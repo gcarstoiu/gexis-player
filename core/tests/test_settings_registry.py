@@ -1292,16 +1292,35 @@ def test_fixed_output_hides_the_volume_rows(store):
     """George, 2026-10-05: with Output mode Fixed, Maximum volume, Starting
     volume and Volume curve are hidden entirely - there is no slider for
     them to shape."""
-    settings = Settings(store, registry=load_registry(), wired={"output_mode": lambda v: None})
+    settings = Settings(store, registry=load_registry(),
+                        wired={"output_mode": lambda v: None, "spotify_enabled": lambda v: None})
     def shown():
-        return {r["key"] for g in settings.to_json() if g["id"] == "audio"
+        return {r["key"] for g in settings.to_json()
                 for r in g["rows"] if r.get("key") and r["visible"]}
     volume_rows = {"max_ceiling", "start_max", "travel_curve"}
+    settings.set("spotify_enabled", True)
     settings.set("output_mode", "Variable")
     assert volume_rows <= shown()
     settings.set("output_mode", "Fixed")
     assert not volume_rows & shown()
     assert "output_mode" in shown()
+
+
+def test_starting_volume_sits_with_spotify_and_hides_with_it(store):
+    """George, 2026-10-05: Starting volume next to Spotify's switch, shown
+    while Spotify is on and the output variable - two conditions on one row."""
+    settings = Settings(store, registry=load_registry(),
+                        wired={"output_mode": lambda v: None, "spotify_enabled": lambda v: None})
+    sources = next(g for g in load_registry() if g["id"] == "sources")["rows"]
+    keys = [r.get("key") for r in sources]
+    assert keys.index("start_max") == keys.index("spotify_enabled") + 1
+    def start_max():
+        return next(r for g in settings.to_json() for r in g["rows"] if r.get("key") == "start_max")["visible"]
+    settings.set("output_mode", "Variable")
+    settings.set("spotify_enabled", True)
+    assert start_max() is True
+    settings.set("spotify_enabled", False)
+    assert start_max() is False
 
 
 def test_the_artwork_updates_are_enrichment_s_lyrion_client_rows():

@@ -46,21 +46,6 @@
         ]
       },
       {
-        "key": "start_max",
-        "type": "number",
-        "label": "Starting volume",
-        "marks": "R",
-        "note": "The loudest Spotify starts at when it takes over, whatever its app was last set to. A lower level stays where it is; a higher one comes down to this.",
-        "min": 10,
-        "max": 100,
-        "unit": "%",
-        "default": 60,
-        "onlyWhen": [
-          "output_mode",
-          "Variable"
-        ]
-      },
-      {
         "key": "volume_managed",
         "type": "readonly",
         "label": "Volume-managed renderers",
@@ -148,6 +133,27 @@
         "marks": "R",
         "note": null,
         "default": true
+      },
+      {
+        "key": "start_max",
+        "type": "number",
+        "label": "Starting volume",
+        "marks": "R",
+        "note": "The loudest Spotify starts at when it takes over, whatever its app was last set to. A lower level stays where it is; a higher one comes down to this.",
+        "min": 10,
+        "max": 100,
+        "unit": "%",
+        "default": 60,
+        "onlyWhen": [
+          [
+            "spotify_enabled",
+            true
+          ],
+          [
+            "output_mode",
+            "Variable"
+          ]
+        ]
       },
       {
         "key": "spotify_name",
