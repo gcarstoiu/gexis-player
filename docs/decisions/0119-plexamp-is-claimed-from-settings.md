@@ -85,10 +85,19 @@ input - beside George's claimed one, which was not touched:
   the copy back if the claim fails: the player is unclaimed for the seconds
   the attempt takes, and claimed as before if it fails.
 
-## Still to measure before it is accepted
+- **A successful claim from the environment, unattended** (George's token,
+  the same day, a throw-away home): `Starting Plexamp 4.13.2`, then *"Plexamp
+  is now signed in and ready!"*, and it **stayed running** - the claim and the
+  start are one process, so the plugin learns of success from the token
+  file appearing, and of failure from the exit. 25 files in its store,
+  `user:token` among them (the file the plugin already reads).
+- **Two names are stored:** `player:name` = `gexis`, Plexamp's own device
+  name (the hostname), and `settings:playerName` = `gexis-claimtest`, from
+  `PLEXAMP_PLAYER_NAME`. Which one Plex shows is read off George's account.
+- Harmless on the way: `Error loading cloud players from plex.tv HTTP status
+  403`, and a failed probe of a phone's player on the LAN.
 
-- **A successful claim from the environment**, on a throw-away Plexamp home,
-  so George's player stays claimed. Needs a fresh token from George
-  (plex.tv/claim, valid four minutes), and leaves a second player in his Plex
-  account to remove afterwards. Whether `PLEXAMP_PLAYER_NAME` names it (the
-  code passes its own device name to the sign-in) is read off that player.
+## Still to confirm before it is accepted
+
+- **Which name George's Plex account shows** for the test player
+  (`gexis-claimtest` or `gexis`), and the test player removed from it.
