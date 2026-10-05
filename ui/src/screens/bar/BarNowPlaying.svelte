@@ -21,6 +21,8 @@
   tray (BarTray.svelte), which App.svelte mounts over every screen.
 -->
 <script>
+  import { onDestroy, untrack } from 'svelte';
+  import { lyricsAsk, lyricsShown } from '../../lib/panelView.js';
   import SourceMark from '../../lib/SourceMark.svelte';
   import QueueRail from '../QueueRail.svelte';
   import { retryEnrichment, trackEnrichment } from '../../lib/enrichment.js';
@@ -84,6 +86,20 @@
   //: The switch replaces the title block with the words; it stays on across
   //: tracks, like a tab the panel leaves open.
   let lyricsOn = $state(false);
+  //: ADR-0101 as amended 2026-10-05: the phone's Lyrics toggle - applied
+  //: once and cleared - and what this screen shows, told back.
+  $effect(() => {
+    const a = $lyricsAsk;
+    if (!a) return;
+    untrack(() => {
+      lyricsOn = a.on;
+      lyricsAsk.set(null);
+    });
+  });
+  $effect(() => {
+    lyricsShown.set(lyricsOn);
+  });
+  onDestroy(() => lyricsShown.set(false));
   const synced = $derived(parseSynced(info?.lyrics_synced));
   const sung = $derived(sungOf(synced));
   const activeLine = $derived(synced.length ? activeAt(synced, head.elapsed) : -1);

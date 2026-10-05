@@ -247,6 +247,10 @@ class StateServer:
         self._ui_dir = ui_dir
         self._clients: set[web.WebSocketResponse] = set()
         store.subscribe(self._broadcast)
+        #: ADR-0121: the touchpad's own socket, the panel's (loopback) and the
+        #: phones' apart. `/state` stays publish-only (ADR-0028).
+        self._pad_panels: set[web.WebSocketResponse] = set()
+        self._pad_phones: set[web.WebSocketResponse] = set()
 
     def _broadcast(self, state: PlaybackState) -> None:
         if not self._clients:
@@ -283,6 +287,61 @@ class StateServer:
             self._clients.discard(ws)
             logger.info("wsserver: client disconnected (%d remaining)", len(self._clients))
         return ws
+
+    #: What each side may say on the touchpad's socket (ADR-0121 §5). Anything
+    #: else is dropped: the core relays these, it does not interpret them.
+    PAD_FROM_PHONE = frozenset({"move", "tap", "text", "key", "scroll", "zoom"})
+    PAD_FROM_PANEL = frozenset({"over", "focus"})
+    PAD_MAX = 2048
+
+    async def _handle_touchpad(self, request: web.Request) -> web.WebSocketResponse:
+        """**The phone as the panel's touchpad and keyboard** (ADR-0121).
+
+        A phone's moves, taps, typing, scrolling and zooming go to the panel; the panel's "the
+        pointer is over a text field" and "a text field has focus" go to the
+        phones. Relayed, never turned into a command; dropped while the
+        *Phone touchpad* row is off. Its own socket rather than `/state`,
+        which stays publish-only (ADR-0028)."""
+        ws = web.WebSocketResponse(heartbeat=20)
+        await ws.prepare(request)
+        panel = self._from_panel(request)
+        mine, theirs, allowed = ((self._pad_panels, self._pad_phones, self.PAD_FROM_PANEL) if panel
+                                 else (self._pad_phones, self._pad_panels, self.PAD_FROM_PHONE))
+        mine.add(ws)
+        try:
+            async for msg in ws:
+                if msg.type != aiohttp.WSMsgType.TEXT or len(msg.data) > self.PAD_MAX:
+                    continue
+                if not self._touchpad_on():
+                    continue
+                try:
+                    kind = json.loads(msg.data).get("t")
+                except (ValueError, AttributeError):
+                    continue
+                if kind not in allowed:
+                    continue
+                for other in list(theirs):
+                    asyncio.create_task(self._send(other, msg.data))
+        finally:
+            mine.discard(ws)
+            # A phone gone - its sheet closed, its screen locked, its Wi-Fi
+            # lost - is said to the panels, which zoom back out (ADR-0121 §2).
+            if not panel:
+                left = json.dumps({"t": "gone", "phones": len(self._pad_phones)})
+                for other in list(self._pad_panels):
+                    asyncio.create_task(self._send(other, left))
+        return ws
+
+    @staticmethod
+    def _from_panel(request: web.Request) -> bool:
+        """The panel arrives on loopback, a phone from the LAN (ADR-0035 §6)."""
+        return request.remote in ("127.0.0.1", "::1")
+
+    def _touchpad_on(self) -> bool:
+        try:
+            return self._settings is None or self._settings.value("phone_touchpad") is not False
+        except Exception:  # noqa: BLE001 - a registry without the row keeps it on
+            return True
 
     async def _handle_activate(self, request: web.Request) -> web.Response:
         renderer_id = request.match_info["renderer_id"]
@@ -504,14 +563,11 @@ class StateServer:
         if background == "Artist pictures":
             return await self._artist_picture()
         if background == "Wallpapers on device":
-            names = self._wallpapers.local_names()
-            if not names:
+            # None twice until every one has been shown, and never the one
+            # already on screen when there is another (ADR-0047 §2e).
+            name = self._wallpapers.next_local(avoid=self._last_background)
+            if name is None:
                 return {"error": "No pictures on this device yet."}
-            # Not the one already on screen, when there is another. A folder
-            # of four and a fifteen-minute rotation would otherwise repeat
-            # about one change in four, which reads as the screen being stuck.
-            choices = [n for n in names if n != self._last_background] or names
-            name = random.choice(choices)
             self._last_background = name
             # **Quoted**: a name can now carry folders, spaces and anything
             # else a person types, and it travels as a URL.
@@ -614,15 +670,17 @@ class StateServer:
             return None, None
         try:
             found = await self._enrichment.for_track(
-                TrackKey(artist=fold(name)), only=("fanart-bg", "tadb-bg")
+                TrackKey(artist=fold(name)), only=("fanart-bgs", "tadb-bg")
             )
         except Exception as exc:
             logger.info("idle: fanart unavailable for %r: %s", name, exc)
             return None, None
         if not found.artist_image:
             return None, None
-        # Which one answered: fanart.tv's, or TheAudioDB's (ADR-0120 §3).
-        return found.artist_image, ("theaudiodb" if found.sources[:1] == ("tadb-bg",) else "fanart")
+        # Which one answered: fanart.tv's, or TheAudioDB's (ADR-0120 §3) -
+        # and any of its pictures, not always the first (ADR-0047 §2e, W3).
+        url = random.choice(found.artist_images or (found.artist_image,))
+        return url, ("theaudiodb" if found.sources[:1] == ("tadb-bg",) else "fanart")
 
     async def _handle_local_wallpaper(self, request: web.Request) -> web.StreamResponse:
         """One picture somebody put on this device. Same rule as below: a
@@ -1055,16 +1113,38 @@ class StateServer:
         self._store.request_idle(action == "show")
         return web.json_response({"idle": action})
 
+    #: ADR-0101 as amended: where a phone may send the panel.
+    VIEWS = ("home", "now", "lyrics", "track")
+
+    async def _handle_view_request(self, request: web.Request) -> web.Response:
+        """**ADR-0101 as amended 2026-10-05: Home, Now playing and Lyrics from
+        the phone's sheet.** Attention first, as the idle toggle is; then the
+        ask goes to the panel in the state it listens to. Now Playing exists
+        only while a source is active, so the three that lead there are
+        refused without one."""
+        to = request.match_info["to"]
+        if to not in self.VIEWS:
+            return web.json_response({"error": f"unknown view {to}"}, status=404)
+        if to != "home" and self._store.state.active is None:
+            return web.json_response({"error": "nothing is playing"}, status=409)
+        if self._peppy is not None:
+            self._peppy.on_touch()
+        self._store.request_view(to)
+        return web.json_response({"view": to})
+
     async def _handle_panel_shown(self, request: web.Request) -> web.Response:
-        """ADR-0101: the panel reporting whether its idle screen is up, so the
-        phone's toggle says what the panel shows - whatever changed it."""
+        """ADR-0101: the panel reporting whether its idle screen is up - and,
+        as amended, whether its lyrics are - so the phone's toggles say what
+        the panel shows, whatever changed it."""
         try:
             body = await request.json()
-            idle = bool(body["idle"])
-        except (ValueError, KeyError, TypeError):
-            return web.json_response({"error": 'body must be {"idle": <bool>}'}, status=400)
-        self._store.set_panel(idle=idle)
-        return web.json_response({"idle": idle})
+            shown = {key: bool(body[key]) for key in ("idle", "lyrics") if key in body}
+        except (ValueError, TypeError, AttributeError):
+            shown = {}
+        if not shown:
+            return web.json_response({"error": 'body must be {"idle": <bool>, "lyrics": <bool>}'}, status=400)
+        self._store.set_panel(**shown)
+        return web.json_response(shown)
 
     async def _handle_setup_status(self, request: web.Request) -> web.Response:
         """ADR-0104 §5: whether setup is needed and the setup network's state.
@@ -1128,6 +1208,9 @@ class StateServer:
             return web.json_response({"error": "loopback only"}, status=403)
         if self._park is None:
             return web.json_response({"parked": False})
+        # `?stop=all`: an update's, which stops whoever is playing too.
+        if request.query.get("stop") == "all":
+            return web.json_response({"parked": bool(await self._park(stop_all=True))})
         return web.json_response({"parked": bool(await self._park())})
 
     async def _handle_setup_answers(self, request: web.Request) -> web.Response:
@@ -1604,6 +1687,7 @@ class StateServer:
         app.router.add_get("/idle/wallpaper/local/{name:.*}", self._handle_local_wallpaper)
         app.router.add_get("/idle/wallpaper/{name}", self._handle_wallpaper_file)
         app.router.add_get("/surface", self._handle_surface)
+        app.router.add_get("/touchpad", self._handle_touchpad)
         app.router.add_post("/touch", self._handle_touch)
         app.router.add_post("/panel/painted", self._handle_painted)
         app.router.add_post("/screen/{action}", self._handle_screen_answer)
@@ -1620,6 +1704,7 @@ class StateServer:
         # ADR-0101: the phone's idle toggle, and the panel saying what it shows.
         app.router.add_post("/panel/idle/{action}", self._handle_idle_request)
         app.router.add_post("/panel/shown", self._handle_panel_shown)
+        app.router.add_post("/panel/go/{to}", self._handle_view_request)
         app.router.add_post("/peppy/{action}", self._handle_peppy)
         app.router.add_get("/settings", self._handle_settings)
         app.router.add_get("/notices/{name}", self._handle_notice)

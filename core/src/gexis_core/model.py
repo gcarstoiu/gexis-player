@@ -263,7 +263,11 @@ class PlaybackState:
     #: `visualiser` and `idle` say whether each is up; `idle_request` is the
     #: last ask from a phone - `{"show": bool, "seq": int}` - which the panel
     #: applies once per `seq`, so a panel that connects late still gets it.
-    panel: dict = field(default_factory=lambda: {"visualiser": False, "idle": False, "idle_request": None})
+    #: **As amended 2026-10-05**: `lyrics` - whether the panel's Now Playing
+    #: shows its lyrics - and `view_request`, a phone's ask for Home, Now
+    #: playing, Lyrics or Track (`{"to", "seq", "at"}`), applied the same way.
+    panel: dict = field(default_factory=lambda: {"visualiser": False, "idle": False, "idle_request": None,
+                                                 "lyrics": False, "view_request": None})
     #: **ADR-0104: first-boot setup and the setup network**, as
     #: `SetupNetwork.public_status` - never the password, which the panel
     #: reads from `/setup/status` over loopback. None until it has decided.

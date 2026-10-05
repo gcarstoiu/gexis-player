@@ -382,3 +382,10 @@ row is shown only when all of them hold. The panel needed nothing new: it
 already drops a heading over nothing and a group with nothing left (§6).
 Checked like a row's, in `check`.
 
+## Amendment, 2026-10-05 — a row may carry several conditions
+
+`onlyWhen` may be a list of `[key, value]` pairs, every one of which must
+hold - for Starting volume beside Spotify's switch, shown while Spotify is
+on and the output variable. A single pair stays the usual form, and the
+only one a plugin's manifest uses.
+

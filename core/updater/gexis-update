@@ -338,7 +338,10 @@ def stop_playback() -> None:
     """ADR-0110 §4: playback stops on consent, not by waiting. The core's park
     - the shutdown's own way of leaving nothing to resume - pauses or
     disconnects every source; nothing resumes afterwards."""
-    req = urllib.request.Request(f"{CORE}/renderers/park", method="POST", data=b"")
+    # `stop=all` (2026-10-05): every source, not LMS alone - Spotify played on
+    # through 0.9.0's install. A core older than this ignores the query and
+    # pauses LMS, as before.
+    req = urllib.request.Request(f"{CORE}/renderers/park?stop=all", method="POST", data=b"")
     try:
         urllib.request.urlopen(req, timeout=30).read()
     except OSError as exc:

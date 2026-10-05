@@ -9,10 +9,226 @@
   that its app keeps a volume of its own.
 -->
 <script>
-  import { active, metadata, volume, fixedOutput, meters, panel, setVolume, showPeppy, hidePeppy, requestIdle } from '../lib/state.js';
+  import { active, metadata, volume, fixedOutput, meters, panel, setVolume, showPeppy, hidePeppy, requestIdle, goTo } from '../lib/state.js';
   import SourceMark from '../lib/SourceMark.svelte';
+  import { settingValues } from '../lib/settings.js';
+  import { openTouchpad } from '../lib/touchpad.js';
 
   let open = $state(false);
+
+  // ── ADR-0121: the touchpad and keyboard for the panel ────────────────
+  //: Relative, as a laptop's touchpad: moves are sent as distances, and the
+  //: panel scales them by Pointer speed. Open only while the sheet is.
+  const TAP_MS = 300;
+  const TAP_MOVE = 10;
+  const touchpad = $derived(open && $settingValues.phone_touchpad !== false);
+  let pad = null;
+  let overField = $state(false);
+  let typing = $state(false);
+  let typeEl = $state(null);
+  let typed = '';
+  let touchStart = null;
+  let last = null;
+  let travelled = 0;
+  let pending = { dx: 0, dy: 0 };
+  let frame = 0;
+
+  $effect(() => {
+    if (!touchpad) return;
+    pad = openTouchpad((message) => {
+      if (message.t === 'over') overField = !!message.field;
+      if (message.t === 'focus' && !message.field) stopTyping();
+    });
+    return () => {
+      pad?.close();
+      pad = null;
+      overField = false;
+      stopTyping();
+    };
+  });
+
+  function stopTyping() {
+    typing = false;
+    typed = '';
+    if (typeEl) {
+      typeEl.value = '';
+      typeEl.blur();
+    }
+  }
+
+  /** Whole pixels go; **the fraction stays for the next frame**. A finger
+   *  starts slowly - under a pixel a frame - and rounding each frame's share
+   *  away held the pointer still and then let it jump (George, 2026-10-05:
+   *  "choppy at the beginning"). The same for a two-finger scroll. */
+  function flush() {
+    frame = 0;
+    const dx = Math.trunc(pending.dx);
+    const dy = Math.trunc(pending.dy);
+    if (dx || dy) pad?.send({ t: 'move', dx, dy });
+    pending = { dx: pending.dx - dx, dy: pending.dy - dy };
+    const sx = Math.trunc(scrolled.dx);
+    const sy = Math.trunc(scrolled.dy);
+    if (sx || sy) pad?.send({ t: 'scroll', dx: sx, dy: sy });
+    scrolled = { dx: scrolled.dx - sx, dy: scrolled.dy - sy };
+    if (Math.abs(zoomed - 1) > 0.002) {
+      pad?.send({ t: 'zoom', by: Math.round(zoomed * 1000) / 1000 });
+      zoomed = 1;
+    }
+  }
+
+  function soon() {
+    if (!frame) frame = requestAnimationFrame(flush);
+  }
+
+  // ── Two fingers (ADR-0121 §2, amended 2026-10-05) ─────────────────────
+  //: How far two fingers go together, or apart, before the gesture is
+  //: decided - a scroll or a zoom, which it then stays until they lift.
+  const DECIDE = 12;
+  //: How far in from the right and bottom edges a finger scrolls.
+  const EDGE = 40;
+  let edge = null;
+  const fingers = new Map();
+  //: 'one' (moving and tapping), 'two' (undecided), 'scroll', 'zoom', or
+  //: 'done' - after two fingers, nothing until every finger has lifted.
+  let gesture = null;
+  let middle = null;
+  let spread = 0;
+  let firstMiddle = null;
+  let firstSpread = 0;
+  let scrolled = { dx: 0, dy: 0 };
+  let sideways = false;
+  let zoomed = 1;
+
+  function midpoint() {
+    const [a, b] = [...fingers.values()];
+    return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  }
+  function apart() {
+    const [a, b] = [...fingers.values()];
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
+  function padDown(event) {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    fingers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (fingers.size === 1 && gesture === null) {
+      gesture = 'one';
+      touchStart = { at: performance.now() };
+      last = { x: event.clientX, y: event.clientY };
+      travelled = 0;
+      // **The scroll lines** (George, 2026-10-05): one finger along the
+      // right edge scrolls up and down, along the bottom sideways - the
+      // content following the finger, as two fingers do.
+      const r = event.currentTarget.getBoundingClientRect();
+      edge = event.clientX > r.right - EDGE ? 'y' : event.clientY > r.bottom - EDGE ? 'x' : null;
+    } else if (fingers.size === 2 && gesture === 'one') {
+      // The second finger: no tap, no pointer movement, until decided.
+      gesture = 'two';
+      touchStart = null;
+      middle = firstMiddle = midpoint();
+      spread = firstSpread = apart();
+    } else {
+      gesture = 'done';
+    }
+  }
+
+  function padMove(event) {
+    if (!fingers.has(event.pointerId)) return;
+    fingers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (gesture === 'one') {
+      const dx = event.clientX - last.x;
+      const dy = event.clientY - last.y;
+      last = { x: event.clientX, y: event.clientY };
+      travelled += Math.abs(dx) + Math.abs(dy);
+      if (edge === 'y') scrolled = { dx: 0, dy: scrolled.dy + dy };
+      else if (edge === 'x') scrolled = { dx: scrolled.dx + dx, dy: 0 };
+      else pending = { dx: pending.dx + dx, dy: pending.dy + dy };
+      soon();
+      return;
+    }
+    if (fingers.size !== 2) return;
+    const m = midpoint();
+    const d = apart();
+    if (gesture === 'two') {
+      if (Math.abs(d - firstSpread) > DECIDE * 1.5) gesture = 'zoom';
+      else if (Math.hypot(m.x - firstMiddle.x, m.y - firstMiddle.y) > DECIDE) {
+        gesture = 'scroll';
+        // One direction per scroll: a list goes up and down, a row sideways,
+        // and a scroll a little off straight must not move both.
+        sideways = Math.abs(m.x - firstMiddle.x) > Math.abs(m.y - firstMiddle.y);
+      } else return;
+      // Counted from here, so the deciding distance is not a jump.
+      middle = m;
+      spread = d;
+      return;
+    }
+    if (gesture === 'scroll') {
+      scrolled = sideways
+        ? { dx: scrolled.dx + m.x - middle.x, dy: 0 }
+        : { dx: 0, dy: scrolled.dy + m.y - middle.y };
+      middle = m;
+      soon();
+    } else if (gesture === 'zoom' && spread > 0) {
+      zoomed *= d / spread;
+      spread = d;
+      soon();
+    }
+  }
+
+  function padUp(event) {
+    fingers.delete(event.pointerId);
+    const was = gesture;
+    if (fingers.size > 0) {
+      if (gesture !== 'one') gesture = 'done';
+      return;
+    }
+    gesture = null;
+    last = null;
+    if (was !== 'one' || !touchStart) return;
+    const quick = performance.now() - touchStart.at < TAP_MS && travelled < TAP_MOVE;
+    touchStart = null;
+    if (!quick) return;
+    // **The keyboard opens inside this same touch** (ADR-0121 §4): the panel
+    // said in advance that the pointer is over a text field. The touch's own
+    // mousedown, a moment later, would take the focus back to the page (seen
+    // end to end, 2026-10-05) - the pad refuses it, below.
+    if (overField && typeEl) {
+      typeEl.value = '';
+      typed = '';
+      typeEl.focus();
+      typing = true;
+    }
+    pad?.send({ t: 'tap' });
+  }
+
+  function padCancel(event) {
+    fingers.delete(event.pointerId);
+    touchStart = null;
+    if (fingers.size === 0) {
+      gesture = null;
+      last = null;
+    } else {
+      gesture = 'done';
+    }
+  }
+
+  /** What changed in the hidden field, sent as text and backspaces - so a
+   *  keyboard's suggestions and corrections arrive as the panel needs them. */
+  function typedInput() {
+    const now = typeEl.value;
+    let same = 0;
+    while (same < typed.length && same < now.length && typed[same] === now[same]) same += 1;
+    for (let i = same; i < typed.length; i += 1) pad?.send({ t: 'key', key: 'Backspace' });
+    if (now.length > same) pad?.send({ t: 'text', text: now.slice(same) });
+    typed = now;
+  }
+
+  function typedKey(event) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      pad?.send({ t: 'key', key: 'Enter' });
+    }
+  }
   let dragging = $state(false);
   let settling = $state(false);
   let local = $state(0);
@@ -90,6 +306,16 @@
       say(`Visualiser: ${err.message}`);
     }
   }
+  //: ADR-0101 as amended 2026-10-05: where the panel goes. Now playing and
+  //: Lyrics need something playing (N2); Home is always there.
+  async function go(to, what) {
+    try {
+      await goTo(to);
+    } catch (err) {
+      say(`${what}: ${err.message}`);
+    }
+  }
+
   async function toggleIdle() {
     try {
       await requestIdle(!$panel.idle);
@@ -98,6 +324,13 @@
     }
   }
 </script>
+
+{#if open}
+  <!-- Open, the sheet is the phone's whole attention: a touch outside it
+       closes it and reaches nothing under it (George, 2026-10-05: no
+       setting changed by a thumb that missed the touchpad). -->
+  <div class="mini__scrim" role="presentation" onclick={() => (open = false)}></div>
+{/if}
 
 <div
   class="mini"
@@ -114,6 +347,36 @@
     </span>
     <span class="mini__chev" class:is-open={open}></span>
   </button>
+
+  {#if touchpad}
+    <!-- ADR-0121: a touchpad for the panel, above the slider. -->
+    <div
+      class="mini__pad"
+      role="application"
+      aria-label="Touchpad for the player's screen"
+      onpointerdown={padDown}
+      onpointermove={padMove}
+      onpointerup={padUp}
+      onpointercancel={padCancel}
+      onmousedown={(event) => event.preventDefault()}
+    >
+      <span class="mini__pad-line mini__pad-line--y" aria-hidden="true"></span>
+      <span class="mini__pad-line mini__pad-line--x" aria-hidden="true"></span>
+      <span class="mini__pad-hint">{typing ? 'Typing on the player' : overField ? 'Tap to type' : 'Touchpad'}</span>
+    </div>
+    <input
+      class="mini__type"
+      bind:this={typeEl}
+      type="text"
+      autocomplete="off"
+      autocorrect="off"
+      spellcheck="false"
+      aria-label="Text for the player's screen"
+      oninput={typedInput}
+      onkeydown={typedKey}
+      onblur={() => (typing = false)}
+    />
+  {/if}
 
   <div class="mini__row">
     {#if $fixedOutput}
@@ -164,6 +427,31 @@
       {#if open}<span>Idle screen</span>{/if}
     </button>
   </div>
+
+  {#if open}
+    <!-- ADR-0101 as amended 2026-10-05: the panel's screens, from here. -->
+    <div class="mini__row mini__nav">
+      <button class="mini__toggle" type="button" onclick={() => go('home', 'Home')}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 5l8 6.5M6.5 10v9h11v-9" /></svg>
+        <span>Home</span>
+      </button>
+      <button class="mini__toggle" type="button" disabled={!$active} onclick={() => go('now', 'Now playing')}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" /><path d="M10.5 9v6l4.5-3z" /></svg>
+        <span>Now playing</span>
+      </button>
+      <button
+        class="mini__toggle"
+        class:is-on={!!$active && $panel.lyrics}
+        type="button"
+        disabled={!$active}
+        aria-pressed={!!$active && !!$panel.lyrics}
+        onclick={() => go($panel.lyrics ? 'track' : 'lyrics', 'Lyrics')}
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h9M5 17h11" /></svg>
+        <span>Lyrics</span>
+      </button>
+    </div>
+  {/if}
 
   {#if note}<div class="mini__note" role="status">{note}</div>{/if}
 </div>
@@ -298,6 +586,13 @@
     cursor: pointer;
     flex: none;
   }
+  .mini__toggle:disabled {
+    opacity: 0.38;
+    cursor: default;
+  }
+  .mini__nav {
+    flex-wrap: wrap;
+  }
   .mini__toggle.is-on {
     background: var(--src-accent);
     border-color: transparent;
@@ -317,6 +612,72 @@
   }
   .mini--open .mini__slider {
     flex-basis: calc(100% - 64px);
+  }
+  .mini__scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 19;
+    background: rgba(0, 0, 0, 0.45);
+    touch-action: none;
+  }
+  /* Half the phone's height and reaching up from the slider, so a thumb
+     moving up has room before the edge (George, 2026-10-05: 180 px was
+     not enough). */
+  .mini__pad {
+    height: clamp(220px, 50dvh, 520px);
+    border-radius: 16px;
+    border: 1px solid rgba(233, 238, 242, 0.14);
+    background: rgba(233, 238, 242, 0.05);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 32px;
+    box-sizing: border-box;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .mini__pad {
+    position: relative;
+  }
+  /* The scroll lines: drawn thin, answering a finger anywhere within 40 px
+     of the edge. */
+  .mini__pad-line {
+    position: absolute;
+    border-radius: 2px;
+    background: rgba(233, 238, 242, 0.22);
+    pointer-events: none;
+  }
+  .mini__pad-line--y {
+    right: 18px;
+    top: 18px;
+    bottom: 40px;
+    width: 3px;
+  }
+  .mini__pad-line--x {
+    left: 18px;
+    right: 40px;
+    bottom: 18px;
+    height: 3px;
+  }
+  .mini__pad-hint {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+  /* Focusable, so the phone's keyboard opens for it, and out of sight. */
+  .mini__type {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    border: 0;
+    padding: 0;
+    font-size: 16px;
   }
   .mini__note {
     font-size: var(--t-meta);

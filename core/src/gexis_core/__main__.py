@@ -29,6 +29,7 @@ from gexis_core.arbitration import Supervisor
 from dataclasses import replace
 
 from gexis_core.config import Config
+from gexis_core.start_guard import StartGuard
 from gexis_core.idle_page import probe as probe_idle_page
 from gexis_core.wallpapers import Wallpapers
 from gexis_core.weather import Weather
@@ -591,6 +592,8 @@ async def main() -> None:
         mute.observe(raw)
         state_store.set_volume_raw(raw, muted=mute.muted, percent=remote.percent())
 
+    start_guard = StartGuard()
+
     def report_renderer_volume(renderer_id: str, value: int, steps: int) -> None:
         """**The one path from a renderer's number to the DAC** (ADR-0054 §3).
 
@@ -604,6 +607,16 @@ async def main() -> None:
         us. Now there is one, and the curve is
         `renderer_value_to_hardware_raw`.
         """
+        # The starting volume holds for a moment (start_guard): the phone's
+        # own slider arriving as it connects is not a request to go louder.
+        again = start_guard.holding(renderer_id, value, time.monotonic())
+        if again is not None and supervisor.active == renderer_id:
+            logger.info("volume: %s asked for %s/%s just after starting at %s; keeping the starting volume",
+                        renderer_id, value, steps, again)
+            adapter = adapters.get(renderer_id) or plugin_adapters.get(renderer_id)
+            if adapter is not None:
+                asyncio.ensure_future(adapter.set_volume(again))
+            return
         remote.set_steps(renderer_id, steps)
         remote.report(renderer_id, value)
         raw = renderer_value_to_hardware_raw(value, steps)
@@ -711,6 +724,7 @@ async def main() -> None:
                 renderer_id, int(start_max), raw, value, steps,
             )
             await volume_bridge.write_hardware(renderer_value_to_hardware_raw(value, steps))
+            start_guard.handed(renderer_id, value, time.monotonic())
         else:
             logger.info(
                 "volume: %s cannot say where it is; handing it the level playing (%s/240 -> %s/%s)",
@@ -1703,7 +1717,8 @@ async def main() -> None:
         # reads the rest as it draws. None of them needs a callback, and all
         # of them are wired, because something reads every one.
         wired={"idle_url": None, "idle_timeout": None, "drawer_on_external": None,
-               "drawer_autohide": None, "listenbrainz_token": None,
+               "drawer_autohide": None, "phone_touchpad": None, "pointer_speed": None,
+               "pointer_style": None, "listenbrainz_token": None,
                "fanart_key": None, "lms_server": None,
                # ADR-0059: read on every ask through `gate` and
                # `confidence_min`, so nothing has to happen on the write.
@@ -1712,6 +1727,9 @@ async def main() -> None:
                "idle_screen": None, "idle_background": None,
                "background_brightness": None, "background_interval": None,
                "wallpaper_key": None, "wallpaper_topics": None,
+               # ADR-0120: read on every fetch. Missed when they were added -
+               # shown and refusing every write until 2026-10-05.
+               "pexels_key": None, "theaudiodb_key": None,
                "idle_weather": None,
                "weather_location": None, "idle_forecast": None,
                "idle_icons": None,
@@ -2798,14 +2816,25 @@ async def main() -> None:
         asyncio.ensure_future(_restart_core_soon())
         return True
 
-    async def _park_renderers() -> bool:
+    async def _park_renderers(stop_all: bool = False) -> bool:
         """**A fresh start after every restart** (George, 2026-09-29). The one
         renderer that resumes by itself is LMS: its server carries on when
         the player reconnects, whatever it is told while the player is away
         (ADR-0095's 2026-09-29 measurements). So as the device goes down its
         player is paused - queue and position kept. Spotify, Bluetooth and
         Plexamp do not resume by themselves. A power cut skips this; the
-        first start after the boot pauses what the server resumed."""
+        first start after the boot pauses what the server resumed.
+
+        **`stop_all` for an update** (ADR-0110 §4, fixed 2026-10-05): playback
+        stops before the install, whoever is playing - Spotify kept playing
+        through 0.9.0's (George)."""
+        if stop_all:
+            try:
+                stopped = await supervisor.stop_active()
+                if stopped:
+                    logger.info("park: %s stopped for the update", stopped)
+            except Exception as exc:  # the update goes on; its restart stops it anyway
+                logger.warning("park: could not stop what was playing: %s", exc)
         try:
             await lms.pause()
             logger.info("park: the device is going down; LMS paused")

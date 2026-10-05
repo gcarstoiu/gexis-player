@@ -228,6 +228,10 @@ class Enrichment:
     #: Recording names the wider world plays most, most first.
     popular: tuple[str, ...] = ()
     artist_image: str | None = None
+    #: Every picture of that kind the provider has, `artist_image` first -
+    #: so the idle screen can vary an artist's background rather than show
+    #: the same one each time (ADR-0047 §2e, W3).
+    artist_images: tuple[str, ...] = ()
     #: Cover art for the release, when the renderer supplies none.
     album_art: str | None = None
     label: str | None = None
@@ -274,6 +278,7 @@ class Enrichment:
             "similar": list(self.similar),
             "popular": list(self.popular),
             "artist_image": self.artist_image,
+            "artist_images": list(self.artist_images),
             "album_art": self.album_art,
             "label": self.label,
             "release_type": self.release_type,
@@ -444,7 +449,7 @@ def _rehydrate(raw: dict) -> dict:
     an older version may not know."""
     known = set(Enrichment.__dataclass_fields__)
     out = {k: v for k, v in raw.items() if k in known}
-    for name in ("similar", "sources"):
+    for name in ("similar", "sources", "artist_images"):
         if name in out and out[name] is not None:
             out[name] = tuple(out[name])
     return out

@@ -201,15 +201,30 @@ def check(groups: list[dict]) -> list[dict]:
                 _check_only_when(name, row.get("onlyWhen"))
         for row in [group, *group["rows"]]:
             only = row.get("onlyWhen")
-            if only is not None and only[0] not in keys:
-                name = row.get("key") or row.get("id") or row.get("label", "?")
-                raise ValueError(f"{name}: onlyWhen names unknown setting {only[0]!r}")
+            for pair in (_conditions(only) if only is not None else []):
+                if pair[0] not in keys:
+                    name = row.get("key") or row.get("id") or row.get("label", "?")
+                    raise ValueError(f"{name}: onlyWhen names unknown setting {pair[0]!r}")
     return groups
+
+
+def _conditions(only: Any) -> list:
+    """`onlyWhen` as a list of `[key, value]` pairs: one pair, or - since
+    2026-10-05 - a list of them, all of which must hold (Starting volume
+    next to Spotify: shown with Spotify on *and* the output variable)."""
+    if isinstance(only, list) and only and isinstance(only[0], list):
+        return only
+    return [only]
 
 
 def _check_only_when(name: str, only: Any) -> None:
     if only is None:
         return
+    for pair in _conditions(only):
+        _check_pair(name, pair)
+
+
+def _check_pair(name: str, only: Any) -> None:
     if not isinstance(only, list) or len(only) != 2:
         raise ValueError(f"{name}: onlyWhen is [key, value]")
     if isinstance(only[1], dict) and set(only[1]) != {ONLY_WHEN_NOT}:
@@ -248,6 +263,10 @@ def _visible(row: dict, rows: dict[str, dict], values: dict[str, Any], seen: set
     only = row.get("onlyWhen")
     if only is None:
         return True
+    return all(_holds(row, pair, rows, values, seen) for pair in _conditions(only))
+
+
+def _holds(row: dict, only: list, rows: dict[str, dict], values: dict[str, Any], seen: set[str]) -> bool:
     key, wanted = only
     if key in seen:
         logger.warning("settings: onlyWhen cycle at %r; hiding the row", key)

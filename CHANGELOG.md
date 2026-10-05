@@ -5,6 +5,32 @@ Every release of Gexis Player and its notes, newest first. Generated from
 edit that file, not this one. The player shows the last 10 under
 Settings → System → Change logs.
 
+## 0.9.1 — 5 October 2026
+
+### New
+
+- The phone can act as a touchpad and keyboard for the screen. Open the volume sheet on the phone: one finger moves a pointer on the screen and a tap presses. Tapping a text field brings up the phone's keyboard, and what is typed appears on the screen.
+- Two fingers on the touchpad scroll what is under the pointer, and a pinch zooms the screen around it. Lines along the right and bottom edges of the touchpad scroll with one finger.
+- Pointer style offers two pointers, Dot and Arrow, next to Pointer speed under Settings → Display. Phone touchpad turns the touchpad off.
+- The phone's volume sheet has Home, Now playing and Lyrics buttons for the screen. Lyrics opens the lyrics on Now Playing, and turns them off again.
+- While the pointer rests on the volume controls, they stay open.
+- Online wallpapers no longer repeat until every picture of the day has been shown, and each day brings a new set. Pictures on the device follow the same rule, and artist pictures vary between an artist's backgrounds.
+
+### Fixed
+
+- An update now stops whatever is playing, not only Lyrion.
+- When Spotify starts playing, its starting volume holds instead of jumping to the last level.
+- Starting volume is now beside Spotify's switch.
+- After an update, long notes can be scrolled, and stay until Continue is pressed.
+- The TheAudioDB key and Pexels API key can be saved.
+- No mouse pointer is left on the screen.
+- Some idle screen pictures failed to load and the previous one stayed up.
+
+### Good to know
+
+- The phone and the screen need to be on the same network for the touchpad, as for the rest of the phone's controls.
+- Artist pictures are looked up once more after this update, to find each artist's other backgrounds.
+
 ## 0.9.0 — 5 October 2026
 
 ### New

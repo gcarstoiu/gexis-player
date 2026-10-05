@@ -19,12 +19,14 @@
   import SetupPage from './screens/SetupPage.svelte';
   import { screen } from './lib/family.svelte.js';
   import UpdateScreen from './screens/UpdateScreen.svelte';
+  import PanelPointer from './lib/PanelPointer.svelte';
   import { update, connection, hidePeppy, screenConfirm, answerScreen, screenNew, answerNewScreen } from './lib/state.js';
   import KeepScreen from './screens/KeepScreen.svelte';
   import NewScreen from './screens/NewScreen.svelte';
   import { loadSettings, settingValues } from './lib/settings.js';
   import { loadLibraryRoot } from './lib/library.js';
   import { reportTouch, showPeppy, reportPainted, reportShown } from './lib/state.js';
+  import { lyricsAsk, lyricsShown } from './lib/panelView.js';
 
   // ADR-0033: idle is "not playing and not touched", one timeout everywhere.
   // From settings (idle_timeout, minutes); `?idle_seconds=` overrides it for testing.
@@ -111,15 +113,25 @@
   // left the drawer up indefinitely and no later change from elsewhere
   // could arm the timer either - `openFromExternal` returned early for a
   // drawer in that state (George, 2026-09-23).
-  function keepVolumeOpen() {
+  //
+  // **And while the phone's pointer rests on it** (ADR-0121; George,
+  // 2026-10-05: "while the cursor is above the modal, it should not be
+  // dismissed"): the pointer entering holds it, leaving lets the timer run.
+  // A tap made there lifts like a finger, which alone would arm the timer.
+  let pointerOver = false;
+  function keepVolumeOpen(event) {
+    if (event?.type === 'pointerenter' && event.pointerType === 'mouse') pointerOver = true;
     clearTimeout(autoHide);
     autoHide = null;
   }
-  function armAutoHide() {
+  function armAutoHide(event) {
+    if (event?.type === 'pointerleave' && event.pointerType === 'mouse') pointerOver = false;
+    if (pointerOver) return;
     clearTimeout(autoHide);
     autoHide = setTimeout(closeVolume, AUTO_HIDE_MS);
   }
   function closeVolume() {
+    pointerOver = false;
     keepVolumeOpen();
     volumeOpen = false;
   }
@@ -232,7 +244,49 @@
   $effect(() => {
     const shown = idle;
     if (surface !== 'panel') return;
-    reportShown(shown).catch(() => {});
+    reportShown({ idle: shown }).catch(() => {});
+  });
+
+  //: **ADR-0101 as amended 2026-10-05: Home, Now playing and Lyrics from the
+  //: phone.** Applied once per ask, as the idle ask is, and attention like a
+  //: touch. Home is the library's root (a fresh one - wherever the library
+  //: had got to), or the root screen with LMS off; the others close what
+  //: covers Now Playing, and Lyrics and Track set its tab.
+  let appliedViewAsk = null;
+  let libraryHome = $state(0);
+  $effect(() => {
+    const ask = $panel.view_request;
+    if (surface !== 'panel' || !ask || ask.seq === appliedViewAsk) return;
+    appliedViewAsk = ask.seq;
+    if (ask.at && Date.now() / 1000 - ask.at > 60) return;
+    untrack(() => {
+      idle = false;
+      askedIdle = false;
+      touches += 1;
+      settingsOpen = false;
+      closeVolume();
+      libraryArtist = null;
+      if (ask.to === 'home') {
+        libraryRequested = !lmsOff;
+        libraryHome += 1;
+        return;
+      }
+      if (!$active) return;
+      libraryRequested = false;
+      if (ask.to === 'lyrics' || ask.to === 'track') lyricsAsk.set({ on: ask.to === 'lyrics' });
+    });
+  });
+
+  let reportedLyrics = null;
+  //: ...and whether the lyrics are what the glass shows: Now Playing up,
+  //: nothing over it, its lyrics on.
+  $effect(() => {
+    const showing =
+      $lyricsShown && !!$active && !libraryOpen && !settingsOpen && !idle && !$panel.visualiser;
+    // The state this reads arrives every second; the core hears a change.
+    if (surface !== 'panel' || showing === reportedLyrics) return;
+    reportedLyrics = showing;
+    reportShown({ lyrics: showing }).catch(() => (reportedLyrics = null));
   });
 
   // The library is a layer over now playing (source/Now Playing.dc.html). It
@@ -329,6 +383,14 @@
   // ADR-0032: the panel renders everything; a remote browser only settings.
   let surface = $state(null);
 
+  // **No system cursor on the panel** (George, 2026-10-05: "two cursors").
+  // The compositor draws one where it starts and hides it only at the
+  // first real touch; driven from a phone, the panel never gets that
+  // touch. The phone's pointer is our own (lib/PanelPointer.svelte).
+  $effect(() => {
+    document.documentElement.classList.toggle('on-panel', surface === 'panel');
+  });
+
   //: **ADR-0109 decision 5: Keep this screen?** The core asks while a newly
   //: chosen screen waits; its countdown runs from the panel's first frame
   //: (`deadline`, this device's clock). Only the panel answers (decision 2).
@@ -347,8 +409,21 @@
   //: reconnects (nothing else shows in between); then the outcome for a few
   //: seconds, and a reload when the release changed the page's own files.
   const OUTCOME_MS = 6000;
+  //: **With notes to read, until Continue** (George, 2026-10-05: 0.9.0's
+  //: notes could not all be seen). The limit is for a panel nobody watches.
+  const NOTES_MS = 120000;
+  let outcomeTimer;
+  function leaveUpdate(changed) {
+    clearTimeout(outcomeTimer);
+    if (changed) location.reload();
+    else {
+      updateLock = false;
+      updateOutcome = null;
+    }
+  }
   let updateLock = $state(false);
   let updateOutcome = $state(null);
+  let updateChanged = false;
   let loadedRelease = null;
   $effect(() => {
     const u = $update;
@@ -363,13 +438,9 @@
     if (u && ['done', 'failed'].includes(u.state)) {
       updateOutcome = u.state;
       const changed = u.state === 'done' && u.installed && u.installed !== loadedRelease;
-      setTimeout(() => {
-        if (changed) location.reload();
-        else {
-          updateLock = false;
-          updateOutcome = null;
-        }
-      }, OUTCOME_MS);
+      updateChanged = changed;
+      const notes = u.state === 'done' && u.whats_new;
+      outcomeTimer = setTimeout(() => leaveUpdate(changed), notes ? NOTES_MS : OUTCOME_MS);
     }
   });
   async function showVisualisation() {
@@ -392,6 +463,7 @@
       .then((r) => r.json())
       .then((body) => (surface = body.surface))
       .catch(() => (surface = 'panel'));
+
 
     // ADR-0043: end the boot animation only once something is actually on
     // the glass. onMount runs before the browser has painted, so this waits
@@ -440,6 +512,7 @@
       {#if screen.family === 'bar'}
       <!-- ADR-0109, Bar family: the library as strips and a rail, with
            Library's props. -->
+      {#key libraryHome}
       <BarLibrary
         active={$active}
         metadata={$metadata}
@@ -451,7 +524,9 @@
         onsettings={openSettings}
         onvolume={openVolume}
       />
+      {/key}
       {:else}
+      {#key libraryHome}
       <Library
         active={$active}
         metadata={$metadata}
@@ -463,6 +538,7 @@
         onsettings={openSettings}
         onvolume={openVolume}
       />
+      {/key}
       {/if}
     </div>
   {:else if $active}
@@ -564,14 +640,23 @@
   <!-- ADR-0110 §6: above even setup and pairing - nothing on this panel is
        usable while its software is being replaced. -->
   {#if updateLock}
-    <UpdateScreen update={$update} reconnecting={$connection !== 'open'} outcome={updateOutcome} />
+    <UpdateScreen update={$update} reconnecting={$connection !== 'open'} outcome={updateOutcome}
+                  oncontinue={() => leaveUpdate(updateChanged)} />
   {/if}
+
+  <!-- ADR-0121: a phone's pointer, over everything, while one controls. -->
+  <PanelPointer />
 </div>
 {/if}
 
 <style>
   :global(*, *::before, *::after) {
     box-sizing: border-box;
+  }
+
+  :global(html.on-panel),
+  :global(html.on-panel *) {
+    cursor: none !important;
   }
 
   :global(body) {

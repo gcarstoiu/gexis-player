@@ -29,6 +29,8 @@ its page, and the panel draws them.
 from __future__ import annotations
 
 import asyncio
+import datetime
+import json
 import logging
 import random
 import time
@@ -58,8 +60,13 @@ CATEGORIES = (
 #: one comes from it.
 PAGE_TTL_S = 24 * 60 * 60
 
-#: Enough to choose from without asking for a hundred results nobody sees.
-PER_PAGE = 50
+#: **The most Pixabay gives at once, and a different page each day**, turning
+#: through `PAGES` (ADR-0047 §2e, George, 2026-10-05). Fifty a page was the
+#: top of the *popular* order every day - mostly the same fifty - and at a
+#: change a minute every one came back within the hour. Still one request
+#: per category per day.
+PER_PAGE = 200
+PAGES = 3
 
 #: What the panel is: a 1280x800 screen. Asking Pixabay to filter means the
 #: rejects never travel, and `largeImageURL` is the biggest size a per-owner
@@ -167,12 +174,96 @@ class Wallpapers:
         #: it**, where the cache above evicts as it fills.
         self._local_dir = Path(local_dir) if local_dir else Path(cache_dir).parent / "pictures"
         self._keep = keep
-        self._pages: dict[tuple, tuple[float, list[dict]]] = {}
+        #: **Kept on disk** (ADR-0047 §2e): each slot's page with when it was
+        #: asked for, and which of its pictures have been shown - so a
+        #: restart neither asks Pixabay again inside its day nor starts the
+        #: pictures over. The page lived in memory until 2026-10-05 and was
+        #: asked for again at every restart.
+        self._state_path = self._dir / "state.json"
+        self._state = self._load_state()
+        self._pages: dict[tuple, tuple[float, list[dict]]] = {
+            tuple(json.loads(k)): (v["at"], v["hits"]) for k, v in self._state["pages"].items()
+        }
         #: Per source, how many of the pictures its pages held were wide
         #: enough for a bar, and how many there were: **the order a bar asks
         #: them in is measured as the player runs** (ADR-0120 §3).
         self._wide_seen: dict[str, list[int]] = {}
         self._lock = asyncio.Lock()
+
+    # ── what is kept across restarts ─────────────────────────────────────
+
+    def _load_state(self) -> dict:
+        try:
+            state = json.loads(self._state_path.read_text())
+            if isinstance(state, dict):
+                return {"pages": dict(state.get("pages") or {}), "shown": dict(state.get("shown") or {}),
+                        "local_shown": list(state.get("local_shown") or [])}
+        except (OSError, ValueError):
+            pass
+        return {"pages": {}, "shown": {}, "local_shown": []}
+
+    def _save_state(self) -> None:
+        self._state["pages"] = {json.dumps(list(k)): {"at": at, "hits": hits}
+                                for k, (at, hits) in self._pages.items()}
+        try:
+            self._dir.mkdir(parents=True, exist_ok=True)
+            scratch = self._state_path.with_suffix(".part")
+            scratch.write_text(json.dumps(self._state))
+            scratch.replace(self._state_path)
+        except OSError as exc:
+            logger.warning("wallpapers: could not keep what was shown: %s", exc)
+
+    @staticmethod
+    def _today_page() -> int:
+        """Which page today is: 1, 2 or 3, turning with the date."""
+        return 1 + datetime.date.today().toordinal() % PAGES
+
+    def _fresh(self, slot: tuple) -> list[dict] | None:
+        cached = self._pages.get(slot)
+        if cached is not None and time.time() - cached[0] < PAGE_TTL_S:
+            return cached[1]
+        return None
+
+    def _keep_page(self, slot: tuple, hits: list[dict]) -> None:
+        """A new page for this slot: what had been shown and is still on it
+        stays shown; the rest is forgotten."""
+        self._pages[slot] = (time.time(), hits)
+        key = json.dumps(list(slot))
+        ids = {h["id"] for h in hits}
+        self._state["shown"][key] = [i for i in self._state["shown"].get(key, []) if i in ids]
+        self._save_state()
+
+    def _unshown(self, slot: tuple, hits: list[dict], avoid: str | None) -> list[dict]:
+        """**No picture twice until every one has been shown** (ADR-0047
+        §2e); then the round starts again - never with the one on screen,
+        when there is another."""
+        shown = set(self._state["shown"].get(json.dumps(list(slot)), []))
+        fresh = [h for h in hits if h["id"] not in shown and f"{h['id']}.jpg" != avoid]
+        if fresh:
+            return fresh
+        self._state["shown"][json.dumps(list(slot))] = []
+        return [h for h in hits if f"{h['id']}.jpg" != avoid] or hits
+
+    def _shown(self, slot: tuple, hit: dict) -> None:
+        key = json.dumps(list(slot))
+        self._state["shown"].setdefault(key, []).append(hit["id"])
+        self._save_state()
+
+    def next_local(self, avoid: str | None = None) -> str | None:
+        """The next of the device's own pictures, by the same rule: none
+        twice until every one has been shown."""
+        names = self.local_names()
+        if not names:
+            return None
+        shown = set(self._state["local_shown"])
+        fresh = [n for n in names if n not in shown and n != avoid]
+        if not fresh:
+            self._state["local_shown"] = []
+            fresh = [n for n in names if n != avoid] or names
+        name = random.choice(fresh)
+        self._state["local_shown"].append(name)
+        self._save_state()
+        return name
 
     # ── the page a category answers with ────────────────────────────────
 
@@ -196,9 +287,25 @@ class Wallpapers:
         may look at the answer.
         """
         slot = (category, wide)
+        fresh = self._fresh(slot)
+        if fresh is not None:
+            return fresh
         cached = self._pages.get(slot)
-        if cached is not None and time.monotonic() - cached[0] < PAGE_TTL_S:
-            return cached[1]
+        hits = await self._pixabay(key, category, wide, self._today_page())
+        if hits is None:
+            return cached[1] if cached else []
+        if not hits and self._today_page() > 1:
+            # A category with fewer than three pages: its first.
+            hits = await self._pixabay(key, category, wide, 1)
+            if hits is None:
+                return cached[1] if cached else []
+        self._keep_page(slot, hits)
+        logger.info("wallpapers: %s has %d %spictures", category, len(hits), "wide " if wide else "")
+        return hits
+
+    async def _pixabay(self, key: str, category: str, wide: bool, page: int) -> list[dict] | None:
+        """One page of a category, filtered as the screen needs; None when
+        the request failed."""
         params = {
             "key": key,
             "category": category,
@@ -209,29 +316,27 @@ class Wallpapers:
             "min_height": WIDE_MIN_HEIGHT if wide else MIN_HEIGHT,
             "order": "popular",
             "per_page": WIDE_PER_PAGE if wide else PER_PAGE,
+            "page": page,
         }
         try:
             async with self._session.get(
                 API_URL, params=params, timeout=aiohttp.ClientTimeout(total=TIMEOUT_S)
             ) as response:
                 if response.status >= 400:
-                    logger.info(
-                        "wallpapers: %s answered HTTP %s", category, response.status
-                    )
-                    return cached[1] if cached else []
+                    logger.info("wallpapers: %s page %d answered HTTP %s", category, page, response.status)
+                    # Past the last page Pixabay answers 400: no pictures,
+                    # not a failure.
+                    return [] if response.status == 400 and page > 1 else None
                 body = await response.json()
         except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as exc:
             logger.info("wallpapers: %s failed: %s", category, exc)
-            return cached[1] if cached else []
+            return None
         hits = [h for h in (body.get("hits") or []) if h.get("largeImageURL")]
         self._count("pixabay", hits, _ratio)
         if wide:
             hits = [h for h in hits if _ratio(h) >= WIDE_RATIO]
-        hits = [{"id": str(h.get("id")), "url": h["largeImageURL"], "user": h.get("user") or "",
+        return [{"id": str(h.get("id")), "url": h["largeImageURL"], "user": h.get("user") or "",
                  "page": h.get("pageURL") or "", "source": "pixabay"} for h in hits]
-        self._pages[slot] = (time.monotonic(), hits)
-        logger.info("wallpapers: %s has %d %spictures", category, len(hits), "wide " if wide else "")
-        return hits
 
     # ── the picture on screen ───────────────────────────────────────────
 
@@ -240,10 +345,12 @@ class Wallpapers:
         word as the search. Cached a day, as Pixabay's pages are - Pexels
         asks for no more, and its 200 requests an hour are never near."""
         slot = ("pexels", topic, wide)
+        fresh = self._fresh(slot)
+        if fresh is not None:
+            return fresh
         cached = self._pages.get(slot)
-        if cached is not None and time.monotonic() - cached[0] < PAGE_TTL_S:
-            return cached[1]
-        params = {"query": topic, "orientation": "landscape", "per_page": PEXELS_PER_PAGE}
+        params = {"query": topic, "orientation": "landscape", "per_page": PEXELS_PER_PAGE,
+                  "page": self._today_page()}
         try:
             async with self._session.get(
                 PEXELS_URL, params=params, headers={"Authorization": key},
@@ -270,7 +377,7 @@ class Wallpapers:
         hits = [{"id": f"pexels-{p.get('id')}", "url": p["src"]["large2x"],
                  "user": p.get("photographer") or "", "page": p.get("url") or "", "source": "pexels"}
                 for p in photos]
-        self._pages[slot] = (time.monotonic(), hits)
+        self._keep_page(slot, hits)
         logger.info("wallpapers: Pexels %s has %d %spictures", topic, len(hits), "wide " if wide else "")
         return hits
 
@@ -311,16 +418,17 @@ class Wallpapers:
             for source, category, w in rounds:
                 if source == "pexels":
                     hits = await self._pexels_page(pexels_key, category, w)
+                    slot = ("pexels", category, w)
                 else:
                     hits = await self._page(key, category, w)
+                    slot = (category, w)
                 if not hits:
                     continue
-                # Not the one already on screen, when there is another.
-                choices = [h for h in hits if f"{h['id']}.jpg" != avoid] or hits
-                hit = random.choice(choices)
+                hit = random.choice(self._unshown(slot, hits, avoid))
                 name = await self._download(hit)
                 if name is None:
                     continue
+                self._shown(slot, hit)
                 return {
                     "file": name,
                     "topic": category,

@@ -84,6 +84,10 @@ MIGRATIONS: tuple[Migration, ...] = (
     # second layout still shows today's weather, so it is not "None".
     convert("idle_forecast", lambda v: "Today only" if v == "None" else v,
             "idle_forecast: None is called Today only"),
+    # George, trying the touchpad (2026-10-05): "50 is way too slow" - the
+    # range is 150 to 400 now. A slower speed kept from a preview is raised.
+    convert("pointer_speed", lambda v: max(150, v) if isinstance(v, (int, float)) else v,
+            "pointer_speed: at least 150 %"),
 )
 
 

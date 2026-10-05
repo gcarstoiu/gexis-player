@@ -55,6 +55,17 @@ put 644 "$S/04-ui/files/gexis-kiosk.service" "$U/gexis-kiosk.service"
 # The system-wide place labwc reads when the user has none of their own:
 # a package does not install into /home (ADR-0107).
 put 644 "$S/04-ui/files/labwc-rc.xml" /etc/xdg/labwc/rc.xml
+# No system cursor on the panel (2026-10-05, ADR-0121): labwc draws one where
+# it starts and hides it only at a real touch, which a panel driven from the
+# phone never gets. A theme whose every cursor is one transparent pixel - a
+# 68-byte Xcursor file - and gexis-kiosk.service names it. Every common name
+# points at it, so a name the theme lacked could not bring the arrow back.
+B=/usr/share/icons/gexis-blank/cursors
+put 644 "$S/04-ui/files/blank-cursor" "$B/default"
+for name in left_ptr arrow pointer hand1 hand2 text xterm grab grabbing wait \
+		watch progress not-allowed crosshair move all-scroll; do
+	ln -s default "$STAGE$B/$name"
+done
 
 # --- The visualiser's driver (05-peppy); the engines and skins are their own ---
 P=/opt/gexis-peppy

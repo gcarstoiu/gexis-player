@@ -390,6 +390,22 @@ class Supervisor:
             self._notify_active_change()
             logger.info("relinquish: %s gave up the device, nobody holds it now", renderer_id)
 
+    async def stop_active(self) -> str | None:
+        """**Stop whoever holds the device, and leave nobody holding it** - the
+        same release a takeover uses, polite stop first and the ladder after.
+        For an update (ADR-0110 §4: "playback stops"), which until 2026-10-05
+        paused LMS alone and left Spotify playing through the install
+        (George). Returns who was stopped, or None."""
+        async with self._lock:
+            holder = self._active
+            if holder is None:
+                return None
+            outcome = await self._release_with_ladder(holder)
+            self._active = None
+            self._notify_active_change()
+            logger.info("stop: %s stopped (%s), nobody holds the device", holder, outcome.name.lower())
+            return holder
+
     def _notify_active_change(self) -> None:
         if self._on_active_change is not None:
             self._on_active_change(self._active)

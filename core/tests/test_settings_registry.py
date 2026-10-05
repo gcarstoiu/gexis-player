@@ -153,6 +153,10 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         "theaudiodb_key",
         # ADR-0120 §6 (2026-10-05): Pexels beside Pixabay, the owner's key.
         "pexels_key",
+        # ADR-0121 §7 (2026-10-05): the phone as the panel's touchpad.
+        "phone_touchpad", "pointer_speed",
+        # ADR-0121 §3, amended 2026-10-05: Claude Design's two cursor sets.
+        "pointer_style",
         # ADR-0055, 2026-09-23: the design has no output picker, because
         # the design did not know the device has four playback outputs and
         # that two of them cannot be turned down.
@@ -592,8 +596,9 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # Attached screen and Screen rotation (ADR-0109, Phase 13b). **90**:
     # Visualiser skins (ADR-0111). **91**: Change logs (ADR-0116). **92**:
     # Sound card board (ADR-0117). **93**: TheAudioDB key (ADR-0120,
-    # 2026-10-05). **94**: Pexels API key (ADR-0120).
-    assert len(rows) == 94
+    # 2026-10-05). **94**: Pexels API key (ADR-0120). **96**: Phone touchpad
+    # and Pointer speed (ADR-0121). **97**: Pointer style (ADR-0121, amended).
+    assert len(rows) == 97
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
@@ -605,8 +610,9 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # tile; 70 with Software update (George, 2026-10-01); 72 with Attached
     # screen and Screen rotation; 73 with Visualiser skins; 74 with Change
     # logs (ADR-0116); 75 with Sound card board (ADR-0117); 76 with
-    # TheAudioDB key (ADR-0120); 77 with Pexels API key (ADR-0120).
-    assert len(rows) - len(kept) == 77
+    # TheAudioDB key (ADR-0120); 77 with Pexels API key (ADR-0120); 79 with
+    # Phone touchpad and Pointer speed (ADR-0121); 80 with Pointer style.
+    assert len(rows) - len(kept) == 80
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():
@@ -1296,16 +1302,35 @@ def test_fixed_output_hides_the_volume_rows(store):
     """George, 2026-10-05: with Output mode Fixed, Maximum volume, Starting
     volume and Volume curve are hidden entirely - there is no slider for
     them to shape."""
-    settings = Settings(store, registry=load_registry(), wired={"output_mode": lambda v: None})
+    settings = Settings(store, registry=load_registry(),
+                        wired={"output_mode": lambda v: None, "spotify_enabled": lambda v: None})
     def shown():
-        return {r["key"] for g in settings.to_json() if g["id"] == "audio"
+        return {r["key"] for g in settings.to_json()
                 for r in g["rows"] if r.get("key") and r["visible"]}
     volume_rows = {"max_ceiling", "start_max", "travel_curve"}
+    settings.set("spotify_enabled", True)
     settings.set("output_mode", "Variable")
     assert volume_rows <= shown()
     settings.set("output_mode", "Fixed")
     assert not volume_rows & shown()
     assert "output_mode" in shown()
+
+
+def test_starting_volume_sits_with_spotify_and_hides_with_it(store):
+    """George, 2026-10-05: Starting volume next to Spotify's switch, shown
+    while Spotify is on and the output variable - two conditions on one row."""
+    settings = Settings(store, registry=load_registry(),
+                        wired={"output_mode": lambda v: None, "spotify_enabled": lambda v: None})
+    sources = next(g for g in load_registry() if g["id"] == "sources")["rows"]
+    keys = [r.get("key") for r in sources]
+    assert keys.index("start_max") == keys.index("spotify_enabled") + 1
+    def start_max():
+        return next(r for g in settings.to_json() for r in g["rows"] if r.get("key") == "start_max")["visible"]
+    settings.set("output_mode", "Variable")
+    settings.set("spotify_enabled", True)
+    assert start_max() is True
+    settings.set("spotify_enabled", False)
+    assert start_max() is False
 
 
 def test_the_artwork_updates_are_enrichment_s_lyrion_client_rows():
@@ -1394,3 +1419,30 @@ async def test_saving_the_device_name_from_settings_restarts_the_device(store):
     settings.set("device_name", "Hall")  # setup's way in
     await asyncio.sleep(0)
     assert restarted == ["device_name"]
+
+
+def test_every_row_shown_and_editable_is_wired():
+    """2026-10-05: TheAudioDB key, Pexels API key (ADR-0120) and Pointer
+    style (ADR-0121) were shown in Settings and refused every write - none
+    was in `__main__`'s `wired`, and nothing checked. A row the panel shows
+    for editing is wired there, or listed here with the reason it is not."""
+    source = (Path(__file__).parent.parent / "src" / "gexis_core" / "__main__.py").read_text()
+    # The `wired={...}` argument itself: a key read elsewhere in the file is
+    # not a key that accepts writes.
+    start = source.index("wired={") + len("wired=")
+    depth = 0
+    for end in range(start, len(source)):
+        depth += {"{": 1, "}": -1}.get(source[end], 0)
+        if depth == 0:
+            break
+    main = source[start:end + 1]
+    editable = {"toggle", "number", "choice", "text", "multi"}
+    not_wired_on_purpose = {
+        # Rows the panel shows but answers itself, or that another path writes.
+    }
+    missing = sorted(
+        r["key"] for g in json.loads((Path(__file__).parent.parent / "src" / "gexis_core" / "settings_registry.json").read_text()) for r in g["rows"]
+        if r.get("key") and r.get("type") in editable and r.get("surfaced", True)
+        and f'"{r["key"]}"' not in main and r["key"] not in not_wired_on_purpose
+    )
+    assert not missing, f"shown for editing, not wired in __main__: {missing}"

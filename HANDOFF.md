@@ -35,17 +35,46 @@ release** (George, 2026-10-04): never push a release onto an open PR.
 | Skin picker (ADR-0050 amended) | 960 px previews made ahead for every installed pack |
 | Released in 0.8.7 | The new-screen notice and its straight switch (29a3386, 88ee721, d91a4bc); a USB disk kept 7 days after unplugging (ADR-0115 decision 17, ddf088f); setup's copy fixes from the review (963857d-034fb33); genre pills kept to two rows on the artist page (7cd3e1b); skin packs fetched from the channel's release when the player's own is unpublished, a stale pack failure no longer shown, failures in words (efd329d); Finding 109's playback test; 13a/13c/13e closed |
 
-**`gexis` right now (2026-10-05, afternoon):** the 13d preview with
-`phase-13b` merged in (core and player `0.8.9+git86.0d130e3`, ui `0.8.9+git77.a4b056c` - with
-**ADR-0120 steps 1-3**: backgrounds placed by what they show, OpenCV 5.0.0
-and both models in the core; TheAudioDB for artist backgrounds and the
-artwork updates; Pexels beside Pixabay, its key row empty), gexis-system `0.8.9+git44.83e89ad`,
-gexis-go-librespot `0.9.0-2` (Spotify without normalisation),
-gexis-plexamp `0.3.0-2+0.8.9+git35.ab56c0c` with the unreleased 0.4.0 plugin
-files laid over it; on the 13.3" with a new cable. George to watch the bar's
-idle screen.
+**`gexis` right now (2026-10-05, evening):** the 13d preview with
+`phase-13b` merged in - core `0.9.0+git17.8ebb7c1`, player and ui
+core, player and ui `0.9.0+git44.78e216c`, system `0.8.9+git87.5b4042c`: 0.9.0, the post-0.9.0 fixes and
+**ADR-0121's touchpad** with George's first four changes; on the 10.1" 1280 x 800 (the 13.3" FHD jammed the Wi-Fi). Its
+volume read 100 % after the touchpad tests, nothing playing - whether a
+test tap set it is unknown (LESSONS 59); left as it was.
 
 **Next, in order:**
+0. **Fixes after 0.9.0, on gexis, unreleased** (George's findings,
+   2026-10-05): an update stops whoever is playing (4f1684d); the starting
+   volume holds 3 s after Spotify takes over (e10b93e); Starting volume
+   beside Spotify's switch (1ef73a8); the panel's post-update notes scroll
+   and wait for Continue (1f5cd5f). The phone's notes scrolled in every
+   test - George sends a screenshot next time.
+0. **ADR-0121, the phone as touchpad and keyboard: built and on gexis**
+   (1c46f74, a56430d, 6181168; after George's first try, a8130c9 speed
+   150-400 %, 88f389d the choppy start, 78356e2 a bigger pad and a touch
+   outside closes the sheet). Three of its four measurements done and in
+   the ADR (31 ms round trip; taps drive the panel after two fixes; the
+   kiosk 16-23 % of one core while moving). **Owed: the keyboard on George's
+   Android** - he found no text field; Settings' text rows (e.g. Pexels API
+   key, empty) have one. **No system cursor on the panel** since fd106a5 + 5b4042c
+   (a blank labwc cursor theme in gexis-system; on gexis, checked by grim
+   -c). **Gestures and pointer styles built and on gexis**
+   (George took every recommendation, 2026-10-05; ADR-0121 §2-3 amended,
+   Pointer style in ADR-0022): two fingers scroll (7ea1f87), pinch zooms
+   1-3x and zooms out when the phone leaves; Dot and Arrow from Claude
+   Design's *Cursors* handoff (`Gexis_DAC_Player_3.zip`), Dot first.
+   Checked through a local relay, not on George's phone; the zoom's cost
+   on the Pi is not measured. **George's second try** (2026-10-05): TheAudioDB key,
+   Pexels API key and Pointer style had never accepted writes - not in
+   `__main__`'s wired table; fixed, and a test now catches it (42c7236).
+   The drawer holds while the pointer is on it, rings only on icon buttons
+   and follow the screen (d84fb94), scroll lines on the pad (80ff8bc).
+   **Home / Now playing / Lyrics in the phone's sheet** (ADR-0101
+   amended; N1 not behind the touchpad, N2 greyed while nothing plays;
+   55d6c1e): checked on gexis's panel (standard layout) - Lyrics, Lyrics
+   off, Home, Now playing, each screenshotted, toggle state reported back.
+   **The bar layout's lyrics switch is not tried on hardware.** Drags (queue order, list scrolling) are
+   out by decision D. Not measured during playback.
 0. **ADR-0120, bar backgrounds** (accepted 2026-10-05): step 1 (placement)
    and step 2 (TheAudioDB for
    backgrounds and the Enrichment updates, its key row) built and live on
@@ -454,6 +483,16 @@ Phases 9-13 were renumbered on 2026-09-16 (George). `docs/DEVELOPMENT.md`
 holds each phase's acceptance criteria; this list is only the order.
 
 ## Things that will bite if forgotten
+
+- **The 13.3" panel's setup jams gexis's Wi-Fi** (measured 2026-10-05,
+  0.9.0 preview, 5 GHz channel 36, signal -62 to -66 dBm either way): with
+  the panel connected, 20-37 % of pings to the router lost, 80-1,260 ms
+  average, link 6.5-27 Mb/s; unplugged, 0 % lost, 7 ms, 290-390 Mb/s. It
+  shows as stuttering playback and Settings that fail to load on the phone.
+  Wi-Fi power saving is not the cause (off was worse). **Swapped for the
+  10.1" 1280x800, the same day: 0 % lost, 7-10 ms to the Lyrion server,
+  290-325 Mb/s** - so it is the 13.3" FHD's setup (the panel, its supply or
+  its cable; not split further). A network cable to the Pi avoids it.
 
 - **Restarting `gexis-core` does not reload the panel.** `ui/dist` rsynced to
   `/opt/gexis-ui` reaches Chromium only on a page load, so a probe run after a

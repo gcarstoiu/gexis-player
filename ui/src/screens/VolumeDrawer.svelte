@@ -34,7 +34,8 @@
 
 <div class="drawer" class:is-open={open} role="presentation"
      onpointerdown={onactivity} onpointerup={onsettled}
-     onpointercancel={onsettled} onpointerleave={onsettled}>
+     onpointercancel={onsettled} onpointerleave={onsettled}
+     onpointerenter={(event) => event.pointerType === 'mouse' && onactivity?.(event)}>
   <div class="drawer__title">Controls</div>
   {#if $fixedOutput}
     <!--
