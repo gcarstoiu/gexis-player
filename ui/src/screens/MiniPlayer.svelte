@@ -59,37 +59,124 @@
   /** Whole pixels go; **the fraction stays for the next frame**. A finger
    *  starts slowly - under a pixel a frame - and rounding each frame's share
    *  away held the pointer still and then let it jump (George, 2026-10-05:
-   *  "choppy at the beginning"). */
+   *  "choppy at the beginning"). The same for a two-finger scroll. */
   function flush() {
     frame = 0;
     const dx = Math.trunc(pending.dx);
     const dy = Math.trunc(pending.dy);
     if (dx || dy) pad?.send({ t: 'move', dx, dy });
     pending = { dx: pending.dx - dx, dy: pending.dy - dy };
+    const sx = Math.trunc(scrolled.dx);
+    const sy = Math.trunc(scrolled.dy);
+    if (sx || sy) pad?.send({ t: 'scroll', dx: sx, dy: sy });
+    scrolled = { dx: scrolled.dx - sx, dy: scrolled.dy - sy };
+    if (Math.abs(zoomed - 1) > 0.002) {
+      pad?.send({ t: 'zoom', by: Math.round(zoomed * 1000) / 1000 });
+      zoomed = 1;
+    }
+  }
+
+  function soon() {
+    if (!frame) frame = requestAnimationFrame(flush);
+  }
+
+  // ── Two fingers (ADR-0121 §2, amended 2026-10-05) ─────────────────────
+  //: How far two fingers go together, or apart, before the gesture is
+  //: decided - a scroll or a zoom, which it then stays until they lift.
+  const DECIDE = 12;
+  const fingers = new Map();
+  //: 'one' (moving and tapping), 'two' (undecided), 'scroll', 'zoom', or
+  //: 'done' - after two fingers, nothing until every finger has lifted.
+  let gesture = null;
+  let middle = null;
+  let spread = 0;
+  let firstMiddle = null;
+  let firstSpread = 0;
+  let scrolled = { dx: 0, dy: 0 };
+  let sideways = false;
+  let zoomed = 1;
+
+  function midpoint() {
+    const [a, b] = [...fingers.values()];
+    return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  }
+  function apart() {
+    const [a, b] = [...fingers.values()];
+    return Math.hypot(a.x - b.x, a.y - b.y);
   }
 
   function padDown(event) {
     event.currentTarget.setPointerCapture(event.pointerId);
-    touchStart = { at: performance.now() };
-    last = { x: event.clientX, y: event.clientY };
-    travelled = 0;
+    fingers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (fingers.size === 1 && gesture === null) {
+      gesture = 'one';
+      touchStart = { at: performance.now() };
+      last = { x: event.clientX, y: event.clientY };
+      travelled = 0;
+    } else if (fingers.size === 2 && gesture === 'one') {
+      // The second finger: no tap, no pointer movement, until decided.
+      gesture = 'two';
+      touchStart = null;
+      middle = firstMiddle = midpoint();
+      spread = firstSpread = apart();
+    } else {
+      gesture = 'done';
+    }
   }
 
   function padMove(event) {
-    if (!last) return;
-    const dx = event.clientX - last.x;
-    const dy = event.clientY - last.y;
-    last = { x: event.clientX, y: event.clientY };
-    travelled += Math.abs(dx) + Math.abs(dy);
-    pending = { dx: pending.dx + dx, dy: pending.dy + dy };
-    if (!frame) frame = requestAnimationFrame(flush);
+    if (!fingers.has(event.pointerId)) return;
+    fingers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (gesture === 'one') {
+      const dx = event.clientX - last.x;
+      const dy = event.clientY - last.y;
+      last = { x: event.clientX, y: event.clientY };
+      travelled += Math.abs(dx) + Math.abs(dy);
+      pending = { dx: pending.dx + dx, dy: pending.dy + dy };
+      soon();
+      return;
+    }
+    if (fingers.size !== 2) return;
+    const m = midpoint();
+    const d = apart();
+    if (gesture === 'two') {
+      if (Math.abs(d - firstSpread) > DECIDE * 1.5) gesture = 'zoom';
+      else if (Math.hypot(m.x - firstMiddle.x, m.y - firstMiddle.y) > DECIDE) {
+        gesture = 'scroll';
+        // One direction per scroll: a list goes up and down, a row sideways,
+        // and a scroll a little off straight must not move both.
+        sideways = Math.abs(m.x - firstMiddle.x) > Math.abs(m.y - firstMiddle.y);
+      } else return;
+      // Counted from here, so the deciding distance is not a jump.
+      middle = m;
+      spread = d;
+      return;
+    }
+    if (gesture === 'scroll') {
+      scrolled = sideways
+        ? { dx: scrolled.dx + m.x - middle.x, dy: 0 }
+        : { dx: 0, dy: scrolled.dy + m.y - middle.y };
+      middle = m;
+      soon();
+    } else if (gesture === 'zoom' && spread > 0) {
+      zoomed *= d / spread;
+      spread = d;
+      soon();
+    }
   }
 
-  function padUp() {
-    if (!touchStart) return;
+  function padUp(event) {
+    fingers.delete(event.pointerId);
+    const was = gesture;
+    if (fingers.size > 0) {
+      if (gesture !== 'one') gesture = 'done';
+      return;
+    }
+    gesture = null;
+    last = null;
+    if (was !== 'one' || !touchStart) return;
     const quick = performance.now() - touchStart.at < TAP_MS && travelled < TAP_MOVE;
     touchStart = null;
-    last = null;
     if (!quick) return;
     // **The keyboard opens inside this same touch** (ADR-0121 §4): the panel
     // said in advance that the pointer is over a text field. The touch's own
@@ -102,6 +189,17 @@
       typing = true;
     }
     pad?.send({ t: 'tap' });
+  }
+
+  function padCancel(event) {
+    fingers.delete(event.pointerId);
+    touchStart = null;
+    if (fingers.size === 0) {
+      gesture = null;
+      last = null;
+    } else {
+      gesture = 'done';
+    }
   }
 
   /** What changed in the hidden field, sent as text and backspaces - so a
@@ -239,7 +337,7 @@
       onpointerdown={padDown}
       onpointermove={padMove}
       onpointerup={padUp}
-      onpointercancel={() => { touchStart = null; last = null; }}
+      onpointercancel={padCancel}
       onmousedown={(event) => event.preventDefault()}
     >
       <span class="mini__pad-hint">{typing ? 'Typing on the player' : overField ? 'Tap to type' : 'Touchpad'}</span>

@@ -51,6 +51,7 @@
  "phone_touchpad",
  "plugins",
  "pointer_speed",
+ "pointer_style",
  "power",
  "reboot",
  "reclaim_lms",

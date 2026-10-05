@@ -10,6 +10,13 @@
   The panel tells the phones, in advance, whether the pointer is over a text
   field - so the phone's tap there can open its keyboard within that same
   touch, the one moment a browser allows it (ADR-0121 §4).
+
+  Two styles, from Claude Design's *Cursors* handoff (ADR-0121 §3), chosen
+  by Pointer style: **Dot** - a dot, a ring around a small round control, a
+  pill over a slider or while two fingers scroll - and **Arrow**, with a
+  ring at its tip over what can be pressed and a double arrow over a
+  slider. The shapes are drawn where the control is; **the pointer itself
+  never moves to it**, so it stays where the finger left it.
 -->
 <script>
   import { onDestroy } from 'svelte';
@@ -17,16 +24,50 @@
   import { openTouchpad, takesText } from './touchpad.js';
 
   const HIDE_MS = 5000;
+  //: Pinch: from the panel as it is to three times as large (ADR-0121 §2).
+  const ZOOM_MAX = 3;
 
   let x = $state(window.innerWidth / 2);
   let y = $state(window.innerHeight / 2);
   let shown = $state(false);
+  //: What the pointer is over, for its shape: 'plain', 'press', 'slide',
+  //: or 'scroll' while two fingers scroll.
+  let kind = $state('plain');
+  //: The ring around a small round control: its centre and size, or null.
+  let ring = $state(null);
+  let scrolledAt = 0;
   let hideTimer;
   let pad = null;
   let over = false;
 
   const on = $derived($settingValues.phone_touchpad !== false);
   const speed = $derived(Math.max(0.25, Number($settingValues.pointer_speed ?? 150) / 100));
+  const arrow = $derived($settingValues.pointer_style === 'Arrow');
+
+  //: Pressable things and sliders, as the panel marks them.
+  const PRESSABLE = 'button, a[href], input, select, textarea, label, summary, [role=button], [role=tab], [role=switch], [role=checkbox], [role=option], [role=menuitem], [role=link]';
+  const SLIDER = '[role=slider], input[type=range], .slider';
+  //: The design's round control: width and height within 1.6 of each other.
+  //: And small - the design drew rings round buttons; a home screen card is
+  //: as square, and a ring round it would cover the screen.
+  const ROUND = 1.6;
+  const RING_MAX = 96;
+
+  /** The pointer's shape for what lies under it. */
+  function look() {
+    const target = under();
+    const slider = target?.closest(SLIDER);
+    const pressable = !slider && target?.closest(PRESSABLE);
+    kind = performance.now() - scrolledAt < 400 ? 'scroll' : slider ? 'slide' : pressable ? 'press' : 'plain';
+    ring = null;
+    if (kind === 'press' && !arrow) {
+      const r = pressable.getBoundingClientRect();
+      const long = Math.max(r.width, r.height);
+      if (long / Math.max(1, Math.min(r.width, r.height)) < ROUND && long <= RING_MAX) {
+        ring = { cx: r.left + r.width / 2, cy: r.top + r.height / 2, size: long + 16 };
+      }
+    }
+  }
 
   $effect(() => {
     if (!on) return;
@@ -42,6 +83,7 @@
       pad?.close();
       pad = null;
       shown = false;
+      unzoom();
     };
   });
 
@@ -61,9 +103,10 @@
   function receive(message) {
     switch (message.t) {
       case 'move': {
-        x = Math.max(0, Math.min(window.innerWidth - 1, x + Number(message.dx || 0) * speed));
-        y = Math.max(0, Math.min(window.innerHeight - 1, y + Number(message.dy || 0) * speed));
+        x = edge(x + Number(message.dx || 0) * speed, window.innerWidth, 'x');
+        y = edge(y + Number(message.dy || 0) * speed, window.innerHeight, 'y');
         wake();
+        look();
         const field = takesText(under());
         if (field !== over) {
           over = field;
@@ -74,6 +117,8 @@
       case 'tap':
         wake();
         tap();
+        // What the tap opened is now under the pointer.
+        requestAnimationFrame(look);
         break;
       case 'text':
         insert(String(message.text ?? ''));
@@ -81,7 +126,100 @@
       case 'key':
         key(String(message.key ?? ''));
         break;
+      case 'scroll':
+        wake();
+        scrolledAt = performance.now();
+        scroll(Number(message.dx || 0), Number(message.dy || 0));
+        look();
+        break;
+      case 'zoom':
+        wake();
+        zoomBy(Number(message.by) || 1);
+        look();
+        break;
+      case 'gone':
+        // A phone's sheet closed, or the phone went: never leave the panel
+        // zoomed for whoever looks at it next.
+        unzoom();
+        break;
     }
+  }
+
+  // ── Two fingers (ADR-0121 §2, amended 2026-10-05) ─────────────────────
+
+  /** **The content follows the fingers**, as on the phone's own screen:
+   *  fingers up move the list up. What scrolls is the nearest thing under
+   *  the pointer that scrolls that way; the page otherwise. */
+  function scroll(dx, dy) {
+    if (dy) scroller(under(), 'y')?.scrollBy({ top: -dy * speed, behavior: 'instant' });
+    if (dx) scroller(under(), 'x')?.scrollBy({ left: -dx * speed, behavior: 'instant' });
+  }
+
+  function scroller(element, axis) {
+    for (let el = element; el && el !== document.documentElement; el = el.parentElement) {
+      const style = getComputedStyle(el);
+      const overflow = axis === 'y' ? style.overflowY : style.overflowX;
+      const room = axis === 'y' ? el.scrollHeight > el.clientHeight : el.scrollWidth > el.clientWidth;
+      if (room && /(auto|scroll)/.test(overflow)) return el;
+    }
+    return document.scrollingElement;
+  }
+
+  //: The panel's magnification and where its corner sits on the screen.
+  let zoom = 1;
+  let tx = 0;
+  let ty = 0;
+
+  /** Larger or smaller around the pointer: what is under it stays under it. */
+  function zoomBy(by) {
+    const next = Math.max(1, Math.min(ZOOM_MAX, zoom * by));
+    if (next === zoom) return;
+    tx = x - ((x - tx) / zoom) * next;
+    ty = y - ((y - ty) / zoom) * next;
+    zoom = next;
+    paint();
+  }
+
+  function unzoom() {
+    zoom = 1;
+    tx = 0;
+    ty = 0;
+    paint();
+  }
+
+  /** Zoomed, the pointer pushing past an edge moves the view instead. */
+  function edge(to, size, axis) {
+    const inside = Math.max(0, Math.min(size - 1, to));
+    if (zoom > 1 && inside !== to) {
+      if (axis === 'x') tx -= to - inside;
+      else ty -= to - inside;
+      paint();
+    }
+    return inside;
+  }
+
+  /** The whole page drawn at `zoom`, kept covering the screen. */
+  function paint() {
+    const app = document.getElementById('app');
+    if (!app) return;
+    tx = Math.min(0, Math.max(window.innerWidth * (1 - zoom), tx));
+    ty = Math.min(0, Math.max(window.innerHeight * (1 - zoom), ty));
+    if (zoom === 1) {
+      app.style.transform = '';
+      app.style.transformOrigin = '';
+      document.documentElement.classList.remove('panel-zoomed');
+      return;
+    }
+    app.style.transformOrigin = '0 0';
+    app.style.transform = `translate(${tx}px, ${ty}px) scale(${zoom})`;
+    document.documentElement.classList.add('panel-zoomed');
+  }
+
+  /** The pointer lives outside the page it points at: a zoom drawn on the
+   *  page must not carry the pointer with it. */
+  function outside(node) {
+    document.body.appendChild(node);
+    return { destroy: () => node.remove() };
   }
 
   /** A tap where the pointer is: the events a finger's tap would make.
@@ -150,29 +288,147 @@
   }
 </script>
 
-{#if on && shown}
-  <div class="pointer" style:transform={`translate(${x}px, ${y}px)`} aria-hidden="true">
-    <svg viewBox="0 0 24 24" width="30" height="30">
-      <path d="M3 2 L3 19 L8 14.5 L11.5 22 L14.5 20.6 L11 13.3 L17.5 13.3 Z" />
-    </svg>
+{#if on}
+  {#if ring}
+    <div
+      class="ring"
+      class:shown
+      use:outside
+      style:transform={`translate(${ring.cx}px, ${ring.cy}px)`}
+      style:--size={`${ring.size}px`}
+      aria-hidden="true"
+    ></div>
+  {/if}
+  <div class="pointer" class:shown use:outside style:transform={`translate(${x}px, ${y}px)`} aria-hidden="true">
+    {#if arrow}
+      <!-- The Arrow set: 32 px, its point (6, 4) on the pointer. -->
+      {#if kind === 'slide'}
+        <svg class="arrow arrow--drag" viewBox="0 0 32 32" width="32" height="32">
+          <path d="M3 16l6.5-6.5v4.3h13v-4.3L29 16l-6.5 6.5v-4.3h-13v4.3z" />
+        </svg>
+      {:else}
+        <svg class="arrow" viewBox="0 0 32 32" width="32" height="32">
+          {#if kind === 'press'}<circle class="arrow__press" cx="6" cy="4" r="4.6" />{/if}
+          <path d="M6 4l20 10.5-9.6 2.6L12.6 27z" />
+        </svg>
+      {/if}
+    {:else}
+      <!-- The Dot set: a 28 px dot that becomes a pill over a slider (48 x 22)
+           or while two fingers scroll (22 x 48), and a small dot inside a
+           ring round a small round control. -->
+      <span class="dot dot--{ring ? 'ringed' : kind}">
+        <svg class="dot__marks" class:on={kind === 'slide' || kind === 'scroll'} viewBox="0 0 64 64" aria-hidden="true">
+          {#if kind === 'scroll'}
+            <path d="M26 22l6-6 6 6M26 42l6 6 6-6" />
+          {:else}
+            <path d="M22 26l-6 6 6 6M42 26l6 6-6 6" />
+          {/if}
+        </svg>
+      </span>
+    {/if}
   </div>
 {/if}
 
 <style>
-  .pointer {
+  :global(html.panel-zoomed),
+  :global(html.panel-zoomed body) {
+    overflow: hidden;
+  }
+  .pointer,
+  .ring {
     position: fixed;
     left: 0;
     top: 0;
     z-index: 1000;
     pointer-events: none;
     will-change: transform;
+    opacity: 0;
+    transition: opacity 300ms ease-out;
   }
-  .pointer svg {
+  .pointer.shown,
+  .ring.shown {
+    opacity: 1;
+    transition-duration: 0ms;
+  }
+
+  /* The Arrow set (Claude Design, Cursors, mouse 2c). */
+  .arrow {
+    position: absolute;
+    left: -6px;
+    top: -4px;
     display: block;
-    fill: #f4f7f9;
-    stroke: #0b1218;
-    stroke-width: 1.4;
+    fill: #7ed6bc;
+    stroke: #0c1014;
+    stroke-width: 1.6;
     stroke-linejoin: round;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  }
+  .arrow--drag {
+    left: -16px;
+    top: -16px;
+  }
+  .arrow__press {
+    fill: rgba(233, 238, 242, 0.2);
+    stroke: #e9eef2;
+    stroke-width: 1.8;
+  }
+
+  /* The Dot set (Claude Design, Cursors, remote 2g). Shape changes take
+     140 ms; the position follows at once - a glide would add to the
+     touchpad's round trip (ADR-0121 §3). */
+  .dot {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 28px;
+    height: 28px;
+    transform: translate(-50%, -50%);
+    border-radius: 999px;
+    background: #7ed6bc;
+    border: 2.4px solid #0c1014;
+    box-sizing: border-box;
+    transition:
+      width 140ms ease-out,
+      height 140ms ease-out,
+      border-width 140ms ease-out;
+  }
+  .dot--slide {
+    width: 48px;
+    height: 22px;
+  }
+  .dot--scroll {
+    width: 22px;
+    height: 48px;
+  }
+  .dot--ringed {
+    width: 9px;
+    height: 9px;
+    border-width: 0;
+  }
+  .dot__marks {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 64px;
+    height: 64px;
+    transform: translate(-50%, -50%);
+    fill: none;
+    stroke: #0c1014;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0;
+    transition: opacity 140ms ease-out;
+  }
+  .dot__marks.on {
+    opacity: 1;
+  }
+  .ring {
+    width: var(--size);
+    height: var(--size);
+    margin: calc(var(--size) / -2) 0 0 calc(var(--size) / -2);
+    border-radius: 999px;
+    border: 4px solid #7ed6bc;
+    background: rgba(233, 238, 242, 0.14);
+    box-sizing: border-box;
   }
 </style>
