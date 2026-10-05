@@ -1,8 +1,8 @@
 # ADR-0119 — Plexamp is claimed from Settings, and says when it is
 
 **Status:** **Draft** — 2026-10-05. George asked for the screen on the
-Settings copy review and said yes to building it; the questions below are
-his before anything is built.
+Settings copy review and said yes to building it, and answered its three
+questions the same day. Accepted once the claim is measured (below).
 **Builds on:** [ADR-0090](0090-plexamp-ships-the-way-beszel-does.md) §4-5 (one
 row, the token; our plugin acts on it), [ADR-0048](0048-how-the-device-name-reaches-four-services.md)
 (one device name), [ADR-0088](0088-a-plugins-settings-reach-its-unit-as-environment.md) (a row's `env`),
@@ -59,15 +59,14 @@ Then, to "a small *Claim again* link under *Claimed ✓*": **yes**.
 4. **Links in notes.** A note may hold one `https://` address, drawn as a link -
    for every row, not only this one.
 
-## Questions owed (George)
+## Decided (George, 2026-10-05)
 
-- **A. Claim again**, and the player already claimed: Plexamp keeps its old
-  claim until the new one succeeds - or the old one is cleared first, so a
-  failed claim leaves it unclaimed. Proposed: kept until the new one succeeds.
-- **B. A claim that fails** (an expired token - plex.tv's last four minutes):
-  the row says *The claim did not work. Get a new token and try again.*
-- **C. Settings rows as links** (4) is new for every row; ADR-0022 notes
-  stay plain text otherwise.
+- **A. Claim again keeps the old claim until the new one succeeds.** A failed
+  attempt leaves the player claimed as it was.
+- **B. A failed claim** says *The claim did not work. Get a new token and try
+  again.*
+- **C. Links in notes**, for every row: a note may hold one `https://`
+  address, drawn as a link that opens a new tab.
 
 ## To measure before it is accepted
 
