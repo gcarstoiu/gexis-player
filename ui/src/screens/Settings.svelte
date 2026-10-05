@@ -11,6 +11,7 @@
   import { components, update } from '../lib/state.js';
   import UpdateModal from './UpdateModal.svelte';
   import ReleaseNotes from './ReleaseNotes.svelte';
+  import NoteText from '../lib/NoteText.svelte';
   import {
     settingsGroups,
     settingsDevice,
@@ -618,7 +619,9 @@
     // zone in use is one tap away rather than two.
     region = row.grouped ? String(row.value ?? '').split('/')[0] || null : null;
     if (region !== null && !String(row.value ?? '').includes('/')) region = null;
-    draft = row.type === 'text' ? (row.value ?? '') : row.type === 'number' ? (row.value ?? row.min) : null;
+    // ADR-0119: a row its plugin reports done opens empty - Claim again
+    // wants a new token, and the spent one is no use to edit.
+    draft = row.type === 'text' ? (row.status ? '' : (row.value ?? '')) : row.type === 'number' ? (row.value ?? row.min) : null;
     // A seeded list is drawn from the row itself, so the sheet opens with
     // its devices on it rather than with a spinner for the 25 ms the read
     // takes (ADR-0044 §1, amended 2026-09-21).
@@ -1145,7 +1148,13 @@
                         <span class="row__name">{r.label}</span>
                         {#if pending(r)}<span class="dot dot--sm"></span>{/if}
                       </span>
-                      {#if r.note && !opensItsOwn(r)}<span class="row__note">{r.note}</span>{/if}
+                      {#if r.note && !opensItsOwn(r)}<span class="row__note"><NoteText text={r.note} links={false} /></span>{/if}
+                      {#if r.status?.error}<span class="row__note row__note--failed">{r.status.error}</span>{/if}
+                      {#if r.status?.text && r.again}
+                        <!-- ADR-0119: a row its plugin reports done offers to do it
+                             again - the row is the button; this says so. -->
+                        <span class="row__again">{r.again}</span>
+                      {/if}
                       {#if r.uploaded && (r.key.endsWith('.missing') || !r.value) && !embedded}
                         <!-- ADR-0106: an uploaded plugin is removed from here,
                              switched off first. -->
@@ -1187,7 +1196,12 @@
                         {/if}
                       {/if}
                     </span>
-                    {#if r.type !== 'toggle' && shown(r)}
+                    {#if r.status?.text}
+                      <!-- ADR-0119: what the row's plugin says it is (Plexamp:
+                           "Claimed"), in place of the value - a spent claim
+                           token's dots say nothing. -->
+                      <span class="row__value row__value--done"><span class="row__tick" aria-hidden="true">✓</span> {r.status.text}</span>
+                    {:else if r.type !== 'toggle' && shown(r)}
                       <span class="row__value" class:is-pending={pending(r)}>{shown(r)}</span>
                     {/if}
                     {#if r.kind === 'share' && r.items?.length}
@@ -1398,8 +1412,8 @@
     <div class="sheet" class:sheet--full={sheetFull} role="dialog" aria-label={sheet.label}>
       <div class="sheet__head">
         <div class="sheet__title">{sheet.grouped && region !== null ? region : sheet.label}</div>
-        {#if sheet.note && !joinItem}<div class="sheet__note">{sheet.note}</div>{/if}
-        {#if joinItem && sheet.note}<div class="sheet__note">{sheet.note}</div>{/if}
+        {#if sheet.note && !joinItem}<div class="sheet__note"><NoteText text={sheet.note} /></div>{/if}
+        {#if joinItem && sheet.note}<div class="sheet__note"><NoteText text={sheet.note} /></div>{/if}
       </div>
 
       <!-- ADR-0044 §2, both forms. A **string** warns about the row and is
@@ -2162,6 +2176,23 @@
   }
   .row__value.is-pending {
     color: var(--accent-warn);
+  }
+  .row__value--done {
+    color: var(--accent-lms);
+  }
+  .row__tick {
+    font-family: var(--font-sans, inherit);
+  }
+  .row__note--failed {
+    color: var(--accent-warn);
+  }
+  .row__again {
+    display: block;
+    margin-top: 6px;
+    font-size: 14px;
+    color: var(--accent-lms);
+    text-decoration: underline;
+    text-underline-offset: 2px;
   }
   /* Below 520px the value drops under the label instead of squeezing it. */
   @container srow (max-width: 520px) {
