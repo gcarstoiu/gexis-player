@@ -9,7 +9,6 @@
 <script>
   import mark from '../assets/gexis-mark.svg';
   import UpdateSteps from './UpdateSteps.svelte';
-  import ReleaseNotes from './ReleaseNotes.svelte';
 
   //: `outcome` is null while it runs, then `done` or `failed` for the few
   //: seconds App shows it before going on.
@@ -31,16 +30,16 @@
     <span class="lock__crumb">Software update</span>
   </header>
 
-  <div class="lock__main" class:lock__main--notes={outcome === 'done' && update?.whats_new}>
+  <div class="lock__main">
     {#if outcome === 'done'}
+      <!-- ADR-0110, 2026-10-05: the end is the steps, every one ticked, until
+           Done - not the notes again, which were read before installing. -->
       <h1>Updated to {update?.installed}</h1>
-      {#if update?.whats_new}<div class="lock__notes"><ReleaseNotes text={update.whats_new} large /></div>{/if}
+      <div class="lock__steps"><UpdateSteps {update} large /></div>
       <div class="lock__foot">
         <p class="lead">Everything is paused or disconnected.</p>
-        {#if update?.whats_new && oncontinue}
-          <!-- With notes the screen waits for this (or two minutes), so they
-               can be read (2026-10-05). -->
-          <button type="button" class="lock__continue" onclick={oncontinue}>Continue</button>
+        {#if oncontinue}
+          <button type="button" class="lock__continue" onclick={oncontinue}>Done</button>
         {/if}
       </div>
     {:else if outcome === 'failed'}
@@ -106,37 +105,6 @@
     text-align: left;
     min-width: 520px;
   }
-  /* **Long notes scroll** (George, 2026-10-05: 0.9.0's ran off the screen
-     and could not be moved). Their own scroll box, so a vertical swipe
-     works here while the rest of the lock still refuses touch: a browser
-     reads touch-action only up to the nearest scroll box. */
-  .lock__notes {
-    max-width: 900px;
-    flex: 0 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    touch-action: pan-y;
-    text-align: left;
-    padding-right: 8px;
-  }
-  /* **With notes, the notes get the height**: a smaller title on a short
-     screen, and the line and Continue on one row below them - on a
-     1280x400 bar the notes had 11 px otherwise (measured 2026-10-05). */
-  .lock__main--notes {
-    justify-content: flex-start;
-    gap: min(34px, 3.5vh);
-  }
-  .lock__main--notes h1 {
-    font-size: min(60px, 9vh);
-    flex: none;
-  }
-  .lock__main--notes .lock__notes {
-    flex: 1 1 auto;
-  }
-  .lock__main--notes .lead {
-    font-size: min(30px, 5.5vh);
-  }
   .lock__foot {
     flex: none;
     display: flex;
@@ -163,5 +131,20 @@
   .lead--warn {
     color: var(--accent-warn);
     font-size: 26px;
+  }
+  /* A bar: a smaller title and less air, so the steps and Done fit 400 px. */
+  @media (max-height: 520px) {
+    .lock { padding: 14px 40px 18px; }
+    .lock__main { gap: 16px; }
+    h1 { font-size: 38px; }
+    .lock__steps { min-width: 0; }
+    .lead { font-size: 22px; }
+    .lead--warn { font-size: 20px; }
+    .lock__continue { padding: 10px 34px; font-size: 20px; }
+  }
+  @media (max-height: 360px) {
+    .lock { padding-top: 8px; padding-bottom: 10px; }
+    .lock__main { gap: 10px; }
+    h1 { font-size: 32px; }
   }
 </style>
