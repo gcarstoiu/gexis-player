@@ -22,15 +22,36 @@ CHECK_UNIT = "gexis-update-check.service"
 INSTALL_UNIT = "gexis-update-install.service"
 
 
-def installed_release() -> str | None:
+#: dpkg's own record of what is installed. Its change time is when the
+#: answer below can have changed.
+DPKG_STATUS = Path("/var/lib/dpkg/status")
+_installed: tuple[float | None, str | None] = (None, None)
+
+
+def installed_release(status_file: Path | None = None) -> str | None:
     """The installed `gexis-player` - the release (ADR-0107), which an
-    update changes and the image stamp does not."""
+    update changes and the image stamp does not.
+
+    **Asked of dpkg once per change of its status file**, not per call: four
+    Settings rows read it, on every `GET /settings`, and at 31 ms a
+    `dpkg-query` it was most of what made saving a setting slow (George,
+    2026-10-05: the button stayed disabled for seconds).
+    """
+    global _installed
+    try:
+        stamp = (status_file or DPKG_STATUS).stat().st_mtime
+    except OSError:
+        stamp = None
+    if stamp is not None and _installed[0] == stamp:
+        return _installed[1]
     try:
         out = subprocess.run(["dpkg-query", "-W", "-f", "${Version}", "gexis-player"],
                              capture_output=True, text=True, timeout=10)
     except (OSError, subprocess.TimeoutExpired):
         return None
-    return out.stdout.strip() or None
+    version = out.stdout.strip() or None
+    _installed = (stamp, version)
+    return version
 
 
 def status(path: Path = STATUS) -> dict:

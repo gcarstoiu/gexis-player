@@ -230,12 +230,21 @@ else
 	ok "plugin manifests: $plugins"
 fi
 
+echo "== Backgrounds placed by what they show (ADR-0120)"
+for f in /opt/gexis-core/models/face_detection_yunet_2023mar.onnx \
+         /opt/gexis-core/models/object_detection_yolox_2022nov.onnx; do
+	dfs "stat $f" | grep -q 'Inode:' && ok "$f" || bad "$f missing"
+done
+dfs "stat /opt/gexis-core/venv/lib/python3.13/site-packages/cv2/__init__.py" | grep -q 'Inode:' \
+	&& ok "OpenCV in the core's environment" || bad "OpenCV missing from the core's environment"
+
 echo "== Plexamp (ADR-0090), a renderer from another repository"
 for f in /usr/lib/systemd/system/plexamp.service \
          /usr/lib/systemd/system/gexis-plexamp.service \
          /usr/share/gexis/plugins/plexamp/plugin.json \
          /usr/share/gexis/plugins/plexamp/mark.png \
          /opt/gexis-plexamp/src/gexis_plexamp/main.py \
+         /usr/lib/gexis/plexamp-run \
          /usr/lib/gexis/gexis-fetch-component \
          /usr/lib/systemd/system/gexis-fetch@.service \
          /usr/share/gexis/components/plexamp.env; do

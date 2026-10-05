@@ -45,6 +45,8 @@ RATES = {
     "www.wikidata.org": 0.3,
     "en.wikipedia.org": 0.3,
     "lrclib.net": 0.4,
+    #: 30 requests a minute on the shared test key (ADR-0120 §5).
+    "www.theaudiodb.com": 2.1,
 }
 
 #: Generous, because a MusicBrainz lookup took 5.3 s in Finding 036 and
@@ -471,6 +473,66 @@ class FanartArtistImage:
         if not self._proxy_base:
             return url
         return f"{self._proxy_base}/imageproxy/{url}/image_{self.SIZE}x{self.SIZE}_o.jpg"
+
+
+#: TheAudioDB's free shared test key (ADR-0120 §5, George: "1.a"): used
+#: when the owner has typed none. Public and TheAudioDB's own; 30 requests a
+#: minute, shared by every player without a key of its own.
+THEAUDIODB_TEST_KEY = "123"
+THEAUDIODB_BASE = "https://www.theaudiodb.com/api/v1/json"
+
+
+def theaudiodb_key(typed) -> str:
+    """The owner's key when there is one, the shared test key otherwise."""
+    return str(typed or "").strip() or THEAUDIODB_TEST_KEY
+
+
+class TheAudioDBArtistImage:
+    """An artist's background from TheAudioDB (ADR-0120 §3): its fanart, 16:9
+    like fanart.tv's, asked after fanart.tv. Measured on 80 of George's
+    artists: pictures for 64, against fanart.tv's 47 - 17 artists fanart.tv
+    lacks.
+
+    Keyed on the MusicBrainz artist id, as fanart.tv's is. Always ready: with
+    no key typed, the shared test key answers.
+    """
+
+    name = "tadb-bg"
+    FIELDS = ("strArtistFanart", "strArtistFanart2", "strArtistFanart3", "strArtistFanart4")
+    SIZE = 1280
+
+    def __init__(self, http: Http, identity: ArtistIdentity, key=None, proxy_base: str | None = None) -> None:
+        self._http = http
+        self._identity = identity
+        self._key = key or (lambda: None)
+        self._proxy_base = (proxy_base or "").rstrip("/")
+
+    def serves(self, renderer) -> bool:
+        return True
+
+    def ready(self) -> bool:
+        return True
+
+    async def fetch(self, key) -> Answer:
+        if not key.artist:
+            return Answer(Outcome.MISSING)
+        who = await self._identity.resolve(key.artist)
+        if who is False:
+            return Answer(Outcome.UNAVAILABLE)
+        if who is None:
+            return Answer(Outcome.MISSING)
+        mbid, score = who
+        found = await self._http.json(
+            f"{THEAUDIODB_BASE}/{theaudiodb_key(self._key())}/artist-mb.php", {"i": mbid})
+        if found is None:
+            return Answer(Outcome.UNAVAILABLE, confidence=score)
+        artist = (found.get("artists") or [None])[0] or {}
+        url = next((artist.get(f) for f in self.FIELDS if artist.get(f)), None)
+        if not url:
+            return Answer(Outcome.MISSING, confidence=score)
+        sized = (f"{self._proxy_base}/imageproxy/{url}/image_{self.SIZE}x{self.SIZE}_o.jpg"
+                 if self._proxy_base else url)
+        return Answer(Outcome.FOUND, Enrichment(artist_image=sized, sources=(self.name,)), confidence=score)
 
 
 #: The idle screen's background, from the same provider (ADR-0047 §1b).

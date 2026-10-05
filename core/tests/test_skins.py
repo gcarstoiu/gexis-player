@@ -440,3 +440,52 @@ def test_a_pack_s_names_table_gives_each_skin_its_label(tmp_path):
     assert skins.labels(tmp_path) == {"144G5_03_Naim Turntable": "Naim · Turntable · art beside",
                                       "orange": "Volumio · Orange"}
     assert skins.labels(tmp_path / "old-gexis-skins") == {}, "no table: the names as they were"
+
+
+def test_a_skin_type_this_screen_has_none_of_is_not_offered(tmp_path):
+    """George, 2026-10-05: on the 1280x400 bar there are no turntables and no
+    fanart skins, and both could still be picked. Each type with nothing
+    behind it is unavailable, with why; a stored one falls back to the
+    first type that has skins."""
+    from gexis_core import skins as sk
+    from gexis_core.settings import SettingsStore
+    from gexis_core.settings_registry import Settings, load_registry
+
+    _pack(tmp_path / "pack", "templates", "[needle]\nscreen.bgr = a.jpg\n", ["a.jpg"])
+    gone = sk.unavailable_corpora(tmp_path, resolution="1280x800")
+    assert set(gone) == {"Spectrum", "VU meters + spectrum", "Turntables", "Tapes", "Fanart"}
+    assert "VU meters" not in gone and "All" not in gone
+
+    store = SettingsStore(tmp_path / "s.db")
+    settings = Settings(store, registry=load_registry(),
+                        restrictions={"skin_corpus": lambda: sk.unavailable_corpora(tmp_path, resolution="1280x800")})
+    store.set("skin_corpus", "Turntables")
+    assert settings.value("skin_corpus") == "VU meters", "in force: the first type with skins"
+    row = next(r for g in settings.to_json() for r in g["rows"] if r.get("key") == "skin_corpus")
+    assert set(row["unavailable"]) == set(gone)
+    assert row["unavailable"]["Fanart"] == "No skins of this type for this screen."
+
+
+def test_the_skins_are_parsed_again_only_when_a_pack_changes(tmp_path, monkeypatch):
+    """2026-10-05: every GET /settings listed the skins, 34 ms a parse on the
+    player. Parsed once per change of a pack's meters.txt."""
+    import os
+
+    from gexis_core import skins as sk
+
+    directory = _pack(tmp_path / "pack", "templates", "[one]\nscreen.bgr = a.jpg\n", ["a.jpg"])
+    calls = []
+    real = sk.parse
+    monkeypatch.setattr(sk, "parse", lambda text: calls.append(1) or real(text))
+    monkeypatch.setattr(sk, "_INSTALLED", {})
+    monkeypatch.setattr(sk, "_DERIVED", {})
+    assert sk.names(tmp_path, sk.ALL, resolution="1280x800") == ["one"]
+    assert [s.name for s, _ in sk.installed(tmp_path)] == ["one"]
+    assert [s.name for s, _ in sk.installed(tmp_path)] == ["one"]
+    assert len(calls) == 1
+    meters = directory / "meters.txt"
+    meters.write_text("[one]\nscreen.bgr = a.jpg\n[two]\nscreen.bgr = a.jpg\n")
+    os.utime(meters, ns=(meters.stat().st_mtime_ns + 10**9,) * 2)
+    assert [s.name for s, _ in sk.installed(tmp_path)] == ["one", "two"]
+    assert len(calls) == 2
+    assert sk.names(tmp_path, sk.ALL, resolution="1280x800") == ["one", "two"], "the memo follows the parse"

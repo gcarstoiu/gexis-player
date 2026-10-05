@@ -2616,6 +2616,12 @@ says before each release which pins are behind their makers.
 
 ### Phase 13b — Other screens: sizes, bars, and knowing which one is attached
 
+**PHASE 13b CLOSED, 2026-10-04** (George: *"Close 13b"*). All five criteria
+met on the hardware: the 10.1" and 13.3" standard screens, both bars (7.9"
+and 11.9"), a new screen switched to before the panel starts, and the way
+back. Released through 0.8.9. Not seen: 800 x 480 (listed, untested, by
+decision) and a bar at 0°.
+
 **Before the first public release** (George, 2026-09-29: *"13a, b and c all
 needed before release"*).
 
@@ -2670,15 +2676,20 @@ the draft below - George: *"Yes"*; ADR-0109 and its amendments, ADR-0111):
    (1480 x 320): Now Playing, the transition screen, idle, setup's network,
    password and QR, Browse, the visualiser with the bar skins; **Settings on
    the phone only**; what a bar drops dropped by design (decision 7).
-   *Open: not yet tried on the bars.*
+   *Met on both bars, 2026-10-04 (George, after the 11.9" and the 7.9":
+   "all good with it"). Found and fixed on the way, released in 0.8.8 and
+   0.8.9: a new screen switched to before the panel starts; Keep waits two
+   minutes; Now Playing, tray, rail, radio, idle and handoff on a bar; the
+   boot logo in the panel's own mode, turned. Both bars were tried at 180°;
+   a bar at 0° is not yet seen.*
 4. **Skins by screen size:** one pack per size, downloaded with consent, never
    in the image; their licences in Legal and Credits (ADR-0111).
    *Met since 0.5.0.*
 5. **The screen list:** every HDMI model of the presets (106), a case listed
    as its panel, and **a model marked tested only once it has been tried on
    the hardware.**
-   *Open: the 7.9" and 11.9" are marked tested and have not been tried -
-   tried in criterion 3, or unmarked.*
+   *Met, 2026-10-04: the 7.9" and 11.9" were tried in criterion 3 and stay
+   marked tested.*
 
 **Acceptance (draft, as first written - replaced by the list above)**
 
@@ -2787,6 +2798,14 @@ the DAC2 HD and the IQaudio DAC+ as the two tested boards. What is known, and
 what the device can learn by itself:
 [Finding 106](findings/106-what-is-known-about-dacs-without-owning-them.md).
 
+**Progress (2026-10-04):** ADR-0117 accepted. Built, not yet on hardware:
+the volume scale read from the card (70d9461); Volumio's list, read and
+corrected (58ba397); outputs named by their board with Tested / Known /
+Detected (b67f7a5); the *Sound card board* row in Settings, with the
+take-back when no card appears (3f5e552). **Open:** the board in setup's
+Audio step (a design question for George); the preview on `gexis` (the
+DAC2 HD unchanged); the IQaudio DAC+ on the bench (criteria 2 and 4).
+
 **An ADR before anything is built.** It must settle three things:
 - how detection and the list divide the work;
 - the three states a DAC can be in;
@@ -2893,7 +2912,10 @@ commands (ADR-0030). 13f widens that walker from the radio branch to the
 home menu, so My Apps - where plugins publish - appears without work per
 plugin.
 
-**An ADR before anything is built.** It must settle:
+**An ADR before anything is built** - drafted ahead as
+[ADR-0118](decisions/0118-lyrion-s-own-menus.md) (George: *"there will be
+more decisions and questions to be asked around it when the time comes"*).
+It must settle:
 - **Where it lives:** a *Lyrion* (or *More*) tile beside our own screens,
   or in place of some of them.
 - **"As a plugin":** our plugins run software (renderers, services); none

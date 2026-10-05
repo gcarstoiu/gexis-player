@@ -18,7 +18,7 @@ from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
 from gexis_core import alsa, bluetooth_adapter_state, bluetooth_agent, device_name, journal, meters, screen_detect, skins, wifi
-from gexis_core import screen_apply, screen_watch, screens, skin_packs, skin_previews
+from gexis_core import board_apply, placement, screen_apply, screen_watch, screens, skin_packs, skin_previews
 from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
@@ -43,6 +43,7 @@ from gexis_core.enrichment import (
 )
 from gexis_core.providers import (
     FANART_BACKGROUND,
+    TheAudioDBArtistImage,
     ArtistIdentity,
     CoverArtProvider,
     FanartArtistImage,
@@ -73,7 +74,7 @@ from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, TrackMetadata
 from gexis_core import settings_migrations, updates
 from gexis_core.settings import SettingsStore
-from gexis_core.settings_registry import Settings, load_registry
+from gexis_core.settings_registry import InvalidValue, Settings, UnknownSetting, load_registry
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
 from gexis_core import backups, bluealsa_volume, components, outputs, plugin_env, plugins, uploads
@@ -100,7 +101,8 @@ from gexis_core.volume import (
     renderer_percent_to_value,
     hardware_raw_to_renderer_value,
     fixed_output as volume_fixed_output,
-    HARDWARE_MAX,
+    hardware_max,
+    use_scale,
     set_ceiling_reader,
     set_curve_reader,
     set_fixed_output_reader,
@@ -253,6 +255,15 @@ async def _restore_done() -> None:
     await asyncio.create_subprocess_exec("systemctl", "reboot")
 
 
+async def _restart_for(key: str) -> None:
+    """**ADR-0048, amended 2026-10-05: a rename restarts the device**
+    (George: *"It should restart the device"*). The pause lets the answer -
+    and the toast that says so - reach whoever saved it first."""
+    logger.warning("settings: %s changed; restarting the device to apply it", key)
+    await asyncio.sleep(1.5)
+    await asyncio.create_subprocess_exec("systemctl", "reboot")
+
+
 async def _reboot() -> None:
     logger.info("reboot: requested from settings")
     await asyncio.create_subprocess_exec("systemctl", "reboot")
@@ -371,10 +382,33 @@ async def main() -> None:
     # whatever board is fitted rather than of this project. Read from the
     # store directly, like `lms_server` above, because it has to be settled
     # before the volume bridges are built.
+    # **ADR-0117 decision 3: a board chosen before this start made its card,
+    # or goes back.** Before the output is resolved, so a go-back is not
+    # first played to. The go-back restarts again, as the choice did.
+    board_missing = board_apply.check([o.card for o in outputs.discover()])
+    if board_missing is not None:
+        settings_store.delete("sound_card_board")
+        logger.warning("board: %s made no sound card; went back, restarting", board_missing)
+
+        async def _board_restart() -> None:
+            await asyncio.sleep(2.0)
+            await asyncio.create_subprocess_exec("systemctl", "reboot")
+        asyncio.ensure_future(_board_restart())
+
     chosen_output = outputs.resolve(settings_store.get("output_device"))
     if chosen_output is None:
         logger.error("outputs: no playback output found at all")
     else:
+        # **The row shows the output as it is offered now** (ADR-0117): a
+        # board the list names, or a state added, changes its option, and a
+        # choice stored under the old one would match nothing on the row.
+        # Straight to the store, as the screen rows are: through Settings
+        # it would choose the output again.
+        stored = settings_store.get("output_device")
+        if stored and stored != chosen_output.option and \
+                stored.split(outputs.SEP)[0] in (chosen_output.label, chosen_output.aka, chosen_output.card):
+            settings_store.set("output_device", chosen_output.option)
+            logger.info("outputs: the stored choice %r is now offered as %r", stored, chosen_output.option)
         if outputs.write(chosen_output):
             logger.warning(
                 "outputs: output.conf did not match %s and was rewritten; "
@@ -384,6 +418,8 @@ async def main() -> None:
         # ADR-0055: arbitration asks about the output the device is
         # playing to, not about the card it shipped with (Finding 048 §5).
         alsa.set_card(chosen_output.card)
+        # ADR-0117: raw values mean what this output's control says they do.
+        use_scale(chosen_output.scale)
         if chosen_output.control:
             config = replace(config, mixer_name=chosen_output.control)
         logger.info(
@@ -728,7 +764,7 @@ async def main() -> None:
             # full scale. Written directly: `write_hardware` now refuses
             # every write in this mode, including this one.
             logger.info("output: fixed - DAC to full scale, the panel can no longer lower it")
-            await set_raw(config.mixer_name, HARDWARE_MAX)
+            await set_raw(config.mixer_name, hardware_max())
         else:
             logger.info("output: variable - the device attenuates again")
             _reapply_level()
@@ -777,6 +813,7 @@ async def main() -> None:
         nonlocal forced_fixed
         forced_fixed = chosen.control is None
         alsa.set_card(chosen.card)
+        use_scale(chosen.scale)
         _restrict_output_mode(chosen)
         volume_bridge.set_mixer_name(chosen.control or config.mixer_name)
         # The monitor watches one card and was spawned for the old one; its
@@ -1535,6 +1572,23 @@ async def main() -> None:
             except Exception:  # noqa: BLE001 - a watcher that dies tells nobody anything
                 logger.exception("skins: ensure failed")
 
+    def _choose_board(value: str) -> None:
+        """ADR-0117 decision 3: the board's overlay written, then a restart;
+        the next start looks for its card (`board_apply.check`)."""
+        try:
+            changed = board_apply.choose(value)
+        except ValueError:
+            logger.warning("board: %r is not a board gexis offers; nothing written", value)
+            return
+        if not changed:
+            return
+        logger.info("board: %s written to config.txt; restarting", value)
+
+        async def _restart() -> None:
+            await asyncio.sleep(2.0)
+            await asyncio.create_subprocess_exec("systemctl", "reboot")
+        asyncio.ensure_future(_restart())
+
     def _choose_screen(label: str | None = None, rotation: str | None = None) -> None:
         """ADR-0109: write the chosen screen and rotation for the next start
         (screen.env, and video= for a bar), then restart on it - unless
@@ -1605,6 +1659,8 @@ async def main() -> None:
             # ADR-0111: on where a pack is already installed - the devices
             # that had gexis-skins keep it, unasked (decision 10).
             "visualiser_skins": lambda: bool(skin_packs.installed()),
+            # ADR-0117: what config.txt loads, which a go-back changes.
+            "sound_card_board": board_apply.setting_value,
             # George, 2026-10-04: "all test releases come with the debug on,
             # so that logs are kept between reboots" - on by default on the
             # Testing channel; a choice made either way stands.
@@ -1618,6 +1674,11 @@ async def main() -> None:
         # installed and on what `skin_corpus` holds, neither of which the
         # registry module can know.
         labels={"skin_corpus": lambda: skins.labels(skins_at()[0]) if skins_at() else {}},
+        # George, 2026-10-05: a skin type this screen has no skins of is not
+        # offered - greyed, with why (ADR-0044's `unavailable`), and a stored
+        # one falls back to the first type that has some.
+        restrictions={"skin_corpus": lambda: (lambda at: skins.unavailable_corpora(at[0], resolution=at[1])
+                                              if at else {})(skins_at())},
         options={
             "skin_corpus": skins_offered,
             # ADR-0055 §1: discovered, not written down. Re-read on every
@@ -1628,6 +1689,7 @@ async def main() -> None:
         # The Release row's note: what the waiting or just-installed release
         # says changed (2026-10-01, George).
         notes={"software_update": updates.whats_new,
+               "sound_card_board": board_apply.note,
                # The Lyrion server's first start says what it is doing.
                **({"lyrion-server.enabled": lambda: _lyrion_note(settings.value("lyrion-server.enabled") is True)}
                   if any(p.id == "lyrion-server" for p in installed_plugins) else {})},
@@ -1755,6 +1817,7 @@ async def main() -> None:
                # next start, and the device restarts on it - unless setup is
                # under way, which restarts by itself when it finishes.
                "screen": lambda value: _choose_screen(label=value),
+               "sound_card_board": lambda value: _choose_board(value),
                "rotation": lambda value: _choose_screen(rotation=value),
                # **ADR-0083.** A backup that stays on the device does not
                # survive the event it exists for, so this writes into a share
@@ -2389,6 +2452,7 @@ async def main() -> None:
         http,
         enrichment_cache,
         fanart_key=lambda: settings.value("fanart_key"),
+        theaudiodb_key=lambda: settings.value("theaudiodb_key"),
         # George, 2026-09-24: *"Use the confidence level for sure."* `Head`
         # resolved at 100 and there is no telling it is the right Head.
         confidence=lambda: int(settings.value("confidence") or 0),
@@ -2432,6 +2496,10 @@ async def main() -> None:
             FanartArtistImage(http, identity, lambda: settings.value("fanart_key"),
                               proxy_base=f"http://{config.lms_host}:{config.lms_port}",
                               **FANART_BACKGROUND),
+            # ADR-0120 §3: TheAudioDB's fanart when fanart.tv has none - after
+            # it, so the merge keeps fanart.tv's where both answer.
+            TheAudioDBArtistImage(http, identity, lambda: settings.value("theaudiodb_key"),
+                                  proxy_base=f"http://{config.lms_host}:{config.lms_port}"),
             LmsArtistProvider(artistinfo, lambda: lms.current_artist_id),
             LmsReleaseProvider(library, artistinfo, lambda: lms.current_album_id),
             WikipediaBiography(http, identity),
@@ -2774,6 +2842,10 @@ async def main() -> None:
         pairing_answer=pairing_agent.answer,
         # ADR-0083: what "restart the device" means is the daemon's to say.
         restore=_restore_done,
+        restart_device=_restart_for,
+        # ADR-0120: backgrounds placed by what they show. The models load on
+        # the first picture, not at start.
+        placer=placement.Placer(),
         lyrion_shares=lyrion_shares,
         lyrion_shares_changed=lambda: lyrion_wake.set(),
         own_server=lambda: (f"{device_name.address()}:9000"
@@ -2915,6 +2987,8 @@ async def main() -> None:
         one, and marked unavailable - the panel must not keep offering a source
         whose process has left.
         """
+        if settings.forget_reports(f"{session.id}."):
+            state_store.bump_settings_revision()
         adapter = plugin_adapters.pop(session.id, None)
         if adapter is None:
             return
@@ -2929,6 +3003,19 @@ async def main() -> None:
         # Availability is the one event that means something without an
         # adapter: it is the panel's own question, and the state store has
         # held a slot per renderer since Phase 3.
+        if kind == "row":
+            # ADR-0119: a plugin says what one of its own rows is - a
+            # service as much as a renderer, so before the adapter lookup.
+            key = f"{session.id}.{message.get('key')}"
+            try:
+                changed = settings.report(key, message.get("state"),
+                                          message.get("text"), message.get("error"))
+            except (UnknownSetting, InvalidValue) as exc:
+                logger.warning("plugins: %s reported an unusable row: %s", session.id, exc)
+                return
+            if changed:
+                state_store.bump_settings_revision()
+            return
         if kind == "available" and session.id in state_store.state.available:
             state_store.set_available(session.id, bool(message.get("available")))
             return

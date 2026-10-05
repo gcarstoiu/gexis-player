@@ -730,3 +730,9 @@ yarl==1.25.1 \
     --hash=sha256:f61964f235a43738bfac50da46fc4254943a7eea3051aeb0b6fc7c992c29fadc \
     --hash=sha256:fe01645169a2112aa1d4ebc3e4c5f029c5c8f97adfc32e5d37c993b39a994d75
     # via aiohttp
+numpy==2.5.3 \
+    --hash=sha256:c76d5dde9f445058f83d0c02af00557a4db91de9a9a57c0df87d1535001d654b
+    # via opencv-python-headless (ADR-0120; aarch64, cp313 - the builder's)
+opencv-python-headless==5.0.0.93 \
+    --hash=sha256:10818d91510e05c04568ae12b5cd120779c70c01bf897b001a6221fe430df80f
+    # ADR-0120: backgrounds placed by what they show (aarch64)

@@ -23,14 +23,18 @@ the wiring that knows about adapters.
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import json
 import logging
+import os
 import random
 import tarfile
+import threading
 from collections.abc import Callable
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 from pathlib import Path
 
+import aiohttp
 from aiohttp import web
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
@@ -88,6 +92,24 @@ DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8090
 
 
+def _screen_size(request: web.Request) -> tuple[int, int] | None:
+    """The asking panel's size, when it says it and it is a screen's."""
+    try:
+        w, h = int(request.query.get("w", "")), int(request.query.get("h", ""))
+    except ValueError:
+        return None
+    return (w, h) if 100 <= w <= 8000 and 100 <= h <= 8000 else None
+
+
+def _lowest_priority() -> None:
+    """The placement thread runs at nice 19: it is never what a person waits
+    for, and the player has music to play (ADR-0120)."""
+    try:
+        os.setpriority(os.PRIO_PROCESS, threading.get_native_id(), 19)
+    except (AttributeError, OSError):
+        pass
+
+
 class StateServer:
     def __init__(
         self,
@@ -109,6 +131,8 @@ class StateServer:
         radio=None,
         pairing_answer=None,
         restore=None,
+        restart_device=None,
+        placer=None,
         lyrion_shares=None,
         lyrion_shares_changed=None,
         own_server=None,
@@ -169,6 +193,18 @@ class StateServer:
         #: the daemon owns what "restart the device" means, and a test can
         #: watch it without one.
         self._restore = restore
+        #: **A row that takes effect at a restart, restarts** (ADR-0048,
+        #: amended 2026-10-05): saving the device name from Settings reboots,
+        #: after the answer. Here, in the route, and not in the row's own
+        #: callback - first-time setup writes the same row and must not
+        #: reboot halfway through.
+        self._restart_device = restart_device
+        #: **ADR-0120: where each background sits, by what it shows.** None
+        #: places every picture as before, 35 % from the top. Asked on one
+        #: low-priority thread, once per picture and screen size.
+        self._placer = placer
+        self._placements: dict[tuple, dict | None] = {}
+        self._placing = None
         #: ADR-0115: the Lyrion server's network shares.
         self._lyrion_shares = lyrion_shares
         self._lyrion_shares_changed = lyrion_shares_changed
@@ -367,7 +403,7 @@ class StateServer:
         if not place:
             return web.json_response({"error": "No location set yet."})
         # `idle_forecast` is two layouts, not a count (design, 2026-09-22).
-        # **Both need today**: the None layout still draws the current
+        # **Both need today**: the Today only layout still draws the current
         # conditions with today's high and low, so the fetch is one day
         # rather than none.
         forecast = str(self._settings.value("idle_forecast") or "3 days")
@@ -375,7 +411,85 @@ class StateServer:
         answer = await self._weather.forecast(place, days)
         return web.json_response({**answer, "forecast": forecast})
 
+    #: How many pictures a route call may pass over as too big for the screen
+    #: before it shows one placed as before (ADR-0120 §2).
+    PLACE_TRIES = 4
+    #: Placements remembered, by picture and screen size.
+    PLACE_MEMORY = 400
+
     async def _handle_idle_wallpaper(self, request: web.Request) -> web.Response:
+        """The next background, placed for the panel that asks (ADR-0120).
+
+        The panel says its size (`w`, `h`); each picture is placed once by
+        what it shows - `place: {y, width}` beside its URL - and one too big
+        for the screen is passed over for the next. Without a size, or
+        without the models, the answer is what it always was.
+        """
+        if self._settings is None or self._wallpapers is None:
+            return web.json_response({"error": "wallpapers are not wired up"}, status=503)
+        screen = _screen_size(request)
+        answer = await self._next_background()
+        if self._placer is None or screen is None:
+            return web.json_response(answer)
+        for _ in range(self.PLACE_TRIES):
+            if not answer.get("url"):
+                return web.json_response(answer)
+            place = await self._place(answer["url"], screen)
+            if place is None:
+                return web.json_response(answer)
+            if not place.get("skip"):
+                return web.json_response({**answer, "place": place})
+            logger.info("idle: %s passed over (%s)", answer["url"], place.get("how"))
+            answer = await self._next_background()
+        return web.json_response(answer)
+
+    async def _place(self, url: str, screen: tuple[int, int]) -> dict | None:
+        """Where this picture sits on this screen, remembered; None when it
+        cannot be read, so the panel places it as before."""
+        key = (url, screen)
+        if key in self._placements:
+            return self._placements[key]
+        data = await self._picture_bytes(url)
+        place = None
+        if data:
+            loop = asyncio.get_running_loop()
+            if self._placing is None:
+                self._placing = concurrent.futures.ThreadPoolExecutor(
+                    max_workers=1, thread_name_prefix="placement", initializer=_lowest_priority)
+            try:
+                found = await loop.run_in_executor(self._placing, self._placer.place, data, screen)
+                place = {**found.to_json(), "skip": found.skip} if found.skip else found.to_json()
+                logger.info("idle: %s placed by %s", url.rsplit("/", 1)[-1][:60], found.how)
+            except Exception as exc:  # noqa: BLE001 - a picture placed as before beats none
+                logger.warning("idle: could not place %s: %s", url, exc)
+        if len(self._placements) >= self.PLACE_MEMORY:
+            self._placements.pop(next(iter(self._placements)))
+        self._placements[key] = place
+        return place
+
+    async def _picture_bytes(self, url: str) -> bytes | None:
+        """The picture a background URL names: a file of ours, or the owner's
+        server's (an artist picture through LMS's image proxy)."""
+        if url.startswith("/idle/wallpaper/local/"):
+            path = self._wallpapers.local_path(unquote(url[len("/idle/wallpaper/local/"):]))
+        elif url.startswith("/idle/wallpaper/"):
+            path = self._wallpapers.path_of(url[len("/idle/wallpaper/"):])
+        else:
+            try:
+                async with aiohttp.ClientSession() as http:
+                    async with http.get(url, timeout=aiohttp.ClientTimeout(total=20)) as response:
+                        return await response.read() if response.status == 200 else None
+            except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
+                logger.info("idle: %s could not be read to place it: %s", url, exc)
+                return None
+        if path is None:
+            return None
+        try:
+            return await asyncio.to_thread(path.read_bytes)
+        except OSError:
+            return None
+
+    async def _next_background(self) -> dict:
         """The next background, whatever `idle_background` says it is.
 
         **One route for four sources**, so the panel asks for "the next
@@ -384,17 +498,15 @@ class StateServer:
         daemon can reach anyway. *When* the picture changes is the panel
         counting `background_interval`; nothing here holds a timer.
         """
-        if self._settings is None or self._wallpapers is None:
-            return web.json_response({"error": "wallpapers are not wired up"}, status=503)
         background = self._settings.value("idle_background") or "Artist pictures"
         if background == "Black":
-            return web.json_response({"off": True, "error": None})
+            return {"off": True, "error": None}
         if background == "Artist pictures":
-            return web.json_response(await self._artist_picture())
+            return await self._artist_picture()
         if background == "Wallpapers on device":
             names = self._wallpapers.local_names()
             if not names:
-                return web.json_response({"error": "No pictures on this device yet."})
+                return {"error": "No pictures on this device yet."}
             # Not the one already on screen, when there is another. A folder
             # of four and a fifteen-minute rotation would otherwise repeat
             # about one change in four, which reads as the screen being stuck.
@@ -403,19 +515,20 @@ class StateServer:
             self._last_background = name
             # **Quoted**: a name can now carry folders, spaces and anything
             # else a person types, and it travels as a URL.
-            return web.json_response(
-                {"url": f"/idle/wallpaper/local/{quote(name)}", "by": "", "page": "",
-                 "credit": None, "error": None}
-            )
+            return {"url": f"/idle/wallpaper/local/{quote(name)}", "by": "", "page": "",
+                    "credit": None, "error": None}
         key = str(self._settings.value("wallpaper_key") or "").strip()
         topics = self._settings.value("wallpaper_topics") or []
         # A bar asks for wide pictures (George, 2026-10-04).
         bar = skin_packs.family(*skin_packs.screen_size()) == "bar"
-        answer = await self._wallpapers.next(key, list(topics), avoid=self._last_background, wide=bar)
+        # ADR-0120 §3: Pexels too, with its own key, when one is typed.
+        pexels = str(self._settings.value("pexels_key") or "").strip() or None
+        answer = await self._wallpapers.next(key, list(topics), avoid=self._last_background, wide=bar,
+                                             pexels_key=pexels)
         if answer.get("file"):
             self._last_background = answer["file"]
             answer = {**answer, "url": f"/idle/wallpaper/{answer['file']}"}
-        return web.json_response(answer)
+        return answer
 
     async def _home_strip(self, limit: int) -> dict:
         """What the library root draws under its cards.
@@ -472,11 +585,11 @@ class StateServer:
         shuffled = list(picked)
         random.shuffle(shuffled)
         for artist in shuffled[:ARTIST_FANART_TRIES]:
-            url = await self._fanart_background(artist.get("name") or "")
+            url, source = await self._fanart_background(artist.get("name") or "")
             if url:
                 self._last_background = artist.get("name") or ""
                 return {"url": url, "by": artist.get("name") or "", "page": "",
-                        "credit": None, "source": "fanart", "error": None}
+                        "credit": None, "source": source, "error": None}
 
         photos = await self._artistinfo.photos([a["id"] for a in picked], PHOTO_BACKGROUND)
         with_photos = [(a, photos.get(a["id"])) for a in picked if photos.get(a["id"])]
@@ -489,23 +602,27 @@ class StateServer:
         return {"url": url, "by": artist.get("name") or "", "page": "",
                 "credit": None, "source": "lms", "error": None}
 
-    async def _fanart_background(self, name: str) -> str | None:
-        """fanart's wide picture for this artist, or None.
+    async def _fanart_background(self, name: str) -> tuple[str | None, str | None]:
+        """fanart.tv's wide picture for this artist - or TheAudioDB's - and
+        which one answered; (None, None) when neither has one.
 
         None covers every way this can come to nothing - no key, no
         MusicBrainz id, no image for that id - because the caller does the
         same thing in all of them: try another artist, then fall back.
         """
         if not name or self._enrichment is None:
-            return None
+            return None, None
         try:
             found = await self._enrichment.for_track(
-                TrackKey(artist=fold(name)), only=("fanart-bg",)
+                TrackKey(artist=fold(name)), only=("fanart-bg", "tadb-bg")
             )
         except Exception as exc:
             logger.info("idle: fanart unavailable for %r: %s", name, exc)
-            return None
-        return found.artist_image or None
+            return None, None
+        if not found.artist_image:
+            return None, None
+        # Which one answered: fanart.tv's, or TheAudioDB's (ADR-0120 §3).
+        return found.artist_image, ("theaudiodb" if found.sources[:1] == ("tadb-bg",) else "fanart")
 
     async def _handle_local_wallpaper(self, request: web.Request) -> web.StreamResponse:
         """One picture somebody put on this device. Same rule as below: a
@@ -959,16 +1076,25 @@ class StateServer:
         panel = request.remote in ("127.0.0.1", "::1")
         return web.json_response(self._setup.status() if panel else self._setup.public_status())
 
+    @staticmethod
+    def _setup_error(raw: str, status: int) -> web.Response:
+        """A setup error as the phone shows it - a sentence - with the
+        core's own text in the log (setup_flow.said)."""
+        from gexis_core import setup_flow
+
+        logger.info("setup: answered %s: %s", status, raw)
+        return web.json_response({"error": setup_flow.said(raw)}, status=status)
+
     def _setup_closed(self) -> web.Response | None:
         """ADR-0104: the setup routes answer only while setup is on - the
         setup network is up, or a new device waits to be set up. A configured
         device on its Wi-Fi has Settings for all of this."""
         if self._setup is None or self._setup_flow is None:
-            return web.json_response({"error": "setup is not wired up"}, status=503)
+            return self._setup_error("setup is not wired up", 503)
         status = self._setup.status()
         if status["network"] in ("open", "failed", "joining") or status["needed"]:
             return None
-        return web.json_response({"error": "setup is not running"}, status=409)
+        return self._setup_error("setup is not running", 409)
 
     async def _handle_plugin_upload(self, request: web.Request) -> web.Response:
         """ADR-0106: the package as the request body. Read here with its own
@@ -1020,7 +1146,7 @@ class StateServer:
             body = await request.json()
             return web.json_response(self._setup_flow.save(body))
         except ValueError as exc:
-            return web.json_response({"error": str(exc)}, status=400)
+            return self._setup_error(str(exc), 400)
 
     async def _handle_setup_networks(self, request: web.Request) -> web.Response:
         """A scan, read while hosting (Finding 099: the phone stays on), less
@@ -1040,7 +1166,7 @@ class StateServer:
         if closed is not None:
             return closed
         if self._screen_seen is None:
-            return web.json_response({"error": "screen detection is not wired up"}, status=503)
+            return self._setup_error("screen detection is not wired up", 503)
         from gexis_core import setup_flow
 
         report = await asyncio.to_thread(self._screen_seen)
@@ -1053,7 +1179,7 @@ class StateServer:
         try:
             told = self._setup_flow.finish() or {}
         except ValueError as exc:
-            return web.json_response({"error": str(exc)}, status=400)
+            return self._setup_error(str(exc), 400)
         return web.json_response({"finishing": True, **told}, status=202)
 
     async def _handle_painted(self, request: web.Request) -> web.Response:
@@ -1245,7 +1371,24 @@ class StateServer:
             value = body["value"]
         except (ValueError, KeyError, TypeError):
             return web.json_response({"error": 'body must be {"value": ...}'}, status=400)
-        return self._settings_call(lambda: {"key": key, "value": self._settings.set(key, value)})
+        before = self._settings_value(key)
+        response = self._settings_call(lambda: {"key": key, "value": self._settings.set(key, value)})
+        if (response.status == 200 and self._restart_device is not None
+                and self._settings_restarts(key) and self._settings_value(key) != before):
+            asyncio.ensure_future(self._restart_device(key))
+        return response
+
+    def _settings_value(self, key: str):
+        try:
+            return self._settings.value(key)
+        except Exception:  # noqa: BLE001 - the write below says what is wrong
+            return None
+
+    def _settings_restarts(self, key: str) -> bool:
+        try:
+            return bool(self._settings.row(key).get("restart"))
+        except Exception:  # noqa: BLE001
+            return False
 
     async def _handle_setting_action(self, request: web.Request) -> web.Response:
         if self._settings is None:

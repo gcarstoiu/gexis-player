@@ -53,7 +53,7 @@ ONLY_WHEN_NOT = "not"
 #: Sources a `choice` may draw its options from instead of a literal list
 #: (ADR-0044 §4). Adding one is a code change, not a registry edit, which is
 #: the point: an unknown name is a typo and must fail the load.
-OPTION_SOURCES = {"skin_corpus", "timezones", "output_device", "screens"}
+OPTION_SOURCES = {"skin_corpus", "timezones", "output_device", "screens", "boards"}
 
 
 @lru_cache(maxsize=1)
@@ -98,12 +98,24 @@ def _screen_tags() -> dict[str, str]:
     return {s.label: "Tested" if s.tested else "Untested" for s in screens.all_screens()}
 
 
+def _boards() -> tuple[str, ...]:
+    """ADR-0117 decision 3: Found by itself, then every board offered."""
+    from . import board_apply
+    return board_apply.options()
+
+
+def _board_tags() -> dict[str, str]:
+    """ADR-0117 decision 2: Tested or Known on every board offered."""
+    from . import board_apply
+    return board_apply.tags()
+
+
 OPTION_RESOLVERS = {"timezones": _timezones, "skin_corpus": tuple, "output_device": tuple,
-                    "screens": _screens}
+                    "screens": _screens, "boards": _boards}
 
 #: A word beside an option in the picker, by source (round 2's Attached
 #: screen: *Tested* / *Untested* on every model).
-OPTION_TAGS = {"screens": _screen_tags}
+OPTION_TAGS = {"screens": _screen_tags, "boards": _board_tags}
 
 logger = logging.getLogger("gexis_core.settings_registry")
 
@@ -175,23 +187,36 @@ def check(groups: list[dict]) -> list[dict]:
                     unknown = set(warn) - set(row.get("options") or ())
                     if unknown:
                         raise ValueError(f"{key}: warn names options that do not exist: {sorted(unknown)}")
-            only = row.get("onlyWhen")
-            if only is not None and (not isinstance(only, list) or len(only) != 2):
-                raise ValueError(f"{key}: onlyWhen is [key, value]")
-            if only is not None and isinstance(only[1], dict) and set(only[1]) != {ONLY_WHEN_NOT}:
-                # A typo in the one key this form has would otherwise read as
-                # "not equal to nothing", which is every value, which is a row
-                # that never hides and never says why.
-                raise ValueError(f"{key}: onlyWhen's object form is {{\"not\": value}}")
+            _check_only_when(key, row.get("onlyWhen"))
 
     # Deferred to a second pass: a row may depend on one declared after it.
+    # **A heading's and a group's conditions too** (2026-10-05): theirs
+    # govern every row under them - see `to_json`.
     keys = {r["key"] for g in groups for r in g["rows"] if r["type"] != "group"}
     for group in groups:
+        _check_only_when(group.get("id", "?"), group.get("onlyWhen"))
         for row in group["rows"]:
+            name = row.get("key") or row.get("label", "?")
+            if row["type"] == "group":
+                _check_only_when(name, row.get("onlyWhen"))
+        for row in [group, *group["rows"]]:
             only = row.get("onlyWhen")
             if only is not None and only[0] not in keys:
-                raise ValueError(f"{row['key']}: onlyWhen names unknown setting {only[0]!r}")
+                name = row.get("key") or row.get("id") or row.get("label", "?")
+                raise ValueError(f"{name}: onlyWhen names unknown setting {only[0]!r}")
     return groups
+
+
+def _check_only_when(name: str, only: Any) -> None:
+    if only is None:
+        return
+    if not isinstance(only, list) or len(only) != 2:
+        raise ValueError(f"{name}: onlyWhen is [key, value]")
+    if isinstance(only[1], dict) and set(only[1]) != {ONLY_WHEN_NOT}:
+        # A typo in the one key this form has would otherwise read as
+        # "not equal to nothing", which is every value, which is a row
+        # that never hides and never says why.
+        raise ValueError(f"{name}: onlyWhen's object form is {{\"not\": value}}")
 
 
 def visible(row: dict, rows: dict[str, dict], values: dict[str, Any]) -> bool:
@@ -334,6 +359,12 @@ def load_seed(settings_rows: dict[str, dict], path: Path = SEED_PATH) -> dict[st
 #: reason - **the opposite of the now-playing rule, on purpose**: a screen
 #: for changing things should show what could be changed and why it
 #: cannot, where a screen for listening should not carry dead controls.
+#: What a plugin may say its row is (ADR-0119).
+STATUS_STATES = ("done", "failed")
+#: A few words or one sentence, not a log.
+STATUS_TEXT_MAX = 160
+
+
 class Locked(Exception):
     pass
 
@@ -550,6 +581,7 @@ class Settings:
         notes: dict[str, Callable[[], str | None]] | None = None,
         seed_path: Path = SEED_PATH,
         labels: dict[str, Callable[[], dict]] | None = None,
+        restrictions: dict[str, Callable[[], dict]] | None = None,
     ) -> None:
         self._store = store
         #: What each option is called on screen, by `optionsFrom` source,
@@ -581,6 +613,14 @@ class Settings:
         #: Injected by the daemon, because only it knows what the sound
         #: card can do.
         self._unavailable: dict[str, dict[Any, str]] = {}
+        #: key -> a callable giving {option: why} as things are now - for a
+        #: set that changes with what is installed (the skin types a screen
+        #: has none of, 2026-10-05), read when needed rather than pushed.
+        self._restrictions = restrictions or {}
+        #: key -> what a plugin last said about its own row (ADR-0119): a
+        #: state the row is in, not a value. In memory only - it is the
+        #: plugin's to say again, and goes when the plugin does.
+        self._status: dict[str, dict[str, str]] = {}
         unknown_sources = set(options or ()) - OPTION_SOURCES
         if unknown_sources:
             raise ValueError(f"not an option source: {sorted(unknown_sources)}")
@@ -590,7 +630,8 @@ class Settings:
         #: registry's own note.
         self._notes = notes or {}
         self._seed = load_seed(self._rows, seed_path)
-        unknown = (set(self._defaults) | set(self._wired) | self._lists | set(self._notes)) - set(self._rows)
+        unknown = (set(self._defaults) | set(self._wired) | self._lists | set(self._notes)
+                   | set(self._restrictions)) - set(self._rows)
         if unknown:
             raise ValueError(f"not in the registry: {sorted(unknown)}")
         not_lists = {k for k in self._lists if self._rows[k]["type"] != "list"}
@@ -619,9 +660,51 @@ class Settings:
         else:
             self._unavailable.pop(key, None)
 
+    def report(self, key: str, state: str | None, text: str | None = None,
+               error: str | None = None) -> bool:
+        """**A plugin says what its row is** (ADR-0119): `done` with a few
+        words (*Claimed*), `failed` with a sentence, or None to say nothing.
+        Returns whether that changed anything, so a plugin repeating itself
+        costs no settings revision."""
+        self.row(key)
+        if state is None:
+            return self._status.pop(key, None) is not None
+        if state not in STATUS_STATES:
+            raise InvalidValue(f"not a row state: {state!r}")
+        status = {"state": state}
+        if text:
+            status["text"] = str(text)[:STATUS_TEXT_MAX]
+        if error:
+            status["error"] = str(error)[:STATUS_TEXT_MAX]
+        if self._status.get(key) == status:
+            return False
+        self._status[key] = status
+        return True
+
+    def forget_reports(self, prefix: str) -> bool:
+        """A plugin that leaves takes what it said with it."""
+        gone = [k for k in self._status if k.startswith(prefix)]
+        for key in gone:
+            del self._status[key]
+        return bool(gone)
+
+    def _blocked(self, key: str) -> dict[Any, str] | None:
+        """What cannot be had for this row now: pushed by `restrict`, or
+        read from a restriction provider. Pushed wins."""
+        if key in self._unavailable:
+            return self._unavailable[key]
+        provider = self._restrictions.get(key)
+        if provider is None:
+            return None
+        try:
+            return dict(provider()) or None
+        except Exception as exc:  # noqa: BLE001 - nothing greyed beats a broken screen
+            logger.warning("settings: what %s cannot offer is unknown: %s", key, exc)
+            return None
+
     def value(self, key: str) -> Any:
         row = self.row(key)
-        blocked = self._unavailable.get(key)
+        blocked = self._blocked(key)
         if blocked:
             # What is in force, which is not what is stored: the stored
             # choice is waiting for the hardware that can honour it.
@@ -658,8 +741,17 @@ class Settings:
         groups = []
         for group in self._groups:
             rows = []
+            # **A heading governs its section, and a group all of it**
+            # (George, 2026-10-05: with Headless on, every setting that needs
+            # a screen is hidden - whole sections, and Enrichment whole). One
+            # condition per row stays the rule; these stack on top of it, so
+            # *Strip below the tiles* keeps Lyrion Client's and gains the
+            # screen's from its heading.
+            governing = [c for c in (group.get("onlyWhen"),) if c]
+            heading = None
             for row in group["rows"]:
                 if row["type"] == "group":
+                    heading = row.get("onlyWhen")
                     rows.append(row)
                     continue
                 public = {k: v for k, v in row.items() if k != "default"}
@@ -670,7 +762,10 @@ class Settings:
                         public["optionTags"] = OPTION_TAGS[source]()
                     if source in self._labels:
                         public["optionLabels"] = self._labels[source]()
-                public["value"] = self.value(row["key"])
+                # The value already worked out for `visible`: a row's
+                # default can be a system read, and every one was being made
+                # twice per request (2026-10-05).
+                public["value"] = values[row["key"]]
                 if row["key"] in self._notes:
                     note = self._notes[row["key"]]()
                     if note:
@@ -678,10 +773,15 @@ class Settings:
                 # A row is wired when something acts on it. For most that is
                 # a `set` callback; for a `list` it is the items route.
                 public["wired"] = row["key"] in self._wired or row["key"] in self._lists
-                blocked = self._unavailable.get(row["key"])
+                blocked = self._blocked(row["key"])
                 if blocked:
                     public["unavailable"] = dict(blocked)
-                public["visible"] = visible(row, self._rows, values)
+                if row["key"] in self._status:
+                    public["status"] = dict(self._status[row["key"]])
+                public["visible"] = visible(row, self._rows, values) and all(
+                    visible({"onlyWhen": c}, self._rows, values)
+                    for c in governing + ([heading] if heading else [])
+                )
                 rows.append(public)
             groups.append({**group, "rows": rows})
         return groups
@@ -698,7 +798,7 @@ class Settings:
             raise NotWired(f"{key} is not wired yet")
         # `multi` rows take a list, which is not a dict key - and a list is
         # never an option anyway.
-        blocked = self._unavailable.get(key) or {}
+        blocked = self._blocked(key) or {}
         if isinstance(value, Hashable) and value in blocked:
             raise Locked(blocked[value])
         source = row.get("optionsFrom")

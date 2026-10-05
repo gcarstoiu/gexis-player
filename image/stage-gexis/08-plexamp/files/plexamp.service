@@ -62,7 +62,14 @@ WorkingDirectory=/home/pi/plexamp
 # restore or a takeover it waits to be told to play, as every renderer here does
 # (ADR-0027).
 ExecStartPre=/usr/lib/gexis/plexamp-start-idle
-ExecStart=/usr/bin/node /home/pi/plexamp/js/index.js
+# **ADR-0119: claimed from Settings.** The device's name (ADR-0048) and the
+# plugin's settings - the claim token among them - reach Plexamp as
+# environment; `plexamp-run` settles any claim, hands the token over only when
+# there is one to make, and becomes Plexamp. The core restarts this unit when
+# the token changes (ADR-0088).
+EnvironmentFile=-/etc/gexis/device-name.env
+EnvironmentFile=-/run/gexis/plugins/plexamp.env
+ExecStart=/usr/lib/gexis/plexamp-run
 Restart=on-failure
 # **5 -> 1, 2026-09-26 (ADR-0091).** This is the path back from every takeover
 # now, not just from a genuine failure, so the wait is dead time in which the

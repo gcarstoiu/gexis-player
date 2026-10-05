@@ -1,6 +1,13 @@
 # Handoff
 
-Last updated: 2026-10-04 (on R2D2).
+Last updated: 2026-10-05 (on R2D2).
+
+**0.9.0 released 2026-10-05 on Testing (serial 23), from `phase-13d`** -
+13b's work, 13d's DAC work (Phase 13d stays open: the board tests are
+still George's), ADR-0119 (Plexamp claimed from Settings; gexis-plexamp
+0.4.0 published and pinned) and ADR-0120 (backgrounds). The PR into `main`
+waits for George. The image is `image/deploy/2026-10-05-gexis-player-v0.9.0.img`
+in the main checkout.
 
 ## Start here
 
@@ -17,7 +24,7 @@ default on for Testing). **George is testing the bars on 0.8.8**: the new
 screen switched to before the panel starts (`gexis-screen-check.service`,
 ADR-0109 amended again 2026-10-04) is not yet seen on hardware. **From 0.8.8, one PR per
 release** (George, 2026-10-04): never push a release onto an open PR.
-**Phases 13a, 13c and 13e are closed** (DEVELOPMENT.md); 13b is still open.
+**Phases 13a, 13b, 13c and 13e are closed** (DEVELOPMENT.md; 13b on 2026-10-04).
 
 | What | State |
 |---|---|
@@ -28,16 +35,26 @@ release** (George, 2026-10-04): never push a release onto an open PR.
 | Skin picker (ADR-0050 amended) | 960 px previews made ahead for every installed pack |
 | Released in 0.8.7 | The new-screen notice and its straight switch (29a3386, 88ee721, d91a4bc); a USB disk kept 7 days after unplugging (ADR-0115 decision 17, ddf088f); setup's copy fixes from the review (963857d-034fb33); genre pills kept to two rows on the artist page (7cd3e1b); skin packs fetched from the channel's release when the player's own is unpublished, a stale pack failure no longer shown, failures in words (efd329d); Finding 109's playback test; 13a/13c/13e closed |
 
-**`gexis` right now:** a preview of everything on the branch (core and player
-`0.8.6+git18.efd329d`, ui `0.8.6+git15.7cd3e1b`), on the 13.3" with a new
-cable, kept. **Skin packs now install on a preview** (efd329d: an unpublished
-release takes its pack from the channel's release; shown live, 2026-10-04 -
-before that every preview failed every pack). The album artist screen was measured on that panel through the
-kiosk's DevTools port (since closed): about 55 fps scrolling, photos in about
-half a second - not slower than the 10.1"; a headless Chromium on the device
-had shown 20 fps, an artefact of its software compositing.
+**`gexis` right now (2026-10-05, afternoon):** the 13d preview with
+`phase-13b` merged in (core and player `0.8.9+git86.0d130e3`, ui `0.8.9+git77.a4b056c` - with
+**ADR-0120 steps 1-3**: backgrounds placed by what they show, OpenCV 5.0.0
+and both models in the core; TheAudioDB for artist backgrounds and the
+artwork updates; Pexels beside Pixabay, its key row empty), gexis-system `0.8.9+git44.83e89ad`,
+gexis-go-librespot `0.9.0-2` (Spotify without normalisation),
+gexis-plexamp `0.3.0-2+0.8.9+git35.ab56c0c` with the unreleased 0.4.0 plugin
+files laid over it; on the 13.3" with a new cable. George to watch the bar's
+idle screen.
 
 **Next, in order:**
+0. **ADR-0120, bar backgrounds** (accepted 2026-10-05): step 1 (placement)
+   and step 2 (TheAudioDB for
+   backgrounds and the Enrichment updates, its key row) built and live on
+   gexis; the shared key's album list holds one album per artist, so covers
+   are asked per album. Step 3 (Pexels, the rename to *Pixabay API key*,
+   the bar's source order measured) built and live too, **untried against
+   Pexels itself**: it issues no new keys for now (George), so the row is
+   empty.
+   a Pexels key for step 3.
 1. **Phase 13d** (ADR-0117, accepted 2026-10-04): built in the worktree,
    six commits, not on hardware. George tests later: the DAC2 HD unchanged
    (preview from `phase-13d`), the IQaudio DAC+ chosen under *Sound card
@@ -45,17 +62,27 @@ had shown 20 fps, an artefact of its software compositing.
    worktree:** the scratchpad venv imports the main checkout's
    `gexis_core`; run them with `PYTHONPATH=src`.
 2. **The copy review** (George, 2026-10-03): one page per area, built from the
-   code, with screenshots, for him to comment on. **Setup is done** (the
-   "Setup Copy" artifact; his comments fixed), with two threads still his:
-   the password line after Finish (only for a secured Wi-Fi?) and
-   "Saving..."/"Connecting..." on Continue/Finish. Settings and the
-   intermediate screens next. The screenshots and fake cores were in the
-   session's scratchpad, which does not survive it: regenerate them (a fake
-   core serving `/setup/answers` with a chosen `step` shows each phone step).
-3. **13b's close** (acceptance rewritten to George's decisions, 2026-10-03):
-   the 7.9" and 11.9" bars tried on the hardware (or unmarked as tested).
-   Nothing else is open.
-4. **Phase 13d, DACs** (an ADR first).
+   code, with screenshots, for him to comment on. **Setup** ("Setup Copy")
+   and **Settings** ("Settings Copy", 2026-10-05) are done, every comment
+   fixed on `phase-13b` (6061e10-15e7d56): shorter Audio texts, Fixed output
+   hides the three volume rows, the artwork updates moved back to Enrichment
+   under *Lyrion Client* (reversing 2026-09-25 at his request), counts in
+   what a list holds, errors in words, "player" where the text means the
+   player and "device" only for the hardware (his call). **The intermediate
+   screens are the third page, not started.** Comments do not reach the
+   session by themselves: watch the artifact and read its threads.
+3. **ADR-0119, Plexamp claimed from Settings** - accepted and built,
+   **live on gexis as a preview** (2026-10-05): the contract's new `row`
+   event (47190f8), the row's *Claimed* / *Claim again* and links in notes
+   (48d0718), `plexamp-run` (ab56c0c), and **gexis-plexamp 0.4.0, committed
+   in its own repository (784242c), not pushed or released** - on gexis its
+   files were laid over the 0.3.0 package by hand. A release needs a
+   gexis-plexamp 0.4.0 release and its pin moved. *Claim again* on George's
+   real player worked (2026-10-05, his token): a new Plex player, Plexamp's own
+   settings started again; it plays through the DAC and the meters (George). The test player `gexis-claimtest` is his to remove from
+   his Plex account.
+4. **Phase 13d, DACs**: ADR-0117 accepted, built in its worktree, being
+   tested on `gexis` (merged up with `phase-13b` for the preview).
 5. **docs/HARDWARE.md** is a draft; what it lacks is listed at its end.
 
 **Working rules learned this session** (also in memory): a change is seen on
@@ -90,10 +117,10 @@ the SSH key only, since a saved Wi-Fi skips setup.
 
 | Branch | State | What is on it |
 |---|---|---|
-| `main` | 2a1dad7 (origin) | Everything to PR #42 (13c). The local `main` is behind it |
-| `phase-13b` | 80 commits ahead of `origin/main`, **not pushed** since 13b began (139 ahead of `origin/phase-13b`) | 13b and ADR-0109/0110/0111, Findings 106-107, releases 0.4.0 and 0.5.0 |
-| tags | `v0.1.0`-`v0.3.3` pushed; **`v0.4.0` and `v0.5.0` local only** | Push with the 13b PR |
-| `skin-packs` | merged into `phase-13b` | Its worktree under `.claude/worktrees/` can go |
+| `main` | Merged through 0.8.9 (PR #47) | Every release to date |
+| `phase-13b` | 13b, closed; records since 0.8.9 not yet in a PR | Goes to `main` with the next release's PR |
+| `phase-13d` | Worktree `~/projects/gexis-player-13d`; ADR-0117 and its build, with `phase-13b` merged in | Merged into the release branch once George's tests pass |
+| tags | `v0.1.0`-`v0.8.9` all pushed (2026-10-04) | - |
 | `design-13b` | Claude Design's 2026-09-30 handoff | Reference only |
 
 ### Devices

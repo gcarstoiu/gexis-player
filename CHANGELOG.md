@@ -5,6 +5,36 @@ Every release of Gexis Player and its notes, newest first. Generated from
 edit that file, not this one. The player shows the last 10 under
 Settings → System → Change logs.
 
+## 0.9.0 — 5 October 2026
+
+### New
+
+- Plexamp can be claimed from Settings: paste a claim token from plex.tv/claim and the row shows Claimed. Claim again moves the player to another Plex account.
+- Idle screen pictures are placed by what they show: faces, people and animals stay in view instead of being cut off. A picture too close to fit is shown a little narrower, or skipped.
+- TheAudioDB adds artist pictures and album covers where fanart.tv has none, for the idle screen and for Update artist portraits and Update album covers. A TheAudioDB key is optional.
+- Pexels can be used beside Pixabay for online wallpapers, with its own key. On a bar, the source with more wide pictures is asked first.
+- With Headless on, the settings that only affect the screen are hidden, Enrichment included.
+- Skin type greys out the types that have no skins for the screen in use.
+- Saving a new device name restarts the device, and says where it comes back.
+- Setup and Settings have shorter, plainer texts throughout, and errors are written in words.
+- A sound card that is not found by itself can be chosen under Settings → Audio → Sound card board.
+- Each output shows whether it is Tested, Known or Detected.
+- An output whose volume control does not work in decibels plays at a fixed level.
+
+### Fixed
+
+- Spotify no longer lowers loud tracks, and now plays as loud as Lyrion at full volume.
+- Saving a setting no longer keeps the buttons disabled for seconds.
+- Restoring a backup no longer talks about joining a network.
+- Lists count what they hold: backups and saved networks are no longer called paired.
+
+### Good to know
+
+- This update is larger than usual, about 70 MB more, for the picture recognition that places idle screen pictures.
+- Without a key of your own, TheAudioDB's shared key is used, and updating album covers can take noticeably longer.
+- Claiming Plexamp again registers the player as new in the Plex account; the old entry stays until it is removed there.
+- Pexels is not issuing new keys at the moment.
+
 ## 0.8.9 — 4 October 2026
 
 ### New

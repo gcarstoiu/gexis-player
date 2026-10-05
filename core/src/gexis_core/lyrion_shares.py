@@ -64,6 +64,21 @@ def label(address: str) -> tuple[str, str]:
     return name, server
 
 
+def mount_reason(error: str) -> str:
+    """`mount`'s refusal, as the share's line says it: the copy review
+    (2026-10-05) found `mount error(13): Permission denied` on the row. The
+    command's own line goes to the log."""
+    text = error.lower()
+    if "error(13)" in text or "permission denied" in text or "access denied" in text:
+        return "the user or password was not accepted"
+    if "error(2)" in text or "no such file" in text or "not found" in text:
+        return "the share was not found on the server"
+    if any(s in text for s in ("error(112)", "error(113)", "error(115)", "host is down",
+                                "no route", "timed out", "connection refused")):
+        return "the server did not answer"
+    return "it could not be opened"
+
+
 class Shares:
     def __init__(self, store, root: Path = ROOT, credentials: Path = CREDENTIALS, run=subprocess.run,
                  is_mount=os.path.ismount) -> None:
@@ -216,7 +231,7 @@ class Shares:
         if result.returncode:
             error = (result.stderr or result.stdout or f"mount exited {result.returncode}").strip().splitlines()[-1]
             logger.warning("lyrion: %s not mounted: %s", address, error)
-            return error[:120]
+            return mount_reason(error)
         logger.info("lyrion: %s mounted read-only at %s", address, point)
         return None
 

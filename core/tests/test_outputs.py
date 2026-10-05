@@ -375,3 +375,36 @@ class TestTheAlsaDefault:
         from gexis_core.outputs import Output, render
         rendered = render(Output(card="sndrpihifiberry", label="DAC", control="Master"), plug=False)
         assert "!default" not in rendered
+
+
+def test_the_outputs_are_worked_out_again_only_when_something_changed(tmp_path, monkeypatch):
+    """2026-10-05: every GET /settings listed the outputs - `aplay` and an
+    `amixer` per card, 50 ms on the player. Asked again when the cards,
+    an HDMI connection or the chosen board change, so a cable plugged in
+    still shows without a restart."""
+    from gexis_core import boards, outputs
+
+    cards = tmp_path / "cards"
+    cards.write_text(" 0 [vc4hdmi0       ]: vc4-hdmi\n")
+    ran = []
+
+    def run(*args):
+        ran.append(args[0])
+        if args[0] == "aplay":
+            return "card 0: vc4hdmi0 [vc4-hdmi-0], device 0: MAI PCM i2s-hifi-0 [MAI PCM i2s-hifi-0]\n"
+        return ""
+
+    monkeypatch.setattr(outputs, "CARDS", cards)
+    monkeypatch.setattr(outputs, "_run", run)
+    monkeypatch.setattr(outputs, "DRM", tmp_path / "drm")
+    monkeypatch.setattr(outputs, "_DISCOVERED", {})
+    monkeypatch.setattr(boards, "hat_product", lambda: None)
+    first = outputs.discover(chosen_board="none")
+    again = outputs.discover(chosen_board="none")
+    assert [o.card for o in again] == [o.card for o in first] == ["vc4hdmi0"]
+    assert ran.count("aplay") == 1
+    outputs.discover(chosen_board="iqaudio-dacplus")  # a board chosen
+    assert ran.count("aplay") == 2
+    cards.write_text(cards.read_text() + " 1 [sndrpihifiberry]: RPi-simple\n")  # a card arrives
+    outputs.discover(chosen_board="iqaudio-dacplus")
+    assert ran.count("aplay") == 3

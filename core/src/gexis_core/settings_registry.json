@@ -10,17 +10,29 @@
         "type": "choice",
         "label": "Output",
         "marks": "R",
-        "note": "Where the sound goes. HDMI costs three things: it has no volume control of its own, so the level is fixed; the Pi carries HDMI audio in a format that has to be converted to, so it is no longer bit-perfect; and the visualiser gets no levels from it. The headphone jack and the DAC keep all three.",
+        "note": "Where the sound goes. Over HDMI the volume is fixed, the sound is not bit-perfect and the visualiser does not move.",
         "optionsFrom": "output_device",
         "default": null,
-        "warn": "Changing the output stops whatever is playing while the sound card is reopened. An output with no volume control of its own — either HDMI — also takes the volume control off the panel."
+        "warn": "Playback stops while the output changes. An output with no volume control of its own, such as HDMI, has no volume slider."
+      },
+      {
+        "key": "sound_card_board",
+        "type": "choice",
+        "label": "Sound card board",
+        "marks": "N",
+        "note": "Most boards and every USB DAC are found by themselves. A board that is not - it does not show under Output - can be chosen here.",
+        "warn": "Choosing a board restarts the player with it. If no sound card appears after the restart, the player goes back to what it had and restarts again.",
+        "options": [],
+        "default": "Found by itself",
+        "optionsFrom": "boards",
+        "grouped": true
       },
       {
         "key": "output_mode",
         "type": "choice",
         "label": "Output mode",
         "marks": "R",
-        "note": "Only variable is built and hardware-verified. Fixed hides the volume control everywhere and applies after stop.",
+        "note": "Variable: the volume is set on the player. Fixed: the player always plays at full level, for an amplifier that sets the volume itself. The change applies when playback next stops.",
         "options": [
           "Variable",
           "Fixed"
@@ -35,11 +47,15 @@
         "type": "number",
         "label": "Maximum volume",
         "marks": "R",
-        "note": "The loudest the device will go, on any input. Set it to 80 and the device is never louder than the slider at 80 — and 100% on the panel, in LMS and on a connected phone all mean that level, so no control shows a number louder than what comes out.",
+        "note": "The loudest the player will go, on any input. Set it to 80 and the player is never louder than the slider at 80 — and 100% on the panel, in LMS and on a connected phone all mean that level, so no control shows a number louder than what comes out.",
         "min": 10,
         "max": 100,
         "unit": "%",
-        "default": null
+        "default": null,
+        "onlyWhen": [
+          "output_mode",
+          "Variable"
+        ]
       },
       {
         "key": "start_max",
@@ -50,7 +66,11 @@
         "min": 10,
         "max": 100,
         "unit": "%",
-        "default": 60
+        "default": 60,
+        "onlyWhen": [
+          "output_mode",
+          "Variable"
+        ]
       },
       {
         "key": "volume_managed",
@@ -71,7 +91,11 @@
           "Cubic",
           "Linear (dB)"
         ],
-        "default": "Cubic"
+        "default": "Cubic",
+        "onlyWhen": [
+          "output_mode",
+          "Variable"
+        ]
       }
     ]
   },
@@ -123,42 +147,6 @@
         "note": "Superseded by the Plugins category, which George asked for on 2026-09-25. ADR-0022 inventoried this as a row in Sources; what it would have opened is now a category of its own, listing each installed plugin's switch. Kept unsurfaced rather than deleted because removing an inventoried row is George's call.",
         "default": null,
         "surfaced": false
-      },
-      {
-        "key": "sweep_portraits",
-        "type": "action",
-        "label": "Update artist portraits",
-        "marks": "R",
-        "note": "Looks up every album artist on fanart.tv and keeps LMS's picture where fanart has none. Checks all of them, every time. Runs in the background; playback is not interrupted.",
-        "default": null,
-        "onlyWhen": [
-          "lms_enabled",
-          true
-        ]
-      },
-      {
-        "key": "sweep_covers",
-        "type": "action",
-        "label": "Update album covers",
-        "marks": "R",
-        "note": "The same walk, for every album rather than only the ones with no cover. One of the two runs at a time.",
-        "default": null,
-        "onlyWhen": [
-          "lms_enabled",
-          true
-        ]
-      },
-      {
-        "key": "sweep_status",
-        "type": "readonly",
-        "label": "Progress",
-        "marks": "R",
-        "note": "What the last or current run has done.",
-        "default": null,
-        "onlyWhen": [
-          "lms_enabled",
-          true
-        ]
       },
       {
         "type": "group",
@@ -227,7 +215,7 @@
         "marks": "R",
         "note": "View and forget remembered devices. Clearing breaks automatic reconnection.",
         "default": null,
-        "empty": "No devices paired yet. Put this device in pairing mode from your phone.",
+        "empty": "No devices paired yet. Pair one from your phone's Bluetooth settings while the player is discoverable.",
         "kind": "device"
       },
       {
@@ -243,7 +231,7 @@
   {
     "id": "handoff",
     "label": "Handoff",
-    "subtitle": "Who gets the device",
+    "subtitle": "Who gets the player",
     "accent": "#e0a758",
     "rows": [
       {
@@ -273,7 +261,7 @@
         "type": "toggle",
         "label": "Reclaim LMS when a session ends",
         "marks": "N",
-        "note": "Never done by design. Opting in reintroduces the spurious reclaims that were measured.",
+        "note": "When Spotify, Bluetooth or Plexamp stops, Lyrion takes the player back. A phone that locks can end a Spotify session, and switch the player to Lyrion without warning.",
         "default": false
       },
       {
@@ -303,7 +291,11 @@
         "label": "Show transition screen",
         "marks": "N",
         "note": null,
-        "default": true
+        "default": true,
+        "onlyWhen": [
+          "headless",
+          false
+        ]
       },
       {
         "key": "handoff_duration",
@@ -403,7 +395,7 @@
         "type": "toggle",
         "label": "Headless",
         "marks": "R",
-        "note": "Disables the local screen entirely.",
+        "note": "Turns the player's screen off. Every setting that only affects the screen is hidden while this is on.",
         "default": false
       },
       {
@@ -412,7 +404,11 @@
         "label": "Show volume when changed elsewhere",
         "marks": "N",
         "note": "A phone’s volume change opens the drawer; the panel’s own changes do not.",
-        "default": true
+        "default": true,
+        "onlyWhen": [
+          "headless",
+          false
+        ]
       },
       {
         "key": "drawer_autohide",
@@ -423,19 +419,27 @@
         "max": 30,
         "unit": "s",
         "note": "When a change from elsewhere opened it.",
-        "default": 3
+        "default": 3,
+        "onlyWhen": [
+          "headless",
+          false
+        ]
       },
       {
         "type": "group",
         "label": "Home screen",
-        "accent": "#c8a2d8"
+        "accent": "#c8a2d8",
+        "onlyWhen": [
+          "headless",
+          false
+        ]
       },
       {
         "key": "home_strip",
         "type": "choice",
-        "label": "Strip below the tiles",
+        "label": "Home screen list",
         "marks": "N",
-        "note": "What the library root shows under its five cards.",
+        "note": "What the home screen shows.",
         "options": [
           "New music",
           "Most played artists",
@@ -465,14 +469,18 @@
       {
         "type": "group",
         "label": "Idle screen",
-        "accent": "#c8a2d8"
+        "accent": "#c8a2d8",
+        "onlyWhen": [
+          "headless",
+          false
+        ]
       },
       {
         "key": "idle_screen",
         "type": "choice",
         "label": "Screen",
         "marks": "R",
-        "note": "The built-in screen shows the clock and weather. An external page replaces it entirely.",
+        "note": "The built-in screen shows the clock and weather. An external page loads the URL provided.",
         "options": [
           "Built in",
           "External URL"
@@ -507,7 +515,7 @@
         "type": "choice",
         "label": "Background",
         "marks": "N",
-        "note": "Artist pictures come from the library. Online wallpapers come from Pixabay and need a key; on-device wallpapers are read from local storage.",
+        "note": "Artist pictures come from the library. Online wallpapers come from Pixabay and need a key. On-device wallpapers are read from local storage.",
         "options": [
           "Artist pictures",
           "Wallpapers online",
@@ -525,7 +533,7 @@
         "type": "number",
         "label": "Background brightness",
         "marks": "N",
-        "note": "How bright the picture behind the clock is. The design's own value is 62%, which is what keeps white type readable over a photograph.",
+        "note": "Brightness of the background picture. Recommended: 62%.",
         "min": 20,
         "max": 100,
         "step": 5,
@@ -543,7 +551,7 @@
         "type": "number",
         "label": "Change the picture every",
         "marks": "N",
-        "note": "How often the background changes — artist pictures, online wallpapers and the device's own, all of them.",
+        "note": "How often the background changes — artist pictures, online wallpapers and the player's own.",
         "min": 1,
         "max": 60,
         "unit": "min",
@@ -558,11 +566,25 @@
       {
         "key": "wallpaper_key",
         "type": "text",
-        "label": "Wallpaper API key",
+        "label": "Pixabay API key",
         "marks": "N",
-        "note": "A free Pixabay key, one per device. Pixabay allows a background feature inside a product like this one, but not a key shipped with it.",
+        "note": "A Pixabay key, from a free account. Use one per player to avoid throttling.",
         "secret": true,
         "placeholder": "Pixabay API key",
+        "default": null,
+        "onlyWhen": [
+          "idle_background",
+          "Wallpapers online"
+        ]
+      },
+      {
+        "key": "pexels_key",
+        "type": "text",
+        "secret": true,
+        "placeholder": "Pexels API key",
+        "label": "Pexels API key",
+        "marks": "N",
+        "note": "A Pexels key, from a free account. With both keys, pictures come from both.",
         "default": null,
         "onlyWhen": [
           "idle_background",
@@ -610,7 +632,7 @@
         "type": "toggle",
         "label": "Clock",
         "marks": "N",
-        "note": "The time and the date, over the background. Turn it off and the panel is a picture frame.",
+        "note": "The time and the date, over the background.",
         "default": true,
         "onlyWhen": [
           "idle_screen",
@@ -622,7 +644,7 @@
         "type": "choice",
         "label": "Clock format",
         "marks": "N",
-        "note": "How the idle screen's clock tells the time. Also asked in first-time setup.",
+        "note": null,
         "options": [
           "24 h",
           "12 h"
@@ -638,7 +660,7 @@
         "type": "toggle",
         "label": "Weather",
         "marks": "N",
-        "note": "Forecasts come from Open-Meteo, which needs no key and no account.",
+        "note": "Forecasts come from Open-Meteo.",
         "default": true,
         "onlyWhen": [
           "idle_screen",
@@ -650,7 +672,7 @@
         "type": "text",
         "label": "Location",
         "marks": "N",
-        "note": "A place name, looked up once. The device stores where it is, not what was typed.",
+        "note": "A city or place name. It can be changed at any time.",
         "placeholder": "City, country",
         "default": null,
         "onlyWhen": [
@@ -663,10 +685,10 @@
         "type": "choice",
         "label": "Forecast",
         "marks": "N",
-        "note": "Three days beside the clock, or today's conditions alone. They are two layouts, not one with a row hidden.",
+        "note": "Today's weather is always shown. 3 days adds a three-day forecast beside it.",
         "options": [
           "3 days",
-          "None"
+          "Today only"
         ],
         "default": "3 days",
         "onlyWhen": [
@@ -693,15 +715,19 @@
       },
       {
         "type": "group",
-        "label": "Visualization",
-        "accent": "#c8a2d8"
+        "label": "Visualiser",
+        "accent": "#c8a2d8",
+        "onlyWhen": [
+          "headless",
+          false
+        ]
       },
       {
         "key": "viz_timeout",
         "type": "number",
         "label": "Timeout",
         "marks": "R",
-        "note": "How long music plays untouched before the visualiser takes the screen.",
+        "note": "How long music plays before the visualiser takes the screen, counted from the last tap or skip.",
         "min": 1,
         "max": 60,
         "unit": "min",
@@ -712,7 +738,7 @@
         "type": "number",
         "label": "Stop when nothing is playing",
         "marks": "N",
-        "note": "How long silence lasts before the visualiser gives the screen back. Without it the meter sits over the idle screen until somebody taps it.",
+        "note": "How long silence lasts before the visualiser gives the screen back.",
         "min": 1,
         "max": 60,
         "unit": "min",
@@ -721,9 +747,9 @@
       {
         "key": "skin_corpus",
         "type": "choice",
-        "label": "Skins",
+        "label": "Skin type",
         "marks": "R",
-        "note": "What the visualiser draws from: needles, bars, both together, a turntable or a tape deck, or the skins that show the artist's photos (Fanart). All takes any of them. Which skin, and whether it changes with the track, is the row below.",
+        "note": "The kind of skin the visualiser picks from.",
         "options": [
           "VU meters",
           "Spectrum",
@@ -760,8 +786,12 @@
       },
       {
         "type": "group",
-        "label": "Visualisation tweaks",
-        "accent": "#c8a2d8"
+        "label": "Visualiser tweaks",
+        "accent": "#c8a2d8",
+        "onlyWhen": [
+          "headless",
+          false
+        ]
       },
       {
         "key": "spectrum_smoothing",
@@ -828,7 +858,7 @@
         "type": "choice",
         "label": "Rotation",
         "marks": "N",
-        "note": "Stepped redraws a turning record or reel eight times a second; smooth redraws it every frame it moves. Smooth roughly doubles what the visualiser costs - measured on a turntable skin, 44 % of one processor core stepped against 87 % smooth.",
+        "note": "Stepped redraws a turning record or reel eight times a second. Smooth redraws it every frame it moves, at the expense of more CPU usage.",
         "options": [
           "Stepped",
           "Smooth"
@@ -846,6 +876,10 @@
     "label": "Enrichment",
     "subtitle": "Lyrics and artist info",
     "accent": "#e8a0b4",
+    "onlyWhen": [
+      "headless",
+      false
+    ],
     "rows": [
       {
         "key": "enrichment",
@@ -868,7 +902,7 @@
         "type": "toggle",
         "label": "Look up missing artwork",
         "marks": "R",
-        "note": "For renderers that supply none. Title and artist are enough to find it later.",
+        "note": "For renderers that supply none.",
         "default": null
       },
       {
@@ -878,7 +912,7 @@
         "placeholder": "ListenBrainz token",
         "label": "ListenBrainz token",
         "marks": "N",
-        "note": "Only for the artist page's Popular list: that endpoint began requiring one on 2026-09-18. Everything else works without a key.",
+        "note": "For the artist page's Popular list. A free user token, from https://listenbrainz.org/settings/",
         "default": null
       },
       {
@@ -888,7 +922,17 @@
         "placeholder": "fanart.tv key",
         "label": "fanart.tv key",
         "marks": "N",
-        "note": "Artist pictures. Without it they come from LMS's own plugin, where the server has one, and initials otherwise.",
+        "note": "Artist pictures from fanart.tv. Without a key they come from the Lyrion server's Music & Artist Information plugin, or initials where it is not installed.",
+        "default": null
+      },
+      {
+        "key": "theaudiodb_key",
+        "type": "text",
+        "secret": true,
+        "placeholder": "TheAudioDB key",
+        "label": "TheAudioDB key",
+        "marks": "N",
+        "note": "Artist pictures and album covers where fanart.tv has none. Optional: without a key of your own, TheAudioDB's free shared key is used.",
         "default": null
       },
       {
@@ -901,6 +945,51 @@
         "max": 100,
         "unit": "%",
         "default": 90
+      },
+      {
+        "type": "group",
+        "label": "Lyrion Client",
+        "accent": "#7ed6bc",
+        "onlyWhen": [
+          "lms_enabled",
+          true
+        ]
+      },
+      {
+        "key": "sweep_portraits",
+        "type": "action",
+        "label": "Update artist portraits",
+        "marks": "R",
+        "note": "Looks up every album artist on fanart.tv, then TheAudioDB, and keeps LMS's picture where neither has one. Checks all of them, every time. Runs in the background; playback is not interrupted.",
+        "default": null,
+        "onlyWhen": [
+          "lms_enabled",
+          true
+        ]
+      },
+      {
+        "key": "sweep_covers",
+        "type": "action",
+        "label": "Update album covers",
+        "marks": "R",
+        "note": "Looks up every album's cover on fanart.tv, then TheAudioDB, and uses it in place of LMS's, keeping LMS's where neither has one. Checks all of them, every time. Runs in the background; playback is not interrupted. One update runs at a time.",
+        "default": null,
+        "onlyWhen": [
+          "lms_enabled",
+          true
+        ]
+      },
+      {
+        "key": "sweep_status",
+        "type": "readonly",
+        "label": "Progress",
+        "marks": "R",
+        "note": "What the last or current run has done.",
+        "default": null,
+        "onlyWhen": [
+          "lms_enabled",
+          true
+        ]
       }
     ]
   },
@@ -915,10 +1004,10 @@
         "type": "text",
         "label": "Device name",
         "marks": "R",
-        "note": "One name for everything: the mDNS hostname, the LMS player, the Spotify Connect device and the Bluetooth name. There is no per-service override. Changing it takes effect at the next restart.",
+        "note": "One name for everything: the mDNS hostname, the LMS player, the Spotify Connect device and the Bluetooth name. There is no per-service override.",
         "default": null,
         "restart": true,
-        "warn": "Change only takes place after a restart of the device.",
+        "warn": "Changing it will restart the device.",
         "placeholder": "Device name"
       },
       {
@@ -981,7 +1070,11 @@
       {
         "type": "group",
         "label": "Visualiser",
-        "accent": "#c8a2d8"
+        "accent": "#c8a2d8",
+        "onlyWhen": [
+          "headless",
+          false
+        ]
       },
       {
         "key": "visualiser_skins",
@@ -1068,9 +1161,9 @@
           "Testing"
         ],
         "default": "Stable",
-        "note": "Testing gets each release first; Stable gets it once it has been tried.",
+        "note": "Testing gets each release first. Stable gets it once it has been tried. Recommended: Stable.",
         "warn": {
-          "Testing": "Testing releases reach this device before everyone else's, and may have problems. Going back to Stable does not downgrade: the device stays where it is until Stable passes it."
+          "Testing": "Testing releases reach this player before everyone else's, and may have problems. Going back to Stable does not downgrade: the player stays where it is until Stable passes it."
         }
       },
       {

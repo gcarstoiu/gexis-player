@@ -148,6 +148,11 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         "confidence", "factory_reset", "idle_close", "image_build",
         "lms_player", "log_level", "plugins", "power", "release_ladder",
         "seek_reanchor", "spotify_name", "theme",
+        # ADR-0120 §5, George's "1.a" (2026-10-05): the owner's own key,
+        # TheAudioDB's shared test key without one.
+        "theaudiodb_key",
+        # ADR-0120 §6 (2026-10-05): Pexels beside Pixabay, the owner's key.
+        "pexels_key",
         # ADR-0055, 2026-09-23: the design has no output picker, because
         # the design did not know the device has four playback outputs and
         # that two of them cannot be turned down.
@@ -179,6 +184,9 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         "legal", "credits",
         # ADR-0116, 2026-10-03: George asked for the last 10 releases' notes.
         "changelog",
+        # ADR-0117 decision 3, 2026-10-04: George kept the setting, for a
+        # DAC board that cannot name itself. The design predates boards.
+        "sound_card_board",
         # ADR-0054 §5, amended 2026-09-28: George's cap on the starting level
         # of a renderer that is handed one (Spotify, and a plugin that declares `volume_handed`). The design
         # predates sources that keep their own.
@@ -517,12 +525,15 @@ def test_the_device_name_warning_says_what_this_device_does():
     *restarts the services*. **It does not**: ADR-0048 writes all four and
     applies none of them until the next restart, on purpose, so the drop's
     sentence would describe a device that does not exist. The mechanic is
-    the design's; the wording is this device's."""
+    the design's; the wording is this device's.
+
+    **Amended 2026-10-05:** saving it from Settings now restarts the device
+    (George: *"It should restart the device"*), so the warning says that -
+    his sentence again, replacing his 2026-09-22 one."""
     row = next(r for r in _rows() if r["key"] == "device_name")
     assert isinstance(row["warn"], str)
     assert row["restart"] is True
-    # George's own sentence, 2026-09-22.
-    assert row["warn"] == "Change only takes place after a restart of the device."
+    assert row["warn"] == "Changing it will restart the device."
 
 
 def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
@@ -579,8 +590,10 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # and the channel.
     # **87**: Software update, its own tile (George, 2026-10-01). **89**:
     # Attached screen and Screen rotation (ADR-0109, Phase 13b). **90**:
-    # Visualiser skins (ADR-0111). **91**: Change logs (ADR-0116).
-    assert len(rows) == 91
+    # Visualiser skins (ADR-0111). **91**: Change logs (ADR-0116). **92**:
+    # Sound card board (ADR-0117). **93**: TheAudioDB key (ADR-0120,
+    # 2026-10-05). **94**: Pexels API key (ADR-0120).
+    assert len(rows) == 94
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
@@ -591,8 +604,9 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # 69 when ADR-0110 folded Check now and Update now into the Release
     # tile; 70 with Software update (George, 2026-10-01); 72 with Attached
     # screen and Screen rotation; 73 with Visualiser skins; 74 with Change
-    # logs (ADR-0116).
-    assert len(rows) - len(kept) == 74
+    # logs (ADR-0116); 75 with Sound card board (ADR-0117); 76 with
+    # TheAudioDB key (ADR-0120); 77 with Pexels API key (ADR-0120).
+    assert len(rows) - len(kept) == 77
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():
@@ -920,9 +934,9 @@ def test_a_recommended_value_in_a_note_is_that_row_s_own_default():
             assert f"{row['default']}{'' if unit == '%' else ' '}{unit}" in note, (
                 f"{row['key']}: the recommendation should carry its unit"
             )
-    assert checked == 4, (
-        "expected ADR-0058's three rows plus the confidence threshold to "
-        f"recommend a value, found {checked}"
+    assert checked == 5, (
+        "expected ADR-0058's three rows, the confidence threshold and the "
+        f"idle background's brightness (2026-10-05) to recommend a value, found {checked}"
     )
 
 
@@ -1276,3 +1290,107 @@ def test_a_hidden_row_is_published_and_marked_invisible(store):
     assert token()["visible"] is False
     settings.set("beszel.enabled", True)
     assert token()["visible"] is True
+
+
+def test_fixed_output_hides_the_volume_rows(store):
+    """George, 2026-10-05: with Output mode Fixed, Maximum volume, Starting
+    volume and Volume curve are hidden entirely - there is no slider for
+    them to shape."""
+    settings = Settings(store, registry=load_registry(), wired={"output_mode": lambda v: None})
+    def shown():
+        return {r["key"] for g in settings.to_json() if g["id"] == "audio"
+                for r in g["rows"] if r.get("key") and r["visible"]}
+    volume_rows = {"max_ceiling", "start_max", "travel_curve"}
+    settings.set("output_mode", "Variable")
+    assert volume_rows <= shown()
+    settings.set("output_mode", "Fixed")
+    assert not volume_rows & shown()
+    assert "output_mode" in shown()
+
+
+def test_the_artwork_updates_are_enrichment_s_lyrion_client_rows():
+    """George, 2026-10-05: the two updates and their progress live in
+    Enrichment, under a Lyrion Client heading that hides with Lyrion Client
+    (ADR-0022, reversing the 2026-09-25 move into Sources)."""
+    enrich = next(g for g in load_registry() if g["id"] == "enrich")["rows"]
+    heading = next(i for i, r in enumerate(enrich) if r.get("type") == "group")
+    assert enrich[heading]["label"] == "Lyrion Client"
+    assert enrich[heading]["onlyWhen"] == ["lms_enabled", True]
+    assert [r["key"] for r in enrich[heading + 1:]] == ["sweep_portraits", "sweep_covers", "sweep_status"]
+    sources = next(g for g in load_registry() if g["id"] == "sources")["rows"]
+    assert not any(r.get("key", "").startswith("sweep_") for r in sources)
+
+
+def test_a_plugin_s_report_is_published_on_its_row_and_goes_with_it(store):
+    """ADR-0119: a plugin says what its row is - Plexamp, *Claimed* - and the
+    row carries it as `status`. Not stored: it goes when the plugin does."""
+    settings = Settings(
+        store,
+        registry=Settings.with_plugins(_groups(), [_plugin("plexamp", kind="renderer", settings=[
+            {"key": "claim_token", "type": "text", "label": "Claim token", "default": None}])]),
+    )
+    def row():
+        return next(r for g in settings.to_json() for r in g["rows"]
+                    if r.get("key") == "plexamp.claim_token")
+    assert "status" not in row()
+    assert settings.report("plexamp.claim_token", "done", "Claimed") is True
+    assert row()["status"] == {"state": "done", "text": "Claimed"}
+    assert settings.report("plexamp.claim_token", "done", "Claimed") is False, "a repeat changes nothing"
+    settings.report("plexamp.claim_token", "failed", "Claimed", "The claim did not work.")
+    assert row()["status"]["error"] == "The claim did not work."
+    assert settings.forget_reports("plexamp.") is True
+    assert "status" not in row()
+    with pytest.raises(InvalidValue):
+        settings.report("plexamp.claim_token", "half-done")
+    with pytest.raises(UnknownSetting):
+        settings.report("plexamp.nothing", "done")
+
+
+def test_headless_hides_every_setting_that_needs_a_screen(store):
+    """George, 2026-10-05: with Headless on, the home screen, idle screen,
+    visualiser and its tweaks, the volume drawer, the transition screen and
+    all of Enrichment are hidden - by their headings' and group's conditions,
+    on top of each row's own (`home_strip` keeps Lyrion Client's)."""
+    settings = Settings(store, registry=load_registry(), wired={"headless": lambda v: None})
+    def shown():
+        return {r["key"] for g in settings.to_json() for r in g["rows"]
+                if r.get("key") and r["visible"]}
+    needs_a_screen = {
+        "drawer_on_external", "drawer_autohide", "home_strip", "home_strip_count",
+        "idle_screen", "idle_timeout", "viz_timeout", "viz_stop", "skin_corpus",
+        "spectrum_smoothing", "skin_motion", "show_transition", "handoff_duration",
+        "enrichment", "lyrics", "confidence", "fanart_key", "visualiser_skins",
+    }
+    settings.set("headless", False)
+    assert needs_a_screen - {"home_strip", "home_strip_count"} <= shown()
+    settings.set("headless", True)
+    assert not needs_a_screen & shown()
+    assert {"headless", "screen", "rotation"} <= shown(), "the switch back stays"
+    enrich = next(g for g in settings.to_json() if g["id"] == "enrich")
+    assert not any(r["visible"] for r in enrich["rows"] if r.get("key"))
+
+
+async def test_saving_the_device_name_from_settings_restarts_the_device(store):
+    """ADR-0048, amended 2026-10-05 (George: "It should restart the device").
+    The route restarts, not the row's callback: setup writes the same row
+    through `Settings.set` and must not reboot halfway through."""
+    import asyncio
+
+    restarted = []
+
+    async def restart(key):
+        restarted.append(key)
+
+    state = StateStore({})
+    settings = Settings(store, registry=load_registry(), wired={"device_name": lambda v: None})
+    server = StateServer(state, settings=settings, restart_device=restart)
+    async with TestClient(TestServer(server.make_app())) as client:
+        assert (await client.put("/settings/device_name", json={"value": "Kitchen"})).status == 200
+        await asyncio.sleep(0)
+        assert restarted == ["device_name"]
+        await client.put("/settings/device_name", json={"value": "Kitchen"})
+        await asyncio.sleep(0)
+        assert restarted == ["device_name"], "the same name again restarts nothing"
+    settings.set("device_name", "Hall")  # setup's way in
+    await asyncio.sleep(0)
+    assert restarted == ["device_name"]

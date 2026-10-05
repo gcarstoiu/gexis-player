@@ -23,9 +23,11 @@ from __future__ import annotations
 import logging
 import re
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import NamedTuple
+
+from gexis_core import boards, mixer_scale
 
 logger = logging.getLogger("gexis_core.outputs")
 
@@ -74,6 +76,9 @@ CONNECTORS = {"vc4hdmi0": "HDMI-A-1", "vc4hdmi1": "HDMI-A-2"}
 #: is connected."* The suffix is display only - `resolve` matches on what
 #: comes before it, so plugging a cable in does not orphan a stored choice.
 UNPLUGGED = " — nothing connected"
+#: What an option adds after the output's name - its state, and
+#: UNPLUGGED - all display only: `resolve` matches on the name before it.
+SEP = " — "
 
 
 #: Formats a renderer actually produces. A card offering none of them
@@ -155,10 +160,19 @@ class Output:
     #: output (ADR-0055 §4).
     control: str | None
     connected: bool = True
+    #: The control's own scale (ADR-0117); None with no control.
+    scale: mixer_scale.Scale | None = field(default=None, compare=False)
+    #: ADR-0117 decision 2: Tested, Known or Detected; None for the Pi's
+    #: own outputs.
+    state: str | None = field(default=None, compare=False)
+    #: What the card's driver calls it, when the list names the board
+    #: otherwise - a choice stored under the old name still finds it.
+    aka: str | None = field(default=None, compare=False)
 
     @property
     def option(self) -> str:
-        return self.label if self.connected else self.label + UNPLUGGED
+        shown = f"{self.label}{SEP}{self.state}" if self.state else self.label
+        return shown if self.connected else shown + UNPLUGGED
 
 
 def _run(*args: str) -> str:
@@ -169,20 +183,27 @@ def _run(*args: str) -> str:
         return ""
 
 
-def playback_control(card: str) -> str | None:
-    """The card's playback volume control, or None if it has none.
+def playback_control(card: str) -> tuple[str, mixer_scale.Scale] | tuple[None, None]:
+    """The card's playback volume control and its scale, or (None, None).
 
     Read from `amixer contents` rather than `scontrols`, because the
     question is not what controls exist but whether one of them is a
     *playback volume* - `vc4hdmi0` has controls and none of them is.
+
+    **Only a control that says its dB** (ADR-0117 decision 1, (a)): one
+    that does not is passed over, and with none left the output is fixed.
     """
-    contents = _run("amixer", "-c", card, "contents")
-    for name, following in re.findall(
-        r"name='([^']+) Playback Volume'\n([^\n]*)", contents
-    ):
-        if "type=INTEGER" in following:
-            return name
-    return None
+    controls = mixer_scale.playback_controls(_run("amixer", "-c", card, "contents"))
+    # **The list's name first** when a card has several (ADR-0117): the
+    # IQaudio DAC+'s *Analogue* is a 0 / -6 dB gain switch, *Digital* the
+    # volume.
+    preferred = boards.mixer_for(card)
+    controls.sort(key=lambda c: c[0] != preferred)
+    for name, scale in controls:
+        if scale is not None:
+            return name, scale
+        logger.warning("outputs: %s's %r gives no dB; not used for volume", card, name)
+    return None, None
 
 
 def _connected(card: str) -> bool:
@@ -197,8 +218,42 @@ def _connected(card: str) -> bool:
     return True
 
 
-def discover() -> list[Output]:
-    """Every playback output the device actually has, ours excluded."""
+#: Where the kernel lists its sound cards: a card arriving or leaving
+#: changes it, and nothing else does.
+CARDS = Path("/proc/asound/cards")
+#: The last `discover` answer and what it was worked out from.
+_DISCOVERED: dict = {}
+
+
+def discover(chosen_board: str | None = None) -> list[Output]:
+    """Every playback output the device actually has, ours excluded - each
+    named, and given its state, as ADR-0117 says: by `chosen_board` (the
+    *Sound card board* setting), the HAT's EEPROM, or the list.
+
+    **Worked out once per change** (2026-10-05): every `GET /settings`
+    lists the outputs, and `aplay` and an `amixer` per card cost 50 ms of
+    it on the player. Asked again when the cards, an HDMI connection or the
+    chosen board change - so a cable plugged in still shows without a
+    restart (ADR-0055 §1).
+    """
+    product = boards.hat_product()
+    if chosen_board is None:
+        from gexis_core import board_apply
+        written = board_apply.written()
+        chosen_board = written.id if written else None
+    try:
+        cards = CARDS.read_text()
+    except OSError:
+        cards = None
+    key = (cards, tuple(_connected(card) for card in CONNECTORS), chosen_board, product)
+    if cards is not None and _DISCOVERED.get("key") == key:
+        return list(_DISCOVERED["found"])
+    found = _discover(chosen_board, product)
+    _DISCOVERED.update(key=key, found=found)
+    return list(found)
+
+
+def _discover(chosen_board: str | None, product) -> list[Output]:
     found: list[Output] = []
     # **The device's description, not the card's.** `aplay -l` gives both,
     # and the card's is the driver's module name - "snd_rpi_hifiberry_
@@ -212,13 +267,18 @@ def discover() -> list[Output]:
     ):
         if card in OURS or any(o.card == card for o in found):
             continue
-        label = LABELS.get(card) or re.split(r" HiFi | hifi", description.strip())[0].strip()
+        label = LABELS.get(card) or re.split(r" HiFi | hifi", description.strip())[0].strip() or card
+        board, state = boards.identify(card, chosen=chosen_board, product=product)
+        control, scale = playback_control(card)
         found.append(
             Output(
                 card=card,
-                label=label or card,
-                control=playback_control(card),
+                label=board.name if board else label,
+                control=control,
                 connected=_connected(card),
+                scale=scale,
+                state=state,
+                aka=label if board else None,
             )
         )
     return found
@@ -262,9 +322,9 @@ def resolve(
     for wanted, why in ((stored, "stored"), (current, "configured")):
         if not wanted:
             continue
-        wanted = wanted.split(UNPLUGGED)[0]
+        wanted = wanted.split(SEP)[0]
         for output in available:
-            if wanted in (output.label, output.card):
+            if wanted in (output.label, output.card, output.aka):
                 return output
         logger.warning("outputs: the %s output %r is not here any more", why, wanted)
     for output in available:

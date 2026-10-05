@@ -349,6 +349,31 @@ def installed(root: Path, pack: str | None = None, resolution: str = RESOLUTION)
     that there are only 84?"*
     """
     packs = [root / pack] if pack else sorted(p for p in root.iterdir() if p.is_dir()) if root.is_dir() else []
+    # **Parsed once per change of the files** (2026-10-05): every
+    # `GET /settings` lists the skins, at 34 ms a parse on the player. The
+    # key is each `meters.txt` and when it last changed, so a pack installed,
+    # updated or removed is read again and nothing else is.
+    stamps = []
+    for pack_dir in (p for p in packs if p.is_dir()):
+        for templates in ("templates", "templates_spectrum"):
+            meters = pack_dir / templates / resolution / "meters.txt"
+            try:
+                stamps.append((str(meters), meters.stat().st_mtime_ns))
+            except OSError:
+                continue
+    key = (str(root), pack, resolution, tuple(stamps))
+    if _INSTALLED.get("key") == key:
+        return list(_INSTALLED["found"])
+    found = _installed(packs, resolution)
+    _INSTALLED.update(key=key, found=found)
+    return list(found)
+
+
+#: The last `installed` answer and what it was read from.
+_INSTALLED: dict = {}
+
+
+def _installed(packs: list[Path], resolution: str) -> list[tuple[Skin, Path]]:
     found: list[tuple[Skin, Path]] = []
     seen: set[str] = set()
     for pack_dir in (p for p in packs if p.is_dir()):
@@ -372,6 +397,38 @@ def installed(root: Path, pack: str | None = None, resolution: str = RESOLUTION)
                 seen.add(skin.name)
                 found.append((skin, meters.parent))
     return found
+
+
+def unavailable_corpora(root: Path, pack: str | None = None, resolution: str = RESOLUTION) -> dict[str, str]:
+    """The `skin_corpus` choices with no skin for this screen, each with why
+    (George, 2026-10-05: on the 1280x400 bar, Turntables and Fanart offered
+    nothing and could still be picked). Greyed with the reason, as ADR-0044's
+    `unavailable` draws them; *All* goes only when there is nothing at all."""
+    skins = [s for s, _ in installed(root, pack, resolution)]
+    memo = _for_this_corpus(("unavailable",))
+    if "answer" not in memo:
+        words = [w for w in CORPUS if w != "Random"]
+        memo["answer"] = {
+            word: "No skins of this type for this screen."
+            for word in words
+            if not in_corpus(skins, word)
+        }
+    return dict(memo["answer"])
+
+
+#: Answers worked out from the skins `installed` last read, dropped when it
+#: reads them again: sorting 147 skins into types was most of a
+#: `GET /settings` once the parse itself was cached (profiled on the
+#: player, 2026-10-05).
+_DERIVED: dict = {}
+
+
+def _for_this_corpus(question: tuple) -> dict:
+    """A memo for one question about the skins `installed` returned last."""
+    if _DERIVED.get("key") != _INSTALLED.get("key"):
+        _DERIVED.clear()
+        _DERIVED["key"] = _INSTALLED.get("key")
+    return _DERIVED.setdefault(question, {})
 
 
 #: ADR-0051 §1. The daemon writes it, the driver polls it beside
@@ -401,7 +458,11 @@ def labels(root: Path) -> dict[str, str]:
 def names(root: Path, corpus: str, pack: str | None = None, resolution: str = RESOLUTION) -> list[str]:
     """The skin names a `skin_corpus` word offers, in corpus order - what the
     `skin` row's picker lists (ADR-0051 §4)."""
-    return [skin.name for skin in in_corpus((s for s, _ in installed(root, pack, resolution)), corpus)]
+    found = installed(root, pack, resolution)
+    memo = _for_this_corpus(("names", corpus))
+    if "answer" not in memo:
+        memo["answer"] = [skin.name for skin in in_corpus((s for s, _ in found), corpus)]
+    return list(memo["answer"])
 
 
 def record_rpm(word: object) -> float:

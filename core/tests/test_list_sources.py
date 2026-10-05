@@ -147,13 +147,13 @@ async def test_joining_reports_what_network_manager_said(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_a_refused_password_comes_back_as_its_last_line(monkeypatch):
+async def test_a_refused_password_comes_back_in_words(monkeypatch):
     async def run(*args, timeout=None):
         return 4, "", "Error: Connection activation failed: Secrets were required"
 
     monkeypatch.setattr(wifi, "_run", run)
     ok, error = await wifi.join("Studio", "wrong")
-    assert ok is False and "Secrets were required" in error
+    assert (ok, error) == (False, "The password was not accepted.")
 
 
 @pytest.mark.asyncio
@@ -163,7 +163,7 @@ async def test_a_timeout_says_so_rather_than_failing_blankly(monkeypatch):
 
     monkeypatch.setattr(wifi, "_run", run)
     ok, error = await wifi.join("Far away")
-    assert ok is False and "Took too long" in error
+    assert ok is False and "took too long" in error
 
 
 @pytest.mark.asyncio

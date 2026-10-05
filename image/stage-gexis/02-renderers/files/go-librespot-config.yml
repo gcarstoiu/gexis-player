@@ -25,6 +25,13 @@ audio_device: output
 # It makes Spotify **louder at the same setting**, by up to 21 dB.
 external_volume: true
 
+# **And no loudness normalisation** (ADR-0052 §6, amended 2026-10-05). On by
+# default in go-librespot, and the one way left for it to touch the audio:
+# George heard Spotify quieter than LMS at full volume with the DAC at 240
+# for both, and LMS's Qobuz app closer to LMS. Finding 018's test of this
+# knob changed nothing - on one track, whose gain may simply have been zero.
+normalisation_disabled: true
+
 zeroconf_enabled: true
 # avahi, not go-librespot's own built-in mDNS responder: avahi-daemon is
 # already running on this image (base layer), so this shares it rather
