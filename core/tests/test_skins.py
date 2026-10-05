@@ -478,6 +478,8 @@ def test_the_skins_are_parsed_again_only_when_a_pack_changes(tmp_path, monkeypat
     real = sk.parse
     monkeypatch.setattr(sk, "parse", lambda text: calls.append(1) or real(text))
     monkeypatch.setattr(sk, "_INSTALLED", {})
+    monkeypatch.setattr(sk, "_DERIVED", {})
+    assert sk.names(tmp_path, sk.ALL, resolution="1280x800") == ["one"]
     assert [s.name for s, _ in sk.installed(tmp_path)] == ["one"]
     assert [s.name for s, _ in sk.installed(tmp_path)] == ["one"]
     assert len(calls) == 1
@@ -486,3 +488,4 @@ def test_the_skins_are_parsed_again_only_when_a_pack_changes(tmp_path, monkeypat
     os.utime(meters, ns=(meters.stat().st_mtime_ns + 10**9,) * 2)
     assert [s.name for s, _ in sk.installed(tmp_path)] == ["one", "two"]
     assert len(calls) == 2
+    assert sk.names(tmp_path, sk.ALL, resolution="1280x800") == ["one", "two"], "the memo follows the parse"

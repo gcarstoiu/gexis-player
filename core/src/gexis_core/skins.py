@@ -405,12 +405,30 @@ def unavailable_corpora(root: Path, pack: str | None = None, resolution: str = R
     nothing and could still be picked). Greyed with the reason, as ADR-0044's
     `unavailable` draws them; *All* goes only when there is nothing at all."""
     skins = [s for s, _ in installed(root, pack, resolution)]
-    words = [w for w in CORPUS if w != "Random"]
-    return {
-        word: "No skins of this type for this screen."
-        for word in words
-        if not in_corpus(skins, word)
-    }
+    memo = _for_this_corpus(("unavailable",))
+    if "answer" not in memo:
+        words = [w for w in CORPUS if w != "Random"]
+        memo["answer"] = {
+            word: "No skins of this type for this screen."
+            for word in words
+            if not in_corpus(skins, word)
+        }
+    return dict(memo["answer"])
+
+
+#: Answers worked out from the skins `installed` last read, dropped when it
+#: reads them again: sorting 147 skins into types was most of a
+#: `GET /settings` once the parse itself was cached (profiled on the
+#: player, 2026-10-05).
+_DERIVED: dict = {}
+
+
+def _for_this_corpus(question: tuple) -> dict:
+    """A memo for one question about the skins `installed` returned last."""
+    if _DERIVED.get("key") != _INSTALLED.get("key"):
+        _DERIVED.clear()
+        _DERIVED["key"] = _INSTALLED.get("key")
+    return _DERIVED.setdefault(question, {})
 
 
 #: ADR-0051 §1. The daemon writes it, the driver polls it beside
@@ -440,7 +458,11 @@ def labels(root: Path) -> dict[str, str]:
 def names(root: Path, corpus: str, pack: str | None = None, resolution: str = RESOLUTION) -> list[str]:
     """The skin names a `skin_corpus` word offers, in corpus order - what the
     `skin` row's picker lists (ADR-0051 §4)."""
-    return [skin.name for skin in in_corpus((s for s, _ in installed(root, pack, resolution)), corpus)]
+    found = installed(root, pack, resolution)
+    memo = _for_this_corpus(("names", corpus))
+    if "answer" not in memo:
+        memo["answer"] = [skin.name for skin in in_corpus((s for s, _ in found), corpus)]
+    return list(memo["answer"])
 
 
 def record_rpm(word: object) -> float:

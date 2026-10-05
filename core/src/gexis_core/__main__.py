@@ -1676,8 +1676,8 @@ async def main() -> None:
         # George, 2026-10-05: a skin type this screen has no skins of is not
         # offered - greyed, with why (ADR-0044's `unavailable`), and a stored
         # one falls back to the first type that has some.
-        restrictions={"skin_corpus": lambda: (skins.unavailable_corpora(skins_at()[0], resolution=skins_at()[1])
-                                             if skins_at() else {})},
+        restrictions={"skin_corpus": lambda: (lambda at: skins.unavailable_corpora(at[0], resolution=at[1])
+                                              if at else {})(skins_at())},
         options={
             "skin_corpus": skins_offered,
             # ADR-0055 §1: discovered, not written down. Re-read on every
