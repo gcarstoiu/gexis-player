@@ -235,7 +235,7 @@ for f in /opt/gexis-core/models/face_detection_yunet_2023mar.onnx \
          /opt/gexis-core/models/object_detection_yolox_2022nov.onnx; do
 	dfs "stat $f" | grep -q 'Inode:' && ok "$f" || bad "$f missing"
 done
-dfs "ls /opt/gexis-core/venv/lib/python3.13/site-packages" | grep -q '^cv2$' \
+dfs "stat /opt/gexis-core/venv/lib/python3.13/site-packages/cv2/__init__.py" | grep -q 'Inode:' \
 	&& ok "OpenCV in the core's environment" || bad "OpenCV missing from the core's environment"
 
 echo "== Plexamp (ADR-0090), a renderer from another repository"
