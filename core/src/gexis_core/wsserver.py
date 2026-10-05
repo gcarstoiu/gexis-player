@@ -582,11 +582,11 @@ class StateServer:
         shuffled = list(picked)
         random.shuffle(shuffled)
         for artist in shuffled[:ARTIST_FANART_TRIES]:
-            url = await self._fanart_background(artist.get("name") or "")
+            url, source = await self._fanart_background(artist.get("name") or "")
             if url:
                 self._last_background = artist.get("name") or ""
                 return {"url": url, "by": artist.get("name") or "", "page": "",
-                        "credit": None, "source": "fanart", "error": None}
+                        "credit": None, "source": source, "error": None}
 
         photos = await self._artistinfo.photos([a["id"] for a in picked], PHOTO_BACKGROUND)
         with_photos = [(a, photos.get(a["id"])) for a in picked if photos.get(a["id"])]
@@ -599,23 +599,27 @@ class StateServer:
         return {"url": url, "by": artist.get("name") or "", "page": "",
                 "credit": None, "source": "lms", "error": None}
 
-    async def _fanart_background(self, name: str) -> str | None:
-        """fanart's wide picture for this artist, or None.
+    async def _fanart_background(self, name: str) -> tuple[str | None, str | None]:
+        """fanart.tv's wide picture for this artist - or TheAudioDB's - and
+        which one answered; (None, None) when neither has one.
 
         None covers every way this can come to nothing - no key, no
         MusicBrainz id, no image for that id - because the caller does the
         same thing in all of them: try another artist, then fall back.
         """
         if not name or self._enrichment is None:
-            return None
+            return None, None
         try:
             found = await self._enrichment.for_track(
-                TrackKey(artist=fold(name)), only=("fanart-bg",)
+                TrackKey(artist=fold(name)), only=("fanart-bg", "tadb-bg")
             )
         except Exception as exc:
             logger.info("idle: fanart unavailable for %r: %s", name, exc)
-            return None
-        return found.artist_image or None
+            return None, None
+        if not found.artist_image:
+            return None, None
+        # Which one answered: fanart.tv's, or TheAudioDB's (ADR-0120 §3).
+        return found.artist_image, ("theaudiodb" if found.sources[:1] == ("tadb-bg",) else "fanart")
 
     async def _handle_local_wallpaper(self, request: web.Request) -> web.StreamResponse:
         """One picture somebody put on this device. Same rule as below: a

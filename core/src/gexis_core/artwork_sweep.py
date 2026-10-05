@@ -28,6 +28,7 @@ import time
 from dataclasses import dataclass, replace
 
 from gexis_core.enrichment import fold, match_title
+from gexis_core.providers import THEAUDIODB_BASE, theaudiodb_key
 
 logger = logging.getLogger("gexis_core.artwork_sweep")
 
@@ -124,7 +125,7 @@ class ArtworkSweep:
     """
 
     def __init__(self, library, identity, http, store, *, fanart_key=None,
-                 confidence=None, on_change=None, on_finish=None,
+                 theaudiodb_key=None, confidence=None, on_change=None, on_finish=None,
                  gap_s: float = FANART_GAP_S, publish_every_s: float = PUBLISH_EVERY_S,
                  clock=time.monotonic) -> None:
         self._library = library
@@ -132,6 +133,9 @@ class ArtworkSweep:
         self._http = http
         self._store = store
         self._fanart_key = fanart_key or (lambda: None)
+        #: ADR-0120 §4: TheAudioDB after fanart.tv - the owner's key, or its
+        #: shared test key without one, so a run needs no key at all now.
+        self._theaudiodb_key = theaudiodb_key or (lambda: None)
         #: The score a MusicBrainz match must reach. `Head` resolved at 100
         #: and there is no way to know it is the right Head; below the
         #: threshold the artist keeps LMS's picture (ADR-0012, ADR-0059).
@@ -183,9 +187,6 @@ class ArtworkSweep:
         """Begin a run. False when one is already going."""
         if self.running():
             logger.info("sweep: %s asked for while %s is running", kind, self._progress.kind)
-            return False
-        if not self._fanart_key():
-            logger.warning("sweep: no fanart.tv key, nothing to ask")
             return False
         self._progress = Progress(kind=kind, running=True)
         self._published_at = self._clock()
@@ -261,12 +262,19 @@ class ArtworkSweep:
             logger.info("sweep: %s scored %s, below the threshold", name, score)
             return False
 
-        art = await self._fanart(mbid)
-        if art is None:
-            return False  # could not ask; leave whatever is remembered
+        # fanart.tv first; TheAudioDB for what it has not (ADR-0120 §4).
+        # **"Nothing" is stored only when both were asked and both said so**:
+        # a source that could not be asked leaves what was remembered.
+        art = await self._fanart(mbid) if self._fanart_key() else {}
+        tadb = _Lazy(lambda: self._tadb_artist(mbid))
 
         if kind == "portraits":
-            url = self._pick(art, ARTIST_KINDS)
+            url = self._pick(art, ARTIST_KINDS) if art else None
+            if url is None:
+                artist = await tadb.get()
+                url = _first(artist, TADB_ARTIST_FIELDS) if artist else None
+                if url is None and (art is None or artist is None):
+                    return False  # a source could not be asked
             self._remember(ARTIST_NAMESPACE, folded, url)
             return url is not None
 
@@ -274,7 +282,8 @@ class ArtworkSweep:
         if not mine:
             return False
         groups = await self._release_groups(mbid)
-        albums = art.get("albums") or {}
+        albums = (art or {}).get("albums") or {}
+        tadb_albums = _Lazy(lambda: self._tadb_albums(tadb))
         # **Their catalogue, indexed the way ours can be matched against it.**
         by_title: dict[str, str] = {}
         for group_id, title in groups.items():
@@ -286,12 +295,73 @@ class ArtworkSweep:
         for title in mine:
             group_id = by_title.get(match_title(title))
             url = self._pick(albums.get(group_id) or {}, ALBUM_KINDS) if group_id else None
+            if url is None:
+                theirs = await tadb_albums.get()
+                if theirs is not None:
+                    url = theirs.get(group_id) if group_id else None
+                    url = url or theirs.get(match_title(title))
+                if url is None and group_id and theirs is not None:
+                    # **One album at a time**: the shared key's album list
+                    # holds one album per artist (measured 2026-10-05,
+                    # Coldplay), its per-album lookup answers for any.
+                    one = await self._tadb_album(group_id)
+                    if one is None:
+                        theirs = None  # could not ask: leave it be
+                    else:
+                        url = one or None
+                if url is None and (art is None or theirs is None):
+                    continue  # a source could not be asked: leave it be
             # **Stored under the title the library has**, not the release
             # group's, because that is the key the panel looks up. `None` is
-            # stored too: "asked, fanart had none" is an answer.
+            # stored too: "asked, neither had one" is an answer.
             self._remember(ALBUM_NAMESPACE, f"{folded}\x1f{fold(title)}", url)
             stored += 1 if url else 0
         return stored > 0
+
+    async def _tadb_artist(self, mbid: str) -> dict | None:
+        """TheAudioDB's record of an artist: `{}` when it has none, None
+        when it could not be asked."""
+        body = await self._http.json(
+            f"{THEAUDIODB_BASE}/{theaudiodb_key(self._theaudiodb_key())}/artist-mb.php", params={"i": mbid})
+        if body is None:
+            return None
+        return (body.get("artists") or [None])[0] or {}
+
+    async def _tadb_album(self, group_id: str) -> str | None:
+        """One album's cover from TheAudioDB by its release group: the URL,
+        `""` when it has none, None when it could not be asked."""
+        body = await self._http.json(
+            f"{THEAUDIODB_BASE}/{theaudiodb_key(self._theaudiodb_key())}/album-mb.php", params={"i": group_id})
+        if body is None:
+            return None
+        album = (body.get("album") or [None])[0] or {}
+        return album.get("strAlbumThumb") or ""
+
+    async def _tadb_albums(self, tadb: "_Lazy") -> dict[str, str] | None:
+        """TheAudioDB's covers for an artist, by release-group id and by
+        matchable title; `{}` when it has none, None when it could not be
+        asked. One call for the whole discography."""
+        artist = await tadb.get()
+        if artist is None:
+            return None
+        if not artist.get("idArtist"):
+            return {}
+        body = await self._http.json(
+            f"{THEAUDIODB_BASE}/{theaudiodb_key(self._theaudiodb_key())}/album.php",
+            params={"i": artist["idArtist"]})
+        if body is None:
+            return None
+        covers: dict[str, str] = {}
+        for album in body.get("album") or []:
+            thumb = album.get("strAlbumThumb")
+            if not thumb:
+                continue
+            if album.get("strMusicBrainzID"):
+                covers.setdefault(album["strMusicBrainzID"], thumb)
+            title = match_title(album.get("strAlbum") or "")
+            if title:
+                covers.setdefault(title, thumb)
+        return covers
 
     async def _fanart(self, mbid: str):
         """fanart's whole answer for one artist, or None when it could not
@@ -343,6 +413,29 @@ class ArtworkSweep:
             self._store.remember(namespace, key, url)
         except Exception as exc:
             logger.info("sweep: could not store %s/%s (%s)", namespace, key, exc)
+
+
+#: TheAudioDB's portrait first, then its fanart (ADR-0120 §4).
+TADB_ARTIST_FIELDS = ("strArtistThumb", "strArtistFanart")
+
+
+def _first(record: dict, fields: tuple[str, ...]) -> str | None:
+    return next((record.get(f) for f in fields if record.get(f)), None)
+
+
+class _Lazy:
+    """One call, made only if something asks, and its answer kept."""
+
+    def __init__(self, make) -> None:
+        self._make = make
+        self._done = False
+        self._value = None
+
+    async def get(self):
+        if not self._done:
+            self._value = await self._make()
+            self._done = True
+        return self._value
 
 
 def remembered(store, namespace: str, key: str) -> str | None | bool:

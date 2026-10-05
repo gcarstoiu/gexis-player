@@ -85,6 +85,14 @@ covers ... The more coverage we have, the better."* Enrichment's *Update
 artist portraits* and *Update album covers* ask TheAudioDB **after fanart.tv
 and before Lyrion's own** pictures.
 
+**Measured while building (2026-10-05):** the shared test key's album
+list (`album.php`) holds **one album per artist** (Coldplay: one), while its
+per-album lookup by release group (`album-mb.php`) answers for any. So a
+cover fanart.tv lacks is asked for alone, one request per album at 30 a
+minute: an update of a large library takes about an hour more on the
+shared key (estimated, not measured), and a personal key's full album list
+saves most of those requests.
+
 ### 5. Keys
 
 - **TheAudioDB (1.a):** an optional key row; the owner's own key when there

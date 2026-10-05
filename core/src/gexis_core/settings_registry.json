@@ -912,6 +912,16 @@
         "default": null
       },
       {
+        "key": "theaudiodb_key",
+        "type": "text",
+        "secret": true,
+        "placeholder": "TheAudioDB key",
+        "label": "TheAudioDB key",
+        "marks": "N",
+        "note": "Artist pictures and album covers where fanart.tv has none. Optional: without a key of your own, TheAudioDB's free shared key is used.",
+        "default": null
+      },
+      {
         "key": "confidence",
         "type": "number",
         "label": "Confidence threshold",
@@ -936,7 +946,7 @@
         "type": "action",
         "label": "Update artist portraits",
         "marks": "R",
-        "note": "Looks up every album artist on fanart.tv and keeps LMS's picture where fanart has none. Checks all of them, every time. Runs in the background; playback is not interrupted.",
+        "note": "Looks up every album artist on fanart.tv, then TheAudioDB, and keeps LMS's picture where neither has one. Checks all of them, every time. Runs in the background; playback is not interrupted.",
         "default": null,
         "onlyWhen": [
           "lms_enabled",
@@ -948,7 +958,7 @@
         "type": "action",
         "label": "Update album covers",
         "marks": "R",
-        "note": "Looks up every album's cover on fanart.tv and uses it in place of LMS's, keeping LMS's where fanart has none. Checks all of them, every time. Runs in the background; playback is not interrupted. One update runs at a time.",
+        "note": "Looks up every album's cover on fanart.tv, then TheAudioDB, and uses it in place of LMS's, keeping LMS's where neither has one. Checks all of them, every time. Runs in the background; playback is not interrupted. One update runs at a time.",
         "default": null,
         "onlyWhen": [
           "lms_enabled",

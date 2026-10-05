@@ -183,6 +183,11 @@ def _shrunk(w: int, h: int, W: int, H: int, need: float, *, top: float, how: str
     picture then still fills `MIN_WIDTH` of its width; skip it otherwise."""
     scale = H / need
     width = min(1.0, w * scale / W)
+    if width >= 1.0:
+        # It fits without shrinking after all (a close-up whose top half is
+        # no taller than the band): the band from `top`, filling the screen.
+        band = H / max(W / w, H / h)
+        return Placement(y=_y(top, band, h), how=how)
     if width < MIN_WIDTH:
         return Placement(skip=True, how=f"{how}, too big")
     # Drawn at `width` of the screen and full height: the picture's own band.

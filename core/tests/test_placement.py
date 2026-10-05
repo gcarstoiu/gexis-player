@@ -40,8 +40,10 @@ def test_an_animal_taller_than_the_band_keeps_its_top():
 def test_a_close_up_animal_is_shrunk_or_skipped_by_its_top_half():
     fits = pl.decide(1920, 1080, BAR, faces=[], subject=(0, 1300, 0.7), salient=NOTHING)
     assert fits.how in ("subject, shrunk", "subject, too big")
-    shrunk = pl.decide(1920, 1080, BAR, faces=[], subject=(0, 1000, 0.7), salient=NOTHING)
-    assert shrunk.how == "subject, shrunk" and shrunk.width >= pl.MIN_WIDTH
+    # A square photo (Lyrion's often are): the band is 400 of its 1280; a
+    # close-up 1000 tall needs its top 500, so it is shrunk to 80 % wide.
+    shrunk = pl.decide(1280, 1280, BAR, faces=[], subject=(0, 1000, 0.7), salient=NOTHING)
+    assert shrunk.how == "subject, shrunk" and shrunk.width == pytest.approx(0.8)
 
 
 def test_nothing_found_follows_what_stands_out_and_a_square_picture_too():
@@ -99,3 +101,9 @@ async def test_the_route_passes_over_a_picture_too_big_and_places_the_next():
         body = await (await client.get("/idle/wallpaper?w=1280&h=400")).json()
     assert body["url"] == "/b.jpg"
     assert body["place"] == {"y": 0.2, "width": 1.0, "how": "faces"}
+
+
+def test_a_close_up_whose_top_half_fits_is_not_called_shrunk():
+    p = pl.decide(1280, 853, BAR, faces=[], subject=(0, 700, 0.8), salient=NOTHING)
+    assert p.how == "subject" and p.width == 1.0
+

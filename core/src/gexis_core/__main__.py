@@ -43,6 +43,7 @@ from gexis_core.enrichment import (
 )
 from gexis_core.providers import (
     FANART_BACKGROUND,
+    TheAudioDBArtistImage,
     ArtistIdentity,
     CoverArtProvider,
     FanartArtistImage,
@@ -2451,6 +2452,7 @@ async def main() -> None:
         http,
         enrichment_cache,
         fanart_key=lambda: settings.value("fanart_key"),
+        theaudiodb_key=lambda: settings.value("theaudiodb_key"),
         # George, 2026-09-24: *"Use the confidence level for sure."* `Head`
         # resolved at 100 and there is no telling it is the right Head.
         confidence=lambda: int(settings.value("confidence") or 0),
@@ -2494,6 +2496,10 @@ async def main() -> None:
             FanartArtistImage(http, identity, lambda: settings.value("fanart_key"),
                               proxy_base=f"http://{config.lms_host}:{config.lms_port}",
                               **FANART_BACKGROUND),
+            # ADR-0120 §3: TheAudioDB's fanart when fanart.tv has none - after
+            # it, so the merge keeps fanart.tv's where both answer.
+            TheAudioDBArtistImage(http, identity, lambda: settings.value("theaudiodb_key"),
+                                  proxy_base=f"http://{config.lms_host}:{config.lms_port}"),
             LmsArtistProvider(artistinfo, lambda: lms.current_artist_id),
             LmsReleaseProvider(library, artistinfo, lambda: lms.current_album_id),
             WikipediaBiography(http, identity),

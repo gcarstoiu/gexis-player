@@ -29,19 +29,21 @@ release** (George, 2026-10-04): never push a release onto an open PR.
 | Released in 0.8.7 | The new-screen notice and its straight switch (29a3386, 88ee721, d91a4bc); a USB disk kept 7 days after unplugging (ADR-0115 decision 17, ddf088f); setup's copy fixes from the review (963857d-034fb33); genre pills kept to two rows on the artist page (7cd3e1b); skin packs fetched from the channel's release when the player's own is unpublished, a stale pack failure no longer shown, failures in words (efd329d); Finding 109's playback test; 13a/13c/13e closed |
 
 **`gexis` right now (2026-10-05, afternoon):** the 13d preview with
-`phase-13b` merged in (core and player `0.8.9+git66.5e459f4`, ui `0.8.9+git60.d73b5a9`,
-gexis-system `0.8.9+git44.83e89ad`, **gexis-go-librespot `0.9.0-2`** - Spotify
-without loudness normalisation, ADR-0052 §6 amended at George's word -
+`phase-13b` merged in (core, ui and player `0.8.9+git77.a4b056c` - with
+**ADR-0120 step 1, backgrounds placed by what they show**, OpenCV 5.0.0 and
+both models in the core), gexis-system `0.8.9+git44.83e89ad`,
+gexis-go-librespot `0.9.0-2` (Spotify without normalisation),
 gexis-plexamp `0.3.0-2+0.8.9+git35.ab56c0c` with the unreleased 0.4.0 plugin
-files laid over it), on the 13.3" with a new cable. **George to compare**
-Spotify and LMS's Qobuz app on the same song at 100. **Skin packs now install on a preview** (efd329d: an unpublished
-release takes its pack from the channel's release; shown live, 2026-10-04 -
-before that every preview failed every pack). The album artist screen was measured on that panel through the
-kiosk's DevTools port (since closed): about 55 fps scrolling, photos in about
-half a second - not slower than the 10.1"; a headless Chromium on the device
-had shown 20 fps, an artefact of its software compositing.
+files laid over it; on the 13.3" with a new cable. George to watch the bar's
+idle screen.
 
 **Next, in order:**
+0. **ADR-0120, bar backgrounds** (accepted 2026-10-05): step 1 (placement)
+   built and live on gexis; step 2 (TheAudioDB for backgrounds and the
+   Enrichment updates, its key row) and step 3 (Pexels, its key row, the
+   rename to *Pixabay API key*, the measured order on bars) to build. The
+   core package is 76 MB now (OpenCV, numpy, two models). George registers
+   a Pexels key for step 3.
 1. **Phase 13d** (ADR-0117, accepted 2026-10-04): built in the worktree,
    six commits, not on hardware. George tests later: the DAC2 HD unchanged
    (preview from `phase-13d`), the IQaudio DAC+ chosen under *Sound card
