@@ -187,23 +187,36 @@ def check(groups: list[dict]) -> list[dict]:
                     unknown = set(warn) - set(row.get("options") or ())
                     if unknown:
                         raise ValueError(f"{key}: warn names options that do not exist: {sorted(unknown)}")
-            only = row.get("onlyWhen")
-            if only is not None and (not isinstance(only, list) or len(only) != 2):
-                raise ValueError(f"{key}: onlyWhen is [key, value]")
-            if only is not None and isinstance(only[1], dict) and set(only[1]) != {ONLY_WHEN_NOT}:
-                # A typo in the one key this form has would otherwise read as
-                # "not equal to nothing", which is every value, which is a row
-                # that never hides and never says why.
-                raise ValueError(f"{key}: onlyWhen's object form is {{\"not\": value}}")
+            _check_only_when(key, row.get("onlyWhen"))
 
     # Deferred to a second pass: a row may depend on one declared after it.
+    # **A heading's and a group's conditions too** (2026-10-05): theirs
+    # govern every row under them - see `to_json`.
     keys = {r["key"] for g in groups for r in g["rows"] if r["type"] != "group"}
     for group in groups:
+        _check_only_when(group.get("id", "?"), group.get("onlyWhen"))
         for row in group["rows"]:
+            name = row.get("key") or row.get("label", "?")
+            if row["type"] == "group":
+                _check_only_when(name, row.get("onlyWhen"))
+        for row in [group, *group["rows"]]:
             only = row.get("onlyWhen")
             if only is not None and only[0] not in keys:
-                raise ValueError(f"{row['key']}: onlyWhen names unknown setting {only[0]!r}")
+                name = row.get("key") or row.get("id") or row.get("label", "?")
+                raise ValueError(f"{name}: onlyWhen names unknown setting {only[0]!r}")
     return groups
+
+
+def _check_only_when(name: str, only: Any) -> None:
+    if only is None:
+        return
+    if not isinstance(only, list) or len(only) != 2:
+        raise ValueError(f"{name}: onlyWhen is [key, value]")
+    if isinstance(only[1], dict) and set(only[1]) != {ONLY_WHEN_NOT}:
+        # A typo in the one key this form has would otherwise read as
+        # "not equal to nothing", which is every value, which is a row
+        # that never hides and never says why.
+        raise ValueError(f"{name}: onlyWhen's object form is {{\"not\": value}}")
 
 
 def visible(row: dict, rows: dict[str, dict], values: dict[str, Any]) -> bool:
@@ -708,8 +721,17 @@ class Settings:
         groups = []
         for group in self._groups:
             rows = []
+            # **A heading governs its section, and a group all of it**
+            # (George, 2026-10-05: with Headless on, every setting that needs
+            # a screen is hidden - whole sections, and Enrichment whole). One
+            # condition per row stays the rule; these stack on top of it, so
+            # *Strip below the tiles* keeps Lyrion Client's and gains the
+            # screen's from its heading.
+            governing = [c for c in (group.get("onlyWhen"),) if c]
+            heading = None
             for row in group["rows"]:
                 if row["type"] == "group":
+                    heading = row.get("onlyWhen")
                     rows.append(row)
                     continue
                 public = {k: v for k, v in row.items() if k != "default"}
@@ -733,7 +755,10 @@ class Settings:
                     public["unavailable"] = dict(blocked)
                 if row["key"] in self._status:
                     public["status"] = dict(self._status[row["key"]])
-                public["visible"] = visible(row, self._rows, values)
+                public["visible"] = visible(row, self._rows, values) and all(
+                    visible({"onlyWhen": c}, self._rows, values)
+                    for c in governing + ([heading] if heading else [])
+                )
                 rows.append(public)
             groups.append({**group, "rows": rows})
         return groups

@@ -924,9 +924,9 @@ def test_a_recommended_value_in_a_note_is_that_row_s_own_default():
             assert f"{row['default']}{'' if unit == '%' else ' '}{unit}" in note, (
                 f"{row['key']}: the recommendation should carry its unit"
             )
-    assert checked == 4, (
-        "expected ADR-0058's three rows plus the confidence threshold to "
-        f"recommend a value, found {checked}"
+    assert checked == 5, (
+        "expected ADR-0058's three rows, the confidence threshold and the "
+        f"idle background's brightness (2026-10-05) to recommend a value, found {checked}"
     )
 
 
@@ -1334,3 +1334,27 @@ def test_a_plugin_s_report_is_published_on_its_row_and_goes_with_it(store):
         settings.report("plexamp.claim_token", "half-done")
     with pytest.raises(UnknownSetting):
         settings.report("plexamp.nothing", "done")
+
+
+def test_headless_hides_every_setting_that_needs_a_screen(store):
+    """George, 2026-10-05: with Headless on, the home screen, idle screen,
+    visualiser and its tweaks, the volume drawer, the transition screen and
+    all of Enrichment are hidden - by their headings' and group's conditions,
+    on top of each row's own (`home_strip` keeps Lyrion Client's)."""
+    settings = Settings(store, registry=load_registry(), wired={"headless": lambda v: None})
+    def shown():
+        return {r["key"] for g in settings.to_json() for r in g["rows"]
+                if r.get("key") and r["visible"]}
+    needs_a_screen = {
+        "drawer_on_external", "drawer_autohide", "home_strip", "home_strip_count",
+        "idle_screen", "idle_timeout", "viz_timeout", "viz_stop", "skin_corpus",
+        "spectrum_smoothing", "skin_motion", "show_transition", "handoff_duration",
+        "enrichment", "lyrics", "confidence", "fanart_key", "visualiser_skins",
+    }
+    settings.set("headless", False)
+    assert needs_a_screen - {"home_strip", "home_strip_count"} <= shown()
+    settings.set("headless", True)
+    assert not needs_a_screen & shown()
+    assert {"headless", "screen", "rotation"} <= shown(), "the switch back stays"
+    enrich = next(g for g in settings.to_json() if g["id"] == "enrich")
+    assert not any(r["visible"] for r in enrich["rows"] if r.get("key"))

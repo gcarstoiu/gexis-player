@@ -366,3 +366,19 @@ sound card can do.
 **It never overwrites the stored value.** The restriction is read in front
 of the store, so lifting it hands back whatever the user had chosen, and
 the row's own default answers when they had chosen nothing.
+
+## Amendment, 2026-10-05 — a heading governs its section, a group all of it
+
+George, on the Settings copy review: *"Once headless is on then all settings
+which need a display to show an effect need to be hidden"* - whole sections
+(Home screen, Idle screen, Visualiser, Visualiser tweaks) and all of
+Enrichment, beside rows that already carry a condition of their own
+(*Strip below the tiles* shows only with Lyrion Client on).
+
+**A subheading's `onlyWhen` now applies to every row under it, and a group
+may carry one that applies to all its rows**, each on top of the row's own.
+A row still has one condition; the section and the group add theirs, and the
+row is shown only when all of them hold. The panel needed nothing new: it
+already drops a heading over nothing and a group with nothing left (§6).
+Checked like a row's, in `check`.
+

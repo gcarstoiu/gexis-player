@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-04 (on R2D2).
+Last updated: 2026-10-05 (on R2D2).
 
 ## Start here
 
@@ -28,9 +28,10 @@ release** (George, 2026-10-04): never push a release onto an open PR.
 | Skin picker (ADR-0050 amended) | 960 px previews made ahead for every installed pack |
 | Released in 0.8.7 | The new-screen notice and its straight switch (29a3386, 88ee721, d91a4bc); a USB disk kept 7 days after unplugging (ADR-0115 decision 17, ddf088f); setup's copy fixes from the review (963857d-034fb33); genre pills kept to two rows on the artist page (7cd3e1b); skin packs fetched from the channel's release when the player's own is unpublished, a stale pack failure no longer shown, failures in words (efd329d); Finding 109's playback test; 13a/13c/13e closed |
 
-**`gexis` right now:** a preview of everything on the branch (core and player
-`0.8.6+git18.efd329d`, ui `0.8.6+git15.7cd3e1b`), on the 13.3" with a new
-cable, kept. **Skin packs now install on a preview** (efd329d: an unpublished
+**`gexis` right now (2026-10-05):** the 13d preview with `phase-13b` merged
+in (core, ui and player `0.8.9+git46.2227d78`, gexis-system
+`0.8.9+git35.ab56c0c`, gexis-plexamp `0.3.0-2+0.8.9+git35.ab56c0c` with the
+unreleased 0.4.0 plugin files laid over it), on the 13.3" with a new cable. **Skin packs now install on a preview** (efd329d: an unpublished
 release takes its pack from the channel's release; shown live, 2026-10-04 -
 before that every preview failed every pack). The album artist screen was measured on that panel through the
 kiosk's DevTools port (since closed): about 55 fps scrolling, photos in about
@@ -45,14 +46,26 @@ had shown 20 fps, an artefact of its software compositing.
    worktree:** the scratchpad venv imports the main checkout's
    `gexis_core`; run them with `PYTHONPATH=src`.
 2. **The copy review** (George, 2026-10-03): one page per area, built from the
-   code, with screenshots, for him to comment on. **Setup is done** (the
-   "Setup Copy" artifact; his comments fixed), with two threads still his:
-   the password line after Finish (only for a secured Wi-Fi?) and
-   "Saving..."/"Connecting..." on Continue/Finish. Settings and the
-   intermediate screens next. The screenshots and fake cores were in the
-   session's scratchpad, which does not survive it: regenerate them (a fake
-   core serving `/setup/answers` with a chosen `step` shows each phone step).
-3. **Phase 13d, DACs**: ADR-0117 accepted, built in its worktree, being
+   code, with screenshots, for him to comment on. **Setup** ("Setup Copy")
+   and **Settings** ("Settings Copy", 2026-10-05) are done, every comment
+   fixed on `phase-13b` (6061e10-15e7d56): shorter Audio texts, Fixed output
+   hides the three volume rows, the artwork updates moved back to Enrichment
+   under *Lyrion Client* (reversing 2026-09-25 at his request), counts in
+   what a list holds, errors in words, "player" where the text means the
+   player and "device" only for the hardware (his call). **The intermediate
+   screens are the third page, not started.** Comments do not reach the
+   session by themselves: watch the artifact and read its threads.
+3. **ADR-0119, Plexamp claimed from Settings** - accepted and built,
+   **live on gexis as a preview** (2026-10-05): the contract's new `row`
+   event (47190f8), the row's *Claimed* / *Claim again* and links in notes
+   (48d0718), `plexamp-run` (ab56c0c), and **gexis-plexamp 0.4.0, committed
+   in its own repository (784242c), not pushed or released** - on gexis its
+   files were laid over the 0.3.0 package by hand. A release needs a
+   gexis-plexamp 0.4.0 release and its pin moved. *Claim again* on George's
+   real player worked (2026-10-05, his token): a new Plex player, Plexamp's own
+   settings started again; it plays through the DAC and the meters (George). The test player `gexis-claimtest` is his to remove from
+   his Plex account.
+4. **Phase 13d, DACs**: ADR-0117 accepted, built in its worktree, being
    tested on `gexis` (merged up with `phase-13b` for the preview).
 5. **docs/HARDWARE.md** is a draft; what it lacks is listed at its end.
 
