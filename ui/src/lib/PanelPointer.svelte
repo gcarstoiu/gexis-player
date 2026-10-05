@@ -53,14 +53,29 @@
   const ROUND = 1.6;
   const RING_MAX = 96;
 
-  /** The pointer's shape for what lies under it. */
+  /** The pointer's shape for what lies under it, what it is over, and
+   *  whether that takes text - asked on every move and four times a second
+   *  while shown, since a tap or the player can change the screen under a
+   *  pointer that has not moved (2026-10-05: a ring left round a button that
+   *  had gone, and a field that opened under the pointer not offered to the
+   *  phone's keyboard). */
   function look() {
     const target = under();
+    hover(target);
+    const field = takesText(target);
+    if (field !== over) {
+      over = field;
+      pad?.send({ t: 'over', field });
+    }
     const slider = target?.closest(SLIDER);
     const pressable = !slider && target?.closest(PRESSABLE);
     kind = performance.now() - scrolledAt < 400 ? 'scroll' : slider ? 'slide' : pressable ? 'press' : 'plain';
     ring = null;
-    if (kind === 'press' && !arrow) {
+    // A ring for a button that is only an icon: a tab or a row with words in
+    // it is not the design's round control, however square (George,
+    // 2026-10-05: "the track entry in now playing shouldn't get the
+    // highlight").
+    if (kind === 'press' && !arrow && !pressable.textContent.trim()) {
       const r = pressable.getBoundingClientRect();
       const long = Math.max(r.width, r.height);
       if (long / Math.max(1, Math.min(r.width, r.height)) < ROUND && long <= RING_MAX) {
@@ -82,17 +97,53 @@
       document.removeEventListener('focusout', focusLeft);
       pad?.close();
       pad = null;
-      shown = false;
+      rest();
       unzoom();
     };
   });
 
-  onDestroy(() => clearTimeout(hideTimer));
+  onDestroy(() => {
+    clearTimeout(hideTimer);
+    clearInterval(lookTimer);
+  });
+
+  let lookTimer;
 
   function wake() {
     shown = true;
     clearTimeout(hideTimer);
-    hideTimer = setTimeout(() => (shown = false), HIDE_MS);
+    hideTimer = setTimeout(rest, HIDE_MS);
+    if (!lookTimer) lookTimer = setInterval(look, 250);
+  }
+
+  /** Hidden: the pointer has left whatever it was over. */
+  function rest() {
+    shown = false;
+    clearInterval(lookTimer);
+    lookTimer = undefined;
+    hover(null);
+    ring = null;
+  }
+
+  // ── Hover, as a mouse gives it ─────────────────────────────────────────
+  //: What the pointer is over, outermost first. Entering and leaving are
+  //: told as a mouse's are - so the volume drawer holds open while the
+  //: pointer rests on it (George, 2026-10-05) - and never otherwise acted on.
+  let hovered = [];
+
+  function hover(target) {
+    const chain = [];
+    for (let el = target; el; el = el.parentElement) chain.unshift(el);
+    let same = 0;
+    while (same < chain.length && same < hovered.length && chain[same] === hovered[same]) same += 1;
+    const at = { clientX: x, clientY: y, pointerId: 1, pointerType: 'mouse', isPrimary: true, view: window };
+    const left = hovered.slice(same).reverse();
+    if (left.length) left[0].dispatchEvent(new PointerEvent('pointerout', { ...at, bubbles: true, composed: true }));
+    for (const el of left) el.dispatchEvent(new PointerEvent('pointerleave', at));
+    const entered = chain.slice(same);
+    if (entered.length) entered[entered.length - 1].dispatchEvent(new PointerEvent('pointerover', { ...at, bubbles: true, composed: true }));
+    for (const el of entered) el.dispatchEvent(new PointerEvent('pointerenter', at));
+    hovered = chain;
   }
 
   /** What lies under the pointer; the pointer itself takes no events. */
@@ -107,11 +158,6 @@
         y = edge(y + Number(message.dy || 0) * speed, window.innerHeight, 'y');
         wake();
         look();
-        const field = takesText(under());
-        if (field !== over) {
-          over = field;
-          pad?.send({ t: 'over', field });
-        }
         break;
       }
       case 'tap':
