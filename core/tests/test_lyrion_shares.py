@@ -76,7 +76,7 @@ def test_rows_say_mounted_or_why_not(tmp_path):
     s.mount_all(s.all())
     by = {i["address"]: i["meta"] for i in s.items()}
     assert by["//nas/music"] == "On nas · Mounted, read-only"
-    assert by["//nas/locked"].startswith("On nas · Not mounted: mount error(13)")
+    assert by["//nas/locked"] == "On nas · Not mounted: the user or password was not accepted"
     assert {i["state"] for i in s.items()} == {"saved"}, "each with its Forget"
 
 

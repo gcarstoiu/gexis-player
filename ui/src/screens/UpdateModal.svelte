@@ -82,7 +82,7 @@
       <span class="task__bar task__bar--busy"><span></span></span>
     {:else if phase === 'answer'}
       {#if timedOut && !fresh}
-        <div class="ask__title">Could not check</div>
+        <div class="ask__title">Could not check for updates</div>
         <div class="task__text">The device did not answer in time. Try again in a minute.</div>
         <div class="ask__buttons"><button type="button" class="btn btn--confirm" onclick={close}>OK</button></div>
       {:else if u.state === 'available'}
@@ -101,7 +101,7 @@
           <button type="button" class="btn btn--confirm" onclick={choose}>Update</button>
         </div>
       {:else if u.state === 'failed'}
-        <div class="ask__title">Could not check</div>
+        <div class="ask__title">Could not check for updates</div>
         <div class="warn"><span class="warn__mark">!</span><span class="warn__text">{u.message}</span></div>
         <div class="ask__buttons"><button type="button" class="btn btn--confirm" onclick={close}>OK</button></div>
       {:else}
