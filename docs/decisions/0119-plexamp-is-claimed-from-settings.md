@@ -68,10 +68,27 @@ Then, to "a small *Claim again* link under *Claimed ✓*": **yes**.
 - **C. Links in notes**, for every row: a note may hold one `https://`
   address, drawn as a link that opens a new tab.
 
-## To measure before it is accepted
+## Measured so far (2026-10-05, gexis, Plexamp 4.13.2)
 
-- **Plexamp claims from the environment, unattended** - on gexis, against a
-  second, throw-away Plexamp home so George's player stays claimed. Needs a
-  fresh token from George (plex.tv/claim, valid four minutes), and leaves a
-  second player in his Plex account to remove afterwards.
-- **What a failed claim looks like** to the plugin: an expired token.
+A throw-away Plexamp - its own `HOME` under `/tmp`, an invented token, no
+input - beside George's claimed one, which was not touched:
+
+- **It reads the variables and does not prompt.** It printed `Starting
+  Plexamp 4.13.2`, then `Error exchanging claim token.`, and **exited 255**,
+  writing nothing to its settings store. That is the failure the plugin
+  sees for B: a non-zero exit with that line.
+- **From its code** (`js/index.js`): the variables are read **only when no
+  `user:token` is stored**. A claimed Plexamp ignores them, so a spent token
+  left in the environment is harmless - and **Claim again cannot work by the
+  variable alone**. For A, the plugin sets the old claim aside (a copy of
+  Plexamp's settings store), restarts Plexamp with the new token, and puts
+  the copy back if the claim fails: the player is unclaimed for the seconds
+  the attempt takes, and claimed as before if it fails.
+
+## Still to measure before it is accepted
+
+- **A successful claim from the environment**, on a throw-away Plexamp home,
+  so George's player stays claimed. Needs a fresh token from George
+  (plex.tv/claim, valid four minutes), and leaves a second player in his Plex
+  account to remove afterwards. Whether `PLEXAMP_PLAYER_NAME` names it (the
+  code passes its own device name to the sign-in) is read off that player.
