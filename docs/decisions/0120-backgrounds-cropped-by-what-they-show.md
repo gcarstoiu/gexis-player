@@ -3,8 +3,7 @@
 **Status:** **Accepted** — George, 2026-10-05, on the comparison page
 *Bar Backgrounds* and in the session: *"Let's do this but with some
 modifications"*, then **1.a**, **2. agreed**, **3. that is fine for pexels -
-and also agreed for the terms**. Two measurements are owed before the build
-(below); they choose between options, they do not reopen the decision.
+and also agreed for the terms**. Measured before the build, below.
 **Builds on:** [ADR-0047](0047-the-idle-screen-gains-backgrounds-and-weather.md)
 (the idle screen's backgrounds), [ADR-0059](0059-artist-portraits-in-the-list.md)
 (the artwork updates), [ADR-0109](0109-other-screens.md) (bars), and
@@ -76,7 +75,8 @@ skipped** and the next one is shown.
   place the band at full sharpness.
 - **On a bar, the sources measured better for bars are asked first** - by the
   share of each one's pictures that are wide enough, and how often the
-  placement finds a band - with no setting.
+  placement finds a band - **counted by the player as it runs**, with no
+  setting.
 
 ### 4. TheAudioDB in the artwork updates too
 
@@ -106,10 +106,25 @@ and before Lyrion's own** pictures.
 - **Wallpaper API key** renamed **Pixabay API key** (the key stays
   `wallpaper_key`).
 
-## To measure before building
+## Measured before building (2026-10-05)
 
-- **The runtime: OpenCV or ONNX Runtime.** OpenCV's prebuilt library and
-  numpy are 137 MB installed (measured); ONNX Runtime may be smaller and runs
-  the same models. The smaller one that runs both models correctly.
-- **Which sources suit bars**: the wide share and the placement rate of
-  Pixabay, Pexels, fanart.tv and TheAudioDB, on George's topics and artists.
+- **The runtime: OpenCV.** Installed for aarch64, Python 3.13:
+  `opencv-python-headless` 83 MB + numpy 53 MB = 136 MB; ONNX Runtime 54 MB +
+  Pillow 22 MB (it reads no pictures itself) + numpy 53 MB = 129 MB, plus
+  protobuf and flatbuffers. About equal, and OpenCV is one package that ran
+  both models and the face finder on gexis. The device already carries
+  Debian's numpy 2.2.4 (`python3-numpy`); whether the core can use it instead
+  of a second copy is for the build.
+- **Artist sources**, 80 of George's 910 artists with a MusicBrainz id, at
+  random: fanart.tv has backgrounds for **47**, TheAudioDB for **64**, either
+  for 64 - **TheAudioDB adds 17 artists fanart.tv lacks**. fanart.tv's 4K
+  backgrounds exist for **2**: asked for first, they rarely answer. Both
+  sources' pictures are 16:9 and place alike on a bar (30 each: placed by
+  faces or a subject 25 and 23; a face too big for the band 5 and 7).
+- **Pixabay on a bar**: George's Animals category gave **0 wide pictures**
+  in its 200-result page, every time the bar asked (gexis's log, two days) -
+  so every animal on the bar is a cropped landscape picture.
+- **Pexels**: not measurable without a key, which only exists once George
+  registers. So **the order on a bar is measured by the player as it runs**
+  (§3): per source, the share of pictures that arrive wide enough or place
+  without being skipped, the better source asked first.
