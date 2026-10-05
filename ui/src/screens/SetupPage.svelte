@@ -334,7 +334,8 @@
   //: The pack the chosen screen gets (the core's skin_packs.for_screen).
   //: Non-breaking: "1280 ×" and "800" must not part at a line's end.
   const packSize = $derived(chosenModel?.skins?.replace('x', '\u00a0×\u00a0') ?? '');
-  const packLabel = $derived(chosenModel?.skin_count ? `the ${chosenModel.skin_count} skins drawn for ${packSize} screens` : `the set for ${packSize} screens`);
+  //: George, 2026-10-05, on the copy review: "for this resolution (n) skins available".
+  const packLine = $derived(chosenModel?.skin_count ? `${chosenModel.skin_count} skins are available for this screen's resolution (${packSize}).` : `Skins are available for this screen's resolution (${packSize}).`);
   //: Two minutes, as every Keep waits since 2026-10-04 (SETUP_KEEP_S and
   //: KEEP_S in the core).
   const pickNote = $derived(
@@ -752,7 +753,7 @@
             <section class="pane">
               <div>
                 <h1>A visualiser for the screen?</h1>
-                <p class="sub">While music plays, the screen can show VU meters and spectrum analysers instead of the cover. They are drawn for one screen size, so the player fetches {packLabel}.</p>
+                <p class="sub">While music plays, the screen can show VU meters and spectrum analysers instead of the cover. {packLine}</p>
               </div>
               <div class="list">
                 {#each [
