@@ -611,7 +611,6 @@
             <section class="pane">
               <div>
                 <h1>Choose the output</h1>
-                <p class="sub">What the player should send audio to. Stored by name, because card numbers move between boots.</p>
               </div>
               {#if !outputs.length}
                 <!-- George, 2026-10-03, reviewing the copy: "Add copy to cover this." -->
