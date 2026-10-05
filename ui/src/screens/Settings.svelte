@@ -86,6 +86,13 @@
   //: path. The sheet stayed open with nothing to show for it (George,
   //: 2026-09-21), which reads as a tap that did not land.
   let saving = $state(false);
+  //: What the buttons show: disabled, and "Saving", only once a save has
+  //: taken longer than SHOW_SAVING_MS. A save that answers sooner - nearly
+  //: all, since 2026-10-05 - made Close blink off and on (George). Taps are
+  //: still refused for the whole save, by `saving`.
+  let busy = $state(false);
+  let busyTimer;
+  const SHOW_SAVING_MS = 400;
   let toast = $state(null);
   let toastTimer;
 
@@ -369,6 +376,8 @@
 
   async function write(row, value) {
     saving = true;
+    clearTimeout(busyTimer);
+    busyTimer = setTimeout(() => (busy = true), SHOW_SAVING_MS);
     try {
       const result = await writeSetting(row.key, value);
       // A 409 is a choice the hardware has taken away (its reason is on the
@@ -377,6 +386,8 @@
       else if (!result.ok) flash(plainly(result.error ?? `HTTP ${result.status}`, `${row.label} was not saved. Try again.`));
       return result.ok;
     } finally {
+      clearTimeout(busyTimer);
+      busy = false;
       saving = false;
     }
   }
@@ -587,6 +598,7 @@
   //: **The last one cannot be turned off**: the daemon refuses an empty set
   //: and the sheet says so rather than sending a write it knows will fail.
   async function toggleOne(option) {
+    if (saving) return; // a tap during a save is not a second request
     const row = sheet;
     const held = Array.isArray(row.value) ? row.value : [];
     const on = held.includes(option);
@@ -860,6 +872,7 @@
   }
 
   async function confirmSheet() {
+    if (saving) return; // a tap during a save is not a second request
     const row = sheet;
     // A failed attempt returns to the field with the password still in it.
     if (join === 'error') {
@@ -1492,7 +1505,7 @@
               class="option"
               class:is-selected={selected}
               type="button"
-              disabled={saving}
+              disabled={busy}
               onclick={() => toggleOne(option)}
             >
               <span class="radio radio--box"><span></span></span>
@@ -1695,7 +1708,7 @@
 
       {#if join !== 'connecting' && join !== 'ok'}
       <div class="sheet__actions">
-        <button class="btn" type="button" disabled={saving} onclick={cancelSheet}>
+        <button class="btn" type="button" disabled={busy} onclick={cancelSheet}>
           {#if join === 'error'}
             Give up
           {:else if joinItem || shareBrowse || shareLogin || (sheet.grouped && region !== null)}
@@ -1713,10 +1726,10 @@
             class="btn btn--confirm"
             class:btn--danger={sheet.danger || restorePending || choicePending !== null}
             type="button"
-            disabled={saving}
+            disabled={busy}
             onclick={confirmSheet}
           >
-            {#if saving}
+            {#if busy}
               <span class="btn__spin"></span>Saving
             {:else if join === 'error'}
               Try again
