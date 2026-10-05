@@ -1205,3 +1205,26 @@ async def test_a_title_the_trim_cannot_change_costs_only_one_request():
 
     assert answer.outcome is Outcome.MISSING
     assert http.albums == ["Nevermind"]
+
+
+@pytest.mark.asyncio
+async def test_theaudiodb_gives_its_fanart_with_the_shared_key_when_none_is_typed():
+    """ADR-0120 §3 and §5 ("1.a"): TheAudioDB's 16:9 fanart, asked with the
+    owner's key or, without one, TheAudioDB's shared test key."""
+    from gexis_core.providers import TheAudioDBArtistImage
+
+    tadb = {"artists": [{"strArtist": "AC/DC", "strArtistFanart": None,
+                         "strArtistFanart2": "https://r2.theaudiodb.com/images/media/artist/fanart/two.jpg"}]}
+    http = FakeHttp({"ws/2/artist/": MB_ARTIST, "theaudiodb.com": tadb})
+    answer = await TheAudioDBArtistImage(http, ArtistIdentity(http), lambda: None).fetch(KEY)
+    assert answer.outcome is Outcome.FOUND
+    assert answer.enrichment.artist_image.endswith("/two.jpg")
+    assert answer.enrichment.sources == ("tadb-bg",)
+    assert any("/json/123/artist-mb.php" in url for url in http.asked)
+
+    http = FakeHttp({"ws/2/artist/": MB_ARTIST, "theaudiodb.com": tadb})
+    await TheAudioDBArtistImage(http, ArtistIdentity(http), lambda: " mine ").fetch(KEY)
+    assert any("/json/mine/artist-mb.php" in url for url in http.asked)
+
+    http = FakeHttp({"ws/2/artist/": MB_ARTIST, "theaudiodb.com": {"artists": None}})
+    assert (await TheAudioDBArtistImage(http, ArtistIdentity(http)).fetch(KEY)).outcome is Outcome.MISSING

@@ -568,7 +568,8 @@ async def test_an_artist_background_comes_from_fanart_before_lms(tmp_path):
         assert body["url"] == "http://lms/imageproxy/fanart/bg.jpg"
         assert body["by"] == "Carmen McRae"
     # The *background* provider, not the artist page's portrait one.
-    assert fanart.asked[0][1] == ("fanart-bg",)
+    # fanart.tv's, then TheAudioDB's when fanart.tv has none (ADR-0120 §3).
+    assert fanart.asked[0][1] == ("fanart-bg", "tadb-bg")
     # And LMS was not asked at all, because it did not have to be.
     assert not lms_photos.asked
 

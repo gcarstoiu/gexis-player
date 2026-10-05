@@ -900,6 +900,16 @@
         "default": null
       },
       {
+        "key": "theaudiodb_key",
+        "type": "text",
+        "secret": true,
+        "placeholder": "TheAudioDB key",
+        "label": "TheAudioDB key",
+        "marks": "N",
+        "note": "Artist pictures and album covers where fanart.tv has none. Optional: without a key of your own, TheAudioDB's free shared key is used.",
+        "default": null
+      },
+      {
         "key": "confidence",
         "type": "number",
         "label": "Confidence threshold",

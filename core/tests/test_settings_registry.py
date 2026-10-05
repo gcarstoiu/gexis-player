@@ -148,6 +148,9 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         "confidence", "factory_reset", "idle_close", "image_build",
         "lms_player", "log_level", "plugins", "power", "release_ladder",
         "seek_reanchor", "spotify_name", "theme",
+        # ADR-0120 §5, George's "1.a" (2026-10-05): the owner's own key,
+        # TheAudioDB's shared test key without one.
+        "theaudiodb_key",
         # ADR-0055, 2026-09-23: the design has no output picker, because
         # the design did not know the device has four playback outputs and
         # that two of them cannot be turned down.
@@ -582,8 +585,9 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # and the channel.
     # **87**: Software update, its own tile (George, 2026-10-01). **89**:
     # Attached screen and Screen rotation (ADR-0109, Phase 13b). **90**:
-    # Visualiser skins (ADR-0111). **91**: Change logs (ADR-0116).
-    assert len(rows) == 91
+    # Visualiser skins (ADR-0111). **91**: Change logs (ADR-0116). **92**:
+    # TheAudioDB key (ADR-0120, 2026-10-05).
+    assert len(rows) == 92
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
@@ -594,8 +598,8 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # 69 when ADR-0110 folded Check now and Update now into the Release
     # tile; 70 with Software update (George, 2026-10-01); 72 with Attached
     # screen and Screen rotation; 73 with Visualiser skins; 74 with Change
-    # logs (ADR-0116).
-    assert len(rows) - len(kept) == 74
+    # logs (ADR-0116); 75 with TheAudioDB key (ADR-0120).
+    assert len(rows) - len(kept) == 75
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():
