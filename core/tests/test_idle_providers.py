@@ -619,7 +619,10 @@ class FakeEnrichment:
         self.asked.append((key.artist, tuple(only)))
         from gexis_core.enrichment import Enrichment
 
-        return Enrichment(artist_image=self._images.get(key.artist))
+        image = self._images.get(key.artist)
+        if isinstance(image, list):
+            return Enrichment(artist_image=image[0], artist_images=tuple(image))
+        return Enrichment(artist_image=image)
 
 
 async def test_an_artist_background_comes_from_fanart_before_lms(tmp_path):
@@ -641,9 +644,23 @@ async def test_an_artist_background_comes_from_fanart_before_lms(tmp_path):
         assert body["by"] == "Carmen McRae"
     # The *background* provider, not the artist page's portrait one.
     # fanart.tv's, then TheAudioDB's when fanart.tv has none (ADR-0120 §3).
-    assert fanart.asked[0][1] == ("fanart-bg", "tadb-bg")
+    assert fanart.asked[0][1] == ("fanart-bgs", "tadb-bg")
     # And LMS was not asked at all, because it did not have to be.
     assert not lms_photos.asked
+
+
+async def test_an_artist_shows_any_of_its_backgrounds_not_always_the_first(tmp_path):
+    """ADR-0047 §2e, W3 (George, 2026-10-05)."""
+    library = FakeLibrary(["Carmen McRae"])
+    urls = [f"http://lms/imageproxy/fanart/bg{n}.jpg" for n in range(3)]
+    settings, client = client_for(
+        tmp_path, wallpapers=Wallpapers(FakeSession(pixabay({})), tmp_path / "p"),
+        library=library, artistinfo=FakeArtistInfo({}), enrichment=FakeEnrichment({"carmen mcrae": urls}),
+    )
+    async with client:
+        settings.set("idle_background", "Artist pictures")
+        seen = {(await (await client.get("/idle/wallpaper")).json())["url"] for _ in range(30)}
+    assert seen == set(urls)
 
 
 async def test_lms_carries_it_when_fanart_has_nothing(tmp_path):

@@ -462,10 +462,13 @@ class FanartArtistImage:
             return Answer(Outcome.UNAVAILABLE, confidence=score)
         for kind in self.PREFERRED:
             images = found.get(kind) or []
-            url = next((i.get("url") for i in images if isinstance(i, dict) and i.get("url")), None)
-            if url:
+            urls = [self._sized(i["url"]) for i in images if isinstance(i, dict) and i.get("url")]
+            if urls:
+                # The first, as before, and every one of that kind beside it:
+                # the idle screen picks among them (ADR-0047 §2e, W3).
                 return Answer(Outcome.FOUND,
-                              Enrichment(artist_image=self._sized(url), sources=("fanart",)),
+                              Enrichment(artist_image=urls[0], artist_images=tuple(urls[:MAX_IMAGES]),
+                                         sources=("fanart",)),
                               confidence=score)
         return Answer(Outcome.MISSING, confidence=score)
 
@@ -535,12 +538,18 @@ class TheAudioDBArtistImage:
         return Answer(Outcome.FOUND, Enrichment(artist_image=sized, sources=(self.name,)), confidence=score)
 
 
+#: How many of an artist's pictures are kept as alternatives.
+MAX_IMAGES = 12
+
 #: The idle screen's background, from the same provider (ADR-0047 §1b).
 #: `artistbackground` first because fanart publishes those at 1920x1080 to
 #: be shown full-bleed, and a 1000px square portrait stretched across a
 #: 1280x800 panel is the shape mistake in the other direction.
 FANART_BACKGROUND = {
-    "name": "fanart-bg",
+    #: "fanart-bgs" since 2026-10-05: answers cached under "fanart-bg" held
+    #: one picture, and a found answer is kept until the cache is cleared -
+    #: a new name asks each artist once more, for all of them.
+    "name": "fanart-bgs",
     "preferred": ("artistbackground", "artistthumb", "musicbanner"),
     #: The panel's own width. Finding 035's rule: ask for what is drawn.
     "size": 1280,
