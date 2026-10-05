@@ -151,6 +151,8 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         # ADR-0120 §5, George's "1.a" (2026-10-05): the owner's own key,
         # TheAudioDB's shared test key without one.
         "theaudiodb_key",
+        # ADR-0120 §6 (2026-10-05): Pexels beside Pixabay, the owner's key.
+        "pexels_key",
         # ADR-0055, 2026-09-23: the design has no output picker, because
         # the design did not know the device has four playback outputs and
         # that two of them cannot be turned down.
@@ -590,8 +592,8 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # Attached screen and Screen rotation (ADR-0109, Phase 13b). **90**:
     # Visualiser skins (ADR-0111). **91**: Change logs (ADR-0116). **92**:
     # Sound card board (ADR-0117). **93**: TheAudioDB key (ADR-0120,
-    # 2026-10-05).
-    assert len(rows) == 93
+    # 2026-10-05). **94**: Pexels API key (ADR-0120).
+    assert len(rows) == 94
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
@@ -603,8 +605,8 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # tile; 70 with Software update (George, 2026-10-01); 72 with Attached
     # screen and Screen rotation; 73 with Visualiser skins; 74 with Change
     # logs (ADR-0116); 75 with Sound card board (ADR-0117); 76 with
-    # TheAudioDB key (ADR-0120).
-    assert len(rows) - len(kept) == 76
+    # TheAudioDB key (ADR-0120); 77 with Pexels API key (ADR-0120).
+    assert len(rows) - len(kept) == 77
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():

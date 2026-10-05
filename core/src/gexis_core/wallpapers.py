@@ -86,6 +86,17 @@ KEEP = 40
 
 CREDIT_NOTE = "Photos from Pixabay"
 
+#: **Pexels, beside Pixabay** (ADR-0120 §3). The owner's own key, sent as the
+#: `Authorization` header; the chosen topic words are its search terms, since
+#: it has no categories (George, 2026-10-05: "that is fine for pexels"). Its
+#: terms want the credit on screen, drawn as Pixabay's is. **Written to its
+#: published API and not yet tried against it**: Pexels issued no new keys
+#: when this was built.
+PEXELS_URL = "https://api.pexels.com/v1/search"
+#: The most results Pexels gives at once.
+PEXELS_PER_PAGE = 80
+PEXELS_CREDIT = "Photos from Pexels"
+
 
 def _ratio(hit: dict) -> float:
     try:
@@ -156,10 +167,25 @@ class Wallpapers:
         #: it**, where the cache above evicts as it fills.
         self._local_dir = Path(local_dir) if local_dir else Path(cache_dir).parent / "pictures"
         self._keep = keep
-        self._pages: dict[tuple[str, bool], tuple[float, list[dict]]] = {}
+        self._pages: dict[tuple, tuple[float, list[dict]]] = {}
+        #: Per source, how many of the pictures its pages held were wide
+        #: enough for a bar, and how many there were: **the order a bar asks
+        #: them in is measured as the player runs** (ADR-0120 §3).
+        self._wide_seen: dict[str, list[int]] = {}
         self._lock = asyncio.Lock()
 
     # ── the page a category answers with ────────────────────────────────
+
+    def wide_share(self, source: str) -> float | None:
+        """The share of this source's pictures wide enough for a bar, as
+        measured so far; None before any page has been read."""
+        wide, total = self._wide_seen.get(source, (0, 0))
+        return wide / total if total else None
+
+    def _count(self, source: str, hits: list[dict], ratio) -> None:
+        seen = self._wide_seen.setdefault(source, [0, 0])
+        seen[0] += sum(1 for h in hits if ratio(h) >= WIDE_RATIO)
+        seen[1] += len(hits)
 
     async def _page(self, key: str, category: str, wide: bool = False) -> list[dict]:
         """This category's pictures, from cache or from Pixabay.
@@ -198,24 +224,77 @@ class Wallpapers:
             logger.info("wallpapers: %s failed: %s", category, exc)
             return cached[1] if cached else []
         hits = [h for h in (body.get("hits") or []) if h.get("largeImageURL")]
+        self._count("pixabay", hits, _ratio)
         if wide:
             hits = [h for h in hits if _ratio(h) >= WIDE_RATIO]
+        hits = [{"id": str(h.get("id")), "url": h["largeImageURL"], "user": h.get("user") or "",
+                 "page": h.get("pageURL") or "", "source": "pixabay"} for h in hits]
         self._pages[slot] = (time.monotonic(), hits)
         logger.info("wallpapers: %s has %d %spictures", category, len(hits), "wide " if wide else "")
         return hits
 
     # ── the picture on screen ───────────────────────────────────────────
 
-    async def next(self, key: str, topics: list[str], avoid: str | None = None, wide: bool = False) -> dict:
+    async def _pexels_page(self, key: str, topic: str, wide: bool = False) -> list[dict]:
+        """This topic's pictures from Pexels, from cache or asked: the topic
+        word as the search. Cached a day, as Pixabay's pages are - Pexels
+        asks for no more, and its 200 requests an hour are never near."""
+        slot = ("pexels", topic, wide)
+        cached = self._pages.get(slot)
+        if cached is not None and time.monotonic() - cached[0] < PAGE_TTL_S:
+            return cached[1]
+        params = {"query": topic, "orientation": "landscape", "per_page": PEXELS_PER_PAGE}
+        try:
+            async with self._session.get(
+                PEXELS_URL, params=params, headers={"Authorization": key},
+                timeout=aiohttp.ClientTimeout(total=TIMEOUT_S),
+            ) as response:
+                if response.status >= 400:
+                    logger.info("wallpapers: Pexels %s answered HTTP %s", topic, response.status)
+                    return cached[1] if cached else []
+                body = await response.json()
+        except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as exc:
+            logger.info("wallpapers: Pexels %s failed: %s", topic, exc)
+            return cached[1] if cached else []
+
+        def ratio(photo: dict) -> float:
+            try:
+                return float(photo.get("width") or 0) / float(photo.get("height") or 1)
+            except (TypeError, ValueError, ZeroDivisionError):
+                return 0.0
+
+        photos = [p for p in (body.get("photos") or []) if (p.get("src") or {}).get("large2x")]
+        self._count("pexels", photos, ratio)
+        if wide:
+            photos = [p for p in photos if ratio(p) >= WIDE_RATIO]
+        hits = [{"id": f"pexels-{p.get('id')}", "url": p["src"]["large2x"],
+                 "user": p.get("photographer") or "", "page": p.get("url") or "", "source": "pexels"}
+                for p in photos]
+        self._pages[slot] = (time.monotonic(), hits)
+        logger.info("wallpapers: Pexels %s has %d %spictures", topic, len(hits), "wide " if wide else "")
+        return hits
+
+    def _order(self, sources: list[str], wide: bool) -> list[str]:
+        """The sources in the order to ask them. On a bar, **the one measured
+        wider first**; one not yet measured is tried as if it were the best,
+        so it gets measured. Elsewhere, a fair shuffle."""
+        if not wide:
+            return random.sample(sources, len(sources))
+        return sorted(sources, key=lambda s: -(self.wide_share(s) if self.wide_share(s) is not None else 1.0))
+
+    async def next(self, key: str, topics: list[str], avoid: str | None = None, wide: bool = False,
+                   pexels_key: str | None = None) -> dict:
         """One picture, ready to draw, or an `error` saying why not.
 
         `file` is a name inside the cache directory rather than a URL: what
         serves it is the daemon's business and this does not need to know
-        the route.
+        the route. Pixabay with its key, Pexels with its own, both when both
+        are typed (ADR-0120 §3).
         """
         chosen = [t.lower() for t in (topics or []) if t.lower() in CATEGORIES]
-        if not key:
-            return {"error": "No Pixabay key yet."}
+        sources = [s for s, k in (("pixabay", key), ("pexels", pexels_key)) if k]
+        if not sources:
+            return {"error": "No Pixabay or Pexels key yet."}
         if not chosen:
             return {"error": "No topics chosen."}
         async with self._lock:
@@ -223,15 +302,21 @@ class Wallpapers:
             # rather than picked once, so a category that answers with
             # nothing falls through to another instead of blanking the
             # screen until the next change.
-            # A bar asks for wide pictures first, then the usual ones.
-            rounds = [(c, w) for w in ((True, False) if wide else (False,))
-                      for c in random.sample(chosen, len(chosen))]
-            for category, w in rounds:
-                hits = await self._page(key, category, w)
+            # A bar asks for wide pictures first - from the source measured
+            # wider first - then the usual ones.
+            rounds = []
+            for w in ((True, False) if wide else (False,)):
+                for source in self._order(sources, w):
+                    rounds += [(source, c, w) for c in random.sample(chosen, len(chosen))]
+            for source, category, w in rounds:
+                if source == "pexels":
+                    hits = await self._pexels_page(pexels_key, category, w)
+                else:
+                    hits = await self._page(key, category, w)
                 if not hits:
                     continue
                 # Not the one already on screen, when there is another.
-                choices = [h for h in hits if f"{h.get('id')}.jpg" != avoid] or hits
+                choices = [h for h in hits if f"{h['id']}.jpg" != avoid] or hits
                 hit = random.choice(choices)
                 name = await self._download(hit)
                 if name is None:
@@ -239,9 +324,10 @@ class Wallpapers:
                 return {
                     "file": name,
                     "topic": category,
-                    "by": hit.get("user") or "",
-                    "page": hit.get("pageURL") or "",
-                    "credit": CREDIT_NOTE,
+                    "by": hit["user"],
+                    "page": hit["page"],
+                    "credit": PEXELS_CREDIT if source == "pexels" else CREDIT_NOTE,
+                    "source": source,
                     "error": None,
                 }
         return {"error": "No pictures came back."}
@@ -252,7 +338,7 @@ class Wallpapers:
         Named after Pixabay's own id, so the same picture twice is the same
         file once: the cache is a set, not a log.
         """
-        name = f"{hit.get('id')}.jpg"
+        name = f"{hit['id']}.jpg"
         path = self._dir / name
         if path.is_file() and path.stat().st_size > 0:
             path.touch()
@@ -260,7 +346,7 @@ class Wallpapers:
         try:
             self._dir.mkdir(parents=True, exist_ok=True)
             async with self._session.get(
-                hit["largeImageURL"],
+                hit["url"],
                 timeout=aiohttp.ClientTimeout(total=DOWNLOAD_TIMEOUT_S),
             ) as response:
                 if response.status >= 400:

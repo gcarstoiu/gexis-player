@@ -136,3 +136,18 @@ saves most of those requests.
   registers. So **the order on a bar is measured by the player as it runs**
   (§3): per source, the share of pictures that arrive wide enough or place
   without being skipped, the better source asked first.
+
+## Built (2026-10-05)
+
+- **Step 1, placement** and **step 2, TheAudioDB**: live on gexis as a
+  preview the same day.
+- **Step 3, Pexels**: built to Pexels' published API (search by the topic
+  word, `orientation=landscape`, 80 a page, the key as the `Authorization`
+  header, `large2x` downloaded, *Photo by … · Photos from Pexels* on
+  screen) and tested against a stand-in only. **Pexels issued no new keys**
+  when it was built (George: *"it will be empty for now as they are not
+  releasing any new keys"*), so the row ships empty and the first real
+  answer is untried. The bar's source order is measured per page read: the
+  share of each source's pictures at least 2.4 to 1, the source measured
+  wider asked first, one not yet measured tried first so it gets measured.
+
