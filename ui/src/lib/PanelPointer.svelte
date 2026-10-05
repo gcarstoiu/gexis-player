@@ -26,7 +26,7 @@
   let over = false;
 
   const on = $derived($settingValues.phone_touchpad !== false);
-  const speed = $derived(Math.max(0.25, Number($settingValues.pointer_speed ?? 100) / 100));
+  const speed = $derived(Math.max(0.25, Number($settingValues.pointer_speed ?? 150) / 100));
 
   $effect(() => {
     if (!on) return;

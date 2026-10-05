@@ -437,11 +437,11 @@
         "label": "Pointer speed",
         "marks": "N",
         "note": "How far the pointer moves for a finger's movement on the phone.",
-        "min": 50,
-        "max": 300,
+        "min": 150,
+        "max": 400,
         "step": 25,
         "unit": "%",
-        "default": 100,
+        "default": 150,
         "onlyWhen": [
           [
             "headless",

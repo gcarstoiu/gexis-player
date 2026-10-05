@@ -89,3 +89,18 @@ def test_a_stored_none_forecast_becomes_today_only(tmp_path):
     other.set("idle_forecast", "3 days")
     sm.migrate(other)
     assert other.get("idle_forecast") == "3 days"
+
+
+def test_a_slow_pointer_speed_is_raised_to_the_new_least(tmp_path):
+    """George, 2026-10-05: the range moved from 50-300 to 150-400. A stored
+    speed below 150 is raised to it; one inside the range is kept."""
+    store = SettingsStore(tmp_path / "s.db")
+    store.set("pointer_speed", 75)
+    sm.migrate(store)
+    assert store.get("pointer_speed") == 150
+    row = next(r for g in json.loads(REGISTRY.read_text()) for r in g["rows"] if r.get("key") == "pointer_speed")
+    assert row["min"] == 150 and row["default"] == 150
+    other = SettingsStore(tmp_path / "t.db")
+    other.set("pointer_speed", 225)
+    sm.migrate(other)
+    assert other.get("pointer_speed") == 225
