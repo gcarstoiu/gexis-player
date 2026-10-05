@@ -330,6 +330,14 @@
   // ADR-0032: the panel renders everything; a remote browser only settings.
   let surface = $state(null);
 
+  // **No system cursor on the panel** (George, 2026-10-05: "two cursors").
+  // The compositor draws one where it starts and hides it only at the
+  // first real touch; driven from a phone, the panel never gets that
+  // touch. The phone's pointer is our own (lib/PanelPointer.svelte).
+  $effect(() => {
+    document.documentElement.classList.toggle('on-panel', surface === 'panel');
+  });
+
   //: **ADR-0109 decision 5: Keep this screen?** The core asks while a newly
   //: chosen screen waits; its countdown runs from the panel's first frame
   //: (`deadline`, this device's clock). Only the panel answers (decision 2).
@@ -402,6 +410,7 @@
       .then((r) => r.json())
       .then((body) => (surface = body.surface))
       .catch(() => (surface = 'panel'));
+
 
     // ADR-0043: end the boot animation only once something is actually on
     // the glass. onMount runs before the browser has painted, so this waits
@@ -586,6 +595,11 @@
 <style>
   :global(*, *::before, *::after) {
     box-sizing: border-box;
+  }
+
+  :global(html.on-panel),
+  :global(html.on-panel *) {
+    cursor: none !important;
   }
 
   :global(body) {
