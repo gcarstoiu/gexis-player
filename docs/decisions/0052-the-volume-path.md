@@ -106,6 +106,15 @@ so Spotify matches LMS: full-scale digital, all of the level in hardware.
 **This makes Spotify louder at the same setting, by up to 21 dB.** It ships
 with the rest of 9i and is tested with the amplifier turned down.
 
+**Amended 2026-10-05: and `normalisation_disabled: true`.** George, testing
+13d: Spotify quieter than LMS at full volume, the DAC at 240 for both (the
+core's own log), and *"qobuz and LMS seem closer to each other -- turn off
+the normalisation for spotify"*. go-librespot levels loudness by default,
+which is the stream being touched after all. [Finding 018](../findings/018-four-phase2c-blockers.md)'s
+test of this knob showed no change - on one track, at a gain that may have
+been zero, so it never ruled the knob out. Existing players get the line
+from the package's upgrade (`gexis-go-librespot` 0.9.0-2).
+
 ### 7. Two questions answered as asked
 
 - **A renderer that manages its own volume, under fixed output:** the slider

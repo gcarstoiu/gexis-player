@@ -14,7 +14,10 @@ set -eu
 STAGE_DIR=/src/image/stage-gexis/02-renderers
 . /src/packaging/go-librespot/pins.sh
 : "${GO_LIBRESPOT_VERSION:?} ${GO_LIBRESPOT_ASSET:?} ${GO_LIBRESPOT_URL:?} ${GO_LIBRESPOT_SHA256:?}"
-VERSION="${GO_LIBRESPOT_VERSION#v}-1"
+# The revision counts changes to our own files around it: -2 turned
+# normalisation off (2026-10-05) - the same upstream version, new content,
+# so a new version (LESSONS 53).
+VERSION="${GO_LIBRESPOT_VERSION#v}-2"
 
 PKG=gexis-go-librespot
 STAGE=/tmp/stage/$PKG
@@ -51,6 +54,14 @@ if [ "$1" = configure ]; then
 		install -m 644 -o 1000 -g 1000 \
 			/usr/share/gexis/defaults/go-librespot/config.yml \
 			/var/lib/go-librespot/config.yml
+	fi
+	# A config placed by an earlier package keeps the player's own edits, so
+	# a setting added since is added to it, not by replacing it: 0.9.0-2's
+	# normalisation_disabled (ADR-0052 §6, amended 2026-10-05).
+	if [ -e /var/lib/go-librespot/config.yml ] &&
+		! grep -q '^normalisation_disabled:' /var/lib/go-librespot/config.yml; then
+		printf '\n# ADR-0052 §6, amended 2026-10-05: Spotify does not level loudness.\nnormalisation_disabled: true\n' \
+			>> /var/lib/go-librespot/config.yml
 	fi
 	# Enabled on the first install only; after that the core switches it at
 	# runtime and an upgrade must leave that choice alone.
