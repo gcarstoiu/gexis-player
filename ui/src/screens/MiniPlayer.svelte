@@ -207,6 +207,13 @@
   }
 </script>
 
+{#if open}
+  <!-- Open, the sheet is the phone's whole attention: a touch outside it
+       closes it and reaches nothing under it (George, 2026-10-05: no
+       setting changed by a thumb that missed the touchpad). -->
+  <div class="mini__scrim" role="presentation" onclick={() => (open = false)}></div>
+{/if}
+
 <div
   class="mini"
   class:mini--open={open}
@@ -454,8 +461,18 @@
   .mini--open .mini__slider {
     flex-basis: calc(100% - 64px);
   }
+  .mini__scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 19;
+    background: rgba(0, 0, 0, 0.45);
+    touch-action: none;
+  }
+  /* Half the phone's height and reaching up from the slider, so a thumb
+     moving up has room before the edge (George, 2026-10-05: 180 px was
+     not enough). */
   .mini__pad {
-    height: 180px;
+    height: clamp(220px, 50dvh, 520px);
     border-radius: 16px;
     border: 1px solid rgba(233, 238, 242, 0.14);
     background: rgba(233, 238, 242, 0.05);
