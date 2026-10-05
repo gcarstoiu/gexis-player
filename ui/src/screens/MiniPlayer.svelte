@@ -86,7 +86,9 @@
     last = null;
     if (!quick) return;
     // **The keyboard opens inside this same touch** (ADR-0121 §4): the panel
-    // said in advance that the pointer is over a text field.
+    // said in advance that the pointer is over a text field. The touch's own
+    // mousedown, a moment later, would take the focus back to the page (seen
+    // end to end, 2026-10-05) - the pad refuses it, below.
     if (overField && typeEl) {
       typeEl.value = '';
       typed = '';
@@ -225,6 +227,7 @@
       onpointermove={padMove}
       onpointerup={padUp}
       onpointercancel={() => { touchStart = null; last = null; }}
+      onmousedown={(event) => event.preventDefault()}
     >
       <span class="mini__pad-hint">{typing ? 'Typing on the player' : overField ? 'Tap to type' : 'Touchpad'}</span>
     </div>
