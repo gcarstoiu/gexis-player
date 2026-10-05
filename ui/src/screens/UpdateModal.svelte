@@ -83,7 +83,7 @@
     {:else if phase === 'answer'}
       {#if timedOut && !fresh}
         <div class="ask__title">Could not check for updates</div>
-        <div class="task__text">The device did not answer in time. Try again in a minute.</div>
+        <div class="task__text">The player did not answer in time. Try again in a minute.</div>
         <div class="ask__buttons"><button type="button" class="btn btn--confirm" onclick={close}>OK</button></div>
       {:else if u.state === 'available'}
         <div class="ask__title">{u.release} is available</div>
@@ -93,7 +93,7 @@
           </div>
         {/if}
         <div class="task__text task__text--quiet">
-          This device has {u.installed}. Installing stops playback. The player restarts, and the device too
+          This player has {u.installed}. Installing stops playback. The player restarts, and the device too
           if the system needs it.
         </div>
         <div class="ask__buttons">
@@ -106,7 +106,7 @@
         <div class="ask__buttons"><button type="button" class="btn btn--confirm" onclick={close}>OK</button></div>
       {:else}
         <div class="ask__title">Up to date</div>
-        <div class="task__text">This device has {u.installed}, the newest release.</div>
+        <div class="task__text">This player has {u.installed}, the newest release.</div>
         <div class="ask__buttons"><button type="button" class="btn btn--confirm" onclick={close}>OK</button></div>
       {/if}
     {:else if phase === 'confirm'}
