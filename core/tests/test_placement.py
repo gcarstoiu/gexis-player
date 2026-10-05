@@ -21,8 +21,8 @@ def test_a_face_is_placed_by_its_eyes_a_third_down_the_band():
 
 
 def test_a_face_too_big_for_the_band_is_shrunk_while_it_fills_three_quarters():
-    # A 450-pixel face needs 675 with room; the band is 600: shrink to fit.
-    p = pl.decide(1920, 1080, BAR, faces=[(200, 450, 380)], subject=None, salient=NOTHING)
+    # A 700-pixel face; the band is 600: shrink until it fits.
+    p = pl.decide(1920, 1080, BAR, faces=[(150, 700, 380)], subject=None, salient=NOTHING)
     assert p.how == "faces, shrunk" and pl.MIN_WIDTH <= p.width < 1.0 and not p.skip
 
 
