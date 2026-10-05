@@ -179,6 +179,7 @@ class TestCovers:
             ]},
             # TheAudioDB, asked for the one fanart.tv lacks, has none either.
             "artist-mb.php": {"artists": [{"idArtist": "7"}]},
+            "album-mb.php": {"album": None},
             "album.php": {"album": []},
         }))
         await run(sweep, "covers")
@@ -368,4 +369,19 @@ class TestTheAudioDB:
         sweep, store, _, _ = build(http=FakeHttp({"fanart.tv": {"artistthumb": []}}))
         await run(sweep, "portraits")
         assert (ARTIST_NAMESPACE, "isaac hayes") not in store.rows
+
+    async def test_a_cover_the_album_list_lacks_is_asked_for_alone(self):
+        """The shared key's album list holds one album per artist (measured
+        2026-10-05); its per-album lookup by release group answers for any."""
+        sweep, store, _, http = build(http=FakeHttp({
+            "webservice.fanart.tv": {"albums": {}},
+            "musicbrainz.org": {"release-groups": [{"id": "RG1", "title": "Hot Buttered Soul"}]},
+            "artist-mb.php": {"artists": [{"idArtist": "7"}]},
+            "album-mb.php": {"album": [{"strAlbumThumb": "https://tadb/alone.jpg"}]},
+            "album.php": {"album": [{"strMusicBrainzID": "OTHER", "strAlbum": "Something Else",
+                                     "strAlbumThumb": "https://tadb/other.jpg"}]},
+        }))
+        await run(sweep, "covers")
+        assert store.rows[(ALBUM_NAMESPACE, "isaac hayes\x1fhot buttered soul")] == "https://tadb/alone.jpg"
+        assert sum("album-mb.php" in c for c in http.calls) == 1, "only for the one with a release group"
 

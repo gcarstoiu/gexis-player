@@ -300,6 +300,15 @@ class ArtworkSweep:
                 if theirs is not None:
                     url = theirs.get(group_id) if group_id else None
                     url = url or theirs.get(match_title(title))
+                if url is None and group_id and theirs is not None:
+                    # **One album at a time**: the shared key's album list
+                    # holds one album per artist (measured 2026-10-05,
+                    # Coldplay), its per-album lookup answers for any.
+                    one = await self._tadb_album(group_id)
+                    if one is None:
+                        theirs = None  # could not ask: leave it be
+                    else:
+                        url = one or None
                 if url is None and (art is None or theirs is None):
                     continue  # a source could not be asked: leave it be
             # **Stored under the title the library has**, not the release
@@ -317,6 +326,16 @@ class ArtworkSweep:
         if body is None:
             return None
         return (body.get("artists") or [None])[0] or {}
+
+    async def _tadb_album(self, group_id: str) -> str | None:
+        """One album's cover from TheAudioDB by its release group: the URL,
+        `""` when it has none, None when it could not be asked."""
+        body = await self._http.json(
+            f"{THEAUDIODB_BASE}/{theaudiodb_key(self._theaudiodb_key())}/album-mb.php", params={"i": group_id})
+        if body is None:
+            return None
+        album = (body.get("album") or [None])[0] or {}
+        return album.get("strAlbumThumb") or ""
 
     async def _tadb_albums(self, tadb: "_Lazy") -> dict[str, str] | None:
         """TheAudioDB's covers for an artist, by release-group id and by
