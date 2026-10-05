@@ -23,14 +23,18 @@ the wiring that knows about adapters.
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import json
 import logging
+import os
 import random
 import tarfile
+import threading
 from collections.abc import Callable
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 from pathlib import Path
 
+import aiohttp
 from aiohttp import web
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
@@ -88,6 +92,24 @@ DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8090
 
 
+def _screen_size(request: web.Request) -> tuple[int, int] | None:
+    """The asking panel's size, when it says it and it is a screen's."""
+    try:
+        w, h = int(request.query.get("w", "")), int(request.query.get("h", ""))
+    except ValueError:
+        return None
+    return (w, h) if 100 <= w <= 8000 and 100 <= h <= 8000 else None
+
+
+def _lowest_priority() -> None:
+    """The placement thread runs at nice 19: it is never what a person waits
+    for, and the player has music to play (ADR-0120)."""
+    try:
+        os.setpriority(os.PRIO_PROCESS, threading.get_native_id(), 19)
+    except (AttributeError, OSError):
+        pass
+
+
 class StateServer:
     def __init__(
         self,
@@ -110,6 +132,7 @@ class StateServer:
         pairing_answer=None,
         restore=None,
         restart_device=None,
+        placer=None,
         lyrion_shares=None,
         lyrion_shares_changed=None,
         own_server=None,
@@ -176,6 +199,12 @@ class StateServer:
         #: callback - first-time setup writes the same row and must not
         #: reboot halfway through.
         self._restart_device = restart_device
+        #: **ADR-0120: where each background sits, by what it shows.** None
+        #: places every picture as before, 35 % from the top. Asked on one
+        #: low-priority thread, once per picture and screen size.
+        self._placer = placer
+        self._placements: dict[tuple, dict | None] = {}
+        self._placing = None
         #: ADR-0115: the Lyrion server's network shares.
         self._lyrion_shares = lyrion_shares
         self._lyrion_shares_changed = lyrion_shares_changed
@@ -382,7 +411,85 @@ class StateServer:
         answer = await self._weather.forecast(place, days)
         return web.json_response({**answer, "forecast": forecast})
 
+    #: How many pictures a route call may pass over as too big for the screen
+    #: before it shows one placed as before (ADR-0120 §2).
+    PLACE_TRIES = 4
+    #: Placements remembered, by picture and screen size.
+    PLACE_MEMORY = 400
+
     async def _handle_idle_wallpaper(self, request: web.Request) -> web.Response:
+        """The next background, placed for the panel that asks (ADR-0120).
+
+        The panel says its size (`w`, `h`); each picture is placed once by
+        what it shows - `place: {y, width}` beside its URL - and one too big
+        for the screen is passed over for the next. Without a size, or
+        without the models, the answer is what it always was.
+        """
+        if self._settings is None or self._wallpapers is None:
+            return web.json_response({"error": "wallpapers are not wired up"}, status=503)
+        screen = _screen_size(request)
+        answer = await self._next_background()
+        if self._placer is None or screen is None:
+            return web.json_response(answer)
+        for _ in range(self.PLACE_TRIES):
+            if not answer.get("url"):
+                return web.json_response(answer)
+            place = await self._place(answer["url"], screen)
+            if place is None:
+                return web.json_response(answer)
+            if not place.get("skip"):
+                return web.json_response({**answer, "place": place})
+            logger.info("idle: %s passed over (%s)", answer["url"], place.get("how"))
+            answer = await self._next_background()
+        return web.json_response(answer)
+
+    async def _place(self, url: str, screen: tuple[int, int]) -> dict | None:
+        """Where this picture sits on this screen, remembered; None when it
+        cannot be read, so the panel places it as before."""
+        key = (url, screen)
+        if key in self._placements:
+            return self._placements[key]
+        data = await self._picture_bytes(url)
+        place = None
+        if data:
+            loop = asyncio.get_running_loop()
+            if self._placing is None:
+                self._placing = concurrent.futures.ThreadPoolExecutor(
+                    max_workers=1, thread_name_prefix="placement", initializer=_lowest_priority)
+            try:
+                found = await loop.run_in_executor(self._placing, self._placer.place, data, screen)
+                place = {**found.to_json(), "skip": found.skip} if found.skip else found.to_json()
+                logger.info("idle: %s placed by %s", url.rsplit("/", 1)[-1][:60], found.how)
+            except Exception as exc:  # noqa: BLE001 - a picture placed as before beats none
+                logger.warning("idle: could not place %s: %s", url, exc)
+        if len(self._placements) >= self.PLACE_MEMORY:
+            self._placements.pop(next(iter(self._placements)))
+        self._placements[key] = place
+        return place
+
+    async def _picture_bytes(self, url: str) -> bytes | None:
+        """The picture a background URL names: a file of ours, or the owner's
+        server's (an artist picture through LMS's image proxy)."""
+        if url.startswith("/idle/wallpaper/local/"):
+            path = self._wallpapers.local_path(unquote(url[len("/idle/wallpaper/local/"):]))
+        elif url.startswith("/idle/wallpaper/"):
+            path = self._wallpapers.path_of(url[len("/idle/wallpaper/"):])
+        else:
+            try:
+                async with aiohttp.ClientSession() as http:
+                    async with http.get(url, timeout=aiohttp.ClientTimeout(total=20)) as response:
+                        return await response.read() if response.status == 200 else None
+            except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
+                logger.info("idle: %s could not be read to place it: %s", url, exc)
+                return None
+        if path is None:
+            return None
+        try:
+            return await asyncio.to_thread(path.read_bytes)
+        except OSError:
+            return None
+
+    async def _next_background(self) -> dict:
         """The next background, whatever `idle_background` says it is.
 
         **One route for four sources**, so the panel asks for "the next
@@ -391,17 +498,15 @@ class StateServer:
         daemon can reach anyway. *When* the picture changes is the panel
         counting `background_interval`; nothing here holds a timer.
         """
-        if self._settings is None or self._wallpapers is None:
-            return web.json_response({"error": "wallpapers are not wired up"}, status=503)
         background = self._settings.value("idle_background") or "Artist pictures"
         if background == "Black":
-            return web.json_response({"off": True, "error": None})
+            return {"off": True, "error": None}
         if background == "Artist pictures":
-            return web.json_response(await self._artist_picture())
+            return await self._artist_picture()
         if background == "Wallpapers on device":
             names = self._wallpapers.local_names()
             if not names:
-                return web.json_response({"error": "No pictures on this device yet."})
+                return {"error": "No pictures on this device yet."}
             # Not the one already on screen, when there is another. A folder
             # of four and a fifteen-minute rotation would otherwise repeat
             # about one change in four, which reads as the screen being stuck.
@@ -410,10 +515,8 @@ class StateServer:
             self._last_background = name
             # **Quoted**: a name can now carry folders, spaces and anything
             # else a person types, and it travels as a URL.
-            return web.json_response(
-                {"url": f"/idle/wallpaper/local/{quote(name)}", "by": "", "page": "",
-                 "credit": None, "error": None}
-            )
+            return {"url": f"/idle/wallpaper/local/{quote(name)}", "by": "", "page": "",
+                    "credit": None, "error": None}
         key = str(self._settings.value("wallpaper_key") or "").strip()
         topics = self._settings.value("wallpaper_topics") or []
         # A bar asks for wide pictures (George, 2026-10-04).
@@ -422,7 +525,7 @@ class StateServer:
         if answer.get("file"):
             self._last_background = answer["file"]
             answer = {**answer, "url": f"/idle/wallpaper/{answer['file']}"}
-        return web.json_response(answer)
+        return answer
 
     async def _home_strip(self, limit: int) -> dict:
         """What the library root draws under its cards.

@@ -104,7 +104,8 @@ Phase 2 and ADR-0027.
 | Show the transition screen at all | [R] | **Wired 2026-09-25**, with the screen's length beside it. Off means a takeover changes screen with no announcement |
 | Idle screen: built-in or external URL | [R] | [ADR-0047](0047-the-idle-screen-gains-backgrounds-and-weather.md). ADR-0033's external page, demoted from *the* answer to one of two |
 | Idle background: artist pictures / wallpapers online / wallpapers on device / black | [N] | ADR-0047 §1 |
-| Wallpaper API key | [N] | **Pixabay**, chosen by George on 2026-09-21 ([Finding 043](../findings/043-the-idle-screens-two-providers.md)). A key per owner: its guidelines allow this use but not a shipped credential |
+| Wallpaper API key | [N] | **Pixabay**, chosen by George on 2026-09-21 ([Finding 043](../findings/043-the-idle-screens-two-providers.md)). A key per owner: its guidelines allow this use but not a shipped credential **Labelled *Pixabay API key* from 2026-10-05** ([ADR-0120](0120-backgrounds-cropped-by-what-they-show.md)), with Pexels beside it; the key stays `wallpaper_key`. |
+| Pexels API key | [N] | **Appended 2026-10-05 on George's confirmation** ([ADR-0120](0120-backgrounds-cropped-by-what-they-show.md) §6). The owner's own key, as Pixabay's; Idle screen, shown only with online wallpapers. Pexels is searched with the chosen topic words, and its credit is drawn on screen as Pixabay's is |
 | Wallpaper topics | [N] | **Appended 2026-09-21 on George's confirmation.** Pixabay's own twenty categories, more than one at a time — the `multi` mechanic [ADR-0044](0044-settings-row-vocabulary.md) §7 exists for this row. Not in the design drop |
 | Background interval | [N] | **Appended 2026-09-21 on George's confirmation.** How often the picture changes. Not in the design drop, and without it the rotation is a hardcoded number nobody chose. Named `wallpaper_interval` until he pointed out it was hidden for artist pictures: it belongs to a picture, not to a wallpaper service |
 | Background brightness | [N] | **Appended 2026-09-21, asked for by George.** The design dims a background to 62% and that is this row's default; 20–100% |
@@ -166,6 +167,7 @@ hardcoded as Phase 7 builds them.
 | Artwork lookup for renderers that supply none | [R] | George, 2026-09-12: Bluetooth's absent art is transient — artist/album/title are enough to find it later |
 | Enrichment provider API keys, one per provider that needs one | [N] | Confirmed as a setting by George, 2026-09-17: entered by each user, never shipped in the image or the repo, so a provider requiring a key is not ruled out by it. Which providers need one depends on the Phase 8 provider decision |
 | fanart.tv key | [N] | Artist pictures (George, 2026-09-18). Without it they come from LMS's own plugin where the server has one, and initials otherwise. A personal key sees a new image about two days after it is added where a project key waits seven (Finding 030) |
+| TheAudioDB key | [N] | **Appended 2026-10-05 on George's confirmation** ([ADR-0120](0120-backgrounds-cropped-by-what-they-show.md) §5, *"1.a"*). Optional: empty uses TheAudioDB's free shared test key (`123`, 30 requests a minute). For artist backgrounds, and for the artwork updates after fanart.tv |
 | ListenBrainz token | [N] | For the artist page's Popular list only. That endpoint began answering `401 "you need to provide an Auth token"` on 2026-09-18, having answered 200 the same morning; George chose a per-user token over dropping the section. Everything else in ADR-0040 §2 still needs no key |
 
 ### System and maintenance
