@@ -37,8 +37,8 @@ release** (George, 2026-10-04): never push a release onto an open PR.
 
 **`gexis` right now (2026-10-05, evening):** the 13d preview with
 `phase-13b` merged in - core `0.9.0+git17.8ebb7c1`, player and ui
-`0.9.0+git19.5e61762`: 0.9.0, the post-0.9.0 fixes and **ADR-0121's
-touchpad**; on the 10.1" 1280 x 800 (the 13.3" FHD jammed the Wi-Fi). Its
+`0.9.0+git25.01a56ee` (core too): 0.9.0, the post-0.9.0 fixes and
+**ADR-0121's touchpad** with George's first four changes; on the 10.1" 1280 x 800 (the 13.3" FHD jammed the Wi-Fi). Its
 volume read 100 % after the touchpad tests, nothing playing - whether a
 test tap set it is unknown (LESSONS 59); left as it was.
 
@@ -50,11 +50,13 @@ test tap set it is unknown (LESSONS 59); left as it was.
    and wait for Continue (1f5cd5f). The phone's notes scrolled in every
    test - George sends a screenshot next time.
 0. **ADR-0121, the phone as touchpad and keyboard: built and on gexis**
-   (1c46f74, a56430d, 6181168). Three of its four measurements done and in
+   (1c46f74, a56430d, 6181168; after George's first try, a8130c9 speed
+   150-400 %, 88f389d the choppy start, 78356e2 a bigger pad and a touch
+   outside closes the sheet). Three of its four measurements done and in
    the ADR (31 ms round trip; taps drive the panel after two fixes; the
-   kiosk 16-23 % of one core while moving). **Owed: George tries it on his
-   Android** - open the volume sheet on the phone, move onto a text field,
-   tap: the keyboard should open. Drags (queue order, list scrolling) are
+   kiosk 16-23 % of one core while moving). **Owed: the keyboard on George's
+   Android** - he found no text field; Settings' text rows (e.g. Pexels API
+   key, empty) have one. Drags (queue order, list scrolling) are
    out by decision D. Not measured during playback.
 0. **ADR-0120, bar backgrounds** (accepted 2026-10-05): step 1 (placement)
    and step 2 (TheAudioDB for
