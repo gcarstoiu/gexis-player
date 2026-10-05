@@ -489,9 +489,12 @@
             <section class="pane">
               <div>
                 <h1>Join your network</h1>
-                <p class="sub">{overLan
-                  ? 'The player is on your network by cable. Add Wi-Fi as well, or leave it on the cable.'
-                  : 'The player has one radio, so it can host this page or use your network, never both.'}</p>
+                <!-- Over the player's Wi-Fi, no line here (George, 2026-10-05:
+                     "This text is not needed" - the welcome's "Keep this phone
+                     handy" already says the page stops when the player moves). -->
+                {#if overLan}
+                  <p class="sub">The player is on your network by cable. Add Wi-Fi as well, or leave it on the cable.</p>
+                {/if}
               </div>
 
               {#if joinError}
