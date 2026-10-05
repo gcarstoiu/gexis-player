@@ -29,6 +29,7 @@ from gexis_core.arbitration import Supervisor
 from dataclasses import replace
 
 from gexis_core.config import Config
+from gexis_core.start_guard import StartGuard
 from gexis_core.idle_page import probe as probe_idle_page
 from gexis_core.wallpapers import Wallpapers
 from gexis_core.weather import Weather
@@ -565,6 +566,8 @@ async def main() -> None:
         mute.observe(raw)
         state_store.set_volume_raw(raw, muted=mute.muted, percent=remote.percent())
 
+    start_guard = StartGuard()
+
     def report_renderer_volume(renderer_id: str, value: int, steps: int) -> None:
         """**The one path from a renderer's number to the DAC** (ADR-0054 §3).
 
@@ -578,6 +581,16 @@ async def main() -> None:
         us. Now there is one, and the curve is
         `renderer_value_to_hardware_raw`.
         """
+        # The starting volume holds for a moment (start_guard): the phone's
+        # own slider arriving as it connects is not a request to go louder.
+        again = start_guard.holding(renderer_id, value, time.monotonic())
+        if again is not None and supervisor.active == renderer_id:
+            logger.info("volume: %s asked for %s/%s just after starting at %s; keeping the starting volume",
+                        renderer_id, value, steps, again)
+            adapter = adapters.get(renderer_id) or plugin_adapters.get(renderer_id)
+            if adapter is not None:
+                asyncio.ensure_future(adapter.set_volume(again))
+            return
         remote.set_steps(renderer_id, steps)
         remote.report(renderer_id, value)
         raw = renderer_value_to_hardware_raw(value, steps)
@@ -685,6 +698,7 @@ async def main() -> None:
                 renderer_id, int(start_max), raw, value, steps,
             )
             await volume_bridge.write_hardware(renderer_value_to_hardware_raw(value, steps))
+            start_guard.handed(renderer_id, value, time.monotonic())
         else:
             logger.info(
                 "volume: %s cannot say where it is; handing it the level playing (%s/240 -> %s/%s)",
