@@ -29,7 +29,7 @@ release** (George, 2026-10-04): never push a release onto an open PR.
 | Released in 0.8.7 | The new-screen notice and its straight switch (29a3386, 88ee721, d91a4bc); a USB disk kept 7 days after unplugging (ADR-0115 decision 17, ddf088f); setup's copy fixes from the review (963857d-034fb33); genre pills kept to two rows on the artist page (7cd3e1b); skin packs fetched from the channel's release when the player's own is unpublished, a stale pack failure no longer shown, failures in words (efd329d); Finding 109's playback test; 13a/13c/13e closed |
 
 **`gexis` right now (2026-10-05, afternoon):** the 13d preview with
-`phase-13b` merged in (core, ui and player `0.8.9+git60.d73b5a9`,
+`phase-13b` merged in (core and player `0.8.9+git66.5e459f4`, ui `0.8.9+git60.d73b5a9`,
 gexis-system `0.8.9+git44.83e89ad`, **gexis-go-librespot `0.9.0-2`** - Spotify
 without loudness normalisation, ADR-0052 §6 amended at George's word -
 gexis-plexamp `0.3.0-2+0.8.9+git35.ab56c0c` with the unreleased 0.4.0 plugin
