@@ -6,7 +6,7 @@ movement or tapping for 5 seconds and it hides itself. C. When tapping
 inside a text field then the phone's keyboard comes up. D. No gestures yet.
 Let's have it working in a simple manner. E. You can record them both.
 Third not. F. Yes. Same behaviour."*). Four measurements come before the
-build (below); they confirm the mechanism, they do not reopen the decisions.
+build (below, and their results under *Measured*); they confirm the mechanism, they do not reopen the decisions.
 **Builds on:** [ADR-0118](0118-lyrion-s-own-menus.md)'s option section and
 its question E (search), [ADR-0028](0028-ui-serving-and-command-channel.md)
 (the API is open to the LAN by decision), [ADR-0022](0022-settings.md) (two
@@ -111,6 +111,33 @@ phone page (ADR-0028); pointing and typing on the panel adds no reach.
   or is reached otherwise.
 - **Load**: what a steady stream of movements costs the core and the panel
   on the Pi.
+
+## Measured (2026-10-05, gexis, preview 0.9.0+git19)
+
+Scope: a headless Chromium on gexis as the panel (loopback, 1280 x 800, the
+installed UI), a phone page in Brave headless on the LAN with touch
+emulation (412 x 820), CDP touch events. Not a real phone; the kiosk took
+the same stream (LESSONS 59).
+
+- **The keyboard - still owed, on George's Android.** In emulation the
+  hidden field takes focus within the tap and keeps it. It did not at
+  first: the touch's own `mousedown`, 1 ms after, took focus back - the
+  keyboard would have opened and closed. Fixed: the touchpad refuses it.
+- **Latency**: 20 crossings of a field's edge, from the phone sending a
+  move to the panel's "over" arriving back - median **31 ms**, most 88 ms,
+  over gexis's Wi-Fi. Two hops, so one way is about half.
+- **Synthetic taps**: a tap opened Settings from the home screen's card; a
+  tap typed into a field (text, Backspace). Two failed and are fixed: a tap
+  made as pointer 41 threw on every control that captures the pointer
+  (volume, queue, bar tray, sideways rows) and left the volume slider held -
+  taps are pointer 1, the mouse's, now; and a browser's own slider ignores
+  made-up events - a tap on one now sets it where it landed (75 % -> 75,
+  `change` sent). **Not reachable from the phone, by D**: anything that
+  needs a drag - reordering the queue, scrolling lists and the bar's
+  sideways rows. The bar tray's band answers a tap.
+- **Load**, 60 moves a second for 30 s: the core 4-5 % of one core (0.5 %
+  idle); the kiosk 16-23 % of one core (under 1 % idle) - of the Pi's 400 %.
+  Nothing playing; not measured during playback.
 
 ## Consequences
 

@@ -1111,6 +1111,25 @@ check is run once without the fix, to see it fail.
 often a frame came - and drives it as a person does (a touch fling, not a
 scripted step), since a fixed step never let the list run.**
 
+**59. The test panel was not the only panel** (2026-10-05, ADR-0121).
+- **What went wrong.** The phone's touchpad was tested against a headless
+  Chromium on gexis, opened on loopback so the core took it for a panel.
+  The kiosk is a panel by the same rule, so every scripted move and tap also
+  landed on the real screen - albums opened, Settings opened, typing sent -
+  while the results were read from the headless page alone. The volume read
+  100 % afterwards, and whether a tap did that cannot be told: it was not
+  read before.
+- **And the script's own taps.** Twice a result looked like a broken tap
+  (an album opened, not Settings). Both were the script: a 2 px nudge to
+  wake the pointer, and short corrections, were quick and small enough to be
+  taps - which is what the touchpad is built to call them.
+- **How it was caught.** By the trace of where the panel's clicks landed,
+  and by asking which pages receive the relay.
+
+**A test that drives a relay reads, before it starts, who else the relay
+reaches - and records any state the stray input could change (volume,
+playback, the screen) before and after.**
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build
