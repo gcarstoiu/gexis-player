@@ -460,9 +460,10 @@ holds each phase's acceptance criteria; this list is only the order.
   the panel connected, 20-37 % of pings to the router lost, 80-1,260 ms
   average, link 6.5-27 Mb/s; unplugged, 0 % lost, 7 ms, 290-390 Mb/s. It
   shows as stuttering playback and Settings that fail to load on the phone.
-  Wi-Fi power saving is not the cause (off was worse). Not yet split between
-  the panel, its power supply and the HDMI cable swapped in that morning; a
-  network cable to the Pi avoids it.
+  Wi-Fi power saving is not the cause (off was worse). **Swapped for the
+  10.1" 1280x800, the same day: 0 % lost, 7-10 ms to the Lyrion server,
+  290-325 Mb/s** - so it is the 13.3" FHD's setup (the panel, its supply or
+  its cable; not split further). A network cable to the Pi avoids it.
 
 - **Restarting `gexis-core` does not reload the panel.** `ui/dist` rsynced to
   `/opt/gexis-ui` reaches Chromium only on a page load, so a probe run after a
