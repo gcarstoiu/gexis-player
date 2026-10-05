@@ -886,7 +886,7 @@
         "placeholder": "ListenBrainz token",
         "label": "ListenBrainz token",
         "marks": "N",
-        "note": "A ListenBrainz user token. Some artist information needs one.",
+        "note": "For the artist page's Popular list. A free user token, from https://listenbrainz.org/settings/",
         "default": null
       },
       {
@@ -896,7 +896,7 @@
         "placeholder": "fanart.tv key",
         "label": "fanart.tv key",
         "marks": "N",
-        "note": "Artist pictures. Without it they come from LMS's own plugin, where the server has one, and initials otherwise.",
+        "note": "Artist pictures from fanart.tv. Without a key they come from the Lyrion server's Music & Artist Information plugin, or initials where it is not installed.",
         "default": null
       },
       {
@@ -968,7 +968,7 @@
         "type": "text",
         "label": "Device name",
         "marks": "R",
-        "note": "One name for everything: the mDNS hostname, the LMS player, the Spotify Connect device and the Bluetooth name. There is no per-service override. Changing it takes effect at the next restart.",
+        "note": "One name for everything: the mDNS hostname, the LMS player, the Spotify Connect device and the Bluetooth name. There is no per-service override.",
         "default": null,
         "restart": true,
         "warn": "Change only takes place after a restart of the device.",
@@ -1125,7 +1125,7 @@
           "Testing"
         ],
         "default": "Stable",
-        "note": "Testing gets each release first; Stable gets it once it has been tried.",
+        "note": "Testing gets each release first. Stable gets it once it has been tried. Recommended: Stable.",
         "warn": {
           "Testing": "Testing releases reach this player before everyone else's, and may have problems. Going back to Stable does not downgrade: the player stays where it is until Stable passes it."
         }
