@@ -1159,3 +1159,17 @@ async def test_a_renderer_that_never_answers_cannot_hang_the_supervisor(monkeypa
     # And the lock is free for the next one.
     await asyncio.wait_for(supervisor.acquire("bluetooth"), 2)
     assert supervisor.active == "bluetooth"
+
+
+@pytest.mark.asyncio
+async def test_an_update_stops_whoever_is_playing_and_leaves_nobody_holding():
+    """2026-10-05: Spotify played on through 0.9.0's install, since the
+    update's stop paused LMS alone. `stop_active` releases the holder the
+    way a takeover does."""
+    supervisor, adapters, holder = build(active="spotify")
+    changes = []
+    supervisor._on_active_change = changes.append
+    assert await supervisor.stop_active() == "spotify"
+    assert adapters["spotify"].release_calls == 1
+    assert supervisor.active is None and changes == [None]
+    assert await supervisor.stop_active() is None, "nothing playing, nothing to stop"

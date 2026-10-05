@@ -2750,14 +2750,25 @@ async def main() -> None:
         asyncio.ensure_future(_restart_core_soon())
         return True
 
-    async def _park_renderers() -> bool:
+    async def _park_renderers(stop_all: bool = False) -> bool:
         """**A fresh start after every restart** (George, 2026-09-29). The one
         renderer that resumes by itself is LMS: its server carries on when
         the player reconnects, whatever it is told while the player is away
         (ADR-0095's 2026-09-29 measurements). So as the device goes down its
         player is paused - queue and position kept. Spotify, Bluetooth and
         Plexamp do not resume by themselves. A power cut skips this; the
-        first start after the boot pauses what the server resumed."""
+        first start after the boot pauses what the server resumed.
+
+        **`stop_all` for an update** (ADR-0110 §4, fixed 2026-10-05): playback
+        stops before the install, whoever is playing - Spotify kept playing
+        through 0.9.0's (George)."""
+        if stop_all:
+            try:
+                stopped = await supervisor.stop_active()
+                if stopped:
+                    logger.info("park: %s stopped for the update", stopped)
+            except Exception as exc:  # the update goes on; its restart stops it anyway
+                logger.warning("park: could not stop what was playing: %s", exc)
         try:
             await lms.pause()
             logger.info("park: the device is going down; LMS paused")
