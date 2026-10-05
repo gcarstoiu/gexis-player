@@ -84,18 +84,33 @@
     }
   }
 
-  /** A tap where the pointer is: the events a finger's tap would make. */
+  /** A tap where the pointer is: the events a finger's tap would make.
+   *  As the mouse's (pointer 1): a control that captures the pointer can
+   *  only capture one that exists, and any other id throws, which left the
+   *  volume slider held (measured on gexis, 2026-10-05). */
   function tap() {
     const target = under();
     if (!target) return;
     const at = { bubbles: true, cancelable: true, composed: true, clientX: x, clientY: y, view: window };
-    const pointer = { ...at, pointerId: 41, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 1 };
+    const pointer = { ...at, pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 1 };
     target.dispatchEvent(new PointerEvent('pointerdown', pointer));
     target.dispatchEvent(new MouseEvent('mousedown', { ...at, button: 0, buttons: 1 }));
     if (takesText(target)) target.focus();
     target.dispatchEvent(new PointerEvent('pointerup', { ...pointer, buttons: 0 }));
     target.dispatchEvent(new MouseEvent('mouseup', { ...at, button: 0 }));
     target.dispatchEvent(new MouseEvent('click', { ...at, button: 0 }));
+    if (target instanceof HTMLInputElement && target.type === 'range') slide(target);
+  }
+
+  /** A browser's own slider ignores made-up events: set it to where the tap
+   *  landed, as a finger's tap on its track would, and say so. */
+  function slide(range) {
+    const r = range.getBoundingClientRect();
+    const min = Number(range.min || 0);
+    const max = Number(range.max || 100);
+    range.value = String(min + Math.min(1, Math.max(0, (x - r.left) / r.width)) * (max - min));
+    range.dispatchEvent(new Event('input', { bubbles: true }));
+    range.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
   function insert(text) {
