@@ -127,8 +127,10 @@ class TestPortraits:
     async def test_nothing_found_is_stored_as_nothing(self):
         """*"fanart has no picture for this one"* is an answer, and the
         fallback reads it as "keep LMS's"."""
-        sweep, store, _, _ = build(http=FakeHttp({"fanart.tv": {"artistthumb": []}}))
+        sweep, store, _, _ = build(http=FakeHttp({"fanart.tv": {"artistthumb": []},
+                                                 "artist-mb.php": {"artists": None}}))
         await run(sweep, "portraits")
+        # Both asked - fanart.tv, then TheAudioDB (ADR-0120 §4) - both none.
         assert store.rows[(ARTIST_NAMESPACE, "isaac hayes")] is None
         assert sweep.progress.found == 0
 
@@ -175,6 +177,9 @@ class TestCovers:
                 {"id": "RG2", "title": "Black Moses"},
                 {"id": "RG3", "title": "Nothing Fanart Has"},
             ]},
+            # TheAudioDB, asked for the one fanart.tv lacks, has none either.
+            "artist-mb.php": {"artists": [{"idArtist": "7"}]},
+            "album.php": {"album": []},
         }))
         await run(sweep, "covers")
         assert store.rows[(ALBUM_NAMESPACE, "isaac hayes\x1fhot buttered soul")] == "https://fan/one.jpg"
@@ -183,7 +188,8 @@ class TestCovers:
         assert store.rows[
             (ALBUM_NAMESPACE, "isaac hayes\x1fblack moses deluxe edition")
         ] == "https://fan/two.jpg"
-        # asked for, and fanart had none: stored as nothing, not skipped
+        # asked for, and neither fanart.tv nor TheAudioDB had one: stored
+        # as nothing, not skipped
         assert store.rows[(ALBUM_NAMESPACE, "isaac hayes\x1fnothing fanart has")] is None
         # **Only what this library holds.** Their catalogue had a release
         # group we do not own; storing it put 16,391 rows in a 4,567-album
@@ -218,9 +224,14 @@ class TestOneAtATime:
         release.set()
         await sweep._task
 
-    async def test_no_key_means_nothing_to_ask(self):
-        sweep, _, _, _ = build(fanart_key=lambda: None)
-        assert sweep.start("portraits") is False
+    async def test_without_a_fanart_key_theaudiodb_alone_is_asked(self):
+        """ADR-0120 §5: TheAudioDB answers with its shared key, so a run no
+        longer needs a key of any kind."""
+        sweep, store, _, http = build(fanart_key=lambda: None, http=FakeHttp({
+            "artist-mb.php": {"artists": [{"strArtistThumb": "https://tadb/portrait.jpg"}]}}))
+        await run(sweep, "portraits")
+        assert store.rows[(ARTIST_NAMESPACE, "isaac hayes")] == "https://tadb/portrait.jpg"
+        assert not any("fanart" in c for c in http.calls)
 
 
 class TestWhatTheCallersRead:
@@ -314,3 +325,47 @@ class TestProgressDoesNotFloodThePanel:
         )
         await run(sweep, "portraits")
         assert finished == [1]
+
+
+class TestTheAudioDB:
+    """ADR-0120 §4 (George: "The more coverage we have, the better"):
+    TheAudioDB after fanart.tv, before LMS's own."""
+
+    async def test_a_portrait_fanart_lacks_comes_from_theaudiodb(self):
+        sweep, store, _, _ = build(http=FakeHttp({
+            "fanart.tv": {"artistthumb": []},
+            "artist-mb.php": {"artists": [{"strArtistThumb": "https://tadb/portrait.jpg"}]}}))
+        await run(sweep, "portraits")
+        assert store.rows[(ARTIST_NAMESPACE, "isaac hayes")] == "https://tadb/portrait.jpg"
+        assert sweep.progress.found == 1
+
+    async def test_fanart_s_portrait_wins_and_theaudiodb_is_not_asked(self):
+        sweep, store, _, http = build(http=FakeHttp({
+            "fanart.tv": {"artistthumb": [{"url": "https://fan/thumb.jpg"}]}}))
+        await run(sweep, "portraits")
+        assert store.rows[(ARTIST_NAMESPACE, "isaac hayes")] == "https://fan/thumb.jpg"
+        assert not any("theaudiodb" in c for c in http.calls)
+
+    async def test_a_cover_fanart_lacks_comes_from_theaudiodb_by_release_group_or_title(self):
+        sweep, store, _, http = build(http=FakeHttp({
+            "webservice.fanart.tv": {"albums": {}},
+            "musicbrainz.org": {"release-groups": [{"id": "RG1", "title": "Hot Buttered Soul"}]},
+            "artist-mb.php": {"artists": [{"idArtist": "7"}]},
+            "album.php": {"album": [
+                {"strMusicBrainzID": "RG1", "strAlbum": "Hot Buttered Soul", "strAlbumThumb": "https://tadb/hbs.jpg"},
+                {"strMusicBrainzID": None, "strAlbum": "Black Moses", "strAlbumThumb": "https://tadb/bm.jpg"},
+            ]},
+        }))
+        await run(sweep, "covers")
+        assert store.rows[(ALBUM_NAMESPACE, "isaac hayes\x1fhot buttered soul")] == "https://tadb/hbs.jpg"
+        assert store.rows[(ALBUM_NAMESPACE, "isaac hayes\x1fblack moses deluxe edition")] == "https://tadb/bm.jpg"
+        # One TheAudioDB artist call and one album list, for the whole artist.
+        assert sum("artist-mb.php" in c for c in http.calls) == 1
+        assert sum("album.php" in c for c in http.calls) == 1
+
+    async def test_theaudiodb_unreachable_stores_nothing_rather_than_none(self):
+        """Finding 036's rule, for the second source too."""
+        sweep, store, _, _ = build(http=FakeHttp({"fanart.tv": {"artistthumb": []}}))
+        await run(sweep, "portraits")
+        assert (ARTIST_NAMESPACE, "isaac hayes") not in store.rows
+

@@ -2404,6 +2404,7 @@ async def main() -> None:
         http,
         enrichment_cache,
         fanart_key=lambda: settings.value("fanart_key"),
+        theaudiodb_key=lambda: settings.value("theaudiodb_key"),
         # George, 2026-09-24: *"Use the confidence level for sure."* `Head`
         # resolved at 100 and there is no telling it is the right Head.
         confidence=lambda: int(settings.value("confidence") or 0),
