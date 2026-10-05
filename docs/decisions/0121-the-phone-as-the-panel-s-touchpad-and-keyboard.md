@@ -34,8 +34,12 @@ The phone sends finger movement over its existing connection to the core;
 the core relays it to the panel, uninterpreted; the panel's page draws its
 own pointer and turns a tap into a tap on what lies under it. **Not** a
 system-level virtual mouse and keyboard (`wlrctl`): that would bring back the
-system pointer the panel hides by design and reach windows the panel does
-not need. Everything the panel shows is our page; the visualiser, a window
+system pointer and reach windows the panel does not need. **The panel shows
+no system cursor** - corrected 2026-10-05: nothing hid it until then, and
+labwc's arrow, drawn where it starts and hidden only by a real touch,
+stayed on a panel driven from the phone (George: *"two cursors"*). The
+page asks for none, and labwc loads a theme whose cursors are one
+transparent pixel (`gexis-blank`, gexis-system). Everything the panel shows is our page; the visualiser, a window
 of its own, needs only taps to leave, which a tap anywhere already does.
 
 ### 2. In the volume sheet (A)
