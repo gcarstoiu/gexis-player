@@ -29,10 +29,10 @@ release** (George, 2026-10-04): never push a release onto an open PR.
 | Released in 0.8.7 | The new-screen notice and its straight switch (29a3386, 88ee721, d91a4bc); a USB disk kept 7 days after unplugging (ADR-0115 decision 17, ddf088f); setup's copy fixes from the review (963857d-034fb33); genre pills kept to two rows on the artist page (7cd3e1b); skin packs fetched from the channel's release when the player's own is unpublished, a stale pack failure no longer shown, failures in words (efd329d); Finding 109's playback test; 13a/13c/13e closed |
 
 **`gexis` right now (2026-10-05, afternoon):** the 13d preview with
-`phase-13b` merged in (core and player `0.8.9+git83.aa86afe`, ui `0.8.9+git77.a4b056c` - with
-**ADR-0120 steps 1 and 2**: backgrounds placed by what they show, OpenCV
-5.0.0 and both models in the core; TheAudioDB for artist backgrounds and
-the artwork updates), gexis-system `0.8.9+git44.83e89ad`,
+`phase-13b` merged in (core and player `0.8.9+git86.0d130e3`, ui `0.8.9+git77.a4b056c` - with
+**ADR-0120 steps 1-3**: backgrounds placed by what they show, OpenCV 5.0.0
+and both models in the core; TheAudioDB for artist backgrounds and the
+artwork updates; Pexels beside Pixabay, its key row empty), gexis-system `0.8.9+git44.83e89ad`,
 gexis-go-librespot `0.9.0-2` (Spotify without normalisation),
 gexis-plexamp `0.3.0-2+0.8.9+git35.ab56c0c` with the unreleased 0.4.0 plugin
 files laid over it; on the 13.3" with a new cable. George to watch the bar's
@@ -43,9 +43,10 @@ idle screen.
    and step 2 (TheAudioDB for
    backgrounds and the Enrichment updates, its key row) built and live on
    gexis; the shared key's album list holds one album per artist, so covers
-   are asked per album. Step 3 (Pexels, its key row, the
-   rename to *Pixabay API key*, the measured order on bars) to build. The
-   core package is 76 MB now (OpenCV, numpy, two models). George registers
+   are asked per album. Step 3 (Pexels, the rename to *Pixabay API key*,
+   the bar's source order measured) built and live too, **untried against
+   Pexels itself**: it issues no new keys for now (George), so the row is
+   empty.
    a Pexels key for step 3.
 1. **Phase 13d** (ADR-0117, accepted 2026-10-04): built in the worktree,
    six commits, not on hardware. George tests later: the DAC2 HD unchanged
