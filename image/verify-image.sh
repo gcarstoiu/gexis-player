@@ -236,6 +236,7 @@ for f in /usr/lib/systemd/system/plexamp.service \
          /usr/share/gexis/plugins/plexamp/plugin.json \
          /usr/share/gexis/plugins/plexamp/mark.png \
          /opt/gexis-plexamp/src/gexis_plexamp/main.py \
+         /usr/lib/gexis/plexamp-run \
          /usr/lib/gexis/gexis-fetch-component \
          /usr/lib/systemd/system/gexis-fetch@.service \
          /usr/share/gexis/components/plexamp.env; do

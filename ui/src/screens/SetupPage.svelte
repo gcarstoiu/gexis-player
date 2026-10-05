@@ -338,7 +338,8 @@
   //: The pack the chosen screen gets (the core's skin_packs.for_screen).
   //: Non-breaking: "1280 ×" and "800" must not part at a line's end.
   const packSize = $derived(chosenModel?.skins?.replace('x', '\u00a0×\u00a0') ?? '');
-  const packLabel = $derived(chosenModel?.skin_count ? `the ${chosenModel.skin_count} skins drawn for ${packSize} screens` : `the set for ${packSize} screens`);
+  //: George, 2026-10-05, on the copy review: "for this resolution (n) skins available".
+  const packLine = $derived(chosenModel?.skin_count ? `${chosenModel.skin_count} skins are available for this screen's resolution (${packSize}).` : `Skins are available for this screen's resolution (${packSize}).`);
   //: Two minutes, as every Keep waits since 2026-10-04 (SETUP_KEEP_S and
   //: KEEP_S in the core).
   const pickNote = $derived(
@@ -445,7 +446,7 @@
           <section class="pane">
             <h1 class="hero">{shownName} is {picked ? 'joining your network' : 'set up'}</h1>
             {#if picked}
-              <p class="lead">This page is served by the player over its own Wi-Fi, so it stops here. Reconnect this phone to <strong>{picked}</strong>, then open the address below.</p>
+              <p class="lead">This page is served by the player over its own Wi-Fi, so it stops here. Check this phone is back on <strong>{picked}</strong>, then open the address below.</p>
             {/if}
             {#if keepQuestion}
               <div class="info info--warn"><span class="bar" style="background:#e0a758"></span><span><b>Then go to the player's screen</b><small>It restarts on the screen you chose and asks whether to keep it. Tap Keep on the screen within two minutes, or it goes back to how it was.</small></span></div>
@@ -454,20 +455,25 @@
               <div class="label">Open in any browser</div>
               <div class="addr">http://{slug}.local:8090</div>
             </div>
-            <div class="note-card" style="--bar: {headless ? '#e0a758' : '#7ed6bc'}">
-              <span class="bar"></span>
-              <span>{headless
-                ? 'Nothing is drawn on the device, so this address is the only way in. Write it down before you close the page.'
-                : 'If the password is not accepted, the player opens its setup network again within about a minute. Join it, and this page picks up where you left off.'}</span>
-            </div>
+            <!-- The password line only when there was a password to refuse: a
+                 secured Wi-Fi was chosen - not over a cable with no Wi-Fi, nor
+                 on an open network (George, 2026-10-04: "Agree"). -->
+            {#if headless || (picked && secured)}
+              <div class="note-card" style="--bar: {headless ? '#e0a758' : '#7ed6bc'}">
+                <span class="bar"></span>
+                <span>{headless
+                  ? 'Nothing is drawn on the device, so this address is the only way in. Write it down before you close the page.'
+                  : 'If the password is not accepted, the player opens its setup network again within about a minute. Join it, and this page picks up where you left off.'}</span>
+              </div>
+            {/if}
           </section>
         {:else if step < 0}
           <section class="pane">
             <h1 class="hero">Set up <span class="word">gexis</span></h1>
             <p class="lead">
               {overLan
-                ? 'Nothing here leaves your network: the player is the only thing this page is talking to.'
-                : "You are connected to the player's own Wi-Fi. Nothing here leaves the room: the device is the only thing this page is talking to."}
+                ? 'This page talks only to the player, over your network.'
+                : "You are connected to the player's own Wi-Fi. This page talks only to the player."}
             </p>
             <div class="cards">
               <div class="info"><span class="bar" style="background:#8fc4d8"></span><span><b>About two minutes</b><small>A few questions. Every one of them can be changed later in Settings.</small></span></div>
@@ -488,9 +494,12 @@
             <section class="pane">
               <div>
                 <h1>Join your network</h1>
-                <p class="sub">{overLan
-                  ? 'The player is on your network by cable. Add Wi-Fi as well, or leave it on the cable.'
-                  : 'The player has one radio, so it can host this page or use your network, never both.'}</p>
+                <!-- Over the player's Wi-Fi, no line here (George, 2026-10-05:
+                     "This text is not needed" - the welcome's "Keep this phone
+                     handy" already says the page stops when the player moves). -->
+                {#if overLan}
+                  <p class="sub">The player is on your network by cable. Add Wi-Fi as well, or leave it on the cable.</p>
+                {/if}
               </div>
 
               {#if joinError}
@@ -536,7 +545,11 @@
                       <input type={showPw ? 'text' : 'password'} bind:value={pw} placeholder={hasPassword ? 'Saved — type to replace it' : 'Network password'} autocomplete="off" spellcheck="false" />
                       <button type="button" class="chip in" onclick={() => (showPw = !showPw)}>{showPw ? 'Hide' : 'Show'}</button>
                     </span>
-                    <span class="hint">{hasPassword && !pw ? 'Saved. The player tries it at the end of setup.' : 'At least 8 characters. The player tries it at the end of setup.'}</span>
+                    <!-- No hint for a new password (George, 2026-10-05: "Not
+                         needed"); the saved one's line waits on his answer. -->
+                    {#if hasPassword && !pw}
+                      <span class="hint">Saved. The player tries it at the end of setup.</span>
+                    {/if}
                   </label>
                 {:else}
                   <span class="hint">This network is open — no password needed.</span>
@@ -547,7 +560,7 @@
             <section class="pane">
               <div>
                 <h1>Name the player</h1>
-                <p class="sub">One name for everything. There is no per-service override, so pick one you will recognise in a list of speakers.</p>
+                <p class="sub">The player's name, and the name every service shows it under — Lyrion, Spotify Connect, Bluetooth and the rest. Pick one you will recognise in a list of speakers.</p>
               </div>
               <label class="field"><span class="label">Device name</span>
                 <input type="text" bind:value={name} placeholder="Living room" autocomplete="off" spellcheck="false" style="border-color:{slugOf(name).length > 1 ? '' : 'rgba(224,167,88,0.55)'}" />
@@ -566,14 +579,13 @@
             <section class="pane">
               <div>
                 <h1>Set the clock</h1>
-                <p class="sub">The idle screen is mostly a clock, so this is worth getting right.</p>
               </div>
               {#if tzMode === 'auto'}
                 <div class="tz">
                   <div class="grow"><div class="label">{setup?.needed ? 'Read from this phone' : 'The player’s time zone'}</div><div class="tz-name">{tzLabel}</div></div>
                   <div class="clock">{fmt(tick, tz || 'UTC')}</div>
                 </div>
-                <button class="ghost" onclick={() => { tzMode = 'region'; tzRegion = null; }}>Choose by hand</button>
+                <button class="ghost" onclick={() => { tzMode = 'region'; tzRegion = null; }}>Set manually</button>
               {:else if tzMode === 'region'}
                 <div class="list">
                   <div class="back-row"><button class="back" aria-label="Back" onclick={() => (tzMode = 'auto')}><span></span></button><span class="label">Region</span></div>
@@ -604,7 +616,6 @@
             <section class="pane">
               <div>
                 <h1>Choose the output</h1>
-                <p class="sub">What the player should send audio to. Stored by name, because card numbers move between boots.</p>
               </div>
               {#if !outputs.length}
                 <!-- George, 2026-10-03, reviewing the copy: "Add copy to cover this." -->
@@ -628,7 +639,7 @@
             <section class="pane">
               <div>
                 <h1>Find your library</h1>
-                <p class="sub">Your own music comes through a Lyrion server on your network. Choose what the player should do; nothing is added without it.</p>
+                <p class="sub">Your own music comes through a Lyrion server on your local network or on the player itself.</p>
               </div>
               <div class="list">
                 <div class="label pad">Lyrion (Logitech Media Server)</div>
@@ -663,7 +674,7 @@
               <div>
                 <h1>{recOk ? 'Is this your screen?' : scState === 'none' ? 'Nothing on the screen yet?' : scChoose ? 'Choose your screen' : 'Which screen is this?'}</h1>
                 <p class="sub">{recOk
-                  ? 'What the screen reports matches this model. It sets the layout and the visualiser skins.'
+                  ? 'What the screen reports matches this model.'
                   : scState === 'none' ? 'Some screens need their settings before they show anything. Choose yours and the player will try it.'
                   : scChoose ? 'Every model gexis knows, by maker.'
                   : 'The screen said who made it and its resolution, but not which model. Choose it from the list.'}</p>
@@ -751,7 +762,7 @@
             <section class="pane">
               <div>
                 <h1>A visualiser for the screen?</h1>
-                <p class="sub">While music plays, the screen can show VU meters and spectrum analysers instead of the cover. They are drawn for one screen size, so the player fetches {packLabel}.</p>
+                <p class="sub">While music plays, the screen can show VU meters and spectrum analysers instead of the cover. {packLine}</p>
               </div>
               <div class="list">
                 {#each [
@@ -792,7 +803,10 @@
           <div class="foot">
             {#if step > 0}<button class="ghost" onclick={back}>Back</button>{/if}
             <button class="primary" style="--c:{accent}" disabled={!valid() || saving} onclick={next}>
-              {step < 0 ? 'Start' : id === 'review' ? 'Finish and connect' : 'Continue'}
+              <!-- Saying what is happening, not only dimming (George,
+                   2026-10-05: "Agreed"). -->
+              {saving ? (id === 'review' ? 'Connecting…' : 'Saving…')
+                : step < 0 ? 'Start' : id === 'review' ? 'Finish and connect' : 'Continue'}
             </button>
           </div>
         {/if}

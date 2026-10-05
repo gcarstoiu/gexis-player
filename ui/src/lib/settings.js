@@ -21,6 +21,7 @@ export async function loadSettings() {
     if (body.device) settingsDevice.set(body.device);
     settingsError.set(null);
   } catch (err) {
+    console.warn('settings could not be loaded:', err.message);
     settingsError.set(err.message);
   }
 }

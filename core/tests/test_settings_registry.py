@@ -1280,3 +1280,57 @@ def test_a_hidden_row_is_published_and_marked_invisible(store):
     assert token()["visible"] is False
     settings.set("beszel.enabled", True)
     assert token()["visible"] is True
+
+
+def test_fixed_output_hides_the_volume_rows(store):
+    """George, 2026-10-05: with Output mode Fixed, Maximum volume, Starting
+    volume and Volume curve are hidden entirely - there is no slider for
+    them to shape."""
+    settings = Settings(store, registry=load_registry(), wired={"output_mode": lambda v: None})
+    def shown():
+        return {r["key"] for g in settings.to_json() if g["id"] == "audio"
+                for r in g["rows"] if r.get("key") and r["visible"]}
+    volume_rows = {"max_ceiling", "start_max", "travel_curve"}
+    settings.set("output_mode", "Variable")
+    assert volume_rows <= shown()
+    settings.set("output_mode", "Fixed")
+    assert not volume_rows & shown()
+    assert "output_mode" in shown()
+
+
+def test_the_artwork_updates_are_enrichment_s_lyrion_client_rows():
+    """George, 2026-10-05: the two updates and their progress live in
+    Enrichment, under a Lyrion Client heading that hides with Lyrion Client
+    (ADR-0022, reversing the 2026-09-25 move into Sources)."""
+    enrich = next(g for g in load_registry() if g["id"] == "enrich")["rows"]
+    heading = next(i for i, r in enumerate(enrich) if r.get("type") == "group")
+    assert enrich[heading]["label"] == "Lyrion Client"
+    assert enrich[heading]["onlyWhen"] == ["lms_enabled", True]
+    assert [r["key"] for r in enrich[heading + 1:]] == ["sweep_portraits", "sweep_covers", "sweep_status"]
+    sources = next(g for g in load_registry() if g["id"] == "sources")["rows"]
+    assert not any(r.get("key", "").startswith("sweep_") for r in sources)
+
+
+def test_a_plugin_s_report_is_published_on_its_row_and_goes_with_it(store):
+    """ADR-0119: a plugin says what its row is - Plexamp, *Claimed* - and the
+    row carries it as `status`. Not stored: it goes when the plugin does."""
+    settings = Settings(
+        store,
+        registry=Settings.with_plugins(_groups(), [_plugin("plexamp", kind="renderer", settings=[
+            {"key": "claim_token", "type": "text", "label": "Claim token", "default": None}])]),
+    )
+    def row():
+        return next(r for g in settings.to_json() for r in g["rows"]
+                    if r.get("key") == "plexamp.claim_token")
+    assert "status" not in row()
+    assert settings.report("plexamp.claim_token", "done", "Claimed") is True
+    assert row()["status"] == {"state": "done", "text": "Claimed"}
+    assert settings.report("plexamp.claim_token", "done", "Claimed") is False, "a repeat changes nothing"
+    settings.report("plexamp.claim_token", "failed", "Claimed", "The claim did not work.")
+    assert row()["status"]["error"] == "The claim did not work."
+    assert settings.forget_reports("plexamp.") is True
+    assert "status" not in row()
+    with pytest.raises(InvalidValue):
+        settings.report("plexamp.claim_token", "half-done")
+    with pytest.raises(UnknownSetting):
+        settings.report("plexamp.nothing", "done")

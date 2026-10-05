@@ -73,7 +73,7 @@ from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, TrackMetadata
 from gexis_core import settings_migrations, updates
 from gexis_core.settings import SettingsStore
-from gexis_core.settings_registry import Settings, load_registry
+from gexis_core.settings_registry import InvalidValue, Settings, UnknownSetting, load_registry
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
 from gexis_core import backups, bluealsa_volume, components, outputs, plugin_env, plugins, uploads
@@ -2963,6 +2963,8 @@ async def main() -> None:
         one, and marked unavailable - the panel must not keep offering a source
         whose process has left.
         """
+        if settings.forget_reports(f"{session.id}."):
+            state_store.bump_settings_revision()
         adapter = plugin_adapters.pop(session.id, None)
         if adapter is None:
             return
@@ -2977,6 +2979,19 @@ async def main() -> None:
         # Availability is the one event that means something without an
         # adapter: it is the panel's own question, and the state store has
         # held a slot per renderer since Phase 3.
+        if kind == "row":
+            # ADR-0119: a plugin says what one of its own rows is - a
+            # service as much as a renderer, so before the adapter lookup.
+            key = f"{session.id}.{message.get('key')}"
+            try:
+                changed = settings.report(key, message.get("state"),
+                                          message.get("text"), message.get("error"))
+            except (UnknownSetting, InvalidValue) as exc:
+                logger.warning("plugins: %s reported an unusable row: %s", session.id, exc)
+                return
+            if changed:
+                state_store.bump_settings_revision()
+            return
         if kind == "available" and session.id in state_store.state.available:
             state_store.set_available(session.id, bool(message.get("available")))
             return

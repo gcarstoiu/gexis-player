@@ -241,6 +241,27 @@ async def scan() -> list[dict]:
     return sorted(best.values(), key=lambda i: (order[i["state"]], -i["bars"], i["name"].lower()))
 
 
+def join_reason(rc: int, err: str) -> str:
+    """NetworkManager's refusal, as the page and the panel say it - in
+    Setup and in Settings alike."""
+    text = (err or "").lower()
+    if rc == 124:
+        return "It took too long. The network may be out of range."
+    if "secrets were required" in text or "no secrets" in text:
+        return "The password was not accepted."
+    if "no network with ssid" in text or "not found" in text or "could not be found" in text:
+        return "No network with that name is in range."
+    # The `Error:` line, not the last one: NetworkManager follows it with a
+    # `Hint: use 'journalctl -xe ...'` line, which reached the panel as the
+    # reason on the first scripted trial.
+    for line in (err or "").splitlines():
+        if line.startswith("Error:"):
+            said = line.removeprefix("Error:").strip().removeprefix("Connection activation failed:").strip()
+            if said:
+                return said[0].upper() + said[1:].rstrip(".") + "."
+    return "The network refused the connection."
+
+
 async def join(ssid: str, password: str | None = None) -> tuple[bool, str | None]:
     """Connect to one network. Returns (joined, message-if-not).
 
@@ -257,9 +278,8 @@ async def join(ssid: str, password: str | None = None) -> tuple[bool, str | None
     await refresh_connected()
     if rc == 0:
         return True, None
-    if rc == 124:
-        return False, "Took too long. The network may be out of range."
-    return False, (err.splitlines()[-1] if err else "Could not join that network.")
+    logger.info("wifi: could not join %s: rc %s, %s", ssid, rc, (err or "").strip()[:200])
+    return False, join_reason(rc, err)
 
 
 async def forget(ssid: str) -> tuple[bool, str | None]:
@@ -272,4 +292,5 @@ async def forget(ssid: str) -> tuple[bool, str | None]:
     await refresh_connected()
     if rc == 0:
         return True, None
-    return False, (err.splitlines()[-1] if err else "Could not forget that network.")
+    logger.info("wifi: could not forget %s: %s", ssid, (err or "").strip()[:200])
+    return False, "Could not forget that network."

@@ -11,6 +11,7 @@
   import { components, update } from '../lib/state.js';
   import UpdateModal from './UpdateModal.svelte';
   import ReleaseNotes from './ReleaseNotes.svelte';
+  import NoteText from '../lib/NoteText.svelte';
   import {
     settingsGroups,
     settingsDevice,
@@ -74,6 +75,9 @@
   let joinItem = $state(null);
   let join = $state(null);
   let joinError = $state(null);
+  // The backup being restored, while the shared progress card shows it -
+  // so the card speaks of a backup, not a network.
+  let restoring = $state(null);
   // The first level of a grouped choice - the time zone's region.
   let region = $state(null);
   //: A write in flight. Even a fast one deserves saying so, and this one
@@ -353,6 +357,13 @@
     onrowopened?.();
   });
 
+  // The core's own words go to the console; a person reads a sentence
+  // (the copy review, 2026-10-05 - as Setup's errors were).
+  function plainly(raw, sentence) {
+    if (raw) console.warn('settings:', raw);
+    return sentence;
+  }
+
   function flash(text, ms = 1900) {
     clearTimeout(toastTimer);
     toast = text;
@@ -363,8 +374,10 @@
     saving = true;
     try {
       const result = await writeSetting(row.key, value);
-      if (result.status === 409) flash(result.error || `${row.label} — not wired yet`);
-      else if (!result.ok) flash(`${row.label}: ${result.error ?? `HTTP ${result.status}`}`);
+      // A 409 is a choice the hardware has taken away (its reason is on the
+      // row already, in words) or a row this release does not apply.
+      if (result.status === 409) flash(row.unavailable?.[value] ?? plainly(result.error, `${row.label} cannot be changed yet`));
+      else if (!result.ok) flash(plainly(result.error ?? `HTTP ${result.status}`, `${row.label} was not saved. Try again.`));
       return result.ok;
     } finally {
       saving = false;
@@ -428,7 +441,12 @@
       // which is what it did with a phone paired (George, on the panel,
       // 2026-09-21).
       const n = (row.items ?? []).length;
-      return n ? `${n} paired` : 'None';
+      if (!n) return 'None';
+      // Counted in what the list holds: Bluetooth's are paired, the rest
+      // are not (the copy review, 2026-10-05: Restore read "12 paired").
+      if (row.kind === 'backup') return n === 1 ? '1 backup' : `${n} backups`;
+      if (row.kind === 'network') return `${n} saved`;
+      return `${n} paired`;
     }
     if (v === null || v === undefined) return row.type === 'action' || row.type === 'document' ? '' : '—';
     if (row.type === 'number') {
@@ -471,13 +489,14 @@
     return c.received != null && c.total ? Math.min(1, c.received / c.total) : null;
   }
   function downloadLine(c) {
-    const from = c.from ?? 'its maker';
+    // A source with no name is left out rather than called "its maker".
+    const from = c.from ? ` from ${c.from}` : '';
     const label = c.label ?? 'it';
     switch (c.state) {
-      case 'preparing': return `Starting the download from ${from}…`;
+      case 'preparing': return `Starting the download${from}…`;
       case 'downloading': {
         const share = downloadShare(c);
-        return `Downloading ${label} from ${from}` + (share != null ? ` · ${Math.round(share * 100)}%` : '…');
+        return `Downloading ${label}${from}` + (share != null ? ` · ${Math.round(share * 100)}%` : '…');
       }
       case 'retrying': return `The download was interrupted: ${c.error ?? 'retrying'}`;
       case 'verifying': return `Checking ${label}…`;
@@ -486,8 +505,8 @@
         const recent = c.updated && Date.now() / 1000 - c.updated < 120;
         return recent ? `Downloaded and installed just now · ${label}` : `Installed · ${label}`;
       }
-      case 'failed': return c.error ?? `The download from ${from} failed`;
-      default: return `Not installed · downloaded from ${from} when you switch it on`;
+      case 'failed': return c.error ?? `The download${from} failed`;
+      default: return `Not installed · downloaded${from} when you switch it on`;
     }
   }
   function downloadDetail(c) {
@@ -597,12 +616,15 @@
     joinItem = null;
     join = null;
     joinError = null;
+    restoring = null;
     listError = null;
     // A grouped choice opens on the region the current value is in, so the
     // zone in use is one tap away rather than two.
     region = row.grouped ? String(row.value ?? '').split('/')[0] || null : null;
     if (region !== null && !String(row.value ?? '').includes('/')) region = null;
-    draft = row.type === 'text' ? (row.value ?? '') : row.type === 'number' ? (row.value ?? row.min) : null;
+    // ADR-0119: a row its plugin reports done opens empty - Claim again
+    // wants a new token, and the spent one is no use to edit.
+    draft = row.type === 'text' ? (row.status ? '' : (row.value ?? '')) : row.type === 'number' ? (row.value ?? row.min) : null;
     // A seeded list is drawn from the row itself, so the sheet opens with
     // its devices on it rather than with a spinner for the 25 ms the read
     // takes (ADR-0044 §1, amended 2026-09-21).
@@ -624,7 +646,7 @@
     const answer = await listItems(key);
     if (sheetKey !== key) return;
     items = answer.items;
-    listError = answer.error;
+    listError = answer.error ? plainly(answer.error, 'The list could not be read. Try again in a moment.') : null;
     searching = false;
   }
 
@@ -662,7 +684,7 @@
       if (answer.ok && key === 'bt_trusted') {
         flash(`${item.name} forgotten. To pair it again, forget ${deviceName} on it too.`, 6000);
       } else {
-        flash(answer.ok ? `${item.name} forgotten` : (answer.error ?? 'Could not forget it'));
+        flash(answer.ok ? `${item.name} forgotten` : plainly(answer.error, 'Could not forget it. Try again.'));
       }
       if (answer.ok) openList(key);
     });
@@ -671,7 +693,7 @@
   //: ADR-0115: Forget on the row itself, without opening the sheet.
   async function forgetShare(row, item) {
     const answer = await listAction(row.key, { name: item.address ?? item.name, action: 'forget' });
-    flash(answer.ok ? `${item.name} forgotten` : (answer.error ?? 'Could not forget it'));
+    flash(answer.ok ? `${item.name} forgotten` : plainly(answer.error, 'Could not forget it. Try again.'));
   }
 
   //: ADR-0115: the share being added.
@@ -690,11 +712,11 @@
       if (answer.login) {
         shareLogin = item;
         shareCreds = { user: user ?? '', password: '' };
-        if (user) flash(answer.error ?? 'Not accepted');
+        if (user) flash(plainly(answer.error, 'The user or password was not accepted.'));
         return;
       }
       if (!answer.ok) {
-        flash(answer.error ?? 'Could not read its shares');
+        flash(plainly(answer.error, 'Could not read its shares. Try again.'));
         return;
       }
       shareBrowse = { server: item, user, password };
@@ -724,7 +746,7 @@
         const address = item.address ?? item.name;
         await command({ name: address, action: 'add', user: user ?? (address.startsWith('//') ? 'guest' : null), password }, (answer) => {
           if (!answer.ok) {
-            flash(answer.error ?? 'Could not add it');
+            flash(plainly(answer.error, 'Could not add it. Check the address and try again.'));
             return;
           }
           flash(`${item.name} added`);
@@ -846,6 +868,7 @@
     if (join === 'error') {
       join = null;
       joinError = null;
+      restoring = null;
       return;
     }
     if (restorePending) {
@@ -853,14 +876,16 @@
       // hear - and then the device goes, which is what the row said.
       const item = restorePending;
       restorePending = null;
+      restoring = item.name;
       join = 'connecting';
       await command({ name: item.name, action: 'join' }, (answer) => {
         if (!answer.ok) {
+          console.warn('restore:', answer.error);
           join = 'error';
-          joinError = answer.error;
           return;
         }
         join = null;
+        restoring = null;
         closeSheet();
         flash('Restoring — the device is restarting');
       });
@@ -882,7 +907,7 @@
       const { address, user, password } = share;
       await command({ name: address.trim(), action: 'add', user: user.trim() || null, password: password || null }, (answer) => {
         if (!answer.ok) {
-          flash(answer.error ?? 'Could not add it');
+          flash(plainly(answer.error, 'Could not add it. Check the address and try again.'));
           return;
         }
         manual = false;
@@ -913,13 +938,13 @@
     }
     if (!row.wired) {
       sheetKey = null;
-      flash(`${row.label} — not wired yet`);
+      flash(`${row.label} cannot be changed yet`);
       return;
     }
     if (row.type === 'action') {
       sheetKey = null;
       const result = await runSetting(row.key);
-      if (!result.ok) flash(`${row.label}: ${result.error ?? `HTTP ${result.status}`}`);
+      if (!result.ok) flash(plainly(result.error ?? `HTTP ${result.status}`, `${row.label} did not run. Try again.`));
       return;
     }
     if (row.type === 'text') {
@@ -970,6 +995,7 @@
     manual = false;
     joinItem = null;
     join = null;
+    restoring = null;
     region = null;
   }
 
@@ -1011,7 +1037,7 @@
     </div>
 
     {#if loadError}
-      <div class="error">Settings could not be loaded: {loadError}</div>
+      <div class="error">Settings could not be loaded. Check the connection to the player, then reload this page.</div>
     {:else}
       <div class="body">
         {#if wide}
@@ -1125,7 +1151,13 @@
                         <span class="row__name">{r.label}</span>
                         {#if pending(r)}<span class="dot dot--sm"></span>{/if}
                       </span>
-                      {#if r.note && !opensItsOwn(r)}<span class="row__note">{r.note}</span>{/if}
+                      {#if r.note && !opensItsOwn(r)}<span class="row__note"><NoteText text={r.note} links={false} /></span>{/if}
+                      {#if r.status?.error}<span class="row__note row__note--failed">{r.status.error}</span>{/if}
+                      {#if r.status?.text && r.again}
+                        <!-- ADR-0119: a row its plugin reports done offers to do it
+                             again - the row is the button; this says so. -->
+                        <span class="row__again">{r.again}</span>
+                      {/if}
                       {#if r.uploaded && (r.key.endsWith('.missing') || !r.value) && !embedded}
                         <!-- ADR-0106: an uploaded plugin is removed from here,
                              switched off first. -->
@@ -1167,7 +1199,12 @@
                         {/if}
                       {/if}
                     </span>
-                    {#if r.type !== 'toggle' && shown(r)}
+                    {#if r.status?.text}
+                      <!-- ADR-0119: what the row's plugin says it is (Plexamp:
+                           "Claimed"), in place of the value - a spent claim
+                           token's dots say nothing. -->
+                      <span class="row__value row__value--done"><span class="row__tick" aria-hidden="true">✓</span> {r.status.text}</span>
+                    {:else if r.type !== 'toggle' && shown(r)}
                       <span class="row__value" class:is-pending={pending(r)}>{shown(r)}</span>
                     {/if}
                     {#if r.kind === 'share' && r.items?.length}
@@ -1357,7 +1394,7 @@
             </div>
             <div class="pane__text">
               <div class="pane__name">{p.label}</div>
-              <div class="pane__meta">{picker.optionLabels?.[viewing] ? '' : `${viewing}  ·  `}{isCurrent ? 'IN USE' : 'NOT IN USE'}</div>
+              <div class="pane__meta">{isCurrent ? 'In use' : 'Not in use'}</div>
             </div>
             <button
               class="pane__use"
@@ -1378,8 +1415,8 @@
     <div class="sheet" class:sheet--full={sheetFull} role="dialog" aria-label={sheet.label}>
       <div class="sheet__head">
         <div class="sheet__title">{sheet.grouped && region !== null ? region : sheet.label}</div>
-        {#if sheet.note && !joinItem}<div class="sheet__note">{sheet.note}</div>{/if}
-        {#if joinItem && sheet.note}<div class="sheet__note">{sheet.note}</div>{/if}
+        {#if sheet.note && !joinItem}<div class="sheet__note"><NoteText text={sheet.note} /></div>{/if}
+        {#if joinItem && sheet.note}<div class="sheet__note"><NoteText text={sheet.note} /></div>{/if}
       </div>
 
       <!-- ADR-0044 §2, both forms. A **string** warns about the row and is
@@ -1587,10 +1624,14 @@
           </div>
           <div class="joining__text">
             <div class="joining__title" data-state={join}>
-              {join === 'connecting' ? `Joining ${joinItem?.name ?? ''}` : join === 'ok' ? 'Connected' : 'Could not join'}
+              {restoring
+                ? join === 'connecting' ? `Restoring ${restoring}` : 'Could not restore'
+                : join === 'connecting' ? `Joining ${joinItem?.name ?? ''}` : join === 'ok' ? 'Connected' : 'Could not join'}
             </div>
             <div class="joining__note">
-              {join === 'connecting'
+              {restoring
+                ? join === 'connecting' ? 'Reading the backup. The device restarts when it is done.' : 'The backup could not be restored.'
+                : join === 'connecting'
                 ? 'Checking the password and getting an address.'
                 : join === 'ok'
                   ? 'This network is saved and will reconnect on its own.'
@@ -2145,6 +2186,23 @@
   }
   .row__value.is-pending {
     color: var(--accent-warn);
+  }
+  .row__value--done {
+    color: var(--accent-lms);
+  }
+  .row__tick {
+    font-family: var(--font-sans, inherit);
+  }
+  .row__note--failed {
+    color: var(--accent-warn);
+  }
+  .row__again {
+    display: block;
+    margin-top: 6px;
+    font-size: 14px;
+    color: var(--accent-lms);
+    text-decoration: underline;
+    text-underline-offset: 2px;
   }
   /* Below 520px the value drops under the label instead of squeezing it. */
   @container srow (max-width: 520px) {

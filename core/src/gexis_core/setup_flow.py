@@ -55,6 +55,29 @@ LMS_MODES = ("find", "address", "off")
 FLAGS = ("hidden", "spotify", "bluetooth", "headless", "visualiser")
 
 
+
+#: **What the phone is told, in words** (George, 2026-10-04, on the setup copy
+#: review: "This needs fixing. Human readable errors."). The core's own text
+#: goes to the log; the phone gets one of these. Matched on how the text
+#: starts, since some carry the value that was refused.
+SAID = (
+    ("no network chosen", "Choose a Wi-Fi network first, or connect the player by cable."),
+    ("setup is not running", "Setup has already finished. Open the player at its address instead."),
+    ("unknown screen", "That screen isn't on the list. Choose another, or Headless."),
+    ("choose a screen or headless, not both", "Choose a screen or Headless, not both."),
+)
+#: Everything else is a request the page itself got wrong - nothing a person
+#: can act on but trying again.
+SAID_OTHERWISE = "Something went wrong saving that. Try again."
+
+
+def said(raw: str) -> str:
+    """The sentence the phone shows for a setup error."""
+    for start, sentence in SAID:
+        if raw.startswith(start):
+            return sentence
+    return SAID_OTHERWISE
+
 class SetupFlow:
     def __init__(
         self,

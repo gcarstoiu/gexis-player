@@ -46,6 +46,8 @@ install -D -m 644 "$STAGE_DIR/files/plexamp.service" \
 	"$STAGE/usr/lib/systemd/system/plexamp.service"
 install -D -m 755 "$STAGE_DIR/files/plexamp-start-idle" \
 	"$STAGE/usr/lib/gexis/plexamp-start-idle"
+install -D -m 755 "$STAGE_DIR/files/plexamp-run" \
+	"$STAGE/usr/lib/gexis/plexamp-run"
 # ADR-0086: the manifest and its glyph, owned by the plugin's repository.
 install -D -m 644 "$PLUGIN_SRC/plugin.json" \
 	"$STAGE/usr/share/gexis/plugins/plexamp/plugin.json"

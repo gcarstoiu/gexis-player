@@ -249,9 +249,9 @@
   {:else if step === 'joined'}
     {@render barHero('tick', 'Phone connected', 64, null)}
   {:else if step === 'phone'}
-    {@render barHero('phone', 'Carry on on your phone', 64, 'This screen shows when the player moves to your network.')}
+    {@render barHero('phone', 'Carry on on your phone', 64, 'Answer the questions on your phone. When you tap Finish, the player joins your Wi-Fi and this screen shows how it goes.')}
   {:else if step === 'joining'}
-    {@render barHero('wifi', `Joining ${setup?.target ?? 'your Wi-Fi'}`, 64, `Put your phone back on ${setup?.target ?? 'your Wi-Fi'} too.`)}
+    {@render barHero('wifi', `Joining ${setup?.target ?? 'your Wi-Fi'}`, 64, `Check your phone is back on ${setup?.target ?? 'your Wi-Fi'}.`)}
   {:else if step === 'done'}
     {@const f = setup.finished ?? {}}
     {@render barHero('tick', `${f.name ?? 'gexis'} is on ${f.ssid ?? 'your network'}`, wide ? 56 : 44, f.restarting ? restartLine(f) : null)}
@@ -314,7 +314,7 @@
         </svg>
       </div>
       <h1 class="huge">Carry on on your phone</h1>
-      <p class="lead">This screen shows when the player moves to your network.</p>
+      <p class="lead">Answer the questions on your phone. When you tap Finish, the player joins your Wi-Fi and this screen shows how it goes.</p>
     {:else if step === 'joining'}
       <div class="big-icon pulse">
         <svg viewBox="0 0 64 64" width="120" height="120" aria-hidden="true">
@@ -325,7 +325,9 @@
         </svg>
       </div>
       <h1 class="huge">Joining {setup?.target ?? 'your Wi-Fi'}</h1>
-      <p class="lead">Put your phone back on {setup?.target ?? 'your Wi-Fi'} too.</p>
+      <!-- Shorter (George, 2026-10-04): most phones rejoin by themselves; this
+           covers the ones that do not. -->
+      <p class="lead">Check your phone is back on {setup?.target ?? 'your Wi-Fi'}.</p>
     {:else if step === 'done'}
       {@const f = setup.finished ?? {}}
       {@const lib = f.library ?? {}}

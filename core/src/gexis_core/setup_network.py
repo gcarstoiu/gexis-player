@@ -30,6 +30,7 @@ import time
 from pathlib import Path
 
 from gexis_core import wifi
+from gexis_core.wifi import join_reason
 
 logger = logging.getLogger(__name__)
 
@@ -99,26 +100,6 @@ def panel_attached(drm: Path = DRM) -> bool:
 #: so the page's last screen - where to go next - arrives before the page
 #: can no longer be reached.
 HANDOVER_S = 3.0
-
-
-def join_reason(rc: int, err: str) -> str:
-    """NetworkManager's refusal, as the page and the panel say it."""
-    text = (err or "").lower()
-    if rc == 124:
-        return "It took too long. The network may be out of range."
-    if "secrets were required" in text or "no secrets" in text:
-        return "The password was not accepted."
-    if "no network with ssid" in text or "not found" in text or "could not be found" in text:
-        return "No network with that name is in range."
-    # The `Error:` line, not the last one: NetworkManager follows it with a
-    # `Hint: use 'journalctl -xe ...'` line, which reached the panel as the
-    # reason on the first scripted trial.
-    for line in (err or "").splitlines():
-        if line.startswith("Error:"):
-            said = line.removeprefix("Error:").strip().removeprefix("Connection activation failed:").strip()
-            if said:
-                return said[0].upper() + said[1:].rstrip(".") + "."
-    return "The network refused the connection."
 
 
 def country_for(timezone: str | None, zone_tab: Path = Path("/usr/share/zoneinfo/zone.tab")) -> str | None:
