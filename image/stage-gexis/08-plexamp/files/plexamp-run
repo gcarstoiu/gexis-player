@@ -1,0 +1,120 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Start Plexamp, claiming it first when there is a claim to make (ADR-0119).
+
+Plexamp claims itself from `PLEXAMP_CLAIM_TOKEN` and names itself from
+`PLEXAMP_PLAYER_NAME` - **but only when it holds no claim**: a claimed one
+ignores both (measured 2026-10-05, Plexamp 4.13.2, and read in its
+`js/index.js`). A claim that fails exits 255 and writes nothing. So:
+
+- the name is always the device's own (ADR-0048), from `GEXIS_DEVICE_NAME`;
+- a **new** token on a claimed player sets Plexamp's store aside and starts
+  it unclaimed with the token - *Claim again* - and the store comes back if
+  the claim fails (George, 2026-10-05: keep the old claim until the next one
+  works);
+- the token is handed over **once**: a token that failed is not tried again,
+  so a dead token cannot loop the unit through its restarts.
+
+What happened is kept in `claim.json` - the token's hash, never the token -
+for this and for the plugin, which reports it on the row.
+
+Runs as `pi`, as `ExecStart`, after `plexamp-start-idle`, and ends by
+becoming Plexamp.
+"""
+import hashlib
+import json
+import os
+import shutil
+import sys
+from pathlib import Path
+
+HOME = Path("/home/pi")
+SETTINGS = HOME / ".local/share/Plexamp/Settings"
+#: Plexamp's own store, set aside while a new claim is tried.
+PREVIOUS = HOME / ".local/share/Plexamp/Settings.previous"
+STATE = HOME / ".local/share/gexis-plexamp/claim.json"
+#: The file a claim writes - the one the plugin already reads for its token.
+TOKEN_FILE = "%40Plexamp%3Auser%3Atoken"
+NODE = ["/usr/bin/node", "/home/pi/plexamp/js/index.js"]
+NAME_FALLBACK = "gexis"
+
+
+def claimed(settings: Path) -> bool:
+    try:
+        # The first byte is Plexamp's type marker, not the value.
+        return bool((settings / TOKEN_FILE).read_text()[1:].strip())
+    except OSError:
+        return False
+
+
+def fingerprint(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()[:16]
+
+
+def read_state(path: Path) -> dict:
+    try:
+        state = json.loads(path.read_text())
+        return state if isinstance(state, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def write_state(path: Path, state: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_suffix(".new")
+    temp.write_text(json.dumps(state))
+    temp.replace(path)
+
+
+def put_back(settings: Path, previous: Path) -> None:
+    if previous.is_dir():
+        shutil.rmtree(settings, ignore_errors=True)
+        previous.rename(settings)
+
+
+def prepare(env: dict, settings: Path = SETTINGS, previous: Path = PREVIOUS,
+            state_path: Path = STATE) -> dict:
+    """The environment Plexamp starts with, having settled the claim."""
+    out = {k: v for k, v in env.items() if k != "PLEXAMP_CLAIM_TOKEN"}
+    out["PLEXAMP_PLAYER_NAME"] = (env.get("GEXIS_DEVICE_NAME") or "").strip() or NAME_FALLBACK
+    token = (env.get("PLEXAMP_CLAIM_TOKEN") or "").strip() or None
+    state = read_state(state_path)
+
+    # **The last start's attempt, settled first.** Plexamp exits on a failed
+    # claim and the unit restarts it, which is how this hears about it.
+    if state.get("state") == "trying":
+        if claimed(settings):
+            state["state"] = "claimed"
+            shutil.rmtree(previous, ignore_errors=True)
+        else:
+            put_back(settings, previous)
+            state["state"] = "failed"
+        write_state(state_path, state)
+
+    if token is None:
+        return out
+    mark = fingerprint(token)
+    if not state and claimed(settings):
+        # A token already stored on a player claimed before this existed
+        # (gexis, claimed through Plexamp's own setup) is taken as the one
+        # that claimed it - not tried again over a working claim.
+        write_state(state_path, {"token": mark, "state": "claimed"})
+        return out
+    if mark == state.get("token"):
+        return out  # tried already: claimed, or failed and not tried twice
+    if claimed(settings):
+        shutil.rmtree(previous, ignore_errors=True)
+        settings.rename(previous)
+    write_state(state_path, {"token": mark, "state": "trying"})
+    out["PLEXAMP_CLAIM_TOKEN"] = token
+    return out
+
+
+def main() -> int:
+    env = prepare(dict(os.environ))
+    os.execve(NODE[0], NODE, env)
+    return 1  # not reached
+
+
+if __name__ == "__main__":
+    sys.exit(main())
