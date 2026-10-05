@@ -1,9 +1,8 @@
 # ADR-0118 — Lyrion's own menus, plugins included
 
-**Status:** **Draft** — 2026-10-04, written ahead of Phase 13f at George's
-request (*"Draft it now but there will be more decisions and questions to be
-asked around it when the time comes"*). Nothing here is decided; the
-questions below are where it starts, not where it ends.
+**Status:** **Accepted in part** - 2026-10-05, George answered A-F (below,
+*Decided*); three smaller questions and the measurements are still owed
+(*Still open*). Drafted 2026-10-04 ahead of Phase 13f.
 **Builds on:** [ADR-0030](0030-library-typed-radio-slimbrowse.md) (radio: the SlimBrowse walk, by
 handle), [ADR-0028](0028-ui-serving-and-command-channel.md) (the API is open to the LAN by
 decision), [ADR-0106](0106-plugins-you-install-and-update.md) (what a plugin
@@ -58,7 +57,45 @@ streaming services, Radio Paradise, YouTube - lives in that same tree under
 5. **Whole branches left out by construction**, as Radio leaves out what it
    does not walk: the player's settings, Turn Off, alarms, sync.
 
-## Questions owed (to George, when 13f starts)
+## Decided (George, 2026-10-05)
+
+- **A. More tiles on the home screen**, in this order: **My Music** (Lyrion's)
+  before Browse; Browse, Artists, Playlists as today; **Favourites** after
+  Playlists; Radio as today; **Apps** before Settings. A top-level category
+  an app adds to Lyrion's home menu later gets a tile of its own, **just
+  before Apps**.
+- **B. Built in, behind a setting**: **Extended navigation**, in the Lyrion
+  client's settings, **off by default** (ADR-0022's inventory, appended on
+  his confirmation). Off, the home screen is as today.
+- **C. Everything but the player's settings** - Alarm Clock, Synchronise,
+  Turn Off and the rest of Lyrion's settings branches stay out. From My Music,
+  **Album Artists and Playlists are left out**, since our own Artists and
+  Playlists cover them; the rest of My Music stays (Music Folder, Genres,
+  Years, Composers, Compilations, New Music, Albums, All Artists, Library
+  Views, Remote Music Libraries, its Search).
+- **D. Open, play, add to queue and play next only.** What is left for later
+  is recorded below (*Not in this iteration*).
+- **E. Search** is where Lyrion's search item is; text comes from the
+  phone's keyboard (ADR-0121); past searches are not remembered.
+- **F. Our Radio screen stays as it is.**
+- **No TIDAL or Deezer**: neither is to be measured or supported for now.
+- **The player's own style** (George): every new tile has an icon and a
+  colour, as Browse, Artists, Playlists and Radio do; the lists look like
+  ours, not Lyrion's.
+- **A list or tiles switch** (George) on the screens this adds.
+
+### Not in this iteration (D)
+
+- **Context menus** (`more`): add to favourites, go to the artist or album,
+  an app's own extras.
+- **Spotty's Transfer Playback**, which moves playback to another device.
+- **Preset assignment** (`set-preset-N`), which rewrites a Squeezebox's
+  buttons.
+- **Remembered searches.**
+- **One-off actions** (`do`) other than playing - none met so far is music.
+
+## Questions owed (to George, when 13f starts) - answered above
+
 
 - **A. Where it lives.** A tile beside our screens (proposed), or in place
   of some of them - and on a bar, where the home row is already six tiles.
