@@ -56,10 +56,16 @@
     }
   }
 
+  /** Whole pixels go; **the fraction stays for the next frame**. A finger
+   *  starts slowly - under a pixel a frame - and rounding each frame's share
+   *  away held the pointer still and then let it jump (George, 2026-10-05:
+   *  "choppy at the beginning"). */
   function flush() {
     frame = 0;
-    if (pending.dx || pending.dy) pad?.send({ t: 'move', dx: Math.round(pending.dx), dy: Math.round(pending.dy) });
-    pending = { dx: 0, dy: 0 };
+    const dx = Math.trunc(pending.dx);
+    const dy = Math.trunc(pending.dy);
+    if (dx || dy) pad?.send({ t: 'move', dx, dy });
+    pending = { dx: pending.dx - dx, dy: pending.dy - dy };
   }
 
   function padDown(event) {
@@ -200,6 +206,13 @@
     }
   }
 </script>
+
+{#if open}
+  <!-- Open, the sheet is the phone's whole attention: a touch outside it
+       closes it and reaches nothing under it (George, 2026-10-05: no
+       setting changed by a thumb that missed the touchpad). -->
+  <div class="mini__scrim" role="presentation" onclick={() => (open = false)}></div>
+{/if}
 
 <div
   class="mini"
@@ -448,8 +461,18 @@
   .mini--open .mini__slider {
     flex-basis: calc(100% - 64px);
   }
+  .mini__scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 19;
+    background: rgba(0, 0, 0, 0.45);
+    touch-action: none;
+  }
+  /* Half the phone's height and reaching up from the slider, so a thumb
+     moving up has room before the edge (George, 2026-10-05: 180 px was
+     not enough). */
   .mini__pad {
-    height: 180px;
+    height: clamp(220px, 50dvh, 520px);
     border-radius: 16px;
     border: 1px solid rgba(233, 238, 242, 0.14);
     background: rgba(233, 238, 242, 0.05);

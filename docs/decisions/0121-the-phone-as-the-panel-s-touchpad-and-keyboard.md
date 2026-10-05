@@ -46,7 +46,11 @@ touchpad** (George, 2026-10-05: *"the phone touch area moves the pointer in
 the screen relative to its initial position. This way bars don't have a
 problem"*): the touch area is not mapped onto the screen; a finger's
 movement moves the pointer from where it is, by an amount *Pointer speed*
-sets, so a 1280 x 400 bar and a 1920 x 1080 panel take the same touchpad. **Nothing else (D)**: no
+sets, so a 1280 x 400 bar and a 1920 x 1080 panel take the same touchpad. **Half the phone's height**, reaching
+up from the slider, and **while the sheet is open a touch outside it only
+closes it** - the page behind is dimmed and takes nothing (George,
+2026-10-05, after trying it: the thumb kept reaching the top of a 180 px
+area, and a missed touch could change a setting). **Nothing else (D)**: no
 two-finger volume, no swipes for tracks, no scrolling gesture - "working in
 a simple manner" first. Scrolling a panel list from the phone is **not** in
 this record; lists scroll by touch on the panel, as today.
@@ -91,7 +95,8 @@ panel's, measured in its own pixels.
 
 - **Phone touchpad** [N] - on/off, whether the volume sheet offers it.
 - **Pointer speed** [N] - how far the pointer moves for a finger's
-  movement.
+  movement: **150 to 400 %, starting at 150** (George, 2026-10-05: *"50 is
+  way too slow"* - first built as 50 to 300, starting at 100).
 
 ### 8. Nothing newly exposed
 
