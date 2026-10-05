@@ -33,6 +33,21 @@ python3 -m venv "$VENV"
 mkdir -p "$STAGE/DEBIAN" "$STAGE/opt/gexis-core"
 cp -a "$VENV" "$STAGE/opt/gexis-core/"
 
+# ADR-0120: the models backgrounds are placed with, pinned and checked.
+. /src/image/stage-gexis/fetch-cached.sh
+. /src/packaging/core/models.sh
+install -d "$STAGE/opt/gexis-core/models"
+fetch_cached "$FACE_MODEL_URL" "$FACE_MODEL_SHA256" "$STAGE/opt/gexis-core/models/face_detection_yunet_2023mar.onnx"
+fetch_cached "$SUBJECT_MODEL_URL" "$SUBJECT_MODEL_SHA256" "$STAGE/opt/gexis-core/models/object_detection_yolox_2022nov.onnx"
+chmod 644 "$STAGE"/opt/gexis-core/models/*.onnx
+for model in yunet:MIT yolox:Apache-2.0; do
+	install -d -m 755 "$STAGE/usr/share/doc/gexis-player/licenses/${model%%:*}"
+	printf '%s\n' "${model%%:*} (OpenCV model zoo, $MODELS_COMMIT) is licensed under ${model#*:}." \
+		"Source: https://github.com/opencv/opencv_zoo/tree/$MODELS_COMMIT/models" \
+		> "$STAGE/usr/share/doc/gexis-player/licenses/${model%%:*}/README"
+	chmod 644 "$STAGE/usr/share/doc/gexis-player/licenses/${model%%:*}/README"
+done
+
 # What the core stage installs besides the environment (image/stage-gexis/
 # 03-core), from the same files - one source of truth until the stages go.
 F=/src/image/stage-gexis/03-core/files
