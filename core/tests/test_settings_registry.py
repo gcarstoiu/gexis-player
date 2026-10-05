@@ -1276,3 +1276,32 @@ def test_a_hidden_row_is_published_and_marked_invisible(store):
     assert token()["visible"] is False
     settings.set("beszel.enabled", True)
     assert token()["visible"] is True
+
+
+def test_fixed_output_hides_the_volume_rows(store):
+    """George, 2026-10-05: with Output mode Fixed, Maximum volume, Starting
+    volume and Volume curve are hidden entirely - there is no slider for
+    them to shape."""
+    settings = Settings(store, registry=load_registry(), wired={"output_mode": lambda v: None})
+    def shown():
+        return {r["key"] for g in settings.to_json() if g["id"] == "audio"
+                for r in g["rows"] if r.get("key") and r["visible"]}
+    volume_rows = {"max_ceiling", "start_max", "travel_curve"}
+    settings.set("output_mode", "Variable")
+    assert volume_rows <= shown()
+    settings.set("output_mode", "Fixed")
+    assert not volume_rows & shown()
+    assert "output_mode" in shown()
+
+
+def test_the_artwork_updates_are_enrichment_s_lyrion_client_rows():
+    """George, 2026-10-05: the two updates and their progress live in
+    Enrichment, under a Lyrion Client heading that hides with Lyrion Client
+    (ADR-0022, reversing the 2026-09-25 move into Sources)."""
+    enrich = next(g for g in load_registry() if g["id"] == "enrich")["rows"]
+    heading = next(i for i, r in enumerate(enrich) if r.get("type") == "group")
+    assert enrich[heading]["label"] == "Lyrion Client"
+    assert enrich[heading]["onlyWhen"] == ["lms_enabled", True]
+    assert [r["key"] for r in enrich[heading + 1:]] == ["sweep_portraits", "sweep_covers", "sweep_status"]
+    sources = next(g for g in load_registry() if g["id"] == "sources")["rows"]
+    assert not any(r.get("key", "").startswith("sweep_") for r in sources)

@@ -39,7 +39,11 @@
         "min": 10,
         "max": 100,
         "unit": "%",
-        "default": null
+        "default": null,
+        "onlyWhen": [
+          "output_mode",
+          "Variable"
+        ]
       },
       {
         "key": "start_max",
@@ -50,7 +54,11 @@
         "min": 10,
         "max": 100,
         "unit": "%",
-        "default": 60
+        "default": 60,
+        "onlyWhen": [
+          "output_mode",
+          "Variable"
+        ]
       },
       {
         "key": "volume_managed",
@@ -71,7 +79,11 @@
           "Cubic",
           "Linear (dB)"
         ],
-        "default": "Cubic"
+        "default": "Cubic",
+        "onlyWhen": [
+          "output_mode",
+          "Variable"
+        ]
       }
     ]
   },
@@ -123,42 +135,6 @@
         "note": "Superseded by the Plugins category, which George asked for on 2026-09-25. ADR-0022 inventoried this as a row in Sources; what it would have opened is now a category of its own, listing each installed plugin's switch. Kept unsurfaced rather than deleted because removing an inventoried row is George's call.",
         "default": null,
         "surfaced": false
-      },
-      {
-        "key": "sweep_portraits",
-        "type": "action",
-        "label": "Update artist portraits",
-        "marks": "R",
-        "note": "Looks up every album artist on fanart.tv and keeps LMS's picture where fanart has none. Checks all of them, every time. Runs in the background; playback is not interrupted.",
-        "default": null,
-        "onlyWhen": [
-          "lms_enabled",
-          true
-        ]
-      },
-      {
-        "key": "sweep_covers",
-        "type": "action",
-        "label": "Update album covers",
-        "marks": "R",
-        "note": "Looks up every album's cover on fanart.tv and uses it in place of LMS's, keeping LMS's where fanart has none. Checks all of them, every time. Runs in the background; playback is not interrupted. One update runs at a time.",
-        "default": null,
-        "onlyWhen": [
-          "lms_enabled",
-          true
-        ]
-      },
-      {
-        "key": "sweep_status",
-        "type": "readonly",
-        "label": "Progress",
-        "marks": "R",
-        "note": "What the last or current run has done.",
-        "default": null,
-        "onlyWhen": [
-          "lms_enabled",
-          true
-        ]
       },
       {
         "type": "group",
@@ -901,6 +877,51 @@
         "max": 100,
         "unit": "%",
         "default": 90
+      },
+      {
+        "type": "group",
+        "label": "Lyrion Client",
+        "accent": "#7ed6bc",
+        "onlyWhen": [
+          "lms_enabled",
+          true
+        ]
+      },
+      {
+        "key": "sweep_portraits",
+        "type": "action",
+        "label": "Update artist portraits",
+        "marks": "R",
+        "note": "Looks up every album artist on fanart.tv and keeps LMS's picture where fanart has none. Checks all of them, every time. Runs in the background; playback is not interrupted.",
+        "default": null,
+        "onlyWhen": [
+          "lms_enabled",
+          true
+        ]
+      },
+      {
+        "key": "sweep_covers",
+        "type": "action",
+        "label": "Update album covers",
+        "marks": "R",
+        "note": "Looks up every album's cover on fanart.tv and uses it in place of LMS's, keeping LMS's where fanart has none. Checks all of them, every time. Runs in the background; playback is not interrupted. One update runs at a time.",
+        "default": null,
+        "onlyWhen": [
+          "lms_enabled",
+          true
+        ]
+      },
+      {
+        "key": "sweep_status",
+        "type": "readonly",
+        "label": "Progress",
+        "marks": "R",
+        "note": "What the last or current run has done.",
+        "default": null,
+        "onlyWhen": [
+          "lms_enabled",
+          true
+        ]
       }
     ]
   },
