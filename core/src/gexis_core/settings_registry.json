@@ -554,11 +554,25 @@
       {
         "key": "wallpaper_key",
         "type": "text",
-        "label": "Wallpaper API key",
+        "label": "Pixabay API key",
         "marks": "N",
         "note": "A Pixabay key, from a free account. Use one per player to avoid throttling.",
         "secret": true,
         "placeholder": "Pixabay API key",
+        "default": null,
+        "onlyWhen": [
+          "idle_background",
+          "Wallpapers online"
+        ]
+      },
+      {
+        "key": "pexels_key",
+        "type": "text",
+        "secret": true,
+        "placeholder": "Pexels API key",
+        "label": "Pexels API key",
+        "marks": "N",
+        "note": "A Pexels key, from a free account. With both keys, pictures come from both.",
         "default": null,
         "onlyWhen": [
           "idle_background",

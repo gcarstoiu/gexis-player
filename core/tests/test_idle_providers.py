@@ -64,8 +64,9 @@ class FakeSession:
         self.calls = []
         self.bodies = {}
 
-    def get(self, url, params=None, timeout=None):
+    def get(self, url, params=None, timeout=None, headers=None):
         self.calls.append((url, dict(params or {})))
+        self.headers = getattr(self, "headers", []) + [dict(headers or {})]
         reply = self.replies(url, dict(params or {}))
         return _Response(reply)
 
@@ -328,7 +329,7 @@ async def test_a_topic_with_no_pictures_falls_through_to_another(tmp_path):
 async def test_no_key_and_no_topics_are_told_apart(tmp_path):
     session = FakeSession(pixabay({}))
     source = Wallpapers(session, tmp_path)
-    assert (await source.next("", ["Nature"]))["error"] == "No Pixabay key yet."
+    assert (await source.next("", ["Nature"]))["error"] == "No Pixabay or Pexels key yet."
     assert (await source.next("key", []))["error"] == "No topics chosen."
     # A topic that is not one of Pixabay's twenty is not a request that
     # comes back empty - it never becomes a request at all.
@@ -635,3 +636,46 @@ def test_an_empty_topic_set_is_refused_at_the_registry(tmp_path):
     settings = Settings(SettingsStore(tmp_path / "s.db"), wired={"wallpaper_topics": None})
     with pytest.raises(InvalidValue):
         settings.set("wallpaper_topics", [])
+
+
+def pexels_and_pixabay(pixabay_hits, pexels_photos):
+    """Pixabay answers per category, Pexels per search; pictures are bytes."""
+    def reply(url, params):
+        if url.startswith("https://pixabay.com/api/"):
+            return (200, {"hits": pixabay_hits.get(params.get("category"), [])})
+        if url.startswith("https://api.pexels.com/"):
+            return (200, {"photos": pexels_photos.get(params.get("query"), [])})
+        return (200, b"\xff\xd8jpeg-bytes")
+    return reply
+
+
+def photo(n, width=6000, height=4000):
+    return {"id": n, "width": width, "height": height, "photographer": f"pexels{n}",
+            "url": f"https://www.pexels.com/photo/{n}/", "src": {"large2x": f"https://images.pexels.com/{n}.jpeg"}}
+
+
+async def test_pexels_alone_searches_the_topic_word_and_credits_itself(tmp_path):
+    """ADR-0120 §3: the owner's Pexels key, the topic as the search, the
+    credit on screen as Pixabay's is."""
+    session = FakeSession(pexels_and_pixabay({}, {"animals": [photo(7)]}))
+    source = Wallpapers(session, tmp_path / "p")
+    answer = await source.next("", ["Animals"], pexels_key="PKEY")
+    assert answer["file"] == "pexels-7.jpg" and answer["source"] == "pexels"
+    assert answer["by"] == "pexels7" and answer["credit"] == "Photos from Pexels"
+    search = next(c for c in session.calls if c[0].startswith("https://api.pexels.com/"))
+    assert search[1]["query"] == "animals" and {"Authorization": "PKEY"} in session.headers
+
+
+async def test_on_a_bar_the_source_measured_wider_is_asked_first(tmp_path):
+    """ADR-0120 §3: no wide Pixabay animals (gexis's log, 2026-10-05), wide
+    ones on Pexels - after one page each, Pexels leads on a bar."""
+    session = FakeSession(pexels_and_pixabay(
+        {"animals": [hit(1, "animals"), hit(2, "animals")]},   # 1280x... not wide
+        {"animals": [photo(7, 6000, 2000), photo(8)]},          # one of two is 3:1
+    ))
+    source = Wallpapers(session, tmp_path / "p")
+    answer = await source.next("KEY", ["Animals"], wide=True, pexels_key="PKEY")
+    assert answer["file"] == "pexels-7.jpg", "the only wide picture of either"
+    assert source.wide_share("pixabay") == 0.0 and source.wide_share("pexels") == 0.5
+    assert source._order(["pixabay", "pexels"], True) == ["pexels", "pixabay"]
+
