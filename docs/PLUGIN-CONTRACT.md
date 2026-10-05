@@ -161,6 +161,7 @@ Taken from `Adapter` and `Capabilities` as they are. The prose for each is in
 {"t": "metadata", "metadata": { … }}
 {"t": "queue", "queue": [ … ]}
 {"t": "volume", "value": 62, "steps": 100}
+{"t": "row", "key": "claim_token", "state": "done", "text": "Claimed"}
 ```
 
 - **`acquire`** — a deliberate acquisition (ADR-0010's table as amended by
@@ -176,6 +177,16 @@ Taken from `Adapter` and `Capabilities` as they are. The prose for each is in
   `transport`, `source_type`, `shuffle`, `repeat`, `unavailable`.
 - **`queue`** — only a renderer that has one (ADR-0038 §5). Others send a
   stream and no queue.
+- **`row`** — *added 2026-10-05* ([ADR-0119](decisions/0119-plexamp-is-claimed-from-settings.md)).
+  What one of the plugin's **own** settings rows is, as opposed to its value:
+  `state` is `done` (with `text`, a few words - *Claimed*) or `failed` (with
+  `error`, one sentence a person reads, and `text` if something still
+  holds), or `null` to say nothing. `key` is the row's key without the
+  plugin's prefix. Any kind of plugin may send it. The core keeps the last
+  one per row in memory and publishes it on the row as `status`; it is
+  never stored, and a plugin that disconnects takes its reports with it, so
+  a plugin says it again after reconnecting. A core older than this logs the
+  event and ignores it.
 
 ## Core → plugin
 

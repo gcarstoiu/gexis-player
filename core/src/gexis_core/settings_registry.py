@@ -334,6 +334,12 @@ def load_seed(settings_rows: dict[str, dict], path: Path = SEED_PATH) -> dict[st
 #: reason - **the opposite of the now-playing rule, on purpose**: a screen
 #: for changing things should show what could be changed and why it
 #: cannot, where a screen for listening should not carry dead controls.
+#: What a plugin may say its row is (ADR-0119).
+STATUS_STATES = ("done", "failed")
+#: A few words or one sentence, not a log.
+STATUS_TEXT_MAX = 160
+
+
 class Locked(Exception):
     pass
 
@@ -581,6 +587,10 @@ class Settings:
         #: Injected by the daemon, because only it knows what the sound
         #: card can do.
         self._unavailable: dict[str, dict[Any, str]] = {}
+        #: key -> what a plugin last said about its own row (ADR-0119): a
+        #: state the row is in, not a value. In memory only - it is the
+        #: plugin's to say again, and goes when the plugin does.
+        self._status: dict[str, dict[str, str]] = {}
         unknown_sources = set(options or ()) - OPTION_SOURCES
         if unknown_sources:
             raise ValueError(f"not an option source: {sorted(unknown_sources)}")
@@ -618,6 +628,34 @@ class Settings:
             self._unavailable[key] = dict(unavailable)
         else:
             self._unavailable.pop(key, None)
+
+    def report(self, key: str, state: str | None, text: str | None = None,
+               error: str | None = None) -> bool:
+        """**A plugin says what its row is** (ADR-0119): `done` with a few
+        words (*Claimed*), `failed` with a sentence, or None to say nothing.
+        Returns whether that changed anything, so a plugin repeating itself
+        costs no settings revision."""
+        self.row(key)
+        if state is None:
+            return self._status.pop(key, None) is not None
+        if state not in STATUS_STATES:
+            raise InvalidValue(f"not a row state: {state!r}")
+        status = {"state": state}
+        if text:
+            status["text"] = str(text)[:STATUS_TEXT_MAX]
+        if error:
+            status["error"] = str(error)[:STATUS_TEXT_MAX]
+        if self._status.get(key) == status:
+            return False
+        self._status[key] = status
+        return True
+
+    def forget_reports(self, prefix: str) -> bool:
+        """A plugin that leaves takes what it said with it."""
+        gone = [k for k in self._status if k.startswith(prefix)]
+        for key in gone:
+            del self._status[key]
+        return bool(gone)
 
     def value(self, key: str) -> Any:
         row = self.row(key)
@@ -681,6 +719,8 @@ class Settings:
                 blocked = self._unavailable.get(row["key"])
                 if blocked:
                     public["unavailable"] = dict(blocked)
+                if row["key"] in self._status:
+                    public["status"] = dict(self._status[row["key"]])
                 public["visible"] = visible(row, self._rows, values)
                 rows.append(public)
             groups.append({**group, "rows": rows})

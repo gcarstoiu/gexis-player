@@ -1305,3 +1305,28 @@ def test_the_artwork_updates_are_enrichment_s_lyrion_client_rows():
     assert [r["key"] for r in enrich[heading + 1:]] == ["sweep_portraits", "sweep_covers", "sweep_status"]
     sources = next(g for g in load_registry() if g["id"] == "sources")["rows"]
     assert not any(r.get("key", "").startswith("sweep_") for r in sources)
+
+
+def test_a_plugin_s_report_is_published_on_its_row_and_goes_with_it(store):
+    """ADR-0119: a plugin says what its row is - Plexamp, *Claimed* - and the
+    row carries it as `status`. Not stored: it goes when the plugin does."""
+    settings = Settings(
+        store,
+        registry=Settings.with_plugins(_groups(), [_plugin("plexamp", kind="renderer", settings=[
+            {"key": "claim_token", "type": "text", "label": "Claim token", "default": None}])]),
+    )
+    def row():
+        return next(r for g in settings.to_json() for r in g["rows"]
+                    if r.get("key") == "plexamp.claim_token")
+    assert "status" not in row()
+    assert settings.report("plexamp.claim_token", "done", "Claimed") is True
+    assert row()["status"] == {"state": "done", "text": "Claimed"}
+    assert settings.report("plexamp.claim_token", "done", "Claimed") is False, "a repeat changes nothing"
+    settings.report("plexamp.claim_token", "failed", "Claimed", "The claim did not work.")
+    assert row()["status"]["error"] == "The claim did not work."
+    assert settings.forget_reports("plexamp.") is True
+    assert "status" not in row()
+    with pytest.raises(InvalidValue):
+        settings.report("plexamp.claim_token", "half-done")
+    with pytest.raises(UnknownSetting):
+        settings.report("plexamp.nothing", "done")
