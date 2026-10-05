@@ -114,6 +114,9 @@ not decided.
 It answers question E for every search box on the panel, Lyrion's and
 ours; it may also stand on its own, as a small phase before 13f.
 
+**Taken up as [ADR-0121](0121-the-phone-as-the-panel-s-touchpad-and-keyboard.md)**
+(accepted 2026-10-05), which answers question E.
+
 ## To measure before the ADR is accepted
 
 - **A cold first page** from a streaming service - Finding 110's timings were
