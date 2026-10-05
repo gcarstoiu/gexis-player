@@ -2,12 +2,15 @@
 
 Last updated: 2026-10-05 (on R2D2).
 
-**0.9.0 released 2026-10-05 on Testing (serial 23), from `phase-13d`** -
-13b's work, 13d's DAC work (Phase 13d stays open: the board tests are
-still George's), ADR-0119 (Plexamp claimed from Settings; gexis-plexamp
-0.4.0 published and pinned) and ADR-0120 (backgrounds). The PR into `main`
-waits for George. The image is `image/deploy/2026-10-05-gexis-player-v0.9.0.img`
-in the main checkout.
+**0.9.1 released 2026-10-05 on Testing (serial 24), from `phase-13d`** -
+ADR-0121's phone touchpad and keyboard (gestures, Pointer style, no system
+cursor), Home / Now playing / Lyrics from the phone (ADR-0101 amended),
+idle backgrounds that do not repeat (ADR-0047 §2e), and the post-0.9.0
+fixes. **PR #49 into `main` waits for George** (0.9.0's, #48, is merged).
+The image is `image/deploy/2026-10-05-gexis-player-v0.9.1.img` in the main
+checkout; 111 checks passed. Phase 13d stays open (board tests).
+**Next: 13f** - ADR-0118's questions A-F put to George on 2026-10-05, with
+recommendations; the read-only measurements wait on his answers.
 
 ## Start here
 
