@@ -555,7 +555,7 @@
             <section class="pane">
               <div>
                 <h1>Name the player</h1>
-                <p class="sub">One name for everything. There is no per-service override, so pick one you will recognise in a list of speakers.</p>
+                <p class="sub">The player's name, and the name every service shows it under — Lyrion, Spotify Connect, Bluetooth and the rest. Pick one you will recognise in a list of speakers.</p>
               </div>
               <label class="field"><span class="label">Device name</span>
                 <input type="text" bind:value={name} placeholder="Living room" autocomplete="off" spellcheck="false" style="border-color:{slugOf(name).length > 1 ? '' : 'rgba(224,167,88,0.55)'}" />
