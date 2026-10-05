@@ -629,7 +629,7 @@
             <section class="pane">
               <div>
                 <h1>Find your library</h1>
-                <p class="sub">Your own music comes through a Lyrion server on your network. Choose what the player should do; nothing is added without it.</p>
+                <p class="sub">Your own music comes through a Lyrion server on your local network or on the player itself.</p>
               </div>
               <div class="list">
                 <div class="label pad">Lyrion (Logitech Media Server)</div>
