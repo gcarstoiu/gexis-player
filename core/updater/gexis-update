@@ -31,7 +31,9 @@ import os
 import re
 import sqlite3
 import subprocess
+import math
 import sys
+import threading
 import time
 import urllib.request
 from pathlib import Path
@@ -61,13 +63,18 @@ PROGRESS: dict = {}
 
 # --- reporting ---------------------------------------------------------------
 
+#: One report at a time: apt's progress is also passed on from a timer.
+_REPORTING = threading.Lock()
+
+
 def report(state: str, **fields) -> None:
     """status.json, which the core reads and the Updates screen shows."""
-    STATE.mkdir(parents=True, exist_ok=True)
-    doc = {"state": state, "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), **PROGRESS, **fields}
-    tmp = STATE / "status.json.tmp"
-    tmp.write_text(json.dumps(doc, indent=1))
-    tmp.replace(STATE / "status.json")
+    with _REPORTING:
+        STATE.mkdir(parents=True, exist_ok=True)
+        doc = {"state": state, "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), **PROGRESS, **fields}
+        tmp = STATE / "status.json.tmp"
+        tmp.write_text(json.dumps(doc, indent=1))
+        tmp.replace(STATE / "status.json")
     print(f"{state}: {fields.get('message', '')}".rstrip(": "), flush=True)
 
 
@@ -227,8 +234,75 @@ def apt_download(opts: list[str], *args: str, report_as: dict, reporter=None) ->
     return apt_progress(opts, *args, state="downloading", report_as=report_as, reporter=reporter)
 
 
+class DpkgShare:
+    """How far dpkg is through an install, **by the size of what it installs,
+    moving on with time** (George, 2026-10-05: "More granularity is
+    needed").
+
+    apt's own share counts dpkg's actions, nine of them for two packages: a
+    75 MB gexis-core and a 13 KB gexis-player had the same weight, and the
+    bar stood still for the 35 s gexis-core took to unpack, then jumped.
+    Here each package weighs its archive's size; its actions place it
+    (unpacking is most of a package, configuring the rest); and within an
+    action the share creeps on with the time it has taken - **never as far
+    as the next action**, so the bar is never ahead of dpkg.
+    """
+
+    #: Where each action puts its package, of its own weight.
+    MARKS = (("Preparing to configure", 0.7), ("Preparing", 0.0), ("Unpacking", 0.05),
+             ("Installing", 0.7), ("Configuring", 0.75), ("Installed", 1.0))
+    STOPS = (0.0, 0.05, 0.7, 0.75, 1.0)
+    #: Megabytes of a package's weight per second, from 0.9.1 on gexis (a Pi
+    #: 4): 75.7 MB unpacked in about 35 s and configured in about 10.
+    RATE_MB_S = 1.5
+    #: How close to the next action the creep may come.
+    CREEP_MAX = 0.9
+
+    def __init__(self, sizes: dict[str, int], clock=None) -> None:
+        self._sizes = {p: max(int(n), 1) for p, n in sizes.items()}
+        self._total = sum(self._sizes.values()) or 1
+        self._reached: dict[str, float] = {}
+        self._current: tuple[str, float, float] | None = None   # package, mark, since
+        self._clock = clock or time.monotonic
+
+    def saw(self, package: str, action: str) -> None:
+        """A `pmstatus` line: this package has reached this action."""
+        mark = next((v for k, v in self.MARKS if action.startswith(k)), None)
+        if package not in self._sizes or mark is None:
+            return
+        if mark < self._reached.get(package, 0.0):
+            return
+        self._reached[package] = mark
+        self._current = (package, mark, self._clock()) if mark < 1.0 else None
+
+    def share(self) -> float:
+        done = {p: m for p, m in self._reached.items()}
+        if self._current:
+            package, mark, since = self._current
+            nxt = next((stop for stop in self.STOPS if stop > mark), 1.0)
+            expected = max(1.0, self._sizes[package] / 1e6 * (nxt - mark) / self.RATE_MB_S)
+            creep = self.CREEP_MAX * (1 - math.exp(-(self._clock() - since) / expected))
+            done[package] = mark + (nxt - mark) * creep
+        return min(1.0, sum(self._sizes[p] * f for p, f in done.items()) / self._total)
+
+
+def archive_sizes(changes: list[tuple[str, str | None, str]]) -> dict[str, int]:
+    """Each package's downloaded archive size, for DpkgShare; a package whose
+    archive is not found weighs a megabyte rather than nothing."""
+    cache = STATE / "apt" / "archives"
+    sizes = {}
+    for package, _, version in changes:
+        found = sorted(cache.glob(f"{package}_{version.replace(':', '%3a')}_*.deb"))
+        try:
+            sizes[package] = found[0].stat().st_size if found else 1_000_000
+        except OSError:
+            sizes[package] = 1_000_000
+    return sizes
+
+
 def apt_progress(opts: list[str], *args: str, state: str, report_as: dict, reporter=None,
-                 prefix: list[str] | None = None, span: tuple[float, float] = (0.0, 1.0)) -> subprocess.CompletedProcess:
+                 prefix: list[str] | None = None, span: tuple[float, float] = (0.0, 1.0),
+                 sizes: dict[str, int] | None = None) -> subprocess.CompletedProcess:
     """apt-get, its progress read as it goes. apt writes
     `dlstatus:<n>:<percent>:<what>` while it downloads and
     `pmstatus:<package>:<percent>:<what>` while dpkg installs, on its status
@@ -236,24 +310,59 @@ def apt_progress(opts: list[str], *args: str, state: str, report_as: dict, repor
     install step in the update similar to the download? Right now it's the
     longest step, but the user is kept in the dark about progress"*). The
     share, placed within `span` of the step, is reported at most once a
-    second."""
+    second.
+
+    **And passed on from a timer too** (2026-10-05): a line that came within
+    the second after another was not reported, and if dpkg then went quiet
+    the screen kept the older share - 0 % for the 35 s of gexis-core's
+    unpacking, with 33 % already read. With `sizes`, dpkg's lines place the
+    bar by DpkgShare instead, which moves on while dpkg is quiet."""
     cmd = [*(prefix or []), "apt-get", "-q", "-y", "-o", "APT::Status-Fd=1", *opts, *args]
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                             env={**os.environ, **APT_ENV})
     out, last = [], 0.0
     lo, hi = span
-    for line in proc.stdout:
-        out.append(line)
-        if line.startswith(("dlstatus:", "pmstatus:")):
-            try:
-                share = float(line.split(":")[2]) / 100
-            except (IndexError, ValueError):
-                continue
-            share = min(max(share, 0.0), 1.0)
-            PROGRESS["progress"] = round(max(PROGRESS.get("progress") or 0.0, lo + share * (hi - lo)), 3)
-            if time.monotonic() - last >= 1:
-                last = time.monotonic()
-                (reporter or report)(state, **report_as)
+    dpkg = DpkgShare(sizes) if sizes else None
+    sent = [None]
+
+    def place(share: float) -> None:
+        share = min(max(share, 0.0), 1.0)
+        PROGRESS["progress"] = round(max(PROGRESS.get("progress") or 0.0, lo + share * (hi - lo)), 3)
+
+    def send() -> None:
+        sent[0] = PROGRESS.get("progress")
+        (reporter or report)(state, **report_as)
+
+    stop = threading.Event()
+
+    def tick() -> None:
+        while not stop.wait(0.5):
+            if dpkg is not None:
+                place(dpkg.share())
+            if PROGRESS.get("progress") != sent[0]:
+                send()
+
+    ticker = threading.Thread(target=tick, daemon=True)
+    ticker.start()
+    try:
+        for line in proc.stdout:
+            out.append(line)
+            if line.startswith(("dlstatus:", "pmstatus:")):
+                fields = line.rstrip("\n").split(":", 3)
+                if dpkg is not None and fields[0] == "pmstatus" and len(fields) == 4:
+                    dpkg.saw(fields[1], fields[3])
+                    place(dpkg.share())
+                else:
+                    try:
+                        place(float(fields[2]) / 100)
+                    except (IndexError, ValueError):
+                        continue
+                if time.monotonic() - last >= 1:
+                    last = time.monotonic()
+                    send()
+    finally:
+        stop.set()
+        ticker.join()
     err = proc.stderr.read()
     proc.wait()
     r = subprocess.CompletedProcess(cmd, proc.returncode, "".join(out), err)
@@ -285,6 +394,10 @@ def plan(opts: list[str], version: str) -> list[tuple[str, str | None, str]]:
 
 # --- the steps ---------------------------------------------------------------
 
+#: The most of a release's notes kept - far above any release's so far.
+NOTES_MAX = 8000
+
+
 def release_notes(version: str) -> str | None:
     """What a release says changed (2026-10-01, George: release notes on the
     device): `r<tag>/notes`, clearsigned by the release key like the channel.
@@ -302,7 +415,10 @@ def release_notes(version: str) -> str | None:
         print(f"{tag}'s notes are not signed by the release key; not shown", flush=True)
         return None
     text = verified.stdout.decode(errors="replace").strip()
-    return text[:1200] or None
+    # A guard on what goes into the status file, not an edit: 1200 cut 0.9.0's
+    # notes (1,979 characters) and 0.9.1's mid-word on every screen that shows
+    # them (George, 2026-10-05).
+    return text[:NOTES_MAX] or None
 
 
 def check(args) -> tuple[str, dict] | None:
@@ -470,9 +586,11 @@ def install(args) -> int:
     # Their shares of the bar: the dist-upgrade is nearly all of the work,
     # gexis-player itself a moment.
     spans = [(0.0, 0.95), (0.95, 1.0)]
+    # Each package weighed by its archive (DpkgShare).
+    sizes = archive_sizes(changes)
     try:
         for apt_step, span in zip(apt_steps, spans):
-            r = apt_progress(opts, *apt_step, prefix=inhibit, span=span, state="installing",
+            r = apt_progress(opts, *apt_step, prefix=inhibit, span=span, state="installing", sizes=sizes,
                              report_as={**about, "backup": backup, "message": f"installing {target}"})
             if r.returncode:
                 raise Stop("install failed: " + why(r))

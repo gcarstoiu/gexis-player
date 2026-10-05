@@ -152,4 +152,20 @@
   @keyframes step-turn {
     to { transform: rotate(360deg); }
   }
+  /* **On a bar, two columns of three** (2026-10-05): six large steps one
+     under another are 364 px, and a 1280 x 400 bar has the title and a
+     button to fit as well - its lock ran off the screen. */
+  @media (max-height: 520px) {
+    .steps--large {
+      display: grid;
+      grid-template-rows: repeat(3, auto);
+      grid-auto-flow: column;
+      gap: 10px 48px;
+    }
+    .steps--large .step { min-height: 36px; gap: 14px; }
+    .steps--large .step__mark { width: 32px; height: 32px; }
+    .steps--large .step__mark svg { width: 20px; height: 20px; }
+    .steps--large .step__label { font-size: 24px; }
+    .steps--large .step__pct { font-size: 20px; min-width: 64px; }
+  }
 </style>

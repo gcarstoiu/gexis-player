@@ -2,12 +2,15 @@
 
 Last updated: 2026-10-05 (on R2D2).
 
-**0.9.0 released 2026-10-05 on Testing (serial 23), from `phase-13d`** -
-13b's work, 13d's DAC work (Phase 13d stays open: the board tests are
-still George's), ADR-0119 (Plexamp claimed from Settings; gexis-plexamp
-0.4.0 published and pinned) and ADR-0120 (backgrounds). The PR into `main`
-waits for George. The image is `image/deploy/2026-10-05-gexis-player-v0.9.0.img`
-in the main checkout.
+**0.9.1 released 2026-10-05 on Testing (serial 24), from `phase-13d`** -
+ADR-0121's phone touchpad and keyboard (gestures, Pointer style, no system
+cursor), Home / Now playing / Lyrics from the phone (ADR-0101 amended),
+idle backgrounds that do not repeat (ADR-0047 §2e), and the post-0.9.0
+fixes. **PR #49 into `main` waits for George** (0.9.0's, #48, is merged).
+The image is `image/deploy/2026-10-05-gexis-player-v0.9.1.img` in the main
+checkout; 111 checks passed. Phase 13d stays open (board tests).
+**Next: 13f** - ADR-0118's questions A-F put to George on 2026-10-05, with
+recommendations; the read-only measurements wait on his answers.
 
 ## Start here
 
@@ -37,7 +40,7 @@ release** (George, 2026-10-04): never push a release onto an open PR.
 
 **`gexis` right now (2026-10-05, evening):** the 13d preview with
 `phase-13b` merged in - core `0.9.0+git17.8ebb7c1`, player and ui
-core, player and ui `0.9.0+git44.78e216c`, system `0.8.9+git87.5b4042c`: 0.9.0, the post-0.9.0 fixes and
+core and player `0.9.0+git50.609946b`, ui `0.9.0+git44.78e216c`, system `0.8.9+git87.5b4042c`: 0.9.0, the post-0.9.0 fixes and
 **ADR-0121's touchpad** with George's first four changes; on the 10.1" 1280 x 800 (the 13.3" FHD jammed the Wi-Fi). Its
 volume read 100 % after the touchpad tests, nothing playing - whether a
 test tap set it is unknown (LESSONS 59); left as it was.
@@ -73,7 +76,18 @@ test tap set it is unknown (LESSONS 59); left as it was.
    amended; N1 not behind the touchpad, N2 greyed while nothing plays;
    55d6c1e): checked on gexis's panel (standard layout) - Lyrics, Lyrics
    off, Home, Now playing, each screenshotted, toggle state reported back.
-   **The bar layout's lyrics switch is not tried on hardware.** Drags (queue order, list scrolling) are
+   **The bar layout's lyrics switch is not tried on hardware.**
+0. **Idle backgrounds checked** (George: "always the same" animals,
+   2026-10-05; ADR-0047 §2e, W1-W3 as recommended): the pool was one page
+   of 50 at a change a minute (52 pictures drawn 230 times in an
+   afternoon). Now 200 a page, the page turning daily through three, no
+   repeat until the page is spent (online and on-device), kept on disk in
+   `/var/lib/gexis-core/wallpapers/state.json` - checked on gexis: 200
+   animals, a restart did not ask Pixabay again (8da8fc7). Artist pictures
+   pick among an artist's fanart backgrounds (3172c48). A face-placed
+   picture failed its request - numpy floats - fixed (b8eb10c). **Not
+   done**: a library over 1000 artists uses its first 1000 only; bars
+   find 0-12 wide pictures per 200 (Animals none). Drags (queue order, list scrolling) are
    out by decision D. Not measured during playback.
 0. **ADR-0120, bar backgrounds** (accepted 2026-10-05): step 1 (placement)
    and step 2 (TheAudioDB for

@@ -409,9 +409,10 @@
   //: reconnects (nothing else shows in between); then the outcome for a few
   //: seconds, and a reload when the release changed the page's own files.
   const OUTCOME_MS = 6000;
-  //: **With notes to read, until Continue** (George, 2026-10-05: 0.9.0's
-  //: notes could not all be seen). The limit is for a panel nobody watches.
-  const NOTES_MS = 120000;
+  //: **A finished update waits for Done** (ADR-0110, 2026-10-05: George,
+  //: "keep the user in the installation screen which he would need to
+  //: dismiss"). The limit is for a panel nobody watches.
+  const DONE_MS = 10 * 60 * 1000;
   let outcomeTimer;
   function leaveUpdate(changed) {
     clearTimeout(outcomeTimer);
@@ -439,8 +440,7 @@
       updateOutcome = u.state;
       const changed = u.state === 'done' && u.installed && u.installed !== loadedRelease;
       updateChanged = changed;
-      const notes = u.state === 'done' && u.whats_new;
-      outcomeTimer = setTimeout(() => leaveUpdate(changed), notes ? NOTES_MS : OUTCOME_MS);
+      outcomeTimer = setTimeout(() => leaveUpdate(changed), u.state === 'done' ? DONE_MS : OUTCOME_MS);
     }
   });
   async function showVisualisation() {

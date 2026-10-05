@@ -4,6 +4,7 @@ from __future__ import annotations
 import importlib.machinery
 import importlib.util
 import io
+import time
 import json
 import subprocess
 from pathlib import Path
@@ -192,6 +193,15 @@ def test_a_release_s_signed_notes_are_read(up, monkeypatch):
     assert up.release_notes("0.2.1+git900.abc1234") == "New: release notes."
 
 
+def test_a_release_s_notes_are_kept_whole(up, monkeypatch):
+    """2026-10-05: notes were cut at 1,200 characters - 0.9.0's and 0.9.1's
+    ended mid-word ("Starting volume is now b") on the phone's dialog."""
+    notes = "New\n" + "\n".join(f"• Change number {n}, said in a sentence of its own." for n in range(40))
+    assert len(notes) > 1900
+    serve(monkeypatch, up, notes + "\n")
+    assert up.release_notes("0.2.1+git900.abc1234") == notes
+
+
 def test_notes_that_do_not_verify_are_not_shown(up, monkeypatch):
     serve(monkeypatch, up, "anything", verified=False)
     assert up.release_notes("0.2.1+git900.abc1234") is None
@@ -236,7 +246,7 @@ def fake_install(up, monkeypatch, *, fail_install=False, answers=True):
             return subprocess.CompletedProcess(args, 100, "", "E: broken")
         return subprocess.CompletedProcess(args, 0, "", "")
     monkeypatch.setattr(up, "apt", apt)
-    def apt_progress(opts, *args, state, report_as, reporter=None, prefix=None, span=(0.0, 1.0)):
+    def apt_progress(opts, *args, state, report_as, reporter=None, prefix=None, span=(0.0, 1.0), sizes=None):
         r = apt(opts, *args, prefix=prefix)
         if r.returncode == 0:
             up.PROGRESS["progress"] = span[1]
@@ -318,6 +328,69 @@ def test_dpkg_s_install_status_moves_the_install_bar_within_its_span(up, monkeyp
     monkeypatch.setattr(up.time, "monotonic", iter(range(0, 100, 2)).__next__)
     up.apt_progress([], "--no-download", "dist-upgrade", state="installing", report_as={}, span=(0.0, 0.95))
     assert ("installing", 0.475) in seen and up.PROGRESS["progress"] == 0.95
+
+
+#: dpkg's lines from 0.9.1's install on gexis (2026-10-05), and its archives.
+INSTALL_091 = [("gexis-player", "Preparing gexis-player"), ("gexis-player", "Unpacking gexis-player"),
+               ("gexis-player", "Installing gexis-player"), ("gexis-core", "Preparing gexis-core"),
+               ("gexis-core", "Unpacking gexis-core")]
+SIZES_091 = {"gexis-core": 75_691_828, "gexis-player": 13_540}
+
+
+def test_dpkg_s_share_weighs_packages_by_size_and_moves_on_with_time(up):
+    """George, 2026-10-05: 0 % for 35 s, then 42 %. The 13 KB package no
+    longer counts as much as the 75 MB one, and while gexis-core unpacks the
+    bar moves - never as far as the next action."""
+    now = [0.0]
+    dpkg = up.DpkgShare(SIZES_091, clock=lambda: now[0])
+    for package, action in INSTALL_091:
+        dpkg.saw(package, action)
+    at_start = dpkg.share()
+    assert 0.04 < at_start < 0.06, "gexis-player's own steps are next to nothing"
+    shares = []
+    for second in range(0, 61, 5):
+        now[0] = second
+        shares.append(dpkg.share())
+    assert shares == sorted(shares) and shares[-1] > shares[0] + 0.3, shares
+    assert all(s < 0.7 for s in shares), "never past where dpkg says unpacking ends"
+    assert 0.25 < shares[3] < 0.55, f"after 15 s of a 35 s unpack: {shares[3]:.2f}"
+    dpkg.saw("gexis-core", "Installing gexis-core")
+    assert abs(dpkg.share() - 0.7) < 0.01
+    for package in SIZES_091:
+        dpkg.saw(package, f"Installed {package}")
+    assert dpkg.share() == 1.0
+    # An action seen again, or out of order, never takes the bar back.
+    dpkg.saw("gexis-core", "Unpacking gexis-core")
+    assert dpkg.share() == 1.0
+
+
+def test_a_share_read_while_another_was_just_reported_still_reaches_the_screen(up, monkeypatch):
+    """2026-10-05: lines within a second of the last report were not passed
+    on, and dpkg then went quiet - the screen showed the older share. A
+    timer passes on the newest one while apt is quiet."""
+    reported, quiet = [], []
+
+    def lines():
+        yield "pmstatus:gexis-core:10.0:Preparing gexis-core\n"
+        yield "pmstatus:gexis-core:33.3:Unpacking gexis-core\n"
+        quiet.append(True)
+        time.sleep(1.3)    # dpkg unpacking, saying nothing
+        yield "pmstatus:dpkg-exec:100:Done\n"
+
+    class Proc:
+        def __init__(self, *a, **k):
+            self.stdout = lines()
+            self.stderr = io.StringIO("")
+            self.returncode = 0
+        def wait(self):
+            return 0
+    monkeypatch.setattr(up.subprocess, "Popen", Proc)
+    up.STATE.mkdir(parents=True, exist_ok=True)
+    up.PROGRESS.clear()
+    monkeypatch.setattr(up, "report", lambda state, **f: reported.append((bool(quiet), up.PROGRESS.get("progress"))))
+    monkeypatch.setattr(up.time, "monotonic", lambda: 0.0)   # never a second since the last
+    up.apt_progress([], "--no-download", "dist-upgrade", state="installing", report_as={})
+    assert (True, 0.333) in reported, reported
 
 
 def test_an_install_s_bar_reaches_the_end(up, monkeypatch):
