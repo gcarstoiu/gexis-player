@@ -1,8 +1,9 @@
 # ADR-0119 — Plexamp is claimed from Settings, and says when it is
 
-**Status:** **Draft** — 2026-10-05. George asked for the screen on the
-Settings copy review and said yes to building it, and answered its three
-questions the same day. Accepted once the claim is measured (below).
+**Status:** **Accepted** — George, 2026-10-05: asked for the screen on the
+Settings copy review, said yes to building it, answered its three questions
+the same day, and confirmed from his Plex account that the claim names the
+player as `PLEXAMP_PLAYER_NAME` says (*"I see the gexis-claimtest there"*).
 **Builds on:** [ADR-0090](0090-plexamp-ships-the-way-beszel-does.md) §4-5 (one
 row, the token; our plugin acts on it), [ADR-0048](0048-how-the-device-name-reaches-four-services.md)
 (one device name), [ADR-0088](0088-a-plugins-settings-reach-its-unit-as-environment.md) (a row's `env`),
@@ -97,7 +98,38 @@ input - beside George's claimed one, which was not touched:
 - Harmless on the way: `Error loading cloud players from plex.tv HTTP status
   403`, and a failed probe of a phone's player on the LAN.
 
-## Still to confirm before it is accepted
+- **The name Plex shows is `PLEXAMP_PLAYER_NAME`'s**: George's Authorized
+  Devices listed the test player as `gexis-claimtest`. He removed it.
 
-- **Which name George's Plex account shows** for the test player
-  (`gexis-claimtest` or `gexis`), and the test player removed from it.
+## How it is built
+
+1. **`plexamp.service`** reads `/etc/gexis/device-name.env` (ADR-0048's
+   `GEXIS_DEVICE_NAME`, squeezelite's already) and
+   `/run/gexis/plugins/plexamp.env`, and starts Plexamp through
+   **`plexamp-run`**, which hands it `PLEXAMP_PLAYER_NAME` from the device
+   name and `PLEXAMP_CLAIM_TOKEN` **only when there is a claim to make**.
+2. **`plexamp-run` keeps the claim's bookkeeping**, in
+   `~/.local/share/gexis-plexamp/claim.json` (the token's hash, never the
+   token, and `trying` / `claimed` / `failed`), at every start:
+   - a **new** token on a claimed player sets Plexamp's store aside
+     (`Settings.previous`) and starts it unclaimed with the token: A;
+   - the same token again, `trying`, and Plexamp's `user:token` there: the
+     claim worked - `claimed`, the old store deleted;
+   - the same token again, `trying`, and no `user:token`: Plexamp exited on
+     the claim - the old store is put back, `failed`, and the token is not
+     handed over again, so a dead token cannot loop the unit.
+   **Claim again makes a new Plex player**, a fresh identity, as the first
+   claim did; the old entry stays in the account until removed there.
+3. **The core restarts `plexamp.service` when the token changes** - it does
+   already for any `env` row (ADR-0088). The manifest's row exports
+   `PLEXAMP_CLAIM_TOKEN`, no longer the `PLEX_CLAIM_TOKEN` nothing read.
+4. **The plugin reports the row**, by the new event, from Plexamp's
+   `user:token` and `claim.json`: `done` *Claimed*; `failed` with B's
+   sentence (and still *Claimed* when the old claim was put back); nothing
+   while unclaimed. The core keeps the last report per plugin in memory and
+   publishes it on the row as `status`; a plugin that leaves takes it with
+   it.
+5. **The panel and the phone** draw a row with `status.state` `done` as its
+   text with a green tick and *Claim again*, which opens the field; a failure
+   as its sentence under the row. A note's `https://` address is a link that
+   opens a new tab, shown without the scheme.
