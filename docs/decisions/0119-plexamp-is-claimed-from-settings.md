@@ -133,3 +133,21 @@ input - beside George's claimed one, which was not touched:
    text with a green tick and *Claim again*, which opens the field; a failure
    as its sentence under the row. A note's `https://` address is a link that
    opens a new tab, shown without the scheme.
+
+## Claim again, on George's own player (2026-10-05)
+
+With a fresh token of George's, saved through `PUT /settings/plexamp.claim_token`
+as the phone saves it, nothing playing: the core restarted Plexamp,
+`plexamp-run` set the claimed store aside and handed the token over, and
+Plexamp answered *"Plexamp is now signed in and ready!"*. The row read
+*Claimed* throughout. At the next start `claim.json` went `trying` ->
+`claimed` and `Settings.previous` was deleted; Plexamp answered on 32500,
+named `gexis`.
+
+**What a new claim costs**, by construction: Plexamp's own settings start
+again - its volume, and anything set in its own settings screens (none is
+set by this project). Its audio device is unset, which is "Follows System
+Output": [ADR-0085](0085-the-alsa-default-is-our-output.md)'s default, the
+chosen output, through the meter. Playback after the new claim was not tried
+(it would have made sound in George's room unasked).
+

@@ -62,8 +62,8 @@ had shown 20 fps, an artefact of its software compositing.
    in its own repository (784242c), not pushed or released** - on gexis its
    files were laid over the 0.3.0 package by hand. A release needs a
    gexis-plexamp 0.4.0 release and its pin moved. *Claim again* on George's
-   real player is untested: it makes a new Plex player and needs a fresh
-   token from him. The test player `gexis-claimtest` is his to remove from
+   real player worked (2026-10-05, his token): a new Plex player, Plexamp's own
+   settings started again; playback after it not yet tried. The test player `gexis-claimtest` is his to remove from
    his Plex account.
 4. **Phase 13d, DACs**: ADR-0117 accepted, built in its worktree, being
    tested on `gexis` (merged up with `phase-13b` for the preview).
