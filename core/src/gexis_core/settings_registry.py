@@ -569,6 +569,7 @@ class Settings:
         notes: dict[str, Callable[[], str | None]] | None = None,
         seed_path: Path = SEED_PATH,
         labels: dict[str, Callable[[], dict]] | None = None,
+        restrictions: dict[str, Callable[[], dict]] | None = None,
     ) -> None:
         self._store = store
         #: What each option is called on screen, by `optionsFrom` source,
@@ -600,6 +601,10 @@ class Settings:
         #: Injected by the daemon, because only it knows what the sound
         #: card can do.
         self._unavailable: dict[str, dict[Any, str]] = {}
+        #: key -> a callable giving {option: why} as things are now - for a
+        #: set that changes with what is installed (the skin types a screen
+        #: has none of, 2026-10-05), read when needed rather than pushed.
+        self._restrictions = restrictions or {}
         #: key -> what a plugin last said about its own row (ADR-0119): a
         #: state the row is in, not a value. In memory only - it is the
         #: plugin's to say again, and goes when the plugin does.
@@ -613,7 +618,8 @@ class Settings:
         #: registry's own note.
         self._notes = notes or {}
         self._seed = load_seed(self._rows, seed_path)
-        unknown = (set(self._defaults) | set(self._wired) | self._lists | set(self._notes)) - set(self._rows)
+        unknown = (set(self._defaults) | set(self._wired) | self._lists | set(self._notes)
+                   | set(self._restrictions)) - set(self._rows)
         if unknown:
             raise ValueError(f"not in the registry: {sorted(unknown)}")
         not_lists = {k for k in self._lists if self._rows[k]["type"] != "list"}
@@ -670,9 +676,23 @@ class Settings:
             del self._status[key]
         return bool(gone)
 
+    def _blocked(self, key: str) -> dict[Any, str] | None:
+        """What cannot be had for this row now: pushed by `restrict`, or
+        read from a restriction provider. Pushed wins."""
+        if key in self._unavailable:
+            return self._unavailable[key]
+        provider = self._restrictions.get(key)
+        if provider is None:
+            return None
+        try:
+            return dict(provider()) or None
+        except Exception as exc:  # noqa: BLE001 - nothing greyed beats a broken screen
+            logger.warning("settings: what %s cannot offer is unknown: %s", key, exc)
+            return None
+
     def value(self, key: str) -> Any:
         row = self.row(key)
-        blocked = self._unavailable.get(key)
+        blocked = self._blocked(key)
         if blocked:
             # What is in force, which is not what is stored: the stored
             # choice is waiting for the hardware that can honour it.
@@ -741,7 +761,7 @@ class Settings:
                 # A row is wired when something acts on it. For most that is
                 # a `set` callback; for a `list` it is the items route.
                 public["wired"] = row["key"] in self._wired or row["key"] in self._lists
-                blocked = self._unavailable.get(row["key"])
+                blocked = self._blocked(row["key"])
                 if blocked:
                     public["unavailable"] = dict(blocked)
                 if row["key"] in self._status:
@@ -766,7 +786,7 @@ class Settings:
             raise NotWired(f"{key} is not wired yet")
         # `multi` rows take a list, which is not a dict key - and a list is
         # never an option anyway.
-        blocked = self._unavailable.get(key) or {}
+        blocked = self._blocked(key) or {}
         if isinstance(value, Hashable) and value in blocked:
             raise Locked(blocked[value])
         source = row.get("optionsFrom")
