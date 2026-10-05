@@ -218,16 +218,43 @@ def _connected(card: str) -> bool:
     return True
 
 
+#: Where the kernel lists its sound cards: a card arriving or leaving
+#: changes it, and nothing else does.
+CARDS = Path("/proc/asound/cards")
+#: The last `discover` answer and what it was worked out from.
+_DISCOVERED: dict = {}
+
+
 def discover(chosen_board: str | None = None) -> list[Output]:
     """Every playback output the device actually has, ours excluded - each
     named, and given its state, as ADR-0117 says: by `chosen_board` (the
-    *Sound card board* setting), the HAT's EEPROM, or the list."""
-    found: list[Output] = []
+    *Sound card board* setting), the HAT's EEPROM, or the list.
+
+    **Worked out once per change** (2026-10-05): every `GET /settings`
+    lists the outputs, and `aplay` and an `amixer` per card cost 50 ms of
+    it on the player. Asked again when the cards, an HDMI connection or the
+    chosen board change - so a cable plugged in still shows without a
+    restart (ADR-0055 §1).
+    """
     product = boards.hat_product()
     if chosen_board is None:
         from gexis_core import board_apply
         written = board_apply.written()
         chosen_board = written.id if written else None
+    try:
+        cards = CARDS.read_text()
+    except OSError:
+        cards = None
+    key = (cards, tuple(_connected(card) for card in CONNECTORS), chosen_board, product)
+    if cards is not None and _DISCOVERED.get("key") == key:
+        return list(_DISCOVERED["found"])
+    found = _discover(chosen_board, product)
+    _DISCOVERED.update(key=key, found=found)
+    return list(found)
+
+
+def _discover(chosen_board: str | None, product) -> list[Output]:
+    found: list[Output] = []
     # **The device's description, not the card's.** `aplay -l` gives both,
     # and the card's is the driver's module name - "snd_rpi_hifiberry_
     # dacplushd", which is what the first version put in the picker. The
