@@ -876,7 +876,7 @@
         "type": "toggle",
         "label": "Look up missing artwork",
         "marks": "R",
-        "note": "For renderers that supply none. Title and artist are enough to find it later.",
+        "note": "For renderers that supply none.",
         "default": null
       },
       {
@@ -886,7 +886,7 @@
         "placeholder": "ListenBrainz token",
         "label": "ListenBrainz token",
         "marks": "N",
-        "note": "Only for the artist page's Popular list: that endpoint began requiring one on 2026-09-18. Everything else works without a key.",
+        "note": "A ListenBrainz user token. Some artist information needs one.",
         "default": null
       },
       {
