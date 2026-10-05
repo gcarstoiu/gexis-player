@@ -60,6 +60,30 @@ bare bar pinned to the bottom, and a strip in the Settings header.
      (ADR-0055 §6).
 5. **No setting.** Nothing here takes a value, so there is no ADR-0022 row.
 
+## Amended 2026-10-05: Home, Now playing and Lyrics
+
+George, 2026-10-05, trying the phone touchpad (ADR-0121): *"Add to the same
+volume sheet: a go to home button, a go to now playing screen, a lyrics
+toggle (on standard screens it goes to now playing - lyrics tab, on bar
+screens, the lyrics on now playing) which on disable it goes to the track
+tab in now playing."* His answers to the two questions it raised:
+
+- **N1: not behind *Phone touchpad*.** Like the visualiser and idle
+  toggles, these act on the panel and need no pointer, so they are there
+  whatever that row says.
+- **N2: Now playing and Lyrics are greyed while nothing plays** - the panel
+  has a Now Playing screen only while a source is active. Home always works.
+
+The same path as the idle toggle: `POST /panel/go/{home|now|lyrics|track}`
+counts as attention (the visualiser steps aside, timers restart), and the
+core publishes a numbered `panel.view_request` the panel applies once.
+**Home** is the library's root, or the root screen with LMS off (ADR-0079);
+**Now playing** closes what covers it; **Lyrics** is Now playing on its
+Lyrics tab - on a bar, with its lyrics on - and turning it off is the Track
+tab, lyrics off. The panel reports `panel.lyrics`, true only while lyrics
+are what the glass shows, so the toggle says what is there whatever changed
+it. Now playing, Lyrics and Track are refused while nothing is active.
+
 ## Consequences
 
 - The phone can put music on and turn it down without going to the panel,
