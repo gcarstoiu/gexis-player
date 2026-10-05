@@ -54,16 +54,52 @@ sets, so a 1280 x 400 bar and a 1920 x 1080 panel take the same touchpad. **Half
 up from the slider, and **while the sheet is open a touch outside it only
 closes it** - the page behind is dimmed and takes nothing (George,
 2026-10-05, after trying it: the thumb kept reaching the top of a 180 px
-area, and a missed touch could change a setting). **Nothing else (D)**: no
-two-finger volume, no swipes for tracks, no scrolling gesture - "working in
-a simple manner" first. Scrolling a panel list from the phone is **not** in
-this record; lists scroll by touch on the panel, as today.
+area, and a missed touch could change a setting). ~~**Nothing else (D)**:
+no two-finger volume, no swipes for tracks, no scrolling gesture~~ -
+**replaced 2026-10-05** (George, after trying it: *"We need gestures now
+since I couldn't scroll to the API key"*; his answers, below, took every
+recommendation):
+
+- **Two fingers scroll** what lies under the pointer, **the content
+  following the fingers** as on the phone's own screen (G1), **up and down
+  and sideways** - the sideways rows too (G2). The nearest scrollable
+  thing under the pointer, in the direction moved; the page otherwise.
+- **Pinch zooms the panel** around the pointer, 1 x to 3 x (G3). Zoomed,
+  the pointer pushing past an edge moves the view; a tap lands on what is
+  under the pointer, as at 1 x. **It zooms back out** only when pinched
+  back - and when the phone's sheet closes or the phone leaves, so a
+  zoomed panel never stays zoomed for whoever looks at it next.
+- A gesture is one thing from start to finish: two fingers start as a
+  scroll or a zoom, whichever they do first, and stay it; after two
+  fingers, the pointer waits for every finger to lift. Still no gestures
+  for volume or tracks.
 
 ### 3. The pointer (B)
 
 Shown **only while a phone is controlling**: it appears with the first
 movement and **hides after 5 seconds with no movement and no tap**. One
 pointer whatever the number of phones; the latest touch moves it.
+
+**Two styles, from Claude Design** (George, 2026-10-05, the *Cursors*
+handoff, `Gexis_DAC_Player_3.zip`), chosen by *Pointer style* (§7), **Dot
+first** - the set drawn for a phone remote:
+
+- **Dot**: a 28 px dot, #7ed6bc on a 2.4 px #0c1014 border. Over a round
+  control (width / height under 1.6) a ring of the larger side + 16 px
+  around the control, with a small dot where the pointer really is; over a
+  slider a 48 x 22 pill; while two fingers scroll a 22 x 48 pill.
+- **Arrow**: the design's arrow (hotspot 6, 4 of 32), with a ring at its tip
+  over anything that can be pressed, and a double arrow over a slider.
+
+What the handoff left to the owner, as recommended (C2-C4): **5 seconds**
+to hide for both styles (B stands; the handoff said 2 and 3); **the ring
+and pills are drawn, the pointer does not move** - the design's jump to a
+control's centre would leave a relative pointer away from where the finger
+left it; the pointer's position follows at once (the design's 90 ms glide
+would add to the 31 ms round trip), its shape changes over 140 ms and it
+fades over 300 ms; **no "working" or "unavailable"** states yet - the panel
+does not know, for most controls, that the player is busy or that a source
+lacks one; they come control by control.
 
 ### 4. Typing (C)
 
@@ -101,6 +137,8 @@ panel's, measured in its own pixels.
 - **Pointer speed** [N] - how far the pointer moves for a finger's
   movement: **150 to 400 %, starting at 150** (George, 2026-10-05: *"50 is
   way too slow"* - first built as 50 to 300, starting at 100).
+- **Pointer style** [N] - Dot or Arrow, Dot first (George, 2026-10-05:
+  *"There are 2, so we will need a setting to switch between"*).
 
 ### 8. Nothing newly exposed
 
