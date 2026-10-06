@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import logging
 import secrets
+import unicodedata
 from urllib.parse import quote
 
 from gexis_core.radio import PLAY_TAIL, UnknownHandle, _wants_text
@@ -66,6 +67,14 @@ LEFT_OUT_ICONS = {"plugins/Spotty/html/images/transfer.png"}
 #: (`role_id` is not one: Lyrion sends it beside a genre's id too.)
 HINTS = (("album_id", "album"), ("work_id", "work"), ("artist_id", "artist"),
          ("folder_id", "folder"), ("year", "year"), ("genre_id", "genre"))
+
+#: Hidden while they hold nothing to choose (the handover's note 3, George
+#: 2026-10-06): the entry, and the most it may hold and still be hidden.
+HIDE_WHEN_FEW = {"opmlselectRemoteLibrary": 0, "opmlselectVirtualLibrary": 1}
+
+#: The most of a list read at once for its letter index: All Artists' 8,393
+#: came back in 221 ms (2.7 MB) on George's server.
+LETTERS_MAX = 20000
 
 #: One page of a list. Lyrion pages by start and count (Finding 111).
 PAGE = 100
@@ -135,13 +144,27 @@ class LyrionMenus:
             spec = self._top_spec(item, menu)
             if spec is None:
                 continue
+            handle = self._issue(spec)
             tiles.append({
                 "key": KNOWN_TILES.get(ident, "other"),
                 "id": ident,
                 "label": _text(item)[0],
-                "handle": self._issue(spec),
+                "handle": handle,
+                # The card's second line: "21 views", "8 items", "6 apps".
+                "count": await self._count(handle),
             })
         return tiles
+
+    async def _count(self, handle: str) -> int | None:
+        """How many entries a tile opens to - a lone text line (Lyrion's
+        "Empty") counting as none; None when it cannot be read."""
+        try:
+            page = await self.browse(handle, 0, 2)
+        except (UnknownHandle, MenusUnavailable):
+            return None
+        if page["count"] == 1 and page["items"] and page["items"][0]["kind"] == "text":
+            return 0
+        return page["count"]
 
     def _top_spec(self, item: dict, menu: list[dict]) -> dict | None:
         ident = str(item.get("id") or "")
@@ -209,6 +232,7 @@ class LyrionMenus:
             have = {str(m.get("id") or "") for m in children}
             children += [m for m in await self._modes() if m["id"] not in have]
         children = [m for m in sorted(children, key=_weight) if str(m.get("id") or "") not in LEFT_OUT_IDS]
+        children = [m for m in children if not await self._too_few(m)]
         rows = []
         for item in children:
             ident = str(item.get("id") or "")
@@ -222,6 +246,40 @@ class LyrionMenus:
         # `node`: a menu of Lyrion's own, drawn as the panel's grouped cards.
         return {"title": spec.get("title"), "count": len(rows), "start": start, "items": page,
                 "node": spec["node"]}
+
+    async def _too_few(self, item: dict) -> bool:
+        """An entry that would open to (nearly) nothing (HIDE_WHEN_FEW)."""
+        most = HIDE_WHEN_FEW.get(str(item.get("id") or ""))
+        go = (item.get("actions") or {}).get("go")
+        if most is None or not go:
+            return False
+        command = list(go.get("cmd") or []) + [0, 2] + [f"{k}:{v}" for k, v in (go.get("params") or {}).items()] + ["menu:1"]
+        try:
+            return int((await self._call(command)).get("count") or 0) <= most
+        except MenusUnavailable:
+            return False
+
+    async def letters(self, handle: str) -> dict:
+        """**Where each letter starts in a list** (the handover's note 6):
+        Lyrion gives no index with a page, but every item of a library list
+        carries its first letter (`textkey`), so the list is read once, whole,
+        and the first position of each letter kept. Accents fold to their
+        letter; digits and signs are `#`. Empty for a list with no letters."""
+        spec = self._spec(handle)
+        if spec["kind"] not in ("folder", "container") or "letters" in spec:
+            return {"letters": spec.get("letters", {})}
+        command = list(spec["cmd"]) + [0, LETTERS_MAX]
+        command += [f"{k}:{v}" for k, v in spec["params"].items()] + ["menu:1"]
+        items = (await self._call(command)).get("item_loop") or []
+        keys = [item.get("textkey") for item in items]
+        found: dict[str, int] = {}
+        if items and sum(1 for k in keys if k) >= len(items) * 0.9:
+            for position, key in enumerate(keys):
+                letter = _letter(key)
+                if letter and letter not in found:
+                    found[letter] = position
+        spec["letters"] = found
+        return {"letters": found}
 
     # --- one item -----------------------------------------------------
 
@@ -369,6 +427,20 @@ def _hint(item: dict, spec: dict) -> str | None:
         if found:
             return found
     return None
+
+
+#: Letters Unicode does not decompose to a Latin one (Ł in Łódź).
+_UNFOLDED = {"Ł": "L", "Ø": "O", "Đ": "D", "Ð": "D", "Æ": "A", "Œ": "O", "ß": "S", "Þ": "T", "ẞ": "S"}
+
+
+def _letter(key) -> str | None:
+    """A rail letter for a textkey: A-Z with accents folded, `#` otherwise."""
+    if not key:
+        return None
+    first = str(key)[0].upper()
+    first = _UNFOLDED.get(first, first)
+    base = unicodedata.normalize("NFKD", first).encode("ascii", "ignore").decode().upper()
+    return base if len(base) == 1 and "A" <= base <= "Z" else "#"
 
 
 def _is_browse(cmd) -> bool:

@@ -261,3 +261,35 @@ async def test_entries_say_what_they_are_and_a_menu_says_it_is_one():
     # As George's server sends a genre: its own id, a role beside it.
     assert _hint({"commonParams": {"genre_id": "601"}}, {"params": {"role_id": "1,5", "genre_id": "601"}}) == "genre"
     assert _hint({"type": "redirect", "text": "Qobuz"}, {}) == "app"
+
+
+
+@pytest.mark.asyncio
+async def test_a_list_says_where_each_letter_starts():
+    """The handover's note 6: from each item's textkey, accents folded,
+    digits and signs as #; read once per list."""
+    class Letters(Lyrion):
+        async def __call__(self, command, player):
+            if command[:2] == ["browselibrary", "items"]:
+                self.asked.append(list(command))
+                keys = ["0", "A", "A", "Á", "B", "É", "Z", "Ł"]
+                return {"count": len(keys), "item_loop": [{"text": k, "textkey": k} for k in keys]}
+            return await super().__call__(command, player)
+    lyrion = Letters()
+    m = menus(lyrion)
+    m._handles["list"] = {"kind": "folder", "cmd": ["browselibrary", "items"], "params": {"mode": "artists"}}
+    assert (await m.letters("list"))["letters"] == {"#": 0, "A": 1, "B": 4, "E": 5, "Z": 6, "L": 7}
+    asked = len(lyrion.asked)
+    await m.letters("list")
+    assert len(lyrion.asked) == asked, "read once"
+
+
+@pytest.mark.asyncio
+async def test_tiles_carry_counts_and_an_empty_favourites_is_none():
+    class Counted(Lyrion):
+        async def __call__(self, command, player):
+            if command[:2] == ["favorites", "items"]:
+                return {"count": 1, "item_loop": [{"text": "Empty", "type": "text", "style": "itemNoAction"}]}
+            return await super().__call__(command, player)
+    tiles = {t["key"]: t for t in await menus(Counted()).tiles()}
+    assert tiles["favorites"]["count"] == 0 and tiles["apps"]["count"] == 2 and tiles["mymusic"]["count"] == 3
