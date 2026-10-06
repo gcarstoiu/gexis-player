@@ -87,6 +87,13 @@ streaming services, Radio Paradise, YouTube - lives in that same tree under
 - **The home row scrolls** (George, 2026-10-05, asked when it was built):
   the cards keep their size, five in view and the next peeking at the
   edge; New Music keeps its height. Bars already scroll theirs.
+- **My Music is every browse mode the server offers** (George, 2026-10-06:
+  *"There are entries missing in My music"*; Finding 111's addendum): the
+  player menu's 14 and Extended Browse Modes' others, 21 in all on his
+  server, in five groups - Artists, Albums, Tracks, By category, More.
+  **Disks and folders stays in** (*"Keep it in"*), though it browses the
+  Lyrion server's own disks; **Playlists Folder is left out**, being our
+  Playlists again (C). A mode its owner switched off stays off.
 - **G. No tile for Lyrion's own top-level Search**: My Music's Search covers
   the library, and each app has its own.
 - **H. The new tiles' icons and colours are drawn by Claude (Code)**, in the
