@@ -20,11 +20,10 @@ app logo in the head column; bar home gains My Music, Favourites, Apps
 (196 x 300 sideways). **Album Artists** replaces Artists on both homes
 (George, 2026-10-06). Standard checked at 711/800/853 and bars at 1280
 and 1850 x 400, through the relay harness against George's Lyrion.
-**Owed:** (1) install `0.9.1+git42.ba6900a` on gexis - not done because
-gexis was playing; it carries the core fix for Qobuz albums handed as a
-context menu (tracks `goAction: playControl` were drawn as folders; seen
-2026-10-06, earlier the same day they were `play`), so the bar album page
-must be re-checked after it; (2) Play / Play next / Add never pressed on
+**Owed:** (1) done 2026-10-06 - `0.9.1+git42.ba6900a` installed on
+gexis (George's go-ahead); Qobuz's context-menu albums now give `play`
+tracks with add/next/play, and the album page checked on bar and
+standard; (2) Play / Play next / Add never pressed on
 George's system - his to try; (3) George's look at the bars, and note 7
 (whether the strip reads as buttons) on a real bar.
 Also on the 13d preview since 0.9.1: the update screen ends on the steps
@@ -59,11 +58,9 @@ release** (George, 2026-10-04): never push a release onto an open PR.
 | Released in 0.8.7 | The new-screen notice and its straight switch (29a3386, 88ee721, d91a4bc); a USB disk kept 7 days after unplugging (ADR-0115 decision 17, ddf088f); setup's copy fixes from the review (963857d-034fb33); genre pills kept to two rows on the artist page (7cd3e1b); skin packs fetched from the channel's release when the player's own is unpublished, a stale pack failure no longer shown, failures in words (efd329d); Finding 109's playback test; 13a/13c/13e closed |
 
 **`gexis` right now (2026-10-06):** the 13d preview with `phase-13b`
-merged - core, player and ui `0.9.1+git40.3268a58` (13f's standard
-screens and their fixes; the bar build, git42, is built in the 13d
-worktree's `packaging/out` but not installed), Extended navigation on,
-on the 10.1" 1280 x 800. Playing when last looked at - check before any
-restart.
+merged - core, player and ui `0.9.1+git42.ba6900a` (13f, Standard and
+Bar), Extended navigation on, on the 10.1" 1280 x 800. Check playback
+before any restart.
 
 **Next, in order:**
 0. **Fixes after 0.9.0, on gexis, unreleased** (George's findings,
