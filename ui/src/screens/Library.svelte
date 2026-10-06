@@ -960,13 +960,15 @@
     if (menu.items.every((r) => r.kind === 'text')) return parent;
     const hint = menu.items.find((r) => r.hint)?.hint;
     // Tracks carry an artist under the title; a station's streams do not.
-    const tracks = menu.items.some((r) => r.kind === 'play' && r.subtitle) || here.ctx?.from?.kind === 'container';
+    // A track Qobuz cannot stream is an unavailable folder with a subtitle.
+    const leaf = (r) => r.kind === 'play' || (r.unavailable && r.kind === 'folder' && !!r.subtitle);
+    const tracks = menu.items.some((r) => leaf(r) && r.subtitle) || here.ctx?.from?.kind === 'container' || !!here.ctx?.from?.unavailable;
     const noun = here.ctx?.apps ? 'apps' : MENU_NOUNS[hint] ?? (tracks ? 'tracks' : 'items');
     // A whole list in hand counts what it shows: an app's album page is its
     // tracks and then lines of text.
     const whole = menu.items.length >= menu.count;
     // An album page's links (Artist, Credits) are not among its tracks.
-    const shown = menu.items.filter((r) => (tracks ? r.kind === 'play' : r.kind !== 'text'));
+    const shown = menu.items.filter((r) => (tracks ? leaf(r) : r.kind !== 'text'));
     // Nothing named (TIDAL signed out: one unnamed item) counts nothing.
     const n = !shown.some((r) => r.label) ? 0 : whole ? shown.length : menu.count;
     if (!n) return parent;
