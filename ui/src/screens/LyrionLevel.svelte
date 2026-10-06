@@ -191,8 +191,12 @@
 
   // ── Cards at an app's first level: the search as a field-button, and
   //    several searches as one field with a chip per kind ─────────────────
-  const searches = $derived(nonText.filter((r) => r.kind === 'search'));
-  const others = $derived(nonText.filter((r) => r.kind !== 'search'));
+  //: An app's "Search" folder (Qobuz's, Spotty's: "New search" and the
+  //: searches before it) is a search too: decision E keeps no history, so
+  //: it opens straight to the field (George, 2026-10-06: one tap).
+  const searchy = (r) => r.kind === 'search' || (!!ctx.appTop && r.kind === 'folder' && /^search$/i.test(r.label));
+  const searches = $derived(nonText.filter(searchy));
+  const others = $derived(nonText.filter((r) => !searchy(r)));
   let kind = $state(0);
   $effect(() => {
     page;

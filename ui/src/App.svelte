@@ -272,9 +272,25 @@
         return;
       }
       if (!$active) return;
+      // ADR-0122 from the phone: down to the strip, the library as left.
+      if (ask.to === 'minimise') {
+        libraryRequested = !lmsOff;
+        return;
+      }
       libraryRequested = false;
       if (ask.to === 'lyrics' || ask.to === 'track') lyricsAsk.set({ on: ask.to === 'lyrics' });
     });
+  });
+
+  //: ...and whether Now Playing is what the glass shows, so the phone's Now
+  //: playing is a toggle: up, it minimises; down, it brings it up (George,
+  //: 2026-10-06).
+  let reportedNow = null;
+  $effect(() => {
+    const showing = !!$active && !libraryOpen && !settingsOpen && !waitingOpen && !idle;
+    if (surface !== 'panel' || showing === reportedNow) return;
+    reportedNow = showing;
+    reportShown({ now: showing }).catch(() => (reportedNow = null));
   });
 
   let reportedLyrics = null;

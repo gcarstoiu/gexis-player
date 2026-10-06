@@ -126,6 +126,7 @@
 
   onDestroy(() => {
     cancelAnimationFrame(moveFrame);
+    cancelAnimationFrame(scrollFrame);
     clearTimeout(hideTimer);
     clearInterval(lookTimer);
   });
@@ -180,11 +181,20 @@
   //: page; now the frame's moves are added up and asked about once.
   let moved = { dx: 0, dy: 0 };
   let moveFrame = 0;
+  //: **And bunches are spread** (ADR-0121 §3, amended 2026-10-06): the
+  //: pointer covers most of what is owed each frame and the rest the next,
+  //: so three moves arriving together read as a glide, not a jump. A move
+  //: that has stopped arriving is caught up within about four frames.
+  const CATCH_UP = 0.6;
   function applyMove() {
     moveFrame = 0;
-    x = edge(x + moved.dx * speed, window.innerWidth, 'x');
-    y = edge(y + moved.dy * speed, window.innerHeight, 'y');
-    moved = { dx: 0, dy: 0 };
+    const done = Math.abs(moved.dx) + Math.abs(moved.dy) < 1.5;
+    const sx = done ? moved.dx : moved.dx * CATCH_UP;
+    const sy = done ? moved.dy : moved.dy * CATCH_UP;
+    x = edge(x + sx * speed, window.innerWidth, 'x');
+    y = edge(y + sy * speed, window.innerHeight, 'y');
+    moved = { dx: moved.dx - sx, dy: moved.dy - sy };
+    if (!done) moveFrame = requestAnimationFrame(applyMove);
     wake();
     look();
   }
@@ -236,9 +246,36 @@
   /** **The content follows the fingers**, as on the phone's own screen:
    *  fingers up move the list up. What scrolls is the nearest thing under
    *  the pointer that scrolls that way; the page otherwise. */
+  //: **A scroll glides** (George, 2026-10-06: "scrolling is somewhat choppy
+  //: as well. When doing it by touch it just works fine"): each message was
+  //: applied whole, and Wi-Fi delivers them in bunches, so a list stepped.
+  //: What is owed is spread over frames, half of it each frame.
+  let owed = { el: null, axis: 'y', left: 0 };
+  let scrollFrame = 0;
   function scroll(dx, dy) {
-    if (dy) scroller(under(), 'y')?.scrollBy({ top: -dy * speed, behavior: 'instant' });
-    if (dx) scroller(under(), 'x')?.scrollBy({ left: -dx * speed, behavior: 'instant' });
+    const axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+    const by = -(axis === 'x' ? dx : dy) * speed;
+    if (!by) return;
+    const el = scroller(under(), axis);
+    if (el !== owed.el || axis !== owed.axis) owed = { el, axis, left: 0 };
+    owed.left += by;
+    if (!scrollFrame) scrollFrame = requestAnimationFrame(glide);
+  }
+  function glide() {
+    scrollFrame = 0;
+    const { el, axis } = owed;
+    if (!el) return;
+    // Whole pixels: a scroll offset drops a fraction, and the remainder
+    // carries to the next frame rather than being lost.
+    const step = Math.round(Math.abs(owed.left) < 2 ? owed.left : owed.left * 0.5);
+    if (!step) {
+      owed.left = 0;
+      return;
+    }
+    owed.left -= step;
+    if (axis === 'x') el.scrollLeft += step;
+    else el.scrollTop += step;
+    if (owed.left) scrollFrame = requestAnimationFrame(glide);
   }
 
   function scroller(element, axis) {
