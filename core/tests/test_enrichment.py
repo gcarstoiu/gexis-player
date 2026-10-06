@@ -537,3 +537,46 @@ def test_a_stored_nobody_is_believed_for_a_week():
     # A found one is not aged out.
     assert cache.recall("mb-artist", "ac dc", missing_ttl=7 * 24 * 3600) == ["66c6", 100]
     assert cache.forget_missing("mb-artist") == 1
+
+
+@pytest.mark.asyncio
+async def test_an_albums_answer_is_one_whatever_the_tracks_length():
+    """The same track came as 290 s from LMS and 293 s over Bluetooth, and
+    its album was looked up twice."""
+    cover = FakeProvider("coverart", [_found(album_art="https://cover")])
+    lyrics = FakeProvider("lrclib", [_found(lyrics="la")])
+    service = EnrichmentService([cover, lyrics], _cache())
+    one = TrackKey.of(TrackMetadata(title="I Wanna Dance", artist="Whitney Houston", album="Whitney", duration=290))
+    two = TrackKey.of(TrackMetadata(title="So Emotional", artist="Whitney Houston", album="Whitney", duration=293))
+    await service.for_track(one)
+    found = await service.for_track(two)
+    assert found.album_art == "https://cover"
+    assert cover.calls == 1
+    # Lyrics are the track's own.
+    assert lyrics.calls == 2
+
+
+@pytest.mark.asyncio
+async def test_a_match_below_the_threshold_stays_refused_from_the_cache():
+    """A cached answer came back at the default 100: refused once, then
+    believed."""
+    weak = FakeProvider("coverart", [Answer(Outcome.FOUND, Enrichment(album_art="https://wrong"), confidence=40)])
+    service = EnrichmentService([weak], _cache(), confidence_min=90)
+    assert (await service.for_track(KEY)).album_art is None
+    assert (await service.for_track(KEY)).album_art is None
+    assert weak.calls == 1
+
+
+@pytest.mark.asyncio
+async def test_the_covers_are_started_first():
+    started = []
+
+    class Note(FakeProvider):
+        async def fetch(self, key):
+            started.append(self.name)
+            return await super().fetch(key)
+
+    service = EnrichmentService([Note("wikipedia", []), Note("mb-release", []), Note("coverart", []),
+                                 Note("recording-art", [])], _cache())
+    await service.for_track(KEY)
+    assert started[:2] == ["coverart", "recording-art"]

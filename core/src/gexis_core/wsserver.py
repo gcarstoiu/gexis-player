@@ -55,7 +55,7 @@ ARTIST_BATCH = 12
 ARTIST_FANART_TRIES = 3
 from dataclasses import replace
 
-from gexis_core.enrichment import Enrichment, TrackKey, fold
+from gexis_core.enrichment import ARTWORK_PROVIDERS, Enrichment, TrackKey, fold
 from gexis_core.library import LibraryUnavailable, NoPlayer, NotFound
 from gexis_core.menus import MenusUnavailable
 from gexis_core.radio import RadioUnavailable, UnknownHandle
@@ -1136,9 +1136,14 @@ class StateServer:
         # rather than from a lookup - and fanart is not asked for a picture
         # we are already holding.
         swept = self.swept_portrait_of(state.metadata.artist, PHOTO_LARGE)
+        omit = ("fanart",) if swept else ()
+        # A cover is looked for only when the renderer sent none (2026-10-06):
+        # LMS's own artwork made every LMS track spend MusicBrainz's allowance
+        # on a cover nobody would draw.
+        if state.metadata.artwork:
+            omit += ARTWORK_PROVIDERS
         found = await self._enrichment.for_track(
-            key, renderer=state.active, pending=pending,
-            omit=("fanart",) if swept else (),
+            key, renderer=state.active, pending=pending, omit=omit,
         )
         if swept:
             found = replace(found, artist_image=swept)
