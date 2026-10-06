@@ -16,8 +16,10 @@
   import { tick } from 'svelte';
   import Disc from '../lib/Disc.svelte';
   import Glyph from '../lib/Glyph.svelte';
+  import JumpStrip from './bar/JumpStrip.svelte';
+  import { dragScroll } from './bar/sideways.svelte.js';
   import { rgba } from '../lib/glyphs.js';
-  import { T, MY_MUSIC, MY_MUSIC_GROUPS, shapeFor, initials, railLetter, playCount, fact } from '../lib/lyrionLooks.js';
+  import { T, MY_MUSIC, MY_MUSIC_GROUPS, shapeFor, initials, railLetter, playCount, fact, levelLayout, hasCover } from '../lib/lyrionLooks.js';
 
   let {
     page = null,
@@ -36,38 +38,19 @@
     onmore,
     onearlier,
     onretry,
+    //: The Bar family (the handover's §Frame — Bar): lists run sideways
+    //: where a 400 px screen has room for one row, the letter strip
+    //: replaces the rail, and the bar's head column holds the title and
+    //: Play all. `wide` is the 1850 layout.
+    bar = false,
+    wide = false,
   } = $props();
+  const D = $derived(bar ? 42 : 46);
 
   const items = $derived(page?.items ?? []);
   const nonText = $derived(items.filter((r) => r.kind !== 'text'));
-  const share = (test) => (nonText.length ? nonText.filter(test).length / nonText.length : 0);
-  const hasCover = (r) => !!r.image && !/\/html\//.test(r.image);
 
-  //: The layout, from the entries and what opened them (the handover's
-  //: "Interactions": covers -> grid, play -> leaf rows, folder -> rows or
-  //: cards, search -> field).
-  const layout = $derived.by(() => {
-    if (failed) return 'unreachable';
-    if (loading || !page) return 'loading';
-    if (page.node === 'myMusic') return 'groups';
-    if (ctx.apps) return 'apps';
-    if (!nonText.length) {
-      if (ctx.favourites) return 'favEmpty';
-      return 'nothing';
-    }
-    if (ctx.appTop && nonText.length === 1 && !nonText[0].label) return 'notSignedIn';
-    if (ctx.favourites) return 'favourites';
-    if (ctx.appTop) return 'cards';
-    if (share((r) => r.hint === 'year') >= 0.6) return 'years';
-    if (share((r) => (r.kind === 'container' || r.kind === 'folder') && hasCover(r)) >= 0.6) return 'covers';
-    if (share((r) => r.hint === 'genre') >= 0.6) return 'genres';
-    if (share((r) => r.hint === 'artist') >= 0.6) return ctx.opens === 'ranked' ? 'ranked' : 'artists';
-    if (share((r) => r.kind === 'play') >= 0.6) {
-      return ctx.from && hasCover(ctx.from) && ctx.from.kind === 'container' ? 'album' : 'tracks';
-    }
-    if (nonText.some((r) => r.kind === 'play')) return 'folder';
-    return 'cards';
-  });
+  const layout = $derived(levelLayout(page, ctx, { loading, failed }));
 
   // ── Leaf rows: one selected at a time ─────────────────────────────────
   let selected = $state(null);
@@ -104,6 +87,7 @@
   let seen = $state(null);
   const onLetter = $derived(seen ?? (items.length ? letterOf(items[0]) : null));
   let rowsBox = $state(null);
+  let coversBox = $state(null);
   $effect(() => {
     page?.handle;
     seen = null;
@@ -112,13 +96,21 @@
   async function jump(l) {
     await onjump?.(l, letters[l]);
     await tick();
-    rowsBox?.querySelector(`[data-letter="${l}"]`)?.scrollIntoView({ block: 'start' });
+    const head = rowsBox?.querySelector(`[data-letter="${l}"]`);
+    if (head) head.scrollIntoView({ block: 'start' });
+    else if (coversBox) coversBox.scrollTop = coversBox.scrollLeft = 0;
     seen = l;
   }
+  //: A mouse drags a bar's sideways lists (sideways.svelte.js); the
+  //: Standard family's lists run down and are left alone.
+  function across(node, on) {
+    return on ? dragScroll(node) : {};
+  }
+  const STRIP_TINT = { genres: '242, 164, 143', artists: '159, 180, 232', covers: '126, 214, 188' };
   function scrollOf(node) {
     for (let n = node.parentElement; n; n = n.parentElement) {
-      const o = getComputedStyle(n).overflowY;
-      if (o === 'auto' || o === 'scroll') return n;
+      const st = getComputedStyle(n);
+      if (/auto|scroll/.test(st.overflowY) || /auto|scroll/.test(st.overflowX)) return n;
     }
     return null;
   }
@@ -209,7 +201,7 @@
   });
 
   function nearEnd(node) {
-    const io = new IntersectionObserver((e) => e.some((x) => x.isIntersecting) && onmore?.(), { rootMargin: '600px' });
+    const io = new IntersectionObserver((e) => e.some((x) => x.isIntersecting) && onmore?.(), { root: scrollOf(node), rootMargin: '600px' });
     io.observe(node);
     return { destroy: () => io.disconnect() };
   }
@@ -219,11 +211,14 @@
     const box = scrollOf(node);
     const io = new IntersectionObserver(async (e) => {
       if (!e.some((x) => x.isIntersecting) || !box) return;
-      const below = box.scrollHeight - box.scrollTop;
+      // A bar's sideways list keeps its place along x.
+      const across = box.scrollWidth > box.clientWidth;
+      const after = across ? box.scrollWidth - box.scrollLeft : box.scrollHeight - box.scrollTop;
       await onearlier?.();
       await tick();
-      box.scrollTop = box.scrollHeight - below;
-    }, { rootMargin: '200px' });
+      if (across) box.scrollLeft = box.scrollWidth - after;
+      else box.scrollTop = box.scrollHeight - after;
+    }, { root: box, rootMargin: '200px' });
     io.observe(node);
     return { destroy: () => io.disconnect() };
   }
@@ -232,11 +227,11 @@
   const fmt = (n) => Number(n).toLocaleString('en-GB');
 </script>
 
-{#snippet actionsFor(row)}
+{#snippet actionsFor(row, short = false)}
   <span class="acts">
-    {#if row.can?.includes('play')}<button class="act act--play" type="button" onclick={(e) => { e.stopPropagation(); onact?.(row, 'play'); }}><span class="tri"></span><span>Play</span></button>{/if}
-    {#if row.can?.includes('next')}<button class="act" type="button" onclick={(e) => { e.stopPropagation(); onact?.(row, 'next'); }}><span class="nexti"><span class="tri tri--s"></span><b></b></span><span>Play next</span></button>{/if}
-    {#if row.can?.includes('add')}<button class="act" type="button" onclick={(e) => { e.stopPropagation(); onact?.(row, 'add'); }}><span class="plus"></span><span>Add</span></button>{/if}
+    {#if row.can?.includes('play')}<button class="act act--play" class:act--sq={short} type="button" aria-label="Play" onclick={(e) => { e.stopPropagation(); onact?.(row, 'play'); }}><span class="tri"></span>{#if !short}<span>Play</span>{/if}</button>{/if}
+    {#if row.can?.includes('next')}<button class="act" type="button" onclick={(e) => { e.stopPropagation(); onact?.(row, 'next'); }}>{#if !short}<span class="nexti"><span class="tri tri--s"></span><b></b></span>{/if}<span>{short ? 'Next' : 'Play next'}</span></button>{/if}
+    {#if row.can?.includes('add')}<button class="act" type="button" onclick={(e) => { e.stopPropagation(); onact?.(row, 'add'); }}>{#if !short}<span class="plus"></span>{/if}<span>Add</span></button>{/if}
   </span>
 {/snippet}
 
@@ -252,7 +247,7 @@
     onclick={() => tap(r)}
   >
     {#if opts.num != null}<span class="num" class:num--top={opts.num <= 3 && opts.podium}>{opts.num}</span>{/if}
-    {#if lead.disc}<Disc name={lead.disc} tint={lead.tint} size={46} />{:else if lead.thumb && !r.image}<Disc name={r.subtitle ? 'Note' : 'Rss'} tint={r.subtitle ? T.coral : T.amber} size={46} />{:else if lead.thumb}<span class="thumb"><img src={r.image} alt="" loading="lazy" /></span>{:else if lead.init}<span class="init">{initials(r.label)}</span>{/if}
+    {#if lead.disc}<Disc name={lead.disc} tint={lead.tint} size={D} />{:else if lead.thumb && !r.image}<Disc name={r.subtitle ? 'Note' : 'Rss'} tint={r.subtitle ? T.coral : T.amber} size={D} />{:else if lead.thumb}<span class="thumb"><img src={r.image} alt="" loading="lazy" /></span>{:else if lead.init}<span class="init">{initials(r.label)}</span>{/if}
     <span class="row__text">
       <span class="row__label" class:is-unnamed={!r.label}>{r._unnamed ? 'No name' : pc.label || 'No name'}</span>
       {#if r.subtitle}<span class="row__sub">{r.subtitle}</span>{/if}
@@ -278,7 +273,9 @@
 {/snippet}
 
 {#snippet rail()}
-  {#if alphabetical}
+  {#if alphabetical && bar}
+    <div class="strip"><JumpStrip have={(l) => l in letters} on={onLetter} tint={STRIP_TINT[layout] ?? STRIP_TINT.artists} onpick={jump} /></div>
+  {:else if alphabetical}
     <div class="rail">
       {#each RAIL as l (l)}
         {@const have = l in letters}
@@ -290,15 +287,33 @@
 
 {#snippet stateBlock(glyph, tint, title, body, retry)}
   <div class="state">
-    <Disc name={glyph} {tint} size={92} />
-    <div class="state__title">{title}</div>
-    <div class="state__body">{body}</div>
-    {#if retry}<button class="retry" type="button" onclick={() => onretry?.()}>Retry</button>{/if}
+    <Disc name={glyph} {tint} size={bar ? 72 : 92} />
+    <div class="state__text">
+      <div class="state__title">{title}</div>
+      <div class="state__body">{body}</div>
+      {#if retry}<button class="retry" type="button" onclick={() => onretry?.()}>Retry</button>{/if}
+    </div>
   </div>
 {/snippet}
 
+{#snippet albumFacts()}
+  {#if album.facts.length}
+    {#if !bar}<div class="sechead sechead--release"><span>Release</span><i></i></div>{/if}
+    <div class="facts">
+      {#each album.facts as [k, v] (k)}<div><div class="facts__k">{k}</div><div class="facts__v">{v}</div></div>{/each}
+    </div>
+  {/if}
+  {#if album.links.length}
+    <div class="links">
+      {#each album.links as l (l.row.handle)}
+        <button class="link" type="button" onclick={() => tap(l.row)}><span class="link__k">{l.kv[0]}</span>{#if l.kv[1]}<span class="link__v">{l.kv[1]}</span>{/if}<span class="chev"></span></button>
+      {/each}
+    </div>
+  {/if}
+{/snippet}
+
 {#snippet playAll(label)}
-  {#if ctx.from?.can?.includes('play')}
+  {#if !bar && ctx.from?.can?.includes('play')}
     <div class="playall">
       <button class="playall__go" type="button" onclick={() => onact?.(ctx.from, 'play')}><span class="tri tri--l"></span><span>{label}</span></button>
       <span class="playall__rule"></span>
@@ -307,7 +322,7 @@
   {/if}
 {/snippet}
 
-<div class="level">
+<div class="level" class:level--bar={bar} class:level--wide={wide}>
   {#if layout === 'loading'}
     <div class="pad loading">
       {#if ctx.opens === 'covers'}
@@ -331,6 +346,27 @@
     {@render stateBlock('Heart', T.pink, 'No favourites yet', 'Favourites you add in Lyrion, from any app or the library, appear here.', false)}
   {:else if layout === 'notSignedIn'}
     {@render stateBlock('Person', T.slate, `${ctx.app ?? 'This app'} isn’t signed in`, `Sign in to ${ctx.app ?? 'it'} in Lyrion’s own settings. Its menus appear here once it is.`, false)}
+  {:else if layout === 'groups' && bar}
+    <!-- My Music on a bar: the groups run sideways, five rows each. -->
+    <div class="bgroups" use:across={bar}>
+      {#each MY_MUSIC_GROUPS as g (g.key)}
+        {@const entries = items.filter((r) => (MY_MUSIC[r.id]?.[0] ?? 'more') === g.key)}
+        {#if entries.length}
+          <div class="bgroup">
+            <div class="group__head"><span style:color={g.ink}>{g.name}</span><i></i></div>
+            <div class="bgroup__grid">
+              {#each entries as r (r.handle)}
+                {@const look = MY_MUSIC[r.id] ?? ['more', ...shapeFor(r.label, r.hint)]}
+                <button class="entry" class:is-busy={busy === r.handle} type="button" onclick={() => tap(r)}>
+                  <Disc name={look[1]} tint={look[2]} size={D} />
+                  <span class="entry__label">{r.label}</span>
+                </button>
+              {/each}
+            </div>
+          </div>
+        {/if}
+      {/each}
+    </div>
   {:else if layout === 'groups'}
     <!-- My Music: four columns, every entry visible from 711 to 853 tall. -->
     <div class="groups">
@@ -356,7 +392,7 @@
     </div>
   {:else if layout === 'apps'}
     <div class="pad scroll">
-      <div class="cards">
+      <div class="cards" style:--rows={2} use:across={bar}>
         {#each nonText as r (r.handle)}
           <button class="card" type="button" class:is-busy={busy === r.handle} onclick={() => tap(r)}>
             <span class="logo">{#if r.image}<img src={r.image} alt="" />{:else}{initials(r.label)}{/if}</span>
@@ -375,7 +411,7 @@
           <span class="fieldbtn__phone"><Glyph name="Phone" ink="rgba(233,238,242,0.62)" /><span>Type on your phone</span></span>
         </button>
         {#if searches.length >= 3}
-          <div class="chips">
+          <div class="chips" use:across={bar}>
             {#each searches as s, i (s.handle)}
               <button class="chip" class:is-on={i === kind} type="button" onclick={() => (kind = i)}>{s.label}</button>
             {/each}
@@ -386,12 +422,12 @@
         {@const sections = searches.length >= 3 ? [['Lists', others]] : others.some((r) => r.kind === 'play') && others.some((r) => r.kind !== 'play') ? [['Mixes', others.filter((r) => r.kind !== 'play')], ['Streams', others.filter((r) => r.kind === 'play')]] : [[null, others]]}
         {#each sections as [headLabel, cards] (headLabel ?? 'all')}
           {#if headLabel}<div class="sechead"><span>{headLabel}</span><i></i></div>{/if}
-          <div class="cards">
+          <div class="cards" style:--rows={searches.length >= 3 || sections.length > 1 ? 1 : 2} use:across={bar}>
             {#each cards as r, i (r.handle)}
               {@const look = r.kind === 'play' ? ['Rss', [T.amber, T.pink, T.sky, T.green][i % 4]] : headLabel === 'Mixes' ? ['Arcs', [T.mint, T.sky, T.coral, T.blue, T.lilac, T.green][i % 6]] : shapeFor(r.label, r.hint)}
               {@const isSel = r.kind === 'play' && selected === r.handle}
               <button class="card" class:is-sel={isSel} class:is-busy={busy === r.handle} type="button" onclick={() => tap(r)}>
-                <Disc name={look[0]} tint={look[1]} size={54} />
+                <Disc name={look[0]} tint={look[1]} size={bar ? 42 : 54} />
                 <span class="card__text">
                   <span class="card__label">{r.label || 'No name'}</span>
                   {#if r.subtitle}<span class="card__sub">{r.subtitle}</span>{/if}
@@ -408,13 +444,13 @@
     </div>
   {:else if layout === 'covers'}
     <div class="withrail">
-      <div class="pad scroll">
+      <div class="pad scroll coversl" bind:this={coversBox} use:across={bar}>
         {#if earlier}<div class="more" use:nearStart></div>{/if}
         <div class="covers">
           {#each items as r, i (r.handle ?? `t${i}`)}
             {#if r.kind !== 'text'}
               <button class="cover" class:is-busy={busy === r.handle} type="button" onclick={() => tap(r)}>
-                <span class="cover__art">{#if hasCover(r)}<img src={r.image} alt="" loading="lazy" />{:else}{@const look = shapeFor(r.label, r.hint)}<Disc name={look[0]} tint={look[1]} size={92} />{/if}</span>
+                <span class="cover__art">{#if hasCover(r)}<img src={r.image} alt="" loading="lazy" />{:else}{@const look = shapeFor(r.label, r.hint)}<Disc name={look[0]} tint={look[1]} size={bar ? 72 : 92} />{/if}</span>
                 <span class="cover__t" class:is-unnamed={!r.label}>{r.label || 'No name'}</span>
                 <span class="cover__s">{r.subtitle ?? ''}</span>
               </button>
@@ -426,10 +462,10 @@
       {@render rail()}
     </div>
   {:else if layout === 'years'}
-    <div class="pad scroll years">
+    <div class="pad scroll years" use:across={bar}>
       {#each decades as [name, ys] (name)}
         <div class="decade">
-          <div class="decade__label"><Disc name="Calendar" tint={T.amber} size={46} /><span>{name}</span></div>
+          <div class="decade__label"><Disc name="Calendar" tint={T.amber} size={D} /><span>{name}</span></div>
           <div class="decade__years">
             {#each ys as r (r.handle)}
               <button class="year" type="button" class:is-busy={busy === r.handle} onclick={() => tap(r)}>{r.label}</button>
@@ -443,44 +479,35 @@
     <div class="albumpage">
       <div class="albumpage__side">
         <span class="albumpage__cover">{#if ctx.from?.image}<img src={ctx.from.image} alt="" />{/if}</span>
-        <div class="albumpage__title">{ctx.from?.label ?? page.title}</div>
-        <div class="albumpage__by">
-          {#if ctx.from?.subtitle}<span class="albumpage__artist">{ctx.from.subtitle}</span>{/if}
-          {#if album.year}<span class="albumpage__year">· {album.year}</span>{/if}
-        </div>
+        {#if !bar}
+          <div class="albumpage__title">{ctx.from?.label ?? page.title}</div>
+          <div class="albumpage__by">
+            {#if ctx.from?.subtitle}<span class="albumpage__artist">{ctx.from.subtitle}</span>{/if}
+            {#if album.year}<span class="albumpage__year">· {album.year}</span>{/if}
+          </div>
+        {/if}
         <div class="albumpage__acts">
           {#if ctx.from?.can?.includes('play')}<button class="big big--play" type="button" onclick={() => onact?.(ctx.from, 'play')}><span class="tri tri--l"></span>Play album</button>{/if}
           {#if ctx.from?.can?.includes('add')}<button class="big" type="button" onclick={() => onact?.(ctx.from, 'add')}><span class="plus plus--l"></span>Add to queue</button>{/if}
         </div>
       </div>
       <div class="albumpage__main scroll">
-        <div class="tracks__head"><span>Tracks</span><span>{album.tracks.length}</span></div>
+        {#if !bar}<div class="tracks__head"><span>Tracks</span><span>{album.tracks.length}</span></div>{/if}
         {#each album.tracks as r, i (r.handle)}
           {@const isSel = selected === r.handle}
           <button class="trow" class:is-sel={isSel} type="button" onclick={() => tapLeaf(r)}>
             <span class="trow__n">{String(i + 1).padStart(2, '0')}</span>
             <span class="trow__t">{r.label}</span>
-            {#if isSel}{@render actionsFor(r)}{/if}
+            {#if isSel}{@render actionsFor(r, bar)}{/if}
           </button>
         {/each}
-        {#if album.facts.length}
-          <div class="sechead sechead--release"><span>Release</span><i></i></div>
-          <div class="facts">
-            {#each album.facts as [k, v] (k)}<div><div class="facts__k">{k}</div><div class="facts__v">{v}</div></div>{/each}
-          </div>
-        {/if}
-        {#if album.links.length}
-          <div class="links">
-            {#each album.links as l (l.row.handle)}
-              <button class="link" type="button" onclick={() => tap(l.row)}><span class="link__k">{l.kv[0]}</span>{#if l.kv[1]}<span class="link__v">{l.kv[1]}</span>{/if}<span class="chev"></span></button>
-            {/each}
-          </div>
-        {/if}
+        {#if !bar}{@render albumFacts()}{/if}
       </div>
+      {#if bar}<div class="albumpage__facts scroll">{@render albumFacts()}</div>{/if}
     </div>
   {:else}
     <!-- Rows: genres, artists, ranked, folders, tracks, favourites. -->
-    {@const cols = layout === 'genres' || layout === 'artists' ? 3 : layout === 'ranked' || layout === 'favourites' ? 2 : 1}
+    {@const cols = layout === 'genres' || layout === 'artists' ? (wide ? 5 : 3) : layout === 'ranked' || layout === 'favourites' ? (wide ? 3 : 2) : wide ? 2 : 1}
     <div class="withrail">
       <div class="pad scroll rowsl" bind:this={rowsBox} use:watchLetters>
         {#if layout === 'folder'}{@render playAll(ctx.from?.hint === 'folder' || ctx.opens === 'folder' ? 'Play folder' : 'Play all')}{/if}
@@ -521,11 +548,12 @@
 </div>
 
 <style>
-  .level { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  /* min-width 0: in a bar's row a sideways list must not widen the level. */
+  .level { position: relative; flex: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; }
   .pad { padding: 22px 40px 24px; box-sizing: border-box; }
   .scroll { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; touch-action: pan-y; }
   .scroll::-webkit-scrollbar { display: none; }
-  .withrail { flex: 1; min-height: 0; display: flex; }
+  .withrail { flex: 1; min-height: 0; min-width: 0; display: flex; }
   .withrail > .scroll { min-width: 0; }
   .more { height: 1px; }
   button { font: inherit; color: inherit; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
@@ -677,4 +705,78 @@
   @keyframes pulse { 50% { filter: opacity(0.55); } }
   .waiting { display: flex; align-items: center; justify-content: center; gap: 12px; font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(233, 238, 242, 0.62); }
   .dot { width: 8px; height: 8px; border-radius: 50%; background: #7ed6bc; display: block; }
+  /* ── The Bar family (the handover's §Frame — Bar): 400 tall ─────────── */
+  .level--bar .pad { padding: 22px 28px 22px; }
+  .level--bar .withrail { flex-direction: column; }
+  .strip { flex-shrink: 0; padding: 0 28px 22px; }
+  .level--bar .row { height: 52px; border-radius: 12px; gap: 14px; }
+  .level--bar .row--two { height: 60px; }
+  .level--bar .row__label { font-size: 19px; }
+  .level--bar .row__sub { font-size: 14px; }
+  .level--bar .thumb, .level--bar .init { width: 42px; height: 42px; }
+  .level--bar .init { font-size: 15px; }
+  .level--bar .act { height: 46px; }
+  .act--sq { width: 46px; padding: 0; justify-content: center; }
+  .level--bar .head { padding-top: 10px; padding-bottom: 6px; }
+  .level--bar .head--first { padding-top: 0; }
+  /* Sideways: a finger pans them natively, the phone's touchpad scrolls x. */
+  .level--bar .bgroups, .level--bar .coversl, .level--bar .years, .level--bar .cards, .level--bar .chips {
+    overflow-x: auto; overflow-y: hidden; touch-action: pan-x; scrollbar-width: none; overscroll-behavior-x: contain;
+  }
+  .level--bar .bgroups::-webkit-scrollbar, .level--bar .coversl::-webkit-scrollbar, .level--bar .years::-webkit-scrollbar,
+  .level--bar .cards::-webkit-scrollbar, .level--bar .chips::-webkit-scrollbar { display: none; }
+  /* My Music: groups sideways, five 56 px rows in 250 px columns. */
+  .bgroups { flex: 1; min-height: 0; display: flex; gap: 28px; padding: 22px 28px; box-sizing: border-box; }
+  .bgroup { flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
+  .bgroup__grid { display: grid; grid-auto-flow: column; grid-template-rows: repeat(5, 56px); grid-auto-columns: 250px; gap: 6px 10px; }
+  .bgroup .entry { max-height: none; min-height: 0; border-radius: 14px; gap: 12px; padding: 0 12px 0 7px; }
+  .bgroup .entry__label { font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Cards: 300 px columns flowing sideways, one or two rows. */
+  .level--bar .cardlevel { overflow: hidden; gap: 12px; }
+  .level--bar .cards { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 300px; grid-template-rows: repeat(var(--rows, 2), 96px); gap: 14px; flex-shrink: 0; }
+  .level--bar .card { gap: 14px; padding: 0 18px 0 16px; }
+  .level--bar .card__label { font-size: 19px; }
+  .level--bar .logo { width: 54px; height: 54px; }
+  .level--bar .fieldbtn { height: 60px; border-radius: 16px; }
+  .level--bar .fieldbtn__label { font-size: 19px; }
+  .level--bar .chips { flex-wrap: nowrap; }
+  .level--bar .chip { height: 48px; font-size: 17px; }
+  /* Covers: one sideways row of 200 px covers above the strip. */
+  .level--bar .coversl { display: flex; align-items: flex-start; }
+  .level--bar .coversl > .more { width: 1px; height: 1px; flex-shrink: 0; }
+  .level--bar .covers { display: flex; gap: 22px; }
+  .level--bar .cover { width: 200px; flex-shrink: 0; }
+  .level--bar .cover__t { font-size: 16px; margin-top: 8px; }
+  .level--bar .cover__s { font-size: 14px; }
+  .level--bar .loading .covers { overflow: hidden; }
+  .level--bar .loading .skel { width: 200px; flex-shrink: 0; }
+  /* Years: decades sideways, each five rows of 112 x 56 chips. */
+  .level--bar .years { flex-direction: row; gap: 28px; padding-top: 18px; }
+  .level--bar .decade { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+  .level--bar .decade__label { height: 42px; font-size: 15px; }
+  .level--bar .decade__years { grid-template-columns: none; grid-auto-flow: column; grid-template-rows: repeat(5, 56px); grid-auto-columns: 112px; gap: 6px; }
+  .level--bar .year { height: 56px; font-size: 19px; }
+  /* The app album page: a 180 px cover column, the tracks, the facts. */
+  .level--bar .albumpage { gap: 24px; padding: 22px 28px; }
+  .level--bar .albumpage__side { width: 180px; gap: 10px; }
+  .level--bar .albumpage__cover { width: 180px; height: 180px; border-radius: 14px; }
+  .level--bar .big { height: 52px; font-size: 17px; border-radius: 14px; }
+  .level--bar .trow { height: 50px; gap: 14px; }
+  .level--bar .trow__t { font-size: 18px; }
+  .albumpage__facts { width: 250px; flex-shrink: 0; padding-left: 24px; border-left: 1px solid rgba(233, 238, 242, 0.08); }
+  .level--wide .albumpage__facts { width: 420px; }
+  .level--bar .facts { grid-template-columns: 1fr; gap: 10px; }
+  .level--bar .facts > div { display: grid; grid-template-columns: 96px minmax(0, 1fr); align-items: baseline; gap: 10px; }
+  .level--bar .facts__k { font-size: 11px; }
+  .level--bar .facts__v { font-size: 16px; margin-top: 0; }
+  .level--bar .links { margin-top: 16px; gap: 8px; }
+  .level--bar .link { height: 44px; padding: 0 12px 0 16px; }
+  .level--bar .link__v { font-size: 16px; }
+  /* States: the disc on the left, the text on the right. */
+  .level--bar .state { flex-direction: row; text-align: left; gap: 28px; }
+  .level--bar .state__title { font-size: 28px; margin-top: 0; }
+  .level--bar .state__body { font-size: 18px; width: 520px; margin-top: 8px; }
+  .level--bar .retry { height: 52px; margin-top: 14px; }
+  .state__text { display: flex; flex-direction: column; align-items: flex-start; }
+  .level:not(.level--bar) .state__text { align-items: center; gap: 18px; }
 </style>

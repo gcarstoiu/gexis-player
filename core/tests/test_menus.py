@@ -170,6 +170,34 @@ async def test_an_album_page_plays_its_tracks_and_hides_the_entry_that_writes():
 
 
 @pytest.mark.asyncio
+async def test_an_album_asked_for_as_a_context_menu_still_plays_its_tracks():
+    """Qobuz's Bestsellers hand their albums `isContextMenu` (seen
+    2026-10-06): each track then "goes" to Play Control, a list of what to
+    do with it. It is a leaf all the same, played by the base's actions."""
+    class ContextMenu:
+        async def __call__(self, command, player):
+            return {"count": 2, "base": {"actions": {
+                "playControl": {"cmd": ["qobuz", "items"], "itemsParams": "playControlParams",
+                                "params": {"menu": "qobuz", "isContextMenu": "1", "item_id": "5.2"}},
+                "play": {"cmd": ["qobuz", "playlist", "play"], "itemsParams": "params", "nextWindow": "nowPlaying"},
+                "add": {"cmd": ["qobuz", "playlist", "add"], "itemsParams": "params"},
+                "add-hold": {"cmd": ["qobuz", "playlist", "insert"], "itemsParams": "params"},
+            }}, "item_loop": [
+                {"text": "Gjallarhorn\nAmon Amarth - The Allfather Awakens", "goAction": "playControl",
+                 "params": {"isContextMenu": 1, "item_id": "5.2.0"},
+                 "playControlParams": {"xmlbrowserPlayControl": "0"}},
+                {"text": "Artist: Amon Amarth",
+                 "actions": {"go": {"cmd": ["qobuz", "items"], "params": {"menu": "qobuz", "item_id": "5.2.10"}}}},
+            ]}
+    m = menus(ContextMenu())
+    m._handles["album"] = {"kind": "folder", "cmd": ["qobuz", "items"], "params": {"item_id": "5.2"}}
+    rows = {r["label"]: r for r in (await m.browse("album"))["items"]}
+    assert rows["Gjallarhorn"]["kind"] == "play"
+    assert rows["Gjallarhorn"]["can"] == ["add", "next", "play"]
+    assert rows["Artist: Amon Amarth"]["kind"] == "folder"
+
+
+@pytest.mark.asyncio
 async def test_apps_are_folders_and_transfer_playback_is_left_out():
     """A list's base offers play to every item in it; an app is still a
     folder. Spotty's Transfer Playback, by its icon."""

@@ -125,3 +125,32 @@ export function fact(text) {
   const at = (text || '').indexOf(': ');
   return at > 0 ? [text.slice(0, at), text.slice(at + 2)] : [text || '', ''];
 }
+
+/** A cover, not a plugin's stock icon (those are served from /html/). */
+export const hasCover = (r) => !!r?.image && !/\/html\//.test(r.image);
+
+/** **The shape a level takes**, from its entries and what opened them (the
+ *  handover's "Interactions": covers -> grid, play -> leaf rows, folder ->
+ *  rows or cards, search -> field). LyrionLevel draws it; the bar's head
+ *  column asks it too, for Play all. */
+export function levelLayout(page, ctx = {}, { loading = false, failed = null } = {}) {
+  if (failed) return 'unreachable';
+  if (loading || !page) return 'loading';
+  if (page.node === 'myMusic') return 'groups';
+  if (ctx.apps) return 'apps';
+  const nonText = (page.items ?? []).filter((r) => r.kind !== 'text');
+  const share = (test) => (nonText.length ? nonText.filter(test).length / nonText.length : 0);
+  if (!nonText.length) return ctx.favourites ? 'favEmpty' : 'nothing';
+  if (ctx.appTop && nonText.length === 1 && !nonText[0].label) return 'notSignedIn';
+  if (ctx.favourites) return 'favourites';
+  if (ctx.appTop) return 'cards';
+  if (share((r) => r.hint === 'year') >= 0.6) return 'years';
+  if (share((r) => (r.kind === 'container' || r.kind === 'folder') && hasCover(r)) >= 0.6) return 'covers';
+  if (share((r) => r.hint === 'genre') >= 0.6) return 'genres';
+  if (share((r) => r.hint === 'artist') >= 0.6) return ctx.opens === 'ranked' ? 'ranked' : 'artists';
+  if (share((r) => r.kind === 'play') >= 0.6) {
+    return ctx.from && hasCover(ctx.from) && ctx.from.kind === 'container' ? 'album' : 'tracks';
+  }
+  if (nonText.some((r) => r.kind === 'play')) return 'folder';
+  return 'cards';
+}

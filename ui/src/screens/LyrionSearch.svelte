@@ -8,10 +8,14 @@
 -->
 <script>
   import Disc from '../lib/Disc.svelte';
+  import Glyph from '../lib/Glyph.svelte';
   import { T, initials, shapeFor } from '../lib/lyrionLooks.js';
   import { menuSearch } from '../lib/menus.js';
 
-  let { rows = [], text = '', ctx = {}, onopen, onact } = $props();
+  //: On a bar the field is the content's own, at its top (the handover's
+  //: §9: "the field sits at the top of the content, chips under it");
+  //: the Standard family's is in Library's header.
+  let { rows = [], text = $bindable(''), ctx = {}, onopen, onact, bar = false, wide = false } = $props();
 
   //: The designer's tints for the five, by the order Lyrion lists them.
   const KIND_TINT = { artists: T.blue, albums: T.mint, works: T.lilac, songs: T.coral, playlists: T.sky };
@@ -56,21 +60,32 @@
   }
 </script>
 
-<div class="search">
+<div class="search" class:search--bar={bar} class:search--wide={wide}>
+  {#if bar}
+    <label class="field">
+      <Glyph name="Search" ink="#e9eef2" />
+      <input class="field__in" type="search" placeholder="Type on your phone" bind:value={text} autocomplete="off" />
+      <span class="field__phone"><Glyph name="Phone" ink="#7ed6bc" /><span>Typing on phone</span></span>
+    </label>
+  {/if}
   {#if !text.trim() || (!searched && running)}
     <div class="state">
-      <Disc name="Phone" tint={T.mint} size={92} />
-      <div class="state__title">Type on your phone</div>
-      <div class="state__body">
-        The panel has no keyboard. Your phone types into this field; results arrive as you type{rows.length > 1 ? `, across all ${rows.length === 5 ? 'five' : rows.length} searches` : ''}.
+      <Disc name="Phone" tint={T.mint} size={bar ? 72 : 92} />
+      <div class="state__text">
+        <div class="state__title">Type on your phone</div>
+        <div class="state__body">
+          {bar ? 'Results arrive as you type' : 'The panel has no keyboard. Your phone types into this field; results arrive as you type'}{rows.length > 1 ? `, across all ${rows.length === 5 ? 'five' : rows.length} searches` : ''}.
+        </div>
       </div>
     </div>
   {:else if searched && !total}
     <div class="state">
-      <Disc name="Search" tint={T.slate} size={92} />
-      <div class="state__title">Nothing for “{searched}”</div>
-      <div class="state__body">
-        {rows.length > 1 ? `No ${rows.map((r) => r.label.toLowerCase().replace(/s$/, '')).join(', ').replace(/, ([^,]*)$/, ' or $1')} matches.` : 'Nothing matches.'} Check the spelling on your phone.
+      <Disc name="Search" tint={T.slate} size={bar ? 72 : 92} />
+      <div class="state__text">
+        <div class="state__title">Nothing for “{searched}”</div>
+        <div class="state__body">
+          {rows.length > 1 ? `No ${rows.map((r) => r.label.toLowerCase().replace(/s$/, '')).join(', ').replace(/, ([^,]*)$/, ' or $1')} matches.` : 'Nothing matches.'} Check the spelling on your phone.
+        </div>
       </div>
     </div>
   {:else}
@@ -94,7 +109,7 @@
               <button class="row" class:is-sel={isSel} class:row--two={!!r.subtitle} type="button" onclick={() => tap(r)}>
                 {#if r.hint === 'artist'}<span class="init">{initials(r.label)}</span>
                 {:else if hasCover(r)}<span class="thumb"><img src={r.image} alt="" loading="lazy" /></span>
-                {:else}{@const look = shapeFor(r.label, r.hint)}<Disc name={look[0]} tint={look[1]} size={46} />{/if}
+                {:else}{@const look = shapeFor(r.label, r.hint)}<Disc name={look[0]} tint={look[1]} size={bar ? 42 : 46} />{/if}
                 <span class="row__text"><span class="row__label">{r.label}</span>{#if r.subtitle}<span class="row__sub">{r.subtitle}</span>{/if}</span>
                 {#if isSel}
                   <span class="acts">
@@ -113,7 +128,7 @@
 </div>
 
 <style>
-  .search { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .search { flex: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; }
   .scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 22px 40px 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; scrollbar-width: none; touch-action: pan-y; }
   button { font: inherit; color: inherit; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
   button:active { transform: scale(0.95); }
@@ -144,4 +159,27 @@
   .state { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 24px 40px; box-sizing: border-box; text-align: center; }
   .state__title { font-size: 30px; font-weight: 700; letter-spacing: -0.01em; margin-top: 6px; white-space: nowrap; }
   .state__body { font-size: 19px; line-height: 1.5; color: rgba(233, 238, 242, 0.72); width: 560px; max-width: 100%; }
+  .state__text { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  /* ── A bar: the field on top, results four across (five at 1850). ── */
+  .field { flex-shrink: 0; height: 60px; margin: 22px 28px 0; box-sizing: border-box; display: flex; align-items: center; gap: 16px; padding: 0 20px; border-radius: 16px; background: rgba(233, 238, 242, 0.07); border: 1.5px solid #7ed6bc; }
+  .field__in { flex: 1; min-width: 0; appearance: none; background: none; border: 0; outline: none; padding: 0; font: inherit; font-size: 22px; font-weight: 600; color: #e9eef2; caret-color: #7ed6bc; }
+  .field__in::placeholder { color: rgba(233, 238, 242, 0.4); }
+  .field__in::-webkit-search-cancel-button { display: none; }
+  .field__phone { display: flex; align-items: center; gap: 10px; flex-shrink: 0; font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(126, 214, 188, 0.9); }
+  .search--bar .scroll { padding: 14px 28px 22px; gap: 10px; }
+  .search--bar .chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; touch-action: pan-x; }
+  .search--bar .chip { height: 48px; font-size: 17px; }
+  .search--bar .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .search--wide .grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .search--bar .head { padding: 8px 0 4px; }
+  .search--bar .row { height: 52px; border-radius: 12px; gap: 12px; }
+  .search--bar .row--two { height: 58px; }
+  .search--bar .row__label { font-size: 17px; }
+  .search--bar .row__sub { font-size: 13px; }
+  .search--bar .thumb, .search--bar .init { width: 42px; height: 42px; }
+  .search--bar .act { height: 46px; }
+  .search--bar .state { flex-direction: row; text-align: left; gap: 28px; }
+  .search--bar .state__text { align-items: flex-start; gap: 8px; }
+  .search--bar .state__title { font-size: 28px; margin-top: 0; }
+  .search--bar .state__body { font-size: 18px; width: 520px; }
 </style>
