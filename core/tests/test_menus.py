@@ -312,6 +312,15 @@ async def test_a_list_says_where_each_letter_starts():
     asked = len(lyrion.asked)
     await m.letters("list")
     assert len(lyrion.asked) == asked, "read once"
+    # A new opening of the same list is a new handle: still not read again
+    # (2.7 MB for All Artists, and nothing relayed while it parses).
+    m._handles["again"] = {"kind": "folder", "cmd": ["browselibrary", "items"], "params": {"mode": "artists"}}
+    assert (await m.letters("again"))["letters"]["Z"] == 6
+    assert len(lyrion.asked) == asked
+    m._clock = lambda: 10**9
+    m._handles["later"] = {"kind": "folder", "cmd": ["browselibrary", "items"], "params": {"mode": "artists"}}
+    await m.letters("later")
+    assert len(lyrion.asked) == asked + 1, "read again after half an hour"
 
 
 @pytest.mark.asyncio
