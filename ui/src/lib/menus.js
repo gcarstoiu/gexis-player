@@ -72,3 +72,6 @@ export function keepView(where, view) {
     // A panel without storage starts each list in its default view.
   }
 }
+
+/** Where each letter starts in a list: `{letters: {A: 0, B: 412, ...}}`. */
+export const menuLetters = (handle) => call(`/menus/letters?at=${encodeURIComponent(handle)}`);
