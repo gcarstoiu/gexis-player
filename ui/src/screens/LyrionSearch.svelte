@@ -58,13 +58,19 @@
       else selected = row.handle;
     } else if (row.kind !== 'text') onopen?.(row);
   }
+
+  //: The search field takes focus as it opens, so text typed on the phone
+  //: lands in it from the tap that opened it (ADR-0121).
+  function focusOnOpen(node) {
+    requestAnimationFrame(() => node.focus({ preventScroll: true }));
+  }
 </script>
 
 <div class="search" class:search--bar={bar} class:search--wide={wide}>
   {#if bar}
     <label class="field">
       <Glyph name="Search" ink="#e9eef2" />
-      <input class="field__in" type="search" placeholder="Type on your phone" bind:value={text} autocomplete="off" />
+      <input class="field__in" use:focusOnOpen type="search" placeholder="Type on your phone" bind:value={text} autocomplete="off" />
       <span class="field__phone"><Glyph name="Phone" ink="#7ed6bc" /><span>Typing on phone</span></span>
     </label>
   {/if}

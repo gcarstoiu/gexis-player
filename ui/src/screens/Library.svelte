@@ -1200,6 +1200,12 @@
       (fadeR ? '#000 calc(100% - 88px),rgba(0,0,0,0.35) calc(100% - 22px),transparent 100%)' : '#000 100%)'),
   );
 
+
+  //: The search field takes focus as it opens, so text typed on the phone
+  //: lands in it from the tap that opened it (ADR-0121).
+  function focusOnOpen(node) {
+    requestAnimationFrame(() => node.focus({ preventScroll: true }));
+  }
 </script>
 
 <!-- The design animates this in over 260ms (opacity 220ms, transform 10px).
@@ -1242,7 +1248,7 @@
              it (ADR-0121). -->
         <label class="msearchhead">
           <Glyph name="Search" ink="#e9eef2" />
-          <input class="msearchhead__field" type="search" placeholder="Type on your phone" bind:value={searchText} autocomplete="off" />
+          <input class="msearchhead__field" use:focusOnOpen type="search" placeholder="Type on your phone" bind:value={searchText} autocomplete="off" />
           <span class="msearchhead__phone"><Glyph name="Phone" ink="#7ed6bc" /><span>Typing on phone</span></span>
         </label>
       {:else}
