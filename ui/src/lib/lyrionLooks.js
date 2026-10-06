@@ -144,13 +144,22 @@ export function levelLayout(page, ctx = {}, { loading = false, failed = null } =
   if (ctx.appTop && nonText.length === 1 && !nonText[0].label) return 'notSignedIn';
   if (ctx.favourites) return 'favourites';
   if (ctx.appTop) return 'cards';
+  // An album's page, before the covers test: its tracks carry the album's
+  // cover, and those Qobuz cannot stream are folders with nothing in them.
+  const leaf = (r) => r.kind === 'play' || (r.unavailable && r.kind === 'folder' && !!r.subtitle);
+  const album = ctx.from && hasCover(ctx.from) && (ctx.from.kind === 'container' || ctx.from.unavailable);
+  if (album && share(leaf) >= 0.6) return 'album';
   if (share((r) => r.hint === 'year') >= 0.6) return 'years';
   if (share((r) => (r.kind === 'container' || r.kind === 'folder') && hasCover(r)) >= 0.6) return 'covers';
   if (share((r) => r.hint === 'genre') >= 0.6) return 'genres';
   if (share((r) => r.hint === 'artist') >= 0.6) return ctx.opens === 'ranked' ? 'ranked' : 'artists';
-  if (share((r) => r.kind === 'play') >= 0.6) {
-    return ctx.from && hasCover(ctx.from) && ctx.from.kind === 'container' ? 'album' : 'tracks';
-  }
+  if (share((r) => r.kind === 'play') >= 0.6) return 'tracks';
   if (nonText.some((r) => r.kind === 'play')) return 'folder';
   return 'cards';
+}
+
+/** 4:12 from 252 seconds. */
+export function mmss(seconds) {
+  const whole = Math.max(0, Math.round(Number(seconds) || 0));
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
 }

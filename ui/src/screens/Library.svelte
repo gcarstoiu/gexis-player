@@ -845,9 +845,12 @@
       // The rail, for lists Lyrion files by letter (the handover's note 6).
       const lettered = got.items.filter((r) => ['artist', 'genre', 'album'].includes(r.hint)).length;
       if (got.count > 30 && lettered >= got.items.length * 0.6) {
+        // Pending (null): the rail or strip takes its place at once, so the
+        // list does not move when the index arrives (George, 2026-10-06).
+        menuLetters = null;
         menuLetters_(handle)
           .then((body) => { if (path[path.length - 1] === level) menuLetters = body.letters ?? {}; })
-          .catch(() => {});
+          .catch(() => { if (path[path.length - 1] === level) menuLetters = {}; });
       }
     } catch (err) {
       if (path[path.length - 1] === level) menuFailed = err.message;

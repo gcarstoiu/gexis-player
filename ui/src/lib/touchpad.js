@@ -24,21 +24,41 @@ export function openTouchpad(onMessage) {
 
   function connect() {
     if (closed) return;
-    socket = new WebSocket(url());
-    socket.addEventListener('open', () => (delay = RECONNECT_MIN_MS));
-    socket.addEventListener('message', (event) => {
+    const mine = new WebSocket(url());
+    socket = mine;
+    mine.addEventListener('open', () => (delay = RECONNECT_MIN_MS));
+    mine.addEventListener('message', (event) => {
       try {
         onMessage(JSON.parse(event.data));
       } catch {
         // A message we cannot read is dropped; the next one stands alone.
       }
     });
-    socket.addEventListener('close', () => {
-      if (closed) return;
+    mine.addEventListener('close', () => {
+      // A socket already replaced (below) does not schedule another.
+      if (closed || socket !== mine) return;
       retry = setTimeout(connect, delay);
       delay = Math.min(delay * 2, RECONNECT_MAX_MS);
     });
   }
+
+  //: **Back on screen, a new socket at once** (George, 2026-10-06: away to
+  //: another app and back, the touchpad answered only after a reload). A
+  //: phone browser sent to the background freezes the page; its socket can
+  //: die without a close the page ever hears, or wait out the backoff. Open
+  //: on a hidden page it is left alone.
+  function fresh() {
+    if (closed || document.visibilityState !== 'visible') return;
+    clearTimeout(retry);
+    delay = RECONNECT_MIN_MS;
+    const old = socket;
+    socket = null;
+    old?.close();
+    connect();
+  }
+  document.addEventListener('visibilitychange', fresh);
+  window.addEventListener('pageshow', fresh);
+  window.addEventListener('online', fresh);
 
   connect();
   return {
@@ -47,6 +67,9 @@ export function openTouchpad(onMessage) {
     },
     close() {
       closed = true;
+      document.removeEventListener('visibilitychange', fresh);
+      window.removeEventListener('pageshow', fresh);
+      window.removeEventListener('online', fresh);
       clearTimeout(retry);
       socket?.close();
     },

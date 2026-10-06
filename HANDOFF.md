@@ -1,31 +1,35 @@
 # Handoff
 
-Last updated: 2026-10-05 (on R2D2).
+Last updated: 2026-10-06 (on R2D2).
 
-**0.9.1 released 2026-10-05 on Testing (serial 24), from `phase-13d`** -
-ADR-0121's phone touchpad and keyboard (gestures, Pointer style, no system
-cursor), Home / Now playing / Lyrics from the phone (ADR-0101 amended),
-idle backgrounds that do not repeat (ADR-0047 §2e), and the post-0.9.0
-fixes. **PR #49 into `main` waits for George** (0.9.0's, #48, is merged).
-The image is `image/deploy/2026-10-05-gexis-player-v0.9.1.img` in the main
-checkout; 111 checks passed. Phase 13d stays open (board tests).
-**13f under way** (ADR-0118 accepted 2026-10-05, A-J; Finding 111):
-Extended navigation row (5d7076d); the core walker `menus.py` and
-`/menus*` routes (6783022); the standard panel's tiles, lists, tiles view
-and search (5c09075, 1f08d1a), then in the design's way after George's
-screenshot review - My Music grouped, tinted cards, our shapes over
-Lyrion's icons (505a1fe and after), and every browse mode the server
-offers in My Music (c43fd60) - **the look goes to Claude Design**: brief
-`design/briefs/13f-lyrion-menus.md`, on `main` (29dd787), 2026-10-06; its
-answer comes back as `design/source/13f/`. **Owed meanwhile: track rows
-show their actions all the time** - against screens.md's row-actions rule
-(first tap reveals, second plays). **On gexis as preview 0.9.1+git28,
-Extended navigation switched on there** for George to try. **Next: the
-bar family's screens** (BarLibrary), then George's try. Also on that
-preview: the update screen ends on the steps until Done; the install bar
-by package size; notes no longer cut (ADR-0110 amended) - these take
-effect from the update after the one that delivers them, so 0.9.2's
-notes must stay under 1,200 characters.
+**0.9.1 released 2026-10-05 on Testing (serial 24), from `phase-13d`**;
+PR #49 is merged. Phase 13d stays open (board tests).
+
+**13f: Claude Design's look is built, Standard and Bar** (ADR-0118
+accepted, A-J plus the handover notes and George's answers, 2026-10-06;
+handover in `design/source/13f/`). Steps on `phase-13b`: 5ede1d5 (glyphs,
+counts, letter index), 9e39b2f (standard screens), then fixes from
+checking them against George's Lyrion - letter headers by Lyrion's
+textkey, a rail jump that stays put, the search field's look, counts that
+match what is shown (a last page counts the rows shown; J's entry is
+Lyrion-counted), the 711 panel's album page and Album Artists card -
+and **step 3, the bars** (4309aa4): LyrionLevel and LyrionSearch take
+`bar`/`wide`; the letter-pair strip is one component, `bar/JumpStrip`,
+shared with the bar Artists row (George: "consistent"); Play all and the
+app logo in the head column; bar home gains My Music, Favourites, Apps
+(196 x 300 sideways). **Album Artists** replaces Artists on both homes
+(George, 2026-10-06). Standard checked at 711/800/853 and bars at 1280
+and 1850 x 400, through the relay harness against George's Lyrion.
+**Owed:** (1) done 2026-10-06 - `0.9.1+git42.ba6900a` installed on
+gexis (George's go-ahead); Qobuz's context-menu albums now give `play`
+tracks with add/next/play, and the album page checked on bar and
+standard; (2) Play / Play next / Add never pressed on
+George's system - his to try; (3) George's look at the bars, and note 7
+(whether the strip reads as buttons) on a real bar.
+Also on the 13d preview since 0.9.1: the update screen ends on the steps
+until Done, install progress by package size, notes no longer cut
+(ADR-0110 amended) - effective from the update after the one that
+delivers them, so 0.9.2's notes must stay under 1,200 characters.
 
 ## Start here
 
@@ -53,12 +57,10 @@ release** (George, 2026-10-04): never push a release onto an open PR.
 | Skin picker (ADR-0050 amended) | 960 px previews made ahead for every installed pack |
 | Released in 0.8.7 | The new-screen notice and its straight switch (29a3386, 88ee721, d91a4bc); a USB disk kept 7 days after unplugging (ADR-0115 decision 17, ddf088f); setup's copy fixes from the review (963857d-034fb33); genre pills kept to two rows on the artist page (7cd3e1b); skin packs fetched from the channel's release when the player's own is unpublished, a stale pack failure no longer shown, failures in words (efd329d); Finding 109's playback test; 13a/13c/13e closed |
 
-**`gexis` right now (2026-10-05, evening):** the 13d preview with
-`phase-13b` merged in - core `0.9.0+git17.8ebb7c1`, player and ui
-core and player `0.9.0+git50.609946b`, ui `0.9.0+git44.78e216c`, system `0.8.9+git87.5b4042c`: 0.9.0, the post-0.9.0 fixes and
-**ADR-0121's touchpad** with George's first four changes; on the 10.1" 1280 x 800 (the 13.3" FHD jammed the Wi-Fi). Its
-volume read 100 % after the touchpad tests, nothing playing - whether a
-test tap set it is unknown (LESSONS 59); left as it was.
+**`gexis` right now (2026-10-06):** the 13d preview with `phase-13b`
+merged - core, player and ui `0.9.1+git42.ba6900a` (13f, Standard and
+Bar), Extended navigation on, on the 10.1" 1280 x 800. Check playback
+before any restart.
 
 **Next, in order:**
 0. **Fixes after 0.9.0, on gexis, unreleased** (George's findings,

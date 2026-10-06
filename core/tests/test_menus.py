@@ -323,3 +323,51 @@ async def test_tiles_carry_counts_and_an_empty_favourites_is_none():
             return await super().__call__(command, player)
     tiles = {t["key"]: t for t in await menus(Counted()).tiles()}
     assert tiles["favorites"]["count"] == 0 and tiles["apps"]["count"] == 2 and tiles["mymusic"]["count"] == 3
+
+
+@pytest.mark.asyncio
+async def test_a_library_album_gets_its_tracks_lengths_and_release_facts():
+    """George, 2026-10-06: lengths and the release line. Lyrion's menu gives
+    a track only its id; the library gives the rest."""
+    class Library:
+        async def __call__(self, command, player):
+            if command[0] == "titles":
+                assert "album_id:7241" in command
+                return {"titles_loop": [
+                    {"id": 1, "duration": 23.4, "genre": "Rock", "year": "2003"},
+                    {"id": 2, "duration": 252.9, "genre": "No Genre", "year": "2003"},
+                ]}
+            return {"count": 2, "base": {"actions": {
+                "play": {"cmd": ["playlistcontrol"], "params": {"cmd": "load"}, "itemsParams": "commonParams"},
+                "playControl": {"cmd": ["browselibrary", "items"], "itemsParams": "playControlParams"},
+            }}, "item_loop": [
+                {"text": "Intro", "type": "audio", "goAction": "playControl", "commonParams": {"track_id": 1}},
+                {"text": "Apocalypse Please", "type": "audio", "goAction": "playControl", "commonParams": {"track_id": 2}},
+            ]}
+    m = menus(Library())
+    m._handles["album"] = {"kind": "container", "cmd": ["browselibrary", "items"],
+                           "params": {"mode": "tracks", "album_id": "7241"}}
+    page = await m.browse("album")
+    assert [(r["label"], r.get("duration")) for r in page["items"]] == [("Intro", 23), ("Apocalypse Please", 253)]
+    assert all("track" not in r for r in page["items"])
+    assert page["facts"] == [["Genre", "Rock"], ["Year", "2003"], ["Duration", "4:36"], ["Tracks", "2"]]
+
+
+@pytest.mark.asyncio
+async def test_what_qobuz_cannot_stream_is_said_so_without_its_star():
+    """Qobuz's "* " (its _albumItem, _trackItem): not licensed here or not
+    yet released. The star goes; the row says unavailable."""
+    class Starred:
+        async def __call__(self, command, player):
+            return {"count": 2, "item_loop": [
+                {"text": "* Guardians of the Galaxy: Awesome Mix Vol. 1\nVarious Artists", "addAction": "go",
+                 "icon": "/imageproxy/x/image.jpg",
+                 "actions": {"go": {"cmd": ["qobuz", "items"], "params": {"menu": "qobuz", "item_id": "9.9.0.8"}}}},
+                {"text": "Rubber Soul\nThe Beatles", "type": "playlist",
+                 "actions": {"go": {"cmd": ["qobuz", "items"], "params": {"menu": "qobuz", "item_id": "9.9.0.9"}}}},
+            ]}
+    m = menus(Starred())
+    m._handles["list"] = {"kind": "folder", "cmd": ["qobuz", "items"], "params": {"item_id": "9.9.0"}}
+    rows = (await m.browse("list"))["items"]
+    assert rows[0]["label"] == "Guardians of the Galaxy: Awesome Mix Vol. 1" and rows[0]["unavailable"] is True
+    assert "unavailable" not in rows[1]

@@ -19,7 +19,7 @@
   import JumpStrip from './bar/JumpStrip.svelte';
   import { dragScroll } from './bar/sideways.svelte.js';
   import { rgba } from '../lib/glyphs.js';
-  import { T, MY_MUSIC, MY_MUSIC_GROUPS, shapeFor, initials, railLetter, playCount, fact, levelLayout, hasCover } from '../lib/lyrionLooks.js';
+  import { T, MY_MUSIC, MY_MUSIC_GROUPS, shapeFor, initials, railLetter, playCount, fact, levelLayout, hasCover, mmss } from '../lib/lyrionLooks.js';
 
   let {
     page = null,
@@ -72,10 +72,13 @@
   }
 
   // ── Letters: headers in the list, and the rail ─────────────────────────
-  const alphabetical = $derived(Object.keys(letters).length > 0);
+  //: `letters` is null while the index is on its way: the rail or strip is
+  //: drawn already, its letters inert, so nothing moves when it lands.
+  const alphabetical = $derived(letters === null || Object.keys(letters).length > 0);
+  const known = $derived(letters ?? {});
   const RAIL = ['#', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'];
   const counts = $derived.by(() => {
-    const at = Object.entries(letters).sort((a, b) => a[1] - b[1]);
+    const at = Object.entries(known).sort((a, b) => a[1] - b[1]);
     const out = {};
     at.forEach(([letter, pos], i) => (out[letter] = (at[i + 1]?.[1] ?? page?.count ?? pos) - pos));
     return out;
@@ -94,7 +97,7 @@
   });
   /** A letter on the rail: that letter's rows, its header at the top. */
   async function jump(l) {
-    await onjump?.(l, letters[l]);
+    await onjump?.(l, known[l]);
     await tick();
     const head = rowsBox?.querySelector(`[data-letter="${l}"]`);
     if (head) head.scrollIntoView({ block: 'start' });
@@ -172,11 +175,18 @@
   // ── The app album page (the handover's §7) ─────────────────────────────
   const album = $derived.by(() => {
     if (layout !== 'album') return null;
-    const tracks = items.filter((r) => r.kind === 'play');
-    const facts = items.filter((r) => r.kind === 'text').map((r) => fact(r.label)).filter(([k, v]) => k && v);
-    const links = items.filter((r) => r.kind === 'folder' || r.kind === 'container').map((r) => ({ row: r, kv: fact(r.label) }));
-    const year = (facts.find(([k]) => /released/i.test(k))?.[1] ?? '').match(/\b(19|20)\d{2}\b/)?.[0] ?? '';
-    return { tracks, facts: facts.slice(0, 5), links, year };
+    const isTrack = (r) => r.kind === 'play' || (r.unavailable && r.kind === 'folder' && !!r.subtitle);
+    const tracks = items.filter(isTrack);
+    // A library album's facts come from the core (its titles); an app's are
+    // its own text lines.
+    const facts = page.facts ?? items.filter((r) => r.kind === 'text').map((r) => fact(r.label)).filter(([k, v]) => k && v);
+    const links = items.filter((r) => !isTrack(r) && (r.kind === 'folder' || r.kind === 'container')).map((r) => ({ row: r, kv: fact(r.label) }));
+    const year = (facts.find(([k]) => /released|year/i.test(k))?.[1] ?? '').match(/\b(19|20)\d{2}\b/)?.[0] ?? '';
+    const minutes = Math.round(tracks.reduce((n, r) => n + (r.duration ?? 0), 0) / 60);
+    //: Nothing here plays: Qobuz streams none of it (not licensed here, or
+    //: not yet released - its "* ").
+    const none = !!ctx.from?.unavailable || (tracks.length > 0 && tracks.every((r) => r.unavailable && !r.can?.length));
+    return { tracks, facts: facts.slice(0, 5), links, year, minutes, none };
   });
 
   // ── Cards at an app's first level: the search as a field-button, and
@@ -258,6 +268,10 @@
       <span class="row__meta">{r._unnamed}</span>
     {:else if pc.plays != null}
       <span class="row__meta">{pc.plays} plays</span>
+    {:else if r.unavailable && !r.can?.length && r.kind !== 'folder'}
+      <span class="row__meta">Not available</span>
+    {:else if r.duration}
+      <span class="row__meta">{mmss(r.duration)}</span>
     {:else if opts.meta}
       <span class="row__meta">{opts.meta}</span>
     {/if}
@@ -274,11 +288,11 @@
 
 {#snippet rail()}
   {#if alphabetical && bar}
-    <div class="strip"><JumpStrip have={(l) => l in letters} on={onLetter} tint={STRIP_TINT[layout] ?? STRIP_TINT.artists} onpick={jump} /></div>
+    <div class="strip"><JumpStrip have={(l) => l in known} on={onLetter} tint={STRIP_TINT[layout] ?? STRIP_TINT.artists} onpick={jump} /></div>
   {:else if alphabetical}
     <div class="rail">
       {#each RAIL as l (l)}
-        {@const have = l in letters}
+        {@const have = l in known}
         <button class="rail__l" class:is-on={l === onLetter} class:is-have={have} type="button" disabled={!have} onclick={() => jump(l)}>{l}</button>
       {/each}
     </div>
@@ -449,10 +463,10 @@
         <div class="covers">
           {#each items as r, i (r.handle ?? `t${i}`)}
             {#if r.kind !== 'text'}
-              <button class="cover" class:is-busy={busy === r.handle} type="button" onclick={() => tap(r)}>
+              <button class="cover" class:is-busy={busy === r.handle} class:is-off={r.unavailable} type="button" onclick={() => tap(r)}>
                 <span class="cover__art">{#if hasCover(r)}<img src={r.image} alt="" loading="lazy" />{:else}{@const look = shapeFor(r.label, r.hint)}<Disc name={look[0]} tint={look[1]} size={bar ? 72 : 92} />{/if}</span>
                 <span class="cover__t" class:is-unnamed={!r.label}>{r.label || 'No name'}</span>
-                <span class="cover__s">{r.subtitle ?? ''}</span>
+                <span class="cover__s">{r.unavailable ? `Not available${r.subtitle ? ` · ${r.subtitle}` : ''}` : (r.subtitle ?? '')}</span>
               </button>
             {/if}
           {/each}
@@ -487,18 +501,20 @@
           </div>
         {/if}
         <div class="albumpage__acts">
+          {#if album.none}<div class="albumpage__none">{ctx.app ?? 'The service'} can’t stream this album</div>{/if}
           {#if ctx.from?.can?.includes('play')}<button class="big big--play" type="button" onclick={() => onact?.(ctx.from, 'play')}><span class="tri tri--l"></span>Play album</button>{/if}
           {#if ctx.from?.can?.includes('add')}<button class="big" type="button" onclick={() => onact?.(ctx.from, 'add')}><span class="plus plus--l"></span>Add to queue</button>{/if}
         </div>
       </div>
       <div class="albumpage__main scroll">
-        {#if !bar}<div class="tracks__head"><span>Tracks</span><span>{album.tracks.length}</span></div>{/if}
+        {#if !bar}<div class="tracks__head"><span>Tracks</span><span>{album.tracks.length}{album.minutes ? ` · ${album.minutes} min` : ''}</span></div>{/if}
         {#each album.tracks as r, i (r.handle)}
           {@const isSel = selected === r.handle}
-          <button class="trow" class:is-sel={isSel} type="button" onclick={() => tapLeaf(r)}>
+          {@const off = r.unavailable && !r.can?.length}
+          <button class="trow" class:is-sel={isSel} class:is-off={off} type="button" disabled={off} onclick={() => tapLeaf(r)}>
             <span class="trow__n">{String(i + 1).padStart(2, '0')}</span>
             <span class="trow__t">{r.label}</span>
-            {#if isSel}{@render actionsFor(r, bar)}{/if}
+            {#if isSel}{@render actionsFor(r, bar)}{:else if off}<span class="trow__d">Not available</span>{:else if r.duration}<span class="trow__d">{mmss(r.duration)}</span>{/if}
           </button>
         {/each}
         {#if !bar}{@render albumFacts()}{/if}
@@ -679,6 +695,11 @@
   .trow.is-sel { background: rgba(126, 214, 188, 0.16); }
   .trow.is-sel .trow__t, .trow.is-sel .trow__n { color: #7ed6bc; }
   .trow__n { font-family: var(--font-mono); font-size: 15px; color: rgba(233, 238, 242, 0.62); width: 26px; flex-shrink: 0; }
+  .trow__d { font-family: var(--font-mono); font-size: 15px; color: rgba(233, 238, 242, 0.62); flex-shrink: 0; }
+  .trow.is-off { opacity: 0.5; cursor: default; }
+  .trow.is-off:active { transform: none; }
+  .cover.is-off .cover__art { opacity: 0.45; }
+  .albumpage__none { font-size: 16px; line-height: 1.4; color: rgba(233, 238, 242, 0.72); padding: 12px 14px; border-radius: 14px; background: rgba(233, 238, 242, 0.05); border: 1px solid rgba(233, 238, 242, 0.1); }
   .trow__t { flex: 1; min-width: 0; font-size: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .sechead--release { margin: 28px 0 14px; padding-top: 0; }
   .facts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
