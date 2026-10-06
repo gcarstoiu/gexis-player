@@ -116,6 +116,38 @@ streaming services, Radio Paradise, YouTube - lives in that same tree under
   is an action, and is left out (read 2026-10-05 from the album page,
   without opening the entry).
 
+### Claude Design's handover, 2026-10-06 (`design/source/13f/`)
+
+The look is the designer's (`HANDOFF.md` there); its ten notes, answered
+by George the same day:
+
+- **Home cards at 200 px**, so the sixth peeks about 110 px (note 1).
+- **No list / tiles switch** - *"it is better without the switch"* (note 2,
+  reversing I): what an entry opens decides its shape - covers a grid,
+  branches tinted rows or cards, tracks leaf rows.
+- **Remote Music Libraries hidden with no entries, Library Views with one**
+  (note 3).
+- **One search field** for My Music's five searches, run together with
+  kind chips; YouTube's searches the same way (note 4).
+- **No artist portraits in lists** (note 5): *"let's see how it looks on
+  device and then we can talk about it again. It is also a question of
+  speed with several thousand portraits."*
+- **A Radio Paradise mix opens to its qualities**, as drawn (note 9).
+- **Row actions 48 px, labelled** (note 8); **the designer's copy** stands
+  (note 10).
+- **Top Tracks' "(189)" becomes "189 plays"** (note 5 of the handover).
+- **The bars' letter strip is the one the bar Artists screen already has**
+  (George: *"I just want to be consistent"*), not a new one (note 7).
+- **Home's Artists becomes Album Artists** (George), so it is not taken for
+  My Music's All Artists.
+
+Found while reading it against the server: Lyrion gives **no letter
+index** with a list, so the core builds one for artists, albums and genres
+from their first letters (one query); other lists have no rail (note 6).
+And **no list-level Play all or Shuffle** for lists such as Top Tracks: Play
+all shows where the level was opened from something that plays whole (an
+album, playlist, genre, folder); Shuffle is not offered.
+
 ### Not in this iteration (D)
 
 - **Context menus** (`more`): add to favourites, go to the artist or album,
