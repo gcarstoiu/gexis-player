@@ -31,11 +31,18 @@
   let y = $state(window.innerHeight / 2);
   let shown = $state(false);
   //: What the pointer is over, for its shape: 'plain', 'press', 'slide',
-  //: or 'scroll' while two fingers scroll.
+  //: or 'scroll' / 'scrollx' while two fingers scroll down or across.
   let kind = $state('plain');
   //: The ring around a small round control: its centre and size, or null.
   let ring = $state(null);
   let scrolledAt = 0;
+  //: Which way two fingers last scrolled, for the shape: up-down or across.
+  let scrolledX = false;
+  //: After a tap, no ring until the pointer moves: what was pressed has
+  //: done its work, and a ring left on whatever stands in its place reads as
+  //: the press still held (George, 2026-10-06: "stays in place for a few
+  //: seconds until it's hidden").
+  let tapped = false;
   let hideTimer;
   let pad = null;
   let over = false;
@@ -69,19 +76,34 @@
     }
     const slider = target?.closest(SLIDER);
     const pressable = !slider && target?.closest(PRESSABLE);
-    kind = performance.now() - scrolledAt < 400 ? 'scroll' : slider ? 'slide' : pressable ? 'press' : 'plain';
+    kind = performance.now() - scrolledAt < 400 ? (scrolledX ? 'scrollx' : 'scroll') : slider ? 'slide' : pressable ? 'press' : 'plain';
     ring = null;
+    if (tapped) return;
     // A ring for a button that is only an icon: a tab or a row with words in
     // it is not the design's round control, however square (George,
     // 2026-10-05: "the track entry in now playing shouldn't get the
     // highlight").
-    if (kind === 'press' && !arrow && !pressable.textContent.trim()) {
+    if (kind === 'press' && !arrow && !words(pressable)) {
       const r = pressable.getBoundingClientRect();
       const long = Math.max(r.width, r.height);
       if (long / Math.max(1, Math.min(r.width, r.height)) < ROUND && long <= RING_MAX) {
         ring = { cx: r.left + r.width / 2, cy: r.top + r.height / 2, size: long + 16 };
       }
     }
+  }
+
+  /** A button's own words - a count on a badge is not one (the queue
+   *  button's "up next", George 2026-10-06). */
+  function words(el) {
+    let text = '';
+    const walk = (node) => {
+      for (const child of node.childNodes) {
+        if (child.nodeType === Node.TEXT_NODE) text += child.textContent;
+        else if (child.nodeType === Node.ELEMENT_NODE && !child.hasAttribute('data-badge')) walk(child);
+      }
+    };
+    walk(el);
+    return text.trim();
   }
 
   $effect(() => {
@@ -103,6 +125,7 @@
   });
 
   onDestroy(() => {
+    cancelAnimationFrame(moveFrame);
     clearTimeout(hideTimer);
     clearInterval(lookTimer);
   });
@@ -151,17 +174,33 @@
     return document.elementFromPoint(Math.round(x), Math.round(y));
   }
 
+  //: **Moves land once a frame** (George, 2026-10-06: "sometimes the cursor
+  //: movement is choppy still"). Wi-Fi delivers the phone's moves in bunches,
+  //: and each one asked what lies under the pointer - a layout on a busy
+  //: page; now the frame's moves are added up and asked about once.
+  let moved = { dx: 0, dy: 0 };
+  let moveFrame = 0;
+  function applyMove() {
+    moveFrame = 0;
+    x = edge(x + moved.dx * speed, window.innerWidth, 'x');
+    y = edge(y + moved.dy * speed, window.innerHeight, 'y');
+    moved = { dx: 0, dy: 0 };
+    wake();
+    look();
+  }
+
   function receive(message) {
     switch (message.t) {
       case 'move': {
-        x = edge(x + Number(message.dx || 0) * speed, window.innerWidth, 'x');
-        y = edge(y + Number(message.dy || 0) * speed, window.innerHeight, 'y');
-        wake();
-        look();
+        tapped = false;
+        moved.dx += Number(message.dx || 0);
+        moved.dy += Number(message.dy || 0);
+        if (!moveFrame) moveFrame = requestAnimationFrame(applyMove);
         break;
       }
       case 'tap':
         wake();
+        tapped = true;
         tap();
         // What the tap opened is now under the pointer.
         requestAnimationFrame(look);
@@ -175,6 +214,7 @@
       case 'scroll':
         wake();
         scrolledAt = performance.now();
+        scrolledX = Math.abs(Number(message.dx || 0)) > Math.abs(Number(message.dy || 0));
         scroll(Number(message.dx || 0), Number(message.dy || 0));
         look();
         break;
@@ -363,7 +403,7 @@
            or while two fingers scroll (22 x 48), and a small dot inside a
            ring round a small round control. -->
       <span class="dot dot--{ring ? 'ringed' : kind}">
-        <svg class="dot__marks" class:on={kind === 'slide' || kind === 'scroll'} viewBox="0 0 64 64" aria-hidden="true">
+        <svg class="dot__marks" class:on={kind === 'slide' || kind === 'scroll' || kind === 'scrollx'} viewBox="0 0 64 64" aria-hidden="true">
           {#if kind === 'scroll'}
             <path d="M26 22l6-6 6 6M26 42l6 6 6-6" />
           {:else}
@@ -444,6 +484,11 @@
   .dot--scroll {
     width: 22px;
     height: 48px;
+  }
+  /* Across: the slider's pill and its left-right marks. */
+  .dot--scrollx {
+    width: 48px;
+    height: 22px;
   }
   .dot--ringed {
     width: 9px;

@@ -704,7 +704,7 @@
           {#if lmsOnly}
             <button class="btn btn--queue" type="button" aria-label="Queue" onclick={() => (queueOpen = true)}>
               <i></i><i></i><i></i>
-              {#if upNext}<span class="btn__badge">{upNext}</span>{/if}
+              {#if upNext}<span class="btn__badge" data-badge>{upNext}</span>{/if}
             </button>
           {/if}
         </div>

@@ -201,12 +201,57 @@ class LyrionMenus:
         # favourites", J): on the last page the count is what is shown.
         if start + len(loop) >= total:
             total = start + len(rows)
+        facts = await self._album_facts(spec, rows)
+        for row in rows:
+            row.pop("track", None)
         return {
             "title": spec.get("title") or result.get("title"),
             "count": total,
             "start": start,
             "items": rows,
+            **({"facts": facts} if facts else {}),
         }
+
+    async def _album_facts(self, spec: dict, rows: list[dict]) -> list[list[str]] | None:
+        """**A library album's release facts and its tracks' lengths**
+        (George, 2026-10-06: "the length of the tracks is not shown", "not
+        seeing the small release information"). Lyrion's menu gives a track
+        its id and nothing else; the library gives the rest, asked once per
+        page. A streaming app's album carries its own facts as text lines
+        (Qobuz) and no lengths at all - nothing to add there."""
+        album = (spec.get("params") or {}).get("album_id")
+        tracks = {row["track"]: row for row in rows if row.get("track") is not None}
+        if album is None or not tracks:
+            return None
+        try:
+            found = (await self._call(["titles", 0, 1000, f"album_id:{album}", "tags:dgy"])).get("titles_loop") or []
+        except Exception:  # noqa: BLE001 - the page stands without them
+            return None
+        total = 0.0
+        genres: list[str] = []
+        years: set[str] = set()
+        for title in found:
+            seconds = float(title.get("duration") or 0)
+            total += seconds
+            row = tracks.get(int(title.get("id") or -1))
+            if row is not None and seconds:
+                row["duration"] = round(seconds)
+            genre = str(title.get("genre") or "").strip()
+            if genre and genre.lower() != "no genre" and genre not in genres:
+                genres.append(genre)
+            year = str(title.get("year") or "").strip()
+            if year and year != "0":
+                years.add(year)
+        facts = []
+        if genres:
+            facts.append(["Genre", ", ".join(genres[:3])])
+        if years:
+            first, last = min(years), max(years)
+            facts.append(["Year", first if first == last else f"{first} – {last}"])
+        if total:
+            facts.append(["Duration", _clock(total)])
+        facts.append(["Tracks", str(len(found))])
+        return facts
 
     async def _modes(self) -> list[dict]:
         """My Music's modes beyond the player menu, as menu items, or none
@@ -320,7 +365,13 @@ class LyrionMenus:
         if plays or control:
             found = self._actions(item, base, go_plays=None if control else (cmd, params))
             spec = {"kind": "play", "actions": found}
-            return self._shape(item, spec) if spec["actions"] else None
+            if not spec["actions"]:
+                return None
+            row = self._shape(item, spec)
+            track = (item.get("commonParams") or {}).get("track_id")
+            if track is not None:
+                row["track"] = int(track)
+            return row
         if not _is_browse(cmd):
             # A `do`, a preset, anything that is not a browse: not offered (D).
             return None
@@ -349,7 +400,15 @@ class LyrionMenus:
 
     def _shape(self, item: dict, spec: dict) -> dict:
         text = _text(item)
+        # Qobuz marks what it cannot stream - not licensed here, or not yet
+        # released - with "* " (its _albumItem and _trackItem): an album then
+        # has no `playlist` type and a track nothing to play. Said plainly
+        # rather than as a star.
+        unavailable = text[0].startswith("* ")
+        if unavailable:
+            text = (text[0][2:].strip(), text[1])
         return {
+            **({"unavailable": True} if unavailable else {}),
             "handle": self._issue(spec),
             "kind": spec["kind"],
             "label": text[0],
@@ -467,6 +526,14 @@ def _weight(item: dict) -> float:
         return float(item.get("weight") or 0)
     except (TypeError, ValueError):
         return 0.0
+
+
+def _clock(seconds: float) -> str:
+    """0:46:05 or 46:05, as Qobuz writes an album's duration."""
+    whole = int(round(seconds))
+    h, rest = divmod(whole, 3600)
+    m, s = divmod(rest, 60)
+    return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
 
 
 def _text(item: dict) -> tuple[str, str | None]:
