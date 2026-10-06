@@ -68,6 +68,32 @@ release** (George, 2026-10-04): never push a release onto an open PR.
 navigation on, kiosk.env back to its original (debug port off, checksum
 2fecdd6d...). Check playback before any restart.
 
+**After 0.9.2 (2026-10-06, night), on `phase-13b`:**
+- Updater: apt-listchanges off (the install bar's 16 s at 0), DpkgShare's
+  rate re-measured (3.5 MB/s), the bar held full before the tick
+  (ADR-0110 amended); **Check for updates now runs a check-only unit**
+  (`gexis-update-checknow.service`) - it had started the nightly unit,
+  which installs on Automatic. Phone: Settings' lists end clear of the
+  sheet (22 px, measured on every page). On gexis as preview
+  `0.9.2+git5` except the check-only unit (committed after).
+- **Panel speed, measured** (Finding 101's tool, 12 runs, playing; raw in
+  `docs/findings/data/112-panel-frames-0.9.2.txt`, A/B in the scratchpad):
+  scrolls unchanged (58-60 drawn/s, 0 % dropped); Settings and Radio opens
+  much better than 29 Sep; Home, artist grid, Albums and artist page opens
+  drop 4-10 % (were 1-5 %). **The A/B clears the kept library (ADR-0122)**:
+  with it off the same opens drop as much or more. Cause still unknown;
+  the tool's `grid-still` and `settings-scroll` selectors need updating.
+  **No finding written yet.**
+- **Docs (drafts)**: `docs/manual/` (screenshots from a public-domain demo
+  library), `docs/FAQ.md` (70 Q&A), `docs/tech/` (six documents with
+  diagrams), `docs/HARDWARE.md` updated and published as a commentable doc.
+  The tech-docs pass listed where ADRs and `docs/ARCHITECTURE.md` disagree
+  with the code (ADR-0105 §4, 0106 item 2, 0107's table, 0108's main text,
+  0110, 0113, 0040 §1, 0031/0104 on setup; stale docstrings in volume.py,
+  remote_volume.py, adapters/base.py, NowPlaying.svelte; vite dev proxy
+  missing routes) - **to be reconciled, not yet done.**
+- Plexamp 0.4.0 was already released and pinned (shipped in 0.9.2).
+
 **Second round of George's findings (2026-10-06), built and on gexis:**
 - One-tap search also for Qobuz's and Spotty's "Search" folders (opened
   straight to the field, their kept searches skipped - decision E).
