@@ -5,6 +5,27 @@ Every release of Gexis Player and its notes, newest first. Generated from
 edit that file, not this one. The player shows the last 10 under
 Settings → System → Change logs.
 
+## 0.9.2 — 6 October 2026
+
+### New
+
+- Extended navigation, under Settings → Sources → Lyrion Client, brings Lyrion's own menus to the screen: My Music with every library view, Favourites, and apps. It is off by default.
+- Now Playing has a Minimise button in its top-left corner, back to the screen it was opened from.
+- The phone's volume sheet keeps its buttons in one row, open or closed. Now playing switches between Now Playing and the screen before it.
+- Under Enrichment, one button finds artist portraits and album covers together and shows what its last run found.
+- Library albums opened from My Music show track lengths and release details.
+
+### Fixed
+
+- Bluetooth and Spotify tracks find album art more often, including tracks by several artists.
+- Search fields bring up the phone's keyboard with one tap.
+- The pointer and scrolling from the phone are smoother.
+- From the next update on, the update screen stays on its finished steps until Done, and its progress moves steadily.
+
+### Good to know
+
+- Artists on Home is now called Album Artists.
+
 ## 0.9.1 — 5 October 2026
 
 ### New
