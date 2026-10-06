@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-06 (on R2D2).
+Last updated: 2026-10-06, late (on R2D2).
 
 **0.9.1 released 2026-10-05 on Testing (serial 24), from `phase-13d`**;
 PR #49 is merged. Phase 13d stays open (board tests).
@@ -57,10 +57,26 @@ release** (George, 2026-10-04): never push a release onto an open PR.
 | Skin picker (ADR-0050 amended) | 960 px previews made ahead for every installed pack |
 | Released in 0.8.7 | The new-screen notice and its straight switch (29a3386, 88ee721, d91a4bc); a USB disk kept 7 days after unplugging (ADR-0115 decision 17, ddf088f); setup's copy fixes from the review (963857d-034fb33); genre pills kept to two rows on the artist page (7cd3e1b); skin packs fetched from the channel's release when the player's own is unpublished, a stale pack failure no longer shown, failures in words (efd329d); Finding 109's playback test; 13a/13c/13e closed |
 
-**`gexis` right now (2026-10-06):** the 13d preview with `phase-13b`
-merged - core, player and ui `0.9.1+git42.ba6900a` (13f, Standard and
-Bar), Extended navigation on, on the 10.1" 1280 x 800. Check playback
-before any restart.
+**`gexis` right now (2026-10-06, late):** the 13d preview with
+`phase-13b` merged - core `0.9.1+git46.b4345ae`, player and ui
+`0.9.1+git51.7c8b0cc`, Extended navigation on, on the 10.1" 1280 x 800.
+Check playback before any restart.
+
+**George's findings of 2026-10-06, all built and on gexis:** Qobuz's
+unstreamable "* " albums open as album pages (tracks Not available, a
+note in place of Play album); a library album gets lengths and a Release
+block from the library; rail/strip drawn while the letter index is pending
+(Albums, Genres and a genre's artists no longer jump); pointer: a tap
+clears the ring, the queue button rings, sideways scroll shape, moves
+applied once a frame (**choppiness not confirmed fixed** - his hands);
+touchpad socket reopens when the phone's page returns; the phone's
+Home/Now playing/Lyrics row moved between pad and volume; a whole
+labelled field counts as a text field, search openers announce text entry
+and the field takes focus as it opens (**the one-tap keyboard is untried
+on a phone**). **ADR-0122 accepted and built**: Minimise (chevron, top
+left over the art) shows the library as left; Home stays. **Owed:** the
+hidden library's behaviour on the Pi over an hour (ADR-0122,
+Consequences); George's look at the chevron.
 
 **Next, in order:**
 0. **Fixes after 0.9.0, on gexis, unreleased** (George's findings,
