@@ -378,6 +378,33 @@
     />
   {/if}
 
+  {#if open}
+    <!-- ADR-0101 as amended 2026-10-05: the panel's screens, from here -
+         between the touchpad and the volume, so a sideways stroke that
+         overshoots the pad lands on buttons that want a tap, not on the
+         slider (George, 2026-10-06). -->
+    <div class="mini__row mini__nav">
+      <button class="mini__toggle" type="button" onclick={() => go('home', 'Home')}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 5l8 6.5M6.5 10v9h11v-9" /></svg>
+        <span>Home</span>
+      </button>
+      <button class="mini__toggle" type="button" disabled={!$active} onclick={() => go('now', 'Now playing')}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" /><path d="M10.5 9v6l4.5-3z" /></svg>
+        <span>Now playing</span>
+      </button>
+      <button
+        class="mini__toggle"
+        class:is-on={!!$active && $panel.lyrics}
+        type="button"
+        disabled={!$active}
+        aria-pressed={!!$active && !!$panel.lyrics}
+        onclick={() => go($panel.lyrics ? 'track' : 'lyrics', 'Lyrics')}
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h9M5 17h11" /></svg>
+        <span>Lyrics</span>
+      </button>
+    </div>
+  {/if}
   <div class="mini__row">
     {#if $fixedOutput}
       <span class="mini__fixed">Fixed output · the amplifier sets the level</span>
@@ -428,30 +455,6 @@
     </button>
   </div>
 
-  {#if open}
-    <!-- ADR-0101 as amended 2026-10-05: the panel's screens, from here. -->
-    <div class="mini__row mini__nav">
-      <button class="mini__toggle" type="button" onclick={() => go('home', 'Home')}>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 5l8 6.5M6.5 10v9h11v-9" /></svg>
-        <span>Home</span>
-      </button>
-      <button class="mini__toggle" type="button" disabled={!$active} onclick={() => go('now', 'Now playing')}>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" /><path d="M10.5 9v6l4.5-3z" /></svg>
-        <span>Now playing</span>
-      </button>
-      <button
-        class="mini__toggle"
-        class:is-on={!!$active && $panel.lyrics}
-        type="button"
-        disabled={!$active}
-        aria-pressed={!!$active && !!$panel.lyrics}
-        onclick={() => go($panel.lyrics ? 'track' : 'lyrics', 'Lyrics')}
-      >
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h9M5 17h11" /></svg>
-        <span>Lyrics</span>
-      </button>
-    </div>
-  {/if}
 
   {#if note}<div class="mini__note" role="status">{note}</div>{/if}
 </div>
@@ -589,6 +592,9 @@
   .mini__toggle:disabled {
     opacity: 0.38;
     cursor: default;
+  }
+  .mini__nav + .mini__row {
+    margin-top: 8px;
   }
   .mini__nav {
     flex-wrap: wrap;

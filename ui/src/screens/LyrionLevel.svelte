@@ -371,7 +371,7 @@
             <div class="bgroup__grid">
               {#each entries as r (r.handle)}
                 {@const look = MY_MUSIC[r.id] ?? ['more', ...shapeFor(r.label, r.hint)]}
-                <button class="entry" class:is-busy={busy === r.handle} type="button" onclick={() => tap(r)}>
+                <button class="entry" class:is-busy={busy === r.handle} type="button" data-text-entry={r.id === 'myMusicSearch' ? '' : undefined} onclick={() => tap(r)}>
                   <Disc name={look[1]} tint={look[2]} size={D} />
                   <span class="entry__label">{r.label}</span>
                 </button>
@@ -393,7 +393,7 @@
                 <div class="group__head"><span style:color={g.ink}>{g.name}</span><i></i></div>
                 {#each entries as r (r.handle)}
                   {@const look = MY_MUSIC[r.id] ?? ['more', ...shapeFor(r.label, r.hint)]}
-                  <button class="entry" class:is-busy={busy === r.handle} type="button" onclick={() => tap(r)}>
+                  <button class="entry" class:is-busy={busy === r.handle} type="button" data-text-entry={r.id === 'myMusicSearch' ? '' : undefined} onclick={() => tap(r)}>
                     <Disc name={look[1]} tint={look[2]} size={46} />
                     <span class="entry__label">{r.label}</span>
                   </button>
@@ -419,7 +419,7 @@
     <div class="pad scroll cardlevel">
       {#if searches.length}
         <!-- A search is a field-button; several are one field and a chip each. -->
-        <button class="fieldbtn" type="button" onclick={() => onsearchentry?.(searches[kind] ?? searches[0])}>
+        <button class="fieldbtn" type="button" data-text-entry onclick={() => onsearchentry?.(searches[kind] ?? searches[0])}>
           <Glyph name="Search" ink={T.ink} />
           <span class="fieldbtn__label">{searches.length >= 3 ? `Search ${ctx.app ?? ''} · ${searches[kind]?.label ?? ''}` : searches[0].label === 'Search' || /^search$/i.test(searches[0].label) ? `Search ${ctx.app ?? ''}` : searches[0].label}</span>
           <span class="fieldbtn__phone"><Glyph name="Phone" ink="rgba(233,238,242,0.62)" /><span>Type on your phone</span></span>

@@ -21,7 +21,7 @@
 <script>
   import { onDestroy } from 'svelte';
   import { settingValues } from './settings.js';
-  import { openTouchpad, takesText } from './touchpad.js';
+  import { openTouchpad, takesText, fieldOf } from './touchpad.js';
 
   const HIDE_MS = 5000;
   //: Pinch: from the panel as it is to three times as large (ADR-0121 §2).
@@ -69,7 +69,7 @@
   function look() {
     const target = under();
     hover(target);
-    const field = takesText(target);
+    const field = !!fieldOf(target);
     if (field !== over) {
       over = field;
       pad?.send({ t: 'over', field });
@@ -319,7 +319,7 @@
     const pointer = { ...at, pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 1 };
     target.dispatchEvent(new PointerEvent('pointerdown', pointer));
     target.dispatchEvent(new MouseEvent('mousedown', { ...at, button: 0, buttons: 1 }));
-    if (takesText(target)) target.focus();
+    fieldOf(target)?.focus();
     target.dispatchEvent(new PointerEvent('pointerup', { ...pointer, buttons: 0 }));
     target.dispatchEvent(new MouseEvent('mouseup', { ...at, button: 0 }));
     target.dispatchEvent(new MouseEvent('click', { ...at, button: 0 }));

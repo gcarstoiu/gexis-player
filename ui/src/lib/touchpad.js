@@ -87,3 +87,19 @@ export function takesText(element) {
   const typed = ['text', 'search', 'password', 'email', 'url', 'tel', 'number'];
   return typed.includes(type) && !element.disabled && !element.readOnly;
 }
+
+/** The text field an element stands for: itself, or the field its label
+ *  holds - a tap anywhere on a labelled field (the search field's glyph,
+ *  its padding, its "typing on phone") focuses the field, so the phone's
+ *  keyboard must come up for it too (George, 2026-10-06: "only when I tap
+ *  right at the beginning of the field"). */
+export function fieldOf(element) {
+  if (!element) return null;
+  if (takesText(element)) return element;
+  // A control that opens a search field, focused as it opens (the apps'
+  // field-button, My Music's Search): the keyboard comes up with that tap.
+  const opener = element.closest?.('[data-text-entry]');
+  if (opener) return opener;
+  const control = element.closest?.('label')?.control;
+  return takesText(control) ? control : null;
+}
