@@ -633,10 +633,12 @@
     if (menu.node) return one(menu.count, 'views');
     if (menu.items.every((r) => r.kind === 'text')) return parent;
     const hint = menu.items.find((r) => r.hint)?.hint;
-    const tracks = menu.items.some((r) => r.kind === 'play' && r.subtitle) || here.ctx?.from?.kind === 'container';
+    // A track Qobuz cannot stream is an unavailable folder with a subtitle.
+    const leaf = (r) => r.kind === 'play' || (r.unavailable && r.kind === 'folder' && !!r.subtitle);
+    const tracks = menu.items.some((r) => leaf(r) && r.subtitle) || here.ctx?.from?.kind === 'container' || !!here.ctx?.from?.unavailable;
     const noun = here.ctx?.apps ? 'apps' : MENU_NOUNS[hint] ?? (tracks ? 'tracks' : 'items');
     const whole = menu.items.length >= menu.count;
-    const shown = menu.items.filter((r) => (tracks ? r.kind === 'play' : r.kind !== 'text'));
+    const shown = menu.items.filter((r) => (tracks ? leaf(r) : r.kind !== 'text'));
     const n = !shown.some((r) => r.label) ? 0 : whole ? shown.length : menu.count;
     if (!n) return parent;
     return [parent, one(n, noun)].filter(Boolean).join(' · ');
