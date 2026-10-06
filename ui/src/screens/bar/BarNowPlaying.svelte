@@ -35,7 +35,7 @@
   // The props App.svelte gives NowPlaying, so the two are interchangeable.
   // `onhome` and `onvisualisation` are the tray's on a bar; they are accepted
   // here so App can pass one set to either screen.
-  let { active, metadata, volume, controls = [], available = [], shuffle = null, repeat = null, queue = null, onvolume, onvisualisation, onhome, onartist, rootless = false } = $props();
+  let { active, metadata, volume, controls = [], available = [], shuffle = null, repeat = null, queue = null, onvolume, onvisualisation, onhome, onartist, onminimise = null, rootless = false } = $props();
   const artistLinked = $derived(!!onartist);
 
   const transport = $derived(metadata?.transport ?? null);
@@ -154,6 +154,11 @@
 
   <div class="strip__body">
     <div class="art">
+      <!-- ADR-0122: back to the library as it was left, Now Playing down to
+           the mini strip (George, 2026-10-06: the chevron top left). -->
+      {#if onminimise}
+        <button class="minimise" type="button" aria-label="Minimise" onclick={onminimise}><span class="minimise__chev"></span></button>
+      {/if}
       {#if artwork}
         <img src={artwork} alt="" onerror={() => (failedArtwork = artwork)} />
       {:else}
@@ -839,5 +844,29 @@
     background: rgba(233, 238, 242, 0.42);
     z-index: 4;
     pointer-events: none;
+  }
+  /* ADR-0122: Minimise, over the art's top-left corner. */
+  .minimise {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    z-index: 2;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 1px solid rgba(233, 238, 242, 0.24);
+    background: rgba(12, 16, 20, 0.5);
+    display: grid;
+    place-items: center;
+    padding: 0;
+    cursor: pointer;
+  }
+  .minimise:active { transform: scale(0.94); }
+  .minimise__chev {
+    width: 14px;
+    height: 14px;
+    border-right: 3px solid var(--ink);
+    border-bottom: 3px solid var(--ink);
+    transform: translateY(-4px) rotate(45deg);
   }
 </style>
