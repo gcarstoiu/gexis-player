@@ -84,9 +84,12 @@ navigation on, kiosk.env back to its original (debug port off, checksum
   with it off the same opens drop as much or more. Cause still unknown;
   the tool's `grid-still` and `settings-scroll` selectors need updating.
   **No finding written yet.**
-- **Docs (drafts)**: `docs/manual/` (screenshots from a public-domain demo
-  library), `docs/FAQ.md` (70 Q&A), `docs/tech/` (six documents with
-  diagrams), `docs/HARDWARE.md` updated and published as a commentable doc.
+- **Docs (drafts) - HELD until George gives the go-ahead** (2026-10-06:
+  "Do not release them until I give the go ahead"): `docs/manual/`,
+  `docs/FAQ.md`, `docs/tech/` live ONLY on the local branch `docs-drafts`
+  (commit 74fc7f9), taken off `phase-13b` so no release carries them.
+  Manual and FAQ published privately for his comments (watched);
+  `docs/HARDWARE.md` updated and published as a commentable doc.
   The tech-docs pass listed where ADRs and `docs/ARCHITECTURE.md` disagree
   with the code (ADR-0105 §4, 0106 item 2, 0107's table, 0108's main text,
   0110, 0113, 0040 §1, 0031/0104 on setup; stale docstrings in volume.py,
