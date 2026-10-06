@@ -175,3 +175,22 @@ with the playlist's tracks.
 - **TIDAL and Deezer**: not to be supported for now (George).
 - **Over time**: one run, one evening; a busier server or a slower service
   could be slower.
+
+## Addendum 2026-10-06: My Music has more than the player menu says
+
+George: *"There are entries missing in My music"*. The player menu (`menu
+… direct:1`, node `myMusic`) carries **14** entries; Lyrion's web interface
+(Material) shows **23**. The other nine are the **Extended Browse Modes**
+plugin's - Random Albums, Popular Albums, Popular Artists, New Artists,
+Recently Played Artists, Recently Updated Albums, Top Tracks, Flop Tracks,
+Disks and folders, Playlists Folder - and two it has switched off on this
+server (Jazz Composers, Classical Music by Conductor: `enabled: "0"` in
+`plugin.extendedbrowsemodes:additionalMenuItems`).
+
+- **Where the full list is:** `material-skin browsemodes` - each mode's id,
+  text, weight and `params`. A command of Material's, so only where
+  Material is installed.
+- **Each opens like the menu's own:** `browselibrary items <start> <n>
+  <params> menu:1`, read here in 9-261 ms (Flop Tracks: 65,283 tracks).
+- **Disks and folders** browses the server's own file system (`home`, `lms`,
+  `media` here).

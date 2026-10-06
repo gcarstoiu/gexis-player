@@ -36,7 +36,11 @@
   } from '../lib/library.js';
   import { afterPaint, revealing } from '../lib/chunks.svelte.js';
   import { settingValues } from '../lib/settings.js';
-  import { menuTiles, loadMenuTiles, browseMenu, menuAct, menuSearch, viewFor, keepView } from '../lib/menus.js';
+  import { menuTiles, loadMenuTiles, browseMenu, menuAct, menuLetters as menuLetters_ } from '../lib/menus.js';
+  import { MY_MUSIC } from '../lib/lyrionLooks.js';
+  import LyrionLevel from './LyrionLevel.svelte';
+  import LyrionSearch from './LyrionSearch.svelte';
+  import Glyph from '../lib/Glyph.svelte';
   import { inView, watchScroller } from '../lib/window.svelte.js';
   import MiniStrip from './MiniStrip.svelte';
   import WaitingServices from './WaitingServices.svelte';
@@ -487,7 +491,7 @@
       // awaited: the grid opens now and fills in behind itself, where it
       // used to discover twenty at a time as cards came into view.
       prefetchArtistPhotos(artists.map((entry) => entry.id));
-      path = [{ kind: 'artists', label: 'Artists' }];
+      path = [{ kind: 'artists', label: 'Album Artists' }];
     } catch (err) {
       console.info('library:', err.message);
     } finally {
@@ -806,117 +810,86 @@
   //: A category an app adds sits just before Apps (ADR-0118 A).
   const otherTiles = $derived($menuTiles.filter((t) => t.key === 'other'));
 
-  //: **Read by colour and silhouette, as Radio's categories are**
-  //: (design/screens.md §8; George, 2026-10-05: "the icons are black and
-  //: white, not colourful as the design"). My Music's entries by Lyrion's
-  //: own ids: the group they sit in, their shape, their tint.
-  const MY_MUSIC = {
-    myMusicArtistsAllArtists: ['artists', 'mic', '#9fb4e8'],
-    myMusicArtistsComposers: ['artists', 'note', '#c8a2d8'],
-    myMusicArtistsJazzComposers: ['artists', 'note', '#f2a48f'],
-    myMusicArtistsConductors: ['artists', 'lines', '#b0bcc4'],
-    myMusicTopArtists: ['artists', 'star', '#e0a758'],
-    myMusicNewArtists: ['artists', 'star', '#7ed6bc'],
-    myMusicRecentlyPlayedArtists: ['artists', 'arcs', '#8fc4d8'],
-    myMusicAlbums: ['albums', 'disc', '#7ed6bc'],
-    myMusicRandomAlbums: ['albums', 'grid', '#c8a2d8'],
-    myMusicAlbumsVariousArtists: ['albums', 'disc', '#f2a48f'],
-    myMusicWorks: ['albums', 'lines', '#e0a758'],
-    myMusicNewMusic: ['albums', 'star', '#7ed6bc'],
-    myMusicRecentlyChangeAlbums: ['albums', 'cal', '#8fc4d8'],
-    myMusicPopularAlbums: ['albums', 'star', '#e0a758'],
-    myMusicTopTracks: ['tracks', 'note', '#7ed6bc'],
-    myMusicFlopTracks: ['tracks', 'note', '#b0bcc4'],
-    myMusicGenres: ['category', 'tag', '#f2a48f'],
-    myMusicYears: ['category', 'cal', '#e0a758'],
-    myMusicMusicFolder: ['category', 'folder', '#8fc4d8'],
-    myMusicFileSystem: ['category', 'folder', '#b0bcc4'],
-    myMusicSearch: ['more', 'search', '#b0bcc4'],
-    opmlselectVirtualLibrary: ['more', 'grid', '#c8a2d8'],
-    opmlselectRemoteLibrary: ['more', 'globe', '#8fc4d8'],
-  };
-  //: My Music's subgroups (George: "there should be some subgroups and
-  //: inside them have tiles"). Five since every mode the server offers is
-  //: in (2026-10-06: 21 entries); one Lyrion adds later goes in More.
-  const MY_MUSIC_GROUPS = [
-    ['artists', 'Artists'],
-    ['albums', 'Albums'],
-    ['tracks', 'Tracks'],
-    ['category', 'By category'],
-    ['more', 'More'],
-  ];
-  //: The design's tints, for entries named by Lyrion: a genre keeps its
-  //: colour from its name, as an artist's initials do.
-  const MENU_TINTS = ['#7ed6bc', '#e0a758', '#9fb4e8', '#f2a48f', '#c8a2d8', '#8fc4d8', '#b0bcc4'];
-  const HINT_SHAPE = { genre: 'tag', year: 'cal', folder: 'folder', artist: 'mic', album: 'disc', work: 'lines' };
-  function menuTint(label) {
-    let h = 0;
-    for (const ch of label ?? '') h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-    return MENU_TINTS[h % MENU_TINTS.length];
-  }
-  function menuLook(row) {
-    const mine = row.id && MY_MUSIC[row.id];
-    if (mine) return [mine[1], mine[2]];
-    const shape = row.kind === 'search' ? 'search' : HINT_SHAPE[row.hint] ?? (row.kind === 'play' ? 'note' : 'folder');
-    return [shape, menuTint(row.label)];
-  }
-  //: **Our own shapes, Lyrion's pictures only where they are the thing
-  //: itself**: a cover (through `/music/` or the image proxy), or an app's
-  //: logo. Icons - the server's grey ones, a plugin's white ones (Spotty's,
-  //: seen 2026-10-05) - all live under an `/html/` path, apps' logos too,
-  //: so an app is known by its hint, not its path.
-  const ownPicture = (row) =>
-    !!row.image && !(row.id && MY_MUSIC[row.id]) && (row.hint === 'app' || !/\/html\//.test(row.image));
-  const covered = (rows) =>
-    rows.length > 0 && rows.filter((r) => r.kind === 'container' && ownPicture(r)).length / rows.length >= 0.6;
-
-  //: One level at a time, as Radio holds it: the page on screen, the view
-  //: it is drawn in, and the search box a search row opened.
+  //: **One level at a time, as Radio holds it**, with what led to it
+  //: (`ctx`): the row that opened it, My Music's word for the entry, the app
+  //: it belongs to - which is how LyrionLevel chooses its shape (ADR-0118,
+  //: Claude Design's handover). The level is pushed at once and drawn as
+  //: loading: a service's first page can take a second (Finding 111).
   let menu = $state(null);
-  const menuGroups = $derived(
-    menu?.node
-      ? MY_MUSIC_GROUPS.map(([key, label]) => ({
-          key,
-          label,
-          items: menu.items.filter((r) => (MY_MUSIC[r.id]?.[0] ?? 'more') === key),
-        })).filter((g) => g.items.length)
-      : null,
-  );
-  let menuView = $state('list');
+  let menuFailed = $state(null);
+  let menuLetters = $state({});
   let menuMore = false;
-  let searching = $state(null);
-  let searchText = $state('');
-  const menuWhere = () => path.filter((p) => p.kind === 'menu').map((p) => p.label).join('/');
 
-  async function openMenu(handle, label, push = true, page = null) {
-    busy = handle;
+  function ctxFor(row, parent = {}) {
+    const mine = row?.id && MY_MUSIC[row.id];
+    const app = row?.hint === 'app';
+    return {
+      from: row?.handle ? row : null,
+      opens: mine ? mine[3] : null,
+      appTop: app,
+      app: app ? row.label : parent.app ?? null,
+      appLogo: app ? row.image : parent.appLogo ?? null,
+    };
+  }
+
+  async function openMenu(handle, label, push = true, ctx = {}) {
+    if (push) path = [...path, { kind: 'menu', handle, label, ctx }];
+    const level = path[path.length - 1];
+    menu = null;
+    menuFailed = null;
+    menuLetters = {};
     try {
-      const got = page ?? (await browseMenu(handle));
-      if (push) path = [...path, { kind: 'menu', handle: got.handle ?? handle, label }];
-      menu = { ...got, handle: got.handle ?? handle };
-      searching = null;
-      revealed = null;
-      menuView = viewFor(menuWhere(), menu.items);
+      const got = await browseMenu(handle);
+      if (path[path.length - 1] !== level) return;
+      menu = { ...got, handle };
+      // The rail, for lists Lyrion files by letter (the handover's note 6).
+      const lettered = got.items.filter((r) => ['artist', 'genre', 'album'].includes(r.hint)).length;
+      if (got.count > 30 && lettered >= got.items.length * 0.6) {
+        menuLetters_(handle)
+          .then((body) => { if (path[path.length - 1] === level) menuLetters = body.letters ?? {}; })
+          .catch(() => {});
+      }
     } catch (err) {
-      flash(err.message);
+      if (path[path.length - 1] === level) menuFailed = err.message;
       console.info('menus:', err.message);
-    } finally {
-      busy = null;
     }
   }
 
   function openMenuTile(tile) {
     path = [];
-    openMenu(tile.handle, tile.key === 'apps' ? 'Apps' : tile.label);
+    openMenu(tile.handle, tile.key === 'apps' ? 'Apps' : tile.label, true, {
+      apps: tile.key === 'apps',
+      favourites: tile.key === 'favorites',
+    });
+  }
+
+  async function openMenuRow(row) {
+    // My Music's Search is the field itself, running its five searches
+    // together (the handover's note 4).
+    if (row.id === 'myMusicSearch') {
+      try {
+        const got = await browseMenu(row.handle);
+        const rows = got.items.filter((r) => r.kind === 'search');
+        path = [...path, { kind: 'menusearch', label: row.label, rows, ctx: here?.ctx ?? {} }];
+      } catch (err) {
+        flash(err.message);
+      }
+      return;
+    }
+    openMenu(row.handle, row.label, true, ctxFor(row, here?.ctx ?? {}));
+  }
+
+  function openSearchEntry(row) {
+    path = [...path, { kind: 'menusearch', label: row.label, rows: [row], ctx: here?.ctx ?? {} }];
   }
 
   /** The next page, when the end of the list comes into view. */
   async function moreMenu() {
-    if (!menu || menuMore || menu.items.length >= menu.count) return;
+    if (!menu || menuMore || (menu.start ?? 0) + menu.items.length >= menu.count) return;
     menuMore = true;
     const showing = menu;
     try {
-      const next = await browseMenu(showing.handle, showing.items.length);
+      const next = await browseMenu(showing.handle, (showing.start ?? 0) + showing.items.length);
       if (menu === showing) menu = { ...showing, items: [...showing.items, ...next.items] };
     } catch (err) {
       console.info('menus:', err.message);
@@ -925,20 +898,32 @@
     }
   }
 
-  function nearEnd(node) {
-    const observer = new IntersectionObserver((entries) => {
-      if (entries.some((e) => e.isIntersecting)) moreMenu();
-    }, { rootMargin: '600px' });
-    observer.observe(node);
-    return { destroy: () => observer.disconnect() };
+  /** The page before, after a jump, as the start comes into view - the
+   *  browser keeps the rows on screen where they are as it grows above. */
+  async function earlierMenu() {
+    if (!menu || menuMore || !(menu.start > 0)) return;
+    menuMore = true;
+    const showing = menu;
+    const from = Math.max(0, showing.start - 100);
+    try {
+      const prev = await browseMenu(showing.handle, from, showing.start - from);
+      if (menu === showing) menu = { ...showing, start: from, items: [...prev.items, ...showing.items] };
+    } catch (err) {
+      console.info('menus:', err.message);
+    } finally {
+      menuMore = false;
+    }
   }
 
-  function tapMenu(row) {
-    if (row.kind === 'folder' || row.kind === 'container') openMenu(row.handle, row.label);
-    else if (row.kind === 'play') doMenu(row, 'play');
-    else if (row.kind === 'search') {
-      searching = searching?.handle === row.handle ? null : row;
-      searchText = '';
+  /** A letter on the rail: the list from where that letter starts. */
+  async function jumpMenu(letter, position) {
+    if (!menu || position == null) return;
+    const showing = menu;
+    try {
+      const got = await browseMenu(showing.handle, position);
+      if (menu === showing) menu = { ...showing, start: position, items: got.items };
+    } catch (err) {
+      console.info('menus:', err.message);
     }
   }
 
@@ -952,26 +937,25 @@
     }
   }
 
-  async function submitSearch(event) {
-    event?.preventDefault();
-    const row = searching;
-    const words = searchText.trim();
-    if (!row || !words) return;
-    busy = row.handle;
-    try {
-      const found = await menuSearch(row.handle, words);
-      await openMenu(found.handle, `“${words}”`, true, found);
-    } catch (err) {
-      flash(err.message);
-    } finally {
-      busy = null;
-    }
-  }
+  //: The search field in the header (ADR-0118 E): typed on the phone.
+  let searchText = $state('');
+  $effect(() => {
+    here;
+    untrack(() => (searchText = ''));
+  });
 
-  function switchView() {
-    menuView = menuView === 'tiles' ? 'list' : 'tiles';
-    keepView(menuWhere(), menuView);
-  }
+  const MENU_NOUNS = { artist: 'artists', album: 'albums', genre: 'genres', year: 'years', work: 'works' };
+  const fmtCount = (n) => Number(n).toLocaleString('en-GB');
+  //: The crumb: where the level was opened from, and how many it holds.
+  const menuCrumb = $derived.by(() => {
+    if (here?.kind !== 'menu') return null;
+    const parent = path.length > 1 ? path[path.length - 2].label : '';
+    if (!menu) return [parent, menuFailed ? '' : 'Loading…'].filter(Boolean).join(' · ');
+    if (menu.node) return `${menu.count} views`;
+    const hint = menu.items.find((r) => r.hint)?.hint;
+    const noun = MENU_NOUNS[hint] ?? (menu.items.some((r) => r.kind === 'play') ? 'tracks' : 'items');
+    return [parent, `${fmtCount(menu.count)} ${noun}`].filter(Boolean).join(' · ');
+  });
 
   async function openPlaylists() {
     busy = 'playlists';
@@ -1136,10 +1120,10 @@
     const top = path[path.length - 1];
     if (top.kind === 'menu') {
       // As Radio: the level above is read again from its handle.
-      menu = null;
-      openMenu(top.handle, top.label, false);
+      openMenu(top.handle, top.label, false, top.ctx);
       return;
     }
+    if (top.kind === 'menusearch') return;
     if (top.kind === 'radio') {
       // **The items go with the path, not after it.** Going forward the
       // path is pushed last, so the level on screen stays its own until
@@ -1237,25 +1221,20 @@
         >
         <span class="i-back"></span>
       </button>
-      <div class="heading">
-        <span class="heading__title">{title}</span>
-        <span class="heading__crumb">{crumb}</span>
-      </div>
-      {#if here?.kind === 'menu' && menu && !menu.node && menu.items.some((r) => r.kind !== 'text')}
-        <!-- ADR-0118 I: list or tiles, remembered for this list. -->
-        <button
-          class="round round--view"
-          type="button"
-          aria-label={menuView === 'tiles' ? 'Show as a list' : 'Show as tiles'}
-          onclick={switchView}
-        >
-          {#if menuView === 'tiles'}
-            <span class="i-rows"><i></i><i></i><i></i></span>
-          {:else}
-            <!-- Nine, not Home's four: the two sit in the same header. -->
-            <span class="i-grid"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
-          {/if}
-        </button>
+      {#if here?.kind === 'menusearch'}
+        <!-- ADR-0118 E: the field replaces the title; the phone types into
+             it (ADR-0121). -->
+        <label class="msearchhead">
+          <Glyph name="Search" ink="#e9eef2" />
+          <input class="msearchhead__field" type="search" placeholder="Type on your phone" bind:value={searchText} autocomplete="off" />
+          <span class="msearchhead__phone"><Glyph name="Phone" ink="#7ed6bc" /><span>Typing on phone</span></span>
+        </label>
+      {:else}
+        <div class="heading">
+          {#if here?.ctx?.appLogo}<img class="heading__app" src={here.ctx.appLogo} alt="" />{/if}
+          <span class="heading__title">{title}</span>
+          <span class="heading__crumb">{menuCrumb ?? crumb}</span>
+        </div>
       {/if}
     </div>
   {/if}
@@ -1293,18 +1272,19 @@
             onpointercancel={lift}
             onclick={() => opening(() => openMenuTile(tile))}
           >
+            <!-- The designer's shapes and tints (design/source/13f). -->
             {#if look === 'mymusic'}
-              <span class="glyph glyph--disc"><i></i></span>
+              <span class="glyph"><Glyph name="Shelf" ink="#8fc4d8" size={44} /></span>
             {:else if look === 'favorites'}
-              <span class="glyph glyph--heart"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5 4.4 13A4.9 4.9 0 0 1 11.3 6l.7.7.7-.7a4.9 4.9 0 0 1 6.9 6.9z" /></svg></span>
+              <span class="glyph"><Glyph name="Heart" ink="#e8a0b4" size={40} /></span>
             {:else if look === 'apps'}
-              <span class="glyph glyph--apps"><i></i><i></i><i></i><i></i></span>
+              <span class="glyph"><Glyph name="Dots" ink="#c8a2d8" size={40} /></span>
             {:else}
-              <span class="glyph glyph--folders"><i></i><i></i></span>
+              <span class="glyph"><Glyph name="Folder" ink="#b0bcc4" size={40} /></span>
             {/if}
             <span>
               <span class="card__name">{look === 'apps' ? 'Apps' : tile.label}</span>
-              <span class="card__count">{look === 'mymusic' ? 'From Lyrion' : look === 'apps' ? 'Services' : look === 'favorites' ? 'Lyrion favourites' : ''}</span>
+              <span class="card__count">{look === 'mymusic' ? (tile.count != null ? `${tile.count} views` : '') : look === 'apps' ? (tile.count != null ? plural(tile.count, 'app', 'apps') : '') : look === 'favorites' ? (tile.count ? plural(tile.count, 'item', 'items') : tile.count === 0 ? 'Empty' : '') : 'From Lyrion'}</span>
             </span>
           </button>
         {/snippet}
@@ -1337,7 +1317,9 @@
           >
             <span class="glyph glyph--dots"><i></i><i></i><i></i></span>
             <span>
-              <span class="card__name">Artists</span>
+              <!-- Album Artists, not Artists: My Music has All Artists too
+                   (George, 2026-10-06). -->
+              <span class="card__name">Album Artists</span>
               <span class="card__count">{counts ? plural(counts.artists, 'artist', 'artists') : ''}</span>
             </span>
           </button>
@@ -1534,136 +1516,24 @@
           <div class="pane__empty">Nothing here</div>
         {/each}
       </div>
-    {:else if here?.kind === 'menu' && !menu}
-      <!-- A service's page can take a second the first time (Finding 111). -->
-      <div class="lists">
-        {#each [1, 2, 3, 4, 5, 6] as n (n)}
-          <div class="skelrow"></div>
-        {/each}
-      </div>
-    {:else if here?.kind === 'menu' && menu}
-      {#snippet disc(row, card)}
-        {@const look = menuLook(row)}
-        <span class="rdisc" class:rdisc--card={card} style:--tint={look[1]}>
-          {#if ownPicture(row) && !failed.has(row.image)}
-            <img class="rdisc__img" src={row.image} alt="" loading="lazy" onerror={() => markFailed(row.image)} />
-          {:else}
-            <span class="rglyph rglyph--{look[0]}"><i></i><i></i><i></i></span>
-          {/if}
-        </span>
-      {/snippet}
-      {#snippet actions(row)}
-        {#if row.can?.length && row.kind === 'play'}
-          <span class="row__actions">
-            {#if row.can.includes('play')}<button class="act act--play" type="button" aria-label="Play now" onclick={() => doMenu(row, 'play')}><span class="act__play"></span></button>{/if}
-            {#if row.can.includes('next')}<button class="act" type="button" aria-label="Play next" onclick={() => doMenu(row, 'next')}><span class="act__next"><b></b><i></i></span></button>{/if}
-            {#if row.can.includes('add')}<button class="act" type="button" aria-label="Add to queue" onclick={() => doMenu(row, 'add')}><span class="act__queue"><i></i><i></i><i></i></span></button>{/if}
-          </span>
-        {/if}
-      {/snippet}
-      {#snippet searchBox(row)}
-        {#if searching?.handle === row.handle}
-          <!-- ADR-0118 E: typed from the phone (ADR-0121), not remembered. -->
-          <form class="msearch" onsubmit={submitSearch}>
-            <input class="msearch__field" type="search" placeholder={row.label} bind:value={searchText} />
-            <button class="msearch__go" type="submit">Search</button>
-          </form>
-        {/if}
-      {/snippet}
-      {#snippet card(row)}
-        <button class="rcard" class:is-busy={busy === row.handle} type="button" onclick={() => tapMenu(row)}>
-          {@render disc(row, true)}
-          <span class="rcard__name" class:is-unnamed={!row.label}>{row.label || 'No name'}</span>
-          {#if row.subtitle}<span class="rcard__meta">{row.subtitle}</span>{/if}
-        </button>
-        {@render searchBox(row)}
-      {/snippet}
-      {#if menuGroups}
-        <!-- A menu of Lyrion's own (My Music): its subgroups, cards in each. -->
-        <div class="lists mgroups" use:fromTop={where}>
-          {#each menuGroups as group (group.key)}
-            <div class="group__head">
-              <span class="group__letter mgroups__label">{group.label}</span>
-              <span class="group__rule"></span>
-            </div>
-            <div class="rgrid rgrid--inline">
-              {#each group.items as row (row.handle)}{@render card(row)}{/each}
-            </div>
-          {/each}
-        </div>
-      {:else if menuView === 'tiles' && covered(menu.items)}
-        <!-- Albums and playlists with covers: the cover grid. -->
-        <div class="lists mgrid" use:fromTop={where}>
-          {#each menu.items as row, i (row.handle ?? `t${i}`)}
-            {#if row.kind === 'text'}
-              <div class="mtext">{row.label}{#if row.subtitle} · {row.subtitle}{/if}</div>
-            {:else}
-              <button class="album mtile" class:is-busy={busy === row.handle} type="button" onclick={() => tapMenu(row)}>
-                <span class="album__art mtile__art">
-                  {#if ownPicture(row) && !failed.has(row.image)}
-                    <img src={row.image} alt="" loading="lazy" onerror={() => markFailed(row.image)} />
-                  {:else}
-                    {@render disc(row, true)}
-                  {/if}
-                </span>
-                <span class="album__title" class:is-unnamed={!row.label}>{row.label || 'No name'}</span>
-                <span class="album__artist">{row.subtitle ?? ''}</span>
-              </button>
-              {@render searchBox(row)}
-            {/if}
-          {:else}
-            <div class="pane__empty">Nothing here</div>
-          {/each}
-          {#if menu.items.length < menu.count}<div class="mmore" use:nearEnd></div>{/if}
-        </div>
-      {:else if menuView === 'tiles'}
-        <!-- Categories, genres, years, folders: the design's card grid,
-             three across, each with its own shape and tint. -->
-        <div class="lists mcards" use:fromTop={where}>
-          <div class="rgrid rgrid--inline">
-            {#each menu.items as row, i (row.handle ?? `t${i}`)}
-              {#if row.kind === 'text'}
-                <div class="mtext">{row.label}{#if row.subtitle} · {row.subtitle}{/if}</div>
-              {:else}
-                {@render card(row)}
-              {/if}
-            {:else}
-              <div class="pane__empty">Nothing here</div>
-            {/each}
-          </div>
-          {#if menu.items.length < menu.count}<div class="mmore" use:nearEnd></div>{/if}
-        </div>
-      {:else}
-        <!-- Long rows: tracks and stations, and any list asked for so. -->
-        <div class="lists" use:fromTop={where}>
-          {#each menu.items as row, i (row.handle ?? `t${i}`)}
-            {#if row.kind === 'text'}
-              <div class="mtext">{row.label}{#if row.subtitle} · {row.subtitle}{/if}</div>
-            {:else}
-              <div class="plrow" class:is-busy={busy === row.handle}>
-                <button class="plrow__hit" type="button" onclick={() => tapMenu(row)}>
-                  {#if ownPicture(row) && row.kind !== 'folder' && !failed.has(row.image)}
-                    <span class="mthumb"><img src={row.image} alt="" loading="lazy" onerror={() => markFailed(row.image)} /></span>
-                  {:else}
-                    {@render disc(row, false)}
-                  {/if}
-                  <span class="plrow__text">
-                    <!-- A name Lyrion has as empty - 11 of George's 326 genres - is
-                         still something to play. -->
-                    <span class="plrow__name" class:is-unnamed={!row.label}>{row.label || 'No name'}</span>
-                    {#if row.subtitle}<span class="plrow__meta">{row.subtitle}</span>{/if}
-                  </span>
-                </button>
-                {@render actions(row)}
-              </div>
-              {@render searchBox(row)}
-            {/if}
-          {:else}
-            <div class="pane__empty">Nothing here</div>
-          {/each}
-          {#if menu.items.length < menu.count}<div class="mmore" use:nearEnd></div>{/if}
-        </div>
-      {/if}
+    {:else if here?.kind === 'menu'}
+      <LyrionLevel
+        page={menu}
+        ctx={here.ctx ?? {}}
+        letters={menuLetters}
+        {busy}
+        loading={!menu && !menuFailed}
+        failed={menuFailed}
+        onopen={openMenuRow}
+        onact={doMenu}
+        onsearchentry={openSearchEntry}
+        onjump={jumpMenu}
+        onmore={moreMenu}
+        onearlier={earlierMenu}
+        onretry={() => openMenu(here.handle, here.label, false, here.ctx)}
+      />
+    {:else if here?.kind === 'menusearch'}
+      <LyrionSearch rows={here.rows} text={searchText} ctx={here.ctx ?? {}} onopen={openMenuRow} onact={doMenu} />
     {:else if here?.kind === 'playlists'}
       <div class="lists">
         {#each playlists as entry (entry.id)}
@@ -2361,200 +2231,26 @@
   .cards--more {
     grid-template-columns: none;
     grid-auto-flow: column;
-    grid-auto-columns: calc((100% - 4 * 26px) / 5.35);
+    /* 200 px, so the sixth card peeks about 110 px and the row reads as one
+       that scrolls (the handover's note 1, George 2026-10-06). */
+    grid-auto-columns: 200px;
     overflow-x: auto;
     overscroll-behavior-x: contain;
     scrollbar-width: none;
     scroll-snap-type: x proximity;
+    mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 72px), transparent 100%);
   }
   .cards--more::-webkit-scrollbar { display: none; }
   .cards--more .card { scroll-snap-align: start; }
-  .card--mymusic { --card: 236, 198, 122; }
-  .card--favorites { --card: 238, 142, 170; }
-  .card--apps { --card: 184, 160, 238; }
-  .card--other { --card: 140, 196, 214; }
-  .card--mymusic .card__count { color: rgba(236, 198, 122, 0.9); }
-  .card--favorites .card__count { color: rgba(238, 142, 170, 0.9); }
-  .card--apps .card__count { color: rgba(184, 160, 238, 0.9); }
-  .card--other .card__count { color: rgba(140, 196, 214, 0.9); }
+  .card--mymusic { --card: 143, 196, 216; }
+  .card--favorites { --card: 232, 160, 180; }
+  .card--apps { --card: 200, 162, 216; }
+  .card--other { --card: 176, 188, 196; border-style: dashed; border-color: rgba(176, 188, 196, 0.4); background: rgba(176, 188, 196, 0.08); }
+  .card--mymusic .card__count { color: rgba(143, 196, 216, 0.9); }
+  .card--favorites .card__count { color: rgba(232, 160, 180, 0.9); }
+  .card--apps .card__count { color: rgba(200, 162, 216, 0.9); }
+  .card--other .card__count { color: rgba(176, 188, 196, 0.95); }
   .card.is-busy { opacity: 0.6; }
-  /* My Music: a record. */
-  .glyph--disc { align-items: center; }
-  .glyph--disc i {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    box-sizing: border-box;
-    background: radial-gradient(circle, rgb(236, 198, 122) 0 5px, transparent 5.5px 9px, rgba(236, 198, 122, 0.35) 9.5px 12px, transparent 12.5px);
-    border: 5px solid rgba(236, 198, 122, 0.95);
-  }
-  /* Favourites: a heart. */
-  .glyph--heart { align-items: center; }
-  .glyph--heart svg { width: 40px; height: 40px; fill: rgba(238, 142, 170, 0.95); }
-  /* Apps: four tiles, fading. */
-  /* With `.glyph`, which is later in this sheet and would make it a flex row
-     with nothing in it (seen on the panel, 2026-10-05). */
-  .glyph.glyph--apps {
-    width: 40px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 5px;
-    align-content: center;
-  }
-  .glyph--apps i { height: 17px; border-radius: 5px; background: rgb(184, 160, 238); }
-  .glyph--apps i:nth-child(2) { opacity: 0.7; }
-  .glyph--apps i:nth-child(3) { opacity: 0.5; }
-  .glyph--apps i:nth-child(4) { opacity: 0.3; }
-  /* A category an app adds, and a folder without a picture: two folders. */
-  .glyph--folders { position: relative; width: 44px; align-items: center; }
-  .glyph--folders i {
-    position: absolute;
-    width: 32px;
-    height: 24px;
-    border-radius: 4px 9px 5px 5px;
-    background: rgb(140, 196, 214);
-    left: 10px;
-    top: 14px;
-  }
-  .glyph--folders i:first-child { left: 2px; top: 6px; opacity: 0.45; }
-  .glyph--small { transform: scale(0.62); }
-
-  /* The lists' pictures: Lyrion's cover or icon, else our own shape. */
-  .mthumb {
-    width: 54px;
-    height: 54px;
-    border-radius: 11px;
-    background: rgba(233, 238, 242, 0.06);
-    border: 1px solid rgba(233, 238, 242, 0.12);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    flex-shrink: 0;
-    box-sizing: border-box;
-  }
-  .mthumb img { width: 100%; height: 100%; object-fit: cover; }
-  .mthumb--big { width: 100%; height: 100%; border: 0; border-radius: 0; background: none; }
-  .mthumb--big .glyph--small { transform: scale(1.4); }
-  .mthumb__search {
-    width: 18px;
-    height: 18px;
-    border: 3px solid rgba(233, 238, 242, 0.85);
-    border-radius: 50%;
-    position: relative;
-  }
-  .mthumb__search::after {
-    content: '';
-    position: absolute;
-    width: 9px;
-    height: 3px;
-    border-radius: 2px;
-    background: rgba(233, 238, 242, 0.85);
-    right: -9px;
-    bottom: -5px;
-    transform: rotate(45deg);
-  }
-  /* `.lists` scrolls; this lays it out as a grid - the two classes
-     together, so `.lists`' own column (later in this sheet) does not win. */
-  .lists.mgrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(var(--tile, 176px), 1fr));
-    gap: 26px 22px;
-    align-content: start;
-  }
-  .mtile { width: auto; text-align: left; }
-  .mtile__art { width: 100%; height: auto; aspect-ratio: 1; display: flex; }
-  .mtext {
-    grid-column: 1 / -1;
-    padding: 10px 14px;
-    font-size: var(--t-meta);
-    color: var(--ink-quiet);
-  }
-  .msearch {
-    display: flex;
-    gap: 12px;
-    padding: 6px 14px 14px 84px;
-  }
-  .msearch--tile { grid-column: 1 / -1; padding-left: 0; }
-  .msearch__field {
-    flex: 1;
-    height: 52px;
-    padding: 0 18px;
-    border-radius: 14px;
-    border: 1px solid rgba(233, 238, 242, 0.2);
-    background: rgba(233, 238, 242, 0.06);
-    color: var(--ink);
-    font: 500 20px var(--font-ui);
-  }
-  .msearch__go {
-    height: 52px;
-    padding: 0 26px;
-    border-radius: 14px;
-    border: 1px solid rgba(126, 214, 188, 0.4);
-    background: rgba(126, 214, 188, 0.16);
-    color: var(--accent-lms);
-    font: 700 18px var(--font-ui);
-  }
-  .mmore { height: 1px; grid-column: 1 / -1; }
-  /* Play next: a bar, then the play mark. */
-  .act__next { display: flex; align-items: center; gap: 3px; }
-  .act__next b { width: 3px; height: 13px; border-radius: 1px; background: rgba(233, 238, 242, 0.9); }
-  .act__next i {
-    width: 0;
-    height: 0;
-    border-left: 9px solid rgba(233, 238, 242, 0.9);
-    border-top: 6px solid transparent;
-    border-bottom: 6px solid transparent;
-  }
-  /* ── Menus drawn as the design's cards (§8) ─────────────────────── */
-  .lists.mgroups,
-  .lists.mcards { display: block; }
-  .mgroups .group__head { padding: 6px 0 14px; }
-  .mgroups .rgrid + .group__head { padding-top: 30px; }
-  .mgroups__label { text-transform: uppercase; color: var(--ink-muted); }
-  /* The grid inside a list that already scrolls and is already inset. */
-  .rgrid.rgrid--inline { overflow: visible; padding: 0; flex: none; }
-  .rgrid .msearch { grid-column: 1 / -1; padding: 0; }
-  .rdisc__img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
-  .rdisc:has(.rdisc__img) { overflow: hidden; background: none; border: 0; }
-  .mtile__art .rdisc { margin: auto; transform: scale(1.6); }
-  /* Six more shapes, drawn as Radio's ten are: in CSS, at full tint. */
-  .rglyph--disc { width: 20px; height: 20px; }
-  .rglyph--disc i:nth-child(1) { inset: 0; background: none; border: 2px solid currentColor; border-radius: 50%; }
-  .rglyph--disc i:nth-child(2) { inset: 5px; background: none; border: 2px solid currentColor; border-radius: 50%; opacity: 0.55; }
-  .rglyph--disc i:nth-child(3) { left: 8px; top: 8px; width: 4px; height: 4px; border-radius: 50%; }
-  .rglyph--tag { width: 20px; height: 20px; }
-  .rglyph--tag i:nth-child(1) {
-    inset: 0; background: none; border: 2px solid currentColor; border-radius: 3px 10px 3px 10px;
-    transform: rotate(-45deg) scale(0.86);
-  }
-  .rglyph--tag i:nth-child(2) { left: 5px; top: 5px; width: 4px; height: 4px; border-radius: 50%; }
-  .rglyph--tag i:nth-child(3) { display: none; }
-  .rglyph--cal { width: 20px; height: 20px; }
-  .rglyph--cal i:nth-child(1) { left: 0; top: 3px; width: 20px; height: 17px; background: none; border: 2px solid currentColor; border-radius: 4px; box-sizing: border-box; }
-  .rglyph--cal i:nth-child(2) { left: 0; top: 8px; width: 20px; height: 2px; }
-  .rglyph--cal i:nth-child(3) { left: 5px; top: 0; width: 2px; height: 6px; box-shadow: 8px 0 0 currentColor; }
-  .rglyph--folder { width: 22px; height: 18px; }
-  .rglyph--folder i:nth-child(1) { left: 0; top: 0; width: 9px; height: 5px; border-radius: 2px 3px 0 0; }
-  .rglyph--folder i:nth-child(2) { left: 0; top: 3px; width: 22px; height: 15px; border-radius: 2px 4px 4px 4px; }
-  .rglyph--folder i:nth-child(3) { display: none; }
-  .rglyph--search { width: 20px; height: 20px; }
-  .rglyph--search i:nth-child(1) { left: 0; top: 0; width: 15px; height: 15px; background: none; border: 2px solid currentColor; border-radius: 50%; box-sizing: border-box; }
-  .rglyph--search i:nth-child(2) { left: 12px; top: 14px; width: 8px; height: 2.5px; border-radius: 2px; transform: rotate(45deg); transform-origin: left; }
-  .rglyph--search i:nth-child(3) { display: none; }
-  .rglyph--grid { width: 20px; height: 20px; }
-  .rglyph--grid i { width: 8px; height: 8px; border-radius: 2px; }
-  .rglyph--grid i:nth-child(1) { left: 0; top: 0; }
-  .rglyph--grid i:nth-child(2) { left: 12px; top: 0; opacity: 0.6; }
-  .rglyph--grid i:nth-child(3) { left: 0; top: 12px; opacity: 0.6; box-shadow: 12px 0 0 currentColor; }
-
-  .round--view { margin-left: auto; }
-  .plrow__name.is-unnamed,
-  .album__title.is-unnamed { color: var(--ink-quiet); font-style: italic; }
-  .i-grid { width: 22px; height: 22px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
-  .i-grid i { border-radius: 1.5px; background: var(--ink-strong); }
-  .i-rows { width: 22px; height: 18px; display: flex; flex-direction: column; justify-content: space-between; }
-  .i-rows i { height: 3.5px; border-radius: 2px; background: var(--ink-strong); }
 
   .glyph {
     height: 44px;

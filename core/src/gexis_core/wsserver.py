@@ -893,6 +893,13 @@ class StateServer:
             return web.json_response({"error": "start and count are numbers"}, status=400)
         return await self._menus_answer(self._menus.browse(request.query.get("at", ""), start, count))
 
+    async def _handle_menus_letters(self, request: web.Request) -> web.Response:
+        """`?at=<handle>`: where each letter starts in that list (the rail)."""
+        off = self._menus_off()
+        if off is not None:
+            return off
+        return await self._menus_answer(self._menus.letters(request.query.get("at", "")))
+
     async def _handle_menus_act(self, request: web.Request) -> web.Response:
         """`{"handle", "action": "play"|"add"|"next"}` - what Lyrion itself
         offers for an item this core issued (ADR-0118 D)."""
@@ -1796,6 +1803,7 @@ class StateServer:
         app.router.add_get("/plugins/{id}/mark", self._handle_plugin_mark)
         app.router.add_get("/menus", self._handle_menus)
         app.router.add_get("/menus/browse", self._handle_menus_browse)
+        app.router.add_get("/menus/letters", self._handle_menus_letters)
         app.router.add_post("/menus/act", self._handle_menus_act)
         app.router.add_post("/menus/search", self._handle_menus_search)
         app.router.add_get("/radio", self._handle_radio)

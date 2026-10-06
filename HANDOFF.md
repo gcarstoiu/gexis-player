@@ -14,7 +14,12 @@ Extended navigation row (5d7076d); the core walker `menus.py` and
 `/menus*` routes (6783022); the standard panel's tiles, lists, tiles view
 and search (5c09075, 1f08d1a), then in the design's way after George's
 screenshot review - My Music grouped, tinted cards, our shapes over
-Lyrion's icons (505a1fe and after) - **on gexis as preview 0.9.1+git25,
+Lyrion's icons (505a1fe and after), and every browse mode the server
+offers in My Music (c43fd60) - **the look goes to Claude Design**: brief
+`design/briefs/13f-lyrion-menus.md`, on `main` (29dd787), 2026-10-06; its
+answer comes back as `design/source/13f/`. **Owed meanwhile: track rows
+show their actions all the time** - against screens.md's row-actions rule
+(first tap reveals, second plays). **On gexis as preview 0.9.1+git28,
 Extended navigation switched on there** for George to try. **Next: the
 bar family's screens** (BarLibrary), then George's try. Also on that
 preview: the update screen ends on the steps until Done; the install bar
