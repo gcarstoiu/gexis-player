@@ -86,12 +86,13 @@ navigation on, kiosk.env back to its original (debug port off, checksum
   now reach the screen (daemon looks ~90 s, panel 60 s), one fetch per
   track/provider and one search per artist at a time, providers search
   with the raw artist; 86 stored 'nobody' identities purged on gexis
-  (logged), nobodies now expire after a week. **Not done** from that
-  report: lead-artist/qualifier trimming in coverart, mb-release and
-  recording-art queries; artwork providers only when the renderer sent no
-  art, and first; duration out of the key for album-level providers; the
-  per-provider (not per-track) 15-min backoff; a cache read defaulting to
-  confidence 100.
+  (logged), nobodies now expire after a week. Then (same evening, George: "Do this too"): queries as a catalogue
+  holds the names (lead artist, trimmed album, bare title; live-checked:
+  two traced Bluetooth tracks now get covers), covers asked only when the
+  renderer sent none and first, album/artist answers cached without the
+  duration, confidence stored with cached answers. **Kept as designed:**
+  the per-provider 15-min backoff (a per-track one was weighed and refused:
+  a down provider would be asked for every track).
 
 **George's findings of 2026-10-06, all built and on gexis:** Qobuz's
 unstreamable "* " albums open as album pages (tracks Not available, a
