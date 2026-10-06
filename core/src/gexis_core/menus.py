@@ -194,10 +194,16 @@ class LyrionMenus:
         command += [f"{k}:{v}" for k, v in spec["params"].items()] + ["menu:1"]
         result = await self._call(command)
         base = (result.get("base") or {}).get("actions") or {}
-        rows = [r for r in (self._row(i, base) for i in result.get("item_loop") or []) if r]
+        loop = result.get("item_loop") or []
+        rows = [r for r in (self._row(i, base) for i in loop) if r]
+        total = int(result.get("count") or 0)
+        # Lyrion counts what the panel leaves out (an album page's "Add to
+        # favourites", J): on the last page the count is what is shown.
+        if start + len(loop) >= total:
+            total = start + len(rows)
         return {
             "title": spec.get("title") or result.get("title"),
-            "count": int(result.get("count") or 0),
+            "count": total,
             "start": start,
             "items": rows,
         }

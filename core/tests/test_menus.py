@@ -165,6 +165,8 @@ async def test_an_album_page_plays_its_tracks_and_hides_the_entry_that_writes():
     assert rows["Gjallarhorn"]["kind"] == "play" and rows["Gjallarhorn"]["subtitle"] == "Amon Amarth"
     assert rows["Gjallarhorn"]["can"] == ["add", "next", "play"]
     assert rows["Artist: Amon Amarth"]["kind"] == "folder" and rows["Genre: Metal"]["kind"] == "text"
+    # The whole list in one page: the count is what is shown, not Lyrion's.
+    assert page["count"] == 3
 
 
 @pytest.mark.asyncio
