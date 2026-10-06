@@ -37,6 +37,7 @@ from gexis_core.weather import Weather
 from gexis_core.metadata_file import MetadataFileWriter
 from gexis_core.artistinfo import PHOTO_LARGE, LmsArtistInfo
 from gexis_core.enrichment import (
+    ARTWORK_PROVIDERS,
     CONFIDENCE_MIN,
     PREFETCH_AFTER_S,
     Cache,
@@ -2493,7 +2494,6 @@ async def main() -> None:
     #: (George, 2026-09-24: *"automatic way for sure"*) - new albums get a
     #: cover as they arrive, and the button does the library on demand.
     LYRIC_PROVIDERS = ("lrclib",)
-    ARTWORK_PROVIDERS = ("coverart", "recording-art")
 
     def _may_ask(name: str) -> bool:
         if settings.value("enrichment") is False:
