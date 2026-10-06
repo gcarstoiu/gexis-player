@@ -811,22 +811,40 @@
   //: white, not colourful as the design"). My Music's entries by Lyrion's
   //: own ids: the group they sit in, their shape, their tint.
   const MY_MUSIC = {
-    myMusicArtistsAllArtists: ['music', 'mic', '#9fb4e8'],
-    myMusicArtistsComposers: ['music', 'note', '#c8a2d8'],
-    myMusicAlbums: ['music', 'disc', '#7ed6bc'],
-    myMusicAlbumsVariousArtists: ['music', 'disc', '#f2a48f'],
-    myMusicWorks: ['music', 'lines', '#e0a758'],
-    myMusicNewMusic: ['music', 'star', '#7ed6bc'],
+    myMusicArtistsAllArtists: ['artists', 'mic', '#9fb4e8'],
+    myMusicArtistsComposers: ['artists', 'note', '#c8a2d8'],
+    myMusicArtistsJazzComposers: ['artists', 'note', '#f2a48f'],
+    myMusicArtistsConductors: ['artists', 'lines', '#b0bcc4'],
+    myMusicTopArtists: ['artists', 'star', '#e0a758'],
+    myMusicNewArtists: ['artists', 'star', '#7ed6bc'],
+    myMusicRecentlyPlayedArtists: ['artists', 'arcs', '#8fc4d8'],
+    myMusicAlbums: ['albums', 'disc', '#7ed6bc'],
+    myMusicRandomAlbums: ['albums', 'grid', '#c8a2d8'],
+    myMusicAlbumsVariousArtists: ['albums', 'disc', '#f2a48f'],
+    myMusicWorks: ['albums', 'lines', '#e0a758'],
+    myMusicNewMusic: ['albums', 'star', '#7ed6bc'],
+    myMusicRecentlyChangeAlbums: ['albums', 'cal', '#8fc4d8'],
+    myMusicPopularAlbums: ['albums', 'star', '#e0a758'],
+    myMusicTopTracks: ['tracks', 'note', '#7ed6bc'],
+    myMusicFlopTracks: ['tracks', 'note', '#b0bcc4'],
     myMusicGenres: ['category', 'tag', '#f2a48f'],
     myMusicYears: ['category', 'cal', '#e0a758'],
     myMusicMusicFolder: ['category', 'folder', '#8fc4d8'],
+    myMusicFileSystem: ['category', 'folder', '#b0bcc4'],
     myMusicSearch: ['more', 'search', '#b0bcc4'],
     opmlselectVirtualLibrary: ['more', 'grid', '#c8a2d8'],
     opmlselectRemoteLibrary: ['more', 'globe', '#8fc4d8'],
   };
   //: My Music's subgroups (George: "there should be some subgroups and
-  //: inside them have tiles"). An entry Lyrion adds later goes in More.
-  const MY_MUSIC_GROUPS = [['music', 'Artists & albums'], ['category', 'By category'], ['more', 'More']];
+  //: inside them have tiles"). Five since every mode the server offers is
+  //: in (2026-10-06: 21 entries); one Lyrion adds later goes in More.
+  const MY_MUSIC_GROUPS = [
+    ['artists', 'Artists'],
+    ['albums', 'Albums'],
+    ['tracks', 'Tracks'],
+    ['category', 'By category'],
+    ['more', 'More'],
+  ];
   //: The design's tints, for entries named by Lyrion: a genre keeps its
   //: colour from its name, as an artist's initials do.
   const MENU_TINTS = ['#7ed6bc', '#e0a758', '#9fb4e8', '#f2a48f', '#c8a2d8', '#8fc4d8', '#b0bcc4'];

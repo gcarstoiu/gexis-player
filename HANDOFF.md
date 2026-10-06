@@ -12,7 +12,9 @@ checkout; 111 checks passed. Phase 13d stays open (board tests).
 **13f under way** (ADR-0118 accepted 2026-10-05, A-J; Finding 111):
 Extended navigation row (5d7076d); the core walker `menus.py` and
 `/menus*` routes (6783022); the standard panel's tiles, lists, tiles view
-and search (5c09075, 1f08d1a) - **on gexis as preview 0.9.1+git17,
+and search (5c09075, 1f08d1a), then in the design's way after George's
+screenshot review - My Music grouped, tinted cards, our shapes over
+Lyrion's icons (505a1fe and after) - **on gexis as preview 0.9.1+git25,
 Extended navigation switched on there** for George to try. **Next: the
 bar family's screens** (BarLibrary), then George's try. Also on that
 preview: the update screen ends on the steps until Done; the install bar
