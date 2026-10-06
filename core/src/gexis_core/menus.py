@@ -348,6 +348,9 @@ class LyrionMenus:
             # entry in a list is: the panel's looks key on these.
             "id": str(item.get("id") or "") or None,
             "hint": _hint(item, spec),
+            # The letter Lyrion sorted it under ("Jon Lord" under L): the
+            # list's headers follow it, as the rail does.
+            "letter": _letter(item.get("textkey")),
         }
 
     def _image(self, item: dict) -> str | None:

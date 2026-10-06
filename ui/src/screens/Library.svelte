@@ -951,10 +951,13 @@
     if (here?.kind !== 'menu') return null;
     const parent = path.length > 1 ? path[path.length - 2].label : '';
     if (!menu) return [parent, menuFailed ? '' : 'Loading…'].filter(Boolean).join(' · ');
-    if (menu.node) return `${menu.count} views`;
+    const one = (n, noun) => `${fmtCount(n)} ${n === 1 ? noun.replace(/s$/, '') : noun}`;
+    if (menu.node) return one(menu.count, 'views');
+    // A list of only text lines - Favourites' "Empty" - has nothing to count.
+    if (menu.items.every((r) => r.kind === 'text')) return parent;
     const hint = menu.items.find((r) => r.hint)?.hint;
     const noun = MENU_NOUNS[hint] ?? (menu.items.some((r) => r.kind === 'play') ? 'tracks' : 'items');
-    return [parent, `${fmtCount(menu.count)} ${noun}`].filter(Boolean).join(' · ');
+    return [parent, one(menu.count, noun)].filter(Boolean).join(' · ');
   });
 
   async function openPlaylists() {
@@ -2132,6 +2135,60 @@
     font-size: var(--t-meta);
     letter-spacing: 0.08em;
     color: var(--ink-quiet);
+  }
+  /* An app's level: its logo before the title (the handover's header). */
+  .heading__app {
+    align-self: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+  /* ADR-0118 E: the search field where the title was, typed on the phone. */
+  .msearchhead {
+    flex: 1;
+    min-width: 0;
+    height: 64px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 20px;
+    border-radius: 18px;
+    background: rgba(233, 238, 242, 0.07);
+    border: 1.5px solid var(--accent-lms);
+  }
+  .msearchhead__field {
+    flex: 1;
+    min-width: 0;
+    appearance: none;
+    background: none;
+    border: 0;
+    outline: none;
+    padding: 0;
+    font: inherit;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--ink);
+    caret-color: var(--accent-lms);
+  }
+  .msearchhead__field::placeholder {
+    color: rgba(233, 238, 242, 0.4);
+  }
+  .msearchhead__field::-webkit-search-cancel-button {
+    display: none;
+  }
+  .msearchhead__phone {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(126, 214, 188, 0.9);
   }
 
   .content {
