@@ -13,6 +13,7 @@
   the region between them, and the region alone blanks for a state.
 -->
 <script>
+  import { tick } from 'svelte';
   import Disc from '../lib/Disc.svelte';
   import Glyph from '../lib/Glyph.svelte';
   import { rgba } from '../lib/glyphs.js';
@@ -96,7 +97,50 @@
     at.forEach(([letter, pos], i) => (out[letter] = (at[i + 1]?.[1] ?? page?.count ?? pos) - pos));
     return out;
   });
-  const onLetter = $derived(items.length ? railLetter(items[0].label) : null);
+  //: Lyrion's own letter where it gives one (it sorts "Jon Lord" under L),
+  //: the label's otherwise.
+  const letterOf = (r) => r.letter ?? railLetter(r.label);
+  //: The rail lights the letter whose header was last scrolled past.
+  let seen = $state(null);
+  const onLetter = $derived(seen ?? (items.length ? letterOf(items[0]) : null));
+  let rowsBox = $state(null);
+  $effect(() => {
+    page?.handle;
+    seen = null;
+  });
+  /** A letter on the rail: that letter's rows, its header at the top. */
+  async function jump(l) {
+    await onjump?.(l, letters[l]);
+    await tick();
+    rowsBox?.querySelector(`[data-letter="${l}"]`)?.scrollIntoView({ block: 'start' });
+    seen = l;
+  }
+  function scrollOf(node) {
+    for (let n = node.parentElement; n; n = n.parentElement) {
+      const o = getComputedStyle(n).overflowY;
+      if (o === 'auto' || o === 'scroll') return n;
+    }
+    return null;
+  }
+  function watchLetters(box) {
+    const node = box;
+    let queued = false;
+    const look = () => {
+      queued = false;
+      const top = box.getBoundingClientRect().top + 8;
+      let found = null;
+      for (const h of node.querySelectorAll('[data-letter]')) {
+        if (h.getBoundingClientRect().top > top) break;
+        found = h.dataset.letter;
+      }
+      seen = found;
+    };
+    const onScroll = () => {
+      if (!queued) (queued = true), requestAnimationFrame(look);
+    };
+    box.addEventListener('scroll', onScroll, { passive: true });
+    return { destroy: () => box.removeEventListener('scroll', onScroll) };
+  }
 
   /** Rows with a header where the letter changes - unnamed ones gathered
    *  last under their own (the handover's Genres). */
@@ -107,7 +151,7 @@
     const out = [];
     let last = null;
     for (const r of named) {
-      const l = railLetter(r.label);
+      const l = letterOf(r);
       if (l !== last) {
         out.push({ head: l, meta: counts[l] ?? '', tint, first: last === null });
         last = l;
@@ -169,8 +213,17 @@
     io.observe(node);
     return { destroy: () => io.disconnect() };
   }
+  //: Rows arriving above keep what is on screen where it is (a letter
+  //: jumped to stays at the top).
   function nearStart(node) {
-    const io = new IntersectionObserver((e) => e.some((x) => x.isIntersecting) && onearlier?.(), { rootMargin: '200px' });
+    const box = scrollOf(node);
+    const io = new IntersectionObserver(async (e) => {
+      if (!e.some((x) => x.isIntersecting) || !box) return;
+      const below = box.scrollHeight - box.scrollTop;
+      await onearlier?.();
+      await tick();
+      box.scrollTop = box.scrollHeight - below;
+    }, { rootMargin: '200px' });
     io.observe(node);
     return { destroy: () => io.disconnect() };
   }
@@ -217,7 +270,7 @@
 {/snippet}
 
 {#snippet heads(entry)}
-  <div class="head" class:head--first={entry.first}>
+  <div class="head" class:head--first={entry.first} data-letter={entry.head.length === 1 ? entry.head : null}>
     <span class="head__label" style:color={entry.tint}>{entry.head}</span>
     <span class="head__rule"></span>
     <span class="head__meta">{entry.meta}</span>
@@ -229,7 +282,7 @@
     <div class="rail">
       {#each RAIL as l (l)}
         {@const have = l in letters}
-        <button class="rail__l" class:is-on={l === onLetter} class:is-have={have} type="button" disabled={!have} onclick={() => onjump?.(l, letters[l])}>{l}</button>
+        <button class="rail__l" class:is-on={l === onLetter} class:is-have={have} type="button" disabled={!have} onclick={() => jump(l)}>{l}</button>
       {/each}
     </div>
   {/if}
@@ -429,7 +482,7 @@
     <!-- Rows: genres, artists, ranked, folders, tracks, favourites. -->
     {@const cols = layout === 'genres' || layout === 'artists' ? 3 : layout === 'ranked' || layout === 'favourites' ? 2 : 1}
     <div class="withrail">
-      <div class="pad scroll rowsl">
+      <div class="pad scroll rowsl" bind:this={rowsBox} use:watchLetters>
         {#if layout === 'folder'}{@render playAll(ctx.from?.hint === 'folder' || ctx.opens === 'folder' ? 'Play folder' : 'Play all')}{/if}
         {#if layout === 'tracks'}{@render playAll('Play all')}{/if}
         {#if earlier}<div class="more" use:nearStart></div>{/if}
