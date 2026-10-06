@@ -720,11 +720,14 @@
   .remote {
     height: 100%;
   }
-  /* ADR-0101: room for the mini player, so the last rows are not under it.
-     Its closed height plus the phone's home-indicator inset. */
+  /* ADR-0101: room for the mini player, so the last rows are not under it -
+     its closed height as MiniPlayer measures it (the home-indicator inset is
+     inside that), and 16 px between the last row and its top edge (George,
+     2026-10-06). Left at the end of Settings' own scrolling lists, not as
+     padding here: padded, the page stopped short and left a bare band above
+     the sheet. */
   .remote--mini {
-    box-sizing: border-box;
-    padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
+    --foot-clear: calc(var(--mini-closed-h, 160px) + 16px);
   }
 
   /* ADR-0109, Standard family: Chromium's scale factor makes every screen

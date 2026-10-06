@@ -502,3 +502,10 @@ def test_a_turn_not_given_within_the_hour_is_a_failure(up, monkeypatch):
     with pytest.raises(up.Stop, match="did not finish within an hour"):
         up.take_turn(lambda: None)
     other.close()
+
+
+def test_apt_listchanges_is_off_for_an_install(up):
+    """It read every package's changelog before dpkg began: 8.8 s for
+    gexis-core on a Pi 4, the bar at 0 for 16 s (2026-10-06)."""
+    assert up.APT_ENV["APT_LISTCHANGES_FRONTEND"] == "none"
+    assert up.APT_ENV["DEBIAN_FRONTEND"] == "noninteractive"

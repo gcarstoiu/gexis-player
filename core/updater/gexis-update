@@ -216,7 +216,12 @@ def apt_env(repos: list[str], pins: list[str] | None = None) -> list[str]:
             "-o", "Dpkg::Options::=--force-confdef", "-o", "Dpkg::Options::=--force-confold"]
 
 
-APT_ENV = {"DEBIAN_FRONTEND": "noninteractive"}
+#: **apt-listchanges off** (2026-10-06): run by apt before dpkg starts, it
+#: opened every package for its changelog - 8.8 s for gexis-core's 75 MB on
+#: a Pi 4, 0.27 s with no frontend - and the install bar stood at 0 for the
+#: 16 s before dpkg began (0.9.1 -> 0.9.2 on gexis, from dpkg.log). Nobody
+#: reads those changelogs on an appliance; the release's notes are its own.
+APT_ENV = {"DEBIAN_FRONTEND": "noninteractive", "APT_LISTCHANGES_FRONTEND": "none"}
 
 
 def apt(opts: list[str], *args: str, prefix: list[str] | None = None) -> subprocess.CompletedProcess:
@@ -252,9 +257,11 @@ class DpkgShare:
     MARKS = (("Preparing to configure", 0.7), ("Preparing", 0.0), ("Unpacking", 0.05),
              ("Installing", 0.7), ("Configuring", 0.75), ("Installed", 1.0))
     STOPS = (0.0, 0.05, 0.7, 0.75, 1.0)
-    #: Megabytes of a package's weight per second, from 0.9.1 on gexis (a Pi
-    #: 4): 75.7 MB unpacked in about 35 s and configured in about 10.
-    RATE_MB_S = 1.5
+    #: Megabytes of a package's weight per second, from dpkg.log on gexis (a
+    #: Pi 4), 0.9.1 -> 0.9.2: gexis-core's 75.7 MB unpacked in 13 s and
+    #: configured in 6. (The 35 s first measured included apt-listchanges'
+    #: 9 s of reading it before dpkg started - see APT_ENV.)
+    RATE_MB_S = 3.5
     #: How close to the next action the creep may come.
     CREEP_MAX = 0.9
 
@@ -594,7 +601,11 @@ def install(args) -> int:
                              report_as={**about, "backup": backup, "message": f"installing {target}"})
             if r.returncode:
                 raise Stop("install failed: " + why(r))
+        # The bar seen full before the step is ticked: it went from about
+        # 70 % straight to the next step (George, 2026-10-06).
         PROGRESS["progress"] = 1.0
+        report("installing", **about, backup=backup, message=f"installing {target}")
+        time.sleep(1.0)
         verify(target)
     except Stop as failure:
         step(active_step() or "install", "failed")
