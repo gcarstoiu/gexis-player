@@ -312,8 +312,14 @@ class LyrionMenus:
             return self._shape(item, {"kind": "search", "cmd": cmd, "params": params,
                                       "title": _text(item)[0]})
         plays = kind_word == "audio" or item.get("style") == "itemplay" or cmd[-1] in PLAY_TAIL
-        if plays:
-            spec = {"kind": "play", "actions": self._actions(item, base, go_plays=(cmd, params))}
+        # An album asked for as a context menu (Qobuz's Bestsellers carry
+        # `isContextMenu`, seen 2026-10-06): its tracks "go" to Play Control,
+        # a list of what to do with them - they are leaves, played by the
+        # `play`, `add` and `add-hold` the list's base offers.
+        control = item.get("goAction") == "playControl"
+        if plays or control:
+            found = self._actions(item, base, go_plays=None if control else (cmd, params))
+            spec = {"kind": "play", "actions": found}
             return self._shape(item, spec) if spec["actions"] else None
         if not _is_browse(cmd):
             # A `do`, a preset, anything that is not a browse: not offered (D).
