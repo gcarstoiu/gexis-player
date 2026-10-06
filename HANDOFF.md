@@ -76,14 +76,14 @@ navigation on, kiosk.env back to its original (debug port off, checksum
   which installs on Automatic. Phone: Settings' lists end clear of the
   sheet (22 px, measured on every page). On gexis as preview
   `0.9.2+git5` except the check-only unit (committed after).
-- **Panel speed, measured** (Finding 101's tool, 12 runs, playing; raw in
-  `docs/findings/data/112-panel-frames-0.9.2.txt`, A/B in the scratchpad):
-  scrolls unchanged (58-60 drawn/s, 0 % dropped); Settings and Radio opens
-  much better than 29 Sep; Home, artist grid, Albums and artist page opens
-  drop 4-10 % (were 1-5 %). **The A/B clears the kept library (ADR-0122)**:
-  with it off the same opens drop as much or more. Cause still unknown;
-  the tool's `grid-still` and `settings-scroll` selectors need updating.
-  **No finding written yet.**
+- **Panel speed: Finding 112.** The slower screen opens (3-10 % dropped
+  against ~1 %) are **the hidden visualiser**, not the UI: the 29 Sep UI is
+  no faster on today's device, the kept library (ADR-0122) is cleared, heat
+  ruled out. Stopped, the opens drop ~1 %. Hidden with a moving fanart skin
+  it takes 57 % of a core while playing (3 % paused; Finding 025 measured 8 %
+  before skins moved). **A decision for George:** whether the visualiser
+  stops drawing while hidden (amends ADR-0019). `panel-frames.py` mended;
+  still flaky on browse/artist-page after Settings - recheck next run.
 - **Docs (drafts) - HELD until George gives the go-ahead** (2026-10-06:
   "Do not release them until I give the go ahead"): `docs/manual/`,
   `docs/FAQ.md`, `docs/tech/` live ONLY on the local branch `docs-drafts`
