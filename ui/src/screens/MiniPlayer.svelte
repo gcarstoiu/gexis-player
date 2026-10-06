@@ -472,12 +472,28 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    padding: 16px 16px calc(12px + env(safe-area-inset-bottom, 0px));
     background: var(--bg-panel);
-    border-top: 1px solid var(--ink-line);
-    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.35);
+    /* **A sheet over Settings, not the end of it** (George, 2026-10-06:
+       "more shadow or some sort of separation between the closed sheet and
+       the settings"): rounded at the top, a lit edge, a deeper shadow, and a
+       handle. */
+    border-top: 1px solid rgba(233, 238, 242, 0.16);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -10px 32px rgba(0, 0, 0, 0.6), 0 -1px 0 rgba(0, 0, 0, 0.4);
     font-family: var(--font-ui);
     color: var(--ink);
+  }
+  .mini::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    width: 36px;
+    height: 4px;
+    margin-left: -18px;
+    border-radius: 2px;
+    background: rgba(233, 238, 242, 0.24);
   }
   .mini__now {
     display: flex;
@@ -544,10 +560,6 @@
     background: var(--ink-fill-press);
     overflow: hidden;
   }
-  .mini--open .mini__track {
-    height: 10px;
-    border-radius: 5px;
-  }
   .mini__fill {
     display: block;
     height: 100%;
@@ -613,12 +625,6 @@
   }
   .mini__icons + .mini__row {
     margin-top: 4px;
-  }
-  .mini--open .mini__row {
-    flex-wrap: wrap;
-  }
-  .mini--open .mini__slider {
-    flex-basis: calc(100% - 64px);
   }
   .mini__scrim {
     position: fixed;
