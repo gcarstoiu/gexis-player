@@ -3345,4 +3345,14 @@
   .toast.is-shown {
     opacity: 1;
   }
+  /* The phone's closed mini player stands over the foot of the page: the
+     scrolling lists end with room for it (App.svelte's --foot-clear, 0 on
+     the panel). */
+  .rail::after,
+  .list::after {
+    content: '';
+    /* Less the list's own foot padding, which already stands below the
+       last row. */
+    flex: 0 0 max(0px, calc(var(--foot-clear, 0px) - 30px));
+  }
 </style>

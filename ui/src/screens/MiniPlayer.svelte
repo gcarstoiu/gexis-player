@@ -323,6 +323,31 @@
       say(`Idle screen: ${err.message}`);
     }
   }
+
+  //: **The page keeps clear of the closed sheet** (George, 2026-10-06: the
+  //: last setting must be fully visible above it). Its height, measured
+  //: while closed, is what Settings leaves free at its foot - App.svelte's
+  //: `.remote--mini` - rather than a number that went stale when the sheet
+  //: gained its row of icons.
+  function closedHeight(node, isOpen) {
+    let open = isOpen;
+    const put = () => {
+      if (!open) document.documentElement.style.setProperty('--mini-closed-h', `${node.offsetHeight}px`);
+    };
+    const watch = new ResizeObserver(put);
+    watch.observe(node);
+    put();
+    return {
+      update(next) {
+        open = next;
+        put();
+      },
+      destroy() {
+        watch.disconnect();
+        document.documentElement.style.removeProperty('--mini-closed-h');
+      },
+    };
+  }
 </script>
 
 {#if open}
@@ -334,6 +359,7 @@
 
 <div
   class="mini"
+  use:closedHeight={open}
   class:mini--open={open}
   style:--src-accent={`var(--accent-${$active}, var(--accent-lms))`}
 >
