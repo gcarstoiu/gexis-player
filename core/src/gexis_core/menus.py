@@ -43,8 +43,19 @@ KNOWN_TILES = {"myMusic": "mymusic", "favorites": "favorites", "opmlmyapps": "ap
 NO_TILE = {"globalSearch", "playerpower", "radios"}
 #: Whole branches that are the player's settings, never walked (C).
 SETTINGS_NODES = {"settings", "settingsAudio", "advancedSettings"}
-#: From My Music: what our own screens already are (C).
-LEFT_OUT_IDS = {"myMusicArtistsAlbumArtists", "myMusicPlaylists"}
+#: From My Music: what our own screens already are (C) - Playlists Folder
+#: being the same playlists again.
+LEFT_OUT_IDS = {"myMusicArtistsAlbumArtists", "myMusicPlaylists", "myMusicPlaylistFolder"}
+
+#: **Every browse mode the server offers**, not only the player menu's
+#: (George, 2026-10-06: "There are entries missing in My music"). The player
+#: menu carried 14 of the 23 Lyrion's web interface shows; the rest are the
+#: Extended Browse Modes plugin's - Random Albums, Popular Artists, Top
+#: Tracks... Material's own list has them all; without Material, the player
+#: menu is what there is.
+MODES_CMD = ["material-skin", "browsemodes"]
+#: Extended Browse Modes' own switches: a mode its owner turned off stays off.
+EBM_PREF = ["pref", "plugin.extendedbrowsemodes:additionalMenuItems", "?"]
 #: Entries left out by their icon (see the module's docstring).
 LEFT_OUT_ICONS = {"plugins/Spotty/html/images/transfer.png"}
 
@@ -168,10 +179,36 @@ class LyrionMenus:
             "items": rows,
         }
 
+    async def _modes(self) -> list[dict]:
+        """My Music's modes beyond the player menu, as menu items, or none
+        when the server cannot say (no Material, an older Lyrion)."""
+        try:
+            modes = (await self._rpc(list(MODES_CMD), self._player_id() or "")).get("modes_loop") or []
+        except Exception:  # noqa: BLE001 - optional: the player menu stands alone
+            return []
+        try:
+            prefs = (await self._rpc(list(EBM_PREF), "")).get("_p2") or []
+            off = {str(p.get("id")) for p in prefs if isinstance(p, dict) and str(p.get("enabled")) == "0"}
+        except Exception:  # noqa: BLE001
+            off = set()
+        items = []
+        for mode in modes:
+            ident = str(mode.get("id") or "")
+            params = mode.get("params") or {}
+            if not ident or ident in off or not params.get("mode"):
+                continue
+            items.append({"node": "myMusic", "id": ident, "text": mode.get("text") or "",
+                          "weight": mode.get("weight"),
+                          "actions": {"go": {"cmd": ["browselibrary", "items"], "params": {**params, "menu": 1}}}})
+        return items
+
     async def _node(self, spec: dict, start: int, count: int) -> dict:
         menu = await self._home()
-        children = [m for m in sorted(menu, key=_weight) if m.get("node") == spec["node"]
-                    and str(m.get("id") or "") not in LEFT_OUT_IDS]
+        children = [m for m in menu if m.get("node") == spec["node"]]
+        if spec["node"] == "myMusic":
+            have = {str(m.get("id") or "") for m in children}
+            children += [m for m in await self._modes() if m["id"] not in have]
+        children = [m for m in sorted(children, key=_weight) if str(m.get("id") or "") not in LEFT_OUT_IDS]
         rows = []
         for item in children:
             ident = str(item.get("id") or "")

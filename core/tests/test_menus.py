@@ -24,7 +24,7 @@ HOME = [
      "actions": {"go": {"cmd": ["browselibrary", "items"], "params": {"mode": "genres"}}}},
     {"node": "myMusic", "id": "myMusicPlaylists", "text": "Playlists", "weight": 80,
      "actions": {"go": {"cmd": ["browselibrary", "items"], "params": {"mode": "playlists"}}}},
-    {"node": "myMusic", "id": "myMusicAlbums", "text": "Albums", "weight": 40,
+    {"node": "myMusic", "id": "myMusicAlbums", "text": "Albums", "weight": 20,
      "actions": {"go": {"cmd": ["browselibrary", "items"], "params": {"mode": "albums"}}}},
     {"node": "settings", "id": "alarm", "text": "Alarm Clock", "weight": 10,
      "actions": {"go": {"cmd": ["alarm", "items"]}}},
@@ -77,14 +77,29 @@ SPOTTY = {
 }
 
 
+MODES = [
+    {"id": "myMusicAlbums", "text": "Albums", "weight": 20, "params": {"mode": "albums"}},
+    {"id": "myMusicRandomAlbums", "text": "Random Albums", "weight": 21, "params": {"mode": "randomalbums", "sort": "random"}},
+    {"id": "myMusicArtistsJazzComposers", "text": "Jazz Composers", "weight": 13, "params": {"mode": "x", "genre_id": "1"}},
+    {"id": "myMusicPlaylistFolder", "text": "Playlists Folder", "weight": 80, "params": {"mode": "playlistFolder"}},
+]
+
+
 class Lyrion:
-    def __init__(self):
+    def __init__(self, material=True):
         self.asked = []
+        self.material = material
 
     async def __call__(self, command, player):
         self.asked.append(list(command))
         if command[0] == "menu":
             return {"item_loop": HOME}
+        if command[0] == "material-skin":
+            if not self.material:
+                raise RuntimeError("no such command")
+            return {"modes_loop": MODES}
+        if command[0] == "pref":
+            return {"_p2": [{"id": "myMusicArtistsJazzComposers", "enabled": "0"}]}
         if command[:2] == ["myapps", "items"]:
             return APPS
         if command[:2] == ["qobuz", "items"]:
@@ -113,6 +128,27 @@ async def test_my_music_leaves_out_what_our_screens_already_are():
     m = menus()
     tiles = {t["key"]: t for t in await m.tiles()}
     page = await m.browse(tiles["mymusic"]["handle"])
+    assert [r["label"] for r in page["items"]] == ["Albums", "Random Albums", "Genres"]
+
+
+@pytest.mark.asyncio
+async def test_my_music_has_every_mode_the_server_offers():
+    """George, 2026-10-06: entries were missing. The modes Material lists
+    join the player menu's - not twice, not one Extended Browse Modes has
+    off, not Playlists Folder (C) - and without Material the menu stands."""
+    m = menus()
+    page = await m.browse(next(t for t in await m.tiles() if t["key"] == "mymusic")["handle"])
+    rows = {r["label"]: r for r in page["items"]}
+    assert set(rows) == {"Albums", "Random Albums", "Genres"}
+    m._handles["x"] = {"kind": "folder", "cmd": ["browselibrary", "items"], "params": {}}
+    lyrion = Lyrion()
+    m2 = menus(lyrion)
+    page = await m2.browse(next(t for t in await m2.tiles() if t["key"] == "mymusic")["handle"])
+    random_albums = next(r for r in page["items"] if r["label"] == "Random Albums")
+    await m2.browse(random_albums["handle"])
+    assert lyrion.asked[-1][:2] == ["browselibrary", "items"] and "sort:random" in lyrion.asked[-1]
+    bare = menus(Lyrion(material=False))
+    page = await bare.browse(next(t for t in await bare.tiles() if t["key"] == "mymusic")["handle"])
     assert [r["label"] for r in page["items"]] == ["Albums", "Genres"]
 
 
@@ -196,7 +232,7 @@ async def test_the_routes_answer_only_with_extended_navigation_on():
         body = await (await client.get("/menus")).json()
         assert body["on"] is True and [t["key"] for t in body["tiles"]][0] == "mymusic"
         page = await (await client.get(f"/menus/browse?at={body['tiles'][0]['handle']}")).json()
-        assert [r["label"] for r in page["items"]] == ["Albums", "Genres"]
+        assert [r["label"] for r in page["items"]] == ["Albums", "Random Albums", "Genres"]
         assert (await client.post("/menus/act", json={"handle": "nope", "action": "play"})).status == 404
         assert (await client.post("/menus/act", json={"handle": "nope", "action": "delete"})).status == 404
         # The Lyrion client off takes Extended navigation with it.
@@ -214,8 +250,8 @@ async def test_entries_say_what_they_are_and_a_menu_says_it_is_one():
     tiles = {t["key"]: t for t in await m.tiles()}
     page = await m.browse(tiles["mymusic"]["handle"])
     assert page["node"] == "myMusic"
-    assert [r["id"] for r in page["items"]] == ["myMusicAlbums", "myMusicGenres"]
-    genres = await m.browse(page["items"][1]["handle"])
+    assert [r["id"] for r in page["items"]] == ["myMusicAlbums", "myMusicRandomAlbums", "myMusicGenres"]
+    genres = await m.browse(page["items"][2]["handle"])
     assert genres  # the fake answers nothing for browselibrary; the hint is read from params:
     from gexis_core.menus import _hint
     assert _hint({"commonParams": {"genre_id": "601"}}, {}) == "genre"
