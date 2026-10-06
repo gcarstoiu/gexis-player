@@ -57,10 +57,41 @@ release** (George, 2026-10-04): never push a release onto an open PR.
 | Skin picker (ADR-0050 amended) | 960 px previews made ahead for every installed pack |
 | Released in 0.8.7 | The new-screen notice and its straight switch (29a3386, 88ee721, d91a4bc); a USB disk kept 7 days after unplugging (ADR-0115 decision 17, ddf088f); setup's copy fixes from the review (963857d-034fb33); genre pills kept to two rows on the artist page (7cd3e1b); skin packs fetched from the channel's release when the player's own is unpublished, a stale pack failure no longer shown, failures in words (efd329d); Finding 109's playback test; 13a/13c/13e closed |
 
-**`gexis` right now (2026-10-06, late):** the 13d preview with
-`phase-13b` merged - core `0.9.1+git46.b4345ae`, player and ui
-`0.9.1+git51.7c8b0cc`, Extended navigation on, on the 10.1" 1280 x 800.
-Check playback before any restart.
+**`gexis` right now (2026-10-06, evening):** the 13d preview with
+`phase-13b` merged - core, player and ui `0.9.1+git60.4f0662e`, Extended
+navigation on, kiosk.env back to its original (debug port off, checksum
+2fecdd6d...). Check playback before any restart.
+
+**Second round of George's findings (2026-10-06), built and on gexis:**
+- One-tap search also for Qobuz's and Spotty's "Search" folders (opened
+  straight to the field, their kept searches skipped - decision E).
+- Phone sheet (ADR-0101 amended): one row of icons, open or closed; Now
+  playing a toggle (`panel.now` reported; `minimise` ask added).
+- Choppiness, measured with a fake phone on the real relay
+  (scratchpad tools): (a) the core's event loop stalls the touchpad relay
+  while it parses big Lyrion answers - ~135 ms in every ~170 for 2 s while
+  All Artists' letter index (2.7 MB) was built; letter indexes now kept by
+  list for 30 min; (b) bunches are spread on the panel: moves 60 % per
+  frame, scrolls half per frame in whole pixels (ADR-0121 §3 amended); the
+  browser's own smooth scroll was tried and measured worse (slow start,
+  then 150-190 px jumps), reverted. **Still open:** a 104 ms main-thread
+  hitch when the Album Artists grid draws its next rows (page work, not
+  input); gexis's Wi-Fi power saving is on (not yet measured as a cause -
+  a decision for George once measured); **item 4 ("redrawn more often")
+  not reproduced** - the idle home paints nothing in 8 s; asked George
+  what he sees and when.
+- Enrichment: Lyrion Client's three rows are one tile, `sweep_all`
+  (ADR-0022 inventory, ADR-0059 amended), last run kept in enrichment.db.
+- On-the-go enrichment (traced by a subagent, claims checked): late covers
+  now reach the screen (daemon looks ~90 s, panel 60 s), one fetch per
+  track/provider and one search per artist at a time, providers search
+  with the raw artist; 86 stored 'nobody' identities purged on gexis
+  (logged), nobodies now expire after a week. **Not done** from that
+  report: lead-artist/qualifier trimming in coverart, mb-release and
+  recording-art queries; artwork providers only when the renderer sent no
+  art, and first; duration out of the key for album-level providers; the
+  per-provider (not per-track) 15-min backoff; a cache read defaulting to
+  confidence 100.
 
 **George's findings of 2026-10-06, all built and on gexis:** Qobuz's
 unstreamable "* " albums open as album pages (tracks Not available, a
