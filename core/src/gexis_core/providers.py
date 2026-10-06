@@ -190,6 +190,27 @@ class ArtistIdentity:
         #: because the daemon restarted, and every lookup of it is a search
         #: against the one endpoint that answers 503 most often.
         self._store = store
+        #: Searches going now, by folded name: the six providers that need
+        #: the artist start together and each began the same search
+        #: (2026-10-06).
+        self._in_flight: dict[str, asyncio.Future] = {}
+        # **Once: the "nobody" answers of searches made with the folded name
+        # alone.** Five providers asked without the raw name until
+        # 2026-10-06, so "Pitbull, Afrojack, Ne-Yo, Nayer" was searched whole,
+        # found nobody, and that was kept for good - 86 such on gexis. A
+        # marker keeps it to one purge.
+        if store is not None:
+            try:
+                store.recall("purged", self.NAMESPACE + "-nulls-1")
+            except KeyError:
+                try:
+                    gone = store.forget_missing(self.NAMESPACE)
+                    store.remember("purged", self.NAMESPACE + "-nulls-1", True)
+                    logger.info("providers: forgot %s artists searched by the folded name alone", gone)
+                except Exception as exc:  # noqa: BLE001 - a purge is housekeeping
+                    logger.info("providers: could not purge stored nobodies (%s)", exc)
+            except Exception as exc:  # noqa: BLE001
+                logger.info("providers: could not read the purge marker (%s)", exc)
 
     async def resolve(self, artist: str, raw: str | None = None) -> tuple[str, int] | None | bool:
         """`(mbid, score)`, `None` when MusicBrainz has no such artist, and
@@ -204,13 +225,24 @@ class ArtistIdentity:
             return self._known[artist]
         if self._store is not None:
             try:
-                remembered = self._store.recall(self.NAMESPACE, artist)
+                # "Nobody" is believed for a week, as a provider's "nothing"
+                # is (MISSING_TTL_S): an artist added upstream is found.
+                remembered = self._store.recall(self.NAMESPACE, artist, missing_ttl=7 * 24 * 3600)
                 self._known[artist] = tuple(remembered) if remembered else None
                 return self._known[artist]
             except KeyError:
                 pass
             except Exception as exc:
                 logger.info("providers: could not read a stored artist id (%s)", exc)
+        running = self._in_flight.get(artist)
+        if running is not None:
+            return await asyncio.shield(running)
+        task = asyncio.ensure_future(self._resolve(artist, raw))
+        self._in_flight[artist] = task
+        task.add_done_callback(lambda _t: self._in_flight.pop(artist, None))
+        return await asyncio.shield(task)
+
+    async def _resolve(self, artist: str, raw: str | None) -> tuple[str, int] | None | bool:
         identity = None
         for candidate in search_names(raw or artist):
             answer = await self._search(candidate)
@@ -367,7 +399,7 @@ class ListenBrainzPopular:
             return Answer(Outcome.UNAVAILABLE)
         if not key.artist:
             return Answer(Outcome.MISSING)
-        who = await self._identity.resolve(key.artist)
+        who = await self._identity.resolve(key.artist, raw=key.raw_artist or None)
         if who is False:
             return Answer(Outcome.UNAVAILABLE)
         if who is None:
@@ -451,7 +483,7 @@ class FanartArtistImage:
             return Answer(Outcome.UNAVAILABLE)
         if not key.artist:
             return Answer(Outcome.MISSING)
-        who = await self._identity.resolve(key.artist)
+        who = await self._identity.resolve(key.artist, raw=key.raw_artist or None)
         if who is False:
             return Answer(Outcome.UNAVAILABLE)
         if who is None:
@@ -519,7 +551,7 @@ class TheAudioDBArtistImage:
     async def fetch(self, key) -> Answer:
         if not key.artist:
             return Answer(Outcome.MISSING)
-        who = await self._identity.resolve(key.artist)
+        who = await self._identity.resolve(key.artist, raw=key.raw_artist or None)
         if who is False:
             return Answer(Outcome.UNAVAILABLE)
         if who is None:
@@ -915,7 +947,7 @@ class WikipediaBiography:
     async def fetch(self, key) -> Answer:
         if not key.artist:
             return Answer(Outcome.MISSING)
-        who = await self._identity.resolve(key.artist)
+        who = await self._identity.resolve(key.artist, raw=key.raw_artist or None)
         if who is False:
             return Answer(Outcome.UNAVAILABLE)
         if who is None:
@@ -998,7 +1030,7 @@ class ListenBrainzSimilar:
     async def fetch(self, key) -> Answer:
         if not key.artist:
             return Answer(Outcome.MISSING)
-        who = await self._identity.resolve(key.artist)
+        who = await self._identity.resolve(key.artist, raw=key.raw_artist or None)
         if who is False:
             return Answer(Outcome.UNAVAILABLE)
         if who is None:

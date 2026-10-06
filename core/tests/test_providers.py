@@ -1245,3 +1245,62 @@ async def test_theaudiodb_gives_its_fanart_with_the_shared_key_when_none_is_type
 
     http = FakeHttp({"ws/2/artist/": MB_ARTIST, "theaudiodb.com": {"artists": None}})
     assert (await TheAudioDBArtistImage(http, ArtistIdentity(http)).fetch(KEY)).outcome is Outcome.MISSING
+
+
+# --- on the go: the name as the renderer sent it (2026-10-06) ----------------
+
+class SpyIdentity:
+    def __init__(self):
+        self.asked = []
+
+    async def resolve(self, artist, raw=None):
+        self.asked.append((artist, raw))
+        return None
+
+
+@pytest.mark.asyncio
+async def test_the_providers_search_with_the_name_as_sent():
+    """Folded, "Pitbull, Afrojack, Ne-Yo, Nayer" loses the commas that
+    `search_names` splits on, so it was searched whole and never found."""
+    spy = SpyIdentity()
+    key = TrackKey.of(TrackMetadata(title="Give Me Everything (feat. Nayer)",
+                                    artist="Pitbull, Afrojack, Ne-Yo, Nayer", album="Planet Pit"))
+    await WikipediaBiography(FakeHttp({}), spy).fetch(key)
+    assert spy.asked == [("pitbull afrojack ne yo nayer", "Pitbull, Afrojack, Ne-Yo, Nayer")]
+
+
+@pytest.mark.asyncio
+async def test_one_search_for_an_artist_however_many_ask_at_once():
+    import asyncio as _asyncio
+
+    gate = _asyncio.Event()
+
+    class SlowHttp(FakeHttp):
+        async def json(self, url, params=None):
+            await gate.wait()
+            return await super().json(url, params)
+
+    http = SlowHttp({"musicbrainz.org/ws/2/artist": MB_ARTIST})
+    identity = ArtistIdentity(http)
+    asks = [_asyncio.ensure_future(identity.resolve("ac dc", raw="AC/DC")) for _ in range(4)]
+    await _asyncio.sleep(0)
+    gate.set()
+    results = await _asyncio.gather(*asks)
+    assert len(http.asked) == 1
+    assert all(r == results[0] for r in results) and results[0][0].startswith("66c662b6")
+
+
+def test_the_nobodies_of_folded_searches_are_forgotten_once(tmp_path):
+    from gexis_core.enrichment import Cache
+
+    store = Cache(tmp_path / "e.db")
+    store.remember(ArtistIdentity.NAMESPACE, "bob marley the wailers", None)
+    store.remember(ArtistIdentity.NAMESPACE, "ac dc", ["66c6", 100])
+    ArtistIdentity(FakeHttp({}), store=store)
+    with pytest.raises(KeyError):
+        store.recall(ArtistIdentity.NAMESPACE, "bob marley the wailers")
+    assert store.recall(ArtistIdentity.NAMESPACE, "ac dc") == ["66c6", 100]
+    # Once: a nobody found after the purge stays.
+    store.remember(ArtistIdentity.NAMESPACE, "nobody at all", None)
+    ArtistIdentity(FakeHttp({}), store=store)
+    assert store.recall(ArtistIdentity.NAMESPACE, "nobody at all") is None

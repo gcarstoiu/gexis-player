@@ -144,9 +144,14 @@ SCREEN_UNITS = (
 #: **ADR-0081: how many times the daemon looks for a cover.** `for_track`
 #: answers with what it has after its own wait and lets a slow provider finish
 #: behind it, caching the result - so one ask can return nothing for a track
-#: whose cover arrives a second later. Three looks, six seconds apart, which
-#: is the panel's own shape in `enrichment.js` for the same reason.
-COVER_LOOKS = 3
+#: whose cover arrives a second later. Six seconds apart, as the panel's own
+#: look-backs in `enrichment.js` for the same reason.
+#: **Fifteen looks, about a minute and a half** (2026-10-06): three gave up
+#: 32 s into a track, and a busy MusicBrainz answered "Summer"'s cover at
+#: 65 s - cached, never shown, while it played. A look while the lookup is
+#: still going waits on that same lookup (`EnrichmentService._ask`), so
+#: looking again costs nothing.
+COVER_LOOKS = 15
 COVER_LOOK_BACK_S = 6.0
 
 #: `bt_enabled` off powers the radio down as well as stopping the audio path,

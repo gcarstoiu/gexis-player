@@ -379,8 +379,10 @@ async def test_providers_are_asked_at_once_not_one_after_another():
     service = EnrichmentService([slow, quick], _cache())
 
     task = asyncio.ensure_future(service.for_track(KEY))
-    await asyncio.sleep(0)
-    await asyncio.sleep(0)
+    # Three turns: `_ask` hands each fetch to a shared task (one per track
+    # and provider, 2026-10-06), one hop more before it starts.
+    for _ in range(3):
+        await asyncio.sleep(0)
     # Both are in flight before either has answered.
     assert set(started) == {"wikipedia", "lrclib"}
     release.set()
@@ -494,3 +496,44 @@ class TestEnrichmentsOwnRowsAreWired:
 
         assert EnrichmentService([], Cache(Path(":memory:")),
                                  confidence_min=55).confidence_min == 55
+
+
+# --- on the go: what reached the screen (2026-10-06) ------------------------
+
+@pytest.mark.asyncio
+async def test_asks_that_overlap_share_one_fetch():
+    """The panel, a phone and the daemon's cover search each asked while a
+    slow provider was still going, and each began the same fetch again -
+    the same MusicBrainz searches queued on one limiter."""
+    release = asyncio.Event()
+    calls = []
+
+    class Slow(FakeProvider):
+        async def fetch(self, key):
+            calls.append(key)
+            await release.wait()
+            return await super().fetch(key)
+
+    service = EnrichmentService([Slow("coverart", [_found(album_art="https://cover")])], _cache())
+    first = asyncio.ensure_future(service.for_track(KEY))
+    second = asyncio.ensure_future(service.for_track(KEY))
+    for _ in range(3):
+        await asyncio.sleep(0)
+    release.set()
+    a, b = await first, await second
+    assert len(calls) == 1
+    assert a.album_art == b.album_art == "https://cover"
+
+
+def test_a_stored_nobody_is_believed_for_a_week():
+    clock = FakeClock()
+    cache = Cache(Path(":memory:"), clock=clock)
+    cache.remember("mb-artist", "pitbull afrojack", None)
+    cache.remember("mb-artist", "ac dc", ["66c6", 100])
+    assert cache.recall("mb-artist", "pitbull afrojack", missing_ttl=7 * 24 * 3600) is None
+    clock.advance(7 * 24 * 3600 + 1)
+    with pytest.raises(KeyError):
+        cache.recall("mb-artist", "pitbull afrojack", missing_ttl=7 * 24 * 3600)
+    # A found one is not aged out.
+    assert cache.recall("mb-artist", "ac dc", missing_ttl=7 * 24 * 3600) == ["66c6", 100]
+    assert cache.forget_missing("mb-artist") == 1
