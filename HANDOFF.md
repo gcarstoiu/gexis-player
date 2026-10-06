@@ -1,13 +1,41 @@
 # Handoff
 
-Last updated: 2026-10-05 (on R2D2).
+Last updated: 2026-10-06, late (on R2D2).
 
-**0.9.0 released 2026-10-05 on Testing (serial 23), from `phase-13d`** -
-13b's work, 13d's DAC work (Phase 13d stays open: the board tests are
-still George's), ADR-0119 (Plexamp claimed from Settings; gexis-plexamp
-0.4.0 published and pinned) and ADR-0120 (backgrounds). The PR into `main`
-waits for George. The image is `image/deploy/2026-10-05-gexis-player-v0.9.0.img`
-in the main checkout.
+**0.9.2 released 2026-10-06 on Testing (serial 25), from `phase-13d`**
+(tag v0.9.2 at 3225ec1): 13f's Lyrion menus behind Extended navigation,
+Minimise (ADR-0122), the phone sheet in one row, the enrichment tile, the
+on-the-go enrichment fixes, the update screen's end and progress. Image
+`image/deploy/2026-10-06-gexis-player-v0.9.2.img` in the main checkout;
+111 checks passed; check-upstream ok (Plexamp 4.13.2, Lyrion 9.1.1).
+**The PR into `main` waits for George.** Phase 13d stays open (board
+tests); 13f stays open (George's tries, the hidden-library hour).
+
+**13f: Claude Design's look is built, Standard and Bar** (ADR-0118
+accepted, A-J plus the handover notes and George's answers, 2026-10-06;
+handover in `design/source/13f/`). Steps on `phase-13b`: 5ede1d5 (glyphs,
+counts, letter index), 9e39b2f (standard screens), then fixes from
+checking them against George's Lyrion - letter headers by Lyrion's
+textkey, a rail jump that stays put, the search field's look, counts that
+match what is shown (a last page counts the rows shown; J's entry is
+Lyrion-counted), the 711 panel's album page and Album Artists card -
+and **step 3, the bars** (4309aa4): LyrionLevel and LyrionSearch take
+`bar`/`wide`; the letter-pair strip is one component, `bar/JumpStrip`,
+shared with the bar Artists row (George: "consistent"); Play all and the
+app logo in the head column; bar home gains My Music, Favourites, Apps
+(196 x 300 sideways). **Album Artists** replaces Artists on both homes
+(George, 2026-10-06). Standard checked at 711/800/853 and bars at 1280
+and 1850 x 400, through the relay harness against George's Lyrion.
+**Owed:** (1) done 2026-10-06 - `0.9.1+git42.ba6900a` installed on
+gexis (George's go-ahead); Qobuz's context-menu albums now give `play`
+tracks with add/next/play, and the album page checked on bar and
+standard; (2) Play / Play next / Add never pressed on
+George's system - his to try; (3) George's look at the bars, and note 7
+(whether the strip reads as buttons) on a real bar.
+Also on the 13d preview since 0.9.1: the update screen ends on the steps
+until Done, install progress by package size, notes no longer cut
+(ADR-0110 amended) - effective from the update after the one that
+delivers them, so 0.9.2's notes must stay under 1,200 characters.
 
 ## Start here
 
@@ -35,12 +63,58 @@ release** (George, 2026-10-04): never push a release onto an open PR.
 | Skin picker (ADR-0050 amended) | 960 px previews made ahead for every installed pack |
 | Released in 0.8.7 | The new-screen notice and its straight switch (29a3386, 88ee721, d91a4bc); a USB disk kept 7 days after unplugging (ADR-0115 decision 17, ddf088f); setup's copy fixes from the review (963857d-034fb33); genre pills kept to two rows on the artist page (7cd3e1b); skin packs fetched from the channel's release when the player's own is unpublished, a stale pack failure no longer shown, failures in words (efd329d); Finding 109's playback test; 13a/13c/13e closed |
 
-**`gexis` right now (2026-10-05, evening):** the 13d preview with
-`phase-13b` merged in - core `0.9.0+git17.8ebb7c1`, player and ui
-core, player and ui `0.9.0+git44.78e216c`, system `0.8.9+git87.5b4042c`: 0.9.0, the post-0.9.0 fixes and
-**ADR-0121's touchpad** with George's first four changes; on the 10.1" 1280 x 800 (the 13.3" FHD jammed the Wi-Fi). Its
-volume read 100 % after the touchpad tests, nothing playing - whether a
-test tap set it is unknown (LESSONS 59); left as it was.
+**`gexis` right now (2026-10-06, evening):** the 13d preview with
+`phase-13b` merged - core, player and ui `0.9.1+git60.4f0662e`, Extended
+navigation on, kiosk.env back to its original (debug port off, checksum
+2fecdd6d...). Check playback before any restart.
+
+**Second round of George's findings (2026-10-06), built and on gexis:**
+- One-tap search also for Qobuz's and Spotty's "Search" folders (opened
+  straight to the field, their kept searches skipped - decision E).
+- Phone sheet (ADR-0101 amended): one row of icons, open or closed; Now
+  playing a toggle (`panel.now` reported; `minimise` ask added).
+- Choppiness, measured with a fake phone on the real relay
+  (scratchpad tools): (a) the core's event loop stalls the touchpad relay
+  while it parses big Lyrion answers - ~135 ms in every ~170 for 2 s while
+  All Artists' letter index (2.7 MB) was built; letter indexes now kept by
+  list for 30 min; (b) bunches are spread on the panel: moves 60 % per
+  frame, scrolls half per frame in whole pixels (ADR-0121 §3 amended); the
+  browser's own smooth scroll was tried and measured worse (slow start,
+  then 150-190 px jumps), reverted. **Still open:** a 104 ms main-thread
+  hitch when the Album Artists grid draws its next rows (page work, not
+  input); gexis's Wi-Fi power saving is on (not yet measured as a cause -
+  a decision for George once measured); **item 4 ("redrawn more often")
+  not reproduced** - the idle home paints nothing in 8 s; asked George
+  what he sees and when.
+- Enrichment: Lyrion Client's three rows are one tile, `sweep_all`
+  (ADR-0022 inventory, ADR-0059 amended), last run kept in enrichment.db.
+- On-the-go enrichment (traced by a subagent, claims checked): late covers
+  now reach the screen (daemon looks ~90 s, panel 60 s), one fetch per
+  track/provider and one search per artist at a time, providers search
+  with the raw artist; 86 stored 'nobody' identities purged on gexis
+  (logged), nobodies now expire after a week. Then (same evening, George: "Do this too"): queries as a catalogue
+  holds the names (lead artist, trimmed album, bare title; live-checked:
+  two traced Bluetooth tracks now get covers), covers asked only when the
+  renderer sent none and first, album/artist answers cached without the
+  duration, confidence stored with cached answers. **Kept as designed:**
+  the per-provider 15-min backoff (a per-track one was weighed and refused:
+  a down provider would be asked for every track).
+
+**George's findings of 2026-10-06, all built and on gexis:** Qobuz's
+unstreamable "* " albums open as album pages (tracks Not available, a
+note in place of Play album); a library album gets lengths and a Release
+block from the library; rail/strip drawn while the letter index is pending
+(Albums, Genres and a genre's artists no longer jump); pointer: a tap
+clears the ring, the queue button rings, sideways scroll shape, moves
+applied once a frame (**choppiness not confirmed fixed** - his hands);
+touchpad socket reopens when the phone's page returns; the phone's
+Home/Now playing/Lyrics row moved between pad and volume; a whole
+labelled field counts as a text field, search openers announce text entry
+and the field takes focus as it opens (**the one-tap keyboard is untried
+on a phone**). **ADR-0122 accepted and built**: Minimise (chevron, top
+left over the art) shows the library as left; Home stays. **Owed:** the
+hidden library's behaviour on the Pi over an hour (ADR-0122,
+Consequences); George's look at the chevron.
 
 **Next, in order:**
 0. **Fixes after 0.9.0, on gexis, unreleased** (George's findings,
@@ -73,7 +147,18 @@ test tap set it is unknown (LESSONS 59); left as it was.
    amended; N1 not behind the touchpad, N2 greyed while nothing plays;
    55d6c1e): checked on gexis's panel (standard layout) - Lyrics, Lyrics
    off, Home, Now playing, each screenshotted, toggle state reported back.
-   **The bar layout's lyrics switch is not tried on hardware.** Drags (queue order, list scrolling) are
+   **The bar layout's lyrics switch is not tried on hardware.**
+0. **Idle backgrounds checked** (George: "always the same" animals,
+   2026-10-05; ADR-0047 §2e, W1-W3 as recommended): the pool was one page
+   of 50 at a change a minute (52 pictures drawn 230 times in an
+   afternoon). Now 200 a page, the page turning daily through three, no
+   repeat until the page is spent (online and on-device), kept on disk in
+   `/var/lib/gexis-core/wallpapers/state.json` - checked on gexis: 200
+   animals, a restart did not ask Pixabay again (8da8fc7). Artist pictures
+   pick among an artist's fanart backgrounds (3172c48). A face-placed
+   picture failed its request - numpy floats - fixed (b8eb10c). **Not
+   done**: a library over 1000 artists uses its first 1000 only; bars
+   find 0-12 wide pictures per 200 (Animals none). Drags (queue order, list scrolling) are
    out by decision D. Not measured during playback.
 0. **ADR-0120, bar backgrounds** (accepted 2026-10-05): step 1 (placement)
    and step 2 (TheAudioDB for

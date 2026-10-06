@@ -128,19 +128,16 @@
       <div class="ask__buttons"><button type="button" class="btn" onclick={close}>Hide</button></div>
     {:else}
       {#if u.state === 'done'}
+        <!-- ADR-0110, 2026-10-05: every step ticked, not the notes again. -->
         <div class="ask__title">Updated to {u.installed}</div>
-        {#if u.whats_new}
-          <div class="notes">
-            <ReleaseNotes text={u.whats_new} />
-          </div>
-        {/if}
+        <UpdateSteps update={u} />
         <div class="task__text task__text--quiet">Everything is paused or disconnected.</div>
       {:else}
         <div class="ask__title">Did not update</div>
         <UpdateSteps update={u} />
         <div class="warn"><span class="warn__mark">!</span><span class="warn__text">{u.message}</span></div>
       {/if}
-      <div class="ask__buttons"><button type="button" class="btn btn--confirm" onclick={close}>OK</button></div>
+      <div class="ask__buttons"><button type="button" class="btn btn--confirm" onclick={close}>{u.state === 'done' ? 'Done' : 'OK'}</button></div>
     {/if}
   </div>
 </div>

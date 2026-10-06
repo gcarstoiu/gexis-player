@@ -35,6 +35,12 @@
     libraryAction,
   } from '../lib/library.js';
   import { afterPaint, revealing } from '../lib/chunks.svelte.js';
+  import { settingValues } from '../lib/settings.js';
+  import { menuTiles, loadMenuTiles, browseMenu, menuAct, menuLetters as menuLetters_ } from '../lib/menus.js';
+  import { MY_MUSIC } from '../lib/lyrionLooks.js';
+  import LyrionLevel from './LyrionLevel.svelte';
+  import LyrionSearch from './LyrionSearch.svelte';
+  import Glyph from '../lib/Glyph.svelte';
   import { inView, watchScroller } from '../lib/window.svelte.js';
   import MiniStrip from './MiniStrip.svelte';
   import WaitingServices from './WaitingServices.svelte';
@@ -485,7 +491,7 @@
       // awaited: the grid opens now and fills in behind itself, where it
       // used to discover twenty at a time as cards came into view.
       prefetchArtistPhotos(artists.map((entry) => entry.id));
-      path = [{ kind: 'artists', label: 'Artists' }];
+      path = [{ kind: 'artists', label: 'Album Artists' }];
     } catch (err) {
       console.info('library:', err.message);
     } finally {
@@ -794,6 +800,193 @@
     }
   }
 
+  // ── ADR-0118: Lyrion's own menus, behind Extended navigation ─────────
+  //: The tiles it adds to Home, asked for again whenever the row changes.
+  $effect(() => {
+    if ($settingValues.lms_extended_nav === true) loadMenuTiles();
+    else menuTiles.set([]);
+  });
+  const tileFor = (key) => $menuTiles.find((t) => t.key === key) ?? null;
+  //: A category an app adds sits just before Apps (ADR-0118 A).
+  const otherTiles = $derived($menuTiles.filter((t) => t.key === 'other'));
+
+  //: **One level at a time, as Radio holds it**, with what led to it
+  //: (`ctx`): the row that opened it, My Music's word for the entry, the app
+  //: it belongs to - which is how LyrionLevel chooses its shape (ADR-0118,
+  //: Claude Design's handover). The level is pushed at once and drawn as
+  //: loading: a service's first page can take a second (Finding 111).
+  let menu = $state(null);
+  let menuFailed = $state(null);
+  let menuLetters = $state({});
+  let menuMore = false;
+
+  function ctxFor(row, parent = {}) {
+    const mine = row?.id && MY_MUSIC[row.id];
+    const app = row?.hint === 'app';
+    return {
+      from: row?.handle ? row : null,
+      opens: mine ? mine[3] : null,
+      appTop: app,
+      app: app ? row.label : parent.app ?? null,
+      appLogo: app ? row.image : parent.appLogo ?? null,
+    };
+  }
+
+  async function openMenu(handle, label, push = true, ctx = {}) {
+    if (push) path = [...path, { kind: 'menu', handle, label, ctx }];
+    const level = path[path.length - 1];
+    menu = null;
+    menuFailed = null;
+    menuLetters = {};
+    try {
+      const got = await browseMenu(handle);
+      if (path[path.length - 1] !== level) return;
+      menu = { ...got, handle };
+      // The rail, for lists Lyrion files by letter (the handover's note 6).
+      const lettered = got.items.filter((r) => ['artist', 'genre', 'album'].includes(r.hint)).length;
+      if (got.count > 30 && lettered >= got.items.length * 0.6) {
+        // Pending (null): the rail or strip takes its place at once, so the
+        // list does not move when the index arrives (George, 2026-10-06).
+        menuLetters = null;
+        menuLetters_(handle)
+          .then((body) => { if (path[path.length - 1] === level) menuLetters = body.letters ?? {}; })
+          .catch(() => { if (path[path.length - 1] === level) menuLetters = {}; });
+      }
+    } catch (err) {
+      if (path[path.length - 1] === level) menuFailed = err.message;
+      console.info('menus:', err.message);
+    }
+  }
+
+  function openMenuTile(tile) {
+    path = [];
+    openMenu(tile.handle, tile.key === 'apps' ? 'Apps' : tile.label, true, {
+      apps: tile.key === 'apps',
+      favourites: tile.key === 'favorites',
+    });
+  }
+
+  async function openMenuRow(row) {
+    // My Music's Search is the field itself, running its five searches
+    // together (the handover's note 4).
+    if (row.id === 'myMusicSearch') {
+      try {
+        const got = await browseMenu(row.handle);
+        const rows = got.items.filter((r) => r.kind === 'search');
+        path = [...path, { kind: 'menusearch', label: row.label, rows, ctx: here?.ctx ?? {} }];
+      } catch (err) {
+        flash(err.message);
+      }
+      return;
+    }
+    openMenu(row.handle, row.label, true, ctxFor(row, here?.ctx ?? {}));
+  }
+
+  async function openSearchEntry(row) {
+    let rows = [row];
+    if (row.kind === 'folder') {
+      // An app's "Search" folder: its own search, without the searches kept
+      // under it (decision E).
+      try {
+        rows = (await browseMenu(row.handle)).items.filter((r) => r.kind === 'search').slice(0, 1);
+      } catch (err) {
+        flash(err.message);
+        return;
+      }
+      if (!rows.length) return openMenuRow(row);
+    }
+    path = [...path, { kind: 'menusearch', label: row.label, rows, ctx: here?.ctx ?? {} }];
+  }
+
+  /** The next page, when the end of the list comes into view. */
+  async function moreMenu() {
+    if (!menu || menuMore || (menu.start ?? 0) + menu.items.length >= menu.count) return;
+    menuMore = true;
+    const showing = menu;
+    try {
+      const next = await browseMenu(showing.handle, (showing.start ?? 0) + showing.items.length);
+      if (menu === showing) menu = { ...showing, items: [...showing.items, ...next.items] };
+    } catch (err) {
+      console.info('menus:', err.message);
+    } finally {
+      menuMore = false;
+    }
+  }
+
+  /** The page before, after a jump, as the start comes into view - the
+   *  browser keeps the rows on screen where they are as it grows above. */
+  async function earlierMenu() {
+    if (!menu || menuMore || !(menu.start > 0)) return;
+    menuMore = true;
+    const showing = menu;
+    const from = Math.max(0, showing.start - 100);
+    try {
+      const prev = await browseMenu(showing.handle, from, showing.start - from);
+      if (menu === showing) menu = { ...showing, start: from, items: [...prev.items, ...showing.items] };
+    } catch (err) {
+      console.info('menus:', err.message);
+    } finally {
+      menuMore = false;
+    }
+  }
+
+  /** A letter on the rail: the list from where that letter starts. */
+  async function jumpMenu(letter, position) {
+    if (!menu || position == null) return;
+    const showing = menu;
+    try {
+      const got = await browseMenu(showing.handle, position);
+      if (menu === showing) menu = { ...showing, start: position, items: got.items };
+    } catch (err) {
+      console.info('menus:', err.message);
+    }
+  }
+
+  async function doMenu(row, action) {
+    try {
+      await menuAct(row.handle, action);
+      flash(action === 'play' ? `Playing ${row.label}` : action === 'next' ? `${row.label} plays next` : `${row.label} added to the queue`);
+    } catch (err) {
+      flash(err.message);
+      console.info('menus:', err.message);
+    }
+  }
+
+  //: The search field in the header (ADR-0118 E): typed on the phone.
+  let searchText = $state('');
+  $effect(() => {
+    here;
+    untrack(() => (searchText = ''));
+  });
+
+  const MENU_NOUNS = { artist: 'artists', album: 'albums', genre: 'genres', year: 'years', work: 'works' };
+  const fmtCount = (n) => Number(n).toLocaleString('en-GB');
+  //: The crumb: where the level was opened from, and how many it holds.
+  const menuCrumb = $derived.by(() => {
+    if (here?.kind !== 'menu') return null;
+    const parent = path.length > 1 ? path[path.length - 2].label : '';
+    if (!menu) return [parent, menuFailed ? '' : 'Loading…'].filter(Boolean).join(' · ');
+    const one = (n, noun) => `${fmtCount(n)} ${n === 1 ? noun.replace(/s$/, '') : noun}`;
+    if (menu.node) return one(menu.count, 'views');
+    // A list of only text lines - Favourites' "Empty" - has nothing to count.
+    if (menu.items.every((r) => r.kind === 'text')) return parent;
+    const hint = menu.items.find((r) => r.hint)?.hint;
+    // Tracks carry an artist under the title; a station's streams do not.
+    // A track Qobuz cannot stream is an unavailable folder with a subtitle.
+    const leaf = (r) => r.kind === 'play' || (r.unavailable && r.kind === 'folder' && !!r.subtitle);
+    const tracks = menu.items.some((r) => leaf(r) && r.subtitle) || here.ctx?.from?.kind === 'container' || !!here.ctx?.from?.unavailable;
+    const noun = here.ctx?.apps ? 'apps' : MENU_NOUNS[hint] ?? (tracks ? 'tracks' : 'items');
+    // A whole list in hand counts what it shows: an app's album page is its
+    // tracks and then lines of text.
+    const whole = menu.items.length >= menu.count;
+    // An album page's links (Artist, Credits) are not among its tracks.
+    const shown = menu.items.filter((r) => (tracks ? leaf(r) : r.kind !== 'text'));
+    // Nothing named (TIDAL signed out: one unnamed item) counts nothing.
+    const n = !shown.some((r) => r.label) ? 0 : whole ? shown.length : menu.count;
+    if (!n) return parent;
+    return [parent, one(n, noun)].filter(Boolean).join(' · ');
+  });
+
   async function openPlaylists() {
     busy = 'playlists';
     try {
@@ -949,11 +1142,18 @@
     if (!path.length) {
       album = null;
       radio = null;
+      menu = null;
       return;
     }
     // Radio holds one level at a time, so stepping back re-reads the level
     // above from the handle that opened it.
     const top = path[path.length - 1];
+    if (top.kind === 'menu') {
+      // As Radio: the level above is read again from its handle.
+      openMenu(top.handle, top.label, false, top.ctx);
+      return;
+    }
+    if (top.kind === 'menusearch') return;
     if (top.kind === 'radio') {
       // **The items go with the path, not after it.** Going forward the
       // path is pushed last, so the level on screen stays its own until
@@ -1014,6 +1214,12 @@
       (fadeR ? '#000 calc(100% - 88px),rgba(0,0,0,0.35) calc(100% - 22px),transparent 100%)' : '#000 100%)'),
   );
 
+
+  //: The search field takes focus as it opens, so text typed on the phone
+  //: lands in it from the tap that opened it (ADR-0121).
+  function focusOnOpen(node) {
+    requestAnimationFrame(() => node.focus({ preventScroll: true }));
+  }
 </script>
 
 <!-- The design animates this in over 260ms (opacity 220ms, transform 10px).
@@ -1051,10 +1257,21 @@
         >
         <span class="i-back"></span>
       </button>
-      <div class="heading">
-        <span class="heading__title">{title}</span>
-        <span class="heading__crumb">{crumb}</span>
-      </div>
+      {#if here?.kind === 'menusearch'}
+        <!-- ADR-0118 E: the field replaces the title; the phone types into
+             it (ADR-0121). -->
+        <label class="msearchhead">
+          <Glyph name="Search" ink="#e9eef2" />
+          <input class="msearchhead__field" use:focusOnOpen type="search" placeholder="Type on your phone" bind:value={searchText} autocomplete="off" />
+          <span class="msearchhead__phone"><Glyph name="Phone" ink="#7ed6bc" /><span>Typing on phone</span></span>
+        </label>
+      {:else}
+        <div class="heading">
+          {#if here?.ctx?.appLogo}<img class="heading__app" src={here.ctx.appLogo} alt="" />{/if}
+          <span class="heading__title">{title}</span>
+          <span class="heading__crumb">{menuCrumb ?? crumb}</span>
+        </div>
+      {/if}
     </div>
   {/if}
 
@@ -1078,7 +1295,37 @@
       </div>
     {:else if atHome}
       <div class="root">
-        <div class="cards">
+        {#snippet menuCard(tile, look)}
+          <!-- ADR-0118: a tile Extended navigation adds, in the player's own
+               style - a shape and a colour of its own (George). -->
+          <button
+            class="card card--{look}"
+            class:is-pressed={pressed === tile.id}
+            class:is-busy={busy === tile.handle}
+            type="button"
+            onpointerdown={() => press(tile.id)}
+            onpointerup={lift}
+            onpointercancel={lift}
+            onclick={() => opening(() => openMenuTile(tile))}
+          >
+            <!-- The designer's shapes and tints (design/source/13f). -->
+            {#if look === 'mymusic'}
+              <span class="glyph"><Glyph name="Shelf" ink="#8fc4d8" size={44} /></span>
+            {:else if look === 'favorites'}
+              <span class="glyph"><Glyph name="Heart" ink="#e8a0b4" size={40} /></span>
+            {:else if look === 'apps'}
+              <span class="glyph"><Glyph name="Dots" ink="#c8a2d8" size={40} /></span>
+            {:else}
+              <span class="glyph"><Glyph name="Folder" ink="#b0bcc4" size={40} /></span>
+            {/if}
+            <span>
+              <span class="card__name">{look === 'apps' ? 'Apps' : tile.label}</span>
+              <span class="card__count">{look === 'mymusic' ? (tile.count != null ? `${tile.count} views` : '') : look === 'apps' ? (tile.count != null ? plural(tile.count, 'app', 'apps') : '') : look === 'favorites' ? (tile.count ? plural(tile.count, 'item', 'items') : tile.count === 0 ? 'Empty' : '') : 'From Lyrion'}</span>
+            </span>
+          </button>
+        {/snippet}
+        <div class="cards" class:cards--more={$menuTiles.length > 0}>
+          {#if tileFor('mymusic')}{@render menuCard(tileFor('mymusic'), 'mymusic')}{/if}
           <button
             class="card card--browse"
             class:is-pressed={pressed === 'browse'}
@@ -1106,7 +1353,9 @@
           >
             <span class="glyph glyph--dots"><i></i><i></i><i></i></span>
             <span>
-              <span class="card__name">Artists</span>
+              <!-- Album Artists, not Artists: My Music has All Artists too
+                   (George, 2026-10-06). -->
+              <span class="card__name card__name--long">Album Artists</span>
               <span class="card__count">{counts ? plural(counts.artists, 'artist', 'artists') : ''}</span>
             </span>
           </button>
@@ -1131,6 +1380,7 @@
             </span>
           </button>
 
+          {#if tileFor('favorites')}{@render menuCard(tileFor('favorites'), 'favorites')}{/if}
           <button
             class="card card--radio"
             class:is-pressed={pressed === 'radio'}
@@ -1149,6 +1399,8 @@
             </span>
           </button>
 
+          {#each otherTiles as tile (tile.id)}{@render menuCard(tile, 'other')}{/each}
+          {#if tileFor('apps')}{@render menuCard(tileFor('apps'), 'apps')}{/if}
           <button
             class="card card--settings"
             class:is-pressed={pressed === 'settings'}
@@ -1300,6 +1552,24 @@
           <div class="pane__empty">Nothing here</div>
         {/each}
       </div>
+    {:else if here?.kind === 'menu'}
+      <LyrionLevel
+        page={menu}
+        ctx={here.ctx ?? {}}
+        letters={menuLetters}
+        {busy}
+        loading={!menu && !menuFailed}
+        failed={menuFailed}
+        onopen={openMenuRow}
+        onact={doMenu}
+        onsearchentry={openSearchEntry}
+        onjump={jumpMenu}
+        onmore={moreMenu}
+        onearlier={earlierMenu}
+        onretry={() => openMenu(here.handle, here.label, false, here.ctx)}
+      />
+    {:else if here?.kind === 'menusearch'}
+      <LyrionSearch rows={here.rows} text={searchText} ctx={here.ctx ?? {}} onopen={openMenuRow} onact={doMenu} />
     {:else if here?.kind === 'playlists'}
       <div class="lists">
         {#each playlists as entry (entry.id)}
@@ -1899,6 +2169,60 @@
     letter-spacing: 0.08em;
     color: var(--ink-quiet);
   }
+  /* An app's level: its logo before the title (the handover's header). */
+  .heading__app {
+    align-self: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+  /* ADR-0118 E: the search field where the title was, typed on the phone. */
+  .msearchhead {
+    flex: 1;
+    min-width: 0;
+    height: 64px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 20px;
+    border-radius: 18px;
+    background: rgba(233, 238, 242, 0.07);
+    border: 1.5px solid var(--accent-lms);
+  }
+  .msearchhead__field {
+    flex: 1;
+    min-width: 0;
+    appearance: none;
+    background: none;
+    border: 0;
+    outline: none;
+    padding: 0;
+    font: inherit;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--ink);
+    caret-color: var(--accent-lms);
+  }
+  .msearchhead__field::placeholder {
+    color: rgba(233, 238, 242, 0.4);
+  }
+  .msearchhead__field::-webkit-search-cancel-button {
+    display: none;
+  }
+  .msearchhead__phone {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(126, 214, 188, 0.9);
+  }
 
   .content {
     position: relative;
@@ -1976,6 +2300,12 @@
     letter-spacing: var(--track-tight);
     color: var(--ink);
   }
+  /* Two words on one line: wrapped, they push the count out of a card on a
+     711-tall panel. */
+  .card__name--long {
+    font-size: calc(var(--t-h2) * 0.76);
+    white-space: nowrap;
+  }
   .card__count {
     display: block;
     min-height: 1.3em;
@@ -1990,6 +2320,35 @@
   .card--playlists .card__count { color: rgba(242, 164, 143, 0.9); }
   .card--radio .card__count { color: var(--ink-muted); }
   .card--settings .card__count { color: var(--ink-quiet); }
+
+  /* ── ADR-0118: the tiles Extended navigation adds ───────────────────
+     **One row that scrolls** (George, 2026-10-05): the cards keep their
+     size, five in view and the next peeking at the edge. */
+  .cards--more {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    /* 200 px, so the sixth card peeks about 110 px and the row reads as one
+       that scrolls (the handover's note 1, George 2026-10-06). */
+    grid-auto-columns: 200px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+    mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 72px), transparent 100%);
+    /* Scrolled to the end, the last card clears the fade. */
+    padding-right: 72px;
+  }
+  .cards--more::-webkit-scrollbar { display: none; }
+  .cards--more .card { scroll-snap-align: start; }
+  .card--mymusic { --card: 143, 196, 216; }
+  .card--favorites { --card: 232, 160, 180; }
+  .card--apps { --card: 200, 162, 216; }
+  .card--other { --card: 176, 188, 196; border-style: dashed; border-color: rgba(176, 188, 196, 0.4); background: rgba(176, 188, 196, 0.08); }
+  .card--mymusic .card__count { color: rgba(143, 196, 216, 0.9); }
+  .card--favorites .card__count { color: rgba(232, 160, 180, 0.9); }
+  .card--apps .card__count { color: rgba(200, 162, 216, 0.9); }
+  .card--other .card__count { color: rgba(176, 188, 196, 0.95); }
+  .card.is-busy { opacity: 0.6; }
 
   .glyph {
     height: 44px;

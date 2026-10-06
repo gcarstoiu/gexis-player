@@ -1245,3 +1245,160 @@ async def test_theaudiodb_gives_its_fanart_with_the_shared_key_when_none_is_type
 
     http = FakeHttp({"ws/2/artist/": MB_ARTIST, "theaudiodb.com": {"artists": None}})
     assert (await TheAudioDBArtistImage(http, ArtistIdentity(http)).fetch(KEY)).outcome is Outcome.MISSING
+
+
+# --- on the go: the name as the renderer sent it (2026-10-06) ----------------
+
+class SpyIdentity:
+    def __init__(self):
+        self.asked = []
+
+    async def resolve(self, artist, raw=None):
+        self.asked.append((artist, raw))
+        return None
+
+
+@pytest.mark.asyncio
+async def test_the_providers_search_with_the_name_as_sent():
+    """Folded, "Pitbull, Afrojack, Ne-Yo, Nayer" loses the commas that
+    `search_names` splits on, so it was searched whole and never found."""
+    spy = SpyIdentity()
+    key = TrackKey.of(TrackMetadata(title="Give Me Everything (feat. Nayer)",
+                                    artist="Pitbull, Afrojack, Ne-Yo, Nayer", album="Planet Pit"))
+    await WikipediaBiography(FakeHttp({}), spy).fetch(key)
+    assert spy.asked == [("pitbull afrojack ne yo nayer", "Pitbull, Afrojack, Ne-Yo, Nayer")]
+
+
+@pytest.mark.asyncio
+async def test_one_search_for_an_artist_however_many_ask_at_once():
+    import asyncio as _asyncio
+
+    gate = _asyncio.Event()
+
+    class SlowHttp(FakeHttp):
+        async def json(self, url, params=None):
+            await gate.wait()
+            return await super().json(url, params)
+
+    http = SlowHttp({"musicbrainz.org/ws/2/artist": MB_ARTIST})
+    identity = ArtistIdentity(http)
+    asks = [_asyncio.ensure_future(identity.resolve("ac dc", raw="AC/DC")) for _ in range(4)]
+    await _asyncio.sleep(0)
+    gate.set()
+    results = await _asyncio.gather(*asks)
+    assert len(http.asked) == 1
+    assert all(r == results[0] for r in results) and results[0][0].startswith("66c662b6")
+
+
+def test_the_nobodies_of_folded_searches_are_forgotten_once(tmp_path):
+    from gexis_core.enrichment import Cache
+
+    store = Cache(tmp_path / "e.db")
+    store.remember(ArtistIdentity.NAMESPACE, "bob marley the wailers", None)
+    store.remember(ArtistIdentity.NAMESPACE, "ac dc", ["66c6", 100])
+    ArtistIdentity(FakeHttp({}), store=store)
+    with pytest.raises(KeyError):
+        store.recall(ArtistIdentity.NAMESPACE, "bob marley the wailers")
+    assert store.recall(ArtistIdentity.NAMESPACE, "ac dc") == ["66c6", 100]
+    # Once: a nobody found after the purge stays.
+    store.remember(ArtistIdentity.NAMESPACE, "nobody at all", None)
+    ArtistIdentity(FakeHttp({}), store=store)
+    assert store.recall(ArtistIdentity.NAMESPACE, "nobody at all") is None
+
+
+# --- the queries, as a catalogue holds the names (2026-10-06) ----------------
+
+def test_the_lead_artist_and_the_bare_title():
+    from gexis_core.providers import bare_title, lead_artist
+
+    assert lead_artist("Pitbull, Afrojack, Ne-Yo, Nayer") == "Pitbull"
+    assert lead_artist("Macklemore & Ryan Lewis, Ray Dalton") == "Macklemore"
+    assert lead_artist("AC/DC") == "AC/DC"
+    assert bare_title("Give Me Everything (feat. Nayer)") == "Give Me Everything"
+    assert bare_title("Can't Hold Us feat. Ray Dalton") == "Can't Hold Us"
+    assert bare_title("Let It Be - Remastered 2009") == "Let It Be"
+
+
+class QueryHttp:
+    """Answers by the query MusicBrainz is asked, and records each."""
+
+    def __init__(self, answers):
+        self.answers = answers
+        self.queries = []
+
+    async def json(self, url, params=None):
+        query = (params or {}).get("query")
+        self.queries.append(query or url)
+        for fragment, body in self.answers.items():
+            if fragment in (query or url):
+                return body
+        return {}
+
+
+@pytest.mark.asyncio
+async def test_a_release_is_found_through_the_lead_artist_and_the_trimmed_album():
+    from gexis_core.providers import MusicBrainzRelease
+
+    http = QueryHttp({'artist:"Pitbull" AND release:"Planet Pit"': {"releases": [
+        {"title": "Planet Pit", "score": 100, "date": "2011", "track-count": 14,
+         "release-group": {"primary-type": "Album"}}]}})
+    key = TrackKey.of(TrackMetadata(title="Give Me Everything (feat. Nayer)",
+                                    artist="Pitbull, Afrojack, Ne-Yo, Nayer",
+                                    album="Planet Pit (Deluxe Version)"))
+    answer = await MusicBrainzRelease(http).fetch(key)
+    assert answer.outcome is Outcome.FOUND and answer.enrichment.released == "2011"
+    assert http.queries == ['artist:"Pitbull, Afrojack, Ne-Yo, Nayer" AND release:"Planet Pit (Deluxe Version)"',
+                            'artist:"Pitbull" AND release:"Planet Pit"']
+
+
+@pytest.mark.asyncio
+async def test_a_recordings_cover_is_asked_by_its_bare_title_and_lead_artist():
+    from gexis_core.providers import RecordingArtProvider
+
+    http = QueryHttp({
+        'recording:"Can\'t Hold Us" AND artist:"Macklemore"': {"recordings": [{
+            "score": 100,
+            "artist-credit": [{"name": "Macklemore", "joinphrase": " & ", "artist": {"name": "Macklemore"}},
+                              {"name": "Ryan Lewis", "artist": {"name": "Ryan Lewis"}}],
+            "releases": [{"id": "R1", "release-group": {"id": "RG1"}}]}]},
+        "coverartarchive.org/release-group/RG1": {"images": [{"front": True, "thumbnails": {"500": "https://c/500.jpg"}}]},
+    })
+    key = TrackKey.of(TrackMetadata(title="Can't Hold Us (feat. Ray Dalton)",
+                                    artist="Macklemore & Ryan Lewis, Ray Dalton", album="The Heist"))
+    answer = await RecordingArtProvider(http).fetch(key)
+    assert answer.outcome is Outcome.FOUND and answer.enrichment.album_art == "https://c/500.jpg"
+
+
+@pytest.mark.asyncio
+async def test_no_cover_is_looked_for_when_the_renderer_sent_one():
+    """LMS's own artwork made every LMS track spend MusicBrainz's allowance
+    on a cover nobody would draw (2026-10-06)."""
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from gexis_core.enrichment import Answer as _A, Cache, EnrichmentService
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+    from pathlib import Path as _P
+
+    asked = []
+
+    class Named:
+        def __init__(self, name):
+            self.name = name
+
+        def serves(self, renderer):
+            return True
+
+        async def fetch(self, key):
+            asked.append(self.name)
+            return _A(Outcome.MISSING)
+
+    store = StateStore({"spotify": True})
+    store.set_active("spotify")
+    store.set_metadata("spotify", TrackMetadata(artist="Daft Punk", title="One More Time",
+                                                album="Discovery", artwork="https://i.scdn.co/x"))
+    providers = [Named("coverart"), Named("recording-art"), Named("lrclib")]
+    server = StateServer(store, enrichment=EnrichmentService(providers, Cache(_P(":memory:"))))
+    async with TestClient(TestServer(server.make_app())) as client:
+        await client.get("/enrichment")
+    assert asked == ["lrclib"]

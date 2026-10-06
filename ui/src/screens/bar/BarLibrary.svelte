@@ -52,6 +52,13 @@
   import { screen } from '../../lib/family.svelte.js';
   import Settings from '../Settings.svelte';
   import BarRail from './BarRail.svelte';
+  import JumpStrip from './JumpStrip.svelte';
+  import Glyph from '../../lib/Glyph.svelte';
+  import { settingValues } from '../../lib/settings.js';
+  import { menuTiles, loadMenuTiles, browseMenu, menuAct, menuLetters as menuLetters_ } from '../../lib/menus.js';
+  import { MY_MUSIC, levelLayout } from '../../lib/lyrionLooks.js';
+  import LyrionLevel from '../LyrionLevel.svelte';
+  import LyrionSearch from '../LyrionSearch.svelte';
   import { dragScroll, watchSideways, edgeMask } from './sideways.svelte.js';
 
   // Library.svelte's props, so App can hand either screen the same set.
@@ -218,7 +225,7 @@
     try {
       artists = await artistsCached();
       prefetchArtistPhotos(artists.map((entry) => entry.id));
-      path = [{ kind: 'artists', label: 'Artists' }];
+      path = [{ kind: 'artists', label: 'Album Artists' }];
     } catch (err) {
       console.info('library:', err.message);
     } finally {
@@ -462,6 +469,193 @@
   );
   const openNew = () => (path = [{ kind: 'new', label: stripLabel }]);
 
+
+  // ---- ADR-0118: Lyrion's own menus, behind Extended navigation ---------------
+  //: Library.svelte's, drawn the bar's way: LyrionLevel and LyrionSearch in
+  //: their bar mode, the title and Play all in the head column, the letter
+  //: strip at the content's foot (the handover's §Frame — Bar).
+  $effect(() => {
+    if ($settingValues.lms_extended_nav === true) loadMenuTiles();
+    else menuTiles.set([]);
+  });
+  const tileFor = (key) => $menuTiles.find((t) => t.key === key) ?? null;
+  //: A category an app adds sits just before Apps (ADR-0118 A).
+  const otherTiles = $derived($menuTiles.filter((t) => t.key === 'other'));
+
+  let menu = $state(null);
+  let menuFailed = $state(null);
+  let menuLetters = $state({});
+  let menuMore = false;
+  //: The 1850 layout (1480 x 320 shown at 0.8).
+  const wide = $derived(W > 1500);
+
+  function ctxFor(row, parent = {}) {
+    const mine = row?.id && MY_MUSIC[row.id];
+    const app = row?.hint === 'app';
+    return {
+      from: row?.handle ? row : null,
+      opens: mine ? mine[3] : null,
+      appTop: app,
+      app: app ? row.label : parent.app ?? null,
+      appLogo: app ? row.image : parent.appLogo ?? null,
+    };
+  }
+
+  async function openMenu(handle, label, push = true, ctx = {}) {
+    if (push) path = [...path, { kind: 'menu', handle, label, ctx }];
+    const level = path[path.length - 1];
+    menu = null;
+    menuFailed = null;
+    menuLetters = {};
+    try {
+      const got = await browseMenu(handle);
+      if (path[path.length - 1] !== level) return;
+      menu = { ...got, handle };
+      // The strip, for lists Lyrion files by letter (the handover's note 6).
+      const lettered = got.items.filter((r) => ['artist', 'genre', 'album'].includes(r.hint)).length;
+      if (got.count > 30 && lettered >= got.items.length * 0.6) {
+        // Pending (null): the rail or strip takes its place at once, so the
+        // list does not move when the index arrives (George, 2026-10-06).
+        menuLetters = null;
+        menuLetters_(handle)
+          .then((body) => { if (path[path.length - 1] === level) menuLetters = body.letters ?? {}; })
+          .catch(() => { if (path[path.length - 1] === level) menuLetters = {}; });
+      }
+    } catch (err) {
+      if (path[path.length - 1] === level) menuFailed = err.message;
+      console.info('menus:', err.message);
+    }
+  }
+
+  function openMenuTile(tile) {
+    path = [];
+    openMenu(tile.handle, tile.key === 'apps' ? 'Apps' : tile.label, true, {
+      apps: tile.key === 'apps',
+      favourites: tile.key === 'favorites',
+    });
+  }
+
+  async function openMenuRow(row) {
+    // My Music's Search is the field itself, running its five searches
+    // together (the handover's note 4).
+    if (row.id === 'myMusicSearch') {
+      try {
+        const got = await browseMenu(row.handle);
+        const rows = got.items.filter((r) => r.kind === 'search');
+        path = [...path, { kind: 'menusearch', label: row.label, rows, ctx: here?.ctx ?? {} }];
+      } catch (err) {
+        flash(err.message);
+      }
+      return;
+    }
+    openMenu(row.handle, row.label, true, ctxFor(row, here?.ctx ?? {}));
+  }
+
+  async function openSearchEntry(row) {
+    let rows = [row];
+    if (row.kind === 'folder') {
+      // An app's "Search" folder: its own search, without the searches kept
+      // under it (decision E).
+      try {
+        rows = (await browseMenu(row.handle)).items.filter((r) => r.kind === 'search').slice(0, 1);
+      } catch (err) {
+        flash(err.message);
+        return;
+      }
+      if (!rows.length) return openMenuRow(row);
+    }
+    path = [...path, { kind: 'menusearch', label: row.label, rows, ctx: here?.ctx ?? {} }];
+  }
+
+  async function moreMenu() {
+    if (!menu || menuMore || (menu.start ?? 0) + menu.items.length >= menu.count) return;
+    menuMore = true;
+    const showing = menu;
+    try {
+      const next = await browseMenu(showing.handle, (showing.start ?? 0) + showing.items.length);
+      if (menu === showing) menu = { ...showing, items: [...showing.items, ...next.items] };
+    } catch (err) {
+      console.info('menus:', err.message);
+    } finally {
+      menuMore = false;
+    }
+  }
+
+  async function earlierMenu() {
+    if (!menu || menuMore || !(menu.start > 0)) return;
+    menuMore = true;
+    const showing = menu;
+    const from = Math.max(0, showing.start - 100);
+    try {
+      const prev = await browseMenu(showing.handle, from, showing.start - from);
+      if (menu === showing) menu = { ...showing, start: from, items: [...prev.items, ...showing.items] };
+    } catch (err) {
+      console.info('menus:', err.message);
+    } finally {
+      menuMore = false;
+    }
+  }
+
+  async function jumpMenu(letter, position) {
+    if (!menu || position == null) return;
+    const showing = menu;
+    try {
+      const got = await browseMenu(showing.handle, position);
+      if (menu === showing) menu = { ...showing, start: position, items: got.items };
+    } catch (err) {
+      console.info('menus:', err.message);
+    }
+  }
+
+  async function doMenu(row, action) {
+    try {
+      await menuAct(row.handle, action);
+      flash(action === 'play' ? `Playing ${row.label}` : action === 'next' ? `${row.label} plays next` : `${row.label} added to the queue`);
+    } catch (err) {
+      flash(err.message);
+      console.info('menus:', err.message);
+    }
+  }
+
+  //: The search field, typed on the phone; on a bar it is the content's.
+  let searchText = $state('');
+  $effect(() => {
+    here;
+    untrack(() => (searchText = ''));
+  });
+
+  //: Play all in the head column, for the lists that play whole (the
+  //: handover's §6: "Play all and Shuffle sit in the head column").
+  const menuLayout = $derived(here?.kind === 'menu' ? levelLayout(menu, here.ctx ?? {}, { loading: !menu && !menuFailed, failed: menuFailed }) : null);
+  const playAllLabel = $derived(
+    !['tracks', 'folder'].includes(menuLayout) || !here?.ctx?.from?.can?.includes('play')
+      ? null
+      : menuLayout === 'folder' && (here.ctx.from.hint === 'folder' || here.ctx.opens === 'folder') ? 'Play folder' : 'Play all',
+  );
+
+  const MENU_NOUNS = { artist: 'artists', album: 'albums', genre: 'genres', year: 'years', work: 'works' };
+  const fmtCount = (n) => Number(n).toLocaleString('en-GB');
+  //: Library.svelte's crumb: where the level was opened from, and how many.
+  const menuCrumb = $derived.by(() => {
+    if (here?.kind === 'menusearch') return path.length > 1 ? path[path.length - 2].label : '';
+    if (here?.kind !== 'menu') return null;
+    const parent = path.length > 1 ? path[path.length - 2].label : '';
+    if (!menu) return [parent, menuFailed ? '' : 'Loading…'].filter(Boolean).join(' · ');
+    const one = (n, noun) => `${fmtCount(n)} ${n === 1 ? noun.replace(/s$/, '') : noun}`;
+    if (menu.node) return one(menu.count, 'views');
+    if (menu.items.every((r) => r.kind === 'text')) return parent;
+    const hint = menu.items.find((r) => r.hint)?.hint;
+    // A track Qobuz cannot stream is an unavailable folder with a subtitle.
+    const leaf = (r) => r.kind === 'play' || (r.unavailable && r.kind === 'folder' && !!r.subtitle);
+    const tracks = menu.items.some((r) => leaf(r) && r.subtitle) || here.ctx?.from?.kind === 'container' || !!here.ctx?.from?.unavailable;
+    const noun = here.ctx?.apps ? 'apps' : MENU_NOUNS[hint] ?? (tracks ? 'tracks' : 'items');
+    const whole = menu.items.length >= menu.count;
+    const shown = menu.items.filter((r) => (tracks ? leaf(r) : r.kind !== 'text'));
+    const n = !shown.some((r) => r.label) ? 0 : whole ? shown.length : menu.count;
+    if (!n) return parent;
+    return [parent, one(n, noun)].filter(Boolean).join(' · ');
+  });
+
   // ---- settings, in the content area ---------------------------------------
   const openSettingsHere = () => (path = [{ kind: 'settings', label: 'Settings' }]);
 
@@ -475,9 +669,16 @@
     if (!path.length) {
       album = null;
       radio = null;
+      menu = null;
       return;
     }
     const top = path[path.length - 1];
+    if (top.kind === 'menu') {
+      // As Radio: the level above is read again from its handle.
+      openMenu(top.handle, top.label, false, top.ctx);
+      return;
+    }
+    if (top.kind === 'menusearch') return;
     if (top.kind === 'radio') {
       radio = null;
       openRadio(top.handle, top.label, false);
@@ -505,6 +706,9 @@
         return stripArtists.length ? plural(stripArtists.length, 'artist', 'artists') : plural(albums.length, 'album', 'albums');
       case 'radio':
         return radioCrumb;
+      case 'menu':
+      case 'menusearch':
+        return menuCrumb ?? '';
       default:
         return '';
     }
@@ -573,27 +777,21 @@
     return { rows: artists.slice(from, to), before: from * PITCH, after: Math.max(0, (artists.length - to) * PITCH) };
   });
 
-  //: Round 2's thirteen two-letter steps, and the "#" the panel's rail has
-  //: (13b-round2-review.md §2: fourteen still fit at 51 px at 1200).
-  const STEPS = [
-    { label: '#', letters: ['#'] },
-    ...Array.from({ length: 13 }, (_, i) => {
-      const a = String.fromCharCode(65 + i * 2);
-      const b = String.fromCharCode(66 + i * 2);
-      return { label: `${a}–${b}`, letters: [a, b] };
-    }),
-  ];
-  const stepFirst = $derived(
-    STEPS.map((step) => artists.findIndex((a) => step.letters.includes(a.letter ?? '#'))),
-  );
-  const stepOn = $derived.by(() => {
-    const first = artists[Math.min(artists.length - 1, Math.floor((side.left + PITCH / 2) / PITCH))];
-    const letter = first?.letter ?? '#';
-    return STEPS.findIndex((s) => s.letters.includes(letter));
+  //: The jump strip (JumpStrip.svelte): where each letter starts in the row.
+  const firstAt = $derived.by(() => {
+    const at = {};
+    artists.forEach((a, i) => {
+      const l = a.letter ?? '#';
+      if (!(l in at)) at[l] = i;
+    });
+    return at;
   });
-  function jump(index) {
-    const at = stepFirst[index];
-    if (at < 0 || !artistRow) return;
+  const letterOn = $derived(
+    artists[Math.min(artists.length - 1, Math.floor((side.left + PITCH / 2) / PITCH))]?.letter ?? '#',
+  );
+  function jump(letter) {
+    const at = firstAt[letter];
+    if (at == null || !artistRow) return;
     artistRow.scrollLeft = at * PITCH;
   }
 </script>
@@ -651,8 +849,13 @@
     {#if column}
       <div class="side">
         {@render backButtons(false)}
-        <div class="side__title">{title}</div>
+        <div class="side__title">
+          {#if here?.ctx?.appLogo}<img class="side__app" src={here.ctx.appLogo} alt="" />{/if}{title}
+        </div>
         <div class="side__crumb">{crumb}</div>
+        {#if playAllLabel}
+          <button class="side__play" type="button" onclick={() => doMenu(here.ctx.from, 'play')}><span class="side__tri"></span>{playAllLabel}</button>
+        {/if}
       </div>
     {/if}
 
@@ -672,8 +875,28 @@
       {:else if atHome}
         <!-- Six across (Bar Frame, home2 / c): the panel's five cards and its
              home strip, which on a bar is a card of its own. -->
-        <div class="home" class:is-narrow={narrow}>
-          <div class="cards">
+        {#snippet menuCard(tile, look)}
+          <!-- ADR-0118: a tile Extended navigation adds (Library.svelte's). -->
+          <button class="card card--{look}" class:is-pressed={pressed === tile.id} class:is-busy={busy === tile.handle} type="button"
+            onpointerdown={() => press(tile.id)} onpointerup={lift} onpointercancel={lift} onclick={() => opening(() => openMenuTile(tile))}>
+            {#if look === 'mymusic'}
+              <span class="glyph"><Glyph name="Shelf" ink="#8fc4d8" size={44} /></span>
+            {:else if look === 'favorites'}
+              <span class="glyph"><Glyph name="Heart" ink="#e8a0b4" size={40} /></span>
+            {:else if look === 'apps'}
+              <span class="glyph"><Glyph name="Dots" ink="#c8a2d8" size={40} /></span>
+            {:else}
+              <span class="glyph"><Glyph name="Folder" ink="#b0bcc4" size={40} /></span>
+            {/if}
+            <span class="card__text">
+              <span class="card__name">{look === 'apps' ? 'Apps' : tile.label}</span>
+              <span class="card__count">{look === 'mymusic' ? (tile.count != null ? `${tile.count} views` : '') : look === 'apps' ? (tile.count != null ? plural(tile.count, 'app', 'apps') : '') : look === 'favorites' ? (tile.count ? plural(tile.count, 'item', 'items') : tile.count === 0 ? 'Empty' : '') : 'From Lyrion'}</span>
+            </span>
+          </button>
+        {/snippet}
+        <div class="home" class:is-narrow={narrow && !$menuTiles.length}>
+          <div class="cards" class:cards--more={$menuTiles.length > 0} use:dragScroll>
+            {#if tileFor('mymusic')}{@render menuCard(tileFor('mymusic'), 'mymusic')}{/if}
             <button class="card card--browse" class:is-pressed={pressed === 'browse'} class:is-busy={busy === 'browse'} type="button"
               onpointerdown={() => press('browse')} onpointerup={lift} onpointercancel={lift} onclick={() => opening(openBrowse)}>
               <span class="glyph glyph--bars"><i style="height:26px"></i><i style="height:44px"></i><i style="height:32px"></i><i style="height:39px"></i></span>
@@ -686,7 +909,9 @@
               onpointerdown={() => press('artists')} onpointerup={lift} onpointercancel={lift} onclick={() => opening(openArtists)}>
               <span class="glyph glyph--dots"><i></i><i></i><i></i></span>
               <span class="card__text">
-                <span class="card__name">Artists</span>
+                <!-- Album Artists, not Artists: My Music has All Artists too
+                     (George, 2026-10-06). -->
+                <span class="card__name card__name--long">Album Artists</span>
                 <span class="card__count">{counts ? plural(counts.artists, 'artist', 'artists') : ''}</span>
               </span>
             </button>
@@ -702,6 +927,7 @@
                 <span class="card__count">{counts ? plural(counts.playlists, 'playlist', 'playlists') : ''}</span>
               </span>
             </button>
+            {#if tileFor('favorites')}{@render menuCard(tileFor('favorites'), 'favorites')}{/if}
             <button class="card card--new" class:is-pressed={pressed === 'new'} type="button"
               onpointerdown={() => press('new')} onpointerup={lift} onpointercancel={lift} onclick={() => opening(openNew)}>
               <span class="glyph glyph--stack"><i></i><i></i><i></i></span>
@@ -719,6 +945,8 @@
                 <span class="card__count"></span>
               </span>
             </button>
+            {#each otherTiles as tile (tile.handle)}{@render menuCard(tile, 'other')}{/each}
+            {#if tileFor('apps')}{@render menuCard(tileFor('apps'), 'apps')}{/if}
             <button class="card card--settings" class:is-pressed={pressed === 'settings'} type="button"
               onpointerdown={() => press('settings')} onpointerup={lift} onpointercancel={lift} onclick={() => opening(openSettingsHere)}>
               <span class="glyph glyph--sliders"><b></b><b></b><i></i><i></i></span>
@@ -729,6 +957,26 @@
             </button>
           </div>
         </div>
+      {:else if here?.kind === 'menu'}
+        <LyrionLevel
+          bar
+          {wide}
+          page={menu}
+          ctx={here.ctx ?? {}}
+          letters={menuLetters}
+          {busy}
+          loading={!menu && !menuFailed}
+          failed={menuFailed}
+          onopen={openMenuRow}
+          onact={doMenu}
+          onsearchentry={openSearchEntry}
+          onjump={jumpMenu}
+          onmore={moreMenu}
+          onearlier={earlierMenu}
+          onretry={() => openMenu(here.handle, here.label, false, here.ctx)}
+        />
+      {:else if here?.kind === 'menusearch'}
+        <LyrionSearch bar {wide} rows={here.rows} bind:text={searchText} ctx={here.ctx ?? {}} onopen={openMenuRow} onact={doMenu} />
       {:else if here?.kind === 'settings'}
         <div class="settings">
           <Settings onback={home} embedded />
@@ -789,11 +1037,7 @@
               <span class="spacer" style:width="{artistWindow.after}px"></span>
             </div>
           </div>
-          <div class="jump">
-            {#each STEPS as step, i (step.label)}
-              <button class="jump__step" class:is-on={i === stepOn} type="button" disabled={stepFirst[i] < 0} onclick={() => jump(i)}>{step.label}</button>
-            {/each}
-          </div>
+          <JumpStrip have={(l) => l in firstAt} on={letterOn} onpick={jump} />
         </div>
       {:else if here?.kind === 'browse'}
         <div class="browse">
@@ -1172,6 +1416,42 @@
     letter-spacing: 0.06em;
     color: var(--ink-quiet);
   }
+  /* ADR-0118: an app's logo before its title, and Play all at the foot of
+     a track list (the handover's §Frame — Bar). */
+  .side__app {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    object-fit: cover;
+    vertical-align: -5px;
+    margin-right: 10px;
+  }
+  .side__play {
+    margin-top: auto;
+    height: 56px;
+    border-radius: 15px;
+    background: rgba(126, 214, 188, 0.14);
+    border: 1px solid rgba(126, 214, 188, 0.36);
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    font: inherit;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--ink);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .side__play:active { transform: scale(0.96); }
+  .side__tri {
+    width: 0;
+    height: 0;
+    border-left: 13px solid var(--accent-lms);
+    border-top: 8px solid transparent;
+    border-bottom: 8px solid transparent;
+  }
 
   /* ---- the photo or cover, 400 x 400, full height ---- */
   .hero {
@@ -1334,6 +1614,33 @@
   .card--artists .card__count { color: rgba(159, 180, 232, 0.9); }
   .card--playlists .card__count { color: rgba(242, 164, 143, 0.9); }
   .card--settings .card__count { color: var(--ink-quiet); }
+  /* ADR-0118: the tiles Extended navigation adds, and the row they make,
+     196 x 300 and sideways (the handover's §1, Bar). */
+  .cards--more {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 196px;
+    height: 300px;
+    --t-card-sub: 13px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    touch-action: pan-x;
+    padding-right: 72px;
+    mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 72px), transparent 100%);
+  }
+  .cards--more::-webkit-scrollbar { display: none; }
+  .card--mymusic { --card: 143, 196, 216; }
+  .card--favorites { --card: 232, 160, 180; }
+  .card--apps { --card: 200, 162, 216; }
+  .card--other { --card: 176, 188, 196; border-style: dashed; border-color: rgba(176, 188, 196, 0.4); background: rgba(176, 188, 196, 0.08); }
+  .card--mymusic .card__count { color: rgba(143, 196, 216, 0.9); }
+  .card--favorites .card__count { color: rgba(232, 160, 180, 0.9); }
+  .card--apps .card__count { color: rgba(200, 162, 216, 0.9); }
+  .card--other .card__count { color: rgba(176, 188, 196, 0.95); }
+  .card.is-busy { opacity: 0.6; }
+  /* Two words in a 196 px card: a step down rather than an ellipsis. */
+  .card__name--long { font-size: calc(var(--t-card) * 0.82); }
 
   .glyph {
     height: 44px;
@@ -1540,37 +1847,6 @@
   .sideways--artists {
     padding-right: 58px;
   }
-  .jump {
-    display: flex;
-    gap: 6px;
-  }
-  .jump__step {
-    flex: 1;
-    min-width: 44px;
-    height: 52px;
-    border-radius: var(--r-md);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    box-sizing: border-box;
-    font-family: var(--font-mono);
-    font-size: 16px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    background: rgba(233, 238, 242, 0.05);
-    border: 1px solid rgba(233, 238, 242, 0.1);
-    color: rgba(233, 238, 242, 0.78);
-  }
-  .jump__step.is-on {
-    background: rgba(159, 180, 232, 0.18);
-    border-color: rgba(159, 180, 232, 0.5);
-    color: var(--accent-bluetooth);
-  }
-  .jump__step:disabled {
-    color: rgba(233, 238, 242, 0.3);
-  }
-  .jump__step:not(:disabled):active { transform: scale(0.96); }
 
   /* ---- Browse: three panes (Bar Library, browse) ---- */
   .browse {

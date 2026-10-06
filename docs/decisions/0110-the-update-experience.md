@@ -160,6 +160,26 @@ strips from every device: every `systemd.*` option in `cmdline.txt`.
 - **The option itself moved** to `/etc/systemd/system.conf.d/`
   (`ShowStatus=no`), where nothing strips it and no reboot is needed.
 
+### The end is the steps, all done, until dismissed (2026-10-05)
+
+George, after updating gexis to 0.9.1: *"the user needs to see that all
+checkmarks got green. I would rather keep the user in the installation
+screen which he would need to dismiss, rather than showing the changelog
+which he has seen already at the beginning of the process."* So a finished
+update - on the panel's lock and in the phone's modal - shows **Updated to
+x.y.z with the six steps ticked**, and a **Done** button; the notes are not
+shown again. The panel's lock waits for Done; a panel nobody watches lets
+go after ten minutes, so it does not stay locked for the night.
+
+And *"More granularity is needed"*: the install step's bar stood at 0 % for
+35 s and jumped to 42 %. It counted dpkg's actions, and a release changes
+four packages, one of them about 70 MB. The bar now weighs each package by
+its size and moves on with the time a package takes, never past the end of
+the action dpkg is on.
+
+The notes themselves were cut at 1,200 characters by the updater - 0.9.0's
+and 0.9.1's mid-word on the phone - and are kept whole since.
+
 ## What changes underneath
 
 - **The updater:**

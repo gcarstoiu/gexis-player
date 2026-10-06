@@ -245,3 +245,16 @@ now."* Four rows in that section have no code behind them at all —
   albums as they arrive — or it may be redundant.
 - **What a household does.** Three options in Finding 054 §10; none chosen,
   and at half an hour a panel it may not need choosing.
+
+## Amended 2026-10-06: one tile for both
+
+George: *"the lyrion client 3 tiles should be collapsed into one. Triggering
+it enriches both artists and albums, with the status being displayed inside
+the tile itself, which will work also as history."* The two buttons and the
+progress row are one action, `sweep_all` (ADR-0022's inventory): one walk per
+album artist stores the portrait and the albums' covers from the same
+MusicBrainz and fanart.tv answers, and counts artists, portraits, albums and
+covers. The last run's counts are kept in `enrichment.db` and read back at
+start, so the tile still says what was found after a restart. "One at a time"
+stands: a press while a run is going is refused, and the button says
+*Running…*.

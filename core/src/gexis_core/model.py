@@ -266,8 +266,11 @@ class PlaybackState:
     #: **As amended 2026-10-05**: `lyrics` - whether the panel's Now Playing
     #: shows its lyrics - and `view_request`, a phone's ask for Home, Now
     #: playing, Lyrics or Track (`{"to", "seq", "at"}`), applied the same way.
+    #: **As amended 2026-10-06**: `now` - whether Now Playing is what the
+    #: panel shows - so the phone's Now playing is a toggle; `minimise` joins
+    #: the asks (ADR-0122).
     panel: dict = field(default_factory=lambda: {"visualiser": False, "idle": False, "idle_request": None,
-                                                 "lyrics": False, "view_request": None})
+                                                 "lyrics": False, "now": False, "view_request": None})
     #: **ADR-0104: first-boot setup and the setup network**, as
     #: `SetupNetwork.public_status` - never the password, which the panel
     #: reads from `/setup/status` over loopback. None until it has decided.

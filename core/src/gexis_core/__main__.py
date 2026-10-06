@@ -23,6 +23,7 @@ from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
 from gexis_core.library import LmsLibrary
+from gexis_core.menus import LyrionMenus
 from gexis_core.radio import RadioBrowser
 from gexis_core.adapters.spotify import SpotifyAdapter
 from gexis_core.arbitration import Supervisor
@@ -36,6 +37,7 @@ from gexis_core.weather import Weather
 from gexis_core.metadata_file import MetadataFileWriter
 from gexis_core.artistinfo import PHOTO_LARGE, LmsArtistInfo
 from gexis_core.enrichment import (
+    ARTWORK_PROVIDERS,
     CONFIDENCE_MIN,
     PREFETCH_AFTER_S,
     Cache,
@@ -144,9 +146,14 @@ SCREEN_UNITS = (
 #: **ADR-0081: how many times the daemon looks for a cover.** `for_track`
 #: answers with what it has after its own wait and lets a slow provider finish
 #: behind it, caching the result - so one ask can return nothing for a track
-#: whose cover arrives a second later. Three looks, six seconds apart, which
-#: is the panel's own shape in `enrichment.js` for the same reason.
-COVER_LOOKS = 3
+#: whose cover arrives a second later. Six seconds apart, as the panel's own
+#: look-backs in `enrichment.js` for the same reason.
+#: **Fifteen looks, about a minute and a half** (2026-10-06): three gave up
+#: 32 s into a track, and a busy MusicBrainz answered "Summer"'s cover at
+#: 65 s - cached, never shown, while it played. A look while the lookup is
+#: still going waits on that same lookup (`EnrichmentService._ask`), so
+#: looking again costs nothing.
+COVER_LOOKS = 15
 COVER_LOOK_BACK_S = 6.0
 
 #: `bt_enabled` off powers the radio down as well as stopping the audio path,
@@ -1652,7 +1659,7 @@ async def main() -> None:
             or "None",
             # ADR-0059. George's own wording: "X out of Y processed (searched
             # for), Z artist portraits found."
-            "sweep_status": lambda: sweep.progress.sentence,
+            "sweep_all": lambda: sweep.progress.sentence,
             # **Which build this is** (ADR-0022's `version` row, wired
             # 2026-09-25). The image writes `/etc/gexis/image.info` because
             # nothing on a running device reported it: the `.info` beside
@@ -1719,6 +1726,8 @@ async def main() -> None:
         wired={"idle_url": None, "idle_timeout": None, "drawer_on_external": None,
                "drawer_autohide": None, "phone_touchpad": None, "pointer_speed": None,
                "pointer_style": None, "listenbrainz_token": None,
+               # ADR-0118 B: read by the menus route and the panel's home.
+               "lms_extended_nav": None,
                "fanart_key": None, "lms_server": None,
                # ADR-0059: read on every ask through `gate` and
                # `confidence_min`, so nothing has to happen on the write.
@@ -1816,9 +1825,9 @@ async def main() -> None:
                # ADR-0059's two buttons. `start` refuses rather than queues
                # while the other is running - a queued button is a progress
                # bar that lies.
-               "sweep_portraits": lambda _=None: _start_sweep("portraits"),
-               "sweep_covers": lambda _=None: _start_sweep("covers"),
-               "sweep_status": None,
+               # George, 2026-10-06: one tile - portraits and covers in one
+               # walk, what it found shown in the tile.
+               "sweep_all": lambda _=None: _start_sweep("all"),
                # Readonly, and listed here for the same reason
                # `volume_managed` is: it is how a row says it reports
                # something rather than nothing (ADR-0022's `version`).
@@ -2485,7 +2494,6 @@ async def main() -> None:
     #: (George, 2026-09-24: *"automatic way for sure"*) - new albums get a
     #: cover as they arrive, and the button does the library on demand.
     LYRIC_PROVIDERS = ("lrclib",)
-    ARTWORK_PROVIDERS = ("coverart", "recording-art")
 
     def _may_ask(name: str) -> bool:
         if settings.value("enrichment") is False:
@@ -2866,6 +2874,9 @@ async def main() -> None:
         # ADR-0038 §8: the one SlimBrowse subtree, browsed by handles the
         # core issues.
         radio=RadioBrowser(library.rpc, lambda: lms.player_id),
+        # ADR-0118: Lyrion's own menus, by the same handles, behind
+        # Extended navigation.
+        menus=LyrionMenus(library.rpc, lambda: lms.player_id, lambda: library.base_url),
         # ADR-0045: the panel's answer, back to the agent that is holding
         # BlueZ's handshake open waiting for it.
         pairing_answer=pairing_agent.answer,

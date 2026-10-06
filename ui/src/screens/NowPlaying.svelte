@@ -27,7 +27,7 @@
   // replaced by settings button... Tapping in the artist does nothing."* An
   // absent `onartist` is what makes the line inert, so nothing here can offer
   // a page that is not reachable.
-  let { active, metadata, volume, controls = [], available = [], shuffle = null, repeat = null, queue = null, onvolume, onvisualisation, onhome, onartist, rootless = false } = $props();
+  let { active, metadata, volume, controls = [], available = [], shuffle = null, repeat = null, queue = null, onvolume, onvisualisation, onhome, onartist, onminimise = null, rootless = false } = $props();
   const artistLinked = $derived(!!onartist);
 
   const transport = $derived(metadata?.transport ?? null);
@@ -330,6 +330,11 @@
   <div class="screen__body">
     <div class="top">
       <div class="art">
+        <!-- ADR-0122: back to the library as it was left, Now Playing down to
+             the mini strip (George, 2026-10-06: the chevron top left). -->
+        {#if onminimise}
+          <button class="minimise" type="button" aria-label="Minimise" onclick={onminimise}><span class="minimise__chev"></span></button>
+        {/if}
         {#if artwork}
           <img src={artwork} alt="" onerror={() => (failedArtwork = artwork)} />
         {:else}
@@ -704,7 +709,7 @@
           {#if lmsOnly}
             <button class="btn btn--queue" type="button" aria-label="Queue" onclick={() => (queueOpen = true)}>
               <i></i><i></i><i></i>
-              {#if upNext}<span class="btn__badge">{upNext}</span>{/if}
+              {#if upNext}<span class="btn__badge" data-badge>{upNext}</span>{/if}
             </button>
           {/if}
         </div>
@@ -1736,4 +1741,28 @@
   }
   .btn--queue i { width: 26px; height: 3px; border-radius: 2px; background: var(--accent-bluetooth); }
   .btn--queue i:last-of-type { width: 15px; }
+  /* ADR-0122: Minimise, over the art's top-left corner. */
+  .minimise {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    z-index: 2;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 1px solid rgba(233, 238, 242, 0.24);
+    background: rgba(12, 16, 20, 0.5);
+    display: grid;
+    place-items: center;
+    padding: 0;
+    cursor: pointer;
+  }
+  .minimise:active { transform: scale(0.94); }
+  .minimise__chev {
+    width: 14px;
+    height: 14px;
+    border-right: 3px solid var(--ink);
+    border-bottom: 3px solid var(--ink);
+    transform: translateY(-4px) rotate(45deg);
+  }
 </style>

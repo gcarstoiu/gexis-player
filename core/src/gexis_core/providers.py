@@ -190,6 +190,27 @@ class ArtistIdentity:
         #: because the daemon restarted, and every lookup of it is a search
         #: against the one endpoint that answers 503 most often.
         self._store = store
+        #: Searches going now, by folded name: the six providers that need
+        #: the artist start together and each began the same search
+        #: (2026-10-06).
+        self._in_flight: dict[str, asyncio.Future] = {}
+        # **Once: the "nobody" answers of searches made with the folded name
+        # alone.** Five providers asked without the raw name until
+        # 2026-10-06, so "Pitbull, Afrojack, Ne-Yo, Nayer" was searched whole,
+        # found nobody, and that was kept for good - 86 such on gexis. A
+        # marker keeps it to one purge.
+        if store is not None:
+            try:
+                store.recall("purged", self.NAMESPACE + "-nulls-1")
+            except KeyError:
+                try:
+                    gone = store.forget_missing(self.NAMESPACE)
+                    store.remember("purged", self.NAMESPACE + "-nulls-1", True)
+                    logger.info("providers: forgot %s artists searched by the folded name alone", gone)
+                except Exception as exc:  # noqa: BLE001 - a purge is housekeeping
+                    logger.info("providers: could not purge stored nobodies (%s)", exc)
+            except Exception as exc:  # noqa: BLE001
+                logger.info("providers: could not read the purge marker (%s)", exc)
 
     async def resolve(self, artist: str, raw: str | None = None) -> tuple[str, int] | None | bool:
         """`(mbid, score)`, `None` when MusicBrainz has no such artist, and
@@ -204,13 +225,24 @@ class ArtistIdentity:
             return self._known[artist]
         if self._store is not None:
             try:
-                remembered = self._store.recall(self.NAMESPACE, artist)
+                # "Nobody" is believed for a week, as a provider's "nothing"
+                # is (MISSING_TTL_S): an artist added upstream is found.
+                remembered = self._store.recall(self.NAMESPACE, artist, missing_ttl=7 * 24 * 3600)
                 self._known[artist] = tuple(remembered) if remembered else None
                 return self._known[artist]
             except KeyError:
                 pass
             except Exception as exc:
                 logger.info("providers: could not read a stored artist id (%s)", exc)
+        running = self._in_flight.get(artist)
+        if running is not None:
+            return await asyncio.shield(running)
+        task = asyncio.ensure_future(self._resolve(artist, raw))
+        self._in_flight[artist] = task
+        task.add_done_callback(lambda _t: self._in_flight.pop(artist, None))
+        return await asyncio.shield(task)
+
+    async def _resolve(self, artist: str, raw: str | None) -> tuple[str, int] | None | bool:
         identity = None
         for candidate in search_names(raw or artist):
             answer = await self._search(candidate)
@@ -367,7 +399,7 @@ class ListenBrainzPopular:
             return Answer(Outcome.UNAVAILABLE)
         if not key.artist:
             return Answer(Outcome.MISSING)
-        who = await self._identity.resolve(key.artist)
+        who = await self._identity.resolve(key.artist, raw=key.raw_artist or None)
         if who is False:
             return Answer(Outcome.UNAVAILABLE)
         if who is None:
@@ -451,7 +483,7 @@ class FanartArtistImage:
             return Answer(Outcome.UNAVAILABLE)
         if not key.artist:
             return Answer(Outcome.MISSING)
-        who = await self._identity.resolve(key.artist)
+        who = await self._identity.resolve(key.artist, raw=key.raw_artist or None)
         if who is False:
             return Answer(Outcome.UNAVAILABLE)
         if who is None:
@@ -519,7 +551,7 @@ class TheAudioDBArtistImage:
     async def fetch(self, key) -> Answer:
         if not key.artist:
             return Answer(Outcome.MISSING)
-        who = await self._identity.resolve(key.artist)
+        who = await self._identity.resolve(key.artist, raw=key.raw_artist or None)
         if who is False:
             return Answer(Outcome.UNAVAILABLE)
         if who is None:
@@ -562,6 +594,29 @@ FANART_BACKGROUND = {
 _QUALIFIER = re.compile(r"\s*(?:[\(\[].*|-\s+.*)$")
 
 
+#: A featured credit written into a title without brackets: "Song feat. X".
+_FEATURING = re.compile(r"\s+(?:feat\.?|ft\.?|featuring)\s+.*$", re.IGNORECASE)
+
+
+#: Where one credit ends and the next begins, for a single query: a comma,
+#: a spaced "&" or "and". Not "/": "AC/DC" is one act.
+_LEAD_SPLIT = re.compile(r"\s*,\s*|\s+&\s+|\s+and\s+", re.I)
+
+
+def lead_artist(raw_artist: str) -> str:
+    """The first credit of "Pitbull, Afrojack, Ne-Yo, Nayer" - what to ask a
+    catalogue when the whole credit found nothing."""
+    name = _CREDIT.split((raw_artist or "").strip())[0].strip()
+    return _LEAD_SPLIT.split(name)[0].strip() if name else ""
+
+
+def bare_title(raw_title: str) -> str:
+    """A track's title as a catalogue holds it: no "(feat. X)", no "- Remastered
+    2011", no "feat. X" - raw, not folded, for a quoted query."""
+    title = _QUALIFIER.sub("", raw_title or "")
+    return _FEATURING.sub("", title).strip()
+
+
 def _without_qualifier(raw_title: str) -> str:
     """"Long Black Limousine  (Take 9)" -> "long black limousine".
 
@@ -593,17 +648,34 @@ class MusicBrainzRelease:
     def serves(self, renderer) -> bool:
         return True
 
+    async def _search(self, artist: str, album: str):
+        return await self._http.json(
+            "https://musicbrainz.org/ws/2/release/",
+            {"query": f'artist:"{artist}" AND release:"{album}"', "fmt": "json", "limit": "1"},
+        )
+
     async def fetch(self, key) -> Answer:
         if not (key.artist and key.album):
             return Answer(Outcome.MISSING)
-        found = await self._http.json(
-            "https://musicbrainz.org/ws/2/release/",
-            {"query": f'artist:"{key.artist}" AND release:"{key.album}"',
-             "fmt": "json", "limit": "1"},
-        )
+        # **As sent, then reduced** (2026-10-06): the folded artist and album
+        # were asked whole, so "Pitbull, Afrojack, Ne-Yo, Nayer" and
+        # "Planet Pit (Deluxe Version)" found no release at all. One more
+        # search at most: the lead artist and the album trimmed.
+        artist = key.raw_artist or key.artist
+        album = key.raw_album or key.album
+        found = await self._search(artist, album)
         if found is None:
             return Answer(Outcome.UNAVAILABLE)
         releases = found.get("releases") or []
+        lead, trimmed = lead_artist(artist), trim_title(album)
+        if not releases and (lead, trimmed) != (artist, album):
+            found = await self._search(lead or artist, trimmed or album)
+            if found is None:
+                return Answer(Outcome.UNAVAILABLE)
+            releases = found.get("releases") or []
+            if releases and match_title(releases[0].get("title") or "") != match_title(trimmed or album):
+                # A looser query: believed on the title, not only the score.
+                return Answer(Outcome.MISSING, confidence=int(releases[0].get("score") or 0))
         if not releases:
             return Answer(Outcome.MISSING)
         release = releases[0]
@@ -783,9 +855,14 @@ class CoverArtProvider:
             # against a catalogue's as they stand missed 43% of his albums
             # (Finding 054 §9); this is the reduction that fixed the sweep.
             trimmed = trim_title(album)
-            if trimmed == album:
+            # **And the lead artist** (2026-10-06): a collaboration's credit
+            # whole - "Macklemore & Ryan Lewis, Ray Dalton" - is no artist
+            # MusicBrainz has. The second search uses both reductions at
+            # once, so a track costs two searches at most.
+            lead = lead_artist(artist)
+            if (lead or artist, trimmed) == (artist, album):
                 return Answer(Outcome.MISSING)
-            found = await self._search(artist, trimmed)
+            found = await self._search(lead or artist, trimmed)
             if found is None:
                 return Answer(Outcome.UNAVAILABLE)
             groups = found.get("release-groups") or []
@@ -844,29 +921,47 @@ class RecordingArtProvider:
     def __init__(self, http: Http) -> None:
         self._http = http
 
+    async def _search(self, title: str, artist: str):
+        return await self._http.json(
+            "https://musicbrainz.org/ws/2/recording/",
+            {"query": f'recording:"{title}" AND artist:"{artist}"', "fmt": "json", "limit": "3"},
+        )
+
     def serves(self, renderer) -> bool:
         return True
 
     async def fetch(self, key) -> Answer:
         if not (key.artist and key.title):
             return Answer(Outcome.MISSING)
-        found = await self._http.json(
-            "https://musicbrainz.org/ws/2/recording/",
-            {"query": f'recording:"{key.title}" AND artist:"{key.artist}"',
-             "fmt": "json", "limit": "3"},
-        )
+        # **The title and the artist as a catalogue holds them** (2026-10-06):
+        # the folded title kept "feat nayer" and "remastered 2011", and the
+        # whole credit is no artist MusicBrainz has.
+        title = bare_title(key.raw_title) or key.title
+        artist = key.raw_artist or key.artist
+        found = await self._search(title, artist)
         if found is None:
             return Answer(Outcome.UNAVAILABLE)
         recordings = found.get("recordings") or []
+        lead = lead_artist(artist)
+        if not recordings and lead and lead != artist:
+            artist = lead
+            found = await self._search(title, artist)
+            if found is None:
+                return Answer(Outcome.UNAVAILABLE)
+            recordings = found.get("recordings") or []
         if not recordings:
             return Answer(Outcome.MISSING)
         top = recordings[0]
         score = int(top.get("score") or 0)
-        credited = " ".join(
-            str((c.get("artist") or {}).get("name") or c.get("name") or "")
-            for c in (top.get("artist-credit") or [])
+        credits = top.get("artist-credit") or []
+        # The credit as written, join phrases and all ("A feat. B"), and its
+        # first name alone: either may be what the renderer sent.
+        credited = "".join(
+            str((c.get("artist") or {}).get("name") or c.get("name") or "") + str(c.get("joinphrase") or "")
+            for c in credits
         )
-        if fold(credited) != key.artist:
+        first = str(((credits or [{}])[0].get("artist") or {}).get("name") or (credits or [{}])[0].get("name") or "")
+        if fold(credited) != key.artist and fold(first) != fold(artist):
             # A high score on somebody else is exactly how a station name
             # would get a cover put against it.
             return Answer(Outcome.MISSING, confidence=score)
@@ -915,7 +1010,7 @@ class WikipediaBiography:
     async def fetch(self, key) -> Answer:
         if not key.artist:
             return Answer(Outcome.MISSING)
-        who = await self._identity.resolve(key.artist)
+        who = await self._identity.resolve(key.artist, raw=key.raw_artist or None)
         if who is False:
             return Answer(Outcome.UNAVAILABLE)
         if who is None:
@@ -998,7 +1093,7 @@ class ListenBrainzSimilar:
     async def fetch(self, key) -> Answer:
         if not key.artist:
             return Answer(Outcome.MISSING)
-        who = await self._identity.resolve(key.artist)
+        who = await self._identity.resolve(key.artist, raw=key.raw_artist or None)
         if who is False:
             return Answer(Outcome.UNAVAILABLE)
         if who is None:

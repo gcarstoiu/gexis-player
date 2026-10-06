@@ -272,9 +272,25 @@
         return;
       }
       if (!$active) return;
+      // ADR-0122 from the phone: down to the strip, the library as left.
+      if (ask.to === 'minimise') {
+        libraryRequested = !lmsOff;
+        return;
+      }
       libraryRequested = false;
       if (ask.to === 'lyrics' || ask.to === 'track') lyricsAsk.set({ on: ask.to === 'lyrics' });
     });
+  });
+
+  //: ...and whether Now Playing is what the glass shows, so the phone's Now
+  //: playing is a toggle: up, it minimises; down, it brings it up (George,
+  //: 2026-10-06).
+  let reportedNow = null;
+  $effect(() => {
+    const showing = !!$active && !libraryOpen && !settingsOpen && !waitingOpen && !idle;
+    if (surface !== 'panel' || showing === reportedNow) return;
+    reportedNow = showing;
+    reportShown({ now: showing }).catch(() => (reportedNow = null));
   });
 
   let reportedLyrics = null;
@@ -305,6 +321,26 @@
   const lmsOff = $derived($settingValues.lms_enabled === false);
   const libraryOpen = $derived(!lmsOff && (!$active || libraryRequested));
   const waitingOpen = $derived(lmsOff && !$active);
+  //: **ADR-0122: the library is kept while Now Playing is up**, mounted and
+  //: hidden, so Minimise shows it as it was left - path, levels, scroll.
+  //: Home remounts it at its root (`libraryHome`), as the phone's Home does.
+  let libraryKept = $state(false);
+  $effect(() => {
+    if (libraryOpen) libraryKept = true;
+    if (lmsOff) libraryKept = false;
+  });
+  const libraryShown = $derived(libraryOpen && !settingsOpen && !waitingOpen);
+  function openLibraryHome() {
+    libraryArtist = null;
+    libraryHome += 1;
+    libraryRequested = true;
+  }
+  function openLibraryArtist(name) {
+    libraryArtist = name;
+    libraryHome += 1;
+    libraryRequested = true;
+  }
+  const minimise = () => (libraryRequested = true);
   let previousActive = null;
   $effect(() => {
     const now = $active;
@@ -409,9 +445,10 @@
   //: reconnects (nothing else shows in between); then the outcome for a few
   //: seconds, and a reload when the release changed the page's own files.
   const OUTCOME_MS = 6000;
-  //: **With notes to read, until Continue** (George, 2026-10-05: 0.9.0's
-  //: notes could not all be seen). The limit is for a panel nobody watches.
-  const NOTES_MS = 120000;
+  //: **A finished update waits for Done** (ADR-0110, 2026-10-05: George,
+  //: "keep the user in the installation screen which he would need to
+  //: dismiss"). The limit is for a panel nobody watches.
+  const DONE_MS = 10 * 60 * 1000;
   let outcomeTimer;
   function leaveUpdate(changed) {
     clearTimeout(outcomeTimer);
@@ -439,8 +476,7 @@
       updateOutcome = u.state;
       const changed = u.state === 'done' && u.installed && u.installed !== loadedRelease;
       updateChanged = changed;
-      const notes = u.state === 'done' && u.whats_new;
-      outcomeTimer = setTimeout(() => leaveUpdate(changed), notes ? NOTES_MS : OUTCOME_MS);
+      outcomeTimer = setTimeout(() => leaveUpdate(changed), u.state === 'done' ? DONE_MS : OUTCOME_MS);
     }
   });
   async function showVisualisation() {
@@ -489,8 +525,9 @@
 <div class="panel" class:panel--bar={screen.family === 'bar'} data-family={screen.family}>
   <!-- One backdrop for the whole panel, so a screen change does not build
        two large blurred layers again (George, 2026-09-17). Exactly one
-       screen is mounted over it at a time: the screens are transparent now,
-       so overlapping them would show both at once. -->
+       screen is drawn over it at a time: the screens are transparent now,
+       so overlapping them would show both at once. The library may stay
+       mounted under another, kept and not drawn (ADR-0122). -->
   <PanelBackground artwork={$metadata?.artwork ?? null} />
 
   <!-- No animation on a screen change at all (George, 2026-09-17). Over a
@@ -508,7 +545,32 @@
       <WaitingHome availability={$availability} onsettings={openSettings} />
     </div>
   {:else if libraryOpen}
+    <!-- The library's layer, below: kept mounted (ADR-0122). -->
+  {:else if $active}
     <div class="screen-layer">
+      <!-- ADR-0079: with LMS off the Home button is a Settings button and
+           `onartist` is not passed at all, so the artist line is a name rather
+           than a link that leads nowhere. -->
+      {#if screen.family === 'bar'}
+        <!-- ADR-0109, Bar family: the strip, with the same props. -->
+        <BarNowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} queue={$queue} onvolume={openVolume} onvisualisation={showVisualisation}
+          rootless={lmsOff}
+          onhome={lmsOff ? openSettings : openLibraryHome}
+          onminimise={lmsOff ? null : minimise}
+          onartist={lmsOff ? undefined : openLibraryArtist} />
+      {:else}
+      <NowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} queue={$queue} onvolume={openVolume} onvisualisation={showVisualisation}
+        rootless={lmsOff}
+        onhome={lmsOff ? openSettings : openLibraryHome}
+        onminimise={lmsOff ? null : minimise}
+        onartist={lmsOff ? undefined : openLibraryArtist} />
+      {/if}
+    </div>
+  {/if}
+
+  {#if libraryKept || libraryOpen}
+    <!-- ADR-0122: kept while hidden - drawn and touchable only while shown. -->
+    <div class="screen-layer" class:is-kept={!libraryShown}>
       {#if screen.family === 'bar'}
       <!-- ADR-0109, Bar family: the library as strips and a rail, with
            Library's props. -->
@@ -541,24 +603,6 @@
       {/key}
       {/if}
     </div>
-  {:else if $active}
-    <div class="screen-layer">
-      <!-- ADR-0079: with LMS off the Home button is a Settings button and
-           `onartist` is not passed at all, so the artist line is a name rather
-           than a link that leads nowhere. -->
-      {#if screen.family === 'bar'}
-        <!-- ADR-0109, Bar family: the strip, with the same props. -->
-        <BarNowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} queue={$queue} onvolume={openVolume} onvisualisation={showVisualisation}
-          rootless={lmsOff}
-          onhome={lmsOff ? openSettings : () => (libraryRequested = true)}
-          onartist={lmsOff ? undefined : (name) => { libraryArtist = name; libraryRequested = true; }} />
-      {:else}
-      <NowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} queue={$queue} onvolume={openVolume} onvisualisation={showVisualisation}
-        rootless={lmsOff}
-        onhome={lmsOff ? openSettings : () => (libraryRequested = true)}
-        onartist={lmsOff ? undefined : (name) => { libraryArtist = name; libraryRequested = true; }} />
-      {/if}
-    </div>
   {/if}
 
   <!-- ADR-0046: **mounted in fixed output too, with no level to show.**
@@ -579,7 +623,7 @@
       onactivity={keepVolumeOpen}
       onsettled={armAutoHide}
       rootless={lmsOff}
-      onhome={lmsOff ? openSettings : () => (libraryRequested = true)}
+      onhome={lmsOff ? openSettings : openLibraryHome}
       onvisualisation={showVisualisation}
     />
   {:else if $volume || $fixedOutput}
@@ -708,5 +752,12 @@
     inset: 0;
     z-index: 5;
     overflow: hidden;
+  }
+  /* ADR-0122: the kept library, not drawn and not touchable; unlike
+     display: none, content-visibility keeps its scroll positions. */
+  .screen-layer.is-kept {
+    content-visibility: hidden;
+    visibility: hidden;
+    pointer-events: none;
   }
 </style>

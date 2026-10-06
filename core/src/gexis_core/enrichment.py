@@ -65,6 +65,20 @@ CONFIDENCE_MIN = 90
 #: serial requests and a real User-Agent, both of which `Http` does.
 PREFETCH_PROVIDERS = ("lms", "lms-release", "lrclib")
 
+#: **What each provider's answer depends on** (`TrackKey.scoped`). Not in
+#: the list: the track itself (lyrics, a recording's cover).
+SCOPES = {
+    "lms": "artist", "popular": "artist", "fanart": "artist", "tadb-bg": "artist",
+    "wikipedia": "artist", "listenbrainz": "artist", "fanart-bgs": "artist",
+    "lms-release": "album", "mb-release": "album", "coverart": "album",
+}
+
+#: The providers that find a cover. **Asked only for a track whose renderer
+#: sent none, and asked first** (2026-10-06): each began with MusicBrainz
+#: behind the biography and release searches on one limiter, and for LMS
+#: tracks with their own artwork they spent that allowance on nothing.
+ARTWORK_PROVIDERS = ("coverart", "recording-art")
+
 #: How long a track must have been playing before its enrichment is warmed.
 #: Skipping through an album would otherwise cost one lookup per track.
 PREFETCH_AFTER_S = 8.0
@@ -207,6 +221,18 @@ class TrackKey:
 
     def as_text(self) -> str:
         return json.dumps([self.artist, self.album, self.title, self.duration])
+
+    def scoped(self, scope: str) -> "TrackKey":
+        """The key cut to what a provider's answer depends on. **An album's
+        cover does not change with the track's length** - but the same
+        Whitney Houston track came as 290 s from LMS and 293 s over Bluetooth,
+        so it was looked up twice (2026-10-06). An artist's answers depend on
+        the artist alone. The raw fields stay: providers query with them."""
+        if scope == "artist":
+            return replace(self, album="", title="", duration=None)
+        if scope == "album":
+            return replace(self, title="", duration=None)
+        return self
 
     def is_empty(self) -> bool:
         """Nothing to look anything up with. A stopped renderer, or a stream
@@ -356,21 +382,29 @@ class Cache:
             path.parent.mkdir(parents=True, exist_ok=True)
         self._conn = sqlite3.connect(path)
         self._conn.execute(self._SCHEMA)
+        # **The match's score is kept with it** (2026-10-06): a cached answer
+        # came back at the default 100, so a match below the threshold was
+        # refused the first time and believed from the cache after. Rows
+        # from before carry 100, which is what they were read as anyway.
+        columns = {row[1] for row in self._conn.execute("PRAGMA table_info(enrichment)")}
+        if "confidence" not in columns:
+            self._conn.execute("ALTER TABLE enrichment ADD COLUMN confidence INTEGER NOT NULL DEFAULT 100")
         self._conn.commit()
 
     def get(self, key: TrackKey, provider: str) -> Answer | None:
         row = self._conn.execute(
-            "SELECT outcome, value, stored_at FROM enrichment WHERE key = ? AND provider = ?",
+            "SELECT outcome, value, stored_at, confidence FROM enrichment WHERE key = ? AND provider = ?",
             (key.as_text(), provider),
         ).fetchone()
         if row is None:
             return None
-        outcome, value, stored_at = row
+        outcome, value, stored_at, confidence = row
         if outcome == Outcome.MISSING.value and self._clock() - stored_at > MISSING_TTL_S:
             # A provider that had nothing a week ago may have something now.
             self.forget(key, provider)
             return None
-        return Answer(Outcome(outcome), Enrichment(**_rehydrate(json.loads(value))))
+        return Answer(Outcome(outcome), Enrichment(**_rehydrate(json.loads(value))),
+                      confidence=int(confidence))
 
     def put(self, key: TrackKey, provider: str, answer: Answer) -> None:
         if answer.outcome is Outcome.UNAVAILABLE:
@@ -380,11 +414,12 @@ class Cache:
             # busy once.
             return
         self._conn.execute(
-            "INSERT INTO enrichment (key, provider, outcome, value, stored_at) "
-            "VALUES (?, ?, ?, ?, ?) ON CONFLICT(key, provider) DO UPDATE SET "
-            "outcome = excluded.outcome, value = excluded.value, stored_at = excluded.stored_at",
+            "INSERT INTO enrichment (key, provider, outcome, value, stored_at, confidence) "
+            "VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(key, provider) DO UPDATE SET "
+            "outcome = excluded.outcome, value = excluded.value, stored_at = excluded.stored_at, "
+            "confidence = excluded.confidence",
             (key.as_text(), provider, answer.outcome.value,
-             json.dumps(answer.enrichment.to_json()), self._clock()),
+             json.dumps(answer.enrichment.to_json()), self._clock(), int(answer.confidence)),
         )
         self._conn.commit()
 
@@ -405,17 +440,33 @@ class Cache:
     )
     """
 
-    def recall(self, namespace: str, key: str):
+    def recall(self, namespace: str, key: str, *, missing_ttl: float | None = None):
         """The stored value, or `KeyError` - because `None` is itself a value
-        worth storing here: "this artist has no photo" is an answer."""
+        worth storing here: "this artist has no photo" is an answer.
+
+        `missing_ttl`: a stored `None` older than this is not believed (a
+        `KeyError`), as `MISSING_TTL_S` does for the providers' answers."""
         self._conn.execute(self._KV_SCHEMA)
         row = self._conn.execute(
-            "SELECT value FROM notes WHERE namespace = ? AND key = ?",
+            "SELECT value, stored_at FROM notes WHERE namespace = ? AND key = ?",
             (namespace, str(key)),
         ).fetchone()
         if row is None:
             raise KeyError(key)
-        return json.loads(row[0])
+        value = json.loads(row[0])
+        if value is None and missing_ttl is not None and self._clock() - row[1] > missing_ttl:
+            raise KeyError(key)
+        return value
+
+    def forget_missing(self, namespace: str) -> int:
+        """Every stored `None` in a namespace: the answers of a search that
+        could not have found them."""
+        self._conn.execute(self._KV_SCHEMA)
+        gone = self._conn.execute(
+            "DELETE FROM notes WHERE namespace = ? AND value = 'null'", (namespace,)
+        ).rowcount
+        self._conn.commit()
+        return gone
 
     def remember(self, namespace: str, key: str, value) -> None:
         self._conn.execute(self._KV_SCHEMA)
@@ -482,6 +533,8 @@ class EnrichmentService:
         #: not to ask somebody rather than a reason to ignore their answer.
         self._gate = gate or (lambda _name: True)
         self._unavailable_until: dict[str, float] = {}
+        #: Fetches going now, by track and provider (`_ask`).
+        self._in_flight: dict[tuple, asyncio.Future] = {}
 
     @property
     def confidence_min(self) -> int:
@@ -532,7 +585,11 @@ class EnrichmentService:
         # often anyone is asked.
         if not asked:
             return Enrichment()
-        tasks = [asyncio.ensure_future(self._ask(provider, key)) for provider in asked]
+        # The covers first: what is started first waits least on a host's
+        # limiter. Merged in the providers' own order all the same.
+        first = sorted(range(len(asked)), key=lambda i: asked[i].name not in ARTWORK_PROVIDERS)
+        started = {i: asyncio.ensure_future(self._ask(asked[i], key)) for i in first}
+        tasks = [started[i] for i in range(len(asked))]
         # Bounded: whatever has not answered keeps going in the background
         # and its result is cached for the next ask.
         await asyncio.wait(tasks, timeout=WAIT_S)
@@ -573,12 +630,33 @@ class EnrichmentService:
             logger.info("enrichment: prefetch failed: %s", exc)
 
     async def _ask(self, provider, key: TrackKey) -> Answer:
+        key = key.scoped(SCOPES.get(provider.name, "track"))
         cached = self._cache.get(key, provider.name)
         if cached is not None:
             return cached
+        # Backed off per provider, not per track: one that is down is not
+        # asked again for every track played meanwhile (the test
+        # `..._not_hammered_while_it_is_down`; kept on 2026-10-06 when a
+        # per-track backoff was weighed and refused).
         until = self._unavailable_until.get(provider.name)
         if until is not None and self._clock() < until:
             return Answer(Outcome.UNAVAILABLE)
+        # **One fetch per track and provider at a time.** The panel, a phone
+        # and the daemon's own cover search each ask while a slow provider is
+        # still going, and each ask began the same fetch again - the same
+        # MusicBrainz searches queued on one limiter, the one host that
+        # answers 503 (2026-10-06: 1,819 asks in three days on gexis). A
+        # second ask now waits for the first.
+        flight = (key, provider.name)
+        running = self._in_flight.get(flight)
+        if running is not None:
+            return await asyncio.shield(running)
+        task = asyncio.ensure_future(self._fetch(provider, key))
+        self._in_flight[flight] = task
+        task.add_done_callback(lambda _t: self._in_flight.pop(flight, None))
+        return await asyncio.shield(task)
+
+    async def _fetch(self, provider, key: TrackKey) -> Answer:
         try:
             answer = await provider.fetch(key)
         except Exception as exc:  # a provider must never take the service down

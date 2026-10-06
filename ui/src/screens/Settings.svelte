@@ -1147,6 +1147,31 @@
                     >{$update?.active ? 'Updating…' : waiting ? 'Update…' : 'Check for updates'}</button>
                   </span>
                 </div>
+              {:else if r.key === 'sweep_all'}
+                <!-- George, 2026-10-06: the Lyrion Client's portraits and
+                     covers in one tile - what the last run found inside it,
+                     kept as its history, and one button that starts again
+                     from scratch. -->
+                {@const running = String(r.value ?? '').startsWith('Running')}
+                <div class="row row--tile">
+                  <span class="row__body">
+                    <span class="row__text">
+                      <span class="row__label"><span class="row__name">{r.label}</span></span>
+                      <span class="row__value row__value--tile">{r.value ?? 'Never run'}</span>
+                      {#if r.note}<span class="row__note">{r.note}</span>{/if}
+                    </span>
+                    <button
+                      type="button"
+                      class="tile__btn"
+                      class:tile__btn--busy={running}
+                      disabled={running}
+                      onclick={async () => {
+                        const result = await runSetting(r.key);
+                        if (!result.ok) flash(plainly(result.error ?? `HTTP ${result.status}`, `${r.label} did not start. Try again.`));
+                      }}
+                    >{running ? 'Running…' : r.label}</button>
+                  </span>
+                </div>
               {:else}
                 <!-- A readonly row takes no tap and draws no chevron: there
                      is nothing to change, and a chevron promises a sheet that

@@ -21,7 +21,7 @@
 <script>
   import { onDestroy } from 'svelte';
   import { settingValues } from './settings.js';
-  import { openTouchpad, takesText } from './touchpad.js';
+  import { openTouchpad, takesText, fieldOf } from './touchpad.js';
 
   const HIDE_MS = 5000;
   //: Pinch: from the panel as it is to three times as large (ADR-0121 §2).
@@ -31,11 +31,18 @@
   let y = $state(window.innerHeight / 2);
   let shown = $state(false);
   //: What the pointer is over, for its shape: 'plain', 'press', 'slide',
-  //: or 'scroll' while two fingers scroll.
+  //: or 'scroll' / 'scrollx' while two fingers scroll down or across.
   let kind = $state('plain');
   //: The ring around a small round control: its centre and size, or null.
   let ring = $state(null);
   let scrolledAt = 0;
+  //: Which way two fingers last scrolled, for the shape: up-down or across.
+  let scrolledX = false;
+  //: After a tap, no ring until the pointer moves: what was pressed has
+  //: done its work, and a ring left on whatever stands in its place reads as
+  //: the press still held (George, 2026-10-06: "stays in place for a few
+  //: seconds until it's hidden").
+  let tapped = false;
   let hideTimer;
   let pad = null;
   let over = false;
@@ -62,26 +69,41 @@
   function look() {
     const target = under();
     hover(target);
-    const field = takesText(target);
+    const field = !!fieldOf(target);
     if (field !== over) {
       over = field;
       pad?.send({ t: 'over', field });
     }
     const slider = target?.closest(SLIDER);
     const pressable = !slider && target?.closest(PRESSABLE);
-    kind = performance.now() - scrolledAt < 400 ? 'scroll' : slider ? 'slide' : pressable ? 'press' : 'plain';
+    kind = performance.now() - scrolledAt < 400 ? (scrolledX ? 'scrollx' : 'scroll') : slider ? 'slide' : pressable ? 'press' : 'plain';
     ring = null;
+    if (tapped) return;
     // A ring for a button that is only an icon: a tab or a row with words in
     // it is not the design's round control, however square (George,
     // 2026-10-05: "the track entry in now playing shouldn't get the
     // highlight").
-    if (kind === 'press' && !arrow && !pressable.textContent.trim()) {
+    if (kind === 'press' && !arrow && !words(pressable)) {
       const r = pressable.getBoundingClientRect();
       const long = Math.max(r.width, r.height);
       if (long / Math.max(1, Math.min(r.width, r.height)) < ROUND && long <= RING_MAX) {
         ring = { cx: r.left + r.width / 2, cy: r.top + r.height / 2, size: long + 16 };
       }
     }
+  }
+
+  /** A button's own words - a count on a badge is not one (the queue
+   *  button's "up next", George 2026-10-06). */
+  function words(el) {
+    let text = '';
+    const walk = (node) => {
+      for (const child of node.childNodes) {
+        if (child.nodeType === Node.TEXT_NODE) text += child.textContent;
+        else if (child.nodeType === Node.ELEMENT_NODE && !child.hasAttribute('data-badge')) walk(child);
+      }
+    };
+    walk(el);
+    return text.trim();
   }
 
   $effect(() => {
@@ -103,6 +125,8 @@
   });
 
   onDestroy(() => {
+    cancelAnimationFrame(moveFrame);
+    cancelAnimationFrame(scrollFrame);
     clearTimeout(hideTimer);
     clearInterval(lookTimer);
   });
@@ -151,17 +175,42 @@
     return document.elementFromPoint(Math.round(x), Math.round(y));
   }
 
+  //: **Moves land once a frame** (George, 2026-10-06: "sometimes the cursor
+  //: movement is choppy still"). Wi-Fi delivers the phone's moves in bunches,
+  //: and each one asked what lies under the pointer - a layout on a busy
+  //: page; now the frame's moves are added up and asked about once.
+  let moved = { dx: 0, dy: 0 };
+  let moveFrame = 0;
+  //: **And bunches are spread** (ADR-0121 §3, amended 2026-10-06): the
+  //: pointer covers most of what is owed each frame and the rest the next,
+  //: so three moves arriving together read as a glide, not a jump. A move
+  //: that has stopped arriving is caught up within about four frames.
+  const CATCH_UP = 0.6;
+  function applyMove() {
+    moveFrame = 0;
+    const done = Math.abs(moved.dx) + Math.abs(moved.dy) < 1.5;
+    const sx = done ? moved.dx : moved.dx * CATCH_UP;
+    const sy = done ? moved.dy : moved.dy * CATCH_UP;
+    x = edge(x + sx * speed, window.innerWidth, 'x');
+    y = edge(y + sy * speed, window.innerHeight, 'y');
+    moved = { dx: moved.dx - sx, dy: moved.dy - sy };
+    if (!done) moveFrame = requestAnimationFrame(applyMove);
+    wake();
+    look();
+  }
+
   function receive(message) {
     switch (message.t) {
       case 'move': {
-        x = edge(x + Number(message.dx || 0) * speed, window.innerWidth, 'x');
-        y = edge(y + Number(message.dy || 0) * speed, window.innerHeight, 'y');
-        wake();
-        look();
+        tapped = false;
+        moved.dx += Number(message.dx || 0);
+        moved.dy += Number(message.dy || 0);
+        if (!moveFrame) moveFrame = requestAnimationFrame(applyMove);
         break;
       }
       case 'tap':
         wake();
+        tapped = true;
         tap();
         // What the tap opened is now under the pointer.
         requestAnimationFrame(look);
@@ -175,6 +224,7 @@
       case 'scroll':
         wake();
         scrolledAt = performance.now();
+        scrolledX = Math.abs(Number(message.dx || 0)) > Math.abs(Number(message.dy || 0));
         scroll(Number(message.dx || 0), Number(message.dy || 0));
         look();
         break;
@@ -196,9 +246,36 @@
   /** **The content follows the fingers**, as on the phone's own screen:
    *  fingers up move the list up. What scrolls is the nearest thing under
    *  the pointer that scrolls that way; the page otherwise. */
+  //: **A scroll glides** (George, 2026-10-06: "scrolling is somewhat choppy
+  //: as well. When doing it by touch it just works fine"): each message was
+  //: applied whole, and Wi-Fi delivers them in bunches, so a list stepped.
+  //: What is owed is spread over frames, half of it each frame.
+  let owed = { el: null, axis: 'y', left: 0 };
+  let scrollFrame = 0;
   function scroll(dx, dy) {
-    if (dy) scroller(under(), 'y')?.scrollBy({ top: -dy * speed, behavior: 'instant' });
-    if (dx) scroller(under(), 'x')?.scrollBy({ left: -dx * speed, behavior: 'instant' });
+    const axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+    const by = -(axis === 'x' ? dx : dy) * speed;
+    if (!by) return;
+    const el = scroller(under(), axis);
+    if (el !== owed.el || axis !== owed.axis) owed = { el, axis, left: 0 };
+    owed.left += by;
+    if (!scrollFrame) scrollFrame = requestAnimationFrame(glide);
+  }
+  function glide() {
+    scrollFrame = 0;
+    const { el, axis } = owed;
+    if (!el) return;
+    // Whole pixels: a scroll offset drops a fraction, and the remainder
+    // carries to the next frame rather than being lost.
+    const step = Math.round(Math.abs(owed.left) < 2 ? owed.left : owed.left * 0.5);
+    if (!step) {
+      owed.left = 0;
+      return;
+    }
+    owed.left -= step;
+    if (axis === 'x') el.scrollLeft += step;
+    else el.scrollTop += step;
+    if (owed.left) scrollFrame = requestAnimationFrame(glide);
   }
 
   function scroller(element, axis) {
@@ -279,7 +356,7 @@
     const pointer = { ...at, pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 1 };
     target.dispatchEvent(new PointerEvent('pointerdown', pointer));
     target.dispatchEvent(new MouseEvent('mousedown', { ...at, button: 0, buttons: 1 }));
-    if (takesText(target)) target.focus();
+    fieldOf(target)?.focus();
     target.dispatchEvent(new PointerEvent('pointerup', { ...pointer, buttons: 0 }));
     target.dispatchEvent(new MouseEvent('mouseup', { ...at, button: 0 }));
     target.dispatchEvent(new MouseEvent('click', { ...at, button: 0 }));
@@ -363,7 +440,7 @@
            or while two fingers scroll (22 x 48), and a small dot inside a
            ring round a small round control. -->
       <span class="dot dot--{ring ? 'ringed' : kind}">
-        <svg class="dot__marks" class:on={kind === 'slide' || kind === 'scroll'} viewBox="0 0 64 64" aria-hidden="true">
+        <svg class="dot__marks" class:on={kind === 'slide' || kind === 'scroll' || kind === 'scrollx'} viewBox="0 0 64 64" aria-hidden="true">
           {#if kind === 'scroll'}
             <path d="M26 22l6-6 6 6M26 42l6 6 6-6" />
           {:else}
@@ -444,6 +521,11 @@
   .dot--scroll {
     width: 22px;
     height: 48px;
+  }
+  /* Across: the slider's pill and its left-right marks. */
+  .dot--scrollx {
+    width: 48px;
+    height: 22px;
   }
   .dot--ringed {
     width: 9px;

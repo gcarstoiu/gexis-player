@@ -1,9 +1,8 @@
 # ADR-0118 — Lyrion's own menus, plugins included
 
-**Status:** **Draft** — 2026-10-04, written ahead of Phase 13f at George's
-request (*"Draft it now but there will be more decisions and questions to be
-asked around it when the time comes"*). Nothing here is decided; the
-questions below are where it starts, not where it ends.
+**Status:** **Accepted** - 2026-10-05, George answered A-I (below,
+*Decided*); the measurements below confirm the mechanism and do not reopen
+the decisions. Drafted 2026-10-04 ahead of Phase 13f.
 **Builds on:** [ADR-0030](0030-library-typed-radio-slimbrowse.md) (radio: the SlimBrowse walk, by
 handle), [ADR-0028](0028-ui-serving-and-command-channel.md) (the API is open to the LAN by
 decision), [ADR-0106](0106-plugins-you-install-and-update.md) (what a plugin
@@ -58,7 +57,109 @@ streaming services, Radio Paradise, YouTube - lives in that same tree under
 5. **Whole branches left out by construction**, as Radio leaves out what it
    does not walk: the player's settings, Turn Off, alarms, sync.
 
-## Questions owed (to George, when 13f starts)
+## Decided (George, 2026-10-05)
+
+- **A. More tiles on the home screen**, in this order: **My Music** (Lyrion's)
+  before Browse; Browse, Artists, Playlists as today; **Favourites** after
+  Playlists; Radio as today; **Apps** before Settings. A top-level category
+  an app adds to Lyrion's home menu later gets a tile of its own, **just
+  before Apps**.
+- **B. Built in, behind a setting**: **Extended navigation**, in the Lyrion
+  client's settings, **off by default** (ADR-0022's inventory, appended on
+  his confirmation). Off, the home screen is as today.
+- **C. Everything but the player's settings** - Alarm Clock, Synchronise,
+  Turn Off and the rest of Lyrion's settings branches stay out. From My Music,
+  **Album Artists and Playlists are left out**, since our own Artists and
+  Playlists cover them; the rest of My Music stays (Music Folder, Genres,
+  Years, Composers, Compilations, New Music, Albums, All Artists, Library
+  Views, Remote Music Libraries, its Search).
+- **D. Open, play, add to queue and play next only.** What is left for later
+  is recorded below (*Not in this iteration*).
+- **E. Search** is where Lyrion's search item is; text comes from the
+  phone's keyboard (ADR-0121); past searches are not remembered.
+- **F. Our Radio screen stays as it is.**
+- **No TIDAL or Deezer**: neither is to be measured or supported for now.
+- **The player's own style** (George): every new tile has an icon and a
+  colour, as Browse, Artists, Playlists and Radio do; the lists look like
+  ours, not Lyrion's.
+- **A list or tiles switch** (George) on the screens this adds.
+
+- **The home row scrolls** (George, 2026-10-05, asked when it was built):
+  the cards keep their size, five in view and the next peeking at the
+  edge; New Music keeps its height. Bars already scroll theirs.
+- **My Music is every browse mode the server offers** (George, 2026-10-06:
+  *"There are entries missing in My music"*; Finding 111's addendum): the
+  player menu's 14 and Extended Browse Modes' others, 21 in all on his
+  server, in five groups - Artists, Albums, Tracks, By category, More.
+  **Disks and folders stays in** (*"Keep it in"*), though it browses the
+  Lyrion server's own disks; **Playlists Folder is left out**, being our
+  Playlists again (C). A mode its owner switched off stays off.
+- **G. No tile for Lyrion's own top-level Search**: My Music's Search covers
+  the library, and each app has its own.
+- **H. The new tiles' icons and colours are drawn by Claude (Code)**, in the
+  player's palette and icon style, and shown for review; George may replace
+  any of them from Claude Design later (*"changing an icon or a tile is a
+  smaller implementation than the navigation itself"*). A category an app
+  adds later gets a generic icon and the next colour in turn.
+- **I. The list / tiles switch** sits at the top right of each new screen,
+  and **each list remembers its own choice on that device** - not a
+  Settings row. Lists start as lists, albums and playlists as tiles.
+
+- **J. Entries that write are hidden this iteration** (George, 2026-10-05:
+  *"Not yet, next iteration"*). Finding 111 found one where context menus
+  do not reach: Qobuz's *Add Release '…' to Qobuz favourites*, on an
+  album's own page, opened like a folder (`qobuz items`) and writing to the
+  account. **Told apart mechanically, not by its words**: its action
+  carries `nextWindow: parent` - go back once it is done - where the
+  page's folders carry none, and a station's play carries `nowPlaying`. A
+  browse-command item whose action names any `nextWindow` but `nowPlaying`
+  is an action, and is left out (read 2026-10-05 from the album page,
+  without opening the entry).
+
+### Claude Design's handover, 2026-10-06 (`design/source/13f/`)
+
+The look is the designer's (`HANDOFF.md` there); its ten notes, answered
+by George the same day:
+
+- **Home cards at 200 px**, so the sixth peeks about 110 px (note 1).
+- **No list / tiles switch** - *"it is better without the switch"* (note 2,
+  reversing I): what an entry opens decides its shape - covers a grid,
+  branches tinted rows or cards, tracks leaf rows.
+- **Remote Music Libraries hidden with no entries, Library Views with one**
+  (note 3).
+- **One search field** for My Music's five searches, run together with
+  kind chips; YouTube's searches the same way (note 4).
+- **No artist portraits in lists** (note 5): *"let's see how it looks on
+  device and then we can talk about it again. It is also a question of
+  speed with several thousand portraits."*
+- **A Radio Paradise mix opens to its qualities**, as drawn (note 9).
+- **Row actions 48 px, labelled** (note 8); **the designer's copy** stands
+  (note 10).
+- **Top Tracks' "(189)" becomes "189 plays"** (note 5 of the handover).
+- **The bars' letter strip is the one the bar Artists screen already has**
+  (George: *"I just want to be consistent"*), not a new one (note 7).
+- **Home's Artists becomes Album Artists** (George), so it is not taken for
+  My Music's All Artists.
+
+Found while reading it against the server: Lyrion gives **no letter
+index** with a list, so the core builds one for artists, albums and genres
+from their first letters (one query); other lists have no rail (note 6).
+And **no list-level Play all or Shuffle** for lists such as Top Tracks: Play
+all shows where the level was opened from something that plays whole (an
+album, playlist, genre, folder); Shuffle is not offered.
+
+### Not in this iteration (D)
+
+- **Context menus** (`more`): add to favourites, go to the artist or album,
+  an app's own extras - and the entries J hides, which belong with them.
+- **Spotty's Transfer Playback**, which moves playback to another device.
+- **Preset assignment** (`set-preset-N`), which rewrites a Squeezebox's
+  buttons.
+- **Remembered searches.**
+- **One-off actions** (`do`) other than playing - none met so far is music.
+
+## Questions owed (to George, when 13f starts) - answered above
+
 
 - **A. Where it lives.** A tile beside our screens (proposed), or in place
   of some of them - and on a bar, where the home row is already six tiles.

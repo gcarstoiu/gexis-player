@@ -590,7 +590,7 @@ async def test_the_phones_home_now_playing_and_lyrics_reach_the_panel():
         assert (await client.post("/panel/go/home")).status == 200
         first = store.state.panel["view_request"]
         assert first["to"] == "home" and peppy.touches == 1
-        for to in ("now", "lyrics", "track"):
+        for to in ("now", "lyrics", "track", "minimise"):
             assert (await client.post(f"/panel/go/{to}")).status == 409, f"{to} with nothing playing"
         assert store.state.panel["view_request"] == first
         store.set_active("lms")
@@ -609,6 +609,9 @@ async def test_the_panel_says_whether_its_lyrics_are_shown():
         assert store.state.panel["lyrics"] is True and store.state.panel["idle"] is False
         assert (await client.post("/panel/shown", json={"idle": True, "lyrics": False})).status == 200
         assert store.state.panel["idle"] is True and store.state.panel["lyrics"] is False
+        # ADR-0122: whether Now Playing is up, for the phone's toggle.
+        assert (await client.post("/panel/shown", json={"now": True})).status == 200
+        assert store.state.panel["now"] is True
 
 
 @pytest.mark.asyncio

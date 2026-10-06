@@ -23,6 +23,7 @@ behind; a cold library simply looks the way it looks today.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import time
 from dataclasses import dataclass, replace
@@ -39,6 +40,8 @@ logger = logging.getLogger("gexis_core.artwork_sweep")
 #: cache keyed on them quietly points at the wrong people afterwards.
 ARTIST_NAMESPACE = "fanart-artist"
 ALBUM_NAMESPACE = "fanart-album"
+#: Where the last run's counts are kept, for the tile after a restart.
+RUN_NAMESPACE = "sweep-run"
 
 #: How long to leave between fanart calls. MusicBrainz's one-per-second is
 #: enforced by `Http`'s own limiter; fanart's limit has never been readable
@@ -82,13 +85,18 @@ class Progress:
     that ends at Y of Y with 60% found has worked perfectly.
     """
 
-    kind: str = ""            # "portraits" | "covers" | ""
+    kind: str = ""            # "all" | "portraits" | "covers" | ""
     running: bool = False
     processed: int = 0
     total: int = 0
     found: int = 0
     finished_at: float = 0.0
     cancelled: bool = False
+    #: **"all"** (George, 2026-10-06: one tile for artists and albums): the
+    #: albums looked at and the covers found, beside the artists' portraits
+    #: in `found`.
+    albums: int = 0
+    covers: int = 0
 
     def to_json(self) -> dict:
         return {
@@ -99,13 +107,31 @@ class Progress:
             "found": self.found,
             "finished_at": self.finished_at or None,
             "cancelled": self.cancelled,
+            "albums": self.albums,
+            "covers": self.covers,
         }
+
+    @classmethod
+    def from_json(cls, data: dict) -> "Progress":
+        return cls(kind=str(data.get("kind") or ""), running=False,
+                   processed=int(data.get("processed") or 0), total=int(data.get("total") or 0),
+                   found=int(data.get("found") or 0), finished_at=float(data.get("finished_at") or 0),
+                   cancelled=bool(data.get("cancelled")), albums=int(data.get("albums") or 0),
+                   covers=int(data.get("covers") or 0))
 
     @property
     def sentence(self) -> str:
         """The row's own text, in George's words."""
         if not self.kind:
             return "Never run"
+        if self.kind == "all":
+            artists = f"{self.processed:,} of {self.total:,} artists, {self.found:,} portraits"
+            albums = f"{self.albums:,} albums, {self.covers:,} covers"
+            if self.running:
+                return f"Running - {artists} · {albums}"
+            when = time.strftime("%-d %b %H:%M", time.localtime(self.finished_at)) if self.finished_at else ""
+            head = "Stopped" if self.cancelled else "Last run"
+            return f"{head}{f' {when}' if when else ''} - {artists} · {albums}"
         noun = "portraits" if self.kind == "portraits" else "covers"
         if self.running:
             return f"{self.processed} of {self.total} processed, {self.found} {noun} found"
@@ -148,8 +174,32 @@ class ArtworkSweep:
         self._publish_every_s = publish_every_s
         self._clock = clock
         self._published_at = 0.0
-        self._progress = Progress()
+        #: **The last run is kept** (George, 2026-10-06: "the status being
+        #: displayed inside the tile itself, which will work also as
+        #: history"): read back at start, so the tile says what was found
+        #: after a restart too.
+        self._progress = self._last_run()
         self._task: asyncio.Task | None = None
+
+    def _last_run(self) -> Progress:
+        if self._store is None:
+            return Progress()
+        try:
+            raw = self._store.recall(RUN_NAMESPACE, "last")
+            return Progress.from_json(json.loads(raw)) if raw else Progress()
+        except KeyError:
+            return Progress()
+        except Exception as exc:  # a bad record must not stop the core
+            logger.info("sweep: could not read the last run (%s)", exc)
+            return Progress()
+
+    def _keep_run(self) -> None:
+        if self._store is None:
+            return
+        try:
+            self._store.remember(RUN_NAMESPACE, "last", json.dumps(self._progress.to_json()))
+        except Exception as exc:
+            logger.info("sweep: could not keep the run (%s)", exc)
 
     # --- what the settings row reads ---------------------------------------
 
@@ -206,18 +256,24 @@ class ArtworkSweep:
         try:
             artists = await self._album_artists()
             self._set(total=len(artists))
-            found = 0
+            found = albums = covers = 0
             for index, (artist_id, name) in enumerate(artists, start=1):
                 try:
-                    hit = await self._one(kind, artist_id, name)
+                    got = await self._one(kind, artist_id, name)
                 except asyncio.CancelledError:
                     raise
                 except Exception as exc:  # one bad artist must not end the run
                     logger.info("sweep: %s failed (%s)", name, exc)
-                    hit = False
-                found += 1 if hit else 0
-                self._set(processed=index, found=found)
+                    got = Found()
+                if kind == "covers":
+                    found += 1 if got.covers else 0
+                else:
+                    found += 1 if got.portrait else 0
+                albums += got.albums
+                covers += got.covers
+                self._set(processed=index, found=found, albums=albums, covers=covers)
             self._set(running=False, finished_at=time.time(), always=True)
+            self._keep_run()
             # **The pictures changed under the panel.** Once, here, and not
             # 917 times on the way.
             self._on_finish()
@@ -225,12 +281,14 @@ class ArtworkSweep:
                         kind, self._progress.processed, self._progress.total, found)
         except asyncio.CancelledError:
             self._set(running=False, cancelled=True, finished_at=time.time(), always=True)
+            self._keep_run()
             self._on_finish()
             logger.info("sweep: %s cancelled at %s of %s",
                         kind, self._progress.processed, self._progress.total)
             raise
         except Exception as exc:
             self._set(running=False, finished_at=time.time(), always=True)
+            self._keep_run()
             self._on_finish()
             logger.error("sweep: %s stopped: %s", kind, exc)
 
@@ -242,11 +300,13 @@ class ArtworkSweep:
         """
         return await self._library.album_artists()
 
-    async def _one(self, kind: str, artist_id: int, name: str) -> bool:
-        """One artist. True when something was stored for them."""
+    async def _one(self, kind: str, artist_id: int, name: str) -> "Found":
+        """One artist: their portrait, their albums' covers, or - "all" -
+        both from the same lookups (they are largely the same calls,
+        Finding 054 §9)."""
         folded = fold(name)
         if not folded:
-            return False
+            return Found()
         # **The raw name is what MusicBrainz is asked**; the folded one is
         # only the cache key (`providers.search_names`).
         resolved = await self._identity.resolve(folded, raw=name)
@@ -254,13 +314,13 @@ class ArtworkSweep:
             # Could not ask. **Never stored as "no picture"** - Finding 036's
             # most important line, and on a sweep of 870 it would poison the
             # whole library in one press.
-            return False
+            return Found()
         if not resolved:
-            return False
+            return Found()
         mbid, score = resolved
         if score < self._confidence():
             logger.info("sweep: %s scored %s, below the threshold", name, score)
-            return False
+            return Found()
 
         # fanart.tv first; TheAudioDB for what it has not (ADR-0120 §4).
         # **"Nothing" is stored only when both were asked and both said so**:
@@ -268,19 +328,23 @@ class ArtworkSweep:
         art = await self._fanart(mbid) if self._fanart_key() else {}
         tadb = _Lazy(lambda: self._tadb_artist(mbid))
 
-        if kind == "portraits":
+        portrait = False
+        if kind in ("portraits", "all"):
             url = self._pick(art, ARTIST_KINDS) if art else None
+            asked = True
             if url is None:
                 artist = await tadb.get()
                 url = _first(artist, TADB_ARTIST_FIELDS) if artist else None
-                if url is None and (art is None or artist is None):
-                    return False  # a source could not be asked
-            self._remember(ARTIST_NAMESPACE, folded, url)
-            return url is not None
+                asked = not (url is None and (art is None or artist is None))
+            if asked:  # a source that could not be asked leaves it be
+                self._remember(ARTIST_NAMESPACE, folded, url)
+                portrait = url is not None
+            if kind == "portraits":
+                return Found(portrait=portrait)
 
         mine = await self._library.album_titles(artist_id)
         if not mine:
-            return False
+            return Found(portrait=portrait)
         groups = await self._release_groups(mbid)
         albums = (art or {}).get("albums") or {}
         tadb_albums = _Lazy(lambda: self._tadb_albums(tadb))
@@ -316,7 +380,7 @@ class ArtworkSweep:
             # stored too: "asked, neither had one" is an answer.
             self._remember(ALBUM_NAMESPACE, f"{folded}\x1f{fold(title)}", url)
             stored += 1 if url else 0
-        return stored > 0
+        return Found(portrait=portrait, albums=len(mine), covers=stored)
 
     async def _tadb_artist(self, mbid: str) -> dict | None:
         """TheAudioDB's record of an artist: `{}` when it has none, None
@@ -413,6 +477,16 @@ class ArtworkSweep:
             self._store.remember(namespace, key, url)
         except Exception as exc:
             logger.info("sweep: could not store %s/%s (%s)", namespace, key, exc)
+
+
+@dataclass(frozen=True)
+class Found:
+    """What one artist gave: their portrait, the albums looked at, the
+    covers found."""
+
+    portrait: bool = False
+    albums: int = 0
+    covers: int = 0
 
 
 #: TheAudioDB's portrait first, then its fanart (ADR-0120 §4).
