@@ -101,7 +101,11 @@ DESIGN_KEYS_THAT_ARE_NOT_ROWS = {"wifi_pass_", "plugin_upload"}
 #: group after 13c had built it; the review asked Claude Design to adopt
 #: ours).
 DESIGN_KEYS_NAMED_OTHERWISE = {"release": "update_status", "check_now": "update_check",
-                               "update_now": "update_install"}
+                               "update_now": "update_install",
+                               # George, 2026-10-06: the design's three Lyrion
+                               # Client rows are one tile.
+                               "sweep_portraits": "sweep_all", "sweep_covers": "sweep_all",
+                               "sweep_status": "sweep_all"}
 
 #: Rows a plugin's manifest brings (ADR-0086), not the registry: the design
 #: draws Beszel's and Plexamp's.
@@ -601,7 +605,8 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # 2026-10-05). **94**: Pexels API key (ADR-0120). **96**: Phone touchpad
     # and Pointer speed (ADR-0121). **97**: Pointer style (ADR-0121, amended).
     # **98**: Extended navigation (ADR-0118).
-    assert len(rows) == 98
+    # **96**: the Lyrion Client's three rows made one (George, 2026-10-06).
+    assert len(rows) == 96
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
@@ -616,7 +621,8 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # TheAudioDB key (ADR-0120); 77 with Pexels API key (ADR-0120); 79 with
     # Phone touchpad and Pointer speed (ADR-0121); 80 with Pointer style;
     # 81 with Extended navigation (ADR-0118).
-    assert len(rows) - len(kept) == 81
+    # 79 with the Lyrion Client's three rows made one (George, 2026-10-06).
+    assert len(rows) - len(kept) == 79
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():
@@ -1340,12 +1346,13 @@ def test_starting_volume_sits_with_spotify_and_hides_with_it(store):
 def test_the_artwork_updates_are_enrichment_s_lyrion_client_rows():
     """George, 2026-10-05: the two updates and their progress live in
     Enrichment, under a Lyrion Client heading that hides with Lyrion Client
-    (ADR-0022, reversing the 2026-09-25 move into Sources)."""
+    (ADR-0022, reversing the 2026-09-25 move into Sources). George,
+    2026-10-06: one tile, both found, what was found shown in it."""
     enrich = next(g for g in load_registry() if g["id"] == "enrich")["rows"]
     heading = next(i for i, r in enumerate(enrich) if r.get("type") == "group")
     assert enrich[heading]["label"] == "Lyrion Client"
     assert enrich[heading]["onlyWhen"] == ["lms_enabled", True]
-    assert [r["key"] for r in enrich[heading + 1:]] == ["sweep_portraits", "sweep_covers", "sweep_status"]
+    assert [r["key"] for r in enrich[heading + 1:]] == ["sweep_all"]
     sources = next(g for g in load_registry() if g["id"] == "sources")["rows"]
     assert not any(r.get("key", "").startswith("sweep_") for r in sources)
 

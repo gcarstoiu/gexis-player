@@ -1653,7 +1653,7 @@ async def main() -> None:
             or "None",
             # ADR-0059. George's own wording: "X out of Y processed (searched
             # for), Z artist portraits found."
-            "sweep_status": lambda: sweep.progress.sentence,
+            "sweep_all": lambda: sweep.progress.sentence,
             # **Which build this is** (ADR-0022's `version` row, wired
             # 2026-09-25). The image writes `/etc/gexis/image.info` because
             # nothing on a running device reported it: the `.info` beside
@@ -1819,9 +1819,9 @@ async def main() -> None:
                # ADR-0059's two buttons. `start` refuses rather than queues
                # while the other is running - a queued button is a progress
                # bar that lies.
-               "sweep_portraits": lambda _=None: _start_sweep("portraits"),
-               "sweep_covers": lambda _=None: _start_sweep("covers"),
-               "sweep_status": None,
+               # George, 2026-10-06: one tile - portraits and covers in one
+               # walk, what it found shown in the tile.
+               "sweep_all": lambda _=None: _start_sweep("all"),
                # Readonly, and listed here for the same reason
                # `volume_managed` is: it is how a row says it reports
                # something rather than nothing (ADR-0022's `version`).

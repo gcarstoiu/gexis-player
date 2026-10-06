@@ -12,6 +12,7 @@ import pytest
 from gexis_core.artwork_sweep import (
     ALBUM_NAMESPACE,
     ARTIST_NAMESPACE,
+    RUN_NAMESPACE,
     ArtworkSweep,
     Progress,
     match_title,
@@ -88,6 +89,11 @@ def build(**kw):
     return sweep, store, identity, http
 
 
+def artwork(store):
+    """The pictures stored, without the run's own record."""
+    return {k: v for k, v in store.rows.items() if k[0] != RUN_NAMESPACE}
+
+
 async def run(sweep, kind):
     assert sweep.start(kind) is True
     await sweep._task
@@ -150,7 +156,7 @@ class TestPortraits:
             http=FakeHttp({"fanart.tv": {"artistthumb": [{"url": "u"}]}}),
         )
         await run(sweep, "portraits")
-        assert store.rows == {}
+        assert artwork(store) == {}
         assert http.calls == []
 
     async def test_an_unresolvable_artist_is_not_an_error(self):
@@ -195,7 +201,7 @@ class TestCovers:
         # **Only what this library holds.** Their catalogue had a release
         # group we do not own; storing it put 16,391 rows in a 4,567-album
         # store and none of the extras was ever read.
-        assert len(store.rows) == 3
+        assert len(artwork(store)) == 3
         # one fanart call and one MusicBrainz lookup, for three albums
         assert sum("fanart" in c for c in http.calls) == 1
         assert sum("musicbrainz" in c for c in http.calls) == 1
@@ -384,4 +390,49 @@ class TestTheAudioDB:
         await run(sweep, "covers")
         assert store.rows[(ALBUM_NAMESPACE, "isaac hayes\x1fhot buttered soul")] == "https://tadb/alone.jpg"
         assert sum("album-mb.php" in c for c in http.calls) == 1, "only for the one with a release group"
+
+
+class TestOneTileForBoth:
+    """George, 2026-10-06: "the lyrion client 3 tiles should be collapsed
+    into one. Triggering it enriches both artists and albums, with the status
+    being displayed inside the tile itself, which will work also as
+    history." """
+
+    BODIES = {
+        "musicbrainz.org/ws/2/artist/MB1": {"release-groups": [
+            {"id": "RG1", "title": "Hot Buttered Soul"},
+            {"id": "RG2", "title": "Black Moses"},
+        ]},
+        "fanart.tv": {
+            "artistthumb": [{"url": "https://fan/isaac.jpg"}],
+            "albums": {"RG1": {"albumcover": [{"url": "https://fan/one.jpg"}]},
+                       "RG2": {"albumcover": [{"url": "https://fan/two.jpg"}]}},
+        },
+        "artist-mb.php": {"artists": [{"idArtist": "7"}]},
+        "album-mb.php": {"album": None},
+        "album.php": {"album": []},
+    }
+
+    async def test_one_walk_finds_portraits_and_covers_from_one_fanart_call(self):
+        sweep, store, _, http = build(http=FakeHttp(self.BODIES))
+        await run(sweep, "all")
+        assert store.rows[(ARTIST_NAMESPACE, "isaac hayes")] == "https://fan/isaac.jpg"
+        assert store.rows[(ALBUM_NAMESPACE, "isaac hayes\x1fhot buttered soul")] == "https://fan/one.jpg"
+        assert sum("fanart" in c for c in http.calls) == 1
+        p = sweep.progress
+        assert (p.processed, p.total, p.found, p.albums, p.covers) == (1, 1, 1, 3, 2)
+        assert p.sentence.startswith("Last run") and "1 of 1 artists, 1 portraits · 3 albums, 2 covers" in p.sentence
+
+    async def test_the_last_run_is_read_back_after_a_restart(self):
+        sweep, store, _, _ = build(http=FakeHttp(self.BODIES))
+        await run(sweep, "all")
+        again, _, _, _ = build(store=store)
+        assert again.progress.kind == "all" and again.progress.covers == 2 and not again.progress.running
+        assert "3 albums, 2 covers" in again.progress.sentence
+
+    async def test_a_new_run_starts_from_scratch(self):
+        sweep, store, _, _ = build(http=FakeHttp(self.BODIES))
+        await run(sweep, "all")
+        await run(sweep, "all")
+        assert (sweep.progress.processed, sweep.progress.covers) == (1, 2)
 

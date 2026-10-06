@@ -1030,35 +1030,12 @@
         ]
       },
       {
-        "key": "sweep_portraits",
+        "key": "sweep_all",
         "type": "action",
-        "label": "Update artist portraits",
+        "label": "Find portraits and covers",
         "marks": "R",
-        "note": "Looks up every album artist on fanart.tv, then TheAudioDB, and keeps LMS's picture where neither has one. Checks all of them, every time. Runs in the background; playback is not interrupted.",
-        "default": null,
-        "onlyWhen": [
-          "lms_enabled",
-          true
-        ]
-      },
-      {
-        "key": "sweep_covers",
-        "type": "action",
-        "label": "Update album covers",
-        "marks": "R",
-        "note": "Looks up every album's cover on fanart.tv, then TheAudioDB, and uses it in place of LMS's, keeping LMS's where neither has one. Checks all of them, every time. Runs in the background; playback is not interrupted. One update runs at a time.",
-        "default": null,
-        "onlyWhen": [
-          "lms_enabled",
-          true
-        ]
-      },
-      {
-        "key": "sweep_status",
-        "type": "readonly",
-        "label": "Progress",
-        "marks": "R",
-        "note": "What the last or current run has done.",
+        "note": "Looks up every album artist's portrait and every album's cover on fanart.tv, then TheAudioDB, and keeps LMS's picture where neither has one. Starts from scratch every time and checks all of them. Runs in the background; playback is not interrupted. What it found stays here until the next run.",
+        "confirm": "Find",
         "default": null,
         "onlyWhen": [
           "lms_enabled",

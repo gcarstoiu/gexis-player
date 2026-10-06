@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import logging
 import secrets
+import time
 import unicodedata
 from urllib.parse import quote
 
@@ -75,6 +76,9 @@ HIDE_WHEN_FEW = {"opmlselectRemoteLibrary": 0, "opmlselectVirtualLibrary": 1}
 #: The most of a list read at once for its letter index: All Artists' 8,393
 #: came back in 221 ms (2.7 MB) on George's server.
 LETTERS_MAX = 20000
+#: How long a letter index is kept: a rescan moves positions, and a scan
+#: takes about two hours (Finding 109), so half an hour is the stale bound.
+LETTERS_KEEP_S = 30 * 60
 
 #: One page of a list. Lyrion pages by start and count (Finding 111).
 PAGE = 100
@@ -100,6 +104,14 @@ class LyrionMenus:
         self._base_url = base_url
         self._handles: dict[str, dict] = {}
         self._limit = limit
+        #: Letter indexes by the list they index, kept a while: handles are
+        #: new on every opening, and reading a list whole is the heaviest
+        #: thing the menus do - All Artists is 2.7 MB from Lyrion, and the
+        #: core relays nothing else while it parses (the phone's touchpad
+        #: stalled ~135 ms in every ~170 for 2 s, measured on gexis
+        #: 2026-10-06).
+        self._letters: dict[tuple, tuple[float, dict]] = {}
+        self._clock = time.monotonic
 
     # --- handles -----------------------------------------------------------
 
@@ -321,15 +333,28 @@ class LyrionMenus:
             return {"letters": spec.get("letters", {})}
         command = list(spec["cmd"]) + [0, LETTERS_MAX]
         command += [f"{k}:{v}" for k, v in spec["params"].items()] + ["menu:1"]
+        key = tuple(str(part) for part in command)
+        kept = self._letters.get(key)
+        if kept and self._clock() - kept[0] < LETTERS_KEEP_S:
+            spec["letters"] = kept[1]
+            return {"letters": kept[1]}
         items = (await self._call(command)).get("item_loop") or []
         keys = [item.get("textkey") for item in items]
         found: dict[str, int] = {}
         if items and sum(1 for k in keys if k) >= len(items) * 0.9:
-            for position, key in enumerate(keys):
-                letter = _letter(key)
+            last = None
+            for position, textkey in enumerate(keys):
+                # Sorted: a letter can only start where the key's first
+                # character changes, so the fold runs a few dozen times.
+                head = str(textkey or "")[:1]
+                if head == last:
+                    continue
+                last = head
+                letter = _letter(textkey)
                 if letter and letter not in found:
                     found[letter] = position
         spec["letters"] = found
+        self._letters[key] = (self._clock(), found)
         return {"letters": found}
 
     # --- one item -----------------------------------------------------

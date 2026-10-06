@@ -88,6 +88,12 @@ MIGRATIONS: tuple[Migration, ...] = (
     # range is 150 to 400 now. A slower speed kept from a preview is raised.
     convert("pointer_speed", lambda v: max(150, v) if isinstance(v, (int, float)) else v,
             "pointer_speed: at least 150 %"),
+    # George, 2026-10-06: the Lyrion Client's three rows are one tile that
+    # finds both and shows what it found. Buttons and a read-out: nothing
+    # stored under them, dropped for the record.
+    drop("sweep_portraits", "sweep_portraits: one tile, sweep_all"),
+    drop("sweep_covers", "sweep_covers: one tile, sweep_all"),
+    drop("sweep_status", "sweep_status: shown in sweep_all's tile"),
 )
 
 

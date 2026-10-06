@@ -75,6 +75,7 @@
  "spotify_enabled",
  "spotify_name",
  "start_max",
+ "sweep_all",
  "sweep_covers",
  "sweep_portraits",
  "sweep_status",
