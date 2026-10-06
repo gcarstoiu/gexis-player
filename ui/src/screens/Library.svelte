@@ -956,8 +956,18 @@
     // A list of only text lines - Favourites' "Empty" - has nothing to count.
     if (menu.items.every((r) => r.kind === 'text')) return parent;
     const hint = menu.items.find((r) => r.hint)?.hint;
-    const noun = MENU_NOUNS[hint] ?? (menu.items.some((r) => r.kind === 'play') ? 'tracks' : 'items');
-    return [parent, one(menu.count, noun)].filter(Boolean).join(' · ');
+    // Tracks carry an artist under the title; a station's streams do not.
+    const tracks = menu.items.some((r) => r.kind === 'play' && r.subtitle) || here.ctx?.from?.kind === 'container';
+    const noun = here.ctx?.apps ? 'apps' : MENU_NOUNS[hint] ?? (tracks ? 'tracks' : 'items');
+    // A whole list in hand counts what it shows: an app's album page is its
+    // tracks and then lines of text.
+    const whole = menu.items.length >= menu.count;
+    // An album page's links (Artist, Credits) are not among its tracks.
+    const shown = menu.items.filter((r) => (tracks ? r.kind === 'play' : r.kind !== 'text'));
+    // Nothing named (TIDAL signed out: one unnamed item) counts nothing.
+    const n = !shown.some((r) => r.label) ? 0 : whole ? shown.length : menu.count;
+    if (!n) return parent;
+    return [parent, one(n, noun)].filter(Boolean).join(' · ');
   });
 
   async function openPlaylists() {
@@ -1322,7 +1332,7 @@
             <span>
               <!-- Album Artists, not Artists: My Music has All Artists too
                    (George, 2026-10-06). -->
-              <span class="card__name">Album Artists</span>
+              <span class="card__name card__name--long">Album Artists</span>
               <span class="card__count">{counts ? plural(counts.artists, 'artist', 'artists') : ''}</span>
             </span>
           </button>
@@ -2267,6 +2277,12 @@
     letter-spacing: var(--track-tight);
     color: var(--ink);
   }
+  /* Two words on one line: wrapped, they push the count out of a card on a
+     711-tall panel. */
+  .card__name--long {
+    font-size: calc(var(--t-h2) * 0.76);
+    white-space: nowrap;
+  }
   .card__count {
     display: block;
     min-height: 1.3em;
@@ -2296,6 +2312,8 @@
     scrollbar-width: none;
     scroll-snap-type: x proximity;
     mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 72px), transparent 100%);
+    /* Scrolled to the end, the last card clears the fade. */
+    padding-right: 72px;
   }
   .cards--more::-webkit-scrollbar { display: none; }
   .cards--more .card { scroll-snap-align: start; }

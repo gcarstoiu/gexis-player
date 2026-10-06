@@ -252,7 +252,7 @@
     onclick={() => tap(r)}
   >
     {#if opts.num != null}<span class="num" class:num--top={opts.num <= 3 && opts.podium}>{opts.num}</span>{/if}
-    {#if lead.disc}<Disc name={lead.disc} tint={lead.tint} size={46} />{:else if lead.thumb}<span class="thumb">{#if r.image}<img src={r.image} alt="" loading="lazy" />{/if}</span>{:else if lead.init}<span class="init">{initials(r.label)}</span>{/if}
+    {#if lead.disc}<Disc name={lead.disc} tint={lead.tint} size={46} />{:else if lead.thumb && !r.image}<Disc name={r.subtitle ? 'Note' : 'Rss'} tint={r.subtitle ? T.coral : T.amber} size={46} />{:else if lead.thumb}<span class="thumb"><img src={r.image} alt="" loading="lazy" /></span>{:else if lead.init}<span class="init">{initials(r.label)}</span>{/if}
     <span class="row__text">
       <span class="row__label" class:is-unnamed={!r.label}>{r._unnamed ? 'No name' : pc.label || 'No name'}</span>
       {#if r.subtitle}<span class="row__sub">{r.subtitle}</span>{/if}
@@ -567,7 +567,7 @@
   .act { height: 48px; padding: 0 18px; border-radius: 14px; background: rgba(233, 238, 242, 0.06); border: 1px solid rgba(233, 238, 242, 0.14); box-sizing: border-box; display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; white-space: nowrap; }
   .act--play { background: rgba(126, 214, 188, 0.14); border-color: rgba(126, 214, 188, 0.36); }
   .textline { grid-column: 1 / -1; font-size: 16px; color: rgba(233, 238, 242, 0.62); padding: 10px 8px; }
-  .head { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; padding-top: 14px; padding-bottom: 8px; }
+  .head { scroll-margin-top: 14px; grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; padding-top: 14px; padding-bottom: 8px; }
   .head--first { padding-top: 0; }
   .head__label { font-family: var(--font-mono); font-size: 14px; font-weight: 700; letter-spacing: 0.18em; flex-shrink: 0; }
   .head__rule { flex: 1; height: 1px; background: rgba(233, 238, 242, 0.1); }
@@ -635,9 +635,11 @@
   .albumpage { flex: 1; min-height: 0; display: flex; gap: 36px; padding: 24px 40px; box-sizing: border-box; }
   .albumpage__side { width: 264px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; }
   .albumpage__cover { width: 264px; height: 264px; border-radius: 16px; overflow: hidden; position: relative; flex-shrink: 0; background: #17242d; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1); display: block; }
+  /* A short panel: the cover gives way, not the artist line. */
+  @media (max-height: 760px) { .albumpage__cover { width: 200px; height: 200px; } }
   .albumpage__cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-  .albumpage__title { font-size: 24px; font-weight: 700; line-height: 1.2; margin-top: 4px; }
-  .albumpage__by { display: flex; align-items: baseline; gap: 8px; font-size: 17px; white-space: nowrap; overflow: hidden; }
+  .albumpage__title { flex-shrink: 0; font-size: 24px; font-weight: 700; line-height: 1.2; margin-top: 4px; }
+  .albumpage__by { flex-shrink: 0; display: flex; align-items: baseline; gap: 8px; font-size: 17px; white-space: nowrap; overflow: hidden; }
   .albumpage__artist { color: #f2a48f; font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
   .albumpage__year { font-family: var(--font-mono); font-size: 15px; color: rgba(233, 238, 242, 0.62); }
   .albumpage__acts { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
