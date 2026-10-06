@@ -8,7 +8,7 @@ Minimise (ADR-0122), the phone sheet in one row, the enrichment tile, the
 on-the-go enrichment fixes, the update screen's end and progress. Image
 `image/deploy/2026-10-06-gexis-player-v0.9.2.img` in the main checkout;
 111 checks passed; check-upstream ok (Plexamp 4.13.2, Lyrion 9.1.1).
-**The PR into `main` waits for George.** Phase 13d stays open (board
+**PR #50 into `main` waits for George.** Phase 13d stays open (board
 tests); 13f stays open (George's tries, the hidden-library hour).
 
 **13f: Claude Design's look is built, Standard and Bar** (ADR-0118
