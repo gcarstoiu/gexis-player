@@ -405,17 +405,33 @@ class Cache:
     )
     """
 
-    def recall(self, namespace: str, key: str):
+    def recall(self, namespace: str, key: str, *, missing_ttl: float | None = None):
         """The stored value, or `KeyError` - because `None` is itself a value
-        worth storing here: "this artist has no photo" is an answer."""
+        worth storing here: "this artist has no photo" is an answer.
+
+        `missing_ttl`: a stored `None` older than this is not believed (a
+        `KeyError`), as `MISSING_TTL_S` does for the providers' answers."""
         self._conn.execute(self._KV_SCHEMA)
         row = self._conn.execute(
-            "SELECT value FROM notes WHERE namespace = ? AND key = ?",
+            "SELECT value, stored_at FROM notes WHERE namespace = ? AND key = ?",
             (namespace, str(key)),
         ).fetchone()
         if row is None:
             raise KeyError(key)
-        return json.loads(row[0])
+        value = json.loads(row[0])
+        if value is None and missing_ttl is not None and self._clock() - row[1] > missing_ttl:
+            raise KeyError(key)
+        return value
+
+    def forget_missing(self, namespace: str) -> int:
+        """Every stored `None` in a namespace: the answers of a search that
+        could not have found them."""
+        self._conn.execute(self._KV_SCHEMA)
+        gone = self._conn.execute(
+            "DELETE FROM notes WHERE namespace = ? AND value = 'null'", (namespace,)
+        ).rowcount
+        self._conn.commit()
+        return gone
 
     def remember(self, namespace: str, key: str, value) -> None:
         self._conn.execute(self._KV_SCHEMA)
@@ -482,6 +498,8 @@ class EnrichmentService:
         #: not to ask somebody rather than a reason to ignore their answer.
         self._gate = gate or (lambda _name: True)
         self._unavailable_until: dict[str, float] = {}
+        #: Fetches going now, by track and provider (`_ask`).
+        self._in_flight: dict[tuple, asyncio.Future] = {}
 
     @property
     def confidence_min(self) -> int:
@@ -579,6 +597,22 @@ class EnrichmentService:
         until = self._unavailable_until.get(provider.name)
         if until is not None and self._clock() < until:
             return Answer(Outcome.UNAVAILABLE)
+        # **One fetch per track and provider at a time.** The panel, a phone
+        # and the daemon's own cover search each ask while a slow provider is
+        # still going, and each ask began the same fetch again - the same
+        # MusicBrainz searches queued on one limiter, the one host that
+        # answers 503 (2026-10-06: 1,819 asks in three days on gexis). A
+        # second ask now waits for the first.
+        flight = (key, provider.name)
+        running = self._in_flight.get(flight)
+        if running is not None:
+            return await asyncio.shield(running)
+        task = asyncio.ensure_future(self._fetch(provider, key))
+        self._in_flight[flight] = task
+        task.add_done_callback(lambda _t: self._in_flight.pop(flight, None))
+        return await asyncio.shield(task)
+
+    async def _fetch(self, provider, key: TrackKey) -> Answer:
         try:
             answer = await provider.fetch(key)
         except Exception as exc:  # a provider must never take the service down
