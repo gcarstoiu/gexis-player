@@ -882,8 +882,20 @@
     openMenu(row.handle, row.label, true, ctxFor(row, here?.ctx ?? {}));
   }
 
-  function openSearchEntry(row) {
-    path = [...path, { kind: 'menusearch', label: row.label, rows: [row], ctx: here?.ctx ?? {} }];
+  async function openSearchEntry(row) {
+    let rows = [row];
+    if (row.kind === 'folder') {
+      // An app's "Search" folder: its own search, without the searches kept
+      // under it (decision E).
+      try {
+        rows = (await browseMenu(row.handle)).items.filter((r) => r.kind === 'search').slice(0, 1);
+      } catch (err) {
+        flash(err.message);
+        return;
+      }
+      if (!rows.length) return openMenuRow(row);
+    }
+    path = [...path, { kind: 'menusearch', label: row.label, rows, ctx: here?.ctx ?? {} }];
   }
 
   /** The next page, when the end of the list comes into view. */

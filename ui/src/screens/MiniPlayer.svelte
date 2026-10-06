@@ -378,33 +378,62 @@
     />
   {/if}
 
-  {#if open}
-    <!-- ADR-0101 as amended 2026-10-05: the panel's screens, from here -
-         between the touchpad and the volume, so a sideways stroke that
-         overshoots the pad lands on buttons that want a tap, not on the
-         slider (George, 2026-10-06). -->
-    <div class="mini__row mini__nav">
-      <button class="mini__toggle" type="button" onclick={() => go('home', 'Home')}>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 5l8 6.5M6.5 10v9h11v-9" /></svg>
-        <span>Home</span>
-      </button>
-      <button class="mini__toggle" type="button" disabled={!$active} onclick={() => go('now', 'Now playing')}>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" /><path d="M10.5 9v6l4.5-3z" /></svg>
-        <span>Now playing</span>
-      </button>
+  <!-- ADR-0101 as amended 2026-10-06 (George): **every toggle in one row,
+       icons only, open or not** - opening the sheet adds the touchpad and
+       nothing else. The row stands between the touchpad and the volume, so
+       a sideways stroke that overshoots the pad lands on buttons that want
+       a tap, not on the slider. Now playing is a toggle: up on the panel it
+       minimises to the strip (ADR-0122); down, it brings it up. -->
+  <div class="mini__icons">
+    <button class="mini__icon" type="button" aria-label="Home on the panel" onclick={() => go('home', 'Home')}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 5l8 6.5M6.5 10v9h11v-9" /></svg>
+    </button>
+    <button
+      class="mini__icon"
+      class:is-on={!!$active && $panel.now}
+      type="button"
+      disabled={!$active}
+      aria-pressed={!!$active && !!$panel.now}
+      aria-label={$panel.now ? 'Minimise Now Playing' : 'Now Playing on the panel'}
+      onclick={() => go($panel.now ? 'minimise' : 'now', 'Now playing')}
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" /><path d="M10.5 9v6l4.5-3z" /></svg>
+    </button>
+    <button
+      class="mini__icon"
+      class:is-on={!!$active && $panel.lyrics}
+      type="button"
+      disabled={!$active}
+      aria-pressed={!!$active && !!$panel.lyrics}
+      aria-label="Lyrics on the panel"
+      onclick={() => go($panel.lyrics ? 'track' : 'lyrics', 'Lyrics')}
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h9M5 17h11" /></svg>
+    </button>
+    {#if $meters}
       <button
-        class="mini__toggle"
-        class:is-on={!!$active && $panel.lyrics}
+        class="mini__icon"
+        class:is-on={$panel.visualiser}
         type="button"
-        disabled={!$active}
-        aria-pressed={!!$active && !!$panel.lyrics}
-        onclick={() => go($panel.lyrics ? 'track' : 'lyrics', 'Lyrics')}
+        aria-pressed={$panel.visualiser}
+        aria-label="Visualiser on the panel"
+        onclick={toggleVisualiser}
       >
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h9M5 17h11" /></svg>
-        <span>Lyrics</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V11M10 19V5M15 19V9M20 19V13" /></svg>
       </button>
-    </div>
-  {/if}
+    {/if}
+    <button
+      class="mini__icon"
+      class:is-on={$panel.idle}
+      type="button"
+      aria-pressed={$panel.idle}
+      aria-label="Idle screen on the panel"
+      onclick={toggleIdle}
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 14.5A7.5 7.5 0 0 1 9.5 5 7.5 7.5 0 1 0 19 14.5Z" /></svg>
+    </button>
+  </div>
+
   <div class="mini__row">
     {#if $fixedOutput}
       <span class="mini__fixed">Fixed output · the amplifier sets the level</span>
@@ -428,33 +457,7 @@
       </div>
       <span class="mini__pct">{$volume?.muted ? 'Muted' : `${shown}%`}</span>
     {/if}
-
-    {#if $meters}
-      <button
-        class="mini__toggle"
-        class:is-on={$panel.visualiser}
-        type="button"
-        aria-pressed={$panel.visualiser}
-        aria-label="Visualiser on the panel"
-        onclick={toggleVisualiser}
-      >
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V11M10 19V5M15 19V9M20 19V13" /></svg>
-        {#if open}<span>Visualiser</span>{/if}
-      </button>
-    {/if}
-    <button
-      class="mini__toggle"
-      class:is-on={$panel.idle}
-      type="button"
-      aria-pressed={$panel.idle}
-      aria-label="Idle screen on the panel"
-      onclick={toggleIdle}
-    >
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 14.5A7.5 7.5 0 0 1 9.5 5 7.5 7.5 0 1 0 19 14.5Z" /></svg>
-      {#if open}<span>Idle screen</span>{/if}
-    </button>
   </div>
-
 
   {#if note}<div class="mini__note" role="status">{note}</div>{/if}
 </div>
@@ -573,45 +576,43 @@
     font-size: var(--t-meta);
     color: var(--ink-quiet);
   }
-  .mini__toggle {
+  /* One row of equal icon buttons, the width of the sheet. */
+  .mini__icons {
     display: flex;
-    align-items: center;
-    gap: 6px;
-    height: 40px;
-    min-width: 40px;
-    padding: 0 9px;
+    gap: 8px;
+  }
+  .mini__icon {
+    flex: 1;
+    height: 44px;
     border-radius: 12px;
     border: 1px solid var(--ink-line);
     background: var(--ink-fill);
     color: var(--ink-quiet);
-    font: inherit;
-    font-size: var(--t-meta);
+    display: grid;
+    place-items: center;
+    padding: 0;
     cursor: pointer;
-    flex: none;
   }
-  .mini__toggle:disabled {
+  .mini__icon:disabled {
     opacity: 0.38;
     cursor: default;
   }
-  .mini__nav + .mini__row {
-    margin-top: 8px;
-  }
-  .mini__nav {
-    flex-wrap: wrap;
-  }
-  .mini__toggle.is-on {
+  .mini__icon.is-on {
     background: var(--src-accent);
     border-color: transparent;
     color: var(--ink-on-accent);
   }
-  .mini__toggle svg {
-    width: 20px;
-    height: 20px;
+  .mini__icon svg {
+    width: 22px;
+    height: 22px;
     fill: none;
     stroke: currentColor;
-    stroke-width: 2.2;
+    stroke-width: 2;
     stroke-linecap: round;
     stroke-linejoin: round;
+  }
+  .mini__icons + .mini__row {
+    margin-top: 4px;
   }
   .mini--open .mini__row {
     flex-wrap: wrap;

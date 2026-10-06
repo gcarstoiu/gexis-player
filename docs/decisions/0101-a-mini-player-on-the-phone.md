@@ -105,3 +105,24 @@ it. Now playing, Lyrics and Track are refused while nothing is active.
 - **On George's phone:** *"Phone mini player works as expected."*
 - **Not tried:** an idle screen asked for while music plays.
 
+
+## Amended 2026-10-06: one row of icons, and Now playing a toggle
+
+George: *"The icons on the phone, volume sheet - fit them all in one row (no
+text) also when volume sheet is collapsed. Opening it basically displays the
+touch area. The now playing becomes a toggle (minimize to strip or full
+screen)."*
+
+- **Home, Now playing, Lyrics, Visualiser and Idle screen are one row of
+  icon buttons**, labelled for screen readers only, shown whether the sheet
+  is open or not. Opening the sheet adds the touchpad (ADR-0121) and the
+  artist line; nothing else.
+- The row sits **between the touchpad and the volume**, so a stroke that
+  overshoots the pad lands on buttons that want a tap rather than on the
+  slider (George, the same day: "the touch area should be lifted away from
+  the volume bar").
+- **Now playing is a toggle.** The panel reports whether Now Playing is what
+  it shows (`panel.now`, beside `lyrics`); lit, the button asks the panel to
+  minimise ([ADR-0122](0122-now-playing-minimised-to-where-you-were.md)),
+  unlit to bring Now Playing up. `minimise` joins the asks `/panel/go/{to}`
+  takes, refused like the others with nothing playing.

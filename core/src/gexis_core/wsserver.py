@@ -1197,7 +1197,7 @@ class StateServer:
         return web.json_response({"idle": action})
 
     #: ADR-0101 as amended: where a phone may send the panel.
-    VIEWS = ("home", "now", "lyrics", "track")
+    VIEWS = ("home", "now", "lyrics", "track", "minimise")
 
     async def _handle_view_request(self, request: web.Request) -> web.Response:
         """**ADR-0101 as amended 2026-10-05: Home, Now playing and Lyrics from
@@ -1221,11 +1221,11 @@ class StateServer:
         the panel shows, whatever changed it."""
         try:
             body = await request.json()
-            shown = {key: bool(body[key]) for key in ("idle", "lyrics") if key in body}
+            shown = {key: bool(body[key]) for key in ("idle", "lyrics", "now") if key in body}
         except (ValueError, TypeError, AttributeError):
             shown = {}
         if not shown:
-            return web.json_response({"error": 'body must be {"idle": <bool>, "lyrics": <bool>}'}, status=400)
+            return web.json_response({"error": 'body must hold "idle", "lyrics" or "now", each a bool'}, status=400)
         self._store.set_panel(**shown)
         return web.json_response(shown)
 

@@ -101,6 +101,18 @@ fades over 300 ms; **no "working" or "unavailable"** states yet - the panel
 does not know, for most controls, that the player is busy or that a source
 lacks one; they come control by control.
 
+**Amended 2026-10-06 - bunches are spread.** George: *"The choppiness for
+cursor is still there occasionally ... if I scroll vertically the album
+artists screen, the scrolling is somewhat choppy as well. When doing it by
+touch it just works fine."* Moves are added up once a frame, and the
+pointer covers 60 % of what is owed each frame (the rest catches up within
+about four frames), so moves Wi-Fi delivers together read as a glide; it
+still starts in the frame the first move lands, so the round trip is not
+lengthened, only a bunch's tail. A two-finger scroll glides likewise, half
+of what is owed each frame, in whole pixels. Whether gexis's Wi-Fi power
+saving (on, measured 2026-10-06) is what bunches the moves is not yet
+measured.
+
 ### 4. Typing (C)
 
 **Tapping inside a text field brings up the phone's keyboard**, with no
