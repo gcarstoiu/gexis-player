@@ -50,7 +50,8 @@ REBOOT_MARKER = Path("/var/lib/gexis/reboot-required")
 #: Units an update must not restart: the updater's own (restarting the unit
 #: it runs as would end it mid-update), and the shutdown pause, whose stop
 #: pauses LMS (ADR-0095). Found in the first update on the device, 2026-09-30.
-NEVER_RESTART = {"gexis-update-install.service", "gexis-update-check.service", "gexis-park.service"}
+NEVER_RESTART = {"gexis-update-install.service", "gexis-update-check.service",
+                 "gexis-update-checknow.service", "gexis-park.service"}
 #: Packages whose new version only takes effect at a boot.
 REBOOT_PACKAGES = re.compile(r"^(linux-image-|raspi-firmware|raspberrypi-sys-mods|libc6|systemd|initramfs-tools)")
 BACKUP_S = 120      # how long a backup may take to appear

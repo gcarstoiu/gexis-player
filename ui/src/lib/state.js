@@ -164,7 +164,8 @@ export const hidePeppy = () => post('/peppy/hide');
 export const requestIdle = (show) => post(`/panel/idle/${show ? 'show' : 'hide'}`);
 // `{ idle }`, `{ lyrics }` or both: what the panel shows (ADR-0101).
 export const reportShown = (shown) => post('/panel/shown', shown);
-// ADR-0101 as amended 2026-10-05: 'home', 'now', 'lyrics' or 'track'.
+// ADR-0101 as amended 2026-10-05: 'home', 'now', 'lyrics', 'track' or
+// 'minimise'.
 export const goTo = (to) => post(`/panel/go/${to}`);
 
 /** Accept or reject the open pairing request. A 409 means the window closed

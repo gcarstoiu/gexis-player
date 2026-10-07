@@ -256,7 +256,7 @@ class SetupFlow:
             # home screen blinked in between). The panel keeps the last setup
             # screen, "Restarting to take its new name", until the restart
             # takes it down; the next boot starts as a configured device.
-            logger.info("setup: the name changed; restarting to take it")
+            logger.info("setup: the name or the screen changed; restarting")
             await self._reboot()
             return
         self._network.done()

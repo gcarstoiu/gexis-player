@@ -1,9 +1,10 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!--
-  Now playing, Phase 4 step 4c: display only. Ported from
-  design/now-playing.html; the styles are that file's, trimmed to what this
-  screen uses. Controls render for the layout but are disabled and carry
-  data-unwired="<phase>" until the phase that wires them.
+  Now Playing. Ported from design/now-playing.html; the styles are that
+  file's, trimmed to what this screen uses. Controls appear when the active
+  renderer declares them (capabilities[active].controls) and are disabled
+  while not in controls.available (ADR-0037). Commands go to
+  /transport/{command}; their result returns on /state.
 -->
 <script>
   import { onDestroy, untrack } from 'svelte';
@@ -1535,9 +1536,9 @@
   .btn.is-pressed:not(:disabled) {
     transform: scale(0.95);
   }
-  /* Cannot work right now (ADR-0037 §3). The design dims an unavailable tab
-     to 0.4; the same here. Unwired scaffolding keeps its own look. */
-  .btn:disabled:not([data-unwired]) {
+  /* Cannot work right now (ADR-0037 §3): dimmed, as the design dims an
+     unavailable tab. */
+  .btn:disabled {
     opacity: 0.4;
   }
   /* The one small control the design draws larger: 64px where the rest are

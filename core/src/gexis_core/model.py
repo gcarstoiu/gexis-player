@@ -241,12 +241,12 @@ class PlaybackState:
     fixed_output: bool = False
     #: **ADR-0055 §6: whether the visualiser can have levels at all.**
     #:
-    #: False on an output whose chain carries no meter - both HDMI, where
-    #: ALSA's `type meter` and the peppyalsa scope come apart over a
-    #: conversion layer. Published for the same reason `fixed_output` is:
-    #: the panel cannot tell "no levels yet" from "no levels ever", and a
-    #: visualisation button that opens a dead screen is the shape ADR-0046
-    #: spent a record arguing against.
+    #: False on an output whose chain carries no meter - only HDMI on Fixed
+    #: volume (ADR-0055 §6 as amended), where ALSA's `type meter` and the
+    #: peppyalsa scope come apart over a conversion layer. Published for the
+    #: same reason `fixed_output` is: the panel cannot tell "no levels yet"
+    #: from "no levels ever", and a visualisation button that opens a dead
+    #: screen is the shape ADR-0046 spent a record arguing against.
     meters: bool = True
     #: A Bluetooth pairing request waiting for an answer, or None
     #: (ADR-0045). Published here rather than on a channel of its own

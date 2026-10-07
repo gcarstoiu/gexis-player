@@ -1,11 +1,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Volume bridge (criterion 5).
 
-The hardware mixer is the single source of truth (ADR-0018: "one global
-control shared by all renderers"). This keeps go-librespot's own volume in
-sync with it. Reads and writes go through `amixer -D output ...` - the
-same "output" ctl indirection squeezelite-mixer-check.sh uses, not a
-direct `hw:sndrpihifiberry` reference (ADR-0009).
+The active renderer's own number is the truth (ADR-0053); the output's
+control follows it. Every renderer's value reaches that control by one
+curve, `renderer_value_to_hardware_raw` (ADR-0054 §3). Writes go through
+libasound (`_Mixer`) on the `output` ctl, with `amixer -D output` as the
+fallback and for reads - the same "output" indirection, not a direct
+`hw:sndrpihifiberry` reference (ADR-0009).
 
 **Subscribed, not polled** (ADR-0018): `alsactl monitor` is spawned once
 and read as a line stream, rather than periodically re-reading `amixer`.
@@ -14,10 +15,9 @@ and read as a line stream, rather than periodically re-reading `amixer`.
 hardware -> Spotify direction is implemented with confidence (amixer plus
 go-librespot's documented POST /player/volume). The reverse direction
 (Spotify -> hardware) depends on the "volume" WS event's undocumented
-payload shape (adapters/spotify.py) and is best-effort. No bluez-alsa
-AVRCP bridging is implemented - ADR-0018 leaves whether that's even
-possible as an open question, not something to guess an implementation
-for here.
+payload shape (adapters/spotify.py) and is best-effort. Bluetooth's
+volume does not come through here: it goes over bluealsa's D-Bus `Volume`
+property (`bluealsa_volume.py`, ADR-0054 §1).
 
 **Echo suppression, amended 2026-09-06 after a real ratchet-to-zero was
 measured on hardware.** Two scales (240 hardware steps, go-librespot's
@@ -73,42 +73,29 @@ either matches the expectation and stops, or lands one step away and
 stops on the next hop - it cannot walk downward indefinitely the way the
 original measured ratchet (179, 172, 162, 140, 119, 97, 0) did.
 
-**Per-renderer memory, added 2026-09-07** (George's decision, after the
-cross-renderer volume jumps this bridge alone couldn't fix): every
-genuine hardware change is attributed to whichever renderer currently
-holds the device (`get_active_renderer`) and fed to
-`renderer_volume.RendererVolumeMemory`, which `arbitration.Supervisor`
-reads from on the *next* acquire to restore that renderer's own level.
-This module only records; it does not itself decide when to restore -
-that's the supervisor's job, on takeover, not this bridge's.
+**No per-renderer memory is kept here.** A renderer is asked where its
+volume is when it takes the device (ADR-0054 §5), and its own memory is
+the one that counts. A hardware change is pushed to go-librespot only
+while Spotify holds the device (`get_active_renderer`); a Spotify report
+while it does not is passed on as Spotify's number and not applied to
+the live mixer, which some other renderer currently owns.
 
-A Spotify volume report while Spotify is *not* currently active is
-still remembered (for whenever it next becomes active) but not applied
-to the live mixer, which some other renderer currently owns - writing
-it anyway would move that renderer's volume out from under it.
+**A dummy mixer control for LMS (B2, George's decision 2026-09-08).**
+Spotify's volume is naturally isolated already - go-librespot keeps its
+own software volume state and only *we* ever write it to hardware.
+squeezelite has no equivalent: pointed at the real control it writes it
+whenever LMS's app tells it to, regardless of which renderer is allowed
+to be heard. So it is given a private control that isn't wired to any
+audio path at all (`squeezelite -O hw:gexislmsvol -V Master`, a
+`snd-dummy` card - see the modprobe config installed by
+image/stage-gexis/00-alsa). Writing to it changes nothing anyone can
+hear, by construction. `DummyMixerBridge` (below) watches it and treats a
+change as a signal to ask LMS its level (ADR-0054 §2); the level reaches
+the output by the same curve as every other renderer's.
 
-**Dummy mixer controls for LMS and Bluetooth, added 2026-09-08 (B2,
-George's decision).** Spotify's volume is naturally isolated already -
-go-librespot keeps its own software volume state and only *we* ever
-write it to hardware. squeezelite (`-V DAC`) and bluealsa-aplay
-(`--mixer-name=DAC`) have no equivalent: both write straight to the
-shared hardware mixer whenever their own upstream (LMS's app, the
-phone's AVRCP slider) tells them to, regardless of which renderer is
-actually allowed to be heard - confirmed on hardware, 2026-09-08,
-raising LMS's volume from the app audibly changed an active Bluetooth
-stream's loudness.
-
-Fixed by giving each of them a private control that isn't wired to any
-audio path at all (a `snd-dummy` card per renderer - see the modprobe
-config installed by image/stage-gexis/00-alsa) - `squeezelite -O
-hw:gexislmsvol -V Master` and `bluealsa-aplay --mixer-device=hw:
-gexisbtvol --mixer-name=Master`. Writing to a dummy control changes
-nothing anyone can hear, by construction. `DummyMixerBridge` (below) is
-the only thing that ever copies a dummy control's value onto the real
-DAC, and only while that control's renderer is the currently active
-one - the same "mirror when active, remember otherwise" shape
-`_on_spotify_volume` already uses, generalised to two more renderers
-instead of Spotify's own software state.
+Bluetooth needs no dummy: bluealsa-aplay runs `--volume=none`, with no
+mixer at all. The `gexisbtvol` dummy card still exists, but nothing uses
+it.
 """
 from __future__ import annotations
 
@@ -167,16 +154,12 @@ ATTENUATION_PATH = Path("/run/gexis/attenuation")
 # returned None (the old Playback-only pattern never matched). Both
 # forms share "Front Left: <n> [", with or without "Playback" in between.
 #
-# `-?` on the value group: found on hardware, 2026-09-08, the *second*
-# time - the dummy control's own range is -50..100 (unlike the DAC's
-# 0..240), and `\d+` alone silently dropped the sign on every negative
-# reading ("-50" parsed as 50), producing wrong mirrored values and
-# erratic missed-update behaviour (a wrongly-sign-stripped reading could
-# coincidentally equal a later or earlier *real* positive reading and
-# get deduped against it) for roughly the bottom third of LMS/Bluetooth's
-# own volume range. Silent, not a parse failure - `re.search` still
-# matched, just the wrong number - so nothing short of comparing against
-# a live reading would have caught it.
+# `-?` on the value group: a control's range can run below zero - the Pi's
+# own headphone jack reads -10239..400 (ADR-0117), and the dummy's did
+# before it became 0..127 - and `\d+` alone silently drops the sign
+# ("-50" parsed as 50). Silent, not a parse failure - `re.search` still
+# matches, just the wrong number - so nothing short of comparing against
+# a live reading would catch it.
 _VALUE_RE = re.compile(rb"Front Left: (?:Playback )?(-?\d+) \[")
 
 # snd-dummy's own scale (mixer_volume_level_min/max module params, left
@@ -210,16 +193,11 @@ DUMMY_CONTROL = "Master"
 #: LMS's, the phone's - still reads 100, and the first move of any slider
 #: releases the whole difference at once.
 #:
-#: **It is applied as a shift, not a compression.** Every position-to-dB map
-#: in this module (the panel slider, the dummy controls, Spotify's fraction)
-#: adds `ceiling_db()`, which is <= 0. So 100% means the ceiling, 0% means
-#: the ceiling minus the same span as before, and *every step keeps its
-#: size*: 0.30 dB on a dummy, 0.45 dB on the panel. Compressing the window
-#: instead would change step sizes with the setting, make the dummy's 128
-#: values no longer land on distinct DAC steps, and re-stretch the gentle
-#: renderer curve that 2026-09-08 was spent recovering (see
-#: `dummy_raw_to_hardware_raw`). The cost of shifting is that the bottom of
-#: travel goes quieter than -45 dB, which is inaudible either way.
+#: **It is applied as a shift, not a compression.** The one position-to-dB
+#: curve every renderer and the panel go through (`renderer_value_to_
+#: hardware_raw`, ADR-0054 §3) adds `ceiling_db()`, which is <= 0. So 100%
+#: means the ceiling, 0% is still silence, and the curve between keeps its
+#: shape rather than being squeezed into a narrower window by the setting.
 _ceiling_reader: Callable[[], float | None] = lambda: None
 
 
@@ -268,11 +246,17 @@ def ceiling_db() -> float:
 
 
 def dummy_raw_to_db(raw: int) -> float:
+    """A dummy control's raw value as its declared dB. Unused since ADR-0054
+    §3: no renderer's level is read from a dummy control's dB any more."""
     return DUMMY_DB_MIN + ceiling_db() + (raw - DUMMY_MIN_RAW) * DUMMY_DB_STEP
 
 
 def dummy_raw_to_hardware_raw(raw: int) -> int:
     """Map a dummy control's raw value onto the real DAC's raw scale.
+
+    **Unused since ADR-0054 §3**: every renderer's number now reaches the
+    output by `renderer_value_to_hardware_raw`. Kept for the reasoning
+    below, which that curve's own docstring answers.
 
     A direct dB copy (dummy's dB value applied unchanged to the DAC,
     clamped to its range) - **not** fractional-position rescaling, which
@@ -449,10 +433,10 @@ def renderer_value_to_hardware_raw(value: int, steps: int) -> int:
     *"Even with volume at 0 on any renderer there is still sound coming.
     Faint but still there."*
 
-    Above zero the travel is linear in dB - ADR-0034's `Perceptual`, and
-    within about a decibel of librespot's `log` over most of its range -
-    ending at `ceiling_db()`, which is the user's own maximum and 0 dB
-    when unset (ADR-0052 amended).
+    Above zero the travel follows `curve()` - cubic by default, linear in
+    dB as the `travel_curve` alternative - over `RENDERER_DB_SPAN`, ending
+    at `ceiling_db()`, which is the user's own maximum and 0 dB when unset
+    (ADR-0052 amended).
     """
     if steps <= 0 or value <= 0:
         return 0
@@ -525,16 +509,17 @@ def publish_attenuation(raw: int, path: Path = ATTENUATION_PATH) -> None:
         logger.debug("volume: cannot publish the attenuation: %s", exc)
 
 
-# ADR-0034: the panel slider spans -45..0dB, linear in dB, with the bottom
-# of travel as silence - the span LMS's and Spotify's own sliders settled on
-# (Findings 009, 010). The number shown is the slider position.
+# ADR-0034's panel slider window, -45..0 dB. Unused since ADR-0054 §4: the
+# panel goes through the same curve as every renderer
+# (`slider_percent_to_raw`).
 SLIDER_DB_MIN = -45.0
 
 #: ADR-0052 §4. A new target is walked to rather than jumped to, because a
 #: drag only ever delivers a *sample* of itself to us - measured, 6 of 12
 #: finger positions on a fast one, in 4 dB steps (Finding 045 §2). The
-#: hardware fills in the rest at its own pace: one raw step is 0.5 dB and
-#: costs ~5.7 ms, so the cap is what bounds a big move rather than the step
+#: hardware fills in the rest at its own pace: one raw step is one step of
+#: the output's own scale (0.5 dB on the DAC2 HD, ADR-0117) and costs
+#: ~5.7 ms there, so the cap is what bounds a big move rather than the step
 #: count. A 4 dB gap becomes eight steps and ~46 ms - a slide.
 RAMP_MAX_S = 0.12
 #: Below this a move is a single write: one or two steps ramped would cost
@@ -593,22 +578,9 @@ class Mute:
             self._restore = None
 
 
-# Spotify's own volume report is a bare fraction (value/max_, go-librespot's
-# software scale) with no hardware control - and therefore no declared TLV
-# range - behind it, unlike LMS/Bluetooth which each derive their own
-# curve from a real control's range (see dummy_raw_to_hardware_raw's
-# docstring). `_on_spotify_volume` used to map that fraction *linearly in
-# raw steps* straight onto the DAC's full 0..240 - found wrong on
-# hardware, 2026-09-08, the same day and the same shape as LMS's bug:
-# George reported 60% inaudible. Raw steps are dB-linear, not
-# perceptually linear (raw_to_db's own docstring), so a linear-in-percent
-# mapping across the DAC's full 120dB span compresses nearly all
-# perceived loudness change into the last quarter of the slider - exactly
-# what a wide-range control does to any naive curve, LMS's included
-# before its own fix. -45dB matches the effective span LMS's curve
-# settled on via the dummy control - chosen here for consistency across
-# renderers' sliders, not derived from anything Spotify-specific (Spotify
-# has no declared hardware range of its own to derive one from).
+# Spotify's old -45..0 dB window. Unused since ADR-0054 §3: Spotify's
+# fraction goes through the same curve as every other renderer's
+# (`spotify_fraction_to_hardware_raw`).
 SPOTIFY_DB_MIN = -45.0
 
 
@@ -624,9 +596,9 @@ def hardware_raw_to_spotify_fraction(raw: int) -> float:
     """Inverse of `spotify_fraction_to_hardware_raw` - used when a hardware
     change (a manual amixer change, a restored remembered level) needs
     reporting back to Spotify as its own value/steps. Clamped to 0..1:
-    a raw value quieter than SPOTIFY_DB_MIN represents (reachable from
-    LMS/Bluetooth's own dummy floor, or a manual amixer write) has no
-    fraction below 0% to express - report 0%, not a negative one.
+    a raw value quieter than the curve's bottom (a manual amixer write,
+    say) has no fraction below 0% to express - report 0%, not a negative
+    one.
     """
     return hardware_raw_to_renderer_value(raw, 1000) / 1000
 
@@ -750,9 +722,10 @@ class _Mixer:
         self._elem = None
 
 
-#: One per control, built on first use. The hardware DAC is the only one
-#: written here; the dummy controls are read, never written (§9 of the
-#: finding: nothing of ours writes them).
+#: One per control, built on first use: the output's control, and with
+#: Software volume the `Gexis` stage beside it (ADR-0124). The dummy
+#: controls are read, never written (§9 of the finding: nothing of ours
+#: writes them).
 _MIXERS: dict[tuple[str, str], _Mixer] = {}
 
 #: One worker, so every libasound call on a mixer handle comes from the
@@ -795,11 +768,10 @@ async def set_raw(
 ) -> None:
     """Write a raw value to a mixer control.
 
-    `device` and `maximum` default to the real DAC's, which is every caller
-    but one: ADR-0053 makes the panel write **Bluetooth's own dummy
-    control**, because that control is what `bluealsa-aplay --volume=mixer`
-    pushes out to the phone over AVRCP. Its scale is 0-127, not 0-240, so
-    the clamp has to travel with the device.
+    `device` and `maximum` default to the output's control and its scale
+    (ADR-0117). `maximum` is passed for a control on another scale: the
+    software stage `Gexis` (0-360, ADR-0124), or the card's own control
+    while it is parked at 0 dB or given its level back (ADR-0127).
     """
     if maximum is None:
         value = max(_scale.raw_min, min(hardware_max(), value))
@@ -1002,10 +974,11 @@ class VolumeBridge:
         writes to the same control, arriving in whichever order the two
         async tasks happened to schedule in.
 
-        Anything that writes the real DAC outside a renderer's own live
-        volume-report path (`_on_adapter_volume`) must go through this,
-        not `set_raw` directly - restore-on-acquire and the unmanaged-
-        renderer floor bump both do now.
+        Anything that writes the output's level must go through this, not
+        `set_raw` directly - a renderer's reported number
+        (`report_renderer_volume`), the panel's own change (`on_level`,
+        ADR-0054 §6), the panel's slider with no renderer to be a remote for,
+        and the starting volume on acquisition all do.
         """
         if fixed_output():
             logger.debug("volume: fixed output, %s/%s not written", raw, hardware_max())
@@ -1024,7 +997,8 @@ class VolumeBridge:
         await self._ramp
 
     async def _ramp_to(self, target: int) -> None:
-        """Walk the DAC to `target` in single raw steps (0.5 dB each).
+        """Walk the DAC to `target` in single raw steps of the output's own
+        scale (0.5 dB each on the DAC2 HD, ADR-0117).
 
         A drag reaches us as a handful of positions a second, so the
         hardware fills in the rest - it will take ~175 changes a second and
@@ -1092,13 +1066,10 @@ class VolumeBridge:
         """Watch `alsactl monitor` and push hardware changes to the
         SOFTWARE_API adapter this bridge was built for.
 
-        Scoped to the real card (`alsa.CARD_ID`), not every card - added
-        2026-09-08 alongside `DummyMixerBridge`. Before the dummy
-        controls existed, an unscoped `alsactl monitor` only ever saw
-        changes on this one card anyway; now that squeezelite and
-        bluealsa-aplay each have their own `snd-dummy` card, an unscoped
-        monitor would double-process their changes here as well as in
-        their own DummyMixerBridge instances.
+        Scoped to the card the device plays to (`alsa.card()`, ADR-0055),
+        not every card: LMS's dummy card is watched by its own
+        `DummyMixerBridge`, and an unscoped monitor would process its
+        changes here as well.
         """
         proc = await asyncio.create_subprocess_exec(
             "alsactl",
@@ -1176,15 +1147,17 @@ async def _noop() -> None:
 
 
 class DummyMixerBridge:
-    """Mirrors one renderer's private dummy mixer control onto the real
-    hardware DAC, only while that renderer is active (B2, George's
-    decision 2026-09-08 - see this module's docstring).
+    """Watches one renderer's private dummy mixer control and, while that
+    renderer is active, reports that it moved (B2, George's decision
+    2026-09-08; ADR-0054 §2 - see this module's docstring). The daemon then
+    asks the renderer its level.
 
-    One instance per dummy-backed renderer (LMS, Bluetooth - Spotify
-    doesn't need one, `VolumeBridge` already isolates it via
-    go-librespot's own software volume). `hardware_control` is the real
-    DAC's control name ("DAC"); `dummy_card`/`dummy_control` identify the
-    renderer's own snd-dummy control ("gexislmsvol"/"Master", say).
+    One instance per dummy-backed renderer - LMS only today (Bluetooth goes
+    over bluealsa's D-Bus property, and Spotify needs none, go-librespot
+    keeping its own software volume). `dummy_card`/`dummy_control`
+    identify the renderer's own snd-dummy control ("gexislmsvol"/"Master").
+    `hardware_control` is accepted but unused: the bridge reports a
+    movement, not a level, so it writes no control.
 
     **Deliberately has no echo window**, unlike `VolumeBridge` - found
     wrong on hardware, 2026-09-08. This class watches the *dummy* card
@@ -1208,8 +1181,8 @@ class DummyMixerBridge:
     one underlying change - the only case an echo window would have
     covered.
 
-    **`renderer_volume` gates the mirror** (George, 2026-09-17: ignore the
-    fade; amends ADR-0034/ADR-0018). LMS fades the player out when it
+    **`is_playing` gates the mirror, after `SETTLE_S`** (George,
+    2026-09-17: ignore the fade; amends ADR-0034/ADR-0018). LMS fades the player out when it
     pauses by sending volume steps, which squeezelite applies to this dummy
     control: measured 22 -> 7 -> -6 -> -20 -> -50 in ~150 ms. Mirrored,
     that put the DAC at its -45 dB floor, published the user's volume as 0%
@@ -1229,10 +1202,10 @@ class DummyMixerBridge:
     not applied while it is paused; the next resume settles and applies
     whatever the control holds then.
 
-    A renderer whose volume never fades (Bluetooth) passes no `is_playing`
-    and mirrors every change as it arrives - unchanged behaviour, and its
-    AVRCP updates during a slider drag are exactly the rapid stream an
-    earlier echo window was found to swallow (above).
+    A renderer whose volume never fades would pass no `is_playing` and
+    have every change reported as it arrives. No built-in does so today:
+    Bluetooth, which once did, goes over bluealsa's D-Bus `Volume`
+    property instead (ADR-0054 §1).
     """
 
     def __init__(

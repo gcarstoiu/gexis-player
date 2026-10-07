@@ -30,19 +30,19 @@ class ReleaseAction(enum.Enum):
 
 
 class VolumeMechanism(enum.Enum):
-    """How a renderer's volume gets bridged onto the shared real hardware
-    mixer (criterion 3, replacing what used to be hardcoded by renderer
-    name in __main__.py/volume.py/renderer_volume.py - found on hardware
-    across Findings 006/008/009/010/011, not designed up front).
+    """How the daemon learns a renderer's volume (criterion 3, replacing
+    what used to be hardcoded by renderer name in __main__.py/volume.py -
+    found on hardware across Findings 006/008/009/010/011, not designed up
+    front). Whichever it is, the renderer's own number is the truth
+    (ADR-0053) and reaches the output by one curve (ADR-0054 §3).
 
-    Two mechanisms exist because the renderers genuinely differ, not as
-    an arbitrary split: a renderer with its own software volume API
-    (Spotify) needs bidirectional echo-suppressed sync with the real DAC
-    (VolumeBridge); a renderer with no such API (LMS via squeezelite,
-    Bluetooth via bluealsa-aplay) instead points its own mixer control at
-    a private snd-dummy card, mirrored onto the real DAC only while it's
-    active (DummyMixerBridge, B2/ADR-0018's amendment) - otherwise the
-    three renderers would fight over the one real control continuously.
+    A renderer with its own software volume API (Spotify) reports its
+    number through `VolumeBridge`. A renderer with no such API (LMS via
+    squeezelite) points its own mixer control at a private snd-dummy card;
+    `DummyMixerBridge` treats a change there as a signal to ask the
+    renderer its level (ADR-0054 §2). Bluetooth is declared DUMMY_MIXER but
+    goes over bluealsa's D-Bus `Volume` property instead
+    (`Capabilities.volume_over_bluealsa`, ADR-0054 §1).
     """
 
     DUMMY_MIXER = "dummy_mixer"
@@ -73,9 +73,7 @@ class Capabilities:
     derived from the three built-in adapters' actual behaviour (Phase 3
     criterion 2), not designed in advance: ADR-0013 is explicit that "the
     error is skipping the derivation, not doing it late." Drives now-
-    playing control rendering and skin field blanking (ADR-0014) once a
-    UI exists to consume it (Phase 4+) - Phase 3 only declares and
-    publishes it.
+    playing control rendering and skin field blanking (ADR-0014).
 
     `release_action` (ADR-0010/0027's pause-vs-disconnect) is deliberately
     not repeated here - it already exists as `Adapter.release_action`,
@@ -101,14 +99,10 @@ class Capabilities:
     #: renderer protocol.
     supports_artwork: bool
     supports_sample_rate: bool
-    #: Whether a remembered volume level should be restored when this
-    #: renderer becomes active (criterion 5, George's decision 2026-09-07).
-    #: Replaces renderer_volume.py's old hardcoded `MANAGED_RENDERERS =
-    #: ("lms", "spotify")` tuple (criterion 3) - False for Bluetooth,
-    #: whose own volume path mixes confirmed hardware-mixer control with
-    #: an unconfirmed software-attenuation regime below ~96% raw (Finding
-    #: 006); restoring a remembered level there would write to a mixer
-    #: that doesn't fully govern what the user actually hears.
+    #: Whether the panel drives this renderer's own volume (ADR-0053: the
+    #: panel is a remote for what is playing). For a plugin it decides
+    #: whether the renderer is registered as a remote volume channel when
+    #: it connects.
     volume_managed: bool
     #: How this renderer's volume gets bridged onto the shared real
     #: hardware mixer (see VolumeMechanism's own docstring for why there
@@ -118,7 +112,7 @@ class Capabilities:
     volume_mechanism: VolumeMechanism
     #: Only meaningful when `volume_mechanism` is DUMMY_MIXER - the
     #: private snd-dummy ALSA card name this renderer's own process
-    #: (squeezelite, bluealsa-aplay) points its mixer control at
+    #: points its mixer control at - squeezelite's only, today
     #: (image/stage-gexis's modprobe config; volume.py's DUMMY_CARD_LMS/
     #: DUMMY_CARD_BLUETOOTH are the same values, referenced here so the
     #: two never drift apart).
@@ -128,25 +122,23 @@ class Capabilities:
     #:
     #: True for Bluetooth, and it replaced a mixer round trip that was
     #: measured wrong one time in three and that pushed a stale mixer value
-    #: at the phone whenever a stream started (Finding 047 §2). It still has
-    #: `dummy_mixer_card` because `bluealsa-aplay` is given one; nothing
-    #: writes it now, and nothing reads it.
+    #: at the phone whenever a stream started (Finding 047 §2). It still
+    #: declares `dummy_mixer_card` (`gexisbtvol`), but bluealsa-aplay runs
+    #: `--volume=none` with no mixer: nothing writes that card, and nothing
+    #: reads it.
     volume_over_bluealsa: bool = False
     #: **ADR-0054 §5, amended 2026-09-28: this renderer is handed its level on
     #: acquisition.** Its own level at a takeover is only what its app last
     #: had (an app's leftover), so the core gives it the
     #: DAC's level, capped by `start_max`, as it does Spotify.
     volume_handed: bool = False
-    #: Transport commands accepted through our own control channel right
-    #: now - deliberately empty on all three built-ins today. No adapter
-    #: currently exposes a way to send play/pause/seek/etc on a user's
-    #: behalf (LMS's pause/power/play/seek calls are only ever issued by
-    #: this project's own takeover/resume logic); Phase 4's own criteria
-    #: have no transport controls beyond LMS activation, and Phase 6
-    #: ("capability-driven controls") is where sending a user's command
-    #: through becomes real. Declared now, honestly empty, rather than
-    #: invented when Phase 6 needs it (ADR-0020: hide a control that
-    #: doesn't exist, never show one that would silently do nothing).
+    #: Transport commands this renderer accepts through our own control
+    #: channel (ADR-0037), from `TRANSPORT_COMMANDS`, each implemented as a
+    #: coroutine method of the same name and reached by
+    #: `/transport/{command}`. This is what the renderer can ever do; the
+    #: published `controls.available` says which of them work right now
+    #: (ADR-0020: hide a control that doesn't exist, never show one that
+    #: would silently do nothing).
     controls: frozenset[str] = field(default_factory=frozenset)
     #: **The rate it reports is the file's own** (ADR-0036 as amended
     #: 2026-10-02): what the visualiser shows. LMS's is; Spotify's 44.1 kHz
@@ -193,8 +185,8 @@ class Adapter(abc.ABC):
     #: /player/stop, but a commanded LMS pause does not make squeezelite
     #: release faster than its `-C` idle timeout (~8.5s measured) - a
     #: shared ladder sized for one renderer is wrong for the other.
-    #: LmsAdapter sets this; adapters whose default timing is fine (or
-    #: not yet measured) leave it None.
+    #: A plugin sets this from its `hello` (ADR-0091); the built-ins leave
+    #: it None.
     release_ladder: "TimeoutLadder | None" = None
 
     @abc.abstractmethod
@@ -226,7 +218,7 @@ class Adapter(abc.ABC):
         `release_action` (pause for LMS, disconnect for everyone else).
         Return True if the renderer's own API confirmed the action - this
         is the "polite stop" step, not a guarantee the device is free; the
-        supervisor checks that separately (alsa.device_busy).
+        supervisor checks that separately (`alsa.device_held_by(unit)`).
         """
 
     @abc.abstractmethod
@@ -260,16 +252,11 @@ class Adapter(abc.ABC):
         renderer's own `device_freed()` chance to retry and its volume
         restore. Default is a no-op.
 
-        Exists for a renderer that must keep running continuously
-        regardless of which renderer holds the device - see `LmsAdapter`
-        (ADR-0010, Finding 013 §1): squeezelite is the base slot and has
-        to stay connected to the LMS server even while paused, so if it
-        ever needed a hard stop to actually free the device,
-        `signal_stop` stopping it deliberately (not killing it) means
-        nothing brings it back automatically - this hook is where that
-        happens, under this code's own timing rather than systemd's blind
-        `Restart=on-failure` retry cadence. A renderer whose process isn't
-        expected to persist across a takeover (everyone else - `release_
-        action` is DISCONNECT, not PAUSE) has no reason to override this.
+        Exists for a renderer whose process must be brought back after a
+        hard stop freed the device; a plugin can ask for it (the plugin
+        adapter forwards it). No built-in overrides it: LMS tried and
+        reverted it - squeezelite is SIGKILLed by `signal_stop`, and
+        systemd's `Restart=on-failure` is what brings it back (see
+        `LmsAdapter`).
         """
         return None

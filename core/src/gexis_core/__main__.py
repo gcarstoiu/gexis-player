@@ -916,11 +916,12 @@ async def main() -> None:
         would carry on to the old card indefinitely; restarting them is
         what makes the change mean something.
 
-        **This daemon restarts with them**, and that is deliberate rather
-        than lazy: the chosen card brings its own volume control name -
-        `DAC` here, `PCM` on the headphone jack, none at all on HDMI - and
-        rediscovering it at startup is one path instead of three mutable
-        ones threaded through the bridges.
+        **This daemon is not restarted.** The chosen card brings its own
+        volume control name - `DAC` here, `PCM` on the headphone jack, none
+        at all on HDMI - and that name is set in place
+        (`VolumeBridge.set_mixer_name`); the mixer handles open on the old
+        card and libasound's cached configuration are freed
+        (`forget_mixers`), so the next write opens the new card's.
         """
         base = outputs.resolve(settings.value("output_device"))
         # The row restricted for this output first: what is in force on it
@@ -1187,9 +1188,10 @@ async def main() -> None:
     )
 
     # ADR-0053's three channels. A renderer with a `set_volume` is driven
-    # through it; Bluetooth has no API of its own and is driven through the
-    # control `bluealsa-aplay` pushes out over AVRCP; a renderer with
-    # neither would still show its number and keep the panel's own slider.
+    # through it; Bluetooth has no API of its own and is driven through
+    # bluealsa's D-Bus `Volume` property (ADR-0054 §1), which bluealsa
+    # carries to the phone over AVRCP; a renderer with neither would still
+    # show its number and keep the panel's own slider.
     for renderer_id, adapter in adapters.items():
         capabilities = adapter.capabilities
         if hasattr(adapter, "set_volume"):
