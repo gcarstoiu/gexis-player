@@ -53,7 +53,7 @@
         "min": 10,
         "max": 100,
         "unit": "%",
-        "default": null,
+        "default": 100,
         "onlyWhen": [
           "output_mode",
           {
