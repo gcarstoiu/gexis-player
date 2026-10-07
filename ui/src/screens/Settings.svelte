@@ -181,6 +181,52 @@
       reportError = null;
     }
   });
+  //: ADR-0126: a hardware report - what the device reads, the owner's
+  //: answers, then GitHub's form filled in. The options are the form's own,
+  //: word for word: GitHub fills a dropdown only from its exact text.
+  const HW_QUESTIONS = [
+    { id: 'sound', q: 'Did the music sound right?', options: ['Yes', 'No', 'Not tried'] },
+    { id: 'volume', q: 'Did the volume change with the slider?', options: ['Yes', 'No', 'Not tried'] },
+    { id: 'clicks', q: 'Any clicks or gaps between tracks?', options: ['No', 'Yes', 'Not tried'] },
+    { id: 'picture', q: 'Is the whole picture visible on the screen?', options: ['Yes', 'No', 'No screen'], screen: true },
+    { id: 'touch', q: 'Does a tap land where the finger is?', options: ['Yes', 'No', 'No touch'], touch: true },
+  ];
+  let hw = $state(null);
+  let hwAnswers = $state({});
+  let hwNotes = $state('');
+  let hwUrl = $state(null);
+  let hwBusy = $state(false);
+  let hwError = $state(null);
+  $effect(() => {
+    if (sheet?.kind !== 'hardware') {
+      hw = null; hwAnswers = {}; hwNotes = ''; hwUrl = null; hwError = null;
+      return;
+    }
+    if (hw === null && !onPanel()) {
+      fetch('/hardware-report').then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+        .then((body) => (hw = body))
+        .catch(() => (hwError = 'The player could not read its hardware. Try again.'));
+    }
+  });
+  async function prepareHardwareReport() {
+    if (hwBusy) return;
+    hwBusy = true;
+    hwError = null;
+    try {
+      const r = await fetch('/hardware-report/issue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers: hwAnswers, notes: hwNotes }),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      hwUrl = (await r.json()).url;
+    } catch (e) {
+      hwError = plainly(e?.message, 'The report could not be prepared. Try again.');
+    } finally {
+      hwBusy = false;
+    }
+  }
+
   async function downloadReport() {
     if (reportBusy) return;
     reportBusy = true;
@@ -1034,6 +1080,11 @@
       flash(`${row.label} cannot be changed yet`);
       return;
     }
+    if (row.kind === 'hardware') {
+      if (hwUrl) sheetKey = null;
+      else await prepareHardwareReport();
+      return;
+    }
     if (row.kind === 'report') {
       if (reportDone) sheetKey = null;
       else await downloadReport();
@@ -1550,6 +1601,43 @@
         {#if joinItem && sheet.note}<div class="sheet__note"><NoteText text={sheet.note} /></div>{/if}
       </div>
 
+      {#if sheet.kind === 'hardware'}
+        <div class="report">
+          {#if onPanel()}
+            <p class="report__text">
+              A report opens GitHub, which the screen cannot. Open Settings on a phone or computer on the same
+              network, at <span class="report__addr">{device.hostname ? `${device.hostname}.local` : device.address}</span>,
+              then System → Report this hardware.
+            </p>
+          {:else if hwUrl}
+            <p class="report__text">The report is ready. GitHub opens with it filled in; read it there and press Create.</p>
+            <a class="report__link report__go" href={hwUrl} target="_blank" rel="noopener">Open the report on GitHub</a>
+          {:else if hw === null && !hwError}
+            <p class="report__text report__text--quiet">Reading the hardware…</p>
+          {:else if hw}
+            <p class="report__text">
+              <span class="report__addr">{hw.board ?? 'No sound card'}</span>{#if hw.state} · {hw.state}{/if}
+              {#if hw.screen}<br /><span class="report__addr">{hw.screen}</span>{/if}
+            </p>
+            {#each HW_QUESTIONS.filter((x) => (!x.screen || hw.screen) && (!x.touch || hw.touch)) as item (item.id)}
+              <div class="hwq">
+                <span class="report__label">{item.q}</span>
+                <div class="hwq__options">
+                  {#each item.options as option (option)}
+                    <button type="button" class="hwq__option" class:is-on={hwAnswers[item.id] === option}
+                      onclick={() => (hwAnswers = { ...hwAnswers, [item.id]: option })}>{option}</button>
+                  {/each}
+                </div>
+              </div>
+            {/each}
+            <label class="report__label" for="hw-notes">Anything else (optional)</label>
+            <textarea id="hw-notes" class="report__note" rows="3" maxlength="2000" bind:value={hwNotes}></textarea>
+            <details class="hwq__facts"><summary>What the player read</summary><pre>{hw.text}</pre></details>
+          {/if}
+          {#if hwError}<p class="report__text report__text--warn">{hwError}</p>{/if}
+        </div>
+      {/if}
+
       {#if sheet.kind === 'report'}
         <div class="report">
           {#if onPanel()}
@@ -1893,15 +1981,17 @@
             Cancel
           {/if}
         </button>
-        {#if join === 'error' || joinItem || restorePending || choicePending !== null || (sheet.type === 'action' && !(sheet.kind === 'report' && onPanel())) || sheet.type === 'toggle' || sheet.type === 'text' || sheet.type === 'share' || sheet.type === 'share-login' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
+        {#if join === 'error' || joinItem || restorePending || choicePending !== null || (sheet.type === 'action' && !((sheet.kind === 'report' || sheet.kind === 'hardware') && onPanel())) || sheet.type === 'toggle' || sheet.type === 'text' || sheet.type === 'share' || sheet.type === 'share-login' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
           <button
             class="btn btn--confirm"
             class:btn--danger={sheet.danger || restorePending || choicePending !== null}
             type="button"
-            disabled={busy || reportBusy}
+            disabled={busy || reportBusy || hwBusy || (sheet.kind === 'hardware' && !hw && !hwUrl)}
             onclick={confirmSheet}
           >
-            {#if sheet.kind === 'report'}
+            {#if sheet.kind === 'hardware'}
+              {#if hwBusy}<span class="btn__spin"></span>Preparing…{:else if hwUrl}Done{:else}Prepare the report{/if}
+            {:else if sheet.kind === 'report'}
               {#if reportBusy}<span class="btn__spin"></span>Preparing…{:else if reportDone}Done{:else}Download{/if}
             {:else if busy}
               <span class="btn__spin"></span>Saving
@@ -3531,6 +3621,40 @@
     word-break: break-all;
   }
   .report__link { color: var(--accent-lms); }
+  .hwq {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .hwq__options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .hwq__option {
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(233, 238, 242, 0.18);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--ink);
+    font: inherit;
+    font-size: 15px;
+  }
+  .hwq__option.is-on {
+    border-color: var(--accent-lms);
+    background: rgba(126, 214, 188, 0.16);
+  }
+  .hwq__facts pre {
+    margin: 6px 0 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    white-space: pre-wrap;
+    color: var(--ink-quiet);
+  }
+  .report__go {
+    font-size: 17px;
+    font-weight: 600;
+  }
   .report__copy {
     margin-left: 8px;
     padding: 2px 10px;

@@ -1293,6 +1293,15 @@
         "default": null
       },
       {
+        "key": "hardware_report",
+        "type": "action",
+        "label": "Report this hardware",
+        "marks": "R",
+        "note": "Tells the project how this sound card and screen work, so others can see what works before buying. A few questions, then a report on GitHub, filled in with what the player reads of the hardware - never a serial number or anything about you.",
+        "kind": "hardware",
+        "default": null
+      },
+      {
         "key": "factory_reset",
         "type": "action",
         "label": "Factory reset",

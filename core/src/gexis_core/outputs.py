@@ -195,6 +195,10 @@ SOFTVOL_SCALE = mixer_scale.Scale(raw_min=0, raw_max=SOFTVOL_STEPS - 1, db_min=S
                                   db_step=-SOFTVOL_MIN_DB / (SOFTVOL_STEPS - 1))
 
 
+#: The Pi's own outputs - not a sound card anybody added (ADR-0126).
+BUILT_IN_CARDS = frozenset({"vc4hdmi0", "vc4hdmi1", "Headphones"})
+
+
 def with_software_volume(output: Output) -> Output:
     """`output`, its level set by the player's software stage (ADR-0124): an
     output with no control of its own (HDMI) gains one."""

@@ -39,7 +39,7 @@ from aiohttp import web
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core import backups, bluetooth_devices, skin_packs, device_name, discovery, lyrion_scan, lyrion_shares, problem_report, skin_previews, skins, wifi
+from gexis_core import backups, bluetooth_devices, skin_packs, device_name, discovery, hardware_report, lyrion_scan, lyrion_shares, problem_report, skin_previews, skins, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
 from gexis_core.artistinfo import PHOTO_BACKGROUND, PHOTO_LARGE, PHOTO_THUMB
 from gexis_core.artwork_sweep import ARTIST_NAMESPACE, remembered
@@ -1270,6 +1270,49 @@ class StateServer:
             "Cache-Control": "no-store",
         })
 
+    async def _hardware_facts(self):
+        """ADR-0126: what the device reads of its sound card and screen. The
+        settings are read here, on the loop (SQLite is bound to this thread);
+        the rest, which opens files and runs commands, in a worker."""
+        from gexis_core import board_apply, outputs
+        stored = self._settings.value("output_device") if self._settings else None
+        screen = self._settings.value("screen") if self._settings else None
+
+        def gather():
+            output = outputs.resolve(stored)
+            written = board_apply.written()
+            return hardware_report.collect(
+                output.card if output and output.card not in outputs.BUILT_IN_CARDS else None,
+                chosen_board=written.id if written else None,
+                screen_chosen=screen,
+            )
+
+        return await asyncio.get_running_loop().run_in_executor(None, gather)
+
+    async def _handle_hardware_report(self, request: web.Request) -> web.Response:
+        """ADR-0126: the facts a hardware report carries, for the sheet to show
+        before anything is sent."""
+        facts = await self._hardware_facts()
+        return web.json_response({
+            "board": facts.board or facts.card or None,
+            "state": facts.state,
+            "screen": facts.screen_chosen or (f"{facts.edid_maker or ''} {facts.edid_name or ''}".strip() or None),
+            "touch": bool(facts.touch),
+            "text": facts.text(),
+        })
+
+    async def _handle_hardware_issue(self, request: web.Request) -> web.Response:
+        """ADR-0126: the issue form's address, pre-filled with the facts and
+        the owner's answers `{"answers": {...}, "notes": "..."}`."""
+        try:
+            body = await request.json() if request.can_read_body else {}
+        except ValueError:
+            body = {}
+        answers = {k: str(v) for k, v in (body.get("answers") or {}).items()}
+        notes = str(body.get("notes") or "")[:2000]
+        facts = await self._hardware_facts()
+        return web.json_response({"url": hardware_report.issue_url(facts, answers, notes)})
+
     async def _handle_panel_shown(self, request: web.Request) -> web.Response:
         """ADR-0101: the panel reporting whether its idle screen is up - and,
         as amended, whether its lyrics are - so the phone's toggles say what
@@ -1851,6 +1894,8 @@ class StateServer:
         app.router.add_get("/settings/{key}/items", self._handle_list_items)
         app.router.add_get("/network/wifi", self._handle_wifi_details)
         app.router.add_post("/report", self._handle_report)
+        app.router.add_get("/hardware-report", self._handle_hardware_report)
+        app.router.add_post("/hardware-report/issue", self._handle_hardware_issue)
         app.router.add_post("/settings/{key}/items", self._handle_list_action)
         app.router.add_post("/bluetooth/pairing/{answer}", self._handle_pairing_answer)
         # ADR-0050. `{name:.*}` because a skin's name is a section heading

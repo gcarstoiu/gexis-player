@@ -167,6 +167,8 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         "problem_report",
         # ADR-0124 (2026-10-07): software volume, the owner's choice.
         "software_volume",
+        # ADR-0126 (2026-10-07): hardware reports from owners.
+        "hardware_report",
         # ADR-0055, 2026-09-23: the design has no output picker, because
         # the design did not know the device has four playback outputs and
         # that two of them cannot be turned down.
@@ -611,8 +613,8 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # **98**: Extended navigation (ADR-0118).
     # **96**: the Lyrion Client's three rows made one (George, 2026-10-06).
     # **97**: Problem report (ADR-0125, 2026-10-07). **98**: Software volume
-    # (ADR-0124).
-    assert len(rows) == 98
+    # (ADR-0124). **99**: Report this hardware (ADR-0126).
+    assert len(rows) == 99
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
@@ -628,8 +630,9 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # Phone touchpad and Pointer speed (ADR-0121); 80 with Pointer style;
     # 81 with Extended navigation (ADR-0118).
     # 79 with the Lyrion Client's three rows made one (George, 2026-10-06).
-    # 80 with Problem report (ADR-0125); 81 with Software volume (ADR-0124).
-    assert len(rows) - len(kept) == 81
+    # 80 with Problem report (ADR-0125); 81 with Software volume (ADR-0124);
+    # 82 with Report this hardware (ADR-0126).
+    assert len(rows) - len(kept) == 82
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():
