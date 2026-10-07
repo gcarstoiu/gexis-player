@@ -252,6 +252,14 @@ needs its password the first time; saved networks join in one tap. The time
 zone is taken from the network; set it in *Settings → Device → Time zone*
 only if that comes out wrong.
 
+**How good is the player's Wi-Fi connection?**
+Open *Settings → Device → Wi-Fi* and tap the connected network. It shows the
+signal (in dBm and as a percentage), the speed the radio is using, the band
+and channel, and the player's address, updated every few seconds. As a rough
+guide, a signal above −67 dBm is good for music; below −75 dBm, stutter
+becomes likely. A 5 GHz network is usually faster but reaches less far than
+2.4 GHz.
+
 **The player lost Wi-Fi while running and has not come back.**
 Restart it. A player only checks its Wi-Fi when it starts: if it cannot reach
 its network then, it opens its own setup network after 90 seconds, and keeps

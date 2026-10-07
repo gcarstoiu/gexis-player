@@ -184,7 +184,7 @@ routes are loopback-only or behave differently by origin: `/surface`,
 | Radio | `GET /radio?handle=…`, `POST /radio/play` | Panel (ADR-0030) |
 | Lyrion menus | `GET /menus`, `/menus/browse`, `/menus/letters`; `POST /menus/act`, `/menus/search` | Panel, when Extended navigation is on (ADR-0118) |
 | Enrichment | `GET /enrichment` | Panel, phone |
-| Settings | `GET /settings`; `PUT /settings/{key}` (write a value); `POST /settings/{key}` (run an action); `GET`/`POST /settings/{key}/items` (list rows: Wi-Fi, trusted devices, backups); `GET /notices/{name}` (Legal, Credits) | Both (ADR-0035) |
+| Settings | `GET /settings`; `PUT /settings/{key}` (write a value); `POST /settings/{key}` (run an action); `GET`/`POST /settings/{key}/items` (list rows: Wi-Fi, trusted devices, backups); `GET /network/wifi` (the connected network's signal, speed, band, channel and address, no rescan - ADR-0123); `GET /notices/{name}` (Legal, Credits) | Both (ADR-0035) |
 | Skins and plugins | `GET /skins`, `/skins/{name}/preview`, `/plugins/{id}/mark`; `POST /plugins/upload`, `/plugins/{id}/uninstall` | Settings (ADR-0050, ADR-0106) |
 | Bluetooth | `POST /bluetooth/pairing/{answer}` | Panel (ADR-0045) |
 | Screens | `POST /screen/{action}`, `/screen-new/{action}` | Panel (ADR-0109) |

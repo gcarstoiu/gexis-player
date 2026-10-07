@@ -366,7 +366,7 @@ the player itself, with its music folders and network shares).
 | Setting | What it does |
 | --- | --- |
 | Device name | One name for everything: the network address (*name*.local), the Lyrion player, the Spotify device and the Bluetooth name. |
-| Wi-Fi | The networks the player knows. |
+| Wi-Fi | The networks in range and the ones the player knows. The connected network shows its speed; tap it to see its signal (dBm and %), speed, band and channel, and the player's address, updated every few seconds. |
 | Time zone | Taken from the network; set it by hand only when that is wrong. |
 | Version | What is installed. |
 | Reboot | Restarts the device; playback stops. |
