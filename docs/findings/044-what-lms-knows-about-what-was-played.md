@@ -27,8 +27,7 @@ them?
 
 **Scope, stated up front:**
 
-- **Measured against George's own server** (LMS 9.1.1, 61,225 tracks, 4,567
-  albums, 917 artists) on 2026-09-21, over the JSON-RPC CLI — the same
+- **Measured against George's own server** (LMS 9.1.1, tens of thousands of tracks, thousands of albums, 917 artists) on 2026-09-21, over the JSON-RPC CLI — the same
   interface the daemon uses. Not against a stock install, and not against
   any other version.
 - **What was tried:** every documented sort on `albums`, the whole tag
@@ -78,7 +77,7 @@ caption, different order.
 not**: asked with the entire tag alphabet
 (`aAbcCdefgiIjJkKlmMnopPqrRsStuvwxyY`), it answers 30 fields and play count
 is not among them. So aggregating plays by artist means **one `songinfo`
-call per track — 61,225 of them** for this library.
+call per track — tens of thousands of them** for this library.
 
 ### `sort:playcount` is not a play-count sort
 

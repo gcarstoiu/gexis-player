@@ -2343,9 +2343,15 @@
     background: var(--accent-lms);
   }
 
+  /* A sheet and its dimming sit above the phone's mini player (20) - as the
+     confirmations (60) and the full-screen picker (30) already did - and
+     below that picker. Under it, a tall sheet's Close and its last options
+     were covered on a laptop's screen (George, 2026-10-07). On the panel
+     both stay inside the screen layer, so nothing there changes. */
   .scrim {
     position: absolute;
     inset: 0;
+    z-index: 24;
     background: rgba(8, 12, 16, 0.62);
     /* No `backdrop-filter`: ADR-0041. A live blur of the screen behind a
        sheet costs this panel two thirds of its frames, whatever its radius
@@ -2361,6 +2367,7 @@
 
   .sheet {
     position: absolute;
+    z-index: 25;
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);

@@ -102,7 +102,7 @@ it moves between tracks.** A queue of several would settle it and was not built.
   renderer or the two that could not be measured.
 - **Nothing about cross-rate.** Phase 11's criterion 2 also asks for takeover
   gaps across sample rates, and that half has been blocked since Phase 9 for a
-  reason that has not changed: a 60,974-track scan of George's library found
+  reason that has not changed: a large scan of George's library found
   **zero** non-44.1 kHz files, so testing it means sourcing content first.
 - **Nothing about what the panel showed** during these takeovers beyond the
   handoff screen already photographed.

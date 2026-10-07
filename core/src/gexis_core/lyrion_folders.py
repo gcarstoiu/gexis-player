@@ -11,7 +11,7 @@ manages that are gone, and leaves every other folder as the user set it.
 **A saved share stays in the list while it is not mounted** (ADR-0115
 decision 16; George, 2026-10-03: *"clearly A"*). Lyrion answers a folder
 taken out of its list by wiping the whole library and scanning everything
-again - two hours for George's 61,362 files - so a NAS that is off when the
+again - two hours for George's tens of thousands of files - so a NAS that is off when the
 player starts must not take its folder out. Only Forget does. **A USB disk
 stays for 7 days after it is unplugged** (decision 17; George: *"decision A,
 but 7 days not more"*), remembered by when it was last seen mounted.
@@ -19,8 +19,7 @@ but 7 days not more"*), remembered by when it was last seen mounted.
 **Lyrion scans on the change itself** (its `Slim/Utils/Prefs.pm`, read
 2026-10-03): a folder added is scanned on its own; a folder taken away wipes
 the library and scans everything again. So nothing here asks for a rescan.
-It did until 2026-10-03, and adding George's NAS share scanned its 61,362
-files and then queued a second walk of them all.
+It did until 2026-10-03, and adding George's NAS share scanned its tens of thousands of files and then queued a second walk of them all.
 """
 from __future__ import annotations
 

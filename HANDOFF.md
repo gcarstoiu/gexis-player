@@ -56,7 +56,7 @@ release** (George, 2026-10-04): never push a release onto an open PR.
 
 | What | State |
 |---|---|
-| Lyrion server (ADR-0115, 19 decisions; Finding 109) | Shipped through 0.8.6. Measured on George's 61,362 files: scans 2 h 7 min (High) / 1 h 59 min (Normal), memory 1,876 / 1,191 MB, no audio gaps during a scan. Memory limit = the player's less 1 GB; Normal under 4 GB |
+| Lyrion server (ADR-0115, 19 decisions; Finding 109) | Shipped through 0.8.6. Measured on George's tens of thousands of files: scans 2 h 7 min (High) / 1 h 59 min (Normal), memory 1,876 / 1,191 MB, no audio gaps during a scan. Memory limit = the player's less 1 GB; Normal under 4 GB |
 | Fetched software (ADR-0100 amended) | Pinned versions; `packaging/check-upstream.sh` before each release; a new pin is fetched by the update that brings it |
 | Change logs (ADR-0116) | `release_notes.json` is the one source: the player's page, `CHANGELOG.md` on `main`, the signed notes |
 | Screens (ADR-0109) | The 13.3" tested at 1920 x 1080 and recognised; a case listed once as its panel. **A new screen at start: a recognised one is switched to with Keep (amended 2026-10-04), any other asked about** - both swaps passed on George's panels, 2026-10-04. Crowd-sourced fingerprints postponed (recorded in the ADR). The 13.3"'s brief blackouts were its HDMI cable (LESSONS 56) |
@@ -86,10 +86,9 @@ navigation on, kiosk.env back to its original (debug port off, checksum
 - **ADR-0123 / ADR-0124 accepted 2026-10-07** (rows in ADR-0022), built one
   step at a time: **step 1, Wi-Fi details - built, on gexis**, then George's
   two findings fixed (one chevron; the lock alone at the line's end, open
-  where the password is known): all three `0.9.2+git25` on gexis, installed
-  during playback without a restart - **the core still runs git20 until its
-  next restart** (whole-Mb/s speed waits on it). Panel view of the sheet not
-  yet looked at. docs-drafts and the manual page updated.
+  where the password is known, both the same 13 x 15): ui/player
+  `0.9.2+git28`, core `0.9.2+git25` (restarted) on gexis; checked on the
+  panel and on phones 412 and 360 px wide. docs-drafts and the manual page updated.
   **Next: step 2, Cable** (manual address, 60 s keep) - gexis has `eth0` but no
   cable plugged; **step 3, software volume** (`meter -> softvol -> card`;
   verify passthrough at 100 % and the HDMI placement).
@@ -296,7 +295,7 @@ the SSH key only, since a saved Wi-Fi skips setup.
   card space for the skins, and the Pi's load at 1920 x 1080. **And the
   Lyrion server** (George, 2026-10-03: *"record the results for hardware
   recommendations"*; Finding 109): memory by library size - about 27 KB a
-  file while scanning, 1,876 MB for 61,362 files, the player itself needing
+  file while scanning, 1,876 MB for tens of thousands of files, the player itself needing
   about 1 GB beside it, so no server on a 1 GB Pi (ADR-0115 decision 18);
   card space - 151 MB of library and 670 MB of artwork cache for those files;
   time - 2 h 7 min for a first scan over the network, 26 min to check.

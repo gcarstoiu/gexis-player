@@ -7,7 +7,7 @@ it. Do we have pictures for a slideshow"*. How many photos can the player get
 per artist, from what it already talks to?
 
 **Scope:**
-- **One library:** George's LMS (7,296 artists, `192.168.178.188:9000`), with
+- **One library:** George's LMS (thousands of artists, `192.168.178.188:9000`), with
   the Music & Artist Information plugin.
 - **60 artists drawn at random** (seed 20261002) from LMS's full artist list,
   which includes collaborations ("X feat. Y", "X & Y") and track-numbered

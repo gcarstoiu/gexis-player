@@ -178,7 +178,7 @@ The value in brackets is the `screen` prop. S is Standard, B is Bar.
 - *(Portraits were tried and reverted at George's request. Do not add pictures.)*
 
 ### 5. Covers (`albums`, `albumsFew`, S + B)
-- Standard: a grid six across, gap 26 × 22, square covers at radius 16 with the 1 px inset highlight. Title 17/600, sub 15 at 0.62. 4,780 albums get the rail.
+- Standard: a grid six across, gap 26 × 22, square covers at radius 16 with the 1 px inset highlight. Title 17/600, sub 15 at 0.62. thousands of albums get the rail.
 - A list of two is just two covers, left-aligned.
 - Bars: one sideways row of 200 px covers above the letter strip.
 - No list / tiles switch (note 2).
@@ -186,7 +186,7 @@ The value in brackets is the `screen` prop. S is Standard, B is Bar.
 ### 6. Track lists (`tracks`, `flop`, S + B)
 - Two-line leaf rows: rank, 46 px thumb, title, "artist – album", "*n* plays". Selecting a row reveals the actions.
 - **Top Tracks:** the trailing "(189)" is taken out of the label and shown as "189 plays" (note 5).
-- **Flop Tracks** (65,287): the total is in the crumb. A foot line reads "1–100 of 65,287 · more as you scroll" (mono 13). No rail, because the list is not alphabetical.
+- **Flop Tracks** (tens of thousands): the total is in the crumb. A foot line reads "1–100 of tens of thousands · more as you scroll" (mono 13). No rail, because the list is not alphabetical.
 - Play all and Shuffle head every track list. Bars: one column at 1280, two at 1850; Play all and Shuffle sit in the head column.
 
 ### 7. An app's album page (`appAlbum`, S + B)

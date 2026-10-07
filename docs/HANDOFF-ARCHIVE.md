@@ -1267,7 +1267,7 @@ submodule edit needed. This build predates that change (built right
 before it), so its own filename is still date-only - the *next* rebuild
 is the first real test of it.
 
-**A full library scan (60,974 tracks, LMS's own `songs` JSON-RPC query,
+**A full library scan (tens of thousands of tracks, LMS's own `songs` JSON-RPC query,
 paginated) found zero non-44.1kHz content anywhere** - criterion 8's
 cross-rate LMS↔Spotify leg has no existing content to test with. Not
 resolved - George's call on whether to add dedicated test content or
@@ -1637,7 +1637,7 @@ separately, not assumed done here.
      George asked to see what the storm does with real margin restored
      before touching Finding 013 §1 or Finding 014 again.
    - **Cross-rate LMS↔Spotify** - blocked on content, not mechanism: a
-     full library scan (60,974 tracks) found zero non-44.1kHz content.
+     full library scan (tens of thousands of tracks) found zero non-44.1kHz content.
      George's call - add dedicated test content, or defer this leg.
    - **Blocker 3 (Bluetooth first connect) is ROOT-CAUSED, 2026-09-12** -
      the adapter is discoverable for only 180s after boot (BlueZ's
@@ -1851,8 +1851,7 @@ display?"* The challenge was right, and ADR-0020 turned out never to have
 written the typed-query alternative up as a considered option.
 
 **The local library is now our own screens over typed queries** (`albums`,
-`artists`, `genres`, `titles`, …) — measured against his LMS 9.1.1: 4554
-albums, 7292 artists, 60974 titles, all with structured fields rather than a
+`artists`, `genres`, `titles`, …) — measured against his LMS 9.1.1: thousands of albums, thousands of artists, tens of thousands of titles, all with structured fields rather than a
 server-formatted label.
 
 **SlimBrowse survives only for radio, entered at `["radios","menu:radio"]`
@@ -3381,8 +3380,7 @@ a picture from both sources, 5 from LMS only, **0 from fanart only**). It
 goes first where it has one; LMS stays behind it. Its pictures go through
 LMS's image proxy - 705 KB became 32.8 KB at 300 px.
 
-**Parked by George: a background sweep for missing album art.** 155 of 4,567
-albums have none. The same sweep for artist pictures was rejected on the
+**Parked by George: a background sweep for missing album art.** 155 of thousands of albums have none. The same sweep for artist pictures was rejected on the
 measurement above: 30-45 minutes of MusicBrainz's one-a-second allowance to
 improve pictures that already exist.
 
@@ -4813,7 +4811,7 @@ from inside `_release_with_ladder`.
 ### What is not done, and is named rather than implied
 
 - **Cross-rate takeover gaps.** Blocked since Phase 9 for a reason that has not
-  changed: a 60,974-track scan found **zero** non-44.1 kHz files.
+  changed: a large scan found **zero** non-44.1 kHz files.
 - **Gaps against Spotify and Bluetooth.** Neither can be made to take the device
   on request — they answer 409 to `activate`, correctly — so measuring them
   needs a phone.
@@ -5131,7 +5129,7 @@ started**, and ADR-0091 does not pre-empt it.
 ### Still open, and none of it blocking
 
 - **Cross-rate takeover gaps.** Blocked since Phase 9, unchanged: a
-  60,974-track scan found **zero** non-44.1 kHz files.
+  large scan found **zero** non-44.1 kHz files.
 - **Gaps against Spotify and Bluetooth.** Neither can be made to take the device
   on request — they answer 409 to `activate`, correctly — so measuring them needs
   a phone.

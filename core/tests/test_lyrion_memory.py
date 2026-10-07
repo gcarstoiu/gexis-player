@@ -15,7 +15,7 @@ def test_a_1_gb_player_is_not_offered_the_server_and_2_gb_is(tmp_path):
 
 
 def test_files_that_fit_follow_the_measured_cost():
-    """Finding 109: 61,362 files took 1,876 MB on High and 1,191 MB on
+    """Finding 109: tens of thousands of files took 1,876 MB on High and 1,191 MB on
     Normal; a 4 GB Pi's 2.7 GB fits them on either, with room."""
     assert 61_362 < lm.files_that_fit(2771, highmem=1) < 120_000
     assert lm.files_that_fit(2771, highmem=0) > 2 * 80_000

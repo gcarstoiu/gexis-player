@@ -9,7 +9,7 @@
 # **Database memory: Normal under 4 GB** (ADR-0115 decision 19; George,
 # 2026-10-03: "B"). Lyrion picks High by itself above 900 MB, and High's
 # scanner needs about twice the memory per file (Finding 109: 1,876 MB
-# against 1,191 MB for 61,362 files), which a 2 GB Pi does not have; a 4 GB
+# against 1,191 MB for tens of thousands of files), which a 2 GB Pi does not have; a 4 GB
 # one does. Only in the first preferences: what is chosen on Lyrion's own
 # Performance page afterwards is never changed here.
 set -eu

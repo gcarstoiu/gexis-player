@@ -237,7 +237,7 @@ class Component extends DCLogic {
       const radio = h('span', { style: { display: 'flex', alignItems: 'center', gap: 7, height: 44 } }, h('span', { style: { width: 14, height: 14, borderRadius: '50%', background: 'rgba(233,238,242,0.85)', display: 'block', flexShrink: 0 } }), h('span', { style: { width: 14, height: 26, borderRight: '3px solid rgba(233,238,242,0.6)', borderRadius: '0 26px 26px 0', display: 'block', flexShrink: 0 } }), h('span', { style: { width: 14, height: 38, borderRight: '3px solid rgba(233,238,242,0.34)', borderRadius: '0 38px 38px 0', display: 'block', flexShrink: 0, marginLeft: -2 } }));
       const sl = (t, k) => [h('span', { key: 'r' + t, style: { position: 'absolute', left: 0, right: 0, top: t, height: 3, borderRadius: 2, background: 'rgba(233,238,242,0.38)', display: 'block' } }), h('span', { key: 'k' + t, style: { position: 'absolute', left: k, top: t - 3, width: 9, height: 9, borderRadius: '50%', background: 'rgba(233,238,242,0.92)', display: 'block' } })];
       const sliders = h('span', { style: { width: 30, height: 30, position: 'relative', display: 'block', flexShrink: 0 } }, sl(7, 17).concat(sl(20, 4)));
-      v.tiles = [tile('My Music', '21 views', g('Shelf', T.sky, 44), T.sky), tile('Browse', '4554 albums', bars, T.mint), tile('Artists', '7293 artists', dots, T.blue), tile('Playlists', '3 playlists', list, T.coral), tile('Favourites', '8 items', g('Heart', T.pink, 40), T.pink), tile('Radio', '', radio, '#e9eef2'), tile('Podcasts', 'From Lyrion', g('Folder', T.slate, 40), T.slate, true), tile('Apps', '6 apps', g('Dots', T.lilac, 40), T.lilac), tile('Settings', 'Device and sources', sliders, '#e9eef2')];
+      v.tiles = [tile('My Music', '21 views', g('Shelf', T.sky, 44), T.sky), tile('Browse', 'thousands of albums', bars, T.mint), tile('Artists', 'thousands of artists', dots, T.blue), tile('Playlists', '3 playlists', list, T.coral), tile('Favourites', '8 items', g('Heart', T.pink, 40), T.pink), tile('Radio', '', radio, '#e9eef2'), tile('Podcasts', 'From Lyrion', g('Folder', T.slate, 40), T.slate, true), tile('Apps', '6 apps', g('Dots', T.lilac, 40), T.lilac), tile('Settings', 'Device and sources', sliders, '#e9eef2')];
     } else if (s === 'mymusic') {
       lay('isGroups'); Object.assign(v, { title: 'My Music', crumb: '21 views', showHome: false });
       v.groups = D.MY_MUSIC.map(gr => ({ name: gr.group, ink: gr.ink, items: gr.items.map(e => ({ label: e[0], disc: disc(e[1], e[2]) })) }));
@@ -247,10 +247,10 @@ class Component extends DCLogic {
     } else if (s === 'years') {
       lay('isYears'); Object.assign(v, { title: 'Years', crumb: 'My Music · 78', decades: Object.keys(D.YEARS).map(k => ({ name: k, years: D.YEARS[k] })) });
     } else if (s === 'artists') {
-      lay('isRows'); Object.assign(v, { title: 'All Artists', crumb: 'My Music · 8,393', cols: wide ? 'repeat(5,minmax(0,1fr))' : 'repeat(3,minmax(0,1fr))', rowsPad: '20px 28px 14px' }); strip(0, T.blue);
+      lay('isRows'); Object.assign(v, { title: 'All Artists', crumb: 'My Music · thousands', cols: wide ? 'repeat(5,minmax(0,1fr))' : 'repeat(3,minmax(0,1fr))', rowsPad: '20px 28px 14px' }); strip(0, T.blue);
       v.rows = [head('A', '412', T.blue, true)].concat(D.ARTISTS_A.map(n => row({ label: n, hasInit: true, init: init(n) })));
     } else if (s === 'albums') {
-      lay('isCovers'); strip(0, T.mint); Object.assign(v, { title: 'Albums', crumb: 'My Music · 4,780', coverPx: '200px', covers: D.ALBUMS.map(a => ({ t: a[0], s: a[1] })) });
+      lay('isCovers'); strip(0, T.mint); Object.assign(v, { title: 'Albums', crumb: 'My Music · thousands', coverPx: '200px', covers: D.ALBUMS.map(a => ({ t: a[0], s: a[1] })) });
     } else if (s === 'tracks') {
       lay('isRows'); Object.assign(v, { title: 'Top Tracks', crumb: 'My Music · 536 · by plays', hasPlayAll: true, cols: wide ? 'repeat(2,minmax(0,1fr))' : 'minmax(0,1fr)' });
       v.rows = D.TOP.map((t, i) => row({ label: t[0], sub: t[1], h: '60px', hasNum: true, num: String(i + 1), hasThumb: true, meta: t[2] + ' plays', sel: i === 1 }));
