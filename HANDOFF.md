@@ -83,10 +83,12 @@ navigation on, kiosk.env back to its original (debug port off, checksum
   below 29 September (1-3 % dropped). On gexis as preview core/player
   `0.9.2+git13.c8d3e83`, gexis-system `0.8.9+git160.0be27be`. `panel-frames.py`
   now ignores the hidden library and measures all 16 interactions.
-- **Waiting on George (2026-10-07):** cable network (show only, or a manual
-  address too?), Wi-Fi details on the connected network (no setting),
-  software volume (which outputs; Spotify/Bluetooth; meters before or after) -
-  ADRs and inventory rows [N] proposed, nothing built.
+- **ADR-0123 / ADR-0124 accepted 2026-10-07** (rows in ADR-0022), built one
+  step at a time: **step 1, Wi-Fi details - built, on gexis** (core
+  `0.9.2+git20`, ui/player `0.9.2+git22`), docs-drafts and pages updated.
+  **Next: step 2, Cable** (manual address, 60 s keep) - gexis has `eth0` but no
+  cable plugged; **step 3, software volume** (`meter -> softvol -> card`;
+  verify passthrough at 100 % and the HDMI placement).
 - **Docs (drafts) - HELD until George gives the go-ahead** (2026-10-06:
   "Do not release them until I give the go ahead"): `docs/manual/`,
   `docs/FAQ.md`, `docs/tech/` live ONLY on the local branch `docs-drafts`
