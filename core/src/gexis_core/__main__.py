@@ -381,8 +381,17 @@ async def _start_software_volume(card_output, store) -> None:
     db = float(db) if db is not None else SOFTWARE_LEVEL_FIRST_DB
     if not await asyncio.to_thread(outputs.create_softvol_control):
         logger.warning("volume: the software control could not be made; the level stays where ALSA puts it")
-    await set_raw(outputs.SOFTVOL_CONTROL, outputs.SOFTVOL_SCALE.raw(db))
+    want = outputs.SOFTVOL_SCALE.raw(db)
+    await set_raw(outputs.SOFTVOL_CONTROL, want, maximum=outputs.SOFTVOL_SCALE.raw_max)
     store.set(SOFTWARE_LEVEL_KEY, db)
+    # **The card is parked only once the software level is in place, read
+    # back** (2026-10-07: a misnamed control left the software stage at 0 dB,
+    # the card was parked at 0 dB anyway, and a phone played at full level).
+    got = await get_raw(outputs.SOFTVOL_CONTROL)
+    if got != want:
+        logger.error("volume: the software level did not take (wanted %s, read %s); "
+                     "the card keeps its own level", want, got)
+        return
     if card_output.control and card_output.scale:
         await set_raw(card_output.control, card_output.scale.top, maximum=card_output.scale.raw_max)
     logger.info("volume: software volume at %.2f dB on %s; its own control parked at 0 dB",

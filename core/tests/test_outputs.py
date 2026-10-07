@@ -418,9 +418,9 @@ def test_software_volume_puts_softvol_after_the_meter_on_a_dac():
     meter = conf.index("pcm.output {")
     assert 'slave.pcm "gexis_softvol"' in conf[meter:conf.index("}", meter)], "the meter sees the music as it arrives"
     assert 'type softvol\n    slave.pcm "hw:IQaudIODAC"' in conf
-    assert 'control { name "Gexis Volume" card IQaudIODAC }' in conf
+    assert 'control { name "Gexis Playback Volume" card IQaudIODAC }' in conf
     assert "gexis_softvol_wait" in conf and "nonblock 0" in conf, "squeezelite's waiting open has the same stage"
-    assert conf.count('name "Gexis Volume"') == 2, "one control for both"
+    assert conf.count('name "Gexis Playback Volume"') == 2, "one control for both"
 
 
 def test_software_volume_goes_in_front_of_plug_on_hdmi():
@@ -439,7 +439,7 @@ def test_the_software_scale_is_exact_and_tops_out_at_0_db():
 def test_an_output_with_no_control_gains_one_and_keeps_its_card():
     hdmi = outputs.Output(card="vc4hdmi0", label="HDMI 1", control=None)
     soft = outputs.with_software_volume(hdmi)
-    assert soft.control == "Gexis Volume" and soft.software and soft.card == "vc4hdmi0" and soft.label == "HDMI 1"
+    assert soft.control == "Gexis" and soft.software and soft.card == "vc4hdmi0" and soft.label == "HDMI 1"
     assert soft.option == hdmi.option, "offered and chosen under the same name"
 
 

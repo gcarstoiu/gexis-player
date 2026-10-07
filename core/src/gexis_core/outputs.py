@@ -182,7 +182,13 @@ class Output:
 #: scale: -90 to 0 dB in 0.25 dB steps (361 values), finer than any card's
 #: own and low enough that 0 % is silence. At 0 dB it passes every sample
 #: unchanged (Finding 115).
-SOFTVOL_CONTROL = "Gexis Volume"
+#: The control ALSA makes is "Gexis Playback Volume" - a playback control by its
+#: name; as a *simple* mixer control -
+#: what amixer and the core's mixer calls address - it is "Gexis", the
+#: "Volume" being its kind (2026-10-07: addressed as "Gexis Volume", every
+#: write missed it and the level stayed at 0 dB).
+SOFTVOL_ELEMENT = "Gexis Playback Volume"
+SOFTVOL_CONTROL = "Gexis"
 SOFTVOL_MIN_DB = -90.0
 SOFTVOL_STEPS = 361
 SOFTVOL_SCALE = mixer_scale.Scale(raw_min=0, raw_max=SOFTVOL_STEPS - 1, db_min=SOFTVOL_MIN_DB,
@@ -226,7 +232,7 @@ def _softvol(name: str, slave: str, card: str) -> str:
     return f'''pcm.{name} {{
     type softvol
     slave.pcm {slave}
-    control {{ name "{SOFTVOL_CONTROL}" card {card} }}
+    control {{ name "{SOFTVOL_ELEMENT}" card {card} }}
     min_dB {SOFTVOL_MIN_DB}
     max_dB 0.0
     resolution {SOFTVOL_STEPS}
