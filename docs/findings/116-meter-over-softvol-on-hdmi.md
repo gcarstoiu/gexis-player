@@ -1,4 +1,4 @@
-# Finding 116 — The meter over software volume on HDMI: squeezelite runs and the levels arrive
+# Finding 116 — The meter over software volume on HDMI: LMS and Spotify play, and the levels arrive
 
 **Date:** 2026-10-07. **For:** George's question, *"with software on hdmi,
 shouldn't now peppy work as well?"* HDMI carries no meter since 2026-09-23
@@ -52,10 +52,24 @@ ADR-0127) the chain could be `meter → softvol → plug → card` instead.
   bands e.g. `[5, 4, 2, 3, 4, 1, 0, 0, 0, 2, 5, …, 5, 9, 0]`; HDMI `RUNNING`;
   no mmap error or assertion from squeezelite.
 
+## Third run, Spotify (George, from his phone, low volume)
+
+- Same chain, with go-librespot and bluealsa-aplay restarted onto it as well.
+  Spotify took the device at 19:57:03 and was handed the level playing (30/100,
+  software 256); George then lowered it to 26 (246, −28.5 dB).
+- Two 8 s reads of the meter WebSocket, 15 s and 34 s after HDMI started:
+  229 messages each, band sums up to 443 and 500, e.g.
+  `[29, 26, 21, 19, 13, 9, 9, 7, 6, 8, 10, …, 16, 10, 3, 2, 0, 0, 0, 0]`; HDMI
+  `RUNNING` at 44.1 kHz throughout.
+- **go-librespot did not abort**: active, 0 restarts, no assertion in its
+  journal. (Its one warning, 24 s before playback, was a Spotify access point
+  retry at start-up - `failed authenticating ... EOF` - not the audio path.)
+
 ## What it means
 
-**For LMS, the visualiser works on HDMI with software volume**: the September
-squeezelite failure did not recur with `softvol` between `meter` and `plug`,
-and the levels reach the visualiser as they do on the DAC. **go-librespot is
-still untested** - it was the renderer that aborted in September - as are
-bluealsa-aplay and rates above 44.1 kHz.
+**With software volume, the visualiser works on HDMI for LMS and Spotify**:
+neither September failure recurred with `softvol` between `meter` and `plug`,
+and the levels reach the visualiser as they do on the DAC. **Not tested:**
+Bluetooth (bluealsa-aplay), rates above 44.1 kHz, and runs longer than about a
+minute. HDMI on **Fixed** keeps `plug` straight under the card and stays
+without a meter.
