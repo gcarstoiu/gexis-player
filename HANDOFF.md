@@ -84,8 +84,12 @@ navigation on, kiosk.env back to its original (debug port off, checksum
   `0.9.2+git13.c8d3e83`, gexis-system `0.8.9+git160.0be27be`. `panel-frames.py`
   now ignores the hidden library and measures all 16 interactions.
 - **ADR-0123 / ADR-0124 accepted 2026-10-07** (rows in ADR-0022), built one
-  step at a time: **step 1, Wi-Fi details - built, on gexis** (core
-  `0.9.2+git20`, ui/player `0.9.2+git22`), docs-drafts and pages updated.
+  step at a time: **step 1, Wi-Fi details - built, on gexis**, then George's
+  two findings fixed (one chevron; the lock alone at the line's end, open
+  where the password is known): all three `0.9.2+git25` on gexis, installed
+  during playback without a restart - **the core still runs git20 until its
+  next restart** (whole-Mb/s speed waits on it). Panel view of the sheet not
+  yet looked at. docs-drafts and the manual page updated.
   **Next: step 2, Cable** (manual address, 60 s keep) - gexis has `eth0` but no
   cable plugged; **step 3, software volume** (`meter -> softvol -> card`;
   verify passthrough at 100 % and the HDMI placement).
