@@ -2,6 +2,21 @@
 
 Last updated: 2026-10-07 (on R2D2).
 
+**Release list before the first public release (2026-10-07, George's order):**
+- Report this hardware: steps 1-5 built; George's changes owed - a kinder
+  name ("hardware feedback"), and the sheet in two steps, screen then audio,
+  the screen step skipped when headless or no screen is connected. Owed by
+  George: the GitHub labels.
+- Cable network (ADR-0123 step 2) - needs a cable.
+- **Setup installs plugins and settles** - ADR-0128, Proposed, three questions
+  owed by George.
+- **A general, thorough code check before release** (George): everything
+  checked once more; **volume, the audio adapters and arbitration must work
+  perfectly from the beginning** - dropped frames or a CSS flaw are not
+  critical, anything in the audio path is.
+- Reconcile the documents that contradict each other.
+- Remove passwordless sudo from the image - last.
+
 **2026-10-07 (state now):** the user manual, FAQ and technical guide are
 **approved and released into the repo** (George: *"you can go ahead and
 publish"*): on `phase-13b`/`phase-13d`, pushed, linked from README's new
