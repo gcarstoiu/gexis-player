@@ -1,6 +1,7 @@
 # ADR-0126 — Hardware reports from users: DACs, HATs and screens tested by the people who own them
 
-**Status:** **Proposed** — 2026-10-07, from George: *"how do we crowd source
+**Status:** **Accepted** — George, 2026-10-07, all three decisions below
+answered *yes*. Raised by George: *"how do we crowd source
 the testing of audio hats, dacs and displays. otherwise its impossible to have
 coverage"*. Takes up what [ADR-0109](0109-other-screens.md) postponed
 (*"Let's leave the crowd sourcing post"*) and answers its two open questions.
@@ -41,7 +42,7 @@ turn what they tell us into what the player shows.
 4. **How it reaches us:** a **GitHub issue form, *Hardware report***, opened
    pre-filled from the phone page (the report travels in the link; when it
    is too long for one, it is copied and pasted). It needs a GitHub account
-   (decision for George, below). Reports are public: anyone can see which
+   (George: yes). Reports are public: anyone can see which
    hardware works before buying.
 5. **A fourth state, *Reported*** (amends ADR-0117, and ADR-0109 for
    screens): a board or screen with at least **one report that it works,
@@ -61,8 +62,8 @@ turn what they tell us into what the player shows.
 
 ## Consequences
 
-- One new ADR-0022 row, `hardware_report` [N], plus the one-time prompt
-  (not a setting), to be appended once George confirms.
+- One ADR-0022 row, `hardware_report` [R], appended 2026-10-07; the
+  one-time prompt is not a setting.
 - `HARDWARE.md` gains a generated table: every board and screen, its state,
   and the number of reports.
 - Someone has to read and label the issues; the issue form keeps each one
@@ -72,12 +73,8 @@ turn what they tell us into what the player shows.
 - Tones at full scale can be loud: the check plays at the current volume,
   capped at the *Maximum volume*, and says to turn the amplifier down first.
 
-## Decisions for George
+## Decided (George, 2026-10-07)
 
-1. **A GitHub account to report (recommended: no infrastructure, public,
-   moderated), or also a route without one?** Without one means running a
-   small form service or an e-mail inbox, both of which someone has to look
-   after.
-2. **Is one report enough for *Reported*?** Recommended yes, with the count
-   shown, so the first owner's report already helps the second.
-3. **The one-time prompt after a week: yes (recommended) or only the row?**
+1. **A GitHub account is required** to send a report; no other route.
+2. **One report is enough for *Reported***, with the count shown.
+3. **The one-time prompt after a week: yes.**

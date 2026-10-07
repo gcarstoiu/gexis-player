@@ -1,6 +1,7 @@
 # ADR-0125 — A problem report users can download, with the personal parts taken out
 
-**Status:** **Proposed** — 2026-10-07, from George: *"have an option to
+**Status:** **Accepted** — George, 2026-10-07, with both decisions below
+answered (*"take them out too"*; *"give both options"*). Raised by George: *"have an option to
 download logs - pii scrubed - for users to be able to report possible issues
 back to us."* Needed before the first public release.
 **Builds on:** [ADR-0103](0103-debug-logs-keep-the-journal.md) (Debug logs
@@ -53,7 +54,7 @@ user has seen what goes.
    | Phones' and Bluetooth devices' names | `device-1`, ... |
    | Share paths, NAS names, user names, account names | `share-1`, `user-1`, ... |
    | The weather location, latitude and longitude | `place` |
-   | Track, album and artist names, file paths in the library | `title-1`, `path-1`, ... (decision for George, below) |
+   | Track, album and artist names, file paths in the library | `title-1`, `path-1`, ... (George: *"take them out too"*) |
    | Anything shaped like a key or token (long hex or base64 runs) | `secret` |
    Known values are taken from the device itself (its own SSIDs, names,
    shares, server address, paired devices) and replaced wherever they
@@ -62,13 +63,15 @@ user has seen what goes.
    summary on the same page - *"Taken out: 4 addresses, 2 network names, 1
    share..."* - and the file is plain text in a zip, so it can be opened
    and read. Nothing is sent anywhere by the player.
-5. **How it reaches us:** the row links to a GitHub issue form, *"Report a
-   problem"*, where the file is attached (decision for George, below).
+5. **How it reaches us - both ways** (George: *"give both options"*): the
+   row links to a GitHub issue form, *"Report a problem"*, where the file is
+   attached, and gives an e-mail address for people without a GitHub
+   account. **The address is owed:** a project address, never a personal
+   one (the repository is public).
 
 ## Consequences
 
-- One new ADR-0022 row, `problem_report` [N], to be appended once George
-  confirms.
+- One ADR-0022 row, `problem_report` [R], appended 2026-10-07.
 - Taking things out by pattern can miss something. The row's note says so
   plainly: *"Personal details are taken out, but read the file before
   sharing it."*
@@ -77,10 +80,7 @@ user has seen what goes.
 - The scrubber gets its own tests, with a fixture journal holding every
   kind in decision 3.
 
-## Decisions for George
+## Decided (George, 2026-10-07)
 
-1. **Track, album and artist names: out (recommended) or kept?** Out keeps
-   what someone listens to private; kept helps with enrichment problems.
-2. **How a report reaches us:** a GitHub issue form (recommended: no
-   infrastructure, but it needs a GitHub account), or also an e-mail address
-   for people without one.
+1. **Track, album and artist names are taken out** with the rest.
+2. **Both routes:** the GitHub issue form and an e-mail address.

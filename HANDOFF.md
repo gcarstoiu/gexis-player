@@ -18,8 +18,9 @@ of every release between the installed one and the new one (*"the update
 screen should show all until the current one"*) - an amendment to the update
 ADR first; (2) ADR-0123 step 2, Cable (needs a cable in gexis); (3)
 ADR-0124, software volume; (4) **ADR-0125, a problem report** and (5)
-**ADR-0126, hardware reports from users** - both *Proposed*, five decisions
-owed by George.
+**ADR-0126, hardware reports from users** - both accepted 2026-10-07, rows
+in ADR-0022; **owed by George: the project e-mail address** for problem
+reports from people without GitHub.
 
 **0.9.2 released 2026-10-06 on Testing (serial 25), from `phase-13d`**
 (tag v0.9.2 at 3225ec1): 13f's Lyrion menus behind Extended navigation,
