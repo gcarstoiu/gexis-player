@@ -76,14 +76,17 @@ navigation on, kiosk.env back to its original (debug port off, checksum
   which installs on Automatic. Phone: Settings' lists end clear of the
   sheet (22 px, measured on every page). On gexis as preview
   `0.9.2+git5` except the check-only unit (committed after).
-- **Panel speed: Finding 112.** The slower screen opens (3-10 % dropped
-  against ~1 %) are **the hidden visualiser**, not the UI: the 29 Sep UI is
-  no faster on today's device, the kept library (ADR-0122) is cleared, heat
-  ruled out. Stopped, the opens drop ~1 %. Hidden with a moving fanart skin
-  it takes 57 % of a core while playing (3 % paused; Finding 025 measured 8 %
-  before skins moved). **A decision for George:** whether the visualiser
-  stops drawing while hidden (amends ADR-0019). `panel-frames.py` mended;
-  still flaky on browse/artist-page after Settings - recheck next run.
+- **Panel speed: Finding 112, fixed.** The slower opens were the hidden
+  visualiser drawing (57 % of a core while playing). George chose option 1:
+  ADR-0019 amended - hidden, it does not draw (`/run/gexis/visualiser-shown`).
+  Now 6 % hidden, shown in 0.3 s with a finished frame; every open at or
+  below 29 September (1-3 % dropped). On gexis as preview core/player
+  `0.9.2+git13.c8d3e83`, gexis-system `0.8.9+git160.0be27be`. `panel-frames.py`
+  now ignores the hidden library and measures all 16 interactions.
+- **Waiting on George (2026-10-07):** cable network (show only, or a manual
+  address too?), Wi-Fi details on the connected network (no setting),
+  software volume (which outputs; Spotify/Bluetooth; meters before or after) -
+  ADRs and inventory rows [N] proposed, nothing built.
 - **Docs (drafts) - HELD until George gives the go-ahead** (2026-10-06:
   "Do not release them until I give the go ahead"): `docs/manual/`,
   `docs/FAQ.md`, `docs/tech/` live ONLY on the local branch `docs-drafts`
