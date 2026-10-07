@@ -78,6 +78,17 @@ def convert(key: str, change: Callable[[Any], Any], note: str) -> Migration:
     return Migration(note=note, run=run)
 
 
+def _one_volume_row(store) -> None:
+    mode, software = store.get("output_mode"), store.get("software_volume")
+    if mode == "Fixed":
+        pass
+    elif software:
+        store.set("output_mode", "Software")
+    elif mode == "Variable":
+        store.set("output_mode", "Hardware")
+    store.delete("software_volume")
+
+
 #: In the order they shipped. Append only.
 MIGRATIONS: tuple[Migration, ...] = (
     # George, on the Settings copy review (2026-10-05): the forecast's
@@ -94,6 +105,11 @@ MIGRATIONS: tuple[Migration, ...] = (
     drop("sweep_portraits", "sweep_portraits: one tile, sweep_all"),
     drop("sweep_covers", "sweep_covers: one tile, sweep_all"),
     drop("sweep_status", "sweep_status: shown in sweep_all's tile"),
+    # ADR-0127 (George, 2026-10-07): Output mode and Software volume are one
+    # row. Variable is Hardware, or Software if the toggle was on; Fixed
+    # stays Fixed - the software stage means nothing at full level.
+    Migration(note="output_mode: Hardware, Software or Fixed; software_volume merged into it",
+              run=lambda store: _one_volume_row(store), drops=frozenset({"software_volume"})),
 )
 
 

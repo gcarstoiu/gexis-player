@@ -165,8 +165,6 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         "lms_extended_nav",
         # ADR-0125 (2026-10-07): the problem report, downloaded.
         "problem_report",
-        # ADR-0124 (2026-10-07): software volume, the owner's choice.
-        "software_volume",
         # ADR-0126 (2026-10-07): hardware reports from owners.
         "hardware_report",
         # ADR-0055, 2026-09-23: the design has no output picker, because
@@ -613,8 +611,9 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # **98**: Extended navigation (ADR-0118).
     # **96**: the Lyrion Client's three rows made one (George, 2026-10-06).
     # **97**: Problem report (ADR-0125, 2026-10-07). **98**: Software volume
-    # (ADR-0124). **99**: Report this hardware (ADR-0126).
-    assert len(rows) == 99
+    # (ADR-0124). **99**: Report this hardware (ADR-0126). **98**: Software
+    # volume merged into Volume (ADR-0127).
+    assert len(rows) == 98
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
@@ -632,7 +631,8 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # 79 with the Lyrion Client's three rows made one (George, 2026-10-06).
     # 80 with Problem report (ADR-0125); 81 with Software volume (ADR-0124);
     # 82 with Report this hardware (ADR-0126).
-    assert len(rows) - len(kept) == 82
+    # **81**: Software volume merged into Volume (ADR-0127).
+    assert len(rows) - len(kept) == 81
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():
@@ -885,44 +885,45 @@ def test_an_unavailable_option_is_greyed_not_hidden(store):
     The opposite of the now-playing rule, on purpose: a screen for changing
     things should say what cannot be changed and why."""
     settings = Settings(store, wired={"output_mode": None})
-    settings.set("output_mode", "Variable")
+    settings.set("output_mode", "Hardware")
 
-    settings.restrict("output_mode", {"Variable": "HDMI 1 has no volume control."})
+    settings.restrict("output_mode", {"Hardware": "HDMI 1 has no volume control."})
 
     row = _row(settings)
-    assert row["options"] == ["Variable", "Fixed"]  # both still offered
-    assert row["unavailable"] == {"Variable": "HDMI 1 has no volume control."}
-    assert row["value"] == "Fixed"  # what is in force
+    assert row["options"] == ["Hardware", "Software", "Fixed"]  # all still offered
+    assert row["unavailable"] == {"Hardware": "HDMI 1 has no volume control."}
+    assert row["value"] == "Software"  # what is in force: the next option (ADR-0127)
     with pytest.raises(Locked):
-        settings.set("output_mode", "Variable")
+        settings.set("output_mode", "Hardware")
 
 
 def test_the_stored_choice_is_untouched_and_comes_back(store):
     """*"When changing back to dac set the previously selected option."*
     The restriction sits **over** the store and never replaces it."""
     settings = Settings(store, wired={"output_mode": None})
-    settings.set("output_mode", "Variable")
-    settings.restrict("output_mode", {"Variable": "no volume control here"})
-    assert settings.value("output_mode") == "Fixed"
+    settings.set("output_mode", "Hardware")
+    settings.restrict("output_mode", {"Hardware": "no volume control here"})
+    assert settings.value("output_mode") == "Software"
 
     settings.restrict("output_mode", {})
 
-    assert settings.value("output_mode") == "Variable"
+    assert settings.value("output_mode") == "Hardware"
 
 
 def test_with_no_previous_choice_the_rows_own_default_answers(store):
-    """*"If there is no previous selection default to variable."*"""
+    """*"If there is no previous selection default to variable."* - Hardware
+    since ADR-0127."""
     settings = Settings(store, wired={"output_mode": None})
-    settings.restrict("output_mode", {"Variable": "no volume control here"})
+    settings.restrict("output_mode", {"Hardware": "no volume control here"})
     settings.restrict("output_mode", {})
 
-    assert settings.value("output_mode") == "Variable"
+    assert settings.value("output_mode") == "Hardware"
 
 
 def test_a_choice_a_user_had_already_made_is_still_settable(store):
     """Only the greyed option is refused, not the row."""
     settings = Settings(store, wired={"output_mode": None})
-    settings.restrict("output_mode", {"Variable": "no volume control here"})
+    settings.restrict("output_mode", {"Hardware": "no volume control here"})
 
     assert settings.set("output_mode", "Fixed") == "Fixed"
 
@@ -1329,7 +1330,7 @@ def test_fixed_output_hides_the_volume_rows(store):
                 for r in g["rows"] if r.get("key") and r["visible"]}
     volume_rows = {"max_ceiling", "start_max", "travel_curve"}
     settings.set("spotify_enabled", True)
-    settings.set("output_mode", "Variable")
+    settings.set("output_mode", "Hardware")
     assert volume_rows <= shown()
     settings.set("output_mode", "Fixed")
     assert not volume_rows & shown()
@@ -1346,7 +1347,7 @@ def test_starting_volume_sits_with_spotify_and_hides_with_it(store):
     assert keys.index("start_max") == keys.index("spotify_enabled") + 1
     def start_max():
         return next(r for g in settings.to_json() for r in g["rows"] if r.get("key") == "start_max")["visible"]
-    settings.set("output_mode", "Variable")
+    settings.set("output_mode", "Hardware")
     settings.set("spotify_enabled", True)
     assert start_max() is True
     settings.set("spotify_enabled", False)
@@ -1467,3 +1468,25 @@ def test_every_row_shown_and_editable_is_wired():
         and f'"{r["key"]}"' not in main and r["key"] not in not_wired_on_purpose
     )
     assert not missing, f"shown for editing, not wired in __main__: {missing}"
+
+
+def test_output_mode_and_software_volume_become_one_row(tmp_path):
+    """ADR-0127: Variable is Hardware, or Software where the toggle was on;
+    Fixed stays Fixed; the toggle alone becomes Software."""
+    from gexis_core import settings_migrations
+    from gexis_core.settings import SettingsStore
+
+    for before, after in [
+        ({"output_mode": "Variable"}, "Hardware"),
+        ({"output_mode": "Variable", "software_volume": True}, "Software"),
+        ({"output_mode": "Fixed", "software_volume": True}, "Fixed"),
+        ({"software_volume": True}, "Software"),
+        ({"software_volume": False}, None),
+        ({}, None),
+    ]:
+        store = SettingsStore(tmp_path / f"s{len(list(tmp_path.iterdir()))}.db")
+        for key, value in before.items():
+            store.set(key, value)
+        settings_migrations.migrate(store)
+        assert store.get("output_mode") == after, before
+        assert store.get("software_volume") is None

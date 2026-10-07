@@ -2784,7 +2784,9 @@
   }
   .option__label {
     flex: 1;
-    min-width: 0;
+    /* Never narrower than its longest word: a greyed option's reason beside
+       it wraps instead of running over it (Volume's Hardware on HDMI). */
+    min-width: min-content;
     font-size: 17px;
     font-weight: 600;
     color: rgba(233, 238, 242, 0.82);

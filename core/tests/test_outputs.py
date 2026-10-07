@@ -491,3 +491,16 @@ async def test_a_change_of_output_makes_libasound_read_its_configuration_again(m
         "snd_config_update_free_global": staticmethod(lambda: freed.append(name))})())
     await volume.forget_mixers()
     assert freed == ["libasound.so.2"]
+
+
+def test_hardware_gives_way_to_software_where_a_card_has_no_control():
+    """ADR-0127 §2, at start-up, before the row is restricted."""
+    from gexis_core.__main__ import volume_mode
+
+    dac = outputs.Output(label="DAC", card="IQaudIODAC", control="Digital", scale=None)
+    hdmi = outputs.Output(label="HDMI 1", card="vc4hdmi0", control=None, scale=None)
+    assert volume_mode("Hardware", dac) == "Hardware"
+    assert volume_mode("Hardware", hdmi) == "Software"
+    assert volume_mode(None, hdmi) == "Software", "the default is Hardware"
+    assert volume_mode("Fixed", hdmi) == "Fixed"
+    assert volume_mode("Variable", dac) == "Hardware", "an unmigrated value"

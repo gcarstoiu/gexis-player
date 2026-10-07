@@ -361,7 +361,20 @@ def read_timezone(localtime: Path = Path("/etc/localtime")) -> str | None:
 
 #: ADR-0124: the row, and where the software level is kept across restarts -
 #: ALSA forgets a software control with its PCM, and makes it again at 0 dB.
-SOFTWARE_VOLUME_KEY = "software_volume"
+#: ADR-0127: one row, `output_mode` - Hardware, Software or Fixed.
+VOLUME_KEY = "output_mode"
+HARDWARE, SOFTWARE, FIXED = "Hardware", "Software", "Fixed"
+
+
+def volume_mode(stored, output) -> str:
+    """What is in force for `output` (ADR-0127 §2): the stored choice, except
+    Hardware on an output with no control of its own, where Software takes
+    its place. The same answer `Settings.value` gives once the row is
+    restricted; this one is for start-up, before `Settings` exists."""
+    mode = stored if stored in (HARDWARE, SOFTWARE, FIXED) else HARDWARE
+    if mode == HARDWARE and output is not None and output.control is None:
+        return SOFTWARE
+    return mode
 SOFTWARE_LEVEL_KEY = "_software_level_db"
 #: A first start with no level remembered and none to carry over: quiet.
 SOFTWARE_LEVEL_FIRST_DB = -30.0
@@ -447,7 +460,7 @@ async def main() -> None:
     chosen_output = outputs.resolve(settings_store.get("output_device"))
     #: ADR-0124: the card as it is, before the software stage takes its place.
     card_output = chosen_output
-    if chosen_output is not None and settings_store.get(SOFTWARE_VOLUME_KEY):
+    if chosen_output is not None and volume_mode(settings_store.get(VOLUME_KEY), chosen_output) == SOFTWARE:
         chosen_output = outputs.with_software_volume(chosen_output)
     if chosen_output is None:
         logger.error("outputs: no playback output found at all")
@@ -813,12 +826,12 @@ async def main() -> None:
     set_curve_reader(lambda: settings.value("travel_curve"))
     # ADR-0046. `output_mode` is what the *user* has chosen; `_fixed_now`
     # is what is in force, which lags it while something is playing.
-    # **An output with no volume control forces fixed output** (ADR-0055
-    # §4). Not a side effect: the device cannot attenuate, so ADR-0046's
-    # behaviour is the only honest one, and the row below cannot override
-    # it.
-    forced_fixed = chosen_output is not None and chosen_output.control is None  # noqa: F841
-    fixed_wanted = {"value": forced_fixed}
+    # ADR-0127: an output with no volume control no longer forces fixed
+    # output - Software takes Hardware's place there - so Fixed is only
+    # ever the user's choice.
+    fixed_wanted = {"value": volume_mode(settings_store.get(VOLUME_KEY), card_output) == FIXED}
+    #: Whether the software stage is in the chain now (ADR-0124).
+    software_on = {"value": bool(chosen_output is not None and chosen_output.software)}
     fixed_now = {"value": False}
     set_fixed_output_reader(lambda: fixed_now["value"])
 
@@ -853,7 +866,8 @@ async def main() -> None:
             _reapply_level()
 
     def _restrict_output_mode(output) -> None:
-        """Grey `Variable` out on an output that cannot attenuate.
+        """Grey `Hardware` out on an output that cannot attenuate; the row
+        then shows Software, the next option (ADR-0127 §2).
 
         ADR-0055 §5. The row still opens and still draws both options -
         George: *"I wouldn't hide this time as settings is different than
@@ -863,7 +877,7 @@ async def main() -> None:
         if output is not None and output.control is None:
             settings.restrict(
                 "output_mode",
-                {"Variable": f"{output.label} has no volume control of its own."},
+                {HARDWARE: f"{output.label} has no volume control of its own."},
             )
         else:
             settings.restrict("output_mode", {})
@@ -882,10 +896,15 @@ async def main() -> None:
         rediscovering it at startup is one path instead of three mutable
         ones threaded through the bridges.
         """
-        chosen = _with_software(outputs.resolve(settings.value("output_device")))
+        base = outputs.resolve(settings.value("output_device"))
+        # The row restricted for this output first: what is in force on it
+        # (ADR-0127 §2) decides whether the software stage is in the chain.
+        _restrict_output_mode(base)
+        chosen = _with_software(base)
         if chosen is None:
             logger.error("outputs: nothing to switch to")
             return
+        software_on["value"] = chosen.software
 
         # **Everything the user can see changes now, before the slow part**
         # (George: *"Changing the output is slow at changing the volume
@@ -893,11 +912,8 @@ async def main() -> None:
         # the sound card: the mode, the greyed option, the padlock and the
         # visualiser button are all consequences of *which output was
         # chosen*, which is already known.
-        nonlocal forced_fixed
-        forced_fixed = chosen.control is None
         alsa.set_card(chosen.card)
         use_scale(chosen.scale)
-        _restrict_output_mode(chosen)
         volume_bridge.set_mixer_name(chosen.control or config.mixer_name)
         # The monitor watches one card and was spawned for the old one; its
         # own loop restarts it, so ending it is enough to move it.
@@ -959,7 +975,7 @@ async def main() -> None:
     def _with_software(output):
         """ADR-0124: the output as the software stage will play it, when the
         row is on."""
-        if output is not None and settings.value(SOFTWARE_VOLUME_KEY):
+        if output is not None and settings.value(VOLUME_KEY) == SOFTWARE:
             return outputs.with_software_volume(output)
         return output
 
@@ -1040,10 +1056,19 @@ async def main() -> None:
         state_store.bump_settings_revision()
 
     def _choose_output_mode(value=None) -> None:
-        fixed_wanted["value"] = forced_fixed or (
-            value or settings.value("output_mode")
-        ) == "Fixed"
+        fixed_wanted["value"] = settings.value(VOLUME_KEY) == FIXED
         asyncio.ensure_future(_apply_output_mode())
+
+    def _choose_volume(value=None) -> None:
+        """ADR-0127: the Volume row. Between Hardware and Software the chain
+        changes, so the output is put in place again with the level carried
+        (ADR-0124); to or from Fixed waits for playback to stop (ADR-0046).
+        Software to Fixed does both: the stage comes out, the card is given
+        the level, then full level once nothing plays."""
+        software = settings.value(VOLUME_KEY) == SOFTWARE
+        if software != software_on["value"]:
+            asyncio.ensure_future(_set_software_volume(software))
+        _choose_output_mode()
 
     def _reapply_level() -> None:
         """Put the level back where the *position* now says it belongs.
@@ -1896,16 +1921,12 @@ async def main() -> None:
                # is re-applied rather than waiting for the next change.
                "travel_curve": lambda _value=None: _reapply_level(),
                # ADR-0046: chosen now, in force at the next legal moment.
-               "output_mode": _choose_output_mode,
+               "output_mode": _choose_volume,
                # ADR-0055: rewrites output.conf, then restarts everything
                # that holds a PCM - including this daemon, which is how the
                # new card's control name gets picked up.
                "output_device": lambda _value=None: asyncio.ensure_future(
                    _switch_output()
-               ),
-               # ADR-0124: the level carried across, then the output again.
-               "software_volume": lambda value=None: asyncio.ensure_future(
-                   _set_software_volume(bool(value))
                ),
                # Readonly: nothing to do on a write, and the value is the
                # live one below rather than the registry's literal.
@@ -2341,8 +2362,10 @@ async def main() -> None:
     # one that cannot be honoured. The user's own choice is never
     # overwritten - the lock sits *over* the stored value - so switching
     # back to an output that can attenuate hands it straight back.
-    _restrict_output_mode(chosen_output)
-    if forced_fixed:
+    _restrict_output_mode(card_output)
+    # The stored choice in force from the start - Fixed included, which was
+    # only ever applied when an output forced it (found 2026-10-07).
+    if fixed_wanted["value"]:
         asyncio.ensure_future(_apply_output_mode())
 
     meters_chain["ok"] = meters_available
@@ -3046,7 +3069,7 @@ async def main() -> None:
         level_save = {"task": None, "db": None}
 
         def _keep_software_level(state) -> None:
-            if not settings.value(SOFTWARE_VOLUME_KEY):
+            if not software_on["value"]:
                 return
             db = state.volume.db if state.volume is not None else None
             if db is None or db == level_save["db"]:
