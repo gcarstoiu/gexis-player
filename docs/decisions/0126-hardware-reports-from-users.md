@@ -97,5 +97,18 @@ turn what they tell us into what the player shows.
 
 **Not built:** decision 7, a screen not yet recognised added from a report -
 the script names such reports, and the screen list is changed by hand.
-**Owed:** the repository's `hardware report` and `accepted` labels (the form
-applies the first; the script reads both).
+**Owed:** nothing - the labels exist (below).
+
+## Amended 2026-10-07 (George)
+
+- **The name: *Hardware feedback*** - *"Report hardware trends to lean towards
+  the negative."* The row, the System page's line (*"Help others with this
+  DAC: share how it works"*), the GitHub form and its label (`hardware
+  feedback`). The setting's key stays `hardware_report`; the state *Reported*
+  is unchanged.
+- **Two steps: the screen, then the sound.** The screen step (pattern, taps,
+  the picture and touch questions) is **skipped when no screen is connected
+  or Headless is on**; its answers are then *No screen* and *No touch*.
+- The labels `hardware feedback`, `accepted` and `problem report` were
+  created on the repository the same day (George: *"You can also create the
+  labels"*).

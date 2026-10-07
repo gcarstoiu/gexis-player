@@ -3,7 +3,7 @@
 Last updated: 2026-10-07 (on R2D2).
 
 **Release list before the first public release (2026-10-07, George's order):**
-- Report this hardware: steps 1-5 built; George's changes owed - a kinder
+- Hardware feedback (was Report this hardware): steps 1-5 built; renamed and in two steps (2026-10-07); was owed - a kinder
   name ("hardware feedback"), and the sheet in two steps, screen then audio,
   the screen step skipped when headless or no screen is connected. Owed by
   George: the GitHub labels.
