@@ -108,6 +108,20 @@ We'd rather you knew these up front:
 - **Not a store product.** It's a hobby project, built carefully with the help
   of AI and tested on real hardware, but without a support team behind it.
 
+## 📖 Documentation
+
+- **[User manual](docs/manual/README.md)**: the screen, the phone page and
+  every setting, with screenshots.
+- **[FAQ](docs/FAQ.md)**: questions and answers, from setting up to sound,
+  network and updates.
+- **[Hardware requirements](docs/HARDWARE.md)**: minimum and recommended,
+  and what each rests on.
+- **[Technical guide](docs/tech/00-overview.md)**: how the player is built
+  and how it works inside, with diagrams.
+- **[Writing a plugin](docs/WRITING-A-PLUGIN.md)** and the
+  **[plugin contract](docs/PLUGIN-CONTRACT.md)**: for adding a source or a
+  service of your own.
+
 ## 🗺️ Roadmap
 
 Rough, and subject to change:
