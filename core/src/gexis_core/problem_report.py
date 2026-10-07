@@ -71,6 +71,16 @@ _LIBRARY_PATH = re.compile(r"(/(?:mnt/gexis-shares|media|srv|home/[^/\s]+/Music|
 #: Never across a "/": a path is not a key.
 _KEYISH = re.compile(r"\b([A-Za-z0-9+_-]{32,}={0,2})\b")
 _FINGERPRINT = re.compile(r"\b((?:SHA256|MD5):[A-Za-z0-9+/:=]{20,})")
+#: go-librespot's lines (logfmt): a title is quoted inside the message
+#: (msg="loaded track \"Title\""), a person in its fields (username="..."),
+#: and the phone that connected after "zeroconf from". Its plain messages -
+#: "failed connecting to dealer" - stay.
+_ESCAPED_QUOTED = re.compile(r'\\"([^"\\]{1,200})\\"')
+_PERSON_FIELD = re.compile(r'\b(username|user|user_name|device_name|display_name)="([^"]*)"')
+_CONNECTED_FROM = re.compile(r'((?:zeroconf|connection|connected|request) from )([^"\n]+?)(?="|$)')
+#: A Spotify link names its track, album, playlist or listener to anyone
+#: who looks it up.
+_SPOTIFY_URI = re.compile(r"\b(spotify:(?:track|album|artist|playlist|episode|show|user):[A-Za-z0-9]+)")
 #: The core's own lines; the quoted-text rule reads only these.
 _CORE_LINE = re.compile(r"\bgexis_core[.\s]")
 _ACCESS_LINE = re.compile(r"\baiohttp\.access\b")
@@ -137,6 +147,10 @@ class Scrubber:
         text = _IPV6.sub(lambda m: m.group(1) if m.group(1) in _KEEP_IPS or ":" not in m.group(1) or m.group(1).count(":") < 2 else self.token("ip", m.group(1)), text)
         text = _LOCAL_NAME.sub(lambda m: self.token("host", m.group(1)), text)
         text = _QUERY_VALUE.sub(self._query, text)
+        text = _SPOTIFY_URI.sub(lambda m: self.token("title", m.group(1)), text)
+        text = _ESCAPED_QUOTED.sub(lambda m: '\\"' + self.token("title", m.group(1)) + '\\"', text)
+        text = _PERSON_FIELD.sub(lambda m: f'{m.group(1)}="{self.token("user", m.group(2))}"' if m.group(2) else m.group(0), text)
+        text = _CONNECTED_FROM.sub(lambda m: m.group(1) + self.token("device", m.group(2).strip()), text)
         text = "\n".join(_QUOTED.sub(self._quoted, line) if _CORE_LINE.search(line) and not _ACCESS_LINE.search(line)
                          else line for line in text.split("\n"))
         text = _KEYISH.sub(self._keyish, text)
@@ -176,14 +190,19 @@ class Scrubber:
         return self.token("secret", run)
 
     def summary(self) -> str:
-        names = {"ip": "address", "mac": "hardware address", "host": "host name", "net": "network name",
-                 "device": "device name", "share": "share", "user": "user or account name",
-                 "title": "track, album or artist name", "text": "name or title", "path": "library path",
-                 "place": "location", "secret": "key or token", "name": "name"}
+        #: kind -> (one, several)
+        names = {"ip": ("address", "addresses"), "mac": ("hardware address", "hardware addresses"),
+                 "host": ("host name", "host names"), "net": ("network name", "network names"),
+                 "device": ("device name", "device names"), "share": ("share", "shares"),
+                 "user": ("user or account name", "user or account names"),
+                 "title": ("track, album or artist name", "track, album or artist names"),
+                 "text": ("name or title", "names or titles"), "path": ("library path", "library paths"),
+                 "place": ("location", "locations"), "secret": ("key or token", "keys or tokens"),
+                 "name": ("name", "names")}
         parts = []
         for kind, n in sorted(self.counts.items(), key=lambda kv: -kv[1]):
-            word = names.get(kind, kind)
-            parts.append(f"{n} {word}{'' if n == 1 else ('es' if word.endswith('ss') else 's')}")
+            one, several = names.get(kind, (kind, kind + "s"))
+            parts.append(f"{n} {one if n == 1 else several}")
         return ", ".join(parts) if parts else "nothing"
 
 

@@ -19,6 +19,9 @@ JOURNAL = """\
 2026-10-07T08:12:52+02:00 livingroom bluealsa[893]: Adding new Stream End-Point: A4:5E:60:11:22:33: SRC: AAC
 2026-10-07T08:12:53+02:00 livingroom wpa_supplicant[700]: wlan0: CTRL-EVENT-CONNECTED - Connection to 9c:c7:a6:00:11:22 completed [id=0 id_str=]
 2026-10-07T08:12:54+02:00 livingroom systemd[1]: Started gexis-core.service - Gexis Player core at 11:45:23, version 1.2.3.4.5.
+2026-10-07T08:12:56+02:00 livingroom go-librespot[2326]: time="2026-10-07T08:12:56+02:00" level=info msg="loaded track \\"Quiet Morning - 2012 Remaster\\" (paused: true)" uri="spotify:track:34xGLuxM0rkxhC"
+2026-10-07T08:12:57+02:00 livingroom go-librespot[2326]: time="2026-10-07T08:12:57+02:00" level=info msg="accepted zeroconf from Phone 9 Max" username="11*****97"
+2026-10-07T08:12:58+02:00 livingroom go-librespot[2326]: time="2026-10-07T08:12:58+02:00" level=error msg="failed connecting to dealer" error="failed to WebSocket dial"
 2026-10-07T08:12:55+02:00 livingroom python[812]: GET /assets/nunito-sans-latin-wght-normal-BWQ3gi2K.woff2 boot cb3a1f2e-5b7d-4e8a-9c21-7d4e5f6a8b90
 """
 
@@ -47,7 +50,8 @@ def test_nothing_personal_is_left():
     _, out = scrubbed()
     for private in ("10.0.4.17", "10.0.4.23", "Nina", "Blue Harbour", "Kitchen Speaker", "3c:22:fb",
                     "Smalltown", "52.12345", "Nasbox", "A4:5E:60", "9c:c7:a6", "livingroom",
-                    "Qx7b2Lk9", "cb3a1f2e", "musicfan"):
+                    "Qx7b2Lk9", "cb3a1f2e", "musicfan", "Quiet Morning", "34xGLuxM", "Phone 9 Max",
+                    "11*****97"):
         assert private not in out, private
 
 
@@ -56,7 +60,8 @@ def test_what_says_what_the_software_did_stays():
     built file's name."""
     _, out = scrubbed()
     for kept in ("gexis-core.service", "version 1.2.3.4.5", "11:45:23", "'Always'",
-                 "nunito-sans-latin-wght-normal-BWQ3gi2K.woff2", "id=42", "Android 14", "SRC: AAC"):
+                 "nunito-sans-latin-wght-normal-BWQ3gi2K.woff2", "id=42", "Android 14", "SRC: AAC",
+                 'msg="failed connecting to dealer"', "loaded track"):
         assert kept in out, kept
 
 
