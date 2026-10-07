@@ -13,10 +13,12 @@ chevron fixes, and sheets above the phone's mini player (a laptop's screen
 hid Close; checked at 4 desktop and 2 phone sizes, no button covered).
 **The first public release** (George, 2026-10-07: today's changes are part
 of it) needs, besides 13d's IQaudio test (George, on the v0.9.2 image), 13f's
-tries and removing passwordless sudo: (1) the update screen shows the notes
-of every release between the installed one and the new one (*"the update
-screen should show all until the current one"*) - an amendment to the update
-ADR first; (2) ADR-0123 step 2, Cable (needs a cable in gexis); (3)
+tries and removing passwordless sudo: (1) **done 2026-10-07** - the notes of
+every release being skipped (ADR-0110 amended; `r<tag>/history`, signed;
+`whats_new_all`; on gexis as `+git56.937356a`). **Not yet seen end to end:**
+the first release published with a history is the first that can show it,
+and only to a device already running this updater - check it on the release
+after 0.9.3; (2) ADR-0123 step 2, Cable (needs a cable in gexis); (3)
 ADR-0124, software volume; (4) **ADR-0125, a problem report** and (5)
 **ADR-0126, hardware reports from users** - both accepted 2026-10-07, rows
 in ADR-0022; **owed by George: the project e-mail address** for problem
