@@ -139,3 +139,12 @@ discover cannot be paired with, confirmed or otherwise.
   is open: the outcome states publish like any other and leave the screen
   alone, because by then there is an answer and whatever was up should come
   back on its own.
+
+## Amended 2026-10-07: discoverable by default
+
+George: *"Bluetooth - set the Discoverable to Always as default from now on."*
+On `guestpi` a phone's first pairing failed with *"Can't communicate with"*
+the player while it was outside its three minutes after a start. `bt_discoverable`
+now defaults to **Always**; *3 min after boot* and *Off* stay as choices, and a
+device that stored one keeps it. Pairing itself still asks for confirmation on
+the panel (this record), so being discoverable does not let a phone pair unseen.

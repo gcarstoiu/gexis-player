@@ -212,7 +212,7 @@
           "3 min after boot",
           "Off"
         ],
-        "default": "3 min after boot"
+        "default": "Always"
       },
       {
         "key": "bt_trusted",

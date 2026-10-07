@@ -333,7 +333,7 @@ Changes take effect at once unless the row says otherwise.
 | Spotify Connect: Starting volume | The loudest Spotify starts at when it takes over. Shown only with Output mode on *Variable*. |
 | Bluetooth: Enabled | The player accepts Bluetooth audio. |
 | Bluetooth: Pairing | *Confirmation* shows a six-digit code on the panel to accept; *PIN-free* pairs anything in range. |
-| Bluetooth: Discoverable | Whether phones can find the player: *Always*, *3 min after boot* (the default) or *Off*. |
+| Bluetooth: Discoverable | Whether phones can find the player: *Always* (the default), *3 min after boot* or *Off*. A new phone still has to be accepted on the screen. |
 | Bluetooth: Trusted devices | Remembered devices; forget one here. |
 | Bluetooth: Auto-trust on pair | Remembers a device once paired, so it reconnects by itself. |
 

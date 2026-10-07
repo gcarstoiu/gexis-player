@@ -46,7 +46,10 @@ MODES = {
     "3 min after boot": (BOOT_WINDOW_S, True),
     "Off": (BOOT_WINDOW_S, False),
 }
-DEFAULT_MODE = "3 min after boot"
+#: Always since 2026-10-07 (George: "Bluetooth - set the Discoverable to
+#: Always as default from now on"): a phone that tried after the three
+#: minutes found nothing, and the first pairing on guestpi failed.
+DEFAULT_MODE = "Always"
 
 
 async def find_adapter(bus: MessageBus) -> str | None:
