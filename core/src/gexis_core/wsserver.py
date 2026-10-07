@@ -1550,9 +1550,31 @@ class StateServer:
         if action not in ("show", "hide"):
             return web.json_response({"error": f"unknown action {action}"}, status=404)
         shown = self._peppy.request(action)
+        if not shown and action == "show" and self._peppy._has_levels():
+            shown = await self._peppy_again()
         if not shown:
             return web.json_response({"error": "no Peppy screen window to act on"}, status=409)
         return web.json_response({"peppy": action})
+
+    #: How long a restarted visualiser has to put its window up (its skins
+    #: load in about 9 s on a Pi 4 with the 1920x1080 packs, guestpi).
+    PEPPY_AGAIN_S = 25
+
+    async def _peppy_again(self) -> bool:
+        """**Asked to show, and there is no window: start it again.** Its
+        loop can end (a skin that would not build ended it on guestpi,
+        2026-10-07, and the panel then said only *no Peppy screen window to
+        act on* for hours). The unit is `Restart=no` so a crash loop stays
+        visible; a listener asking for it is a reason to try once."""
+        logger.warning("peppy: no window to show; starting gexis-peppy again")
+        proc = await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-peppy.service")
+        await proc.wait()
+        deadline = asyncio.get_running_loop().time() + self.PEPPY_AGAIN_S
+        while asyncio.get_running_loop().time() < deadline:
+            await asyncio.sleep(1.5)
+            if await asyncio.to_thread(self._peppy.request, "show"):
+                return True
+        return False
 
     async def _handle_notice(self, request: web.Request) -> web.Response:
         """ADR-0099: the Legal and Credits pages, from `notices.json`."""

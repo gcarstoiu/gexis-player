@@ -99,6 +99,7 @@ from gexis_core.volume import (
     VolumeBridge,
     db_to_raw,
     get_raw,
+    forget_mixers,
     Mute,
     renderer_value_to_hardware_raw,
     renderer_percent_to_value,
@@ -922,6 +923,17 @@ async def main() -> None:
         )
         await stop.wait()
         outputs.write(chosen, tuning=_tuning())
+        # The mixer handles open on the old card are let go of: the next
+        # write opens the new one's.
+        await forget_mixers()
+        # ADR-0124: **the software level in place before anything can play**
+        # - on every change of output, not only when the row is switched on
+        # (George, 2026-10-07: on HDMI the volume stayed the same throughout).
+        if chosen.software:
+            await _start_software_volume(outputs.resolve(settings.value("output_device")), settings_store)
+            raw = await get_raw(outputs.SOFTVOL_CONTROL)
+            if raw is not None:
+                state_store.set_volume_raw(raw)
         # **This daemon is not restarted any more.** It was, to pick up the
         # new card's control name; that name is now settable in place
         # (`VolumeBridge.set_mixer_name`), and the restart was most of what
@@ -959,23 +971,23 @@ async def main() -> None:
         as a change of output is."""
         volume = state_store.state.volume
         db = volume.db if volume is not None else None
+        # The card as it is now - not as it was at start-up: the output may
+        # have changed since.
+        base = outputs.resolve(settings.value("output_device"))
         if db is not None:
             if on:
                 settings_store.set(SOFTWARE_LEVEL_KEY, db)
-            elif card_output is not None and card_output.control and card_output.scale:
-                await set_raw(card_output.control, card_output.scale.raw(db),
-                              maximum=card_output.scale.raw_max)
+            elif base is not None and base.control and base.scale:
+                await set_raw(base.control, base.scale.raw(db), maximum=base.scale.raw_max)
         logger.info("volume: software volume %s at %s dB", "on" if on else "off", db)
-        # The switch is made in place (`_switch_output` no longer restarts
-        # this daemon), so what start-up does for software volume is done
-        # here too: the control made at the carried level, the card parked.
+        # The output is put in place again; switched on, `_switch_output`
+        # makes the software control at the carried level before the
+        # renderers reopen.
         await _switch_output()
-        base = outputs.resolve(settings.value("output_device"))
-        if on and base is not None:
-            await _start_software_volume(base, settings_store)
-        raw = await get_raw(outputs.SOFTVOL_CONTROL if on else (base.control if base else config.mixer_name))
-        if raw is not None:
-            state_store.set_volume_raw(raw)
+        if not on and base is not None and base.control:
+            raw = await get_raw(base.control)
+            if raw is not None:
+                state_store.set_volume_raw(raw)
 
     async def _rewrite_output_conf(reason: str) -> None:
         """Put the current output and tuning in `output.conf` and reopen.

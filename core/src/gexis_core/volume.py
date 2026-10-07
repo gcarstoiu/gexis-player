@@ -740,6 +740,15 @@ class _Mixer:
             self._elem = None
             return False
 
+    def close(self) -> None:
+        if self._elem is not None:
+            try:
+                self._lib.snd_mixer_close.argtypes = [self._ctypes.c_void_p]
+                self._lib.snd_mixer_close(self._handle)
+            except Exception:  # noqa: BLE001 - it is being let go of anyway
+                pass
+        self._elem = None
+
 
 #: One per control, built on first use. The hardware DAC is the only one
 #: written here; the dummy controls are read, never written (§9 of the
@@ -751,6 +760,19 @@ _MIXERS: dict[tuple[str, str], _Mixer] = {}
 _MIXER_THREAD = concurrent.futures.ThreadPoolExecutor(
     max_workers=1, thread_name_prefix="gexis-mixer"
 )
+
+
+async def forget_mixers() -> None:
+    """**After a change of output** (ADR-0124, George 2026-10-07: *"Switching
+    to hdmi and it stops working"*). A handle is opened through `output` and
+    stays on the card `output` meant *then*: the software control has the
+    same name on every card, so after a switch to HDMI the slider went on
+    writing the old card's. Closed on the thread that opened them."""
+    def close_all():
+        for mixer in _MIXERS.values():
+            mixer.close()
+        _MIXERS.clear()
+    await asyncio.get_running_loop().run_in_executor(_MIXER_THREAD, close_all)
 
 
 async def set_raw(

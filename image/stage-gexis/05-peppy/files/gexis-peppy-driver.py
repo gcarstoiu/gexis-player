@@ -561,9 +561,15 @@ class Rotation:
         #: panel, 2026-09-22). Such a skin is not a choice, so it leaves the
         #: pool rather than reaching the glass.
         self.spectrum_ready = True
+        #: Skins that could not be built (an image that would not load), left
+        #: out from then on. One such skin took the whole screen down on
+        #: guestpi (2026-10-07): the rotation reached it, the loop ended,
+        #: and the visualiser had no window for the rest of the day.
+        self.broken: set[str] = set()
 
     def pool(self) -> list[str]:
-        chosen = self.selection.pool(self.skins)
+        chosen = [n for n in self.selection.pool(self.skins) if n not in self.broken] or \
+            self.selection.pool(self.skins)
         if self.spectrum_ready:
             return chosen
         drawable = [n for n in chosen if kind_of(self.skins[n]) != SPECTRUM]
@@ -613,11 +619,28 @@ class Rotation:
         self.prepared = None
         self.switch(wanted)
 
+    #: How many skins one preparation tries before giving up for this turn.
+    PREPARE_TRIES = 5
+
     def prepare_next(self, name: str | None = None) -> None:
         """Build the next skin's meter now, so a track change costs no image
         loading. Done right after a switch, while the new skin is already on
-        screen — the moment with the most slack, not the least."""
-        name = name or self.pick()
+        screen — the moment with the most slack, not the least.
+
+        **A skin that cannot be built is left out, and another is tried** -
+        never the end of the loop."""
+        for _ in range(self.PREPARE_TRIES):
+            skin = name or self.pick()
+            try:
+                self._prepare(skin)
+                return
+            except Exception as exc:  # noqa: BLE001 - one skin, not the screen
+                print(f"peppy: skin {skin!r} could not be built ({type(exc).__name__}: {exc}); left out")
+                self.broken.add(skin)
+                name = None
+        raise RuntimeError("no skin could be built")
+
+    def _prepare(self, name: str) -> None:
         from configfileparser import BASE_PATH, METER
         from meterfactory import MeterFactory
 
@@ -661,7 +684,7 @@ class Rotation:
     def switch(self, to: str | None = None) -> None:
         if to is not None and (self.prepared is None or self.prepared[0] != to):
             self.prepare_next(to)
-        if self.prepared is None:
+        if self.prepared is None or self.prepared[0] in self.broken:
             self.prepare_next()
         name, meter = self.prepared
         self.prepared = None
@@ -1202,4 +1225,11 @@ def run() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(run())
+    code = run()
+    # **Out for real.** `SystemExit` waits for the threads still running
+    # (the touch reporter, SDL's timer), and on guestpi (2026-10-07) the
+    # process sat there for hours after its loop had ended: no window, and
+    # nothing for the daemon to restart.
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(code)

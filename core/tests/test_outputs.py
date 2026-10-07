@@ -448,3 +448,20 @@ def test_the_card_is_still_read_back_from_a_software_config(tmp_path):
     conf.write_text(outputs.render(outputs.with_software_volume(
         outputs.Output(card="IQaudIODAC", label="x", control="Digital")), False))
     assert outputs.configured(conf) == "IQaudIODAC"
+
+
+async def test_a_change_of_output_lets_go_of_the_old_card_s_mixers():
+    """George, 2026-10-07: *"Switching to hdmi and it stops working"* - the
+    handle to `Gexis` stayed on the DAC, and the slider went on writing it."""
+    from gexis_core import volume
+
+    class Held:
+        closed = False
+
+        def close(self):
+            self.closed = True
+
+    held = Held()
+    volume._MIXERS[("output", "Gexis")] = held
+    await volume.forget_mixers()
+    assert held.closed and volume._MIXERS == {}
