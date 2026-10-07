@@ -60,6 +60,7 @@ refused rather than converted, because nothing in the chain is a `plug`
 |---|---|---|
 | `pcm.output` | `type meter` over `hw:sndrpihifiberry`, with the peppyalsa scope | go-librespot, bluealsa-aplay, and (through `default`) Plexamp |
 | `pcm.output_wait` | The same chain, but the slave is opened with `nonblock 0` so a busy DAC makes the open *wait* instead of failing (ADR-0095) | squeezelite only |
+| `gexis_softvol`, `gexis_softvol_wait` | **With Software volume on (ADR-0124):** `meter → softvol → card`; on HDMI `softvol → plug → card`. One control for both, `Gexis Playback Volume` (`Gexis` to amixer), -90..0 dB in 0.25 dB steps; at 0 dB it passes every sample unchanged (Finding 115). The core makes the control at start and sets the saved level before anything plays (ALSA would make it at 0 dB), parks the card's own control at 0 dB only after that level reads back, and gives the card the level back when switched off | every renderer, through `output` / `output_wait` |
 | `ctl.output` | The DAC's control interface, so `amixer -D output` and the core reach the hardware mixer by name | gexis-core |
 | `pcm_scope.peppyalsa` | Level and 30-band spectrum analysis, written to FIFOs in `/run/gexis` | loaded inside whichever renderer has the device open |
 
