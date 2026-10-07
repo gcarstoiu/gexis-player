@@ -35,9 +35,11 @@ reports from people without GitHub.
 (George). Problem report tried end to end there (download from a phone-sized
 browser; go-librespot's titles, phone name and account then taken out too).
 Finding 113: opening screens drops more frames on the 13.3" (Home 9 %).
-**Owed by George:** what counts as "in use" for the skin-pack download cap
-(the Spotify delay on first boot was the 490 MB pack saturating Wi-Fi while
-the phone connected - nothing was playing yet). **Built, not yet seen:** the
+**Skin packs capped while in use** (ADR-0111 amended; George agreed "in
+use" = playing or Spotify/Bluetooth active in the last 10 min): on guestpi,
+12.5 MB/s idle, then 3.1-3.2 MB/s from the moment music played, resuming
+the file (`+git73`). Not tried on the device: the Spotify/Bluetooth trigger
+(needs a phone; unit-tested) and the return to full speed after 10 min. **Built, not yet seen:** the
 screen applied during setup (ADR-0109 amended) - needs a fresh setup.
 
 **0.9.2 released 2026-10-06 on Testing (serial 25), from `phase-13d`**

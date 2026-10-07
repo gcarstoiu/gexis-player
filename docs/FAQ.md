@@ -202,7 +202,10 @@ toggled from the phone page.
 **There is no visualiser, or no skins to choose from.**
 The skins are a separate download: *Settings → Plugins → Visualiser → Visualiser
 skins*. Each screen size gets its own set (from about 50 MB to about 490 MB);
-switching it off removes them. Over HDMI audio output the visualiser does not
+switching it off removes them. While music plays, or for 10 minutes after a
+phone connects over Spotify or Bluetooth, the set downloads at no more than
+3 MB/s, so the music keeps its share of the network; otherwise at full
+speed. Over HDMI audio output the visualiser does not
 move.
 
 **How do I pick one skin and keep it?**
