@@ -1173,3 +1173,27 @@ async def test_an_update_stops_whoever_is_playing_and_leaves_nobody_holding():
     assert adapters["spotify"].release_calls == 1
     assert supervisor.active is None and changes == [None]
     assert await supervisor.stop_active() is None, "nothing playing, nothing to stop"
+
+
+@pytest.mark.asyncio
+async def test_nothing_takes_the_device_while_an_update_installs():
+    """ADR-0105 §4 step 4, built 2026-10-07: a phone choosing the device
+    mid-install is released, not let play through the install - and once the
+    update is done, the next acquisition is an ordinary one."""
+    holder = {"who": None}
+    adapters = _three(holder)
+    installing = {"now": True}
+    supervisor = Supervisor(
+        adapters,
+        device_busy=lambda renderer_id: holder["who"] == renderer_id,
+        ladder=FAST_LADDER,
+        frozen=lambda: "an update is installing" if installing["now"] else None,
+    )
+    holder["who"] = "spotify"          # go-librespot opened the device on the phone's choice
+    await supervisor.acquire("spotify")
+    assert supervisor.active is None
+    assert adapters["spotify"].release_calls == 1, "released, not merely refused"
+
+    installing["now"] = False
+    await supervisor.acquire("spotify")
+    assert supervisor.active == "spotify"

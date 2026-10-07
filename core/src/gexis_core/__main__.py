@@ -1170,6 +1170,15 @@ async def main() -> None:
         on_value=lambda level, steps: report_renderer_volume("bluetooth", level, steps)
     )
 
+    #: The updater's states from *Stop playback* on (core/updater/gexis-update).
+    UPDATE_FROZEN = frozenset({"stopping", "installing", "restarting", "checking-device", "going-back"})
+
+    def _installing() -> str | None:
+        update = state_store.state.update or {}
+        if update.get("active") and update.get("state") in UPDATE_FROZEN:
+            return "an update is installing"
+        return None
+
     supervisor = Supervisor(
         adapters,
         # By unit, which the supervisor keeps after a renderer is forgotten:
@@ -1185,6 +1194,9 @@ async def main() -> None:
         # whatever fired - an event from an instance that had not died yet,
         # `activate` from a phone, the reclaim above.
         enabled=lambda renderer_id: renderer_enabled(renderer_id),
+        # ADR-0105 §4 step 4 (built 2026-10-07): from the moment the updater
+        # stops playback until it is done, nothing takes the device.
+        frozen=lambda: _installing(),
     )
 
     # ADR-0053's three channels. A renderer with a `set_volume` is driven

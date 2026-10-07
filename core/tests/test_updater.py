@@ -646,3 +646,50 @@ def test_a_pack_that_ends_on_its_own_is_not_restarted(up, monkeypatch):
     monkeypatch.setattr(up, "apt_progress",
                         lambda opts, *args, stop_when=None, **kw: n.append(1) or subprocess.CompletedProcess(args, 100, "", "E: x"))
     assert up.pack_fetch([], "gexis-skins-1920x1080", a).returncode == 100 and n == [1]
+
+
+def test_a_player_that_does_not_answer_after_the_update_goes_back(up, monkeypatch):
+    """ADR-0105 §4 step 6, built 2026-10-07: until then it was reported
+    failed and left on the new release."""
+    seen, order = fake_install(up, monkeypatch, answers=False)
+    assert up.install(None) == 1
+    last = seen[-1]
+    assert last["state"] == "failed" and last["attempted"] == "2"
+    assert "Back on 1" in last["message"] and last["steps"]["check"] == "failed"
+    assert any(s["state"] == "going-back" for s in seen)
+    assert order == ["backup", "stop", "restart", "restart"], "the old release's code restarted too"
+    assert (up.STATE / "failed-testing").read_text() == "2"
+
+
+def reboot_install(up, monkeypatch, *, answers=True):
+    seen, order = fake_install(up, monkeypatch, answers=answers)
+    ran = []
+    monkeypatch.setattr(up, "restart", lambda changes: order.append("restart") or "reboot")
+    monkeypatch.setattr(up, "run", lambda *a, **k: ran.append(a) or subprocess.CompletedProcess(a, 0, "", ""))
+    return seen, order, ran
+
+
+def test_an_update_that_reboots_is_checked_after_the_boot(up, monkeypatch):
+    """ADR-0105 §4 step 5, built 2026-10-07: before, the check was ticked
+    before rebooting and nothing looked afterwards."""
+    seen, order, ran = reboot_install(up, monkeypatch)
+    assert up.install(None) == 0
+    assert seen[-1]["state"] == "restarting" and seen[-1]["steps"]["restart"] == "active"
+    assert seen[-1]["steps"]["check"] == "pending", "not ticked before the boot"
+    assert ("systemctl", "reboot") in ran and up.pending().exists()
+
+    assert up.postboot(None) == 0
+    assert seen[-1]["state"] == "done" and set(seen[-1]["steps"].values()) == {"done"}
+    assert not up.pending().exists()
+    assert up.postboot(None) == 0, "a boot with nothing to check does nothing"
+
+
+def test_a_boot_that_does_not_answer_goes_back_once(up, monkeypatch):
+    seen, order, ran = reboot_install(up, monkeypatch, answers=False)
+    assert up.install(None) == 0
+    ran.clear()
+    assert up.postboot(None) == 1
+    last = seen[-1]
+    assert last["state"] == "failed" and "Back on 1" in last["message"]
+    assert ("systemctl", "reboot") in ran, "what went back lands at a boot"
+    assert not up.pending().exists(), "the boot after going back is not checked again"

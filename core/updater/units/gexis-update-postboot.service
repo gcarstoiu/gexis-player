@@ -1,0 +1,15 @@
+[Unit]
+Description=Gexis Player: check an update that ended in a reboot (ADR-0105)
+# Only when an update left something to check: every other boot skips it.
+ConditionPathExists=/var/lib/gexis/updates/pending-check.json
+After=gexis-core.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/gexis/gexis-update postboot
+# Waits up to two minutes for the core, and may put the old release back.
+TimeoutStartSec=infinity
+
+[Install]
+WantedBy=multi-user.target

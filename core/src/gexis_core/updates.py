@@ -24,6 +24,9 @@ STATUS = Path("/var/lib/gexis/updates/status.json")
 #: nothing (2026-10-06).
 CHECK_UNIT = "gexis-update-checknow.service"
 INSTALL_UNIT = "gexis-update-install.service"
+#: ADR-0105 §4 step 5 (built 2026-10-07): the check an update that ended in
+#: a reboot leaves for the boot - an update is still running while it does.
+POSTBOOT_UNIT = "gexis-update-postboot.service"
 
 
 #: dpkg's own record of what is installed. Its change time is when the
@@ -141,7 +144,7 @@ def view(path: Path = STATUS, installed: str | None = None, running: bool | None
     doc = status(path)
     state = doc.get("state")
     if running is None:
-        running = state in INSTALLING and unit_running(INSTALL_UNIT)
+        running = state in INSTALLING and (unit_running(INSTALL_UNIT) or unit_running(POSTBOOT_UNIT))
     return {
         "installed": short(installed if installed is not None else installed_release()),
         "state": state,
