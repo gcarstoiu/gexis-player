@@ -9,7 +9,8 @@ body:
         Thank you for taking the time. The player can prepare a file with what is needed to look into a
         problem: **Settings → System → Problem report**, on a phone or computer on the same network.
         Personal details are taken out on the player before the file is written, but please read it
-        before attaching it here - this page is public.
+        before attaching it here - this page is public. Without a GitHub account, e-mail the
+        file to george.carstoiu@gexis.net instead.
   - type: textarea
     id: what
     attributes:

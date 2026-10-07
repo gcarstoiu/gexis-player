@@ -51,6 +51,8 @@ BLUETOOTH = Path("/var/lib/bluetooth")
 #: Where the report says to send it (ADR-0125 decision 5). The e-mail route
 #: is added when George names the address.
 ISSUE_URL = "https://github.com/gcarstoiu/gexis-player/issues/new?template=problem-report.yml"
+#: For people without a GitHub account (ADR-0125 decision 5; George, 2026-10-07).
+EMAIL = "george.carstoiu@gexis.net"
 
 # --- the scrubber ------------------------------------------------------------
 
@@ -380,6 +382,7 @@ def build(note: str, rows: list[dict], get: Callable[[str], object], *, shares: 
         "Taking things out by pattern can miss something: read the files before\n"
         "sharing them. Nothing was sent anywhere by the player.\n\n"
         f"To report the problem: {ISSUE_URL}\n"
+        f"Or by e-mail, with this file attached: {EMAIL}\n"
     )
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
