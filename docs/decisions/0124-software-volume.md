@@ -54,3 +54,31 @@ the panel says *Fixed* and offers no slider.
   and given back its level when it is turned off.
 - A takeover's *Starting volume* (Spotify) applies to whichever control is in
   use.
+
+## Built 2026-10-07 (step 1)
+
+- **The stage:** `meter → softvol → card`, or `softvol → plug → card` on
+  HDMI; one control for `output` and squeezelite's `output_wait`, made on the
+  output's own card as `Gexis Playback Volume` - `Gexis` to the simple-mixer
+  calls the core uses. Its scale is -90..0 dB in 0.25 dB steps (361 values).
+- **The level is the player's to keep:** ALSA makes a `softvol` control at
+  0 dB when its PCM first opens, so the core makes it itself (open and close,
+  nothing played) and sets the saved level before any renderer opens the
+  output; the level is saved a second after it settles. **The card's own
+  control is parked at 0 dB only once the software level has read back** -
+  found on `guestpi`: the control addressed by the wrong name took no writes,
+  the card was parked anyway, and a phone played at full level for about two
+  minutes.
+- **Switched in place**, as an output change is (no restart of the core):
+  on, the heard level becomes the software level; off, the card's own control
+  is given it first. Measured on `guestpi` (silent at 0 %): the level carried
+  both ways, -26.0 dB before and after a core restart and back on the card
+  when switched off; silence at 44.1/96/192 kHz through both PCMs at their own
+  rate and format; a Lyrion FLAC through the chain with squeezelite reporting
+  no errors.
+- **The confirmation is asked each time it is switched on**, not only the
+  first (decision 2 said the first): it is the mechanism every warned switch
+  uses, and the safer of the two.
+- **Not yet tried:** HDMI through the player's own switch (Finding 115 tried
+  the chain by hand); a full reboot, where ALSA makes the control afresh;
+  Spotify and Bluetooth driving it (they go through the same path as Lyrion).

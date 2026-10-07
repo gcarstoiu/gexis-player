@@ -319,6 +319,7 @@ Changes take effect at once unless the row says otherwise.
 | Output | Where the sound goes. Over HDMI the volume is fixed, the sound is not bit-perfect and the visualiser does not move. |
 | Sound card board | Most boards and every USB DAC are found by themselves. A board that is not (it does not show under Output) can be chosen here. |
 | Output mode | *Variable*: the volume is set on the player. *Fixed*: the player always plays at full level, for an amplifier that sets the volume itself. Applies when playback next stops. |
+| Software volume | Off by default. On, the player sets the level by recalculating the sound itself, on any output, including one with no volume control of its own, such as HDMI. Playback is then not bit-perfect below 100 %; switching it on asks first, and switching it off restores bit-perfect playback. The level carries across either way. |
 | Maximum volume | The loudest the player will go, on any input. At 80, 100 % on every control means that level. Shown only with Output mode on *Variable*. |
 | Volume curve | How the slider's travel maps to loudness. *Cubic* (half travel is −15.5 dB) is the usual shape; *Linear* puts half travel at −30 dB. |
 

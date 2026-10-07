@@ -41,7 +41,9 @@ volume inside its own software, so below 100 in the Plexamp app it is not
 bit-perfect either.
 
 **Why is there no volume slider?**
-Either the output has no volume control of its own (HDMI is one), or
+Either the output has no volume control of its own (HDMI is one) - switch on
+*Settings → Audio → Software volume* to set the level in the player instead,
+at the cost of bit-perfect playback below 100 % - or
 *Settings → Audio → Output mode* is set to *Fixed*. Fixed sends the full
 level all the time, for an amplifier that sets the volume itself; the screen
 shows a padlock instead of a slider. To get the slider back, set Output mode
