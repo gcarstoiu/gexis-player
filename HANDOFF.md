@@ -1,6 +1,21 @@
 # Handoff
 
-Last updated: 2026-10-06, late (on R2D2).
+Last updated: 2026-10-07 (on R2D2).
+
+**2026-10-07 (state now):** the user manual, FAQ and technical guide are
+**approved and released into the repo** (George: *"you can go ahead and
+publish"*): on `phase-13b`/`phase-13d`, pushed, linked from README's new
+Documentation section; they reach `main` with the next release PR. The
+library's size is out of every current file (13d5eed; George: history
+stays as it is). On gexis: core/ui/player `0.9.2+git32.b8a250b`, system and
+lyrion-server `+git174.13d5eed` - Wi-Fi details with George's lock and
+chevron fixes, and sheets above the phone's mini player (a laptop's screen
+hid Close; checked at 4 desktop and 2 phone sizes, no button covered).
+**Next, in order:** (1) the update screen shows the notes of every release
+between the installed one and the new one (George, 2026-10-07: *"the update
+screen should show all until the current one"*) - an amendment to the
+update ADR first; (2) ADR-0123 step 2, Cable (needs a cable in gexis);
+(3) ADR-0124, software volume.
 
 **0.9.2 released 2026-10-06 on Testing (serial 25), from `phase-13d`**
 (tag v0.9.2 at 3225ec1): 13f's Lyrion menus behind Extended navigation,
