@@ -69,6 +69,7 @@ class StateStore:
         self._update: dict | None = None
         self._screen_confirm: dict | None = None
         self._screen_new: dict | None = None
+        self._screen_check: dict | None = None
         #: **ADR-0081: the cover the daemon found for a renderer that sent
         #: none.** `renderer_id -> (track, url)`, applied in `state` below
         #: only where the renderer's own artwork is absent. Keyed on the
@@ -122,6 +123,7 @@ class StateStore:
             update=dict(self._update) if self._update else None,
             screen_confirm=dict(self._screen_confirm) if self._screen_confirm else None,
             screen_new=dict(self._screen_new) if self._screen_new else None,
+            screen_check=dict(self._screen_check) if self._screen_check else None,
         )
 
     def set_active(self, renderer_id: str | None) -> None:
@@ -387,6 +389,13 @@ class StateStore:
         if question == self._screen_new:
             return
         self._screen_new = dict(question) if question is not None else None
+        self._notify()
+
+    def set_screen_check(self, check: dict | None) -> None:
+        """ADR-0126: the test pattern on the panel, and its result."""
+        if check == self._screen_check:
+            return
+        self._screen_check = dict(check) if check is not None else None
         self._notify()
 
     def bump_settings_revision(self) -> None:

@@ -243,11 +243,49 @@ def play_tones(card: str, workdir: Path = Path("/tmp")) -> list[str]:
     return results
 
 
+#: ADR-0126 decision 2: *"asks for four taps in the corners - touch
+#: accuracy is measured, not asked"*. A touch screen set up wrongly (axes
+#: swapped, mirrored, mapped to a different size) misses by a large part of
+#: the screen; a finger that simply lands a little off misses by its own
+#: width. 6 % of the diagonal: 91 px on a 1280x800 7", 132 px on a
+#: 1920x1080 13.3", 119 px on a 1920x480 bar - well clear of a fingertip,
+#: well short of the hundreds of pixels a wrong mapping is off by at the far
+#: corners.
+TAP_TOLERANCE = 0.06
+CORNERS = ("top left", "top right", "bottom right", "bottom left")
+
+
+def measure_taps(width: int, height: int, taps: list[dict]) -> dict:
+    """Each tap's distance from the circle it was asked for, in the screen's
+    own pixels, and whether all four landed. `taps` as the panel sends them:
+    `{"corner", "x", "y", "tx", "ty"}` (where the finger was, where the
+    circle was)."""
+    limit = TAP_TOLERANCE * (width ** 2 + height ** 2) ** 0.5
+    measured = []
+    for tap in taps[: len(CORNERS)]:
+        off = round(((float(tap["x"]) - float(tap["tx"])) ** 2 + (float(tap["y"]) - float(tap["ty"])) ** 2) ** 0.5)
+        corner = str(tap.get("corner")) if tap.get("corner") in CORNERS else "?"
+        measured.append({"corner": corner, "off": off})
+    landed = len(measured) == len(CORNERS) and all(m["off"] <= limit for m in measured)
+    return {"size": f"{int(width)}x{int(height)}", "taps": measured, "limit": round(limit), "landed": landed}
+
+
+def screen_lines(result: dict) -> list[str]:
+    """The screen check as the report's details hold it."""
+    lines = [f"screen as the panel drew it: {result.get('size', '?')}"]
+    if result.get("taps"):
+        lines.append("taps, distance from the circle: " +
+                     ", ".join(f"{t['corner']} {t['off']} px" for t in result["taps"]) +
+                     f" - {'all within' if result.get('landed') else 'not all within'} {result.get('limit')} px")
+    return lines
+
+
 #: The questions only a person can answer, by the issue form's field ids.
 ANSWERS = ("sound", "volume", "clicks", "picture", "touch")
 
 
-def issue_url(facts: Facts, answers: dict[str, str], notes: str = "", tones: list[str] | None = None) -> str:
+def issue_url(facts: Facts, answers: dict[str, str], notes: str = "", tones: list[str] | None = None,
+              screen_check: list[str] | None = None) -> str:
     """The issue form, pre-filled: the board and screen in the title, the
     answers in their fields, the facts in the details. Kept under what GitHub
     accepts by cutting the details first."""
@@ -264,6 +302,8 @@ def issue_url(facts: Facts, answers: dict[str, str], notes: str = "", tones: lis
     details = facts.text()
     if tones:
         details += "\nTest tones\n" + "".join(f"- {t}\n" for t in tones)
+    if screen_check:
+        details += "\nScreen check\n" + "".join(f"- {t}\n" for t in screen_check)
     url = f"{ISSUE_FORM}?{urlencode({**params, 'details': details})}"
     while len(url) > URL_MAX and details:
         details = details[: max(0, len(details) - 200)]

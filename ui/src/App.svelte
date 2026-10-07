@@ -20,7 +20,8 @@
   import { screen } from './lib/family.svelte.js';
   import UpdateScreen from './screens/UpdateScreen.svelte';
   import PanelPointer from './lib/PanelPointer.svelte';
-  import { update, connection, hidePeppy, screenConfirm, answerScreen, screenNew, answerNewScreen } from './lib/state.js';
+  import { update, connection, hidePeppy, screenConfirm, answerScreen, screenNew, answerNewScreen, screenCheck, sendScreenCheck } from './lib/state.js';
+  import TestPattern from './screens/TestPattern.svelte';
   import KeepScreen from './screens/KeepScreen.svelte';
   import NewScreen from './screens/NewScreen.svelte';
   import { loadSettings, settingValues } from './lib/settings.js';
@@ -664,6 +665,14 @@
 
   {#if $screenNew && !$screenConfirm && !setupShown && !updateLock}
     <NewScreen question={$screenNew} onanswer={answerNew} />
+  {/if}
+
+  <!-- ADR-0126: the hardware report's test pattern, over everything but
+       Keep this screen and the update lock. -->
+  {#if $screenCheck?.showing && !$screenConfirm && !updateLock}
+    {#key $screenCheck.seq}
+      <TestPattern check={$screenCheck} onresult={(r) => sendScreenCheck(r).catch(() => {})} />
+    {/key}
   {/if}
 
   <!-- ADR-0109 decision 5: above everything but the update lock - the

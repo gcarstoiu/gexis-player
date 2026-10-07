@@ -6,9 +6,9 @@
   standalone on a phone and will be embedded on the panel.
 -->
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { pressing } from '../lib/press.svelte.js';
-  import { components, update } from '../lib/state.js';
+  import { components, update, screenCheck, showScreenCheck } from '../lib/state.js';
   import UpdateModal from './UpdateModal.svelte';
   import ReleaseNotes from './ReleaseNotes.svelte';
   import ReleaseHistory from './ReleaseHistory.svelte';
@@ -214,9 +214,36 @@
       hwTonesBusy = false;
     }
   }
+  // ADR-0126: the test pattern this sheet asked for (its `seq`), so a result
+  // left from an earlier check is not shown as this one's.
+  let hwCheckSeq = $state(null);
+  const hwCheck = $derived(hwCheckSeq !== null && $screenCheck?.seq === hwCheckSeq ? $screenCheck : null);
+  const hwCheckLines = $derived(hwCheck?.result ? [
+    `The panel draws ${hwCheck.result.size.replace('x', ' × ')}.`,
+    ...hwCheck.result.taps.map((t) => `${t.corner}: ${t.off} px from the circle`),
+    hwCheck.result.landed ? `All four within ${hwCheck.result.limit} px.` : `Not all within ${hwCheck.result.limit} px.`,
+  ] : null);
+  async function toggleScreenCheck() {
+    hwError = null;
+    try {
+      if (hwCheck?.showing) await showScreenCheck(false);
+      else hwCheckSeq = (await showScreenCheck(true)).seq;
+    } catch (e) {
+      hwError = plainly(e?.message, 'The test pattern could not be shown. Try again.');
+    }
+  }
+  // Touch accuracy is measured, not asked: the taps answer it.
+  let hwAnsweredSeq = null;
+  $effect(() => {
+    if (hwCheck?.result?.taps?.length && hwAnsweredSeq !== hwCheck.seq) {
+      hwAnsweredSeq = hwCheck.seq;
+      hwAnswers = { ...untrack(() => hwAnswers), touch: hwCheck.result.landed ? 'Yes' : 'No' };
+    }
+  });
   $effect(() => {
     if (sheet?.kind !== 'hardware') {
-      hw = null; hwAnswers = {}; hwNotes = ''; hwUrl = null; hwError = null; hwTones = null;
+      if (untrack(() => hwCheck?.showing)) showScreenCheck(false).catch(() => {});
+      hw = null; hwAnswers = {}; hwNotes = ''; hwUrl = null; hwError = null; hwTones = null; hwCheckSeq = null;
       return;
     }
     if (hw === null && !onPanel()) {
@@ -1619,7 +1646,7 @@
       </div>
 
       {#if sheet.kind === 'hardware'}
-        <div class="report">
+        <div class="report report--scroll">
           {#if onPanel()}
             <p class="report__text">
               A report opens GitHub, which the screen cannot. Open Settings on a phone or computer on the same
@@ -1650,6 +1677,23 @@
                 </button>
               </div>
             </div>
+            {#if hw.screen}
+              <div class="hwq">
+                <span class="report__label">Screen check</span>
+                <p class="report__text report__text--quiet">
+                  A test pattern on the player's screen: a coloured line along each edge{#if hw.touch}, then four
+                  circles to tap in turn{/if}.
+                </p>
+                {#if hwCheckLines}
+                  <ul class="hwq__tones">{#each hwCheckLines as t (t)}<li>{t}</li>{/each}</ul>
+                {/if}
+                <div class="hwq__options">
+                  <button type="button" class="hwq__option" onclick={toggleScreenCheck}>
+                    {hwCheck?.showing ? 'Take it down' : hwCheck ? 'Show it again' : 'Show the test pattern'}
+                  </button>
+                </div>
+              </div>
+            {/if}
             {#each HW_QUESTIONS.filter((x) => (!x.screen || hw.screen) && (!x.touch || hw.touch)) as item (item.id)}
               <div class="hwq">
                 <span class="report__label">{item.q}</span>
@@ -3637,6 +3681,14 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
+  }
+  /* The hardware report is taller than a phone: its questions scroll inside
+     the sheet, and the sheet's buttons stay where a thumb can reach them. */
+  .report--scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
   .report__text {
     margin: 0;

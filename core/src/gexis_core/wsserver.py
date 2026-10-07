@@ -1326,8 +1326,51 @@ class StateServer:
         answers = {k: str(v) for k, v in (body.get("answers") or {}).items()}
         notes = str(body.get("notes") or "")[:2000]
         tones = [str(t) for t in (body.get("tones") or [])][:6]
+        check = self._store.state.screen_check or {}
+        screen = hardware_report.screen_lines(check["result"]) if check.get("result") else None
         facts = await self._hardware_facts()
-        return web.json_response({"url": hardware_report.issue_url(facts, answers, notes, tones)})
+        return web.json_response({"url": hardware_report.issue_url(facts, answers, notes, tones, screen)})
+
+    #: ADR-0126: the pattern goes away by itself if nobody finishes it.
+    SCREEN_CHECK_S = 120
+
+    async def _handle_hardware_screen(self, request: web.Request) -> web.Response:
+        """ADR-0126: the test pattern on the panel, asked for from a phone
+        (`{"show": true}`) and taken down from it (`{"show": false}`)."""
+        try:
+            body = await request.json() if request.can_read_body else {}
+        except ValueError:
+            body = {}
+        check = dict(self._store.state.screen_check or {})
+        if not body.get("show"):
+            if check:
+                self._store.set_screen_check({**check, "showing": False})
+            return web.json_response({"ok": True})
+        touch = bool(await asyncio.get_running_loop().run_in_executor(None, hardware_report._touch))
+        seq = int(check.get("seq", 0)) + 1
+        self._store.set_screen_check({"showing": True, "touch": touch, "seq": seq, "result": None})
+
+        def expire():
+            now = self._store.state.screen_check or {}
+            if now.get("seq") == seq and now.get("showing"):
+                self._store.set_screen_check({**now, "showing": False})
+
+        asyncio.get_running_loop().call_later(self.SCREEN_CHECK_S, expire)
+        return web.json_response({"seq": seq, "touch": touch})
+
+    async def _handle_hardware_screen_result(self, request: web.Request) -> web.Response:
+        """ADR-0126: the panel's four corner taps `{"seq", "width", "height",
+        "taps"}`, in the screen's own pixels - measured here, shown on the phone."""
+        try:
+            body = await request.json()
+            check = dict(self._store.state.screen_check or {})
+            if not check.get("showing") or body.get("seq") != check.get("seq"):
+                return web.json_response({"error": "No test pattern is being shown."}, status=409)
+            result = hardware_report.measure_taps(int(body["width"]), int(body["height"]), list(body["taps"]))
+        except (ValueError, KeyError, TypeError):
+            return web.json_response({"error": "bad taps"}, status=400)
+        self._store.set_screen_check({**check, "showing": False, "result": result})
+        return web.json_response(result)
 
     async def _handle_panel_shown(self, request: web.Request) -> web.Response:
         """ADR-0101: the panel reporting whether its idle screen is up - and,
@@ -1913,6 +1956,8 @@ class StateServer:
         app.router.add_get("/hardware-report", self._handle_hardware_report)
         app.router.add_post("/hardware-report/issue", self._handle_hardware_issue)
         app.router.add_post("/hardware-report/tones", self._handle_hardware_tones)
+        app.router.add_post("/hardware-report/screen", self._handle_hardware_screen)
+        app.router.add_post("/hardware-report/screen/result", self._handle_hardware_screen_result)
         app.router.add_post("/settings/{key}/items", self._handle_list_action)
         app.router.add_post("/bluetooth/pairing/{answer}", self._handle_pairing_answer)
         # ADR-0050. `{name:.*}` because a skin's name is a section heading

@@ -87,3 +87,51 @@ def test_nothing_is_played_over_music(tmp_path, monkeypatch):
 def test_the_tones_reach_the_report():
     url = hr.issue_url(facts(), {"sound": "Yes"}, "", ["44.1 kHz: played, the card at 44.1 kHz S16_LE"])
     assert "Test tones\n- 44.1 kHz: played" in parse_qs(urlsplit(url).query)["details"][0]
+
+
+def test_taps_are_measured_and_a_wrong_mapping_is_told_from_a_finger():
+    on = [{"corner": c, "x": tx + 9, "y": ty - 12, "tx": tx, "ty": ty}
+          for c, tx, ty in (("top left", 84, 84), ("top right", 1836, 84),
+                            ("bottom right", 1836, 996), ("bottom left", 84, 996))]
+    result = hr.measure_taps(1920, 1080, on)
+    assert result == {"size": "1920x1080", "limit": 132, "landed": True,
+                      "taps": [{"corner": t["corner"], "off": 15} for t in on]}
+    # Touch mapped to 1280x800 on a 1920x1080 screen: right and bottom fall short.
+    scaled = [{**t, "x": t["tx"] * 1280 / 1920, "y": t["ty"] * 800 / 1080} for t in on]
+    off = hr.measure_taps(1920, 1080, scaled)
+    assert not off["landed"] and off["taps"][0]["off"] < 60 and off["taps"][2]["off"] > 600
+    assert not hr.measure_taps(1920, 1080, on[:3])["landed"], "three taps are not a result"
+    lines = hr.screen_lines(result)
+    assert lines[0] == "screen as the panel drew it: 1920x1080"
+    assert "bottom left 15 px - all within 132 px" in lines[1]
+
+
+async def test_the_pattern_is_shown_measured_and_reaches_the_report(monkeypatch):
+    from aiohttp.test_utils import TestClient, TestServer
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+
+    store = StateStore({})
+    server = StateServer(store)
+    monkeypatch.setattr(hr, "_touch", lambda: ["ILITEK ILITEK-TP (222a:0001)"])
+
+    async def fake_facts():
+        return facts()
+    server._hardware_facts = fake_facts
+    client = TestClient(TestServer(server.make_app()))
+    await client.start_server()
+    try:
+        shown = await (await client.post("/hardware-report/screen", json={"show": True})).json()
+        assert store.state.screen_check == {"showing": True, "touch": True, "seq": shown["seq"], "result": None}
+        stale = await client.post("/hardware-report/screen/result",
+                                  json={"seq": shown["seq"] - 1, "width": 800, "height": 480, "taps": []})
+        assert stale.status == 409, "a result for an earlier pattern is refused"
+        taps = [{"corner": c, "x": 50, "y": 50, "tx": 56, "ty": 56} for c in hr.CORNERS]
+        r = await client.post("/hardware-report/screen/result",
+                              json={"seq": shown["seq"], "width": 800, "height": 480, "taps": taps})
+        assert r.status == 200 and store.state.screen_check["showing"] is False
+        assert store.state.screen_check["result"]["landed"] is True
+        url = (await (await client.post("/hardware-report/issue", json={"answers": {}})).json())["url"]
+        assert "Screen check\n- screen as the panel drew it: 800x480" in parse_qs(urlsplit(url).query)["details"][0]
+    finally:
+        await client.close()
