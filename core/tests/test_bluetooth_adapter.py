@@ -180,6 +180,29 @@ async def test_attach_media_player_reports_metadata_on_a_real_signal_shape():
     assert received[-1].artist == "Band"
 
 
+@pytest.mark.asyncio
+async def test_a_paused_phone_that_plays_again_takes_the_device():
+    """2026-10-07, George on guestpi: the phone stayed connected and paused
+    while the core restarted, then played on the link it already had. No
+    object appeared, so Bluetooth never took the device and its volume was
+    not applied - "it was 0 then nothing was heard ... then the volume was
+    much higher". Paused -> playing now acquires; playing -> playing does not
+    acquire again."""
+    adapter = BluetoothAdapter()
+    adapter._bus = _FakeBus()
+    adapter._last_transport = "paused"
+    acquired = []
+    await adapter._attach_media_player("/org/bluez/hci0/dev_XX/player0", lambda: acquired.append(1))
+    callback = adapter._bus.proxy.interfaces[PROPERTIES_IFACE].callback
+
+    callback(MEDIA_PLAYER_IFACE, {"Status": Variant("s", "playing")}, [])
+    callback(MEDIA_PLAYER_IFACE, {"Status": Variant("s", "playing")}, [])
+    assert acquired == [1]
+    callback(MEDIA_PLAYER_IFACE, {"Status": Variant("s", "paused")}, [])
+    callback(MEDIA_PLAYER_IFACE, {"Status": Variant("s", "playing")}, [])
+    assert acquired == [1, 1], "paused and played again: taken again (the supervisor ignores it if still current)"
+
+
 # --- _handle_interfaces_added / _handle_interfaces_removed -----------------
 
 
@@ -383,7 +406,7 @@ async def test_the_player_path_follows_the_media_player_in_and_out(monkeypatch):
     """ADR-0037's commands go to the MediaPlayer1 object, not the device."""
     adapter = BluetoothAdapter()
 
-    async def no_dbus(path):
+    async def no_dbus(path, on_acquire=None):
         return None
 
     monkeypatch.setattr(adapter, "_attach_media_player", no_dbus)
