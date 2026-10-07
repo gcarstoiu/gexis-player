@@ -1130,6 +1130,26 @@ scripted step), since a fixed step never let the list run.**
 reaches - and records any state the stray input could change (volume,
 playback, the screen) before and after.**
 
+**60. A write that could not fail** (2026-10-07, ADR-0124 on `guestpi`).
+- **What went wrong.** Software volume addressed its control as
+  `Gexis Volume`; to the simple-mixer calls the core uses it is `Gexis` (the
+  word *Volume* is its kind). Every write missed it - and the write path
+  falls back to `amixer` and ignores its exit - so the software stage stayed
+  at 0 dB while the card's own control was parked at 0 dB as planned. A phone
+  played at full level for about two minutes.
+- **What it looked like.** The log said *"software volume at -33.50 dB ...
+  its own control parked at 0 dB"*: the intended value, reported as done.
+- **How it was caught.** By reading the control itself (`amixer contents`)
+  after the log said all was well.
+- **And the "silent" test that was not.** Checking the chain at 0 %, a
+  Lyrion track was played - and the player took Lyrion's own volume, 100 %,
+  at the takeover, as it is built to. Six seconds at full level. The 0 % held
+  only until the source changed.
+
+**A level is believed when it is read back, never when it was written; and
+a quiet test sets the volume of every source it starts, not only the
+player's.**
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build
