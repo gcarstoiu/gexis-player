@@ -21,7 +21,7 @@ pack for the screen downloads (ADR-0111), and any plugin the owner wants
 time. On guestpi (2026-10-07) Spotify took a long time to connect right after
 setup while this was going on.
 
-## Decision (proposed)
+## Decision
 
 1. **A Plugins step in setup**, after Visualiser and before Review: the
    plugins this release ships, each with one line on what it is and its size,
