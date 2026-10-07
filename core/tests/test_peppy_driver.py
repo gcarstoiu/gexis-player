@@ -288,3 +288,20 @@ def test_the_driver_s_fanart_pool_matches_the_core_s():
     assert sel.pool(skins) == ["t"]
     from gexis_core import skins as core_skins
     assert set(driver.CORPUS) == set(core_skins.CORPUS)
+
+
+def test_the_shown_flag_is_read_when_it_changes(tmp_path):
+    """ADR-0019 as amended: `0` hidden, `1` shown; absent means shown, as an
+    older core writes nothing."""
+    driver = _driver()
+    path = tmp_path / "visualiser-shown"
+    shown = driver.Shown(path)
+    assert shown.check() is True
+    path.write_text("0")
+    assert shown.check() is False
+    import os
+    path.write_text("1")
+    os.utime(path, ns=(1, 10**18))
+    assert shown.check() is True
+    path.unlink()
+    assert shown.check() is True

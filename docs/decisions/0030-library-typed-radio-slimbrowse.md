@@ -65,15 +65,15 @@ All verified against the live server, with counts as measured:
 
 | Screen | Query | Count |
 |---|---|---|
-| Albums | `albums` | 4554 |
-| All Artists | `artists` | 7292 |
+| Albums | `albums` | thousands |
+| All Artists | `artists` | thousands |
 | Album Artists | `artists role_id:ALBUMARTIST` | 916 |
 | Composers | `artists role_id:COMPOSER` | 3589 |
 | Genres | `genres` | 320 |
 | Years | `years` | 81 |
 | Compilations | `albums compilation:1` | 105 |
 | New Music | `albums sort:new` | 100 |
-| Songs | `titles` | 60974 |
+| Songs | `titles` | tens of thousands |
 | Playlists | `playlists` | 1 |
 | Music Folder | `musicfolder` | ✓ |
 | Works | `works` | valid command, 0 in this library |

@@ -73,7 +73,7 @@ HINTS = (("album_id", "album"), ("work_id", "work"), ("artist_id", "artist"),
 #: 2026-10-06): the entry, and the most it may hold and still be hidden.
 HIDE_WHEN_FEW = {"opmlselectRemoteLibrary": 0, "opmlselectVirtualLibrary": 1}
 
-#: The most of a list read at once for its letter index: All Artists' 8,393
+#: The most of a list read at once for its letter index: All Artists' thousands
 #: came back in 221 ms (2.7 MB) on George's server.
 LETTERS_MAX = 20000
 #: How long a letter index is kept: a rescan moves positions, and a scan

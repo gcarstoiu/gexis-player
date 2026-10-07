@@ -17,7 +17,7 @@ on a 1, 2 or 8 GB Pi 4, or on any other model.
 |---|---|---|---|
 | **Computer** | Raspberry Pi 4 Model B | Raspberry Pi 4 Model B | The only model the player is built and tested for. Pi 5, Pi 3, Pi 400 and Compute Module 4: **untested**. |
 | **Memory** | 2 GB (**untested**) | 4 GB (**tested**) | The player's own processes use about **700 MB** with a screen attached (measured on `gexis`, 2026-10-03: the visualiser 283 MB, the screen's browser about 226 MB, Plexamp 62 MB, the core 34 MB, the rest under 25 MB each). A 1 GB Pi would leave little room: **untested**. |
-| **Storage** | 16 GB card (**calculated**) | 32 GB or more | The image is **5.1 GB** (0.9.2; 4.9 GB at 0.8.4). `gexis`, with one skin pack and the Lyrion server holding a 61,362-file library, uses **8.3 GB**. Space for an update's downloads comes on top. |
+| **Storage** | 16 GB card (**calculated**) | 32 GB or more | The image is **5.1 GB** (0.9.2; 4.9 GB at 0.8.4). `gexis`, with one skin pack and the Lyrion server holding a library of tens of thousands of files, uses **8.3 GB**. Space for an update's downloads comes on top. |
 | **Audio** | A DAC HAT from the player's list, or a USB DAC | HiFiBerry DAC2 HD | ADR-0117 (Phase 13d) gives every DAC one of three states. **Tested:** the HiFiBerry DAC2 HD (`hw:sndrpihifiberry`, the bench board throughout). **Built, its board test owed:** the IQaudio DAC+, chosen under *Sound card board*. **Known:** the rest of the list (from Volumio's, corrected - Finding 106), **untested**. **Detected:** a USB DAC works as any class-compliant card, **untried**. DSD: neither tested board plays it. |
 | **Screen** | None (the player runs without one) | An HDMI touch screen from the tested list | HDMI only (ADR-0109). **Tested on the hardware** (Phase 13b, closed 2026-10-04): Waveshare 10.1" HDMI LCD (B), 1280 x 800, with or without its case; a 13.3" at 1920 x 1080; the Waveshare 7.9" bar (1280 x 400) and 11.9" bar (1480 x 320), both landscape. **Listed, untested:** 800 x 480, and a bar at 0°. DSI and DPI screens: not supported. |
 | **Network** | Wi-Fi | Wi-Fi or Ethernet | `gexis` runs on Wi-Fi. Internet is needed for updates, skin packs, and anything a plugin downloads (Plexamp, the Lyrion server). **Untested:** whether Wi-Fi power saving, on in the image, delays the phone's touchpad (2026-10-06: the bursts measured came from the core, not the network). |
@@ -51,8 +51,8 @@ library.
 
 | | Minimum | Recommended | What it rests on |
 |---|---|---|---|
-| **Memory** | 2 GB Pi: a library of about **34,000 files** (**calculated**) | 4 GB Pi: about **90,000 files** as set, **187,000** on Normal (**calculated**; 61,362 **tested** on both) | See below. A 1 GB Pi is not offered the server (ADR-0115 decision 18). |
-| **Storage** | About **14 KB per file** on top of the player's needs (**calculated**) | The same | For 61,362 files: library database **151 MB**, artwork cache **670 MB** (Finding 109). |
+| **Memory** | 2 GB Pi: a library of about **34,000 files** (**calculated**) | 4 GB Pi: about **90,000 files** as set, **187,000** on Normal (**calculated**; a library of tens of thousands of files **tested** on both) | See below. A 1 GB Pi is not offered the server (ADR-0115 decision 18). |
+| **Storage** | About **14 KB per file** on top of the player's needs (**calculated**) | The same | The library database and the artwork cache together, for the tested library (Finding 109). |
 | **Speed** | Every answer under 0.2 s on a 4 GB Pi (**tested**) | The same | Lists 25-70 ms, search 136-174 ms, covers 5-17 ms. A server on other hardware answered 2-5 times faster (Finding 109). |
 | **Network** | Wi-Fi | Ethernet for a library on a NAS (**untested**: not compared) | The scans below ran over Wi-Fi from a NAS. |
 
@@ -60,13 +60,14 @@ library.
 
 While it scans, Lyrion's scanner grows with every file, on top of about
 **400 MB** for the server itself. How much per file depends on Lyrion's own
-*Database Memory Config* (Finding 109, 61,362 files on `gexis`, 2026-10-03):
+*Database Memory Config* (Finding 109, measured on `gexis` with a library of tens of
+thousands of files, 2026-10-03):
 
-| Database Memory Config | Per file | Lyrion's peak for 61,362 files | Scan time | Search |
-|---|---|---|---|---|
-| Normal | about 13 KB | **1,191 MB** | 1 h 59 min | about 25 ms slower |
-| High | about 27 KB | **1,876 MB** | 2 h 7 min | - |
-| Maximum | as High (its scanner is High's) | not scanned | - | as High |
+| Database Memory Config | Per file | Scan time, against High | Search |
+|---|---|---|---|
+| Normal | about 13 KB | about 6 % shorter | about 25 ms slower |
+| High | about 27 KB | - | - |
+| Maximum | as High (its scanner is High's) | not scanned | as High |
 
 Everything else browsed at the same speed on all three. The player sets
 **Normal on a Pi under 4 GB** and leaves Lyrion's own choice, **High**, on
@@ -78,7 +79,7 @@ Performance page. The player keeps 1 GB for itself and gives Lyrion the rest
 |---|---|---|---|
 | 1 GB | - | not offered | - |
 | 2 GB | about 0.8 GB | about 34,000 files (Normal) | the same |
-| 4 GB | about 2.7 GB | about 90,000 files (High; 61,362 **tested**) | about 187,000 files (61,362 **tested**) |
+| 4 GB | about 2.7 GB | about 90,000 files (High; **tested** below that) | about 187,000 files (**tested** below that) |
 | 8 GB | about 6.8 GB | about 240,000 files (High) | about 500,000 files |
 
 All but the tested figures are **calculated**; the 2 GB and 8 GB rows assume
@@ -91,7 +92,7 @@ many would on Normal (decision 18).
 
 ### Time
 
-| | Measured on `gexis` (Pi 4, 4 GB, Wi-Fi, a NAS share of 61,362 files) |
+| | Measured on `gexis` (Pi 4, 4 GB, Wi-Fi, a NAS share of tens of thousands of files) |
 |---|---|
 | First scan | **2 h 7 min**: 82 min reading the files, 45 min covers, artist pictures, search index and artwork |
 | Scan with nothing changed | **26 min**: 3 min checking the files, 21 min artist pictures |

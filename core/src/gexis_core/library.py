@@ -345,7 +345,7 @@ class LmsLibrary:
 
         **The sweep stores a cover per album we own, not per release group
         MusicBrainz knows** (ADR-0059, corrected 2026-09-24): keying on their
-        catalogue put 16,391 rows in the store for a 4,567-album library, and
+        catalogue put 16,391 rows in the store for a large library, and
         none of the extras is ever read.
         """
         result = await self._rpc(
@@ -358,8 +358,7 @@ class LmsLibrary:
         """Every album artist, `(id, name)`, for the artwork sweep.
 
         **All of them in one call**, which is what a sweep wants and what a
-        screen must never do: 917 on George's library against 7,296
-        contributors. Uncached deliberately - a sweep is the one caller that
+        screen must never do: 917 on George's library against thousands of contributors. Uncached deliberately - a sweep is the one caller that
         wants what LMS has now rather than what it had when the page opened.
         """
         result = await self._rpc(["artists", 0, 100000, "role_id:ALBUMARTIST"])

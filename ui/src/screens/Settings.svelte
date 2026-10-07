@@ -73,6 +73,31 @@
   let listError = $state(null);
   // The network being joined, and how that is going.
   let joinItem = $state(null);
+  //: ADR-0123: the connected network's details, unfolded under its line and
+  //: read again every 5 s while they are open - signal and speed move.
+  let netOpen = $state(false);
+  let netLive = $state(null);
+  // A speed never breaks between its number and its unit ("325 / Mb/s").
+  const keepUnit = (meta) => meta.replace(/(\d) ([GMk]b\/s)/, '$1\u00a0$2');
+  $effect(() => {
+    if (!netOpen) return;
+    let stop = false;
+    const read = async () => {
+      try {
+        const r = await fetch('/network/wifi');
+        const body = r.ok ? await r.json() : null;
+        if (!stop) netLive = body?.connected ? body : null;
+      } catch {
+        // A missed read keeps the last one on screen.
+      }
+    };
+    read();
+    const timer = setInterval(read, 5000);
+    return () => {
+      stop = true;
+      clearInterval(timer);
+    };
+  });
   let join = $state(null);
   let joinError = $state(null);
   // The backup being restored, while the shared progress card shows it -
@@ -1590,14 +1615,15 @@
                    are on is how the sheet is dismissed, and refusing it
                    leaves the sheet looking stuck (George, on the panel,
                    2026-09-20). -->
-              {@const inert = item.state === 'connected'}
+              {@const inert = item.state === 'connected' && !item.details}
               <button
                 class="item"
                 class:is-joined={joined}
                 class:item--static={inert}
                 type="button"
                 disabled={inert}
-                onclick={() => chooseItem(item)}
+                aria-expanded={item.state === 'connected' && item.details ? netOpen : undefined}
+                onclick={() => (item.state === 'connected' ? (netOpen = !netOpen) : chooseItem(item))}
               >
                 {#if item.bars}
                   <span class="bars" class:is-joined={joined}>
@@ -1609,10 +1635,18 @@
                 <span class="item__text">
                   <span class="item__title">
                     <span class="item__name">{item.name}</span>
-                    {#if item.state === 'locked'}<span class="lock"><span></span><span></span></span>{/if}
                   </span>
-                  {#if item.meta}<span class="item__meta" class:is-joined={joined}>{item.meta}</span>{/if}
+                  {#if item.meta}<span class="item__meta" class:is-joined={joined}>{keepUnit(item.state === 'connected' && netOpen && netLive?.name === item.name && netLive.speed ? `Connected · ${netLive.speed}` : item.meta)}</span>{/if}
                 </span>
+                <!-- The lock alone, at the end of the line before its action,
+                     leaves the name its room (George, 2026-10-07): closed
+                     where a password is still needed, open where one was
+                     given before. -->
+                {#if item.state === 'locked'}
+                  <span class="lock" role="img" aria-label="Password needed"><span></span><span></span></span>
+                {:else if item.secured}
+                  <span class="lock lock--open" role="img" aria-label="Password saved"><span></span><span></span></span>
+                {/if}
                 {#if item.state === 'saved'}
                   <!-- **Saved only, never the network in use.** Forgetting
                        the one the device is reachable over drops the daemon
@@ -1631,10 +1665,20 @@
                     onclick={(e) => { e.stopPropagation(); doForget(item); }}
                     onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); doForget(item); } }}
                   >Forget</span>
-                {:else if item.state === 'locked'}
-                  <span class="item__need">Password needed</span>
+                {/if}
+                {#if item.state === 'connected' && item.details}
+                  <span class="netchev" class:netchev--open={netOpen} aria-hidden="true"></span>
                 {/if}
               </button>
+              {#if item.state === 'connected' && item.details && netOpen}
+                <!-- ADR-0123: the connected network in detail, under its line
+                     rather than in a row of its own. -->
+                <dl class="netinfo">
+                  {#each (netLive?.name === item.name ? netLive.details : item.details) as [k, v] (k)}
+                    <div class="netinfo__row"><dt>{k}</dt><dd>{v}</dd></div>
+                  {/each}
+                </dl>
+              {/if}
             {/each}
             {#if sheet.hint}<div class="items__hint">{sheet.hint}</div>{/if}
           </div>
@@ -2289,9 +2333,15 @@
     background: var(--accent-lms);
   }
 
+  /* A sheet and its dimming sit above the phone's mini player (20) - as the
+     confirmations (60) and the full-screen picker (30) already did - and
+     below that picker. Under it, a tall sheet's Close and its last options
+     were covered on a laptop's screen (George, 2026-10-07). On the panel
+     both stay inside the screen layer, so nothing there changes. */
   .scrim {
     position: absolute;
     inset: 0;
+    z-index: 24;
     background: rgba(8, 12, 16, 0.62);
     /* No `backdrop-filter`: ADR-0041. A live blur of the screen behind a
        sheet costs this panel two thirds of its frames, whatever its radius
@@ -2307,6 +2357,7 @@
 
   .sheet {
     position: absolute;
+    z-index: 25;
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
@@ -2671,12 +2722,22 @@
     border-radius: 2px;
     background: rgba(233, 238, 242, 0.6);
   }
+  /* Open: the shackle lifted and free on one side. */
+  /* The closed lock's own shackle, in its own place: only its left leg
+     cut short, free of the body. Lifted or moved sideways, the open lock
+     read larger than the closed one (George, 2026-10-07); this way both
+     fill the same 13 x 15. */
+  .lock.lock--open span:last-child {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 100%, 50% 50%, 0 50%);
+  }
   .lock span:last-child {
     position: absolute;
     left: 3px;
     top: 0;
     width: 7px;
-    height: 8px;
+    /* Down to the body's top edge, not into it: the two translucent layers
+       overlapping drew a brighter square at each leg. */
+    height: 6px;
     border: 2px solid rgba(233, 238, 242, 0.6);
     border-bottom: none;
     border-radius: 4px 4px 0 0;
@@ -2748,17 +2809,6 @@
   }
   .forget:active {
     transform: scale(0.95);
-  }
-  .item__need {
-    flex-shrink: 0;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: rgba(233, 238, 242, 0.6);
-    max-width: 150px;
-    text-align: right;
-    text-wrap: pretty;
   }
 
   /* The search, while it is running. */
@@ -3354,5 +3404,55 @@
     /* Less the list's own foot padding, which already stands below the
        last row. */
     flex: 0 0 max(0px, calc(var(--foot-clear, 0px) - 30px));
+  }
+  /* ADR-0123: the connected network's details. */
+  .netinfo {
+    margin: -2px 0 8px;
+    padding: 10px 16px 12px 52px;
+    display: grid;
+    gap: 6px;
+  }
+  .netinfo__row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .netinfo dt {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+  }
+  .netinfo dd {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--ink-body);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  /* A narrow phone gives up the indent under the name before a value
+     breaks ("5 GHz · channel / 116" at 360 px). */
+  @media (max-width: 380px) {
+    .netinfo {
+      padding-left: 18px;
+    }
+  }
+  /* Not `.chev`: that one is drawn with its own two borders, and adding
+     a third drew two chevrons over each other. */
+  .netchev {
+    flex-shrink: 0;
+    width: 9px;
+    height: 9px;
+    border-right: 2px solid var(--ink-quiet);
+    border-bottom: 2px solid var(--ink-quiet);
+    transform: rotate(45deg);
+    margin: 0 2px 4px 0;
+    transition: transform var(--dur-fast) var(--ease);
+  }
+  .netchev--open {
+    transform: rotate(225deg);
+    margin-bottom: -4px;
   }
 </style>
