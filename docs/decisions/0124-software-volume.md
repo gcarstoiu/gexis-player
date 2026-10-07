@@ -1,11 +1,10 @@
 # ADR-0124 — Software volume, the owner's choice
 
-**Status:** **Proposed** — George, 2026-10-07: *"software volume as an option
+**Status:** **Accepted** — George, 2026-10-07 (*"All good. Agreed with your proposal"*, the rows, the 60 s safeguard and the wording included): *"software volume as an option
 for the user (completely his choice and can apply for example to hdmi devices
 - we make it clear it is not bit perfect and it is his decision)"*; then
 *"C. On any output. Users choice in the end, but with some clear notes that
-bit perfect doesn't apply anymore. Spotify and Bluetooth too."* The row below
-waits for his confirmation before it enters ADR-0022's inventory.
+bit perfect doesn't apply anymore. Spotify and Bluetooth too."* Its row is in ADR-0022's inventory.
 **Builds on:** [ADR-0018](0018-volume-and-output-modes.md) (Variable and
 Fixed), [ADR-0009](0009-logical-output-device.md) (one named output),
 [ADR-0085](0085-the-alsa-default-is-our-output.md), [ADR-0055](0055-which-output-the-device-plays-to.md).

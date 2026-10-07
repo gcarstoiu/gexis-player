@@ -1,11 +1,10 @@
 # ADR-0123 — The network in Settings: cable and Wi-Fi
 
-**Status:** **Proposed** — George, 2026-10-07, on what to add: *"cable network
+**Status:** **Accepted** — George, 2026-10-07 (*"All good. Agreed with your proposal"*, the rows, the 60 s safeguard and the wording included), on what to add: *"cable network
 connection setup, connection speed and signal strength in the connected WiFi
 overview"*; then *"A. Let's give some flexibility and allow manual
 introduction as well, not just showing. B. Agreed. See where everything fits
-so as not to make everything too crowded."* The rows below wait for his
-confirmation before they enter ADR-0022's inventory.
+so as not to make everything too crowded."* Its rows are in ADR-0022's inventory.
 **Builds on:** [ADR-0031](0031-first-boot-setup-access-point.md) (setup; on
 a cable, Wi-Fi is optional - amendment 8), [ADR-0104](0104-how-the-device-knows-it-needs-setup.md),
 [ADR-0022](0022-settings.md) (every setting inventoried).
