@@ -19,7 +19,12 @@ every release being skipped (ADR-0110 amended; `r<tag>/history`, signed;
 the first release published with a history is the first that can show it,
 and only to a device already running this updater - check it on the release
 after 0.9.3; (2) ADR-0123 step 2, Cable (needs a cable in gexis); (3)
-ADR-0124, software volume; (4) **ADR-0125, a problem report** and (5)
+ADR-0124, software volume; (4) **ADR-0125, a problem report - built
+2026-10-07** (`problem_report.py`, `POST /report`, the System row, the
+GitHub issue form; tuned against gexis's real journal; packages
+`0.9.2+git60.270b9bb` built, **not yet installed or tried end to end**:
+gexis went offline when George's IQaudio card went in; the e-mail route
+waits on the address) and (5)
 **ADR-0126, hardware reports from users** - both accepted 2026-10-07, rows
 in ADR-0022; **owed by George: the project e-mail address** for problem
 reports from people without GitHub.
