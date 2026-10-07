@@ -957,7 +957,16 @@ async def main() -> None:
                 await set_raw(card_output.control, card_output.scale.raw(db),
                               maximum=card_output.scale.raw_max)
         logger.info("volume: software volume %s at %s dB", "on" if on else "off", db)
+        # The switch is made in place (`_switch_output` no longer restarts
+        # this daemon), so what start-up does for software volume is done
+        # here too: the control made at the carried level, the card parked.
         await _switch_output()
+        base = outputs.resolve(settings.value("output_device"))
+        if on and base is not None:
+            await _start_software_volume(base, settings_store)
+        raw = await get_raw(outputs.SOFTVOL_CONTROL if on else (base.control if base else config.mixer_name))
+        if raw is not None:
+            state_store.set_volume_raw(raw)
 
     async def _rewrite_output_conf(reason: str) -> None:
         """Put the current output and tuning in `output.conf` and reopen.
@@ -3006,13 +3015,16 @@ async def main() -> None:
     if initial_raw is not None:
         state_store.set_volume_raw(initial_raw)
 
-    if chosen_output is not None and chosen_output.software:
+    if True:
         # ADR-0124: the software level kept across restarts - ALSA makes its
         # control again at 0 dB. Saved a second after it settles, not on
-        # every step of a ramp.
+        # every step of a ramp; only while the row is on (it can be switched
+        # on without a restart).
         level_save = {"task": None, "db": None}
 
         def _keep_software_level(state) -> None:
+            if not settings.value(SOFTWARE_VOLUME_KEY):
+                return
             db = state.volume.db if state.volume is not None else None
             if db is None or db == level_save["db"]:
                 return
