@@ -77,6 +77,8 @@
   //: read again every 5 s while they are open - signal and speed move.
   let netOpen = $state(false);
   let netLive = $state(null);
+  // A speed never breaks between its number and its unit ("325 / Mb/s").
+  const keepUnit = (meta) => meta.replace(/(\d) ([GMk]b\/s)/, '$1\u00a0$2');
   $effect(() => {
     if (!netOpen) return;
     let stop = false;
@@ -1633,10 +1635,18 @@
                 <span class="item__text">
                   <span class="item__title">
                     <span class="item__name">{item.name}</span>
-                    {#if item.state === 'locked'}<span class="lock"><span></span><span></span></span>{/if}
                   </span>
-                  {#if item.meta}<span class="item__meta" class:is-joined={joined}>{item.state === 'connected' && netOpen && netLive?.name === item.name && netLive.speed ? `Connected · ${netLive.speed}` : item.meta}</span>{/if}
+                  {#if item.meta}<span class="item__meta" class:is-joined={joined}>{keepUnit(item.state === 'connected' && netOpen && netLive?.name === item.name && netLive.speed ? `Connected · ${netLive.speed}` : item.meta)}</span>{/if}
                 </span>
+                <!-- The lock alone, at the end of the line before its action,
+                     leaves the name its room (George, 2026-10-07): closed
+                     where a password is still needed, open where one was
+                     given before. -->
+                {#if item.state === 'locked'}
+                  <span class="lock" role="img" aria-label="Password needed"><span></span><span></span></span>
+                {:else if item.secured}
+                  <span class="lock lock--open" role="img" aria-label="Password saved"><span></span><span></span></span>
+                {/if}
                 {#if item.state === 'saved'}
                   <!-- **Saved only, never the network in use.** Forgetting
                        the one the device is reachable over drops the daemon
@@ -1655,10 +1665,9 @@
                     onclick={(e) => { e.stopPropagation(); doForget(item); }}
                     onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); doForget(item); } }}
                   >Forget</span>
-                {:else if item.state === 'locked'}
-                  <span class="item__need">Password needed</span>
-                {:else if item.state === 'connected' && item.details}
-                  <span class="chev" class:chev--open={netOpen} aria-hidden="true"></span>
+                {/if}
+                {#if item.state === 'connected' && item.details}
+                  <span class="netchev" class:netchev--open={netOpen} aria-hidden="true"></span>
                 {/if}
               </button>
               {#if item.state === 'connected' && item.details && netOpen}
@@ -2706,6 +2715,15 @@
     border-radius: 2px;
     background: rgba(233, 238, 242, 0.6);
   }
+  /* Open: the shackle lifted and free on one side. */
+  .lock.lock--open {
+    width: 18px;
+  }
+  .lock.lock--open span:last-child {
+    left: 9px;
+    top: -3px;
+    height: 9px;
+  }
   .lock span:last-child {
     position: absolute;
     left: 3px;
@@ -2783,17 +2801,6 @@
   }
   .forget:active {
     transform: scale(0.95);
-  }
-  .item__need {
-    flex-shrink: 0;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: rgba(233, 238, 242, 0.6);
-    max-width: 150px;
-    text-align: right;
-    text-wrap: pretty;
   }
 
   /* The search, while it is running. */
@@ -3415,18 +3422,28 @@
     font-size: 14px;
     color: var(--ink-body);
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
-  .item .chev {
+  /* A narrow phone gives up the indent under the name before a value
+     breaks ("5 GHz · channel / 116" at 360 px). */
+  @media (max-width: 380px) {
+    .netinfo {
+      padding-left: 18px;
+    }
+  }
+  /* Not `.chev`: that one is drawn with its own two borders, and adding
+     a third drew two chevrons over each other. */
+  .netchev {
     flex-shrink: 0;
     width: 9px;
     height: 9px;
     border-right: 2px solid var(--ink-quiet);
     border-bottom: 2px solid var(--ink-quiet);
     transform: rotate(45deg);
-    margin: 0 6px 4px 8px;
+    margin: 0 2px 4px 0;
     transition: transform var(--dur-fast) var(--ease);
   }
-  .item .chev--open {
+  .netchev--open {
     transform: rotate(225deg);
     margin-bottom: -4px;
   }
