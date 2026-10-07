@@ -421,8 +421,13 @@ flowchart LR
   PeppyMeter is a separate native window under the same compositor. The UI
   only asks for it (`POST /peppy/show`, `/peppy/hide`). `core/.../peppy.py`
   raises or minimises that window through `wlrctl` (matching
-  `title:pygame window`). The meter process keeps rendering while hidden,
-  which is why showing it is instant. The core also raises it after five
+  `title:pygame window`). The meter process keeps running while hidden but
+  **does not draw** (ADR-0019 as amended 2026-10-07, Finding 112): the core
+  writes `/run/gexis/visualiser-shown` (`0` hidden, `1` before a show), the
+  driver skips its own drawing and slows to five frames a second while it
+  reads `0`, and the core waits 0.25 s after writing `1` before raising the
+  window, so the first frame shown is finished. Hidden while music plays it
+  takes about 6 % of a core instead of 57 %. The core also raises it after five
   minutes of unattended playback (ADR-0036). Its visibility is published as
   `panel.visualiser`, and the UI clears the idle screen when it goes up.
   While an update runs, the panel hides it.
