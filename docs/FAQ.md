@@ -23,7 +23,7 @@ problem entirely.
 
 **Will a library scan by the Lyrion server interrupt the music?**
 It should not. The Lyrion server runs at the lowest priority, and 40 minutes
-of playback during a full scan of a 61,000-file library had no gaps. The Pi
+of playback during a full scan of a large library had no gaps. The Pi
 does get warm during a scan (close to the temperature where a Pi 4 starts
 slowing itself down), so a heatsink or fan is recommended.
 
@@ -323,8 +323,8 @@ on the network and then their shares, with a login where needed; a share
 that does not announce itself can be added with *Add by address*.
 
 **How long does the first scan take?**
-On a 4 GB Pi over Wi-Fi, a library of about 61,000 files took about two
-hours, and a rescan with nothing changed about 26 minutes. The first scan
+On a 4 GB Pi over Wi-Fi, a library of tens of thousands of files took a
+couple of hours, and a rescan with nothing changed under half an hour. The first scan
 starts by itself when a folder is added.
 
 **The server's row says the scan stopped for lack of memory.**
