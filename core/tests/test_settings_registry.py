@@ -155,8 +155,6 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         # ADR-0120 §5, George's "1.a" (2026-10-05): the owner's own key,
         # TheAudioDB's shared test key without one.
         "theaudiodb_key",
-        # ADR-0120 §6 (2026-10-05): Pexels beside Pixabay, the owner's key.
-        "pexels_key",
         # ADR-0121 §7 (2026-10-05): the phone as the panel's touchpad.
         "phone_touchpad", "pointer_speed",
         # ADR-0121 §3, amended 2026-10-05: Claude Design's two cursor sets.
@@ -612,8 +610,9 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # **96**: the Lyrion Client's three rows made one (George, 2026-10-06).
     # **97**: Problem report (ADR-0125, 2026-10-07). **98**: Software volume
     # (ADR-0124). **99**: Report this hardware (ADR-0126). **98**: Software
-    # volume merged into Volume (ADR-0127).
-    assert len(rows) == 98
+    # volume merged into Volume (ADR-0127). **97**: Pexels removed (George,
+    # 2026-10-07).
+    assert len(rows) == 97
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
@@ -631,8 +630,9 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # 79 with the Lyrion Client's three rows made one (George, 2026-10-06).
     # 80 with Problem report (ADR-0125); 81 with Software volume (ADR-0124);
     # 82 with Report this hardware (ADR-0126).
-    # **81**: Software volume merged into Volume (ADR-0127).
-    assert len(rows) - len(kept) == 81
+    # **81**: Software volume merged into Volume (ADR-0127). **80**: Pexels
+    # removed.
+    assert len(rows) - len(kept) == 80
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():

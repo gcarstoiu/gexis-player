@@ -1929,7 +1929,7 @@ async def main() -> None:
                "wallpaper_key": None, "wallpaper_topics": None,
                # ADR-0120: read on every fetch. Missed when they were added -
                # shown and refusing every write until 2026-10-05.
-               "pexels_key": None, "theaudiodb_key": None,
+               "theaudiodb_key": None,
                "idle_weather": None,
                "weather_location": None, "idle_forecast": None,
                "idle_icons": None,

@@ -582,10 +582,7 @@ class StateServer:
         topics = self._settings.value("wallpaper_topics") or []
         # A bar asks for wide pictures (George, 2026-10-04).
         bar = skin_packs.family(*skin_packs.screen_size()) == "bar"
-        # ADR-0120 §3: Pexels too, with its own key, when one is typed.
-        pexels = str(self._settings.value("pexels_key") or "").strip() or None
-        answer = await self._wallpapers.next(key, list(topics), avoid=self._last_background, wide=bar,
-                                             pexels_key=pexels)
+        answer = await self._wallpapers.next(key, list(topics), avoid=self._last_background, wide=bar)
         if answer.get("file"):
             self._last_background = answer["file"]
             answer = {**answer, "url": f"/idle/wallpaper/{answer['file']}"}

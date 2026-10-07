@@ -110,6 +110,9 @@ MIGRATIONS: tuple[Migration, ...] = (
     # stays Fixed - the software stage means nothing at full level.
     Migration(note="output_mode: Hardware, Software or Fixed; software_volume merged into it",
               run=lambda store: _one_volume_row(store), drops=frozenset({"software_volume"})),
+    # George, 2026-10-07: "remove pexels completely as they are not providing
+    # API keys anymore".
+    drop("pexels_key", "pexels_key: Pexels removed"),
 )
 
 
