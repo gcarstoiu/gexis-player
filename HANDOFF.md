@@ -29,6 +29,19 @@ george.carstoiu@gexis.net added 2026-10-07) and (5)
 in ADR-0022; **owed by George: the project e-mail address** for problem
 reports from people without GitHub.
 
+**0.9.3 released 2026-10-07 on Testing (serial 26)**, from the tag `v0.9.3`
+(c54684c), built in a worktree at the tag (`~/projects/gexis-player-r093`,
+removable); image `image/deploy/2026-10-07-gexis-player-v0.9.3.img`, 111
+checks passed. **PR #51 (`release-0.9.3` -> `main`) waits for George.**
+**0.9.4 so far, on `phase-13d`:** Spotify's starting volume applied even when
+Spotify is slow (c2a8f53); the Pi-DAC PRO recognised and Tested (Finding 114);
+Bluetooth discoverable Always by default; Bluetooth takes the device when the
+phone plays again (George: "bluetooth fix works"); **software volume, step 1**
+(ADR-0124, Finding 115; tried silently on guestpi; not yet: HDMI through the
+player, a full reboot, Spotify/Bluetooth driving it). guestpi runs
+`0.9.3+git13`, software volume off, its volume and Lyrion's at 0. A fresh
+card defaults to the Stable channel, which does not exist until a promotion.
+
 **guestpi (2026-10-07):** George's second Pi with the IQaudio DAC+ and the
 13.3", flashed from v0.9.2 (my key on it), now on the preview
 `0.9.2+git60` + system `+git174`. **IQaudio and the 13.3" detected fine**
