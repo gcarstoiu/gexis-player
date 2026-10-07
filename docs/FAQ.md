@@ -352,8 +352,7 @@ it on again downloads it and starts a new library.
 **How do I see Lyrion's own menus and apps on the screen?**
 Switch on *Settings → Sources → Lyrion Client → Extended navigation*. The
 home screen then has My Music with every library view, Favourites, and Apps,
-including what Lyrion's apps add (for example Lyrion's own Qobuz app). It is
-off by default.
+including what Lyrion's apps add. It is off by default.
 
 ---
 
@@ -384,10 +383,6 @@ Switch on *Plexamp* on the Plugins page (it is downloaded from Plex). Then, in
 its *Claim token* row under *Settings → Sources*, paste a token from
 plex.tv/claim; the row then shows *Claimed*. *Claim again* moves the player
 to another Plex account, and registers it there as a new player.
-
-**Can I use Qobuz?**
-Through Lyrion: install Lyrion's own Qobuz app on the Lyrion server, and
-switch on *Extended navigation* to browse it from the screen.
 
 ---
 
