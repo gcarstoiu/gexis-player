@@ -51,6 +51,12 @@ Where the time goes on this screen has not been traced; Finding 112's trace
 was taken on `gexis`. Whether Home's 9 % is visible to a person was not
 asked.
 
+## Not taken further
+
+George, on the device: *"record the learnings about the 13.3 inch screen but
+do not investigate further. On device it feels fine."* The numbers stand as a
+measurement; nothing is changed for them, and no trace was taken.
+
 ## The tool, corrected
 
 The first two runs on this screen failed after their first scenes: the

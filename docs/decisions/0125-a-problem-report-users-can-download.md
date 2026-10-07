@@ -66,8 +66,8 @@ user has seen what goes.
 5. **How it reaches us - both ways** (George: *"give both options"*): the
    row links to a GitHub issue form, *"Report a problem"*, where the file is
    attached, and gives an e-mail address for people without a GitHub
-   account. **The address is owed:** a project address, never a personal
-   one (the repository is public).
+   account: **george.carstoiu@gexis.net** (George, 2026-10-07), shown as text
+   with a Copy button - a mail link may open nothing.
 
 ## Consequences
 

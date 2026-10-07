@@ -156,6 +156,19 @@
   //: The panel has nowhere to save a file, so there the sheet says where to
   //: open it instead.
   const REPORT_ISSUE = 'https://github.com/gcarstoiu/gexis-player/issues/new?template=problem-report.yml';
+  //: ADR-0125 decision 5: for people without a GitHub account (George,
+  //: 2026-10-07). Shown as text with Copy - a mail link may open nothing.
+  const REPORT_EMAIL = 'george.carstoiu@gexis.net';
+  let reportCopied = $state(false);
+  async function copyReportEmail() {
+    try {
+      await navigator.clipboard.writeText(REPORT_EMAIL);
+      reportCopied = true;
+      setTimeout(() => (reportCopied = false), 2000);
+    } catch {
+      // No clipboard here: the address stays on screen to copy by hand.
+    }
+  }
   let reportNote = $state('');
   let reportBusy = $state(false);
   let reportDone = $state(null);
@@ -1552,6 +1565,10 @@
             <p class="report__text">
               Read it, then attach it to a report on GitHub:
               <a class="report__link" href={REPORT_ISSUE} target="_blank" rel="noopener">Report a problem</a>.
+            </p>
+            <p class="report__text">
+              Or e-mail it to <span class="report__addr">{REPORT_EMAIL}</span>
+              <button type="button" class="report__copy" onclick={copyReportEmail}>{reportCopied ? 'Copied' : 'Copy'}</button>
             </p>
           {:else}
             <label class="report__label" for="report-note">What happened? (optional)</label>
@@ -3514,6 +3531,16 @@
     word-break: break-all;
   }
   .report__link { color: var(--accent-lms); }
+  .report__copy {
+    margin-left: 8px;
+    padding: 2px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(233, 238, 242, 0.2);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--ink);
+    font: inherit;
+    font-size: 13px;
+  }
   .report__label {
     font-family: var(--font-mono);
     font-size: 12px;
