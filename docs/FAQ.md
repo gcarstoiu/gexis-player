@@ -477,6 +477,13 @@ are not kept in backups, so enter them again.
 to 100 MB) to help track down a problem. It is on by default on the Testing
 channel; switching it off deletes the logs kept.
 
+**My sound card or screen is not marked Tested. Can I help?**
+Yes: open *Settings → System → Report this hardware* on a phone or computer,
+answer a few questions about how it plays and looks, and send the report it
+prepares on GitHub (a GitHub account is needed). The player fills in what it
+reads of the hardware itself - never a serial number or anything about you -
+and reports are public, so the next owner can see what works.
+
 **Something is wrong. How do I report it?**
 Open *Settings → System → Problem report* on a phone or computer on the same
 network, say in a line what happened, and tap *Download*. The player prepares
