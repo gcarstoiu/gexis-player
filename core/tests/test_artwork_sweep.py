@@ -199,7 +199,7 @@ class TestCovers:
         # as nothing, not skipped
         assert store.rows[(ALBUM_NAMESPACE, "isaac hayes\x1fnothing fanart has")] is None
         # **Only what this library holds.** Their catalogue had a release
-        # group we do not own; storing it put 16,391 rows in a 4,567-album
+        # group we do not own; storing it put 16,391 rows in a large
         # store and none of the extras was ever read.
         assert len(artwork(store)) == 3
         # one fanart call and one MusicBrainz lookup, for three albums

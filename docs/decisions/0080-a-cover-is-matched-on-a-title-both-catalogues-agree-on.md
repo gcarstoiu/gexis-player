@@ -108,9 +108,9 @@ Folding removes the `&`, and the phrase then matches nothing at all. Worse,
 folding is ASCII-only: `100 Jahre Strauß` becomes `100 jahre strau` — the `ß`
 is dropped rather than transliterated.
 
-**On George's library, 1,423 of 4,567 albums (31.2 %) carry a character
+**On George's library, 31.2 % of the albums carry a character
 folding removes**, against 506 (11.1 %) carrying a modifier. The two overlap
-very little: 1,435 albums, **31.4 %**, are affected by one or the other.
+very little: **31.4 %** of the albums, are affected by one or the other.
 
 So the decision above stands with one correction running through it: **both
 asks carry the title's own characters.**

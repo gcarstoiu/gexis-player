@@ -83,7 +83,7 @@ of `transfer_to_gexis`.
 - **Same-rate LMS↔Spotify only**, both sides confirmed at 44.1 kHz.
   Cross-rate and every Bluetooth-involving pair are **deferred by George's
   decision, 2026-09-12** — cross-rate has no content to test with (a
-  60,974-track library scan found zero non-44.1kHz files), and Bluetooth
+  large library scan found zero non-44.1kHz files), and Bluetooth
   pairs are not scriptable. Criterion 8's cross-rate half is **unmet and
   stays unmet**.
 - **LMS is driven by activation** (`power 1`), ADR-0027's designed

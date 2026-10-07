@@ -6,7 +6,7 @@ be that the album name contains modifiers that could be excluded."* How many
 of his albums carry one?
 **Amended the same day**, on the device: the modifiers are the *smaller*
 half. See §2.
-**Scope:** every album LMS holds for George — **4,567** — read from
+**Scope:** every album LMS holds for George — **thousands** — read from
 `slim.request ["albums","0","30000"]` on 2026-09-25 and put through `fold`
 (what the cover provider asked with until today) and `match_title` (what it
 asks with now, per [ADR-0080](../decisions/0080-a-cover-is-matched-on-a-title-both-catalogues-agree-on.md)).
@@ -17,7 +17,7 @@ not reach, not how many covers exist behind it.
 
 | | albums | share |
 |---|---|---|
-| total | 4,567 | |
+| total | thousands | |
 | **the reduction changes the query** | **506** | **11.1 %** |
 | fold to nothing at all (`+`, `÷`, `=`) | 3 | 0.07 % |
 
@@ -84,11 +84,11 @@ ASCII-only, so it does worse than remove punctuation:
 '100%'                  -> '100'
 ```
 
-| | albums | share |
-|---|---|---|
-| folding changes more than case | **1,423** | **31.2 %** |
-| carries a modifier (§1) | 506 | 11.1 % |
-| **one or the other** | **1,435** | **31.4 %** |
+| | share of the albums |
+|---|---|
+| folding changes more than case | **31.2 %** |
+| carries a modifier (§1) | 11.1 % |
+| **one or the other** | **31.4 %** |
 
 The two barely overlap. **The modifiers are 11 % and the folding is 31 %**,
 and the folding was invisible because nobody had asked MusicBrainz what it

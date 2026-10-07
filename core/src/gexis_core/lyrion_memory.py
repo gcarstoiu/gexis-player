@@ -4,7 +4,7 @@ George, 2026-10-03: *"I just wonder what happens if someone with 1 or 2 GB
 try a large library"*, then *"A plus B"*).
 
 Lyrion's scanner grows with the library: about 27 KB a file, 1,876 MB for
-Lyrion as a whole with George's 61,362 files (Finding 109). The unit may use
+Lyrion as a whole with George's tens of thousands of files (Finding 109). The unit may use
 the player's memory less 1 GB (`lyrion-memory-limit`). Here:
 
 - a player below 1.5 GB (a 1 GB Pi) is not offered the server at all;
@@ -26,7 +26,7 @@ STOPPED = Path("/var/lib/gexis/lyrion-scan-stopped.json")
 #: Lyrion a useful share (a 1 GB Pi reports about 900 MB).
 MIN_MB = 1536
 #: What the scanner adds per file, by Lyrion's "Database Memory Config"
-#: (`dbhighmem`), measured with George's 61,362 files (Finding 109): Normal
+#: (`dbhighmem`), measured with George's tens of thousands of files (Finding 109): Normal
 #: about 13 KB, High about 27 KB; Maximum's scanner is High's.
 PER_FILE_KB = {0: 13, 1: 27, 2: 27}
 #: Lyrion before its first file: the server, its cache, the kernel's share.

@@ -417,7 +417,7 @@ class Component extends DCLogic {
       isLib: lib, isArtists: s === 'lib-artists', isPlaylist: s === 'lib-playlist', isFolder: s === 'lib-folder',
       libHomeDisplay: s === 'lib-artists' ? 'none' : 'flex',
       libTitle: s === 'lib-artists' ? 'Artists' : s === 'lib-playlist' ? 'Evening' : 'Germany',
-      libCrumb: s === 'lib-artists' ? '7293 artists' : s === 'lib-playlist' ? '12 tracks \u00b7 47 min' : 'Radio \u00b7 By location',
+      libCrumb: s === 'lib-artists' ? 'thousands of artists' : s === 'lib-playlist' ? '12 tracks \u00b7 47 min' : 'Radio \u00b7 By location',
       artists: ARTISTS.map(a => ({ name: a[0], sub: a[1] })),
       letters: LETTERS.map((l, i) => ({ label: l, bg: i === 0 ? 'rgba(159,180,232,0.18)' : 'rgba(233,238,242,0.05)', line: i === 0 ? 'rgba(159,180,232,0.5)' : 'rgba(233,238,242,0.1)', ink: i === 0 ? '#9fb4e8' : 'rgba(233,238,242,0.78)' })),
       plTracks: TRACKS.map((t, i) => ({ num: String(i + 1).padStart(2, '0'), title: t[0], artist: t[1], dur: t[2] })),

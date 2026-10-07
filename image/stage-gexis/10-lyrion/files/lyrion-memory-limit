@@ -5,7 +5,7 @@
 # Lyrion server may use the player's memory less 1 GB, which the player
 # itself needs (measured: about 700 MB of Peppy, the screen's browser,
 # Plexamp and the core). Its scanner grows with the library - 1,876 MB for
-# George's 61,362 files - and a fixed 2 GB stopped that scan on a 4 GB Pi
+# George's tens of thousands of files - and a fixed 2 GB stopped that scan on a 4 GB Pi
 # while being more than a 2 GB Pi has.
 #
 # Run as root by gexis-lyrion.service before Lyrion starts, so a card moved

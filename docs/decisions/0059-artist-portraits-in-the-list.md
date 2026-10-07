@@ -36,7 +36,7 @@ Four measured facts shape it (Finding 054):
   ever had a fanart call made for it**, because nothing in the list asks.
   89 searches at ~3.4 s plus 870 fanart calls at ~0.4 s is **ten to fifteen
   minutes** — not the three to nine hours this record first computed for all
-  7,296 contributors, and not the "two to eight minutes" that followed it,
+  thousands of contributors, and not the "two to eight minutes" that followed it,
   which counted the searches alone.
 - **fanart does not have a portrait for every artist.** Of three ids tried
   directly, one came back with none. The LMS fallback carries a real share
@@ -50,7 +50,7 @@ evaporates.
 
 ## The options
 
-**A — one background sweep.** Walk all 7,296 once, at MusicBrainz's pace,
+**A — one background sweep.** Walk all thousands once, at MusicBrainz's pace,
 and stop. *For:* the list is complete and instant afterwards, and it is a
 single job with a progress line. *Against:* three to nine hours on first
 run; asks MusicBrainz about thousands of artists nobody will look at; the
@@ -157,7 +157,7 @@ seven hours album art was first estimated at alone.
 ### Built 2026-09-24, and what two corrections cost
 
 **Measured on George's own library** (Finding 054 §11): portraits **917 of
-917 in seven minutes, 525 found**; covers **2,289 of 4,567 albums (50%)**.
+917 in seven minutes, 525 found**; covers **half the albums (50 %)**.
 About 43% of artists and half the albums keep LMS's picture, which is
 fanart's coverage rather than a fault.
 
@@ -172,7 +172,7 @@ rather than the run:
   to 11%; covers rose four points, so the rest of the gap is fanart's.
 - **The store held a catalogue, not a library.** Keying on every release
   group those artists ever made put 16,391 rows in the store for a
-  4,567-album library. It now walks this library's albums and looks each one
+  large library. It now walks this library's albums and looks each one
   up in theirs: **4,334 rows**, one per album owned.
 
 **Two more, found when George said the grid had not changed** (*"the artist

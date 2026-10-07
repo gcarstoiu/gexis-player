@@ -90,12 +90,12 @@ Grouped by us into five (a first pass — **regroup or rename freely**):
 
 | Group | Entry | Opens | Count (George's) | Pictures | First open |
 |---|---|---|---|---|---|
-| **Artists** | All Artists | artists | 8,393 | **none** | 48 ms |
+| **Artists** | All Artists | artists | thousands | **none** | 48 ms |
 | | Composers | artists | 3,617 | none | 19 ms |
 | | Popular Artists | artists, by play count | 121 | almost none | 35 ms |
 | | New Artists | artists, newest first | 948 | none | 118 ms |
 | | Recently Played Artists | artists | 57 | almost none | 16 ms |
-| **Albums** | Albums | albums | 4,780 | covers | 18 ms |
+| **Albums** | Albums | albums | thousands | covers | 18 ms |
 | | Random Albums | albums, shuffled each time | 50 | covers | 33 ms |
 | | Compilations | albums | 122 | covers | 11 ms |
 | | Works | classical works | 78 | covers | 20 ms |
@@ -103,7 +103,7 @@ Grouped by us into five (a first pass — **regroup or rename freely**):
 | | Recently Updated Albums | albums | 100 | covers | 44 ms |
 | | Popular Albums | albums, by play count | 100 | covers | 14 ms |
 | **Tracks** | Top Tracks | tracks, play count in the title — *"Sogno (189)"* | 536 | covers | 145 ms |
-| | Flop Tracks | tracks least played | **65,287** | covers | 335 ms |
+| | Flop Tracks | tracks least played | **tens of thousands** | covers | 335 ms |
 | **By category** | Genres | genres | 326 (11 with **no name**) | none | 11 ms |
 | | Years | years | 78 | none | 10 ms |
 | | Music Folder | folders, then files | 1 at the top | none | 22 ms |
@@ -179,11 +179,11 @@ rules for 711–853 tall) and the **Bar family** (1280 × 400 and 1480 × 320):
    entries, each with its own shape and colour.
 3. **Category lists without pictures** — genres, years, folders — from 6
    entries to 326; and the **unnamed** entry.
-4. **Artist lists, with no pictures**, from 57 to 8,393 — do they need the
+4. **Artist lists, with no pictures**, from 57 to thousands — do they need the
    Artists grid's letter rail (`screens.md` §5)?
-5. **Album and playlist lists with covers**, from 2 to 4,780 — grid, list,
+5. **Album and playlist lists with covers**, from 2 to thousands — grid, list,
    or both.
-6. **Track lists** — Top Tracks, an album's tracks, 65,287 Flop Tracks —
+6. **Track lists** — Top Tracks, an album's tracks, tens of thousands Flop Tracks —
    following the row-actions rule (Play · Play next · Add).
 7. **An app's album or playlist page**, with its text lines.
 8. **An app's first level** — Qobuz's ten mixed entries, YouTube's eleven
