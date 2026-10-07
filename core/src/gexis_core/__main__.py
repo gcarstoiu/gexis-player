@@ -361,6 +361,11 @@ def read_timezone(localtime: Path = Path("/etc/localtime")) -> str | None:
 
 #: ADR-0124: the row, and where the software level is kept across restarts -
 #: ALSA forgets a software control with its PCM, and makes it again at 0 dB.
+#: How long after a change of output a renderer's first report above the level
+#: playing is answered rather than followed: Spotify's came 12 s after its
+#: restart on guestpi (2026-10-07), so twice that.
+RESTART_HOLD_S = 30.0
+
 #: ADR-0127: one row, `output_mode` - Hardware, Software or Fixed.
 VOLUME_KEY = "output_mode"
 HARDWARE, SOFTWARE, FIXED = "Hardware", "Software", "Fixed"
@@ -681,10 +686,11 @@ async def main() -> None:
         if again is not None and value > again and supervisor.active == renderer_id:
             logger.info("volume: %s asked for %s/%s just after starting at %s; keeping the starting volume",
                         renderer_id, value, steps, again)
-            adapter = adapters.get(renderer_id) or plugin_adapters.get(renderer_id)
-            if adapter is not None:
-                asyncio.ensure_future(adapter.set_volume(again))
-                start_guard.told(renderer_id, time.monotonic())
+            # Through the renderer's own channel - its API, or for Bluetooth
+            # the phone's level over AVRCP (ADR-0053) - which is the level
+            # already playing, never the value it reported.
+            asyncio.ensure_future(remote.send(held))
+            start_guard.told(renderer_id, time.monotonic())
             return
         remote.set_steps(renderer_id, steps)
         remote.report(renderer_id, value)
@@ -736,6 +742,13 @@ async def main() -> None:
             # been holding it since (ADR-0054 §1).
             value, steps = bluetooth_volume.level, bluealsa_volume.STEPS
             if value is None:
+                # **The phone's own level, arriving later, is not a request**
+                # (George, guestpi, 2026-10-07: *"started lower and then as soon
+                # as I increased the volume it went higher"* - the phone's first
+                # report, 7 s in, was its remembered 56/127, far above what was
+                # playing). Held like a starting volume: a first report above
+                # the level playing is answered with that level.
+                _hold_the_level_playing(renderer_id)
                 return False
             logger.info("volume: bluetooth says it is at %s on acquisition", value)
             report_renderer_volume(renderer_id, value, steps)
@@ -753,6 +766,18 @@ async def main() -> None:
             renderer_id, value, getattr(adapter, "VOLUME_STEPS", 100)
         )
         return True
+
+    def _hold_the_level_playing(renderer_id: str, untold_max_s: float | None = None) -> None:
+        """Arm the start guard at the level playing now, for a renderer that
+        has not said where it is (start_guard)."""
+        if volume_fixed_output():
+            return
+        volume = state_store.state.volume
+        raw = mute.audible_raw(volume.raw if volume is not None else None)
+        if raw is None:
+            return
+        start_guard.handed(renderer_id, hardware_raw_to_renderer_value(raw, 100), time.monotonic(),
+                           told=False, untold_max_s=untold_max_s)
 
     async def hand_level_to(renderer_id: str, adapter) -> bool:
         """**ADR-0054 §5, amended 2026-09-26: the level already playing carries
@@ -955,6 +980,14 @@ async def main() -> None:
         # (`VolumeBridge.set_mixer_name`), and the restart was most of what
         # made the switch feel slow - the panel lost its websocket and
         # everything with it.
+        # **A renderer restarted under the source playing says nothing true
+        # about the volume** (George, guestpi, 2026-10-07: Spotify jumped to
+        # full level 12 s after Volume went from Hardware to Software -
+        # go-librespot's first report after its restart was 100). The source
+        # keeps the device across the restart, so no takeover arms the start
+        # guard; this does, for as long as a phone takes to reconnect.
+        if supervisor.active is not None:
+            _hold_the_level_playing(supervisor.active, untold_max_s=RESTART_HOLD_S)
         logger.info("outputs: starting the renderers again for %s", chosen.label)
         await asyncio.create_subprocess_exec(
             "systemctl", "restart", "squeezelite.service", "go-librespot.service",
