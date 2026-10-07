@@ -54,6 +54,7 @@
  "pointer_speed",
  "pointer_style",
  "power",
+ "problem_report",
  "reboot",
  "reclaim_lms",
  "record_speed",

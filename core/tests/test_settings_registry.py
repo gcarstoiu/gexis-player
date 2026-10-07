@@ -163,6 +163,8 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         "pointer_style",
         # ADR-0118 B (2026-10-05): Lyrion's own menus on the home screen.
         "lms_extended_nav",
+        # ADR-0125 (2026-10-07): the problem report, downloaded.
+        "problem_report",
         # ADR-0055, 2026-09-23: the design has no output picker, because
         # the design did not know the device has four playback outputs and
         # that two of them cannot be turned down.
@@ -602,7 +604,8 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # **95**: Phone touchpad and Pointer speed (ADR-0121). **96**: Pointer
     # style (ADR-0121, amended). **97**: Extended navigation (ADR-0118).
     # **95**: the Lyrion Client's three rows made one (George, 2026-10-06).
-    assert len(rows) == 95
+    # **96**: Problem report (ADR-0125, 2026-10-07).
+    assert len(rows) == 96
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
@@ -616,8 +619,9 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # logs (ADR-0116); 75 with TheAudioDB key (ADR-0120); 76 with Pexels
     # API key (ADR-0120); 78 with Phone touchpad and Pointer speed (ADR-0121);
     # 79 with Pointer style; 80 with Extended navigation (ADR-0118); 78 with
-    # the Lyrion Client's three rows made one (George, 2026-10-06).
-    assert len(rows) - len(kept) == 78
+    # the Lyrion Client's three rows made one (George, 2026-10-06); 79 with
+    # Problem report (ADR-0125).
+    assert len(rows) - len(kept) == 79
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():

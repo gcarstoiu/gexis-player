@@ -709,6 +709,10 @@ class Settings:
             logger.warning("settings: what %s cannot offer is unknown: %s", key, exc)
             return None
 
+    def all_rows(self) -> list[dict]:
+        """Every row, plugins' included, in the registry's order."""
+        return list(self._rows.values())
+
     def value(self, key: str) -> Any:
         row = self.row(key)
         blocked = self._blocked(key)
