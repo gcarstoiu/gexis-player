@@ -45,13 +45,17 @@ Either the output has no volume control of its own (HDMI is one), or
 *Settings → Audio → Output mode* is set to *Fixed*. Fixed sends the full
 level all the time, for an amplifier that sets the volume itself; the screen
 shows a padlock instead of a slider. To get the slider back, set Output mode
-to *Variable*. Turn the amplifier down before switching to Fixed.
+to *Variable*. Turn the amplifier down before switching to Fixed: in Fixed,
+*Maximum volume* and Spotify's *Starting volume* no longer apply (both rows
+are hidden), and every source plays at full level.
 
 **Can the player be stopped from ever playing too loud?**
 Yes: *Settings → Audio → Maximum volume*. Set it to 80 and the player is never
 louder than 80 % of its range, from any source. 100 % on the screen, in
 Lyrion and on a phone then all mean that level, so no control shows a number
-louder than what comes out.
+louder than what comes out. It applies only with *Output mode* set to
+*Variable*; in *Fixed* the player always sends the full level, and the
+amplifier is what limits the volume.
 
 **Spotify started much louder than the music before it. Can that be avoided?**
 *Settings → Sources → Spotify Connect → Starting volume* (default 60 %) is the
@@ -59,7 +63,8 @@ loudest Spotify starts at when it takes over, whatever the Spotify app was
 last set to. A lower level is kept; a higher one comes down to the setting.
 For the first few seconds the player holds that level even if the phone sends
 its own, higher one. (Spotify's loudness normalisation is off on the player,
-so at full volume it is as loud as Lyrion.)
+so at full volume it is as loud as Lyrion.) Like *Maximum volume*, it applies
+only with *Output mode* set to *Variable*.
 
 **The bottom of the volume slider is very quiet, or the middle is too loud.**
 *Settings → Audio → Volume curve* sets how the slider's travel maps to

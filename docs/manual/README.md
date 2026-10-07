@@ -104,7 +104,8 @@ elsewhere (a phone, a Lyrion app) can open the drawer too
 
 With **Output mode** set to *Fixed*, the player always plays at full level
 for an amplifier that sets the volume; the button then shows a padlock and
-the drawer explains why.
+the drawer explains why. *Maximum volume* and Spotify's *Starting volume* do
+not apply in Fixed, and their rows are hidden.
 
 ## 3. The library
 
@@ -318,7 +319,7 @@ Changes take effect at once unless the row says otherwise.
 | Output | Where the sound goes. Over HDMI the volume is fixed, the sound is not bit-perfect and the visualiser does not move. |
 | Sound card board | Most boards and every USB DAC are found by themselves. A board that is not (it does not show under Output) can be chosen here. |
 | Output mode | *Variable*: the volume is set on the player. *Fixed*: the player always plays at full level, for an amplifier that sets the volume itself. Applies when playback next stops. |
-| Maximum volume | The loudest the player will go, on any input. At 80, 100 % on every control means that level. |
+| Maximum volume | The loudest the player will go, on any input. At 80, 100 % on every control means that level. Shown only with Output mode on *Variable*. |
 | Volume curve | How the slider's travel maps to loudness. *Cubic* (half travel is −15.5 dB) is the usual shape; *Linear* puts half travel at −30 dB. |
 
 ### Sources — *Renderers and services*
@@ -329,7 +330,7 @@ Changes take effect at once unless the row says otherwise.
 | Lyrion Client: Server | Which Lyrion server. Servers announce themselves on the network; typing an address is the fallback. |
 | Lyrion Client: Extended navigation | Lyrion's own menus on Home: My Music, Favourites, Apps (section 4). |
 | Spotify Connect: Enabled | The player appears as a Spotify Connect device. |
-| Spotify Connect: Starting volume | The loudest Spotify starts at when it takes over. |
+| Spotify Connect: Starting volume | The loudest Spotify starts at when it takes over. Shown only with Output mode on *Variable*. |
 | Bluetooth: Enabled | The player accepts Bluetooth audio. |
 | Bluetooth: Pairing | *Confirmation* shows a six-digit code on the panel to accept; *PIN-free* pairs anything in range. |
 | Bluetooth: Discoverable | Whether phones can find the player: *Always*, *3 min after boot* (the default) or *Off*. |
