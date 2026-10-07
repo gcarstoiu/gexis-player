@@ -5,6 +5,26 @@ Every release of Gexis Player and its notes, newest first. Generated from
 edit that file, not this one. The player shows the last 10 under
 Settings → System → Change logs.
 
+## 0.9.3 — 7 October 2026
+
+### New
+
+- Settings → System → Problem report prepares one file with the player's logs, versions, hardware and settings, to attach to a report of a problem on GitHub or by e-mail. Addresses, names, networks, shares, keys and what is played are taken out on the player first. It is downloaded on a phone or computer.
+- Settings → Device → Wi-Fi shows the connected network's signal, speed, band and channel. Secured networks show a lock, open where the password is already saved.
+- The user manual, a FAQ, the hardware requirements and a technical guide are on GitHub, linked from the project page.
+
+### Fixed
+
+- Screens open faster while music plays: the visualiser no longer draws while it is hidden.
+- Check for updates only checks; it no longer installs when Updates is set to Automatic.
+- On a phone, the last setting is no longer hidden behind the volume bar; on a computer, the bar no longer covers a sheet's buttons.
+- Setting up a new card, setup's screens fit the attached screen, and a bar screen is turned to landscape before setup starts.
+- A visualiser skin download no longer holds up Spotify or Bluetooth: while the player is in use, it downloads more slowly.
+
+### Good to know
+
+- From the next update on, the update screen shows the notes of every release it skips, and the install step's progress moves from the start.
+
 ## 0.9.2 — 6 October 2026
 
 ### New
