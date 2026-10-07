@@ -75,7 +75,7 @@ from gexis_core.lyrion_shares import Shares as LyrionShares
 from gexis_core.fanart import Fanart
 from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, TrackMetadata
-from gexis_core import hardware_report, settings_migrations, updates
+from gexis_core import hardware_report, settings_migrations, settling, updates
 from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import InvalidValue, Settings, UnknownSetting, load_registry
 from gexis_core.splash import Splash
@@ -2857,6 +2857,54 @@ async def main() -> None:
             await asyncio.sleep(1 if view.get("active") else 3)
 
     asyncio.ensure_future(_follow_updates())
+
+    async def _follow_settling() -> None:
+        """**ADR-0128: the first start after setup, until it has settled.**
+        What setup chose to wait for, read against the downloads' own state
+        every two seconds while there is anything to wait for. Everything
+        finished: *Ready*, briefly, then gone. Something failed: it stays
+        until the owner's OK (`/settling/done`) - George: "Leave it for
+        settings but inform user"."""
+        ready_since = None
+        while True:
+            record = await asyncio.to_thread(settling.read)
+            view = settling.view(record, _all_components()) if record else None
+            if view and view["phase"] == "ready":
+                ready_since = ready_since or time.monotonic()
+                if time.monotonic() - ready_since > settling.READY_S:
+                    await asyncio.to_thread(settling.end)
+                    view = None
+            else:
+                ready_since = None
+            state_store.set_settling(view)
+            await asyncio.sleep(2 if view else 10)
+
+    asyncio.ensure_future(_follow_settling())
+
+    def _settling_done() -> None:
+        settling.end()
+        state_store.set_settling(None)
+
+    def _offered_plugins() -> list[dict]:
+        """ADR-0128 decision 1: every plugin the release ships beyond the
+        built-in sources - its switch, what it downloads and from where, and
+        the notice it must show first (ADR-0098)."""
+        pins = components.pins()
+        out = []
+        for plugin in installed_plugins:
+            if plugin.built_in or plugin.uploaded:
+                continue
+            component = downloads.get(plugin.id)
+            pin = pins.get(component) or {} if component else {}
+            out.append({
+                "id": plugin.id, "name": plugin.name,
+                "row": plugin.enabled_row or f"{plugin.id}.enabled",
+                "summary": plugin.summary or (f"Downloaded from {pin.get('FROM')}." if pin.get("FROM") else None),
+                "notice": plugin.notice,
+                "component": component,
+                "from": pin.get("FROM"),
+            })
+        return out
     # ADR-0111: the pack this screen wants every few minutes - and now, once
     # the attached screen has been compared (below), so a start that
     # switches screens does not first fetch the old screen's pack.
@@ -3050,7 +3098,7 @@ async def main() -> None:
             return False
 
     setup_network = SetupNetwork(on_change=state_store.set_setup)
-    setup_flow = SetupFlow(setup_network, settings, reboot=_reboot)
+    setup_flow = SetupFlow(setup_network, settings, reboot=_reboot, plugins=_offered_plugins)
     state_server = StateServer(
         state_store,
         host=config.state_host,
@@ -3102,6 +3150,7 @@ async def main() -> None:
         park=_park_renderers,
         screen_answer=_screen_answer,
         screen_new_answer=_screen_new_answer,
+        settling_done=_settling_done,
         on_painted=_screen_painted,
         upload_plugin=_upload_plugin,
         uninstall_plugin=_uninstall_plugin,

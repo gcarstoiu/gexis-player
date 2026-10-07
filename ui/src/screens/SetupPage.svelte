@@ -33,6 +33,7 @@
     ['music', 'Music', '#9fb4e8'],
     ['display', 'Screen', '#8fd9a8'],
     ['visualiser', 'Visualiser', '#e8c27e'],
+    ['plugins', 'Plugins', '#b4a6e8'],
     ['review', 'Review', '#f2a48f']
   ];
   const last = STEPS.length;
@@ -71,6 +72,19 @@
   let headless = $state(false);
   //: ADR-0111 decision 4: asked, never assumed. null until answered.
   let visualiser = $state(null);
+  //: ADR-0128: every plugin the release ships, and the ones chosen (ids).
+  //: Off unless chosen; one with a notice (Plexamp, ADR-0098) shows it first.
+  let offered = $state([]);
+  let chosenPlugins = $state([]);
+  let noticeFor = $state(null);
+  function togglePlugin(p) {
+    if (chosenPlugins.includes(p.id)) chosenPlugins = chosenPlugins.filter((x) => x !== p.id);
+    else if (p.notice && noticeFor !== p.id) noticeFor = p.id;
+    else {
+      chosenPlugins = [...chosenPlugins, p.id];
+      noticeFor = null;
+    }
+  }
   //: ADR-0109 as amended 2026-10-02: the restart will ask Keep this screen?
   //: on the panel, which this page says before the phone is put down.
   let keepQuestion = $state(false);
@@ -191,6 +205,7 @@
       try { saved = await json('/setup/answers'); } catch { /* a fresh start */ }
       try { rows = rowsOf(await json('/settings')); } catch { /* defaults below */ }
       await loadScreens();
+      try { offered = await json('/setup/plugins'); } catch { offered = []; }
       outputs = rows.output_device?.options ?? [];
       zones = rows.timezone?.options ?? [];
       let phoneTz = null;
@@ -220,6 +235,8 @@
       if (had) scOpen = { [had.maker]: true };
       // Set up again: what the device has (a kept gexis-skins counts).
       visualiser = saved.visualiser ?? (setup?.needed ? null : (rows.visualiser_skins?.value ?? null));
+      chosenPlugins = saved.plugins ?? (setup?.needed ? []
+        : offered.filter((p) => rows[`${p.id}.enabled`]?.value === true).map((p) => p.id));
       hidden = !!saved.hidden;
       hasPassword = !!saved.has_password;
       joinError = saved.error ?? null;
@@ -250,6 +267,7 @@
       case 'music': return { lms_mode: lmsMode, lms: lmsMode === 'address' ? (lms.trim() || null) : null, spotify, bluetooth: bt };
       case 'display': return headless ? { headless: true } : { headless: false, screen: chosen };
       case 'visualiser': return { visualiser };
+      case 'plugins': return { plugins: chosenPlugins };
       default: return {};
     }
   }
@@ -298,7 +316,7 @@
   //: over, and the setting left as it is.
   const noVisualiser = $derived(headless || !chosenModel?.skins);
   function skipped(n) {
-    return noVisualiser && STEPS[n]?.[0] === 'visualiser';
+    return (noVisualiser && STEPS[n]?.[0] === 'visualiser') || (!offered.length && STEPS[n]?.[0] === 'plugins');
   }
   function back() {
     step -= skipped(step - 1) ? 2 : 1;
@@ -408,7 +426,8 @@
     ['Library', lmsMode === 'off' ? 'Not used' : lmsMode === 'address' ? lms.trim() : lmsMode === 'find' ? 'Found once on your network' : 'Not chosen', 4],
     ['Services', [spotify ? 'Spotify Connect' : null, bt ? 'Bluetooth' : null].filter(Boolean).join(' · ') || 'Lyrion only', 4],
     ['Screen', headless ? 'Headless' : chosenModel ? `${chosenModel.maker} ${shortOf(chosenModel)} · ${chosenModel.width} × ${chosenModel.height}` : 'Not chosen', 5],
-    ...(noVisualiser ? [] : [['Visualiser', visualiser === true ? `Install · ${chosenModel?.skin_count ? `${chosenModel.skin_count} skins, ` : ''}${packSize}` : visualiser === false ? 'None' : 'Not chosen', 6]])
+    ...(noVisualiser ? [] : [['Visualiser', visualiser === true ? `Install · ${chosenModel?.skin_count ? `${chosenModel.skin_count} skins, ` : ''}${packSize}` : visualiser === false ? 'None' : 'Not chosen', 6]]),
+    ...(offered.length ? [['Plugins', offered.filter((p) => chosenPlugins.includes(p.id)).map((p) => p.name).join(' · ') || 'None', 7]] : [])
   ]);
 </script>
 
@@ -778,6 +797,30 @@
               <div class="note-card" style="--bar: #e8c27e">
                 <span class="bar"></span>
                 <span>The designs are made by the PeppyMeter community, and many show the faces of real hi-fi equipment.</span>
+              </div>
+            </section>
+          {:else if id === 'plugins'}
+            <!-- ADR-0128 (George, 2026-10-07: "All"): every plugin the
+                 release ships, off unless chosen. Each downloads once the
+                 player is on your network, and the screen waits for it. -->
+            <section class="pane">
+              <div>
+                <h1>Anything else to install?</h1>
+                <p class="sub">Each is downloaded once the player is on your network, and the screen shows it arriving. All can be switched on or off later under Plugins.</p>
+              </div>
+              <div class="list">
+                {#each offered as p (p.id)}
+                  <button class="net" class:sel={chosenPlugins.includes(p.id)} onclick={() => togglePlugin(p)}>
+                    <span class="grow"><span class="nm">{p.name}</span>{#if p.summary}<span class="meta plain">{p.summary}</span>{/if}</span>
+                    <span class="toggle" class:on={chosenPlugins.includes(p.id)}><span></span></span>
+                  </button>
+                  {#if noticeFor === p.id}
+                    <div class="note-card" style="--bar: #b4a6e8">
+                      <span class="bar"></span>
+                      <span>{p.notice} <b>Tap {p.name} again to switch it on.</b></span>
+                    </div>
+                  {/if}
+                {/each}
               </div>
             </section>
           {:else if id === 'review'}

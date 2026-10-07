@@ -147,6 +147,7 @@ class StateServer:
         park=None,
         screen_answer=None,
         screen_new_answer=None,
+        settling_done=None,
         on_painted=None,
         upload_plugin=None,
         uninstall_plugin=None,
@@ -231,6 +232,7 @@ class StateServer:
         #: from the panel only.
         self._screen_answer = screen_answer
         self._screen_new_answer = screen_new_answer
+        self._settling_done = settling_done
         #: The panel's first frame starts that question's countdown.
         self._on_painted = on_painted
         #: ADR-0106: a package from a phone or computer, and taking one away.
@@ -1544,6 +1546,24 @@ class StateServer:
         report = await asyncio.to_thread(self._screen_seen)
         return web.json_response(setup_flow.screen_choices(report))
 
+    async def _handle_setup_plugins(self, request: web.Request) -> web.Response:
+        """ADR-0128: the Plugins step - every plugin the release ships, with
+        what it is, where it downloads from, and its notice."""
+        closed = self._setup_closed()
+        if closed is not None:
+            return closed
+        offered = self._setup_flow.offered()
+        return web.json_response([{k: p.get(k) for k in ("id", "name", "summary", "notice", "from", "component")}
+                                  for p in offered])
+
+    async def _handle_settling_done(self, request: web.Request) -> web.Response:
+        """ADR-0128: the owner's OK on a settling screen that names a
+        download that did not finish."""
+        if self._settling_done is None:
+            return web.json_response({"error": "not wired up"}, status=503)
+        self._settling_done()
+        return web.json_response({"ok": True})
+
     async def _handle_setup_finish(self, request: web.Request) -> web.Response:
         closed = self._setup_closed()
         if closed is not None:
@@ -2012,6 +2032,8 @@ class StateServer:
         app.router.add_get("/setup/networks", self._handle_setup_networks)
         app.router.add_get("/setup/screen", self._handle_setup_screen)
         app.router.add_post("/setup/finish", self._handle_setup_finish)
+        app.router.add_get("/setup/plugins", self._handle_setup_plugins)
+        app.router.add_post("/settling/done", self._handle_settling_done)
         # ADR-0101: the phone's idle toggle, and the panel saying what it shows.
         app.router.add_post("/panel/idle/{action}", self._handle_idle_request)
         app.router.add_post("/panel/shown", self._handle_panel_shown)

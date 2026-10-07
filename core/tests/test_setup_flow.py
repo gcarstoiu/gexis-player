@@ -29,6 +29,7 @@ class FakeSettings:
 
 def make(tmp_path, nm, settings=None, **kw):
     kw_servers = {"servers": kw.pop("servers", [])}
+    offered = kw.pop("plugins", [])
     net, clock = setup(tmp_path, nm, **kw)
     countries, reboots = [], []
 
@@ -47,6 +48,7 @@ def make(tmp_path, nm, settings=None, **kw):
         net, settings or FakeSettings(), reboot=reboot,
         answers=tmp_path / "answers.json", marker=tmp_path / "setup-done",
         set_country=country, find_servers=find, sleep=clock.sleep,
+        plugins=lambda: offered, settling_path=tmp_path / "settling.json",
     )
     return flow, net, clock, countries, reboots
 
@@ -289,3 +291,45 @@ def test_the_phone_is_told_in_words_not_the_core_s_text():
     assert sf.said("choose a screen or headless, not both") == "Choose a screen or Headless, not both."
     for raw in ("answers must be an object", "unknown answer colour", "step must be text", "setup is not wired up"):
         assert sf.said(raw) == "Something went wrong saving that. Try again."
+
+
+PLUGINS = [
+    {"id": "plexamp", "name": "Plexamp", "row": "plexamp.enabled", "component": "plexamp", "notice": "Plex terms."},
+    {"id": "lyrion-server", "name": "Lyrion Server", "row": "lyrion-server.enabled", "component": "lyrion"},
+    {"id": "beszel", "name": "Beszel", "row": "beszel.enabled", "component": None},
+]
+
+
+def test_only_offered_plugins_are_an_answer(tmp_path):
+    """ADR-0128: the Plugins step's answer is a list of what was offered."""
+    flow, *_ = make(tmp_path, FakeNM(devices=NOTHING), plugins=PLUGINS)
+    assert flow.save({"plugins": ["plexamp", "beszel"]})["plugins"] == ["beszel", "plexamp"]
+    with pytest.raises(ValueError):
+        flow.save({"plugins": ["spotify"]})
+    with pytest.raises(ValueError):
+        flow.save({"plugins": "plexamp"})
+
+
+def test_chosen_plugins_go_on_after_the_join_the_rest_off_and_the_first_start_waits_for_them(tmp_path):
+    """ADR-0128: switched after the join (they download), every offered one
+    set explicitly, and what downloads is what the first start waits for -
+    with the visualiser's skins when they were chosen."""
+    nm = FakeNM(devices=NOTHING)
+    settings = FakeSettings()
+    flow, net, *_ = make(tmp_path, nm, settings, plugins=PLUGINS)
+    flow.save({"ssid": "Home", "password": "hunter22", "visualiser": True,
+               "plugins": ["plexamp", "beszel"]})
+    finish(flow, net)
+    assert ("plexamp.enabled", True) in settings.sets and ("beszel.enabled", True) in settings.sets
+    assert ("lyrion-server.enabled", False) in settings.sets, "not chosen is off, not left at its default"
+    import json
+    waits = json.loads((tmp_path / "settling.json").read_text())["items"]
+    assert [w["id"] for w in waits] == ["skins", "plexamp"], "Beszel downloads nothing to wait for"
+
+
+def test_nothing_chosen_to_download_writes_nothing_to_wait_for(tmp_path):
+    settings = FakeSettings()
+    flow, net, *_ = make(tmp_path, FakeNM(devices=NOTHING), settings, plugins=PLUGINS)
+    flow.save({"ssid": "Home", "password": "hunter22", "plugins": ["beszel"]})
+    finish(flow, net)
+    assert not (tmp_path / "settling.json").exists()

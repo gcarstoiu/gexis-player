@@ -289,6 +289,9 @@ class PlaybackState:
     #: ADR-0126: the hardware report's screen check - the test pattern on the
     #: panel, asked for from a phone, and what the four corner taps measured.
     screen_check: dict | None = None
+    #: ADR-0128: the first start after setup, until the downloads it chose
+    #: have finished - `phase` and each item's state - or None.
+    settling: dict | None = None
 
     @property
     def controls(self) -> dict | None:
@@ -334,4 +337,5 @@ class PlaybackState:
             "screen_confirm": dict(self.screen_confirm) if self.screen_confirm else None,
             "screen_new": dict(self.screen_new) if self.screen_new else None,
             "screen_check": dict(self.screen_check) if self.screen_check else None,
+            "settling": dict(self.settling) if self.settling else None,
         }

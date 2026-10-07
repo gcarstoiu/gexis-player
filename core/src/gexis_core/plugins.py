@@ -98,6 +98,8 @@ class Plugin:
     #: **ADR-0098: what the user must read before switching it on**, shown as
     #: a confirmation by the panel.
     notice: str | None = None
+    #: **One line on what it is** (ADR-0128): the setup step's description.
+    summary: str | None = None
     #: True for the three this repository ships. They are not special in how
     #: they are read - only in who wrote them.
     built_in: bool = False
@@ -177,6 +179,7 @@ def parse(raw: dict, *, directory: Path | None = None, built_in: bool = False) -
         first=raw.get("first") is True,
         removes=raw["removes"] if isinstance(raw.get("removes"), str) else None,
         notice=raw.get("notice"),
+        summary=raw["summary"] if isinstance(raw.get("summary"), str) else None,
         mark=mark,
         settings=tuple(settings),
         built_in=built_in,
