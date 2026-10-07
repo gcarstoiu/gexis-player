@@ -487,34 +487,3 @@ itself but has not been tried. A board that is not found by itself can be
 chosen in *Settings → Audio → Sound card board*. The screen's HDMI audio
 can be chosen too, but its volume is fixed, it is not bit-perfect and the
 visualiser does not move with it.
-
----
-
-## Sources (internal)
-
-Numbers of the repository records each section rests on.
-
-- **Sound and playback:** Findings 045, 047, 095, 103, 109; ADR-0018, 0034,
-  0046, 0052, 0054, 0055, 0085, 0094, 0115; HANDOFF "Things that will bite"
-  (the 13.3″ Wi-Fi measurement, 2026-10-05); settings registry (Audio,
-  Handoff, Sources); release notes 0.9.0, 0.9.1.
-- **Screen and touch:** LESSONS 56, 57; ADR-0029, 0109, 0121, 0122; Findings
-  100, 101; release notes 0.4.0, 0.8.7, 0.8.8, 0.9.2; docs/HARDWARE.md.
-- **Idle screen and visualiser:** ADR-0033, 0036, 0047, 0050, 0058, 0096,
-  0101, 0111, 0112, 0120; Findings 043, 107, 108; release notes 0.5.0, 0.6.0,
-  0.7.0, 0.9.0, 0.9.1.
-- **Phone and touchpad:** ADR-0032, 0101, 0102, 0121; LESSONS 59; release
-  notes 0.9.1, 0.9.2.
-- **Network and Wi-Fi:** ADR-0031, 0048, 0104; Finding 099; LESSONS 46.
-- **Setup and first boot:** ADR-0031, 0104; Finding 099; LESSONS 46; release
-  notes 0.4.0, 0.8.7.
-- **Library and Lyrion:** ADR-0030, 0038, 0115, 0118; Findings 109, 110, 111;
-  release notes 0.8.0-0.8.7, 0.9.2; docs/HARDWARE.md.
-- **Streaming sources:** ADR-0024, 0045, 0054, 0090, 0119; Findings 012, 077,
-  087, 095; release notes 0.8.6, 0.9.0.
-- **Pictures, lyrics and artist information:** ADR-0012, 0040, 0059, 0068,
-  0075, 0080, 0081, 0120; Findings 030, 035, 036; release notes 0.9.0, 0.9.2.
-- **Updates and maintenance:** ADR-0083, 0103, 0105, 0110, 0116; Finding 105;
-  release notes 0.3.0-0.3.3, 0.8.3-0.8.5, 0.9.1.
-- **Hardware:** ADR-0055, 0109, 0115, 0117; Findings 103, 106, 109;
-  docs/HARDWARE.md.
