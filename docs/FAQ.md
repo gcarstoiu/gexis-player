@@ -483,7 +483,9 @@ answer a few questions about how it plays and looks - a short test tone at
 44.1, 96 and 192 kHz helps with the sound, and a test pattern on the
 player's screen, with four circles to tap, checks the picture and the touch -
 and send the report it
-prepares on GitHub (a GitHub account is needed). The player fills in what it
+prepares on GitHub (a GitHub account is needed). A week after a sound card
+or screen that is not Tested is first used, the System page offers this once
+in a line at its top; its × puts it away for good. The player fills in what it
 reads of the hardware itself - never a serial number or anything about you -
 and reports are public, so the next owner can see what works.
 
