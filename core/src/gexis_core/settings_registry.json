@@ -10,7 +10,7 @@
         "type": "choice",
         "label": "Output",
         "marks": "R",
-        "note": "Where the sound goes. Over HDMI the sound is not bit-perfect and the visualiser does not move; HDMI has no volume control of its own, so its volume is Software or Fixed.",
+        "note": "Where the sound goes. Over HDMI the sound is not bit-perfect; HDMI has no volume control of its own, so its volume is Software or Fixed, and the visualiser moves only on Software.",
         "optionsFrom": "output_device",
         "default": null,
         "warn": "Playback stops while the output changes."
