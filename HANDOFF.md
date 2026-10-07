@@ -18,7 +18,7 @@ Last updated: 2026-10-07 (on R2D2).
   after the restart is reported failed but not rolled back; nothing is
   checked after an update's reboot; a takeover is not refused during an
   install (the panel is only locked) - ADR-0105/0110 promise all three.
-- Reconcile the documents that contradict each other.
+- ~~Reconcile the documents that contradict each other.~~ **Done 2026-10-07:** ARCHITECTURE.md, README, FAQ, manual, HARDWARE.md, plugin docs, the technical guide, nine ADRs amended (with *Not built* where the code does less), stale code comments, the dev proxy.
 - Remove passwordless sudo from the image - last.
 
 **2026-10-07 (state now):** the user manual, FAQ and technical guide are
