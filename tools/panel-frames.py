@@ -593,7 +593,13 @@ async def measure(port: int, runs: int, only: str | None, playback: str | None) 
         if playback:
             await set_playback(session, playback)
         panel = await Panel.connect(session, port)
-        with Touchscreen() as finger:
+        # **The touch range is the page's own size** (2026-10-07, guestpi's
+        # 13.3" at scale 1.5): the compositor stretches the range over the
+        # whole screen, so a 1280 x 800 range on a 1280 x 720 page put every
+        # tap 11 % too high, and the scenes after the first failed on "not on
+        # home". On gexis (1280 x 800, scale 1) nothing changes.
+        size = await panel.evaluate("[window.innerWidth, window.innerHeight]")
+        with Touchscreen(*size) as finger:
             screen = Screen(panel, finger)
 
             async def idle():
