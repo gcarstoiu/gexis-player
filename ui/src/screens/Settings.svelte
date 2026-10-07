@@ -2520,7 +2520,11 @@
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(233, 238, 242, 0.1);
   }
-  .row:active {
+  /* Not a tile: a tile is not pressed, only its button is - `:active`
+     holds on every ancestor of what the finger is on, so a tile lit up as a
+     whole when its button was tapped (George, 2026-10-07, Find portraits
+     and covers). */
+  .row:not(.row--tile):active {
     background: rgba(233, 238, 242, 0.12);
   }
   .row--danger {
