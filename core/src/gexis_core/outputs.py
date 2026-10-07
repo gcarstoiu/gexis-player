@@ -23,7 +23,7 @@ from __future__ import annotations
 import logging
 import re
 import subprocess
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import NamedTuple
 
@@ -168,11 +168,69 @@ class Output:
     #: What the card's driver calls it, when the list names the board
     #: otherwise - a choice stored under the old name still finds it.
     aka: str | None = field(default=None, compare=False)
+    #: ADR-0124: the level set by the player's own software stage, not the
+    #: card's control.
+    software: bool = field(default=False, compare=False)
 
     @property
     def option(self) -> str:
         shown = f"{self.label}{SEP}{self.state}" if self.state else self.label
         return shown if self.connected else shown + UNPLUGGED
+
+
+#: ADR-0124: the software stage's control, on the output's own card, and its
+#: scale: -90 to 0 dB in 0.25 dB steps (361 values), finer than any card's
+#: own and low enough that 0 % is silence. At 0 dB it passes every sample
+#: unchanged (Finding 115).
+SOFTVOL_CONTROL = "Gexis Volume"
+SOFTVOL_MIN_DB = -90.0
+SOFTVOL_STEPS = 361
+SOFTVOL_SCALE = mixer_scale.Scale(raw_min=0, raw_max=SOFTVOL_STEPS - 1, db_min=SOFTVOL_MIN_DB,
+                                  db_step=-SOFTVOL_MIN_DB / (SOFTVOL_STEPS - 1))
+
+
+def with_software_volume(output: Output) -> Output:
+    """`output`, its level set by the player's software stage (ADR-0124): an
+    output with no control of its own (HDMI) gains one."""
+    return replace(output, control=SOFTVOL_CONTROL, scale=SOFTVOL_SCALE, software=True)
+
+
+def create_softvol_control(pcm: str = "output") -> bool:
+    """**Make the software stage's control exist without playing anything**
+    (ADR-0124). ALSA creates a `softvol` control when its PCM is first
+    opened, and creates it at 0 dB; the core sets the remembered level on it
+    before any renderer opens the output. Open and close, non-blocking: a
+    card someone is already playing to has the control already. True when
+    the open succeeded or the card was busy."""
+    import ctypes
+    try:
+        lib = ctypes.CDLL("libasound.so.2")
+    except OSError as exc:
+        logger.warning("outputs: no libasound to open %s: %s", pcm, exc)
+        return False
+    lib.snd_pcm_open.argtypes = [ctypes.POINTER(ctypes.c_void_p), ctypes.c_char_p, ctypes.c_int, ctypes.c_int]
+    lib.snd_pcm_close.argtypes = [ctypes.c_void_p]
+    handle = ctypes.c_void_p()
+    # SND_PCM_STREAM_PLAYBACK = 0, SND_PCM_NONBLOCK = 1
+    rc = lib.snd_pcm_open(ctypes.byref(handle), pcm.encode(), 0, 1)
+    if rc < 0:
+        busy = rc == -16       # EBUSY: someone holds it, so the control exists
+        if not busy:
+            logger.warning("outputs: could not open %s to create its volume control (%d)", pcm, rc)
+        return busy
+    lib.snd_pcm_close(handle)
+    return True
+
+
+def _softvol(name: str, slave: str, card: str) -> str:
+    return f'''pcm.{name} {{
+    type softvol
+    slave.pcm {slave}
+    control {{ name "{SOFTVOL_CONTROL}" card {card} }}
+    min_dB {SOFTVOL_MIN_DB}
+    max_dB 0.0
+    resolution {SOFTVOL_STEPS}
+}}'''
 
 
 def _run(*args: str) -> str:
@@ -366,6 +424,29 @@ def render(output: Output, plug: bool, tuning: Tuning = Tuning()) -> str:
     type plug
     slave.pcm {{ type hw card {output.card} nonblock 0 }}
 }}'''
+        if output.software:
+            # ADR-0124 on a converted chain (HDMI): the software stage in
+            # front of `plug`, which then converts for the card (Finding 115).
+            head = _softvol("output", f'{{ type plug slave.pcm "hw:{output.card}" }}', output.card)
+            wait = _softvol("output_wait", f"{{ type plug slave.pcm {{ type hw card {output.card} nonblock 0 }} }}",
+                            output.card)
+    elif output.software:
+        # **ADR-0124: the meter first, then the software stage** (Finding
+        # 115), so the visualiser shows the music as it arrives, as with the
+        # card's own control. One control for both PCMs: the level is the
+        # same whoever opened which.
+        head = f'''pcm.output {{
+    type meter
+    slave.pcm "gexis_softvol"
+    scopes.0 peppyalsa
+}}
+{_softvol("gexis_softvol", f'"hw:{output.card}"', output.card)}'''
+        wait = f'''pcm.output_wait {{
+    type meter
+    slave.pcm "gexis_softvol_wait"
+    scopes.0 peppyalsa
+}}
+{_softvol("gexis_softvol_wait", f"{{ type hw card {output.card} nonblock 0 }}", output.card)}'''
     else:
         head = f'''pcm.output {{
     type meter

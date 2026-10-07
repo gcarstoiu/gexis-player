@@ -358,6 +358,37 @@ def read_timezone(localtime: Path = Path("/etc/localtime")) -> str | None:
     return target.split(marker, 1)[1] if marker in target else None
 
 
+#: ADR-0124: the row, and where the software level is kept across restarts -
+#: ALSA forgets a software control with its PCM, and makes it again at 0 dB.
+SOFTWARE_VOLUME_KEY = "software_volume"
+SOFTWARE_LEVEL_KEY = "_software_level_db"
+#: A first start with no level remembered and none to carry over: quiet.
+SOFTWARE_LEVEL_FIRST_DB = -30.0
+
+
+async def _start_software_volume(card_output, store) -> None:
+    """**Before anything plays** (ADR-0124): the software control made and
+    set to the remembered level, and the card's own control parked at 0 dB,
+    where it passes the software stage's samples on unchanged.
+
+    The level, in order: the one remembered; else the card's own, which is
+    what the listener was hearing when it was switched on; else quiet."""
+    db = store.get(SOFTWARE_LEVEL_KEY)
+    if db is None and card_output.control and card_output.scale:
+        raw = await get_raw(card_output.control)
+        if raw is not None:
+            db = card_output.scale.db(raw)
+    db = float(db) if db is not None else SOFTWARE_LEVEL_FIRST_DB
+    if not await asyncio.to_thread(outputs.create_softvol_control):
+        logger.warning("volume: the software control could not be made; the level stays where ALSA puts it")
+    await set_raw(outputs.SOFTVOL_CONTROL, outputs.SOFTVOL_SCALE.raw(db))
+    store.set(SOFTWARE_LEVEL_KEY, db)
+    if card_output.control and card_output.scale:
+        await set_raw(card_output.control, card_output.scale.top, maximum=card_output.scale.raw_max)
+    logger.info("volume: software volume at %.2f dB on %s; its own control parked at 0 dB",
+                db, card_output.label)
+
+
 async def main() -> None:
     config = Config.load()
 
@@ -404,6 +435,10 @@ async def main() -> None:
         asyncio.ensure_future(_board_restart())
 
     chosen_output = outputs.resolve(settings_store.get("output_device"))
+    #: ADR-0124: the card as it is, before the software stage takes its place.
+    card_output = chosen_output
+    if chosen_output is not None and settings_store.get(SOFTWARE_VOLUME_KEY):
+        chosen_output = outputs.with_software_volume(chosen_output)
     if chosen_output is None:
         logger.error("outputs: no playback output found at all")
     else:
@@ -428,6 +463,8 @@ async def main() -> None:
         alsa.set_card(chosen_output.card)
         # ADR-0117: raw values mean what this output's control says they do.
         use_scale(chosen_output.scale)
+        if chosen_output.software:
+            await _start_software_volume(card_output, settings_store)
         if chosen_output.control:
             config = replace(config, mixer_name=chosen_output.control)
         logger.info(
@@ -835,7 +872,7 @@ async def main() -> None:
         rediscovering it at startup is one path instead of three mutable
         ones threaded through the bridges.
         """
-        chosen = outputs.resolve(settings.value("output_device"))
+        chosen = _with_software(outputs.resolve(settings.value("output_device")))
         if chosen is None:
             logger.error("outputs: nothing to switch to")
             return
@@ -898,6 +935,30 @@ async def main() -> None:
             ),
         )
 
+    def _with_software(output):
+        """ADR-0124: the output as the software stage will play it, when the
+        row is on."""
+        if output is not None and settings.value(SOFTWARE_VOLUME_KEY):
+            return outputs.with_software_volume(output)
+        return output
+
+    async def _set_software_volume(on=None) -> None:
+        """ADR-0124: switched on or off. **The level the listener hears
+        carries across** - on, it becomes the software level; off, the card's
+        own control is given it back before anything restarts, so neither
+        way starts at full level. Then the output is put in place again,
+        as a change of output is."""
+        volume = state_store.state.volume
+        db = volume.db if volume is not None else None
+        if db is not None:
+            if on:
+                settings_store.set(SOFTWARE_LEVEL_KEY, db)
+            elif card_output is not None and card_output.control and card_output.scale:
+                await set_raw(card_output.control, card_output.scale.raw(db),
+                              maximum=card_output.scale.raw_max)
+        logger.info("volume: software volume %s at %s dB", "on" if on else "off", db)
+        await _switch_output()
+
     async def _rewrite_output_conf(reason: str) -> None:
         """Put the current output and tuning in `output.conf` and reopen.
 
@@ -907,7 +968,7 @@ async def main() -> None:
         They restart afterwards, which is also what makes the new file
         mean anything - ALSA reads it when a PCM is opened.
         """
-        chosen = outputs.resolve(settings.value("output_device"))
+        chosen = _with_software(outputs.resolve(settings.value("output_device")))
         if chosen is None:
             logger.error("outputs: nothing to write the tuning to")
             return
@@ -1811,6 +1872,10 @@ async def main() -> None:
                # new card's control name gets picked up.
                "output_device": lambda _value=None: asyncio.ensure_future(
                    _switch_output()
+               ),
+               # ADR-0124: the level carried across, then the output again.
+               "software_volume": lambda value=None: asyncio.ensure_future(
+                   _set_software_volume(bool(value))
                ),
                # Readonly: nothing to do on a write, and the value is the
                # live one below rather than the registry's literal.
@@ -2940,6 +3005,28 @@ async def main() -> None:
     initial_raw = await get_raw(config.mixer_name)
     if initial_raw is not None:
         state_store.set_volume_raw(initial_raw)
+
+    if chosen_output is not None and chosen_output.software:
+        # ADR-0124: the software level kept across restarts - ALSA makes its
+        # control again at 0 dB. Saved a second after it settles, not on
+        # every step of a ramp.
+        level_save = {"task": None, "db": None}
+
+        def _keep_software_level(state) -> None:
+            db = state.volume.db if state.volume is not None else None
+            if db is None or db == level_save["db"]:
+                return
+            level_save["db"] = db
+            if level_save["task"] is not None:
+                level_save["task"].cancel()
+
+            async def _save(value=db) -> None:
+                await asyncio.sleep(1.0)
+                settings_store.set(SOFTWARE_LEVEL_KEY, value)
+
+            level_save["task"] = asyncio.ensure_future(_save())
+
+        state_store.subscribe(_keep_software_level)
 
     def make_on_acquire(renderer_id: str):
         def _on_acquire() -> None:

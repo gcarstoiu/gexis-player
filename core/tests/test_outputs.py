@@ -408,3 +408,43 @@ def test_the_outputs_are_worked_out_again_only_when_something_changed(tmp_path, 
     cards.write_text(cards.read_text() + " 1 [sndrpihifiberry]: RPi-simple\n")  # a card arrives
     outputs.discover(chosen_board="iqaudio-dacplus")
     assert ran.count("aplay") == 3
+
+
+# --- ADR-0124: software volume (Finding 115) ---------------------------------
+
+def test_software_volume_puts_softvol_after_the_meter_on_a_dac():
+    out = outputs.with_software_volume(outputs.Output(card="IQaudIODAC", label="IQaudIO Pi-DAC PRO", control="Digital"))
+    conf = outputs.render(out, False)
+    meter = conf.index("pcm.output {")
+    assert 'slave.pcm "gexis_softvol"' in conf[meter:conf.index("}", meter)], "the meter sees the music as it arrives"
+    assert 'type softvol\n    slave.pcm "hw:IQaudIODAC"' in conf
+    assert 'control { name "Gexis Volume" card IQaudIODAC }' in conf
+    assert "gexis_softvol_wait" in conf and "nonblock 0" in conf, "squeezelite's waiting open has the same stage"
+    assert conf.count('name "Gexis Volume"') == 2, "one control for both"
+
+
+def test_software_volume_goes_in_front_of_plug_on_hdmi():
+    out = outputs.with_software_volume(outputs.Output(card="vc4hdmi0", label="HDMI 1", control=None))
+    conf = outputs.render(out, True)
+    assert conf.startswith('pcm.output {\n    type softvol\n    slave.pcm { type plug slave.pcm "hw:vc4hdmi0" }')
+    assert "type meter" not in conf.split("pcm_scope.peppyalsa")[0], "no meter over plug"
+
+
+def test_the_software_scale_is_exact_and_tops_out_at_0_db():
+    scale = outputs.SOFTVOL_SCALE
+    assert (scale.raw_min, scale.raw_max, scale.db_min, scale.db_step) == (0, 360, -90.0, 0.25)
+    assert scale.top == 360 and scale.db(360) == 0.0 and scale.raw(-15.5) == 298
+
+
+def test_an_output_with_no_control_gains_one_and_keeps_its_card():
+    hdmi = outputs.Output(card="vc4hdmi0", label="HDMI 1", control=None)
+    soft = outputs.with_software_volume(hdmi)
+    assert soft.control == "Gexis Volume" and soft.software and soft.card == "vc4hdmi0" and soft.label == "HDMI 1"
+    assert soft.option == hdmi.option, "offered and chosen under the same name"
+
+
+def test_the_card_is_still_read_back_from_a_software_config(tmp_path):
+    conf = tmp_path / "output.conf"
+    conf.write_text(outputs.render(outputs.with_software_volume(
+        outputs.Output(card="IQaudIODAC", label="x", control="Digital")), False))
+    assert outputs.configured(conf) == "IQaudIODAC"

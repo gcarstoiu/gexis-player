@@ -10,7 +10,7 @@
         "type": "choice",
         "label": "Output",
         "marks": "R",
-        "note": "Where the sound goes. Over HDMI the volume is fixed, the sound is not bit-perfect and the visualiser does not move.",
+        "note": "Where the sound goes. Over HDMI the sound is not bit-perfect and the visualiser does not move; its volume is fixed unless Software volume is on.",
         "optionsFrom": "output_device",
         "default": null,
         "warn": "Playback stops while the output changes. An output with no volume control of its own, such as HDMI, has no volume slider."
@@ -41,6 +41,16 @@
         "warn": {
           "Fixed": "Fixed output sends the signal at 100%. Turn your amplifier down before confirming — the panel can no longer lower it."
         }
+      },
+      {
+        "key": "software_volume",
+        "type": "toggle",
+        "label": "Software volume",
+        "marks": "R",
+        "note": "Sets the level by recalculating the sound, on any output - including one with no volume control of its own, such as HDMI. Not bit-perfect below 100 %.",
+        "warn": "The player changes the level by recalculating the sound. Playback is no longer bit-perfect, at any volume below 100 %. Use it for an output with no volume control of its own, such as HDMI, or if you prefer it. Off restores bit-perfect playback.",
+        "confirm": "Switch it on",
+        "default": false
       },
       {
         "key": "max_ceiling",
