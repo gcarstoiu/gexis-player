@@ -304,8 +304,27 @@ class TestProgressDoesNotFloodThePanel:
         )
         assert sweep.start("portraits") is True
         await sweep._task
-        # start, and the end - not twenty
-        assert len(published) <= 3, published
+        # start, the total, the first artist and the end - not twenty
+        # (the total and the first artist at once since 2026-10-07: George
+        # saw it sit at 0)
+        assert len(published) <= 4, published
+
+    async def test_the_total_and_the_first_artist_reach_the_panel_at_once(self):
+        """George, 2026-10-07: "the progress seems stuck at 0" - the total
+        and the first artist fell inside the publishing gap."""
+        seen = []
+        sweep, _, _, _ = build(
+            library=FakeLibrary([(i, f"Artist {i}") for i in range(5)], {i: [] for i in range(5)}),
+            identity=FakeIdentity({}),
+            publish_every_s=999.0,
+            clock=lambda: 0.0,
+        )
+        sweep._on_change = lambda: seen.append((sweep.progress.total, sweep.progress.processed))
+        assert sweep.progress.sentence == "Never run"
+        sweep.start("all")
+        assert sweep.progress.sentence == "Starting - reading the library's artists…"
+        await sweep._task
+        assert (5, 0) in seen and (5, 1) in seen, seen
 
     async def test_the_end_is_always_published(self):
         published = []
