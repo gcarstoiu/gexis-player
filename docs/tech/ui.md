@@ -64,8 +64,8 @@ flowchart LR
   `/state`. Every frame is the whole `PlaybackState` as JSON
   (`state.to_json()` in the core). The module exposes derived stores
   (`active`, `metadata`, `volume`, `capabilities`, `available`, `queue`,
-  `handoff`, `pairing`, `panel`, `setup`, `update`, `screen_confirm`,
-  `screen_new`, `sources`, …). Components subscribe to these stores and
+  `handoff`, `pairing`, `panel`, `setup`, `update`, `screenConfirm`,
+  `screenNew`, `screenCheck`, `sources`, …). Components subscribe to these stores and
   never read the socket. Reconnects back off from 0.5 s to 5 s, because the
   kiosk has to outlive any number of core restarts.
 - **Commands go over REST, never the socket** (ADR-0028). `post()` in
@@ -169,10 +169,12 @@ flowchart BT
   HO["HandoffScreen"]
   SU["SetupScreen"]
   PA["PairingFrame (ADR-0045)"]
-  NS["NewScreen / KeepScreen (ADR-0109)"]
+  NS["NewScreen (ADR-0109)"]
+  TP["TestPattern (ADR-0126)"]
+  KS["KeepScreen (ADR-0109)"]
   UP["UpdateScreen (ADR-0110: locks the panel)"]
   PP["PanelPointer (ADR-0121)"]
-  BG --> SL --> VD --> ID --> HO --> SU --> PA --> NS --> UP --> PP
+  BG --> SL --> VD --> ID --> HO --> SU --> PA --> NS --> TP --> KS --> UP --> PP
 ```
 
 Component tree, as `App.svelte` mounts it:
@@ -195,7 +197,7 @@ flowchart TD
   Pan --> VD["VolumeDrawer / BarTray"]
   Pan --> IS[IdleScreen]
   Pan --> HS[HandoffScreen]
-  Pan --> Ov["SetupScreen · PairingFrame ·<br/>NewScreen · KeepScreen · UpdateScreen"]
+  Pan --> Ov["SetupScreen · PairingFrame ·<br/>NewScreen · TestPattern · KeepScreen · UpdateScreen"]
   Pan --> PP[PanelPointer]
 ```
 
@@ -398,7 +400,8 @@ sequenceDiagram
 flowchart LR
   SD["systemd: gexis-kiosk.service<br/>(Conflicts=getty@tty1, Restart=no)"] --> LW["labwc -s gexis-kiosk-start"]
   LW --> CR["Chromium --kiosk<br/>--ozone-platform=wayland<br/>--force-device-scale-factor<br/>http://127.0.0.1:8090/"]
-  LW --> PY["PeppyMeter window<br/>(gexis-peppy.service)"]
+  SP["systemd: gexis-peppy.service<br/>(PartOf=gexis-kiosk.service)"] --> PY["PeppyMeter window"]
+  LW -. "hosts its window" .- PY
   CORE[gexis-core peppy.py] -- "wlrctl toplevel focus / minimize" --> LW
   CR -- "POST /peppy/show" --> CORE
 ```
@@ -443,6 +446,7 @@ flowchart LR
 | `SetupScreen` (panel) | setup network up, or the device needs setup | Shows QR codes and the way in. Takes no input. Readable from 2 m (ADR-0104 §5). The password comes from loopback-only `/setup/status`, never from `/state` |
 | `SetupPage` (phone) | the device needs setup | The first-time setup flow; answers are saved step by step to the core |
 | `NewScreen` / `KeepScreen` | a different screen is attached / a new screen awaits confirmation | Only the panel answers Keep; a countdown reverts (ADR-0109 decision 5) |
+| `TestPattern` (panel) | `screen_check` showing | The hardware feedback's test pattern; the panel's four corner taps go back to the core. Mounted over everything but *Keep this screen?* and the update lock (ADR-0126) |
 | `UpdateModal` (Settings) | the user checks for an update | One modal, from the check to the outcome (ADR-0110 §3) |
 | `UpdateScreen` (panel) | `update.active` | Locks the panel and stays up through the core restart and reconnect. At the end it waits for Done, or 10 min. It reloads the page if the installed release changed (ADR-0110 §6) |
 
@@ -450,18 +454,4 @@ flowchart LR
 
 ## Where code and docs disagree (code wins)
 
-- `docs/ARCHITECTURE.md` §4 shows one WebSocket carrying "state + levels" to
-  the UI. The UI's `/state` carries state only. Meter levels go to the
-  native PeppyMeter process and are never sent to the browser
-  (ADR-0026 replaced the in-browser renderer).
-- `docs/ARCHITECTURE.md` §2/§7: "four screen types". The panel now also has
-  Settings, the waiting home, handoff, setup, pairing and update screens,
-  and Home is the library root (ADR-0033, ADR-0079).
-- The header comment of `ui/src/screens/NowPlaying.svelte` still says
-  controls are "disabled and carry data-unwired". They are wired:
-  `sendTransport` posts to `/transport/{command}`.
-- `ui/vite.config.js`'s dev proxy forwards only `/state`, `/renderer`,
-  `/volume`, `/idle` and `/library`. `/surface`, `/settings`, `/transport`,
-  `/menus`, `/panel/*`, `/peppy/*` and `/touchpad` are not proxied, so a dev
-  session against a device is partial. In particular `/surface` fails, and
-  the app then falls back to `panel`.
+None are known as of 2026-10-07.

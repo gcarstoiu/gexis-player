@@ -66,7 +66,7 @@ builds the UI first (`npm ci && npm run build`) and then all packages.
 
 | Package | Carries |
 |---|---|
-| `gexis-core` | the core in its own venv at `/opt/gexis-core/venv`, its units, built-in plugin manifests, **the updater** (`/usr/lib/gexis/gexis-update`) and its three units, the release key |
+| `gexis-core` | the core in its own venv at `/opt/gexis-core/venv`, its units, built-in plugin manifests, **the updater** (`/usr/lib/gexis/gexis-update`) and its four units (`gexis-update-check.service`, `gexis-update-check.timer`, `gexis-update-checknow.service`, `gexis-update-install.service`), the release key |
 | `gexis-ui` | the built Svelte pages |
 | `gexis-system` | our units, ALSA files, kiosk, splash, Samba/Avahi files, the Peppy driver - built from `image/stage-gexis/*/files` |
 | `gexis-peppyalsa`, `gexis-peppy-engines` | the meter tap library; PeppyMeter/PeppySpectrum |
@@ -218,7 +218,7 @@ indexing).
 |---|---|---|
 | `check` | `gexis-update-checknow.service`, from Settings' *Check for updates* | read and verify the channel, compare with the installed `gexis-player`, write `available` / `current`; installs nothing |
 | `install` | `gexis-update-install.service` via the update modal | check, then the six steps below |
-| `scheduled` | `gexis-update-check.service`, from its timer (03:00, up to 1 h random delay, persistent) | check; install only if *Updates* is Automatic, nothing is playing (`/proc/asound/*/status` RUNNING), and this release has not already failed here |
+| `scheduled` | `gexis-update-check.service`, from its timer (03:00, up to 1 h random delay, persistent) | check; install only if *Updates* is Automatic, nothing is playing (`/proc/asound/card*/pcm*p/sub*/status` RUNNING), and this release has not already failed here |
 | `pack-install` / `pack-remove <pkg>` | the core, for skin packs (§6) | install or remove one `gexis-skins-<W>x<H>` |
 
 *Check for updates* runs `check` through its own unit. Until 2026-10-06 it
@@ -245,11 +245,17 @@ instead of failing on apt's lock.
 `STEPS = download, backup, stop, install, restart, check`. Each is `pending`,
 `active`, `done` or `failed`, all listed from the start (ADR-0110 §3).
 
+At the start of `install`, before the first step, the updater reads the
+*installed* release's signed `parts` file, which names what to go back to. If
+it cannot be fetched, the release's legacy names (`<tag>` and `<tag>-debian`)
+stand in and the update continues; a `parts` file not signed by the release
+key, or for another release, stops the update.
+
 1. **download** - `apt-get update` on the new parts; simulate to plan the
-   changes; `--download-only` everything. Then read the *installed* release's
-   `parts` file and pre-download the current versions of every package that
-   will change, so going back needs no network. If the old release can't be
-   read, the update continues and says going back won't be possible.
+   changes; `--download-only` everything. Then pre-download, from the
+   installed release, the current versions of every package that will change,
+   so going back needs no network. If those repositories can't be read, the
+   update continues and says going back won't be possible.
 2. **backup** - `POST /settings/backup` on the core, then wait up to 120 s for
    a new `.tgz` in `/var/lib/gexis-core/backups/` (ADR-0083). No backup, no
    update.
@@ -262,7 +268,8 @@ instead of failing on apt's lock.
    clean, and `libasound2t64` matches the release's pinned dependency.
 5. **restart** - a reboot if a kernel/firmware/libc/systemd/initramfs package
    changed (or a reboot marker exists); otherwise `systemctl try-restart` every
-   `.service` the changed packages ship, except the updater's own units and
+   `.service` the changed packages ship, except the updater's own units
+   (`gexis-update-install`, `gexis-update-check`, `gexis-update-checknow`) and
    `gexis-park.service`.
 6. **check** - the core answers `GET /settings` within 120 s.
 
@@ -353,8 +360,9 @@ the units (`systemctl start --no-block`) and reads `status.json`:
 
 - `_follow_updates()` in `__main__.py` polls every 3 s (1 s during an install)
   and publishes `update` on `/state`: installed, state, release, previous,
-  steps, progress, notes (`whats_new`, and `whats_new_all` for every release
-  skipped), message, reboot, and **`active`** - true only while
+  `attempted` (the release a failed install was trying), steps, progress,
+  notes (`whats_new`, and `whats_new_all` for every release skipped),
+  message, reboot, `at` (when the status was written), and **`active`** - true only while
   the state is an installing one *and* the install unit is actually running, so
   a killed updater cannot lock the panel forever.
 - Settings rows: *Release* (`0.9.2 · Testing`, read-only) and the *Software
@@ -383,10 +391,10 @@ release carries all five in its `skins` part.
 
 The core (`skin_packs.py`, `_skins_ensure()` in `__main__.py`) decides which
 pack the screen wants - its exact size, else the largest that fits in the same
-family (Standard or Bar) - and, when the *Visualiser skins* switch is on, runs
+family (Standard or Bar), else the largest that fits in any family - and, when the *Visualiser skins* switch is on, runs
 `gexis-update pack-install <pkg>`, then removes packs for other sizes. The
 updater installs from the installed release's parts, falling back to the
-channel's release for a build that was never published, and reports to
+channel's release (and then Testing's) for a build that was never published, and reports to
 `/var/lib/gexis/updates/pack.json`. A failed download is retried every five
 minutes. A device that still has the old single `gexis-skins` keeps it as its
 1280x800 pack (`apt-mark manual` stops autoremove taking it).

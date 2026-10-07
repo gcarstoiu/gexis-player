@@ -42,8 +42,8 @@ entry. `01-run.sh` ships `/etc/sudoers.d/010_pi-nopasswd`, asserted mode 440
 and `visudo`-checked at build time, because nothing in this boot path would
 otherwise create it.
 
-**On a user's card every variable is blank**, so first boot only finalises the
-account, and the core's setup flow (below) does the rest.
+**On a user's card every variable is blank** except `WIFI_COUNTRY`, which is
+used only when `WIFI_SSID` is set; so first boot only finalises the account, and the core's setup flow (below) does the rest.
 
 **On a developer's card**, `make provision DEVICE=/dev/sdX` runs
 `image/provision.sh`: it mounts the flashed card's boot partition, rewrites
@@ -194,7 +194,7 @@ sequenceDiagram
     C->>C: validate, save setup-answers.json
   end
   Ph->>C: POST /setup/finish
-  C-->>Ph: {keep_question}
+  C-->>Ph: 202 {"finishing": true, "keep_question": ...}
   Note over C: _apply(): settings first, via Settings.set
   C->>C: Wi-Fi country from time zone (raspi-config)
   C->>C: wait 3 s so the phone's last screen arrives
@@ -204,7 +204,7 @@ sequenceDiagram
     C->>C: touch setup-done, delete answers file
     C->>C: Lyrion: find / given address / off
     C-->>P: state done (network, library, restart reason)
-    C->>C: after 10 s: reboot if name or screen changed, else online
+    C->>C: after 10 s: reboot if a screen was chosen or the name differs from the old one, else online
   else join fails
     C->>NM: delete the profile just made
     C->>C: drop password, keep other answers + error, step=wifi
@@ -234,9 +234,10 @@ sequenceDiagram
    discovery datagram on port 3483 and takes each reply's source address.
    Exactly one server is used; several are named and left to Settings; *Off*
    sets `lms_enabled` false.
-5. The panel shows the result for 10 s, then the device **reboots** if the
-   name or screen changed (both apply at a restart; the Screen step's restart
-   is where *Keep this screen?* is asked, ADR-0109), otherwise goes `online`.
+5. The panel shows the result for 10 s, then the device **reboots** if any
+   screen was chosen in setup, or if the name differs from the old one (both
+   apply at a restart; the Screen step's restart is where *Keep this screen?*
+   is asked, ADR-0109), otherwise goes `online`.
 
 **Setup's own screens are laid out for the attached screen** (ADR-0109
 amended 2026-10-07): `gexis-screen-check` runs before the kiosk during setup
@@ -259,7 +260,7 @@ All under the core's HTTP server on port 8090 (`wsserver.py`):
 | `GET/POST /setup/answers` | read (resume) / save one step |
 | `GET /setup/networks` | Wi-Fi scan, the setup network itself removed |
 | `GET /setup/screen` | the Screen step: what the screen reports, the suggested model, all models |
-| `POST /setup/finish` | start applying |
+| `POST /setup/finish` | start applying; answers `202` with `{"finishing": true, "keep_question": ...}` |
 
 Every route but `/setup/status` answers 409 once setup is over (`_setup_closed`):
 a configured device has Settings for all of this. On a phone, `App.svelte`
