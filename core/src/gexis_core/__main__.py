@@ -2084,7 +2084,7 @@ async def main() -> None:
                     # Powering up does not restore what the row asked for, and
                     # `gexis-bluetooth-setup.service` may not have re-run yet.
                     await bluetooth_adapter_state.apply_discoverable(
-                        bus, settings.value("bt_discoverable") or "3 min after boot"
+                        bus, settings.value("bt_discoverable") or bluetooth_adapter_state.DEFAULT_MODE
                     )
             finally:
                 bus.disconnect()
@@ -2182,7 +2182,7 @@ async def main() -> None:
         # default answers.
         if renderer_enabled("bluetooth"):
             await _apply_discoverable(
-                settings.value("bt_discoverable") or "3 min after boot", attempts=10
+                settings.value("bt_discoverable") or bluetooth_adapter_state.DEFAULT_MODE, attempts=10
             )
         bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
         pairing_bus.append(bus)

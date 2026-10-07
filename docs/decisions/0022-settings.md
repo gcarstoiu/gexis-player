@@ -132,7 +132,7 @@ background that is a picture — which is the negated form
 | LMS server address, or discovery | [R][H] | Must. Hardcoded to `192.168.178.188:9000` in `core.toml` today |
 | LMS player name | [H] | `gexis` |
 | Bluetooth pairing: PIN-free vs confirmation | [R] | **Decided and wired 2026-09-25.** George: *"confirmation is default, pin free as viable option."* The capability is fixed when the agent registers - `NoInputNoOutput` means BlueZ never asks at all - so changing this unregisters and registers again rather than waiting for a reboot. Proved on the hardware, both ways |
-| Bluetooth discoverability | [R] | BlueZ's 180 s default, no change by decision (ADR-0024's amendment). "Always / 3 minutes after boot / off" is the natural triple if it becomes a setting |
+| Bluetooth discoverability | [R] | `bt_discoverable`: Always / 3 min after boot / Off. **Default *Always* since 2026-10-07** (George: *"Bluetooth - set the Discoverable to Always as default from now on"*), after a phone found nothing once the three minutes after a start had passed. A device that stored another choice keeps it |
 | Trusted device list — view and forget | [R] | ADR-0010 requires a recently-connected list for reconnection. Clearing it is one of this record's two named accepted risks |
 | Auto-trust on pair | [R] | **Wired 2026-09-25.** The agent has read this per request for some time - what was missing was the row being settable. **The note here was stale**: there is no `gexis-bluetooth-trust.service` in the image; the agent does the trusting |
 | Spotify Connect device name | [R] | Follows the single device name below |

@@ -370,13 +370,15 @@ under its device name. The phone and the player must be on the same network.
 **How do I pair a phone over Bluetooth?**
 While the player is discoverable, pair from the phone's Bluetooth settings.
 By default a six-digit code appears on the screen to confirm (*Settings →
-Sources → Bluetooth → Pairing*), and the player is discoverable for 3
-minutes after it starts (*Discoverable* also offers *Always* and *Off*).
+Sources → Bluetooth → Pairing*), and the player is always discoverable
+(*Discoverable* also offers *3 min after boot* and *Off*).
 
 **A Bluetooth device will not pair again after being forgotten.**
 Forget it on both sides: in *Settings → Sources → Bluetooth → Trusted
 devices* on the player, and forget the player in the phone's Bluetooth
-settings, then pair again.
+settings, then pair again. The same after re-flashing the player's card: the
+new card has new pairing keys, and a phone still holding the old ones may say
+it *can't communicate* with the player until it forgets it and pairs again.
 
 **Bluetooth plays, but the screen says "Not provided".**
 The phone is sending no track details. In the one case seen, the phone was
