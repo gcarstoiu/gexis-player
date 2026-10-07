@@ -1220,6 +1220,15 @@ class StateServer:
         self._store.request_view(to)
         return web.json_response({"view": to})
 
+    async def _handle_wifi_details(self, request: web.Request) -> web.Response:
+        """ADR-0123: the connected Wi-Fi network's signal, speed, band,
+        channel and address - no rescan, so the open sheet can ask every
+        few seconds. `{"connected": false}` when there is none."""
+        details = await wifi.connected_details()
+        if not details:
+            return web.json_response({"connected": False})
+        return web.json_response({"connected": True, **details})
+
     async def _handle_panel_shown(self, request: web.Request) -> web.Response:
         """ADR-0101: the panel reporting whether its idle screen is up - and,
         as amended, whether its lyrics are - so the phone's toggles say what
@@ -1799,6 +1808,7 @@ class StateServer:
         app.router.add_put("/settings/{key}", self._handle_setting_write)
         app.router.add_post("/settings/{key}", self._handle_setting_action)
         app.router.add_get("/settings/{key}/items", self._handle_list_items)
+        app.router.add_get("/network/wifi", self._handle_wifi_details)
         app.router.add_post("/settings/{key}/items", self._handle_list_action)
         app.router.add_post("/bluetooth/pairing/{answer}", self._handle_pairing_answer)
         # ADR-0050. `{name:.*}` because a skin's name is a section heading

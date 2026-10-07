@@ -20,7 +20,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import shutil
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -206,6 +208,7 @@ async def scan() -> list[dict]:
         logger.info("wifi: scan failed: %s", err or rc)
         return []
     saved = await saved_ssids()
+    details = await connected_details()
     best: dict[str, dict] = {}
     for line in out.splitlines():
         parts = _fields(line)
@@ -220,6 +223,8 @@ async def scan() -> list[dict]:
         connected = in_use.strip() == "*"
         if connected:
             state, meta = "connected", "Connected"
+            if details and details.get("speed"):
+                meta = f"Connected · {details['speed']}"
         elif ssid in saved:
             state, meta = "saved", "Saved"
         elif secured:
@@ -233,12 +238,98 @@ async def scan() -> list[dict]:
             "state": state,
             "secured": secured,
         }
+        if connected and details:
+            item["details"] = details["details"]
         # The same network is seen once per band and per access point; the
         # strongest sighting is the one worth showing.
         if ssid not in best or item["bars"] > best[ssid]["bars"] or connected:
             best[ssid] = item
     order = {"connected": 0, "saved": 1, "open": 2, "locked": 2}
     return sorted(best.values(), key=lambda i: (order[i["state"]], -i["bars"], i["name"].lower()))
+
+
+async def _quiet(*cmd: str, timeout: float = SHORT_TIMEOUT_S) -> str:
+    """Another tool's output, or "" - details are a nicety, never an error."""
+    try:
+        process = await asyncio.create_subprocess_exec(
+            *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL)
+        out, _ = await asyncio.wait_for(process.communicate(), timeout)
+        return out.decode("utf-8", "replace")
+    except (OSError, asyncio.TimeoutError):
+        return ""
+
+
+def _level_dbm(proc_wireless: str, device: str) -> int | None:
+    """`/proc/net/wireless`'s signal level for one interface, in dBm."""
+    for line in proc_wireless.splitlines():
+        if line.strip().startswith(f"{device}:"):
+            parts = line.split()
+            try:
+                return int(float(parts[3].rstrip(".")))
+            except (IndexError, ValueError):
+                return None
+    return None
+
+
+def _bitrate(iwconfig: str) -> str | None:
+    """The link's current speed from `iwconfig` - what the radio is using
+    now, not the access point's best (nmcli's RATE)."""
+    m = re.search(r"Bit Rate[=:]\s*([\d.]+)\s*([GMk]b/s)", iwconfig)
+    if not m:
+        return None
+    value = float(m.group(1))
+    return f"{value:g} {m.group(2)}"
+
+
+def _band(freq_mhz: str) -> str | None:
+    try:
+        mhz = int(freq_mhz.split()[0])
+    except (ValueError, IndexError):
+        return None
+    return "2.4 GHz" if mhz < 3000 else "6 GHz" if mhz >= 5925 else "5 GHz"
+
+
+async def connected_details(device: str = "wlan0") -> dict | None:
+    """**The connected network, in detail** (ADR-0123): signal, speed, band,
+    channel and address. Cheap - no rescan - so the open sheet can ask
+    every few seconds. None when not connected."""
+    if not available():
+        return None
+    rc, out, _ = await _run("-t", "-f", "IN-USE,SSID,SIGNAL,CHAN,FREQ", "device", "wifi", "list", "--rescan", "no")
+    if rc != 0:
+        return None
+    row = next((_fields(l) for l in out.splitlines() if l.startswith("*")), None)
+    if not row or len(row) < 5:
+        return None
+    _, ssid, signal, chan, freq = row[:5]
+    rc, show, _ = await _run("-t", "-f", "IP4.ADDRESS", "device", "show", device)
+    address = None
+    for line in show.splitlines() if rc == 0 else ():
+        value = _fields(line)[-1]
+        if value:
+            address = value.split("/")[0]
+            break
+    try:
+        level = _level_dbm(Path("/proc/net/wireless").read_text(), device)
+    except OSError:
+        level = None
+    speed = _bitrate(await _quiet("iwconfig", device))
+    band = _band(freq)
+    try:
+        percent = int(signal)
+    except ValueError:
+        percent = None
+    lines = []
+    if percent is not None or level is not None:
+        lines.append(["Signal", " · ".join(x for x in (f"{level} dBm" if level is not None else None,
+                                                       f"{percent} %" if percent is not None else None) if x)])
+    if speed:
+        lines.append(["Speed", speed])
+    if band or chan:
+        lines.append(["Band", " · ".join(x for x in (band, f"channel {chan}" if chan else None) if x)])
+    if address:
+        lines.append(["Address", address])
+    return {"name": ssid, "speed": speed, "details": lines}
 
 
 def join_reason(rc: int, err: str) -> str:

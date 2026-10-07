@@ -73,6 +73,29 @@
   let listError = $state(null);
   // The network being joined, and how that is going.
   let joinItem = $state(null);
+  //: ADR-0123: the connected network's details, unfolded under its line and
+  //: read again every 5 s while they are open - signal and speed move.
+  let netOpen = $state(false);
+  let netLive = $state(null);
+  $effect(() => {
+    if (!netOpen) return;
+    let stop = false;
+    const read = async () => {
+      try {
+        const r = await fetch('/network/wifi');
+        const body = r.ok ? await r.json() : null;
+        if (!stop) netLive = body?.connected ? body : null;
+      } catch {
+        // A missed read keeps the last one on screen.
+      }
+    };
+    read();
+    const timer = setInterval(read, 5000);
+    return () => {
+      stop = true;
+      clearInterval(timer);
+    };
+  });
   let join = $state(null);
   let joinError = $state(null);
   // The backup being restored, while the shared progress card shows it -
@@ -1600,14 +1623,15 @@
                    are on is how the sheet is dismissed, and refusing it
                    leaves the sheet looking stuck (George, on the panel,
                    2026-09-20). -->
-              {@const inert = item.state === 'connected'}
+              {@const inert = item.state === 'connected' && !item.details}
               <button
                 class="item"
                 class:is-joined={joined}
                 class:item--static={inert}
                 type="button"
                 disabled={inert}
-                onclick={() => chooseItem(item)}
+                aria-expanded={item.state === 'connected' && item.details ? netOpen : undefined}
+                onclick={() => (item.state === 'connected' ? (netOpen = !netOpen) : chooseItem(item))}
               >
                 {#if item.bars}
                   <span class="bars" class:is-joined={joined}>
@@ -1643,8 +1667,19 @@
                   >Forget</span>
                 {:else if item.state === 'locked'}
                   <span class="item__need">Password needed</span>
+                {:else if item.state === 'connected' && item.details}
+                  <span class="chev" class:chev--open={netOpen} aria-hidden="true"></span>
                 {/if}
               </button>
+              {#if item.state === 'connected' && item.details && netOpen}
+                <!-- ADR-0123: the connected network in detail, under its line
+                     rather than in a row of its own. -->
+                <dl class="netinfo">
+                  {#each (netLive?.name === item.name ? netLive.details : item.details) as [k, v] (k)}
+                    <div class="netinfo__row"><dt>{k}</dt><dd>{v}</dd></div>
+                  {/each}
+                </dl>
+              {/if}
             {/each}
             {#if sheet.hint}<div class="items__hint">{sheet.hint}</div>{/if}
           </div>
@@ -3364,5 +3399,45 @@
     /* Less the list's own foot padding, which already stands below the
        last row. */
     flex: 0 0 max(0px, calc(var(--foot-clear, 0px) - 30px));
+  }
+  /* ADR-0123: the connected network's details. */
+  .netinfo {
+    margin: -2px 0 8px;
+    padding: 10px 16px 12px 52px;
+    display: grid;
+    gap: 6px;
+  }
+  .netinfo__row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .netinfo dt {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+  }
+  .netinfo dd {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--ink-body);
+    font-variant-numeric: tabular-nums;
+  }
+  .item .chev {
+    flex-shrink: 0;
+    width: 9px;
+    height: 9px;
+    border-right: 2px solid var(--ink-quiet);
+    border-bottom: 2px solid var(--ink-quiet);
+    transform: rotate(45deg);
+    margin: 0 6px 4px 8px;
+    transition: transform var(--dur-fast) var(--ease);
+  }
+  .item .chev--open {
+    transform: rotate(225deg);
+    margin-bottom: -4px;
   }
 </style>

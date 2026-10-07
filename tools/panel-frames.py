@@ -306,7 +306,16 @@ LYRICS = ".lyrics__scroller"
 #: panel before a measurement that assumes nothing is.
 SCRIM = ".scrim, .sw-scrim"
 
-RECT = """(() => {{ const e = document.querySelector({selector!r});
+#: **The first match that is on the glass** (2026-10-07). Since ADR-0122 the
+#: library stays in the page, hidden, while Now Playing is up: the first
+#: `.new__scroll` was the hidden one, so the harness believed it was on Home
+#: and tapped a card nobody could see - grid-still, the artist page and
+#: Browse failed every run. Every query below takes the first visible match.
+VISIBLE = """const seen = (e) => !e.closest('.is-kept') &&
+    (e.checkVisibility ? e.checkVisibility({{visibilityProperty: true}}) : e.offsetParent !== null);
+  const first = (sel) => [...document.querySelectorAll(sel)].find(seen);"""
+
+RECT = """(() => {{ """ + VISIBLE + """ const e = first({selector!r});
   if (!e) return null; const r = e.getBoundingClientRect();
   return [r.x, r.y, r.width, r.height]; }})()"""
 
@@ -329,12 +338,12 @@ COVERING = """(() => {{ return [...document.querySelectorAll({selector!r})].some
     return r.width > 4 && r.height > 4;
   }}); }})()"""
 
-TOP = """(() => {{ const e = document.querySelector({selector!r});
+TOP = """(() => {{ """ + VISIBLE + """ const e = first({selector!r});
   if (!e) return false; e.scrollTop = 0; e.scrollLeft = 0; return true; }})()"""
 
 #: The nth match rather than the first - a settings section is one of a list
 #: of identical buttons, and only its position tells them apart.
-RECT_NTH = """(() => {{ const e = document.querySelectorAll({selector!r})[{index}];
+RECT_NTH = """(() => {{ """ + VISIBLE + """ const e = [...document.querySelectorAll({selector!r})].filter(seen)[{index}];
   if (!e) return null; const r = e.getBoundingClientRect();
   return [r.x, r.y, r.width, r.height]; }})()"""
 
@@ -368,9 +377,19 @@ class Screen:
         # scrolls sideways, and Settings' card sits past the screen's edge -
         # a tap at its centre landed off the glass and "settings" was never
         # reached.
+        # Only the row that scrolls sideways is moved: scrollIntoView also
+        # scrolls the panel's fixed, overflow-hidden frames, and left the
+        # whole screen shifted after Settings (2026-10-07: Albums, Playlists
+        # and Radio then measured taps that landed on nothing).
         await self._panel.evaluate(
-            f"(() => {{ const e = document.querySelector({selector!r});"
-            f" if (e) e.scrollIntoView({{block: 'nearest', inline: 'nearest', behavior: 'instant'}}); }})()")
+            "(() => { " + VISIBLE.replace("{{", "{").replace("}}", "}") + f" const e = first({selector!r}); if (!e) return;"
+            f" for (let p = e.parentElement; p; p = p.parentElement) {{"
+            f"  const o = getComputedStyle(p).overflowX;"
+            f"  if ((o === 'auto' || o === 'scroll') && p.scrollWidth > p.clientWidth) {{"
+            f"   const r = e.getBoundingClientRect(), q = p.getBoundingClientRect();"
+            f"   if (r.left < q.left) p.scrollLeft -= q.left - r.left + 16;"
+            f"   else if (r.right > q.right - 80) p.scrollLeft += r.right - q.right + 96;"
+            f"   break; }} }} }})()")
         # The row snaps; its position is read once it has settled.
         await asyncio.sleep(0.8)
         box = await self.rect(selector)
@@ -468,7 +487,7 @@ class Screen:
         # plain literal whose `}}` stayed doubled, so every probe was a
         # syntax error answering `null`.
         return await self._panel.evaluate(
-            f"(() => {{ const e = document.querySelector({selector!r});"
+            "(() => { " + VISIBLE.replace("{{", "{").replace("}}", "}") + f" const e = first({selector!r});"
             f" return e ? e.scrollTop + e.scrollLeft : null; }})()"
         )
 
