@@ -479,18 +479,19 @@ to 100 MB) to help track down a problem. It is on by default on the Testing
 channel; switching it off deletes the logs kept.
 
 **My sound card or screen is not marked Tested. Can I help?**
-Yes: open *Settings → System → Report this hardware* on a phone or computer,
-answer a few questions about how it plays and looks - a short test tone at
-44.1, 96 and 192 kHz helps with the sound, and a test pattern on the
-player's screen, with four circles to tap, checks the picture and the touch -
-and send the report it
-prepares on GitHub (a GitHub account is needed). A week after a sound card
-or screen that is not Tested is first used, the System page offers this once
-in a line at its top; its × puts it away for good. The player fills in what it
+Yes: open *Settings → System → Hardware feedback* on a phone or computer. It
+takes two short steps. First the screen: a test pattern on the player's
+screen shows whether all of it is visible, and four circles to tap measure
+where the touches land. Then the sound: a short test tone at 44.1, 96 and
+192 kHz, and a few questions about how it plays. On a player without a
+screen, or one set to Headless, it starts at the sound. The feedback is then
+sent on GitHub (a GitHub account is needed), filled in with what the player
 reads of the hardware itself - never a serial number or anything about you -
-and reports are public, so the next owner can see what works. Once a report
-is accepted, the next release marks that card or screen *Reported* in the
-player and in the project's hardware list.
+and it is public, so the next owner can see what works. A week after a sound
+card or screen that is not Tested is first used, the System page offers this
+once in a line at its top; its × puts it away for good. Once feedback is
+accepted, the next release marks that card or screen *Reported* in the player
+and in the project's hardware list.
 
 **Something is wrong. How do I report it?**
 Open *Settings → System → Problem report* on a phone or computer on the same
