@@ -241,7 +241,7 @@ Read against `core/updater/gexis-update` on phase-13d.
   configuration (`packaging/system/build.sh`; ADR-0107). Otherwise only the
   units of the packages that changed are restarted.
 
-**Not built (2026-10-07):**
+**Not built (2026-10-07) - to be built before the first public release** (George, 2026-10-07: *"Build them."*):
 
 - **A core that does not answer after the update's restart is not rolled
   back.** The update is reported as failed ("the core did not answer after

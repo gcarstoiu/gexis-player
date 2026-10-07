@@ -1,9 +1,10 @@
 # ADR-0128 — First setup installs the plugins and waits until the player has settled
 
-**Status:** **Proposed** — George, 2026-10-07, on the list before the first
+**Status:** **Accepted** — George, 2026-10-07, on the list before the first
 public release: *"Add step in setup for installing plugins and loading screen
-on first setup for things to be downloaded and settled."* The questions under
-*Owed* are his to answer before it is built.
+on first setup for things to be downloaded and settled."* The three questions
+answered the same day: *"1. All. No he can't. Leave it for settings but
+inform user."*
 **Builds on:** [ADR-0031](0031-first-boot-setup-access-point.md) and
 [ADR-0104](0104-how-the-device-knows-it-needs-setup.md) (first-boot setup),
 [ADR-0106](0106-plugins-you-install-and-update.md) (plugins installed and
@@ -32,12 +33,11 @@ setup while this was going on.
 3. **Nothing new to set:** the step's answer is the plugins themselves
    (ADR-0106); no ADR-0022 row.
 
-## Owed (George)
+## Decided (George, 2026-10-07)
 
-1. [?] Which plugins the step offers - all of those the release ships, or a
-   chosen few (Lyrion Server, Plexamp)?
-2. [?] Whether the settling screen may be skipped ("Use it now, finish in the
-   background"), or always waits.
-3. [?] What happens when a download fails on the first boot (no network yet,
-   a slow line): retry on its own with the screen saying so, or continue and
-   leave it to Settings.
+1. **All the plugins the release ships** are offered in the step.
+2. **The settling screen cannot be skipped**: music is offered once it has
+   settled.
+3. **A download that fails is left for Settings, and the owner is told**: the
+   settling screen says which one did not finish and where to try again
+   (*Settings → Plugins*), then finishes; the player does not retry on its own.

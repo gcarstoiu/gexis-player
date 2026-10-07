@@ -272,7 +272,7 @@ was shown only that release's notes; what the skipped ones changed was in
   release's notes are kept up to 8,000 characters (`NOTES_MAX`), far above
   any so far; the history as a whole up to 40,000.
 
-**Not built (2026-10-07):**
+**Not built (2026-10-07) - to be built before the first public release** (George, 2026-10-07: *"Build them."*):
 
 - **§5's "returns to the release it had" holds only when the install or its
   `verify` fails.** A core that does not answer after the restart is
