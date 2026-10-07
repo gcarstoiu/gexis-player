@@ -177,16 +177,15 @@ player back.
 
 **Where do the idle screen's pictures come from?**
 *Settings → Display → Idle screen → Background* chooses: *Artist pictures*
-from the library; *Wallpapers online* from Pixabay and Pexels (each needs a
-free key of its own, entered in the rows below); *Wallpapers on device*, read
+from the library; *Wallpapers online* from Pixabay (it needs a free key, entered
+in the row below); *Wallpapers on device*, read
 from the player's Pictures share on the network; or *Black*. Pictures are
 placed by what they show, so faces, people and animals stay in view.
 
 **The online wallpapers keep repeating.**
 They no longer repeat until every picture of the day has been shown, and
 each day brings a new set. *Wallpaper topics* sets which Pixabay categories
-are drawn from; choosing several mixes them. Pexels is not issuing new keys
-at the moment, so Pixabay alone works too.
+are drawn from; choosing several mixes them.
 
 **The weather is for the wrong place, or not shown.**
 Set *Settings → Display → Idle screen → Location* to a city or place name.

@@ -1,5 +1,7 @@
 # ADR-0120 — Backgrounds cropped by what they show; Pexels and TheAudioDB
 
+> **Amended 2026-10-07: Pexels removed** (George: *"remove pexels completely as they are not providing API keys anymore"*). Its source, row and key are gone; Pixabay is the online wallpaper source. The Pexels parts below are history.
+
 **Status:** **Accepted** — George, 2026-10-05, on the comparison page
 *Bar Backgrounds* and in the session: *"Let's do this but with some
 modifications"*, then **1.a**, **2. agreed**, **3. that is fine for pexels -
