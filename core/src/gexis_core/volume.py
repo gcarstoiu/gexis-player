@@ -772,6 +772,18 @@ async def forget_mixers() -> None:
         for mixer in _MIXERS.values():
             mixer.close()
         _MIXERS.clear()
+        # **And libasound's own copy of the configuration.** A process keeps
+        # the one it loaded first: after `output.conf` was rewritten, `output`
+        # still meant the old card in here while a fresh `amixer` saw the new
+        # one - so on the DAC, LMS's volume went to HDMI's software control
+        # (George, guestpi, 2026-10-07; measured with a rewritten ctl on
+        # guestpi: the old card until this call, the new one after it). The
+        # next open reads the files again.
+        try:
+            import ctypes
+            ctypes.CDLL("libasound.so.2").snd_config_update_free_global()
+        except OSError:
+            pass
     await asyncio.get_running_loop().run_in_executor(_MIXER_THREAD, close_all)
 
 
@@ -996,7 +1008,7 @@ class VolumeBridge:
         renderer floor bump both do now.
         """
         if fixed_output():
-            logger.debug("volume: fixed output, %s/240 not written", raw)
+            logger.debug("volume: fixed output, %s/%s not written", raw, hardware_max())
             return
         raw = self._capped(raw)
         self._expected_hw_raw = (raw, time.monotonic())
@@ -1133,7 +1145,7 @@ class VolumeBridge:
                 # would poison whichever renderer's level was looked up by
                 # that key next. Track it as the new baseline and move on.
                 logger.debug(
-                    "volume: hardware changed to %s/240 with no active renderer, not attributed",
+                    "volume: hardware changed to %s with no active renderer, not attributed",
                     raw,
                 )
                 continue
@@ -1141,7 +1153,7 @@ class VolumeBridge:
                 continue
             steps = await self._adapter.get_volume_steps()
             value = round(hardware_raw_to_spotify_fraction(raw) * steps)
-            logger.info("volume: hardware -> %s (%s/240)", self._adapter.renderer_id, raw)
+            logger.info("volume: hardware -> %s (%s/%s)", self._adapter.renderer_id, raw, hardware_max())
             self._expected_adapter_value = (value, time.monotonic())
             await self._adapter.set_volume(value)
 

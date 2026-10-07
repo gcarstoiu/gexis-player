@@ -477,3 +477,17 @@ def test_hdmi_stays_without_a_control_of_its_own_when_the_software_one_is_on_it(
 """
     monkeypatch.setattr(outputs, "_run", lambda *a: contents)
     assert outputs.playback_control("vc4hdmi0") == (None, None)
+
+
+async def test_a_change_of_output_makes_libasound_read_its_configuration_again(monkeypatch):
+    """A process keeps the ALSA configuration it loaded first; `output`
+    meant the old card in the core after a switch (guestpi, 2026-10-07)."""
+    import ctypes
+
+    from gexis_core import volume
+
+    freed = []
+    monkeypatch.setattr(ctypes, "CDLL", lambda name: type("Lib", (), {
+        "snd_config_update_free_global": staticmethod(lambda: freed.append(name))})())
+    await volume.forget_mixers()
+    assert freed == ["libasound.so.2"]

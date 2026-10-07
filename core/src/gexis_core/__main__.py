@@ -683,7 +683,7 @@ async def main() -> None:
             )
             return
         logger.info(
-            "volume: %s -> hardware (%s/%s -> %s/240)", renderer_id, value, steps, raw
+            "volume: %s -> hardware (%s/%s -> %s/%s)", renderer_id, value, steps, raw, hardware_max()
         )
         asyncio.ensure_future(volume_bridge.write_hardware(raw))
 
@@ -783,8 +783,8 @@ async def main() -> None:
         if start_max is not None:
             cap_raw = renderer_value_to_hardware_raw(renderer_percent_to_value(start_max, 100), 100)
             if raw > cap_raw:
-                logger.info("volume: %s starts no louder than %s%%; the DAC comes down first (%s/240 -> %s/240)",
-                            renderer_id, int(start_max), raw, cap_raw)
+                logger.info("volume: %s starts no louder than %s%%; the DAC comes down first (%s -> %s of %s)",
+                            renderer_id, int(start_max), raw, cap_raw, hardware_max())
                 await volume_bridge.write_hardware(cap_raw)
                 start_guard.handed(renderer_id, start_max, time.monotonic(), told=False)
                 raw, lowered = cap_raw, True
@@ -794,8 +794,8 @@ async def main() -> None:
             value = min(value, renderer_percent_to_value(start_max, steps))
         else:
             logger.info(
-                "volume: %s cannot say where it is; handing it the level playing (%s/240 -> %s/%s)",
-                renderer_id, raw, value, steps,
+                "volume: %s cannot say where it is; handing it the level playing (%s/%s -> %s/%s)",
+                renderer_id, raw, hardware_max(), value, steps,
             )
         remote.set_steps(renderer_id, steps)
         remote.report(renderer_id, value)
@@ -1208,7 +1208,7 @@ async def main() -> None:
         if await remote.send(percent):
             return True
         raw = slider_percent_to_raw(percent)
-        logger.info("command: volume -> %.0f%% (raw %s/240)", percent, raw)
+        logger.info("command: volume -> %.0f%% (raw %s/%s)", percent, raw, hardware_max())
         # Through the bridge, never set_raw() directly - the echo window is
         # what stops this write being read back as an external change and
         # bounced out to the active renderer (Finding 009 §1, which cost a
