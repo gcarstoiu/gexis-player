@@ -1,6 +1,8 @@
 """Phase 5 criteria 6 and 8: who shows and hides the Peppy screen (ADR-0036)."""
 from __future__ import annotations
 
+import time
+import subprocess
 import pytest
 
 from gexis_core.model import TrackMetadata
@@ -196,7 +198,7 @@ def test_paused_time_does_not_count_towards_the_track_position():
 
 
 def test_missing_wlrctl_is_not_fatal():
-    screen = PeppyScreen(wlrctl="/nonexistent/wlrctl")
+    screen = PeppyScreen(wlrctl="/nonexistent/wlrctl", shown_path=None, settle_s=0)
     assert screen.show() is False
     assert screen.visible is False
 
@@ -247,7 +249,7 @@ def test_the_screen_passes_the_compositor_socket_to_wlrctl(monkeypatch):
         return Result()
 
     monkeypatch.setattr("gexis_core.peppy.subprocess.run", fake_run)
-    screen = PeppyScreen(wlrctl="/usr/bin/wlrctl", runtime_dir="/run/user/1000", wayland_display="wayland-0")
+    screen = PeppyScreen(wlrctl="/usr/bin/wlrctl", runtime_dir="/run/user/1000", wayland_display="wayland-0", shown_path=None, settle_s=0)
 
     assert screen.show() is True
     assert seen["env"]["XDG_RUNTIME_DIR"] == "/run/user/1000"
@@ -469,7 +471,7 @@ def test_the_screen_says_when_it_goes_up_or_down(monkeypatch):
         stderr = b""
 
     monkeypatch.setattr("gexis_core.peppy.subprocess.run", lambda *a, **k: Result())
-    screen = PeppyScreen(wlrctl="/usr/bin/wlrctl")
+    screen = PeppyScreen(wlrctl="/usr/bin/wlrctl", shown_path=None, settle_s=0)
     seen = []
     screen.on_change = seen.append
     screen.show()
@@ -493,3 +495,45 @@ def test_peppymeter_is_pointed_at_the_pack_and_its_size(tmp_path):
     assert f"base.folder = {base}\nmeter.folder = 800x480\nscreen.width = 800\nscreen.height = 480\n" in text
     assert text.startswith("# ours\n") and "screen.width = untouched" in text
     assert set_meter_skins(conf, base, "800x480", 800, 480) is False
+
+
+
+def test_the_driver_is_told_when_the_screen_is_up(tmp_path, monkeypatch):
+    """ADR-0019 as amended 2026-10-07: hidden, the visualiser draws nothing
+    (57 % of a core while music played, Finding 112). The flag is `0` from
+    the start and after a hide, `1` before a show - and the raise waits for
+    the driver, so the first frame shown is finished."""
+    flag = tmp_path / "visualiser-shown"
+    order = []
+
+    class Done:
+        returncode = 0
+        stderr = b""
+
+    def fake_run(cmd, **kw):
+        order.append((cmd[2], flag.read_text()))
+        return Done()
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    slept = []
+    monkeypatch.setattr(time, "sleep", lambda s: slept.append(s))
+    screen = PeppyScreen(wlrctl="/usr/bin/wlrctl", shown_path=flag, settle_s=0.25)
+    assert flag.read_text() == "0"
+    assert screen.show() is True
+    assert order[-1] == ("focus", "1") and slept == [0.25]
+    assert screen.hide() is True
+    assert flag.read_text() == "0"
+
+
+def test_a_show_that_finds_no_window_leaves_it_not_drawing(tmp_path, monkeypatch):
+    flag = tmp_path / "visualiser-shown"
+
+    class Failed:
+        returncode = 1
+        stderr = b"no window"
+
+    monkeypatch.setattr(subprocess, "run", lambda cmd, **kw: Failed())
+    monkeypatch.setattr(time, "sleep", lambda s: None)
+    screen = PeppyScreen(wlrctl="/usr/bin/wlrctl", shown_path=flag)
+    assert screen.show() is False
+    assert flag.read_text() == "0"
