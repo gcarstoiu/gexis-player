@@ -41,13 +41,13 @@ volume inside its own software, so below 100 in the Plexamp app it is not
 bit-perfect either.
 
 **Why is there no volume slider?**
-Either the output has no volume control of its own (HDMI is one) - switch on
-*Settings → Audio → Software volume* to set the level in the player instead,
-at the cost of bit-perfect playback below 100 % - or
-*Settings → Audio → Output mode* is set to *Fixed*. Fixed sends the full
-level all the time, for an amplifier that sets the volume itself; the screen
-shows a padlock instead of a slider. To get the slider back, set Output mode
-to *Variable*. Turn the amplifier down before switching to Fixed: in Fixed,
+*Settings → Audio → Volume* is set to *Fixed*. Fixed sends the full level all
+the time, for an amplifier that sets the volume itself; the screen shows a
+padlock instead of a slider. To get the slider back, choose *Hardware* (the
+sound card's own volume control) or *Software* (the player recalculates the
+sound - not bit-perfect below 100 %). On an output with no volume control of
+its own, such as HDMI, Hardware is greyed out and Software is used in its
+place. Turn the amplifier down before switching to Fixed: in Fixed,
 *Maximum volume* and Spotify's *Starting volume* no longer apply (both rows
 are hidden), and every source plays at full level.
 
@@ -55,9 +55,9 @@ are hidden), and every source plays at full level.
 Yes: *Settings → Audio → Maximum volume*. Set it to 80 and the player is never
 louder than 80 % of its range, from any source. 100 % on the screen, in
 Lyrion and on a phone then all mean that level, so no control shows a number
-louder than what comes out. It applies only with *Output mode* set to
-*Variable*; in *Fixed* the player always sends the full level, and the
-amplifier is what limits the volume.
+louder than what comes out. It does not apply with *Volume* set to
+*Fixed*: then the player always sends the full level, and the amplifier is
+what limits the volume.
 
 **Spotify started much louder than the music before it. Can that be avoided?**
 *Settings → Sources → Spotify Connect → Starting volume* (default 60 %) is the
@@ -65,8 +65,8 @@ loudest Spotify starts at when it takes over, whatever the Spotify app was
 last set to. A lower level is kept; a higher one comes down to the setting.
 For the first few seconds the player holds that level even if the phone sends
 its own, higher one. (Spotify's loudness normalisation is off on the player,
-so at full volume it is as loud as Lyrion.) Like *Maximum volume*, it applies
-only with *Output mode* set to *Variable*.
+so at full volume it is as loud as Lyrion.) Like *Maximum volume*, it does
+not apply with *Volume* set to *Fixed*.
 
 **The bottom of the volume slider is very quiet, or the middle is too loud.**
 *Settings → Audio → Volume curve* sets how the slider's travel maps to
