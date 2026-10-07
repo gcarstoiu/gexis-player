@@ -3,7 +3,7 @@
 """**From owners' reports to the player, by a reviewed change** (ADR-0126
 decision 6).
 
-Reads the GitHub *Hardware report* issues labelled `accepted`, and writes
+Reads the GitHub *Hardware feedback* issues labelled `accepted`, and writes
 
 - `core/src/gexis_core/hardware_reports.json` - per board and per screen, how
   many accepted reports say it works, how many report a problem, the newest
@@ -172,7 +172,7 @@ def table(data: dict) -> str:
 def fetch() -> list[dict]:
     out = subprocess.run(
         ["gh", "issue", "list", "--state", "all", "--limit", "1000",
-         "--label", "hardware report", "--label", "accepted",
+         "--label", "hardware feedback", "--label", "accepted",
          "--json", "number,url,body,title"],
         capture_output=True, text=True, check=True, cwd=ROOT).stdout
     return json.loads(out)

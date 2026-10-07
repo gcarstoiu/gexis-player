@@ -198,6 +198,9 @@
   let hwBusy = $state(false);
   let hwError = $state(null);
   let hwTones = $state(null);
+  //: George, 2026-10-07: two steps - the screen, then the sound; the screen's
+  //: skipped when there is none to look at (headless, or none connected).
+  let hwStep = $state('screen');
   let hwTonesBusy = $state(false);
   async function playHardwareTones() {
     if (hwTonesBusy) return;
@@ -244,11 +247,12 @@
     if (sheet?.kind !== 'hardware') {
       if (untrack(() => hwCheck?.showing)) showScreenCheck(false).catch(() => {});
       hw = null; hwAnswers = {}; hwNotes = ''; hwUrl = null; hwError = null; hwTones = null; hwCheckSeq = null;
+      hwStep = 'screen';
       return;
     }
     if (hw === null && !onPanel()) {
       fetch('/hardware-report').then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-        .then((body) => (hw = body))
+        .then((body) => { hw = body; hwStep = body?.display ? 'screen' : 'sound'; })
         .catch(() => (hwError = 'The player could not read its hardware. Try again.'));
     }
   });
@@ -274,7 +278,10 @@
       const r = await fetch('/hardware-report/issue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answers: hwAnswers, notes: hwNotes, tones: hwTones ?? [] }),
+        body: JSON.stringify({
+          answers: hw?.display ? hwAnswers : { ...hwAnswers, picture: 'No screen', touch: 'No touch' },
+          notes: hwNotes, tones: hwTones ?? [],
+        }),
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       hwUrl = (await r.json()).url;
@@ -1140,7 +1147,10 @@
     }
     if (row.kind === 'hardware') {
       if (hwUrl) sheetKey = null;
-      else await prepareHardwareReport();
+      else if (hw?.display && hwStep === 'screen') {
+        if (hwCheck?.showing) showScreenCheck(false).catch(() => {});
+        hwStep = 'sound';
+      } else await prepareHardwareReport();
       return;
     }
     if (row.kind === 'report') {
@@ -1171,6 +1181,11 @@
   }
 
   function cancelSheet() {
+    // The feedback's sound step goes back to its screen step.
+    if (sheet?.kind === 'hardware' && hw?.display && hwStep === 'sound' && !hwUrl) {
+      hwStep = 'screen';
+      return;
+    }
     // A pending restore is a step inside the sheet, not the sheet: cancelling
     // it goes back to the list, the way cancelling a choice does.
     if (restorePending) {
@@ -1671,35 +1686,21 @@
         <div class="report report--scroll">
           {#if onPanel()}
             <p class="report__text">
-              A report opens GitHub, which the screen cannot. Open Settings on a phone or computer on the same
+              This feedback opens GitHub, which the screen cannot. Open Settings on a phone or computer on the same
               network, at <span class="report__addr">{device.hostname ? `${device.hostname}.local` : device.address}</span>,
-              then System → Report this hardware.
+              then System → Hardware feedback.
             </p>
           {:else if hwUrl}
-            <p class="report__text">The report is ready. GitHub opens with it filled in; read it there and press Create.</p>
-            <a class="report__link report__go" href={hwUrl} target="_blank" rel="noopener">Open the report on GitHub</a>
+            <p class="report__text">The feedback is ready. GitHub opens with it filled in; read it there and press Create.</p>
+            <a class="report__link report__go" href={hwUrl} target="_blank" rel="noopener">Open it on GitHub</a>
           {:else if hw === null && !hwError}
             <p class="report__text report__text--quiet">Reading the hardware…</p>
           {:else if hw}
-            <p class="report__text">
-              <span class="report__addr">{hw.board ?? 'No sound card'}</span>{#if hw.state} · {hw.state}{/if}
-              {#if hw.screen}<br /><span class="report__addr">{hw.screen}</span>{/if}
-            </p>
-            <div class="hwq">
-              <span class="report__label">Sound check</span>
-              <p class="report__text report__text--quiet">
-                A short tone at 44.1, 96 and 192 kHz, at the current volume. Turn the amplifier down first.
-              </p>
-              {#if hwTones}
-                <ul class="hwq__tones">{#each hwTones as t (t)}<li>{t}</li>{/each}</ul>
-              {/if}
-              <div class="hwq__options">
-                <button type="button" class="hwq__option" disabled={hwTonesBusy} onclick={playHardwareTones}>
-                  {hwTonesBusy ? 'Playing…' : hwTones ? 'Play them again' : 'Play test tones'}
-                </button>
-              </div>
-            </div>
-            {#if hw.screen}
+            {#if hw.display}
+              <p class="report__step">Step {hwStep === 'screen' ? 1 : 2} of 2 · {hwStep === 'screen' ? 'Screen' : 'Sound'}</p>
+            {/if}
+            {#if hw.display && hwStep === 'screen'}
+              <p class="report__text"><span class="report__addr">{hw.screen ?? 'Screen'}</span></p>
               <div class="hwq">
                 <span class="report__label">Screen check</span>
                 <p class="report__text report__text--quiet">
@@ -1715,8 +1716,26 @@
                   </button>
                 </div>
               </div>
+            {:else}
+              <p class="report__text">
+                <span class="report__addr">{hw.board ?? 'No sound card'}</span>{#if hw.state} · {hw.state}{/if}
+              </p>
+              <div class="hwq">
+                <span class="report__label">Sound check</span>
+                <p class="report__text report__text--quiet">
+                  A short tone at 44.1, 96 and 192 kHz, at the current volume. Turn the amplifier down first.
+                </p>
+                {#if hwTones}
+                  <ul class="hwq__tones">{#each hwTones as t (t)}<li>{t}</li>{/each}</ul>
+                {/if}
+                <div class="hwq__options">
+                  <button type="button" class="hwq__option" disabled={hwTonesBusy} onclick={playHardwareTones}>
+                    {hwTonesBusy ? 'Playing…' : hwTones ? 'Play them again' : 'Play test tones'}
+                  </button>
+                </div>
+              </div>
             {/if}
-            {#each HW_QUESTIONS.filter((x) => (!x.screen || hw.screen) && (!x.touch || hw.touch)) as item (item.id)}
+            {#each HW_QUESTIONS.filter((x) => (hw.display && hwStep === 'screen') ? (x.screen || (x.touch && hw.touch)) : !(x.screen || x.touch)) as item (item.id)}
               <div class="hwq">
                 <span class="report__label">{item.q}</span>
                 <div class="hwq__options">
@@ -1727,9 +1746,11 @@
                 </div>
               </div>
             {/each}
+            {#if !(hw.display && hwStep === 'screen')}
             <label class="report__label" for="hw-notes">Anything else (optional)</label>
             <textarea id="hw-notes" class="report__note" rows="3" maxlength="2000" bind:value={hwNotes}></textarea>
             <details class="hwq__facts"><summary>What the player read</summary><pre>{hw.text}</pre></details>
+            {/if}
           {/if}
           {#if hwError}<p class="report__text report__text--warn">{hwError}</p>{/if}
         </div>
@@ -2068,7 +2089,8 @@
         <button class="btn" type="button" disabled={busy} onclick={cancelSheet}>
           {#if join === 'error'}
             Give up
-          {:else if joinItem || shareBrowse || shareLogin || (sheet.grouped && region !== null)}
+          {:else if joinItem || shareBrowse || shareLogin || (sheet.grouped && region !== null)
+                     || (sheet.kind === 'hardware' && hw?.display && hwStep === 'sound' && !hwUrl)}
             Back
           {:else if restorePending}
             Cancel
@@ -2087,7 +2109,7 @@
             onclick={confirmSheet}
           >
             {#if sheet.kind === 'hardware'}
-              {#if hwBusy}<span class="btn__spin"></span>Preparing…{:else if hwUrl}Done{:else}Prepare the report{/if}
+              {#if hwBusy}<span class="btn__spin"></span>Preparing…{:else if hwUrl}Done{:else if hw?.display && hwStep === 'screen'}Next: the sound{:else}Prepare the feedback{/if}
             {:else if sheet.kind === 'report'}
               {#if reportBusy}<span class="btn__spin"></span>Preparing…{:else if reportDone}Done{:else}Download{/if}
             {:else if busy}
@@ -3564,6 +3586,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    /* A label that wraps ("Prepare the feedback" at phone width) stays
+       centred and clear of the edges. */
+    padding: 0 14px;
+    text-align: center;
+    line-height: 1.2;
     font-size: 17px;
     font-weight: 600;
   }
@@ -3728,6 +3755,14 @@
     word-break: break-all;
   }
   .report__link { color: var(--accent-lms); }
+  .report__step {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-dim, #9fb0bd);
+  }
   .hwprompt {
     display: flex;
     align-items: stretch;

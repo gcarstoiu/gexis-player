@@ -1294,7 +1294,11 @@ class StateServer:
         """ADR-0126: the facts a hardware report carries, for the sheet to show
         before anything is sent."""
         facts = await self._hardware_facts()
+        headless = bool(self._settings.value("headless")) if self._settings else False
         return web.json_response({
+            # George, 2026-10-07: the screen step only when there is a screen
+            # to look at - not headless, and one connected.
+            "display": facts.screen_connected and not headless,
             "board": facts.board or facts.card or None,
             "state": facts.state,
             "screen": facts.screen_chosen or (f"{facts.edid_maker or ''} {facts.edid_name or ''}".strip() or None),

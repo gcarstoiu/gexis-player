@@ -1,14 +1,14 @@
-name: Hardware report
-description: How a sound card or screen works with Gexis Player - sent from Settings → System → Report this hardware.
+name: Hardware feedback
+description: How a sound card or screen works with Gexis Player - sent from Settings → System → Hardware feedback.
 title: "[Hardware] "
-labels: ["hardware report"]
+labels: ["hardware feedback"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thank you - reports like this one are how Gexis learns which sound cards and screens work.
+        Thank you - feedback like this is how Gexis learns which sound cards and screens work.
         The player filled in what it can read itself; nothing in it names you, your network or the
-        hardware's serial numbers. Reports are public, so anyone can see what works before buying.
+        hardware's serial numbers. It is public, so anyone can see what works before buying.
   - type: input
     id: board
     attributes:

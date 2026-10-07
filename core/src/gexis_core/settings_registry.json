@@ -1293,9 +1293,9 @@
       {
         "key": "hardware_report",
         "type": "action",
-        "label": "Report this hardware",
+        "label": "Hardware feedback",
         "marks": "R",
-        "note": "Tells the project how this sound card and screen work, so others can see what works before buying. A few questions, then a report on GitHub, filled in with what the player reads of the hardware - never a serial number or anything about you.",
+        "note": "Tells the project how this sound card and screen work, so others can see what works before buying. Two short checks - the screen, then the sound - and a few questions, then feedback on GitHub, filled in with what the player reads of the hardware - never a serial number or anything about you.",
         "kind": "hardware",
         "default": null
       },

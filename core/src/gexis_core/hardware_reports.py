@@ -2,7 +2,7 @@
 """**What owners reported** (ADR-0126 decisions 5 and 6).
 
 `hardware_reports.json` is written by `tools/hardware-reports.py` from the
-GitHub *Hardware report* issues labelled `accepted`, and changes only in a
+GitHub *Hardware feedback* issues labelled `accepted`, and changes only in a
 reviewed commit: a report never reaches a device by itself, so a wrong one
 cannot reach anyone unreviewed.
 

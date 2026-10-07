@@ -156,7 +156,7 @@ def test_the_line_comes_a_week_after_the_hardware_was_first_seen():
     text, record = hr.prompt(record, pieces, now=1000.0 + WEEK - 1)
     assert text is None
     text, record = hr.prompt(record, pieces, now=1000.0 + WEEK)
-    assert text == "Help others with this DAC: report how it works"
+    assert text == "Help others with this DAC: share how it works"
 
 
 def test_dismissed_is_for_good_for_that_hardware_and_a_new_one_is_asked_in_its_own_time():
@@ -168,7 +168,7 @@ def test_dismissed_is_for_good_for_that_hardware_and_a_new_one_is_asked_in_its_o
     text, record = hr.prompt(record, other, now=10 * WEEK)
     assert text is None, "new hardware waits its own week"
     text, _ = hr.prompt(record, other, now=11 * WEEK)
-    assert text == "Help others with this DAC and screen: report how they work"
+    assert text == "Help others with this DAC and screen: share how they work"
 
 
 async def test_preparing_a_report_answers_the_prompt(tmp_path, monkeypatch):

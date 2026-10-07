@@ -108,8 +108,8 @@ lowest priority so that it should not be (ADR-0115), and Phase 13e's criterion
 *Tested* means played and measured on the project's own hardware. *Reported*
 means at least one owner sent a report that it works, and none against
 (*Reported with problems* when one did); *Known* boards and *Untested* screens
-are on the player's list without either. Owners report from
-*Settings → System → Report this hardware*; accepted reports reach this table
+are on the player's list without either. Owners send feedback from
+*Settings → System → Hardware feedback*; accepted feedback reaches this table
 and the player through a reviewed change (ADR-0126).
 
 <!-- hardware-reports:begin (tools/hardware-reports.py writes this table) -->

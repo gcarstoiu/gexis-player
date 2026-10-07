@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""**Report this hardware** (ADR-0126; George, 2026-10-07: *"how do we crowd
+"""**Hardware feedback**, first called Report this hardware (ADR-0126; George, 2026-10-07: *"how do we crowd
 source the testing of audio hats, dacs and displays. otherwise its impossible
 to have coverage"*).
 
@@ -314,9 +314,9 @@ def prompt(stored: dict | None, pieces: dict[str, str], now: float) -> tuple[str
     if not due:
         return None, record
     if len(due) == 2:
-        return "Help others with this DAC and screen: report how they work", record
+        return "Help others with this DAC and screen: share how they work", record
     what = "this DAC" if due == ["sound"] else "this screen"
-    return f"Help others with {what}: report how it works", record
+    return f"Help others with {what}: share how it works", record
 
 
 def dismissed(stored: dict | None, pieces: dict[str, str]) -> dict:
