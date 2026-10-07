@@ -1,0 +1,14 @@
+# The Settings button "Check for updates" (ADR-0110): read the channel and say
+# whether a release is waiting - nothing else. Not gexis-update-check.service,
+# whose `scheduled` run is the night's and installs when Updates is Automatic
+# and nothing plays: started from the button, it installed a release nobody
+# had asked for (found 2026-10-06, reading the units for the docs).
+[Unit]
+Description=Gexis Player: check the channel for a release, install nothing (ADR-0110)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/gexis/gexis-update check
+TimeoutStartSec=300

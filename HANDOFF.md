@@ -68,6 +68,35 @@ release** (George, 2026-10-04): never push a release onto an open PR.
 navigation on, kiosk.env back to its original (debug port off, checksum
 2fecdd6d...). Check playback before any restart.
 
+**After 0.9.2 (2026-10-06, night), on `phase-13b`:**
+- Updater: apt-listchanges off (the install bar's 16 s at 0), DpkgShare's
+  rate re-measured (3.5 MB/s), the bar held full before the tick
+  (ADR-0110 amended); **Check for updates now runs a check-only unit**
+  (`gexis-update-checknow.service`) - it had started the nightly unit,
+  which installs on Automatic. Phone: Settings' lists end clear of the
+  sheet (22 px, measured on every page). On gexis as preview
+  `0.9.2+git5` except the check-only unit (committed after).
+- **Panel speed: Finding 112.** The slower screen opens (3-10 % dropped
+  against ~1 %) are **the hidden visualiser**, not the UI: the 29 Sep UI is
+  no faster on today's device, the kept library (ADR-0122) is cleared, heat
+  ruled out. Stopped, the opens drop ~1 %. Hidden with a moving fanart skin
+  it takes 57 % of a core while playing (3 % paused; Finding 025 measured 8 %
+  before skins moved). **A decision for George:** whether the visualiser
+  stops drawing while hidden (amends ADR-0019). `panel-frames.py` mended;
+  still flaky on browse/artist-page after Settings - recheck next run.
+- **Docs (drafts) - HELD until George gives the go-ahead** (2026-10-06:
+  "Do not release them until I give the go ahead"): `docs/manual/`,
+  `docs/FAQ.md`, `docs/tech/` live ONLY on the local branch `docs-drafts`
+  (commit 74fc7f9), taken off `phase-13b` so no release carries them.
+  Manual and FAQ published privately for his comments (watched);
+  `docs/HARDWARE.md` updated and published as a commentable doc.
+  The tech-docs pass listed where ADRs and `docs/ARCHITECTURE.md` disagree
+  with the code (ADR-0105 §4, 0106 item 2, 0107's table, 0108's main text,
+  0110, 0113, 0040 §1, 0031/0104 on setup; stale docstrings in volume.py,
+  remote_volume.py, adapters/base.py, NowPlaying.svelte; vite dev proxy
+  missing routes) - **to be reconciled, not yet done.**
+- Plexamp 0.4.0 was already released and pinned (shipped in 0.9.2).
+
 **Second round of George's findings (2026-10-06), built and on gexis:**
 - One-tap search also for Qobuz's and Spotty's "Search" folders (opened
   straight to the field, their kept searches skipped - decision E).

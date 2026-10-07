@@ -18,7 +18,11 @@ from pathlib import Path
 logger = logging.getLogger("gexis_core.updates")
 
 STATUS = Path("/var/lib/gexis/updates/status.json")
-CHECK_UNIT = "gexis-update-check.service"
+#: What "Check for updates" starts: a check, never an install. The nightly
+#: timer's unit, gexis-update-check.service, runs `scheduled`, which installs
+#: when Updates is Automatic - wrong for a button that says it installs
+#: nothing (2026-10-06).
+CHECK_UNIT = "gexis-update-checknow.service"
 INSTALL_UNIT = "gexis-update-install.service"
 
 

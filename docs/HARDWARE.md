@@ -1,6 +1,6 @@
 # Hardware
 
-**Status: draft, being built** (George, 2026-10-03: *"a hardware
+**Status: draft, being built; brought up to date 2026-10-06** (George, 2026-10-03: *"a hardware
 recommendation document, with minimum and recommended hardware, with the
 lyrion Server as a separate entry as in end it is optional"*; ADR-0111
 decision 12). Every line names what it rests on. **Tested** means run on the
@@ -17,10 +17,11 @@ on a 1, 2 or 8 GB Pi 4, or on any other model.
 |---|---|---|---|
 | **Computer** | Raspberry Pi 4 Model B | Raspberry Pi 4 Model B | The only model the player is built and tested for. Pi 5, Pi 3, Pi 400 and Compute Module 4: **untested**. |
 | **Memory** | 2 GB (**untested**) | 4 GB (**tested**) | The player's own processes use about **700 MB** with a screen attached (measured on `gexis`, 2026-10-03: the visualiser 283 MB, the screen's browser about 226 MB, Plexamp 62 MB, the core 34 MB, the rest under 25 MB each). A 1 GB Pi would leave little room: **untested**. |
-| **Storage** | 16 GB card (**calculated**) | 32 GB or more | The image is **4.9 GB** (0.8.4). `gexis`, with one skin pack and the Lyrion server holding a 61,362-file library, uses **8.3 GB**. Space for an update's downloads comes on top. |
-| **Audio** | HiFiBerry DAC+ HD | HiFiBerry DAC+ HD | The only board tested (it is `hw:sndrpihifiberry`). Other DACs: Phase 13d, not yet supported. |
-| **Screen** | None (the player runs without one) | An HDMI screen from the tested list | HDMI only (ADR-0109). Tested: Waveshare 10.1" HDMI LCD (B), 1280 x 800, with or without its case. The 13.3" and the two bar screens are listed as tested by ADR-0109 but not yet tried on the hardware. DSI and DPI screens: not supported. |
-| **Network** | Wi-Fi | Wi-Fi or Ethernet | `gexis` runs on Wi-Fi. Internet is needed for updates, skin packs, and anything a plugin downloads (Plexamp, the Lyrion server). |
+| **Storage** | 16 GB card (**calculated**) | 32 GB or more | The image is **5.1 GB** (0.9.2; 4.9 GB at 0.8.4). `gexis`, with one skin pack and the Lyrion server holding a 61,362-file library, uses **8.3 GB**. Space for an update's downloads comes on top. |
+| **Audio** | A DAC HAT from the player's list, or a USB DAC | HiFiBerry DAC2 HD | ADR-0117 (Phase 13d) gives every DAC one of three states. **Tested:** the HiFiBerry DAC2 HD (`hw:sndrpihifiberry`, the bench board throughout). **Built, its board test owed:** the IQaudio DAC+, chosen under *Sound card board*. **Known:** the rest of the list (from Volumio's, corrected - Finding 106), **untested**. **Detected:** a USB DAC works as any class-compliant card, **untried**. DSD: neither tested board plays it. |
+| **Screen** | None (the player runs without one) | An HDMI touch screen from the tested list | HDMI only (ADR-0109). **Tested on the hardware** (Phase 13b, closed 2026-10-04): Waveshare 10.1" HDMI LCD (B), 1280 x 800, with or without its case; a 13.3" at 1920 x 1080; the Waveshare 7.9" bar (1280 x 400) and 11.9" bar (1480 x 320), both landscape. **Listed, untested:** 800 x 480, and a bar at 0°. DSI and DPI screens: not supported. |
+| **Network** | Wi-Fi | Wi-Fi or Ethernet | `gexis` runs on Wi-Fi. Internet is needed for updates, skin packs, and anything a plugin downloads (Plexamp, the Lyrion server). **Untested:** whether Wi-Fi power saving, on in the image, delays the phone's touchpad (2026-10-06: the bursts measured came from the core, not the network). |
+| **Phone** | None (the panel works by touch) | A phone with a current browser, on the same network | The phone page (ADR-0101): Settings, the mini player and the touchpad (ADR-0121), tried on George's phone. No app to install. |
 | **Power** | Raspberry Pi's 5 V 3 A USB-C supply | Same | Raspberry Pi's own recommendation for the Pi 4; not measured here. |
 | **Cooling** | **Untested** | A heatsink or fan (**calculated**) | Playing music while the Lyrion server scanned, `gexis` reached **79.8 °C** - 0.2 °C below where a Pi 4 starts slowing itself down - without throttling (2026-10-03, Finding 109); a scan alone peaked at 75.9 °C. Its case and cooling were not recorded. Idle and visualiser temperatures: not measured. |
 

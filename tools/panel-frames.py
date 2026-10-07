@@ -364,6 +364,15 @@ class Screen:
         return bool(await self.rect(selector))
 
     async def tap(self, selector: str, settle: float = 1.4) -> None:
+        # **Into view first** (2026-10-06): Home's cards became a row that
+        # scrolls sideways, and Settings' card sits past the screen's edge -
+        # a tap at its centre landed off the glass and "settings" was never
+        # reached.
+        await self._panel.evaluate(
+            f"(() => {{ const e = document.querySelector({selector!r});"
+            f" if (e) e.scrollIntoView({{block: 'nearest', inline: 'nearest', behavior: 'instant'}}); }})()")
+        # The row snaps; its position is read once it has settled.
+        await asyncio.sleep(0.8)
         box = await self.rect(selector)
         if box is None:
             raise RuntimeError(f"nothing to tap: {selector} is not on the panel")
@@ -431,8 +440,13 @@ class Screen:
         await self.must_be(NEW_MUSIC, "home")
 
     async def go_artist_grid(self) -> None:
-        if not await self.has(ARTIST_GRID):
+        for _ in range(2):
+            if await self.has(ARTIST_GRID):
+                break
             await self.go_home()
+            # Home is rebuilt when it is opened from Now Playing; a tap while
+            # it is still arriving hit nothing (grid-still, 2026-10-06).
+            await asyncio.sleep(1.0)
             await self.tap(ARTISTS_CARD, settle=2.5)
         await self.must_be(ARTIST_GRID, "the artist grid")
 

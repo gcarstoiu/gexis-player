@@ -509,3 +509,16 @@ def test_apt_listchanges_is_off_for_an_install(up):
     gexis-core on a Pi 4, the bar at 0 for 16 s (2026-10-06)."""
     assert up.APT_ENV["APT_LISTCHANGES_FRONTEND"] == "none"
     assert up.APT_ENV["DEBIAN_FRONTEND"] == "noninteractive"
+
+
+def test_the_settings_button_checks_and_never_installs():
+    """"Check for updates" started the nightly unit, whose `scheduled` run
+    installs when Updates is Automatic (2026-10-06)."""
+    from gexis_core import updates
+
+    unit = Path(__file__).resolve().parents[1] / "updater" / "units" / updates.CHECK_UNIT
+    assert updates.CHECK_UNIT != "gexis-update-check.service"
+    exec_start = next(l for l in unit.read_text().splitlines() if l.startswith("ExecStart="))
+    assert exec_start.split()[-1] == "check"
+    build = (Path(__file__).resolve().parents[2] / "packaging" / "core" / "build.sh").read_text()
+    assert updates.CHECK_UNIT in build
