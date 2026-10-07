@@ -502,8 +502,9 @@ async def main() -> None:
             chosen_output.control or "none - fixed output",
         )
         # ADR-0055 §6: a converted chain carries no meter, so the
-        # visualiser has nothing to draw and its button is not offered.
-        meters_available = outputs.needs_plug(chosen_output.card) is not True
+        # visualiser has nothing to draw and its button is not offered -
+        # unless the software stage is in it (amended 2026-10-07).
+        meters_available = chosen_output.software or outputs.needs_plug(chosen_output.card) is not True
 
     # The player squeezelite announces, which a rename changes (ADR-0048).
     lms_player_name = device_name.lms_player(config.lms_player_name)
@@ -943,7 +944,7 @@ async def main() -> None:
         # The monitor watches one card and was spawned for the old one; its
         # own loop restarts it, so ending it is enough to move it.
         volume_bridge.restart_monitor()
-        meters_chain["ok"] = outputs.needs_plug(chosen.card) is not True
+        meters_chain["ok"] = chosen.software or outputs.needs_plug(chosen.card) is not True
         _publish_meters()
         _choose_output_mode()
         state_store.bump_settings_revision()

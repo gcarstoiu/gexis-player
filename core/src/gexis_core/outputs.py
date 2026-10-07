@@ -418,9 +418,35 @@ def render(output: Output, plug: bool, tuning: Tuning = Tuning()) -> str:
     *opening the card*, and a caller that has not freed it first would get
     no answer and render something wrong. See `write`.
     """
-    if plug:
-        # **No meter on a converted chain** (2026-09-23). With `plug` under
-        # it, ALSA's `type meter` and the peppyalsa scope come apart:
+    if output.software:
+        # **ADR-0124: the meter first, then the software stage** (Finding
+        # 115), so the visualiser shows the music as it arrives, as with the
+        # card's own control. One control for both PCMs: the level is the
+        # same whoever opened which.
+        #
+        # **On a converted chain (HDMI) too, since 2026-10-07** (ADR-0055 §6
+        # as amended, Finding 116): the September failures below came from
+        # the meter straight over `plug`; with `softvol` between them LMS and
+        # Spotify play and the levels arrive. `plug` then converts for the
+        # card, under the software stage (Finding 115).
+        card = f'{{ type plug slave.pcm "hw:{output.card}" }}' if plug else f'"hw:{output.card}"'
+        card_wait = (f"{{ type plug slave.pcm {{ type hw card {output.card} nonblock 0 }} }}" if plug
+                     else f"{{ type hw card {output.card} nonblock 0 }}")
+        head = f'''pcm.output {{
+    type meter
+    slave.pcm "gexis_softvol"
+    scopes.0 peppyalsa
+}}
+{_softvol("gexis_softvol", card, output.card)}'''
+        wait = f'''pcm.output_wait {{
+    type meter
+    slave.pcm "gexis_softvol_wait"
+    scopes.0 peppyalsa
+}}
+{_softvol("gexis_softvol_wait", card_wait, output.card)}'''
+    elif plug:
+        # **No meter on a converted chain** (2026-09-23) - now only HDMI on
+        # Fixed volume. With `plug` under it, ALSA's `type meter` and the peppyalsa scope come apart:
         # go-librespot dies on `pcm_meter.c:1222: snd_pcm_scope_s16_get_
         # channel_buffer: Assertion 's16->buf_areas' failed` - which is a
         # crash, not the "Spotify disconnects" it looks like from outside -
@@ -440,29 +466,6 @@ def render(output: Output, plug: bool, tuning: Tuning = Tuning()) -> str:
     type plug
     slave.pcm {{ type hw card {output.card} nonblock 0 }}
 }}'''
-        if output.software:
-            # ADR-0124 on a converted chain (HDMI): the software stage in
-            # front of `plug`, which then converts for the card (Finding 115).
-            head = _softvol("output", f'{{ type plug slave.pcm "hw:{output.card}" }}', output.card)
-            wait = _softvol("output_wait", f"{{ type plug slave.pcm {{ type hw card {output.card} nonblock 0 }} }}",
-                            output.card)
-    elif output.software:
-        # **ADR-0124: the meter first, then the software stage** (Finding
-        # 115), so the visualiser shows the music as it arrives, as with the
-        # card's own control. One control for both PCMs: the level is the
-        # same whoever opened which.
-        head = f'''pcm.output {{
-    type meter
-    slave.pcm "gexis_softvol"
-    scopes.0 peppyalsa
-}}
-{_softvol("gexis_softvol", f'"hw:{output.card}"', output.card)}'''
-        wait = f'''pcm.output_wait {{
-    type meter
-    slave.pcm "gexis_softvol_wait"
-    scopes.0 peppyalsa
-}}
-{_softvol("gexis_softvol_wait", f"{{ type hw card {output.card} nonblock 0 }}", output.card)}'''
     else:
         head = f'''pcm.output {{
     type meter

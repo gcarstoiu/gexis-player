@@ -423,11 +423,16 @@ def test_software_volume_puts_softvol_after_the_meter_on_a_dac():
     assert conf.count('name "Gexis Playback Volume"') == 2, "one control for both"
 
 
-def test_software_volume_goes_in_front_of_plug_on_hdmi():
+def test_software_volume_goes_in_front_of_plug_on_hdmi_with_the_meter_first():
+    """Finding 116: `meter → softvol → plug → card` plays, and the levels
+    arrive; the meter straight over `plug` (HDMI on Fixed) still never."""
     out = outputs.with_software_volume(outputs.Output(card="vc4hdmi0", label="HDMI 1", control=None))
     conf = outputs.render(out, True)
-    assert conf.startswith('pcm.output {\n    type softvol\n    slave.pcm { type plug slave.pcm "hw:vc4hdmi0" }')
-    assert "type meter" not in conf.split("pcm_scope.peppyalsa")[0], "no meter over plug"
+    assert conf.startswith('pcm.output {\n    type meter\n    slave.pcm "gexis_softvol"')
+    assert 'type softvol\n    slave.pcm { type plug slave.pcm "hw:vc4hdmi0" }' in conf
+    assert 'slave.pcm { type plug slave.pcm { type hw card vc4hdmi0 nonblock 0 } }' in conf
+    fixed = outputs.render(outputs.Output(card="vc4hdmi0", label="HDMI 1", control=None), True)
+    assert "type meter" not in fixed.split("pcm_scope.peppyalsa")[0], "no meter straight over plug"
 
 
 def test_the_software_scale_is_exact_and_tops_out_at_0_db():
@@ -448,6 +453,9 @@ def test_the_card_is_still_read_back_from_a_software_config(tmp_path):
     conf.write_text(outputs.render(outputs.with_software_volume(
         outputs.Output(card="IQaudIODAC", label="x", control="Digital")), False))
     assert outputs.configured(conf) == "IQaudIODAC"
+    conf.write_text(outputs.render(outputs.with_software_volume(
+        outputs.Output(card="vc4hdmi0", label="HDMI 1", control=None)), True))
+    assert outputs.configured(conf) == "vc4hdmi0", "through the plug, too"
 
 
 async def test_a_change_of_output_lets_go_of_the_old_card_s_mixers():
