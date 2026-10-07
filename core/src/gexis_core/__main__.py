@@ -590,13 +590,15 @@ async def main() -> None:
         """
         # The starting volume holds for a moment (start_guard): the phone's
         # own slider arriving as it connects is not a request to go louder.
-        again = start_guard.holding(renderer_id, value, time.monotonic())
-        if again is not None and supervisor.active == renderer_id:
+        held = start_guard.held(renderer_id, time.monotonic())
+        again = renderer_percent_to_value(held, steps) if held is not None else None
+        if again is not None and value > again and supervisor.active == renderer_id:
             logger.info("volume: %s asked for %s/%s just after starting at %s; keeping the starting volume",
                         renderer_id, value, steps, again)
             adapter = adapters.get(renderer_id) or plugin_adapters.get(renderer_id)
             if adapter is not None:
                 asyncio.ensure_future(adapter.set_volume(again))
+                start_guard.told(renderer_id, time.monotonic())
             return
         remote.set_steps(renderer_id, steps)
         remote.report(renderer_id, value)
@@ -692,20 +694,31 @@ async def main() -> None:
         raw = mute.audible_raw(volume.raw if volume is not None else None)
         if raw is None:
             return False
-        steps = await adapter.get_volume_steps()
-        value = hardware_raw_to_renderer_value(raw, steps)
         # Every renderer handed its level, not one named here (ADR-0054 §5,
         # amended again 2026-09-28): Spotify, and a plugin that declares
         # `volume_handed`.
+        #
+        # **The DAC comes down before the renderer is asked anything**
+        # (2026-10-07, George on guestpi: *"Volume did start at 100% which
+        # shouldn't have happened"*). Asking Spotify its scale first ran out of
+        # the 2 s the supervisor allows while its session was still starting,
+        # and the starting volume was never applied. Lowering is our own write;
+        # the renderer is told when it answers - or, if it does not in time,
+        # its first report above the level is answered with it (start_guard).
         start_max = _number("start_max")
-        if start_max is not None and value > renderer_percent_to_value(start_max, steps):
-            value = renderer_percent_to_value(start_max, steps)
-            logger.info(
-                "volume: %s starts no louder than %s%%; the DAC comes down (%s/240 -> %s/%s)",
-                renderer_id, int(start_max), raw, value, steps,
-            )
-            await volume_bridge.write_hardware(renderer_value_to_hardware_raw(value, steps))
-            start_guard.handed(renderer_id, value, time.monotonic())
+        lowered = False
+        if start_max is not None:
+            cap_raw = renderer_value_to_hardware_raw(renderer_percent_to_value(start_max, 100), 100)
+            if raw > cap_raw:
+                logger.info("volume: %s starts no louder than %s%%; the DAC comes down first (%s/240 -> %s/240)",
+                            renderer_id, int(start_max), raw, cap_raw)
+                await volume_bridge.write_hardware(cap_raw)
+                start_guard.handed(renderer_id, start_max, time.monotonic(), told=False)
+                raw, lowered = cap_raw, True
+        steps = await adapter.get_volume_steps()
+        value = hardware_raw_to_renderer_value(raw, steps)
+        if lowered:
+            value = min(value, renderer_percent_to_value(start_max, steps))
         else:
             logger.info(
                 "volume: %s cannot say where it is; handing it the level playing (%s/240 -> %s/%s)",
@@ -714,6 +727,8 @@ async def main() -> None:
         remote.set_steps(renderer_id, steps)
         remote.report(renderer_id, value)
         await adapter.set_volume(value)
+        if lowered:
+            start_guard.told(renderer_id, time.monotonic())
         return True
 
     # ADR-0052 §3, amended: the ceiling is the top of every scale, so the
