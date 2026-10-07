@@ -418,12 +418,14 @@ def test_a_pack_comes_from_the_installed_release_s_own_parts(up, monkeypatch):
     monkeypatch.setattr(up, "parts_of", lambda v: (["ours-a", "skins-b"], ["ours-a", "skins-b"]) if v == "0.4.0" else None)
     monkeypatch.setattr(up, "apt_env", lambda repos, pins=None: calls.append(("env", repos, pins)) or ["opts"])
     monkeypatch.setattr(up, "apt", lambda opts, *a, **k: calls.append(("apt",) + a) or subprocess.CompletedProcess(a, 0, "", ""))
-    def dl(opts, *a, report_as, reporter=None):
+    def fetch(opts, name, activity):
         up.PROGRESS["progress"] = 0.5
-        reporter("downloading", **report_as)
-        calls.append(("download",) + a)
-        return subprocess.CompletedProcess(a, 0, "", "")
-    monkeypatch.setattr(up, "apt_download", dl)
+        up.report_pack("downloading", package=name, message=f"fetching {name}")
+        calls.append(("download", "--download-only", "install", name))
+        return subprocess.CompletedProcess([], 0, "", "")
+    monkeypatch.setattr(up, "pack_fetch", fetch)
+    real = up.Activity
+    monkeypatch.setattr(up, "Activity", lambda **kw: real(playing_now=lambda: False, follow=False))
     up.STATE.mkdir(parents=True, exist_ok=True)
     assert up.pack_install("gexis-skins-1920x1080") == 0
     assert calls[0] == ("env", ["ours-a", "skins-b"], ["ours-a", "skins-b"])
@@ -445,8 +447,9 @@ def test_a_pack_for_an_unpublished_release_comes_from_the_channel_s(up, monkeypa
     monkeypatch.setattr(up, "apt_env", lambda repos, pins=None: envs.append(repos) or repos)
     monkeypatch.setattr(up, "apt", lambda opts, *a, **k: subprocess.CompletedProcess(
         a, 100 if (a == ("update",) and opts[0].startswith("r0.8.6-git16")) else 0, "", ""))
-    monkeypatch.setattr(up, "apt_download", lambda opts, *a, report_as, reporter=None:
-                        subprocess.CompletedProcess(a, 0, "", ""))
+    monkeypatch.setattr(up, "pack_fetch", lambda opts, name, activity: subprocess.CompletedProcess([], 0, "", ""))
+    real = up.Activity
+    monkeypatch.setattr(up, "Activity", lambda **kw: real(playing_now=lambda: False, follow=False))
     up.STATE.mkdir(parents=True, exist_ok=True)
     assert up.pack_install("gexis-skins-1920x1080") == 0
     assert envs == [["r0.8.6-git16.d91a4bc"], ["ours-f", "skins-9", "rpi-d", "debian-7"]]
@@ -587,3 +590,59 @@ def test_a_long_history_keeps_the_newest_and_counts_the_rest(up, monkeypatch):
     assert kept[0]["release"] == "0.30.0" and len(kept) < 30
     assert sum(len(e["notes"]) for e in kept) <= up.HISTORY_MAX
     assert got[-1] == {"release": None, "date": None, "earlier": 30 - len(kept)}
+
+
+# --- ADR-0111 amended 2026-10-07: a pack downloads gently while in use -------
+
+class Clock:
+    def __init__(self):
+        self.t = 1000.0
+
+    def __call__(self):
+        return self.t
+
+
+def test_in_use_while_something_plays_and_for_ten_minutes_after_a_phone(up):
+    clock, playing = Clock(), [False]
+    a = up.Activity(clock=clock, playing_now=lambda: playing[0], follow=False)
+    assert not a.in_use(), "a quiet player downloads at full speed"
+    a.saw()                       # "accepted zeroconf from ..." - nothing plays yet
+    clock.t += up.QUIET_S - 1
+    assert a.in_use()
+    clock.t += 2
+    assert not a.in_use(), "ten quiet minutes"
+    playing[0] = True
+    assert a.in_use()
+
+
+def test_go_librespot_s_own_errors_are_not_a_person(up):
+    assert up._activity_line('Oct 07 12:03:47 p go-librespot[2326]: level=info msg="accepted zeroconf from x"')
+    assert not up._activity_line('Oct 07 12:59:53 p go-librespot[2326]: level=error msg="failed receiving dealer message"')
+    assert up._activity_line("Oct 07 12:04:10 p bluealsa[893]: Adding new Stream End-Point")
+
+
+def test_a_pack_downloads_capped_in_use_and_restarts_when_that_changes(up, monkeypatch):
+    clock, playing = Clock(), [False]
+    a = up.Activity(clock=clock, playing_now=lambda: playing[0], follow=False)
+    calls = []
+
+    def apt_progress(opts, *args, state, report_as, reporter=None, stop_when=None, **kw):
+        calls.append(any("Dl-Limit" in o for o in opts))
+        if len(calls) == 1:
+            playing[0] = True          # a phone starts playing mid-download
+            assert stop_when(), "the watcher sees it"
+            return subprocess.CompletedProcess(args, up.INTERRUPTED, "", "")
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    monkeypatch.setattr(up, "apt_progress", apt_progress)
+    r = up.pack_fetch(["-o", "Dir::State=x"], "gexis-skins-1920x1080", a)
+    assert r.returncode == 0
+    assert calls == [False, True], "full speed, then capped, resuming the same download"
+
+
+def test_a_pack_that_ends_on_its_own_is_not_restarted(up, monkeypatch):
+    a = up.Activity(clock=Clock(), playing_now=lambda: False, follow=False)
+    n = []
+    monkeypatch.setattr(up, "apt_progress",
+                        lambda opts, *args, stop_when=None, **kw: n.append(1) or subprocess.CompletedProcess(args, 100, "", "E: x"))
+    assert up.pack_fetch([], "gexis-skins-1920x1080", a).returncode == 100 and n == [1]
