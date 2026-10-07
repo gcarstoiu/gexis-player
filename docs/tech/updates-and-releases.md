@@ -72,7 +72,7 @@ builds the UI first (`npm ci && npm run build`) and then all packages.
 | `gexis-peppyalsa`, `gexis-peppy-engines` | the meter tap library; PeppyMeter/PeppySpectrum |
 | `gexis-go-librespot`, `gexis-beszel-agent` | upstream binaries, as built upstream (ADR-0093) |
 | `gexis-beszel-hub`, `gexis-lyrion-server`, `gexis-plexamp` | plugins; Lyrion and Plexamp themselves are *not* inside (see §7) |
-| `gexis-skins-<W>x<H>` | one visualiser skin pack per screen size (ADR-0111); never in the image |
+| `gexis-skins-<W>x<H>` | one visualiser skin pack per screen size (ADR-0111); never in the image. `gexis-update pack-install` fetches it at 3 MB/s (apt's `Dl-Limit`) while the player is in use - a card playing, or go-librespot, BlueALSA or BlueZ active in the last 10 min - and restarts apt at the other speed when that changes, resuming the partial file (ADR-0111 amended 2026-10-07) |
 | `gexis-player` | **the release**: exact `Depends` on all of the above (skins excepted), on `libasound2t64`, and the OS packages the device runs |
 
 **Versioning.** A package's version is the `git describe` of the *last commit
