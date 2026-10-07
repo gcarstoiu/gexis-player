@@ -29,6 +29,17 @@ waits on the address) and (5)
 in ADR-0022; **owed by George: the project e-mail address** for problem
 reports from people without GitHub.
 
+**guestpi (2026-10-07):** George's second Pi with the IQaudio DAC+ and the
+13.3", flashed from v0.9.2 (my key on it), now on the preview
+`0.9.2+git60` + system `+git174`. **IQaudio and the 13.3" detected fine**
+(George). Problem report tried end to end there (download from a phone-sized
+browser; go-librespot's titles, phone name and account then taken out too).
+Finding 113: opening screens drops more frames on the 13.3" (Home 9 %).
+**Owed by George:** what counts as "in use" for the skin-pack download cap
+(the Spotify delay on first boot was the 490 MB pack saturating Wi-Fi while
+the phone connected - nothing was playing yet). **Built, not yet seen:** the
+screen applied during setup (ADR-0109 amended) - needs a fresh setup.
+
 **0.9.2 released 2026-10-06 on Testing (serial 25), from `phase-13d`**
 (tag v0.9.2 at 3225ec1): 13f's Lyrion menus behind Extended navigation,
 Minimise (ADR-0122), the phone sheet in one row, the enrichment tile, the
