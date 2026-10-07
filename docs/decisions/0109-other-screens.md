@@ -356,3 +356,28 @@ report makes a screen recognised - stay open until it is taken up.
   compositor exists).
 - Each bar's mode reaching KMS through `video=` from a preset's timings.
 - What each screen's EDID and touch controller actually say.
+
+## Amended 2026-10-07: the screen applied during setup too
+
+George, after flashing 0.9.2 onto a 13.3" (1920 x 1080): *"The QR codes on the
+screen were skewed to the left of the image as though the pi was displaying
+the 1280 resolution on the 1920 screen. This should be address as on a bar it
+could be problematic."* At start, a new screen was switched to only once setup
+was done (amended 2026-10-04: *"not when the setup takes care of things"*), so
+setup's own screen ran unscaled - 1280 logical px in the left of 1920 - and on
+a bar it would have stood on its side. George then agreed: apply it during
+setup too.
+
+1. **During setup, `gexis-screen-check` applies the attached screen before the
+   panel starts**, as it does after setup: the recognised model, else the one
+   listed bar of its mode, else the screen laid out from its own mode (scale
+   only - no rotation, no kernel mode). A bar whose kernel mode changes
+   restarts the device first, before anything is drawn.
+2. **Provisional, not kept, and no Keep asked:** setup's Screen step is the
+   question. The setup network keeps the **fixed** password (ADR-0104): a
+   provisional screen is not one anybody has confirmed is readable, and the
+   fixed password works whatever the screen shows.
+3. **Setup's Screen step confirms it or replaces it**; a different choice asks
+   Keep after setup, as before.
+4. Applied once per setup: a screen applied provisionally is not applied
+   again at the next start while setup is still under way.

@@ -134,7 +134,9 @@ Usually not. A screen the player recognises is used straight away at start,
 and asks *Keep this screen?*. Any other screen is asked about, and the list
 of screens opens on its size. The layout follows the screen: *Standard* for
 ordinary screens, *Bar* for wide strip screens (1280 × 400 and 1480 × 320),
-which are turned to landscape.
+which are turned to landscape. On the very first start, setup's own screens
+are already laid out for the attached screen; setup's Screen step then
+confirms it.
 
 **Which screens work?**
 HDMI screens only. Tested on the hardware: a 10.1″ 1280 × 800 (the reference

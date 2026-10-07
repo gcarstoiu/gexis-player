@@ -238,6 +238,14 @@ sequenceDiagram
    name or screen changed (both apply at a restart; the Screen step's restart
    is where *Keep this screen?* is asked, ADR-0109), otherwise goes `online`.
 
+**Setup's own screens are laid out for the attached screen** (ADR-0109
+amended 2026-10-07): `gexis-screen-check` runs before the kiosk during setup
+too and applies the recognised model, the one listed bar of its mode
+(restarting first for a bar's kernel mode), or the screen's own mode, scale
+only. The choice is **provisional** in `screen.json`: no Keep is asked, and
+`screen_apply.confirmed()` stays false, so the setup network keeps the fixed
+password. The Screen step confirms it, or replaces it and asks Keep.
+
 **Errors** reach the phone as sentences (`setup_flow.said()`); the core's own
 text goes to the log.
 

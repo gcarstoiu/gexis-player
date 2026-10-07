@@ -119,13 +119,55 @@ def test_a_bar_needing_its_own_mode_restarts_first(tmp_path):
     assert "video=HDMI-A-1:320x1480,panel_orientation=left_side_up" in files["cmdline"].read_text()
 
 
-def test_nothing_is_switched_during_setup_headless_or_for_the_same_screen(tmp_path):
+def test_nothing_is_switched_headless_or_for_the_same_screen(tmp_path):
     path, files = tmp_path / "seen.json", _files(tmp_path)
     sw.kept(TEN, path)
-    assert sw.at_start(MONITOR, headless=False, setup_needed=True, path=path, files=files) == "same"
     assert sw.at_start(MONITOR, headless=True, setup_needed=False, path=path, files=files) == "same"
     assert sw.at_start(TEN, headless=False, setup_needed=False, path=path, files=files) == "same"
     assert not files["env"].exists()
+
+
+# ADR-0109 amended 2026-10-07 (George, the 13.3" on a fresh card: "The QR codes
+# on the screen were skewed to the left"): during setup too, provisionally.
+
+def test_during_setup_the_screen_is_laid_out_for_setup_without_keep(tmp_path):
+    from gexis_core import screen_apply
+    path, files = tmp_path / "seen.json", _files(tmp_path)
+    assert sw.at_start(THIRTEEN, headless=False, setup_needed=True, path=path, files=files) == "switched"
+    env = files["env"].read_text()
+    assert "GEXIS_SCREEN_ID=waveshare-13.3-hdmi-h" in env and "GEXIS_SCREEN_SCALE=1.5" in env
+    state = screen_apply.read_state(files["state"])
+    assert state["provisional"] and not state["pending"], "no Keep: setup's Screen step asks"
+    assert not screen_apply.confirmed(files["state"]), "the setup network keeps its fixed password"
+
+
+def test_during_setup_it_is_applied_once(tmp_path):
+    path, files = tmp_path / "seen.json", _files(tmp_path)
+    assert sw.at_start(STRANGER, headless=False, setup_needed=True, path=path, files=files) == "switched"
+    assert "GEXIS_SCREEN_ID=other-1920x1080" in files["env"].read_text(), "its own mode, scale only"
+    assert sw.at_start(STRANGER, headless=False, setup_needed=True, path=path, files=files) == "same"
+
+
+def test_during_setup_a_bar_is_turned_and_restarts_first(tmp_path):
+    path, files = tmp_path / "seen.json", _files(tmp_path)
+    assert sw.at_start(BAR, headless=False, setup_needed=True, path=path, files=files) == "restart"
+    assert "video=HDMI-A-1:320x1480,panel_orientation=left_side_up" in files["cmdline"].read_text()
+
+
+def test_during_setup_no_screen_attached_changes_nothing(tmp_path):
+    path, files = tmp_path / "seen.json", _files(tmp_path)
+    nothing = screen_detect.Seen(connected=False)
+    assert sw.at_start(nothing, headless=False, setup_needed=True, path=path, files=files) == "same"
+    assert not files["env"].exists()
+
+
+def test_setups_screen_step_confirms_the_provisional_screen(tmp_path):
+    from gexis_core import screen_apply
+    path, files = tmp_path / "seen.json", _files(tmp_path)
+    sw.at_start(THIRTEEN, headless=False, setup_needed=True, path=path, files=files)
+    asks = screen_apply.choose(screen_apply.Applied("waveshare-13.3-hdmi-h", 0), after_setup=True, **files)
+    assert asks is False, "the same picture: kept without asking"
+    assert screen_apply.confirmed(files["state"])
 
 
 def test_a_switch_waiting_for_keep_after_its_restart_is_left_to_the_core(tmp_path):
