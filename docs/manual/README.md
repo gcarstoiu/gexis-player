@@ -6,9 +6,11 @@ Klimt, Kandinsky, Monet, Seurat, Marc, Rousseau, Hiroshige, Mucha, Gauguin
 and others, the portraits are of the composers, and the lyrics are
 Schiller's *Ode to Joy* (1785). The addresses shown are examples.
 
-Gexis Player is a music player for the Raspberry Pi 4 with a high-quality
-DAC. It plays your Lyrion (Logitech Media Server) library, Spotify Connect,
-Bluetooth and Plexamp, and switches between them by itself. You control it
+Gexis Player is a music player for the Raspberry Pi with a high-quality
+DAC; it needs a Raspberry Pi 4 or newer, and the Pi 4 is the model it is
+built and tested on. It plays your Lyrion (Logitech Media Server) library,
+Spotify Connect, Bluetooth and Plexamp, one at a time, and switches to
+whichever one you start. You control it
 from its own touch screen (the *panel*), from any phone or computer on the
 same network (the *phone page*), or from the apps you already use: a
 Lyrion app, Spotify, or your phone's Bluetooth.
@@ -279,6 +281,23 @@ visualiser.
 ![Bar: Now Playing](images/bar-nowplaying-track.webp)
 
 ![Bar: Home](images/bar-library-home.webp)
+
+Pulled down from the top of any screen, the tray: Home, the visualiser and
+the volume. Tap below it, or push it back up, to close it.
+
+![Bar: the tray](images/bar-tray.webp)
+
+The library's lists run sideways, with a strip of letters to jump along
+them.
+
+![Bar: Album Artists](images/bar-artists.webp)
+
+An artist's page and an album's: the picture on the left, what can be
+played on the right.
+
+![Bar: an artist](images/bar-artist.webp)
+
+![Bar: an album](images/bar-album.webp)
 
 ## 9. Settings
 
