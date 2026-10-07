@@ -33,8 +33,7 @@ the panel says *Fixed* and offers no slider.
 3. **Where it sits in the chain:** `meter → softvol → card`. The meter tap
    stays first, so the visualiser shows the music as it arrives, exactly as
    with hardware volume today; the software stage is after it. On HDMI it
-   sits before the conversion HDMI needs (IEC958): to be verified on the
-   device.
+   sits before the conversion HDMI needs (IEC958) - verified (Finding 115).
 4. **Every source uses it** (George: *"Spotify and Bluetooth too"*): the core
    bridges each renderer's volume to the software control instead of the
    card's - Lyrion's dummy mixer, Spotify's mixer, Bluetooth's D-Bus volume -
@@ -46,9 +45,11 @@ the panel says *Fixed* and offers no slider.
 ## Consequences
 
 - Below 100 % the samples are recalculated (ALSA's `softvol`, 24-bit headroom
-  on the DAC2 HD): not bit-perfect, which the row says. At 100 % with the
-  control at 0 dB it passes the samples through - to be measured, not assumed
-  (Finding to follow).
+  on the DAC2 HD): not bit-perfect, which the row says. **At 100 % (0 dB) it
+  passes every sample unchanged - measured** (Finding 115: 18 runs, 0 samples
+  changed in value).
+- **On HDMI it sits in front of `plug`:** `softvol → plug → card`, measured
+  (Finding 115); there is no meter on that chain, as before.
 - The card's own control is left at its maximum while software volume is on,
   and given back its level when it is turned off.
 - A takeover's *Starting volume* (Spotify) applies to whichever control is in
