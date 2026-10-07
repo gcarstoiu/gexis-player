@@ -76,3 +76,32 @@ untested, the second is a change to ADR-0019 for George to decide.
 `panel-frames.py` was mended on the way: a tap now brings its target into view
 (Home's cards scroll sideways, and Settings' card was off the glass), and the
 artist grid is retried once while Home is still arriving.
+
+## After the change (2026-10-07)
+
+George chose to stop drawing while hidden; ADR-0019 was amended and built
+(`/run/gexis/visualiser-shown`). Measured on `gexis` with the same moving
+fanart skin: the hidden driver takes **6 % of a core while music plays**
+(57 % before; 1 % paused, 54 % shown). Shown on request in 0.3 s, its first
+frame complete (screenshot 50 ms after the request: needles, record, photo and
+the current title all drawn).
+
+The whole interaction set, 12 runs each and every one usable
+(`6-hidden-not-drawing.txt`; the tool now ignores the library ADR-0122 keeps
+hidden, which had made it tap a card nobody could see):
+
+| Open | 29 Sep (Finding 101) | 0.9.2 | Hidden, not drawing |
+| --- | --- | --- | --- |
+| Home | 34.2 / 1.3 % | 48.4 / 4.3 % | 45.7 / 1.2 % |
+| Artist grid | 43.5 / 3.3 % | 37.3 / 9.7 % | 50.5 / 2.0 % |
+| Albums | 37.8 / 5.4 % | 37.6 / 9.0 % | 50.5 / 3.0 % |
+| Artist page | 45.5 / 2.4 % | 44.8 / 9.1 % | 49.6 / 1.9 % |
+| Playlists | 35.6 / 5.6 % | 41.3 / 7.1 % | 51.5 / 1.0 % |
+| Queue rail | 54.5 / 1.6 % | 47.1 / 3.3 % | 49.7 / 1.0 % |
+| Settings | 26.4 / 12.0 % | 43.1 / 0.0 % | 45.0 / 0.0 % |
+| Radio | 37.5 / 7.1 % | 51.1 / 0.0 % | 48.7 / 3.9 % |
+
+Every scroll 58.4-58.5 drawn/s, 0 % dropped. Every open is now at or below
+Finding 101's, Radio excepted (3.9 % against 7.1 % then and 0 % in 0.9.2: its
+runs range widely, as they did on 29 September). The processor ran at 1.8 GHz
+in 36 of 38 samples; the two lower ones are the governor at rest between runs.
