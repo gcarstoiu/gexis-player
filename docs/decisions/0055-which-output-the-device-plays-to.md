@@ -1,5 +1,7 @@
 # ADR-0055 — Which output the device plays to
 
+> **Amended by [ADR-0127](0127-one-volume-row.md) (2026-10-07):** Output mode and Software volume are one row, *Volume* - Hardware, Software or Fixed. On an output with no volume control of its own, Hardware is greyed and Software takes its place; Fixed is no longer forced there.
+
 **Status:** **Accepted and built, 2026-09-23** — George answered the three
 Open questions below (*"Offer all, but maybe it clears that the one that is
 not connected looks disabled or has a note saying that nothing is
