@@ -465,3 +465,15 @@ async def test_a_change_of_output_lets_go_of_the_old_card_s_mixers():
     volume._MIXERS[("output", "Gexis")] = held
     await volume.forget_mixers()
     assert held.closed and volume._MIXERS == {}
+
+
+def test_hdmi_stays_without_a_control_of_its_own_when_the_software_one_is_on_it(monkeypatch):
+    """guestpi, 2026-10-07: HDMI took the software control for its own, and
+    parked it at 0 dB under the level it had just been given."""
+    contents = """numid=7,iface=MIXER,name='Gexis Playback Volume'
+  ; type=INTEGER,access=rw---RW-,values=2,min=0,max=360,step=0
+  : values=279,279
+  | dBscale-min=-90.00dB,step=0.25dB,mute=0
+"""
+    monkeypatch.setattr(outputs, "_run", lambda *a: contents)
+    assert outputs.playback_control("vc4hdmi0") == (None, None)

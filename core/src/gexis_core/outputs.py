@@ -262,6 +262,12 @@ def playback_control(card: str) -> tuple[str, mixer_scale.Scale] | tuple[None, N
     that does not is passed over, and with none left the output is fixed.
     """
     controls = mixer_scale.playback_controls(_run("amixer", "-c", card, "contents"))
+    # **Never our own software stage** (ADR-0124). It is a playback volume
+    # with a dB scale on the card it plays to, so on HDMI - which has no
+    # control of its own - it was taken for the card's: then parked at 0 dB
+    # as the card's control is, under the level it had just been given
+    # (guestpi, 2026-10-07).
+    controls = [c for c in controls if c[0] != SOFTVOL_CONTROL]
     # **The list's name first** when a card has several (ADR-0117): the
     # IQaudio DAC+'s *Analogue* is a 0 / -6 dB gain switch, *Digital* the
     # volume.
