@@ -522,3 +522,68 @@ def test_the_settings_button_checks_and_never_installs():
     assert exec_start.split()[-1] == "check"
     build = (Path(__file__).resolve().parents[2] / "packaging" / "core" / "build.sh").read_text()
     assert updates.CHECK_UNIT in build
+
+
+# --- ADR-0110 amended 2026-10-07: every skipped release's notes -------------
+
+def _vkey(v):
+    """dpkg's order for the versions these tests use: x.y.z, then a
+    +gitN build of it after the release itself."""
+    base, _, build = v.partition("+git")
+    nums = tuple(int(p) for p in base.split("."))
+    return nums + ((1, int(build.split(".")[0])) if build else (0, 0))
+
+
+def serve_history(monkeypatch, up, releases, verified=True):
+    text = json.dumps({"releases": releases})
+    monkeypatch.setattr(up.urllib.request, "urlopen", lambda url, timeout=0: io.BytesIO(b"signed"))
+    def fake_run(args, input=None, capture_output=False, **kw):
+        if args[0] == "dpkg":
+            a, op, b = args[2], args[3], args[4]
+            assert op == "gt"
+            return subprocess.CompletedProcess(args, 0 if _vkey(a) > _vkey(b) else 1, "", "")
+        assert args[0] == "gpgv", "only gpgv reads what came from the network"
+        return subprocess.CompletedProcess(args, 0 if verified else 1, text.encode() if verified else b"", b"")
+    monkeypatch.setattr(up.subprocess, "run", fake_run)
+
+
+HISTORY = {v: {"date": f"2026-10-0{i}", "notes": f"New\n• What {v} changed."}
+           for i, v in enumerate(["0.9.5", "0.9.4", "0.9.3", "0.9.2", "0.9.1"], start=1)}
+
+
+def test_every_release_after_the_installed_one_is_shown_newest_first(up, monkeypatch):
+    """George, 2026-10-07: "the update screen should show all until the
+    current one"."""
+    serve_history(monkeypatch, up, HISTORY)
+    got = up.release_history("0.9.4", "0.9.1")
+    assert [e["release"] for e in got] == ["0.9.4", "0.9.3", "0.9.2"]
+    assert got[0]["notes"] == "New\n• What 0.9.4 changed." and got[0]["date"] == "2026-10-02"
+
+
+def test_a_build_between_releases_counts_as_its_release(up, monkeypatch):
+    """A preview build of 0.9.2 already has what 0.9.2 changed."""
+    serve_history(monkeypatch, up, HISTORY)
+    assert [e["release"] for e in up.release_history("0.9.3", "0.9.2+git32.b8a250b")] == ["0.9.3"]
+
+
+def test_a_history_that_does_not_verify_falls_back_to_the_notes(up, monkeypatch):
+    serve_history(monkeypatch, up, HISTORY, verified=False)
+    assert up.release_history("0.9.4", "0.9.1") is None
+
+
+def test_a_release_without_a_history_falls_back_to_the_notes(up, monkeypatch):
+    def missing(url, timeout=0):
+        raise OSError("404")
+    monkeypatch.setattr(up.urllib.request, "urlopen", missing)
+    assert up.release_history("0.9.4", "0.9.1") is None
+
+
+def test_a_long_history_keeps_the_newest_and_counts_the_rest(up, monkeypatch):
+    long_notes = "New\n" + "• A change said at length. " * 600
+    many = {f"0.{n}.0": {"date": "2026-10-01", "notes": long_notes} for n in range(1, 31)}
+    serve_history(monkeypatch, up, many)
+    got = up.release_history("0.30.0", "0.0.1")
+    kept = [e for e in got if e["release"]]
+    assert kept[0]["release"] == "0.30.0" and len(kept) < 30
+    assert sum(len(e["notes"]) for e in kept) <= up.HISTORY_MAX
+    assert got[-1] == {"release": None, "date": None, "earlier": 30 - len(kept)}

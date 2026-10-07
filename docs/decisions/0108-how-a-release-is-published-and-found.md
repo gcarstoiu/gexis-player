@@ -177,3 +177,10 @@ first pool release is that test.
   hundred of them through the redirect.
 - Fetching every package of the tested set by exact version from both
   archives (0 of 1,027 were missing on 2026-09-30; not yet fetched).
+
+## Amended 2026-10-07: a release's history
+
+Beside `notes`, each release publishes `history`: every release's notes from
+its tagged `release_notes.json`, clearsigned by the release key, so a device
+several releases behind can show what each skipped release changed
+([ADR-0110](0110-the-update-experience.md), amended the same day).

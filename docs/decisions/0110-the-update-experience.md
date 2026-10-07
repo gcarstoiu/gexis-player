@@ -223,3 +223,26 @@ from the same log (gexis-core unpacked in 13 s, configured in 6: 3.5 MB/s,
 not 1.5), and the bar is shown full for a second before the step is
 ticked. Like every updater change, it applies from the update after the
 one that delivers it.
+
+## Amended 2026-10-07: the notes of every release being skipped
+
+George: *"the update screen should show all until the current one."* A
+device several releases behind went straight to the newest (ADR-0105) and
+was shown only that release's notes; what the skipped ones changed was in
+*Change logs* only after installing.
+
+1. **Each release publishes its history beside its notes:** `r<tag>/history`,
+   every release's notes from that tag's `release_notes.json` (ADR-0116),
+   clearsigned by the release key like the notes (ADR-0108).
+2. **The updater reads the waiting release's history** and keeps every
+   release newer than the installed one, up to the waiting one, newest
+   first, each with its number, date and notes. A history that is missing
+   or does not verify falls back to the waiting release's notes alone, as
+   before. Kept whole up to 40,000 characters (about twenty releases); past
+   that, the oldest are left out and a line says how many, with *Change logs*
+   and GitHub named for them.
+3. **Shown as one block per release** in the modal and on the Software update
+   tile: the release's number and date as its heading, its notes under it.
+   One release waiting reads as it does today.
+4. Like every updater change, **it applies from the update after the one that
+   delivers it**: the updater that reads the notes is the installed one.

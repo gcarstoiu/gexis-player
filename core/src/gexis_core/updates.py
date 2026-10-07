@@ -151,6 +151,10 @@ def view(path: Path = STATUS, installed: str | None = None, running: bool | None
         "steps": doc.get("steps"),
         "progress": doc.get("progress"),
         "whats_new": doc.get("whats_new"),
+        # ADR-0110 amended 2026-10-07: every release being skipped, newest
+        # first; None from an updater older than that, or a release with no
+        # history - the screen shows `whats_new` alone then.
+        "whats_new_all": doc.get("whats_new_all"),
         "message": doc.get("message"),
         "reboot": bool(doc.get("reboot")),
         "at": doc.get("at"),
