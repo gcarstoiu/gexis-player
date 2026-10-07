@@ -172,3 +172,24 @@ through. So every test runs as a **timed script on the device**:
 George joins from his phone during the window, and Claude reads the logs
 afterwards. The full test is a card flashed with nothing pre-seeded.
 
+
+## Amended 2026-10-07 (brought into line with the code)
+
+- **Amendment 4, Music:** the step asks one of three: **find** the server,
+  use **this address**, or **off** (`LMS_MODES` in
+  `core/src/gexis_core/setup_flow.py`; George, 2026-09-29: a server nobody
+  asked for must not appear). Nothing is searched for over the setup
+  network, as decided; with *find*, the device searches once after it has
+  joined the home network, before setup ends. One server found is used,
+  several are named and left to Settings (`_library`).
+- **Amendment 1, the password:** a player with a panel makes up its own
+  password only once a screen has been kept on the panel
+  ([ADR-0109](0109-other-screens.md) decision 5); until then it uses
+  `gexis-setup`, as a player without one does
+  (`core/src/gexis_core/setup_network.py`).
+- **Amendment 2, the QR codes:** the panel does not show both codes at once.
+  It shows setup one step at a time, one QR code each: the join code until a
+  phone is on the setup network, then the page's code (George, 2026-09-29;
+  `ui/src/screens/SetupScreen.svelte`).
+- **Amendment 7, the 90 s:** counted from the core's setup task starting,
+  not from boot (`_wait_for_network` in `setup_network.py`).

@@ -246,3 +246,42 @@ was shown only that release's notes; what the skipped ones changed was in
    One release waiting reads as it does today.
 4. Like every updater change, **it applies from the update after the one that
    delivers it**: the updater that reads the notes is the installed one.
+
+## Amended 2026-10-07 (brought into line with the code)
+
+- **"What changes underneath", `--now`:** the updater has no `--now` flag.
+  `gexis-update install` never waits for silence; only `gexis-update
+  scheduled`, the night run, looks at whether anything is playing
+  (`core/updater/gexis-update`).
+- **"What changes underneath", `POST /updates/install`:** there is no such
+  route. The modal's button runs the `update_install` settings action, which
+  starts `gexis-update-install.service` (`core/src/gexis_core/__main__.py`).
+  The core does not stop playback first: the updater stops every source
+  itself at its *Stop playback* step (`stop_playback`, the core's
+  `/renderers/park?stop=all`), after the download and the backup, so music
+  plays on through those two.
+- **"What changes underneath", Settings:** the `update_check` and
+  `update_install` rows were not removed. They remain in the registry as
+  unsurfaced actions (`"surfaced": false`), which the modal runs; no
+  migration removed their keys.
+- **§3 step 2, *Up to date (0.2.4)*:** the answer reads *Up to date*, with
+  the release named in its text ("This player has 0.2.4, the newest
+  release."), and it waits for **OK** rather than closing
+  (`ui/src/screens/UpdateModal.svelte`).
+- **"The end is the steps" (2026-10-05), notes "kept whole":** each
+  release's notes are kept up to 8,000 characters (`NOTES_MAX`), far above
+  any so far; the history as a whole up to 40,000.
+
+**Not built (2026-10-07):**
+
+- **§5's "returns to the release it had" holds only when the install or its
+  `verify` fails.** A core that does not answer after the restart is
+  reported as failed and the device stays on the new release; nothing goes
+  back (ADR-0105, amended the same day).
+- **§6's *Restarting the device* is likely not what a reboot shows.**
+  Inferred from the code, not seen on a device: the updater ticks the
+  restart and check steps and reports *done* before calling the reboot, so
+  the panel's lock shows *Restarting the device* only for the moment the
+  restart step is active, then the finished screen (*Updated to …*, Done)
+  until the boot (`ui/src/screens/UpdateScreen.svelte`,
+  `core/updater/gexis-update`).
