@@ -197,9 +197,26 @@
   let hwUrl = $state(null);
   let hwBusy = $state(false);
   let hwError = $state(null);
+  let hwTones = $state(null);
+  let hwTonesBusy = $state(false);
+  async function playHardwareTones() {
+    if (hwTonesBusy) return;
+    hwTonesBusy = true;
+    hwError = null;
+    try {
+      const r = await fetch('/hardware-report/tones', { method: 'POST' });
+      const body = await r.json();
+      if (!r.ok) throw new Error(body?.error ?? `HTTP ${r.status}`);
+      hwTones = body.tones;
+    } catch (e) {
+      hwError = plainly(e?.message, 'The tones could not be played. Try again.');
+    } finally {
+      hwTonesBusy = false;
+    }
+  }
   $effect(() => {
     if (sheet?.kind !== 'hardware') {
-      hw = null; hwAnswers = {}; hwNotes = ''; hwUrl = null; hwError = null;
+      hw = null; hwAnswers = {}; hwNotes = ''; hwUrl = null; hwError = null; hwTones = null;
       return;
     }
     if (hw === null && !onPanel()) {
@@ -216,7 +233,7 @@
       const r = await fetch('/hardware-report/issue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answers: hwAnswers, notes: hwNotes }),
+        body: JSON.stringify({ answers: hwAnswers, notes: hwNotes, tones: hwTones ?? [] }),
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       hwUrl = (await r.json()).url;
@@ -1619,6 +1636,20 @@
               <span class="report__addr">{hw.board ?? 'No sound card'}</span>{#if hw.state} · {hw.state}{/if}
               {#if hw.screen}<br /><span class="report__addr">{hw.screen}</span>{/if}
             </p>
+            <div class="hwq">
+              <span class="report__label">Sound check</span>
+              <p class="report__text report__text--quiet">
+                A short tone at 44.1, 96 and 192 kHz, at the current volume. Turn the amplifier down first.
+              </p>
+              {#if hwTones}
+                <ul class="hwq__tones">{#each hwTones as t (t)}<li>{t}</li>{/each}</ul>
+              {/if}
+              <div class="hwq__options">
+                <button type="button" class="hwq__option" disabled={hwTonesBusy} onclick={playHardwareTones}>
+                  {hwTonesBusy ? 'Playing…' : hwTones ? 'Play them again' : 'Play test tones'}
+                </button>
+              </div>
+            </div>
             {#each HW_QUESTIONS.filter((x) => (!x.screen || hw.screen) && (!x.touch || hw.touch)) as item (item.id)}
               <div class="hwq">
                 <span class="report__label">{item.q}</span>
@@ -3643,6 +3674,13 @@
   .hwq__option.is-on {
     border-color: var(--accent-lms);
     background: rgba(126, 214, 188, 0.16);
+  }
+  .hwq__tones {
+    margin: 0;
+    padding-left: 18px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--ink-body);
   }
   .hwq__facts pre {
     margin: 6px 0 0;

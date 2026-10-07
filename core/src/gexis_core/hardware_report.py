@@ -180,11 +180,74 @@ def collect(card: str | None, chosen_board: str | None = None, screen_chosen: st
     return facts
 
 
+#: ADR-0126 decision 2: a short tone at each rate a listener's music is
+#: likely to come in. -20 dBFS: clearly heard, never near full scale.
+TONE_RATES = (44100, 96000, 192000)
+TONE_HZ = 1000
+TONE_DBFS = -20.0
+TONE_S = 2.0
+
+
+def _tone(path: Path, rate: int) -> None:
+    """A stereo sine, 16-bit at 44.1 kHz, 24-bit in a 32-bit container
+    above - what the renderers send."""
+    import math, struct, wave
+    width = 2 if rate == 44100 else 4
+    amp = 10 ** (TONE_DBFS / 20) * (2 ** (8 * width - 1) - 1)
+    n = int(rate * TONE_S)
+    fade = int(rate * 0.02)          # 20 ms in and out: no click at the edges
+    frames = bytearray()
+    pack = "<hh" if width == 2 else "<ii"
+    for i in range(n):
+        g = min(1.0, i / fade, (n - 1 - i) / fade)
+        v = int(amp * g * math.sin(2 * math.pi * TONE_HZ * i / rate))
+        if width == 4:
+            v &= ~0xFF             # 24 bits of it, as a 24-bit file would carry
+        frames += struct.pack(pack, v, v)
+    with wave.open(str(path), "wb") as w:
+        w.setnchannels(2); w.setsampwidth(width); w.setframerate(rate); w.writeframes(bytes(frames))
+
+
+def playing() -> bool:
+    try:
+        return any("RUNNING" in p.read_text(errors="ignore")
+                   for p in Path("/proc/asound").glob("card*/pcm*p/sub*/status"))
+    except OSError:
+        return False
+
+
+def play_tones(card: str, workdir: Path = Path("/tmp")) -> list[str]:
+    """Each tone through the player's own `output` - so the volume, the
+    software stage and the meter are as for music - and what the card ran
+    at while it played. The caller has checked nothing else is playing."""
+    import time
+    results = []
+    status = Path(f"/proc/asound/{card}/pcm0p/sub0/hw_params")
+    for rate in TONE_RATES:
+        path = workdir / f"gexis-tone-{rate}.wav"
+        _tone(path, rate)
+        proc = subprocess.Popen(["aplay", "-q", "-D", "output", str(path)],
+                                stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+        time.sleep(0.6)
+        hw = _read(status)
+        proc.wait(timeout=TONE_S + 10)
+        err = (proc.stderr.read() or "").strip().splitlines()[-1:] if proc.stderr else []
+        path.unlink(missing_ok=True)
+        got_rate = re.search(r"rate: (\d+)", hw)
+        got_fmt = re.search(r"format: (\S+)", hw)
+        if proc.returncode == 0 and got_rate:
+            results.append(f"{rate / 1000:g} kHz: played, the card at {int(got_rate.group(1)) / 1000:g} kHz "
+                           f"{got_fmt.group(1) if got_fmt else ''}".rstrip())
+        else:
+            results.append(f"{rate / 1000:g} kHz: did not play ({err[0] if err else 'no answer'})")
+    return results
+
+
 #: The questions only a person can answer, by the issue form's field ids.
 ANSWERS = ("sound", "volume", "clicks", "picture", "touch")
 
 
-def issue_url(facts: Facts, answers: dict[str, str], notes: str = "") -> str:
+def issue_url(facts: Facts, answers: dict[str, str], notes: str = "", tones: list[str] | None = None) -> str:
     """The issue form, pre-filled: the board and screen in the title, the
     answers in their fields, the facts in the details. Kept under what GitHub
     accepts by cutting the details first."""
@@ -199,6 +262,8 @@ def issue_url(facts: Facts, answers: dict[str, str], notes: str = "") -> str:
         "notes": notes.strip(),
     }
     details = facts.text()
+    if tones:
+        details += "\nTest tones\n" + "".join(f"- {t}\n" for t in tones)
     url = f"{ISSUE_FORM}?{urlencode({**params, 'details': details})}"
     while len(url) > URL_MAX and details:
         details = details[: max(0, len(details) - 200)]

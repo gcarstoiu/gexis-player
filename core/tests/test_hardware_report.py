@@ -56,3 +56,34 @@ def test_no_sound_card_still_makes_a_report():
     q = parse_qs(urlsplit(hr.issue_url(f, {}, "")).query)
     assert q["board"] == ["no sound card"] and q["screen"] == ["none"]
     assert "card: none" in q["details"][0]
+
+
+def test_a_tone_is_the_rate_and_format_music_comes_in_at_minus_20_dbfs(tmp_path):
+    import math, struct, wave
+    for rate, width in ((44100, 2), (96000, 4), (192000, 4)):
+        path = tmp_path / f"t{rate}.wav"
+        hr._tone(path, rate)
+        with wave.open(str(path)) as w:
+            assert (w.getframerate(), w.getsampwidth(), w.getnchannels()) == (rate, width, 2)
+            data = w.readframes(w.getnframes())
+        fmt = "<h" if width == 2 else "<i"
+        peak = max(abs(struct.unpack_from(fmt, data, i)[0]) for i in range(0, len(data), width))
+        dbfs = 20 * math.log10(peak / (2 ** (8 * width - 1) - 1))
+        assert -20.1 < dbfs <= -19.9, (rate, dbfs)
+        if width == 4:
+            assert all(data[i] == 0 for i in range(0, len(data), 4)), "24 bits in a 32-bit container"
+
+
+def test_nothing_is_played_over_music(tmp_path, monkeypatch):
+    status = tmp_path / "card5" / "pcm0p" / "sub0"
+    status.mkdir(parents=True)
+    (status / "status").write_text("state: RUNNING\n")
+    monkeypatch.setattr(hr, "Path", lambda p: tmp_path if p == "/proc/asound" else __import__("pathlib").Path(p))
+    assert hr.playing() is True
+    (status / "status").write_text("closed\n")
+    assert hr.playing() is False
+
+
+def test_the_tones_reach_the_report():
+    url = hr.issue_url(facts(), {"sound": "Yes"}, "", ["44.1 kHz: played, the card at 44.1 kHz S16_LE"])
+    assert "Test tones\n- 44.1 kHz: played" in parse_qs(urlsplit(url).query)["details"][0]

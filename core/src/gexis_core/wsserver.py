@@ -1301,6 +1301,21 @@ class StateServer:
             "text": facts.text(),
         })
 
+    async def _handle_hardware_tones(self, request: web.Request) -> web.Response:
+        """ADR-0126: a tone at 44.1, 96 and 192 kHz through the player's own
+        output, and what the card ran at - **only when nothing is playing**:
+        a test never cuts into music."""
+        from gexis_core import outputs
+        if hardware_report.playing():
+            return web.json_response({"error": "Something is playing. Pause it first, then play the tones."},
+                                     status=409)
+        output = outputs.resolve(self._settings.value("output_device")) if self._settings else None
+        if output is None:
+            return web.json_response({"error": "No output to play to."}, status=409)
+        results = await asyncio.get_running_loop().run_in_executor(
+            None, lambda: hardware_report.play_tones(output.card))
+        return web.json_response({"tones": results})
+
     async def _handle_hardware_issue(self, request: web.Request) -> web.Response:
         """ADR-0126: the issue form's address, pre-filled with the facts and
         the owner's answers `{"answers": {...}, "notes": "..."}`."""
@@ -1310,8 +1325,9 @@ class StateServer:
             body = {}
         answers = {k: str(v) for k, v in (body.get("answers") or {}).items()}
         notes = str(body.get("notes") or "")[:2000]
+        tones = [str(t) for t in (body.get("tones") or [])][:6]
         facts = await self._hardware_facts()
-        return web.json_response({"url": hardware_report.issue_url(facts, answers, notes)})
+        return web.json_response({"url": hardware_report.issue_url(facts, answers, notes, tones)})
 
     async def _handle_panel_shown(self, request: web.Request) -> web.Response:
         """ADR-0101: the panel reporting whether its idle screen is up - and,
@@ -1896,6 +1912,7 @@ class StateServer:
         app.router.add_post("/report", self._handle_report)
         app.router.add_get("/hardware-report", self._handle_hardware_report)
         app.router.add_post("/hardware-report/issue", self._handle_hardware_issue)
+        app.router.add_post("/hardware-report/tones", self._handle_hardware_tones)
         app.router.add_post("/settings/{key}/items", self._handle_list_action)
         app.router.add_post("/bluetooth/pairing/{answer}", self._handle_pairing_answer)
         # ADR-0050. `{name:.*}` because a skin's name is a section heading
