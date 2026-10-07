@@ -60,13 +60,18 @@ flowchart TB
         bt["bluealsa + bluealsa-aplay<br/>(Bluetooth A2DP sink)"]
         px["Plexamp<br/>(plugin)"]
     end
-    subgraph Audio["ALSA"]
-        out["pcm.output<br/>type meter + peppyalsa scope"]
+    subgraph Audio["ALSA (pcm.output)"]
+        out["type meter + peppyalsa scope"]
+        sv["softvol Gexis<br/>(Volume on Software)"]
+        pl["plug<br/>(HDMI only)"]
         hw["hw:&lt;card name&gt;<br/>DAC HAT, USB DAC, jack or HDMI"]
     end
     Presentation --> Control
     Control --> Renderers
     Renderers --> out --> hw
+    out -.-> sv -.-> hw
+    sv -.-> pl -.-> hw
+    Renderers -. "HDMI on Fixed:<br/>plug only, no meter" .-> pl
 ```
 
 ## Processes and how they talk
@@ -151,7 +156,7 @@ Notes on the diagram:
 ```mermaid
 flowchart LR
     pi["Raspberry Pi 4"]
-    dac["DAC HAT (I2S), detected<br/>from its EEPROM<br/>or USB DAC / jack / HDMI"]
+    dac["DAC HAT (I2S), detected<br/>from its EEPROM or chosen once<br/>or USB DAC / jack / HDMI"]
     amp["Amplifier"]
     scr["HDMI touch screen<br/>Standard or Bar family"]
     ph["Phone on the same network"]
@@ -163,9 +168,11 @@ flowchart LR
 
 - **DAC.** The bench board is the HiFiBerry DAC2 HD (`hw:sndrpihifiberry`).
   The HAT's EEPROM is read at boot, so the card name and its mixer control
-  are discovered, not configured (`core/src/gexis_core/outputs.py`). The
-  user picks which output plays (ADR-0055); an output without a hardware
-  mixer is fixed-output, and the volume control is hidden (ADR-0046).
+  are discovered, not configured (`core/src/gexis_core/outputs.py`). A board
+  with no EEPROM is chosen once in Settings → Audio → Sound card board, which
+  writes its `dtoverlay` (ADR-0117). The user picks which output plays
+  (ADR-0055); an output without a hardware mixer gets the software volume
+  stage by default, and Fixed is only ever the user's choice (ADR-0127).
   Volume semantics are on [audio-path.md](audio-path.md).
 - **Screen.** HDMI only. Screens fall into two families, Standard (around
   1280 x 800) and Bar (wide strips such as 1280 x 400), applied through

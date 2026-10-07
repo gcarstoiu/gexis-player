@@ -3,7 +3,10 @@
 **Status:** settled at high level. Layer boundaries and the arbitration model are
 decided. Implementation detail below the layer boundaries is not.
 
-**Last updated:** 2026-09-04
+**Last updated:** 2026-10-07 - brought into line with the code and the ADRs
+up to ADR-0127 (the hardware, screens, volume, the ALSA chain, the screens
+list, arbitration's plugin renderers, the visualiser, enrichment, plugins).
+Where history explains a choice, the old text stays under a dated note.
 
 ---
 
@@ -26,16 +29,28 @@ their OS.
 
 **Hardware**
 
-- Raspberry Pi 4, 4 GB. No other boards in scope.
-- HiFiBerry DAC2 HD. PCM179x codec, 192 kHz / 24-bit ceiling, no DSD.
-- Attached touchscreen at 1280x800.
+- Raspberry Pi 4 only; 4 GB tested, 2 GB the untested minimum
+  (`docs/HARDWARE.md`). No other boards in scope.
+- A DAC HAT from the player's list, or a class-compliant USB DAC, each
+  *Tested*, *Reported*, *Known* or *Detected*
+  ([ADR-0117](decisions/0117-dacs-beyond-the-two-on-the-bench.md),
+  [ADR-0126](decisions/0126-hardware-reports-from-users.md)). The bench
+  reference is the HiFiBerry DAC2 HD (PCM179x, 192 kHz / 24-bit, no DSD); the
+  IQaudIO Pi-DAC PRO is Tested too. *(Was: the DAC2 HD only.)*
+- An attached HDMI screen of the Standard or Bar family, or none (headless)
+  ([ADR-0109](decisions/0109-other-screens.md)); 1280x800 is the reference
+  panel. *(Was: a 1280x800 touchscreen only.)*
 
 **Audio**
 
 - Bit-perfect playback, provable by inspection of the ALSA chain.
 - One active renderer at a time. No dmix.
-- Hardware volume by default; software volume only as fallback for HATs without
-  a mixer.
+- Volume is **Hardware** (the card's own control; default), **Software** (the
+  player scales the samples, on any output; it takes Hardware's place on an
+  output with no control, such as HDMI) or **Fixed**
+  ([ADR-0124](decisions/0124-software-volume.md),
+  [ADR-0127](decisions/0127-one-volume-row.md)). *(Was: software volume only as
+  a fallback for HATs without a mixer.)*
 - Base-image renderers: squeezelite (LMS), go-librespot (Spotify Connect),
   Bluetooth A2DP sink.
 - Multiroom via LMS only.
@@ -48,11 +63,20 @@ their OS.
   everything, a remote browser renders only the settings surface. Only the
   settings screen is responsive; every other screen is a fixed 1280x800
   artboard, because no other screen is ever served to a phone.
-- Four screen types: library navigation, now playing, Peppy screen, idle.
+  **Amended 2026-10-07:** the panel lays every screen out by its family,
+  Standard or Bar (ADR-0109); a phone gets Settings, the mini player
+  ([ADR-0101](decisions/0101-a-mini-player-on-the-phone.md)) and the touchpad
+  ([ADR-0121](decisions/0121-the-phone-as-the-panel-s-touchpad-and-keyboard.md)).
+- The panel's screens: Home, the library (ADR-0030), now playing, the Peppy
+  screen, idle, the takeover screen (ADR-0094), the waiting screens with LMS
+  off (ADR-0079), Settings, setup, the update screen, the pairing
+  confirmation. *(Was: four screen types.)*
 - Now playing, artist info and track info available for every renderer.
 - Lyrics on now playing: synced, unsynced, or none.
-- Peppy screen renders unmodified PeppyMeter/Volumio-extended skins at 1280x800,
-  meters and spectrum animated, track metadata drawn into the skin's positions.
+- Peppy screen renders PeppyMeter/Volumio-extended skins with the native
+  engine (ADR-0026), drawn for the attached screen's size - or the largest
+  set that fits, centred (ADR-0111) - meters and spectrum animated, track
+  metadata drawn into the skin's positions.
 - Switching to the Peppy screen with no visible render-in delay.
 - Snappy: low latency on track change, navigation and renderer handoff.
 - Metadata file for external displays, moOde-compatible format.
@@ -60,10 +84,13 @@ their OS.
 
 ### Should
 
-1. Plexamp
+1. Plexamp - **delivered as a plugin**, fetched on the device when switched
+   on (ADR-0090, ADR-0100).
 2. Spotify account navigation and control
 3. Theme engine
-5. Plugin extensibility: renderers, idle screens, meters, themes
+4. Plugin extensibility: renderers, idle screens, meters, themes - **renderers
+   and services delivered** (ADR-0084, ADR-0086, ADR-0089, ADR-0106);
+   themes, idle screens and meters not yet.
 
 ### Could
 
@@ -74,13 +101,15 @@ their OS.
 
 ### Out of scope
 
-- MPD and local library
+- MPD, and a library managed by the player itself. A local library is served
+  only through the optional Lyrion Server plugin
+  ([ADR-0115](decisions/0115-the-lyrion-server-as-a-plugin.md)).
 - Native mobile apps
 - Tidal, Deezer and other services at this stage
 
 ---
 
-## 3. On "bit-perfect", and the two output modes
+## 3. On "bit-perfect", and the volume modes
 
 Precise wording matters here, and the loose version is what gets quoted back.
 
@@ -91,7 +120,8 @@ different modes, not a marketing gradation:
 | Mode | Volume controlled by | Claim |
 |---|---|---|
 | **Fixed output** | external amplifier | Nothing in the signal path is touched — not on the Pi, not in the DAC |
-| **Variable output** | DAC hardware attenuator | The samples we send to the DAC are unmodified; attenuation happens inside the chip |
+| **Hardware** (was *Variable output*) | DAC hardware attenuator | The samples we send to the DAC are unmodified; attenuation happens inside the chip |
+| **Software** (ADR-0124, ADR-0127) | the player scales the samples, after the meter tap | Bit-perfect at 100 % only (Finding 115); not below |
 
 Fixed output sets `DAC Playback Volume` to 240 (0 dB) and locks it. It is the
 stronger claim and it is available on this hardware.
@@ -115,8 +145,10 @@ path and no mixer.
   must not jump to 0 dB unannounced. Confirmation on the switch, and the change
   should take effect on the next track or after a stop rather than immediately.
 
-Software volume remains as a third path, used only on hardware without a mixer.
-Not applicable to the DAC2 HD.
+Software volume is the third mode, on any output (ADR-0124, ADR-0127): the
+owner's choice where the card has its own control, and what takes Hardware's
+place where it has none (HDMI). *(Was: a third path only on hardware without
+a mixer.)*
 
 ---
 
@@ -124,10 +156,11 @@ Not applicable to the DAC2 HD.
 
 ```
 ┌─ Presentation ─ web UI, one codebase ───────────────────────┐
-│   library nav  │  now playing  │  idle                      │
+│   home · library · now playing · idle · settings · …        │
 │                   capability-driven UI                      │
-│   local: Chromium kiosk under labwc  ·  remote: any browser │
-└────────────── WebSocket (state + levels) ───────────────────┘
+│   local: Chromium kiosk under labwc                         │
+│   remote: Settings, the phone's mini player and touchpad    │
+└──── WebSocket /state (publish-only) + REST, core on :8090 ──┘
 ┌─ Peppy screen ─ native process (ADR-0026) ──────────────────┐
 │   PeppyMeter/PeppySpectrum, skins rendered natively         │
 │   raised and hidden by labwc, not by the browser            │
@@ -138,24 +171,25 @@ Not applicable to the DAC2 HD.
 │    · capability declaration per adapter                     │
 │    · arbitration supervisor                                 │
 │    · library proxy (normalised, source-agnostic)            │
-│    · volume bridge → ALSA hardware mixer                    │
+│    · volume bridge → the active renderer's own volume,      │
+│      mirrored onto the card's control or the software stage │
 │    · metadata file writer → external displays               │
-│  Visualisation service   levels + FFT                       │
-│    · transports: WebSocket │ PeppyMeter HTTP │ peppyalsa FIFO│
-│  Enrichment service   artist/album/track → bio, artwork     │
-│  Lyrics service                                             │
+│    · enrichment and lyrics (in the core process, ADR-0040)  │
+│  Visualisation service (gexis-meter) levels + FFT           │
+│    · FIFOs to PeppyMeter │ WebSocket /meter │ PeppyMeter HTTP│
 │  Config store — SQLite                                      │
 └──────────────── IPC contract (plugins) ─────────────────────┘
 ┌─ Renderers ─ separate processes, systemd units ─────────────┐
-│  squeezelite      go-librespot      bluealsa-aplay          │
-│           all write to logical device "output"              │
+│  squeezelite   go-librespot   bluealsa-aplay   plugins      │
+│  (Plexamp, …)  all reach the logical device "output"        │
 └─────────────────────────────────────────────────────────────┘
 ┌─ Audio ─────────────────────────────────────────────────────┐
-│  output  →  type meter + peppyalsa scope  →  hw: DAC2 HD    │
-│  hardware mixer for volume                                  │
+│  output → meter (peppyalsa) → [softvol] → [plug] → card     │
+│  softvol with Software volume; plug on HDMI; HDMI on Fixed: │
+│  plug only, no meter                                        │
 └─────────────────────────────────────────────────────────────┘
 ┌─ Base ──────────────────────────────────────────────────────┐
-│  image + kernel + hifiberry-dacplushd (EEPROM-detected)     │
+│  image + kernel + DAC overlay (by EEPROM, or from the list) │
 │  BlueZ + bluez-alsa · avahi                                 │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -170,8 +204,16 @@ condition is recorded: a non-cooperative renderer entering Must.
 
 ### The `output` indirection
 
-Every renderer targets a logical ALSA device named `output`. Nothing references
-`hw:` directly and nothing references a card index.
+Every renderer's audio reaches a logical ALSA device named `output` -
+squeezelite through `output_wait`, its twin whose open waits for a busy card
+(ADR-0095), and Plexamp through the ALSA default, an alias of `output`
+(ADR-0085). No renderer references `hw:` for audio, and nothing references a
+card index.
+
+The default, for the DAC2 HD on Hardware volume (`image/stage-gexis/00-alsa/
+files/output.conf`, with `output_wait`, `ctl.output` and the peppyalsa scope
+beside it); the core rewrites it for the chosen output and volume mode
+(`outputs.render()`):
 
 ```
 pcm.output {
@@ -197,18 +239,22 @@ All 18 combinations verified working through the meter chain (Finding 002).
 
 ### Volume
 
-Hardware, via `DAC Playback Volume`: 240 steps of 0.5 dB, 0 = mute, 240 = 0 dB.
-Simple-mixer name is `DAC`, which is what `squeezelite -V` needs.
+The card's own playback control, its scale read from ALSA rather than assumed
+(ADR-0117) - on the DAC2 HD `DAC`, 240 steps of 0.5 dB, 240 = 0 dB - or, with
+Software volume, the software stage's `Gexis` control (-90..0 dB in 0.25 dB
+steps, ADR-0124). squeezelite drives a private dummy mixer
+(`hw:gexislmsvol`, `Master`) that the core follows.
 
-One global control shared by all renderers. Spotify, LMS and Bluetooth each
-expect to own device volume; all three are bridged onto this one mixer.
+One control shared by all renderers. Spotify, LMS and Bluetooth each expect to
+own device volume; each reaches this one control through its own channel, and
+the panel changes the active renderer's level rather than the card's
+(ADR-0053, ADR-0054).
 
-### Known defect
+### No known defect in the meter
 
-`type meter` loses the final 768 frames of a stream at S32_LE/192000. Interior
-samples are bit-identical at both extremes of the grid. Characterised in
-Finding 003, unresolved, logged. Does not block the design; does block the
-bit-perfect claim being written into marketing copy until closed.
+Finding 003 reported that `type meter` lost the final 768 frames of a stream.
+**Withdrawn:** Finding 004 shows the same artefact with the meter removed - it
+is `snd-aloop`'s, the capture device the test used.
 
 ---
 
@@ -247,9 +293,10 @@ different shapes:
 
 | Renderer | Acquisition |
 |---|---|
-| LMS | explicit play or resume (no connect event exists — always connected) |
+| LMS | the player powered on (ADR-0027; was: explicit play or resume) |
 | Spotify Connect | device selected in the app |
-| Bluetooth | A2DP profile connect |
+| Bluetooth | A2DP profile connect; also the phone playing again (`MediaPlayer1` Status) |
+| Plugin renderer | as its manifest declares, plus a play queue it has not seen (ADR-0089, ADR-0092) |
 
 ### Release — disconnect, uniformly
 
@@ -263,9 +310,13 @@ pauses, because its connection is structural rather than a user session.**
 
 | Renderer | On losing the device |
 |---|---|
-| LMS | pause, stay connected (base slot) |
+| LMS | pause, then power 0 (ADR-0027; was: pause, stay connected) |
 | Bluetooth | disconnect |
 | Spotify Connect | disconnect |
+| Plugin renderer | its unit taken off the device (ADR-0091) |
+
+Every release escalates when the renderer does not let go: the polite stop,
+then SIGTERM, then SIGKILL (`arbitration.py`).
 
 Disconnect is self-explaining: the phone shows the device gone rather than
 showing "playing" into a silent room. No invisible state anywhere.
@@ -301,10 +352,12 @@ addresses that, so it does not outweigh the notification problem.
 
 ### Mitigating Bluetooth reconnection
 
-Reconnecting should not require a trip into phone settings. The idle and
-now-playing screens list recently-connected Bluetooth devices; tapping one
-initiates the connection from our side. BlueZ can initiate connections to
-trusted devices, so this is available to us.
+**Planned, not built (2026-10-07):** reconnecting should not require a trip
+into phone settings. The idle and now-playing screens would list
+recently-connected Bluetooth devices; tapping one would initiate the
+connection from our side. BlueZ can initiate connections to trusted devices,
+so this is available to us. Today Settings lists and forgets paired devices
+only (ADR-0044, ADR-0045).
 
 **Unverified:** how reliably a phone that has moved on accepts an
 inbound connection.
@@ -338,8 +391,9 @@ release is implemented, not a tuning option.
 ### Rules
 
 - **No auto-resume.** Release never starts playback. The user chooses what plays
-  next. Release of the active slot leaves LMS current but not playing, which
-  means the idle screen.
+  next. With no renderer holding the device the panel shows Home; the idle
+  screen follows after five minutes without activity (ADR-0033). *(Was: LMS
+  current but not playing, the idle screen.)*
 - **Takeover acts on the outgoing renderer through its control channel.**
   Blocking the audio path is not sufficient: the source would still show
   "playing" into a silent room. An adapter must be able to disconnect or pause
@@ -360,6 +414,15 @@ release is implemented, not a tuning option.
 ---
 
 ## 7. Display
+
+> **Amended 2026-10-07.** The four-screen picture below predates Home
+> (ADR-0033), the takeover screen (ADR-0094) and the waiting screens
+> (ADR-0079). Now: with nothing connected the panel shows **Home**; **idle**
+> comes after five minutes without activity, from any screen (ADR-0033); the
+> **Peppy screen** is entered by its button or after five minutes of
+> unattended playback - not the same timer (ADR-0036 §1); every takeover shows
+> the takeover screen. The original picture is kept for the reasoning it
+> records.
 
 Four screens. Two are driven by different things, and conflating them was an
 error corrected during design.
@@ -431,10 +494,18 @@ title · artist · album · artwork · sample rate · remaining time · source t
 ```
 
 Album is optional (44 of 71). That set is the minimum every renderer adapter
-must supply. Where a field is absent, the skin renderer **blanks that region,
+must supply - **except the sample rate**, which is shown nowhere but the
+visualiser, and there only for LMS or a plugin that declares it is the source's
+(ADR-0036 §2 as amended). Where a field is absent, the skin renderer **blanks that region,
 never the screen**.
 
 ### Skin rendering
+
+> **Superseded by [ADR-0026](decisions/0026-peppymeter-native-process-integration.md).**
+> The skins are drawn by the vendored PeppyMeter/PeppySpectrum engines, a
+> native process kept rendering while hidden and raised by labwc (§4). The
+> in-browser design below was not built; it is kept for the skin-corpus survey
+> it records.
 
 In-browser, consuming the PeppyMeter/Volumio extended format unmodified. The
 value is in the community skins, so consuming them is the point.
@@ -467,7 +538,12 @@ intentional — quantisation is a deliberate choice, not a default.
 
 ## 8. Control plane
 
-Python. One core daemon plus three services.
+Python. One core daemon - state, arbitration, library, volume, enrichment and
+lyrics (ADR-0040), settings, setup, the plugin socket - and a separate
+visualisation service (`gexis-meter`). *(Was: one core daemon plus three
+services.)* The other units on the image include `gexis-peppy`,
+`gexis-kiosk`, `gexis-park`, `gexis-smb`, `gexis-screen-check`,
+`gexis-fetch@`, the uploaded-plugin units and the updater's.
 
 ### Core state daemon
 
@@ -515,15 +591,18 @@ point.
 |---|---|
 | LMS | CometD subscribe for push; JSON-RPC on :9000 for calls |
 | Spotify | go-librespot HTTP + WebSocket API |
-| Bluetooth | BlueZ `org.bluez.MediaPlayer1`, D-Bus PropertiesChanged |
+| Bluetooth | BlueZ `org.bluez.MediaPlayer1` and `MediaTransport1`, D-Bus PropertiesChanged; volume from `org.bluealsa.PCM1` (ADR-0054) |
+| Plugin renderer | JSON lines over `/run/gexis/plugins.sock` (ADR-0084, ADR-0089; `docs/PLUGIN-CONTRACT.md`) |
 
 LMS polling is not acceptable — CometD or track changes will visibly lag.
 
 ### Visualisation service
 
-Reads the peppyalsa FIFOs, publishes on three transports: WebSocket (primary,
-for the browser renderer), PeppyMeter HTTP (so unmodified PeppyMeter can be
-dropped in as a plugin), peppyalsa FIFO (compatibility).
+Reads the peppyalsa FIFOs and republishes them, the levels scaled to follow
+the volume (ADR-0057): to the native PeppyMeter through passthrough FIFOs (the
+primary consumer, ADR-0026), on WebSocket `/meter` (:8091), and optionally to a
+PeppyMeter HTTP server (off by default). *(Was: WebSocket primary, for a
+browser renderer that was not built.)*
 
 Publishing on all three keeps the renderer choice reversible.
 
@@ -532,8 +611,8 @@ service can attach and detach freely without stalling audio.
 
 **Logged alternative:** computing RMS and FFT ourselves rather than reading
 peppyalsa would free us from its `decay_ms`, smoothing and 0–100 scale, and
-would remove the meter plugin from the audio path entirely — sidestepping the
-Finding 003 defect. It requires our own tap, whose shape is unknown. Not
+would remove the meter plugin from the audio path entirely. (The Finding 003
+defect it would have sidestepped was withdrawn by Finding 004.) It requires our own tap, whose shape is unknown. Not
 adopted; recorded so the option is not lost.
 
 ### Enrichment service
@@ -550,10 +629,10 @@ need artist bios too.
   what is playing.
 - **Confidence threshold.** Below it, show nothing. A confidently wrong artist
   biography is worse than a blank panel.
-- **One global rate limiter.** MusicBrainz permits about one request per second
-  per IP and 503s everything above that; a meaningful User-Agent is required and
-  polling is explicitly discouraged. Single shared token bucket, persistent
-  cache, negative results cached too.
+- **One rate limiter per provider** (ADR-0040 §5; was: one global bucket).
+  MusicBrainz permits about one request per second per IP and 503s everything
+  above that; a meaningful User-Agent is required and polling is explicitly
+  discouraged. Persistent cache, negative results cached too.
 
 ### Config store
 
@@ -575,7 +654,10 @@ Two reasons:
 
 ### Contract fields
 
-Minimum, derived from the three defaults:
+Minimum, derived from the three defaults. The decided form: JSON lines over a
+Unix socket (ADR-0084), a manifest (ADR-0086) of kind `renderer` or `service`,
+settings passed to the unit as environment (ADR-0088), installed and uploaded
+plugins (ADR-0106) - `docs/PLUGIN-CONTRACT.md` is the reference.
 
 - audio connection method (always `output`)
 - acquisition events (one or more)
@@ -583,6 +665,11 @@ Minimum, derived from the three defaults:
 - pause capability, with success/failure reporting
 - metadata capability declaration
 - control surface
+
+> **Amended by ADR-0013 (2026-09-25).** The three defaults stay in the core
+> process and do not speak the protocol; the contract is derived from them, and
+> plugin renderers are carried by the same arbitration (ADR-0089). The
+> paragraph below was the original intent.
 
 **The three default renderers are implemented against the public contract**, not
 special-cased. If the built-ins are privileged, the contract will be incomplete
@@ -594,8 +681,9 @@ and the first external plugin will discover it.
 
 **Spend the hardware on responsiveness.** Footprint and flash wear are not
 selection criteria. Everything stays resident — Chromium never restarts,
-renderers stay loaded even when inactive, arbitration controls who holds the
-device rather than who is running. Cold start is the enemy.
+renderers that are switched on stay loaded even when inactive (one switched
+off is stopped, ADR-0077), arbitration controls who holds the device rather
+than who is running. Cold start is the enemy.
 
 **Protect the audio path with priority, not by doing less.** If UI load ever
 causes audio underruns, the answer is scheduling priority and CPU affinity, not
@@ -612,34 +700,37 @@ not. A single negative result is not decisive.
 
 **Deferred to their ADRs:**
 
-- Peppy screen exit gesture. Touch-to-exit costs three actions to skip a track;
-  a transient transport overlay on first touch costs a hidden gesture.
-- Volume semantics in variable-output mode. Does the phone's Spotify slider move
-  the amp?
-- `steps.per.degree` quantisation — match PeppyMeter or render smooth.
+- ~~Peppy screen exit gesture.~~ Touch exits (ADR-0019).
+- ~~Volume semantics in variable-output mode.~~ The renderer's own volume is
+  the device's; the phone's slider moves it (ADR-0053).
+- ~~`steps.per.degree` quantisation.~~ Moot: the native engine draws the
+  skins (ADR-0026).
 - Degraded metadata display rule beyond "blank the region".
-- How the UI represents "no renderer holds the device" (ADR-0027 makes this
-  routine rather than an edge case).
-- Bluetooth reconnection UX and whether inbound connection is reliable.
+- ~~How the UI represents "no renderer holds the device".~~ Home (ADR-0033);
+  with LMS off, the waiting screens (ADR-0079).
+- Bluetooth reconnection UX and whether inbound connection is reliable (§6:
+  planned, not built).
 
 **Needing measurement:**
 
 - Takeover gap under direct ALSA, same-rate and cross-rate.
-- Finding 003 grid fill and mechanism.
-- Per-frame cost of the layered browser renderer at 1280x800 on a Pi 4.
+- ~~Finding 003 grid fill and mechanism.~~ Withdrawn (Finding 004).
+- ~~Per-frame cost of the layered browser renderer.~~ Moot (ADR-0026).
 - LMS CometD latency in practice.
 - Pi 4 Wi-Fi/Bluetooth coexistence under simultaneous A2DP and network
   streaming.
 
 **Needing investigation:**
 
-- Base OS: Raspberry Pi OS Lite vs DietPi. Still open (ADR-0001). Blocked on
+- ~~Base OS.~~ **Decided: Raspberry Pi OS Lite 64-bit, built with pi-gen
+  (ADR-0001, Accepted).** The original question, for the record: Raspberry Pi
+  OS Lite vs DietPi, blocked on
   whether DietPi supports a reproducible, CI-drivable image build comparable to
   Volumio's `build.sh` or moOde's pi-gen wrapper. Note that DietPi on a Pi is a
   conversion applied on top of Raspberry Pi OS Lite and uses the same apt repos
   and kernel, so Phase 1 measurements transfer either way.
-- PeppyMeter skin asset conventions: needle sprite pivot, the meaning of
-  `distance`, the font faces the skins assume, the `playinfo.type` icon set.
+- ~~PeppyMeter skin asset conventions.~~ Moot: the native engine reads its
+  own skins (ADR-0026).
 - Spotify Web API scope availability for the account-navigation Should.
   **Partially resolved, Phase 2 (2026-09-05):** the Player API — transfer
   playback, play/pause, read playback state — is confirmed available to a
@@ -650,9 +741,21 @@ not. A single negative result is not decisive.
   *navigation* would need beyond playback control — the Feb 2026 change
   specifically restricted browse/categories and batch catalog endpoints for
   new apps, which was not checked against what navigation would require.
-- Synced lyrics sources for non-LMS renderers.
+- ~~Synced lyrics sources for non-LMS renderers.~~ LRCLIB (ADR-0040).
 - BlueZ AVRCP cover art in the controller role.
 
 **No reference implementation exists for our display stack.** moOde and Volumio
 run Chromium on X; piCorePlayer runs Jivelite on the framebuffer. Chromium on
 Wayland under labwc is none of those.
+
+---
+
+## 12. Not described above (see the ADRs)
+
+Areas the original architecture did not cover, decided since: updates over
+the network - Debian packages from a signed repository and the updater's
+units (ADR-0105, ADR-0107, ADR-0108, ADR-0110); first-boot setup over its own
+access point (ADR-0031, ADR-0104; ADR-0128 proposed); the SMB pictures share
+(ADR-0049); network settings (ADR-0123); problem reports and hardware
+feedback (ADR-0125, ADR-0126). Ports: 8090 (the UI, REST and `/state`), 8091
+(`/meter`), 9000 (LMS), 3678 (go-librespot, loopback).

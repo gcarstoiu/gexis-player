@@ -5,8 +5,8 @@ how volume works, and how the meters and visualiser get their data.
 
 The short version: **one renderer at a time writes to one logical ALSA device,
 `output`; the core daemon decides who that is; volume is applied once, in the
-DAC's own hardware attenuator; and a tap inside `output` feeds the
-visualiser.** There is no sound server and no mixing (ADR-0008).
+output's own volume control on Hardware or in the software stage inside
+`output` on Software; and a tap inside `output` feeds the visualiser.** There is no sound server and no mixing (ADR-0008).
 
 ## The audio graph
 
@@ -37,11 +37,11 @@ flowchart LR
     OUT -.-> SCOPE
 
     SCOPE -- "meter.fifo<br/>spectrum.fifo" --> MS["gexis-meter<br/>(meter_service.py)"]
-    MS -- "WS :8091 /meter" --> UI["Panel / phone UI"]
+    MS -- "WS :8091 /meter" --> RC["remote clients<br/>(not the UI)"]
     MS -- "meter-peppy.fifo<br/>spectrum-peppy.fifo" --> PP["gexis-peppy<br/>(PeppyMeter + PeppySpectrum)"]
     MS -. "optional HTTP PUT" .-> EXT["external PeppyMeter"]
 
-    CORE["gexis-core"] -- "DAC Playback Volume<br/>(ctl.output)" --> HW
+    CORE["gexis-core"] -- "the output's volume control<br/>(its own, or Gexis on Software)" --> HW
     CORE -- "/run/gexis/attenuation" --> MS
 ```
 
@@ -195,10 +195,11 @@ it" would be wrong, because by then the incoming renderer may legitimately
 have opened it. The card checked is whichever output is configured, not
 always the HiFiBerry (ADR-0055).
 
-The built-in adapters and the plugin adapter all send **SIGKILL** on both
-signal rungs. A SIGTERM'd squeezelite, go-librespot or Plexamp exits cleanly,
-and `Restart=on-failure` does not count a clean exit as a failure, so it
-would never come back. A plugin may declare its own ladder (Plexamp declares
+The LMS, Spotify and plugin adapters send **SIGKILL** on both signal rungs.
+A SIGTERM'd squeezelite, go-librespot or Plexamp exits cleanly, and
+`Restart=on-failure` does not count a clean exit as a failure, so it would
+never come back. The Bluetooth adapter sends SIGTERM on the first signal rung
+and SIGKILL on the second. A plugin may declare its own ladder (Plexamp declares
 no polite grace, ADR-0091). Every call into a renderer's API while the
 supervisor holds its lock is bounded at 2 s (`RENDERER_CALL_TIMEOUT_S`), so a
 renderer that stops answering cannot stall later takeovers.
@@ -272,9 +273,9 @@ toggle into ADR-0046's Output mode).
 
 | Mode | What happens | Claim |
 |---|---|---|
-| **Hardware** (default; was *Variable*) | The DAC's hardware attenuator (`DAC Playback Volume`, 0–240 in 0.5 dB steps) sets the level. Samples reach the DAC unmodified. | Bit-perfect up to the DAC chip |
+| **Hardware** (default; was *Variable*) | The output's own volume control sets the level, on the scale read for that card (ADR-0117): on the DAC2 HD, `DAC Playback Volume`, 240 steps of 0.5 dB. Samples reach the card unmodified. | Bit-perfect up to the DAC chip |
 | **Software** | `meter → softvol → card` (HDMI: `meter → softvol → plug → card`); the card's own control parked at 0 dB. On an output with no control of its own, `Settings.restrict` greys Hardware and `Settings.value` answers Software, the next option (`volume_mode()` in `__main__.py` for start-up). | Bit-perfect at 100 % only (Finding 115) |
-| **Fixed** | The DAC is set to 240 (0 dB) and nothing may write it; the amplifier sets the level. Volume controls are hidden, with a padlock and a reason, not greyed (ADR-0046). | Nothing in the signal path is touched |
+| **Fixed** | The output's control is set to its own 0 dB (240 on the DAC2 HD) and nothing may write it; the amplifier sets the level. Volume controls are hidden, with a padlock and a reason, not greyed (ADR-0046). | Nothing in the signal path is touched |
 
 Switching to Fixed while playing waits until playback stops, because a jump to
 full scale into an amplifier set for a quieter signal is the loudest mistake
@@ -324,7 +325,7 @@ flowchart TB
     R --> RV["RemoteVolume.report<br/>(panel shows this number)"]
     R -->|"only if id is active"| C["renderer_value_to_hardware_raw<br/>+ max_ceiling shift"]
     C --> W["VolumeBridge.write_hardware<br/>(refused in Fixed mode; ramped)"]
-    W --> DAC["DAC Playback Volume<br/>via ctl.output"]
+    W --> DAC["the output's volume control<br/>(its own, or Gexis on Software)"]
     W --> ATT["/run/gexis/attenuation<br/>(for the meters)"]
 
     PANEL["Panel / phone slider"] --> RVS["RemoteVolume → active renderer's<br/>set_volume / bluealsa Volume"]
@@ -341,8 +342,9 @@ Mechanics behind the picture:
   volume on pause, and the fade must not be taken as a level), and the core
   asks LMS over JSON-RPC what its volume really is (ADR-0054 §2). A second
   dummy, `gexisbtvol`, is still created but no longer used.
-- **Ramping.** `write_hardware()` walks the DAC to a new target in 0.5 dB
-  steps, capped at about 120 ms, so a slider drag that arrives as a few
+- **Ramping.** `write_hardware()` walks the control to a new target one raw
+  step of the output's own scale at a time (0.5 dB on the DAC2 HD, 0.25 dB on
+  the software stage), capped at about 120 ms, so a slider drag that arrives as a few
   samples sounds like a slide rather than a staircase. A newer target cancels
   the ramp in flight; the final target is always written (ADR-0052 §4).
 - **Echo suppression** in `VolumeBridge` is value-matched: it drops exactly one
@@ -352,8 +354,8 @@ Mechanics behind the picture:
   (`acquire_volume()`), and that value is applied. Renderers whose answer is
   not meaningful (go-librespot under `external_volume`, plugins declaring
   `volume_handed`) are instead *handed* the level already playing, capped at
-  `start_max` (`hand_level_to()`, ADR-0054 §5). A short start guard ignores a
-  phone's slider arriving as it connects.
+  `start_max` (`hand_level_to()`, ADR-0054 §5). The start guard answers a
+  louder first report by handing the level again, and follows a quieter one.
 - **Ceiling.** `max_ceiling` (a percentage) shifts the top of every scale down
   rather than clipping, so 100 in any app means the ceiling (ADR-0052 §3).
 - **Mute** remembers the level and writes 0; any other change ends mute
@@ -363,18 +365,34 @@ Mechanics behind the picture:
 
 `core/src/gexis_core/outputs.py` (ADR-0055) discovers playback cards (skipping
 the dummy cards), labels them, and notes which have a volume control and
-whether an HDMI connector has anything plugged in. Choosing one rewrites the
-card name in `output.conf` and restarts the renderers and the core, because
-ALSA reads the file only when a PCM is opened, and each card brings its own
+whether an HDMI connector has anything plugged in. Each card brings its own
 control name (`DAC` on the HiFiBerry, something else on the headphone jack,
-none on HDMI).
+none on HDMI) and its own scale, read per card (ADR-0117).
 
-HDMI accepts only IEC958 subframes, so no renderer can open it raw. For a card
-like that, `render()` writes `type plug` **instead of** the meter: conversion
-is allowed only where bit-perfect is already impossible, and the meter is
-dropped because a meter over a plug crashes the renderers. On such an output
-there is no volume control, no bit-perfect claim and no visualiser levels;
-the Settings row says so.
+Choosing one does not restart the core. The core stops the renderers,
+rewrites `output.conf` (ALSA reads it only when a PCM is opened), frees its
+own mixer handles and libasound's cached configuration
+(`volume.forget_mixers`), makes the software control at the remembered level
+when Software is in force, and starts the renderers again. For 30 s afterwards
+the start guard answers a renderer's report above the level playing
+(`RESTART_HOLD_S`).
+
+The chains `outputs.render()` writes:
+
+| Output and mode | Chain |
+|---|---|
+| Hardware | `meter → card` |
+| Software | `meter → softvol → card` (`Gexis`, -90..0 dB, 361 steps of 0.25 dB) |
+| HDMI on Software | `meter → softvol → plug → card` |
+| HDMI on Fixed | `plug → card`, no meter |
+
+HDMI accepts only IEC958 subframes, so no renderer can open it raw and a
+`plug` converts: conversion is allowed only where bit-perfect is already
+impossible. HDMI has no control of its own, so Hardware is greyed there and
+Software takes its place (ADR-0127); Fixed is only ever the user's choice.
+With the softvol between them the meter works on HDMI (ADR-0055 §6 as
+amended, Finding 116). A meter straight over a plug crashes the renderers, so
+HDMI on Fixed has no meter and no visualiser levels.
 
 ## Meters and the visualiser
 
@@ -402,7 +420,8 @@ flowchart LR
 - **One reader, three transports** (ADR-0011). A FIFO splits bytes between
   readers, so `gexis-meter` (`core/src/gexis_core/meter_service.py`, its own
   unit, kept out of the core's event loop) is the only reader. It republishes
-  on a WebSocket for the UI, on a pair of passthrough FIFOs for our PeppyMeter,
+  on a WebSocket (`:8091/meter`) for remote clients (the UI does not read
+  it), on a pair of passthrough FIFOs for our PeppyMeter,
   and optionally by HTTP PUT to an unmodified PeppyMeter elsewhere.
 - **Levels follow the volume** (ADR-0057). The tap is before the DAC's
   attenuator, so the service reads the attenuation the core publishes and
@@ -419,9 +438,12 @@ flowchart LR
 - **The Peppy screen is a native process**, not a browser page (ADR-0026).
   `gexis-peppy.service` runs `gexis-peppy-driver.py`, which drives the
   vendored PeppyMeter and PeppySpectrum engines (packaging/peppy-engines) in
-  one pygame window. It keeps rendering while hidden; the core raises and
-  hides the window through labwc with `wlrctl` (`core/src/gexis_core/peppy.py`),
-  which is why entry is instant. Entry is the button or five minutes of
+  one pygame window. The core raises and hides the window through labwc with
+  `wlrctl` (`core/src/gexis_core/peppy.py`). While hidden the process keeps
+  running but draws nothing of its own: the core writes
+  `/run/gexis/visualiser-shown` (`0` hidden, `1` before a show), and the driver
+  skips its drawing and slows to five frames a second (`HIDDEN_FRAME_S`, 0.2 s)
+  while it reads `0` (see [ui.md](ui.md)). Entry is the button or five minutes of
   unattended playback; a renderer change lowers it (ADR-0036).
 - **What it draws besides levels.** The core writes
   `/run/gexis/nowplaying.json` (`peppy_metadata.py`) for title, artist,

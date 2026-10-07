@@ -13,7 +13,11 @@ Last updated: 2026-10-07 (on R2D2).
 - **A general, thorough code check before release** (George): everything
   checked once more; **volume, the audio adapters and arbitration must work
   perfectly from the beginning** - dropped frames or a CSS flaw are not
-  critical, anything in the audio path is.
+  critical, anything in the audio path is. **Found by the 2026-10-07
+  documents review, for this check:** an update whose core does not answer
+  after the restart is reported failed but not rolled back; nothing is
+  checked after an update's reboot; a takeover is not refused during an
+  install (the panel is only locked) - ADR-0105/0110 promise all three.
 - Reconcile the documents that contradict each other.
 - Remove passwordless sudo from the image - last.
 

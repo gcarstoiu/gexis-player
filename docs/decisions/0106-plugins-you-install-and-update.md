@@ -137,3 +137,20 @@ plugin is listed as *needs uploading again*, with its settings waiting.
 - Whether a renderer under `ProtectSystem=strict` can open the `output` PCM,
   whose configuration lives in `/etc/alsa` (read-only is enough in principle).
 - The memory and CPU limits' values.
+
+## Amended 2026-10-07 (brought into line with the code)
+
+- **"Proposed: our plugins", item 2 is superseded by
+  [ADR-0107](0107-our-parts-as-debian-packages.md).** Beszel and the
+  adapters did not move to the download mechanism: the Beszel agent, the
+  Beszel hub and the Plexamp adapter ship as packages in the release
+  (`gexis-beszel-agent`, `gexis-beszel-hub`, `gexis-plexamp`;
+  `packaging/beszel-agent/build.sh`, `packaging/beszel-hub/build.sh`,
+  `packaging/plexamp/build.sh`). Only Plexamp itself is fetched on the
+  device, by the pin `gexis-plexamp` carries (ADR-0100).
+- **"The sandbox", the unit template:** there are two templates, not
+  `gexis-uploaded@<id>.service`: `gexis-uploaded-renderer@.service` and
+  `gexis-uploaded-service@.service`, chosen by the plugin's kind, so a
+  plugin runs as `gexis-uploaded-<kind>@<id>.service`
+  (`core/src/gexis_core/uploads.py`; the templates in
+  `image/stage-gexis/03-core/files/`, packaged by `packaging/core/build.sh`).

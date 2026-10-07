@@ -1,7 +1,7 @@
 # Gexis Player: questions and answers
 
 For people who use the player day to day. It describes the player as of
-release 0.9.2. Setting names are written as they appear in Settings, with
+the release it ships with. Setting names are written as they appear in Settings, with
 their place: *Settings → Audio → Maximum volume* means the Audio page, row
 *Maximum volume*. Settings opens on the screen and, in the same form, on any
 phone or computer on the same network.
@@ -35,8 +35,9 @@ own rate, without resampling. Tracks at the same rate play on without it.
 
 **Is the sound bit-perfect?**
 Through a DAC with its own volume control, yes, up to 24-bit / 192 kHz: the
-volume is set in the DAC's own hardware, not by changing the samples. Two
-exceptions: over HDMI the sound is not bit-perfect, and Plexamp lowers its
+volume is set in the DAC's own hardware, not by changing the samples. Three
+exceptions: over HDMI the sound is not bit-perfect; with *Settings → Audio →
+Volume* on *Software* it is not bit-perfect below 100 %; and Plexamp lowers its
 volume inside its own software, so below 100 in the Plexamp app it is not
 bit-perfect either.
 
@@ -53,7 +54,7 @@ are hidden), and every source plays at full level.
 
 **Can the player be stopped from ever playing too loud?**
 Yes: *Settings → Audio → Maximum volume*. Set it to 80 and the player is never
-louder than 80 % of its range, from any source. 100 % on the screen, in
+louder than the slider at 80, from any source. 100 % on the screen, in
 Lyrion and on a phone then all mean that level, so no control shows a number
 louder than what comes out. It does not apply with *Volume* set to
 *Fixed*: then the player always sends the full level, and the amplifier is
@@ -126,7 +127,8 @@ before, so nothing is lost.
 **What is "Keep this screen?"**
 Whenever a screen change alters the picture (a new screen, another model
 chosen in *Settings → Display → Attached screen*, or *Screen rotation*), the
-player restarts on it and asks *Keep this screen?*. Without a tap on Keep
+player restarts on it and asks *Keep this screen?* (*Keep this rotation?*
+after a rotation change). Without a tap on Keep
 within two minutes it goes back to how it was, so a screen that shows nothing
 cannot lock anyone out. A screen mounted upside down is set with *Screen
 rotation*, 180°.
@@ -135,7 +137,7 @@ rotation*, 180°.
 Usually not. A screen the player recognises is used straight away at start,
 and asks *Keep this screen?*. Any other screen is asked about, and the list
 of screens opens on its size. The layout follows the screen: *Standard* for
-ordinary screens, *Bar* for wide strip screens (1280 × 400 and 1480 × 320),
+ordinary screens, *Bar* for wide strip screens (such as the tested 1280 × 400 and 1480 × 320),
 which are turned to landscape. On the very first start, setup's own screens
 are already laid out for the attached screen; setup's Screen step then
 confirms it.
@@ -234,17 +236,16 @@ to the phone's home screen. There is no app to install.
 
 **What can the phone do?**
 Everything in Settings, plus a mini player at the bottom: the source, the
-title, the volume, and switches for the visualiser and the idle screen. The
-volume sheet also has a touchpad for the screen and Home, Now playing and
-Lyrics buttons. Browsing the library happens on the screen, or in the
+title, the volume, and one row of buttons for the panel - Home, Now Playing,
+Lyrics, Visualiser and Idle screen. Opening the sheet adds a touchpad for the
+screen. Browsing the library happens on the screen, or in the
 streaming app.
 
 **How does the touchpad work?**
 Open the volume sheet on the phone. One finger moves a pointer on the
 screen, a tap presses, two fingers scroll, and a pinch zooms. The lines along
 the right and bottom edges scroll with one finger. Tapping a text field on
-the screen brings up the phone's keyboard. A touch outside the pad closes the
-sheet.
+the screen brings up the phone's keyboard. A touch outside the sheet closes it.
 
 **The pointer is too slow, or hard to see.**
 *Settings → Display → Pointer speed* (150–400 %) and *Pointer style* (*Dot* or
@@ -511,7 +512,7 @@ logs from before the restart are kept.
 
 **What hardware does the player need?**
 A Raspberry Pi 4 Model B (4 GB tested; 2 GB untested), a 32 GB card is
-recommended, a DAC (the HiFiBerry DAC2 HD is the tested one), and optionally
+recommended, a DAC (the HiFiBerry DAC2 HD and IQaudIO Pi-DAC PRO are tested), and optionally
 an HDMI touch screen. Power from the official 5 V 3 A supply, and a heatsink
 or fan, especially with the Lyrion server. The minimum and recommended
 hardware, with what each rests on, are in the
