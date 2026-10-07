@@ -1853,6 +1853,9 @@ async def main() -> None:
                # another machine is offered too.
                "backup": lambda _=None: asyncio.ensure_future(_make_backup()),
                "restore": None,
+               # ADR-0125: built and downloaded through its own route,
+               # `POST /report`, which the browser saves as a file.
+               "problem_report": None,
                # ADR-0086: whatever the installed plugins brought. Wired
                # like any other row - something acts on it - and the thing
                # that acts is the plugin.

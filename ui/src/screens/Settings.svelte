@@ -152,6 +152,47 @@
       .join('  \u00b7  ')
   );
   const sheet = $derived(sheetKey ? asSheet(rowOf(sheetKey)) : null);
+  //: ADR-0125: the problem report - built on the player, downloaded here.
+  //: The panel has nowhere to save a file, so there the sheet says where to
+  //: open it instead.
+  const REPORT_ISSUE = 'https://github.com/gcarstoiu/gexis-player/issues/new?template=problem-report.yml';
+  let reportNote = $state('');
+  let reportBusy = $state(false);
+  let reportDone = $state(null);
+  let reportError = $state(null);
+  const onPanel = () => document.documentElement.classList.contains('on-panel');
+  $effect(() => {
+    if (sheet?.kind !== 'report') {
+      reportNote = '';
+      reportDone = null;
+      reportError = null;
+    }
+  });
+  async function downloadReport() {
+    if (reportBusy) return;
+    reportBusy = true;
+    reportError = null;
+    try {
+      const r = await fetch('/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note: reportNote }),
+      });
+      if (!r.ok) throw new Error(r.status === 409 ? 'A report is already being prepared. Try again in a minute.' : `HTTP ${r.status}`);
+      const name = /filename="([^"]+)"/.exec(r.headers.get('Content-Disposition') ?? '')?.[1] ?? 'gexis-report.zip';
+      const url = URL.createObjectURL(await r.blob());
+      const a = Object.assign(document.createElement('a'), { href: url, download: name });
+      document.body.append(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      reportDone = { name, summary: r.headers.get('X-Report-Summary') ?? '' };
+    } catch (e) {
+      reportError = plainly(e?.message, 'The report could not be prepared. Try again.');
+    } finally {
+      reportBusy = false;
+    }
+  }
   const picker = $derived(pickerKey ? rowOf(pickerKey) : null);
 
   // ADR-0044 §3 and §6: the API publishes every row and says of each whether
@@ -980,6 +1021,11 @@
       flash(`${row.label} cannot be changed yet`);
       return;
     }
+    if (row.kind === 'report') {
+      if (reportDone) sheetKey = null;
+      else await downloadReport();
+      return;
+    }
     if (row.type === 'action') {
       sheetKey = null;
       const result = await runSetting(row.key);
@@ -1491,6 +1537,32 @@
         {#if joinItem && sheet.note}<div class="sheet__note"><NoteText text={sheet.note} /></div>{/if}
       </div>
 
+      {#if sheet.kind === 'report'}
+        <div class="report">
+          {#if onPanel()}
+            <p class="report__text">
+              The screen has nowhere to save a file. Open Settings on a phone or computer on the same
+              network, at <span class="report__addr">{device.hostname ? `${device.hostname}.local` : device.address}</span>,
+              then System → Problem report.
+            </p>
+          {:else if reportDone}
+            <p class="report__text">
+              Saved as <span class="report__addr">{reportDone.name}</span>. Taken out: {reportDone.summary || 'nothing'}.
+            </p>
+            <p class="report__text">
+              Read it, then attach it to a report on GitHub:
+              <a class="report__link" href={REPORT_ISSUE} target="_blank" rel="noopener">Report a problem</a>.
+            </p>
+          {:else}
+            <label class="report__label" for="report-note">What happened? (optional)</label>
+            <textarea id="report-note" class="report__note" rows="4" maxlength="4000" bind:value={reportNote}
+              placeholder="What you did, what you expected, what happened instead"></textarea>
+            {#if reportBusy}<p class="report__text report__text--quiet">Preparing the report. It takes up to a minute.</p>{/if}
+            {#if reportError}<p class="report__text report__text--warn">{reportError}</p>{/if}
+          {/if}
+        </div>
+      {/if}
+
       <!-- ADR-0044 §2, both forms. A **string** warns about the row and is
            shown the whole time the sheet is open, because what it describes
            happens whatever is typed (`device_name`); an **object** warns
@@ -1804,15 +1876,17 @@
             Cancel
           {/if}
         </button>
-        {#if join === 'error' || joinItem || restorePending || choicePending !== null || sheet.type === 'action' || sheet.type === 'toggle' || sheet.type === 'text' || sheet.type === 'share' || sheet.type === 'share-login' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
+        {#if join === 'error' || joinItem || restorePending || choicePending !== null || (sheet.type === 'action' && !(sheet.kind === 'report' && onPanel())) || sheet.type === 'toggle' || sheet.type === 'text' || sheet.type === 'share' || sheet.type === 'share-login' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
           <button
             class="btn btn--confirm"
             class:btn--danger={sheet.danger || restorePending || choicePending !== null}
             type="button"
-            disabled={busy}
+            disabled={busy || reportBusy}
             onclick={confirmSheet}
           >
-            {#if busy}
+            {#if sheet.kind === 'report'}
+              {#if reportBusy}<span class="btn__spin"></span>Preparing…{:else if reportDone}Done{:else}Download{/if}
+            {:else if busy}
               <span class="btn__spin"></span>Saving
             {:else if join === 'error'}
               Try again
@@ -3420,6 +3494,46 @@
     flex: 0 0 max(0px, calc(var(--foot-clear, 0px) - 30px));
   }
   /* ADR-0123: the connected network's details. */
+  /* ADR-0125: the problem report's sheet. */
+  .report {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .report__text {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.45;
+    color: var(--ink-body);
+  }
+  .report__text--quiet { color: var(--ink-quiet); }
+  .report__text--warn { color: var(--accent-warn); }
+  .report__addr {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    word-break: break-all;
+  }
+  .report__link { color: var(--accent-lms); }
+  .report__label {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+  }
+  .report__note {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(233, 238, 242, 0.16);
+    background: rgba(255, 255, 255, 0.045);
+    color: var(--ink);
+    font: inherit;
+    font-size: 16px;
+    line-height: 1.4;
+    resize: vertical;
+  }
   .netinfo {
     margin: -2px 0 8px;
     padding: 10px 16px 12px 52px;
