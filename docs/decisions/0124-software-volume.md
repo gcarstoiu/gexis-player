@@ -1,5 +1,7 @@
 # ADR-0124 — Software volume, the owner's choice
 
+> **Amended by [ADR-0127](0127-one-volume-row.md) (2026-10-07):** Output mode and Software volume are one row, *Volume* - Hardware, Software or Fixed. On an output with no volume control of its own, Hardware is greyed and Software takes its place; Fixed is no longer forced there.
+
 **Status:** **Accepted** — George, 2026-10-07 (*"All good. Agreed with your proposal"*, the rows, the 60 s safeguard and the wording included): *"software volume as an option
 for the user (completely his choice and can apply for example to hdmi devices
 - we make it clear it is not bit perfect and it is his decision)"*; then
