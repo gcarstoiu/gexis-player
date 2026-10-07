@@ -60,7 +60,7 @@ refused rather than converted, because nothing in the chain is a `plug`
 |---|---|---|
 | `pcm.output` | `type meter` over `hw:sndrpihifiberry`, with the peppyalsa scope | go-librespot, bluealsa-aplay, and (through `default`) Plexamp |
 | `pcm.output_wait` | The same chain, but the slave is opened with `nonblock 0` so a busy DAC makes the open *wait* instead of failing (ADR-0095) | squeezelite only |
-| `gexis_softvol`, `gexis_softvol_wait` | **With Software volume on (ADR-0124):** `meter → softvol → card`; on HDMI `softvol → plug → card`. One control for both, `Gexis Playback Volume` (`Gexis` to amixer), -90..0 dB in 0.25 dB steps; at 0 dB it passes every sample unchanged (Finding 115). The core makes the control at start and sets the saved level before anything plays (ALSA would make it at 0 dB), parks the card's own control at 0 dB only after that level reads back, and gives the card the level back when switched off | every renderer, through `output` / `output_wait` |
+| `gexis_softvol`, `gexis_softvol_wait` | **With Volume on Software (ADR-0124, ADR-0127):** `meter → softvol → card`; on HDMI `softvol → plug → card`. One control for both, `Gexis Playback Volume` (`Gexis` to amixer), -90..0 dB in 0.25 dB steps; at 0 dB it passes every sample unchanged (Finding 115). The core makes the control at start and sets the saved level before anything plays (ALSA would make it at 0 dB), parks the card's own control at 0 dB only after that level reads back, and gives the card the level back when Hardware is chosen again. On every change of output the core closes its mixer handles and frees libasound's cached configuration (`volume.forget_mixers`): a running process otherwise keeps resolving `output` to the card it first saw | every renderer, through `output` / `output_wait` |
 | `ctl.output` | The DAC's control interface, so `amixer -D output` and the core reach the hardware mixer by name | gexis-core |
 | `pcm_scope.peppyalsa` | Level and 30-band spectrum analysis, written to FIFOs in `/run/gexis` | loaded inside whichever renderer has the device open |
 
@@ -265,18 +265,23 @@ Details worth knowing:
 
 ## Volume
 
-### Output modes
+### Volume: Hardware, Software or Fixed
+
+One setting, `output_mode` (ADR-0127; it merged ADR-0124's Software volume
+toggle into ADR-0046's Output mode).
 
 | Mode | What happens | Claim |
 |---|---|---|
-| **Variable** (default) | The DAC's hardware attenuator (`DAC Playback Volume`, 0–240 in 0.5 dB steps) sets the level. Samples reach the DAC unmodified. | Bit-perfect up to the DAC chip |
+| **Hardware** (default; was *Variable*) | The DAC's hardware attenuator (`DAC Playback Volume`, 0–240 in 0.5 dB steps) sets the level. Samples reach the DAC unmodified. | Bit-perfect up to the DAC chip |
+| **Software** | `meter → softvol → card` (HDMI: `softvol → plug → card`); the card's own control parked at 0 dB. On an output with no control of its own, `Settings.restrict` greys Hardware and `Settings.value` answers Software, the next option (`volume_mode()` in `__main__.py` for start-up). | Bit-perfect at 100 % only (Finding 115) |
 | **Fixed** | The DAC is set to 240 (0 dB) and nothing may write it; the amplifier sets the level. Volume controls are hidden, with a padlock and a reason, not greyed (ADR-0046). | Nothing in the signal path is touched |
 
 Switching to Fixed while playing waits until playback stops, because a jump to
 full scale into an amplifier set for a quieter signal is the loudest mistake
 the device can make (ADR-0018, ADR-0046; `_apply_output_mode()` in
-`__main__.py`). An output with no volume control (HDMI) forces Fixed
-(ADR-0055 §4). In code, `volume.fixed_output()` gates `VolumeBridge.write_hardware()`,
+`__main__.py`). An output with no volume control (HDMI) no longer forces Fixed: Software
+takes Hardware's place there (ADR-0127). Between Hardware and Software the
+chain changes, so the renderers restart with the level carried across. In code, `volume.fixed_output()` gates `VolumeBridge.write_hardware()`,
 the one function every write to the DAC goes through.
 
 ### One DAC, many sliders
