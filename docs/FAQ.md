@@ -480,7 +480,9 @@ channel; switching it off deletes the logs kept.
 **My sound card or screen is not marked Tested. Can I help?**
 Yes: open *Settings → System → Report this hardware* on a phone or computer,
 answer a few questions about how it plays and looks - a short test tone at
-44.1, 96 and 192 kHz helps with the first one - and send the report it
+44.1, 96 and 192 kHz helps with the sound, and a test pattern on the
+player's screen, with four circles to tap, checks the picture and the touch -
+and send the report it
 prepares on GitHub (a GitHub account is needed). The player fills in what it
 reads of the hardware itself - never a serial number or anything about you -
 and reports are public, so the next owner can see what works.

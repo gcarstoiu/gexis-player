@@ -410,7 +410,7 @@ downloads it when switched on. A plugin file can also be uploaded here.
 | Back up now | Saves the settings, the library's pictures, the paired devices and the device's configuration into the Backups share. |
 | Restore | Puts a backup back and restarts the device. |
 | Debug logs | Keeps the logs across restarts, for tracking down a problem. |
-| Report this hardware | On a phone or computer: a few questions about how the sound card and screen work, with a short test tone at 44.1, 96 and 192 kHz played at the current volume (not while something plays), then a report on GitHub, filled in with what the player reads of them (never a serial number or anything about you). It helps others see what works before buying. |
+| Report this hardware | On a phone or computer: a few questions about how the sound card and screen work, with a short test tone at 44.1, 96 and 192 kHz played at the current volume (not while something plays), and a test pattern on the player's screen with four circles to tap, which measures where the touches land; then a report on GitHub, filled in with what the player reads of them (never a serial number or anything about you). It helps others see what works before buying. |
 | Problem report | On a phone or computer: downloads one file with the logs, versions, hardware and settings, to attach to a report of a problem. Addresses, names, networks, shares, keys and what you play are taken out on the player first; read the file before sharing it. On the screen it says where to open it instead. |
 | Legal, Credits | The licences, and everyone whose work is in the player. |
 
