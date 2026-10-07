@@ -261,17 +261,28 @@ key, or for another release, stops the update.
    update.
 3. **stop** - `POST /renderers/park?stop=all`: the core pauses or disconnects
    every source, the same path as shutdown; nothing resumes afterwards
-   (ADR-0110 §4). Failure to reach the core is logged, not fatal.
+   (ADR-0110 §4). Failure to reach the core is logged, not fatal. From here
+   until the update ends the core refuses every takeover and releases the
+   source that asked (`Supervisor(frozen=...)`, the states `stopping` to
+   `going-back`; ADR-0105 §4 step 4, built 2026-10-07).
 4. **install** - `apt-get --no-download dist-upgrade`, then `install
    gexis-player=<version>`, under `systemd-inhibit --what=shutdown:sleep`.
    Then **verify**: `gexis-player` is the target version, `dpkg --audit` is
    clean, and `libasound2t64` matches the release's pinned dependency.
 5. **restart** - a reboot if a kernel/firmware/libc/systemd/initramfs package
-   changed (or a reboot marker exists); otherwise `systemctl try-restart` every
+   changed (or a reboot marker exists): the updater first writes
+   `/var/lib/gexis/updates/pending-check.json` (the release, what to go back
+   to, the steps so far) and reports `restarting` with the restart step
+   active; after the boot `gexis-update-postboot.service` (after the core;
+   only when that file exists) runs `gexis-update postboot`, which does step 6
+   and goes back on failure, once. Otherwise `systemctl try-restart` every
    `.service` the changed packages ship, except the updater's own units
-   (`gexis-update-install`, `gexis-update-check`, `gexis-update-checknow`) and
+   (`gexis-update-install`, `gexis-update-check`, `gexis-update-checknow`,
+   `gexis-update-postboot`) and
    `gexis-park.service`.
-6. **check** - the core answers `GET /settings` within 120 s.
+6. **check** - the core answers `GET /settings` within 120 s (after a reboot,
+   also `verify`). A core that does not answer is a failure: the updater goes
+   back.
 
 ```mermaid
 stateDiagram-v2
@@ -288,21 +299,24 @@ stateDiagram-v2
     installing --> going_back: apt error or verify failed
     going_back --> failed: back on previous, or "restore the backup"
     installing --> restarting
-    restarting --> done: reboot needed (device reboots)
-    restarting --> checking_device: services restarted
-    checking_device --> done: core answers
-    checking_device --> failed: core silent
+    restarting --> checking_device: services restarted, or after the reboot (postboot)
+    checking_device --> done: core answers (and, after a reboot, verify)
+    checking_device --> going_back: core silent or verify failed
     current --> [*]
     done --> [*]
     failed --> [*]
 ```
 
-**Going back** happens only for failures inside the install step. The updater
-runs `dist-upgrade --allow-downgrades` against the previous release's parts
-(pinned), then `dpkg --configure -a`, records `failed-<channel>` so the nightly
-run won't retry that release, and reports whether the device is back on the
-previous version or the backup must be restored. A failed post-restart check
-reports `failed` but does not roll back. Once *Update* is pressed there is no
+**Going back** (`go_back()`) follows any failure from the install step on -
+the install, its verify, the core not answering after the restart, or the
+check after a reboot. The updater runs `dist-upgrade --allow-downgrades`
+against the previous release's parts (pinned), then `dpkg --configure -a`,
+records `failed-<channel>` so the nightly run won't retry that release,
+reports whether the device is back on the previous version or the backup must
+be restored, and - when the new release had already been restarted -
+restarts what changed again, or reboots when that is what lands it. A boot
+after going back is not checked again. **Only an updater with this code does
+it** (built 2026-10-07): it protects updates made from that release on. Once *Update* is pressed there is no
 cancel (ADR-0110 §5).
 
 ### Progress

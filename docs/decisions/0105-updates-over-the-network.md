@@ -241,7 +241,7 @@ Read against `core/updater/gexis-update` on phase-13d.
   configuration (`packaging/system/build.sh`; ADR-0107). Otherwise only the
   units of the packages that changed are restarted.
 
-**Not built (2026-10-07) - to be built before the first public release** (George, 2026-10-07: *"Build them."*):
+**Built 2026-10-07** (George: *"Build them."*), after first being found not built the same day (`core/updater/gexis-update`: `go_back`, `postboot`, `gexis-update-postboot.service`; the core's `Supervisor(frozen=...)`). Only an updater with this code does it, so it protects updates made from that release on, not the update to it. What was missing:
 
 - **A core that does not answer after the update's restart is not rolled
   back.** The update is reported as failed ("the core did not answer after

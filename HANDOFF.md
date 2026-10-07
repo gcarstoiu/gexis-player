@@ -19,7 +19,8 @@ Last updated: 2026-10-07 (on R2D2).
   after the restart is reported failed but not rolled back; nothing is
   checked after an update's reboot; a takeover is not refused during an
   install (the panel is only locked) - ADR-0105/0110 promise all three.
-  **George, 2026-10-07: build them** - in progress.
+  **George, 2026-10-07: build them** - **built** (f17cfab on phase-13d); not
+  yet seen on a device: it needs a release published with it, then a second.
 - ~~Reconcile the documents that contradict each other.~~ **Done 2026-10-07:** ARCHITECTURE.md, README, FAQ, manual, HARDWARE.md, plugin docs, the technical guide, nine ADRs amended (with *Not built* where the code does less), stale code comments, the dev proxy.
 - Remove passwordless sudo from the image - last.
 

@@ -272,7 +272,7 @@ was shown only that release's notes; what the skipped ones changed was in
   release's notes are kept up to 8,000 characters (`NOTES_MAX`), far above
   any so far; the history as a whole up to 40,000.
 
-**Not built (2026-10-07) - to be built before the first public release** (George, 2026-10-07: *"Build them."*):
+**Built 2026-10-07** (George: *"Build them."*), after first being found not built the same day (`core/updater/gexis-update`: `go_back`, `postboot`, `gexis-update-postboot.service`; the core's `Supervisor(frozen=...)`). Only an updater with this code does it, so it protects updates made from that release on, not the update to it. What was missing:
 
 - **§5's "returns to the release it had" holds only when the install or its
   `verify` fails.** A core that does not answer after the restart is

@@ -436,8 +436,9 @@ ListenBrainz token*.
 *Settings → System → Software update* shows a waiting release and its notes.
 Installing stops the music (it asks first), restarts the player and checks
 it; the device itself restarts only if the system needs it, and the update
-says so before starting. If the new release fails its check, the player goes
-back to the release it had. *Settings → System → Change logs* lists what
+says so before starting. If the new release fails its check - also after the
+device restarts - the player goes back to the release it had. While it
+installs, no phone or app can start playing on it. *Settings → System → Change logs* lists what
 changed in the last 10 releases.
 
 **The player is several releases behind. Does it install each one in turn?**
