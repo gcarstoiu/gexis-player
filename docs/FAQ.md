@@ -468,6 +468,17 @@ are not kept in backups, so enter them again.
 to 100 MB) to help track down a problem. It is on by default on the Testing
 channel; switching it off deletes the logs kept.
 
+**Something is wrong. How do I report it?**
+Open *Settings → System → Problem report* on a phone or computer on the same
+network, say in a line what happened, and tap *Download*. The player prepares
+one file with its logs, versions, hardware and settings; this takes up to a
+minute. Before the file is written, the player takes out addresses, network
+and device names, shares, accounts, keys, the weather location and the names
+of what you play, each replaced by a token such as `ip-3`. Read the file before
+sharing it, then attach it to a new report on GitHub with *Report a problem*.
+If the problem goes away at a restart, switch on *Debug logs* first, so the
+logs from before the restart are kept.
+
 ---
 
 ## Hardware

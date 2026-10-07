@@ -409,6 +409,7 @@ downloads it when switched on. A plugin file can also be uploaded here.
 | Back up now | Saves the settings, the library's pictures, the paired devices and the device's configuration into the Backups share. |
 | Restore | Puts a backup back and restarts the device. |
 | Debug logs | Keeps the logs across restarts, for tracking down a problem. |
+| Problem report | On a phone or computer: downloads one file with the logs, versions, hardware and settings, to attach to a report of a problem. Addresses, names, networks, shares, keys and what you play are taken out on the player first; read the file before sharing it. On the screen it says where to open it instead. |
 | Legal, Credits | The licences, and everyone whose work is in the player. |
 
 ## 10. Updates
