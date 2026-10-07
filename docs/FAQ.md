@@ -475,7 +475,9 @@ channel; switching it off deletes the logs kept.
 A Raspberry Pi 4 Model B (4 GB tested; 2 GB untested), a 32 GB card is
 recommended, a DAC (the HiFiBerry DAC2 HD is the tested one), and optionally
 an HDMI touch screen. Power from the official 5 V 3 A supply, and a heatsink
-or fan, especially with the Lyrion server.
+or fan, especially with the Lyrion server. The minimum and recommended
+hardware, with what each rests on, are in the
+[hardware requirements](HARDWARE.md).
 
 **Which DACs work?**
 Each output in *Settings → Audio → Output* shows *Tested*, *Known* or
