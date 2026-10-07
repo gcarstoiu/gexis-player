@@ -8,8 +8,9 @@ Last updated: 2026-10-07 (on R2D2).
   the screen step skipped when headless or no screen is connected. Owed by
   George: the GitHub labels.
 - Cable network (ADR-0123 step 2) - needs a cable.
-- **Setup installs plugins and settles** - ADR-0128, Proposed, three questions
-  owed by George.
+- **Setup installs plugins and settles** - ADR-0128, Accepted 2026-10-07
+  (all plugins offered; no skipping; a failed download left for Settings, the
+  owner told). To build.
 - **A general, thorough code check before release** (George): everything
   checked once more; **volume, the audio adapters and arbitration must work
   perfectly from the beginning** - dropped frames or a CSS flaw are not
@@ -18,7 +19,8 @@ Last updated: 2026-10-07 (on R2D2).
   after the restart is reported failed but not rolled back; nothing is
   checked after an update's reboot; a takeover is not refused during an
   install (the panel is only locked) - ADR-0105/0110 promise all three.
-- Reconcile the documents that contradict each other.
+  **George, 2026-10-07: build them** - in progress.
+- ~~Reconcile the documents that contradict each other.~~ **Done 2026-10-07:** ARCHITECTURE.md, README, FAQ, manual, HARDWARE.md, plugin docs, the technical guide, nine ADRs amended (with *Not built* where the code does less), stale code comments, the dev proxy.
 - Remove passwordless sudo from the image - last.
 
 **2026-10-07 (state now):** the user manual, FAQ and technical guide are
