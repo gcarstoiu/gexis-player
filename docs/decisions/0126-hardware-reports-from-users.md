@@ -78,3 +78,24 @@ turn what they tell us into what the player shows.
 1. **A GitHub account is required** to send a report; no other route.
 2. **One report is enough for *Reported***, with the count shown.
 3. **The one-time prompt after a week: yes.**
+
+## Built (2026-10-07, on `phase-13d`)
+
+1. **Facts and the form** - `hardware_report.py`, `GET /hardware-report`,
+   `POST /hardware-report/issue`, the System row's sheet,
+   `.github/ISSUE_TEMPLATE/hardware-report.yml`.
+2. **Test tones** - 1 kHz at -20 dBFS at 44.1, 96 and 192 kHz through
+   `output`, refused while anything plays; what the card ran at goes into the
+   report.
+3. **The screen check** - the pattern on the panel, four corner taps measured
+   in screen pixels against 6 % of the diagonal; the touch answer follows.
+4. **The one-time line** - a week after a piece of hardware that is not
+   Tested is first seen, per piece; × or a prepared report dismisses it.
+5. ***Reported*** - `tools/hardware-reports.py` writes
+   `hardware_reports.json` and HARDWARE.md's table; boards, the screen list,
+   both pickers' tags and the two rows' notes follow it.
+
+**Not built:** decision 7, a screen not yet recognised added from a report -
+the script names such reports, and the screen list is changed by hand.
+**Owed:** the repository's `hardware report` and `accepted` labels (the form
+applies the first; the script reads both).

@@ -144,7 +144,8 @@ confirms it.
 HDMI screens only. Tested on the hardware: a 10.1″ 1280 × 800 (the reference
 screen), a 13.3″ at 1920 × 1080, and the 1280 × 400 and 1480 × 320 bars.
 Others in *Settings → Display → Attached screen* are listed but untested;
-those tested are marked *Tested*. DSI and DPI screens are not supported.
+those tested are marked *Tested*, those owners have reported working
+*Reported*. DSI and DPI screens are not supported.
 
 **Can the player run without a screen?**
 Yes. *Settings → Display → Headless* turns the screen off, and every setting
@@ -487,7 +488,9 @@ prepares on GitHub (a GitHub account is needed). A week after a sound card
 or screen that is not Tested is first used, the System page offers this once
 in a line at its top; its × puts it away for good. The player fills in what it
 reads of the hardware itself - never a serial number or anything about you -
-and reports are public, so the next owner can see what works.
+and reports are public, so the next owner can see what works. Once a report
+is accepted, the next release marks that card or screen *Reported* in the
+player and in the project's hardware list.
 
 **Something is wrong. How do I report it?**
 Open *Settings → System → Problem report* on a phone or computer on the same
@@ -514,8 +517,10 @@ hardware, with what each rests on, are in the
 [hardware requirements](HARDWARE.md).
 
 **Which DACs work?**
-Each output in *Settings → Audio → Output* shows *Tested*, *Known* or
-*Detected*. The HiFiBerry DAC2 HD is tested; the boards on the player's list
+Each output in *Settings → Audio → Output* shows *Tested*, *Reported*,
+*Known* or *Detected*. The HiFiBerry DAC2 HD and the IQaudIO Pi-DAC PRO are
+tested; a board owners have reported working is *Reported* (*Reported with
+problems* if a report says otherwise); the other boards on the player's list
 are known but untested; a class-compliant USB DAC should be detected by
 itself but has not been tried. A board that is not found by itself can be
 chosen in *Settings → Audio → Sound card board*. The screen's HDMI audio
