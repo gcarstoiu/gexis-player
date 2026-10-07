@@ -58,6 +58,7 @@ brings one is refused.
 | `label` | no | A renderer's status line for the moOde-compatible metadata file (`"Radio Foo Active"` style) |
 | `accent` | no | A CSS colour for the panel's accent when your renderer plays |
 | `status` | no | The waiting screen's second line under your mark (`"Ready"`, `"Pairable"`) |
+| `summary` | no | One line on what it is. The player's own plugins show it in setup's Plugins step; an uploaded plugin arrives after setup, so it is not shown there |
 | `settings` | no | Rows for **Settings**, below |
 
 **Not allowed:** `unit` (the player writes it), paths that point outside the
