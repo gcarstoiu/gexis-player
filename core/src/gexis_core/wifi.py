@@ -278,6 +278,10 @@ def _bitrate(iwconfig: str) -> str | None:
     if not m:
         return None
     value = float(m.group(1))
+    # Whole megabits: "292.5 Mb/s" broke the connected line in two on a
+    # phone, and the half adds nothing a listener can use.
+    if m.group(2) == "Mb/s":
+        return f"{int(value + 0.5)} Mb/s"
     return f"{value:g} {m.group(2)}"
 
 

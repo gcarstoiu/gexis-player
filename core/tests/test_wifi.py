@@ -15,6 +15,8 @@ def test_the_signal_speed_and_band_are_read_from_their_sources():
     assert wifi._level_dbm(proc, "wlan0") == -57
     assert wifi._level_dbm(proc, "eth0") is None
     assert wifi._bitrate("wlan0  IEEE 802.11  ESSID:x\n  Bit Rate=390 Mb/s   Tx-Power=31 dBm") == "390 Mb/s"
+    assert wifi._bitrate("Bit Rate=292.5 Mb/s") == "293 Mb/s"
+    assert wifi._bitrate("Bit Rate=1.2 Gb/s") == "1.2 Gb/s"
     assert wifi._bitrate("no rate here") is None
     assert wifi._band("5580 MHz") == "5 GHz" and wifi._band("2437 MHz") == "2.4 GHz"
 
