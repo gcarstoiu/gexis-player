@@ -29,7 +29,7 @@ flowchart LR
     end
     subgraph gh["Project's GitHub Releases"]
         parts["parts: ours-*, skins-*, rpi-*, debian-*<br/>(flat apt repos)"]
-        page["r&lt;tag&gt;: notes, parts"]
+        page["r&lt;tag&gt;: notes, history, parts"]
         ch["channels: testing, stable"]
     end
     pub --> parts & page & ch
@@ -177,6 +177,11 @@ a file any published part already holds byte-for-byte is referenced from there
   Settings → Change logs and `CHANGELOG.md`). `publish.sh` refuses notes
   without the *New / Fixed / Good to know* sections, or notes that promise a
   restart or its absence (ADR-0110);
+- `history` - every release's notes from the same tagged file, clearsigned as
+  JSON; the updater keeps the releases newer than the installed one, up to
+  the waiting one, as `whats_new_all`, so a device several releases behind
+  shows each one it skips (ADR-0110 amended 2026-10-07). A release without
+  one, or one that does not verify, falls back to `notes`;
 - once promoted to stable, `gexis-player.img.xz` with checksum and signature.
 
 **Channels.** A permanent release named `channels` holds two clearsigned files,
@@ -320,9 +325,9 @@ sequenceDiagram
     Core->>Sd: start --no-block gexis-update-checknow.service
     Sd->>Upd: check (installs nothing)
     Upd->>GH: channels/<channel> (gpgv)
-    Upd->>GH: r<tag>/notes (gpgv)
+    Upd->>GH: r<tag>/notes, r<tag>/history (gpgv)
     Upd-->>Core: status.json: available
-    Core-->>UI: /state update {state: available, whats_new}
+    Core-->>UI: /state update {state: available, whats_new, whats_new_all}
     User->>UI: Update (confirms playback stops)
     UI->>Core: POST /settings/update_install
     Core->>Sd: start --no-block gexis-update-install.service
@@ -348,7 +353,8 @@ the units (`systemctl start --no-block`) and reads `status.json`:
 
 - `_follow_updates()` in `__main__.py` polls every 3 s (1 s during an install)
   and publishes `update` on `/state`: installed, state, release, previous,
-  steps, progress, notes, message, reboot, and **`active`** - true only while
+  steps, progress, notes (`whats_new`, and `whats_new_all` for every release
+  skipped), message, reboot, and **`active`** - true only while
   the state is an installing one *and* the install unit is actually running, so
   a killed updater cannot lock the panel forever.
 - Settings rows: *Release* (`0.9.2 · Testing`, read-only) and the *Software

@@ -428,6 +428,57 @@ def release_notes(version: str) -> str | None:
     return text[:NOTES_MAX] or None
 
 
+#: The most of the skipped releases' notes kept together: about twenty
+#: releases (ADR-0110 amended 2026-10-07). Past it the oldest are left out,
+#: and a last entry says how many.
+HISTORY_MAX = 40000
+
+
+def is_newer(a: str, b: str | None) -> bool:
+    return run("dpkg", "--compare-versions", a, "gt", b or "0", check=False).returncode == 0
+
+
+def release_key(version: str) -> tuple:
+    """A history's releases are plain x.y.z (ADR-0110 §1)."""
+    return tuple(int(p) if p.isdigit() else 0 for p in version.split("."))
+
+
+def release_history(target: str, current: str | None) -> list[dict] | None:
+    """Every release newer than `current`, up to `target`, newest first -
+    each `{"release", "date", "notes"}` (ADR-0110 amended 2026-10-07, George:
+    *"the update screen should show all until the current one"*). From
+    `r<tag>/history`, clearsigned by the release key. None when the release
+    has no history or it does not verify: the waiting release's own notes
+    are shown then, as before."""
+    try:
+        with urllib.request.urlopen(f"{BASE}/{tag_of(target)}/history", timeout=60) as r:
+            signed = r.read()
+    except OSError:
+        return None
+    verified = subprocess.run(["gpgv", "--keyring", str(KEY_GPG), "--output", "-", "-"],
+                              input=signed, capture_output=True)
+    if verified.returncode != 0:
+        print(f"{tag_of(target)}'s history is not signed by the release key; not shown", flush=True)
+        return None
+    try:
+        releases = json.loads(verified.stdout.decode(errors="replace"))["releases"]
+    except (ValueError, KeyError, TypeError):
+        return None
+    wanted = [v for v in releases
+              if isinstance(releases[v], dict) and releases[v].get("notes")
+              and is_newer(v, current) and not is_newer(v, target)]
+    wanted.sort(key=release_key, reverse=True)
+    out, size = [], 0
+    for v in wanted:
+        notes = str(releases[v]["notes"]).strip()
+        if out and size + len(notes) > HISTORY_MAX:
+            out.append({"release": None, "date": None, "earlier": len(wanted) - len(out)})
+            break
+        out.append({"release": v, "date": releases[v].get("date"), "notes": notes[:NOTES_MAX]})
+        size += len(notes)
+    return out or None
+
+
 def check(args) -> tuple[str, dict] | None:
     channel = channel_name(args.channel)
     report("checking", channel=channel, message=f"reading the {channel} channel")
@@ -446,8 +497,10 @@ def check(args) -> tuple[str, dict] | None:
                message=f"{channel} names {target}, older than {current}; staying until it passes")
         return None
     ch["_whats_new"] = release_notes(target)
+    ch["_whats_new_all"] = release_history(target, current)
     report("available", channel=channel, release=target, installed=current,
-           notes=ch.get("Notes"), whats_new=ch["_whats_new"], message=f"{target} is waiting")
+           notes=ch.get("Notes"), whats_new=ch["_whats_new"], whats_new_all=ch["_whats_new_all"],
+           message=f"{target} is waiting")
     return channel, ch
 
 
@@ -539,7 +592,7 @@ def install(args) -> int:
     repos = ch["Repositories"].split()
     back_repos, back_pins = parts_of(current)
 
-    about = dict(channel=channel, release=target, previous=current, whats_new=ch.get("_whats_new"))
+    about = dict(channel=channel, release=target, previous=current, whats_new=ch.get("_whats_new"), whats_new_all=ch.get("_whats_new_all"))
     PROGRESS.clear()
     PROGRESS.update(steps={s: "pending" for s in STEPS}, progress=0.0)
     step("download")
@@ -660,13 +713,13 @@ def scheduled(args) -> int:
         # ADR-0110 §4: at night nobody can be asked, so a night that finds
         # music playing does not wait - it tries again the next night.
         report("available", channel=channel, release=ch["Release"], installed=installed("gexis-player"),
-               notes=ch.get("Notes"), whats_new=ch.get("_whats_new"),
+               notes=ch.get("Notes"), whats_new=ch.get("_whats_new"), whats_new_all=ch.get("_whats_new_all"),
                message="something was playing; trying again tomorrow night")
         return 0
     failed = STATE / f"failed-{channel}"
     if failed.exists() and failed.read_text().strip() == ch["Release"]:
         report("available", channel=channel, release=ch["Release"], installed=installed("gexis-player"),
-               notes=ch.get("Notes"),
+               notes=ch.get("Notes"), whats_new=ch.get("_whats_new"), whats_new_all=ch.get("_whats_new_all"),
                message=f"{ch['Release']} failed here before; it waits for Update now or a newer release")
         return 0
     return install(args)

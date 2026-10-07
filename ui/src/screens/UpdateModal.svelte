@@ -13,7 +13,7 @@
   import { update, metadata, connection } from '../lib/state.js';
   import { runSetting } from '../lib/settings.js';
   import UpdateSteps from './UpdateSteps.svelte';
-  import ReleaseNotes from './ReleaseNotes.svelte';
+  import ReleaseHistory from './ReleaseHistory.svelte';
 
   //: `check` runs a check first; `available` opens on the waiting release
   //: (the tile's *Update…*); `progress` reopens an install already running.
@@ -87,9 +87,9 @@
         <div class="ask__buttons"><button type="button" class="btn btn--confirm" onclick={close}>OK</button></div>
       {:else if u.state === 'available'}
         <div class="ask__title">{u.release} is available</div>
-        {#if u.whats_new}
+        {#if u.whats_new || u.whats_new_all?.length}
           <div class="notes">
-            <ReleaseNotes text={u.whats_new} />
+            <ReleaseHistory update={u} />
           </div>
         {/if}
         <div class="task__text task__text--quiet">

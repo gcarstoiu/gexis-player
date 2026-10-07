@@ -11,6 +11,7 @@
   import { components, update } from '../lib/state.js';
   import UpdateModal from './UpdateModal.svelte';
   import ReleaseNotes from './ReleaseNotes.svelte';
+  import ReleaseHistory from './ReleaseHistory.svelte';
   import NoteText from '../lib/NoteText.svelte';
   import {
     settingsGroups,
@@ -1158,9 +1159,12 @@
                       <span class="row__value row__value--tile">{r.value}</span>
                       <!-- ADR-0116: only while it waits; once installed, its
                            notes are under Change logs. -->
-                      {#if $update?.whats_new && $update?.state === 'available'}
-                        <span class="row__note">What's new in {$update.release}</span>
-                        <span class="tile__notes"><ReleaseNotes text={$update.whats_new} /></span>
+                      {#if ($update?.whats_new || $update?.whats_new_all?.length) && $update?.state === 'available'}
+                        <!-- ADR-0110 amended 2026-10-07: every release it skips. -->
+                        <span class="row__note">{($update.whats_new_all?.filter((e) => e?.release).length ?? 0) > 1
+                          ? `What's new since ${$update.installed}`
+                          : `What's new in ${$update.release}`}</span>
+                        <span class="tile__notes"><ReleaseHistory update={$update} /></span>
                       {:else if r.note}<span class="row__note">{r.note}</span>{/if}
                     </span>
                     <button

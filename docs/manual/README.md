@@ -414,7 +414,8 @@ downloads it when switched on. A plugin file can also be uploaded here.
 ## 10. Updates
 
 When a new release is waiting, **Settings → System → Software update** shows
-it with its notes. **Update** runs six steps, each ticked as it finishes:
+it with its notes. A player several releases behind shows the notes of every
+release it skips, newest first, each under its number and date. **Update** runs six steps, each ticked as it finishes:
 
 1. download;
 2. back up the settings;
