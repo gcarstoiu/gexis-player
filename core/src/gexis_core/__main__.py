@@ -395,8 +395,8 @@ async def _start_software_volume(card_output, store) -> None:
         return
     if card_output.control and card_output.scale:
         await set_raw(card_output.control, card_output.scale.top, maximum=card_output.scale.raw_max)
-    logger.info("volume: software volume at %.2f dB on %s; its own control parked at 0 dB",
-                db, card_output.label)
+    logger.info("volume: software volume at %.2f dB on %s; %s", db, card_output.label,
+                "its own control parked at 0 dB" if card_output.control else "it has no control of its own")
 
 
 async def main() -> None:
