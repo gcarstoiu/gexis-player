@@ -95,7 +95,10 @@ def _screens() -> tuple[str, ...]:
 def _screen_tags() -> dict[str, str]:
     """ADR-0109 decision 1: each model marked Tested or Untested."""
     from . import screens
-    return {s.label: "Tested" if s.tested else "Untested" for s in screens.all_screens()}
+    from . import hardware_reports
+    return {s.label: "Tested" if s.tested else
+            (hardware_reports.state(hardware_reports.screen(s.label)) or "Untested")
+            for s in screens.all_screens()}
 
 
 def _boards() -> tuple[str, ...]:

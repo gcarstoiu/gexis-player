@@ -158,6 +158,10 @@ def identify(card: str, chosen: str | None = None,
     makers = by_card(card)
     if board is None and len(makers) == 1:
         board = makers[0]
+    from gexis_core import hardware_reports
     if board is None:
-        return None, "Known" if makers else "Detected"
-    return board, "Tested" if board.tested else "Known"
+        # ADR-0126: owners' reports, for a card no single listed board makes.
+        return None, hardware_reports.state(hardware_reports.board(card)) or ("Known" if makers else "Detected")
+    if board.tested:
+        return board, "Tested"
+    return board, hardware_reports.state(hardware_reports.board(board.id)) or "Known"

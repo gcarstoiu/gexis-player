@@ -48,7 +48,10 @@ def options() -> tuple[str, ...]:
 
 
 def tags() -> dict[str, str]:
-    return {label(b): "Tested" if b.tested else "Known" for b in boards.all_boards() if b.offered}
+    from gexis_core import hardware_reports
+    return {label(b): "Tested" if b.tested else
+            (hardware_reports.state(hardware_reports.board(b.id)) or "Known")
+            for b in boards.all_boards() if b.offered}
 
 
 def block_for(board: boards.Board | None) -> str:

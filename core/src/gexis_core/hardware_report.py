@@ -328,6 +328,29 @@ def dismissed(stored: dict | None, pieces: dict[str, str]) -> dict:
     return record
 
 
+def board_reports(output) -> str | None:
+    """What owners reported of the board behind `output`, as the Sound card
+    board row says it (ADR-0126 decision 5); None for a Tested board, the
+    Pi's own outputs, or nothing reported."""
+    from gexis_core import board_apply, hardware_reports
+    if output is None or output.card in boards.BUILT_IN:
+        return None
+    written = board_apply.written()
+    board, state = boards.identify(output.card, chosen=written.id if written else None,
+                                   product=_read(HAT / "product") or None)
+    if state == "Tested":
+        return None
+    return hardware_reports.sentence(hardware_reports.board(board.id if board else output.card))
+
+
+def screen_reports(label: str | None) -> str | None:
+    from gexis_core import hardware_reports, screens
+    model = screens.by_label(label) if label else None
+    if model is None or model.tested:
+        return None
+    return hardware_reports.sentence(hardware_reports.screen(model.label))
+
+
 #: The questions only a person can answer, by the issue form's field ids.
 ANSWERS = ("sound", "volume", "clicks", "picture", "touch")
 

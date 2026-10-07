@@ -103,6 +103,230 @@ a scan can be heard in music playing at the same time - Lyrion runs at the
 lowest priority so that it should not be (ADR-0115), and Phase 13e's criterion
 2 is that check.
 
+## Sound cards and screens, as tested and reported
+
+*Tested* means played and measured on the project's own hardware. *Reported*
+means at least one owner sent a report that it works, and none against
+(*Reported with problems* when one did); *Known* boards and *Untested* screens
+are on the player's list without either. Owners report from
+*Settings → System → Report this hardware*; accepted reports reach this table
+and the player through a reviewed change (ADR-0126).
+
+<!-- hardware-reports:begin (tools/hardware-reports.py writes this table) -->
+
+| Sound card | State | Reports |
+|---|---|---|
+| 52Pi NVDAC | Known |  |
+| 52Pi NVDAC [Pi5] | Known |  |
+| Adafruit MAX98357 | Known |  |
+| Adafruit UDA1334A | Known |  |
+| Allo BOSS | Known |  |
+| Allo BOSS [Pi5] | Known |  |
+| Allo BOSS2 | Known |  |
+| Allo DigiOne | Known |  |
+| Allo Katana | Known |  |
+| Allo Piano | Known |  |
+| Allo Piano 2.1 | Known |  |
+| ApplePi DAC | Known |  |
+| AudioInjector bare I2S | Known |  |
+| AudioInjector Isolated | Known |  |
+| AudioInjector Pro | Known |  |
+| AudioInjector Stereo | Known |  |
+| AudioInjector Ultra 2 | Known |  |
+| Audiophonics I-Sabre ES9028Q2M | Known |  |
+| BassFly-uHAT | Known |  |
+| BassFly-uHAT with I2S Mic | Known |  |
+| BassMantis-uHAT | Known |  |
+| BassMantis-uHAT with I2S Mic | Known |  |
+| BassOwl-HAT | Known |  |
+| ChipDip DAC | Known |  |
+| Dion Audio Loco V2 DAC-AMP | Known |  |
+| Fe-Pi Audio | Known |  |
+| Generic I2S DAC | Known |  |
+| Google voiceHAT | Known |  |
+| HiFiBerry Amp | Known |  |
+| HiFiBerry Amp100 | Known |  |
+| HiFiBerry Amp100 [Pi5] | Known |  |
+| HiFiBerry Amp2 | Known |  |
+| HiFiBerry Amp2 [Pi5] | Known |  |
+| HiFiBerry Amp3 | Known |  |
+| HiFiBerry Amp4 | Known |  |
+| HiFiBerry Amp4 [Pi5] | Known |  |
+| HiFiBerry Amp4 Pro | Known |  |
+| HiFiBerry Amp4 Pro [Pi5] | Known |  |
+| HiFiBerry DAC | Known |  |
+| HiFiBerry DAC Plus | Known |  |
+| HiFiBerry DAC Plus [Pi5] | Known |  |
+| HiFiBerry DAC Plus ADC | Known |  |
+| HiFiBerry DAC Plus ADC PRO | Known |  |
+| HiFiBerry DAC Plus ADC PRO [Pi5] | Known |  |
+| HiFiBerry DAC Plus DSP | Known |  |
+| HiFiBerry DAC+ Pro | Known |  |
+| HiFiBerry DAC+ Pro [Pi5] | Known |  |
+| HiFiBerry DAC2 HD | Tested |  |
+| HiFiBerry DAC2 Pro | Known |  |
+| HiFiBerry DAC2 Pro [Pi5] | Known |  |
+| HiFiBerry Digi | Known |  |
+| HiFiBerry Digi+ Pro | Known |  |
+| HiFiBox DAC | Known |  |
+| HiFiBox DAC [Pi5] | Known |  |
+| Innomaker Amp | Known |  |
+| Innomaker Amp Pro | Known |  |
+| Innomaker Dac | Known |  |
+| Innomaker Dac [Pi5] | Known |  |
+| Innomaker Dac Pro | Known |  |
+| Interlude Audio Analog Hat | Known |  |
+| Interlude Audio Digital Hat | Known |  |
+| IQaudIO DAC Plus | Known |  |
+| IQaudIO Pi-DAC PRO | Tested |  |
+| IQaudIO Pi-Digi+ | Known |  |
+| IQaudIO Pi-DigiAMP+ | Known |  |
+| JustBoom Amp Boards | Known |  |
+| JustBoom DAC Boards | Known |  |
+| JustBoom Digi Boards | Known |  |
+| Mamboberry LS DAC+ | Known |  |
+| Melopero DAC ZERO | Known |  |
+| Melopero DAC ZERO [Pi5] | Known |  |
+| MERUS™ Amp piHAT ZW | Known |  |
+| NanoSound DAC | Known |  |
+| NanoSound DAC [Pi5] | Known |  |
+| Orchard Audio PecanPi DAC | Known |  |
+| Orchard Audio PecanPi+ DAC | Known |  |
+| OSA DACBerry ONE+ | Known |  |
+| OSA DACBerry ONE+ [Pi5] | Known |  |
+| OSA DACBerry PRO | Known |  |
+| pHAT BEAT | Known |  |
+| pHAT DAC | Known |  |
+| PI 2 Design 502DAC | Known |  |
+| PI 2 Design 502DAC [Pi5] | Known |  |
+| PI 2 Design 502DAC Pro | Known |  |
+| PI 2 Design 502DAC Pro [Pi5] | Known |  |
+| PI 2 Design 503HTA Hybrid Tube Amp | Known |  |
+| Picade HAT | Known |  |
+| Pisound | Known |  |
+| R-PI DAC | Known |  |
+| Raspberry Pi DAC+ | Known |  |
+| Soekris dam 1021 | Known |  |
+| Speaker pHAT | Known |  |
+| ST400 Dac (PCM5122) - Amp | Known |  |
+| TauDAC - DM101 | Known |  |
+| Terra-Berry DAC 2/3 | Known |  |
+| Volumio Zero ES9039 DAC | Known |  |
+| Waveshare WM8960 Audio HAT | Known |  |
+| wisdPi Hifi DAC | Known |  |
+| wisdPi Hifi DAC [Pi5] | Known |  |
+
+| Screen | State | Reports |
+|---|---|---|
+| Adafruit 10.1" HDMI IPS (1280x800) | Untested |  |
+| Adafruit 5" Display Backpack (800x480) | Untested |  |
+| Adafruit 5" HDMI (800x480) | Untested |  |
+| Adafruit 7" HDMI (1024x600) | Untested |  |
+| Adafruit 7" HDMI (800x480) | Untested |  |
+| Adafruit 7" HDMI IPS (1280x800) | Untested |  |
+| BIGTREETECH HDMI5 V1.0 (800x480) | Untested |  |
+| BIGTREETECH HDMI7 V1.0 (1024x600) | Untested |  |
+| BIGTREETECH HDMI7 V1.2 (1024x600) | Untested |  |
+| Elecrow 5" HDMI (800x480) | Untested |  |
+| Elecrow 7" HDMI (1024x600) | Untested |  |
+| Freenove 7" HDMI (1024x600) | Untested |  |
+| GeeekPi 10.1" HDMI (1024x600) | Untested |  |
+| GeeekPi 10.1" HDMI (1280x800) | Untested |  |
+| GeeekPi 11.6" HDMI (1366x768) | Untested |  |
+| GeeekPi 5" HDMI (800x480) | Untested |  |
+| GeeekPi 7" HDMI (1024x600) | Untested |  |
+| GeeekPi 7" HDMI (1280x800) | Untested |  |
+| Generic (1280x720) | Untested |  |
+| Generic (1920x1080) | Untested |  |
+| Generic 1024x600 HDMI | Untested |  |
+| Generic 1280x800 HDMI | Untested |  |
+| Generic 1366x768 HDMI (HD Ready) | Untested |  |
+| Generic 30Hz (3840x2160) | Untested |  |
+| Generic 480x320 HDMI | Untested |  |
+| Generic 60Hz (3840x2160) | Untested |  |
+| Generic 800x480 HDMI | Untested |  |
+| HMTECH 10.1" HDMI Touchscreen (1024x600) | Untested |  |
+| HMTECH 7" HDMI Monitor (800x480) | Untested |  |
+| Hosyond 10.1" HDMI Display-H (1024x600) | Untested |  |
+| Hosyond 10.1" HDMI Display-S (1024x600) | Untested |  |
+| Hosyond 10.1" HDMI Display-Y (1024x600) | Untested |  |
+| Hosyond 5" HDMI Display-B (800x480) | Untested |  |
+| Hosyond 7" HDMI Display-C (1024x600) | Untested |  |
+| Hosyond 7" HDMI Display-H (1024x600) | Untested |  |
+| Hosyond 8.8" HDMI Bar (480x1920) | Untested |  |
+| Joy-IT 10" HDMI LCD V2 (1280x800) | Untested |  |
+| Joy-IT 10.1" HDMI LCD Version B (1280x800) | Untested |  |
+| Joy-IT 10.1" IPS HDMI V3 (1280x800) | Untested |  |
+| Joy-IT 5" HDMI LCD V2 (800x480) | Untested |  |
+| Joy-IT 7" HDMI LCD V2 (1024x600) | Untested |  |
+| Kuman 7" HDMI (1024x600) | Untested |  |
+| Kuman 7" HDMI (800x480) | Untested |  |
+| LCDwiki 3.5" HDMI (480x320) | Untested |  |
+| LCDwiki 4" HDMI-C (480x800) | Untested |  |
+| LCDwiki 5" HDMI (800x480) | Untested |  |
+| LCDwiki 7" HDMI-B (800x480) | Untested |  |
+| LCDwiki 7" HDMI-C (1024x600) | Untested |  |
+| Longruner 5" HDMI (800x480) | Untested |  |
+| Longruner 7" HDMI (1024x600) | Untested |  |
+| Pollin 5" HDMI 800x480 Touch (pre-2020) | Untested |  |
+| Seeed Studio 10.1" HDMI (1366x768) | Untested |  |
+| Seeed Studio 10.1" HDMI IPS (1200x1920) | Untested |  |
+| Seeed Studio 10.1" HDMI IPS (1280x800) | Untested |  |
+| Seeed Studio 5" HDMI (720x1280) | Untested |  |
+| Seeed Studio 7" HDMI (1024x600) | Untested |  |
+| Seeed Studio 7" HDMI (720x1280) | Untested |  |
+| Seeed Studio 7" HDMI IPS (1280x800) | Untested |  |
+| Spotpear 10.1" HDMI (1024x600) | Untested |  |
+| Spotpear 4" HDMI (480x800) | Untested |  |
+| Spotpear 5" HDMI (1024x600) | Untested |  |
+| Spotpear 7" HDMI (1024x600) | Untested |  |
+| Spotpear 7" HDMI (1280x800) | Untested |  |
+| Sunfounder 10.1" HDMI (1024x600) | Untested |  |
+| Sunfounder 7" HDMI (1024x600) | Untested |  |
+| UCTRONICS 3.5" HDMI (480x320) | Untested |  |
+| UCTRONICS 5" HDMI (800x480) | Untested |  |
+| UCTRONICS 7" HDMI (1024x600) | Untested |  |
+| UCTRONICS 7" HDMI (1024x768) | Untested |  |
+| Waveshare 10.1" HDMI LCD (1024x600) | Untested |  |
+| Waveshare 10.1" HDMI LCD (B) (1280x800) | Tested |  |
+| Waveshare 10.1" HDMI LCD (D) (1024x600) | Untested |  |
+| Waveshare 10.1" HDMI LCD (E) (1024x600) | Untested |  |
+| Waveshare 10.1" HDMI LCD (F) (1024x600) | Untested |  |
+| Waveshare 10.1" HDMI LCD (G) (1024x600) | Untested |  |
+| Waveshare 10.1" HDMI LCD (H) (1024x600) | Untested |  |
+| Waveshare 10.5" HDMI AMOLED (2560x1600) | Untested |  |
+| Waveshare 11.6" HDMI LCD (H) (1920x1080) | Untested |  |
+| Waveshare 11.9" HDMI LCD (320x1480) | Tested |  |
+| Waveshare 13.3" HDMI LCD (H) (1920x1080) | Tested |  |
+| Waveshare 15.6" FHD Monitor (B) (1920x1080) | Untested |  |
+| Waveshare 15.6" HDMI LCD (1920x1080) | Untested |  |
+| Waveshare 2.8" HDMI LCD (H) (480x640) | Untested |  |
+| Waveshare 3.5" HDMI LCD (480x320) | Untested |  |
+| Waveshare 3.5" HDMI LCD (E) (640x480) | Untested |  |
+| Waveshare 4" HDMI LCD (480x800) | Untested |  |
+| Waveshare 4" HDMI LCD (H) (480x800) | Untested |  |
+| Waveshare 4.3" HDMI LCD (480x272) | Untested |  |
+| Waveshare 4.3" HDMI LCD (B) (800x480) | Untested |  |
+| Waveshare 5" HDMI AMOLED (960x544) | Untested |  |
+| Waveshare 5" HDMI LCD (800x480) | Untested |  |
+| Waveshare 5" HDMI LCD (B) (800x480) | Untested |  |
+| Waveshare 5" HDMI LCD (G) (800x480) | Untested |  |
+| Waveshare 5" HDMI LCD (H) (800x480) | Untested |  |
+| Waveshare 5" HDMI LCD (H) V4 (800x480) | Untested |  |
+| Waveshare 5.5" 2K HDMI LCD (1440x2560) | Untested |  |
+| Waveshare 5.5" HDMI AMOLED (1080x1920) | Untested |  |
+| Waveshare 6" HDMI AMOLED (1080x2160) | Untested |  |
+| Waveshare 7" FHD HDMI Monitor (1080x1920) | Untested |  |
+| Waveshare 7" HDMI LCD (1024x600) | Untested |  |
+| Waveshare 7" HDMI LCD (B) (800x480) | Untested |  |
+| Waveshare 7" HDMI LCD (C) (1024x600) | Untested |  |
+| Waveshare 7" HDMI LCD (H) (1024x600) | Untested |  |
+| Waveshare 7.9" HDMI LCD (400x1280) | Tested |  |
+| Waveshare 8.8" HDMI Side Monitor (480x1920) | Untested |  |
+| Waveshare 9.3" HDMI LCD (1600x600) | Untested |  |
+
+<!-- hardware-reports:end -->
+
 ## Not covered yet
 
 - The visualiser's load at 1920 x 1080 (ADR-0111 decision 12).

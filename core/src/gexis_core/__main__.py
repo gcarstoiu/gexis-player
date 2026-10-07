@@ -75,7 +75,7 @@ from gexis_core.lyrion_shares import Shares as LyrionShares
 from gexis_core.fanart import Fanart
 from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, TrackMetadata
-from gexis_core import settings_migrations, updates
+from gexis_core import hardware_report, settings_migrations, updates
 from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import InvalidValue, Settings, UnknownSetting, load_registry
 from gexis_core.splash import Splash
@@ -1797,6 +1797,14 @@ async def main() -> None:
             await asyncio.create_subprocess_exec("systemctl", "reboot")
         asyncio.ensure_future(_restart())
 
+    def _reports_note(key: str, reported: str | None) -> str | None:
+        """ADR-0126 decision 5: the row's own note, then what owners
+        reported; None leaves the note as it is."""
+        if not reported:
+            return None
+        own = settings.row(key).get("note")
+        return f"{own} {reported}" if own else reported
+
     settings = Settings(
         settings_store,
         registry=Settings.with_plugins(load_registry(), installed_plugins, downloads,
@@ -1875,7 +1883,11 @@ async def main() -> None:
         # The Release row's note: what the waiting or just-installed release
         # says changed (2026-10-01, George).
         notes={"software_update": updates.whats_new,
-               "sound_card_board": board_apply.note,
+               "sound_card_board": lambda: board_apply.note() or _reports_note(
+                   "sound_card_board", hardware_report.board_reports(
+                       outputs.resolve(settings_store.get("output_device")))),
+               # ADR-0126 decision 5: what owners reported, on the screen row.
+               "screen": lambda: _reports_note("screen", hardware_report.screen_reports(settings_store.get("screen"))),
                # The Lyrion server's first start says what it is doing.
                **({"lyrion-server.enabled": lambda: _lyrion_note(settings.value("lyrion-server.enabled") is True)}
                   if any(p.id == "lyrion-server" for p in installed_plugins) else {})},
