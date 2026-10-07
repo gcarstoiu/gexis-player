@@ -207,8 +207,8 @@ skins*. Each screen size gets its own set (from about 50 MB to about 490 MB);
 switching it off removes them. While music plays, or for 10 minutes after a
 phone connects over Spotify or Bluetooth, the set downloads at no more than
 3 MB/s, so the music keeps its share of the network; otherwise at full
-speed. Over HDMI audio output the visualiser does not
-move.
+speed. Over HDMI audio output the visualiser moves only with
+*Settings → Audio → Volume* on *Software*; on *Fixed* it does not.
 
 **How do I pick one skin and keep it?**
 Under *Settings → Display → Visualiser*, choose a *Skin type*, switch off
@@ -517,5 +517,6 @@ Each output in *Settings → Audio → Output* shows *Tested*, *Known* or
 are known but untested; a class-compliant USB DAC should be detected by
 itself but has not been tried. A board that is not found by itself can be
 chosen in *Settings → Audio → Sound card board*. The screen's HDMI audio
-can be chosen too, but its volume is fixed, it is not bit-perfect and the
-visualiser does not move with it.
+can be chosen too; it is not bit-perfect, its volume is set in software
+(or fixed), and the visualiser moves with it only while the volume is in
+software.
