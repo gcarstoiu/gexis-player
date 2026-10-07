@@ -30,6 +30,7 @@ import os
 import random
 import tarfile
 import threading
+import time
 from collections.abc import Callable
 from urllib.parse import quote, unquote
 from pathlib import Path
@@ -1329,7 +1330,54 @@ class StateServer:
         check = self._store.state.screen_check or {}
         screen = hardware_report.screen_lines(check["result"]) if check.get("result") else None
         facts = await self._hardware_facts()
-        return web.json_response({"url": hardware_report.issue_url(facts, answers, notes, tones, screen)})
+        url = hardware_report.issue_url(facts, answers, notes, tones, screen)
+        # A report prepared is the prompt answered: it is not asked again.
+        if self._settings is not None:
+            await self._dismiss_hardware_prompt()
+        return web.json_response({"url": url})
+
+    async def _hardware_pieces(self) -> dict[str, str]:
+        """ADR-0126 decision 1: what on this device is not Tested. Settings
+        on the loop; the board's EEPROM and the list in a worker."""
+        from gexis_core import board_apply, boards, outputs, screens
+        stored = self._settings.value("output_device") if self._settings else None
+        screen = self._settings.value("screen") if self._settings else None
+
+        def gather():
+            output = outputs.resolve(stored)
+            card = output.card if output and output.card not in outputs.BUILT_IN_CARDS else None
+            board = state = None
+            if card:
+                written = board_apply.written()
+                board, state = boards.identify(card, chosen=written.id if written else None,
+                                               product=hardware_report._read(hardware_report.HAT / "product") or None)
+            model = screens.by_label(screen) if screen else None
+            return hardware_report.untested(card, board.id if board else None, state,
+                                            screen if model else None, model.tested if model else None)
+
+        return await asyncio.get_running_loop().run_in_executor(None, gather)
+
+    async def _handle_hardware_prompt(self, request: web.Request) -> web.Response:
+        """ADR-0126 decision 1: the System page's one line, after a week on
+        hardware that is not Tested; null when there is nothing to ask."""
+        if self._settings is None:
+            return web.json_response({"text": None})
+        pieces = await self._hardware_pieces()
+        text, record = hardware_report.prompt(self._settings.kept(hardware_report.PROMPT_KEY), pieces, time.time())
+        self._settings.keep(hardware_report.PROMPT_KEY, record)
+        return web.json_response({"text": text})
+
+    async def _handle_hardware_prompt_dismiss(self, request: web.Request) -> web.Response:
+        """*"dismissed for good with one tap"* - for this hardware; another
+        board or screen later is asked about in its own time."""
+        if self._settings is not None:
+            await self._dismiss_hardware_prompt()
+        return web.json_response({"ok": True})
+
+    async def _dismiss_hardware_prompt(self) -> None:
+        pieces = await self._hardware_pieces()
+        self._settings.keep(hardware_report.PROMPT_KEY,
+                            hardware_report.dismissed(self._settings.kept(hardware_report.PROMPT_KEY), pieces))
 
     #: ADR-0126: the pattern goes away by itself if nobody finishes it.
     SCREEN_CHECK_S = 120
@@ -1978,6 +2026,8 @@ class StateServer:
         app.router.add_get("/hardware-report", self._handle_hardware_report)
         app.router.add_post("/hardware-report/issue", self._handle_hardware_issue)
         app.router.add_post("/hardware-report/tones", self._handle_hardware_tones)
+        app.router.add_get("/hardware-report/prompt", self._handle_hardware_prompt)
+        app.router.add_post("/hardware-report/prompt/dismiss", self._handle_hardware_prompt_dismiss)
         app.router.add_post("/hardware-report/screen", self._handle_hardware_screen)
         app.router.add_post("/hardware-report/screen/result", self._handle_hardware_screen_result)
         app.router.add_post("/settings/{key}/items", self._handle_list_action)

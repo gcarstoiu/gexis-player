@@ -280,6 +280,54 @@ def screen_lines(result: dict) -> list[str]:
     return lines
 
 
+#: ADR-0126 decision 1: *"Offered once, unprompted, after a week on a board
+#: or screen that is not Tested: a single line on Settings' System page ...
+#: dismissed for good with one tap."*
+PROMPT_KEY = "_hardware_prompt"
+PROMPT_AFTER_S = 7 * 24 * 3600
+
+
+def untested(card: str | None, board_id: str | None, board_state: str | None,
+             screen_label: str | None, screen_tested: bool | None) -> dict[str, str]:
+    """What on this device is not Tested, by kind: `{"sound": key,
+    "screen": key}`, each key naming that piece of hardware. The Pi's own
+    outputs are no DAC to report; no screen chosen is nothing to report."""
+    out = {}
+    if card and board_state is not None and board_state != "Tested":
+        out["sound"] = f"sound:{board_id or card}"
+    if screen_label and screen_tested is False:
+        out["screen"] = f"screen:{screen_label}"
+    return out
+
+
+def prompt(stored: dict | None, pieces: dict[str, str], now: float) -> tuple[str | None, dict]:
+    """The line to show, if any, and the record to keep. A piece is first
+    seen now unless the record already has it; it is due a week after that,
+    unless dismissed (or reported, which dismisses it)."""
+    record = {"seen": dict((stored or {}).get("seen") or {}),
+              "dismissed": list((stored or {}).get("dismissed") or [])}
+    due = []
+    for kind, key in pieces.items():
+        since = record["seen"].setdefault(key, now)
+        if key not in record["dismissed"] and now - since >= PROMPT_AFTER_S:
+            due.append(kind)
+    if not due:
+        return None, record
+    if len(due) == 2:
+        return "Help others with this DAC and screen: report how they work", record
+    what = "this DAC" if due == ["sound"] else "this screen"
+    return f"Help others with {what}: report how it works", record
+
+
+def dismissed(stored: dict | None, pieces: dict[str, str]) -> dict:
+    record = {"seen": dict((stored or {}).get("seen") or {}),
+              "dismissed": list((stored or {}).get("dismissed") or [])}
+    for key in pieces.values():
+        if key not in record["dismissed"]:
+            record["dismissed"].append(key)
+    return record
+
+
 #: The questions only a person can answer, by the issue form's field ids.
 ANSWERS = ("sound", "volume", "clicks", "picture", "touch")
 

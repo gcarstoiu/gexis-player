@@ -252,6 +252,20 @@
         .catch(() => (hwError = 'The player could not read its hardware. Try again.'));
     }
   });
+  // ADR-0126 decision 1: one line on the System page, a week after a board
+  // or screen that is not Tested arrived; dismissed for good with one tap.
+  let hwPrompt = $state(null);
+  $effect(() => {
+    if (current?.id !== 'system') return;
+    fetch('/hardware-report/prompt').then((r) => (r.ok ? r.json() : null))
+      .then((body) => (hwPrompt = body?.text ?? null))
+      .catch(() => (hwPrompt = null));
+  });
+  function dismissHardwarePrompt() {
+    hwPrompt = null;
+    fetch('/hardware-report/prompt/dismiss', { method: 'POST' }).catch(() => {});
+  }
+
   async function prepareHardwareReport() {
     if (hwBusy) return;
     hwBusy = true;
@@ -1292,6 +1306,14 @@
                 </span>
               </button>
               <input class="upload__input" type="file" accept=".tar.gz,.tgz,application/gzip" bind:this={pluginFile} onchange={onPluginPicked} />
+            {/if}
+            {#if current?.id === 'system' && hwPrompt}
+              <div class="hwprompt">
+                <button class="hwprompt__go" type="button" onclick={() => { const row = rowOf('hardware_report'); if (row) openSheet(row); }}>
+                  {hwPrompt}
+                </button>
+                <button class="hwprompt__x" type="button" aria-label="Do not ask again" onclick={dismissHardwarePrompt}>×</button>
+              </div>
             {/if}
             {#each rows as r, i (r.key ?? `group-${i}`)}
               {#if r.type === 'group'}
@@ -3706,6 +3728,33 @@
     word-break: break-all;
   }
   .report__link { color: var(--accent-lms); }
+  .hwprompt {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    border-radius: 14px;
+    border: 1px solid rgba(124, 208, 176, 0.35);
+    background: rgba(124, 208, 176, 0.08);
+  }
+  .hwprompt__go {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+    padding: 14px 18px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink);
+    background: none;
+    border: 0;
+  }
+  .hwprompt__x {
+    flex-shrink: 0;
+    width: 52px;
+    font-size: 22px;
+    color: var(--ink-dim, #9fb0bd);
+    background: none;
+    border: 0;
+  }
   .hwq {
     display: flex;
     flex-direction: column;

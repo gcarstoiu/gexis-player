@@ -135,3 +135,61 @@ async def test_the_pattern_is_shown_measured_and_reaches_the_report(monkeypatch)
         assert "Screen check\n- screen as the panel drew it: 800x480" in parse_qs(urlsplit(url).query)["details"][0]
     finally:
         await client.close()
+
+
+WEEK = hr.PROMPT_AFTER_S
+
+
+def test_only_what_is_not_tested_is_asked_about():
+    assert hr.untested("IQaudIODAC", "iqaudio-pi-dac-pro", "Tested", None, None) == {}
+    assert hr.untested("sndrpihifiberry", "hifiberry-dacplus", "Known", None, None) == {
+        "sound": "sound:hifiberry-dacplus"}
+    assert hr.untested(None, None, None, "Waveshare/13.3inch HDMI LCD (H)", True) == {}, "the Pi's own outputs are no DAC"
+    assert hr.untested("Device", None, "Detected", "Acme/7inch", False) == {
+        "sound": "sound:Device", "screen": "screen:Acme/7inch"}
+
+
+def test_the_line_comes_a_week_after_the_hardware_was_first_seen():
+    pieces = {"sound": "sound:hifiberry-dacplus"}
+    text, record = hr.prompt(None, pieces, now=1000.0)
+    assert text is None and record["seen"] == {"sound:hifiberry-dacplus": 1000.0}
+    text, record = hr.prompt(record, pieces, now=1000.0 + WEEK - 1)
+    assert text is None
+    text, record = hr.prompt(record, pieces, now=1000.0 + WEEK)
+    assert text == "Help others with this DAC: report how it works"
+
+
+def test_dismissed_is_for_good_for_that_hardware_and_a_new_one_is_asked_in_its_own_time():
+    dac = {"sound": "sound:hifiberry-dacplus"}
+    _, record = hr.prompt(None, dac, now=0.0)
+    record = hr.dismissed(record, dac)
+    assert hr.prompt(record, dac, now=10 * WEEK)[0] is None
+    other = {"sound": "sound:Device", "screen": "screen:Acme/7inch"}
+    text, record = hr.prompt(record, other, now=10 * WEEK)
+    assert text is None, "new hardware waits its own week"
+    text, _ = hr.prompt(record, other, now=11 * WEEK)
+    assert text == "Help others with this DAC and screen: report how they work"
+
+
+async def test_preparing_a_report_answers_the_prompt(tmp_path, monkeypatch):
+    from aiohttp.test_utils import TestClient, TestServer
+    from gexis_core.settings import SettingsStore
+    from gexis_core.settings_registry import Settings
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+
+    settings = Settings(SettingsStore(tmp_path / "s.db"), seed_path=tmp_path / "none.json")
+    server = StateServer(StateStore({}), settings=settings)
+    pieces = {"sound": "sound:Device"}
+
+    async def fake_pieces():
+        return pieces
+
+    async def fake_facts():
+        return facts()
+    server._hardware_pieces, server._hardware_facts = fake_pieces, fake_facts
+    settings.keep(hr.PROMPT_KEY, {"seen": {"sound:Device": 0.0}, "dismissed": []})
+    async with TestClient(TestServer(server.make_app())) as client:
+        assert (await (await client.get("/hardware-report/prompt")).json())["text"].startswith("Help others")
+        await client.post("/hardware-report/issue", json={"answers": {}})
+        assert (await (await client.get("/hardware-report/prompt")).json())["text"] is None
