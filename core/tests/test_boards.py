@@ -6,7 +6,7 @@ from gexis_core import boards as b
 
 def test_the_raspberry_pi_rows_are_read_and_most_are_offered():
     every = b.all_boards()
-    assert len(every) == 98
+    assert len(every) == 99, "Volumio's 98, and the Pi-DAC PRO (Finding 114)"
     # Nine rows need an init script, which is not run here; the IQaudio
     # DAC+'s was corrected away.
     assert sum(not x.offered for x in every) == 8
@@ -16,6 +16,14 @@ def test_the_raspberry_pi_rows_are_read_and_most_are_offered():
 def test_the_dac2_hd_names_itself_and_is_tested():
     board, state = b.identify("sndrpihifiberry", product="DAC 2 HD")
     assert board.id == "hifiberry-dac2hd" and state == "Tested"
+
+
+def test_the_pi_dac_pro_names_itself_and_is_tested():
+    """Finding 114: George's IQaudio board, by its EEPROM; the card it makes
+    is shared, so the EEPROM is what tells it apart."""
+    board, state = b.identify("IQaudIODAC", product="Pi-DAC PRO")
+    assert board.id == "iqaudio-pi-dac-pro" and board.name == "IQaudIO Pi-DAC PRO" and state == "Tested"
+    assert b.by_id("iqaudio-dacplus").tested is False, "the DAC+ itself is not tested"
 
 
 def test_the_iqaudio_dac_plus_row_is_corrected():
