@@ -14,10 +14,11 @@
   control and its scale; the rates and formats the card accepts through the
   player's own `output`, with silence (no sound); a Lyrion MP3 and a Lyrion
   FLAC, 20 % volume, a few seconds each; the de-emphasis setting.
-- **Not measured:** Spotify, Bluetooth and Plexamp through this board (each
-  needs a phone or the app); the analogue output itself (no analyser); taking
-  back a chosen board that is not fitted (ADR-0117's third test); the DAC+.
-  George heard Spotify play through it after setup (2026-10-07).
+- **Then with George's phone** (13:52-14:05): Spotify Connect twice and
+  Bluetooth once, the card's state logged every half second.
+- **Not measured:** Plexamp through this board; the analogue output itself
+  (no analyser); taking back a chosen board that is not fitted (ADR-0117's
+  third test); the DAC+.
 
 ## Results
 
@@ -51,7 +52,13 @@
 5. **Lyrion:** a 320 kbit/s MP3 at 44.1 kHz and a 16-bit 44.1 kHz FLAC both
    opened the card at S32_LE, 44.1 kHz - decoded and zero-padded, not
    resampled; Lyrion's own volume stays at 100 %, the card's control moves.
-6. **De-emphasis is off, though the switch reads "on".** The driver declares
+6. **Spotify:** the card at S32_LE, 44.1 kHz throughout; the phone's slider
+   moved the card's control (0 to -18.5 dB). **Bluetooth** (SBC): S16_LE,
+   44.1 kHz; BlueALSA in pass-through, so no volume of its own; the phone's
+   slider moved the card's control (-9 to -24.5 dB). The first Spotify
+   takeover started at 100 % - a bug in the starting volume, fixed the same
+   day and seen right on the second (`c2a8f53`).
+7. **De-emphasis is off, though the switch reads "on".** The driver declares
    the control inverted (`SOC_SINGLE("Deemphasis Switch", PCM512x_DSP,
    PCM512x_DEMP_SHIFT, 1, 1)` in `sound/soc/codecs/pcm512x.c`, rpi-6.18.y): "on"
    is the enable bit clear. Register 7 read `00` with the switch on and `10`
@@ -61,11 +68,10 @@
 
 ## What it means
 
-ADR-0117's acceptance items 1 and 4 hold for this board for Lyrion and for
-anything that plays through `output`; Spotify, Bluetooth and Plexamp share that
-path and were not measured on it. For the player to call this board *Tested*,
-it has to recognise it as a Pi-DAC PRO - by its EEPROM, since the card name is
-shared - which it does not do yet.
+ADR-0117's acceptance items 1 and 4 hold for this board for Lyrion, Spotify
+and Bluetooth; Plexamp shares the path and was not measured on it. George:
+*"let's move it to tested"* - the player now recognises the board by its
+EEPROM (the card name is shared) and calls it *IQaudIO Pi-DAC PRO*, *Tested*.
 
 ## A mistake on the way
 
