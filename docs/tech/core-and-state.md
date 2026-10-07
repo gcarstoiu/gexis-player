@@ -127,6 +127,7 @@ Top-level fields of the `/state` payload:
 | `update` | The updater's status, read from its status file (ADR-0110) |
 | `screen_confirm`, `screen_new` | The "keep this screen?" and "new screen attached" questions (ADR-0109) |
 | `screen_check` | The hardware feedback's test pattern and the measured corner taps (ADR-0126) |
+| `settling` | The first start after setup, until its downloads have finished: `phase` and each item's state (ADR-0128) |
 | `settings_revision`, `pictures_revision` | Refetch triggers |
 
 ### How a change reaches the screen
@@ -194,7 +195,7 @@ routes are loopback-only or behave differently by origin: `/surface`,
 | Hardware report | `GET /hardware-report` (the board by EEPROM, driver, overlays, controls, formats and rates; the screen's EDID and touch controller - no serials), `POST /hardware-report/tones` (a 1 kHz tone at -20 dBFS at 44.1, 96 and 192 kHz through `output`, and the rate and format the card ran at; `409` while any card plays), `GET /hardware-report/prompt` and `POST /hardware-report/prompt/dismiss` (the System page's one line, a week after a board or screen that is not Tested was first seen, per piece of hardware; kept in the internal `_hardware_prompt` key; a prepared report dismisses it too), `POST /hardware-report/screen` (`{"show"}`: the test pattern on the panel, through `screen_check` in `/state`; taken down after 120 s) and `POST /hardware-report/screen/result` (the panel's four corner taps in screen pixels, measured against 6 % of the diagonal), `POST /hardware-report/issue` (`{"answers", "notes", "tones"}` -> the pre-filled GitHub *Hardware report* form's address) - `hardware_report.py`; the *Reported* state from `hardware_reports.json` (`hardware_reports.py`), which only `tools/hardware-reports.py` writes, from the issues labelled `accepted`, along with HARDWARE.md's table | Settings on a phone or computer (ADR-0126) |
 | Problem report | `POST /report` (body `{"note": ...}`) - a zip of the journal, the updater's log, versions, hardware and settings, scrubbed on the device by `problem_report.py`; the header `X-Report-Summary` says what was taken out; one at a time (`409`) | Settings on a phone or computer (ADR-0125) |
 | Screens | `POST /screen/{action}`, `/screen-new/{action}` | Panel (ADR-0109) |
-| Setup | `GET /setup/status`, `/setup/answers`, `/setup/networks`, `/setup/screen`; `POST /setup/answers`, `/setup/finish`, `/renderers/park` | Setup page (ADR-0104) |
+| Setup | `GET /setup/status`, `/setup/answers`, `/setup/networks`, `/setup/screen`, `/setup/plugins`; `POST /setup/answers`, `/setup/finish`, `/renderers/park`, `/settling/done` (the OK on a settling screen that names a failed download, ADR-0128) | Setup page (ADR-0104) |
 | UI files | `GET /`, `/assets/*`, a fixed list of web-app files | Browser |
 
 The UI routes are registered **after** the API so nothing in the bundle can

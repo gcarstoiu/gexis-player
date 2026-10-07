@@ -8,9 +8,9 @@ Last updated: 2026-10-07 (on R2D2).
   the screen step skipped when headless or no screen is connected. Owed by
   George: the GitHub labels.
 - Cable network (ADR-0123 step 2) - needs a cable.
-- **Setup installs plugins and settles** - ADR-0128, Accepted 2026-10-07
-  (all plugins offered; no skipping; a failed download left for Settings, the
-  owner told). To build.
+- **Setup installs plugins and settles** - ADR-0128, Accepted and **built**
+  2026-10-07 (f9f9a0c on phase-13d); checked in a browser against a test
+  server, not yet on a freshly set-up device.
 - **A general, thorough code check before release** (George): everything
   checked once more; **volume, the audio adapters and arbitration must work
   perfectly from the beginning** - dropped frames or a CSS flaw are not

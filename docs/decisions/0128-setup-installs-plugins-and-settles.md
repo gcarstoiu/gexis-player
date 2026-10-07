@@ -41,3 +41,22 @@ setup while this was going on.
 3. **A download that fails is left for Settings, and the owner is told**: the
    settling screen says which one did not finish and where to try again
    (*Settings → Plugins*), then finishes; the player does not retry on its own.
+
+## Built (2026-10-07, on `phase-13d`)
+
+- **The Plugins step** (`SetupPage.svelte`, `GET /setup/plugins`): every
+  shipped plugin that is not a built-in source - Plexamp, the Lyrion Server,
+  Beszel, the Beszel hub - each with one line from its manifest's new
+  `summary` (or where it downloads from); a plugin with a notice shows it on
+  the first tap and switches on at the second. No download size is shown:
+  the pins do not carry one.
+- **After the join** every offered plugin is switched on or off as chosen,
+  explicitly - a plugin switch's default is on, which is not a choice - and
+  `settling.json` records what to wait for.
+- **The settling screen** (`SettlingScreen.svelte`, `settling.py`,
+  `/state`'s `settling`): each download's progress; *Ready* for 4 s; a
+  failure - or a download that has not started 10 minutes after setup - named
+  with *Settings → Plugins*, then OK (`POST /settling/done`).
+- **Music is not blocked** while it settles: the screen covers the panel (and
+  shows on a phone), but a source can still take the device. Not yet seen on a
+  freshly set-up device.

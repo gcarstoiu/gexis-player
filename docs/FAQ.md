@@ -292,7 +292,11 @@ says at which address it comes back.
 On first start with no network, the player opens its own Wi-Fi, called
 *gexis-setup*. The screen shows two QR codes: one to join that network, one
 to open the setup page. The phone then walks through Wi-Fi, a name, the
-clock, the output, the music and the screen.
+clock, the output, the music, the screen, the visualiser and the plugins to
+install (Plexamp, the Lyrion Server, Beszel). Once the player is on your
+network it shows what it is downloading, each with its progress, until it is
+ready; this cannot be skipped. A download that does not finish is named, with
+*Settings → Plugins* as the place to try it again.
 
 **What is the setup network's password, and why does the phone say it has no internet?**
 The password is shown on the screen; a player without a screen uses

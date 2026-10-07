@@ -171,7 +171,9 @@ that reloads resumes from it; the password is never handed back, only
 
 The phone's steps (`SetupPage.svelte`): Network, Name, Time (zone and 12/24 h),
 Output, Music, Screen, Visualiser (skipped for headless or for screens no skin
-pack fits), Review.
+pack fits), Plugins (ADR-0128; every plugin the release ships beyond the
+built-in sources, from `GET /setup/plugins`; skipped when there are none),
+Review.
 
 ```mermaid
 sequenceDiagram
@@ -203,6 +205,7 @@ sequenceDiagram
   alt join succeeds
     C->>C: touch setup-done, delete answers file
     C->>C: Lyrion: find / given address / off
+    C->>C: plugins on or off as chosen; settling.json (ADR-0128)
     C-->>P: state done (network, library, restart reason)
     C->>C: after 10 s: reboot if a screen was chosen or the name differs from the old one, else online
   else join fails
@@ -261,6 +264,7 @@ All under the core's HTTP server on port 8090 (`wsserver.py`):
 | `GET /setup/networks` | Wi-Fi scan, the setup network itself removed |
 | `GET /setup/screen` | the Screen step: what the screen reports, the suggested model, all models |
 | `POST /setup/finish` | start applying; answers `202` with `{"finishing": true, "keep_question": ...}` |
+| `GET /setup/plugins` | ADR-0128: the plugins the Plugins step offers - `id`, `name`, `summary`, `notice`, `from`, `component` |
 
 Every route but `/setup/status` answers 409 once setup is over (`_setup_closed`):
 a configured device has Settings for all of this. On a phone, `App.svelte`
@@ -329,3 +333,21 @@ phone; a "PIN-free" pairing setting registers `NoInputNoOutput` instead
 (`capability_for()`). The
 agent's timeout is the only clock: the panel's countdown displays it, and the
 prompt disappears when the agent says so.
+
+## The first start after setup (ADR-0128)
+
+After the join, `SetupFlow._plugins_and_settling` switches every offered
+plugin on or off as chosen - explicitly, since a plugin switch defaults to on -
+and records in `/var/lib/gexis/settling.json` what the first start waits for:
+the visualiser's skins (component `skins`) when chosen, and each chosen plugin
+that downloads (its component name). Nothing to wait for writes nothing.
+
+The core reads it every 2 s (`_follow_settling`) against `_all_components()`
+and publishes `settling` on `/state` (`settling.view`): each item `waiting`,
+`busy` (with `received`/`total`), `done` or `failed` (with `error`), and the
+phase `settling`, `ready` or `failed`. An item still waiting 10 minutes after
+setup (`WAIT_S`; no home network, most likely) is failed with *The download
+did not start*. `ready` stays up 4 s (`READY_S`), then the file is removed;
+`failed` stays until `POST /settling/done`. The panel draws
+`SettlingScreen.svelte` over everything but *Keep this screen?* and the update
+lock, with no way to dismiss it while anything downloads; a phone draws it too.
