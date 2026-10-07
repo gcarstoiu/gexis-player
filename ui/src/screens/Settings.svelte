@@ -2716,20 +2716,21 @@
     background: rgba(233, 238, 242, 0.6);
   }
   /* Open: the shackle lifted and free on one side. */
-  .lock.lock--open {
-    width: 18px;
-  }
+  /* The closed lock's own shackle, in its own place: only its left leg
+     cut short, free of the body. Lifted or moved sideways, the open lock
+     read larger than the closed one (George, 2026-10-07); this way both
+     fill the same 13 x 15. */
   .lock.lock--open span:last-child {
-    left: 9px;
-    top: -3px;
-    height: 9px;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 100%, 50% 50%, 0 50%);
   }
   .lock span:last-child {
     position: absolute;
     left: 3px;
     top: 0;
     width: 7px;
-    height: 8px;
+    /* Down to the body's top edge, not into it: the two translucent layers
+       overlapping drew a brighter square at each leg. */
+    height: 6px;
     border: 2px solid rgba(233, 238, 242, 0.6);
     border-bottom: none;
     border-radius: 4px 4px 0 0;
