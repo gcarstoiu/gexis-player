@@ -429,6 +429,17 @@ says so before starting. If the new release fails its check, the player goes
 back to the release it had. *Settings → System → Change logs* lists what
 changed in the last 10 releases.
 
+**The player is several releases behind. Does it install each one in turn?**
+No: it goes straight to the newest release on its channel, in one update. What
+the releases in between changed comes with it: settings they renamed or
+retired are carried over in order, and if any of them needed a full restart,
+the device restarts. The update shows the newest release's notes; afterwards
+*Settings → System → Change logs* has the notes of the last 10 releases,
+skipped ones included, and points to the full list on GitHub. In
+the rare case that the newest release needs a newer updater than the device
+has, the update says so, and the card is re-flashed with a current image
+(after a backup).
+
 **Can updates install by themselves?**
 Set *Settings → System → Updates* to *Automatic*. A waiting release is then
 installed between 3 and 4 at night, never while music plays, and one that
