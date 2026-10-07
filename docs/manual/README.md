@@ -1,6 +1,6 @@
 # Gexis Player — User Manual
 
-**Draft, written for 0.9.2.** The screenshots use a demonstration library of
+**Written for the release it ships with.** The screenshots use a demonstration library of
 public-domain works: the album covers are paintings by Hokusai, Van Gogh,
 Klimt, Kandinsky, Monet, Seurat, Marc, Rousseau, Hiroshige, Mucha, Gauguin
 and others, the portraits are of the composers, and the lyrics are
@@ -274,7 +274,7 @@ type a name, a password or a key.
 
 ## 8. Bar screens
 
-On a wide, short *bar* screen (1280 × 400 or 1480 × 320) the same player is
+On a wide, short *bar* screen (such as the tested 1280 × 400 and 1480 × 320) the same player is
 laid out in strips: Now Playing on one line, and the library's lists run
 sideways. A tray pulled down from the top holds Home, the volume and the
 visualiser.
@@ -332,8 +332,8 @@ Changes take effect at once unless the row says otherwise.
 | Spotify Connect: Enabled | The player appears as a Spotify Connect device. |
 | Spotify Connect: Starting volume | The loudest Spotify starts at when it takes over. Hidden with Volume on *Fixed*. |
 | Bluetooth: Enabled | The player accepts Bluetooth audio. |
-| Bluetooth: Pairing | *Confirmation* shows a six-digit code on the panel to accept; *PIN-free* pairs anything in range. |
-| Bluetooth: Discoverable | Whether phones can find the player: *Always* (the default), *3 min after boot* or *Off*. A new phone still has to be accepted on the screen. |
+| Bluetooth: Pairing | *Confirmation required* shows a six-digit code on the panel to accept; *PIN-free* pairs anything in range. |
+| Bluetooth: Discoverable | Whether phones can find the player: *Always* (the default), *3 min after boot* or *Off*. With *Pairing* on *Confirmation required*, a new phone still has to be accepted on the screen. |
 | Bluetooth: Trusted devices | Remembered devices; forget one here. |
 | Bluetooth: Auto-trust on pair | Remembers a device once paired, so it reconnects by itself. |
 

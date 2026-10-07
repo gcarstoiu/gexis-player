@@ -121,8 +121,8 @@ plugin ignores fields it does not know.
 
 | `kind` | means | must declare |
 |---|---|---|
-| `renderer` | plays audio and takes part in arbitration (ADR-0010) | `unit`, `release_action`, `capabilities` |
-| `service` | anything else — a monitoring agent, a scheduled job | `unit` only |
+| `renderer` | plays audio and takes part in arbitration (ADR-0010) | `capabilities`; `release_action` defaults to `disconnect`; `unit` is optional and, if given, must match the manifest's |
+| `service` | anything else — a monitoring agent, a scheduled job | nothing beyond `id`, `kind` and `contract` |
 
 **A `service` declares no capabilities and receives no arbitration.** This
 split is the point of the whole exercise: if a Beszel agent cannot be
@@ -302,8 +302,9 @@ configuration from the environment like most daemons do.
   amended). Its settings reach it before it starts
   ([ADR-0088](decisions/0088-a-plugins-settings-reach-its-unit-as-environment.md)).
   **Discovery is settled too**: a plugin ships `plugin.json` under
-  `/usr/share/gexis/plugins/<id>/`, and its id must match one before it may
-  connect. Connecting says a plugin is *running*, not that it exists.
+  `/usr/share/gexis/plugins/<id>/` (shipped with the player) or
+  `/var/lib/gexis/plugins/<id>/current/` (uploaded), and its id must match one
+  before it may connect. Connecting says a plugin is *running*, not that it exists.
 
   **Who puts it there is answered for uploads** by
   [ADR-0106](decisions/0106-plugins-you-install-and-update.md): a user uploads a
@@ -319,9 +320,8 @@ configuration from the environment like most daemons do.
   ([ADR-0089](decisions/0089-arbitration-carries-a-plugin-renderer.md)): a
   `renderer` that connects gets an adapter built around its session and
   registered with the supervisor, and its `acquire` and `release` reach
-  arbitration the way the three built-ins' events do. **Not yet exercised by a
-  real renderer** — that is Phase 11's Plexamp, and until it has happened this
-  document stays a draft.
+  arbitration the way the three built-ins' events do. Exercised by Plexamp (Finding 082) and by an uploaded
+  receiver (2026-09-30).
 
   Three things worth knowing before writing one:
 
