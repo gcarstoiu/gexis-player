@@ -1645,7 +1645,7 @@
                     <span class="item__name">{item.name}</span>
                     {#if item.state === 'locked'}<span class="lock"><span></span><span></span></span>{/if}
                   </span>
-                  {#if item.meta}<span class="item__meta" class:is-joined={joined}>{item.meta}</span>{/if}
+                  {#if item.meta}<span class="item__meta" class:is-joined={joined}>{item.state === 'connected' && netOpen && netLive?.name === item.name && netLive.speed ? `Connected · ${netLive.speed}` : item.meta}</span>{/if}
                 </span>
                 {#if item.state === 'saved'}
                   <!-- **Saved only, never the network in use.** Forgetting
