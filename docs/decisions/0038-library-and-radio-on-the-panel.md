@@ -76,8 +76,8 @@ recorded.
   leading articles ("The Beatles" under B) and folds accents in the order.
   This replaces `design/data-contract.md`'s own folding rule.
 - **The discography is grouped by LMS's `release_type`, as LMS gives it.**
-  Measured across all 4,554 albums: ALBUM 3,968, ALBUM COMPILATION 293,
-  ALBUM LIVE 95, ALBUM SOUNDTRACK 88, SINGLE 38, EP 34, and a tail of
+  Measured across all the albums: ALBUM by far the most, then ALBUM
+  COMPILATION, ALBUM LIVE, ALBUM SOUNDTRACK, SINGLE, EP, and a tail of
   combinations (EP LIVE, ALBUM COMPILATION DJ MIX, …).
 - **The rail's letter is folded** (George, 2026-09-18): `Ç` into C, `Í` into
   I, digits and anything else into `#`, so the rail is the design's `#` and
@@ -262,7 +262,7 @@ element:
 The bare resize returns a PNG twice the size of the original. **Repeated on
 20 random albums (step 1):** the bare `cover_300x300` was a PNG for 5 of 20,
 up to 245 KB; `cover_300x300_o.jpg` was a JPEG for all 20, median 22 KB,
-largest 53 KB (500 px: median 52 KB). 4,521 of 4,554 albums have an
+largest 53 KB (500 px: median 52 KB). 99 % of the albums have an
 `artwork_track_id`.
 
 SlimBrowse icons arrive as server paths (`plugins/…` and `/plugins/…`, both
@@ -356,8 +356,8 @@ The [H] rows are hardcoded as they are built in this phase.
 - `docs/DEVELOPMENT.md` Phase 7 criterion 1 lists the designed screens instead
   of eleven lists. The queue rail, and Home with the mini strip, are added as
   criteria.
-- Criterion 3's "lists of thousands" still applies: 7,292 artists in the grid
-  and the Browse artist pane. The 60,974 songs have no designed screen.
+- Criterion 3's "lists of thousands" still applies: thousands of artists in the grid
+  and the Browse artist pane. The tens of thousands of songs have no designed screen.
 - Now playing's Home and Queue buttons are wired, clearing the last
   `phase-7` markers.
 - Adding a streaming service still means our own work (ADR-0030); nothing here

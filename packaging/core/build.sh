@@ -67,7 +67,7 @@ done
 # outlives the environment it replaces. Its key in both forms: armoured for
 # apt's signed-by, binary for gpgv, which checks the channel file.
 install -D -m 755 /src/core/updater/gexis-update "$STAGE/usr/lib/gexis/gexis-update"
-for unit in gexis-update-check.service gexis-update-check.timer gexis-update-install.service; do
+for unit in gexis-update-check.service gexis-update-check.timer gexis-update-checknow.service gexis-update-install.service; do
 	install -D -m 644 "/src/core/updater/units/$unit" "$U/$unit"
 done
 install -D -m 644 /src/packaging/keys/gexis-release.asc "$STAGE/usr/share/gexis/keys/gexis-release.asc"

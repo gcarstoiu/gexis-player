@@ -25,6 +25,7 @@ import logging
 import os
 import random
 import sys
+import time
 from pathlib import Path
 
 import pygame
@@ -55,6 +56,36 @@ def meter_sections(path: Path) -> dict[str, dict[str, str]]:
 #: What the daemon publishes and this reads (ADR-0051 §1). Polled on the
 #: same hook as the metadata: a stat, and a read only when it has moved.
 SELECTION_PATH = Path("/run/gexis/visualisation.json")
+
+#: Whether the screen is up (ADR-0019 as amended 2026-10-07), written by the
+#: core: `0` hidden, `1` shown. Absent - an older core - means shown.
+SHOWN_PATH = Path("/run/gexis/visualiser-shown")
+#: Hidden, the loop runs at this interval and draws nothing of its own:
+#: five frames a second, enough to keep the track and selection current.
+HIDDEN_FRAME_S = 0.2
+
+
+class Shown:
+    """The core's flag, read when its file changes - a stat per frame."""
+
+    def __init__(self, path: Path = SHOWN_PATH) -> None:
+        self._path = path
+        self._stamp = None
+        self.value = True
+
+    def check(self) -> bool:
+        try:
+            stamp = self._path.stat().st_mtime_ns
+        except OSError:
+            self._stamp, self.value = None, True
+            return self.value
+        if stamp != self._stamp:
+            self._stamp = stamp
+            try:
+                self.value = self._path.read_text().strip() != "0"
+            except OSError:
+                self.value = True
+        return self.value
 
 METERS, SPECTRUM, BOTH = "meters", "spectrum", "both"
 #: What moves (ADR-0096 as amended), as `gexis_core.skins` decides it.
@@ -1060,11 +1091,18 @@ def main() -> int:
     # and a small read, and it costs nothing to be a little late to a skin.
     poll_every = max(1, int(peppy.util.meter_config[FRAME_RATE] / 10))
     frames = 0
+    shown = Shown()
 
     def per_frame() -> None:
         nonlocal track, frames, metadata
         frames += 1
-        if frames % poll_every == 0:
+        # ADR-0019 as amended: hidden, poll and draw nothing of our own, and
+        # hold the loop back so PeppyMeter's needles are drawn less often too
+        # (57 % of a core while music played, Finding 112).
+        hidden = not shown.check()
+        if hidden:
+            time.sleep(HIDDEN_FRAME_S)
+        if hidden or frames % poll_every == 0:
             # The same poll carries both files: which track is playing, and
             # what the panel last asked for (ADR-0051 §1).
             if selection.reload():
@@ -1093,6 +1131,8 @@ def main() -> int:
                 dirty = layer.draw(metadata)
                 if dirty:
                     pygame.display.update(dirty)
+        if hidden:
+            return
         # ADR-0112: the fanart frame changes only at a list change and during
         # a crossfade; then its area alone is repainted, bottom up, so the
         # needles, the glass and the text stay over the photo.

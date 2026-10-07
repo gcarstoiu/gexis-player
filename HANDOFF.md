@@ -1,6 +1,46 @@
 # Handoff
 
-Last updated: 2026-10-06, late (on R2D2).
+Last updated: 2026-10-07 (on R2D2).
+
+**2026-10-07 (state now):** the user manual, FAQ and technical guide are
+**approved and released into the repo** (George: *"you can go ahead and
+publish"*): on `phase-13b`/`phase-13d`, pushed, linked from README's new
+Documentation section; they reach `main` with the next release PR. The
+library's size is out of every current file (13d5eed; George: history
+stays as it is). On gexis: core/ui/player `0.9.2+git32.b8a250b`, system and
+lyrion-server `+git174.13d5eed` - Wi-Fi details with George's lock and
+chevron fixes, and sheets above the phone's mini player (a laptop's screen
+hid Close; checked at 4 desktop and 2 phone sizes, no button covered).
+**The first public release** (George, 2026-10-07: today's changes are part
+of it) needs, besides 13d's IQaudio test (George, on the v0.9.2 image), 13f's
+tries and removing passwordless sudo: (1) **done 2026-10-07** - the notes of
+every release being skipped (ADR-0110 amended; `r<tag>/history`, signed;
+`whats_new_all`; on gexis as `+git56.937356a`). **Not yet seen end to end:**
+the first release published with a history is the first that can show it,
+and only to a device already running this updater - check it on the release
+after 0.9.3; (2) ADR-0123 step 2, Cable (needs a cable in gexis); (3)
+ADR-0124, software volume; (4) **ADR-0125, a problem report - built
+2026-10-07** (`problem_report.py`, `POST /report`, the System row, the
+GitHub issue form; tuned against gexis's real journal; packages
+`0.9.2+git60.270b9bb` built, **not yet installed or tried end to end**:
+gexis went offline when George's IQaudio card went in; e-mail route
+george.carstoiu@gexis.net added 2026-10-07) and (5)
+**ADR-0126, hardware reports from users** - both accepted 2026-10-07, rows
+in ADR-0022; **owed by George: the project e-mail address** for problem
+reports from people without GitHub.
+
+**guestpi (2026-10-07):** George's second Pi with the IQaudio DAC+ and the
+13.3", flashed from v0.9.2 (my key on it), now on the preview
+`0.9.2+git60` + system `+git174`. **IQaudio and the 13.3" detected fine**
+(George). Problem report tried end to end there (download from a phone-sized
+browser; go-librespot's titles, phone name and account then taken out too).
+Finding 113: opening screens drops more frames on the 13.3" (Home 9 %).
+**Skin packs capped while in use** (ADR-0111 amended; George agreed "in
+use" = playing or Spotify/Bluetooth active in the last 10 min): on guestpi,
+12.5 MB/s idle, then 3.1-3.2 MB/s from the moment music played, resuming
+the file (`+git73`). Not tried on the device: the Spotify/Bluetooth trigger
+(needs a phone; unit-tested) and the return to full speed after 10 min. **Built, not yet seen:** the
+screen applied during setup (ADR-0109 amended) - needs a fresh setup.
 
 **0.9.2 released 2026-10-06 on Testing (serial 25), from `phase-13d`**
 (tag v0.9.2 at 3225ec1): 13f's Lyrion menus behind Extended navigation,
@@ -8,7 +48,7 @@ Minimise (ADR-0122), the phone sheet in one row, the enrichment tile, the
 on-the-go enrichment fixes, the update screen's end and progress. Image
 `image/deploy/2026-10-06-gexis-player-v0.9.2.img` in the main checkout;
 111 checks passed; check-upstream ok (Plexamp 4.13.2, Lyrion 9.1.1).
-**The PR into `main` waits for George.** Phase 13d stays open (board
+**PR #50 into `main` waits for George.** Phase 13d stays open (board
 tests); 13f stays open (George's tries, the hidden-library hour).
 
 **13f: Claude Design's look is built, Standard and Bar** (ADR-0118
@@ -56,7 +96,7 @@ release** (George, 2026-10-04): never push a release onto an open PR.
 
 | What | State |
 |---|---|
-| Lyrion server (ADR-0115, 19 decisions; Finding 109) | Shipped through 0.8.6. Measured on George's 61,362 files: scans 2 h 7 min (High) / 1 h 59 min (Normal), memory 1,876 / 1,191 MB, no audio gaps during a scan. Memory limit = the player's less 1 GB; Normal under 4 GB |
+| Lyrion server (ADR-0115, 19 decisions; Finding 109) | Shipped through 0.8.6. Measured on George's tens of thousands of files: scans 2 h 7 min (High) / 1 h 59 min (Normal), memory 1,876 / 1,191 MB, no audio gaps during a scan. Memory limit = the player's less 1 GB; Normal under 4 GB |
 | Fetched software (ADR-0100 amended) | Pinned versions; `packaging/check-upstream.sh` before each release; a new pin is fetched by the update that brings it |
 | Change logs (ADR-0116) | `release_notes.json` is the one source: the player's page, `CHANGELOG.md` on `main`, the signed notes |
 | Screens (ADR-0109) | The 13.3" tested at 1920 x 1080 and recognised; a case listed once as its panel. **A new screen at start: a recognised one is switched to with Keep (amended 2026-10-04), any other asked about** - both swaps passed on George's panels, 2026-10-04. Crowd-sourced fingerprints postponed (recorded in the ADR). The 13.3"'s brief blackouts were its HDMI cable (LESSONS 56) |
@@ -67,6 +107,43 @@ release** (George, 2026-10-04): never push a release onto an open PR.
 `phase-13b` merged - core, player and ui `0.9.1+git60.4f0662e`, Extended
 navigation on, kiosk.env back to its original (debug port off, checksum
 2fecdd6d...). Check playback before any restart.
+
+**After 0.9.2 (2026-10-06, night), on `phase-13b`:**
+- Updater: apt-listchanges off (the install bar's 16 s at 0), DpkgShare's
+  rate re-measured (3.5 MB/s), the bar held full before the tick
+  (ADR-0110 amended); **Check for updates now runs a check-only unit**
+  (`gexis-update-checknow.service`) - it had started the nightly unit,
+  which installs on Automatic. Phone: Settings' lists end clear of the
+  sheet (22 px, measured on every page). On gexis as preview
+  `0.9.2+git5` except the check-only unit (committed after).
+- **Panel speed: Finding 112, fixed.** The slower opens were the hidden
+  visualiser drawing (57 % of a core while playing). George chose option 1:
+  ADR-0019 amended - hidden, it does not draw (`/run/gexis/visualiser-shown`).
+  Now 6 % hidden, shown in 0.3 s with a finished frame; every open at or
+  below 29 September (1-3 % dropped). On gexis as preview core/player
+  `0.9.2+git13.c8d3e83`, gexis-system `0.8.9+git160.0be27be`. `panel-frames.py`
+  now ignores the hidden library and measures all 16 interactions.
+- **ADR-0123 / ADR-0124 accepted 2026-10-07** (rows in ADR-0022), built one
+  step at a time: **step 1, Wi-Fi details - built, on gexis**, then George's
+  two findings fixed (one chevron; the lock alone at the line's end, open
+  where the password is known, both the same 13 x 15): ui/player
+  `0.9.2+git28`, core `0.9.2+git25` (restarted) on gexis; checked on the
+  panel and on phones 412 and 360 px wide. docs-drafts and the manual page updated.
+  **Next: step 2, Cable** (manual address, 60 s keep) - gexis has `eth0` but no
+  cable plugged; **step 3, software volume** (`meter -> softvol -> card`;
+  verify passthrough at 100 % and the HDMI placement).
+- **Docs (drafts) - HELD until George gives the go-ahead** (2026-10-06:
+  "Do not release them until I give the go ahead"): `docs/manual/`,
+  `docs/FAQ.md`, `docs/tech/` live ONLY on the local branch `docs-drafts`
+  (commit 74fc7f9), taken off `phase-13b` so no release carries them.
+  Manual and FAQ published privately for his comments (watched);
+  `docs/HARDWARE.md` updated and published as a commentable doc.
+  The tech-docs pass listed where ADRs and `docs/ARCHITECTURE.md` disagree
+  with the code (ADR-0105 §4, 0106 item 2, 0107's table, 0108's main text,
+  0110, 0113, 0040 §1, 0031/0104 on setup; stale docstrings in volume.py,
+  remote_volume.py, adapters/base.py, NowPlaying.svelte; vite dev proxy
+  missing routes) - **to be reconciled, not yet done.**
+- Plexamp 0.4.0 was already released and pinned (shipped in 0.9.2).
 
 **Second round of George's findings (2026-10-06), built and on gexis:**
 - One-tap search also for Qobuz's and Spotty's "Search" folders (opened
@@ -258,7 +335,7 @@ the SSH key only, since a saved Wi-Fi skips setup.
   card space for the skins, and the Pi's load at 1920 x 1080. **And the
   Lyrion server** (George, 2026-10-03: *"record the results for hardware
   recommendations"*; Finding 109): memory by library size - about 27 KB a
-  file while scanning, 1,876 MB for 61,362 files, the player itself needing
+  file while scanning, 1,876 MB for tens of thousands of files, the player itself needing
   about 1 GB beside it, so no server on a 1 GB Pi (ADR-0115 decision 18);
   card space - 151 MB of library and 670 MB of artwork cache for those files;
   time - 2 h 7 min for a first scan over the network, 26 min to check.

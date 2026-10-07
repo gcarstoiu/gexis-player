@@ -1274,6 +1274,15 @@
         "default": false
       },
       {
+        "key": "problem_report",
+        "type": "action",
+        "label": "Problem report",
+        "marks": "R",
+        "note": "Downloads the player's logs, versions, hardware and settings in one file, to attach to a report of a problem. Addresses, names, networks, shares, keys and what you play are taken out on the player first, but read the file before sharing it.",
+        "kind": "report",
+        "default": null
+      },
+      {
         "key": "factory_reset",
         "type": "action",
         "label": "Factory reset",

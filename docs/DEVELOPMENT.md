@@ -343,7 +343,7 @@ carried out explicitly deferred rather than silently unmet. Sub-phases
 | Bluetooth's release ladder still does not free the device | 4 | Found 2026-09-08, never re-reproduced since the busy-check fix; George's decision 2026-09-10 to defer. ADR-0010 "Open". |
 | Fixed output mode is unimplemented | 5 | Only variable mode is built and verified. ADR-0018. Most naturally built once mode selection has a UI (Phase 4+). |
 | Criterion 7 unproven for Bluetooth pairs | 7 | Not scriptable — contested rounds need a human tapping a phone each time. |
-| Cross-rate takeover gap unmeasured | 8, 9 | A 60,974-track library scan found zero non-44.1kHz files. Needs test content sourced first. **This half of criterion 8 is unmet, not met-with-caveats.** |
+| Cross-rate takeover gap unmeasured | 8, 9 | A large library scan found zero non-44.1kHz files. Needs test content sourced first. **This half of criterion 8 is unmet, not met-with-caveats.** |
 | Bluetooth takeover gap unmeasured | 8, 9, 10 | Same scriptability limit. Bluetooth pairs therefore show the transition screen by default. |
 
 Also carried forward, decided rather than open: Bluetooth discoverability
@@ -432,7 +432,7 @@ must happen within three minutes of boot.
    LMS↔Spotify pair only.** Two legs are deferred, both for reasons of
    what can actually be measured rather than of effort:
    - **Cross-rate: no content exists to test with.** A full library scan
-     (60,974 tracks, LMS's own `songs` JSON-RPC query, paginated) found
+     (tens of thousands of tracks, LMS's own `songs` JSON-RPC query, paginated) found
      **zero non-44.1kHz tracks**. Testing this leg would mean sourcing and
      adding dedicated test content first. Deferred, not skipped — the
      criterion's cross-rate half is unmet and stays unmet.
@@ -993,7 +993,7 @@ subtree of nine items.
    *not* been executed against a real player.
 3. **Pagination on lists of thousands.** Evidence updated 2026-09-17
    (Finding 029): Songs is out of scope and all 916 album artists arrive in
-   one 98 KB request in 23 ms; the long lists that remain are albums (4,567),
+   one 98 KB request in 23 ms; the long lists that remain are albums (thousands),
    Radio Now Playing (950) and Local Radio stations (194).
 4. **Artwork** via `artwork_track_id` → `/music/<id>/cover`.
 5. **Radio browses via SlimBrowse rooted at `["radios","menu:radio"]`**, never
@@ -1404,7 +1404,7 @@ before the next, as Phase 7 ran.
    wired.
 
 **Parked by George (2026-09-18), for Phase 9 or later: a background sweep
-for missing album art.** 155 of the library's 4,567 albums have no
+for missing album art.** 155 of the library's thousands of albums have no
 `artwork_track_id` - live bootlegs, Japan mini-LPs, deluxe editions - and
 Cover Art Archive could fill them. It wants a Settings action, a job that
 survives a restart, and pacing so it does not starve foreground lookups of
@@ -1635,7 +1635,7 @@ ADRs were updated.
    - **Few album covers were found.** George's diagnosis — modifiers in the
      album name — was right and was the smaller half: the query was also
      being *folded*, and `releasegroup:"57th & 9th"` scores 100 where
-     `"57th 9th"` returns nothing. **31.2 % of his 4,567 albums** carry a
+     `"57th 9th"` returns nothing. **31.2 % of his thousands of albums** carry a
      character folding removes, against 11.1 % carrying a modifier. Measured
      old against new on 40 albums: **27 found → 32, none lost**
      ([ADR-0080](decisions/0080-a-cover-is-matched-on-a-title-both-catalogues-agree-on.md),
@@ -2883,7 +2883,7 @@ hub), ADR-0115 decisions 1-19 (the Lyrion server) and Finding 109.
    on `gexis` (2026-10-03). The Beszel hub ships in the image and runs on
    `gexis`; off is its removal (ADR-0114).
 2. **Met, measured** (Finding 109): 46 minutes of playback through the
-   player's Lyrion client while its own server scanned 61,362 files from
+   player's Lyrion client while its own server scanned tens of thousands of files from
    scratch - 0 underruns and 0 XRUNs in the client's own log, load up to
    7.05, 79.8 °C without throttling - and George heard nothing. Not
    measured: other renderers under the same load.

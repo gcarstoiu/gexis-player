@@ -141,7 +141,7 @@ with the playlist's tracks.
 | Radio Now Playing | **955** | 32-43 ms (pages at 0, 100, 200, 800) |
 | Qobuz Bestsellers | 189 | 495 ms the first, 12 ms the next |
 | Spotty What's New | 98 | 770 ms first open (one page) |
-| My Music Albums | 4,780 | 30 ms |
+| My Music Albums | thousands | 30 ms |
 
 - **Pages are asked for by start and count** (`<cmd> <start> <n> … menu:1`),
   and `count` comes with the first: the panel's windowed lists (ADR-0067) can
@@ -191,6 +191,6 @@ server (Jazz Composers, Classical Music by Conductor: `enabled: "0"` in
   text, weight and `params`. A command of Material's, so only where
   Material is installed.
 - **Each opens like the menu's own:** `browselibrary items <start> <n>
-  <params> menu:1`, read here in 9-261 ms (Flop Tracks: 65,283 tracks).
+  <params> menu:1`, read here in 9-261 ms (Flop Tracks: tens of thousands of tracks).
 - **Disks and folders** browses the server's own file system (`home`, `lms`,
   `media` here).

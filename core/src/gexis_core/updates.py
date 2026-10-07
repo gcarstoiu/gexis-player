@@ -18,7 +18,11 @@ from pathlib import Path
 logger = logging.getLogger("gexis_core.updates")
 
 STATUS = Path("/var/lib/gexis/updates/status.json")
-CHECK_UNIT = "gexis-update-check.service"
+#: What "Check for updates" starts: a check, never an install. The nightly
+#: timer's unit, gexis-update-check.service, runs `scheduled`, which installs
+#: when Updates is Automatic - wrong for a button that says it installs
+#: nothing (2026-10-06).
+CHECK_UNIT = "gexis-update-checknow.service"
 INSTALL_UNIT = "gexis-update-install.service"
 
 
@@ -147,6 +151,10 @@ def view(path: Path = STATUS, installed: str | None = None, running: bool | None
         "steps": doc.get("steps"),
         "progress": doc.get("progress"),
         "whats_new": doc.get("whats_new"),
+        # ADR-0110 amended 2026-10-07: every release being skipped, newest
+        # first; None from an updater older than that, or a release with no
+        # history - the screen shows `whats_new` alone then.
+        "whats_new_all": doc.get("whats_new_all"),
         "message": doc.get("message"),
         "reboot": bool(doc.get("reboot")),
         "at": doc.get("at"),

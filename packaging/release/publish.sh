@@ -151,6 +151,15 @@ grep -qxE 'New|Fixed|Good to know' "$DEST/notes.txt" && grep -q '^• ' "$DEST/n
 	|| { echo "ERROR: notes.txt says whether the update restarts; leave that to the update modal (ADR-0110)" >&2; exit 1; }
 sed -E 's/^(New|Fixed|Good to know)$/### \1/; s/^• /- /' "$DEST/notes.txt" > "$DEST/notes.md"
 gpg --batch --yes -u "$SIGNER" --clearsign -o "$DEST/notes" "$DEST/notes.txt"
+# **Its history** (ADR-0110 amended 2026-10-07, George: "the update screen
+# should show all until the current one"): every release's notes from the
+# same tagged file, signed, so a device several releases behind shows what
+# each one it skips changed.
+git show "v$version:core/src/gexis_core/release_notes.json" \
+	| python3 -c 'import json, sys; r = json.load(sys.stdin)["releases"]; json.dump({"releases": {v: {"date": e.get("date"), "notes": e["notes"]} for v, e in r.items()}}, sys.stdout, ensure_ascii=False, indent=1)' \
+	> "$DEST/history.json" && [ -s "$DEST/history.json" ] \
+	|| { echo "ERROR: could not build the release history from v$version's release_notes.json" >&2; exit 1; }
+gpg --batch --yes -u "$SIGNER" --clearsign -o "$DEST/history" "$DEST/history.json"
 gpg --batch --verify "$DEST/parts" 2>/dev/null || { echo "ERROR: $DEST/parts does not verify" >&2; exit 1; }
 # The parts: each a pre-release of its own, never GitHub's "latest".
 for part in "$DEST"/repos/*/; do
@@ -169,7 +178,7 @@ exists "$tag" \
 		--title "gexis-player $version" \
 		--notes-file "$DEST/notes.md"
 gh_retry gh release edit "$tag" --repo "$REPO" --notes-file "$DEST/notes.md" >/dev/null
-gh_retry gh release upload "$tag" --repo "$REPO" --clobber "$DEST/parts" "$DEST/notes"
+gh_retry gh release upload "$tag" --repo "$REPO" --clobber "$DEST/parts" "$DEST/notes" "$DEST/history"
 if [ "${2:-}" = --channel ]; then
 	channel_file "${3:?--channel needs testing or stable}" "$tag"
 fi

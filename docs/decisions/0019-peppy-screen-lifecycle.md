@@ -242,3 +242,25 @@ possible, since the renderer is in the browser, but no requirement asks for it.
 - Perceived latency of a visibility switch on an already-composited layer stack
   at 1280x800 on a Pi 4. The no-delay requirement is assumed achievable by
   construction; it has not been measured.
+
+## Amended 2026-10-07: hidden, it does not draw
+
+George, on [Finding 112](../findings/112-the-slower-opens-are-the-hidden-visualiser.md)
+(*"Let's do option 1"*): the screen stays a running process, hidden, as above -
+but **while hidden it no longer draws**. Finding 025 measured the hidden
+process at 8 % of a core; with the moving skins since (ADR-0096's turning
+record, ADR-0112's fanart frame) it took 57 % while music played, and the
+panel's screen opens dropped 3-8 % of frames instead of about 1 %.
+
+- The core writes `/run/gexis/visualiser-shown` (`1` or `0`) beside
+  `visualisation.json`: `0` when it starts and after every hide, `1` before
+  every show.
+- While it reads `0`, the driver skips its own drawing - the record and reels,
+  the fanart frame, the scrolling title, the spectrum - and slows its loop to
+  five frames a second, which slows PeppyMeter's own needle drawing with it.
+  It still polls the track and the selection, so the screen is current when
+  shown. The meter pipes cannot back up: each read drains them.
+- **Entry stays finished:** the core writes `1`, waits 0.25 s - at least one
+  full frame at the driver's normal rate after its slowest hidden frame - and
+  only then raises the window.
+- No file (an older core) means shown: the driver draws as before.

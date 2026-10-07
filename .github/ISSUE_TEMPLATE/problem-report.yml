@@ -1,0 +1,46 @@
+name: Report a problem
+description: Something on the player does not work as it should. Attach the player's problem report.
+title: "[Problem] "
+labels: ["problem report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time. The player can prepare a file with what is needed to look into a
+        problem: **Settings → System → Problem report**, on a phone or computer on the same network.
+        Personal details are taken out on the player before the file is written, but please read it
+        before attaching it here - this page is public. Without a GitHub account, e-mail the
+        file to george.carstoiu@gexis.net instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Settings → System → Software update shows it.
+      placeholder: "0.9.3"
+  - type: dropdown
+    id: often
+    attributes:
+      label: How often does it happen?
+      options:
+        - Every time
+        - Sometimes
+        - Once so far
+  - type: textarea
+    id: report
+    attributes:
+      label: Problem report
+      description: Drag the gexis-report-....zip file here.
+  - type: checkboxes
+    id: read
+    attributes:
+      label: Before sending
+      options:
+        - label: I have read the report's files and nothing in them is something I do not want to share.
+          required: false

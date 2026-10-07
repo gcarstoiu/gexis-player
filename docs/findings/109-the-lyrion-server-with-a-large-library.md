@@ -1,4 +1,4 @@
-# Finding 109 — The Lyrion server with a 61,000-file library
+# Finding 109 — The Lyrion server with a large library
 
 **Date:** 2026-10-03
 **Question:** What does the Lyrion server plugin (ADR-0115) cost a Pi 4 with a
@@ -9,13 +9,12 @@ compare with a Lyrion server on other hardware?
 **Scope.** `gexis`: Raspberry Pi 4 Model B rev 1.5, 4 GB (3,795 MB usable),
 on **Wi-Fi**, Gexis Player 0.8.4 with core previews, Lyrion 9.1.1 run at the
 lowest CPU and I/O priority (ADR-0115). The library: George's NAS share
-`//Tower.local/Music` over SMB, mounted read-only, **61,362 files** (61,347
-songs, 4,571 albums, 7,313 artists once scanned). Sampled every 15 s: the
+`//Tower.local/Music` over SMB, mounted read-only, **tens of thousands of files** (tens of thousands of songs, thousands of albums, thousands of artists once scanned). Sampled every 15 s: the
 unit's cgroup memory (own memory - `anon` - and file cache apart), each
 Lyrion process's RSS, CPU time, load, temperature, Lyrion's scan progress.
 Speeds: `lyrion_bench.py` (scratch) - eight requests, each ten times after
 one warm-up, one at a time, median and slowest. The other server: George's
-`192.168.178.188`, *Lyrion Music Server (Docker)* 9.1.1, 61,225 songs; its
+`192.168.178.188`, *Lyrion Music Server (Docker)* 9.1.1, tens of thousands of songs; its
 hardware was not recorded.
 
 **Not measured:** a Pi 4 with other than 4 GB, or any other model; a wired
@@ -105,7 +104,7 @@ Maximum / other - status 9 / 10 / 9 / 12; artists 60 / 60 / 59 / 21; albums
 Lyrion labels High *"recommended for machines with 1+ GB RAM"* and Maximum
 *"recommended for libraries with more than 50,000 tracks and machines with
 2+ GB RAM"* (`strings.txt`). On a Pi 4 the measurements point the other way
-for scanning: a 61,000-file library needed 1.9 GB on High (and so on
+for scanning: a large library needed 1.9 GB on High (and so on
 Maximum) and 1.2 GB on Normal.
 
 ## For the hardware requirements
@@ -118,7 +117,7 @@ runs:
 | Pi 4 | Lyrion may use | Normal (13 KB a file) | High (27 KB a file) |
 |---|---|---|---|
 | 2 GB | about 0.8 GB | about 34,000 | about 16,000 |
-| 4 GB | about 2.7 GB | about 187,000 | about 90,000 (61,362 tested) |
+| 4 GB | about 2.7 GB | about 187,000 | about 90,000 (tens of thousands tested) |
 | 8 GB | about 6.8 GB | about 500,000 | about 240,000 |
 
 The 2 GB and 8 GB rows assume about 1.85 GB and 7.8 GB usable; neither was
@@ -129,7 +128,7 @@ checked. Decision 19 makes Normal the first setting under 4 GB.
 Measured on `gexis` the same evening, 21:20-22:06: music from George's other
 Lyrion server (the Docker one) through the player's own Lyrion client
 (squeezelite) to the HiFiBerry DAC+ HD, while the player's own Lyrion server
-scanned the 61,362 files from scratch (`wipecache` at 21:26:10, Database
+scanned the tens of thousands of files from scratch (`wipecache` at 21:26:10, Database
 Memory Config High, the 2,771 MB limit). Gaps were counted by the client
 itself: its output logging was turned up for the test (`-d output=info`), and
 it logs **"output underrun"** and **"XRUN"** when the sound card runs dry -

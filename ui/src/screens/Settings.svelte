@@ -11,6 +11,7 @@
   import { components, update } from '../lib/state.js';
   import UpdateModal from './UpdateModal.svelte';
   import ReleaseNotes from './ReleaseNotes.svelte';
+  import ReleaseHistory from './ReleaseHistory.svelte';
   import NoteText from '../lib/NoteText.svelte';
   import {
     settingsGroups,
@@ -73,6 +74,31 @@
   let listError = $state(null);
   // The network being joined, and how that is going.
   let joinItem = $state(null);
+  //: ADR-0123: the connected network's details, unfolded under its line and
+  //: read again every 5 s while they are open - signal and speed move.
+  let netOpen = $state(false);
+  let netLive = $state(null);
+  // A speed never breaks between its number and its unit ("325 / Mb/s").
+  const keepUnit = (meta) => meta.replace(/(\d) ([GMk]b\/s)/, '$1\u00a0$2');
+  $effect(() => {
+    if (!netOpen) return;
+    let stop = false;
+    const read = async () => {
+      try {
+        const r = await fetch('/network/wifi');
+        const body = r.ok ? await r.json() : null;
+        if (!stop) netLive = body?.connected ? body : null;
+      } catch {
+        // A missed read keeps the last one on screen.
+      }
+    };
+    read();
+    const timer = setInterval(read, 5000);
+    return () => {
+      stop = true;
+      clearInterval(timer);
+    };
+  });
   let join = $state(null);
   let joinError = $state(null);
   // The backup being restored, while the shared progress card shows it -
@@ -126,6 +152,60 @@
       .join('  \u00b7  ')
   );
   const sheet = $derived(sheetKey ? asSheet(rowOf(sheetKey)) : null);
+  //: ADR-0125: the problem report - built on the player, downloaded here.
+  //: The panel has nowhere to save a file, so there the sheet says where to
+  //: open it instead.
+  const REPORT_ISSUE = 'https://github.com/gcarstoiu/gexis-player/issues/new?template=problem-report.yml';
+  //: ADR-0125 decision 5: for people without a GitHub account (George,
+  //: 2026-10-07). Shown as text with Copy - a mail link may open nothing.
+  const REPORT_EMAIL = 'george.carstoiu@gexis.net';
+  let reportCopied = $state(false);
+  async function copyReportEmail() {
+    try {
+      await navigator.clipboard.writeText(REPORT_EMAIL);
+      reportCopied = true;
+      setTimeout(() => (reportCopied = false), 2000);
+    } catch {
+      // No clipboard here: the address stays on screen to copy by hand.
+    }
+  }
+  let reportNote = $state('');
+  let reportBusy = $state(false);
+  let reportDone = $state(null);
+  let reportError = $state(null);
+  const onPanel = () => document.documentElement.classList.contains('on-panel');
+  $effect(() => {
+    if (sheet?.kind !== 'report') {
+      reportNote = '';
+      reportDone = null;
+      reportError = null;
+    }
+  });
+  async function downloadReport() {
+    if (reportBusy) return;
+    reportBusy = true;
+    reportError = null;
+    try {
+      const r = await fetch('/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note: reportNote }),
+      });
+      if (!r.ok) throw new Error(r.status === 409 ? 'A report is already being prepared. Try again in a minute.' : `HTTP ${r.status}`);
+      const name = /filename="([^"]+)"/.exec(r.headers.get('Content-Disposition') ?? '')?.[1] ?? 'gexis-report.zip';
+      const url = URL.createObjectURL(await r.blob());
+      const a = Object.assign(document.createElement('a'), { href: url, download: name });
+      document.body.append(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      reportDone = { name, summary: r.headers.get('X-Report-Summary') ?? '' };
+    } catch (e) {
+      reportError = plainly(e?.message, 'The report could not be prepared. Try again.');
+    } finally {
+      reportBusy = false;
+    }
+  }
   const picker = $derived(pickerKey ? rowOf(pickerKey) : null);
 
   // ADR-0044 §3 and §6: the API publishes every row and says of each whether
@@ -954,6 +1034,11 @@
       flash(`${row.label} cannot be changed yet`);
       return;
     }
+    if (row.kind === 'report') {
+      if (reportDone) sheetKey = null;
+      else await downloadReport();
+      return;
+    }
     if (row.type === 'action') {
       sheetKey = null;
       const result = await runSetting(row.key);
@@ -1133,9 +1218,12 @@
                       <span class="row__value row__value--tile">{r.value}</span>
                       <!-- ADR-0116: only while it waits; once installed, its
                            notes are under Change logs. -->
-                      {#if $update?.whats_new && $update?.state === 'available'}
-                        <span class="row__note">What's new in {$update.release}</span>
-                        <span class="tile__notes"><ReleaseNotes text={$update.whats_new} /></span>
+                      {#if ($update?.whats_new || $update?.whats_new_all?.length) && $update?.state === 'available'}
+                        <!-- ADR-0110 amended 2026-10-07: every release it skips. -->
+                        <span class="row__note">{($update.whats_new_all?.filter((e) => e?.release).length ?? 0) > 1
+                          ? `What's new since ${$update.installed}`
+                          : `What's new in ${$update.release}`}</span>
+                        <span class="tile__notes"><ReleaseHistory update={$update} /></span>
                       {:else if r.note}<span class="row__note">{r.note}</span>{/if}
                     </span>
                     <button
@@ -1462,6 +1550,36 @@
         {#if joinItem && sheet.note}<div class="sheet__note"><NoteText text={sheet.note} /></div>{/if}
       </div>
 
+      {#if sheet.kind === 'report'}
+        <div class="report">
+          {#if onPanel()}
+            <p class="report__text">
+              The screen has nowhere to save a file. Open Settings on a phone or computer on the same
+              network, at <span class="report__addr">{device.hostname ? `${device.hostname}.local` : device.address}</span>,
+              then System → Problem report.
+            </p>
+          {:else if reportDone}
+            <p class="report__text">
+              Saved as <span class="report__addr">{reportDone.name}</span>. Taken out: {reportDone.summary || 'nothing'}.
+            </p>
+            <p class="report__text">
+              Read it, then attach it to a report on GitHub:
+              <a class="report__link" href={REPORT_ISSUE} target="_blank" rel="noopener">Report a problem</a>.
+            </p>
+            <p class="report__text">
+              Or e-mail it to <span class="report__addr">{REPORT_EMAIL}</span>
+              <button type="button" class="report__copy" onclick={copyReportEmail}>{reportCopied ? 'Copied' : 'Copy'}</button>
+            </p>
+          {:else}
+            <label class="report__label" for="report-note">What happened? (optional)</label>
+            <textarea id="report-note" class="report__note" rows="4" maxlength="4000" bind:value={reportNote}
+              placeholder="What you did, what you expected, what happened instead"></textarea>
+            {#if reportBusy}<p class="report__text report__text--quiet">Preparing the report. It takes up to a minute.</p>{/if}
+            {#if reportError}<p class="report__text report__text--warn">{reportError}</p>{/if}
+          {/if}
+        </div>
+      {/if}
+
       <!-- ADR-0044 §2, both forms. A **string** warns about the row and is
            shown the whole time the sheet is open, because what it describes
            happens whatever is typed (`device_name`); an **object** warns
@@ -1600,14 +1718,15 @@
                    are on is how the sheet is dismissed, and refusing it
                    leaves the sheet looking stuck (George, on the panel,
                    2026-09-20). -->
-              {@const inert = item.state === 'connected'}
+              {@const inert = item.state === 'connected' && !item.details}
               <button
                 class="item"
                 class:is-joined={joined}
                 class:item--static={inert}
                 type="button"
                 disabled={inert}
-                onclick={() => chooseItem(item)}
+                aria-expanded={item.state === 'connected' && item.details ? netOpen : undefined}
+                onclick={() => (item.state === 'connected' ? (netOpen = !netOpen) : chooseItem(item))}
               >
                 {#if item.bars}
                   <span class="bars" class:is-joined={joined}>
@@ -1619,10 +1738,18 @@
                 <span class="item__text">
                   <span class="item__title">
                     <span class="item__name">{item.name}</span>
-                    {#if item.state === 'locked'}<span class="lock"><span></span><span></span></span>{/if}
                   </span>
-                  {#if item.meta}<span class="item__meta" class:is-joined={joined}>{item.meta}</span>{/if}
+                  {#if item.meta}<span class="item__meta" class:is-joined={joined}>{keepUnit(item.state === 'connected' && netOpen && netLive?.name === item.name && netLive.speed ? `Connected · ${netLive.speed}` : item.meta)}</span>{/if}
                 </span>
+                <!-- The lock alone, at the end of the line before its action,
+                     leaves the name its room (George, 2026-10-07): closed
+                     where a password is still needed, open where one was
+                     given before. -->
+                {#if item.state === 'locked'}
+                  <span class="lock" role="img" aria-label="Password needed"><span></span><span></span></span>
+                {:else if item.secured}
+                  <span class="lock lock--open" role="img" aria-label="Password saved"><span></span><span></span></span>
+                {/if}
                 {#if item.state === 'saved'}
                   <!-- **Saved only, never the network in use.** Forgetting
                        the one the device is reachable over drops the daemon
@@ -1641,10 +1768,20 @@
                     onclick={(e) => { e.stopPropagation(); doForget(item); }}
                     onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); doForget(item); } }}
                   >Forget</span>
-                {:else if item.state === 'locked'}
-                  <span class="item__need">Password needed</span>
+                {/if}
+                {#if item.state === 'connected' && item.details}
+                  <span class="netchev" class:netchev--open={netOpen} aria-hidden="true"></span>
                 {/if}
               </button>
+              {#if item.state === 'connected' && item.details && netOpen}
+                <!-- ADR-0123: the connected network in detail, under its line
+                     rather than in a row of its own. -->
+                <dl class="netinfo">
+                  {#each (netLive?.name === item.name ? netLive.details : item.details) as [k, v] (k)}
+                    <div class="netinfo__row"><dt>{k}</dt><dd>{v}</dd></div>
+                  {/each}
+                </dl>
+              {/if}
             {/each}
             {#if sheet.hint}<div class="items__hint">{sheet.hint}</div>{/if}
           </div>
@@ -1756,15 +1893,17 @@
             Cancel
           {/if}
         </button>
-        {#if join === 'error' || joinItem || restorePending || choicePending !== null || sheet.type === 'action' || sheet.type === 'toggle' || sheet.type === 'text' || sheet.type === 'share' || sheet.type === 'share-login' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
+        {#if join === 'error' || joinItem || restorePending || choicePending !== null || (sheet.type === 'action' && !(sheet.kind === 'report' && onPanel())) || sheet.type === 'toggle' || sheet.type === 'text' || sheet.type === 'share' || sheet.type === 'share-login' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
           <button
             class="btn btn--confirm"
             class:btn--danger={sheet.danger || restorePending || choicePending !== null}
             type="button"
-            disabled={busy}
+            disabled={busy || reportBusy}
             onclick={confirmSheet}
           >
-            {#if busy}
+            {#if sheet.kind === 'report'}
+              {#if reportBusy}<span class="btn__spin"></span>Preparing…{:else if reportDone}Done{:else}Download{/if}
+            {:else if busy}
               <span class="btn__spin"></span>Saving
             {:else if join === 'error'}
               Try again
@@ -2299,9 +2438,15 @@
     background: var(--accent-lms);
   }
 
+  /* A sheet and its dimming sit above the phone's mini player (20) - as the
+     confirmations (60) and the full-screen picker (30) already did - and
+     below that picker. Under it, a tall sheet's Close and its last options
+     were covered on a laptop's screen (George, 2026-10-07). On the panel
+     both stay inside the screen layer, so nothing there changes. */
   .scrim {
     position: absolute;
     inset: 0;
+    z-index: 24;
     background: rgba(8, 12, 16, 0.62);
     /* No `backdrop-filter`: ADR-0041. A live blur of the screen behind a
        sheet costs this panel two thirds of its frames, whatever its radius
@@ -2317,6 +2462,7 @@
 
   .sheet {
     position: absolute;
+    z-index: 25;
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
@@ -2681,12 +2827,22 @@
     border-radius: 2px;
     background: rgba(233, 238, 242, 0.6);
   }
+  /* Open: the shackle lifted and free on one side. */
+  /* The closed lock's own shackle, in its own place: only its left leg
+     cut short, free of the body. Lifted or moved sideways, the open lock
+     read larger than the closed one (George, 2026-10-07); this way both
+     fill the same 13 x 15. */
+  .lock.lock--open span:last-child {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 100%, 50% 50%, 0 50%);
+  }
   .lock span:last-child {
     position: absolute;
     left: 3px;
     top: 0;
     width: 7px;
-    height: 8px;
+    /* Down to the body's top edge, not into it: the two translucent layers
+       overlapping drew a brighter square at each leg. */
+    height: 6px;
     border: 2px solid rgba(233, 238, 242, 0.6);
     border-bottom: none;
     border-radius: 4px 4px 0 0;
@@ -2758,17 +2914,6 @@
   }
   .forget:active {
     transform: scale(0.95);
-  }
-  .item__need {
-    flex-shrink: 0;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: rgba(233, 238, 242, 0.6);
-    max-width: 150px;
-    text-align: right;
-    text-wrap: pretty;
   }
 
   /* The search, while it is running. */
@@ -3354,5 +3499,115 @@
   }
   .toast.is-shown {
     opacity: 1;
+  }
+  /* The phone's closed mini player stands over the foot of the page: the
+     scrolling lists end with room for it (App.svelte's --foot-clear, 0 on
+     the panel). */
+  .rail::after,
+  .list::after {
+    content: '';
+    /* Less the list's own foot padding, which already stands below the
+       last row. */
+    flex: 0 0 max(0px, calc(var(--foot-clear, 0px) - 30px));
+  }
+  /* ADR-0123: the connected network's details. */
+  /* ADR-0125: the problem report's sheet. */
+  .report {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .report__text {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.45;
+    color: var(--ink-body);
+  }
+  .report__text--quiet { color: var(--ink-quiet); }
+  .report__text--warn { color: var(--accent-warn); }
+  .report__addr {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    word-break: break-all;
+  }
+  .report__link { color: var(--accent-lms); }
+  .report__copy {
+    margin-left: 8px;
+    padding: 2px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(233, 238, 242, 0.2);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--ink);
+    font: inherit;
+    font-size: 13px;
+  }
+  .report__label {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+  }
+  .report__note {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(233, 238, 242, 0.16);
+    background: rgba(255, 255, 255, 0.045);
+    color: var(--ink);
+    font: inherit;
+    font-size: 16px;
+    line-height: 1.4;
+    resize: vertical;
+  }
+  .netinfo {
+    margin: -2px 0 8px;
+    padding: 10px 16px 12px 52px;
+    display: grid;
+    gap: 6px;
+  }
+  .netinfo__row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .netinfo dt {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+  }
+  .netinfo dd {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--ink-body);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  /* A narrow phone gives up the indent under the name before a value
+     breaks ("5 GHz · channel / 116" at 360 px). */
+  @media (max-width: 380px) {
+    .netinfo {
+      padding-left: 18px;
+    }
+  }
+  /* Not `.chev`: that one is drawn with its own two borders, and adding
+     a third drew two chevrons over each other. */
+  .netchev {
+    flex-shrink: 0;
+    width: 9px;
+    height: 9px;
+    border-right: 2px solid var(--ink-quiet);
+    border-bottom: 2px solid var(--ink-quiet);
+    transform: rotate(45deg);
+    margin: 0 2px 4px 0;
+    transition: transform var(--dur-fast) var(--ease);
+  }
+  .netchev--open {
+    transform: rotate(225deg);
+    margin-bottom: -4px;
   }
 </style>

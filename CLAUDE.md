@@ -42,6 +42,21 @@ Claude handles implementation, tooling, tests, commits.
 - A verification that finds nothing has not proved nothing happened — see
   `docs/LESSONS.md`. Before overturning an earlier conclusion, search this
   repository for it first.
+- **Keep the public documents current with every change** (George,
+  2026-10-07). A change that alters what a user sees or does, how the
+  player works inside, or what a plugin author relies on updates, in the
+  same piece of work:
+  - the user manual (`docs/manual/`) and its screenshots — taken only from
+    the public-domain demo library, never a real one;
+  - the FAQ (`docs/FAQ.md`);
+  - the technical guide (`docs/tech/`);
+  - the GitHub overview (`README.md`);
+  - the plugin manual (`docs/WRITING-A-PLUGIN.md`, `docs/PLUGIN-CONTRACT.md`);
+  - `docs/HARDWARE.md`.
+  Say in the hand-back which of them changed, or that none needed to. The
+  manual, FAQ and technical guide were approved for release on 2026-10-07
+  and live on the release branches like every other file; their screenshots
+  come only from the public-domain demo library.
 - Implementing anything that comes — or might come — with a setting: propose
   it for ADR-0022's inventory and append it **only after George confirms**.
   Mark it as that record does ([R] recorded / [H] hardcoded today / [N] new

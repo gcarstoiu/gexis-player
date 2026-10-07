@@ -6,8 +6,7 @@ portraits… I would like to change them with ones from fanart, having LMS as
 fall back. I think we checked this in the past and the problem was getting
 the link for musicbrainz to link back to the artist in fanart. I think LMS
 might have that. Can you check?"*
-**Scope:** George's own LMS 9.1.1 at `192.168.178.188:9000` — **7,296
-contributors, 917 album artists, 4,567 albums, 61,225 songs** — and the
+**Scope:** George's own LMS 9.1.1 at `192.168.178.188:9000` — **thousands of contributors, 917 album artists, thousands of albums, tens of thousands of songs** — and the
 daemon on `gexis`, 2026-09-23. Ten tracks sampled for MusicBrainz tags, four
 artists fetched cold through the daemon's own `/library/artist-info`, every
 album counted for artwork, every album artist checked against the resolved
@@ -37,7 +36,7 @@ does.
 
 `providers.ArtistIdentity` resolves a folded artist name to a MusicBrainz id
 through the search endpoint, and stores it in `enrichment.db`'s `notes`
-table under `mb-artist`. **822 of the 7,296 artists are already resolved**,
+table under `mb-artist`. **822 of the thousands of artists are already resolved**,
 purely from ordinary browsing.
 
 `FanartArtistImage` is keyed on that id, the fanart key is set, and **the
@@ -73,7 +72,7 @@ it:
 http://<lms>/imageproxy/https://assets.fanart.tv/…/artistthumb/…jpg
 ```
 
-So a full sweep of 7,296 artists is **metadata, not gigabytes** — which is
+So a full sweep of thousands of artists is **metadata, not gigabytes** — which is
 the difference between Finding 030's worry about 246–826 KB per image and
 what this would actually hold.
 
@@ -85,7 +84,7 @@ the job by two orders of magnitude.
 
 | | |
 | --- | --- |
-| contributors in the library | **7,296** |
+| contributors in the library | **thousands** |
 | **album artists** (`role_id:ALBUMARTIST`) | **917** (870 once folded) |
 | already asked about | **781** |
 | **left to ask about** | **89** |
@@ -154,9 +153,9 @@ enrichment.
 
 | | |
 | --- | --- |
-| albums | **4,567** |
-| with artwork LMS can serve | **4,412** |
-| **without any** | **155 (3.4%)** |
+| albums | **thousands** |
+| with artwork LMS can serve | **96.6 %** |
+| **without any** | **3.4 %** |
 
 The missing ones are mostly editions and live bootlegs — *"12 x 5 (2006,
 Japan Mini LP)"*, *"2001-09-28: Higher Ground, Winooski, VT, USA"*.
@@ -167,7 +166,7 @@ kind of search, per album, on the same one-per-second limiter — and Finding
 036 measured CAA itself at 949–1,851 ms on top.
 
 - **The 155 gaps:** about **9 minutes**.
-- **Every album, to replace what LMS has:** 4,567 searches plus 4,567 CAA
+- **Every album, to replace what LMS has:** thousands of searches plus as many CAA
   fetches, **four to seven hours**.
 
 Nothing here says LMS's existing covers are poor; George did not say so.
@@ -193,7 +192,7 @@ untagged files with AcoustID, then an LMS rescan. beets' `mbsync` refreshes
 files that already have ids and cannot add them.
 
 **The catch, and it is the reason not to do it casually:** those taggers
-rewrite the whole tag set, not just the MusicBrainz fields. On a 61,225-file
+rewrite the whole tag set, not just the MusicBrainz fields. On a large
 library that somebody has curated, that is the risk, not the effort.
 
 ## 9. Album covers come free with the artist call
@@ -260,8 +259,8 @@ stored, 492 with a picture — so **about 43% keep LMS's photo**. That is
 fanart's coverage of this library, not a fault, and the grid will look
 mixed.
 
-**Covers, first run:** 2,114 of 4,567 albums (46%) got one, 492 (11%) were
-asked about and fanart had none, and **1,961 (43%) never matched a release
+**Covers, first run:** 46 % of the albums got one, 11 % were
+asked about and fanart had none, and **43 % never matched a release
 group at all**. That last number was the matcher, not fanart: LMS shows what
 the tagger wrote — `12 x 5 (2006, Japan Mini LP)`, `[1997] MTV Unplugged
 [EP]`, `57th & 9th (Deluxe Edition)` — where MusicBrainz's release group is
@@ -271,9 +270,9 @@ the tagger wrote — `12 x 5 (2006, Japan Mini LP)`, `[1997] MTV Unplugged
 
 | | first run | after |
 | --- | --- | --- |
-| fanart cover | 2,114 (46%) | **2,289 (50%)** |
-| asked, fanart had none | 492 (11%) | 1,793 (39%) |
-| never matched a release group | 1,961 (43%) | **485 (11%)** |
+| fanart cover | 46 % | **50 %** |
+| asked, fanart had none | 11 % | 39 % |
+| never matched a release group | 43 % | **11 %** |
 | rows stored | 16,391 | **4,334** |
 
 **The matcher did its job and the pictures barely moved.** Unmatched fell
@@ -284,7 +283,7 @@ looked like a ceiling of the matcher rather than of fanart.
 
 **And the store stopped holding a catalogue.** The first run kept a cover
 for every release group those 917 artists ever made — 16,391 rows for a
-4,567-album library, ~12,000 of them never read. It now walks the albums
+large library, ~12,000 of them never read. It now walks the albums
 this library has and looks each one up in theirs: one row per album owned.
 
 ## 12. Where the misses went, and what three changes recovered

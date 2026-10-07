@@ -209,3 +209,40 @@ and 0.9.1's mid-word on the phone - and are kept whole since.
   screen). ADR-0105 §6 says the panel and phone say so. That is not built yet,
   and this record does not change it.
 - A/B partitions (ADR-0105 §4: decided against for now).
+
+## Amended 2026-10-06: the install bar's dead start
+
+George, on 0.9.1 -> 0.9.2: *"it still stayed quite a while on 0 and then
+when it reached around 70%, the text under the checkmarks changed to
+Restarting player and all the checkboxes were green."* From gexis's
+`dpkg.log` and the updater's journal: dpkg began 16 s after the install
+step did, because apt first ran `apt-listchanges` over every package (8.8 s
+for gexis-core's 75 MB alone; 0.27 s with no frontend). The updater now runs
+apt with `APT_LISTCHANGES_FRONTEND=none`. DpkgShare's rate is re-measured
+from the same log (gexis-core unpacked in 13 s, configured in 6: 3.5 MB/s,
+not 1.5), and the bar is shown full for a second before the step is
+ticked. Like every updater change, it applies from the update after the
+one that delivers it.
+
+## Amended 2026-10-07: the notes of every release being skipped
+
+George: *"the update screen should show all until the current one."* A
+device several releases behind went straight to the newest (ADR-0105) and
+was shown only that release's notes; what the skipped ones changed was in
+*Change logs* only after installing.
+
+1. **Each release publishes its history beside its notes:** `r<tag>/history`,
+   every release's notes from that tag's `release_notes.json` (ADR-0116),
+   clearsigned by the release key like the notes (ADR-0108).
+2. **The updater reads the waiting release's history** and keeps every
+   release newer than the installed one, up to the waiting one, newest
+   first, each with its number, date and notes. A history that is missing
+   or does not verify falls back to the waiting release's notes alone, as
+   before. Kept whole up to 40,000 characters (about twenty releases); past
+   that, the oldest are left out and a line says how many, with *Change logs*
+   and GitHub named for them.
+3. **Shown as one block per release** in the modal and on the Software update
+   tile: the release's number and date as its heading, its notes under it.
+   One release waiting reads as it does today.
+4. Like every updater change, **it applies from the update after the one that
+   delivers it**: the updater that reads the notes is the installed one.

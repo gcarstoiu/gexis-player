@@ -151,7 +151,7 @@ def trim_title(title: str) -> str:
     title's own characters, so a quoted phrase built from a folded title
     misses every album whose name carries one - `57th & 9th` folds to
     `57th 9th` and matches nothing, and `100 Jahre Strauss` loses the `ss`
-    entirely. Measured on George's library: **31.2% of 4,567 albums**.
+    entirely. Measured on George's library: **31.2% of thousands of albums**.
 
     **Never empty**, for the same reason `match_title` is not.
     """

@@ -159,8 +159,7 @@ network share**; and **it ships in our releases**.
 
 ### Settled 2026-10-03 (George), after scanning his library
 
-Measured on George's player, 2026-10-03 (Finding 109): his NAS share, 61,362
-files, took **2 h 7 min** to scan the first time and **26 min** to check with
+Measured on George's player, 2026-10-03 (Finding 109): his NAS share, tens of thousands of files, took **2 h 7 min** to scan the first time and **26 min** to check with
 nothing changed; the scanner's own memory grew by about 27 KB a file, to
 **1,876 MB** for Lyrion as a whole - past the 2 GB this record set, once file
 cache is counted.

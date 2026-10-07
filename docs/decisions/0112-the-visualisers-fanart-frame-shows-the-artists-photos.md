@@ -30,7 +30,7 @@ Interval, order and transition are the plugin's global settings, not the
 skin's. Our renderer draws none of this today: the frame shows whatever the
 skin's background has there.
 
-Finding 108, on George's library (60 random artists of 7,296): 31 have at
+Finding 108, on George's library (60 random artists of thousands): 31 have at
 least one photo from the plugin's `artistphotos`, 22 have two or more, 12
 have five or more; the photos come from Discogs and Last.fm, all real, Discogs
 at most about 600 px wide; a list costs about 0.75 s uncached. 16 of the 29

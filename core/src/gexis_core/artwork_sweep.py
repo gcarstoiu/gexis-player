@@ -295,7 +295,7 @@ class ArtworkSweep:
     async def _album_artists(self) -> list[tuple[int, str]]:
         """Every album artist LMS knows, `(id, name)`.
 
-        Album artists, not contributors: 917 against 7,296 on George's own
+        Album artists, not contributors: 917 against thousands on George's own
         library, and the list the panel draws is theirs.
         """
         return await self._library.album_artists()

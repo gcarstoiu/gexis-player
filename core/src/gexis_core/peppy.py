@@ -19,11 +19,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from pathlib import Path
 import os
 import shutil
 import subprocess
 import time
+from pathlib import Path
 
 logger = logging.getLogger("gexis_core.peppy")
 
@@ -42,6 +42,14 @@ DEFAULT_RUNTIME_DIR = "/run/user/1000"
 DEFAULT_WAYLAND_DISPLAY = "wayland-0"
 
 
+#: ADR-0019 as amended 2026-10-07: whether the screen is up, for the driver,
+#: which draws nothing of its own while it reads `0`.
+SHOWN_PATH = Path("/run/gexis/visualiser-shown")
+#: Before a raise, after `1` is written: the driver's slowest hidden frame
+#: (0.2 s) and one of its normal ones, so the first frame shown is finished.
+SHOW_SETTLE_S = 0.25
+
+
 class PeppyScreen:
     """Show and hide, with `wlrctl`. Absent tooling is not fatal: a device
     without the meter process running is a device that shows now playing."""
@@ -53,8 +61,12 @@ class PeppyScreen:
         wlrctl: str | None = None,
         runtime_dir: str = DEFAULT_RUNTIME_DIR,
         wayland_display: str = DEFAULT_WAYLAND_DISPLAY,
+        shown_path: Path | None = SHOWN_PATH,
+        settle_s: float = SHOW_SETTLE_S,
     ) -> None:
         self._title = title
+        self._shown_path = shown_path
+        self._settle_s = settle_s
         self._wlrctl = wlrctl or shutil.which("wlrctl")
         # The daemon runs as root with no session of its own, so it must be
         # told where the compositor's socket is. Found on hardware: without
@@ -67,6 +79,8 @@ class PeppyScreen:
             "WAYLAND_DISPLAY": wayland_display,
         }
         self.visible = False
+        # Hidden from the start: the driver begins minimised (gexis-peppy-start).
+        self._tell(False)
         #: ADR-0101: told whenever the screen goes up or down, so the phone's
         #: toggle can say what the panel shows.
         self.on_change = None
@@ -92,17 +106,34 @@ class PeppyScreen:
             return False
         return True
 
+    def _tell(self, shown: bool) -> None:
+        if self._shown_path is None:
+            return
+        try:
+            self._shown_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = self._shown_path.with_suffix(".tmp")
+            tmp.write_text("1" if shown else "0")
+            os.replace(tmp, self._shown_path)
+        except OSError as exc:
+            logger.info("peppy: could not write %s (%s)", self._shown_path, exc)
+
     def show(self) -> bool:
+        self._tell(True)
+        if self._settle_s:
+            time.sleep(self._settle_s)
         if self._run("focus"):
             self.visible = True
             logger.info("peppy: shown")
             if self.on_change:
                 self.on_change(True)
             return True
+        # Not raised: back to not drawing.
+        self._tell(False)
         return False
 
     def hide(self) -> bool:
         if self._run("minimize"):
+            self._tell(False)
             self.visible = False
             logger.info("peppy: hidden")
             if self.on_change:

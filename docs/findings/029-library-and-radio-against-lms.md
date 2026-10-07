@@ -14,8 +14,8 @@ was only observed, through its journal and `/state`.
 
 **Scope, stated up front:**
 
-- **One server, one library:** 60,974 songs, 4,554 albums, 916 album artists
-  before the rescan below; 61,225 / 4,567 / 917 after. Timings are from R2D2
+- **One server, one library:** tens of thousands of songs, thousands of albums, 916 album artists
+  before the rescan below; tens of thousands / thousands / 917 after. Timings are from R2D2
   over the LAN, three runs each for reads; they are not panel latencies.
 - **Playback was observed through LMS status and the core's log, sampled
   0.5–7 s after each command.** Whether the speakers were on was not
@@ -65,9 +65,9 @@ The album-artist list needs no paging at this size.
   those artists inside C and I (the key sequence reads `…C Ç C…` and
   `…I Í I…`).
 - **`release_type` is present on every album** (`tags:W`), as combined
-  values: ALBUM 3,968, ALBUM COMPILATION 293, ALBUM LIVE 95, ALBUM SOUNDTRACK
-  88, SINGLE 38, EP 34, ALBUM REMIX 9, ALBUM COMPILATION SOUNDTRACK 8, ALBUM
-  COMPILATION DJ MIX 7, EP LIVE 3, and single-digit others.
+  values: ALBUM by far the most, then ALBUM COMPILATION, ALBUM LIVE, ALBUM
+  SOUNDTRACK, SINGLE, EP, ALBUM REMIX, ALBUM COMPILATION SOUNDTRACK, ALBUM
+  COMPILATION DJ MIX, EP LIVE, and a few others.
 
 George, 2026-09-17: follow LMS in both (ADR-0038 §1a).
 
@@ -80,7 +80,7 @@ George, 2026-09-17: follow LMS in both (ADR-0038 §1a).
 - `playlists 0 0` returns `{}` (no count). `search:` returns `{}` for
   playlists. The core has to list them all and filter.
 - George set a folder (`/playlist`). **Setting it started a full rescan**
-  (15:25–15:54): Qobuz playlists, database optimise, discovery, 61,240 files,
+  (15:25–15:54): Qobuz playlists, database optimise, discovery, tens of thousands of files,
   Qobuz playlists again. `playlists new` issued at the start of it timed out
   after 20 s and created nothing.
 - After the scan, three test playlists were created (George: keep them):
@@ -108,8 +108,8 @@ remembered queue origin — is invalid after a full rescan, and `lastscan` is
 the signal to drop them. The New Music strip reflects scan order after a full
 rescan, not what was recently added.
 
-**Artwork was lost too:** albums with an `artwork_track_id` went from 4,521 of
-4,554 before the rescan to 4,412 of 4,567 after (counted 19:14). El Mocambo
+**Artwork was lost too:** albums with an `artwork_track_id` went from 99 % of
+the albums before the rescan to 97 % after (counted 19:14). El Mocambo
 1977 had one before and none after. Not investigated; the library routes
 return no artwork for those albums, which the panel shows as pending.
 
@@ -125,7 +125,7 @@ return no artwork for those albums, which the panel shows as pending.
 | `cover_150x150_o.jpg` | JPEG | 8 KB | 15 KB |
 | `cover_500x500_o.jpg` | JPEG | 52 KB | 141 KB |
 
-4,521 of 4,554 albums have an `artwork_track_id`.
+99 % of the albums have an `artwork_track_id`.
 
 ### 6. Radio
 

@@ -59,7 +59,7 @@ reverted approaches.
    median 1827.8ms; Spotify→LMS n=20, median 4170.9ms).
 5. Rebuilt and reflashed the image with both fixes baked in (not just
    hot-patched). Also added build-filename versioning (unrelated,
-   separate ask) and confirmed a full 60,974-track library scan found no
+   separate ask) and confirmed a full large library scan found no
    non-44.1kHz content (blocks the cross-rate leg on content, not
    mechanism).
 6. **Continued live use (not scripted testing) found both of today's

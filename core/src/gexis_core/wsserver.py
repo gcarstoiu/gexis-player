@@ -39,7 +39,7 @@ from aiohttp import web
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core import backups, bluetooth_devices, skin_packs, device_name, discovery, lyrion_scan, lyrion_shares, skin_previews, skins, wifi
+from gexis_core import backups, bluetooth_devices, skin_packs, device_name, discovery, lyrion_scan, lyrion_shares, problem_report, skin_previews, skins, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
 from gexis_core.artistinfo import PHOTO_BACKGROUND, PHOTO_LARGE, PHOTO_THUMB
 from gexis_core.artwork_sweep import ARTIST_NAMESPACE, remembered
@@ -1220,6 +1220,56 @@ class StateServer:
         self._store.request_view(to)
         return web.json_response({"view": to})
 
+    async def _handle_wifi_details(self, request: web.Request) -> web.Response:
+        """ADR-0123: the connected Wi-Fi network's signal, speed, band,
+        channel and address - no rescan, so the open sheet can ask every
+        few seconds. `{"connected": false}` when there is none."""
+        details = await wifi.connected_details()
+        if not details:
+            return web.json_response({"connected": False})
+        return web.json_response({"connected": True, **details})
+
+    #: One report at a time: building one reads and rewrites the whole
+    #: journal, half a minute on a Pi 4.
+    _report_lock = asyncio.Lock()
+
+    async def _handle_report(self, request: web.Request) -> web.Response:
+        """ADR-0125: the problem report, downloaded. The body may carry the
+        user's own line, `{"note": "..."}`. Every value is read here, on the
+        loop - the settings store is SQLite, bound to this thread - and the
+        journal is read and scrubbed in a worker."""
+        if self._settings is None:
+            return web.json_response({"error": "settings are not wired up"}, status=503)
+        try:
+            body = await request.json() if request.can_read_body else {}
+        except ValueError:
+            body = {}
+        note = str((body or {}).get("note") or "")[:4000]
+        rows = self._settings.all_rows()
+        values = {}
+        for row in rows:
+            try:
+                values[row["key"]] = self._settings.value(row["key"])
+            except Exception:  # noqa: BLE001 - a row that cannot be read is left out
+                values[row["key"]] = None
+        shares = self._lyrion_shares.all() if self._lyrion_shares is not None else []
+        state = self._store.state
+        playing = []
+        for item in ((state.metadata,) if state.metadata else ()) + (tuple(state.queue.items) if state.queue else ()):
+            playing += [item.title, item.artist, item.album]
+        if self._report_lock.locked():
+            return web.json_response({"error": "a report is already being prepared"}, status=409)
+        async with self._report_lock:
+            report = await asyncio.get_running_loop().run_in_executor(
+                None, lambda: problem_report.build(note, rows, values.get, shares=shares,
+                                                   now_playing=[p for p in playing if p]))
+        logger.info("report: %s, %d bytes; taken out: %s", report.name, len(report.data), report.summary)
+        return web.Response(body=report.data, content_type="application/zip", headers={
+            "Content-Disposition": f'attachment; filename="{report.name}"',
+            "X-Report-Summary": report.summary,
+            "Cache-Control": "no-store",
+        })
+
     async def _handle_panel_shown(self, request: web.Request) -> web.Response:
         """ADR-0101: the panel reporting whether its idle screen is up - and,
         as amended, whether its lyrics are - so the phone's toggles say what
@@ -1799,6 +1849,8 @@ class StateServer:
         app.router.add_put("/settings/{key}", self._handle_setting_write)
         app.router.add_post("/settings/{key}", self._handle_setting_action)
         app.router.add_get("/settings/{key}/items", self._handle_list_items)
+        app.router.add_get("/network/wifi", self._handle_wifi_details)
+        app.router.add_post("/report", self._handle_report)
         app.router.add_post("/settings/{key}/items", self._handle_list_action)
         app.router.add_post("/bluetooth/pairing/{answer}", self._handle_pairing_answer)
         # ADR-0050. `{name:.*}` because a skin's name is a section heading

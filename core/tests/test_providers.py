@@ -1149,8 +1149,7 @@ async def test_the_query_carries_the_titles_own_characters():
     """**The bug that was costing the most** (measured against MusicBrainz,
     2026-09-25). The album went into a quoted phrase *folded*, and the index
     holds the real title: `releasegroup:"57th & 9th"` scores 100 and
-    `releasegroup:"57th 9th"` returns nothing at all. 31.2% of George's 4,567
-    albums carry a character folding removes."""
+    `releasegroup:"57th 9th"` returns nothing at all. 31.2% of George's thousands of albums carry a character folding removes."""
     http = SearchingHttp({"57th & 9th": [{"id": "rg", "title": "57th & 9th", "score": 100}]})
 
     answer = await CoverArtProvider(http).fetch(_key("57th & 9th"))

@@ -418,12 +418,14 @@ def test_a_pack_comes_from_the_installed_release_s_own_parts(up, monkeypatch):
     monkeypatch.setattr(up, "parts_of", lambda v: (["ours-a", "skins-b"], ["ours-a", "skins-b"]) if v == "0.4.0" else None)
     monkeypatch.setattr(up, "apt_env", lambda repos, pins=None: calls.append(("env", repos, pins)) or ["opts"])
     monkeypatch.setattr(up, "apt", lambda opts, *a, **k: calls.append(("apt",) + a) or subprocess.CompletedProcess(a, 0, "", ""))
-    def dl(opts, *a, report_as, reporter=None):
+    def fetch(opts, name, activity):
         up.PROGRESS["progress"] = 0.5
-        reporter("downloading", **report_as)
-        calls.append(("download",) + a)
-        return subprocess.CompletedProcess(a, 0, "", "")
-    monkeypatch.setattr(up, "apt_download", dl)
+        up.report_pack("downloading", package=name, message=f"fetching {name}")
+        calls.append(("download", "--download-only", "install", name))
+        return subprocess.CompletedProcess([], 0, "", "")
+    monkeypatch.setattr(up, "pack_fetch", fetch)
+    real = up.Activity
+    monkeypatch.setattr(up, "Activity", lambda **kw: real(playing_now=lambda: False, follow=False))
     up.STATE.mkdir(parents=True, exist_ok=True)
     assert up.pack_install("gexis-skins-1920x1080") == 0
     assert calls[0] == ("env", ["ours-a", "skins-b"], ["ours-a", "skins-b"])
@@ -445,8 +447,9 @@ def test_a_pack_for_an_unpublished_release_comes_from_the_channel_s(up, monkeypa
     monkeypatch.setattr(up, "apt_env", lambda repos, pins=None: envs.append(repos) or repos)
     monkeypatch.setattr(up, "apt", lambda opts, *a, **k: subprocess.CompletedProcess(
         a, 100 if (a == ("update",) and opts[0].startswith("r0.8.6-git16")) else 0, "", ""))
-    monkeypatch.setattr(up, "apt_download", lambda opts, *a, report_as, reporter=None:
-                        subprocess.CompletedProcess(a, 0, "", ""))
+    monkeypatch.setattr(up, "pack_fetch", lambda opts, name, activity: subprocess.CompletedProcess([], 0, "", ""))
+    real = up.Activity
+    monkeypatch.setattr(up, "Activity", lambda **kw: real(playing_now=lambda: False, follow=False))
     up.STATE.mkdir(parents=True, exist_ok=True)
     assert up.pack_install("gexis-skins-1920x1080") == 0
     assert envs == [["r0.8.6-git16.d91a4bc"], ["ours-f", "skins-9", "rpi-d", "debian-7"]]
@@ -502,3 +505,144 @@ def test_a_turn_not_given_within_the_hour_is_a_failure(up, monkeypatch):
     with pytest.raises(up.Stop, match="did not finish within an hour"):
         up.take_turn(lambda: None)
     other.close()
+
+
+def test_apt_listchanges_is_off_for_an_install(up):
+    """It read every package's changelog before dpkg began: 8.8 s for
+    gexis-core on a Pi 4, the bar at 0 for 16 s (2026-10-06)."""
+    assert up.APT_ENV["APT_LISTCHANGES_FRONTEND"] == "none"
+    assert up.APT_ENV["DEBIAN_FRONTEND"] == "noninteractive"
+
+
+def test_the_settings_button_checks_and_never_installs():
+    """"Check for updates" started the nightly unit, whose `scheduled` run
+    installs when Updates is Automatic (2026-10-06)."""
+    from gexis_core import updates
+
+    unit = Path(__file__).resolve().parents[1] / "updater" / "units" / updates.CHECK_UNIT
+    assert updates.CHECK_UNIT != "gexis-update-check.service"
+    exec_start = next(l for l in unit.read_text().splitlines() if l.startswith("ExecStart="))
+    assert exec_start.split()[-1] == "check"
+    build = (Path(__file__).resolve().parents[2] / "packaging" / "core" / "build.sh").read_text()
+    assert updates.CHECK_UNIT in build
+
+
+# --- ADR-0110 amended 2026-10-07: every skipped release's notes -------------
+
+def _vkey(v):
+    """dpkg's order for the versions these tests use: x.y.z, then a
+    +gitN build of it after the release itself."""
+    base, _, build = v.partition("+git")
+    nums = tuple(int(p) for p in base.split("."))
+    return nums + ((1, int(build.split(".")[0])) if build else (0, 0))
+
+
+def serve_history(monkeypatch, up, releases, verified=True):
+    text = json.dumps({"releases": releases})
+    monkeypatch.setattr(up.urllib.request, "urlopen", lambda url, timeout=0: io.BytesIO(b"signed"))
+    def fake_run(args, input=None, capture_output=False, **kw):
+        if args[0] == "dpkg":
+            a, op, b = args[2], args[3], args[4]
+            assert op == "gt"
+            return subprocess.CompletedProcess(args, 0 if _vkey(a) > _vkey(b) else 1, "", "")
+        assert args[0] == "gpgv", "only gpgv reads what came from the network"
+        return subprocess.CompletedProcess(args, 0 if verified else 1, text.encode() if verified else b"", b"")
+    monkeypatch.setattr(up.subprocess, "run", fake_run)
+
+
+HISTORY = {v: {"date": f"2026-10-0{i}", "notes": f"New\n• What {v} changed."}
+           for i, v in enumerate(["0.9.5", "0.9.4", "0.9.3", "0.9.2", "0.9.1"], start=1)}
+
+
+def test_every_release_after_the_installed_one_is_shown_newest_first(up, monkeypatch):
+    """George, 2026-10-07: "the update screen should show all until the
+    current one"."""
+    serve_history(monkeypatch, up, HISTORY)
+    got = up.release_history("0.9.4", "0.9.1")
+    assert [e["release"] for e in got] == ["0.9.4", "0.9.3", "0.9.2"]
+    assert got[0]["notes"] == "New\n• What 0.9.4 changed." and got[0]["date"] == "2026-10-02"
+
+
+def test_a_build_between_releases_counts_as_its_release(up, monkeypatch):
+    """A preview build of 0.9.2 already has what 0.9.2 changed."""
+    serve_history(monkeypatch, up, HISTORY)
+    assert [e["release"] for e in up.release_history("0.9.3", "0.9.2+git32.b8a250b")] == ["0.9.3"]
+
+
+def test_a_history_that_does_not_verify_falls_back_to_the_notes(up, monkeypatch):
+    serve_history(monkeypatch, up, HISTORY, verified=False)
+    assert up.release_history("0.9.4", "0.9.1") is None
+
+
+def test_a_release_without_a_history_falls_back_to_the_notes(up, monkeypatch):
+    def missing(url, timeout=0):
+        raise OSError("404")
+    monkeypatch.setattr(up.urllib.request, "urlopen", missing)
+    assert up.release_history("0.9.4", "0.9.1") is None
+
+
+def test_a_long_history_keeps_the_newest_and_counts_the_rest(up, monkeypatch):
+    long_notes = "New\n" + "• A change said at length. " * 600
+    many = {f"0.{n}.0": {"date": "2026-10-01", "notes": long_notes} for n in range(1, 31)}
+    serve_history(monkeypatch, up, many)
+    got = up.release_history("0.30.0", "0.0.1")
+    kept = [e for e in got if e["release"]]
+    assert kept[0]["release"] == "0.30.0" and len(kept) < 30
+    assert sum(len(e["notes"]) for e in kept) <= up.HISTORY_MAX
+    assert got[-1] == {"release": None, "date": None, "earlier": 30 - len(kept)}
+
+
+# --- ADR-0111 amended 2026-10-07: a pack downloads gently while in use -------
+
+class Clock:
+    def __init__(self):
+        self.t = 1000.0
+
+    def __call__(self):
+        return self.t
+
+
+def test_in_use_while_something_plays_and_for_ten_minutes_after_a_phone(up):
+    clock, playing = Clock(), [False]
+    a = up.Activity(clock=clock, playing_now=lambda: playing[0], follow=False)
+    assert not a.in_use(), "a quiet player downloads at full speed"
+    a.saw()                       # "accepted zeroconf from ..." - nothing plays yet
+    clock.t += up.QUIET_S - 1
+    assert a.in_use()
+    clock.t += 2
+    assert not a.in_use(), "ten quiet minutes"
+    playing[0] = True
+    assert a.in_use()
+
+
+def test_go_librespot_s_own_errors_are_not_a_person(up):
+    assert up._activity_line('Oct 07 12:03:47 p go-librespot[2326]: level=info msg="accepted zeroconf from x"')
+    assert not up._activity_line('Oct 07 12:59:53 p go-librespot[2326]: level=error msg="failed receiving dealer message"')
+    assert up._activity_line("Oct 07 12:04:10 p bluealsa[893]: Adding new Stream End-Point")
+
+
+def test_a_pack_downloads_capped_in_use_and_restarts_when_that_changes(up, monkeypatch):
+    clock, playing = Clock(), [False]
+    a = up.Activity(clock=clock, playing_now=lambda: playing[0], follow=False)
+    calls = []
+
+    def apt_progress(opts, *args, state, report_as, reporter=None, stop_when=None, **kw):
+        calls.append(any("Dl-Limit" in o for o in opts))
+        if len(calls) == 1:
+            playing[0] = True          # a phone starts playing mid-download
+            assert stop_when(), "the watcher sees it"
+            return subprocess.CompletedProcess(args, up.INTERRUPTED, "", "")
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    monkeypatch.setattr(up, "apt_progress", apt_progress)
+    r = up.pack_fetch(["-o", "Dir::State=x"], "gexis-skins-1920x1080", a)
+    assert r.returncode == 0
+    assert calls == [False, True], "full speed, then capped, resuming the same download"
+
+
+def test_a_pack_that_ends_on_its_own_is_not_restarted(up, monkeypatch):
+    a = up.Activity(clock=Clock(), playing_now=lambda: False, follow=False)
+    n = []
+    monkeypatch.setattr(up, "apt_progress",
+                        lambda opts, *args, stop_when=None, **kw: n.append(1) or subprocess.CompletedProcess(args, 100, "", "E: x"))
+    assert up.pack_fetch([], "gexis-skins-1920x1080", a).returncode == 100 and n == [1]

@@ -7,7 +7,8 @@ Documentation=file:///opt/gexis-core/venv/lib/python3.13/site-packages/gexis_cor
 # before both, and once: a screen attached since the last start comes up in
 # its own layout with Keep this screen?, and goes back by itself.
 #
-# Not during setup: its Screen step decides then.
+# During setup too (amended 2026-10-07): provisionally, without Keep, so
+# setup's own screens are laid out for the screen; its Screen step decides.
 After=local-fs.target systemd-udev-trigger.service
 Before=gexis-core.service gexis-kiosk.service
 
