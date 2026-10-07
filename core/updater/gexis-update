@@ -29,6 +29,7 @@ import hashlib
 import json
 import os
 import re
+import signal
 import sqlite3
 import subprocess
 import math
@@ -307,9 +308,13 @@ def archive_sizes(changes: list[tuple[str, str | None, str]]) -> dict[str, int]:
     return sizes
 
 
+#: apt_progress's return code when `stop_when` stopped it.
+INTERRUPTED = -1000
+
+
 def apt_progress(opts: list[str], *args: str, state: str, report_as: dict, reporter=None,
                  prefix: list[str] | None = None, span: tuple[float, float] = (0.0, 1.0),
-                 sizes: dict[str, int] | None = None) -> subprocess.CompletedProcess:
+                 sizes: dict[str, int] | None = None, stop_when=None) -> subprocess.CompletedProcess:
     """apt-get, its progress read as it goes. apt writes
     `dlstatus:<n>:<percent>:<what>` while it downloads and
     `pmstatus:<package>:<percent>:<what>` while dpkg installs, on its status
@@ -342,8 +347,15 @@ def apt_progress(opts: list[str], *args: str, state: str, report_as: dict, repor
 
     stop = threading.Event()
 
+    interrupted = threading.Event()
+
     def tick() -> None:
         while not stop.wait(0.5):
+            # ADR-0111 amended 2026-10-07: the caller wants apt at another
+            # speed. SIGINT lets apt keep the partial file it is fetching.
+            if stop_when is not None and not interrupted.is_set() and stop_when():
+                interrupted.set()
+                proc.send_signal(signal.SIGINT)
             if dpkg is not None:
                 place(dpkg.share())
             if PROGRESS.get("progress") != sent[0]:
@@ -372,7 +384,8 @@ def apt_progress(opts: list[str], *args: str, state: str, report_as: dict, repor
         ticker.join()
     err = proc.stderr.read()
     proc.wait()
-    r = subprocess.CompletedProcess(cmd, proc.returncode, "".join(out), err)
+    r = subprocess.CompletedProcess(cmd, INTERRUPTED if interrupted.is_set() else proc.returncode,
+                                    "".join(out), err)
     with (STATE / "apt.log").open("a") as log:
         log.write(f"\n=== {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} apt-get {' '.join(args)} -> {r.returncode}\n")
         log.write(r.stdout + r.stderr)
@@ -766,6 +779,88 @@ def pack_sources(release: str) -> list[tuple[list[str], list[str]]]:
     return [lambda: parts_of(release), channel_parts]
 
 
+#: ADR-0111 amended 2026-10-07 (George: "capped while something plays, full
+#: speed when nothing does"; "Agree with your recommendation on in use").
+CAP_KB_S = 3000
+QUIET_S = 600
+#: Quiet at rest, and they speak the moment a phone connects - Spotify at
+#: "accepted zeroconf", Bluetooth at the pairing - before any sound plays.
+ACTIVITY_UNITS = ("go-librespot.service", "bluealsa.service", "bluetooth.service")
+
+
+def _activity_line(line: str) -> bool:
+    """A line that means a person: go-librespot's info lines (a phone, a
+    track), not its own reconnect errors at rest; any line of Bluetooth's."""
+    return "go-librespot" not in line or "level=info" in line
+
+
+class Activity:
+    """Whether the player is in use: something plays, or Spotify or
+    Bluetooth showed activity in the last `QUIET_S`. Follows those services'
+    journal while a pack downloads."""
+
+    def __init__(self, clock=time.monotonic, playing_now=None, follow: bool = True) -> None:
+        self._clock = clock
+        self._playing = playing_now or playing
+        self.last: float | None = None
+        self._proc = None
+        units = [a for u in ACTIVITY_UNITS for a in ("-u", u)]
+        # The last ten minutes, by each line's own time.
+        try:
+            recent = run("journalctl", "--no-pager", "-q", "-o", "short-unix", "--since", f"-{QUIET_S}s",
+                         *units, check=False).stdout if follow else ""
+        except OSError:          # no journal to read: playing alone decides
+            recent = ""
+        stamps = [float(l.split()[0]) for l in recent.splitlines()
+                  if l.split() and _activity_line(l) and l.split()[0].replace(".", "", 1).isdigit()]
+        if stamps:
+            self.last = self._clock() - max(0.0, time.time() - max(stamps))
+        if follow:
+            try:
+                # `short`, not `cat`: the unit's name is on the line, and
+                # it is what tells go-librespot's own errors apart.
+                self._proc = subprocess.Popen(["journalctl", "--no-pager", "-q", "-f", "-n", "0", "-o", "short", *units],
+                                              stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+                threading.Thread(target=self._follow, daemon=True).start()
+            except OSError:
+                self._proc = None
+
+    def _follow(self) -> None:
+        for line in self._proc.stdout:
+            if _activity_line(line):
+                self.saw()
+
+    def saw(self) -> None:
+        self.last = self._clock()
+
+    def in_use(self) -> bool:
+        if self._playing():
+            self.saw()
+            return True
+        return self.last is not None and self._clock() - self.last < QUIET_S
+
+    def close(self) -> None:
+        if self._proc is not None:
+            self._proc.terminate()
+
+
+def pack_fetch(opts: list[str], name: str, activity: Activity) -> subprocess.CompletedProcess:
+    """Download a pack, capped while the player is in use (ADR-0111 amended
+    2026-10-07): apt is restarted at the other speed when that changes, and
+    resumes the file it was fetching."""
+    while True:
+        capped = activity.in_use()
+        limit = ["-o", f"Acquire::http::Dl-Limit={CAP_KB_S}", "-o", f"Acquire::https::Dl-Limit={CAP_KB_S}"] \
+            if capped else []
+        print(f"pack download: {'capped at %d kB/s, the player is in use' % CAP_KB_S if capped else 'full speed'}",
+              flush=True)
+        r = apt_progress(opts + limit, "--download-only", "install", name, state="downloading",
+                         report_as={"package": name, "message": f"fetching {name}"}, reporter=report_pack,
+                         stop_when=lambda: activity.in_use() != capped)
+        if r.returncode != INTERRUPTED:
+            return r
+
+
 def pack_install(name: str) -> int:
     """Install one skin pack from the installed release's parts - or, when
     that release cannot be read, from the channel's (`pack_sources`)."""
@@ -791,8 +886,11 @@ def pack_install(name: str) -> int:
             break
     if opts is None:
         raise Stop(UNREACHABLE)
-    r = apt_download(opts, "--download-only", "install", name,
-                     report_as={"package": name, "message": f"fetching {name}"}, reporter=report_pack)
+    activity = Activity()
+    try:
+        r = pack_fetch(opts, name, activity)
+    finally:
+        activity.close()
     if r.returncode:
         print(f"pack download failed: {why(r)}", flush=True)
         raise Stop("The download stopped before it finished. It is tried again in a few minutes.")

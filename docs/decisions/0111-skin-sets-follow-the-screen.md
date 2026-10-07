@@ -157,3 +157,26 @@ questions; each answer is quoted.
   requirements.
 - **Written permission from foonerd and Gelo5:** not asked (decision 6 rests
   on the repositories' licences).
+
+## Amended 2026-10-07: a pack downloads gently while the player is in use
+
+On a fresh card George connected his phone to Spotify a minute after setup,
+and it took 38 s to play: the 1920 × 1080 pack (490 MB) was downloading at the
+whole Wi-Fi link (~8 MB/s), Spotify's connection timed out after 10 s, and
+go-librespot waited 25 s before trying again. Nothing was playing yet - the
+phone was connecting. George: *"Both: capped while something plays, full
+speed when nothing does"*, then, on what counts: *"Agree with your
+recommendation on in use"*.
+
+1. **In use** means: a sound card is playing, **or** Spotify or Bluetooth
+   showed any activity in the last **10 minutes** - read from go-librespot's,
+   BlueALSA's and BlueZ's own logs, which are quiet at rest and speak the
+   moment a phone connects. Lyrion is covered by playing: its stream comes
+   from the server on the home network.
+2. **In use, a pack downloads at no more than 3 MB/s** (apt's own
+   `Dl-Limit`); otherwise at full speed. The 490 MB pack takes about three
+   minutes capped, one uncapped.
+3. **Watched while it downloads:** when the player becomes in use, or has been
+   quiet for 10 minutes, apt is stopped and started again at the other speed.
+   It resumes the partial file, so nothing is fetched twice.
+4. Updates are not affected: an update stops playback before it downloads.
