@@ -302,6 +302,15 @@ ADR-0053 and ADR-0054:
 4. **A renderer's value is never sent back to it.** The panel's 101 positions
    cannot represent AVRCP's 128 values exactly, so echoing a renderer's own
    value back creates a ratchet. `RemoteVolume.report()` is inbound only.
+5. **A first report above the level playing is answered, not followed**
+   (`start_guard.py`). After a takeover that hands a starting volume
+   (Spotify, a plugin declaring `volume_handed`), after a takeover by a phone
+   that has not yet said its level, and for 30 s after a change of output
+   restarts the renderers, a report louder than the level playing is answered
+   by sending that level back through the renderer's own channel (its API, or
+   the phone's AVRCP level). A phone's remembered level or a restarted
+   go-librespot's 100 is not a hand on the slider. The level sent is ours, never
+   the renderer's own value, so rule 4 holds.
 
 ```mermaid
 flowchart TB
