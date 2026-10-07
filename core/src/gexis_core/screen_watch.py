@@ -172,6 +172,36 @@ def _setup_needed(connections: Path = CONNECTIONS) -> bool:
     return needs_setup(wifi)
 
 
+def during_setup(seen: screen_detect.Seen | None = None, *, path: Path = STATE, files: dict | None = None) -> str:
+    """**The attached screen, applied for setup's own screens** (ADR-0109
+    amended 2026-10-07; George, on a 13.3": *"The QR codes on the screen were
+    skewed to the left ... on a bar it could be problematic"*). The same
+    choice as after setup - the recognised model, the one listed bar of its
+    mode, else its own mode, scale only - but **provisional**: no Keep, and
+    not counted as confirmed, so the setup network keeps its fixed password
+    (ADR-0104). Setup's Screen step confirms it or replaces it. Once per
+    setup: a screen already applied is left as it is."""
+    import time as _time
+    from . import screen_apply
+    files = files or {}
+    state = files.get("state", screen_apply.STATE)
+    if screen_apply.read_state(state).get("current"):
+        return "same"
+    seen = screen_detect.seen() if seen is None else seen
+    if not seen.connected or not seen.preferred:
+        return "same"
+    model = target(seen)
+    applied = screen_apply.Applied(model.id, 0)
+    where = {k: files[k] for k in ("env", "cmdline") if k in files}
+    restart = screen_apply.picture(**where)[0] != screen_apply.picture_of(applied)[0]
+    screen_apply.write_files(applied, **where)
+    screen_apply.write_state({"current": applied.to_json(), "previous": None, "pending": False,
+                              "provisional": True, "since": _time.time()}, state)
+    kept(seen, path)
+    logger.info("screen: setup on %s, laid out as %s until setup's Screen step", key(seen), model.id)
+    return "restart" if restart else "switched"
+
+
 def at_start(seen: screen_detect.Seen | None = None, *, headless: bool | None = None,
              setup_needed: bool | None = None, path: Path = STATE, files: dict | None = None) -> str:
     """Before the panel: a different screen is switched to, pending a Keep.
@@ -180,7 +210,7 @@ def at_start(seen: screen_detect.Seen | None = None, *, headless: bool | None = 
     "restart" (the kernel's mode changed)."""
     from . import screen_apply
     if setup_needed if setup_needed is not None else _setup_needed():
-        return "same"
+        return during_setup(seen, path=path, files=files)
     # A switch made before this start's restart still waits for Keep - the
     # core shows that, and nothing here is asked (it logged "asks" for the
     # 7.9" bar, 2026-10-04, while Keep was on the panel).

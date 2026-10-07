@@ -159,7 +159,9 @@ def confirmed(path: Path = STATE) -> bool:
     """Whether a screen has been kept on the panel (decision 5: until then the
     setup network uses the fixed password)."""
     data = read_state(path)
-    return bool(data.get("current")) and not data.get("pending")
+    # A screen applied during setup (ADR-0109 amended 2026-10-07) is not one
+    # anybody has confirmed is readable.
+    return bool(data.get("current")) and not data.get("pending") and not data.get("provisional")
 
 
 def write_files(applied: Applied | None, *, env: Path = SCREEN_ENV, cmdline: Path = CMDLINE) -> bool:
