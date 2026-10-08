@@ -623,6 +623,8 @@
   function shown(row) {
     const v = row.value;
     if (row.type === 'toggle') return '';
+    // ADR-0123: the cable at a glance, the line the core keeps for it.
+    if (row.kind === 'cable') return row.note ?? '';
     // A screen reads as its maker and model, not the picker's `Maker/Model`.
     if (row.optionTags && typeof v === 'string') return v.replace('/', ' ');
     // A skin by the name its pack gives it (George's "Brand · Model").
@@ -1699,7 +1701,7 @@
     <div class="sheet" class:sheet--full={sheetFull} role="dialog" aria-label={sheet.label}>
       <div class="sheet__head">
         <div class="sheet__title">{sheet.grouped && region !== null ? region : sheet.label}</div>
-        {#if sheet.note && !joinItem}<div class="sheet__note"><NoteText text={sheet.note} /></div>{/if}
+        {#if sheet.note && !joinItem && sheet.kind !== 'cable'}<div class="sheet__note"><NoteText text={sheet.note} /></div>{/if}
         {#if joinItem && sheet.note}<div class="sheet__note"><NoteText text={sheet.note} /></div>{/if}
       </div>
 

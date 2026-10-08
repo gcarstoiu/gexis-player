@@ -274,7 +274,7 @@ class Cable:
             logger.warning("cable: %s refused (%s); putting it back", wanted["method"], err)
             await _set(name, before, self._device, self._run)
             raise ValueError("The player could not take that address. Nothing was changed.")
-        now = await status(self._device, self._run, self._sys_net)
+        now = await self.status()
         new = (now.get("address") or "").split("/")[0] or None
         self.pending = Pending(name, before, new, self._clock() + self._keep_s)
         logger.info("cable: %s address %s applied; kept only if confirmed within %.0f s",
@@ -296,7 +296,16 @@ class Cable:
             self._timer.cancel()
             self._timer = None
         self._on_change(None)
+        asyncio.ensure_future(self._refresh())
         return True
+
+    async def _refresh(self) -> None:
+        """The row's line, read again after a change settles."""
+        try:
+            await self.status()
+            self._on_change(self.pending)
+        except Exception as exc:  # noqa: BLE001
+            logger.info("cable: status not read: %s", exc)
 
     async def _expire(self) -> None:
         pending = self.pending
@@ -308,4 +317,4 @@ class Cable:
         if not ok:
             logger.error("cable: the old address did not come back: %s", err)
         self.pending = None
-        self._on_change(None)
+        await self._refresh()
