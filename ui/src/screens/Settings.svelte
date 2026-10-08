@@ -2198,7 +2198,12 @@
     width: 100%;
     height: 100%;
     min-height: 100%;
-    overflow: hidden;
+    /* `clip`, not `hidden` (George, 2026-10-08, a phone pasting the Beszel
+       key): the weave is drawn 90 px past every edge, and `hidden` is still a
+       scroll container - 131 px of sideways scroll at 412 px wide, which a
+       phone used to bring a field's caret into view, sliding the page left
+       under the fixed mini player. `clip` crops the same and scrolls nothing. */
+    overflow: clip;
     font-family: var(--font-ui);
     color: var(--ink);
     background: var(--bg-base);
@@ -3265,7 +3270,7 @@
     background: var(--bg-base);
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow: clip;
   }
   /* ADR-0100 as amended: a plugin's download, inside its own row. */
   .row--dl { position: relative; }
