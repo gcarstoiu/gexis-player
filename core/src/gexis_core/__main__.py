@@ -75,7 +75,7 @@ from gexis_core.lyrion_shares import Shares as LyrionShares
 from gexis_core.fanart import Fanart
 from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, TrackMetadata
-from gexis_core import hardware_report, settings_migrations, settling, updates
+from gexis_core import connections, hardware_report, settings_migrations, settling, updates
 from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import InvalidValue, Settings, UnknownSetting, load_registry
 from gexis_core.splash import Splash
@@ -89,6 +89,7 @@ from gexis_core.systemd import is_enabled as _unit_is_enabled
 from gexis_core.systemd import disagreeing as disagreeing_units
 from gexis_core.systemd import set_enabled as _set_unit_enabled
 from gexis_core.systemd import restart_if_enabled as _restart_if_enabled
+from gexis_core.systemd import unit_state as _unit_state
 from gexis_core.artwork_sweep import ArtworkSweep
 from gexis_core.bluealsa_volume import BluealsaVolume
 from gexis_core.remote_volume import RemoteVolume
@@ -2880,6 +2881,62 @@ async def main() -> None:
             await asyncio.sleep(2 if view else 10)
 
     asyncio.ensure_future(_follow_settling())
+
+    async def _follow_service_plugins() -> None:
+        """**A switched-on service that cannot start says so on its switch**
+        (George, 2026-10-07: the Beszel agent failed at every start on a
+        pasted key, and nothing in Settings said so). Its unit `failed`: the
+        row says it could not start; running again: said no more. Only what
+        this put there is cleared - a plugin's own report is its own."""
+        said: set[str] = set()
+        #: ADR-0129: since when each connecting service has been without a
+        #: connection - switched on, started, or last connected.
+        quiet_since: dict[str, float] = {}
+        uids: dict[str, int | None] = {}
+        while True:
+            for plugin in installed_plugins:
+                if plugin.kind != "service" or not plugin.unit:
+                    continue
+                row = plugin.enabled_row or f"{plugin.id}.enabled"
+                try:
+                    on = settings.value(row) is not False
+                except Exception:  # noqa: BLE001 - a plugin without its row
+                    continue
+                state = await asyncio.to_thread(_unit_state, plugin.unit) if on else None
+                if state == "failed":
+                    changed = settings.report(row, "failed", error=f"{plugin.name} could not start. Check its settings.")
+                    said.add(row)
+                elif row in said:
+                    changed = settings.report(row, None)
+                    said.discard(row)
+                else:
+                    changed = False
+                # Not an uploaded one: its user is made afresh for every run.
+                if plugin.connection and not plugin.uploaded:
+                    changed = _indicate_connection(plugin, row, state, quiet_since, uids) or changed
+                if changed:
+                    state_store.bump_settings_revision()
+            await asyncio.sleep(10)
+
+    def _indicate_connection(plugin, row: str, state: str | None,
+                             quiet_since: dict[str, float], uids: dict[str, int | None]) -> bool:
+        """ADR-0129: *Connected*, *Connecting* or *Not connected* beside the
+        switch of a service that connects somewhere; nothing while it is off."""
+        if state is None:
+            quiet_since.pop(row, None)
+            return settings.indicate(row, None)
+        if plugin.unit not in uids or uids[plugin.unit] is None:
+            uids[plugin.unit] = connections.unit_uid(plugin.unit)
+        uid = uids[plugin.unit]
+        connected = state == "active" and uid is not None and connections.established(uid)
+        now = time.monotonic()
+        if connected or state != "active":
+            # A start begins the wait again; a failed unit is red at once.
+            quiet_since[row] = now
+        tone, text = connections.reading(state, connected, now - quiet_since.setdefault(row, now))
+        return settings.indicate(row, tone, text)
+
+    asyncio.ensure_future(_follow_service_plugins())
 
     def _settling_done() -> None:
         settling.end()

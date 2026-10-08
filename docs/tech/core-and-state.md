@@ -273,8 +273,25 @@ row mechanics `list`, `warn`, `onlyWhen`, `optionsFrom`, `picker` and
   computed `visible` (from `onlyWhen`, including a heading's or a group's
   condition), its current `value`, `options` for `optionsFrom` sources
   (`skin_corpus`, `timezones`, `output_device`, `screens`, `boards`), `unavailable`
-  options greyed with a reason (ADR-0044 §8), and a plugin's `status`
-  report (ADR-0119).
+  options greyed with a reason (ADR-0044 §8), a plugin's `status`
+  report (ADR-0119), and the core's `indicator` on the heading above a
+  service's rows (ADR-0129, below).
+- **A text row may carry `pattern`** (matched whole) and **`invalid`** (the
+  sentence for a refusal): a value that does not match is refused with `400`
+  before it is stored. An empty value is not checked.
+- **A service says whether it is connected** (ADR-0129), on the heading
+  above its rows, which names its switch in `indicatorOf`.
+  `_follow_service_plugins` in `__main__.py` looks every 10 s at each
+  switched-on service:
+  - a unit that has `failed` gets the `status` *could not start*;
+  - a manifest with `"connection": true` (the player's own plugins only)
+    gets `Settings.indicate(row, tone, text)`.
+
+  `connections.py` reads `/proc/net/tcp` and `tcp6` for an established
+  connection off the device by the unit's `User=`. With one, the heading says
+  *Connected* (`ok`). Without one it says *Connecting* (`wait`) for
+  `GRACE_S` = 60 s, then *Not connected* (`bad`). A failed unit is `bad`
+  at once.
 - Every successful `set` calls the row's callback and then bumps
   `settings_revision`, so every open client refetches.
 

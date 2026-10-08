@@ -293,6 +293,26 @@ configuration from the environment like most daemons do.
 [ADR-0083](decisions/0083-a-backup-leaves-the-device.md) states outright.
 `secret: true` masks a row on the panel and nothing more.
 
+### A text row may check its value
+
+*Added 2026-10-08.* A `text` row may carry **`pattern`**, a regular expression
+the whole value must match, and **`invalid`**, the sentence shown when it does
+not. A value that does not match is refused with HTTP 400 and is not stored,
+so a plugin never starts on it. An empty value is still allowed: clearing a
+row is not a malformed value.
+
+### A service may say whether it is connected
+
+*Added 2026-10-08* ([ADR-0129](decisions/0129-a-service-says-whether-it-is-connected.md)).
+A `service` manifest with **`"connection": true`** has the heading above its
+rows say *Connected* (green), *Connecting* (orange) or *Not connected* (red)
+while it is on. The core reads this itself, from the established TCP
+connections off the device held by the user its unit runs as; the plugin
+sends nothing. The heading carries it as `indicator` (`tone` `ok` / `wait` /
+`bad`, and `text`), with `indicatorOf` naming the switch; it is apart from the
+`status` a plugin reports (`row`, above). Honoured only for the player's own
+plugins: an uploaded plugin's user is made for each run.
+
 ## Deliberately not here yet
 
 - ~~**Who starts a plugin.**~~ **Answered for a plugin that is a unit**, which

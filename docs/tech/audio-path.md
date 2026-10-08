@@ -414,9 +414,16 @@ flowchart LR
 - **The tap.** `pcm.output` is `type meter` with the peppyalsa scope, so the
   analysis runs inside whichever renderer has the device open and writes two
   FIFOs in `/run/gexis` (not `/tmp`: bluealsa-aplay has a private `/tmp`).
-  peppyalsa never blocks audio when nobody reads the FIFOs. The image applies a
-  small patch so each spectrum frame is written in one `write()`
-  (`peppyalsa-one-write-per-frame.patch`), giving readers whole records.
+  peppyalsa never blocks audio when nobody reads the FIFOs. Two patches are
+  applied to it, in this order:
+  - `peppyalsa-one-write-per-frame.patch` writes each spectrum frame in one
+    `write()`, giving readers whole records;
+  - `peppyalsa-spectrum-bands.patch` (ADR-0130) spaces the 30 bands
+    logarithmically from 50 Hz to 16 kHz at every sample rate, on an FFT
+    sized to the rate (about 10.8 Hz a bin: 4096 points at 44.1 and 48 kHz)
+    over the newest samples, with 3 dB per octave added above 1 kHz.
+    Upstream spread them to the Nyquist frequency, so at 96 kHz the top bars
+    never moved (Finding 117).
 - **One reader, three transports** (ADR-0011). A FIFO splits bytes between
   readers, so `gexis-meter` (`core/src/gexis_core/meter_service.py`, its own
   unit, kept out of the core's event loop) is the only reader. It republishes
@@ -427,10 +434,14 @@ flowchart LR
   attenuator, so the service reads the attenuation the core publishes and
   lowers the levels by a third of it (`METER_VOLUME_TRACKING`), mapping the
   volume's 60 dB onto a VU dial's ~20 dB.
-- **The spectrum frame matches its reader** (ADR-0056). peppyalsa measures 30
-  bands; a skin draws 20–22. The passthrough reads the spectrum engine's
-  declared `size` and folds bands to that count by peak, so the reader never
-  reads across frame boundaries.
+- **The spectrum frame matches its reader** (ADR-0056 as amended
+  2026-10-08). peppyalsa measures 30 bands; each skin draws what its own
+  panel holds, 18 to 21 on the 1920x1080 packs (`spectrum_bars`: the right
+  margin may be 6 px short of the left). The driver writes that count into
+  the engine's `config.txt`; the passthrough reads it and folds the bands to
+  it by peak. The engine's pipe reader is replaced (`read_the_newest_frame`):
+  it keeps the last whole frame of what is waiting, so a change of count
+  cannot put it out of step.
 - **Movement is configurable**: needle fall time, needle smoothing and
   spectrum smoothing are settings (ADR-0058). The first two regenerate
   `output.conf`'s peppyalsa section; needle smoothing is PeppyMeter's own

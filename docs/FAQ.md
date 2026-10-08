@@ -212,6 +212,13 @@ phone connects over Spotify or Bluetooth, the set downloads at no more than
 speed. Over HDMI audio output the visualiser moves only with
 *Settings → Audio → Volume* on *Software*; on *Fixed* it does not.
 
+**What do a spectrum's bars show?**
+The music's loudness from 50 Hz on the left to 16 kHz on the right, spaced the
+way pitch is heard, so the bass has several bars of its own. It is the same
+at every sample rate. The higher bars are lifted a little, because recordings
+have less energy the higher the pitch; without that the rightmost bars would
+hardly move.
+
 **How do I pick one skin and keep it?**
 Under *Settings → Display → Visualiser*, choose a *Skin type*, switch off
 *Rotate skin per track*, and choose a *Skin*: tapping one previews it, and
@@ -291,9 +298,11 @@ says at which address it comes back.
 **How is a new player set up?**
 On first start with no network, the player opens its own Wi-Fi, called
 *gexis-setup*. The screen shows two QR codes: one to join that network, one
-to open the setup page. The phone then walks through Wi-Fi, a name, the
-clock, the output, the music, the screen, the visualiser and the plugins to
-install (Plexamp, the Lyrion Server, Beszel). Once the player is on your
+to open the setup page. The phone then walks through Wi-Fi, then asks
+whether this is a new player or a backup to restore. A new player goes on to
+a name, the clock, the output, the music, the screen, the visualiser and the
+plugins to install (Plexamp, the Lyrion Server, Beszel); a backup answers all
+of those, and the phone shows what it brings before the player restarts. Once the player is on your
 network it shows what it is downloading, each with its progress, until it is
 ready; this cannot be skipped, and music may be slow to start until then. A download that does not finish is named, with
 *Settings → Plugins* as the place to try it again.
@@ -474,14 +483,30 @@ update that brings it.
 *Settings → System → Back up now* writes the settings, the library's
 pictures, the paired devices and the player's configuration into the
 player's Backups share on the network. Copy the backup off the player before
-flashing. Afterwards, copy it back into the Backups share and choose it under
-*Restore*; the player restarts with everything back. Network share passwords
-are not kept in backups, so enter them again.
+flashing. After flashing, setup offers *Restore a backup* right after the
+Wi-Fi: choose the file on the phone, check what it brings, and the player
+restarts with everything back. Anything setup asks (the name, for instance)
+can be changed in that review, so one player's backup can start another. With
+a new name, the review offers *A second player*: on, the first player keeps
+its Beszel identity, Plexamp's claim, Spotify sign-in and Bluetooth
+pairings, so the two never share them. A backup from an older version works. A
+backup can also be restored later: copy it into the Backups share and choose
+it under *Settings → System → Restore*. Network share passwords are not kept
+in backups, so enter them again.
 
 **What are Debug logs for?**
 *Settings → System → Debug logs* keeps the player's logs across restarts (up
 to 100 MB) to help track down a problem. It is on by default on the Testing
 channel; switching it off deletes the logs kept.
+
+**Is Beszel reaching its hub?**
+Its heading in *Settings → System*, above the hub address, token and key,
+says so while it is on: **Connected** in
+green, **Connecting** in orange for its first minute, then **Not connected**
+in red. Not connected usually means the hub address, token or Hub public key
+does not match the hub's *Add System* dialog. A Hub public key that is not one
+is refused when it is saved, and an agent that cannot start at all says
+*Beszel could not start. Check its settings.*
 
 **My sound card or screen is not marked Tested. Can I help?**
 Yes: open *Settings → System → Hardware feedback* on a phone or computer. It

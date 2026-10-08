@@ -223,7 +223,9 @@ what was there. *Settings → Display* sets when it appears and what it shows.
 
 The **visualiser** shows a VU meter or spectrum from a collection of skins,
 drawn from the music as it plays. Open it with the visualiser button on Now
-Playing or from the phone; touch the screen to close it.
+Playing or from the phone; touch the screen to close it. A spectrum's bars run from
+the deep bass on the left (50 Hz) to the top of what recordings carry on the
+right (16 kHz), the same at every sample rate.
 
 ## 7. The phone page
 
@@ -398,6 +400,10 @@ screen's size, **Plexamp**, the **Lyrion Server** and the **Beszel**
 monitoring agent, among others. A plugin that needs software from its maker
 downloads it when switched on. Setup offers the same plugins, and the first
 start shows each download arriving. A plugin file can also be uploaded here.
+While Beszel is on, its heading in **System**, above the hub address, token
+and key, says whether the agent has reached its hub: **Connected** in green,
+**Connecting** in orange for its first minute, **Not connected** in red after
+that. A Hub public key that is not one is refused when it is saved.
 
 ### System — *Updates and maintenance*
 
@@ -408,7 +414,7 @@ start shows each download arriving. A plugin file can also be uploaded here.
 | Updates | *Automatic* installs a waiting release at night, never while playing. |
 | Update channel | *Testing* gets each release first, *Stable* once it has been tried. Recommended: Stable. |
 | Back up now | Saves the settings, the library's pictures, the paired devices and the device's configuration into the Backups share. |
-| Restore | Puts a backup back and restarts the device. |
+| Restore | Puts a backup from the Backups share back and restarts the device. A freshly flashed card can restore one during setup instead, straight from the phone, changing anything setup asks (the name, say) on the way. |
 | Debug logs | Keeps the logs across restarts, for tracking down a problem. |
 | Hardware feedback | On a phone or computer, two steps. The screen: a test pattern on the player's screen, with four circles to tap, which measures where the touches land, and two questions. The sound: a short test tone at 44.1, 96 and 192 kHz played at the current volume (not while something plays), and three questions. Without a screen, or with Headless on, it starts at the sound. Then feedback on GitHub, filled in with what the player reads of them (never a serial number or anything about you). It helps others see what works before buying. A week after a sound card or screen that is not Tested is first used, a line at the top of System offers it once; × puts it away for good. |
 | Problem report | On a phone or computer: downloads one file with the logs, versions, hardware and settings, to attach to a report of a problem. Addresses, names, networks, shares, keys and what you play are taken out on the player first; read the file before sharing it. On the screen it says where to open it instead. |

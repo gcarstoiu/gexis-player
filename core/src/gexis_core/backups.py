@@ -13,11 +13,17 @@ once a month is the wrong place for a mechanism.
 """
 from __future__ import annotations
 
+import json
 import logging
+import os
 import re
+import shutil
+import sqlite3
 import subprocess
 import tarfile
+import tempfile
 import time
+import zlib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -88,6 +94,25 @@ MEMBERS = (
 #: `/var/lib/go-librespot`, and refusing them would make them unrestorable for
 #: the sake of one image-owned file.
 FORMERLY_BACKED_UP = ("var/lib/go-librespot",)
+
+#: **What makes a backup this player and no other** (ADR-0131 as amended;
+#: George, 2026-10-08: "Setup could offer to leave these behind when the name
+#: is changed" - "yes"). A backup restored onto a second player leaves these
+#: behind, so two players do not share one identity: one system in two
+#: places on the Beszel hub, one Plex player on two devices. The pairings
+#: are bound to the first Pi's adapter and do nothing on another.
+IDENTITIES = (
+    ("var/lib/beszel-agent", "Beszel identity"),
+    ("home/pi/.local/share/Plexamp", "Plexamp's claim"),
+    ("var/lib/go-librespot/state.json", "Spotify sign-in"),
+    ("var/lib/bluetooth", "Bluetooth pairings"),
+)
+
+#: **The databases the core holds open** (ADR-0131 §5). Put back by writing
+#: beside them and renaming, so an open connection keeps the file it had and
+#: never sees one overwritten underneath it.
+REPLACED = ("var/lib/gexis-core/settings.db", "var/lib/gexis-core/enrichment.db")
+SETTINGS_DB = "var/lib/gexis-core/settings.db"
 
 #: `gexis-<name>-<stamp>.tgz`. The name is the device's, so an archive says
 #: where it came from - ADR-0083 does not prevent restoring one device's
@@ -176,34 +201,198 @@ def create(device_name: str, directory: Path = DEFAULT_DIR, root: Path = Path("/
     return name
 
 
-def restore(name: str, directory: Path = DEFAULT_DIR, root: Path = Path("/")) -> None:
-    """Put one back. **The caller reboots** (ADR-0083).
+def _checked(archive: tarfile.TarFile, label: str) -> list[tarfile.TarInfo]:
+    """The members to put back. Refuses a link and a member that would land
+    outside the paths this module writes - the share is guest-writable, so an
+    archive in it is not necessarily one we made."""
+    allowed = tuple(MEMBERS)
+    members = []
+    for member in archive.getmembers():
+        if member.issym() or member.islnk():
+            raise ValueError(f"{label}: refuses a link, {member.name!r}")
+        if member.name.startswith(allowed):
+            members.append(member)
+        elif member.name.startswith(FORMERLY_BACKED_UP):
+            # An archive from before a member was narrowed: skipped, not
+            # refused, so a backup taken the day before is still one.
+            logger.info("backup: %s: leaving %s to the image", label, member.name)
+        else:
+            raise ValueError(f"{label}: refuses to write {member.name!r}")
+    return members
 
-    Refuses a name that is not ours and a member that would land outside the
-    paths this module writes - the share is guest-writable, so an archive in
-    it is not necessarily one we made.
-    """
+
+def restore(name: str, directory: Path = DEFAULT_DIR, root: Path = Path("/")) -> None:
+    """Put one back. **The caller reboots** (ADR-0083)."""
     if not SAFE.match(name) or not NAME.match(name):
         raise ValueError(f"not a backup name: {name!r}")
     path = directory / name
     if not path.is_file():
         raise FileNotFoundError(str(path))
-    allowed = tuple(MEMBERS)
+    restore_file(path, root)
+
+
+def restore_file(path: Path, root: Path = Path("/"), leave: tuple[str, ...] = ()) -> int:
+    """Put back the archive at `path`, whatever it is called - setup's
+    upload is not in the share (ADR-0131). `leave`: paths not put back, the
+    identities of a backup restored as another player. Returns how many
+    paths."""
     with tarfile.open(path, "r:gz") as archive:
-        members = []
-        for member in archive.getmembers():
-            if member.issym() or member.islnk():
-                raise ValueError(f"{name}: refuses a link, {member.name!r}")
-            if member.name.startswith(allowed):
-                members.append(member)
-            elif member.name.startswith(FORMERLY_BACKED_UP):
-                # An archive from before a member was narrowed: skipped, not
-                # refused, so a backup taken the day before is still one.
-                logger.info("backup: %s: leaving %s to the image", name, member.name)
-            else:
-                raise ValueError(f"{name}: refuses to write {member.name!r}")
-        archive.extractall(root, members=members)
-    logger.warning("backup: restored %s over %d path(s); a reboot follows", name, len(members))
+        members = [m for m in _checked(archive, path.name)
+                   if not any(m.name == p or m.name.startswith(p + "/") for p in leave)]
+        swapped = [m for m in members if m.name in REPLACED and m.isfile()]
+        archive.extractall(root, members=[m for m in members if m not in swapped])
+        for member in swapped:
+            target = root / member.name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            partial = target.with_name(f".{target.name}.restoring")
+            source = archive.extractfile(member)
+            if source is None:
+                continue
+            with source, open(partial, "wb") as out:
+                shutil.copyfileobj(source, out)
+            os.chmod(partial, member.mode & 0o777)
+            try:
+                os.chown(partial, member.uid, member.gid)
+            except OSError:  # not root: the tests, and nothing else
+                pass
+            partial.replace(target)
+    logger.warning("backup: restored %s over %d path(s); a reboot follows", path.name, len(members))
+    return len(members)
+
+
+def write_settings(values: dict, root: Path = Path("/")) -> None:
+    """**Setup's own answers over a restored backup** (ADR-0131 as amended):
+    written into the settings file just put back, which is the one the next
+    start reads. The core's open store still holds the file it had."""
+    if not values:
+        return
+    conn = sqlite3.connect(root / SETTINGS_DB)
+    try:
+        conn.executemany("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+                         [(key, json.dumps(value)) for key, value in values.items()])
+        conn.commit()
+    finally:
+        conn.close()
+
+
+class Refused(ValueError):
+    """**A file setup cannot restore, in words for the phone** (ADR-0131 §4)."""
+
+
+NOT_A_BACKUP = "That file is not a gexis backup. A backup is a .tgz file from the player's Backups share."
+FOREIGN = "That file holds more than a gexis backup does, so it is not restored."
+NO_SETTINGS = "That backup has no settings in it."
+UNREADABLE = "The settings in that backup cannot be read by this version of gexis."
+
+#: What setup applies from a backup as its own answers, in this order
+#: (ADR-0131 §5.3): Headless before the screen, as setup's own steps go.
+APPLIED = ("device_name", "timezone", "clock_format", "output_device", "lms_enabled", "lms_server",
+           "spotify_enabled", "bt_enabled", "headless", "screen", "visualiser_skins")
+
+_PAIRED = re.compile(r"^var/lib/bluetooth/[0-9A-F:]{17}/[0-9A-F:]{17}$")
+
+
+def _settings_in(archive: tarfile.TarFile, member: tarfile.TarInfo) -> dict:
+    source = archive.extractfile(member)
+    if source is None:
+        raise Refused(NO_SETTINGS)
+    with tempfile.TemporaryDirectory() as work:
+        copy = Path(work) / "settings.db"
+        with source, open(copy, "wb") as out:
+            shutil.copyfileobj(source, out)
+        try:
+            conn = sqlite3.connect(f"file:{copy}?mode=ro", uri=True)
+            try:
+                rows = conn.execute("SELECT key, value FROM settings").fetchall()
+            finally:
+                conn.close()
+        except sqlite3.Error as exc:
+            logger.warning("backup: settings unreadable: %s", exc)
+            raise Refused(UNREADABLE) from None
+    values = {}
+    for key, raw in rows:
+        try:
+            values[key] = json.loads(raw)
+        except (TypeError, ValueError):
+            continue
+    return values
+
+
+def inspect(path: Path, known_migrations: int, schema_key: str = "_settings_schema") -> dict:
+    """**What a backup would bring, without putting anything back** (ADR-0131
+    §3-4): its settings as setup applies them, which plugins it has on, what
+    else it carries, when and where it was made, and whether a newer version
+    of gexis made it. Raises `Refused` with the sentence for the phone."""
+    try:
+        archive = tarfile.open(path, "r:gz")
+    except (tarfile.TarError, OSError, EOFError, zlib.error):
+        raise Refused(NOT_A_BACKUP) from None
+    with archive:
+        try:
+            members = _checked(archive, path.name)
+        except ValueError:
+            raise Refused(FOREIGN) from None
+        except (tarfile.TarError, OSError, EOFError, zlib.error):
+            raise Refused(NOT_A_BACKUP) from None
+        by_name = {m.name: m for m in members}
+        db = by_name.get(SETTINGS_DB)
+        if db is None or not db.isfile():
+            raise Refused(NO_SETTINGS)
+        values = _settings_in(archive, db)
+        name = values.get("device_name")
+        env = by_name.get("etc/gexis/device-name.env")
+        if not name and env is not None and env.isfile():
+            source = archive.extractfile(env)
+            if source is not None:
+                with source:
+                    for line in source.read().decode(errors="replace").splitlines():
+                        if line.startswith("NAME="):
+                            name = line[5:].strip().strip('"') or None
+    names = [m.name for m in members]
+    schema = values.get(schema_key)
+    # When it was made: the time in its name, as `create` writes it, or the
+    # newest file in it - a renamed file keeps its contents' times.
+    stamp = re.search(r"-(\d{8}-\d{6})\.tgz$", path.name)
+    try:
+        made = time.mktime(time.strptime(stamp.group(1), "%Y%m%d-%H%M%S")) if stamp else None
+    except ValueError:
+        made = None
+    if made is None:
+        made = max((m.mtime for m in members), default=None)
+    brings = []
+    paired = sum(1 for n in names if _PAIRED.match(n))
+    if paired:
+        brings.append(f"{paired} paired Bluetooth {'device' if paired == 1 else 'devices'}")
+    if "var/lib/go-librespot/state.json" in names:
+        brings.append("Spotify sign-in")
+    if any(n.startswith("home/pi/.local/share/Plexamp/Settings/") for n in names):
+        brings.append("Plexamp's claim")
+    if any(n.startswith("var/lib/beszel-agent/") for n in names):
+        brings.append("Beszel identity")
+    if any(n.startswith("var/lib/beszel-hub/") for n in names):
+        brings.append("Beszel hub history")
+    if any(n.startswith("var/lib/squeezeboxserver/prefs/") for n in names):
+        brings.append("Lyrion server settings")
+    playlists = sum(1 for n in names if n.startswith("var/lib/gexis-music/Playlists/") and n.endswith(".m3u"))
+    if playlists:
+        brings.append(f"{playlists} {'playlist' if playlists == 1 else 'playlists'}")
+    if "var/lib/gexis-core/enrichment.db" in names:
+        brings.append("Artist and album information")
+    if any(n.startswith("var/lib/private/gexis-uploaded/") for n in names):
+        brings.append("Uploaded plugins' data")
+    held = [label for prefix, label in IDENTITIES
+            if any(n == prefix or n.startswith(prefix + "/") for n in names)]
+    return {
+        "name": name,
+        "made": made,
+        #: What a second player would leave behind, of what this one holds.
+        "identities": held,
+        "newer": isinstance(schema, int) and schema > known_migrations,
+        "settings": {key: values[key] for key in APPLIED if key in values},
+        "enabled": sorted(k[:-len(".enabled")] for k, v in values.items()
+                          if k.endswith(".enabled") and v is True),
+        "brings": brings,
+    }
 
 
 def forget(name: str, directory: Path = DEFAULT_DIR) -> None:

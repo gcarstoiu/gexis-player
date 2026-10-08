@@ -1522,6 +1522,47 @@ class StateServer:
         except ValueError as exc:
             return self._setup_error(str(exc), 400)
 
+    async def _handle_setup_backup(self, request: web.Request) -> web.Response:
+        """**ADR-0131: a backup, uploaded from the phone in setup.** The body
+        is the file, streamed to disk under its own cap (a backup can be far
+        larger than a form), then checked; the page gets the review or the
+        reason in a sentence. `?name=` carries the file's name for the
+        review, nothing more."""
+        closed = self._setup_closed()
+        if closed is not None:
+            return closed
+        from gexis_core import backups, setup_flow
+
+        part = self._setup_flow.upload_path()
+        part.parent.mkdir(parents=True, exist_ok=True)
+        size = 0
+        try:
+            fd = os.open(part, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, "wb") as out:
+                async for chunk in request.content.iter_chunked(1 << 16):
+                    size += len(chunk)
+                    if size > setup_flow.BACKUP_MAX_BYTES:
+                        raise OverflowError
+                    out.write(chunk)
+        except OverflowError:
+            part.unlink(missing_ok=True)
+            return web.json_response({"error": "That file is larger than any gexis backup."}, status=413)
+        except (OSError, ConnectionError) as exc:
+            part.unlink(missing_ok=True)
+            logger.warning("setup: backup upload failed after %d bytes: %s", size, exc)
+            return web.json_response({"error": "The file did not arrive whole. Try again."}, status=400)
+        try:
+            answers = await asyncio.to_thread(self._setup_flow.take_backup, part, request.query.get("name"))
+        except backups.Refused as exc:
+            return web.json_response({"error": str(exc)}, status=400)
+        return web.json_response(answers)
+
+    async def _handle_setup_backup_forget(self, request: web.Request) -> web.Response:
+        closed = self._setup_closed()
+        if closed is not None:
+            return closed
+        return web.json_response(await asyncio.to_thread(self._setup_flow.forget_backup))
+
     async def _handle_setup_networks(self, request: web.Request) -> web.Response:
         """A scan, read while hosting (Finding 099: the phone stays on), less
         the setup network itself, which sees itself."""
@@ -2032,6 +2073,8 @@ class StateServer:
         app.router.add_get("/setup/networks", self._handle_setup_networks)
         app.router.add_get("/setup/screen", self._handle_setup_screen)
         app.router.add_post("/setup/finish", self._handle_setup_finish)
+        app.router.add_post("/setup/backup", self._handle_setup_backup)
+        app.router.add_delete("/setup/backup", self._handle_setup_backup_forget)
         app.router.add_get("/setup/plugins", self._handle_setup_plugins)
         app.router.add_post("/settling/done", self._handle_settling_done)
         # ADR-0101: the phone's idle toggle, and the panel saying what it shows.

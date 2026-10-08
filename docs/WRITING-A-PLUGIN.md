@@ -59,6 +59,7 @@ brings one is refused.
 | `accent` | no | A CSS colour for the panel's accent when your renderer plays |
 | `status` | no | The waiting screen's second line under your mark (`"Ready"`, `"Pairable"`) |
 | `summary` | no | One line on what it is. The player's own plugins show it in setup's Plugins step; an uploaded plugin arrives after setup, so it is not shown there |
+| `connection` | no | Honoured only on the player's own `service` plugins, not on an uploaded one: the heading above its rows then says *Connected*, *Connecting* or *Not connected*. An uploaded plugin runs as a user made for each run, so there is no fixed user to read connections from |
 | `settings` | no | Rows for **Settings**, below |
 
 **Not allowed:** `unit` (the player writes it), paths that point outside the
@@ -233,6 +234,11 @@ your name. Your switch sits under the same heading on the Plugins page:
   for their vocabulary.
 - **`secret: true`** masks a value on the screen. It is **not** encryption: the
   settings are readable on the local network.
+- **`pattern` and `invalid`** check a `text` row before it is saved. `pattern`
+  is a regular expression the whole value must match; a value that does not
+  is refused and `invalid` is shown, so say there what the value should look
+  like. Beszel's *Hub public key* uses it, because a pasted value that is not a
+  key stops the agent at every start.
 - **Every plugin gets an on/off switch** it did not declare. An uploaded plugin
   arrives **off**.
 

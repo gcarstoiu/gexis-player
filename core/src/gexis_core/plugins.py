@@ -100,6 +100,10 @@ class Plugin:
     notice: str | None = None
     #: **One line on what it is** (ADR-0128): the setup step's description.
     summary: str | None = None
+    #: **ADR-0129: a service that connects somewhere** - its switch says
+    #: *Connected*, *Connecting* or *Not connected*, read by the core from the
+    #: connections its unit's user holds.
+    connection: bool = False
     #: True for the three this repository ships. They are not special in how
     #: they are read - only in who wrote them.
     built_in: bool = False
@@ -180,6 +184,7 @@ def parse(raw: dict, *, directory: Path | None = None, built_in: bool = False) -
         removes=raw["removes"] if isinstance(raw.get("removes"), str) else None,
         notice=raw.get("notice"),
         summary=raw["summary"] if isinstance(raw.get("summary"), str) else None,
+        connection=raw.get("connection") is True and raw["kind"] == "service",
         mark=mark,
         settings=tuple(settings),
         built_in=built_in,

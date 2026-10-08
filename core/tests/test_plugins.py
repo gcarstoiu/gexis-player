@@ -367,3 +367,13 @@ def test_the_lyrion_server_heads_sources_with_the_client_beneath():
     sources = next(g for g in groups if g["id"] == "sources")
     headings = [r["label"] for r in sources["rows"] if r["type"] == "group"]
     assert headings[:2] == ["Lyrion Server", "Lyrion Client"]
+
+
+def test_only_a_service_can_ask_for_its_connection_shown():
+    """ADR-0129: `connection` is read from the unit's own connections; a
+    renderer is arbitrated, not connected, and is not given one."""
+    service = {"id": "beszel", "name": "Beszel", "kind": "service", "unit": "beszel-agent.service"}
+    assert parse({**service, "connection": True}).connection is True
+    assert parse(service).connection is False
+    assert parse({**service, "connection": "yes"}).connection is False
+    assert parse({**GOOD, "connection": True}).connection is False

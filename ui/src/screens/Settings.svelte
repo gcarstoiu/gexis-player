@@ -577,6 +577,8 @@
       // A 409 is a choice the hardware has taken away (its reason is on the
       // row already, in words) or a row this release does not apply.
       if (result.status === 409) flash(row.unavailable?.[value] ?? plainly(result.error, `${row.label} cannot be changed yet`));
+      // A value not in the row's form says what the form is (`invalid`).
+      else if (result.status === 400 && row.invalid) flash(row.invalid, 4500);
       else if (!result.ok) flash(plainly(result.error ?? `HTTP ${result.status}`, `${row.label} was not saved. Try again.`));
       return result.ok;
     } finally {
@@ -1336,6 +1338,14 @@
                   <span class="subhead__dot" style:background={r.accent}></span>
                   <span class="subhead__label" style:color={r.accent}>{r.label}</span>
                   <span class="subhead__rule"></span>
+                  {#if r.indicator}
+                    <!-- ADR-0129 as amended: what the service is doing, the
+                         core's reading, above the rows its keys go in. -->
+                    <span class="ind ind--{r.indicator.tone}">
+                      <span class="ind__mark" aria-hidden="true">{r.indicator.tone === 'ok' ? '✓' : r.indicator.tone === 'bad' ? '✕' : ''}</span>
+                      {r.indicator.text}
+                    </span>
+                  {/if}
                 </div>
               {:else if r.key === 'software_update'}
                 <!-- ADR-0110 §2 as amended (George, 2026-10-01): the
@@ -2196,7 +2206,12 @@
     width: 100%;
     height: 100%;
     min-height: 100%;
-    overflow: hidden;
+    /* `clip`, not `hidden` (George, 2026-10-08, a phone pasting the Beszel
+       key): the weave is drawn 90 px past every edge, and `hidden` is still a
+       scroll container - 131 px of sideways scroll at 412 px wide, which a
+       phone used to bring a field's caret into view, sliding the page left
+       under the fixed mini player. `clip` crops the same and scrolls nothing. */
+    overflow: clip;
     font-family: var(--font-ui);
     color: var(--ink);
     background: var(--bg-base);
@@ -2584,6 +2599,42 @@
   }
   .row__value--done {
     color: var(--accent-lms);
+  }
+  .ind {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    flex-shrink: 0;
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--ind);
+  }
+  .ind__mark {
+    display: inline-grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    font-family: var(--font-sans, inherit);
+    font-size: 12px;
+    color: var(--ink-on-accent);
+    background: var(--ind);
+  }
+  .ind--ok {
+    --ind: var(--accent-ok);
+  }
+  .ind--wait {
+    --ind: var(--accent-warn);
+  }
+  .ind--bad {
+    --ind: var(--accent-bad);
+  }
+  .ind--wait .ind__mark {
+    animation: indWait 1400ms ease-in-out infinite;
+  }
+  @keyframes indWait {
+    50% { opacity: 0.35; }
   }
   .row__tick {
     font-family: var(--font-sans, inherit);
@@ -3263,7 +3314,7 @@
     background: var(--bg-base);
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow: clip;
   }
   /* ADR-0100 as amended: a plugin's download, inside its own row. */
   .row--dl { position: relative; }

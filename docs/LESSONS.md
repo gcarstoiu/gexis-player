@@ -1150,6 +1150,41 @@ playback, the screen) before and after.**
 a quiet test sets the volume of every source it starts, not only the
 player's.**
 
+**61. A refusal tested against code that accepts** (2026-10-08, Beszel on
+`guestpi`).
+- **What went wrong.** The install of a new check - a Hub public key that is
+  not an SSH key is refused - was gated on nothing playing, and was skipped:
+  something played. The test that followed, in the same command, was not
+  gated: it wrote a deliberately wrong key, which the old code, still
+  running, accepted. George had entered a working key seven minutes earlier;
+  the agent was connected to the hub. The write replaced it and the agent
+  failed at every start.
+- **What it looked like.** `HTTP 200` for a value that should have been
+  refused - read as "the check is not live yet", after the damage.
+- **How it was caught.** By the agent's own log: connected at 07:52:14,
+  stopped at 07:58:58, failing on the test text since.
+
+**A test that writes runs only after the change it tests is confirmed
+installed, in its own command - never in the same one as a gated install -
+and never writes over a real setting: it uses a row nothing reads, or puts
+the value back.**
+
+**62. Old and new, identical to the decimal** (2026-10-08, peppyalsa on
+`guestpi`, Finding 117).
+- **What went wrong.** A side-by-side test of two builds of a library pointed
+  each run at its own copy with `pcm_scope_type.!peppyalsa { lib … }`. The
+  system's `conf.d/output.conf`, read later through alsa-lib's hooks, put its
+  own path back, so both runs loaded the installed library.
+- **What it looked like.** A clean result: every bar's mean, movement and
+  zero count equal between old and new. That could have been read as "the
+  patch changes nothing on the device", or as the model being wrong.
+- **How it was caught.** It was too equal. A real change cannot match to the
+  decimal, and the PC harness had already shown a large one.
+
+**A comparison of two builds proves which build ran, per run, before
+comparing anything: the process's memory map, a version string, a symbol
+only one has. "No difference" is a result only after that.**
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

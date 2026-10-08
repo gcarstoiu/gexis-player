@@ -1393,6 +1393,32 @@ def test_a_plugin_s_report_is_published_on_its_row_and_goes_with_it(store):
         settings.report("plexamp.nothing", "done")
 
 
+def test_a_service_s_connection_is_indicated_on_its_heading_apart_from_reports(store):
+    """ADR-0129 as amended (George, 2026-10-08: *"next in system, in the same
+    place where the keys are added"*): the core's reading - *Connected* - is
+    the `indicator` of the heading above the plugin's own rows, beside and
+    independent of a plugin's `status` on its switch."""
+    settings = Settings(store, registry=Settings.with_plugins(_groups(), [_plugin("beszel", kind="service", settings=[
+        {"key": "key", "type": "text", "label": "Hub public key", "default": None}])]))
+    def heading():
+        return next(r for g in settings.to_json() for r in g["rows"]
+                    if r.get("type") == "group" and r.get("indicatorOf") == "beszel.enabled")
+    def switch():
+        return next(r for g in settings.to_json() for r in g["rows"] if r.get("key") == "beszel.enabled")
+    assert "indicator" not in heading()
+    assert settings.indicate("beszel.enabled", "wait", "Connecting") is True
+    assert heading()["indicator"] == {"tone": "wait", "text": "Connecting"}
+    assert "indicator" not in switch(), "said once, where the keys are"
+    assert settings.indicate("beszel.enabled", "wait", "Connecting") is False, "a repeat changes nothing"
+    settings.report("beszel.enabled", "failed", error="Beszel could not start. Check its settings.")
+    settings.indicate("beszel.enabled", "bad", "Not connected")
+    assert heading()["indicator"]["tone"] == "bad" and switch()["status"]["state"] == "failed"
+    assert settings.indicate("beszel.enabled", None) is True
+    assert "indicator" not in heading() and "status" in switch()
+    with pytest.raises(InvalidValue):
+        settings.indicate("beszel.enabled", "green")
+
+
 def test_headless_hides_every_setting_that_needs_a_screen(store):
     """George, 2026-10-05: with Headless on, the home screen, idle screen,
     visualiser and its tweaks, the volume drawer, the transition screen and
@@ -1490,3 +1516,24 @@ def test_output_mode_and_software_volume_become_one_row(tmp_path):
         settings_migrations.migrate(store)
         assert store.get("output_mode") == after, before
         assert store.get("software_volume") is None
+
+
+def test_a_text_row_with_a_pattern_refuses_what_does_not_fit_and_says_why():
+    """2026-10-07: a pasted paragraph as the Beszel hub's key left the agent
+    failing at every start, and nothing said so."""
+    import json
+    from pathlib import Path
+
+    from gexis_core.settings_registry import InvalidValue, validate
+
+    manifest = Path(__file__).parents[2] / "image" / "stage-gexis" / "07-beszel" / "files" / "plugin.json"
+    row = next(r for r in json.loads(manifest.read_text())["settings"] if r["key"] == "key")
+    key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFZVk7Y67bQyvENPVjSUAOS9eZvS+Cabc123"
+    assert validate(row, key) == key
+    assert validate(row, f"  {key} beszel@hub ") == f"{key} beszel@hub"
+    assert validate(row, "") == "", "clearing is not a value"
+    with pytest.raises(InvalidValue) as refused:
+        validate(row, "Waiting on your answer: while the settling screen is up")
+    assert str(refused.value).startswith("That is not the hub's public key")
+    assert validate({"key": "x", "type": "text", "pattern": "(unclosed"}, "anything") == "anything", \
+        "a pattern that does not compile does not lock the row"

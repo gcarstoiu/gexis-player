@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+import re
 from functools import lru_cache
 from pathlib import Path
 from collections.abc import Hashable
@@ -339,6 +340,19 @@ def validate(row: dict, value: Any, *, options: Any = None) -> Any:
         value = value.strip()
         if len(value) > TEXT_MAX:
             raise InvalidValue(f"at most {TEXT_MAX} characters")
+        # **The form a value must have** (2026-10-07: a Beszel key that was a
+        # pasted paragraph left the agent failing at every start, and nothing
+        # said so). `pattern` is matched whole; `invalid` is the sentence the
+        # panel shows. Empty always passes - clearing a row is not a value.
+        pattern = row.get("pattern")
+        if pattern and value:
+            try:
+                ok = re.fullmatch(pattern, value) is not None
+            except re.error:
+                logger.warning("settings: %s has a pattern that does not compile; not checked", row.get("key"))
+                ok = True
+            if not ok:
+                raise InvalidValue(row.get("invalid") or "not in the expected form")
     return value
 
 
@@ -383,6 +397,10 @@ def load_seed(settings_rows: dict[str, dict], path: Path = SEED_PATH) -> dict[st
 #: cannot, where a screen for listening should not carry dead controls.
 #: What a plugin may say its row is (ADR-0119).
 STATUS_STATES = ("done", "failed")
+#: **ADR-0129: a service's connection, said on its switch** - green, orange,
+#: red. The core's own reading, not a plugin's report (ADR-0119), so the two
+#: never contradict: Plexamp's `failed` still says *Claimed*.
+INDICATOR_TONES = ("ok", "wait", "bad")
 #: A few words or one sentence, not a log.
 STATUS_TEXT_MAX = 160
 
@@ -513,8 +531,10 @@ class Settings:
                     "category to hold its switch", plugin.id,
                 )
                 continue
+            # ADR-0129 as amended: a service's connection is said on the
+            # heading above its own rows, where its keys are entered.
             rows = [{"type": "group", "label": plugin.name, "accent": plugin.accent,
-                     "onlyWhen": [switch, True]}]
+                     "onlyWhen": [switch, True], "indicatorOf": switch}]
             reserved = {"enabled"} if plugin.enabled_row is None else set()
             for row in plugin.settings:
                 row = dict(row)
@@ -643,6 +663,8 @@ class Settings:
         #: state the row is in, not a value. In memory only - it is the
         #: plugin's to say again, and goes when the plugin does.
         self._status: dict[str, dict[str, str]] = {}
+        #: key -> the core's own reading of what the row switches (ADR-0129).
+        self._indicators: dict[str, dict[str, str]] = {}
         unknown_sources = set(options or ()) - OPTION_SOURCES
         if unknown_sources:
             raise ValueError(f"not an option source: {sorted(unknown_sources)}")
@@ -701,6 +723,21 @@ class Settings:
         if self._status.get(key) == status:
             return False
         self._status[key] = status
+        return True
+
+    def indicate(self, key: str, tone: str | None, text: str | None = None) -> bool:
+        """**What a switched-on service is doing, on the heading above its
+        rows** (ADR-0129 as amended), keyed by its switch: `ok`, `wait` or `bad` with a word or two - *Connected*.
+        None says nothing. Returns whether that changed anything."""
+        self.row(key)
+        if tone is None:
+            return self._indicators.pop(key, None) is not None
+        if tone not in INDICATOR_TONES:
+            raise InvalidValue(f"not an indicator tone: {tone!r}")
+        indicator = {"tone": tone, "text": str(text or "")[:STATUS_TEXT_MAX]}
+        if self._indicators.get(key) == indicator:
+            return False
+        self._indicators[key] = indicator
         return True
 
     def forget_reports(self, prefix: str) -> bool:
@@ -778,6 +815,8 @@ class Settings:
             for row in group["rows"]:
                 if row["type"] == "group":
                     heading = row.get("onlyWhen")
+                    if row.get("indicatorOf") in self._indicators:
+                        row = {**row, "indicator": dict(self._indicators[row["indicatorOf"]])}
                     rows.append(row)
                     continue
                 public = {k: v for k, v in row.items() if k != "default"}

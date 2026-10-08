@@ -13,9 +13,10 @@ repository.
 - Components fetched when the image is built are pinned to exact commits or
   releases, which are named in the build scripts under `image/stage-gexis/`.
   Their source is at those upstreams.
-- **peppyalsa is modified here.** The change is
-  `image/stage-gexis/00-alsa/files/peppyalsa-one-write-per-frame.patch`, applied
-  to the pinned upstream commit.
+- **peppyalsa is modified here.** The changes are
+  `image/stage-gexis/00-alsa/files/peppyalsa-one-write-per-frame.patch` and
+  `image/stage-gexis/00-alsa/files/peppyalsa-spectrum-bands.patch`, applied in
+  that order to the pinned upstream commit.
 - Debian and Raspberry Pi OS packages are listed with their exact versions in
   `packages.txt`, beside this file. Their source is in the Debian and Raspberry
   Pi OS source archives at those versions.
