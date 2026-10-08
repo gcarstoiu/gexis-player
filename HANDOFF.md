@@ -30,13 +30,12 @@ renaming a backup as a second player. *Open* in ADR-0131: backups from a newer
 release are accepted, with a note.
 
 **guestpi** (192.168.178.21, Pi-DAC PRO, 13.3"): runs 0.9.5's code as a
-preview. **Plexamp is unclaimed there**: Plex accepts each new claim, then
-refuses the sign-in it issued for the first seconds and Plexamp drops it
-(three claims, 2026-10-08; requests with the same sign-in answered 200 and 401
-within a second, no pattern by device ID). George: wait and try again later.
-The earlier store is set aside as `~/.local/share/Plexamp.aside-20261008-121613`.
-Our wrapper's own faults to fix afterwards: a failed claim's leftovers, and the
-row not saying the claim failed. **gexis** is offline since its card swap.
+preview. **Plexamp claimed again** later on 2026-10-08, after three claims
+Plex refused (its sign-ins answered 200 and 401 within a second); the
+wrapper's three faults it showed are fixed (ADR-0119 amended, gexis-plexamp
+0.4.2, on guestpi). The store set aside then is still at
+`~/.local/share/Plexamp.aside-20261008-121613` - delete it when convenient.
+**gexis** is offline since its card swap.
 
 **Left before the first public release.** George to test: the Volume row
 (Fixed never tried by Claude - it goes to full level), the volume-jump fixes
