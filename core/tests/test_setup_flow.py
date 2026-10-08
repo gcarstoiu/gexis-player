@@ -438,3 +438,40 @@ def test_restore_without_a_backup_is_refused_and_new_ignores_one(tmp_path):
     flow.save({"start": "new"})
     finish(flow, net)
     assert not (tmp_path / "card/var/lib/gexis-core/settings.db").exists(), "New player: the backup is not used"
+
+
+def _restored(tmp_path, key):
+    import sqlite3
+    conn = sqlite3.connect(tmp_path / "card/var/lib/gexis-core/settings.db")
+    row = conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
+    return json.loads(row[0]) if row else None
+
+
+def test_a_step_changed_in_the_review_is_written_over_the_backup(tmp_path):
+    """ADR-0131 as amended (George, 2026-10-08): a backup set up as another
+    player - the name changed in the review is what it starts with, in the
+    settings put back and through Settings; the backup's name is not
+    re-applied over it. What was left alone stays the backup's."""
+    settings = FakeSettings()
+    flow, net, _, reboots, upload, names = _with_backup(tmp_path, FakeNM(devices=NOTHING), settings, plugins=PLUGINS)
+    flow.take_backup(upload)
+    flow.save({"ssid": "Home", "password": "hunter22", "name": "Kitchen", "plugins": ["beszel"]})
+    asyncio.run(_finish_told(flow, net))
+    assert _restored(tmp_path, "device_name") == "Kitchen"
+    assert ("device_name", "Kitchen") in settings.sets
+    assert names == [], "the backup's own name is not put back over the new one"
+    assert _restored(tmp_path, "timezone") == "Europe/Berlin", "left alone: the backup's"
+    assert _restored(tmp_path, "plexamp.enabled") is False and _restored(tmp_path, "beszel.enabled") is True
+    assert not (tmp_path / "settling.json").exists() or \
+        [w["id"] for w in json.loads((tmp_path / "settling.json").read_text())["items"]] == ["skins"]
+    assert net.status()["finished"]["name"] == "Kitchen" and reboots == [True]
+
+
+def test_lyrion_found_after_the_join_is_written_into_the_restored_settings(tmp_path):
+    settings = FakeSettings()
+    flow, net, _, _, upload, _ = _with_backup(tmp_path, FakeNM(devices=NOTHING), settings,
+                                              servers=[{"name": "Den", "address": "10.0.0.5:9000"}])
+    flow.take_backup(upload)
+    flow.save({"ssid": "Home", "password": "hunter22", "lms_mode": "find"})
+    asyncio.run(_finish_told(flow, net))
+    assert _restored(tmp_path, "lms_server") == "10.0.0.5:9000" and _restored(tmp_path, "lms_enabled") is True

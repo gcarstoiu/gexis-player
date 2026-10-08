@@ -244,6 +244,21 @@ def restore_file(path: Path, root: Path = Path("/")) -> int:
     return len(members)
 
 
+def write_settings(values: dict, root: Path = Path("/")) -> None:
+    """**Setup's own answers over a restored backup** (ADR-0131 as amended):
+    written into the settings file just put back, which is the one the next
+    start reads. The core's open store still holds the file it had."""
+    if not values:
+        return
+    conn = sqlite3.connect(root / SETTINGS_DB)
+    try:
+        conn.executemany("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+                         [(key, json.dumps(value)) for key, value in values.items()])
+        conn.commit()
+    finally:
+        conn.close()
+
+
 class Refused(ValueError):
     """**A file setup cannot restore, in words for the phone** (ADR-0131 §4)."""
 

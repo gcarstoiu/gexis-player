@@ -38,6 +38,9 @@
     ['review', 'Review', '#f2a48f']
   ];
   const last = STEPS.length;
+  //: A step by its name: the Review's Change buttons, which went to the wrong
+  //: step by position when Start was put in (ADR-0131).
+  const at = (sid) => STEPS.findIndex((s) => s[0] === sid);
 
   let step = $state(-1);
   let loaded = $state(false);
@@ -96,6 +99,32 @@
   const restoring = $derived(startMode === 'restore');
   const QUESTIONS = ['name', 'tz', 'out', 'music', 'display', 'visualiser', 'plugins'];
 
+  //: **A step changed in the review opens on the backup's answer** (ADR-0131
+  //: as amended; George, 2026-10-08: a backup used for another player, with
+  //: its name changed). Only what was not saved as a setup answer is taken
+  //: from the backup; a step continued from is saved and wins.
+  function fromBackup(b, saved = {}) {
+    const v = b?.settings ?? {};
+    if (saved.name == null && v.device_name) name = v.device_name;
+    if (saved.timezone == null && v.timezone && (!zones.length || zones.includes(v.timezone))) { tz = v.timezone; tzMode = 'auto'; }
+    if (saved.clock == null && v.clock_format) clock24 = v.clock_format !== '12 h';
+    if (saved.output == null && v.output_device && outputs.includes(v.output_device)) out = v.output_device;
+    if (saved.lms_mode == null) {
+      lmsMode = v.lms_enabled === false ? 'off' : v.lms_server ? 'address' : null;
+      lms = v.lms_server ?? '';
+    }
+    if (saved.spotify == null && v.spotify_enabled != null) spotify = v.spotify_enabled !== false;
+    if (saved.bluetooth == null && v.bt_enabled != null) bt = v.bt_enabled !== false;
+    if (saved.headless == null && saved.screen == null) {
+      headless = !!v.headless;
+      scPick = headless ? null : v.screen ?? null;
+      scConfirmed = !!scPick && scPick === screenInfo?.suggested?.label;
+      scChoose = !!scPick && !scConfirmed && !!screenInfo?.suggested;
+    }
+    if (saved.visualiser == null && v.visualiser_skins != null) visualiser = !!v.visualiser_skins;
+    if (saved.plugins == null) chosenPlugins = (b?.enabled ?? []).filter((id) => offered.some((p) => p.id === id));
+  }
+
   function uploadBackup(file) {
     if (!file) return;
     uploadError = null;
@@ -107,7 +136,10 @@
     xhr.onload = () => {
       let body = {};
       try { body = JSON.parse(xhr.responseText); } catch { /* not JSON */ }
-      if (xhr.status >= 200 && xhr.status < 300) backup = body.backup ?? null;
+      if (xhr.status >= 200 && xhr.status < 300) {
+        backup = body.backup ?? null;
+        fromBackup(backup, body);
+      }
       else uploadError = body.error ?? 'The file did not reach the player. Try again.';
       uploading = null;
     };
@@ -126,28 +158,8 @@
 
   //: The backup's settings, said the way the Review says setup's own.
   const made = $derived(backup?.made ? new Date(backup.made * 1000).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : null);
-  function screenOf(label) {
-    if (!label) return null;
-    const m = (screenInfo?.models ?? []).find((x) => x.label === label);
-    return m ? `${m.maker} ${shortOf(m)} · ${m.width} × ${m.height}` : label.replace('/', ' ');
-  }
-  const restoreReview = $derived.by(() => {
-    if (!backup) return [];
-    const b = backup.settings ?? {};
-    const on = (v) => v !== false;
-    const named = (id) => offered.find((p) => p.id === id)?.name ?? id;
-    return [
-      ['Name', b.device_name ? `${b.device_name} · ${slugOf(b.device_name) || 'gexis'}.local` : 'Not in the backup'],
-      ['Time zone', b.timezone ? `${b.timezone}${b.clock_format ? ` · ${b.clock_format}` : ''}` : 'Not in the backup'],
-      ['Output', b.output_device ?? 'Not in the backup'],
-      ['Library', b.lms_enabled === false ? 'Not used' : b.lms_server || 'Not in the backup'],
-      ['Services', [on(b.spotify_enabled) ? 'Spotify Connect' : null, on(b.bt_enabled) ? 'Bluetooth' : null].filter(Boolean).join(' · ') || 'Lyrion only'],
-      ['Screen', b.headless ? 'Headless' : screenOf(b.screen) ?? 'Not in the backup'],
-      ...(b.headless ? [] : [['Visualiser', b.visualiser_skins ? 'Downloaded again after the restart' : 'None']]),
-      ['Plugins', (backup.enabled ?? []).map(named).join(' · ') || 'None'],
-      ['Also brought back', (backup.brings ?? []).join(' · ') || 'Settings only']
-    ];
-  });
+  //: What else the backup brings, beside the answers the review shows.
+  const brings = $derived((backup?.brings ?? []).join(' · ') || 'Settings only');
 
   //: ADR-0109 as amended 2026-10-02: the restart will ask Keep this screen?
   //: on the panel, which this page says before the phone is put down.
@@ -304,6 +316,7 @@
         : offered.filter((p) => rows[`${p.id}.enabled`]?.value === true).map((p) => p.id));
       startMode = saved.start ?? null;
       backup = saved.backup ?? null;
+      if (backup) fromBackup(backup, saved);
       hidden = !!saved.hidden;
       hasPassword = !!saved.has_password;
       joinError = saved.error ?? null;
@@ -492,15 +505,15 @@
   );
 
   const review = $derived([
-    ['Network', picked || (overLan ? 'Ethernet only' : 'Not set'), 0],
-    ['Name', `${shownName} · ${slug}.local`, 1],
-    ['Time zone', `${tz || 'Not set'} · ${clock24 ? '24 h' : '12 h'}`, 2],
-    ['Output', out || 'Not set', 3],
-    ['Library', lmsMode === 'off' ? 'Not used' : lmsMode === 'address' ? lms.trim() : lmsMode === 'find' ? 'Found once on your network' : 'Not chosen', 4],
-    ['Services', [spotify ? 'Spotify Connect' : null, bt ? 'Bluetooth' : null].filter(Boolean).join(' · ') || 'Lyrion only', 4],
-    ['Screen', headless ? 'Headless' : chosenModel ? `${chosenModel.maker} ${shortOf(chosenModel)} · ${chosenModel.width} × ${chosenModel.height}` : 'Not chosen', 5],
-    ...(noVisualiser ? [] : [['Visualiser', visualiser === true ? `Install · ${chosenModel?.skin_count ? `${chosenModel.skin_count} skins, ` : ''}${packSize}` : visualiser === false ? 'None' : 'Not chosen', 6]]),
-    ...(offered.length ? [['Plugins', offered.filter((p) => chosenPlugins.includes(p.id)).map((p) => p.name).join(' · ') || 'None', 7]] : [])
+    ['Network', picked || (overLan ? 'Ethernet only' : 'Not set'), at('wifi')],
+    ['Name', `${shownName} · ${slug}.local`, at('name')],
+    ['Time zone', `${tz || 'Not set'} · ${clock24 ? '24 h' : '12 h'}`, at('tz')],
+    ['Output', out || (restoring ? 'As in the backup' : 'Not set'), at('out')],
+    ['Library', lmsMode === 'off' ? 'Not used' : lmsMode === 'address' ? lms.trim() : lmsMode === 'find' ? 'Found once on your network' : restoring ? 'As in the backup' : 'Not chosen', at('music')],
+    ['Services', [spotify ? 'Spotify Connect' : null, bt ? 'Bluetooth' : null].filter(Boolean).join(' · ') || 'Lyrion only', at('music')],
+    ['Screen', headless ? 'Headless' : chosenModel ? `${chosenModel.maker} ${shortOf(chosenModel)} · ${chosenModel.width} × ${chosenModel.height}` : scPick ? scPick.replace('/', ' ') : 'Not chosen', at('display')],
+    ...(noVisualiser ? [] : [['Visualiser', visualiser === true ? `Install · ${chosenModel?.skin_count ? `${chosenModel.skin_count} skins, ` : ''}${packSize}` : visualiser === false ? 'None' : 'Not chosen', at('visualiser')]]),
+    ...(offered.length ? [['Plugins', offered.filter((p) => chosenPlugins.includes(p.id)).map((p) => p.name).join(' · ') || 'None', at('plugins')]] : [])
   ]);
 </script>
 
@@ -509,7 +522,7 @@
     <header>
       <img class="mark" src={mark} alt="" width="34" height="34" />
       <span class="crumb">
-        {step < 0 ? 'First-time setup' : step >= last || finished ? 'Almost done' : `Step ${shownAt(step)} of ${shownSteps} · ${STEPS[step][1]}`}
+        {step < 0 ? 'First-time setup' : step >= last || finished ? 'Almost done' : restoring && QUESTIONS.includes(id) ? `Restoring · changing ${STEPS[step][1]}` : `Step ${shownAt(step)} of ${shownSteps} · ${STEPS[step][1]}`}
       </span>
       {#if setup?.ssid}<span class="over">Over {setup.ssid}</span>{/if}
     </header>
@@ -942,14 +955,18 @@
             <section class="pane">
               <div>
                 <h1>Check the backup</h1>
-                <p class="sub">Finishing moves the player to your network, puts this backup back and restarts it.</p>
+                <p class="sub">Change anything setup asks, to use this backup for another player as well. Finishing moves the player to your network, puts the backup back with your changes and restarts it.</p>
               </div>
+              <!-- The same table as a new player's Review, with Change on every
+                   answer setup asks (George, 2026-10-08): a change is
+                   written over the backup's. What setup does not ask - keys,
+                   pairings, sign-ins - comes back as it is. -->
               <div class="table">
-                <div class="trow"><span class="what">Network</span><span class="val grow">{picked || (overLan ? 'Ethernet only' : 'Not set')}</span><button class="chip" onclick={() => { fromReview = true; step = 0; }}>Change</button></div>
-                <div class="trow"><span class="what">Backup</span><span class="val grow">{backup?.name ?? 'A gexis backup'}{made ? ` · ${made}` : ''}</span><button class="chip" onclick={() => { step = 1; }}>Choose another</button></div>
-                {#each restoreReview as r}
-                  <div class="trow"><span class="what">{r[0]}</span><span class="val grow">{r[1]}</span></div>
+                <div class="trow"><span class="what">Backup</span><span class="val grow">{backup?.name ?? 'A gexis backup'}{made ? ` · ${made}` : ''}</span><button class="chip" onclick={() => { step = at('start'); }}>Choose another</button></div>
+                {#each review as r}
+                  <div class="trow"><span class="what">{r[0]}</span><span class="val grow">{r[1]}</span><button class="chip" onclick={() => { fromReview = true; step = r[2]; }}>Change</button></div>
                 {/each}
+                <div class="trow"><span class="what">Also brought back</span><span class="val grow">{brings}</span></div>
               </div>
               {#if backup?.newer}
                 <div class="warn"><span class="bang">!</span><span>Made by a newer version of gexis. Settings this version does not know wait until it is updated.</span></div>

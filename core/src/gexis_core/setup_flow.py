@@ -267,9 +267,9 @@ class SetupFlow:
         if data.get("start") == "restore":
             if not self._restoring(data):
                 raise ValueError("no backup")
-            restored = data["backup"]["settings"]
+            values, _ = self._restore_values(data)
             self._task = asyncio.ensure_future(self._apply_restore(data))
-            return {"keep_question": self._keep_question(restored)}
+            return {"keep_question": self._keep_question(values)}
         self._task = asyncio.ensure_future(self._apply(data))
         return {"keep_question": self._keep_question(data)}
 
@@ -345,12 +345,40 @@ class SetupFlow:
             return
         self._network.done()
 
+    def _restore_values(self, data: dict) -> tuple[dict, set]:
+        """**The backup's settings, with what was changed in setup over them**
+        (ADR-0131 as amended; George, 2026-10-08: *"from the overview have the
+        ability to change for example the Device name"*). A step's answer is
+        there only when the step was opened and continued from, so what the
+        owner left alone stays the backup's. Returns the values and the keys
+        setup changed."""
+        values = dict(data["backup"]["settings"])
+        changed = set()
+        for answer, key in SETTINGS.items():
+            if answer == "lms" or answer not in data or data[answer] in (None, ""):
+                continue
+            values[key] = data[answer]
+            changed.add(key)
+        if data.get("headless") is True:
+            values.pop("screen", None)
+            changed.discard("screen")
+        mode = data.get("lms_mode")
+        if mode == "off":
+            values["lms_enabled"] = False
+            changed.add("lms_enabled")
+        elif mode == "address" and data.get("lms"):
+            values.update(lms_server=data["lms"], lms_enabled=True)
+            changed |= {"lms_server", "lms_enabled"}
+        return values, changed
+
     async def _apply_restore(self, data: dict) -> None:
-        """**ADR-0131 §5**: the join, the backup's main answers applied as
-        setup applies its own, the files put back, what to wait for, and the
+        """**ADR-0131 §5, as amended**: the join; the backup's files put back;
+        what was changed in setup written over them; then everything that
+        lives outside the store (the screen, the time zone, the name) applied
+        through Settings, as setup applies its own; what to wait for; the
         restart. A failed join keeps the backup and goes back to Network."""
-        restored = dict(data["backup"]["settings"])
-        country = setup_network.country_for(restored.get("timezone"))
+        values, changed = self._restore_values(data)
+        country = setup_network.country_for(values.get("timezone"))
         if country:
             await self._set_country(country)
         ssid = data.get("ssid")
@@ -367,51 +395,73 @@ class SetupFlow:
         self._marker.parent.mkdir(parents=True, exist_ok=True)
         self._marker.touch()
         self._path.unlink(missing_ok=True)
-        if restored.get("headless"):
-            restored.pop("screen", None)
-        elif restored.get("screen") and screens.by_label(restored["screen"]) is None:
+        if values.get("headless"):
+            values.pop("screen", None)
+        elif values.get("screen") and screens.by_label(values["screen"]) is None:
             # A model this version does not know - a newer backup's.
-            logger.warning("setup: the backup's screen %s is not known here; left to Settings", restored["screen"])
-            restored.pop("screen")
-        for key in backups.APPLIED:
-            if key in restored and restored[key] is not None:
-                self._set_quietly(key, restored[key])
+            logger.warning("setup: the backup's screen %s is not known here; left to Settings", values["screen"])
+            values.pop("screen")
+            changed.discard("screen")
+        # The plugins: the Plugins step's answer when it was changed, else the
+        # backup's own.
+        offered = self.offered()
+        if "plugins" in data:
+            enabled = set(data["plugins"])
+        else:
+            enabled = set(data["backup"].get("enabled") or [])
+        writes = {key: values[key] for key in changed if key in values}
+        if "plugins" in data:
+            writes.update({p["row"]: p["id"] in enabled for p in offered})
+        if data.get("lms_mode") == "find":
+            library = await self._library(data, apply=False)
+            if library.get("state") == "found":
+                writes.update(lms_server=library["address"], lms_enabled=True)
         try:
             await asyncio.to_thread(backups.restore_file, self._backup, self._restore_root)
-            # The backup's name in all four places, as Settings' restore does.
-            await asyncio.to_thread(self._apply_name)
+            await asyncio.to_thread(backups.write_settings, writes, self._restore_root)
+            if "device_name" not in changed:
+                # The backup's name in all four places, as Settings' restore
+                # does; a name changed in setup is applied below instead.
+                await asyncio.to_thread(self._apply_name)
         except Exception as exc:  # noqa: BLE001 - the restart still comes
             logger.error("setup: the backup did not go back: %s", exc)
         finally:
             self._backup.unlink(missing_ok=True)
+        # What lives outside the store, through Settings as setup's own
+        # answers. Their writes reach the store the core has open, which the
+        # restart leaves behind; the restored file already says the same.
+        for key in backups.APPLIED:
+            if key in values and values[key] is not None:
+                self._set_quietly(key, values[key])
         wait = []
-        if restored.get("visualiser_skins") and not restored.get("headless"):
+        if values.get("visualiser_skins") and not values.get("headless"):
             wait.append({"id": "skins", "name": "The visualiser's skins"})
-        on = set(data["backup"].get("enabled") or [])
-        for plugin in self.offered():
-            if plugin["id"] in on and plugin.get("component"):
+        for plugin in offered:
+            if plugin["id"] in enabled and plugin.get("component"):
                 wait.append({"id": plugin["component"], "name": plugin["name"]})
         try:
             settling.begin(wait, self._settling_path)
         except OSError as exc:
             logger.warning("setup: cannot record what to wait for: %s", exc)
-        name = restored.get("device_name") or data["backup"].get("name")
+        name = values.get("device_name") or data["backup"].get("name")
         self._network.finished(ssid, {"state": "unchanged"}, "restore", name)
-        logger.info("setup: finished by restoring a backup; restarting")
+        logger.info("setup: finished by restoring a backup (%d setting(s) changed in setup); restarting",
+                    len(writes))
         await self._sleep(DONE_S)
         if self._reboot is not None:
             await self._reboot()
         else:
             self._network.done()
 
-    async def _library(self, data: dict) -> dict:
+    async def _library(self, data: dict, apply: bool = True) -> dict:
         """**Lyrion, once the device is on the home network** (George,
         2026-09-29: *"If we can stop and start the WiFi to check the network,
         why can't we do the same for the Lms server?"*). Over the setup
         network there is nothing to find (amendment 4); after the join there
         is. An address typed in setup is kept as it is. Without one: exactly
         one server found is used; several are named and left to Settings;
-        none is said."""
+        none is said. `apply=False` (a restore, ADR-0131) only says what was
+        found: the restore writes it into the settings it puts back."""
         mode = data.get("lms_mode") or ("address" if data.get("lms") else None)
         if mode == "off":
             self._set_quietly("lms_enabled", False)
@@ -430,12 +480,13 @@ class SetupFlow:
             servers = []
         if len(servers) == 1:
             server = servers[0]
-            try:
-                self._settings.set("lms_server", server["address"])
-            except Exception as exc:
-                logger.warning("setup: lms_server not set: %s", exc)
-                return {"state": "none"}
-            self._set_quietly("lms_enabled", True)
+            if apply:
+                try:
+                    self._settings.set("lms_server", server["address"])
+                except Exception as exc:
+                    logger.warning("setup: lms_server not set: %s", exc)
+                    return {"state": "none"}
+                self._set_quietly("lms_enabled", True)
             return {"state": "found", "name": server.get("name") or server["address"], "address": server["address"]}
         if servers:
             return {"state": "several", "names": [s.get("name") or s["address"] for s in servers]}
