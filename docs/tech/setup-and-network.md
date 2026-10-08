@@ -169,11 +169,12 @@ atomically and 0600 from the first byte (it holds the Wi-Fi password). A page
 that reloads resumes from it; the password is never handed back, only
 `has_password`.
 
-The phone's steps (`SetupPage.svelte`): Network, Name, Time (zone and 12/24 h),
-Output, Music, Screen, Visualiser (skipped for headless or for screens no skin
-pack fits), Plugins (ADR-0128; every plugin the release ships beyond the
-built-in sources, from `GET /setup/plugins`; skipped when there are none),
-Review.
+The phone's steps (`SetupPage.svelte`): Network, Start (ADR-0131: a new
+player or a backup), Name, Time (zone and 12/24 h), Output, Music, Screen,
+Visualiser (skipped for headless or for screens no skin pack fits), Plugins
+(ADR-0128; every plugin the release ships beyond the built-in sources, from
+`GET /setup/plugins`; skipped when there are none), Review. Restoring skips
+every step from Name to Plugins: the backup answers them, and Review shows it.
 
 ```mermaid
 sequenceDiagram
@@ -242,6 +243,36 @@ sequenceDiagram
    apply at a restart; the Screen step's restart is where *Keep this screen?*
    is asked, ADR-0109), otherwise goes `online`.
 
+**Restoring a backup instead** (ADR-0131, `SetupFlow._apply_restore()`):
+
+1. **The upload.** `POST /setup/backup` streams the file to
+   `setup-backup.tgz.part` beside the answers (cap 1 GB). `take_backup()`
+   reads it with `backups.inspect()`:
+   - it refuses, in a sentence, a file that is not a gzip tar, one with a
+     path no backup holds or a link, one with no settings, or one whose
+     `settings.db` will not open or has no `settings` table;
+   - it returns the backup's main settings (`backups.APPLIED`), the plugins
+     it has on, what else it carries, when it was made (from its name), and
+     whether a newer release made it (more migrations than this one knows).
+
+   The file is kept as `setup-backup.tgz` (0600), and the review is saved in
+   the answers as `backup`, with `start: "restore"`. `DELETE /setup/backup`
+   forgets it.
+2. **Finishing**:
+   - the Wi-Fi country from the backup's time zone, then the join (a failed
+     join keeps the backup and returns to Network);
+   - the backup's main settings through `Settings.set`, as setup's own
+     answers, because the screen (`screen.json`), the time zone and the name
+     live outside the store too. A screen this version does not know is left
+     to Settings;
+   - `backups.restore_file()`, with the two databases written beside
+     themselves and renamed into place, so the core's open connection is
+     never overwritten underneath it;
+   - `device_name.apply_restored()`, `settling.json` for the skins and each
+     downloading plugin the backup has on;
+   - the panel's `restart_for: "restore"`, and the reboot. The file is
+     deleted whatever happens.
+
 **Setup's own screens are laid out for the attached screen** (ADR-0109
 amended 2026-10-07): `gexis-screen-check` runs before the kiosk during setup
 too and applies the recognised model, the one listed bar of its mode
@@ -265,6 +296,8 @@ All under the core's HTTP server on port 8090 (`wsserver.py`):
 | `GET /setup/screen` | the Screen step: what the screen reports, the suggested model, all models |
 | `POST /setup/finish` | start applying; answers `202` with `{"finishing": true, "keep_question": ...}` |
 | `GET /setup/plugins` | ADR-0128: the plugins the Plugins step offers - `id`, `name`, `summary`, `notice`, `from`, `component` |
+| `POST /setup/backup` | ADR-0131: a backup as the request body (`?name=` its file name); answers the setup answers with the review, or 400 with the reason |
+| `DELETE /setup/backup` | ADR-0131: forget the uploaded backup |
 
 Every route but `/setup/status` answers 409 once setup is over (`_setup_closed`):
 a configured device has Settings for all of this. On a phone, `App.svelte`

@@ -124,3 +124,9 @@ dropped there would be a broken wallpaper.
 - **Whether a restore should be able to take a subset** — settings without
   the enrichment cache, say. One archive, all of it, until somebody wants
   otherwise.
+
+**Amended 2026-10-08:**
+- A backup can also be restored in setup, uploaded from the phone
+  ([ADR-0131](0131-setup-can-restore-a-backup.md)).
+- Both ways, the two databases are now written beside themselves and
+  renamed into place rather than overwritten.

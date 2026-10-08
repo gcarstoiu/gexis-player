@@ -298,9 +298,11 @@ says at which address it comes back.
 **How is a new player set up?**
 On first start with no network, the player opens its own Wi-Fi, called
 *gexis-setup*. The screen shows two QR codes: one to join that network, one
-to open the setup page. The phone then walks through Wi-Fi, a name, the
-clock, the output, the music, the screen, the visualiser and the plugins to
-install (Plexamp, the Lyrion Server, Beszel). Once the player is on your
+to open the setup page. The phone then walks through Wi-Fi, then asks
+whether this is a new player or a backup to restore. A new player goes on to
+a name, the clock, the output, the music, the screen, the visualiser and the
+plugins to install (Plexamp, the Lyrion Server, Beszel); a backup answers all
+of those, and the phone shows what it brings before the player restarts. Once the player is on your
 network it shows what it is downloading, each with its progress, until it is
 ready; this cannot be skipped, and music may be slow to start until then. A download that does not finish is named, with
 *Settings → Plugins* as the place to try it again.
@@ -481,9 +483,12 @@ update that brings it.
 *Settings → System → Back up now* writes the settings, the library's
 pictures, the paired devices and the player's configuration into the
 player's Backups share on the network. Copy the backup off the player before
-flashing. Afterwards, copy it back into the Backups share and choose it under
-*Restore*; the player restarts with everything back. Network share passwords
-are not kept in backups, so enter them again.
+flashing. After flashing, setup offers *Restore a backup* right after the
+Wi-Fi: choose the file on the phone, check what it brings, and the player
+restarts with everything back. A backup from an older version works. A
+backup can also be restored later: copy it into the Backups share and choose
+it under *Settings → System → Restore*. Network share passwords are not kept
+in backups, so enter them again.
 
 **What are Debug logs for?**
 *Settings → System → Debug logs* keeps the player's logs across restarts (up
