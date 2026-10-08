@@ -11,7 +11,7 @@ import urllib.parse
 
 LMS_HOST = "192.168.178.188"
 LMS_CLI_PORT = 9090
-GEXIS_PLAYER_ID = "e4:5f:01:58:89:07"
+GEXIS_PLAYER_ID = "aa:bb:cc:00:00:01"
 
 
 def _enc(s):

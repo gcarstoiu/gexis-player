@@ -309,7 +309,7 @@ def _tree():
     return {
         "/org/bluez/hci0": {bas.ADAPTER_IFACE: {}},
         "/org/bluez/hci0/dev_A": {
-            DEVICE_IFACE: _Props(Paired=True, Trusted=True, Connected=True, Alias="Pixel 10 Pro", Address="64:9D:38:E3:E5:2A")
+            DEVICE_IFACE: _Props(Paired=True, Trusted=True, Connected=True, Alias="Pixel 10 Pro", Address="AA:BB:CC:00:00:03")
         },
         "/org/bluez/hci0/dev_B": {
             DEVICE_IFACE: _Props(Paired=True, Trusted=False, Connected=False, Alias="Kitchen Echo", Address="AA:BB:CC:DD:EE:FF")

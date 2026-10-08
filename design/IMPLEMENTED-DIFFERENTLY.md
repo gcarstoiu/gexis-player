@@ -321,18 +321,18 @@ steps follow what the device sees:
    loaded the page. *panel-setup-3-carry-on-on-your-phone.png*
 5. **Joining <network>** - a pulsing Wi-Fi icon in the circle, 72 px title,
    *"Put your phone back on <network> too."*; it stays up while the player looks
-   for a Lyrion server. *panel-setup-4-joining.png*
+   for a Lyrion server. *panel-setup-4-joining.png* (the home network's name hidden, 2026-10-08)
 6. **Done** - a check in the circle, *"<name> is on <network>"*, *"Restarting to
    take its new name…"* when renaming, and **below it, apart, a card with the
    Lyrion mark**: *Found your Lyrion server* with the server's name and address,
    or the address given, *N Lyrion servers found - choose one in Settings*,
    *Lyrion is off*, or *No Lyrion server found*. 10 s, then the panel's own
    screens - or straight to the restart, with nothing in between (George: the
-   home screen must not blink first). *panel-setup-5-done-with-lyrion.png*
+   home screen must not blink first). *panel-setup-5-done-with-lyrion.png* (the home network's name hidden, 2026-10-08)
 
 - **Could not join** - the join step headed by a 64 px warning triangle and
   *"Could not join <network>"* with the reason and *"Everything else you
-  entered is kept."* *panel-setup-could-not-join.png* (taken before the spacing
+  entered is kept."* *panel-setup-could-not-join.png* (the home network's name hidden, 2026-10-08) (taken before the spacing
   was loosened).
 - **The setup network did not start** - the triangle in the circle, the reason
   in mono, and *"Trying again in a moment."*

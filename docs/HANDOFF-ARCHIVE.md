@@ -144,9 +144,9 @@ verified** — this build predates the change.
 
 **LMS details for testing:** CLI on port 9090 (works from `gexis` via
 `bash`'s `/dev/tcp`; telnet and `nc` aren't on the image). `gexis`
-registers with playerid `e4:5f:01:58:89:07` — the **wlan0** MAC, not
+registers with playerid `aa:bb:cc:00:00:01` — the **wlan0** MAC, not
 eth0 (the machine has both). moOde is also registered
-(`88:a2:9e:79:e1:32`), useful as a second player for takeover testing.
+(`aa:bb:cc:00:00:02`), useful as a second player for takeover testing.
 
 **Volume is confirmed global across renderers, as criterion 5 expects:**
 moving it via LMS moves the hardware mixer, which then also affects
@@ -2477,7 +2477,7 @@ a bare GET to `/jsonrpc.js` with no body and a 5s timeout — LMS
 apparently only handles POST there, so the GET just hung until the
 timeout, which read as "unreachable." A real JSON-RPC POST succeeded
 immediately, confirmed the "gexis" LMS player exists
-(`e4:5f:01:58:89:07`, `192.168.178.188:9000`), and running the LMS
+(`aa:bb:cc:00:00:01`, `192.168.178.188:9000`), and running the LMS
 adapter's `run()` against it end-to-end — handshake, `/slim/subscribe`,
 then a real `playlist play` triggered from the test itself — produced a
 genuine CometD `mode -> play` push and fired `on_acquire()` within 4
@@ -3051,7 +3051,7 @@ units; all renderer, core, kiosk, meter and Peppy units running.
   every reflash** (`provision.local.env` carries R2D2's key only; George chose
   not to change `provision.sh`):
   `ssh pi@gexis.local 'cat >> ~/.ssh/authorized_keys' < ~/.ssh/c3po_id_ed25519.pub`.
-- LMS player `gexis` (`88:a2:9e:79:e1:32`): `digitalVolumeControl` **1**
+- LMS player `gexis` (`aa:bb:cc:00:00:02`): `digitalVolumeControl` **1**
   after the reflash, read over JSON-RPC. LMS itself was not restarted, so the
   "after an LMS restart" half of that check was not made.
 - Core tests on R2D2: 444 passed, 1 skipped (scratch venv, `core[test]`).

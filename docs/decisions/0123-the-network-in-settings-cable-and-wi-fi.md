@@ -83,7 +83,7 @@ five**: details live in the sheet a row opens, not on the page.
     phone and panel, while a change waits; at the old address it names the
     new one to open.
 - **Tried on guestpi, 2026-10-08,** with nothing playing:
-  1. a manual address (`192.0.2.230/24`, checked free by ping and ARP
+  1. a manual address (a free one on the home network, checked by ping and ARP
      first) answered at once; *Keep* from the Wi-Fi address was refused;
      not kept, the cable went back to DHCP 60 s later to the second;
   2. set again and kept from the new address, through the page: the banner,
@@ -100,7 +100,7 @@ five**: details live in the sheet a row opens, not on the page.
   `http://None:8090`. A change now names the typed address (Manual), or waits
   up to 20 s for DHCP's (Automatic).
 - **Tried on guestpi, Wi-Fi, 2026-10-08,** working over the cable: a manual
-  `192.0.2.231/24`, not kept, back to DHCP after 60 s plus the rejoin;
+  address, not kept, back to DHCP after 60 s plus the rejoin;
   set again and kept from `.231`; back to *Automatic*, kept at `.21`.
 - **Consequence corrected:** "a backup carries it like the Wi-Fi networks"
   above is wrong. A backup holds no NetworkManager profile (ADR-0083's
