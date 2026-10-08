@@ -95,6 +95,19 @@ MEMBERS = (
 #: the sake of one image-owned file.
 FORMERLY_BACKED_UP = ("var/lib/go-librespot",)
 
+#: **What makes a backup this player and no other** (ADR-0131 as amended;
+#: George, 2026-10-08: "Setup could offer to leave these behind when the name
+#: is changed" - "yes"). A backup restored onto a second player leaves these
+#: behind, so two players do not share one identity: one system in two
+#: places on the Beszel hub, one Plex player on two devices. The pairings
+#: are bound to the first Pi's adapter and do nothing on another.
+IDENTITIES = (
+    ("var/lib/beszel-agent", "Beszel identity"),
+    ("home/pi/.local/share/Plexamp", "Plexamp's claim"),
+    ("var/lib/go-librespot/state.json", "Spotify sign-in"),
+    ("var/lib/bluetooth", "Bluetooth pairings"),
+)
+
 #: **The databases the core holds open** (ADR-0131 §5). Put back by writing
 #: beside them and renaming, so an open connection keeps the file it had and
 #: never sees one overwritten underneath it.
@@ -218,11 +231,14 @@ def restore(name: str, directory: Path = DEFAULT_DIR, root: Path = Path("/")) ->
     restore_file(path, root)
 
 
-def restore_file(path: Path, root: Path = Path("/")) -> int:
+def restore_file(path: Path, root: Path = Path("/"), leave: tuple[str, ...] = ()) -> int:
     """Put back the archive at `path`, whatever it is called - setup's
-    upload is not in the share (ADR-0131). Returns how many paths."""
+    upload is not in the share (ADR-0131). `leave`: paths not put back, the
+    identities of a backup restored as another player. Returns how many
+    paths."""
     with tarfile.open(path, "r:gz") as archive:
-        members = _checked(archive, path.name)
+        members = [m for m in _checked(archive, path.name)
+                   if not any(m.name == p or m.name.startswith(p + "/") for p in leave)]
         swapped = [m for m in members if m.name in REPLACED and m.isfile()]
         archive.extractall(root, members=[m for m in members if m not in swapped])
         for member in swapped:
@@ -364,9 +380,13 @@ def inspect(path: Path, known_migrations: int, schema_key: str = "_settings_sche
         brings.append("Artist and album information")
     if any(n.startswith("var/lib/private/gexis-uploaded/") for n in names):
         brings.append("Uploaded plugins' data")
+    held = [label for prefix, label in IDENTITIES
+            if any(n == prefix or n.startswith(prefix + "/") for n in names)]
     return {
         "name": name,
         "made": made,
+        #: What a second player would leave behind, of what this one holds.
+        "identities": held,
         "newer": isinstance(schema, int) and schema > known_migrations,
         "settings": {key: values[key] for key in APPLIED if key in values},
         "enabled": sorted(k[:-len(".enabled")] for k, v in values.items()

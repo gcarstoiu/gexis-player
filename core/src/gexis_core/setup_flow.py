@@ -61,7 +61,7 @@ TEXT = ("ssid", "password", "name", "timezone", "clock", "output", "lms", "scree
 #: George, 2026-09-29: a server nobody asked for must not appear. The Music
 #: step asks: find it once on the network, this address, or not at all.
 LMS_MODES = ("find", "address", "off")
-FLAGS = ("hidden", "spotify", "bluetooth", "headless", "visualiser")
+FLAGS = ("hidden", "spotify", "bluetooth", "headless", "visualiser", "second_player")
 
 
 
@@ -416,8 +416,17 @@ class SetupFlow:
             library = await self._library(data, apply=False)
             if library.get("state") == "found":
                 writes.update(lms_server=library["address"], lms_enabled=True)
+        # **A second player** (ADR-0131 as amended): a backup given another
+        # name leaves the first player's identities behind, unless the owner
+        # said it is the same player.
+        renamed = (values.get("device_name") or "").strip() != (data["backup"]["settings"].get("device_name") or "").strip()
+        second = renamed and data.get("second_player") is not False
+        leave = tuple(prefix for prefix, _ in backups.IDENTITIES) if second else ()
+        if second:
+            logger.info("setup: restoring as another player; leaving behind %s",
+                        ", ".join(label for _, label in backups.IDENTITIES))
         try:
-            await asyncio.to_thread(backups.restore_file, self._backup, self._restore_root)
+            await asyncio.to_thread(backups.restore_file, self._backup, self._restore_root, leave)
             await asyncio.to_thread(backups.write_settings, writes, self._restore_root)
             if "device_name" not in changed:
                 # The backup's name in all four places, as Settings' restore

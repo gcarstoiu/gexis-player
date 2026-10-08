@@ -158,8 +158,24 @@
 
   //: The backup's settings, said the way the Review says setup's own.
   const made = $derived(backup?.made ? new Date(backup.made * 1000).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : null);
+  //: **A second player** (ADR-0131 as amended; George, 2026-10-08: "yes"):
+  //: a backup given another name leaves the first player's identities
+  //: behind unless the switch says it is the same player. On by default: two
+  //: players sharing one identity is the mistake that costs.
+  let secondPlayer = $state(true);
+  const renamed = $derived(!!backup && (name || '').trim() !== (backup.settings?.device_name ?? '').trim());
+  const leaving = $derived(renamed && secondPlayer ? backup?.identities ?? [] : []);
+  const isLeft = (item) => leaving.includes(item) || (leaving.includes('Bluetooth pairings') && / paired Bluetooth /.test(` ${item} `));
+  async function setSecondPlayer(on) {
+    secondPlayer = on;
+    try {
+      await json('/setup/answers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ second_player: on }) });
+    } catch (err) {
+      problem = err.message;
+    }
+  }
   //: What else the backup brings, beside the answers the review shows.
-  const brings = $derived((backup?.brings ?? []).join(' · ') || 'Settings only');
+  const brings = $derived((backup?.brings ?? []).filter((b) => !isLeft(b)).join(' · ') || 'Settings only');
 
   //: ADR-0109 as amended 2026-10-02: the restart will ask Keep this screen?
   //: on the panel, which this page says before the phone is put down.
@@ -317,6 +333,7 @@
       startMode = saved.start ?? null;
       backup = saved.backup ?? null;
       if (backup) fromBackup(backup, saved);
+      secondPlayer = saved.second_player ?? true;
       hidden = !!saved.hidden;
       hasPassword = !!saved.has_password;
       joinError = saved.error ?? null;
@@ -968,6 +985,17 @@
                 {/each}
                 <div class="trow"><span class="what">Also brought back</span><span class="val grow">{brings}</span></div>
               </div>
+              {#if renamed && backup?.identities?.length}
+                <button class="net" class:sel={secondPlayer} onclick={() => setSecondPlayer(!secondPlayer)}>
+                  <span class="grow">
+                    <span class="nm">A second player</span>
+                    <span class="meta plain">{secondPlayer
+                      ? `Left with ${backup.settings?.device_name ?? 'the first player'}: ${backup.identities.join(' · ')}. Two players never share them. Switch off if this is the same player with a new name.`
+                      : `The same player with a new name: ${backup.identities.join(' · ')} come back too.`}</span>
+                  </span>
+                  <span class="toggle" class:on={secondPlayer}><span></span></span>
+                </button>
+              {/if}
               {#if backup?.newer}
                 <div class="warn"><span class="bang">!</span><span>Made by a newer version of gexis. Settings this version does not know wait until it is updated.</span></div>
               {/if}

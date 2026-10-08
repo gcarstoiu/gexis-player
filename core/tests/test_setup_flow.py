@@ -475,3 +475,35 @@ def test_lyrion_found_after_the_join_is_written_into_the_restored_settings(tmp_p
     flow.save({"ssid": "Home", "password": "hunter22", "lms_mode": "find"})
     asyncio.run(_finish_told(flow, net))
     assert _restored(tmp_path, "lms_server") == "10.0.0.5:9000" and _restored(tmp_path, "lms_enabled") is True
+
+
+def test_a_backup_given_another_name_leaves_the_first_player_s_identities_behind(tmp_path):
+    """George, 2026-10-08: "Setup could offer to leave these behind when the
+    name is changed" - "yes". The Beszel fingerprint, Plexamp's claim, the
+    Spotify sign-in and the pairings stay with the first player; everything
+    else comes back."""
+    flow, net, _, _, upload, _ = _with_backup(tmp_path, FakeNM(devices=NOTHING))
+    seen = flow.take_backup(upload)["backup"]
+    assert set(seen["identities"]) == {"Beszel identity", "Plexamp's claim", "Spotify sign-in", "Bluetooth pairings"}
+    flow.save({"ssid": "Home", "password": "hunter22", "name": "Kitchen"})
+    asyncio.run(_finish_told(flow, net))
+    card = tmp_path / "card"
+    for gone in ("var/lib/beszel-agent", "home/pi/.local/share/Plexamp", "var/lib/go-librespot/state.json",
+                 "var/lib/bluetooth"):
+        assert not (card / gone).exists(), gone
+    assert (card / "var/lib/gexis-music/Playlists/Evening.m3u").exists()
+    assert (card / "var/lib/gexis-core/enrichment.db").exists()
+
+
+def test_the_same_player_keeps_them_renamed_or_not(tmp_path):
+    """Said to be the same player (the switch off), or the name left as the
+    backup's even with its step opened: everything comes back."""
+    for answers in ({"name": "Kitchen", "second_player": False}, {"name": "Living Room"}):
+        root = tmp_path / str(len(answers))
+        root.mkdir()
+        flow, net, _, _, upload, _ = _with_backup(root, FakeNM(devices=NOTHING))
+        flow.take_backup(upload)
+        flow.save({"ssid": "Home", "password": "hunter22", **answers})
+        asyncio.run(_finish_told(flow, net))
+        assert (root / "card/var/lib/beszel-agent/fingerprint").exists(), answers
+        assert (root / "card/home/pi/.local/share/Plexamp/Settings").exists(), answers
