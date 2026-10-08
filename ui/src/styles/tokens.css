@@ -37,6 +37,8 @@
   --accent-artist:    #f2a48f;  /* artist name, Hi-Res tier, paused state */
   --play-fill:        #f2a48f;  /* play control: fixed, NOT the source accent */
   --accent-warn:      #e0a758;  /* unconfirmed setting, destructive action */
+  --accent-ok:        #7fd58e;  /* a service's state: connected (ADR-0129)  */
+  --accent-bad:       #ee7b70;  /* a service's state: not connected         */
   --accent-display:   #c8a2d8;  /* settings: Display group                */
 
   /* ---- type ------------------------------------------------------------ */

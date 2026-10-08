@@ -75,7 +75,7 @@ from gexis_core.lyrion_shares import Shares as LyrionShares
 from gexis_core.fanart import Fanart
 from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, TrackMetadata
-from gexis_core import hardware_report, settings_migrations, settling, updates
+from gexis_core import connections, hardware_report, settings_migrations, settling, updates
 from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import InvalidValue, Settings, UnknownSetting, load_registry
 from gexis_core.splash import Splash
@@ -2889,6 +2889,10 @@ async def main() -> None:
         row says it could not start; running again: said no more. Only what
         this put there is cleared - a plugin's own report is its own."""
         said: set[str] = set()
+        #: ADR-0129: since when each connecting service has been without a
+        #: connection - switched on, started, or last connected.
+        quiet_since: dict[str, float] = {}
+        uids: dict[str, int | None] = {}
         while True:
             for plugin in installed_plugins:
                 if plugin.kind != "service" or not plugin.unit:
@@ -2907,9 +2911,29 @@ async def main() -> None:
                     said.discard(row)
                 else:
                     changed = False
+                if plugin.connection:
+                    changed = _indicate_connection(plugin, row, state, quiet_since, uids) or changed
                 if changed:
                     state_store.bump_settings_revision()
-            await asyncio.sleep(15)
+            await asyncio.sleep(10)
+
+    def _indicate_connection(plugin, row: str, state: str | None,
+                             quiet_since: dict[str, float], uids: dict[str, int | None]) -> bool:
+        """ADR-0129: *Connected*, *Connecting* or *Not connected* beside the
+        switch of a service that connects somewhere; nothing while it is off."""
+        if state is None:
+            quiet_since.pop(row, None)
+            return settings.indicate(row, None)
+        if plugin.unit not in uids or uids[plugin.unit] is None:
+            uids[plugin.unit] = connections.unit_uid(plugin.unit)
+        uid = uids[plugin.unit]
+        connected = state == "active" and uid is not None and connections.established(uid)
+        now = time.monotonic()
+        if connected or state != "active":
+            # A start begins the wait again; a failed unit is red at once.
+            quiet_since[row] = now
+        tone, text = connections.reading(state, connected, now - quiet_since.setdefault(row, now))
+        return settings.indicate(row, tone, text)
 
     asyncio.ensure_future(_follow_service_plugins())
 

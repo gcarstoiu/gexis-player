@@ -397,6 +397,10 @@ def load_seed(settings_rows: dict[str, dict], path: Path = SEED_PATH) -> dict[st
 #: cannot, where a screen for listening should not carry dead controls.
 #: What a plugin may say its row is (ADR-0119).
 STATUS_STATES = ("done", "failed")
+#: **ADR-0129: a service's connection, said on its switch** - green, orange,
+#: red. The core's own reading, not a plugin's report (ADR-0119), so the two
+#: never contradict: Plexamp's `failed` still says *Claimed*.
+INDICATOR_TONES = ("ok", "wait", "bad")
 #: A few words or one sentence, not a log.
 STATUS_TEXT_MAX = 160
 
@@ -657,6 +661,8 @@ class Settings:
         #: state the row is in, not a value. In memory only - it is the
         #: plugin's to say again, and goes when the plugin does.
         self._status: dict[str, dict[str, str]] = {}
+        #: key -> the core's own reading of what the row switches (ADR-0129).
+        self._indicators: dict[str, dict[str, str]] = {}
         unknown_sources = set(options or ()) - OPTION_SOURCES
         if unknown_sources:
             raise ValueError(f"not an option source: {sorted(unknown_sources)}")
@@ -715,6 +721,21 @@ class Settings:
         if self._status.get(key) == status:
             return False
         self._status[key] = status
+        return True
+
+    def indicate(self, key: str, tone: str | None, text: str | None = None) -> bool:
+        """**What a switched-on service is doing, beside its switch**
+        (ADR-0129): `ok`, `wait` or `bad` with a word or two - *Connected*.
+        None says nothing. Returns whether that changed anything."""
+        self.row(key)
+        if tone is None:
+            return self._indicators.pop(key, None) is not None
+        if tone not in INDICATOR_TONES:
+            raise InvalidValue(f"not an indicator tone: {tone!r}")
+        indicator = {"tone": tone, "text": str(text or "")[:STATUS_TEXT_MAX]}
+        if self._indicators.get(key) == indicator:
+            return False
+        self._indicators[key] = indicator
         return True
 
     def forget_reports(self, prefix: str) -> bool:
@@ -818,6 +839,8 @@ class Settings:
                     public["unavailable"] = dict(blocked)
                 if row["key"] in self._status:
                     public["status"] = dict(self._status[row["key"]])
+                if row["key"] in self._indicators:
+                    public["indicator"] = dict(self._indicators[row["key"]])
                 public["visible"] = visible(row, self._rows, values) and all(
                     visible({"onlyWhen": c}, self._rows, values)
                     for c in governing + ([heading] if heading else [])

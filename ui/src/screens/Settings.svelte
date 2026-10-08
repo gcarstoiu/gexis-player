@@ -1500,6 +1500,14 @@
                         <span style:width={`${Math.round((downloadShare(c) ?? 0) * 100)}%`}></span>
                       </span>
                     {/if}
+                    {#if r.indicator && r.value}
+                      <!-- ADR-0129: what a switched-on service is doing - the
+                           core's reading, green, orange or red. -->
+                      <span class="ind ind--{r.indicator.tone}">
+                        <span class="ind__mark" aria-hidden="true">{r.indicator.tone === 'ok' ? '✓' : r.indicator.tone === 'bad' ? '✕' : ''}</span>
+                        {r.indicator.text}
+                      </span>
+                    {/if}
                     {#if r.type === 'toggle'}
                       <span class="toggle" class:is-on={!!r.value}><span></span></span>
                     {:else if r.type !== 'readonly'}
@@ -2591,6 +2599,42 @@
   }
   .row__value--done {
     color: var(--accent-lms);
+  }
+  .ind {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    flex-shrink: 0;
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--ind);
+  }
+  .ind__mark {
+    display: inline-grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    font-family: var(--font-sans, inherit);
+    font-size: 12px;
+    color: var(--ink-on-accent);
+    background: var(--ind);
+  }
+  .ind--ok {
+    --ind: var(--accent-ok);
+  }
+  .ind--wait {
+    --ind: var(--accent-warn);
+  }
+  .ind--bad {
+    --ind: var(--accent-bad);
+  }
+  .ind--wait .ind__mark {
+    animation: indWait 1400ms ease-in-out infinite;
+  }
+  @keyframes indWait {
+    50% { opacity: 0.35; }
   }
   .row__tick {
     font-family: var(--font-sans, inherit);

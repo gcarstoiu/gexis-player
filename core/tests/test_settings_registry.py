@@ -1393,6 +1393,25 @@ def test_a_plugin_s_report_is_published_on_its_row_and_goes_with_it(store):
         settings.report("plexamp.nothing", "done")
 
 
+def test_a_service_s_connection_is_indicated_on_its_switch_apart_from_reports(store):
+    """ADR-0129: the core's reading of a service - *Connected* - is the row's
+    `indicator`, beside and independent of a plugin's own `status`."""
+    settings = Settings(store, registry=Settings.with_plugins(_groups(), [_plugin("beszel", kind="service")]))
+    def row():
+        return next(r for g in settings.to_json() for r in g["rows"] if r.get("key") == "beszel.enabled")
+    assert "indicator" not in row()
+    assert settings.indicate("beszel.enabled", "wait", "Connecting") is True
+    assert row()["indicator"] == {"tone": "wait", "text": "Connecting"}
+    assert settings.indicate("beszel.enabled", "wait", "Connecting") is False, "a repeat changes nothing"
+    settings.report("beszel.enabled", "failed", error="Beszel could not start. Check its settings.")
+    settings.indicate("beszel.enabled", "bad", "Not connected")
+    assert row()["indicator"]["tone"] == "bad" and row()["status"]["state"] == "failed"
+    assert settings.indicate("beszel.enabled", None) is True
+    assert "indicator" not in row() and "status" in row()
+    with pytest.raises(InvalidValue):
+        settings.indicate("beszel.enabled", "green")
+
+
 def test_headless_hides_every_setting_that_needs_a_screen(store):
     """George, 2026-10-05: with Headless on, the home screen, idle screen,
     visualiser and its tweaks, the volume drawer, the transition screen and
