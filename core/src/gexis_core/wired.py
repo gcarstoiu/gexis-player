@@ -29,6 +29,10 @@ SYS_NET = Path("/sys/class/net")
 KEEP_S = 60.0
 #: How long the port is given to take its address after a change.
 UP_TIMEOUT_S = 30.0
+#: How long to wait for the address to show after it comes up - a Wi-Fi
+#: rejoin takes a few seconds - and how often to look.
+ADDRESS_WAIT_S = 20.0
+ADDRESS_POLL_S = 1.0
 
 #: The sentences the phone shows for an address that does not work out.
 BAD_ADDRESS = "Type the address with its prefix, for example 192.168.1.20/24."
@@ -277,8 +281,17 @@ class Cable:
             logger.warning("cable: %s refused (%s); putting it back", wanted["method"], err)
             await _set(name, before, self._device, self._run)
             raise ValueError("The player could not take that address. Nothing was changed.")
-        now = await self.status()
-        new = (now.get("address") or "").split("/")[0] or None
+        # The address to open and keep: a manual one is the one typed; an
+        # automatic one is what DHCP gives, which on Wi-Fi comes only after
+        # the rejoin (2026-10-08 on guestpi: read at once, it was none).
+        new = manual.host if method == "manual" else None
+        for _ in range(int(ADDRESS_WAIT_S / ADDRESS_POLL_S)):
+            now = await self.status()
+            got = (now.get("address") or "").split("/")[0] or None
+            if got and (new is None or got == new):
+                new = got
+                break
+            await self._sleep(ADDRESS_POLL_S)
         self.pending = Pending(name, before, new, self._clock() + self._keep_s)
         logger.info("cable: %s address %s applied; kept only if confirmed within %.0f s",
                     wanted["method"], new, self._keep_s)

@@ -198,3 +198,27 @@ async def test_the_routes_reach_each_port_and_leave_the_wi_fi_details_alone():
         r = await client.post("/network/cable", json={"method": "auto"})
         assert r.status == 409, "one change waits at a time"
         assert (await client.post("/network/keep")).status == 200, "loopback keeps whichever waits"
+
+
+def test_an_automatic_address_that_comes_late_is_waited_for(sys_net):
+    """guestpi, 2026-10-08: on Wi-Fi the address came only after the rejoin,
+    and the phone was told to open http://None:8090."""
+    class Late(FakeNM):
+        def __init__(self):
+            super().__init__(method="manual")
+            self.profile.update(addresses="192.0.2.231/24", gateway="192.0.2.1", dns="192.0.2.1")
+            self.reads = 0
+        def live(self):
+            if self.profile["method"] == "auto":
+                self.reads += 1
+                if self.reads < 3:
+                    return "", "", []
+            return super().live()
+
+    async def go():
+        nm = Late()
+        port = wired.Cable(run=nm, sys_net=sys_net, sleep=lambda s: asyncio.sleep(0), clock=lambda: 0.0)
+        port._timer = None
+        told = await port.change("auto")
+        return told
+    assert asyncio.run(go())["address"] == "192.0.2.107"
