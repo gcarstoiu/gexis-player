@@ -348,7 +348,7 @@
     {
       "name": "peppyalsa",
       "group": "visualiser",
-      "role": "Feeds the music's levels to the visualiser. Modified here: one write per frame.",
+      "role": "Feeds the music's levels to the visualiser. Modified here: one write per frame, and the spectrum's bands (50 Hz to 16 kHz at every sample rate).",
       "author": "project-owner (Peppy)",
       "licence": "GPL-3.0 (modified by Gexis Player; the change is in image/stage-gexis/00-alsa/files)",
       "url": "https://github.com/project-owner/peppyalsa",
