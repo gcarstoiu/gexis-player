@@ -39,7 +39,7 @@ import pcm_holder  # noqa: E402
 import spotify_api  # noqa: E402
 
 LMS_BASE = "http://192.168.178.188:9000"
-PLAYER = "e4:5f:01:58:89:07"
+PLAYER = "aa:bb:cc:00:00:01"
 POLL_INTERVAL_S = 0.02
 _id = [0]
 

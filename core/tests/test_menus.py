@@ -110,7 +110,7 @@ class Lyrion:
 
 
 def menus(lyrion=None):
-    return LyrionMenus(lyrion or Lyrion(), lambda: "88:a2:9e:79:e1:32", lambda: "http://lms:9000")
+    return LyrionMenus(lyrion or Lyrion(), lambda: "aa:bb:cc:00:00:02", lambda: "http://lms:9000")
 
 
 @pytest.mark.asyncio

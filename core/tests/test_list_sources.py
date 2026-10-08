@@ -72,7 +72,7 @@ async def test_finding_nothing_is_an_answer_not_an_error():
 def test_terse_fields_respect_the_escapes_nmcli_writes():
     """`nmcli -t` escapes a colon inside a value. Splitting on ":" would cut
     a network called `2:1` in half and report two."""
-    assert wifi._fields(r"*:H@l:58:WPA2") == ["*", "H@l", "58", "WPA2"]
+    assert wifi._fields(r"*:HomeNet:58:WPA2") == ["*", "HomeNet", "58", "WPA2"]
     assert wifi._fields(r" :2\:1:44:WPA2") == [" ", "2:1", "44", "WPA2"]
     assert wifi._fields(r" :back\\slash:44:") == [" ", "back\\slash", "44", ""]
 
@@ -102,8 +102,8 @@ def _fake_nmcli(monkeypatch, answers):
 async def test_a_scan_names_each_state_and_keeps_the_strongest_sighting(monkeypatch):
     _fake_nmcli(monkeypatch, {
         ("-t", "-f", "IN-USE,SSID,SIGNAL,SECURITY"): (0, "\n".join([
-            "*:H@l:58:WPA2",
-            " :H@l:30:WPA2",          # the same network, weaker, second band
+            "*:HomeNet:58:WPA2",
+            " :HomeNet:30:WPA2",          # the same network, weaker, second band
             " :Werkstatt:70:WPA2",    # secured, not saved
             " :Studio:64:WPA2",       # secured and saved
             " :Cafe Gast:22:",        # open
@@ -113,9 +113,9 @@ async def test_a_scan_names_each_state_and_keeps_the_strongest_sighting(monkeypa
         ("-t", "-f", "802-11-wireless.ssid"): (0, "802-11-wireless.ssid:Studio"),
     })
     items = await wifi.scan()
-    assert [i["name"] for i in items] == ["H@l", "Studio", "Werkstatt", "Cafe Gast"]
+    assert [i["name"] for i in items] == ["HomeNet", "Studio", "Werkstatt", "Cafe Gast"]
     by = {i["name"]: i for i in items}
-    assert by["H@l"]["state"] == "connected" and by["H@l"]["bars"] == 3
+    assert by["HomeNet"]["state"] == "connected" and by["HomeNet"]["bars"] == 3
     assert by["Studio"]["state"] == "saved"
     assert by["Werkstatt"]["state"] == "locked" and by["Werkstatt"]["secured"] is True
     assert by["Cafe Gast"]["state"] == "open" and by["Cafe Gast"]["secured"] is False
@@ -127,9 +127,9 @@ async def test_a_saved_network_is_matched_by_ssid_not_by_connection_name(monkeyp
     on the connection's name would report every known network as unknown."""
     _fake_nmcli(monkeypatch, {
         ("-t", "-f", "NAME,UUID,TYPE"): (0, "preconfigured:uuid-1:802-11-wireless\nWired:u2:802-3-ethernet"),
-        ("-t", "-f", "802-11-wireless.ssid"): (0, "802-11-wireless.ssid:H@l"),
+        ("-t", "-f", "802-11-wireless.ssid"): (0, "802-11-wireless.ssid:HomeNet"),
     })
-    assert await wifi.saved_ssids() == {"H@l": "preconfigured"}
+    assert await wifi.saved_ssids() == {"HomeNet": "preconfigured"}
 
 
 @pytest.mark.asyncio
@@ -176,10 +176,10 @@ async def test_forgetting_a_network_that_was_never_saved_says_so(monkeypatch):
 async def test_forgetting_deletes_the_connection_that_carries_the_ssid(monkeypatch):
     seen = _fake_nmcli(monkeypatch, {
         ("-t", "-f", "NAME,UUID,TYPE"): (0, "preconfigured:uuid-1:802-11-wireless"),
-        ("-t", "-f", "802-11-wireless.ssid"): (0, "802-11-wireless.ssid:H@l"),
+        ("-t", "-f", "802-11-wireless.ssid"): (0, "802-11-wireless.ssid:HomeNet"),
         ("connection", "delete"): (0, ""),
     })
-    assert await wifi.forget("H@l") == (True, None)
+    assert await wifi.forget("HomeNet") == (True, None)
     assert ("connection", "delete", "preconfigured") in seen
 
 
@@ -349,13 +349,13 @@ async def test_items_are_only_for_lists(tmp_path):
 @pytest.mark.asyncio
 async def test_wifi_items_come_from_a_scan(tmp_path, monkeypatch):
     async def scan():
-        return [{"name": "H@l", "meta": "Connected", "bars": 4, "state": "connected"}]
+        return [{"name": "HomeNet", "meta": "Connected", "bars": 4, "state": "connected"}]
 
     monkeypatch.setattr(wifi, "available", lambda: True)
     monkeypatch.setattr(wifi, "scan", scan)
     async with client_for(tmp_path) as client:
         body = await (await client.get("/settings/wifi/items")).json()
-        assert body["items"][0]["name"] == "H@l"
+        assert body["items"][0]["name"] == "HomeNet"
 
 
 @pytest.mark.asyncio
@@ -425,11 +425,11 @@ async def test_the_connected_network_is_the_rows_own_value(monkeypatch):
     connected."""
     monkeypatch.setattr(wifi, "available", lambda: True)
     _fake_nmcli(monkeypatch, {
-        ("-t", "-f", "ACTIVE,SSID"): (0, "no:L0c@lh0st\nyes:H@l\nno:H@l\n"),
+        ("-t", "-f", "ACTIVE,SSID"): (0, "no:L0c@lh0st\nyes:HomeNet\nno:HomeNet\n"),
     })
     wifi._connected = None
-    assert await wifi.refresh_connected() == "H@l"
-    assert wifi.connected_ssid() == "H@l"
+    assert await wifi.refresh_connected() == "HomeNet"
+    assert wifi.connected_ssid() == "HomeNet"
 
 
 def test_reading_the_row_never_runs_a_subprocess(monkeypatch):
@@ -441,8 +441,8 @@ def test_reading_the_row_never_runs_a_subprocess(monkeypatch):
         raise AssertionError("connected_ssid must not run anything")
 
     monkeypatch.setattr(wifi.shutil, "which", explode)
-    wifi._connected = "H@l"
-    assert wifi.connected_ssid() == "H@l"
+    wifi._connected = "HomeNet"
+    assert wifi.connected_ssid() == "HomeNet"
 
 
 @pytest.mark.asyncio

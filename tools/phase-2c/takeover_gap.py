@@ -53,7 +53,7 @@ import spotify_api
 from spectrum_fifo import SpectrumReader, measure_takeover_gap
 
 LMS_BASE = "http://192.168.178.188:9000"
-LMS_PLAYER = "e4:5f:01:58:89:07"
+LMS_PLAYER = "aa:bb:cc:00:00:01"
 _rpc_id = [0]
 
 

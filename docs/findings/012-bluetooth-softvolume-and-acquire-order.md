@@ -26,7 +26,7 @@ software" question - it wasn't "below ~96%", it was the whole range,
 the whole time.** Confirmed on the device directly, not guessed:
 
 ```
-$ sudo cat /var/lib/bluealsa/64:9D:38:E3:E5:2A
+$ sudo cat /var/lib/bluealsa/AA:BB:CC:00:00:03
 [/org/bluealsa/hci0/dev_64_9D_38_E3_E5_2A/a2dpsnk/source]
 SoftVolume=true
 ...

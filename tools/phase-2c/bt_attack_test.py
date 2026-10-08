@@ -16,7 +16,7 @@ import pcm_holder
 import spotify_api
 from attack_test import Watcher
 
-BT_MAC = "64:9D:38:E3:E5:2A"
+BT_MAC = "AA:BB:CC:00:00:03"
 
 
 def bt_reconnect_attempt():

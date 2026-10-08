@@ -11,7 +11,7 @@ JOURNAL = """\
 2026-10-07T08:12:45+02:00 livingroom avahi-daemon[758]: Joining mDNS multicast group on interface wlan0.IPv4 with address 10.0.4.17.
 2026-10-07T08:12:45+02:00 livingroom sshd-session[901]: Accepted publickey for pi from 10.0.4.23 port 51234 ssh2: ED25519 SHA256:Qx7b2Lk9fP0aZr4TmW8vYc3NhE6uJd1sKo5gBi2XyA
 2026-10-07T08:12:46+02:00 livingroom python[812]: 2026-10-07 08:12:46,001 aiohttp.access INFO 10.0.4.23 [07/Oct/2026:08:12:46 +0200] "GET /library/artist-info?id=42&name=Nina%20Example HTTP/1.1" 200 512 "-" "Mozilla/5.0 (Linux; Android 14)"
-2026-10-07T08:12:47+02:00 livingroom python[812]: 2026-10-07 08:12:47,002 gexis_core.adapters.lms INFO lms: resolved player 'Kitchen Speaker' to id 3c:22:fb:01:9a:7e
+2026-10-07T08:12:47+02:00 livingroom python[812]: 2026-10-07 08:12:47,002 gexis_core.adapters.lms INFO lms: resolved player 'Kitchen Speaker' to id aa:bb:cc:00:00:04
 2026-10-07T08:12:48+02:00 livingroom python[812]: 2026-10-07 08:12:48,003 gexis_core.enrichment INFO enrichment: looking up 'Blue Harbour Lights' by 'Nina Example'
 2026-10-07T08:12:49+02:00 livingroom python[812]: 2026-10-07 08:12:49,004 gexis_core.weather INFO weather: 'Smalltown,12345, Region, Country' is Smalltown, XX (52.12345, 13.54321)
 2026-10-07T08:12:50+02:00 livingroom python[812]: 2026-10-07 08:12:50,005 gexis_core.bluetooth_adapter_state INFO bluetooth: discoverable='Always'
