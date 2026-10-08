@@ -147,6 +147,7 @@ the question blocking it was answered.
 | [0127](0127-one-volume-row.md) | One Volume row: Hardware, Software or Fixed | **Accepted** 2026-10-07 (George) - Output mode and Software volume become one row; Hardware greyed on an output with no control, Software takes its place; default Hardware, so HDMI starts on Software; a migration carries the old choices |
 | [0128](0128-setup-installs-plugins-and-settles.md) | First setup installs the plugins and waits until the player has settled | **Accepted** 2026-10-07 (George) - a Plugins step before Review offering every plugin the release ships; a settling screen that cannot be skipped, each download's progress, then Ready; a failed download left for Settings, the owner told |
 | [0129](0129-a-service-says-whether-it-is-connected.md) | A service says whether it is connected | **Accepted** 2026-10-08 (George) - *Connected* green, *Connecting* orange, *Not connected* red on the heading above a switched-on service's rows (System, where Beszel's keys go); read by the core from the connections its unit's user holds, not from its log; asked for with `"connection": true`; Beszel first |
+| [0130](0130-the-spectrum-covers-what-is-heard.md) | The spectrum covers what is heard: 50 Hz to 16 kHz at every rate | **Accepted** 2026-10-08 (George) - bands log-spaced 50 Hz-16 kHz whatever the sample rate; an FFT sized to the rate (about 10.8 Hz a bin) for the bass; 3 dB per octave lift above 1 kHz; a second peppyalsa patch, gexis-peppyalsa -2 |
 
 ## Cross-cutting rules
 

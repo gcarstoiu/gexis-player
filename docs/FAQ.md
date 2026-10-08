@@ -212,6 +212,13 @@ phone connects over Spotify or Bluetooth, the set downloads at no more than
 speed. Over HDMI audio output the visualiser moves only with
 *Settings → Audio → Volume* on *Software*; on *Fixed* it does not.
 
+**What do a spectrum's bars show?**
+The music's loudness from 50 Hz on the left to 16 kHz on the right, spaced the
+way pitch is heard, so the bass has several bars of its own. It is the same
+at every sample rate. The higher bars are lifted a little, because recordings
+have less energy the higher the pitch; without that the rightmost bars would
+hardly move.
+
 **How do I pick one skin and keep it?**
 Under *Settings → Display → Visualiser*, choose a *Skin type*, switch off
 *Rotate skin per track*, and choose a *Skin*: tapping one previews it, and
