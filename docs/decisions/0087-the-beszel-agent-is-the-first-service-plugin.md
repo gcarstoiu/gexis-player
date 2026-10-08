@@ -181,3 +181,9 @@ was exactly how the Spotify pairing was lost.
   this one.
 - Two settings rows join ADR-0022's inventory, **after George confirms**, plus
   the synthesised `beszel.enabled`.
+
+**Amended 2026-10-08:**
+- The switch says whether the agent has reached its hub
+  ([ADR-0129](0129-a-service-says-whether-it-is-connected.md)).
+- The Hub public key row refuses a value that is not a key.
+- A unit that fails says *Beszel could not start. Check its settings.*
