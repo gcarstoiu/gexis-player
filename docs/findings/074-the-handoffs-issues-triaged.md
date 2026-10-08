@@ -44,13 +44,13 @@ What was missing was not a fix but a name. The daemon now reads the pref once
 the player id is known and says what it found:
 
 ```
-lms: digitalVolumeControl=1 on 88:a2:9e:79:e1:32
+lms: digitalVolumeControl=1 on aa:bb:cc:00:00:02
 ```
 
 and, with it at 0:
 
 ```
-lms: player 88:a2:9e:79:e1:32 has digitalVolumeControl=0 (fixed volume). LMS
+lms: player aa:bb:cc:00:00:02 has digitalVolumeControl=0 (fixed volume). LMS
 will move its own number and always send full level, so no volume change from
 LMS or a phone reaches this device, and mute cannot be ended from there. Set
 it to 1 in LMS's player settings.

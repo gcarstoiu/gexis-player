@@ -186,7 +186,7 @@ The core now takes the player's name from `device-name.env`, the file
 squeezelite's `-n` reads and a rename writes (`device_name.lms_player`), falling
 back to `lms_player_name` only without it. Both are read at start and a rename
 applies at the next restart, so they cannot disagree. Measured on the device:
-*"lms: resolved player 'Living Room Sofa' to id 88:a2:9e:79:e1:32"*.
+*"lms: resolved player 'Living Room Sofa' to id aa:bb:cc:00:00:02"*.
 
 ## Amended 2026-10-05: saving the name restarts the device
 

@@ -180,7 +180,7 @@ of the player can know when Plexamp selects or deselects it.**
 `onmomo/squeeze-plex-hub`, MIT, Nuxt/Nitro, a GDM announcer plus a per-player
 Plex façade in front of LMS selected by `X-Plex-Target-Client-Identifier`. It
 **already advertises this device's own squeezelite** as a Plex target, and
-`/api/players` shows it discovering both `gexis` (`88:a2:9e:79:e1:32`) and
+`/api/players` shows it discovering both `gexis` (`aa:bb:cc:00:00:02`) and
 `ShelvesPi` from `Lyrion Music Server (Docker)`.
 
 Same 24-bit/192 kHz FLAC, same DAC, both paths:

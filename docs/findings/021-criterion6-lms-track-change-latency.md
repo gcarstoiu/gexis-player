@@ -5,7 +5,7 @@
 `phase-3-core-daemon` commit `02fc0dc` into the existing
 `/opt/gexis-core/venv` (not baked into a rebuilt image — see HANDOFF.md's
 note on this session's hand-install workflow). LMS server
-`192.168.178.188:9000`, player `e4:5f:01:58:89:07`.
+`192.168.178.188:9000`, player `aa:bb:cc:00:00:01`.
 **Question:** Phase 3 criterion 6 — "Track change on LMS appears on the
 WebSocket within a bounded time, measured and recorded."
 
