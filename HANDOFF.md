@@ -33,6 +33,16 @@ nine ADRs).
 - the Beszel heading in System says Connected / Connecting / Not connected
   (ADR-0129, amended the same day from the switch to the heading);
 - Settings no longer slides sideways on a phone.
+- the spectrum covers 50 Hz to 16 kHz at every rate, with five bass bars and
+  a lift above 1 kHz (ADR-0130, Finding 117; gexis-peppyalsa -2, a second
+  patch). On guestpi since 2026-10-08; George to look at it on the panel.
+
+**Next:** restoring a backup in setup - George, 2026-10-08: keep the Wi-Fi
+step, then the backup instead of the other steps, a review of what it
+brings, then restart; backups from older releases accepted unless the
+settings schema changed beyond what migrations carry; plugins arrive on the
+getting-ready screen (ADR-0128). Claude designs it (no Claude Design); ADR
+first.
 
 **guestpi** (192.168.178.21, Pi-DAC PRO, 13.3"): runs all of that as a
 preview (core 0.9.4+git11.38e9c93); its Beszel heading reads Connected. The
