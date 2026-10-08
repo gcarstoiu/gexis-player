@@ -5390,7 +5390,7 @@ gexis's own card is out of the Pi). What it found and what was fixed, all on
   end of setup, Change from Review returns to Review, the phone page's
   blurred backdrop, and **Lyrion only on the user's explicit choice** (find /
   address / off).
-Seen on the last run (18:03): Joining → "SofaPi4 is on H@l" + "Found your
+Seen on the last run (18:03): Joining → "SofaPi4 is on HomeNet" + "Found your
 Lyrion server" → restart, no home screen between; the name in all four places
 after it. **Not yet seen:** image 759's first-try setup network on a blank
 card (the device's radio is long unblocked); the Music step with nothing
