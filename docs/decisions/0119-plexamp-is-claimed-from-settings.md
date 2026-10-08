@@ -151,3 +151,19 @@ Output": [ADR-0085](0085-the-alsa-default-is-our-output.md)'s default, the
 chosen output, through the meter. **Playback after the new claim: George, the same day -** *"it plays and
 the meters work"* - the DAC, through the meter.
 
+
+**Amended 2026-10-08 - three faults a failing claim showed on guestpi.** Plex
+issued a sign-in for each of three fresh tokens and refused it moments
+later; Plexamp wrote half an account and exited 255, or signed in and then
+dropped the sign-in. Plexamp claimed normally again later the same day.
+- **Any store is set aside before a claim**, claimed or not, and comes back
+  when the claim fails. Before, only a claimed store was, and a failed claim
+  on an unclaimed player left half an account behind.
+- **A failed claim is told by Plexamp's exit** (`ExecStopPost=plexamp-run
+  --stopped`, reading systemd's `EXIT_CODE`/`EXIT_STATUS`), not by its
+  files. The next start had taken a sign-in file, written before the
+  exit, for a claim.
+- **The row says a claim that was lost or never came** (gexis-plexamp
+  0.4.2): *Plex signed this player out* when a recorded claim has no
+  sign-in, and *The claim did not work* when one has been tried for more
+  than 90 s without one. It went blank before.
