@@ -16,9 +16,9 @@ STAGE_DIR=/src/image/stage-gexis/07-beszel
 : "${BESZEL_VERSION:?} ${BESZEL_ASSET:?} ${BESZEL_URL:?} ${BESZEL_SHA256:?}"
 # The revision after the dash is ours: raise it whenever what this package
 # carries besides Beszel changes (its plugin.json), or apt keeps the old one -
-# -2 for the manifest's `summary` (ADR-0128, 2026-10-07); -3 for the Hub
-# public key's `pattern`.
-VERSION="${BESZEL_VERSION#v}-3"
+# Back to -1 with each new Beszel version (0.20.0 went to -3 for manifest
+# changes, 2026-10-07/08).
+VERSION="${BESZEL_VERSION#v}-1"
 
 PKG=gexis-beszel-agent
 STAGE=/tmp/stage/$PKG
