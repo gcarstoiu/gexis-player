@@ -334,3 +334,67 @@ class Cable:
             logger.error("cable: the old address did not come back: %s", err)
         self.pending = None
         await self._refresh()
+
+
+#: The setup network's profile (setup_network.PROFILE): hosted on the Wi-Fi
+#: port, and never taken down for a cable.
+SETUP_PROFILE = "gexis-setup"
+#: The sentence after a Wi-Fi join while the cable is in.
+CABLE_IN_USE = ("Saved. The player uses the cable while it is plugged in; "
+                "this network takes over when the cable is unplugged.")
+
+
+async def _wifi_connected(device: str, run) -> str | None:
+    """The Wi-Fi port's connection, when it is connected; None otherwise."""
+    rc, out, _ = await run("-t", "-f", "GENERAL.STATE,GENERAL.CONNECTION", "device", "show", device)
+    if rc != 0:
+        return None
+    state = name = None
+    for line in _lines(out):
+        key, _, value = line.partition(":")
+        if key == "GENERAL.STATE":
+            state = value.split(" ")[0]
+        elif key == "GENERAL.CONNECTION":
+            name = value if value and value != "--" else None
+    return name if state == "100" else None
+
+
+class CableFirst:
+    """**The cable wins** (ADR-0123 as amended; George, 2026-10-08: *"The
+    cable should win"*). While the cable has a link, the Wi-Fi is
+    disconnected - its networks stay saved - so the player has one address
+    and one way out. When the link goes, the Wi-Fi connects again by itself.
+    The setup network is never taken down for it."""
+
+    def __init__(self, cable: str = DEVICE, wifi_device: str = "wlan0", run=wifi._run,
+                 sys_net: Path = SYS_NET, every: float = 5.0, sleep=asyncio.sleep) -> None:
+        self._cable = cable
+        self._wifi = wifi_device
+        self._run = run
+        self._sys_net = sys_net
+        self._every = every
+        self._sleep = sleep
+
+    def cable_in(self) -> bool:
+        return has_port(self._cable, self._sys_net) and link(self._cable, self._sys_net)[0]
+
+    async def step(self, had_link: bool | None) -> bool:
+        carrier = self.cable_in()
+        if carrier:
+            name = await _wifi_connected(self._wifi, self._run)
+            if name and name != SETUP_PROFILE:
+                logger.info("network: the cable has a link; Wi-Fi (%s) disconnected", name)
+                await self._run("device", "disconnect", self._wifi)
+        elif had_link:
+            logger.info("network: the cable lost its link; Wi-Fi connects again")
+            await self._run("device", "connect", self._wifi, timeout=UP_TIMEOUT_S)
+        return carrier
+
+    async def follow(self) -> None:
+        had: bool | None = None
+        while True:
+            try:
+                had = await self.step(had)
+            except Exception as exc:  # noqa: BLE001 - never the core
+                logger.info("network: cable-first check failed: %s", exc)
+            await self._sleep(self._every)

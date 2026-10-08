@@ -889,7 +889,8 @@
       setTimeout(() => {
         if (join !== 'ok') return;
         closeSheet();
-        flash(`Joined ${name}`);
+        // ADR-0123 as amended: on the cable, the network is saved for later.
+        flash(answer.notice ?? `Joined ${name}`, answer.notice ? 6000 : undefined);
       }, 1300);
     });
   }

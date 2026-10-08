@@ -3165,6 +3165,8 @@ async def main() -> None:
     setup_network = SetupNetwork(on_change=state_store.set_setup)
     setup_flow = SetupFlow(setup_network, settings, reboot=_reboot, plugins=_offered_plugins)
     asyncio.ensure_future(cable.follow())
+    # ADR-0123 as amended (George, 2026-10-08): the cable wins over Wi-Fi.
+    asyncio.ensure_future(wired.CableFirst().follow())
     state_server = StateServer(
         state_store,
         cable=cable,

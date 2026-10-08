@@ -2095,7 +2095,15 @@ class StateServer:
             return web.json_response({"error": f"unknown action {action}"}, status=400)
         # A refused password is not a broken request: the answer is 200 with
         # the reason, because the sheet shows it and offers to try again.
-        return web.json_response({"ok": ok, "error": error})
+        answer = {"ok": ok, "error": error}
+        if ok and action == "join":
+            from gexis_core import wired
+
+            if wired.has_port() and wired.link()[0]:
+                # ADR-0123 as amended: the cable wins - the join proved the
+                # password, and the network waits for the cable to go.
+                answer["notice"] = wired.CABLE_IN_USE
+        return web.json_response(answer)
 
     @staticmethod
     def _settings_call(call) -> web.Response:

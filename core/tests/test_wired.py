@@ -222,3 +222,50 @@ def test_an_automatic_address_that_comes_late_is_waited_for(sys_net):
         told = await port.change("auto")
         return told
     assert asyncio.run(go())["address"] == "192.0.2.107"
+
+
+class Ports:
+    """`nmcli` for the cable-first rule: the Wi-Fi port's state, and what was done."""
+
+    def __init__(self, wifi="HomeNet"):
+        self.wifi = wifi
+        self.done = []
+
+    async def __call__(self, *args, timeout=None):
+        if args[:3] == ("-t", "-f", "GENERAL.STATE,GENERAL.CONNECTION"):
+            if self.wifi:
+                return 0, f"GENERAL.STATE:100 (connected)\nGENERAL.CONNECTION:{self.wifi}\n", ""
+            return 0, "GENERAL.STATE:30 (disconnected)\nGENERAL.CONNECTION:--\n", ""
+        self.done.append(args)
+        if args[:2] == ("device", "disconnect"):
+            self.wifi = None
+        return 0, "", ""
+
+
+def test_the_cable_wins_and_wi_fi_comes_back_without_it(sys_net):
+    """George, 2026-10-08: "The cable should win"."""
+    ports = Ports()
+    rule = wired.CableFirst(run=ports, sys_net=sys_net)
+
+    async def go():
+        had = await rule.step(None)
+        assert had and ports.done == [("device", "disconnect", "wlan0")]
+        had = await rule.step(had)
+        assert len(ports.done) == 1, "already off: nothing more"
+        (sys_net / "eth0" / "carrier").write_text("0\n")
+        had = await rule.step(had)
+        assert ports.done[-1] == ("device", "connect", "wlan0") and not had
+        await rule.step(had)
+        assert len(ports.done) == 2, "no cable, no link change: nothing"
+    asyncio.run(go())
+
+
+def test_the_setup_network_is_never_taken_down_for_a_cable(sys_net):
+    ports = Ports(wifi=wired.SETUP_PROFILE)
+    asyncio.run(wired.CableFirst(run=ports, sys_net=sys_net).step(None))
+    assert ports.done == []
+
+
+def test_the_setup_profile_is_setup_s_own():
+    from gexis_core import setup_network
+    assert wired.SETUP_PROFILE == setup_network.PROFILE
