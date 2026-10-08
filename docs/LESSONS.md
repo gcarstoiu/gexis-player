@@ -1150,6 +1150,25 @@ playback, the screen) before and after.**
 a quiet test sets the volume of every source it starts, not only the
 player's.**
 
+**61. A refusal tested against code that accepts** (2026-10-08, Beszel on
+`guestpi`).
+- **What went wrong.** The install of a new check - a Hub public key that is
+  not an SSH key is refused - was gated on nothing playing, and was skipped:
+  something played. The test that followed, in the same command, was not
+  gated: it wrote a deliberately wrong key, which the old code, still
+  running, accepted. George had entered a working key seven minutes earlier;
+  the agent was connected to the hub. The write replaced it and the agent
+  failed at every start.
+- **What it looked like.** `HTTP 200` for a value that should have been
+  refused - read as "the check is not live yet", after the damage.
+- **How it was caught.** By the agent's own log: connected at 07:52:14,
+  stopped at 07:58:58, failing on the test text since.
+
+**A test that writes runs only after the change it tests is confirmed
+installed, in its own command - never in the same one as a gated install -
+and never writes over a real setting: it uses a row nothing reads, or puts
+the value back.**
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build
