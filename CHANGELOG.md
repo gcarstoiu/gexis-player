@@ -5,6 +5,23 @@ Every release of Gexis Player and its notes, newest first. Generated from
 edit that file, not this one. The player shows the last 10 under
 Settings → System → Change logs.
 
+## 0.9.5 — 8 October 2026
+
+### New
+
+- First-time setup can restore a backup: after the Wi-Fi, choose Restore a backup and the backup file on the phone. The review shows what it brings, and anything setup asks - the name, for instance - can be changed there, so one player's backup can start another. Given another name, the new player leaves the first one's Beszel identity, Plexamp claim, Spotify sign-in and Bluetooth pairings behind.
+- The spectrum covers 50 Hz to 16 kHz at every sample rate, with more bars for the bass and the higher bars lifted a little, so the bars on the right move with the music. Each spectrum skin draws as many bars as its panel holds.
+- Settings → System → Beszel says whether the agent has reached its hub: Connected, Connecting or Not connected.
+
+### Fixed
+
+- A Beszel Hub public key that is not a key is refused when it is saved, and a plugin that cannot start says so beside its switch.
+- On a phone, Settings no longer slides sideways.
+
+### Good to know
+
+- Spotify Connect (go-librespot 0.10.3) starts the first skip at once, and the Beszel agent and hub are at 0.21.0.
+
 ## 0.9.4 — 8 October 2026
 
 ### New
