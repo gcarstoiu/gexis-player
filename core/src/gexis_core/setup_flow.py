@@ -439,6 +439,10 @@ class SetupFlow:
                         ", ".join(label for _, label in backups.IDENTITIES))
         try:
             await asyncio.to_thread(backups.restore_file, self._backup, self._restore_root, leave)
+            if second:
+                # Before setup's own answers, so a plugin switched on in the
+                # review still is.
+                await asyncio.to_thread(backups.forget_settings, backups.IDENTITY_SETTINGS, self._restore_root)
             await asyncio.to_thread(backups.write_settings, writes, self._restore_root)
             if "device_name" in changed and values.get("device_name"):
                 # The backup's own name file just came back with the files:

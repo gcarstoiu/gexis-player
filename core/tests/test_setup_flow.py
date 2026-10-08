@@ -484,7 +484,7 @@ def test_a_backup_given_another_name_leaves_the_first_player_s_identities_behind
     else comes back."""
     flow, net, _, _, upload, _ = _with_backup(tmp_path, FakeNM(devices=NOTHING))
     seen = flow.take_backup(upload)["backup"]
-    assert set(seen["identities"]) == {"Beszel identity", "Plexamp's claim", "Spotify sign-in", "Bluetooth pairings"}
+    assert set(seen["identities"]) == {"Beszel connection", "Plexamp's claim", "Spotify sign-in", "Bluetooth pairings"}
     flow.save({"ssid": "Home", "password": "hunter22", "name": "Kitchen"})
     asyncio.run(_finish_told(flow, net))
     card = tmp_path / "card"
@@ -507,6 +507,37 @@ def test_the_same_player_keeps_them_renamed_or_not(tmp_path):
         asyncio.run(_finish_told(flow, net))
         assert (root / "card/var/lib/beszel-agent/fingerprint").exists(), answers
         assert (root / "card/home/pi/.local/share/Plexamp/Settings").exists(), answers
+
+
+CONNECTED = {**VALUES, "beszel.enabled": True, "beszel.hub": "http://192.0.2.9:8090", "beszel.key": "ssh-ed25519 AAAA",
+             "beszel.token": "t0ken", "plexamp.claim_token": "claim-abc"}
+
+
+def test_a_second_player_leaves_the_first_one_s_hub_and_claim_in_the_settings_too(tmp_path):
+    """George, 2026-10-08: a second player came up still showing the first
+    one's Beszel hub - "everything goes, including IP". The connection is
+    settings, not files: the whole Beszel plugin back to its defaults, and
+    Plexamp's claim token gone with its switch kept. The same player keeps
+    them all."""
+    for answers, kept in (({"name": "Kitchen"}, False), ({"name": "Kitchen", "second_player": False}, True)):
+        root = tmp_path / str(kept)
+        root.mkdir()
+        flow, net, _, _, upload, _ = _with_backup(root, FakeNM(devices=NOTHING), values=CONNECTED)
+        flow.take_backup(upload)
+        flow.save({"ssid": "Home", "password": "hunter22", **answers})
+        asyncio.run(_finish_told(flow, net))
+        for key in ("beszel.enabled", "beszel.hub", "beszel.key", "beszel.token", "plexamp.claim_token"):
+            assert (_restored(root, key) is not None) is kept, (key, answers)
+        assert _restored(root, "plexamp.enabled") is True
+        assert _restored(root, "device_name") == "Kitchen"
+
+
+def test_a_plugin_switched_on_in_the_review_stays_on_a_second_player(tmp_path):
+    flow, net, _, _, upload, _ = _with_backup(tmp_path, FakeNM(devices=NOTHING), values=CONNECTED, plugins=PLUGINS)
+    flow.take_backup(upload)
+    flow.save({"ssid": "Home", "password": "hunter22", "name": "Kitchen", "plugins": ["beszel"]})
+    asyncio.run(_finish_told(flow, net))
+    assert _restored(tmp_path, "beszel.enabled") is True and _restored(tmp_path, "beszel.hub") is None
 
 
 def test_a_restore_applies_its_answers_with_a_real_store(tmp_path):

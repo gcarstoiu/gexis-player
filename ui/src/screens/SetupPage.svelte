@@ -98,6 +98,11 @@
   let uploadError = $state(null);
   const restoring = $derived(startMode === 'restore');
   const QUESTIONS = ['name', 'tz', 'out', 'music', 'display', 'visualiser', 'plugins'];
+  //: **Asked on a restore too** (George, 2026-10-08: "leave the two as
+  //: mandatory steps next to WiFi"): the output and the screen are this
+  //: player's hardware, which a backup from another one does not know. A
+  //: 0.9.5 restore put guestpi's DAC on a player with another one.
+  const ASKED = ['out', 'display'];
 
   //: **A step changed in the review opens on the backup's answer** (ADR-0131
   //: as amended; George, 2026-10-08: a backup used for another player, with
@@ -108,19 +113,12 @@
     if (saved.name == null && v.device_name) name = v.device_name;
     if (saved.timezone == null && v.timezone && (!zones.length || zones.includes(v.timezone))) { tz = v.timezone; tzMode = 'auto'; }
     if (saved.clock == null && v.clock_format) clock24 = v.clock_format !== '12 h';
-    if (saved.output == null && v.output_device && outputs.includes(v.output_device)) out = v.output_device;
     if (saved.lms_mode == null) {
       lmsMode = v.lms_enabled === false ? 'off' : v.lms_server ? 'address' : null;
       lms = v.lms_server ?? '';
     }
     if (saved.spotify == null && v.spotify_enabled != null) spotify = v.spotify_enabled !== false;
     if (saved.bluetooth == null && v.bt_enabled != null) bt = v.bt_enabled !== false;
-    if (saved.headless == null && saved.screen == null) {
-      headless = !!v.headless;
-      scPick = headless ? null : v.screen ?? null;
-      scConfirmed = !!scPick && scPick === screenInfo?.suggested?.label;
-      scChoose = !!scPick && !scConfirmed && !!screenInfo?.suggested;
-    }
     if (saved.visualiser == null && v.visualiser_skins != null) visualiser = !!v.visualiser_skins;
     if (saved.plugins == null) chosenPlugins = (b?.enabled ?? []).filter((id) => offered.some((p) => p.id === id));
   }
@@ -415,8 +413,9 @@
   const noVisualiser = $derived(headless || !chosenModel?.skins);
   function skipped(n) {
     const s = STEPS[n]?.[0];
-    //: ADR-0131: a backup answers every question after Start.
-    if (restoring && QUESTIONS.includes(s)) return true;
+    //: ADR-0131: a backup answers every question after Start but the two
+    //: this player's own hardware answers.
+    if (restoring && QUESTIONS.includes(s) && !ASKED.includes(s)) return true;
     return (noVisualiser && s === 'visualiser') || (!offered.length && s === 'plugins');
   }
   function back() {
@@ -525,7 +524,7 @@
     ['Network', picked || (overLan ? 'Ethernet only' : 'Not set'), at('wifi')],
     ['Name', `${shownName} · ${slug}.local`, at('name')],
     ['Time zone', `${tz || 'Not set'} · ${clock24 ? '24 h' : '12 h'}`, at('tz')],
-    ['Output', out || (restoring ? 'As in the backup' : 'Not set'), at('out')],
+    ['Output', out || 'Not set', at('out')],
     ['Library', lmsMode === 'off' ? 'Not used' : lmsMode === 'address' ? lms.trim() : lmsMode === 'find' ? 'Found once on your network' : restoring ? 'As in the backup' : 'Not chosen', at('music')],
     ['Services', [spotify ? 'Spotify Connect' : null, bt ? 'Bluetooth' : null].filter(Boolean).join(' · ') || 'Lyrion only', at('music')],
     ['Screen', headless ? 'Headless' : chosenModel ? `${chosenModel.maker} ${shortOf(chosenModel)} · ${chosenModel.width} × ${chosenModel.height}` : scPick ? scPick.replace('/', ' ') : 'Not chosen', at('display')],
@@ -539,7 +538,7 @@
     <header>
       <img class="mark" src={mark} alt="" width="34" height="34" />
       <span class="crumb">
-        {step < 0 ? 'First-time setup' : step >= last || finished ? 'Almost done' : restoring && QUESTIONS.includes(id) ? `Restoring · changing ${STEPS[step][1]}` : `Step ${shownAt(step)} of ${shownSteps} · ${STEPS[step][1]}`}
+        {step < 0 ? 'First-time setup' : step >= last || finished ? 'Almost done' : restoring && skipped(step) ? `Restoring · changing ${STEPS[step][1]}` : `Step ${shownAt(step)} of ${shownSteps} · ${STEPS[step][1]}`}
       </span>
       {#if setup?.ssid}<span class="over">Over {setup.ssid}</span>{/if}
     </header>

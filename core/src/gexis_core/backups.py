@@ -102,11 +102,20 @@ FORMERLY_BACKED_UP = ("var/lib/go-librespot",)
 #: places on the Beszel hub, one Plex player on two devices. The pairings
 #: are bound to the first Pi's adapter and do nothing on another.
 IDENTITIES = (
-    ("var/lib/beszel-agent", "Beszel identity"),
+    ("var/lib/beszel-agent", "Beszel connection"),
     ("home/pi/.local/share/Plexamp", "Plexamp's claim"),
     ("var/lib/go-librespot/state.json", "Spotify sign-in"),
     ("var/lib/bluetooth", "Bluetooth pairings"),
 )
+
+#: **The settings that go with them** (George, 2026-10-08, on a second player
+#: that came up still showing the first one's hub: *"everything goes,
+#: including IP"*). A key, or a prefix ending in "." for every key of a
+#: plugin. Beszel's connection is all settings - the hub's address, its key,
+#: the token - and switched on with them gone it would have nothing to reach,
+#: so the whole plugin goes back to its defaults. Plexamp keeps its switch:
+#: on a second player it is claimed again.
+IDENTITY_SETTINGS = ("beszel.", "plexamp.claim_token")
 
 #: **The databases the core holds open** (ADR-0131 §5). Put back by writing
 #: beside them and renaming, so an open connection keeps the file it had and
@@ -275,6 +284,22 @@ def write_settings(values: dict, root: Path = Path("/")) -> None:
         conn.close()
 
 
+def forget_settings(keys: tuple = IDENTITY_SETTINGS, root: Path = Path("/")) -> None:
+    """**A second player's restored settings without the first one's
+    identities** (`IDENTITY_SETTINGS`): removed from the settings file just
+    put back, so the next start reads each one's default."""
+    conn = sqlite3.connect(root / SETTINGS_DB)
+    try:
+        for key in keys:
+            if key.endswith("."):
+                conn.execute("DELETE FROM settings WHERE substr(key, 1, ?) = ?", (len(key), key))
+            else:
+                conn.execute("DELETE FROM settings WHERE key = ?", (key,))
+        conn.commit()
+    finally:
+        conn.close()
+
+
 class Refused(ValueError):
     """**A file setup cannot restore, in words for the phone** (ADR-0131 §4)."""
 
@@ -368,7 +393,7 @@ def inspect(path: Path, known_migrations: int, schema_key: str = "_settings_sche
     if any(n.startswith("home/pi/.local/share/Plexamp/Settings/") for n in names):
         brings.append("Plexamp's claim")
     if any(n.startswith("var/lib/beszel-agent/") for n in names):
-        brings.append("Beszel identity")
+        brings.append("Beszel connection")
     if any(n.startswith("var/lib/beszel-hub/") for n in names):
         brings.append("Beszel hub history")
     if any(n.startswith("var/lib/squeezeboxserver/prefs/") for n in names):
