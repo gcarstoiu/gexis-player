@@ -405,7 +405,10 @@ the details came through. Not every app sends track details over Bluetooth.
 Switch on *Plexamp* on the Plugins page (it is downloaded from Plex). Then, in
 its *Claim token* row under *Settings → Sources*, paste a token from
 plex.tv/claim; the row then shows *Claimed*. *Claim again* moves the player
-to another Plex account, and registers it there as a new player.
+to another Plex account, and registers it there as a new player. A token
+lasts only a few minutes, so paste it soon after making it. If the row says
+*The claim did not work* or *Plex signed this player out*, get a new token and
+paste it again; a claim that fails leaves the player as it was.
 
 ---
 
