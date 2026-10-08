@@ -367,9 +367,12 @@ Settings' Wi-Fi row is a `list` row (ADR-0044) backed by `wifi.py`, through
   per-item action. A device that loses its Wi-Fi recovers by restarting, which
   re-runs the boot decision in §2.
 
-## 6b. The cable (ADR-0123)
+## 6b. The cable, and the Wi-Fi address (ADR-0123)
 
-`wired.py`, through `nmcli` like the Wi-Fi:
+`wired.py`, through `nmcli` like the Wi-Fi. One class, `Cable`, serves both
+ports: `eth0` for the Cable row, `wlan0` and the connected network's profile
+for the Wi-Fi address (`/network/wifi/address`; `/network/wifi` is the
+connected network's details). One change waits at a time.
 
 - **State:** link and speed from `/sys/class/net/eth0/{carrier,speed}` (cheap,
   read with every settings listing for the row); the profile on the port
