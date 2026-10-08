@@ -55,3 +55,43 @@ five**: details live in the sheet a row opens, not on the page.
 - `gexis` has no cable: the cable half is tested on a second Pi or the bench
   before it ships, and said so until then.
 - IPv6 stays automatic; manual applies to IPv4 only (raise if wanted).
+
+## Built
+
+- **2026-10-03 (0.9.3):** the connected Wi-Fi network's details - signal,
+  speed, band, channel, address.
+- **2026-10-08, the cable**, with a cable on guestpi (George: *"Lan cable
+  connected. You can work on it being supported"*):
+  - `wired.py`: the port's link and speed from the kernel, its profile's
+    address, gateway and DNS from NetworkManager, and `check()` for a manual
+    address (an address with its prefix; a gateway inside that network, not
+    the address itself; one or two DNS servers), each refusal a sentence;
+  - `Cable.change()` saves the profile's IPv4 settings, applies the new ones
+    (`nmcli connection modify` and `up`), and puts the old ones back if the
+    port does not take them;
+  - **the safeguard:** a change waits `KEEP_S` = 60 s for *Keep*
+    (`POST /network/keep`), counted only when the request arrives at the new
+    address, which shows it works, or from the panel (loopback), which
+    reaches the player whatever its address. Not kept, the old settings come
+    back by themselves;
+  - the *Cable* row is shown while the port has a link or holds a manual
+    address (the registry's new `shown` providers). Its line is *Connected
+    · 1000 Mb/s · address*, with *manual* or *waiting to be kept* after it;
+    *No link* without a cable;
+  - the sheet (`CableSheet`): the facts, *Automatic* / *Manual*, the fields,
+    *Save*. `CableKeep` asks *Keep the new cable address?* on every page,
+    phone and panel, while a change waits; at the old address it names the
+    new one to open.
+- **Tried on guestpi, 2026-10-08,** with nothing playing:
+  1. a manual address (`192.0.2.230/24`, checked free by ping and ARP
+     first) answered at once; *Keep* from the Wi-Fi address was refused;
+     not kept, the cable went back to DHCP 60 s later to the second;
+  2. set again and kept from the new address, through the page: the banner,
+     the sheet and *Keep* at `.230`;
+  3. back to *Automatic* through the sheet, kept at the address DHCP gave
+     (`.107`). guestpi ends as it started.
+- **Not built yet:** the same *Automatic / Manual* choice for the connected
+  Wi-Fi network (decision 2). It can reuse `wired.py` with the Wi-Fi profile.
+- NetworkManager stores the cable's profile once it is changed (the profile
+  it made by itself lived only in memory before). Automatic is the same as
+  before it.

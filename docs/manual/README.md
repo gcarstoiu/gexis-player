@@ -388,6 +388,7 @@ the player itself, with its music folders and network shares).
 | Setting | What it does |
 | --- | --- |
 | Device name | One name for everything: the network address (*name*.local), the Lyrion player, the Spotify device and the Bluetooth name. |
+| Cable | Shown while a network cable is plugged in: *Connected · 1000 Mb/s · address*. Tap it to see the address, gateway and DNS, and to set the address by hand (*Manual*: the address with its prefix, the gateway, one or two DNS servers) or back to *Automatic*. After *Save*, open the player at its new address and tap *Keep* within 60 seconds; otherwise the old address comes back by itself. |
 | Wi-Fi | The networks in range and the ones the player knows. The connected network shows its speed; tap it to see its signal (dBm and %), speed, band and channel, and the player's address, updated every few seconds. A closed lock marks a secured network that needs its password; an open lock, one whose password the player already has. |
 | Time zone | Taken from the network; set it by hand only when that is wrong. |
 | Version | What is installed. |
