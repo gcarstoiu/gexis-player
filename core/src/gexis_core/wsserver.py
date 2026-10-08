@@ -1242,7 +1242,8 @@ class StateServer:
 
     def _address(self, request: web.Request):
         """The cable's or the Wi-Fi's address, by the route."""
-        return self._wifi_address if request.match_info.get("port") == "wifi" else self._cable
+        # `/network/wifi` itself is the connected network's details (0.9.3).
+        return self._wifi_address if request.path.startswith("/network/wifi/") else self._cable
 
     async def _handle_cable(self, request: web.Request) -> web.Response:
         """ADR-0123: what the Cable sheet - or the connected Wi-Fi network's
@@ -2166,8 +2167,10 @@ class StateServer:
         app.router.add_get("/network/wifi", self._handle_wifi_details)
         app.router.add_post("/report", self._handle_report)
         app.router.add_get("/backups/{name}", self._handle_backup_download)
-        app.router.add_get("/network/{port:cable|wifi}", self._handle_cable)
-        app.router.add_post("/network/{port:cable|wifi}", self._handle_cable_change)
+        app.router.add_get("/network/cable", self._handle_cable)
+        app.router.add_post("/network/cable", self._handle_cable_change)
+        app.router.add_get("/network/wifi/address", self._handle_cable)
+        app.router.add_post("/network/wifi/address", self._handle_cable_change)
         app.router.add_post("/network/keep", self._handle_cable_keep)
         app.router.add_get("/hardware-report", self._handle_hardware_report)
         app.router.add_post("/hardware-report/issue", self._handle_hardware_issue)

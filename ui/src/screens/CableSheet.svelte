@@ -11,7 +11,7 @@
   import { onDestroy, onMount } from 'svelte';
 
   let { port = 'cable', facts = true } = $props();
-  const url = `/network/${port}`;
+  const url = port === 'wifi' ? '/network/wifi/address' : '/network/cable';
 
   let cable = $state(null);
   let method = $state('auto');

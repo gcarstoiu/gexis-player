@@ -171,3 +171,30 @@ def test_without_a_connection_the_sentence_names_the_port(tmp_path):
         return str(refused.value)
     assert asyncio.run(go("wlan0")) == "Join a Wi-Fi network first."
     assert "cable" in asyncio.run(go("eth0"))
+
+
+@pytest.mark.asyncio
+async def test_the_routes_reach_each_port_and_leave_the_wi_fi_details_alone():
+    """`/network/wifi` is the connected network's details (0.9.3); the
+    address is `/network/wifi/address`. Keep counts for whichever waits."""
+    from aiohttp.test_utils import TestClient, TestServer
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+
+    class Port:
+        def __init__(self, name):
+            self.name, self.pending = name, None
+        async def status(self):
+            return {"port": True, "link": True, "speed": None, "address": f"{self.name}/24", "method": "auto",
+                    "profile": self.name, "gateway": None, "dns": []}
+        def keep(self, arrived_at, loopback):
+            return loopback
+
+    cable, wifi = Port("cable"), Port("wifi")
+    async with TestClient(TestServer(StateServer(StateStore({}), cable=cable, wifi_address=wifi).make_app())) as client:
+        assert (await (await client.get("/network/cable")).json())["profile"] == "cable"
+        assert (await (await client.get("/network/wifi/address")).json())["profile"] == "wifi"
+        wifi.pending = type("P", (), {"address": "10.0.0.9"})()
+        r = await client.post("/network/cable", json={"method": "auto"})
+        assert r.status == 409, "one change waits at a time"
+        assert (await client.post("/network/keep")).status == 200, "loopback keeps whichever waits"

@@ -25,7 +25,7 @@
     let found = null;
     for (const p of ['cable', 'wifi']) {
       try {
-        const r = await fetch(`/network/${p}`);
+        const r = await fetch(p === 'wifi' ? '/network/wifi/address' : '/network/cable');
         if (!r.ok) continue;
         const waiting = (await r.json()).pending;
         if (waiting) {
