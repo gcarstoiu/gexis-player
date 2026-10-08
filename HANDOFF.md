@@ -42,8 +42,11 @@ wrapper's three faults it showed are fixed (ADR-0119 amended, gexis-plexamp
 - Plexamp's claim: a failed claim leaves nothing behind, is told by Plexamp's
   exit, and the row says it (ADR-0119 amended; gexis-plexamp 0.4.2);
 - the **Cable** row (ADR-0123): state, Automatic / Manual address, the 60 s
-  Keep; tried on guestpi end to end, guestpi back on DHCP (.107). The same
-  choice for Wi-Fi is not built yet;
+  Keep; and the same for the connected Wi-Fi network (decision 2). Both tried
+  on guestpi end to end; guestpi back on DHCP on both (.107 cable, .21 Wi-Fi).
+  **Open, George's:** a cable and Wi-Fi are both connected at once today;
+  he called it an error - proposed: the cable wins, Wi-Fi drops while it has
+  a link and comes back without it;
 - `verify-image.sh` with Beszel 0.21.0's binary checksums.
 All of it is on guestpi (core 0.9.5+git31).
 
@@ -54,8 +57,8 @@ volume (visualiser; Bluetooth with the volume raised), software volume across
 a full reboot, the small fixes, Hardware feedback on the real panel (pattern,
 taps, tones, GitHub - labels exist), and a **freshly flashed card** (the
 Plugins step, the settling screen, the screen applied in setup). The update
-safety can only be seen on the release after 0.9.4. Claude to do: the Wi-Fi
-address choice (ADR-0123 decision 2; the cable half is done), **the final thorough code check**
+safety can only be seen on the release after 0.9.4. Claude to do: cable or Wi-Fi, one at a time (once George decides),
+**the final thorough code check**
 (George: everything once more; volume, the adapters and arbitration must
 work perfectly from the start), the first public release, and removing
 passwordless sudo from the image - last.
