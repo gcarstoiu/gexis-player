@@ -345,7 +345,7 @@ CABLE_IN_USE = ("Saved. The player uses the cable while it is plugged in; "
 
 
 async def _wifi_connected(device: str, run) -> str | None:
-    """The Wi-Fi port's connection, when it is connected; None otherwise."""
+    """A port's connection, when it is connected; None otherwise."""
     rc, out, _ = await run("-t", "-f", "GENERAL.STATE,GENERAL.CONNECTION", "device", "show", device)
     if rc != 0:
         return None
@@ -380,6 +380,11 @@ class CableFirst:
 
     async def step(self, had_link: bool | None) -> bool:
         carrier = self.cable_in()
+        if carrier and await _wifi_connected(self._cable, self._run) is None:
+            # A link, but no address yet (seen on guestpi: "getting IP
+            # configuration" for some seconds). The Wi-Fi stays until the
+            # cable can carry the player, or there is a gap with neither.
+            return carrier
         if carrier:
             name = await _wifi_connected(self._wifi, self._run)
             if name and name != SETUP_PROFILE:

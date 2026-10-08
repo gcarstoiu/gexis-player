@@ -231,7 +231,13 @@ class Ports:
         self.wifi = wifi
         self.done = []
 
+    cable_up = True
+
     async def __call__(self, *args, timeout=None):
+        if args[:3] == ("-t", "-f", "GENERAL.STATE,GENERAL.CONNECTION") and args[-1] == "eth0":
+            if self.cable_up:
+                return 0, "GENERAL.STATE:100 (connected)\nGENERAL.CONNECTION:Wired connection 1\n", ""
+            return 0, "GENERAL.STATE:70 (connecting (getting IP configuration))\nGENERAL.CONNECTION:Wired connection 1\n", ""
         if args[:3] == ("-t", "-f", "GENERAL.STATE,GENERAL.CONNECTION"):
             if self.wifi:
                 return 0, f"GENERAL.STATE:100 (connected)\nGENERAL.CONNECTION:{self.wifi}\n", ""
@@ -269,3 +275,15 @@ def test_the_setup_network_is_never_taken_down_for_a_cable(sys_net):
 def test_the_setup_profile_is_setup_s_own():
     from gexis_core import setup_network
     assert wired.SETUP_PROFILE == setup_network.PROFILE
+
+
+def test_the_wi_fi_stays_until_the_cable_has_its_address(sys_net):
+    """guestpi: a link, still getting its address - the Wi-Fi had already
+    gone, and the player had no network for some seconds."""
+    ports = Ports()
+    ports.cable_up = False
+    rule = wired.CableFirst(run=ports, sys_net=sys_net)
+    assert asyncio.run(rule.step(None)) and ports.done == []
+    ports.cable_up = True
+    asyncio.run(rule.step(True))
+    assert ports.done == [("device", "disconnect", "wlan0")]
