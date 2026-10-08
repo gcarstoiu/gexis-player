@@ -367,6 +367,27 @@ Settings' Wi-Fi row is a `list` row (ADR-0044) backed by `wifi.py`, through
   per-item action. A device that loses its Wi-Fi recovers by restarting, which
   re-runs the boot decision in §2.
 
+## 6b. The cable (ADR-0123)
+
+`wired.py`, through `nmcli` like the Wi-Fi:
+
+- **State:** link and speed from `/sys/class/net/eth0/{carrier,speed}` (cheap,
+  read with every settings listing for the row); the profile on the port
+  (`GENERAL.CONNECTION`, *Wired connection 1* as NetworkManager names it), its
+  IPv4 method, and the address, gateway and DNS in use.
+- **The row** `cable` (Device) is an action row of `kind: "cable"`, shown by a
+  `shown` provider while the port has a link or holds a manual address; its
+  line is the `notes` provider `Cable.note()`, kept current by `Cable.follow()`
+  every 10 s.
+- **A change** (`POST /network/cable` with `method`, and for Manual
+  `address`/`gateway`/`dns`): `check()`, then the profile's IPv4 settings are
+  saved, modified and brought up; if the port refuses, they are put back.
+- **The safeguard:** the change is pending for 60 s. `POST /network/keep`
+  keeps it only if the request arrived at the new address (the socket's own
+  address) or from loopback (the panel); otherwise the saved settings come
+  back. Every page shows `CableKeep` while `GET /network/cable` has `pending`,
+  read again whenever `settings_revision` moves.
+
 ## 7. Bluetooth pairing, briefly
 
 Pairing is confirmed on the panel on a device's first pair only (ADR-0045,
