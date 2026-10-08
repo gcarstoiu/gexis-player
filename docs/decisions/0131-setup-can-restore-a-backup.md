@@ -86,12 +86,47 @@ wants it.
       put down.
 6. **Nothing new to set**: no ADR-0022 row.
 
+## Amended (George, 2026-10-08, the same day)
+
+*"In the review phase why not use the same review screen we have for the new
+installation setup which would allow also a change? Use case would be
+installing the player for another device but not wanting to start from
+scratch ... This would be only for the entries in the current setup that can
+be changed and not for api credentials."*
+
+- **§3:** the review is the new player's Review table, with *Change* on every
+  answer setup asks: name, time zone, output, library, services, screen,
+  visualiser and plugins. Each step opens on the backup's answer. The backup
+  and what else it brings are rows above and below it. Keys, pairings and
+  sign-ins have no *Change*: setup does not ask for them.
+- **§5:** a step continued from is setup's answer, and it wins over the
+  backup's. The order changes so that it can:
+  1. the join;
+  2. the files put back;
+  3. **the changed answers written into the restored settings file**
+     (`backups.write_settings`), the one the next start reads;
+  4. the main answers applied through `Settings.set`, as before;
+  5. the backup's name re-applied everywhere only when the name was not
+     changed.
+- *Find my Lyrion server*, chosen in the review, searches after the join and
+  writes what it finds into the restored settings.
+
+**A consequence for a second player** (*Open* below): a backup used for
+another player also brings the first player's identities.
+
 ## Open
 
 - **Backups from a newer release are accepted.** A setup run from an older
   card then restores settings that version cannot read until it updates.
   Refusing instead would leave the owner unable to use their own backup until
   they found a newer image. George may want them refused.
+
+- **Identities on a second player.** A backup restored onto a second player
+  gives it the first one's Beszel fingerprint (the hub would see one system
+  in two places), Plexamp's claim (one Plex player identity on two devices),
+  the Spotify sign-in and the Bluetooth pairings. The pairings are bound to
+  the first Pi's adapter and do nothing on another. Setup could offer to
+  leave these behind when the name is changed. George's to decide.
 
 ## Not decided here
 
