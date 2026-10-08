@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import stat
 
 import pytest
@@ -333,3 +334,107 @@ def test_nothing_chosen_to_download_writes_nothing_to_wait_for(tmp_path):
     flow.save({"ssid": "Home", "password": "hunter22", "plugins": ["beszel"]})
     finish(flow, net)
     assert not (tmp_path / "settling.json").exists()
+
+
+# -- ADR-0131: restoring a backup in setup ----------------------------------
+
+from gexis_core import backups as _backups
+from test_backups import VALUES, _real_device
+
+
+def _with_backup(tmp_path, nm, settings=None, values=VALUES, **kw):
+    flow, net, clock, countries, reboots = make(tmp_path, nm, settings, **kw)
+    flow._backup = tmp_path / "state" / "setup-backup.tgz"
+    flow._restore_root = tmp_path / "card"
+    (tmp_path / "card").mkdir()
+    names = []
+    flow._apply_name = lambda: names.append(True)
+    old = _real_device(tmp_path / "old", values)
+    made = _backups.create("Living Room", tmp_path / "share", old)
+    upload = tmp_path / "upload.part"
+    upload.write_bytes((tmp_path / "share" / made).read_bytes())
+    return flow, net, countries, reboots, upload, names
+
+
+def test_a_backup_is_checked_kept_and_said_in_the_answers(tmp_path):
+    flow, net, _, _, upload, _ = _with_backup(tmp_path, FakeNM(devices=NOTHING))
+    out = flow.take_backup(upload, "gexis-living-room-20261008-101500.tgz")
+    assert out["start"] == "restore" and out["backup"]["name"] == "Living Room"
+    assert out["backup"]["file"] == "gexis-living-room-20261008-101500.tgz"
+    assert stat.S_IMODE(flow._backup.stat().st_mode) == 0o600 and not upload.exists()
+
+
+def test_a_refused_file_is_deleted_and_the_kept_one_stays(tmp_path):
+    flow, net, _, _, upload, _ = _with_backup(tmp_path, FakeNM(devices=NOTHING))
+    flow.take_backup(upload)
+    junk = tmp_path / "junk.part"
+    junk.write_bytes(b"a photo")
+    with pytest.raises(_backups.Refused):
+        flow.take_backup(junk)
+    assert not junk.exists() and flow._backup.exists()
+    assert flow.answers()["backup"]["name"] == "Living Room"
+
+
+def test_restoring_joins_applies_the_backup_s_answers_puts_the_files_back_and_restarts(tmp_path):
+    """ADR-0131 §5: the country from the backup's time zone, the join, its
+    main answers through Settings (Headless before the screen), the files,
+    what the first start waits for, then the restart - and the file gone."""
+    nm = FakeNM(devices=NOTHING)
+    settings = FakeSettings()
+    flow, net, countries, reboots, upload, names = _with_backup(tmp_path, nm, settings, plugins=PLUGINS)
+    flow.take_backup(upload)
+    flow.save({"ssid": "Home", "password": "hunter22"})
+    told = asyncio.run(_finish_told(flow, net))
+    assert countries == ["DE"]
+    keys = [k for k, _ in settings.sets]
+    assert keys.index("headless") < keys.index("screen")
+    assert ("device_name", "Living Room") in settings.sets and ("timezone", "Europe/Berlin") in settings.sets
+    assert "volume_max" not in keys, "everything else comes back with the files"
+    assert (tmp_path / "card/var/lib/gexis-core/settings.db").exists()
+    assert names == [True]
+    waits = json.loads((tmp_path / "settling.json").read_text())["items"]
+    assert [w["id"] for w in waits] == ["skins", "plexamp"]
+    assert net.status()["finished"]["restart_for"] == "restore"
+    assert reboots == [True] and not flow._backup.exists()
+    assert (tmp_path / "setup-done").exists()
+    assert told == {"keep_question": True}
+
+
+def test_a_screen_this_version_does_not_know_is_left_to_settings(tmp_path):
+    settings = FakeSettings()
+    flow, net, _, _, upload, _ = _with_backup(tmp_path, FakeNM(devices=NOTHING), settings,
+                                              values={**VALUES, "screen": "Future/Panel 9000"})
+    flow.take_backup(upload)
+    flow.save({"ssid": "Home", "password": "hunter22"})
+    assert asyncio.run(_finish_told(flow, net)) == {"keep_question": False}
+    assert "screen" not in [k for k, _ in settings.sets]
+
+
+async def _finish_told(flow, net):
+    net._state, net._needed = "open", True
+    told = flow.finish()
+    await flow._task
+    return told
+
+
+def test_a_failed_join_keeps_the_backup_and_goes_back_to_network(tmp_path):
+    nm = FakeNM(devices=NOTHING, up_rc=4)
+    settings = FakeSettings()
+    flow, net, _, reboots, upload, _ = _with_backup(tmp_path, nm, settings)
+    flow.take_backup(upload)
+    flow.save({"ssid": "Home", "password": "wrongpass"})
+    finish(flow, net)
+    assert flow._backup.exists() and flow.answers()["step"] == "wifi"
+    assert settings.sets == [] and reboots == []
+    assert not (tmp_path / "card/var/lib/gexis-core/settings.db").exists()
+
+
+def test_restore_without_a_backup_is_refused_and_new_ignores_one(tmp_path):
+    flow, net, _, _, upload, _ = _with_backup(tmp_path, FakeNM(devices=NOTHING))
+    flow.save({"ssid": "Home", "password": "hunter22", "start": "restore"})
+    with pytest.raises(ValueError, match="no backup"):
+        asyncio.run(_finish_told(flow, net))
+    flow.take_backup(upload)
+    flow.save({"start": "new"})
+    finish(flow, net)
+    assert not (tmp_path / "card/var/lib/gexis-core/settings.db").exists(), "New player: the backup is not used"

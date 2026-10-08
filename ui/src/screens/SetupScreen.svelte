@@ -83,9 +83,11 @@
     return setup?.page_opened ? 'phone' : 'page';
   });
 
-  //: Why setup's end restarts: a new name, a chosen screen (ADR-0109), or both.
+  //: Why setup's end restarts: a new name, a chosen screen (ADR-0109), both,
+  //: or a backup restored (ADR-0131).
   const restartLine = (f) =>
-    f.restart_for === 'screen' ? 'Restarting on the chosen screen…'
+    f.restart_for === 'restore' ? 'Restoring the backup and restarting…'
+    : f.restart_for === 'screen' ? 'Restarting on the chosen screen…'
       : f.restart_for === 'both' ? 'Restarting with its new name, on the chosen screen…'
         : 'Restarting to take its new name…';
 

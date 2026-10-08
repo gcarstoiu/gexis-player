@@ -27,6 +27,7 @@
 
   const STEPS = [
     ['wifi', 'Network', '#8fc4d8'],
+    ['start', 'Start', '#9fd0c4'],
     ['name', 'Name', '#e8a0b4'],
     ['tz', 'Time', '#c8a2d8'],
     ['out', 'Output', '#7ed6bc'],
@@ -85,6 +86,69 @@
       noticeFor = null;
     }
   }
+  //: ADR-0131: a new player, or one restored from a backup. `backup` is what
+  //: the core read from the uploaded file - its settings, what else it
+  //: brings, when and where it was made; null until one is taken.
+  let startMode = $state(null);
+  let backup = $state(null);
+  let uploading = $state(null);
+  let uploadError = $state(null);
+  const restoring = $derived(startMode === 'restore');
+  const QUESTIONS = ['name', 'tz', 'out', 'music', 'display', 'visualiser', 'plugins'];
+
+  function uploadBackup(file) {
+    if (!file) return;
+    uploadError = null;
+    uploading = 0;
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `/setup/backup?name=${encodeURIComponent(file.name)}`);
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable) uploading = e.loaded / e.total; };
+    xhr.onload = () => {
+      let body = {};
+      try { body = JSON.parse(xhr.responseText); } catch { /* not JSON */ }
+      if (xhr.status >= 200 && xhr.status < 300) backup = body.backup ?? null;
+      else uploadError = body.error ?? 'The file did not reach the player. Try again.';
+      uploading = null;
+    };
+    xhr.onerror = () => {
+      uploadError = "The file did not reach the player. Your phone may have dropped off the player's Wi-Fi for a moment.";
+      uploading = null;
+    };
+    xhr.send(file);
+  }
+
+  async function chooseAnother() {
+    try { await json('/setup/backup', { method: 'DELETE' }); } catch { /* the next upload replaces it */ }
+    backup = null;
+    uploadError = null;
+  }
+
+  //: The backup's settings, said the way the Review says setup's own.
+  const made = $derived(backup?.made ? new Date(backup.made * 1000).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : null);
+  function screenOf(label) {
+    if (!label) return null;
+    const m = (screenInfo?.models ?? []).find((x) => x.label === label);
+    return m ? `${m.maker} ${shortOf(m)} · ${m.width} × ${m.height}` : label.replace('/', ' ');
+  }
+  const restoreReview = $derived.by(() => {
+    if (!backup) return [];
+    const b = backup.settings ?? {};
+    const on = (v) => v !== false;
+    const named = (id) => offered.find((p) => p.id === id)?.name ?? id;
+    return [
+      ['Name', b.device_name ? `${b.device_name} · ${slugOf(b.device_name) || 'gexis'}.local` : 'Not in the backup'],
+      ['Time zone', b.timezone ? `${b.timezone}${b.clock_format ? ` · ${b.clock_format}` : ''}` : 'Not in the backup'],
+      ['Output', b.output_device ?? 'Not in the backup'],
+      ['Library', b.lms_enabled === false ? 'Not used' : b.lms_server || 'Not in the backup'],
+      ['Services', [on(b.spotify_enabled) ? 'Spotify Connect' : null, on(b.bt_enabled) ? 'Bluetooth' : null].filter(Boolean).join(' · ') || 'Lyrion only'],
+      ['Screen', b.headless ? 'Headless' : screenOf(b.screen) ?? 'Not in the backup'],
+      ...(b.headless ? [] : [['Visualiser', b.visualiser_skins ? 'Downloaded again after the restart' : 'None']]),
+      ['Plugins', (backup.enabled ?? []).map(named).join(' · ') || 'None'],
+      ['Also brought back', (backup.brings ?? []).join(' · ') || 'Settings only']
+    ];
+  });
+
   //: ADR-0109 as amended 2026-10-02: the restart will ask Keep this screen?
   //: on the panel, which this page says before the phone is put down.
   let keepQuestion = $state(false);
@@ -157,6 +221,7 @@
   function valid() {
     switch (id) {
       case 'wifi': return wifiValid;
+      case 'start': return startMode === 'new' || (restoring && !!backup && uploading === null);
       case 'name': return slugOf(name).length > 1;
       case 'tz': return !!tz;
       case 'music': return lmsMode === 'find' || lmsMode === 'off' || (lmsMode === 'address' && lms.trim().length > 2);
@@ -237,6 +302,8 @@
       visualiser = saved.visualiser ?? (setup?.needed ? null : (rows.visualiser_skins?.value ?? null));
       chosenPlugins = saved.plugins ?? (setup?.needed ? []
         : offered.filter((p) => rows[`${p.id}.enabled`]?.value === true).map((p) => p.id));
+      startMode = saved.start ?? null;
+      backup = saved.backup ?? null;
       hidden = !!saved.hidden;
       hasPassword = !!saved.has_password;
       joinError = saved.error ?? null;
@@ -261,6 +328,7 @@
         else if (!secured) a.password = null;
         return a;
       }
+      case 'start': return { start: startMode };
       case 'name': return { name: (name || '').trim() };
       case 'tz': return { timezone: tz, clock: clock24 ? '24 h' : '12 h' };
       case 'out': return { output: out };
@@ -306,7 +374,7 @@
       return;
     }
     let to = fromReview || (retrying && id === 'wifi') ? last - 1 : step + 1;
-    if (skipped(to)) to += 1;
+    while (to < last - 1 && skipped(to)) to += 1;
     if (to === last - 1) fromReview = false;
     if (await saveStep(to)) step = to;
   }
@@ -316,10 +384,15 @@
   //: over, and the setting left as it is.
   const noVisualiser = $derived(headless || !chosenModel?.skins);
   function skipped(n) {
-    return (noVisualiser && STEPS[n]?.[0] === 'visualiser') || (!offered.length && STEPS[n]?.[0] === 'plugins');
+    const s = STEPS[n]?.[0];
+    //: ADR-0131: a backup answers every question after Start.
+    if (restoring && QUESTIONS.includes(s)) return true;
+    return (noVisualiser && s === 'visualiser') || (!offered.length && s === 'plugins');
   }
   function back() {
-    step -= skipped(step - 1) ? 2 : 1;
+    let to = step - 1;
+    while (to > 0 && skipped(to)) to -= 1;
+    step = to;
   }
 
   //: **The count is what this person meets** (George, 2026-10-03, reviewing
@@ -463,7 +536,10 @@
           <div class="row-spin"><span class="spin" style="border-top-color:#8fc4d8"></span><span>Opening setup</span></div>
         {:else if finished}
           <section class="pane">
-            <h1 class="hero">{shownName} is {picked ? 'joining your network' : 'set up'}</h1>
+            <h1 class="hero">{restoring ? (backup?.settings?.device_name ?? backup?.name ?? shownName) : shownName} is {picked ? 'joining your network' : 'set up'}</h1>
+            {#if restoring}
+              <p class="lead">Then it puts the backup back and restarts. Plugins and the visualiser download again after the restart, and the player's screen shows them arriving.</p>
+            {/if}
             {#if picked}
               <p class="lead">This page is served by the player over its own Wi-Fi, so it stops here. Check this phone is back on <strong>{picked}</strong>, then open the address below.</p>
             {/if}
@@ -472,7 +548,7 @@
             {/if}
             <div class="addr-card">
               <div class="label">Open in any browser</div>
-              <div class="addr">http://{slug}.local:8090</div>
+              <div class="addr">http://{restoring && backup?.settings?.device_name ? slugOf(backup.settings.device_name) || 'gexis' : slug}.local:8090</div>
             </div>
             <!-- The password line only when there was a password to refuse: a
                  secured Wi-Fi was chosen - not over a cable with no Wi-Fi, nor
@@ -572,6 +648,45 @@
                   </label>
                 {:else}
                   <span class="hint">This network is open — no password needed.</span>
+                {/if}
+              {/if}
+            </section>
+          {:else if id === 'start'}
+            <!-- ADR-0131 (George, 2026-10-08): a backup after the Wi-Fi, and
+                 its review in place of the other questions. -->
+            <section class="pane">
+              <div>
+                <h1>A new player, or a backup?</h1>
+                <p class="sub">A backup brings back the settings, pairings and sign-ins this player had before its card was flashed.</p>
+              </div>
+              <div class="list">
+                {#each [
+                  ['new', 'Set up a new player', 'A few questions. Every answer can be changed later in Settings.'],
+                  ['restore', 'Restore a backup', 'The file made under Settings → System → Back up now.']
+                ] as o}
+                  <button class="net" class:sel={startMode === o[0]} onclick={() => (startMode = o[0])}>
+                    <span class="radio" class:on={startMode === o[0]}><span></span></span>
+                    <span class="grow"><span class="nm">{o[1]}</span><span class="meta plain">{o[2]}</span></span>
+                  </button>
+                {/each}
+              </div>
+              {#if restoring}
+                {#if backup}
+                  <div class="picked">
+                    <span class="grow"><b>{backup.name ?? 'A gexis backup'}</b><small>{made ? `Made ${made}` : ''}{backup.file ? `${made ? ' · ' : ''}${backup.file}` : ''}</small></span>
+                    <button class="chip" onclick={chooseAnother}>Choose another</button>
+                  </div>
+                {:else if uploading !== null}
+                  <div class="row-spin"><span class="spin" style="border-top-color:#9fd0c4"></span><span>{uploading < 1 ? `Sending the backup · ${Math.round(uploading * 100)} %` : 'Checking the backup'}</span></div>
+                {:else}
+                  <label class="file-pick">
+                    <input type="file" onchange={(e) => uploadBackup(e.currentTarget.files?.[0])} />
+                    <span>Choose the backup file</span>
+                  </label>
+                  <div class="info"><span class="bar" style="background:#9fd0c4"></span><span><b>Where is it?</b><small>A backup is written to the old player's Backups share. Copied off before the card was flashed, it is on your phone or computer now, named like gexis-living-room-20261008-101500.tgz.</small></span></div>
+                {/if}
+                {#if uploadError}
+                  <div class="warn"><span class="bang">!</span><span>{uploadError}</span></div>
                 {/if}
               {/if}
             </section>
@@ -823,6 +938,27 @@
                 {/each}
               </div>
             </section>
+          {:else if id === 'review' && restoring}
+            <section class="pane">
+              <div>
+                <h1>Check the backup</h1>
+                <p class="sub">Finishing moves the player to your network, puts this backup back and restarts it.</p>
+              </div>
+              <div class="table">
+                <div class="trow"><span class="what">Network</span><span class="val grow">{picked || (overLan ? 'Ethernet only' : 'Not set')}</span><button class="chip" onclick={() => { fromReview = true; step = 0; }}>Change</button></div>
+                <div class="trow"><span class="what">Backup</span><span class="val grow">{backup?.name ?? 'A gexis backup'}{made ? ` · ${made}` : ''}</span><button class="chip" onclick={() => { step = 1; }}>Choose another</button></div>
+                {#each restoreReview as r}
+                  <div class="trow"><span class="what">{r[0]}</span><span class="val grow">{r[1]}</span></div>
+                {/each}
+              </div>
+              {#if backup?.newer}
+                <div class="warn"><span class="bang">!</span><span>Made by a newer version of gexis. Settings this version does not know wait until it is updated.</span></div>
+              {/if}
+              <div class="note-card" style="--bar: #9fd0c4">
+                <span class="bar"></span>
+                <span>Network share passwords are not kept in backups. Enter them again in Settings after the restart.</span>
+              </div>
+            </section>
           {:else if id === 'review'}
             <section class="pane">
               <div>
@@ -849,7 +985,7 @@
               <!-- Saying what is happening, not only dimming (George,
                    2026-10-05: "Agreed"). -->
               {saving ? (id === 'review' ? 'Connecting…' : 'Saving…')
-                : step < 0 ? 'Start' : id === 'review' ? 'Finish and connect' : 'Continue'}
+                : step < 0 ? 'Start' : id === 'review' ? (restoring ? 'Restore and connect' : 'Finish and connect') : 'Continue'}
             </button>
           </div>
         {/if}
@@ -996,6 +1132,14 @@
   .chip { padding: 8px 16px; font-size: 14px; }
   .chip.in { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); }
   .ghost { align-self: flex-start; padding: 12px 22px; font-size: 15px; }
+  /* ADR-0131: the file chooser, as a button. The input is kept in the label
+     (a hidden input still opens from its label) so the phone's own picker
+     comes up; no `accept`, which on some phones greys out a .tgz. */
+  .file-pick {
+    position: relative; align-self: flex-start; cursor: pointer; border-radius: 999px; font-weight: 700;
+    padding: 14px 24px; font-size: 16px; color: #0d151c; background: #9fd0c4;
+  }
+  .file-pick input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; }
   .back { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
   .back span { width: 10px; height: 10px; border-left: 2.5px solid var(--ink); border-bottom: 2.5px solid var(--ink); transform: rotate(45deg); margin-left: 4px; }
   .back-row { display: flex; align-items: center; gap: 14px; padding: 0 2px 6px; }

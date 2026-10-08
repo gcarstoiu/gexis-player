@@ -22,11 +22,20 @@ import logging
 import os
 from pathlib import Path
 
-from gexis_core import discovery, screen_apply, screen_detect, screens, settling, setup_network, skin_packs
+from gexis_core import backups, device_name, discovery, screen_apply, screen_detect, screens, settling, \
+    settings_migrations, setup_network, skin_packs
 
 logger = logging.getLogger(__name__)
 
 ANSWERS = setup_network.STATE_DIR / "setup-answers.json"
+#: ADR-0131: a backup uploaded in setup, until setup finishes or another
+#: replaces it. Root's only: it holds Bluetooth keys and sign-ins.
+BACKUP = setup_network.STATE_DIR / "setup-backup.tgz"
+#: Larger than any backup measured (guestpi's: 2 MB), small enough that a
+#: wrong file is stopped before it fills the card.
+BACKUP_MAX_BYTES = 1024 * 1024 * 1024
+#: ADR-0131 §1: after Network, a new player or a backup.
+STARTS = ("new", "restore")
 #: How long the panel shows where the device went, before its own screens.
 DONE_S = 10.0
 
@@ -65,6 +74,7 @@ SAID = (
     ("setup is not running", "Setup has already finished. Open the player at its address instead."),
     ("unknown screen", "That screen isn't on the list. Choose another, or Headless."),
     ("choose a screen or headless, not both", "Choose a screen or Headless, not both."),
+    ("no backup", "Choose the backup file first."),
 )
 #: Everything else is a request the page itself got wrong - nothing a person
 #: can act on but trying again.
@@ -86,6 +96,9 @@ class SetupFlow:
         *,
         reboot=None,
         answers: Path = ANSWERS,
+        backup: Path = BACKUP,
+        restore_root: Path = Path("/"),
+        apply_name=None,
         marker: Path = setup_network.DONE_MARKER,
         set_country=None,
         find_servers=None,
@@ -97,6 +110,9 @@ class SetupFlow:
         self._settings = settings
         self._reboot = reboot
         self._path = answers
+        self._backup = backup
+        self._restore_root = restore_root
+        self._apply_name = apply_name or device_name.apply_restored
         self._marker = marker
         self._set_country = set_country or _raspi_config_country
         self._find_servers = find_servers or discovery.find_servers
@@ -160,6 +176,10 @@ class SetupFlow:
                 if not isinstance(value, list) or not all(isinstance(v, str) and v in ids for v in value):
                     raise ValueError("plugins must be a list of offered plugins")
                 data[key] = sorted(set(value))
+            elif key == "start":
+                if value is not None and value not in STARTS:
+                    raise ValueError(f"start must be one of {', '.join(STARTS)}")
+                data[key] = value
             elif key == "step":
                 if not isinstance(value, str):
                     raise ValueError("step must be text")
@@ -186,6 +206,46 @@ class SetupFlow:
         self._write(data)
         return self.answers()
 
+    # -- a backup (ADR-0131) -------------------------------------------------
+
+    def upload_path(self) -> Path:
+        """Where an upload is written while it arrives, beside the kept one."""
+        return self._backup.with_name(self._backup.name + ".part")
+
+    def take_backup(self, upload: Path, filename: str | None = None) -> dict:
+        """Check an uploaded file and keep it for finishing. Raises
+        `backups.Refused` with the sentence for the phone; a refused file is
+        deleted, and one kept before it stays."""
+        # Read under the name it came with, which carries when it was made.
+        named = upload
+        if filename and backups.NAME.match(Path(filename).name) and backups.SAFE.match(Path(filename).name):
+            named = upload.with_name(Path(filename).name)
+            upload.replace(named)
+        try:
+            seen = backups.inspect(named, len(settings_migrations.MIGRATIONS))
+        except backups.Refused:
+            named.unlink(missing_ok=True)
+            raise
+        self._backup.parent.mkdir(parents=True, exist_ok=True)
+        os.chmod(named, 0o600)
+        named.replace(self._backup)
+        data = self._read()
+        data["backup"] = {**seen, "file": (filename or "")[:120] or None}
+        data["start"] = "restore"
+        self._write(data)
+        logger.info("setup: backup from %s taken (%s)", seen.get("name"), ", ".join(seen["brings"]) or "settings only")
+        return self.answers()
+
+    def forget_backup(self) -> dict:
+        self._backup.unlink(missing_ok=True)
+        data = self._read()
+        data.pop("backup", None)
+        self._write(data)
+        return self.answers()
+
+    def _restoring(self, data: dict) -> bool:
+        return data.get("start") == "restore" and bool(data.get("backup")) and self._backup.is_file()
+
     # -- finishing ---------------------------------------------------------
 
     @property
@@ -204,11 +264,19 @@ class SetupFlow:
         # network at all, it is the one answer setup cannot finish without.
         if not data.get("ssid") and self._network.status()["network"] != "online":
             raise ValueError("no network chosen")
+        if data.get("start") == "restore":
+            if not self._restoring(data):
+                raise ValueError("no backup")
+            restored = data["backup"]["settings"]
+            self._task = asyncio.ensure_future(self._apply_restore(data))
+            return {"keep_question": self._keep_question(restored)}
         self._task = asyncio.ensure_future(self._apply(data))
         return {"keep_question": self._keep_question(data)}
 
     def _keep_question(self, data: dict) -> bool:
-        model = screens.by_label(data["screen"]) if data.get("screen") and not data.get("headless") else None
+        """`data` is setup's answers, or a backup's settings by their keys."""
+        label = data.get("screen")
+        model = screens.by_label(label) if label and not data.get("headless") else None
         if model is None:
             return False
         try:
@@ -276,6 +344,65 @@ class SetupFlow:
             await self._reboot()
             return
         self._network.done()
+
+    async def _apply_restore(self, data: dict) -> None:
+        """**ADR-0131 §5**: the join, the backup's main answers applied as
+        setup applies its own, the files put back, what to wait for, and the
+        restart. A failed join keeps the backup and goes back to Network."""
+        restored = dict(data["backup"]["settings"])
+        country = setup_network.country_for(restored.get("timezone"))
+        if country:
+            await self._set_country(country)
+        ssid = data.get("ssid")
+        if ssid:
+            joined, reason = await self._network.join_new(ssid, data.get("password"), bool(data.get("hidden")), hold=True)
+        else:
+            joined, reason = True, None
+        if not joined:
+            data.pop("password", None)
+            data["error"] = {"ssid": ssid, "reason": reason}
+            data["step"] = "wifi"
+            self._write(data)
+            return
+        self._marker.parent.mkdir(parents=True, exist_ok=True)
+        self._marker.touch()
+        self._path.unlink(missing_ok=True)
+        if restored.get("headless"):
+            restored.pop("screen", None)
+        elif restored.get("screen") and screens.by_label(restored["screen"]) is None:
+            # A model this version does not know - a newer backup's.
+            logger.warning("setup: the backup's screen %s is not known here; left to Settings", restored["screen"])
+            restored.pop("screen")
+        for key in backups.APPLIED:
+            if key in restored and restored[key] is not None:
+                self._set_quietly(key, restored[key])
+        try:
+            await asyncio.to_thread(backups.restore_file, self._backup, self._restore_root)
+            # The backup's name in all four places, as Settings' restore does.
+            await asyncio.to_thread(self._apply_name)
+        except Exception as exc:  # noqa: BLE001 - the restart still comes
+            logger.error("setup: the backup did not go back: %s", exc)
+        finally:
+            self._backup.unlink(missing_ok=True)
+        wait = []
+        if restored.get("visualiser_skins") and not restored.get("headless"):
+            wait.append({"id": "skins", "name": "The visualiser's skins"})
+        on = set(data["backup"].get("enabled") or [])
+        for plugin in self.offered():
+            if plugin["id"] in on and plugin.get("component"):
+                wait.append({"id": plugin["component"], "name": plugin["name"]})
+        try:
+            settling.begin(wait, self._settling_path)
+        except OSError as exc:
+            logger.warning("setup: cannot record what to wait for: %s", exc)
+        name = restored.get("device_name") or data["backup"].get("name")
+        self._network.finished(ssid, {"state": "unchanged"}, "restore", name)
+        logger.info("setup: finished by restoring a backup; restarting")
+        await self._sleep(DONE_S)
+        if self._reboot is not None:
+            await self._reboot()
+        else:
+            self._network.done()
 
     async def _library(self, data: dict) -> dict:
         """**Lyrion, once the device is on the home network** (George,
