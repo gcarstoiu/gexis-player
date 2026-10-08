@@ -504,12 +504,13 @@ pictures, the paired devices and the player's configuration into the
 player's Backups share on the network. Copy the backup off the player before
 flashing: on a phone or computer, *Settings → System → Restore* has *Download*
 beside each backup, or copy it from the share. After flashing, setup offers *Restore a backup* right after the
-Wi-Fi: choose the file on the phone, check what it brings, and the player
-restarts with everything back. Anything setup asks (the name, for instance)
-can be changed in that review, so one player's backup can start another. With
-a new name, the review offers *A second player*: on, the first player keeps
-its Beszel identity, Plexamp's claim, Spotify sign-in and Bluetooth
-pairings, so the two never share them. A backup from an older version works. A
+Wi-Fi: choose the file on the phone, choose the output and the screen this
+player has, check what the backup brings, and the player restarts with
+everything back. Anything else setup asks (the name, for instance) can be
+changed in that review, so one player's backup can start another. With a new
+name, the review offers *A second player*: on, the first player keeps its
+Beszel connection (the hub's address and keys too), Plexamp's claim, Spotify
+sign-in and Bluetooth pairings, so the two never share them. A backup from an older version works. A
 backup can also be restored later: copy it into the Backups share and choose
 it under *Settings → System → Restore*. Network share passwords are not kept
 in backups, so enter them again.

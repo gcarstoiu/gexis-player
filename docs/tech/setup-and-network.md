@@ -173,8 +173,9 @@ The phone's steps (`SetupPage.svelte`): Network, Start (ADR-0131: a new
 player or a backup), Name, Time (zone and 12/24 h), Output, Music, Screen,
 Visualiser (skipped for headless or for screens no skin pack fits), Plugins
 (ADR-0128; every plugin the release ships beyond the built-in sources, from
-`GET /setup/plugins`; skipped when there are none), Review. Restoring skips
-every step from Name to Plugins: the backup answers them, and Review shows it.
+`GET /setup/plugins`; skipped when there are none), Review. Restoring asks
+Output and Screen, which are this player's hardware (`ASKED`), and skips the
+rest from Name to Plugins: the backup answers them, and Review shows it.
 
 ```mermaid
 sequenceDiagram
@@ -258,29 +259,38 @@ sequenceDiagram
    The file is kept as `setup-backup.tgz` (0600), and the review is saved in
    the answers as `backup`, with `start: "restore"`. `DELETE /setup/backup`
    forgets it.
-2. **The review** is the new player's Review, with *Change* on each answer:
-   the page fills every step from the backup (`fromBackup`), and a step
+2. **Output and Screen** are asked as a new player's are, opening on what
+   this player detects, never on the backup's: a backup from another player
+   names that player's DAC and screen.
+3. **The review** is the new player's Review, with *Change* on each answer:
+   the page fills the other steps from the backup (`fromBackup`), and a step
    continued from is saved as a setup answer. `_restore_values()` lays those
    answers over the backup's settings.
-3. **Finishing**:
+4. **Finishing**:
    - the Wi-Fi country from the time zone, then the join (a failed join keeps
      the backup and returns to Network);
+   - the main settings through `Settings.set` (`backups.APPLIED`), as
+     setup's own answers, because the screen (`screen.json`), the time zone
+     and the name live outside the store too. **Before the files go back**:
+     once the settings file is replaced, the store the core holds open
+     refuses every write. A screen this version does not know is left to
+     Settings;
    - `backups.restore_file()`, with the two databases written beside
      themselves and renamed into place, so the core's open connection is
      never overwritten underneath it;
+   - with a name that differs from the backup's and `second_player` not
+     false, `backups.IDENTITIES` are left out of `restore_file()` (the
+     Beszel agent's data, Plexamp's store, go-librespot's `state.json` and
+     `/var/lib/bluetooth`), and `backups.forget_settings()` removes
+     `IDENTITY_SETTINGS` from the restored settings: every `beszel.` key
+     and `plexamp.claim_token`;
    - `backups.write_settings()`: the answers changed in setup (and a Lyrion
      server found after the join) written into the restored settings, which
      the next start reads;
-   - the main settings through `Settings.set`, as setup's own answers,
-     because the screen (`screen.json`), the time zone and the name live
-     outside the store too. A screen this version does not know is left to
-     Settings;
-   - with a name that differs from the backup's and `second_player` not
-     false, `backups.IDENTITIES` are left out of `restore_file()`: the
-     Beszel agent's data, Plexamp's store, go-librespot's `state.json` and
-     `/var/lib/bluetooth`;
-   - `device_name.apply_restored()` unless the name was changed,
-     `settling.json` for the skins and each downloading plugin that is on;
+   - `device_name.apply()` with the changed name, after the backup's own
+     name file is back, or `device_name.apply_restored()` when it was not
+     changed; `settling.json` for the skins and each downloading plugin that
+     is on;
    - the panel's `restart_for: "restore"`, and the reboot. The file is
      deleted whatever happens.
 
