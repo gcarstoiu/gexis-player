@@ -4,27 +4,36 @@
 
 # Gexis Player
 
-**A high-fidelity music player for the Raspberry Pi 4, with a touchscreen, that
-plays whatever you send it — from your phone, your music server or the streaming
-apps you already use — and hands the DAC cleanly from one to the next.**
+**Turn a Raspberry Pi 4, a DAC and a touchscreen into a high-fidelity streamer
+with a face. It plays whatever you send it, from Spotify, your own library,
+Plexamp or a phone over Bluetooth, hands the DAC cleanly from one to the next,
+and shows every track the same way: artwork, lyrics and the story behind it.**
 
 🎧 Bit-perfect up to 24-bit / 192 kHz · 🔀 Spotify, Lyrion, Plexamp and
-Bluetooth on one device · 🖥️ A 1280×800 touchscreen that shows what's playing,
-whoever is playing it · 📈 VU meters, spectrum and turning turntables when you just
-want to watch the music
+Bluetooth on one device · 🖥️ Touchscreens from 7" to 13.3", bar displays
+included · 📈 VU meters, spectrum and turning turntables when you just want to
+watch the music · 📱 Set up and run from your phone, no keyboard, no SSH
 
-> 🚧 **Work in progress.** Gexis Player is built in the open and used every day on
-> its reference device, but it has no public release image yet. See the roadmap.
+> 🧪 **Testing releases are out.** Gexis Player is built in the open, plays
+> every day on its reference devices, and updates itself over the network:
+> a new release never needs a reflash. The first Stable release is next.
 
-<!-- Screenshots / demo go here: now playing, library, visualiser, idle screen,
-     settings on a phone. -->
+<p align="center">
+  <img src="docs/manual/images/panel-nowplaying-track.webp" alt="Now playing on the 10.1-inch panel: artwork, title, artist and the current lyric line" width="720">
+</p>
+<p align="center">
+  <img src="docs/manual/images/panel-album-page.webp" alt="An album page in the library, with Play album and Add to queue" width="356">
+  <img src="docs/manual/images/bar-nowplaying-track.webp" alt="The same track on an 11.9-inch bar display" width="356">
+</p>
+<p align="center"><sub>Shown with a public-domain demo library.</sub></p>
 
 ---
 
 ## 🎵 What it does
 
-You put a Raspberry Pi 4 with a HiFiBerry DAC and a touchscreen next to your
-amplifier, flash the Gexis image, and it becomes a streamer with a face:
+Put a Raspberry Pi 4 with a DAC and a touchscreen next to your amplifier, flash
+the Gexis image, and answer a few questions on your phone. That is the whole
+installation:
 
 - **Cast to it from the apps you already have.** It appears as a speaker in the
   Spotify app, as a player in Lyrion (Logitech Media Server) and Plexamp, and as a
@@ -39,13 +48,18 @@ amplifier, flash the Gexis image, and it becomes a streamer with a face:
   Bluetooth.
 - **Browse and play your library** from the panel when you use Lyrion: albums,
   artists, playlists and radio.
-- **Watch it.** A visualiser with up to 287 skins, depending on the screen: classic needle VU meters,
-  spectrum analysers, and turntables and tape decks whose records and reels turn
-  as the music plays.
-- **Set it up from your phone.** On first boot with no network it opens its own
-  Wi-Fi. The panel shows two QR codes, one to join that network and one to open
-  the setup page, and your phone walks you through the rest: your Wi-Fi, a name,
-  the time, the output, your music and the screen.
+- **Watch it.** A visualiser with up to 287 skins, depending on the screen:
+  classic needle VU meters, spectrum analysers from 50 Hz to 16 kHz, and
+  turntables and tape decks whose records and reels turn as the music plays.
+- **Set it up from your phone.** On first boot it opens its own Wi-Fi. The
+  panel shows two QR codes, one to join that network and one to open the setup
+  page, and your phone walks you through the rest: your Wi-Fi, a name, the time,
+  the output, your music and the screen. The screen and the DAC are recognised
+  where they can be, so most answers are already filled in.
+- **Move to a new card in minutes.** Setup can restore a backup straight from
+  your phone, show what it brings back, and let you change anything on the way.
+  One player's backup can even start a second one, which leaves the first one's
+  sign-ins and pairings where they belong.
 - **Control it from your phone's browser.** Every setting on the panel is also
   on your phone. The panel and the phone take the same input.
 
@@ -58,14 +72,16 @@ amplifier, flash the Gexis image, and it becomes a streamer with a face:
 | 🔀 **Handover** | One source at a time, never mixed. Takeover in any direction. The previous source is released before the next one plays |
 | 🖼️ **Now playing** | Artwork, track info, synced or plain lyrics, artist info and photos, queue for Lyrion |
 | 📚 **Library** | Browse Lyrion by album, artist, playlist and radio, from the touchscreen |
-| 📈 **Visualiser** | Up to 287 skins, depending on the screen size: VU meters, spectrum, and animated turntables and tape decks with progress, time, volume and play-state shown in each skin's own style. Skins can rotate per track |
+| 📈 **Visualiser** | Up to 287 skins, depending on the screen size: VU meters, spectrum from 50 Hz to 16 kHz with fine bass detail, and animated turntables and tape decks with progress, time, volume and play-state shown in each skin's own style. Skins can rotate per track |
+| 🖥️ **Screens** | HDMI touchscreens from 7" to 13.3", including 7.9" and 11.9" bar displays, recognised during setup and laid out for their shape. Or none at all: Headless keeps everything else working |
 | 🧭 **First-time setup** | No network at first boot: the player opens its own Wi-Fi (WPA2, password on the panel) and a setup page for your phone, reached by QR code. A wrong Wi-Fi password brings setup back with the reason, keeping everything else you entered. A player that starts without its Wi-Fi opens setup again after 90 seconds, and rejoins its own network when it returns |
+| 💾 **Backup & restore** | Your settings, pairings and source logins in one archive, on a network share or downloaded to your phone. A freshly flashed card restores it during setup, straight from your phone: it asks for this player's output and screen, shows what the backup brings back, and lets you change the rest |
+| ⬆️ **Updates** | Over the network, from Settings, with release notes. Two channels: *Testing* gets each release first, *Stable* once it has been tried. Never a reflash |
+| 🔗 **Cable or Wi-Fi** | On a network cable, Settings shows its speed and address, and the cable wins: Wi-Fi steps aside while the cable carries the player. A fixed address for either, kept only once it is shown to work, so a typo cannot lock you out |
+| 🔌 **Plugins** | Extra sources and services as plugins, switched on or off in Settings, with progress and retry shown in the switch itself when one downloads software. Today: Plexamp and the Lyrion Server (sources), the visualiser skins, and Beszel monitoring with its connection shown in Settings. Your own plugins can be uploaded from Settings. Remove deletes what a plugin downloaded |
 | 🌤️ **Idle screen** | Clock (24 or 12 hour), weather and wallpapers when nothing is playing |
 | 📱 **Settings anywhere** | The full settings screen on the panel and on any phone or computer on your network |
-| 🔌 **Plugins** | Extra sources and services as plugins, switched on or off in Settings, with progress and retry shown in the switch itself when one downloads software. Today: Plexamp and the Lyrion Server (sources), the visualiser skins, and Beszel monitoring (system). Your own plugins can be uploaded from Settings. Remove deletes what a plugin downloaded |
-| 💾 **Backup & restore** | Your settings, pairings and source logins in one archive, on a network share or downloaded to your phone. A freshly flashed card restores it during setup, straight from your phone, after showing what it brings back |
-| 🙈 **Headless** | Run it without the screen; everything else keeps working |
-| 🔗 **Cable or Wi-Fi** | On a network cable, Settings shows its speed and address and can give it a fixed address - kept only once it is shown to work, so a typo cannot lock you out |
+| 🩺 **When something is wrong** | A problem report in one download, with addresses, names, keys and what you play taken out first. Hardware feedback that tests your screen's touch and your DAC's rates, and helps others see what works before buying |
 
 ## 🏆 Where it shines
 
@@ -80,6 +96,9 @@ amplifier, flash the Gexis image, and it becomes a streamer with a face:
   artwork, lyrics and artist pages.
 - **A visualiser worth leaving on,** from studio VU meters to a turning
   record with its tonearm tracking the song.
+- **An appliance, not a project.** Flash, answer a few questions on your
+  phone, and from then on it updates itself. No keyboard, no terminal, no
+  config files, and a backup that brings it all back on a new card.
 
 ## ⚖️ Limitations and trade-offs
 
@@ -130,14 +149,15 @@ We'd rather you knew these up front:
 
 Rough, and subject to change:
 
-- 🟢 **Now:** first boot without a network, set up from your phone over the
-  player's own Wi-Fi. Legal and Credits pages in Settings. Plugins that download
-  software, with progress, retry and remove. A mini player on the phone. Animated skins with scrolling tickers, smooth rotation, and progress,
-  volume and play-state in each skin's own style.
-  Installing your own plugins from Settings, and keeping plugins up to date.
-  Touchscreens from 7" to 13.3", including bar displays, recognised during
-  setup. Updates over the network, so a new release never needs a reflash.
-- 🔜 **Next:** the first public release image.
+- ✅ **Done:** first boot without a network, set up from your phone over the
+  player's own Wi-Fi, with the screen and the DAC recognised. Restoring a
+  backup during setup. Updates over the network, on a Testing and a Stable
+  channel. Touchscreens from 7" to 13.3", bar displays included. Plugins that
+  download software, with progress, retry and remove, and your own plugins
+  installed from Settings. A mini player on the phone. Animated skins with
+  scrolling tickers and smooth rotation. A fixed address on cable or Wi-Fi.
+  Problem reports and hardware feedback.
+- 🔜 **Next:** the first Stable release.
 - 🎨 **Later:** themes. Artist and album information from your own Plex server.
 - 💭 **Maybe:** a visual equaliser, room correction with a phone as the
   microphone, the DAC's own filter and polarity options.
