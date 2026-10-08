@@ -1,8 +1,8 @@
 diff --git a/src/spectrum.c b/src/spectrum.c
-index 4d6ae12..e7ec081 100644
+index 4d6ae12..7e72370 100644
 --- a/src/spectrum.c
 +++ b/src/spectrum.c
-@@ -44,11 +44,35 @@
+@@ -44,11 +44,36 @@
  #include <fftw3.h>
  #include "peppyalsa.h"
  
@@ -17,13 +17,14 @@ index 4d6ae12..e7ec081 100644
 +   The FFT is sized to the rate - about 10.8 Hz a bin, 4096 points at 44.1
 +   and 48 kHz - over the latest samples, kept in `history`, so the bass has
 +   bins of its own; a frame is still made once per update, as before.
-+   Band sums are divided by sqrt(input_size / 512) to stay on upstream's
-+   scale for the level mapping below. */
++   Band sums are divided by input_size as upstream's are, which keeps a
++   single tone - a bass note - at the level it read before. (Dividing
++   further by sqrt(input_size / 512), as noise would ask, held the bass
++   bars at zero a third of the time: Finding 117.) */
 +#define BAND_LOW_HZ 50.0
 +#define BAND_HIGH_HZ 16000.0
 +#define LIFT_FROM_HZ 1000.0
 +#define LIFT_DB 3.0
-+#define REFERENCE_SIZE 512.0
 +
 +static unsigned int input_size = 0;
  static unsigned int output_size;   
@@ -39,7 +40,7 @@ index 4d6ae12..e7ec081 100644
  
  static char *mypipesa;
  static int fifo_fd_sa = -1;
-@@ -95,13 +119,81 @@ static void send_to_pipe(unsigned int value) {
+@@ -95,13 +120,81 @@ static void send_to_pipe(unsigned int value) {
  	}
  }
  
@@ -99,7 +100,7 @@ index 4d6ae12..e7ec081 100644
 +	for(int m = 0; m < spectrum_size; m++) {
 +		double centre = sqrt(fmax(band_edges[m], 1.0) * band_edges[m + 1]);
 +		double octaves = centre > LIFT_FROM_HZ ? log2(centre / LIFT_FROM_HZ) : 0;
-+		band_gain[m] = pow(10, LIFT_DB * octaves / 20) / sqrt(n / REFERENCE_SIZE);
++		band_gain[m] = pow(10, LIFT_DB * octaves / 20);
 +	}
 +	history_fill = 0;
 +	fft_rate = rate;
@@ -124,7 +125,7 @@ index 4d6ae12..e7ec081 100644
  static void reader_disconnect_handler(int signum) {
  	(void)signum;
  	if(fifo_fd_sa != -1) {
-@@ -115,7 +207,6 @@ static int init(const char *name, int max, int show, int p, int f_log, int y_log
+@@ -115,7 +208,6 @@ static int init(const char *name, int max, int show, int p, int f_log, int y_log
  	memset(&disconnect_action, 0, sizeof(disconnect_action));
  	disconnect_action.sa_handler = &reader_disconnect_handler;
  	sigaction(SIGPIPE, &disconnect_action, NULL);
@@ -132,7 +133,7 @@ index 4d6ae12..e7ec081 100644
  	int size = strlen(name);
  	mypipesa = (char*)malloc(size + 1);
  	strcpy(mypipesa, name);	
-@@ -128,12 +219,11 @@ static int init(const char *name, int max, int show, int p, int f_log, int y_log
+@@ -128,12 +220,11 @@ static int init(const char *name, int max, int show, int p, int f_log, int y_log
  	mkfifo(mypipesa, 0666);
  	open_pipe();
  	atexit(cleanup);
@@ -148,7 +149,7 @@ index 4d6ae12..e7ec081 100644
      return 0;
  }
  
-@@ -145,91 +235,90 @@ static void update(int meter_level_l, int meter_level_r, snd_pcm_scope_peppyalsa
+@@ -145,91 +236,90 @@ static void update(int meter_level_l, int meter_level_r, snd_pcm_scope_peppyalsa
  		}			
  	}
  	
