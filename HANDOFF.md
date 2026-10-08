@@ -45,7 +45,10 @@ now fixed on `phase-13d`, none of it released yet:
 
 **The restarts George saw were power, not gexis**: 11 boots in the card's
 journal, none with a shutdown, every journal file left unclosed, one
-*Undervoltage detected*. Asked George how the bar and the Pi are powered.
+*Undervoltage detected*. The bar takes its power (and touch) from the Pi's
+USB, the Pi a USB supply of unknown rating: recommended the official 5.1 V /
+3 A supply, then the bar powered separately if it recurs; confirm with
+`vcgencmd get_throttled` (read only) once the player is back.
 The power cuts left **dpkg half-done** (the skins pack install, updates/0000);
 finish it with George's say once the power is steady, dry run first. The
 lighter square around the boot logo is unexplained by the code (every stage
@@ -61,8 +64,8 @@ messages that pointed at the removal are neutral. Backups:
 `backup/phase-13b-before-clean`, `backup/phase-13d-before-clean` - local
 only, never pushed; delete once the next release is out. **PR #54** (the same
 scrub on main) waits for George's merge. Addresses already public before
-today (the dev machine, the LMS server, tests) are untouched: whether to
-scrub those too is George's.
+today (the dev machine, the LMS server, tests) stay: George, 2026-10-08,
+*"Leave the old one be - no scrub"*.
 
 **guestpi** (Pi-DAC PRO, 13.3"): runs 0.9.5's code as a
 preview. **Plexamp claimed again** later on 2026-10-08, after three claims
