@@ -1393,21 +1393,28 @@ def test_a_plugin_s_report_is_published_on_its_row_and_goes_with_it(store):
         settings.report("plexamp.nothing", "done")
 
 
-def test_a_service_s_connection_is_indicated_on_its_switch_apart_from_reports(store):
-    """ADR-0129: the core's reading of a service - *Connected* - is the row's
-    `indicator`, beside and independent of a plugin's own `status`."""
-    settings = Settings(store, registry=Settings.with_plugins(_groups(), [_plugin("beszel", kind="service")]))
-    def row():
+def test_a_service_s_connection_is_indicated_on_its_heading_apart_from_reports(store):
+    """ADR-0129 as amended (George, 2026-10-08: *"next in system, in the same
+    place where the keys are added"*): the core's reading - *Connected* - is
+    the `indicator` of the heading above the plugin's own rows, beside and
+    independent of a plugin's `status` on its switch."""
+    settings = Settings(store, registry=Settings.with_plugins(_groups(), [_plugin("beszel", kind="service", settings=[
+        {"key": "key", "type": "text", "label": "Hub public key", "default": None}])]))
+    def heading():
+        return next(r for g in settings.to_json() for r in g["rows"]
+                    if r.get("type") == "group" and r.get("indicatorOf") == "beszel.enabled")
+    def switch():
         return next(r for g in settings.to_json() for r in g["rows"] if r.get("key") == "beszel.enabled")
-    assert "indicator" not in row()
+    assert "indicator" not in heading()
     assert settings.indicate("beszel.enabled", "wait", "Connecting") is True
-    assert row()["indicator"] == {"tone": "wait", "text": "Connecting"}
+    assert heading()["indicator"] == {"tone": "wait", "text": "Connecting"}
+    assert "indicator" not in switch(), "said once, where the keys are"
     assert settings.indicate("beszel.enabled", "wait", "Connecting") is False, "a repeat changes nothing"
     settings.report("beszel.enabled", "failed", error="Beszel could not start. Check its settings.")
     settings.indicate("beszel.enabled", "bad", "Not connected")
-    assert row()["indicator"]["tone"] == "bad" and row()["status"]["state"] == "failed"
+    assert heading()["indicator"]["tone"] == "bad" and switch()["status"]["state"] == "failed"
     assert settings.indicate("beszel.enabled", None) is True
-    assert "indicator" not in row() and "status" in row()
+    assert "indicator" not in heading() and "status" in switch()
     with pytest.raises(InvalidValue):
         settings.indicate("beszel.enabled", "green")
 

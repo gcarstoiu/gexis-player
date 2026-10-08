@@ -1338,6 +1338,14 @@
                   <span class="subhead__dot" style:background={r.accent}></span>
                   <span class="subhead__label" style:color={r.accent}>{r.label}</span>
                   <span class="subhead__rule"></span>
+                  {#if r.indicator}
+                    <!-- ADR-0129 as amended: what the service is doing, the
+                         core's reading, above the rows its keys go in. -->
+                    <span class="ind ind--{r.indicator.tone}">
+                      <span class="ind__mark" aria-hidden="true">{r.indicator.tone === 'ok' ? '✓' : r.indicator.tone === 'bad' ? '✕' : ''}</span>
+                      {r.indicator.text}
+                    </span>
+                  {/if}
                 </div>
               {:else if r.key === 'software_update'}
                 <!-- ADR-0110 §2 as amended (George, 2026-10-01): the
@@ -1498,14 +1506,6 @@
                       {@const c = $components[r.component]}
                       <span class="dl__bar" class:dl__bar--busy={!downloadShare(c)}>
                         <span style:width={`${Math.round((downloadShare(c) ?? 0) * 100)}%`}></span>
-                      </span>
-                    {/if}
-                    {#if r.indicator && r.value}
-                      <!-- ADR-0129: what a switched-on service is doing - the
-                           core's reading, green, orange or red. -->
-                      <span class="ind ind--{r.indicator.tone}">
-                        <span class="ind__mark" aria-hidden="true">{r.indicator.tone === 'ok' ? '✓' : r.indicator.tone === 'bad' ? '✕' : ''}</span>
-                        {r.indicator.text}
                       </span>
                     {/if}
                     {#if r.type === 'toggle'}

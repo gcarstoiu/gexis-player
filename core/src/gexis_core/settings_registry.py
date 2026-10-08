@@ -531,8 +531,10 @@ class Settings:
                     "category to hold its switch", plugin.id,
                 )
                 continue
+            # ADR-0129 as amended: a service's connection is said on the
+            # heading above its own rows, where its keys are entered.
             rows = [{"type": "group", "label": plugin.name, "accent": plugin.accent,
-                     "onlyWhen": [switch, True]}]
+                     "onlyWhen": [switch, True], "indicatorOf": switch}]
             reserved = {"enabled"} if plugin.enabled_row is None else set()
             for row in plugin.settings:
                 row = dict(row)
@@ -724,8 +726,8 @@ class Settings:
         return True
 
     def indicate(self, key: str, tone: str | None, text: str | None = None) -> bool:
-        """**What a switched-on service is doing, beside its switch**
-        (ADR-0129): `ok`, `wait` or `bad` with a word or two - *Connected*.
+        """**What a switched-on service is doing, on the heading above its
+        rows** (ADR-0129 as amended), keyed by its switch: `ok`, `wait` or `bad` with a word or two - *Connected*.
         None says nothing. Returns whether that changed anything."""
         self.row(key)
         if tone is None:
@@ -813,6 +815,8 @@ class Settings:
             for row in group["rows"]:
                 if row["type"] == "group":
                     heading = row.get("onlyWhen")
+                    if row.get("indicatorOf") in self._indicators:
+                        row = {**row, "indicator": dict(self._indicators[row["indicatorOf"]])}
                     rows.append(row)
                     continue
                 public = {k: v for k, v in row.items() if k != "default"}
@@ -839,8 +843,6 @@ class Settings:
                     public["unavailable"] = dict(blocked)
                 if row["key"] in self._status:
                     public["status"] = dict(self._status[row["key"]])
-                if row["key"] in self._indicators:
-                    public["indicator"] = dict(self._indicators[row["key"]])
                 public["visible"] = visible(row, self._rows, values) and all(
                     visible({"onlyWhen": c}, self._rows, values)
                     for c in governing + ([heading] if heading else [])
