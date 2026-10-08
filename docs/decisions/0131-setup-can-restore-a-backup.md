@@ -121,12 +121,22 @@ another player also brings the first player's identities.
   Refusing instead would leave the owner unable to use their own backup until
   they found a newer image. George may want them refused.
 
-- **Identities on a second player.** A backup restored onto a second player
-  gives it the first one's Beszel fingerprint (the hub would see one system
-  in two places), Plexamp's claim (one Plex player identity on two devices),
-  the Spotify sign-in and the Bluetooth pairings. The pairings are bound to
-  the first Pi's adapter and do nothing on another. Setup could offer to
-  leave these behind when the name is changed. George's to decide.
+- ~~**Identities on a second player.**~~ **Decided** (George, 2026-10-08,
+  on *"Setup could offer to leave these behind when the name is changed"*:
+  *"yes, let's do that"*):
+  - **What:** a backup given another name in the review leaves the first
+    player's identities behind: the Beszel fingerprint (the hub would see
+    one system in two places), Plexamp's claim (one Plex player on two
+    devices), the Spotify sign-in and the Bluetooth pairings (bound to the
+    first Pi's adapter anyway).
+  - **How it is offered:** the review shows *A second player*, on by
+    default, naming what stays behind; switched off, it is the same player
+    with a new name and everything comes back.
+  - **On by default** is Claude's choice: two players sharing an identity is
+    the mistake that costs.
+  - **Built:** `backups.IDENTITIES`, `restore_file(leave=...)`, the
+    `second_player` answer. Only a name that differs from the backup's
+    counts; opening the Name step and continuing does not.
 
 ## Not decided here
 
