@@ -6,6 +6,7 @@
   standalone on a phone and will be embedded on the panel.
 -->
 <script>
+  import CableSheet from './CableSheet.svelte';
   import { onMount, untrack } from 'svelte';
   import { pressing } from '../lib/press.svelte.js';
   import { components, update, screenCheck, showScreenCheck } from '../lib/state.js';
@@ -1776,6 +1777,10 @@
         </div>
       {/if}
 
+      {#if sheet.kind === 'cable'}
+        <!-- ADR-0123: the cable's own sheet, with its own Save. -->
+        <CableSheet />
+      {/if}
       {#if sheet.kind === 'report'}
         <div class="report">
           {#if onPanel()}
@@ -2133,7 +2138,7 @@
             Cancel
           {/if}
         </button>
-        {#if join === 'error' || joinItem || restorePending || choicePending !== null || (sheet.type === 'action' && !((sheet.kind === 'report' || sheet.kind === 'hardware') && onPanel())) || sheet.type === 'toggle' || sheet.type === 'text' || sheet.type === 'share' || sheet.type === 'share-login' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
+        {#if join === 'error' || joinItem || restorePending || choicePending !== null || (sheet.type === 'action' && sheet.kind !== 'cable' && !((sheet.kind === 'report' || sheet.kind === 'hardware') && onPanel())) || sheet.type === 'toggle' || sheet.type === 'text' || sheet.type === 'share' || sheet.type === 'share-login' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
           <button
             class="btn btn--confirm"
             class:btn--danger={sheet.danger || restorePending || choicePending !== null}

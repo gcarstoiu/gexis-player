@@ -23,6 +23,7 @@
   import { update, connection, hidePeppy, screenConfirm, answerScreen, screenNew, answerNewScreen, screenCheck, sendScreenCheck } from './lib/state.js';
   import TestPattern from './screens/TestPattern.svelte';
   import SettlingScreen from './screens/SettlingScreen.svelte';
+  import CableKeep from './screens/CableKeep.svelte';
   import { settling, settlingDone } from './lib/state.js';
   import KeepScreen from './screens/KeepScreen.svelte';
   import NewScreen from './screens/NewScreen.svelte';
@@ -526,6 +527,8 @@
   {#if $settling}
     <SettlingScreen settling={$settling} ondone={() => settlingDone().catch(() => {})} />
   {/if}
+  <!-- ADR-0123: a new cable address waiting to be kept, on every page. -->
+  <CableKeep />
 {:else if surface === 'panel'}
 
 <div class="panel" class:panel--bar={screen.family === 'bar'} data-family={screen.family}>
@@ -676,6 +679,9 @@
        everything but Keep this screen and the update lock. -->
   {#if $settling && !$screenConfirm && !updateLock && !setupShown}
     <SettlingScreen settling={$settling} ondone={() => settlingDone().catch(() => {})} />
+  {/if}
+  {#if !setupShown}
+    <CableKeep />
   {/if}
 
   <!-- ADR-0126: the hardware report's test pattern, over everything but

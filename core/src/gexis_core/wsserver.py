@@ -143,6 +143,7 @@ class StateServer:
         splash=None,
         setup=None,
         setup_flow=None,
+        cable=None,
         screen_seen=None,
         park=None,
         screen_answer=None,
@@ -221,6 +222,8 @@ class StateServer:
         #: ADR-0104: the setup network's status, for the panel and the phone.
         self._setup = setup
         self._setup_flow = setup_flow
+        #: ADR-0123: the cable's address (gexis_core.wired.Cable).
+        self._cable = cable
         #: ADR-0109: `() -> screen_detect.Seen`, what the attached screen
         #: reports, for setup's Screen step. Injected so a test needs no sysfs.
         self._screen_seen = screen_seen
@@ -1233,6 +1236,44 @@ class StateServer:
     #: journal, half a minute on a Pi 4.
     _report_lock = asyncio.Lock()
 
+    async def _handle_cable(self, request: web.Request) -> web.Response:
+        """ADR-0123: what the Cable sheet shows."""
+        if self._cable is None:
+            return web.json_response({"error": "the cable is not wired up"}, status=503)
+        from gexis_core import wired
+
+        state = await self._cable.status()
+        return web.json_response({**state, "summary": wired.summary(state)})
+
+    async def _handle_cable_change(self, request: web.Request) -> web.Response:
+        """ADR-0123: an address, Automatic or Manual, applied and waiting for
+        *Keep* - or a sentence saying why not."""
+        if self._cable is None:
+            return web.json_response({"error": "the cable is not wired up"}, status=503)
+        try:
+            body = await request.json()
+            told = await self._cable.change(body.get("method"), body.get("address") or "",
+                                            body.get("gateway") or "", body.get("dns") or [])
+        except ValueError as exc:
+            return web.json_response({"error": str(exc)}, status=400)
+        return web.json_response(told)
+
+    async def _handle_cable_keep(self, request: web.Request) -> web.Response:
+        """ADR-0123: *Keep* - counted from the new address, which proves it
+        works, or from the panel."""
+        if self._cable is None:
+            return web.json_response({"error": "the cable is not wired up"}, status=503)
+        sockname = request.transport.get_extra_info("sockname") if request.transport else None
+        arrived_at = sockname[0] if sockname else None
+        loopback = request.remote in ("127.0.0.1", "::1")
+        if self._cable.keep(arrived_at, loopback):
+            return web.json_response({"kept": True})
+        pending = self._cable.pending
+        if pending is None:
+            return web.json_response({"error": "Nothing is waiting to be kept."}, status=409)
+        return web.json_response({"error": f"Open the player at http://{pending.address}:8090 and keep it there - "
+                                           "that is what shows the new address works."}, status=409)
+
     async def _handle_backup_download(self, request: web.Request) -> web.StreamResponse:
         """**A backup, saved on a phone or computer** (ADR-0083 as amended
         2026-10-08; George: *"the option in system backup to also download
@@ -2108,6 +2149,9 @@ class StateServer:
         app.router.add_get("/network/wifi", self._handle_wifi_details)
         app.router.add_post("/report", self._handle_report)
         app.router.add_get("/backups/{name}", self._handle_backup_download)
+        app.router.add_get("/network/cable", self._handle_cable)
+        app.router.add_post("/network/cable", self._handle_cable_change)
+        app.router.add_post("/network/keep", self._handle_cable_keep)
         app.router.add_get("/hardware-report", self._handle_hardware_report)
         app.router.add_post("/hardware-report/issue", self._handle_hardware_issue)
         app.router.add_post("/hardware-report/tones", self._handle_hardware_tones)
