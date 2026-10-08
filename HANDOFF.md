@@ -13,7 +13,7 @@ be removed once their PRs are merged. Earlier narrative: `docs/HANDOFF-ARCHIVE.m
 
 **0.9.5 cut 2026-10-08 for Testing** (tag `v0.9.5`, release `r0.9.5`, image
 `image/deploy/2026-10-08-gexis-player-v0.9.5.img`; notes approved by George).
-PR __PR__ waits for George. 0.9.4 is PR #52 (merged). In 0.9.5:
+**PR #53** waits for George (Testing serial 28, signature checked; 111 image checks after the verify-image fix). 0.9.4 is PR #52 (merged). In 0.9.5:
 - restoring a backup in setup (ADR-0131, amended twice the same day): after
   Network, New player or Restore a backup; the review is the new player's,
   with Change on every answer; a backup given another name leaves the first
