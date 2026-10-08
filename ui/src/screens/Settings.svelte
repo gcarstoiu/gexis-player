@@ -1699,7 +1699,7 @@
   <div class="scrim" class:is-open={sheet} role="presentation" onclick={closeSheet}></div>
 
   {#if sheet}
-    <div class="sheet" class:sheet--full={sheetFull} role="dialog" aria-label={sheet.label}>
+    <div class="sheet" class:sheet--full={sheetFull} class:sheet--fit={sheet.type === 'action' && !sheet.kind && !restorePending} role="dialog" aria-label={sheet.label}>
       <div class="sheet__head">
         <div class="sheet__title">{sheet.grouped && region !== null ? region : sheet.label}</div>
         {#if sheet.note && !joinItem && sheet.kind !== 'cable'}<div class="sheet__note"><NoteText text={sheet.note} /></div>{/if}
@@ -2805,6 +2805,15 @@
     border-radius: 20px;
     padding: 18px 20px 14px;
     gap: 12px;
+  }
+  /* A confirmation holds a title, a line and two buttons: drawn the bar's
+     full height it was mostly empty (George, 2026-10-08, *Reboot* on the
+     11.9" bar). It takes its own height, centred, as on other screens. */
+  :global(.panel--bar) .sheet.sheet--fit {
+    top: 50%;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+    max-height: calc(100% - 24px);
   }
   .sheet__head {
     flex-shrink: 0;
