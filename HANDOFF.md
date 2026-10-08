@@ -11,46 +11,32 @@ holds the documents and shared work; **`phase-13d`** in
 Worktrees `~/projects/gexis-player-r093` and `-r094` sit at their tags and can
 be removed once their PRs are merged. Earlier narrative: `docs/HANDOFF-ARCHIVE.md`.
 
-**0.9.4 released 2026-10-08 on Testing** (tag `v0.9.4`, release `r0.9.4`,
-image `image/deploy/2026-10-08-gexis-player-v0.9.4.img`, 111 checks passed;
-Plexamp 4.13.2 and Lyrion 9.1.1 the latest; Testing channel serial 27, its
-signature checked with a device's keyring). **PR #52** waits for George.
-In it: one Volume row - Hardware / Software / Fixed (ADR-0124, ADR-0127);
-the visualiser on HDMI with Software volume (ADR-0055 §6 amended, Finding
-116); Hardware feedback with the Reported state (ADR-0126); setup's Plugins
-step and the settling screen (ADR-0128); updates that go back when the player
-does not answer, check after a reboot and refuse takeovers (ADR-0105/0110 -
-**only from updates made from 0.9.4 on**); Pexels removed; George's small
-fixes. Docs reconciled with the code (ARCHITECTURE.md, README, the guides,
-nine ADRs).
+**0.9.5 cut 2026-10-08 for Testing** (tag `v0.9.5`, release `r0.9.5`, image
+`image/deploy/2026-10-08-gexis-player-v0.9.5.img`; notes approved by George).
+PR __PR__ waits for George. 0.9.4 is PR #52 (merged). In 0.9.5:
+- restoring a backup in setup (ADR-0131, amended twice the same day): after
+  Network, New player or Restore a backup; the review is the new player's,
+  with Change on every answer; a backup given another name leaves the first
+  player's identities behind (*A second player*, on by default);
+- the spectrum: 50 Hz to 16 kHz at every rate with a lift above 1 kHz
+  (ADR-0130), and each skin draws the bars its panel holds (ADR-0056
+  amended; Finding 117);
+- the Beszel heading's Connected / Connecting / Not connected (ADR-0129), the
+  Hub public key check, the failed-plugin note, go-librespot 0.10.3, Beszel
+  0.21.0, Settings not sliding sideways on a phone.
 
-**Since 0.9.4, on `phase-13d` (for the next release's notes):**
-- go-librespot 0.10.3 and Beszel 0.21.0 (agent and hub) - `check-upstream.sh`
-  now checks both;
-- the Beszel Hub public key row refuses a value that is not a key
-  (`pattern`/`invalid` on text rows);
-- a service whose unit failed says *could not start* on its switch;
-- the Beszel heading in System says Connected / Connecting / Not connected
-  (ADR-0129, amended the same day from the switch to the heading);
-- Settings no longer slides sideways on a phone.
-- the spectrum covers 50 Hz to 16 kHz at every rate, with five bass bars and
-  a lift above 1 kHz (ADR-0130, Finding 117; gexis-peppyalsa -2, a second
-  patch). On guestpi since 2026-10-08; George to look at it on the panel.
+George to test on a freshly flashed card: the restore in setup, including
+renaming a backup as a second player. *Open* in ADR-0131: backups from a newer
+release are accepted, with a note.
 
-- restoring a backup in setup (ADR-0131): after Network, New player or
-  Restore a backup; the file uploaded from the phone, checked, reviewed, then
-  joined, applied, put back and restarted. Walked through in a browser
-  against the real setup flow; **not yet on a freshly flashed card**, which is
-  the only place it shows - George's test. On guestpi (core
-  0.9.4+git29.7596821) its routes answer 409, as on any configured player.
-  *Open* in the ADR: backups from a newer release are accepted, with a note.
-
-**guestpi** (192.168.178.21, Pi-DAC PRO, 13.3"): runs all of that as a
-preview (core 0.9.4+git11.38e9c93); its Beszel heading reads Connected. The
-Hub public key was re-entered by 08:01 on 2026-10-08, after a test overwrote
-it
-(LESSONS 61). Not yet tried on it by George: Spotify on go-librespot 0.10.3,
-the orange and red states. **gexis** is offline since its card swap.
+**guestpi** (192.168.178.21, Pi-DAC PRO, 13.3"): runs 0.9.5's code as a
+preview. **Plexamp is unclaimed there**: Plex accepts each new claim, then
+refuses the sign-in it issued for the first seconds and Plexamp drops it
+(three claims, 2026-10-08; requests with the same sign-in answered 200 and 401
+within a second, no pattern by device ID). George: wait and try again later.
+The earlier store is set aside as `~/.local/share/Plexamp.aside-20261008-121613`.
+Our wrapper's own faults to fix afterwards: a failed claim's leftovers, and the
+row not saying the claim failed. **gexis** is offline since its card swap.
 
 **Left before the first public release.** George to test: the Volume row
 (Fixed never tried by Claude - it goes to full level), the volume-jump fixes
@@ -70,7 +56,9 @@ passwordless sudo from the image - last.
 profiles from screenshot scripts filled /tmp (16 GB) - delete them after each
 run; installing `gexis-core` does not restart it - restart it as its own gated
 step, or the old code keeps running. (The package-revision rule is LESSONS 53,
-not new: gexis-beszel-agent is at 0.21.0-2.)
+not new: gexis-beszel-agent is at 0.21.0-2.) Raising a Beszel pin also means
+raising `image/verify-image.sh`'s binary checksums: 0.9.5's first image check
+failed on exactly that (the image held the right binaries).
 
 ## Build environment (2026-09-13) — read this before the next build
 
