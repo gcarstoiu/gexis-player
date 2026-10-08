@@ -57,6 +57,7 @@ setup while this was going on.
   `/state`'s `settling`): each download's progress; *Ready* for 4 s; a
   failure - or a download that has not started 10 minutes after setup - named
   with *Settings → Plugins*, then OK (`POST /settling/done`).
-- **Music is not blocked** while it settles: the screen covers the panel (and
-  shows on a phone), but a source can still take the device. Not yet seen on a
-  freshly set-up device.
+- **Music is not blocked** while it settles (George, 2026-10-07: *"rather than
+  blocking, put a message up"*): the screen covers the panel and shows on a
+  phone, and says *Until it is done, music may be slow to start*; a source can
+  still take the device. Not yet seen on a freshly set-up device.
