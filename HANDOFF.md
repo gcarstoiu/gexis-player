@@ -37,6 +37,16 @@ wrapper's three faults it showed are fixed (ADR-0119 amended, gexis-plexamp
 `~/.local/share/Plexamp.aside-20261008-121613` - delete it when convenient.
 **gexis** is offline since its card swap.
 
+**Since 0.9.5, on `phase-13d` (for the next release's notes):**
+- Download a backup from *Settings → System → Restore* (ADR-0083 amended);
+- Plexamp's claim: a failed claim leaves nothing behind, is told by Plexamp's
+  exit, and the row says it (ADR-0119 amended; gexis-plexamp 0.4.2);
+- the **Cable** row (ADR-0123): state, Automatic / Manual address, the 60 s
+  Keep; tried on guestpi end to end, guestpi back on DHCP (.107). The same
+  choice for Wi-Fi is not built yet;
+- `verify-image.sh` with Beszel 0.21.0's binary checksums.
+All of it is on guestpi (core 0.9.5+git31).
+
 **Left before the first public release.** George to test: the Volume row
 (Fixed never tried by Claude - it goes to full level), the volume-jump fixes
 (Spotify after a mode change, Bluetooth's late level), HDMI with Software
@@ -44,8 +54,8 @@ volume (visualiser; Bluetooth with the volume raised), software volume across
 a full reboot, the small fixes, Hardware feedback on the real panel (pattern,
 taps, tones, GitHub - labels exist), and a **freshly flashed card** (the
 Plugins step, the settling screen, the screen applied in setup). The update
-safety can only be seen on the release after 0.9.4. Claude to do: the cable
-network (ADR-0123 step 2; needs a cable), **the final thorough code check**
+safety can only be seen on the release after 0.9.4. Claude to do: the Wi-Fi
+address choice (ADR-0123 decision 2; the cable half is done), **the final thorough code check**
 (George: everything once more; volume, the adapters and arbitration must
 work perfectly from the start), the first public release, and removing
 passwordless sudo from the image - last.
