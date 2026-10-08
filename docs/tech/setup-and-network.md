@@ -391,6 +391,13 @@ connected network's details). One change waits at a time.
   back. Every page shows `CableKeep` while `GET /network/cable` has `pending`,
   read again whenever `settings_revision` moves.
 
+**The cable wins** (ADR-0123 as amended): `wired.CableFirst`, every 5 s.
+While `eth0` has a link *and* is connected (an address, not only a link),
+a connected `wlan0` is disconnected with `nmcli device disconnect` -
+unless it hosts the setup network (`gexis-setup`). When the link goes,
+`nmcli device connect wlan0` brings back the best saved network. A join from
+Settings while the cable is in answers with `notice`.
+
 ## 7. Bluetooth pairing, briefly
 
 Pairing is confirmed on the panel on a device's first pair only (ADR-0045,

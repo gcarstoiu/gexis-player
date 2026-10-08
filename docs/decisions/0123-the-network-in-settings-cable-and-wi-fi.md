@@ -108,3 +108,29 @@ five**: details live in the sheet a row opens, not on the page.
 - NetworkManager stores the cable's profile once it is changed (the profile
   it made by itself lived only in memory before). Automatic is the same as
   before it.
+
+## Amended 2026-10-08: the cable wins
+
+George, seeing the cable and the Wi-Fi connected at once: *"which must be an
+error"*; on the choice: *"The cable should win"*.
+
+- **While the cable carries the player, the Wi-Fi is disconnected.** Its
+  networks stay saved. When the cable's link goes, the Wi-Fi connects again
+  by itself, with its own address; `<name>.local` finds the player either
+  way. Before, NetworkManager kept both, the cable carrying the traffic
+  (its route is preferred) and the player answering at two addresses.
+- **The Wi-Fi stands down only once the cable has its address**, not at the
+  link: on guestpi the link came several seconds before DHCP's answer, and
+  the first version left the player with no network in between.
+- **The setup network is never taken down** for a cable.
+- **A Wi-Fi network joined in Settings while the cable is in** is joined -
+  which proves the password - then set aside; the sheet says *"Saved. The
+  player uses the cable while it is plugged in; this network takes over
+  when the cable is unplugged."*
+- **Built** as `wired.CableFirst`, a check every 5 s in the core. **Tried on
+  guestpi** with the port taken down for 30 s and brought back, twice: the
+  Wi-Fi was connected within 10 s of the link going, and disconnected 5 s
+  after the cable had its address again.
+- **Not tried:** a real unplug, as opposed to taking the port down; and a
+  player whose Wi-Fi has never been set up (it has nothing to connect to,
+  and stays on no network until the cable is back).

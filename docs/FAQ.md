@@ -293,6 +293,12 @@ says at which address it comes back.
 
 ---
 
+**What happens with a cable and Wi-Fi at the same time?**
+The cable wins. While a cable is plugged in, the Wi-Fi is off and its
+networks stay saved; unplug the cable and the Wi-Fi connects again by itself
+within about 10 seconds, at its own address. `gexis.local` (the player's name)
+finds it either way.
+
 **Can the player have a fixed address on the cable?**
 Yes: *Settings → Device → Cable* (shown while a cable is plugged in), then
 *Manual*, with the address and its prefix (for example `192.168.1.20/24`), the
