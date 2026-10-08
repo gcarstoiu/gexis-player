@@ -1233,6 +1233,24 @@ class StateServer:
     #: journal, half a minute on a Pi 4.
     _report_lock = asyncio.Lock()
 
+    async def _handle_backup_download(self, request: web.Request) -> web.StreamResponse:
+        """**A backup, saved on a phone or computer** (ADR-0083 as amended
+        2026-10-08; George: *"the option in system backup to also download
+        one of the backups locally"*) - ready for a newly flashed card's
+        setup (ADR-0131). What the Backups share already offers the same
+        network, by the same names."""
+        try:
+            path = backups.path_of(request.match_info["name"])
+        except ValueError:
+            return web.json_response({"error": "not a backup"}, status=400)
+        except FileNotFoundError:
+            return web.json_response({"error": "That backup is not on the player any more."}, status=404)
+        return web.FileResponse(path, headers={
+            "Content-Disposition": f'attachment; filename="{path.name}"',
+            "Content-Type": "application/gzip",
+            "Cache-Control": "no-store",
+        })
+
     async def _handle_report(self, request: web.Request) -> web.Response:
         """ADR-0125: the problem report, downloaded. The body may carry the
         user's own line, `{"note": "..."}`. Every value is read here, on the
@@ -2089,6 +2107,7 @@ class StateServer:
         app.router.add_get("/settings/{key}/items", self._handle_list_items)
         app.router.add_get("/network/wifi", self._handle_wifi_details)
         app.router.add_post("/report", self._handle_report)
+        app.router.add_get("/backups/{name}", self._handle_backup_download)
         app.router.add_get("/hardware-report", self._handle_hardware_report)
         app.router.add_post("/hardware-report/issue", self._handle_hardware_issue)
         app.router.add_post("/hardware-report/tones", self._handle_hardware_tones)

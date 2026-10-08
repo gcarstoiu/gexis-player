@@ -395,6 +395,18 @@ def inspect(path: Path, known_migrations: int, schema_key: str = "_settings_sche
     }
 
 
+def path_of(name: str, directory: Path = DEFAULT_DIR) -> Path:
+    """**One backup, to download** (ADR-0083 as amended 2026-10-08): its file,
+    by a name that is ours and nothing else. Raises ValueError for a name
+    that is not, FileNotFoundError for one that is not there."""
+    if not SAFE.match(name) or not NAME.match(name):
+        raise ValueError(f"not a backup name: {name!r}")
+    path = directory / name
+    if not path.is_file():
+        raise FileNotFoundError(name)
+    return path
+
+
 def forget(name: str, directory: Path = DEFAULT_DIR) -> None:
     if not SAFE.match(name) or not NAME.match(name):
         raise ValueError(f"not a backup name: {name!r}")

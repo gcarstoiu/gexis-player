@@ -1254,7 +1254,7 @@
         "type": "list",
         "label": "Restore",
         "marks": "N",
-        "note": "Replaces everything a backup holds and restarts the device. Backups are read from the Backups share, so one copied there from another machine is offered too.",
+        "note": "Replaces everything a backup holds and restarts the device. Backups are read from the Backups share, so one copied there from another machine is offered too. On a phone or computer, Download saves one there - ready for setup on a newly flashed card.",
         "default": null,
         "empty": "No backups yet. Back up first, or copy one into the Backups share.",
         "kind": "backup"

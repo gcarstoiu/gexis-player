@@ -292,6 +292,16 @@
     }
   }
 
+  //: ADR-0083 as amended 2026-10-08: the file itself, by its own name - a
+  //: link, so a large backup goes straight to the browser's downloads.
+  function downloadBackup(item) {
+    const a = Object.assign(document.createElement('a'), { href: `/backups/${encodeURIComponent(item.name)}`, download: item.name });
+    document.body.append(a);
+    a.click();
+    a.remove();
+    flash(`Saving ${item.name}`);
+  }
+
   async function downloadReport() {
     if (reportBusy) return;
     reportBusy = true;
@@ -1937,6 +1947,7 @@
               {@const inert = item.state === 'connected' && !item.details}
               <button
                 class="item"
+                class:item--backup={sheet.key === 'restore'}
                 class:is-joined={joined}
                 class:item--static={inert}
                 type="button"
@@ -1965,6 +1976,18 @@
                   <span class="lock" role="img" aria-label="Password needed"><span></span><span></span></span>
                 {:else if item.secured}
                   <span class="lock lock--open" role="img" aria-label="Password saved"><span></span><span></span></span>
+                {/if}
+                {#if sheet.key === 'restore' && !onPanel()}
+                  <!-- ADR-0083 as amended 2026-10-08: a backup saved on the
+                       phone or computer, for a newly flashed card's setup
+                       (ADR-0131). Not on the panel, which saves nothing. -->
+                  <span
+                    class="forget"
+                    role="button"
+                    tabindex="0"
+                    onclick={(e) => { e.stopPropagation(); downloadBackup(item); }}
+                    onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); downloadBackup(item); } }}
+                  >Download</span>
                 {/if}
                 {#if item.state === 'saved'}
                   <!-- **Saved only, never the network in use.** Forgetting
@@ -3065,6 +3088,19 @@
   .item__text {
     flex: 1;
     min-width: 0;
+  }
+  /* A backup's name and date take the line; Download and Forget go under
+     them, at the right (2026-10-08: beside them, on a phone, the name
+     shrank to "ge…" and the date broke word by word). */
+  .item--backup {
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+  .item--backup .item__text {
+    flex: 1 1 100%;
+  }
+  .item--backup .forget:first-of-type {
+    margin-left: auto;
   }
   .item__title {
     display: flex;
