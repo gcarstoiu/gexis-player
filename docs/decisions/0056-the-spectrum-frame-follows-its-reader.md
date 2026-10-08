@@ -115,3 +115,21 @@ learns that size from the reader's own configuration.**
   and corrected from the first figures given, see Finding 051). A guess at
   a middle, and
   George has not yet seen a correctly framed spectrum at any other value.
+
+**Amended 2026-10-08 - each skin draws its own count.**
+- **What it was:** one count for every skin, the corpus's smallest - 18 on
+  guestpi, where the panels hold 18 to 21. George saw room for 20 on *Free*.
+  The reason was this ADR's: the engine read its pipe `4 * size` bytes at a
+  time, and after one frame of another size it stayed out of step.
+- **The engine's reader is replaced on the instance**
+  (`read_the_newest_frame`). It drains the pipe and keeps the last `4 * size`
+  bytes. The relay writes each frame in one atomic write, so the end of what
+  waits is the end of a frame: the read is aligned however the sizes went
+  before.
+- **The count follows the skin**, under one lock with the engine's update
+  thread (`serialise_updates`), and the engine's bar slots are made again
+  when the count changes.
+- **The margin rule** allows the right margin 6 px short of the left, as the
+  authors drew them: *Free* holds 20.
+- **Seen on guestpi:** eight skin changes during playback (18, 20, 19, 20,
+  19, 20, 20, 20 bars), the relay following each, no errors (Finding 117).
