@@ -295,7 +295,7 @@ to open the setup page. The phone then walks through Wi-Fi, a name, the
 clock, the output, the music, the screen, the visualiser and the plugins to
 install (Plexamp, the Lyrion Server, Beszel). Once the player is on your
 network it shows what it is downloading, each with its progress, until it is
-ready; this cannot be skipped. A download that does not finish is named, with
+ready; this cannot be skipped, and music may be slow to start until then. A download that does not finish is named, with
 *Settings → Plugins* as the place to try it again.
 
 **What is the setup network's password, and why does the phone say it has no internet?**
