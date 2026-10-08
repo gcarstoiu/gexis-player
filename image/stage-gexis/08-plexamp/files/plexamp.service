@@ -70,6 +70,9 @@ ExecStartPre=/usr/lib/gexis/plexamp-start-idle
 EnvironmentFile=-/etc/gexis/device-name.env
 EnvironmentFile=-/run/gexis/plugins/plexamp.env
 ExecStart=/usr/lib/gexis/plexamp-run
+# A claim that ended Plexamp with an error is told here, by its exit
+# (plexamp-run --stopped; systemd sets EXIT_CODE and EXIT_STATUS).
+ExecStopPost=-/usr/lib/gexis/plexamp-run --stopped
 Restart=on-failure
 # **5 -> 1, 2026-09-26 (ADR-0091).** This is the path back from every takeover
 # now, not just from a genuine failure, so the wait is dead time in which the

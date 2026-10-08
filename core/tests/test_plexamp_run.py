@@ -90,3 +90,50 @@ def test_a_token_stored_on_an_already_claimed_player_is_not_tried(home):
     env = run.prepare({"PLEXAMP_CLAIM_TOKEN": "claim-spent"}, **home)
     assert "PLEXAMP_CLAIM_TOKEN" not in env
     assert home["settings"].is_dir() and not home["previous"].exists()
+
+
+# -- 2026-10-08: what guestpi's three claims showed ------------------------------
+
+def unclaimed_store(settings: Path) -> None:
+    settings.mkdir(parents=True, exist_ok=True)
+    (settings / "%40Plexamp%3Auser%3AanonymousIdentifier").write_text("Sbefore")
+
+
+def test_a_failed_claim_on_an_unclaimed_player_leaves_nothing_behind(home):
+    """Plexamp wrote the user, Plex refused the sign-in, Plexamp exited 255:
+    the store as it was before comes back, not half an account."""
+    unclaimed_store(home["settings"])
+    run.prepare({"PLEXAMP_CLAIM_TOKEN": "claim-one"}, **home)
+    assert home["previous"].is_dir(), "an unclaimed store is set aside too"
+    claim(home["settings"], "Sissued")
+    (home["settings"] / "%40Plexamp%3Auser%3Aname").write_text("Sowner")
+    run.stopped({"EXIT_CODE": "exited", "EXIT_STATUS": "255"}, **home)
+    assert state(home)["state"] == "failed"
+    assert sorted(p.name for p in home["settings"].iterdir()) == ["%40Plexamp%3Auser%3AanonymousIdentifier"]
+    assert not home["previous"].exists()
+
+
+def test_a_sign_in_written_before_the_exit_is_not_taken_for_a_claim(home):
+    """The next start used to see the token file and record *claimed*."""
+    run.prepare({"PLEXAMP_CLAIM_TOKEN": "claim-one"}, **home)
+    claim(home["settings"], "Sissued")
+    run.stopped({"EXIT_CODE": "exited", "EXIT_STATUS": "255"}, **home)
+    env = run.prepare({"PLEXAMP_CLAIM_TOKEN": "claim-one"}, **home)
+    assert state(home)["state"] == "failed" and "PLEXAMP_CLAIM_TOKEN" not in env
+    assert not home["settings"].exists(), "nothing of the failed claim stays"
+
+
+def test_a_stop_while_claiming_settles_nothing(home):
+    run.prepare({"PLEXAMP_CLAIM_TOKEN": "claim-one"}, **home)
+    claim(home["settings"])
+    run.stopped({"EXIT_CODE": "killed", "EXIT_STATUS": "TERM"}, **home)
+    assert state(home)["state"] == "trying"
+    run.stopped({"EXIT_CODE": "exited", "EXIT_STATUS": "0"}, **home)
+    assert state(home)["state"] == "trying"
+    run.prepare({"PLEXAMP_CLAIM_TOKEN": "claim-one"}, **home)
+    assert state(home)["state"] == "claimed"
+
+
+def test_the_attempt_is_timed_for_the_plugin(home):
+    run.prepare({"PLEXAMP_CLAIM_TOKEN": "claim-one"}, **home)
+    assert isinstance(state(home)["at"], float)
