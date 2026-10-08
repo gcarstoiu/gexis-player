@@ -85,3 +85,32 @@ runs had loaded `/usr/lib/libpeppyalsa.so`:
 - 192 kHz: the FFT is 16384 points there, so expect about twice the 96 kHz
   CPU cost.
 - How the bars look on the panel, which is for George.
+
+## Added 2026-10-08: how many bars are drawn
+
+George: *"there should be 20 in total ... there is enough space for 20
+bars."*
+
+- **What was drawn:** 18 bars on every skin. The driver took the smallest
+  count of the 41 spectrum sections installed on guestpi (21 hold 19, 12
+  hold 20, 6 hold 18, 2 hold 21), for the framing reason in ADR-0056.
+- **What the strict margin rule cost besides:** *Free* at 1920x1080 holds 20
+  bars with 110 px to the right against a 115 px origin, and the rule gave
+  it 19.
+- **After ADR-0056's amendment**, on guestpi during playback (Lyrion at
+  volume 0, the album skipped track by track), eight skin changes:
+
+  | Skin | Bars |
+  |---|---|
+  | Advanced X220 | 18 |
+  | Free | 20 |
+  | Kenwood | 19 |
+  | Technics | 20 |
+  | NAD C3050HD | 19 |
+  | Marantz, Sony TAN77, Nixie | 20 |
+
+  The relay declared the same count each time, and the visualiser logged no
+  error. Screen captures show *Free* with 20 bars to the end of its panel.
+- **Not seen:** a misaligned frame. The reader is tested for it (a change
+  of size with a frame of the old size in flight), but alignment cannot be
+  read off still captures.
