@@ -258,18 +258,25 @@ sequenceDiagram
    The file is kept as `setup-backup.tgz` (0600), and the review is saved in
    the answers as `backup`, with `start: "restore"`. `DELETE /setup/backup`
    forgets it.
-2. **Finishing**:
-   - the Wi-Fi country from the backup's time zone, then the join (a failed
-     join keeps the backup and returns to Network);
-   - the backup's main settings through `Settings.set`, as setup's own
-     answers, because the screen (`screen.json`), the time zone and the name
-     live outside the store too. A screen this version does not know is left
-     to Settings;
+2. **The review** is the new player's Review, with *Change* on each answer:
+   the page fills every step from the backup (`fromBackup`), and a step
+   continued from is saved as a setup answer. `_restore_values()` lays those
+   answers over the backup's settings.
+3. **Finishing**:
+   - the Wi-Fi country from the time zone, then the join (a failed join keeps
+     the backup and returns to Network);
    - `backups.restore_file()`, with the two databases written beside
      themselves and renamed into place, so the core's open connection is
      never overwritten underneath it;
-   - `device_name.apply_restored()`, `settling.json` for the skins and each
-     downloading plugin the backup has on;
+   - `backups.write_settings()`: the answers changed in setup (and a Lyrion
+     server found after the join) written into the restored settings, which
+     the next start reads;
+   - the main settings through `Settings.set`, as setup's own answers,
+     because the screen (`screen.json`), the time zone and the name live
+     outside the store too. A screen this version does not know is left to
+     Settings;
+   - `device_name.apply_restored()` unless the name was changed,
+     `settling.json` for the skins and each downloading plugin that is on;
    - the panel's `restart_for: "restore"`, and the reboot. The file is
      deleted whatever happens.
 

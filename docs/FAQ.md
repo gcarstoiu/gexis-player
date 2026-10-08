@@ -485,7 +485,8 @@ pictures, the paired devices and the player's configuration into the
 player's Backups share on the network. Copy the backup off the player before
 flashing. After flashing, setup offers *Restore a backup* right after the
 Wi-Fi: choose the file on the phone, check what it brings, and the player
-restarts with everything back. A backup from an older version works. A
+restarts with everything back. Anything setup asks (the name, for instance)
+can be changed in that review, so one player's backup can start another. A backup from an older version works. A
 backup can also be restored later: copy it into the Backups share and choose
 it under *Settings → System → Restore*. Network share passwords are not kept
 in backups, so enter them again.
