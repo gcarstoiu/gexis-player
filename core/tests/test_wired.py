@@ -139,3 +139,35 @@ def test_the_row_is_shown_with_a_cable_or_a_manual_address(sys_net):
     cable.manual = True
     assert cable.shown(), "a fixed address keeps the row, cable or not"
     assert not wired.Cable(run=FakeNM(), sys_net=sys_net / "none").shown(), "no port, no row"
+
+
+def test_the_wi_fi_port_is_changed_the_same_way(tmp_path):
+    """ADR-0123 decision 2: the connected Wi-Fi network's address, through
+    its own profile, kept or put back exactly as the cable's."""
+    (tmp_path / "wlan0").mkdir()
+    (tmp_path / "wlan0" / "carrier").write_text("1\n")
+    nm = FakeNM()
+
+    async def go():
+        port = wired.Cable(device="wlan0", run=nm, sys_net=tmp_path, sleep=lambda s: asyncio.sleep(0), clock=lambda: 0.0)
+        told = await port.change("manual", "192.0.2.60/24", "192.0.2.1", ["192.0.2.1"])
+        assert told["address"] == "192.0.2.60"
+        assert any(c[:2] == ("connection", "up") and "wlan0" in c for c in nm.calls)
+        await port._timer
+    asyncio.run(go())
+    assert nm.profile["method"] == "auto", "not kept: put back"
+
+
+def test_without_a_connection_the_sentence_names_the_port(tmp_path):
+    class NoProfile(FakeNM):
+        async def __call__(self, *args, timeout=None):
+            if args[:3] == ("-t", "-f", "GENERAL.CONNECTION"):
+                return 0, "GENERAL.CONNECTION:--\n", ""
+            return await super().__call__(*args, timeout=timeout)
+
+    async def go(device):
+        with pytest.raises(ValueError) as refused:
+            await wired.Cable(device=device, run=NoProfile(), sys_net=tmp_path).change("auto")
+        return str(refused.value)
+    assert asyncio.run(go("wlan0")) == "Join a Wi-Fi network first."
+    assert "cable" in asyncio.run(go("eth0"))

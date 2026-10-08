@@ -1822,6 +1822,8 @@ async def main() -> None:
 
     # ADR-0123: the cable - its row is there while one is plugged in.
     cable = wired.Cable(on_change=lambda _pending: state_store.bump_settings_revision())
+    # ADR-0123 decision 2: the connected Wi-Fi network's address, the same way.
+    wifi_address = wired.Cable(device="wlan0", on_change=lambda _pending: state_store.bump_settings_revision())
     settings = Settings(
         settings_store,
         shown={"cable": cable.shown},
@@ -3166,6 +3168,7 @@ async def main() -> None:
     state_server = StateServer(
         state_store,
         cable=cable,
+        wifi_address=wifi_address,
         host=config.state_host,
         port=config.state_port,
         activate=activate,

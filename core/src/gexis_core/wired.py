@@ -201,6 +201,9 @@ class Cable:
     def __init__(self, device: str = DEVICE, run=wifi._run, sys_net: Path = SYS_NET,
                  keep_s: float = KEEP_S, on_change=None, sleep=asyncio.sleep, clock=time.time) -> None:
         self._device = device
+        #: What the phone is told when the port has nothing to change.
+        self._missing = ("Join a Wi-Fi network first." if device.startswith("wl")
+                         else "The cable has no connection to change. Plug it in first.")
         self._run = run
         self._sys_net = sys_net
         self._keep_s = keep_s
@@ -260,7 +263,7 @@ class Cable:
             raise ValueError("A change is waiting to be kept. Keep it, or wait for it to go back.")
         name = await profile(self._device, self._run)
         if name is None:
-            raise ValueError("The cable has no connection to change. Plug it in first.")
+            raise ValueError(self._missing)
         before = await settings_of(name, self._run)
         if method == "manual":
             manual = check(address, gateway, dns)

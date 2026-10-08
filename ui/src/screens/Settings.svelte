@@ -2027,6 +2027,9 @@
                     <div class="netinfo__row"><dt>{k}</dt><dd>{v}</dd></div>
                   {/each}
                 </dl>
+                <!-- ADR-0123 decision 2: this network's address, Automatic or
+                     Manual, kept the way the cable's is. -->
+                <div class="netaddr"><CableSheet port="wifi" facts={false} /></div>
               {/if}
             {/each}
             {#if sheet.hint}<div class="items__hint">{sheet.hint}</div>{/if}
@@ -3099,6 +3102,9 @@
   /* A backup's name and date take the line; Download and Forget go under
      them, at the right (2026-10-08: beside them, on a phone, the name
      shrank to "ge…" and the date broke word by word). */
+  .netaddr {
+    padding: 4px 18px 14px;
+  }
   .item--backup {
     flex-wrap: wrap;
     row-gap: 12px;

@@ -1,12 +1,17 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!--
   **The Cable row's sheet** (ADR-0123): the cable at a glance, and its
-  address - Automatic (DHCP) or Manual. A manual address is checked as typed
+  address - Automatic (DHCP) or Manual. `port="wifi"` is the same form under
+  the connected Wi-Fi network's details (decision 2), whose own lines already
+  say what `facts` would. A manual address is checked as typed
   by the core, and kept only once confirmed from it within 60 s: CableKeep
   shows the question on every page while it waits.
 -->
 <script>
   import { onDestroy, onMount } from 'svelte';
+
+  let { port = 'cable', facts = true } = $props();
+  const url = `/network/${port}`;
 
   let cable = $state(null);
   let method = $state('auto');
@@ -20,7 +25,7 @@
 
   async function read() {
     try {
-      const r = await fetch('/network/cable');
+      const r = await fetch(url);
       if (!r.ok) throw new Error();
       cable = await r.json();
       if (!touched) {
@@ -55,7 +60,7 @@
     saving = true;
     error = null;
     try {
-      const r = await fetch('/network/cable', {
+      const r = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(method === 'manual'
@@ -78,12 +83,14 @@
   {#if !cable}
     <p class="cable__text">Reading the cable…</p>
   {:else}
+    {#if facts}
     <dl class="cable__facts">
       <div><dt>Link</dt><dd>{cable.link ? `Connected${cable.speed ? ` · ${cable.speed} Mb/s` : ''}` : 'No link'}</dd></div>
       <div><dt>Address</dt><dd>{cable.address ?? '-'}</dd></div>
       <div><dt>Gateway</dt><dd>{cable.gateway ?? '-'}</dd></div>
       <div><dt>DNS</dt><dd>{cable.dns?.length ? cable.dns.join(' · ') : '-'}</dd></div>
     </dl>
+    {/if}
 
     {#if told || cable.pending}
       <p class="cable__text cable__text--warn">

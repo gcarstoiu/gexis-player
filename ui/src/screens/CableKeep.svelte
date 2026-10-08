@@ -18,15 +18,27 @@
   let answer = $state(null);
   let busy = $state(false);
 
+  //: Which port waits: the cable's or the Wi-Fi's (ADR-0123 decision 2).
+  let port = $state('cable');
+
   async function read() {
-    try {
-      const r = await fetch('/network/cable');
-      if (!r.ok) return;
-      pending = (await r.json()).pending ?? null;
-      if (!pending) answer = null;
-    } catch {
-      /* the player is changing address: the next revision says */
+    let found = null;
+    for (const p of ['cable', 'wifi']) {
+      try {
+        const r = await fetch(`/network/${p}`);
+        if (!r.ok) continue;
+        const waiting = (await r.json()).pending;
+        if (waiting) {
+          found = waiting;
+          port = p;
+          break;
+        }
+      } catch {
+        /* the player is changing address: the next revision says */
+      }
     }
+    pending = found;
+    if (!pending) answer = null;
   }
 
   let seen;
@@ -63,14 +75,14 @@
 </script>
 
 {#if pending}
-  <div class="keep" role="alertdialog" aria-label="Keep the new cable address?">
+  <div class="keep" role="alertdialog" aria-label={`Keep the new ${port === 'wifi' ? 'Wi-Fi' : 'cable'} address?`}>
     <div class="keep__text">
-      <b>Keep the new cable address?</b>
+      <b>Keep the new {port === 'wifi' ? 'Wi-Fi' : 'cable'} address?</b>
       <span>
         {#if elsewhere}
           Open <span class="addr">http://{pending.address}:8090</span> and keep it there, within {left} s.
         {:else}
-          {pending.address ? `The player is at ${pending.address} on the cable.` : 'The player has a new cable address.'}
+          {pending.address ? `The player is at ${pending.address} on the ${port === 'wifi' ? 'Wi-Fi' : 'cable'}.` : 'The player has a new address.'}
           Not kept within {left} s, the old address comes back.
         {/if}
       </span>
