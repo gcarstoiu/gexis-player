@@ -1,4 +1,4 @@
-# ADR-0129 — A service's switch says whether it is connected
+# ADR-0129 — A service says whether it is connected
 
 **Status:** **Accepted** — George, 2026-10-08: *"Can you also add a status to
 the beszel client? Connected or not connected or pending, with the
@@ -19,7 +19,9 @@ keeps retrying never fails, so that message doesn't cover it.
 
 ## Decision
 
-1. **Beside the switch of a switched-on service that connects somewhere**:
+1. **On the heading above the service's own rows** - in *System* for Beszel,
+   where its hub address, token and key are entered - while it is switched
+   on, for a service that connects somewhere:
    - **Connected**: green, with a tick;
    - **Connecting**: orange, a dot that pulses;
    - **Not connected**: red, with a cross.
@@ -42,9 +44,16 @@ keeps retrying never fails, so that message doesn't cover it.
      still says *Claimed*, so `status` can't carry a red *Not connected*
      without changing what it means for every plugin.
    - The two show side by side: a failed unit has the orange *could not
-     start* note under its name and the red *Not connected* beside its
-     switch.
+     start* note on the switch, on the Plugins page, and the red *Not
+     connected* on the heading in System.
 5. **No setting.** Nothing to choose; no ADR-0022 row.
+
+## Amended (George, 2026-10-08, the same day)
+
+First built beside the switch on the Plugins page. George: *"The icons should
+be next in system, in the same place where the keys are added."* Moved to the
+heading above the plugin's rows (`indicatorOf` on the heading names the
+switch); the switch shows it no more. It is said once.
 
 ## Limits
 
@@ -68,7 +77,7 @@ keeps retrying never fails, so that message doesn't cover it.
   `Settings.indicate(row, tone, text)`.
 - `plugins.Plugin.connection`; the Beszel manifest sets it. Its package goes
   to `0.21.0-2`, because the manifest changed (LESSONS 53).
-- `Settings.svelte`: the `.ind` indicator. `tokens.css`: `--accent-ok`
+- `Settings.svelte`: the `.ind` indicator on the `.subhead` heading. `tokens.css`: `--accent-ok`
   `#7fd58e` and `--accent-bad` `#ee7b70`; orange is the existing
   `--accent-warn`.
 - Checked in a browser on the panel (1280 × 800) and on a phone (412 px):

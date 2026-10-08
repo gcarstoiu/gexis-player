@@ -183,7 +183,7 @@ was exactly how the Spotify pairing was lost.
   the synthesised `beszel.enabled`.
 
 **Amended 2026-10-08:**
-- The switch says whether the agent has reached its hub
+- The Beszel heading in System says whether the agent has reached its hub
   ([ADR-0129](0129-a-service-says-whether-it-is-connected.md)).
 - The Hub public key row refuses a value that is not a key.
 - A unit that fails says *Beszel could not start. Check its settings.*

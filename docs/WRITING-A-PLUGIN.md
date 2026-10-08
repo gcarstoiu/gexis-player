@@ -59,7 +59,7 @@ brings one is refused.
 | `accent` | no | A CSS colour for the panel's accent when your renderer plays |
 | `status` | no | The waiting screen's second line under your mark (`"Ready"`, `"Pairable"`) |
 | `summary` | no | One line on what it is. The player's own plugins show it in setup's Plugins step; an uploaded plugin arrives after setup, so it is not shown there |
-| `connection` | no | Honoured only on the player's own `service` plugins, not on an uploaded one: its switch then says *Connected*, *Connecting* or *Not connected*. An uploaded plugin runs as a user made for each run, so there is no fixed user to read connections from |
+| `connection` | no | Honoured only on the player's own `service` plugins, not on an uploaded one: the heading above its rows then says *Connected*, *Connecting* or *Not connected*. An uploaded plugin runs as a user made for each run, so there is no fixed user to read connections from |
 | `settings` | no | Rows for **Settings**, below |
 
 **Not allowed:** `unit` (the player writes it), paths that point outside the

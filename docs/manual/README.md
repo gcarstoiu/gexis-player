@@ -398,9 +398,10 @@ screen's size, **Plexamp**, the **Lyrion Server** and the **Beszel**
 monitoring agent, among others. A plugin that needs software from its maker
 downloads it when switched on. Setup offers the same plugins, and the first
 start shows each download arriving. A plugin file can also be uploaded here.
-Beszel's switch says whether the agent has reached its hub: **Connected** in
-green, **Connecting** in orange for its first minute, **Not connected** in red
-after that. A Hub public key that is not one is refused when it is saved.
+While Beszel is on, its heading in **System**, above the hub address, token
+and key, says whether the agent has reached its hub: **Connected** in green,
+**Connecting** in orange for its first minute, **Not connected** in red after
+that. A Hub public key that is not one is refused when it is saved.
 
 ### System — *Updates and maintenance*
 
