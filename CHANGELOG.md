@@ -5,6 +5,32 @@ Every release of Gexis Player and its notes, newest first. Generated from
 edit that file, not this one. The player shows the last 10 under
 Settings → System → Change logs.
 
+## 0.9.4 — 8 October 2026
+
+### New
+
+- Settings → Audio → Volume is one setting: Hardware (the sound card's own control), Software (the player sets the level itself, on any output) or Fixed. On an output with no control of its own, such as HDMI, Software takes Hardware's place, and the visualiser works over HDMI too.
+- Settings → System → Hardware feedback: a short check of the screen and the sound - a test pattern with four taps, and test tones at 44.1, 96 and 192 kHz - then feedback on GitHub, filled in with what the player reads of its hardware. Sound cards and screens owners report as working are marked Reported.
+- First-time setup offers the plugins - Plexamp, the Lyrion Server, Beszel - and the first start shows each download arriving until the player is ready.
+- The IQaudIO Pi-DAC PRO is tested.
+
+### Fixed
+
+- Changing the output or the volume mode, or a phone connecting over Bluetooth, no longer makes the volume jump.
+- The volume follows the output after switching between the sound card and HDMI.
+- Spotify keeps to the starting volume even when it takes a moment to connect.
+- Bluetooth takes the player again when the phone plays after a pause.
+- The visualiser comes back if it stopped, and a skin that cannot be shown is skipped.
+- The Lyrics tab shows five lines, without a heading of its own.
+- Maximum volume shows 100 % on a new card.
+- Find portraits and covers shows its progress from the start, and tapping it lights only its button.
+
+### Good to know
+
+- Bluetooth is discoverable by default.
+- Online wallpapers come from Pixabay only: Pexels no longer issues keys.
+- From this release on, an update that does not come back properly returns to the release that was there, also after a restart of the device, and nothing can start playing while one installs.
+
 ## 0.9.3 — 7 October 2026
 
 ### New
