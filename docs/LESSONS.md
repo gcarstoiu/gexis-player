@@ -1169,6 +1169,22 @@ installed, in its own command - never in the same one as a gated install -
 and never writes over a real setting: it uses a row nothing reads, or puts
 the value back.**
 
+**62. Old and new, identical to the decimal** (2026-10-08, peppyalsa on
+`guestpi`, Finding 117).
+- **What went wrong.** A side-by-side test of two builds of a library pointed
+  each run at its own copy with `pcm_scope_type.!peppyalsa { lib … }`. The
+  system's `conf.d/output.conf`, read later through alsa-lib's hooks, put its
+  own path back, so both runs loaded the installed library.
+- **What it looked like.** A clean result: every bar's mean, movement and
+  zero count equal between old and new. That could have been read as "the
+  patch changes nothing on the device", or as the model being wrong.
+- **How it was caught.** It was too equal. A real change cannot match to the
+  decimal, and the PC harness had already shown a large one.
+
+**A comparison of two builds proves which build ran, per run, before
+comparing anything: the process's memory map, a version string, a symbol
+only one has. "No difference" is a result only after that.**
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

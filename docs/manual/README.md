@@ -223,7 +223,9 @@ what was there. *Settings → Display* sets when it appears and what it shows.
 
 The **visualiser** shows a VU meter or spectrum from a collection of skins,
 drawn from the music as it plays. Open it with the visualiser button on Now
-Playing or from the phone; touch the screen to close it.
+Playing or from the phone; touch the screen to close it. A spectrum's bars run from
+the deep bass on the left (50 Hz) to the top of what recordings carry on the
+right (16 kHz), the same at every sample rate.
 
 ## 7. The phone page
 

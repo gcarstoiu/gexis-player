@@ -139,3 +139,7 @@ something else.
 
 Not adopted. Recorded so the option is not lost, and because the Finding 003
 defect may eventually force the question.
+
+**Amended 2026-10-08:** what the 30 bands measure is
+[ADR-0130](0130-the-spectrum-covers-what-is-heard.md)'s: 50 Hz to 16 kHz at
+every sample rate. The transports are unchanged.
