@@ -1,407 +1,50 @@
 # Handoff
 
-Last updated: 2026-10-07 (on R2D2).
-
-**Release list before the first public release (2026-10-07, George's order):**
-- Hardware feedback (was Report this hardware): steps 1-5 built; renamed and in two steps (2026-10-07); was owed - a kinder
-  name ("hardware feedback"), and the sheet in two steps, screen then audio,
-  the screen step skipped when headless or no screen is connected. Owed by
-  George: the GitHub labels.
-- Cable network (ADR-0123 step 2) - needs a cable.
-- **Setup installs plugins and settles** - ADR-0128, Accepted and **built**
-  2026-10-07 (f9f9a0c on phase-13d); checked in a browser against a test
-  server, not yet on a freshly set-up device.
-- **A general, thorough code check before release** (George): everything
-  checked once more; **volume, the audio adapters and arbitration must work
-  perfectly from the beginning** - dropped frames or a CSS flaw are not
-  critical, anything in the audio path is. **Found by the 2026-10-07
-  documents review, for this check:** an update whose core does not answer
-  after the restart is reported failed but not rolled back; nothing is
-  checked after an update's reboot; a takeover is not refused during an
-  install (the panel is only locked) - ADR-0105/0110 promise all three.
-  **George, 2026-10-07: build them** - **built** (f17cfab on phase-13d); not
-  yet seen on a device: it needs a release published with it, then a second.
-- ~~Reconcile the documents that contradict each other.~~ **Done 2026-10-07:** ARCHITECTURE.md, README, FAQ, manual, HARDWARE.md, plugin docs, the technical guide, nine ADRs amended (with *Not built* where the code does less), stale code comments, the dev proxy.
-- Remove passwordless sudo from the image - last.
-
-**2026-10-07 (state now):** the user manual, FAQ and technical guide are
-**approved and released into the repo** (George: *"you can go ahead and
-publish"*): on `phase-13b`/`phase-13d`, pushed, linked from README's new
-Documentation section; they reach `main` with the next release PR. The
-library's size is out of every current file (13d5eed; George: history
-stays as it is). On gexis: core/ui/player `0.9.2+git32.b8a250b`, system and
-lyrion-server `+git174.13d5eed` - Wi-Fi details with George's lock and
-chevron fixes, and sheets above the phone's mini player (a laptop's screen
-hid Close; checked at 4 desktop and 2 phone sizes, no button covered).
-**The first public release** (George, 2026-10-07: today's changes are part
-of it) needs, besides 13d's IQaudio test (George, on the v0.9.2 image), 13f's
-tries and removing passwordless sudo: (1) **done 2026-10-07** - the notes of
-every release being skipped (ADR-0110 amended; `r<tag>/history`, signed;
-`whats_new_all`; on gexis as `+git56.937356a`). **Not yet seen end to end:**
-the first release published with a history is the first that can show it,
-and only to a device already running this updater - check it on the release
-after 0.9.3; (2) ADR-0123 step 2, Cable (needs a cable in gexis); (3)
-ADR-0124, software volume; (4) **ADR-0125, a problem report - built
-2026-10-07** (`problem_report.py`, `POST /report`, the System row, the
-GitHub issue form; tuned against gexis's real journal; packages
-`0.9.2+git60.270b9bb` built, **not yet installed or tried end to end**:
-gexis went offline when George's IQaudio card went in; e-mail route
-george.carstoiu@gexis.net added 2026-10-07) and (5)
-**ADR-0126, hardware reports from users** - both accepted 2026-10-07, rows
-in ADR-0022; **owed by George: the project e-mail address** for problem
-reports from people without GitHub.
-
-**0.9.3 released 2026-10-07 on Testing (serial 26)**, from the tag `v0.9.3`
-(c54684c), built in a worktree at the tag (`~/projects/gexis-player-r093`,
-removable); image `image/deploy/2026-10-07-gexis-player-v0.9.3.img`, 111
-checks passed. **PR #51 (`release-0.9.3` -> `main`) waits for George.**
-**0.9.4 so far, on `phase-13d`:** Spotify's starting volume applied even when
-Spotify is slow (c2a8f53); the Pi-DAC PRO recognised and Tested (Finding 114);
-Bluetooth discoverable Always by default; Bluetooth takes the device when the
-phone plays again (George: "bluetooth fix works"); **software volume, step 1**
-(ADR-0124, Finding 115; tried silently on guestpi; not yet: HDMI through the
-player, a full reboot, Spotify/Bluetooth driving it). guestpi runs
-`0.9.3+git13`, software volume off, its volume and Lyrion's at 0. A fresh
-card defaults to the Stable channel, which does not exist until a promotion.
-
-**guestpi (2026-10-07):** George's second Pi with the IQaudio DAC+ and the
-13.3", flashed from v0.9.2 (my key on it), now on the preview
-`0.9.2+git60` + system `+git174`. **IQaudio and the 13.3" detected fine**
-(George). Problem report tried end to end there (download from a phone-sized
-browser; go-librespot's titles, phone name and account then taken out too).
-Finding 113: opening screens drops more frames on the 13.3" (Home 9 %).
-**Skin packs capped while in use** (ADR-0111 amended; George agreed "in
-use" = playing or Spotify/Bluetooth active in the last 10 min): on guestpi,
-12.5 MB/s idle, then 3.1-3.2 MB/s from the moment music played, resuming
-the file (`+git73`). Not tried on the device: the Spotify/Bluetooth trigger
-(needs a phone; unit-tested) and the return to full speed after 10 min. **Built, not yet seen:** the
-screen applied during setup (ADR-0109 amended) - needs a fresh setup.
-
-**0.9.2 released 2026-10-06 on Testing (serial 25), from `phase-13d`**
-(tag v0.9.2 at 3225ec1): 13f's Lyrion menus behind Extended navigation,
-Minimise (ADR-0122), the phone sheet in one row, the enrichment tile, the
-on-the-go enrichment fixes, the update screen's end and progress. Image
-`image/deploy/2026-10-06-gexis-player-v0.9.2.img` in the main checkout;
-111 checks passed; check-upstream ok (Plexamp 4.13.2, Lyrion 9.1.1).
-**PR #50 into `main` waits for George.** Phase 13d stays open (board
-tests); 13f stays open (George's tries, the hidden-library hour).
-
-**13f: Claude Design's look is built, Standard and Bar** (ADR-0118
-accepted, A-J plus the handover notes and George's answers, 2026-10-06;
-handover in `design/source/13f/`). Steps on `phase-13b`: 5ede1d5 (glyphs,
-counts, letter index), 9e39b2f (standard screens), then fixes from
-checking them against George's Lyrion - letter headers by Lyrion's
-textkey, a rail jump that stays put, the search field's look, counts that
-match what is shown (a last page counts the rows shown; J's entry is
-Lyrion-counted), the 711 panel's album page and Album Artists card -
-and **step 3, the bars** (4309aa4): LyrionLevel and LyrionSearch take
-`bar`/`wide`; the letter-pair strip is one component, `bar/JumpStrip`,
-shared with the bar Artists row (George: "consistent"); Play all and the
-app logo in the head column; bar home gains My Music, Favourites, Apps
-(196 x 300 sideways). **Album Artists** replaces Artists on both homes
-(George, 2026-10-06). Standard checked at 711/800/853 and bars at 1280
-and 1850 x 400, through the relay harness against George's Lyrion.
-**Owed:** (1) done 2026-10-06 - `0.9.1+git42.ba6900a` installed on
-gexis (George's go-ahead); Qobuz's context-menu albums now give `play`
-tracks with add/next/play, and the album page checked on bar and
-standard; (2) Play / Play next / Add never pressed on
-George's system - his to try; (3) George's look at the bars, and note 7
-(whether the strip reads as buttons) on a real bar.
-Also on the 13d preview since 0.9.1: the update screen ends on the steps
-until Done, install progress by package size, notes no longer cut
-(ADR-0110 amended) - effective from the update after the one that
-delivers them, so 0.9.2's notes must stay under 1,200 characters.
+Last updated: 2026-10-08 (on R2D2).
 
 ## Start here
 
-**Work continues on `phase-13b` in the main checkout, and Phase 13d in its
-own worktree, `~/projects/gexis-player-13d` (branch `phase-13d`). Releases
-0.5.0 to 0.8.9 went to the testing channel (0.8.9 is serial 22,
-2026-10-04).** `main` is merged through 0.8.8 (PR #46); **the 0.8.9 PR waits
-for George to merge it** - he merges, Claude opens. Next: 13b's last screen
-swaps (George), then testing 13d (its worktree), then **13f, Lyrion's own
-menus** (added 2026-10-04, Finding 110; an ADR first). 0.8.8 was released
-without a preview, at George's word: he tests the bars on releases, not
-previews, and test releases keep their logs across restarts (Debug logs
-default on for Testing). **George is testing the bars on 0.8.8**: the new
-screen switched to before the panel starts (`gexis-screen-check.service`,
-ADR-0109 amended again 2026-10-04) is not yet seen on hardware. **From 0.8.8, one PR per
-release** (George, 2026-10-04): never push a release onto an open PR.
-**Phases 13a, 13b, 13c and 13e are closed** (DEVELOPMENT.md; 13b on 2026-10-04).
+Branches: **`phase-13b`** in the main checkout
+holds the documents and shared work; **`phase-13d`** in
+`~/projects/gexis-player-13d` is the release branch - every change since
+0.9.3 is there, and `phase-13b` is merged into it after each docs change.
+Worktrees `~/projects/gexis-player-r093` and `-r094` sit at their tags and can
+be removed once their PRs are merged. Earlier narrative: `docs/HANDOFF-ARCHIVE.md`.
 
-| What | State |
-|---|---|
-| Lyrion server (ADR-0115, 19 decisions; Finding 109) | Shipped through 0.8.6. Measured on George's tens of thousands of files: scans 2 h 7 min (High) / 1 h 59 min (Normal), memory 1,876 / 1,191 MB, no audio gaps during a scan. Memory limit = the player's less 1 GB; Normal under 4 GB |
-| Fetched software (ADR-0100 amended) | Pinned versions; `packaging/check-upstream.sh` before each release; a new pin is fetched by the update that brings it |
-| Change logs (ADR-0116) | `release_notes.json` is the one source: the player's page, `CHANGELOG.md` on `main`, the signed notes |
-| Screens (ADR-0109) | The 13.3" tested at 1920 x 1080 and recognised; a case listed once as its panel. **A new screen at start: a recognised one is switched to with Keep (amended 2026-10-04), any other asked about** - both swaps passed on George's panels, 2026-10-04. Crowd-sourced fingerprints postponed (recorded in the ADR). The 13.3"'s brief blackouts were its HDMI cable (LESSONS 56) |
-| Skin picker (ADR-0050 amended) | 960 px previews made ahead for every installed pack |
-| Released in 0.8.7 | The new-screen notice and its straight switch (29a3386, 88ee721, d91a4bc); a USB disk kept 7 days after unplugging (ADR-0115 decision 17, ddf088f); setup's copy fixes from the review (963857d-034fb33); genre pills kept to two rows on the artist page (7cd3e1b); skin packs fetched from the channel's release when the player's own is unpublished, a stale pack failure no longer shown, failures in words (efd329d); Finding 109's playback test; 13a/13c/13e closed |
+**0.9.4 released 2026-10-08 on Testing** (tag `v0.9.4`, release `r0.9.4`,
+image `image/deploy/2026-10-08-gexis-player-v0.9.4.img`, 111 checks passed;
+Plexamp 4.13.2 and Lyrion 9.1.1 the latest). PR __PR__ waits for George.
+In it: one Volume row - Hardware / Software / Fixed (ADR-0124, ADR-0127);
+the visualiser on HDMI with Software volume (ADR-0055 §6 amended, Finding
+116); Hardware feedback with the Reported state (ADR-0126); setup's Plugins
+step and the settling screen (ADR-0128); updates that go back when the player
+does not answer, check after a reboot and refuse takeovers (ADR-0105/0110 -
+**only from updates made from 0.9.4 on**); Pexels removed; George's small
+fixes. Docs reconciled with the code (ARCHITECTURE.md, README, the guides,
+nine ADRs).
 
-**`gexis` right now (2026-10-06, evening):** the 13d preview with
-`phase-13b` merged - core, player and ui `0.9.1+git60.4f0662e`, Extended
-navigation on, kiosk.env back to its original (debug port off, checksum
-2fecdd6d...). Check playback before any restart.
+**guestpi** (192.168.178.21, Pi-DAC PRO, 13.3"): runs the 0.9.4 code as a
+preview. **gexis** is offline since its card swap.
 
-**After 0.9.2 (2026-10-06, night), on `phase-13b`:**
-- Updater: apt-listchanges off (the install bar's 16 s at 0), DpkgShare's
-  rate re-measured (3.5 MB/s), the bar held full before the tick
-  (ADR-0110 amended); **Check for updates now runs a check-only unit**
-  (`gexis-update-checknow.service`) - it had started the nightly unit,
-  which installs on Automatic. Phone: Settings' lists end clear of the
-  sheet (22 px, measured on every page). On gexis as preview
-  `0.9.2+git5` except the check-only unit (committed after).
-- **Panel speed: Finding 112, fixed.** The slower opens were the hidden
-  visualiser drawing (57 % of a core while playing). George chose option 1:
-  ADR-0019 amended - hidden, it does not draw (`/run/gexis/visualiser-shown`).
-  Now 6 % hidden, shown in 0.3 s with a finished frame; every open at or
-  below 29 September (1-3 % dropped). On gexis as preview core/player
-  `0.9.2+git13.c8d3e83`, gexis-system `0.8.9+git160.0be27be`. `panel-frames.py`
-  now ignores the hidden library and measures all 16 interactions.
-- **ADR-0123 / ADR-0124 accepted 2026-10-07** (rows in ADR-0022), built one
-  step at a time: **step 1, Wi-Fi details - built, on gexis**, then George's
-  two findings fixed (one chevron; the lock alone at the line's end, open
-  where the password is known, both the same 13 x 15): ui/player
-  `0.9.2+git28`, core `0.9.2+git25` (restarted) on gexis; checked on the
-  panel and on phones 412 and 360 px wide. docs-drafts and the manual page updated.
-  **Next: step 2, Cable** (manual address, 60 s keep) - gexis has `eth0` but no
-  cable plugged; **step 3, software volume** (`meter -> softvol -> card`;
-  verify passthrough at 100 % and the HDMI placement).
-- **Docs (drafts) - HELD until George gives the go-ahead** (2026-10-06:
-  "Do not release them until I give the go ahead"): `docs/manual/`,
-  `docs/FAQ.md`, `docs/tech/` live ONLY on the local branch `docs-drafts`
-  (commit 74fc7f9), taken off `phase-13b` so no release carries them.
-  Manual and FAQ published privately for his comments (watched);
-  `docs/HARDWARE.md` updated and published as a commentable doc.
-  The tech-docs pass listed where ADRs and `docs/ARCHITECTURE.md` disagree
-  with the code (ADR-0105 §4, 0106 item 2, 0107's table, 0108's main text,
-  0110, 0113, 0040 §1, 0031/0104 on setup; stale docstrings in volume.py,
-  remote_volume.py, adapters/base.py, NowPlaying.svelte; vite dev proxy
-  missing routes) - **to be reconciled, not yet done.**
-- Plexamp 0.4.0 was already released and pinned (shipped in 0.9.2).
+**Left before the first public release.** George to test: the Volume row
+(Fixed never tried by Claude - it goes to full level), the volume-jump fixes
+(Spotify after a mode change, Bluetooth's late level), HDMI with Software
+volume (visualiser; Bluetooth with the volume raised), software volume across
+a full reboot, the small fixes, Hardware feedback on the real panel (pattern,
+taps, tones, GitHub - labels exist), and a **freshly flashed card** (the
+Plugins step, the settling screen, the screen applied in setup). The update
+safety can only be seen on the release after 0.9.4. Claude to do: the cable
+network (ADR-0123 step 2; needs a cable), **the final thorough code check**
+(George: everything once more; volume, the adapters and arbitration must
+work perfectly from the start), the first public release, and removing
+passwordless sudo from the image - last.
 
-**Second round of George's findings (2026-10-06), built and on gexis:**
-- One-tap search also for Qobuz's and Spotty's "Search" folders (opened
-  straight to the field, their kept searches skipped - decision E).
-- Phone sheet (ADR-0101 amended): one row of icons, open or closed; Now
-  playing a toggle (`panel.now` reported; `minimise` ask added).
-- Choppiness, measured with a fake phone on the real relay
-  (scratchpad tools): (a) the core's event loop stalls the touchpad relay
-  while it parses big Lyrion answers - ~135 ms in every ~170 for 2 s while
-  All Artists' letter index (2.7 MB) was built; letter indexes now kept by
-  list for 30 min; (b) bunches are spread on the panel: moves 60 % per
-  frame, scrolls half per frame in whole pixels (ADR-0121 §3 amended); the
-  browser's own smooth scroll was tried and measured worse (slow start,
-  then 150-190 px jumps), reverted. **Still open:** a 104 ms main-thread
-  hitch when the Album Artists grid draws its next rows (page work, not
-  input); gexis's Wi-Fi power saving is on (not yet measured as a cause -
-  a decision for George once measured); **item 4 ("redrawn more often")
-  not reproduced** - the idle home paints nothing in 8 s; asked George
-  what he sees and when.
-- Enrichment: Lyrion Client's three rows are one tile, `sweep_all`
-  (ADR-0022 inventory, ADR-0059 amended), last run kept in enrichment.db.
-- On-the-go enrichment (traced by a subagent, claims checked): late covers
-  now reach the screen (daemon looks ~90 s, panel 60 s), one fetch per
-  track/provider and one search per artist at a time, providers search
-  with the raw artist; 86 stored 'nobody' identities purged on gexis
-  (logged), nobodies now expire after a week. Then (same evening, George: "Do this too"): queries as a catalogue
-  holds the names (lead artist, trimmed album, bare title; live-checked:
-  two traced Bluetooth tracks now get covers), covers asked only when the
-  renderer sent none and first, album/artist answers cached without the
-  duration, confidence stored with cached answers. **Kept as designed:**
-  the per-provider 15-min backoff (a per-track one was weighed and refused:
-  a down provider would be asked for every track).
-
-**George's findings of 2026-10-06, all built and on gexis:** Qobuz's
-unstreamable "* " albums open as album pages (tracks Not available, a
-note in place of Play album); a library album gets lengths and a Release
-block from the library; rail/strip drawn while the letter index is pending
-(Albums, Genres and a genre's artists no longer jump); pointer: a tap
-clears the ring, the queue button rings, sideways scroll shape, moves
-applied once a frame (**choppiness not confirmed fixed** - his hands);
-touchpad socket reopens when the phone's page returns; the phone's
-Home/Now playing/Lyrics row moved between pad and volume; a whole
-labelled field counts as a text field, search openers announce text entry
-and the field takes focus as it opens (**the one-tap keyboard is untried
-on a phone**). **ADR-0122 accepted and built**: Minimise (chevron, top
-left over the art) shows the library as left; Home stays. **Owed:** the
-hidden library's behaviour on the Pi over an hour (ADR-0122,
-Consequences); George's look at the chevron.
-
-**Next, in order:**
-0. **Fixes after 0.9.0, on gexis, unreleased** (George's findings,
-   2026-10-05): an update stops whoever is playing (4f1684d); the starting
-   volume holds 3 s after Spotify takes over (e10b93e); Starting volume
-   beside Spotify's switch (1ef73a8); the panel's post-update notes scroll
-   and wait for Continue (1f5cd5f). The phone's notes scrolled in every
-   test - George sends a screenshot next time.
-0. **ADR-0121, the phone as touchpad and keyboard: built and on gexis**
-   (1c46f74, a56430d, 6181168; after George's first try, a8130c9 speed
-   150-400 %, 88f389d the choppy start, 78356e2 a bigger pad and a touch
-   outside closes the sheet). Three of its four measurements done and in
-   the ADR (31 ms round trip; taps drive the panel after two fixes; the
-   kiosk 16-23 % of one core while moving). **Owed: the keyboard on George's
-   Android** - he found no text field; Settings' text rows (e.g. Pexels API
-   key, empty) have one. **No system cursor on the panel** since fd106a5 + 5b4042c
-   (a blank labwc cursor theme in gexis-system; on gexis, checked by grim
-   -c). **Gestures and pointer styles built and on gexis**
-   (George took every recommendation, 2026-10-05; ADR-0121 §2-3 amended,
-   Pointer style in ADR-0022): two fingers scroll (7ea1f87), pinch zooms
-   1-3x and zooms out when the phone leaves; Dot and Arrow from Claude
-   Design's *Cursors* handoff (`Gexis_DAC_Player_3.zip`), Dot first.
-   Checked through a local relay, not on George's phone; the zoom's cost
-   on the Pi is not measured. **George's second try** (2026-10-05): TheAudioDB key,
-   Pexels API key and Pointer style had never accepted writes - not in
-   `__main__`'s wired table; fixed, and a test now catches it (42c7236).
-   The drawer holds while the pointer is on it, rings only on icon buttons
-   and follow the screen (d84fb94), scroll lines on the pad (80ff8bc).
-   **Home / Now playing / Lyrics in the phone's sheet** (ADR-0101
-   amended; N1 not behind the touchpad, N2 greyed while nothing plays;
-   55d6c1e): checked on gexis's panel (standard layout) - Lyrics, Lyrics
-   off, Home, Now playing, each screenshotted, toggle state reported back.
-   **The bar layout's lyrics switch is not tried on hardware.**
-0. **Idle backgrounds checked** (George: "always the same" animals,
-   2026-10-05; ADR-0047 §2e, W1-W3 as recommended): the pool was one page
-   of 50 at a change a minute (52 pictures drawn 230 times in an
-   afternoon). Now 200 a page, the page turning daily through three, no
-   repeat until the page is spent (online and on-device), kept on disk in
-   `/var/lib/gexis-core/wallpapers/state.json` - checked on gexis: 200
-   animals, a restart did not ask Pixabay again (8da8fc7). Artist pictures
-   pick among an artist's fanart backgrounds (3172c48). A face-placed
-   picture failed its request - numpy floats - fixed (b8eb10c). **Not
-   done**: a library over 1000 artists uses its first 1000 only; bars
-   find 0-12 wide pictures per 200 (Animals none). Drags (queue order, list scrolling) are
-   out by decision D. Not measured during playback.
-0. **ADR-0120, bar backgrounds** (accepted 2026-10-05): step 1 (placement)
-   and step 2 (TheAudioDB for
-   backgrounds and the Enrichment updates, its key row) built and live on
-   gexis; the shared key's album list holds one album per artist, so covers
-   are asked per album. Step 3 (Pexels, the rename to *Pixabay API key*,
-   the bar's source order measured) built and live too, **untried against
-   Pexels itself**: it issues no new keys for now (George), so the row is
-   empty.
-   a Pexels key for step 3.
-1. **Phase 13d** (ADR-0117, accepted 2026-10-04): built in the worktree,
-   six commits, not on hardware. George tests later: the DAC2 HD unchanged
-   (preview from `phase-13d`), the IQaudio DAC+ chosen under *Sound card
-   board*, and the take-back with a board that is not fitted. **Tests in a
-   worktree:** the scratchpad venv imports the main checkout's
-   `gexis_core`; run them with `PYTHONPATH=src`.
-2. **The copy review** (George, 2026-10-03): one page per area, built from the
-   code, with screenshots, for him to comment on. **Setup** ("Setup Copy")
-   and **Settings** ("Settings Copy", 2026-10-05) are done, every comment
-   fixed on `phase-13b` (6061e10-15e7d56): shorter Audio texts, Fixed output
-   hides the three volume rows, the artwork updates moved back to Enrichment
-   under *Lyrion Client* (reversing 2026-09-25 at his request), counts in
-   what a list holds, errors in words, "player" where the text means the
-   player and "device" only for the hardware (his call). **The intermediate
-   screens are the third page, not started.** Comments do not reach the
-   session by themselves: watch the artifact and read its threads.
-3. **ADR-0119, Plexamp claimed from Settings** - accepted and built,
-   **live on gexis as a preview** (2026-10-05): the contract's new `row`
-   event (47190f8), the row's *Claimed* / *Claim again* and links in notes
-   (48d0718), `plexamp-run` (ab56c0c), and **gexis-plexamp 0.4.0, committed
-   in its own repository (784242c), not pushed or released** - on gexis its
-   files were laid over the 0.3.0 package by hand. A release needs a
-   gexis-plexamp 0.4.0 release and its pin moved. *Claim again* on George's
-   real player worked (2026-10-05, his token): a new Plex player, Plexamp's own
-   settings started again; it plays through the DAC and the meters (George). The test player `gexis-claimtest` is his to remove from
-   his Plex account.
-4. **Phase 13d, DACs**: ADR-0117 accepted, built in its worktree, being
-   tested on `gexis` (merged up with `phase-13b` for the preview).
-5. **docs/HARDWARE.md** is a draft; what it lacks is listed at its end.
-
-**Working rules learned this session** (also in memory): a change is seen on
-George's player before a release is cut, installed as the **whole set of one
-commit, `gexis-player` with it, reading every removal apt reports**
-(LESSONS 55), and the core restarted and checked by behaviour only the new
-code has (LESSONS 54). A setting read for a worker thread is read on the
-core's own thread first (SQLite; it bit twice).
-
-**How a release is made** (each step proven 2026-10-02): run
-`packaging/check-upstream.sh` - a pin behind its maker is tried on George's
-player first, then moved (ADR-0100, amended 2026-10-03); George sees every
-change live on his player before any release; George approves the notes (impersonal, New / Fixed / Good to know, no restart promises -
-publish.sh refuses them); add them, with the day, to
-`core/src/gexis_core/release_notes.json`, regenerate `CHANGELOG.md` (`cd core
-&& python -m gexis_core.changelog ../CHANGELOG.md`; a test checks it) and
-commit (ADR-0116: publish.sh takes them from the tagged commit's file, and
-the player shows them under Change logs); tag `vX.Y.Z` locally; `make image` (never commit while it
-packages - a `.dirty` build); `image/verify-image.sh` on the image;
-`packaging/release/build.sh <img>`; `packaging/release/publish.sh rX.Y.Z
---channel testing`; push the tag; then push the branch and open **one**
-pull request into `main` for the release - **George merges it** (2026-10-03; ADR-0116 decision 7: Change logs
-points at `main`'s `CHANGELOG.md`, so it is current once he has). `packaging/release/out` is a symlink into the
-`gexis-player-13a` worktree, excluded in `.git/info/exclude`. Never edit a
-script while it runs (LESSONS 51).
-
-**Provisioning a card:** do it, don't hand it to George - `udisksctl mount`
-needs no password where `sudo mount` does. A card meant to test setup gets
-the SSH key only, since a saved Wi-Fi skips setup.
-
-### Branches and PRs
-
-| Branch | State | What is on it |
-|---|---|---|
-| `main` | Merged through 0.8.9 (PR #47) | Every release to date |
-| `phase-13b` | 13b, closed; records since 0.8.9 not yet in a PR | Goes to `main` with the next release's PR |
-| `phase-13d` | Worktree `~/projects/gexis-player-13d`; ADR-0117 and its build, with `phase-13b` merged in | Merged into the release branch once George's tests pass |
-| tags | `v0.1.0`-`v0.8.9` all pushed (2026-10-04) | - |
-| `design-13b` | Claude Design's 2026-09-30 handoff | Reference only |
-
-### Devices
-
-- **A card flashed 2026-10-02 with `2026-10-02-gexis-player-v0.5.0.img`**
-  (97 `verify-image.sh` checks), SSH key only, set up by George from the
-  phone and his backup restored: *"everything seems in place"*. His finding
-  there - Keep asked at boot while he was at the phone - is what the 13b
-  amendment above answers.
-- **sofa-pi** (192.168.178.131) took every update 852 -> 0.3.3 by George's
-  own hand; whether it is on 0.4.0 or 0.5.0 now was not checked this session.
-- The core's tests run on R2D2 from a venv (`python3 -m venv <dir>`,
-  `pip install -e 'core[test]'`); add pygame to run the render tests too.
-
-### Decided, not started
-
-- **Hardware requirements, minimum and recommended** - **started as
-  `docs/HARDWARE.md`** (George, 2026-10-03), the Lyrion server its own
-  optional section; what is not yet in it is listed at its end
-  (ADR-0111 decision 12):
-  card space for the skins, and the Pi's load at 1920 x 1080. **And the
-  Lyrion server** (George, 2026-10-03: *"record the results for hardware
-  recommendations"*; Finding 109): memory by library size - about 27 KB a
-  file while scanning, 1,876 MB for tens of thousands of files, the player itself needing
-  about 1 GB beside it, so no server on a 1 GB Pi (ADR-0115 decision 18);
-  card space - 151 MB of library and 670 MB of artwork cache for those files;
-  time - 2 h 7 min for a first scan over the network, 26 min to check.
-- **go-librespot 0.9.0 -> 0.10.2** (George, 2026-09-30: *"After 13c"*) -
-  the first real update of a component through a release.
-- **New users start from an image** (ADR-0105 amended): promoting to stable
-  attaches the signed image; a Raspberry Pi Imager listing with the first
-  public release, which waits on 13a, 13b and 13c.
-- **Before the first public release** (George's to-do list, 2026-10-03):
-  - **Remove the `pi` user's passwordless `sudo`** (George: *"The removal of
-    sudo should go to first release to-dos"*; ADR-0107 decision 3 left it to
-    then). Development images keep it - Claude's SSH work on `gexis` uses it -
-    so the release image is where it goes.
-- **Settings as an installed app: not now** (ADR-0102).
-
-### Open, none blocking
-
-- **PeppyMeter's redraw area for a meter away from the corner** is offset by
-  `meter.y`; letterboxing adds 40 px to it. Whether the driver's partial
-  updates show it as smearing is unchecked (skin-packs report, 2026-10-01).
-- **An image without skins starts `gexis-peppy`, which exits 1** ("no
-  skins") until a pack arrives and the core restarts it. Harmless; one
-  failed unit in the journal.
-- **Choosing a screen restarts the player even when nothing visible
-  changes** - out of the 2026-10-02 amendment's scope.
-- **LMS's power-on reaches the core 1.45-1.5 s after the press** (George,
-  2026-09-28: recorded, no action).
-- **Bluetooth "Not provided", once**, 2026-09-26; not reproduced.
-- **The Restore row reads "4 paired"** - Bluetooth's word for backups too.
-- **A phone that opens `/` posts `/panel/painted`**, read from the code.
-- Older open items are in the archive's 2026-09-27 and 2026-10-02 blocks.
+**Learned 2026-10-07/08, not yet in LESSONS:** a new worktree needs
+`git submodule update --init` before `make image` (pi-gen); a package
+versioned by its upstream (gexis-beszel-agent) must have its revision raised
+when anything else it carries changes, or apt never installs it (raised to
+-2); headless browser profiles from screenshot scripts filled /tmp (16 GB) -
+delete them after each run.
 
 ## Build environment (2026-09-13) — read this before the next build
 
