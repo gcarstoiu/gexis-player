@@ -25,11 +25,46 @@ be removed once their PRs are merged. Earlier narrative: `docs/HANDOFF-ARCHIVE.m
   Hub public key check, the failed-plugin note, go-librespot 0.10.3, Beszel
   0.21.0, Settings not sliding sideways on a phone.
 
-George to test on a freshly flashed card: the restore in setup, including
-renaming a backup as a second player. *Open* in ADR-0131: backups from a newer
-release are accepted, with a note.
+**0.9.5 on a freshly flashed card (gexis's Pi, now ShelvesPi: DAC2 HD,
+11.9" bar), 2026-10-08.** The restore in setup was tried, and failed in ways
+now fixed on `phase-13d`, none of it released yet:
+- the name, time zone, output and screen were never applied: written after
+  the settings file was replaced, so the core's open store refused them
+  (fixed: applied before the files go back; a real-store test);
+- guestpi's DAC came back on a player with another one: **Output and Screen
+  are now asked on every restore** (ADR-0131 amended again);
+- a second player kept the first one's Beszel hub, key and token and
+  Plexamp's claim token (settings, not files): now removed
+  (`backups.IDENTITY_SETTINGS`);
+- Plexamp was offered as a source although its download had failed:
+  gexis-plexamp's first availability answer is now always sent (committed in
+  that repository; **needs a 0.4.3 release and the pin moved**); the plugin
+  contract now says a renderer is available from the moment it connects;
+- Settings: a press on Download or Forget no longer presses the whole row;
+  a confirmation on a bar is its own height, centred.
 
-**guestpi** (192.168.178.21, Pi-DAC PRO, 13.3"): runs 0.9.5's code as a
+**The restarts George saw were power, not gexis**: 11 boots in the card's
+journal, none with a shutdown, every journal file left unclosed, one
+*Undervoltage detected*. Asked George how the bar and the Pi are powered.
+The power cuts left **dpkg half-done** (the skins pack install, updates/0000);
+finish it with George's say once the power is steady, dry run first. The
+lighter square around the boot logo is unexplained by the code (every stage
+paints #101a21 edge to edge); likely the first boot's mode before the bar's
+`video=` was set. The address the router first gave the player was taken by
+another device (NetworkManager's ACD refused it): the panel should say when
+it has no IPv4 - not built.
+
+**Local commits cleaned 2026-10-08** (George: "also clean the commits"): the
+46 commits on `phase-13b`/`phase-13d` not on GitHub were rewritten so none
+adds the home Wi-Fi's name or home-network test addresses, and the two
+messages that pointed at the removal are neutral. Backups:
+`backup/phase-13b-before-clean`, `backup/phase-13d-before-clean` - local
+only, never pushed; delete once the next release is out. **PR #54** (the same
+scrub on main) waits for George's merge. Addresses already public before
+today (the dev machine, the LMS server, tests) are untouched: whether to
+scrub those too is George's.
+
+**guestpi** (Pi-DAC PRO, 13.3"): runs 0.9.5's code as a
 preview. **Plexamp claimed again** later on 2026-10-08, after three claims
 Plex refused (its sign-ins answered 200 and 401 within a second); the
 wrapper's three faults it showed are fixed (ADR-0119 amended, gexis-plexamp
@@ -43,7 +78,7 @@ wrapper's three faults it showed are fixed (ADR-0119 amended, gexis-plexamp
   exit, and the row says it (ADR-0119 amended; gexis-plexamp 0.4.2);
 - the **Cable** row (ADR-0123): state, Automatic / Manual address, the 60 s
   Keep; and the same for the connected Wi-Fi network (decision 2). Both tried
-  on guestpi end to end; guestpi back on DHCP on both (.107 cable, .21 Wi-Fi).
+  on guestpi end to end; guestpi back on DHCP on both.
   and **the cable wins**: Wi-Fi off while the cable carries the player, back
   without it (ADR-0123 amended; tried on guestpi with the port taken down);
 - `verify-image.sh` with Beszel 0.21.0's binary checksums.
