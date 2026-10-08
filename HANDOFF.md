@@ -37,12 +37,13 @@ nine ADRs).
   a lift above 1 kHz (ADR-0130, Finding 117; gexis-peppyalsa -2, a second
   patch). On guestpi since 2026-10-08; George to look at it on the panel.
 
-**Next:** restoring a backup in setup - George, 2026-10-08: keep the Wi-Fi
-step, then the backup instead of the other steps, a review of what it
-brings, then restart; backups from older releases accepted unless the
-settings schema changed beyond what migrations carry; plugins arrive on the
-getting-ready screen (ADR-0128). Claude designs it (no Claude Design); ADR
-first.
+- restoring a backup in setup (ADR-0131): after Network, New player or
+  Restore a backup; the file uploaded from the phone, checked, reviewed, then
+  joined, applied, put back and restarted. Walked through in a browser
+  against the real setup flow; **not yet on a freshly flashed card**, which is
+  the only place it shows - George's test. On guestpi (core
+  0.9.4+git29.7596821) its routes answer 409, as on any configured player.
+  *Open* in the ADR: backups from a newer release are accepted, with a note.
 
 **guestpi** (192.168.178.21, Pi-DAC PRO, 13.3"): runs all of that as a
 preview (core 0.9.4+git11.38e9c93); its Beszel heading reads Connected. The
