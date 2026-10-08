@@ -56,7 +56,9 @@ passwordless sudo from the image - last.
 profiles from screenshot scripts filled /tmp (16 GB) - delete them after each
 run; installing `gexis-core` does not restart it - restart it as its own gated
 step, or the old code keeps running. (The package-revision rule is LESSONS 53,
-not new: gexis-beszel-agent is at 0.21.0-2.)
+not new: gexis-beszel-agent is at 0.21.0-2.) Raising a Beszel pin also means
+raising `image/verify-image.sh`'s binary checksums: 0.9.5's first image check
+failed on exactly that (the image held the right binaries).
 
 ## Build environment (2026-09-13) — read this before the next build
 
