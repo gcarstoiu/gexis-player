@@ -507,3 +507,36 @@ def test_the_same_player_keeps_them_renamed_or_not(tmp_path):
         asyncio.run(_finish_told(flow, net))
         assert (root / "card/var/lib/beszel-agent/fingerprint").exists(), answers
         assert (root / "card/home/pi/.local/share/Plexamp/Settings").exists(), answers
+
+
+def test_a_restore_applies_its_answers_with_a_real_store(tmp_path):
+    """0.9.5 on a new card, 2026-10-08: the answers were applied after the
+    settings file was replaced, and the store the core held open refused
+    every write - the name, the time zone, the screen never applied. With a
+    real store: they are applied, and a name changed in setup goes over the
+    backup's own name file after the files are back."""
+    from gexis_core.settings import SettingsStore
+    from gexis_core.settings_registry import Settings, load_registry
+
+    calls = []
+    card = tmp_path / "card"
+    (card / "var/lib/gexis-core").mkdir(parents=True)
+    store = SettingsStore(card / "var/lib/gexis-core/settings.db")
+    settings = Settings(store, registry=load_registry(), seed_path=tmp_path / "none.json",
+                        defaults={"device_name": lambda: "raspberrypi"},
+                        wired={"device_name": lambda v: calls.append(("set", "device_name", v)),
+                               "timezone": lambda v: calls.append(("set", "timezone", v))})
+    base = tmp_path / "setup"
+    base.mkdir()
+    flow, net, _, _, upload, _ = _with_backup(base, FakeNM(devices=NOTHING), settings)
+    flow._restore_root = card
+    flow._rename = lambda name: calls.append(("rename", name, (card / "etc/gexis/device-name.env").read_text()))
+    flow.take_backup(upload)
+    flow.save({"ssid": "Home", "password": "hunter22", "name": "ShelvesPi"})
+    asyncio.run(_finish_told(flow, net))
+    assert ("set", "device_name", "ShelvesPi") in calls
+    assert ("set", "timezone", "Europe/Berlin") in calls
+    rename = [c for c in calls if c[0] == "rename"]
+    assert rename and rename[0][1] == "ShelvesPi"
+    assert "NAME=gexis" in rename[0][2], "renamed after the backup's own name file came back"
+    assert calls.index(("set", "device_name", "ShelvesPi")) < calls.index(rename[0])
