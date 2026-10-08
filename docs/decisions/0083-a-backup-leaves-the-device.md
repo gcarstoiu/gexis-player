@@ -130,3 +130,13 @@ dropped there would be a broken wallpaper.
   ([ADR-0131](0131-setup-can-restore-a-backup.md)).
 - Both ways, the two databases are now written beside themselves and
   renamed into place rather than overwritten.
+
+**Amended 2026-10-08, later** (George: *"can we add the option in system
+backup to also download one of the backups locally?"*):
+- Each backup in *Restore* has *Download* beside *Forget*, on a phone or
+  computer (not the panel, which saves no files).
+- It is `GET /backups/{name}`, by a name that is ours only, as the restore
+  is. It offers the same network nothing the Backups share does not already
+  offer (ADR-0028: the LAN is unauthenticated by decision).
+- With it, the file a newly flashed card's setup asks for (ADR-0131) is one
+  tap away.

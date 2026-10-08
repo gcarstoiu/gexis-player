@@ -486,7 +486,8 @@ update that brings it.
 *Settings → System → Back up now* writes the settings, the library's
 pictures, the paired devices and the player's configuration into the
 player's Backups share on the network. Copy the backup off the player before
-flashing. After flashing, setup offers *Restore a backup* right after the
+flashing: on a phone or computer, *Settings → System → Restore* has *Download*
+beside each backup, or copy it from the share. After flashing, setup offers *Restore a backup* right after the
 Wi-Fi: choose the file on the phone, check what it brings, and the player
 restarts with everything back. Anything setup asks (the name, for instance)
 can be changed in that review, so one player's backup can start another. With
