@@ -63,7 +63,7 @@ amplifier, flash the Gexis image, and it becomes a streamer with a face:
 | 🌤️ **Idle screen** | Clock (24 or 12 hour), weather and wallpapers when nothing is playing |
 | 📱 **Settings anywhere** | The full settings screen on the panel and on any phone or computer on your network |
 | 🔌 **Plugins** | Extra sources and services as plugins, switched on or off in Settings, with progress and retry shown in the switch itself when one downloads software. Today: Plexamp and the Lyrion Server (sources), the visualiser skins, and Beszel monitoring (system). Your own plugins can be uploaded from Settings. Remove deletes what a plugin downloaded |
-| 💾 **Backup & restore** | Your settings, pairings and source logins in one archive on a network share, restored onto a freshly flashed card |
+| 💾 **Backup & restore** | Your settings, pairings and source logins in one archive on a network share. A freshly flashed card restores it during setup, straight from your phone, after showing what it brings back |
 | 🙈 **Headless** | Run it without the screen; everything else keeps working |
 
 ## 🏆 Where it shines
