@@ -89,6 +89,7 @@ from gexis_core.systemd import is_enabled as _unit_is_enabled
 from gexis_core.systemd import disagreeing as disagreeing_units
 from gexis_core.systemd import set_enabled as _set_unit_enabled
 from gexis_core.systemd import restart_if_enabled as _restart_if_enabled
+from gexis_core.systemd import unit_state as _unit_state
 from gexis_core.artwork_sweep import ArtworkSweep
 from gexis_core.bluealsa_volume import BluealsaVolume
 from gexis_core.remote_volume import RemoteVolume
@@ -2880,6 +2881,37 @@ async def main() -> None:
             await asyncio.sleep(2 if view else 10)
 
     asyncio.ensure_future(_follow_settling())
+
+    async def _follow_service_plugins() -> None:
+        """**A switched-on service that cannot start says so on its switch**
+        (George, 2026-10-07: the Beszel agent failed at every start on a
+        pasted key, and nothing in Settings said so). Its unit `failed`: the
+        row says it could not start; running again: said no more. Only what
+        this put there is cleared - a plugin's own report is its own."""
+        said: set[str] = set()
+        while True:
+            for plugin in installed_plugins:
+                if plugin.kind != "service" or not plugin.unit:
+                    continue
+                row = plugin.enabled_row or f"{plugin.id}.enabled"
+                try:
+                    on = settings.value(row) is not False
+                except Exception:  # noqa: BLE001 - a plugin without its row
+                    continue
+                state = await asyncio.to_thread(_unit_state, plugin.unit) if on else None
+                if state == "failed":
+                    changed = settings.report(row, "failed", error=f"{plugin.name} could not start. Check its settings.")
+                    said.add(row)
+                elif row in said:
+                    changed = settings.report(row, None)
+                    said.discard(row)
+                else:
+                    changed = False
+                if changed:
+                    state_store.bump_settings_revision()
+            await asyncio.sleep(15)
+
+    asyncio.ensure_future(_follow_service_plugins())
 
     def _settling_done() -> None:
         settling.end()

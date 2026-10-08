@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+import re
 from functools import lru_cache
 from pathlib import Path
 from collections.abc import Hashable
@@ -339,6 +340,19 @@ def validate(row: dict, value: Any, *, options: Any = None) -> Any:
         value = value.strip()
         if len(value) > TEXT_MAX:
             raise InvalidValue(f"at most {TEXT_MAX} characters")
+        # **The form a value must have** (2026-10-07: a Beszel key that was a
+        # pasted paragraph left the agent failing at every start, and nothing
+        # said so). `pattern` is matched whole; `invalid` is the sentence the
+        # panel shows. Empty always passes - clearing a row is not a value.
+        pattern = row.get("pattern")
+        if pattern and value:
+            try:
+                ok = re.fullmatch(pattern, value) is not None
+            except re.error:
+                logger.warning("settings: %s has a pattern that does not compile; not checked", row.get("key"))
+                ok = True
+            if not ok:
+                raise InvalidValue(row.get("invalid") or "not in the expected form")
     return value
 
 

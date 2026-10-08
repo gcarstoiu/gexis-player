@@ -577,6 +577,8 @@
       // A 409 is a choice the hardware has taken away (its reason is on the
       // row already, in words) or a row this release does not apply.
       if (result.status === 409) flash(row.unavailable?.[value] ?? plainly(result.error, `${row.label} cannot be changed yet`));
+      // A value not in the row's form says what the form is (`invalid`).
+      else if (result.status === 400 && row.invalid) flash(row.invalid, 4500);
       else if (!result.ok) flash(plainly(result.error ?? `HTTP ${result.status}`, `${row.label} was not saved. Try again.`));
       return result.ok;
     } finally {

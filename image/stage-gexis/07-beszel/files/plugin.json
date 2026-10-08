@@ -35,7 +35,9 @@
       "secret": true,
       "placeholder": "ssh-ed25519 AAAA...",
       "default": null,
-      "env": "KEY"
+      "env": "KEY",
+      "pattern": "ssh-(ed25519|rsa|ecdsa-sha2-nistp(256|384|521)) [A-Za-z0-9+/]+={0,3}( \\S.*)?",
+      "invalid": "That is not the hub's public key. It starts with ssh-ed25519 - copy it from the hub's Add System dialog."
     }
   ]
 }

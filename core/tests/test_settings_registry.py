@@ -1490,3 +1490,24 @@ def test_output_mode_and_software_volume_become_one_row(tmp_path):
         settings_migrations.migrate(store)
         assert store.get("output_mode") == after, before
         assert store.get("software_volume") is None
+
+
+def test_a_text_row_with_a_pattern_refuses_what_does_not_fit_and_says_why():
+    """2026-10-07: a pasted paragraph as the Beszel hub's key left the agent
+    failing at every start, and nothing said so."""
+    import json
+    from pathlib import Path
+
+    from gexis_core.settings_registry import InvalidValue, validate
+
+    manifest = Path(__file__).parents[2] / "image" / "stage-gexis" / "07-beszel" / "files" / "plugin.json"
+    row = next(r for r in json.loads(manifest.read_text())["settings"] if r["key"] == "key")
+    key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFZVk7Y67bQyvENPVjSUAOS9eZvS+Cabc123"
+    assert validate(row, key) == key
+    assert validate(row, f"  {key} beszel@hub ") == f"{key} beszel@hub"
+    assert validate(row, "") == "", "clearing is not a value"
+    with pytest.raises(InvalidValue) as refused:
+        validate(row, "Waiting on your answer: while the settling screen is up")
+    assert str(refused.value).startswith("That is not the hub's public key")
+    assert validate({"key": "x", "type": "text", "pattern": "(unclosed"}, "anything") == "anything", \
+        "a pattern that does not compile does not lock the row"
