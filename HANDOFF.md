@@ -13,7 +13,8 @@ be removed once their PRs are merged. Earlier narrative: `docs/HANDOFF-ARCHIVE.m
 
 **0.9.4 released 2026-10-08 on Testing** (tag `v0.9.4`, release `r0.9.4`,
 image `image/deploy/2026-10-08-gexis-player-v0.9.4.img`, 111 checks passed;
-Plexamp 4.13.2 and Lyrion 9.1.1 the latest). PR __PR__ waits for George.
+Plexamp 4.13.2 and Lyrion 9.1.1 the latest; Testing channel serial 27, its
+signature checked with a device's keyring). **PR #52** waits for George.
 In it: one Volume row - Hardware / Software / Fixed (ADR-0124, ADR-0127);
 the visualiser on HDMI with Software volume (ADR-0055 §6 amended, Finding
 116); Hardware feedback with the Reported state (ADR-0126); setup's Plugins
@@ -23,8 +24,21 @@ does not answer, check after a reboot and refuse takeovers (ADR-0105/0110 -
 fixes. Docs reconciled with the code (ARCHITECTURE.md, README, the guides,
 nine ADRs).
 
-**guestpi** (192.168.178.21, Pi-DAC PRO, 13.3"): runs the 0.9.4 code as a
-preview. **gexis** is offline since its card swap.
+**Since 0.9.4, on `phase-13d` (for the next release's notes):**
+- go-librespot 0.10.3 and Beszel 0.21.0 (agent and hub) - `check-upstream.sh`
+  now checks both;
+- the Beszel Hub public key row refuses a value that is not a key
+  (`pattern`/`invalid` on text rows);
+- a service whose unit failed says *could not start* on its switch;
+- the Beszel heading in System says Connected / Connecting / Not connected
+  (ADR-0129, amended the same day from the switch to the heading);
+- Settings no longer slides sideways on a phone.
+
+**guestpi** (192.168.178.21, Pi-DAC PRO, 13.3"): runs all of that as a
+preview (core 0.9.4+git11.38e9c93); its Beszel heading reads Connected. George
+re-entered the Hub public key on 2026-10-08 after a test overwrote it
+(LESSONS 61). Not yet tried on it by George: Spotify on go-librespot 0.10.3,
+the orange and red states. **gexis** is offline since its card swap.
 
 **Left before the first public release.** George to test: the Volume row
 (Fixed never tried by Claude - it goes to full level), the volume-jump fixes
@@ -40,11 +54,11 @@ work perfectly from the start), the first public release, and removing
 passwordless sudo from the image - last.
 
 **Learned 2026-10-07/08, not yet in LESSONS:** a new worktree needs
-`git submodule update --init` before `make image` (pi-gen); a package
-versioned by its upstream (gexis-beszel-agent) must have its revision raised
-when anything else it carries changes, or apt never installs it (raised to
--2); headless browser profiles from screenshot scripts filled /tmp (16 GB) -
-delete them after each run.
+`git submodule update --init` before `make image` (pi-gen); headless browser
+profiles from screenshot scripts filled /tmp (16 GB) - delete them after each
+run; installing `gexis-core` does not restart it - restart it as its own gated
+step, or the old code keeps running. (The package-revision rule is LESSONS 53,
+not new: gexis-beszel-agent is at 0.21.0-2.)
 
 ## Build environment (2026-09-13) — read this before the next build
 
