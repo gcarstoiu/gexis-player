@@ -275,6 +275,10 @@ sequenceDiagram
      because the screen (`screen.json`), the time zone and the name live
      outside the store too. A screen this version does not know is left to
      Settings;
+   - with a name that differs from the backup's and `second_player` not
+     false, `backups.IDENTITIES` are left out of `restore_file()`: the
+     Beszel agent's data, Plexamp's store, go-librespot's `state.json` and
+     `/var/lib/bluetooth`;
    - `device_name.apply_restored()` unless the name was changed,
      `settling.json` for the skins and each downloading plugin that is on;
    - the panel's `restart_for: "restore"`, and the reboot. The file is
