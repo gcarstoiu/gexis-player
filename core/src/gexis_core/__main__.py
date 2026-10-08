@@ -2911,7 +2911,8 @@ async def main() -> None:
                     said.discard(row)
                 else:
                     changed = False
-                if plugin.connection:
+                # Not an uploaded one: its user is made afresh for every run.
+                if plugin.connection and not plugin.uploaded:
                     changed = _indicate_connection(plugin, row, state, quiet_since, uids) or changed
                 if changed:
                     state_store.bump_settings_revision()
