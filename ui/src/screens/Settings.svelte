@@ -3064,8 +3064,14 @@
     background: rgba(255, 255, 255, 0.045);
     border: 1px solid rgba(233, 238, 242, 0.1);
   }
-  .item:active {
+  /* Only the row's own tap: a press on Download or Forget inside it is
+     that button's, and the whole tile shrinking with it read as the row
+     being chosen (George, 2026-10-08, downloading a backup). */
+  .item:active:not(:has(.forget:active)) {
     transform: scale(0.95);
+  }
+  .forget:active {
+    transform: scale(0.92);
   }
   .item.is-joined {
     background: rgba(126, 214, 188, 0.12);
