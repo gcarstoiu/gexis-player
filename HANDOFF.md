@@ -35,8 +35,8 @@ nine ADRs).
 - Settings no longer slides sideways on a phone.
 
 **guestpi** (192.168.178.21, Pi-DAC PRO, 13.3"): runs all of that as a
-preview (core 0.9.4+git11.38e9c93); its Beszel heading reads Connected. George
-re-entered the Hub public key on 2026-10-08 after a test overwrote it
+preview (core 0.9.4+git11.38e9c93); its Beszel heading reads Connected. The Hub public key was
+re-entered by 08:01 on 2026-10-08, after a test overwrote it
 (LESSONS 61). Not yet tried on it by George: Spotify on go-librespot 0.10.3,
 the orange and red states. **gexis** is offline since its card swap.
 
