@@ -484,7 +484,8 @@ to 100 MB) to help track down a problem. It is on by default on the Testing
 channel; switching it off deletes the logs kept.
 
 **Is Beszel reaching its hub?**
-Its switch in *Settings → Plugins* says so while it is on: **Connected** in
+Its heading in *Settings → System*, above the hub address, token and key,
+says so while it is on: **Connected** in
 green, **Connecting** in orange for its first minute, then **Not connected**
 in red. Not connected usually means the hub address, token or Hub public key
 does not match the hub's *Add System* dialog. A Hub public key that is not one
