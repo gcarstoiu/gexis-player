@@ -298,8 +298,10 @@ Yes: *Settings → Device → Cable* (shown while a cable is plugged in), then
 *Manual*, with the address and its prefix (for example `192.168.1.20/24`), the
 gateway and one or two DNS servers. After *Save*, open the player at the new
 address and tap *Keep* within 60 seconds. If the new address does not work,
-the old one comes back by itself, so a mistake cannot lock you out. The same
-choice for Wi-Fi is not there yet.
+the old one comes back by itself, so a mistake cannot lock you out. On Wi-Fi,
+the same choice is under the connected network's details in *Settings →
+Device → Wi-Fi*. A backup does not hold a fixed address: set it again after
+restoring one.
 
 ## Setup and first boot
 

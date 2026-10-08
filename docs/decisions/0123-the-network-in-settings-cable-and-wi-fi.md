@@ -90,8 +90,21 @@ five**: details live in the sheet a row opens, not on the page.
      the sheet and *Keep* at `.230`;
   3. back to *Automatic* through the sheet, kept at the address DHCP gave
      (`.107`). guestpi ends as it started.
-- **Not built yet:** the same *Automatic / Manual* choice for the connected
-  Wi-Fi network (decision 2). It can reuse `wired.py` with the Wi-Fi profile.
+- **2026-10-08, the Wi-Fi address** (decision 2; George: *"do it as well"*):
+  the same `wired.Cable`, on `wlan0` and the connected network's profile;
+  the same form under the connected network's details in the Wi-Fi sheet.
+  It is served at `/network/wifi/address`, because `/network/wifi` was
+  already the details. Only one change waits at a time, and *Keep* counts
+  for whichever waits. Found while trying it: after a Wi-Fi rejoin the new
+  address shows only seconds later, so the phone was told to open
+  `http://None:8090`. A change now names the typed address (Manual), or waits
+  up to 20 s for DHCP's (Automatic).
+- **Tried on guestpi, Wi-Fi, 2026-10-08,** working over the cable: a manual
+  `192.0.2.231/24`, not kept, back to DHCP after 60 s plus the rejoin;
+  set again and kept from `.231`; back to *Automatic*, kept at `.21`.
+- **Consequence corrected:** "a backup carries it like the Wi-Fi networks"
+  above is wrong. A backup holds no NetworkManager profile (ADR-0083's
+  members), so a manual address is set again after a restore.
 - NetworkManager stores the cable's profile once it is changed (the profile
   it made by itself lived only in memory before). Automatic is the same as
   before it.
