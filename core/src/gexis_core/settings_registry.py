@@ -95,7 +95,10 @@ def _screens() -> tuple[str, ...]:
 def _screen_tags() -> dict[str, str]:
     """ADR-0109 decision 1: each model marked Tested or Untested."""
     from . import screens
-    return {s.label: "Tested" if s.tested else "Untested" for s in screens.all_screens()}
+    from . import hardware_reports
+    return {s.label: "Tested" if s.tested else
+            (hardware_reports.state(hardware_reports.screen(s.label)) or "Untested")
+            for s in screens.all_screens()}
 
 
 def _boards() -> tuple[str, ...]:
@@ -808,6 +811,18 @@ class Settings:
                 rows.append(public)
             groups.append({**group, "rows": rows})
         return groups
+
+    def kept(self, key: str) -> Any:
+        """A value the player keeps for itself - an `_`-key no row names
+        (the software level, the hardware prompt's record)."""
+        if not key.startswith("_"):
+            raise UnknownSetting(f"{key} is a setting; read it with value()")
+        return self._store.get(key)
+
+    def keep(self, key: str, value: Any) -> None:
+        if not key.startswith("_"):
+            raise UnknownSetting(f"{key} is a setting; write it with set()")
+        self._store.set(key, value)
 
     def set(self, key: str, value: Any) -> Any:
         row = self.row(key)

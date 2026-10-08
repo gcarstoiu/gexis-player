@@ -145,3 +145,41 @@ Phase 13b, not here.
   image's chroot does today (same Python 3.13, same wheels) - the first thing
   step 1 checks.
 - How long a full package build takes under qemu.
+
+## Amended 2026-10-07 (brought into line with the code)
+
+- **The packages table, `gexis-player`:** it depends on the exact versions
+  of `gexis-core`, `gexis-ui`, `gexis-system`, `gexis-peppyalsa`,
+  `gexis-peppy-engines`, `gexis-go-librespot`, `gexis-beszel-agent`,
+  `gexis-beszel-hub`, `gexis-lyrion-server` and `gexis-plexamp`, on alsa-lib
+  (`libasound2t64`, exact), and on the OS packages the device runs, but on no
+  skins package ([ADR-0111](0111-skin-sets-follow-the-screen.md)). It
+  carries `Replaces: gexis-skins`, because it now holds the
+  peppy_screensaver licence `gexis-skins` used to (`packaging/player/build.sh`).
+- **The packages table, packages added since:** `gexis-beszel-hub`
+  ([ADR-0114](0114-the-beszel-hub-as-a-plugin.md)), `gexis-lyrion-server`
+  ([ADR-0115](0115-the-lyrion-server-as-a-plugin.md)) and one
+  `gexis-skins-<W>x<H>` per screen size (ADR-0111).
+- **The packages table, `gexis-skins`:** still built, but new images do not
+  install it (`image/stage-gexis/01-packages/00-run.sh`) and nothing depends
+  on it. A release's skins part takes it only from the image the release is
+  built from (`packaging/release/build.sh`), so a release built from a
+  current image carries the five size packs and not `gexis-skins`.
+- **The packages table, `gexis-core`:** also carries the updater
+  (`/usr/lib/gexis/gexis-update`) and its units, the release key
+  (`/usr/share/gexis/keys/`) and the picture models backgrounds are placed
+  with ([ADR-0120](0120-backgrounds-cropped-by-what-they-show.md))
+  (`packaging/core/build.sh`).
+- **"Files the player rewrites":** the defaults still ship under
+  `/usr/share/gexis/defaults/`, but each package places its own from its own
+  install script, only if the file is not there: `gexis-core` the
+  `core.toml`, `gexis-go-librespot` its `config.yml`, `gexis-lyrion-server`
+  its prefs, `gexis-system` the rest. `gexis-system` does not copy for the
+  others.
+- **"The version the device reports":** the release is read from the
+  installed `gexis-player` as decided, but `/etc/gexis/image.info` keeps the
+  image's version as well as its build date
+  (`image/stage-gexis/01-packages/02-run.sh`; the core falls back to it when
+  no release is installed), and `packages.txt` is still written once, at
+  image build (`image/stage-gexis/09-legal/01-run-chroot.sh`), not after
+  every install.

@@ -225,7 +225,7 @@ class BluetoothAdapter(Adapter):
                 self._player_path = path
                 logger.info("bluetooth: MediaPlayer1 already present at %s on startup", path)
                 self._seed_metadata(ifaces[MEDIA_PLAYER_IFACE])
-                asyncio.create_task(self._attach_media_player(path))
+                asyncio.create_task(self._attach_media_player(path, on_acquire))
                 self._acquire_if_already_playing(ifaces[MEDIA_PLAYER_IFACE], on_acquire)
             if MEDIA_TRANSPORT_IFACE in ifaces:
                 # A phone already connected when the daemon started - its
@@ -254,7 +254,7 @@ class BluetoothAdapter(Adapter):
             self._player_path = path
             logger.info("bluetooth: MediaPlayer1 appeared at %s (acquisition)", path)
             self._seed_metadata(interfaces[MEDIA_PLAYER_IFACE])
-            asyncio.create_task(self._attach_media_player(path))
+            asyncio.create_task(self._attach_media_player(path, on_acquire))
             on_acquire()
         if MEDIA_TRANSPORT_IFACE in interfaces:
             self._connected_device_path = self._device_path_for_player(path)
@@ -338,7 +338,7 @@ class BluetoothAdapter(Adapter):
         logger.info("bluetooth: codec %s (MediaTransport1.Codec=%s)", self._last_codec, codec)
         self._report_metadata()
 
-    async def _attach_media_player(self, player_path: str) -> None:
+    async def _attach_media_player(self, player_path: str, on_acquire=None) -> None:
         """Subscribes to this MediaPlayer1's own PropertiesChanged, so track
         changes and position updates after the initial snapshot are
         reported too - not just the acquisition edge `on_acquire()` needs.
@@ -382,7 +382,21 @@ class BluetoothAdapter(Adapter):
             if "Position" in changed:
                 self._last_position_ms = changed["Position"]
             if "Status" in changed:
+                was = self._last_transport
                 self._last_transport = TRANSPORT_STATUS.get(changed["Status"])
+                # **Play on the phone takes the device** (2026-10-07, George on
+                # guestpi: the volume "was 0 then nothing was heard, but then
+                # as soon as I pushed the volume a bit higher then the volume
+                # was much higher"). A phone connected and paused when the core
+                # started - or paused long enough for another source to take
+                # over - plays again on the link it already has: no object
+                # appears, so no acquisition followed, Bluetooth never became
+                # the active source, and its volume was not applied. The
+                # supervisor ignores this when Bluetooth already has it.
+                if (on_acquire is not None and self._last_transport == "playing"
+                        and was != "playing"):
+                    logger.info("bluetooth: playing again on %s (acquisition)", player_path)
+                    on_acquire()
             if "Shuffle" in changed:
                 self._last_shuffle = changed["Shuffle"]
             if "Repeat" in changed:

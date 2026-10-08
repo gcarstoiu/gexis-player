@@ -147,3 +147,25 @@ unblock worked and the hotspot was asked for before `wlan0` was ready. Image
 759-g3d38d11 waits up to 20 s for NetworkManager to call `wlan0` usable,
 retries a failed start in 15 s, and puts the radio's state beside any reason
 on the panel. Its first-try start is still to be seen on hardware.
+
+## Amended 2026-10-07 (brought into line with the code)
+
+- **§3, "Opens", the 90 s:** counted from the core's setup task starting,
+  not from boot (`_wait_for_network` in
+  `core/src/gexis_core/setup_network.py`).
+- **§3, the password:** made up only once a screen has been kept on the
+  panel ([ADR-0109](0109-other-screens.md) decision 5); until then
+  `gexis-setup`, as without a panel. Its alphabet is lowercase letters and
+  digits, leaving out `0 o 1 l` (`PASSWORD_ALPHABET`); there are no capitals
+  to confuse.
+- **§4, "Applying":** setup also applies the clock format, Headless, the
+  screen and the visualiser's skins (`SETTINGS` in
+  `core/src/gexis_core/setup_flow.py`), and sets `lms_enabled` by the Music
+  step's choice: off for *off*, on for an address, and on for *find* when
+  one server is found. *Find* searches once, after the join and before
+  setup ends (`_library`; [ADR-0031](0031-first-boot-setup-access-point.md),
+  amended the same day).
+- **§5, "What the panel shows":** not everything on one screen. The panel
+  shows setup one step at a time, one QR code each: the join code, then the
+  page's code once a phone is on the setup network, then the progress
+  (George, 2026-09-29; `ui/src/screens/SetupScreen.svelte`).

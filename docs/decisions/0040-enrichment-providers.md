@@ -211,3 +211,21 @@ duration), which survives one.
 - **Last.fm** — one call for bio, tags and similar artists, with autocorrect
   for messy names. Rejected: a per-user key for a device whose whole setup
   story is "no keys", plus badge and link obligations.
+
+## Amended 2026-10-07 (brought into line with the code)
+
+- **§1, "LMS first where it can answer, our own providers behind it":**
+  the providers are not asked one after another with LMS first. Every
+  provider that serves the playing renderer, is ready and is switched on is
+  asked at once, and their answers are merged field by field, the first in
+  the list winning a field (`EnrichmentService.for_track` and
+  `Enrichment.merged_with` in `core/src/gexis_core/enrichment.py`; the list
+  in `core/src/gexis_core/__main__.py`). For an LMS track, LMS's plugin
+  wins the text fields it answers; for pictures fanart.tv and then
+  TheAudioDB ([ADR-0120](0120-backgrounds-cropped-by-what-they-show.md) §3)
+  come before it, as §2's "Pictures before LMS, text after it" says.
+- **§1, "always for Spotify and Bluetooth, which have no LMS ids":** true for
+  the enrichment providers. Separately, the visualiser's fanart frame finds
+  an artist's LMS photos by exact name (letter case aside) for any source
+  ([ADR-0112](0112-the-visualisers-fanart-frame-shows-the-artists-photos.md);
+  `core/src/gexis_core/fanart.py`).

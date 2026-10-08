@@ -52,12 +52,13 @@ brings one is refused.
 | `id` | yes | Lowercase letters, digits and `-`, starting with a letter, 2-31 characters. It is the folder, the prefix of your settings, and a URL part. It may not be one of the player's own (`lms`, `spotify`, `bluetooth`, `plexamp`, `beszel`, …) |
 | `name` | yes | What people see |
 | `kind` | yes | `renderer` or `service` |
-| `version` | yes | Letters, digits and `. + ~ -`, up to 40 characters. Uploading a different version updates the plugin; the same version again is refused |
+| `version` | yes | Letters, digits and `. + ~ -`, up to 40 characters, starting with a letter or digit. Uploading a different version updates the plugin; the same version again is refused |
 | `run` | yes | The command to start, **relative to the package**. An **aarch64** program (the Pi 4 on a 64-bit system) or a script with a `#!` line |
 | `area` | no | The Settings page your plugin belongs on: `audio`, `sources`, `handoff`, `display`, `enrichment`, `device` or `system`. Absent: `sources` for a renderer, `system` for a service. It places your plugin; it does not change what it may do |
 | `label` | no | A renderer's status line for the moOde-compatible metadata file (`"Radio Foo Active"` style) |
 | `accent` | no | A CSS colour for the panel's accent when your renderer plays |
 | `status` | no | The waiting screen's second line under your mark (`"Ready"`, `"Pairable"`) |
+| `summary` | no | One line on what it is. The player's own plugins show it in setup's Plugins step; an uploaded plugin arrives after setup, so it is not shown there |
 | `settings` | no | Rows for **Settings**, below |
 
 **Not allowed:** `unit` (the player writes it), paths that point outside the
@@ -88,7 +89,7 @@ Things that follow from this:
 - **A program that expects `$HOME`** should be given one there:
   `export HOME=$STATE_DIRECTORY`.
 - **A program that wants a config file** writes it into `$STATE_DIRECTORY`
-  at start. `tools/sample-renderer/run.sh` shows the shape.
+  at start. `tools/sample-renderer/tone.py` shows the shape.
 
 ## 4. Talking to the player
 

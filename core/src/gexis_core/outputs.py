@@ -23,7 +23,7 @@ from __future__ import annotations
 import logging
 import re
 import subprocess
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import NamedTuple
 
@@ -168,11 +168,79 @@ class Output:
     #: What the card's driver calls it, when the list names the board
     #: otherwise - a choice stored under the old name still finds it.
     aka: str | None = field(default=None, compare=False)
+    #: ADR-0124: the level set by the player's own software stage, not the
+    #: card's control.
+    software: bool = field(default=False, compare=False)
 
     @property
     def option(self) -> str:
         shown = f"{self.label}{SEP}{self.state}" if self.state else self.label
         return shown if self.connected else shown + UNPLUGGED
+
+
+#: ADR-0124: the software stage's control, on the output's own card, and its
+#: scale: -90 to 0 dB in 0.25 dB steps (361 values), finer than any card's
+#: own and low enough that 0 % is silence. At 0 dB it passes every sample
+#: unchanged (Finding 115).
+#: The control ALSA makes is "Gexis Playback Volume" - a playback control by its
+#: name; as a *simple* mixer control -
+#: what amixer and the core's mixer calls address - it is "Gexis", the
+#: "Volume" being its kind (2026-10-07: addressed as "Gexis Volume", every
+#: write missed it and the level stayed at 0 dB).
+SOFTVOL_ELEMENT = "Gexis Playback Volume"
+SOFTVOL_CONTROL = "Gexis"
+SOFTVOL_MIN_DB = -90.0
+SOFTVOL_STEPS = 361
+SOFTVOL_SCALE = mixer_scale.Scale(raw_min=0, raw_max=SOFTVOL_STEPS - 1, db_min=SOFTVOL_MIN_DB,
+                                  db_step=-SOFTVOL_MIN_DB / (SOFTVOL_STEPS - 1))
+
+
+#: The Pi's own outputs - not a sound card anybody added (ADR-0126).
+BUILT_IN_CARDS = frozenset({"vc4hdmi0", "vc4hdmi1", "Headphones"})
+
+
+def with_software_volume(output: Output) -> Output:
+    """`output`, its level set by the player's software stage (ADR-0124): an
+    output with no control of its own (HDMI) gains one."""
+    return replace(output, control=SOFTVOL_CONTROL, scale=SOFTVOL_SCALE, software=True)
+
+
+def create_softvol_control(pcm: str = "output") -> bool:
+    """**Make the software stage's control exist without playing anything**
+    (ADR-0124). ALSA creates a `softvol` control when its PCM is first
+    opened, and creates it at 0 dB; the core sets the remembered level on it
+    before any renderer opens the output. Open and close, non-blocking: a
+    card someone is already playing to has the control already. True when
+    the open succeeded or the card was busy."""
+    import ctypes
+    try:
+        lib = ctypes.CDLL("libasound.so.2")
+    except OSError as exc:
+        logger.warning("outputs: no libasound to open %s: %s", pcm, exc)
+        return False
+    lib.snd_pcm_open.argtypes = [ctypes.POINTER(ctypes.c_void_p), ctypes.c_char_p, ctypes.c_int, ctypes.c_int]
+    lib.snd_pcm_close.argtypes = [ctypes.c_void_p]
+    handle = ctypes.c_void_p()
+    # SND_PCM_STREAM_PLAYBACK = 0, SND_PCM_NONBLOCK = 1
+    rc = lib.snd_pcm_open(ctypes.byref(handle), pcm.encode(), 0, 1)
+    if rc < 0:
+        busy = rc == -16       # EBUSY: someone holds it, so the control exists
+        if not busy:
+            logger.warning("outputs: could not open %s to create its volume control (%d)", pcm, rc)
+        return busy
+    lib.snd_pcm_close(handle)
+    return True
+
+
+def _softvol(name: str, slave: str, card: str) -> str:
+    return f'''pcm.{name} {{
+    type softvol
+    slave.pcm {slave}
+    control {{ name "{SOFTVOL_ELEMENT}" card {card} }}
+    min_dB {SOFTVOL_MIN_DB}
+    max_dB 0.0
+    resolution {SOFTVOL_STEPS}
+}}'''
 
 
 def _run(*args: str) -> str:
@@ -194,6 +262,12 @@ def playback_control(card: str) -> tuple[str, mixer_scale.Scale] | tuple[None, N
     that does not is passed over, and with none left the output is fixed.
     """
     controls = mixer_scale.playback_controls(_run("amixer", "-c", card, "contents"))
+    # **Never our own software stage** (ADR-0124). It is a playback volume
+    # with a dB scale on the card it plays to, so on HDMI - which has no
+    # control of its own - it was taken for the card's: then parked at 0 dB
+    # as the card's control is, under the level it had just been given
+    # (guestpi, 2026-10-07).
+    controls = [c for c in controls if c[0] != SOFTVOL_CONTROL]
     # **The list's name first** when a card has several (ADR-0117): the
     # IQaudio DAC+'s *Analogue* is a 0 / -6 dB gain switch, *Digital* the
     # volume.
@@ -344,9 +418,35 @@ def render(output: Output, plug: bool, tuning: Tuning = Tuning()) -> str:
     *opening the card*, and a caller that has not freed it first would get
     no answer and render something wrong. See `write`.
     """
-    if plug:
-        # **No meter on a converted chain** (2026-09-23). With `plug` under
-        # it, ALSA's `type meter` and the peppyalsa scope come apart:
+    if output.software:
+        # **ADR-0124: the meter first, then the software stage** (Finding
+        # 115), so the visualiser shows the music as it arrives, as with the
+        # card's own control. One control for both PCMs: the level is the
+        # same whoever opened which.
+        #
+        # **On a converted chain (HDMI) too, since 2026-10-07** (ADR-0055 §6
+        # as amended, Finding 116): the September failures below came from
+        # the meter straight over `plug`; with `softvol` between them LMS and
+        # Spotify play and the levels arrive. `plug` then converts for the
+        # card, under the software stage (Finding 115).
+        card = f'{{ type plug slave.pcm "hw:{output.card}" }}' if plug else f'"hw:{output.card}"'
+        card_wait = (f"{{ type plug slave.pcm {{ type hw card {output.card} nonblock 0 }} }}" if plug
+                     else f"{{ type hw card {output.card} nonblock 0 }}")
+        head = f'''pcm.output {{
+    type meter
+    slave.pcm "gexis_softvol"
+    scopes.0 peppyalsa
+}}
+{_softvol("gexis_softvol", card, output.card)}'''
+        wait = f'''pcm.output_wait {{
+    type meter
+    slave.pcm "gexis_softvol_wait"
+    scopes.0 peppyalsa
+}}
+{_softvol("gexis_softvol_wait", card_wait, output.card)}'''
+    elif plug:
+        # **No meter on a converted chain** (2026-09-23) - now only HDMI on
+        # Fixed volume. With `plug` under it, ALSA's `type meter` and the peppyalsa scope come apart:
         # go-librespot dies on `pcm_meter.c:1222: snd_pcm_scope_s16_get_
         # channel_buffer: Assertion 's16->buf_areas' failed` - which is a
         # crash, not the "Spotify disconnects" it looks like from outside -

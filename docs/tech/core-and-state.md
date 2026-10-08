@@ -25,7 +25,10 @@ Start-up order, in brief:
 2. `SettingsStore()` opens `/var/lib/gexis-core/settings.db`, then
    `settings_migrations.migrate()` runs before anything reads a setting.
 3. The output is resolved (`outputs.resolve`, ADR-0055): this decides the
-   mixer control name and whether the chain carries a meter.
+   mixer control name and whether the chain carries a meter. When Volume is
+   on Software it also swaps in the software stage (`Gexis`) as the control
+   and makes it (ADR-0124, ADR-0127). Meters are available when the software
+   stage is in the chain or the card needs no conversion.
 4. The three built-in adapters are built: `LmsAdapter`, `SpotifyAdapter`,
    `BluetoothAdapter`.
 5. Plugin manifests are read (`plugins.installed()` plus `uploads.installed()`),
@@ -72,9 +75,9 @@ The `gather` at the end of `main()` runs, for the life of the process:
 | Task | What it does |
 |---|---|
 | `_run_renderer(id, adapter, …)` per built-in | Runs `adapter.run()` while that source's row is on and cancels it when off (ADR-0077) |
-| `volume_bridge.run()` | Spotify's two-way volume sync with the DAC mixer |
+| `volume_bridge.run()` | Spotify's two-way volume sync with the output's volume control |
 | `bluetooth_volume.run()` | Bluetooth's level over bluealsa's D-Bus API (ADR-0054 §1) |
-| `DummyMixerBridge.run()` per dummy-mixer renderer | Mirrors LMS's private snd-dummy control onto the DAC while LMS is active |
+| `DummyMixerBridge.run()` per dummy-mixer renderer | Mirrors LMS's private snd-dummy control onto the output's volume control while LMS is active |
 | `peppy.run()` | The visualiser screen's lifecycle (ADR-0019/0026/0036) |
 | `wifi.watch_connected()` | Keeps the Wi-Fi row's value current off the request path |
 | `setup_network.run()` | First-boot setup network (ADR-0104) |
@@ -111,8 +114,8 @@ Top-level fields of the `/state` payload:
 | Field | Meaning |
 |---|---|
 | `active`, `available` | Who holds the device; which renderers are reachable |
-| `metadata` | The active renderer's track (title, artist, album, artwork, rate, position, transport, shuffle/repeat, …) |
-| `capabilities`, `controls` | Each renderer's declared contract; the active renderer's transport commands that work now (ADR-0037) |
+| `metadata` | The active renderer's track (title, artist, album, artwork, rate, position, transport, …) |
+| `capabilities`, `controls` | Each renderer's declared contract; the active renderer's transport commands that work now, with its shuffle and repeat state where it declares them (ADR-0037) |
 | `sources` | One entry per installed source from its manifest: name, kind, accent, mark URL (ADR-0086) |
 | `handoff` | A takeover in progress, for the transition screen (ADR-0094) |
 | `volume`, `fixed_output`, `meters` | Level; whether there is no attenuation at all (ADR-0046); whether the output can feed the visualiser (ADR-0055 §6) |
@@ -123,6 +126,8 @@ Top-level fields of the `/state` payload:
 | `setup` | First-boot setup status, never the password (ADR-0104) |
 | `update` | The updater's status, read from its status file (ADR-0110) |
 | `screen_confirm`, `screen_new` | The "keep this screen?" and "new screen attached" questions (ADR-0109) |
+| `screen_check` | The hardware feedback's test pattern and the measured corner taps (ADR-0126) |
+| `settling` | The first start after setup, until its downloads have finished: `phase` and each item's state (ADR-0128) |
 | `settings_revision`, `pictures_revision` | Refetch triggers |
 
 ### How a change reaches the screen
@@ -184,21 +189,22 @@ routes are loopback-only or behave differently by origin: `/surface`,
 | Radio | `GET /radio?handle=…`, `POST /radio/play` | Panel (ADR-0030) |
 | Lyrion menus | `GET /menus`, `/menus/browse`, `/menus/letters`; `POST /menus/act`, `/menus/search` | Panel, when Extended navigation is on (ADR-0118) |
 | Enrichment | `GET /enrichment` | Panel, phone |
-| Settings | `GET /settings`; `PUT /settings/{key}` (write a value); `POST /settings/{key}` (run an action); `GET`/`POST /settings/{key}/items` (list rows: Wi-Fi, trusted devices, backups); `GET /network/wifi` (the connected network's signal, speed, band, channel and address, no rescan - ADR-0123); `GET /notices/{name}` (Legal, Credits) | Both (ADR-0035) |
+| Settings | `GET /settings`; `PUT /settings/{key}` (write a value); `POST /settings/{key}` (run an action); `GET`/`POST /settings/{key}/items` (list rows: Wi-Fi, trusted devices, backups, `lyrion-server.shares`, `lms_server`); `GET /network/wifi` (the connected network's signal, speed, band, channel and address, no rescan - ADR-0123); `GET /notices/{name}` (Legal, Credits) | Both (ADR-0035) |
 | Skins and plugins | `GET /skins`, `/skins/{name}/preview`, `/plugins/{id}/mark`; `POST /plugins/upload`, `/plugins/{id}/uninstall` | Settings (ADR-0050, ADR-0106) |
 | Bluetooth | `POST /bluetooth/pairing/{answer}` | Panel (ADR-0045) |
+| Hardware report | `GET /hardware-report` (the board by EEPROM, driver, overlays, controls, formats and rates; the screen's EDID and touch controller - no serials), `POST /hardware-report/tones` (a 1 kHz tone at -20 dBFS at 44.1, 96 and 192 kHz through `output`, and the rate and format the card ran at; `409` while any card plays), `GET /hardware-report/prompt` and `POST /hardware-report/prompt/dismiss` (the System page's one line, a week after a board or screen that is not Tested was first seen, per piece of hardware; kept in the internal `_hardware_prompt` key; a prepared report dismisses it too), `POST /hardware-report/screen` (`{"show"}`: the test pattern on the panel, through `screen_check` in `/state`; taken down after 120 s) and `POST /hardware-report/screen/result` (the panel's four corner taps in screen pixels, measured against 6 % of the diagonal), `POST /hardware-report/issue` (`{"answers", "notes", "tones"}` -> the pre-filled GitHub *Hardware report* form's address) - `hardware_report.py`; the *Reported* state from `hardware_reports.json` (`hardware_reports.py`), which only `tools/hardware-reports.py` writes, from the issues labelled `accepted`, along with HARDWARE.md's table | Settings on a phone or computer (ADR-0126) |
 | Problem report | `POST /report` (body `{"note": ...}`) - a zip of the journal, the updater's log, versions, hardware and settings, scrubbed on the device by `problem_report.py`; the header `X-Report-Summary` says what was taken out; one at a time (`409`) | Settings on a phone or computer (ADR-0125) |
 | Screens | `POST /screen/{action}`, `/screen-new/{action}` | Panel (ADR-0109) |
-| Setup | `GET /setup/status`, `/setup/answers`, `/setup/networks`, `/setup/screen`; `POST /setup/answers`, `/setup/finish`, `/renderers/park` | Setup page (ADR-0104) |
+| Setup | `GET /setup/status`, `/setup/answers`, `/setup/networks`, `/setup/screen`, `/setup/plugins`; `POST /setup/answers`, `/setup/finish`, `/renderers/park`, `/settling/done` (the OK on a settling screen that names a failed download, ADR-0128) | Setup page (ADR-0104) |
 | UI files | `GET /`, `/assets/*`, a fixed list of web-app files | Browser |
 
 The UI routes are registered **after** the API so nothing in the bundle can
 shadow an API path, and `index.html` is served `no-store` while hashed assets
 are cacheable.
 
-Errors follow one convention: `404` unknown thing, `409` not possible now
-(nothing active, row locked, Extended navigation off), `502` LMS unreachable,
-`503` not wired up.
+Errors follow one convention: `400` invalid value, `404` unknown thing, `405`
+not settable, `409` not possible now (nothing active, row locked, Extended
+navigation off), `502` LMS unreachable, `503` not wired up.
 
 ## Adapters: the renderer contract
 
@@ -228,7 +234,7 @@ the built-ins to implement the same contract a plugin does.
 |---|---|---|
 | `lms.py` | CometD push from Lyrion; JSON-RPC on port 9000 for calls | `dummy_mixer` |
 | `spotify.py` | go-librespot's HTTP API and `/events` WebSocket | `software_api` |
-| `bluetooth.py` | BlueZ `MediaPlayer1` over D-Bus `PropertiesChanged` | bluealsa D-Bus (ADR-0054 §1) |
+| `bluetooth.py` | BlueZ `MediaPlayer1` over D-Bus `PropertiesChanged` | declares `dummy_mixer` with `volume_over_bluealsa`; the level travels over bluealsa's D-Bus API (ADR-0054 §1) |
 | `plugin.py` | Nothing; events arrive on the plugin socket | Declared by the plugin |
 
 Arbitration (who wins the device, the release ladder, the transition screen)
@@ -266,7 +272,7 @@ row mechanics `list`, `warn`, `onlyWhen`, `optionsFrom`, `picker` and
 - **The API publishes every row and the panel filters**: each row carries a
   computed `visible` (from `onlyWhen`, including a heading's or a group's
   condition), its current `value`, `options` for `optionsFrom` sources
-  (`skin_corpus`, `timezones`, `output_device`, `screens`), `unavailable`
+  (`skin_corpus`, `timezones`, `output_device`, `screens`, `boards`), `unavailable`
   options greyed with a reason (ADR-0044 §8), and a plugin's `status`
   report (ADR-0119).
 - Every successful `set` calls the row's callback and then bumps

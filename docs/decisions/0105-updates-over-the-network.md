@@ -217,3 +217,41 @@ confirmed.
   it (they are documented; not checked against a real set).
 - Whether `apt` on this image can reinstall a previous version from a local
   cache cleanly in every case (held packages, removed dependencies).
+
+## Amended 2026-10-07 (brought into line with the code)
+
+Read against `core/updater/gexis-update` on phase-13d.
+
+- **§4 step 2, where downloads go:** not `/var/cache/gexis/updates/`. The
+  packages go to `/var/lib/gexis/updates/apt/archives/`, one cache shared by
+  every release, and each release (the one going in, the one kept for going
+  back) has its own apt lists beside it, in `/var/lib/gexis/updates/apt/<key>/`
+  (`apt_env`).
+- **§4 step 5, what is checked:** the installed `gexis-player` is the release
+  asked for, `dpkg --audit` reports nothing half-installed, alsa-lib is the
+  version the release pins (`verify`), and, after the restart, the core
+  answers on `/settings` within two minutes (`core_answers`). There is no
+  check that the panel draws a frame or that the `output` definition matches
+  a checksum.
+- **§4 step 6, when the device restarts:** not only for the kernel or
+  firmware. A reboot follows any change to a `linux-image-*`, `raspi-firmware`,
+  `raspberrypi-sys-mods`, `libc6`, `systemd` or `initramfs-tools` package
+  (`REBOOT_PACKAGES`), or the marker `/var/lib/gexis/reboot-required`, which
+  `gexis-system`'s install script writes when it changed the boot
+  configuration (`packaging/system/build.sh`; ADR-0107). Otherwise only the
+  units of the packages that changed are restarted.
+
+**Built 2026-10-07** (George: *"Build them."*), after first being found not built the same day (`core/updater/gexis-update`: `go_back`, `postboot`, `gexis-update-postboot.service`; the core's `Supervisor(frozen=...)`). Only an updater with this code does it, so it protects updates made from that release on, not the update to it. What was missing:
+
+- **A core that does not answer after the update's restart is not rolled
+  back.** The update is reported as failed ("the core did not answer after
+  the update") and the device stays on the new release
+  (`core/updater/gexis-update`, `install`, about lines 707-710). Step 6's
+  "go back" covers only a failed install or a failed `verify`.
+- **With a reboot, nothing is checked after the boot.** The restart and
+  check steps are ticked and *done* reported before `systemctl reboot` is
+  called; no check runs when the device comes back.
+- **Step 4's "does not take a takeover" is not enforced.** The panel is
+  locked while the update runs (ADR-0110 §6), but the core does not refuse a
+  takeover during an install, and `systemd-inhibit` holds off shutdown and
+  sleep for the install step only, not the whole update.

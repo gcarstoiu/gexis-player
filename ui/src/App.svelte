@@ -20,7 +20,10 @@
   import { screen } from './lib/family.svelte.js';
   import UpdateScreen from './screens/UpdateScreen.svelte';
   import PanelPointer from './lib/PanelPointer.svelte';
-  import { update, connection, hidePeppy, screenConfirm, answerScreen, screenNew, answerNewScreen } from './lib/state.js';
+  import { update, connection, hidePeppy, screenConfirm, answerScreen, screenNew, answerNewScreen, screenCheck, sendScreenCheck } from './lib/state.js';
+  import TestPattern from './screens/TestPattern.svelte';
+  import SettlingScreen from './screens/SettlingScreen.svelte';
+  import { settling, settlingDone } from './lib/state.js';
   import KeepScreen from './screens/KeepScreen.svelte';
   import NewScreen from './screens/NewScreen.svelte';
   import { loadSettings, settingValues } from './lib/settings.js';
@@ -520,6 +523,9 @@
   {#if $screenNew}
     <NewScreen question={$screenNew} onanswer={answerNew} />
   {/if}
+  {#if $settling}
+    <SettlingScreen settling={$settling} ondone={() => settlingDone().catch(() => {})} />
+  {/if}
 {:else if surface === 'panel'}
 
 <div class="panel" class:panel--bar={screen.family === 'bar'} data-family={screen.family}>
@@ -664,6 +670,20 @@
 
   {#if $screenNew && !$screenConfirm && !setupShown && !updateLock}
     <NewScreen question={$screenNew} onanswer={answerNew} />
+  {/if}
+
+  <!-- ADR-0128: the first start after setup, until it has settled - over
+       everything but Keep this screen and the update lock. -->
+  {#if $settling && !$screenConfirm && !updateLock && !setupShown}
+    <SettlingScreen settling={$settling} ondone={() => settlingDone().catch(() => {})} />
+  {/if}
+
+  <!-- ADR-0126: the hardware report's test pattern, over everything but
+       Keep this screen and the update lock. -->
+  {#if $screenCheck?.showing && !$screenConfirm && !updateLock}
+    {#key $screenCheck.seq}
+      <TestPattern check={$screenCheck} onresult={(r) => sendScreenCheck(r).catch(() => {})} />
+    {/key}
   {/if}
 
   <!-- ADR-0109 decision 5: above everything but the update lock - the

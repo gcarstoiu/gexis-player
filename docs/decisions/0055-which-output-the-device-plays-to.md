@@ -1,5 +1,7 @@
 # ADR-0055 — Which output the device plays to
 
+> **Amended by [ADR-0127](0127-one-volume-row.md) (2026-10-07):** Output mode and Software volume are one row, *Volume* - Hardware, Software or Fixed. On an output with no volume control of its own, Hardware is greyed and Software takes its place; Fixed is no longer forced there.
+
 **Status:** **Accepted and built, 2026-09-23** — George answered the three
 Open questions below (*"Offer all, but maybe it clears that the one that is
 not connected looks disabled or has a note saying that nothing is
@@ -187,6 +189,16 @@ in the working memory, not here.
 
 **Measured, so the cost is scoped:** only HDMI. The headphone jack takes
 `S16_LE` natively, needs no conversion layer, and keeps its meter.
+
+**Amended 2026-10-07 (George: *"Go ahead with the change for hdmi and software
+volume"*), on [Finding 116](../findings/116-meter-over-softvol-on-hdmi.md):**
+with Volume on Software ([ADR-0124](0124-software-volume.md),
+[ADR-0127](0127-one-volume-row.md)) HDMI carries the meter again, as
+`meter → softvol → plug → card`. The September failures came from `meter`
+straight over `plug`; with `softvol` between them LMS and Spotify played and
+the levels reached the visualiser. **HDMI on Fixed** keeps `plug` straight
+under the card and stays without a meter - now the only output on a Pi that
+does. Not yet measured on that chain: Bluetooth, rates above 44.1 kHz.
 
 ## Open — answered 2026-09-23
 

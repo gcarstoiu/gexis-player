@@ -27,14 +27,25 @@ from pathlib import Path
 DACS = Path(__file__).with_name("boards_data") / "dacs.json"
 
 #: ADR-0117 decision 2: *Tested* - played and measured here, with a finding.
-#: The IQaudio DAC+ joins once 13d's tests pass on George's board.
-TESTED: frozenset[str] = frozenset({"hifiberry-dac2hd"})
+#: George's IQaudio board turned out to be a Pi-DAC PRO (Finding 114,
+#: 2026-10-07: George, *"let's move it to tested"*); the DAC+ itself is not.
+TESTED: frozenset[str] = frozenset({"hifiberry-dac2hd", "iqaudio-pi-dac-pro"})
+
+#: Boards Volumio's list does not have, in its row format.
+ADDITIONS: tuple[dict, ...] = (
+    # Finding 114: found by its EEPROM ("Pi-DAC PRO", vendor IQaudIO, id
+    # 0x0008), which loads the DAC+'s driver - so the card is `IQaudIODAC`,
+    # shared with four other boards, and only the EEPROM says which this is.
+    {"id": "iqaudio-pi-dac-pro", "name": "IQaudIO Pi-DAC PRO", "overlay": "iqaudio-dacplus",
+     "alsacard": "IQaudIODAC", "mixer": "Digital", "eeprom_name": "Pi-DAC PRO", "script": ""},
+)
 
 #: Changes to Volumio's rows, by id, applied when the list is read.
 CORRECTIONS: dict[str, dict] = {
     # The IQaudio DAC+ carries the DigiAMP+'s amplifier: `unmute_amp` (with
     # a trailing space) and `iqamp-unmute.sh`. The DAC+ has no amplifier;
-    # its overlay alone is the board (to be shown on George's, 13d).
+    # its overlay alone is the board (not shown on hardware: George's
+    # board is a Pi-DAC PRO, Finding 114).
     "iqaudio-dacplus": {"overlay": "iqaudio-dacplus", "script": ""},
 }
 
@@ -74,7 +85,7 @@ def _clean(value) -> str:
 @lru_cache(maxsize=1)
 def all_boards(path: Path = DACS) -> tuple[Board, ...]:
     doc = json.loads(path.read_text())
-    rows = next(d["data"] for d in doc["devices"] if d["name"] == "Raspberry PI")
+    rows = [*next(d["data"] for d in doc["devices"] if d["name"] == "Raspberry PI"), *ADDITIONS]
     out = []
     for row in rows:
         row = {**row, **CORRECTIONS.get(row.get("id"), {})}
@@ -147,6 +158,10 @@ def identify(card: str, chosen: str | None = None,
     makers = by_card(card)
     if board is None and len(makers) == 1:
         board = makers[0]
+    from gexis_core import hardware_reports
     if board is None:
-        return None, "Known" if makers else "Detected"
-    return board, "Tested" if board.tested else "Known"
+        # ADR-0126: owners' reports, for a card no single listed board makes.
+        return None, hardware_reports.state(hardware_reports.board(card)) or ("Known" if makers else "Detected")
+    if board.tested:
+        return board, "Tested"
+    return board, hardware_reports.state(hardware_reports.board(board.id)) or "Known"

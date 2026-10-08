@@ -136,3 +136,12 @@ to judge by on a panel.
 4. The IQaudio DAC+ plays bit-perfect through every renderer, with its own
    mixer, as the DAC2 HD does.
 5. A USB DAC tried once if one is to hand; otherwise *Detected*, untried.
+
+## Amended 2026-10-07: the second board is a Pi-DAC PRO
+
+George's IQaudio board, tested on `guestpi`, is an **IQaudio Pi-DAC PRO** by its
+EEPROM - not the DAC+ this record planned (Finding 114). It loads the DAC+'s
+driver and makes the same card, `IQaudIODAC`, so it is recognised by its EEPROM
+(`Pi-DAC PRO`) through a row of ours beside Volumio's list. Acceptance items 1
+and 4 measured for Lyrion, Spotify and Bluetooth; Plexamp not. George: *"let's
+move it to tested"* - it is **Tested**. The DAC+ itself stays *Known*.

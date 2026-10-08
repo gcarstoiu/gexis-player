@@ -184,3 +184,26 @@ Beside `notes`, each release publishes `history`: every release's notes from
 its tagged `release_notes.json`, clearsigned by the release key, so a device
 several releases behind can show what each skipped release changed
 ([ADR-0110](0110-the-update-experience.md), amended the same day).
+
+## Amended 2026-10-07 (brought into line with the code)
+
+- **"Publishing is a separate, deliberate step":** there is no
+  `make release`, and the publishing script is not `packaging/publish.sh`.
+  `packaging/release/build.sh <image>` builds a release from the image it was
+  tested as, and `packaging/release/publish.sh <tag> [--channel testing]`
+  uploads it; `publish.sh --promote <tag>` moves stable.
+- **"A channel is one small signed file", the example:** the file also
+  carries `Format:` (2 means a release made of parts), and an updater refuses
+  a channel whose format is newer than it reads, saying a newer image is
+  needed (`FORMAT` in `core/updater/gexis-update`).
+- **"Promoting to stable":** it is not "nothing uploaded again". Promoting
+  uploads the release's image (`gexis-player.img.xz`, with `.sha256` and
+  `.asc`) and marks that release GitHub's *latest*, as ADR-0105's amendment
+  of 2026-09-30 decided; and stable is pointed at whichever tag is given, not
+  necessarily the one testing names (`packaging/release/publish.sh`).
+- **"What changed":** each release publishes clearsigned `notes` and
+  `history` (amended above), and those are what a device shows. The channel
+  file's `Notes:` link to the release's GitHub page is for people.
+- **"`Serial` only increases":** a device records the serial it has
+  accepted when it is already on the channel's release, or once it has
+  installed it (`remember_serial`), not on every read.

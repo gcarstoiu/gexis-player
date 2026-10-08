@@ -1,7 +1,7 @@
 # Gexis Player: questions and answers
 
 For people who use the player day to day. It describes the player as of
-release 0.9.2. Setting names are written as they appear in Settings, with
+the release it ships with. Setting names are written as they appear in Settings, with
 their place: *Settings → Audio → Maximum volume* means the Audio page, row
 *Maximum volume*. Settings opens on the screen and, in the same form, on any
 phone or computer on the same network.
@@ -35,27 +35,30 @@ own rate, without resampling. Tracks at the same rate play on without it.
 
 **Is the sound bit-perfect?**
 Through a DAC with its own volume control, yes, up to 24-bit / 192 kHz: the
-volume is set in the DAC's own hardware, not by changing the samples. Two
-exceptions: over HDMI the sound is not bit-perfect, and Plexamp lowers its
+volume is set in the DAC's own hardware, not by changing the samples. Three
+exceptions: over HDMI the sound is not bit-perfect; with *Settings → Audio →
+Volume* on *Software* it is not bit-perfect below 100 %; and Plexamp lowers its
 volume inside its own software, so below 100 in the Plexamp app it is not
 bit-perfect either.
 
 **Why is there no volume slider?**
-Either the output has no volume control of its own (HDMI is one), or
-*Settings → Audio → Output mode* is set to *Fixed*. Fixed sends the full
-level all the time, for an amplifier that sets the volume itself; the screen
-shows a padlock instead of a slider. To get the slider back, set Output mode
-to *Variable*. Turn the amplifier down before switching to Fixed: in Fixed,
+*Settings → Audio → Volume* is set to *Fixed*. Fixed sends the full level all
+the time, for an amplifier that sets the volume itself; the screen shows a
+padlock instead of a slider. To get the slider back, choose *Hardware* (the
+sound card's own volume control) or *Software* (the player recalculates the
+sound - not bit-perfect below 100 %). On an output with no volume control of
+its own, such as HDMI, Hardware is greyed out and Software is used in its
+place. Turn the amplifier down before switching to Fixed: in Fixed,
 *Maximum volume* and Spotify's *Starting volume* no longer apply (both rows
 are hidden), and every source plays at full level.
 
 **Can the player be stopped from ever playing too loud?**
 Yes: *Settings → Audio → Maximum volume*. Set it to 80 and the player is never
-louder than 80 % of its range, from any source. 100 % on the screen, in
+louder than the slider at 80, from any source. 100 % on the screen, in
 Lyrion and on a phone then all mean that level, so no control shows a number
-louder than what comes out. It applies only with *Output mode* set to
-*Variable*; in *Fixed* the player always sends the full level, and the
-amplifier is what limits the volume.
+louder than what comes out. It does not apply with *Volume* set to
+*Fixed*: then the player always sends the full level, and the amplifier is
+what limits the volume.
 
 **Spotify started much louder than the music before it. Can that be avoided?**
 *Settings → Sources → Spotify Connect → Starting volume* (default 60 %) is the
@@ -63,8 +66,8 @@ loudest Spotify starts at when it takes over, whatever the Spotify app was
 last set to. A lower level is kept; a higher one comes down to the setting.
 For the first few seconds the player holds that level even if the phone sends
 its own, higher one. (Spotify's loudness normalisation is off on the player,
-so at full volume it is as loud as Lyrion.) Like *Maximum volume*, it applies
-only with *Output mode* set to *Variable*.
+so at full volume it is as loud as Lyrion.) Like *Maximum volume*, it does
+not apply with *Volume* set to *Fixed*.
 
 **The bottom of the volume slider is very quiet, or the middle is too loud.**
 *Settings → Audio → Volume curve* sets how the slider's travel maps to
@@ -124,7 +127,8 @@ before, so nothing is lost.
 **What is "Keep this screen?"**
 Whenever a screen change alters the picture (a new screen, another model
 chosen in *Settings → Display → Attached screen*, or *Screen rotation*), the
-player restarts on it and asks *Keep this screen?*. Without a tap on Keep
+player restarts on it and asks *Keep this screen?* (*Keep this rotation?*
+after a rotation change). Without a tap on Keep
 within two minutes it goes back to how it was, so a screen that shows nothing
 cannot lock anyone out. A screen mounted upside down is set with *Screen
 rotation*, 180°.
@@ -133,7 +137,7 @@ rotation*, 180°.
 Usually not. A screen the player recognises is used straight away at start,
 and asks *Keep this screen?*. Any other screen is asked about, and the list
 of screens opens on its size. The layout follows the screen: *Standard* for
-ordinary screens, *Bar* for wide strip screens (1280 × 400 and 1480 × 320),
+ordinary screens, *Bar* for wide strip screens (such as the tested 1280 × 400 and 1480 × 320),
 which are turned to landscape. On the very first start, setup's own screens
 are already laid out for the attached screen; setup's Screen step then
 confirms it.
@@ -142,7 +146,8 @@ confirms it.
 HDMI screens only. Tested on the hardware: a 10.1″ 1280 × 800 (the reference
 screen), a 13.3″ at 1920 × 1080, and the 1280 × 400 and 1480 × 320 bars.
 Others in *Settings → Display → Attached screen* are listed but untested;
-those tested are marked *Tested*. DSI and DPI screens are not supported.
+those tested are marked *Tested*, those owners have reported working
+*Reported*. DSI and DPI screens are not supported.
 
 **Can the player run without a screen?**
 Yes. *Settings → Display → Headless* turns the screen off, and every setting
@@ -172,16 +177,15 @@ player back.
 
 **Where do the idle screen's pictures come from?**
 *Settings → Display → Idle screen → Background* chooses: *Artist pictures*
-from the library; *Wallpapers online* from Pixabay and Pexels (each needs a
-free key of its own, entered in the rows below); *Wallpapers on device*, read
+from the library; *Wallpapers online* from Pixabay (it needs a free key, entered
+in the row below); *Wallpapers on device*, read
 from the player's Pictures share on the network; or *Black*. Pictures are
 placed by what they show, so faces, people and animals stay in view.
 
 **The online wallpapers keep repeating.**
 They no longer repeat until every picture of the day has been shown, and
 each day brings a new set. *Wallpaper topics* sets which Pixabay categories
-are drawn from; choosing several mixes them. Pexels is not issuing new keys
-at the moment, so Pixabay alone works too.
+are drawn from; choosing several mixes them.
 
 **The weather is for the wrong place, or not shown.**
 Set *Settings → Display → Idle screen → Location* to a city or place name.
@@ -205,8 +209,8 @@ skins*. Each screen size gets its own set (from about 50 MB to about 490 MB);
 switching it off removes them. While music plays, or for 10 minutes after a
 phone connects over Spotify or Bluetooth, the set downloads at no more than
 3 MB/s, so the music keeps its share of the network; otherwise at full
-speed. Over HDMI audio output the visualiser does not
-move.
+speed. Over HDMI audio output the visualiser moves only with
+*Settings → Audio → Volume* on *Software*; on *Fixed* it does not.
 
 **How do I pick one skin and keep it?**
 Under *Settings → Display → Visualiser*, choose a *Skin type*, switch off
@@ -231,17 +235,16 @@ to the phone's home screen. There is no app to install.
 
 **What can the phone do?**
 Everything in Settings, plus a mini player at the bottom: the source, the
-title, the volume, and switches for the visualiser and the idle screen. The
-volume sheet also has a touchpad for the screen and Home, Now playing and
-Lyrics buttons. Browsing the library happens on the screen, or in the
+title, the volume, and one row of buttons for the panel - Home, Now Playing,
+Lyrics, Visualiser and Idle screen. Opening the sheet adds a touchpad for the
+screen. Browsing the library happens on the screen, or in the
 streaming app.
 
 **How does the touchpad work?**
 Open the volume sheet on the phone. One finger moves a pointer on the
 screen, a tap presses, two fingers scroll, and a pinch zooms. The lines along
 the right and bottom edges scroll with one finger. Tapping a text field on
-the screen brings up the phone's keyboard. A touch outside the pad closes the
-sheet.
+the screen brings up the phone's keyboard. A touch outside the sheet closes it.
 
 **The pointer is too slow, or hard to see.**
 *Settings → Display → Pointer speed* (150–400 %) and *Pointer style* (*Dot* or
@@ -289,7 +292,11 @@ says at which address it comes back.
 On first start with no network, the player opens its own Wi-Fi, called
 *gexis-setup*. The screen shows two QR codes: one to join that network, one
 to open the setup page. The phone then walks through Wi-Fi, a name, the
-clock, the output, the music and the screen.
+clock, the output, the music, the screen, the visualiser and the plugins to
+install (Plexamp, the Lyrion Server, Beszel). Once the player is on your
+network it shows what it is downloading, each with its progress, until it is
+ready; this cannot be skipped, and music may be slow to start until then. A download that does not finish is named, with
+*Settings → Plugins* as the place to try it again.
 
 **What is the setup network's password, and why does the phone say it has no internet?**
 The password is shown on the screen; a player without a screen uses
@@ -370,13 +377,15 @@ under its device name. The phone and the player must be on the same network.
 **How do I pair a phone over Bluetooth?**
 While the player is discoverable, pair from the phone's Bluetooth settings.
 By default a six-digit code appears on the screen to confirm (*Settings →
-Sources → Bluetooth → Pairing*), and the player is discoverable for 3
-minutes after it starts (*Discoverable* also offers *Always* and *Off*).
+Sources → Bluetooth → Pairing*), and the player is always discoverable
+(*Discoverable* also offers *3 min after boot* and *Off*).
 
 **A Bluetooth device will not pair again after being forgotten.**
 Forget it on both sides: in *Settings → Sources → Bluetooth → Trusted
 devices* on the player, and forget the player in the phone's Bluetooth
-settings, then pair again.
+settings, then pair again. The same after re-flashing the player's card: the
+new card has new pairing keys, and a phone still holding the old ones may say
+it *can't communicate* with the player until it forgets it and pairs again.
 
 **Bluetooth plays, but the screen says "Not provided".**
 The phone is sending no track details. In the one case seen, the phone was
@@ -430,8 +439,9 @@ ListenBrainz token*.
 *Settings → System → Software update* shows a waiting release and its notes.
 Installing stops the music (it asks first), restarts the player and checks
 it; the device itself restarts only if the system needs it, and the update
-says so before starting. If the new release fails its check, the player goes
-back to the release it had. *Settings → System → Change logs* lists what
+says so before starting. If the new release fails its check - also after the
+device restarts - the player goes back to the release it had. While it
+installs, no phone or app can start playing on it. *Settings → System → Change logs* lists what
 changed in the last 10 releases.
 
 **The player is several releases behind. Does it install each one in turn?**
@@ -473,6 +483,21 @@ are not kept in backups, so enter them again.
 to 100 MB) to help track down a problem. It is on by default on the Testing
 channel; switching it off deletes the logs kept.
 
+**My sound card or screen is not marked Tested. Can I help?**
+Yes: open *Settings → System → Hardware feedback* on a phone or computer. It
+takes two short steps. First the screen: a test pattern on the player's
+screen shows whether all of it is visible, and four circles to tap measure
+where the touches land. Then the sound: a short test tone at 44.1, 96 and
+192 kHz, and a few questions about how it plays. On a player without a
+screen, or one set to Headless, it starts at the sound. The feedback is then
+sent on GitHub (a GitHub account is needed), filled in with what the player
+reads of the hardware itself - never a serial number or anything about you -
+and it is public, so the next owner can see what works. A week after a sound
+card or screen that is not Tested is first used, the System page offers this
+once in a line at its top; its × puts it away for good. Once feedback is
+accepted, the next release marks that card or screen *Reported* in the player
+and in the project's hardware list.
+
 **Something is wrong. How do I report it?**
 Open *Settings → System → Problem report* on a phone or computer on the same
 network, say in a line what happened, and tap *Download*. The player prepares
@@ -491,17 +516,20 @@ logs from before the restart are kept.
 
 **What hardware does the player need?**
 A Raspberry Pi 4 Model B (4 GB tested; 2 GB untested), a 32 GB card is
-recommended, a DAC (the HiFiBerry DAC2 HD is the tested one), and optionally
+recommended, a DAC (the HiFiBerry DAC2 HD and IQaudIO Pi-DAC PRO are tested), and optionally
 an HDMI touch screen. Power from the official 5 V 3 A supply, and a heatsink
 or fan, especially with the Lyrion server. The minimum and recommended
 hardware, with what each rests on, are in the
 [hardware requirements](HARDWARE.md).
 
 **Which DACs work?**
-Each output in *Settings → Audio → Output* shows *Tested*, *Known* or
-*Detected*. The HiFiBerry DAC2 HD is tested; the boards on the player's list
+Each output in *Settings → Audio → Output* shows *Tested*, *Reported*,
+*Known* or *Detected*. The HiFiBerry DAC2 HD and the IQaudIO Pi-DAC PRO are
+tested; a board owners have reported working is *Reported* (*Reported with
+problems* if a report says otherwise); the other boards on the player's list
 are known but untested; a class-compliant USB DAC should be detected by
 itself but has not been tried. A board that is not found by itself can be
 chosen in *Settings → Audio → Sound card board*. The screen's HDMI audio
-can be chosen too, but its volume is fixed, it is not bit-perfect and the
-visualiser does not move with it.
+can be chosen too; it is not bit-perfect, its volume is set in software
+(or fixed), and the visualiser moves with it only while the volume is in
+software.

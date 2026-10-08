@@ -2,6 +2,28 @@
 
 Last updated: 2026-10-07 (on R2D2).
 
+**Release list before the first public release (2026-10-07, George's order):**
+- Hardware feedback (was Report this hardware): steps 1-5 built; renamed and in two steps (2026-10-07); was owed - a kinder
+  name ("hardware feedback"), and the sheet in two steps, screen then audio,
+  the screen step skipped when headless or no screen is connected. Owed by
+  George: the GitHub labels.
+- Cable network (ADR-0123 step 2) - needs a cable.
+- **Setup installs plugins and settles** - ADR-0128, Accepted and **built**
+  2026-10-07 (f9f9a0c on phase-13d); checked in a browser against a test
+  server, not yet on a freshly set-up device.
+- **A general, thorough code check before release** (George): everything
+  checked once more; **volume, the audio adapters and arbitration must work
+  perfectly from the beginning** - dropped frames or a CSS flaw are not
+  critical, anything in the audio path is. **Found by the 2026-10-07
+  documents review, for this check:** an update whose core does not answer
+  after the restart is reported failed but not rolled back; nothing is
+  checked after an update's reboot; a takeover is not refused during an
+  install (the panel is only locked) - ADR-0105/0110 promise all three.
+  **George, 2026-10-07: build them** - **built** (f17cfab on phase-13d); not
+  yet seen on a device: it needs a release published with it, then a second.
+- ~~Reconcile the documents that contradict each other.~~ **Done 2026-10-07:** ARCHITECTURE.md, README, FAQ, manual, HARDWARE.md, plugin docs, the technical guide, nine ADRs amended (with *Not built* where the code does less), stale code comments, the dev proxy.
+- Remove passwordless sudo from the image - last.
+
 **2026-10-07 (state now):** the user manual, FAQ and technical guide are
 **approved and released into the repo** (George: *"you can go ahead and
 publish"*): on `phase-13b`/`phase-13d`, pushed, linked from README's new
@@ -28,6 +50,19 @@ george.carstoiu@gexis.net added 2026-10-07) and (5)
 **ADR-0126, hardware reports from users** - both accepted 2026-10-07, rows
 in ADR-0022; **owed by George: the project e-mail address** for problem
 reports from people without GitHub.
+
+**0.9.3 released 2026-10-07 on Testing (serial 26)**, from the tag `v0.9.3`
+(c54684c), built in a worktree at the tag (`~/projects/gexis-player-r093`,
+removable); image `image/deploy/2026-10-07-gexis-player-v0.9.3.img`, 111
+checks passed. **PR #51 (`release-0.9.3` -> `main`) waits for George.**
+**0.9.4 so far, on `phase-13d`:** Spotify's starting volume applied even when
+Spotify is slow (c2a8f53); the Pi-DAC PRO recognised and Tested (Finding 114);
+Bluetooth discoverable Always by default; Bluetooth takes the device when the
+phone plays again (George: "bluetooth fix works"); **software volume, step 1**
+(ADR-0124, Finding 115; tried silently on guestpi; not yet: HDMI through the
+player, a full reboot, Spotify/Bluetooth driving it). guestpi runs
+`0.9.3+git13`, software volume off, its volume and Lyrion's at 0. A fresh
+card defaults to the Stable channel, which does not exist until a promotion.
 
 **guestpi (2026-10-07):** George's second Pi with the IQaudio DAC+ and the
 13.3", flashed from v0.9.2 (my key on it), now on the preview

@@ -31,3 +31,16 @@ uploaded once, but a changed file is a new file).
 - Whether the slots, which are measured from the pack's pictures, are
   measured in the same build that makes the pictures or from the published
   packs.
+
+## Amended 2026-10-07 (brought into line with the code)
+
+The status stays **Accepted**: the decision stands, and it is not yet built.
+
+**Not built (2026-10-07):**
+
+- **Decisions 1 and 2: the tables have not left the packs.** Each
+  `gexis-skins-<W>x<H>` package still carries its own tables in the pack's
+  root: `packaging/skin-packs/slots.py` writes `badge-slots.json` and
+  `packaging/skin-packs/names.py` writes `names.json` there, during
+  `packaging/skin-packs/build.sh`. No tables package exists, so a rename or
+  a slot fix is still a new skin pack.

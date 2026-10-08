@@ -271,7 +271,7 @@ def settings_text(rows: Iterable[dict], get: Callable[[str], object], scrubber: 
     """Every registry row and its value. A secret row says only whether it
     is set (ADR-0125 decision 2: keys, tokens, passwords never leave); a
     row a person filled in - a name, an address, a place - shows its token;
-    a fixed choice ("Variable", "Cubic") shows as it is."""
+    a fixed choice ("Hardware", "Cubic") shows as it is."""
     out = []
     for row in rows:
         key = row.get("key")

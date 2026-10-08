@@ -7,7 +7,8 @@ events, not to share a hot loop with it.
 
 Three transports, one reader:
 
-- **WebSocket** `/meter` — our UI and anything remote.
+- **WebSocket** `/meter` — for remote clients; the panel's UI does not read
+  it.
 - **PeppyMeter HTTP** — `PUT {left,right,mono}` to a PeppyMeter web server,
   which is the only push shape upstream accepts (`vumeterhandler.py`).
   Configured off by default; it exists so an unmodified PeppyMeter elsewhere

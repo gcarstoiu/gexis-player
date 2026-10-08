@@ -1,6 +1,7 @@
 {
   "id": "lyrion-server",
   "name": "Lyrion Server",
+  "summary": "Your own music library on the player itself, from a USB disk, a network share or its Music folder.",
   "kind": "service",
   "area": "sources",
   "unit": "gexis-lyrion.service",

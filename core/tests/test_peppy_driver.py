@@ -305,3 +305,23 @@ def test_the_shown_flag_is_read_when_it_changes(tmp_path):
     assert shown.check() is True
     path.unlink()
     assert shown.check() is True
+
+
+def test_a_skin_that_cannot_be_built_is_left_out_not_the_end_of_the_screen():
+    """guestpi, 2026-10-07: the rotation reached a skin whose image would not
+    load, the loop ended, and the visualiser had no window all afternoon."""
+    peppy = types.SimpleNamespace(meter=types.SimpleNamespace())
+    rotation = driver.Rotation(peppy, {"01G5_Needle": {}, "02G5_Broken": {}}, spectrum_state=None)
+    rotation.selection.corpus = "All"
+    built = []
+
+    def prepare(name):
+        if name == "02G5_Broken":
+            raise TypeError("'NoneType' object is not subscriptable")
+        built.append(name)
+        rotation.prepared = (name, object())
+
+    rotation._prepare = prepare
+    rotation.prepare_next("02G5_Broken")
+    assert rotation.prepared[0] == "01G5_Needle" and "02G5_Broken" in rotation.broken
+    assert rotation.pool() == ["01G5_Needle"], "and it is not drawn from again"

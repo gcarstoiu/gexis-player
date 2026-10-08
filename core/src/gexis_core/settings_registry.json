@@ -10,10 +10,10 @@
         "type": "choice",
         "label": "Output",
         "marks": "R",
-        "note": "Where the sound goes. Over HDMI the volume is fixed, the sound is not bit-perfect and the visualiser does not move.",
+        "note": "Where the sound goes. Over HDMI the sound is not bit-perfect; HDMI has no volume control of its own, so its volume is Software or Fixed, and the visualiser moves only on Software.",
         "optionsFrom": "output_device",
         "default": null,
-        "warn": "Playback stops while the output changes. An output with no volume control of its own, such as HDMI, has no volume slider."
+        "warn": "Playback stops while the output changes."
       },
       {
         "key": "sound_card_board",
@@ -30,15 +30,17 @@
       {
         "key": "output_mode",
         "type": "choice",
-        "label": "Output mode",
+        "label": "Volume",
         "marks": "R",
-        "note": "Variable: the volume is set on the player. Fixed: the player always plays at full level, for an amplifier that sets the volume itself. The change applies when playback next stops.",
+        "note": "How the level is set. Hardware: by the sound card's own volume control, bit-perfect at every level. Software: by the player recalculating the sound - for an output with no volume control of its own, such as HDMI; not bit-perfect below 100 %. Fixed: always full level, for an amplifier that sets the volume itself; the change applies when playback next stops.",
         "options": [
-          "Variable",
+          "Hardware",
+          "Software",
           "Fixed"
         ],
-        "default": "Variable",
+        "default": "Hardware",
         "warn": {
+          "Software": "The player changes the level by recalculating the sound. Playback is no longer bit-perfect, at any volume below 100 %. Use it for an output with no volume control of its own, such as HDMI, or if you prefer it. Hardware restores bit-perfect playback.",
           "Fixed": "Fixed output sends the signal at 100%. Turn your amplifier down before confirming — the panel can no longer lower it."
         }
       },
@@ -51,10 +53,12 @@
         "min": 10,
         "max": 100,
         "unit": "%",
-        "default": null,
+        "default": 100,
         "onlyWhen": [
           "output_mode",
-          "Variable"
+          {
+            "not": "Fixed"
+          }
         ]
       },
       {
@@ -79,7 +83,9 @@
         "default": "Cubic",
         "onlyWhen": [
           "output_mode",
-          "Variable"
+          {
+            "not": "Fixed"
+          }
         ]
       }
     ]
@@ -175,7 +181,9 @@
           ],
           [
             "output_mode",
-            "Variable"
+            {
+              "not": "Fixed"
+            }
           ]
         ]
       },
@@ -224,7 +232,7 @@
           "3 min after boot",
           "Off"
         ],
-        "default": "3 min after boot"
+        "default": "Always"
       },
       {
         "key": "bt_trusted",
@@ -645,20 +653,6 @@
         "note": "A Pixabay key, from a free account. Use one per player to avoid throttling.",
         "secret": true,
         "placeholder": "Pixabay API key",
-        "default": null,
-        "onlyWhen": [
-          "idle_background",
-          "Wallpapers online"
-        ]
-      },
-      {
-        "key": "pexels_key",
-        "type": "text",
-        "secret": true,
-        "placeholder": "Pexels API key",
-        "label": "Pexels API key",
-        "marks": "N",
-        "note": "A Pexels key, from a free account. With both keys, pictures come from both.",
         "default": null,
         "onlyWhen": [
           "idle_background",
@@ -1280,6 +1274,15 @@
         "marks": "R",
         "note": "Downloads the player's logs, versions, hardware and settings in one file, to attach to a report of a problem. Addresses, names, networks, shares, keys and what you play are taken out on the player first, but read the file before sharing it.",
         "kind": "report",
+        "default": null
+      },
+      {
+        "key": "hardware_report",
+        "type": "action",
+        "label": "Hardware feedback",
+        "marks": "R",
+        "note": "Tells the project how this sound card and screen work, so others can see what works before buying. Two short checks - the screen, then the sound - and a few questions, then feedback on GitHub, filled in with what the player reads of the hardware - never a serial number or anything about you.",
+        "kind": "hardware",
         "default": null
       },
       {

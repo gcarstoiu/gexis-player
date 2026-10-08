@@ -114,7 +114,9 @@ async def test_an_unknown_mode_falls_back_rather_than_leaving_it_as_it_was():
     whatever state it happened to be in."""
     bus = FakeBus()
     await state.apply_discoverable(bus, "Whatever the store had")
-    assert bus.props["DiscoverableTimeout"] == state.BOOT_WINDOW_S
+    # The default, Always since 2026-10-07: no timeout, discoverable.
+    assert state.DEFAULT_MODE == "Always"
+    assert bus.props["DiscoverableTimeout"] == 0 and bus.props["Discoverable"] is True
 
 
 @pytest.mark.asyncio

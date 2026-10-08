@@ -30,13 +30,13 @@ it.
   number and the device at another.
 - **Spotify** — go-librespot's local API, 2–5 ms. Already built; this only
   routes to it.
-- **Bluetooth** — its own dummy control, which `bluealsa-aplay
-  --volume=mixer` pushes out over AVRCP. ~6 ms to write. **The outbound leg
-  is inference until a phone is seen to follow it.**
+- **Bluetooth** — bluealsa's D-Bus `Volume` property (`bluealsa_volume.py`,
+  ADR-0054 §1), which bluealsa carries to the phone over AVRCP.
 
-What reaches the DAC is unchanged: the renderer's control moves, and the
-mirrors in `volume.py` carry it to the hardware exactly as before. This
-class adds no path to the hardware; it removes the panel's private one.
+A renderer's report reaches the output through `report_renderer_volume`
+and the one curve, `renderer_value_to_hardware_raw` (ADR-0054 §3). A panel
+change is also written to the hardware at once, through `on_level`, rather
+than waiting for the trip through the renderer and back (ADR-0054 §6).
 """
 from __future__ import annotations
 

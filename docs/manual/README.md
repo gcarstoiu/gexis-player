@@ -1,6 +1,6 @@
 # Gexis Player — User Manual
 
-**Draft, written for 0.9.2.** The screenshots use a demonstration library of
+**Written for the release it ships with.** The screenshots use a demonstration library of
 public-domain works: the album covers are paintings by Hokusai, Van Gogh,
 Klimt, Kandinsky, Monet, Seurat, Marc, Rousseau, Hiroshige, Mucha, Gauguin
 and others, the portraits are of the composers, and the lyrics are
@@ -102,7 +102,7 @@ seconds, but stays open while the phone's pointer rests on it. A change made
 elsewhere (a phone, a Lyrion app) can open the drawer too
 (*Settings → Display → Show volume when changed elsewhere*).
 
-With **Output mode** set to *Fixed*, the player always plays at full level
+With **Volume** set to *Fixed*, the player always plays at full level
 for an amplifier that sets the volume; the button then shows a padlock and
 the drawer explains why. *Maximum volume* and Spotify's *Starting volume* do
 not apply in Fixed, and their rows are hidden.
@@ -274,7 +274,7 @@ type a name, a password or a key.
 
 ## 8. Bar screens
 
-On a wide, short *bar* screen (1280 × 400 or 1480 × 320) the same player is
+On a wide, short *bar* screen (such as the tested 1280 × 400 and 1480 × 320) the same player is
 laid out in strips: Now Playing on one line, and the library's lists run
 sideways. A tray pulled down from the top holds Home, the volume and the
 visualiser.
@@ -316,10 +316,10 @@ Changes take effect at once unless the row says otherwise.
 
 | Setting | What it does |
 | --- | --- |
-| Output | Where the sound goes. Over HDMI the volume is fixed, the sound is not bit-perfect and the visualiser does not move. |
-| Sound card board | Most boards and every USB DAC are found by themselves. A board that is not (it does not show under Output) can be chosen here. |
-| Output mode | *Variable*: the volume is set on the player. *Fixed*: the player always plays at full level, for an amplifier that sets the volume itself. Applies when playback next stops. |
-| Maximum volume | The loudest the player will go, on any input. At 80, 100 % on every control means that level. Shown only with Output mode on *Variable*. |
+| Output | Where the sound goes. Over HDMI the sound is not bit-perfect; HDMI has no volume control of its own, so its volume is Software or Fixed, and the visualiser moves only on Software. |
+| Sound card board | Most boards and every USB DAC are found by themselves. A board that is not (it does not show under Output) can be chosen here. Each board is marked *Tested* (played and measured by the project), *Reported* (owners reported it working; *Reported with problems* if one did not) or *Known*. |
+| Volume | How the level is set. *Hardware* (default): by the sound card's own volume control, bit-perfect at every level. *Software*: by the player recalculating the sound, on any output; not bit-perfect below 100 %, and choosing it asks first. *Fixed*: always full level, for an amplifier that sets the volume itself; applies when playback next stops. On an output with no volume control of its own, such as HDMI, Hardware is greyed out and Software is used in its place. The level carries across between Hardware and Software. |
+| Maximum volume | The loudest the player will go, on any input. At 80, 100 % on every control means that level. Hidden with Volume on *Fixed*. |
 | Volume curve | How the slider's travel maps to loudness. *Cubic* (half travel is −15.5 dB) is the usual shape; *Linear* puts half travel at −30 dB. |
 
 ### Sources — *Renderers and services*
@@ -330,10 +330,10 @@ Changes take effect at once unless the row says otherwise.
 | Lyrion Client: Server | Which Lyrion server. Servers announce themselves on the network; typing an address is the fallback. |
 | Lyrion Client: Extended navigation | Lyrion's own menus on Home: My Music, Favourites, Apps (section 4). |
 | Spotify Connect: Enabled | The player appears as a Spotify Connect device. |
-| Spotify Connect: Starting volume | The loudest Spotify starts at when it takes over. Shown only with Output mode on *Variable*. |
+| Spotify Connect: Starting volume | The loudest Spotify starts at when it takes over. Hidden with Volume on *Fixed*. |
 | Bluetooth: Enabled | The player accepts Bluetooth audio. |
-| Bluetooth: Pairing | *Confirmation* shows a six-digit code on the panel to accept; *PIN-free* pairs anything in range. |
-| Bluetooth: Discoverable | Whether phones can find the player: *Always*, *3 min after boot* (the default) or *Off*. |
+| Bluetooth: Pairing | *Confirmation required* shows a six-digit code on the panel to accept; *PIN-free* pairs anything in range. |
+| Bluetooth: Discoverable | Whether phones can find the player: *Always* (the default), *3 min after boot* or *Off*. With *Pairing* on *Confirmation required*, a new phone still has to be accepted on the screen. |
 | Bluetooth: Trusted devices | Remembered devices; forget one here. |
 | Bluetooth: Auto-trust on pair | Remembers a device once paired, so it reconnects by itself. |
 
@@ -362,7 +362,7 @@ the player itself, with its music folders and network shares).
 | Phone touchpad, Pointer speed, Pointer style | The phone's touchpad (section 7). |
 | Home screen list, Items in the strip | What the row under Home's cards shows, and how many. |
 | Idle screen: Screen, Timeout | The built-in clock-and-weather screen, or an external page; and after how long, with nothing playing and nobody touching the panel. |
-| Idle screen: Background, Background brightness, Change the picture every | Artist pictures from the library, online wallpapers (Pixabay and Pexels, with a free key), or pictures on the device. |
+| Idle screen: Background, Background brightness, Change the picture every | Artist pictures from the library, online wallpapers (Pixabay, with a free key), or pictures on the device. |
 | Idle screen: Wallpaper topics | Which kinds of wallpaper are drawn from. |
 | Idle screen: Clock, Clock format, Weather, Location, Forecast, Weather icons | What the idle screen shows over the picture; forecasts come from Open-Meteo. |
 | Visualiser: Timeout, Stop when nothing is playing | When the visualiser takes the screen while music plays, and when it gives it back. |
@@ -396,7 +396,8 @@ the player itself, with its music folders and network shares).
 Optional parts, each with its own switch: the **visualiser skins** for this
 screen's size, **Plexamp**, the **Lyrion Server** and the **Beszel**
 monitoring agent, among others. A plugin that needs software from its maker
-downloads it when switched on. A plugin file can also be uploaded here.
+downloads it when switched on. Setup offers the same plugins, and the first
+start shows each download arriving. A plugin file can also be uploaded here.
 
 ### System — *Updates and maintenance*
 
@@ -409,6 +410,7 @@ downloads it when switched on. A plugin file can also be uploaded here.
 | Back up now | Saves the settings, the library's pictures, the paired devices and the device's configuration into the Backups share. |
 | Restore | Puts a backup back and restarts the device. |
 | Debug logs | Keeps the logs across restarts, for tracking down a problem. |
+| Hardware feedback | On a phone or computer, two steps. The screen: a test pattern on the player's screen, with four circles to tap, which measures where the touches land, and two questions. The sound: a short test tone at 44.1, 96 and 192 kHz played at the current volume (not while something plays), and three questions. Without a screen, or with Headless on, it starts at the sound. Then feedback on GitHub, filled in with what the player reads of them (never a serial number or anything about you). It helps others see what works before buying. A week after a sound card or screen that is not Tested is first used, a line at the top of System offers it once; × puts it away for good. |
 | Problem report | On a phone or computer: downloads one file with the logs, versions, hardware and settings, to attach to a report of a problem. Addresses, names, networks, shares, keys and what you play are taken out on the player first; read the file before sharing it. On the screen it says where to open it instead. |
 | Legal, Credits | The licences, and everyone whose work is in the player. |
 

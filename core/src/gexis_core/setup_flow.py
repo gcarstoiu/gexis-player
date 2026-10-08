@@ -22,7 +22,7 @@ import logging
 import os
 from pathlib import Path
 
-from gexis_core import discovery, screen_apply, screen_detect, screens, setup_network, skin_packs
+from gexis_core import discovery, screen_apply, screen_detect, screens, settling, setup_network, skin_packs
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +90,8 @@ class SetupFlow:
         set_country=None,
         find_servers=None,
         sleep=asyncio.sleep,
+        plugins=None,
+        settling_path: Path = settling.PATH,
     ) -> None:
         self._network = network
         self._settings = settings
@@ -99,7 +101,15 @@ class SetupFlow:
         self._set_country = set_country or _raspi_config_country
         self._find_servers = find_servers or discovery.find_servers
         self._sleep = sleep
+        #: ADR-0128: what the Plugins step offers - every plugin the release
+        #: ships beyond the built-in sources, as `offered()` describes them.
+        self._plugins = plugins or (lambda: [])
+        self._settling_path = settling_path
         self._task: asyncio.Task | None = None
+
+    def offered(self) -> list[dict]:
+        """ADR-0128 decision 1: every plugin the release ships (George: "All")."""
+        return list(self._plugins())
 
     # -- the answers ---------------------------------------------------------
 
@@ -145,6 +155,11 @@ class SetupFlow:
                 if value is not None and value not in LMS_MODES:
                     raise ValueError(f"lms_mode must be one of {', '.join(LMS_MODES)}")
                 data[key] = value
+            elif key == "plugins":
+                ids = {p["id"] for p in self.offered()}
+                if not isinstance(value, list) or not all(isinstance(v, str) and v in ids for v in value):
+                    raise ValueError("plugins must be a list of offered plugins")
+                data[key] = sorted(set(value))
             elif key == "step":
                 if not isinstance(value, str):
                     raise ValueError("step must be text")
@@ -240,6 +255,7 @@ class SetupFlow:
         self._marker.touch()
         self._path.unlink(missing_ok=True)
         library = await self._library(data)
+        self._plugins_and_settling(data)
         # ADR-0048: a rename takes effect at a restart, and the page's last
         # screen has already sent the phone to the new name.
         renaming = bool(data.get("name") and data["name"] != old_name and self._reboot is not None)
@@ -256,7 +272,7 @@ class SetupFlow:
             # home screen blinked in between). The panel keeps the last setup
             # screen, "Restarting to take its new name", until the restart
             # takes it down; the next boot starts as a configured device.
-            logger.info("setup: the name changed; restarting to take it")
+            logger.info("setup: the name or the screen changed; restarting")
             await self._reboot()
             return
         self._network.done()
@@ -298,6 +314,26 @@ class SetupFlow:
             return {"state": "several", "names": [s.get("name") or s["address"] for s in servers]}
         return {"state": "none"}
 
+
+    def _plugins_and_settling(self, data: dict) -> None:
+        """ADR-0128: the plugins chosen switched on - after the join, since
+        each downloads from the internet - and every other one offered
+        switched off, explicitly (a switch's default is not a choice). Then
+        what the first start waits for: the skin pack, if one was chosen,
+        and each chosen plugin that downloads its software."""
+        chosen = set(data.get("plugins") or [])
+        wait = []
+        if data.get("visualiser") and not data.get("headless"):
+            wait.append({"id": "skins", "name": "The visualiser's skins"})
+        for plugin in self.offered():
+            on = plugin["id"] in chosen
+            self._set_quietly(plugin["row"], on)
+            if on and plugin.get("component"):
+                wait.append({"id": plugin["component"], "name": plugin["name"]})
+        try:
+            settling.begin(wait, self._settling_path)
+        except OSError as exc:
+            logger.warning("setup: cannot record what to wait for: %s", exc)
 
     def _set_quietly(self, key: str, value) -> None:
         try:

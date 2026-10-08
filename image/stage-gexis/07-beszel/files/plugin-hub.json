@@ -1,6 +1,7 @@
 {
   "id": "beszel-hub",
   "name": "Beszel hub",
+  "summary": "A Beszel hub on the player: its own page showing how this player, and others that report to it, are doing.",
   "kind": "service",
   "area": "system",
   "unit": "beszel-hub.service",

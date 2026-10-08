@@ -75,7 +75,7 @@ from gexis_core.lyrion_shares import Shares as LyrionShares
 from gexis_core.fanart import Fanart
 from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, TrackMetadata
-from gexis_core import settings_migrations, updates
+from gexis_core import hardware_report, settings_migrations, settling, updates
 from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import InvalidValue, Settings, UnknownSetting, load_registry
 from gexis_core.splash import Splash
@@ -99,6 +99,7 @@ from gexis_core.volume import (
     VolumeBridge,
     db_to_raw,
     get_raw,
+    forget_mixers,
     Mute,
     renderer_value_to_hardware_raw,
     renderer_percent_to_value,
@@ -358,6 +359,64 @@ def read_timezone(localtime: Path = Path("/etc/localtime")) -> str | None:
     return target.split(marker, 1)[1] if marker in target else None
 
 
+#: ADR-0124: the row, and where the software level is kept across restarts -
+#: ALSA forgets a software control with its PCM, and makes it again at 0 dB.
+#: How long after a change of output a renderer's first report above the level
+#: playing is answered rather than followed: Spotify's came 12 s after its
+#: restart on guestpi (2026-10-07), so twice that.
+RESTART_HOLD_S = 30.0
+
+#: ADR-0127: one row, `output_mode` - Hardware, Software or Fixed.
+VOLUME_KEY = "output_mode"
+HARDWARE, SOFTWARE, FIXED = "Hardware", "Software", "Fixed"
+
+
+def volume_mode(stored, output) -> str:
+    """What is in force for `output` (ADR-0127 §2): the stored choice, except
+    Hardware on an output with no control of its own, where Software takes
+    its place. The same answer `Settings.value` gives once the row is
+    restricted; this one is for start-up, before `Settings` exists."""
+    mode = stored if stored in (HARDWARE, SOFTWARE, FIXED) else HARDWARE
+    if mode == HARDWARE and output is not None and output.control is None:
+        return SOFTWARE
+    return mode
+SOFTWARE_LEVEL_KEY = "_software_level_db"
+#: A first start with no level remembered and none to carry over: quiet.
+SOFTWARE_LEVEL_FIRST_DB = -30.0
+
+
+async def _start_software_volume(card_output, store) -> None:
+    """**Before anything plays** (ADR-0124): the software control made and
+    set to the remembered level, and the card's own control parked at 0 dB,
+    where it passes the software stage's samples on unchanged.
+
+    The level, in order: the one remembered; else the card's own, which is
+    what the listener was hearing when it was switched on; else quiet."""
+    db = store.get(SOFTWARE_LEVEL_KEY)
+    if db is None and card_output.control and card_output.scale:
+        raw = await get_raw(card_output.control)
+        if raw is not None:
+            db = card_output.scale.db(raw)
+    db = float(db) if db is not None else SOFTWARE_LEVEL_FIRST_DB
+    if not await asyncio.to_thread(outputs.create_softvol_control):
+        logger.warning("volume: the software control could not be made; the level stays where ALSA puts it")
+    want = outputs.SOFTVOL_SCALE.raw(db)
+    await set_raw(outputs.SOFTVOL_CONTROL, want, maximum=outputs.SOFTVOL_SCALE.raw_max)
+    store.set(SOFTWARE_LEVEL_KEY, db)
+    # **The card is parked only once the software level is in place, read
+    # back** (2026-10-07: a misnamed control left the software stage at 0 dB,
+    # the card was parked at 0 dB anyway, and a phone played at full level).
+    got = await get_raw(outputs.SOFTVOL_CONTROL)
+    if got != want:
+        logger.error("volume: the software level did not take (wanted %s, read %s); "
+                     "the card keeps its own level", want, got)
+        return
+    if card_output.control and card_output.scale:
+        await set_raw(card_output.control, card_output.scale.top, maximum=card_output.scale.raw_max)
+    logger.info("volume: software volume at %.2f dB on %s; %s", db, card_output.label,
+                "its own control parked at 0 dB" if card_output.control else "it has no control of its own")
+
+
 async def main() -> None:
     config = Config.load()
 
@@ -404,6 +463,10 @@ async def main() -> None:
         asyncio.ensure_future(_board_restart())
 
     chosen_output = outputs.resolve(settings_store.get("output_device"))
+    #: ADR-0124: the card as it is, before the software stage takes its place.
+    card_output = chosen_output
+    if chosen_output is not None and volume_mode(settings_store.get(VOLUME_KEY), chosen_output) == SOFTWARE:
+        chosen_output = outputs.with_software_volume(chosen_output)
     if chosen_output is None:
         logger.error("outputs: no playback output found at all")
     else:
@@ -428,6 +491,8 @@ async def main() -> None:
         alsa.set_card(chosen_output.card)
         # ADR-0117: raw values mean what this output's control says they do.
         use_scale(chosen_output.scale)
+        if chosen_output.software:
+            await _start_software_volume(card_output, settings_store)
         if chosen_output.control:
             config = replace(config, mixer_name=chosen_output.control)
         logger.info(
@@ -437,8 +502,9 @@ async def main() -> None:
             chosen_output.control or "none - fixed output",
         )
         # ADR-0055 §6: a converted chain carries no meter, so the
-        # visualiser has nothing to draw and its button is not offered.
-        meters_available = outputs.needs_plug(chosen_output.card) is not True
+        # visualiser has nothing to draw and its button is not offered -
+        # unless the software stage is in it (amended 2026-10-07).
+        meters_available = chosen_output.software or outputs.needs_plug(chosen_output.card) is not True
 
     # The player squeezelite announces, which a rename changes (ADR-0048).
     lms_player_name = device_name.lms_player(config.lms_player_name)
@@ -616,13 +682,16 @@ async def main() -> None:
         """
         # The starting volume holds for a moment (start_guard): the phone's
         # own slider arriving as it connects is not a request to go louder.
-        again = start_guard.holding(renderer_id, value, time.monotonic())
-        if again is not None and supervisor.active == renderer_id:
+        held = start_guard.held(renderer_id, time.monotonic())
+        again = renderer_percent_to_value(held, steps) if held is not None else None
+        if again is not None and value > again and supervisor.active == renderer_id:
             logger.info("volume: %s asked for %s/%s just after starting at %s; keeping the starting volume",
                         renderer_id, value, steps, again)
-            adapter = adapters.get(renderer_id) or plugin_adapters.get(renderer_id)
-            if adapter is not None:
-                asyncio.ensure_future(adapter.set_volume(again))
+            # Through the renderer's own channel - its API, or for Bluetooth
+            # the phone's level over AVRCP (ADR-0053) - which is the level
+            # already playing, never the value it reported.
+            asyncio.ensure_future(remote.send(held))
+            start_guard.told(renderer_id, time.monotonic())
             return
         remote.set_steps(renderer_id, steps)
         remote.report(renderer_id, value)
@@ -634,7 +703,7 @@ async def main() -> None:
             )
             return
         logger.info(
-            "volume: %s -> hardware (%s/%s -> %s/240)", renderer_id, value, steps, raw
+            "volume: %s -> hardware (%s/%s -> %s/%s)", renderer_id, value, steps, raw, hardware_max()
         )
         asyncio.ensure_future(volume_bridge.write_hardware(raw))
 
@@ -674,6 +743,13 @@ async def main() -> None:
             # been holding it since (ADR-0054 §1).
             value, steps = bluetooth_volume.level, bluealsa_volume.STEPS
             if value is None:
+                # **The phone's own level, arriving later, is not a request**
+                # (George, guestpi, 2026-10-07: *"started lower and then as soon
+                # as I increased the volume it went higher"* - the phone's first
+                # report, 7 s in, was its remembered 56/127, far above what was
+                # playing). Held like a starting volume: a first report above
+                # the level playing is answered with that level.
+                _hold_the_level_playing(renderer_id)
                 return False
             logger.info("volume: bluetooth says it is at %s on acquisition", value)
             report_renderer_volume(renderer_id, value, steps)
@@ -691,6 +767,18 @@ async def main() -> None:
             renderer_id, value, getattr(adapter, "VOLUME_STEPS", 100)
         )
         return True
+
+    def _hold_the_level_playing(renderer_id: str, untold_max_s: float | None = None) -> None:
+        """Arm the start guard at the level playing now, for a renderer that
+        has not said where it is (start_guard)."""
+        if volume_fixed_output():
+            return
+        volume = state_store.state.volume
+        raw = mute.audible_raw(volume.raw if volume is not None else None)
+        if raw is None:
+            return
+        start_guard.handed(renderer_id, hardware_raw_to_renderer_value(raw, 100), time.monotonic(),
+                           told=False, untold_max_s=untold_max_s)
 
     async def hand_level_to(renderer_id: str, adapter) -> bool:
         """**ADR-0054 §5, amended 2026-09-26: the level already playing carries
@@ -718,28 +806,41 @@ async def main() -> None:
         raw = mute.audible_raw(volume.raw if volume is not None else None)
         if raw is None:
             return False
-        steps = await adapter.get_volume_steps()
-        value = hardware_raw_to_renderer_value(raw, steps)
         # Every renderer handed its level, not one named here (ADR-0054 §5,
         # amended again 2026-09-28): Spotify, and a plugin that declares
         # `volume_handed`.
+        #
+        # **The DAC comes down before the renderer is asked anything**
+        # (2026-10-07, George on guestpi: *"Volume did start at 100% which
+        # shouldn't have happened"*). Asking Spotify its scale first ran out of
+        # the 2 s the supervisor allows while its session was still starting,
+        # and the starting volume was never applied. Lowering is our own write;
+        # the renderer is told when it answers - or, if it does not in time,
+        # its first report above the level is answered with it (start_guard).
         start_max = _number("start_max")
-        if start_max is not None and value > renderer_percent_to_value(start_max, steps):
-            value = renderer_percent_to_value(start_max, steps)
-            logger.info(
-                "volume: %s starts no louder than %s%%; the DAC comes down (%s/240 -> %s/%s)",
-                renderer_id, int(start_max), raw, value, steps,
-            )
-            await volume_bridge.write_hardware(renderer_value_to_hardware_raw(value, steps))
-            start_guard.handed(renderer_id, value, time.monotonic())
+        lowered = False
+        if start_max is not None:
+            cap_raw = renderer_value_to_hardware_raw(renderer_percent_to_value(start_max, 100), 100)
+            if raw > cap_raw:
+                logger.info("volume: %s starts no louder than %s%%; the DAC comes down first (%s -> %s of %s)",
+                            renderer_id, int(start_max), raw, cap_raw, hardware_max())
+                await volume_bridge.write_hardware(cap_raw)
+                start_guard.handed(renderer_id, start_max, time.monotonic(), told=False)
+                raw, lowered = cap_raw, True
+        steps = await adapter.get_volume_steps()
+        value = hardware_raw_to_renderer_value(raw, steps)
+        if lowered:
+            value = min(value, renderer_percent_to_value(start_max, steps))
         else:
             logger.info(
-                "volume: %s cannot say where it is; handing it the level playing (%s/240 -> %s/%s)",
-                renderer_id, raw, value, steps,
+                "volume: %s cannot say where it is; handing it the level playing (%s/%s -> %s/%s)",
+                renderer_id, raw, hardware_max(), value, steps,
             )
         remote.set_steps(renderer_id, steps)
         remote.report(renderer_id, value)
         await adapter.set_volume(value)
+        if lowered:
+            start_guard.told(renderer_id, time.monotonic())
         return True
 
     # ADR-0052 §3, amended: the ceiling is the top of every scale, so the
@@ -751,12 +852,12 @@ async def main() -> None:
     set_curve_reader(lambda: settings.value("travel_curve"))
     # ADR-0046. `output_mode` is what the *user* has chosen; `_fixed_now`
     # is what is in force, which lags it while something is playing.
-    # **An output with no volume control forces fixed output** (ADR-0055
-    # §4). Not a side effect: the device cannot attenuate, so ADR-0046's
-    # behaviour is the only honest one, and the row below cannot override
-    # it.
-    forced_fixed = chosen_output is not None and chosen_output.control is None  # noqa: F841
-    fixed_wanted = {"value": forced_fixed}
+    # ADR-0127: an output with no volume control no longer forces fixed
+    # output - Software takes Hardware's place there - so Fixed is only
+    # ever the user's choice.
+    fixed_wanted = {"value": volume_mode(settings_store.get(VOLUME_KEY), card_output) == FIXED}
+    #: Whether the software stage is in the chain now (ADR-0124).
+    software_on = {"value": bool(chosen_output is not None and chosen_output.software)}
     fixed_now = {"value": False}
     set_fixed_output_reader(lambda: fixed_now["value"])
 
@@ -791,7 +892,8 @@ async def main() -> None:
             _reapply_level()
 
     def _restrict_output_mode(output) -> None:
-        """Grey `Variable` out on an output that cannot attenuate.
+        """Grey `Hardware` out on an output that cannot attenuate; the row
+        then shows Software, the next option (ADR-0127 §2).
 
         ADR-0055 §5. The row still opens and still draws both options -
         George: *"I wouldn't hide this time as settings is different than
@@ -801,7 +903,7 @@ async def main() -> None:
         if output is not None and output.control is None:
             settings.restrict(
                 "output_mode",
-                {"Variable": f"{output.label} has no volume control of its own."},
+                {HARDWARE: f"{output.label} has no volume control of its own."},
             )
         else:
             settings.restrict("output_mode", {})
@@ -814,16 +916,22 @@ async def main() -> None:
         would carry on to the old card indefinitely; restarting them is
         what makes the change mean something.
 
-        **This daemon restarts with them**, and that is deliberate rather
-        than lazy: the chosen card brings its own volume control name -
-        `DAC` here, `PCM` on the headphone jack, none at all on HDMI - and
-        rediscovering it at startup is one path instead of three mutable
-        ones threaded through the bridges.
+        **This daemon is not restarted.** The chosen card brings its own
+        volume control name - `DAC` here, `PCM` on the headphone jack, none
+        at all on HDMI - and that name is set in place
+        (`VolumeBridge.set_mixer_name`); the mixer handles open on the old
+        card and libasound's cached configuration are freed
+        (`forget_mixers`), so the next write opens the new card's.
         """
-        chosen = outputs.resolve(settings.value("output_device"))
+        base = outputs.resolve(settings.value("output_device"))
+        # The row restricted for this output first: what is in force on it
+        # (ADR-0127 §2) decides whether the software stage is in the chain.
+        _restrict_output_mode(base)
+        chosen = _with_software(base)
         if chosen is None:
             logger.error("outputs: nothing to switch to")
             return
+        software_on["value"] = chosen.software
 
         # **Everything the user can see changes now, before the slow part**
         # (George: *"Changing the output is slow at changing the volume
@@ -831,16 +939,13 @@ async def main() -> None:
         # the sound card: the mode, the greyed option, the padlock and the
         # visualiser button are all consequences of *which output was
         # chosen*, which is already known.
-        nonlocal forced_fixed
-        forced_fixed = chosen.control is None
         alsa.set_card(chosen.card)
         use_scale(chosen.scale)
-        _restrict_output_mode(chosen)
         volume_bridge.set_mixer_name(chosen.control or config.mixer_name)
         # The monitor watches one card and was spawned for the old one; its
         # own loop restarts it, so ending it is enough to move it.
         volume_bridge.restart_monitor()
-        meters_chain["ok"] = outputs.needs_plug(chosen.card) is not True
+        meters_chain["ok"] = chosen.software or outputs.needs_plug(chosen.card) is not True
         _publish_meters()
         _choose_output_mode()
         state_store.bump_settings_revision()
@@ -861,11 +966,30 @@ async def main() -> None:
         )
         await stop.wait()
         outputs.write(chosen, tuning=_tuning())
+        # The mixer handles open on the old card are let go of: the next
+        # write opens the new one's.
+        await forget_mixers()
+        # ADR-0124: **the software level in place before anything can play**
+        # - on every change of output, not only when the row is switched on
+        # (George, 2026-10-07: on HDMI the volume stayed the same throughout).
+        if chosen.software:
+            await _start_software_volume(outputs.resolve(settings.value("output_device")), settings_store)
+            raw = await get_raw(outputs.SOFTVOL_CONTROL)
+            if raw is not None:
+                state_store.set_volume_raw(raw)
         # **This daemon is not restarted any more.** It was, to pick up the
         # new card's control name; that name is now settable in place
         # (`VolumeBridge.set_mixer_name`), and the restart was most of what
         # made the switch feel slow - the panel lost its websocket and
         # everything with it.
+        # **A renderer restarted under the source playing says nothing true
+        # about the volume** (George, guestpi, 2026-10-07: Spotify jumped to
+        # full level 12 s after Volume went from Hardware to Software -
+        # go-librespot's first report after its restart was 100). The source
+        # keeps the device across the restart, so no takeover arms the start
+        # guard; this does, for as long as a phone takes to reconnect.
+        if supervisor.active is not None:
+            _hold_the_level_playing(supervisor.active, untold_max_s=RESTART_HOLD_S)
         logger.info("outputs: starting the renderers again for %s", chosen.label)
         await asyncio.create_subprocess_exec(
             "systemctl", "restart", "squeezelite.service", "go-librespot.service",
@@ -883,6 +1007,39 @@ async def main() -> None:
             ),
         )
 
+    def _with_software(output):
+        """ADR-0124: the output as the software stage will play it, when the
+        row is on."""
+        if output is not None and settings.value(VOLUME_KEY) == SOFTWARE:
+            return outputs.with_software_volume(output)
+        return output
+
+    async def _set_software_volume(on=None) -> None:
+        """ADR-0124: switched on or off. **The level the listener hears
+        carries across** - on, it becomes the software level; off, the card's
+        own control is given it back before anything restarts, so neither
+        way starts at full level. Then the output is put in place again,
+        as a change of output is."""
+        volume = state_store.state.volume
+        db = volume.db if volume is not None else None
+        # The card as it is now - not as it was at start-up: the output may
+        # have changed since.
+        base = outputs.resolve(settings.value("output_device"))
+        if db is not None:
+            if on:
+                settings_store.set(SOFTWARE_LEVEL_KEY, db)
+            elif base is not None and base.control and base.scale:
+                await set_raw(base.control, base.scale.raw(db), maximum=base.scale.raw_max)
+        logger.info("volume: software volume %s at %s dB", "on" if on else "off", db)
+        # The output is put in place again; switched on, `_switch_output`
+        # makes the software control at the carried level before the
+        # renderers reopen.
+        await _switch_output()
+        if not on and base is not None and base.control:
+            raw = await get_raw(base.control)
+            if raw is not None:
+                state_store.set_volume_raw(raw)
+
     async def _rewrite_output_conf(reason: str) -> None:
         """Put the current output and tuning in `output.conf` and reopen.
 
@@ -892,7 +1049,7 @@ async def main() -> None:
         They restart afterwards, which is also what makes the new file
         mean anything - ALSA reads it when a PCM is opened.
         """
-        chosen = outputs.resolve(settings.value("output_device"))
+        chosen = _with_software(outputs.resolve(settings.value("output_device")))
         if chosen is None:
             logger.error("outputs: nothing to write the tuning to")
             return
@@ -934,10 +1091,19 @@ async def main() -> None:
         state_store.bump_settings_revision()
 
     def _choose_output_mode(value=None) -> None:
-        fixed_wanted["value"] = forced_fixed or (
-            value or settings.value("output_mode")
-        ) == "Fixed"
+        fixed_wanted["value"] = settings.value(VOLUME_KEY) == FIXED
         asyncio.ensure_future(_apply_output_mode())
+
+    def _choose_volume(value=None) -> None:
+        """ADR-0127: the Volume row. Between Hardware and Software the chain
+        changes, so the output is put in place again with the level carried
+        (ADR-0124); to or from Fixed waits for playback to stop (ADR-0046).
+        Software to Fixed does both: the stage comes out, the card is given
+        the level, then full level once nothing plays."""
+        software = settings.value(VOLUME_KEY) == SOFTWARE
+        if software != software_on["value"]:
+            asyncio.ensure_future(_set_software_volume(software))
+        _choose_output_mode()
 
     def _reapply_level() -> None:
         """Put the level back where the *position* now says it belongs.
@@ -1004,6 +1170,15 @@ async def main() -> None:
         on_value=lambda level, steps: report_renderer_volume("bluetooth", level, steps)
     )
 
+    #: The updater's states from *Stop playback* on (core/updater/gexis-update).
+    UPDATE_FROZEN = frozenset({"stopping", "installing", "restarting", "checking-device", "going-back"})
+
+    def _installing() -> str | None:
+        update = state_store.state.update or {}
+        if update.get("active") and update.get("state") in UPDATE_FROZEN:
+            return "an update is installing"
+        return None
+
     supervisor = Supervisor(
         adapters,
         # By unit, which the supervisor keeps after a renderer is forgotten:
@@ -1019,12 +1194,16 @@ async def main() -> None:
         # whatever fired - an event from an instance that had not died yet,
         # `activate` from a phone, the reclaim above.
         enabled=lambda renderer_id: renderer_enabled(renderer_id),
+        # ADR-0105 §4 step 4 (built 2026-10-07): from the moment the updater
+        # stops playback until it is done, nothing takes the device.
+        frozen=lambda: _installing(),
     )
 
     # ADR-0053's three channels. A renderer with a `set_volume` is driven
-    # through it; Bluetooth has no API of its own and is driven through the
-    # control `bluealsa-aplay` pushes out over AVRCP; a renderer with
-    # neither would still show its number and keep the panel's own slider.
+    # through it; Bluetooth has no API of its own and is driven through
+    # bluealsa's D-Bus `Volume` property (ADR-0054 §1), which bluealsa
+    # carries to the phone over AVRCP; a renderer with neither would still
+    # show its number and keep the panel's own slider.
     for renderer_id, adapter in adapters.items():
         capabilities = adapter.capabilities
         if hasattr(adapter, "set_volume"):
@@ -1102,7 +1281,7 @@ async def main() -> None:
         if await remote.send(percent):
             return True
         raw = slider_percent_to_raw(percent)
-        logger.info("command: volume -> %.0f%% (raw %s/240)", percent, raw)
+        logger.info("command: volume -> %.0f%% (raw %s/%s)", percent, raw, hardware_max())
         # Through the bridge, never set_raw() directly - the echo window is
         # what stops this write being read back as an external change and
         # bounced out to the active renderer (Finding 009 §1, which cost a
@@ -1632,6 +1811,14 @@ async def main() -> None:
             await asyncio.create_subprocess_exec("systemctl", "reboot")
         asyncio.ensure_future(_restart())
 
+    def _reports_note(key: str, reported: str | None) -> str | None:
+        """ADR-0126 decision 5: the row's own note, then what owners
+        reported; None leaves the note as it is."""
+        if not reported:
+            return None
+        own = settings.row(key).get("note")
+        return f"{own} {reported}" if own else reported
+
     settings = Settings(
         settings_store,
         registry=Settings.with_plugins(load_registry(), installed_plugins, downloads,
@@ -1710,7 +1897,11 @@ async def main() -> None:
         # The Release row's note: what the waiting or just-installed release
         # says changed (2026-10-01, George).
         notes={"software_update": updates.whats_new,
-               "sound_card_board": board_apply.note,
+               "sound_card_board": lambda: board_apply.note() or _reports_note(
+                   "sound_card_board", hardware_report.board_reports(
+                       outputs.resolve(settings_store.get("output_device")))),
+               # ADR-0126 decision 5: what owners reported, on the screen row.
+               "screen": lambda: _reports_note("screen", hardware_report.screen_reports(settings_store.get("screen"))),
                # The Lyrion server's first start says what it is doing.
                **({"lyrion-server.enabled": lambda: _lyrion_note(settings.value("lyrion-server.enabled") is True)}
                   if any(p.id == "lyrion-server" for p in installed_plugins) else {})},
@@ -1738,7 +1929,7 @@ async def main() -> None:
                "wallpaper_key": None, "wallpaper_topics": None,
                # ADR-0120: read on every fetch. Missed when they were added -
                # shown and refusing every write until 2026-10-05.
-               "pexels_key": None, "theaudiodb_key": None,
+               "theaudiodb_key": None,
                "idle_weather": None,
                "weather_location": None, "idle_forecast": None,
                "idle_icons": None,
@@ -1790,7 +1981,7 @@ async def main() -> None:
                # is re-applied rather than waiting for the next change.
                "travel_curve": lambda _value=None: _reapply_level(),
                # ADR-0046: chosen now, in force at the next legal moment.
-               "output_mode": _choose_output_mode,
+               "output_mode": _choose_volume,
                # ADR-0055: rewrites output.conf, then restarts everything
                # that holds a PCM - including this daemon, which is how the
                # new card's control name gets picked up.
@@ -1856,6 +2047,8 @@ async def main() -> None:
                # ADR-0125: built and downloaded through its own route,
                # `POST /report`, which the browser saves as a file.
                "problem_report": None,
+               # ADR-0126: through its own routes, `/hardware-report`.
+               "hardware_report": None,
                # ADR-0086: whatever the installed plugins brought. Wired
                # like any other row - something acts on it - and the thing
                # that acts is the plugin.
@@ -2069,7 +2262,7 @@ async def main() -> None:
                     # Powering up does not restore what the row asked for, and
                     # `gexis-bluetooth-setup.service` may not have re-run yet.
                     await bluetooth_adapter_state.apply_discoverable(
-                        bus, settings.value("bt_discoverable") or "3 min after boot"
+                        bus, settings.value("bt_discoverable") or bluetooth_adapter_state.DEFAULT_MODE
                     )
             finally:
                 bus.disconnect()
@@ -2167,7 +2360,7 @@ async def main() -> None:
         # default answers.
         if renderer_enabled("bluetooth"):
             await _apply_discoverable(
-                settings.value("bt_discoverable") or "3 min after boot", attempts=10
+                settings.value("bt_discoverable") or bluetooth_adapter_state.DEFAULT_MODE, attempts=10
             )
         bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
         pairing_bus.append(bus)
@@ -2229,8 +2422,10 @@ async def main() -> None:
     # one that cannot be honoured. The user's own choice is never
     # overwritten - the lock sits *over* the stored value - so switching
     # back to an output that can attenuate hands it straight back.
-    _restrict_output_mode(chosen_output)
-    if forced_fixed:
+    _restrict_output_mode(card_output)
+    # The stored choice in force from the start - Fixed included, which was
+    # only ever applied when an output forced it (found 2026-10-07).
+    if fixed_wanted["value"]:
         asyncio.ensure_future(_apply_output_mode())
 
     meters_chain["ok"] = meters_available
@@ -2662,6 +2857,54 @@ async def main() -> None:
             await asyncio.sleep(1 if view.get("active") else 3)
 
     asyncio.ensure_future(_follow_updates())
+
+    async def _follow_settling() -> None:
+        """**ADR-0128: the first start after setup, until it has settled.**
+        What setup chose to wait for, read against the downloads' own state
+        every two seconds while there is anything to wait for. Everything
+        finished: *Ready*, briefly, then gone. Something failed: it stays
+        until the owner's OK (`/settling/done`) - George: "Leave it for
+        settings but inform user"."""
+        ready_since = None
+        while True:
+            record = await asyncio.to_thread(settling.read)
+            view = settling.view(record, _all_components()) if record else None
+            if view and view["phase"] == "ready":
+                ready_since = ready_since or time.monotonic()
+                if time.monotonic() - ready_since > settling.READY_S:
+                    await asyncio.to_thread(settling.end)
+                    view = None
+            else:
+                ready_since = None
+            state_store.set_settling(view)
+            await asyncio.sleep(2 if view else 10)
+
+    asyncio.ensure_future(_follow_settling())
+
+    def _settling_done() -> None:
+        settling.end()
+        state_store.set_settling(None)
+
+    def _offered_plugins() -> list[dict]:
+        """ADR-0128 decision 1: every plugin the release ships beyond the
+        built-in sources - its switch, what it downloads and from where, and
+        the notice it must show first (ADR-0098)."""
+        pins = components.pins()
+        out = []
+        for plugin in installed_plugins:
+            if plugin.built_in or plugin.uploaded:
+                continue
+            component = downloads.get(plugin.id)
+            pin = pins.get(component) or {} if component else {}
+            out.append({
+                "id": plugin.id, "name": plugin.name,
+                "row": plugin.enabled_row or f"{plugin.id}.enabled",
+                "summary": plugin.summary or (f"Downloaded from {pin.get('FROM')}." if pin.get("FROM") else None),
+                "notice": plugin.notice,
+                "component": component,
+                "from": pin.get("FROM"),
+            })
+        return out
     # ADR-0111: the pack this screen wants every few minutes - and now, once
     # the attached screen has been compared (below), so a start that
     # switches screens does not first fetch the old screen's pack.
@@ -2855,7 +3098,7 @@ async def main() -> None:
             return False
 
     setup_network = SetupNetwork(on_change=state_store.set_setup)
-    setup_flow = SetupFlow(setup_network, settings, reboot=_reboot)
+    setup_flow = SetupFlow(setup_network, settings, reboot=_reboot, plugins=_offered_plugins)
     state_server = StateServer(
         state_store,
         host=config.state_host,
@@ -2907,6 +3150,7 @@ async def main() -> None:
         park=_park_renderers,
         screen_answer=_screen_answer,
         screen_new_answer=_screen_new_answer,
+        settling_done=_settling_done,
         on_painted=_screen_painted,
         upload_plugin=_upload_plugin,
         uninstall_plugin=_uninstall_plugin,
@@ -2925,6 +3169,31 @@ async def main() -> None:
     initial_raw = await get_raw(config.mixer_name)
     if initial_raw is not None:
         state_store.set_volume_raw(initial_raw)
+
+    if True:
+        # ADR-0124: the software level kept across restarts - ALSA makes its
+        # control again at 0 dB. Saved a second after it settles, not on
+        # every step of a ramp; only while the row is on (it can be switched
+        # on without a restart).
+        level_save = {"task": None, "db": None}
+
+        def _keep_software_level(state) -> None:
+            if not software_on["value"]:
+                return
+            db = state.volume.db if state.volume is not None else None
+            if db is None or db == level_save["db"]:
+                return
+            level_save["db"] = db
+            if level_save["task"] is not None:
+                level_save["task"].cancel()
+
+            async def _save(value=db) -> None:
+                await asyncio.sleep(1.0)
+                settings_store.set(SOFTWARE_LEVEL_KEY, value)
+
+            level_save["task"] = asyncio.ensure_future(_save())
+
+        state_store.subscribe(_keep_software_level)
 
     def make_on_acquire(renderer_id: str):
         def _on_acquire() -> None:
