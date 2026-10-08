@@ -5,7 +5,8 @@
   each one's progress, then *Ready*, which the core takes down a few seconds
   later. George, 2026-10-07: it **cannot be skipped**; and **a download that
   fails is left for Settings, and the owner is told** - the screen names it,
-  says where to try again, and waits for OK.
+  says where to try again, and waits for OK. Sources are not refused while it
+  settles (George: rather than blocking, say that music may be slow to start).
 -->
 <script>
   let { settling, ondone } = $props();
@@ -43,7 +44,7 @@
       {:else if settling.phase === 'failed'}
         {names(failed)} did not finish. Try again any time in <b>Settings → Plugins</b>; everything else is ready.
       {:else}
-        Downloading what you chose in setup. It takes a few minutes; the player is ready when it is done.
+        Downloading what you chose in setup - a few minutes. Until it is done, music may be slow to start.
       {/if}
     </div>
     <div class="items">
