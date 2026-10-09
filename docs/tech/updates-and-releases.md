@@ -72,7 +72,7 @@ builds the UI first (`npm ci && npm run build`) and then all packages.
 | `gexis-peppyalsa`, `gexis-peppy-engines` | the meter tap library; PeppyMeter/PeppySpectrum |
 | `gexis-go-librespot`, `gexis-beszel-agent` | upstream binaries, as built upstream (ADR-0093) |
 | `gexis-beszel-hub`, `gexis-lyrion-server`, `gexis-plexamp` | plugins; Lyrion and Plexamp themselves are *not* inside (see §7) |
-| `gexis-skins-<W>x<H>` | one visualiser skin pack per screen size (ADR-0111); never in the image. `gexis-update pack-install` fetches it at 3 MB/s (apt's `Dl-Limit`) while the player is in use - a card playing, or go-librespot, BlueALSA or BlueZ active in the last 10 min - and restarts apt at the other speed when that changes, resuming the partial file (ADR-0111 amended 2026-10-07) |
+| `gexis-skins-<W>x<H>` | one visualiser skin pack per screen size (ADR-0111); never in the image. Until one is installed, `gexis-peppy` exits cleanly saying so, and the core restarts it once the pack is in (2026-10-09). `gexis-update pack-install` fetches it at 3 MB/s (apt's `Dl-Limit`) while the player is in use - a card playing, or go-librespot, BlueALSA or BlueZ active in the last 10 min - and restarts apt at the other speed when that changes, resuming the partial file (ADR-0111 amended 2026-10-07) |
 | `gexis-player` | **the release**: exact `Depends` on all of the above (skins excepted), on `libasound2t64`, and the OS packages the device runs |
 
 **Versioning.** A package's version is the `git describe` of the *last commit
@@ -306,6 +306,14 @@ stateDiagram-v2
     done --> [*]
     failed --> [*]
 ```
+
+**An install cut short is finished first** (`heal()`, ADR-0110 as amended
+2026-10-09). After `apt update`, both an update and a skin pack check dpkg:
+a non-empty `/var/lib/dpkg/updates` or anything `dpkg --audit` lists means an
+earlier run was cut short (a power cut, on ShelvesPi). The updater runs
+`dpkg --configure -a`, installs again any package still listed, and only then
+goes on; if dpkg is still not clean it stops with a sentence saying so,
+rather than the download error apt's refusal used to be shown as.
 
 **Going back** (`go_back()`) follows any failure from the install step on -
 the install, its verify, the core not answering after the restart, or the

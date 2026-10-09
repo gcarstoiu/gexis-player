@@ -305,3 +305,17 @@ and the panel had nothing that drew it.
 - A preview installed over SSH is also followed by a restart of the kiosk
   (procedure), so it shows at once rather than within the minute.
 
+## Amended 2026-10-09: an install cut short is finished first
+
+George, after ShelvesPi's power cuts: *"Fix the issues you've discovered."*
+A power cut stopped a skin pack halfway through installing. From then on
+every apt run refused - *dpkg was interrupted, you must manually run 'dpkg
+--configure -a'* - and the screen said the download had stopped, every few
+minutes, for a day. A player has nobody to run that by hand.
+
+- After `apt update`, an update and a skin pack both check dpkg (its journal
+  in `/var/lib/dpkg/updates`, and `dpkg --audit`). Anything there: `dpkg
+  --configure -a`, then any package still listed installed again from the
+  repositories just read. Only then the download.
+- Still not clean: the run stops and the screen says an earlier install was
+  cut short and could not be finished, instead of a download error.
