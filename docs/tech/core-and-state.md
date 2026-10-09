@@ -128,6 +128,7 @@ Top-level fields of the `/state` payload:
 | `screen_confirm`, `screen_new` | The "keep this screen?" and "new screen attached" questions (ADR-0109) |
 | `screen_check` | The hardware feedback's test pattern and the measured corner taps (ADR-0126) |
 | `settling` | The first start after setup, until its downloads have finished: `phase` and each item's state (ADR-0128) |
+| `resetting` | `true` once a factory reset is confirmed, for the 3 s before the restart; every screen shows the reset screen (ADR-0132) |
 | `settings_revision`, `pictures_revision` | Refetch triggers |
 
 ### How a change reaches the screen

@@ -519,8 +519,10 @@ in backups, so enter them again.
 
 **How do I start the player over, without re-flashing the card?**
 *Settings → System → Reset to factory settings*, on the screen or a phone.
-Hold the button for 3 seconds, until its bar fills; the player restarts,
-clears everything and comes up in setup, as on a freshly flashed card. It
+Hold the button for 3 seconds, until its bar fills; the screen and the phone
+say the player is resetting, and the phone says how to reach setup. The
+player restarts, clears everything and comes up in setup, as on a freshly
+flashed card. It
 removes every setting and the name, the saved Wi-Fi networks, paired devices
 and sign-ins, the skins, the plugins, the Lyrion Server's library, and the
 backups kept on the player, so download a backup first (*Restore →
