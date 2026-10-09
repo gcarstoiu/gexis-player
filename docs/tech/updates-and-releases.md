@@ -311,9 +311,13 @@ stateDiagram-v2
 2026-10-09). After `apt update`, both an update and a skin pack check dpkg:
 a non-empty `/var/lib/dpkg/updates` or anything `dpkg --audit` lists means an
 earlier run was cut short (a power cut, on ShelvesPi). The updater runs
-`dpkg --configure -a`, installs again any package still listed, and only then
-goes on; if dpkg is still not clean it stops with a sentence saying so,
-rather than the download error apt's refusal used to be shown as.
+`dpkg --configure -a`, installs again any package still listed - or, for a
+skin pack whose exact version is no longer published, removes it so it is
+installed fresh - and only then goes on; if dpkg is still not clean it stops
+with a sentence saying so, rather than the download error apt's refusal used
+to be shown as. Before every `apt update` it also drops empty package lists
+in its own apt folders (`drop_empty_lists()`): a power cut can leave them at
+0 bytes, and apt would otherwise keep them for good.
 
 **Going back** (`go_back()`) follows any failure from the install step on -
 the install, its verify, the core not answering after the restart, or the
