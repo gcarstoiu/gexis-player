@@ -9,7 +9,8 @@ the phone in your pocket. Gexis Player brings all of it to one place: a
 Raspberry Pi 4 with a good DAC and a touchscreen, next to your amplifier.**
 
 An audiophile streamer for the Raspberry Pi and the DIY audio community.
-Bit-perfect up to 24-bit / 192 kHz, every source on one screen, set up from
+Bit-perfect, tested up to 24-bit / 192 kHz and likely higher with DACs that
+go further, every source on one screen, set up from
 your phone in minutes. Free and open source: no ads, no account, no
 subscription.
 
@@ -57,7 +58,9 @@ newest deliberate choice wins, and the others are told.
 
 ### 🎚️ Sounds the way the file does
 
-Bit-perfect to the DAC up to 24/192. The volume is set in the DAC's own
+Bit-perfect to the DAC, tested up to 24/192. Nothing in the chain resamples,
+so a DAC that takes higher rates, a USB DAC for example, should get them too,
+though that is untested. The volume is set in the DAC's own
 hardware, in software for an output with none of its own (HDMI), or fixed for
 an amplifier that does it. A maximum level holds for every source, and
 Spotify never starts louder than you allow. Because Gexis is the whole
@@ -126,7 +129,7 @@ or removed from Settings, with its progress shown in the switch itself.
 | | |
 |---|---|
 | 🔊 **Sources** | Spotify Connect · Lyrion (squeezelite) · Bluetooth (A2DP) · Plexamp · your own plugins |
-| 🎚️ **Sound** | Bit-perfect up to 24/192 · hardware, software or fixed volume · a maximum level for every source · a starting volume Spotify never exceeds |
+| 🎚️ **Sound** | Bit-perfect, tested up to 24/192, higher rates possible with other DACs (untested) · hardware, software or fixed volume · a maximum level for every source · a starting volume Spotify never exceeds |
 | 🔀 **Handover** | One source at a time, never mixed · takeover in any direction · the previous source released before the next one plays |
 | 🖼️ **Now playing** | Artwork · synced or plain lyrics · artist information and photos · the Lyrion queue |
 | 📈 **Visualiser** | Up to 287 skins, depending on the screen · VU meters, spectrum, turntables and tape decks · progress, time, volume and play-state in each skin's own style · skins that rotate per track |
@@ -145,8 +148,9 @@ I'd rather you knew these up front:
 
 - **Tested hardware is narrow.** A Raspberry Pi 4 (4 GB); the HiFiBerry
   DAC2 HD and IQaudIO Pi-DAC PRO; four HDMI touch screens. Other DACs and
-  screens are listed but untested - see the
-  [hardware requirements](docs/HARDWARE.md).
+  screens are listed but untested, as are USB DACs and rates above 24/192 -
+  see the [hardware requirements](docs/HARDWARE.md). *Hardware feedback* on
+  the player is the way to report what works.
 - **On a phone you get Settings and a mini player, not the whole player.**
   The mini player has the volume, a touchpad and buttons that drive the panel;
   the library is browsed on the panel, in a Lyrion app or in your streaming
