@@ -235,8 +235,31 @@ def apt_env(repos: list[str], pins: list[str] | None = None) -> list[str]:
 APT_ENV = {"DEBIAN_FRONTEND": "noninteractive", "APT_LISTCHANGES_FRONTEND": "none"}
 
 
+def drop_empty_lists() -> list[str]:
+    """**An empty package list is thrown away before `apt update`**, so apt
+    fetches it again. A power cut on ShelvesPi left every list it had just
+    written at 0 bytes - ext4 had not written them to the card yet - and apt,
+    finding the signed index unchanged, answered "Hit" and kept the empty
+    ones: no package could be found ("Unable to locate package"), in every
+    repository, for good. No list of ours is ever really empty. `lock` is
+    apt's own and empty by nature."""
+    dropped = []
+    for f in sorted((STATE / "apt").glob("*/lists/*")):
+        try:
+            if f.is_file() and f.name != "lock" and f.stat().st_size == 0:
+                f.unlink()
+                dropped.append(f.name)
+        except OSError:
+            continue
+    if dropped:
+        print(f"dropped {len(dropped)} empty package list(s): {', '.join(dropped)}", flush=True)
+    return dropped
+
+
 def apt(opts: list[str], *args: str, prefix: list[str] | None = None) -> subprocess.CompletedProcess:
     """apt-get, its whole output kept in STATE/apt.log for the record."""
+    if "update" in args:
+        drop_empty_lists()
     r = run(*(prefix or []), "apt-get", "-q", "-y", *opts, *args, env=APT_ENV, check=False)
     with (STATE / "apt.log").open("a") as log:
         log.write(f"\n=== {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} apt-get {' '.join(args)} -> {r.returncode}\n")
@@ -295,6 +318,21 @@ def heal(opts: list[str]) -> None:
     journal, broken = interrupted()
     if broken:
         apt(opts, "--allow-change-held-packages", "install", "--reinstall", *broken)
+        journal, broken = interrupted()
+    # **A skin pack apt cannot reinstall is removed**, and the install that
+    # follows fetches it fresh. Found on ShelvesPi itself, after the first
+    # version of this passed its tests: the half-installed pack's exact
+    # version was no longer in any repository ("needs to be reinstalled, but
+    # I can't find an archive for it"). Only packs: the player downloads them
+    # itself anyway, while removing any other package could take part of the
+    # player with it - those stop here and say so.
+    packs = [name for name in broken if PACK.match(name) or name == "gexis-skins"]
+    if packs:
+        r = run("dpkg", "--remove", "--force-remove-reinstreq", *packs, check=False, env=APT_ENV)
+        with (STATE / "apt.log").open("a") as log:
+            log.write(f"\n=== {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} "
+                      f"dpkg --remove --force-remove-reinstreq {' '.join(packs)} -> {r.returncode}\n")
+            log.write(r.stdout + r.stderr)
         journal, broken = interrupted()
     if journal or broken:
         print(f"dpkg is still not clean: {', '.join(broken) or 'its journal'}", flush=True)

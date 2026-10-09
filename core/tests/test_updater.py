@@ -758,7 +758,37 @@ def test_configure_alone_can_be_enough(monkeypatch, up, tmp_path):
     assert ["dpkg", "--configure", "-a"] in calls and applied == []
 
 
-def test_what_cannot_be_finished_says_so(monkeypatch, up, tmp_path):
-    _dpkg(monkeypatch, up, tmp_path, journal=True, audits=[AUDIT_BROKEN, AUDIT_BROKEN, AUDIT_BROKEN])
+def test_a_pack_apt_cannot_reinstall_is_removed_for_a_fresh_install(monkeypatch, up, tmp_path):
+    """ShelvesPi again, with the first version of this: the half-installed
+    pack's exact version was in no repository, so apt could not reinstall
+    it. A pack is removed, and the install that follows fetches it fresh."""
+    calls, applied = _dpkg(monkeypatch, up, tmp_path, journal=True,
+                           audits=[AUDIT_BROKEN, AUDIT_BROKEN, AUDIT_BROKEN, ""])
+    up.heal(["-o", "x"])
+    assert ["dpkg", "--remove", "--force-remove-reinstreq", "gexis-skins-1480x320"] in calls
+
+
+def test_anything_else_that_cannot_be_finished_says_so(monkeypatch, up, tmp_path):
+    """Never removes a package of the player itself."""
+    core = AUDIT_BROKEN.replace("gexis-skins-1480x320", "gexis-core")
+    calls, _ = _dpkg(monkeypatch, up, tmp_path, journal=True, audits=[core, core, core])
     with pytest.raises(up.Stop, match="cut short"):
         up.heal(["-o", "x"])
+    assert not any(c[:2] == ["dpkg", "--remove"] for c in calls)
+
+
+def test_empty_package_lists_are_dropped_before_an_update(up, tmp_path, monkeypatch):
+    """ShelvesPi after its power cuts: every saved list at 0 bytes, kept by
+    apt's "Hit" forever - no package could be found. They are thrown away so
+    apt fetches them again; real lists and apt's lock stay."""
+    lists = tmp_path / "updates" / "apt" / "ecd84854c1b3ae58" / "lists"
+    lists.mkdir(parents=True)
+    (lists / "x_skins-bbb_._Packages").write_text("")
+    (lists / "x_skins-bbb_._InRelease").write_text("signed")
+    (lists / "x_ours_._Packages").write_text("Package: gexis-core\n")
+    (lists / "lock").write_text("")
+    seen = []
+    monkeypatch.setattr(up, "run", lambda *a, **k: seen.append(sorted(p.name for p in lists.iterdir()))
+                        or subprocess.CompletedProcess(a, 0, "", ""))
+    up.apt(["-o", "x"], "update")
+    assert seen == [["lock", "x_ours_._Packages", "x_skins-bbb_._InRelease"]]
