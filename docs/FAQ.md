@@ -569,6 +569,21 @@ or fan, especially with the Lyrion server. The minimum and recommended
 hardware, with what each rests on, are in the
 [hardware requirements](HARDWARE.md).
 
+**The player restarts by itself, or the screen keeps going dark and coming back. Why?**
+Almost always the power supply. A Raspberry Pi 4 needs a steady 5.1 V at up
+to 3 A; a phone charger, or a long or thin cable, sags when the player is
+busy - starting up, installing, or a touch screen lighting up - and the Pi
+resets. A screen that takes its power from the Pi's USB port adds its draw
+to the Pi's own. One player showed it both ways: on a phone charger it
+restarted over and over within seconds of starting; on a better supply it
+stopped restarting, but still dipped several times in a few minutes while
+its bar screen, powered from the Pi, was in use. Use the official 5.1 V / 3 A
+supply, and give a screen its own supply where it has a port for one. A
+problem report (*Settings → System → Problem report*) carries the Pi's own
+record under *Throttling*: `0x0` means the power has been fine since the
+last start. A power cut during an install or update is repaired by the
+player itself the next time it installs anything.
+
 **Which DACs work?**
 Each output in *Settings → Audio → Output* shows *Tested*, *Reported*,
 *Known* or *Detected*. The HiFiBerry DAC2 HD and the IQaudIO Pi-DAC PRO are

@@ -983,8 +983,14 @@ def main() -> int:
     # (ADR-0051 §2).
     skins, homes = load_corpus(base_folder, meter_folder)
     if not skins:
-        print(f"ERROR: no skins in {corpus}/meters.txt", file=sys.stderr)
-        return 1
+        # **No pack for this screen yet is not a failure** (ShelvesPi,
+        # 2026-10-09): its pack had not arrived - a power cut left it half
+        # installed - and the unit sat in `systemctl --failed` and in problem
+        # reports as a crash. The panel offers no visualiser without a pack,
+        # and the core restarts this unit once one is installed.
+        print(f"no skin pack for this screen yet ({corpus}/meters.txt is empty); "
+              "the visualiser starts once one is installed", file=sys.stderr)
+        return 0
 
     from configfileparser import BASE_PATH, FRAME_RATE, METER
     from peppymeter import Peppymeter

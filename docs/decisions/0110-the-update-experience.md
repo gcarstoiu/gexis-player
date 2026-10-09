@@ -305,3 +305,34 @@ and the panel had nothing that drew it.
 - A preview installed over SSH is also followed by a restart of the kiosk
   (procedure), so it shows at once rather than within the minute.
 
+## Amended 2026-10-09: an install cut short is finished first
+
+George, after ShelvesPi's power cuts: *"Fix the issues you've discovered."*
+A power cut stopped a skin pack halfway through installing. From then on
+every apt run refused - *dpkg was interrupted, you must manually run 'dpkg
+--configure -a'* - and the screen said the download had stopped, every few
+minutes, for a day. A player has nobody to run that by hand.
+
+- After `apt update`, an update and a skin pack both check dpkg (its journal
+  in `/var/lib/dpkg/updates`, and `dpkg --audit`). Anything there: `dpkg
+  --configure -a`, then any package still listed installed again from the
+  repositories just read. Only then the download.
+- Still not clean: the run stops and the screen says an earlier install was
+  cut short and could not be finished, instead of a download error.
+
+**Tried on ShelvesPi itself, the same day, which the tests had not
+caught:**
+
+- The half-installed skin pack's exact version was in no repository, so
+  apt could not reinstall it. A **skin pack** that cannot be reinstalled is
+  now removed (`dpkg --remove --force-remove-reinstreq`) and installed fresh
+  by the run that follows. Only packs: removing any other package could take
+  part of the player with it, so those stop and say so.
+- The power cut had also left **every package list the updater had saved at
+  0 bytes** - written moments before the cut, never flushed to the card. apt,
+  finding each signed index unchanged, answered "Hit" and kept them, so no
+  package could be found at all. Empty lists in the updater's own apt folders
+  are now thrown away before every `apt update`, and apt fetches them again.
+- With both, the updater on ShelvesPi dropped four empty lists, finished
+  dpkg, and installed the 1480x320 pack it had been missing for a day.
+

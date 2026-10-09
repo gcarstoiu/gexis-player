@@ -180,3 +180,13 @@ recommendation on in use"*.
    quiet for 10 minutes, apt is stopped and started again at the other speed.
    It resumes the partial file, so nothing is fetched twice.
 4. Updates are not affected: an update stops playback before it downloads.
+
+## Amended 2026-10-09: no pack yet is not a failure
+
+The image holds no skins (decision 3), so on every new card the visualiser
+started, found none, and exited with an error until its pack arrived - and on
+ShelvesPi, whose pack a power cut left half installed, it stayed in
+`systemctl --failed` and in problem reports as a crash. It now exits cleanly,
+saying the visualiser starts once a pack is installed; the panel already
+offers no visualiser without one, and the core restarts the unit when a pack
+lands.

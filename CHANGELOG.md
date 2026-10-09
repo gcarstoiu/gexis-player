@@ -5,6 +5,18 @@ Every release of Gexis Player and its notes, newest first. Generated from
 edit that file, not this one. The player shows the last 10 under
 Settings → System → Change logs.
 
+## 0.9.7 — 9 October 2026
+
+### Fixed
+
+- An install or update cut short - by a power cut, for instance - is finished by the player itself the next time it installs anything. Until now a skin pack could stay missing, retried every few minutes, with the screen saying its download had stopped.
+- With no visualiser skins installed yet, the visualiser waits for them quietly instead of showing as failed.
+- On a bar screen, the Minimise button on Now Playing points right, to the mini strip, and a tap near its top no longer opens the tray.
+
+### Good to know
+
+- Plexamp's plugin is at 0.4.4: while Plexamp is not answering, its log says so once instead of every second.
+
 ## 0.9.6 — 9 October 2026
 
 ### New

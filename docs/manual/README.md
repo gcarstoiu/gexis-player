@@ -279,7 +279,9 @@ type a name, a password or a key.
 On a wide, short *bar* screen (such as the tested 1280 × 400 and 1480 × 320) the same player is
 laid out in strips: Now Playing on one line, and the library's lists run
 sideways. A tray pulled down from the top holds Home, the volume and the
-visualiser.
+visualiser. On Now Playing, the **Minimise** button on the artwork points
+right, to the mini strip it leaves you with, and sits below the top edge
+the tray is pulled from.
 
 ![Bar: Now Playing](images/bar-nowplaying-track.webp)
 
