@@ -23,9 +23,9 @@ configuration persistence, specified nowhere".
 
 1. **Settings → System → *Reset to factory settings*.** An action, after
    *Restore*, on the panel and the phone like every other row. Its sheet says
-   what goes - including the backups and the music kept on the player - offers
-   *Download* of a backup first on a phone or computer, and confirms with
-   ***Reset and restart***.
+   what goes - including the backups and the music kept on the player - says
+   to download a backup first under *Restore*, and confirms with ***Hold to
+   reset and restart*** (decision 6).
 2. **The wipe runs at the start of the next boot, not while the player
    runs.** Confirming writes a request (`/var/lib/gexis/factory-reset`) and
    restarts. `gexis-factory-reset.service` runs early - before NetworkManager,
@@ -55,6 +55,16 @@ configuration persistence, specified nowhere".
 5. **Plugins' units follow their switches at the next start**, as after a
    restore (`_reconcile_sources`): with the settings gone, each is back to
    its default.
+6. **A challenge that needs no keyboard** (George, 2026-10-09: *"add a
+   challenge of sorts when triggering a reset. Should be something that could
+   work without a keyboard."*). The confirm button is **held for 3 seconds**,
+   a bar filling across it; letting go, sliding off it or a cancelled touch
+   before then starts over. It works the same by finger on the panel, on a
+   phone, with a mouse, and with Space or Enter held down. A tap, or a stray
+   brush of the panel, cannot reset a player. Typing a word was set aside:
+   the panel has no keyboard. A puzzle was set aside too: it reads as a game
+   on an action that deletes everything.
+   Registry rows mark it with `"hold": true`.
 
 ## Settings inventory (ADR-0022)
 
