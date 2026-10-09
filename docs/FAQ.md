@@ -517,6 +517,16 @@ backup can also be restored later: copy it into the Backups share and choose
 it under *Settings → System → Restore*. Network share passwords are not kept
 in backups, so enter them again.
 
+**How do I start the player over, without re-flashing the card?**
+*Settings → System → Reset to factory settings*, on the screen or a phone.
+Hold the button for 3 seconds, until its bar fills; the player restarts,
+clears everything and comes up in setup, as on a freshly flashed card. It
+removes every setting and the name, the saved Wi-Fi networks, paired devices
+and sign-ins, the skins, the plugins, the Lyrion Server's library, and the
+backups and music kept on the player, so download a backup first (*Restore →
+Download* on a phone or computer). The installed version stays, so there is
+nothing to download again except the skins and plugins setup chooses.
+
 **What are Debug logs for?**
 *Settings → System → Debug logs* keeps the player's logs across restarts (up
 to 100 MB) to help track down a problem. It is on by default on the Testing

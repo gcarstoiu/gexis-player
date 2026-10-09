@@ -8,10 +8,11 @@ changed afterwards.
 
 Decisions: ADR-0031 (setup access point, amended 2026-09-28), ADR-0104 (how the
 device knows it needs setup), ADR-0048 (the device name), ADR-0109 (the Screen
-step), ADR-0111 (the Visualiser step), ADR-0083 (backup and restore).
+step), ADR-0111 (the Visualiser step), ADR-0083 (backup and restore),
+ADR-0132 (reset to factory settings).
 
 Code: `core/src/gexis_core/setup_network.py`, `setup_flow.py`, `wifi.py`,
-`device_name.py`, `discovery.py`; UI `ui/src/screens/SetupPage.svelte` (phone)
+`device_name.py`, `discovery.py`, `factory_reset.py`; UI `ui/src/screens/SetupPage.svelte` (phone)
 and `SetupScreen.svelte` (panel); image `image/stage-gexis/01-firstboot/`.
 
 ---
@@ -436,3 +437,39 @@ did not start*. `ready` stays up 4 s (`READY_S`), then the file is removed;
 `failed` stays until `POST /settling/done`. The panel draws
 `SettlingScreen.svelte` over everything but *Keep this screen?* and the update
 lock, with no way to dismiss it while anything downloads; a phone draws it too.
+
+## Reset to factory settings (ADR-0132)
+
+*Settings → System → Reset to factory settings* is an action row with
+`hold: true`: `Settings.svelte` confirms it only after the button is held for
+3 s (`HOLD_MS`) by pointer, or with Space or Enter held down; a release, a
+pointer leaving the button or a cancelled touch starts over. The core's
+`_factory_reset()` writes `/var/lib/gexis/factory-reset` (`factory_reset.request`)
+and reboots.
+
+The wipe does not run while the player runs: files such as the settings
+database are held open, and the restore path showed a live replacement meets
+a read-only store (ADR-0131). `gexis-factory-reset.service`
+(`ConditionPathExists=` the request, `DefaultDependencies=no`, wanted by
+`sysinit.target`) runs `python -m gexis_core.factory_reset` after the local
+file systems are mounted and before NetworkManager, Bluetooth, hostnamed, the
+screen check, the core, the kiosk, the renderers and the Lyrion Server.
+`wipe()` then:
+
+- removes the files and folders in `REMOVED` (settings and enrichment
+  databases, caches, backups, the device name, share passwords, the setup
+  marker and answers, the screen and board records, components, uploaded
+  plugins, Plexamp, Spotify's state, Beszel, the Lyrion Server's prefs and
+  cache) and empties those in `EMPTIED` (NetworkManager's connections,
+  Bluetooth, the music kept on the player, the journal), keeping the folders'
+  owners and modes;
+- writes back the image's hostname `raspberrypi` (and sets it on the running
+  kernel), Spotify's name `gexis` and the time zone Europe/London;
+- strips the screen's `video=` and the Wi-Fi country from `cmdline.txt` and
+  the sound card board's block from `config.txt`;
+- purges every installed `gexis-skins*` package.
+
+Each step is on its own: one that fails is logged and the rest go on. The
+request is removed last, so the boot continues into setup with no marker
+(ADR-0104). The installed release stays; SSH keys provisioned on the card
+stay.
