@@ -461,8 +461,10 @@ screen check, the core, the kiosk, the renderers and the Lyrion Server.
   marker and answers, the screen and board records, components, uploaded
   plugins, Plexamp, Spotify's state, Beszel, the Lyrion Server's prefs and
   cache) and empties those in `EMPTIED` (NetworkManager's connections,
-  Bluetooth, the music kept on the player, the journal), keeping the folders'
-  owners and modes;
+  Bluetooth, the journal), keeping the folders' owners and modes. The music
+  folder (`/var/lib/gexis-music`) and the Pictures share
+  (`/var/lib/gexis-core/pictures`) are never touched; Lyrion's new
+  preferences point at the music again and it rescans;
 - writes back the image's hostname `raspberrypi` (and sets it on the running
   kernel), Spotify's name `gexis` and the time zone Europe/London;
 - strips the screen's `video=` and the Wi-Fi country from `cmdline.txt` and

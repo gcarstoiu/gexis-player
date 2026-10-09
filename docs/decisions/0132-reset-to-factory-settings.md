@@ -5,7 +5,8 @@ settings which was deferred in the past but which is necessary now ...
 once the user resets, all settings are reset, skins are removed, plugins
 removed... everything goes to a clean installation with the next restart
 showing the setup."* On the four choices put to him: backups on the player
-**deleted**; music files and playlists on the player **deleted**; started
+**deleted**; music files and playlists on the player **deleted** - reversed
+the same day, see the amendment below; started
 from the **panel and the phone**; the row **added** to ADR-0022's inventory.
 **Builds on:** [ADR-0021](0021-deployment-flashable-image.md) (where it was
 deferred), [ADR-0104](0104-how-the-device-knows-it-needs-setup.md) (what makes
@@ -23,7 +24,7 @@ configuration persistence, specified nowhere".
 
 1. **Settings → System → *Reset to factory settings*.** An action, after
    *Restore*, on the panel and the phone like every other row. Its sheet says
-   what goes - including the backups and the music kept on the player - says
+   what goes - including the backups kept on the player - says
    to download a backup first under *Restore*, and confirms with ***Hold to
    reset and restart*** (decision 6).
 2. **The wipe runs at the start of the next boot, not while the player
@@ -47,11 +48,13 @@ configuration persistence, specified nowhere".
    - downloads: every skin pack (purged), the Plexamp app, uploaded plugins
      and their data, the components' state, the settling record;
    - the Lyrion Server's settings and library database;
-   - **the backups kept on the player** and **the music and playlists kept
-     on the player** (George's choice);
+   - **the backups kept on the player** (George's choice);
    - network share passwords; kept debug logs.
 4. **What stays:** the installed release (no downgrade) and the image's own
-   files; SSH access, when the card was provisioned with a key.
+   files; SSH access, when the card was provisioned with a key; **the music
+   folder** (`/var/lib/gexis-music`, with the playlists Lyrion saves there)
+   and **the Pictures share** (`/var/lib/gexis-core/pictures`). The Lyrion
+   Server's library database goes, so it scans the kept music again.
 5. **Plugins' units follow their switches at the next start**, as after a
    restore (`_reconcile_sources`): with the settings gone, each is back to
    its default.
@@ -65,6 +68,14 @@ configuration persistence, specified nowhere".
    the panel has no keyboard. A puzzle was set aside too: it reads as a game
    on an action that deletes everything.
    Registry rows mark it with `"hold": true`.
+
+## Amendment, 2026-10-09: the owner's files stay
+
+George, the same day: *"music from music folder shouldn't be deleted, nor the
+photos from the photos folder. Only the backups go."* The music folder and
+the Pictures share are no longer emptied (decision 4); of what the owner put
+on the player, only the backups go. The first answer above is kept as it was
+given.
 
 ## Settings inventory (ADR-0022)
 
