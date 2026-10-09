@@ -202,6 +202,14 @@
   //: George, 2026-10-07: two steps - the screen, then the sound; the screen's
   //: skipped when there is none to look at (headless, or none connected).
   let hwStep = $state('screen');
+  //: **Hardware feedback in steps** (George, 2026-10-09: the free text
+  //: "should have its own step in the modal as otherwise it's too tight on a
+  //: phone"): Screen (with a screen), Sound, then Anything else - with what
+  //: the player puts in the report itself, so it is seen before it is sent.
+  const HW_STEP_NAMES = { screen: 'Screen', sound: 'Sound', notes: 'Anything else' };
+  const hwSteps = $derived(hw?.display ? ['screen', 'sound', 'notes'] : ['sound', 'notes']);
+  const hwAt = $derived(Math.max(0, hwSteps.indexOf(hwStep)));
+  const hwLast = $derived(hwAt === hwSteps.length - 1);
   let hwTonesBusy = $state(false);
   async function playHardwareTones() {
     if (hwTonesBusy) return;
@@ -1163,9 +1171,9 @@
     }
     if (row.kind === 'hardware') {
       if (hwUrl) sheetKey = null;
-      else if (hw?.display && hwStep === 'screen') {
-        if (hwCheck?.showing) showScreenCheck(false).catch(() => {});
-        hwStep = 'sound';
+      else if (!hwLast) {
+        if (hwStep === 'screen' && hwCheck?.showing) showScreenCheck(false).catch(() => {});
+        hwStep = hwSteps[hwAt + 1];
       } else await prepareHardwareReport();
       return;
     }
@@ -1197,9 +1205,9 @@
   }
 
   function cancelSheet() {
-    // The feedback's sound step goes back to its screen step.
-    if (sheet?.kind === 'hardware' && hw?.display && hwStep === 'sound' && !hwUrl) {
-      hwStep = 'screen';
+    // A feedback step after the first goes back one step.
+    if (sheet?.kind === 'hardware' && hw && hwAt > 0 && !hwUrl) {
+      hwStep = hwSteps[hwAt - 1];
       return;
     }
     // A pending restore is a step inside the sheet, not the sheet: cancelling
@@ -1720,10 +1728,8 @@
           {:else if hw === null && !hwError}
             <p class="report__text report__text--quiet">Reading the hardware…</p>
           {:else if hw}
-            {#if hw.display}
-              <p class="report__step">Step {hwStep === 'screen' ? 1 : 2} of 2 · {hwStep === 'screen' ? 'Screen' : 'Sound'}</p>
-            {/if}
-            {#if hw.display && hwStep === 'screen'}
+            <p class="report__step">Step {hwAt + 1} of {hwSteps.length} · {HW_STEP_NAMES[hwStep]}</p>
+            {#if hwStep === 'screen'}
               <p class="report__text"><span class="report__addr">{hw.screen ?? 'Screen'}</span></p>
               <div class="hwq">
                 <span class="report__label">Screen check</span>
@@ -1740,7 +1746,7 @@
                   </button>
                 </div>
               </div>
-            {:else}
+            {:else if hwStep === 'sound'}
               <p class="report__text">
                 <span class="report__addr">{hw.board ?? 'No sound card'}</span>{#if hw.state} · {hw.state}{/if}
               </p>
@@ -1759,7 +1765,7 @@
                 </div>
               </div>
             {/if}
-            {#each HW_QUESTIONS.filter((x) => (hw.display && hwStep === 'screen') ? (x.screen || (x.touch && hw.touch)) : !(x.screen || x.touch)) as item (item.id)}
+            {#each hwStep === 'notes' ? [] : HW_QUESTIONS.filter((x) => hwStep === 'screen' ? (x.screen || (x.touch && hw.touch)) : !(x.screen || x.touch)) as item (item.id)}
               <div class="hwq">
                 <span class="report__label">{item.q}</span>
                 <div class="hwq__options">
@@ -1770,10 +1776,13 @@
                 </div>
               </div>
             {/each}
-            {#if !(hw.display && hwStep === 'screen')}
-            <label class="report__label" for="hw-notes">Anything else (optional)</label>
-            <textarea id="hw-notes" class="report__note" rows="3" maxlength="2000" bind:value={hwNotes}></textarea>
-            <details class="hwq__facts"><summary>What the player read</summary><pre>{hw.text}</pre></details>
+            {#if hwStep === 'notes'}
+            <label class="report__label" for="hw-notes">Your notes (optional)</label>
+            <p class="report__text report__text--quiet">What worked, what did not, how it sounds or looks. Leave it empty if the answers say it all.</p>
+            <textarea id="hw-notes" class="report__note report__note--tall" rows="7" maxlength="2000" bind:value={hwNotes}></textarea>
+            <details class="hwq__facts"><summary>What the player adds for you</summary>
+              <p class="report__text report__text--quiet">Read from the hardware and put in the feedback, so you need not type it. Nothing about you, and no serial numbers.</p>
+              <pre>{hw.text}</pre></details>
             {/if}
           {/if}
           {#if hwError}<p class="report__text report__text--warn">{hwError}</p>{/if}
@@ -2134,7 +2143,7 @@
           {#if join === 'error'}
             Give up
           {:else if joinItem || shareBrowse || shareLogin || (sheet.grouped && region !== null)
-                     || (sheet.kind === 'hardware' && hw?.display && hwStep === 'sound' && !hwUrl)}
+                     || (sheet.kind === 'hardware' && hw && hwAt > 0 && !hwUrl)}
             Back
           {:else if restorePending}
             Cancel
@@ -2153,7 +2162,7 @@
             onclick={confirmSheet}
           >
             {#if sheet.kind === 'hardware'}
-              {#if hwBusy}<span class="btn__spin"></span>Preparing…{:else if hwUrl}Done{:else if hw?.display && hwStep === 'screen'}Next: the sound{:else}Prepare the feedback{/if}
+              {#if hwBusy}<span class="btn__spin"></span>Preparing…{:else if hwUrl}Done{:else if hw && !hwLast}{hwSteps[hwAt + 1] === 'sound' ? 'Next: the sound' : 'Next: anything else'}{:else}Prepare the feedback{/if}
             {:else if sheet.kind === 'report'}
               {#if reportBusy}<span class="btn__spin"></span>Preparing…{:else if reportDone}Done{:else}Download{/if}
             {:else if busy}
@@ -3967,6 +3976,9 @@
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--ink-quiet);
+  }
+  .report__note--tall {
+    min-height: 168px;
   }
   .report__note {
     width: 100%;
