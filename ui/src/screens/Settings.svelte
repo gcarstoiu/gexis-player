@@ -9,7 +9,7 @@
   import CableSheet from './CableSheet.svelte';
   import { onMount, untrack } from 'svelte';
   import { pressing } from '../lib/press.svelte.js';
-  import { components, update, screenCheck, showScreenCheck } from '../lib/state.js';
+  import { components, update, screenCheck, showScreenCheck, resetting } from '../lib/state.js';
   import UpdateModal from './UpdateModal.svelte';
   import ReleaseNotes from './ReleaseNotes.svelte';
   import ReleaseHistory from './ReleaseHistory.svelte';
@@ -1222,7 +1222,8 @@
       sheetKey = null;
       const result = await runSetting(row.key);
       if (!result.ok) flash(plainly(result.error ?? `HTTP ${result.status}`, `${row.label} did not run. Try again.`));
-      else if (row.key === 'factory_reset') flash('Resetting. The player restarts into setup.', 12000);
+      // ADR-0132: the reset screen at once, not when /state says so.
+      else if (row.key === 'factory_reset') resetting.set(true);
       return;
     }
     if (row.type === 'text') {

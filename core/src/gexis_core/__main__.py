@@ -279,13 +279,17 @@ async def _reboot() -> None:
     await asyncio.create_subprocess_exec("systemctl", "reboot")
 
 
-async def _factory_reset() -> None:
+async def _factory_reset(state_store) -> None:
     """**ADR-0132: the reset is asked for, then the device restarts**; the
     wipe itself runs early in the next boot (`gexis-factory-reset.service`),
-    before anything holds the files it removes."""
+    before anything holds the files it removes. `resetting` on `/state` puts
+    the reset screen on the panel and every phone first (George, 2026-10-09:
+    "Something needs to be shown to the user so he knows that the device is
+    being reset"), and the restart waits long enough for it to arrive."""
     await asyncio.to_thread(factory_reset.request)
+    state_store.set_resetting()
     logger.warning("factory reset: requested; restarting to wipe and come up in setup")
-    await asyncio.sleep(1.5)
+    await asyncio.sleep(3)
     await asyncio.create_subprocess_exec("systemctl", "reboot")
 
 
@@ -2064,7 +2068,7 @@ async def main() -> None:
                "update_install": lambda _=None: updates.start(updates.INSTALL_UNIT),
                "updates": None, "update_channel": None,
                "reboot": lambda _: asyncio.ensure_future(_reboot()),
-               "factory_reset": lambda _: asyncio.ensure_future(_factory_reset()),
+               "factory_reset": lambda _: asyncio.ensure_future(_factory_reset(state_store)),
                # ADR-0109: a screen or rotation chosen is written for the
                # next start, and the device restarts on it - unless setup is
                # under way, which restarts by itself when it finishes.

@@ -23,8 +23,9 @@
   import { update, connection, hidePeppy, screenConfirm, answerScreen, screenNew, answerNewScreen, screenCheck, sendScreenCheck } from './lib/state.js';
   import TestPattern from './screens/TestPattern.svelte';
   import SettlingScreen from './screens/SettlingScreen.svelte';
+  import ResetScreen from './screens/ResetScreen.svelte';
   import CableKeep from './screens/CableKeep.svelte';
-  import { settling, settlingDone } from './lib/state.js';
+  import { settling, settlingDone, resetting } from './lib/state.js';
   import KeepScreen from './screens/KeepScreen.svelte';
   import NewScreen from './screens/NewScreen.svelte';
   import { loadSettings, settingValues } from './lib/settings.js';
@@ -749,6 +750,11 @@
   <!-- ADR-0121: a phone's pointer, over everything, while one controls. -->
   <PanelPointer />
 </div>
+{/if}
+
+<!-- ADR-0132: a factory reset under way - over everything, on every surface. -->
+{#if $resetting}
+  <ResetScreen surface={surface === 'remote' ? 'remote' : 'panel'} />
 {/if}
 
 <style>

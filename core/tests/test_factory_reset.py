@@ -73,3 +73,17 @@ def test_a_step_that_fails_does_not_stop_the_rest(tmp_path, monkeypatch):
     (tmp_path / "boot/firmware/cmdline.txt").unlink()
     done = factory_reset.wipe(tmp_path)
     assert "hostname" in done and not (tmp_path / "var/lib/gexis-core/settings.db").exists()
+
+
+def test_the_reset_is_on_the_state_for_every_screen():
+    """George, 2026-10-09: the panel and every phone show that the player is
+    being reset - not only the phone that confirmed it."""
+    from gexis_core.state import StateStore
+
+    store = StateStore({})
+    seen = []
+    store.subscribe(lambda state: seen.append(state.to_json()["resetting"]))
+    assert store.state.to_json()["resetting"] is False
+    store.set_resetting()
+    store.set_resetting()
+    assert store.state.resetting is True and seen == [True]

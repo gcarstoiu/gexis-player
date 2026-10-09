@@ -71,6 +71,7 @@ class StateStore:
         self._screen_new: dict | None = None
         self._screen_check: dict | None = None
         self._settling: dict | None = None
+        self._resetting = False
         #: **ADR-0081: the cover the daemon found for a renderer that sent
         #: none.** `renderer_id -> (track, url)`, applied in `state` below
         #: only where the renderer's own artwork is absent. Keyed on the
@@ -126,6 +127,7 @@ class StateStore:
             screen_new=dict(self._screen_new) if self._screen_new else None,
             screen_check=dict(self._screen_check) if self._screen_check else None,
             settling=dict(self._settling) if self._settling else None,
+            resetting=self._resetting,
         )
 
     def set_active(self, renderer_id: str | None) -> None:
@@ -405,6 +407,15 @@ class StateStore:
         if settling == self._settling:
             return
         self._settling = dict(settling) if settling is not None else None
+        self._notify()
+
+    def set_resetting(self) -> None:
+        """ADR-0132: a factory reset was confirmed and the device is about to
+        restart. There is no way back from it, so no setter for False: the
+        restart ends this state."""
+        if self._resetting:
+            return
+        self._resetting = True
         self._notify()
 
     def bump_settings_revision(self) -> None:
