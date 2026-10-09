@@ -67,6 +67,19 @@ scrub on main) waits for George's merge. Addresses already public before
 today (the dev machine, the LMS server, tests) stay: George, 2026-10-08,
 *"Leave the old one be - no scrub"*.
 
+**2026-10-09.** A test image with every fix since 0.9.5 is built and
+verified (111 checks): `image/deploy/2026-10-08-gexis-player-v0.9.5-66-g466956c.img`,
+for George's clean-flash setup test - not a release; it fetches skins and
+plugins from the published 0.9.5 Testing release. **gexis-plexamp 0.4.3**
+released (Plexamp missing or not answering is unavailable from the first
+poll) and pinned. **README rewritten and approved by George** (preview with
+comments, 2026-10-09): one opening, Lyrion and plugins as their own sections,
+first person singular and no self-promotion (memory), screenshots plus
+`docs/SCREENSHOTS.md`, and animated visualiser captures in
+`docs/assets/visualiser/` rendered off-screen by the real driver from a
+public-domain Beethoven recording (pygame-ce, not the device's pygame). It
+reaches GitHub's front page with the next release PR.
+
 **guestpi** (Pi-DAC PRO, 13.3"): runs 0.9.5's code as a
 preview. **Plexamp claimed again** later on 2026-10-08, after three claims
 Plex refused (its sign-ins answered 200 and 401 within a second); the
