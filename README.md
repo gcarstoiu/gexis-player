@@ -27,6 +27,12 @@ watch the music · 📱 Set up and run from your phone, no keyboard, no SSH
 </p>
 <p align="center"><sub>Shown with a public-domain demo library.</sub></p>
 
+Gexis began as the player for one living room and grew into something we are
+genuinely proud of. It is built on many years of other people's open-source
+work, so it goes back out the same way: free, under the GPL, with every line
+in the open. If it makes your music sound and look a little better, it has
+done its job, and we are glad to share it.
+
 ---
 
 ## 🎵 What it does
@@ -190,5 +196,10 @@ with what.
 ## 🙏 Credits
 
 Gexis Player stands on the shoulders of PeppyMeter and its skin artists,
-squeezelite, go-librespot, bluez-alsa, Raspberry Pi OS and many more,
-all listed in [THIRD-PARTY.md](THIRD-PARTY.md). Thank you.
+squeezelite, go-librespot, bluez-alsa, Lyrion, Raspberry Pi OS and many more,
+all listed in [THIRD-PARTY.md](THIRD-PARTY.md). None of this would exist if
+they had not shared their work first. Thank you.
+
+Found a bug, tried it on a DAC or screen nobody has yet, or written a plugin?
+Issues and feedback are very welcome - *Settings → System → Hardware
+feedback* on the player fills most of a report in for you.
