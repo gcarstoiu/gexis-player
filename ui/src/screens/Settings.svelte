@@ -6,6 +6,7 @@
   standalone on a phone and will be embedded on the panel.
 -->
 <script>
+  import CableSheet from './CableSheet.svelte';
   import { onMount, untrack } from 'svelte';
   import { pressing } from '../lib/press.svelte.js';
   import { components, update, screenCheck, showScreenCheck } from '../lib/state.js';
@@ -201,6 +202,14 @@
   //: George, 2026-10-07: two steps - the screen, then the sound; the screen's
   //: skipped when there is none to look at (headless, or none connected).
   let hwStep = $state('screen');
+  //: **Hardware feedback in steps** (George, 2026-10-09: the free text
+  //: "should have its own step in the modal as otherwise it's too tight on a
+  //: phone"): Screen (with a screen), Sound, then Anything else - with what
+  //: the player puts in the report itself, so it is seen before it is sent.
+  const HW_STEP_NAMES = { screen: 'Screen', sound: 'Sound', notes: 'Anything else' };
+  const hwSteps = $derived(hw?.display ? ['screen', 'sound', 'notes'] : ['sound', 'notes']);
+  const hwAt = $derived(Math.max(0, hwSteps.indexOf(hwStep)));
+  const hwLast = $derived(hwAt === hwSteps.length - 1);
   let hwTonesBusy = $state(false);
   async function playHardwareTones() {
     if (hwTonesBusy) return;
@@ -290,6 +299,16 @@
     } finally {
       hwBusy = false;
     }
+  }
+
+  //: ADR-0083 as amended 2026-10-08: the file itself, by its own name - a
+  //: link, so a large backup goes straight to the browser's downloads.
+  function downloadBackup(item) {
+    const a = Object.assign(document.createElement('a'), { href: `/backups/${encodeURIComponent(item.name)}`, download: item.name });
+    document.body.append(a);
+    a.click();
+    a.remove();
+    flash(`Saving ${item.name}`);
   }
 
   async function downloadReport() {
@@ -612,6 +631,8 @@
   function shown(row) {
     const v = row.value;
     if (row.type === 'toggle') return '';
+    // ADR-0123: the cable at a glance, the line the core keeps for it.
+    if (row.kind === 'cable') return row.note ?? '';
     // A screen reads as its maker and model, not the picker's `Maker/Model`.
     if (row.optionTags && typeof v === 'string') return v.replace('/', ' ');
     // A skin by the name its pack gives it (George's "Brand · Model").
@@ -876,7 +897,8 @@
       setTimeout(() => {
         if (join !== 'ok') return;
         closeSheet();
-        flash(`Joined ${name}`);
+        // ADR-0123 as amended: on the cable, the network is saved for later.
+        flash(answer.notice ?? `Joined ${name}`, answer.notice ? 6000 : undefined);
       }, 1300);
     });
   }
@@ -1149,9 +1171,9 @@
     }
     if (row.kind === 'hardware') {
       if (hwUrl) sheetKey = null;
-      else if (hw?.display && hwStep === 'screen') {
-        if (hwCheck?.showing) showScreenCheck(false).catch(() => {});
-        hwStep = 'sound';
+      else if (!hwLast) {
+        if (hwStep === 'screen' && hwCheck?.showing) showScreenCheck(false).catch(() => {});
+        hwStep = hwSteps[hwAt + 1];
       } else await prepareHardwareReport();
       return;
     }
@@ -1183,9 +1205,9 @@
   }
 
   function cancelSheet() {
-    // The feedback's sound step goes back to its screen step.
-    if (sheet?.kind === 'hardware' && hw?.display && hwStep === 'sound' && !hwUrl) {
-      hwStep = 'screen';
+    // A feedback step after the first goes back one step.
+    if (sheet?.kind === 'hardware' && hw && hwAt > 0 && !hwUrl) {
+      hwStep = hwSteps[hwAt - 1];
       return;
     }
     // A pending restore is a step inside the sheet, not the sheet: cancelling
@@ -1685,10 +1707,10 @@
   <div class="scrim" class:is-open={sheet} role="presentation" onclick={closeSheet}></div>
 
   {#if sheet}
-    <div class="sheet" class:sheet--full={sheetFull} role="dialog" aria-label={sheet.label}>
+    <div class="sheet" class:sheet--full={sheetFull} class:sheet--fit={sheet.type === 'action' && !sheet.kind && !restorePending} role="dialog" aria-label={sheet.label}>
       <div class="sheet__head">
         <div class="sheet__title">{sheet.grouped && region !== null ? region : sheet.label}</div>
-        {#if sheet.note && !joinItem}<div class="sheet__note"><NoteText text={sheet.note} /></div>{/if}
+        {#if sheet.note && !joinItem && sheet.kind !== 'cable'}<div class="sheet__note"><NoteText text={sheet.note} /></div>{/if}
         {#if joinItem && sheet.note}<div class="sheet__note"><NoteText text={sheet.note} /></div>{/if}
       </div>
 
@@ -1706,10 +1728,8 @@
           {:else if hw === null && !hwError}
             <p class="report__text report__text--quiet">Reading the hardware…</p>
           {:else if hw}
-            {#if hw.display}
-              <p class="report__step">Step {hwStep === 'screen' ? 1 : 2} of 2 · {hwStep === 'screen' ? 'Screen' : 'Sound'}</p>
-            {/if}
-            {#if hw.display && hwStep === 'screen'}
+            <p class="report__step">Step {hwAt + 1} of {hwSteps.length} · {HW_STEP_NAMES[hwStep]}</p>
+            {#if hwStep === 'screen'}
               <p class="report__text"><span class="report__addr">{hw.screen ?? 'Screen'}</span></p>
               <div class="hwq">
                 <span class="report__label">Screen check</span>
@@ -1726,7 +1746,7 @@
                   </button>
                 </div>
               </div>
-            {:else}
+            {:else if hwStep === 'sound'}
               <p class="report__text">
                 <span class="report__addr">{hw.board ?? 'No sound card'}</span>{#if hw.state} · {hw.state}{/if}
               </p>
@@ -1745,7 +1765,7 @@
                 </div>
               </div>
             {/if}
-            {#each HW_QUESTIONS.filter((x) => (hw.display && hwStep === 'screen') ? (x.screen || (x.touch && hw.touch)) : !(x.screen || x.touch)) as item (item.id)}
+            {#each hwStep === 'notes' ? [] : HW_QUESTIONS.filter((x) => hwStep === 'screen' ? (x.screen || (x.touch && hw.touch)) : !(x.screen || x.touch)) as item (item.id)}
               <div class="hwq">
                 <span class="report__label">{item.q}</span>
                 <div class="hwq__options">
@@ -1756,16 +1776,23 @@
                 </div>
               </div>
             {/each}
-            {#if !(hw.display && hwStep === 'screen')}
-            <label class="report__label" for="hw-notes">Anything else (optional)</label>
-            <textarea id="hw-notes" class="report__note" rows="3" maxlength="2000" bind:value={hwNotes}></textarea>
-            <details class="hwq__facts"><summary>What the player read</summary><pre>{hw.text}</pre></details>
+            {#if hwStep === 'notes'}
+            <label class="report__label" for="hw-notes">Your notes (optional)</label>
+            <p class="report__text report__text--quiet">What worked, what did not, how it sounds or looks. Leave it empty if the answers say it all.</p>
+            <textarea id="hw-notes" class="report__note report__note--tall" rows="7" maxlength="2000" bind:value={hwNotes}></textarea>
+            <details class="hwq__facts"><summary>What the player adds for you</summary>
+              <p class="report__text report__text--quiet">Read from the hardware and put in the feedback, so you need not type it. Nothing about you, and no serial numbers.</p>
+              <pre>{hw.text}</pre></details>
             {/if}
           {/if}
           {#if hwError}<p class="report__text report__text--warn">{hwError}</p>{/if}
         </div>
       {/if}
 
+      {#if sheet.kind === 'cable'}
+        <!-- ADR-0123: the cable's own sheet, with its own Save. -->
+        <CableSheet />
+      {/if}
       {#if sheet.kind === 'report'}
         <div class="report">
           {#if onPanel()}
@@ -1937,6 +1964,7 @@
               {@const inert = item.state === 'connected' && !item.details}
               <button
                 class="item"
+                class:item--backup={sheet.key === 'restore'}
                 class:is-joined={joined}
                 class:item--static={inert}
                 type="button"
@@ -1965,6 +1993,18 @@
                   <span class="lock" role="img" aria-label="Password needed"><span></span><span></span></span>
                 {:else if item.secured}
                   <span class="lock lock--open" role="img" aria-label="Password saved"><span></span><span></span></span>
+                {/if}
+                {#if sheet.key === 'restore' && !onPanel()}
+                  <!-- ADR-0083 as amended 2026-10-08: a backup saved on the
+                       phone or computer, for a newly flashed card's setup
+                       (ADR-0131). Not on the panel, which saves nothing. -->
+                  <span
+                    class="forget"
+                    role="button"
+                    tabindex="0"
+                    onclick={(e) => { e.stopPropagation(); downloadBackup(item); }}
+                    onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); downloadBackup(item); } }}
+                  >Download</span>
                 {/if}
                 {#if item.state === 'saved'}
                   <!-- **Saved only, never the network in use.** Forgetting
@@ -1997,6 +2037,9 @@
                     <div class="netinfo__row"><dt>{k}</dt><dd>{v}</dd></div>
                   {/each}
                 </dl>
+                <!-- ADR-0123 decision 2: this network's address, Automatic or
+                     Manual, kept the way the cable's is. -->
+                <div class="netaddr"><CableSheet port="wifi" facts={false} /></div>
               {/if}
             {/each}
             {#if sheet.hint}<div class="items__hint">{sheet.hint}</div>{/if}
@@ -2100,7 +2143,7 @@
           {#if join === 'error'}
             Give up
           {:else if joinItem || shareBrowse || shareLogin || (sheet.grouped && region !== null)
-                     || (sheet.kind === 'hardware' && hw?.display && hwStep === 'sound' && !hwUrl)}
+                     || (sheet.kind === 'hardware' && hw && hwAt > 0 && !hwUrl)}
             Back
           {:else if restorePending}
             Cancel
@@ -2110,7 +2153,7 @@
             Cancel
           {/if}
         </button>
-        {#if join === 'error' || joinItem || restorePending || choicePending !== null || (sheet.type === 'action' && !((sheet.kind === 'report' || sheet.kind === 'hardware') && onPanel())) || sheet.type === 'toggle' || sheet.type === 'text' || sheet.type === 'share' || sheet.type === 'share-login' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
+        {#if join === 'error' || joinItem || restorePending || choicePending !== null || (sheet.type === 'action' && sheet.kind !== 'cable' && !((sheet.kind === 'report' || sheet.kind === 'hardware') && onPanel())) || sheet.type === 'toggle' || sheet.type === 'text' || sheet.type === 'share' || sheet.type === 'share-login' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
           <button
             class="btn btn--confirm"
             class:btn--danger={sheet.danger || restorePending || choicePending !== null}
@@ -2119,7 +2162,7 @@
             onclick={confirmSheet}
           >
             {#if sheet.kind === 'hardware'}
-              {#if hwBusy}<span class="btn__spin"></span>Preparing…{:else if hwUrl}Done{:else if hw?.display && hwStep === 'screen'}Next: the sound{:else}Prepare the feedback{/if}
+              {#if hwBusy}<span class="btn__spin"></span>Preparing…{:else if hwUrl}Done{:else if hw && !hwLast}{hwSteps[hwAt + 1] === 'sound' ? 'Next: the sound' : 'Next: anything else'}{:else}Prepare the feedback{/if}
             {:else if sheet.kind === 'report'}
               {#if reportBusy}<span class="btn__spin"></span>Preparing…{:else if reportDone}Done{:else}Download{/if}
             {:else if busy}
@@ -2772,6 +2815,15 @@
     padding: 18px 20px 14px;
     gap: 12px;
   }
+  /* A confirmation holds a title, a line and two buttons: drawn the bar's
+     full height it was mostly empty (George, 2026-10-08, *Reboot* on the
+     11.9" bar). It takes its own height, centred, as on other screens. */
+  :global(.panel--bar) .sheet.sheet--fit {
+    top: 50%;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+    max-height: calc(100% - 24px);
+  }
   .sheet__head {
     flex-shrink: 0;
     min-width: 0;
@@ -3030,8 +3082,14 @@
     background: rgba(255, 255, 255, 0.045);
     border: 1px solid rgba(233, 238, 242, 0.1);
   }
-  .item:active {
+  /* Only the row's own tap: a press on Download or Forget inside it is
+     that button's, and the whole tile shrinking with it read as the row
+     being chosen (George, 2026-10-08, downloading a backup). */
+  .item:active:not(:has(.forget:active)) {
     transform: scale(0.95);
+  }
+  .forget:active {
+    transform: scale(0.92);
   }
   .item.is-joined {
     background: rgba(126, 214, 188, 0.12);
@@ -3065,6 +3123,22 @@
   .item__text {
     flex: 1;
     min-width: 0;
+  }
+  /* A backup's name and date take the line; Download and Forget go under
+     them, at the right (2026-10-08: beside them, on a phone, the name
+     shrank to "ge…" and the date broke word by word). */
+  .netaddr {
+    padding: 4px 18px 14px;
+  }
+  .item--backup {
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+  .item--backup .item__text {
+    flex: 1 1 100%;
+  }
+  .item--backup .forget:first-of-type {
+    margin-left: auto;
   }
   .item__title {
     display: flex;
@@ -3903,7 +3977,14 @@
     text-transform: uppercase;
     color: var(--ink-quiet);
   }
+  .report__note--tall {
+    min-height: 168px;
+  }
+  /* Never squeezed: in a sheet taller than the phone, the flex column shrank
+     the box to one line (George, 2026-10-09, on guestpi). */
   .report__note {
+    flex-shrink: 0;
+    min-height: 96px;
     width: 100%;
     box-sizing: border-box;
     padding: 12px 14px;

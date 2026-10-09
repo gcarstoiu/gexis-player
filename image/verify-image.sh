@@ -170,11 +170,13 @@ else
 	[ "$size" -gt 1000000 ] && ok "beszel-agent installed ($size bytes)" \
 		|| bad "beszel-agent is $size bytes"
 	# The tarball's checksum is what the stage pins; the extracted binary has its
-	# own, and this is it - taken from the first image built with this stage
-	# (2026-09-25) and confirmed identical to the binary that was run, enrolled
-	# and measured on `gexis` before the stage existed (Findings 078 and 080).
-	# So this asserts the image ships the build that was actually tested.
-	BESZEL_BINARY_SHA256="4c95b91e7c07912c8f8b6ea4286a6be926cc0616ba49b079082120bea3b203ed"
+	# own, and this is it. First taken from the first image built with this
+	# stage (2026-09-25, v0.20.0, the binary run and measured on `gexis`,
+	# Findings 078 and 080). **v0.21.0 since 2026-10-08**: extracted from the
+	# release archive that matches the pin, and the build connected to the hub
+	# on guestpi. Raise it with every new Beszel pin - 0.9.5's first image
+	# check failed here because the pin moved and this did not.
+	BESZEL_BINARY_SHA256="bd6eed7a98493e0900c3398177552a53809546733ea69a8ad200e2cf4c7b677c"
 	got="$(sha256sum "$OUT/agent" | cut -d' ' -f1)"
 	[ "$got" = "$BESZEL_BINARY_SHA256" ] && ok "beszel-agent is the build that was tested" \
 		|| bad "beszel-agent sha256 is $got, expected $BESZEL_BINARY_SHA256"
@@ -183,9 +185,9 @@ fi
 rm -f "$OUT/agent"
 
 # ADR-0114: the hub, the build its pin names (the binary's own checksum, taken
-# from the pinned release on 2026-10-02).
+# from the pinned release - v0.21.0 since 2026-10-08, as the agent above).
 dfs "dump /usr/bin/beszel-hub $OUT/hub" >/dev/null
-BESZEL_HUB_BINARY_SHA256="2573c4a32ef5dfeda9a13fbf35f2cf8bb2f46f34088ef7f70a407878756dd5c4"
+BESZEL_HUB_BINARY_SHA256="deb0823dc34e80e85555558eaa091da6f11ef9d769feceef13b54d7a07b47052"
 if [ ! -s "$OUT/hub" ]; then
 	bad "/usr/bin/beszel-hub missing"
 else

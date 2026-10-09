@@ -6005,3 +6005,45 @@ the SSH key only, since a saved Wi-Fi skips setup.
 - **A phone that opens `/` posts `/panel/painted`**, read from the code.
 - Older open items are in the archive's 2026-09-27 and 2026-10-02 blocks.
 
+## 2026-10-08 — the 0.9.4 block, moved here when 0.9.5 was cut
+
+**0.9.4 released 2026-10-08 on Testing** (tag `v0.9.4`, release `r0.9.4`,
+image `image/deploy/2026-10-08-gexis-player-v0.9.4.img`, 111 checks passed;
+Plexamp 4.13.2 and Lyrion 9.1.1 the latest; Testing channel serial 27, its
+signature checked with a device's keyring). **PR #52** waits for George.
+In it: one Volume row - Hardware / Software / Fixed (ADR-0124, ADR-0127);
+the visualiser on HDMI with Software volume (ADR-0055 §6 amended, Finding
+116); Hardware feedback with the Reported state (ADR-0126); setup's Plugins
+step and the settling screen (ADR-0128); updates that go back when the player
+does not answer, check after a reboot and refuse takeovers (ADR-0105/0110 -
+**only from updates made from 0.9.4 on**); Pexels removed; George's small
+fixes. Docs reconciled with the code (ARCHITECTURE.md, README, the guides,
+nine ADRs).
+
+**Since 0.9.4, on `phase-13d` (for the next release's notes):**
+- go-librespot 0.10.3 and Beszel 0.21.0 (agent and hub) - `check-upstream.sh`
+  now checks both;
+- the Beszel Hub public key row refuses a value that is not a key
+  (`pattern`/`invalid` on text rows);
+- a service whose unit failed says *could not start* on its switch;
+- the Beszel heading in System says Connected / Connecting / Not connected
+  (ADR-0129, amended the same day from the switch to the heading);
+- Settings no longer slides sideways on a phone.
+- the spectrum covers 50 Hz to 16 kHz at every rate, with five bass bars and
+  a lift above 1 kHz (ADR-0130, Finding 117; gexis-peppyalsa -2, a second
+  patch). On guestpi since 2026-10-08; George to look at it on the panel.
+
+- restoring a backup in setup (ADR-0131): after Network, New player or
+  Restore a backup; the file uploaded from the phone, checked, reviewed, then
+  joined, applied, put back and restarted. Walked through in a browser
+  against the real setup flow; **not yet on a freshly flashed card**, which is
+  the only place it shows - George's test. On guestpi (core
+  0.9.4+git29.7596821) its routes answer 409, as on any configured player.
+  *Open* in the ADR: backups from a newer release are accepted, with a note.
+
+**guestpi** (192.168.178.21, Pi-DAC PRO, 13.3"): runs all of that as a
+preview (core 0.9.4+git11.38e9c93); its Beszel heading reads Connected. The
+Hub public key was re-entered by 08:01 on 2026-10-08, after a test overwrote
+it
+(LESSONS 61). Not yet tried on it by George: Spotify on go-librespot 0.10.3,
+the orange and red states. **gexis** is offline since its card swap.

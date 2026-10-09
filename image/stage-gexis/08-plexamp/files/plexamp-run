@@ -13,7 +13,15 @@ ignores both (measured 2026-10-05, Plexamp 4.13.2, and read in its
   the claim fails (George, 2026-10-05: keep the old claim until the next one
   works);
 - the token is handed over **once**: a token that failed is not tried again,
-  so a dead token cannot loop the unit through its restarts.
+  so a dead token cannot loop the unit through its restarts;
+- **any store is set aside before a claim, claimed or not**, and comes back
+  if it fails (2026-10-08: a failed claim on an unclaimed player left half an
+  account behind - Plexamp had written the user, then Plex refused the
+  sign-in it had just issued, and Plexamp exited);
+- **a failed claim is told by Plexamp's exit, not by its files** (the same
+  day: Plexamp wrote a sign-in and then exited 255, and the next start took
+  the file for a claim). The unit's `ExecStopPost` runs this with
+  `--stopped`; systemd's `EXIT_CODE`/`EXIT_STATUS` say how it ended.
 
 What happened is kept in `claim.json` - the token's hash, never the token -
 for this and for the plugin, which reports it on the row.
@@ -26,6 +34,7 @@ import json
 import os
 import shutil
 import sys
+import time
 from pathlib import Path
 
 HOME = Path("/home/pi")
@@ -67,9 +76,26 @@ def write_state(path: Path, state: dict) -> None:
 
 
 def put_back(settings: Path, previous: Path) -> None:
+    """The store as it was before the claim - or none, if there was none:
+    what a failed claim wrote does not stay."""
+    shutil.rmtree(settings, ignore_errors=True)
     if previous.is_dir():
-        shutil.rmtree(settings, ignore_errors=True)
         previous.rename(settings)
+
+
+def stopped(env: dict, settings: Path = SETTINGS, previous: Path = PREVIOUS,
+            state_path: Path = STATE) -> None:
+    """**Plexamp ended while a claim was being tried** (`ExecStopPost`). An
+    exit with an error is the claim failing: the store goes back and the
+    token is recorded as failed. A stop, or a clean exit, settles nothing -
+    the next start reads the store."""
+    state = read_state(state_path)
+    if state.get("state") != "trying":
+        return
+    if env.get("EXIT_CODE") == "exited" and env.get("EXIT_STATUS") not in (None, "", "0"):
+        put_back(settings, previous)
+        state["state"] = "failed"
+        write_state(state_path, state)
 
 
 def prepare(env: dict, settings: Path = SETTINGS, previous: Path = PREVIOUS,
@@ -102,15 +128,18 @@ def prepare(env: dict, settings: Path = SETTINGS, previous: Path = PREVIOUS,
         return out
     if mark == state.get("token"):
         return out  # tried already: claimed, or failed and not tried twice
-    if claimed(settings):
-        shutil.rmtree(previous, ignore_errors=True)
+    shutil.rmtree(previous, ignore_errors=True)
+    if settings.is_dir():
         settings.rename(previous)
-    write_state(state_path, {"token": mark, "state": "trying"})
+    write_state(state_path, {"token": mark, "state": "trying", "at": time.time()})
     out["PLEXAMP_CLAIM_TOKEN"] = token
     return out
 
 
 def main() -> int:
+    if sys.argv[1:] == ["--stopped"]:
+        stopped(dict(os.environ))
+        return 0
     env = prepare(dict(os.environ))
     os.execve(NODE[0], NODE, env)
     return 1  # not reached

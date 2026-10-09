@@ -165,6 +165,8 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         "problem_report",
         # ADR-0126 (2026-10-07): hardware reports from owners.
         "hardware_report",
+        # ADR-0123 (2026-10-08): the cable, shown while one is plugged in.
+        "cable",
         # ADR-0055, 2026-09-23: the design has no output picker, because
         # the design did not know the device has four playback outputs and
         # that two of them cannot be turned down.
@@ -612,7 +614,8 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # (ADR-0124). **99**: Report this hardware (ADR-0126). **98**: Software
     # volume merged into Volume (ADR-0127). **97**: Pexels removed (George,
     # 2026-10-07).
-    assert len(rows) == 97
+    # **98**: Cable (ADR-0123, 2026-10-08).
+    assert len(rows) == 98
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
@@ -632,7 +635,7 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # 82 with Report this hardware (ADR-0126).
     # **81**: Software volume merged into Volume (ADR-0127). **80**: Pexels
     # removed.
-    assert len(rows) - len(kept) == 80
+    assert len(rows) - len(kept) == 81  # 81: Cable (ADR-0123)
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():
@@ -1537,3 +1540,19 @@ def test_a_text_row_with_a_pattern_refuses_what_does_not_fit_and_says_why():
     assert str(refused.value).startswith("That is not the hub's public key")
     assert validate({"key": "x", "type": "text", "pattern": "(unclosed"}, "anything") == "anything", \
         "a pattern that does not compile does not lock the row"
+
+
+def test_a_row_can_follow_the_hardware(store):
+    """ADR-0123: the Cable row is there while a cable is plugged in - a
+    provider, read with every listing; one that fails hides its row only."""
+    there = {"on": False}
+    settings = Settings(store, shown={"cable": lambda: there["on"]})
+    def cable():
+        return next(r for g in settings.to_json() for r in g["rows"] if r.get("key") == "cable")
+    assert cable()["visible"] is False
+    there["on"] = True
+    assert cable()["visible"] is True
+    broken = Settings(store, shown={"cable": lambda: 1 / 0})
+    assert next(r for g in broken.to_json() for r in g["rows"] if r.get("key") == "cable")["visible"] is False
+    with pytest.raises(ValueError):
+        Settings(store, shown={"nothing": lambda: True})

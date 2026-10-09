@@ -138,6 +138,29 @@ another player also brings the first player's identities.
     `second_player` answer. Only a name that differs from the backup's
     counts; opening the Name step and continuing does not.
 
+## Amended again (George, 2026-10-08, after the first restore on a new card)
+
+A backup from guestpi restored onto a new player with another DAC, another
+screen and a new name. It came up with guestpi's output, and still showing
+guestpi's Beszel hub.
+
+- **Output and Screen are asked on every restore** (*"leave the two as
+  mandatory steps next to WiFi"*). They are this player's hardware, which a
+  backup from another one does not know. Both steps open on what this
+  player detects, never on the backup's answer, and the restore then goes
+  Network, Start, Output, Screen, Review. The other questions stay answered
+  by the backup, with *Change* in the review.
+- **A second player leaves the identity settings behind too** (*"everything
+  goes, including IP"*). Beszel's connection is settings, not files: the
+  hub's address, its key and the token came back with the settings although
+  the agent's own data was left behind. `backups.IDENTITY_SETTINGS` names
+  them: every `beszel.` key, so the plugin is back at its defaults (off),
+  and `plexamp.claim_token`. Plexamp keeps its switch and is claimed again.
+  A plugin switched on in the review is still switched on. The review now
+  calls the first of these *Beszel connection*.
+- Built: `SetupPage.svelte` (`ASKED`), `backups.forget_settings()`, called
+  before setup's own answers are written over the restored settings.
+
 ## Not decided here
 
 - Restoring a backup that is still on the old player, over the network.

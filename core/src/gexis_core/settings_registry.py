@@ -624,8 +624,13 @@ class Settings:
         seed_path: Path = SEED_PATH,
         labels: dict[str, Callable[[], dict]] | None = None,
         restrictions: dict[str, Callable[[], dict]] | None = None,
+        shown: dict[str, Callable[[], bool]] | None = None,
     ) -> None:
         self._store = store
+        #: key -> whether the row is there at all, for a row that follows the
+        #: hardware rather than another setting - the Cable row, while a cable
+        #: is plugged in (ADR-0123). Read with every listing.
+        self._shown = shown or {}
         #: What each option is called on screen, by `optionsFrom` source,
         #: where the stored value is a key and not a name to read (the skins'
         #: section names, ADR-0111: George's "Brand · Model" names).
@@ -675,12 +680,22 @@ class Settings:
         self._notes = notes or {}
         self._seed = load_seed(self._rows, seed_path)
         unknown = (set(self._defaults) | set(self._wired) | self._lists | set(self._notes)
-                   | set(self._restrictions)) - set(self._rows)
+                   | set(self._restrictions) | set(self._shown)) - set(self._rows)
         if unknown:
             raise ValueError(f"not in the registry: {sorted(unknown)}")
         not_lists = {k for k in self._lists if self._rows[k]["type"] != "list"}
         if not_lists:
             raise ValueError(f"declared as list rows but are not: {sorted(not_lists)}")
+
+    def _is_shown(self, key: str) -> bool:
+        provider = self._shown.get(key)
+        if provider is None:
+            return True
+        try:
+            return bool(provider())
+        except Exception as exc:  # noqa: BLE001 - a row, not the page
+            logger.warning("settings: cannot tell whether %s is shown: %s", key, exc)
+            return False
 
     def row(self, key: str) -> dict:
         try:
@@ -843,7 +858,7 @@ class Settings:
                     public["unavailable"] = dict(blocked)
                 if row["key"] in self._status:
                     public["status"] = dict(self._status[row["key"]])
-                public["visible"] = visible(row, self._rows, values) and all(
+                public["visible"] = self._is_shown(row["key"]) and visible(row, self._rows, values) and all(
                     visible({"onlyWhen": c}, self._rows, values)
                     for c in governing + ([heading] if heading else [])
                 )

@@ -407,3 +407,36 @@ def test_made_is_the_time_in_the_name_or_the_newest_file(tmp_path):
     renamed = out / "my-backup.tgz"
     (out / name).rename(renamed)
     assert backups.inspect(renamed, 5)["made"] == max(m.mtime for m in tarfile.open(renamed).getmembers())
+
+
+# -- ADR-0083 as amended 2026-10-08: a backup downloaded ------------------------
+
+def test_a_download_is_one_of_ours_by_name(tmp_path):
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    name = backups.create("gexis", out, root)
+    assert backups.path_of(name, out) == out / name
+    with pytest.raises(ValueError):
+        backups.path_of("../settings.db", out)
+    with pytest.raises(ValueError):
+        backups.path_of("notes.txt", out)
+    with pytest.raises(FileNotFoundError):
+        backups.path_of("gexis-gone-20260101-000000.tgz", out)
+
+
+@pytest.mark.asyncio
+async def test_the_route_sends_it_as_a_file_to_save(tmp_path, monkeypatch):
+    from aiohttp.test_utils import TestClient, TestServer
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    name = backups.create("gexis", out, root)
+    monkeypatch.setattr(backups, "DEFAULT_DIR", out)
+    monkeypatch.setattr(backups.path_of, "__defaults__", (out,))
+    async with TestClient(TestServer(StateServer(StateStore({})).make_app())) as client:
+        r = await client.get(f"/backups/{name}")
+        assert r.status == 200
+        assert r.headers["Content-Disposition"] == f'attachment; filename="{name}"'
+        assert await r.read() == (out / name).read_bytes()
+        assert (await client.get("/backups/..%2Fsettings.db")).status in (400, 404)
+        assert (await client.get("/backups/gexis-gone-20260101-000000.tgz")).status == 404

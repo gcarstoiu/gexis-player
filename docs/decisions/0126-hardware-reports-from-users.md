@@ -112,3 +112,15 @@ the script names such reports, and the screen list is changed by hand.
 - The labels `hardware feedback`, `accepted` and `problem report` were
   created on the repository the same day (George: *"You can also create the
   labels"*).
+
+## Amended 2026-10-09: a step of its own for the notes
+
+George, on a phone: the free-text box *"should have its own step in the
+modal as otherwise it's too tight on a phone"*, with the step named in the
+title. The sheet is now **Screen, Sound, Anything else** (*Step 1 of 3*), or
+Sound, Anything else (*Step 1 of 2*) without a screen. The last step holds the
+notes and, under *What the player adds for you* (until now *What the player
+read*, which did not say what it was for), the facts the player puts into the
+feedback itself, so they are seen before anything is sent. *Back* goes one
+step back.
+

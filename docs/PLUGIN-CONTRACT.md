@@ -171,6 +171,13 @@ Taken from `Adapter` and `Capabilities` as they are. The prose for each is in
   **Safe to send at any time**: the core ignores it unless this renderer is
   currently active, which is what makes the echo of a commanded release
   harmless.
+- **`available`** — whether the panel offers this renderer. **A renderer is
+  available from the moment it connects**, so a plugin whose player may not
+  be there (not installed yet, not started, not answering) sends
+  `available: false` as soon as it knows, and `true` when the player
+  answers. A plugin that reports only *changes* from a state of its own
+  has to start that state at unknown, or its first `false` is never sent
+  (gexis-plexamp before 2026-10-08).
 - **`metadata`** — fields from `TrackMetadata`; every one optional, absent is
   absent and draws nothing. `track_id`, `title`, `artist`, `album`, `year`,
   `artwork`, `artwork_small`, `sample_rate` (Hz), `bit_depth` (bits; added 2026-10-02), `codec`, `position`, `duration`,

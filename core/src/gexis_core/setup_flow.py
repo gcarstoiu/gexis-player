@@ -99,6 +99,7 @@ class SetupFlow:
         backup: Path = BACKUP,
         restore_root: Path = Path("/"),
         apply_name=None,
+        rename=None,
         marker: Path = setup_network.DONE_MARKER,
         set_country=None,
         find_servers=None,
@@ -113,6 +114,7 @@ class SetupFlow:
         self._backup = backup
         self._restore_root = restore_root
         self._apply_name = apply_name or device_name.apply_restored
+        self._rename = rename or device_name.apply
         self._marker = marker
         self._set_country = set_country or _raspi_config_country
         self._find_servers = find_servers or discovery.find_servers
@@ -416,6 +418,16 @@ class SetupFlow:
             library = await self._library(data, apply=False)
             if library.get("state") == "found":
                 writes.update(lms_server=library["address"], lms_enabled=True)
+        # **What lives outside the store first, through Settings as setup's
+        # own answers** - the screen, the time zone, the name. Before the
+        # files go back, not after: once the settings file is replaced, the
+        # store the core holds open refuses every write ("attempt to write a
+        # readonly database"), and 0.9.5's restore lost the name, the time
+        # zone and the screen to it (2026-10-08: a renamed backup on a new
+        # card came up as raspberrypi).
+        for key in backups.APPLIED:
+            if key in values and values[key] is not None:
+                self._set_quietly(key, values[key])
         # **A second player** (ADR-0131 as amended): a backup given another
         # name leaves the first player's identities behind, unless the owner
         # said it is the same player.
@@ -427,21 +439,23 @@ class SetupFlow:
                         ", ".join(label for _, label in backups.IDENTITIES))
         try:
             await asyncio.to_thread(backups.restore_file, self._backup, self._restore_root, leave)
+            if second:
+                # Before setup's own answers, so a plugin switched on in the
+                # review still is.
+                await asyncio.to_thread(backups.forget_settings, backups.IDENTITY_SETTINGS, self._restore_root)
             await asyncio.to_thread(backups.write_settings, writes, self._restore_root)
-            if "device_name" not in changed:
+            if "device_name" in changed and values.get("device_name"):
+                # The backup's own name file just came back with the files:
+                # the name changed in setup goes over it again, everywhere.
+                await asyncio.to_thread(self._rename, values["device_name"])
+            else:
                 # The backup's name in all four places, as Settings' restore
-                # does; a name changed in setup is applied below instead.
+                # does.
                 await asyncio.to_thread(self._apply_name)
         except Exception as exc:  # noqa: BLE001 - the restart still comes
             logger.error("setup: the backup did not go back: %s", exc)
         finally:
             self._backup.unlink(missing_ok=True)
-        # What lives outside the store, through Settings as setup's own
-        # answers. Their writes reach the store the core has open, which the
-        # restart leaves behind; the restored file already says the same.
-        for key in backups.APPLIED:
-            if key in values and values[key] is not None:
-                self._set_quietly(key, values[key])
         wait = []
         if values.get("visualiser_skins") and not values.get("headless"):
             wait.append({"id": "skins", "name": "The visualiser's skins"})

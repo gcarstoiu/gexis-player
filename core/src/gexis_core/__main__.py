@@ -75,7 +75,7 @@ from gexis_core.lyrion_shares import Shares as LyrionShares
 from gexis_core.fanart import Fanart
 from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, TrackMetadata
-from gexis_core import connections, hardware_report, settings_migrations, settling, updates
+from gexis_core import connections, hardware_report, settings_migrations, settling, updates, wired
 from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import InvalidValue, Settings, UnknownSetting, load_registry
 from gexis_core.splash import Splash
@@ -1820,8 +1820,13 @@ async def main() -> None:
         own = settings.row(key).get("note")
         return f"{own} {reported}" if own else reported
 
+    # ADR-0123: the cable - its row is there while one is plugged in.
+    cable = wired.Cable(on_change=lambda _pending: state_store.bump_settings_revision())
+    # ADR-0123 decision 2: the connected Wi-Fi network's address, the same way.
+    wifi_address = wired.Cable(device="wlan0", on_change=lambda _pending: state_store.bump_settings_revision())
     settings = Settings(
         settings_store,
+        shown={"cable": cable.shown},
         registry=Settings.with_plugins(load_registry(), installed_plugins, downloads,
                                        missing=restored_missing),
         defaults={
@@ -1898,6 +1903,7 @@ async def main() -> None:
         # The Release row's note: what the waiting or just-installed release
         # says changed (2026-10-01, George).
         notes={"software_update": updates.whats_new,
+               "cable": cable.note,
                "sound_card_board": lambda: board_apply.note() or _reports_note(
                    "sound_card_board", hardware_report.board_reports(
                        outputs.resolve(settings_store.get("output_device")))),
@@ -2050,6 +2056,8 @@ async def main() -> None:
                "problem_report": None,
                # ADR-0126: through its own routes, `/hardware-report`.
                "hardware_report": None,
+               # ADR-0123: its sheet changes the address through /network/cable.
+               "cable": None,
                # ADR-0086: whatever the installed plugins brought. Wired
                # like any other row - something acts on it - and the thing
                # that acts is the plugin.
@@ -3156,8 +3164,13 @@ async def main() -> None:
 
     setup_network = SetupNetwork(on_change=state_store.set_setup)
     setup_flow = SetupFlow(setup_network, settings, reboot=_reboot, plugins=_offered_plugins)
+    asyncio.ensure_future(cable.follow())
+    # ADR-0123 as amended (George, 2026-10-08): the cable wins over Wi-Fi.
+    asyncio.ensure_future(wired.CableFirst().follow())
     state_server = StateServer(
         state_store,
+        cable=cable,
+        wifi_address=wifi_address,
         host=config.state_host,
         port=config.state_port,
         activate=activate,

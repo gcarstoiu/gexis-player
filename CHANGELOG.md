@@ -5,6 +5,26 @@ Every release of Gexis Player and its notes, newest first. Generated from
 edit that file, not this one. The player shows the last 10 under
 Settings → System → Change logs.
 
+## 0.9.6 — 9 October 2026
+
+### New
+
+- Settings → Device → Cable shows a network cable's speed and address, and its address can be set Automatic or Manual. A manual address is kept only once it is confirmed from the new address within 60 seconds; otherwise the old one comes back. The connected Wi-Fi network has the same choice under its details.
+- While a network cable is plugged in, the Wi-Fi steps aside; unplug it and the Wi-Fi connects again.
+- Settings → System → Restore offers Download beside each backup on a phone or computer, to keep a copy off the player for a newly flashed card.
+- Hardware feedback comes in three steps - the screen, the sound, then room for notes beside what the player adds to the feedback itself.
+
+### Fixed
+
+- Restoring a backup during setup applies its name, time zone and other answers, and asks for this player's own output and screen. Restored as a second player, it leaves the first one's Beszel connection - the hub's address and keys - and Plexamp's claim behind.
+- A Plexamp claim that does not work leaves nothing behind and says why on its row, and Plexamp is offered as a source only once it is installed and answering.
+- Download and Forget on a backup press only the button, not the whole row.
+- On a bar screen, a confirmation such as Reboot takes its own height instead of the whole screen.
+
+### Good to know
+
+- Plexamp's plugin is at 0.4.3.
+
 ## 0.9.5 — 8 October 2026
 
 ### New

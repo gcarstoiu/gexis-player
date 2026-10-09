@@ -55,3 +55,82 @@ five**: details live in the sheet a row opens, not on the page.
 - `gexis` has no cable: the cable half is tested on a second Pi or the bench
   before it ships, and said so until then.
 - IPv6 stays automatic; manual applies to IPv4 only (raise if wanted).
+
+## Built
+
+- **2026-10-03 (0.9.3):** the connected Wi-Fi network's details - signal,
+  speed, band, channel, address.
+- **2026-10-08, the cable**, with a cable on guestpi (George: *"Lan cable
+  connected. You can work on it being supported"*):
+  - `wired.py`: the port's link and speed from the kernel, its profile's
+    address, gateway and DNS from NetworkManager, and `check()` for a manual
+    address (an address with its prefix; a gateway inside that network, not
+    the address itself; one or two DNS servers), each refusal a sentence;
+  - `Cable.change()` saves the profile's IPv4 settings, applies the new ones
+    (`nmcli connection modify` and `up`), and puts the old ones back if the
+    port does not take them;
+  - **the safeguard:** a change waits `KEEP_S` = 60 s for *Keep*
+    (`POST /network/keep`), counted only when the request arrives at the new
+    address, which shows it works, or from the panel (loopback), which
+    reaches the player whatever its address. Not kept, the old settings come
+    back by themselves;
+  - the *Cable* row is shown while the port has a link or holds a manual
+    address (the registry's new `shown` providers). Its line is *Connected
+    · 1000 Mb/s · address*, with *manual* or *waiting to be kept* after it;
+    *No link* without a cable;
+  - the sheet (`CableSheet`): the facts, *Automatic* / *Manual*, the fields,
+    *Save*. `CableKeep` asks *Keep the new cable address?* on every page,
+    phone and panel, while a change waits; at the old address it names the
+    new one to open.
+- **Tried on guestpi, 2026-10-08,** with nothing playing:
+  1. a manual address (a free one on the home network, checked by ping and ARP
+     first) answered at once; *Keep* from the Wi-Fi address was refused;
+     not kept, the cable went back to DHCP 60 s later to the second;
+  2. set again and kept from the new address, through the page: the banner,
+     the sheet and *Keep* at `.230`;
+  3. back to *Automatic* through the sheet, kept at the address DHCP gave
+     (`.107`). guestpi ends as it started.
+- **2026-10-08, the Wi-Fi address** (decision 2; George: *"do it as well"*):
+  the same `wired.Cable`, on `wlan0` and the connected network's profile;
+  the same form under the connected network's details in the Wi-Fi sheet.
+  It is served at `/network/wifi/address`, because `/network/wifi` was
+  already the details. Only one change waits at a time, and *Keep* counts
+  for whichever waits. Found while trying it: after a Wi-Fi rejoin the new
+  address shows only seconds later, so the phone was told to open
+  `http://None:8090`. A change now names the typed address (Manual), or waits
+  up to 20 s for DHCP's (Automatic).
+- **Tried on guestpi, Wi-Fi, 2026-10-08,** working over the cable: a manual
+  address, not kept, back to DHCP after 60 s plus the rejoin;
+  set again and kept from `.231`; back to *Automatic*, kept at `.21`.
+- **Consequence corrected:** "a backup carries it like the Wi-Fi networks"
+  above is wrong. A backup holds no NetworkManager profile (ADR-0083's
+  members), so a manual address is set again after a restore.
+- NetworkManager stores the cable's profile once it is changed (the profile
+  it made by itself lived only in memory before). Automatic is the same as
+  before it.
+
+## Amended 2026-10-08: the cable wins
+
+George, seeing the cable and the Wi-Fi connected at once: *"which must be an
+error"*; on the choice: *"The cable should win"*.
+
+- **While the cable carries the player, the Wi-Fi is disconnected.** Its
+  networks stay saved. When the cable's link goes, the Wi-Fi connects again
+  by itself, with its own address; `<name>.local` finds the player either
+  way. Before, NetworkManager kept both, the cable carrying the traffic
+  (its route is preferred) and the player answering at two addresses.
+- **The Wi-Fi stands down only once the cable has its address**, not at the
+  link: on guestpi the link came several seconds before DHCP's answer, and
+  the first version left the player with no network in between.
+- **The setup network is never taken down** for a cable.
+- **A Wi-Fi network joined in Settings while the cable is in** is joined -
+  which proves the password - then set aside; the sheet says *"Saved. The
+  player uses the cable while it is plugged in; this network takes over
+  when the cable is unplugged."*
+- **Built** as `wired.CableFirst`, a check every 5 s in the core. **Tried on
+  guestpi** with the port taken down for 30 s and brought back, twice: the
+  Wi-Fi was connected within 10 s of the link going, and disconnected 5 s
+  after the cable had its address again.
+- **Not tried:** a real unplug, as opposed to taking the port down; and a
+  player whose Wi-Fi has never been set up (it has nothing to connect to,
+  and stays on no network until the cable is back).

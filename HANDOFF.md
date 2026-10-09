@@ -11,46 +11,94 @@ holds the documents and shared work; **`phase-13d`** in
 Worktrees `~/projects/gexis-player-r093` and `-r094` sit at their tags and can
 be removed once their PRs are merged. Earlier narrative: `docs/HANDOFF-ARCHIVE.md`.
 
-**0.9.4 released 2026-10-08 on Testing** (tag `v0.9.4`, release `r0.9.4`,
-image `image/deploy/2026-10-08-gexis-player-v0.9.4.img`, 111 checks passed;
-Plexamp 4.13.2 and Lyrion 9.1.1 the latest; Testing channel serial 27, its
-signature checked with a device's keyring). **PR #52** waits for George.
-In it: one Volume row - Hardware / Software / Fixed (ADR-0124, ADR-0127);
-the visualiser on HDMI with Software volume (ADR-0055 §6 amended, Finding
-116); Hardware feedback with the Reported state (ADR-0126); setup's Plugins
-step and the settling screen (ADR-0128); updates that go back when the player
-does not answer, check after a reboot and refuse takeovers (ADR-0105/0110 -
-**only from updates made from 0.9.4 on**); Pexels removed; George's small
-fixes. Docs reconciled with the code (ARCHITECTURE.md, README, the guides,
-nine ADRs).
+**0.9.5 cut 2026-10-08 for Testing** (tag `v0.9.5`, release `r0.9.5`, image
+`image/deploy/2026-10-08-gexis-player-v0.9.5.img`; notes approved by George).
+**PR #53** waits for George (Testing serial 28, signature checked; 111 image checks after the verify-image fix). 0.9.4 is PR #52 (merged). In 0.9.5:
+- restoring a backup in setup (ADR-0131, amended twice the same day): after
+  Network, New player or Restore a backup; the review is the new player's,
+  with Change on every answer; a backup given another name leaves the first
+  player's identities behind (*A second player*, on by default);
+- the spectrum: 50 Hz to 16 kHz at every rate with a lift above 1 kHz
+  (ADR-0130), and each skin draws the bars its panel holds (ADR-0056
+  amended; Finding 117);
+- the Beszel heading's Connected / Connecting / Not connected (ADR-0129), the
+  Hub public key check, the failed-plugin note, go-librespot 0.10.3, Beszel
+  0.21.0, Settings not sliding sideways on a phone.
 
-**Since 0.9.4, on `phase-13d` (for the next release's notes):**
-- go-librespot 0.10.3 and Beszel 0.21.0 (agent and hub) - `check-upstream.sh`
-  now checks both;
-- the Beszel Hub public key row refuses a value that is not a key
-  (`pattern`/`invalid` on text rows);
-- a service whose unit failed says *could not start* on its switch;
-- the Beszel heading in System says Connected / Connecting / Not connected
-  (ADR-0129, amended the same day from the switch to the heading);
-- Settings no longer slides sideways on a phone.
-- the spectrum covers 50 Hz to 16 kHz at every rate, with five bass bars and
-  a lift above 1 kHz (ADR-0130, Finding 117; gexis-peppyalsa -2, a second
-  patch). On guestpi since 2026-10-08; George to look at it on the panel.
+**0.9.5 on a freshly flashed card (gexis's Pi, now ShelvesPi: DAC2 HD,
+11.9" bar), 2026-10-08.** The restore in setup was tried, and failed in ways
+now fixed on `phase-13d`, none of it released yet:
+- the name, time zone, output and screen were never applied: written after
+  the settings file was replaced, so the core's open store refused them
+  (fixed: applied before the files go back; a real-store test);
+- guestpi's DAC came back on a player with another one: **Output and Screen
+  are now asked on every restore** (ADR-0131 amended again);
+- a second player kept the first one's Beszel hub, key and token and
+  Plexamp's claim token (settings, not files): now removed
+  (`backups.IDENTITY_SETTINGS`);
+- Plexamp was offered as a source although its download had failed:
+  gexis-plexamp's first availability answer is now always sent (committed in
+  that repository; **needs a 0.4.3 release and the pin moved**); the plugin
+  contract now says a renderer is available from the moment it connects;
+- Settings: a press on Download or Forget no longer presses the whole row;
+  a confirmation on a bar is its own height, centred.
 
-- restoring a backup in setup (ADR-0131): after Network, New player or
-  Restore a backup; the file uploaded from the phone, checked, reviewed, then
-  joined, applied, put back and restarted. Walked through in a browser
-  against the real setup flow; **not yet on a freshly flashed card**, which is
-  the only place it shows - George's test. On guestpi (core
-  0.9.4+git29.7596821) its routes answer 409, as on any configured player.
-  *Open* in the ADR: backups from a newer release are accepted, with a note.
+**The restarts George saw were power, not gexis**: 11 boots in the card's
+journal, none with a shutdown, every journal file left unclosed, one
+*Undervoltage detected*. The bar takes its power (and touch) from the Pi's
+USB, the Pi a USB supply of unknown rating: recommended the official 5.1 V /
+3 A supply, then the bar powered separately if it recurs; confirm with
+`vcgencmd get_throttled` (read only) once the player is back.
+The power cuts left **dpkg half-done** (the skins pack install, updates/0000);
+finish it with George's say once the power is steady, dry run first. The
+lighter square around the boot logo is unexplained by the code (every stage
+paints #101a21 edge to edge); likely the first boot's mode before the bar's
+`video=` was set. The address the router first gave the player was taken by
+another device (NetworkManager's ACD refused it): the panel should say when
+it has no IPv4 - not built.
 
-**guestpi** (192.168.178.21, Pi-DAC PRO, 13.3"): runs all of that as a
-preview (core 0.9.4+git11.38e9c93); its Beszel heading reads Connected. The
-Hub public key was re-entered by 08:01 on 2026-10-08, after a test overwrote
-it
-(LESSONS 61). Not yet tried on it by George: Spotify on go-librespot 0.10.3,
-the orange and red states. **gexis** is offline since its card swap.
+**Local commits cleaned 2026-10-08** (George: "also clean the commits"): the
+46 commits on `phase-13b`/`phase-13d` not on GitHub were rewritten so none
+adds the home Wi-Fi's name or home-network test addresses, and the two
+messages that pointed at the removal are neutral. Backups:
+`backup/phase-13b-before-clean`, `backup/phase-13d-before-clean` - local
+only, never pushed; delete once the next release is out. **PR #54** (the same
+scrub on main) waits for George's merge. Addresses already public before
+today (the dev machine, the LMS server, tests) stay: George, 2026-10-08,
+*"Leave the old one be - no scrub"*.
+
+**2026-10-09.** A test image with every fix since 0.9.5 is built and
+verified (111 checks): `image/deploy/2026-10-08-gexis-player-v0.9.5-66-g466956c.img`,
+for George's clean-flash setup test - not a release; it fetches skins and
+plugins from the published 0.9.5 Testing release. **gexis-plexamp 0.4.3**
+released (Plexamp missing or not answering is unavailable from the first
+poll) and pinned. **README rewritten and approved by George** (preview with
+comments, 2026-10-09): one opening, Lyrion and plugins as their own sections,
+first person singular and no self-promotion (memory), screenshots plus
+`docs/SCREENSHOTS.md`, and animated visualiser captures in
+`docs/assets/visualiser/` rendered off-screen by the real driver from a
+public-domain Beethoven recording (pygame-ce, not the device's pygame). It
+reaches GitHub's front page with the next release PR.
+
+**guestpi** (Pi-DAC PRO, 13.3"): runs 0.9.5's code as a
+preview. **Plexamp claimed again** later on 2026-10-08, after three claims
+Plex refused (its sign-ins answered 200 and 401 within a second); the
+wrapper's three faults it showed are fixed (ADR-0119 amended, gexis-plexamp
+0.4.2, on guestpi). The store set aside then is still at
+`~/.local/share/Plexamp.aside-20261008-121613` - delete it when convenient.
+**gexis** is offline since its card swap.
+
+**Since 0.9.5, on `phase-13d` (for the next release's notes):**
+- Download a backup from *Settings → System → Restore* (ADR-0083 amended);
+- Plexamp's claim: a failed claim leaves nothing behind, is told by Plexamp's
+  exit, and the row says it (ADR-0119 amended; gexis-plexamp 0.4.2);
+- the **Cable** row (ADR-0123): state, Automatic / Manual address, the 60 s
+  Keep; and the same for the connected Wi-Fi network (decision 2). Both tried
+  on guestpi end to end; guestpi back on DHCP on both.
+  and **the cable wins**: Wi-Fi off while the cable carries the player, back
+  without it (ADR-0123 amended; tried on guestpi with the port taken down);
+- `verify-image.sh` with Beszel 0.21.0's binary checksums.
+All of it is on guestpi (core 0.9.5+git31).
 
 **Left before the first public release.** George to test: the Volume row
 (Fixed never tried by Claude - it goes to full level), the volume-jump fixes
@@ -59,8 +107,7 @@ volume (visualiser; Bluetooth with the volume raised), software volume across
 a full reboot, the small fixes, Hardware feedback on the real panel (pattern,
 taps, tones, GitHub - labels exist), and a **freshly flashed card** (the
 Plugins step, the settling screen, the screen applied in setup). The update
-safety can only be seen on the release after 0.9.4. Claude to do: the cable
-network (ADR-0123 step 2; needs a cable), **the final thorough code check**
+safety can only be seen on the release after 0.9.4. Claude to do: **the final thorough code check**
 (George: everything once more; volume, the adapters and arbitration must
 work perfectly from the start), the first public release, and removing
 passwordless sudo from the image - last.
@@ -70,7 +117,9 @@ passwordless sudo from the image - last.
 profiles from screenshot scripts filled /tmp (16 GB) - delete them after each
 run; installing `gexis-core` does not restart it - restart it as its own gated
 step, or the old code keeps running. (The package-revision rule is LESSONS 53,
-not new: gexis-beszel-agent is at 0.21.0-2.)
+not new: gexis-beszel-agent is at 0.21.0-2.) Raising a Beszel pin also means
+raising `image/verify-image.sh`'s binary checksums: 0.9.5's first image check
+failed on exactly that (the image held the right binaries).
 
 ## Build environment (2026-09-13) — read this before the next build
 

@@ -293,6 +293,22 @@ says at which address it comes back.
 
 ---
 
+**What happens with a cable and Wi-Fi at the same time?**
+The cable wins. While a cable is plugged in, the Wi-Fi is off and its
+networks stay saved; unplug the cable and the Wi-Fi connects again by itself
+within about 10 seconds, at its own address. `gexis.local` (the player's name)
+finds it either way.
+
+**Can the player have a fixed address on the cable?**
+Yes: *Settings → Device → Cable* (shown while a cable is plugged in), then
+*Manual*, with the address and its prefix (for example `192.168.1.20/24`), the
+gateway and one or two DNS servers. After *Save*, open the player at the new
+address and tap *Keep* within 60 seconds. If the new address does not work,
+the old one comes back by itself, so a mistake cannot lock you out. On Wi-Fi,
+the same choice is under the connected network's details in *Settings →
+Device → Wi-Fi*. A backup does not hold a fixed address: set it again after
+restoring one.
+
 ## Setup and first boot
 
 **How is a new player set up?**
@@ -405,7 +421,10 @@ the details came through. Not every app sends track details over Bluetooth.
 Switch on *Plexamp* on the Plugins page (it is downloaded from Plex). Then, in
 its *Claim token* row under *Settings → Sources*, paste a token from
 plex.tv/claim; the row then shows *Claimed*. *Claim again* moves the player
-to another Plex account, and registers it there as a new player.
+to another Plex account, and registers it there as a new player. A token
+lasts only a few minutes, so paste it soon after making it. If the row says
+*The claim did not work* or *Plex signed this player out*, get a new token and
+paste it again; a claim that fails leaves the player as it was.
 
 ---
 
@@ -483,13 +502,15 @@ update that brings it.
 *Settings → System → Back up now* writes the settings, the library's
 pictures, the paired devices and the player's configuration into the
 player's Backups share on the network. Copy the backup off the player before
-flashing. After flashing, setup offers *Restore a backup* right after the
-Wi-Fi: choose the file on the phone, check what it brings, and the player
-restarts with everything back. Anything setup asks (the name, for instance)
-can be changed in that review, so one player's backup can start another. With
-a new name, the review offers *A second player*: on, the first player keeps
-its Beszel identity, Plexamp's claim, Spotify sign-in and Bluetooth
-pairings, so the two never share them. A backup from an older version works. A
+flashing: on a phone or computer, *Settings → System → Restore* has *Download*
+beside each backup, or copy it from the share. After flashing, setup offers *Restore a backup* right after the
+Wi-Fi: choose the file on the phone, choose the output and the screen this
+player has, check what the backup brings, and the player restarts with
+everything back. Anything else setup asks (the name, for instance) can be
+changed in that review, so one player's backup can start another. With a new
+name, the review offers *A second player*: on, the first player keeps its
+Beszel connection (the hub's address and keys too), Plexamp's claim, Spotify
+sign-in and Bluetooth pairings, so the two never share them. A backup from an older version works. A
 backup can also be restored later: copy it into the Backups share and choose
 it under *Settings → System → Restore*. Network share passwords are not kept
 in backups, so enter them again.
@@ -510,11 +531,12 @@ is refused when it is saved, and an agent that cannot start at all says
 
 **My sound card or screen is not marked Tested. Can I help?**
 Yes: open *Settings → System → Hardware feedback* on a phone or computer. It
-takes two short steps. First the screen: a test pattern on the player's
+takes three short steps. First the screen: a test pattern on the player's
 screen shows whether all of it is visible, and four circles to tap measure
 where the touches land. Then the sound: a short test tone at 44.1, 96 and
-192 kHz, and a few questions about how it plays. On a player without a
-screen, or one set to Headless, it starts at the sound. The feedback is then
+192 kHz, and a few questions about how it plays. Last, room for your own
+notes, beside what the player adds for you. On a player without a screen,
+or one set to Headless, it starts at the sound. The feedback is then
 sent on GitHub (a GitHub account is needed), filled in with what the player
 reads of the hardware itself - never a serial number or anything about you -
 and it is public, so the next owner can see what works. A week after a sound

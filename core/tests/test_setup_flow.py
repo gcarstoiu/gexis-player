@@ -484,7 +484,7 @@ def test_a_backup_given_another_name_leaves_the_first_player_s_identities_behind
     else comes back."""
     flow, net, _, _, upload, _ = _with_backup(tmp_path, FakeNM(devices=NOTHING))
     seen = flow.take_backup(upload)["backup"]
-    assert set(seen["identities"]) == {"Beszel identity", "Plexamp's claim", "Spotify sign-in", "Bluetooth pairings"}
+    assert set(seen["identities"]) == {"Beszel connection", "Plexamp's claim", "Spotify sign-in", "Bluetooth pairings"}
     flow.save({"ssid": "Home", "password": "hunter22", "name": "Kitchen"})
     asyncio.run(_finish_told(flow, net))
     card = tmp_path / "card"
@@ -507,3 +507,67 @@ def test_the_same_player_keeps_them_renamed_or_not(tmp_path):
         asyncio.run(_finish_told(flow, net))
         assert (root / "card/var/lib/beszel-agent/fingerprint").exists(), answers
         assert (root / "card/home/pi/.local/share/Plexamp/Settings").exists(), answers
+
+
+CONNECTED = {**VALUES, "beszel.enabled": True, "beszel.hub": "http://192.0.2.9:8090", "beszel.key": "ssh-ed25519 AAAA",
+             "beszel.token": "t0ken", "plexamp.claim_token": "claim-abc"}
+
+
+def test_a_second_player_leaves_the_first_one_s_hub_and_claim_in_the_settings_too(tmp_path):
+    """George, 2026-10-08: a second player came up still showing the first
+    one's Beszel hub - "everything goes, including IP". The connection is
+    settings, not files: the whole Beszel plugin back to its defaults, and
+    Plexamp's claim token gone with its switch kept. The same player keeps
+    them all."""
+    for answers, kept in (({"name": "Kitchen"}, False), ({"name": "Kitchen", "second_player": False}, True)):
+        root = tmp_path / str(kept)
+        root.mkdir()
+        flow, net, _, _, upload, _ = _with_backup(root, FakeNM(devices=NOTHING), values=CONNECTED)
+        flow.take_backup(upload)
+        flow.save({"ssid": "Home", "password": "hunter22", **answers})
+        asyncio.run(_finish_told(flow, net))
+        for key in ("beszel.enabled", "beszel.hub", "beszel.key", "beszel.token", "plexamp.claim_token"):
+            assert (_restored(root, key) is not None) is kept, (key, answers)
+        assert _restored(root, "plexamp.enabled") is True
+        assert _restored(root, "device_name") == "Kitchen"
+
+
+def test_a_plugin_switched_on_in_the_review_stays_on_a_second_player(tmp_path):
+    flow, net, _, _, upload, _ = _with_backup(tmp_path, FakeNM(devices=NOTHING), values=CONNECTED, plugins=PLUGINS)
+    flow.take_backup(upload)
+    flow.save({"ssid": "Home", "password": "hunter22", "name": "Kitchen", "plugins": ["beszel"]})
+    asyncio.run(_finish_told(flow, net))
+    assert _restored(tmp_path, "beszel.enabled") is True and _restored(tmp_path, "beszel.hub") is None
+
+
+def test_a_restore_applies_its_answers_with_a_real_store(tmp_path):
+    """0.9.5 on a new card, 2026-10-08: the answers were applied after the
+    settings file was replaced, and the store the core held open refused
+    every write - the name, the time zone, the screen never applied. With a
+    real store: they are applied, and a name changed in setup goes over the
+    backup's own name file after the files are back."""
+    from gexis_core.settings import SettingsStore
+    from gexis_core.settings_registry import Settings, load_registry
+
+    calls = []
+    card = tmp_path / "card"
+    (card / "var/lib/gexis-core").mkdir(parents=True)
+    store = SettingsStore(card / "var/lib/gexis-core/settings.db")
+    settings = Settings(store, registry=load_registry(), seed_path=tmp_path / "none.json",
+                        defaults={"device_name": lambda: "raspberrypi"},
+                        wired={"device_name": lambda v: calls.append(("set", "device_name", v)),
+                               "timezone": lambda v: calls.append(("set", "timezone", v))})
+    base = tmp_path / "setup"
+    base.mkdir()
+    flow, net, _, _, upload, _ = _with_backup(base, FakeNM(devices=NOTHING), settings)
+    flow._restore_root = card
+    flow._rename = lambda name: calls.append(("rename", name, (card / "etc/gexis/device-name.env").read_text()))
+    flow.take_backup(upload)
+    flow.save({"ssid": "Home", "password": "hunter22", "name": "ShelvesPi"})
+    asyncio.run(_finish_told(flow, net))
+    assert ("set", "device_name", "ShelvesPi") in calls
+    assert ("set", "timezone", "Europe/Berlin") in calls
+    rename = [c for c in calls if c[0] == "rename"]
+    assert rename and rename[0][1] == "ShelvesPi"
+    assert "NAME=gexis" in rename[0][2], "renamed after the backup's own name file came back"
+    assert calls.index(("set", "device_name", "ShelvesPi")) < calls.index(rename[0])
