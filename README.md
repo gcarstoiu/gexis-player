@@ -69,9 +69,10 @@ On first boot the player opens its own Wi-Fi, the panel shows two QR codes,
 and your phone walks you through the rest: your Wi-Fi, a name, the time, the
 output, your music and the screen. The screen and the DAC are recognised where
 they can be, so most answers are already filled in. After that, updates arrive
-over the network, every setting is on your phone as well as the panel, and a
-backup brings it all back on a new card, during setup, straight from your
-phone. No keyboard, no terminal, no config files.
+over the network, every setting is on your phone as well as the panel, your
+phone doubles as a touchpad for the screen, and a backup brings it all back on
+a new card, during setup, straight from your phone. No keyboard, no terminal,
+no config files.
 
 ## 📚 Your library, with Lyrion
 
@@ -125,6 +126,7 @@ or removed from Settings, with its progress shown in the switch itself.
 | ⬆️ **Updates** | Over the network, with release notes · *Testing* gets each release first, *Stable* once it has been tried |
 | 🔗 **Network** | Wi-Fi or cable, and the cable wins while it is plugged in · a fixed address on either, kept only once it is shown to work |
 | 📱 **Settings anywhere** | The full settings on the panel and on any phone or computer on your network, with a mini player on the phone |
+| 🖐️ **Phone as a touchpad** | Drive the panel from across the room: one finger moves a pointer, a tap presses, two fingers scroll, a pinch zooms, and a text field on the panel brings up the phone's keyboard · no app to install |
 | 🩺 **When something is wrong** | A problem report in one download, with addresses, names, keys and what you play taken out first · hardware feedback that tests your screen's touch and your DAC's rates |
 
 ## ⚖️ Limitations and trade-offs
