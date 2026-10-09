@@ -2798,6 +2798,14 @@ the DAC2 HD and the IQaudio DAC+ as the two tested boards. What is known, and
 what the device can learn by itself:
 [Finding 106](findings/106-what-is-known-about-dacs-without-owning-them.md).
 
+**Progress (2026-10-04):** ADR-0117 accepted. Built, not yet on hardware:
+the volume scale read from the card (70d9461); Volumio's list, read and
+corrected (58ba397); outputs named by their board with Tested / Known /
+Detected (b67f7a5); the *Sound card board* row in Settings, with the
+take-back when no card appears (3f5e552). **Open:** the board in setup's
+Audio step (a design question for George); the preview on `gexis` (the
+DAC2 HD unchanged); the IQaudio DAC+ on the bench (criteria 2 and 4).
+
 **An ADR before anything is built.** It must settle three things:
 - how detection and the list divide the work;
 - the three states a DAC can be in;

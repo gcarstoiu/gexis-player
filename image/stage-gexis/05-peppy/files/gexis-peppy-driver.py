@@ -25,6 +25,7 @@ import logging
 import os
 import random
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -267,92 +268,127 @@ def spectrum_for(skin: dict[str, str]) -> tuple[str, int, int] | None:
 
 
 #: The bar count, once the corpus has been looked at: see `spectrum_bars`.
-_BARS: int | None = None
+#: **How far short of the left margin the right one may fall** (George,
+#: 2026-10-08: "there is enough space for 20 bars"). The authors drew most
+#: panels a few pixels short of symmetric - Free's right margin is 110 px to a
+#: 115 px origin, Lynx 41 to 44, Sony 14 to 19 - and the strict rule took a
+#: bar from each. Two that are far off (Dorrought 25 to 61, SansuiTU 7 to 16)
+#: keep the count the strict rule gives them.
+MARGIN_TOLERANCE_PX = 6
 
 
-def spectrum_bars(base_folder: Path | None, folder: str, bands: int) -> int | None:
-    """**How many bars every spectrum skin draws.**
+def spectrum_bars(base_folder: Path | None, folder: str, bands: int, section: str) -> int | None:
+    """**How many bars this spectrum section draws** - its own, not the
+    corpus's (George, 2026-10-08).
 
-    The engine draws `config[SIZE]` bars from the global `config.txt`. It was
-    30 and no skin has room for 30: measured across both installed packs,
-    their artwork holds 19 or 20 (Finding 049). What fits is arithmetic on
-    the skin's own numbers - the width of its background picture, where the
-    first bar starts, and how wide a bar and a gap are:
+    The engine draws `config[SIZE]` bars. What fits is arithmetic on the
+    section's own numbers - the width of its background picture, where the
+    first bar starts, and how wide a bar and a gap are - with the last bar
+    ending no closer to the right edge than the first begins from the left,
+    less `MARGIN_TOLERANCE_PX`:
 
-        room = (background width - 2*origin.x + bar.gap) // (bar.width + bar.gap)
+        room = (width - 2*origin.x + gap + tolerance) // (bar.width + gap)
 
     **`origin.x` twice, because the picture has a frame.** Filling to the
     picture's own right-hand edge puts the last bar on the bezel: `Free`'s
-    panel is 933px wide and its drawn interior ends 25px short of that, so
-    the 22nd bar overhung by most of its width (George, 2026-09-23: *"the
-    bars for spectrum are also out of the bounds of the space they should
-    sit in, by half a bar in general for all skins"*). The inset is not in
-    the config; `origin.x` is the author's own left-hand margin, and ending
-    as far from the right edge as the bars begin from the left cannot
-    overhang.
+    panel at 1280x800 is 933px wide and its drawn interior ends 25px short of
+    that, so a 22nd bar overhung by most of its width (George, 2026-09-23).
 
-    **One number for the whole corpus, not one per skin**, and that is the
-    part worth explaining. The engine reads `size` **once**, when the driver
-    constructs it - a skin change re-points the section, the base folder and
-    the screen size, but `config[SIZE]` keeps the value it started with. The
-    meter relay, meanwhile, reads this same file and follows it
-    ([ADR-0056](../../../../docs/decisions/0056-the-spectrum-frame-follows-its-reader.md)).
-    So a per-skin count made the two disagree from the second skin onwards,
-    and a FIFO has no message boundaries: the reader then takes its frames
-    across record boundaries and every bar shows a different band each
-    refresh. George saw it as flashing in the low bars, and the device's own
-    log had it - *"drawing 20"* while the engine was still on 19.
+    **Per section since 2026-10-08.** It was one number for the whole corpus,
+    the smallest - 18 on guestpi, where sections hold 18 to 21 - because the
+    engine and the meter relay had to agree on the frame size or every bar
+    showed a different band (Finding 051), and the engine's reader went out
+    of step for good after one disagreement. `read_the_newest_frame` now
+    takes the newest whole frame whatever came before, so the count can
+    change with the skin.
 
-    **The spread is one bar**, 19 against 20, so the minimum over the whole
-    installed corpus costs nothing and removes the disagreement entirely:
-    the number is written once and never changes while the engine runs.
-
-    **The pipe is not touched.** peppyalsa keeps sending `bands` bands
-    (ADR-0011); the count is capped at that, never the other way round.
-
-    **The count comes down, never the bar width.** The bar is a picture the
-    skin's author drew at a fixed size; narrowing it would scale their
-    artwork.
+    **Capped at `bands`**, what the pipe carries: more bars than measurements
+    would invent data. **The count comes down, never the bar width**: the
+    bar is a picture the skin's author drew at a fixed size.
     """
-    global _BARS
-    if _BARS is not None:
-        return _BARS
     if base_folder is None or not folder:
         return None
-    rooms = []
-    # `base_folder` is `<root>/<pack>/templates_spectrum`, so two levels up is
-    # the root every installed pack sits under. Every pack, not just the one
-    # in use: the number has to hold for whatever the corpus rotates onto.
-    root = base_folder.parent.parent
-    for spectrum_txt in sorted(root.glob(f"*/templates*/{folder}/spectrum.txt")):
-        parser = configparser.ConfigParser(strict=False)
-        try:
-            parser.read(spectrum_txt)
-        except configparser.Error:
-            continue
-        for name in parser.sections():
-            section = parser[name]
-            try:
-                width = int(section["bar.width"])
-                gap = int(section["bar.gap"])
-                origin = int(section["origin.x"])
-                area = png_width(spectrum_txt.parent / section["bgr.filename"])
-            except (KeyError, ValueError, OSError):
-                continue
-            if not area:
-                continue
-            room = (area - 2 * origin + gap) // (width + gap)
-            if room > 0:
-                rooms.append(room)
-    if not rooms:
+    spectrum_txt = base_folder / folder / "spectrum.txt"
+    parser = configparser.ConfigParser(strict=False)
+    try:
+        parser.read(spectrum_txt)
+        values = parser[section]
+        width = int(values["bar.width"])
+        gap = int(values["bar.gap"])
+        origin = int(values["origin.x"])
+        area = png_width(spectrum_txt.parent / values["bgr.filename"])
+    except (configparser.Error, KeyError, ValueError, OSError):
         return None
-    _BARS = min(min(rooms), bands)
-    print(
-        f"peppy: {len(rooms)} spectrum sections hold {min(rooms)}-{max(rooms)} bars, "
-        f"drawing {_BARS} everywhere",
-        flush=True,
-    )
-    return _BARS
+    if not area:
+        return None
+    room = (area - 2 * origin + gap + MARGIN_TOLERANCE_PX) // (width + gap)
+    return min(room, bands) if room > 0 else None
+
+
+def read_the_newest_frame(spectrum) -> None:
+    """**The newest whole frame, whatever came before it** (2026-10-08).
+
+    The engine reads its pipe `4 * size` bytes at a time, and a pipe keeps no
+    frame boundaries: once the relay wrote one frame of another size - a skin
+    change, with the bar count changing - every later read straddled two
+    frames and each bar showed a different band (Finding 051). That is why
+    the count was one number for every skin.
+
+    The relay writes each frame in one `write()` of at most `PIPE_BUF`, which
+    POSIX makes atomic, so **the end of what is waiting is always the end of
+    a frame**. This drains everything and keeps the last `4 * size` bytes:
+    aligned at every read, however the sizes went before. A poll that finds
+    nothing new holds the last frame, as `hold_the_last_frame` does for the
+    meters; a held frame of the old size reads as silence until the next.
+    Patched on the instance, as that one is (ADR-0026).
+    """
+    try:
+        from spectrumconfigparser import PIPE_SIZE
+    except ImportError:  # the tests, without the engine
+        PIPE_SIZE = "pipe_size"
+
+    last: dict[str, bytes | None] = {"frame": None}
+
+    def latest():
+        size = spectrum.config[PIPE_SIZE]
+        chunks = []
+        while True:
+            try:
+                data = os.read(spectrum.pipe, 65536)
+            except (BlockingIOError, OSError, TypeError):
+                break
+            if not data:
+                break
+            chunks.append(data)
+        if chunks:
+            waiting = b"".join(chunks)
+            if len(waiting) >= size:
+                last["frame"] = waiting[-size:]
+        frame = last["frame"]
+        if frame is None or len(frame) != size:
+            return [0] * size
+        return frame
+
+    spectrum.get_latest_pipe_data = latest
+
+
+def serialise_updates(spectrum) -> threading.Lock:
+    """**One lock between the engine's data thread and a skin change.** The
+    engine moves its bars from a thread of its own (`get_data`, every 40 ms),
+    indexing `components` by `config[SIZE]`. A skin change that alters the
+    count rebuilds both; half done under a running update, the thread indexes
+    past the end, and an exception there ends it silently. Patched on the
+    instance (ADR-0026); `SpectrumState.follow` takes the same lock."""
+    lock = threading.Lock()
+    update = spectrum.set_values
+
+    def set_values():
+        with lock:
+            update()
+
+    spectrum.set_values = set_values
+    spectrum.gexis_lock = lock
+    return lock
 
 
 def png_width(path: Path) -> int | None:
@@ -368,7 +404,7 @@ def png_width(path: Path) -> int | None:
     return int.from_bytes(header[16:20], "big")
 
 
-def select_spectrum_section(name: str, base_folder: Path | None = None, folder: str | None = None) -> None:
+def select_spectrum_section(name: str, base_folder: Path | None = None, folder: str | None = None) -> int | None:
     """Point the spectrum engine's own config at one section. Rewritten in
     place: configparser fails hard on a duplicate key, and an appended one
     would stop the process starting.
@@ -393,16 +429,17 @@ def select_spectrum_section(name: str, base_folder: Path | None = None, folder: 
     # so the bar count is read from the same place it will read the rest.
     # The cap is what the *pipe* carries, which is the band count peppyalsa
     # was configured with - never more bars than there are measurements.
-    bars = spectrum_bars(
-        base_folder, parser["current"].get("spectrum.folder", ""), SPECTRUM_BANDS
-    )
+    base = Path(parser["current"]["base.folder"]) if parser["current"].get("base.folder") else None
+    bars = spectrum_bars(base, parser["current"].get("spectrum.folder", ""), SPECTRUM_BANDS, name)
     if bars:
         parser["current"]["size"] = str(bars)
+        print(f"peppy: spectrum {name}: {bars} bars", flush=True)
     # The engine reads this file; the daemon never does. It is rewritten on
     # every skin change, which is why the image installs it writable by the
-    # user the unit runs as.
+    # user the unit runs as. The meter relay follows its `size` (ADR-0056).
     with path.open("w") as handle:
         parser.write(handle)
+    return bars
 
 
 def spectrum_base(home: Path) -> Path:
@@ -561,9 +598,15 @@ class Rotation:
         #: panel, 2026-09-22). Such a skin is not a choice, so it leaves the
         #: pool rather than reaching the glass.
         self.spectrum_ready = True
+        #: Skins that could not be built (an image that would not load), left
+        #: out from then on. One such skin took the whole screen down on
+        #: guestpi (2026-10-07): the rotation reached it, the loop ended,
+        #: and the visualiser had no window for the rest of the day.
+        self.broken: set[str] = set()
 
     def pool(self) -> list[str]:
-        chosen = self.selection.pool(self.skins)
+        chosen = [n for n in self.selection.pool(self.skins) if n not in self.broken] or \
+            self.selection.pool(self.skins)
         if self.spectrum_ready:
             return chosen
         drawable = [n for n in chosen if kind_of(self.skins[n]) != SPECTRUM]
@@ -613,11 +656,28 @@ class Rotation:
         self.prepared = None
         self.switch(wanted)
 
+    #: How many skins one preparation tries before giving up for this turn.
+    PREPARE_TRIES = 5
+
     def prepare_next(self, name: str | None = None) -> None:
         """Build the next skin's meter now, so a track change costs no image
         loading. Done right after a switch, while the new skin is already on
-        screen — the moment with the most slack, not the least."""
-        name = name or self.pick()
+        screen — the moment with the most slack, not the least.
+
+        **A skin that cannot be built is left out, and another is tried** -
+        never the end of the loop."""
+        for _ in range(self.PREPARE_TRIES):
+            skin = name or self.pick()
+            try:
+                self._prepare(skin)
+                return
+            except Exception as exc:  # noqa: BLE001 - one skin, not the screen
+                print(f"peppy: skin {skin!r} could not be built ({type(exc).__name__}: {exc}); left out")
+                self.broken.add(skin)
+                name = None
+        raise RuntimeError("no skin could be built")
+
+    def _prepare(self, name: str) -> None:
         from configfileparser import BASE_PATH, METER
         from meterfactory import MeterFactory
 
@@ -661,7 +721,7 @@ class Rotation:
     def switch(self, to: str | None = None) -> None:
         if to is not None and (self.prepared is None or self.prepared[0] != to):
             self.prepare_next(to)
-        if self.prepared is None:
+        if self.prepared is None or self.prepared[0] in self.broken:
             self.prepare_next()
         name, meter = self.prepared
         self.prepared = None
@@ -717,8 +777,10 @@ class SpectrumState:
         from spectrumconfigparser import (
             AVAILABLE_SPECTRUM_NAMES,
             BASE_FOLDER,
+            PIPE_SIZE,
             SCREEN_HEIGHT,
             SCREEN_WIDTH,
+            SIZE,
             SPECTRUM_FOLDER,
             SPECTRUM_X,
             SPECTRUM_Y,
@@ -726,9 +788,21 @@ class SpectrumState:
 
         here = Path.cwd()
         os.chdir(SPECTRUM_DIR)
+        spectrum = self.spectrum
+        lock = getattr(spectrum, "gexis_lock", None) or threading.Lock()
+        lock.acquire()
         try:
-            select_spectrum_section(name, spectrum_base(home) if home else None, home.name if home else None)
-            spectrum = self.spectrum
+            bars = select_spectrum_section(name, spectrum_base(home) if home else None, home.name if home else None)
+            if bars and bars != spectrum.config[SIZE]:
+                # **This skin's own count** (2026-10-08), in memory as in
+                # the file the relay follows. The engine made its bar slots
+                # once, for the count it started with, and finds them by
+                # position from it - so they are made again.
+                # `read_the_newest_frame` keeps the pipe aligned across it.
+                spectrum.config[SIZE] = bars
+                spectrum.config[PIPE_SIZE] = 4 * bars
+                spectrum.components = []
+                spectrum.init_container()
             spectrum.config[SCREEN_WIDTH] = width
             spectrum.config[SCREEN_HEIGHT] = height
             spectrum.config[AVAILABLE_SPECTRUM_NAMES] = [name]
@@ -768,6 +842,7 @@ class SpectrumState:
             print(f"peppy: spectrum {name!r} would not load: {exc}", file=sys.stderr)
             self.active = False
         finally:
+            lock.release()
             os.chdir(here)
 
 
@@ -908,8 +983,14 @@ def main() -> int:
     # (ADR-0051 §2).
     skins, homes = load_corpus(base_folder, meter_folder)
     if not skins:
-        print(f"ERROR: no skins in {corpus}/meters.txt", file=sys.stderr)
-        return 1
+        # **No pack for this screen yet is not a failure** (ShelvesPi,
+        # 2026-10-09): its pack had not arrived - a power cut left it half
+        # installed - and the unit sat in `systemctl --failed` and in problem
+        # reports as a crash. The panel offers no visualiser without a pack,
+        # and the core restarts this unit once one is installed.
+        print(f"no skin pack for this screen yet ({corpus}/meters.txt is empty); "
+              "the visualiser starts once one is installed", file=sys.stderr)
+        return 0
 
     from configfileparser import BASE_PATH, FRAME_RATE, METER
     from peppymeter import Peppymeter
@@ -1017,6 +1098,8 @@ def main() -> int:
             # that made it. PeppyMeter's loop does the drawing instead,
             # through `dependent` below.
             spectrum.callback_start = lambda _spectrum: None
+            read_the_newest_frame(spectrum)
+            serialise_updates(spectrum)
             spectrum.start()
             spectrum_state.spectrum = spectrum
             # Only if the skin on screen is the one it was built against;
@@ -1202,4 +1285,11 @@ def run() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(run())
+    code = run()
+    # **Out for real.** `SystemExit` waits for the threads still running
+    # (the touch reporter, SDL's timer), and on guestpi (2026-10-07) the
+    # process sat there for hours after its loop had ended: no window, and
+    # nothing for the daemon to restart.
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(code)

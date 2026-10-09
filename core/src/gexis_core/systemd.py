@@ -128,6 +128,17 @@ def restart_if_enabled(unit: str) -> None:
     subprocess.run(["systemctl", "restart", unit], check=False, capture_output=True)
 
 
+def unit_state(unit: str) -> str:
+    """What `systemctl is-active` says - `active`, `failed`, `inactive`,
+    `activating`... - or `unknown` when it cannot be asked."""
+    try:
+        result = subprocess.run(["systemctl", "is-active", unit], check=False, capture_output=True,
+                                text=True, timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        return "unknown"
+    return (result.stdout or "").strip() or "unknown"
+
+
 def is_enabled(unit: str) -> bool:
     """Whether systemd will start this unit at boot.
 

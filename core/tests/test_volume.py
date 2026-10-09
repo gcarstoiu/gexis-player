@@ -1092,7 +1092,7 @@ class TestAnUnexpectedHardwareChangeWithARendererActive:
             return Proc([b"node hw:0\n"])
 
         async def fake_get_raw(*_a, **_k):
-            return vol.HARDWARE_MAX
+            return vol.hardware_max()
 
         async def stop_instead_of_sleeping(_seconds):
             # the loop sleeps 5s and recurses once the fake monitor is out

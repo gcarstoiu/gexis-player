@@ -375,3 +375,140 @@ class TestTheAlsaDefault:
         from gexis_core.outputs import Output, render
         rendered = render(Output(card="sndrpihifiberry", label="DAC", control="Master"), plug=False)
         assert "!default" not in rendered
+
+
+def test_the_outputs_are_worked_out_again_only_when_something_changed(tmp_path, monkeypatch):
+    """2026-10-05: every GET /settings listed the outputs - `aplay` and an
+    `amixer` per card, 50 ms on the player. Asked again when the cards,
+    an HDMI connection or the chosen board change, so a cable plugged in
+    still shows without a restart."""
+    from gexis_core import boards, outputs
+
+    cards = tmp_path / "cards"
+    cards.write_text(" 0 [vc4hdmi0       ]: vc4-hdmi\n")
+    ran = []
+
+    def run(*args):
+        ran.append(args[0])
+        if args[0] == "aplay":
+            return "card 0: vc4hdmi0 [vc4-hdmi-0], device 0: MAI PCM i2s-hifi-0 [MAI PCM i2s-hifi-0]\n"
+        return ""
+
+    monkeypatch.setattr(outputs, "CARDS", cards)
+    monkeypatch.setattr(outputs, "_run", run)
+    monkeypatch.setattr(outputs, "DRM", tmp_path / "drm")
+    monkeypatch.setattr(outputs, "_DISCOVERED", {})
+    monkeypatch.setattr(boards, "hat_product", lambda: None)
+    first = outputs.discover(chosen_board="none")
+    again = outputs.discover(chosen_board="none")
+    assert [o.card for o in again] == [o.card for o in first] == ["vc4hdmi0"]
+    assert ran.count("aplay") == 1
+    outputs.discover(chosen_board="iqaudio-dacplus")  # a board chosen
+    assert ran.count("aplay") == 2
+    cards.write_text(cards.read_text() + " 1 [sndrpihifiberry]: RPi-simple\n")  # a card arrives
+    outputs.discover(chosen_board="iqaudio-dacplus")
+    assert ran.count("aplay") == 3
+
+
+# --- ADR-0124: software volume (Finding 115) ---------------------------------
+
+def test_software_volume_puts_softvol_after_the_meter_on_a_dac():
+    out = outputs.with_software_volume(outputs.Output(card="IQaudIODAC", label="IQaudIO Pi-DAC PRO", control="Digital"))
+    conf = outputs.render(out, False)
+    meter = conf.index("pcm.output {")
+    assert 'slave.pcm "gexis_softvol"' in conf[meter:conf.index("}", meter)], "the meter sees the music as it arrives"
+    assert 'type softvol\n    slave.pcm "hw:IQaudIODAC"' in conf
+    assert 'control { name "Gexis Playback Volume" card IQaudIODAC }' in conf
+    assert "gexis_softvol_wait" in conf and "nonblock 0" in conf, "squeezelite's waiting open has the same stage"
+    assert conf.count('name "Gexis Playback Volume"') == 2, "one control for both"
+
+
+def test_software_volume_goes_in_front_of_plug_on_hdmi_with_the_meter_first():
+    """Finding 116: `meter → softvol → plug → card` plays, and the levels
+    arrive; the meter straight over `plug` (HDMI on Fixed) still never."""
+    out = outputs.with_software_volume(outputs.Output(card="vc4hdmi0", label="HDMI 1", control=None))
+    conf = outputs.render(out, True)
+    assert conf.startswith('pcm.output {\n    type meter\n    slave.pcm "gexis_softvol"')
+    assert 'type softvol\n    slave.pcm { type plug slave.pcm "hw:vc4hdmi0" }' in conf
+    assert 'slave.pcm { type plug slave.pcm { type hw card vc4hdmi0 nonblock 0 } }' in conf
+    fixed = outputs.render(outputs.Output(card="vc4hdmi0", label="HDMI 1", control=None), True)
+    assert "type meter" not in fixed.split("pcm_scope.peppyalsa")[0], "no meter straight over plug"
+
+
+def test_the_software_scale_is_exact_and_tops_out_at_0_db():
+    scale = outputs.SOFTVOL_SCALE
+    assert (scale.raw_min, scale.raw_max, scale.db_min, scale.db_step) == (0, 360, -90.0, 0.25)
+    assert scale.top == 360 and scale.db(360) == 0.0 and scale.raw(-15.5) == 298
+
+
+def test_an_output_with_no_control_gains_one_and_keeps_its_card():
+    hdmi = outputs.Output(card="vc4hdmi0", label="HDMI 1", control=None)
+    soft = outputs.with_software_volume(hdmi)
+    assert soft.control == "Gexis" and soft.software and soft.card == "vc4hdmi0" and soft.label == "HDMI 1"
+    assert soft.option == hdmi.option, "offered and chosen under the same name"
+
+
+def test_the_card_is_still_read_back_from_a_software_config(tmp_path):
+    conf = tmp_path / "output.conf"
+    conf.write_text(outputs.render(outputs.with_software_volume(
+        outputs.Output(card="IQaudIODAC", label="x", control="Digital")), False))
+    assert outputs.configured(conf) == "IQaudIODAC"
+    conf.write_text(outputs.render(outputs.with_software_volume(
+        outputs.Output(card="vc4hdmi0", label="HDMI 1", control=None)), True))
+    assert outputs.configured(conf) == "vc4hdmi0", "through the plug, too"
+
+
+async def test_a_change_of_output_lets_go_of_the_old_card_s_mixers():
+    """George, 2026-10-07: *"Switching to hdmi and it stops working"* - the
+    handle to `Gexis` stayed on the DAC, and the slider went on writing it."""
+    from gexis_core import volume
+
+    class Held:
+        closed = False
+
+        def close(self):
+            self.closed = True
+
+    held = Held()
+    volume._MIXERS[("output", "Gexis")] = held
+    await volume.forget_mixers()
+    assert held.closed and volume._MIXERS == {}
+
+
+def test_hdmi_stays_without_a_control_of_its_own_when_the_software_one_is_on_it(monkeypatch):
+    """guestpi, 2026-10-07: HDMI took the software control for its own, and
+    parked it at 0 dB under the level it had just been given."""
+    contents = """numid=7,iface=MIXER,name='Gexis Playback Volume'
+  ; type=INTEGER,access=rw---RW-,values=2,min=0,max=360,step=0
+  : values=279,279
+  | dBscale-min=-90.00dB,step=0.25dB,mute=0
+"""
+    monkeypatch.setattr(outputs, "_run", lambda *a: contents)
+    assert outputs.playback_control("vc4hdmi0") == (None, None)
+
+
+async def test_a_change_of_output_makes_libasound_read_its_configuration_again(monkeypatch):
+    """A process keeps the ALSA configuration it loaded first; `output`
+    meant the old card in the core after a switch (guestpi, 2026-10-07)."""
+    import ctypes
+
+    from gexis_core import volume
+
+    freed = []
+    monkeypatch.setattr(ctypes, "CDLL", lambda name: type("Lib", (), {
+        "snd_config_update_free_global": staticmethod(lambda: freed.append(name))})())
+    await volume.forget_mixers()
+    assert freed == ["libasound.so.2"]
+
+
+def test_hardware_gives_way_to_software_where_a_card_has_no_control():
+    """ADR-0127 §2, at start-up, before the row is restricted."""
+    from gexis_core.__main__ import volume_mode
+
+    dac = outputs.Output(label="DAC", card="IQaudIODAC", control="Digital", scale=None)
+    hdmi = outputs.Output(label="HDMI 1", card="vc4hdmi0", control=None, scale=None)
+    assert volume_mode("Hardware", dac) == "Hardware"
+    assert volume_mode("Hardware", hdmi) == "Software"
+    assert volume_mode(None, hdmi) == "Software", "the default is Hardware"
+    assert volume_mode("Fixed", hdmi) == "Fixed"
+    assert volume_mode("Variable", dac) == "Hardware", "an unmigrated value"

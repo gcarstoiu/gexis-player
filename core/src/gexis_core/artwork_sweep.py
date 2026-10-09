@@ -124,6 +124,10 @@ class Progress:
         """The row's own text, in George's words."""
         if not self.kind:
             return "Never run"
+        if self.running and not self.total:
+            # Before the first number: the library's artists are being read
+            # (George, 2026-10-07: "the progress seems stuck at 0").
+            return "Starting - reading the library's artists…"
         if self.kind == "all":
             artists = f"{self.processed:,} of {self.total:,} artists, {self.found:,} portraits"
             albums = f"{self.albums:,} albums, {self.covers:,} covers"
@@ -255,7 +259,9 @@ class ArtworkSweep:
     async def _run(self, kind: str) -> None:
         try:
             artists = await self._album_artists()
-            self._set(total=len(artists))
+            # The total, and below the first artist, on screen at once - not
+            # after the publishing gap (George, 2026-10-07: it sat at 0).
+            self._set(total=len(artists), always=True)
             found = albums = covers = 0
             for index, (artist_id, name) in enumerate(artists, start=1):
                 try:
@@ -271,7 +277,7 @@ class ArtworkSweep:
                     found += 1 if got.portrait else 0
                 albums += got.albums
                 covers += got.covers
-                self._set(processed=index, found=found, albums=albums, covers=covers)
+                self._set(processed=index, found=found, albums=albums, covers=covers, always=index == 1)
             self._set(running=False, finished_at=time.time(), always=True)
             self._keep_run()
             # **The pictures changed under the panel.** Once, here, and not

@@ -1,0 +1,58 @@
+name: Hardware feedback
+description: How a sound card or screen works with Gexis Player - sent from Settings → System → Hardware feedback.
+title: "[Hardware] "
+labels: ["hardware feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you - feedback like this is how Gexis learns which sound cards and screens work.
+        The player filled in what it can read itself; nothing in it names you, your network or the
+        hardware's serial numbers. It is public, so anyone can see what works before buying.
+  - type: input
+    id: board
+    attributes:
+      label: Sound card
+    validations:
+      required: true
+  - type: input
+    id: screen
+    attributes:
+      label: Screen
+  - type: dropdown
+    id: sound
+    attributes:
+      label: Did the music sound right?
+      options: ["Yes", "No", "Not tried"]
+    validations:
+      required: true
+  - type: dropdown
+    id: volume
+    attributes:
+      label: Did the volume change with the slider?
+      options: ["Yes", "No", "Not tried"]
+  - type: dropdown
+    id: clicks
+    attributes:
+      label: Any clicks or gaps between tracks?
+      options: ["No", "Yes", "Not tried"]
+  - type: dropdown
+    id: picture
+    attributes:
+      label: Is the whole picture visible on the screen?
+      options: ["Yes", "No", "No screen"]
+  - type: dropdown
+    id: touch
+    attributes:
+      label: Does a tap land where the finger is?
+      options: ["Yes", "No", "No touch"]
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+  - type: textarea
+    id: details
+    attributes:
+      label: What the player read
+      description: Filled in by the player. Please leave it as it is.
+      render: text

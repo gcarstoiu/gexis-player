@@ -67,7 +67,7 @@ done
 # outlives the environment it replaces. Its key in both forms: armoured for
 # apt's signed-by, binary for gpgv, which checks the channel file.
 install -D -m 755 /src/core/updater/gexis-update "$STAGE/usr/lib/gexis/gexis-update"
-for unit in gexis-update-check.service gexis-update-check.timer gexis-update-checknow.service gexis-update-install.service; do
+for unit in gexis-update-check.service gexis-update-check.timer gexis-update-checknow.service gexis-update-install.service gexis-update-postboot.service; do
 	install -D -m 644 "/src/core/updater/units/$unit" "$U/$unit"
 done
 install -D -m 644 /src/packaging/keys/gexis-release.asc "$STAGE/usr/share/gexis/keys/gexis-release.asc"
@@ -121,6 +121,8 @@ fi
 if command -v systemctl >/dev/null; then
 	systemctl enable gexis-screen-check.service
 	systemctl enable gexis-update-check.timer
+	# ADR-0105 §4 step 5 (built 2026-10-07): the check after an update's reboot.
+	systemctl enable gexis-update-postboot.service
 	if [ -d /run/systemd/system ]; then systemctl start gexis-update-check.timer; fi
 fi
 # Restarts are the updater's (the core may be the one running it); only tell

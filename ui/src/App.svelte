@@ -20,7 +20,11 @@
   import { screen } from './lib/family.svelte.js';
   import UpdateScreen from './screens/UpdateScreen.svelte';
   import PanelPointer from './lib/PanelPointer.svelte';
-  import { update, connection, hidePeppy, screenConfirm, answerScreen, screenNew, answerNewScreen } from './lib/state.js';
+  import { update, connection, hidePeppy, screenConfirm, answerScreen, screenNew, answerNewScreen, screenCheck, sendScreenCheck } from './lib/state.js';
+  import TestPattern from './screens/TestPattern.svelte';
+  import SettlingScreen from './screens/SettlingScreen.svelte';
+  import CableKeep from './screens/CableKeep.svelte';
+  import { settling, settlingDone } from './lib/state.js';
   import KeepScreen from './screens/KeepScreen.svelte';
   import NewScreen from './screens/NewScreen.svelte';
   import { loadSettings, settingValues } from './lib/settings.js';
@@ -479,6 +483,38 @@
       outcomeTimer = setTimeout(() => leaveUpdate(changed), u.state === 'done' ? DONE_MS : OUTCOME_MS);
     }
   });
+  //: **A new UI build reloads the panel too** (ADR-0110 as amended
+  //: 2026-10-09). The reload above follows the release; a UI package
+  //: installed under the same release - a preview over SSH, a package put on
+  //: by hand - left guestpi's panel running 7 October's code for two days,
+  //: and the test pattern a phone asked for never appeared. Once a minute the
+  //: panel reads its own index.html and compares the build it names with the
+  //: one it runs; it reloads when they differ and nothing that must not be cut
+  //: short is up. Phones load the page afresh each time and are left alone.
+  const BUILD_CHECK_MS = 60 * 1000;
+  const BUILD = /\/assets\/index-[\w-]+\.js/;
+  const runningBuild =
+    document.querySelector('script[type="module"][src*="/assets/index-"]')?.getAttribute('src')?.match(BUILD)?.[0] ?? null;
+  async function checkBuild() {
+    if (!runningBuild || !document.documentElement.classList.contains('on-panel')) return;
+    if (updateLock || setupShown || $screenConfirm || $screenCheck?.showing) return;
+    try {
+      const r = await fetch('/', { cache: 'no-store' });
+      if (!r.ok) return;
+      const now = (await r.text()).match(BUILD)?.[0];
+      if (now && now !== runningBuild) {
+        console.info(`panel: build ${runningBuild} replaced by ${now}; reloading`);
+        location.reload();
+      }
+    } catch {
+      /* the core is restarting: the next check sees the answer */
+    }
+  }
+  $effect(() => {
+    const id = setInterval(checkBuild, BUILD_CHECK_MS);
+    return () => clearInterval(id);
+  });
+
   async function showVisualisation() {
     try {
       await showPeppy();
@@ -520,6 +556,11 @@
   {#if $screenNew}
     <NewScreen question={$screenNew} onanswer={answerNew} />
   {/if}
+  {#if $settling}
+    <SettlingScreen settling={$settling} ondone={() => settlingDone().catch(() => {})} />
+  {/if}
+  <!-- ADR-0123: a new cable address waiting to be kept, on every page. -->
+  <CableKeep />
 {:else if surface === 'panel'}
 
 <div class="panel" class:panel--bar={screen.family === 'bar'} data-family={screen.family}>
@@ -664,6 +705,23 @@
 
   {#if $screenNew && !$screenConfirm && !setupShown && !updateLock}
     <NewScreen question={$screenNew} onanswer={answerNew} />
+  {/if}
+
+  <!-- ADR-0128: the first start after setup, until it has settled - over
+       everything but Keep this screen and the update lock. -->
+  {#if $settling && !$screenConfirm && !updateLock && !setupShown}
+    <SettlingScreen settling={$settling} ondone={() => settlingDone().catch(() => {})} />
+  {/if}
+  {#if !setupShown}
+    <CableKeep />
+  {/if}
+
+  <!-- ADR-0126: the hardware report's test pattern, over everything but
+       Keep this screen and the update lock. -->
+  {#if $screenCheck?.showing && !$screenConfirm && !updateLock}
+    {#key $screenCheck.seq}
+      <TestPattern check={$screenCheck} onresult={(r) => sendScreenCheck(r).catch(() => {})} />
+    {/key}
   {/if}
 
   <!-- ADR-0109 decision 5: above everything but the update lock - the

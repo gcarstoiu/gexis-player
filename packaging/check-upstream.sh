@@ -3,7 +3,8 @@
 #
 # ADR-0100, amended 2026-10-03 (George: "We go with A"): **we choose the
 # version** of the software the player fetches from its maker. Run before
-# every release: it reads each maker's own "latest" feed and says which pins
+# every release: it reads each maker's own "latest" feed - for what the player
+# fetches and for what we package (Beszel, go-librespot) - and says which pins
 # are behind. Nothing is changed here - a newer version is tried on the
 # player as a preview before its pin is moved.
 #
@@ -37,5 +38,17 @@ lyrion_have=$(pin "$lyrion_pin" URL | sed -E 's/.*lyrionmusicserver-([0-9.]+)-ar
 lyrion_latest=$(curl -fsS --max-time 20 https://lyrion.org/lms-server-repository/latest.xml 2>/dev/null \
 	| grep -o '<tararm [^>]*' | sed -n 's/.* version="\([^"]*\)".*/\1/p')
 report Lyrion "$lyrion_have" "$lyrion_latest"
+
+# **The components we package from GitHub releases** (George, 2026-10-08: "I see
+# the client is already older than the latest release of the beszel client" -
+# this check named only the two fetched on the device, so Beszel and
+# go-librespot fell behind unseen). Each one's latest release, by tag.
+gh_latest() {
+	curl -fsS --max-time 20 "https://api.github.com/repos/$1/releases/latest" 2>/dev/null \
+		| python3 -c 'import json, sys; print(json.load(sys.stdin)["tag_name"])' 2>/dev/null
+}
+report "Beszel agent" "$(pin packaging/beszel-agent/pins.sh BESZEL_VERSION)" "$(gh_latest henrygd/beszel)"
+report "Beszel hub" "$(pin packaging/beszel-hub/pins.sh BESZEL_HUB_VERSION)" "$(gh_latest henrygd/beszel)"
+report go-librespot "$(pin packaging/go-librespot/pins.sh GO_LIBRESPOT_VERSION)" "$(gh_latest devgianlu/go-librespot)"
 
 exit $status

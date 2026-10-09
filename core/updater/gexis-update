@@ -50,10 +50,20 @@ REBOOT_MARKER = Path("/var/lib/gexis/reboot-required")
 #: Units an update must not restart: the updater's own (restarting the unit
 #: it runs as would end it mid-update), and the shutdown pause, whose stop
 #: pauses LMS (ADR-0095). Found in the first update on the device, 2026-09-30.
-NEVER_RESTART = {"gexis-update-install.service", "gexis-update-check.service", "gexis-park.service"}
+NEVER_RESTART = {"gexis-update-install.service", "gexis-update-check.service",
+                 "gexis-update-checknow.service", "gexis-update-postboot.service",
+                 "gexis-park.service"}
 #: Packages whose new version only takes effect at a boot.
 REBOOT_PACKAGES = re.compile(r"^(linux-image-|raspi-firmware|raspberrypi-sys-mods|libc6|systemd|initramfs-tools)")
 BACKUP_S = 120      # how long a backup may take to appear
+#: ADR-0105 §4 step 5, amended 2026-10-07 (George: "Build them"): what an
+#: update that ends in a reboot leaves for the boot to check - the release it
+#: put in, the one to go back to, the steps so far. Read by `postboot`.
+def pending() -> Path:
+    return STATE / "pending-check.json"
+
+
+INHIBIT = ["systemd-inhibit", "--what=shutdown:sleep", "--who=gexis-update", "--mode=block"]
 #: **ADR-0110 §3: every step listed from the start**, each pending, active,
 #: done or failed, so the modal and the panel can say what comes next.
 STEPS = ("download", "backup", "stop", "install", "restart", "check")
@@ -225,13 +235,108 @@ def apt_env(repos: list[str], pins: list[str] | None = None) -> list[str]:
 APT_ENV = {"DEBIAN_FRONTEND": "noninteractive", "APT_LISTCHANGES_FRONTEND": "none"}
 
 
+def drop_empty_lists() -> list[str]:
+    """**An empty package list is thrown away before `apt update`**, so apt
+    fetches it again. A power cut on ShelvesPi left every list it had just
+    written at 0 bytes - ext4 had not written them to the card yet - and apt,
+    finding the signed index unchanged, answered "Hit" and kept the empty
+    ones: no package could be found ("Unable to locate package"), in every
+    repository, for good. No list of ours is ever really empty. `lock` is
+    apt's own and empty by nature."""
+    dropped = []
+    for f in sorted((STATE / "apt").glob("*/lists/*")):
+        try:
+            if f.is_file() and f.name != "lock" and f.stat().st_size == 0:
+                f.unlink()
+                dropped.append(f.name)
+        except OSError:
+            continue
+    if dropped:
+        print(f"dropped {len(dropped)} empty package list(s): {', '.join(dropped)}", flush=True)
+    return dropped
+
+
 def apt(opts: list[str], *args: str, prefix: list[str] | None = None) -> subprocess.CompletedProcess:
     """apt-get, its whole output kept in STATE/apt.log for the record."""
+    if "update" in args:
+        drop_empty_lists()
     r = run(*(prefix or []), "apt-get", "-q", "-y", *opts, *args, env=APT_ENV, check=False)
     with (STATE / "apt.log").open("a") as log:
         log.write(f"\n=== {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} apt-get {' '.join(args)} -> {r.returncode}\n")
         log.write(r.stdout + r.stderr)
     return r
+
+
+#: dpkg's journal of the install it is in the middle of. Anything in it
+#: when no install runs means one was cut short.
+DPKG_UPDATES = Path("/var/lib/dpkg/updates")
+#: What the screen says when even the repair below could not finish it.
+CUT_SHORT = ("An earlier install was cut short, and finishing it did not work. "
+             "It is tried again in a few minutes; a problem report says more.")
+
+
+def interrupted() -> tuple[bool, list[str]]:
+    """Whether dpkg was cut short (its journal is not empty), and the
+    packages `dpkg --audit` says are half-installed or need installing again."""
+    try:
+        journal = any(DPKG_UPDATES.iterdir())
+    except OSError:
+        journal = False
+    try:
+        audit = run("dpkg", "--audit", check=False)
+    except OSError:  # no dpkg here at all: nothing it could have left
+        return journal, []
+    broken: list[str] = []
+    for line in audit.stdout.splitlines():
+        # The package lines are indented: " name (description)".
+        if line.startswith(" ") and line.strip():
+            name = line.split()[0]
+            if name not in broken:
+                broken.append(name)
+    return journal, broken
+
+
+def heal(opts: list[str]) -> None:
+    """**An install cut short is finished before anything else** (ADR-0110
+    as amended 2026-10-09). A power cut on ShelvesPi stopped a skin pack
+    halfway through installing; from then on every apt run refused with
+    "dpkg was interrupted, you must manually run 'dpkg --configure -a'",
+    and the screen said the download had stopped, every few minutes, for a
+    day. A player has nobody to run that by hand, so the updater does:
+    `dpkg --configure -a` finishes what dpkg was doing, and a package still
+    broken after it - the pack had lost its file list - is installed again
+    from the repositories `opts` names. Called after `apt update`, so they
+    are readable."""
+    journal, broken = interrupted()
+    if not journal and not broken:
+        return
+    print(f"dpkg was interrupted ({', '.join(broken) or 'its journal'}); finishing it", flush=True)
+    r = run("dpkg", "--configure", "-a", check=False, env=APT_ENV)
+    with (STATE / "apt.log").open("a") as log:
+        log.write(f"\n=== {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} dpkg --configure -a -> {r.returncode}\n")
+        log.write(r.stdout + r.stderr)
+    journal, broken = interrupted()
+    if broken:
+        apt(opts, "--allow-change-held-packages", "install", "--reinstall", *broken)
+        journal, broken = interrupted()
+    # **A skin pack apt cannot reinstall is removed**, and the install that
+    # follows fetches it fresh. Found on ShelvesPi itself, after the first
+    # version of this passed its tests: the half-installed pack's exact
+    # version was no longer in any repository ("needs to be reinstalled, but
+    # I can't find an archive for it"). Only packs: the player downloads them
+    # itself anyway, while removing any other package could take part of the
+    # player with it - those stop here and say so.
+    packs = [name for name in broken if PACK.match(name) or name == "gexis-skins"]
+    if packs:
+        r = run("dpkg", "--remove", "--force-remove-reinstreq", *packs, check=False, env=APT_ENV)
+        with (STATE / "apt.log").open("a") as log:
+            log.write(f"\n=== {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} "
+                      f"dpkg --remove --force-remove-reinstreq {' '.join(packs)} -> {r.returncode}\n")
+            log.write(r.stdout + r.stderr)
+        journal, broken = interrupted()
+    if journal or broken:
+        print(f"dpkg is still not clean: {', '.join(broken) or 'its journal'}", flush=True)
+        raise Stop(CUT_SHORT)
 
 
 def apt_download(opts: list[str], *args: str, report_as: dict, reporter=None) -> subprocess.CompletedProcess:
@@ -594,6 +699,34 @@ def restart(changes: list[tuple[str, str | None, str]]) -> str:
     return "services: " + (", ".join(sorted(units)) or "none")
 
 
+def go_back(about: dict, channel: str, target: str, current: str, back_repos, back_pins,
+            backup, failure: str, changes) -> int:
+    """**Put the release that was there back** (ADR-0105 §4 step 6): from the
+    versions downloaded before the install, then the device restarted as an
+    install restarts it. Shared by every way an update can fail - the install,
+    its check, the core not answering, the check after a reboot."""
+    step(active_step() or "check", "failed")
+    report("going-back", **{**about, "release": current}, message=f"{failure}; putting {current} back")
+    back = apt_env(back_repos, back_pins)
+    apt(back, "--no-download", "--allow-downgrades", "--allow-change-held-packages",
+        "dist-upgrade", prefix=INHIBIT + [f"--why=Putting {current} back"])
+    run("dpkg", "--configure", "-a", check=False)
+    ok = installed("gexis-player") == current
+    # Remembered, so a night's Automatic run does not try it again
+    # (Finding 105); "Update now" still does - it is asked for.
+    (STATE / f"failed-{channel}").write_text(target)
+    report("failed", **{**about, "release": installed("gexis-player")}, backup=backup, attempted=target,
+           message=f"{failure}. " + (f"Back on {current}." if ok else "Going back did not complete: restore the backup."))
+    if ok and changes:
+        # The old release's code back in the running services, or the device
+        # restarted when what went back only lands at a boot. Once: a boot
+        # after going back is not checked again (`postboot` never goes back
+        # twice).
+        if restart(changes) == "reboot":
+            run("systemctl", "reboot", check=False)
+    return 1
+
+
 def install(args) -> int:
     found = check(args)
     if not found:
@@ -613,6 +746,7 @@ def install(args) -> int:
     opts = apt_env(repos)
     if apt(opts, "update").returncode:
         raise Stop(f"apt could not read {' '.join(repos)}")
+    heal(opts)
     changes = plan(opts, target)
     for args_ in (["--download-only", "--allow-change-held-packages", "dist-upgrade"],
                   ["--download-only", "--allow-change-held-packages", "install", f"gexis-player={target}"]):
@@ -646,8 +780,7 @@ def install(args) -> int:
     PROGRESS["progress"] = 0.0
     report("installing", **about, backup=backup, message=f"installing {target}")
     opts = apt_env(repos)
-    inhibit = ["systemd-inhibit", "--what=shutdown:sleep", "--who=gexis-update",
-               f"--why=Installing {target}", "--mode=block"]
+    inhibit = INHIBIT + [f"--why=Installing {target}"]
     # ADR-0111 decision 10: a device that has gexis-skins keeps it. Releases
     # since 0.4 no longer depend on it, so apt would call it "no longer
     # required" and an autoremove - ours never runs one, a person might -
@@ -674,19 +807,10 @@ def install(args) -> int:
         time.sleep(1.0)
         verify(target)
     except Stop as failure:
+        # Nothing restarted yet: the services still run the old code, so
+        # going back needs no restart of its own.
         step(active_step() or "install", "failed")
-        report("going-back", **{**about, "release": current}, message=f"{failure}; putting {current} back")
-        back = apt_env(back_repos, back_pins)
-        apt(back, "--no-download", "--allow-downgrades", "--allow-change-held-packages",
-            "dist-upgrade", prefix=inhibit)
-        run("dpkg", "--configure", "-a", check=False)
-        ok = installed("gexis-player") == current
-        # Remembered, so a night's Automatic run does not try it again
-        # (Finding 105); "Update now" still does - it is asked for.
-        (STATE / f"failed-{channel}").write_text(target)
-        report("failed", **{**about, "release": installed("gexis-player")}, backup=backup, attempted=target,
-               message=f"{failure}. " + (f"Back on {current}." if ok else "Going back did not complete: restore the backup."))
-        return 1
+        return go_back(about, channel, target, current, back_repos, back_pins, backup, str(failure), changes=None)
     step("install", "done")
     remember_serial(channel, ch["_serial"])
     step("restart")
@@ -695,22 +819,59 @@ def install(args) -> int:
            message="restarting the device" if reboot else "restarting the player")
     how = restart(changes)
     if how == "reboot":
-        step("restart", "done")
-        step("check", "done")
-        report("done", **about, backup=backup, changed=len(changes), restart=how,
-               message=f"{target} installed ({how})")
+        # **Checked after the boot, not before it** (ADR-0105 §4 step 5, built
+        # 2026-10-07): the boot's `postboot` reads this, checks the device
+        # and goes back if it does not answer.
+        step("restart", "active")
+        pending().write_text(json.dumps({
+            "about": about, "channel": channel, "target": target, "current": current,
+            "back_repos": back_repos, "back_pins": back_pins, "backup": backup,
+            "changes": changes, "steps": PROGRESS.get("steps"), "how": how}))
+        report("restarting", **about, backup=backup, reboot=True, message="restarting the device")
         run("systemctl", "reboot", check=False)
         return 0
     step("restart", "done")
     step("check")
     report("checking-device", **about, backup=backup, message="checking the player answers")
     if not core_answers():
-        step("check", "failed")
-        report("failed", **about, message="the core did not answer after the update")
-        return 1
+        # **Back to the release that answered** (built 2026-10-07): until
+        # then a core that did not come up was reported and left as it was.
+        return go_back(about, channel, target, current, back_repos, back_pins, backup,
+                       "the player did not answer after the update", changes)
     step("check", "done")
     report("done", **about, backup=backup, changed=len(changes), restart=how,
            message=f"{target} installed ({how})")
+    return 0
+
+
+def postboot(args) -> int:
+    """**The check an update that ended in a reboot left for the boot**
+    (gexis-update-postboot.service, after the core). The release asked for is
+    the one installed, and the core answers - or the release that was there
+    goes back on. Runs once per update: the file is gone before anything that
+    could reboot again."""
+    try:
+        left = json.loads(pending().read_text())
+    except (OSError, ValueError):
+        return 0
+    pending().unlink(missing_ok=True)
+    about, target, current = left["about"], left["target"], left["current"]
+    PROGRESS.clear()
+    PROGRESS.update(steps=left.get("steps") or {s: "done" for s in STEPS}, progress=1.0)
+    step("restart", "done")
+    step("check")
+    report("checking-device", **about, backup=left.get("backup"), message="checking the player answers")
+    try:
+        verify(target)
+        if not core_answers():
+            raise Stop("the player did not answer after the restart")
+    except Stop as failure:
+        changes = [tuple(c) for c in left.get("changes") or []]
+        return go_back(about, left["channel"], target, current, left["back_repos"], left["back_pins"],
+                       left.get("backup"), str(failure), changes)
+    step("check", "done")
+    report("done", **about, backup=left.get("backup"), changed=len(left.get("changes") or []),
+           restart=left.get("how", "reboot"), message=f"{target} installed (reboot)")
     return 0
 
 
@@ -886,6 +1047,7 @@ def pack_install(name: str) -> int:
             break
     if opts is None:
         raise Stop(UNREACHABLE)
+    heal(opts)
     activity = Activity()
     try:
         r = pack_fetch(opts, name, activity)
@@ -948,7 +1110,7 @@ def take_turn(waiting) -> object:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument("action", choices=["check", "install", "scheduled", "pack-install", "pack-remove"])
+    parser.add_argument("action", choices=["check", "install", "scheduled", "postboot", "pack-install", "pack-remove"])
     parser.add_argument("package", nargs="?")
     parser.add_argument("--channel", choices=["stable", "testing"])
     args = parser.parse_args()
@@ -967,6 +1129,8 @@ def main() -> int:
         if args.action == "scheduled":
             _turn = take_turn(lambda: None)
             return scheduled(args)
+        if args.action == "postboot":
+            return postboot(args)
         _turn = take_turn(lambda: report("downloading", message="waiting for the skin pack download to finish"))
         return install(args)
     except Stop as stop:

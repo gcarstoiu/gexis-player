@@ -120,6 +120,13 @@ export const answerScreen = (answer) => post(`/screen/${answer}`);
 //: ADR-0109, amended 2026-10-03: a different screen attached at start.
 export const screenNew = derived(playback, ($s) => $s?.screen_new ?? null);
 export const answerNewScreen = (answer) => post(`/screen-new/${answer}`);
+//: ADR-0126: the hardware report's test pattern, and what the taps measured.
+export const screenCheck = derived(playback, ($s) => $s?.screen_check ?? null);
+export const showScreenCheck = (show) => post('/hardware-report/screen', { show });
+export const sendScreenCheck = (result) => post('/hardware-report/screen/result', result);
+//: ADR-0128: the first start after setup, until it has settled.
+export const settling = derived(playback, ($s) => $s?.settling ?? null);
+export const settlingDone = () => post('/settling/done');
 
 /** The setup network's password, which the core gives to the panel only. */
 export async function setupPassword() {
@@ -160,7 +167,8 @@ export const hidePeppy = () => post('/peppy/hide');
 export const requestIdle = (show) => post(`/panel/idle/${show ? 'show' : 'hide'}`);
 // `{ idle }`, `{ lyrics }` or both: what the panel shows (ADR-0101).
 export const reportShown = (shown) => post('/panel/shown', shown);
-// ADR-0101 as amended 2026-10-05: 'home', 'now', 'lyrics' or 'track'.
+// ADR-0101 as amended 2026-10-05: 'home', 'now', 'lyrics', 'track' or
+// 'minimise'.
 export const goTo = (to) => post(`/panel/go/${to}`);
 
 /** Accept or reject the open pairing request. A 409 means the window closed

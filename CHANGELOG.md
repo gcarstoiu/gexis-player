@@ -5,6 +5,178 @@ Every release of Gexis Player and its notes, newest first. Generated from
 edit that file, not this one. The player shows the last 10 under
 Settings → System → Change logs.
 
+## 0.9.7 — 9 October 2026
+
+### Fixed
+
+- An install or update cut short - by a power cut, for instance - is finished by the player itself the next time it installs anything. Until now a skin pack could stay missing, retried every few minutes, with the screen saying its download had stopped.
+- With no visualiser skins installed yet, the visualiser waits for them quietly instead of showing as failed.
+- On a bar screen, the Minimise button on Now Playing points right, to the mini strip, and a tap near its top no longer opens the tray.
+
+### Good to know
+
+- Plexamp's plugin is at 0.4.4: while Plexamp is not answering, its log says so once instead of every second.
+
+## 0.9.6 — 9 October 2026
+
+### New
+
+- Settings → Device → Cable shows a network cable's speed and address, and its address can be set Automatic or Manual. A manual address is kept only once it is confirmed from the new address within 60 seconds; otherwise the old one comes back. The connected Wi-Fi network has the same choice under its details.
+- While a network cable is plugged in, the Wi-Fi steps aside; unplug it and the Wi-Fi connects again.
+- Settings → System → Restore offers Download beside each backup on a phone or computer, to keep a copy off the player for a newly flashed card.
+- Hardware feedback comes in three steps - the screen, the sound, then room for notes beside what the player adds to the feedback itself.
+
+### Fixed
+
+- Restoring a backup during setup applies its name, time zone and other answers, and asks for this player's own output and screen. Restored as a second player, it leaves the first one's Beszel connection - the hub's address and keys - and Plexamp's claim behind.
+- A Plexamp claim that does not work leaves nothing behind and says why on its row, and Plexamp is offered as a source only once it is installed and answering.
+- Download and Forget on a backup press only the button, not the whole row.
+- On a bar screen, a confirmation such as Reboot takes its own height instead of the whole screen.
+
+### Good to know
+
+- Plexamp's plugin is at 0.4.3.
+
+## 0.9.5 — 8 October 2026
+
+### New
+
+- First-time setup can restore a backup: after the Wi-Fi, choose Restore a backup and the backup file on the phone. The review shows what it brings, and anything setup asks - the name, for instance - can be changed there, so one player's backup can start another. Given another name, the new player leaves the first one's Beszel identity, Plexamp claim, Spotify sign-in and Bluetooth pairings behind.
+- The spectrum covers 50 Hz to 16 kHz at every sample rate, with more bars for the bass and the higher bars lifted a little, so the bars on the right move with the music. Each spectrum skin draws as many bars as its panel holds.
+- Settings → System → Beszel says whether the agent has reached its hub: Connected, Connecting or Not connected.
+
+### Fixed
+
+- A Beszel Hub public key that is not a key is refused when it is saved, and a plugin that cannot start says so beside its switch.
+- On a phone, Settings no longer slides sideways.
+
+### Good to know
+
+- Spotify Connect (go-librespot 0.10.3) starts the first skip at once, and the Beszel agent and hub are at 0.21.0.
+
+## 0.9.4 — 8 October 2026
+
+### New
+
+- Settings → Audio → Volume is one setting: Hardware (the sound card's own control), Software (the player sets the level itself, on any output) or Fixed. On an output with no control of its own, such as HDMI, Software takes Hardware's place, and the visualiser works over HDMI too.
+- Settings → System → Hardware feedback: a short check of the screen and the sound - a test pattern with four taps, and test tones at 44.1, 96 and 192 kHz - then feedback on GitHub, filled in with what the player reads of its hardware. Sound cards and screens owners report as working are marked Reported.
+- First-time setup offers the plugins - Plexamp, the Lyrion Server, Beszel - and the first start shows each download arriving until the player is ready.
+- The IQaudIO Pi-DAC PRO is tested.
+
+### Fixed
+
+- Changing the output or the volume mode, or a phone connecting over Bluetooth, no longer makes the volume jump.
+- The volume follows the output after switching between the sound card and HDMI.
+- Spotify keeps to the starting volume even when it takes a moment to connect.
+- Bluetooth takes the player again when the phone plays after a pause.
+- The visualiser comes back if it stopped, and a skin that cannot be shown is skipped.
+- The Lyrics tab shows five lines, without a heading of its own.
+- Maximum volume shows 100 % on a new card.
+- Find portraits and covers shows its progress from the start, and tapping it lights only its button.
+
+### Good to know
+
+- Bluetooth is discoverable by default.
+- Online wallpapers come from Pixabay only: Pexels no longer issues keys.
+- From this release on, an update that does not come back properly returns to the release that was there, also after a restart of the device, and nothing can start playing while one installs.
+
+## 0.9.3 — 7 October 2026
+
+### New
+
+- Settings → System → Problem report prepares one file with the player's logs, versions, hardware and settings, to attach to a report of a problem on GitHub or by e-mail. Addresses, names, networks, shares, keys and what is played are taken out on the player first. It is downloaded on a phone or computer.
+- Settings → Device → Wi-Fi shows the connected network's signal, speed, band and channel. Secured networks show a lock, open where the password is already saved.
+- The user manual, a FAQ, the hardware requirements and a technical guide are on GitHub, linked from the project page.
+
+### Fixed
+
+- Screens open faster while music plays: the visualiser no longer draws while it is hidden.
+- Check for updates only checks; it no longer installs when Updates is set to Automatic.
+- On a phone, the last setting is no longer hidden behind the volume bar; on a computer, the bar no longer covers a sheet's buttons.
+- Setting up a new card, setup's screens fit the attached screen, and a bar screen is turned to landscape before setup starts.
+- A visualiser skin download no longer holds up Spotify or Bluetooth: while the player is in use, it downloads more slowly.
+
+### Good to know
+
+- From the next update on, the update screen shows the notes of every release it skips, and the install step's progress moves from the start.
+
+## 0.9.2 — 6 October 2026
+
+### New
+
+- Extended navigation, under Settings → Sources → Lyrion Client, brings Lyrion's own menus to the screen: My Music with every library view, Favourites, and apps. It is off by default.
+- Now Playing has a Minimise button in its top-left corner, back to the screen it was opened from.
+- The phone's volume sheet keeps its buttons in one row, open or closed. Now playing switches between Now Playing and the screen before it.
+- Under Enrichment, one button finds artist portraits and album covers together and shows what its last run found.
+- Library albums opened from My Music show track lengths and release details.
+
+### Fixed
+
+- Bluetooth and Spotify tracks find album art more often, including tracks by several artists.
+- Search fields bring up the phone's keyboard with one tap.
+- The pointer and scrolling from the phone are smoother.
+- From the next update on, the update screen stays on its finished steps until Done, and its progress moves steadily.
+
+### Good to know
+
+- Artists on Home is now called Album Artists.
+
+## 0.9.1 — 5 October 2026
+
+### New
+
+- The phone can act as a touchpad and keyboard for the screen. Open the volume sheet on the phone: one finger moves a pointer on the screen and a tap presses. Tapping a text field brings up the phone's keyboard, and what is typed appears on the screen.
+- Two fingers on the touchpad scroll what is under the pointer, and a pinch zooms the screen around it. Lines along the right and bottom edges of the touchpad scroll with one finger.
+- Pointer style offers two pointers, Dot and Arrow, next to Pointer speed under Settings → Display. Phone touchpad turns the touchpad off.
+- The phone's volume sheet has Home, Now playing and Lyrics buttons for the screen. Lyrics opens the lyrics on Now Playing, and turns them off again.
+- While the pointer rests on the volume controls, they stay open.
+- Online wallpapers no longer repeat until every picture of the day has been shown, and each day brings a new set. Pictures on the device follow the same rule, and artist pictures vary between an artist's backgrounds.
+
+### Fixed
+
+- An update now stops whatever is playing, not only Lyrion.
+- When Spotify starts playing, its starting volume holds instead of jumping to the last level.
+- Starting volume is now beside Spotify's switch.
+- After an update, long notes can be scrolled, and stay until Continue is pressed.
+- The TheAudioDB key and Pexels API key can be saved.
+- No mouse pointer is left on the screen.
+- Some idle screen pictures failed to load and the previous one stayed up.
+
+### Good to know
+
+- The phone and the screen need to be on the same network for the touchpad, as for the rest of the phone's controls.
+- Artist pictures are looked up once more after this update, to find each artist's other backgrounds.
+
+## 0.9.0 — 5 October 2026
+
+### New
+
+- Plexamp can be claimed from Settings: paste a claim token from plex.tv/claim and the row shows Claimed. Claim again moves the player to another Plex account.
+- Idle screen pictures are placed by what they show: faces, people and animals stay in view instead of being cut off. A picture too close to fit is shown a little narrower, or skipped.
+- TheAudioDB adds artist pictures and album covers where fanart.tv has none, for the idle screen and for Update artist portraits and Update album covers. A TheAudioDB key is optional.
+- Pexels can be used beside Pixabay for online wallpapers, with its own key. On a bar, the source with more wide pictures is asked first.
+- With Headless on, the settings that only affect the screen are hidden, Enrichment included.
+- Skin type greys out the types that have no skins for the screen in use.
+- Saving a new device name restarts the device, and says where it comes back.
+- Setup and Settings have shorter, plainer texts throughout, and errors are written in words.
+- A sound card that is not found by itself can be chosen under Settings → Audio → Sound card board.
+- Each output shows whether it is Tested, Known or Detected.
+- An output whose volume control does not work in decibels plays at a fixed level.
+
+### Fixed
+
+- Spotify no longer lowers loud tracks, and now plays as loud as Lyrion at full volume.
+- Saving a setting no longer keeps the buttons disabled for seconds.
+- Restoring a backup no longer talks about joining a network.
+- Lists count what they hold: backups and saved networks are no longer called paired.
+
+### Good to know
+
+- This update is larger than usual, about 70 MB more, for the picture recognition that places idle screen pictures.
+- Without a key of your own, TheAudioDB's shared key is used, and updating album covers can take noticeably longer.
+- Claiming Plexamp again registers the player as new in the Plex account; the old entry stays until it is removed there.
+- Pexels is not issuing new keys at the moment.
+
 ## 0.8.9 — 4 October 2026
 
 ### New

@@ -1,9 +1,10 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!--
-  Now playing, Phase 4 step 4c: display only. Ported from
-  design/now-playing.html; the styles are that file's, trimmed to what this
-  screen uses. Controls render for the layout but are disabled and carry
-  data-unwired="<phase>" until the phase that wires them.
+  Now Playing. Ported from design/now-playing.html; the styles are that
+  file's, trimmed to what this screen uses. Controls appear when the active
+  renderer declares them (capabilities[active].controls) and are disabled
+  while not in controls.available (ADR-0037). Commands go to
+  /transport/{command}; their result returns on /state.
 -->
 <script>
   import { onDestroy, untrack } from 'svelte';
@@ -424,12 +425,10 @@
               {/if}
             </div>
           {:else if tab === 'lyrics'}
+            <!-- No heading of its own: the tab already says Lyrics, and the
+                 height goes to the words (George, 2026-10-07: five lines,
+                 not three). -->
             <div class="artisttab">
-              <div class="sect">
-                <span class="sect__label">Lyrics</span>
-                <span class="sect__rule"></span>
-                {#if artistInfo.state === 'loading'}<span class="sect__note">Looking…</span>{/if}
-              </div>
 
               {#if artistInfo.state === 'loading'}
                 <div class="skel"><span></span><span></span><span></span></div>
@@ -1160,11 +1159,13 @@
     min-height: 0;
     overflow: hidden;
     justify-content: flex-start;
-    /* The same 30%/70% ramp the Track strip carries: the design puts it on
-       both lyric windows (2026-09-22). The sung line is held at the centre
-       of the box, so it is never the one being faded. */
-    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 30%, #000 70%, transparent 100%);
-    mask-image: linear-gradient(180deg, transparent 0, #000 30%, #000 70%, transparent 100%);
+    /* The sung line is held at the centre of the box, so it is never the
+       one being faded. */
+    /* Only the edges fade here (George, 2026-10-07: "only 3 rows are shown
+       at a time for synced lyrics. Should be 5"): the 30%/70% ramp left the
+       middle 40% clear, three lines of 70px. */
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 7%, #000 93%, transparent 100%);
+    mask-image: linear-gradient(180deg, transparent 0, #000 7%, #000 93%, transparent 100%);
   }
   .lyrics--scroll .lyrics__line {
     color: var(--ink-lyric-off);
@@ -1535,9 +1536,9 @@
   .btn.is-pressed:not(:disabled) {
     transform: scale(0.95);
   }
-  /* Cannot work right now (ADR-0037 §3). The design dims an unavailable tab
-     to 0.4; the same here. Unwired scaffolding keeps its own look. */
-  .btn:disabled:not([data-unwired]) {
+  /* Cannot work right now (ADR-0037 §3): dimmed, as the design dims an
+     unavailable tab. */
+  .btn:disabled {
     opacity: 0.4;
   }
   /* The one small control the design draws larger: 64px where the rest are

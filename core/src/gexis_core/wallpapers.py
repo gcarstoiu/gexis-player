@@ -93,16 +93,6 @@ KEEP = 40
 
 CREDIT_NOTE = "Photos from Pixabay"
 
-#: **Pexels, beside Pixabay** (ADR-0120 §3). The owner's own key, sent as the
-#: `Authorization` header; the chosen topic words are its search terms, since
-#: it has no categories (George, 2026-10-05: "that is fine for pexels"). Its
-#: terms want the credit on screen, drawn as Pixabay's is. **Written to its
-#: published API and not yet tried against it**: Pexels issued no new keys
-#: when this was built.
-PEXELS_URL = "https://api.pexels.com/v1/search"
-#: The most results Pexels gives at once.
-PEXELS_PER_PAGE = 80
-PEXELS_CREDIT = "Photos from Pexels"
 
 
 def _ratio(hit: dict) -> float:
@@ -340,47 +330,6 @@ class Wallpapers:
 
     # ── the picture on screen ───────────────────────────────────────────
 
-    async def _pexels_page(self, key: str, topic: str, wide: bool = False) -> list[dict]:
-        """This topic's pictures from Pexels, from cache or asked: the topic
-        word as the search. Cached a day, as Pixabay's pages are - Pexels
-        asks for no more, and its 200 requests an hour are never near."""
-        slot = ("pexels", topic, wide)
-        fresh = self._fresh(slot)
-        if fresh is not None:
-            return fresh
-        cached = self._pages.get(slot)
-        params = {"query": topic, "orientation": "landscape", "per_page": PEXELS_PER_PAGE,
-                  "page": self._today_page()}
-        try:
-            async with self._session.get(
-                PEXELS_URL, params=params, headers={"Authorization": key},
-                timeout=aiohttp.ClientTimeout(total=TIMEOUT_S),
-            ) as response:
-                if response.status >= 400:
-                    logger.info("wallpapers: Pexels %s answered HTTP %s", topic, response.status)
-                    return cached[1] if cached else []
-                body = await response.json()
-        except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as exc:
-            logger.info("wallpapers: Pexels %s failed: %s", topic, exc)
-            return cached[1] if cached else []
-
-        def ratio(photo: dict) -> float:
-            try:
-                return float(photo.get("width") or 0) / float(photo.get("height") or 1)
-            except (TypeError, ValueError, ZeroDivisionError):
-                return 0.0
-
-        photos = [p for p in (body.get("photos") or []) if (p.get("src") or {}).get("large2x")]
-        self._count("pexels", photos, ratio)
-        if wide:
-            photos = [p for p in photos if ratio(p) >= WIDE_RATIO]
-        hits = [{"id": f"pexels-{p.get('id')}", "url": p["src"]["large2x"],
-                 "user": p.get("photographer") or "", "page": p.get("url") or "", "source": "pexels"}
-                for p in photos]
-        self._keep_page(slot, hits)
-        logger.info("wallpapers: Pexels %s has %d %spictures", topic, len(hits), "wide " if wide else "")
-        return hits
-
     def _order(self, sources: list[str], wide: bool) -> list[str]:
         """The sources in the order to ask them. On a bar, **the one measured
         wider first**; one not yet measured is tried as if it were the best,
@@ -389,19 +338,18 @@ class Wallpapers:
             return random.sample(sources, len(sources))
         return sorted(sources, key=lambda s: -(self.wide_share(s) if self.wide_share(s) is not None else 1.0))
 
-    async def next(self, key: str, topics: list[str], avoid: str | None = None, wide: bool = False,
-                   pexels_key: str | None = None) -> dict:
+    async def next(self, key: str, topics: list[str], avoid: str | None = None, wide: bool = False) -> dict:
         """One picture, ready to draw, or an `error` saying why not.
 
         `file` is a name inside the cache directory rather than a URL: what
         serves it is the daemon's business and this does not need to know
-        the route. Pixabay with its key, Pexels with its own, both when both
-        are typed (ADR-0120 §3).
+        the route. Pixabay with its key (ADR-0120 §3; Pexels removed 2026-10-07,
+        George: "they are not providing API keys anymore").
         """
         chosen = [t.lower() for t in (topics or []) if t.lower() in CATEGORIES]
-        sources = [s for s, k in (("pixabay", key), ("pexels", pexels_key)) if k]
+        sources = ["pixabay"] if key else []
         if not sources:
-            return {"error": "No Pixabay or Pexels key yet."}
+            return {"error": "No Pixabay key yet."}
         if not chosen:
             return {"error": "No topics chosen."}
         async with self._lock:
@@ -416,12 +364,8 @@ class Wallpapers:
                 for source in self._order(sources, w):
                     rounds += [(source, c, w) for c in random.sample(chosen, len(chosen))]
             for source, category, w in rounds:
-                if source == "pexels":
-                    hits = await self._pexels_page(pexels_key, category, w)
-                    slot = ("pexels", category, w)
-                else:
-                    hits = await self._page(key, category, w)
-                    slot = (category, w)
+                hits = await self._page(key, category, w)
+                slot = (category, w)
                 if not hits:
                     continue
                 hit = random.choice(self._unshown(slot, hits, avoid))
@@ -434,7 +378,7 @@ class Wallpapers:
                     "topic": category,
                     "by": hit["user"],
                     "page": hit["page"],
-                    "credit": PEXELS_CREDIT if source == "pexels" else CREDIT_NOTE,
+                    "credit": CREDIT_NOTE,
                     "source": source,
                     "error": None,
                 }

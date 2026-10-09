@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+import re
 from functools import lru_cache
 from pathlib import Path
 from collections.abc import Hashable
@@ -53,7 +54,7 @@ ONLY_WHEN_NOT = "not"
 #: Sources a `choice` may draw its options from instead of a literal list
 #: (ADR-0044 §4). Adding one is a code change, not a registry edit, which is
 #: the point: an unknown name is a typo and must fail the load.
-OPTION_SOURCES = {"skin_corpus", "timezones", "output_device", "screens"}
+OPTION_SOURCES = {"skin_corpus", "timezones", "output_device", "screens", "boards"}
 
 
 @lru_cache(maxsize=1)
@@ -95,15 +96,30 @@ def _screens() -> tuple[str, ...]:
 def _screen_tags() -> dict[str, str]:
     """ADR-0109 decision 1: each model marked Tested or Untested."""
     from . import screens
-    return {s.label: "Tested" if s.tested else "Untested" for s in screens.all_screens()}
+    from . import hardware_reports
+    return {s.label: "Tested" if s.tested else
+            (hardware_reports.state(hardware_reports.screen(s.label)) or "Untested")
+            for s in screens.all_screens()}
+
+
+def _boards() -> tuple[str, ...]:
+    """ADR-0117 decision 3: Found by itself, then every board offered."""
+    from . import board_apply
+    return board_apply.options()
+
+
+def _board_tags() -> dict[str, str]:
+    """ADR-0117 decision 2: Tested or Known on every board offered."""
+    from . import board_apply
+    return board_apply.tags()
 
 
 OPTION_RESOLVERS = {"timezones": _timezones, "skin_corpus": tuple, "output_device": tuple,
-                    "screens": _screens}
+                    "screens": _screens, "boards": _boards}
 
 #: A word beside an option in the picker, by source (round 2's Attached
 #: screen: *Tested* / *Untested* on every model).
-OPTION_TAGS = {"screens": _screen_tags}
+OPTION_TAGS = {"screens": _screen_tags, "boards": _board_tags}
 
 logger = logging.getLogger("gexis_core.settings_registry")
 
@@ -324,6 +340,19 @@ def validate(row: dict, value: Any, *, options: Any = None) -> Any:
         value = value.strip()
         if len(value) > TEXT_MAX:
             raise InvalidValue(f"at most {TEXT_MAX} characters")
+        # **The form a value must have** (2026-10-07: a Beszel key that was a
+        # pasted paragraph left the agent failing at every start, and nothing
+        # said so). `pattern` is matched whole; `invalid` is the sentence the
+        # panel shows. Empty always passes - clearing a row is not a value.
+        pattern = row.get("pattern")
+        if pattern and value:
+            try:
+                ok = re.fullmatch(pattern, value) is not None
+            except re.error:
+                logger.warning("settings: %s has a pattern that does not compile; not checked", row.get("key"))
+                ok = True
+            if not ok:
+                raise InvalidValue(row.get("invalid") or "not in the expected form")
     return value
 
 
@@ -368,6 +397,10 @@ def load_seed(settings_rows: dict[str, dict], path: Path = SEED_PATH) -> dict[st
 #: cannot, where a screen for listening should not carry dead controls.
 #: What a plugin may say its row is (ADR-0119).
 STATUS_STATES = ("done", "failed")
+#: **ADR-0129: a service's connection, said on its switch** - green, orange,
+#: red. The core's own reading, not a plugin's report (ADR-0119), so the two
+#: never contradict: Plexamp's `failed` still says *Claimed*.
+INDICATOR_TONES = ("ok", "wait", "bad")
 #: A few words or one sentence, not a log.
 STATUS_TEXT_MAX = 160
 
@@ -498,8 +531,10 @@ class Settings:
                     "category to hold its switch", plugin.id,
                 )
                 continue
+            # ADR-0129 as amended: a service's connection is said on the
+            # heading above its own rows, where its keys are entered.
             rows = [{"type": "group", "label": plugin.name, "accent": plugin.accent,
-                     "onlyWhen": [switch, True]}]
+                     "onlyWhen": [switch, True], "indicatorOf": switch}]
             reserved = {"enabled"} if plugin.enabled_row is None else set()
             for row in plugin.settings:
                 row = dict(row)
@@ -589,8 +624,13 @@ class Settings:
         seed_path: Path = SEED_PATH,
         labels: dict[str, Callable[[], dict]] | None = None,
         restrictions: dict[str, Callable[[], dict]] | None = None,
+        shown: dict[str, Callable[[], bool]] | None = None,
     ) -> None:
         self._store = store
+        #: key -> whether the row is there at all, for a row that follows the
+        #: hardware rather than another setting - the Cable row, while a cable
+        #: is plugged in (ADR-0123). Read with every listing.
+        self._shown = shown or {}
         #: What each option is called on screen, by `optionsFrom` source,
         #: where the stored value is a key and not a name to read (the skins'
         #: section names, ADR-0111: George's "Brand · Model" names).
@@ -628,6 +668,8 @@ class Settings:
         #: state the row is in, not a value. In memory only - it is the
         #: plugin's to say again, and goes when the plugin does.
         self._status: dict[str, dict[str, str]] = {}
+        #: key -> the core's own reading of what the row switches (ADR-0129).
+        self._indicators: dict[str, dict[str, str]] = {}
         unknown_sources = set(options or ()) - OPTION_SOURCES
         if unknown_sources:
             raise ValueError(f"not an option source: {sorted(unknown_sources)}")
@@ -638,12 +680,22 @@ class Settings:
         self._notes = notes or {}
         self._seed = load_seed(self._rows, seed_path)
         unknown = (set(self._defaults) | set(self._wired) | self._lists | set(self._notes)
-                   | set(self._restrictions)) - set(self._rows)
+                   | set(self._restrictions) | set(self._shown)) - set(self._rows)
         if unknown:
             raise ValueError(f"not in the registry: {sorted(unknown)}")
         not_lists = {k for k in self._lists if self._rows[k]["type"] != "list"}
         if not_lists:
             raise ValueError(f"declared as list rows but are not: {sorted(not_lists)}")
+
+    def _is_shown(self, key: str) -> bool:
+        provider = self._shown.get(key)
+        if provider is None:
+            return True
+        try:
+            return bool(provider())
+        except Exception as exc:  # noqa: BLE001 - a row, not the page
+            logger.warning("settings: cannot tell whether %s is shown: %s", key, exc)
+            return False
 
     def row(self, key: str) -> dict:
         try:
@@ -686,6 +738,21 @@ class Settings:
         if self._status.get(key) == status:
             return False
         self._status[key] = status
+        return True
+
+    def indicate(self, key: str, tone: str | None, text: str | None = None) -> bool:
+        """**What a switched-on service is doing, on the heading above its
+        rows** (ADR-0129 as amended), keyed by its switch: `ok`, `wait` or `bad` with a word or two - *Connected*.
+        None says nothing. Returns whether that changed anything."""
+        self.row(key)
+        if tone is None:
+            return self._indicators.pop(key, None) is not None
+        if tone not in INDICATOR_TONES:
+            raise InvalidValue(f"not an indicator tone: {tone!r}")
+        indicator = {"tone": tone, "text": str(text or "")[:STATUS_TEXT_MAX]}
+        if self._indicators.get(key) == indicator:
+            return False
+        self._indicators[key] = indicator
         return True
 
     def forget_reports(self, prefix: str) -> bool:
@@ -763,6 +830,8 @@ class Settings:
             for row in group["rows"]:
                 if row["type"] == "group":
                     heading = row.get("onlyWhen")
+                    if row.get("indicatorOf") in self._indicators:
+                        row = {**row, "indicator": dict(self._indicators[row["indicatorOf"]])}
                     rows.append(row)
                     continue
                 public = {k: v for k, v in row.items() if k != "default"}
@@ -789,13 +858,25 @@ class Settings:
                     public["unavailable"] = dict(blocked)
                 if row["key"] in self._status:
                     public["status"] = dict(self._status[row["key"]])
-                public["visible"] = visible(row, self._rows, values) and all(
+                public["visible"] = self._is_shown(row["key"]) and visible(row, self._rows, values) and all(
                     visible({"onlyWhen": c}, self._rows, values)
                     for c in governing + ([heading] if heading else [])
                 )
                 rows.append(public)
             groups.append({**group, "rows": rows})
         return groups
+
+    def kept(self, key: str) -> Any:
+        """A value the player keeps for itself - an `_`-key no row names
+        (the software level, the hardware prompt's record)."""
+        if not key.startswith("_"):
+            raise UnknownSetting(f"{key} is a setting; read it with value()")
+        return self._store.get(key)
+
+    def keep(self, key: str, value: Any) -> None:
+        if not key.startswith("_"):
+            raise UnknownSetting(f"{key} is a setting; write it with set()")
+        self._store.set(key, value)
 
     def set(self, key: str, value: Any) -> Any:
         row = self.row(key)

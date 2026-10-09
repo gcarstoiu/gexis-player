@@ -6,9 +6,10 @@
   standalone on a phone and will be embedded on the panel.
 -->
 <script>
-  import { onMount } from 'svelte';
+  import CableSheet from './CableSheet.svelte';
+  import { onMount, untrack } from 'svelte';
   import { pressing } from '../lib/press.svelte.js';
-  import { components, update } from '../lib/state.js';
+  import { components, update, screenCheck, showScreenCheck } from '../lib/state.js';
   import UpdateModal from './UpdateModal.svelte';
   import ReleaseNotes from './ReleaseNotes.svelte';
   import ReleaseHistory from './ReleaseHistory.svelte';
@@ -181,6 +182,135 @@
       reportError = null;
     }
   });
+  //: ADR-0126: a hardware report - what the device reads, the owner's
+  //: answers, then GitHub's form filled in. The options are the form's own,
+  //: word for word: GitHub fills a dropdown only from its exact text.
+  const HW_QUESTIONS = [
+    { id: 'sound', q: 'Did the music sound right?', options: ['Yes', 'No', 'Not tried'] },
+    { id: 'volume', q: 'Did the volume change with the slider?', options: ['Yes', 'No', 'Not tried'] },
+    { id: 'clicks', q: 'Any clicks or gaps between tracks?', options: ['No', 'Yes', 'Not tried'] },
+    { id: 'picture', q: 'Is the whole picture visible on the screen?', options: ['Yes', 'No', 'No screen'], screen: true },
+    { id: 'touch', q: 'Does a tap land where the finger is?', options: ['Yes', 'No', 'No touch'], touch: true },
+  ];
+  let hw = $state(null);
+  let hwAnswers = $state({});
+  let hwNotes = $state('');
+  let hwUrl = $state(null);
+  let hwBusy = $state(false);
+  let hwError = $state(null);
+  let hwTones = $state(null);
+  //: George, 2026-10-07: two steps - the screen, then the sound; the screen's
+  //: skipped when there is none to look at (headless, or none connected).
+  let hwStep = $state('screen');
+  //: **Hardware feedback in steps** (George, 2026-10-09: the free text
+  //: "should have its own step in the modal as otherwise it's too tight on a
+  //: phone"): Screen (with a screen), Sound, then Anything else - with what
+  //: the player puts in the report itself, so it is seen before it is sent.
+  const HW_STEP_NAMES = { screen: 'Screen', sound: 'Sound', notes: 'Anything else' };
+  const hwSteps = $derived(hw?.display ? ['screen', 'sound', 'notes'] : ['sound', 'notes']);
+  const hwAt = $derived(Math.max(0, hwSteps.indexOf(hwStep)));
+  const hwLast = $derived(hwAt === hwSteps.length - 1);
+  let hwTonesBusy = $state(false);
+  async function playHardwareTones() {
+    if (hwTonesBusy) return;
+    hwTonesBusy = true;
+    hwError = null;
+    try {
+      const r = await fetch('/hardware-report/tones', { method: 'POST' });
+      const body = await r.json();
+      if (!r.ok) throw new Error(body?.error ?? `HTTP ${r.status}`);
+      hwTones = body.tones;
+    } catch (e) {
+      hwError = plainly(e?.message, 'The tones could not be played. Try again.');
+    } finally {
+      hwTonesBusy = false;
+    }
+  }
+  // ADR-0126: the test pattern this sheet asked for (its `seq`), so a result
+  // left from an earlier check is not shown as this one's.
+  let hwCheckSeq = $state(null);
+  const hwCheck = $derived(hwCheckSeq !== null && $screenCheck?.seq === hwCheckSeq ? $screenCheck : null);
+  const hwCheckLines = $derived(hwCheck?.result ? [
+    `The panel draws ${hwCheck.result.size.replace('x', ' × ')}.`,
+    ...hwCheck.result.taps.map((t) => `${t.corner}: ${t.off} px from the circle`),
+    hwCheck.result.landed ? `All four within ${hwCheck.result.limit} px.` : `Not all within ${hwCheck.result.limit} px.`,
+  ] : null);
+  async function toggleScreenCheck() {
+    hwError = null;
+    try {
+      if (hwCheck?.showing) await showScreenCheck(false);
+      else hwCheckSeq = (await showScreenCheck(true)).seq;
+    } catch (e) {
+      hwError = plainly(e?.message, 'The test pattern could not be shown. Try again.');
+    }
+  }
+  // Touch accuracy is measured, not asked: the taps answer it.
+  let hwAnsweredSeq = null;
+  $effect(() => {
+    if (hwCheck?.result?.taps?.length && hwAnsweredSeq !== hwCheck.seq) {
+      hwAnsweredSeq = hwCheck.seq;
+      hwAnswers = { ...untrack(() => hwAnswers), touch: hwCheck.result.landed ? 'Yes' : 'No' };
+    }
+  });
+  $effect(() => {
+    if (sheet?.kind !== 'hardware') {
+      if (untrack(() => hwCheck?.showing)) showScreenCheck(false).catch(() => {});
+      hw = null; hwAnswers = {}; hwNotes = ''; hwUrl = null; hwError = null; hwTones = null; hwCheckSeq = null;
+      hwStep = 'screen';
+      return;
+    }
+    if (hw === null && !onPanel()) {
+      fetch('/hardware-report').then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+        .then((body) => { hw = body; hwStep = body?.display ? 'screen' : 'sound'; })
+        .catch(() => (hwError = 'The player could not read its hardware. Try again.'));
+    }
+  });
+  // ADR-0126 decision 1: one line on the System page, a week after a board
+  // or screen that is not Tested arrived; dismissed for good with one tap.
+  let hwPrompt = $state(null);
+  $effect(() => {
+    if (current?.id !== 'system') return;
+    fetch('/hardware-report/prompt').then((r) => (r.ok ? r.json() : null))
+      .then((body) => (hwPrompt = body?.text ?? null))
+      .catch(() => (hwPrompt = null));
+  });
+  function dismissHardwarePrompt() {
+    hwPrompt = null;
+    fetch('/hardware-report/prompt/dismiss', { method: 'POST' }).catch(() => {});
+  }
+
+  async function prepareHardwareReport() {
+    if (hwBusy) return;
+    hwBusy = true;
+    hwError = null;
+    try {
+      const r = await fetch('/hardware-report/issue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          answers: hw?.display ? hwAnswers : { ...hwAnswers, picture: 'No screen', touch: 'No touch' },
+          notes: hwNotes, tones: hwTones ?? [],
+        }),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      hwUrl = (await r.json()).url;
+    } catch (e) {
+      hwError = plainly(e?.message, 'The report could not be prepared. Try again.');
+    } finally {
+      hwBusy = false;
+    }
+  }
+
+  //: ADR-0083 as amended 2026-10-08: the file itself, by its own name - a
+  //: link, so a large backup goes straight to the browser's downloads.
+  function downloadBackup(item) {
+    const a = Object.assign(document.createElement('a'), { href: `/backups/${encodeURIComponent(item.name)}`, download: item.name });
+    document.body.append(a);
+    a.click();
+    a.remove();
+    flash(`Saving ${item.name}`);
+  }
+
   async function downloadReport() {
     if (reportBusy) return;
     reportBusy = true;
@@ -275,7 +405,10 @@
   // list is every zone this system knows, and `Europe/Berlin` splits at the
   // slash. Level one is the regions, level two the places in one of them.
   const grouped = $derived(sheet?.grouped ? (sheet.options ?? []) : []);
-  const regions = $derived([...new Set(grouped.map((o) => o.split('/')[0]))].sort());
+  // An option with no `/` is a choice of its own, above the groups - Sound
+  // card board's *Found by itself* (ADR-0117).
+  const loose = $derived(grouped.filter((o) => !o.includes('/')));
+  const regions = $derived([...new Set(grouped.filter((o) => o.includes('/')).map((o) => o.split('/')[0]))].sort());
   const places = $derived(
     region === null ? [] : grouped.filter((o) => o.split('/')[0] === region)
   );
@@ -463,6 +596,8 @@
       // A 409 is a choice the hardware has taken away (its reason is on the
       // row already, in words) or a row this release does not apply.
       if (result.status === 409) flash(row.unavailable?.[value] ?? plainly(result.error, `${row.label} cannot be changed yet`));
+      // A value not in the row's form says what the form is (`invalid`).
+      else if (result.status === 400 && row.invalid) flash(row.invalid, 4500);
       else if (!result.ok) flash(plainly(result.error ?? `HTTP ${result.status}`, `${row.label} was not saved. Try again.`));
       return result.ok;
     } finally {
@@ -496,6 +631,8 @@
   function shown(row) {
     const v = row.value;
     if (row.type === 'toggle') return '';
+    // ADR-0123: the cable at a glance, the line the core keeps for it.
+    if (row.kind === 'cable') return row.note ?? '';
     // A screen reads as its maker and model, not the picker's `Maker/Model`.
     if (row.optionTags && typeof v === 'string') return v.replace('/', ' ');
     // A skin by the name its pack gives it (George's "Brand · Model").
@@ -760,7 +897,8 @@
       setTimeout(() => {
         if (join !== 'ok') return;
         closeSheet();
-        flash(`Joined ${name}`);
+        // ADR-0123 as amended: on the cable, the network is saved for later.
+        flash(answer.notice ?? `Joined ${name}`, answer.notice ? 6000 : undefined);
       }, 1300);
     });
   }
@@ -1031,6 +1169,14 @@
       flash(`${row.label} cannot be changed yet`);
       return;
     }
+    if (row.kind === 'hardware') {
+      if (hwUrl) sheetKey = null;
+      else if (!hwLast) {
+        if (hwStep === 'screen' && hwCheck?.showing) showScreenCheck(false).catch(() => {});
+        hwStep = hwSteps[hwAt + 1];
+      } else await prepareHardwareReport();
+      return;
+    }
     if (row.kind === 'report') {
       if (reportDone) sheetKey = null;
       else await downloadReport();
@@ -1059,6 +1205,11 @@
   }
 
   function cancelSheet() {
+    // A feedback step after the first goes back one step.
+    if (sheet?.kind === 'hardware' && hw && hwAt > 0 && !hwUrl) {
+      hwStep = hwSteps[hwAt - 1];
+      return;
+    }
     // A pending restore is a step inside the sheet, not the sheet: cancelling
     // it goes back to the list, the way cancelling a choice does.
     if (restorePending) {
@@ -1195,12 +1346,28 @@
               </button>
               <input class="upload__input" type="file" accept=".tar.gz,.tgz,application/gzip" bind:this={pluginFile} onchange={onPluginPicked} />
             {/if}
+            {#if current?.id === 'system' && hwPrompt}
+              <div class="hwprompt">
+                <button class="hwprompt__go" type="button" onclick={() => { const row = rowOf('hardware_report'); if (row) openSheet(row); }}>
+                  {hwPrompt}
+                </button>
+                <button class="hwprompt__x" type="button" aria-label="Do not ask again" onclick={dismissHardwarePrompt}>×</button>
+              </div>
+            {/if}
             {#each rows as r, i (r.key ?? `group-${i}`)}
               {#if r.type === 'group'}
                 <div class="subhead">
                   <span class="subhead__dot" style:background={r.accent}></span>
                   <span class="subhead__label" style:color={r.accent}>{r.label}</span>
                   <span class="subhead__rule"></span>
+                  {#if r.indicator}
+                    <!-- ADR-0129 as amended: what the service is doing, the
+                         core's reading, above the rows its keys go in. -->
+                    <span class="ind ind--{r.indicator.tone}">
+                      <span class="ind__mark" aria-hidden="true">{r.indicator.tone === 'ok' ? '✓' : r.indicator.tone === 'bad' ? '✕' : ''}</span>
+                      {r.indicator.text}
+                    </span>
+                  {/if}
                 </div>
               {:else if r.key === 'software_update'}
                 <!-- ADR-0110 §2 as amended (George, 2026-10-01): the
@@ -1540,13 +1707,92 @@
   <div class="scrim" class:is-open={sheet} role="presentation" onclick={closeSheet}></div>
 
   {#if sheet}
-    <div class="sheet" class:sheet--full={sheetFull} role="dialog" aria-label={sheet.label}>
+    <div class="sheet" class:sheet--full={sheetFull} class:sheet--fit={sheet.type === 'action' && !sheet.kind && !restorePending} role="dialog" aria-label={sheet.label}>
       <div class="sheet__head">
         <div class="sheet__title">{sheet.grouped && region !== null ? region : sheet.label}</div>
-        {#if sheet.note && !joinItem}<div class="sheet__note"><NoteText text={sheet.note} /></div>{/if}
+        {#if sheet.note && !joinItem && sheet.kind !== 'cable'}<div class="sheet__note"><NoteText text={sheet.note} /></div>{/if}
         {#if joinItem && sheet.note}<div class="sheet__note"><NoteText text={sheet.note} /></div>{/if}
       </div>
 
+      {#if sheet.kind === 'hardware'}
+        <div class="report report--scroll">
+          {#if onPanel()}
+            <p class="report__text">
+              This feedback opens GitHub, which the screen cannot. Open Settings on a phone or computer on the same
+              network, at <span class="report__addr">{device.hostname ? `${device.hostname}.local` : device.address}</span>,
+              then System → Hardware feedback.
+            </p>
+          {:else if hwUrl}
+            <p class="report__text">The feedback is ready. GitHub opens with it filled in; read it there and press Create.</p>
+            <a class="report__link report__go" href={hwUrl} target="_blank" rel="noopener">Open it on GitHub</a>
+          {:else if hw === null && !hwError}
+            <p class="report__text report__text--quiet">Reading the hardware…</p>
+          {:else if hw}
+            <p class="report__step">Step {hwAt + 1} of {hwSteps.length} · {HW_STEP_NAMES[hwStep]}</p>
+            {#if hwStep === 'screen'}
+              <p class="report__text"><span class="report__addr">{hw.screen ?? 'Screen'}</span></p>
+              <div class="hwq">
+                <span class="report__label">Screen check</span>
+                <p class="report__text report__text--quiet">
+                  A test pattern on the player's screen: a coloured line along each edge{#if hw.touch}, then four
+                  circles to tap in turn{/if}.
+                </p>
+                {#if hwCheckLines}
+                  <ul class="hwq__tones">{#each hwCheckLines as t (t)}<li>{t}</li>{/each}</ul>
+                {/if}
+                <div class="hwq__options">
+                  <button type="button" class="hwq__option" onclick={toggleScreenCheck}>
+                    {hwCheck?.showing ? 'Take it down' : hwCheck ? 'Show it again' : 'Show the test pattern'}
+                  </button>
+                </div>
+              </div>
+            {:else if hwStep === 'sound'}
+              <p class="report__text">
+                <span class="report__addr">{hw.board ?? 'No sound card'}</span>{#if hw.state} · {hw.state}{/if}
+              </p>
+              <div class="hwq">
+                <span class="report__label">Sound check</span>
+                <p class="report__text report__text--quiet">
+                  A short tone at 44.1, 96 and 192 kHz, at the current volume. Turn the amplifier down first.
+                </p>
+                {#if hwTones}
+                  <ul class="hwq__tones">{#each hwTones as t (t)}<li>{t}</li>{/each}</ul>
+                {/if}
+                <div class="hwq__options">
+                  <button type="button" class="hwq__option" disabled={hwTonesBusy} onclick={playHardwareTones}>
+                    {hwTonesBusy ? 'Playing…' : hwTones ? 'Play them again' : 'Play test tones'}
+                  </button>
+                </div>
+              </div>
+            {/if}
+            {#each hwStep === 'notes' ? [] : HW_QUESTIONS.filter((x) => hwStep === 'screen' ? (x.screen || (x.touch && hw.touch)) : !(x.screen || x.touch)) as item (item.id)}
+              <div class="hwq">
+                <span class="report__label">{item.q}</span>
+                <div class="hwq__options">
+                  {#each item.options as option (option)}
+                    <button type="button" class="hwq__option" class:is-on={hwAnswers[item.id] === option}
+                      onclick={() => (hwAnswers = { ...hwAnswers, [item.id]: option })}>{option}</button>
+                  {/each}
+                </div>
+              </div>
+            {/each}
+            {#if hwStep === 'notes'}
+            <label class="report__label" for="hw-notes">Your notes (optional)</label>
+            <p class="report__text report__text--quiet">What worked, what did not, how it sounds or looks. Leave it empty if the answers say it all.</p>
+            <textarea id="hw-notes" class="report__note report__note--tall" rows="7" maxlength="2000" bind:value={hwNotes}></textarea>
+            <details class="hwq__facts"><summary>What the player adds for you</summary>
+              <p class="report__text report__text--quiet">Read from the hardware and put in the feedback, so you need not type it. Nothing about you, and no serial numbers.</p>
+              <pre>{hw.text}</pre></details>
+            {/if}
+          {/if}
+          {#if hwError}<p class="report__text report__text--warn">{hwError}</p>{/if}
+        </div>
+      {/if}
+
+      {#if sheet.kind === 'cable'}
+        <!-- ADR-0123: the cable's own sheet, with its own Save. -->
+        <CableSheet />
+      {/if}
       {#if sheet.kind === 'report'}
         <div class="report">
           {#if onPanel()}
@@ -1609,6 +1855,13 @@
            lists rather than one of several hundred. -->
       {#if sheet.grouped && region === null}
         <div class="options" data-noscrollbar>
+          {#each loose as option (option)}
+            {@const selected = choicePending !== null ? choicePending === option : String(sheet.value) === option}
+            <button class="option" class:is-selected={selected} type="button" onclick={() => choose(option)}>
+              <span class="radio"><span></span></span>
+              <span class="option__label">{option}</span>
+            </button>
+          {/each}
           {#each regions as name (name)}
             {@const selected = String(sheet.value ?? '').split('/')[0] === name}
             <button class="option" class:is-selected={selected} type="button" onclick={() => chooseRegion(name)}>
@@ -1711,6 +1964,7 @@
               {@const inert = item.state === 'connected' && !item.details}
               <button
                 class="item"
+                class:item--backup={sheet.key === 'restore'}
                 class:is-joined={joined}
                 class:item--static={inert}
                 type="button"
@@ -1739,6 +1993,18 @@
                   <span class="lock" role="img" aria-label="Password needed"><span></span><span></span></span>
                 {:else if item.secured}
                   <span class="lock lock--open" role="img" aria-label="Password saved"><span></span><span></span></span>
+                {/if}
+                {#if sheet.key === 'restore' && !onPanel()}
+                  <!-- ADR-0083 as amended 2026-10-08: a backup saved on the
+                       phone or computer, for a newly flashed card's setup
+                       (ADR-0131). Not on the panel, which saves nothing. -->
+                  <span
+                    class="forget"
+                    role="button"
+                    tabindex="0"
+                    onclick={(e) => { e.stopPropagation(); downloadBackup(item); }}
+                    onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); downloadBackup(item); } }}
+                  >Download</span>
                 {/if}
                 {#if item.state === 'saved'}
                   <!-- **Saved only, never the network in use.** Forgetting
@@ -1771,6 +2037,9 @@
                     <div class="netinfo__row"><dt>{k}</dt><dd>{v}</dd></div>
                   {/each}
                 </dl>
+                <!-- ADR-0123 decision 2: this network's address, Automatic or
+                     Manual, kept the way the cable's is. -->
+                <div class="netaddr"><CableSheet port="wifi" facts={false} /></div>
               {/if}
             {/each}
             {#if sheet.hint}<div class="items__hint">{sheet.hint}</div>{/if}
@@ -1873,7 +2142,8 @@
         <button class="btn" type="button" disabled={busy} onclick={cancelSheet}>
           {#if join === 'error'}
             Give up
-          {:else if joinItem || shareBrowse || shareLogin || (sheet.grouped && region !== null)}
+          {:else if joinItem || shareBrowse || shareLogin || (sheet.grouped && region !== null)
+                     || (sheet.kind === 'hardware' && hw && hwAt > 0 && !hwUrl)}
             Back
           {:else if restorePending}
             Cancel
@@ -1883,15 +2153,17 @@
             Cancel
           {/if}
         </button>
-        {#if join === 'error' || joinItem || restorePending || choicePending !== null || (sheet.type === 'action' && !(sheet.kind === 'report' && onPanel())) || sheet.type === 'toggle' || sheet.type === 'text' || sheet.type === 'share' || sheet.type === 'share-login' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
+        {#if join === 'error' || joinItem || restorePending || choicePending !== null || (sheet.type === 'action' && sheet.kind !== 'cable' && !((sheet.kind === 'report' || sheet.kind === 'hardware') && onPanel())) || sheet.type === 'toggle' || sheet.type === 'text' || sheet.type === 'share' || sheet.type === 'share-login' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
           <button
             class="btn btn--confirm"
             class:btn--danger={sheet.danger || restorePending || choicePending !== null}
             type="button"
-            disabled={busy || reportBusy}
+            disabled={busy || reportBusy || hwBusy || (sheet.kind === 'hardware' && !hw && !hwUrl)}
             onclick={confirmSheet}
           >
-            {#if sheet.kind === 'report'}
+            {#if sheet.kind === 'hardware'}
+              {#if hwBusy}<span class="btn__spin"></span>Preparing…{:else if hwUrl}Done{:else if hw && !hwLast}{hwSteps[hwAt + 1] === 'sound' ? 'Next: the sound' : 'Next: anything else'}{:else}Prepare the feedback{/if}
+            {:else if sheet.kind === 'report'}
               {#if reportBusy}<span class="btn__spin"></span>Preparing…{:else if reportDone}Done{:else}Download{/if}
             {:else if busy}
               <span class="btn__spin"></span>Saving
@@ -1977,7 +2249,12 @@
     width: 100%;
     height: 100%;
     min-height: 100%;
-    overflow: hidden;
+    /* `clip`, not `hidden` (George, 2026-10-08, a phone pasting the Beszel
+       key): the weave is drawn 90 px past every edge, and `hidden` is still a
+       scroll container - 131 px of sideways scroll at 412 px wide, which a
+       phone used to bring a field's caret into view, sliding the page left
+       under the fixed mini player. `clip` crops the same and scrolls nothing. */
+    overflow: clip;
     font-family: var(--font-ui);
     color: var(--ink);
     background: var(--bg-base);
@@ -2301,7 +2578,11 @@
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(233, 238, 242, 0.1);
   }
-  .row:active {
+  /* Not a tile: a tile is not pressed, only its button is - `:active`
+     holds on every ancestor of what the finger is on, so a tile lit up as a
+     whole when its button was tapped (George, 2026-10-07, Find portraits
+     and covers). */
+  .row:not(.row--tile):active {
     background: rgba(233, 238, 242, 0.12);
   }
   .row--danger {
@@ -2361,6 +2642,42 @@
   }
   .row__value--done {
     color: var(--accent-lms);
+  }
+  .ind {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    flex-shrink: 0;
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--ind);
+  }
+  .ind__mark {
+    display: inline-grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    font-family: var(--font-sans, inherit);
+    font-size: 12px;
+    color: var(--ink-on-accent);
+    background: var(--ind);
+  }
+  .ind--ok {
+    --ind: var(--accent-ok);
+  }
+  .ind--wait {
+    --ind: var(--accent-warn);
+  }
+  .ind--bad {
+    --ind: var(--accent-bad);
+  }
+  .ind--wait .ind__mark {
+    animation: indWait 1400ms ease-in-out infinite;
+  }
+  @keyframes indWait {
+    50% { opacity: 0.35; }
   }
   .row__tick {
     font-family: var(--font-sans, inherit);
@@ -2498,6 +2815,15 @@
     padding: 18px 20px 14px;
     gap: 12px;
   }
+  /* A confirmation holds a title, a line and two buttons: drawn the bar's
+     full height it was mostly empty (George, 2026-10-08, *Reboot* on the
+     11.9" bar). It takes its own height, centred, as on other screens. */
+  :global(.panel--bar) .sheet.sheet--fit {
+    top: 50%;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+    max-height: calc(100% - 24px);
+  }
   .sheet__head {
     flex-shrink: 0;
     min-width: 0;
@@ -2609,7 +2935,9 @@
   }
   .option__label {
     flex: 1;
-    min-width: 0;
+    /* Never narrower than its longest word: a greyed option's reason beside
+       it wraps instead of running over it (Volume's Hardware on HDMI). */
+    min-width: min-content;
     font-size: 17px;
     font-weight: 600;
     color: rgba(233, 238, 242, 0.82);
@@ -2754,8 +3082,14 @@
     background: rgba(255, 255, 255, 0.045);
     border: 1px solid rgba(233, 238, 242, 0.1);
   }
-  .item:active {
+  /* Only the row's own tap: a press on Download or Forget inside it is
+     that button's, and the whole tile shrinking with it read as the row
+     being chosen (George, 2026-10-08, downloading a backup). */
+  .item:active:not(:has(.forget:active)) {
     transform: scale(0.95);
+  }
+  .forget:active {
+    transform: scale(0.92);
   }
   .item.is-joined {
     background: rgba(126, 214, 188, 0.12);
@@ -2789,6 +3123,22 @@
   .item__text {
     flex: 1;
     min-width: 0;
+  }
+  /* A backup's name and date take the line; Download and Forget go under
+     them, at the right (2026-10-08: beside them, on a phone, the name
+     shrank to "ge…" and the date broke word by word). */
+  .netaddr {
+    padding: 4px 18px 14px;
+  }
+  .item--backup {
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+  .item--backup .item__text {
+    flex: 1 1 100%;
+  }
+  .item--backup .forget:first-of-type {
+    margin-left: auto;
   }
   .item__title {
     display: flex;
@@ -3038,7 +3388,7 @@
     background: var(--bg-base);
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow: clip;
   }
   /* ADR-0100 as amended: a plugin's download, inside its own row. */
   .row--dl { position: relative; }
@@ -3365,6 +3715,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    /* A label that wraps ("Prepare the feedback" at phone width) stays
+       centred and clear of the edges. */
+    padding: 0 14px;
+    text-align: center;
+    line-height: 1.2;
     font-size: 17px;
     font-weight: 600;
   }
@@ -3507,6 +3862,14 @@
     flex-direction: column;
     gap: 10px;
   }
+  /* The hardware report is taller than a phone: its questions scroll inside
+     the sheet, and the sheet's buttons stay where a thumb can reach them. */
+  .report--scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
   .report__text {
     margin: 0;
     font-size: 15px;
@@ -3521,6 +3884,82 @@
     word-break: break-all;
   }
   .report__link { color: var(--accent-lms); }
+  .report__step {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-dim, #9fb0bd);
+  }
+  .hwprompt {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    border-radius: 14px;
+    border: 1px solid rgba(124, 208, 176, 0.35);
+    background: rgba(124, 208, 176, 0.08);
+  }
+  .hwprompt__go {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+    padding: 14px 18px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink);
+    background: none;
+    border: 0;
+  }
+  .hwprompt__x {
+    flex-shrink: 0;
+    width: 52px;
+    font-size: 22px;
+    color: var(--ink-dim, #9fb0bd);
+    background: none;
+    border: 0;
+  }
+  .hwq {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .hwq__options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .hwq__option {
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(233, 238, 242, 0.18);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--ink);
+    font: inherit;
+    font-size: 15px;
+  }
+  .hwq__option.is-on {
+    border-color: var(--accent-lms);
+    background: rgba(126, 214, 188, 0.16);
+  }
+  .hwq__tones {
+    margin: 0;
+    padding-left: 18px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--ink-body);
+  }
+  .hwq__facts pre {
+    margin: 6px 0 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    white-space: pre-wrap;
+    color: var(--ink-quiet);
+  }
+  .report__go {
+    font-size: 17px;
+    font-weight: 600;
+  }
   .report__copy {
     margin-left: 8px;
     padding: 2px 10px;
@@ -3538,7 +3977,14 @@
     text-transform: uppercase;
     color: var(--ink-quiet);
   }
+  .report__note--tall {
+    min-height: 168px;
+  }
+  /* Never squeezed: in a sheet taller than the phone, the flex column shrank
+     the box to one line (George, 2026-10-09, on guestpi). */
   .report__note {
+    flex-shrink: 0;
+    min-height: 96px;
     width: 100%;
     box-sizing: border-box;
     padding: 12px 14px;

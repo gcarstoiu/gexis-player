@@ -646,3 +646,149 @@ def test_a_pack_that_ends_on_its_own_is_not_restarted(up, monkeypatch):
     monkeypatch.setattr(up, "apt_progress",
                         lambda opts, *args, stop_when=None, **kw: n.append(1) or subprocess.CompletedProcess(args, 100, "", "E: x"))
     assert up.pack_fetch([], "gexis-skins-1920x1080", a).returncode == 100 and n == [1]
+
+
+def test_a_player_that_does_not_answer_after_the_update_goes_back(up, monkeypatch):
+    """ADR-0105 §4 step 6, built 2026-10-07: until then it was reported
+    failed and left on the new release."""
+    seen, order = fake_install(up, monkeypatch, answers=False)
+    assert up.install(None) == 1
+    last = seen[-1]
+    assert last["state"] == "failed" and last["attempted"] == "2"
+    assert "Back on 1" in last["message"] and last["steps"]["check"] == "failed"
+    assert any(s["state"] == "going-back" for s in seen)
+    assert order == ["backup", "stop", "restart", "restart"], "the old release's code restarted too"
+    assert (up.STATE / "failed-testing").read_text() == "2"
+
+
+def reboot_install(up, monkeypatch, *, answers=True):
+    seen, order = fake_install(up, monkeypatch, answers=answers)
+    ran = []
+    monkeypatch.setattr(up, "restart", lambda changes: order.append("restart") or "reboot")
+    monkeypatch.setattr(up, "run", lambda *a, **k: ran.append(a) or subprocess.CompletedProcess(a, 0, "", ""))
+    return seen, order, ran
+
+
+def test_an_update_that_reboots_is_checked_after_the_boot(up, monkeypatch):
+    """ADR-0105 §4 step 5, built 2026-10-07: before, the check was ticked
+    before rebooting and nothing looked afterwards."""
+    seen, order, ran = reboot_install(up, monkeypatch)
+    assert up.install(None) == 0
+    assert seen[-1]["state"] == "restarting" and seen[-1]["steps"]["restart"] == "active"
+    assert seen[-1]["steps"]["check"] == "pending", "not ticked before the boot"
+    assert ("systemctl", "reboot") in ran and up.pending().exists()
+
+    assert up.postboot(None) == 0
+    assert seen[-1]["state"] == "done" and set(seen[-1]["steps"].values()) == {"done"}
+    assert not up.pending().exists()
+    assert up.postboot(None) == 0, "a boot with nothing to check does nothing"
+
+
+def test_a_boot_that_does_not_answer_goes_back_once(up, monkeypatch):
+    seen, order, ran = reboot_install(up, monkeypatch, answers=False)
+    assert up.install(None) == 0
+    ran.clear()
+    assert up.postboot(None) == 1
+    last = seen[-1]
+    assert last["state"] == "failed" and "Back on 1" in last["message"]
+    assert ("systemctl", "reboot") in ran, "what went back lands at a boot"
+    assert not up.pending().exists(), "the boot after going back is not checked again"
+
+
+AUDIT_BROKEN = ("The following packages are in a mess due to serious problems during\n"
+                "installation.  They must be reinstalled for them (and any packages\n"
+                "that depend on them) to function properly:\n"
+                " gexis-skins-1480x320 (no description available)\n\n"
+                "The following packages are missing the list control file in the\n"
+                "database, they need to be reinstalled:\n"
+                " gexis-skins-1480x320 (no description available)\n")
+
+
+def _dpkg(monkeypatch, up, tmp_path, journal, audits, configure_rc=0):
+    """A dpkg cut short: a journal file until `--configure -a` runs, and
+    `dpkg --audit` answering from `audits` in turn. Every command recorded."""
+    updates = tmp_path / "dpkg-updates"
+    updates.mkdir()
+    if journal:
+        (updates / "0000").write_text("x")
+    monkeypatch.setattr(up, "DPKG_UPDATES", updates)
+    calls = []
+    left = list(audits)
+
+    def fake_run(*args, check=True, env=None):
+        calls.append(list(args))
+        if args[:2] == ("dpkg", "--audit"):
+            out = left.pop(0) if left else ""
+            return subprocess.CompletedProcess(args, 0, out, "")
+        if args[:3] == ("dpkg", "--configure", "-a"):
+            for f in updates.iterdir():
+                f.unlink()
+            return subprocess.CompletedProcess(args, configure_rc, "", "")
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    monkeypatch.setattr(up, "run", fake_run)
+    applied = []
+    monkeypatch.setattr(up, "apt", lambda opts, *a, prefix=None: applied.append(list(a))
+                        or subprocess.CompletedProcess(a, 0, "", ""))
+    (tmp_path / "updates").mkdir(exist_ok=True)
+    return calls, applied
+
+
+def test_a_clean_dpkg_is_left_alone(monkeypatch, up, tmp_path):
+    calls, applied = _dpkg(monkeypatch, up, tmp_path, journal=False, audits=[""])
+    up.heal(["-o", "x"])
+    assert ["dpkg", "--configure", "-a"] not in calls and applied == []
+
+
+def test_an_install_cut_short_is_finished_then_the_broken_package_reinstalled(monkeypatch, up, tmp_path):
+    """ShelvesPi, 2026-10-08: a power cut mid-install; every apt run since
+    refused with "dpkg was interrupted". The updater finishes it, and the
+    pack that lost its file list is installed again."""
+    calls, applied = _dpkg(monkeypatch, up, tmp_path, journal=True,
+                           audits=[AUDIT_BROKEN, AUDIT_BROKEN, ""])
+    up.heal(["-o", "x"])
+    assert ["dpkg", "--configure", "-a"] in calls
+    assert applied == [["--allow-change-held-packages", "install", "--reinstall", "gexis-skins-1480x320"]]
+    assert "dpkg --configure -a" in (tmp_path / "updates" / "apt.log").read_text()
+
+
+def test_configure_alone_can_be_enough(monkeypatch, up, tmp_path):
+    calls, applied = _dpkg(monkeypatch, up, tmp_path, journal=True, audits=["", ""])
+    up.heal(["-o", "x"])
+    assert ["dpkg", "--configure", "-a"] in calls and applied == []
+
+
+def test_a_pack_apt_cannot_reinstall_is_removed_for_a_fresh_install(monkeypatch, up, tmp_path):
+    """ShelvesPi again, with the first version of this: the half-installed
+    pack's exact version was in no repository, so apt could not reinstall
+    it. A pack is removed, and the install that follows fetches it fresh."""
+    calls, applied = _dpkg(monkeypatch, up, tmp_path, journal=True,
+                           audits=[AUDIT_BROKEN, AUDIT_BROKEN, AUDIT_BROKEN, ""])
+    up.heal(["-o", "x"])
+    assert ["dpkg", "--remove", "--force-remove-reinstreq", "gexis-skins-1480x320"] in calls
+
+
+def test_anything_else_that_cannot_be_finished_says_so(monkeypatch, up, tmp_path):
+    """Never removes a package of the player itself."""
+    core = AUDIT_BROKEN.replace("gexis-skins-1480x320", "gexis-core")
+    calls, _ = _dpkg(monkeypatch, up, tmp_path, journal=True, audits=[core, core, core])
+    with pytest.raises(up.Stop, match="cut short"):
+        up.heal(["-o", "x"])
+    assert not any(c[:2] == ["dpkg", "--remove"] for c in calls)
+
+
+def test_empty_package_lists_are_dropped_before_an_update(up, tmp_path, monkeypatch):
+    """ShelvesPi after its power cuts: every saved list at 0 bytes, kept by
+    apt's "Hit" forever - no package could be found. They are thrown away so
+    apt fetches them again; real lists and apt's lock stay."""
+    lists = tmp_path / "updates" / "apt" / "ecd84854c1b3ae58" / "lists"
+    lists.mkdir(parents=True)
+    (lists / "x_skins-bbb_._Packages").write_text("")
+    (lists / "x_skins-bbb_._InRelease").write_text("signed")
+    (lists / "x_ours_._Packages").write_text("Package: gexis-core\n")
+    (lists / "lock").write_text("")
+    seen = []
+    monkeypatch.setattr(up, "run", lambda *a, **k: seen.append(sorted(p.name for p in lists.iterdir()))
+                        or subprocess.CompletedProcess(a, 0, "", ""))
+    up.apt(["-o", "x"], "update")
+    assert seen == [["lock", "x_ours_._Packages", "x_skins-bbb_._InRelease"]]

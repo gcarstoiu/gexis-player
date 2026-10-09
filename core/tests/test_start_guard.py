@@ -38,3 +38,13 @@ def test_a_renderer_never_told_is_not_held_for_ever():
     guard = StartGuard()
     guard.handed("spotify", 60, now=100.0, told=False)
     assert guard.held("spotify", now=100.0 + UNTOLD_MAX_S + HOLD_S + 1) is None
+
+
+def test_a_restart_holds_longer_than_a_takeover():
+    """guestpi, 2026-10-07: go-librespot's first report after an output
+    change came 12 s after its restart - past a takeover's 15 s would still
+    hold it, but a slow reconnect would not; a restart holds 30 s."""
+    guard = StartGuard()
+    guard.handed("spotify", 20, now=0.0, told=False, untold_max_s=30.0)
+    assert guard.held("spotify", now=20.0) == 20
+    assert guard.held("spotify", now=31.0) is None

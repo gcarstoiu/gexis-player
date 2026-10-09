@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import stat
 
 import pytest
@@ -29,6 +30,7 @@ class FakeSettings:
 
 def make(tmp_path, nm, settings=None, **kw):
     kw_servers = {"servers": kw.pop("servers", [])}
+    offered = kw.pop("plugins", [])
     net, clock = setup(tmp_path, nm, **kw)
     countries, reboots = [], []
 
@@ -47,6 +49,7 @@ def make(tmp_path, nm, settings=None, **kw):
         net, settings or FakeSettings(), reboot=reboot,
         answers=tmp_path / "answers.json", marker=tmp_path / "setup-done",
         set_country=country, find_servers=find, sleep=clock.sleep,
+        plugins=lambda: offered, settling_path=tmp_path / "settling.json",
     )
     return flow, net, clock, countries, reboots
 
@@ -289,3 +292,282 @@ def test_the_phone_is_told_in_words_not_the_core_s_text():
     assert sf.said("choose a screen or headless, not both") == "Choose a screen or Headless, not both."
     for raw in ("answers must be an object", "unknown answer colour", "step must be text", "setup is not wired up"):
         assert sf.said(raw) == "Something went wrong saving that. Try again."
+
+
+PLUGINS = [
+    {"id": "plexamp", "name": "Plexamp", "row": "plexamp.enabled", "component": "plexamp", "notice": "Plex terms."},
+    {"id": "lyrion-server", "name": "Lyrion Server", "row": "lyrion-server.enabled", "component": "lyrion"},
+    {"id": "beszel", "name": "Beszel", "row": "beszel.enabled", "component": None},
+]
+
+
+def test_only_offered_plugins_are_an_answer(tmp_path):
+    """ADR-0128: the Plugins step's answer is a list of what was offered."""
+    flow, *_ = make(tmp_path, FakeNM(devices=NOTHING), plugins=PLUGINS)
+    assert flow.save({"plugins": ["plexamp", "beszel"]})["plugins"] == ["beszel", "plexamp"]
+    with pytest.raises(ValueError):
+        flow.save({"plugins": ["spotify"]})
+    with pytest.raises(ValueError):
+        flow.save({"plugins": "plexamp"})
+
+
+def test_chosen_plugins_go_on_after_the_join_the_rest_off_and_the_first_start_waits_for_them(tmp_path):
+    """ADR-0128: switched after the join (they download), every offered one
+    set explicitly, and what downloads is what the first start waits for -
+    with the visualiser's skins when they were chosen."""
+    nm = FakeNM(devices=NOTHING)
+    settings = FakeSettings()
+    flow, net, *_ = make(tmp_path, nm, settings, plugins=PLUGINS)
+    flow.save({"ssid": "Home", "password": "hunter22", "visualiser": True,
+               "plugins": ["plexamp", "beszel"]})
+    finish(flow, net)
+    assert ("plexamp.enabled", True) in settings.sets and ("beszel.enabled", True) in settings.sets
+    assert ("lyrion-server.enabled", False) in settings.sets, "not chosen is off, not left at its default"
+    import json
+    waits = json.loads((tmp_path / "settling.json").read_text())["items"]
+    assert [w["id"] for w in waits] == ["skins", "plexamp"], "Beszel downloads nothing to wait for"
+
+
+def test_nothing_chosen_to_download_writes_nothing_to_wait_for(tmp_path):
+    settings = FakeSettings()
+    flow, net, *_ = make(tmp_path, FakeNM(devices=NOTHING), settings, plugins=PLUGINS)
+    flow.save({"ssid": "Home", "password": "hunter22", "plugins": ["beszel"]})
+    finish(flow, net)
+    assert not (tmp_path / "settling.json").exists()
+
+
+# -- ADR-0131: restoring a backup in setup ----------------------------------
+
+from gexis_core import backups as _backups
+from test_backups import VALUES, _real_device
+
+
+def _with_backup(tmp_path, nm, settings=None, values=VALUES, **kw):
+    flow, net, clock, countries, reboots = make(tmp_path, nm, settings, **kw)
+    flow._backup = tmp_path / "state" / "setup-backup.tgz"
+    flow._restore_root = tmp_path / "card"
+    (tmp_path / "card").mkdir()
+    names = []
+    flow._apply_name = lambda: names.append(True)
+    old = _real_device(tmp_path / "old", values)
+    made = _backups.create("Living Room", tmp_path / "share", old)
+    upload = tmp_path / "upload.part"
+    upload.write_bytes((tmp_path / "share" / made).read_bytes())
+    return flow, net, countries, reboots, upload, names
+
+
+def test_a_backup_is_checked_kept_and_said_in_the_answers(tmp_path):
+    flow, net, _, _, upload, _ = _with_backup(tmp_path, FakeNM(devices=NOTHING))
+    out = flow.take_backup(upload, "gexis-living-room-20261008-101500.tgz")
+    assert out["start"] == "restore" and out["backup"]["name"] == "Living Room"
+    assert out["backup"]["file"] == "gexis-living-room-20261008-101500.tgz"
+    assert stat.S_IMODE(flow._backup.stat().st_mode) == 0o600 and not upload.exists()
+
+
+def test_a_refused_file_is_deleted_and_the_kept_one_stays(tmp_path):
+    flow, net, _, _, upload, _ = _with_backup(tmp_path, FakeNM(devices=NOTHING))
+    flow.take_backup(upload)
+    junk = tmp_path / "junk.part"
+    junk.write_bytes(b"a photo")
+    with pytest.raises(_backups.Refused):
+        flow.take_backup(junk)
+    assert not junk.exists() and flow._backup.exists()
+    assert flow.answers()["backup"]["name"] == "Living Room"
+
+
+def test_restoring_joins_applies_the_backup_s_answers_puts_the_files_back_and_restarts(tmp_path):
+    """ADR-0131 §5: the country from the backup's time zone, the join, its
+    main answers through Settings (Headless before the screen), the files,
+    what the first start waits for, then the restart - and the file gone."""
+    nm = FakeNM(devices=NOTHING)
+    settings = FakeSettings()
+    flow, net, countries, reboots, upload, names = _with_backup(tmp_path, nm, settings, plugins=PLUGINS)
+    flow.take_backup(upload)
+    flow.save({"ssid": "Home", "password": "hunter22"})
+    told = asyncio.run(_finish_told(flow, net))
+    assert countries == ["DE"]
+    keys = [k for k, _ in settings.sets]
+    assert keys.index("headless") < keys.index("screen")
+    assert ("device_name", "Living Room") in settings.sets and ("timezone", "Europe/Berlin") in settings.sets
+    assert "volume_max" not in keys, "everything else comes back with the files"
+    assert (tmp_path / "card/var/lib/gexis-core/settings.db").exists()
+    assert names == [True]
+    waits = json.loads((tmp_path / "settling.json").read_text())["items"]
+    assert [w["id"] for w in waits] == ["skins", "plexamp"]
+    assert net.status()["finished"]["restart_for"] == "restore"
+    assert reboots == [True] and not flow._backup.exists()
+    assert (tmp_path / "setup-done").exists()
+    assert told == {"keep_question": True}
+
+
+def test_a_screen_this_version_does_not_know_is_left_to_settings(tmp_path):
+    settings = FakeSettings()
+    flow, net, _, _, upload, _ = _with_backup(tmp_path, FakeNM(devices=NOTHING), settings,
+                                              values={**VALUES, "screen": "Future/Panel 9000"})
+    flow.take_backup(upload)
+    flow.save({"ssid": "Home", "password": "hunter22"})
+    assert asyncio.run(_finish_told(flow, net)) == {"keep_question": False}
+    assert "screen" not in [k for k, _ in settings.sets]
+
+
+async def _finish_told(flow, net):
+    net._state, net._needed = "open", True
+    told = flow.finish()
+    await flow._task
+    return told
+
+
+def test_a_failed_join_keeps_the_backup_and_goes_back_to_network(tmp_path):
+    nm = FakeNM(devices=NOTHING, up_rc=4)
+    settings = FakeSettings()
+    flow, net, _, reboots, upload, _ = _with_backup(tmp_path, nm, settings)
+    flow.take_backup(upload)
+    flow.save({"ssid": "Home", "password": "wrongpass"})
+    finish(flow, net)
+    assert flow._backup.exists() and flow.answers()["step"] == "wifi"
+    assert settings.sets == [] and reboots == []
+    assert not (tmp_path / "card/var/lib/gexis-core/settings.db").exists()
+
+
+def test_restore_without_a_backup_is_refused_and_new_ignores_one(tmp_path):
+    flow, net, _, _, upload, _ = _with_backup(tmp_path, FakeNM(devices=NOTHING))
+    flow.save({"ssid": "Home", "password": "hunter22", "start": "restore"})
+    with pytest.raises(ValueError, match="no backup"):
+        asyncio.run(_finish_told(flow, net))
+    flow.take_backup(upload)
+    flow.save({"start": "new"})
+    finish(flow, net)
+    assert not (tmp_path / "card/var/lib/gexis-core/settings.db").exists(), "New player: the backup is not used"
+
+
+def _restored(tmp_path, key):
+    import sqlite3
+    conn = sqlite3.connect(tmp_path / "card/var/lib/gexis-core/settings.db")
+    row = conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
+    return json.loads(row[0]) if row else None
+
+
+def test_a_step_changed_in_the_review_is_written_over_the_backup(tmp_path):
+    """ADR-0131 as amended (George, 2026-10-08): a backup set up as another
+    player - the name changed in the review is what it starts with, in the
+    settings put back and through Settings; the backup's name is not
+    re-applied over it. What was left alone stays the backup's."""
+    settings = FakeSettings()
+    flow, net, _, reboots, upload, names = _with_backup(tmp_path, FakeNM(devices=NOTHING), settings, plugins=PLUGINS)
+    flow.take_backup(upload)
+    flow.save({"ssid": "Home", "password": "hunter22", "name": "Kitchen", "plugins": ["beszel"]})
+    asyncio.run(_finish_told(flow, net))
+    assert _restored(tmp_path, "device_name") == "Kitchen"
+    assert ("device_name", "Kitchen") in settings.sets
+    assert names == [], "the backup's own name is not put back over the new one"
+    assert _restored(tmp_path, "timezone") == "Europe/Berlin", "left alone: the backup's"
+    assert _restored(tmp_path, "plexamp.enabled") is False and _restored(tmp_path, "beszel.enabled") is True
+    assert not (tmp_path / "settling.json").exists() or \
+        [w["id"] for w in json.loads((tmp_path / "settling.json").read_text())["items"]] == ["skins"]
+    assert net.status()["finished"]["name"] == "Kitchen" and reboots == [True]
+
+
+def test_lyrion_found_after_the_join_is_written_into_the_restored_settings(tmp_path):
+    settings = FakeSettings()
+    flow, net, _, _, upload, _ = _with_backup(tmp_path, FakeNM(devices=NOTHING), settings,
+                                              servers=[{"name": "Den", "address": "10.0.0.5:9000"}])
+    flow.take_backup(upload)
+    flow.save({"ssid": "Home", "password": "hunter22", "lms_mode": "find"})
+    asyncio.run(_finish_told(flow, net))
+    assert _restored(tmp_path, "lms_server") == "10.0.0.5:9000" and _restored(tmp_path, "lms_enabled") is True
+
+
+def test_a_backup_given_another_name_leaves_the_first_player_s_identities_behind(tmp_path):
+    """George, 2026-10-08: "Setup could offer to leave these behind when the
+    name is changed" - "yes". The Beszel fingerprint, Plexamp's claim, the
+    Spotify sign-in and the pairings stay with the first player; everything
+    else comes back."""
+    flow, net, _, _, upload, _ = _with_backup(tmp_path, FakeNM(devices=NOTHING))
+    seen = flow.take_backup(upload)["backup"]
+    assert set(seen["identities"]) == {"Beszel connection", "Plexamp's claim", "Spotify sign-in", "Bluetooth pairings"}
+    flow.save({"ssid": "Home", "password": "hunter22", "name": "Kitchen"})
+    asyncio.run(_finish_told(flow, net))
+    card = tmp_path / "card"
+    for gone in ("var/lib/beszel-agent", "home/pi/.local/share/Plexamp", "var/lib/go-librespot/state.json",
+                 "var/lib/bluetooth"):
+        assert not (card / gone).exists(), gone
+    assert (card / "var/lib/gexis-music/Playlists/Evening.m3u").exists()
+    assert (card / "var/lib/gexis-core/enrichment.db").exists()
+
+
+def test_the_same_player_keeps_them_renamed_or_not(tmp_path):
+    """Said to be the same player (the switch off), or the name left as the
+    backup's even with its step opened: everything comes back."""
+    for answers in ({"name": "Kitchen", "second_player": False}, {"name": "Living Room"}):
+        root = tmp_path / str(len(answers))
+        root.mkdir()
+        flow, net, _, _, upload, _ = _with_backup(root, FakeNM(devices=NOTHING))
+        flow.take_backup(upload)
+        flow.save({"ssid": "Home", "password": "hunter22", **answers})
+        asyncio.run(_finish_told(flow, net))
+        assert (root / "card/var/lib/beszel-agent/fingerprint").exists(), answers
+        assert (root / "card/home/pi/.local/share/Plexamp/Settings").exists(), answers
+
+
+CONNECTED = {**VALUES, "beszel.enabled": True, "beszel.hub": "http://192.0.2.9:8090", "beszel.key": "ssh-ed25519 AAAA",
+             "beszel.token": "t0ken", "plexamp.claim_token": "claim-abc"}
+
+
+def test_a_second_player_leaves_the_first_one_s_hub_and_claim_in_the_settings_too(tmp_path):
+    """George, 2026-10-08: a second player came up still showing the first
+    one's Beszel hub - "everything goes, including IP". The connection is
+    settings, not files: the whole Beszel plugin back to its defaults, and
+    Plexamp's claim token gone with its switch kept. The same player keeps
+    them all."""
+    for answers, kept in (({"name": "Kitchen"}, False), ({"name": "Kitchen", "second_player": False}, True)):
+        root = tmp_path / str(kept)
+        root.mkdir()
+        flow, net, _, _, upload, _ = _with_backup(root, FakeNM(devices=NOTHING), values=CONNECTED)
+        flow.take_backup(upload)
+        flow.save({"ssid": "Home", "password": "hunter22", **answers})
+        asyncio.run(_finish_told(flow, net))
+        for key in ("beszel.enabled", "beszel.hub", "beszel.key", "beszel.token", "plexamp.claim_token"):
+            assert (_restored(root, key) is not None) is kept, (key, answers)
+        assert _restored(root, "plexamp.enabled") is True
+        assert _restored(root, "device_name") == "Kitchen"
+
+
+def test_a_plugin_switched_on_in_the_review_stays_on_a_second_player(tmp_path):
+    flow, net, _, _, upload, _ = _with_backup(tmp_path, FakeNM(devices=NOTHING), values=CONNECTED, plugins=PLUGINS)
+    flow.take_backup(upload)
+    flow.save({"ssid": "Home", "password": "hunter22", "name": "Kitchen", "plugins": ["beszel"]})
+    asyncio.run(_finish_told(flow, net))
+    assert _restored(tmp_path, "beszel.enabled") is True and _restored(tmp_path, "beszel.hub") is None
+
+
+def test_a_restore_applies_its_answers_with_a_real_store(tmp_path):
+    """0.9.5 on a new card, 2026-10-08: the answers were applied after the
+    settings file was replaced, and the store the core held open refused
+    every write - the name, the time zone, the screen never applied. With a
+    real store: they are applied, and a name changed in setup goes over the
+    backup's own name file after the files are back."""
+    from gexis_core.settings import SettingsStore
+    from gexis_core.settings_registry import Settings, load_registry
+
+    calls = []
+    card = tmp_path / "card"
+    (card / "var/lib/gexis-core").mkdir(parents=True)
+    store = SettingsStore(card / "var/lib/gexis-core/settings.db")
+    settings = Settings(store, registry=load_registry(), seed_path=tmp_path / "none.json",
+                        defaults={"device_name": lambda: "raspberrypi"},
+                        wired={"device_name": lambda v: calls.append(("set", "device_name", v)),
+                               "timezone": lambda v: calls.append(("set", "timezone", v))})
+    base = tmp_path / "setup"
+    base.mkdir()
+    flow, net, _, _, upload, _ = _with_backup(base, FakeNM(devices=NOTHING), settings)
+    flow._restore_root = card
+    flow._rename = lambda name: calls.append(("rename", name, (card / "etc/gexis/device-name.env").read_text()))
+    flow.take_backup(upload)
+    flow.save({"ssid": "Home", "password": "hunter22", "name": "ShelvesPi"})
+    asyncio.run(_finish_told(flow, net))
+    assert ("set", "device_name", "ShelvesPi") in calls
+    assert ("set", "timezone", "Europe/Berlin") in calls
+    rename = [c for c in calls if c[0] == "rename"]
+    assert rename and rename[0][1] == "ShelvesPi"
+    assert "NAME=gexis" in rename[0][2], "renamed after the backup's own name file came back"
+    assert calls.index(("set", "device_name", "ShelvesPi")) < calls.index(rename[0])

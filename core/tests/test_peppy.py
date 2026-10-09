@@ -537,3 +537,41 @@ def test_a_show_that_finds_no_window_leaves_it_not_drawing(tmp_path, monkeypatch
     screen = PeppyScreen(wlrctl="/usr/bin/wlrctl", shown_path=flag)
     assert screen.show() is False
     assert flag.read_text() == "0"
+
+
+async def test_a_show_with_no_window_starts_the_visualiser_again(monkeypatch):
+    """guestpi, 2026-10-07: the driver's loop had ended, and every press said
+    only *no Peppy screen window to act on*."""
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+
+    class NoWindowUntilRestarted(FakeScreen):
+        up = False
+
+        def show(self):
+            self.calls.append("show")
+            self.visible = self.up
+            return self.up
+
+    screen = NoWindowUntilRestarted()
+    controller = PeppyController(screen, UnattendedPlayback(300))
+    server = StateServer(StateStore({}), peppy=controller)
+    started = []
+
+    class Done:
+        async def wait(self):
+            screen.up = True
+
+    async def exec_(*args, **kw):
+        started.append(args)
+        return Done()
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", exec_)
+    async with TestClient(TestServer(server.make_app())) as client:
+        assert (await client.post("/peppy/show")).status == 200
+    assert started == [("systemctl", "restart", "gexis-peppy.service")]
+    assert screen.visible

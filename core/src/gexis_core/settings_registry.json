@@ -10,23 +10,37 @@
         "type": "choice",
         "label": "Output",
         "marks": "R",
-        "note": "Where the sound goes. Over HDMI the volume is fixed, the sound is not bit-perfect and the visualiser does not move.",
+        "note": "Where the sound goes. Over HDMI the sound is not bit-perfect; HDMI has no volume control of its own, so its volume is Software or Fixed, and the visualiser moves only on Software.",
         "optionsFrom": "output_device",
         "default": null,
-        "warn": "Playback stops while the output changes. An output with no volume control of its own, such as HDMI, has no volume slider."
+        "warn": "Playback stops while the output changes."
+      },
+      {
+        "key": "sound_card_board",
+        "type": "choice",
+        "label": "Sound card board",
+        "marks": "N",
+        "note": "Most boards and every USB DAC are found by themselves. A board that is not - it does not show under Output - can be chosen here.",
+        "warn": "Choosing a board restarts the player with it. If no sound card appears after the restart, the player goes back to what it had and restarts again.",
+        "options": [],
+        "default": "Found by itself",
+        "optionsFrom": "boards",
+        "grouped": true
       },
       {
         "key": "output_mode",
         "type": "choice",
-        "label": "Output mode",
+        "label": "Volume",
         "marks": "R",
-        "note": "Variable: the volume is set on the player. Fixed: the player always plays at full level, for an amplifier that sets the volume itself. The change applies when playback next stops.",
+        "note": "How the level is set. Hardware: by the sound card's own volume control, bit-perfect at every level. Software: by the player recalculating the sound - for an output with no volume control of its own, such as HDMI; not bit-perfect below 100 %. Fixed: always full level, for an amplifier that sets the volume itself; the change applies when playback next stops.",
         "options": [
-          "Variable",
+          "Hardware",
+          "Software",
           "Fixed"
         ],
-        "default": "Variable",
+        "default": "Hardware",
         "warn": {
+          "Software": "The player changes the level by recalculating the sound. Playback is no longer bit-perfect, at any volume below 100 %. Use it for an output with no volume control of its own, such as HDMI, or if you prefer it. Hardware restores bit-perfect playback.",
           "Fixed": "Fixed output sends the signal at 100%. Turn your amplifier down before confirming — the panel can no longer lower it."
         }
       },
@@ -39,10 +53,12 @@
         "min": 10,
         "max": 100,
         "unit": "%",
-        "default": null,
+        "default": 100,
         "onlyWhen": [
           "output_mode",
-          "Variable"
+          {
+            "not": "Fixed"
+          }
         ]
       },
       {
@@ -67,7 +83,9 @@
         "default": "Cubic",
         "onlyWhen": [
           "output_mode",
-          "Variable"
+          {
+            "not": "Fixed"
+          }
         ]
       }
     ]
@@ -163,7 +181,9 @@
           ],
           [
             "output_mode",
-            "Variable"
+            {
+              "not": "Fixed"
+            }
           ]
         ]
       },
@@ -640,20 +660,6 @@
         ]
       },
       {
-        "key": "pexels_key",
-        "type": "text",
-        "secret": true,
-        "placeholder": "Pexels API key",
-        "label": "Pexels API key",
-        "marks": "N",
-        "note": "A Pexels key, from a free account. With both keys, pictures come from both.",
-        "default": null,
-        "onlyWhen": [
-          "idle_background",
-          "Wallpapers online"
-        ]
-      },
-      {
         "key": "wallpaper_topics",
         "type": "multi",
         "label": "Wallpaper topics",
@@ -1062,6 +1068,15 @@
         "discover": true
       },
       {
+        "key": "cable",
+        "type": "action",
+        "label": "Cable",
+        "marks": "N",
+        "note": null,
+        "kind": "cable",
+        "default": null
+      },
+      {
         "key": "timezone",
         "type": "choice",
         "label": "Time zone",
@@ -1248,7 +1263,7 @@
         "type": "list",
         "label": "Restore",
         "marks": "N",
-        "note": "Replaces everything a backup holds and restarts the device. Backups are read from the Backups share, so one copied there from another machine is offered too.",
+        "note": "Replaces everything a backup holds and restarts the device. Backups are read from the Backups share, so one copied there from another machine is offered too. On a phone or computer, Download saves one there - ready for setup on a newly flashed card.",
         "default": null,
         "empty": "No backups yet. Back up first, or copy one into the Backups share.",
         "kind": "backup"
@@ -1268,6 +1283,15 @@
         "marks": "R",
         "note": "Downloads the player's logs, versions, hardware and settings in one file, to attach to a report of a problem. Addresses, names, networks, shares, keys and what you play are taken out on the player first, but read the file before sharing it.",
         "kind": "report",
+        "default": null
+      },
+      {
+        "key": "hardware_report",
+        "type": "action",
+        "label": "Hardware feedback",
+        "marks": "R",
+        "note": "Tells the project how this sound card and screen work, so others can see what works before buying. Two short checks - the screen, then the sound - and a few questions, then feedback on GitHub, filled in with what the player reads of the hardware - never a serial number or anything about you.",
+        "kind": "hardware",
         "default": null
       },
       {

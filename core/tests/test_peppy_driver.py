@@ -305,3 +305,98 @@ def test_the_shown_flag_is_read_when_it_changes(tmp_path):
     assert shown.check() is True
     path.unlink()
     assert shown.check() is True
+
+
+def test_a_skin_that_cannot_be_built_is_left_out_not_the_end_of_the_screen():
+    """guestpi, 2026-10-07: the rotation reached a skin whose image would not
+    load, the loop ended, and the visualiser had no window all afternoon."""
+    peppy = types.SimpleNamespace(meter=types.SimpleNamespace())
+    rotation = driver.Rotation(peppy, {"01G5_Needle": {}, "02G5_Broken": {}}, spectrum_state=None)
+    rotation.selection.corpus = "All"
+    built = []
+
+    def prepare(name):
+        if name == "02G5_Broken":
+            raise TypeError("'NoneType' object is not subscriptable")
+        built.append(name)
+        rotation.prepared = (name, object())
+
+    rotation._prepare = prepare
+    rotation.prepare_next("02G5_Broken")
+    assert rotation.prepared[0] == "01G5_Needle" and "02G5_Broken" in rotation.broken
+    assert rotation.pool() == ["01G5_Needle"], "and it is not drawn from again"
+
+
+# -- each spectrum skin draws its own count (2026-10-08) ----------------------
+
+import os as _os
+import struct as _struct
+import zlib as _zlib
+
+
+def _png(path, width, height=10):
+    raw = b"".join(b"\x00" + b"\x00" * width * 3 for _ in range(height))
+    def chunk(kind, data):
+        return _struct.pack(">I", len(data)) + kind + data + _struct.pack(">I", _zlib.crc32(kind + data))
+    path.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", _struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+                     + chunk(b"IDAT", _zlib.compress(raw)) + chunk(b"IEND", b""))
+
+
+def _section(folder, name, area, origin, width, gap):
+    folder.mkdir(parents=True, exist_ok=True)
+    _png(folder / f"{name}.png", area)
+    with (folder / "spectrum.txt").open("a") as out:
+        out.write(f"[{name}]\norigin.x = {origin}\nbar.width = {width}\nbar.gap = {gap}\nbgr.filename = {name}.png\n")
+
+
+def test_each_section_draws_what_its_own_panel_holds(tmp_path):
+    """George, 2026-10-08: "there is enough space for 20 bars". Free at
+    1920x1080: 20 bars leave 110 px to the right against a 115 px origin -
+    drawn that way by its author - so 20, not the corpus's smallest."""
+    base = tmp_path / "templates_spectrum"
+    _section(base / "1920x1080", "Free", 1405, 115, 40, 20)
+    _section(base / "1920x1080", "Dorrought", 1644, 61, 38, 42)
+    _section(base / "1920x1080", "Wide", 4000, 10, 40, 20)
+    assert driver.spectrum_bars(base, "1920x1080", 30, "Free") == 20
+    assert driver.spectrum_bars(base, "1920x1080", 30, "Dorrought") == 19, "a 20th would leave 25 px against 61: not drawn"
+    assert driver.spectrum_bars(base, "1920x1080", 30, "Wide") == 30, "never more bars than bands"
+    assert driver.spectrum_bars(base, "1920x1080", 30, "Missing") is None
+
+
+def _engine(pipe, size):
+    return types.SimpleNamespace(pipe=pipe, config={"pipe_size": 4 * size})
+
+
+def test_the_newest_whole_frame_is_read_however_the_sizes_went_before():
+    """Finding 051: a reader taking fixed-size chunks went out of step for
+    good after one frame of another size. The end of what is waiting is the
+    end of a frame, so the newest one is always whole."""
+    read_fd, write_fd = _os.pipe()
+    _os.set_blocking(read_fd, False)
+    try:
+        engine = _engine(read_fd, 18)
+        driver.read_the_newest_frame(engine)
+        latest = engine.get_latest_pipe_data
+        frame = lambda n, v: _struct.pack(f"<{n}I", *([v] * n))
+        _os.write(write_fd, frame(18, 1) + frame(18, 2))
+        assert latest() == frame(18, 2)
+        assert latest() == frame(18, 2), "nothing new: the last frame holds"
+        # The skin changes to 20 bars; an 18-bar frame is still in flight.
+        engine.config["pipe_size"] = 80
+        _os.write(write_fd, frame(18, 3))
+        assert latest() == [0] * 80, "a frame of the old size reads as silence"
+        _os.write(write_fd, frame(18, 4) + frame(20, 5) + frame(20, 6))
+        assert latest() == frame(20, 6)
+        _os.write(write_fd, frame(20, 7))
+        assert latest() == frame(20, 7), "and stays in step"
+    finally:
+        _os.close(read_fd)
+        _os.close(write_fd)
+
+
+def test_updates_and_a_skin_change_take_one_lock():
+    calls = []
+    engine = types.SimpleNamespace(set_values=lambda: calls.append(engine.gexis_lock.locked()))
+    lock = driver.serialise_updates(engine)
+    engine.set_values()
+    assert calls == [True] and not lock.locked()

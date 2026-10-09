@@ -14,7 +14,11 @@ set -eu
 STAGE_DIR=/src/image/stage-gexis/07-beszel
 . /src/packaging/beszel-agent/pins.sh
 : "${BESZEL_VERSION:?} ${BESZEL_ASSET:?} ${BESZEL_URL:?} ${BESZEL_SHA256:?}"
-VERSION="${BESZEL_VERSION#v}-1"
+# The revision after the dash is ours: raise it whenever what this package
+# carries besides Beszel changes (its plugin.json), or apt keeps the old one -
+# Back to -1 with each new Beszel version (0.20.0 went to -3 for manifest
+# changes, 2026-10-07/08).
+VERSION="${BESZEL_VERSION#v}-2"
 
 PKG=gexis-beszel-agent
 STAGE=/tmp/stage/$PKG

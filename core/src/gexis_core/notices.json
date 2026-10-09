@@ -348,7 +348,7 @@
     {
       "name": "peppyalsa",
       "group": "visualiser",
-      "role": "Feeds the music's levels to the visualiser. Modified here: one write per frame.",
+      "role": "Feeds the music's levels to the visualiser. Modified here: one write per frame, and the spectrum's bands (50 Hz to 16 kHz at every sample rate).",
       "author": "project-owner (Peppy)",
       "licence": "GPL-3.0 (modified by Gexis Player; the change is in image/stage-gexis/00-alsa/files)",
       "url": "https://github.com/project-owner/peppyalsa",
@@ -401,6 +401,16 @@
       "licence": "MIT",
       "url": "https://github.com/foonerd/pi_screen_setup",
       "arrives": "display_presets.json 1.5.9 at commit 8c0896b3, kept with its licence in core/src/gexis_core/screens_data/",
+      "sources": []
+    },
+    {
+      "name": "DAC board list",
+      "group": "core",
+      "role": "The DAC boards the player can name, and the Sound card board setting offers for a board that cannot name itself: overlays, card names, volume controls.",
+      "author": "Volumio (Michelangelo Guarise and contributors)",
+      "licence": "GPL-3.0",
+      "url": "https://github.com/volumio/volumio3-backend",
+      "arrives": "dacs.json at commit e4cc75ae (last changed at c82d2341a3), kept with its licence in core/src/gexis_core/boards_data/; corrected as boards.py says",
       "sources": []
     },
     {

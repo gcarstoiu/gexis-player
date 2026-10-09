@@ -37,9 +37,12 @@ class StartGuard:
         #: renderer -> [hold until, percent, told, since]
         self._handed: dict[str, list] = {}
 
-    def handed(self, renderer_id: str, percent: float, now: float, told: bool = True) -> None:
-        """`renderer_id` starts at `percent`; `told` once it has been sent it."""
-        self._handed[renderer_id] = [now + self._hold_s, percent, told, now]
+    def handed(self, renderer_id: str, percent: float, now: float, told: bool = True,
+               untold_max_s: float | None = None) -> None:
+        """`renderer_id` starts at `percent`; `told` once it has been sent it.
+        `untold_max_s` replaces `UNTOLD_MAX_S` for this one hand-over."""
+        self._handed[renderer_id] = [now + self._hold_s, percent, told, now,
+                                     self._untold_max_s if untold_max_s is None else untold_max_s]
 
     def told(self, renderer_id: str, now: float) -> None:
         """The renderer has just been sent its starting level: hold from now."""
@@ -53,8 +56,8 @@ class StartGuard:
         held = self._handed.get(renderer_id)
         if held is None:
             return None
-        until, percent, told, since = held
-        if not told and now - since < self._untold_max_s:
+        until, percent, told, since, untold_max_s = held
+        if not told and now - since < untold_max_s:
             return percent
         if now >= until:
             del self._handed[renderer_id]

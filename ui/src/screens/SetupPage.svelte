@@ -27,15 +27,20 @@
 
   const STEPS = [
     ['wifi', 'Network', '#8fc4d8'],
+    ['start', 'Start', '#9fd0c4'],
     ['name', 'Name', '#e8a0b4'],
     ['tz', 'Time', '#c8a2d8'],
     ['out', 'Output', '#7ed6bc'],
     ['music', 'Music', '#9fb4e8'],
     ['display', 'Screen', '#8fd9a8'],
     ['visualiser', 'Visualiser', '#e8c27e'],
+    ['plugins', 'Plugins', '#b4a6e8'],
     ['review', 'Review', '#f2a48f']
   ];
   const last = STEPS.length;
+  //: A step by its name: the Review's Change buttons, which went to the wrong
+  //: step by position when Start was put in (ADR-0131).
+  const at = (sid) => STEPS.findIndex((s) => s[0] === sid);
 
   let step = $state(-1);
   let loaded = $state(false);
@@ -71,6 +76,105 @@
   let headless = $state(false);
   //: ADR-0111 decision 4: asked, never assumed. null until answered.
   let visualiser = $state(null);
+  //: ADR-0128: every plugin the release ships, and the ones chosen (ids).
+  //: Off unless chosen; one with a notice (Plexamp, ADR-0098) shows it first.
+  let offered = $state([]);
+  let chosenPlugins = $state([]);
+  let noticeFor = $state(null);
+  function togglePlugin(p) {
+    if (chosenPlugins.includes(p.id)) chosenPlugins = chosenPlugins.filter((x) => x !== p.id);
+    else if (p.notice && noticeFor !== p.id) noticeFor = p.id;
+    else {
+      chosenPlugins = [...chosenPlugins, p.id];
+      noticeFor = null;
+    }
+  }
+  //: ADR-0131: a new player, or one restored from a backup. `backup` is what
+  //: the core read from the uploaded file - its settings, what else it
+  //: brings, when and where it was made; null until one is taken.
+  let startMode = $state(null);
+  let backup = $state(null);
+  let uploading = $state(null);
+  let uploadError = $state(null);
+  const restoring = $derived(startMode === 'restore');
+  const QUESTIONS = ['name', 'tz', 'out', 'music', 'display', 'visualiser', 'plugins'];
+  //: **Asked on a restore too** (George, 2026-10-08: "leave the two as
+  //: mandatory steps next to WiFi"): the output and the screen are this
+  //: player's hardware, which a backup from another one does not know. A
+  //: 0.9.5 restore put guestpi's DAC on a player with another one.
+  const ASKED = ['out', 'display'];
+
+  //: **A step changed in the review opens on the backup's answer** (ADR-0131
+  //: as amended; George, 2026-10-08: a backup used for another player, with
+  //: its name changed). Only what was not saved as a setup answer is taken
+  //: from the backup; a step continued from is saved and wins.
+  function fromBackup(b, saved = {}) {
+    const v = b?.settings ?? {};
+    if (saved.name == null && v.device_name) name = v.device_name;
+    if (saved.timezone == null && v.timezone && (!zones.length || zones.includes(v.timezone))) { tz = v.timezone; tzMode = 'auto'; }
+    if (saved.clock == null && v.clock_format) clock24 = v.clock_format !== '12 h';
+    if (saved.lms_mode == null) {
+      lmsMode = v.lms_enabled === false ? 'off' : v.lms_server ? 'address' : null;
+      lms = v.lms_server ?? '';
+    }
+    if (saved.spotify == null && v.spotify_enabled != null) spotify = v.spotify_enabled !== false;
+    if (saved.bluetooth == null && v.bt_enabled != null) bt = v.bt_enabled !== false;
+    if (saved.visualiser == null && v.visualiser_skins != null) visualiser = !!v.visualiser_skins;
+    if (saved.plugins == null) chosenPlugins = (b?.enabled ?? []).filter((id) => offered.some((p) => p.id === id));
+  }
+
+  function uploadBackup(file) {
+    if (!file) return;
+    uploadError = null;
+    uploading = 0;
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `/setup/backup?name=${encodeURIComponent(file.name)}`);
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable) uploading = e.loaded / e.total; };
+    xhr.onload = () => {
+      let body = {};
+      try { body = JSON.parse(xhr.responseText); } catch { /* not JSON */ }
+      if (xhr.status >= 200 && xhr.status < 300) {
+        backup = body.backup ?? null;
+        fromBackup(backup, body);
+      }
+      else uploadError = body.error ?? 'The file did not reach the player. Try again.';
+      uploading = null;
+    };
+    xhr.onerror = () => {
+      uploadError = "The file did not reach the player. Your phone may have dropped off the player's Wi-Fi for a moment.";
+      uploading = null;
+    };
+    xhr.send(file);
+  }
+
+  async function chooseAnother() {
+    try { await json('/setup/backup', { method: 'DELETE' }); } catch { /* the next upload replaces it */ }
+    backup = null;
+    uploadError = null;
+  }
+
+  //: The backup's settings, said the way the Review says setup's own.
+  const made = $derived(backup?.made ? new Date(backup.made * 1000).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : null);
+  //: **A second player** (ADR-0131 as amended; George, 2026-10-08: "yes"):
+  //: a backup given another name leaves the first player's identities
+  //: behind unless the switch says it is the same player. On by default: two
+  //: players sharing one identity is the mistake that costs.
+  let secondPlayer = $state(true);
+  const renamed = $derived(!!backup && (name || '').trim() !== (backup.settings?.device_name ?? '').trim());
+  const leaving = $derived(renamed && secondPlayer ? backup?.identities ?? [] : []);
+  const isLeft = (item) => leaving.includes(item) || (leaving.includes('Bluetooth pairings') && / paired Bluetooth /.test(` ${item} `));
+  async function setSecondPlayer(on) {
+    secondPlayer = on;
+    try {
+      await json('/setup/answers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ second_player: on }) });
+    } catch (err) {
+      problem = err.message;
+    }
+  }
+  //: What else the backup brings, beside the answers the review shows.
+  const brings = $derived((backup?.brings ?? []).filter((b) => !isLeft(b)).join(' · ') || 'Settings only');
+
   //: ADR-0109 as amended 2026-10-02: the restart will ask Keep this screen?
   //: on the panel, which this page says before the phone is put down.
   let keepQuestion = $state(false);
@@ -107,6 +211,10 @@
   let nets = $state([]);
   let scan = $state('scanning');
   let outputs = $state([]);
+  // ADR-0117: only the Pi's own outputs - a DAC board with no EEPROM is not
+  // seen until it is chosen, which restarts the player, so after setup.
+  const PI_OWN = ['Headphones (3.5 mm)', 'HDMI 1', 'HDMI 2'];
+  const noBoard = $derived(outputs.length > 0 && outputs.every((o) => PI_OWN.includes(o.split(' — ')[0])));
   let zones = $state([]);
   let tick = $state(new Date());
   let finished = $state(false);
@@ -139,6 +247,7 @@
   function valid() {
     switch (id) {
       case 'wifi': return wifiValid;
+      case 'start': return startMode === 'new' || (restoring && !!backup && uploading === null);
       case 'name': return slugOf(name).length > 1;
       case 'tz': return !!tz;
       case 'music': return lmsMode === 'find' || lmsMode === 'off' || (lmsMode === 'address' && lms.trim().length > 2);
@@ -187,6 +296,7 @@
       try { saved = await json('/setup/answers'); } catch { /* a fresh start */ }
       try { rows = rowsOf(await json('/settings')); } catch { /* defaults below */ }
       await loadScreens();
+      try { offered = await json('/setup/plugins'); } catch { offered = []; }
       outputs = rows.output_device?.options ?? [];
       zones = rows.timezone?.options ?? [];
       let phoneTz = null;
@@ -216,6 +326,12 @@
       if (had) scOpen = { [had.maker]: true };
       // Set up again: what the device has (a kept gexis-skins counts).
       visualiser = saved.visualiser ?? (setup?.needed ? null : (rows.visualiser_skins?.value ?? null));
+      chosenPlugins = saved.plugins ?? (setup?.needed ? []
+        : offered.filter((p) => rows[`${p.id}.enabled`]?.value === true).map((p) => p.id));
+      startMode = saved.start ?? null;
+      backup = saved.backup ?? null;
+      if (backup) fromBackup(backup, saved);
+      secondPlayer = saved.second_player ?? true;
       hidden = !!saved.hidden;
       hasPassword = !!saved.has_password;
       joinError = saved.error ?? null;
@@ -240,12 +356,14 @@
         else if (!secured) a.password = null;
         return a;
       }
+      case 'start': return { start: startMode };
       case 'name': return { name: (name || '').trim() };
       case 'tz': return { timezone: tz, clock: clock24 ? '24 h' : '12 h' };
       case 'out': return { output: out };
       case 'music': return { lms_mode: lmsMode, lms: lmsMode === 'address' ? (lms.trim() || null) : null, spotify, bluetooth: bt };
       case 'display': return headless ? { headless: true } : { headless: false, screen: chosen };
       case 'visualiser': return { visualiser };
+      case 'plugins': return { plugins: chosenPlugins };
       default: return {};
     }
   }
@@ -284,7 +402,7 @@
       return;
     }
     let to = fromReview || (retrying && id === 'wifi') ? last - 1 : step + 1;
-    if (skipped(to)) to += 1;
+    while (to < last - 1 && skipped(to)) to += 1;
     if (to === last - 1) fromReview = false;
     if (await saveStep(to)) step = to;
   }
@@ -294,10 +412,16 @@
   //: over, and the setting left as it is.
   const noVisualiser = $derived(headless || !chosenModel?.skins);
   function skipped(n) {
-    return noVisualiser && STEPS[n]?.[0] === 'visualiser';
+    const s = STEPS[n]?.[0];
+    //: ADR-0131: a backup answers every question after Start but the two
+    //: this player's own hardware answers.
+    if (restoring && QUESTIONS.includes(s) && !ASKED.includes(s)) return true;
+    return (noVisualiser && s === 'visualiser') || (!offered.length && s === 'plugins');
   }
   function back() {
-    step -= skipped(step - 1) ? 2 : 1;
+    let to = step - 1;
+    while (to > 0 && skipped(to)) to -= 1;
+    step = to;
   }
 
   //: **The count is what this person meets** (George, 2026-10-03, reviewing
@@ -397,14 +521,15 @@
   );
 
   const review = $derived([
-    ['Network', picked || (overLan ? 'Ethernet only' : 'Not set'), 0],
-    ['Name', `${shownName} · ${slug}.local`, 1],
-    ['Time zone', `${tz || 'Not set'} · ${clock24 ? '24 h' : '12 h'}`, 2],
-    ['Output', out || 'Not set', 3],
-    ['Library', lmsMode === 'off' ? 'Not used' : lmsMode === 'address' ? lms.trim() : lmsMode === 'find' ? 'Found once on your network' : 'Not chosen', 4],
-    ['Services', [spotify ? 'Spotify Connect' : null, bt ? 'Bluetooth' : null].filter(Boolean).join(' · ') || 'Lyrion only', 4],
-    ['Screen', headless ? 'Headless' : chosenModel ? `${chosenModel.maker} ${shortOf(chosenModel)} · ${chosenModel.width} × ${chosenModel.height}` : 'Not chosen', 5],
-    ...(noVisualiser ? [] : [['Visualiser', visualiser === true ? `Install · ${chosenModel?.skin_count ? `${chosenModel.skin_count} skins, ` : ''}${packSize}` : visualiser === false ? 'None' : 'Not chosen', 6]])
+    ['Network', picked || (overLan ? 'Ethernet only' : 'Not set'), at('wifi')],
+    ['Name', `${shownName} · ${slug}.local`, at('name')],
+    ['Time zone', `${tz || 'Not set'} · ${clock24 ? '24 h' : '12 h'}`, at('tz')],
+    ['Output', out || 'Not set', at('out')],
+    ['Library', lmsMode === 'off' ? 'Not used' : lmsMode === 'address' ? lms.trim() : lmsMode === 'find' ? 'Found once on your network' : restoring ? 'As in the backup' : 'Not chosen', at('music')],
+    ['Services', [spotify ? 'Spotify Connect' : null, bt ? 'Bluetooth' : null].filter(Boolean).join(' · ') || 'Lyrion only', at('music')],
+    ['Screen', headless ? 'Headless' : chosenModel ? `${chosenModel.maker} ${shortOf(chosenModel)} · ${chosenModel.width} × ${chosenModel.height}` : scPick ? scPick.replace('/', ' ') : 'Not chosen', at('display')],
+    ...(noVisualiser ? [] : [['Visualiser', visualiser === true ? `Install · ${chosenModel?.skin_count ? `${chosenModel.skin_count} skins, ` : ''}${packSize}` : visualiser === false ? 'None' : 'Not chosen', at('visualiser')]]),
+    ...(offered.length ? [['Plugins', offered.filter((p) => chosenPlugins.includes(p.id)).map((p) => p.name).join(' · ') || 'None', at('plugins')]] : [])
   ]);
 </script>
 
@@ -413,7 +538,7 @@
     <header>
       <img class="mark" src={mark} alt="" width="34" height="34" />
       <span class="crumb">
-        {step < 0 ? 'First-time setup' : step >= last || finished ? 'Almost done' : `Step ${shownAt(step)} of ${shownSteps} · ${STEPS[step][1]}`}
+        {step < 0 ? 'First-time setup' : step >= last || finished ? 'Almost done' : restoring && skipped(step) ? `Restoring · changing ${STEPS[step][1]}` : `Step ${shownAt(step)} of ${shownSteps} · ${STEPS[step][1]}`}
       </span>
       {#if setup?.ssid}<span class="over">Over {setup.ssid}</span>{/if}
     </header>
@@ -440,7 +565,10 @@
           <div class="row-spin"><span class="spin" style="border-top-color:#8fc4d8"></span><span>Opening setup</span></div>
         {:else if finished}
           <section class="pane">
-            <h1 class="hero">{shownName} is {picked ? 'joining your network' : 'set up'}</h1>
+            <h1 class="hero">{restoring ? (backup?.settings?.device_name ?? backup?.name ?? shownName) : shownName} is {picked ? 'joining your network' : 'set up'}</h1>
+            {#if restoring}
+              <p class="lead">Then it puts the backup back and restarts. Plugins and the visualiser download again after the restart, and the player's screen shows them arriving.</p>
+            {/if}
             {#if picked}
               <p class="lead">This page is served by the player over its own Wi-Fi, so it stops here. Check this phone is back on <strong>{picked}</strong>, then open the address below.</p>
             {/if}
@@ -449,7 +577,7 @@
             {/if}
             <div class="addr-card">
               <div class="label">Open in any browser</div>
-              <div class="addr">http://{slug}.local:8090</div>
+              <div class="addr">http://{restoring && backup?.settings?.device_name ? slugOf(backup.settings.device_name) || 'gexis' : slug}.local:8090</div>
             </div>
             <!-- The password line only when there was a password to refuse: a
                  secured Wi-Fi was chosen - not over a cable with no Wi-Fi, nor
@@ -552,6 +680,45 @@
                 {/if}
               {/if}
             </section>
+          {:else if id === 'start'}
+            <!-- ADR-0131 (George, 2026-10-08): a backup after the Wi-Fi, and
+                 its review in place of the other questions. -->
+            <section class="pane">
+              <div>
+                <h1>A new player, or a backup?</h1>
+                <p class="sub">A backup brings back the settings, pairings and sign-ins this player had before its card was flashed.</p>
+              </div>
+              <div class="list">
+                {#each [
+                  ['new', 'Set up a new player', 'A few questions. Every answer can be changed later in Settings.'],
+                  ['restore', 'Restore a backup', 'The file made under Settings → System → Back up now.']
+                ] as o}
+                  <button class="net" class:sel={startMode === o[0]} onclick={() => (startMode = o[0])}>
+                    <span class="radio" class:on={startMode === o[0]}><span></span></span>
+                    <span class="grow"><span class="nm">{o[1]}</span><span class="meta plain">{o[2]}</span></span>
+                  </button>
+                {/each}
+              </div>
+              {#if restoring}
+                {#if backup}
+                  <div class="picked">
+                    <span class="grow"><b>{backup.name ?? 'A gexis backup'}</b><small>{made ? `Made ${made}` : ''}{backup.file ? `${made ? ' · ' : ''}${backup.file}` : ''}</small></span>
+                    <button class="chip" onclick={chooseAnother}>Choose another</button>
+                  </div>
+                {:else if uploading !== null}
+                  <div class="row-spin"><span class="spin" style="border-top-color:#9fd0c4"></span><span>{uploading < 1 ? `Sending the backup · ${Math.round(uploading * 100)} %` : 'Checking the backup'}</span></div>
+                {:else}
+                  <label class="file-pick">
+                    <input type="file" onchange={(e) => uploadBackup(e.currentTarget.files?.[0])} />
+                    <span>Choose the backup file</span>
+                  </label>
+                  <div class="info"><span class="bar" style="background:#9fd0c4"></span><span><b>Where is it?</b><small>A backup is written to the old player's Backups share. Copied off before the card was flashed, it is on your phone or computer now, named like gexis-living-room-20261008-101500.tgz.</small></span></div>
+                {/if}
+                {#if uploadError}
+                  <div class="warn"><span class="bang">!</span><span>{uploadError}</span></div>
+                {/if}
+              {/if}
+            </section>
           {:else if id === 'name'}
             <section class="pane">
               <div>
@@ -625,6 +792,11 @@
                   </button>
                 {/each}
               </div>
+              {#if noBoard}
+                <!-- George, 2026-10-04: say where a board is chosen, rather
+                     than restart in the middle of setup. -->
+                <div class="info"><span class="bar" style="background:#7ed6bc"></span><span><b>Your board isn't listed?</b><small>Some DAC boards are not found by themselves. After setup, choose yours in Settings → Audio → Sound card board, and the player restarts with it.</small></span></div>
+              {/if}
             </section>
           {:else if id === 'music'}
             <section class="pane">
@@ -771,6 +943,66 @@
                 <span>The designs are made by the PeppyMeter community, and many show the faces of real hi-fi equipment.</span>
               </div>
             </section>
+          {:else if id === 'plugins'}
+            <!-- ADR-0128 (George, 2026-10-07: "All"): every plugin the
+                 release ships, off unless chosen. Each downloads once the
+                 player is on your network, and the screen waits for it. -->
+            <section class="pane">
+              <div>
+                <h1>Anything else to install?</h1>
+                <p class="sub">Each is downloaded once the player is on your network, and the screen shows it arriving. All can be switched on or off later under Plugins.</p>
+              </div>
+              <div class="list">
+                {#each offered as p (p.id)}
+                  <button class="net" class:sel={chosenPlugins.includes(p.id)} onclick={() => togglePlugin(p)}>
+                    <span class="grow"><span class="nm">{p.name}</span>{#if p.summary}<span class="meta plain">{p.summary}</span>{/if}</span>
+                    <span class="toggle" class:on={chosenPlugins.includes(p.id)}><span></span></span>
+                  </button>
+                  {#if noticeFor === p.id}
+                    <div class="note-card" style="--bar: #b4a6e8">
+                      <span class="bar"></span>
+                      <span>{p.notice} <b>Tap {p.name} again to switch it on.</b></span>
+                    </div>
+                  {/if}
+                {/each}
+              </div>
+            </section>
+          {:else if id === 'review' && restoring}
+            <section class="pane">
+              <div>
+                <h1>Check the backup</h1>
+                <p class="sub">Change anything setup asks, to use this backup for another player as well. Finishing moves the player to your network, puts the backup back with your changes and restarts it.</p>
+              </div>
+              <!-- The same table as a new player's Review, with Change on every
+                   answer setup asks (George, 2026-10-08): a change is
+                   written over the backup's. What setup does not ask - keys,
+                   pairings, sign-ins - comes back as it is. -->
+              <div class="table">
+                <div class="trow"><span class="what">Backup</span><span class="val grow">{backup?.name ?? 'A gexis backup'}{made ? ` · ${made}` : ''}</span><button class="chip" onclick={() => { step = at('start'); }}>Choose another</button></div>
+                {#each review as r}
+                  <div class="trow"><span class="what">{r[0]}</span><span class="val grow">{r[1]}</span><button class="chip" onclick={() => { fromReview = true; step = r[2]; }}>Change</button></div>
+                {/each}
+                <div class="trow"><span class="what">Also brought back</span><span class="val grow">{brings}</span></div>
+              </div>
+              {#if renamed && backup?.identities?.length}
+                <button class="net" class:sel={secondPlayer} onclick={() => setSecondPlayer(!secondPlayer)}>
+                  <span class="grow">
+                    <span class="nm">A second player</span>
+                    <span class="meta plain">{secondPlayer
+                      ? `Left with ${backup.settings?.device_name ?? 'the first player'}: ${backup.identities.join(' · ')}. Two players never share them. Switch off if this is the same player with a new name.`
+                      : `The same player with a new name: ${backup.identities.join(' · ')} come back too.`}</span>
+                  </span>
+                  <span class="toggle" class:on={secondPlayer}><span></span></span>
+                </button>
+              {/if}
+              {#if backup?.newer}
+                <div class="warn"><span class="bang">!</span><span>Made by a newer version of gexis. Settings this version does not know wait until it is updated.</span></div>
+              {/if}
+              <div class="note-card" style="--bar: #9fd0c4">
+                <span class="bar"></span>
+                <span>Network share passwords are not kept in backups. Enter them again in Settings after the restart.</span>
+              </div>
+            </section>
           {:else if id === 'review'}
             <section class="pane">
               <div>
@@ -797,7 +1029,7 @@
               <!-- Saying what is happening, not only dimming (George,
                    2026-10-05: "Agreed"). -->
               {saving ? (id === 'review' ? 'Connecting…' : 'Saving…')
-                : step < 0 ? 'Start' : id === 'review' ? 'Finish and connect' : 'Continue'}
+                : step < 0 ? 'Start' : id === 'review' ? (restoring ? 'Restore and connect' : 'Finish and connect') : 'Continue'}
             </button>
           </div>
         {/if}
@@ -944,6 +1176,14 @@
   .chip { padding: 8px 16px; font-size: 14px; }
   .chip.in { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); }
   .ghost { align-self: flex-start; padding: 12px 22px; font-size: 15px; }
+  /* ADR-0131: the file chooser, as a button. The input is kept in the label
+     (a hidden input still opens from its label) so the phone's own picker
+     comes up; no `accept`, which on some phones greys out a .tgz. */
+  .file-pick {
+    position: relative; align-self: flex-start; cursor: pointer; border-radius: 999px; font-weight: 700;
+    padding: 14px 24px; font-size: 16px; color: #0d151c; background: #9fd0c4;
+  }
+  .file-pick input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; }
   .back { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
   .back span { width: 10px; height: 10px; border-left: 2.5px solid var(--ink); border-bottom: 2.5px solid var(--ink); transform: rotate(45deg); margin-left: 4px; }
   .back-row { display: flex; align-items: center; gap: 14px; padding: 0 2px 6px; }

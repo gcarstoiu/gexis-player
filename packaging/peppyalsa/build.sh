@@ -10,10 +10,12 @@
 # /tmp/peppyalsa as the stage does, because that path is recorded in the
 # library's debug information.
 #
-# **PATCHED**: this is not upstream peppyalsa. Finding 052's one write per
-# spectrum frame is applied (image/stage-gexis/00-alsa/files/
-# peppyalsa-one-write-per-frame.patch); the version says so with its
-# "+git<commit>" and the Description names the patch by sha256.
+# **PATCHED**: this is not upstream peppyalsa. Two patches, in this order,
+# from image/stage-gexis/00-alsa/files/: Finding 052's one write per spectrum
+# frame (peppyalsa-one-write-per-frame.patch), then ADR-0130's bands - 50 Hz
+# to 16 kHz at every rate, an FFT sized to the rate, a lift above 1 kHz
+# (peppyalsa-spectrum-bands.patch). The version says so with its
+# "+git<commit>" and the Description names each patch by sha256.
 set -eu
 
 VERSION_ARG="$1"   # the repository's version: unused, peppyalsa has its own
@@ -29,8 +31,12 @@ UPSTREAM=0.44
 SOURCE_SHA256=a2e9fc0d0ea6b9cbb52bb9a959899c0bb9568a20d0e44d1b11afe5012960ba23
 PATCH=/src/image/stage-gexis/00-alsa/files/peppyalsa-one-write-per-frame.patch
 PATCH_SHA256=$(sha256sum "$PATCH" | cut -d' ' -f1)
+BANDS_PATCH=/src/image/stage-gexis/00-alsa/files/peppyalsa-spectrum-bands.patch
+BANDS_SHA256=$(sha256sum "$BANDS_PATCH" | cut -d' ' -f1)
 SHORT=$(printf '%s' "$COMMIT" | cut -c1-7)
-VERSION="${UPSTREAM}+git${COMMIT_DATE}.${SHORT}-1"
+# The revision is ours: raised with every change to the patches (-2: the
+# bands, ADR-0130), or apt keeps the old library (LESSONS 53).
+VERSION="${UPSTREAM}+git${COMMIT_DATE}.${SHORT}-2"
 # Staged where dpkg-shlibdeps expects a package's files: debian/<package>.
 STAGE=/tmp/pkg/debian/gexis-peppyalsa
 
@@ -51,6 +57,8 @@ fi
 # reason, kept).
 git apply --verbose "$PATCH"
 grep -q 'frame_buffer' src/spectrum.c || { echo "ERROR: the peppyalsa patch did not apply" >&2; exit 1; }
+git apply --verbose "$BANDS_PATCH"
+grep -q 'BAND_HIGH_HZ' src/spectrum.c || { echo "ERROR: the peppyalsa bands patch did not apply" >&2; exit 1; }
 
 aclocal
 libtoolize
@@ -74,7 +82,7 @@ chmod 644 "$STAGE/usr/lib/libpeppyalsa.a"
 DOC="$STAGE/usr/share/doc/gexis-player/licenses/peppyalsa"
 install -d -m 755 "$DOC"
 printf '%s\n' "peppyalsa is licensed under the GNU General Public License, version 3." \
-	"It is MODIFIED by Gexis Player: one write per frame. See ../../SOURCE.md." \
+	"It is MODIFIED by Gexis Player: one write per frame, and the spectrum's bands. See ../../SOURCE.md." \
 	"Source: https://github.com/project-owner/peppyalsa" \
 	> "$DOC/README"
 chmod 644 "$DOC/README"
@@ -104,7 +112,8 @@ Description: peppyalsa ALSA scope plugin, patched for Gexis Player
  upstream commit $COMMIT
  (source sha256 over its tracked files $SOURCE_SHA256)
  with peppyalsa-one-write-per-frame.patch applied
- (sha256 $PATCH_SHA256, Finding 052).
+ (sha256 $PATCH_SHA256, Finding 052), then
+ peppyalsa-spectrum-bands.patch (sha256 $BANDS_SHA256, ADR-0130).
 CTL
 chmod 644 "$STAGE/DEBIAN/control" "$STAGE/DEBIAN/triggers"
 mkdir -p /out

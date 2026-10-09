@@ -845,10 +845,14 @@
     z-index: 4;
     pointer-events: none;
   }
-  /* ADR-0122: Minimise, over the art's top-left corner. */
+  /* ADR-0122: Minimise, over the art's top-left corner - **below the pull
+     band** (George, 2026-10-09: it must not overlap the area that pulls the
+     tray down). The band is the top 44 px across the whole strip and sits
+     above the art, so a button from 14 px took the upper part of every tap
+     as a pull. */
   .minimise {
     position: absolute;
-    top: 14px;
+    top: 56px;
     left: 14px;
     z-index: 2;
     width: 52px;
@@ -862,11 +866,13 @@
     cursor: pointer;
   }
   .minimise:active { transform: scale(0.94); }
+  /* Pointing right, where the mini strip is on a bar (George, 2026-10-09);
+     the panel's points down, to its own. */
   .minimise__chev {
     width: 14px;
     height: 14px;
     border-right: 3px solid var(--ink);
     border-bottom: 3px solid var(--ink);
-    transform: translateY(-4px) rotate(45deg);
+    transform: translateX(-4px) rotate(-45deg);
   }
 </style>

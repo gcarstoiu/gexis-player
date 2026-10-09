@@ -155,8 +155,6 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         # ADR-0120 §5, George's "1.a" (2026-10-05): the owner's own key,
         # TheAudioDB's shared test key without one.
         "theaudiodb_key",
-        # ADR-0120 §6 (2026-10-05): Pexels beside Pixabay, the owner's key.
-        "pexels_key",
         # ADR-0121 §7 (2026-10-05): the phone as the panel's touchpad.
         "phone_touchpad", "pointer_speed",
         # ADR-0121 §3, amended 2026-10-05: Claude Design's two cursor sets.
@@ -165,6 +163,10 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         "lms_extended_nav",
         # ADR-0125 (2026-10-07): the problem report, downloaded.
         "problem_report",
+        # ADR-0126 (2026-10-07): hardware reports from owners.
+        "hardware_report",
+        # ADR-0123 (2026-10-08): the cable, shown while one is plugged in.
+        "cable",
         # ADR-0055, 2026-09-23: the design has no output picker, because
         # the design did not know the device has four playback outputs and
         # that two of them cannot be turned down.
@@ -196,6 +198,9 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         "legal", "credits",
         # ADR-0116, 2026-10-03: George asked for the last 10 releases' notes.
         "changelog",
+        # ADR-0117 decision 3, 2026-10-04: George kept the setting, for a
+        # DAC board that cannot name itself. The design predates boards.
+        "sound_card_board",
         # ADR-0054 §5, amended 2026-09-28: George's cap on the starting level
         # of a renderer that is handed one (Spotify, and a plugin that declares `volume_handed`). The design
         # predates sources that keep their own.
@@ -600,12 +605,17 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # **87**: Software update, its own tile (George, 2026-10-01). **89**:
     # Attached screen and Screen rotation (ADR-0109, Phase 13b). **90**:
     # Visualiser skins (ADR-0111). **91**: Change logs (ADR-0116). **92**:
-    # TheAudioDB key (ADR-0120, 2026-10-05). **93**: Pexels API key (ADR-0120).
-    # **95**: Phone touchpad and Pointer speed (ADR-0121). **96**: Pointer
-    # style (ADR-0121, amended). **97**: Extended navigation (ADR-0118).
-    # **95**: the Lyrion Client's three rows made one (George, 2026-10-06).
-    # **96**: Problem report (ADR-0125, 2026-10-07).
-    assert len(rows) == 96
+    # Sound card board (ADR-0117). **93**: TheAudioDB key (ADR-0120,
+    # 2026-10-05). **94**: Pexels API key (ADR-0120). **96**: Phone touchpad
+    # and Pointer speed (ADR-0121). **97**: Pointer style (ADR-0121, amended).
+    # **98**: Extended navigation (ADR-0118).
+    # **96**: the Lyrion Client's three rows made one (George, 2026-10-06).
+    # **97**: Problem report (ADR-0125, 2026-10-07). **98**: Software volume
+    # (ADR-0124). **99**: Report this hardware (ADR-0126). **98**: Software
+    # volume merged into Volume (ADR-0127). **97**: Pexels removed (George,
+    # 2026-10-07).
+    # **98**: Cable (ADR-0123, 2026-10-08).
+    assert len(rows) == 98
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
@@ -616,12 +626,16 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # 69 when ADR-0110 folded Check now and Update now into the Release
     # tile; 70 with Software update (George, 2026-10-01); 72 with Attached
     # screen and Screen rotation; 73 with Visualiser skins; 74 with Change
-    # logs (ADR-0116); 75 with TheAudioDB key (ADR-0120); 76 with Pexels
-    # API key (ADR-0120); 78 with Phone touchpad and Pointer speed (ADR-0121);
-    # 79 with Pointer style; 80 with Extended navigation (ADR-0118); 78 with
-    # the Lyrion Client's three rows made one (George, 2026-10-06); 79 with
-    # Problem report (ADR-0125).
-    assert len(rows) - len(kept) == 79
+    # logs (ADR-0116); 75 with Sound card board (ADR-0117); 76 with
+    # TheAudioDB key (ADR-0120); 77 with Pexels API key (ADR-0120); 79 with
+    # Phone touchpad and Pointer speed (ADR-0121); 80 with Pointer style;
+    # 81 with Extended navigation (ADR-0118).
+    # 79 with the Lyrion Client's three rows made one (George, 2026-10-06).
+    # 80 with Problem report (ADR-0125); 81 with Software volume (ADR-0124);
+    # 82 with Report this hardware (ADR-0126).
+    # **81**: Software volume merged into Volume (ADR-0127). **80**: Pexels
+    # removed.
+    assert len(rows) - len(kept) == 81  # 81: Cable (ADR-0123)
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():
@@ -874,44 +888,45 @@ def test_an_unavailable_option_is_greyed_not_hidden(store):
     The opposite of the now-playing rule, on purpose: a screen for changing
     things should say what cannot be changed and why."""
     settings = Settings(store, wired={"output_mode": None})
-    settings.set("output_mode", "Variable")
+    settings.set("output_mode", "Hardware")
 
-    settings.restrict("output_mode", {"Variable": "HDMI 1 has no volume control."})
+    settings.restrict("output_mode", {"Hardware": "HDMI 1 has no volume control."})
 
     row = _row(settings)
-    assert row["options"] == ["Variable", "Fixed"]  # both still offered
-    assert row["unavailable"] == {"Variable": "HDMI 1 has no volume control."}
-    assert row["value"] == "Fixed"  # what is in force
+    assert row["options"] == ["Hardware", "Software", "Fixed"]  # all still offered
+    assert row["unavailable"] == {"Hardware": "HDMI 1 has no volume control."}
+    assert row["value"] == "Software"  # what is in force: the next option (ADR-0127)
     with pytest.raises(Locked):
-        settings.set("output_mode", "Variable")
+        settings.set("output_mode", "Hardware")
 
 
 def test_the_stored_choice_is_untouched_and_comes_back(store):
     """*"When changing back to dac set the previously selected option."*
     The restriction sits **over** the store and never replaces it."""
     settings = Settings(store, wired={"output_mode": None})
-    settings.set("output_mode", "Variable")
-    settings.restrict("output_mode", {"Variable": "no volume control here"})
-    assert settings.value("output_mode") == "Fixed"
+    settings.set("output_mode", "Hardware")
+    settings.restrict("output_mode", {"Hardware": "no volume control here"})
+    assert settings.value("output_mode") == "Software"
 
     settings.restrict("output_mode", {})
 
-    assert settings.value("output_mode") == "Variable"
+    assert settings.value("output_mode") == "Hardware"
 
 
 def test_with_no_previous_choice_the_rows_own_default_answers(store):
-    """*"If there is no previous selection default to variable."*"""
+    """*"If there is no previous selection default to variable."* - Hardware
+    since ADR-0127."""
     settings = Settings(store, wired={"output_mode": None})
-    settings.restrict("output_mode", {"Variable": "no volume control here"})
+    settings.restrict("output_mode", {"Hardware": "no volume control here"})
     settings.restrict("output_mode", {})
 
-    assert settings.value("output_mode") == "Variable"
+    assert settings.value("output_mode") == "Hardware"
 
 
 def test_a_choice_a_user_had_already_made_is_still_settable(store):
     """Only the greyed option is refused, not the row."""
     settings = Settings(store, wired={"output_mode": None})
-    settings.restrict("output_mode", {"Variable": "no volume control here"})
+    settings.restrict("output_mode", {"Hardware": "no volume control here"})
 
     assert settings.set("output_mode", "Fixed") == "Fixed"
 
@@ -1318,7 +1333,7 @@ def test_fixed_output_hides_the_volume_rows(store):
                 for r in g["rows"] if r.get("key") and r["visible"]}
     volume_rows = {"max_ceiling", "start_max", "travel_curve"}
     settings.set("spotify_enabled", True)
-    settings.set("output_mode", "Variable")
+    settings.set("output_mode", "Hardware")
     assert volume_rows <= shown()
     settings.set("output_mode", "Fixed")
     assert not volume_rows & shown()
@@ -1335,7 +1350,7 @@ def test_starting_volume_sits_with_spotify_and_hides_with_it(store):
     assert keys.index("start_max") == keys.index("spotify_enabled") + 1
     def start_max():
         return next(r for g in settings.to_json() for r in g["rows"] if r.get("key") == "start_max")["visible"]
-    settings.set("output_mode", "Variable")
+    settings.set("output_mode", "Hardware")
     settings.set("spotify_enabled", True)
     assert start_max() is True
     settings.set("spotify_enabled", False)
@@ -1379,6 +1394,32 @@ def test_a_plugin_s_report_is_published_on_its_row_and_goes_with_it(store):
         settings.report("plexamp.claim_token", "half-done")
     with pytest.raises(UnknownSetting):
         settings.report("plexamp.nothing", "done")
+
+
+def test_a_service_s_connection_is_indicated_on_its_heading_apart_from_reports(store):
+    """ADR-0129 as amended (George, 2026-10-08: *"next in system, in the same
+    place where the keys are added"*): the core's reading - *Connected* - is
+    the `indicator` of the heading above the plugin's own rows, beside and
+    independent of a plugin's `status` on its switch."""
+    settings = Settings(store, registry=Settings.with_plugins(_groups(), [_plugin("beszel", kind="service", settings=[
+        {"key": "key", "type": "text", "label": "Hub public key", "default": None}])]))
+    def heading():
+        return next(r for g in settings.to_json() for r in g["rows"]
+                    if r.get("type") == "group" and r.get("indicatorOf") == "beszel.enabled")
+    def switch():
+        return next(r for g in settings.to_json() for r in g["rows"] if r.get("key") == "beszel.enabled")
+    assert "indicator" not in heading()
+    assert settings.indicate("beszel.enabled", "wait", "Connecting") is True
+    assert heading()["indicator"] == {"tone": "wait", "text": "Connecting"}
+    assert "indicator" not in switch(), "said once, where the keys are"
+    assert settings.indicate("beszel.enabled", "wait", "Connecting") is False, "a repeat changes nothing"
+    settings.report("beszel.enabled", "failed", error="Beszel could not start. Check its settings.")
+    settings.indicate("beszel.enabled", "bad", "Not connected")
+    assert heading()["indicator"]["tone"] == "bad" and switch()["status"]["state"] == "failed"
+    assert settings.indicate("beszel.enabled", None) is True
+    assert "indicator" not in heading() and "status" in switch()
+    with pytest.raises(InvalidValue):
+        settings.indicate("beszel.enabled", "green")
 
 
 def test_headless_hides_every_setting_that_needs_a_screen(store):
@@ -1456,3 +1497,62 @@ def test_every_row_shown_and_editable_is_wired():
         and f'"{r["key"]}"' not in main and r["key"] not in not_wired_on_purpose
     )
     assert not missing, f"shown for editing, not wired in __main__: {missing}"
+
+
+def test_output_mode_and_software_volume_become_one_row(tmp_path):
+    """ADR-0127: Variable is Hardware, or Software where the toggle was on;
+    Fixed stays Fixed; the toggle alone becomes Software."""
+    from gexis_core import settings_migrations
+    from gexis_core.settings import SettingsStore
+
+    for before, after in [
+        ({"output_mode": "Variable"}, "Hardware"),
+        ({"output_mode": "Variable", "software_volume": True}, "Software"),
+        ({"output_mode": "Fixed", "software_volume": True}, "Fixed"),
+        ({"software_volume": True}, "Software"),
+        ({"software_volume": False}, None),
+        ({}, None),
+    ]:
+        store = SettingsStore(tmp_path / f"s{len(list(tmp_path.iterdir()))}.db")
+        for key, value in before.items():
+            store.set(key, value)
+        settings_migrations.migrate(store)
+        assert store.get("output_mode") == after, before
+        assert store.get("software_volume") is None
+
+
+def test_a_text_row_with_a_pattern_refuses_what_does_not_fit_and_says_why():
+    """2026-10-07: a pasted paragraph as the Beszel hub's key left the agent
+    failing at every start, and nothing said so."""
+    import json
+    from pathlib import Path
+
+    from gexis_core.settings_registry import InvalidValue, validate
+
+    manifest = Path(__file__).parents[2] / "image" / "stage-gexis" / "07-beszel" / "files" / "plugin.json"
+    row = next(r for r in json.loads(manifest.read_text())["settings"] if r["key"] == "key")
+    key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFZVk7Y67bQyvENPVjSUAOS9eZvS+Cabc123"
+    assert validate(row, key) == key
+    assert validate(row, f"  {key} beszel@hub ") == f"{key} beszel@hub"
+    assert validate(row, "") == "", "clearing is not a value"
+    with pytest.raises(InvalidValue) as refused:
+        validate(row, "Waiting on your answer: while the settling screen is up")
+    assert str(refused.value).startswith("That is not the hub's public key")
+    assert validate({"key": "x", "type": "text", "pattern": "(unclosed"}, "anything") == "anything", \
+        "a pattern that does not compile does not lock the row"
+
+
+def test_a_row_can_follow_the_hardware(store):
+    """ADR-0123: the Cable row is there while a cable is plugged in - a
+    provider, read with every listing; one that fails hides its row only."""
+    there = {"on": False}
+    settings = Settings(store, shown={"cable": lambda: there["on"]})
+    def cable():
+        return next(r for g in settings.to_json() for r in g["rows"] if r.get("key") == "cable")
+    assert cable()["visible"] is False
+    there["on"] = True
+    assert cable()["visible"] is True
+    broken = Settings(store, shown={"cable": lambda: 1 / 0})
+    assert next(r for g in broken.to_json() for r in g["rows"] if r.get("key") == "cable")["visible"] is False
+    with pytest.raises(ValueError):
+        Settings(store, shown={"nothing": lambda: True})

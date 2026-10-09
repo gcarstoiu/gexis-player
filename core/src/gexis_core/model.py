@@ -241,12 +241,12 @@ class PlaybackState:
     fixed_output: bool = False
     #: **ADR-0055 §6: whether the visualiser can have levels at all.**
     #:
-    #: False on an output whose chain carries no meter - both HDMI, where
-    #: ALSA's `type meter` and the peppyalsa scope come apart over a
-    #: conversion layer. Published for the same reason `fixed_output` is:
-    #: the panel cannot tell "no levels yet" from "no levels ever", and a
-    #: visualisation button that opens a dead screen is the shape ADR-0046
-    #: spent a record arguing against.
+    #: False on an output whose chain carries no meter - only HDMI on Fixed
+    #: volume (ADR-0055 §6 as amended), where ALSA's `type meter` and the
+    #: peppyalsa scope come apart over a conversion layer. Published for the
+    #: same reason `fixed_output` is: the panel cannot tell "no levels yet"
+    #: from "no levels ever", and a visualisation button that opens a dead
+    #: screen is the shape ADR-0046 spent a record arguing against.
     meters: bool = True
     #: A Bluetooth pairing request waiting for an answer, or None
     #: (ADR-0045). Published here rather than on a channel of its own
@@ -286,6 +286,12 @@ class PlaybackState:
     screen_confirm: dict | None = None
     #: ADR-0109, amended 2026-10-03: a different screen attached at start.
     screen_new: dict | None = None
+    #: ADR-0126: the hardware report's screen check - the test pattern on the
+    #: panel, asked for from a phone, and what the four corner taps measured.
+    screen_check: dict | None = None
+    #: ADR-0128: the first start after setup, until the downloads it chose
+    #: have finished - `phase` and each item's state - or None.
+    settling: dict | None = None
 
     @property
     def controls(self) -> dict | None:
@@ -330,4 +336,6 @@ class PlaybackState:
             "update": dict(self.update) if self.update else None,
             "screen_confirm": dict(self.screen_confirm) if self.screen_confirm else None,
             "screen_new": dict(self.screen_new) if self.screen_new else None,
+            "screen_check": dict(self.screen_check) if self.screen_check else None,
+            "settling": dict(self.settling) if self.settling else None,
         }

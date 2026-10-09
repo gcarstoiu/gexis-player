@@ -100,6 +100,7 @@ class Supervisor:
         on_active_change=None,
         on_handoff_change=None,
         enabled=None,
+        frozen=None,
     ) -> None:
         """`device_busy` is a one-arg callable (sync or async), taking a
         renderer_id and returning whether *that specific renderer* still
@@ -175,6 +176,13 @@ class Supervisor:
         #: session ends - and a gate at three callers is a gate missing from
         #: the fourth.
         self._enabled = enabled
+        #: **No takeover while an update installs** (ADR-0105 §4 step 4, built
+        #: 2026-10-07): a zero-arg callable giving the reason while the
+        #: device is not to be taken, None otherwise. Unlike a switched-off
+        #: renderer, one asking now is running - a phone choosing the device
+        #: mid-install would play through it - so it is released, not just
+        #: refused.
+        self._frozen = frozen
         # None means *nobody* holds the device (ADR-0027). Until
         # 2026-09-12 this same None meant "LMS", which is why the
         # distinction is called out rather than left to the type.
@@ -258,6 +266,13 @@ class Supervisor:
         # to report and nobody is released.
         if self._enabled is not None and not self._enabled(renderer_id):
             logger.info("acquire: %s is switched off, refusing", renderer_id)
+            return
+        reason = self._frozen() if self._frozen is not None else None
+        if reason:
+            logger.info("acquire: %s refused - %s; releasing it", renderer_id, reason)
+            async with self._lock:
+                if renderer_id != self._active:
+                    await self._release_with_ladder(renderer_id)
             return
         async with self._lock:
             if renderer_id == self._active:

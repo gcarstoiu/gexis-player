@@ -288,6 +288,14 @@ recognition.
 | Attached screen | [N] | A choice from the list of supported screens (grouped by maker, from `foonerd/pi_screen_setup`'s presets, Finding 100). Sets the layout family (Standard or Bar) and the visualiser's skin set. The same list as setup's Screen step, where a recognised screen is confirmed or another chosen. Applies at the next restart |
 | Screen rotation | [N] | 0° / 180° (ADR-0109 decision 6, George 2026-09-30: portrait is not designed). 0° is the model's landscape: the two bar screens are portrait panels used sideways (Finding 100), and their list entry carries that turn. Applies at the next restart |
 
+### Appended 2026-10-04 — Phase 13d's row
+
+Proposed in ADR-0117 decision 3 and confirmed by George, 2026-10-04:
+*"Understood the decision now. Let's keep the setting."*
+
+| Setting | Mark | Notes |
+|---|---|---|
+| Sound card board | [N] | Settings → Audio, and the same choice in setup's Audio step. *Found by itself* (the default: nothing written) or a board from the list (Volumio's, read and corrected). For a board that does not name itself: choosing writes its `dtoverlay=` to `config.txt` and restarts; **if no card appears, the overlay is taken out again by itself** and the row says the board was not found (ADR-0117) |
 ### Changed 2026-10-04 — Debug logs on by default on Testing
 
 `debug_logs` ([R], ADR-0103) defaults **on** when the update channel is
