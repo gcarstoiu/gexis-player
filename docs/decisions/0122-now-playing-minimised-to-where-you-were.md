@@ -52,3 +52,13 @@ path is often four or five levels deep.
 - The phone's Home (ADR-0101 amended) still means the root: it remounts the
   library, as Now Playing's Home does.
 - With LMS off there is no library ([ADR-0079](0079-with-lms-off-the-panel-is-two-screens.md)): no Minimise either.
+
+## Amended 2026-10-09: on a bar, the chevron points right and clears the pull band
+
+George: on a bar *"the minimise button on now playing should have its
+chevron pointing towards the right as that's where the mini strip is"*, and
+*"make sure it doesn't overlap with the touch area for pulling down the
+volume drawer"*. The band that pulls the tray down is the top 44 px across
+the whole strip, above the art; the button sat from 14 px, so the upper part
+of a tap opened the tray. On a bar it now starts at 56 px and its chevron
+points right. The panel's is unchanged.
