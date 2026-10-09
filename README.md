@@ -4,19 +4,14 @@
 
 # Gexis Player
 
-**Turn a Raspberry Pi 4, a DAC and a touchscreen into a high-fidelity streamer
-with a face. It plays whatever you send it, from Spotify, your own library,
-Plexamp or a phone over Bluetooth, hands the DAC cleanly from one to the next,
-and shows every track the same way: artwork, lyrics and the story behind it.**
+**Your music lives in many places: Spotify, a server in the cupboard, Plex,
+the phone in your pocket. Gexis Player brings all of it to one place: a
+Raspberry Pi 4 with a good DAC and a touchscreen, next to your amplifier.**
 
-🎧 Bit-perfect up to 24-bit / 192 kHz · 🔀 Spotify, Lyrion, Plexamp and
-Bluetooth on one device · 🖥️ Touchscreens from 7" to 13.3", bar displays
-included · 📈 VU meters, spectrum and turning turntables when you just want to
-watch the music · 📱 Set up and run from your phone, no keyboard, no SSH
-
-> 🧪 **Testing releases are out.** Gexis Player is built in the open, plays
-> every day on its reference devices, and updates itself over the network:
-> a new release never needs a reflash. The first Stable release is next.
+An audiophile streamer for the Raspberry Pi and the DIY audio community.
+Bit-perfect up to 24-bit / 192 kHz, every source on one screen, set up from
+your phone in minutes. Free and open source: no ads, no account, no
+subscription.
 
 <p align="center">
   <img src="docs/manual/images/panel-nowplaying-track.webp" alt="Now playing on the 10.1-inch panel: artwork, title, artist and the current lyric line" width="720">
@@ -26,6 +21,10 @@ watch the music · 📱 Set up and run from your phone, no keyboard, no SSH
   <img src="docs/manual/images/bar-nowplaying-track.webp" alt="The same track on an 11.9-inch bar display" width="356">
 </p>
 <p align="center"><sub>Shown with a public-domain demo library.</sub></p>
+
+> 🧪 **Testing releases are out.** Gexis Player is built in the open, plays
+> every day on its reference devices, and updates itself over the network:
+> a new release never needs a reflash. The first Stable release is next.
 
 Gexis began as the player for one living room and grew into something we are
 genuinely proud of. It is built on many years of other people's open-source
@@ -37,74 +36,96 @@ done its job, and we are glad to share it.
 
 ## 🎵 What it does
 
-Put a Raspberry Pi 4 with a DAC and a touchscreen next to your amplifier, flash
-the Gexis image, and answer a few questions on your phone. That is the whole
-installation:
+### 🎧 Plays from the apps you already use
 
-- **Cast to it from the apps you already have.** It appears as a speaker in the
-  Spotify app, as a player in Lyrion (Logitech Media Server) and Plexamp, and as a
-  Bluetooth speaker on your phone.
-- **Switch sources without thinking about it.** Start playing from another app
-  and it takes over: the previous source is stopped politely, a short transition
-  screen shows who is taking over, and the new one plays. You never have to
-  "disconnect" anything first.
-- **See what's playing on the panel.** Artwork, artist, album, lyrics (synced
-  where available), artist biographies and photos. It's the same screen whatever
-  the source: Spotify, your own library through Lyrion, Plex, or a phone over
-  Bluetooth.
-- **Browse and play your library** from the panel when you use Lyrion: albums,
-  artists, playlists and radio.
-- **Watch it.** A visualiser with up to 287 skins, depending on the screen:
-  classic needle VU meters, spectrum analysers from 50 Hz to 16 kHz, and
-  turntables and tape decks whose records and reels turn as the music plays.
-- **Set it up from your phone.** On first boot it opens its own Wi-Fi. The
-  panel shows two QR codes, one to join that network and one to open the setup
-  page, and your phone walks you through the rest: your Wi-Fi, a name, the time,
-  the output, your music and the screen. The screen and the DAC are recognised
-  where they can be, so most answers are already filled in.
-- **Move to a new card in minutes.** Setup can restore a backup straight from
-  your phone, show what it brings back, and let you change anything on the way.
-  One player's backup can even start a second one, which leaves the first one's
-  sign-ins and pairings where they belong.
-- **Control it from your phone's browser.** Every setting on the panel is also
-  on your phone. The panel and the phone take the same input.
+It appears as a speaker in the Spotify app, as a player in Lyrion and
+Plexamp, and as a Bluetooth speaker on your phone. Start playing from any of
+them and Gexis hands over: the source that was playing is stopped politely,
+a short transition shows who is taking over, and the new one plays. Nothing
+to disconnect first, no juggling apps when two of them want the DAC: the
+newest deliberate choice wins, and the others are told.
 
-## ✨ Main features
+### 🎚️ Sounds the way the file does
+
+Bit-perfect to the DAC up to 24/192. The volume is set in the DAC's own
+hardware, in software for an output with none of its own (HDMI), or fixed for
+an amplifier that does it. A maximum level holds for every source, and
+Spotify never starts louder than you allow. Because Gexis is the whole
+system, not an app on someone else's, the audio chain can be checked rather
+than taken on trust.
+
+### 🖼️ Shows every track the same way
+
+Artwork, synced lyrics, artist biographies and photos, and the album the track
+is from, whether it came from Spotify, your own files, Plex or a phone. When
+nothing is playing: a clock, the weather and wallpapers. When you just want to
+watch the music: up to 287 visualiser skins, from studio VU meters and a
+spectrum from 50 Hz to 16 kHz to turntables and tape decks whose records and
+reels turn as the music plays.
+
+### 📲 Sets up from your phone, and stays set up
+
+On first boot the player opens its own Wi-Fi, the panel shows two QR codes,
+and your phone walks you through the rest: your Wi-Fi, a name, the time, the
+output, your music and the screen. The screen and the DAC are recognised where
+they can be, so most answers are already filled in. After that, updates arrive
+over the network, every setting is on your phone as well as the panel, and a
+backup brings it all back on a new card, during setup, straight from your
+phone. No keyboard, no terminal, no config files.
+
+## 📚 Your library, with Lyrion
+
+Gexis plays your own music through **Lyrion Music Server**, the free,
+open-source server that grew out of Logitech Media Server and SlimServer and
+has been refined by its community for two decades. Gexis does not reinvent a
+library; it uses one of the most mature there is:
+
+- **Built for big collections.** Lyrion indexes tens of thousands of files on
+  a NAS, a USB drive or a share, and keeps them browsable by album, artist,
+  genre, year and playlist.
+- **More than your files.** Lyrion's own apps add internet radio, podcasts and
+  streaming services, all playing through the same player.
+- **Played and browsed on the panel.** Albums, artists, playlists and radio
+  from the touchscreen, with the queue beside Now Playing, and every Lyrion
+  app on your phone or computer still at hand.
+- **Wherever it suits you.** Use the Lyrion server you already run, or switch
+  on the Lyrion Server plugin and the player keeps your library itself; its
+  scans run at the lowest priority, and a full scan of a large library played
+  through 40 minutes without a gap. Or leave Lyrion out: Spotify, Plexamp and
+  Bluetooth work without it.
+
+## 🔌 Plugins: make it yours
+
+Gexis is built to be extended. A plugin adds a **source** that plays through
+the player or a **service** that runs beside it, and is switched on, updated
+or removed from Settings, with its progress shown in the switch itself.
+
+- **Ready today:** Plexamp, the Lyrion Server, the visualiser skin packs, and
+  Beszel monitoring with its connection shown in Settings.
+- **Your own:** upload a plugin from Settings on your phone. It speaks a small
+  JSON protocol over a local socket, so it can be written in any language, and
+  runs in a sandbox the player sets up for it. The
+  [plugin guide](docs/WRITING-A-PLUGIN.md) takes you from an empty folder to a
+  plugin installed from your phone, with two working examples.
+- **Clean to remove:** Remove deletes what a plugin downloaded, and a plugin
+  that fails says why on its own row.
+
+## ✨ Features at a glance
 
 | | |
 |---|---|
-| 🔊 **Sources** | Spotify Connect · Lyrion / Logitech Media Server (squeezelite) · Bluetooth (A2DP) · Plexamp |
-| 🎚️ **Sound** | Bit-perfect to the DAC up to 24/192. Volume set in the DAC's own hardware (bit-perfect), in software for an output with no volume control such as HDMI, or fixed for an amplifier that sets it. A maximum-volume limit that holds for every source, and a starting volume Spotify never exceeds when it takes over |
-| 🔀 **Handover** | One source at a time, never mixed. Takeover in any direction. The previous source is released before the next one plays |
-| 🖼️ **Now playing** | Artwork, track info, synced or plain lyrics, artist info and photos, queue for Lyrion |
-| 📚 **Library** | Browse Lyrion by album, artist, playlist and radio, from the touchscreen |
-| 📈 **Visualiser** | Up to 287 skins, depending on the screen size: VU meters, spectrum from 50 Hz to 16 kHz with fine bass detail, and animated turntables and tape decks with progress, time, volume and play-state shown in each skin's own style. Skins can rotate per track |
-| 🖥️ **Screens** | HDMI touchscreens from 7" to 13.3", including 7.9" and 11.9" bar displays, recognised during setup and laid out for their shape. Or none at all: Headless keeps everything else working |
-| 🧭 **First-time setup** | No network at first boot: the player opens its own Wi-Fi (WPA2, password on the panel) and a setup page for your phone, reached by QR code. A wrong Wi-Fi password brings setup back with the reason, keeping everything else you entered. A player that starts without its Wi-Fi opens setup again after 90 seconds, and rejoins its own network when it returns |
-| 💾 **Backup & restore** | Your settings, pairings and source logins in one archive, on a network share or downloaded to your phone. A freshly flashed card restores it during setup, straight from your phone: it asks for this player's output and screen, shows what the backup brings back, and lets you change the rest |
-| ⬆️ **Updates** | Over the network, from Settings, with release notes. Two channels: *Testing* gets each release first, *Stable* once it has been tried. Never a reflash |
-| 🔗 **Cable or Wi-Fi** | On a network cable, Settings shows its speed and address, and the cable wins: Wi-Fi steps aside while the cable carries the player. A fixed address for either, kept only once it is shown to work, so a typo cannot lock you out |
-| 🔌 **Plugins** | Extra sources and services as plugins, switched on or off in Settings, with progress and retry shown in the switch itself when one downloads software. Today: Plexamp and the Lyrion Server (sources), the visualiser skins, and Beszel monitoring with its connection shown in Settings. Your own plugins can be uploaded from Settings. Remove deletes what a plugin downloaded |
-| 🌤️ **Idle screen** | Clock (24 or 12 hour), weather and wallpapers when nothing is playing |
-| 📱 **Settings anywhere** | The full settings screen on the panel and on any phone or computer on your network |
-| 🩺 **When something is wrong** | A problem report in one download, with addresses, names, keys and what you play taken out first. Hardware feedback that tests your screen's touch and your DAC's rates, and helps others see what works before buying |
-
-## 🏆 Where it shines
-
-- **Sound you can check.** Bit-perfect is a property of the whole audio chain,
-  and because Gexis owns the whole system, not an app on top of someone else's,
-  the chain can be inspected rather than taken on trust.
-- **Handover done properly.** Most multi-source players leave you juggling apps
-  when two of them want the DAC. Gexis arbitrates: the newest deliberate choice
-  wins, and the others are told.
-- **One face for every source.** A track from Spotify, from your own library or
-  from a phone over Bluetooth looks the same on the panel, with the same
-  artwork, lyrics and artist pages.
-- **A visualiser worth leaving on,** from studio VU meters to a turning
-  record with its tonearm tracking the song.
-- **An appliance, not a project.** Flash, answer a few questions on your
-  phone, and from then on it updates itself. No keyboard, no terminal, no
-  config files, and a backup that brings it all back on a new card.
+| 🔊 **Sources** | Spotify Connect · Lyrion (squeezelite) · Bluetooth (A2DP) · Plexamp · your own plugins |
+| 🎚️ **Sound** | Bit-perfect up to 24/192 · hardware, software or fixed volume · a maximum level for every source · a starting volume Spotify never exceeds |
+| 🔀 **Handover** | One source at a time, never mixed · takeover in any direction · the previous source released before the next one plays |
+| 🖼️ **Now playing** | Artwork · synced or plain lyrics · artist information and photos · the Lyrion queue |
+| 📈 **Visualiser** | Up to 287 skins, depending on the screen · VU meters, spectrum, turntables and tape decks · progress, time, volume and play-state in each skin's own style · skins that rotate per track |
+| 🖥️ **Screens** | HDMI touchscreens from 7" to 13.3", including 7.9" and 11.9" bar displays, recognised and laid out for their shape · or Headless, with no screen at all |
+| 🧭 **Setup** | Over the player's own Wi-Fi (WPA2, password on the panel) or your network on a cable · a wrong password brings setup back with the reason · a player that starts without its Wi-Fi offers setup again after 90 seconds |
+| 💾 **Backup & restore** | Settings, pairings and source logins in one archive, on a network share or downloaded to your phone · restored during setup, which asks for this player's output and screen and lets you change the rest · one player's backup can start a second one, leaving the first one's sign-ins behind |
+| ⬆️ **Updates** | Over the network, with release notes · *Testing* gets each release first, *Stable* once it has been tried |
+| 🔗 **Network** | Wi-Fi or cable, and the cable wins while it is plugged in · a fixed address on either, kept only once it is shown to work |
+| 📱 **Settings anywhere** | The full settings on the panel and on any phone or computer on your network, with a mini player on the phone |
+| 🩺 **When something is wrong** | A problem report in one download, with addresses, names, keys and what you play taken out first · hardware feedback that tests your screen's touch and your DAC's rates |
 
 ## ⚖️ Limitations and trade-offs
 
@@ -114,15 +135,13 @@ We'd rather you knew these up front:
   DAC2 HD and IQaudIO Pi-DAC PRO; four HDMI touch screens. Other DACs and
   screens are listed but untested - see the
   [hardware requirements](docs/HARDWARE.md).
-- **Your library comes through Lyrion.** Gexis has no music library of its
-  own. Browsing your files needs a Lyrion server: one elsewhere on your
-  network, or the optional Lyrion Server plugin on the player itself.
 - **One source plays at a time,** by design (no mixing). A takeover is not
   instant: the previous source has to let go of the DAC first, and some
   sources let go faster than others.
 - **On a phone you get Settings and a mini player, not the whole player.**
   The mini player has the volume, a touchpad and buttons that drive the panel;
-  the library is browsed on the panel or in your streaming app.
+  the library is browsed on the panel, in a Lyrion app or in your streaming
+  app.
 - **Setup takes a phone.** Over Wi-Fi, the player has one radio, so it
   either hosts its setup network or joins yours, never both: your phone loses
   the setup page at the moment the player moves over, and says the setup
