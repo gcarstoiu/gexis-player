@@ -35,9 +35,8 @@ subscription.
 > every day on its reference devices, and updates itself over the network:
 > a new release never needs a reflash. The first Stable release is next.
 
-Gexis is one person's project: mine. I love hi-fi, and I had a clear idea of
-how a player should work, so I built it, carefully, with the help of AI, and
-tested it on real hardware. It began as the player for one living room and
+I love hi-fi, and I had a clear idea of how a player should work, so I built
+it, carefully, with the help of AI, and tested it on real hardware. It began as the player for one living room and
 grew into something I am genuinely proud of. It is built on many years of
 other people's open-source work, so it goes back out the same way: free,
 under the GPL, with every line in the open. If it makes your music sound and
