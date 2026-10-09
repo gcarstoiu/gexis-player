@@ -1109,3 +1109,49 @@ def test_a_core_restart_is_not_a_boot(tmp_path):
     marker.touch()
     assert not boot_check_due(marker)
     assert not boot_check_due(None)
+
+
+def _players(*rows):
+    return {"result": {"players_loop": [dict(zip(("name", "playerid", "connected"), r)) for r in rows]}}
+
+
+def _resolver(players, macs):
+    from gexis_core.adapters.lms import LmsAdapter
+    a = LmsAdapter("127.0.0.1", 9000, "GuestPi", own_macs=lambda: macs)
+
+    async def rpc(session, player, cmd):
+        return players
+    a._rpc = rpc
+    return a
+
+
+def test_our_player_is_found_by_our_address_not_by_a_shared_name():
+    """George's bar player, 2026-10-09: restored as "GuestPi" beside guestpi,
+    with a stale entry from the setup boot under the cable's address. Play
+    went to the first "GuestPi" listed - not this player."""
+    players = _players(("GuestPi", "aa:bb:cc:00:10:06", 0),      # our stale cable entry
+                       ("GuestPi", "aa:bb:cc:00:20:87", 1),      # guestpi
+                       ("GuestPi", "aa:bb:cc:00:10:07", 1))      # us, over Wi-Fi
+    a = _resolver(players, ["aa:bb:cc:00:10:06", "aa:bb:cc:00:10:07"])
+    assert asyncio.run(a._resolve_player_id(None)) == "aa:bb:cc:00:10:07"
+
+
+def test_while_our_squeezelite_has_not_connected_the_lookup_waits():
+    players = _players(("GuestPi", "aa:bb:cc:00:10:06", 0), ("GuestPi", "aa:bb:cc:00:20:87", 1))
+    a = _resolver(players, ["aa:bb:cc:00:10:06", "aa:bb:cc:00:10:07"])
+    with pytest.raises(RuntimeError, match="not connected yet"):
+        asyncio.run(a._resolve_player_id(None))
+
+
+def test_the_name_is_the_last_resort_and_prefers_a_connected_one():
+    players = _players(("GuestPi", "aa:bb:cc:00:00:01", 0), ("GuestPi", "aa:bb:cc:00:00:02", 1))
+    a = _resolver(players, ["aa:bb:cc:00:10:07"])
+    assert asyncio.run(a._resolve_player_id(None)) == "aa:bb:cc:00:00:02"
+
+
+def test_own_mac_addresses_reads_the_interfaces(tmp_path):
+    from gexis_core.adapters.lms import own_mac_addresses
+    for name, mac in (("lo", "00:00:00:00:00:00"), ("eth0", "AA:BB:CC:00:10:06"), ("wlan0", "aa:bb:cc:00:10:07")):
+        (tmp_path / name).mkdir()
+        (tmp_path / name / "address").write_text(mac + "\n")
+    assert own_mac_addresses(tmp_path) == ["aa:bb:cc:00:10:06", "aa:bb:cc:00:10:07"]
