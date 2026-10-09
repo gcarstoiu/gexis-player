@@ -187,7 +187,8 @@ Rough, and subject to change:
   scrolling tickers and smooth rotation. A fixed address on cable or Wi-Fi.
   Problem reports and hardware feedback.
 - 🔜 **Next:** the first Stable release.
-- 🎨 **Later:** themes. Artist and album information from your own Plex server.
+- 🎨 **Later:** themes. With Plex switched on, your own Plex server fills in
+  the artist and album information other sources leave out.
 - 💭 **Maybe:** a visual equaliser, room correction with a phone as the
   microphone, the DAC's own filter and polarity options.
 
