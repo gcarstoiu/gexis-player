@@ -161,11 +161,13 @@ or removed from Settings, with its progress shown in the switch itself.
 
 I'd rather you knew these up front:
 
-- **Tested hardware is narrow.** A Raspberry Pi 4 (4 GB); the HiFiBerry
-  DAC2 HD and IQaudIO Pi-DAC PRO; four HDMI touch screens. Other DACs and
-  screens are listed but untested, as are USB DACs and rates above 24/192 -
-  see the [hardware requirements](docs/HARDWARE.md). *Hardware feedback* on
-  the player is the way to report what works.
+- **Tested hardware is narrow, for now.** A Raspberry Pi 4 (4 GB); the
+  HiFiBerry DAC2 HD and IQaudIO Pi-DAC PRO; four HDMI touch screens. Other
+  DACs and screens are listed but untested, as are USB DACs and rates above
+  24/192 - see the [hardware requirements](docs/HARDWARE.md). Community
+  testing is very welcome and is how this list grows: if you run Gexis on
+  other hardware, *Hardware feedback* on the player tests it and fills in
+  most of the report for you.
 - **On a phone you get Settings and a mini player, not the whole player.**
   The mini player has the volume, a touchpad and buttons that drive the panel;
   the library is browsed on the panel, in a Lyrion app or in your streaming
