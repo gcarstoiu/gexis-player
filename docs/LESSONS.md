@@ -1185,6 +1185,26 @@ the value back.**
 comparing anything: the process's memory map, a version string, a symbol
 only one has. "No difference" is a result only after that.**
 
+**63. A repair that passed its tests, twice wrong on the device**
+(2026-10-09, the updater on ShelvesPi after its power cuts).
+- **What went wrong.** The fix for an install cut short - `dpkg --configure
+  -a`, then reinstall what is still broken - was written from one symptom
+  (apt's "dpkg was interrupted") and tested against fakes that answered the
+  way that symptom suggested. On the device the reinstall failed: the
+  half-installed pack's exact version was in no repository. Removed and
+  fetched fresh, the pack was still "Unable to locate": the same power cut had
+  left every package list the updater had saved at 0 bytes, and apt's "Hit"
+  kept them.
+- **What it looked like.** 54 tests passing, then 55, each fake doing what the
+  previous reading of the problem said.
+- **How it was caught.** By running the new updater once against the real
+  broken card before releasing it, instead of after.
+
+**A power cut does not break one thing.** A recovery for it is proven on the
+damaged device itself, run to the end - here, the pack installed - before
+it is released; a fake built from the first symptom only proves the first
+symptom.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

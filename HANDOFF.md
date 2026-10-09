@@ -67,6 +67,16 @@ scrub on main) waits for George's merge. Addresses already public before
 today (the dev machine, the LMS server, tests) stay: George, 2026-10-08,
 *"Leave the old one be - no scrub"*.
 
+**0.9.7 cut 2026-10-09 for Testing** (tag `v0.9.7`, release `r0.9.7`,
+serial 30, image `image/deploy/2026-10-09-gexis-player-v0.9.7.img`, 111
+checks; notes approved). **PR #56** waits for George; PR #55 (0.9.6) is
+merged. In it: the power-cut repair in the updater (dpkg finished, an
+unreinstallable pack removed and fetched fresh, empty package lists dropped -
+proven on ShelvesPi's damaged card, LESSONS 63), the visualiser without a
+pack exiting cleanly, the bar's Minimise below the pull band pointing right,
+gexis-plexamp 0.4.4. ShelvesPi still runs its 0.9.5 card, now repaired by
+hand-run updater and with its pack; it is to be reflashed with 0.9.7.
+
 **0.9.6 cut 2026-10-09 for Testing** (tag `v0.9.6`, release `r0.9.6`,
 serial 29, image `image/deploy/2026-10-09-gexis-player-v0.9.6.img`, 111
 checks; notes approved by George; channel verified from GitHub's API).
