@@ -531,11 +531,12 @@ is refused when it is saved, and an agent that cannot start at all says
 
 **My sound card or screen is not marked Tested. Can I help?**
 Yes: open *Settings → System → Hardware feedback* on a phone or computer. It
-takes two short steps. First the screen: a test pattern on the player's
+takes three short steps. First the screen: a test pattern on the player's
 screen shows whether all of it is visible, and four circles to tap measure
 where the touches land. Then the sound: a short test tone at 44.1, 96 and
-192 kHz, and a few questions about how it plays. On a player without a
-screen, or one set to Headless, it starts at the sound. The feedback is then
+192 kHz, and a few questions about how it plays. Last, room for your own
+notes, beside what the player adds for you. On a player without a screen,
+or one set to Headless, it starts at the sound. The feedback is then
 sent on GitHub (a GitHub account is needed), filled in with what the player
 reads of the hardware itself - never a serial number or anything about you -
 and it is public, so the next owner can see what works. A week after a sound
