@@ -20,7 +20,7 @@ Spotify Premium, and Plexamp a Plex account, on Plex's terms.
 </p>
 <p align="center">
   <img src="docs/assets/visualiser/viz-spectrum-1280x800.webp" alt="Animated: vintage VU meters over a bar spectrum, on the 10.1-inch panel" width="356">
-  <img src="docs/assets/visualiser/viz-vu-1280x800.webp" alt="Animated: calibrated dBFS LED level strips, on the 10.1-inch panel" width="356">
+  <img src="docs/assets/visualiser/viz-dash-1280x800.webp" alt="Animated: the artwork large, with a small spectrum and level meter, on the 10.1-inch panel" width="356">
 </p>
 <p align="center">
   <img src="docs/assets/visualiser/viz-spectrum-1480x320.webp" alt="Animated: an equaliser-style spectrum on the 11.9-inch bar" width="720">
