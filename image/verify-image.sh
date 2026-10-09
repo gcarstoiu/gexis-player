@@ -389,6 +389,8 @@ done
 echo "== ADR-0095 as amended: LMS paused as the device goes down"
 dfs "stat /usr/lib/systemd/system/gexis-park.service" | grep -q 'Inode:' && ok "gexis-park.service installed" || bad "gexis-park.service missing"
 dfs "stat /etc/systemd/system/multi-user.target.wants/gexis-park.service" | grep -q 'Inode:' && ok "gexis-park.service enabled" || bad "gexis-park.service not enabled"
+# ADR-0132: the reset runs early in the boot after it is asked for - only if enabled.
+dfs "stat /etc/systemd/system/sysinit.target.wants/gexis-factory-reset.service" | grep -q 'Inode:' && ok "gexis-factory-reset.service enabled" || bad "gexis-factory-reset.service not enabled"
 
 echo "== ADR-0106: uploaded plugins run under the player's own sandboxed units"
 for u in gexis-uploaded-renderer@.service gexis-uploaded-service@.service; do

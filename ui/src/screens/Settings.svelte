@@ -1089,6 +1089,42 @@
     if (await write(row, Number(draft))) flash(`${row.label}: ${shown({ ...row, value: Number(draft) })}`);
   }
 
+  //: **A challenge that needs no keyboard** (ADR-0132; George, 2026-10-09:
+  //: "add a challenge of sorts when triggering a reset ... something that
+  //: could work without a keyboard"). A row with `hold` confirms only after
+  //: its button is held for HOLD_MS - a finger, a mouse, or Space or Enter
+  //: held down; letting go early starts over. A stray tap cannot reset.
+  const HOLD_MS = 3000;
+  let holdShare = $state(0);
+  let holdFrame = null;
+  function holdStart(event) {
+    if (holdFrame !== null || busy) return;
+    event?.preventDefault?.();
+    const from = performance.now();
+    const tick = (now) => {
+      holdShare = Math.min(1, (now - from) / HOLD_MS);
+      if (holdShare >= 1) {
+        holdFrame = null;
+        holdShare = 0;
+        confirmSheet();
+        return;
+      }
+      holdFrame = requestAnimationFrame(tick);
+    };
+    holdFrame = requestAnimationFrame(tick);
+  }
+  function holdStop() {
+    if (holdFrame !== null) cancelAnimationFrame(holdFrame);
+    holdFrame = null;
+    holdShare = 0;
+  }
+  const holdKey = (down) => (event) => {
+    if (event.key !== ' ' && event.key !== 'Enter') return;
+    event.preventDefault();
+    if (!down) holdStop();
+    else if (!event.repeat) holdStart(event);
+  };
+
   async function confirmSheet() {
     if (saving) return; // a tap during a save is not a second request
     const row = sheet;
@@ -1186,6 +1222,7 @@
       sheetKey = null;
       const result = await runSetting(row.key);
       if (!result.ok) flash(plainly(result.error ?? `HTTP ${result.status}`, `${row.label} did not run. Try again.`));
+      else if (row.key === 'factory_reset') flash('Resetting. The player restarts into setup.', 12000);
       return;
     }
     if (row.type === 'text') {
@@ -2158,9 +2195,18 @@
             class="btn btn--confirm"
             class:btn--danger={sheet.danger || restorePending || choicePending !== null}
             type="button"
+            class:btn--hold={sheet.hold}
             disabled={busy || reportBusy || hwBusy || (sheet.kind === 'hardware' && !hw && !hwUrl)}
-            onclick={confirmSheet}
+            onclick={sheet.hold ? (event) => event.preventDefault() : confirmSheet}
+            onpointerdown={sheet.hold ? holdStart : null}
+            onpointerup={sheet.hold ? holdStop : null}
+            onpointerleave={sheet.hold ? holdStop : null}
+            onpointercancel={sheet.hold ? holdStop : null}
+            oncontextmenu={sheet.hold ? (event) => event.preventDefault() : null}
+            onkeydown={sheet.hold ? holdKey(true) : null}
+            onkeyup={sheet.hold ? holdKey(false) : null}
           >
+            {#if sheet.hold}<span class="btn__hold" style:width="{Math.round(holdShare * 100)}%"></span>{/if}
             {#if sheet.kind === 'hardware'}
               {#if hwBusy}<span class="btn__spin"></span>Preparing…{:else if hwUrl}Done{:else if hw && !hwLast}{hwSteps[hwAt + 1] === 'sound' ? 'Next: the sound' : 'Next: anything else'}{:else}Prepare the feedback{/if}
             {:else if sheet.kind === 'report'}
@@ -3745,6 +3791,21 @@
     background: rgba(126, 214, 188, 0.16);
     border-color: rgba(126, 214, 188, 0.4);
     color: var(--accent-lms);
+  }
+  /* ADR-0132: held, not tapped - the fill shows how long is left. */
+  .btn--hold {
+    position: relative;
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .btn__hold {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: rgba(224, 167, 88, 0.35);
+    pointer-events: none;
   }
   .btn--danger {
     background: rgba(224, 167, 88, 0.2);
