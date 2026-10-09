@@ -150,9 +150,11 @@ We'd rather you knew these up front:
   The mini player has the volume, a touchpad and buttons that drive the panel;
   the library is browsed on the panel, in a Lyrion app or in your streaming
   app.
-- **Plexamp's volume is its own.** Plexamp scales the sound inside its own
-  engine, so the Plexamp app's slider sets Plexamp's level and the panel's sets
-  the DAC's. The two are separate numbers.
+- **Plexamp keeps its own volume.** This comes from Plexamp itself: it
+  scales the sound inside its own engine and does not hand its level to the
+  player. So the Plexamp app's slider sets Plexamp's level, the panel's sets
+  the DAC's, and the two are separate numbers. Every other source shares the
+  panel's one volume.
 - **Not a store product.** It's a hobby project, built carefully with the help
   of AI and tested on real hardware, but without a support team behind it.
 
