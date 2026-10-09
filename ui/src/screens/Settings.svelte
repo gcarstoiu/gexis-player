@@ -3980,7 +3980,11 @@
   .report__note--tall {
     min-height: 168px;
   }
+  /* Never squeezed: in a sheet taller than the phone, the flex column shrank
+     the box to one line (George, 2026-10-09, on guestpi). */
   .report__note {
+    flex-shrink: 0;
+    min-height: 96px;
     width: 100%;
     box-sizing: border-box;
     padding: 12px 14px;
