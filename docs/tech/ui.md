@@ -448,7 +448,7 @@ flowchart LR
 | `NewScreen` / `KeepScreen` | a different screen is attached / a new screen awaits confirmation | Only the panel answers Keep; a countdown reverts (ADR-0109 decision 5) |
 | `TestPattern` (panel) | `screen_check` showing | The hardware feedback's test pattern; the panel's four corner taps go back to the core. Mounted over everything but *Keep this screen?* and the update lock (ADR-0126) |
 | `UpdateModal` (Settings) | the user checks for an update | One modal, from the check to the outcome (ADR-0110 §3) |
-| `UpdateScreen` (panel) | `update.active` | Locks the panel and stays up through the core restart and reconnect. At the end it waits for Done, or 10 min. It reloads the page if the installed release changed (ADR-0110 §6) |
+| `UpdateScreen` (panel) | `update.active` | Locks the panel and stays up through the core restart and reconnect. At the end it waits for Done, or 10 min. It reloads the page if the installed release changed (ADR-0110 §6). Separately, the panel reads its own `index.html` once a minute and reloads when the UI build it names differs from the one running, unless the update lock, setup, *Keep this screen?* or the test pattern is up (ADR-0110 as amended 2026-10-09) |
 
 ---
 
