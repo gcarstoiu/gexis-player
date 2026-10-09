@@ -444,8 +444,12 @@ lock, with no way to dismiss it while anything downloads; a phone draws it too.
 `hold: true`: `Settings.svelte` confirms it only after the button is held for
 3 s (`HOLD_MS`) by pointer, or with Space or Enter held down; a release, a
 pointer leaving the button or a cancelled touch starts over. The core's
-`_factory_reset()` writes `/var/lib/gexis/factory-reset` (`factory_reset.request`)
-and reboots.
+`_factory_reset()` writes `/var/lib/gexis/factory-reset` (`factory_reset.request`),
+puts `resetting` on `/state`, and reboots 3 s later. `ResetScreen.svelte`
+covers every surface from then on; the phone that confirmed shows it without
+waiting for the state. The UI latches it (`resetting` in `lib/state.js`), so
+a phone keeps it after the socket drops - with how to reach setup over
+*gexis-setup* or a cable - and a panel loses it only with the restart.
 
 The wipe does not run while the player runs: files such as the settings
 database are held open, and the restore path showed a live replacement meets

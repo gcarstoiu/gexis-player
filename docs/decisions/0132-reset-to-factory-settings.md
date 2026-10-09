@@ -77,6 +77,19 @@ the Pictures share are no longer emptied (decision 4); of what the owner put
 on the player, only the backups go. The first answer above is kept as it was
 given.
 
+## Amendment, 2026-10-09: the reset is shown
+
+George, after the first reset on the bar player: *"kept finger on the button
+until the end on the phone, but then there was nothing: no message, no
+overlay screen saying that the device is being reset. Something needs to be
+shown to the user so he knows that the device is being reset."* A toast had
+been the only sign. Now a **reset screen** covers the panel and every phone:
+the core puts `resetting` on `/state` and restarts 3 seconds later; the phone
+that confirmed shows it at once. A phone keeps it after the player goes,
+with how to reach setup - *gexis-setup* and `10.42.0.1:8090`, or
+`raspberrypi.local:8090` over a cable. It has no way out: the player is
+going.
+
 ## Settings inventory (ADR-0022)
 
 *Reset to factory settings* [R], System, after Restore; an action, no stored
