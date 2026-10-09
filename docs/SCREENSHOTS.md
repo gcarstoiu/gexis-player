@@ -57,6 +57,17 @@ with a public-domain demo library.
 </tr>
 </table>
 
+## The visualiser, moving
+
+Two of the skins, on the 10.1" panel and on the 11.9" bar.
+
+<table>
+<tr><td align="center" valign="top"><img src="assets/visualiser/viz-spectrum-1280x800.webp" alt="Spectrum, 10.1-inch panel" width="420"><br><sub>Spectrum</sub></td>
+<td align="center" valign="top"><img src="assets/visualiser/viz-vu-1280x800.webp" alt="VU meters, 10.1-inch panel" width="420"><br><sub>VU meters</sub></td></tr>
+<tr><td align="center" valign="top" colspan="2"><img src="assets/visualiser/viz-spectrum-1480x320.webp" alt="Spectrum, 11.9-inch bar" width="860"><br><sub>Spectrum on the bar</sub></td></tr>
+<tr><td align="center" valign="top" colspan="2"><img src="assets/visualiser/viz-vu-1480x320.webp" alt="Meters, 11.9-inch bar" width="860"><br><sub>Meters on the bar</sub></td></tr>
+</table>
+
 ## On a phone
 
 Settings and the mini player, in the phone's browser. No app to install.

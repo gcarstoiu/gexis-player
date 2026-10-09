@@ -18,6 +18,14 @@ subscription.
   <img src="docs/manual/images/panel-nowplaying-track.webp" alt="Now playing on the 10.1-inch panel: artwork, title, artist and the current lyric line" width="720">
 </p>
 <p align="center">
+  <img src="docs/assets/visualiser/viz-spectrum-1280x800.webp" alt="Animated: a spectrum skin of glass tubes in a wooden cabinet, on the 10.1-inch panel" width="356">
+  <img src="docs/assets/visualiser/viz-vu-1280x800.webp" alt="Animated: two VU meters moving to the music, on the 10.1-inch panel" width="356">
+</p>
+<p align="center">
+  <img src="docs/assets/visualiser/viz-spectrum-1480x320.webp" alt="Animated: an equaliser-style spectrum on the 11.9-inch bar" width="720">
+  <img src="docs/assets/visualiser/viz-vu-1480x320.webp" alt="Animated: two signal meters on the 11.9-inch bar" width="720">
+</p>
+<p align="center">
   <img src="docs/manual/images/panel-album-page.webp" alt="An album page in the library, with Play album and Add to queue" width="356">
   <img src="docs/manual/images/bar-nowplaying-track.webp" alt="The same track on an 11.9-inch bar display" width="356">
 </p>
