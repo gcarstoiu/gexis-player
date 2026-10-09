@@ -285,3 +285,23 @@ was shown only that release's notes; what the skipped ones changed was in
   restart step is active, then the finished screen (*Updated to …*, Done)
   until the boot (`ui/src/screens/UpdateScreen.svelte`,
   `core/updater/gexis-update`).
+
+## Amended 2026-10-09: a new UI build reloads the panel too
+
+George asked for the recommendation (*"Going with your recommendation"*)
+after the test pattern never appeared on guestpi. Its panel had loaded on
+7 October at 12:54; the pattern was added that afternoon, and the UI
+packages installed on 8 October as previews kept the release at 0.9.5. §6
+reloads the page only when the installed release changes, so the panel ran
+the old code for two days: the phone asked, the core published the request,
+and the panel had nothing that drew it.
+
+- **The panel reloads when its UI build changes.** Once a minute it reads
+  its own `index.html` and compares the build that names
+  (`/assets/index-<hash>.js`) with the one it is running. When they differ it
+  reloads, unless the update lock, setup, *Keep this screen?* or the test
+  pattern is up; the next minute tries again.
+- Phones are left alone: each opening loads the page afresh.
+- A preview installed over SSH is also followed by a restart of the kiosk
+  (procedure), so it shows at once rather than within the minute.
+
