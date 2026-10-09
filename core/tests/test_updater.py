@@ -693,3 +693,72 @@ def test_a_boot_that_does_not_answer_goes_back_once(up, monkeypatch):
     assert last["state"] == "failed" and "Back on 1" in last["message"]
     assert ("systemctl", "reboot") in ran, "what went back lands at a boot"
     assert not up.pending().exists(), "the boot after going back is not checked again"
+
+
+AUDIT_BROKEN = ("The following packages are in a mess due to serious problems during\n"
+                "installation.  They must be reinstalled for them (and any packages\n"
+                "that depend on them) to function properly:\n"
+                " gexis-skins-1480x320 (no description available)\n\n"
+                "The following packages are missing the list control file in the\n"
+                "database, they need to be reinstalled:\n"
+                " gexis-skins-1480x320 (no description available)\n")
+
+
+def _dpkg(monkeypatch, up, tmp_path, journal, audits, configure_rc=0):
+    """A dpkg cut short: a journal file until `--configure -a` runs, and
+    `dpkg --audit` answering from `audits` in turn. Every command recorded."""
+    updates = tmp_path / "dpkg-updates"
+    updates.mkdir()
+    if journal:
+        (updates / "0000").write_text("x")
+    monkeypatch.setattr(up, "DPKG_UPDATES", updates)
+    calls = []
+    left = list(audits)
+
+    def fake_run(*args, check=True, env=None):
+        calls.append(list(args))
+        if args[:2] == ("dpkg", "--audit"):
+            out = left.pop(0) if left else ""
+            return subprocess.CompletedProcess(args, 0, out, "")
+        if args[:3] == ("dpkg", "--configure", "-a"):
+            for f in updates.iterdir():
+                f.unlink()
+            return subprocess.CompletedProcess(args, configure_rc, "", "")
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    monkeypatch.setattr(up, "run", fake_run)
+    applied = []
+    monkeypatch.setattr(up, "apt", lambda opts, *a, prefix=None: applied.append(list(a))
+                        or subprocess.CompletedProcess(a, 0, "", ""))
+    (tmp_path / "updates").mkdir(exist_ok=True)
+    return calls, applied
+
+
+def test_a_clean_dpkg_is_left_alone(monkeypatch, up, tmp_path):
+    calls, applied = _dpkg(monkeypatch, up, tmp_path, journal=False, audits=[""])
+    up.heal(["-o", "x"])
+    assert ["dpkg", "--configure", "-a"] not in calls and applied == []
+
+
+def test_an_install_cut_short_is_finished_then_the_broken_package_reinstalled(monkeypatch, up, tmp_path):
+    """ShelvesPi, 2026-10-08: a power cut mid-install; every apt run since
+    refused with "dpkg was interrupted". The updater finishes it, and the
+    pack that lost its file list is installed again."""
+    calls, applied = _dpkg(monkeypatch, up, tmp_path, journal=True,
+                           audits=[AUDIT_BROKEN, AUDIT_BROKEN, ""])
+    up.heal(["-o", "x"])
+    assert ["dpkg", "--configure", "-a"] in calls
+    assert applied == [["--allow-change-held-packages", "install", "--reinstall", "gexis-skins-1480x320"]]
+    assert "dpkg --configure -a" in (tmp_path / "updates" / "apt.log").read_text()
+
+
+def test_configure_alone_can_be_enough(monkeypatch, up, tmp_path):
+    calls, applied = _dpkg(monkeypatch, up, tmp_path, journal=True, audits=["", ""])
+    up.heal(["-o", "x"])
+    assert ["dpkg", "--configure", "-a"] in calls and applied == []
+
+
+def test_what_cannot_be_finished_says_so(monkeypatch, up, tmp_path):
+    _dpkg(monkeypatch, up, tmp_path, journal=True, audits=[AUDIT_BROKEN, AUDIT_BROKEN, AUDIT_BROKEN])
+    with pytest.raises(up.Stop, match="cut short"):
+        up.heal(["-o", "x"])

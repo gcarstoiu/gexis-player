@@ -244,6 +244,63 @@ def apt(opts: list[str], *args: str, prefix: list[str] | None = None) -> subproc
     return r
 
 
+#: dpkg's journal of the install it is in the middle of. Anything in it
+#: when no install runs means one was cut short.
+DPKG_UPDATES = Path("/var/lib/dpkg/updates")
+#: What the screen says when even the repair below could not finish it.
+CUT_SHORT = ("An earlier install was cut short, and finishing it did not work. "
+             "It is tried again in a few minutes; a problem report says more.")
+
+
+def interrupted() -> tuple[bool, list[str]]:
+    """Whether dpkg was cut short (its journal is not empty), and the
+    packages `dpkg --audit` says are half-installed or need installing again."""
+    try:
+        journal = any(DPKG_UPDATES.iterdir())
+    except OSError:
+        journal = False
+    try:
+        audit = run("dpkg", "--audit", check=False)
+    except OSError:  # no dpkg here at all: nothing it could have left
+        return journal, []
+    broken: list[str] = []
+    for line in audit.stdout.splitlines():
+        # The package lines are indented: " name (description)".
+        if line.startswith(" ") and line.strip():
+            name = line.split()[0]
+            if name not in broken:
+                broken.append(name)
+    return journal, broken
+
+
+def heal(opts: list[str]) -> None:
+    """**An install cut short is finished before anything else** (ADR-0110
+    as amended 2026-10-09). A power cut on ShelvesPi stopped a skin pack
+    halfway through installing; from then on every apt run refused with
+    "dpkg was interrupted, you must manually run 'dpkg --configure -a'",
+    and the screen said the download had stopped, every few minutes, for a
+    day. A player has nobody to run that by hand, so the updater does:
+    `dpkg --configure -a` finishes what dpkg was doing, and a package still
+    broken after it - the pack had lost its file list - is installed again
+    from the repositories `opts` names. Called after `apt update`, so they
+    are readable."""
+    journal, broken = interrupted()
+    if not journal and not broken:
+        return
+    print(f"dpkg was interrupted ({', '.join(broken) or 'its journal'}); finishing it", flush=True)
+    r = run("dpkg", "--configure", "-a", check=False, env=APT_ENV)
+    with (STATE / "apt.log").open("a") as log:
+        log.write(f"\n=== {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} dpkg --configure -a -> {r.returncode}\n")
+        log.write(r.stdout + r.stderr)
+    journal, broken = interrupted()
+    if broken:
+        apt(opts, "--allow-change-held-packages", "install", "--reinstall", *broken)
+        journal, broken = interrupted()
+    if journal or broken:
+        print(f"dpkg is still not clean: {', '.join(broken) or 'its journal'}", flush=True)
+        raise Stop(CUT_SHORT)
+
+
 def apt_download(opts: list[str], *args: str, report_as: dict, reporter=None) -> subprocess.CompletedProcess:
     """apt-get --download-only, reading its progress as it goes (ADR-0110 §3:
     a bar for the download)."""
@@ -651,6 +708,7 @@ def install(args) -> int:
     opts = apt_env(repos)
     if apt(opts, "update").returncode:
         raise Stop(f"apt could not read {' '.join(repos)}")
+    heal(opts)
     changes = plan(opts, target)
     for args_ in (["--download-only", "--allow-change-held-packages", "dist-upgrade"],
                   ["--download-only", "--allow-change-held-packages", "install", f"gexis-player={target}"]):
@@ -951,6 +1009,7 @@ def pack_install(name: str) -> int:
             break
     if opts is None:
         raise Stop(UNREACHABLE)
+    heal(opts)
     activity = Activity()
     try:
         r = pack_fetch(opts, name, activity)
