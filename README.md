@@ -113,8 +113,11 @@ library; it uses one of the most mature there is:
   in sync around the house, with Squeezebox players and other squeezelite
   players alike. Groups are made in Lyrion's own apps; with Gexis in a group
   it is untested so far.
-- **More than your files.** Lyrion's own apps add internet radio, podcasts and
-  streaming services, all playing through the same player.
+- **More than your files, and it grows with plugins.** Lyrion has a large
+  plugin library of its own, kept by its community: internet radio, podcasts,
+  streaming services, artist information, smart mixes and much more,
+  installed from Lyrion's settings and all playing through the same player.
+  These are Lyrion's plugins, separate from Gexis's own below.
 - **Played and browsed on the panel.** Albums, artists, playlists and radio
   from the touchscreen, with the queue beside Now Playing, and every Lyrion
   app on your phone or computer still at hand.
