@@ -35,11 +35,13 @@ subscription.
 > every day on its reference devices, and updates itself over the network:
 > a new release never needs a reflash. The first Stable release is next.
 
-Gexis began as the player for one living room and grew into something we are
-genuinely proud of. It is built on many years of other people's open-source
-work, so it goes back out the same way: free, under the GPL, with every line
-in the open. If it makes your music sound and look a little better, it has
-done its job, and we are glad to share it.
+Gexis is one person's project: mine. I love hi-fi, and I had a clear idea of
+how a player should work, so I built it, carefully, with the help of AI, and
+tested it on real hardware. It began as the player for one living room and
+grew into something I am genuinely proud of. It is built on many years of
+other people's open-source work, so it goes back out the same way: free,
+under the GPL, with every line in the open. If it makes your music sound and
+look a little better, it has done its job, and I am glad to share it.
 
 ---
 
@@ -140,7 +142,7 @@ or removed from Settings, with its progress shown in the switch itself.
 
 ## ⚖️ Limitations and trade-offs
 
-We'd rather you knew these up front:
+I'd rather you knew these up front:
 
 - **Tested hardware is narrow.** A Raspberry Pi 4 (4 GB); the HiFiBerry
   DAC2 HD and IQaudIO Pi-DAC PRO; four HDMI touch screens. Other DACs and
@@ -155,10 +157,8 @@ We'd rather you knew these up front:
   player. So the Plexamp app's slider sets Plexamp's level, the panel's sets
   the DAC's, and the two are separate numbers. Every other source shares the
   panel's one volume.
-- **Not a store product.** It's a hobby project: one guy with a love for
-  hi-fi and a clear idea of how a player should work, building it carefully
-  with the help of AI and testing it on real hardware. There is no support
-  team behind it.
+- **Not a store product.** It's a hobby project, with no support team
+  behind it.
 
 ## 📖 Documentation
 
