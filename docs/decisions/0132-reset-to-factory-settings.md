@@ -1,0 +1,62 @@
+# ADR-0132 — Reset to factory settings
+
+**Status:** **Accepted** — George, 2026-10-09: *"add a reset to factory
+settings which was deferred in the past but which is necessary now ...
+once the user resets, all settings are reset, skins are removed, plugins
+removed... everything goes to a clean installation with the next restart
+showing the setup."* On the four choices put to him: backups on the player
+**deleted**; music files and playlists on the player **deleted**; started
+from the **panel and the phone**; the row **added** to ADR-0022's inventory.
+**Builds on:** [ADR-0021](0021-deployment-flashable-image.md) (where it was
+deferred), [ADR-0104](0104-how-the-device-knows-it-needs-setup.md) (what makes
+setup come back), [ADR-0083](0083-a-backup-leaves-the-device.md) (backups),
+[ADR-0131](0131-setup-can-restore-a-backup.md) (the read-only store a live
+replacement of the settings file meets).
+
+## Context
+
+Testing setup meant re-flashing a card. A player also has no way back to a
+clean state for a new owner. ADR-0021 deferred a factory reset as "implied by
+configuration persistence, specified nowhere".
+
+## Decision
+
+1. **Settings → System → *Reset to factory settings*.** An action, after
+   *Restore*, on the panel and the phone like every other row. Its sheet says
+   what goes - including the backups and the music kept on the player - offers
+   *Download* of a backup first on a phone or computer, and confirms with
+   ***Reset and restart***.
+2. **The wipe runs at the start of the next boot, not while the player
+   runs.** Confirming writes a request (`/var/lib/gexis/factory-reset`) and
+   restarts. `gexis-factory-reset.service` runs early - before NetworkManager,
+   Bluetooth, the renderers and the core - so nothing holds a file it deletes
+   (ADR-0131's read-only store), and the same boot ends in setup.
+3. **What goes - back to a freshly flashed card:**
+   - all settings (`settings.db`) and artist and album information
+     (`enrichment.db`), and the caches built from them;
+   - the device name: `device-name.env` removed, hostname `raspberrypi`
+     (`/etc/hostname`, `/etc/hosts`), no pretty name, Spotify's name back to
+     *gexis*; the time zone back to Europe/London, the image's;
+   - the network: every saved NetworkManager profile (Wi-Fi networks, a
+     cable's fixed address), the Wi-Fi country in `cmdline.txt`, the setup
+     marker and answers, so setup comes back (ADR-0104);
+   - the screen: `screen.json`, `screen-seen.json`, `screen.env` and the
+     `video=` in `cmdline.txt`; the sound card board's block in `config.txt`;
+   - identities: Bluetooth pairings, the Spotify sign-in, Beszel's agent and
+     hub data, Plexamp's claim;
+   - downloads: every skin pack (purged), the Plexamp app, uploaded plugins
+     and their data, the components' state, the settling record;
+   - the Lyrion Server's settings and library database;
+   - **the backups kept on the player** and **the music and playlists kept
+     on the player** (George's choice);
+   - network share passwords; kept debug logs.
+4. **What stays:** the installed release (no downgrade) and the image's own
+   files; SSH access, when the card was provisioned with a key.
+5. **Plugins' units follow their switches at the next start**, as after a
+   restore (`_reconcile_sources`): with the settings gone, each is back to
+   its default.
+
+## Settings inventory (ADR-0022)
+
+*Reset to factory settings* [R], System, after Restore; an action, no stored
+value. Appended on George's confirmation, 2026-10-09.
