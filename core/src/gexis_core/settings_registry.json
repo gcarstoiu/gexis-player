@@ -1273,7 +1273,7 @@
         "type": "action",
         "label": "Reset to factory settings",
         "marks": "R",
-        "note": "Everything goes, as on a newly flashed card: every setting and name, the Wi-Fi networks, paired devices and sign-ins, the skins and plugins, the Lyrion Server's library - and the backups and music kept on this player. Download a backup first under Restore. The player restarts into setup.",
+        "note": "Everything goes, as on a newly flashed card: every setting and name, the Wi-Fi networks, paired devices and sign-ins, the skins and plugins, the Lyrion Server's library, and the backups kept on this player. Your music, playlists and pictures stay. Download a backup first under Restore. The player restarts into setup.",
         "danger": true,
         "confirm": "Hold to reset and restart",
         "hold": true,

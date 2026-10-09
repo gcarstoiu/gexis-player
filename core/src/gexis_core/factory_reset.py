@@ -54,10 +54,12 @@ REMOVED = (
     "var/lib/gexis/lyrion-usb-seen.json",
 )
 #: Emptied, the folder itself kept (its owner and mode belong to the image).
+#: Never the music folder (`/var/lib/gexis-music`, with Lyrion's playlists)
+#: or the Pictures share (`/var/lib/gexis-core/pictures`): what the owner put
+#: there stays (George, 2026-10-09, amending ADR-0132).
 EMPTIED = (
     "etc/NetworkManager/system-connections",
     "var/lib/bluetooth",
-    "var/lib/gexis-music",
     "var/log/journal",
 )
 #: The image's own name and time zone (pi-gen's defaults; ADR-0132 §3).

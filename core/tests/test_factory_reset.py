@@ -14,6 +14,7 @@ def _used_player(root: Path) -> None:
         f.write_text(text)
     for rel in ("var/lib/gexis-core/settings.db", "var/lib/gexis-core/enrichment.db",
                 "var/lib/gexis-core/backups/gexis-living-room-20261009-120000.tgz",
+                "var/lib/gexis-core/pictures/beach.jpg",
                 "etc/gexis/device-name.env", "etc/machine-info", "var/lib/gexis/setup-done",
                 "var/lib/gexis/screen.json", "etc/gexis/screen.env", "var/lib/gexis/components/plexamp.sha256",
                 "var/lib/go-librespot/state.json", "var/lib/beszel-agent/fingerprint",
@@ -44,7 +45,11 @@ def test_a_used_player_goes_back_to_a_freshly_flashed_card(tmp_path):
                  "var/lib/beszel-agent", "home/pi/.local/share/Plexamp", "home/pi/plexamp",
                  "var/lib/squeezeboxserver/prefs", "var/lib/gexis/plugins"):
         assert not (tmp_path / gone).exists(), gone
-    for emptied in ("var/lib/gexis-music", "var/lib/bluetooth", "etc/NetworkManager/system-connections",
+    # The owner's music, playlists and pictures stay (ADR-0132 as amended).
+    for kept in ("var/lib/gexis-music/Album/track.flac", "var/lib/gexis-music/Playlists/Evening.m3u",
+                 "var/lib/gexis-core/pictures/beach.jpg"):
+        assert (tmp_path / kept).is_file(), kept
+    for emptied in ("var/lib/bluetooth", "etc/NetworkManager/system-connections",
                     "var/log/journal"):
         assert (tmp_path / emptied).is_dir() and not any((tmp_path / emptied).iterdir()), emptied
     assert (tmp_path / "etc/hostname").read_text() == "raspberrypi\n"
