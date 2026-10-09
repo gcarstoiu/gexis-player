@@ -20,7 +20,16 @@ subscription.
   <img src="docs/manual/images/panel-album-page.webp" alt="An album page in the library, with Play album and Add to queue" width="356">
   <img src="docs/manual/images/bar-nowplaying-track.webp" alt="The same track on an 11.9-inch bar display" width="356">
 </p>
-<p align="center"><sub>Shown with a public-domain demo library.</sub></p>
+<p align="center">
+  <img src="docs/manual/images/panel-nowplaying-lyrics.webp" alt="Lyrics on the panel, the current line highlighted" width="356">
+  <img src="docs/manual/images/panel-artist-page.webp" alt="An artist page: biography, albums and similar artists" width="356">
+</p>
+<p align="center">
+  <img src="docs/manual/images/panel-home.webp" alt="The library home: My Music, Browse, Album Artists, Playlists, Favourites and new music" width="356">
+  <img src="docs/manual/images/panel-browse.webp" alt="Browse: artists, their albums and the tracks" width="356">
+</p>
+<p align="center"><sub>Shown with a public-domain demo library.</sub><br>
+📸 <a href="docs/SCREENSHOTS.md"><b>See every screenshot</b></a>: the panel, the bar and the phone.</p>
 
 > 🧪 **Testing releases are out.** Gexis Player is built in the open, plays
 > every day on its reference devices, and updates itself over the network:
