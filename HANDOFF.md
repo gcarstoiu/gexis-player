@@ -67,6 +67,13 @@ scrub on main) waits for George's merge. Addresses already public before
 today (the dev machine, the LMS server, tests) stay: George, 2026-10-08,
 *"Leave the old one be - no scrub"*.
 
+**At the first Stable release** (George, 2026-10-09): revisit how the image
+reaches people - most likely all three of ADR-0021's routes: the image file
+with Raspberry Pi Imager's *Use custom* (`docs/INSTALL.md`, written), our own
+Imager repository, and an application to Imager's community categories
+(Raspberry Pi reviews it). The image file is published only on promotion to
+Stable, so the installation guide's download works from then.
+
 **0.9.7 cut 2026-10-09 for Testing** (tag `v0.9.7`, release `r0.9.7`,
 serial 30, image `image/deploy/2026-10-09-gexis-player-v0.9.7.img`, 111
 checks; notes approved). **PR #56** waits for George; PR #55 (0.9.6) is
