@@ -146,21 +146,10 @@ We'd rather you knew these up front:
   DAC2 HD and IQaudIO Pi-DAC PRO; four HDMI touch screens. Other DACs and
   screens are listed but untested - see the
   [hardware requirements](docs/HARDWARE.md).
-- **One source plays at a time,** by design (no mixing). A takeover is not
-  instant: the previous source has to let go of the DAC first, and some
-  sources let go faster than others.
 - **On a phone you get Settings and a mini player, not the whole player.**
   The mini player has the volume, a touchpad and buttons that drive the panel;
   the library is browsed on the panel, in a Lyrion app or in your streaming
   app.
-- **Setup takes a phone.** Over Wi-Fi, the player has one radio, so it
-  either hosts its setup network or joins yours, never both: your phone loses
-  the setup page at the moment the player moves over, and says the setup
-  network has no internet while you are on it (stay connected). It opens that
-  network only when it starts: a player that loses its Wi-Fi while running is
-  reached again by restarting it.
-  With a network cable plugged in at first boot, setup runs over your own
-  network instead.
 - **Plexamp's volume is its own.** Plexamp scales the sound inside its own
   engine, so the Plexamp app's slider sets Plexamp's level and the panel's sets
   the DAC's. The two are separate numbers.
