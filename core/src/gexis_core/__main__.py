@@ -1744,6 +1744,22 @@ async def main() -> None:
         finally:
             previews_state["busy"] = False
 
+    #: **The visualiser waits for the settling screen** (George's bar player,
+    #: 2026-10-09: "after the download finished on the settling screen the
+    #: whole player blinked and then showed the downloading modal again").
+    #: Its pack landing restarted it, and its window opening over the
+    #: settling screen was the blink. While that screen is up the restart is
+    #: held here, and done when it goes (`_follow_settling`).
+    visualiser_held = {"settling": False, "restart": False}
+
+    async def _restart_visualiser() -> None:
+        if visualiser_held["settling"]:
+            visualiser_held["restart"] = True
+            logger.info("peppy: restart held until the settling screen is gone")
+            return
+        visualiser_held["restart"] = False
+        await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-peppy.service")
+
     async def _configure_visualiser() -> None:
         """ADR-0111: PeppyMeter draws the pack skins_at() names, at its size.
         Restarted only when its config changed."""
@@ -1755,7 +1771,7 @@ async def main() -> None:
             return
         width, height = (int(n) for n in at[1].split("x"))
         if await asyncio.to_thread(set_meter_skins, Path(config.meter_consumer_config), base, at[1], width, height):
-            await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-peppy.service")
+            await _restart_visualiser()
 
     def _package_on_disk(size: tuple[int, int]) -> str:
         """A size's package: its pack, or the gexis-skins a device kept."""
@@ -2886,6 +2902,10 @@ async def main() -> None:
             else:
                 ready_since = None
             state_store.set_settling(view)
+            visualiser_held["settling"] = view is not None
+            if view is None and visualiser_held["restart"]:
+                logger.info("peppy: the settling screen is gone; restarting the visualiser held for it")
+                await _restart_visualiser()
             await asyncio.sleep(2 if view else 10)
 
     asyncio.ensure_future(_follow_settling())
