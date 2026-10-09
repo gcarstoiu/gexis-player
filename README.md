@@ -155,8 +155,10 @@ We'd rather you knew these up front:
   player. So the Plexamp app's slider sets Plexamp's level, the panel's sets
   the DAC's, and the two are separate numbers. Every other source shares the
   panel's one volume.
-- **Not a store product.** It's a hobby project, built carefully with the help
-  of AI and tested on real hardware, but without a support team behind it.
+- **Not a store product.** It's a hobby project: one guy with a love for
+  hi-fi and a clear idea of how a player should work, building it carefully
+  with the help of AI and testing it on real hardware. There is no support
+  team behind it.
 
 ## 📖 Documentation
 
