@@ -67,6 +67,13 @@ scrub on main) waits for George's merge. Addresses already public before
 today (the dev machine, the LMS server, tests) stay: George, 2026-10-08,
 *"Leave the old one be - no scrub"*.
 
+**0.9.6 cut 2026-10-09 for Testing** (tag `v0.9.6`, release `r0.9.6`,
+serial 29, image `image/deploy/2026-10-09-gexis-player-v0.9.6.img`, 111
+checks; notes approved by George; channel verified from GitHub's API).
+**PR #55** waits for George. PR #54 (the privacy clean-up) is merged and was
+merged into the release. The worktree `~/projects/gexis-player-r096` sits at
+the tag.
+
 **2026-10-09.** A test image with every fix since 0.9.5 is built and
 verified (111 checks): `image/deploy/2026-10-08-gexis-player-v0.9.5-66-g466956c.img`,
 for George's clean-flash setup test - not a release; it fetches skins and
