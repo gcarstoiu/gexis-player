@@ -97,6 +97,13 @@ library; it uses one of the most mature there is:
 - **Built for big collections.** Lyrion indexes tens of thousands of files on
   a NAS, a USB drive or a share, and keeps them browsable by album, artist,
   genre, year and playlist.
+- **High resolution, untouched.** Lyrion sends your files as they are:
+  hi-res FLAC, WAV and AIFF reach the player at their own sample rate and bit
+  depth, and nothing on the way resamples them.
+- **In time across rooms.** Lyrion can group players so the same music plays
+  in sync around the house, with Squeezebox players and other squeezelite
+  players alike. Groups are made in Lyrion's own apps; with Gexis in a group
+  it is untested so far.
 - **More than your files.** Lyrion's own apps add internet radio, podcasts and
   streaming services, all playing through the same player.
 - **Played and browsed on the panel.** Albums, artists, playlists and radio
