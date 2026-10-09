@@ -4,7 +4,7 @@
 
 # Gexis Player
 
-**Your music lives in many places: Spotify, a server in the cupboard, Plex,
+**Your music lives in many places: Spotify, a server under your desk, Plex,
 the phone in your pocket. Gexis Player brings all of it to one place: a
 Raspberry Pi 4 with a good DAC and a touchscreen, next to your amplifier.**
 
