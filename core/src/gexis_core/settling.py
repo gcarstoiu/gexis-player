@@ -67,8 +67,13 @@ def view(record: dict | None, status: dict, now: float | None = None) -> dict | 
     for item in record["items"]:
         live = status.get(item["id"]) or {}
         state = live.get("state")
+        # **A share as well as bytes** (George's bar player, 2026-10-09: the
+        # skins "showed no progress in downloading and then all of a sudden it
+        # was done"). A skin pack reports how far it is as a share - apt gives
+        # no byte counts - and only bytes were passed on.
         entry = {"id": item["id"], "name": item.get("name") or live.get("label") or item["id"],
-                 "received": live.get("received"), "total": live.get("total"), "error": None}
+                 "received": live.get("received"), "total": live.get("total"),
+                 "share": live.get("share"), "error": None}
         if state == "installed":
             entry["state"] = "done"
         elif state == "failed":
