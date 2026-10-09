@@ -10,9 +10,10 @@ Raspberry Pi 4 with a good DAC and a touchscreen, next to your amplifier.**
 
 An audiophile streamer for the Raspberry Pi and the DIY audio community.
 Bit-perfect, tested up to 24-bit / 192 kHz and likely higher with DACs that
-go further, every source on one screen, set up from
-your phone in minutes. Free and open source: no ads, no account, no
-subscription.
+go further, every source on one screen, set up from your phone in minutes.
+Free and open source: Gexis itself has no ads and needs no account or
+subscription. Some streaming services bring their own: Spotify Connect needs
+Spotify Premium, and Plexamp a Plex account, on Plex's terms.
 
 <p align="center">
   <img src="docs/manual/images/panel-nowplaying-track.webp" alt="Now playing on the 10.1-inch panel: artwork, title, artist and the current lyric line" width="720">
