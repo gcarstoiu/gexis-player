@@ -186,6 +186,8 @@ I'd rather you knew these up front:
 
 ## 📖 Documentation
 
+- **[Installation guide](docs/INSTALL.md)**: from an empty card to music,
+  on Windows, macOS or Linux.
 - **[User manual](docs/manual/README.md)**: the screen, the phone page and
   every setting, with screenshots.
 - **[FAQ](docs/FAQ.md)**: questions and answers, from setting up to sound,

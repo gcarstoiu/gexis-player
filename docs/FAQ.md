@@ -317,8 +317,10 @@ On first start with no network, the player opens its own Wi-Fi, called
 to open the setup page. The phone then walks through Wi-Fi, then asks
 whether this is a new player or a backup to restore. A new player goes on to
 a name, the clock, the output, the music, the screen, the visualiser and the
-plugins to install (Plexamp, the Lyrion Server, Beszel); a backup answers all
-of those, and the phone shows what it brings before the player restarts. Once the player is on your
+plugins to install (Plexamp, the Lyrion Server, Beszel); a backup asks only
+for this player's output and screen and answers the rest, and the phone shows
+what it brings before the player restarts. Step by step, from flashing the
+card: the [installation guide](INSTALL.md). Once the player is on your
 network it shows what it is downloading, each with its progress, until it is
 ready; this cannot be skipped, and music may be slow to start until then. A download that does not finish is named, with
 *Settings → Plugins* as the place to try it again.
