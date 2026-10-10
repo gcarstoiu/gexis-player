@@ -166,6 +166,12 @@ found seven things that were George's to settle. His answers:
 - **The full list folds by maker on the phone** ("Waveshare · 91 models").
   181 open rows would be about 13,000 px; the search and the
   resolution-matching models stay open.
+  **Amended 2026-10-10: the makers are chips.** Folded, the 18 makers were
+  still 18 full-width headings, most of a phone's height before one model
+  (George: *"It is important but it takes a few screens to scroll"*). They
+  now wrap as chips with their model counts (about 350 px at 390 px wide,
+  where the headings took about 860); one maker opens at a time, under the
+  chips, headed with its name. A search still lists every match, open.
 - **If the list cannot be loaded, the step says so and offers Retry.** The
   list comes from the player over the setup Wi-Fi, so a failure means the
   phone dropped off it for a moment. Offering only Headless would turn the
