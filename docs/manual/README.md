@@ -466,7 +466,6 @@ Everything about the player itself, under seven headings.
 
 | Setting | What it does |
 | --- | --- |
-| Version | What is installed. |
 | Legal, Credits | The licences, and everyone whose work is in the player. |
 
 **Power**
