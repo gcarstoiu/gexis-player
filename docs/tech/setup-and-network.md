@@ -422,6 +422,13 @@ prompt disappears when the agent says so.
 
 ## The first start after setup (ADR-0128)
 
+**The skin pack waits until setup is over** (amended 2026-10-10): while
+`SetupNetwork.needed`, `_skins_ensure` in `__main__.py` does nothing and
+notes that it waited; it runs at the next start, or from the setup network's
+change callback when setup ends without a restart. An install holds the
+updater's shutdown block, and setup's restart is refused while it is held
+(`_systemctl_reboot` now asks again every 15 s, up to 30 minutes).
+
 After the join, `SetupFlow._plugins_and_settling` switches every offered
 plugin on or off as chosen - explicitly, since a plugin switch defaults to on -
 and records in `/var/lib/gexis/settling.json` what the first start waits for:
