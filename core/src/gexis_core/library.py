@@ -484,7 +484,7 @@ class LmsLibrary:
             return await self._add_to_playlist(kind, item_id, playlist_id)
         player = self._player_id()
         if not player:
-            raise NoPlayer("the LMS player has not been resolved yet")
+            raise NoPlayer("the Lyrion player has not been resolved yet")
         if action in ("play", "shuffle"):
             await self._rpc(["playlist", "shuffle", 1 if action == "shuffle" else 0], player)
         result = await self._rpc(
@@ -509,7 +509,7 @@ class LmsLibrary:
             raise NotFound(f"{action} on the queue")
         player = self._player_id()
         if not player:
-            raise NoPlayer("the LMS player has not been resolved yet")
+            raise NoPlayer("the Lyrion player has not been resolved yet")
         await self._rpc(command if action == "clear" else [*command, index], player)
         logger.info("library: queue %s %s", action, "" if action == "clear" else index)
         await self._queue_changed()

@@ -905,7 +905,7 @@ class StateServer:
         except NotFound as exc:
             return web.json_response({"error": f"{exc} not found"}, status=404)
         except LibraryUnavailable as exc:
-            return web.json_response({"error": f"LMS unreachable: {exc}"}, status=502)
+            return web.json_response({"error": f"Lyrion unreachable: {exc}"}, status=502)
 
     async def _handle_library_action(self, request: web.Request) -> web.Response:
         """ADR-0038 §5: one route for what the panel does to the library.
@@ -935,7 +935,7 @@ class StateServer:
         except NoPlayer as exc:
             return web.json_response({"error": str(exc)}, status=409)
         except LibraryUnavailable as exc:
-            return web.json_response({"error": f"LMS unreachable: {exc}"}, status=502)
+            return web.json_response({"error": f"Lyrion unreachable: {exc}"}, status=502)
 
     # --- ADR-0118: Lyrion's own menus -------------------------------------
 
@@ -1026,7 +1026,7 @@ class StateServer:
         except UnknownHandle as exc:
             return web.json_response({"error": f"unknown handle: {exc}"}, status=404)
         except RadioUnavailable as exc:
-            return web.json_response({"error": f"LMS unreachable: {exc}"}, status=502)
+            return web.json_response({"error": f"Lyrion unreachable: {exc}"}, status=502)
 
     async def _handle_radio_play(self, request: web.Request) -> web.Response:
         """`{"handle": ..., "action": "play"|"add"}` - and only a handle
@@ -1046,7 +1046,7 @@ class StateServer:
         except UnknownHandle as exc:
             return web.json_response({"error": f"unknown handle: {exc}"}, status=404)
         except RadioUnavailable as exc:
-            return web.json_response({"error": f"LMS unreachable: {exc}"}, status=502)
+            return web.json_response({"error": f"Lyrion unreachable: {exc}"}, status=502)
 
     async def _handle_artist_photos(self, request: web.Request) -> web.Response:
         """`?ids=1,2,3[&size=200]` -> `{"<id>": url|null}`.
@@ -1148,7 +1148,7 @@ class StateServer:
             biography = await self._artistinfo.biography(artist_id)
             found = Enrichment(
                 biography=biography,
-                biography_source="LMS" if biography else None,
+                biography_source="Lyrion" if biography else None,
                 artist_image=photos.get(artist_id),
                 sources=("lms",) if (biography or photos.get(artist_id)) else (),
             )

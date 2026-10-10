@@ -308,7 +308,7 @@ class LmsArtistProvider:
             biography=biography,
             # ADR-0040 §4: the line on the panel names whoever actually
             # answered, and here that is the server, not us.
-            biography_source="LMS" if biography else None,
+            biography_source="Lyrion" if biography else None,
             artist_image=photos.get(artist_id),
             sources=("lms",),
         ))
@@ -351,7 +351,7 @@ class LmsReleaseProvider:
             released=str(album["year"]) if album.get("year") else None,
             length_s=length,
             album_note=note,
-            album_note_source="LMS" if note else None,
+            album_note_source="Lyrion" if note else None,
             sources=("lms-release",),
         ))
 
