@@ -225,7 +225,7 @@ Only one source plays at a time. When you start Spotify, Bluetooth or
 Plexamp from your phone, that source **takes over**: Lyrion pauses, a short
 transition screen shows who took the player, and Now Playing shows the new
 source. When that session ends, the player can give itself back to Lyrion
-(*Settings → Handoff → Reclaim LMS when a session ends*, off by default), or
+(*Settings → Handoff → Reclaim Lyrion when a session ends*, off by default), or
 you can start Lyrion again from the panel.
 
 Spotify starts at the **Starting volume** you set, however loud the Spotify
@@ -327,7 +327,7 @@ played on the right.
 ## 9. Settings
 
 Settings is reached from the **Settings** card on Home, or on the phone
-page. It is grouped into eight areas, listed down the left-hand side on the
+page. It is grouped into seven areas, listed down the left-hand side on the
 panel.
 
 ![Settings](images/panel-settings.webp)
@@ -370,7 +370,7 @@ the player itself, with its music folders and network shares).
 | Setting | What it does |
 | --- | --- |
 | Restore transport on return | What Lyrion does when it gets the player back: *Play only if playing* (it resumes only if it was playing when it was taken), *Always pause* or *Always play*. |
-| Reclaim LMS when a session ends | Off by default. On, when Spotify, Bluetooth or Plexamp stops, Lyrion takes the player back; a phone that locks can end a Spotify session and switch the player to Lyrion without warning. |
+| Reclaim Lyrion when a session ends | Off by default. On, when Spotify, Bluetooth or Plexamp stops, Lyrion takes the player back; a phone that locks can end a Spotify session and switch the player to Lyrion without warning. |
 | Show transition screen | The short animation when one source takes over from another. |
 | Transition screen length | How long it stays up. |
 
@@ -387,7 +387,7 @@ the player itself, with its music folders and network shares).
 | Home screen list, Items in the strip | What the row under Home's cards shows, and how many. |
 | Clock on the waiting screen, Hint on the waiting screen | With the Lyrion client off: the time, date and name in the top left, and the line *Start music from your phone* above the sources. |
 | Idle screen: Screen, Timeout | The built-in clock-and-weather screen, or an external page; and after how long, with nothing playing and nobody touching the panel. |
-| Idle screen: Background, Background brightness, Change the picture every | **Gexis wallpapers**, the player's own pictures (the default on a new player); **Space pictures** from NASA and ESA; artist pictures from the library, which show the player's own while the LMS client is off; online wallpapers (Pixabay, with a free key); pictures on the device; or black. |
+| Idle screen: Background, Background brightness, Change the picture every | **Gexis wallpapers**, the player's own pictures (the default on a new player); **Space pictures** from NASA and ESA; artist pictures from the library, which show the player's own while the Lyrion client is off; online wallpapers (Pixabay, with a free key); pictures on the device; or black. |
 | Idle screen: Wallpaper styles, Follow the time of day, Seasons, Holidays | With Gexis wallpapers. Each picture comes from one of the chosen styles (Calm, Colourful, Psychedelic), the hour's pictures (dawn, day, dusk, night) or the season's. On New Year, and on Christmas and Easter where they are public holidays, only those days' pictures show. The country comes from the weather location, or the time zone until one is set; Easter follows the Western or Orthodox date by country. |
 | Idle screen: Wallpaper topics | Which kinds of wallpaper are drawn from. |
 | Idle screen: Clock, Clock format, Weather, Location, Forecast, Weather icons | What the idle screen shows over the picture; forecasts come from Open-Meteo. |
@@ -407,17 +407,6 @@ the player itself, with its music folders and network shares).
 | Confidence threshold | How sure the match must be (recommended 90 %). Below it, nothing is shown rather than something wrong. |
 | Lyrion Client: Find portraits and covers | Looks up every album artist's portrait and every album's cover, keeps Lyrion's where none is found, and shows what the last run found. |
 
-### Device — *Identity and network*
-
-| Setting | What it does |
-| --- | --- |
-| Device name | One name for everything: the network address (*name*.local), the Lyrion player, the Spotify device and the Bluetooth name. |
-| Cable | Shown while a network cable is plugged in: *Connected · 1000 Mb/s · address*. Tap it to see the address, gateway and DNS, and to set the address by hand (*Manual*: the address with its prefix, the gateway, one or two DNS servers) or back to *Automatic*. After *Save*, open the player at its new address and tap *Keep* within 60 seconds; otherwise the old address comes back by itself. While the cable is in, the Wi-Fi is off and its networks stay saved; unplug the cable and the Wi-Fi connects again by itself. |
-| Wi-Fi | The networks in range and the ones the player knows. The connected network shows its speed; tap it to see its signal (dBm and %), speed, band and channel, and the player's address, updated every few seconds. A closed lock marks a secured network that needs its password; an open lock, one whose password the player already has. Under the connected network's details, its address can be set by hand the same way as the cable's, and kept the same way. |
-| Time zone | Taken from the network; set it by hand only when that is wrong. |
-| Version | What is installed. |
-| Reboot | Restarts the device; playback stops. |
-
 ### Plugins — *What is installed beyond the player itself*
 
 Optional parts, each with its own switch: the **visualiser skins** for this
@@ -430,7 +419,25 @@ and key, says whether the agent has reached its hub: **Connected** in green,
 **Connecting** in orange for its first minute, **Not connected** in red after
 that. A Hub public key that is not one is refused when it is saved.
 
-### System — *Updates and maintenance*
+### System — *The player, its network, updates and maintenance*
+
+Everything about the player itself, under seven headings.
+
+**This player**
+
+| Setting | What it does |
+| --- | --- |
+| Device name | One name for everything: the network address (*name*.local), the Lyrion player, the Spotify device and the Bluetooth name. |
+| Time zone | Taken from the network; set it by hand only when that is wrong. |
+
+**Network**
+
+| Setting | What it does |
+| --- | --- |
+| Wi-Fi | The networks in range and the ones the player knows. The connected network shows its speed; tap it to see its signal (dBm and %), speed, band and channel, and the player's address, updated every few seconds. A closed lock marks a secured network that needs its password; an open lock, one whose password the player already has. Under the connected network's details, its address can be set by hand the same way as the cable's, and kept the same way. |
+| Cable | Shown while a network cable is plugged in: *Connected · 1000 Mb/s · address*. Tap it to see the address, gateway and DNS, and to set the address by hand (*Manual*: the address with its prefix, the gateway, one or two DNS servers) or back to *Automatic*. After *Save*, open the player at its new address and tap *Keep* within 60 seconds; otherwise the old address comes back by itself. While the cable is in, the Wi-Fi is off and its networks stay saved; unplug the cable and the Wi-Fi connects again by itself. |
+
+**Updates**
 
 | Setting | What it does |
 | --- | --- |
@@ -438,13 +445,35 @@ that. A Hub public key that is not one is refused when it is saved.
 | Change logs | What changed in the last 10 releases. |
 | Updates | *Automatic* installs a waiting release at night, never while playing. |
 | Update channel | *Testing* gets each release first, *Stable* once it has been tried. Recommended: Stable. |
+
+**Backup and reset**
+
+| Setting | What it does |
+| --- | --- |
 | Back up now | Saves the settings, the library's pictures, the paired devices and the device's configuration into the Backups share. |
 | Restore | Puts a backup from the Backups share back and restarts the device. On a phone or computer, *Download* beside a backup saves it there. A freshly flashed card can restore one during setup instead, straight from the phone: setup asks for this player's output and screen, and anything else it asks (the name, say) can be changed on the way. |
 | Reset to factory settings | Puts the player back as on a freshly flashed card, then restarts into setup. Everything goes: every setting and the name, the Wi-Fi networks, paired devices and sign-ins, the skins and plugins, the Lyrion Server's library, and the backups kept on the player. The music folder, its playlists and the Pictures share stay. Download a backup first under *Restore*. To confirm, hold *Hold to reset and restart* for 3 seconds, until its bar fills; letting go earlier cancels. The screen and every phone then say the player is resetting; a phone also says how to reach setup. The installed version stays. |
-| Debug logs | Keeps the logs across restarts, for tracking down a problem. |
-| Hardware feedback | On a phone or computer, three steps. The screen: a test pattern on the player's screen, with four circles to tap, which measures where the touches land, and two questions. The sound: a short test tone at 44.1, 96 and 192 kHz played at the current volume (not while something plays), and three questions. Anything else: your own notes, if any, and what the player adds for you, to read before it goes. Without a screen, or with Headless on, it starts at the sound and has two steps. Then feedback on GitHub, filled in with what the player reads of them (never a serial number or anything about you). It helps others see what works before buying. A week after a sound card or screen that is not Tested is first used, a line at the top of System offers it once; × puts it away for good. |
+
+**Help**
+
+| Setting | What it does |
+| --- | --- |
 | Problem report | On a phone or computer: downloads one file with the logs, versions, hardware and settings, to attach to a report of a problem. Addresses, names, networks, shares, keys and what you play are taken out on the player first; read the file before sharing it. On the screen it says where to open it instead. |
+| Hardware feedback | On a phone or computer, three steps. The screen: a test pattern on the player's screen, with four circles to tap, which measures where the touches land, and two questions. The sound: a short test tone at 44.1, 96 and 192 kHz played at the current volume (not while something plays), and three questions. Anything else: your own notes, if any, and what the player adds for you, to read before it goes. Without a screen, or with Headless on, it starts at the sound and has two steps. Then feedback on GitHub, filled in with what the player reads of them (never a serial number or anything about you). It helps others see what works before buying. A week after a sound card or screen that is not Tested is first used, a line at the top of System offers it once; × puts it away for good. |
+| Debug logs | Keeps the logs across restarts, for tracking down a problem. |
+
+**About**
+
+| Setting | What it does |
+| --- | --- |
+| Version | What is installed. |
 | Legal, Credits | The licences, and everyone whose work is in the player. |
+
+**Power**
+
+| Setting | What it does |
+| --- | --- |
+| Reboot | Restarts the device; playback stops. |
 
 ## 10. Updates
 
