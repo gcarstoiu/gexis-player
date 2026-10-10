@@ -369,6 +369,15 @@ holds each phase's acceptance criteria; this list is only the order.
 
 ## Things that will bite if forgotten
 
+- **A history rewrite after previews strands the preview device** (the bar,
+  2026-10-10). A package's version is `<tag>+git<count>.<hash>`; after a
+  rewrite the release's packages keep the count but get new hashes, and dpkg
+  then compares the hashes - `65.6709a60` sorted above `65.85d1002`, so 0.9.8
+  was a downgrade to the bar and its update failed ("held broken packages").
+  Players on real releases are unaffected. Put a preview device back on the
+  release's own packages with `apt-get install --allow-downgrades`, dry run
+  first.
+
 - **The 13.3" panel's setup jams gexis's Wi-Fi** (measured 2026-10-05,
   0.9.0 preview, 5 GHz channel 36, signal -62 to -66 dBm either way): with
   the panel connected, 20-37 % of pings to the router lost, 80-1,260 ms
