@@ -1735,7 +1735,10 @@ async def main() -> None:
     # network yet, during setup) is tried again every few minutes.
     SKINS_RETRY_S = 300.0
     UPDATER = "/usr/lib/gexis/gexis-update"
-    skins_state = {"busy": False, "task": None}
+    skins_state = {"busy": False, "task": None, "waited": False}
+    #: The setup network, once it exists (it is made further down): while
+    #: the player still needs setup, the pack waits (below).
+    setup_ref: dict = {"net": None}
 
     def _publish_meters() -> None:
         """ADR-0055 §6 and ADR-0111: the visualiser is there when the output
@@ -1751,6 +1754,19 @@ async def main() -> None:
 
     async def _skins_ensure() -> None:
         if skins_state["busy"]:
+            return
+        # **Not while setup is still under way** (George, 2026-10-10: "That
+        # should be handled in the settlement screen once the panel
+        # reboots"). Setup writes Visualiser skins, and the install it
+        # started held the updater's shutdown block over setup's own restart,
+        # which systemd then refused (the bar player, twice). The pack waits
+        # until setup is over - the next start, or the moment setup ends when
+        # nothing restarts - and the settling screen shows it (ADR-0128).
+        net = setup_ref["net"]
+        if net is not None and net.needed and settings.value("visualiser_skins"):
+            if not skins_state["waited"]:
+                logger.info("skins: waiting until setup is over; the settling screen fetches them")
+            skins_state["waited"] = True
             return
         skins_state["busy"] = True
         try:
@@ -3261,7 +3277,15 @@ async def main() -> None:
             logger.warning("park: LMS not paused: %s", exc)
             return False
 
-    setup_network = SetupNetwork(on_change=state_store.set_setup)
+    def _setup_changed(status: dict) -> None:
+        state_store.set_setup(status)
+        # A setup that ends without a restart: the pack it held back starts.
+        if skins_state["waited"] and setup_ref["net"] is not None and not setup_ref["net"].needed:
+            skins_state["waited"] = False
+            _skins_kick()
+
+    setup_network = SetupNetwork(on_change=_setup_changed)
+    setup_ref["net"] = setup_network
     setup_flow = SetupFlow(setup_network, settings, reboot=_reboot, plugins=_offered_plugins)
     asyncio.ensure_future(cable.follow())
     # ADR-0123 as amended (George, 2026-10-08): the cable wins over Wi-Fi.
