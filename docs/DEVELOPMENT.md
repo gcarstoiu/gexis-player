@@ -2913,7 +2913,7 @@ per file on Pis other than 4 GB, and temperatures with a case (HARDWARE.md).
 ### Phase 13f — Lyrion's own menus, plugins included
 
 **Closes after the hidden library's hour** on the Pi (ADR-0122,
-Consequences) **and George's look** (George, 2026-10-10, agreeing to the
+Consequences; measured 2026-10-10, nothing - Finding 118) **and George's look** (George, 2026-10-10, agreeing to the
 recommendation). It was built and released behind *Extended navigation*
 (ADR-0118); it had no written acceptance criteria, so closing is his call.
 
