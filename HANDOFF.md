@@ -1,16 +1,29 @@
 # Handoff
 
-Last updated: 2026-10-10 (on R2D2).
+Last updated: 2026-10-10, evening (on R2D2).
 
 ## Start here
 
 Branches: **`phase-13b`** in the main checkout holds the documents and shared
 work; **`phase-13d`** in `~/projects/gexis-player-13d` is the release branch,
-and `phase-13b` is merged into it after each docs change. The worktree
-`~/projects/gexis-player-r098` sits at `v0.9.8` (the older release worktrees
-were removed 2026-10-10).
+and `phase-13b` is merged into it after each docs change. The worktrees
+`~/projects/gexis-player-r098` and `-r099` sit at their tags.
 Earlier narrative: `docs/HANDOFF-ARCHIVE.md` (0.9.5 to 0.9.7 moved there
 2026-10-10).
+
+**0.9.9 cut 2026-10-10 for Testing** (tag `v0.9.9`, release `r0.9.9`,
+serial 33, image `image/deploy/2026-10-10-gexis-player-v0.9.9.img`, 113
+checks; notes approved by George). **PR #58 open - George merges it.** No
+preview on a device first: George asked for the release directly. In it:
+- **The settling screen can be put away at once** (ADR-0128 amended):
+  *Use the player now*, `POST /settling/hide`, `hidden` in `settling.json`;
+  a failure brings it back (George confirmed).
+- **Setup's Screen step: makers as chips**, one open at a time (ADR-0109
+  amended).
+- **The bar's 11.9" screen is recognised in setup** (its fingerprint, read on
+  ShelvesPi: EDID `WSD`/`WaveShare-119`, touch `0712:000a`).
+- **A restore switches on only plugins stored on** (ADR-0131's "not stored
+  is on" withdrawn; sofapi had waited for a Lyrion Server never chosen).
 
 **0.9.8 cut 2026-10-10 for Testing** (tag `v0.9.8`, release `r0.9.8`,
 serial 32 after the rewrite below, image
@@ -52,14 +65,17 @@ deleted once 0.9.8 was merged. **Do not put `claude.ai/artifact` links in the
 repository.**
 
 **Devices.** **ShelvesPi** (the bar, DAC2 HD, 11.9" bar screen; reached at
-its fixed lease) runs `phase-13d` as a preview, restored from guestpi's
-backup as a second player after a factory reset. **sofapi** runs release
-0.9.7 - George asked that previews go to the bar, not there. **guestpi**
-was offline at the end of the day.
+its fixed lease) runs release 0.9.8 (its earlier preview packages sorted
+above the rewritten release, so the 0.9.8 debs went on with
+`--allow-downgrades`). **sofapi** runs release 0.9.8, reset and restored
+(its settling screen was unblocked by hand: the plugin fix in 0.9.9).
+Previews go to the bar, not sofapi (George). **guestpi** was offline at the
+end of the day.
 
-**Waiting on George:** one more reset and restore on the bar
-to see setup restart by itself with the skins arriving on the settling
-screen (not yet proven on a device); a look at the boot screen's seam.
+**Waiting on George:** merge PR #58. Then, on 0.9.9: one more reset and
+restore on the bar to see setup restart by itself, recognise the bar screen,
+and the skins arrive on the settling screen - with *Use the player now* (none
+of it yet seen on a device); a look at the boot screen's seam.
 
 **At the first Stable release** (George, 2026-10-09): revisit how the image
 reaches people - most likely all three of ADR-0021's routes: the image file
