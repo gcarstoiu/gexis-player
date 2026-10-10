@@ -39,6 +39,16 @@ George). Its PR into main waits for George. In it:
   the bar's Minimise where the library's Back is; the tab titled with the
   player's name.
 
+**Local history rewritten 2026-10-10 before pushing 0.9.8** (George: the
+recommendation, "go ahead - I allow it"): ADR-0133 had linked the design
+page in George's Claude account, the same kind of link CLAUDE.md keeps out of
+commits. The sentence now says the options were on a private design page;
+nothing else changed. Backups, local only: `backup/phase-13b-before-artifact`,
+`backup/phase-13d-before-artifact` and the tag
+`backup/v0.9.8-before-artifact` (the commit Testing serial 31 was built
+from) - delete with the older `-before-clean` ones once the release is out.
+**Do not put `claude.ai/artifact` links in the repository.**
+
 **Devices.** **ShelvesPi** (the bar, DAC2 HD, 11.9" bar screen; reached at
 its fixed lease) runs `phase-13d` as a preview, restored from guestpi's
 backup as a second player after a factory reset. **sofapi** runs release
