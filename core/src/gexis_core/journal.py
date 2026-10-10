@@ -20,6 +20,15 @@ logger = logging.getLogger("gexis_core.journal")
 DROPIN = Path("/etc/systemd/journald.conf.d/60-gexis-debug-logs.conf")
 KEPT = Path("/var/log/journal")
 CONTENT = "[Journal]\nStorage=persistent\nSystemMaxUse=100M\n"
+#: **TEMPORARY - remove before the first public release** (George,
+#: 2026-10-10: "we need to remove it before first release as normally nothing
+#: should make it through a reset. So we add it today for debugging purposes
+#: only"). Written by a factory reset (`factory_reset.wipe`), so the boot it
+#: runs in and the setup after it are kept on the card; removed by the core at
+#: its first start after setup (`__main__._reconcile_debug_logs`).
+AFTER_RESET = Path("/etc/systemd/journald.conf.d/61-gexis-after-reset.conf")
+AFTER_RESET_CONTENT = ("# TEMPORARY (ADR-0132, 2026-10-10): the boot after a factory reset, kept\n"
+                       "# for debugging until setup is done. Removed by gexis-core.\n" + CONTENT)
 
 
 def is_kept(dropin: Path = DROPIN) -> bool:

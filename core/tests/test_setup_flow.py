@@ -393,7 +393,10 @@ def test_restoring_joins_applies_the_backup_s_answers_puts_the_files_back_and_re
     assert (tmp_path / "card/var/lib/gexis-core/settings.db").exists()
     assert names == [True]
     waits = json.loads((tmp_path / "settling.json").read_text())["items"]
-    assert [w["id"] for w in waits] == ["skins", "plexamp"]
+    # The backup stores Plexamp on and Beszel off, and nothing for the
+    # Lyrion Server: its switch's default, on - so it is waited for too
+    # (found 2026-10-10: a switch left at its default read as off).
+    assert [w["id"] for w in waits] == ["skins", "plexamp", "lyrion"]
     assert net.status()["finished"]["restart_for"] == "restore"
     assert reboots == [True] and not flow._backup.exists()
     assert (tmp_path / "setup-done").exists()

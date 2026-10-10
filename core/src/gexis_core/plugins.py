@@ -14,6 +14,7 @@ code nothing else runs is how the first external plugin finds a hole
 """
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 
 import json
@@ -105,7 +106,8 @@ class Plugin:
     #: connections its unit's user holds.
     connection: bool = False
     #: True for the three this repository ships. They are not special in how
-    #: they are read - only in who wrote them.
+    #: they are read - only in who wrote them. Setup asks about them in its own
+    #: steps (Music, Services), so its Plugins step leaves them out.
     built_in: bool = False
     #: **ADR-0106: uploaded by the user**, not part of Gexis Player. Run under
     #: the player's own sandboxed unit; the screen tags it so.
@@ -191,6 +193,11 @@ def parse(raw: dict, *, directory: Path | None = None, built_in: bool = False) -
     )
 
 
+#: The renderers this repository ships, with rows of their own
+#: (`lms_enabled`, `spotify_enabled`, `bt_enabled`).
+BUILT_IN = frozenset({"lms", "spotify", "bluetooth"})
+
+
 def installed(directory: Path = DEFAULT_DIR) -> list[Plugin]:
     """Every readable manifest, by id.
 
@@ -222,5 +229,11 @@ def installed(directory: Path = DEFAULT_DIR) -> list[Plugin]:
         if plugin.id in found:
             logger.warning("plugins: %s is installed twice, keeping the first", plugin.id)
             continue
+        # **Set where the manifests are read** (found 2026-10-10: the field
+        # was declared and never set, so setup's Plugins step offered LMS,
+        # Spotify and Bluetooth beside the plugins, and a restore that went
+        # through that step switched LMS and Spotify off).
+        if plugin.id in BUILT_IN:
+            plugin = dataclasses.replace(plugin, built_in=True)
         found[plugin.id] = plugin
     return list(found.values())

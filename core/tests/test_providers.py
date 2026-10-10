@@ -86,7 +86,7 @@ async def test_the_lms_provider_credits_the_server_not_wikipedia():
 
     assert answer.outcome is Outcome.FOUND
     assert answer.enrichment.biography == "An Australian rock band."
-    assert answer.enrichment.biography_source == "LMS"
+    assert answer.enrichment.biography_source == "Lyrion"
     assert answer.enrichment.artist_image == "http://lms/photo.jpg"
 
 
@@ -253,7 +253,7 @@ async def test_a_release_is_read_from_the_library_not_from_the_internet():
     assert answer.enrichment.released == "2011"
     assert answer.enrichment.length_s == pytest.approx(720.5)
     assert answer.enrichment.album_note == "A live album."
-    assert answer.enrichment.album_note_source == "LMS"
+    assert answer.enrichment.album_note_source == "Lyrion"
     assert library.asked == [6044]
 
 
@@ -495,7 +495,7 @@ async def test_the_artist_page_asks_lms_first_then_the_rest():
     found = body["enrichment"]
     # LMS wins the biography; ListenBrainz fills what it has nothing for.
     assert found["biography"] == "From the plugin."
-    assert found["biography_source"] == "LMS"
+    assert found["biography_source"] == "Lyrion"
     assert found["artist_image"] == "http://lms/photo.jpg"
     assert found["similar"] == ["Queen", "Led Zeppelin"]
 

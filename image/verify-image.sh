@@ -83,6 +83,22 @@ else
 fi
 rm -f "$OUT/status"
 
+# ADR-0133: the player's own wallpapers are in the image, each with its credit.
+echo "== the player's own wallpapers (ADR-0133)"
+dfs "dump /usr/share/gexis/wallpapers/credits.json $OUT/credits.json" >/dev/null
+if [ ! -s "$OUT/credits.json" ]; then
+	bad "/usr/share/gexis/wallpapers/credits.json missing"
+else
+	want=$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))))' "$OUT/credits.json")
+	got=0
+	for set in $(python3 -c 'import json,sys; print(" ".join(sorted({c["set"] for c in json.load(open(sys.argv[1]))})))' "$OUT/credits.json"); do
+		n=$(dfs "ls -l /usr/share/gexis/wallpapers/$set" | grep -c '\.webp')
+		got=$((got + n))
+	done
+	[ "$got" = "$want" ] && ok "$got wallpapers, each listed in credits.json" || bad "credits.json lists $want wallpapers, the image has $got"
+fi
+rm -f "$OUT/credits.json"
+
 echo "== files the services must be able to write"
 # The driver rewrites the spectrum engine's config to choose a section - the
 # engine has no other way to be told - and the unit runs as pi (uid 1000).
@@ -389,6 +405,8 @@ done
 echo "== ADR-0095 as amended: LMS paused as the device goes down"
 dfs "stat /usr/lib/systemd/system/gexis-park.service" | grep -q 'Inode:' && ok "gexis-park.service installed" || bad "gexis-park.service missing"
 dfs "stat /etc/systemd/system/multi-user.target.wants/gexis-park.service" | grep -q 'Inode:' && ok "gexis-park.service enabled" || bad "gexis-park.service not enabled"
+# ADR-0132: the reset runs early in the boot after it is asked for - only if enabled.
+dfs "stat /etc/systemd/system/sysinit.target.wants/gexis-factory-reset.service" | grep -q 'Inode:' && ok "gexis-factory-reset.service enabled" || bad "gexis-factory-reset.service not enabled"
 
 echo "== ADR-0106: uploaded plugins run under the player's own sandboxed units"
 for u in gexis-uploaded-renderer@.service gexis-uploaded-service@.service; do

@@ -15,8 +15,22 @@
 //
 // The animation is still renderable from files/render/ and is not built.
 
-Window.SetBackgroundTopColor(0.063, 0.102, 0.129);     // #101a21
-Window.SetBackgroundBottomColor(0.063, 0.102, 0.129);
+// #101a21 = (16, 26, 33). Plymouth cuts a colour's fraction off rather than
+// rounding it, so 0.129 x 255 = 32.9 painted blue 32 beside the still's 33:
+// a seam where a bar's still ends (George, 2026-10-10: "a separation line
+// between the logo area ... and the side which is of different, really
+// close though, colour"). These are (n + 0.3) / 255, safe either way - and
+// the ground below is an image, so it is the still's colour exactly.
+Window.SetBackgroundTopColor(0.0639, 0.1031, 0.1306);
+Window.SetBackgroundBottomColor(0.0639, 0.1031, 0.1306);
+
+// The whole window in the still's own ground, from an image rather than a
+// colour, behind the still: the same pixels by the same path, so nothing
+// where they meet can differ.
+ground = Sprite(Image("ground.png").Scale(Window.GetWidth(), Window.GetHeight()));
+ground.SetX(0);
+ground.SetY(0);
+ground.SetZ(-1);
 
 // The still is 1280x800, scaled to fill whatever mode the screen comes up
 // in - keeping its shape, cut evenly at the edges - and centred: what swaybg

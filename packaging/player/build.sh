@@ -26,7 +26,7 @@ ours=""
 # gexis-skins or on a size's pack. A device installs its pack with consent;
 # one that already has gexis-skins keeps it, since apt leaves an installed
 # package alone when nothing depends on it any more.
-for pkg in gexis-core gexis-ui gexis-system gexis-peppyalsa gexis-peppy-engines \
+for pkg in gexis-core gexis-ui gexis-system gexis-wallpapers gexis-peppyalsa gexis-peppy-engines \
 	gexis-go-librespot gexis-beszel-agent gexis-beszel-hub gexis-lyrion-server gexis-plexamp; do
 	v=$(version_of "$pkg")
 	ours="$ours, $pkg (= $v)"

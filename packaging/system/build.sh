@@ -85,7 +85,7 @@ put 755 "$S/05-peppy/files/gexis-peppy-start" /usr/bin/gexis-peppy-start
 
 # --- The splash (06-splash) ---------------------------------------------------
 T=/usr/share/plymouth/themes/gexis
-for f in gexis.plymouth gexis.script still.png; do
+for f in gexis.plymouth gexis.script still.png ground.png; do
 	put 644 "$S/06-splash/files/theme/$f" "$T/$f"
 done
 put 644 "$S/06-splash/files/theme/still.png" /usr/share/gexis/panel-background.png

@@ -33,6 +33,7 @@ from gexis_core.config import Config
 from gexis_core.start_guard import StartGuard
 from gexis_core.idle_page import probe as probe_idle_page
 from gexis_core.wallpapers import Wallpapers
+from gexis_core.space_pictures import SpacePictures
 from gexis_core.weather import Weather
 from gexis_core.metadata_file import MetadataFileWriter
 from gexis_core.artistinfo import PHOTO_LARGE, LmsArtistInfo
@@ -70,7 +71,7 @@ from gexis_core.peppy import (
     set_meter_skins,
     set_meter_smoothing,
 )
-from gexis_core import lyrion_addons, lyrion_folders, lyrion_memory
+from gexis_core import factory_reset, lyrion_addons, lyrion_folders, lyrion_memory
 from gexis_core.lyrion_shares import Shares as LyrionShares
 from gexis_core.fanart import Fanart
 from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
@@ -256,13 +257,57 @@ async def _set_timezone(zone: str) -> None:
         logger.info("timezone: set to %s", zone)
 
 
+#: How often a refused restart is asked again, and for how long.
+REBOOT_RETRY_S = 15.0
+REBOOT_GIVE_UP_S = 30 * 60.0
+
+
+async def _systemctl_reboot(*, retry_s: float = REBOOT_RETRY_S, give_up_s: float = REBOOT_GIVE_UP_S,
+                            exec_=asyncio.create_subprocess_exec, sleep=asyncio.sleep) -> bool:
+    """**Every restart the core asks for, until systemd takes it.**
+
+    Found on the bar player (2026-10-10), after a factory reset and a
+    restore in setup: the restored *Visualiser skins* started the pack's
+    install at once, the updater holds a shutdown block while it installs
+    (so a power cut cannot leave a half-written package), and systemd 257
+    refuses even root's reboot while one is held - "Call to Reboot failed:
+    Access denied". Asked twice a minute apart, the second refusal came four
+    seconds before the install ended, and the panel stayed on setup's last
+    screen. So the restart is asked again every `retry_s` until it is taken
+    - an install ends in minutes - and the refusal is logged once, not every
+    time. Returns whether it was taken."""
+    waited = 0.0
+    last = None
+    while True:
+        try:
+            proc = await exec_("systemctl", "reboot", stdout=asyncio.subprocess.PIPE,
+                               stderr=asyncio.subprocess.STDOUT)
+            out, _ = await proc.communicate()
+        except OSError as exc:
+            logger.error("reboot: systemctl could not be run: %s", exc)
+            return False
+        if proc.returncode == 0:
+            logger.info("reboot: systemd took the restart%s", f" after {waited:.0f} s" if waited else "")
+            return True
+        reason = out.decode(errors="replace").strip() or f"exit {proc.returncode}"
+        if reason != last:
+            logger.warning("reboot: refused (%s); asking again every %.0f s - an install holding a "
+                           "shutdown block does this until it ends", reason, retry_s)
+            last = reason
+        if waited >= give_up_s:
+            logger.error("reboot: still refused after %.0f min (%s); giving up", waited / 60, reason)
+            return False
+        await sleep(retry_s)
+        waited += retry_s
+
+
 async def _restore_done() -> None:
     """**ADR-0083: a restore reboots.** The archive is already written back by
     the time this runs; the pause is only so the answer reaches whoever asked
     before the device goes down under them."""
     logger.warning("restore: rebooting to come up on the restored state")
     await asyncio.sleep(1.5)
-    await asyncio.create_subprocess_exec("systemctl", "reboot")
+    await _systemctl_reboot()
 
 
 async def _restart_for(key: str) -> None:
@@ -271,12 +316,26 @@ async def _restart_for(key: str) -> None:
     and the toast that says so - reach whoever saved it first."""
     logger.warning("settings: %s changed; restarting the device to apply it", key)
     await asyncio.sleep(1.5)
-    await asyncio.create_subprocess_exec("systemctl", "reboot")
+    await _systemctl_reboot()
 
 
 async def _reboot() -> None:
     logger.info("reboot: requested from settings")
-    await asyncio.create_subprocess_exec("systemctl", "reboot")
+    await _systemctl_reboot()
+
+
+async def _factory_reset(state_store) -> None:
+    """**ADR-0132: the reset is asked for, then the device restarts**; the
+    wipe itself runs early in the next boot (`gexis-factory-reset.service`),
+    before anything holds the files it removes. `resetting` on `/state` puts
+    the reset screen on the panel and every phone first (George, 2026-10-09:
+    "Something needs to be shown to the user so he knows that the device is
+    being reset"), and the restart waits long enough for it to arrive."""
+    await asyncio.to_thread(factory_reset.request)
+    state_store.set_resetting()
+    logger.warning("factory reset: requested; restarting to wipe and come up in setup")
+    await asyncio.sleep(3)
+    await _systemctl_reboot()
 
 
 #: ADR-0109 decision 5: how long the panel asks *Keep this screen?*, from its
@@ -460,7 +519,7 @@ async def main() -> None:
 
         async def _board_restart() -> None:
             await asyncio.sleep(2.0)
-            await asyncio.create_subprocess_exec("systemctl", "reboot")
+            await _systemctl_reboot()
         asyncio.ensure_future(_board_restart())
 
     chosen_output = outputs.resolve(settings_store.get("output_device"))
@@ -1322,6 +1381,9 @@ async def main() -> None:
     wallpapers = Wallpapers(
         idle_session, config.wallpaper_dir, local_dir=Path(config.pictures_dir)
     )
+    # ADR-0133: Space pictures from NASA and ESA, kept beside the Pixabay
+    # ones for the same reason.
+    space = SpacePictures(idle_session, Path(config.wallpaper_dir).parent / "space")
 
     # ADR-0051. The three visualisation rows describe what the renderer
     # draws, and the renderer is another process: it learns of a change by
@@ -1673,7 +1735,10 @@ async def main() -> None:
     # network yet, during setup) is tried again every few minutes.
     SKINS_RETRY_S = 300.0
     UPDATER = "/usr/lib/gexis/gexis-update"
-    skins_state = {"busy": False, "task": None}
+    skins_state = {"busy": False, "task": None, "waited": False}
+    #: The setup network, once it exists (it is made further down): while
+    #: the player still needs setup, the pack waits (below).
+    setup_ref: dict = {"net": None}
 
     def _publish_meters() -> None:
         """ADR-0055 §6 and ADR-0111: the visualiser is there when the output
@@ -1689,6 +1754,19 @@ async def main() -> None:
 
     async def _skins_ensure() -> None:
         if skins_state["busy"]:
+            return
+        # **Not while setup is still under way** (George, 2026-10-10: "That
+        # should be handled in the settlement screen once the panel
+        # reboots"). Setup writes Visualiser skins, and the install it
+        # started held the updater's shutdown block over setup's own restart,
+        # which systemd then refused (the bar player, twice). The pack waits
+        # until setup is over - the next start, or the moment setup ends when
+        # nothing restarts - and the settling screen shows it (ADR-0128).
+        net = setup_ref["net"]
+        if net is not None and net.needed and settings.value("visualiser_skins"):
+            if not skins_state["waited"]:
+                logger.info("skins: waiting until setup is over; the settling screen fetches them")
+            skins_state["waited"] = True
             return
         skins_state["busy"] = True
         try:
@@ -1744,6 +1822,22 @@ async def main() -> None:
         finally:
             previews_state["busy"] = False
 
+    #: **The visualiser waits for the settling screen** (George's bar player,
+    #: 2026-10-09: "after the download finished on the settling screen the
+    #: whole player blinked and then showed the downloading modal again").
+    #: Its pack landing restarted it, and its window opening over the
+    #: settling screen was the blink. While that screen is up the restart is
+    #: held here, and done when it goes (`_follow_settling`).
+    visualiser_held = {"settling": False, "restart": False}
+
+    async def _restart_visualiser() -> None:
+        if visualiser_held["settling"]:
+            visualiser_held["restart"] = True
+            logger.info("peppy: restart held until the settling screen is gone")
+            return
+        visualiser_held["restart"] = False
+        await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-peppy.service")
+
     async def _configure_visualiser() -> None:
         """ADR-0111: PeppyMeter draws the pack skins_at() names, at its size.
         Restarted only when its config changed."""
@@ -1755,7 +1849,7 @@ async def main() -> None:
             return
         width, height = (int(n) for n in at[1].split("x"))
         if await asyncio.to_thread(set_meter_skins, Path(config.meter_consumer_config), base, at[1], width, height):
-            await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-peppy.service")
+            await _restart_visualiser()
 
     def _package_on_disk(size: tuple[int, int]) -> str:
         """A size's package: its pack, or the gexis-skins a device kept."""
@@ -1787,7 +1881,7 @@ async def main() -> None:
 
         async def _restart() -> None:
             await asyncio.sleep(2.0)
-            await asyncio.create_subprocess_exec("systemctl", "reboot")
+            await _systemctl_reboot()
         asyncio.ensure_future(_restart())
 
     def _choose_screen(label: str | None = None, rotation: str | None = None) -> None:
@@ -1809,7 +1903,7 @@ async def main() -> None:
 
         async def _restart() -> None:
             await asyncio.sleep(2.0)
-            await asyncio.create_subprocess_exec("systemctl", "reboot")
+            await _systemctl_reboot()
         asyncio.ensure_future(_restart())
 
     def _reports_note(key: str, reported: str | None) -> str | None:
@@ -1939,6 +2033,10 @@ async def main() -> None:
                "theaudiodb_key": None,
                "idle_weather": None,
                "weather_location": None, "idle_forecast": None,
+               # ADR-0133: read when the next picture is chosen.
+               "wallpaper_styles": None, "wallpaper_time_of_day": None,
+               "wallpaper_seasons": None, "wallpaper_holidays": None,
+               "waiting_clock": None, "waiting_hint": None,
                "idle_icons": None,
                "viz_timeout": None, "viz_stop": None,
                # ADR-0022's handoff rows, wired 2026-09-25. Read where they
@@ -2038,6 +2136,7 @@ async def main() -> None:
                "update_install": lambda _=None: updates.start(updates.INSTALL_UNIT),
                "updates": None, "update_channel": None,
                "reboot": lambda _: asyncio.ensure_future(_reboot()),
+               "factory_reset": lambda _: asyncio.ensure_future(_factory_reset(state_store)),
                # ADR-0109: a screen or rotation chosen is written for the
                # next start, and the device restarts on it - unless setup is
                # under way, which restarts by itself when it finishes.
@@ -2317,6 +2416,18 @@ async def main() -> None:
         """At startup the device follows the switch (ADR-0103 §4, as ADR-0077
         does for the others): a restore brings back the setting, not the file.
         Only a disagreement is acted on, so a fresh image restarts nothing."""
+        # TEMPORARY - remove before the first public release
+        # (journal.AFTER_RESET): after a factory reset the logs stay on the
+        # card until setup is done, whatever the switch says; at the first
+        # start after setup the drop-in goes and this check waits one start,
+        # so those logs survive the restart setup ends with.
+        if journal.AFTER_RESET.exists():
+            if not Path("/var/lib/gexis/setup-done").exists():
+                logger.info("journal: kept on the card until setup is done (after a factory reset)")
+                return
+            journal.AFTER_RESET.unlink(missing_ok=True)
+            logger.info("journal: setup is done; the log kept since the factory reset stays until the next start")
+            return
         on = settings.value("debug_logs") is True
         if not journal.matches(on):
             logger.info("journal: debug_logs is %s and the device disagrees; applying", on)
@@ -2886,6 +2997,10 @@ async def main() -> None:
             else:
                 ready_since = None
             state_store.set_settling(view)
+            visualiser_held["settling"] = view is not None
+            if view is None and visualiser_held["restart"]:
+                logger.info("peppy: the settling screen is gone; restarting the visualiser held for it")
+                await _restart_visualiser()
             await asyncio.sleep(2 if view else 10)
 
     asyncio.ensure_future(_follow_settling())
@@ -3017,7 +3132,7 @@ async def main() -> None:
         _sync_screen_settings()
         state_store.set_screen_confirm(None)
         await asyncio.sleep(1.5)
-        await asyncio.create_subprocess_exec("systemctl", "reboot")
+        await _systemctl_reboot()
 
     async def _screen_countdown(seconds: float, reason: str) -> None:
         await asyncio.sleep(seconds)
@@ -3162,7 +3277,15 @@ async def main() -> None:
             logger.warning("park: LMS not paused: %s", exc)
             return False
 
-    setup_network = SetupNetwork(on_change=state_store.set_setup)
+    def _setup_changed(status: dict) -> None:
+        state_store.set_setup(status)
+        # A setup that ends without a restart: the pack it held back starts.
+        if skins_state["waited"] and setup_ref["net"] is not None and not setup_ref["net"].needed:
+            skins_state["waited"] = False
+            _skins_kick()
+
+    setup_network = SetupNetwork(on_change=_setup_changed)
+    setup_ref["net"] = setup_network
     setup_flow = SetupFlow(setup_network, settings, reboot=_reboot, plugins=_offered_plugins)
     asyncio.ensure_future(cable.follow())
     # ADR-0123 as amended (George, 2026-10-08): the cable wins over Wi-Fi.
@@ -3227,6 +3350,7 @@ async def main() -> None:
         # ADR-0047: the idle screen's two providers.
         weather=forecast,
         wallpapers=wallpapers,
+        space=space,
         # ADR-0050: the picker's previews are the skins' own pictures.
         skins_at=skins_at,
         ui_dir=ui_dir,

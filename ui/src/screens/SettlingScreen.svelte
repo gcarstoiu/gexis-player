@@ -23,11 +23,14 @@
     if (item.state === 'failed') return item.error ? `Did not finish: ${item.error}` : 'Did not finish';
     if (item.state === 'waiting') return 'Waiting to start…';
     const got = mb(item.received), all = mb(item.total);
-    return got != null && all ? `${got} of ${all} MB` : 'Downloading…';
+    if (got != null && all) return `${got} of ${all} MB`;
+    // A skin pack says how far it is as a share, not in bytes.
+    return item.share != null ? `${Math.round(item.share * 100)} %` : 'Downloading…';
   }
   function share(item) {
     if (item.state === 'done') return 1;
-    return item.total ? Math.min(1, (item.received ?? 0) / item.total) : 0;
+    if (item.total) return Math.min(1, (item.received ?? 0) / item.total);
+    return item.share != null ? Math.min(1, Math.max(0, item.share)) : 0;
   }
   function names(list) {
     const n = list.map((i) => i.name);
@@ -55,7 +58,7 @@
             <span class="item__state">{line(item)}</span>
           </div>
           {#if item.state === 'busy' || item.state === 'waiting' || item.state === 'done'}
-            <div class="bar" class:bar--waiting={item.state === 'waiting' || (item.state === 'busy' && !item.total)}>
+            <div class="bar" class:bar--waiting={item.state === 'waiting' || (item.state === 'busy' && !item.total && item.share == null)}>
               <span style:width="{Math.round(share(item) * 100)}%"></span>
             </div>
           {/if}

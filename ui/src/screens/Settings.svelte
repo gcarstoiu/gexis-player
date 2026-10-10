@@ -9,7 +9,7 @@
   import CableSheet from './CableSheet.svelte';
   import { onMount, untrack } from 'svelte';
   import { pressing } from '../lib/press.svelte.js';
-  import { components, update, screenCheck, showScreenCheck } from '../lib/state.js';
+  import { components, update, screenCheck, showScreenCheck, resetting, metadata, fixedOutput } from '../lib/state.js';
   import UpdateModal from './UpdateModal.svelte';
   import ReleaseNotes from './ReleaseNotes.svelte';
   import ReleaseHistory from './ReleaseHistory.svelte';
@@ -23,6 +23,7 @@
     loadSettings,
     runSetting,
     writeSetting,
+    fixedPending,
   } from '../lib/settings.js';
 
   // On the panel, Settings is a layer over the library and Back closes it
@@ -631,6 +632,9 @@
   function shown(row) {
     const v = row.value;
     if (row.type === 'toggle') return '';
+    // ADR-0046 as amended: a Volume change that waits for a pause says so.
+    if (row.key === 'output_mode' && $fixedPending === 'on') return 'Fixed at the next pause';
+    if (row.key === 'output_mode' && $fixedPending === 'off') return `${v} at the next pause`;
     // ADR-0123: the cable at a glance, the line the core keeps for it.
     if (row.kind === 'cable') return row.note ?? '';
     // A screen reads as its maker and model, not the picker's `Maker/Model`.
@@ -787,6 +791,20 @@
     return n > FULL_SHEET_OPTIONS;
   });
 
+  //: What a written choice says. **A Volume change that has to wait says
+  //: so** (ADR-0046 as amended, George on sofapi, 2026-10-10): while music
+  //: plays, Fixed starts - or ends - only at the next pause or stop.
+  function said(row, option) {
+    const playing = $metadata?.transport === 'playing';
+    if (row.key === 'output_mode' && playing && option === 'Fixed' && !$fixedOutput) {
+      flash('Fixed output starts at the next pause or stop. Until then the volume still works.', 9000);
+    } else if (row.key === 'output_mode' && playing && option !== 'Fixed' && $fixedOutput) {
+      flash(`${option} volume starts at the next pause or stop.`, 9000);
+    } else {
+      flash(`${row.label}: ${option}`);
+    }
+  }
+
   async function choose(option) {
     const row = sheet;
     if (String(row.value) === option) {
@@ -807,7 +825,7 @@
       return;
     }
     sheetKey = null;
-    if (await write(row, option)) flash(`${row.label}: ${option}`);
+    if (await write(row, option)) said(row, option);
   }
 
   //: ADR-0044 §7. Each tap is a write, because nothing on this screen has
@@ -1089,6 +1107,42 @@
     if (await write(row, Number(draft))) flash(`${row.label}: ${shown({ ...row, value: Number(draft) })}`);
   }
 
+  //: **A challenge that needs no keyboard** (ADR-0132; George, 2026-10-09:
+  //: "add a challenge of sorts when triggering a reset ... something that
+  //: could work without a keyboard"). A row with `hold` confirms only after
+  //: its button is held for HOLD_MS - a finger, a mouse, or Space or Enter
+  //: held down; letting go early starts over. A stray tap cannot reset.
+  const HOLD_MS = 3000;
+  let holdShare = $state(0);
+  let holdFrame = null;
+  function holdStart(event) {
+    if (holdFrame !== null || busy) return;
+    event?.preventDefault?.();
+    const from = performance.now();
+    const tick = (now) => {
+      holdShare = Math.min(1, (now - from) / HOLD_MS);
+      if (holdShare >= 1) {
+        holdFrame = null;
+        holdShare = 0;
+        confirmSheet();
+        return;
+      }
+      holdFrame = requestAnimationFrame(tick);
+    };
+    holdFrame = requestAnimationFrame(tick);
+  }
+  function holdStop() {
+    if (holdFrame !== null) cancelAnimationFrame(holdFrame);
+    holdFrame = null;
+    holdShare = 0;
+  }
+  const holdKey = (down) => (event) => {
+    if (event.key !== ' ' && event.key !== 'Enter') return;
+    event.preventDefault();
+    if (!down) holdStop();
+    else if (!event.repeat) holdStart(event);
+  };
+
   async function confirmSheet() {
     if (saving) return; // a tap during a save is not a second request
     const row = sheet;
@@ -1161,7 +1215,7 @@
       const option = choicePending;
       choicePending = null;
       sheetKey = null;
-      if (await write(row, option)) flash(`${row.label}: ${option}`);
+      if (await write(row, option)) said(row, option);
       return;
     }
     if (!row.wired) {
@@ -1186,6 +1240,8 @@
       sheetKey = null;
       const result = await runSetting(row.key);
       if (!result.ok) flash(plainly(result.error ?? `HTTP ${result.status}`, `${row.label} did not run. Try again.`));
+      // ADR-0132: the reset screen at once, not when /state says so.
+      else if (row.key === 'factory_reset') resetting.set(true);
       return;
     }
     if (row.type === 'text') {
@@ -2158,9 +2214,18 @@
             class="btn btn--confirm"
             class:btn--danger={sheet.danger || restorePending || choicePending !== null}
             type="button"
+            class:btn--hold={sheet.hold}
             disabled={busy || reportBusy || hwBusy || (sheet.kind === 'hardware' && !hw && !hwUrl)}
-            onclick={confirmSheet}
+            onclick={sheet.hold ? (event) => event.preventDefault() : confirmSheet}
+            onpointerdown={sheet.hold ? holdStart : null}
+            onpointerup={sheet.hold ? holdStop : null}
+            onpointerleave={sheet.hold ? holdStop : null}
+            onpointercancel={sheet.hold ? holdStop : null}
+            oncontextmenu={sheet.hold ? (event) => event.preventDefault() : null}
+            onkeydown={sheet.hold ? holdKey(true) : null}
+            onkeyup={sheet.hold ? holdKey(false) : null}
           >
+            {#if sheet.hold}<span class="btn__hold" style:width="{Math.round(holdShare * 100)}%"></span>{/if}
             {#if sheet.kind === 'hardware'}
               {#if hwBusy}<span class="btn__spin"></span>Preparing…{:else if hwUrl}Done{:else if hw && !hwLast}{hwSteps[hwAt + 1] === 'sound' ? 'Next: the sound' : 'Next: anything else'}{:else}Prepare the feedback{/if}
             {:else if sheet.kind === 'report'}
@@ -3745,6 +3810,21 @@
     background: rgba(126, 214, 188, 0.16);
     border-color: rgba(126, 214, 188, 0.4);
     color: var(--accent-lms);
+  }
+  /* ADR-0132: held, not tapped - the fill shows how long is left. */
+  .btn--hold {
+    position: relative;
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .btn__hold {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: rgba(224, 167, 88, 0.35);
+    pointer-events: none;
   }
   .btn--danger {
     background: rgba(224, 167, 88, 0.2);

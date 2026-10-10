@@ -52,6 +52,9 @@ class FakeNM:
         if args[:2] == ("connection", "delete"):
             self.profiles.discard(args[2])
             return 0, "", ""
+        if args[:3] == ("connection", "up", sn.PROFILE):
+            # The setup network brought up again as WPA2 only: not a join.
+            return 0, "", ""
         if args[:2] == ("connection", "up"):
             return self.up_rc, "", "" if self.up_rc == 0 else "Error: secrets were required"
         if "list" in args and "--rescan" in args:
@@ -310,7 +313,7 @@ def test_a_saved_network_out_of_range_keeps_the_setup_network(tmp_path):
     nm = FakeNM(devices=NOTHING, saved={"Home": "preconfigured"}, in_range={"Neighbour"})
     net, clock = setup(tmp_path, nm, stations=0)
     hold(net, nm, clock, lambda: clock.now > sn.CONFIGURED_WAIT_S + 3 * sn.RETRY_S)
-    assert net.status()["network"] == "open" and not nm.did("connection", "up")
+    assert net.status()["network"] == "open" and not [c for c in nm.did("connection", "up") if c[2] != sn.PROFILE]
 
 
 def test_the_setup_network_seeing_itself_is_not_a_way_home(tmp_path):
@@ -319,13 +322,14 @@ def test_the_setup_network_seeing_itself_is_not_a_way_home(tmp_path):
     nm.saved = {}
     net, clock = setup(tmp_path, nm, stations=0)
     hold(net, nm, clock, lambda: clock.now > sn.NEW_WAIT_S + 2 * sn.RETRY_S)
-    assert net.status()["network"] == "open" and not nm.did("connection", "up")
+    assert net.status()["network"] == "open" and not [c for c in nm.did("connection", "up") if c[2] != sn.PROFILE]
 
 
 def test_a_failed_rejoin_opens_the_setup_network_again_with_the_reason(tmp_path):
     nm = FakeNM(devices=NOTHING, saved={"Home": "preconfigured"}, in_range={"Home"}, up_rc=4)
     net, clock = setup(tmp_path, nm, stations=0)
-    hold(net, nm, clock, lambda: len(nm.did("connection", "up")) == 1 and net.status()["network"] == "open")
+    hold(net, nm, clock, lambda: len([c for c in nm.did("connection", "up") if c[2] != sn.PROFILE]) == 1
+         and net.status()["network"] == "open")
     assert net.status()["network"] == "open"
     assert net.status()["reason"] == "The password was not accepted."
     assert net.status()["failed"] == "Home"
@@ -518,3 +522,17 @@ def test_a_phone_counts_as_joined_only_once_it_has_an_address(tmp_path):
         assert run(net._ready_phones()) == 1, "associated without a lease is not yet joined"
     finally:
         _t.time = orig
+
+
+def test_the_setup_network_offers_wpa2_only(tmp_path):
+    """George's bar player, 2026-10-09: a phone preferring WPA3 could not
+    join - the Pi's firmware fails WPA3's handshake as an access point. The
+    hotspot is set to management-frame protection off, which leaves WPA2,
+    and brought up again with it."""
+    nm = FakeNM(devices=NOTHING)
+    net, _ = setup(tmp_path, nm)
+    run(net.open())
+    hotspot = nm.calls.index(next(c for c in nm.calls if c[:3] == ("device", "wifi", "hotspot")))
+    pmf = nm.calls.index(("connection", "modify", sn.PROFILE, "802-11-wireless-security.pmf", "disable"))
+    up = nm.calls.index(("connection", "up", sn.PROFILE))
+    assert hotspot < pmf < up

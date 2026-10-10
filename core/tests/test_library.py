@@ -473,7 +473,7 @@ async def test_lms_unreachable_is_502(lms):
     status, body = await _get("/library/new", _lib())
 
     assert status == 502
-    assert "LMS unreachable" in body["error"]
+    assert "Lyrion unreachable" in body["error"]
 
 
 @pytest.mark.asyncio

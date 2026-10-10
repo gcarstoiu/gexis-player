@@ -16,6 +16,8 @@ inputs() {
 	case "$1" in
 		core) echo core packaging/core packaging/keys image/stage-gexis/03-core/files ;;
 		ui) echo ui packaging/ui ;;
+		# ADR-0133: the pictures change rarely; their package with them.
+		wallpapers) echo wallpapers packaging/wallpapers ;;
 		system) echo image/stage-gexis packaging/system ;;
 		skins) echo skins packaging/skins image/stage-gexis/fetch-cached.sh \
 			image/stage-gexis/05-peppy/files/letterbox.py \
@@ -88,9 +90,9 @@ reused=""
 # The skin packs (ADR-0111) are built with the rest, and the release carries
 # them all; the image installs none (decision 9: 01-packages leaves them out).
 SKIN_PACKS="skins-1920x1080 skins-1280x400 skins-1480x320 skins-800x480 skins-1280x800"
-for pkg in ${*:-core ui system skins $SKIN_PACKS peppyalsa peppy-engines go-librespot beszel-agent beszel-hub lyrion-server plexamp player}; do
+for pkg in ${*:-core ui system wallpapers skins $SKIN_PACKS peppyalsa peppy-engines go-librespot beszel-agent beszel-hub lyrion-server plexamp player}; do
 	case "$pkg" in
-		skins|skins-*)
+		skins|skins-*|wallpapers)
 			ver=$(version_for "$pkg")
 			cached="$DEB_CACHE/gexis-${pkg}_${ver}_all.deb"
 			case "$ver" in *.dirty) ;; *)
@@ -117,12 +119,12 @@ done
 docker run --rm -v "$PWD/packaging/out":/out alpine chown -R "$(id -u):$(id -g)" /out
 # Keep what was just built for next time, and only the current set: an older
 # version of a pack is never wanted again.
-for deb in packaging/out/gexis-skins_*_all.deb packaging/out/gexis-skins-*_all.deb; do
+for deb in packaging/out/gexis-skins_*_all.deb packaging/out/gexis-skins-*_all.deb packaging/out/gexis-wallpapers_*_all.deb; do
 	[ -f "$deb" ] || continue
 	case "$deb" in *.dirty_all.deb) continue ;; esac
 	[ -f "$DEB_CACHE/$(basename "$deb")" ] || cp "$deb" "$DEB_CACHE/"
 done
-for old in "$DEB_CACHE"/gexis-skins*_all.deb; do
+for old in "$DEB_CACHE"/gexis-skins*_all.deb "$DEB_CACHE"/gexis-wallpapers_*_all.deb; do
 	[ -f "$old" ] || continue
 	[ -f "packaging/out/$(basename "$old")" ] || rm -f "$old"
 done

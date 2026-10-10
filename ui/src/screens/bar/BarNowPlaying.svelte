@@ -850,22 +850,30 @@
      tray down). The band is the top 44 px across the whole strip and sits
      above the art, so a button from 14 px took the upper part of every tap
      as a pull. */
+  /* The library's Back over a cover, to the pixel (BarLibrary's
+     `.nav--over .round`; George, 2026-10-10: "the same position and size as
+     the back button when navigating the library"). Its top 20px lie in the
+     44px pull band: above it, as the lyrics switch is - the control under
+     the finger wins, and the band keeps the rest of the bar's width. */
   .minimise {
     position: absolute;
-    top: 56px;
-    left: 14px;
-    z-index: 2;
-    width: 52px;
-    height: 52px;
+    top: 24px;
+    left: 24px;
+    z-index: 5;
+    width: var(--ctl);
+    height: var(--ctl);
     border-radius: 50%;
-    border: 1px solid rgba(233, 238, 242, 0.24);
-    background: rgba(12, 16, 20, 0.5);
+    border: 0;
+    background: rgba(13, 21, 28, 0.55);
     display: grid;
     place-items: center;
     padding: 0;
     cursor: pointer;
   }
-  .minimise:active { transform: scale(0.94); }
+  .minimise:active {
+    transform: scale(0.95);
+    background: var(--ink-fill-press);
+  }
   /* Pointing right, where the mini strip is on a bar (George, 2026-10-09);
      the panel's points down, to its own. */
   .minimise__chev {
