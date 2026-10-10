@@ -63,8 +63,11 @@ the player's own wallpapers show instead.
 ### 3. Two new backgrounds
 
 - **Gexis wallpapers:** the player's own set (section 4).
-- **NASA pictures:** a set of public-domain images from NASA's missions and
-  telescopes, on its own.
+- **NASA pictures:** images from NASA's missions and telescopes, on its own:
+  NASA's public-domain ones, and ESA, ESA/Hubble and ESA/Webb releases under
+  CC BY, each drawn with the credit line its release asks for (George,
+  2026-10-10: *"for the standalone idle screen don't discard them. We can use
+  the credit line."*). The Gexis wallpapers stay public domain or CC0.
 
 Both are in the image, so neither needs a key or a network.
 
