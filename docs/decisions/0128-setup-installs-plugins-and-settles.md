@@ -102,7 +102,8 @@ should be told of this. Otherwise it feels like being stuck"*. Decision 2's
   reload of the kiosk does not bring it back.
 - **A failure brings it back**: `view()` reports `hidden` only while nothing
   has failed, so decision 3 holds - the owner is told what did not finish and
-  where to try again, and answers OK as before.
+  where to try again, and answers OK as before. Confirmed by George the same
+  day: *"It can come back and inform the user"*.
 - **The visualiser's held restart** (amendment above, 2026-10-09) waits only
   while the screen is up: put away, it restarts once its skins are in.
 - On a 320 px bar the card is tightened and the button stays at its foot, so
