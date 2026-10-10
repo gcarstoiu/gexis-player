@@ -5,6 +5,18 @@ Every release of Gexis Player and its notes, newest first. Generated from
 edit that file, not this one. The player shows the last 10 under
 Settings → System → Change logs.
 
+## 0.9.9 — 10 October 2026
+
+### New
+
+- The screen after setup that shows the downloads can be put away at any time with Use the player now. The downloads go on, and Settings shows how far they are. A download that does not finish brings the screen back, saying which one and where to try again.
+- Setup's Screen step lists screen makers as buttons, each with its number of models. Tapping one opens its models, so the list is much shorter on a phone.
+
+### Fixed
+
+- A restore switches on only the plugins that were on when the backup was made. In 0.9.8 a plugin that had never been switched on came back on, and the screen after setup waited for its download.
+- Setup recognises the Waveshare 11.9" bar screen straight away, as it does the 10.1" and 13.3" screens, instead of asking for it from the list.
+
 ## 0.9.8 — 10 October 2026
 
 ### New
