@@ -165,3 +165,22 @@ guestpi's Beszel hub.
 
 - Restoring a backup that is still on the old player, over the network.
 - Wi-Fi networks in backups.
+
+## Amendment, 2026-10-10: the switches a backup was made with
+
+George, restoring a backup on the bar player: setup's Plugins step listed
+LMS, Spotify and Bluetooth among the plugins, and *"The restore should
+restore the status of Bluetooth, Spotify and Lms ... if the restore file
+they were on when the backup was created so they should be on when the
+restore happens."* Two faults, both fixed:
+
+- **The three sources are built in** (`Plugin.built_in`, declared since
+  ADR-0086 and never set). Setup asks about them in its Music and Services
+  steps; the Plugins step offers only plugins.
+- **A switch a backup does not store was on.** Every plugin switch defaults
+  to on and a backup stores only what was changed, so reading "on" as
+  "stored on" brought anything left at its default back off. The backup's
+  summary now also names what was switched off (`disabled`); the restore and
+  the setup page take every other plugin as on, and the settling screen
+  waits for its download.
+

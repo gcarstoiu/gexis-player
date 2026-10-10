@@ -533,7 +533,8 @@ flashing: on a phone or computer, *Settings → System → Restore* has *Downloa
 beside each backup, or copy it from the share. After flashing, setup offers *Restore a backup* right after the
 Wi-Fi: choose the file on the phone, choose the output and the screen this
 player has, check what the backup brings, and the player restarts with
-everything back. Anything else setup asks (the name, for instance) can be
+everything back. Sources and plugins come back on or off as they were when the
+backup was made. Anything else setup asks (the name, for instance) can be
 changed in that review, so one player's backup can start another. With a new
 name, the review offers *A second player*: on, the first player keeps its
 Beszel connection (the hub's address and keys too), Plexamp's claim, Spotify
