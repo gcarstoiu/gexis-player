@@ -324,7 +324,15 @@ Western or Orthodox, by country), otherwise the chosen styles plus the
 hour's and the season's - and `_where()` in `wsserver.py` takes the country
 and latitude from the weather location's geocoding, or from `zone.tab` for
 the time zone. *Artist pictures* fall back to them while `lms_enabled` is
-off. A migration keeps *Artist pictures* on a player already in use, the
+off. *Space pictures* come first from `space_pictures.SpacePictures`: a
+catalogue refreshed at most daily, in the background, from ESA/Webb's and
+ESA/Hubble's feeds (kept when the picture page's credit starts with "ESA",
+CC BY 4.0) and two of `NASA_QUERIES` against `images-api.nasa.gov` (a NASA
+centre, no partner in the credit, a scene and no people); each picture is
+fetched when first shown into `/var/lib/gexis-core/space/` (ESA's 1920-px
+wallpaper, NASA's large preview), the newest 40 kept, and served at
+`/idle/wallpaper/space/<file>`. Offline it shows what it kept and asks again
+after an hour; with nothing kept, the built-in `space` set shows. A migration keeps *Artist pictures* on a player already in use, the
 old default. It can also show an external page if the
 `idle_screen` setting chooses one and the page is embeddable. It reads
 `/idle`, `/idle/weather` and `/idle/wallpaper?w=&h=`. The source credits are
