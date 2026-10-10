@@ -207,7 +207,8 @@
   let scChoose = $state(false);
   let scConfirmed = $state(false);
   let scQuery = $state('');
-  let scOpen = $state({});
+  // The one maker whose models are open under the maker chips.
+  let scMaker = $state(null);
 
   // What the device offers.
   let nets = $state([]);
@@ -325,7 +326,7 @@
       else if (scPick && screenInfo.suggested) scChoose = true;
       // A device set up again opens on its own screen's maker.
       const had = scPick && screenInfo.models.find((m) => m.label === scPick);
-      if (had) scOpen = { [had.maker]: true };
+      if (had) scMaker = had.maker;
       // Set up again: what the device has (a kept gexis-skins counts).
       visualiser = saved.visualiser ?? (setup?.needed ? null : (rows.visualiser_skins?.value ?? null));
       chosenPlugins = saved.plugins ?? (setup?.needed ? []
@@ -497,12 +498,21 @@
       match.sort((a, b) => Number(b.tested) - Number(a.tested));
       if (match.length) out.push({ key: '__match', title: `Matching ${size[0]} × ${size[1]}`, rows: match, fixed: true, makers: true });
     }
-    for (const maker of [...new Set(rows.map((m) => m.maker))]) {
-      out.push({ key: maker, title: maker, rows: rows.filter((m) => m.maker === maker), fixed: !!q });
+    // A search shows every maker it found, open. Otherwise the makers are
+    // chips and only the tapped one opens: 18 maker headings, one under the
+    // other, were most of a phone's height before a single model (George,
+    // 2026-10-10: "It is important but it takes a few screens to scroll").
+    if (q) {
+      for (const maker of [...new Set(rows.map((m) => m.maker))]) {
+        out.push({ key: maker, title: maker, rows: rows.filter((m) => m.maker === maker), fixed: true });
+      }
     }
     return out;
   });
-  const groupOpen = (g) => g.fixed || !!scOpen[g.key];
+  const scMakers = $derived(
+    [...new Set(models.map((m) => m.maker))].map((name) => ({ name, n: models.filter((m) => m.maker === name).length })),
+  );
+  const scMakerRows = $derived(scMaker ? models.filter((m) => m.maker === scMaker) : []);
   function pickScreen(m) {
     scPick = m.label;
     headless = false;
@@ -881,34 +891,40 @@
                   <label class="field">
                     <input type="text" class="search" style="--c:#8fd9a8" bind:value={scQuery} placeholder="Search by maker, size or resolution" autocomplete="off" spellcheck="false" />
                   </label>
+                  {#snippet modelRow(m, makers)}
+                    {@const on = !headless && chosen === m.label}
+                    <button class="net" class:sel={on} onclick={() => pickScreen(m)}>
+                      <span class="radio" class:on><span></span></span>
+                      <span class="grow"><span class="nm wrap">{makers ? `${m.maker} ${shortOf(m)}` : shortOf(m)}</span><span class="meta">{sizeOf(m)} · {familyOf(m)}</span></span>
+                      <span class="tag" class:untested={!m.tested}>{m.tested ? 'Tested' : 'Untested'}</span>
+                    </button>
+                    {#if on}
+                      <div class="warn"><span class="bang">!</span><span>{pickNote}</span></div>
+                    {/if}
+                  {/snippet}
                   {#each scGroups as g (g.key)}
                     <div class="list">
-                      {#if g.fixed}
-                        <div class="label pad">{g.title}</div>
-                      {:else}
-                        <button class="sc-maker" aria-expanded={groupOpen(g)} onclick={() => (scOpen = { ...scOpen, [g.key]: !groupOpen(g) })}>
-                          <span class="label grow">{g.title}</span>
-                          <span class="sc-count">{g.rows.length} {g.rows.length === 1 ? 'model' : 'models'}</span>
-                          <span class="chev" class:down={groupOpen(g)}></span>
-                        </button>
-                      {/if}
-                      {#if groupOpen(g)}
-                        {#each g.rows as m (m.id)}
-                          {@const on = !headless && chosen === m.label}
-                          <button class="net" class:sel={on} onclick={() => pickScreen(m)}>
-                            <span class="radio" class:on><span></span></span>
-                            <span class="grow"><span class="nm wrap">{g.makers ? `${m.maker} ${shortOf(m)}` : shortOf(m)}</span><span class="meta">{sizeOf(m)} · {familyOf(m)}</span></span>
-                            <span class="tag" class:untested={!m.tested}>{m.tested ? 'Tested' : 'Untested'}</span>
-                          </button>
-                          {#if on}
-                            <div class="warn"><span class="bang">!</span><span>{pickNote}</span></div>
-                          {/if}
-                        {/each}
-                      {/if}
+                      <div class="label pad">{g.title}</div>
+                      {#each g.rows as m (m.id)}{@render modelRow(m, g.makers)}{/each}
                     </div>
-                  {:else}
-                    <p class="hint">No model matches “{scQuery.trim()}”.</p>
                   {/each}
+                  {#if scQuery.trim()}
+                    {#if !scGroups.length}<p class="hint">No model matches “{scQuery.trim()}”.</p>{/if}
+                  {:else}
+                    <div class="list">
+                      <div class="label pad">{scGroups.length ? 'Or by maker' : 'By maker'}</div>
+                      <div class="sc-chips">
+                        {#each scMakers as mk (mk.name)}
+                          <button class="sc-chip" class:on={scMaker === mk.name} aria-expanded={scMaker === mk.name}
+                            onclick={() => (scMaker = scMaker === mk.name ? null : mk.name)}>
+                            {mk.name}<span class="sc-count">{mk.n}</span>
+                          </button>
+                        {/each}
+                      </div>
+                      {#if scMaker}<div class="label pad">{scMaker} · {scMakerRows.length} {scMakerRows.length === 1 ? 'model' : 'models'}</div>{/if}
+                      {#each scMakerRows as m (m.id)}{@render modelRow(m, false)}{/each}
+                    </div>
+                  {/if}
                 {/if}
               {/if}
 
@@ -1254,12 +1270,18 @@
   .sc-grid { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 16px; font-size: 15px; }
   .sc-grid > span:nth-child(odd) { color: var(--ink-quiet); }
   .mono { font-family: var(--font-mono); word-break: break-word; }
-  /* A maker's heading opens its models: 181 rows, all open, are some
-     thirteen thousand pixels of phone between the search and Continue. */
-  .sc-maker { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 4px 6px 4px 2px; }
-  .sc-maker .label { padding: 0; }
+  /* Makers as chips, one open at a time: every model open is some
+     thirteen thousand pixels of phone between the search and Continue, and
+     every maker as a heading still most of a screen. */
+  .sc-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 2px 0 6px; }
+  .sc-chip {
+    all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+    min-height: 44px; padding: 0 14px; border-radius: 22px; font-size: 15px; font-weight: 600;
+    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--ink-line);
+  }
+  .sc-chip.on { background: rgba(143, 217, 168, 0.16); border-color: #8fd9a8; color: #8fd9a8; }
+  .sc-chip:active { transform: scale(0.97); }
   .sc-count { font-family: var(--font-mono); font-size: 12px; color: var(--ink-quiet); }
-  .chev.down { transform: rotate(135deg); margin-top: -4px; }
   .nm.wrap { white-space: normal; overflow: visible; }
   /* The design's search field is in the page's face, not the mono of the
      fields that take addresses and passwords. */
