@@ -195,6 +195,12 @@ from the weather location, or from the time zone until a location is set,
 and decides whether Easter follows the Western or the Orthodox date. Every
 picture is public domain or CC0, and its author is shown in the corner.
 
+*Space pictures* download new pictures from NASA and ESA (the Webb and
+Hubble pictures of the week) about once a day and keep the latest 40, so
+they still show without a network; until the first ones arrive, a built-in
+set shows. ESA's pictures carry their credit line in the corner, as their
+licence asks.
+
 **The online wallpapers keep repeating.**
 They no longer repeat until every picture of the day has been shown, and
 each day brings a new set. *Wallpaper topics* sets which Pixabay categories
