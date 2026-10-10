@@ -40,6 +40,11 @@ FINGERPRINTS: dict[str, Fingerprint] = {
     # controller, which many makers' screens report, so the touch controller
     # (ILI 222a:0001) and 1920x1080 carry the match with it.
     "waveshare-13.3-hdmi-h": Fingerprint(edid_maker="RTK", edid_name="RTK FHD", usb="222a:0001"),
+    # The bar player's 11.9", read on it 2026-10-10: EDID "WSD" /
+    # "WaveShare-119", preferred 320x1480 (its native portrait); touch
+    # 0712:000a. Without it setup showed the whole list on the phone where
+    # the 10.1" and 13.3" were recognised (George, the same day).
+    "waveshare-11.9-hdmi": Fingerprint(edid_maker="WSD", edid_name="WaveShare-119", usb="0712:000a"),
 }
 
 
