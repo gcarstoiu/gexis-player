@@ -28,10 +28,17 @@
   import { settling, settlingDone, resetting } from './lib/state.js';
   import KeepScreen from './screens/KeepScreen.svelte';
   import NewScreen from './screens/NewScreen.svelte';
-  import { loadSettings, settingValues } from './lib/settings.js';
+  import { loadSettings, settingValues, settingsDevice } from './lib/settings.js';
   import { loadLibraryRoot } from './lib/library.js';
   import { reportTouch, showPeppy, reportPainted, reportShown } from './lib/state.js';
   import { lyricsAsk, lyricsShown } from './lib/panelView.js';
+
+  //: The browser tab says which player it is (George, 2026-10-10: with
+  //: several players open in tabs "it is hard to distinguish between the
+  //: tabs"). Its name as Settings shows it; "gexis" until it is known.
+  $effect(() => {
+    document.title = $settingsDevice.name || 'gexis';
+  });
 
   // ADR-0033: idle is "not playing and not touched", one timeout everywhere.
   // From settings (idle_timeout, minutes); `?idle_seconds=` overrides it for testing.
