@@ -61,3 +61,26 @@ setup while this was going on.
   blocking, put a message up"*): the screen covers the panel and shows on a
   phone, and says *Until it is done, music may be slow to start*; a source can
   still take the device. Not yet seen on a freshly set-up device.
+
+## Amendment, 2026-10-10: the skins wait for setup to end
+
+On the bar player, after a factory reset and a restore in setup, the
+player did not restart. Setup had written *Visualiser skins*, which started
+the pack's install at once (ADR-0111 decision 4's "setting it starts the
+download"); the updater holds a shutdown block while it installs, and
+systemd refused setup's restart while it was held. George: *"why was the
+vis skins being installed at that point. That should be handled in the
+settlement screen once the panel reboots."*
+
+- **While the player still needs setup, the skin pack waits.** It starts at
+  the next start - which is where this record's settling screen is - or,
+  when setup ends without a restart, the moment it ends. The settling
+  screen shows its progress either way.
+- **A refused restart is also asked again** every 15 s for up to 30 minutes,
+  so any other install that holds the block delays the restart rather than
+  stopping it.
+- **Plexamp's download is left as it is**: its unit pulls it in through
+  systemd, and at the start of a setup boot it fails at once for want of a
+  network and holds no block; the settling screen fetches it after the
+  restart. Gating it on the unit would start Plexamp without its app.
+
