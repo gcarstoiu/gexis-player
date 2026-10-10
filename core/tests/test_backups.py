@@ -324,6 +324,8 @@ def test_inspect_says_what_a_backup_brings_without_putting_anything_back(tmp_pat
     assert seen["settings"]["timezone"] == "Europe/Berlin"
     assert "volume_max" not in seen["settings"], "only what setup applies as its answers"
     assert seen["enabled"] == ["plexamp"]
+    # What was switched off: everything else stored nothing, and was on.
+    assert seen["disabled"] == ["beszel"]
     assert seen["newer"] is False
     assert "1 paired Bluetooth device" in seen["brings"]
     assert {"Spotify sign-in", "Plexamp's claim", "1 playlist"} <= set(seen["brings"])

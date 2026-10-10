@@ -416,6 +416,11 @@ def inspect(path: Path, known_migrations: int, schema_key: str = "_settings_sche
         "settings": {key: values[key] for key in APPLIED if key in values},
         "enabled": sorted(k[:-len(".enabled")] for k, v in values.items()
                           if k.endswith(".enabled") and v is True),
+        #: **What was switched off** - every plugin's switch defaults to on,
+        #: so a switch the backup does not store was on (found 2026-10-10:
+        #: Plexamp left at its default read as off on a restore).
+        "disabled": sorted(k[:-len(".enabled")] for k, v in values.items()
+                           if k.endswith(".enabled") and v is False),
         "brings": brings,
     }
 

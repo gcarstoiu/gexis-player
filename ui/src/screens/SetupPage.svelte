@@ -120,7 +120,9 @@
     if (saved.spotify == null && v.spotify_enabled != null) spotify = v.spotify_enabled !== false;
     if (saved.bluetooth == null && v.bt_enabled != null) bt = v.bt_enabled !== false;
     if (saved.visualiser == null && v.visualiser_skins != null) visualiser = !!v.visualiser_skins;
-    if (saved.plugins == null) chosenPlugins = (b?.enabled ?? []).filter((id) => offered.some((p) => p.id === id));
+    // On unless the backup switched it off: every plugin's switch defaults
+    // to on, and a backup stores only what was changed.
+    if (saved.plugins == null) chosenPlugins = offered.map((p) => p.id).filter((id) => !(b?.disabled ?? []).includes(id));
   }
 
   function uploadBackup(file) {
