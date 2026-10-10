@@ -98,14 +98,8 @@ safety can only be seen on the release after 0.9.4. Claude to do: **the final th
 work perfectly from the start), the first public release, and removing
 passwordless sudo from the image - last.
 
-**Learned 2026-10-07/08, not yet in LESSONS:** a new worktree needs
-`git submodule update --init` before `make image` (pi-gen); headless browser
-profiles from screenshot scripts filled /tmp (16 GB) - delete them after each
-run; installing `gexis-core` does not restart it - restart it as its own gated
-step, or the old code keeps running. (The package-revision rule is LESSONS 53,
-not new: gexis-beszel-agent is at 0.21.0-2.) Raising a Beszel pin also means
-raising `image/verify-image.sh`'s binary checksums: 0.9.5's first image check
-failed on exactly that (the image held the right binaries).
+**Learned 2026-10-07/10:** now LESSONS 65-68, and the build notes in the
+technical guide's release section (`docs/tech/updates-and-releases.md` §4).
 
 ## Build environment (2026-09-13) — read this before the next build
 
@@ -327,22 +321,20 @@ reverted, currently-flashed image predates this fix.
    device; 12b Legal and Credits            Plexamp fetched from Plex, status /
                                             progress / Retry / Remove in its row;
                                             Legal and Credits approved
-13 first boot without a network           setup access point; pull forward the
-                                            moment a non-developer gets a device
-                                            (ADR-0031)
+13 first boot without a network          CLOSED 2026-10-10 (George). All nine
+                                            criteria met; the blank-card flash it
+                                            last waited for has been done with every
+                                            0.9.x image since.
 13a plugins you install and update       CLOSED 2026-10-03. Decided 2026-09-28 (George): a phase
                                             before themes. Upload a plugin from a
                                             phone or computer, run it sandboxed,
                                             Remove it; updates from versions we
                                             have tested. ADR first
-13b other screens                        * BUILT on phase-13b; hardware tests
-                                            and the PR to go. Added 2026-09-28
-                                            (George): 800x480 to
-                                            1920x1080, bars 1280x400 and 1480x320
-                                            (landscape); two layout families;
-                                            skins per resolution; recognise the
-                                            screen in setup. Finding 100. ADR
-                                            first; designs from Claude Design
+13b other screens                        CLOSED 2026-10-04 (George: "Close 13b").
+                                            Standard and bar families, skins per
+                                            resolution, the screen recognised in
+                                            setup; the 11.9" bar's fingerprint added
+                                            2026-10-10.
 13c updates over the network             * CLOSED 2026-10-03; MERGED (PR #42); 13a merged (PR #41).
                                             Added 2026-09-28 (George: "Agreed to
                                             do before"). **The first public release
@@ -353,15 +345,23 @@ reverted, currently-flashed image predates this fix.
                                             as they come or a tested snapshot
                                             (decide), backup before each update.
                                             ADR first
-13d DACs we have not tested             decided 2026-10-01 (George): after 13b,
-                                            from Volumio's list; the DAC2 HD and
-                                            IQaudio DAC+ first. ADR first
+13d DACs we have not tested              Built and released. Closes (George,
+                                            2026-10-10) after two tests on guestpi:
+                                            Plexamp through the IQaudio Pi-DAC PRO,
+                                            and a chosen board that is not fitted
+                                            taken back. The DAC+ itself stays
+                                            untested (not owned). Finding 114.
 13e server plugins                       CLOSED 2026-10-03. Decided 2026-10-02 (George): after 13d,
                                             before the first public release. Lyrion
                                             server and Beszel hub, shipped in our
                                             releases; music first, scan impact
                                             measured. Pi-hole and AdGuard deferred.
                                             ADR first
+13f Lyrion's own menus                   Built and released behind Extended
+                                            navigation (ADR-0118). Closes (George,
+                                            2026-10-10) after the hidden library's
+                                            hour on the Pi (ADR-0122) and George's
+                                            look.
 14 themes                                 cut out of 10. ADR-0016 calls themes
                                             plugins and plugins processes; a
                                             theme has no process - settle that

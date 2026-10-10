@@ -145,6 +145,17 @@ A release is built **from the image it was tested as**, not from a package
 list. `packaging/release/build.sh <image.img>` refuses to run if the image's
 `gexis-player` differs from the one in `packaging/out`.
 
+Three things that have each cost a build:
+
+- **A release worktree needs `git submodule update --init`** before
+  `make image`: pi-gen is a submodule, and a fresh worktree has it empty.
+- **Raising a Beszel pin raises the image check's checksums too**:
+  `image/verify-image.sh` holds the tested agent binary's SHA-256 beside the
+  pin in `packaging/beszel-agent/pins.sh` (0.9.5's first image check failed on
+  exactly that, with the right binaries in the image).
+- **`python -m gexis_core.changelog` writes `CHANGELOG.md` in the current
+  directory**: run it from the repository root, or pass the path.
+
 ```mermaid
 flowchart TD
     I[(tested image)] -->|debugfs: dpkg status, archive keyrings| L[installed list:<br/>name version arch]
