@@ -293,6 +293,23 @@ drawn per kind:
 - **Footer**: `MiniStrip` while something is active. At Home with nothing
   active, `WaitingServices` shows the waiting renderers' marks instead.
 
+### Waiting screen (LMS off)
+
+`WaitingHome.svelte` (ADR-0079, drawn as ADR-0133) is the panel's root while
+`lms_enabled` is off and nothing is active: `Backdrop` behind a veil, the
+clock, date and device name top left (`waiting_clock`), the line *Start
+music from your phone* (`waiting_hint`, never on a bar), and a tile per
+renderer in `$sources` that `availability` marks waiting - `SourceMark`,
+its manifest name and status. The picture's credit sits at the foot. With
+every source off it says so, and the Settings button stays in the corner.
+Tiles are a translucent plate: ADR-0041 bans live backdrop blur.
+
+`Backdrop.svelte` is the background picture for both this and the idle
+screen: it asks `/idle/wallpaper?w=&h=` for the next picture, preloads it,
+places it by the core's `place` (ADR-0120) or the crop rule, dims it by
+`background_brightness`, and changes it every `background_interval`
+minutes. The screen binds `picture` and `shown` for its credit line.
+
 The root's data is loaded once at start-up, and its covers are decoded
 before it is shown, so that Home appears complete (`lib/library.js`).
 
