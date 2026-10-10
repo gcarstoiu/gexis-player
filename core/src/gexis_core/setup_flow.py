@@ -410,7 +410,9 @@ class SetupFlow:
         if "plugins" in data:
             enabled = set(data["plugins"])
         else:
-            enabled = set(data["backup"].get("enabled") or [])
+            # On unless the backup switched it off: a switch's default is on.
+            off = set(data["backup"].get("disabled") or [])
+            enabled = {p["id"] for p in offered if p["id"] not in off}
         writes = {key: values[key] for key in changed if key in values}
         if "plugins" in data:
             writes.update({p["row"]: p["id"] in enabled for p in offered})

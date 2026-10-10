@@ -80,7 +80,9 @@ than taken on trust.
 
 Artwork, synced lyrics, artist biographies and photos, and the album the track
 is from, whether it came from Spotify, your own files, Plex or a phone. When
-nothing is playing: a clock, the weather and wallpapers. When you just want to
+nothing is playing: a clock, the weather and wallpapers - the player's own
+public-domain photographs, changing with the time of day, the seasons and
+the holidays, or new space pictures from NASA and ESA. When you just want to
 watch the music: up to 287 visualiser skins, from studio VU meters and a
 spectrum from 50 Hz to 16 kHz to turntables and tape decks whose records and
 reels turn as the music plays.
@@ -154,7 +156,7 @@ or removed from Settings, with its progress shown in the switch itself.
 | 📈 **Visualiser** | Up to 287 skins, depending on the screen · VU meters, spectrum, turntables and tape decks · progress, time, volume and play-state in each skin's own style · skins that rotate per track |
 | 🖥️ **Screens** | HDMI touchscreens from 7" to 13.3", including 7.9" and 11.9" bar displays, recognised and laid out for their shape · or Headless, with no screen at all |
 | 🧭 **Setup** | Over the player's own Wi-Fi (WPA2, password on the panel) or your network on a cable · a wrong password brings setup back with the reason · a player that starts without its Wi-Fi offers setup again after 90 seconds |
-| 💾 **Backup & restore** | Settings, pairings and source logins in one archive, on a network share or downloaded to your phone · restored during setup, which asks for this player's output and screen and lets you change the rest · one player's backup can start a second one, leaving the first one's sign-ins behind |
+| 💾 **Backup & restore** | Settings, pairings and source logins in one archive, on a network share or downloaded to your phone · restored during setup, which asks for this player's output and screen and lets you change the rest · one player's backup can start a second one, leaving the first one's sign-ins behind · a factory reset starts the player over without re-flashing |
 | ⬆️ **Updates** | Over the network, with release notes · *Testing* gets each release first, *Stable* once it has been tried |
 | 🔗 **Network** | Wi-Fi or cable, and the cable wins while it is plugged in · a fixed address on either, kept only once it is shown to work |
 | 📱 **Settings anywhere** | The full settings on the panel and on any phone or computer on your network, with a mini player on the phone |
@@ -186,6 +188,8 @@ I'd rather you knew these up front:
 
 ## 📖 Documentation
 
+- **[Installation guide](docs/INSTALL.md)**: from an empty card to music,
+  on Windows, macOS or Linux.
 - **[User manual](docs/manual/README.md)**: the screen, the phone page and
   every setting, with screenshots.
 - **[FAQ](docs/FAQ.md)**: questions and answers, from setting up to sound,

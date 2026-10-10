@@ -52,6 +52,12 @@ place. Turn the amplifier down before switching to Fixed: in Fixed,
 *Maximum volume* and Spotify's *Starting volume* no longer apply (both rows
 are hidden), and every source plays at full level.
 
+**I chose Fixed, but the volume still changes.**
+Fixed chosen while music plays starts at the next pause or stop, so the
+level never jumps to full in the middle of a track. Until then the volume
+works as before, and the Volume row and the volume controls say *Fixed at
+the next pause*. Pause once and Fixed is in force.
+
 **Can the player be stopped from ever playing too loud?**
 Yes: *Settings → Audio → Maximum volume*. Set it to 80 and the player is never
 louder than the slider at 80, from any source. 100 % on the screen, in
@@ -98,7 +104,7 @@ length* (1 to 5 seconds) for how long it stays up. A takeover still in
 progress when the time runs out keeps it up until it finishes.
 
 **When Spotify stopped, the player went back to Lyrion on its own. Why?**
-*Settings → Handoff → Reclaim LMS when a session ends* is on. When Spotify,
+*Settings → Handoff → Reclaim Lyrion when a session ends* is on. When Spotify,
 Bluetooth or Plexamp stops, Lyrion then takes the player back. A phone that
 locks can end a Spotify session, so with this on, the player can switch to
 Lyrion without warning. It is off by default.
@@ -176,11 +182,30 @@ weather and a background picture. A touch, or music starting, brings the
 player back.
 
 **Where do the idle screen's pictures come from?**
-*Settings → Display → Idle screen → Background* chooses: *Artist pictures*
-from the library; *Wallpapers online* from Pixabay (it needs a free key, entered
-in the row below); *Wallpapers on device*, read
-from the player's Pictures share on the network; or *Black*. Pictures are
+*Settings → Display → Idle screen → Background* chooses: *Gexis wallpapers*,
+the player's own public-domain photographs, built in (the default on a new
+player); *Space pictures* from NASA and ESA; *Artist pictures* from the
+library (while the Lyrion client is off they show the player's own instead);
+*Wallpapers online* from Pixabay (it needs a free key, entered in the row
+below); *Wallpapers on device*, read from the player's Pictures share on the
+network; or *Black*. Pictures are
 placed by what they show, so faces, people and animals stay in view.
+
+**How do the player's own wallpapers change through the day and the year?**
+With *Gexis wallpapers*, each picture comes from one of the *Wallpaper
+styles* you chose (Calm, Colourful, Psychedelic), from pictures for the
+time of day (dawn, day, dusk, night) or from the season's, by hemisphere.
+On New Year, and on Christmas and Easter where they are public holidays,
+only those days' pictures show; *Holidays* turns that off. The country comes
+from the weather location, or from the time zone until a location is set,
+and decides whether Easter follows the Western or the Orthodox date. Every
+picture is public domain or CC0, and its author is shown in the corner.
+
+*Space pictures* download new pictures from NASA and ESA (the Webb and
+Hubble pictures of the week) about once a day and keep the latest 40, so
+they still show without a network; until the first ones arrive, a built-in
+set shows. ESA's pictures carry their credit line in the corner, as their
+licence asks.
 
 **The online wallpapers keep repeating.**
 They no longer repeat until every picture of the day has been shown, and
@@ -267,13 +292,13 @@ phone first.
 ## Network and Wi-Fi
 
 **How do I change the Wi-Fi network?**
-*Settings → Device → Wi-Fi* lists the networks in range. A secured network
+*Settings → System → Wi-Fi* lists the networks in range. A secured network
 needs its password the first time; saved networks join in one tap. The time
-zone is taken from the network; set it in *Settings → Device → Time zone*
+zone is taken from the network; set it in *Settings → System → Time zone*
 only if that comes out wrong.
 
 **How good is the player's Wi-Fi connection?**
-Open *Settings → Device → Wi-Fi* and tap the connected network. It shows the
+Open *Settings → System → Wi-Fi* and tap the connected network. It shows the
 signal (in dBm and as a percentage), the speed the radio is using, the band
 and channel, and the player's address, updated every few seconds. As a rough
 guide, a signal above −67 dBm is good for music; below −75 dBm, stutter
@@ -286,7 +311,7 @@ its network then, it opens its own setup network after 90 seconds, and keeps
 looking for the saved network every few minutes.
 
 **What is the player's name, and can it be changed?**
-*Settings → Device → Device name* is one name for everything: the network
+*Settings → System → Device name* is one name for everything: the network
 address (`name.local`), the Lyrion player, the Spotify Connect device, the
 Bluetooth name and Plexamp. Changing it restarts the player, and Settings
 says at which address it comes back.
@@ -300,13 +325,13 @@ within about 10 seconds, at its own address. `gexis.local` (the player's name)
 finds it either way.
 
 **Can the player have a fixed address on the cable?**
-Yes: *Settings → Device → Cable* (shown while a cable is plugged in), then
+Yes: *Settings → System → Cable* (shown while a cable is plugged in), then
 *Manual*, with the address and its prefix (for example `192.168.1.20/24`), the
 gateway and one or two DNS servers. After *Save*, open the player at the new
 address and tap *Keep* within 60 seconds. If the new address does not work,
 the old one comes back by itself, so a mistake cannot lock you out. On Wi-Fi,
 the same choice is under the connected network's details in *Settings →
-Device → Wi-Fi*. A backup does not hold a fixed address: set it again after
+System → Wi-Fi*. A backup does not hold a fixed address: set it again after
 restoring one.
 
 ## Setup and first boot
@@ -317,8 +342,10 @@ On first start with no network, the player opens its own Wi-Fi, called
 to open the setup page. The phone then walks through Wi-Fi, then asks
 whether this is a new player or a backup to restore. A new player goes on to
 a name, the clock, the output, the music, the screen, the visualiser and the
-plugins to install (Plexamp, the Lyrion Server, Beszel); a backup answers all
-of those, and the phone shows what it brings before the player restarts. Once the player is on your
+plugins to install (Plexamp, the Lyrion Server, Beszel); a backup asks only
+for this player's output and screen and answers the rest, and the phone shows
+what it brings before the player restarts. Step by step, from flashing the
+card: the [installation guide](INSTALL.md). Once the player is on your
 network it shows what it is downloading, each with its progress, until it is
 ready; this cannot be skipped, and music may be slow to start until then. A download that does not finish is named, with
 *Settings → Plugins* as the place to try it again.
@@ -506,7 +533,8 @@ flashing: on a phone or computer, *Settings → System → Restore* has *Downloa
 beside each backup, or copy it from the share. After flashing, setup offers *Restore a backup* right after the
 Wi-Fi: choose the file on the phone, choose the output and the screen this
 player has, check what the backup brings, and the player restarts with
-everything back. Anything else setup asks (the name, for instance) can be
+everything back. Sources and plugins come back on or off as they were when the
+backup was made. Anything else setup asks (the name, for instance) can be
 changed in that review, so one player's backup can start another. With a new
 name, the review offers *A second player*: on, the first player keeps its
 Beszel connection (the hub's address and keys too), Plexamp's claim, Spotify
@@ -514,6 +542,20 @@ sign-in and Bluetooth pairings, so the two never share them. A backup from an ol
 backup can also be restored later: copy it into the Backups share and choose
 it under *Settings → System → Restore*. Network share passwords are not kept
 in backups, so enter them again.
+
+**How do I start the player over, without re-flashing the card?**
+*Settings → System → Reset to factory settings*, on the screen or a phone.
+Hold the button for 3 seconds, until its bar fills; the screen and the phone
+say the player is resetting, and the phone says how to reach setup. The
+player restarts, clears everything and comes up in setup, as on a freshly
+flashed card. It
+removes every setting and the name, the saved Wi-Fi networks, paired devices
+and sign-ins, the skins, the plugins, the Lyrion Server's library, and the
+backups kept on the player, so download a backup first (*Restore →
+Download* on a phone or computer). The music folder, its playlists and the
+Pictures share stay, and the Lyrion Server scans the music again. The
+installed version stays, so there is nothing to download again except the
+skins and plugins setup chooses.
 
 **What are Debug logs for?**
 *Settings → System → Debug logs* keeps the player's logs across restarts (up

@@ -41,7 +41,7 @@
         "default": "Hardware",
         "warn": {
           "Software": "The player changes the level by recalculating the sound. Playback is no longer bit-perfect, at any volume below 100 %. Use it for an output with no volume control of its own, such as HDMI, or if you prefer it. Hardware restores bit-perfect playback.",
-          "Fixed": "Fixed output sends the signal at 100%. Turn your amplifier down before confirming — the panel can no longer lower it."
+          "Fixed": "Fixed output sends the signal at 100%. Turn your amplifier down before confirming — the panel can no longer lower it. While music plays, it starts at the next pause or stop; until then the volume still works."
         }
       },
       {
@@ -49,7 +49,7 @@
         "type": "number",
         "label": "Maximum volume",
         "marks": "R",
-        "note": "The loudest the player will go, on any input. Set it to 80 and the player is never louder than the slider at 80 — and 100% on the panel, in LMS and on a connected phone all mean that level, so no control shows a number louder than what comes out.",
+        "note": "The loudest the player will go, on any input. Set it to 80 and the player is never louder than the slider at 80 — and 100% on the panel, in Lyrion and on a connected phone all mean that level, so no control shows a number louder than what comes out.",
         "min": 10,
         "max": 100,
         "unit": "%",
@@ -285,7 +285,7 @@
       {
         "key": "reclaim_lms",
         "type": "toggle",
-        "label": "Reclaim LMS when a session ends",
+        "label": "Reclaim Lyrion when a session ends",
         "marks": "N",
         "note": "When Spotify, Bluetooth or Plexamp stops, Lyrion takes the player back. A phone that locks can end a Spotify session, and switch the player to Lyrion without warning.",
         "default": false
@@ -549,6 +549,30 @@
         ]
       },
       {
+        "key": "waiting_clock",
+        "type": "toggle",
+        "label": "Clock on the waiting screen",
+        "marks": "N",
+        "note": "With the Lyrion client off: the time, the date and the player's name in the top left.",
+        "default": true,
+        "onlyWhen": [
+          "lms_enabled",
+          false
+        ]
+      },
+      {
+        "key": "waiting_hint",
+        "type": "toggle",
+        "label": "Hint on the waiting screen",
+        "marks": "N",
+        "note": "One line above the sources: Start music from your phone.",
+        "default": true,
+        "onlyWhen": [
+          "lms_enabled",
+          false
+        ]
+      },
+      {
         "type": "group",
         "label": "Idle screen",
         "accent": "#c8a2d8",
@@ -597,14 +621,16 @@
         "type": "choice",
         "label": "Background",
         "marks": "N",
-        "note": "Artist pictures come from the library. Online wallpapers come from Pixabay and need a key. On-device wallpapers are read from local storage.",
+        "note": "Gexis wallpapers and Space pictures are the player's own, built in. Artist pictures come from the library, and show the player's own while the Lyrion client is off. Online wallpapers come from Pixabay and need a key. On-device wallpapers are read from local storage.",
         "options": [
+          "Gexis wallpapers",
+          "Space pictures",
           "Artist pictures",
           "Wallpapers online",
           "Wallpapers on device",
           "Black"
         ],
-        "default": "Artist pictures",
+        "default": "Gexis wallpapers",
         "onlyWhen": [
           "idle_screen",
           "Built in"
@@ -693,6 +719,61 @@
         "onlyWhen": [
           "idle_background",
           "Wallpapers online"
+        ]
+      },
+      {
+        "key": "wallpaper_styles",
+        "type": "multi",
+        "label": "Wallpaper styles",
+        "marks": "N",
+        "note": "Each new picture comes from one of the chosen styles at random.",
+        "options": [
+          "Calm",
+          "Colourful",
+          "Psychedelic"
+        ],
+        "default": [
+          "Calm"
+        ],
+        "onlyWhen": [
+          "idle_background",
+          "Gexis wallpapers"
+        ]
+      },
+      {
+        "key": "wallpaper_time_of_day",
+        "type": "toggle",
+        "label": "Follow the time of day",
+        "marks": "N",
+        "note": "Pictures for dawn, day, dusk and night join the styles, each at its hour.",
+        "default": true,
+        "onlyWhen": [
+          "idle_background",
+          "Gexis wallpapers"
+        ]
+      },
+      {
+        "key": "wallpaper_seasons",
+        "type": "toggle",
+        "label": "Seasons",
+        "marks": "N",
+        "note": "The season's pictures join the styles, by hemisphere.",
+        "default": true,
+        "onlyWhen": [
+          "idle_background",
+          "Gexis wallpapers"
+        ]
+      },
+      {
+        "key": "wallpaper_holidays",
+        "type": "toggle",
+        "label": "Holidays",
+        "marks": "N",
+        "note": "On New Year, and on Christmas and Easter where they are holidays, only their pictures show. The country comes from the weather location, or the time zone until one is set.",
+        "default": true,
+        "onlyWhen": [
+          "idle_background",
+          "Gexis wallpapers"
         ]
       },
       {
@@ -1008,7 +1089,7 @@
         "type": "number",
         "label": "Confidence threshold",
         "marks": "R",
-        "note": "Recommended: 90%. How sure MusicBrainz has to be that it found the right artist or release. Below it the picture is not taken and LMS's is kept. It gates every enrichment lookup, not only pictures — a confidently wrong biography is worse than a blank panel.",
+        "note": "Recommended: 90%. How sure MusicBrainz has to be that it found the right artist or release. Below it the picture is not taken and Lyrion's is kept. It gates every enrichment lookup, not only pictures — a confidently wrong biography is worse than a blank panel.",
         "min": 0,
         "max": 100,
         "unit": "%",
@@ -1028,90 +1109,13 @@
         "type": "action",
         "label": "Find portraits and covers",
         "marks": "R",
-        "note": "Looks up every album artist's portrait and every album's cover on fanart.tv, then TheAudioDB, and keeps LMS's picture where neither has one. Starts from scratch every time and checks all of them. Runs in the background; playback is not interrupted. What it found stays here until the next run.",
+        "note": "Looks up every album artist's portrait and every album's cover on fanart.tv, then TheAudioDB, and keeps Lyrion's picture where neither has one. Starts from scratch every time and checks all of them. Runs in the background; playback is not interrupted. What it found stays here until the next run.",
         "confirm": "Find",
         "default": null,
         "onlyWhen": [
           "lms_enabled",
           true
         ]
-      }
-    ]
-  },
-  {
-    "id": "device",
-    "label": "Device",
-    "subtitle": "Identity and network",
-    "accent": "#8fc4d8",
-    "rows": [
-      {
-        "key": "device_name",
-        "type": "text",
-        "label": "Device name",
-        "marks": "R",
-        "note": "One name for everything: the mDNS hostname, the LMS player, the Spotify Connect device and the Bluetooth name. There is no per-service override.",
-        "default": null,
-        "restart": true,
-        "warn": "Changing it will restart the device.",
-        "placeholder": "Device name"
-      },
-      {
-        "key": "wifi",
-        "type": "list",
-        "label": "Wi-Fi",
-        "marks": "R",
-        "note": null,
-        "default": null,
-        "empty": "No networks found. Check the adapter is enabled, or move closer to the router.",
-        "hint": "A secured network needs its password the first time. Saved networks join in one tap.",
-        "kind": "network",
-        "discover": true
-      },
-      {
-        "key": "cable",
-        "type": "action",
-        "label": "Cable",
-        "marks": "N",
-        "note": null,
-        "kind": "cable",
-        "default": null
-      },
-      {
-        "key": "timezone",
-        "type": "choice",
-        "label": "Time zone",
-        "marks": "N",
-        "note": "Taken from the network. Set it by hand only when that comes out wrong.",
-        "options": [],
-        "default": null,
-        "optionsFrom": "timezones",
-        "grouped": true
-      },
-      {
-        "key": "api_loopback",
-        "type": "toggle",
-        "label": "Restrict API to loopback",
-        "marks": "N",
-        "note": "The API binds all interfaces and is unauthenticated by decision.",
-        "default": false,
-        "surfaced": false
-      },
-      {
-        "key": "version",
-        "type": "readonly",
-        "label": "Version",
-        "marks": "R",
-        "note": null,
-        "default": null
-      },
-      {
-        "key": "reboot",
-        "type": "action",
-        "label": "Reboot",
-        "marks": "N",
-        "note": "Restarts the device. Playback stops.",
-        "danger": true,
-        "confirm": "Reboot now"
       }
     ]
   },
@@ -1144,9 +1148,71 @@
   {
     "id": "system",
     "label": "System",
-    "subtitle": "Updates and maintenance",
+    "subtitle": "The player, its network, updates and maintenance",
     "accent": "#b0bcc4",
     "rows": [
+      {
+        "type": "group",
+        "label": "This player",
+        "accent": "#b0bcc4"
+      },
+      {
+        "key": "device_name",
+        "type": "text",
+        "label": "Device name",
+        "marks": "R",
+        "note": "One name for everything: the mDNS hostname, the Lyrion player, the Spotify Connect device and the Bluetooth name. There is no per-service override.",
+        "default": null,
+        "restart": true,
+        "warn": "Changing it will restart the device.",
+        "placeholder": "Device name"
+      },
+      {
+        "key": "timezone",
+        "type": "choice",
+        "label": "Time zone",
+        "marks": "N",
+        "note": "Taken from the network. Set it by hand only when that comes out wrong.",
+        "options": [],
+        "default": null,
+        "optionsFrom": "timezones",
+        "grouped": true
+      },
+      {
+        "type": "group",
+        "label": "Network",
+        "accent": "#b0bcc4"
+      },
+      {
+        "key": "wifi",
+        "type": "list",
+        "label": "Wi-Fi",
+        "marks": "R",
+        "note": null,
+        "default": null,
+        "empty": "No networks found. Check the adapter is enabled, or move closer to the router.",
+        "hint": "A secured network needs its password the first time. Saved networks join in one tap.",
+        "kind": "network",
+        "discover": true
+      },
+      {
+        "key": "cable",
+        "type": "action",
+        "label": "Cable",
+        "marks": "N",
+        "note": null,
+        "kind": "cable",
+        "default": null
+      },
+      {
+        "key": "api_loopback",
+        "type": "toggle",
+        "label": "Restrict API to loopback",
+        "marks": "N",
+        "note": "The API binds all interfaces and is unauthenticated by decision.",
+        "default": false,
+        "surfaced": false
+      },
       {
         "type": "group",
         "label": "Updates",
@@ -1222,32 +1288,8 @@
       },
       {
         "type": "group",
-        "label": "Device",
+        "label": "Backup and reset",
         "accent": "#b0bcc4"
-      },
-      {
-        "key": "image_build",
-        "type": "readonly",
-        "label": "Image build",
-        "marks": "R",
-        "note": "Nothing else on a running device reports which build it is.",
-        "default": null,
-        "surfaced": false
-      },
-      {
-        "key": "log_level",
-        "type": "choice",
-        "label": "Log level",
-        "marks": "N",
-        "note": null,
-        "options": [
-          "Error",
-          "Warn",
-          "Info",
-          "Debug"
-        ],
-        "default": null,
-        "surfaced": false
       },
       {
         "key": "backup",
@@ -1269,12 +1311,20 @@
         "kind": "backup"
       },
       {
-        "key": "debug_logs",
-        "type": "toggle",
-        "label": "Debug logs",
+        "key": "factory_reset",
+        "type": "action",
+        "label": "Reset to factory settings",
         "marks": "R",
-        "note": "Keeps the device's logs on the card across restarts, up to 100 MB, for tracking down a problem. Off, they are kept in memory and lost at a restart, and switching off deletes the ones kept. On by default on the Testing channel.",
-        "default": false
+        "note": "Everything goes, as on a newly flashed card: every setting and name, the Wi-Fi networks, paired devices and sign-ins, the skins and plugins, the Lyrion Server's library, and the backups kept on this player. Your music, playlists and pictures stay. Download a backup first under Restore. The player restarts into setup.",
+        "danger": true,
+        "confirm": "Hold to reset and restart",
+        "hold": true,
+        "default": null
+      },
+      {
+        "type": "group",
+        "label": "Help",
+        "accent": "#b0bcc4"
       },
       {
         "key": "problem_report",
@@ -1295,13 +1345,48 @@
         "default": null
       },
       {
-        "key": "factory_reset",
-        "type": "action",
-        "label": "Factory reset",
+        "key": "debug_logs",
+        "type": "toggle",
+        "label": "Debug logs",
         "marks": "R",
-        "note": "Every setting returns to its shipped default. Paired devices and Wi-Fi credentials are cleared.",
-        "confirm": "Erase all settings",
-        "danger": true,
+        "note": "Keeps the device's logs on the card across restarts, up to 100 MB, for tracking down a problem. Off, they are kept in memory and lost at a restart, and switching off deletes the ones kept. On by default on the Testing channel.",
+        "default": false
+      },
+      {
+        "key": "log_level",
+        "type": "choice",
+        "label": "Log level",
+        "marks": "N",
+        "note": null,
+        "options": [
+          "Error",
+          "Warn",
+          "Info",
+          "Debug"
+        ],
+        "default": null,
+        "surfaced": false
+      },
+      {
+        "key": "image_build",
+        "type": "readonly",
+        "label": "Image build",
+        "marks": "R",
+        "note": "Nothing else on a running device reports which build it is.",
+        "default": null,
+        "surfaced": false
+      },
+      {
+        "type": "group",
+        "label": "About",
+        "accent": "#b0bcc4"
+      },
+      {
+        "key": "version",
+        "type": "readonly",
+        "label": "Version",
+        "marks": "R",
+        "note": null,
         "default": null,
         "surfaced": false
       },
@@ -1320,6 +1405,20 @@
         "label": "Credits",
         "marks": "R",
         "note": "Everyone whose work is in the player."
+      },
+      {
+        "type": "group",
+        "label": "Power",
+        "accent": "#b0bcc4"
+      },
+      {
+        "key": "reboot",
+        "type": "action",
+        "label": "Reboot",
+        "marks": "N",
+        "note": "Restarts the device. Playback stops.",
+        "danger": true,
+        "confirm": "Reboot now"
       },
       {
         "key": "power",

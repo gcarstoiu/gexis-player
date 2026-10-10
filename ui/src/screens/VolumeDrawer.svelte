@@ -6,6 +6,7 @@
 -->
 <script>
   import { fixedOutput } from '../lib/state.js';
+  import { fixedPending } from '../lib/settings.js';
   import { VolumeControl } from '../lib/volumeControl.svelte.js';
   import LockIcon from '../lib/LockIcon.svelte';
   import VolumeIcon from '../lib/VolumeIcon.svelte';
@@ -37,6 +38,10 @@
      onpointercancel={onsettled} onpointerleave={onsettled}
      onpointerenter={(event) => event.pointerType === 'mouse' && onactivity?.(event)}>
   <div class="drawer__title">Controls</div>
+  <!-- ADR-0046 as amended: a Volume change waiting for a pause says so. -->
+  {#if $fixedPending}
+    <div class="pending">{$fixedPending === 'on' ? "Fixed output starts at the next pause or stop" : "Fixed output ends at the next pause or stop"}.</div>
+  {/if}
   {#if $fixedOutput}
     <!--
       ADR-0046: the drawer still opens, so the answer is where the question
@@ -81,6 +86,12 @@
 </div>
 
 <style>
+  .pending {
+    margin: -4px 0 12px;
+    font-size: 15px;
+    line-height: 1.35;
+    color: var(--accent-warn);
+  }
   .scrim {
     position: absolute;
     inset: 0;

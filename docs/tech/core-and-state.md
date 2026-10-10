@@ -128,6 +128,7 @@ Top-level fields of the `/state` payload:
 | `screen_confirm`, `screen_new` | The "keep this screen?" and "new screen attached" questions (ADR-0109) |
 | `screen_check` | The hardware feedback's test pattern and the measured corner taps (ADR-0126) |
 | `settling` | The first start after setup, until its downloads have finished: `phase` and each item's state (ADR-0128) |
+| `resetting` | `true` once a factory reset is confirmed, for the 3 s before the restart; every screen shows the reset screen (ADR-0132) |
 | `settings_revision`, `pictures_revision` | Refetch triggers |
 
 ### How a change reaches the screen
@@ -210,6 +211,11 @@ navigation off), `502` LMS unreachable, `503` not wired up.
 
 ## Adapters: the renderer contract
 
+**Names.** The renderer whose id is `lms` (squeezelite, the LMS CLI, the
+`lms_enabled` row) is shown to people as **Lyrion** - its manifest's name -
+since 2026-10-10 (George: *"rename to lyrion everywhere"*). This guide keeps
+"LMS" where it names the protocol, the server's CLI or an identifier.
+
 `adapters/base.py` is the authority for what a renderer is. ADR-0013 requires
 the built-ins to implement the same contract a plugin does.
 
@@ -255,8 +261,10 @@ is described in `audio-path.md`.
 ### The registry
 
 `settings_registry.json` is the executable form of ADR-0022's inventory:
-eight groups (Audio, Sources, Handoff, Display, Enrichment, Device, Plugins,
-System), each a list of rows. A row has a `key`, a `type` and presentation
+seven groups (Audio, Sources, Handoff, Display, Enrichment, Plugins, System),
+each a list of rows. System took in Device on 2026-10-10 (George: *"it is
+confusing to have both"*), under the sub-headings This player, Network,
+Updates, Backup and reset, Help, About and Power; no key changed. A row has a `key`, a `type` and presentation
 fields. Types: `toggle`, `choice`, `number`, `text`, `multi` (settable),
 `readonly`, `action`, `group` (a sub-heading), `list` (items from discovery,
 such as Wi-Fi networks) and `document` (Legal, Credits). ADR-0044 added the

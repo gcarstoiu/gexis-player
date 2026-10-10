@@ -1185,6 +1185,46 @@ the value back.**
 comparing anything: the process's memory map, a version string, a symbol
 only one has. "No difference" is a result only after that.**
 
+**63. A repair that passed its tests, twice wrong on the device**
+(2026-10-09, the updater on ShelvesPi after its power cuts).
+- **What went wrong.** The fix for an install cut short - `dpkg --configure
+  -a`, then reinstall what is still broken - was written from one symptom
+  (apt's "dpkg was interrupted") and tested against fakes that answered the
+  way that symptom suggested. On the device the reinstall failed: the
+  half-installed pack's exact version was in no repository. Removed and
+  fetched fresh, the pack was still "Unable to locate": the same power cut had
+  left every package list the updater had saved at 0 bytes, and apt's "Hit"
+  kept them.
+- **What it looked like.** 54 tests passing, then 55, each fake doing what the
+  previous reading of the problem said.
+- **How it was caught.** By running the new updater once against the real
+  broken card before releasing it, instead of after.
+
+**A power cut does not break one thing.** A recovery for it is proven on the
+damaged device itself, run to the end - here, the pack installed - before
+it is released; a fake built from the first symptom only proves the first
+symptom.
+
+**64. A dry run that skipped the check it was meant to test** (2026-10-10,
+setup's restart on the bar player after a factory reset).
+- **What went wrong.** Setup did not restart after a restore, and the
+  updater's shutdown block was the suspect: a skin pack was installing at
+  that moment. To rule it out, a block was held on the device and `systemctl
+  reboot --dry-run` was run as root; it passed, and the block was set aside.
+  The real call does what the dry run never reaches - it asks logind, which
+  under systemd 257 refuses even root while a block is held ("Call to
+  Reboot failed: Access denied"). The next test showed exactly that.
+- **What it looked like.** "exit 0" from root, with the block listed beside
+  it: a clean negative.
+- **How it was caught.** The core began logging every refused restart with
+  systemd's own words the same day; the next reset and restore printed the
+  refusal, minute by minute, with the pack install in the lines above.
+
+**A dry run is proof only of what it executes.** Before a dry run rules a
+cause out, check that it reaches the step the cause would act on - here
+logind's inhibitor check, which `--dry-run` returns before. When it cannot,
+log the real call's answer and let the next real run say.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

@@ -63,6 +63,21 @@ export const settingValues = derived(settingsGroups, ($groups) => {
   return values;
 });
 
+/** **Fixed output chosen but not yet in force, or left but still in force**
+ *  (ADR-0046, amended 2026-10-10): the core changes it only when playback
+ *  pauses or stops (ADR-0018), so the setting and the device disagree until
+ *  then. George, on sofapi: "It was misleading as it was showing that fixed
+ *  was turned on, when in fact it was not." `'on'` while Fixed waits to
+ *  start, `'off'` while it waits to end, null when they agree - and null
+ *  until both the settings and the state have arrived, so a page still
+ *  loading does not claim a change is waiting. */
+export const fixedPending = derived([settingValues, playback], ([$values, $state]) => {
+  if (!$state || $values.output_mode === undefined) return null;
+  const wanted = $values.output_mode === 'Fixed';
+  const now = $state.fixed_output === true;
+  return wanted === now ? null : wanted ? 'on' : 'off';
+});
+
 /** A `list` row's items, fetched when its sheet opens (ADR-0044 §1). A Wi-Fi
  *  scan takes seconds and LMS discovery listens for 2.5 s, so this is slow on
  *  purpose and the sheet shows that it is searching. */

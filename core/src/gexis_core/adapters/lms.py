@@ -202,6 +202,24 @@ def mark_boot_checked(marker: Path) -> None:
         logger.warning("lms: cannot record the boot check: %s", exc)
 
 
+
+def own_mac_addresses(sys_net: Path = Path("/sys/class/net")) -> list[str]:
+    """This Pi's interface addresses - what squeezelite takes its player id
+    from - leaving out the loopback and blank ones."""
+    found = []
+    try:
+        interfaces = sorted(sys_net.iterdir())
+    except OSError:
+        return found
+    for iface in interfaces:
+        try:
+            mac = (iface / "address").read_text().strip().lower()
+        except OSError:
+            continue
+        if mac and mac != "00:00:00:00:00:00":
+            found.append(mac)
+    return found
+
 class LmsAdapter(Adapter):
     renderer_id = "lms"
     release_action = ReleaseAction.PAUSE
@@ -261,8 +279,11 @@ class LmsAdapter(Adapter):
     VOLUME_STEPS = VOLUME_STEPS
 
     def __init__(self, host: str, port: int, player_name: str,
-                 boot_marker: Path | None = None) -> None:
+                 boot_marker: Path | None = None, own_macs=None) -> None:
         self._base = f"http://{host}:{port}"
+        #: This Pi's network addresses, which squeezelite takes its player id
+        #: from - see `_resolve_player_id`.
+        self._own_macs = own_macs or own_mac_addresses
         #: **Nothing resumes by itself when the device starts** (George,
         #: 2026-09-29: after a restart LMS was playing, *"I was expecting it
         #: paused"*). The server remembers a player that was playing when the
@@ -681,13 +702,34 @@ class LmsAdapter(Adapter):
         return self._max_queue
 
     async def _resolve_player_id(self, session: aiohttp.ClientSession) -> str:
+        """**Our player by this Pi's own addresses first, then by name.**
+        squeezelite's player id is the MAC address of one of this Pi's
+        network interfaces. A name is not an identity (George's bar player,
+        2026-10-09): restored from guestpi's backup under the same name, the
+        server listed two "GuestPi" - and a stale entry from the setup boot,
+        under the cable's address, while our own squeezelite had not yet
+        connected - and the first by name was taken, so Play went to a player
+        that was not this one. A connected player with one of our addresses
+        wins; while none is connected the lookup fails and is retried (the
+        caller waits 5 s), rather than settling on a stale one. The name is the
+        last resort, for a squeezelite given a MAC of its own."""
         result = await self._rpc(session, "", ["players", 0, 99])
         players = result.get("result", {}).get("players_loop", [])
-        for player in players:
-            if player.get("name") == self._player_name:
-                return player["playerid"]
+        ours = {mac.lower() for mac in self._own_macs()}
+        mine = [p for p in players if str(p.get("playerid", "")).lower() in ours]
+        connected = [p for p in mine if p.get("connected") in (1, True, "1")]
+        if connected:
+            return connected[0]["playerid"]
+        if mine:
+            raise RuntimeError(
+                f"lms: our player {mine[0]['playerid']} is listed but not connected yet"
+            )
+        named = [p for p in players if p.get("name") == self._player_name]
+        named.sort(key=lambda p: p.get("connected") not in (1, True, "1"))
+        if named:
+            return named[0]["playerid"]
         raise RuntimeError(
-            f"lms: no player named {self._player_name!r} found in {players!r}"
+            f"lms: no player of ours or named {self._player_name!r} found in {players!r}"
         )
 
     async def run(self, on_acquire, on_release) -> None:

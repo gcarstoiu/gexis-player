@@ -377,3 +377,16 @@ def test_only_a_service_can_ask_for_its_connection_shown():
     assert parse(service).connection is False
     assert parse({**service, "connection": "yes"}).connection is False
     assert parse({**GOOD, "connection": True}).connection is False
+
+
+
+def test_the_three_renderers_this_repository_ships_are_built_in(tmp_path):
+    """Found 2026-10-10: `built_in` was never set, so setup's Plugins step
+    offered LMS, Spotify and Bluetooth beside the plugins - and a restore
+    through that step switched LMS and Spotify off."""
+    for pid, extra in (("lms", {"kind": "renderer", "unit": "squeezelite.service", "enabled_row": "lms_enabled"}),
+                       ("plexamp", {"kind": "renderer", "unit": "plexamp.service"})):
+        (tmp_path / pid).mkdir()
+        (tmp_path / pid / "plugin.json").write_text(json.dumps({"id": pid, "name": pid.title(), **extra}))
+    found = {p.id: p for p in plugins.installed(tmp_path)}
+    assert found["lms"].built_in is True and found["plexamp"].built_in is False

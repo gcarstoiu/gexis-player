@@ -14,7 +14,7 @@ def test_it_settles_while_anything_waits_or_downloads():
     view = settling.view(record(), {"skins": {"state": "downloading", "received": 5, "total": 10}}, now=1010.0)
     assert view["phase"] == "settling"
     assert view["items"][0] == {"id": "skins", "name": "The visualiser's skins", "received": 5, "total": 10,
-                                "error": None, "state": "busy"}
+                                "share": None, "error": None, "state": "busy"}
     assert view["items"][1]["state"] == "waiting"
 
 
@@ -45,3 +45,11 @@ def test_begin_read_end(tmp_path):
     assert settling.read(path)["items"] == ITEMS
     settling.end(path)
     assert settling.read(path) is None
+
+
+def test_a_skin_pack_s_share_reaches_the_screen():
+    """George's bar player, 2026-10-09: the skins showed no progress, then
+    were done - a pack reports a share, and only bytes were passed on."""
+    record = {"started": 0, "items": [{"id": "skins", "name": "The visualiser's skins"}]}
+    v = settling.view(record, {"skins": {"state": "downloading", "share": 0.42}}, now=1)
+    assert v["items"][0]["state"] == "busy" and v["items"][0]["share"] == 0.42

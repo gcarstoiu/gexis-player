@@ -705,6 +705,9 @@ async def test_the_routes_answer_503_rather_than_404_when_nothing_is_wired(tmp_p
     settings, client = client_for(tmp_path)
     async with client:
         assert (await client.get("/idle/weather")).status == 503
+        # The player's own pictures (ADR-0133) need nothing wired; the
+        # downloaded ones do.
+        settings.set("idle_background", "Wallpapers online")
         assert (await client.get("/idle/wallpaper")).status == 503
 
 

@@ -104,3 +104,24 @@ def test_a_slow_pointer_speed_is_raised_to_the_new_least(tmp_path):
     other.set("pointer_speed", 225)
     sm.migrate(other)
     assert other.get("pointer_speed") == 225
+
+
+def test_an_existing_player_keeps_artist_pictures_and_a_new_one_starts_on_gexis_wallpapers(tmp_path):
+    """ADR-0133: Gexis wallpapers is the default on a new player, and an
+    existing choice is kept - including the old default nobody stored."""
+    keep = sm.MIGRATIONS.index(next(m for m in sm.MIGRATIONS if m.note.startswith("idle_background")))
+    used = SettingsStore(tmp_path / "used.db")          # ran the earlier releases' migrations
+    used.set(sm.SCHEMA_KEY, keep)
+    sm.migrate(used)
+    assert used.get("idle_background") == "Artist pictures"
+    chosen = SettingsStore(tmp_path / "chosen.db")      # a choice already stored stays
+    chosen.set(sm.SCHEMA_KEY, keep)
+    chosen.set("idle_background", "Black")
+    sm.migrate(chosen)
+    assert chosen.get("idle_background") == "Black"
+    new = SettingsStore(tmp_path / "new.db")            # a freshly flashed card
+    sm.migrate(new)
+    assert new.get("idle_background") is None and new.get(sm.SCHEMA_KEY) == len(sm.MIGRATIONS)
+    default = next(r["default"] for g in json.loads(REGISTRY.read_text()) for r in g["rows"]
+                   if r.get("key") == "idle_background")
+    assert default == "Gexis wallpapers"

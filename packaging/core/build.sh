@@ -52,7 +52,7 @@ done
 # 03-core), from the same files - one source of truth until the stages go.
 F=/src/image/stage-gexis/03-core/files
 U="$STAGE/usr/lib/systemd/system"
-for unit in gexis-core.service gexis-meter.service gexis-park.service gexis-screen-check.service \
+for unit in gexis-core.service gexis-meter.service gexis-park.service gexis-screen-check.service gexis-factory-reset.service \
 	gexis-uploaded-renderer@.service gexis-uploaded-service@.service gexis-fetch@.service; do
 	install -D -m 644 "$F/$unit" "$U/$unit"
 done
@@ -120,6 +120,8 @@ fi
 # at a start.
 if command -v systemctl >/dev/null; then
 	systemctl enable gexis-screen-check.service
+	# ADR-0132: acts only when a reset was asked for; on for every device.
+	systemctl enable gexis-factory-reset.service
 	systemctl enable gexis-update-check.timer
 	# ADR-0105 §4 step 5 (built 2026-10-07): the check after an update's reboot.
 	systemctl enable gexis-update-postboot.service

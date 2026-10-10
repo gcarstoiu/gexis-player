@@ -10,6 +10,7 @@
 -->
 <script>
   import { active, metadata, volume, fixedOutput, meters, panel, setVolume, showPeppy, hidePeppy, requestIdle, goTo } from '../lib/state.js';
+  import { fixedPending } from '../lib/settings.js';
   import SourceMark from '../lib/SourceMark.svelte';
   import { settingValues } from '../lib/settings.js';
   import { openTouchpad } from '../lib/touchpad.js';
@@ -460,6 +461,10 @@
     </button>
   </div>
 
+  <!-- ADR-0046 as amended: a Volume change waiting for a pause says so. -->
+  {#if $fixedPending}
+    <div class="mini__pending">{$fixedPending === 'on' ? "Fixed output starts at the next pause or stop" : "Fixed output ends at the next pause or stop"}.</div>
+  {/if}
   <div class="mini__row">
     {#if $fixedOutput}
       <span class="mini__fixed">Fixed output · the amplifier sets the level</span>
@@ -489,6 +494,12 @@
 </div>
 
 <style>
+  .mini__pending {
+    font-size: 14px;
+    line-height: 1.35;
+    color: var(--accent-warn);
+    padding: 0 2px 6px;
+  }
   .mini {
     position: fixed;
     left: 0;

@@ -132,7 +132,7 @@ def _write_bluetooth(name: str) -> None:
 
 
 #: The four, by the name the user would recognise.
-TARGETS = ("Spotify", "Bluetooth", "LMS", "mDNS")
+TARGETS = ("Spotify", "Bluetooth", "Lyrion", "mDNS")
 
 
 def apply(name: str) -> Written:
@@ -147,7 +147,7 @@ def apply(name: str) -> Written:
     steps = (
         ("Spotify", lambda: _write_librespot(name)),
         ("Bluetooth", lambda: _write_bluetooth(name)),
-        ("LMS", lambda: _write_env(name)),
+        ("Lyrion", lambda: _write_env(name)),
         # The only one that takes the sanitised form.
         ("mDNS", lambda: _write_hostname(host)),
     )

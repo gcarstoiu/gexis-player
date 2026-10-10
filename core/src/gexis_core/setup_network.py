@@ -488,6 +488,17 @@ class SetupNetwork:
             timeout=wifi.JOIN_TIMEOUT_S,
         )
         await self._nmcli("connection", "modify", PROFILE, "connection.autoconnect", "no")
+        if rc == 0:
+            # **WPA2 only** (George's bar player, 2026-10-09: the QR code
+            # showed and the phone could not join). `device wifi hotspot`
+            # offers WPA3 beside WPA2 (key_mgmt "WPA-PSK WPA-PSK-SHA256 SAE"),
+            # a phone that prefers WPA3 takes it, and the Pi's Wi-Fi firmware
+            # fails WPA3's handshake as an access point ("brcmf_cyw_mgmt_tx:
+            # TX Auth frame operation is timedout"). WPA3 needs management-
+            # frame protection; with it off, NetworkManager offers WPA2 alone.
+            # Tried on the player by hand first: the phone joined at once.
+            await self._nmcli("connection", "modify", PROFILE, "802-11-wireless-security.pmf", "disable")
+            rc, _, err = await self._nmcli("connection", "up", PROFILE, timeout=wifi.JOIN_TIMEOUT_S)
         # Read back rather than trusted: this is the line that keeps the home
         # Wi-Fi from losing the radio to a leftover at boot.
         _, autoconnect, _ = await self._nmcli("-g", "connection.autoconnect", "connection", "show", PROFILE)

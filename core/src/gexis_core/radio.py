@@ -187,7 +187,7 @@ class RadioBrowser:
             raise UnknownHandle(f"{handle} is not a station")
         player = self._player_id()
         if not player:
-            raise UnknownHandle("the LMS player has not been resolved yet")
+            raise UnknownHandle("the Lyrion player has not been resolved yet")
         if spec.get("url"):
             command = ["playlist", "play" if action == "play" else "add", spec["url"]]
         else:

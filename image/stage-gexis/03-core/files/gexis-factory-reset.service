@@ -1,0 +1,26 @@
+[Unit]
+# ADR-0132: the wipe asked for in Settings, at the start of the boot after the
+# request - before anything that holds the files it removes, so the same boot
+# ends in setup. Only when asked: without the request this does not run.
+Description=Gexis: reset to factory settings, when asked
+Documentation=file:///opt/gexis-core/venv/lib/python3.13/site-packages/gexis_core/factory_reset.py
+ConditionPathExists=/var/lib/gexis/factory-reset
+DefaultDependencies=no
+After=local-fs.target
+# Before the journal moves onto the card: the wipe empties /var/log/journal,
+# and a journal already open there would go on writing into deleted files,
+# losing this boot's log - the reset's own record included.
+Before=systemd-journal-flush.service
+Before=sysinit.target NetworkManager.service bluetooth.service systemd-hostnamed.service
+Before=gexis-screen-check.service gexis-core.service gexis-kiosk.service gexis-peppy.service
+Before=squeezelite.service go-librespot.service plexamp.service beszel-agent.service gexis-lyrion.service
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/gexis-core/venv/bin/python -m gexis_core.factory_reset
+TimeoutStartSec=300
+StandardOutput=journal
+
+[Install]
+WantedBy=sysinit.target
