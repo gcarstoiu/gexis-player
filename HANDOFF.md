@@ -358,10 +358,10 @@ reverted, currently-flashed image predates this fix.
                                             measured. Pi-hole and AdGuard deferred.
                                             ADR first
 13f Lyrion's own menus                   Built and released behind Extended
-                                            navigation (ADR-0118). Closes (George,
-                                            2026-10-10) after the hidden library's
-                                            hour on the Pi (ADR-0122) and George's
-                                            look.
+                                            navigation (ADR-0118). The hidden
+                                            library's hour measured 2026-10-10 on
+                                            the bar and sofapi: nothing (Finding
+                                            118). Closes on George's look.
 14 themes                                 cut out of 10. ADR-0016 calls themes
                                             plugins and plugins processes; a
                                             theme has no process - settle that
