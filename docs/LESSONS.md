@@ -1248,12 +1248,14 @@ the old order.
   showed on it.
 - **What it looked like.** The new version in `dpkg-query`, the new files on
   disk, a phone or computer opening the page fresh and showing the change.
-- **How it was caught.** The pattern was missing on the panel only;
-  restarting `gexis-kiosk` brought it.
+- **How it was caught.** A phone asked for the test pattern and it never
+  appeared on the panel.
 
-**The panel is a page loaded once.** After a UI install, restart the kiosk
-too, and check the change on the panel itself - a fresh browser elsewhere
-loads the new files, which is exactly what the panel did not do.
+**The panel is a page loaded once.** Since 2026-10-09 it reloads itself when
+the installed build differs from the one it runs - it reads its own
+`index.html` once a minute (ADR-0110 amended). A UI change is still checked
+on the panel itself: a fresh browser elsewhere loads the new files, which is
+exactly what the panel did not do.
 
 **67. Test failures that were a full disk** (2026-10-07/08, again
 2026-10-10).
