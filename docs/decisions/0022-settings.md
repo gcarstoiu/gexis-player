@@ -311,6 +311,22 @@ Confirmed by George, 2026-10-04 (*"Yes you can"*):
 |---|---|---|
 | Bar wallpaper shape and crop | [H] | On a bar, Pixabay pictures at least 2.4 times as wide as tall are preferred, from a 200-result page at 400 px minimum height, falling back to the usual ones; the idle screen fills a bar with any picture it can crop by up to 70 %, framed at 35 % from the top (George, "C"). Fixed values, not rows |
 
+### Appended 2026-10-10 — the waiting screen and the player's own wallpapers
+
+Confirmed by George, 2026-10-10 (*"Go ahead. Settings lines are fine"*), from
+[ADR-0133](0133-the-waiting-screen-and-the-players-own-wallpapers.md) §5. All
+in Display:
+
+| Setting | Mark | Notes |
+|---|---|---|
+| Background: **Gexis wallpapers** and **NASA pictures** | [N] | Two new options on `idle_background`, which now also sets the waiting screen's background (ADR-0133 §2). Both built into the image, no key, no network. Gexis wallpapers is the default on a new player; an existing choice is kept. Artist pictures show the player's own wallpapers while the LMS client is off |
+| Wallpaper styles | [N] | Calm, Colourful, Psychedelic, several at a time (`multi`); default Calm. Shown with Gexis wallpapers |
+| Follow the time of day | [N] | Dawn, day, dusk and night pictures by the clock; default on |
+| Seasons | [N] | The season's pictures, by hemisphere from the time zone; default on |
+| Holidays | [N] | New Year, Christmas and Easter (Western or Orthodox) for the player's country, from the time zone and then the weather location; default on. On a holiday's days its pictures replace the styles (George: *"They replace them. For the time being if option is selected."*) |
+| Clock on the waiting screen | [N] | Time, date and the player's name, top left; follows *Clock format*; default on |
+| Hint on the waiting screen | [N] | *Start music from your phone* above the source tiles; default on |
+
 ## Settled by prior records
 
 - **Output mode switching is not instantaneous.** Confirmation dialogue, and the

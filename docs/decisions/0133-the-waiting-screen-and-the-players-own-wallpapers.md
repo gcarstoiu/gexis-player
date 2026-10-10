@@ -10,8 +10,8 @@ then from the location, with the proposed list (*"Completely agree with the
 proposal"*); the waiting screen **follows the idle screen's Background**
 (*"4a"*), and **NASA pictures** become a Background of their own (*"add NASA
 pictures as a standalone option for the idle screen as well"*). The settings
-rows below are **proposed, not yet in ADR-0022's inventory**: they are
-appended when George confirms them.
+rows below are **in ADR-0022's inventory**, confirmed by George the same
+day (*"Go ahead. Settings lines are fine"*).
 **Date:** 2026-10-10
 **Amends:** [ADR-0079](0079-with-lms-off-the-panel-is-two-screens.md) (the waiting
 screen's look), [ADR-0047](0047-the-idle-screen-gains-backgrounds-and-weather.md)
@@ -98,7 +98,7 @@ Both are in the image, so neither needs a key or a network.
 - **The country** comes from the time zone at first (the mapping the setup's
   Wi-Fi country already uses), and from the weather location once one is set.
 
-### 5. Proposed settings rows (awaiting George's confirmation)
+### 5. Settings rows (in ADR-0022's inventory, 2026-10-10)
 
 | Setting | What it does | Default | Mark |
 |---|---|---|---|
