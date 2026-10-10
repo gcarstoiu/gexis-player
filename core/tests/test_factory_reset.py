@@ -90,3 +90,47 @@ def test_the_reset_is_on_the_state_for_every_screen():
     store.set_resetting()
     store.set_resetting()
     assert store.state.resetting is True and seen == [True]
+
+
+async def test_a_refused_restart_is_asked_again_until_it_is_taken():
+    """The bar player, 2026-10-10: a pack install's shutdown block made
+    systemd refuse setup's restart; asked again, it goes through."""
+    from gexis_core.__main__ import _systemctl_reboot
+
+    answers = [(1, b"Call to Reboot failed: Access denied")] * 3 + [(0, b"")]
+    calls, slept = [], []
+
+    class Proc:
+        def __init__(self, code, out):
+            self.returncode, self._out = code, out
+
+        async def communicate(self):
+            return self._out, None
+
+    async def exec_(*argv, **_):
+        calls.append(argv)
+        return Proc(*answers[len(calls) - 1])
+
+    async def sleep(s):
+        slept.append(s)
+
+    assert await _systemctl_reboot(retry_s=15, give_up_s=600, exec_=exec_, sleep=sleep) is True
+    assert len(calls) == 4 and slept == [15, 15, 15]
+
+
+async def test_a_restart_refused_for_too_long_gives_up():
+    from gexis_core.__main__ import _systemctl_reboot
+
+    class Proc:
+        returncode = 1
+
+        async def communicate(self):
+            return b"Access denied", None
+
+    async def exec_(*argv, **_):
+        return Proc()
+
+    async def sleep(s):
+        pass
+
+    assert await _systemctl_reboot(retry_s=15, give_up_s=45, exec_=exec_, sleep=sleep) is False

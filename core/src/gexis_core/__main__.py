@@ -257,27 +257,48 @@ async def _set_timezone(zone: str) -> None:
         logger.info("timezone: set to %s", zone)
 
 
-async def _systemctl_reboot() -> None:
-    """**Every restart the core asks for, and whether it was taken.** After a
-    factory reset and a restore in setup the bar player did not restart
-    (George, 2026-10-10: "I had to do it manually"), and nothing said why:
-    the call was fire-and-forget. A refusal is logged with systemd's own
-    words and asked again once; a restart that goes ahead takes the core with
-    it before either."""
-    for attempt in (1, 2):
+#: How often a refused restart is asked again, and for how long.
+REBOOT_RETRY_S = 15.0
+REBOOT_GIVE_UP_S = 30 * 60.0
+
+
+async def _systemctl_reboot(*, retry_s: float = REBOOT_RETRY_S, give_up_s: float = REBOOT_GIVE_UP_S,
+                            exec_=asyncio.create_subprocess_exec, sleep=asyncio.sleep) -> bool:
+    """**Every restart the core asks for, until systemd takes it.**
+
+    Found on the bar player (2026-10-10), after a factory reset and a
+    restore in setup: the restored *Visualiser skins* started the pack's
+    install at once, the updater holds a shutdown block while it installs
+    (so a power cut cannot leave a half-written package), and systemd 257
+    refuses even root's reboot while one is held - "Call to Reboot failed:
+    Access denied". Asked twice a minute apart, the second refusal came four
+    seconds before the install ended, and the panel stayed on setup's last
+    screen. So the restart is asked again every `retry_s` until it is taken
+    - an install ends in minutes - and the refusal is logged once, not every
+    time. Returns whether it was taken."""
+    waited = 0.0
+    last = None
+    while True:
         try:
-            proc = await asyncio.create_subprocess_exec(
-                "systemctl", "reboot", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
+            proc = await exec_("systemctl", "reboot", stdout=asyncio.subprocess.PIPE,
+                               stderr=asyncio.subprocess.STDOUT)
             out, _ = await proc.communicate()
         except OSError as exc:
             logger.error("reboot: systemctl could not be run: %s", exc)
-            return
+            return False
         if proc.returncode == 0:
-            logger.info("reboot: systemd took the restart")
-            return
-        logger.error("reboot: refused (attempt %d, exit %s): %s", attempt, proc.returncode,
-                     out.decode(errors="replace").strip() or "no message")
-        await asyncio.sleep(10)
+            logger.info("reboot: systemd took the restart%s", f" after {waited:.0f} s" if waited else "")
+            return True
+        reason = out.decode(errors="replace").strip() or f"exit {proc.returncode}"
+        if reason != last:
+            logger.warning("reboot: refused (%s); asking again every %.0f s - an install holding a "
+                           "shutdown block does this until it ends", reason, retry_s)
+            last = reason
+        if waited >= give_up_s:
+            logger.error("reboot: still refused after %.0f min (%s); giving up", waited / 60, reason)
+            return False
+        await sleep(retry_s)
+        waited += retry_s
 
 
 async def _restore_done() -> None:
