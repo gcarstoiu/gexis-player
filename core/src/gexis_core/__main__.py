@@ -256,13 +256,36 @@ async def _set_timezone(zone: str) -> None:
         logger.info("timezone: set to %s", zone)
 
 
+async def _systemctl_reboot() -> None:
+    """**Every restart the core asks for, and whether it was taken.** After a
+    factory reset and a restore in setup the bar player did not restart
+    (George, 2026-10-10: "I had to do it manually"), and nothing said why:
+    the call was fire-and-forget. A refusal is logged with systemd's own
+    words and asked again once; a restart that goes ahead takes the core with
+    it before either."""
+    for attempt in (1, 2):
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "systemctl", "reboot", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
+            out, _ = await proc.communicate()
+        except OSError as exc:
+            logger.error("reboot: systemctl could not be run: %s", exc)
+            return
+        if proc.returncode == 0:
+            logger.info("reboot: systemd took the restart")
+            return
+        logger.error("reboot: refused (attempt %d, exit %s): %s", attempt, proc.returncode,
+                     out.decode(errors="replace").strip() or "no message")
+        await asyncio.sleep(10)
+
+
 async def _restore_done() -> None:
     """**ADR-0083: a restore reboots.** The archive is already written back by
     the time this runs; the pause is only so the answer reaches whoever asked
     before the device goes down under them."""
     logger.warning("restore: rebooting to come up on the restored state")
     await asyncio.sleep(1.5)
-    await asyncio.create_subprocess_exec("systemctl", "reboot")
+    await _systemctl_reboot()
 
 
 async def _restart_for(key: str) -> None:
@@ -271,12 +294,12 @@ async def _restart_for(key: str) -> None:
     and the toast that says so - reach whoever saved it first."""
     logger.warning("settings: %s changed; restarting the device to apply it", key)
     await asyncio.sleep(1.5)
-    await asyncio.create_subprocess_exec("systemctl", "reboot")
+    await _systemctl_reboot()
 
 
 async def _reboot() -> None:
     logger.info("reboot: requested from settings")
-    await asyncio.create_subprocess_exec("systemctl", "reboot")
+    await _systemctl_reboot()
 
 
 async def _factory_reset(state_store) -> None:
@@ -290,7 +313,7 @@ async def _factory_reset(state_store) -> None:
     state_store.set_resetting()
     logger.warning("factory reset: requested; restarting to wipe and come up in setup")
     await asyncio.sleep(3)
-    await asyncio.create_subprocess_exec("systemctl", "reboot")
+    await _systemctl_reboot()
 
 
 #: ADR-0109 decision 5: how long the panel asks *Keep this screen?*, from its
@@ -474,7 +497,7 @@ async def main() -> None:
 
         async def _board_restart() -> None:
             await asyncio.sleep(2.0)
-            await asyncio.create_subprocess_exec("systemctl", "reboot")
+            await _systemctl_reboot()
         asyncio.ensure_future(_board_restart())
 
     chosen_output = outputs.resolve(settings_store.get("output_device"))
@@ -1817,7 +1840,7 @@ async def main() -> None:
 
         async def _restart() -> None:
             await asyncio.sleep(2.0)
-            await asyncio.create_subprocess_exec("systemctl", "reboot")
+            await _systemctl_reboot()
         asyncio.ensure_future(_restart())
 
     def _choose_screen(label: str | None = None, rotation: str | None = None) -> None:
@@ -1839,7 +1862,7 @@ async def main() -> None:
 
         async def _restart() -> None:
             await asyncio.sleep(2.0)
-            await asyncio.create_subprocess_exec("systemctl", "reboot")
+            await _systemctl_reboot()
         asyncio.ensure_future(_restart())
 
     def _reports_note(key: str, reported: str | None) -> str | None:
@@ -3052,7 +3075,7 @@ async def main() -> None:
         _sync_screen_settings()
         state_store.set_screen_confirm(None)
         await asyncio.sleep(1.5)
-        await asyncio.create_subprocess_exec("systemctl", "reboot")
+        await _systemctl_reboot()
 
     async def _screen_countdown(seconds: float, reason: str) -> None:
         await asyncio.sleep(seconds)
