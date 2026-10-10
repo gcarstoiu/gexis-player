@@ -7,14 +7,16 @@ Last updated: 2026-10-10 (on R2D2).
 Branches: **`phase-13b`** in the main checkout holds the documents and shared
 work; **`phase-13d`** in `~/projects/gexis-player-13d` is the release branch,
 and `phase-13b` is merged into it after each docs change. The worktree
-`~/projects/gexis-player-r098` sits at `v0.9.8`; `-r096` and `-r097` can go.
+`~/projects/gexis-player-r098` sits at `v0.9.8` (the older release worktrees
+were removed 2026-10-10).
 Earlier narrative: `docs/HANDOFF-ARCHIVE.md` (0.9.5 to 0.9.7 moved there
 2026-10-10).
 
 **0.9.8 cut 2026-10-10 for Testing** (tag `v0.9.8`, release `r0.9.8`,
 serial 32 after the rewrite below, image
 `image/deploy/2026-10-10-gexis-player-v0.9.8.img`, 113 checks; notes approved
-by George). **PR #57** waits for George's merge. In it:
+by George). **PR #57 merged 2026-10-10**; main merged back into both
+branches. In it:
 - **Reset to factory settings** (ADR-0132): hold 3 s; the wipe runs early in
   the next boot; music, playlists and Pictures stay; a reset screen on every
   surface. **TEMPORARY until the first public release**: a reset keeps its
@@ -45,11 +47,9 @@ by George). **PR #57** waits for George's merge. In it:
 recommendation, "go ahead - I allow it"): ADR-0133 had linked the design
 page in George's Claude account, the same kind of link CLAUDE.md keeps out of
 commits. The sentence now says the options were on a private design page;
-nothing else changed. Backups, local only: `backup/phase-13b-before-artifact`,
-`backup/phase-13d-before-artifact` and the tag
-`backup/v0.9.8-before-artifact` (the commit Testing serial 31 was built
-from) - delete with the older `-before-clean` ones once the release is out.
-**Do not put `claude.ai/artifact` links in the repository.**
+nothing else changed. Its backups and the older `-before-clean` ones were
+deleted once 0.9.8 was merged. **Do not put `claude.ai/artifact` links in the
+repository.**
 
 **Devices.** **ShelvesPi** (the bar, DAC2 HD, 11.9" bar screen; reached at
 its fixed lease) runs `phase-13d` as a preview, restored from guestpi's
@@ -57,7 +57,7 @@ backup as a second player after a factory reset. **sofapi** runs release
 0.9.7 - George asked that previews go to the bar, not there. **guestpi**
 was offline at the end of the day.
 
-**Waiting on George:** the 0.9.8 PR; one more reset and restore on the bar
+**Waiting on George:** one more reset and restore on the bar
 to see setup restart by itself with the skins arriving on the settling
 screen (not yet proven on a device); a look at the boot screen's seam.
 
