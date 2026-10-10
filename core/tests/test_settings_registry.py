@@ -574,7 +574,8 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # rows (ADR-0110 §2) - the Release tile's button and the update modal
     # run them, through the same action route.
     # 16 since ADR-0132 (2026-10-09): the factory reset is surfaced.
-    assert len(kept) == 16, "ADR-0022's amendment: inventoried, not surfaced"
+    # 17 since 2026-10-10: Version, which repeated Release (George: "Yes, you can remove").
+    assert len(kept) == 17, "ADR-0022's amendment: inventoried, not surfaced"
     # Every one of them is still served by the API.
     assert all(r.get("key") for r in kept)
     # 54 at the start of 9d, plus the two rows the design has and the plan
@@ -642,7 +643,7 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # 82 with Report this hardware (ADR-0126).
     # **81**: Software volume merged into Volume (ADR-0127). **80**: Pexels
     # removed.
-    assert len(rows) - len(kept) == 88  # 88: the waiting screen's two rows (ADR-0133); 86: the own wallpapers (ADR-0133); 82: the factory reset (ADR-0132); 81: Cable (ADR-0123)
+    assert len(rows) - len(kept) == 87  # 87: Version hidden, it repeated Release; 88: the waiting screen's two rows (ADR-0133); 86: the own wallpapers (ADR-0133); 82: the factory reset (ADR-0132); 81: Cable (ADR-0123)
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():

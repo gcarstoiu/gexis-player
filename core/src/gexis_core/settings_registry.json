@@ -1387,7 +1387,8 @@
         "label": "Version",
         "marks": "R",
         "note": null,
-        "default": null
+        "default": null,
+        "surfaced": false
       },
       {
         "key": "legal",
