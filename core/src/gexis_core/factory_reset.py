@@ -16,7 +16,7 @@ import sys
 import time
 from pathlib import Path
 
-from gexis_core import board_apply, screen_apply
+from gexis_core import board_apply, journal, screen_apply
 
 logger = logging.getLogger("gexis_core.factory_reset")
 
@@ -189,6 +189,19 @@ def wipe(root: Path = Path("/"), run=subprocess.run) -> list[str]:
         run(["dpkg", "--purge", *packs], capture_output=True, text=True, check=False)
         return True
     step("skin packs", skin_packs)
+
+    def keep_this_boots_log() -> bool:
+        # TEMPORARY - remove before the first public release (journal.AFTER_RESET).
+        dropin = root / journal.AFTER_RESET.relative_to("/")
+        dropin.parent.mkdir(parents=True, exist_ok=True)
+        dropin.write_text(journal.AFTER_RESET_CONTENT)
+        if root == Path("/"):
+            # journald read its settings before this ran; the restart takes
+            # the new one, and the flush ordered after this unit then moves the
+            # boot's log so far onto the card.
+            run(["systemctl", "restart", "systemd-journald"], capture_output=True, text=True, check=False)
+        return True
+    step("this boot's log kept (temporary)", keep_this_boots_log)
     return done
 
 

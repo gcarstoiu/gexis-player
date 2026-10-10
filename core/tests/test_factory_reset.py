@@ -54,6 +54,9 @@ def test_a_used_player_goes_back_to_a_freshly_flashed_card(tmp_path):
         assert (tmp_path / emptied).is_dir() and not any((tmp_path / emptied).iterdir()), emptied
     assert (tmp_path / "etc/hostname").read_text() == "raspberrypi\n"
     assert "127.0.1.1\traspberrypi" in (tmp_path / "etc/hosts").read_text()
+    # TEMPORARY (journal.AFTER_RESET): the reset's own boot is kept on the card.
+    kept = (tmp_path / "etc/systemd/journald.conf.d/61-gexis-after-reset.conf").read_text()
+    assert "Storage=persistent" in kept and "TEMPORARY" in kept
     assert "device_name: gexis" in (tmp_path / "var/lib/go-librespot/config.yml").read_text()
     assert (tmp_path / "etc/timezone").read_text() == "Europe/London\n"
     cmdline = (tmp_path / "boot/firmware/cmdline.txt").read_text()

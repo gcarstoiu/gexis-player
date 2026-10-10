@@ -2371,6 +2371,18 @@ async def main() -> None:
         """At startup the device follows the switch (ADR-0103 §4, as ADR-0077
         does for the others): a restore brings back the setting, not the file.
         Only a disagreement is acted on, so a fresh image restarts nothing."""
+        # TEMPORARY - remove before the first public release
+        # (journal.AFTER_RESET): after a factory reset the logs stay on the
+        # card until setup is done, whatever the switch says; at the first
+        # start after setup the drop-in goes and this check waits one start,
+        # so those logs survive the restart setup ends with.
+        if journal.AFTER_RESET.exists():
+            if not Path("/var/lib/gexis/setup-done").exists():
+                logger.info("journal: kept on the card until setup is done (after a factory reset)")
+                return
+            journal.AFTER_RESET.unlink(missing_ok=True)
+            logger.info("journal: setup is done; the log kept since the factory reset stays until the next start")
+            return
         on = settings.value("debug_logs") is True
         if not journal.matches(on):
             logger.info("journal: debug_logs is %s and the device disagrees; applying", on)
