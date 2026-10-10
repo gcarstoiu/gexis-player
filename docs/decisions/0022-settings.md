@@ -319,7 +319,7 @@ in Display:
 
 | Setting | Mark | Notes |
 |---|---|---|
-| Background: **Gexis wallpapers** and **NASA pictures** | [N] | Two new options on `idle_background`, which now also sets the waiting screen's background (ADR-0133 §2). Both built into the image, no key, no network. Gexis wallpapers is the default on a new player; an existing choice is kept. Artist pictures show the player's own wallpapers while the LMS client is off |
+| Background: **Gexis wallpapers** and **Space pictures** | [N] | Two new options on `idle_background`, which now also sets the waiting screen's background (ADR-0133 §2). Both built into the image, no key, no network. Gexis wallpapers is the default on a new player; an existing choice is kept. Artist pictures show the player's own wallpapers while the LMS client is off |
 | Wallpaper styles | [N] | Calm, Colourful, Psychedelic, several at a time (`multi`); default Calm. Shown with Gexis wallpapers |
 | Follow the time of day | [N] | Dawn, day, dusk and night pictures by the clock; default on |
 | Seasons | [N] | The season's pictures, by hemisphere from the time zone; default on |

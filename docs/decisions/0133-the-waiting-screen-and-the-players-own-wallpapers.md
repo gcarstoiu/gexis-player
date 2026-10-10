@@ -8,7 +8,7 @@ clock and wallpaper."* On the four decisions put to him: the wallpapers are
 the image**; holidays follow the **country**, taken from the time zone and
 then from the location, with the proposed list (*"Completely agree with the
 proposal"*); the waiting screen **follows the idle screen's Background**
-(*"4a"*), and **NASA pictures** become a Background of their own (*"add NASA
+(*"4a"*), and **Space pictures** become a Background of their own (*"add NASA
 pictures as a standalone option for the idle screen as well"*). The settings
 rows below are **in ADR-0022's inventory**, confirmed by George the same
 day (*"Go ahead. Settings lines are fine"*).
@@ -63,11 +63,13 @@ the player's own wallpapers show instead.
 ### 3. Two new backgrounds
 
 - **Gexis wallpapers:** the player's own set (section 4).
-- **NASA pictures:** images from NASA's missions and telescopes, on its own:
+- **Space pictures:** images from NASA's missions and telescopes, on its own:
   NASA's public-domain ones, and ESA, ESA/Hubble and ESA/Webb releases under
   CC BY, each drawn with the credit line its release asks for (George,
   2026-10-10: *"for the standalone idle screen don't discard them. We can use
-  the credit line."*). The Gexis wallpapers stay public domain or CC0.
+  the credit line."*). Named *Space pictures* rather than *NASA pictures* for
+  that reason (George, the same day: *"Do that"*). The Gexis wallpapers stay
+  public domain or CC0.
 
 Both are in the image, so neither needs a key or a network.
 
@@ -105,7 +107,7 @@ Both are in the image, so neither needs a key or a network.
 
 | Setting | What it does | Default | Mark |
 |---|---|---|---|
-| *Background* (exists) | Gains **Gexis wallpapers** and **NASA pictures**; one background for the idle and the waiting screen | Gexis wallpapers on a new player; an existing choice is kept | [N] new options on an existing row |
+| *Background* (exists) | Gains **Gexis wallpapers** and **Space pictures**; one background for the idle and the waiting screen | Gexis wallpapers on a new player; an existing choice is kept | [N] new options on an existing row |
 | **Wallpaper styles** | Calm, Colourful, Psychedelic; several allowed | Calm | [N] |
 | **Follow the time of day** | Dawn, day, dusk and night pictures by the clock | On | [N] |
 | **Seasons** | The season's pictures, by hemisphere | On | [N] |
