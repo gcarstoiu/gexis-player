@@ -5,6 +5,33 @@ Every release of Gexis Player and its notes, newest first. Generated from
 edit that file, not this one. The player shows the last 10 under
 Settings → System → Change logs.
 
+## 0.9.8 — 10 October 2026
+
+### New
+
+- Reset to factory settings, under Settings → System: hold the button for 3 seconds to confirm. Every setting, network, pairing, sign-in, skin and plugin is cleared and setup starts again. The music folder, its playlists and the Pictures share stay.
+- Two new backgrounds for the idle screen. Gexis wallpapers are public-domain photographs in three styles (Calm, Colourful, Psychedelic) that can follow the time of day, the seasons, and New Year, Christmas and Easter for the player's country. Space pictures shows new pictures from NASA and ESA.
+- With the Lyrion client off, the waiting screen shows the clock, the date and the player's name over the background, with a tile for each source.
+- Settings: Device is now part of System, grouped under This player, Network, Updates, Backup and reset, Help, About and Power.
+- The browser tab shows the player's name.
+
+### Fixed
+
+- Setup's own Wi-Fi uses WPA2 only: a phone preferring WPA3 could not join it.
+- Lyrion plays to this player even when another player on the server has the same name.
+- A restore in setup no longer stops on setup's last screen; the skins download after the restart, with their progress shown.
+- A restore brings Lyrion, Spotify, Bluetooth and the plugins back on or off as they were. Setup's Plugins step lists only plugins.
+- After setup the screen no longer blinks when the downloads finish, and a skin pack shows its progress.
+- Choosing Fixed volume while music plays now says that it starts at the next pause or stop, instead of looking already on.
+- On a bar screen, the boot screen's background is one colour on both sides of the logo.
+
+### Good to know
+
+- The Lyrion client is now called Lyrion on every screen.
+- On a bar screen, Minimise on Now Playing has the size and place of the library's Back button.
+- A player already in use keeps its background; a new player starts on Gexis wallpapers.
+- The player's own wallpapers make this update about 26 MB larger.
+
 ## 0.9.7 — 9 October 2026
 
 ### Fixed
