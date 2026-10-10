@@ -104,7 +104,7 @@ length* (1 to 5 seconds) for how long it stays up. A takeover still in
 progress when the time runs out keeps it up until it finishes.
 
 **When Spotify stopped, the player went back to Lyrion on its own. Why?**
-*Settings → Handoff → Reclaim LMS when a session ends* is on. When Spotify,
+*Settings → Handoff → Reclaim Lyrion when a session ends* is on. When Spotify,
 Bluetooth or Plexamp stops, Lyrion then takes the player back. A phone that
 locks can end a Spotify session, so with this on, the player can switch to
 Lyrion without warning. It is off by default.
@@ -185,7 +185,7 @@ player back.
 *Settings → Display → Idle screen → Background* chooses: *Gexis wallpapers*,
 the player's own public-domain photographs, built in (the default on a new
 player); *Space pictures* from NASA and ESA; *Artist pictures* from the
-library (while the LMS client is off they show the player's own instead);
+library (while the Lyrion client is off they show the player's own instead);
 *Wallpapers online* from Pixabay (it needs a free key, entered in the row
 below); *Wallpapers on device*, read from the player's Pictures share on the
 network; or *Black*. Pictures are
@@ -292,13 +292,13 @@ phone first.
 ## Network and Wi-Fi
 
 **How do I change the Wi-Fi network?**
-*Settings → Device → Wi-Fi* lists the networks in range. A secured network
+*Settings → System → Wi-Fi* lists the networks in range. A secured network
 needs its password the first time; saved networks join in one tap. The time
-zone is taken from the network; set it in *Settings → Device → Time zone*
+zone is taken from the network; set it in *Settings → System → Time zone*
 only if that comes out wrong.
 
 **How good is the player's Wi-Fi connection?**
-Open *Settings → Device → Wi-Fi* and tap the connected network. It shows the
+Open *Settings → System → Wi-Fi* and tap the connected network. It shows the
 signal (in dBm and as a percentage), the speed the radio is using, the band
 and channel, and the player's address, updated every few seconds. As a rough
 guide, a signal above −67 dBm is good for music; below −75 dBm, stutter
@@ -311,7 +311,7 @@ its network then, it opens its own setup network after 90 seconds, and keeps
 looking for the saved network every few minutes.
 
 **What is the player's name, and can it be changed?**
-*Settings → Device → Device name* is one name for everything: the network
+*Settings → System → Device name* is one name for everything: the network
 address (`name.local`), the Lyrion player, the Spotify Connect device, the
 Bluetooth name and Plexamp. Changing it restarts the player, and Settings
 says at which address it comes back.
@@ -325,13 +325,13 @@ within about 10 seconds, at its own address. `gexis.local` (the player's name)
 finds it either way.
 
 **Can the player have a fixed address on the cable?**
-Yes: *Settings → Device → Cable* (shown while a cable is plugged in), then
+Yes: *Settings → System → Cable* (shown while a cable is plugged in), then
 *Manual*, with the address and its prefix (for example `192.168.1.20/24`), the
 gateway and one or two DNS servers. After *Save*, open the player at the new
 address and tap *Keep* within 60 seconds. If the new address does not work,
 the old one comes back by itself, so a mistake cannot lock you out. On Wi-Fi,
 the same choice is under the connected network's details in *Settings →
-Device → Wi-Fi*. A backup does not hold a fixed address: set it again after
+System → Wi-Fi*. A backup does not hold a fixed address: set it again after
 restoring one.
 
 ## Setup and first boot
