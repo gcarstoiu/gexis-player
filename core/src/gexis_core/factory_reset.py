@@ -44,6 +44,8 @@ REMOVED = (
     # Downloads and plugins.
     "var/lib/gexis/components", "var/lib/gexis/plugins", "var/lib/gexis/plugins-known.json",
     "var/lib/gexis/updates/pack.json", "var/lib/gexis-uploaded", "var/lib/private/gexis-uploaded",
+    # The downloaded wallpapers: Pixabay's and Space pictures (ADR-0133).
+    "var/lib/gexis-core/wallpapers", "var/lib/gexis-core/space",
     "home/pi/plexamp",
     # Identities.
     "var/lib/go-librespot/state.json", "var/lib/beszel-agent", "var/lib/beszel-hub",

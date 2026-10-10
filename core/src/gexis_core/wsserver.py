@@ -158,6 +158,7 @@ class StateServer:
         weather=None,
         wallpapers=None,
         own=None,
+        space=None,
         skins_at: Callable[[], tuple[Path, str] | None] | None = None,
         ui_dir: Path | None = None,
     ) -> None:
@@ -253,6 +254,8 @@ class StateServer:
         #: ADR-0133: the player's own pictures, for Gexis wallpapers and Space
         #: pictures - and for artist pictures while there is no library.
         self._own = own if own is not None else own_wallpapers.OwnWallpapers()
+        #: ADR-0133: Space pictures downloaded from NASA and ESA.
+        self._space = space
         #: Where the skin packs live (ADR-0050). Read per request rather
         #: than at start: a pack could be added under a running daemon, and
         #: parsing 99 sections costs less than the request that asked.
@@ -554,7 +557,9 @@ class StateServer:
     async def _picture_bytes(self, url: str) -> bytes | None:
         """The picture a background URL names: a file of ours, or the owner's
         server's (an artist picture through LMS's image proxy)."""
-        if url.startswith("/idle/wallpaper/own/"):
+        if url.startswith("/idle/wallpaper/space/"):
+            path = self._space.path_of(url[len("/idle/wallpaper/space/"):]) if self._space else None
+        elif url.startswith("/idle/wallpaper/own/"):
             path = self._own.path_of(unquote(url[len("/idle/wallpaper/own/"):]))
         elif url.startswith("/idle/wallpaper/local/"):
             path = self._wallpapers.local_path(unquote(url[len("/idle/wallpaper/local/"):]))
@@ -621,6 +626,12 @@ class StateServer:
         pictures are their built-in set; Gexis wallpapers are chosen by the
         style, hour, season and holiday rows (`own_wallpapers.active_sets`)."""
         if background == "Space pictures":
+            # Downloaded ones first; the built-in set until one has arrived.
+            if self._space is not None:
+                answer = await self._space.next(avoid=self._last_background)
+                if answer is not None:
+                    self._last_background = answer["file"]
+                    return answer
             sets = [own_wallpapers.SPACE]
         else:
             country, latitude = await self._where()
@@ -767,6 +778,13 @@ class StateServer:
         if path is None or not path.is_file():
             return web.json_response({"error": "no such picture"}, status=404)
         return web.FileResponse(path, headers={"Cache-Control": "max-age=86400"})
+
+    async def _handle_space_wallpaper(self, request: web.Request) -> web.StreamResponse:
+        """One downloaded Space picture (ADR-0133): a name it handed out."""
+        path = self._space.path_of(request.match_info["name"]) if self._space else None
+        if path is None:
+            return web.json_response({"error": "no such picture"}, status=404)
+        return web.FileResponse(path)
 
     async def _handle_wallpaper_file(self, request: web.Request) -> web.StreamResponse:
         """One downloaded picture. **Name only, never a path**: this route
@@ -2207,6 +2225,7 @@ class StateServer:
         # is what refuses anything that resolves outside the directory.
         app.router.add_get("/idle/wallpaper/local/{name:.*}", self._handle_local_wallpaper)
         app.router.add_get("/idle/wallpaper/own/{name:.*}", self._handle_own_wallpaper)
+        app.router.add_get("/idle/wallpaper/space/{name}", self._handle_space_wallpaper)
         app.router.add_get("/idle/wallpaper/{name}", self._handle_wallpaper_file)
         app.router.add_get("/surface", self._handle_surface)
         app.router.add_get("/touchpad", self._handle_touchpad)

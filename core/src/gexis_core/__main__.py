@@ -33,6 +33,7 @@ from gexis_core.config import Config
 from gexis_core.start_guard import StartGuard
 from gexis_core.idle_page import probe as probe_idle_page
 from gexis_core.wallpapers import Wallpapers
+from gexis_core.space_pictures import SpacePictures
 from gexis_core.weather import Weather
 from gexis_core.metadata_file import MetadataFileWriter
 from gexis_core.artistinfo import PHOTO_LARGE, LmsArtistInfo
@@ -1359,6 +1360,9 @@ async def main() -> None:
     wallpapers = Wallpapers(
         idle_session, config.wallpaper_dir, local_dir=Path(config.pictures_dir)
     )
+    # ADR-0133: Space pictures from NASA and ESA, kept beside the Pixabay
+    # ones for the same reason.
+    space = SpacePictures(idle_session, Path(config.wallpaper_dir).parent / "space")
 
     # ADR-0051. The three visualisation rows describe what the renderer
     # draws, and the renderer is another process: it learns of a change by
@@ -3300,6 +3304,7 @@ async def main() -> None:
         # ADR-0047: the idle screen's two providers.
         weather=forecast,
         wallpapers=wallpapers,
+        space=space,
         # ADR-0050: the picker's previews are the skins' own pictures.
         skins_at=skins_at,
         ui_dir=ui_dir,
