@@ -170,3 +170,13 @@ async def test_the_idle_route_serves_the_players_own_pictures(tmp_path):
         settings.set("lms_enabled", False)
         body = await (await client.get("/idle/wallpaper")).json()
         assert body["url"].startswith("/idle/wallpaper/own/")
+
+
+def test_the_system_zone_is_read_from_the_localtime_link(tmp_path):
+    zone = tmp_path / "usr/share/zoneinfo/Europe/Berlin"
+    zone.parent.mkdir(parents=True)
+    zone.write_text("tz")
+    link = tmp_path / "localtime"
+    link.symlink_to(zone)
+    assert ow.system_zone(link) == "Europe/Berlin"
+    assert ow.system_zone(tmp_path / "missing") is None

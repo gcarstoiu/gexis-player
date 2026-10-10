@@ -650,12 +650,7 @@ class StateServer:
                 found = None
             if isinstance(found, dict) and found.get("country"):
                 return str(found["country"]).upper(), found.get("latitude")
-        zone = self._settings.value("timezone")
-        if not zone:
-            try:
-                zone = Path("/etc/timezone").read_text().strip()
-            except OSError:
-                zone = None
+        zone = self._settings.value("timezone") or own_wallpapers.system_zone()
         return own_wallpapers.from_time_zone(zone)
 
     async def _home_strip(self, limit: int) -> dict:

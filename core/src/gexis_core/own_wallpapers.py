@@ -108,6 +108,19 @@ def time_of_day(hour: int) -> str:
     return name
 
 
+def system_zone(localtime: Path = Path("/etc/localtime")) -> str | None:
+    """The zone the system runs in, from `/etc/localtime`'s link. Not
+    `/etc/timezone`: setting the zone on this Debian does not update that
+    file, which a factory reset had left at the image's own (found on the bar
+    player, 2026-10-10: the file said London, the system Berlin)."""
+    try:
+        target = str(localtime.resolve())
+    except OSError:
+        return None
+    marker = "/zoneinfo/"
+    return target.split(marker, 1)[1] if marker in target else None
+
+
 def from_time_zone(zone: str | None, zone_tab: Path = ZONE_TAB) -> tuple[str | None, float | None]:
     """The country and latitude tzdata gives a zone (`zone.tab`'s own
     coordinates), or (None, None)."""
