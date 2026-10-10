@@ -4,9 +4,15 @@
 Setup chooses a skin pack and plugins; each downloads once the player is on
 the home network - after setup's restart, more often than not. Until then the
 panel says what it is waiting for, each download with its progress, then
-*Ready*. George, 2026-10-07: it **cannot be skipped**, and **a download that
-fails is left for Settings, and the owner is told**: the screen names what did
-not finish and where to try again, and waits for OK.
+*Ready*. **A download that fails is left for Settings, and the owner is
+told**: the screen names what did not finish and where to try again, and
+waits for OK (George, 2026-10-07).
+
+**It can be put away at once** (ADR-0128 amended 2026-10-10; George: "the
+settling screen should be dismissible much faster and the user should be told
+of this. Otherwise it feels like being stuck"). `hide` marks the record; the
+downloads go on, Settings shows how far they are, and the screen comes back
+only if one of them fails - so the owner is still told.
 
 Setup writes what to wait for (`begin`), by the names `/state`'s `components`
 already carries (a plugin's component, `skins` for the pack); the core reads
@@ -52,6 +58,18 @@ def read(path: Path = PATH) -> dict | None:
     return record if isinstance(record, dict) and record.get("items") else None
 
 
+def hide(path: Path = PATH) -> None:
+    """The owner put the screen away; what it waits for is still followed."""
+    record = read(path)
+    if record is None or record.get("hidden"):
+        return
+    record["hidden"] = True
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(record))
+    tmp.replace(path)
+    logger.info("settling: put away by the owner; the downloads go on")
+
+
 def end(path: Path = PATH) -> None:
     path.unlink(missing_ok=True)
 
@@ -59,7 +77,8 @@ def end(path: Path = PATH) -> None:
 def view(record: dict | None, status: dict, now: float | None = None) -> dict | None:
     """What the screen shows: each item's state - `waiting`, `busy` (with
     `received`/`total`), `done` or `failed` (with `error`) - and the phase,
-    `settling` while any is waiting or busy, then `ready` or `failed`."""
+    `settling` while any is waiting or busy, then `ready` or `failed` - and
+    `hidden`, put away by the owner: true only while nothing has failed."""
     if not record:
         return None
     now = time.time() if now is None else now
@@ -89,4 +108,4 @@ def view(record: dict | None, status: dict, now: float | None = None) -> dict | 
         items.append(entry)
     states = {i["state"] for i in items}
     phase = "settling" if states & {"waiting", "busy"} else ("failed" if "failed" in states else "ready")
-    return {"phase": phase, "items": items}
+    return {"phase": phase, "items": items, "hidden": bool(record.get("hidden")) and phase != "failed"}

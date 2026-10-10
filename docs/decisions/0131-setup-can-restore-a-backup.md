@@ -177,10 +177,11 @@ restore happens."* Two faults, both fixed:
 - **The three sources are built in** (`Plugin.built_in`, declared since
   ADR-0086 and never set). Setup asks about them in its Music and Services
   steps; the Plugins step offers only plugins.
-- **A switch a backup does not store was on.** Every plugin switch defaults
-  to on and a backup stores only what was changed, so reading "on" as
-  "stored on" brought anything left at its default back off. The backup's
-  summary now also names what was switched off (`disabled`); the restore and
-  the setup page take every other plugin as on, and the settling screen
-  waits for its download.
+- ~~A switch a backup does not store was on.~~ **Withdrawn the same
+  evening:** a plugin switch nobody touched is not stored and reads its
+  unit's own state, and every plugin ships disabled - so "not stored" means
+  off. Taken as on, it put the Lyrion Server on sofapi's settling screen
+  with nothing to switch it on. A restore takes a plugin as on only where the
+  backup stores it on, as before; LMS, Spotify and Bluetooth, now out of the
+  Plugins step, come back as the backup's own settings say.
 

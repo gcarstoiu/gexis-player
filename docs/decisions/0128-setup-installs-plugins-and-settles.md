@@ -37,7 +37,8 @@ setup while this was going on.
 
 1. **All the plugins the release ships** are offered in the step.
 2. **The settling screen cannot be skipped**: music is offered once it has
-   settled.
+   settled. *Withdrawn 2026-10-10: it can be put away at once - see the
+   amendment below.*
 3. **A download that fails is left for Settings, and the owner is told**: the
    settling screen says which one did not finish and where to try again
    (*Settings → Plugins*), then finishes; the player does not retry on its own.
@@ -84,3 +85,26 @@ settlement screen once the panel reboots."*
   network and holds no block; the settling screen fetches it after the
   restart. Gating it on the unit would start Plexamp without its app.
 
+## Amendment, 2026-10-10: the screen can be put away at once
+
+George, after a restore left sofapi on this screen waiting for the Lyrion
+Server: *"the settling screen should be dismissible much faster and the user
+should be told of this. Otherwise it feels like being stuck"*. Decision 2's
+"cannot be skipped" is withdrawn.
+
+- **A button from the first moment**, *Use the player now*, while anything is
+  waiting or downloading, and **the screen says so**: *You can use the player
+  now: the downloads go on, and Settings shows how far they are.* (The skins
+  on *Display → Visualiser skins*, each plugin under *Plugins*; both rows
+  already showed a component's progress.)
+- **Put away is the record's, not one screen's**: `POST /settling/hide` sets
+  `hidden` in `settling.json`, so the panel and a phone both drop it and a
+  reload of the kiosk does not bring it back.
+- **A failure brings it back**: `view()` reports `hidden` only while nothing
+  has failed, so decision 3 holds - the owner is told what did not finish and
+  where to try again, and answers OK as before. Confirmed by George the same
+  day: *"It can come back and inform the user"*.
+- **The visualiser's held restart** (amendment above, 2026-10-09) waits only
+  while the screen is up: put away, it restarts once its skins are in.
+- On a 320 px bar the card is tightened and the button stays at its foot, so
+  the way out is never below the fold.
