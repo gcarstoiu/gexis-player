@@ -347,8 +347,10 @@ for this player's output and screen and answers the rest, and the phone shows
 what it brings before the player restarts. Step by step, from flashing the
 card: the [installation guide](INSTALL.md). Once the player is on your
 network it shows what it is downloading, each with its progress, until it is
-ready; this cannot be skipped, and music may be slow to start until then. A download that does not finish is named, with
-*Settings → Plugins* as the place to try it again.
+ready. *Use the player now* puts that screen away at any time: the downloads
+go on, Settings shows how far they are, and music may be slow to start until
+they finish. A download that does not finish brings the screen back, named,
+with *Settings → Plugins* as the place to try it again.
 
 **What is the setup network's password, and why does the phone say it has no internet?**
 The password is shown on the screen; a player without a screen uses
