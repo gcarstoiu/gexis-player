@@ -98,7 +98,11 @@
  "viz_stop",
  "viz_timeout",
  "volume_managed",
+ "wallpaper_holidays",
  "wallpaper_key",
+ "wallpaper_seasons",
+ "wallpaper_styles",
+ "wallpaper_time_of_day",
  "wallpaper_topics",
  "weather_location",
  "wifi"

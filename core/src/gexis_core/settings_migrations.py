@@ -42,12 +42,15 @@ SHIPPED_KEYS_PATH = Path(__file__).with_name("settings_shipped_keys.json")
 class Migration:
     """One step. `renames` and `drops` are what it does to keys, declared so
     the tests can see that every key that left the registry was handled;
-    `run` does it."""
+    `run` does it. `existing_only`: it is about what a device already set
+    up was doing, so a new store - one that had run no migration before this
+    start - records it as done without running it."""
 
     note: str
     run: Callable[[Any], None]
     renames: dict[str, str] = field(default_factory=dict)
     drops: frozenset[str] = frozenset()
+    existing_only: bool = False
 
 
 def rename(old: str, new: str, note: str,
@@ -113,6 +116,12 @@ MIGRATIONS: tuple[Migration, ...] = (
     # George, 2026-10-07: "remove pexels completely as they are not providing
     # API keys anymore".
     drop("pexels_key", "pexels_key: Pexels removed"),
+    # ADR-0133 (George, 2026-10-10): a new player starts on Gexis wallpapers,
+    # and "an existing choice is kept" - including the one nobody stored, the
+    # old default. A device already in use keeps Artist pictures.
+    Migration(note="idle_background: an existing player keeps Artist pictures, the old default",
+              run=lambda store: store.get("idle_background") is None and store.set("idle_background", "Artist pictures"),
+              existing_only=True),
 )
 
 
@@ -129,8 +138,10 @@ def migrate(store, migrations: tuple[Migration, ...] = MIGRATIONS) -> int:
         logger.warning("settings: the store is at %d migrations, this release knows %d; leaving it as it is",
                        done, len(migrations))
         return 0
+    fresh = done == 0
     for number, step in enumerate(migrations[done:], start=done + 1):
-        step.run(store)
+        if not (fresh and step.existing_only):
+            step.run(store)
         store.set(SCHEMA_KEY, number)
         logger.info("settings: migration %d - %s", number, step.note)
     return len(migrations) - done

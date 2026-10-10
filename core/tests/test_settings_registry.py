@@ -173,6 +173,9 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         "output_device",
         "background_brightness", "background_interval", "idle_clock",
         "time_display", "updates", "volume_managed", "wallpaper_topics",
+        # ADR-0133, 2026-10-10: the player's own wallpapers, which the design
+        # predates - styles, time of day, seasons, holidays.
+        "wallpaper_styles", "wallpaper_time_of_day", "wallpaper_seasons", "wallpaper_holidays",
         # ADR-0058, 2026-09-23: George asked for the three numbers that decide
         # how the visualisation *moves*. The design has no rows for them
         # because until this week nobody knew which knobs there were.
@@ -615,8 +618,9 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # (ADR-0124). **99**: Report this hardware (ADR-0126). **98**: Software
     # volume merged into Volume (ADR-0127). **97**: Pexels removed (George,
     # 2026-10-07).
-    # **98**: Cable (ADR-0123, 2026-10-08).
-    assert len(rows) == 98
+    # **98**: Cable (ADR-0123, 2026-10-08). **102**: the player's own
+    # wallpapers' four rows (ADR-0133, 2026-10-10).
+    assert len(rows) == 102
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
@@ -636,7 +640,7 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # 82 with Report this hardware (ADR-0126).
     # **81**: Software volume merged into Volume (ADR-0127). **80**: Pexels
     # removed.
-    assert len(rows) - len(kept) == 82  # 82: the factory reset (ADR-0132); 81: Cable (ADR-0123)
+    assert len(rows) - len(kept) == 86  # 86: the own wallpapers (ADR-0133); 82: the factory reset (ADR-0132); 81: Cable (ADR-0123)
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():

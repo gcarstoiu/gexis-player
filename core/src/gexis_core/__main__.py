@@ -1992,6 +1992,9 @@ async def main() -> None:
                "theaudiodb_key": None,
                "idle_weather": None,
                "weather_location": None, "idle_forecast": None,
+               # ADR-0133: read when the next picture is chosen.
+               "wallpaper_styles": None, "wallpaper_time_of_day": None,
+               "wallpaper_seasons": None, "wallpaper_holidays": None,
                "idle_icons": None,
                "viz_timeout": None, "viz_stop": None,
                # ADR-0022's handoff rows, wired 2026-09-25. Read where they

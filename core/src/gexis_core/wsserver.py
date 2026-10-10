@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import asyncio
 import concurrent.futures
+import datetime
 import json
 import logging
 import os
@@ -40,6 +41,7 @@ from aiohttp import web
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
+from gexis_core import own_wallpapers
 from gexis_core import backups, bluetooth_devices, skin_packs, device_name, discovery, hardware_report, lyrion_scan, lyrion_shares, problem_report, skin_previews, skins, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
 from gexis_core.artistinfo import PHOTO_BACKGROUND, PHOTO_LARGE, PHOTO_THUMB
@@ -155,6 +157,7 @@ class StateServer:
         uninstall_plugin=None,
         weather=None,
         wallpapers=None,
+        own=None,
         skins_at: Callable[[], tuple[Path, str] | None] | None = None,
         ui_dir: Path | None = None,
     ) -> None:
@@ -247,6 +250,9 @@ class StateServer:
         self._uninstall_plugin = uninstall_plugin
         self._weather = weather
         self._wallpapers = wallpapers
+        #: ADR-0133: the player's own pictures, for Gexis wallpapers and Space
+        #: pictures - and for artist pictures while there is no library.
+        self._own = own if own is not None else own_wallpapers.OwnWallpapers()
         #: Where the skin packs live (ADR-0050). Read per request rather
         #: than at start: a pack could be added under a running daemon, and
         #: parsing 99 sections costs less than the request that asked.
@@ -498,7 +504,12 @@ class StateServer:
         for the screen is passed over for the next. Without a size, or
         without the models, the answer is what it always was.
         """
-        if self._settings is None or self._wallpapers is None:
+        if self._settings is None:
+            return web.json_response({"error": "wallpapers are not wired up"}, status=503)
+        # The player's own pictures need nothing wired; the downloaded and
+        # the on-device ones need the wallpaper source.
+        if self._wallpapers is None and self._settings.value("idle_background") in (
+                "Wallpapers online", "Wallpapers on device"):
             return web.json_response({"error": "wallpapers are not wired up"}, status=503)
         screen = _screen_size(request)
         answer = await self._next_background()
@@ -543,7 +554,9 @@ class StateServer:
     async def _picture_bytes(self, url: str) -> bytes | None:
         """The picture a background URL names: a file of ours, or the owner's
         server's (an artist picture through LMS's image proxy)."""
-        if url.startswith("/idle/wallpaper/local/"):
+        if url.startswith("/idle/wallpaper/own/"):
+            path = self._own.path_of(unquote(url[len("/idle/wallpaper/own/"):]))
+        elif url.startswith("/idle/wallpaper/local/"):
             path = self._wallpapers.local_path(unquote(url[len("/idle/wallpaper/local/"):]))
         elif url.startswith("/idle/wallpaper/"):
             path = self._wallpapers.path_of(url[len("/idle/wallpaper/"):])
@@ -571,11 +584,17 @@ class StateServer:
         daemon can reach anyway. *When* the picture changes is the panel
         counting `background_interval`; nothing here holds a timer.
         """
-        background = self._settings.value("idle_background") or "Artist pictures"
+        background = self._settings.value("idle_background") or "Gexis wallpapers"
         if background == "Black":
             return {"off": True, "error": None}
+        # ADR-0133 §2: artist pictures come from the library, which is not
+        # there while the LMS client is off; the player's own show instead.
+        if background == "Artist pictures" and self._settings.value("lms_enabled") is False:
+            background = "Gexis wallpapers"
         if background == "Artist pictures":
             return await self._artist_picture()
+        if background in ("Gexis wallpapers", "Space pictures"):
+            return await self._own_picture(background)
         if background == "Wallpapers on device":
             # None twice until every one has been shown, and never the one
             # already on screen when there is another (ADR-0047 §2e).
@@ -596,6 +615,48 @@ class StateServer:
             self._last_background = answer["file"]
             answer = {**answer, "url": f"/idle/wallpaper/{answer['file']}"}
         return answer
+
+    async def _own_picture(self, background: str) -> dict:
+        """**ADR-0133.** The next of the player's own pictures. Space
+        pictures are their built-in set; Gexis wallpapers are chosen by the
+        style, hour, season and holiday rows (`own_wallpapers.active_sets`)."""
+        if background == "Space pictures":
+            sets = [own_wallpapers.SPACE]
+        else:
+            country, latitude = await self._where()
+            value = self._settings.value
+            styles = value("wallpaper_styles")
+            sets = own_wallpapers.active_sets(
+                datetime.datetime.now(),
+                styles=list(styles) if isinstance(styles, list) else ["Calm"],
+                time_of_day_on=value("wallpaper_time_of_day") is not False,
+                seasons_on=value("wallpaper_seasons") is not False,
+                holidays_on=value("wallpaper_holidays") is not False,
+                country=country, latitude=latitude)
+        answer = self._own.next(sets, avoid=self._last_background)
+        if answer is None:
+            return {"error": "The player's own pictures are not installed."}
+        self._last_background = answer["file"]
+        return answer
+
+    async def _where(self) -> tuple[str | None, float | None]:
+        """**The player's country and latitude** (ADR-0133 §4): the weather
+        location's once one is set, the time zone's before that."""
+        place = str(self._settings.value("weather_location") or "").strip()
+        if place and self._weather is not None:
+            try:
+                found = await self._weather.geocode(place)
+            except Exception:  # noqa: BLE001 - a holiday is not worth a failed picture
+                found = None
+            if isinstance(found, dict) and found.get("country"):
+                return str(found["country"]).upper(), found.get("latitude")
+        zone = self._settings.value("timezone")
+        if not zone:
+            try:
+                zone = Path("/etc/timezone").read_text().strip()
+            except OSError:
+                zone = None
+        return own_wallpapers.from_time_zone(zone)
 
     async def _home_strip(self, limit: int) -> dict:
         """What the library root draws under its cards.
@@ -703,6 +764,14 @@ class StateServer:
         if path is None:
             return web.json_response({"error": "no such picture"}, status=404)
         return web.FileResponse(path)
+
+    async def _handle_own_wallpaper(self, request: web.Request) -> web.StreamResponse:
+        """One of the player's own pictures (ADR-0133): only a name the
+        credits list holds, so nothing else on the disk is reachable."""
+        path = self._own.path_of(request.match_info["name"])
+        if path is None or not path.is_file():
+            return web.json_response({"error": "no such picture"}, status=404)
+        return web.FileResponse(path, headers={"Cache-Control": "max-age=86400"})
 
     async def _handle_wallpaper_file(self, request: web.Request) -> web.StreamResponse:
         """One downloaded picture. **Name only, never a path**: this route
@@ -2142,6 +2211,7 @@ class StateServer:
         # `{name:.*}` because a picture may be in a folder; `local_path`
         # is what refuses anything that resolves outside the directory.
         app.router.add_get("/idle/wallpaper/local/{name:.*}", self._handle_local_wallpaper)
+        app.router.add_get("/idle/wallpaper/own/{name:.*}", self._handle_own_wallpaper)
         app.router.add_get("/idle/wallpaper/{name}", self._handle_wallpaper_file)
         app.router.add_get("/surface", self._handle_surface)
         app.router.add_get("/touchpad", self._handle_touchpad)

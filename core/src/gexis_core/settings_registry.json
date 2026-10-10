@@ -597,14 +597,16 @@
         "type": "choice",
         "label": "Background",
         "marks": "N",
-        "note": "Artist pictures come from the library. Online wallpapers come from Pixabay and need a key. On-device wallpapers are read from local storage.",
+        "note": "Gexis wallpapers and Space pictures are the player's own, built in. Artist pictures come from the library, and show the player's own while the LMS client is off. Online wallpapers come from Pixabay and need a key. On-device wallpapers are read from local storage.",
         "options": [
+          "Gexis wallpapers",
+          "Space pictures",
           "Artist pictures",
           "Wallpapers online",
           "Wallpapers on device",
           "Black"
         ],
-        "default": "Artist pictures",
+        "default": "Gexis wallpapers",
         "onlyWhen": [
           "idle_screen",
           "Built in"
@@ -693,6 +695,61 @@
         "onlyWhen": [
           "idle_background",
           "Wallpapers online"
+        ]
+      },
+      {
+        "key": "wallpaper_styles",
+        "type": "multi",
+        "label": "Wallpaper styles",
+        "marks": "N",
+        "note": "Each new picture comes from one of the chosen styles at random.",
+        "options": [
+          "Calm",
+          "Colourful",
+          "Psychedelic"
+        ],
+        "default": [
+          "Calm"
+        ],
+        "onlyWhen": [
+          "idle_background",
+          "Gexis wallpapers"
+        ]
+      },
+      {
+        "key": "wallpaper_time_of_day",
+        "type": "toggle",
+        "label": "Follow the time of day",
+        "marks": "N",
+        "note": "Pictures for dawn, day, dusk and night join the styles, each at its hour.",
+        "default": true,
+        "onlyWhen": [
+          "idle_background",
+          "Gexis wallpapers"
+        ]
+      },
+      {
+        "key": "wallpaper_seasons",
+        "type": "toggle",
+        "label": "Seasons",
+        "marks": "N",
+        "note": "The season's pictures join the styles, by hemisphere.",
+        "default": true,
+        "onlyWhen": [
+          "idle_background",
+          "Gexis wallpapers"
+        ]
+      },
+      {
+        "key": "wallpaper_holidays",
+        "type": "toggle",
+        "label": "Holidays",
+        "marks": "N",
+        "note": "On New Year, and on Christmas and Easter where they are holidays, only their pictures show. The country comes from the weather location, or the time zone until one is set.",
+        "default": true,
+        "onlyWhen": [
+          "idle_background",
+          "Gexis wallpapers"
         ]
       },
       {

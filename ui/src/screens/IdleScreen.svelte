@@ -65,7 +65,7 @@
   //: George, 2026-09-28: a 12-hour clock drops the leading zero and says am
   //: or pm after the seconds, at their size.
   const twelve = $derived(settings.clock_format === '12 h');
-  const background = $derived(settings.idle_background ?? 'Artist pictures');
+  const background = $derived(settings.idle_background ?? 'Gexis wallpapers');
   const black = $derived(background === 'Black' || !shown);
 
   // The design's own two values, and the reasoning is in the header: the
