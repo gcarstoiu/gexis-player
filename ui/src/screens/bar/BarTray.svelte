@@ -18,6 +18,7 @@
 -->
 <script>
   import { fixedOutput, meters } from '../../lib/state.js';
+  import { fixedPending } from '../../lib/settings.js';
   import { VolumeControl } from '../../lib/volumeControl.svelte.js';
   import { pressing } from '../../lib/press.svelte.js';
   import LockIcon from '../../lib/LockIcon.svelte';
@@ -188,7 +189,7 @@
       <span class="fixed__lock"><LockIcon size={34} /></span>
       <span class="fixed__text">
         <span class="fixed__title">Fixed output</span>
-        <span class="fixed__sub">Level is set downstream. Set it on your amplifier.</span>
+        <span class="fixed__sub">{$fixedPending === 'off' ? 'Fixed output ends at the next pause or stop.' : 'Level is set downstream. Set it on your amplifier.'}</span>
       </span>
       <span class="fixed__level">100%</span>
     </div>
@@ -220,6 +221,8 @@
       </div>
     </div>
     <span class="readout" class:is-muted={muted}>{muted ? 'Mute' : shown}</span>
+    <!-- ADR-0046 as amended: Fixed chosen, waiting for a pause. -->
+    {#if $fixedPending === 'on'}<span class="pending">Fixed at the next pause</span>{/if}
   {/if}
 </div>
 
@@ -228,6 +231,12 @@
 </div>
 
 <style>
+  .pending {
+    flex-shrink: 0;
+    font-size: 15px;
+    color: var(--accent-warn);
+    white-space: nowrap;
+  }
   .scrim {
     position: absolute;
     inset: 0;

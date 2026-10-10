@@ -41,7 +41,7 @@
         "default": "Hardware",
         "warn": {
           "Software": "The player changes the level by recalculating the sound. Playback is no longer bit-perfect, at any volume below 100 %. Use it for an output with no volume control of its own, such as HDMI, or if you prefer it. Hardware restores bit-perfect playback.",
-          "Fixed": "Fixed output sends the signal at 100%. Turn your amplifier down before confirming — the panel can no longer lower it."
+          "Fixed": "Fixed output sends the signal at 100%. Turn your amplifier down before confirming — the panel can no longer lower it. While music plays, it starts at the next pause or stop; until then the volume still works."
         }
       },
       {

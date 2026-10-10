@@ -9,7 +9,7 @@
   import CableSheet from './CableSheet.svelte';
   import { onMount, untrack } from 'svelte';
   import { pressing } from '../lib/press.svelte.js';
-  import { components, update, screenCheck, showScreenCheck, resetting } from '../lib/state.js';
+  import { components, update, screenCheck, showScreenCheck, resetting, metadata, fixedOutput } from '../lib/state.js';
   import UpdateModal from './UpdateModal.svelte';
   import ReleaseNotes from './ReleaseNotes.svelte';
   import ReleaseHistory from './ReleaseHistory.svelte';
@@ -23,6 +23,7 @@
     loadSettings,
     runSetting,
     writeSetting,
+    fixedPending,
   } from '../lib/settings.js';
 
   // On the panel, Settings is a layer over the library and Back closes it
@@ -631,6 +632,9 @@
   function shown(row) {
     const v = row.value;
     if (row.type === 'toggle') return '';
+    // ADR-0046 as amended: a Volume change that waits for a pause says so.
+    if (row.key === 'output_mode' && $fixedPending === 'on') return 'Fixed at the next pause';
+    if (row.key === 'output_mode' && $fixedPending === 'off') return `${v} at the next pause`;
     // ADR-0123: the cable at a glance, the line the core keeps for it.
     if (row.kind === 'cable') return row.note ?? '';
     // A screen reads as its maker and model, not the picker's `Maker/Model`.
@@ -787,6 +791,20 @@
     return n > FULL_SHEET_OPTIONS;
   });
 
+  //: What a written choice says. **A Volume change that has to wait says
+  //: so** (ADR-0046 as amended, George on sofapi, 2026-10-10): while music
+  //: plays, Fixed starts - or ends - only at the next pause or stop.
+  function said(row, option) {
+    const playing = $metadata?.transport === 'playing';
+    if (row.key === 'output_mode' && playing && option === 'Fixed' && !$fixedOutput) {
+      flash('Fixed output starts at the next pause or stop. Until then the volume still works.', 9000);
+    } else if (row.key === 'output_mode' && playing && option !== 'Fixed' && $fixedOutput) {
+      flash(`${option} volume starts at the next pause or stop.`, 9000);
+    } else {
+      flash(`${row.label}: ${option}`);
+    }
+  }
+
   async function choose(option) {
     const row = sheet;
     if (String(row.value) === option) {
@@ -807,7 +825,7 @@
       return;
     }
     sheetKey = null;
-    if (await write(row, option)) flash(`${row.label}: ${option}`);
+    if (await write(row, option)) said(row, option);
   }
 
   //: ADR-0044 §7. Each tap is a write, because nothing on this screen has
@@ -1197,7 +1215,7 @@
       const option = choicePending;
       choicePending = null;
       sheetKey = null;
-      if (await write(row, option)) flash(`${row.label}: ${option}`);
+      if (await write(row, option)) said(row, option);
       return;
     }
     if (!row.wired) {
