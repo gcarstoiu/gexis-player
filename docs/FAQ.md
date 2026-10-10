@@ -176,11 +176,24 @@ weather and a background picture. A touch, or music starting, brings the
 player back.
 
 **Where do the idle screen's pictures come from?**
-*Settings → Display → Idle screen → Background* chooses: *Artist pictures*
-from the library; *Wallpapers online* from Pixabay (it needs a free key, entered
-in the row below); *Wallpapers on device*, read
-from the player's Pictures share on the network; or *Black*. Pictures are
+*Settings → Display → Idle screen → Background* chooses: *Gexis wallpapers*,
+the player's own public-domain photographs, built in (the default on a new
+player); *Space pictures* from NASA and ESA; *Artist pictures* from the
+library (while the LMS client is off they show the player's own instead);
+*Wallpapers online* from Pixabay (it needs a free key, entered in the row
+below); *Wallpapers on device*, read from the player's Pictures share on the
+network; or *Black*. Pictures are
 placed by what they show, so faces, people and animals stay in view.
+
+**How do the player's own wallpapers change through the day and the year?**
+With *Gexis wallpapers*, each picture comes from one of the *Wallpaper
+styles* you chose (Calm, Colourful, Psychedelic), from pictures for the
+time of day (dawn, day, dusk, night) or from the season's, by hemisphere.
+On New Year, and on Christmas and Easter where they are public holidays,
+only those days' pictures show; *Holidays* turns that off. The country comes
+from the weather location, or from the time zone until a location is set,
+and decides whether Easter follows the Western or the Orthodox date. Every
+picture is public domain or CC0, and its author is shown in the corner.
 
 **The online wallpapers keep repeating.**
 They no longer repeat until every picture of the day has been shown, and

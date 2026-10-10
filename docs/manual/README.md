@@ -366,7 +366,8 @@ the player itself, with its music folders and network shares).
 | Phone touchpad, Pointer speed, Pointer style | The phone's touchpad (section 7). |
 | Home screen list, Items in the strip | What the row under Home's cards shows, and how many. |
 | Idle screen: Screen, Timeout | The built-in clock-and-weather screen, or an external page; and after how long, with nothing playing and nobody touching the panel. |
-| Idle screen: Background, Background brightness, Change the picture every | Artist pictures from the library, online wallpapers (Pixabay, with a free key), or pictures on the device. |
+| Idle screen: Background, Background brightness, Change the picture every | **Gexis wallpapers**, the player's own pictures (the default on a new player); **Space pictures** from NASA and ESA; artist pictures from the library, which show the player's own while the LMS client is off; online wallpapers (Pixabay, with a free key); pictures on the device; or black. |
+| Idle screen: Wallpaper styles, Follow the time of day, Seasons, Holidays | With Gexis wallpapers. Each picture comes from one of the chosen styles (Calm, Colourful, Psychedelic), the hour's pictures (dawn, day, dusk, night) or the season's. On New Year, and on Christmas and Easter where they are public holidays, only those days' pictures show. The country comes from the weather location, or the time zone until one is set; Easter follows the Western or Orthodox date by country. |
 | Idle screen: Wallpaper topics | Which kinds of wallpaper are drawn from. |
 | Idle screen: Clock, Clock format, Weather, Location, Forecast, Weather icons | What the idle screen shows over the picture; forecasts come from Open-Meteo. |
 | Visualiser: Timeout, Stop when nothing is playing | When the visualiser takes the screen while music plays, and when it gives it back. |
