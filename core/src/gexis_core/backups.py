@@ -414,13 +414,13 @@ def inspect(path: Path, known_migrations: int, schema_key: str = "_settings_sche
         "identities": held,
         "newer": isinstance(schema, int) and schema > known_migrations,
         "settings": {key: values[key] for key in APPLIED if key in values},
+        #: **On only where the backup stores it on.** A plugin switch nobody
+        #: touched is not stored, and reads its unit's own state - and every
+        #: plugin ships disabled. Taking "not stored" as on (2026-10-10, for an
+        #: afternoon) put the Lyrion Server on sofapi's settling screen with
+        #: nothing to switch it on, waiting for a download that never started.
         "enabled": sorted(k[:-len(".enabled")] for k, v in values.items()
                           if k.endswith(".enabled") and v is True),
-        #: **What was switched off** - every plugin's switch defaults to on,
-        #: so a switch the backup does not store was on (found 2026-10-10:
-        #: Plexamp left at its default read as off on a restore).
-        "disabled": sorted(k[:-len(".enabled")] for k, v in values.items()
-                           if k.endswith(".enabled") and v is False),
         "brings": brings,
     }
 

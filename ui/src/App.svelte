@@ -25,7 +25,7 @@
   import SettlingScreen from './screens/SettlingScreen.svelte';
   import ResetScreen from './screens/ResetScreen.svelte';
   import CableKeep from './screens/CableKeep.svelte';
-  import { settling, settlingDone, resetting } from './lib/state.js';
+  import { settling, settlingDone, settlingHide, resetting } from './lib/state.js';
   import KeepScreen from './screens/KeepScreen.svelte';
   import NewScreen from './screens/NewScreen.svelte';
   import { loadSettings, settingValues, settingsDevice } from './lib/settings.js';
@@ -564,8 +564,8 @@
   {#if $screenNew}
     <NewScreen question={$screenNew} onanswer={answerNew} />
   {/if}
-  {#if $settling}
-    <SettlingScreen settling={$settling} ondone={() => settlingDone().catch(() => {})} />
+  {#if $settling && !$settling.hidden}
+    <SettlingScreen settling={$settling} ondone={() => settlingDone().catch(() => {})} onhide={() => settlingHide().catch(() => {})} />
   {/if}
   <!-- ADR-0123: a new cable address waiting to be kept, on every page. -->
   <CableKeep />
@@ -717,8 +717,8 @@
 
   <!-- ADR-0128: the first start after setup, until it has settled - over
        everything but Keep this screen and the update lock. -->
-  {#if $settling && !$screenConfirm && !updateLock && !setupShown}
-    <SettlingScreen settling={$settling} ondone={() => settlingDone().catch(() => {})} />
+  {#if $settling && !$settling.hidden && !$screenConfirm && !updateLock && !setupShown}
+    <SettlingScreen settling={$settling} ondone={() => settlingDone().catch(() => {})} onhide={() => settlingHide().catch(() => {})} />
   {/if}
   {#if !setupShown}
     <CableKeep />

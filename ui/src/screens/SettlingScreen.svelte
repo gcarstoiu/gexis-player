@@ -3,13 +3,18 @@
   **The first start after setup, until the player has settled** (ADR-0128).
   What setup chose to download - the visualiser's skins, each plugin - with
   each one's progress, then *Ready*, which the core takes down a few seconds
-  later. George, 2026-10-07: it **cannot be skipped**; and **a download that
-  fails is left for Settings, and the owner is told** - the screen names it,
-  says where to try again, and waits for OK. Sources are not refused while it
-  settles (George: rather than blocking, say that music may be slow to start).
+  later. **A download that fails is left for Settings, and the owner is
+  told** - the screen names it, says where to try again, and waits for OK.
+  Sources are not refused while it settles (George: rather than blocking, say
+  that music may be slow to start).
+
+  **It can be put away from the start** (ADR-0128 amended 2026-10-10, George:
+  "Otherwise it feels like being stuck"): the screen says the downloads go on
+  and where to follow them, and comes back only if one fails.
 -->
 <script>
-  let { settling, ondone } = $props();
+  let { settling, ondone, onhide } = $props();
+  let hiding = $state(false);
 
   const failed = $derived(settling.items.filter((i) => i.state === 'failed'));
   const title = $derived(settling.phase === 'ready' ? 'Ready'
@@ -48,6 +53,7 @@
         {names(failed)} did not finish. Try again any time in <b>Settings → Plugins</b>; everything else is ready.
       {:else}
         Downloading what you chose in setup - a few minutes. Until it is done, music may be slow to start.
+        You can use the player now: the downloads go on, and Settings shows how far they are.
       {/if}
     </div>
     <div class="items">
@@ -67,6 +73,8 @@
     </div>
     {#if settling.phase === 'failed'}
       <button class="ok" type="button" onclick={ondone}>OK</button>
+    {:else if settling.phase === 'settling'}
+      <button class="ok" type="button" disabled={hiding} onclick={async () => { hiding = true; try { await onhide(); } finally { hiding = false; } }}>Use the player now</button>
     {/if}
   </div>
 </div>
@@ -161,13 +169,26 @@
     animation: settleWait 1600ms ease-in-out infinite;
     background: rgba(126, 214, 188, 0.5);
   }
+  @media (max-height: 480px) {
+    .settle { padding: 10px; }
+    .card { padding: 16px 22px; gap: 12px; }
+    .title { font-size: 22px; }
+    .note { font-size: 15px; line-height: 1.35; }
+    .items { gap: 10px; }
+    .ok { height: 46px; }
+  }
   @keyframes settleWait {
     0% { transform: translateX(-100%); }
     100% { transform: translateX(340%); }
   }
+  /* Stuck to the card's foot: on a 320 px bar the card scrolls, and the
+     way out must not be below it. */
   .ok {
+    position: sticky;
+    bottom: 0;
     align-self: flex-end;
     min-width: 140px;
+    padding: 0 22px;
     height: 54px;
     border-radius: 15px;
     font-size: 17px;

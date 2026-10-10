@@ -65,3 +65,15 @@ def test_the_13_3_inch_is_recognised_by_what_it_reported_on_gexis():
     other = screen_detect.Seen(connected=True, connector="HDMI-A-1", edid_maker="RTK",
                                edid_name="RTK FHD", preferred=(1920, 1080), usb=("2109:3431",))
     assert screen_detect.suggest(other) is None, "a Realtek screen without that touch is not named"
+
+
+def test_the_11_9_inch_bar_is_recognised_by_what_it_reported_on_the_bar_player():
+    """2026-10-10, read on the bar player: EDID WSD / WaveShare-119, 320x1480
+    (its native portrait), touch 0712:000a - exactly what the Seen below
+    holds. Setup showed the whole list for it until then."""
+    seen = screen_detect.Seen(connected=True, connector="HDMI-A-1", edid_maker="WSD",
+                              edid_name="WaveShare-119", preferred=(320, 1480), usb=("2109:3431", "0712:000a"))
+    assert screen_detect.suggest(seen).id == "waveshare-11.9-hdmi"
+    without_touch = screen_detect.Seen(connected=True, connector="HDMI-A-1", edid_maker="WSD",
+                                       edid_name="WaveShare-119", preferred=(320, 1480), usb=("2109:3431",))
+    assert screen_detect.suggest(without_touch) is None

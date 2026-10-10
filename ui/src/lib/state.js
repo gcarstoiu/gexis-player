@@ -127,6 +127,7 @@ export const sendScreenCheck = (result) => post('/hardware-report/screen/result'
 //: ADR-0128: the first start after setup, until it has settled.
 export const settling = derived(playback, ($s) => $s?.settling ?? null);
 export const settlingDone = () => post('/settling/done');
+export const settlingHide = () => post('/settling/hide');
 //: ADR-0132: a factory reset was confirmed and the player is restarting into
 //: it. Latched for the life of the page: once the player goes, the socket
 //: drops and later frames would say nothing - the screen must stay, with how

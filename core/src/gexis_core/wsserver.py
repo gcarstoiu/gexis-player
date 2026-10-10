@@ -152,6 +152,7 @@ class StateServer:
         screen_answer=None,
         screen_new_answer=None,
         settling_done=None,
+        settling_hide=None,
         on_painted=None,
         upload_plugin=None,
         uninstall_plugin=None,
@@ -244,6 +245,7 @@ class StateServer:
         self._screen_answer = screen_answer
         self._screen_new_answer = screen_new_answer
         self._settling_done = settling_done
+        self._settling_hide = settling_hide
         #: The panel's first frame starts that question's countdown.
         self._on_painted = on_painted
         #: ADR-0106: a package from a phone or computer, and taking one away.
@@ -1764,6 +1766,14 @@ class StateServer:
         self._settling_done()
         return web.json_response({"ok": True})
 
+    async def _handle_settling_hide(self, request: web.Request) -> web.Response:
+        """ADR-0128 amended 2026-10-10: the owner put the settling screen away
+        while the downloads go on."""
+        if self._settling_hide is None:
+            return web.json_response({"error": "not wired up"}, status=503)
+        self._settling_hide()
+        return web.json_response({"ok": True})
+
     async def _handle_setup_finish(self, request: web.Request) -> web.Response:
         closed = self._setup_closed()
         if closed is not None:
@@ -2246,6 +2256,7 @@ class StateServer:
         app.router.add_delete("/setup/backup", self._handle_setup_backup_forget)
         app.router.add_get("/setup/plugins", self._handle_setup_plugins)
         app.router.add_post("/settling/done", self._handle_settling_done)
+        app.router.add_post("/settling/hide", self._handle_settling_hide)
         # ADR-0101: the phone's idle toggle, and the panel saying what it shows.
         app.router.add_post("/panel/idle/{action}", self._handle_idle_request)
         app.router.add_post("/panel/shown", self._handle_panel_shown)
