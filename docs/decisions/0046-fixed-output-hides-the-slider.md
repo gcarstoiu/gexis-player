@@ -137,3 +137,23 @@ back to LMS's own number.
   Spotify or AVRCP slider still moves and now changes nothing at all,
   because `--volume=none` means bluealsa does not attenuate either. That is
   honest and it is also a silent control. **Not decided here.**
+
+## Amendment, 2026-10-10: the wait for a pause is shown
+
+George, testing on sofapi: Fixed chosen while music played left the volume
+working - as ADR-0018 intends, the change waits for a pause or stop - but
+*"It was misleading as it was showing that fixed was turned on, when in
+fact it was not."* Of three ways forward (show the wait; also switch at the
+next track; switch at once) he chose to keep the wait and show it: *"Just
+A."*
+
+- **While the chosen mode and the device disagree**, the Volume row reads
+  *Fixed at the next pause* (or the mode it waits to return to), and the
+  panel's volume drawer, the bar's tray and the phone's volume sheet say
+  that Fixed output starts - or ends - at the next pause or stop.
+- **The confirmation says it waits**, and a choice made while music plays
+  says so again when it is saved.
+- **The code applies the change at a pause or stop only**, not at the next
+  track as ADR-0018's wording also allows; that is kept, and the screen now
+  says it.
+

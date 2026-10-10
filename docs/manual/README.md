@@ -117,7 +117,11 @@ elsewhere (a phone, a Lyrion app) can open the drawer too
 With **Volume** set to *Fixed*, the player always plays at full level
 for an amplifier that sets the volume; the button then shows a padlock and
 the drawer explains why. *Maximum volume* and Spotify's *Starting volume* do
-not apply in Fixed, and their rows are hidden.
+not apply in Fixed, and their rows are hidden. Chosen while music plays,
+Fixed starts at the next pause or stop, so the level never jumps mid-track;
+until then the volume still works, and the Volume row, the volume controls
+and the phone say *Fixed at the next pause*. Leaving Fixed waits the same
+way.
 
 ## 3. The library
 
