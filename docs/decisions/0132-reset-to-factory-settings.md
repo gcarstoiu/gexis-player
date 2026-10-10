@@ -90,6 +90,23 @@ with how to reach setup - *gexis-setup* and `10.42.0.1:8090`, or
 `raspberrypi.local:8090` over a cable. It has no way out: the player is
 going.
 
+## Amendment, 2026-10-10: the boot after a reset is logged - temporarily
+
+After a reset and a restore in setup, the bar player did not restart, and
+the boot it happened in had kept its log in memory only, so nothing showed
+why. George: *"Add the retaining of the log after reset but we need to
+remove it before first release as normally nothing should make it through a
+reset. So we add it today for debugging purposes only."*
+
+**Temporary, removed before the first public release.** The wipe writes
+`61-gexis-after-reset.conf` (journald `Storage=persistent`) and restarts
+journald before the log moves onto the card. While it is there the core's
+startup check of *Debug logs* leaves the logs alone. At the first start
+after setup the core removes it and skips that check once, so the logs of
+the reset and of setup survive setup's restart; from the next start
+*Debug logs* decides again. Code marked `TEMPORARY` in `journal.py`,
+`factory_reset.py` and `__main__.py`.
+
 ## Settings inventory (ADR-0022)
 
 *Reset to factory settings* [R], System, after Restore; an action, no stored

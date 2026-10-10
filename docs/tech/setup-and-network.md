@@ -475,6 +475,10 @@ screen check, the core, the kiosk, the renderers and the Lyrion Server.
   the sound card board's block from `config.txt`;
 - purges every installed `gexis-skins*` package.
 
+**Temporary, until the first public release:** the wipe also writes
+`61-gexis-after-reset.conf`, keeping this boot's log and setup's on the card
+until the first start after setup (ADR-0132, amendment of 2026-10-10).
+
 Each step is on its own: one that fails is logged and the rest go on. The
 request is removed last, so the boot continues into setup with no marker
 (ADR-0104). The installed release stays; SSH keys provisioned on the card
