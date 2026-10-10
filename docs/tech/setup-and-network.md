@@ -443,7 +443,10 @@ setup (`WAIT_S`; no home network, most likely) is failed with *The download
 did not start*. `ready` stays up 4 s (`READY_S`), then the file is removed;
 `failed` stays until `POST /settling/done`. The panel draws
 `SettlingScreen.svelte` over everything but *Keep this screen?* and the update
-lock, with no way to dismiss it while anything downloads; a phone draws it too.
+lock; a phone draws it too. *Use the player now* (`POST /settling/hide`,
+ADR-0128 amended 2026-10-10) sets `hidden` in the file: both surfaces drop the
+screen while the downloads go on, and `view()` clears `hidden` when anything
+fails, so a failure is still shown and answered with OK.
 
 ## Reset to factory settings (ADR-0132)
 
