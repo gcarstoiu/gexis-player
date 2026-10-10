@@ -2997,8 +2997,9 @@ async def main() -> None:
             else:
                 ready_since = None
             state_store.set_settling(view)
-            visualiser_held["settling"] = view is not None
-            if view is None and visualiser_held["restart"]:
+            # Held while the screen is up, not while it is put away.
+            visualiser_held["settling"] = view is not None and not view["hidden"]
+            if not visualiser_held["settling"] and visualiser_held["restart"]:
                 logger.info("peppy: the settling screen is gone; restarting the visualiser held for it")
                 await _restart_visualiser()
             await asyncio.sleep(2 if view else 10)
@@ -3064,6 +3065,13 @@ async def main() -> None:
     def _settling_done() -> None:
         settling.end()
         state_store.set_settling(None)
+
+    def _settling_hide() -> None:
+        """ADR-0128 amended 2026-10-10: put away; the downloads go on."""
+        settling.hide()
+        # At once, not at the follower's next read two seconds on.
+        record = settling.read()
+        state_store.set_settling(settling.view(record, _all_components()) if record else None)
 
     def _offered_plugins() -> list[dict]:
         """ADR-0128 decision 1: every plugin the release ships beyond the
@@ -3344,6 +3352,7 @@ async def main() -> None:
         screen_answer=_screen_answer,
         screen_new_answer=_screen_new_answer,
         settling_done=_settling_done,
+        settling_hide=_settling_hide,
         on_painted=_screen_painted,
         upload_plugin=_upload_plugin,
         uninstall_plugin=_uninstall_plugin,

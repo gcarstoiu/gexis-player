@@ -53,3 +53,19 @@ def test_a_skin_pack_s_share_reaches_the_screen():
     record = {"started": 0, "items": [{"id": "skins", "name": "The visualiser's skins"}]}
     v = settling.view(record, {"skins": {"state": "downloading", "share": 0.42}}, now=1)
     assert v["items"][0]["state"] == "busy" and v["items"][0]["share"] == 0.42
+
+
+def test_put_away_it_follows_on_and_comes_back_only_for_a_failure(tmp_path):
+    """ADR-0128 amended 2026-10-10: the owner can put the screen away at once;
+    the downloads go on, and a failure brings it back to be told."""
+    path = tmp_path / "settling.json"
+    settling.begin([{"id": "skins", "name": "Visualiser skins"}], path, now=0)
+    assert settling.view(settling.read(path), {}, now=1)["hidden"] is False
+    settling.hide(path)
+    busy = settling.view(settling.read(path), {"skins": {"state": "downloading"}}, now=2)
+    assert busy["phase"] == "settling" and busy["hidden"] is True
+    failed = settling.view(settling.read(path), {"skins": {"state": "failed", "error": "x"}}, now=3)
+    assert failed["phase"] == "failed" and failed["hidden"] is False
+    settling.end(path)
+    settling.hide(path)                      # nothing to put away: writes nothing
+    assert not path.exists()
