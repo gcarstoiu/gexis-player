@@ -71,7 +71,24 @@ the player's own wallpapers show instead.
   that reason (George, the same day: *"Do that"*). The Gexis wallpapers stay
   public domain or CC0.
 
-Both are in the image, so neither needs a key or a network.
+**Gexis wallpapers are built into the image**: no key, no network. **Space
+pictures come from the network** (George, 2026-10-10: *"Yes. Record it that
+way"*, on whether they are fetched as they are shown):
+
+- **Downloaded and kept on the player**, as Pixabay's are (ADR-0047 §2a):
+  new pictures arrive over time, and the screen still has pictures when the
+  network is down.
+- **Only from sources where every picture's licence is known:** NASA's own
+  image library (`images-api.nasa.gov`, no key), filtered to items credited
+  to NASA itself; and the ESA/Webb and ESA/Hubble pictures of the week, all
+  CC BY, each drawn with its credit line.
+- **Not NASA's Astronomy Picture of the Day:** it regularly carries amateur
+  photographers' copyrighted pictures, so its licence cannot be taken on
+  trust.
+- **A small built-in set**, chosen by George from the contact sheet, shows on
+  a first start and whenever nothing has been downloaded yet.
+- With one background for both screens (§2), Space pictures bring these to
+  the waiting screen too.
 
 ### 4. The player's own wallpapers
 
@@ -123,7 +140,10 @@ Both are in the image, so neither needs a key or a network.
 
 ## Consequences
 
-- The image grows by about 20 MB (estimate).
+- The image grows by about 20 MB (estimate), most of it the Gexis wallpapers;
+  Space pictures add only their small built-in set.
+- Space pictures add two network sources whose licences have to be checked
+  as they come in: credited to NASA, or an ESA feed's CC BY.
 - Each picture's credit has to be kept with it and drawn, as Pixabay's are.
 - The holidays' dates for the later, lunar ones are a table that has to be
   kept up to date.
