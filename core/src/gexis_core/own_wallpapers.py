@@ -210,7 +210,10 @@ class OwnWallpapers:
             # CC BY: the line its release asks for, then the licence.
             by, credit = None, f"{entry['credit']} · {licence}"
         else:
-            by = entry.get("author") or None
+            # Commons writes "Unknown author" where nobody is named; the line
+            # then gives the licence alone rather than "Photo by Unknown".
+            author = (entry.get("author") or "").strip()
+            by = None if not author or author.lower().startswith("unknown") else author
             credit = "Public domain" if licence.lower().startswith("public domain") else licence
         return {"url": f"/idle/wallpaper/own/{name}", "file": name, "by": by,
                 "page": entry.get("source") or "", "credit": credit, "error": None}

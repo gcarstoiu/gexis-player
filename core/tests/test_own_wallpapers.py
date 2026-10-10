@@ -180,3 +180,10 @@ def test_the_system_zone_is_read_from_the_localtime_link(tmp_path):
     link.symlink_to(zone)
     assert ow.system_zone(link) == "Europe/Berlin"
     assert ow.system_zone(tmp_path / "missing") is None
+
+
+def test_an_unknown_author_is_not_named(tmp_path):
+    walls = _installed(tmp_path)
+    walls._load()["calm/a.webp"]["author"] = "Unknown author"
+    answer = walls.answer("calm/a.webp")
+    assert answer["by"] is None and answer["credit"] == "Public domain"

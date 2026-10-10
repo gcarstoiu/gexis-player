@@ -591,7 +591,7 @@
     </div>
   {:else if waitingOpen}
     <div class="screen-layer">
-      <WaitingHome availability={$availability} onsettings={openSettings} />
+      <WaitingHome availability={$availability} onsettings={openSettings} settings={$settingValues} />
     </div>
   {:else if libraryOpen}
     <!-- The library's layer, below: kept mounted (ADR-0122). -->

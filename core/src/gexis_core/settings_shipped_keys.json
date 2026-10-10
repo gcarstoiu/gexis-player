@@ -98,6 +98,8 @@
  "viz_stop",
  "viz_timeout",
  "volume_managed",
+ "waiting_clock",
+ "waiting_hint",
  "wallpaper_holidays",
  "wallpaper_key",
  "wallpaper_seasons",

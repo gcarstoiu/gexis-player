@@ -549,6 +549,30 @@
         ]
       },
       {
+        "key": "waiting_clock",
+        "type": "toggle",
+        "label": "Clock on the waiting screen",
+        "marks": "N",
+        "note": "With the LMS client off: the time, the date and the player's name in the top left.",
+        "default": true,
+        "onlyWhen": [
+          "lms_enabled",
+          false
+        ]
+      },
+      {
+        "key": "waiting_hint",
+        "type": "toggle",
+        "label": "Hint on the waiting screen",
+        "marks": "N",
+        "note": "One line above the sources: Start music from your phone.",
+        "default": true,
+        "onlyWhen": [
+          "lms_enabled",
+          false
+        ]
+      },
+      {
         "type": "group",
         "label": "Idle screen",
         "accent": "#c8a2d8",

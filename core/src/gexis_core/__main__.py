@@ -1999,6 +1999,7 @@ async def main() -> None:
                # ADR-0133: read when the next picture is chosen.
                "wallpaper_styles": None, "wallpaper_time_of_day": None,
                "wallpaper_seasons": None, "wallpaper_holidays": None,
+               "waiting_clock": None, "waiting_hint": None,
                "idle_icons": None,
                "viz_timeout": None, "viz_stop": None,
                # ADR-0022's handoff rows, wired 2026-09-25. Read where they
