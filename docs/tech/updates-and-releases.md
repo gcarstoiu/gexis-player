@@ -68,6 +68,7 @@ builds the UI first (`npm ci && npm run build`) and then all packages.
 |---|---|
 | `gexis-core` | the core in its own venv at `/opt/gexis-core/venv`, its units, built-in plugin manifests, **the updater** (`/usr/lib/gexis/gexis-update`) and its four units (`gexis-update-check.service`, `gexis-update-check.timer`, `gexis-update-checknow.service`, `gexis-update-install.service`), the release key |
 | `gexis-ui` | the built Svelte pages |
+| `gexis-wallpapers` | the player's own pictures (`wallpapers/` in the repository) at `/usr/share/gexis/wallpapers/<set>/`, with `credits.json` - every picture's author, licence and source, which the screens draw from (ADR-0133). The build refuses a picture without a credit |
 | `gexis-system` | our units, ALSA files, kiosk, splash, Samba/Avahi files, the Peppy driver - built from `image/stage-gexis/*/files` |
 | `gexis-peppyalsa`, `gexis-peppy-engines` | the meter tap library; PeppyMeter/PeppySpectrum |
 | `gexis-go-librespot`, `gexis-beszel-agent` | upstream binaries, as built upstream (ADR-0093) |
@@ -84,9 +85,9 @@ its version is plain `x.y.z` (ADR-0110 §1). A dirty tree appends `.dirty`.
 
 **Reproducible.** `SOURCE_DATE_EPOCH` is the commit time of the package's
 inputs, so an unchanged package rebuilds byte-identical. That is what lets
-publishing skip files already uploaded. Skin packs are additionally reused
-from a local cache (`~/.cache/gexis-player/debs`) when their version is
-unchanged.
+publishing skip files already uploaded. Skin packs and `gexis-wallpapers` are
+additionally reused from a local cache (`~/.cache/gexis-player/debs`) when
+their version is unchanged.
 
 **alsa-lib is pinned.** The image installs and holds
 `libasound2t64=1.2.14-1+rpt1+deb13u1` (`image/stage-gexis/00-alsa`), and
