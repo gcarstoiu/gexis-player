@@ -1225,6 +1225,68 @@ cause out, check that it reaches the step the cause would act on - here
 logind's inhibitor check, which `--dry-run` returns before. When it cannot,
 log the real call's answer and let the next real run say.
 
+**65. A fake store hid a read-only database** (2026-10-08, a restore in
+setup on 0.9.5, a new card).
+- **What went wrong.** A restore applied setup's answers - the name, the
+  time zone, the screen - after the backup's settings file had replaced the
+  one the core held open. SQLite refused every write ("attempt to write a
+  readonly database"), and the renamed player came up as *raspberrypi*.
+- **What it looked like.** The restore's tests passed: they used a fake
+  settings object with no SQLite under it, which took writes in any order.
+- **How it was caught.** On the device, by the name it came up with.
+
+**A fake answers the question it was written for, not the one the real
+thing raises.** Where the order of writes against a file matters, the test
+runs against the real store; the one added with the fix (593924e) fails on
+the old order.
+
+**66. The panel kept the old page** (2026-10-07 to 2026-10-09, `guestpi`).
+- **What went wrong.** Previews installed `gexis-ui` on guestpi and
+  restarted the core (lesson 54), but not the kiosk. The browser had loaded
+  the page before the install and kept it, so the panel ran 7 October's code
+  for two days, and the hardware-feedback test pattern built since never
+  showed on it.
+- **What it looked like.** The new version in `dpkg-query`, the new files on
+  disk, a phone or computer opening the page fresh and showing the change.
+- **How it was caught.** The pattern was missing on the panel only;
+  restarting `gexis-kiosk` brought it.
+
+**The panel is a page loaded once.** After a UI install, restart the kiosk
+too, and check the change on the panel itself - a fresh browser elsewhere
+loads the new files, which is exactly what the panel did not do.
+
+**67. Test failures that were a full disk** (2026-10-07/08, again
+2026-10-10).
+- **What went wrong.** The test suite failed by the hundred - 135 failures
+  on 2026-10-10 - with errors from inside the code under test. `/tmp` (16 GB
+  of RAM) was full: each screenshot script had left its headless browser
+  profile there.
+- **What it looked like.** A regression: real tracebacks, from real modules,
+  right after a change.
+- **How it was caught.** `df -h /tmp`, after the failures did not match the
+  change.
+
+**When failures do not match the change, check the machine before the
+code.** Screenshot scripts delete their browser profiles when they finish;
+a full scratch disk is the first thing ruled out.
+
+**68. A release checked where it could not fail** (2026-10-10, 0.9.8).
+- **What went wrong.** 0.9.8 was rewritten before it was pushed (an
+  artifact link in ADR-0133). A package's version is `<tag>+git<count>.<hash>`;
+  the rewrite kept the counts and changed the hashes, so on the bar - which
+  ran previews of the same commits - dpkg sorted the preview's `65.6709a60`
+  above the release's `65.85d1002`. The update was a downgrade there and
+  failed ("held broken packages").
+- **What it looked like.** The update worked on sofapi: a player on release
+  packages, which no preview had touched and which therefore could not show
+  the fault.
+- **How it was caught.** George updated the bar.
+
+**A release is checked on the devices that ran its previews**, or a history
+rewrite is followed by putting those devices back on release packages
+(`apt-get install --allow-downgrades`, dry run first) before anyone updates
+them.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build
@@ -1234,7 +1296,8 @@ device for a booting one, a comment for the machine it describes, a
 summary line for the rule it summarises, a directory listing for the design
 itself, a log line for the screen it describes, a lucky memory layout for
 the one the daemon would get, a unit that always starts for one that refuses
-to, a panel with the test's own timeout still set for the one the user has —
+to, a panel with the test's own timeout still set for the one the user has, a fake settings object for SQLite, a fresh browser for the panel's
+loaded page, a device no preview had touched for the one that had —
 and the check quietly accepted the substitute. None of these failed loudly. Each
 produced an answer that looked like a normal result, not an error.
 

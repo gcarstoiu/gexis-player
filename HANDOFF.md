@@ -98,14 +98,8 @@ safety can only be seen on the release after 0.9.4. Claude to do: **the final th
 work perfectly from the start), the first public release, and removing
 passwordless sudo from the image - last.
 
-**Learned 2026-10-07/08, not yet in LESSONS:** a new worktree needs
-`git submodule update --init` before `make image` (pi-gen); headless browser
-profiles from screenshot scripts filled /tmp (16 GB) - delete them after each
-run; installing `gexis-core` does not restart it - restart it as its own gated
-step, or the old code keeps running. (The package-revision rule is LESSONS 53,
-not new: gexis-beszel-agent is at 0.21.0-2.) Raising a Beszel pin also means
-raising `image/verify-image.sh`'s binary checksums: 0.9.5's first image check
-failed on exactly that (the image held the right binaries).
+**Learned 2026-10-07/10:** now LESSONS 65-68, and the build notes in the
+technical guide's release section (`docs/tech/updates-and-releases.md` §4).
 
 ## Build environment (2026-09-13) — read this before the next build
 
