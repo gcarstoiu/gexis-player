@@ -48,6 +48,18 @@ chevron (top left) goes back to exactly where you were in the library.
 *Home: the cards along the top, the newest albums underneath, and the mini
 strip at the bottom. The row of cards scrolls sideways.*
 
+**With the Lyrion client switched off** there is no library, and the
+panel's home is the **waiting screen**: the clock, the date and the player's
+name over the same picture as the idle screen, and a tile for each source
+waiting to be played to - its state under its name. Start music from a phone
+and the panel moves to Now Playing. Settings is the button in the top right
+corner.
+
+![The waiting screen](images/panel-waiting.webp)
+
+*The waiting screen, with the Lyrion client off: a public-domain wallpaper,
+the four sources, and the picture's credit at the foot.*
+
 Everything on the panel works by touch: tap to open, swipe to scroll. Lists
 with many entries have a **letter rail** down the right-hand side; tap a
 letter to jump there.
@@ -280,12 +292,16 @@ On a wide, short *bar* screen (such as the tested 1280 × 400 and 1480 × 320) t
 laid out in strips: Now Playing on one line, and the library's lists run
 sideways. A tray pulled down from the top holds Home, the volume and the
 visualiser. On Now Playing, the **Minimise** button on the artwork points
-right, to the mini strip it leaves you with, and sits below the top edge
-the tray is pulled from.
+right, to the mini strip it leaves you with, and sits where the library's
+Back button does, at its size. With the Lyrion client off, the waiting
+screen keeps the clock in a column on the left with the source tiles beside
+it.
 
 ![Bar: Now Playing](images/bar-nowplaying-track.webp)
 
 ![Bar: Home](images/bar-library-home.webp)
+
+![Bar: the waiting screen](images/bar-waiting.webp)
 
 Pulled down from the top of any screen, the tray: Home, the visualiser and
 the volume. Tap below it, or push it back up, to close it.
@@ -365,6 +381,7 @@ the player itself, with its music folders and network shares).
 | Volume drawer auto-hide | How long the drawer stays when a change from elsewhere opened it. |
 | Phone touchpad, Pointer speed, Pointer style | The phone's touchpad (section 7). |
 | Home screen list, Items in the strip | What the row under Home's cards shows, and how many. |
+| Clock on the waiting screen, Hint on the waiting screen | With the Lyrion client off: the time, date and name in the top left, and the line *Start music from your phone* above the sources. |
 | Idle screen: Screen, Timeout | The built-in clock-and-weather screen, or an external page; and after how long, with nothing playing and nobody touching the panel. |
 | Idle screen: Background, Background brightness, Change the picture every | **Gexis wallpapers**, the player's own pictures (the default on a new player); **Space pictures** from NASA and ESA; artist pictures from the library, which show the player's own while the LMS client is off; online wallpapers (Pixabay, with a free key); pictures on the device; or black. |
 | Idle screen: Wallpaper styles, Follow the time of day, Seasons, Holidays | With Gexis wallpapers. Each picture comes from one of the chosen styles (Calm, Colourful, Psychedelic), the hour's pictures (dawn, day, dusk, night) or the season's. On New Year, and on Christmas and Easter where they are public holidays, only those days' pictures show. The country comes from the weather location, or the time zone until one is set; Easter follows the Western or Orthodox date by country. |
