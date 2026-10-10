@@ -48,7 +48,9 @@ path is often four or five levels deep.
 
 - The library's own timers and effects keep running while hidden. None of
   them draws, and they ran while it was open before; measured after the
-  build is how a hidden library behaves on a Pi 4 over an hour (owed).
+  build is how a hidden library behaves on a Pi 4 over an hour - measured
+  2026-10-10 on the bar player and sofapi: nothing measurable, no growth
+  ([Finding 118](../findings/118-the-hidden-library-over-an-hour.md)).
 - The phone's Home (ADR-0101 amended) still means the root: it remounts the
   library, as Now Playing's Home does.
 - With LMS off there is no library ([ADR-0079](0079-with-lms-off-the-panel-is-two-screens.md)): no Minimise either.
