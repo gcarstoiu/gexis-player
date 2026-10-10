@@ -312,9 +312,20 @@ answer. Enrichment only adds; it never overwrites what the renderer supplied
 ### Idle screen
 
 `IdleScreen.svelte` (ADR-0033, ADR-0047) shows a drifting clock and date and
-a weather band (3 days or today only). The background is one of *Artist
-pictures*, *Wallpapers online*, *Wallpapers on device* or *Black*
-(`idle_background`). It can also show an external page if the
+a weather band (3 days or today only). The background is one of *Gexis
+wallpapers*, *Space pictures*, *Artist pictures*, *Wallpapers online*,
+*Wallpapers on device* or *Black* (`idle_background`). The first two are the
+player's own pictures (ADR-0133): `gexis-wallpapers` installs them at
+`/usr/share/gexis/wallpapers/<set>/` with `credits.json`, served at
+`/idle/wallpaper/own/<set>/<file>` for names in that list only.
+`own_wallpapers.active_sets` chooses the sets a picture may come from - a
+holiday's alone on its days (`holiday()`: New Year; Christmas and Easter,
+Western or Orthodox, by country), otherwise the chosen styles plus the
+hour's and the season's - and `_where()` in `wsserver.py` takes the country
+and latitude from the weather location's geocoding, or from `zone.tab` for
+the time zone. *Artist pictures* fall back to them while `lms_enabled` is
+off. A migration keeps *Artist pictures* on a player already in use, the
+old default. It can also show an external page if the
 `idle_screen` setting chooses one and the page is embeddable. It reads
 `/idle`, `/idle/weather` and `/idle/wallpaper?w=&h=`. The source credits are
 drawn on screen because the data licences ask for them. Legibility comes
