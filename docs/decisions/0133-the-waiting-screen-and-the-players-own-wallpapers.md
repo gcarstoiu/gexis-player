@@ -92,6 +92,9 @@ Both are in the image, so neither needs a key or a network.
     own pictures.
   - **Left out:** Valentine's Day and Halloween, customary in some countries
     only and more commercial than seasonal.
+- **On a holiday's days its pictures replace the styles**, while *Holidays*
+  is on (George, 2026-10-10: *"They replace them. For the time being if
+  option is selected."*). "For the time being": open to revisiting.
 - **The country** comes from the time zone at first (the mapping the setup's
   Wi-Fi country already uses), and from the weather location once one is set.
 
@@ -112,8 +115,6 @@ Both are in the image, so neither needs a key or a network.
 ## Not decided here
 
 - **Which pictures**, until George has seen the contact sheets.
-- **Whether a holiday's pictures replace the styles on its days or join
-  them.** Proposed: they replace them.
 
 ## Consequences
 
