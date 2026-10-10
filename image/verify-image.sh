@@ -83,6 +83,22 @@ else
 fi
 rm -f "$OUT/status"
 
+# ADR-0133: the player's own wallpapers are in the image, each with its credit.
+echo "== the player's own wallpapers (ADR-0133)"
+dfs "dump /usr/share/gexis/wallpapers/credits.json $OUT/credits.json" >/dev/null
+if [ ! -s "$OUT/credits.json" ]; then
+	bad "/usr/share/gexis/wallpapers/credits.json missing"
+else
+	want=$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))))' "$OUT/credits.json")
+	got=0
+	for set in $(python3 -c 'import json,sys; print(" ".join(sorted({c["set"] for c in json.load(open(sys.argv[1]))})))' "$OUT/credits.json"); do
+		n=$(dfs "ls -l /usr/share/gexis/wallpapers/$set" | grep -c '\.webp')
+		got=$((got + n))
+	done
+	[ "$got" = "$want" ] && ok "$got wallpapers, each listed in credits.json" || bad "credits.json lists $want wallpapers, the image has $got"
+fi
+rm -f "$OUT/credits.json"
+
 echo "== files the services must be able to write"
 # The driver rewrites the spectrum engine's config to choose a section - the
 # engine has no other way to be told - and the unit runs as pi (uid 1000).
