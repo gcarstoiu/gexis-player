@@ -11,8 +11,10 @@ and `phase-13b` is merged into it after each docs change. The worktree
 Earlier narrative: `docs/HANDOFF-ARCHIVE.md` (0.9.5 to 0.9.7 moved there
 2026-10-10).
 
-**0.9.8 cut 2026-10-10 for Testing** (tag `v0.9.8`; notes approved by
-George). Its PR into main waits for George. In it:
+**0.9.8 cut 2026-10-10 for Testing** (tag `v0.9.8`, release `r0.9.8`,
+serial 32 after the rewrite below, image
+`image/deploy/2026-10-10-gexis-player-v0.9.8.img`, 113 checks; notes approved
+by George). **PR #57** waits for George's merge. In it:
 - **Reset to factory settings** (ADR-0132): hold 3 s; the wipe runs early in
   the next boot; music, playlists and Pictures stay; a reset screen on every
   surface. **TEMPORARY until the first public release**: a reset keeps its
