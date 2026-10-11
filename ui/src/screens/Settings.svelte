@@ -1986,7 +1986,13 @@
             >
               <span class="radio"><span></span></span>
               {#if p.ord}<span class="option__ord">{p.ord}</span>{/if}
-              <span class="option__label">{p.label}</span>
+              {#if sheet.optionNotes?.[option]}
+                <!-- A line under the option (George, 2026-10-11: Volume's
+                     three, each short; only Fixed keeps the amber warning). -->
+                <span class="option__text"><span class="option__label">{p.label}</span><span class="option__note">{sheet.optionNotes[option]}</span></span>
+              {:else}
+                <span class="option__label">{p.label}</span>
+              {/if}
               {#if why}<span class="option__why">{why}</span>{/if}
             </button>
           {/each}
@@ -2969,6 +2975,18 @@
     opacity: 0.42;
   }
 
+  .option__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .option__note {
+    font-size: 14px;
+    line-height: 1.35;
+    color: var(--ink-quiet);
+  }
   .option__why {
     margin-left: auto;
     padding-left: 14px;
