@@ -176,6 +176,12 @@ contract. Send what you know; absent fields draw nothing.
 The player keeps the DAC's own level separately; read ADR-0053 and ADR-0054
 before you decide how yours behaves.
 
+**Fixed output.** The core tells you whether the output is *Fixed* with
+`{"t": "output", "fixed": true}` (answer `true`). If your renderer has a
+volume of its own that the core does not manage, hold it at full level while
+`fixed` is true - otherwise its slider would still lower the sound on a
+player whose owner set the level on the amplifier (ADR-0137).
+
 `tools/sample-renderer/` is a complete renderer in about a hundred lines of
 Python: it plays a generated tone through `output` when the panel's button is
 pressed, and stops when another source takes over.
