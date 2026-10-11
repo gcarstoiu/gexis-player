@@ -3616,6 +3616,8 @@ async def main() -> None:
         # ADR-0104: decided once at boot; holds the setup network while it is
         # needed and gives the radio back to a saved network when one returns.
         setup_network.run(),
+        # ADR-0134: and after boot, a network gone two minutes opens it again.
+        setup_network.watch(),
         # ADR-0084: the socket plugins connect to. Served for the life of the
         # process, beside the one the browser uses.
         plugin_server.run(),
