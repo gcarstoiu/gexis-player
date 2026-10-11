@@ -84,6 +84,7 @@ Three runs; the same condition varies by about ±5 points between them.
   all of them, the remedy is less time animating, not fewer animations.
   George chose a setting (2026-10-11): *Weather icon motion*, Animated (the
   default) or Static. With Static the idle screen runs no animations (0 of
-  11, checked in a browser); its CPU on the Pi is the paused figure above.
+  11, checked in a browser); on the Pi it is expected at the paused figure
+  above, 4-6 %, not yet measured with the setting itself.
 - Memory summed over Chromium's processes counts shared pages more than once;
   it is a trend, not the browser's real footprint.
