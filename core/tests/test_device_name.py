@@ -250,3 +250,28 @@ def test_a_backslash_is_written_as_typed_and_does_not_stop_the_rename(paths, nam
     assert _yaml_value(paths["LIBRESPOT_PATH"].read_text()) == name
     assert device_name.lms_player("") == name
     assert paths["HOSTNAME_PATH"].read_text().strip() == device_name.sanitise(name)
+
+
+@pytest.mark.parametrize("name", ["Sofa\nLD_PRELOAD=/tmp/x.so", "Sofa\r\nX=1", "Sofa\x00", "Sofa X=1", "Sofa\x85X=1"])
+def test_a_line_break_in_a_name_is_refused_where_it_is_typed(name):
+    """Review, 2026-10-12: anyone on the LAN could PUT a name with a newline,
+    and every newline became a line of their choosing in the EnvironmentFile
+    two renderer units read, as a user with passwordless sudo."""
+    from gexis_core.settings_registry import InvalidValue, load_registry, validate
+    row = next(r for g in load_registry() for r in g["rows"] if r.get("key") == "device_name")
+    with pytest.raises(InvalidValue):
+        validate(row, name)
+    assert validate(row, "  Café Münster: Den #2 [AC\\DC] 🎵 ") == "Café Münster: Den #2 [AC\\DC] 🎵"
+
+
+def test_a_line_break_that_gets_past_the_settings_adds_no_line_anywhere(paths):
+    """A restored backup or setup's own rename reaches `apply` without the
+    row's check, so the writer does not trust its input either: no value can
+    add a line to the four files."""
+    before = {k: p.read_text().count("\n") for k, p in paths.items() if p.exists()}
+    written = device_name.apply("Sofa\nLD_PRELOAD=/tmp/x.so\r end")
+    assert written.ok
+    assert paths["ENV_PATH"].read_text() == 'GEXIS_DEVICE_NAME="Sofa LD_PRELOAD=/tmp/x.so end"\n'
+    for key, count in before.items():
+        assert paths[key].read_text().count("\n") == count, key
+    assert device_name.lms_player("") == "Sofa LD_PRELOAD=/tmp/x.so end"

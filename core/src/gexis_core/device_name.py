@@ -32,6 +32,14 @@ logger = logging.getLogger(__name__)
 #: What the image ships and what a name that sanitises to nothing falls back
 #: to. The design's own fallback.
 FALLBACK = "gexis"
+#: What no name may carry into the four files: control characters (C0, DEL,
+#: C1 - NEL among them), Unicode's line and paragraph separators, and lone
+#: surrogates, which no encoder writes. Every line break here is a line of
+#: someone else's choosing in an EnvironmentFile two renderer units read
+#: (review, 2026-10-12). The settings row refuses the same set where it is
+#: typed; this is for the ways in that do not pass the row - a restored
+#: backup, setup's own rename.
+UNWRITABLE = re.compile(r"[\x00-\x1f\x7f-\x9f\u2028\u2029\ud800-\udfff]+")
 #: RFC 1123's limit on one label, which is what a `.local` name is.
 HOSTNAME_MAX = 63
 
@@ -162,6 +170,9 @@ def apply(name: str) -> Written:
     `None` special case inside the loop and made the failure path
     unreachable from a test.
     """
+    # A run of line breaks or other controls becomes one space rather than
+    # refusing the rename: the files take what the person meant, on one line.
+    name = UNWRITABLE.sub(" ", name).strip() or FALLBACK
     host = sanitise(name)
     steps = (
         ("Spotify", lambda: _write_librespot(name)),
