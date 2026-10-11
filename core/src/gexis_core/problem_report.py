@@ -90,6 +90,41 @@ _ACCESS_LINE = re.compile(r"\baiohttp\.access\b")
 #: single measurement ("0.26812 s") never is.
 _COORDS = re.compile(r"(?<![\d.])(-?\d{1,3}\.\d{3,}),\s*(-?\d{1,3}\.\d{3,})(?![\d.])")
 
+#: What a known value begins with, when it begins with a letter or digit.
+_HEAD = re.compile(r"[A-Za-z0-9]+")
+_ALNUM = re.compile(r"[A-Za-z0-9]").match
+
+#: How much of a log is scrubbed at a time (`Scrubber.scrub`): about 10 ms
+#: of the slowest pattern on a desktop.
+PIECE = 64 * 1024
+
+
+def _pieces(text: str, size: int = PIECE) -> Iterable[str]:
+    """`text` in whole lines, each piece about `size` long."""
+    start = 0
+    while start < len(text):
+        end = text.find("\n", start + size)
+        end = len(text) if end < 0 else end + 1
+        yield text[start:end]
+        start = end
+
+
+#: Lines that name a place or an artist without quotes, found by their
+#: shape (review, 2026-10-12). The geocoder's own name for the weather
+#: location is not what the owner typed - "munich" comes back "München, DE"
+#: - so no known value covers it (weather.geocode: "%r is %s, %s (lat,
+#: lon)"). The covers sweep logs library artists, whom the device knows
+#: only while they play ("sweep: %s failed (...)", "... scored %s, below
+#: the threshold", "could not store <namespace>/<artist>"); "failed" puts
+#: the line in the public issue's last errors.
+_WEATHER_PLACE = re.compile(r"(\bweather: .*? is )([^\n]+?)(?= \(-?\d{1,3}\.\d+, -?\d{1,3}\.\d+\))")
+_SWEEP_ARTIST = re.compile(r"(\bsweep: (?!could not ))([^\n]+?)(?= failed \(| scored -?[\d.]+, below the threshold)")
+_SWEEP_KEY = re.compile(r"(\bsweep: could not (?:store|read) [\w-]+/)([^\n]+?)(?= \()")
+#: A query string's coordinates are a place, though they read as numbers.
+_COORD_KEYS = {"lat", "lon", "lng", "latitude", "longitude"}
+#: The log's own words, which a known value matches only in its own case.
+_LOG_WORDS = {"DEBUG", "INFO", "WARNING", "WARN", "ERROR", "CRITICAL", "FATAL"}
+
 #: Kept as they are: they identify nobody.
 _KEEP_IPS = {"127.0.0.1", "0.0.0.0", "255.255.255.255", "::1", "::"}
 #: Never a private value, whatever a row holds: the product, the image's
@@ -108,6 +143,8 @@ class Scrubber:
     allowed: set[str] = field(default_factory=set)
     tokens: dict[tuple[str, str], str] = field(default_factory=dict)
     counts: dict[str, int] = field(default_factory=dict)
+    #: `known` arranged for `scrub_known`, made again when a value is added.
+    _index: tuple | None = field(default=None, init=False, repr=False)
 
     def know(self, value, kind: str) -> None:
         """A value the device holds that must not leave it."""
@@ -117,7 +154,9 @@ class Scrubber:
         if len(value) < KNOWN_MIN or value.lower() in ("true", "false", "none", "null") \
                 or value.lower() in _NOT_PRIVATE:
             return
-        self.known.setdefault(value, kind)
+        if value not in self.known:
+            self.known[value] = kind
+            self._index = None
 
     def token(self, kind: str, value: str) -> str:
         key = (kind, value)
@@ -129,17 +168,75 @@ class Scrubber:
 
     def scrub_known(self, text: str) -> str:
         """The device's own values only. Longest first, so "Living Room Pi"
-        goes before "Living Room"; never inside a longer word."""
+        goes before "Living Room"; never inside a longer word.
+
+        **Looked up word by word, not as one alternation of every value.**
+        The regex engine holds the interpreter's lock for the whole of a
+        call and tries each alternative at each place in the text, so a
+        long queue's titles over a 20 MB journal kept the core's event loop
+        - volume, arbitration - waiting for seconds (review, 2026-10-12;
+        4.1 s measured on a desktop for 3,000 values over 2 MB). Here the
+        text is read once, and only a word some value begins with is
+        compared.
+
+        **In any case** (review, 2026-10-12): a place typed "munich,
+        germany" is logged by others as "Munich". The log's own level words
+        are the exception - a track called "Warning" must not take every
+        "WARNING" with it."""
         if not self.known:
             return text
-        # One pass for all of them: an alternation tries the longest first.
-        values = sorted(self.known, key=len, reverse=True)
-        pattern = re.compile(r"(?<![A-Za-z0-9])(" + "|".join(map(re.escape, values)) + r")(?![A-Za-z0-9])")
-        return pattern.sub(lambda m: self.token(self.known[m.group(1)], m.group(1)), text)
+        heads, starts = self._known_index()
+        out: list[str] = []
+        done = 0
+        for m in starts.finditer(text):
+            at = m.start()
+            if at < done:
+                continue        # inside a value already taken out
+            for value, low in heads.get(m.group().lower(), ()):
+                end = at + len(value)
+                seg = text[at:end]
+                if (seg == value or (seg.lower() == low and seg not in _LOG_WORDS)) \
+                        and not (end < len(text) and _ALNUM(text[end])):
+                    out.append(text[done:at])
+                    out.append(self.token(self.known[value], value))
+                    done = end
+                    break
+        out.append(text[done:])
+        return "".join(out)
+
+    def _known_index(self) -> tuple[dict[str, list[tuple[str, str]]], re.Pattern]:
+        """Each known value, with its lower case, under the word it begins
+        with - its first run of letters and digits, or its first character
+        when that is neither ("(What's ...") - in lower case, longest first;
+        and the pattern that finds every place in a text where one of those
+        can begin."""
+        if self._index is None:
+            heads: dict[str, list[tuple[str, str]]] = {}
+            others: set[str] = set()
+            for value in sorted(self.known, key=len, reverse=True):
+                head = _HEAD.match(value)
+                key = (head.group() if head else value[0]).lower()
+                if not head:
+                    others.update(c for c in (value[0], value[0].lower(), value[0].upper()) if len(c) == 1)
+                heads.setdefault(key, []).append((value, value.lower()))
+            first = "|[" + "".join(map(re.escape, sorted(others))) + "]" if others else ""
+            self._index = (heads, re.compile(r"(?<![A-Za-z0-9])(?:[A-Za-z0-9]+" + first + ")"))
+        return self._index
 
     def scrub(self, text: str) -> str:
         """A log: the known values, then the patterns, line by line where a
-        rule depends on whose line it is."""
+        rule depends on whose line it is.
+
+        **A piece at a time**, whole lines, so no one pass of a pattern
+        holds the interpreter's lock for longer than `PIECE` takes to read
+        (the event loop waits on it - see `scrub_known`)."""
+        return "".join(self._scrub(piece) for piece in _pieces(text))
+
+    def _scrub(self, text: str) -> str:
+        # Before the known values, while the coordinates still mark the line.
+        text = _WEATHER_PLACE.sub(lambda m: m.group(1) + self._unquoted("place", m.group(2)), text)
+        text = _SWEEP_ARTIST.sub(lambda m: m.group(1) + self._unquoted("title", m.group(2)), text)
+        text = _SWEEP_KEY.sub(lambda m: m.group(1) + self._unquoted("title", m.group(2)), text)
         text = self.scrub_known(text)
         text = _FINGERPRINT.sub(lambda m: self.token("secret", m.group(1)), text)
         text = _SHARE_UNIT.sub(lambda m: self.token("share", m.group(1)), text)
@@ -161,9 +258,16 @@ class Scrubber:
 
     def _query(self, m: re.Match) -> str:
         value = m.group(2)
+        if value and m.group(1)[1:-1].lower() in _COORD_KEYS:
+            return m.group(1) + self.token("place", value)
         if not value or re.fullmatch(r"[\d.,x-]+", value):
             return m.group(0)
         return m.group(1) + self.token("text", value)
+
+    def _unquoted(self, kind: str, text: str) -> str:
+        """A name a line's shape says is one, quoted (%r) or not."""
+        q = text[0] if len(text) > 1 and text[0] in "'\"" and text[-1] == text[0] else ""
+        return q + self.token(kind, text[1:-1] if q else text) + q
 
     def _quoted(self, m: re.Match) -> str:
         """A quoted name or title: anything with a space, a capital or a

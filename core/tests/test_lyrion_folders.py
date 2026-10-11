@@ -72,3 +72,25 @@ def test_a_usb_disk_stays_seven_days_after_it_is_unplugged(tmp_path, monkeypatch
     current = ["/var/lib/gexis-music", disk]
     lf.usb_recent([disk], seen, now=0)
     assert lf.wanted(current, [], saved=lf.usb_recent([], seen, now=day)) == current
+
+
+def test_the_usb_record_is_written_whole_and_only_when_it_changes(tmp_path, monkeypatch):
+    """Review, 2026-10-12: rewritten in place on every 20 s pass, so a power
+    cut could leave it empty - every unplugged disk forgotten, and Lyrion
+    wiping the library for it."""
+    import os
+
+    disk = str(lf.USB / "disk-a")
+    seen = tmp_path / "seen.json"
+    writes = []
+    real = os.replace
+    monkeypatch.setattr(os, "replace", lambda a, b: (writes.append(b), real(a, b)))
+    lf.usb_recent([disk], seen, now=1000)
+    assert writes == [seen] and not (tmp_path / "seen.json.tmp").exists()
+    for n in range(1, 100):                         # half an hour of passes, still mounted
+        lf.usb_recent([disk], seen, now=1000 + 20 * n)
+    lf.usb_recent([], seen, now=3000)               # unplugged
+    assert writes == [seen], "nothing changed, nothing written"
+    lf.usb_recent([disk], seen, now=1000 + 3600)    # plugged in again an hour on
+    assert len(writes) == 2
+    assert lf.usb_recent([], seen, now=1000 + 3600 + 6 * 86400) == [disk]

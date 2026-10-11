@@ -40,6 +40,12 @@ class FakeScreen:
         self.visible = False
         return True
 
+    async def show_async(self):
+        return self.show()
+
+    async def hide_async(self):
+        return self.hide()
+
 
 def playing(**kw):
     return TrackMetadata(transport="playing", **kw)
@@ -575,3 +581,108 @@ async def test_a_show_with_no_window_starts_the_visualiser_again(monkeypatch):
         assert (await client.post("/peppy/show")).status == 200
     assert started == [("systemctl", "restart", "gexis-peppy.service")]
     assert screen.visible
+
+
+async def test_raising_and_lowering_never_hold_up_the_event_loop(tmp_path, monkeypatch):
+    """Review, 2026-10-12: the settle was slept and wlrctl run on the loop,
+    so every raise held volume and arbitration for at least 0.25 s, and a
+    touch for a wlrctl round trip - up to 5 s with the compositor busy."""
+    import asyncio
+
+    class Done:
+        returncode = 0
+        stderr = b""
+
+    def slow_wlrctl(cmd, **kw):
+        time.sleep(0.2)
+        return Done()
+
+    monkeypatch.setattr(subprocess, "run", slow_wlrctl)
+    shown = []
+    screen = PeppyScreen(wlrctl="/usr/bin/wlrctl", shown_path=tmp_path / "shown", settle_s=0.25)
+    screen.on_change = shown.append
+    clock = [0.0]
+    timer = UnattendedPlayback(60, now=lambda: clock[0])
+    controller = PeppyController(screen, timer, tick_s=0.01)
+    gaps = []
+
+    async def the_rest_of_the_core():
+        loop = asyncio.get_running_loop()
+        last = loop.time()
+        while True:
+            await asyncio.sleep(0.01)
+            gaps.append(loop.time() - last)
+            last = loop.time()
+
+    other = asyncio.ensure_future(the_rest_of_the_core())
+    task = asyncio.ensure_future(controller.run())
+    timer.set_playing(True)
+    clock[0] += 61
+    for _ in range(100):
+        await asyncio.sleep(0.02)
+        if screen.visible:
+            break
+    assert screen.visible and shown == [False, True]
+    controller.on_touch()
+    for _ in range(50):
+        await asyncio.sleep(0.02)
+        if not screen.visible:
+            break
+    task.cancel()
+    other.cancel()
+    assert not screen.visible and shown == [False, True, False]
+    assert max(gaps) < 0.15, f"the loop waited {max(gaps):.2f} s"
+
+
+async def test_a_touch_during_a_raise_lowers_it_after_not_before(tmp_path, monkeypatch):
+    """With the raise off the loop, a touch while it settles must not be
+    overtaken by it."""
+    import asyncio
+
+    class Done:
+        returncode = 0
+        stderr = b""
+
+    order = []
+    monkeypatch.setattr(subprocess, "run", lambda cmd, **kw: (order.append(cmd[2]), Done())[1])
+    screen = PeppyScreen(wlrctl="/usr/bin/wlrctl", shown_path=tmp_path / "shown", settle_s=0.05)
+    controller = PeppyController(screen, UnattendedPlayback(300))
+    raising = asyncio.ensure_future(controller.request_async("show"))
+    await asyncio.sleep(0.01)
+    screen.visible = True               # as the panel believes, mid-raise
+    controller.on_touch()
+    await raising
+    await asyncio.gather(*controller._lowering)
+    assert order == ["focus", "minimize"] and not screen.visible
+
+
+@pytest.mark.parametrize("which", ["smoothing", "skins"])
+def test_peppymeter_s_config_is_replaced_whole_never_rewritten_in_place(tmp_path, which):
+    """Review, 2026-10-12: rewritten in place, a power cut could leave it cut
+    short - and both setters only rewrite keys already there, so it was
+    never mended and the visualiser stayed dead."""
+    import os
+
+    from gexis_core.peppy import set_meter_skins, set_meter_smoothing
+
+    conf = tmp_path / "config.txt"
+    conf.write_text("[current]\nbase.folder = /old\nmeter.folder = a\nscreen.width = 800\n"
+                    "screen.height = 480\n[data.source]\nsmooth.buffer.size = 6\n")
+    conf.chmod(0o640)
+    before = conf.stat().st_ino
+    if which == "smoothing":
+        assert set_meter_smoothing(400, conf) is True
+    else:
+        assert set_meter_skins(conf, tmp_path / "pack", "b", 1280, 720) is True
+    assert conf.stat().st_ino != before, "a new file renamed into place"
+    assert oct(conf.stat().st_mode & 0o777) == oct(0o640)
+    assert [p.name for p in tmp_path.iterdir()] == ["config.txt"]
+    assert "smooth.buffer.size = " in conf.read_text() and "[current]" in conf.read_text()
+    if os.geteuid() == 0:
+        return                          # root writes anywhere
+    os.chmod(tmp_path, 0o500)           # nowhere to put the new one: the old one stands
+    try:
+        assert set_meter_smoothing(800, conf) is False
+        assert "[current]" in conf.read_text()
+    finally:
+        os.chmod(tmp_path, 0o700)

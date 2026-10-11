@@ -99,3 +99,35 @@ def test_a_collaboration_lms_lists_as_its_own_artist_falls_back_to_the_first(tmp
     assert len(run(f.for_artist("Snoop Dogg feat. Mystikal"))) == 1
     assert len(run(f.for_artist("Snoop Dogg feat. Mystikal", artist_id=12))) == 1, "by LMS id too"
     assert run(f.for_artist("Nick Cave")) == []
+
+
+def test_lms_away_or_the_plugin_not_there_yet_is_not_remembered_as_no_photos(tmp_path):
+    """Review, 2026-10-12: on a fresh player the plugin is installed only
+    after Lyrion restarts; every artist played before then kept an empty
+    `.done` for good, and a failed name lookup was kept as "no artist"."""
+    lms = FakeLms({"Example Artist": 7}, {7: ["https://x/1.jpg"]})
+    down = True
+
+    async def rpc(command, timeout=None):
+        if down:
+            raise ConnectionError("Lyrion restarting")
+        return await lms.rpc(command, timeout)
+    f = Fanart(rpc, download, BASE, directory=tmp_path)
+    assert run(f.for_artist("Example Artist")) == []
+    assert run(f.photos(7)) == []
+    assert not (tmp_path / "7" / ".done").exists()
+    down = False
+    assert len(run(f.for_artist("Example Artist"))) == 1, "asked again once LMS answers"
+    assert len(run(Fanart(rpc, download, BASE, directory=tmp_path).photos(7))) == 1, "and after a restart"
+
+
+def test_photos_named_but_none_downloaded_are_asked_for_again(tmp_path):
+    lms = FakeLms({}, {7: ["https://x/1.jpg", "https://x/2.jpg"]})
+    offline = True
+
+    async def fetch(url):
+        return None if offline else b"jpeg"
+    f = Fanart(lms.rpc, fetch, BASE, directory=tmp_path)
+    assert run(f.photos(7)) == [] and not (tmp_path / "7" / ".done").exists()
+    offline = False
+    assert len(run(f.photos(7))) == 2

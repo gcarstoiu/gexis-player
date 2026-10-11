@@ -33,7 +33,9 @@ KEY = "lyrion-server.shares"
 ROOT = Path("/mnt/gexis-shares")
 CREDENTIALS = Path("/etc/gexis/shares")
 SMB = re.compile(r"^//[^/\s]+/[^\s].*$")
-NFS = re.compile(r"^[^/:\s]+:/(?!/).*$")  # not a URL: "http://..." has two slashes
+#: Not a URL ("http://..." has two slashes), and not an option: mount runs
+#: as root, and "-o...:/x" would reach it as one (review, 2026-10-12).
+NFS = re.compile(r"^(?!-)[^/:\s]+:/(?!/).*$")
 
 
 def kind(address: str) -> str | None:
@@ -236,11 +238,20 @@ class Shares:
                 if self._needs_login(share):
                     return "Needs its password again"
                 self._write_login(address, share.get("user"), None)  # a guest, restored
-            command = ["mount", "-t", "cifs", address, str(point), "-o",
-                       f"ro,credentials={cred},uid=squeezeboxserver,gid=nogroup,iocharset=utf8,nosuid,nodev,noexec"]
+            command = ["mount", "-t", "cifs", "-o",
+                       f"ro,credentials={cred},uid=squeezeboxserver,gid=nogroup,iocharset=utf8,nosuid,nodev,noexec",
+                       "--", address, str(point)]
         else:
-            command = ["mount", "-t", "nfs", address, str(point), "-o", "ro,soft,timeo=100,nosuid,nodev,noexec"]
-        result = self._run(command, capture_output=True, text=True, timeout=30, check=False)
+            command = ["mount", "-t", "nfs", "-o", "ro,soft,timeo=100,nosuid,nodev,noexec", "--", address, str(point)]
+        try:
+            result = self._run(command, capture_output=True, text=True, timeout=30, check=False)
+        except subprocess.TimeoutExpired:
+            # A foreground NFS mount to a host that is off but still has its
+            # address retries for two minutes. Said in its row, and the
+            # shares after it still tried (review, 2026-10-12: one NAS off
+            # kept every share listed after it unmounted, every pass).
+            logger.warning("lyrion: %s not mounted: no answer in 30 s", address)
+            return "the server did not answer"
         if result.returncode:
             error = (result.stderr or result.stdout or f"mount exited {result.returncode}").strip().splitlines()[-1]
             logger.warning("lyrion: %s not mounted: %s", address, error)
@@ -250,7 +261,10 @@ class Shares:
 
     def _unmount(self, point: Path) -> None:
         if self._is_mount(str(point)):
-            self._run(["umount", "-l", str(point)], capture_output=True, text=True, timeout=30, check=False)
+            try:
+                self._run(["umount", "-l", str(point)], capture_output=True, text=True, timeout=30, check=False)
+            except subprocess.TimeoutExpired:   # nor does one stuck unmount stop the rest
+                logger.warning("lyrion: %s not unmounted: no answer in 30 s", point)
         try:
             point.rmdir()
         except OSError:

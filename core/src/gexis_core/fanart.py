@@ -38,6 +38,10 @@ CALL_TIMEOUT_S = 20.0
 _JOINS = re.compile(r"\s+(?:feat\.?|ft\.?|featuring)\s+|\s*[&,/;]\s*", re.IGNORECASE)
 
 
+#: `Fanart._exact`'s "LMS did not answer", apart from "no such artist".
+_UNASKED = object()
+
+
 def first_artist(name: str) -> str | None:
     """The first artist a collaboration credits, or None if it is one name."""
     parts = [p.strip() for p in _JOINS.split(name) if p and p.strip()]
@@ -70,12 +74,19 @@ class Fanart:
         self._ids: dict[str, int | None] = {}
         self._busy: dict[int, asyncio.Task] = {}
 
-    async def _ask(self, command: list) -> dict:
+    async def _ask(self, command: list) -> dict | None:
+        """LMS's answer, or None when there was none - LMS away or
+        restarting, the plugin not installed yet (an unknown command closes
+        the connection), a lookup past the timeout. **None is not "no
+        photos"** (the MISSING/UNAVAILABLE line of Finding 036): on a fresh
+        player the plugin arrives only after Lyrion restarts, and every
+        artist played before then was remembered as having none, for good
+        (review, 2026-10-12)."""
         try:
             return await self._rpc(command, timeout=CALL_TIMEOUT_S) or {}
-        except Exception as exc:  # LMS away or the plugin absent: no photos, not a failure
+        except Exception as exc:  # no photos for now, not a failure
             logger.info("fanart: %s did not answer (%r)", command[:2], exc)
-            return {}
+            return None
 
     async def artist_id(self, name: str | None) -> int | None:
         """LMS's id for an artist named exactly so, letter case aside; for a
@@ -87,11 +98,17 @@ class Fanart:
             found = await self._exact(name)
             if found is None and (first := first_artist(name)):
                 found = await self._exact(first)
+            if found is _UNASKED:
+                return None     # asked again next time, not kept as "no such artist"
             self._ids[key] = found
         return self._ids[key]
 
-    async def _exact(self, name: str) -> int | None:
+    async def _exact(self, name: str) -> int | None | object:
+        """The id, None for no such artist, `_UNASKED` when LMS did not
+        answer."""
         result = await self._ask(["artists", 0, 20, f"search:{name}"])
+        if result is None:
+            return _UNASKED
         for artist in result.get("artists_loop") or []:
             if str(artist.get("artist", "")).strip().lower() == name.strip().lower():
                 try:
@@ -131,6 +148,8 @@ class Fanart:
 
     async def _fetch(self, artist_id: int, folder: Path) -> list[Path]:
         result = await self._ask(["musicartistinfo", "artistphotos", f"artist_id:{artist_id}"])
+        if result is None:
+            return []           # not an answer: nothing written, asked again next time
         urls = [str(p["url"]) for p in (result.get("item_loop") or []) if p.get("url")][:PER_ARTIST]
         folder.mkdir(parents=True, exist_ok=True)
         kept = []
@@ -141,6 +160,11 @@ class Fanart:
             path = folder / f"{n:02d}.jpg"
             path.write_bytes(data)
             kept.append(path)
+        if urls and not kept:
+            # Photos named, none fetched - the internet away while LMS is
+            # not. Not an answer either.
+            logger.info("fanart: none of %d photos for artist %d came", len(urls), artist_id)
+            return kept
         # Remembered even when empty: "asked, LMS has none" is an answer, and
         # asking again on every track of that artist costs 0.75 s each.
         (folder / ".done").touch()

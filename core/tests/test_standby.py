@@ -78,6 +78,12 @@ class FakeScreen:
         self.visible = False
         return True
 
+    async def show_async(self):
+        return self.show()
+
+    async def hide_async(self):
+        return self.hide()
+
 
 def test_the_visualiser_does_not_come_up_in_standby():
     asleep = {"off": True}

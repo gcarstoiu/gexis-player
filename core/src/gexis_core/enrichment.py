@@ -389,6 +389,12 @@ class Cache:
         columns = {row[1] for row in self._conn.execute("PRAGMA table_info(enrichment)")}
         if "confidence" not in columns:
             self._conn.execute("ALTER TABLE enrichment ADD COLUMN confidence INTEGER NOT NULL DEFAULT 100")
+        # **A "nothing" no longer believed is not kept** (review, 2026-10-12:
+        # the file only ever grew). `get` already ignores one past
+        # MISSING_TTL_S, but deleted it only if the same track came up
+        # again; most never do. What is FOUND is kept, as before.
+        self._conn.execute("DELETE FROM enrichment WHERE outcome = ? AND stored_at < ?",
+                           (Outcome.MISSING.value, self._clock() - MISSING_TTL_S))
         self._conn.commit()
 
     def get(self, key: TrackKey, provider: str) -> Answer | None:
@@ -510,13 +516,34 @@ def _always_ready() -> bool:
     return True
 
 
+#: A picture on the LMS server - its image proxy, which LMS's own photos and
+#: the fanart and TheAudioDB answers go through - up to the path.
+_LMS_IMAGE = re.compile(r"^https?://[^/]+(?=/imageproxy/)")
+
+
+def rebased(enrichment: Enrichment, base: str) -> Enrichment:
+    """A stored answer's pictures at the LMS server's address as it is now
+    (review, 2026-10-12): a FOUND answer is kept for good, and the address
+    it was written with goes stale with a new DHCP lease, the player's own
+    server instead of a NAS's (ADR-0115), or a backup restored elsewhere."""
+    base = base.rstrip("/")
+
+    def at(url):
+        return _LMS_IMAGE.sub(base, url) if isinstance(url, str) else url
+    changed = {"artist_image": at(enrichment.artist_image), "album_art": at(enrichment.album_art),
+               "artist_images": tuple(at(u) for u in enrichment.artist_images)}
+    if all(getattr(enrichment, k) == v for k, v in changed.items()):
+        return enrichment
+    return replace(enrichment, **changed)
+
+
 class EnrichmentService:
     """Asks the providers in order, remembers what they said, and publishes
     once. Never on a screen's path: `for_track` is awaited by whatever is
     filling a tab, and now playing has already rendered (ADR-0012)."""
 
     def __init__(self, providers, cache: Cache, *, clock=time.monotonic,
-                 confidence_min: int = CONFIDENCE_MIN, gate=None) -> None:
+                 confidence_min: int = CONFIDENCE_MIN, gate=None, lms_base=None) -> None:
         #: In the order they are asked. ADR-0040 §1: LMS's own plugin first
         #: where it answers, the key-free set behind it.
         self._providers = list(providers)
@@ -535,6 +562,9 @@ class EnrichmentService:
         self._unavailable_until: dict[str, float] = {}
         #: Fetches going now, by track and provider (`_ask`).
         self._in_flight: dict[tuple, asyncio.Future] = {}
+        #: The LMS server's address now, or a callable giving it: a stored
+        #: answer's pictures are moved to it (`rebased`). None leaves them.
+        self._lms_base = lms_base
 
     @property
     def confidence_min(self) -> int:
@@ -633,6 +663,9 @@ class EnrichmentService:
         key = key.scoped(SCOPES.get(provider.name, "track"))
         cached = self._cache.get(key, provider.name)
         if cached is not None:
+            base = self._lms_base() if callable(self._lms_base) else self._lms_base
+            if base and cached.outcome is Outcome.FOUND:
+                cached.enrichment = rebased(cached.enrichment, base)
             return cached
         # Backed off per provider, not per track: one that is down is not
         # asked again for every track played meanwhile (the test
