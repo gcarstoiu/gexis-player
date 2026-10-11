@@ -121,3 +121,22 @@ def test_a_source_switch_waits_for_the_one_before_it():
     assert "async with renderer_locks.setdefault(renderer_id" in apply
     now = _closure("_apply_renderer_now")
     assert now.index("on = renderer_enabled(renderer_id)") < now.index("set_unit_enabled(")
+
+
+def test_a_plugin_s_queue_is_published_as_a_queue():
+    """A plugin's `queue` event was stored as its own list, which has no
+    `to_json`: once the plugin was active every broadcast raised, starting
+    with the one inside `Supervisor.acquire`, so the outgoing renderer was
+    never released."""
+    import json
+
+    from gexis_core.__main__ import plugin_queue
+    from gexis_core.model import Queue
+
+    queue = plugin_queue("plexamp", [{"title": "a", "duration": "12"}, "not a track"])
+    assert isinstance(queue, Queue)
+    assert [item.title for item in queue.items] == ["a", None]
+    assert queue.items[0].duration == 12.0 and queue.items[0].source_type == "plexamp"
+    json.dumps(queue.to_json())
+    assert plugin_queue("plexamp", {"items": []}) is None
+    assert "plugin_queue(session.id" in _closure("_plugin_event")

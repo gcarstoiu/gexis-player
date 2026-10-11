@@ -75,7 +75,7 @@ from gexis_core import factory_reset, lyrion_addons, lyrion_folders, lyrion_memo
 from gexis_core.lyrion_shares import Shares as LyrionShares
 from gexis_core.fanart import Fanart
 from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
-from gexis_core.model import BLANK_METADATA, TrackMetadata
+from gexis_core.model import BLANK_METADATA, Queue, TrackMetadata
 from gexis_core import connections, hardware_report, settings_migrations, settling, updates, wired
 from gexis_core.standby import Schedule, Standby
 from gexis_core.settings import SettingsStore
@@ -421,6 +421,54 @@ def read_timezone(localtime: Path = Path("/etc/localtime")) -> str | None:
     target = str(localtime.resolve())
     marker = "/zoneinfo/"
     return target.split(marker, 1)[1] if marker in target else None
+
+
+def plugin_metadata(renderer_id: str, raw) -> TrackMetadata:
+    """**A plugin's metadata line, as the model** (contract v1).
+
+    Generic: it reads the fields the contract names and ignores everything
+    else. A plugin is written by somebody who cannot test against this
+    device, so a bad value is dropped rather than raised - a renderer that
+    sends a string where a number belongs should lose that field, not take
+    the daemon down mid-track.
+
+    `source_type` is **ours to set**, not the plugin's: it says which
+    renderer supplied the metadata, and a plugin naming a different one
+    would be lying about attribution the panel draws.
+    """
+    raw = raw if isinstance(raw, dict) else {}
+    text = ("track_id", "title", "artist", "album", "year", "artwork",
+            "artwork_small", "codec", "transport", "repeat")
+    fields = {k: str(raw[k]) for k in text if raw.get(k) is not None}
+    for number, cast in (("position", float), ("duration", float),
+                         ("sample_rate", int), ("bit_depth", int)):
+        try:
+            if raw.get(number) is not None:
+                fields[number] = cast(raw[number])
+        except (TypeError, ValueError):
+            logger.warning(
+                "plugins: %s sent %s=%r, which is not a number",
+                renderer_id, number, raw.get(number),
+            )
+    if isinstance(raw.get("shuffle"), bool):
+        fields["shuffle"] = raw["shuffle"]
+    unavailable = raw.get("unavailable")
+    if isinstance(unavailable, list):
+        fields["unavailable"] = frozenset(str(u) for u in unavailable)
+    return replace(BLANK_METADATA, source_type=renderer_id, **fields)
+
+
+def plugin_queue(renderer_id: str, raw) -> Queue | None:
+    """**A plugin's queue, as the model** (`{"t": "queue", "queue": [...]}`).
+
+    It was stored as the plugin's own list, which has no `to_json`: once that
+    plugin was active every broadcast raised, and the first one - inside
+    `Supervisor.acquire` - ended the takeover before the outgoing renderer
+    was released (code review, 2026-10-12). Each entry is read as a metadata
+    line is; anything but a list is no queue, as before."""
+    if not isinstance(raw, list):
+        return None
+    return Queue(items=tuple(plugin_metadata(renderer_id, item) for item in raw))
 
 
 #: ADR-0124: the row, and where the software level is kept across restarts -
@@ -1596,40 +1644,6 @@ async def main() -> None:
     # ADR-0035. Defaults are what is true of this deployment today. A wired
     # row is read where it is used - the idle page probe here, the rest by
     # the UI - so none needs a callback.
-    def plugin_metadata(renderer_id: str, raw) -> TrackMetadata:
-        """**A plugin's metadata line, as the model** (contract v1).
-
-        Generic: it reads the fields the contract names and ignores everything
-        else. A plugin is written by somebody who cannot test against this
-        device, so a bad value is dropped rather than raised - a renderer that
-        sends a string where a number belongs should lose that field, not take
-        the daemon down mid-track.
-
-        `source_type` is **ours to set**, not the plugin's: it says which
-        renderer supplied the metadata, and a plugin naming a different one
-        would be lying about attribution the panel draws.
-        """
-        raw = raw if isinstance(raw, dict) else {}
-        text = ("track_id", "title", "artist", "album", "year", "artwork",
-                "artwork_small", "codec", "transport", "repeat")
-        fields = {k: str(raw[k]) for k in text if raw.get(k) is not None}
-        for number, cast in (("position", float), ("duration", float),
-                             ("sample_rate", int), ("bit_depth", int)):
-            try:
-                if raw.get(number) is not None:
-                    fields[number] = cast(raw[number])
-            except (TypeError, ValueError):
-                logger.warning(
-                    "plugins: %s sent %s=%r, which is not a number",
-                    renderer_id, number, raw.get(number),
-                )
-        if isinstance(raw.get("shuffle"), bool):
-            fields["shuffle"] = raw["shuffle"]
-        unavailable = raw.get("unavailable")
-        if isinstance(unavailable, list):
-            fields["unavailable"] = frozenset(str(u) for u in unavailable)
-        return replace(BLANK_METADATA, source_type=renderer_id, **fields)
-
     def _plugin_env(plugin) -> bool:
         """**Export what this plugin's rows say to its unit** (ADR-0088).
 
@@ -3737,8 +3751,7 @@ async def main() -> None:
                 )
                 return
             if kind == "queue":
-                queue = message.get("queue")
-                state_store.set_queue(session.id, queue if isinstance(queue, list) else None)
+                state_store.set_queue(session.id, plugin_queue(session.id, message.get("queue")))
                 return
             if kind == "volume":
                 # The renderer's own level changed - somebody turned it up in
