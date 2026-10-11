@@ -32,7 +32,7 @@
         "type": "choice",
         "label": "Volume",
         "marks": "R",
-        "note": "How the level is set. Hardware: by the sound card's own volume control, bit-perfect at every level. Software: by the player recalculating the sound - for an output with no volume control of its own, such as HDMI; not bit-perfect below 100 %. Fixed: always full level, for an amplifier that sets the volume itself; the change applies when playback next stops.",
+        "note": null,
         "options": [
           "Hardware",
           "Software",
