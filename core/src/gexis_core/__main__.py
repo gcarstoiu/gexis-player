@@ -922,7 +922,7 @@ async def main() -> None:
     fixed_now = {"value": False}
     set_fixed_output_reader(lambda: fixed_now["value"])
 
-    async def _apply_output_mode() -> None:
+    async def _apply_output_mode(force: bool = False) -> None:
         """Put the chosen mode into force, if now is a legal moment.
 
         **ADR-0018 requires the change to apply on the next track or after
@@ -934,7 +934,9 @@ async def main() -> None:
         wanted = fixed_wanted["value"]
         if wanted == fixed_now["value"]:
             return
-        if state_store.state.metadata.transport == "playing":
+        # `force`: the change of volume type has just stopped playback
+        # itself (ADR-0046 amended 2026-10-11); the state may not say so yet.
+        if not force and state_store.state.metadata.transport == "playing":
             logger.info(
                 "output: %s is chosen but something is playing; it applies after stop",
                 "fixed" if wanted else "variable",
@@ -1155,16 +1157,43 @@ async def main() -> None:
         fixed_wanted["value"] = settings.value(VOLUME_KEY) == FIXED
         asyncio.ensure_future(_apply_output_mode())
 
+    volume_change = asyncio.Lock()
+
+    async def _change_volume_type() -> None:
+        """**Every change of volume type stops playback and reopens the
+        renderers** (ADR-0046 amended 2026-10-11, George: *"enforce a renderer
+        disconnect like it is between software and hardware"*). Fixed had
+        waited for a pause and, measured on sofapi, only took hold when a
+        renderer reconnected.
+
+        Whoever plays is stopped first and nobody holds the device, so the
+        source that comes back is a new takeover: its *Starting volume* is
+        applied (George: Spotify came back at 100, the level it had when the
+        switch stopped it). Then the new type is put in force - the software
+        stage in or out with the level carried (ADR-0124), full scale for
+        Fixed - and the renderers reopen on it."""
+        async with volume_change:
+            stopped = await supervisor.stop_active()
+            if stopped:
+                logger.info("volume: %s stopped for the change of volume type", stopped)
+            fixed_wanted["value"] = settings.value(VOLUME_KEY) == FIXED
+            software = settings.value(VOLUME_KEY) == SOFTWARE
+            if software != software_on["value"]:
+                # Rewrites the output and restarts the renderers itself.
+                await _set_software_volume(software)
+                await _apply_output_mode(force=True)
+                return
+            await _apply_output_mode(force=True)
+            logger.info("volume: restarting the renderers on the new volume type")
+            restart = await asyncio.create_subprocess_exec(
+                "systemctl", "restart", "squeezelite.service", "go-librespot.service",
+                "bluealsa-aplay.service",
+            )
+            await restart.wait()
+
     def _choose_volume(value=None) -> None:
-        """ADR-0127: the Volume row. Between Hardware and Software the chain
-        changes, so the output is put in place again with the level carried
-        (ADR-0124); to or from Fixed waits for playback to stop (ADR-0046).
-        Software to Fixed does both: the stage comes out, the card is given
-        the level, then full level once nothing plays."""
-        software = settings.value(VOLUME_KEY) == SOFTWARE
-        if software != software_on["value"]:
-            asyncio.ensure_future(_set_software_volume(software))
-        _choose_output_mode()
+        """ADR-0127: the Volume row - Hardware, Software or Fixed."""
+        asyncio.ensure_future(_change_volume_type())
 
     def _reapply_level() -> None:
         """Put the level back where the *position* now says it belongs.

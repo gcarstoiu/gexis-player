@@ -24,7 +24,6 @@
     loadSettings,
     runSetting,
     writeSetting,
-    fixedPending,
   } from '../lib/settings.js';
 
   // On the panel, Settings is a layer over the library and Back closes it
@@ -633,9 +632,6 @@
   function shown(row) {
     const v = row.value;
     if (row.type === 'toggle') return '';
-    // ADR-0046 as amended: a Volume change that waits for a pause says so.
-    if (row.key === 'output_mode' && $fixedPending === 'on') return 'Fixed at the next pause';
-    if (row.key === 'output_mode' && $fixedPending === 'off') return `${v} at the next pause`;
     // ADR-0123: the cable at a glance, the line the core keeps for it.
     if (row.kind === 'cable') return row.note ?? '';
     // A screen reads as its maker and model, not the picker's `Maker/Model`.
@@ -799,15 +795,14 @@
     return n > FULL_SHEET_OPTIONS;
   });
 
-  //: What a written choice says. **A Volume change that has to wait says
-  //: so** (ADR-0046 as amended, George on sofapi, 2026-10-10): while music
-  //: plays, Fixed starts - or ends - only at the next pause or stop.
+  //: What a written choice says. A change of volume type stops playback
+  //: (ADR-0046 amended 2026-10-11), and says so.
   function said(row, option) {
     const playing = $metadata?.transport === 'playing';
-    if (row.key === 'output_mode' && playing && option === 'Fixed' && !$fixedOutput) {
-      flash('Fixed output starts at the next pause or stop. Until then the volume still works.', 9000);
-    } else if (row.key === 'output_mode' && playing && option !== 'Fixed' && $fixedOutput) {
-      flash(`${option} volume starts at the next pause or stop.`, 9000);
+    // ADR-0046 amended 2026-10-11: a change of volume type stops playback
+    // and reopens the sources at once (George) - no more waiting for a pause.
+    if (row.key === 'output_mode' && playing) {
+      flash(`Volume: ${option}. Playback stopped for the change; start it again when ready.`, 7000);
     } else {
       flash(`${row.label}: ${option}`);
     }
