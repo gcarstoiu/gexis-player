@@ -809,12 +809,32 @@ class Settings:
         row = self.row(key)
         stored = self._store.get(key, _MISSING)
         if stored is not _MISSING:
-            return stored
+            return self._still_offered(row, stored)
         if key in self._seed:
             return self._seed[key]
         if key in self._defaults:
             return self._defaults[key]()
         return row.get("default")
+
+    @staticmethod
+    def _still_offered(row: dict, stored: Any) -> Any:
+        """**A stored choice the row no longer offers is not trusted.** An
+        option taken out of the registry (Space and Season, 2026-10-11, after
+        a player had stored Space) would otherwise stay in force and make the
+        row refuse every write that carries it. A list keeps what is still
+        offered and falls back to the default when nothing is; a single
+        choice falls back to the default. Rows whose options come from the
+        system (`optionsFrom`) are left alone: those change with the hardware
+        and say so through `unavailable`."""
+        options = row.get("options")
+        if row.get("optionsFrom") is not None or not isinstance(options, list) or not options:
+            return stored
+        if row.get("type") == "multi" and isinstance(stored, list):
+            kept = [v for v in stored if v in options]
+            return kept if kept else row.get("default")
+        if row.get("type") == "choice" and stored not in options:
+            return row.get("default")
+        return stored
 
     def to_json(self) -> list[dict]:
         """Every row, including the ones the screen will not draw.

@@ -1661,3 +1661,20 @@ def test_an_in_condition_must_name_a_list():
     with pytest.raises(ValueError):
         _check_pair("row", ["idle_background", {"in": []}])
     _check_pair("row", ["idle_background", {"in": ["Black"]}])
+
+
+
+def test_a_stored_option_the_row_no_longer_offers_falls_away(store):
+    """2026-10-11: sofapi had stored Wallpaper topics ["Space"] before Space
+    left the row; the topics fell back to the default rather than staying
+    empty and refusing every write that carried Space."""
+    settings = Settings(store, registry=load_registry(), wired={"wallpaper_topics": None,
+                                                               "idle_icon_motion": None})
+    default = next(r for r in _rows() if r["key"] == "wallpaper_topics")["default"]
+    store.set("wallpaper_topics", ["Space"])
+    assert settings.value("wallpaper_topics") == default
+    store.set("wallpaper_topics", ["Space", "Nature"])
+    assert settings.value("wallpaper_topics") == ["Nature"]
+    settings.set("wallpaper_topics", ["Nature", "Calm"])          # a write from that list lands
+    store.set("idle_icon_motion", "Wobbly")
+    assert settings.value("idle_icon_motion") == "Animated"
