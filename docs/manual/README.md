@@ -117,11 +117,10 @@ elsewhere (a phone, a Lyrion app) can open the drawer too
 With **Volume** set to *Fixed*, the player always plays at full level
 for an amplifier that sets the volume; the button then shows a padlock and
 the drawer explains why. *Maximum volume* and Spotify's *Starting volume* do
-not apply in Fixed, and their rows are hidden. Chosen while music plays,
-Fixed starts at the next pause or stop, so the level never jumps mid-track;
-until then the volume still works, and the Volume row, the volume controls
-and the phone say *Fixed at the next pause*. Leaving Fixed waits the same
-way.
+not apply in Fixed, and their rows are hidden. Changing the volume type
+while music plays stops playback, and the sources reconnect on the new type,
+so the level never jumps mid-track; the source that comes back starts no
+louder than its *Starting volume*.
 
 ## 3. The library
 
@@ -349,7 +348,7 @@ Changes take effect at once unless the row says otherwise.
 | --- | --- |
 | Output | Where the sound goes. Over HDMI the sound is not bit-perfect; HDMI has no volume control of its own, so its volume is Software or Fixed, and the visualiser moves only on Software. |
 | Sound card board | Most boards and every USB DAC are found by themselves. A board that is not (it does not show under Output) can be chosen here. Each board is marked *Tested* (played and measured by the project), *Reported* (owners reported it working; *Reported with problems* if one did not) or *Known*. |
-| Volume | How the level is set. *Hardware* (default): by the sound card's own volume control, bit-perfect at every level. *Software*: by the player recalculating the sound, on any output; not bit-perfect below 100 %. *Fixed*: always full level, for an amplifier that sets the volume itself; it asks first, and applies when playback next stops. On an output with no volume control of its own, such as HDMI, Hardware is greyed out and Software is used in its place. The level carries across between Hardware and Software. |
+| Volume | How the level is set. *Hardware* (default): by the sound card's own volume control, bit-perfect at every level. *Software*: by the player recalculating the sound, on any output; not bit-perfect below 100 %. *Fixed*: always full level, for an amplifier that sets the volume itself; it asks first. Any change of volume type stops playback while the sources reconnect on it. On an output with no volume control of its own, such as HDMI, Hardware is greyed out and Software is used in its place. The level carries across between Hardware and Software. |
 | Maximum volume | The loudest the player will go, on any input. At 80, 100 % on every control means that level. Hidden with Volume on *Fixed*. |
 | Volume curve | How the slider's travel maps to loudness. *Cubic* (half travel is −15.5 dB) is the usual shape; *Linear* puts half travel at −30 dB. |
 
