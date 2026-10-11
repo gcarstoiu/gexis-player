@@ -27,7 +27,7 @@ SEED_PATH = Path("/etc/gexis/settings-seed.json")
 #: from the store (ADR-0044 §1). It is therefore in TYPES and not in SETTABLE
 #: - except for `kind: "server"`, which `validate` admits on its own; see
 #: there for why one shape of list stores a value and the others do not.
-SETTABLE = {"toggle", "choice", "number", "text", "multi"}
+SETTABLE = {"toggle", "choice", "number", "text", "multi", "intervals"}
 #: `document` opens a page to read and holds no value (ADR-0099): Legal and
 #: Credits, whose text the core serves at `/notices/<document>`.
 TYPES = SETTABLE | {"readonly", "action", "group", "list", "document"}
@@ -247,6 +247,35 @@ def _check_pair(name: str, only: Any) -> None:
         raise ValueError(f"{name}: onlyWhen's \"in\" takes a non-empty list")
 
 
+#: **ADR-0135: an `intervals` row** - times of day on chosen days, as many
+#: as the row's `max`. Each `{"from": "HH:MM", "until": "HH:MM", "days":
+#: [...]}`; an interval may run past midnight, and its days are the days it
+#: starts on.
+DAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+_HHMM = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+
+
+def _intervals(row: dict, value: Any) -> list[dict]:
+    if not isinstance(value, list):
+        raise InvalidValue("expected a list of times")
+    most = int(row.get("max") or 6)
+    if len(value) > most:
+        raise InvalidValue(f"at most {most}")
+    out = []
+    for item in value:
+        if not isinstance(item, dict):
+            raise InvalidValue("each time is a from, an until and its days")
+        start, end, days = item.get("from"), item.get("until"), item.get("days")
+        if not (isinstance(start, str) and _HHMM.match(start) and isinstance(end, str) and _HHMM.match(end)):
+            raise InvalidValue("times are HH:MM")
+        if start == end:
+            raise InvalidValue("a standby time cannot start and end at the same time")
+        if not isinstance(days, list) or not days or any(d not in DAYS for d in days):
+            raise InvalidValue("choose at least one day")
+        out.append({"from": start, "until": end, "days": [d for d in DAYS if d in days]})
+    return out
+
+
 def visible(row: dict, rows: dict[str, dict], values: dict[str, Any]) -> bool:
     """Whether a row is shown, given every row and every current value.
 
@@ -311,6 +340,8 @@ def validate(row: dict, value: Any, *, options: Any = None) -> Any:
         return value.strip()[:TEXT_MAX]
     if kind not in SETTABLE:
         raise NotSettable(f"{row['key']} is {kind} and takes no value")
+    if kind == "intervals":
+        return _intervals(row, value)
     if kind == "toggle":
         if not isinstance(value, bool):
             raise InvalidValue("expected true or false")

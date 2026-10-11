@@ -187,7 +187,7 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         "waiting_background_interval", "waiting_wallpaper_topics", "waiting_wallpaper_styles",
         "waiting_wallpaper_time_of_day", "waiting_wallpaper_seasons", "waiting_wallpaper_holidays",
         # ADR-0135, 2026-10-11: display standby (George).
-        "standby_now", "standby_schedule", "standby_wake",
+        "standby_now", "standby_schedule", "standby_times", "standby_wake",
         # ADR-0058, 2026-09-23: George asked for the three numbers that decide
         # how the visualisation *moves*. The design has no rows for them
         # because until this week nobody knew which knobs there were.
@@ -634,7 +634,7 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # **98**: Cable (ADR-0123, 2026-10-08). **102**: the player's own
     # wallpapers' four rows (ADR-0133, 2026-10-10). **104**: the waiting
     # screen's clock and hint (ADR-0133).
-    assert len(rows) == 117
+    assert len(rows) == 118
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
@@ -654,7 +654,7 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # 82 with Report this hardware (ADR-0126).
     # **81**: Software volume merged into Volume (ADR-0127). **80**: Pexels
     # removed.
-    assert len(rows) - len(kept) == 100  # 100: display standby (ADR-0135); 97: the idle switch and the home background (ADR-0133, 2026-10-11); 88: Weather icon motion (Finding 118); 87: Version hidden, it repeated Release; 88: the waiting screen's two rows (ADR-0133); 86: the own wallpapers (ADR-0133); 82: the factory reset (ADR-0132); 81: Cable (ADR-0123)
+    assert len(rows) - len(kept) == 101  # 101: display standby (ADR-0135); 97: the idle switch and the home background (ADR-0133, 2026-10-11); 88: Weather icon motion (Finding 118); 87: Version hidden, it repeated Release; 88: the waiting screen's two rows (ADR-0133); 86: the own wallpapers (ADR-0133); 82: the factory reset (ADR-0132); 81: Cable (ADR-0123)
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():
@@ -1700,3 +1700,22 @@ def test_every_option_description_names_an_option_and_is_short():
         assert set(notes) <= set(row["options"]), row["key"]
         assert all(len(n) <= 80 for n in notes.values()), row["key"]
         assert not row.get("note"), f"{row['key']}: a top note as well as the options' own"
+
+
+def test_standby_times_take_intervals_on_days_and_refuse_what_cannot_be_kept():
+    """ADR-0135: the owner's standby times - as many as six, each a from and
+    an until (HH:MM, past midnight allowed) on at least one day."""
+    row = next(r for r in _rows() if r["key"] == "standby_times")
+    assert row["type"] == "intervals" and row["max"] == 6
+    assert validate(row, row["default"]) == row["default"]
+    night = {"from": "23:00", "until": "07:00", "days": ["Sun", "Mon"]}
+    assert validate(row, [night]) == [{"from": "23:00", "until": "07:00", "days": ["Mon", "Sun"]}]
+    assert validate(row, []) == []
+    for bad in ([{"from": "7:00", "until": "08:00", "days": ["Mon"]}],
+                [{"from": "24:00", "until": "08:00", "days": ["Mon"]}],
+                [{"from": "08:00", "until": "08:00", "days": ["Mon"]}],
+                [{"from": "08:00", "until": "09:00", "days": []}],
+                [{"from": "08:00", "until": "09:00", "days": ["Funday"]}],
+                [night] * 7, "23:00-07:00"):
+        with pytest.raises(InvalidValue):
+            validate(row, bad)

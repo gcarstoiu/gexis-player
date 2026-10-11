@@ -654,6 +654,13 @@
       const shownNames = held.slice(0, 2).join(', ');
       return held.length > 2 ? `${shownNames} +${held.length - 2}` : shownNames;
     }
+    // ADR-0135: standby times - the one, or how many.
+    if (row.type === 'intervals') {
+      const held = Array.isArray(v) ? v : [];
+      if (!held.length) return 'None';
+      if (held.length > 1) return `${held.length} times`;
+      return `${held[0].from}–${held[0].until} · ${daysSaid(held[0].days)}`;
+    }
     if (row.type === 'list') {
       // A server list reads out which one is in use; a device list counts
       // what it holds. The design takes the count in both cases, which loses
@@ -852,6 +859,49 @@
       o === option ? !on : held.includes(o)
     );
     await write(row, wanted);
+  }
+
+  //: **ADR-0135: standby times**, written at each change as a `multi` is;
+  //: the core refuses what cannot be kept and says why. Times are picked,
+  //: hour and minute, so the panel needs no keyboard for them.
+  const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const HOURS = Array.from({ length: 24 }, (_, h) => String(h).padStart(2, '0'));
+  const QUARTERS = ['00', '15', '30', '45'];
+  function daysSaid(days = []) {
+    const on = DAYS.filter((d) => days.includes(d));
+    if (on.length === 7) return 'every day';
+    if (on.join() === 'Mon,Tue,Wed,Thu,Fri') return 'Mon–Fri';
+    if (on.join() === 'Sat,Sun') return 'weekends';
+    return on.join(', ');
+  }
+  function minutesOf(time) {
+    const m = time.split(':')[1];
+    return QUARTERS.includes(m) ? QUARTERS : [...QUARTERS, m].sort();
+  }
+  async function editInterval(i, change) {
+    if (saving) return;
+    const list = (sheet.value ?? []).map((iv, k) => (k === i ? { ...iv, ...change } : iv));
+    await write(sheet, list);
+  }
+  async function setTime(i, which, part, value) {
+    const [h, m] = (sheet.value[i][which] ?? '00:00').split(':');
+    await editInterval(i, { [which]: part === 'h' ? `${value}:${m}` : `${h}:${value}` });
+  }
+  async function toggleDay(i, day) {
+    const days = sheet.value[i].days ?? [];
+    if (days.includes(day) && days.length === 1) {
+      flash('At least one day has to stay selected');
+      return;
+    }
+    await editInterval(i, { days: days.includes(day) ? days.filter((d) => d !== day) : [...days, day] });
+  }
+  async function addInterval() {
+    if (saving) return;
+    await write(sheet, [...(sheet.value ?? []), { from: '22:00', until: '06:00', days: [...DAYS] }]);
+  }
+  async function removeInterval(i) {
+    if (saving) return;
+    await write(sheet, (sheet.value ?? []).filter((_, k) => k !== i));
   }
 
   let draft = $state(null);
@@ -1951,6 +2001,43 @@
             </button>
           {/each}
         </div>
+      {:else if sheet.type === 'intervals'}
+        <div class="iv" data-noscrollbar>
+          {#each sheet.value ?? [] as iv, i (i)}
+            <div class="iv__item">
+              <div class="iv__times">
+                {#each [['from', 'From'], ['until', 'Until']] as [which, label] (which)}
+                  <span class="iv__pair">
+                  <span class="iv__label">{label}</span>
+                  <span class="iv__time">
+                    <select aria-label="{label} hour" value={iv[which].split(':')[0]} disabled={busy}
+                      onchange={(e) => setTime(i, which, 'h', e.currentTarget.value)}>
+                      {#each HOURS as h (h)}<option value={h}>{h}</option>{/each}
+                    </select>
+                    <span class="iv__colon">:</span>
+                    <select aria-label="{label} minutes" value={iv[which].split(':')[1]} disabled={busy}
+                      onchange={(e) => setTime(i, which, 'm', e.currentTarget.value)}>
+                      {#each minutesOf(iv[which]) as m (m)}<option value={m}>{m}</option>{/each}
+                    </select>
+                  </span>
+                  </span>
+                {/each}
+                <button class="iv__remove" type="button" aria-label="Remove this standby time" disabled={busy}
+                  onclick={() => removeInterval(i)}>×</button>
+              </div>
+              <div class="iv__days">
+                {#each DAYS as d (d)}
+                  <button class="iv__day" class:on={iv.days.includes(d)} type="button" disabled={busy}
+                    aria-pressed={iv.days.includes(d)} onclick={() => toggleDay(i, d)}>{d}</button>
+                {/each}
+              </div>
+            </div>
+          {:else}
+            <p class="iv__none">No standby times yet.</p>
+          {/each}
+          <button class="iv__add" type="button" disabled={busy || (sheet.value ?? []).length >= (sheet.max ?? 6)}
+            onclick={addInterval}>Add standby time</button>
+        </div>
       {:else if sheet.type === 'multi'}
         <!-- The choice sheet with the radio replaced: tapping toggles, and
              nothing closes the sheet because there is no single answer that
@@ -2214,7 +2301,7 @@
             Back
           {:else if restorePending}
             Cancel
-          {:else if choicePending === null && (sheet.type === 'choice' || sheet.type === 'multi' || sheet.grouped || (sheet.wired && sheet.type === 'number'))}
+          {:else if choicePending === null && (sheet.type === 'choice' || sheet.type === 'multi' || sheet.type === 'intervals' || sheet.grouped || (sheet.wired && sheet.type === 'number'))}
             Close
           {:else}
             Cancel
@@ -2980,6 +3067,113 @@
     opacity: 0.42;
   }
 
+  .iv {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .iv__item {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: var(--r-lg);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--ink-line);
+  }
+  .iv__times {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+  }
+  .iv__pair {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap;
+  }
+  .iv__label {
+    min-width: 52px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+  }
+  .iv__time {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .iv__time select {
+    min-height: 44px;
+    padding: 0 10px;
+    border-radius: var(--r-md);
+    border: 1px solid var(--ink-line);
+    background: var(--ink-fill);
+    color: var(--ink);
+    font: inherit;
+    font-size: 17px;
+    font-variant-numeric: tabular-nums;
+  }
+  .iv__colon {
+    color: var(--ink-quiet);
+  }
+  .iv__remove {
+    margin-left: auto;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--ink-line);
+    background: var(--ink-fill);
+    color: var(--ink-muted);
+    font-size: 22px;
+    line-height: 1;
+  }
+  .iv__days {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .iv__day {
+    min-width: 50px;
+    min-height: 44px;
+    padding: 0 10px;
+    border-radius: 22px;
+    border: 1px solid var(--ink-line);
+    background: var(--ink-fill);
+    color: var(--ink-muted);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .iv__day.on {
+    border-color: var(--accent-lms);
+    background: rgba(126, 214, 188, 0.16);
+    color: var(--accent-lms);
+  }
+  .iv__add {
+    min-height: 52px;
+    text-align: center;
+    border-radius: var(--r-lg);
+    border: 1px dashed var(--ink-line);
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .iv__add:disabled {
+    opacity: 0.45;
+  }
+  .iv__none {
+    color: var(--ink-quiet);
+    margin: 0;
+  }
   .option__text {
     flex: 1;
     min-width: 0;

@@ -82,6 +82,7 @@
  "spotify_name",
  "standby_now",
  "standby_schedule",
+ "standby_times",
  "standby_wake",
  "start_max",
  "sweep_all",

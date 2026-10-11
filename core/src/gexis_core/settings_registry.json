@@ -463,6 +463,33 @@
         "default": false
       },
       {
+        "key": "standby_times",
+        "type": "intervals",
+        "label": "Standby times",
+        "marks": "N",
+        "note": "Each from a start to an end time, on the days chosen; one may run past midnight.",
+        "max": 6,
+        "default": [
+          {
+            "from": "23:00",
+            "until": "07:00",
+            "days": [
+              "Mon",
+              "Tue",
+              "Wed",
+              "Thu",
+              "Fri",
+              "Sat",
+              "Sun"
+            ]
+          }
+        ],
+        "onlyWhen": [
+          "standby_schedule",
+          true
+        ]
+      },
+      {
         "key": "standby_wake",
         "type": "number",
         "label": "Back to standby after",

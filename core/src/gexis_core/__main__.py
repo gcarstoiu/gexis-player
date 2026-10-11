@@ -2049,7 +2049,7 @@ async def main() -> None:
                # ADR-0135: display standby. The schedule's rows are read where
                # the schedule is kept; the action puts the screen to sleep now.
                "standby_now": lambda _=None: asyncio.ensure_future(standby.sleep("asked")),
-               "standby_schedule": None, "standby_wake": None,
+               "standby_schedule": None, "standby_times": None, "standby_wake": None,
                "waiting_background": None, "waiting_background_brightness": None,
                "waiting_background_interval": None, "waiting_wallpaper_topics": None,
                "waiting_wallpaper_styles": None, "waiting_wallpaper_time_of_day": None,
