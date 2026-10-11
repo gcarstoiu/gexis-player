@@ -67,6 +67,12 @@ EMPTIED = (
     "etc/NetworkManager/system-connections",
     "var/lib/bluetooth",
     "var/log/journal",
+    # **The panel browser's profile** (the review of 2026-10-12): cookies,
+    # storage, history and cache of every page the panel showed, an external
+    # idle page's included. kiosk.env keeps it off ~/.config "so a factory
+    # reset or a wipe of browser state is one directory"; the reset had not
+    # wiped it. The folder is `pi`'s, so emptied; this runs before the kiosk.
+    "var/lib/gexis-kiosk",
 )
 #: The image's own name and time zone (pi-gen's defaults; ADR-0132 §3).
 HOSTNAME = "raspberrypi"

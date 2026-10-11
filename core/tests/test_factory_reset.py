@@ -22,7 +22,8 @@ def _used_player(root: Path) -> None:
                 "var/lib/squeezeboxserver/prefs/server.prefs", "var/lib/gexis-music/Album/track.flac",
                 "var/lib/gexis-music/Playlists/Evening.m3u", "var/lib/bluetooth/DC:A6:32:00:00:01/settings",
                 "etc/NetworkManager/system-connections/HomeNet.nmconnection",
-                "var/log/journal/abc/system.journal", "var/lib/gexis/plugins/qobuz/current"):
+                "var/log/journal/abc/system.journal", "var/lib/gexis/plugins/qobuz/current",
+                "var/lib/gexis-kiosk/Default/Cookies", "var/lib/gexis-kiosk/Default/Local Storage/leveldb/000003.log"):
         put(rel)
     put("etc/hostname", "livingroom\n")
     put("etc/hosts", "127.0.0.1\tlocalhost\n127.0.1.1\tlivingroom\n")
@@ -53,7 +54,10 @@ def test_a_used_player_goes_back_to_a_freshly_flashed_card(tmp_path):
     # `pi`'s by gexis-core's postinst, and recreated by root it refused
     # every copy into the share (the review of 2026-10-12).
     for emptied in ("var/lib/bluetooth", "etc/NetworkManager/system-connections",
-                    "var/log/journal", "var/lib/gexis-core/backups"):
+                    "var/log/journal", "var/lib/gexis-core/backups",
+                    # The panel browser's profile: cookies, storage and cache
+                    # of every page it showed (the review of 2026-10-12).
+                    "var/lib/gexis-kiosk"):
         assert (tmp_path / emptied).is_dir() and not any((tmp_path / emptied).iterdir()), emptied
     assert (tmp_path / "etc/hostname").read_text() == "raspberrypi\n"
     assert "127.0.1.1\traspberrypi" in (tmp_path / "etc/hosts").read_text()
