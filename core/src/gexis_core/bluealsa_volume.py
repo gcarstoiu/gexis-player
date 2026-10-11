@@ -94,6 +94,8 @@ class BluealsaVolume:
             except Exception as exc:  # noqa: BLE001 - bluealsa is a separate service
                 logger.warning("bluealsa: volume watch failed (%s), retrying in 5s", exc)
             self._forget()
+            # The connection is let go of only here, where it has ended.
+            self._bus = None
             await asyncio.sleep(5)
 
     async def _watch(self) -> None:
@@ -184,9 +186,13 @@ class BluealsaVolume:
         self._on_value(level, STEPS)
 
     def _forget(self) -> None:
+        """The phone's PCM is gone. **The bus is not**: this also runs when a
+        phone disconnects, with the connection and its InterfacesAdded watch
+        still live, and clearing the bus here made the next phone's PCM be
+        passed over in silence - volume following stopped for good after the
+        first disconnect, until the core restarted (code review, 2026-10-12)."""
         self._path = None
         self._level = None
-        self._bus = None
 
     async def set(self, level: int) -> None:
         """Put `level` on the phone. **Only ever a panel-originated value** —
