@@ -270,7 +270,8 @@ class PlaybackState:
     #: panel shows - so the phone's Now playing is a toggle; `minimise` joins
     #: the asks (ADR-0122).
     panel: dict = field(default_factory=lambda: {"visualiser": False, "idle": False, "idle_request": None,
-                                                 "lyrics": False, "now": False, "view_request": None})
+                                                 "lyrics": False, "now": False, "view_request": None,
+                                                 "standby": False})
     #: **ADR-0104: first-boot setup and the setup network**, as
     #: `SetupNetwork.public_status` - never the password, which the panel
     #: reads from `/setup/status` over loopback. None until it has decided.

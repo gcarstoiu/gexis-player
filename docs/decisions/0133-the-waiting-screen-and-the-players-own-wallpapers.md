@@ -147,3 +147,102 @@ way"*, on whether they are fetched as they are shown):
 - Each picture's credit has to be kept with it and drawn, as Pixabay's are.
 - The holidays' dates for the later, lunar ones are a table that has to be
   kept up to date.
+
+## Amended 2026-10-11: a Background section, and Pixabay searches
+
+George, testing the waiting screen with Lyrion off: the rows behind its
+picture were not under *Home screen*. They were under *Idle screen*, because
+the two screens share one background (§5).
+
+1. **A section of its own, *Background***, in Settings → Display between
+   *Home screen* and *Idle screen*, since it serves both (George chose it
+   over repeating the rows or a pointer line): *Background*, *Background
+   brightness*, *Change the picture every*, the Pixabay key and topics, and
+   the four wallpaper rows. *Background* no longer depends on the idle
+   screen being the built-in one: with an external idle page the waiting
+   screen still draws it. No key changes, so no migration.
+2. **Pixabay topics gain Space, Calm and Season** (George, reversing
+   2026-09-21's *"We start with categories"*). They are searches, not
+   Pixabay categories: Space asks for *space*, Calm for *calm*, Season for
+   the current season (*spring*, *summer*, *autumn*, *winter*) by the
+   player's hemisphere, as the Gexis wallpapers' seasons are read. Measured
+   on the bar player the same day: each search has Pixabay's ceiling of 500
+   usable photos. **Searches ask for editors' choice only** (ours: a search
+   matches captions as well as pictures, and Pixabay's picks are its
+   reviewed ones); categories stay as they were.
+3. **Holidays supersede the chosen topics** (George: *"holidays are a toggle
+   that supersede the choice of wallpaper"*). The existing *Holidays* row
+   now governs *Wallpapers online* too: on New Year, and on Christmas and
+   Easter where they are holidays, Pixabay is asked for that holiday
+   (*new year*, *christmas*, *easter*) instead of the topics. Same country
+   rule as the Gexis wallpapers (§4).
+4. **The registry learns "one of"** (`{"in": [...]}` in `onlyWhen`): the
+   *Holidays* row shows for either wallpaper background.
+
+**Revised the same day, after George saw it on sofapi:** Space left the
+topics - the *Space pictures* background covers it - and so did Season:
+the *Seasons* toggle now governs *Wallpapers online* as it does the Gexis
+wallpapers, adding the season's search beside the chosen topics (George
+chose the toggle over the topic). Calm stays a search. Space's searches had
+been fine (the top results were the Milky Way, galaxies and Earth from
+orbit); the topic was redundant, not broken.
+
+## Amended 2026-10-11 (second): two backgrounds, and Display in seven sections
+
+George, on sofapi: one shared *Background* section *"is not working for me
+organisation wise"*. The home screen and the idle screen each get their own.
+
+1. **Display's sections**, in order: *Panel*; **Touchpad** (the phone's
+   touchpad, pointer speed and style); **Volume** (the drawer's two rows);
+   **Photo service and location** (the Pixabay key, and the location the
+   weather and the seasons and holidays read); **Home screen**; **Idle
+   screen**; *Visualiser* and *Visualiser tweaks*. The shared *Background*
+   section of the first amendment is gone.
+2. **Two backgrounds.** *Home screen* keeps its rows (the strip with the
+   Lyrion client on; clock and hint with it off) and gains a background of
+   its own for the waiting screen, shown with the Lyrion client off:
+   `waiting_background` and `waiting_background_brightness`,
+   `waiting_background_interval`, `waiting_wallpaper_topics`,
+   `waiting_wallpaper_styles`, `waiting_wallpaper_time_of_day`,
+   `waiting_wallpaper_seasons`, `waiting_wallpaper_holidays`. **Fresh
+   defaults** (George), not a copy of the idle screen's: Gexis wallpapers,
+   Calm. *Artist pictures* is not offered there - the library it needs is
+   off whenever the waiting screen shows. The idle screen keeps today's keys,
+   so nothing changes for it on an update.
+3. **One order in both** (George: *"background should be followed by Topics
+   and then season toggle"*): Background, Topics or Styles, Follow the time
+   of day, Seasons, Holidays, Background brightness, Change the picture
+   every.
+4. **The idle screen can be switched off**: an *Idle screen* toggle heads
+   its section and hides every row under it when off. **Off by default on a
+   new player** (George); a player already in use keeps it on (a migration
+   for existing players only). Off, the panel never goes idle by itself and
+   the phone's idle button is not offered.
+5. **The picture route says which screen asks** (`/idle/wallpaper?for=home`);
+   each screen keeps its own last picture, so the two do not show the same
+   one by turns.
+
+## Amended 2026-10-11 (third): Space is a topic, not a background
+
+George: *"There was a misunderstanding with Space. It should be a topic not
+a background type."* The first amendment's revision had taken it the other
+way round.
+
+1. **The *Space pictures* background is removed, all of it** (George chose
+   "Remove it all"): the option on both backgrounds, the daily NASA and ESA
+   download (`space_pictures.py`), its route, and the twelve built-in space
+   pictures with their credits - five of them ESA's, the only CC BY ones;
+   `gexis-wallpapers` is now 89 pictures, every one public domain or CC0. A
+   player that had chosen it falls back to *Gexis wallpapers*, the default
+   (a stored option no longer offered falls away); what it had downloaded is
+   deleted once when the core starts.
+2. **Space is a Pixabay topic again**, beside Calm, a search as before.
+3. **Explanations beside the options** (George): the Background sheets, and
+   eight others whose top note explained their options, carry a short line
+   per option instead; such a sheet stays open after a choice until Close.
+4. **Seasons only for Gexis wallpapers** (George, the same day, of three
+   ways put to him): with online wallpapers a season beside a topic such as
+   Science only took turns with it, half the pictures each, and Pixabay
+   cannot ask for "science in autumn". The *Seasons* row shows with Gexis
+   wallpapers alone, on both screens; online wallpapers' topics carry no
+   season. *Holidays* still governs both.

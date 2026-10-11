@@ -1,8 +1,8 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!--
   **The background picture** - the idle screen's (ADR-0047, ADR-0120), and
-  since ADR-0133 the waiting screen's too, which follows the same
-  *Background*. One place that asks the core for the next picture, holds it
+  since ADR-0133 the waiting screen's too, each from its own rows since
+  2026-10-11 (`screen`). One place that asks the core for the next picture, holds it
   until the browser has it, places it by what it shows, and changes it every
   *Change the picture every* minutes. The screen above it binds `picture`
   and `shown` for its own credit line and for whether there is a picture.
@@ -12,11 +12,15 @@
   import { fade } from 'svelte/transition';
   import { screen } from '../lib/family.svelte.js';
 
-  let { settings = {}, active = true, picture = $bindable(null), shown = $bindable(null) } = $props();
+  // `screen`: whose background this is - the idle screen's or the home
+  // (waiting) screen's, each with rows of its own (ADR-0133 amended
+  // 2026-10-11, second).
+  let { settings = {}, active = true, screen: which = 'idle', picture = $bindable(null), shown = $bindable(null) } = $props();
+  const home = $derived(which === 'home');
 
   let panelHeight = $state(window.innerHeight || 800);
   let panelWidth = $state(window.innerWidth || 1280);
-  const background = $derived(settings.idle_background ?? 'Gexis wallpapers');
+  const background = $derived((home ? settings.waiting_background : settings.idle_background) ?? 'Gexis wallpapers');
   const bar = $derived(screen.family === 'bar');
   //: The shape of what is on screen, measured when it loads rather than
   //: asked of the source - a wallpaper service, a photo plugin and a folder
@@ -59,7 +63,7 @@
   // the number is his to move. **The contour does not move with it** - it
   // is what carries the type at *any* brightness, and it matters most at
   // the top of this range where the picture is brightest.
-  const brightness = $derived(Math.max(20, Math.min(100, Number(settings.background_brightness ?? 62))) / 100);
+  const brightness = $derived(Math.max(20, Math.min(100, Number((home ? settings.waiting_background_brightness : settings.background_brightness) ?? 62))) / 100);
 
   // **Loaded before it is shown.** Swapping the source on a visible picture
   // paints the gap; this holds the new one until the browser has it.
@@ -68,7 +72,7 @@
     let answer;
     try {
       // The size, so the core places the picture for this screen (ADR-0120).
-      const response = await fetch(`/idle/wallpaper?w=${Math.round(panelWidth)}&h=${Math.round(panelHeight)}`);
+      const response = await fetch(`/idle/wallpaper?w=${Math.round(panelWidth)}&h=${Math.round(panelHeight)}${home ? '&for=home' : ''}`);
       answer = response.ok ? await response.json() : null;
     } catch {
       answer = null;
@@ -89,7 +93,7 @@
 
   onMount(() => {
     loadPicture();
-    const every = Math.max(1, Number(settings.background_interval ?? 15)) * 60 * 1000;
+    const every = Math.max(1, Number((home ? settings.waiting_background_interval : settings.background_interval) ?? 15)) * 60 * 1000;
     const pictures = setInterval(loadPicture, every);
     return () => clearInterval(pictures);
   });

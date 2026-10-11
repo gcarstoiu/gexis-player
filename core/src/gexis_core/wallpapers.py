@@ -45,15 +45,22 @@ TIMEOUT_S = 10.0
 DOWNLOAD_TIMEOUT_S = 30.0
 
 #: Pixabay's own categories, lowercase on the wire. The settings row offers
-#: them capitalised and nothing of ours: George, on whether to invent topic
-#: words that map to searches - *"We start with categories and see later if
-#: we need to add queries too. I think not though as it should be enough."*
+#: them capitalised. George, 2026-09-21: *"We start with categories and see
+#: later if we need to add queries too."* - and on 2026-10-11 Space, Calm and
+#: Season joined them as searches (ADR-0133 amended; see `SEARCH`).
 CATEGORIES = (
     "backgrounds", "fashion", "nature", "science", "education", "feelings",
     "health", "people", "religion", "places", "animals", "industry",
     "computer", "food", "sports", "transportation", "travel", "buildings",
     "business", "music",
 )
+
+#: **A topic that is a search, not a category**: the caller hands `next()`
+#: `q:<words>` for it - Space and Calm as written, Season as the season it
+#: is, a holiday in place of every topic on its days (ADR-0133 amended
+#: 2026-10-11). Searches ask for editors' choice only: a search matches
+#: captions as well as pictures, and Pixabay's picks are its reviewed ones.
+SEARCH = "q:"
 
 #: Their own rule, not a number we chose: *"Requests must be cached for 24
 #: hours."* One page per category per day, and every picture until the next
@@ -269,6 +276,7 @@ class Wallpapers:
         seen[1] += len(hits)
 
     async def _page(self, key: str, category: str, wide: bool = False) -> list[dict]:
+        # `category` is a Pixabay category or a `q:` search (`SEARCH`).
         """This category's pictures, from cache or from Pixabay.
 
         A failed request leaves whatever is cached in place, including a
@@ -298,7 +306,8 @@ class Wallpapers:
         the request failed."""
         params = {
             "key": key,
-            "category": category,
+            **({"q": category[len(SEARCH):], "editors_choice": "true"} if category.startswith(SEARCH)
+               else {"category": category}),
             "image_type": "photo",
             "orientation": "horizontal",
             "safesearch": "true",
@@ -346,7 +355,8 @@ class Wallpapers:
         the route. Pixabay with its key (ADR-0120 §3; Pexels removed 2026-10-07,
         George: "they are not providing API keys anymore").
         """
-        chosen = [t.lower() for t in (topics or []) if t.lower() in CATEGORIES]
+        chosen = [t.lower() for t in (topics or [])
+                  if t.lower() in CATEGORIES or (t.startswith(SEARCH) and len(t) > len(SEARCH))]
         sources = ["pixabay"] if key else []
         if not sources:
             return {"error": "No Pixabay key yet."}

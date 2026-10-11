@@ -113,8 +113,13 @@ stateDiagram-v2
   joining --> open: join failed (reason kept, password dropped)
   joining --> online: retry join ok
   done --> online: after 10 s, or reboot if name/screen changed
-  online --> [*]
+  online --> open: no network for 2 min after boot (watch, ADR-0134)
 ```
+
+**After boot** `SetupNetwork.watch()` (ADR-0134) looks every 15 s
+(`WATCH_S`), only while the state is `online`, setup is finished and no
+`join_new` is under way. Two minutes (`LOST_S`) with no device `online()`
+accepts opens the setup network and runs the same `_hold` retry as at boot.
 
 State strings are the ones `SetupNetwork.status()` publishes:
 `starting`, `waiting`, `open`, `joining`, `failed`, `done`, `online`.
@@ -324,7 +329,11 @@ All under the core's HTTP server on port 8090 (`wsserver.py`):
 Every route but `/setup/status` answers 409 once setup is over (`_setup_closed`):
 a configured device has Settings for all of this. On a phone, `App.svelte`
 renders `SetupPage` in place of Settings while setup is needed or the setup
-network is up; on the panel, `SetupScreen` covers the ordinary screens.
+network is up (`open` or `failed`), and holds it once shown so a join cannot
+swap it for Settings under the phone. `joining` keeps a page already shown
+but never opens one: a page reconnecting as the player rejoins its own Wi-Fi
+would otherwise hold a setup page with no setup running (found 2026-10-11).
+On the panel, `SetupScreen` covers the ordinary screens.
 
 ---
 

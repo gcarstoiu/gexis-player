@@ -5,6 +5,29 @@ Every release of Gexis Player and its notes, newest first. Generated from
 edit that file, not this one. The player shows the last 10 under
 Settings → System → Change logs.
 
+## 0.10.0 — 11 October 2026
+
+### New
+
+- Display standby. The Screen button in the phone's mini player turns the panel's screen off; a touch, music starting or the button again turns it back on, and the player keeps playing. Settings → Display → Display standby → Scheduled standby turns it off at up to six standby times, each with its own days. Woken during one, it goes dark again after 2 minutes unused (adjustable up to 30).
+- The home screen and the idle screen each have their own background. With the Lyrion client off, the home screen's is set under Settings → Display → Home screen.
+- The idle screen can be switched off. It is off on a new player; a player already in use keeps it on.
+- Weather icon motion: Animated or Static. Static icons use far less of the processor while the idle screen is up.
+- Online wallpapers gain Space and Calm among the topics. On New Year, Christmas and Easter, Holidays shows that day's pictures in their place.
+
+### Fixed
+
+- A player that loses its network while running now opens its setup network after two minutes, as it does at start, and goes back to its saved network when that returns.
+- A phone page open while the player rejoined its network could switch to the setup page and stay there.
+
+### Good to know
+
+- Settings → Display is arranged in sections: Panel, Display standby, Touchpad, Volume, Photo service and location, Home screen, Idle screen, Visualiser.
+- Settings explain each option beside it instead of above the list, and such sheets stay open until closed. In Volume, only Fixed asks to confirm.
+- The Space pictures background is removed. A player that used it shows Gexis wallpapers instead, and space photos are available as a topic of online wallpapers.
+- Seasons applies to Gexis wallpapers only.
+- The player's own wallpapers are 89 pictures, all public domain or CC0.
+
 ## 0.9.9 — 10 October 2026
 
 ### New

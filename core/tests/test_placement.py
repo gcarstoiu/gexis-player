@@ -89,7 +89,7 @@ async def test_the_route_passes_over_a_picture_too_big_and_places_the_next():
     server._wallpapers = object()
     pictures = iter([{"url": "/a.jpg"}, {"url": "/b.jpg"}])
 
-    async def next_background():
+    async def next_background(keys=None):
         return next(pictures)
 
     async def picture_bytes(url):

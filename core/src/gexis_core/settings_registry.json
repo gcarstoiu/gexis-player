@@ -32,7 +32,7 @@
         "type": "choice",
         "label": "Volume",
         "marks": "R",
-        "note": "How the level is set. Hardware: by the sound card's own volume control, bit-perfect at every level. Software: by the player recalculating the sound - for an output with no volume control of its own, such as HDMI; not bit-perfect below 100 %. Fixed: always full level, for an amplifier that sets the volume itself; the change applies when playback next stops.",
+        "note": null,
         "options": [
           "Hardware",
           "Software",
@@ -40,8 +40,12 @@
         ],
         "default": "Hardware",
         "warn": {
-          "Software": "The player changes the level by recalculating the sound. Playback is no longer bit-perfect, at any volume below 100 %. Use it for an output with no volume control of its own, such as HDMI, or if you prefer it. Hardware restores bit-perfect playback.",
-          "Fixed": "Fixed output sends the signal at 100%. Turn your amplifier down before confirming — the panel can no longer lower it. While music plays, it starts at the next pause or stop; until then the volume still works."
+          "Fixed": "Full level, and the panel can no longer lower it. Turn your amplifier down before confirming."
+        },
+        "optionNotes": {
+          "Hardware": "The sound card's own control. Bit-perfect.",
+          "Software": "Set by the player, for HDMI and similar. Not bit-perfect below 100 %.",
+          "Fixed": "Always full level, for an amplifier that sets the volume."
         }
       },
       {
@@ -75,7 +79,7 @@
         "type": "choice",
         "label": "Volume curve",
         "marks": "R",
-        "note": "How the slider's travel maps to loudness, over 60 dB either way. Cubic is the shape a volume control usually has — half travel is −15.5 dB. Linear spreads the decibels evenly instead, which puts half travel at −30 dB and makes the bottom of the slider very quiet.",
+        "note": null,
         "options": [
           "Cubic",
           "Linear (dB)"
@@ -86,7 +90,11 @@
           {
             "not": "Fixed"
           }
-        ]
+        ],
+        "optionNotes": {
+          "Cubic": "Half travel is −15.5 dB, like most volume controls.",
+          "Linear (dB)": "Even decibels: half travel is −30 dB."
+        }
       }
     ]
   },
@@ -214,12 +222,16 @@
         "type": "choice",
         "label": "Pairing",
         "marks": "R",
-        "note": "Confirmation shows a six-digit code on the panel and waits for it to be accepted. PIN-free pairs anything in range without asking.",
+        "note": null,
         "options": [
           "Confirmation required",
           "PIN-free"
         ],
-        "default": "Confirmation required"
+        "default": "Confirmation required",
+        "optionNotes": {
+          "Confirmation required": "A six-digit code on the panel, to be accepted.",
+          "PIN-free": "Pairs anything in range without asking."
+        }
       },
       {
         "key": "bt_discoverable",
@@ -425,27 +437,68 @@
         "default": false
       },
       {
-        "key": "drawer_on_external",
-        "type": "toggle",
-        "label": "Show volume when changed elsewhere",
-        "marks": "N",
-        "note": "A phone’s volume change opens the drawer; the panel’s own changes do not.",
-        "default": true,
+        "type": "group",
+        "label": "Display standby",
+        "accent": "#c8a2d8",
         "onlyWhen": [
           "headless",
           false
         ]
       },
       {
-        "key": "drawer_autohide",
-        "type": "number",
-        "label": "Volume drawer auto-hide",
+        "key": "standby_schedule",
+        "type": "toggle",
+        "label": "Scheduled standby",
         "marks": "N",
+        "note": "The screen off at the standby times whenever nothing is playing.",
+        "default": false
+      },
+      {
+        "key": "standby_times",
+        "type": "intervals",
+        "label": "Standby times",
+        "marks": "N",
+        "note": "Each from a start to an end time, on the days chosen; one may run past midnight.",
+        "max": 6,
+        "default": [
+          {
+            "from": "23:00",
+            "until": "07:00",
+            "days": [
+              "Mon",
+              "Tue",
+              "Wed",
+              "Thu",
+              "Fri",
+              "Sat",
+              "Sun"
+            ]
+          }
+        ],
+        "onlyWhen": [
+          "standby_schedule",
+          true
+        ]
+      },
+      {
+        "key": "standby_wake",
+        "type": "number",
+        "label": "Back to standby after",
+        "marks": "N",
+        "note": "A screen woken during a standby time goes back off after this long without a touch and with nothing playing.",
         "min": 1,
         "max": 30,
-        "unit": "s",
-        "note": "When a change from elsewhere opened it.",
-        "default": 3,
+        "unit": "min",
+        "default": 2,
+        "onlyWhen": [
+          "standby_schedule",
+          true
+        ]
+      },
+      {
+        "type": "group",
+        "label": "Touchpad",
+        "accent": "#c8a2d8",
         "onlyWhen": [
           "headless",
           false
@@ -506,6 +559,70 @@
             true
           ]
         ]
+      },
+      {
+        "type": "group",
+        "label": "Volume",
+        "accent": "#c8a2d8",
+        "onlyWhen": [
+          "headless",
+          false
+        ]
+      },
+      {
+        "key": "drawer_on_external",
+        "type": "toggle",
+        "label": "Show volume when changed elsewhere",
+        "marks": "N",
+        "note": "A phone’s volume change opens the drawer; the panel’s own changes do not.",
+        "default": true,
+        "onlyWhen": [
+          "headless",
+          false
+        ]
+      },
+      {
+        "key": "drawer_autohide",
+        "type": "number",
+        "label": "Volume drawer auto-hide",
+        "marks": "N",
+        "min": 1,
+        "max": 30,
+        "unit": "s",
+        "note": "When a change from elsewhere opened it.",
+        "default": 3,
+        "onlyWhen": [
+          "headless",
+          false
+        ]
+      },
+      {
+        "type": "group",
+        "label": "Photo service and location",
+        "accent": "#c8a2d8",
+        "onlyWhen": [
+          "headless",
+          false
+        ]
+      },
+      {
+        "key": "wallpaper_key",
+        "type": "text",
+        "label": "Pixabay API key",
+        "marks": "N",
+        "note": "For online wallpapers: a Pixabay key, from a free account. Use one per player to avoid throttling.",
+        "secret": true,
+        "placeholder": "Pixabay API key",
+        "default": null
+      },
+      {
+        "key": "weather_location",
+        "type": "text",
+        "label": "Location",
+        "marks": "N",
+        "note": "A city or place name: the weather, and the wallpapers' seasons and holidays, follow it. It can be changed at any time.",
+        "placeholder": "City, country",
+        "default": null
       },
       {
         "type": "group",
@@ -573,6 +690,163 @@
         ]
       },
       {
+        "key": "waiting_background",
+        "type": "choice",
+        "label": "Background",
+        "marks": "N",
+        "note": null,
+        "options": [
+          "Gexis wallpapers",
+          "Wallpapers online",
+          "Wallpapers on device",
+          "Black"
+        ],
+        "default": "Gexis wallpapers",
+        "onlyWhen": [
+          "lms_enabled",
+          false
+        ],
+        "optionNotes": {
+          "Gexis wallpapers": "The player's own photographs, built in.",
+          "Wallpapers online": "Photos from Pixabay; needs its key.",
+          "Wallpapers on device": "From the player's Pictures share.",
+          "Black": "No picture."
+        }
+      },
+      {
+        "key": "waiting_wallpaper_topics",
+        "type": "multi",
+        "label": "Wallpaper topics",
+        "marks": "N",
+        "note": "Space and Calm are searches; the rest are Pixabay's own categories. Each new picture comes from one of the chosen ones at random.",
+        "options": [
+          "Space",
+          "Calm",
+          "Backgrounds",
+          "Fashion",
+          "Nature",
+          "Science",
+          "Education",
+          "Feelings",
+          "Health",
+          "People",
+          "Religion",
+          "Places",
+          "Animals",
+          "Industry",
+          "Computer",
+          "Food",
+          "Sports",
+          "Transportation",
+          "Travel",
+          "Buildings",
+          "Business",
+          "Music"
+        ],
+        "default": [
+          "Nature"
+        ],
+        "onlyWhen": [
+          "waiting_background",
+          "Wallpapers online"
+        ]
+      },
+      {
+        "key": "waiting_wallpaper_styles",
+        "type": "multi",
+        "label": "Wallpaper styles",
+        "marks": "N",
+        "note": "Each new picture comes from one of the chosen styles at random.",
+        "options": [
+          "Calm",
+          "Colourful",
+          "Psychedelic"
+        ],
+        "default": [
+          "Calm"
+        ],
+        "onlyWhen": [
+          "waiting_background",
+          "Gexis wallpapers"
+        ]
+      },
+      {
+        "key": "waiting_wallpaper_time_of_day",
+        "type": "toggle",
+        "label": "Follow the time of day",
+        "marks": "N",
+        "note": "Pictures for dawn, day, dusk and night join the styles, each at its hour.",
+        "default": true,
+        "onlyWhen": [
+          "waiting_background",
+          "Gexis wallpapers"
+        ]
+      },
+      {
+        "key": "waiting_wallpaper_seasons",
+        "type": "toggle",
+        "label": "Seasons",
+        "marks": "N",
+        "note": "The season's pictures join the styles, by hemisphere.",
+        "default": true,
+        "onlyWhen": [
+          "waiting_background",
+          "Gexis wallpapers"
+        ]
+      },
+      {
+        "key": "waiting_wallpaper_holidays",
+        "type": "toggle",
+        "label": "Holidays",
+        "marks": "N",
+        "note": "On New Year, and on Christmas and Easter where they are holidays, only their pictures show, in place of the styles or topics. The country comes from the weather location, or the time zone until one is set.",
+        "default": true,
+        "onlyWhen": [
+          "waiting_background",
+          {
+            "in": [
+              "Gexis wallpapers",
+              "Wallpapers online"
+            ]
+          }
+        ]
+      },
+      {
+        "key": "waiting_background_brightness",
+        "type": "number",
+        "label": "Background brightness",
+        "marks": "N",
+        "note": "Brightness of the background picture. Recommended: 62%.",
+        "min": 20,
+        "max": 100,
+        "step": 5,
+        "unit": "%",
+        "default": 62,
+        "onlyWhen": [
+          "waiting_background",
+          {
+            "not": "Black"
+          }
+        ]
+      },
+      {
+        "key": "waiting_background_interval",
+        "type": "number",
+        "label": "Change the picture every",
+        "marks": "N",
+        "note": "How often the background changes — artist pictures, online wallpapers and the player's own.",
+        "min": 1,
+        "max": 60,
+        "unit": "min",
+        "default": 15,
+        "onlyWhen": [
+          "waiting_background",
+          {
+            "not": "Black"
+          }
+        ]
+      },
+      {
         "type": "group",
         "label": "Idle screen",
         "accent": "#c8a2d8",
@@ -582,16 +856,32 @@
         ]
       },
       {
+        "key": "idle_enabled",
+        "type": "toggle",
+        "label": "Idle screen",
+        "marks": "N",
+        "note": "A clock and picture screen when nobody has used the panel for a while. Off, the panel stays on what it shows.",
+        "default": false
+      },
+      {
         "key": "idle_screen",
         "type": "choice",
         "label": "Screen",
         "marks": "R",
-        "note": "The built-in screen shows the clock and weather. An external page loads the URL provided.",
+        "note": null,
         "options": [
           "Built in",
           "External URL"
         ],
-        "default": "Built in"
+        "default": "Built in",
+        "onlyWhen": [
+          "idle_enabled",
+          true
+        ],
+        "optionNotes": {
+          "Built in": "Clock, weather and a picture.",
+          "External URL": "A web page, from the URL below."
+        }
       },
       {
         "key": "idle_url",
@@ -614,17 +904,20 @@
         "min": 1,
         "max": 60,
         "unit": "min",
-        "default": 5
+        "default": 5,
+        "onlyWhen": [
+          "idle_enabled",
+          true
+        ]
       },
       {
         "key": "idle_background",
         "type": "choice",
         "label": "Background",
         "marks": "N",
-        "note": "Gexis wallpapers and Space pictures are the player's own, built in. Artist pictures come from the library, and show the player's own while the Lyrion client is off. Online wallpapers come from Pixabay and need a key. On-device wallpapers are read from local storage.",
+        "note": null,
         "options": [
           "Gexis wallpapers",
-          "Space pictures",
           "Artist pictures",
           "Wallpapers online",
           "Wallpapers on device",
@@ -634,64 +927,24 @@
         "onlyWhen": [
           "idle_screen",
           "Built in"
-        ]
-      },
-      {
-        "key": "background_brightness",
-        "type": "number",
-        "label": "Background brightness",
-        "marks": "N",
-        "note": "Brightness of the background picture. Recommended: 62%.",
-        "min": 20,
-        "max": 100,
-        "step": 5,
-        "unit": "%",
-        "default": 62,
-        "onlyWhen": [
-          "idle_background",
-          {
-            "not": "Black"
-          }
-        ]
-      },
-      {
-        "key": "background_interval",
-        "type": "number",
-        "label": "Change the picture every",
-        "marks": "N",
-        "note": "How often the background changes — artist pictures, online wallpapers and the player's own.",
-        "min": 1,
-        "max": 60,
-        "unit": "min",
-        "default": 15,
-        "onlyWhen": [
-          "idle_background",
-          {
-            "not": "Black"
-          }
-        ]
-      },
-      {
-        "key": "wallpaper_key",
-        "type": "text",
-        "label": "Pixabay API key",
-        "marks": "N",
-        "note": "A Pixabay key, from a free account. Use one per player to avoid throttling.",
-        "secret": true,
-        "placeholder": "Pixabay API key",
-        "default": null,
-        "onlyWhen": [
-          "idle_background",
-          "Wallpapers online"
-        ]
+        ],
+        "optionNotes": {
+          "Gexis wallpapers": "The player's own photographs, built in.",
+          "Artist pictures": "From the library; the player's own while the Lyrion client is off.",
+          "Wallpapers online": "Photos from Pixabay; needs its key.",
+          "Wallpapers on device": "From the player's Pictures share.",
+          "Black": "No picture."
+        }
       },
       {
         "key": "wallpaper_topics",
         "type": "multi",
         "label": "Wallpaper topics",
         "marks": "N",
-        "note": "Pixabay's own categories. Each new picture is drawn from one of the chosen ones at random, so several stay mixed rather than taking turns.",
+        "note": "Space and Calm are searches; the rest are Pixabay's own categories. Each new picture comes from one of the chosen ones at random.",
         "options": [
+          "Space",
+          "Calm",
           "Backgrounds",
           "Fashion",
           "Nature",
@@ -769,11 +1022,51 @@
         "type": "toggle",
         "label": "Holidays",
         "marks": "N",
-        "note": "On New Year, and on Christmas and Easter where they are holidays, only their pictures show. The country comes from the weather location, or the time zone until one is set.",
+        "note": "On New Year, and on Christmas and Easter where they are holidays, only their pictures show, in place of the styles or topics. The country comes from the weather location, or the time zone until one is set.",
         "default": true,
         "onlyWhen": [
           "idle_background",
-          "Gexis wallpapers"
+          {
+            "in": [
+              "Gexis wallpapers",
+              "Wallpapers online"
+            ]
+          }
+        ]
+      },
+      {
+        "key": "background_brightness",
+        "type": "number",
+        "label": "Background brightness",
+        "marks": "N",
+        "note": "Brightness of the background picture. Recommended: 62%.",
+        "min": 20,
+        "max": 100,
+        "step": 5,
+        "unit": "%",
+        "default": 62,
+        "onlyWhen": [
+          "idle_background",
+          {
+            "not": "Black"
+          }
+        ]
+      },
+      {
+        "key": "background_interval",
+        "type": "number",
+        "label": "Change the picture every",
+        "marks": "N",
+        "note": "How often the background changes — artist pictures, online wallpapers and the player's own.",
+        "min": 1,
+        "max": 60,
+        "unit": "min",
+        "default": 15,
+        "onlyWhen": [
+          "idle_background",
+          {
+            "not": "Black"
+          }
         ]
       },
       {
@@ -817,24 +1110,11 @@
         ]
       },
       {
-        "key": "weather_location",
-        "type": "text",
-        "label": "Location",
-        "marks": "N",
-        "note": "A city or place name. It can be changed at any time.",
-        "placeholder": "City, country",
-        "default": null,
-        "onlyWhen": [
-          "idle_weather",
-          true
-        ]
-      },
-      {
         "key": "idle_forecast",
         "type": "choice",
         "label": "Forecast",
         "marks": "N",
-        "note": "Today's weather is always shown. 3 days adds a three-day forecast beside it.",
+        "note": null,
         "options": [
           "3 days",
           "Today only"
@@ -843,7 +1123,11 @@
         "onlyWhen": [
           "idle_weather",
           true
-        ]
+        ],
+        "optionNotes": {
+          "3 days": "Today and the next three days.",
+          "Today only": "Today's weather alone."
+        }
       },
       {
         "key": "idle_icons",
@@ -861,6 +1145,26 @@
           "idle_weather",
           true
         ]
+      },
+      {
+        "key": "idle_icon_motion",
+        "type": "choice",
+        "label": "Weather icon motion",
+        "marks": "N",
+        "note": null,
+        "options": [
+          "Animated",
+          "Static"
+        ],
+        "default": "Animated",
+        "onlyWhen": [
+          "idle_weather",
+          true
+        ],
+        "optionNotes": {
+          "Animated": "Moving icons: about half of one of the Pi's four processor cores.",
+          "Static": "Still icons: almost none."
+        }
       },
       {
         "type": "group",
@@ -1007,7 +1311,7 @@
         "type": "choice",
         "label": "Rotation",
         "marks": "N",
-        "note": "Stepped redraws a turning record or reel eight times a second. Smooth redraws it every frame it moves, at the expense of more CPU usage.",
+        "note": null,
         "options": [
           "Stepped",
           "Smooth"
@@ -1016,7 +1320,11 @@
           "skin_motion",
           true
         ],
-        "default": "Stepped"
+        "default": "Stepped",
+        "optionNotes": {
+          "Stepped": "Eight redraws a second.",
+          "Smooth": "Every frame it moves; uses more processor."
+        }
       }
     ]
   },
@@ -1264,12 +1572,16 @@
         "type": "choice",
         "label": "Updates",
         "marks": "RN",
-        "note": "Automatic installs a waiting release at night, never while playing, and does not retry one that failed.",
+        "note": null,
         "options": [
           "Manual",
           "Automatic"
         ],
-        "default": "Manual"
+        "default": "Manual",
+        "optionNotes": {
+          "Manual": "Installs when started from here.",
+          "Automatic": "At night, never while playing; a failed one is not retried."
+        }
       },
       {
         "key": "update_channel",
@@ -1281,9 +1593,13 @@
           "Testing"
         ],
         "default": "Stable",
-        "note": "Testing gets each release first. Stable gets it once it has been tried. Recommended: Stable.",
+        "note": null,
         "warn": {
           "Testing": "Testing releases reach this player before everyone else's, and may have problems. Going back to Stable does not downgrade: the player stays where it is until Stable passes it."
+        },
+        "optionNotes": {
+          "Stable": "Each release once it has been tried. Recommended.",
+          "Testing": "Each release first."
         }
       },
       {

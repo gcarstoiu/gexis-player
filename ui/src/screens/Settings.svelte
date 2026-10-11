@@ -654,6 +654,13 @@
       const shownNames = held.slice(0, 2).join(', ');
       return held.length > 2 ? `${shownNames} +${held.length - 2}` : shownNames;
     }
+    // ADR-0135: standby times - the one, or how many.
+    if (row.type === 'intervals') {
+      const held = Array.isArray(v) ? v : [];
+      if (!held.length) return 'None';
+      if (held.length > 1) return `${held.length} times`;
+      return `${held[0].from}–${held[0].until} · ${daysSaid(held[0].days)}`;
+    }
     if (row.type === 'list') {
       // A server list reads out which one is in use; a device list counts
       // what it holds. The design takes the count in both cases, which loses
@@ -807,6 +814,11 @@
 
   async function choose(option) {
     const row = sheet;
+    //: **A sheet whose options are described stays open** (George,
+    //: 2026-10-11, on Volume: "shouldn't close automatically the modal.
+    //: Should stay open until user closes it"): the descriptions are read
+    //: beside the choice, and Close ends it.
+    const stays = !!row.optionNotes;
     if (String(row.value) === option) {
       // Back to what is stored. With something held back that is a change of
       // mind, not a choice, so the sheet stays open and lets go of it.
@@ -814,7 +826,7 @@
         choicePending = null;
         return;
       }
-      sheetKey = null;
+      if (!stays) sheetKey = null;
       return;
     }
     // ADR-0044 §2: a warned option is selected first and committed second.
@@ -824,7 +836,7 @@
       choicePending = option;
       return;
     }
-    sheetKey = null;
+    if (!stays) sheetKey = null;
     if (await write(row, option)) said(row, option);
   }
 
@@ -847,6 +859,64 @@
       o === option ? !on : held.includes(o)
     );
     await write(row, wanted);
+  }
+
+  //: **ADR-0135: standby times.** Edited in a copy the sheet draws at once -
+  //: a day chip waiting for the player's answer felt slow (George,
+  //: 2026-10-11) - and written 400 ms after the last change, or as the sheet
+  //: closes. A time the core refuses puts the copy back to what it holds and
+  //: says why. Times are picked from our own grid, hours then quarters: the
+  //: browser's list was "really old school" and the panel has no keyboard.
+  const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const HOURS = Array.from({ length: 24 }, (_, h) => String(h).padStart(2, '0'));
+  const QUARTERS = ['00', '15', '30', '45'];
+  let ivs = $state([]);
+  let picking = $state(null); // { i, which } while a time's grid is open
+  let ivTimer = null;
+  function daysSaid(days = []) {
+    const on = DAYS.filter((d) => days.includes(d));
+    if (on.length === 7) return 'every day';
+    if (on.join() === 'Mon,Tue,Wed,Thu,Fri') return 'Mon–Fri';
+    if (on.join() === 'Sat,Sun') return 'weekends';
+    return on.join(', ');
+  }
+  function ivChanged(list) {
+    ivs = list;
+    clearTimeout(ivTimer);
+    ivTimer = setTimeout(saveIntervals, 400);
+  }
+  async function saveIntervals() {
+    clearTimeout(ivTimer);
+    ivTimer = null;
+    const row = sheet ?? rowOf('standby_times');
+    if (!row || row.type !== 'intervals') return;
+    const wanted = $state.snapshot(ivs);
+    if (JSON.stringify(wanted) === JSON.stringify(row.value ?? [])) return;
+    if (!(await write(row, wanted))) ivs = structuredClone(row.value ?? []);
+  }
+  function setTime(i, which, part, value) {
+    const [h, m] = ivs[i][which].split(':');
+    const time = part === 'h' ? `${value}:${m}` : `${h}:${value}`;
+    // The grid stays open to show what was chosen (George, 2026-10-11);
+    // tapping the time again closes it.
+    ivChanged(ivs.map((iv, k) => (k === i ? { ...iv, [which]: time } : iv)));
+  }
+  function toggleDay(i, day) {
+    const days = ivs[i].days;
+    if (days.includes(day) && days.length === 1) {
+      flash('At least one day has to stay selected');
+      return;
+    }
+    const next = days.includes(day) ? days.filter((d) => d !== day) : DAYS.filter((d) => d === day || days.includes(d));
+    ivChanged(ivs.map((iv, k) => (k === i ? { ...iv, days: next } : iv)));
+  }
+  function addInterval() {
+    picking = null;
+    ivChanged([...ivs, { from: '22:00', until: '06:00', days: [...DAYS] }]);
+  }
+  function removeInterval(i) {
+    picking = null;
+    ivChanged(ivs.filter((_, k) => k !== i));
   }
 
   let draft = $state(null);
@@ -874,6 +944,10 @@
     // takes (ADR-0044 §1, amended 2026-09-21).
     items = row.items ?? [];
     if (row.type === 'list') openList(row.key);
+    if (row.type === 'intervals') {
+      ivs = structuredClone(row.value ?? []);
+      picking = null;
+    }
   }
 
   //: Fetched per opening, never cached: a scan is a picture of the room now.
@@ -1261,6 +1335,8 @@
   }
 
   function cancelSheet() {
+    // ADR-0135: standby times still waiting to be written go now.
+    if (sheet?.type === 'intervals' && ivTimer) saveIntervals();
     // A feedback step after the first goes back one step.
     if (sheet?.kind === 'hardware' && hw && hwAt > 0 && !hwUrl) {
       hwStep = hwSteps[hwAt - 1];
@@ -1276,6 +1352,8 @@
   }
 
   function closeSheet() {
+    // ADR-0135: standby times still waiting to be written go now.
+    if (sheet?.type === 'intervals' && ivTimer) saveIntervals();
     restorePending = null;
     // Inside a level, the same button steps back before it closes.
     if (joinItem && join !== 'connecting') {
@@ -1946,6 +2024,55 @@
             </button>
           {/each}
         </div>
+      {:else if sheet.type === 'intervals'}
+        <div class="iv" data-noscrollbar>
+          {#each ivs as iv, i (i)}
+            <div class="iv__item">
+              <button class="iv__remove" type="button" aria-label="Remove this standby time"
+                onclick={() => removeInterval(i)}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17" /></svg>
+              </button>
+              <div class="iv__times">
+                {#each [['from', 'From'], ['until', 'Until']] as [which, label] (which)}
+                  {@const open = picking?.i === i && picking?.which === which}
+                  <span class="iv__pair">
+                    <span class="iv__label">{label}</span>
+                    <button class="iv__time" class:open type="button" aria-expanded={open}
+                      aria-label="{label} {iv[which]}"
+                      onclick={() => (picking = open ? null : { i, which })}>{iv[which]}</button>
+                  </span>
+                {/each}
+              </div>
+              {#if picking?.i === i}
+                {@const [hh, mm] = iv[picking.which].split(':')}
+                <div class="iv__picker">
+                  <div class="iv__grid iv__grid--hours">
+                    {#each HOURS as h (h)}
+                      <button class="iv__cell" class:on={h === hh} type="button"
+                        onclick={() => setTime(i, picking.which, 'h', h)}>{h}</button>
+                    {/each}
+                  </div>
+                  <div class="iv__grid iv__grid--quarters">
+                    {#each QUARTERS as m (m)}
+                      <button class="iv__cell" class:on={m === mm} type="button"
+                        onclick={() => setTime(i, picking.which, 'm', m)}>:{m}</button>
+                    {/each}
+                  </div>
+                </div>
+              {/if}
+              <div class="iv__days">
+                {#each DAYS as d (d)}
+                  <button class="iv__day" class:on={iv.days.includes(d)} type="button"
+                    aria-pressed={iv.days.includes(d)} onclick={() => toggleDay(i, d)}>{d}</button>
+                {/each}
+              </div>
+            </div>
+          {:else}
+            <p class="iv__none">No standby times yet.</p>
+          {/each}
+          <button class="iv__add" type="button" disabled={ivs.length >= (sheet.max ?? 6)}
+            onclick={addInterval}>Add standby time</button>
+        </div>
       {:else if sheet.type === 'multi'}
         <!-- The choice sheet with the radio replaced: tapping toggles, and
              nothing closes the sheet because there is no single answer that
@@ -1986,7 +2113,13 @@
             >
               <span class="radio"><span></span></span>
               {#if p.ord}<span class="option__ord">{p.ord}</span>{/if}
-              <span class="option__label">{p.label}</span>
+              {#if sheet.optionNotes?.[option]}
+                <!-- A line under the option (George, 2026-10-11: Volume's
+                     three, each short; only Fixed keeps the amber warning). -->
+                <span class="option__text"><span class="option__label">{p.label}</span><span class="option__note">{sheet.optionNotes[option]}</span></span>
+              {:else}
+                <span class="option__label">{p.label}</span>
+              {/if}
               {#if why}<span class="option__why">{why}</span>{/if}
             </button>
           {/each}
@@ -2203,7 +2336,7 @@
             Back
           {:else if restorePending}
             Cancel
-          {:else if choicePending === null && (sheet.type === 'choice' || sheet.type === 'multi' || sheet.grouped || (sheet.wired && sheet.type === 'number'))}
+          {:else if choicePending === null && (sheet.type === 'choice' || sheet.type === 'multi' || sheet.type === 'intervals' || sheet.grouped || (sheet.wired && sheet.type === 'number'))}
             Close
           {:else}
             Cancel
@@ -2969,6 +3102,169 @@
     opacity: 0.42;
   }
 
+  .iv {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .iv__item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: var(--r-lg);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--ink-line);
+  }
+  .iv__remove {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    border: 1px solid var(--ink-line);
+    background: var(--ink-fill);
+    color: var(--ink-muted);
+  }
+  .iv__remove svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+  }
+  .iv__times {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 56px;
+  }
+  .iv__pair {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .iv__label {
+    min-width: 56px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+  }
+  .iv__time {
+    min-width: 104px;
+    text-align: center;
+    min-height: 48px;
+    padding: 0 16px;
+    border-radius: var(--r-md);
+    border: 1px solid var(--ink-line);
+    background: var(--ink-fill);
+    color: var(--ink);
+    font: inherit;
+    font-size: 22px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .iv__time.open {
+    border-color: var(--accent-lms);
+    color: var(--accent-lms);
+  }
+  .iv__picker {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .iv__grid {
+    display: grid;
+    gap: 6px;
+  }
+  .iv__grid--hours {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .iv__grid--quarters {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .iv__cell {
+    min-height: 44px;
+    padding: 0;
+    text-align: center;
+    border-radius: var(--r-md);
+    border: 1px solid var(--ink-line);
+    background: var(--ink-fill);
+    color: var(--ink-body);
+    font: inherit;
+    font-size: 16px;
+    font-variant-numeric: tabular-nums;
+  }
+  .iv__cell.on {
+    border-color: var(--accent-lms);
+    background: rgba(126, 214, 188, 0.16);
+    color: var(--accent-lms);
+    font-weight: 700;
+  }
+  .iv__days {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .iv__day {
+    min-width: 50px;
+    text-align: center;
+    min-height: 44px;
+    padding: 0 10px;
+    border-radius: 22px;
+    border: 1px solid var(--ink-line);
+    background: var(--ink-fill);
+    color: var(--ink-muted);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .iv__day.on {
+    border-color: var(--accent-lms);
+    background: rgba(126, 214, 188, 0.16);
+    color: var(--accent-lms);
+  }
+  .iv__add {
+    min-height: 52px;
+    text-align: center;
+    border-radius: var(--r-lg);
+    border: 1px dashed var(--ink-line);
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .iv__add:disabled {
+    opacity: 0.45;
+  }
+  .iv__none {
+    color: var(--ink-quiet);
+    margin: 0;
+  }
+  .option__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .option__note {
+    font-size: 14px;
+    line-height: 1.35;
+    color: var(--ink-quiet);
+  }
   .option__why {
     margin-left: auto;
     padding-left: 14px;

@@ -125,3 +125,25 @@ def test_an_existing_player_keeps_artist_pictures_and_a_new_one_starts_on_gexis_
     default = next(r["default"] for g in json.loads(REGISTRY.read_text()) for r in g["rows"]
                    if r.get("key") == "idle_background")
     assert default == "Gexis wallpapers"
+
+
+def test_an_existing_player_keeps_its_idle_screen_and_a_new_one_starts_without(tmp_path):
+    """ADR-0133 amended 2026-10-11 (second): the idle screen is off on a new
+    player and stays on for one already in use (George: "Existing players
+    keep it on")."""
+    step = sm.MIGRATIONS.index(next(m for m in sm.MIGRATIONS if m.note.startswith("idle_enabled")))
+    used = SettingsStore(tmp_path / "used.db")
+    used.set(sm.SCHEMA_KEY, step)
+    sm.migrate(used)
+    assert used.get("idle_enabled") is True
+    chose = SettingsStore(tmp_path / "chose.db")
+    chose.set(sm.SCHEMA_KEY, step)
+    chose.set("idle_enabled", False)
+    sm.migrate(chose)
+    assert chose.get("idle_enabled") is False
+    new = SettingsStore(tmp_path / "new.db")
+    sm.migrate(new)
+    assert new.get("idle_enabled") is None
+    default = next(r["default"] for g in json.loads(REGISTRY.read_text()) for r in g["rows"]
+                   if r.get("key") == "idle_enabled")
+    assert default is False

@@ -122,6 +122,12 @@ MIGRATIONS: tuple[Migration, ...] = (
     Migration(note="idle_background: an existing player keeps Artist pictures, the old default",
               run=lambda store: store.get("idle_background") is None and store.set("idle_background", "Artist pictures"),
               existing_only=True),
+    # ADR-0133 amended 2026-10-11 (second): the idle screen can be switched
+    # off, and is off on a new player (George). A player already in use keeps
+    # it on - "Existing players keep it on".
+    Migration(note="idle_enabled: an existing player keeps its idle screen on",
+              run=lambda store: store.get("idle_enabled") is None and store.set("idle_enabled", True),
+              existing_only=True),
 )
 
 

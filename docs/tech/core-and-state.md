@@ -184,7 +184,7 @@ routes are loopback-only or behave differently by origin: `/surface`,
 | Surface | `GET /surface` → `panel` or `remote` | Both, at start (ADR-0032) |
 | Touchpad relay | `GET /touchpad` (WebSocket) | Phone ↔ panel (ADR-0121) |
 | Playback | `POST /renderer/{id}/activate`, `POST /transport/{command}`, `POST /volume`, `POST /volume/mute` | Both |
-| Panel view | `POST /touch`, `POST /panel/painted`, `POST /panel/shown`, `POST /panel/idle/{show,hide}`, `POST /panel/go/{to}`, `POST /peppy/{action}` | Panel reports; phone asks |
+| Panel view | `POST /touch`, `POST /panel/painted`, `POST /panel/shown`, `POST /panel/idle/{show,hide}`, `POST /panel/standby/{on,off}` (ADR-0135), `POST /panel/go/{to}`, `POST /peppy/{action}` | Panel reports; phone asks |
 | Idle screen | `GET /idle`, `/idle/weather`, `/idle/wallpaper`, `/idle/wallpaper/{name}`, `/idle/wallpaper/local/{path}` | Panel (ADR-0047) |
 | Library | `GET /library/{counts,strip,new,artists,playlists}`, `/library/artists/{id}/{albums,genres}`, `/library/albums/{id}`, `/library/playlists/{id}`, `/library/artist-photos`, `/library/artist-info`; `POST /library/action` | Panel (ADR-0038) |
 | Radio | `GET /radio?handle=…`, `POST /radio/play` | Panel (ADR-0030) |
@@ -265,7 +265,7 @@ seven groups (Audio, Sources, Handoff, Display, Enrichment, Plugins, System),
 each a list of rows. System took in Device on 2026-10-10 (George: *"it is
 confusing to have both"*), under the sub-headings This player, Network,
 Updates, Backup and reset, Help, About and Power; no key changed. A row has a `key`, a `type` and presentation
-fields. Types: `toggle`, `choice`, `number`, `text`, `multi` (settable),
+fields. Types: `toggle`, `choice`, `number`, `text`, `multi`, `intervals` (settable; the last, ADR-0135, a list of `{from, until, days}`),
 `readonly`, `action`, `group` (a sub-heading), `list` (items from discovery,
 such as Wi-Fi networks) and `document` (Legal, Credits). ADR-0044 added the
 row mechanics `list`, `warn`, `onlyWhen`, `optionsFrom`, `picker` and
@@ -280,7 +280,8 @@ row mechanics `list`, `warn`, `onlyWhen`, `optionsFrom`, `picker` and
   (`/etc/gexis/settings-seed.json`, validated row by row), a `defaults`
   callable (deployment config or the running system), the registry default.
 - **The API publishes every row and the panel filters**: each row carries a
-  computed `visible` (from `onlyWhen`, including a heading's or a group's
+  computed `visible` (from `onlyWhen` - a value, `"*any*"`, `{"not": v}` or,
+  since 2026-10-11, `{"in": [v, ...]}` - including a heading's or a group's
   condition), its current `value`, `options` for `optionsFrom` sources
   (`skin_corpus`, `timezones`, `output_device`, `screens`, `boards`), `unavailable`
   options greyed with a reason (ADR-0044 §8), a plugin's `status`
@@ -484,3 +485,20 @@ plugin may send: `acquire`, `release`, `available`, `metadata`, `queue`,
 | `/run/gexis/` | Runtime files: plugin socket, plugin env files, meter FIFOs, visualiser selection |
 | `/usr/share/gexis/plugins/` | Shipped plugin manifests |
 | `/var/lib/gexis/plugins/` | Uploaded plugins |
+
+## Display standby (ADR-0135)
+
+`standby.py`. `Standby` holds whether the screen is off and why (`asked`,
+`schedule`); `sleep()` publishes `panel.standby` first - the panel draws a
+black cover, which also takes the waking tap - then turns the output off with
+`wlr-randr` in the kiosk's labwc session (`runuser -u pi`, the connector and
+turn from `/etc/gexis/screen.env`); `wake()` turns it back on with the turn
+re-applied, then publishes. A touch (`POST /touch`), music starting
+(`follow_playback` in `__main__.py`) and `POST /panel/standby/off` wake it;
+the visualiser does not come up while it is off (`PeppyController(blocked=)`).
+`Schedule.tick()`, every 15 s: inside a standby time (`in_standby_time`; an
+interval belongs to the days it starts on) the screen goes off once nothing
+plays and `last_use` is older than `standby_wake` minutes; outside them, a
+screen the schedule put off wakes. Measured on the 10.1": touch still reaches
+the page with the output off; the screen shows its own "No signal" for about
+10 s some 30 s in.

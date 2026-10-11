@@ -27,7 +27,7 @@
   be worse than extending this one.
 -->
 <script>
-  let { condition = 'unknown', set = 'Solid', size = 80 } = $props();
+  let { condition = 'unknown', set = 'Solid', size = 80, still = false } = $props();
 
   // Which primitives each condition is made of. The design's own `cond()`
   // maps sun/part/cloud/rain; the rest extend it.
@@ -63,6 +63,7 @@
 
 <span
   class="wx wx--{kind}"
+  class:wx--still={still}
   style:width={`${size}px`}
   style:height={`${size}px`}
   style:--s={`${size}px`}
@@ -112,6 +113,15 @@
 </span>
 
 <style>
+  /* **Still, when the owner chooses it** (*Weather icon motion*, George,
+     2026-10-11). Any one running animation keeps Chromium on a Pi 4 drawing
+     every frame - about half a core - and paused it is 4-6 % (Finding 118).
+     Each shape keeps its resting frame. */
+  .wx--still,
+  .wx--still * {
+    animation: none !important;
+  }
+
   /* The design's four animations, verbatim. */
   @keyframes wxSpin {
     to {

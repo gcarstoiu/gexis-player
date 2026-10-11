@@ -9,7 +9,7 @@
   that its app keeps a volume of its own.
 -->
 <script>
-  import { active, metadata, volume, fixedOutput, meters, panel, setVolume, showPeppy, hidePeppy, requestIdle, goTo } from '../lib/state.js';
+  import { active, metadata, volume, fixedOutput, meters, panel, setVolume, showPeppy, hidePeppy, requestIdle, requestStandby, goTo } from '../lib/state.js';
   import { fixedPending } from '../lib/settings.js';
   import SourceMark from '../lib/SourceMark.svelte';
   import { settingValues } from '../lib/settings.js';
@@ -449,6 +449,19 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V11M10 19V5M15 19V9M20 19V13" /></svg>
       </button>
     {/if}
+    <!-- ADR-0135: the panel's screen off, or back on. -->
+    <button
+      class="mini__icon"
+      class:is-on={$panel.standby}
+      type="button"
+      aria-pressed={$panel.standby}
+      aria-label={$panel.standby ? 'Turn the panel screen on' : 'Turn the panel screen off'}
+      onclick={() => requestStandby(!$panel.standby).catch(() => {})}
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="11" rx="1.5" /><path d="M9 20h6M12 16v4" /></svg>
+    </button>
+    {#if $settingValues.idle_enabled === true}
+    <!-- Not offered with the idle screen switched off (2026-10-11). -->
     <button
       class="mini__icon"
       class:is-on={$panel.idle}
@@ -459,6 +472,7 @@
     >
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 14.5A7.5 7.5 0 0 1 9.5 5 7.5 7.5 0 1 0 19 14.5Z" /></svg>
     </button>
+    {/if}
   </div>
 
   <!-- ADR-0046 as amended: a Volume change waiting for a pause says so. -->

@@ -2473,6 +2473,11 @@ the legal text"*).
 
 ### Phase 13 — First boot without a network
 
+**PHASE 13 CLOSED, 2026-10-10** (George agreed to the recommendation). All
+nine criteria were met by 2026-09-29; the one thing left then - a flash of
+the image on a blank card - has been done with every 0.9.x image since,
+setup and restore included.
+
 Added 2026-09-14, George: give credentials a phase, *"with an initial hotspot
 creation upon the first boot for setting up the device — so basically not only
 the credentials but also things like hostname"*. Decided in
@@ -2792,6 +2797,13 @@ passwordless `sudo` (above).
 
 ### Phase 13d — DACs we have not tested
 
+**Closes after two tests** (George, 2026-10-10, agreeing to the
+recommendation): Plexamp through the IQaudio Pi-DAC PRO, and a chosen board
+that is not fitted, taken back - both on guestpi. The DAC+ the phase planned
+stays untested: the IQaudio board to hand is the Pi-DAC PRO (Finding 114).
+The board in setup's Audio step was settled as a pointer to *Settings →
+Audio → Sound card board* (George, 2026-10-04).
+
 **Decided 2026-10-01** (George): its own phase, after 13b, seeded from
 Volumio's list (GPL-3.0-only, so the combined work stays at GPL-3.0), with
 the DAC2 HD and the IQaudio DAC+ as the two tested boards. What is known, and
@@ -2899,6 +2911,11 @@ is Normal under 4 GB (decision 19). **Left for later:** the scanner's memory
 per file on Pis other than 4 GB, and temperatures with a case (HARDWARE.md).
 
 ### Phase 13f — Lyrion's own menus, plugins included
+
+**Closes after the hidden library's hour** on the Pi (ADR-0122,
+Consequences; measured 2026-10-10, nothing - Finding 118) **and George's look** (George, 2026-10-10, agreeing to the
+recommendation). It was built and released behind *Extended navigation*
+(ADR-0118); it had no written acceptance criteria, so closing is his call.
 
 **Added 2026-10-04** (George: *"can we make a plugin which extends the
 lyrion server navigation. Basically have everything that lyrion has as

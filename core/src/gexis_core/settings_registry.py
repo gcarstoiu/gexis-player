@@ -27,7 +27,7 @@ SEED_PATH = Path("/etc/gexis/settings-seed.json")
 #: from the store (ADR-0044 §1). It is therefore in TYPES and not in SETTABLE
 #: - except for `kind: "server"`, which `validate` admits on its own; see
 #: there for why one shape of list stores a value and the others do not.
-SETTABLE = {"toggle", "choice", "number", "text", "multi"}
+SETTABLE = {"toggle", "choice", "number", "text", "multi", "intervals"}
 #: `document` opens a page to read and holds no value (ADR-0099): Legal and
 #: Credits, whose text the core serves at `/notices/<document>`.
 TYPES = SETTABLE | {"readonly", "action", "group", "list", "document"}
@@ -50,6 +50,12 @@ ONLY_WHEN_ANY = "*any*"
 #: sentinel because a setting's value is always a scalar, so this cannot be
 #: mistaken for one.
 ONLY_WHEN_NOT = "not"
+
+#: `onlyWhen: [key, {"in": [a, b]}]` - shown while the key holds one of
+#: these (ADR-0133 amended 2026-10-11: *Holidays* governs both wallpaper
+#: backgrounds, and no third one). Where a negation would be right for every
+#: background but one, it stays the better form, for the reason above.
+ONLY_WHEN_IN = "in"
 
 #: Sources a `choice` may draw its options from instead of a literal list
 #: (ADR-0044 §4). Adding one is a code change, not a registry edit, which is
@@ -231,11 +237,43 @@ def _check_only_when(name: str, only: Any) -> None:
 def _check_pair(name: str, only: Any) -> None:
     if not isinstance(only, list) or len(only) != 2:
         raise ValueError(f"{name}: onlyWhen is [key, value]")
-    if isinstance(only[1], dict) and set(only[1]) != {ONLY_WHEN_NOT}:
+    if isinstance(only[1], dict) and set(only[1]) not in ({ONLY_WHEN_NOT}, {ONLY_WHEN_IN}):
         # A typo in the one key this form has would otherwise read as
         # "not equal to nothing", which is every value, which is a row
         # that never hides and never says why.
-        raise ValueError(f"{name}: onlyWhen's object form is {{\"not\": value}}")
+        raise ValueError(f"{name}: onlyWhen's object form is {{\"not\": value}} or {{\"in\": [values]}}")
+    if isinstance(only[1], dict) and ONLY_WHEN_IN in only[1] and not (
+            isinstance(only[1][ONLY_WHEN_IN], list) and only[1][ONLY_WHEN_IN]):
+        raise ValueError(f"{name}: onlyWhen's \"in\" takes a non-empty list")
+
+
+#: **ADR-0135: an `intervals` row** - times of day on chosen days, as many
+#: as the row's `max`. Each `{"from": "HH:MM", "until": "HH:MM", "days":
+#: [...]}`; an interval may run past midnight, and its days are the days it
+#: starts on.
+DAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+_HHMM = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+
+
+def _intervals(row: dict, value: Any) -> list[dict]:
+    if not isinstance(value, list):
+        raise InvalidValue("expected a list of times")
+    most = int(row.get("max") or 6)
+    if len(value) > most:
+        raise InvalidValue(f"at most {most}")
+    out = []
+    for item in value:
+        if not isinstance(item, dict):
+            raise InvalidValue("each time is a from, an until and its days")
+        start, end, days = item.get("from"), item.get("until"), item.get("days")
+        if not (isinstance(start, str) and _HHMM.match(start) and isinstance(end, str) and _HHMM.match(end)):
+            raise InvalidValue("times are HH:MM")
+        if start == end:
+            raise InvalidValue("a standby time cannot start and end at the same time")
+        if not isinstance(days, list) or not days or any(d not in DAYS for d in days):
+            raise InvalidValue("choose at least one day")
+        out.append({"from": start, "until": end, "days": [d for d in DAYS if d in days]})
+    return out
 
 
 def visible(row: dict, rows: dict[str, dict], values: dict[str, Any]) -> bool:
@@ -281,6 +319,8 @@ def _holds(row: dict, only: list, rows: dict[str, dict], values: dict[str, Any],
     held = values.get(key)
     if wanted == ONLY_WHEN_ANY:
         return held not in (None, "", False)
+    if isinstance(wanted, dict) and ONLY_WHEN_IN in wanted:
+        return held in wanted[ONLY_WHEN_IN]
     if isinstance(wanted, dict):
         return held != wanted[ONLY_WHEN_NOT]
     return held == wanted
@@ -300,6 +340,8 @@ def validate(row: dict, value: Any, *, options: Any = None) -> Any:
         return value.strip()[:TEXT_MAX]
     if kind not in SETTABLE:
         raise NotSettable(f"{row['key']} is {kind} and takes no value")
+    if kind == "intervals":
+        return _intervals(row, value)
     if kind == "toggle":
         if not isinstance(value, bool):
             raise InvalidValue("expected true or false")
@@ -798,12 +840,32 @@ class Settings:
         row = self.row(key)
         stored = self._store.get(key, _MISSING)
         if stored is not _MISSING:
-            return stored
+            return self._still_offered(row, stored)
         if key in self._seed:
             return self._seed[key]
         if key in self._defaults:
             return self._defaults[key]()
         return row.get("default")
+
+    @staticmethod
+    def _still_offered(row: dict, stored: Any) -> Any:
+        """**A stored choice the row no longer offers is not trusted.** An
+        option taken out of the registry (Space and Season, 2026-10-11, after
+        a player had stored Space) would otherwise stay in force and make the
+        row refuse every write that carries it. A list keeps what is still
+        offered and falls back to the default when nothing is; a single
+        choice falls back to the default. Rows whose options come from the
+        system (`optionsFrom`) are left alone: those change with the hardware
+        and say so through `unavailable`."""
+        options = row.get("options")
+        if row.get("optionsFrom") is not None or not isinstance(options, list) or not options:
+            return stored
+        if row.get("type") == "multi" and isinstance(stored, list):
+            kept = [v for v in stored if v in options]
+            return kept if kept else row.get("default")
+        if row.get("type") == "choice" and stored not in options:
+            return row.get("default")
+        return stored
 
     def to_json(self) -> list[dict]:
         """Every row, including the ones the screen will not draw.

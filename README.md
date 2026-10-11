@@ -82,7 +82,7 @@ Artwork, synced lyrics, artist biographies and photos, and the album the track
 is from, whether it came from Spotify, your own files, Plex or a phone. When
 nothing is playing: a clock, the weather and wallpapers - the player's own
 public-domain photographs, changing with the time of day, the seasons and
-the holidays, or new space pictures from NASA and ESA. When you just want to
+the holidays, or photos from Pixabay - space among them. When you just want to
 watch the music: up to 287 visualiser skins, from studio VU meters and a
 spectrum from 50 Hz to 16 kHz to turntables and tape decks whose records and
 reels turn as the music plays.

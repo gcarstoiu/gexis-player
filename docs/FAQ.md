@@ -175,45 +175,58 @@ the library.
 
 ## Idle screen and visualiser
 
+**Can the screen turn off, at night or on demand?**
+Yes. The *Screen* button in the phone's mini player darkens it until a
+touch, music starting or the button again wakes it; the player keeps playing meanwhile.
+*Settings → Display → Display standby → Scheduled standby* does it at the
+*Standby times* you set - several,
+each with its own days. Woken during one, the screen goes dark again after
+*Back to standby after* (2 minutes unless changed) if nobody uses it.
+
 **When does the idle screen appear?**
-After *Settings → Display → Idle screen → Timeout* (default 5 minutes) with
-nothing playing and nobody touching the screen. It shows a clock, the
+Only with *Settings → Display → Idle screen* switched on - it is off on a new
+player, and the panel then stays on what it shows. On, it appears after
+*Timeout* (default 5 minutes) with nothing playing and nobody touching the
+screen. It shows a clock, the
 weather and a background picture. A touch, or music starting, brings the
 player back.
 
 **Where do the idle screen's pictures come from?**
 *Settings → Display → Idle screen → Background* chooses: *Gexis wallpapers*,
 the player's own public-domain photographs, built in (the default on a new
-player); *Space pictures* from NASA and ESA; *Artist pictures* from the
+player); *Artist pictures* from the
 library (while the Lyrion client is off they show the player's own instead);
-*Wallpapers online* from Pixabay (it needs a free key, entered in the row
-below); *Wallpapers on device*, read from the player's Pictures share on the
+*Wallpapers online* from Pixabay (it needs a free key, entered under
+*Photo service and location*); *Wallpapers on device*, read from the player's Pictures share on the
 network; or *Black*. Pictures are
-placed by what they show, so faces, people and animals stay in view.
+placed by what they show, so faces, people and animals stay in view. The
+waiting screen (with the Lyrion client off) has its own *Background* under
+*Home screen*, chosen apart from the idle screen's.
 
 **How do the player's own wallpapers change through the day and the year?**
 With *Gexis wallpapers*, each picture comes from one of the *Wallpaper
 styles* you chose (Calm, Colourful, Psychedelic), from pictures for the
 time of day (dawn, day, dusk, night) or from the season's, by hemisphere.
 On New Year, and on Christmas and Easter where they are public holidays,
-only those days' pictures show; *Holidays* turns that off. The country comes
+only those days' pictures show, with the online wallpapers too; *Holidays* turns
+that off. The country comes
 from the weather location, or from the time zone until a location is set,
 and decides whether Easter follows the Western or the Orthodox date. Every
 picture is public domain or CC0, and its author is shown in the corner.
 
-*Space pictures* download new pictures from NASA and ESA (the Webb and
-Hubble pictures of the week) about once a day and keep the latest 40, so
-they still show without a network; until the first ones arrive, a built-in
-set shows. ESA's pictures carry their credit line in the corner, as their
-licence asks.
+Space photos come from Pixabay: choose *Space* among the *Wallpaper topics*
+of *Wallpapers online*.
 
 **The online wallpapers keep repeating.**
 They no longer repeat until every picture of the day has been shown, and
-each day brings a new set. *Wallpaper topics* sets which Pixabay categories
-are drawn from; choosing several mixes them.
+each day brings a new set. *Wallpaper topics* sets what is drawn from:
+*Space* and *Calm* search Pixabay's selected photos and the rest are Pixabay's
+own categories; choosing several mixes them. *Holidays* shows a holiday's
+pictures in their place on its days.
 
 **The weather is for the wrong place, or not shown.**
-Set *Settings → Display → Idle screen → Location* to a city or place name.
+Set *Settings → Display → Photo service and location → Location* to a city or
+place name.
 *Forecast* chooses today only or three days; *Weather* turns it off. The
 forecast comes from Open-Meteo and needs no key.
 
@@ -305,10 +318,12 @@ guide, a signal above −67 dBm is good for music; below −75 dBm, stutter
 becomes likely. A 5 GHz network is usually faster but reaches less far than
 2.4 GHz.
 
-**The player lost Wi-Fi while running and has not come back.**
-Restart it. A player only checks its Wi-Fi when it starts: if it cannot reach
-its network then, it opens its own setup network after 90 seconds, and keeps
-looking for the saved network every few minutes.
+**The player lost Wi-Fi while running.**
+After two minutes without a network, the player opens its own setup network
+and the screen shows how to join it, as at start (after 90 seconds there). It
+keeps looking for its saved network every five minutes and goes back to it
+when it is in range; or choose a network from the setup screen. This counts
+a network that gave the player no address as no network.
 
 **What is the player's name, and can it be changed?**
 *Settings → System → Device name* is one name for everything: the network

@@ -43,6 +43,7 @@
   // ADR-0033: idle is "not playing and not touched", one timeout everywhere.
   // From settings (idle_timeout, minutes); `?idle_seconds=` overrides it for testing.
   const IDLE_OVERRIDE_S = Number(new URLSearchParams(location.search).get('idle_seconds')) || null;
+  const idleOn = $derived($settingValues.idle_enabled === true);
   const IDLE_MS = $derived((IDLE_OVERRIDE_S ?? ($settingValues.idle_timeout ?? 5) * 60) * 1000);
 
   let idle = $state(false);
@@ -160,6 +161,12 @@
       untrack(() => { idle = false; askedIdle = false; });
       return;
     }
+    // **The idle screen can be off** (ADR-0133 amended 2026-10-11, second;
+    // off on a new player): the panel then stays on what it shows.
+    if (!idleOn) {
+      untrack(() => { idle = false; askedIdle = false; });
+      return;
+    }
     if (playing) {
       if (!untrack(() => askedIdle)) idle = false;
       return;
@@ -235,8 +242,8 @@
     appliedIdleAsk = ask.seq;
     if (ask.at && Date.now() / 1000 - ask.at > 60) return;
     untrack(() => {
-      idle = ask.show;
-      askedIdle = ask.show;
+      idle = ask.show && idleOn;
+      askedIdle = ask.show && idleOn;
       if (!ask.show) touches += 1;
     });
   });
@@ -410,10 +417,16 @@
   //: is on (ADR-0104). Held once shown: finishing takes the network down
   //: under the page, and it must keep its last screen - where to go next -
   //: rather than swap to Settings as the state changes behind it.
+  //:
+  //: **"joining" keeps it but never opens it** (2026-10-11, the outage test on
+  //: sofapi): a page that reconnected the moment the player was rejoining its
+  //: own Wi-Fi - after the setup network of ADR-0134 - switched to setup and
+  //: held it, on a player with no setup running. A phone doing setup always
+  //: saw "open" first.
   let setupPageHeld = $state(false);
   const setupPage = $derived(
     setupPageHeld ||
-      (!!$setup && (['open', 'failed', 'joining'].includes($setup.network) || $setup.needed))
+      (!!$setup && (['open', 'failed'].includes($setup.network) || $setup.needed))
   );
   $effect(() => {
     if (setupPage && surface === 'remote') untrack(() => (setupPageHeld = true));
@@ -759,12 +772,25 @@
 </div>
 {/if}
 
+<!-- ADR-0135: the screen in standby. Its output is off; this black is for a
+     screen whose output could not be switched, and it takes the tap that
+     wakes it, so that tap presses nothing underneath. -->
+{#if surface === 'panel' && $panel.standby}
+  <div class="standby-cover" aria-hidden="true"></div>
+{/if}
+
 <!-- ADR-0132: a factory reset under way - over everything, on every surface. -->
 {#if $resetting}
   <ResetScreen surface={surface === 'remote' ? 'remote' : 'panel'} />
 {/if}
 
 <style>
+  .standby-cover {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: #000;
+  }
   :global(*, *::before, *::after) {
     box-sizing: border-box;
   }

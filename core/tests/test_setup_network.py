@@ -536,3 +536,62 @@ def test_the_setup_network_offers_wpa2_only(tmp_path):
     pmf = nm.calls.index(("connection", "modify", sn.PROFILE, "802-11-wireless-security.pmf", "disable"))
     up = nm.calls.index(("connection", "up", sn.PROFILE))
     assert hotspot < pmf < up
+
+
+# -- ADR-0134: a network lost after boot -----------------------------------
+
+
+def watching(net, clock, until, limit=4000.0):
+    async def go():
+        task = asyncio.create_task(net.watch())
+        for _ in range(100_000):
+            await asyncio.sleep(0)
+            if until() or clock.now > limit:
+                break
+        task.cancel()
+    run(go())
+
+
+def online_player(tmp_path, nm, **kw):
+    net, clock = setup(tmp_path, nm, **kw)
+    net._needed = False
+    net._state = "online"
+    return net, clock
+
+
+def test_two_minutes_without_a_network_after_boot_opens_the_setup_network(tmp_path):
+    nm = FakeNM(devices=NOTHING, saved={"Home": "preconfigured"})
+    net, clock = online_player(tmp_path, nm)
+    watching(net, clock, lambda: nm.hotspot_at is not None)
+    assert nm.hotspot_at is not None
+    assert sn.LOST_S <= nm.hotspot_at <= sn.LOST_S + 2 * sn.WATCH_S
+    assert net.status()["network"] == "open"
+
+
+def test_a_short_drop_after_boot_leaves_the_setup_network_closed(tmp_path):
+    drop = [NOTHING] * 4 + [WIFI_UP]          # a minute away, then back
+    nm = FakeNM(devices=drop, saved={"Home": "preconfigured"})
+    net, clock = online_player(tmp_path, nm)
+    watching(net, clock, lambda: False, limit=600.0)
+    assert nm.hotspot_at is None and net.status()["network"] == "online"
+
+
+def test_the_watch_leaves_a_join_and_an_unfinished_setup_alone(tmp_path):
+    nm = FakeNM(devices=NOTHING, saved={"Home": "preconfigured"})
+    net, clock = online_player(tmp_path, nm)
+    net._busy = True                            # a join from Settings
+    watching(net, clock, lambda: False, limit=600.0)
+    assert nm.hotspot_at is None
+    nm2 = FakeNM(devices=NOTHING)
+    net2, clock2 = online_player(tmp_path / "new", nm2)
+    net2._needed = True                         # setup still running
+    watching(net2, clock2, lambda: False, limit=600.0)
+    assert nm2.hotspot_at is None
+
+
+def test_after_the_setup_network_opens_a_saved_network_in_range_is_rejoined(tmp_path):
+    nm = FakeNM(devices=NOTHING, saved={"Home": "preconfigured"}, in_range={"Home"})
+    net, clock = online_player(tmp_path, nm)
+    watching(net, clock, lambda: nm.hotspot_at is not None and net.status()["network"] == "online")
+    assert nm.hotspot_at is not None and nm.did("connection", "up", "preconfigured")
+    assert net.status()["network"] == "online"
