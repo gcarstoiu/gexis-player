@@ -642,7 +642,15 @@ class StateServer:
 
     #: ADR-0133 amended 2026-10-11: the topic that is a search, and what each
     #: holiday asks Pixabay for when it supersedes the topics.
-    PIXABAY_SEARCHES = {"Space": "space", "Calm": "calm"}
+    #:
+    #: **Space is outer space, not the word** (George, 2026-10-11: "Space
+    #: should be looked at as universe, galaxy, outer space"). Measured the
+    #: same day on 200 editors' choice pictures: *space* alone had 112 with no
+    #: astronomy tag - rooms, "copy space", the Space Needle. `|` is Pixabay's
+    #: OR; single words only, since a space inside it reads as AND. This set
+    #: had 6 of 144 off the subject, northern lights and rocket launches;
+    #: *universe* was left out because it brought in cosmos flowers.
+    PIXABAY_SEARCHES = {"Space": "galaxy|nebula|astronomy|astronaut|astrophotography", "Calm": "calm"}
     PIXABAY_HOLIDAYS = {"newyear": "new year", "christmas": "christmas", "easter": "easter"}
 
     async def _pixabay_topics(self, chosen: list, keys: dict | None = None) -> list[str]:
