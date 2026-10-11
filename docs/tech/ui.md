@@ -351,7 +351,8 @@ hour's and the season's - and `_where()` in `wsserver.py` takes the country
 and latitude from the weather location's geocoding, or from `zone.tab` for
 the time zone. *Artist pictures* fall back to them while `lms_enabled` is
 off. *Space pictures* (NASA and ESA) were removed on 2026-10-11; space is a
-Pixabay topic (`PIXABAY_SEARCHES`), and the core deletes what they had
+Pixabay topic (`PIXABAY_SEARCHES`: an OR of single astronomy words, since
+*space* alone matched rooms - ADR-0133), and the core deletes what they had
 downloaded once at start. A migration keeps *Artist pictures* on a player already in use, the
 old default. It can also show an external page if the
 `idle_screen` setting chooses one and the page is embeddable. It reads

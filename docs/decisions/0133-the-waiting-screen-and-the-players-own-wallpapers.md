@@ -246,3 +246,23 @@ way round.
    cannot ask for "science in autumn". The *Seasons* row shows with Gexis
    wallpapers alone, on both screens; online wallpapers' topics carry no
    season. *Holidays* still governs both.
+
+## Amended 2026-10-11 (fourth): Space searches for outer space
+
+George: *"the 'space' topic on pixabay is returning false positives. Space
+should be looked at as universe, galaxy, outer space - not just space."*
+Measured the same day from sofapi, editors' choice, landscape, at least
+1280 x 800, the first page (up to 200) of each search, counting pictures
+whose tags carry no astronomy word:
+
+| Search | Pictures | No astronomy tag |
+|---|---|---|
+| `space` | 200 of 291 | 112 - rooms, *copy space*, the Space Needle |
+| `outer space` | 200 of 291 | 112 (the same answer) |
+| `galaxy\|nebula\|universe` | 145 | 7 - cosmos flowers, northern lights |
+| `galaxy\|nebula\|astronomy\|astronaut\|astrophotography` | 144 | 6 - northern lights, rocket launches |
+
+**Space now asks for the last.** `|` is Pixabay's OR; a multi-word term
+inside it is read as AND and narrows the answer, so the words are single.
+*universe* is left out: it matched the cosmos flower. Calm is unchanged.
+Not measured: later pages, and how the answer moves from day to day.
