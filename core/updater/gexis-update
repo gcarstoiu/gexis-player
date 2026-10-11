@@ -36,6 +36,7 @@ import math
 import sys
 import threading
 import time
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -368,6 +369,42 @@ def heal(opts: list[str]) -> None:
     if journal or broken:
         print(f"dpkg is still not clean: {', '.join(broken) or 'its journal'}", flush=True)
         raise Stop(CUT_SHORT)
+
+
+def prune_cache() -> list[str]:
+    """**The cache keeps what is installed, and nothing else** (the review
+    of 2026-10-12). apt keeps every file it fetches, and nothing cleaned
+    this cache - the system's apt-daily cleans only /var/cache/apt: each
+    release's packages, the copies fetched for going back, every new skin
+    pack version (up to 462 MB) stayed on the card for good. Run when an
+    update or a pack has ended well. The installed versions stay: they are
+    what the next update goes back to, and keeping them spares it the
+    download. Half-fetched files in `partial/` stay for apt to resume. When
+    dpkg cannot say what is installed, nothing goes; nor while a boot has
+    an update still to check, which may need the release before."""
+    if pending().exists():
+        return []
+    try:
+        listed = run("dpkg-query", "-W", "-f", "${Package} ${Version}\n", check=False)
+    except OSError:  # no dpkg to ask: nothing is known to be spare
+        return []
+    have = {tuple(line.split(" ", 1)) for line in listed.stdout.splitlines() if line.count(" ") == 1}
+    if listed.returncode or not have:
+        return []
+    dropped = []
+    for deb in sorted((STATE / "apt" / "archives").glob("*.deb")):
+        # apt names them <package>_<version>_<arch>.deb, the epoch's ":" as %3a.
+        fields = deb.name[:-len(".deb")].split("_")
+        if len(fields) != 3 or (fields[0], urllib.parse.unquote(fields[1])) in have:
+            continue
+        try:
+            deb.unlink()
+            dropped.append(deb.name)
+        except OSError:
+            continue
+    if dropped:
+        print(f"dropped {len(dropped)} package(s) no longer installed from the cache", flush=True)
+    return dropped
 
 
 def apt_download(opts: list[str], *args: str, report_as: dict, reporter=None) -> subprocess.CompletedProcess:
@@ -879,6 +916,7 @@ def install(args) -> int:
                        "the player did not answer after the update", changes)
     step("check", "done")
     pending().unlink(missing_ok=True)
+    prune_cache()
     report("done", **about, backup=backup, changed=len(changes), restart=how,
            message=f"{target} installed ({how})")
     return 0
@@ -922,6 +960,7 @@ def postboot(args) -> int:
         return go_back(about, left["channel"], target, current, left["back_repos"], left["back_pins"],
                        left.get("backup"), str(failure), changes)
     step("check", "done")
+    prune_cache()
     report("done", **about, backup=left.get("backup"), changed=len(left.get("changes") or []),
            restart=left.get("how", "reboot"), message=f"{target} installed (reboot)")
     return 0
@@ -1114,6 +1153,7 @@ def pack_install(name: str) -> int:
     if r.returncode:
         print(f"pack install failed: {why(r)}", flush=True)
         raise Stop("They were downloaded but could not be installed. It is tried again in a few minutes.")
+    prune_cache()
     report_pack("installed", package=name, version=installed(name), message=f"{name} installed")
     return 0
 

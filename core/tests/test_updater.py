@@ -769,6 +769,78 @@ def test_a_boot_that_does_not_answer_goes_back_once(up, monkeypatch):
     assert not up.pending().exists(), "the boot after going back is not checked again"
 
 
+def _cache(up):
+    cache = up.STATE / "apt" / "archives"
+    (cache / "partial").mkdir(parents=True)
+    for name in ("gexis-core_0.10.0_arm64.deb", "gexis-core_0.10.1_arm64.deb",
+                 "gexis-skins-1920x1080_2_all.deb", "gexis-skins-1920x1080_3_all.deb",
+                 "libfoo_1%3a2.0-1_arm64.deb", "libfoo_1%3a1.9-1_arm64.deb"):
+        (cache / name).write_bytes(b"deb")
+    (cache / "partial" / "gexis-skins-1920x1080_4_all.deb").write_bytes(b"half")
+    (cache / "lock").write_text("")
+    return cache
+
+
+INSTALLED = "gexis-core 0.10.1\ngexis-skins-1920x1080 3\nlibfoo 1:2.0-1\n"
+
+
+def test_the_cache_keeps_only_what_is_installed(up, monkeypatch):
+    """**The review of 2026-10-12.** Every download - each release, each
+    rollback copy, each new pack version - stayed in the private cache, and
+    nothing ever cleaned it: a player on Testing would fill its card in
+    months. What is installed now stays, because the next update's way back
+    needs it; a half-fetched file stays for the download to resume."""
+    cache = _cache(up)
+    monkeypatch.setattr(up, "run", lambda *a, **k: subprocess.CompletedProcess(a, 0, INSTALLED, ""))
+    up.prune_cache()
+    assert sorted(p.name for p in cache.iterdir()) == [
+        "gexis-core_0.10.1_arm64.deb", "gexis-skins-1920x1080_3_all.deb", "libfoo_1%3a2.0-1_arm64.deb",
+        "lock", "partial"]
+    assert (cache / "partial" / "gexis-skins-1920x1080_4_all.deb").exists()
+
+
+def test_the_cache_is_left_whole_when_dpkg_cannot_say_what_is_installed(up, monkeypatch):
+    cache = _cache(up)
+    monkeypatch.setattr(up, "run", lambda *a, **k: subprocess.CompletedProcess(a, 2, "", "error"))
+    up.prune_cache()
+    assert len(list(cache.glob("*.deb"))) == 6
+
+
+def test_the_cache_is_left_whole_while_a_boot_may_still_go_back(up, monkeypatch):
+    cache = _cache(up)
+    up.leave_for_the_boot({"how": "reboot"})
+    monkeypatch.setattr(up, "run", lambda *a, **k: subprocess.CompletedProcess(a, 0, INSTALLED, ""))
+    up.prune_cache()
+    assert len(list(cache.glob("*.deb"))) == 6
+
+
+def test_an_update_prunes_the_cache_when_it_ends(up, monkeypatch):
+    pruned = []
+    seen, order = fake_install(up, monkeypatch)
+    monkeypatch.setattr(up, "prune_cache", lambda: pruned.append("update"))
+    assert up.install(None) == 0
+    assert pruned == ["update"]
+    fake_install(up, monkeypatch, answers=False)
+    monkeypatch.setattr(up, "prune_cache", lambda: pruned.append("went back"))
+    assert up.install(None) == 1
+    assert pruned == ["update"], "not after going back: Update now tries the same files again"
+
+
+def test_a_pack_prunes_the_cache_once_installed(up, monkeypatch):
+    pruned = []
+    monkeypatch.setattr(up, "installed", lambda p: "0.10.1")
+    monkeypatch.setattr(up, "parts_of", lambda v: (["r0.10.1"], ["r0.10.1"]))
+    monkeypatch.setattr(up, "apt_env", lambda repos, pins=None: repos)
+    monkeypatch.setattr(up, "apt", lambda opts, *a, **k: subprocess.CompletedProcess(a, 0, "", ""))
+    monkeypatch.setattr(up, "heal", lambda opts: None)
+    monkeypatch.setattr(up, "pack_fetch", lambda opts, name, activity: subprocess.CompletedProcess([], 0, "", ""))
+    real = up.Activity
+    monkeypatch.setattr(up, "Activity", lambda **kw: real(playing_now=lambda: False, follow=False))
+    monkeypatch.setattr(up, "prune_cache", lambda: pruned.append(1))
+    up.STATE.mkdir(parents=True, exist_ok=True)
+    assert up.pack_install("gexis-skins-1920x1080") == 0 and pruned == [1]
+
+
 class PowerCut(BaseException):
     """The power going: nothing after it in the process runs."""
 
