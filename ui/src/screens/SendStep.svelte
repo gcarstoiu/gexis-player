@@ -13,6 +13,7 @@
 -->
 <script>
   import { pressing } from '../lib/press.svelte.js';
+  import { copyText } from '../lib/copy.js';
 
   let { githubUrl = null, fileHref, fileName, fileKind, email, attach = false, githubSays } = $props();
 
@@ -28,14 +29,22 @@
   });
 
   let copied = $state(false);
+  let copyFailed = $state(false);
+  let address;
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(email);
+    if (await copyText(email)) {
       copied = true;
+      copyFailed = false;
       setTimeout(() => (copied = false), 2000);
-    } catch {
-      // No clipboard here: the address stays on screen to copy by hand.
+      return;
     }
+    // Nothing would copy: the address is selected, to copy by hand.
+    copyFailed = true;
+    const range = document.createRange();
+    range.selectNodeContents(address);
+    const picked = window.getSelection();
+    picked.removeAllRanges();
+    picked.addRange(range);
   }
 </script>
 
@@ -62,13 +71,14 @@
     <span class="way__name">By e-mail</span>
     <p class="way__text">Download {fileKind}, then send it to:</p>
     <p class="way__addr">
-      <span>{email}</span>
+      <span bind:this={address}>{email}</span>
       <!-- Copied says so with a tick (George, 2026-10-11). -->
       <button type="button" class="way__copy" class:is-pressed={press.is('copy')} class:is-copied={copied}
         {...held('copy')} onclick={copy} aria-live="polite">
         {#if copied}<span class="way__tick" aria-hidden="true">✓</span>Copied{:else}Copy{/if}
       </button>
     </p>
+    {#if copyFailed}<p class="way__text way__text--quiet">This browser would not copy it: the address is selected - press and hold to copy.</p>{/if}
     <a class="way__go" class:is-pressed={press.is('download')} {...held('download')}
       href={fileHref} download={fileName}>Download {fileName} ↓</a>
   </section>
