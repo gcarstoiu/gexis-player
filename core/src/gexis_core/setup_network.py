@@ -750,6 +750,25 @@ class SetupNetwork:
                 return None
             await self._sleep(POLL_S)
 
+    async def _cable_back(self) -> bool:
+        """Leave the setup network for a cable that has an address. A new
+        player waits while a phone is on it: that phone may be half-way
+        through setup, and setup over the cable can start once it leaves."""
+        devices = await self._devices()
+        if not ethernet_address(devices):
+            return False
+        if self._needed and await self._count_stations() > 0:
+            return False
+        where = next(d for d, k, st, _ in devices if k == "ethernet" and st.startswith("connected"))
+        await self.close()
+        self._state, self._target = "online", None
+        self._reason = self._failed = None
+        if self._needed:
+            self._lan_address = await self._address_of(where)
+        self._publish()
+        logger.info("setup: on the network through %s again; %s closed", where, SSID)
+        return True
+
     async def _hold(self, retry: float) -> None:
         """While open: every `retry` seconds with nobody on it, look for a
         saved network and go back to it. A join that fails brings the setup
@@ -757,14 +776,29 @@ class SetupNetwork:
 
         **Until the device is online, not while the network is open**: a
         join from setup takes the network down and may bring it back, and a
-        loop that ended when it went down would never retry again."""
+        loop that ended when it went down would never retry again.
+
+        **A cable that gets its address back ends it too** (review,
+        2026-10-12). Only a saved Wi-Fi in range used to, so an Ethernet-only
+        player that booted before its router, or lost it for two minutes
+        (ADR-0134), kept the setup network up until a reboot - and every phone
+        on the LAN got the setup page. ADR-0104 §3: the setup network never
+        opens while Ethernet has an address. Looked for every `WATCH_S`, not
+        at the five-minute retry, since the cable takes nothing from anyone."""
+        last = self._clock()
         while self._state != "online":
-            await self._sleep(FAILED_RETRY_S if self._state == "failed" else retry)
+            due = retry - (self._clock() - last)
+            await self._sleep(FAILED_RETRY_S if self._state == "failed" else min(WATCH_S, max(due, POLL_S)))
             if self._busy or self._state not in ("open", "failed"):
                 continue
+            if await self._cable_back():
+                return
             if self._state == "failed":
                 await self.open()
                 continue
+            if self._clock() - last < retry:
+                continue
+            last = self._clock()
             if await self._count_stations() > 0:
                 logger.info("setup: a phone is on %s; not looking for other networks", SSID)
                 continue

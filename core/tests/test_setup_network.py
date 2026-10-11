@@ -595,3 +595,58 @@ def test_after_the_setup_network_opens_a_saved_network_in_range_is_rejoined(tmp_
     watching(net, clock, lambda: nm.hotspot_at is not None and net.status()["network"] == "online")
     assert nm.hotspot_at is not None and nm.did("connection", "up", "preconfigured")
     assert net.status()["network"] == "online"
+
+
+# -- the cable coming back (review, 2026-10-12) -----------------------------
+
+
+def cable_back(net, nm, clock, *, after, limit=3000.0):
+    """Run the boot decision with no network, then give the cable its address
+    `after` seconds once the setup network is open."""
+    async def go():
+        task = asyncio.create_task(net.run())
+        opened_at = None
+        for _ in range(100_000):
+            await asyncio.sleep(0)
+            if opened_at is None and net.status()["network"] == "open":
+                opened_at = clock.now
+            if opened_at is not None and clock.now >= opened_at + after:
+                nm.devices = [list(ETH_UP)]
+            if task.done() or clock.now > limit:
+                break
+        task.cancel()
+        return opened_at
+    return run(go())
+
+
+def test_a_configured_player_whose_cable_comes_back_closes_the_setup_network(tmp_path):
+    """An Ethernet-only player that booted before its router (or lost the
+    network for two minutes): the setup network opened, and only a saved
+    Wi-Fi in range ever closed it - so with none it stayed 'open' until a
+    reboot, and every phone on the LAN got the setup page."""
+    nm = FakeNM(devices=NOTHING)
+    (tmp_path / "setup-done").touch()
+    net, clock = setup(tmp_path, nm, stations=0)
+    opened_at = cable_back(net, nm, clock, after=60.0)
+    assert opened_at is not None
+    assert net.status()["network"] == "online" and net.status()["ssid"] is None
+    assert nm.did("connection", "delete", sn.PROFILE)[-1:], "the setup network is taken down"
+    assert clock.now <= opened_at + 60.0 + 2 * sn.WATCH_S, "within seconds, not the five-minute retry"
+
+
+def test_the_cable_coming_back_does_not_cut_off_a_phone_doing_first_setup(tmp_path):
+    """A new player: a phone on the setup network may be half-way through
+    setup, so the setup network stays while one is on it."""
+    nm = FakeNM(devices=NOTHING)
+    net, clock = setup(tmp_path, nm, stations=1)
+    cable_back(net, nm, clock, after=30.0, limit=1500.0)
+    assert net.status()["network"] == "open"
+
+
+def test_a_new_player_with_nobody_on_the_setup_network_moves_to_the_cable(tmp_path):
+    nm = FakeNM(devices=NOTHING)
+    net, clock = setup(tmp_path, nm, stations=0)
+    cable_back(net, nm, clock, after=30.0)
+    assert net.needed and net.status()["network"] == "online"
+    assert net.status()["address"] == "http://192.168.1.50:8090/", "setup carries on over the cable"
+
