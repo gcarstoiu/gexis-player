@@ -8,6 +8,7 @@
 <script>
   import PlayerSwitcher from './PlayerSwitcher.svelte';
   import CableSheet from './CableSheet.svelte';
+  import SendStep from './SendStep.svelte';
   import { onMount, untrack } from 'svelte';
   import { pressing } from '../lib/press.svelte.js';
   import { components, update, screenCheck, showScreenCheck, resetting, metadata, fixedOutput } from '../lib/state.js';
@@ -154,33 +155,35 @@
       .join('  \u00b7  ')
   );
   const sheet = $derived(sheetKey ? asSheet(rowOf(sheetKey)) : null);
-  //: ADR-0125: the problem report - built on the player, downloaded here.
+  //: ADR-0125: the problem report - built on the player, sent from here.
   //: The panel has nowhere to save a file, so there the sheet says where to
-  //: open it instead.
-  const REPORT_ISSUE = 'https://github.com/gcarstoiu/gexis-player/issues/new?template=problem-report.yml';
-  //: ADR-0125 decision 5: for people without a GitHub account (George,
-  //: 2026-10-07). Shown as text with Copy - a mail link may open nothing.
+  //: open it instead. ADR-0125 decision 5: an address for people without a
+  //: GitHub account (George, 2026-10-07).
   const REPORT_EMAIL = 'george.carstoiu@gexis.net';
-  let reportCopied = $state(false);
-  async function copyReportEmail() {
-    try {
-      await navigator.clipboard.writeText(REPORT_EMAIL);
-      reportCopied = true;
-      setTimeout(() => (reportCopied = false), 2000);
-    } catch {
-      // No clipboard here: the address stays on screen to copy by hand.
-    }
-  }
+  //: **ADR-0138: three steps** - what happened, Preparing (the checklist the
+  //: player works down), Send (`SendStep`, shared with hardware feedback).
+  const REPORT_OFTEN = ['Every time', 'Sometimes', 'Once so far'];
+  const REPORT_STEP_NAMES = { what: 'What happened', preparing: 'Preparing', send: 'Send' };
+  let reportStep = $state('what');
   let reportNote = $state('');
-  let reportBusy = $state(false);
-  let reportDone = $state(null);
+  let reportOften = $state(null);
+  let reportStatus = $state(null);
+  let reportIssue = $state(null);
   let reportError = $state(null);
+  let reportOpening = 0;
+  let reportPoll = null;
+  const reportReady = $derived(reportStatus?.state === 'ready');
   const onPanel = () => document.documentElement.classList.contains('on-panel');
   $effect(() => {
     if (sheet?.kind !== 'report') {
+      reportStep = 'what';
       reportNote = '';
-      reportDone = null;
+      reportOften = null;
+      reportStatus = null;
+      reportIssue = null;
       reportError = null;
+      clearTimeout(reportPoll);
+      reportOpening += 1;
     }
   });
   //: ADR-0126: a hardware report - what the device reads, the owner's
@@ -381,30 +384,58 @@
     flash(`Saving ${item.name}`);
   }
 
-  async function downloadReport() {
-    if (reportBusy) return;
-    reportBusy = true;
+  async function prepareReport() {
+    // GitHub's form will not take a report without it.
+    if (!reportNote.trim()) {
+      reportError = 'Say what happened first: GitHub needs it.';
+      return;
+    }
+    const opening = reportOpening;
+    clearTimeout(reportPoll);
     reportError = null;
+    reportStatus = null;
+    reportIssue = null;
+    reportStep = 'preparing';
     try {
-      const r = await fetch('/report', {
+      const r = await fetch('/report/prepare', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ note: reportNote }),
+        body: JSON.stringify({ what: reportNote, often: reportOften }),
       });
       if (!r.ok) throw new Error(r.status === 409 ? 'A report is already being prepared. Try again in a minute.' : `HTTP ${r.status}`);
-      const name = /filename="([^"]+)"/.exec(r.headers.get('Content-Disposition') ?? '')?.[1] ?? 'gexis-report.zip';
-      const url = URL.createObjectURL(await r.blob());
-      const a = Object.assign(document.createElement('a'), { href: url, download: name });
-      document.body.append(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-      reportDone = { name, summary: r.headers.get('X-Report-Summary') ?? '' };
     } catch (e) {
-      reportError = plainly(e?.message, 'The report could not be prepared. Try again.');
-    } finally {
-      reportBusy = false;
+      if (opening === reportOpening) reportError = plainly(e?.message, 'The report could not be prepared. Try again.');
+      return;
     }
+    followReport(opening);
+  }
+
+  //: The checklist, read every 0.4 s while the player works down it.
+  async function followReport(opening) {
+    if (opening !== reportOpening) return;
+    try {
+      const status = await (await fetch('/report/status')).json();
+      if (opening !== reportOpening) return;
+      reportStatus = status;
+      if (status.state === 'ready') {
+        fetch('/report/issue').then((r) => (r.ok ? r.json() : null))
+          .then((body) => { if (opening === reportOpening) reportIssue = body?.url ?? null; })
+          .catch(() => {});
+        return;
+      }
+      if (status.state === 'failed' || status.state === 'idle') {
+        reportError = 'The report could not be prepared. Try again.';
+        return;
+      }
+    } catch {
+      // The player is busy or restarting: the next look says.
+    }
+    reportPoll = setTimeout(() => followReport(opening), 400);
+  }
+
+  function sizeSaid(bytes) {
+    if (bytes == null) return '';
+    return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
   }
   const picker = $derived(pickerKey ? rowOf(pickerKey) : null);
 
@@ -1386,8 +1417,11 @@
       return;
     }
     if (row.kind === 'report') {
-      if (reportDone) sheetKey = null;
-      else await downloadReport();
+      if (reportStep === 'what') await prepareReport();
+      else if (reportStep === 'preparing') {
+        if (reportReady) reportStep = 'send';
+        else if (reportError) await prepareReport();
+      }
       return;
     }
     if (row.type === 'action') {
@@ -1421,6 +1455,14 @@
     if (sheet?.kind === 'hardware' && hw && hwAt > 0 && !hwUrl) {
       hwError = null;
       hwStep = hwSteps[hwAt - 1];
+      return;
+    }
+    // The problem report's Preparing step goes back to what happened; the
+    // report the player is making carries on, and is made again on Next.
+    if (sheet?.kind === 'report' && reportStep === 'preparing') {
+      clearTimeout(reportPoll);
+      reportError = null;
+      reportStep = 'what';
       return;
     }
     // A pending restore is a step inside the sheet, not the sheet: cancelling
@@ -1964,14 +2006,12 @@
               then System → Hardware feedback.
             </p>
           {:else if hwUrl}
-            <!-- George, 2026-10-11: one way to send - a link beside a Done
-                 button left it unclear which of the two sent it. -->
-            <p class="report__text">The feedback is ready.</p>
-            <a class="btn btn--confirm report__send" href={hwUrl} target="_blank" rel="noopener">Send on GitHub ↗</a>
-            <p class="report__text report__text--quiet">
-              GitHub opens with it all filled in. Read it, then press Create there to send it. It needs a GitHub
-              account. The player keeps it: System → Hardware feedback can send it again.
-            </p>
+            <!-- ADR-0138 §3: the Send step the problem report ends on too. -->
+            <p class="report__step">Send</p>
+            <SendStep githubUrl={hwUrl} fileHref="/hardware-report/file" fileName={`gexis-hardware-${new Date().toISOString().slice(0, 10)}.txt`}
+              fileKind="the feedback" email={REPORT_EMAIL}
+              githubSays="Filled in with everything: your answers, your notes and what the player read." />
+            <p class="report__text report__text--quiet">The player keeps it: System → Hardware feedback can send it again.</p>
           {:else if hw === null && !hwError}
             <p class="report__text report__text--quiet">Reading the hardware…</p>
           {:else if hw}
@@ -2041,30 +2081,59 @@
         <CableSheet />
       {/if}
       {#if sheet.kind === 'report'}
-        <div class="report">
+        <div class="report report--scroll">
           {#if onPanel()}
             <p class="report__text">
               The screen has nowhere to save a file. Open Settings on a phone or computer on the same
               network, at <span class="report__addr">{device.hostname ? `${device.hostname}.local` : device.address}</span>,
               then System → Problem report.
             </p>
-          {:else if reportDone}
-            <p class="report__text">
-              Saved as <span class="report__addr">{reportDone.name}</span>. Taken out: {reportDone.summary || 'nothing'}.
-            </p>
-            <p class="report__text">
-              Read it, then attach it to a report on GitHub:
-              <a class="report__link" href={REPORT_ISSUE} target="_blank" rel="noopener">Report a problem</a>.
-            </p>
-            <p class="report__text">
-              Or e-mail it to <span class="report__addr">{REPORT_EMAIL}</span>
-              <button type="button" class="report__copy" onclick={copyReportEmail}>{reportCopied ? 'Copied' : 'Copy'}</button>
-            </p>
           {:else}
-            <label class="report__label" for="report-note">What happened? (optional)</label>
-            <textarea id="report-note" class="report__note" rows="4" maxlength="4000" bind:value={reportNote}
-              placeholder="What you did, what you expected, what happened instead"></textarea>
-            {#if reportBusy}<p class="report__text report__text--quiet">Preparing the report. It takes up to a minute.</p>{/if}
+            <p class="report__step">Step {['what', 'preparing', 'send'].indexOf(reportStep) + 1} of 3 · {REPORT_STEP_NAMES[reportStep]}</p>
+            {#if reportStep === 'what'}
+              <textarea id="report-note" class="report__note report__note--tall" rows="6" maxlength="4000" bind:value={reportNote}
+                aria-label="What happened?"
+                placeholder="What you did, what you expected, what happened instead"></textarea>
+              <div class="hwq">
+                <span class="report__label">How often does it happen?</span>
+                <div class="hwq__options">
+                  {#each REPORT_OFTEN as option (option)}
+                    <button type="button" class="hwq__option" class:is-on={reportOften === option}
+                      onclick={() => (reportOften = reportOften === option ? null : option)}>{option}</button>
+                  {/each}
+                </div>
+              </div>
+            {:else if reportStep === 'preparing'}
+              {@const steps = reportStatus?.steps ?? []}
+              {@const at = steps.findIndex((x) => !x.done)}
+              <ul class="check">
+                {#each steps as item, i (item.id)}
+                  <li class="check__item" class:is-done={item.done} class:is-now={i === at && !reportError}>
+                    <span class="check__mark" aria-hidden="true">{item.done ? '✓' : i === at && !reportError ? '' : '○'}</span>
+                    <span class="check__text">
+                      <span class="check__label">{item.label}</span>
+                      {#if item.detail}<span class="check__detail">{item.detail}</span>{/if}
+                    </span>
+                  </li>
+                {/each}
+              </ul>
+              {#if !reportStatus && !reportError}<p class="report__text report__text--quiet">Starting…</p>{/if}
+              {#if reportReady}
+                <p class="report__text">
+                  Ready: <span class="report__addr">{reportStatus.name}</span>, {sizeSaid(reportStatus.size)}. Nothing has left
+                  the player.
+                </p>
+                <details class="hwq__facts"><summary>What is in it</summary>
+                  <ul class="check__files">
+                    {#each reportStatus.files as f (f.name)}<li><span>{f.name}</span><span>{sizeSaid(f.size)}</span></li>{/each}
+                  </ul>
+                </details>
+              {/if}
+            {:else}
+              <SendStep githubUrl={reportIssue} fileHref="/report/file" fileName={reportStatus?.name ?? 'gexis-report.zip'}
+                fileKind="the report" email={REPORT_EMAIL} attach
+                githubSays="Filled in with what happened, how often, the version, what was taken out and the log's last errors and warnings." />
+            {/if}
             {#if reportError}<p class="report__text report__text--warn">{reportError}</p>{/if}
           {/if}
         </div>
@@ -2445,11 +2514,12 @@
           {#if join === 'error'}
             Give up
           {:else if joinItem || shareBrowse || shareLogin || (sheet.grouped && region !== null)
-                     || (sheet.kind === 'hardware' && hw && hwAt > 0 && !hwUrl)}
+                     || (sheet.kind === 'hardware' && hw && hwAt > 0 && !hwUrl)
+                     || (sheet.kind === 'report' && reportStep === 'preparing')}
             Back
           {:else if restorePending}
             Cancel
-          {:else if sheet.kind === 'hardware' && hwUrl}
+          {:else if (sheet.kind === 'hardware' && hwUrl) || (sheet.kind === 'report' && reportStep === 'send')}
             Close
           {:else if choicePending === null && (sheet.type === 'choice' || sheet.type === 'multi' || sheet.type === 'intervals' || sheet.grouped || (sheet.wired && sheet.type === 'number'))}
             Close
@@ -2457,13 +2527,14 @@
             Cancel
           {/if}
         </button>
-        {#if join === 'error' || joinItem || restorePending || choicePending !== null || (sheet.type === 'action' && sheet.kind !== 'cable' && !((sheet.kind === 'report' || sheet.kind === 'hardware') && onPanel()) && !(sheet.kind === 'hardware' && hwUrl)) || sheet.type === 'toggle' || sheet.type === 'text' || sheet.type === 'share' || sheet.type === 'share-login' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
+        {#if join === 'error' || joinItem || restorePending || choicePending !== null || (sheet.type === 'action' && sheet.kind !== 'cable' && !((sheet.kind === 'report' || sheet.kind === 'hardware') && onPanel()) && !(sheet.kind === 'hardware' && hwUrl) && !(sheet.kind === 'report' && reportStep === 'send')) || sheet.type === 'toggle' || sheet.type === 'text' || sheet.type === 'share' || sheet.type === 'share-login' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
           <button
             class="btn btn--confirm"
             class:btn--danger={sheet.danger || restorePending || choicePending !== null}
             type="button"
             class:btn--hold={sheet.hold}
-            disabled={busy || reportBusy || hwBusy || (sheet.kind === 'hardware' && !hw && !hwUrl && !hwError)}
+            disabled={busy || hwBusy || (sheet.kind === 'hardware' && !hw && !hwUrl && !hwError)
+              || (sheet.kind === 'report' && reportStep === 'preparing' && !reportReady && !reportError)}
             onclick={sheet.hold ? (event) => event.preventDefault() : confirmSheet}
             onpointerdown={sheet.hold ? holdStart : null}
             onpointerup={sheet.hold ? holdStop : null}
@@ -2477,7 +2548,7 @@
             {#if sheet.kind === 'hardware'}
               {#if hwBusy}<span class="btn__spin"></span>Preparing…{:else if hwUrl}Done{:else if !hw && hwError}Try again{:else if hw && !hwLast}{hwSteps[hwAt + 1] === 'sound' ? 'Next: the sound' : 'Next: anything else'}{:else}Prepare the feedback{/if}
             {:else if sheet.kind === 'report'}
-              {#if reportBusy}<span class="btn__spin"></span>Preparing…{:else if reportDone}Done{:else}Download{/if}
+              {#if reportStep === 'what'}Next: prepare the report{:else if reportError}Try again{:else if reportReady}Next: send it{:else}<span class="btn__spin"></span>Preparing…{/if}
             {:else if busy}
               <span class="btn__spin"></span>Saving
             {:else if join === 'error'}
@@ -4409,6 +4480,69 @@
     color: var(--ink-body);
   }
   .report__text--quiet { color: var(--ink-quiet); }
+  /* ADR-0138: the checklist the player works down while preparing. */
+  .check {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .check__item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    color: var(--ink-quiet);
+  }
+  .check__item.is-done,
+  .check__item.is-now { color: var(--ink); }
+  .check__mark {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .check__item.is-done .check__mark {
+    background: rgba(126, 214, 188, 0.16);
+    color: var(--accent-lms);
+  }
+  .check__item.is-now .check__mark {
+    border: 2px solid var(--ink-line);
+    border-top-color: var(--accent-lms);
+    animation: check-turn 0.9s linear infinite;
+  }
+  @keyframes check-turn { to { transform: rotate(360deg); } }
+  .check__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .check__label { font-size: 15px; line-height: 1.35; }
+  .check__detail {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink-quiet);
+    overflow-wrap: anywhere;
+  }
+  .check__files {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink-quiet);
+  }
+  .check__files li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
   .report__text--warn { color: var(--accent-warn); }
   .report__addr {
     font-family: var(--font-mono);
