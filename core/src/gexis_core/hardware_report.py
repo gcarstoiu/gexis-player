@@ -284,6 +284,31 @@ def screen_lines(result: dict) -> list[str]:
 #: or screen that is not Tested: a single line on Settings' System page ...
 #: dismissed for good with one tap."*
 PROMPT_KEY = "_hardware_prompt"
+
+#: **The last feedback prepared, kept** (ADR-0126 amended 2026-10-11): sent
+#: again or started over from the System row, and forgotten when the sound
+#: card or the screen it was made on is no longer the one in use.
+KEPT_KEY = "_hardware_feedback"
+
+
+def identity(card: str | None, board_id: str | None, screen_label: str | None) -> str:
+    """The sound card and screen in use, as one key: a board is told apart
+    from another on the same card (HiFiBerry's share one) by its id."""
+    return f"sound:{board_id or card or 'none'}|screen:{screen_label or 'none'}"
+
+
+def kept_for(stored: dict | None, now_identity: str) -> dict | None:
+    """What is kept, if it was made on the hardware in use now."""
+    if not isinstance(stored, dict) or stored.get("identity") != now_identity or not stored.get("url"):
+        return None
+    return stored
+
+
+def names(facts: Facts) -> tuple[str, str]:
+    """The sound card and the screen as the feedback names them."""
+    what = facts.board or facts.card or "no sound card"
+    screen = facts.screen_chosen or (f"{facts.edid_maker} {facts.edid_name}".strip() if facts.edid_name else "")
+    return what, screen
 PROMPT_AFTER_S = 7 * 24 * 3600
 
 
@@ -360,8 +385,7 @@ def issue_url(facts: Facts, answers: dict[str, str], notes: str = "", tones: lis
     """The issue form, pre-filled: the board and screen in the title, the
     answers in their fields, the facts in the details. Kept under what GitHub
     accepts by cutting the details first."""
-    what = facts.board or facts.card or "no sound card"
-    screen = facts.screen_chosen or (f"{facts.edid_maker} {facts.edid_name}".strip() if facts.edid_name else "")
+    what, screen = names(facts)
     params = {
         "template": TEMPLATE,
         "title": f"[Hardware] {what}" + (f" · {screen}" if screen else ""),

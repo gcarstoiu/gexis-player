@@ -193,3 +193,51 @@ async def test_preparing_a_report_answers_the_prompt(tmp_path, monkeypatch):
         assert (await (await client.get("/hardware-report/prompt")).json())["text"].startswith("Help others")
         await client.post("/hardware-report/issue", json={"answers": {}})
         assert (await (await client.get("/hardware-report/prompt")).json())["text"] is None
+
+
+async def test_the_last_feedback_is_kept_sent_again_started_over_and_forgotten_with_other_hardware(tmp_path):
+    """ADR-0126 amended 2026-10-11 (George): *"can the findings be stored to
+    be sent again or the assessment restarted from scratch? ... wherever the
+    screen or audio hat changes the report hardware should be reset."*"""
+    from aiohttp.test_utils import TestClient, TestServer
+    from gexis_core.settings import SettingsStore
+    from gexis_core.settings_registry import Settings
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+
+    settings = Settings(SettingsStore(tmp_path / "s.db"), seed_path=tmp_path / "none.json")
+    server = StateServer(StateStore({}), settings=settings)
+    now = {"identity": hr.identity("sndrpihifiberry", "hifiberry-dacpluspro", "Waveshare 10.1")}
+
+    async def fake_pieces():
+        return {}
+
+    async def fake_facts():
+        return facts()
+
+    async def fake_identity():
+        return now["identity"]
+    server._hardware_pieces, server._hardware_facts = fake_pieces, fake_facts
+    server._hardware_identity = fake_identity
+    async with TestClient(TestServer(server.make_app())) as client:
+        assert (await (await client.get("/hardware-report/kept")).json())["kept"] is None
+        url = (await (await client.post("/hardware-report/issue", json={"answers": {"sound": "Yes"}})).json())["url"]
+        kept = (await (await client.get("/hardware-report/kept")).json())["kept"]
+        assert kept["url"] == url and kept["board"] and kept["at"] > 0
+
+        await client.post("/hardware-report/kept/clear")
+        assert (await (await client.get("/hardware-report/kept")).json())["kept"] is None
+
+        await client.post("/hardware-report/issue", json={"answers": {"sound": "Yes"}})
+        now["identity"] = hr.identity("sndrpihifiberry", "hifiberry-dac", "Waveshare 10.1")
+        assert (await (await client.get("/hardware-report/kept")).json())["kept"] is None
+        now["identity"] = hr.identity("sndrpihifiberry", "hifiberry-dacpluspro", "Waveshare 10.1")
+        assert (await (await client.get("/hardware-report/kept")).json())["kept"] is None, \
+            "forgotten for good, not hidden while the other board is in"
+
+
+def test_another_board_on_the_same_card_or_another_screen_is_other_hardware():
+    base = hr.identity("sndrpihifiberry", "hifiberry-dacpluspro", "Waveshare 10.1")
+    assert base != hr.identity("sndrpihifiberry", "hifiberry-dac", "Waveshare 10.1")
+    assert base != hr.identity("sndrpihifiberry", "hifiberry-dacpluspro", None)
+    assert hr.kept_for({"identity": base, "url": "u"}, base) and not hr.kept_for({"identity": base, "url": "u"}, "x")

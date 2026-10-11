@@ -1574,7 +1574,50 @@ class StateServer:
         # A report prepared is the prompt answered: it is not asked again.
         if self._settings is not None:
             await self._dismiss_hardware_prompt()
+            # And kept, to be sent again (ADR-0126 amended 2026-10-11).
+            board, screen_name = hardware_report.names(facts)
+            self._settings.keep(hardware_report.KEPT_KEY, {
+                "identity": await self._hardware_identity(), "at": time.time(),
+                "board": board, "screen": screen_name or None, "url": url})
         return web.json_response({"url": url})
+
+    async def _hardware_identity(self) -> str:
+        """ADR-0126 amended 2026-10-11: the sound card and screen in use, as
+        the key what is kept was made on."""
+        from gexis_core import board_apply, boards, outputs
+        stored = self._settings.value("output_device") if self._settings else None
+        screen = self._settings.value("screen") if self._settings else None
+
+        def gather():
+            output = outputs.resolve(stored)
+            card = output.card if output and output.card not in outputs.BUILT_IN_CARDS else None
+            board = None
+            if card:
+                written = board_apply.written()
+                board, _ = boards.identify(card, chosen=written.id if written else None,
+                                           product=hardware_report._read(hardware_report.HAT / "product") or None)
+            return hardware_report.identity(card, board.id if board else None, screen)
+
+        return await asyncio.get_running_loop().run_in_executor(None, gather)
+
+    async def _handle_hardware_kept(self, request: web.Request) -> web.Response:
+        """The last feedback, for the System row: when, what, and the link to
+        send it again. Forgotten here when the hardware has changed."""
+        if self._settings is None:
+            return web.json_response({"kept": None})
+        stored = self._settings.kept(hardware_report.KEPT_KEY)
+        kept = hardware_report.kept_for(stored, await self._hardware_identity())
+        if stored and kept is None:
+            self._settings.keep(hardware_report.KEPT_KEY, None)
+        if kept is None:
+            return web.json_response({"kept": None})
+        return web.json_response({"kept": {k: kept.get(k) for k in ("at", "board", "screen", "url")}})
+
+    async def _handle_hardware_kept_clear(self, request: web.Request) -> web.Response:
+        """*Start over*: the kept feedback forgotten."""
+        if self._settings is not None:
+            self._settings.keep(hardware_report.KEPT_KEY, None)
+        return web.json_response({"ok": True})
 
     async def _hardware_pieces(self) -> dict[str, str]:
         """ADR-0126 decision 1: what on this device is not Tested. Settings
@@ -2365,6 +2408,8 @@ class StateServer:
         app.router.add_post("/hardware-report/issue", self._handle_hardware_issue)
         app.router.add_post("/hardware-report/tones", self._handle_hardware_tones)
         app.router.add_get("/hardware-report/prompt", self._handle_hardware_prompt)
+        app.router.add_get("/hardware-report/kept", self._handle_hardware_kept)
+        app.router.add_post("/hardware-report/kept/clear", self._handle_hardware_kept_clear)
         app.router.add_post("/hardware-report/prompt/dismiss", self._handle_hardware_prompt_dismiss)
         app.router.add_post("/hardware-report/screen", self._handle_hardware_screen)
         app.router.add_post("/hardware-report/screen/result", self._handle_hardware_screen_result)

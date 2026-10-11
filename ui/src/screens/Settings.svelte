@@ -184,8 +184,9 @@
     }
   });
   //: ADR-0126: a hardware report - what the device reads, the owner's
-  //: answers, then GitHub's form filled in. The options are the form's own,
-  //: word for word: GitHub fills a dropdown only from its exact text.
+  //: answers, then GitHub's form filled in. The options are the words the
+  //: form's text fields expect (GitHub fills no dropdown from a link, so
+  //: they are text fields since 2026-10-11).
   const HW_QUESTIONS = [
     { id: 'sound', q: 'Did the music sound right?', options: ['Yes', 'No', 'Not tried'] },
     { id: 'volume', q: 'Did the volume change with the slider?', options: ['Yes', 'No', 'Not tried'] },
@@ -275,6 +276,32 @@
       .then((body) => (hwPrompt = body?.text ?? null))
       .catch(() => (hwPrompt = null));
   });
+  //: ADR-0126 amended 2026-10-11 (George): the last feedback, kept until
+  //: the sound card or screen changes - sent again or started over from
+  //: the System row.
+  let hwKept = $state(null);
+  function loadHardwareKept() {
+    fetch('/hardware-report/kept').then((r) => (r.ok ? r.json() : null))
+      .then((body) => (hwKept = body?.kept ?? null))
+      .catch(() => (hwKept = null));
+  }
+  $effect(() => {
+    if (current?.id === 'system' && !sheet) loadHardwareKept();
+  });
+  function hardwareKeptLine(kept) {
+    let day = '';
+    try {
+      day = new Date(kept.at * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    } catch {
+      day = '';
+    }
+    return day ? `Ready since ${day}` : 'Ready';
+  }
+  async function startHardwareOver(row) {
+    hwKept = null;
+    await fetch('/hardware-report/kept/clear', { method: 'POST' }).catch(() => {});
+    openSheet(row);
+  }
   function dismissHardwarePrompt() {
     hwPrompt = null;
     fetch('/hardware-report/prompt/dismiss', { method: 'POST' }).catch(() => {});
@@ -1534,6 +1561,22 @@
                     >{$update?.active ? 'Updating…' : waiting ? 'Update…' : 'Check for updates'}</button>
                   </span>
                 </div>
+              {:else if r.key === 'hardware_report' && hwKept}
+                <!-- ADR-0126 amended 2026-10-11 (George chose the row): the
+                     last feedback, with its two buttons. -->
+                <div class="row row--tile">
+                  <span class="row__body row__body--stack">
+                    <button type="button" class="row__text hwkept__open" onclick={() => tap(r)}>
+                      <span class="row__label"><span class="row__name">{r.label}</span></span>
+                      <span class="row__value row__value--tile">{hardwareKeptLine(hwKept)}</span>
+                      <span class="row__note">{[hwKept.board, hwKept.screen].filter(Boolean).join(' · ')}</span>
+                    </button>
+                    <span class="hwkept__actions">
+                      <a class="tile__btn tile__btn--go hwkept__btn" href={hwKept.url} target="_blank" rel="noopener">Send again ↗</a>
+                      <button type="button" class="tile__btn" onclick={() => startHardwareOver(r)}>Start over</button>
+                    </span>
+                  </span>
+                </div>
               {:else if r.key === 'sweep_all'}
                 <!-- George, 2026-10-06: the Lyrion Client's portraits and
                      covers in one tile - what the last run found inside it,
@@ -1858,8 +1901,14 @@
               then System → Hardware feedback.
             </p>
           {:else if hwUrl}
-            <p class="report__text">The feedback is ready. GitHub opens with it filled in; read it there and press Create.</p>
-            <a class="report__link report__go" href={hwUrl} target="_blank" rel="noopener">Open it on GitHub</a>
+            <!-- George, 2026-10-11: one way to send - a link beside a Done
+                 button left it unclear which of the two sent it. -->
+            <p class="report__text">The feedback is ready.</p>
+            <a class="btn btn--confirm report__send" href={hwUrl} target="_blank" rel="noopener">Send on GitHub ↗</a>
+            <p class="report__text report__text--quiet">
+              GitHub opens with it all filled in. Read it, then press Create there to send it. It needs a GitHub
+              account. The player keeps it: System → Hardware feedback can send it again.
+            </p>
           {:else if hw === null && !hwError}
             <p class="report__text report__text--quiet">Reading the hardware…</p>
           {:else if hw}
@@ -2337,13 +2386,15 @@
             Back
           {:else if restorePending}
             Cancel
+          {:else if sheet.kind === 'hardware' && hwUrl}
+            Close
           {:else if choicePending === null && (sheet.type === 'choice' || sheet.type === 'multi' || sheet.type === 'intervals' || sheet.grouped || (sheet.wired && sheet.type === 'number'))}
             Close
           {:else}
             Cancel
           {/if}
         </button>
-        {#if join === 'error' || joinItem || restorePending || choicePending !== null || (sheet.type === 'action' && sheet.kind !== 'cable' && !((sheet.kind === 'report' || sheet.kind === 'hardware') && onPanel())) || sheet.type === 'toggle' || sheet.type === 'text' || sheet.type === 'share' || sheet.type === 'share-login' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
+        {#if join === 'error' || joinItem || restorePending || choicePending !== null || (sheet.type === 'action' && sheet.kind !== 'cable' && !((sheet.kind === 'report' || sheet.kind === 'hardware') && onPanel()) && !(sheet.kind === 'hardware' && hwUrl)) || sheet.type === 'toggle' || sheet.type === 'text' || sheet.type === 'share' || sheet.type === 'share-login' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
           <button
             class="btn btn--confirm"
             class:btn--danger={sheet.danger || restorePending || choicePending !== null}
@@ -2732,6 +2783,38 @@
     color: var(--accent-lms);
   }
   .tile__btn:disabled { opacity: 0.6; }
+  .row__body--stack {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .hwkept__open {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+  }
+  .hwkept__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .hwkept__btn {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+  }
+  .report__send {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 52px;
+    text-decoration: none;
+  }
   /* A running install: dimmed as before, but a tap brings back the modal
      that Hide put away (George, 2026-10-02: "how do I see it again?"). */
   .tile__btn--busy { opacity: 0.6; }
