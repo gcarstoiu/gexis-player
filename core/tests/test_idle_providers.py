@@ -720,7 +720,7 @@ def test_the_topics_row_and_pixabays_categories_cannot_drift():
     options = rows["wallpaper_topics"]["options"]
     # ADR-0133 amended 2026-10-11: three searches beside the categories, and
     # each of them is one the route knows how to ask for.
-    searches = set(StateServer.PIXABAY_SEARCHES) | {"Season"}
+    searches = set(StateServer.PIXABAY_SEARCHES)
     assert {o.lower() for o in options if o not in searches} == set(wallpapers_mod.CATEGORIES)
     assert searches <= set(options)
 
@@ -741,15 +741,15 @@ def pixabay_any(url, params):
     return (200, b"\xff\xd8jpeg-bytes")
 
 
-async def test_space_calm_and_the_season_are_searches_and_a_holiday_replaces_them(tmp_path, monkeypatch):
-    """ADR-0133 amended 2026-10-11: Space and Calm ask Pixabay by word, Season
-    by the season it is, all as editors' choice; with *Holidays* on, a
-    holiday's day asks for the holiday alone (George: *"holidays are a toggle
-    that supersede the choice of wallpaper"*)."""
+async def test_calm_is_a_search_the_season_joins_and_a_holiday_replaces_them(tmp_path, monkeypatch):
+    """ADR-0133 amended 2026-10-11: Calm asks Pixabay by word and the
+    *Seasons* toggle adds the season it is, both as editors' choice; with
+    *Holidays* on, a holiday's day asks for the holiday alone (George:
+    *"holidays are a toggle that supersede the choice of wallpaper"*)."""
     from gexis_core import own_wallpapers
     session = FakeSession(pixabay_any)
     settings, client = client_for(tmp_path, wallpapers=Wallpapers(session, tmp_path / "pics"))
-    for key in ("wallpaper_holidays",):
+    for key in ("wallpaper_holidays", "wallpaper_seasons"):
         settings._wired[key] = None
     monkeypatch.setattr(own_wallpapers, "season", lambda day, southern: "autumn")
     asked = lambda: [(p.get("category"), p.get("q"), p.get("editors_choice"))
@@ -757,13 +757,22 @@ async def test_space_calm_and_the_season_are_searches_and_a_holiday_replaces_the
     async with client:
         settings.set("idle_background", "Wallpapers online")
         settings.set("wallpaper_key", "key")
-        settings.set("wallpaper_topics", ["Space", "Calm", "Season", "Nature"])
+        settings.set("wallpaper_topics", ["Calm", "Nature"])
         monkeypatch.setattr(own_wallpapers, "holiday", lambda day, country: None)
-        for _ in range(8):
+        # Random across the topics: ask until all three have been asked for.
+        want = {("nature", None, None), (None, "calm", "true"), (None, "autumn", "true")}
+        for _ in range(60):
             assert (await (await client.get("/idle/wallpaper")).json())["error"] is None
-        seen = set(asked())
-        assert ("nature", None, None) in seen
-        assert {(None, "space", "true"), (None, "calm", "true"), (None, "autumn", "true")} <= seen
+            if want <= set(asked()):
+                break
+        assert want <= set(asked())
+
+        # Seasons off: no season among them.
+        session.calls.clear()
+        settings.set("wallpaper_seasons", False)
+        for _ in range(12):
+            await client.get("/idle/wallpaper")
+        assert (None, "autumn", "true") not in set(asked())
 
         session.calls.clear()
         monkeypatch.setattr(own_wallpapers, "holiday", lambda day, country: "christmas")

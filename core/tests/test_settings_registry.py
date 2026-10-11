@@ -775,9 +775,9 @@ def test_the_wallpaper_topics_row_offers_pixabays_own_categories():
     }
     row = next(r for r in _rows() if r["key"] == "wallpaper_topics")
     assert row["type"] == "multi"
-    # ADR-0133 amended 2026-10-11: Space, Calm and Season, searches, join them.
-    assert row["options"][:3] == ["Space", "Calm", "Season"]
-    assert {o.lower() for o in row["options"][3:]} == pixabay
+    # ADR-0133 amended 2026-10-11: Calm, a search, joins them.
+    assert row["options"][0] == "Calm"
+    assert {o.lower() for o in row["options"][1:]} == pixabay
     # A default that is empty would be a row the validator itself refuses.
     assert row["default"] == ["Nature"]
 

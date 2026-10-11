@@ -655,11 +655,9 @@
         "type": "multi",
         "label": "Wallpaper topics",
         "marks": "N",
-        "note": "Space, Calm and Season (the current season) are searches; the rest are Pixabay's own categories. Each new picture comes from one of the chosen ones at random.",
+        "note": "Calm is a search; the rest are Pixabay's own categories. Each new picture comes from one of the chosen ones at random.",
         "options": [
-          "Space",
           "Calm",
-          "Season",
           "Backgrounds",
           "Fashion",
           "Nature",
@@ -725,11 +723,16 @@
         "type": "toggle",
         "label": "Seasons",
         "marks": "N",
-        "note": "The season's pictures join the styles, by hemisphere.",
+        "note": "The season's pictures join the styles or topics, by hemisphere.",
         "default": true,
         "onlyWhen": [
           "idle_background",
-          "Gexis wallpapers"
+          {
+            "in": [
+              "Gexis wallpapers",
+              "Wallpapers online"
+            ]
+          }
         ]
       },
       {

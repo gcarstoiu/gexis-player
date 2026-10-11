@@ -624,34 +624,32 @@ class StateServer:
             answer = {**answer, "url": f"/idle/wallpaper/{answer['file']}"}
         return answer
 
-    #: ADR-0133 amended 2026-10-11: the topics that are searches, and what each
-    #: holiday asks Pixabay for when it supersedes them.
-    PIXABAY_SEARCHES = {"Space": "space", "Calm": "calm"}
+    #: ADR-0133 amended 2026-10-11: the topic that is a search, and what each
+    #: holiday asks Pixabay for when it supersedes the topics.
+    PIXABAY_SEARCHES = {"Calm": "calm"}
     PIXABAY_HOLIDAYS = {"newyear": "new year", "christmas": "christmas", "easter": "easter"}
 
     async def _pixabay_topics(self, chosen: list) -> list[str]:
         """What `Wallpapers.next` is asked for: on a holiday, with *Holidays*
         on, that holiday alone (George: *"holidays are a toggle that
-        supersede the choice of wallpaper"*); otherwise each chosen topic -
-        a category as it is, Space and Calm as searches, Season as the
-        season it is by the player's hemisphere."""
-        names = [str(t) for t in chosen]
-        needs_place = "Season" in names or self._settings.value("wallpaper_holidays") is not False
-        country, latitude = await self._where() if needs_place else (None, None)
+        supersede the choice of wallpaper"*); otherwise each chosen topic - a
+        category as it is, Calm as a search - and, with *Seasons* on, the
+        season it is by the player's hemisphere beside them (George chose
+        the toggle over a Season topic, 2026-10-11)."""
+        value = self._settings.value
+        holidays_on = value("wallpaper_holidays") is not False
+        seasons_on = value("wallpaper_seasons") is not False
+        country, latitude = await self._where() if (holidays_on or seasons_on) else (None, None)
         today = datetime.datetime.now().date()
-        if self._settings.value("wallpaper_holidays") is not False:
+        if holidays_on:
             holiday = own_wallpapers.holiday(today, country)
             if holiday in self.PIXABAY_HOLIDAYS:
                 return [PIXABAY_SEARCH + self.PIXABAY_HOLIDAYS[holiday]]
-        topics = []
-        for name in names:
-            if name in self.PIXABAY_SEARCHES:
-                topics.append(PIXABAY_SEARCH + self.PIXABAY_SEARCHES[name])
-            elif name == "Season":
-                topics.append(PIXABAY_SEARCH + own_wallpapers.season(
-                    today, southern=latitude is not None and latitude < 0))
-            else:
-                topics.append(name)
+        topics = [PIXABAY_SEARCH + self.PIXABAY_SEARCHES[t] if t in self.PIXABAY_SEARCHES else t
+                  for t in (str(t) for t in chosen)]
+        if seasons_on:
+            topics.append(PIXABAY_SEARCH + own_wallpapers.season(
+                today, southern=latitude is not None and latitude < 0))
         return topics
 
     async def _own_picture(self, background: str) -> dict:
