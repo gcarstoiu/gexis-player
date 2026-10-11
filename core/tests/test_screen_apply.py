@@ -184,3 +184,43 @@ def test_a_bar_kept_before_gets_its_orientation_at_the_next_start(tmp_path):
     assert screen_apply.refresh(**f) is True
     assert f["cmdline"].read_text().split()[-1] == "video=HDMI-A-1:320x1480,panel_orientation=left_side_up"
     assert screen_apply.refresh(**f) is False, "nothing to do the second time"
+
+
+def test_cmdline_txt_is_never_rewritten_in_place(tmp_path, monkeypatch):
+    """Review, 2026-10-12: `write_text` truncates first, on the FAT boot
+    partition, and these players are switched off at the wall (ADR-0019). A
+    power cut there left a cmdline.txt with no `root=` - a Pi that does not
+    boot until someone edits the card by hand. Written beside it, flushed to
+    the card, then renamed over it."""
+    import os
+    f = files(tmp_path)
+    inode = f["cmdline"].stat().st_ino
+    synced, real_fsync = [], os.fsync
+
+    def fsync(fd):
+        synced.append(os.readlink(f"/proc/self/fd/{fd}"))
+        real_fsync(fd)
+
+    monkeypatch.setattr(os, "fsync", fsync)
+    screen_apply.choose(Applied("waveshare-7.9-hdmi", 0), **f, now=1)
+    assert f["cmdline"].stat().st_ino != inode, "a new file renamed into place"
+    assert "video=HDMI-A-1:400x1280" in f["cmdline"].read_text()
+    assert f["cmdline"].read_text().startswith("console=serial0")
+    assert str(f["cmdline"]) + ".tmp" in synced, "the new text is on the card before the rename"
+    assert str(tmp_path) in synced, "and so is the rename"
+    assert not (tmp_path / "cmdline.txt.tmp").exists()
+
+
+def test_a_cmdline_txt_that_cannot_be_written_is_left_as_it_was(tmp_path, monkeypatch):
+    import os
+    f = files(tmp_path)
+
+    def refuse(fd):
+        raise OSError(5, "Input/output error")
+
+    monkeypatch.setattr(os, "fsync", refuse)
+    try:
+        screen_apply.write_files(Applied("waveshare-7.9-hdmi", 0), env=f["env"], cmdline=f["cmdline"])
+    except OSError:
+        pass
+    assert f["cmdline"].read_text() == CMDLINE

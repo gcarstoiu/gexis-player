@@ -116,6 +116,9 @@ class Players:
                 body = await response.json()
         except (aiohttp.ClientError, asyncio.TimeoutError, ValueError):
             return None
+        if not isinstance(body, dict):
+            # Not a player's status: one odd peer must not fail the whole list.
+            return None
         # The page to open is the player's own name, so a bookmark made there
         # survives its address changing.
         return {**body, "url": f"http://{peer['host']}:{peer['port']}/"}

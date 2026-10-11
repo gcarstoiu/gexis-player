@@ -71,10 +71,10 @@ def test_a_rename_writes_all_four(paths):
     written = device_name.apply("Gexis Living Room")
     assert written.ok and written.hostname == "gexis-living-room"
     assert paths["HOSTNAME_PATH"].read_text() == "gexis-living-room\n"
-    assert "GEXIS_DEVICE_NAME=Gexis Living Room\n" == paths["ENV_PATH"].read_text()
+    assert 'GEXIS_DEVICE_NAME="Gexis Living Room"\n' == paths["ENV_PATH"].read_text()
     # The three display names are verbatim; only the hostname is sanitised.
-    assert "device_name: Gexis Living Room\n" in paths["LIBRESPOT_PATH"].read_text()
-    assert "PRETTY_HOSTNAME=Gexis Living Room\n" in paths["MACHINE_INFO_PATH"].read_text()
+    assert 'device_name: "Gexis Living Room"\n' in paths["LIBRESPOT_PATH"].read_text()
+    assert 'PRETTY_HOSTNAME="Gexis Living Room"\n' in paths["MACHINE_INFO_PATH"].read_text()
 
 
 def test_the_hosts_entry_carries_the_new_name_and_the_running_one(paths, monkeypatch):
@@ -117,14 +117,14 @@ def test_bluetooth_takes_the_name_from_machine_info_not_main_conf(paths):
     """
     paths["MACHINE_INFO_PATH"].unlink()
     device_name.apply("Studio")
-    assert paths["MACHINE_INFO_PATH"].read_text() == "PRETTY_HOSTNAME=Studio\n"
+    assert paths["MACHINE_INFO_PATH"].read_text() == 'PRETTY_HOSTNAME="Studio"\n'
     assert not hasattr(device_name, "BLUETOOTH_PATH"), "main.conf is not a target"
 
 
 def test_a_missing_key_is_appended_rather_than_dropped(paths):
     paths["LIBRESPOT_PATH"].write_text("audio_backend: alsa\n")
     device_name.apply("Studio")
-    assert paths["LIBRESPOT_PATH"].read_text() == "audio_backend: alsa\ndevice_name: Studio\n"
+    assert paths["LIBRESPOT_PATH"].read_text() == 'audio_backend: alsa\ndevice_name: "Studio"\n'
 
 
 def test_a_target_that_refuses_is_named_and_the_others_still_land(paths, monkeypatch):
@@ -141,13 +141,13 @@ def test_a_target_that_refuses_is_named_and_the_others_still_land(paths, monkeyp
     # Everything else still happened - one refusal is not a reason to leave
     # the rest on the old name.
     assert paths["HOSTNAME_PATH"].read_text() == "studio\n"
-    assert "PRETTY_HOSTNAME=Studio\n" in paths["MACHINE_INFO_PATH"].read_text()
+    assert 'PRETTY_HOSTNAME="Studio"\n' in paths["MACHINE_INFO_PATH"].read_text()
 
 
 def test_the_env_directory_is_created_if_it_is_not_there(paths):
     assert not paths["ENV_PATH"].parent.exists()
     assert device_name.apply("Studio").ok
-    assert paths["ENV_PATH"].read_text() == "GEXIS_DEVICE_NAME=Studio\n"
+    assert paths["ENV_PATH"].read_text() == 'GEXIS_DEVICE_NAME="Studio"\n'
 
 
 def test_renaming_twice_replaces_rather_than_accumulates(paths, monkeypatch):
@@ -155,7 +155,7 @@ def test_renaming_twice_replaces_rather_than_accumulates(paths, monkeypatch):
     device_name.apply("First")
     device_name.apply("Second")
     yaml = paths["LIBRESPOT_PATH"].read_text()
-    assert yaml.count("device_name:") == 1 and "device_name: Second" in yaml
+    assert yaml.count("device_name:") == 1 and 'device_name: "Second"' in yaml
     assert paths["MACHINE_INFO_PATH"].read_text().count("PRETTY_HOSTNAME=") == 1
     assert paths["HOSTS_PATH"].read_text().count("127.0.1.1") == 1
 
@@ -210,11 +210,68 @@ def test_a_restore_puts_the_backups_name_in_all_four_places(paths):
     written = device_name.apply_restored()
     assert written is not None and written.hostname == "gexis" and not written.failed
     assert paths["HOSTNAME_PATH"].read_text().strip() == "gexis"
-    assert "PRETTY_HOSTNAME=gexis" in paths["MACHINE_INFO_PATH"].read_text()
-    assert "device_name: gexis" in paths["LIBRESPOT_PATH"].read_text()
+    assert 'PRETTY_HOSTNAME="gexis"' in paths["MACHINE_INFO_PATH"].read_text()
+    assert 'device_name: "gexis"' in paths["LIBRESPOT_PATH"].read_text()
 
 
 def test_a_restore_without_a_name_changes_nothing(paths):
     paths["MACHINE_INFO_PATH"].write_text("PRETTY_HOSTNAME=Sofa PI\n")
     assert device_name.apply_restored() is None
     assert "Sofa PI" in paths["MACHINE_INFO_PATH"].read_text()
+
+
+# ── names the files must survive (review, 2026-10-12) ─────────────────────
+
+def _yaml_value(text: str) -> str:
+    """The `device_name:` value as a YAML reader takes it. Written as a
+    JSON string, and a JSON string is a YAML double-quoted scalar - so the
+    standard library reads it back without PyYAML, which the venv lacks."""
+    import json
+    line = next(l for l in text.splitlines() if l.startswith("device_name:"))
+    return json.loads(line.partition(":")[2].strip())
+
+
+@pytest.mark.parametrize("name", ["Kitchen: Main", "@home", "*Den*", "Kitchen #2", "[Den]", "Den 'n' \"Co\""])
+def test_a_name_yaml_would_misread_reaches_spotify_whole(paths, name):
+    """Unquoted, 'Kitchen: Main' left go-librespot's config unparseable and
+    Spotify Connect gone after the restart, with the rename reported ok;
+    '#2' was cut off as a comment and '[Den]' became a list."""
+    assert device_name.apply(name).ok
+    assert _yaml_value(paths["LIBRESPOT_PATH"].read_text()) == name
+
+
+@pytest.mark.parametrize("name", ["AC\\DC", "Sofa \\1", "Den\\n"])
+def test_a_backslash_is_written_as_typed_and_does_not_stop_the_rename(paths, name):
+    """The line went to `re.subn` as a replacement template, so 'AC\\DC'
+    raised `bad escape \\D` before any file was written: a 500, the new name
+    stored, and all four targets left on the old one."""
+    written = device_name.apply(name)
+    assert written.ok, written.failed
+    assert _yaml_value(paths["LIBRESPOT_PATH"].read_text()) == name
+    assert device_name.lms_player("") == name
+    assert paths["HOSTNAME_PATH"].read_text().strip() == device_name.sanitise(name)
+
+
+@pytest.mark.parametrize("name", ["Sofa\nLD_PRELOAD=/tmp/x.so", "Sofa\r\nX=1", "Sofa\x00", "Sofa X=1", "Sofa\x85X=1"])
+def test_a_line_break_in_a_name_is_refused_where_it_is_typed(name):
+    """Review, 2026-10-12: anyone on the LAN could PUT a name with a newline,
+    and every newline became a line of their choosing in the EnvironmentFile
+    two renderer units read, as a user with passwordless sudo."""
+    from gexis_core.settings_registry import InvalidValue, load_registry, validate
+    row = next(r for g in load_registry() for r in g["rows"] if r.get("key") == "device_name")
+    with pytest.raises(InvalidValue):
+        validate(row, name)
+    assert validate(row, "  Café Münster: Den #2 [AC\\DC] 🎵 ") == "Café Münster: Den #2 [AC\\DC] 🎵"
+
+
+def test_a_line_break_that_gets_past_the_settings_adds_no_line_anywhere(paths):
+    """A restored backup or setup's own rename reaches `apply` without the
+    row's check, so the writer does not trust its input either: no value can
+    add a line to the four files."""
+    before = {k: p.read_text().count("\n") for k, p in paths.items() if p.exists()}
+    written = device_name.apply("Sofa\nLD_PRELOAD=/tmp/x.so\r end")
+    assert written.ok
+    assert paths["ENV_PATH"].read_text() == 'GEXIS_DEVICE_NAME="Sofa LD_PRELOAD=/tmp/x.so end"\n'
+    for key, count in before.items():
+        assert paths[key].read_text().count("\n") == count, key
+    assert device_name.lms_player("") == "Sofa LD_PRELOAD=/tmp/x.so end"

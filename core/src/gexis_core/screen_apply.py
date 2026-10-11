@@ -18,6 +18,7 @@ Keep. Nothing here restarts anything; the caller does.
 from __future__ import annotations
 
 import json
+import os
 import re
 import time
 from dataclasses import dataclass
@@ -185,8 +186,36 @@ def write_files(applied: Applied | None, *, env: Path = SCREEN_ENV, cmdline: Pat
     after = with_video(before.strip(), video_for(screen, rotation=applied.rotation) if screen else None)
     if after.strip() == before.strip():
         return False
-    cmdline.write_text(after)
+    _replace_durably(cmdline, after)
     return True
+
+
+def _replace_durably(path: Path, text: str) -> None:
+    """**cmdline.txt is never rewritten in place** (review, 2026-10-12).
+    Truncate-then-write on the FAT boot partition, on a player switched off
+    at the wall (ADR-0019), can leave it empty: no `root=`, and a Pi that
+    does not boot until someone edits the card by hand. So: written beside
+    it, on the card before the rename, then renamed over it, and the rename
+    itself on the card. On vfat a rename is not atomic the way it is on ext4,
+    which is why both syncs are here and not only the rename."""
+    tmp = path.with_name(path.name + ".tmp")
+    try:
+        with open(tmp, "w") as out:
+            out.write(text)
+            out.flush()
+            os.fsync(out.fileno())
+        tmp.replace(path)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+    try:
+        folder = os.open(path.parent, os.O_RDONLY)
+        try:
+            os.fsync(folder)
+        finally:
+            os.close(folder)
+    except OSError:
+        pass  # the file is in place; the kernel's own writeback finishes the rest
 
 
 def choose(applied: Applied, *, state: Path = STATE, env: Path = SCREEN_ENV, cmdline: Path = CMDLINE,
