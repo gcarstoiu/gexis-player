@@ -187,6 +187,9 @@ class Supervisor:
         # 2026-09-12 this same None meant "LMS", which is why the
         # distinction is called out rather than left to the type.
         self._active: str | None = None
+        #: The incoming renderer while the outgoing one's release runs - see
+        #: `releasing_for`.
+        self._releasing_for: str | None = None
         self._lock = asyncio.Lock()
 
     def register(self, adapter: Adapter) -> None:
@@ -249,6 +252,22 @@ class Supervisor:
         change, say) have to handle None explicitly.
         """
         return self._active
+
+    @property
+    def releasing_for(self) -> str | None:
+        """**The renderer taking over, while the one it displaces is still
+        being released**; None otherwise (code review, 2026-10-12).
+
+        `active` already names the incoming renderer then - the release ladder
+        relies on that - but the outgoing renderer's audio is still playing.
+        A volume report from the incoming renderer in this window is not a
+        level to write to the shared DAC: that is the blip Finding 012 moved
+        the volume step after the release to remove, and a phone's own slider
+        arriving as it takes over (ADR-0054's 2026-10-05 amendment) brought it
+        back through the report path. Cleared before the volume step, which
+        is where the incoming renderer's level is decided.
+        """
+        return self._releasing_for
 
     async def acquire(self, renderer_id: str) -> None:
         """`renderer_id`'s acquisition event fired. Apply ADR-0010 policy as
@@ -340,10 +359,13 @@ class Supervisor:
             # An acquisition that died in the ladder once left Spotify at the
             # level the previous renderer had left, and a phone's next press took the DAC to
             # full scale (Finding 096).
+            self._releasing_for = renderer_id
             try:
                 await self._release_with_ladder(outgoing)
             except Exception:  # noqa: BLE001 - logged, and the takeover goes on
                 logger.exception("release[%s] failed; the takeover goes on", outgoing)
+            finally:
+                self._releasing_for = None
         if self._restore_volume is not None:
             await _bounded(f"{renderer_id}'s volume", self._restore_volume(renderer_id))
         # Finding 014: give the incoming renderer a chance to retry its
