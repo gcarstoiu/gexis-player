@@ -921,6 +921,9 @@ async def main() -> None:
     software_on = {"value": bool(chosen_output is not None and chosen_output.software)}
     fixed_now = {"value": False}
     set_fixed_output_reader(lambda: fixed_now["value"])
+    # ADR-0137: the plugins are told when Fixed changes. Made further down; a
+    # change before it exists reaches each plugin as it connects instead.
+    plugin_server = None
 
     async def _apply_output_mode(force: bool = False) -> None:
         """Put the chosen mode into force, if now is a legal moment.
@@ -944,6 +947,8 @@ async def main() -> None:
             return
         fixed_now["value"] = wanted
         state_store.set_fixed_output(wanted)
+        if plugin_server is not None:
+            plugin_server.tell_output(wanted)
         if wanted:
             # Nothing is attenuating, so the one level the DAC may hold is
             # full scale. Written directly: `write_hardware` now refuses
@@ -3652,6 +3657,8 @@ async def main() -> None:
             for key in plugin_rows
             if key.startswith(f"{plugin_id}.")
         },
+        # ADR-0137: whether the output is Fixed, told at connection.
+        output_fixed=lambda: fixed_now["value"],
     )
 
     logger.info("gexis-core starting: adapters=%s", list(adapters))
