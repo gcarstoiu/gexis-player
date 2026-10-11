@@ -155,3 +155,35 @@ hardware should be reset."*
 Not a setting: no ADR-0022 row. Kept with the prompt's record, in the
 settings store's own state, so a backup carries it and a factory reset
 clears it.
+
+## Amended 2026-10-11 (again): checked through
+
+George, the same evening: the form still came blank, *"First time the show
+pattern button didn't work and then also the tones couldn't be played. Can
+you thoroughly check the implementation here?"* The two failures were traced
+(the phone's state connection, down for seven seconds after the browser came
+back from the background; a Plexamp the player did not know was playing,
+which plugin 0.4.7 fixes) and the whole feature was reviewed. Changed:
+
+- **Touch** is a device that reports a touch and where it lands, on USB or
+  I2C - not any USB input device: a keyboard with a screen without touch
+  asked for four taps that could not be made.
+- **The tones** wait while a source holds the card even paused (it refuses
+  them as surely as one playing), play one set at a time, and never call a
+  tone that played "did not play".
+- **The address** keeps the details' first lines (version, card) and cuts
+  the notes once the rest of the details is gone; notes in a script other
+  than Latin had pushed every detail out.
+- **Only the screen check a feedback ran** goes into it; a screen without
+  touch answers *No touch*.
+- **The Pi's own output** (HDMI, the jack) is named as that and never
+  counted as a DAC.
+- **What is kept** is forgotten when the connected screen changes or the
+  player goes Headless, not only when Settings names another.
+- **Showing the pattern** takes the visualiser down and wakes a screen in
+  standby, either of which hid it.
+- The phone reconnects to the player at once when the page comes back to
+  the front; the pattern button also follows the player's own answer.
+
+**The form on `main` still has dropdowns**, which GitHub never fills from a
+link; the text fields reach users when the release carrying them is merged.
