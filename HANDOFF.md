@@ -40,16 +40,16 @@ Previewed on sofapi step by step through the day. In it:
   open until Close; only Fixed asks to confirm in Volume.
 
 **Devices.** **sofapi** (Waveshare 10.1", Lyrion queue of George's - do not
-clear it) runs the `phase-13d` preview that became 0.10.0 (0.9.9+git73;
-0.10.0 sorts above it). **ShelvesPi** (the bar) runs release 0.9.8, not yet
-updated - George's reset-and-restore check on 0.9.9 or later is still owed.
-**guestpi** offline. Previews went to sofapi today at George's request.
+clear it) and **ShelvesPi** (the bar) both run the `phase-13d` preview
+0.10.0+git14 (ADR-0136's switcher needs two players), the bar's first update
+since 0.9.8. George's reset-and-restore check on the bar is still owed, now
+on this. **guestpi** offline.
 
-**Waiting on George:** merge PR #59. Decisions owed: Home Assistant (the
-player in an existing Home Assistant, recommended, or hosted as a plugin, to
-be measured first); several players (a switcher in the phone page's header,
-recommended). Checks owed: a reset and restore on the bar; standby on the
-bars; the boot screen's seam.
+**Waiting on George:** a look at the player switcher on his phone (ADR-0136,
+built and tried on both players). Checks owed: a reset and restore on the
+bar; display standby on the bar (dark or a lasting "No signal"? turned the
+right way after waking?); the boot screen's seam. Phase 13g (the player in
+Home Assistant) is queued before themes, ADR first.
 
 **At the first Stable release** (George, 2026-10-09): revisit how the image
 reaches people - most likely all three of ADR-0021's routes: the image file
