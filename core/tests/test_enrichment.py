@@ -580,3 +580,29 @@ async def test_the_covers_are_started_first():
                                  Note("recording-art", [])], _cache())
     await service.for_track(KEY)
     assert started[:2] == ["coverart", "recording-art"]
+
+
+@pytest.mark.asyncio
+async def test_a_stored_picture_follows_the_lms_server_to_its_new_address():
+    """Review, 2026-10-12: a FOUND answer is kept for good, with the LMS
+    address it was written with - stale after a new DHCP lease, the player's
+    own server instead of a NAS's, or a backup restored elsewhere."""
+    key = TrackKey.of(TrackMetadata(title="Example Title", artist="Example Artist",
+                                    album="Example Album", duration=200.0))
+    cache = _cache()
+    old = "http://old-host:9000"
+    remote = "https://assets.example.invalid/a.jpg"
+    first = EnrichmentService([FakeProvider("fanart", [_found(
+        artist_image=f"{old}/imageproxy/{remote}/image_600x600_o.jpg",
+        artist_images=(f"{old}/imageproxy/{remote}/image_600x600_o.jpg", remote),
+        album_art=f"{old}/imageproxy/mai/album/1/image_300x300_o.jpg")])], cache)
+    await first.for_track(key)
+
+    now = {"base": "http://new-host:9000"}
+    again = FakeProvider("fanart", [])
+    service = EnrichmentService([again], cache, lms_base=lambda: now["base"])
+    found = await service.for_track(key)
+    assert again.calls == 0
+    assert found.artist_image == f"http://new-host:9000/imageproxy/{remote}/image_600x600_o.jpg"
+    assert found.artist_images == (found.artist_image, remote), "a picture elsewhere stays as it is"
+    assert found.album_art == "http://new-host:9000/imageproxy/mai/album/1/image_300x300_o.jpg"
