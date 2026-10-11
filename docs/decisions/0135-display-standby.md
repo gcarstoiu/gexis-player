@@ -1,14 +1,15 @@
 # ADR-0135 — Display standby: the screen off on demand and at night
 
-**Status:** **Proposed** — 2026-10-11. **Rows confirmed by George** the same
+**Status:** **Accepted** — 2026-10-11. **Rows confirmed by George** the same
 day (*"The 4 rows confirmed"*), with days of the week on each interval (*"Day
 of the week would be good too"*) and at most six (*"6 is plenty"*). George chose the recommendations
 (on-demand screen off and a night schedule; touch, music starting and the
 phone button wake it; controls in Display and the phone's mini player), with
 two changes: **Display standby is a section of its own**, and **a screen
 woken during the night goes back to standby when unused, after 2 minutes by
-default, at most 30**. Waits on the screen-off test below and on George
-confirming the settings rows (ADR-0022).
+default, at most 30**. The screen-off method was measured on the 10.1" the
+same day (below); the bars and the 13.3" are checked when it is previewed on
+them.
 **Amends:** [ADR-0019](0019-peppy-screen-lifecycle.md) §*The panel does not
 sleep* ("No blanking, no backlight timeout").
 
@@ -73,8 +74,10 @@ player, and an interval whose start and end are the same is refused.
   HDMI-A-1 --off` for 60 s: the touch controller (event4) sent 13.5 KB of
   events, and the page posted seven `/touch` to the core while dark. Wake on
   touch needs no reader of its own.
-- **The backlight went dark, then the screen lit its own "No signal" box**
-  after about 30 s (George, at the screen). Not yet known: whether it goes
-  dark again on its own after the box; whether the 13.3" and the bars do the
-  same. Without that, a black page with the signal kept (no box, the
-  backlight lit) is the alternative.
+- **The backlight went dark, the screen lit its own "No signal" box after
+  about 30 s, and the box went away about 10 s later**, dark from then on
+  (George, at the screen; a second run of 3 minutes). So output off is
+  standby on this screen, with one short flash of the box as it starts.
+  Not yet known: the 13.3" and the bars. A screen that kept its box lit would
+  need the alternative - a black page with the signal kept, the backlight
+  lit.
