@@ -27,6 +27,7 @@ const RECONNECT_MAX_MS = 5000;
 
 let socket = null;
 let retryDelay = RECONNECT_MIN_MS;
+let retryTimer = null;
 
 function socketUrl() {
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -34,14 +35,17 @@ function socketUrl() {
 }
 
 export function connect() {
-  socket = new WebSocket(socketUrl());
+  clearTimeout(retryTimer);
+  retryTimer = null;
+  const ws = new WebSocket(socketUrl());
+  socket = ws;
 
-  socket.addEventListener('open', () => {
+  ws.addEventListener('open', () => {
     connection.set('open');
     retryDelay = RECONNECT_MIN_MS;
   });
 
-  socket.addEventListener('message', (event) => {
+  ws.addEventListener('message', (event) => {
     try {
       playback.set(JSON.parse(event.data));
     } catch {
@@ -50,16 +54,37 @@ export function connect() {
     }
   });
 
-  socket.addEventListener('close', () => {
+  ws.addEventListener('close', () => {
+    // A socket already replaced (reconnected when the page came back) says
+    // nothing about the connection any more.
+    if (ws !== socket) return;
     connection.set('reconnecting');
-    setTimeout(connect, retryDelay);
+    retryTimer = setTimeout(connect, retryDelay);
     // Backing off matters because the common cause of a close is the
     // daemon restarting, which takes seconds - a tight retry loop would
     // hammer it through its own startup.
     retryDelay = Math.min(retryDelay * 2, RECONNECT_MAX_MS);
   });
 
-  socket.addEventListener('error', () => socket.close());
+  ws.addEventListener('error', () => ws.close());
+}
+
+//: **Back in front, connected at once** (George, 2026-10-11: the test pattern
+//: "didn't work" the first time). A phone's browser drops this socket while
+//: it is in the background and freezes the retry; brought back, the page
+//: waited out its back-off - seven seconds on sofapi, during which every
+//: press of *Show the test pattern* looked like nothing, since the sheet
+//: hears the pattern is up through this socket.
+if (typeof document !== 'undefined') {
+  const reconnectNow = () => {
+    if (document.visibilityState !== 'visible' || !socket) return;
+    if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) return;
+    retryDelay = RECONNECT_MIN_MS;
+    connect();
+  };
+  document.addEventListener('visibilitychange', reconnectNow);
+  window.addEventListener('pageshow', reconnectNow);
+  window.addEventListener('online', reconnectNow);
 }
 
 /** Convenience views, so components never reach into the payload shape. */

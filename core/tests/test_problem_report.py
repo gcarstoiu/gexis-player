@@ -119,3 +119,84 @@ def test_a_journal_over_the_limit_keeps_its_newest_lines():
     lines = "".join(f"line {n}\n" for n in range(1000))
     out = pr.journal(limit=200, run=lambda *a, **k: lines)
     assert out.endswith("line 999\n") and len(out.encode()) <= 200 and out.startswith("line ")
+
+
+def _quiet(monkeypatch, tmp_path):
+    monkeypatch.setattr(pr, "UPDATES", tmp_path)
+    monkeypatch.setattr(pr, "NM_CONNECTIONS", tmp_path / "nm")
+    monkeypatch.setattr(pr, "BLUETOOTH", tmp_path / "bt")
+    monkeypatch.setattr(pr, "hardware", lambda run=None: "Model: Raspberry Pi 4 Model B\n")
+
+    def run(*cmd, timeout=None):
+        return JOURNAL if cmd[0] == "journalctl" else ""
+    return run
+
+
+def test_the_checklist_is_told_every_step_in_order(monkeypatch, tmp_path):
+    """ADR-0138 §1 (George: "details on what is being prepared similar to a
+    checklist")."""
+    told = []
+    report = pr.build("It stopped.", ROWS, VALUES.get, shares=SHARES, run=_quiet(monkeypatch, tmp_path),
+                      clock=lambda: 1791300000, progress=lambda step, detail: told.append((step, detail)))
+    assert [s for s, _ in told] == [s for s, _ in pr.STEPS]
+    assert dict(told)["scrub"] == report.summary
+    assert dict(told)["write"].startswith(report.name)
+    assert ("journal.txt", len(report.data)) not in report.files and any(n == "journal.txt" for n, _ in report.files)
+
+
+def test_the_last_errors_are_the_newest_cleaned_and_bounded():
+    log = "\n".join([f"2026-10-11T10:00:{i:02d} gexis_core INFO fine {i}" for i in range(50)] +
+                    [f"2026-10-11T10:01:{i:02d} gexis_core ERROR broke {i}" for i in range(50)])
+    errors = pr.last_errors(log, limit=300)
+    assert "INFO" not in errors and errors.endswith("broke 49") and len(errors) <= 300
+
+
+def test_the_issue_carries_what_happened_how_often_the_version_and_the_errors(monkeypatch, tmp_path):
+    from urllib.parse import parse_qs, urlsplit
+    report = pr.build("It stopped at 10.0.4.23.", ROWS, VALUES.get, shares=SHARES, run=_quiet(monkeypatch, tmp_path),
+                      clock=lambda: 1791300000)
+    report.errors = "\n".join(f"2026-10-11T10:01:{i % 60:02d} ERROR " + "x" * 200 for i in range(200))
+    url = pr.issue_url("The sound stopped after a skip.\nThen nothing.", "Sometimes", "0.10.1", report)
+    assert len(url) <= pr.URL_MAX
+    q = {k: v[0] for k, v in parse_qs(urlsplit(url).query).items()}
+    assert q["title"] == "[Problem] The sound stopped after a skip."
+    assert (q["often"], q["version"]) == ("Sometimes", "0.10.1")
+    assert report.name in q["report"] and "Last errors" in q["report"]
+    assert "often" not in parse_qs(urlsplit(pr.issue_url("x", "Daily", "0.10.1", report)).query)
+
+
+async def test_prepared_in_the_background_ticked_downloaded_sent_and_dropped_after_an_hour(tmp_path, monkeypatch):
+    """ADR-0138: prepare, follow the checklist, then the file and the issue;
+    gone after REPORT_KEEP_S."""
+    import asyncio
+    from aiohttp.test_utils import TestClient, TestServer
+    from gexis_core.settings import SettingsStore
+    from gexis_core.settings_registry import Settings
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+
+    def fake_build(what, rows, get, *, shares=(), now_playing=(), progress=None, **kw):
+        for step, _ in pr.STEPS:
+            progress(step, f"{step} done")
+        return pr.Report(b"PK-zip", "gexis-report-x.zip", "2 addresses", [("journal.txt", 10)], "ERROR one")
+    monkeypatch.setattr(pr, "build", fake_build)
+    monkeypatch.setattr(pr, "_run", lambda *a, **k: "0.10.1+git5.abc")
+    settings = Settings(SettingsStore(tmp_path / "s.db"), seed_path=tmp_path / "none.json")
+    server = StateServer(StateStore({}), settings=settings)
+    async with TestClient(TestServer(server.make_app())) as client:
+        assert (await (await client.get("/report/status")).json())["state"] == "idle"
+        assert (await client.post("/report/prepare", json={"what": "It stopped.", "often": "Once so far"})).status == 200
+        for _ in range(50):
+            status = await (await client.get("/report/status")).json()
+            if status["state"] == "ready":
+                break
+            await asyncio.sleep(0.02)
+        assert status["state"] == "ready" and all(s["done"] for s in status["steps"])
+        assert status["files"] == [{"name": "journal.txt", "size": 10}]
+        file = await client.get("/report/file")
+        assert file.status == 200 and await file.read() == b"PK-zip"
+        url = (await (await client.get("/report/issue")).json())["url"]
+        assert "often=Once+so+far" in url and "version=0.10.1" in url
+        server._report_job["at"] -= server.REPORT_KEEP_S + 1
+        assert (await client.get("/report/file")).status == 404
+        assert (await (await client.get("/report/status")).json())["state"] == "idle"

@@ -47,7 +47,12 @@ version_for() {
 	# `git log -- .` simplifies away a merge whose tree equals one parent's,
 	# and v0.6.0, tagged on such a merge, built gexis-player 0.5.0+git21.
 	if [ "$paths" = "." ]; then commit=$(git rev-parse HEAD); fi
-	local v; v=$(git describe --tags --match 'v[0-9]*' --always "$commit" | sed -E 's/^v//; s/-([0-9]+)-g([0-9a-f]+)$/+git\1.\2/')
+	# **Seven characters of the commit, always** (found 2026-10-11): left to
+	# itself git lengthens the abbreviation as the repository grows, and at
+	# eight every package's version changed with nothing in it changed -
+	# every device would have downloaded them all again. Git still goes
+	# longer where seven would be ambiguous.
+	local v; v=$(git describe --tags --match 'v[0-9]*' --always --abbrev=7 "$commit" | sed -E 's/^v//; s/-([0-9]+)-g([0-9a-f]+)$/+git\1.\2/')
 	# shellcheck disable=SC2046
 	if [ -n "$(git status --porcelain -- $paths)" ]; then v="$v.dirty"; fi
 	printf '%s' "$v"

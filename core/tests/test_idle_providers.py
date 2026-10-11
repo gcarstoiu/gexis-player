@@ -761,7 +761,7 @@ async def test_space_and_calm_are_searches_no_season_joins_and_a_holiday_replace
         settings.set("wallpaper_topics", ["Space", "Calm", "Nature"])
         settings.set("wallpaper_seasons", True)
         monkeypatch.setattr(own_wallpapers, "holiday", lambda day, country: None)
-        want = {("nature", None, None), (None, "calm", "true"), (None, "space", "true")}
+        want = {("nature", None, None), (None, "calm", "true"), (None, "galaxy|nebula|astronomy|astronaut|astrophotography", "true")}
         for _ in range(60):
             assert (await (await client.get("/idle/wallpaper")).json())["error"] is None
             if want <= set(asked()):

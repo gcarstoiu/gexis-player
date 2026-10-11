@@ -1,0 +1,11 @@
+<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<!-- ADR-0136: each player announces itself, so the others can list it in the
+     phone's switcher. avahi is already how name.local resolves (ADR-0049 §4). -->
+<service-group>
+  <name replace-wildcards="yes">%h</name>
+  <service>
+    <type>_gexis._tcp</type>
+    <port>8090</port>
+  </service>
+</service-group>

@@ -24,19 +24,16 @@ body:
       label: Version
       description: Settings → System → Software update shows it.
       placeholder: "0.9.3"
-  - type: dropdown
+  - type: input
     id: often
     attributes:
       label: How often does it happen?
-      options:
-        - Every time
-        - Sometimes
-        - Once so far
+      description: "Filled in by the player: Every time, Sometimes or Once so far."
   - type: textarea
     id: report
     attributes:
       label: Problem report
-      description: Drag the gexis-report-....zip file here.
+      description: Filled in by the player with what it took out and the log's last errors. Drag the gexis-report-....zip file here too, if you can.
   - type: checkboxes
     id: read
     attributes:

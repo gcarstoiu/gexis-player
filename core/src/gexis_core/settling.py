@@ -100,6 +100,10 @@ def view(record: dict | None, status: dict, now: float | None = None) -> dict | 
             entry["error"] = live.get("error")
         elif state in BUSY:
             entry["state"] = "busy"
+            # **Which step** (George, 2026-10-11: the skins sat at 100 % for
+            # the 4 min 18 s their install took on the bar, which "might look
+            # like a bug"): the screen says Installing once the download is in.
+            entry["step"] = state
         elif now - float(record.get("started") or now) > WAIT_S:
             entry["state"] = "failed"
             entry["error"] = "The download did not start"

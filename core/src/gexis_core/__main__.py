@@ -106,6 +106,7 @@ from gexis_core.volume import (
     Mute,
     renderer_value_to_hardware_raw,
     renderer_percent_to_value,
+    level_after_fixed,
     hardware_raw_to_renderer_value,
     fixed_output as volume_fixed_output,
     hardware_max,
@@ -921,8 +922,14 @@ async def main() -> None:
     software_on = {"value": bool(chosen_output is not None and chosen_output.software)}
     fixed_now = {"value": False}
     set_fixed_output_reader(lambda: fixed_now["value"])
+    # ADR-0137: the plugins are told when Fixed changes. Made further down; a
+    # change before it exists reaches each plugin as it connects instead.
+    plugin_server = None
 
-    async def _apply_output_mode() -> None:
+    #: The level before Fixed, to come back to (`level_after_fixed`).
+    before_fixed: dict[str, int | None] = {"raw": None}
+
+    async def _apply_output_mode(force: bool = False) -> None:
         """Put the chosen mode into force, if now is a legal moment.
 
         **ADR-0018 requires the change to apply on the next track or after
@@ -934,14 +941,23 @@ async def main() -> None:
         wanted = fixed_wanted["value"]
         if wanted == fixed_now["value"]:
             return
-        if state_store.state.metadata.transport == "playing":
+        # `force`: the change of volume type has just stopped playback
+        # itself (ADR-0046 amended 2026-10-11); the state may not say so yet.
+        if not force and state_store.state.metadata.transport == "playing":
             logger.info(
                 "output: %s is chosen but something is playing; it applies after stop",
                 "fixed" if wanted else "variable",
             )
             return
         fixed_now["value"] = wanted
+        if wanted:
+            # Kept to come back to (`level_after_fixed`): set_fixed_output
+            # clears the published level.
+            volume = state_store.state.volume
+            before_fixed["raw"] = mute.audible_raw(volume.raw if volume is not None else None)
         state_store.set_fixed_output(wanted)
+        if plugin_server is not None:
+            plugin_server.tell_output(wanted)
         if wanted:
             # Nothing is attenuating, so the one level the DAC may hold is
             # full scale. Written directly: `write_hardware` now refuses
@@ -950,6 +966,12 @@ async def main() -> None:
             await set_raw(config.mixer_name, hardware_max())
         else:
             logger.info("output: variable - the device attenuates again")
+            if remote.level() is None and state_store.state.volume is None:
+                raw = level_after_fixed(before_fixed["raw"], _number("start_max"))
+                if raw is not None:
+                    logger.info("output: the DAC comes down from full scale to %s of %s", raw, hardware_max())
+                    await volume_bridge.write_hardware(raw)
+                    return
             _reapply_level()
 
     def _restrict_output_mode(output) -> None:
@@ -1155,16 +1177,43 @@ async def main() -> None:
         fixed_wanted["value"] = settings.value(VOLUME_KEY) == FIXED
         asyncio.ensure_future(_apply_output_mode())
 
+    volume_change = asyncio.Lock()
+
+    async def _change_volume_type() -> None:
+        """**Every change of volume type stops playback and reopens the
+        renderers** (ADR-0046 amended 2026-10-11, George: *"enforce a renderer
+        disconnect like it is between software and hardware"*). Fixed had
+        waited for a pause and, measured on sofapi, only took hold when a
+        renderer reconnected.
+
+        Whoever plays is stopped first and nobody holds the device, so the
+        source that comes back is a new takeover: its *Starting volume* is
+        applied (George: Spotify came back at 100, the level it had when the
+        switch stopped it). Then the new type is put in force - the software
+        stage in or out with the level carried (ADR-0124), full scale for
+        Fixed - and the renderers reopen on it."""
+        async with volume_change:
+            stopped = await supervisor.stop_active()
+            if stopped:
+                logger.info("volume: %s stopped for the change of volume type", stopped)
+            fixed_wanted["value"] = settings.value(VOLUME_KEY) == FIXED
+            software = settings.value(VOLUME_KEY) == SOFTWARE
+            if software != software_on["value"]:
+                # Rewrites the output and restarts the renderers itself.
+                await _set_software_volume(software)
+                await _apply_output_mode(force=True)
+                return
+            await _apply_output_mode(force=True)
+            logger.info("volume: restarting the renderers on the new volume type")
+            restart = await asyncio.create_subprocess_exec(
+                "systemctl", "restart", "squeezelite.service", "go-librespot.service",
+                "bluealsa-aplay.service",
+            )
+            await restart.wait()
+
     def _choose_volume(value=None) -> None:
-        """ADR-0127: the Volume row. Between Hardware and Software the chain
-        changes, so the output is put in place again with the level carried
-        (ADR-0124); to or from Fixed waits for playback to stop (ADR-0046).
-        Software to Fixed does both: the stage comes out, the card is given
-        the level, then full level once nothing plays."""
-        software = settings.value(VOLUME_KEY) == SOFTWARE
-        if software != software_on["value"]:
-            asyncio.ensure_future(_set_software_volume(software))
-        _choose_output_mode()
+        """ADR-0127: the Volume row - Hardware, Software or Fixed."""
+        asyncio.ensure_future(_change_volume_type())
 
     def _reapply_level() -> None:
         """Put the level back where the *position* now says it belongs.
@@ -1781,7 +1830,7 @@ async def main() -> None:
                         return
                     have = await asyncio.to_thread(skin_packs.installed)
                     # Onto the new pack before the old one goes from under it.
-                    await _configure_visualiser()
+                    await _configure_visualiser(installed=True)
                     _, extra = skin_packs.plan(skin_packs.screen_size(), have)
                 if skin_packs.for_screen(*skin_packs.screen_size()) in have:
                     for size in extra:
@@ -1840,9 +1889,13 @@ async def main() -> None:
         visualiser_held["restart"] = False
         await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-peppy.service")
 
-    async def _configure_visualiser() -> None:
+    async def _configure_visualiser(installed: bool = False) -> None:
         """ADR-0111: PeppyMeter draws the pack skins_at() names, at its size.
-        Restarted only when its config changed."""
+        Restarted when its config changed, **or a pack has just been
+        installed**: a visualiser that started before its pack was there
+        ends ("no skin pack for this screen yet"), and its config may already
+        name the folder the pack fills - sofapi after a fresh setup,
+        2026-10-11, whose first visualiser had to be started from the phone."""
         at = skins_at()
         if at is None:
             return
@@ -1850,7 +1903,8 @@ async def main() -> None:
         if base is None:
             return
         width, height = (int(n) for n in at[1].split("x"))
-        if await asyncio.to_thread(set_meter_skins, Path(config.meter_consumer_config), base, at[1], width, height):
+        changed = await asyncio.to_thread(set_meter_skins, Path(config.meter_consumer_config), base, at[1], width, height)
+        if changed or installed:
             await _restart_visualiser()
 
     def _package_on_disk(size: tuple[int, int]) -> str:
@@ -3623,6 +3677,8 @@ async def main() -> None:
             for key in plugin_rows
             if key.startswith(f"{plugin_id}.")
         },
+        # ADR-0137: whether the output is Fixed, told at connection.
+        output_fixed=lambda: fixed_now["value"],
     )
 
     logger.info("gexis-core starting: adapters=%s", list(adapters))
@@ -3647,6 +3703,8 @@ async def main() -> None:
         setup_network.watch(),
         # ADR-0135: the screen off at the owner's standby times.
         standby_schedule.run(),
+        # ADR-0136: the other players on the network, kept warm for the phone.
+        state_server.watch_players(),
         # ADR-0084: the socket plugins connect to. Served for the life of the
         # process, beside the one the browser uses.
         plugin_server.run(),

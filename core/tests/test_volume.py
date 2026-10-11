@@ -1133,3 +1133,12 @@ def test_a_level_handed_to_a_renderer_comes_back_where_it_was(value):
     raw = renderer_value_to_hardware_raw(value, 100)
     back = renderer_value_to_hardware_raw(hardware_raw_to_renderer_value(raw, 100), 100)
     assert abs(back - raw) <= 1
+
+
+def test_leaving_fixed_goes_back_to_the_level_before_it_or_the_starting_volume():
+    """George, 2026-10-11: Spotify started at 100 coming from Fixed to
+    Hardware - the DAC had stayed at full scale with no level to start under."""
+    from gexis_core.volume import level_after_fixed, renderer_percent_to_value, renderer_value_to_hardware_raw
+    assert level_after_fixed(180, 60) == 180
+    assert level_after_fixed(None, 60) == renderer_value_to_hardware_raw(renderer_percent_to_value(60, 100), 100)
+    assert level_after_fixed(None, None) is None

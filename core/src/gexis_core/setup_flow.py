@@ -567,16 +567,28 @@ def _pack_name(width: int, height: int) -> str | None:
     return f"{size[0]}x{size[1]}" if size else None
 
 
-def screen_choices(report: screen_detect.Seen) -> dict:
+def screen_choices(report: screen_detect.Seen, turn: int = 0, *, now: tuple | None = None) -> dict:
     """**The Screen step's page** (ADR-0109): what the screen reports, the
     tested model that suggests (or nothing), and every model. The page tells
     its three states apart from this: a suggestion is *recognised*, a screen
     connected without one is *uncertain*, nothing connected is *none*."""
     suggested = screen_detect.suggest(report)
+    every = screens.all_screens()
+    # **Which choices change nothing** (George, 2026-10-11: the Keep warning
+    # showed on the bar's recognised, tested screen, already applied for
+    # setup): those whose picture is the one on the screen now. Only the
+    # others restart the player and ask Keep this screen?.
+    try:
+        current = screen_apply.picture() if now is None else now
+        unchanged = [s.id for s in every if screen_apply.picture_of(screen_apply.Applied(s.id, turn)) == current]
+    except Exception as exc:  # a guess for the phone's wording, never a failure
+        logger.info("setup: cannot tell which screens change nothing: %s", exc)
+        unchanged = []
     return {
         "seen": report.to_json(),
         "suggested": _screen_json(suggested) if suggested else None,
-        "models": [_screen_json(s) for s in screens.all_screens()],
+        "models": [_screen_json(s) for s in every],
+        "unchanged": unchanged,
     }
 
 

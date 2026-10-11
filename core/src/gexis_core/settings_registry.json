@@ -1647,7 +1647,7 @@
         "type": "action",
         "label": "Problem report",
         "marks": "R",
-        "note": "Downloads the player's logs, versions, hardware and settings in one file, to attach to a report of a problem. Addresses, names, networks, shares, keys and what you play are taken out on the player first, but read the file before sharing it.",
+        "note": "Tells the project what went wrong, with the player's logs, versions, hardware and settings. Personal details are taken out on the player first.",
         "kind": "report",
         "default": null
       },
@@ -1656,7 +1656,7 @@
         "type": "action",
         "label": "Hardware feedback",
         "marks": "R",
-        "note": "Tells the project how this sound card and screen work, so others can see what works before buying. Two short checks - the screen, then the sound - and a few questions, then feedback on GitHub, filled in with what the player reads of the hardware - never a serial number or anything about you.",
+        "note": "Tells the project how this sound card and screen work, so others can see what works before buying: two short checks and a few questions, then sent on GitHub or by e-mail - never a serial number or anything about you.",
         "kind": "hardware",
         "default": null
       },

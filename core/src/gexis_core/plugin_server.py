@@ -133,6 +133,7 @@ class PluginServer:
         on_connect=None,
         on_disconnect=None,
         settings_for=None,
+        output_fixed=None,
         contract: int = CONTRACT,
     ) -> None:
         self._installed = {p.id: p for p in plugins}
@@ -145,6 +146,9 @@ class PluginServer:
         #: one while it is stopped, and it has to come up on the answer rather
         #: than on its own default (ADR-0086).
         self._settings_for = settings_for
+        #: **ADR-0137: whether the output is Fixed**, told to every plugin as
+        #: it connects and whenever it changes (`tell_output`).
+        self._output_fixed = output_fixed
         self._contract = contract
         self.sessions: dict[str, Session] = {}
 
@@ -199,6 +203,9 @@ class PluginServer:
             session = await self._greet(reader, writer)
             if session is None:
                 return
+            # Sent once the listener runs: the answer is read there.
+            if self._output_fixed is not None:
+                asyncio.ensure_future(self._tell(session, bool(self._output_fixed())))
             await self._listen(session, reader)
         except (ConnectionError, asyncio.IncompleteReadError):
             pass
@@ -213,6 +220,20 @@ class PluginServer:
                     self._on_disconnect(session)
             else:
                 writer.close()
+
+    def tell_output(self, fixed: bool) -> None:
+        """ADR-0137: Fixed put in force or taken out - every plugin is told."""
+        for session in list(self.sessions.values()):
+            asyncio.ensure_future(self._tell(session, fixed))
+
+    @staticmethod
+    async def _tell(session: Session, fixed: bool) -> None:
+        """`output`, added within contract 1 (ADR-0137): a plugin that does not
+        know it answers `error`, which is not a fault."""
+        try:
+            await session.send("output", fixed=fixed)
+        except PluginGone as exc:
+            logger.debug("plugins: %s did not take output (%s)", session.id, exc)
 
     async def _refuse(self, writer: asyncio.StreamWriter, reason: str) -> None:
         logger.warning("plugins: refused a connection - %s", reason)

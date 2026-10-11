@@ -41,7 +41,8 @@ from aiohttp import web
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core import own_wallpapers
+from gexis_core import own_wallpapers, screen_apply
+from gexis_core.players import Players, status_line
 from gexis_core.wallpapers import SEARCH as PIXABAY_SEARCH
 from gexis_core import backups, bluetooth_devices, skin_packs, device_name, discovery, hardware_report, lyrion_scan, lyrion_shares, problem_report, skin_previews, skins, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
@@ -192,6 +193,8 @@ class StateServer:
         self._peppy = peppy
         #: ADR-0135: the screen's standby, which a touch and the phone wake.
         self._standby = standby
+        #: ADR-0136: the other players on the network, for the phone's switcher.
+        self._players = Players(lambda: device_name.hostname())
         self._library = library
         self._artistinfo = artistinfo
         self._enrichment = enrichment
@@ -639,7 +642,15 @@ class StateServer:
 
     #: ADR-0133 amended 2026-10-11: the topic that is a search, and what each
     #: holiday asks Pixabay for when it supersedes the topics.
-    PIXABAY_SEARCHES = {"Space": "space", "Calm": "calm"}
+    #:
+    #: **Space is outer space, not the word** (George, 2026-10-11: "Space
+    #: should be looked at as universe, galaxy, outer space"). Measured the
+    #: same day on 200 editors' choice pictures: *space* alone had 112 with no
+    #: astronomy tag - rooms, "copy space", the Space Needle. `|` is Pixabay's
+    #: OR; single words only, since a space inside it reads as AND. This set
+    #: had 6 of 144 off the subject, northern lights and rocket launches;
+    #: *universe* was left out because it brought in cosmos flowers.
+    PIXABAY_SEARCHES = {"Space": "galaxy|nebula|astronomy|astronaut|astrophotography", "Calm": "calm"}
     PIXABAY_HOLIDAYS = {"newyear": "new year", "christmas": "christmas", "easter": "easter"}
 
     async def _pixabay_topics(self, chosen: list, keys: dict | None = None) -> list[str]:
@@ -1308,6 +1319,27 @@ class StateServer:
                 await self._standby.wake("touch")
         return web.json_response({"touched": True})
 
+    def _player_status(self) -> dict:
+        """**ADR-0136: what this player says of itself** to the others."""
+        state = self._store.state
+        return {"name": self._setting_or_none("device_name") or device_name.hostname(),
+                "host": f"{device_name.hostname()}.local",
+                **status_line(state, state.sources)}
+
+    async def watch_players(self) -> None:
+        """ADR-0136: the other players kept warm, so the phone's list is ready."""
+        await self._players.watch()
+
+    async def _handle_player_status(self, request: web.Request) -> web.Response:
+        return web.json_response(self._player_status())
+
+    async def _handle_players(self, request: web.Request) -> web.Response:
+        """ADR-0136: this player and the others found, each with its status;
+        the phone moves its tab to the one chosen."""
+        async with aiohttp.ClientSession() as session:
+            others = await self._players.others(session)
+        return web.json_response({"self": self._player_status(), "others": others})
+
     async def _handle_standby(self, request: web.Request) -> web.Response:
         """**ADR-0135: the screen off or on from a phone, or the Settings
         action.** `on` is standby on - the screen off."""
@@ -1475,6 +1507,108 @@ class StateServer:
             "Cache-Control": "no-store",
         })
 
+    #: ADR-0138 decision 4: a prepared report is kept this long, then dropped.
+    REPORT_KEEP_S = 3600
+    _report_job: dict | None = None
+
+    def _report_inputs(self):
+        """What the report is built from, read on the loop (the settings store
+        is SQLite, bound to this thread)."""
+        rows = self._settings.all_rows()
+        values = {}
+        for row in rows:
+            try:
+                values[row["key"]] = self._settings.value(row["key"])
+            except Exception:  # noqa: BLE001 - a row that cannot be read is left out
+                values[row["key"]] = None
+        shares = self._lyrion_shares.all() if self._lyrion_shares is not None else []
+        state = self._store.state
+        playing = []
+        for item in ((state.metadata,) if state.metadata else ()) + (tuple(state.queue.items) if state.queue else ()):
+            playing += [item.title, item.artist, item.album]
+        return rows, values, shares, [p for p in playing if p]
+
+    def _report_now(self) -> dict | None:
+        job = self._report_job
+        if job and job.get("at") and time.monotonic() - job["at"] > self.REPORT_KEEP_S:
+            self._report_job = job = None
+        return job
+
+    async def _handle_report_prepare(self, request: web.Request) -> web.Response:
+        """ADR-0138 §1: the report prepared in the background, its checklist
+        ticked as it goes (`/report/status`)."""
+        if self._settings is None:
+            return web.json_response({"error": "settings are not wired up"}, status=503)
+        try:
+            body = await request.json() if request.can_read_body else {}
+        except ValueError:
+            body = {}
+        if not isinstance(body, dict):
+            body = {}
+        job = self._report_now()
+        if job and job["state"] == "preparing":
+            return web.json_response({"error": "a report is already being prepared"}, status=409)
+        what = str(body.get("what") or "")[:4000]
+        often = body.get("often") if body.get("often") in problem_report.OFTEN else None
+        rows, values, shares, playing = self._report_inputs()
+        job = {"state": "preparing", "what": what, "often": often, "done": {}, "at": None,
+               "report": None, "error": None, "version": ""}
+        self._report_job = job
+
+        def tell(step: str, detail: str) -> None:
+            job["done"][step] = detail          # read by /report/status; plain assignment
+
+        def work():
+            report = problem_report.build(what, rows, values.get, shares=shares, now_playing=playing,
+                                          progress=tell)
+            version = problem_report._run("dpkg-query", "-W", "-f", "${Version}", "gexis-player").strip()
+            return report, version
+
+        async def run() -> None:
+            async with self._report_lock:
+                try:
+                    report, version = await asyncio.get_running_loop().run_in_executor(None, work)
+                except Exception as exc:  # noqa: BLE001 - said on the sheet, not lost
+                    logger.exception("report: preparing failed")
+                    job.update(state="failed", error=str(exc) or type(exc).__name__)
+                    return
+            logger.info("report: %s, %d bytes; taken out: %s", report.name, len(report.data), report.summary)
+            job.update(state="ready", report=report, version=version.split("+")[0], at=time.monotonic())
+
+        asyncio.ensure_future(run())
+        return web.json_response({"ok": True})
+
+    async def _handle_report_status(self, request: web.Request) -> web.Response:
+        job = self._report_now()
+        if job is None:
+            return web.json_response({"state": "idle"})
+        report = job["report"]
+        return web.json_response({
+            "state": job["state"],
+            "steps": [{"id": sid, "label": label, "done": sid in job["done"], "detail": job["done"].get(sid, "")}
+                      for sid, label in problem_report.STEPS],
+            "error": job["error"],
+            "name": report.name if report else None,
+            "size": len(report.data) if report else None,
+            "files": [{"name": n, "size": b} for n, b in report.files] if report else [],
+            "summary": report.summary if report else None,
+        })
+
+    async def _handle_report_file(self, request: web.Request) -> web.Response:
+        job = self._report_now()
+        if not job or job["state"] != "ready":
+            return web.json_response({"error": "No report is ready. Prepare it again."}, status=404)
+        report = job["report"]
+        return web.Response(body=report.data, content_type="application/zip", headers={
+            "Content-Disposition": f'attachment; filename="{report.name}"', "Cache-Control": "no-store"})
+
+    async def _handle_report_issue(self, request: web.Request) -> web.Response:
+        job = self._report_now()
+        if not job or job["state"] != "ready":
+            return web.json_response({"error": "No report is ready. Prepare it again."}, status=404)
+        return web.json_response({"url": problem_report.issue_url(job["what"], job["often"], job["version"],
+                                                                  job["report"])})
+
     async def _hardware_facts(self):
         """ADR-0126: what the device reads of its sound card and screen. The
         settings are read here, on the loop (SQLite is bound to this thread);
@@ -1486,10 +1620,12 @@ class StateServer:
         def gather():
             output = outputs.resolve(stored)
             written = board_apply.written()
+            builtin = output is not None and output.card in outputs.BUILT_IN_CARDS
             return hardware_report.collect(
-                output.card if output and output.card not in outputs.BUILT_IN_CARDS else None,
+                output.card if output and not builtin else None,
                 chosen_board=written.id if written else None,
                 screen_chosen=screen,
+                builtin=output.label if builtin else None,
             )
 
         return await asyncio.get_running_loop().run_in_executor(None, gather)
@@ -1498,31 +1634,54 @@ class StateServer:
         """ADR-0126: the facts a hardware report carries, for the sheet to show
         before anything is sent."""
         facts = await self._hardware_facts()
-        headless = bool(self._settings.value("headless")) if self._settings else False
+        display = self._display(facts)
+        board, screen = hardware_report.names(facts, display)
         return web.json_response({
             # George, 2026-10-07: the screen step only when there is a screen
             # to look at - not headless, and one connected.
-            "display": facts.screen_connected and not headless,
-            "board": facts.board or facts.card or None,
+            "display": display,
+            "board": board if (facts.card or facts.builtin) else None,
             "state": facts.state,
-            "screen": facts.screen_chosen or (f"{facts.edid_maker or ''} {facts.edid_name or ''}".strip() or None),
-            "touch": bool(facts.touch),
+            "screen": screen or None,
+            "touch": display and bool(facts.touch),
             "text": facts.text(),
         })
+
+    def _display(self, facts) -> bool:
+        """A screen to look at: connected, and the player not Headless."""
+        headless = bool(self._settings.value("headless")) if self._settings else False
+        return bool(facts.screen_connected) and not headless
+
+    #: One set of tones at a time: two phones at once shared the files and
+    #: each took the card from the other (review, 2026-10-11).
+    _tones_lock = None
 
     async def _handle_hardware_tones(self, request: web.Request) -> web.Response:
         """ADR-0126: a tone at 44.1, 96 and 192 kHz through the player's own
         output, and what the card ran at - **only when nothing is playing**:
         a test never cuts into music."""
         from gexis_core import outputs
-        if hardware_report.playing():
-            return web.json_response({"error": "Something is playing. Pause it first, then play the tones."},
-                                     status=409)
+        if self._tones_lock is None:
+            self._tones_lock = asyncio.Lock()
+        if self._tones_lock.locked():
+            return web.json_response({"error": "The tones are already playing."}, status=409)
         output = outputs.resolve(self._settings.value("output_device")) if self._settings else None
         if output is None:
             return web.json_response({"error": "No output to play to."}, status=409)
-        results = await asyncio.get_running_loop().run_in_executor(
-            None, lambda: hardware_report.play_tones(output.card))
+        async with self._tones_lock:
+            why = hardware_report.busy(output.card)
+            if why == "playing":
+                return web.json_response({"error": "Something is playing. Stop it first, then play the tones."},
+                                         status=409)
+            if why == "held":
+                return web.json_response({"error": "A source still holds the sound card, paused. Stop it, "
+                                                   "then play the tones."}, status=409)
+            try:
+                results = await asyncio.get_running_loop().run_in_executor(
+                    None, lambda: hardware_report.play_tones(output.card))
+            except hardware_report.CardBusy:
+                return web.json_response({"error": "A source took the sound card while the tones played. "
+                                                   "Stop it, then play them again."}, status=409)
         return web.json_response({"tones": results})
 
     async def _handle_hardware_issue(self, request: web.Request) -> web.Response:
@@ -1532,17 +1691,89 @@ class StateServer:
             body = await request.json() if request.can_read_body else {}
         except ValueError:
             body = {}
-        answers = {k: str(v) for k, v in (body.get("answers") or {}).items()}
+        if not isinstance(body, dict):
+            return web.json_response({"error": "expected an object"}, status=400)
+        raw = body.get("answers") if isinstance(body.get("answers"), dict) else {}
+        answers = {k: str(v) for k, v in raw.items() if isinstance(v, str) and v}
         notes = str(body.get("notes") or "")[:2000]
-        tones = [str(t) for t in (body.get("tones") or [])][:6]
+        tones = [str(t) for t in (body.get("tones") if isinstance(body.get("tones"), list) else [])][:6]
+        # Only the check this feedback ran: one left from another phone or an
+        # earlier opening said "not all within" in feedback that had no
+        # screen step at all (review, 2026-10-11).
         check = self._store.state.screen_check or {}
-        screen = hardware_report.screen_lines(check["result"]) if check.get("result") else None
+        ran = body.get("check_seq")
+        screen = (hardware_report.screen_lines(check["result"])
+                  if check.get("result") and ran is not None and ran == check.get("seq") else None)
         facts = await self._hardware_facts()
-        url = hardware_report.issue_url(facts, answers, notes, tones, screen)
+        display = self._display(facts)
+        url = hardware_report.issue_url(facts, answers, notes, tones, screen, display)
         # A report prepared is the prompt answered: it is not asked again.
         if self._settings is not None:
             await self._dismiss_hardware_prompt()
+            # And kept, to be sent again (ADR-0126 amended 2026-10-11).
+            board, screen_name = hardware_report.names(facts, display)
+            self._settings.keep(hardware_report.KEPT_KEY, {
+                "identity": await self._hardware_identity(), "at": time.time(),
+                "board": board, "screen": screen_name or None, "url": url})
         return web.json_response({"url": url})
+
+    async def _hardware_identity(self) -> str:
+        """ADR-0126 amended 2026-10-11: the sound card and screen in use, as
+        the key what is kept was made on."""
+        from gexis_core import board_apply, boards, outputs
+        stored = self._settings.value("output_device") if self._settings else None
+        screen = self._settings.value("screen") if self._settings else None
+
+        def gather():
+            output = outputs.resolve(stored)
+            card = output.card if output and output.card not in outputs.BUILT_IN_CARDS else None
+            board = None
+            if card:
+                written = board_apply.written()
+                board, _ = boards.identify(card, chosen=written.id if written else None,
+                                           product=hardware_report._read(hardware_report.HAT / "product") or None)
+            from gexis_core import screen_detect
+            try:
+                seen = screen_detect.seen()
+                shown = f"{seen.edid_maker or ''}/{seen.edid_name or ''}" if seen.connected and not headless else None
+            except Exception:  # noqa: BLE001 - unread is no screen
+                shown = None
+            return hardware_report.identity(card, board.id if board else None, screen, shown)
+
+        headless = bool(self._settings.value("headless")) if self._settings else False
+        return await asyncio.get_running_loop().run_in_executor(None, gather)
+
+    async def _handle_hardware_kept(self, request: web.Request) -> web.Response:
+        """The last feedback, for the System row: when, what, and the link to
+        send it again. Forgotten here when the hardware has changed."""
+        if self._settings is None:
+            return web.json_response({"kept": None})
+        stored = self._settings.kept(hardware_report.KEPT_KEY)
+        kept = hardware_report.kept_for(stored, await self._hardware_identity())
+        if stored and kept is None:
+            self._settings.keep(hardware_report.KEPT_KEY, None)
+        if kept is None:
+            return web.json_response({"kept": None})
+        return web.json_response({"kept": {k: kept.get(k) for k in ("at", "board", "screen", "url")}})
+
+    async def _handle_hardware_file(self, request: web.Request) -> web.Response:
+        """ADR-0138 decision 3: the prepared feedback as a text file, to send
+        by e-mail."""
+        stored = self._settings.kept(hardware_report.KEPT_KEY) if self._settings is not None else None
+        kept = hardware_report.kept_for(stored, await self._hardware_identity())
+        if kept is None:
+            return web.json_response({"error": "No feedback is prepared."}, status=404)
+        stamp = time.strftime("%Y-%m-%d", time.localtime(kept.get("at") or time.time()))
+        return web.Response(text=hardware_report.feedback_text(kept["url"]), content_type="text/plain",
+                            charset="utf-8", headers={
+                                "Content-Disposition": f'attachment; filename="gexis-hardware-{stamp}.txt"',
+                                "Cache-Control": "no-store"})
+
+    async def _handle_hardware_kept_clear(self, request: web.Request) -> web.Response:
+        """*Start over*: the kept feedback forgotten."""
+        if self._settings is not None:
+            self._settings.keep(hardware_report.KEPT_KEY, None)
+        return web.json_response({"ok": True})
 
     async def _hardware_pieces(self) -> dict[str, str]:
         """ADR-0126 decision 1: what on this device is not Tested. Settings
@@ -1597,12 +1828,25 @@ class StateServer:
             body = await request.json() if request.can_read_body else {}
         except ValueError:
             body = {}
+        if not isinstance(body, dict):
+            body = {}
         check = dict(self._store.state.screen_check or {})
         if not body.get("show"):
             if check:
                 self._store.set_screen_check({**check, "showing": False})
             return web.json_response({"ok": True})
         touch = bool(await asyncio.get_running_loop().run_in_executor(None, hardware_report._touch))
+        # The pattern is the browser's; the visualiser is a window over it, and
+        # a screen in standby is dark (review, 2026-10-11): both would hide it
+        # while the phone said it was up.
+        if self._peppy is not None:
+            # On the loop: hiding publishes the panel's change (see
+            # `_peppy_again`, which answered a 500 from a worker thread).
+            self._peppy.request("hide")
+        if self._standby is not None:
+            self._standby.used()
+            if self._standby.off:
+                await self._standby.wake("screen check")
         seq = int(check.get("seq", 0)) + 1
         self._store.set_screen_check({"showing": True, "touch": touch, "seq": seq, "result": None})
 
@@ -1623,7 +1867,7 @@ class StateServer:
             if not check.get("showing") or body.get("seq") != check.get("seq"):
                 return web.json_response({"error": "No test pattern is being shown."}, status=409)
             result = hardware_report.measure_taps(int(body["width"]), int(body["height"]), list(body["taps"]))
-        except (ValueError, KeyError, TypeError):
+        except (ValueError, KeyError, TypeError, AttributeError, OverflowError):
             return web.json_response({"error": "bad taps"}, status=400)
         self._store.set_screen_check({**check, "showing": False, "result": result})
         return web.json_response(result)
@@ -1790,7 +2034,11 @@ class StateServer:
         from gexis_core import setup_flow
 
         report = await asyncio.to_thread(self._screen_seen)
-        return web.json_response(setup_flow.screen_choices(report))
+        try:
+            turn = screen_apply.parse_rotation(self._settings.value("rotation")) if self._settings else 0
+        except Exception:  # noqa: BLE001 - unturned is the safe guess for wording
+            turn = 0
+        return web.json_response(await asyncio.to_thread(setup_flow.screen_choices, report, turn))
 
     async def _handle_setup_plugins(self, request: web.Request) -> web.Response:
         """ADR-0128: the Plugins step - every plugin the release ships, with
@@ -1895,7 +2143,11 @@ class StateServer:
         deadline = asyncio.get_running_loop().time() + self.PEPPY_AGAIN_S
         while asyncio.get_running_loop().time() < deadline:
             await asyncio.sleep(1.5)
-            if await asyncio.to_thread(self._peppy.request, "show"):
+            # On the loop, as the first ask is: showing publishes the panel's
+            # change to the phones, and that needs the loop (a worker thread
+            # here answered the first visualiser of an evening with a 500,
+            # sofapi 2026-10-11, though it came up).
+            if self._peppy.request("show"):
                 return True
         return False
 
@@ -2303,6 +2555,8 @@ class StateServer:
         # ADR-0101: the phone's idle toggle, and the panel saying what it shows.
         app.router.add_post("/panel/idle/{action}", self._handle_idle_request)
         app.router.add_post("/panel/standby/{action}", self._handle_standby)
+        app.router.add_get("/player/status", self._handle_player_status)
+        app.router.add_get("/players", self._handle_players)
         app.router.add_post("/panel/shown", self._handle_panel_shown)
         app.router.add_post("/panel/go/{to}", self._handle_view_request)
         app.router.add_post("/peppy/{action}", self._handle_peppy)
@@ -2313,6 +2567,10 @@ class StateServer:
         app.router.add_get("/settings/{key}/items", self._handle_list_items)
         app.router.add_get("/network/wifi", self._handle_wifi_details)
         app.router.add_post("/report", self._handle_report)
+        app.router.add_post("/report/prepare", self._handle_report_prepare)
+        app.router.add_get("/report/status", self._handle_report_status)
+        app.router.add_get("/report/file", self._handle_report_file)
+        app.router.add_get("/report/issue", self._handle_report_issue)
         app.router.add_get("/backups/{name}", self._handle_backup_download)
         app.router.add_get("/network/cable", self._handle_cable)
         app.router.add_post("/network/cable", self._handle_cable_change)
@@ -2323,6 +2581,9 @@ class StateServer:
         app.router.add_post("/hardware-report/issue", self._handle_hardware_issue)
         app.router.add_post("/hardware-report/tones", self._handle_hardware_tones)
         app.router.add_get("/hardware-report/prompt", self._handle_hardware_prompt)
+        app.router.add_get("/hardware-report/kept", self._handle_hardware_kept)
+        app.router.add_post("/hardware-report/kept/clear", self._handle_hardware_kept_clear)
+        app.router.add_get("/hardware-report/file", self._handle_hardware_file)
         app.router.add_post("/hardware-report/prompt/dismiss", self._handle_hardware_prompt_dismiss)
         app.router.add_post("/hardware-report/screen", self._handle_hardware_screen)
         app.router.add_post("/hardware-report/screen/result", self._handle_hardware_screen_result)

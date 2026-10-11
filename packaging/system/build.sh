@@ -45,6 +45,8 @@ chmod 644 "$STAGE$DEF/device-name.env" "$STAGE$DEF/machine-info"
 # --- The shares (03-core) -----------------------------------------------------
 put 644 "$S/03-core/files/gexis-pictures.conf" /etc/samba/smb.conf.d/gexis-pictures.conf
 put 644 "$S/03-core/files/gexis-smb.service" /etc/avahi/services/gexis-smb.service
+# ADR-0136: each player announces itself to the others.
+put 644 "$S/03-core/files/gexis-player-mdns.service" /etc/avahi/services/gexis-player.service
 
 # --- The panel (04-ui) --------------------------------------------------------
 put 644 "$S/04-ui/files/kiosk.env" /etc/gexis/kiosk.env

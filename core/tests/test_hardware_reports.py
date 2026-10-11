@@ -49,6 +49,16 @@ def test_the_form_s_headings_map_to_its_fields(tool):
     assert a["board"] == "HiFiBerry DAC+ Pro" and a["touch"] == "Yes" and "notes" not in a
 
 
+def test_the_answers_are_text_the_player_fills_and_typed_ones_count(tool):
+    """GitHub fills no dropdown from a link: the player's answers arrived
+    blank (George, 2026-10-11). They are text fields now; one typed or
+    edited by hand counts whatever its capitals."""
+    template = (TOOL.parents[1] / ".github" / "ISSUE_TEMPLATE" / "hardware-report.yml").read_text()
+    assert "type: dropdown" not in template
+    a = tool.answers(issue(1, sound="yes", clicks="NO", touch="Not tried.")["body"], tool.form_labels())
+    assert (a["sound"], a["clicks"], a["touch"]) == ("Yes", "No", "Not tried")
+
+
 def test_two_that_work_and_one_against(tool):
     data, skipped = tool.collect([issue(1), issue(2, gexis="0.9.5"), issue(3, clicks="Yes", touch="No")],
                                  tool.form_labels())
@@ -94,3 +104,17 @@ def test_the_table_lists_every_board_and_screen(tool):
 def test_the_shipped_file_is_well_formed():
     data = json.loads(hardware_reports.PATH.read_text())
     assert set(data) == {"boards", "screens"}
+
+
+def test_a_heading_typed_into_the_notes_does_not_overrule_the_answer(tool):
+    """Review, 2026-10-11: the last of two headings won."""
+    sneaky = issue(1)["body"].replace("### Anything else\n\n_No response_",
+                                      "### Anything else\n\n### Did the music sound right?\n\nNo")
+    assert tool.answers(sneaky, tool.form_labels())["sound"] == "Yes"
+
+
+def test_the_pi_s_own_output_is_not_counted_as_a_board(tool):
+    body = issue(1, board="HDMI (the Pi's own output)")["body"].replace(
+        "- card: sndrpihifiberry - HiFiBerry DAC+ Pro (Known)", "- card: none - HDMI, the Pi's own output")
+    data, _ = tool.collect([{**issue(1), "body": body}], tool.form_labels())
+    assert data["boards"] == {}
