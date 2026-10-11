@@ -615,8 +615,11 @@ sent on GitHub (a GitHub account is needed), filled in with what the player
 reads of the hardware itself - never a serial number or anything about you -
 and it is public, so the next owner can see what works. A week after a sound
 card or screen that is not Tested is first used, the System page offers this
-once in a line at its top; its × puts it away for good. Once feedback is
-accepted, the next release marks that card or screen *Reported* in the player
+once in a line at its top; its × puts it away for good. The last step's
+*Send on GitHub* opens the feedback there; *Create* on GitHub sends it. The
+player keeps it: the *Hardware feedback* row then shows *Send again* and
+*Start over*, until the sound card or screen is changed, when it is
+forgotten. Once feedback is accepted, the next release marks that card or screen *Reported* in the player
 and in the project's hardware list.
 
 **Something is wrong. How do I report it?**
