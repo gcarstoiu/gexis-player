@@ -897,8 +897,9 @@
   function setTime(i, which, part, value) {
     const [h, m] = ivs[i][which].split(':');
     const time = part === 'h' ? `${value}:${m}` : `${h}:${value}`;
+    // The grid stays open to show what was chosen (George, 2026-10-11);
+    // tapping the time again closes it.
     ivChanged(ivs.map((iv, k) => (k === i ? { ...iv, [which]: time } : iv)));
-    if (part === 'm') picking = null;
   }
   function toggleDay(i, day) {
     const days = ivs[i].days;
