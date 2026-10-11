@@ -29,8 +29,6 @@ REMOVED = (
     "var/lib/gexis-core/settings.db", "var/lib/gexis-core/settings.db-wal", "var/lib/gexis-core/settings.db-shm",
     "var/lib/gexis-core/enrichment.db", "var/lib/gexis-core/enrichment.db-wal", "var/lib/gexis-core/enrichment.db-shm",
     "var/cache/gexis-core",
-    # The backups kept on the player (George: deleted).
-    "var/lib/gexis-core/backups",
     # The name.
     "etc/gexis/device-name.env", "etc/machine-info",
     # Network share passwords; kept debug logs.
@@ -60,6 +58,12 @@ REMOVED = (
 #: or the Pictures share (`/var/lib/gexis-core/pictures`): what the owner put
 #: there stays (George, 2026-10-09, amending ADR-0132).
 EMPTIED = (
+    # The backups kept on the player (George: deleted). **Emptied, not
+    # removed** (the review of 2026-10-12): the folder is the Backups share,
+    # `pi`'s and group-writable from gexis-core's postinst. Removed, the share
+    # was gone until the first backup, which made it again as root's - and
+    # Samba, writing as `pi`, refused every backup copied back into it.
+    "var/lib/gexis-core/backups",
     "etc/NetworkManager/system-connections",
     "var/lib/bluetooth",
     "var/log/journal",

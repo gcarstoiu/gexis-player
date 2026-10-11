@@ -39,7 +39,7 @@ def _used_player(root: Path) -> None:
 def test_a_used_player_goes_back_to_a_freshly_flashed_card(tmp_path):
     _used_player(tmp_path)
     factory_reset.wipe(tmp_path)
-    for gone in ("var/lib/gexis-core/settings.db", "var/lib/gexis-core/backups", "etc/gexis/device-name.env",
+    for gone in ("var/lib/gexis-core/settings.db", "etc/gexis/device-name.env",
                  "etc/machine-info", "var/lib/gexis/setup-done", "var/lib/gexis/screen.json",
                  "etc/gexis/screen.env", "var/lib/gexis/components", "var/lib/go-librespot/state.json",
                  "var/lib/beszel-agent", "home/pi/.local/share/Plexamp", "home/pi/plexamp",
@@ -49,8 +49,11 @@ def test_a_used_player_goes_back_to_a_freshly_flashed_card(tmp_path):
     for kept in ("var/lib/gexis-music/Album/track.flac", "var/lib/gexis-music/Playlists/Evening.m3u",
                  "var/lib/gexis-core/pictures/beach.jpg"):
         assert (tmp_path / kept).is_file(), kept
+    # The backups go, their folder stays: it is the Backups share, made
+    # `pi`'s by gexis-core's postinst, and recreated by root it refused
+    # every copy into the share (the review of 2026-10-12).
     for emptied in ("var/lib/bluetooth", "etc/NetworkManager/system-connections",
-                    "var/log/journal"):
+                    "var/log/journal", "var/lib/gexis-core/backups"):
         assert (tmp_path / emptied).is_dir() and not any((tmp_path / emptied).iterdir()), emptied
     assert (tmp_path / "etc/hostname").read_text() == "raspberrypi\n"
     assert "127.0.1.1\traspberrypi" in (tmp_path / "etc/hosts").read_text()
