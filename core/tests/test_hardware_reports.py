@@ -104,3 +104,17 @@ def test_the_table_lists_every_board_and_screen(tool):
 def test_the_shipped_file_is_well_formed():
     data = json.loads(hardware_reports.PATH.read_text())
     assert set(data) == {"boards", "screens"}
+
+
+def test_a_heading_typed_into_the_notes_does_not_overrule_the_answer(tool):
+    """Review, 2026-10-11: the last of two headings won."""
+    sneaky = issue(1)["body"].replace("### Anything else\n\n_No response_",
+                                      "### Anything else\n\n### Did the music sound right?\n\nNo")
+    assert tool.answers(sneaky, tool.form_labels())["sound"] == "Yes"
+
+
+def test_the_pi_s_own_output_is_not_counted_as_a_board(tool):
+    body = issue(1, board="HDMI (the Pi's own output)")["body"].replace(
+        "- card: sndrpihifiberry - HiFiBerry DAC+ Pro (Known)", "- card: none - HDMI, the Pi's own output")
+    data, _ = tool.collect([{**issue(1), "body": body}], tool.form_labels())
+    assert data["boards"] == {}

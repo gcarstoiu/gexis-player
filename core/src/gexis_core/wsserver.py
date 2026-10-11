@@ -1518,10 +1518,12 @@ class StateServer:
         def gather():
             output = outputs.resolve(stored)
             written = board_apply.written()
+            builtin = output is not None and output.card in outputs.BUILT_IN_CARDS
             return hardware_report.collect(
-                output.card if output and output.card not in outputs.BUILT_IN_CARDS else None,
+                output.card if output and not builtin else None,
                 chosen_board=written.id if written else None,
                 screen_chosen=screen,
+                builtin=output.label if builtin else None,
             )
 
         return await asyncio.get_running_loop().run_in_executor(None, gather)
@@ -1530,31 +1532,54 @@ class StateServer:
         """ADR-0126: the facts a hardware report carries, for the sheet to show
         before anything is sent."""
         facts = await self._hardware_facts()
-        headless = bool(self._settings.value("headless")) if self._settings else False
+        display = self._display(facts)
+        board, screen = hardware_report.names(facts, display)
         return web.json_response({
             # George, 2026-10-07: the screen step only when there is a screen
             # to look at - not headless, and one connected.
-            "display": facts.screen_connected and not headless,
-            "board": facts.board or facts.card or None,
+            "display": display,
+            "board": board if (facts.card or facts.builtin) else None,
             "state": facts.state,
-            "screen": facts.screen_chosen or (f"{facts.edid_maker or ''} {facts.edid_name or ''}".strip() or None),
-            "touch": bool(facts.touch),
+            "screen": screen or None,
+            "touch": display and bool(facts.touch),
             "text": facts.text(),
         })
+
+    def _display(self, facts) -> bool:
+        """A screen to look at: connected, and the player not Headless."""
+        headless = bool(self._settings.value("headless")) if self._settings else False
+        return bool(facts.screen_connected) and not headless
+
+    #: One set of tones at a time: two phones at once shared the files and
+    #: each took the card from the other (review, 2026-10-11).
+    _tones_lock = None
 
     async def _handle_hardware_tones(self, request: web.Request) -> web.Response:
         """ADR-0126: a tone at 44.1, 96 and 192 kHz through the player's own
         output, and what the card ran at - **only when nothing is playing**:
         a test never cuts into music."""
         from gexis_core import outputs
-        if hardware_report.playing():
-            return web.json_response({"error": "Something is playing. Pause it first, then play the tones."},
-                                     status=409)
+        if self._tones_lock is None:
+            self._tones_lock = asyncio.Lock()
+        if self._tones_lock.locked():
+            return web.json_response({"error": "The tones are already playing."}, status=409)
         output = outputs.resolve(self._settings.value("output_device")) if self._settings else None
         if output is None:
             return web.json_response({"error": "No output to play to."}, status=409)
-        results = await asyncio.get_running_loop().run_in_executor(
-            None, lambda: hardware_report.play_tones(output.card))
+        async with self._tones_lock:
+            why = hardware_report.busy(output.card)
+            if why == "playing":
+                return web.json_response({"error": "Something is playing. Stop it first, then play the tones."},
+                                         status=409)
+            if why == "held":
+                return web.json_response({"error": "A source still holds the sound card, paused. Stop it, "
+                                                   "then play the tones."}, status=409)
+            try:
+                results = await asyncio.get_running_loop().run_in_executor(
+                    None, lambda: hardware_report.play_tones(output.card))
+            except hardware_report.CardBusy:
+                return web.json_response({"error": "A source took the sound card while the tones played. "
+                                                   "Stop it, then play them again."}, status=409)
         return web.json_response({"tones": results})
 
     async def _handle_hardware_issue(self, request: web.Request) -> web.Response:
@@ -1564,18 +1589,27 @@ class StateServer:
             body = await request.json() if request.can_read_body else {}
         except ValueError:
             body = {}
-        answers = {k: str(v) for k, v in (body.get("answers") or {}).items()}
+        if not isinstance(body, dict):
+            return web.json_response({"error": "expected an object"}, status=400)
+        raw = body.get("answers") if isinstance(body.get("answers"), dict) else {}
+        answers = {k: str(v) for k, v in raw.items() if isinstance(v, str) and v}
         notes = str(body.get("notes") or "")[:2000]
-        tones = [str(t) for t in (body.get("tones") or [])][:6]
+        tones = [str(t) for t in (body.get("tones") if isinstance(body.get("tones"), list) else [])][:6]
+        # Only the check this feedback ran: one left from another phone or an
+        # earlier opening said "not all within" in feedback that had no
+        # screen step at all (review, 2026-10-11).
         check = self._store.state.screen_check or {}
-        screen = hardware_report.screen_lines(check["result"]) if check.get("result") else None
+        ran = body.get("check_seq")
+        screen = (hardware_report.screen_lines(check["result"])
+                  if check.get("result") and ran is not None and ran == check.get("seq") else None)
         facts = await self._hardware_facts()
-        url = hardware_report.issue_url(facts, answers, notes, tones, screen)
+        display = self._display(facts)
+        url = hardware_report.issue_url(facts, answers, notes, tones, screen, display)
         # A report prepared is the prompt answered: it is not asked again.
         if self._settings is not None:
             await self._dismiss_hardware_prompt()
             # And kept, to be sent again (ADR-0126 amended 2026-10-11).
-            board, screen_name = hardware_report.names(facts)
+            board, screen_name = hardware_report.names(facts, display)
             self._settings.keep(hardware_report.KEPT_KEY, {
                 "identity": await self._hardware_identity(), "at": time.time(),
                 "board": board, "screen": screen_name or None, "url": url})
@@ -1596,8 +1630,15 @@ class StateServer:
                 written = board_apply.written()
                 board, _ = boards.identify(card, chosen=written.id if written else None,
                                            product=hardware_report._read(hardware_report.HAT / "product") or None)
-            return hardware_report.identity(card, board.id if board else None, screen)
+            from gexis_core import screen_detect
+            try:
+                seen = screen_detect.seen()
+                shown = f"{seen.edid_maker or ''}/{seen.edid_name or ''}" if seen.connected and not headless else None
+            except Exception:  # noqa: BLE001 - unread is no screen
+                shown = None
+            return hardware_report.identity(card, board.id if board else None, screen, shown)
 
+        headless = bool(self._settings.value("headless")) if self._settings else False
         return await asyncio.get_running_loop().run_in_executor(None, gather)
 
     async def _handle_hardware_kept(self, request: web.Request) -> web.Response:
@@ -1672,12 +1713,25 @@ class StateServer:
             body = await request.json() if request.can_read_body else {}
         except ValueError:
             body = {}
+        if not isinstance(body, dict):
+            body = {}
         check = dict(self._store.state.screen_check or {})
         if not body.get("show"):
             if check:
                 self._store.set_screen_check({**check, "showing": False})
             return web.json_response({"ok": True})
         touch = bool(await asyncio.get_running_loop().run_in_executor(None, hardware_report._touch))
+        # The pattern is the browser's; the visualiser is a window over it, and
+        # a screen in standby is dark (review, 2026-10-11): both would hide it
+        # while the phone said it was up.
+        if self._peppy is not None:
+            # On the loop: hiding publishes the panel's change (see
+            # `_peppy_again`, which answered a 500 from a worker thread).
+            self._peppy.request("hide")
+        if self._standby is not None:
+            self._standby.used()
+            if self._standby.off:
+                await self._standby.wake("screen check")
         seq = int(check.get("seq", 0)) + 1
         self._store.set_screen_check({"showing": True, "touch": touch, "seq": seq, "result": None})
 
@@ -1698,7 +1752,7 @@ class StateServer:
             if not check.get("showing") or body.get("seq") != check.get("seq"):
                 return web.json_response({"error": "No test pattern is being shown."}, status=409)
             result = hardware_report.measure_taps(int(body["width"]), int(body["height"]), list(body["taps"]))
-        except (ValueError, KeyError, TypeError):
+        except (ValueError, KeyError, TypeError, AttributeError, OverflowError):
             return web.json_response({"error": "bad taps"}, status=400)
         self._store.set_screen_check({**check, "showing": False, "result": result})
         return web.json_response(result)

@@ -213,17 +213,23 @@
   const hwAt = $derived(Math.max(0, hwSteps.indexOf(hwStep)));
   const hwLast = $derived(hwAt === hwSteps.length - 1);
   let hwTonesBusy = $state(false);
+  //: **Which opening of the sheet an answer belongs to** (review,
+  //: 2026-10-11): tones take ten seconds, and a sheet closed and opened again
+  //: meanwhile took the old tones as its own.
+  let hwOpening = 0;
   async function playHardwareTones() {
     if (hwTonesBusy) return;
+    const opening = hwOpening;
     hwTonesBusy = true;
     hwError = null;
     try {
       const r = await fetch('/hardware-report/tones', { method: 'POST' });
       const body = await r.json();
+      if (opening !== hwOpening) return;
       if (!r.ok) throw new Error(body?.error ?? `HTTP ${r.status}`);
       hwTones = body.tones;
     } catch (e) {
-      hwError = plainly(e?.message, 'The tones could not be played. Try again.');
+      if (opening === hwOpening) hwError = plainly(e?.message, 'The tones could not be played. Try again.');
     } finally {
       hwTonesBusy = false;
     }
@@ -231,7 +237,16 @@
   // ADR-0126: the test pattern this sheet asked for (its `seq`), so a result
   // left from an earlier check is not shown as this one's.
   let hwCheckSeq = $state(null);
-  const hwCheck = $derived(hwCheckSeq !== null && $screenCheck?.seq === hwCheckSeq ? $screenCheck : null);
+  //: **Up as soon as the player says so** (George, 2026-10-11: the pattern
+  //: "didn't work" the first time). The button followed only the state
+  //: socket, and a phone back from the background had none for seconds; the
+  //: player's own answer now counts until the socket catches up.
+  let hwAsked = $state(null); // { seq, showing } from the player's answer
+  const hwCheck = $derived(
+    hwCheckSeq !== null && $screenCheck?.seq === hwCheckSeq ? $screenCheck
+      : hwAsked !== null && hwAsked.seq === hwCheckSeq ? { seq: hwAsked.seq, showing: hwAsked.showing, result: null }
+        : null,
+  );
   const hwCheckLines = $derived(hwCheck?.result ? [
     `The panel draws ${hwCheck.result.size.replace('x', ' × ')}.`,
     ...hwCheck.result.taps.map((t) => `${t.corner}: ${t.off} px from the circle`),
@@ -240,8 +255,18 @@
   async function toggleScreenCheck() {
     hwError = null;
     try {
-      if (hwCheck?.showing) await showScreenCheck(false);
-      else hwCheckSeq = (await showScreenCheck(true)).seq;
+      if (hwCheck?.showing) {
+        await showScreenCheck(false);
+        if (hwAsked) hwAsked = { ...hwAsked, showing: false };
+      } else {
+        // A new check answers touch anew: the last one's answer does not
+        // outlive it (review, 2026-10-11).
+        const { touch: _, ...rest } = hwAnswers;
+        hwAnswers = rest;
+        const { seq } = await showScreenCheck(true);
+        hwAsked = { seq, showing: true };
+        hwCheckSeq = seq;
+      }
     } catch (e) {
       hwError = plainly(e?.message, 'The test pattern could not be shown. Try again.');
     }
@@ -258,15 +283,20 @@
     if (sheet?.kind !== 'hardware') {
       if (untrack(() => hwCheck?.showing)) showScreenCheck(false).catch(() => {});
       hw = null; hwAnswers = {}; hwNotes = ''; hwUrl = null; hwError = null; hwTones = null; hwCheckSeq = null;
+      hwAsked = null; hwAnsweredSeq = null; hwBusy = false;
       hwStep = 'screen';
+      hwOpening += 1;
       return;
     }
-    if (hw === null && !onPanel()) {
-      fetch('/hardware-report').then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-        .then((body) => { hw = body; hwStep = body?.display ? 'screen' : 'sound'; })
-        .catch(() => (hwError = 'The player could not read its hardware. Try again.'));
-    }
+    if (hw === null && !onPanel() && untrack(() => !hwError)) loadHardware();
   });
+  function loadHardware() {
+    const opening = hwOpening;
+    hwError = null;
+    fetch('/hardware-report').then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((body) => { if (opening === hwOpening) { hw = body; hwStep = body?.display ? 'screen' : 'sound'; } })
+      .catch(() => { if (opening === hwOpening) hwError = 'The player could not read its hardware. Try again.'; });
+  }
   // ADR-0126 decision 1: one line on the System page, a week after a board
   // or screen that is not Tested arrived; dismissed for good with one tap.
   let hwPrompt = $state(null);
@@ -309,21 +339,33 @@
 
   async function prepareHardwareReport() {
     if (hwBusy) return;
+    // GitHub's form will not take feedback without it.
+    if (!hwAnswers.sound) {
+      hwStep = 'sound';
+      hwError = 'Answer "Did the music sound right?" first: GitHub needs it.';
+      return;
+    }
+    const opening = hwOpening;
     hwBusy = true;
     hwError = null;
+    // A screen without touch says so; without a screen, neither is asked.
+    const answers = !hw?.display ? { ...hwAnswers, picture: 'No screen', touch: 'No touch' }
+      : !hw?.touch ? { ...hwAnswers, touch: 'No touch' } : hwAnswers;
     try {
       const r = await fetch('/hardware-report/issue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          answers: hw?.display ? hwAnswers : { ...hwAnswers, picture: 'No screen', touch: 'No touch' },
-          notes: hwNotes, tones: hwTones ?? [],
+          answers, notes: hwNotes, tones: hwTones ?? [],
+          // The check this feedback ran, and no other (review, 2026-10-11).
+          check_seq: hwCheck?.result ? hwCheckSeq : null,
         }),
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      hwUrl = (await r.json()).url;
+      const { url } = await r.json();
+      if (opening === hwOpening) hwUrl = url;
     } catch (e) {
-      hwError = plainly(e?.message, 'The report could not be prepared. Try again.');
+      if (opening === hwOpening) hwError = plainly(e?.message, 'The report could not be prepared. Try again.');
     } finally {
       hwBusy = false;
     }
@@ -1335,8 +1377,10 @@
     }
     if (row.kind === 'hardware') {
       if (hwUrl) sheetKey = null;
+      else if (!hw) loadHardware();
       else if (!hwLast) {
         if (hwStep === 'screen' && hwCheck?.showing) showScreenCheck(false).catch(() => {});
+        hwError = null;
         hwStep = hwSteps[hwAt + 1];
       } else await prepareHardwareReport();
       return;
@@ -1375,6 +1419,7 @@
     if (sheet?.type === 'intervals' && ivTimer) saveIntervals();
     // A feedback step after the first goes back one step.
     if (sheet?.kind === 'hardware' && hw && hwAt > 0 && !hwUrl) {
+      hwError = null;
       hwStep = hwSteps[hwAt - 1];
       return;
     }
@@ -1584,10 +1629,15 @@
                       <span class="row__value row__value--tile">{hardwareKeptLine(hwKept)}</span>
                       <span class="row__note">{[hwKept.board, hwKept.screen].filter(Boolean).join(' · ')}</span>
                     </button>
-                    <span class="hwkept__actions">
-                      <a class="tile__btn tile__btn--go hwkept__btn" href={hwKept.url} target="_blank" rel="noopener">Send again ↗</a>
-                      <button type="button" class="tile__btn" onclick={() => startHardwareOver(r)}>Start over</button>
-                    </span>
+                    {#if onPanel()}
+                      <!-- GitHub opens on a phone or computer, not here. -->
+                      <span class="row__note">Send it again from Settings on a phone or computer.</span>
+                    {:else}
+                      <span class="hwkept__actions">
+                        <a class="tile__btn tile__btn--go hwkept__btn" href={hwKept.url} target="_blank" rel="noopener">Send again ↗</a>
+                        <button type="button" class="tile__btn" onclick={() => startHardwareOver(r)}>Start over</button>
+                      </span>
+                    {/if}
                   </span>
                 </div>
               {:else if r.key === 'sweep_all'}
@@ -2413,7 +2463,7 @@
             class:btn--danger={sheet.danger || restorePending || choicePending !== null}
             type="button"
             class:btn--hold={sheet.hold}
-            disabled={busy || reportBusy || hwBusy || (sheet.kind === 'hardware' && !hw && !hwUrl)}
+            disabled={busy || reportBusy || hwBusy || (sheet.kind === 'hardware' && !hw && !hwUrl && !hwError)}
             onclick={sheet.hold ? (event) => event.preventDefault() : confirmSheet}
             onpointerdown={sheet.hold ? holdStart : null}
             onpointerup={sheet.hold ? holdStop : null}
@@ -2425,7 +2475,7 @@
           >
             {#if sheet.hold}<span class="btn__hold" style:width="{Math.round(holdShare * 100)}%"></span>{/if}
             {#if sheet.kind === 'hardware'}
-              {#if hwBusy}<span class="btn__spin"></span>Preparing…{:else if hwUrl}Done{:else if hw && !hwLast}{hwSteps[hwAt + 1] === 'sound' ? 'Next: the sound' : 'Next: anything else'}{:else}Prepare the feedback{/if}
+              {#if hwBusy}<span class="btn__spin"></span>Preparing…{:else if hwUrl}Done{:else if !hw && hwError}Try again{:else if hw && !hwLast}{hwSteps[hwAt + 1] === 'sound' ? 'Next: the sound' : 'Next: anything else'}{:else}Prepare the feedback{/if}
             {:else if sheet.kind === 'report'}
               {#if reportBusy}<span class="btn__spin"></span>Preparing…{:else if reportDone}Done{:else}Download{/if}
             {:else if busy}

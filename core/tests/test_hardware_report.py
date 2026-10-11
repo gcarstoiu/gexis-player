@@ -14,6 +14,22 @@ I: Bus=0003 Vendor=222a Product=0001 Version=0110
 N: Name="ILITEK ILITEK-TP"
 U: Uniq=SN-0042-SECRET
 H: Handlers=mouse0 event4
+B: EV=1b
+B: KEY=400 0 0 0 0 0
+B: ABS=260800000000003
+
+I: Bus=0003 Vendor=046d Product=c31c Version=0110
+N: Name="Logitech USB Keyboard"
+H: Handlers=sysrq kbd event5
+B: EV=120013
+B: KEY=1000000000007 ff9f207ac14057ff febeffdfffefffff fffffffffffffffe
+
+I: Bus=0018 Vendor=0000 Product=0000 Version=0000
+N: Name="10-0038 generic ft5x06 (79)"
+H: Handlers=event6
+B: EV=b
+B: KEY=400 0 0 0 0 0
+B: ABS=2608000 3
 """
 
 
@@ -21,7 +37,8 @@ def test_the_touch_controller_by_name_and_id_never_its_serial(tmp_path, monkeypa
     devices = tmp_path / "devices"
     devices.write_text(DEVICES)
     monkeypatch.setattr(hr, "INPUT_DEVICES", devices)
-    assert hr._touch() == ["ILITEK ILITEK-TP (222a:0001)"]
+    assert hr._touch() == ["ILITEK ILITEK-TP (222a:0001)", "10-0038 generic ft5x06 (79) (0000:0000)"], \
+        "touch controllers on USB and I2C; a keyboard is not one (review, 2026-10-11)"
 
 
 def facts():
@@ -74,14 +91,21 @@ def test_a_tone_is_the_rate_and_format_music_comes_in_at_minus_20_dbfs(tmp_path)
             assert all(data[i] == 0 for i in range(0, len(data), 4)), "24 bits in a 32-bit container"
 
 
-def test_nothing_is_played_over_music(tmp_path, monkeypatch):
-    status = tmp_path / "card5" / "pcm0p" / "sub0"
-    status.mkdir(parents=True)
-    (status / "status").write_text("state: RUNNING\n")
-    monkeypatch.setattr(hr, "Path", lambda p: tmp_path if p == "/proc/asound" else __import__("pathlib").Path(p))
-    assert hr.playing() is True
-    (status / "status").write_text("closed\n")
-    assert hr.playing() is False
+def test_nothing_is_played_over_music_nor_onto_a_card_held_open(tmp_path):
+    """Review, 2026-10-11: a source paused on the card holds it too, and the
+    tones then wrote three "did not play" lines as if the card had failed."""
+    sub = tmp_path / "card5" / "pcm0p" / "sub0"
+    sub.mkdir(parents=True)
+    (tmp_path / "sndrpihifiberry").symlink_to("card5")
+    other = tmp_path / "card0" / "pcm0p" / "sub0"
+    other.mkdir(parents=True)
+    (other / "status").write_text("state: PREPARED\n")
+    (sub / "status").write_text("state: RUNNING\n")
+    assert hr.busy("sndrpihifiberry", tmp_path) == "playing"
+    (sub / "status").write_text("state: PAUSED\n")
+    assert hr.busy("sndrpihifiberry", tmp_path) == "held"
+    (sub / "status").write_text("closed\n")
+    assert hr.busy("sndrpihifiberry", tmp_path) is None, "another card held, not playing, is not in the way"
 
 
 def test_the_tones_reach_the_report():
@@ -131,8 +155,12 @@ async def test_the_pattern_is_shown_measured_and_reaches_the_report(monkeypatch)
                               json={"seq": shown["seq"], "width": 800, "height": 480, "taps": taps})
         assert r.status == 200 and store.state.screen_check["showing"] is False
         assert store.state.screen_check["result"]["landed"] is True
-        url = (await (await client.post("/hardware-report/issue", json={"answers": {}})).json())["url"]
+        url = (await (await client.post("/hardware-report/issue",
+                                        json={"answers": {}, "check_seq": shown["seq"]})).json())["url"]
         assert "Screen check\n- screen as the panel drew it: 800x480" in parse_qs(urlsplit(url).query)["details"][0]
+        other = (await (await client.post("/hardware-report/issue", json={"answers": {}})).json())["url"]
+        assert "Screen check" not in parse_qs(urlsplit(other).query)["details"][0], \
+            "a check this feedback did not run stays out of it (review, 2026-10-11)"
     finally:
         await client.close()
 
@@ -241,3 +269,23 @@ def test_another_board_on_the_same_card_or_another_screen_is_other_hardware():
     assert base != hr.identity("sndrpihifiberry", "hifiberry-dac", "Waveshare 10.1")
     assert base != hr.identity("sndrpihifiberry", "hifiberry-dacpluspro", None)
     assert hr.kept_for({"identity": base, "url": "u"}, base) and not hr.kept_for({"identity": base, "url": "u"}, "x")
+
+
+def test_notes_in_any_script_fit_and_the_version_and_card_are_never_cut():
+    """Review, 2026-10-11: 2,000 Cyrillic letters cut every detail and the
+    address was still 12,317 characters long."""
+    for notes in ("ж" * 2000, "😀" * 2000, "a" * 2000):
+        url = hr.issue_url(facts(), {"sound": "Yes"}, notes, ["44.1 kHz: played"])
+        assert len(url) <= hr.URL_MAX
+        q = parse_qs(urlsplit(url).query)
+        assert q["details"][0].startswith("Gexis 0.9.4 on a")
+        assert "- card: IQaudIODAC" in q["details"][0]
+        assert q["sound"] == ["Yes"]
+
+
+def test_the_pi_s_own_output_is_named_never_a_dac_and_no_screen_is_none():
+    f = hr.Facts(version="0.10.0", builtin="HDMI", screen_connected=False, screen_chosen='Waveshare 10.1"')
+    assert hr.names(f) == ("HDMI (the Pi's own output)", "")
+    assert "- card: none - HDMI, the Pi's own output" in f.text()
+    connected = facts()
+    assert hr.names(connected, display=False)[1] == "", "Headless: no screen named"
