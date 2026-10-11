@@ -438,6 +438,47 @@
       },
       {
         "type": "group",
+        "label": "Display standby",
+        "accent": "#c8a2d8",
+        "onlyWhen": [
+          "headless",
+          false
+        ]
+      },
+      {
+        "key": "standby_now",
+        "type": "action",
+        "label": "Turn the screen off",
+        "marks": "N",
+        "note": "Until a touch, music starting or the phone's screen button wakes it. The player keeps playing.",
+        "default": null,
+        "confirm": "Turn off"
+      },
+      {
+        "key": "standby_schedule",
+        "type": "toggle",
+        "label": "Scheduled standby",
+        "marks": "N",
+        "note": "The screen off at the standby times whenever nothing is playing.",
+        "default": false
+      },
+      {
+        "key": "standby_wake",
+        "type": "number",
+        "label": "Back to standby after",
+        "marks": "N",
+        "note": "A screen woken during a standby time goes back off after this long without a touch and with nothing playing.",
+        "min": 1,
+        "max": 30,
+        "unit": "min",
+        "default": 2,
+        "onlyWhen": [
+          "standby_schedule",
+          true
+        ]
+      },
+      {
+        "type": "group",
         "label": "Touchpad",
         "accent": "#c8a2d8",
         "onlyWhen": [

@@ -2046,6 +2046,10 @@ async def main() -> None:
                # switch, and the home screen's background - all read by the
                # panel or the picture route as they are used.
                "idle_enabled": None,
+               # ADR-0135: display standby. The schedule's rows are read where
+               # the schedule is kept; the action puts the screen to sleep now.
+               "standby_now": lambda _=None: asyncio.ensure_future(standby.sleep("asked")),
+               "standby_schedule": None, "standby_wake": None,
                "waiting_background": None, "waiting_background_brightness": None,
                "waiting_background_interval": None, "waiting_wallpaper_topics": None,
                "waiting_wallpaper_styles": None, "waiting_wallpaper_time_of_day": None,
