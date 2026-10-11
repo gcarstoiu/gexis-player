@@ -1,4 +1,4 @@
-# Finding 118 — The hidden library over an hour: nothing; the idle screen: half a core
+# Finding 118 — The hidden library over an hour: nothing; the idle screen: half a core, from its weather icons
 
 **Date:** 2026-10-10. **For:** ADR-0122's owed measurement - *"how a hidden
 library behaves on a Pi 4 over an hour"* - and Phase 13f's closing (George:
@@ -46,15 +46,42 @@ run it on the bar, then on sofapi, as the bar might still have undervoltage).
    and the CPU jumped in that sample. Nothing in it animates continuously: a
    one-second clock tick, a clock block that moves once a minute, a picture
    every few minutes, under a static `blur(38px)` copy of the picture.
-   **The cause is not established**; a once-a-second repaint over the blurred
-   layer is the first suspect, not a measured one.
+   The cause, measured the next night, is below: the weather icons'
+   animations.
+
+## The cause: the weather icons (2026-10-11, the bar player)
+
+**Scope:** the bar player, the idle screen up (four weather icons: today's and
+three days; no blurred halo on that picture), the kiosk's DevTools port
+switched on for the test and off again after (`/etc/gexis/kiosk.env`
+restored, checksum matched). Each condition a CSS rule injected into the
+running page, 10 s to settle, then the browser's CPU over 45 s from `/proc`.
+Three runs; the same condition varies by about ±5 points between them.
+
+| Condition | Browser CPU, one core |
+|---|---|
+| As it is (11 animations running in 4 icons) | 47-57 % |
+| **Weather animations paused** | **4-6 %** |
+| Forecast icons paused, today's icon animating | 42 % |
+| **One animation running** (a cloud's drift) | **49 %** |
+| Animations stepped (`steps(4)`) | 28 % |
+| `will-change` on the animated parts | 57 % |
+| The blurred halo hidden / no filter on the picture | 47 % / 63 % |
+
+1. **The weather icons' animations are the cost**: paused, the idle screen
+   is at 4-6 %.
+2. **It is not per animation.** One drifting cloud costs what all eleven do:
+   while anything animates, Chromium on the Pi 4 composites a frame on every
+   refresh, and that is the half a core. The animations are already the cheap
+   kind (`transform` and `opacity` only); layer hints do not help.
+3. **The blur and the picture's filters are not involved.**
 
 ## What follows
 
 - **Phase 13f's owed measurement is done:** the hidden library is fine.
 - **The idle screen's cost is new**, not recorded before, and the screen is
-  what a player shows most of the day. Finding its cause is proposed as a
-  to-do; the panel's frames and the blurred layer would be measured with the
-  clock's tick held still, one change at a time.
+  what a player shows most of the day. Since one animation costs as much as
+  all of them, the remedy is less time animating, not fewer animations: a
+  decision for George (the icons' motion is the design's).
 - Memory summed over Chromium's processes counts shared pages more than once;
   it is a trend, not the browser's real footprint.
