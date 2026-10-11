@@ -44,6 +44,10 @@ MANAGED = (USB, SHARES)
 #: When each USB disk was last seen mounted (decision 17).
 USB_SEEN = Path("/var/lib/gexis/lyrion-usb-seen.json")
 USB_KEEP_S = 7 * 24 * 3600
+#: A disk still mounted is seen again no oftener than this: the record is
+#: written only when it changes, not on every 20 s pass (review,
+#: 2026-10-12), and an hour is nothing against 7 days.
+USB_SEEN_EVERY_S = 3600
 
 
 def usb_recent(mounted_now: list[str], path: Path = USB_SEEN, now: float | None = None,
@@ -56,17 +60,34 @@ def usb_recent(mounted_now: list[str], path: Path = USB_SEEN, now: float | None 
         seen = seen if isinstance(seen, dict) else {}
     except (OSError, ValueError):
         seen = {}
+    before = dict(seen)
     for folder in mounted_now:
-        if folder.startswith(str(USB) + "/"):
+        at = seen.get(folder)
+        if folder.startswith(str(USB) + "/") and not (isinstance(at, (int, float))
+                                                      and 0 <= now - at < USB_SEEN_EVERY_S):
             seen[folder] = now
     seen = {folder: at for folder, at in seen.items()
             if isinstance(at, (int, float)) and now - at <= keep_s}
+    if seen != before:
+        _write(path, json.dumps(seen, indent=1))
+    return sorted(seen)
+
+
+def _write(path: Path, text: str) -> None:
+    """Whole or not at all. A record cut short by a power cut reads as no
+    disk ever seen, and an unplugged disk's folder then leaves Lyrion's
+    list - which Lyrion answers by wiping the library and scanning it all
+    again (review, 2026-10-12)."""
+    tmp = path.with_name(path.name + ".tmp")
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(seen, indent=1))
-    except OSError:
-        pass
-    return sorted(seen)
+        with open(tmp, "w") as out:
+            out.write(text)
+            out.flush()
+            os.fsync(out.fileno())
+        os.replace(tmp, path)
+    except OSError as exc:
+        logger.info("lyrion: could not keep when USB disks were seen (%s)", exc)
 
 
 def mounted(root: Path, is_mount: Callable[[str], bool] = os.path.ismount) -> list[str]:
