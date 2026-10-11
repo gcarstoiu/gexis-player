@@ -274,6 +274,87 @@ def test_a_link_is_refused(tmp_path):
         backups.restore(name, out, tmp_path / "root")
 
 
+@pytest.mark.parametrize("member", [
+    # Under an allowed path by its first characters, then back out.
+    "var/lib/bluetooth/../../../etc/cron.d/evil",
+    "var/lib/bluetooth/11:22/../../../../etc/cron.d/evil",
+    # A sibling that only starts like one of ours.
+    "var/lib/bluetoothX/evil",
+    "var/lib/gexis-core/settings.db.evil",
+    # Absolute, and spelled so a prefix match would not see it.
+    "/var/lib/bluetooth/evil",
+    "./var/lib/bluetooth/evil",
+    "var/lib/bluetooth//evil",
+])
+def test_a_member_that_climbs_out_of_our_paths_is_refused(tmp_path, member):
+    """**The review of 2026-10-12.** The check matched names by their first
+    characters, so `var/lib/bluetooth/../../../etc/cron.d/evil` passed it;
+    on the device's Python 3.13 `extractall` follows the `..`, as root, and
+    the reboot after a restore runs what it planted. Here the root is a
+    folder, so the escape lands inside it - which is where we look."""
+    out = tmp_path / "out"
+    out.mkdir()
+    name = "gexis-gexis-20260925-120000.tgz"
+    _hostile(out / name, member)
+    root = tmp_path / "root"
+
+    with pytest.raises(ValueError, match="refuses"):
+        backups.restore(name, out, root)
+    assert not (root / "etc/cron.d/evil").exists()
+    assert not list(tmp_path.rglob("evil"))
+
+
+@pytest.mark.parametrize("kind", [tarfile.LNKTYPE, tarfile.FIFOTYPE, tarfile.CHRTYPE, tarfile.BLKTYPE])
+def test_a_hard_link_or_a_device_is_refused(tmp_path, kind):
+    out = tmp_path / "out"
+    out.mkdir()
+    name = "gexis-gexis-20260925-120000.tgz"
+    with tarfile.open(out / name, "w:gz") as archive:
+        info = tarfile.TarInfo("var/lib/bluetooth/evil")
+        info.type = kind
+        info.linkname = "/etc/shadow" if kind == tarfile.LNKTYPE else ""
+        archive.addfile(info)
+
+    with pytest.raises(ValueError, match="refuses"):
+        backups.restore(name, out, tmp_path / "root")
+    assert not (tmp_path / "root").exists()
+
+
+def test_a_setuid_bit_is_not_put_back(tmp_path):
+    """A file under one of our paths, but marked to run as its owner."""
+    import io
+    out = tmp_path / "out"
+    out.mkdir()
+    name = "gexis-gexis-20260925-120000.tgz"
+    with tarfile.open(out / name, "w:gz") as archive:
+        info = tarfile.TarInfo("home/pi/.local/share/Plexamp/run")
+        info.mode = 0o4755
+        info.size = 5
+        archive.addfile(info, io.BytesIO(b"pwned"))
+
+    backups.restore(name, out, tmp_path / "root")
+    assert (tmp_path / "root/home/pi/.local/share/Plexamp/run").stat().st_mode & 0o7000 == 0
+
+
+def test_the_extraction_keeps_owners_and_refuses_what_escapes(tmp_path, monkeypatch):
+    """**Not the default filter**: Python 3.13, on the device, has none (every
+    file as the archive says, links and all), and 3.14's `data` would put
+    Plexamp's claim back owned by root, where `pi` cannot write it. `tar`
+    keeps owners and still refuses a path that leaves the root."""
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    name = backups.create("gexis", out, root)
+    seen = []
+    real = tarfile.TarFile.extractall
+
+    def spy(self, path=".", members=None, *, numeric_owner=False, filter=None):
+        seen.append(filter)
+        return real(self, path, members, numeric_owner=numeric_owner, filter=filter)
+
+    monkeypatch.setattr(tarfile.TarFile, "extractall", spy)
+    backups.restore(name, out, tmp_path / "fresh")
+    assert seen == ["tar"]
+
+
 def test_restoring_something_that_is_not_there(tmp_path):
     with pytest.raises(FileNotFoundError):
         backups.restore("gexis-gexis-20260925-120000.tgz", tmp_path, tmp_path)

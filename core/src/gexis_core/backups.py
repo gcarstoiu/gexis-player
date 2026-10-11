@@ -210,18 +210,36 @@ def create(device_name: str, directory: Path = DEFAULT_DIR, root: Path = Path("/
     return name
 
 
+def _under(name: str, paths) -> bool:
+    """Whether `name` is one of `paths` or inside one - **by whole path
+    components**: `var/lib/bluetoothX` is not under `var/lib/bluetooth`."""
+    return any(name == p or name.startswith(p + "/") for p in paths)
+
+
 def _checked(archive: tarfile.TarFile, label: str) -> list[tarfile.TarInfo]:
     """The members to put back. Refuses a link and a member that would land
     outside the paths this module writes - the share is guest-writable, so an
-    archive in it is not necessarily one we made."""
-    allowed = tuple(MEMBERS)
+    archive in it is not necessarily one we made.
+
+    **Only plain files and folders, by names already in their plain form**
+    (the review of 2026-10-12). The first version matched names by their
+    first characters, so `var/lib/bluetooth/../../../etc/cron.d/x` passed,
+    and on the device's Python 3.13 `extractall` followed the `..` - as
+    root, with the reboot after a restore to run what it planted. A name
+    with `..`, `.`, an empty part or a leading `/` is refused, not tidied: no
+    archive `create` writes has one."""
     members = []
     for member in archive.getmembers():
         if member.issym() or member.islnk():
             raise ValueError(f"{label}: refuses a link, {member.name!r}")
-        if member.name.startswith(allowed):
+        if not (member.isfile() or member.isdir()):
+            raise ValueError(f"{label}: refuses a device or a pipe, {member.name!r}")
+        parts = member.name.split("/")
+        if member.name.startswith("/") or any(part in ("", ".", "..") for part in parts):
+            raise ValueError(f"{label}: refuses to write {member.name!r}")
+        if _under(member.name, MEMBERS):
             members.append(member)
-        elif member.name.startswith(FORMERLY_BACKED_UP):
+        elif _under(member.name, FORMERLY_BACKED_UP):
             # An archive from before a member was narrowed: skipped, not
             # refused, so a backup taken the day before is still one.
             logger.info("backup: %s: leaving %s to the image", label, member.name)
@@ -246,10 +264,14 @@ def restore_file(path: Path, root: Path = Path("/"), leave: tuple[str, ...] = ()
     identities of a backup restored as another player. Returns how many
     paths."""
     with tarfile.open(path, "r:gz") as archive:
-        members = [m for m in _checked(archive, path.name)
-                   if not any(m.name == p or m.name.startswith(p + "/") for p in leave)]
+        members = [m for m in _checked(archive, path.name) if not _under(m.name, leave)]
         swapped = [m for m in members if m.name in REPLACED and m.isfile()]
-        archive.extractall(root, members=[m for m in members if m not in swapped])
+        # **`tar`, named** (the review of 2026-10-12): Python 3.13 on the
+        # device has no default filter and 3.14's is `data`, which would put
+        # Plexamp's claim back owned by root, where `pi` cannot write it.
+        # `tar` keeps owners, drops setuid bits, and refuses a path that
+        # would leave `root` - a second guard behind `_checked`.
+        archive.extractall(root, members=[m for m in members if m not in swapped], filter="tar")
         for member in swapped:
             target = root / member.name
             target.parent.mkdir(parents=True, exist_ok=True)
