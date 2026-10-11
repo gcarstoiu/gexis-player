@@ -227,7 +227,8 @@ and decides whether Easter follows the Western or the Orthodox date. Every
 picture is public domain or CC0, and its author is shown in the corner.
 
 Space photos come from Pixabay: choose *Space* among the *Wallpaper topics*
-of *Wallpapers online*.
+of *Wallpapers online*. It asks for galaxies, nebulae and astronomy photos,
+not for the word *space*, which also matches empty rooms and the like.
 
 **The online wallpapers keep repeating.**
 They no longer repeat until every picture of the day has been shown, and

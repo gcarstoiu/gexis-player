@@ -399,7 +399,7 @@ the player itself, with its music folders and network shares).
 | Idle screen | On or off. Off (the default on a new player), the panel stays on what it shows and the rows below are hidden. |
 | Idle screen: Screen, Timeout | The built-in clock-and-weather screen, or an external page; and after how long, with nothing playing and nobody touching the panel. |
 | Idle screen: Background | **Gexis wallpapers**, the player's own pictures; artist pictures from the library, which show the player's own while the Lyrion client is off; online wallpapers (Pixabay); pictures on the device; or black. |
-| Idle screen: Wallpaper topics | With online wallpapers. *Space* and *Calm* search Pixabay's selected photos; the others are Pixabay's own categories. Choosing several mixes them. |
+| Idle screen: Wallpaper topics | With online wallpapers. *Space* (galaxies, nebulae, astronomy) and *Calm* search Pixabay's selected photos; the others are Pixabay's own categories. Choosing several mixes them. |
 | Idle screen: Wallpaper styles, Follow the time of day | With Gexis wallpapers: the chosen styles (Calm, Colourful, Psychedelic), and the hour's pictures (dawn, day, dusk, night). |
 | Idle screen: Seasons, Holidays | *Seasons*, with Gexis wallpapers: the season's pictures join the styles, by hemisphere. *Holidays*, with Gexis wallpapers or online wallpapers: on New Year, and on Christmas and Easter where they are public holidays, only those days' pictures show; Easter follows the Western or Orthodox date by country. |
 | Idle screen: Background brightness, Change the picture every | How dark the picture is behind the text, and how often it changes. |
