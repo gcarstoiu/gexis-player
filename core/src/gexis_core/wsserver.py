@@ -1315,7 +1315,7 @@ class StateServer:
         # page with the output off.
         if self._standby is not None:
             self._standby.used()
-            if self._standby.off:
+            if self._standby.may_be_dark:
                 await self._standby.wake("touch")
         return web.json_response({"touched": True})
 
