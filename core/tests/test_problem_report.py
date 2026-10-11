@@ -79,6 +79,50 @@ def test_the_product_name_is_not_taken_for_a_private_one():
     assert "gexis-core.service" in s.scrub(JOURNAL)
 
 
+def test_a_long_queue_over_a_long_journal_never_holds_up_the_rest_of_the_core():
+    """Review, 2026-10-12: the known values were one alternation, and the
+    regex engine holds the interpreter's lock for a whole call - a long
+    queue's titles over the journal kept the event loop (volume,
+    arbitration) waiting for seconds. A thread that wakes every 5 ms
+    stands in for the loop."""
+    import threading
+    import time
+    line = ("2026-10-07T08:12:49+02:00 box python[812]: 2026-10-07 08:12:49,004 gexis_core.library "
+            "INFO library: queue add 1234 -> 17 tracks at 0.0123 s\n")
+    text = line * 5000 + "2026-10-07T08:13:00+02:00 box python[812]: Jl title 2999 ends here\n"
+    s = pr.Scrubber()
+    for i in range(3000):       # a queue's worth, no two alike
+        s.know(f"{chr(65 + i % 26)}{chr(97 + i // 26 % 26)} title {i}", "title")
+    gaps, done = [], threading.Event()
+
+    def loop():
+        last = time.perf_counter()
+        while not done.is_set():
+            time.sleep(0.005)
+            now = time.perf_counter()
+            gaps.append(now - last)
+            last = now
+    ticker = threading.Thread(target=loop)
+    ticker.start()
+    try:
+        out = s.scrub(text)
+    finally:
+        done.set()
+        ticker.join()
+    assert "Jl title 2999" not in out and "title-1 ends here" in out
+    assert max(gaps) < 0.25, f"the loop waited {max(gaps):.2f} s"
+
+
+def test_a_journal_is_scrubbed_in_whole_lines():
+    s = pr.Scrubber()
+    s.know("Nina Example", "title")
+    text = "".join(f"line {n} by Nina Example at 10.0.4.{n % 200}\n" for n in range(400))
+    assert "".join(pr._pieces(text, size=100)) == text
+    assert all(p.endswith("\n") for p in pr._pieces(text, size=100))
+    out = s.scrub(text)
+    assert "Nina" not in out and "10.0.4." not in out and out.count("\n") == 400
+
+
 def test_settings_show_choices_and_hide_what_a_person_typed():
     s = pr.Scrubber()
     pr.learn(s, ROWS, VALUES.get)
