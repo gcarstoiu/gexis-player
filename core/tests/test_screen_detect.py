@@ -77,3 +77,16 @@ def test_the_11_9_inch_bar_is_recognised_by_what_it_reported_on_the_bar_player()
     without_touch = screen_detect.Seen(connected=True, connector="HDMI-A-1", edid_maker="WSD",
                                        edid_name="WaveShare-119", preferred=(320, 1480), usb=("2109:3431",))
     assert screen_detect.suggest(without_touch) is None
+
+
+def test_the_screen_already_on_shows_as_one_that_changes_nothing():
+    """2026-10-11: setup warned *Keep this screen?* on the recognised bar,
+    already applied for setup; the choices that change nothing say so."""
+    from gexis_core import screen_apply, screens, setup_flow
+    bar = next(s for s in screens.all_screens() if s.width == 1480 and s.height == 320)
+    standard = next(s for s in screens.all_screens() if s.width == 1280 and s.height == 800)
+    report = screen_detect.Seen(connected=True, connector="HDMI-A-1", edid_maker="WSD", edid_name="WaveShare-119",
+                     preferred=(320, 1480), usb=("0712:000a",))
+    now = screen_apply.picture_of(screen_apply.Applied(bar.id, 0))
+    page = setup_flow.screen_choices(report, 0, now=now)
+    assert bar.id in page["unchanged"] and standard.id not in page["unchanged"]

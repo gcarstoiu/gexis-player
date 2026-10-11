@@ -41,7 +41,7 @@ from aiohttp import web
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core import own_wallpapers
+from gexis_core import own_wallpapers, screen_apply
 from gexis_core.players import Players, status_line
 from gexis_core.wallpapers import SEARCH as PIXABAY_SEARCH
 from gexis_core import backups, bluetooth_devices, skin_packs, device_name, discovery, hardware_report, lyrion_scan, lyrion_shares, problem_report, skin_previews, skins, wifi
@@ -1814,7 +1814,11 @@ class StateServer:
         from gexis_core import setup_flow
 
         report = await asyncio.to_thread(self._screen_seen)
-        return web.json_response(setup_flow.screen_choices(report))
+        try:
+            turn = screen_apply.parse_rotation(self._settings.value("rotation")) if self._settings else 0
+        except Exception:  # noqa: BLE001 - unturned is the safe guess for wording
+            turn = 0
+        return web.json_response(await asyncio.to_thread(setup_flow.screen_choices, report, turn))
 
     async def _handle_setup_plugins(self, request: web.Request) -> web.Response:
         """ADR-0128: the Plugins step - every plugin the release ships, with
