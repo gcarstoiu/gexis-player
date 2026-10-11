@@ -621,7 +621,12 @@ class SetupNetwork:
             await self._nmcli("connection", "delete", ssid)
             self._target = None
             self._failed, self._reason = ssid, reason
-            if hosting or self._needed:
+            # **Back to the setup network only when it was the way in, or
+            # there is no other** (review, 2026-10-12). Setup over the cable
+            # (ADR-0031 amendment 8) is not hosting, and a mistyped password
+            # there raised the setup network with no retry behind it, and left
+            # Finish without Wi-Fi refused because the state was not 'online'.
+            if hosting or (self._needed and online(await self._devices()) is None):
                 await self.open()
             else:
                 self._state = "online"

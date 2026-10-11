@@ -650,3 +650,22 @@ def test_a_new_player_with_nobody_on_the_setup_network_moves_to_the_cable(tmp_pa
     assert net.needed and net.status()["network"] == "online"
     assert net.status()["address"] == "http://192.168.1.50:8090/", "setup carries on over the cable"
 
+
+
+def test_a_failed_join_during_setup_over_ethernet_stays_on_the_cable(tmp_path):
+    """A mistyped Wi-Fi password during setup over the cable opened the setup
+    network with nothing to retry it, and Finish without Wi-Fi was then
+    refused because the state was no longer 'online'."""
+    nm = FakeNM(devices=ETH_UP, up_rc=4)
+    net, clock = setup(tmp_path, nm, carrier=True)
+    run(net.run())
+
+    async def go():
+        return await net.join_new("Home", "wrongpass", hold=True)
+    joined, reason = run(go())
+    assert not joined and reason == "The password was not accepted."
+    assert not nm.did("device", "wifi", "hotspot"), "no setup network on a cabled player"
+    status = net.status()
+    assert status["network"] == "online" and status["needed"]
+    assert status["address"] == "http://192.168.1.50:8090/"
+    assert status["failed"] == "Home" and status["reason"] == reason
