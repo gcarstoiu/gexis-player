@@ -138,6 +138,15 @@ def hardware_max() -> int:
     """The loudest raw value written: the control's 0 dB, never above it."""
     return _scale.top
 
+
+def hardware_silence() -> int:
+    """**Silence: the bottom of the control, which is not always raw 0.**
+    It was 0 here until the scale came from the card (ADR-0117) - true of the
+    DAC2 HD's 0..240, but the Pi's own headphone jack runs -10239..400, where
+    raw 0 is 0 dB. Mute, a renderer's 0 and the slider's 0% all wrote 0 there:
+    full scale into headphones (code review, 2026-10-12)."""
+    return _scale.raw_min
+
 #: **Where the current attenuation is left for the meter service to read**
 #: ([ADR-0057](../../../docs/decisions/0057-the-meters-follow-the-volume.md)).
 #: The meter tap is `pcm.output`, which sits *before* the DAC attenuates, so
@@ -439,14 +448,14 @@ def renderer_value_to_hardware_raw(value: int, steps: int) -> int:
     (ADR-0052 amended).
     """
     if steps <= 0 or value <= 0:
-        return 0
+        return hardware_silence()
     return db_to_raw(ceiling_db() + _curve_db(value / steps))
 
 
 def hardware_raw_to_renderer_value(raw: int, steps: int) -> int:
     """The inverse, for the one case that needs it: reporting a level the
     *hardware* has to a renderer that did not set it."""
-    if steps <= 0 or raw <= 0:
+    if steps <= 0 or raw <= hardware_silence():
         return 0
     short = ceiling_db() - raw_to_db(raw)
     if curve() == CURVE_LINEAR:
@@ -575,7 +584,7 @@ class Mute:
                 return False
             self._restore = raw
             self.muted = True
-            await self._write_hardware(0)
+            await self._write_hardware(hardware_silence())
         else:
             restore, self._restore = self._restore, None
             self.muted = False
@@ -588,7 +597,7 @@ class Mute:
         return self._restore if self.muted else current
 
     def observe(self, raw: int) -> None:
-        if self.muted and raw != 0:
+        if self.muted and raw != hardware_silence():
             self.muted = False
             self._restore = None
 
@@ -779,19 +788,24 @@ async def set_raw(
     mixer_name: str,
     value: int,
     device: str = MIXER_DEVICE,
-    maximum: int | None = None,
+    scale: mixer_scale.Scale | None = None,
 ) -> None:
     """Write a raw value to a mixer control.
 
-    `device` and `maximum` default to the output's control and its scale
-    (ADR-0117). `maximum` is passed for a control on another scale: the
+    `device` and `scale` default to the output's control and its scale
+    (ADR-0117). `scale` is passed for a control on another one: the
     software stage `Gexis` (0-360, ADR-0124), or the card's own control
     while it is parked at 0 dB or given its level back (ADR-0127).
+
+    **Clamped to that scale's own bottom, not to 0** (code review,
+    2026-10-12): this took a bare `maximum` and clamped below at 0, so the
+    headphone jack's -20 dB (raw -2000) handed back to the card was written
+    as raw 0, which is 0 dB there.
     """
-    if maximum is None:
+    if scale is None:
         value = max(_scale.raw_min, min(hardware_max(), value))
     else:
-        value = max(0, min(maximum, value))
+        value = max(scale.raw_min, min(scale.raw_max, value))
     key = (device, mixer_name)
     mixer = _MIXERS.get(key)
     if mixer is None:

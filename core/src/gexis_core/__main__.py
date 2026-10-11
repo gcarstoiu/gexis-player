@@ -463,7 +463,7 @@ async def _start_software_volume(card_output, store) -> None:
     if not await asyncio.to_thread(outputs.create_softvol_control):
         logger.warning("volume: the software control could not be made; the level stays where ALSA puts it")
     want = outputs.SOFTVOL_SCALE.raw(db)
-    await set_raw(outputs.SOFTVOL_CONTROL, want, maximum=outputs.SOFTVOL_SCALE.raw_max)
+    await set_raw(outputs.SOFTVOL_CONTROL, want, scale=outputs.SOFTVOL_SCALE)
     store.set(SOFTWARE_LEVEL_KEY, db)
     # **The card is parked only once the software level is in place, read
     # back** (2026-10-07: a misnamed control left the software stage at 0 dB,
@@ -474,7 +474,7 @@ async def _start_software_volume(card_output, store) -> None:
                      "the card keeps its own level", want, got)
         return
     if card_output.control and card_output.scale:
-        await set_raw(card_output.control, card_output.scale.top, maximum=card_output.scale.raw_max)
+        await set_raw(card_output.control, card_output.scale.top, scale=card_output.scale)
     logger.info("volume: software volume at %.2f dB on %s; %s", db, card_output.label,
                 "its own control parked at 0 dB" if card_output.control else "it has no control of its own")
 
@@ -1112,7 +1112,7 @@ async def main() -> None:
             if on:
                 settings_store.set(SOFTWARE_LEVEL_KEY, db)
             elif base is not None and base.control and base.scale:
-                await set_raw(base.control, base.scale.raw(db), maximum=base.scale.raw_max)
+                await set_raw(base.control, base.scale.raw(db), scale=base.scale)
         logger.info("volume: software volume %s at %s dB", "on" if on else "off", db)
         # The output is put in place again; switched on, `_switch_output`
         # makes the software control at the carried level before the
