@@ -5,6 +5,32 @@ Every release of Gexis Player and its notes, newest first. Generated from
 edit that file, not this one. The player shows the last 10 under
 Settings → System → Change logs.
 
+## 0.10.1 — 11 October 2026
+
+### New
+
+- Switching between players on the phone: with more than one Gexis Player on the network, the button at the right of the Settings title lists them, each with what it is playing and through which source; choosing one opens its page.
+- Settings → System → Problem report works in three steps: what happened and how often; a checklist showing what the player gathers and what it takes out; then sending it - on GitHub, already filled in with what happened and the log's last errors, or as a file to send by e-mail.
+- Hardware feedback ends on the same choice: on GitHub, filled in, or a text file to send by e-mail. The last one prepared stays under its row, with Send again and Start over, until the sound card or screen changes.
+- With Volume on Fixed, Plexamp stays at full level: its app's volume slider goes straight back to 100, and the amplifier sets the volume.
+
+### Fixed
+
+- Changing the volume type stops playback at once and reconnects the sources on the new type, Fixed included.
+- Leaving Fixed, the volume returns to where it was before, and Spotify starts no louder than its starting volume.
+- The Space topic shows pictures of outer space.
+- Hardware feedback: its answers reach the GitHub form; the test pattern shows over the visualiser and wakes a dark screen; the tones wait while a paused source holds the sound card; only touch screens are asked for taps; long notes no longer push out what the player read.
+- The visualiser starts after a fresh setup without first being asked for, and asking for it no longer reports an error.
+- A choice in Settings is marked the moment it is tapped.
+- The phone page reconnects as soon as it is brought back to the front.
+- Copy works on the phone page.
+- During the first start, a skin pack being installed shows Installing… with a moving bar instead of standing at 100 %.
+
+### Good to know
+
+- Setup asks "Keep this screen?" only when the screen chosen changes what the player applies.
+- Problem reports and hardware feedback still need a GitHub account to send through GitHub; the e-mail route needs none.
+
 ## 0.10.0 — 11 October 2026
 
 ### New
