@@ -444,12 +444,21 @@ class Supervisor:
             return holder
 
     def _notify_active_change(self) -> None:
+        # **A listener that raises does not stop a takeover half-way** (review,
+        # 2026-10-12: a plugin's queue broke the next broadcast, and the
+        # acquisition after it never finished). Logged, and the change stands.
         if self._on_active_change is not None:
-            self._on_active_change(self._active)
+            try:
+                self._on_active_change(self._active)
+            except Exception:  # noqa: BLE001 - the device's owner must still change
+                logger.exception("arbitration: a listener failed on the change to %s", self._active)
 
     def _notify_handoff(self, from_renderer: str | None, to_renderer: str | None) -> None:
         if self._on_handoff_change is not None:
-            self._on_handoff_change(from_renderer, to_renderer)
+            try:
+                self._on_handoff_change(from_renderer, to_renderer)
+            except Exception:  # noqa: BLE001 - as above
+                logger.exception("arbitration: a listener failed on the handoff %s -> %s", from_renderer, to_renderer)
 
     async def _release_with_ladder(self, renderer_id: str) -> ReleaseOutcome:
         adapter = self._adapters[renderer_id]

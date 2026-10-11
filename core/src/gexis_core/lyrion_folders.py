@@ -23,6 +23,8 @@ It did until 2026-10-03, and adding George's NAS share scanned its tens of thous
 """
 from __future__ import annotations
 
+import asyncio
+
 import json
 import logging
 import os
@@ -122,8 +124,12 @@ async def sync(rpc: Callable[[list], Awaitable[dict]], is_mount=os.path.ismount,
     current = result.get("_p2") or []
     if isinstance(current, str):
         current = [current]
-    present = [d for root in MANAGED for d in mounted(root, is_mount)]
-    keep = [*saved, *usb_recent(present, usb_seen)]
+    # Off the loop: a mount point on a server that is switched off can hold
+    # `ismount` for seconds, every 20 s (review, 2026-10-12).
+    def look() -> tuple[list[str], list[str]]:
+        present = [d for root in MANAGED for d in mounted(root, is_mount)]
+        return present, [*saved, *usb_recent(present, usb_seen)]
+    present, keep = await asyncio.to_thread(look)
     want = wanted(list(current), present, saved=keep)
     if want == list(current):
         return False

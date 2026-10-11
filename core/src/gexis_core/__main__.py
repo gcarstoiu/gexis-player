@@ -389,7 +389,11 @@ def _lyrion_note(on: bool) -> str | None:
 
 
 def _setup_running(setup: dict | None) -> bool:
-    return bool(setup and setup.get("network") in ("open", "joining", "failed"))
+    """Setup is under way: on the setup network, or - over the cable
+    (ADR-0031 amendment 8) - online with setup still needed. Its own restart
+    is then the only one (review, 2026-10-12: a screen chosen during setup
+    over Ethernet restarted the player half-way through Finish)."""
+    return bool(setup and (setup.get("needed") or setup.get("network") in ("open", "joining", "failed")))
 
 
 def screen_question(state: dict, now: float | None = None) -> dict | None:
@@ -807,6 +811,14 @@ async def main() -> None:
             # already playing, never the value it reported.
             asyncio.ensure_future(remote.send(held))
             start_guard.told(renderer_id, time.monotonic())
+            return
+        # **Not while the outgoing renderer is being released** (review,
+        # 2026-10-12): the incoming one's own reports reached the DAC before
+        # the device was free, at the incoming level over the outgoing music.
+        # Its level is set once the release is done (acquire_volume).
+        if supervisor.releasing_for == renderer_id:
+            logger.info("volume: %s reported %s/%s while the outgoing renderer is still being released; not applied",
+                        renderer_id, value, steps)
             return
         remote.set_steps(renderer_id, steps)
         remote.report(renderer_id, value)
@@ -2412,7 +2424,15 @@ async def main() -> None:
         """
         state_store.set_pairing(request.to_json() if request is not None else None)
         if request is not None and request.state == "asking":
-            peppy.request("hide")
+            # Off the loop: lowering the meter waits on wlrctl (review,
+            # 2026-10-12).
+            asyncio.ensure_future(peppy.request_async("hide"))
+            # A request in standby was drawn under the black cover with the
+            # output off, and expired unseen (review, 2026-10-12). `standby`
+            # is assigned further down main(), before the agent registers.
+            standby.used()
+            if standby.may_be_dark:
+                asyncio.ensure_future(standby.wake("pairing"))
 
     #: The agent's own bus, kept so the capability can be changed without a
     #: restart (ADR-0022's `bt_pairing`).
@@ -2673,6 +2693,18 @@ async def main() -> None:
             pairing_agent,
             bluetooth_agent.capability_for(settings.value("bt_pairing")),
         )
+        async def _bluez_back() -> None:
+            # BlueZ keeps agents in memory only: a restarted bluetoothd has
+            # forgotten ours and the adapter's switches (review, 2026-10-12).
+            if renderer_enabled("bluetooth"):
+                await _apply_discoverable(
+                    settings.value("bt_discoverable") or bluetooth_adapter_state.DEFAULT_MODE, attempts=10
+                )
+            await bluetooth_agent.register(
+                bus, pairing_agent, bluetooth_agent.capability_for(settings.value("bt_pairing"))
+            )
+
+        await bluetooth_agent.follow_bluez(bus, _bluez_back)
         # The bus stays open for the process: an agent whose connection
         # closes is unregistered by BlueZ, silently, and pairing goes back
         # to whatever answered before.
@@ -2717,7 +2749,7 @@ async def main() -> None:
     def _standby_published(off: bool, reason: str | None) -> None:
         state_store.set_panel(standby=off)
         if off and peppy_screen.visible:
-            peppy_screen.hide()
+            asyncio.ensure_future(peppy_screen.hide_async())
 
     standby = Standby(publish=_standby_published)
     # ADR-0135: the owner's standby times. Their rows are read each tick.
@@ -2795,7 +2827,7 @@ async def main() -> None:
         nonlocal previous_active, previous_playing
         # ADR-0135: music starting wakes a screen in standby.
         playing = state.metadata.transport == "playing"
-        if playing and not previous_playing and standby.off:
+        if playing and not previous_playing and standby.may_be_dark:
             asyncio.ensure_future(standby.wake("music"))
         previous_playing = playing
         # ADR-0018/0046: a mode change waits for playback to stop, and this
@@ -3074,6 +3106,9 @@ async def main() -> None:
             settings.value("confidence") if settings.value("confidence") is not None
             else CONFIDENCE_MIN
         ),
+        # Stored answers carry the LMS address in their picture links; they
+        # follow the current one as they are read (review, 2026-10-12).
+        lms_base=f"http://{config.lms_host}:{config.lms_port}",
         gate=_may_ask,
     )
     # Warm the Artist tab while the track plays, so opening it shows

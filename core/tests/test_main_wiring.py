@@ -194,3 +194,13 @@ def test_a_watch_that_ends_is_logged_and_started_again():
     gate = _closure("_run_renderer")
     assert "task.add_done_callback(ended)" in gate
     assert "if task is not None and task.done():" in gate
+
+
+def test_setup_over_the_cable_counts_as_setup_running():
+    """Review, 2026-10-12: setup over Ethernet runs 'online' with setup still
+    needed; a screen chosen then restarted the player half-way through Finish."""
+    from gexis_core.__main__ import _setup_running
+    assert _setup_running({"network": "online", "needed": True})
+    assert _setup_running({"network": "open", "needed": False})
+    assert not _setup_running({"network": "online", "needed": False})
+    assert not _setup_running(None)

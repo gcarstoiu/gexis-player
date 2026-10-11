@@ -1313,7 +1313,11 @@ class StateServer:
 
     async def _handle_touch(self, request: web.Request) -> web.Response:
         """The panel telling the daemon somebody touched it. The daemon cannot
-        see touches itself: they land in whichever window has the screen."""
+        see touches itself: they land in whichever window has the screen.
+        **The panel only** (review, 2026-10-12): a phone's request would wake a
+        screen in standby and count as attention it never paid."""
+        if request.remote not in ("127.0.0.1", "::1"):
+            return web.json_response({"error": "only the panel reports touches"}, status=403)
         if self._peppy is not None:
             self._peppy.on_touch()
         # ADR-0135: a touch wakes a screen in standby - measured to reach the
@@ -1849,12 +1853,11 @@ class StateServer:
         # a screen in standby is dark (review, 2026-10-11): both would hide it
         # while the phone said it was up.
         if self._peppy is not None:
-            # On the loop: hiding publishes the panel's change (see
-            # `_peppy_again`, which answered a 500 from a worker thread).
-            self._peppy.request("hide")
+            # Lowered off the loop, its change published back on it.
+            await self._peppy.request_async("hide")
         if self._standby is not None:
             self._standby.used()
-            if self._standby.off:
+            if self._standby.may_be_dark:
                 await self._standby.wake("screen check")
         seq = int(check.get("seq", 0)) + 1
         self._store.set_screen_check({"showing": True, "touch": touch, "seq": seq, "result": None})
@@ -1884,7 +1887,10 @@ class StateServer:
     async def _handle_panel_shown(self, request: web.Request) -> web.Response:
         """ADR-0101: the panel reporting whether its idle screen is up - and,
         as amended, whether its lyrics are - so the phone's toggles say what
-        the panel shows, whatever changed it."""
+        the panel shows, whatever changed it. **The panel only** (review,
+        2026-10-12): a phone saying so would set the toggles to a lie."""
+        if request.remote not in ("127.0.0.1", "::1"):
+            return web.json_response({"error": "only the panel reports what it shows"}, status=403)
         try:
             body = await request.json()
             shown = {key: bool(body[key]) for key in ("idle", "lyrics", "now") if key in body}
@@ -2129,7 +2135,8 @@ class StateServer:
             return web.json_response({"error": "the Peppy screen is not wired up"}, status=503)
         if action not in ("show", "hide"):
             return web.json_response({"error": f"unknown action {action}"}, status=404)
-        shown = self._peppy.request(action)
+        # Off the loop: raising or lowering waits on wlrctl (review, 2026-10-12).
+        shown = await self._peppy.request_async(action)
         if not shown and action == "show" and self._peppy._has_levels():
             # **One restart at a time** (review, 2026-10-12): a second tap
             # while the skins load (~9 s) restarted the unit again and killed
@@ -2162,7 +2169,7 @@ class StateServer:
             # change to the phones, and that needs the loop (a worker thread
             # here answered the first visualiser of an evening with a 500,
             # sofapi 2026-10-11, though it came up).
-            if self._peppy.request("show"):
+            if await self._peppy.request_async("show"):
                 return True
         return False
 

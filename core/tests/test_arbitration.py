@@ -876,8 +876,10 @@ async def test_a_failing_active_change_does_not_leave_the_screen_up():
     )
     supervisor._active = "lms"
 
-    with pytest.raises(RuntimeError):
-        await supervisor.acquire("spotify")
+    # Since the review of 2026-10-12 the listener's failure is logged and the
+    # takeover completes; the handoff screen still comes down.
+    await supervisor.acquire("spotify")
+    assert supervisor.active == "spotify"
     assert seen == [("lms", "spotify"), (None, None)]
 
 
@@ -1240,3 +1242,23 @@ async def test_nothing_takes_the_device_while_an_update_installs():
     installing["now"] = False
     await supervisor.acquire("spotify")
     assert supervisor.active == "spotify"
+
+
+def test_a_listener_that_raises_does_not_stop_the_change():
+    """Review, 2026-10-12: a broadcast that raised left a takeover half-done."""
+    import asyncio
+    from gexis_core.arbitration import Supervisor
+
+    seen = []
+
+    def boom(active):
+        seen.append(active)
+        raise RuntimeError("listener broke")
+
+    sup = Supervisor.__new__(Supervisor)
+    sup._on_active_change = boom
+    sup._on_handoff_change = lambda a, b: (_ for _ in ()).throw(RuntimeError("x"))
+    sup._active = "spotify"
+    sup._notify_active_change()
+    sup._notify_handoff("lms", "spotify")
+    assert seen == ["spotify"]

@@ -712,6 +712,9 @@ async def test_a_second_show_while_the_visualiser_is_starting_again_waits_for_it
                 self.looks += 1
             return self.looks >= 3
 
+        async def request_async(self, action):
+            return self.request(action)
+
     import asyncio
     real_sleep = asyncio.sleep
 
@@ -744,6 +747,10 @@ class _PeppyWithoutWindow:
             return False
         self._store.set_panel(visualiser=True)
         return True
+
+    async def request_async(self, action):
+        # As the real one: worked off the loop, published back on it.
+        return self.request(action)
 
 
 @pytest.mark.asyncio
