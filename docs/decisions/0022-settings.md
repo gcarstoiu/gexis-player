@@ -122,6 +122,7 @@ background that is a picture — which is the negated form
 | Idle clock and date | [N] | **Appended 2026-09-22, asked for by George**: with it off, and the weather off, the panel is a picture frame. Not in the design drop, which draws the clock as the screen's reason for existing |
 | Weather on the idle screen | [N] | ADR-0047 §2. **Open-Meteo**, key-free, so this toggle alone gates the four rows below — the drop's `weather_key` is removed rather than kept as a row that stores nothing |
 | Weather location | [N] | Typed as a place, geocoded once through Open-Meteo's key-free geocoder, stored as coordinates |
+| Weather icon motion | [N] | **Appended 2026-10-11, confirmed by George**: *Animated* (the design's, the default) or *Static*. Any one running animation keeps the Pi 4's browser drawing every frame, about half a core, and Static stops them all ([Finding 118](../findings/118-the-hidden-library-over-an-hour.md)); a short note in the sheet says so. `onlyWhen: ['idle_weather', true]` |
 | Forecast days, show min and max, weather icons | [N] | ADR-0047 §2, all three `onlyWhen: ['idle_weather', true]` **`idle_forecast`'s second option is *Today only*, 2026-10-05** (George: today's weather shows in both layouts), was *None*; the first settings migration moves a stored *None* (ADR-0105 §5). |
 
 ### Renderers and sources
