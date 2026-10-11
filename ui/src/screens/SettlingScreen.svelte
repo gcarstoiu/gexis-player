@@ -27,6 +27,9 @@
     if (item.state === 'done') return 'Done';
     if (item.state === 'failed') return item.error ? `Did not finish: ${item.error}` : 'Did not finish';
     if (item.state === 'waiting') return 'Waiting to start…';
+    // The download is in and the package is being put in place - minutes for
+    // a skin pack, with nothing to count (2026-10-11).
+    if (item.step === 'installing' || item.step === 'verifying') return 'Installing…';
     const got = mb(item.received), all = mb(item.total);
     if (got != null && all) return `${got} of ${all} MB`;
     // A skin pack says how far it is as a share, not in bytes.
@@ -52,7 +55,7 @@
       {:else if settling.phase === 'failed'}
         {names(failed)} did not finish. Try again any time in <b>Settings → Plugins</b>; everything else is ready.
       {:else}
-        Downloading what you chose in setup - a few minutes. Until it is done, music may be slow to start.
+        Downloading and installing what you chose in setup - a few minutes. Until it is done, music may be slow to start.
         You can use the player now: the downloads go on, and Settings shows how far they are.
       {/if}
     </div>
@@ -64,7 +67,7 @@
             <span class="item__state">{line(item)}</span>
           </div>
           {#if item.state === 'busy' || item.state === 'waiting' || item.state === 'done'}
-            <div class="bar" class:bar--waiting={item.state === 'waiting' || (item.state === 'busy' && !item.total && item.share == null)}>
+            <div class="bar" class:bar--waiting={item.state === 'waiting' || item.step === 'installing' || item.step === 'verifying' || (item.state === 'busy' && !item.total && item.share == null)}>
               <span style:width="{Math.round(share(item) * 100)}%"></span>
             </div>
           {/if}

@@ -14,7 +14,7 @@ def test_it_settles_while_anything_waits_or_downloads():
     view = settling.view(record(), {"skins": {"state": "downloading", "received": 5, "total": 10}}, now=1010.0)
     assert view["phase"] == "settling"
     assert view["items"][0] == {"id": "skins", "name": "The visualiser's skins", "received": 5, "total": 10,
-                                "share": None, "error": None, "state": "busy"}
+                                "share": None, "error": None, "state": "busy", "step": "downloading"}
     assert view["items"][1]["state"] == "waiting"
 
 
@@ -69,3 +69,11 @@ def test_put_away_it_follows_on_and_comes_back_only_for_a_failure(tmp_path):
     settling.end(path)
     settling.hide(path)                      # nothing to put away: writes nothing
     assert not path.exists()
+
+
+def test_a_pack_being_installed_says_so_rather_than_100_percent():
+    """George, 2026-10-11: the skins showed 100 % for the 4 min 18 s their
+    install took on the bar. The step goes to the screen, which says
+    Installing."""
+    v = settling.view(record(), {"skins": {"state": "installing", "share": 1.0}}, now=1010.0)
+    assert v["items"][0]["state"] == "busy" and v["items"][0]["step"] == "installing"
