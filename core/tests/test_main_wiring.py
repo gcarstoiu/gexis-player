@@ -110,3 +110,14 @@ def test_a_renderer_plugin_reopens_the_output_with_the_built_ins():
     restart = _closure("_restart_renderers")
     assert "restart_if_enabled(unit) for unit in _plugin_renderer_units()" in restart
     assert "p.kind == 'renderer'" in _closure("_plugin_renderer_units")
+
+
+def test_a_source_switch_waits_for_the_one_before_it():
+    """Each write of a source row ran its own `_apply_renderer` with no lock,
+    so a quick off -> on let the slower "off" finish last: Bluetooth's radio
+    powered down, or go-librespot stopped, under a switch that said on. The
+    row is read inside the lock, so the last tap wins."""
+    apply = _closure("_apply_renderer")
+    assert "async with renderer_locks.setdefault(renderer_id" in apply
+    now = _closure("_apply_renderer_now")
+    assert now.index("on = renderer_enabled(renderer_id)") < now.index("set_unit_enabled(")

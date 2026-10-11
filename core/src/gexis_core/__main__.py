@@ -2499,8 +2499,20 @@ async def main() -> None:
             if task is not None:
                 task.cancel()
 
+    #: One change at a time per source, and the switch read again once it is
+    #: that change's turn - as `plugin_unit_locks` does for a plugin's (code
+    #: review, 2026-10-12: Bluetooth off and on within a few seconds left the
+    #: slower "off" task disabling the setup unit and powering the radio down
+    #: after the "on" had finished, under a switch that said on).
+    renderer_locks: dict[str, asyncio.Lock] = {}
+
     async def _apply_renderer(renderer_id: str) -> None:
-        """A source row was written: make the device match it (ADR-0077)."""
+        """A source row was written: make the device match it (ADR-0077).
+        The last tap wins."""
+        async with renderer_locks.setdefault(renderer_id, asyncio.Lock()):
+            await _apply_renderer_now(renderer_id)
+
+    async def _apply_renderer_now(renderer_id: str) -> None:
         on = renderer_enabled(renderer_id)
         adapter = adapters.get(renderer_id)
         if adapter is None:
