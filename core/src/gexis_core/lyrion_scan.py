@@ -26,6 +26,14 @@ class NeedsLogin(Exception):
     """The server lists its shares only to a known user."""
 
 
+class NoAnswer(ValueError):
+    """The server did not answer in `TIMEOUT_S` - asleep, or a firewall
+    that drops rather than refuses - or the tool to ask it is missing.
+    Escaping as it was, it made the browse an HTTP 500 (review,
+    2026-10-12). A ValueError, which the list action answers as a refusal:
+    "Needs <server> to answer"."""
+
+
 @dataclass(frozen=True)
 class Server:
     name: str
@@ -54,8 +62,12 @@ def parse_browse(output: str, own: set[str] = frozenset()) -> list[Server]:
 def servers(own: set[str], run=subprocess.run) -> list[Server]:
     found = []
     for service in ("_smb._tcp", "_nfs._tcp"):
-        result = run(["avahi-browse", "-rtpk", service], capture_output=True, text=True,
-                     timeout=TIMEOUT_S, check=False)
+        try:
+            result = run(["avahi-browse", "-rtpk", service], capture_output=True, text=True,
+                         timeout=TIMEOUT_S, check=False)
+        except (OSError, subprocess.SubprocessError) as exc:  # the other kind is still worth listing
+            logger.info("lyrion_scan: %s browse did not finish (%s)", service, exc)
+            continue
         found += parse_browse(result.stdout or "", own)
     return sorted(set(found), key=lambda s: (s.name.lower(), s.kind))
 
@@ -85,7 +97,16 @@ def shares(server: Server, user: str | None = None, password: str | None = None,
            run=subprocess.run) -> list[dict]:
     """A server's shares. Raises NeedsLogin for an SMB server that refuses a
     guest (or the user given). The password reaches smbclient through a
-    root-only file, never its command line."""
+    root-only file, never its command line. Raises NoAnswer when the server
+    does not answer."""
+    try:
+        return _shares(server, user, password, run)
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.info("lyrion_scan: %s did not answer (%s)", server.kind, exc)
+        raise NoAnswer(f"{server.name} to answer") from exc
+
+
+def _shares(server: Server, user: str | None, password: str | None, run) -> list[dict]:
     if server.kind == "nfs":
         # "--": the host comes from the request, and is never an option.
         result = run(["showmount", "-e", "--", server.host], capture_output=True, text=True,
