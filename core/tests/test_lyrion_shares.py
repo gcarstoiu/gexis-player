@@ -188,3 +188,26 @@ def test_points_name_every_saved_share_mounted_or_not(tmp_path):
     s.add("//nas/a", "me", "pw")
     s.add("nas:/b", None, None)
     assert s.points() == [str(tmp_path / "mnt" / ls.slug("//nas/a")), str(tmp_path / "mnt" / ls.slug("nas:/b"))]
+
+
+def test_a_server_that_does_not_answer_does_not_stop_the_shares_after_it(tmp_path):
+    """Review, 2026-10-12: an NFS mount to a NAS that is off retries for two
+    minutes; the 30 s timeout ended the whole pass, every share after it was
+    never tried, and its row said nothing."""
+    mounted = set()
+
+    def run(command, **kw):
+        if command[0] == "mount" and any("nas-off" in part for part in command):
+            raise subprocess.TimeoutExpired(command, kw.get("timeout"))
+        if command[0] == "mount":
+            mounted.add(next(part for part in command if part.startswith(str(tmp_path / "mnt"))))
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    s = ls.Shares(Store(), root=tmp_path / "mnt", credentials=tmp_path / "cred", run=run,
+                  is_mount=lambda p: p in mounted)
+    s.add("nas-off:/music", None, None)
+    s.add("nas-on:/music", None, None)
+    s.mount_all(s.all())
+    off, on = s.items()
+    assert off["meta"] == "On nas-off · Not mounted: the server did not answer"
+    assert on["meta"] == "On nas-on · Mounted, read-only"
