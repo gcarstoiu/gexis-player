@@ -465,9 +465,13 @@
   const packLine = $derived(chosenModel?.skin_count ? `${chosenModel.skin_count} skins are available for this screen's resolution (${packSize}).` : `Skins are available for this screen's resolution (${packSize}).`);
   //: Two minutes, as every Keep waits since 2026-10-04 (SETUP_KEEP_S and
   //: KEEP_S in the core).
+  //: The Keep sentence only where it is true: a screen whose picture is the
+  //: one already on the screen (`unchanged`, from the core) restarts nothing
+  //: and asks nothing (George, 2026-10-11: shown on the recognised bar).
+  const asksKeep = $derived(!chosenModel || !(screenInfo?.unchanged ?? []).includes(chosenModel.id));
   const pickNote = $derived(
     (chosenModel && !chosenModel.tested ? 'This model has not been tested with gexis. ' : '') +
-      'When setup finishes the player restarts on this screen and asks Keep this screen? on it. If nobody touches Keep within two minutes, it goes back.'
+      (asksKeep ? 'When setup finishes the player restarts on this screen and asks Keep this screen? on it. If nobody touches Keep within two minutes, it goes back.' : '')
   );
   //: The preset names carry the panel's own resolution, which the row's note
   //: already gives the way the screen is used ("(400x1280)" on a bar).
@@ -869,7 +873,7 @@
                   <button class="sc-btn" class:on={scConfirmed && !headless} onclick={() => { scPick = null; scConfirmed = true; headless = false; }}>This is right</button>
                   <button class="sc-btn other" onclick={() => { scChoose = true; scConfirmed = false; }}>Choose another</button>
                 </div>
-                {#if !headless}
+                {#if !headless && pickNote}
                   <div class="warn"><span class="bang">!</span><span>{pickNote}</span></div>
                 {/if}
               {:else}
@@ -898,7 +902,7 @@
                       <span class="grow"><span class="nm wrap">{makers ? `${m.maker} ${shortOf(m)}` : shortOf(m)}</span><span class="meta">{sizeOf(m)} · {familyOf(m)}</span></span>
                       <span class="tag" class:untested={!m.tested}>{m.tested ? 'Tested' : 'Untested'}</span>
                     </button>
-                    {#if on}
+                    {#if on && pickNote}
                       <div class="warn"><span class="bang">!</span><span>{pickNote}</span></div>
                     {/if}
                   {/snippet}

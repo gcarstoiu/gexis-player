@@ -117,11 +117,10 @@ elsewhere (a phone, a Lyrion app) can open the drawer too
 With **Volume** set to *Fixed*, the player always plays at full level
 for an amplifier that sets the volume; the button then shows a padlock and
 the drawer explains why. *Maximum volume* and Spotify's *Starting volume* do
-not apply in Fixed, and their rows are hidden. Chosen while music plays,
-Fixed starts at the next pause or stop, so the level never jumps mid-track;
-until then the volume still works, and the Volume row, the volume controls
-and the phone say *Fixed at the next pause*. Leaving Fixed waits the same
-way.
+not apply in Fixed, and their rows are hidden. Changing the volume type
+while music plays stops playback, and the sources reconnect on the new type,
+so the level never jumps mid-track; the source that comes back starts no
+louder than its *Starting volume*.
 
 ## 3. The library
 
@@ -253,7 +252,11 @@ same network.
 ![Phone: Settings](images/phone-settings.webp)
 
 The phone page shows **Settings** above and the **mini player** at the
-bottom:
+bottom. With more than one player on the network, a switch button sits at
+the right of the *Settings* title: tap it for every player, each with what it is doing - *Playing · Spotify*, *Stopped · Lyrion*,
+*Idle* - and choose one to open its page in the same tab.
+
+The mini player has:
 
 - the track playing;
 - a row of buttons for the panel: **Home**, **Now Playing** (lit while the
@@ -345,7 +348,7 @@ Changes take effect at once unless the row says otherwise.
 | --- | --- |
 | Output | Where the sound goes. Over HDMI the sound is not bit-perfect; HDMI has no volume control of its own, so its volume is Software or Fixed, and the visualiser moves only on Software. |
 | Sound card board | Most boards and every USB DAC are found by themselves. A board that is not (it does not show under Output) can be chosen here. Each board is marked *Tested* (played and measured by the project), *Reported* (owners reported it working; *Reported with problems* if one did not) or *Known*. |
-| Volume | How the level is set. *Hardware* (default): by the sound card's own volume control, bit-perfect at every level. *Software*: by the player recalculating the sound, on any output; not bit-perfect below 100 %. *Fixed*: always full level, for an amplifier that sets the volume itself; it asks first, and applies when playback next stops. On an output with no volume control of its own, such as HDMI, Hardware is greyed out and Software is used in its place. The level carries across between Hardware and Software. |
+| Volume | How the level is set. *Hardware* (default): by the sound card's own volume control, bit-perfect at every level. *Software*: by the player recalculating the sound, on any output; not bit-perfect below 100 %. *Fixed*: always full level, for an amplifier that sets the volume itself; it asks first. Any change of volume type stops playback while the sources reconnect on it. On an output with no volume control of its own, such as HDMI, Hardware is greyed out and Software is used in its place. The level carries across between Hardware and Software. |
 | Maximum volume | The loudest the player will go, on any input. At 80, 100 % on every control means that level. Hidden with Volume on *Fixed*. |
 | Volume curve | How the slider's travel maps to loudness. *Cubic* (half travel is −15.5 dB) is the usual shape; *Linear* puts half travel at −30 dB. |
 
@@ -396,7 +399,7 @@ the player itself, with its music folders and network shares).
 | Idle screen | On or off. Off (the default on a new player), the panel stays on what it shows and the rows below are hidden. |
 | Idle screen: Screen, Timeout | The built-in clock-and-weather screen, or an external page; and after how long, with nothing playing and nobody touching the panel. |
 | Idle screen: Background | **Gexis wallpapers**, the player's own pictures; artist pictures from the library, which show the player's own while the Lyrion client is off; online wallpapers (Pixabay); pictures on the device; or black. |
-| Idle screen: Wallpaper topics | With online wallpapers. *Space* and *Calm* search Pixabay's selected photos; the others are Pixabay's own categories. Choosing several mixes them. |
+| Idle screen: Wallpaper topics | With online wallpapers. *Space* (galaxies, nebulae, astronomy) and *Calm* search Pixabay's selected photos; the others are Pixabay's own categories. Choosing several mixes them. |
 | Idle screen: Wallpaper styles, Follow the time of day | With Gexis wallpapers: the chosen styles (Calm, Colourful, Psychedelic), and the hour's pictures (dawn, day, dusk, night). |
 | Idle screen: Seasons, Holidays | *Seasons*, with Gexis wallpapers: the season's pictures join the styles, by hemisphere. *Holidays*, with Gexis wallpapers or online wallpapers: on New Year, and on Christmas and Easter where they are public holidays, only those days' pictures show; Easter follows the Western or Orthodox date by country. |
 | Idle screen: Background brightness, Change the picture every | How dark the picture is behind the text, and how often it changes. |
@@ -469,8 +472,8 @@ Everything about the player itself, under seven headings.
 
 | Setting | What it does |
 | --- | --- |
-| Problem report | On a phone or computer: downloads one file with the logs, versions, hardware and settings, to attach to a report of a problem. Addresses, names, networks, shares, keys and what you play are taken out on the player first; read the file before sharing it. On the screen it says where to open it instead. |
-| Hardware feedback | On a phone or computer, three steps. The screen: a test pattern on the player's screen, with four circles to tap, which measures where the touches land, and two questions. The sound: a short test tone at 44.1, 96 and 192 kHz played at the current volume (not while something plays), and three questions. Anything else: your own notes, if any, and what the player adds for you, to read before it goes. Without a screen, or with Headless on, it starts at the sound and has two steps. Then feedback on GitHub, filled in with what the player reads of them (never a serial number or anything about you). It helps others see what works before buying. A week after a sound card or screen that is not Tested is first used, a line at the top of System offers it once; × puts it away for good. |
+| Problem report | On a phone or computer, three steps. What happened: in your own words, and how often. Preparing: the player gathers its logs, versions, hardware and settings, ticking each line of a checklist as it goes - including what it took out: addresses, names, networks, shares, keys and what you play. Send: *On GitHub* opens the report there filled in with what happened and the log's last errors (needs a GitHub account; the full file can be dragged onto it too), or *By e-mail* downloads the file to send to the address shown. Nothing leaves the player until you send it; read the file first. The prepared report stays on the player for an hour. On the screen it says where to open it instead. |
+| Hardware feedback | On a phone or computer, three steps. The screen: a test pattern on the player's screen, with four circles to tap on a touch screen, which measures where the touches land, and two questions. The sound: a short test tone at 44.1, 96 and 192 kHz played at the current volume (not while a source holds the sound card, even paused: stop it first), and three questions. *Did the music sound right?* must be answered: GitHub needs it. Anything else: your own notes, if any, and what the player adds for you, to read before it goes. Without a screen, or with Headless on, it starts at the sound and has two steps. Then the same Send step as the problem report: *On GitHub* opens the feedback there, filled in with what the player reads of them (never a serial number or anything about you) - *Create* on GitHub sends it - or *By e-mail* downloads it as a text file to send to the address shown. The player keeps the last one: the row shows when it was made, with *Send again* and *Start over*, until the sound card or screen changes. It helps others see what works before buying. A week after a sound card or screen that is not Tested is first used, a line at the top of System offers it once; × puts it away for good. |
 | Debug logs | Keeps the logs across restarts, for tracking down a problem. |
 
 **About**

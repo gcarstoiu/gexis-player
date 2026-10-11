@@ -350,3 +350,23 @@ async def test_a_missing_group_is_a_warning_not_a_failure(tmp_path, caplog, monk
         assert (await _hear(reader))["t"] == "welcome"
         writer.close()
     assert "gexis-plugins" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_a_plugin_is_told_whether_the_output_is_fixed_and_when_it_changes(tmp_path):
+    """ADR-0137: `output` at connection and on every change; a plugin that does
+    not know it answers `error`, and nothing breaks."""
+    fixed = {"on": True}
+    async with Harness(tmp_path, output_fixed=lambda: fixed["on"]) as h:
+        reader, writer, welcome = await _hello(h)
+        assert welcome["t"] == "welcome"
+        told = await _hear(reader)
+        assert told["t"] == "output" and told["fixed"] is True
+        await _say(writer, {"t": "error", "id": told["id"], "message": "unknown command"})
+        h.server.tell_output(False)
+        again = await _hear(reader)
+        assert again["t"] == "output" and again["fixed"] is False
+        await _say(writer, {"t": "ok", "id": again["id"], "result": True})
+        await asyncio.sleep(0.05)
+        assert "plexamp" in h.server.sessions
+        writer.close()

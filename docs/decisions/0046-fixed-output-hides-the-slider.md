@@ -157,3 +157,41 @@ A."*
   track as ADR-0018's wording also allows; that is kept, and the screen now
   says it.
 
+## Amended 2026-10-11: every change of volume type stops playback at once
+
+George, on sofapi: Fixed chosen while playing *"doesn't change on pause or
+next track but only on render reconnect. We should keep it like this and
+enforce a renderer disconnect like it is between software and hardware"* -
+and Spotify, back after a change, played at the 100 it had held, not its
+*Starting volume*.
+
+- **Any change of the Volume row** - Hardware, Software, Fixed - stops
+  whoever is playing (`Supervisor.stop_active`, the release an update uses),
+  puts the new type in force (the software stage in or out with the level
+  carried, full scale for Fixed) and restarts the renderers. The wait for a
+  pause, and the *Fixed at the next pause* notes, are withdrawn.
+- **The full-level jump this record guarded against cannot happen**: nothing
+  plays while the type changes.
+- **Nobody holds the device afterwards**, so the source that returns is a
+  takeover and its *Starting volume* applies (ADR-0054 §5).
+
+**Bluetooth at 0 in Fixed is left as it is** (George, 2026-10-11: *"keep it
+as is and record it. No point in messing with the phone's bar"*). With
+Fixed, every source plays at full level whatever its own slider shows - but
+a phone's Bluetooth slider at 0 silences playback. The player never
+attenuates Bluetooth (the A2DP stream reaches the card at full scale,
+`bluealsa_volume.py`), so the silence is most likely the phone's: Android
+sends none at the bottom of its slider. **Not tested** - the player's side
+was not read with a phone at 0. Snapping the phone's slider back to full was
+proposed and declined.
+
+## Amended 2026-10-11 (again): leaving Fixed
+
+George: Spotify *"starting at 100 when coming from fixed to hardware"*. In
+Fixed the DAC is at full scale and no level is published; the change of
+type stops playback, so on leaving Fixed nothing was playing to take a level
+from, the DAC stayed at full scale, and Spotify taking the device had no
+level to start under. **Leaving Fixed, the DAC comes back to the level it
+had before Fixed was chosen**, or, on a player started in Fixed, to the
+*Starting volume*; that level is published, so the next source starts under
+it as after any other change.

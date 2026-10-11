@@ -108,3 +108,13 @@ should be told of this. Otherwise it feels like being stuck"*. Decision 2's
   while the screen is up: put away, it restarts once its skins are in.
 - On a 320 px bar the card is tightened and the button stays at its foot, so
   the way out is never below the fold.
+
+## Amended 2026-10-11 (second): the install step said
+
+George, on the bar: the skins sat at 100 % on this screen - 4 min 18 s of
+installing after a 6 s download - which *"might look like a bug"*. The view
+now carries each item's step; an item installing says **Installing…** with
+a moving bar instead of its finished download's share. dpkg reports one
+package's progress by phase, not by file, so a single large pack has nothing
+truer to count. The Screen step's *Keep this screen?* warning, fixed the same
+day, is ADR-0109's.

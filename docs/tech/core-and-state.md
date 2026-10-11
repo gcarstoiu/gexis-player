@@ -184,7 +184,7 @@ routes are loopback-only or behave differently by origin: `/surface`,
 | Surface | `GET /surface` → `panel` or `remote` | Both, at start (ADR-0032) |
 | Touchpad relay | `GET /touchpad` (WebSocket) | Phone ↔ panel (ADR-0121) |
 | Playback | `POST /renderer/{id}/activate`, `POST /transport/{command}`, `POST /volume`, `POST /volume/mute` | Both |
-| Panel view | `POST /touch`, `POST /panel/painted`, `POST /panel/shown`, `POST /panel/idle/{show,hide}`, `POST /panel/standby/{on,off}` (ADR-0135), `POST /panel/go/{to}`, `POST /peppy/{action}` | Panel reports; phone asks |
+| Panel view | `POST /touch`, `POST /panel/painted`, `POST /panel/shown`, `POST /panel/idle/{show,hide}`, `POST /panel/standby/{on,off}` (ADR-0135), `GET /player/status` and `GET /players` (ADR-0136), `POST /panel/go/{to}`, `POST /peppy/{action}` | Panel reports; phone asks |
 | Idle screen | `GET /idle`, `/idle/weather`, `/idle/wallpaper`, `/idle/wallpaper/{name}`, `/idle/wallpaper/local/{path}` | Panel (ADR-0047) |
 | Library | `GET /library/{counts,strip,new,artists,playlists}`, `/library/artists/{id}/{albums,genres}`, `/library/albums/{id}`, `/library/playlists/{id}`, `/library/artist-photos`, `/library/artist-info`; `POST /library/action` | Panel (ADR-0038) |
 | Radio | `GET /radio?handle=…`, `POST /radio/play` | Panel (ADR-0030) |
@@ -193,10 +193,10 @@ routes are loopback-only or behave differently by origin: `/surface`,
 | Settings | `GET /settings`; `PUT /settings/{key}` (write a value); `POST /settings/{key}` (run an action); `GET`/`POST /settings/{key}/items` (list rows: Wi-Fi, trusted devices, backups, `lyrion-server.shares`, `lms_server`); `GET /network/wifi` (the connected network's signal, speed, band, channel and address, no rescan - ADR-0123); `GET /notices/{name}` (Legal, Credits) | Both (ADR-0035) |
 | Skins and plugins | `GET /skins`, `/skins/{name}/preview`, `/plugins/{id}/mark`; `POST /plugins/upload`, `/plugins/{id}/uninstall` | Settings (ADR-0050, ADR-0106) |
 | Bluetooth | `POST /bluetooth/pairing/{answer}` | Panel (ADR-0045) |
-| Hardware report | `GET /hardware-report` (the board by EEPROM, driver, overlays, controls, formats and rates; the screen's EDID and touch controller - no serials), `POST /hardware-report/tones` (a 1 kHz tone at -20 dBFS at 44.1, 96 and 192 kHz through `output`, and the rate and format the card ran at; `409` while any card plays), `GET /hardware-report/prompt` and `POST /hardware-report/prompt/dismiss` (the System page's one line, a week after a board or screen that is not Tested was first seen, per piece of hardware; kept in the internal `_hardware_prompt` key; a prepared report dismisses it too), `POST /hardware-report/screen` (`{"show"}`: the test pattern on the panel, through `screen_check` in `/state`; taken down after 120 s) and `POST /hardware-report/screen/result` (the panel's four corner taps in screen pixels, measured against 6 % of the diagonal), `POST /hardware-report/issue` (`{"answers", "notes", "tones"}` -> the pre-filled GitHub *Hardware report* form's address) - `hardware_report.py`; the *Reported* state from `hardware_reports.json` (`hardware_reports.py`), which only `tools/hardware-reports.py` writes, from the issues labelled `accepted`, along with HARDWARE.md's table | Settings on a phone or computer (ADR-0126) |
+| Hardware report | `GET /hardware-report` (the board by EEPROM, driver, overlays, controls, formats and rates; the screen's EDID and touch controller - no serials), `POST /hardware-report/tones` (a 1 kHz tone at -20 dBFS at 44.1, 96 and 192 kHz through `output`, and the rate and format the card ran at; `409` while any card plays), `GET /hardware-report/prompt` and `POST /hardware-report/prompt/dismiss` (the System page's one line, a week after a board or screen that is not Tested was first seen, per piece of hardware; kept in the internal `_hardware_prompt` key; a prepared report dismisses it too), `POST /hardware-report/screen` (`{"show"}`: the test pattern on the panel, through `screen_check` in `/state`; taken down after 120 s) and `POST /hardware-report/screen/result` (the panel's four corner taps in screen pixels, measured against 6 % of the diagonal), `POST /hardware-report/issue` (`{"answers", "notes", "tones"}` -> the pre-filled GitHub *Hardware feedback* form's address; its answers are text fields, which GitHub fills from a link and dropdowns are not; the result is kept in `_hardware_feedback` with the sound card and screen it was made on), `GET /hardware-report/kept` (that one, or `null` - dropped once the board or screen in use is another) and `POST /hardware-report/kept/clear` (*Start over*), `GET /hardware-report/file` (that feedback as a text file, for e-mail - ADR-0138) - `hardware_report.py`; the *Reported* state from `hardware_reports.json` (`hardware_reports.py`), which only `tools/hardware-reports.py` writes, from the issues labelled `accepted`, along with HARDWARE.md's table | Settings on a phone or computer (ADR-0126) |
 | Network | `GET`/`POST /network/cable` and `/network/wifi/address` (an address, Automatic or Manual), `POST /network/keep` (ADR-0123); `GET /network/wifi` (the connected network's details) | Phone, computer, panel |
 | Backups | `GET /backups/{name}` - one backup from the Backups share, as a file to save (ADR-0083 as amended 2026-10-08); a name that is not one of ours is refused | Phone, computer |
-| Problem report | `POST /report` (body `{"note": ...}`) - a zip of the journal, the updater's log, versions, hardware and settings, scrubbed on the device by `problem_report.py`; the header `X-Report-Summary` says what was taken out; one at a time (`409`) | Settings on a phone or computer (ADR-0125) |
+| Problem report | `POST /report/prepare` (`{"what", "often"}`) starts it in the background; `GET /report/status` gives the seven steps of `problem_report.STEPS`, each `done` with what it found, then the file's name, size and contents; `GET /report/file` (the zip) and `GET /report/issue` (the GitHub form's address: what happened, how often, the version, what was taken out and the log's last errors, cleaned, under 7,500 characters) for an hour after; one at a time (`409`). The zip holds the journal, the updater's log, versions, hardware and settings, scrubbed on the device. `POST /report` still answers the zip in one request | Settings on a phone or computer (ADR-0125, ADR-0138) |
 | Screens | `POST /screen/{action}`, `/screen-new/{action}` | Panel (ADR-0109) |
 | Setup | `GET /setup/status`, `/setup/answers`, `/setup/networks`, `/setup/screen`, `/setup/plugins`; `POST /setup/answers`, `/setup/finish`, `/renderers/park`, `/settling/hide` (*Use the player now*), `/settling/done` (the OK on a settling screen that names a failed download, ADR-0128) | Setup page (ADR-0104) |
 | UI files | `GET /`, `/assets/*`, a fixed list of web-app files | Browser |
@@ -502,3 +502,17 @@ plays and `last_use` is older than `standby_wake` minutes; outside them, a
 screen the schedule put off wakes. Measured on the 10.1": touch still reaches
 the page with the output off; the screen shows its own "No signal" for about
 10 s some 30 s in.
+
+## Other players on the network (ADR-0136)
+
+Each player announces `_gexis._tcp` on port 8090
+(`/etc/avahi/services/gexis-player.service`, from `gexis-system`, beside the
+share's). `players.py`: `Players.watch()` (started with the core) runs
+`avahi-browse -rpt _gexis._tcp` every 30 s, keeps one resolved IPv4 entry per
+host (`parse_browse`, this player left out) and asks each `GET
+/player/status` (2 s); `/players` answers from that, in about 10 ms where a
+search on request took 1.1 s (measured on sofapi, 2026-10-11). The phone
+remembers the last list (`localStorage`), so the button shows at once. `/player/status` is `{name, host, transport, renderer}` - the renderer
+named as the source list names it; `/players` is `{self, others}`, each other
+with the `url` of its page by name. `PlayerSwitcher.svelte` draws it on the
+phone only.

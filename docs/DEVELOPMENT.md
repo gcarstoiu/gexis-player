@@ -2946,6 +2946,34 @@ It must settle:
   menus; and what a streaming plugin adds - **measured on a server with one
   installed** first.
 
+### Phase 13g — The player in Home Assistant
+
+**Added 2026-10-11** (George: *"Let's add the home assistant with the player
+as a plugin as a separate phase before themes"*, after choosing the player
+inside an existing Home Assistant over hosting Home Assistant on the player).
+The player appears in the owner's own Home Assistant as a media player: what
+plays, its artwork, volume, play and pause, next and previous, the source,
+and the screen's standby (ADR-0135).
+
+**An ADR before anything is built.** It must settle:
+- **How Home Assistant reaches it**: an integration of our own, published for
+  Home Assistant to install, reading the player's existing API and its
+  `/state` socket; or MQTT, with Home Assistant's discovery - which needs a
+  broker the owner runs.
+- **How it is found**: the `_gexis._tcp` announcement (ADR-0136) lets Home
+  Assistant discover players with no address typed.
+- **What it may change**, given the API is open to the LAN by decision
+  (ADR-0028).
+
+**Acceptance (draft):**
+
+1. A player on the network appears in Home Assistant without an address
+   typed.
+2. Home Assistant shows what plays, with artwork, within two seconds of a
+   change, and controls play, pause, next, previous and volume.
+3. Nothing it does disturbs playback, measured as Phase 13e measured the
+   Lyrion Server.
+
 ### Phase 14 — Themes
 
 **Cut out of Phase 10 on 2026-09-25** (George): *"Themes to be cut out and have
@@ -2974,6 +3002,31 @@ that is settled.
    (`docs/DEVELOPMENT.md`'s own rule: accuracy is checked against a picture).
 4. **The visualiser is not themed by this.** PeppyMeter skins are ADR-0051's
    separate corpus with their own picker, and share no tokens with the panel.
+
+### Phase 14a — A sound bar on optical, through a USB adapter
+
+**Added 2026-10-11** (George: *"Add it as a phase after themes"*). A
+class-compliant USB-to-TOSLINK adapter is a USB sound card: the player already
+lists it under *Output* as *Detected* (ADR-0117). What it lacks is a way to
+keep within what the sound bar takes: the player sends each track at its own
+rate, a 96 or 192 kHz file goes out at that rate, and many sound bars take only
+44.1 and 48 kHz over optical - silence, with the player believing all is well.
+
+**An ADR before anything is built.** It must settle:
+- **A maximum sample rate per output** (48 or 96 kHz, say): above it the
+  player converts down, so those tracks are no longer bit-perfect; 44.1 kHz
+  stays untouched. A setting, proposed for ADR-0022's inventory first.
+- **Volume**: Fixed (the sound bar's remote) or Software (the phone's
+  slider); an adapter without a volume control offers only those.
+
+**Acceptance (draft):**
+
+1. A USB-to-optical adapter plays to a sound bar over TOSLINK, chosen under
+   *Output*, on hardware George has to hand.
+2. A 24/96 and a 24/192 file play on a sound bar that takes only 48 kHz,
+   converted, with the maximum set.
+3. Tracks at or under the maximum stay bit-perfect, measured as Findings
+   002 and 003 measured the DAC.
 
 ## Test tiers
 

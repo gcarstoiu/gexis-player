@@ -680,3 +680,49 @@ async def test_uninstall_is_only_for_uploaded_plugins():
         ok = await client.post("/plugins/radiofoo/uninstall")
         ours = await client.post("/plugins/lms/uninstall")
     assert ok.status == 200 and ours.status == 404
+
+
+class _PeppyWithoutWindow:
+    """No window at first; shown once it has been started again, and saying
+    so the way the real one does - `on_change` into the state store."""
+
+    def __init__(self, store):
+        self._store = store
+        self.asked = 0
+
+    def _has_levels(self):
+        return True
+
+    def request(self, action):
+        self.asked += 1
+        if self.asked == 1:
+            return False
+        self._store.set_panel(visualiser=True)
+        return True
+
+
+@pytest.mark.asyncio
+async def test_a_visualiser_started_again_is_shown_and_answered(monkeypatch):
+    """**The first visualiser of the evening answered 500** (sofapi,
+    2026-10-11): the window was gone, the core started it again, and showing
+    it was asked from a worker thread - whose state change reached the phones
+    through `create_task`, which needs the event loop. The visualiser came
+    up; the answer was an error."""
+    from gexis_core import wsserver
+
+    async def started(*args, **kw):
+        class _Done:
+            async def wait(self):
+                return 0
+        return _Done()
+
+    monkeypatch.setattr(wsserver.asyncio, "create_subprocess_exec", started)
+    store = StateStore(_caps("lms"))
+    peppy = _PeppyWithoutWindow(store)
+    server = StateServer(store, peppy=peppy)
+    async with TestClient(TestServer(server.make_app())) as client:
+        async with client.ws_connect("/state") as phone:
+            await phone.receive_json()
+            response = await client.post("/peppy/show")
+            assert response.status == 200
+            assert (await phone.receive_json())["panel"]["visualiser"] is True

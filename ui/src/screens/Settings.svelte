@@ -6,7 +6,9 @@
   standalone on a phone and will be embedded on the panel.
 -->
 <script>
+  import PlayerSwitcher from './PlayerSwitcher.svelte';
   import CableSheet from './CableSheet.svelte';
+  import SendStep from './SendStep.svelte';
   import { onMount, untrack } from 'svelte';
   import { pressing } from '../lib/press.svelte.js';
   import { components, update, screenCheck, showScreenCheck, resetting, metadata, fixedOutput } from '../lib/state.js';
@@ -23,7 +25,6 @@
     loadSettings,
     runSetting,
     writeSetting,
-    fixedPending,
   } from '../lib/settings.js';
 
   // On the panel, Settings is a layer over the library and Back closes it
@@ -154,38 +155,41 @@
       .join('  \u00b7  ')
   );
   const sheet = $derived(sheetKey ? asSheet(rowOf(sheetKey)) : null);
-  //: ADR-0125: the problem report - built on the player, downloaded here.
+  //: ADR-0125: the problem report - built on the player, sent from here.
   //: The panel has nowhere to save a file, so there the sheet says where to
-  //: open it instead.
-  const REPORT_ISSUE = 'https://github.com/gcarstoiu/gexis-player/issues/new?template=problem-report.yml';
-  //: ADR-0125 decision 5: for people without a GitHub account (George,
-  //: 2026-10-07). Shown as text with Copy - a mail link may open nothing.
+  //: open it instead. ADR-0125 decision 5: an address for people without a
+  //: GitHub account (George, 2026-10-07).
   const REPORT_EMAIL = 'george.carstoiu@gexis.net';
-  let reportCopied = $state(false);
-  async function copyReportEmail() {
-    try {
-      await navigator.clipboard.writeText(REPORT_EMAIL);
-      reportCopied = true;
-      setTimeout(() => (reportCopied = false), 2000);
-    } catch {
-      // No clipboard here: the address stays on screen to copy by hand.
-    }
-  }
+  //: **ADR-0138: three steps** - what happened, Preparing (the checklist the
+  //: player works down), Send (`SendStep`, shared with hardware feedback).
+  const REPORT_OFTEN = ['Every time', 'Sometimes', 'Once so far'];
+  const REPORT_STEP_NAMES = { what: 'What happened', preparing: 'Preparing', send: 'Send' };
+  let reportStep = $state('what');
   let reportNote = $state('');
-  let reportBusy = $state(false);
-  let reportDone = $state(null);
+  let reportOften = $state(null);
+  let reportStatus = $state(null);
+  let reportIssue = $state(null);
   let reportError = $state(null);
+  let reportOpening = 0;
+  let reportPoll = null;
+  const reportReady = $derived(reportStatus?.state === 'ready');
   const onPanel = () => document.documentElement.classList.contains('on-panel');
   $effect(() => {
     if (sheet?.kind !== 'report') {
+      reportStep = 'what';
       reportNote = '';
-      reportDone = null;
+      reportOften = null;
+      reportStatus = null;
+      reportIssue = null;
       reportError = null;
+      clearTimeout(reportPoll);
+      reportOpening += 1;
     }
   });
   //: ADR-0126: a hardware report - what the device reads, the owner's
-  //: answers, then GitHub's form filled in. The options are the form's own,
-  //: word for word: GitHub fills a dropdown only from its exact text.
+  //: answers, then GitHub's form filled in. The options are the words the
+  //: form's text fields expect (GitHub fills no dropdown from a link, so
+  //: they are text fields since 2026-10-11).
   const HW_QUESTIONS = [
     { id: 'sound', q: 'Did the music sound right?', options: ['Yes', 'No', 'Not tried'] },
     { id: 'volume', q: 'Did the volume change with the slider?', options: ['Yes', 'No', 'Not tried'] },
@@ -212,17 +216,23 @@
   const hwAt = $derived(Math.max(0, hwSteps.indexOf(hwStep)));
   const hwLast = $derived(hwAt === hwSteps.length - 1);
   let hwTonesBusy = $state(false);
+  //: **Which opening of the sheet an answer belongs to** (review,
+  //: 2026-10-11): tones take ten seconds, and a sheet closed and opened again
+  //: meanwhile took the old tones as its own.
+  let hwOpening = 0;
   async function playHardwareTones() {
     if (hwTonesBusy) return;
+    const opening = hwOpening;
     hwTonesBusy = true;
     hwError = null;
     try {
       const r = await fetch('/hardware-report/tones', { method: 'POST' });
       const body = await r.json();
+      if (opening !== hwOpening) return;
       if (!r.ok) throw new Error(body?.error ?? `HTTP ${r.status}`);
       hwTones = body.tones;
     } catch (e) {
-      hwError = plainly(e?.message, 'The tones could not be played. Try again.');
+      if (opening === hwOpening) hwError = plainly(e?.message, 'The tones could not be played. Try again.');
     } finally {
       hwTonesBusy = false;
     }
@@ -230,7 +240,16 @@
   // ADR-0126: the test pattern this sheet asked for (its `seq`), so a result
   // left from an earlier check is not shown as this one's.
   let hwCheckSeq = $state(null);
-  const hwCheck = $derived(hwCheckSeq !== null && $screenCheck?.seq === hwCheckSeq ? $screenCheck : null);
+  //: **Up as soon as the player says so** (George, 2026-10-11: the pattern
+  //: "didn't work" the first time). The button followed only the state
+  //: socket, and a phone back from the background had none for seconds; the
+  //: player's own answer now counts until the socket catches up.
+  let hwAsked = $state(null); // { seq, showing } from the player's answer
+  const hwCheck = $derived(
+    hwCheckSeq !== null && $screenCheck?.seq === hwCheckSeq ? $screenCheck
+      : hwAsked !== null && hwAsked.seq === hwCheckSeq ? { seq: hwAsked.seq, showing: hwAsked.showing, result: null }
+        : null,
+  );
   const hwCheckLines = $derived(hwCheck?.result ? [
     `The panel draws ${hwCheck.result.size.replace('x', ' × ')}.`,
     ...hwCheck.result.taps.map((t) => `${t.corner}: ${t.off} px from the circle`),
@@ -239,8 +258,18 @@
   async function toggleScreenCheck() {
     hwError = null;
     try {
-      if (hwCheck?.showing) await showScreenCheck(false);
-      else hwCheckSeq = (await showScreenCheck(true)).seq;
+      if (hwCheck?.showing) {
+        await showScreenCheck(false);
+        if (hwAsked) hwAsked = { ...hwAsked, showing: false };
+      } else {
+        // A new check answers touch anew: the last one's answer does not
+        // outlive it (review, 2026-10-11).
+        const { touch: _, ...rest } = hwAnswers;
+        hwAnswers = rest;
+        const { seq } = await showScreenCheck(true);
+        hwAsked = { seq, showing: true };
+        hwCheckSeq = seq;
+      }
     } catch (e) {
       hwError = plainly(e?.message, 'The test pattern could not be shown. Try again.');
     }
@@ -257,15 +286,31 @@
     if (sheet?.kind !== 'hardware') {
       if (untrack(() => hwCheck?.showing)) showScreenCheck(false).catch(() => {});
       hw = null; hwAnswers = {}; hwNotes = ''; hwUrl = null; hwError = null; hwTones = null; hwCheckSeq = null;
+      hwAsked = null; hwAnsweredSeq = null; hwBusy = false;
       hwStep = 'screen';
+      hwOpening += 1;
       return;
     }
-    if (hw === null && !onPanel()) {
-      fetch('/hardware-report').then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-        .then((body) => { hw = body; hwStep = body?.display ? 'screen' : 'sound'; })
-        .catch(() => (hwError = 'The player could not read its hardware. Try again.'));
+    if (hw === null && !onPanel() && untrack(() => !hwError)) {
+      const ready = hwPreloaded;
+      hwPreloaded = null;
+      if (ready) {
+        hw = ready;
+        hwStep = ready.display ? 'screen' : 'sound';
+      } else if (ready === false) {
+        hwError = 'The player could not read its hardware. Try again.';
+      } else {
+        loadHardware();
+      }
     }
   });
+  function loadHardware() {
+    const opening = hwOpening;
+    hwError = null;
+    fetch('/hardware-report').then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((body) => { if (opening === hwOpening) { hw = body; hwStep = body?.display ? 'screen' : 'sound'; } })
+      .catch(() => { if (opening === hwOpening) hwError = 'The player could not read its hardware. Try again.'; });
+  }
   // ADR-0126 decision 1: one line on the System page, a week after a board
   // or screen that is not Tested arrived; dismissed for good with one tap.
   let hwPrompt = $state(null);
@@ -275,6 +320,32 @@
       .then((body) => (hwPrompt = body?.text ?? null))
       .catch(() => (hwPrompt = null));
   });
+  //: ADR-0126 amended 2026-10-11 (George): the last feedback, kept until
+  //: the sound card or screen changes - sent again or started over from
+  //: the System row.
+  let hwKept = $state(null);
+  function loadHardwareKept() {
+    fetch('/hardware-report/kept').then((r) => (r.ok ? r.json() : null))
+      .then((body) => (hwKept = body?.kept ?? null))
+      .catch(() => (hwKept = null));
+  }
+  $effect(() => {
+    if (current?.id === 'system' && !sheet) loadHardwareKept();
+  });
+  function hardwareKeptLine(kept) {
+    let day = '';
+    try {
+      day = new Date(kept.at * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    } catch {
+      day = '';
+    }
+    return day ? `Ready since ${day}` : 'Ready';
+  }
+  async function startHardwareOver(row) {
+    hwKept = null;
+    await fetch('/hardware-report/kept/clear', { method: 'POST' }).catch(() => {});
+    openSheet(row);
+  }
   function dismissHardwarePrompt() {
     hwPrompt = null;
     fetch('/hardware-report/prompt/dismiss', { method: 'POST' }).catch(() => {});
@@ -282,21 +353,33 @@
 
   async function prepareHardwareReport() {
     if (hwBusy) return;
+    // GitHub's form will not take feedback without it.
+    if (!hwAnswers.sound) {
+      hwStep = 'sound';
+      hwError = 'Answer "Did the music sound right?" first: GitHub needs it.';
+      return;
+    }
+    const opening = hwOpening;
     hwBusy = true;
     hwError = null;
+    // A screen without touch says so; without a screen, neither is asked.
+    const answers = !hw?.display ? { ...hwAnswers, picture: 'No screen', touch: 'No touch' }
+      : !hw?.touch ? { ...hwAnswers, touch: 'No touch' } : hwAnswers;
     try {
       const r = await fetch('/hardware-report/issue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          answers: hw?.display ? hwAnswers : { ...hwAnswers, picture: 'No screen', touch: 'No touch' },
-          notes: hwNotes, tones: hwTones ?? [],
+          answers, notes: hwNotes, tones: hwTones ?? [],
+          // The check this feedback ran, and no other (review, 2026-10-11).
+          check_seq: hwCheck?.result ? hwCheckSeq : null,
         }),
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      hwUrl = (await r.json()).url;
+      const { url } = await r.json();
+      if (opening === hwOpening) hwUrl = url;
     } catch (e) {
-      hwError = plainly(e?.message, 'The report could not be prepared. Try again.');
+      if (opening === hwOpening) hwError = plainly(e?.message, 'The report could not be prepared. Try again.');
     } finally {
       hwBusy = false;
     }
@@ -312,30 +395,58 @@
     flash(`Saving ${item.name}`);
   }
 
-  async function downloadReport() {
-    if (reportBusy) return;
-    reportBusy = true;
+  async function prepareReport() {
+    // GitHub's form will not take a report without it.
+    if (!reportNote.trim()) {
+      reportError = 'Say what happened first: GitHub needs it.';
+      return;
+    }
+    const opening = reportOpening;
+    clearTimeout(reportPoll);
     reportError = null;
+    reportStatus = null;
+    reportIssue = null;
+    reportStep = 'preparing';
     try {
-      const r = await fetch('/report', {
+      const r = await fetch('/report/prepare', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ note: reportNote }),
+        body: JSON.stringify({ what: reportNote, often: reportOften }),
       });
       if (!r.ok) throw new Error(r.status === 409 ? 'A report is already being prepared. Try again in a minute.' : `HTTP ${r.status}`);
-      const name = /filename="([^"]+)"/.exec(r.headers.get('Content-Disposition') ?? '')?.[1] ?? 'gexis-report.zip';
-      const url = URL.createObjectURL(await r.blob());
-      const a = Object.assign(document.createElement('a'), { href: url, download: name });
-      document.body.append(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-      reportDone = { name, summary: r.headers.get('X-Report-Summary') ?? '' };
     } catch (e) {
-      reportError = plainly(e?.message, 'The report could not be prepared. Try again.');
-    } finally {
-      reportBusy = false;
+      if (opening === reportOpening) reportError = plainly(e?.message, 'The report could not be prepared. Try again.');
+      return;
     }
+    followReport(opening);
+  }
+
+  //: The checklist, read every 0.4 s while the player works down it.
+  async function followReport(opening) {
+    if (opening !== reportOpening) return;
+    try {
+      const status = await (await fetch('/report/status')).json();
+      if (opening !== reportOpening) return;
+      reportStatus = status;
+      if (status.state === 'ready') {
+        fetch('/report/issue').then((r) => (r.ok ? r.json() : null))
+          .then((body) => { if (opening === reportOpening) reportIssue = body?.url ?? null; })
+          .catch(() => {});
+        return;
+      }
+      if (status.state === 'failed' || status.state === 'idle') {
+        reportError = 'The report could not be prepared. Try again.';
+        return;
+      }
+    } catch {
+      // The player is busy or restarting: the next look says.
+    }
+    reportPoll = setTimeout(() => followReport(opening), 400);
+  }
+
+  function sizeSaid(bytes) {
+    if (bytes == null) return '';
+    return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
   }
   const picker = $derived(pickerKey ? rowOf(pickerKey) : null);
 
@@ -632,9 +743,6 @@
   function shown(row) {
     const v = row.value;
     if (row.type === 'toggle') return '';
-    // ADR-0046 as amended: a Volume change that waits for a pause says so.
-    if (row.key === 'output_mode' && $fixedPending === 'on') return 'Fixed at the next pause';
-    if (row.key === 'output_mode' && $fixedPending === 'off') return `${v} at the next pause`;
     // ADR-0123: the cable at a glance, the line the core keeps for it.
     if (row.kind === 'cable') return row.note ?? '';
     // A screen reads as its maker and model, not the picker's `Maker/Model`.
@@ -798,19 +906,29 @@
     return n > FULL_SHEET_OPTIONS;
   });
 
-  //: What a written choice says. **A Volume change that has to wait says
-  //: so** (ADR-0046 as amended, George on sofapi, 2026-10-10): while music
-  //: plays, Fixed starts - or ends - only at the next pause or stop.
+  //: What a written choice says. A change of volume type stops playback
+  //: (ADR-0046 amended 2026-10-11), and says so.
   function said(row, option) {
     const playing = $metadata?.transport === 'playing';
-    if (row.key === 'output_mode' && playing && option === 'Fixed' && !$fixedOutput) {
-      flash('Fixed output starts at the next pause or stop. Until then the volume still works.', 9000);
-    } else if (row.key === 'output_mode' && playing && option !== 'Fixed' && $fixedOutput) {
-      flash(`${option} volume starts at the next pause or stop.`, 9000);
+    // ADR-0046 amended 2026-10-11: a change of volume type stops playback
+    // and reopens the sources at once (George) - no more waiting for a pause.
+    if (row.key === 'output_mode' && playing) {
+      flash(`Volume: ${option}. Playback stopped for the change; start it again when ready.`, 7000);
     } else {
       flash(`${row.label}: ${option}`);
     }
   }
+
+  //: **The option tapped is drawn chosen at once** (George, 2026-10-11:
+  //: "The option flashes but then it takes a bit to be selected"). Since a
+  //: sheet with option notes stays open, the tick waited for the player to
+  //: save and send the settings back; it now moves on the tap, and goes back
+  //: to what is stored if the save fails.
+  let choiceShown = $state(null);
+  $effect(() => {
+    // Let go once the stored value has caught up, or the sheet changes.
+    if (!sheet || String(sheet.value) === untrack(() => choiceShown)) choiceShown = null;
+  });
 
   async function choose(option) {
     const row = sheet;
@@ -837,7 +955,9 @@
       return;
     }
     if (!stays) sheetKey = null;
+    else choiceShown = option;
     if (await write(row, option)) said(row, option);
+    else if (choiceShown === option) choiceShown = null;
   }
 
   //: ADR-0044 §7. Each tap is a write, because nothing on this screen has
@@ -921,7 +1041,36 @@
 
   let draft = $state(null);
 
+  //: **Hardware feedback opens whole** (George, 2026-10-11: it "still loads
+  //: in two steps which is making the entire thing look like it's
+  //: jumping"). The sheet opened on "Reading the hardware…" and grew when
+  //: the answer came; the read takes about 0.2 s, so the sheet now waits for
+  //: it and opens once, complete. A read that fails or takes over 4 s opens
+  //: the sheet anyway, on its error and Try again.
+  let hwPreloaded = null; // the answer, false when it failed, null when not asked
+  let hwPreloading = false;
+  async function preloadHardware(row) {
+    if (hwPreloading) return;
+    hwPreloading = true;
+    const stop = new AbortController();
+    const late = setTimeout(() => stop.abort(), 4000);
+    try {
+      const r = await fetch('/hardware-report', { signal: stop.signal });
+      hwPreloaded = r.ok ? await r.json() : false;
+    } catch {
+      hwPreloaded = false;
+    } finally {
+      clearTimeout(late);
+      hwPreloading = false;
+    }
+    openSheet(row);
+  }
+
   function openSheet(row) {
+    if (row.kind === 'hardware' && !onPanel() && hwPreloaded === null) {
+      preloadHardware(row);
+      return;
+    }
     sheetKey = row.key;
     manual = false;
     shareBrowse = null;
@@ -1299,15 +1448,20 @@
     }
     if (row.kind === 'hardware') {
       if (hwUrl) sheetKey = null;
+      else if (!hw) loadHardware();
       else if (!hwLast) {
         if (hwStep === 'screen' && hwCheck?.showing) showScreenCheck(false).catch(() => {});
+        hwError = null;
         hwStep = hwSteps[hwAt + 1];
       } else await prepareHardwareReport();
       return;
     }
     if (row.kind === 'report') {
-      if (reportDone) sheetKey = null;
-      else await downloadReport();
+      if (reportStep === 'what') await prepareReport();
+      else if (reportStep === 'preparing') {
+        if (reportReady) reportStep = 'send';
+        else if (reportError) await prepareReport();
+      }
       return;
     }
     if (row.type === 'action') {
@@ -1339,7 +1493,16 @@
     if (sheet?.type === 'intervals' && ivTimer) saveIntervals();
     // A feedback step after the first goes back one step.
     if (sheet?.kind === 'hardware' && hw && hwAt > 0 && !hwUrl) {
+      hwError = null;
       hwStep = hwSteps[hwAt - 1];
+      return;
+    }
+    // The problem report's Preparing step goes back to what happened; the
+    // report the player is making carries on, and is made again on Next.
+    if (sheet?.kind === 'report' && reportStep === 'preparing') {
+      clearTimeout(reportPoll);
+      reportError = null;
+      reportStep = 'what';
       return;
     }
     // A pending restore is a step inside the sheet, not the sheet: cancelling
@@ -1414,7 +1577,12 @@
         ><span></span></button>
       {/if}
       <div class="head__text">
-        <div class="title" class:title--wide={wide}>{!wide && current ? current.label : 'Settings'}</div>
+        <div class="title-row">
+          <div class="title" class:title--wide={wide}>{!wide && current ? current.label : 'Settings'}</div>
+          <!-- ADR-0136: on a phone, the way to the other players - at the
+               right end of the title's line (George, 2026-10-11). -->
+          {#if !onPanel()}<PlayerSwitcher />{/if}
+        </div>
         <!-- Shown at both widths: the panel is where someone types the
              name, so it is where the resolved host has to sit beside it. -->
         <div class="subtitle">{subtitle}</div>
@@ -1531,6 +1699,27 @@
                       class:tile__btn--busy={$update?.active}
                       onclick={() => (updateModal = $update?.active ? 'progress' : waiting ? 'available' : 'check')}
                     >{$update?.active ? 'Updating…' : waiting ? 'Update…' : 'Check for updates'}</button>
+                  </span>
+                </div>
+              {:else if r.key === 'hardware_report' && hwKept}
+                <!-- ADR-0126 amended 2026-10-11 (George chose the row): the
+                     last feedback, with its two buttons. -->
+                <div class="row row--tile">
+                  <span class="row__body row__body--stack">
+                    <button type="button" class="row__text hwkept__open" onclick={() => tap(r)}>
+                      <span class="row__label"><span class="row__name">{r.label}</span></span>
+                      <span class="row__value row__value--tile">{hardwareKeptLine(hwKept)}</span>
+                      <span class="row__note">{[hwKept.board, hwKept.screen].filter(Boolean).join(' · ')}</span>
+                    </button>
+                    {#if onPanel()}
+                      <!-- GitHub opens on a phone or computer, not here. -->
+                      <span class="row__note">Send it again from Settings on a phone or computer.</span>
+                    {:else}
+                      <span class="hwkept__actions">
+                        <a class="tile__btn tile__btn--go hwkept__btn" href={hwKept.url} target="_blank" rel="noopener">Send again ↗</a>
+                        <button type="button" class="tile__btn" onclick={() => startHardwareOver(r)}>Start over</button>
+                      </span>
+                    {/if}
                   </span>
                 </div>
               {:else if r.key === 'sweep_all'}
@@ -1841,7 +2030,8 @@
   <div class="scrim" class:is-open={sheet} role="presentation" onclick={closeSheet}></div>
 
   {#if sheet}
-    <div class="sheet" class:sheet--full={sheetFull} class:sheet--fit={sheet.type === 'action' && !sheet.kind && !restorePending} role="dialog" aria-label={sheet.label}>
+    <div class="sheet" class:sheet--full={sheetFull} class:sheet--fit={sheet.type === 'action' && !sheet.kind && !restorePending}
+      class:sheet--steps={sheet.kind === 'hardware' || sheet.kind === 'report'} role="dialog" aria-label={sheet.label}>
       <div class="sheet__head">
         <div class="sheet__title">{sheet.grouped && region !== null ? region : sheet.label}</div>
         {#if sheet.note && !joinItem && sheet.kind !== 'cable'}<div class="sheet__note"><NoteText text={sheet.note} /></div>{/if}
@@ -1857,8 +2047,12 @@
               then System → Hardware feedback.
             </p>
           {:else if hwUrl}
-            <p class="report__text">The feedback is ready. GitHub opens with it filled in; read it there and press Create.</p>
-            <a class="report__link report__go" href={hwUrl} target="_blank" rel="noopener">Open it on GitHub</a>
+            <!-- ADR-0138 §3: the Send step the problem report ends on too. -->
+            <p class="report__step">Send</p>
+            <SendStep githubUrl={hwUrl} fileHref="/hardware-report/file" fileName={`gexis-hardware-${new Date().toISOString().slice(0, 10)}.txt`}
+              fileKind="the feedback" email={REPORT_EMAIL}
+              githubSays="Filled in with everything: your answers, your notes and what the player read." />
+            <p class="report__text report__text--quiet">The player keeps it: System → Hardware feedback can send it again.</p>
           {:else if hw === null && !hwError}
             <p class="report__text report__text--quiet">Reading the hardware…</p>
           {:else if hw}
@@ -1928,30 +2122,59 @@
         <CableSheet />
       {/if}
       {#if sheet.kind === 'report'}
-        <div class="report">
+        <div class="report report--scroll">
           {#if onPanel()}
             <p class="report__text">
               The screen has nowhere to save a file. Open Settings on a phone or computer on the same
               network, at <span class="report__addr">{device.hostname ? `${device.hostname}.local` : device.address}</span>,
               then System → Problem report.
             </p>
-          {:else if reportDone}
-            <p class="report__text">
-              Saved as <span class="report__addr">{reportDone.name}</span>. Taken out: {reportDone.summary || 'nothing'}.
-            </p>
-            <p class="report__text">
-              Read it, then attach it to a report on GitHub:
-              <a class="report__link" href={REPORT_ISSUE} target="_blank" rel="noopener">Report a problem</a>.
-            </p>
-            <p class="report__text">
-              Or e-mail it to <span class="report__addr">{REPORT_EMAIL}</span>
-              <button type="button" class="report__copy" onclick={copyReportEmail}>{reportCopied ? 'Copied' : 'Copy'}</button>
-            </p>
           {:else}
-            <label class="report__label" for="report-note">What happened? (optional)</label>
-            <textarea id="report-note" class="report__note" rows="4" maxlength="4000" bind:value={reportNote}
-              placeholder="What you did, what you expected, what happened instead"></textarea>
-            {#if reportBusy}<p class="report__text report__text--quiet">Preparing the report. It takes up to a minute.</p>{/if}
+            <p class="report__step">Step {['what', 'preparing', 'send'].indexOf(reportStep) + 1} of 3 · {REPORT_STEP_NAMES[reportStep]}</p>
+            {#if reportStep === 'what'}
+              <textarea id="report-note" class="report__note report__note--tall" rows="6" maxlength="4000" bind:value={reportNote}
+                aria-label="What happened?"
+                placeholder="What you did, what you expected, what happened instead"></textarea>
+              <div class="hwq">
+                <span class="report__label">How often does it happen?</span>
+                <div class="hwq__options">
+                  {#each REPORT_OFTEN as option (option)}
+                    <button type="button" class="hwq__option" class:is-on={reportOften === option}
+                      onclick={() => (reportOften = reportOften === option ? null : option)}>{option}</button>
+                  {/each}
+                </div>
+              </div>
+            {:else if reportStep === 'preparing'}
+              {@const steps = reportStatus?.steps ?? []}
+              {@const at = steps.findIndex((x) => !x.done)}
+              <ul class="check">
+                {#each steps as item, i (item.id)}
+                  <li class="check__item" class:is-done={item.done} class:is-now={i === at && !reportError}>
+                    <span class="check__mark" aria-hidden="true">{item.done ? '✓' : i === at && !reportError ? '' : '○'}</span>
+                    <span class="check__text">
+                      <span class="check__label">{item.label}</span>
+                      {#if item.detail}<span class="check__detail">{item.detail}</span>{/if}
+                    </span>
+                  </li>
+                {/each}
+              </ul>
+              {#if !reportStatus && !reportError}<p class="report__text report__text--quiet">Starting…</p>{/if}
+              {#if reportReady}
+                <p class="report__text">
+                  Ready: <span class="report__addr">{reportStatus.name}</span>, {sizeSaid(reportStatus.size)}. Nothing has left
+                  the player.
+                </p>
+                <details class="hwq__facts"><summary>What is in it</summary>
+                  <ul class="check__files">
+                    {#each reportStatus.files as f (f.name)}<li><span>{f.name}</span><span>{sizeSaid(f.size)}</span></li>{/each}
+                  </ul>
+                </details>
+              {/if}
+            {:else}
+              <SendStep githubUrl={reportIssue} fileHref="/report/file" fileName={reportStatus?.name ?? 'gexis-report.zip'}
+                fileKind="the report" email={REPORT_EMAIL} attach
+                githubSays="Filled in with what happened, how often, the version, what was taken out and the log's last errors and warnings." />
+            {/if}
             {#if reportError}<p class="report__text report__text--warn">{reportError}</p>{/if}
           {/if}
         </div>
@@ -1990,7 +2213,7 @@
       {#if sheet.grouped && region === null}
         <div class="options" data-noscrollbar>
           {#each loose as option (option)}
-            {@const selected = choicePending !== null ? choicePending === option : String(sheet.value) === option}
+            {@const selected = choicePending !== null ? choicePending === option : (choiceShown ?? String(sheet.value)) === option}
             <button class="option" class:is-selected={selected} type="button" onclick={() => choose(option)}>
               <span class="radio"><span></span></span>
               <span class="option__label">{option}</span>
@@ -2013,7 +2236,7 @@
       {:else if sheet.grouped}
         <div class="options" data-noscrollbar>
           {#each places as option (option)}
-            {@const selected = choicePending !== null ? choicePending === option : String(sheet.value) === option}
+            {@const selected = choicePending !== null ? choicePending === option : (choiceShown ?? String(sheet.value)) === option}
             <button class="option" class:is-selected={selected} type="button" onclick={() => choose(option)}>
               <span class="radio"><span></span></span>
               <span class="option__label">{placeLabel(option)}</span>
@@ -2095,7 +2318,7 @@
       {:else if sheet.type === 'choice'}
         <div class="options" data-noscrollbar>
           {#each sheet.options ?? [] as option (option)}
-            {@const selected = choicePending !== null ? choicePending === option : String(sheet.value) === option}
+            {@const selected = choicePending !== null ? choicePending === option : (choiceShown ?? String(sheet.value)) === option}
             {@const p = sheet.optionsFrom ? parts(option) : { ord: '', label: option }}
             {@const why = sheet.unavailable?.[option]}
             <!-- ADR-0044's `unavailable`: greyed, not hidden. George,
@@ -2332,23 +2555,27 @@
           {#if join === 'error'}
             Give up
           {:else if joinItem || shareBrowse || shareLogin || (sheet.grouped && region !== null)
-                     || (sheet.kind === 'hardware' && hw && hwAt > 0 && !hwUrl)}
+                     || (sheet.kind === 'hardware' && hw && hwAt > 0 && !hwUrl)
+                     || (sheet.kind === 'report' && reportStep === 'preparing')}
             Back
           {:else if restorePending}
             Cancel
+          {:else if (sheet.kind === 'hardware' && hwUrl) || (sheet.kind === 'report' && reportStep === 'send')}
+            Close
           {:else if choicePending === null && (sheet.type === 'choice' || sheet.type === 'multi' || sheet.type === 'intervals' || sheet.grouped || (sheet.wired && sheet.type === 'number'))}
             Close
           {:else}
             Cancel
           {/if}
         </button>
-        {#if join === 'error' || joinItem || restorePending || choicePending !== null || (sheet.type === 'action' && sheet.kind !== 'cable' && !((sheet.kind === 'report' || sheet.kind === 'hardware') && onPanel())) || sheet.type === 'toggle' || sheet.type === 'text' || sheet.type === 'share' || sheet.type === 'share-login' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
+        {#if join === 'error' || joinItem || restorePending || choicePending !== null || (sheet.type === 'action' && sheet.kind !== 'cable' && !((sheet.kind === 'report' || sheet.kind === 'hardware') && onPanel()) && !(sheet.kind === 'hardware' && hwUrl) && !(sheet.kind === 'report' && reportStep === 'send')) || sheet.type === 'toggle' || sheet.type === 'text' || sheet.type === 'share' || sheet.type === 'share-login' || (sheet.type === 'number' && !sheet.wired) || (sheet.type === 'list' && sheet.manual && !searching)}
           <button
             class="btn btn--confirm"
             class:btn--danger={sheet.danger || restorePending || choicePending !== null}
             type="button"
             class:btn--hold={sheet.hold}
-            disabled={busy || reportBusy || hwBusy || (sheet.kind === 'hardware' && !hw && !hwUrl)}
+            disabled={busy || hwBusy || (sheet.kind === 'hardware' && !hw && !hwUrl && !hwError)
+              || (sheet.kind === 'report' && reportStep === 'preparing' && !reportReady && !reportError)}
             onclick={sheet.hold ? (event) => event.preventDefault() : confirmSheet}
             onpointerdown={sheet.hold ? holdStart : null}
             onpointerup={sheet.hold ? holdStop : null}
@@ -2360,9 +2587,9 @@
           >
             {#if sheet.hold}<span class="btn__hold" style:width="{Math.round(holdShare * 100)}%"></span>{/if}
             {#if sheet.kind === 'hardware'}
-              {#if hwBusy}<span class="btn__spin"></span>Preparing…{:else if hwUrl}Done{:else if hw && !hwLast}{hwSteps[hwAt + 1] === 'sound' ? 'Next: the sound' : 'Next: anything else'}{:else}Prepare the feedback{/if}
+              {#if hwBusy}<span class="btn__spin"></span>Preparing…{:else if hwUrl}Done{:else if !hw && hwError}Try again{:else if hw && !hwLast}{hwSteps[hwAt + 1] === 'sound' ? 'Next: the sound' : 'Next: anything else'}{:else}Prepare the feedback{/if}
             {:else if sheet.kind === 'report'}
-              {#if reportBusy}<span class="btn__spin"></span>Preparing…{:else if reportDone}Done{:else}Download{/if}
+              {#if reportStep === 'what'}Next: prepare the report{:else if reportError}Try again{:else if reportReady}Next: send it{:else}<span class="btn__spin"></span>Preparing…{/if}
             {:else if busy}
               <span class="btn__spin"></span>Saving
             {:else if join === 'error'}
@@ -2534,6 +2761,15 @@
     transform: translateX(3.9px) rotate(45deg);
   }
   .head__text {
+    flex: 1;
+    min-width: 0;
+  }
+  .title-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .title-row .title {
     flex: 1;
     min-width: 0;
   }
@@ -2722,6 +2958,38 @@
     color: var(--accent-lms);
   }
   .tile__btn:disabled { opacity: 0.6; }
+  .row__body--stack {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .hwkept__open {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+  }
+  .hwkept__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .hwkept__btn {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+  }
+  .report__send {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 52px;
+    text-decoration: none;
+  }
   /* A running install: dimmed as before, but a tap brings back the modal
      that Hide put away (George, 2026-10-02: "how do I see it again?"). */
   .tile__btn--busy { opacity: 0.6; }
@@ -2989,6 +3257,16 @@
      400 px screen the panel's 82% cap leaves a sheet too short to hold a
      list. */
   /* A long list on a phone: the whole screen, not a card over it. */
+  /* **A sheet in steps stays where it opened** (George, 2026-10-11, on
+     Hardware feedback: "when opening the modal it jumps"). Centred, a sheet
+     that grew - the step area arriving after "Reading the hardware…", or the
+     next step - re-centred and pushed what was already read upwards. Held
+     at the top, it grows downwards only. Before the bar's rules, which
+     already hold every sheet at the top. */
+  .sheet.sheet--steps {
+    top: 9%;
+    transform: translate(-50%, 0);
+  }
   .sheet.sheet--full {
     top: 0;
     left: 0;
@@ -4253,6 +4531,69 @@
     color: var(--ink-body);
   }
   .report__text--quiet { color: var(--ink-quiet); }
+  /* ADR-0138: the checklist the player works down while preparing. */
+  .check {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .check__item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    color: var(--ink-quiet);
+  }
+  .check__item.is-done,
+  .check__item.is-now { color: var(--ink); }
+  .check__mark {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .check__item.is-done .check__mark {
+    background: rgba(126, 214, 188, 0.16);
+    color: var(--accent-lms);
+  }
+  .check__item.is-now .check__mark {
+    border: 2px solid var(--ink-line);
+    border-top-color: var(--accent-lms);
+    animation: check-turn 0.9s linear infinite;
+  }
+  @keyframes check-turn { to { transform: rotate(360deg); } }
+  .check__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .check__label { font-size: 15px; line-height: 1.35; }
+  .check__detail {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink-quiet);
+    overflow-wrap: anywhere;
+  }
+  .check__files {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink-quiet);
+  }
+  .check__files li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
   .report__text--warn { color: var(--accent-warn); }
   .report__addr {
     font-family: var(--font-mono);

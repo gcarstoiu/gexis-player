@@ -60,9 +60,19 @@ def answers(body: str, labels: dict[str, str]) -> dict[str, str]:
     for heading, value in re.findall(r"^### (.+?)\n+(.*?)(?=^### |\Z)", body or "", re.S | re.M):
         field = labels.get(heading.strip())
         value = value.strip()
+        # The first of each heading only: GitHub writes the form's own in
+        # order, and a heading typed into the notes must not overrule them
+        # (review, 2026-10-11).
+        if field in out:
+            continue
         if field and value and value != "_No response_":
-            out[field] = value
+            # The answers are text fields since GitHub fills no dropdown from
+            # a link (George, 2026-10-11): one edited by hand may be "yes".
+            out[field] = CANONICAL.get(value.lower().rstrip("."), value)
     return out
+
+
+CANONICAL = {w.lower(): w for w in ("Yes", "No", "Not tried", "No screen", "No touch")}
 
 
 def version(details: str) -> str | None:
@@ -123,11 +133,12 @@ def collect(issues: list[dict], labels: dict[str, str]) -> tuple[dict, list[str]
         a = answers(issue.get("body", ""), labels)
         gexis = version(a.get("details", ""))
         board = a.get("board")
-        if board and board != "no sound card":
+        # The Pi's own outputs are no DAC to report (ADR-0126 decision 3).
+        if board and board != "no sound card" and "the Pi's own output" not in board:
             key = board_key(board)
             if key is None:
                 card = re.search(r"- card: (\S+)", a.get("details", ""))
-                key = card.group(1) if card else None
+                key = card.group(1) if card and card.group(1) != "none" else None
             how = verdict(a, "board")
             if key and how:
                 _add(data["boards"], key, how, issue, gexis)

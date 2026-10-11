@@ -124,3 +124,66 @@ read*, which did not say what it was for), the facts the player puts into the
 feedback itself, so they are seen before anything is sent. *Back* goes one
 step back.
 
+
+## Amended 2026-10-11: answers that arrive, one way to send, feedback kept
+
+George, after sending one from a phone: *"Values selected during test are
+not passed along to the GitHub form"*, and *"Unclear for an user what to do
+at the end. Show in GitHub is a link and pressing done closes the modal"*;
+*"can the findings be stored to be sent again or the assessment restarted
+from scratch? ... wherever the screen or audio hat changes the report
+hardware should be reset."*
+
+1. **The five answers are text fields on the form.** GitHub fills an issue
+   form's text fields from a link but not its dropdowns, so every answer
+   chosen on the player arrived blank. The player writes the same words
+   (*Yes*, *No*, *Not tried*, *No screen*, *No touch*); the script reading
+   reports takes them whatever their capitals. GitHub reads the form from
+   `main`, so this holds from the release that carries it.
+2. **One way to send** (George chose it of two): the last step shows a
+   single main button, *Send on GitHub*, with a line saying GitHub opens
+   filled in and Create sends it; *Done* becomes *Close*.
+3. **The last feedback is kept on the player**, with the sound card and the
+   screen it was made on. Under the *Hardware feedback* row on System (George
+   chose the row over the sheet): when it was made, the two pieces, and two
+   buttons - ***Send again*** (GitHub opens with it once more) and ***Start
+   over*** (it is forgotten; the row opens a fresh check).
+4. **Another sound card or screen forgets it**: what is kept names the
+   pieces, and when either is no longer the one in use it is dropped. The
+   one-time prompt was already per piece.
+
+Not a setting: no ADR-0022 row. Kept with the prompt's record, in the
+settings store's own state, so a backup carries it and a factory reset
+clears it.
+
+## Amended 2026-10-11 (again): checked through
+
+George, the same evening: the form still came blank, *"First time the show
+pattern button didn't work and then also the tones couldn't be played. Can
+you thoroughly check the implementation here?"* The two failures were traced
+(the phone's state connection, down for seven seconds after the browser came
+back from the background; a Plexamp the player did not know was playing,
+which plugin 0.4.7 fixes) and the whole feature was reviewed. Changed:
+
+- **Touch** is a device that reports a touch and where it lands, on USB or
+  I2C - not any USB input device: a keyboard with a screen without touch
+  asked for four taps that could not be made.
+- **The tones** wait while a source holds the card even paused (it refuses
+  them as surely as one playing), play one set at a time, and never call a
+  tone that played "did not play".
+- **The address** keeps the details' first lines (version, card) and cuts
+  the notes once the rest of the details is gone; notes in a script other
+  than Latin had pushed every detail out.
+- **Only the screen check a feedback ran** goes into it; a screen without
+  touch answers *No touch*.
+- **The Pi's own output** (HDMI, the jack) is named as that and never
+  counted as a DAC.
+- **What is kept** is forgotten when the connected screen changes or the
+  player goes Headless, not only when Settings names another.
+- **Showing the pattern** takes the visualiser down and wakes a screen in
+  standby, either of which hid it.
+- The phone reconnects to the player at once when the page comes back to
+  the front; the pattern button also follows the player's own answer.
+
+**The form on `main` still has dropdowns**, which GitHub never fills from a
+link; the text fields reach users when the release carrying them is merged.

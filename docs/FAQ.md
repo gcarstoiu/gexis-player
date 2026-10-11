@@ -52,11 +52,18 @@ place. Turn the amplifier down before switching to Fixed: in Fixed,
 *Maximum volume* and Spotify's *Starting volume* no longer apply (both rows
 are hidden), and every source plays at full level.
 
-**I chose Fixed, but the volume still changes.**
-Fixed chosen while music plays starts at the next pause or stop, so the
-level never jumps to full in the middle of a track. Until then the volume
-works as before, and the Volume row and the volume controls say *Fixed at
-the next pause*. Pause once and Fixed is in force.
+**With Fixed, Bluetooth goes silent when the phone's slider is at 0.**
+That is the phone: with the slider at the bottom it sends silence. Anywhere
+above 0, Bluetooth plays at full level in Fixed, as every source does; set
+the loudness on the amplifier.
+
+**What happens when I change the volume type while music plays?**
+Playback stops and the sources reconnect on the new type at once - Hardware,
+Software or Fixed alike - so the level never jumps to full in the middle of a
+track. Start the music again when ready; the source that comes back starts no
+louder than its *Starting volume*. Leaving *Fixed*, the volume goes back to
+where it was before *Fixed* was chosen (or to the *Starting volume*, on a
+player that started in *Fixed*) rather than staying at full.
 
 **Can the player be stopped from ever playing too loud?**
 Yes: *Settings → Audio → Maximum volume*. Set it to 80 and the player is never
@@ -175,6 +182,13 @@ the library.
 
 ## Idle screen and visualiser
 
+**I have more than one player. Do I need a tab for each?**
+No. On the phone page, tap the switch button at the right of the *Settings*
+title - there when another player is on the network. It lists
+every player with what it is playing and through which source; choosing one
+opens its page in the same tab. A player is listed once it runs this release
+or later and is on the same network.
+
 **Can the screen turn off, at night or on demand?**
 Yes. The *Screen* button in the phone's mini player darkens it until a
 touch, music starting or the button again wakes it; the player keeps playing meanwhile.
@@ -215,7 +229,8 @@ and decides whether Easter follows the Western or the Orthodox date. Every
 picture is public domain or CC0, and its author is shown in the corner.
 
 Space photos come from Pixabay: choose *Space* among the *Wallpaper topics*
-of *Wallpapers online*.
+of *Wallpapers online*. It asks for galaxies, nebulae and astronomy photos,
+not for the word *space*, which also matches empty rooms and the like.
 
 **The online wallpapers keep repeating.**
 They no longer repeat until every picture of the day has been shown, and
@@ -361,7 +376,9 @@ plugins to install (Plexamp, the Lyrion Server, Beszel); a backup asks only
 for this player's output and screen and answers the rest, and the phone shows
 what it brings before the player restarts. Step by step, from flashing the
 card: the [installation guide](INSTALL.md). Once the player is on your
-network it shows what it is downloading, each with its progress, until it is
+network it shows what it is downloading and installing, each with its
+progress (a skin pack's install says *Installing*: minutes, with nothing to
+count), until it is
 ready. *Use the player now* puts that screen away at any time: the downloads
 go on, Settings shows how far they are, and music may be slow to start until
 they finish. A download that does not finish brings the screen back, named,
@@ -600,19 +617,25 @@ sent on GitHub (a GitHub account is needed), filled in with what the player
 reads of the hardware itself - never a serial number or anything about you -
 and it is public, so the next owner can see what works. A week after a sound
 card or screen that is not Tested is first used, the System page offers this
-once in a line at its top; its × puts it away for good. Once feedback is
-accepted, the next release marks that card or screen *Reported* in the player
+once in a line at its top; its × puts it away for good. The last step
+offers the same two ways as the problem report: *On GitHub* opens the feedback
+there, and *Create* on GitHub sends it; *By e-mail* downloads it as a text file. The
+player keeps it: the *Hardware feedback* row then shows *Send again* and
+*Start over*, until the sound card or screen is changed, when it is
+forgotten. Once feedback is accepted, the next release marks that card or screen *Reported* in the player
 and in the project's hardware list.
 
 **Something is wrong. How do I report it?**
 Open *Settings → System → Problem report* on a phone or computer on the same
-network, say in a line what happened, and tap *Download*. The player prepares
-one file with its logs, versions, hardware and settings; this takes up to a
-minute. Before the file is written, the player takes out addresses, network
-and device names, shares, accounts, keys, the weather location and the names
-of what you play, each replaced by a token such as `ip-3`. Read the file before
-sharing it, then attach it to a new report on GitHub with *Report a problem*,
-or e-mail it to george.carstoiu@gexis.net.
+network. Say what happened and how often, then *Next*: the player prepares
+one file with its logs, versions, hardware and settings, ticking off each step
+as it goes; this takes up to a minute. Before the file is written, the player
+takes out addresses, network and device names, shares, accounts, keys, the
+weather location and the names of what you play, each replaced by a token such
+as `ip-3`. Then choose how to send it: *On GitHub* opens a report already
+filled in with what happened and the log's last errors (the file itself can be
+dragged onto it too - a link cannot attach it), or *By e-mail* downloads the
+file to send to george.carstoiu@gexis.net. Read the file before sharing it.
 If the problem goes away at a restart, switch on *Debug logs* first, so the
 logs from before the restart are kept.
 

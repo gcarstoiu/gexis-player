@@ -19,33 +19,33 @@ body:
     id: screen
     attributes:
       label: Screen
-  - type: dropdown
+  - type: input
     id: sound
     attributes:
       label: Did the music sound right?
-      options: ["Yes", "No", "Not tried"]
+      description: "Filled in by the player: Yes, No or Not tried."
     validations:
       required: true
-  - type: dropdown
+  - type: input
     id: volume
     attributes:
       label: Did the volume change with the slider?
-      options: ["Yes", "No", "Not tried"]
-  - type: dropdown
+      description: "Filled in by the player: Yes, No or Not tried."
+  - type: input
     id: clicks
     attributes:
       label: Any clicks or gaps between tracks?
-      options: ["No", "Yes", "Not tried"]
-  - type: dropdown
+      description: "Filled in by the player: No, Yes or Not tried."
+  - type: input
     id: picture
     attributes:
       label: Is the whole picture visible on the screen?
-      options: ["Yes", "No", "No screen"]
-  - type: dropdown
+      description: "Filled in by the player: Yes, No or No screen."
+  - type: input
     id: touch
     attributes:
       label: Does a tap land where the finger is?
-      options: ["Yes", "No", "No touch"]
+      description: "Filled in by the player: Yes, No or No touch."
   - type: textarea
     id: notes
     attributes:
