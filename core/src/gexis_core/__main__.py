@@ -529,6 +529,10 @@ async def main() -> None:
     card_output = chosen_output
     if chosen_output is not None and volume_mode(settings_store.get(VOLUME_KEY), chosen_output) == SOFTWARE:
         chosen_output = outputs.with_software_volume(chosen_output)
+    # Nothing to draw without an output - and assigned before the branch, as
+    # it is read unconditionally further down: with no output at all it was
+    # unbound and the core died in a restart loop (code review, 2026-10-12).
+    meters_available = False
     if chosen_output is None:
         logger.error("outputs: no playback output found at all")
     else:
