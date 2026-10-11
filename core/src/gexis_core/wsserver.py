@@ -2230,7 +2230,7 @@ class StateServer:
                     # what the row shows (George, 2026-10-03: "look like just
                     # code"), so it is not sent.
                     row["value"] = None
-                    row["items"] = self._lyrion_shares.items() if self._lyrion_shares else []
+                    row["items"] = await self._share_items() if self._lyrion_shares else []
                     continue
                 source = self.SEEDED_LISTS.get(key)
                 if source is None:
@@ -2240,6 +2240,15 @@ class StateServer:
                 # so an unavailable BlueZ reads as the row's own empty state
                 # rather than failing the whole settings payload.
                 row["items"] = await self._bluetooth(getattr(module, name))
+
+    async def _share_items(self) -> list[dict]:
+        """The Lyrion shares' rows. The list is read on this thread - the
+        settings store is SQLite, which answers only the thread that opened
+        it - and the mount checks in a worker: a share whose NAS is off
+        holds a stat for the whole NFS timeout (review, 2026-10-12)."""
+        shares = self._lyrion_shares.all()
+        mounted = await asyncio.to_thread(self._lyrion_shares.mounted, shares)
+        return self._lyrion_shares.items(mounted)
 
     async def _handle_pairing_answer(self, request: web.Request) -> web.Response:
         """Accept or reject the open pairing request (ADR-0045).
@@ -2355,8 +2364,7 @@ class StateServer:
         if key == "lyrion-server.shares":
             if self._lyrion_shares is None:
                 return web.json_response({"items": []})
-            # On this thread: it reads the settings store (SQLite, one thread).
-            saved = self._lyrion_shares.items()
+            saved = await self._share_items()
             # ADR-0115's scan: the servers announcing themselves, after the
             # shares already added; this device's own left out.
             own = {device_name.hostname(), f"{device_name.hostname()}.local", device_name.address() or ""}

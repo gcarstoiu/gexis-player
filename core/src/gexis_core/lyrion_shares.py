@@ -168,10 +168,23 @@ class Shares:
         self._unmount(self._root / slug(address))
         self._login(address).unlink(missing_ok=True)
 
-    def items(self) -> list[dict]:
-        """The list's rows: each share and whether it is mounted."""
+    def mounted(self, shares: list[dict]) -> set[str]:
+        """The addresses in `shares` (as `all()` read them) mounted now. No
+        store: runs in a worker. **Never on the event loop** (review,
+        2026-10-12): `ismount` stats the share's root, and on a NAS that is
+        off that waits out the NFS timeout - tens of seconds of no volume,
+        no transport and no broadcasts."""
+        return {s["address"] for s in shares if self._is_mount(str(self._root / slug(s["address"])))}
+
+    def items(self, mounted: set[str] | None = None) -> list[dict]:
+        """The list's rows: each share and whether it is mounted. `mounted`
+        is what `mounted()` found in a worker; without it the check runs
+        here, which only a caller off the loop may do."""
+        shares = self.all()
+        if mounted is None:
+            mounted = self.mounted(shares)
         out = []
-        for share in self.all():
+        for share in shares:
             address = share["address"]
             name, server = label(address)
             if self._needs_login(share):
@@ -179,7 +192,7 @@ class Shares:
                             "bars": None, "state": "saved", "address": address, "login": True,
                             "user": share.get("user")})
                 continue
-            if self._is_mount(str(self._root / slug(address))):
+            if address in mounted:
                 meta = "Mounted, read-only"
             elif address in self.errors:
                 meta = f"Not mounted: {self.errors[address]}"
