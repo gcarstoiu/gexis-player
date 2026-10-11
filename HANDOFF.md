@@ -6,18 +6,17 @@ Last updated: 2026-10-11 (on R2D2).
 
 Branches: **`phase-13b`** in the main checkout holds the documents and shared
 work; **`phase-13d`** in `~/projects/gexis-player-13d` is the release branch,
-and `phase-13b` is merged into it after each docs change. The worktrees
-`~/projects/gexis-player-r099`, `-r0100` and `-r0101` sit at their tags.
+and `phase-13b` is merged into it after each docs change. No release
+worktree is left (each is made at its tag for the image, then removed).
 Earlier narrative: `docs/HANDOFF-ARCHIVE.md` (0.9.8 and 0.9.9 moved there
 2026-10-11; 0.10.0 and the old *Left before the first public release*
 moved there the same evening).
 
 **0.10.1 cut 2026-10-11 for Testing** (tag `v0.10.1`, release `r0.10.1`,
 serial 35, image `image/deploy/2026-10-11-gexis-player-v0.10.1.img`, 113
-checks; notes approved by George). **PR #60 open - George merges it.** After
-the merge: merge `origin/main` into both branches, delete `release-0.10.1`,
-remove the worktrees `-r099`, `-r0100` and `-r0101` (`rm -rf` and `git
-worktree prune`: the submodule refuses `worktree remove`).
+checks; notes approved by George). **PR #60 merged** 2026-10-11; `main`
+merged into both branches, `release-0.10.1` deleted, the release worktrees
+removed. The GitHub forms on `main` now have text fields, which links fill.
 In it: the player switcher (ADR-0136); plugins told when the output is Fixed
 and Plexamp held at 100 there (ADR-0137, plugin **0.4.7** - 0.4.6 ran a second
 poller and lost Plexamp after a restart in Fixed; never released); every
@@ -35,8 +34,7 @@ option tick, Copy, the switcher. **Still owed by George on 0.10.1:** volume
 type changes (g04, g05), Plexamp's slider in Fixed (g22), the Space topic.
 **For George, not blocking:** the bar's Plexamp needs a new claim token (Plex
 signed it out); the bar on its own supply, then Claude reads
-`vcgencmd get_throttled` again. **Postponed by George:** a separate PR of the
-GitHub forms to `main` - 0.10.1's merge brings them.
+`vcgencmd get_throttled` again. The GitHub forms reached `main` with 0.10.1's merge.
 
 **Devices.** sofapi (Waveshare 10.1"; its Lyrion queue is George's - do not
 clear it) and ShelvesPi (the bar) run the `phase-13d` preview 0.10.0+git75,
