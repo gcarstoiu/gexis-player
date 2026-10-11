@@ -483,6 +483,16 @@
       updateOutcome = null;
     }
   }
+  //: **An update that ends without an outcome lets the panel go** (code
+  //: review, 2026-10-12). An updater killed mid-way leaves its file on
+  //: *installing*; an install whose own check finds nothing newer ends on
+  //: *current*. Either way the unit stops and `active` drops with no *done*
+  //: or *failed* to show, and the lock - which takes no input - stayed up
+  //: until a power cycle, which it tells the user not to do. Not at once:
+  //: between two steps the file can sit a moment on a state the core does
+  //: not count as running.
+  const STRANDED_MS = 30 * 1000;
+  let strandedTimer;
   let updateLock = $state(false);
   let updateOutcome = $state(null);
   let updateChanged = false;
@@ -494,14 +504,27 @@
       if (!untrack(() => updateLock)) hidePeppy();
       updateLock = true;
       updateOutcome = null;
+      clearTimeout(strandedTimer);
+      strandedTimer = undefined;
       return;
     }
-    if (!untrack(() => updateLock) || untrack(() => updateOutcome) || $connection !== 'open') return;
+    if (!untrack(() => updateLock) || untrack(() => updateOutcome) || $connection !== 'open') {
+      clearTimeout(strandedTimer);
+      strandedTimer = undefined;
+      return;
+    }
     if (u && ['done', 'failed'].includes(u.state)) {
+      clearTimeout(strandedTimer);
+      strandedTimer = undefined;
       updateOutcome = u.state;
       const changed = u.state === 'done' && u.installed && u.installed !== loadedRelease;
       updateChanged = changed;
       outcomeTimer = setTimeout(() => leaveUpdate(changed), u.state === 'done' ? DONE_MS : OUTCOME_MS);
+    } else if (strandedTimer === undefined) {
+      strandedTimer = setTimeout(() => {
+        strandedTimer = undefined;
+        leaveUpdate(Boolean($update?.installed && $update.installed !== loadedRelease));
+      }, STRANDED_MS);
     }
   });
   //: **A new UI build reloads the panel too** (ADR-0110 as amended
