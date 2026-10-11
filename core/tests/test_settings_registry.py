@@ -1599,7 +1599,8 @@ def test_weather_icon_motion_hangs_off_the_weather_and_is_wired():
     row = rows["idle_icon_motion"]
     assert row["options"] == ["Animated", "Static"] and row["default"] == "Animated"
     assert row["onlyWhen"] == ["idle_weather", True]
-    assert row["note"] and len(row["note"]) < 160
+    # Since 2026-10-11 the explanation sits beside each option, short.
+    assert row["note"] is None and all(len(n) < 80 for n in row["optionNotes"].values())
     main = (Path(__file__).parents[1] / "src" / "gexis_core" / "__main__.py").read_text()
     assert '"idle_icon_motion": None' in main
 
@@ -1678,3 +1679,15 @@ def test_a_stored_option_the_row_no_longer_offers_falls_away(store):
     settings.set("wallpaper_topics", ["Nature", "Calm"])          # a write from that list lands
     store.set("idle_icon_motion", "Wobbly")
     assert settings.value("idle_icon_motion") == "Animated"
+
+
+def test_every_option_description_names_an_option_and_is_short():
+    """George, 2026-10-11: explanations beside the options, "short and to
+    the point", instead of a paragraph over the sheet."""
+    for row in _rows():
+        notes = row.get("optionNotes")
+        if not notes:
+            continue
+        assert set(notes) <= set(row["options"]), row["key"]
+        assert all(len(n) <= 80 for n in notes.values()), row["key"]
+        assert not row.get("note"), f"{row['key']}: a top note as well as the options' own"

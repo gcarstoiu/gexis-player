@@ -807,6 +807,11 @@
 
   async function choose(option) {
     const row = sheet;
+    //: **A sheet whose options are described stays open** (George,
+    //: 2026-10-11, on Volume: "shouldn't close automatically the modal.
+    //: Should stay open until user closes it"): the descriptions are read
+    //: beside the choice, and Close ends it.
+    const stays = !!row.optionNotes;
     if (String(row.value) === option) {
       // Back to what is stored. With something held back that is a change of
       // mind, not a choice, so the sheet stays open and lets go of it.
@@ -814,7 +819,7 @@
         choicePending = null;
         return;
       }
-      sheetKey = null;
+      if (!stays) sheetKey = null;
       return;
     }
     // ADR-0044 §2: a warned option is selected first and committed second.
@@ -824,7 +829,7 @@
       choicePending = option;
       return;
     }
-    sheetKey = null;
+    if (!stays) sheetKey = null;
     if (await write(row, option)) said(row, option);
   }
 

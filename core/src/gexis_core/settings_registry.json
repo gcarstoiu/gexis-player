@@ -44,7 +44,7 @@
         },
         "optionNotes": {
           "Hardware": "The sound card's own control. Bit-perfect.",
-          "Software": "Set by the player, for HDMI and outputs without their own control. Not bit-perfect below 100 %.",
+          "Software": "Set by the player, for HDMI and similar. Not bit-perfect below 100 %.",
           "Fixed": "Always full level, for an amplifier that sets the volume."
         }
       },
@@ -79,7 +79,7 @@
         "type": "choice",
         "label": "Volume curve",
         "marks": "R",
-        "note": "How the slider's travel maps to loudness, over 60 dB either way. Cubic is the shape a volume control usually has — half travel is −15.5 dB. Linear spreads the decibels evenly instead, which puts half travel at −30 dB and makes the bottom of the slider very quiet.",
+        "note": null,
         "options": [
           "Cubic",
           "Linear (dB)"
@@ -90,7 +90,11 @@
           {
             "not": "Fixed"
           }
-        ]
+        ],
+        "optionNotes": {
+          "Cubic": "Half travel is −15.5 dB, like most volume controls.",
+          "Linear (dB)": "Even decibels: half travel is −30 dB."
+        }
       }
     ]
   },
@@ -218,12 +222,16 @@
         "type": "choice",
         "label": "Pairing",
         "marks": "R",
-        "note": "Confirmation shows a six-digit code on the panel and waits for it to be accepted. PIN-free pairs anything in range without asking.",
+        "note": null,
         "options": [
           "Confirmation required",
           "PIN-free"
         ],
-        "default": "Confirmation required"
+        "default": "Confirmation required",
+        "optionNotes": {
+          "Confirmation required": "A six-digit code on the panel, to be accepted.",
+          "PIN-free": "Pairs anything in range without asking."
+        }
       },
       {
         "key": "bt_discoverable",
@@ -627,7 +635,7 @@
         "type": "choice",
         "label": "Background",
         "marks": "N",
-        "note": "Behind the waiting screen. Gexis wallpapers and Space pictures are the player's own, built in. Online wallpapers come from Pixabay and need its key. On-device wallpapers are read from local storage.",
+        "note": null,
         "options": [
           "Gexis wallpapers",
           "Space pictures",
@@ -639,7 +647,14 @@
         "onlyWhen": [
           "lms_enabled",
           false
-        ]
+        ],
+        "optionNotes": {
+          "Gexis wallpapers": "The player's own photographs, built in.",
+          "Space pictures": "From NASA and ESA, downloaded daily.",
+          "Wallpapers online": "Photos from Pixabay; needs its key.",
+          "Wallpapers on device": "From the player's Pictures share.",
+          "Black": "No picture."
+        }
       },
       {
         "key": "waiting_wallpaper_topics",
@@ -800,7 +815,7 @@
         "type": "choice",
         "label": "Screen",
         "marks": "R",
-        "note": "The built-in screen shows the clock and weather. An external page loads the URL provided.",
+        "note": null,
         "options": [
           "Built in",
           "External URL"
@@ -809,7 +824,11 @@
         "onlyWhen": [
           "idle_enabled",
           true
-        ]
+        ],
+        "optionNotes": {
+          "Built in": "Clock, weather and a picture.",
+          "External URL": "A web page, from the URL below."
+        }
       },
       {
         "key": "idle_url",
@@ -843,7 +862,7 @@
         "type": "choice",
         "label": "Background",
         "marks": "N",
-        "note": "Gexis wallpapers and Space pictures are the player's own, built in. Artist pictures come from the library, and show the player's own while the Lyrion client is off. Online wallpapers come from Pixabay and need a key. On-device wallpapers are read from local storage.",
+        "note": null,
         "options": [
           "Gexis wallpapers",
           "Space pictures",
@@ -856,7 +875,15 @@
         "onlyWhen": [
           "idle_screen",
           "Built in"
-        ]
+        ],
+        "optionNotes": {
+          "Gexis wallpapers": "The player's own photographs, built in.",
+          "Space pictures": "From NASA and ESA, downloaded daily.",
+          "Artist pictures": "From the library; the player's own while the Lyrion client is off.",
+          "Wallpapers online": "Photos from Pixabay; needs its key.",
+          "Wallpapers on device": "From the player's Pictures share.",
+          "Black": "No picture."
+        }
       },
       {
         "key": "wallpaper_topics",
@@ -1040,7 +1067,7 @@
         "type": "choice",
         "label": "Forecast",
         "marks": "N",
-        "note": "Today's weather is always shown. 3 days adds a three-day forecast beside it.",
+        "note": null,
         "options": [
           "3 days",
           "Today only"
@@ -1049,7 +1076,11 @@
         "onlyWhen": [
           "idle_weather",
           true
-        ]
+        ],
+        "optionNotes": {
+          "3 days": "Today and the next three days.",
+          "Today only": "Today's weather alone."
+        }
       },
       {
         "key": "idle_icons",
@@ -1073,7 +1104,7 @@
         "type": "choice",
         "label": "Weather icon motion",
         "marks": "N",
-        "note": "Animated icons use about half of one of the Pi's four processor cores while the idle screen is up. Static uses almost none.",
+        "note": null,
         "options": [
           "Animated",
           "Static"
@@ -1082,7 +1113,11 @@
         "onlyWhen": [
           "idle_weather",
           true
-        ]
+        ],
+        "optionNotes": {
+          "Animated": "Moving icons: about half of one of the Pi's four processor cores.",
+          "Static": "Still icons: almost none."
+        }
       },
       {
         "type": "group",
@@ -1229,7 +1264,7 @@
         "type": "choice",
         "label": "Rotation",
         "marks": "N",
-        "note": "Stepped redraws a turning record or reel eight times a second. Smooth redraws it every frame it moves, at the expense of more CPU usage.",
+        "note": null,
         "options": [
           "Stepped",
           "Smooth"
@@ -1238,7 +1273,11 @@
           "skin_motion",
           true
         ],
-        "default": "Stepped"
+        "default": "Stepped",
+        "optionNotes": {
+          "Stepped": "Eight redraws a second.",
+          "Smooth": "Every frame it moves; uses more processor."
+        }
       }
     ]
   },
@@ -1486,12 +1525,16 @@
         "type": "choice",
         "label": "Updates",
         "marks": "RN",
-        "note": "Automatic installs a waiting release at night, never while playing, and does not retry one that failed.",
+        "note": null,
         "options": [
           "Manual",
           "Automatic"
         ],
-        "default": "Manual"
+        "default": "Manual",
+        "optionNotes": {
+          "Manual": "Installs when started from here.",
+          "Automatic": "At night, never while playing; a failed one is not retried."
+        }
       },
       {
         "key": "update_channel",
@@ -1503,9 +1546,13 @@
           "Testing"
         ],
         "default": "Stable",
-        "note": "Testing gets each release first. Stable gets it once it has been tried. Recommended: Stable.",
+        "note": null,
         "warn": {
           "Testing": "Testing releases reach this player before everyone else's, and may have problems. Going back to Stable does not downgrade: the player stays where it is until Stable passes it."
+        },
+        "optionNotes": {
+          "Stable": "Each release once it has been tried. Recommended.",
+          "Testing": "Each release first."
         }
       },
       {
