@@ -175,6 +175,14 @@ the library.
 
 ## Idle screen and visualiser
 
+**Can the screen turn off, at night or on demand?**
+Yes. *Settings → Display → Display standby → Turn the screen off*, or the
+*Screen* button in the phone's mini player, darkens it until a touch, music
+starting or the button again wakes it; the player keeps playing meanwhile.
+*Scheduled standby* does it at the *Standby times* you set - several,
+each with its own days. Woken during one, the screen goes dark again after
+*Back to standby after* (2 minutes unless changed) if nobody uses it.
+
 **When does the idle screen appear?**
 Only with *Settings → Display → Idle screen* switched on - it is off on a new
 player, and the panel then stays on what it shows. On, it appears after

@@ -389,3 +389,12 @@ hold - for Starting volume beside Spotify's switch, shown while Spotify is
 on and the output variable. A single pair stays the usual form, and the
 only one a plugin's manifest uses.
 
+## Amendment, 2026-10-11 — `intervals`
+
+[ADR-0135](0135-display-standby.md)'s *Standby times*: a settable list of
+`{"from": "HH:MM", "until": "HH:MM", "days": [...]}`, at most the row's
+`max`. Validated on the player (a time that starts and ends at once, or has
+no day, is refused; days are stored in week order). The sheet lists each
+with its two times - picked as hour and quarter, so no keyboard is needed -
+its day chips and a remove button, and *Add standby time*; each change is
+written at once, as a `multi`'s is.

@@ -81,3 +81,13 @@ player, and an interval whose start and end are the same is refused.
   Not yet known: the 13.3" and the bars. A screen that kept its box lit would
   need the alternative - a black page with the signal kept, the backlight
   lit.
+
+## Built (2026-10-11, on `phase-13d`, in four steps)
+
+1. The screen off and on (`standby.py`), the panel's black cover, the wakes
+   (touch, music, the phone's new *Screen* button), the visualiser held off.
+   Tried by George on sofapi: all four worked.
+2. The *Display standby* section: *Turn the screen off* (asks once, "Turn
+   off"), *Scheduled standby*, *Back to standby after*.
+3. *Standby times*: the `intervals` row (ADR-0044 amended).
+4. The schedule (`Schedule`), every 15 s.
