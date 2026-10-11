@@ -61,7 +61,9 @@ the loudness on the amplifier.
 Playback stops and the sources reconnect on the new type at once - Hardware,
 Software or Fixed alike - so the level never jumps to full in the middle of a
 track. Start the music again when ready; the source that comes back starts no
-louder than its *Starting volume*.
+louder than its *Starting volume*. Leaving *Fixed*, the volume goes back to
+where it was before *Fixed* was chosen (or to the *Starting volume*, on a
+player that started in *Fixed*) rather than staying at full.
 
 **Can the player be stopped from ever playing too loud?**
 Yes: *Settings → Audio → Maximum volume*. Set it to 80 and the player is never
