@@ -352,6 +352,11 @@ class ArtworkSweep:
         if not mine:
             return Found(portrait=portrait)
         groups = await self._release_groups(mbid)
+        # MusicBrainz not asked: no album has a release group to match, and
+        # "neither had one" would be stored over every cover the artist has
+        # - an earlier run's found ones included (review, 2026-10-12).
+        catalogue = groups is not None
+        groups = groups or {}
         albums = (art or {}).get("albums") or {}
         tadb_albums = _Lazy(lambda: self._tadb_albums(tadb))
         # **Their catalogue, indexed the way ours can be matched against it.**
@@ -379,7 +384,7 @@ class ArtworkSweep:
                         theirs = None  # could not ask: leave it be
                     else:
                         url = one or None
-                if url is None and (art is None or theirs is None):
+                if url is None and (art is None or theirs is None or not catalogue):
                     continue  # a source could not be asked: leave it be
             # **Stored under the title the library has**, not the release
             # group's, because that is the key the panel looks up. `None` is
@@ -444,8 +449,9 @@ class ArtworkSweep:
             f"https://webservice.fanart.tv/v3/music/{mbid}", params={"api_key": key}
         )
 
-    async def _release_groups(self, mbid: str) -> dict[str, str]:
-        """`{release-group id: title}` for one artist.
+    async def _release_groups(self, mbid: str) -> dict[str, str] | None:
+        """`{release-group id: title}` for one artist, None when MusicBrainz
+        could not be asked.
 
         **A lookup, not a search.** Finding 036 measured the lookup endpoint
         at 4 of 4 and the search endpoint at 4 of 9; this one answered in
@@ -455,8 +461,8 @@ class ArtworkSweep:
             f"https://musicbrainz.org/ws/2/artist/{mbid}",
             params={"inc": "release-groups", "fmt": "json"},
         )
-        if not body:
-            return {}
+        if body is None:
+            return None
         return {
             group["id"]: group.get("title") or ""
             for group in (body.get("release-groups") or [])
