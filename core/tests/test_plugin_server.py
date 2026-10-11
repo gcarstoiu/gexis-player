@@ -185,6 +185,51 @@ async def test_something_that_is_not_an_event_is_dropped_not_dispatched(tmp_path
 
 
 @pytest.mark.asyncio
+async def test_a_queue_longer_than_asyncios_default_line_is_delivered(tmp_path):
+    """Code review, 2026-10-12: the server used StreamReader's default limit
+    of 64 KiB, so a queue of a few hundred tracks with artwork URLs (about
+    100 KB) made `readline` raise and cost the plugin its session - looping,
+    because the plugin reconnects and sends its queue again. `MAX_LINE` is
+    the documented limit, and was never reached."""
+    queue = [{"title": f"Track {n}", "artwork": "https://example.invalid/" + "a" * 300}
+             for n in range(300)]
+    async with Harness(tmp_path) as h:
+        reader, writer, _ = await _hello(h)
+        try:
+            await _say(writer, {"t": "queue", "queue": queue})
+            for _ in range(100):
+                if h.events:
+                    break
+                await asyncio.sleep(0.01)
+            assert [t for _, t, _ in h.events] == ["queue"]
+            assert len(h.events[0][2]["queue"]) == 300
+            assert h.gone == []
+        finally:
+            writer.close()
+
+
+@pytest.mark.asyncio
+async def test_a_line_over_max_line_is_dropped_not_the_connection(tmp_path):
+    """The contract's promise for a line too long to be a message: it is
+    dropped, and the session carries on with the next one."""
+    from gexis_core.plugin_server import MAX_LINE
+
+    async with Harness(tmp_path) as h:
+        reader, writer, _ = await _hello(h)
+        try:
+            writer.write(b'{"t":"queue","queue":"' + b"x" * (MAX_LINE + 10) + b'"}\n')
+            await _say(writer, {"t": "release"})
+            for _ in range(200):
+                if h.events:
+                    break
+                await asyncio.sleep(0.01)
+            assert [t for _, t, _ in h.events] == ["release"]
+            assert h.gone == []
+        finally:
+            writer.close()
+
+
+@pytest.mark.asyncio
 async def test_a_handler_that_raises_does_not_drop_the_connection(tmp_path):
     """One bad event must not cost a renderer its session."""
     async with Harness(tmp_path) as h:

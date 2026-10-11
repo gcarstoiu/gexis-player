@@ -42,6 +42,11 @@ GROUP = "gexis-plugins"
 #: A line longer than this is not a message, it is a mistake or an attack.
 #: The largest thing a plugin legitimately sends is a queue, and LMS's ceiling
 #: is a few hundred tracks.
+#:
+#: **It is the stream's own limit too** (code review, 2026-10-12). The server
+#: used to take asyncio's default of 64 KiB, so `readline` raised on a
+#: 100 KB queue and the session was dropped before this number was ever
+#: compared - a plugin that reconnected and resent its queue looped.
 MAX_LINE = 1 << 20
 
 #: What a plugin may send unprompted. Anything else is answered with an error
@@ -158,7 +163,8 @@ class PluginServer:
         # A socket left by a daemon that died is not a reason to refuse to
         # start; nothing else may bind this path.
         self._path.unlink(missing_ok=True)
-        server = await asyncio.start_unix_server(self._serve, path=str(self._path))
+        server = await asyncio.start_unix_server(self._serve, path=str(self._path),
+                                                 limit=MAX_LINE)
         # Nothing on the network can reach a filesystem socket, but anyone on
         # the device could: the permission is the authorisation (ADR-0084).
         self._path.chmod(0o660)
@@ -329,15 +335,37 @@ class PluginServer:
         await session._writer.drain()
         logger.info("plugins: %s connected (%s)", session.id, session.kind)
 
+    @staticmethod
+    async def _read_line(reader) -> bytes | None:
+        """The next line - `b""` at the end - or None for one longer than
+        `MAX_LINE`, which has been read past and thrown away.
+
+        Not `readline`: that raises on an overlong line having discarded an
+        unknown part of it, which leaves the rest of the line to be read as
+        if it were the next message. `readuntil` leaves the buffer alone, so
+        exactly the long line is skipped, up to and including its newline.
+        """
+        overlong = False
+        while True:
+            try:
+                line = await reader.readuntil(b"\n")
+            except asyncio.IncompleteReadError as exc:
+                return None if overlong and exc.partial else exc.partial
+            except asyncio.LimitOverrunError as exc:
+                overlong = True
+                await reader.readexactly(exc.consumed)
+                continue
+            return None if overlong else line
+
     async def _listen(self, session: Session, reader) -> None:
         while True:
-            line = await reader.readline()
+            line = await self._read_line(reader)
+            if line is None:
+                logger.warning("plugins: %s sent more than %d bytes on one line, dropping",
+                               session.id, MAX_LINE)
+                continue
             if not line:
                 return
-            if len(line) > MAX_LINE:
-                logger.warning("plugins: %s sent %d bytes on one line, dropping",
-                               session.id, len(line))
-                continue
             try:
                 message = json.loads(line)
             except ValueError:
