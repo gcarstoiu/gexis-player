@@ -196,7 +196,8 @@ With *Gexis wallpapers*, each picture comes from one of the *Wallpaper
 styles* you chose (Calm, Colourful, Psychedelic), from pictures for the
 time of day (dawn, day, dusk, night) or from the season's, by hemisphere.
 On New Year, and on Christmas and Easter where they are public holidays,
-only those days' pictures show; *Holidays* turns that off. The country comes
+only those days' pictures show, with the online wallpapers too; *Holidays* turns
+that off. The country comes
 from the weather location, or from the time zone until a location is set,
 and decides whether Easter follows the Western or the Orthodox date. Every
 picture is public domain or CC0, and its author is shown in the corner.
@@ -209,8 +210,9 @@ licence asks.
 
 **The online wallpapers keep repeating.**
 They no longer repeat until every picture of the day has been shown, and
-each day brings a new set. *Wallpaper topics* sets which Pixabay categories
-are drawn from; choosing several mixes them.
+each day brings a new set. *Wallpaper topics* sets what is drawn from:
+*Space*, *Calm* and *Season* (the current season) search Pixabay's selected
+photos, and the rest are Pixabay's own categories; choosing several mixes them.
 
 **The weather is for the wrong place, or not shown.**
 Set *Settings → Display → Idle screen → Location* to a city or place name.
