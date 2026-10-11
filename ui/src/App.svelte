@@ -443,6 +443,22 @@
 
   // ADR-0032: the panel renders everything; a remote browser only settings.
   let surface = $state(null);
+  //: **No answer is asked again, not taken for the panel** (code review,
+  //: 2026-10-12). A phone that loaded the page as the core restarted used to
+  //: become a panel until reloaded: drawn at 1280 px, its taps ending the
+  //: real panel's visualiser, its screens reported as the panel's. Nothing
+  //: shows until the core says which this is - on the panel too, which only
+  //: waits for the restart it was going to wait for anyway.
+  const SURFACE_RETRY_MAX_MS = 5000;
+  function askSurface(delay = 500) {
+    fetch('/surface')
+      .then((r) => r.json())
+      .then((body) => {
+        if (body?.surface !== 'panel' && body?.surface !== 'remote') throw new Error(`surface ${body?.surface}`);
+        surface = body.surface;
+      })
+      .catch(() => setTimeout(() => askSurface(Math.min(delay * 2, SURFACE_RETRY_MAX_MS)), delay));
+  }
 
   // **No system cursor on the panel** (George, 2026-10-05: "two cursors").
   // The compositor draws one where it starts and hides it only at the
@@ -575,10 +591,7 @@
     // off: there is no home to be ahead of, and the read would be three
     // requests to a server this device is not using (ADR-0079).
     if ($settingValues.lms_enabled !== false) loadLibraryRoot();
-    fetch('/surface')
-      .then((r) => r.json())
-      .then((body) => (surface = body.surface))
-      .catch(() => (surface = 'panel'));
+    askSurface();
 
 
     // ADR-0043: end the boot animation only once something is actually on
