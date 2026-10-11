@@ -52,11 +52,11 @@ place. Turn the amplifier down before switching to Fixed: in Fixed,
 *Maximum volume* and Spotify's *Starting volume* no longer apply (both rows
 are hidden), and every source plays at full level.
 
-**I chose Fixed, but the volume still changes.**
-Fixed chosen while music plays starts at the next pause or stop, so the
-level never jumps to full in the middle of a track. Until then the volume
-works as before, and the Volume row and the volume controls say *Fixed at
-the next pause*. Pause once and Fixed is in force.
+**What happens when I change the volume type while music plays?**
+Playback stops and the sources reconnect on the new type at once - Hardware,
+Software or Fixed alike - so the level never jumps to full in the middle of a
+track. Start the music again when ready; the source that comes back starts no
+louder than its *Starting volume*.
 
 **Can the player be stopped from ever playing too loud?**
 Yes: *Settings → Audio → Maximum volume*. Set it to 80 and the player is never

@@ -157,3 +157,20 @@ A."*
   track as ADR-0018's wording also allows; that is kept, and the screen now
   says it.
 
+## Amended 2026-10-11: every change of volume type stops playback at once
+
+George, on sofapi: Fixed chosen while playing *"doesn't change on pause or
+next track but only on render reconnect. We should keep it like this and
+enforce a renderer disconnect like it is between software and hardware"* -
+and Spotify, back after a change, played at the 100 it had held, not its
+*Starting volume*.
+
+- **Any change of the Volume row** - Hardware, Software, Fixed - stops
+  whoever is playing (`Supervisor.stop_active`, the release an update uses),
+  puts the new type in force (the software stage in or out with the level
+  carried, full scale for Fixed) and restarts the renderers. The wait for a
+  pause, and the *Fixed at the next pause* notes, are withdrawn.
+- **The full-level jump this record guarded against cannot happen**: nothing
+  plays while the type changes.
+- **Nobody holds the device afterwards**, so the source that returns is a
+  takeover and its *Starting volume* applies (ADR-0054 §5).
