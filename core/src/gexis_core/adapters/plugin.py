@@ -144,6 +144,16 @@ class PluginAdapter(Adapter):
         declared = declaration.get("capabilities", {})
         self.capabilities = capabilities_from({} if declared is None else declared)
         self.release_ladder = _ladder(declaration.get("release_ladder"))
+        #: **An edge that arrives before `run` is held, not lost** (code
+        #: review, 2026-10-12). `run` is only scheduled when the plugin
+        #: connects, and the server reads the plugin's next line without
+        #: yielding - so a plugin that wrote `hello` and `acquire` together had
+        #: its `acquire` reach this adapter before `run` had handed it the
+        #: callbacks. The AttributeError was logged and the acquisition
+        #: dropped. These stand-ins keep the edges, and `run` replays them.
+        self._early: list[str] = []
+        self.on_acquire = lambda: self._early.append("acquire")
+        self.on_release = lambda: self._early.append("release")
 
     async def run(self, on_acquire, on_release) -> None:
         """**Parks.** The socket is the watch.
@@ -156,6 +166,9 @@ class PluginAdapter(Adapter):
         """
         self.on_acquire = on_acquire
         self.on_release = on_release
+        early, self._early = self._early, []
+        for edge in early:
+            (on_acquire if edge == "acquire" else on_release)()
         logger.info("plugins: %s is watching through its own connection", self.renderer_id)
         await asyncio.Event().wait()
 
