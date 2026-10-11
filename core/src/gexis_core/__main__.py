@@ -1077,7 +1077,7 @@ async def main() -> None:
         logger.info("outputs: stopping the renderers to switch to %s", chosen.label)
         stop = await asyncio.create_subprocess_exec(
             "systemctl", "stop", "squeezelite.service", "go-librespot.service",
-            "bluealsa-aplay.service",
+            "bluealsa-aplay.service", *_plugin_renderer_units(),
         )
         await stop.wait()
         outputs.write(chosen, tuning=_tuning())
@@ -1130,11 +1130,29 @@ async def main() -> None:
         off, or squeezelite with no server finding one on the network by
         itself (code review, 2026-10-12)."""
         units = [adapters[rid].unit_name for rid in RENDERER_ROWS if renderer_enabled(rid)]
-        if not units:
-            return
-        restart = await asyncio.create_subprocess_exec("systemctl", "restart", *units)
-        if wait:
-            await restart.wait()
+        # A renderer plugin's unit by its own switch, which is its unit's
+        # enabled state (ADR-0086).
+        plugin_restarts = [restart_if_enabled(unit) for unit in _plugin_renderer_units()]
+        if units:
+            restart = await asyncio.create_subprocess_exec("systemctl", "restart", *units)
+            if wait:
+                await restart.wait()
+        if plugin_restarts:
+            if wait:
+                await asyncio.gather(*plugin_restarts)
+            else:
+                for restart_plugin in plugin_restarts:
+                    asyncio.ensure_future(restart_plugin)
+
+    def _plugin_renderer_units() -> list[str]:
+        """**A renderer plugin plays through `output` as the built-ins do**, and
+        has to reopen it as they do (code review, 2026-10-12). Only the three
+        built-ins were stopped and restarted, so on a change of output Plexamp
+        went on playing to the old card while the volume and arbitration had
+        moved to the new one; and holding the card, it made `outputs.write`
+        unable to ask what the card needs (LESSONS case 21)."""
+        return [p.unit for p in installed_plugins
+                if p.kind == "renderer" and not p.built_in and p.unit]
 
     def _tuning() -> outputs.Tuning:
         """ADR-0058's two peppyalsa numbers, as the settings have them."""
@@ -1207,7 +1225,7 @@ async def main() -> None:
         logger.info("outputs: stopping the renderers - %s", reason)
         stop = await asyncio.create_subprocess_exec(
             "systemctl", "stop", "squeezelite.service", "go-librespot.service",
-            "bluealsa-aplay.service",
+            "bluealsa-aplay.service", *_plugin_renderer_units(),
         )
         await stop.wait()
         outputs.write(chosen, tuning=_tuning())

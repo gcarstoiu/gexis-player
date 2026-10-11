@@ -99,3 +99,14 @@ def test_a_switched_off_source_is_not_restarted_with_the_others():
         assert "'restart', 'squeezelite.service'" not in body, name
         assert "_restart_renderers(" in body, name
     assert "renderer_enabled(rid)" in _closure("_restart_renderers")
+
+
+def test_a_renderer_plugin_reopens_the_output_with_the_built_ins():
+    """Only the three built-ins were stopped and restarted on a change of
+    output, so a playing Plexamp kept the old card open while the volume and
+    arbitration moved to the new one."""
+    for name in ("_switch_output", "_rewrite_output_conf"):
+        assert "*_plugin_renderer_units()" in _closure(name), name
+    restart = _closure("_restart_renderers")
+    assert "restart_if_enabled(unit) for unit in _plugin_renderer_units()" in restart
+    assert "p.kind == 'renderer'" in _closure("_plugin_renderer_units")
