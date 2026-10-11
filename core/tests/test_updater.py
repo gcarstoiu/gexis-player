@@ -58,6 +58,34 @@ def test_a_serial_that_went_down_is_refused(monkeypatch, up):
         up.read_channel("testing")
 
 
+def test_a_serial_file_a_power_cut_emptied_does_not_stop_every_check(monkeypatch, up):
+    """**The review of 2026-10-12.** ShelvesPi's power cut left files just
+    written at 0 bytes; an empty `serial-stable` made every check raise
+    ValueError after saying "checking" - the tile stood at Checking… until
+    someone deleted it over SSH. Unreadable, it counts as none seen."""
+    up.STATE.mkdir(parents=True)
+    for text in ("", "7\x00\x00", "garbage"):
+        (up.STATE / "serial-testing").write_text(text)
+        serve(monkeypatch, up, channel_text(serial=3))
+        assert up.read_channel("testing")["_serial"] == 3
+
+
+def test_the_serial_is_written_beside_and_renamed(monkeypatch, up):
+    """So a cut mid-write leaves the serial before, never half of one."""
+    up.remember_serial("testing", 5)
+    real = Path.write_text
+
+    def cut(self, text, *a, **k):
+        real(self, text[:0])
+        raise OSError("the power went")
+
+    monkeypatch.setattr(Path, "write_text", cut)
+    with pytest.raises(OSError):
+        up.remember_serial("testing", 6)
+    monkeypatch.setattr(Path, "write_text", real)
+    assert (up.STATE / "serial-testing").read_text() == "5"
+
+
 def test_a_channel_in_a_newer_format_says_the_updater_is_too_old(monkeypatch, up):
     """LESSONS 49: a layout this updater cannot read is named, not a 404."""
     serve(monkeypatch, up, "Format: 3\n" + channel_text())
@@ -495,6 +523,52 @@ def test_an_update_waits_for_a_pack_download_and_says_so(up, monkeypatch):
     assert said == ["waiting"] and held is not None
 
 
+def test_a_check_during_an_update_leaves_its_status_alone(up, monkeypatch):
+    """**The review of 2026-10-12.** "Check for updates" took no lock, and
+    wrote "checking" and then "available" over an install's status.json:
+    the panel lock and the renderers' freeze lifted while dpkg ran, and a
+    check that ended last could replace "restore the backup" with
+    "available". While an update holds the status, a check says nothing."""
+    import fcntl
+    import sys
+
+    up.STATE.mkdir(parents=True)
+    up.report("installing", message="installing 2")
+    other = (up.STATE / "status.lock").open("w")
+    fcntl.flock(other, fcntl.LOCK_EX)          # the install, running
+    checked = []
+    monkeypatch.setattr(up, "check", lambda args: checked.append(args))
+    monkeypatch.setattr(sys, "argv", ["gexis-update", "check"])
+    assert up.main() == 0
+    assert checked == [] and json.loads((up.STATE / "status.json").read_text())["state"] == "installing"
+
+    other.close()                               # ...and finished
+    assert up.main() == 0 and len(checked) == 1
+
+
+def test_every_update_holds_the_status_while_it_runs(up, monkeypatch):
+    import fcntl
+    import sys
+
+    seen = []
+
+    def busy(args):
+        probe = (up.STATE / "status.lock").open("w")
+        try:
+            fcntl.flock(probe, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            seen.append("free")
+        except BlockingIOError:
+            seen.append("held")
+        probe.close()
+        return 0
+
+    for action, name in (("install", "install"), ("scheduled", "scheduled"), ("postboot", "postboot")):
+        monkeypatch.setattr(up, name, busy)
+        monkeypatch.setattr(sys, "argv", ["gexis-update", action])
+        assert up.main() == 0
+    assert seen == ["held", "held", "held"]
+
+
 def test_a_turn_not_given_within_the_hour_is_a_failure(up, monkeypatch):
     import fcntl
 
@@ -693,6 +767,147 @@ def test_a_boot_that_does_not_answer_goes_back_once(up, monkeypatch):
     assert last["state"] == "failed" and "Back on 1" in last["message"]
     assert ("systemctl", "reboot") in ran, "what went back lands at a boot"
     assert not up.pending().exists(), "the boot after going back is not checked again"
+
+
+def _cache(up):
+    cache = up.STATE / "apt" / "archives"
+    (cache / "partial").mkdir(parents=True)
+    for name in ("gexis-core_0.10.0_arm64.deb", "gexis-core_0.10.1_arm64.deb",
+                 "gexis-skins-1920x1080_2_all.deb", "gexis-skins-1920x1080_3_all.deb",
+                 "libfoo_1%3a2.0-1_arm64.deb", "libfoo_1%3a1.9-1_arm64.deb"):
+        (cache / name).write_bytes(b"deb")
+    (cache / "partial" / "gexis-skins-1920x1080_4_all.deb").write_bytes(b"half")
+    (cache / "lock").write_text("")
+    return cache
+
+
+INSTALLED = "gexis-core 0.10.1\ngexis-skins-1920x1080 3\nlibfoo 1:2.0-1\n"
+
+
+def test_the_cache_keeps_only_what_is_installed(up, monkeypatch):
+    """**The review of 2026-10-12.** Every download - each release, each
+    rollback copy, each new pack version - stayed in the private cache, and
+    nothing ever cleaned it: a player on Testing would fill its card in
+    months. What is installed now stays, because the next update's way back
+    needs it; a half-fetched file stays for the download to resume."""
+    cache = _cache(up)
+    monkeypatch.setattr(up, "run", lambda *a, **k: subprocess.CompletedProcess(a, 0, INSTALLED, ""))
+    up.prune_cache()
+    assert sorted(p.name for p in cache.iterdir()) == [
+        "gexis-core_0.10.1_arm64.deb", "gexis-skins-1920x1080_3_all.deb", "libfoo_1%3a2.0-1_arm64.deb",
+        "lock", "partial"]
+    assert (cache / "partial" / "gexis-skins-1920x1080_4_all.deb").exists()
+
+
+def test_the_cache_is_left_whole_when_dpkg_cannot_say_what_is_installed(up, monkeypatch):
+    cache = _cache(up)
+    monkeypatch.setattr(up, "run", lambda *a, **k: subprocess.CompletedProcess(a, 2, "", "error"))
+    up.prune_cache()
+    assert len(list(cache.glob("*.deb"))) == 6
+
+
+def test_the_cache_is_left_whole_while_a_boot_may_still_go_back(up, monkeypatch):
+    cache = _cache(up)
+    up.leave_for_the_boot({"how": "reboot"})
+    monkeypatch.setattr(up, "run", lambda *a, **k: subprocess.CompletedProcess(a, 0, INSTALLED, ""))
+    up.prune_cache()
+    assert len(list(cache.glob("*.deb"))) == 6
+
+
+def test_an_update_prunes_the_cache_when_it_ends(up, monkeypatch):
+    pruned = []
+    seen, order = fake_install(up, monkeypatch)
+    monkeypatch.setattr(up, "prune_cache", lambda: pruned.append("update"))
+    assert up.install(None) == 0
+    assert pruned == ["update"]
+    fake_install(up, monkeypatch, answers=False)
+    monkeypatch.setattr(up, "prune_cache", lambda: pruned.append("went back"))
+    assert up.install(None) == 1
+    assert pruned == ["update"], "not after going back: Update now tries the same files again"
+
+
+def test_a_pack_prunes_the_cache_once_installed(up, monkeypatch):
+    pruned = []
+    monkeypatch.setattr(up, "installed", lambda p: "0.10.1")
+    monkeypatch.setattr(up, "parts_of", lambda v: (["r0.10.1"], ["r0.10.1"]))
+    monkeypatch.setattr(up, "apt_env", lambda repos, pins=None: repos)
+    monkeypatch.setattr(up, "apt", lambda opts, *a, **k: subprocess.CompletedProcess(a, 0, "", ""))
+    monkeypatch.setattr(up, "heal", lambda opts: None)
+    monkeypatch.setattr(up, "pack_fetch", lambda opts, name, activity: subprocess.CompletedProcess([], 0, "", ""))
+    real = up.Activity
+    monkeypatch.setattr(up, "Activity", lambda **kw: real(playing_now=lambda: False, follow=False))
+    monkeypatch.setattr(up, "prune_cache", lambda: pruned.append(1))
+    up.STATE.mkdir(parents=True, exist_ok=True)
+    assert up.pack_install("gexis-skins-1920x1080") == 0 and pruned == [1]
+
+
+class PowerCut(BaseException):
+    """The power going: nothing after it in the process runs."""
+
+
+def cut_install(up, monkeypatch):
+    """An install the power stops in the middle of dpkg."""
+    seen, order = fake_install(up, monkeypatch)
+    real = up.apt_progress
+
+    def apt_progress(opts, *args, state, **kw):
+        if state == "installing":
+            raise PowerCut()
+        return real(opts, *args, state=state, **kw)
+
+    monkeypatch.setattr(up, "apt_progress", apt_progress)
+    with pytest.raises(PowerCut):
+        up.install(None)
+    return seen, order
+
+
+def test_an_install_leaves_its_check_for_the_boot_before_dpkg_starts(up, monkeypatch):
+    """**The review of 2026-10-12.** pending-check.json was written only for
+    a planned reboot, so an install the power cut short left nothing for the
+    boot: dpkg dirty, postinsts never run, verify never run - and once
+    gexis-player was unpacked at the new version, every later check said
+    "current" and never reached `heal`."""
+    cut_install(up, monkeypatch)
+    left = json.loads(up.pending().read_text())
+    assert left["how"] == "cut-short" and left["target"] == "2" and left["current"] == "1"
+    assert left["repos"] == ["ours-x"] and left["back_repos"] == ["ours-old"]
+    assert left["steps"]["install"] == "active"
+
+
+def test_the_boot_after_a_cut_short_install_finishes_it_and_checks_it(up, monkeypatch):
+    seen, _ = cut_install(up, monkeypatch)
+    healed, envs = [], []
+    monkeypatch.setattr(up, "interrupted", lambda: (True, ["gexis-core"]))
+    monkeypatch.setattr(up, "apt_env", lambda repos, pins=None: envs.append(repos) or ["-o", "x"])
+    monkeypatch.setattr(up, "heal", lambda opts: healed.append(opts))
+    assert up.postboot(None) == 0
+    assert envs[0] == ["ours-x"] and healed == [["-o", "x"]], "finished from the release going in"
+    assert seen[-1]["state"] == "done" and set(seen[-1]["steps"].values()) == {"done"}
+    assert not up.pending().exists()
+
+
+def test_a_cut_short_install_that_cannot_be_finished_goes_back(up, monkeypatch):
+    seen, _ = cut_install(up, monkeypatch)
+    monkeypatch.setattr(up, "interrupted", lambda: (True, ["gexis-core"]))
+
+    def heal(opts):
+        raise up.Stop(up.CUT_SHORT)
+
+    monkeypatch.setattr(up, "heal", heal)
+    assert up.postboot(None) == 1
+    last = seen[-1]
+    assert last["state"] == "failed" and "Back on 1" in last["message"]
+    assert last["steps"]["install"] == "failed"
+    assert not up.pending().exists()
+
+
+def test_an_update_that_ends_leaves_nothing_for_the_boot(up, monkeypatch):
+    fake_install(up, monkeypatch)
+    assert up.install(None) == 0
+    assert not up.pending().exists()
+    fake_install(up, monkeypatch, fail_install=True)
+    assert up.install(None) == 1
+    assert not up.pending().exists(), "gone back already; the boot has nothing to check"
 
 
 AUDIT_BROKEN = ("The following packages are in a mess due to serious problems during\n"

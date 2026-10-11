@@ -123,6 +123,17 @@ IDENTITY_SETTINGS = ("beszel.", "plexamp.claim_token")
 REPLACED = ("var/lib/gexis-core/settings.db", "var/lib/gexis-core/enrichment.db")
 SETTINGS_DB = "var/lib/gexis-core/settings.db"
 
+#: **Services whose files a restore puts back under them** (the review of
+#: 2026-10-12): stopped first, so nothing has them open. The hub's PocketBase
+#: store is SQLite in WAL mode: put back under the running hub, its own WAL
+#: was checkpointed into the restored file at the reboot - "database disk
+#: image is malformed", the history the restore was for and the hub's own
+#: both lost. Not started again: the reboot that follows starts it.
+STOPPED_FOR_RESTORE = (("var/lib/beszel-hub", "beszel-hub.service"),)
+
+#: SQLite's companions of a database in WAL mode.
+WAL_FILES = ("-wal", "-shm")
+
 #: `gexis-<name>-<stamp>.tgz`. The name is the device's, so an archive says
 #: where it came from - ADR-0083 does not prevent restoring one device's
 #: archive onto another, and this is what makes it visible.
@@ -177,25 +188,74 @@ def available(directory: Path = DEFAULT_DIR) -> list[Archive]:
     return sorted(found, key=lambda a: a.made, reverse=True)
 
 
+def _snapshot(source: Path, into: Path) -> bool:
+    """SQLite's own copy of a database another program has open in WAL
+    mode: one consistent file, the WAL's rows in it. False when it is not
+    one SQLite can read; the files then go in as they are."""
+    try:
+        live = sqlite3.connect(source)
+        try:
+            copy = sqlite3.connect(into)
+            try:
+                live.backup(copy)
+            finally:
+                copy.close()
+        finally:
+            live.close()
+        return True
+    except sqlite3.Error as exc:
+        logger.warning("backup: %s could not be copied as a database (%s); taking its files", source, exc)
+        into.unlink(missing_ok=True)
+        return False
+
+
 def create(device_name: str, directory: Path = DEFAULT_DIR, root: Path = Path("/")) -> str:
     """Write one, and return its name.
 
     **Written to a temporary name and renamed**, so a half-written archive is
     never listed as a whole one - the share is read by a person who cannot
     tell the difference.
+
+    **A database with a WAL beside it goes in as one file** (the review of
+    2026-10-12): the Beszel hub writes its store while this runs, and
+    `data.db` and `data.db-wal` read a moment apart restored to a state that
+    never existed. SQLite's backup copies it whole; the WAL and its index
+    stay out. A database with no WAL - the core's own, and the hub's when it
+    is stopped - is one file already, and goes in as it is.
     """
     directory.mkdir(parents=True, exist_ok=True)
     name = f"gexis-{_slug(device_name)}-{time.strftime('%Y%m%d-%H%M%S')}.tgz"
     final = directory / name
     partial = directory / f".{name}.part"
     try:
-        with tarfile.open(partial, "w:gz") as archive:
+        with tempfile.TemporaryDirectory() as work, tarfile.open(partial, "w:gz") as archive:
+            copied: list[tuple[tarfile.TarInfo, Path]] = []
+
+            def live_databases(info: tarfile.TarInfo) -> tarfile.TarInfo | None:
+                path = root / info.name
+                if not info.isfile():
+                    return info
+                if any(info.name.endswith(s) for s in WAL_FILES) and \
+                        any(c.name == info.name[:-4] for c, _ in copied):
+                    return None
+                if Path(f"{path}-wal").exists():
+                    into = Path(work) / str(len(copied))
+                    if _snapshot(path, into):
+                        copied.append((info, into))
+                        return None
+                return info
+
             for member in MEMBERS:
                 source = root / member
                 if not source.exists():
                     logger.info("backup: %s is not here, skipping", member)
                     continue
-                archive.add(source, arcname=member)
+                archive.add(source, arcname=member, filter=live_databases)
+            # The copies, under the live files' names, owners and modes.
+            for info, into in copied:
+                info.size = into.stat().st_size
+                with open(into, "rb") as data:
+                    archive.addfile(info, data)
         partial.replace(final)
     except Exception:
         partial.unlink(missing_ok=True)
@@ -210,18 +270,36 @@ def create(device_name: str, directory: Path = DEFAULT_DIR, root: Path = Path("/
     return name
 
 
+def _under(name: str, paths) -> bool:
+    """Whether `name` is one of `paths` or inside one - **by whole path
+    components**: `var/lib/bluetoothX` is not under `var/lib/bluetooth`."""
+    return any(name == p or name.startswith(p + "/") for p in paths)
+
+
 def _checked(archive: tarfile.TarFile, label: str) -> list[tarfile.TarInfo]:
     """The members to put back. Refuses a link and a member that would land
     outside the paths this module writes - the share is guest-writable, so an
-    archive in it is not necessarily one we made."""
-    allowed = tuple(MEMBERS)
+    archive in it is not necessarily one we made.
+
+    **Only plain files and folders, by names already in their plain form**
+    (the review of 2026-10-12). The first version matched names by their
+    first characters, so `var/lib/bluetooth/../../../etc/cron.d/x` passed,
+    and on the device's Python 3.13 `extractall` followed the `..` - as
+    root, with the reboot after a restore to run what it planted. A name
+    with `..`, `.`, an empty part or a leading `/` is refused, not tidied: no
+    archive `create` writes has one."""
     members = []
     for member in archive.getmembers():
         if member.issym() or member.islnk():
             raise ValueError(f"{label}: refuses a link, {member.name!r}")
-        if member.name.startswith(allowed):
+        if not (member.isfile() or member.isdir()):
+            raise ValueError(f"{label}: refuses a device or a pipe, {member.name!r}")
+        parts = member.name.split("/")
+        if member.name.startswith("/") or any(part in ("", ".", "..") for part in parts):
+            raise ValueError(f"{label}: refuses to write {member.name!r}")
+        if _under(member.name, MEMBERS):
             members.append(member)
-        elif member.name.startswith(FORMERLY_BACKED_UP):
+        elif _under(member.name, FORMERLY_BACKED_UP):
             # An archive from before a member was narrowed: skipped, not
             # refused, so a backup taken the day before is still one.
             logger.info("backup: %s: leaving %s to the image", label, member.name)
@@ -240,33 +318,80 @@ def restore(name: str, directory: Path = DEFAULT_DIR, root: Path = Path("/")) ->
     restore_file(path, root)
 
 
-def restore_file(path: Path, root: Path = Path("/"), leave: tuple[str, ...] = ()) -> int:
+def restore_file(path: Path, root: Path = Path("/"), leave: tuple[str, ...] = (), run=None) -> int:
     """Put back the archive at `path`, whatever it is called - setup's
     upload is not in the share (ADR-0131). `leave`: paths not put back, the
     identities of a backup restored as another player. Returns how many
-    paths."""
+    paths. `run`: how services are stopped (`STOPPED_FOR_RESTORE`) - on the
+    device's own root, systemctl; elsewhere nothing unless a test passes
+    one."""
+    if run is None and root == Path("/"):
+        run = subprocess.run
     with tarfile.open(path, "r:gz") as archive:
-        members = [m for m in _checked(archive, path.name)
-                   if not any(m.name == p or m.name.startswith(p + "/") for p in leave)]
-        swapped = [m for m in members if m.name in REPLACED and m.isfile()]
-        archive.extractall(root, members=[m for m in members if m not in swapped])
-        for member in swapped:
-            target = root / member.name
-            target.parent.mkdir(parents=True, exist_ok=True)
-            partial = target.with_name(f".{target.name}.restoring")
-            source = archive.extractfile(member)
-            if source is None:
-                continue
-            with source, open(partial, "wb") as out:
-                shutil.copyfileobj(source, out)
-            os.chmod(partial, member.mode & 0o777)
-            try:
-                os.chown(partial, member.uid, member.gid)
-            except OSError:  # not root: the tests, and nothing else
-                pass
-            partial.replace(target)
+        members = [m for m in _checked(archive, path.name) if not _under(m.name, leave)]
+        stopped = _stop_for_restore(members, run)
+        try:
+            _put_back(archive, members, root)
+        except BaseException:
+            # Nothing reboots after a restore that failed: what was running
+            # runs again.
+            for unit in stopped:
+                run(["systemctl", "start", unit], check=False, capture_output=True)
+            raise
     logger.warning("backup: restored %s over %d path(s); a reboot follows", path.name, len(members))
     return len(members)
+
+
+def _stop_for_restore(members: list[tarfile.TarInfo], run) -> list[str]:
+    """Stop each service whose files the archive brings; return those that
+    were running."""
+    stopped = []
+    if run is None:
+        return stopped
+    for prefix, unit in STOPPED_FOR_RESTORE:
+        if not any(_under(m.name, (prefix,)) for m in members):
+            continue
+        active = run(["systemctl", "is-active", "--quiet", unit], check=False, capture_output=True)
+        run(["systemctl", "stop", unit], check=False, capture_output=True)
+        if getattr(active, "returncode", 1) == 0:
+            stopped.append(unit)
+        logger.info("backup: %s stopped for the restore", unit)
+    return stopped
+
+
+def _put_back(archive: tarfile.TarFile, members: list[tarfile.TarInfo], root: Path) -> None:
+    """The extraction itself: the core's databases beside and renamed, the
+    rest by `extractall`."""
+    swapped = [m for m in members if m.name in REPLACED and m.isfile()]
+    # **`tar`, named** (the review of 2026-10-12): Python 3.13 on the
+    # device has no default filter and 3.14's is `data`, which would put
+    # Plexamp's claim back owned by root, where `pi` cannot write it.
+    # `tar` keeps owners, drops setuid bits, and refuses a path that
+    # would leave `root` - a second guard behind `_checked`.
+    archive.extractall(root, members=[m for m in members if m not in swapped], filter="tar")
+    for member in swapped:
+        target = root / member.name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        partial = target.with_name(f".{target.name}.restoring")
+        source = archive.extractfile(member)
+        if source is None:
+            continue
+        with source, open(partial, "wb") as out:
+            shutil.copyfileobj(source, out)
+        os.chmod(partial, member.mode & 0o777)
+        try:
+            os.chown(partial, member.uid, member.gid)
+        except OSError:  # not root: the tests, and nothing else
+            pass
+        partial.replace(target)
+    # A WAL the archive does not bring is not left beside the database it
+    # brings: the next open would apply it to the restored file.
+    brought = {m.name for m in members}
+    for member in members:
+        if member.isfile() and member not in swapped:
+            for suffix in WAL_FILES:
+                if member.name + suffix not in brought:
+                    (root / (member.name + suffix)).unlink(missing_ok=True)
 
 
 def write_settings(values: dict, root: Path = Path("/")) -> None:
