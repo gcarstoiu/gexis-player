@@ -300,10 +300,14 @@ class LmsAdapter(Adapter):
         #: corrected back to if LMS restarted the track (see
         #: RESUME_POSITION_TOLERANCE_S). `_resume_timestamp` is the queue's
         #: `playlist_timestamp` when they were recorded: both are put back
-        #: only if it is unchanged (Finding 029, defect A).
+        #: only if it is unchanged (Finding 029, defect A). `_resume_index` is
+        #: `playlist_cur_index`, held to the same rule: a skip or a jump within
+        #: the queue leaves the timestamp alone, and the position belongs to
+        #: the track it was read from (code review, 2026-10-12).
         self._resume_playing = False
         self._resume_position: float | None = None
         self._resume_timestamp: float | None = None
+        self._resume_index: int | None = None
         self._on_metadata: Callable[[TrackMetadata], None] | None = None
         self._on_queue = None
         #: (playlist_timestamp, current index) when the queue was last read.
@@ -920,6 +924,7 @@ class LmsAdapter(Adapter):
         if isinstance(position, (int, float)):
             self._resume_position = float(position)
             self._resume_timestamp = _as_float(status.get("result", {}).get("playlist_timestamp"))
+            self._resume_index = _as_int(status.get("result", {}).get("playlist_cur_index"))
             logger.info("lms: noted position %.1fs at deactivation", self._resume_position)
 
     async def _cometd_handshake(self, session: aiohttp.ClientSession) -> str:
@@ -1060,6 +1065,7 @@ class LmsAdapter(Adapter):
                     float(position) if isinstance(position, (int, float)) else None
                 )
                 self._resume_timestamp = _as_float(result.get("playlist_timestamp"))
+                self._resume_index = _as_int(result.get("playlist_cur_index"))
                 await self._rpc(session, self._player_id, ["pause", 1])
                 await self._rpc(session, self._player_id, ["power", 0])
                 logger.info(
@@ -1095,13 +1101,22 @@ class LmsAdapter(Adapter):
         position. An edit while away loses the position too; George chose
         that over any chance of seeking into content just picked
         (2026-09-17, rule A).
+
+        **Nor onto another track of the same queue** (code review,
+        2026-10-12). Next, previous and a jump within the queue leave the
+        timestamp alone, so track 7 picked in the Lyrion app while Spotify
+        played was seeked to where track 3 had been released. The track's
+        place in the queue is compared as well; an LMS that does not report
+        it is compared on the timestamp alone, as before.
         """
         resume_playing = self._resume_playing
         resume_position = self._resume_position
         resume_timestamp = self._resume_timestamp
+        resume_index = self._resume_index
         self._resume_playing = False
         self._resume_position = None
         self._resume_timestamp = None
+        self._resume_index = None
         if self._player_id is None:
             return
         # **What the user asked for, where they have asked** (ADR-0022's
@@ -1130,6 +1145,15 @@ class LmsAdapter(Adapter):
                         "not restoring the old position or play state",
                         resume_timestamp,
                         timestamp,
+                    )
+                    return
+                index = _as_int(result.get("playlist_cur_index"))
+                if None not in (index, resume_index) and index != resume_index:
+                    logger.info(
+                        "lms: another track since it was released (index %s -> %s), "
+                        "not restoring the old position or play state",
+                        resume_index,
+                        index,
                     )
                     return
                 if resume_playing and result.get("mode") != "play":

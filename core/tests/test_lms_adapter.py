@@ -83,12 +83,15 @@ class FakeRpc:
     change them between `release()` and `device_freed()` to model what LMS
     did in between - restarting the track from zero, say. `timestamp` is
     the queue's `playlist_timestamp`; a test changes it to model a load or
-    an edit, and sets it to None for an LMS that does not report one."""
+    an edit, and sets it to None for an LMS that does not report one.
+    `index` is `playlist_cur_index`, which LMS reports as a string; a test
+    changes it to model a skip or a jump within the same queue."""
 
     def __init__(self, mode="play", position=60.0):
         self.mode = mode
         self.position = position
         self.timestamp = 1789663581.32885
+        self.index = "2"
         self.commands = []
 
     async def __call__(self, session, player, command):
@@ -97,6 +100,8 @@ class FakeRpc:
             result = {"mode": self.mode, "power": 1, "time": self.position}
             if self.timestamp is not None:
                 result["playlist_timestamp"] = self.timestamp
+            if self.index is not None:
+                result["playlist_cur_index"] = self.index
             return {"result": result}
         return {"result": {}}
 
@@ -392,6 +397,55 @@ async def test_an_lms_reporting_no_timestamp_behaves_as_before(monkeypatch):
     restore stands rather than silently switching itself off."""
     adapter, rpc = _adapter(monkeypatch, mode="play", position=60.0)
     rpc.timestamp = None
+    await adapter.release()
+    rpc.position = 1.2
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert ["time", "60.00"] in rpc.commands
+
+
+@pytest.mark.asyncio
+async def test_another_track_of_the_same_queue_is_not_seeked_to_the_old_position(monkeypatch):
+    """Code review, 2026-10-12: next, previous and a jump within the queue
+    leave `playlist_timestamp` alone (Finding 029's addendum), so track 7
+    picked in the Lyrion app while Spotify played was seeked to the 1:55
+    track 3 had been released at. A track the user just picked is content
+    just chosen (ADR-0027, rule A), so neither the position nor the play
+    state is put back."""
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=115.0)
+    await adapter.release()
+    rpc.index = "6"
+    rpc.mode = "pause"
+    rpc.position = 0.4
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert not any(c[0] == "time" for c in rpc.commands)
+    assert ["play"] not in rpc.commands
+
+
+@pytest.mark.asyncio
+async def test_another_track_after_a_deactivation_is_not_seeked_either(monkeypatch):
+    """The same, for the user's own power-off: the position noted then
+    belongs to the track that was playing, not to the one picked since."""
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=72.0)
+    await adapter._note_position_if_unset(session=None)
+    rpc.index = "3"
+    rpc.position = 0.4
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert not any(c[0] == "time" for c in rpc.commands)
+
+
+@pytest.mark.asyncio
+async def test_an_lms_reporting_no_index_behaves_as_before(monkeypatch):
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=60.0)
+    rpc.index = None
     await adapter.release()
     rpc.position = 1.2
     rpc.commands.clear()
