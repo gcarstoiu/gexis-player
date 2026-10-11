@@ -1124,6 +1124,26 @@ def take_turn(waiting) -> object:
     raise Stop("another update or skin pack download did not finish within an hour")
 
 
+def hold_status(wait: bool = True) -> object | None:
+    """**One writer of status.json at a time** (the review of 2026-10-12).
+    An install, the nightly run and the boot's check hold it for as long as
+    they run; "Check for updates" only when it is free. Without it a check
+    started during an install wrote "checking" and then "available" over
+    the install's state: the panel lock and the renderers' freeze lifted
+    while dpkg ran, and a check that ended last could replace "restore the
+    backup". Separate from `take_turn`, which a pack download holds too, and
+    a check while a pack downloads is harmless. None when not waiting and
+    held; the lock is the open file, as the turn's is."""
+    STATE.mkdir(parents=True, exist_ok=True)
+    held = (STATE / "status.lock").open("w")
+    try:
+        fcntl.flock(held, fcntl.LOCK_EX | (0 if wait else fcntl.LOCK_NB))
+        return held
+    except BlockingIOError:
+        held.close()
+        return None
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("action", choices=["check", "install", "scheduled", "postboot", "pack-install", "pack-remove"])
@@ -1140,8 +1160,13 @@ def main() -> int:
             return 1
     try:
         if args.action == "check":
+            _status = hold_status(wait=False)
+            if _status is None:
+                print("an update is running; its status is left as it is", flush=True)
+                return 0
             check(args)
             return 0
+        _status = hold_status()
         if args.action == "scheduled":
             _turn = take_turn(lambda: None)
             return scheduled(args)

@@ -523,6 +523,52 @@ def test_an_update_waits_for_a_pack_download_and_says_so(up, monkeypatch):
     assert said == ["waiting"] and held is not None
 
 
+def test_a_check_during_an_update_leaves_its_status_alone(up, monkeypatch):
+    """**The review of 2026-10-12.** "Check for updates" took no lock, and
+    wrote "checking" and then "available" over an install's status.json:
+    the panel lock and the renderers' freeze lifted while dpkg ran, and a
+    check that ended last could replace "restore the backup" with
+    "available". While an update holds the status, a check says nothing."""
+    import fcntl
+    import sys
+
+    up.STATE.mkdir(parents=True)
+    up.report("installing", message="installing 2")
+    other = (up.STATE / "status.lock").open("w")
+    fcntl.flock(other, fcntl.LOCK_EX)          # the install, running
+    checked = []
+    monkeypatch.setattr(up, "check", lambda args: checked.append(args))
+    monkeypatch.setattr(sys, "argv", ["gexis-update", "check"])
+    assert up.main() == 0
+    assert checked == [] and json.loads((up.STATE / "status.json").read_text())["state"] == "installing"
+
+    other.close()                               # ...and finished
+    assert up.main() == 0 and len(checked) == 1
+
+
+def test_every_update_holds_the_status_while_it_runs(up, monkeypatch):
+    import fcntl
+    import sys
+
+    seen = []
+
+    def busy(args):
+        probe = (up.STATE / "status.lock").open("w")
+        try:
+            fcntl.flock(probe, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            seen.append("free")
+        except BlockingIOError:
+            seen.append("held")
+        probe.close()
+        return 0
+
+    for action, name in (("install", "install"), ("scheduled", "scheduled"), ("postboot", "postboot")):
+        monkeypatch.setattr(up, name, busy)
+        monkeypatch.setattr(sys, "argv", ["gexis-update", action])
+        assert up.main() == 0
+    assert seen == ["held", "held", "held"]
+
+
 def test_a_turn_not_given_within_the_hour_is_a_failure(up, monkeypatch):
     import fcntl
 
