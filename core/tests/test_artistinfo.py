@@ -34,8 +34,15 @@ class FakeLms:
         self.absent = absent
         self.commands = []
         self.timeouts = []
+        #: What `serverstatus` says; answered without being counted below.
+        self.lastscan = "1700000000"
+
+    def status(self, command):
+        return {"lastscan": self.lastscan} if command[0] == "serverstatus" else None
 
     async def __call__(self, command, player="", timeout=None):
+        if (status := self.status(command)) is not None:
+            return status
         self.commands.append(list(command))
         self.timeouts.append(timeout)
         if self.absent:
@@ -332,6 +339,8 @@ class SlowLms(FakeLms):
         self._drop = drop
 
     async def __call__(self, command, player="", timeout=None):
+        if (status := self.status(command)) is not None:
+            return status
         self.commands.append(list(command))
         self.timeouts.append(timeout)
         if self._clock is not None:
@@ -642,4 +651,61 @@ async def test_a_connection_dropped_at_once_still_means_no_plugin():
     await info.photos([1])
     await info.photos([2])
 
+    assert len(lms.commands) == 1
+
+
+@pytest.mark.asyncio
+async def test_stored_photos_are_dropped_after_a_rescan_or_on_another_server():
+    """Review, 2026-10-12: stored by artist id with the server's address in
+    the URL, and `forget` was never called - a rescan renumbers the ids, and
+    another server (the player's own after a NAS's, a restored backup) has
+    its own, so artists showed someone else's photo or a broken one."""
+    from gexis_core.artistinfo import SCOPE_CHECK_S
+
+    lms = FakeLms(photos={7452: "imageproxy/mai/artist/7452/image.png"})
+    store, clock = _store(), FakeClock()
+    first = await LmsArtistInfo(lms, BASE, store=store, clock=clock).photos([7452])
+    assert first[7452].startswith(BASE + "/")
+    await LmsArtistInfo(lms, BASE, store=store, clock=clock).photos([7452])
+    assert len(lms.commands) == 1, "the same server and scan: kept"
+
+    other = "http://server-b:9000"
+    moved = await LmsArtistInfo(lms, other, store=store, clock=clock).photos([7452])
+    assert moved[7452].startswith(other + "/") and len(lms.commands) == 2
+
+    info = LmsArtistInfo(lms, other, store=store, clock=clock)
+    await info.photos([7452])
+    assert len(lms.commands) == 2
+    lms.lastscan = "1800000000"                      # a rescan
+    await info.photos([7452])
+    assert len(lms.commands) == 2, "looked at no oftener than SCOPE_CHECK_S"
+    clock.advance(SCOPE_CHECK_S)
+    await info.photos([7452])
+    assert len(lms.commands) == 3
+
+
+@pytest.mark.asyncio
+async def test_photos_stored_before_their_server_was_kept_are_asked_again_once():
+    lms = FakeLms(photos={7452: "imageproxy/mai/artist/7452/image.png"})
+    store = _store()
+    store.remember(LmsArtistInfo.NAMESPACE, 7452, "http://old-address:9000/imageproxy/x/image_200x200_o.jpg")
+    photos = await LmsArtistInfo(lms, BASE, store=store).photos([7452])
+    assert photos[7452].startswith(BASE + "/") and len(lms.commands) == 1
+    await LmsArtistInfo(lms, BASE, store=store).photos([7452])
+    assert len(lms.commands) == 1
+
+
+@pytest.mark.asyncio
+async def test_a_scan_under_way_or_a_server_that_gives_no_status_drops_nothing():
+    lms = FakeLms(photos={7452: "imageproxy/mai/artist/7452/image.png"})
+    store, clock = _store(), FakeClock()
+    await LmsArtistInfo(lms, BASE, store=store, clock=clock).photos([7452])
+    lms.status = lambda command: {"rescan": 1} if command[0] == "serverstatus" else None
+    await LmsArtistInfo(lms, BASE, store=store, clock=clock).photos([7452])
+
+    def no_status(command):
+        if command[0] == "serverstatus":
+            raise ConnectionResetError("restarting")
+    lms.status = no_status
+    await LmsArtistInfo(lms, BASE, store=store, clock=clock).photos([7452])
     assert len(lms.commands) == 1

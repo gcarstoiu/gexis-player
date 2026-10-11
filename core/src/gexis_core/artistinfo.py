@@ -101,6 +101,16 @@ SLOW_REMEMBERED_S = 86400.0
 #: it for one.
 SLOW_NAMESPACE = "artist-photo-slow"
 
+#: **Which server, and which of its scans, the stored photos belong to**
+#: (review, 2026-10-12). They are kept by LMS artist id, with the server's
+#: address in the URL, and nothing ever called `forget`: a full rescan
+#: renumbers every id (Finding 029 §4), another server - the player's own
+#: after a NAS's (ADR-0115), a restored backup - numbers its own, and a new
+#: address breaks every URL. So a change of either drops them.
+SCOPE_NAMESPACE = "artist-photo-scope"
+#: How often the server's last scan is looked at, at most.
+SCOPE_CHECK_S = 60.0
+
 #: A dropped connection means "no such command" only if it happens at once.
 #: Measured 2026-09-18: LMS refuses an unknown command in milliseconds, but
 #: an artist whose picture it must fetch from elsewhere holds the socket for
@@ -158,6 +168,10 @@ class LmsArtistInfo:
         self._slow_until: dict[int, float] = {}
         self._absent_until: float | None = None
         self._semaphore = asyncio.Semaphore(CONCURRENCY)
+        #: `{"server", "lastscan"}` the photos held belong to; read from the
+        #: store the first time.
+        self._scope: dict | None = None
+        self._scope_checked: float | None = None
 
     # --- the plugin --------------------------------------------------------
 
@@ -242,11 +256,63 @@ class LmsArtistInfo:
         base, _, _ = path.rpartition("/")
         return f"{self._base}/{base}/image_{size}x{size}_o.jpg"
 
+    # --- whose photos -------------------------------------------------------
+
+    async def _check_scope(self) -> None:
+        """Drop what is held if it was read from another server or before
+        the server's last scan (`SCOPE_NAMESPACE`)."""
+        now = self._clock()
+        if self._scope_checked is not None and now - self._scope_checked < SCOPE_CHECK_S:
+            return
+        self._scope_checked = now
+        try:
+            status = await self._rpc(["serverstatus", 0, 0], timeout=CALL_TIMEOUT_S) or {}
+        except Exception as exc:  # the server is not told apart then, only the address
+            logger.debug("artistinfo: no server status (%r)", exc)
+            status = {}
+        if status.get("rescan"):
+            return  # ids in flux: looked at again once the scan has settled
+        lastscan = status.get("lastscan")
+        lastscan = None if lastscan is None else str(lastscan)
+        held = self._scope if self._scope is not None else self._recall_scope()
+        stale = (held is None or held.get("server") != self._base
+                 or (lastscan is not None and held.get("lastscan") != lastscan))
+        if not stale:
+            self._scope = held
+            return
+        if held is not None:
+            logger.info("artistinfo: photos were from %s (scan %s), the server is %s (scan %s); "
+                        "asking again", held.get("server"), held.get("lastscan"), self._base, lastscan)
+        try:
+            self.forget()
+        except Exception as exc:
+            logger.info("artistinfo: could not drop the stored photos (%s)", exc)
+            return
+        self._scope = {"server": self._base, "lastscan": lastscan}
+        if self._store is not None:
+            try:
+                self._store.remember(SCOPE_NAMESPACE, "scope", self._scope)
+            except Exception as exc:
+                logger.info("artistinfo: could not store whose photos they are (%s)", exc)
+
+    def _recall_scope(self) -> dict | None:
+        if self._store is None:
+            return None
+        try:
+            held = self._store.recall(SCOPE_NAMESPACE, "scope")
+        except KeyError:
+            return None     # photos stored before this was kept: whose is unknown
+        except Exception as exc:
+            logger.info("artistinfo: could not read whose photos they are (%s)", exc)
+            return None
+        return held if isinstance(held, dict) else None
+
     # --- reads -------------------------------------------------------------
 
     async def photos(self, artist_ids, size: int = PHOTO_THUMB) -> dict[int, str | None]:
         """A photo URL per artist, or None where the plugin has none. Asked
         concurrently; already-known artists cost nothing."""
+        await self._check_scope()
         for artist_id in dict.fromkeys(artist_ids):
             if artist_id in self._photos or self._store is None:
                 continue
