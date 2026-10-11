@@ -1281,3 +1281,8 @@ class TestAChangeOfScaleStartsFromNoPosition:
         bridge.forget_position()
         await bridge.write_hardware(100)
         assert fake_set_raw == [("DAC", 100)]
+
+    def test_the_control_in_use_is_the_current_one(self):
+        bridge, _ = make_bridge()
+        bridge.set_mixer_name("PCM")
+        assert bridge.mixer_name == "PCM"

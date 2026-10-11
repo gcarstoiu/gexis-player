@@ -987,7 +987,11 @@ async def main() -> None:
             # full scale. Written directly: `write_hardware` now refuses
             # every write in this mode, including this one.
             logger.info("output: fixed - DAC to full scale, the panel can no longer lower it")
-            await set_raw(config.mixer_name, hardware_max())
+            # **The control in use now**, not the one the daemon started
+            # with (code review, 2026-10-12): after a change of output, or
+            # from a start in Software, that was another card's control or
+            # the software stage, and Fixed played at the old attenuation.
+            await set_raw(volume_bridge.mixer_name, hardware_max())
         else:
             logger.info("output: variable - the device attenuates again")
             if remote.level() is None and state_store.state.volume is None:
@@ -1089,7 +1093,12 @@ async def main() -> None:
             if raw is not None:
                 # Through `publish_volume`, which keeps the mute it shows.
                 publish_volume(raw)
-        elif not fixed_now["value"] and state_store.state.volume is not None:
+        elif fixed_now["value"]:
+            # Fixed carries to the new card as full scale: `_apply_output_mode`
+            # writes it only on a change of mode, and the new card's control
+            # was left at whatever it held (code review, 2026-10-12).
+            await set_raw(volume_bridge.mixer_name, hardware_max())
+        elif state_store.state.volume is not None:
             # **The level shown is the level the new card plays at** (code
             # review, 2026-10-12): its control was left at whatever it held -
             # the jack's own 0 dB, say - under a panel showing another level.

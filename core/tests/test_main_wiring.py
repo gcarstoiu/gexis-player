@@ -64,9 +64,19 @@ def test_a_change_of_output_carries_every_kept_level_to_the_new_scale():
 
 def test_a_change_of_output_puts_the_level_shown_on_the_new_card():
     """In Hardware the new card was left at whatever its control held, under a
-    panel showing another level."""
+    panel showing another level; in Fixed it was never taken to full scale."""
     switch = _closure("_switch_output")
     tail = switch[switch.index("forget_mixers()"):]
+    assert "set_raw(volume_bridge.mixer_name, hardware_max())" in tail
     assert "volume_bridge.write_hardware(state_store.state.volume.raw)" in tail
     assert tail.index("write_hardware(") < tail.index("'restart'")
+
+
+def test_fixed_writes_full_scale_to_the_control_in_use():
+    """`config.mixer_name` is the control the daemon started with - the
+    software stage after a start in Software, the old card's after a change of
+    output - so Fixed wrote full scale to a control no longer in the chain."""
+    apply = _closure("_apply_output_mode")
+    assert "config.mixer_name" not in apply
+    assert "set_raw(volume_bridge.mixer_name, hardware_max())" in apply
 

@@ -952,6 +952,12 @@ class VolumeBridge:
         logger.info("volume: moving the mixer monitor to %s", alsa.card())
         proc.terminate()
 
+    @property
+    def mixer_name(self) -> str:
+        """The control written now - the chosen output's, not the one the
+        daemon started with."""
+        return self._mixer_name
+
     def forget_position(self) -> None:
         """**After a change of scale** (code review, 2026-10-12): the last value
         written is a raw on the old scale, and a ramp from it on the new one
