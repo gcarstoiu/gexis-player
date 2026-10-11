@@ -246,6 +246,34 @@ async def test_interfaces_added_media_transport_only_acquires_no_metadata():
     assert received == []
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("transport", [
+    "/org/bluez/hci0/dev_XX/fd2",
+    # BlueZ nests a transport under the remote endpoint whenever it knows
+    # that endpoint (code review, 2026-10-12).
+    "/org/bluez/hci0/dev_XX/sep1/fd1",
+])
+async def test_a_transport_after_the_player_still_names_the_device(transport):
+    """A transport that appears after MediaPlayer1 - the stream reopened
+    after a call, a codec renegotiated - used to have one segment stripped,
+    which for `dev_XX/sep1/fd1` is `dev_XX/sep1`. That is not a Device1:
+    the phone leaving then never relinquished, and a takeover could not
+    disconnect it."""
+    adapter = BluetoothAdapter()
+    adapter._handle_interfaces_added("/org/bluez/hci0/dev_XX/player0", {MEDIA_PLAYER_IFACE: {}},
+                                     lambda: None)
+    await asyncio.sleep(0)
+    adapter._handle_interfaces_added(transport, {MEDIA_TRANSPORT_IFACE: {}}, lambda: None)
+
+    assert adapter._connected_device_path == "/org/bluez/hci0/dev_XX"
+
+    released = []
+    adapter._handle_interfaces_removed(
+        "/org/bluez/hci0/dev_XX/player0", {MEDIA_PLAYER_IFACE: {}}, lambda: released.append(None)
+    )
+    assert released == [None]
+
+
 def test_interfaces_removed_relinquishes_and_blanks_metadata():
     """Regression test: George found this live, 2026-09-12 - disconnecting
     Spotify/Bluetooth left `active` pointed at the disconnected renderer
