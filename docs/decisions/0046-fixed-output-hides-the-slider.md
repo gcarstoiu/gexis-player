@@ -184,3 +184,14 @@ attenuates Bluetooth (the A2DP stream reaches the card at full scale,
 sends none at the bottom of its slider. **Not tested** - the player's side
 was not read with a phone at 0. Snapping the phone's slider back to full was
 proposed and declined.
+
+## Amended 2026-10-11 (again): leaving Fixed
+
+George: Spotify *"starting at 100 when coming from fixed to hardware"*. In
+Fixed the DAC is at full scale and no level is published; the change of
+type stops playback, so on leaving Fixed nothing was playing to take a level
+from, the DAC stayed at full scale, and Spotify taking the device had no
+level to start under. **Leaving Fixed, the DAC comes back to the level it
+had before Fixed was chosen**, or, on a player started in Fixed, to the
+*Starting volume*; that level is published, so the next source starts under
+it as after any other change.

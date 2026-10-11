@@ -39,3 +39,13 @@ switch, per phone, which no player can set.) A Plex forum request for a
 - A gexis-plexamp release (0.4.5), and its pin moved here.
 - The slider jumps back in the app: the one visible difference from the
   other sources, whose sliders stay where they were left.
+
+## Amended 2026-10-11: within 0.2 s (plugin 0.4.6)
+
+George: *"Can we make it faster than 1 second?"* Measured on sofapi with the
+plugin's own `Plexamp` class, nothing playing, the level moved to 99 five
+times: through the long poll alone it went back after **0.15 to 0.96 s** -
+the poll does not always wake for a volume change and then runs out its
+second. Asked every 0.2 s as well, while Fixed only: **0.06 to 0.20 s**.
+Five local requests a second to Plexamp, only while the output is Fixed.
+Not measured: how soon the app's own slider shows it.
