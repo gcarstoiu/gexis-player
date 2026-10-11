@@ -116,8 +116,18 @@
   // 2026-09-23). It is pinned only while a finger is actually on it.
   const AUTO_HIDE_MS = $derived(($settingValues.drawer_autohide ?? 3) * 1000);
   let autoHide = null;
+  //: **A drawer that opened by itself takes no touch at first** (code
+  //: review, 2026-10-12). A change from a phone opens it over whatever is on
+  //: the panel, taking touches while it is still fading in: a tap meant for
+  //: an album card under the slider set the level at that point, near 100%
+  //: from the right of the card. Until this long after such an opening the
+  //: level and mute take nothing; someone who meant the slider has not yet
+  //: seen it.
+  const VOLUME_ARM_MS = 400;
+  let volumeArmsAt = $state(0);
   function openFromExternal() {
     if ($settingValues.drawer_on_external === false) return;
+    if (!volumeOpen) volumeArmsAt = performance.now() + VOLUME_ARM_MS;
     volumeOpen = true;
     armAutoHide();
   }
@@ -399,6 +409,7 @@
 
   const openVolume = () => {
     armAutoHide();
+    volumeArmsAt = 0;
     volumeOpen = true;
   };
 
@@ -714,6 +725,7 @@
          show. -->
     <BarTray
       open={volumeOpen}
+      armsAt={volumeArmsAt}
       volume={$volume}
       active={$active}
       onclose={closeVolume}
@@ -727,6 +739,7 @@
   {:else if $volume || $fixedOutput}
     <VolumeDrawer
       open={volumeOpen}
+      armsAt={volumeArmsAt}
       volume={$volume}
       active={$active}
       onclose={closeVolume}
