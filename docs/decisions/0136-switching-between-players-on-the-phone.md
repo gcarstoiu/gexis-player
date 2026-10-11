@@ -34,3 +34,9 @@ over mDNS (avahi), and avahi already advertises each player's share
 - A player that is off, or on another network, is simply not listed.
 - Players older than this release announce nothing and are not listed until
   updated.
+
+## Built (2026-10-11, on `phase-13d`)
+
+As decided. Tried on sofapi and the bar player, both on the preview: each
+lists the other with its status (*Stopped · Lyrion*), and the phone's list
+opens from the header line.

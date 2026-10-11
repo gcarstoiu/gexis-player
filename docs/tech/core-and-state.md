@@ -184,7 +184,7 @@ routes are loopback-only or behave differently by origin: `/surface`,
 | Surface | `GET /surface` → `panel` or `remote` | Both, at start (ADR-0032) |
 | Touchpad relay | `GET /touchpad` (WebSocket) | Phone ↔ panel (ADR-0121) |
 | Playback | `POST /renderer/{id}/activate`, `POST /transport/{command}`, `POST /volume`, `POST /volume/mute` | Both |
-| Panel view | `POST /touch`, `POST /panel/painted`, `POST /panel/shown`, `POST /panel/idle/{show,hide}`, `POST /panel/standby/{on,off}` (ADR-0135), `POST /panel/go/{to}`, `POST /peppy/{action}` | Panel reports; phone asks |
+| Panel view | `POST /touch`, `POST /panel/painted`, `POST /panel/shown`, `POST /panel/idle/{show,hide}`, `POST /panel/standby/{on,off}` (ADR-0135), `GET /player/status` and `GET /players` (ADR-0136), `POST /panel/go/{to}`, `POST /peppy/{action}` | Panel reports; phone asks |
 | Idle screen | `GET /idle`, `/idle/weather`, `/idle/wallpaper`, `/idle/wallpaper/{name}`, `/idle/wallpaper/local/{path}` | Panel (ADR-0047) |
 | Library | `GET /library/{counts,strip,new,artists,playlists}`, `/library/artists/{id}/{albums,genres}`, `/library/albums/{id}`, `/library/playlists/{id}`, `/library/artist-photos`, `/library/artist-info`; `POST /library/action` | Panel (ADR-0038) |
 | Radio | `GET /radio?handle=…`, `POST /radio/play` | Panel (ADR-0030) |
@@ -502,3 +502,15 @@ plays and `last_use` is older than `standby_wake` minutes; outside them, a
 screen the schedule put off wakes. Measured on the 10.1": touch still reaches
 the page with the output off; the screen shows its own "No signal" for about
 10 s some 30 s in.
+
+## Other players on the network (ADR-0136)
+
+Each player announces `_gexis._tcp` on port 8090
+(`/etc/avahi/services/gexis-player.service`, from `gexis-system`, beside the
+share's). `players.py`: `Players.others()` runs `avahi-browse -rpt
+_gexis._tcp`, keeps one resolved IPv4 entry per host (`parse_browse`, this
+player left out), asks each `GET /player/status` (2 s) and keeps the answer
+30 s. `/player/status` is `{name, host, transport, renderer}` - the renderer
+named as the source list names it; `/players` is `{self, others}`, each other
+with the `url` of its page by name. `PlayerSwitcher.svelte` draws it on the
+phone only.
