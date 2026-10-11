@@ -527,6 +527,21 @@ RAMP_MAX_S = 0.12
 RAMP_MIN_STEPS = 3
 
 
+def level_after_fixed(before_raw: int | None, start_max: float | None) -> int | None:
+    """**The DAC's level on leaving Fixed** (George, 2026-10-11: Spotify
+    started at 100 coming from Fixed to Hardware). In Fixed the DAC sits at
+    full scale and no level is published; nothing playing afterwards meant
+    nothing to put it back from, so it stayed at full scale and a source
+    taking the device had no level to start under. It goes back to the level
+    it had before Fixed, or - when there was none, as on a player started in
+    Fixed - to the *Starting volume*. None: neither is known."""
+    if before_raw is not None:
+        return before_raw
+    if start_max is not None:
+        return renderer_value_to_hardware_raw(renderer_percent_to_value(start_max, 100), 100)
+    return None
+
+
 def slider_percent_to_raw(percent: float) -> int:
     """The panel's own slider, for when there is no renderer to be a remote
     for. **The same curve as everything else since ADR-0054 §4**: it used

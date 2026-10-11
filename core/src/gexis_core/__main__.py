@@ -106,6 +106,7 @@ from gexis_core.volume import (
     Mute,
     renderer_value_to_hardware_raw,
     renderer_percent_to_value,
+    level_after_fixed,
     hardware_raw_to_renderer_value,
     fixed_output as volume_fixed_output,
     hardware_max,
@@ -925,6 +926,9 @@ async def main() -> None:
     # change before it exists reaches each plugin as it connects instead.
     plugin_server = None
 
+    #: The level before Fixed, to come back to (`level_after_fixed`).
+    before_fixed: dict[str, int | None] = {"raw": None}
+
     async def _apply_output_mode(force: bool = False) -> None:
         """Put the chosen mode into force, if now is a legal moment.
 
@@ -946,6 +950,11 @@ async def main() -> None:
             )
             return
         fixed_now["value"] = wanted
+        if wanted:
+            # Kept to come back to (`level_after_fixed`): set_fixed_output
+            # clears the published level.
+            volume = state_store.state.volume
+            before_fixed["raw"] = mute.audible_raw(volume.raw if volume is not None else None)
         state_store.set_fixed_output(wanted)
         if plugin_server is not None:
             plugin_server.tell_output(wanted)
@@ -957,6 +966,12 @@ async def main() -> None:
             await set_raw(config.mixer_name, hardware_max())
         else:
             logger.info("output: variable - the device attenuates again")
+            if remote.level() is None and state_store.state.volume is None:
+                raw = level_after_fixed(before_fixed["raw"], _number("start_max"))
+                if raw is not None:
+                    logger.info("output: the DAC comes down from full scale to %s of %s", raw, hardware_max())
+                    await volume_bridge.write_hardware(raw)
+                    return
             _reapply_level()
 
     def _restrict_output_mode(output) -> None:
