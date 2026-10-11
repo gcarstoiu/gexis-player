@@ -336,6 +336,9 @@ reverted, currently-flashed image predates this fix.
                                             library's hour measured 2026-10-10 on
                                             the bar and sofapi: nothing (Finding
                                             118). Closes on George's look.
+13g the player in Home Assistant          added 2026-10-11 (George): the player as a
+                                            media player in the owner's Home Assistant;
+                                            ADR first. Before themes
 14 themes                                 cut out of 10. ADR-0016 calls themes
                                             plugins and plugins processes; a
                                             theme has no process - settle that

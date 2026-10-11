@@ -2946,6 +2946,34 @@ It must settle:
   menus; and what a streaming plugin adds - **measured on a server with one
   installed** first.
 
+### Phase 13g — The player in Home Assistant
+
+**Added 2026-10-11** (George: *"Let's add the home assistant with the player
+as a plugin as a separate phase before themes"*, after choosing the player
+inside an existing Home Assistant over hosting Home Assistant on the player).
+The player appears in the owner's own Home Assistant as a media player: what
+plays, its artwork, volume, play and pause, next and previous, the source,
+and the screen's standby (ADR-0135).
+
+**An ADR before anything is built.** It must settle:
+- **How Home Assistant reaches it**: an integration of our own, published for
+  Home Assistant to install, reading the player's existing API and its
+  `/state` socket; or MQTT, with Home Assistant's discovery - which needs a
+  broker the owner runs.
+- **How it is found**: the `_gexis._tcp` announcement (ADR-0136) lets Home
+  Assistant discover players with no address typed.
+- **What it may change**, given the API is open to the LAN by decision
+  (ADR-0028).
+
+**Acceptance (draft):**
+
+1. A player on the network appears in Home Assistant without an address
+   typed.
+2. Home Assistant shows what plays, with artwork, within two seconds of a
+   change, and controls play, pause, next, previous and volume.
+3. Nothing it does disturbs playback, measured as Phase 13e measured the
+   Lyrion Server.
+
 ### Phase 14 — Themes
 
 **Cut out of Phase 10 on 2026-09-25** (George): *"Themes to be cut out and have
