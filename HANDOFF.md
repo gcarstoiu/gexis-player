@@ -343,6 +343,8 @@ reverted, currently-flashed image predates this fix.
                                             plugins and plugins processes; a
                                             theme has no process - settle that
                                             first
+14a a sound bar on optical (USB adapter)   added 2026-10-11 (George): a maximum sample
+                                            rate per output; ADR first. After themes
 15 the library answers for itself         moved here 2026-09-26 (George): "the
                                             entire discussion and in between
                                             phase for enrichment via Plex server
