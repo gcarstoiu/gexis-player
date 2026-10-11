@@ -155,6 +155,7 @@ the question blocking it was answered.
 | [0134](0134-the-panel-says-when-the-player-has-no-network.md) | A network lost after boot opens the setup network | **Accepted** 2026-10-11 (George) - after boot the core keeps watching; two minutes without a network opens the setup network and its screen, as at boot, with the same five-minute rejoin; the proposed strip withdrawn |
 | [0135](0135-display-standby.md) | Display standby: the screen off on demand and at night | **Accepted** 2026-10-11 (George) - the HDMI output off, the player still playing; on demand (Display standby, the phone's mini player) and on the owner's own standby times, as many intervals as wanted; touch, music and the phone wake it; woken at night it goes back after 2 min unused (1-30); amends ADR-0019. Four rows, one a new list of intervals with days of the week; output off measured on the 10.1" |
 | [0136](0136-switching-between-players-on-the-phone.md) | Switching between players on the phone | **Accepted** 2026-10-11 (George) - each player announces `_gexis._tcp`; the core finds the others and their status; the phone's header line opens a list of players with status and renderer, and moves the same tab to the one chosen |
+| [0137](0137-plugins-are-told-when-output-is-fixed.md) | Plugins are told when the output is Fixed | **Accepted** 2026-10-11 (George) - a new `output` message within contract 1; Plexamp's plugin keeps Plexamp at 100 in Fixed, its app's slider snapping back. Plexamp has no setting to hide it |
 
 ## Cross-cutting rules
 

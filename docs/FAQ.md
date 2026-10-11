@@ -52,6 +52,11 @@ place. Turn the amplifier down before switching to Fixed: in Fixed,
 *Maximum volume* and Spotify's *Starting volume* no longer apply (both rows
 are hidden), and every source plays at full level.
 
+**With Fixed, Bluetooth goes silent when the phone's slider is at 0.**
+That is the phone: with the slider at the bottom it sends silence. Anywhere
+above 0, Bluetooth plays at full level in Fixed, as every source does; set
+the loudness on the amplifier.
+
 **What happens when I change the volume type while music plays?**
 Playback stops and the sources reconnect on the new type at once - Hardware,
 Software or Fixed alike - so the level never jumps to full in the middle of a

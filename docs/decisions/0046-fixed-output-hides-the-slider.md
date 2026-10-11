@@ -174,3 +174,13 @@ and Spotify, back after a change, played at the 100 it had held, not its
   plays while the type changes.
 - **Nobody holds the device afterwards**, so the source that returns is a
   takeover and its *Starting volume* applies (ADR-0054 §5).
+
+**Bluetooth at 0 in Fixed is left as it is** (George, 2026-10-11: *"keep it
+as is and record it. No point in messing with the phone's bar"*). With
+Fixed, every source plays at full level whatever its own slider shows - but
+a phone's Bluetooth slider at 0 silences playback. The player never
+attenuates Bluetooth (the A2DP stream reaches the card at full scale,
+`bluealsa_volume.py`), so the silence is most likely the phone's: Android
+sends none at the bottom of its slider. **Not tested** - the player's side
+was not read with a phone at 0. Snapping the phone's slider back to full was
+proposed and declined.

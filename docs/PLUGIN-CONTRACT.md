@@ -206,6 +206,7 @@ Taken from `Adapter` and `Capabilities` as they are. The prose for each is in
 {"t": "transport", "id": 12, "command": "pause", "argument": null}
 {"t": "set_volume", "id": 13, "value": 62, "steps": 100}
 {"t": "setting", "id": 14, "key": "hub", "value": "http://beszel.local:8090"}
+{"t": "output", "id": 15, "fixed": true}
 ```
 
 Each carries an `id`; the plugin answers exactly once:
@@ -225,6 +226,14 @@ Each carries an `id`; the plugin answers exactly once:
 - **`device_freed`** and **`restart_after_release`** are the two hooks that
   exist because of measured races, not design (Findings 013 §1 and 014).
   Default: do nothing, answer `true`.
+- **`output`** (**added 2026-10-11, within version 1**, ADR-0137) says
+  whether the output is *Fixed* - every source at full level, the amplifier
+  setting the volume. Sent once the plugin is connected and whenever Fixed is
+  put in force or taken out. A renderer with a volume of its own that the
+  core does not manage should hold it at full level while `fixed` is true;
+  Plexamp's plugin does, and puts its level back whenever its app moves it.
+  A plugin with nothing to do answers `true`; one that does not know the
+  message answers `error`, and the core takes no notice.
 - **`setting`** is one of the plugin's own rows being changed, under the key
   the plugin declared. **The core stores the value whether or not the plugin
   is connected**, so one that is down misses nothing: it is handed every
