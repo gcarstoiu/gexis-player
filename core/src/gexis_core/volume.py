@@ -1108,7 +1108,20 @@ class VolumeBridge:
         not every card: LMS's dummy card is watched by its own
         `DummyMixerBridge`, and an unscoped monitor would process its
         changes here as well.
+
+        **A loop, not a recursion** (code review, 2026-10-12): the restart
+        used to be `return await self.run()`, one more frame each time, and
+        on a card that cannot be monitored - a USB DAC unplugged - alsactl
+        exits at once, so after ~80 minutes of restarts every 5 s the
+        RecursionError ended the daemon.
         """
+        while True:
+            await self._monitor_once()
+            logger.warning("volume: alsactl monitor exited, restarting in 5s")
+            await asyncio.sleep(5)
+
+    async def _monitor_once(self) -> None:
+        """One `alsactl monitor`, read until it exits."""
         proc = await asyncio.create_subprocess_exec(
             "alsactl",
             "monitor",
@@ -1124,9 +1137,7 @@ class VolumeBridge:
         while True:
             line = await proc.stdout.readline()
             if not line:
-                logger.warning("volume: alsactl monitor exited, restarting in 5s")
-                await asyncio.sleep(5)
-                return await self.run()
+                return
             raw = await get_raw(self._mixer_name)
             if raw is None or raw == last_raw:
                 # `raw == last_raw` also absorbs the extra monitor lines a
@@ -1359,6 +1370,16 @@ class DummyMixerBridge:
         await self._mirror(raw)
 
     async def run(self) -> None:
+        """A loop rather than a recursion, as `VolumeBridge.run`: a dummy card
+        that failed to load would otherwise end the daemon in ~80 minutes."""
+        while True:
+            await self._monitor_once()
+            logger.warning(
+                "volume: alsactl monitor(%s) exited, restarting in 5s", self._dummy_card
+            )
+            await asyncio.sleep(5)
+
+    async def _monitor_once(self) -> None:
         proc = await asyncio.create_subprocess_exec(
             "alsactl",
             "monitor",
@@ -1369,11 +1390,7 @@ class DummyMixerBridge:
         while True:
             line = await proc.stdout.readline()
             if not line:
-                logger.warning(
-                    "volume: alsactl monitor(%s) exited, restarting in 5s", self._dummy_card
-                )
-                await asyncio.sleep(5)
-                return await self.run()
+                return
             await self._on_dummy_change(
                 await get_raw(self._dummy_control, device=f"hw:{self._dummy_card}")
             )

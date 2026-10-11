@@ -1194,3 +1194,55 @@ class TestTheBackstopCapsAtTheCeiling:
         bridge, _ = make_bridge()
         await bridge.write_hardware(volume_module.hardware_max())
         assert fake_set_raw[-1] == ("DAC", volume_module.hardware_max())
+
+
+class TestAMonitorThatKeepsExitingDoesNotRecurse:
+    """**Code review, 2026-10-12.** Both bridges restarted `alsactl monitor`
+    with `return await self.run()`. On a card that cannot be monitored it
+    exits at once, so every 5 s added a frame, and after ~1000 of them -
+    about 80 minutes with a USB DAC unplugged - RecursionError ended main()."""
+
+    class _Done(Exception):
+        pass
+
+    def _exiting_monitor(self, monkeypatch, restarts):
+        spawned = []
+
+        class Stdout:
+            async def readline(self):
+                return b""
+
+        class Proc:
+            stdout = Stdout()
+            returncode = 0
+
+        async def fake_exec(*args, **kwargs):
+            spawned.append(args)
+            if len(spawned) > restarts:
+                raise self._Done
+            return Proc()
+
+        async def no_wait(_seconds):
+            pass
+
+        monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
+        monkeypatch.setattr(volume_module.asyncio, "sleep", no_wait)
+        return spawned
+
+    @pytest.mark.asyncio
+    async def test_the_output_s_monitor(self, monkeypatch):
+        spawned = self._exiting_monitor(monkeypatch, 2000)
+        bridge, _ = make_bridge()
+        with pytest.raises(self._Done):
+            await bridge.run()
+        assert len(spawned) == 2001
+
+    @pytest.mark.asyncio
+    async def test_a_dummy_card_s_monitor(self, monkeypatch):
+        spawned = self._exiting_monitor(monkeypatch, 2000)
+        bridge = volume_module.DummyMixerBridge(
+            "lms", "gexislmsvol", "Master", "DAC", get_active_renderer=lambda: None
+        )
+        with pytest.raises(self._Done):
+            await bridge.run()
+        assert len(spawned) == 2001
