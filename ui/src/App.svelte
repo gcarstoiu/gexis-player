@@ -417,10 +417,16 @@
   //: is on (ADR-0104). Held once shown: finishing takes the network down
   //: under the page, and it must keep its last screen - where to go next -
   //: rather than swap to Settings as the state changes behind it.
+  //:
+  //: **"joining" keeps it but never opens it** (2026-10-11, the outage test on
+  //: sofapi): a page that reconnected the moment the player was rejoining its
+  //: own Wi-Fi - after the setup network of ADR-0134 - switched to setup and
+  //: held it, on a player with no setup running. A phone doing setup always
+  //: saw "open" first.
   let setupPageHeld = $state(false);
   const setupPage = $derived(
     setupPageHeld ||
-      (!!$setup && (['open', 'failed', 'joining'].includes($setup.network) || $setup.needed))
+      (!!$setup && (['open', 'failed'].includes($setup.network) || $setup.needed))
   );
   $effect(() => {
     if (setupPage && surface === 'remote') untrack(() => (setupPageHeld = true));
