@@ -2038,6 +2038,8 @@ async def main() -> None:
                "wallpaper_seasons": None, "wallpaper_holidays": None,
                "waiting_clock": None, "waiting_hint": None,
                "idle_icons": None,
+               # Finding 118: read by the idle screen as it draws the icons.
+               "idle_icon_motion": None,
                "viz_timeout": None, "viz_stop": None,
                # ADR-0022's handoff rows, wired 2026-09-25. Read where they
                # are used - the adapter at a takeover, the panel for the

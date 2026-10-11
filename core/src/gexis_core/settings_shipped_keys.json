@@ -31,6 +31,7 @@
  "idle_clock",
  "idle_close",
  "idle_forecast",
+ "idle_icon_motion",
  "idle_icons",
  "idle_screen",
  "idle_timeout",

@@ -177,6 +177,9 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         # predates - styles, time of day, seasons, holidays.
         "wallpaper_styles", "wallpaper_time_of_day", "wallpaper_seasons", "wallpaper_holidays",
         "waiting_clock", "waiting_hint",
+        # Finding 118: the weather icons' animations hold half a core; the
+        # owner chooses (George, 2026-10-11).
+        "idle_icon_motion",
         # ADR-0058, 2026-09-23: George asked for the three numbers that decide
         # how the visualisation *moves*. The design has no rows for them
         # because until this week nobody knew which knobs there were.
@@ -623,7 +626,7 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # **98**: Cable (ADR-0123, 2026-10-08). **102**: the player's own
     # wallpapers' four rows (ADR-0133, 2026-10-10). **104**: the waiting
     # screen's clock and hint (ADR-0133).
-    assert len(rows) == 104
+    assert len(rows) == 105
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
@@ -643,7 +646,7 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # 82 with Report this hardware (ADR-0126).
     # **81**: Software volume merged into Volume (ADR-0127). **80**: Pexels
     # removed.
-    assert len(rows) - len(kept) == 87  # 87: Version hidden, it repeated Release; 88: the waiting screen's two rows (ADR-0133); 86: the own wallpapers (ADR-0133); 82: the factory reset (ADR-0132); 81: Cable (ADR-0123)
+    assert len(rows) - len(kept) == 88  # 88: Weather icon motion (Finding 118); 87: Version hidden, it repeated Release; 88: the waiting screen's two rows (ADR-0133); 86: the own wallpapers (ADR-0133); 82: the factory reset (ADR-0132); 81: Cable (ADR-0123)
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():
@@ -1564,3 +1567,16 @@ def test_a_row_can_follow_the_hardware(store):
     assert next(r for g in broken.to_json() for r in g["rows"] if r.get("key") == "cable")["visible"] is False
     with pytest.raises(ValueError):
         Settings(store, shown={"nothing": lambda: True})
+
+
+def test_weather_icon_motion_hangs_off_the_weather_and_is_wired():
+    """Finding 118: *Weather icon motion* - Animated (the design's, kept as
+    the default) or Static - shows only with the weather on, and is a row
+    the idle screen reads, so it takes writes."""
+    rows = {r["key"]: r for r in _rows()}
+    row = rows["idle_icon_motion"]
+    assert row["options"] == ["Animated", "Static"] and row["default"] == "Animated"
+    assert row["onlyWhen"] == ["idle_weather", True]
+    assert row["note"] and len(row["note"]) < 160
+    main = (Path(__file__).parents[1] / "src" / "gexis_core" / "__main__.py").read_text()
+    assert '"idle_icon_motion": None' in main

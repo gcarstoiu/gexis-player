@@ -863,6 +863,22 @@
         ]
       },
       {
+        "key": "idle_icon_motion",
+        "type": "choice",
+        "label": "Weather icon motion",
+        "marks": "N",
+        "note": "Animated icons use about half of one of the Pi's four processor cores while the idle screen is up. Static uses almost none.",
+        "options": [
+          "Animated",
+          "Static"
+        ],
+        "default": "Animated",
+        "onlyWhen": [
+          "idle_weather",
+          true
+        ]
+      },
+      {
         "type": "group",
         "label": "Visualiser",
         "accent": "#c8a2d8",
