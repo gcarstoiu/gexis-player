@@ -787,9 +787,9 @@ def test_the_wallpaper_topics_row_offers_pixabays_own_categories():
     }
     row = next(r for r in _rows() if r["key"] == "wallpaper_topics")
     assert row["type"] == "multi"
-    # ADR-0133 amended 2026-10-11: Calm, a search, joins them.
-    assert row["options"][0] == "Calm"
-    assert {o.lower() for o in row["options"][1:]} == pixabay
+    # ADR-0133 amended 2026-10-11: Space and Calm, searches, join them.
+    assert row["options"][:2] == ["Space", "Calm"]
+    assert {o.lower() for o in row["options"][2:]} == pixabay
     # A default that is empty would be a row the validator itself refuses.
     assert row["default"] == ["Nature"]
 
@@ -1666,15 +1666,16 @@ def test_an_in_condition_must_name_a_list():
 
 
 def test_a_stored_option_the_row_no_longer_offers_falls_away(store):
-    """2026-10-11: sofapi had stored Wallpaper topics ["Space"] before Space
-    left the row; the topics fell back to the default rather than staying
-    empty and refusing every write that carried Space."""
+    """2026-10-11: sofapi had stored Wallpaper topics ["Space"] while Space
+    was out of the row; the topics fell back to the default rather than
+    staying empty and refusing every write that carried it. Season, which
+    left for good, stands in for it here."""
     settings = Settings(store, registry=load_registry(), wired={"wallpaper_topics": None,
                                                                "idle_icon_motion": None})
     default = next(r for r in _rows() if r["key"] == "wallpaper_topics")["default"]
-    store.set("wallpaper_topics", ["Space"])
+    store.set("wallpaper_topics", ["Season"])
     assert settings.value("wallpaper_topics") == default
-    store.set("wallpaper_topics", ["Space", "Nature"])
+    store.set("wallpaper_topics", ["Season", "Nature"])
     assert settings.value("wallpaper_topics") == ["Nature"]
     settings.set("wallpaper_topics", ["Nature", "Calm"])          # a write from that list lands
     store.set("idle_icon_motion", "Wobbly")

@@ -64,8 +64,9 @@
   const meridiem = $derived(twelve ? (now.getHours() < 12 ? 'am' : 'pm') : '');
   const date = $derived(`${DAYS[now.getDay()]} ${now.getDate()} ${MONTHS[now.getMonth()]}`);
 
-  // The picture's credit, as the idle screen draws it: Pixabay, NASA's and
-  // ESA's licences all ask that people be shown where a picture comes from.
+  // The picture's credit, as the idle screen draws it: Pixabay's terms ask
+  // that people be shown where a picture comes from, and the player's own
+  // carry their authors.
   const credit = $derived(
     shown && picture?.credit
       ? `${picture.by ? `Photo by ${picture.by} · ` : ''}${picture.credit}`

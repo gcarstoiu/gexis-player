@@ -1,7 +1,6 @@
 #!/bin/sh
 # ADR-0133: gexis-wallpapers - the player's own pictures (wallpapers/), for
-# the Gexis wallpapers background and Space pictures' built-in set, with
-# credits.json beside them: the screens draw each picture's credit from it.
+# the Gexis wallpapers background, with credits.json beside them: the screens draw each picture's credit from it.
 # Runs inside gexis-deb-builder with the repository at /src.
 #
 # Its version is the last commit that changed wallpapers/ or this folder
@@ -45,8 +44,8 @@ Maintainer: Gexis Player <noreply@github.com>
 Section: sound
 Priority: optional
 Description: Gexis Player's own wallpapers
- Public-domain and CC0 photographs for the Gexis wallpapers background, and
- a built-in set of space pictures, with each picture's credit (ADR-0133).
+ Public-domain and CC0 photographs for the Gexis wallpapers background,
+ with each picture's credit (ADR-0133).
 CTL
 mkdir -p /out
 dpkg-deb --root-owner-group -Zxz --build "$STAGE" "/out/gexis-wallpapers_${VERSION}_all.deb" >/dev/null

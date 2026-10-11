@@ -638,7 +638,6 @@
         "note": null,
         "options": [
           "Gexis wallpapers",
-          "Space pictures",
           "Wallpapers online",
           "Wallpapers on device",
           "Black"
@@ -650,7 +649,6 @@
         ],
         "optionNotes": {
           "Gexis wallpapers": "The player's own photographs, built in.",
-          "Space pictures": "From NASA and ESA, downloaded daily.",
           "Wallpapers online": "Photos from Pixabay; needs its key.",
           "Wallpapers on device": "From the player's Pictures share.",
           "Black": "No picture."
@@ -661,8 +659,9 @@
         "type": "multi",
         "label": "Wallpaper topics",
         "marks": "N",
-        "note": "Calm is a search; the rest are Pixabay's own categories. Each new picture comes from one of the chosen ones at random.",
+        "note": "Space and Calm are searches; the rest are Pixabay's own categories. Each new picture comes from one of the chosen ones at random.",
         "options": [
+          "Space",
           "Calm",
           "Backgrounds",
           "Fashion",
@@ -865,7 +864,6 @@
         "note": null,
         "options": [
           "Gexis wallpapers",
-          "Space pictures",
           "Artist pictures",
           "Wallpapers online",
           "Wallpapers on device",
@@ -878,7 +876,6 @@
         ],
         "optionNotes": {
           "Gexis wallpapers": "The player's own photographs, built in.",
-          "Space pictures": "From NASA and ESA, downloaded daily.",
           "Artist pictures": "From the library; the player's own while the Lyrion client is off.",
           "Wallpapers online": "Photos from Pixabay; needs its key.",
           "Wallpapers on device": "From the player's Pictures share.",
@@ -890,8 +887,9 @@
         "type": "multi",
         "label": "Wallpaper topics",
         "marks": "N",
-        "note": "Calm is a search; the rest are Pixabay's own categories. Each new picture comes from one of the chosen ones at random.",
+        "note": "Space and Calm are searches; the rest are Pixabay's own categories. Each new picture comes from one of the chosen ones at random.",
         "options": [
+          "Space",
           "Calm",
           "Backgrounds",
           "Fashion",
