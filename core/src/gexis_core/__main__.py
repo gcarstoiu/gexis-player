@@ -1148,6 +1148,15 @@ async def main() -> None:
         as a change of output is."""
         volume = state_store.state.volume
         db = volume.db if volume is not None else None
+        if on and db is None and fixed_now["value"]:
+            # **From Fixed, the level to come back to** - the one before
+            # Fixed, or the Starting volume (`level_after_fixed`), as leaving
+            # Fixed for Hardware gives. Nothing is published in Fixed, and with
+            # no software level stored `_start_software_volume` read the card,
+            # which Fixed holds at full scale: the software stage came up at
+            # 0 dB (code review, 2026-10-12).
+            raw = level_after_fixed(before_fixed["raw"], _number("start_max"))
+            db = raw_to_db(raw) if raw is not None else SOFTWARE_LEVEL_FIRST_DB
         # The card as it is now - not as it was at start-up: the output may
         # have changed since.
         base = outputs.resolve(settings.value("output_device"))

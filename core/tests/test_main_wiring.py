@@ -80,3 +80,10 @@ def test_fixed_writes_full_scale_to_the_control_in_use():
     assert "config.mixer_name" not in apply
     assert "set_raw(volume_bridge.mixer_name, hardware_max())" in apply
 
+
+def test_from_fixed_to_software_starts_at_the_level_to_come_back_to():
+    """With nothing published in Fixed and no software level stored,
+    `_start_software_volume` read the card - at full scale in Fixed - and the
+    software stage came up at 0 dB."""
+    software = _closure("_set_software_volume")
+    assert "level_after_fixed(before_fixed['raw']" in software
