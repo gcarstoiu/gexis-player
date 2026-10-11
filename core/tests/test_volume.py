@@ -1142,3 +1142,28 @@ def test_leaving_fixed_goes_back_to_the_level_before_it_or_the_starting_volume()
     assert level_after_fixed(180, 60) == 180
     assert level_after_fixed(None, 60) == renderer_value_to_hardware_raw(renderer_percent_to_value(60, 100), 100)
     assert level_after_fixed(None, None) is None
+
+
+class TestASupersededWriteDoesNotRaise:
+    """**Code review, 2026-10-12.** A second `write_hardware` that cancels a
+    ramp which has not started yet cancels it before `_ramp_to`'s own
+    `except CancelledError` exists, and the first caller's `await` raised -
+    out of `hand_level_to`, ending a Spotify takeover before `device_freed`."""
+
+    @pytest.mark.asyncio
+    async def test_two_writes_in_the_same_tick_both_return(self, fake_set_raw):
+        bridge, _ = make_bridge()
+        first = asyncio.ensure_future(bridge.write_hardware(100))
+        second = asyncio.ensure_future(bridge.write_hardware(200))
+        results = await asyncio.gather(first, second, return_exceptions=True)
+        assert results == [None, None]
+        assert fake_set_raw[-1] == ("DAC", 200)
+
+    @pytest.mark.asyncio
+    async def test_a_caller_that_is_itself_cancelled_still_is(self):
+        bridge, _ = make_bridge()
+        writer = asyncio.ensure_future(bridge.write_hardware(100))
+        await asyncio.sleep(0)  # the writer is awaiting a ramp not yet started
+        writer.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await writer

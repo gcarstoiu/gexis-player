@@ -1022,8 +1022,18 @@ class VolumeBridge:
             self._ramp.cancel()
         self._ramp = asyncio.ensure_future(self._ramp_to(raw))
         # Never raises: a ramp the next target supersedes ends quietly, and
-        # its caller is not the one who cancelled it.
-        await self._ramp
+        # its caller is not the one who cancelled it. `_ramp_to` swallows
+        # that only once it is running; one superseded before its first step
+        # is cancelled without running, and the CancelledError came out here
+        # instead - out of a Spotify takeover, skipping the steps after its
+        # starting volume (code review, 2026-10-12). Re-raised only when it
+        # is *this* caller that is being cancelled.
+        try:
+            await self._ramp
+        except asyncio.CancelledError:
+            task = asyncio.current_task()
+            if task is not None and task.cancelling():
+                raise
 
     async def _ramp_to(self, target: int) -> None:
         """Walk the DAC to `target` in single raw steps of the output's own
