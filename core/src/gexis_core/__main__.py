@@ -77,7 +77,7 @@ from gexis_core.fanart import Fanart
 from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, TrackMetadata
 from gexis_core import connections, hardware_report, settings_migrations, settling, updates, wired
-from gexis_core.standby import Standby
+from gexis_core.standby import Schedule, Standby
 from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import InvalidValue, Settings, UnknownSetting, load_registry
 from gexis_core.splash import Splash
@@ -2552,6 +2552,10 @@ async def main() -> None:
             peppy_screen.hide()
 
     standby = Standby(publish=_standby_published)
+    # ADR-0135: the owner's standby times. Their rows are read each tick.
+    standby_schedule = Schedule(
+        standby, lambda key: settings.value(key),
+        lambda: state_store.state.metadata.transport == "playing")
     peppy = PeppyController(
         peppy_screen,
         UnattendedPlayback(
@@ -3641,6 +3645,8 @@ async def main() -> None:
         setup_network.run(),
         # ADR-0134: and after boot, a network gone two minutes opens it again.
         setup_network.watch(),
+        # ADR-0135: the screen off at the owner's standby times.
+        standby_schedule.run(),
         # ADR-0084: the socket plugins connect to. Served for the life of the
         # process, beside the one the browser uses.
         plugin_server.run(),

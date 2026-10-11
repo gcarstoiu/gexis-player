@@ -106,3 +106,112 @@ async def test_a_touch_and_the_phone_wake_the_screen_and_the_phone_can_put_it_to
         assert (await (await client.post("/panel/standby/off")).json()) == {"standby": False}
         assert (await client.post("/panel/standby/sideways")).status == 404
     assert switched == [False, True, False, True]
+
+
+# -- the schedule -------------------------------------------------------------
+
+import datetime  # noqa: E402
+
+EVERY = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+NIGHT = [{"from": "23:00", "until": "07:00", "days": EVERY}]
+
+
+def at(day, hhmm):
+    """A local time on a weekday: 2026-10-12 is a Monday."""
+    hours, minutes = map(int, hhmm.split(":"))
+    return datetime.datetime(2026, 10, 12 + EVERY.index(day), hours, minutes)
+
+
+def test_a_standby_time_past_midnight_belongs_to_the_day_it_starts():
+    friday_night = [{"from": "23:00", "until": "07:00", "days": ["Fri"]}]
+    assert sb.in_standby_time(at("Fri", "23:30"), friday_night)
+    assert sb.in_standby_time(at("Sat", "06:59"), friday_night)
+    assert not sb.in_standby_time(at("Sat", "07:00"), friday_night)
+    assert not sb.in_standby_time(at("Thu", "23:30"), friday_night)
+    assert not sb.in_standby_time(at("Fri", "06:00"), friday_night)
+    weekdays = [{"from": "09:30", "until": "12:00", "days": ["Mon", "Tue", "Wed", "Thu", "Fri"]}]
+    assert sb.in_standby_time(at("Wed", "10:00"), weekdays)
+    assert not sb.in_standby_time(at("Sat", "10:00"), weekdays)
+    assert not sb.in_standby_time(at("Wed", "12:00"), weekdays)
+
+
+class Clock:
+    def __init__(self):
+        self.t = 0.0
+
+    def __call__(self):
+        return self.t
+
+
+def scheduled(values, *, now, playing=False):
+    clock = Clock()
+    switched = []
+
+    async def switch(on):
+        switched.append(on)
+        return True
+
+    standby = sb.Standby(switch=switch, clock=clock)
+    music = {"on": playing}
+    schedule = sb.Schedule(standby, lambda k: values.get(k), lambda: music["on"],
+                           clock=clock, now=lambda: now["at"])
+    return standby, schedule, clock, music
+
+
+def test_inside_a_standby_time_the_screen_goes_off_once_unused_and_after_the_wake_it_goes_back():
+    values = {"standby_schedule": True, "standby_times": NIGHT, "standby_wake": 2}
+    now = {"at": at("Mon", "23:30")}
+    standby, schedule, clock, music = scheduled(values, now=now)
+
+    async def go():
+        clock.t = 30.0                       # used half a minute ago: not yet
+        await schedule.tick()
+        assert not standby.off
+        clock.t = 121.0
+        await schedule.tick()
+        assert standby.off and standby.reason == "schedule"
+        await standby.wake("touch")          # woken at night ...
+        clock.t += 119
+        await schedule.tick()
+        assert not standby.off               # ... kept for the wake's two minutes
+        clock.t += 2
+        await schedule.tick()
+        assert standby.off
+        await standby.wake("music")
+        music["on"] = True                   # music playing keeps it on
+        clock.t += 600
+        await schedule.tick()
+        assert not standby.off
+        music["on"] = False
+        clock.t += 121
+        await schedule.tick()
+        assert standby.off
+        now["at"] = at("Tue", "07:00")       # the window over: the schedule wakes it
+        await schedule.tick()
+        assert not standby.off
+    asyncio.run(go())
+
+
+def test_the_schedule_leaves_alone_a_screen_the_owner_turned_off_and_wakes_its_own_when_switched_off():
+    values = {"standby_schedule": True, "standby_times": NIGHT, "standby_wake": 2}
+    now = {"at": at("Mon", "12:00")}
+    standby, schedule, clock, _ = scheduled(values, now=now)
+
+    async def go():
+        await standby.sleep("asked")
+        await schedule.tick()                # outside a standby time
+        assert standby.off and standby.reason == "asked"
+        await standby.wake("touch")
+        now["at"] = at("Mon", "23:30")
+        clock.t += 300
+        await schedule.tick()
+        assert standby.off and standby.reason == "schedule"
+        values["standby_schedule"] = False   # switched off: its own standby ends
+        await schedule.tick()
+        assert not standby.off
+        values["standby_schedule"] = True
+        values["headless"] = True            # no screen, no schedule
+        clock.t += 300
+        await schedule.tick()
+        assert not standby.off
+    asyncio.run(go())

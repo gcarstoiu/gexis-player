@@ -1302,8 +1302,10 @@ class StateServer:
             self._peppy.on_touch()
         # ADR-0135: a touch wakes a screen in standby - measured to reach the
         # page with the output off.
-        if self._standby is not None and self._standby.off:
-            await self._standby.wake("touch")
+        if self._standby is not None:
+            self._standby.used()
+            if self._standby.off:
+                await self._standby.wake("touch")
         return web.json_response({"touched": True})
 
     async def _handle_standby(self, request: web.Request) -> web.Response:
