@@ -40,6 +40,12 @@ class FakeScreen:
         self.visible = False
         return True
 
+    async def show_async(self):
+        return self.show()
+
+    async def hide_async(self):
+        return self.hide()
+
 
 def playing(**kw):
     return TrackMetadata(transport="playing", **kw)
@@ -575,3 +581,76 @@ async def test_a_show_with_no_window_starts_the_visualiser_again(monkeypatch):
         assert (await client.post("/peppy/show")).status == 200
     assert started == [("systemctl", "restart", "gexis-peppy.service")]
     assert screen.visible
+
+
+async def test_raising_and_lowering_never_hold_up_the_event_loop(tmp_path, monkeypatch):
+    """Review, 2026-10-12: the settle was slept and wlrctl run on the loop,
+    so every raise held volume and arbitration for at least 0.25 s, and a
+    touch for a wlrctl round trip - up to 5 s with the compositor busy."""
+    import asyncio
+
+    class Done:
+        returncode = 0
+        stderr = b""
+
+    def slow_wlrctl(cmd, **kw):
+        time.sleep(0.2)
+        return Done()
+
+    monkeypatch.setattr(subprocess, "run", slow_wlrctl)
+    shown = []
+    screen = PeppyScreen(wlrctl="/usr/bin/wlrctl", shown_path=tmp_path / "shown", settle_s=0.25)
+    screen.on_change = shown.append
+    clock = [0.0]
+    timer = UnattendedPlayback(60, now=lambda: clock[0])
+    controller = PeppyController(screen, timer, tick_s=0.01)
+    gaps = []
+
+    async def the_rest_of_the_core():
+        loop = asyncio.get_running_loop()
+        last = loop.time()
+        while True:
+            await asyncio.sleep(0.01)
+            gaps.append(loop.time() - last)
+            last = loop.time()
+
+    other = asyncio.ensure_future(the_rest_of_the_core())
+    task = asyncio.ensure_future(controller.run())
+    timer.set_playing(True)
+    clock[0] += 61
+    for _ in range(100):
+        await asyncio.sleep(0.02)
+        if screen.visible:
+            break
+    assert screen.visible and shown == [False, True]
+    controller.on_touch()
+    for _ in range(50):
+        await asyncio.sleep(0.02)
+        if not screen.visible:
+            break
+    task.cancel()
+    other.cancel()
+    assert not screen.visible and shown == [False, True, False]
+    assert max(gaps) < 0.15, f"the loop waited {max(gaps):.2f} s"
+
+
+async def test_a_touch_during_a_raise_lowers_it_after_not_before(tmp_path, monkeypatch):
+    """With the raise off the loop, a touch while it settles must not be
+    overtaken by it."""
+    import asyncio
+
+    class Done:
+        returncode = 0
+        stderr = b""
+
+    order = []
+    monkeypatch.setattr(subprocess, "run", lambda cmd, **kw: (order.append(cmd[2]), Done())[1])
+    screen = PeppyScreen(wlrctl="/usr/bin/wlrctl", shown_path=tmp_path / "shown", settle_s=0.05)
+    controller = PeppyController(screen, UnattendedPlayback(300))
+    raising = asyncio.ensure_future(controller.request_async("show"))
+    await asyncio.sleep(0.01)
+    screen.visible = True               # as the panel believes, mid-raise
+    controller.on_touch()
+    await raising
+    await asyncio.gather(*controller._lowering)
+    assert order == ["focus", "minimize"] and not screen.visible
