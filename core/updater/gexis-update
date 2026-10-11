@@ -63,6 +63,21 @@ def pending() -> Path:
     return STATE / "pending-check.json"
 
 
+#: `how` in pending-check.json for an install still running (the review of
+#: 2026-10-12): written before dpkg starts, so a boot that finds it found an
+#: install the power cut short.
+CUT_SHORT_HOW = "cut-short"
+
+
+def leave_for_the_boot(left: dict) -> None:
+    """pending-check.json, written beside and renamed: a boot must never
+    find half of it."""
+    STATE.mkdir(parents=True, exist_ok=True)
+    tmp = STATE / "pending-check.json.tmp"
+    tmp.write_text(json.dumps(left))
+    tmp.replace(pending())
+
+
 INHIBIT = ["systemd-inhibit", "--what=shutdown:sleep", "--who=gexis-update", "--mode=block"]
 #: **ADR-0110 §3: every step listed from the start**, each pending, active,
 #: done or failed, so the modal and the panel can say what comes next.
@@ -727,6 +742,8 @@ def go_back(about: dict, channel: str, target: str, current: str, back_repos, ba
     apt(back, "--no-download", "--allow-downgrades", "--allow-change-held-packages",
         "dist-upgrade", prefix=INHIBIT + [f"--why=Putting {current} back"])
     run("dpkg", "--configure", "-a", check=False)
+    # Gone back: nothing left for a boot to check or finish.
+    pending().unlink(missing_ok=True)
     ok = installed("gexis-player") == current
     # Remembered, so a night's Automatic run does not try it again
     # (Finding 105); "Update now" still does - it is asked for.
@@ -795,6 +812,15 @@ def install(args) -> int:
     step("install")
     PROGRESS["progress"] = 0.0
     report("installing", **about, backup=backup, message=f"installing {target}")
+    # **Left for the boot before dpkg starts** (the review of 2026-10-12):
+    # written only for a planned reboot, an install the power cut short left
+    # the boot nothing - dpkg dirty, postinsts never run, `verify` never run;
+    # and with gexis-player already unpacked at `target`, every later check
+    # said "current" and never reached `heal`. `postboot` finishes it from
+    # `repos` and checks it, or puts `current` back.
+    left = {"about": about, "channel": channel, "target": target, "current": current, "repos": repos,
+            "back_repos": back_repos, "back_pins": back_pins, "backup": backup, "changes": changes}
+    leave_for_the_boot({**left, "steps": PROGRESS.get("steps"), "how": CUT_SHORT_HOW})
     opts = apt_env(repos)
     inhibit = INHIBIT + [f"--why=Installing {target}"]
     # ADR-0111 decision 10: a device that has gexis-skins keeps it. Releases
@@ -839,10 +865,7 @@ def install(args) -> int:
         # 2026-10-07): the boot's `postboot` reads this, checks the device
         # and goes back if it does not answer.
         step("restart", "active")
-        pending().write_text(json.dumps({
-            "about": about, "channel": channel, "target": target, "current": current,
-            "back_repos": back_repos, "back_pins": back_pins, "backup": backup,
-            "changes": changes, "steps": PROGRESS.get("steps"), "how": how}))
+        leave_for_the_boot({**left, "steps": PROGRESS.get("steps"), "how": how})
         report("restarting", **about, backup=backup, reboot=True, message="restarting the device")
         run("systemctl", "reboot", check=False)
         return 0
@@ -855,6 +878,7 @@ def install(args) -> int:
         return go_back(about, channel, target, current, back_repos, back_pins, backup,
                        "the player did not answer after the update", changes)
     step("check", "done")
+    pending().unlink(missing_ok=True)
     report("done", **about, backup=backup, changed=len(changes), restart=how,
            message=f"{target} installed ({how})")
     return 0
@@ -878,6 +902,18 @@ def postboot(args) -> int:
     step("check")
     report("checking-device", **about, backup=left.get("backup"), message="checking the player answers")
     try:
+        # **An install the power cut short is finished first** (the review
+        # of 2026-10-12), from the release going in, as `install` heals; what
+        # cannot be finished is a failure like any other, and goes back.
+        journal, broken = interrupted()
+        if journal or broken or left.get("how") == CUT_SHORT_HOW:
+            report("checking-device", **about, backup=left.get("backup"),
+                   message="finishing the install that was cut short")
+            opts = apt_env(left.get("repos") or left["back_repos"])
+            apt(opts, "update")
+            heal(opts)
+        if PROGRESS["steps"].get("install") == "active":
+            step("install", "done")
         verify(target)
         if not core_answers():
             raise Stop("the player did not answer after the restart")

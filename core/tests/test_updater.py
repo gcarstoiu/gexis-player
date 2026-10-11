@@ -769,6 +769,75 @@ def test_a_boot_that_does_not_answer_goes_back_once(up, monkeypatch):
     assert not up.pending().exists(), "the boot after going back is not checked again"
 
 
+class PowerCut(BaseException):
+    """The power going: nothing after it in the process runs."""
+
+
+def cut_install(up, monkeypatch):
+    """An install the power stops in the middle of dpkg."""
+    seen, order = fake_install(up, monkeypatch)
+    real = up.apt_progress
+
+    def apt_progress(opts, *args, state, **kw):
+        if state == "installing":
+            raise PowerCut()
+        return real(opts, *args, state=state, **kw)
+
+    monkeypatch.setattr(up, "apt_progress", apt_progress)
+    with pytest.raises(PowerCut):
+        up.install(None)
+    return seen, order
+
+
+def test_an_install_leaves_its_check_for_the_boot_before_dpkg_starts(up, monkeypatch):
+    """**The review of 2026-10-12.** pending-check.json was written only for
+    a planned reboot, so an install the power cut short left nothing for the
+    boot: dpkg dirty, postinsts never run, verify never run - and once
+    gexis-player was unpacked at the new version, every later check said
+    "current" and never reached `heal`."""
+    cut_install(up, monkeypatch)
+    left = json.loads(up.pending().read_text())
+    assert left["how"] == "cut-short" and left["target"] == "2" and left["current"] == "1"
+    assert left["repos"] == ["ours-x"] and left["back_repos"] == ["ours-old"]
+    assert left["steps"]["install"] == "active"
+
+
+def test_the_boot_after_a_cut_short_install_finishes_it_and_checks_it(up, monkeypatch):
+    seen, _ = cut_install(up, monkeypatch)
+    healed, envs = [], []
+    monkeypatch.setattr(up, "interrupted", lambda: (True, ["gexis-core"]))
+    monkeypatch.setattr(up, "apt_env", lambda repos, pins=None: envs.append(repos) or ["-o", "x"])
+    monkeypatch.setattr(up, "heal", lambda opts: healed.append(opts))
+    assert up.postboot(None) == 0
+    assert envs[0] == ["ours-x"] and healed == [["-o", "x"]], "finished from the release going in"
+    assert seen[-1]["state"] == "done" and set(seen[-1]["steps"].values()) == {"done"}
+    assert not up.pending().exists()
+
+
+def test_a_cut_short_install_that_cannot_be_finished_goes_back(up, monkeypatch):
+    seen, _ = cut_install(up, monkeypatch)
+    monkeypatch.setattr(up, "interrupted", lambda: (True, ["gexis-core"]))
+
+    def heal(opts):
+        raise up.Stop(up.CUT_SHORT)
+
+    monkeypatch.setattr(up, "heal", heal)
+    assert up.postboot(None) == 1
+    last = seen[-1]
+    assert last["state"] == "failed" and "Back on 1" in last["message"]
+    assert last["steps"]["install"] == "failed"
+    assert not up.pending().exists()
+
+
+def test_an_update_that_ends_leaves_nothing_for_the_boot(up, monkeypatch):
+    fake_install(up, monkeypatch)
+    assert up.install(None) == 0
+    assert not up.pending().exists()
+    fake_install(up, monkeypatch, fail_install=True)
+    assert up.install(None) == 1
+    assert not up.pending().exists(), "gone back already; the boot has nothing to check"
+
+
 AUDIT_BROKEN = ("The following packages are in a mess due to serious problems during\n"
                 "installation.  They must be reinstalled for them (and any packages\n"
                 "that depend on them) to function properly:\n"
