@@ -134,6 +134,30 @@ def use_scale(scale: mixer_scale.Scale | None) -> None:
     _scale = scale or mixer_scale.DAC2_HD
 
 
+def current_scale() -> mixer_scale.Scale:
+    """The scale raw values mean now - kept by whoever holds one across a
+    `use_scale`, to `carry_raw` it."""
+    return _scale
+
+
+def carry_raw(raw: int | None, old: mixer_scale.Scale, new: mixer_scale.Scale) -> int | None:
+    """**A raw level kept from before a change of scale, as the same level
+    after it** (code review, 2026-10-12).
+
+    A raw number only means something on its own scale: -20 dB is 200 on the
+    DAC2 HD, -2000 on the headphone jack and 280 on the software stage. A
+    change of output or of volume type moved the scale under the levels kept
+    as raws - the published one, Mute's, the one before Fixed - and they were
+    replayed on the new scale: the software stage's -20 dB unmuted onto the
+    DAC2 HD as its top, full scale. Carried through dB instead, never above
+    0 dB (`Scale.raw`), and silence stays silence."""
+    if raw is None:
+        return None
+    if raw <= old.raw_min:
+        return new.raw_min
+    return new.raw(old.db(raw))
+
+
 def hardware_max() -> int:
     """The loudest raw value written: the control's 0 dB, never above it."""
     return _scale.top
@@ -597,6 +621,10 @@ class Mute:
             await self._write_hardware(restore)
         return True
 
+    def carry(self, old: mixer_scale.Scale, new: mixer_scale.Scale) -> None:
+        """The level unmute restores, onto a new scale (`carry_raw`)."""
+        self._restore = carry_raw(self._restore, old, new)
+
     def audible_raw(self, current: int | None) -> int | None:
         """The level this device is at, as a listener means it: the one
         unmuting would restore while muted, `current` otherwise."""
@@ -923,6 +951,14 @@ class VolumeBridge:
             return
         logger.info("volume: moving the mixer monitor to %s", alsa.card())
         proc.terminate()
+
+    def forget_position(self) -> None:
+        """**After a change of scale** (code review, 2026-10-12): the last value
+        written is a raw on the old scale, and a ramp from it on the new one
+        walks through levels that mean something else - from the DAC2 HD's
+        200 down to the jack's -2000 passes 0, which is 0 dB there. The next
+        write goes straight to its target instead."""
+        self._last_written = None
 
     def set_mixer_name(self, mixer_name: str) -> None:
         """**The control's name follows the chosen output** (ADR-0055 §3):

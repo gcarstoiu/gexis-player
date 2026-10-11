@@ -121,3 +121,48 @@ async def test_a_level_given_to_another_scale_is_clamped_to_that_scale():
     finally:
         volume._MIXERS.pop(("output", "PCM"), None)
     assert fake.values == [-2000, -10239]
+
+
+class TestALevelCarriedToAnotherScale:
+    """**Code review, 2026-10-12.** A raw number means something only on its
+    own scale, and a change of output or of volume type moved the scale under
+    every level kept as a raw. -20 dB on the software stage is raw 280, which
+    on the DAC2 HD is past its top - unmuting after Software -> Hardware wrote
+    full scale. Carried through dB instead."""
+
+    def _jack(self):
+        return ms.playback_controls(JACK)[0][1]
+
+    def test_the_same_level_on_the_new_scale(self):
+        from gexis_core.outputs import SOFTVOL_SCALE
+
+        jack = self._jack()
+        assert volume.carry_raw(280, SOFTVOL_SCALE, ms.DAC2_HD) == 200
+        assert volume.carry_raw(200, ms.DAC2_HD, jack) == -2000
+        assert volume.carry_raw(-2000, jack, ms.DAC2_HD) == 200
+        assert volume.carry_raw(200, ms.DAC2_HD, SOFTVOL_SCALE) == 280
+
+    def test_silence_stays_silence_and_nothing_goes_above_0_db(self):
+        from gexis_core.outputs import SOFTVOL_SCALE
+
+        jack = self._jack()
+        assert volume.carry_raw(0, ms.DAC2_HD, jack) == -10239
+        assert volume.carry_raw(-10239, jack, SOFTVOL_SCALE) == 0
+        # The software stage's floor is -90 dB, above the DAC2 HD's mute.
+        assert volume.carry_raw(0, SOFTVOL_SCALE, ms.DAC2_HD) == 0
+        assert volume.carry_raw(400, jack, ms.DAC2_HD) == 240
+        assert volume.carry_raw(None, jack, ms.DAC2_HD) is None
+
+    async def test_unmute_after_the_scale_moved_restores_the_same_level(self):
+        from gexis_core.outputs import SOFTVOL_SCALE
+
+        writes = []
+
+        async def write(raw):
+            writes.append(raw)
+
+        mute = volume.Mute(write, lambda: 280)
+        await mute.set(True)
+        mute.carry(SOFTVOL_SCALE, ms.DAC2_HD)
+        await mute.set(False)
+        assert writes[-1] == 200, "-20 dB, not the DAC2 HD's full scale"

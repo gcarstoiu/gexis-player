@@ -100,6 +100,8 @@ from gexis_core.volume import (
     DUMMY_MAX_RAW,
     DummyMixerBridge,
     VolumeBridge,
+    carry_raw,
+    current_scale,
     db_to_raw,
     get_raw,
     forget_mixers,
@@ -932,6 +934,25 @@ async def main() -> None:
     #: The level before Fixed, to come back to (`level_after_fixed`).
     before_fixed: dict[str, int | None] = {"raw": None}
 
+    def _carry_levels(old) -> None:
+        """**Every level kept as a raw, onto the scale now in force** (code
+        review, 2026-10-12). A change of output or of volume type changes
+        what a raw number means, and the published level, Mute's and the one
+        before Fixed were replayed on the new scale as they were: muted in
+        Software at -20 dB, switched to Hardware and unmuted, the DAC2 HD was
+        written its top; a switch from the DAC to the jack read the DAC's
+        -20 dB as the jack's full scale, and the restart guard held nothing.
+        Called straight after `use_scale`, before anything can read them."""
+        new = current_scale()
+        if new == old:
+            return
+        volume_bridge.forget_position()
+        mute.carry(old, new)
+        before_fixed["raw"] = carry_raw(before_fixed["raw"], old, new)
+        volume = state_store.state.volume
+        if volume is not None:
+            publish_volume(carry_raw(volume.raw, old, new))
+
     async def _apply_output_mode(force: bool = False) -> None:
         """Put the chosen mode into force, if now is a legal moment.
 
@@ -1026,8 +1047,12 @@ async def main() -> None:
         # visualiser button are all consequences of *which output was
         # chosen*, which is already known.
         alsa.set_card(chosen.card)
+        old_scale = current_scale()
         use_scale(chosen.scale)
         volume_bridge.set_mixer_name(chosen.control or config.mixer_name)
+        # Before `_choose_output_mode`, whose Fixed takes the level to come
+        # back to from the published one.
+        _carry_levels(old_scale)
         # The monitor watches one card and was spawned for the old one; its
         # own loop restarts it, so ending it is enough to move it.
         volume_bridge.restart_monitor()
@@ -1062,7 +1087,13 @@ async def main() -> None:
             await _start_software_volume(outputs.resolve(settings.value("output_device")), settings_store)
             raw = await get_raw(outputs.SOFTVOL_CONTROL)
             if raw is not None:
-                state_store.set_volume_raw(raw)
+                # Through `publish_volume`, which keeps the mute it shows.
+                publish_volume(raw)
+        elif not fixed_now["value"] and state_store.state.volume is not None:
+            # **The level shown is the level the new card plays at** (code
+            # review, 2026-10-12): its control was left at whatever it held -
+            # the jack's own 0 dB, say - under a panel showing another level.
+            await volume_bridge.write_hardware(state_store.state.volume.raw)
         # **This daemon is not restarted any more.** It was, to pick up the
         # new card's control name; that name is now settable in place
         # (`VolumeBridge.set_mixer_name`), and the restart was most of what
@@ -1114,8 +1145,10 @@ async def main() -> None:
         if db is not None:
             if on:
                 settings_store.set(SOFTWARE_LEVEL_KEY, db)
-            elif base is not None and base.control and base.scale:
-                await set_raw(base.control, base.scale.raw(db), scale=base.scale)
+            elif volume is not None and base is not None and base.control and base.scale:
+                # `carry_raw`, so a muted level goes over as silence.
+                await set_raw(base.control, carry_raw(volume.raw, current_scale(), base.scale),
+                              scale=base.scale)
         logger.info("volume: software volume %s at %s dB", "on" if on else "off", db)
         # The output is put in place again; switched on, `_switch_output`
         # makes the software control at the carried level before the
@@ -1124,7 +1157,7 @@ async def main() -> None:
         if not on and base is not None and base.control:
             raw = await get_raw(base.control)
             if raw is not None:
-                state_store.set_volume_raw(raw)
+                publish_volume(raw)
 
     async def _rewrite_output_conf(reason: str) -> None:
         """Put the current output and tuning in `output.conf` and reopen.

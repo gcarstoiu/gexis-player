@@ -1266,3 +1266,18 @@ class TestAMonitorThatKeepsExitingDoesNotRecurse:
         with pytest.raises(self._Done):
             await bridge.run()
         assert len(spawned) == 2001
+
+
+class TestAChangeOfScaleStartsFromNoPosition:
+    """**Code review, 2026-10-12.** The last value written is a raw on the old
+    scale; a ramp from the DAC2 HD's 200 to the jack's -2000 walked through
+    0, which is 0 dB on the jack."""
+
+    @pytest.mark.asyncio
+    async def test_the_next_write_goes_straight_to_its_target(self, fake_set_raw):
+        bridge, _ = make_bridge()
+        await bridge.write_hardware(200)
+        fake_set_raw.clear()
+        bridge.forget_position()
+        await bridge.write_hardware(100)
+        assert fake_set_raw == [("DAC", 100)]
