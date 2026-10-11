@@ -299,6 +299,45 @@ async def test_a_status_that_cannot_be_read_acquires_nothing():
     assert acquired == []
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status, body", [
+    (204, {}),
+    (200, {"stopped": True, "paused": False}),
+])
+async def test_no_session_on_reconnect_gives_the_device_up(status, body):
+    """Code review, 2026-10-12. go-librespot that dies mid-play never says
+    `inactive`, and after systemd restarts it there is no session - but the
+    core kept Spotify active, with the old track on the panel and the slider
+    driving a daemon with nothing to play. Releasing is safe to send
+    unconditionally: the supervisor ignores it unless Spotify is active."""
+    adapter = SpotifyAdapter("127.0.0.1", 3678)
+    acquired, released = [], []
+
+    await adapter._acquire_if_already_playing(
+        FakeStatus(body, status=status), lambda: acquired.append(True),
+        lambda: released.append(True))
+
+    assert acquired == []
+    assert released == [True]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status, body", [
+    (200, {**PLAYING, "paused": True}),
+    (500, {}),
+])
+async def test_a_paused_session_or_an_unreadable_status_releases_nothing(status, body):
+    """A paused session still holds the device (ADR-0027), and a status that
+    cannot be read says nothing either way."""
+    adapter = SpotifyAdapter("127.0.0.1", 3678)
+    released = []
+
+    await adapter._acquire_if_already_playing(
+        FakeStatus(body, status=status), lambda: None, lambda: released.append(True))
+
+    assert released == []
+
+
 async def _fake_librespot(pause_status=200):
     """A go-librespot that records what it was asked, and when."""
     import time

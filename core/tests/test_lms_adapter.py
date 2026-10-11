@@ -92,12 +92,13 @@ class FakeRpc:
         self.position = position
         self.timestamp = 1789663581.32885
         self.index = "2"
+        self.power = 1
         self.commands = []
 
     async def __call__(self, session, player, command):
         self.commands.append(list(command))
         if command[0] == "status":
-            result = {"mode": self.mode, "power": 1, "time": self.position}
+            result = {"mode": self.mode, "power": self.power, "time": self.position}
             if self.timestamp is not None:
                 result["playlist_timestamp"] = self.timestamp
             if self.index is not None:
@@ -1080,6 +1081,47 @@ async def test_a_push_re_reads_the_queue(monkeypatch):
 
     # One for the seed query, one for the push.
     assert rpc.queue_reads == 2
+
+
+async def _watch_once(monkeypatch, adapter):
+    """Run `_watch` through its seed and stop at the first long poll."""
+    async def fake_post(self, session, message, timeout=None):
+        if message["channel"] == "/meta/connect":
+            raise asyncio.CancelledError
+        return []
+
+    monkeypatch.setattr(LmsAdapter, "_cometd_handshake", lambda self, session: _done("cid"))
+    monkeypatch.setattr(LmsAdapter, "_cometd_post", fake_post)
+    acquired, released = [], []
+    with pytest.raises(asyncio.CancelledError):
+        await adapter._watch(lambda: acquired.append(1), lambda: released.append(1))
+    return acquired, released
+
+
+@pytest.mark.asyncio
+async def test_a_player_powered_off_while_the_connection_was_down_is_released(monkeypatch):
+    """Code review, 2026-10-12. The seed on (re)connecting acquired for a
+    player already on, and said nothing for one that was off - so a power-off
+    that happened while the connection was lost left LMS active, its old
+    track on the panel, until something else took over. Releasing is safe to
+    send unconditionally: the supervisor ignores it unless LMS is active."""
+    adapter, rpc = _adapter(monkeypatch, mode="stop")
+    rpc.power = 0
+
+    acquired, released = await _watch_once(monkeypatch, adapter)
+
+    assert acquired == []
+    assert released == [1]
+
+
+@pytest.mark.asyncio
+async def test_a_player_on_at_connection_is_still_an_acquisition(monkeypatch):
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+
+    acquired, released = await _watch_once(monkeypatch, adapter)
+
+    assert acquired == [1]
+    assert released == []
 
 
 @pytest.mark.asyncio

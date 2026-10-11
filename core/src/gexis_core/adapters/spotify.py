@@ -175,7 +175,7 @@ class SpotifyAdapter(Adapter):
                 if self._on_availability is not None:
                     self._on_availability(True)
                 await self._seed_flags(session)
-                await self._acquire_if_already_playing(session, on_acquire)
+                await self._acquire_if_already_playing(session, on_acquire, on_release)
                 async for msg in ws:
                     if msg.type != aiohttp.WSMsgType.TEXT:
                         continue
@@ -256,7 +256,7 @@ class SpotifyAdapter(Adapter):
         self._last_metadata = metadata
         self._on_metadata(metadata)
 
-    async def _acquire_if_already_playing(self, session, on_acquire) -> None:
+    async def _acquire_if_already_playing(self, session, on_acquire, on_release=None) -> None:
         """If Spotify is playing when this adapter starts watching, say so.
 
         go-librespot announces acquisition with `active`/`will_play` events,
@@ -270,17 +270,29 @@ class SpotifyAdapter(Adapter):
         The same shape as the LMS adapter's "player already powered on at
         startup": read the state once rather than wait for an edge that has
         already passed.
+
+        **And the other direction** (code review, 2026-10-12): go-librespot
+        that dies mid-play never sends `inactive`, so after systemd restarts
+        it the core kept Spotify active - the old track on the panel, the
+        slider driving a daemon with no session - until something else took
+        over. No session now releases. Safe whatever the core believes:
+        `Supervisor.relinquish` ignores it unless Spotify is the active one.
         """
         try:
             async with session.get(
                 f"{self._base}/status", timeout=aiohttp.ClientTimeout(total=2)
             ) as resp:
-                if resp.status != 200:
+                if resp.status == 204:
+                    body = {"stopped": True}
+                elif resp.status != 200:
                     return
-                body = await resp.json(content_type=None)
+                else:
+                    body = await resp.json(content_type=None)
         except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as exc:
             logger.debug("spotify: /status at startup failed: %s", exc)
             return
+        if body.get("stopped") and on_release is not None:
+            on_release()
         # `stopped` means no session at all; `paused` still holds the device
         # (ADR-0027: holding it is the acquisition, playing is a separate
         # question), but a paused session at startup is indistinguishable

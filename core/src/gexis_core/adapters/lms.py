@@ -841,6 +841,14 @@ class LmsAdapter(Adapter):
             if last_power:
                 logger.info("lms: player already powered on at startup (acquisition)")
                 on_acquire()
+            else:
+                # **And off is said too** (code review, 2026-10-12): a player
+                # powered off while the connection was down produced no edge
+                # this loop could see, and LMS stayed active - its old track
+                # on the panel - until something else took over. Ignored by
+                # the supervisor unless LMS is the active renderer, so a cold
+                # start with the player off costs nothing.
+                on_release()
             if boot_check_due(self._boot_marker):
                 await self._check_after_boot(session)
 
