@@ -300,10 +300,20 @@ class LmsAdapter(Adapter):
         #: corrected back to if LMS restarted the track (see
         #: RESUME_POSITION_TOLERANCE_S). `_resume_timestamp` is the queue's
         #: `playlist_timestamp` when they were recorded: both are put back
-        #: only if it is unchanged (Finding 029, defect A).
+        #: only if it is unchanged (Finding 029, defect A). `_resume_index` is
+        #: `playlist_cur_index`, held to the same rule: a skip or a jump within
+        #: the queue leaves the timestamp alone, and the position belongs to
+        #: the track it was read from (code review, 2026-10-12).
         self._resume_playing = False
         self._resume_position: float | None = None
         self._resume_timestamp: float | None = None
+        self._resume_index: int | None = None
+        #: **A takeover's power-off that never reached LMS** (code review,
+        #: 2026-10-12). Set when `release()` failed against an unreachable
+        #: LMS; sent when the connection is back, instead of the seed reading
+        #: a player still on as LMS taking the device again. Cleared the
+        #: moment the player is seen off, whoever turned it off.
+        self._power_off_owed = False
         self._on_metadata: Callable[[TrackMetadata], None] | None = None
         self._on_queue = None
         #: (playlist_timestamp, current index) when the queue was last read.
@@ -834,9 +844,20 @@ class LmsAdapter(Adapter):
             # race ADR-0027 exists to win. The old base-slot model dodged
             # this by assuming LMS was current at all times; with the base
             # slot gone the startup state has to be read, not assumed.
-            if last_power:
+            if last_power and self._power_off_owed:
+                await self._pay_power_off(session)
+            elif last_power:
                 logger.info("lms: player already powered on at startup (acquisition)")
                 on_acquire()
+            else:
+                self._power_off_owed = False
+                # **And off is said too** (code review, 2026-10-12): a player
+                # powered off while the connection was down produced no edge
+                # this loop could see, and LMS stayed active - its old track
+                # on the panel - until something else took over. Ignored by
+                # the supervisor unless LMS is the active renderer, so a cold
+                # start with the player off costs nothing.
+                on_release()
             if boot_check_due(self._boot_marker):
                 await self._check_after_boot(session)
 
@@ -872,6 +893,8 @@ class LmsAdapter(Adapter):
                     power = data.get("power")
                     if power is None:
                         continue
+                    if not power:
+                        self._power_off_owed = False
                     if power and not last_power:
                         # ADR-0027: activating the player is the
                         # acquisition. Play is a separate intention
@@ -920,6 +943,7 @@ class LmsAdapter(Adapter):
         if isinstance(position, (int, float)):
             self._resume_position = float(position)
             self._resume_timestamp = _as_float(status.get("result", {}).get("playlist_timestamp"))
+            self._resume_index = _as_int(status.get("result", {}).get("playlist_cur_index"))
             logger.info("lms: noted position %.1fs at deactivation", self._resume_position)
 
     async def _cometd_handshake(self, session: aiohttp.ClientSession) -> str:
@@ -1050,6 +1074,16 @@ class LmsAdapter(Adapter):
         """
         if self._player_id is None:
             return False
+        # **Shielded** (code review, 2026-10-12): the supervisor gives this
+        # two seconds and then cancels it. An LMS slow to answer had the call
+        # cut between the pause and the power-off, and the player stayed on
+        # while another renderer held the device - after which LMS could not
+        # be acquired at all, because only a power-on edge does that. The
+        # supervisor still moves on at two seconds; the power-off lands when
+        # LMS answers.
+        return await asyncio.shield(self._pause_and_power_off())
+
+    async def _pause_and_power_off(self) -> bool:
         async with aiohttp.ClientSession() as session:
             try:
                 status = await self._rpc(session, self._player_id, ["status", "-", 1])
@@ -1060,6 +1094,7 @@ class LmsAdapter(Adapter):
                     float(position) if isinstance(position, (int, float)) else None
                 )
                 self._resume_timestamp = _as_float(result.get("playlist_timestamp"))
+                self._resume_index = _as_int(result.get("playlist_cur_index"))
                 await self._rpc(session, self._player_id, ["pause", 1])
                 await self._rpc(session, self._player_id, ["power", 0])
                 logger.info(
@@ -1068,9 +1103,21 @@ class LmsAdapter(Adapter):
                     self._resume_playing,
                 )
                 return True
-            except aiohttp.ClientError as exc:
-                logger.warning("lms: pause/power-off failed: %s", exc)
+            except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
+                logger.warning("lms: pause/power-off failed, owed until LMS is back: %s", exc)
+                self._power_off_owed = True
                 return False
+
+    async def _pay_power_off(self, session: aiohttp.ClientSession) -> None:
+        """The takeover's pause and power-off, sent late - in that order, for
+        the reason `release()` gives."""
+        self._power_off_owed = False
+        try:
+            await self._rpc(session, self._player_id, ["pause", 1])
+            await self._rpc(session, self._player_id, ["power", 0])
+            logger.info("lms: back; paused and powered off as the takeover asked")
+        except aiohttp.ClientError as exc:
+            logger.warning("lms: the owed power-off failed again: %s", exc)
 
     async def device_freed(self) -> None:
         """ADR-0027: put back what `release()` recorded - the transport state,
@@ -1095,13 +1142,22 @@ class LmsAdapter(Adapter):
         position. An edit while away loses the position too; George chose
         that over any chance of seeking into content just picked
         (2026-09-17, rule A).
+
+        **Nor onto another track of the same queue** (code review,
+        2026-10-12). Next, previous and a jump within the queue leave the
+        timestamp alone, so track 7 picked in the Lyrion app while Spotify
+        played was seeked to where track 3 had been released. The track's
+        place in the queue is compared as well; an LMS that does not report
+        it is compared on the timestamp alone, as before.
         """
         resume_playing = self._resume_playing
         resume_position = self._resume_position
         resume_timestamp = self._resume_timestamp
+        resume_index = self._resume_index
         self._resume_playing = False
         self._resume_position = None
         self._resume_timestamp = None
+        self._resume_index = None
         if self._player_id is None:
             return
         # **What the user asked for, where they have asked** (ADR-0022's
@@ -1130,6 +1186,15 @@ class LmsAdapter(Adapter):
                         "not restoring the old position or play state",
                         resume_timestamp,
                         timestamp,
+                    )
+                    return
+                index = _as_int(result.get("playlist_cur_index"))
+                if None not in (index, resume_index) and index != resume_index:
+                    logger.info(
+                        "lms: another track since it was released (index %s -> %s), "
+                        "not restoring the old position or play state",
+                        resume_index,
+                        index,
                     )
                     return
                 if resume_playing and result.get("mode") != "play":

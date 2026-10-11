@@ -185,6 +185,51 @@ async def test_something_that_is_not_an_event_is_dropped_not_dispatched(tmp_path
 
 
 @pytest.mark.asyncio
+async def test_a_queue_longer_than_asyncios_default_line_is_delivered(tmp_path):
+    """Code review, 2026-10-12: the server used StreamReader's default limit
+    of 64 KiB, so a queue of a few hundred tracks with artwork URLs (about
+    100 KB) made `readline` raise and cost the plugin its session - looping,
+    because the plugin reconnects and sends its queue again. `MAX_LINE` is
+    the documented limit, and was never reached."""
+    queue = [{"title": f"Track {n}", "artwork": "https://example.invalid/" + "a" * 300}
+             for n in range(300)]
+    async with Harness(tmp_path) as h:
+        reader, writer, _ = await _hello(h)
+        try:
+            await _say(writer, {"t": "queue", "queue": queue})
+            for _ in range(100):
+                if h.events:
+                    break
+                await asyncio.sleep(0.01)
+            assert [t for _, t, _ in h.events] == ["queue"]
+            assert len(h.events[0][2]["queue"]) == 300
+            assert h.gone == []
+        finally:
+            writer.close()
+
+
+@pytest.mark.asyncio
+async def test_a_line_over_max_line_is_dropped_not_the_connection(tmp_path):
+    """The contract's promise for a line too long to be a message: it is
+    dropped, and the session carries on with the next one."""
+    from gexis_core.plugin_server import MAX_LINE
+
+    async with Harness(tmp_path) as h:
+        reader, writer, _ = await _hello(h)
+        try:
+            writer.write(b'{"t":"queue","queue":"' + b"x" * (MAX_LINE + 10) + b'"}\n')
+            await _say(writer, {"t": "release"})
+            for _ in range(200):
+                if h.events:
+                    break
+                await asyncio.sleep(0.01)
+            assert [t for _, t, _ in h.events] == ["release"]
+            assert h.gone == []
+        finally:
+            writer.close()
+
+
+@pytest.mark.asyncio
 async def test_a_handler_that_raises_does_not_drop_the_connection(tmp_path):
     """One bad event must not cost a renderer its session."""
     async with Harness(tmp_path) as h:
@@ -315,6 +360,40 @@ async def test_on_connect_can_refuse_the_connection(tmp_path):
         # And it left nothing behind: a refused plugin is not connected.
         assert "plexamp" not in h.server.sessions
         writer.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", [ConnectionResetError, ValueError])
+async def test_a_plugin_lost_before_its_welcome_can_connect_again(tmp_path, failure):
+    """Code review, 2026-10-12. A plugin that died between `hello` and
+    `welcome` - the welcome's write failing, or its settings unreadable - was
+    already in `sessions` and already registered by `on_connect`, but the
+    cleanup only ran for a session `_greet` had returned. Every reconnect was
+    then refused as "already connected" until the core restarted, and the
+    panel kept offering a renderer whose process was gone."""
+    fail = {"once": True}
+
+    def settings_for(plugin_id):
+        if fail.pop("once", False):
+            raise failure("the plugin went away")
+        return {}
+
+    async with Harness(tmp_path, settings_for=settings_for) as h:
+        reader, writer = await h.connect()
+        try:
+            await _say(writer, {"t": "hello", "contract": CONTRACT, "id": "plexamp"})
+            assert await _hear(reader) is None
+        finally:
+            writer.close()
+        assert h.connected == ["plexamp"]
+        assert h.gone == ["plexamp"]
+        assert "plexamp" not in h.server.sessions
+
+        reader, writer, answer = await _hello(h)
+        try:
+            assert answer["t"] == "welcome"
+        finally:
+            writer.close()
 
 
 def test_the_socket_names_a_group_that_is_not_root():
