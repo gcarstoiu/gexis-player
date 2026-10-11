@@ -49,6 +49,16 @@ def test_the_form_s_headings_map_to_its_fields(tool):
     assert a["board"] == "HiFiBerry DAC+ Pro" and a["touch"] == "Yes" and "notes" not in a
 
 
+def test_the_answers_are_text_the_player_fills_and_typed_ones_count(tool):
+    """GitHub fills no dropdown from a link: the player's answers arrived
+    blank (George, 2026-10-11). They are text fields now; one typed or
+    edited by hand counts whatever its capitals."""
+    template = (TOOL.parents[1] / ".github" / "ISSUE_TEMPLATE" / "hardware-report.yml").read_text()
+    assert "type: dropdown" not in template
+    a = tool.answers(issue(1, sound="yes", clicks="NO", touch="Not tried.")["body"], tool.form_labels())
+    assert (a["sound"], a["clicks"], a["touch"]) == ("Yes", "No", "Not tried")
+
+
 def test_two_that_work_and_one_against(tool):
     data, skipped = tool.collect([issue(1), issue(2, gexis="0.9.5"), issue(3, clicks="Yes", touch="No")],
                                  tool.form_labels())

@@ -61,8 +61,13 @@ def answers(body: str, labels: dict[str, str]) -> dict[str, str]:
         field = labels.get(heading.strip())
         value = value.strip()
         if field and value and value != "_No response_":
-            out[field] = value
+            # The answers are text fields since GitHub fills no dropdown from
+            # a link (George, 2026-10-11): one edited by hand may be "yes".
+            out[field] = CANONICAL.get(value.lower().rstrip("."), value)
     return out
+
+
+CANONICAL = {w.lower(): w for w in ("Yes", "No", "Not tried", "No screen", "No touch")}
 
 
 def version(details: str) -> str | None:
