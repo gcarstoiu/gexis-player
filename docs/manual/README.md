@@ -391,7 +391,7 @@ the player itself, with its music folders and network shares).
 | Background: Wallpaper styles, Follow the time of day, Seasons, Holidays | With Gexis wallpapers. Each picture comes from one of the chosen styles (Calm, Colourful, Psychedelic), the hour's pictures (dawn, day, dusk, night) or the season's. On New Year, and on Christmas and Easter where they are public holidays, only those days' pictures show, with Gexis wallpapers and with online wallpapers alike. The country comes from the weather location, or the time zone until one is set; Easter follows the Western or Orthodox date by country. |
 | Background: Pixabay API key, Wallpaper topics | With online wallpapers. *Space*, *Calm* and *Season* (the current season's pictures) search Pixabay's selected photos; the others are Pixabay's own categories. Choosing several mixes them. |
 | Idle screen: Clock, Clock format, Weather, Location, Forecast, Weather icons | What the idle screen shows over the picture; forecasts come from Open-Meteo. |
-| Weather icon motion | *Animated* or *Static*. Animated icons use about half of one of the Pi's four processor cores while the idle screen is up; Static uses almost none. |
+| Idle screen: Weather icon motion | *Animated* or *Static*. Animated icons use about half of one of the Pi's four processor cores while the idle screen is up; Static uses almost none. |
 | Visualiser: Timeout, Stop when nothing is playing | When the visualiser takes the screen while music plays, and when it gives it back. |
 | Visualiser: Skin type, Rotate skin per track, Skin | Which skins it uses; tap a skin to preview it, then *Use this skin*. |
 | Visualiser tweaks | How the bars and needles move, and whether turntables and tapes turn. |
