@@ -1117,10 +1117,24 @@ async def main() -> None:
         if supervisor.active is not None:
             _hold_the_level_playing(supervisor.active, untold_max_s=RESTART_HOLD_S)
         logger.info("outputs: starting the renderers again for %s", chosen.label)
-        await asyncio.create_subprocess_exec(
-            "systemctl", "restart", "squeezelite.service", "go-librespot.service",
-            "bluealsa-aplay.service",
-        )
+        await _restart_renderers()
+
+    async def _restart_renderers(wait: bool = False) -> None:
+        """**The renderers whose source is on, and only those** (ADR-0077).
+
+        A plain `systemctl restart` of all three starts a unit that is stopped
+        and disabled, so a change of output, of volume type or of the
+        visualiser's tuning brought a switched-off source back until the next
+        boot - with no adapter watching it, so outside arbitration and the
+        volume chain: go-librespot offered to phones under a switch saying
+        off, or squeezelite with no server finding one on the network by
+        itself (code review, 2026-10-12)."""
+        units = [adapters[rid].unit_name for rid in RENDERER_ROWS if renderer_enabled(rid)]
+        if not units:
+            return
+        restart = await asyncio.create_subprocess_exec("systemctl", "restart", *units)
+        if wait:
+            await restart.wait()
 
     def _tuning() -> outputs.Tuning:
         """ADR-0058's two peppyalsa numbers, as the settings have them."""
@@ -1197,10 +1211,7 @@ async def main() -> None:
         )
         await stop.wait()
         outputs.write(chosen, tuning=_tuning())
-        await asyncio.create_subprocess_exec(
-            "systemctl", "restart", "squeezelite.service", "go-librespot.service",
-            "bluealsa-aplay.service",
-        )
+        await _restart_renderers()
 
     def _apply_scope_tuning(_value=None) -> None:
         """`spectrum_smoothing` and `meter_fall` both live in `output.conf`."""
@@ -1259,11 +1270,7 @@ async def main() -> None:
                 return
             await _apply_output_mode(force=True)
             logger.info("volume: restarting the renderers on the new volume type")
-            restart = await asyncio.create_subprocess_exec(
-                "systemctl", "restart", "squeezelite.service", "go-librespot.service",
-                "bluealsa-aplay.service",
-            )
-            await restart.wait()
+            await _restart_renderers(wait=True)
 
     def _choose_volume(value=None) -> None:
         """ADR-0127: the Volume row - Hardware, Software or Fixed."""

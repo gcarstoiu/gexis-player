@@ -69,7 +69,7 @@ def test_a_change_of_output_puts_the_level_shown_on_the_new_card():
     tail = switch[switch.index("forget_mixers()"):]
     assert "set_raw(volume_bridge.mixer_name, hardware_max())" in tail
     assert "volume_bridge.write_hardware(state_store.state.volume.raw)" in tail
-    assert tail.index("write_hardware(") < tail.index("'restart'")
+    assert tail.index("write_hardware(") < tail.index("_restart_renderers(")
 
 
 def test_fixed_writes_full_scale_to_the_control_in_use():
@@ -87,3 +87,15 @@ def test_from_fixed_to_software_starts_at_the_level_to_come_back_to():
     software stage came up at 0 dB."""
     software = _closure("_set_software_volume")
     assert "level_after_fixed(before_fixed['raw']" in software
+
+
+def test_a_switched_off_source_is_not_restarted_with_the_others():
+    """A plain `systemctl restart` of the three renderer units starts one that
+    is stopped and disabled: changing the output, the volume type or the
+    visualiser's tuning brought a switched-off source back, outside
+    arbitration (ADR-0077)."""
+    for name in ("_switch_output", "_rewrite_output_conf", "_change_volume_type"):
+        body = _closure(name)
+        assert "'restart', 'squeezelite.service'" not in body, name
+        assert "_restart_renderers(" in body, name
+    assert "renderer_enabled(rid)" in _closure("_restart_renderers")
