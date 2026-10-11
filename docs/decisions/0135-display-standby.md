@@ -1,6 +1,8 @@
 # ADR-0135 — Display standby: the screen off on demand and at night
 
-**Status:** **Proposed** — 2026-10-11. George chose the recommendations
+**Status:** **Proposed** — 2026-10-11. **Rows confirmed by George** the same
+day (*"The 4 rows confirmed"*), with days of the week on each interval (*"Day
+of the week would be good too"*) and at most six (*"6 is plenty"*). George chose the recommendations
 (on-demand screen off and a night schedule; touch, music starting and the
 phone button wake it; controls in Display and the phone's mini player), with
 two changes: **Display standby is a section of its own**, and **a screen
@@ -46,7 +48,7 @@ Section **Display standby** in Display, after *Panel*:
 |---|---|---|
 | Turn the screen off | action | — |
 | Scheduled standby | toggle | off |
-| Standby times | **new: a list of intervals**, each *From - Until* as HH:MM, up to 6 | one, 23:00-07:00 |
+| Standby times | **new: a list of intervals**, each *From - Until* as HH:MM **and the days of the week it applies to**, up to 6 | one, 23:00-07:00, every day |
 | Back to standby after | number, 1-30 min | 2 min |
 
 *Standby times* and *Back to standby after* show only with *Scheduled
@@ -64,3 +66,15 @@ player, and an interval whose start and end are the same is refused.
 - **Does a touch still reach the player** with the output off? If not, the
   core reads the touch device itself to wake the screen.
 - **What it saves**, in watts.
+
+## Measured so far (2026-10-11, sofapi: Waveshare 10.1" HDMI LCD (B), 1280 x 800)
+
+- **Touch reaches the panel's page with the output off.** `wlr-randr --output
+  HDMI-A-1 --off` for 60 s: the touch controller (event4) sent 13.5 KB of
+  events, and the page posted seven `/touch` to the core while dark. Wake on
+  touch needs no reader of its own.
+- **The backlight went dark, then the screen lit its own "No signal" box**
+  after about 30 s (George, at the screen). Not yet known: whether it goes
+  dark again on its own after the box; whether the 13.3" and the bars do the
+  same. Without that, a black page with the signal kept (no box, the
+  backlight lit) is the alternative.
