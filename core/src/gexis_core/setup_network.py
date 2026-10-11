@@ -61,6 +61,13 @@ NEW_WAIT_S = 15.0
 #: While open and nobody is on it, look for the saved networks this often.
 RETRY_S = 300.0
 POLL_S = 2.0
+
+#: **ADR-0134: a network lost after boot.** How often the online player looks,
+#: and how long without a network before the setup network opens as it does
+#: at boot (George, 2026-10-11: "Yes, after 2 minutes"). A Wi-Fi roam passes
+#: in less, and so does a join from Settings: `wifi.join` gives up at 45 s.
+WATCH_S = 15.0
+LOST_S = 120.0
 #: After switching the radio on: how long to wait for NetworkManager to call
 #: `wlan0` usable before asking it for the hotspot anyway.
 WLAN_READY_S = 20.0
@@ -691,6 +698,42 @@ class SetupNetwork:
             await self._hold(retry)
         finally:
             phones.cancel()
+
+    async def watch(self) -> None:
+        """**ADR-0134: after boot, a lost network brings the setup network
+        back.** Runs for the life of the core beside `run()` and acts only
+        while the player is online and configured, so the boot decision and
+        a setup network already open stay `run()`'s. Two minutes with no
+        network - the same test as at boot, so an address refused by the
+        router counts as none - and the setup network opens with the same
+        screen, then `_hold` gives the radio back to a saved network in range
+        every five minutes."""
+        lost_since = None
+        while True:
+            await self._sleep(WATCH_S)
+            if self._busy or self._needed or self._state != "online":
+                lost_since = None
+                continue
+            if online(await self._devices()) is not None:
+                if lost_since is not None:
+                    logger.info("setup: the network is back")
+                lost_since = None
+                continue
+            now = self._clock()
+            if lost_since is None:
+                lost_since = now
+                logger.info("setup: no network; %s opens if it stays away %d s", SSID, LOST_S)
+                continue
+            if now - lost_since < LOST_S:
+                continue
+            logger.warning("setup: no network for %d s after boot; opening %s", LOST_S, SSID)
+            lost_since = None
+            await self.open()
+            phones = asyncio.ensure_future(self._watch_phones())
+            try:
+                await self._hold(RETRY_S)
+            finally:
+                phones.cancel()
 
     async def _wait_for_network(self) -> str | None:
         """ADR-0104 §3. A configured device gets 90 s. A new one gets 15 s for

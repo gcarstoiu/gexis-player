@@ -42,6 +42,7 @@ from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
 from gexis_core import own_wallpapers
+from gexis_core.wallpapers import SEARCH as PIXABAY_SEARCH
 from gexis_core import backups, bluetooth_devices, skin_packs, device_name, discovery, hardware_report, lyrion_scan, lyrion_shares, problem_report, skin_previews, skins, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
 from gexis_core.artistinfo import PHOTO_BACKGROUND, PHOTO_LARGE, PHOTO_THUMB
@@ -128,6 +129,7 @@ class StateServer:
         idle_page=None,
         settings=None,
         peppy=None,
+        standby=None,
         library=None,
         artistinfo=None,
         notes=None,
@@ -159,7 +161,6 @@ class StateServer:
         weather=None,
         wallpapers=None,
         own=None,
-        space=None,
         skins_at: Callable[[], tuple[Path, str] | None] | None = None,
         ui_dir: Path | None = None,
     ) -> None:
@@ -189,6 +190,8 @@ class StateServer:
         self._idle_page = idle_page
         self._settings = settings
         self._peppy = peppy
+        #: ADR-0135: the screen's standby, which a touch and the phone wake.
+        self._standby = standby
         self._library = library
         self._artistinfo = artistinfo
         self._enrichment = enrichment
@@ -256,8 +259,6 @@ class StateServer:
         #: ADR-0133: the player's own pictures, for Gexis wallpapers and Space
         #: pictures - and for artist pictures while there is no library.
         self._own = own if own is not None else own_wallpapers.OwnWallpapers()
-        #: ADR-0133: Space pictures downloaded from NASA and ESA.
-        self._space = space
         #: Where the skin packs live (ADR-0050). Read per request rather
         #: than at start: a pack could be added under a running daemon, and
         #: parsing 99 sections costs less than the request that asked.
@@ -268,7 +269,9 @@ class StateServer:
         #: What the idle screen is showing, so the next change is a change.
         #: One value for three sources, because only one of them is on
         #: screen at a time: a file name, a Pixabay id, or an artist.
-        self._last_background: str | None = None
+        #: Each screen's last picture (ADR-0133 amended 2026-10-11, second):
+        #: the home and the idle screen pick theirs apart.
+        self._last_background: dict[str, str | None] = {"idle": None, "home": None}
         self._ui_dir = ui_dir
         self._clients: set[web.WebSocketResponse] = set()
         store.subscribe(self._broadcast)
@@ -513,11 +516,12 @@ class StateServer:
             return web.json_response({"error": "wallpapers are not wired up"}, status=503)
         # The player's own pictures need nothing wired; the downloaded and
         # the on-device ones need the wallpaper source.
-        if self._wallpapers is None and self._settings.value("idle_background") in (
+        keys = self.HOME_KEYS if request.query.get("for") == "home" else self.IDLE_KEYS
+        if self._wallpapers is None and self._settings.value(keys["background"]) in (
                 "Wallpapers online", "Wallpapers on device"):
             return web.json_response({"error": "wallpapers are not wired up"}, status=503)
         screen = _screen_size(request)
-        answer = await self._next_background()
+        answer = await self._next_background(keys)
         if self._placer is None or screen is None:
             return web.json_response(answer)
         for _ in range(self.PLACE_TRIES):
@@ -529,7 +533,7 @@ class StateServer:
             if not place.get("skip"):
                 return web.json_response({**answer, "place": place})
             logger.info("idle: %s passed over (%s)", answer["url"], place.get("how"))
-            answer = await self._next_background()
+            answer = await self._next_background(keys)
         return web.json_response(answer)
 
     async def _place(self, url: str, screen: tuple[int, int]) -> dict | None:
@@ -559,9 +563,7 @@ class StateServer:
     async def _picture_bytes(self, url: str) -> bytes | None:
         """The picture a background URL names: a file of ours, or the owner's
         server's (an artist picture through LMS's image proxy)."""
-        if url.startswith("/idle/wallpaper/space/"):
-            path = self._space.path_of(url[len("/idle/wallpaper/space/"):]) if self._space else None
-        elif url.startswith("/idle/wallpaper/own/"):
+        if url.startswith("/idle/wallpaper/own/"):
             path = self._own.path_of(unquote(url[len("/idle/wallpaper/own/"):]))
         elif url.startswith("/idle/wallpaper/local/"):
             path = self._wallpapers.local_path(unquote(url[len("/idle/wallpaper/local/"):]))
@@ -582,7 +584,17 @@ class StateServer:
         except OSError:
             return None
 
-    async def _next_background(self) -> dict:
+    #: **Which rows each screen reads** (ADR-0133 amended 2026-10-11, second).
+    #: The idle screen keeps the keys it always had; the home screen's are
+    #: the waiting screen's own.
+    IDLE_KEYS = {"screen": "idle", "background": "idle_background", "topics": "wallpaper_topics",
+                 "styles": "wallpaper_styles", "time_of_day": "wallpaper_time_of_day",
+                 "seasons": "wallpaper_seasons", "holidays": "wallpaper_holidays"}
+    HOME_KEYS = {"screen": "home", "background": "waiting_background", "topics": "waiting_wallpaper_topics",
+                 "styles": "waiting_wallpaper_styles", "time_of_day": "waiting_wallpaper_time_of_day",
+                 "seasons": "waiting_wallpaper_seasons", "holidays": "waiting_wallpaper_holidays"}
+
+    async def _next_background(self, keys: dict | None = None) -> dict:
         """The next background, whatever `idle_background` says it is.
 
         **One route for four sources**, so the panel asks for "the next
@@ -591,7 +603,9 @@ class StateServer:
         daemon can reach anyway. *When* the picture changes is the panel
         counting `background_interval`; nothing here holds a timer.
         """
-        background = self._settings.value("idle_background") or "Gexis wallpapers"
+        keys = keys or self.IDLE_KEYS
+        last = keys["screen"]
+        background = self._settings.value(keys["background"]) or "Gexis wallpapers"
         if background == "Black":
             return {"off": True, "error": None}
         # ADR-0133 §2: artist pictures come from the library, which is not
@@ -600,56 +614,73 @@ class StateServer:
             background = "Gexis wallpapers"
         if background == "Artist pictures":
             return await self._artist_picture()
-        if background in ("Gexis wallpapers", "Space pictures"):
-            return await self._own_picture(background)
+        if background == "Gexis wallpapers":
+            return await self._own_picture(background, keys)
         if background == "Wallpapers on device":
             # None twice until every one has been shown, and never the one
             # already on screen when there is another (ADR-0047 §2e).
-            name = self._wallpapers.next_local(avoid=self._last_background)
+            name = self._wallpapers.next_local(avoid=self._last_background[last])
             if name is None:
                 return {"error": "No pictures on this device yet."}
-            self._last_background = name
+            self._last_background[last] = name
             # **Quoted**: a name can now carry folders, spaces and anything
             # else a person types, and it travels as a URL.
             return {"url": f"/idle/wallpaper/local/{quote(name)}", "by": "", "page": "",
                     "credit": None, "error": None}
         key = str(self._settings.value("wallpaper_key") or "").strip()
-        topics = self._settings.value("wallpaper_topics") or []
+        topics = await self._pixabay_topics(self._settings.value(keys["topics"]) or [], keys)
         # A bar asks for wide pictures (George, 2026-10-04).
         bar = skin_packs.family(*skin_packs.screen_size()) == "bar"
-        answer = await self._wallpapers.next(key, list(topics), avoid=self._last_background, wide=bar)
+        answer = await self._wallpapers.next(key, list(topics), avoid=self._last_background[last], wide=bar)
         if answer.get("file"):
-            self._last_background = answer["file"]
+            self._last_background[last] = answer["file"]
             answer = {**answer, "url": f"/idle/wallpaper/{answer['file']}"}
         return answer
 
-    async def _own_picture(self, background: str) -> dict:
-        """**ADR-0133.** The next of the player's own pictures. Space
-        pictures are their built-in set; Gexis wallpapers are chosen by the
+    #: ADR-0133 amended 2026-10-11: the topic that is a search, and what each
+    #: holiday asks Pixabay for when it supersedes the topics.
+    PIXABAY_SEARCHES = {"Space": "space", "Calm": "calm"}
+    PIXABAY_HOLIDAYS = {"newyear": "new year", "christmas": "christmas", "easter": "easter"}
+
+    async def _pixabay_topics(self, chosen: list, keys: dict | None = None) -> list[str]:
+        """What `Wallpapers.next` is asked for: on a holiday, with *Holidays*
+        on, that holiday alone (George: *"holidays are a toggle that
+        supersede the choice of wallpaper"*); otherwise each chosen topic - a
+        category as it is, Space and Calm as searches. *Seasons* is the Gexis
+        wallpapers' alone (George, 2026-10-11: "Seasons only for Gexis
+        wallpapers" - a season beside Science only took turns with it)."""
+        keys = keys or self.IDLE_KEYS
+        value = self._settings.value
+        holidays_on = value(keys["holidays"]) is not False
+        country, _ = await self._where() if holidays_on else (None, None)
+        today = datetime.datetime.now().date()
+        if holidays_on:
+            holiday = own_wallpapers.holiday(today, country)
+            if holiday in self.PIXABAY_HOLIDAYS:
+                return [PIXABAY_SEARCH + self.PIXABAY_HOLIDAYS[holiday]]
+        topics = [PIXABAY_SEARCH + self.PIXABAY_SEARCHES[t] if t in self.PIXABAY_SEARCHES else t
+                  for t in (str(t) for t in chosen)]
+        return topics
+
+    async def _own_picture(self, background: str, keys: dict | None = None) -> dict:
+        """**ADR-0133.** The next of the player's own pictures, chosen by the
         style, hour, season and holiday rows (`own_wallpapers.active_sets`)."""
-        if background == "Space pictures":
-            # Downloaded ones first; the built-in set until one has arrived.
-            if self._space is not None:
-                answer = await self._space.next(avoid=self._last_background)
-                if answer is not None:
-                    self._last_background = answer["file"]
-                    return answer
-            sets = [own_wallpapers.SPACE]
-        else:
-            country, latitude = await self._where()
-            value = self._settings.value
-            styles = value("wallpaper_styles")
-            sets = own_wallpapers.active_sets(
-                datetime.datetime.now(),
-                styles=list(styles) if isinstance(styles, list) else ["Calm"],
-                time_of_day_on=value("wallpaper_time_of_day") is not False,
-                seasons_on=value("wallpaper_seasons") is not False,
-                holidays_on=value("wallpaper_holidays") is not False,
-                country=country, latitude=latitude)
-        answer = self._own.next(sets, avoid=self._last_background)
+        keys = keys or self.IDLE_KEYS
+        last = keys["screen"]
+        country, latitude = await self._where()
+        value = self._settings.value
+        styles = value(keys["styles"])
+        sets = own_wallpapers.active_sets(
+            datetime.datetime.now(),
+            styles=list(styles) if isinstance(styles, list) else ["Calm"],
+            time_of_day_on=value(keys["time_of_day"]) is not False,
+            seasons_on=value(keys["seasons"]) is not False,
+            holidays_on=value(keys["holidays"]) is not False,
+            country=country, latitude=latitude)
+        answer = self._own.next(sets, avoid=self._last_background[last])
         if answer is None:
             return {"error": "The player's own pictures are not installed."}
-        self._last_background = answer["file"]
+        self._last_background[last] = answer["file"]
         return answer
 
     async def _where(self) -> tuple[str | None, float | None]:
@@ -710,7 +741,7 @@ class StateServer:
         if not items:
             return {"error": "No artists in the library yet."}
         # Not the artist already on screen, when there is another.
-        items = [a for a in items if a.get("name") != self._last_background] or items
+        items = [a for a in items if a.get("name") != self._last_background["idle"]] or items
         picked = random.sample(items, min(ARTIST_BATCH, len(items)))
 
         # **fanart is asked about one artist, not the batch.** Each name
@@ -723,7 +754,7 @@ class StateServer:
         for artist in shuffled[:ARTIST_FANART_TRIES]:
             url, source = await self._fanart_background(artist.get("name") or "")
             if url:
-                self._last_background = artist.get("name") or ""
+                self._last_background["idle"] = artist.get("name") or ""
                 return {"url": url, "by": artist.get("name") or "", "page": "",
                         "credit": None, "source": source, "error": None}
 
@@ -732,7 +763,7 @@ class StateServer:
         if not with_photos:
             return {"error": "No artist pictures for these artists."}
         artist, url = random.choice(with_photos)
-        self._last_background = artist.get("name") or ""
+        self._last_background["idle"] = artist.get("name") or ""
         # The credit is the artist's name rather than a licence line: both
         # sources come through the owner's own server.
         return {"url": url, "by": artist.get("name") or "", "page": "",
@@ -780,13 +811,6 @@ class StateServer:
         if path is None or not path.is_file():
             return web.json_response({"error": "no such picture"}, status=404)
         return web.FileResponse(path, headers={"Cache-Control": "max-age=86400"})
-
-    async def _handle_space_wallpaper(self, request: web.Request) -> web.StreamResponse:
-        """One downloaded Space picture (ADR-0133): a name it handed out."""
-        path = self._space.path_of(request.match_info["name"]) if self._space else None
-        if path is None:
-            return web.json_response({"error": "no such picture"}, status=404)
-        return web.FileResponse(path)
 
     async def _handle_wallpaper_file(self, request: web.Request) -> web.StreamResponse:
         """One downloaded picture. **Name only, never a path**: this route
@@ -1276,7 +1300,27 @@ class StateServer:
         see touches itself: they land in whichever window has the screen."""
         if self._peppy is not None:
             self._peppy.on_touch()
+        # ADR-0135: a touch wakes a screen in standby - measured to reach the
+        # page with the output off.
+        if self._standby is not None:
+            self._standby.used()
+            if self._standby.off:
+                await self._standby.wake("touch")
         return web.json_response({"touched": True})
+
+    async def _handle_standby(self, request: web.Request) -> web.Response:
+        """**ADR-0135: the screen off or on from a phone, or the Settings
+        action.** `on` is standby on - the screen off."""
+        action = request.match_info["action"]
+        if self._standby is None:
+            return web.json_response({"error": "standby is not wired up"}, status=503)
+        if action == "on":
+            await self._standby.sleep("asked")
+        elif action == "off":
+            await self._standby.wake("phone")
+        else:
+            return web.json_response({"error": f"unknown action {action}"}, status=404)
+        return web.json_response({"standby": self._standby.off})
 
     async def _handle_idle_request(self, request: web.Request) -> web.Response:
         """**ADR-0101: the phone's idle-screen toggle.** Attention first, as a
@@ -2235,7 +2279,6 @@ class StateServer:
         # is what refuses anything that resolves outside the directory.
         app.router.add_get("/idle/wallpaper/local/{name:.*}", self._handle_local_wallpaper)
         app.router.add_get("/idle/wallpaper/own/{name:.*}", self._handle_own_wallpaper)
-        app.router.add_get("/idle/wallpaper/space/{name}", self._handle_space_wallpaper)
         app.router.add_get("/idle/wallpaper/{name}", self._handle_wallpaper_file)
         app.router.add_get("/surface", self._handle_surface)
         app.router.add_get("/touchpad", self._handle_touchpad)
@@ -2259,6 +2302,7 @@ class StateServer:
         app.router.add_post("/settling/hide", self._handle_settling_hide)
         # ADR-0101: the phone's idle toggle, and the panel saying what it shows.
         app.router.add_post("/panel/idle/{action}", self._handle_idle_request)
+        app.router.add_post("/panel/standby/{action}", self._handle_standby)
         app.router.add_post("/panel/shown", self._handle_panel_shown)
         app.router.add_post("/panel/go/{to}", self._handle_view_request)
         app.router.add_post("/peppy/{action}", self._handle_peppy)

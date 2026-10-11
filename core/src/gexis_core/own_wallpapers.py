@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """**The player's own wallpapers** (ADR-0133): the next picture for the
-*Gexis wallpapers* and *Space pictures* backgrounds.
+*Gexis wallpapers* background.
 
 The pictures are `gexis-wallpapers`' (`/usr/share/gexis/wallpapers/<set>/`),
 listed with their credits in `credits.json`. Which set a picture comes from:
@@ -34,7 +34,6 @@ ZONE_TAB = Path("/usr/share/zoneinfo/zone.tab")
 
 #: The settings' style names, and their folders.
 STYLES = {"Calm": "calm", "Colourful": "colourful", "Psychedelic": "psychedelic"}
-SPACE = "space"
 
 #: Local hours. Fixed, not the sun: the weather's sunrise is not always there,
 #: and a set chosen by the clock is what the setting promises.

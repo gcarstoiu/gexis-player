@@ -55,6 +55,8 @@
   //: conditions up under the clock, which then centres over them.
   const threeDays = $derived((settings.idle_forecast ?? '3 days') === '3 days');
   const iconSet = $derived(settings.idle_icons ?? 'Solid');
+  // Finding 118: animated icons hold half a core; Static is the owner's way out.
+  const still = $derived(settings.idle_icon_motion === 'Static');
   //: `idle_clock`, George's row (2026-09-22): *"this way a user can
   //: actually use the panel as a photo frame only"*. The date goes with
   //: it - they are one block and one thought.
@@ -306,7 +308,7 @@
             {#if drawsWeather}
               {#if wantsClock}<span class="bi__divider"></span>{/if}
               <div class="bi__today ink" style:--k={todayScale}>
-                <WeatherIcon condition={weather.now.condition} set={iconSet} size={100} />
+                <WeatherIcon condition={weather.now.condition} set={iconSet} {still} size={100} />
                 <div class="bi__todaytext">
                   <div class="bi__line">
                     <span class="bi__temp">{degrees(weather.now.temperature)}</span>
@@ -325,7 +327,7 @@
                   {#each shownDays as day (day.date)}
                     <span class="bi__day">
                       <span class="bi__dayname ink">{short(day.date)}</span>
-                      <WeatherIcon condition={day.condition} set={iconSet} size={80} />
+                      <WeatherIcon condition={day.condition} set={iconSet} {still} size={80} />
                       <span class="bi__daymm ink">
                         <span class="bi__daymax">{degrees(day.max)}</span>
                         <span class="bi__daymin">{degrees(day.min)}</span>
@@ -366,7 +368,7 @@
         {#if !threeDays && drawsWeather}
           {#if wantsClock}<div class="rule"></div>{/if}
           <div class="now now--big ink">
-            <WeatherIcon condition={weather.now.condition} set={iconSet} size={150} />
+            <WeatherIcon condition={weather.now.condition} set={iconSet} {still} size={150} />
             <div class="now__text">
               <div class="now__line">
                 <span class="now__temp">{degrees(weather.now.temperature)}</span>
@@ -391,7 +393,7 @@
     {:else if threeDays && drawsWeather}
       <div class="band">
         <div class="now ink">
-          <WeatherIcon condition={weather.now.condition} set={iconSet} size={132} />
+          <WeatherIcon condition={weather.now.condition} set={iconSet} {still} size={132} />
           <div class="now__text">
             <div class="now__line">
               <span class="now__temp">{degrees(weather.now.temperature)}</span>
@@ -414,7 +416,7 @@
           {#each forecastDays as day (day.date)}
             <span class="day">
               <span class="day__name ink">{short(day.date)}</span>
-              <WeatherIcon condition={day.condition} set={iconSet} size={100} />
+              <WeatherIcon condition={day.condition} set={iconSet} {still} size={100} />
               <span class="day__mm ink">
                 <span class="day__max">{degrees(day.max)}</span>
                 <span class="day__min">{degrees(day.min)}</span>

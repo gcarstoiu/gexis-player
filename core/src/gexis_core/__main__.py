@@ -9,6 +9,7 @@ import asyncio
 import functools
 import logging
 import re
+import shutil
 import subprocess
 import time
 from pathlib import Path
@@ -33,7 +34,6 @@ from gexis_core.config import Config
 from gexis_core.start_guard import StartGuard
 from gexis_core.idle_page import probe as probe_idle_page
 from gexis_core.wallpapers import Wallpapers
-from gexis_core.space_pictures import SpacePictures
 from gexis_core.weather import Weather
 from gexis_core.metadata_file import MetadataFileWriter
 from gexis_core.artistinfo import PHOTO_LARGE, LmsArtistInfo
@@ -77,6 +77,7 @@ from gexis_core.fanart import Fanart
 from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, TrackMetadata
 from gexis_core import connections, hardware_report, settings_migrations, settling, updates, wired
+from gexis_core.standby import Schedule, Standby
 from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import InvalidValue, Settings, UnknownSetting, load_registry
 from gexis_core.splash import Splash
@@ -1381,9 +1382,10 @@ async def main() -> None:
     wallpapers = Wallpapers(
         idle_session, config.wallpaper_dir, local_dir=Path(config.pictures_dir)
     )
-    # ADR-0133: Space pictures from NASA and ESA, kept beside the Pixabay
-    # ones for the same reason.
-    space = SpacePictures(idle_session, Path(config.wallpaper_dir).parent / "space")
+    # Space pictures (NASA and ESA) were taken out on 2026-10-11 (George:
+    # Space is a Pixabay topic, not a background); what they had downloaded
+    # goes once, here.
+    shutil.rmtree(Path(config.wallpaper_dir).parent / "space", ignore_errors=True)
 
     # ADR-0051. The three visualisation rows describe what the renderer
     # draws, and the renderer is another process: it learns of a change by
@@ -2038,6 +2040,20 @@ async def main() -> None:
                "wallpaper_seasons": None, "wallpaper_holidays": None,
                "waiting_clock": None, "waiting_hint": None,
                "idle_icons": None,
+               # Finding 118: read by the idle screen as it draws the icons.
+               "idle_icon_motion": None,
+               # ADR-0133 amended 2026-10-11 (second): the idle screen's own
+               # switch, and the home screen's background - all read by the
+               # panel or the picture route as they are used.
+               "idle_enabled": None,
+               # ADR-0135: display standby. The schedule's rows are read where
+               # the schedule is kept. The screen is put off on demand from the
+               # phone's button (George, 2026-10-11: not a row as well).
+               "standby_schedule": None, "standby_times": None, "standby_wake": None,
+               "waiting_background": None, "waiting_background_brightness": None,
+               "waiting_background_interval": None, "waiting_wallpaper_topics": None,
+               "waiting_wallpaper_styles": None, "waiting_wallpaper_time_of_day": None,
+               "waiting_wallpaper_seasons": None, "waiting_wallpaper_holidays": None,
                "viz_timeout": None, "viz_stop": None,
                # ADR-0022's handoff rows, wired 2026-09-25. Read where they
                # are used - the adapter at a takeover, the panel for the
@@ -2527,6 +2543,19 @@ async def main() -> None:
     )
     # ADR-0101: the phone's visualiser toggle says what the panel shows.
     peppy_screen.on_change = lambda shown: state_store.set_panel(visualiser=shown)
+
+    # ADR-0135: display standby. The panel and the phones learn it from the
+    # panel state; the visualiser goes down with the screen.
+    def _standby_published(off: bool, reason: str | None) -> None:
+        state_store.set_panel(standby=off)
+        if off and peppy_screen.visible:
+            peppy_screen.hide()
+
+    standby = Standby(publish=_standby_published)
+    # ADR-0135: the owner's standby times. Their rows are read each tick.
+    standby_schedule = Schedule(
+        standby, lambda key: settings.value(key),
+        lambda: state_store.state.metadata.transport == "playing")
     peppy = PeppyController(
         peppy_screen,
         UnattendedPlayback(
@@ -2535,6 +2564,8 @@ async def main() -> None:
         ),
         # ADR-0055 §6: nothing raises a screen this output cannot feed.
         has_levels=lambda: state_store.state.meters,
+        # ADR-0135: nor one that is in standby.
+        blocked=lambda: standby.off,
     )
 
     # **ADR-0055 §5.** An output with no volume control takes the choice
@@ -2552,6 +2583,7 @@ async def main() -> None:
     _publish_meters()
 
     previous_active = state_store.state.active
+    previous_playing = state_store.state.metadata.transport == "playing"
 
     async def _find_cover(renderer_id: str, metadata) -> None:
         """**The cover for a track the renderer sent none for** (ADR-0081).
@@ -2592,7 +2624,12 @@ async def main() -> None:
         state_store.set_found_artwork(renderer_id, metadata, found.album_art)
 
     def follow_playback(state) -> None:
-        nonlocal previous_active
+        nonlocal previous_active, previous_playing
+        # ADR-0135: music starting wakes a screen in standby.
+        playing = state.metadata.transport == "playing"
+        if playing and not previous_playing and standby.off:
+            asyncio.ensure_future(standby.wake("music"))
+        previous_playing = playing
         # ADR-0018/0046: a mode change waits for playback to stop, and this
         # is where stopping is noticed.
         if fixed_wanted["value"] != fixed_now["value"]:
@@ -3311,6 +3348,7 @@ async def main() -> None:
         idle_page=idle_page,
         settings=settings,
         peppy=peppy,
+        standby=standby,
         # Phase 7 (ADR-0038): the same server, and the same player, the
         # renderer adapter talks to.
         library=library,
@@ -3359,7 +3397,6 @@ async def main() -> None:
         # ADR-0047: the idle screen's two providers.
         weather=forecast,
         wallpapers=wallpapers,
-        space=space,
         # ADR-0050: the picker's previews are the skins' own pictures.
         skins_at=skins_at,
         ui_dir=ui_dir,
@@ -3606,6 +3643,10 @@ async def main() -> None:
         # ADR-0104: decided once at boot; holds the setup network while it is
         # needed and gives the radio back to a saved network when one returns.
         setup_network.run(),
+        # ADR-0134: and after boot, a network gone two minutes opens it again.
+        setup_network.watch(),
+        # ADR-0135: the screen off at the owner's standby times.
+        standby_schedule.run(),
         # ADR-0084: the socket plugins connect to. Served for the life of the
         # process, beside the one the browser uses.
         plugin_server.run(),

@@ -64,7 +64,8 @@ class StateStore:
         self._pairing: dict | None = None
         self._components: dict = {}
         self._panel: dict = {"visualiser": False, "idle": False, "idle_request": None,
-                             "lyrics": False, "now": False, "view_request": None}
+                             "lyrics": False, "now": False, "view_request": None,
+                             "standby": False}
         self._setup: dict | None = None
         self._update: dict | None = None
         self._screen_confirm: dict | None = None

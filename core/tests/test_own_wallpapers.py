@@ -159,10 +159,11 @@ async def test_the_idle_route_serves_the_players_own_pictures(tmp_path):
         # normalises it onto another route, which does not serve it either).
         assert (await client.get("/idle/wallpaper/own/../credits.json")).status != 200
 
-        settings.set("idle_background", "Space pictures")
+        # Space pictures left on 2026-10-11: a stored choice of it falls back
+        # to the default, the player's own.
+        settings._store.set("idle_background", "Space pictures")
         body = await (await client.get("/idle/wallpaper")).json()
-        assert body["url"] == "/idle/wallpaper/own/space/s1.webp"
-        assert body["credit"] == "ESA/Webb, NASA & CSA · CC BY 4.0"
+        assert body["url"].startswith("/idle/wallpaper/own/")
 
         # ADR-0133 §2: no library while the LMS client is off, so artist
         # pictures give way to the player's own.
