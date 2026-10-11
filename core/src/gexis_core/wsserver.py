@@ -1423,7 +1423,9 @@ class StateServer:
         if port is None:
             return web.json_response({"error": "not wired up"}, status=503)
         other = self._cable if port is self._wifi_address else self._wifi_address
-        if other is not None and other.pending is not None:
+        # Applying counts as waiting: `pending` is set only once the address
+        # has come, up to 20 s after the change began.
+        if other is not None and (other.pending is not None or other.changing):
             return web.json_response({"error": "Another address change is waiting to be kept. Keep it, or wait for "
                                                "it to go back."}, status=409)
         try:
