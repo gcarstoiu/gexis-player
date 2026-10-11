@@ -446,15 +446,6 @@
         ]
       },
       {
-        "key": "standby_now",
-        "type": "action",
-        "label": "Turn the screen off",
-        "marks": "N",
-        "note": "Until a touch, music starting or the phone's screen button wakes it. The player keeps playing.",
-        "default": null,
-        "confirm": "Turn off"
-      },
-      {
         "key": "standby_schedule",
         "type": "toggle",
         "label": "Scheduled standby",

@@ -2047,8 +2047,8 @@ async def main() -> None:
                # panel or the picture route as they are used.
                "idle_enabled": None,
                # ADR-0135: display standby. The schedule's rows are read where
-               # the schedule is kept; the action puts the screen to sleep now.
-               "standby_now": lambda _=None: asyncio.ensure_future(standby.sleep("asked")),
+               # the schedule is kept. The screen is put off on demand from the
+               # phone's button (George, 2026-10-11: not a row as well).
                "standby_schedule": None, "standby_times": None, "standby_wake": None,
                "waiting_background": None, "waiting_background_brightness": None,
                "waiting_background_interval": None, "waiting_wallpaper_topics": None,

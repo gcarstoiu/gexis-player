@@ -861,12 +861,18 @@
     await write(row, wanted);
   }
 
-  //: **ADR-0135: standby times**, written at each change as a `multi` is;
-  //: the core refuses what cannot be kept and says why. Times are picked,
-  //: hour and minute, so the panel needs no keyboard for them.
+  //: **ADR-0135: standby times.** Edited in a copy the sheet draws at once -
+  //: a day chip waiting for the player's answer felt slow (George,
+  //: 2026-10-11) - and written 400 ms after the last change, or as the sheet
+  //: closes. A time the core refuses puts the copy back to what it holds and
+  //: says why. Times are picked from our own grid, hours then quarters: the
+  //: browser's list was "really old school" and the panel has no keyboard.
   const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const HOURS = Array.from({ length: 24 }, (_, h) => String(h).padStart(2, '0'));
   const QUARTERS = ['00', '15', '30', '45'];
+  let ivs = $state([]);
+  let picking = $state(null); // { i, which } while a time's grid is open
+  let ivTimer = null;
   function daysSaid(days = []) {
     const on = DAYS.filter((d) => days.includes(d));
     if (on.length === 7) return 'every day';
@@ -874,34 +880,42 @@
     if (on.join() === 'Sat,Sun') return 'weekends';
     return on.join(', ');
   }
-  function minutesOf(time) {
-    const m = time.split(':')[1];
-    return QUARTERS.includes(m) ? QUARTERS : [...QUARTERS, m].sort();
+  function ivChanged(list) {
+    ivs = list;
+    clearTimeout(ivTimer);
+    ivTimer = setTimeout(saveIntervals, 400);
   }
-  async function editInterval(i, change) {
-    if (saving) return;
-    const list = (sheet.value ?? []).map((iv, k) => (k === i ? { ...iv, ...change } : iv));
-    await write(sheet, list);
+  async function saveIntervals() {
+    clearTimeout(ivTimer);
+    ivTimer = null;
+    const row = sheet ?? rowOf('standby_times');
+    if (!row || row.type !== 'intervals') return;
+    const wanted = $state.snapshot(ivs);
+    if (JSON.stringify(wanted) === JSON.stringify(row.value ?? [])) return;
+    if (!(await write(row, wanted))) ivs = structuredClone(row.value ?? []);
   }
-  async function setTime(i, which, part, value) {
-    const [h, m] = (sheet.value[i][which] ?? '00:00').split(':');
-    await editInterval(i, { [which]: part === 'h' ? `${value}:${m}` : `${h}:${value}` });
+  function setTime(i, which, part, value) {
+    const [h, m] = ivs[i][which].split(':');
+    const time = part === 'h' ? `${value}:${m}` : `${h}:${value}`;
+    ivChanged(ivs.map((iv, k) => (k === i ? { ...iv, [which]: time } : iv)));
+    if (part === 'm') picking = null;
   }
-  async function toggleDay(i, day) {
-    const days = sheet.value[i].days ?? [];
+  function toggleDay(i, day) {
+    const days = ivs[i].days;
     if (days.includes(day) && days.length === 1) {
       flash('At least one day has to stay selected');
       return;
     }
-    await editInterval(i, { days: days.includes(day) ? days.filter((d) => d !== day) : [...days, day] });
+    const next = days.includes(day) ? days.filter((d) => d !== day) : DAYS.filter((d) => d === day || days.includes(d));
+    ivChanged(ivs.map((iv, k) => (k === i ? { ...iv, days: next } : iv)));
   }
-  async function addInterval() {
-    if (saving) return;
-    await write(sheet, [...(sheet.value ?? []), { from: '22:00', until: '06:00', days: [...DAYS] }]);
+  function addInterval() {
+    picking = null;
+    ivChanged([...ivs, { from: '22:00', until: '06:00', days: [...DAYS] }]);
   }
-  async function removeInterval(i) {
-    if (saving) return;
-    await write(sheet, (sheet.value ?? []).filter((_, k) => k !== i));
+  function removeInterval(i) {
+    picking = null;
+    ivChanged(ivs.filter((_, k) => k !== i));
   }
 
   let draft = $state(null);
@@ -929,6 +943,10 @@
     // takes (ADR-0044 §1, amended 2026-09-21).
     items = row.items ?? [];
     if (row.type === 'list') openList(row.key);
+    if (row.type === 'intervals') {
+      ivs = structuredClone(row.value ?? []);
+      picking = null;
+    }
   }
 
   //: Fetched per opening, never cached: a scan is a picture of the room now.
@@ -1316,6 +1334,8 @@
   }
 
   function cancelSheet() {
+    // ADR-0135: standby times still waiting to be written go now.
+    if (sheet?.type === 'intervals' && ivTimer) saveIntervals();
     // A feedback step after the first goes back one step.
     if (sheet?.kind === 'hardware' && hw && hwAt > 0 && !hwUrl) {
       hwStep = hwSteps[hwAt - 1];
@@ -1331,6 +1351,8 @@
   }
 
   function closeSheet() {
+    // ADR-0135: standby times still waiting to be written go now.
+    if (sheet?.type === 'intervals' && ivTimer) saveIntervals();
     restorePending = null;
     // Inside a level, the same button steps back before it closes.
     if (joinItem && join !== 'connecting') {
@@ -2003,31 +2025,43 @@
         </div>
       {:else if sheet.type === 'intervals'}
         <div class="iv" data-noscrollbar>
-          {#each sheet.value ?? [] as iv, i (i)}
+          {#each ivs as iv, i (i)}
             <div class="iv__item">
+              <button class="iv__remove" type="button" aria-label="Remove this standby time"
+                onclick={() => removeInterval(i)}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17" /></svg>
+              </button>
               <div class="iv__times">
                 {#each [['from', 'From'], ['until', 'Until']] as [which, label] (which)}
+                  {@const open = picking?.i === i && picking?.which === which}
                   <span class="iv__pair">
-                  <span class="iv__label">{label}</span>
-                  <span class="iv__time">
-                    <select aria-label="{label} hour" value={iv[which].split(':')[0]} disabled={busy}
-                      onchange={(e) => setTime(i, which, 'h', e.currentTarget.value)}>
-                      {#each HOURS as h (h)}<option value={h}>{h}</option>{/each}
-                    </select>
-                    <span class="iv__colon">:</span>
-                    <select aria-label="{label} minutes" value={iv[which].split(':')[1]} disabled={busy}
-                      onchange={(e) => setTime(i, which, 'm', e.currentTarget.value)}>
-                      {#each minutesOf(iv[which]) as m (m)}<option value={m}>{m}</option>{/each}
-                    </select>
-                  </span>
+                    <span class="iv__label">{label}</span>
+                    <button class="iv__time" class:open type="button" aria-expanded={open}
+                      aria-label="{label} {iv[which]}"
+                      onclick={() => (picking = open ? null : { i, which })}>{iv[which]}</button>
                   </span>
                 {/each}
-                <button class="iv__remove" type="button" aria-label="Remove this standby time" disabled={busy}
-                  onclick={() => removeInterval(i)}>×</button>
               </div>
+              {#if picking?.i === i}
+                {@const [hh, mm] = iv[picking.which].split(':')}
+                <div class="iv__picker">
+                  <div class="iv__grid iv__grid--hours">
+                    {#each HOURS as h (h)}
+                      <button class="iv__cell" class:on={h === hh} type="button"
+                        onclick={() => setTime(i, picking.which, 'h', h)}>{h}</button>
+                    {/each}
+                  </div>
+                  <div class="iv__grid iv__grid--quarters">
+                    {#each QUARTERS as m (m)}
+                      <button class="iv__cell" class:on={m === mm} type="button"
+                        onclick={() => setTime(i, picking.which, 'm', m)}>:{m}</button>
+                    {/each}
+                  </div>
+                </div>
+              {/if}
               <div class="iv__days">
                 {#each DAYS as d (d)}
-                  <button class="iv__day" class:on={iv.days.includes(d)} type="button" disabled={busy}
+                  <button class="iv__day" class:on={iv.days.includes(d)} type="button"
                     aria-pressed={iv.days.includes(d)} onclick={() => toggleDay(i, d)}>{d}</button>
                 {/each}
               </div>
@@ -2035,7 +2069,7 @@
           {:else}
             <p class="iv__none">No standby times yet.</p>
           {/each}
-          <button class="iv__add" type="button" disabled={busy || (sheet.value ?? []).length >= (sheet.max ?? 6)}
+          <button class="iv__add" type="button" disabled={ivs.length >= (sheet.max ?? 6)}
             onclick={addInterval}>Add standby time</button>
         </div>
       {:else if sheet.type === 'multi'}
@@ -3076,6 +3110,7 @@
     gap: 12px;
   }
   .iv__item {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -3084,20 +3119,41 @@
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid var(--ink-line);
   }
+  .iv__remove {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    border: 1px solid var(--ink-line);
+    background: var(--ink-fill);
+    color: var(--ink-muted);
+  }
+  .iv__remove svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+  }
   .iv__times {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px 12px;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 56px;
   }
   .iv__pair {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    white-space: nowrap;
+    gap: 12px;
   }
   .iv__label {
-    min-width: 52px;
+    min-width: 56px;
     font-family: var(--font-mono);
     font-size: 12px;
     letter-spacing: var(--track-label);
@@ -3105,34 +3161,55 @@
     color: var(--ink-quiet);
   }
   .iv__time {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-  }
-  .iv__time select {
-    min-height: 44px;
-    padding: 0 10px;
+    min-width: 104px;
+    text-align: center;
+    min-height: 48px;
+    padding: 0 16px;
     border-radius: var(--r-md);
     border: 1px solid var(--ink-line);
     background: var(--ink-fill);
     color: var(--ink);
     font: inherit;
-    font-size: 17px;
+    font-size: 22px;
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
-  .iv__colon {
-    color: var(--ink-quiet);
+  .iv__time.open {
+    border-color: var(--accent-lms);
+    color: var(--accent-lms);
   }
-  .iv__remove {
-    margin-left: auto;
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
+  .iv__picker {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .iv__grid {
+    display: grid;
+    gap: 6px;
+  }
+  .iv__grid--hours {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .iv__grid--quarters {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .iv__cell {
+    min-height: 44px;
+    padding: 0;
+    text-align: center;
+    border-radius: var(--r-md);
     border: 1px solid var(--ink-line);
     background: var(--ink-fill);
-    color: var(--ink-muted);
-    font-size: 22px;
-    line-height: 1;
+    color: var(--ink-body);
+    font: inherit;
+    font-size: 16px;
+    font-variant-numeric: tabular-nums;
+  }
+  .iv__cell.on {
+    border-color: var(--accent-lms);
+    background: rgba(126, 214, 188, 0.16);
+    color: var(--accent-lms);
+    font-weight: 700;
   }
   .iv__days {
     display: flex;
@@ -3141,6 +3218,7 @@
   }
   .iv__day {
     min-width: 50px;
+    text-align: center;
     min-height: 44px;
     padding: 0 10px;
     border-radius: 22px;
