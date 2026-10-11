@@ -3,6 +3,7 @@ here is invented; the shapes are the ones a real journal holds."""
 from __future__ import annotations
 
 import io
+import re
 import zipfile
 
 from gexis_core import problem_report as pr
@@ -121,6 +122,59 @@ def test_a_journal_is_scrubbed_in_whole_lines():
     assert all(p.endswith("\n") for p in pr._pieces(text, size=100))
     out = s.scrub(text)
     assert "Nina" not in out and "10.0.4." not in out and out.count("\n") == 400
+
+
+def _line(logger, message, level="INFO"):
+    return (f"2026-10-12T09:00:00+02:00 box python[812]: 2026-10-12 09:00:00,001 gexis_core.{logger} "
+            f"{level} {message}")
+
+
+def test_the_geocoders_own_name_for_the_place_is_taken_out():
+    """Review, 2026-10-12: the owner types "smalltown, xx" and Open-Meteo
+    answers with its own spelling, which no known value matched."""
+    s = pr.Scrubber()
+    pr.learn(s, ROWS, {**VALUES, "weather_location": "smalltown, xx"}.get)
+    out = s.scrub("\n".join([
+        _line("weather", "weather: 'smalltown, xx' is Smålltown-on-Sea, XX (52.1235, 13.5432)"),
+        _line("idle_page", "idle: forecast for Smalltown asked"),
+        "2026-10-12T09:00:02+02:00 box python[812]: GET https://api.open-meteo.com/v1/forecast?latitude=52.1235&longitude=13.5432&forecast_days=4",
+    ]))
+    for private in ("Smålltown", "Sea", "Smalltown", "smalltown", "52.12", "13.54"):
+        assert private not in out, private
+    assert re.search(r"weather: 'name-1' is place-1 \(place-\d\)", out) and "forecast_days=4" in out
+
+
+def test_library_artists_the_covers_sweep_names_are_taken_out():
+    """Review, 2026-10-12: the sweep logs artists from the library, which the
+    device knows only while they play, and "failed" puts the line into the
+    public issue."""
+    s = pr.Scrubber()
+    log = "\n".join([
+        _line("artwork_sweep", "sweep: Example Band failed (Cannot connect to host example.invalid:443)"),
+        _line("artwork_sweep", "sweep: quietname scored 71, below the threshold"),
+        _line("artwork_sweep", "sweep: 'Other Example' failed (timed out)"),
+        _line("artwork_sweep", "sweep: could not store fanart-artist/'example band' (database is locked)"),
+        _line("artwork_sweep", "sweep: could not read the last run (no such file)"),
+        _line("artwork_sweep", "sweep: covers finished - 917 of 917, 870 found"),
+    ])
+    out = s.scrub(log)
+    for private in ("Example Band", "quietname", "Other Example", "example band"):
+        assert private not in out, private
+    for kept in ("sweep: title-1 failed (Cannot connect", "sweep: title-2 scored 71, below the threshold",
+                 "sweep: 'title-3' failed (timed out)", "could not store fanart-artist/'title-4' (database",
+                 "could not read the last run (no such file)", "covers finished - 917 of 917"):
+        assert kept in out, kept
+    assert "Example" not in pr.last_errors(out) and "title-1 failed" in pr.last_errors(out)
+
+
+def test_a_known_value_is_found_in_any_case_but_the_logs_own_words_stay():
+    s = pr.Scrubber()
+    pr.learn(s, ROWS, VALUES.get, now_playing=("Warning", "Nina Example"))
+    out = s.scrub("\n".join([_line("adapters.lms", "lms: NINA EXAMPLE - warning", level="WARNING"),
+                              _line("enrichment", "enrichment: nina example has no Warning")]))
+    assert "nina" not in out.lower() and "warning" not in out
+    assert " WARNING lms: title-" in out and "has no title-" in out
+    assert pr.last_errors(out).count("WARNING") == 1
 
 
 def test_settings_show_choices_and_hide_what_a_person_typed():

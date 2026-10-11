@@ -269,7 +269,7 @@ class ArtworkSweep:
                 except asyncio.CancelledError:
                     raise
                 except Exception as exc:  # one bad artist must not end the run
-                    logger.info("sweep: %s failed (%s)", name, exc)
+                    logger.info("sweep: %r failed (%s)", name, exc)
                     got = Found()
                 if kind == "covers":
                     found += 1 if got.covers else 0
@@ -325,7 +325,7 @@ class ArtworkSweep:
             return Found()
         mbid, score = resolved
         if score < self._confidence():
-            logger.info("sweep: %s scored %s, below the threshold", name, score)
+            logger.info("sweep: %r scored %s, below the threshold", name, score)
             return Found()
 
         # fanart.tv first; TheAudioDB for what it has not (ADR-0120 §4).
@@ -482,7 +482,7 @@ class ArtworkSweep:
         try:
             self._store.remember(namespace, key, url)
         except Exception as exc:
-            logger.info("sweep: could not store %s/%s (%s)", namespace, key, exc)
+            logger.info("sweep: could not store %s/%r (%s)", namespace, key, exc)
 
 
 @dataclass(frozen=True)
@@ -529,5 +529,5 @@ def remembered(store, namespace: str, key: str) -> str | None | bool:
     except KeyError:
         return False
     except Exception as exc:
-        logger.info("sweep: could not read %s/%s (%s)", namespace, key, exc)
+        logger.info("sweep: could not read %s/%r (%s)", namespace, key, exc)
         return False
