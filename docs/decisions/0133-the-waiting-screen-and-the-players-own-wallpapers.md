@@ -186,3 +186,38 @@ wallpapers, adding the season's search beside the chosen topics (George
 chose the toggle over the topic). Calm stays a search. Space's searches had
 been fine (the top results were the Milky Way, galaxies and Earth from
 orbit); the topic was redundant, not broken.
+
+## Amended 2026-10-11 (second): two backgrounds, and Display in seven sections
+
+George, on sofapi: one shared *Background* section *"is not working for me
+organisation wise"*. The home screen and the idle screen each get their own.
+
+1. **Display's sections**, in order: *Panel*; **Touchpad** (the phone's
+   touchpad, pointer speed and style); **Volume** (the drawer's two rows);
+   **Photo service and location** (the Pixabay key, and the location the
+   weather and the seasons and holidays read); **Home screen**; **Idle
+   screen**; *Visualiser* and *Visualiser tweaks*. The shared *Background*
+   section of the first amendment is gone.
+2. **Two backgrounds.** *Home screen* keeps its rows (the strip with the
+   Lyrion client on; clock and hint with it off) and gains a background of
+   its own for the waiting screen, shown with the Lyrion client off:
+   `waiting_background` and `waiting_background_brightness`,
+   `waiting_background_interval`, `waiting_wallpaper_topics`,
+   `waiting_wallpaper_styles`, `waiting_wallpaper_time_of_day`,
+   `waiting_wallpaper_seasons`, `waiting_wallpaper_holidays`. **Fresh
+   defaults** (George), not a copy of the idle screen's: Gexis wallpapers,
+   Calm. *Artist pictures* is not offered there - the library it needs is
+   off whenever the waiting screen shows. The idle screen keeps today's keys,
+   so nothing changes for it on an update.
+3. **One order in both** (George: *"background should be followed by Topics
+   and then season toggle"*): Background, Topics or Styles, Follow the time
+   of day, Seasons, Holidays, Background brightness, Change the picture
+   every.
+4. **The idle screen can be switched off**: an *Idle screen* toggle heads
+   its section and hides every row under it when off. **Off by default on a
+   new player** (George); a player already in use keeps it on (a migration
+   for existing players only). Off, the panel never goes idle by itself and
+   the phone's idle button is not offered.
+5. **The picture route says which screen asks** (`/idle/wallpaper?for=home`);
+   each screen keeps its own last picture, so the two do not show the same
+   one by turns.

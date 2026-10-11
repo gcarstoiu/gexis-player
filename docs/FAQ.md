@@ -176,8 +176,10 @@ the library.
 ## Idle screen and visualiser
 
 **When does the idle screen appear?**
-After *Settings → Display → Idle screen → Timeout* (default 5 minutes) with
-nothing playing and nobody touching the screen. It shows a clock, the
+Only with *Settings → Display → Idle screen* switched on - it is off on a new
+player, and the panel then stays on what it shows. On, it appears after
+*Timeout* (default 5 minutes) with nothing playing and nobody touching the
+screen. It shows a clock, the
 weather and a background picture. A touch, or music starting, brings the
 player back.
 
@@ -186,10 +188,12 @@ player back.
 the player's own public-domain photographs, built in (the default on a new
 player); *Space pictures* from NASA and ESA; *Artist pictures* from the
 library (while the Lyrion client is off they show the player's own instead);
-*Wallpapers online* from Pixabay (it needs a free key, entered in the row
-below); *Wallpapers on device*, read from the player's Pictures share on the
+*Wallpapers online* from Pixabay (it needs a free key, entered under
+*Photo service and location*); *Wallpapers on device*, read from the player's Pictures share on the
 network; or *Black*. Pictures are
-placed by what they show, so faces, people and animals stay in view.
+placed by what they show, so faces, people and animals stay in view. The
+waiting screen (with the Lyrion client off) has its own *Background* under
+*Home screen*, chosen apart from the idle screen's.
 
 **How do the player's own wallpapers change through the day and the year?**
 With *Gexis wallpapers*, each picture comes from one of the *Wallpaper
@@ -216,7 +220,8 @@ categories; choosing several mixes them. *Seasons* adds the current season's
 pictures, and *Holidays* shows a holiday's in their place on its days.
 
 **The weather is for the wrong place, or not shown.**
-Set *Settings → Display → Idle screen → Location* to a city or place name.
+Set *Settings → Display → Photo service and location → Location* to a city or
+place name.
 *Forecast* chooses today only or three days; *Weather* turns it off. The
 forecast comes from Open-Meteo and needs no key.
 
