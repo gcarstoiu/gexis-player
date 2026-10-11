@@ -1990,7 +1990,8 @@
   <div class="scrim" class:is-open={sheet} role="presentation" onclick={closeSheet}></div>
 
   {#if sheet}
-    <div class="sheet" class:sheet--full={sheetFull} class:sheet--fit={sheet.type === 'action' && !sheet.kind && !restorePending} role="dialog" aria-label={sheet.label}>
+    <div class="sheet" class:sheet--full={sheetFull} class:sheet--fit={sheet.type === 'action' && !sheet.kind && !restorePending}
+      class:sheet--steps={sheet.kind === 'hardware' || sheet.kind === 'report'} role="dialog" aria-label={sheet.label}>
       <div class="sheet__head">
         <div class="sheet__title">{sheet.grouped && region !== null ? region : sheet.label}</div>
         {#if sheet.note && !joinItem && sheet.kind !== 'cable'}<div class="sheet__note"><NoteText text={sheet.note} /></div>{/if}
@@ -3216,6 +3217,16 @@
      400 px screen the panel's 82% cap leaves a sheet too short to hold a
      list. */
   /* A long list on a phone: the whole screen, not a card over it. */
+  /* **A sheet in steps stays where it opened** (George, 2026-10-11, on
+     Hardware feedback: "when opening the modal it jumps"). Centred, a sheet
+     that grew - the step area arriving after "Reading the hardware…", or the
+     next step - re-centred and pushed what was already read upwards. Held
+     at the top, it grows downwards only. Before the bar's rules, which
+     already hold every sheet at the top. */
+  .sheet.sheet--steps {
+    top: 9%;
+    transform: translate(-50%, 0);
+  }
   .sheet.sheet--full {
     top: 0;
     left: 0;
