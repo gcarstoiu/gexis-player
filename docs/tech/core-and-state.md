@@ -280,7 +280,8 @@ row mechanics `list`, `warn`, `onlyWhen`, `optionsFrom`, `picker` and
   (`/etc/gexis/settings-seed.json`, validated row by row), a `defaults`
   callable (deployment config or the running system), the registry default.
 - **The API publishes every row and the panel filters**: each row carries a
-  computed `visible` (from `onlyWhen`, including a heading's or a group's
+  computed `visible` (from `onlyWhen` - a value, `"*any*"`, `{"not": v}` or,
+  since 2026-10-11, `{"in": [v, ...]}` - including a heading's or a group's
   condition), its current `value`, `options` for `optionsFrom` sources
   (`skin_corpus`, `timezones`, `output_device`, `screens`, `boards`), `unavailable`
   options greyed with a reason (ADR-0044 §8), a plugin's `status`

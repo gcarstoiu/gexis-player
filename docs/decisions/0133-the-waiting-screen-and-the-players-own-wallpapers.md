@@ -147,3 +147,34 @@ way"*, on whether they are fetched as they are shown):
 - Each picture's credit has to be kept with it and drawn, as Pixabay's are.
 - The holidays' dates for the later, lunar ones are a table that has to be
   kept up to date.
+
+## Amended 2026-10-11: a Background section, and Pixabay searches
+
+George, testing the waiting screen with Lyrion off: the rows behind its
+picture were not under *Home screen*. They were under *Idle screen*, because
+the two screens share one background (§5).
+
+1. **A section of its own, *Background***, in Settings → Display between
+   *Home screen* and *Idle screen*, since it serves both (George chose it
+   over repeating the rows or a pointer line): *Background*, *Background
+   brightness*, *Change the picture every*, the Pixabay key and topics, and
+   the four wallpaper rows. *Background* no longer depends on the idle
+   screen being the built-in one: with an external idle page the waiting
+   screen still draws it. No key changes, so no migration.
+2. **Pixabay topics gain Space, Calm and Season** (George, reversing
+   2026-09-21's *"We start with categories"*). They are searches, not
+   Pixabay categories: Space asks for *space*, Calm for *calm*, Season for
+   the current season (*spring*, *summer*, *autumn*, *winter*) by the
+   player's hemisphere, as the Gexis wallpapers' seasons are read. Measured
+   on the bar player the same day: each search has Pixabay's ceiling of 500
+   usable photos. **Searches ask for editors' choice only** (ours: a search
+   matches captions as well as pictures, and Pixabay's picks are its
+   reviewed ones); categories stay as they were.
+3. **Holidays supersede the chosen topics** (George: *"holidays are a toggle
+   that supersede the choice of wallpaper"*). The existing *Holidays* row
+   now governs *Wallpapers online* too: on New Year, and on Christmas and
+   Easter where they are holidays, Pixabay is asked for that holiday
+   (*new year*, *christmas*, *easter*) instead of the topics. Same country
+   rule as the Gexis wallpapers (§4).
+4. **The registry learns "one of"** (`{"in": [...]}` in `onlyWhen`): the
+   *Holidays* row shows for either wallpaper background.

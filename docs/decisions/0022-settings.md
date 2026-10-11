@@ -112,7 +112,7 @@ Phase 2 and ADR-0027.
 | Idle background: artist pictures / wallpapers online / wallpapers on device / black | [N] | ADR-0047 §1 |
 | Wallpaper API key | [N] | **Pixabay**, chosen by George on 2026-09-21 ([Finding 043](../findings/043-the-idle-screens-two-providers.md)). A key per owner: its guidelines allow this use but not a shipped credential **Labelled *Pixabay API key* from 2026-10-05** ([ADR-0120](0120-backgrounds-cropped-by-what-they-show.md)), with Pexels beside it; the key stays `wallpaper_key`. |
 | ~~Pexels API key~~ | [N] | **Removed 2026-10-07** (George: *"remove pexels completely as they are not providing API keys anymore"*; a migration drops `pexels_key`).<br>**Appended 2026-10-05 on George's confirmation** ([ADR-0120](0120-backgrounds-cropped-by-what-they-show.md) §6). The owner's own key, as Pixabay's; Idle screen, shown only with online wallpapers. Pexels is searched with the chosen topic words, and its credit is drawn on screen as Pixabay's is |
-| Wallpaper topics | [N] | **Appended 2026-09-21 on George's confirmation.** Pixabay's own twenty categories, more than one at a time — the `multi` mechanic [ADR-0044](0044-settings-row-vocabulary.md) §7 exists for this row. Not in the design drop |
+| Wallpaper topics | [N] | **Appended 2026-09-21 on George's confirmation.** Pixabay's own twenty categories, more than one at a time — the `multi` mechanic [ADR-0044](0044-settings-row-vocabulary.md) §7 exists for this row. Not in the design drop. **Space, Calm and Season added 2026-10-11** (George; [ADR-0133](0133-the-waiting-screen-and-the-players-own-wallpapers.md) amended): searches, Season the current one. Under *Background* since then |
 | Background interval | [N] | **Appended 2026-09-21 on George's confirmation.** How often the picture changes. Not in the design drop, and without it the rotation is a hardcoded number nobody chose. Named `wallpaper_interval` until he pointed out it was hidden for artist pictures: it belongs to a picture, not to a wallpaper service |
 | Background brightness | [N] | **Appended 2026-09-21, asked for by George.** The design dims a background to 62% and that is this row's default; 20–100% |
 
@@ -324,7 +324,7 @@ in Display:
 | Wallpaper styles | [N] | Calm, Colourful, Psychedelic, several at a time (`multi`); default Calm. Shown with Gexis wallpapers |
 | Follow the time of day | [N] | Dawn, day, dusk and night pictures by the clock; default on |
 | Seasons | [N] | The season's pictures, by hemisphere from the time zone; default on |
-| Holidays | [N] | New Year, Christmas and Easter (Western or Orthodox) for the player's country, from the time zone and then the weather location; default on. On a holiday's days its pictures replace the styles (George: *"They replace them. For the time being if option is selected."*) |
+| Holidays | [N] | New Year, Christmas and Easter (Western or Orthodox) for the player's country, from the time zone and then the weather location; default on. On a holiday's days its pictures replace the styles (George: *"They replace them. For the time being if option is selected."*). **From 2026-10-11 it governs *Wallpapers online* too**, replacing the topics (George: *"holidays are a toggle that supersede the choice of wallpaper"*); `onlyWhen` names both backgrounds |
 | Clock on the waiting screen | [N] | Time, date and the player's name, top left; follows *Clock format*; default on |
 | Hint on the waiting screen | [N] | *Start music from your phone* above the source tiles; default on |
 
