@@ -224,6 +224,8 @@ class StateServer:
         self._placer = placer
         self._placements: dict[tuple, dict | None] = {}
         self._placing = None
+        #: The visualiser's restart under way, if one is (`_peppy_again`).
+        self._peppy_restarting: asyncio.Future | None = None
         #: ADR-0115: the Lyrion server's network shares.
         self._lyrion_shares = lyrion_shares
         self._lyrion_shares_changed = lyrion_shares_changed
@@ -2124,7 +2126,13 @@ class StateServer:
             return web.json_response({"error": f"unknown action {action}"}, status=404)
         shown = self._peppy.request(action)
         if not shown and action == "show" and self._peppy._has_levels():
-            shown = await self._peppy_again()
+            # **One restart at a time** (review, 2026-10-12): a second tap
+            # while the skins load (~9 s) restarted the unit again and killed
+            # the half-loaded one. A later ask waits for the restart under way;
+            # shielded, so a phone that gives up does not cancel it for all.
+            if self._peppy_restarting is None or self._peppy_restarting.done():
+                self._peppy_restarting = asyncio.ensure_future(self._peppy_again())
+            shown = await asyncio.shield(self._peppy_restarting)
         if not shown:
             return web.json_response({"error": "no Peppy screen window to act on"}, status=409)
         return web.json_response({"peppy": action})

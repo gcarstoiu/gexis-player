@@ -682,6 +682,51 @@ async def test_uninstall_is_only_for_uploaded_plugins():
     assert ok.status == 200 and ours.status == 404
 
 
+@pytest.mark.asyncio
+async def test_a_second_show_while_the_visualiser_is_starting_again_waits_for_it(monkeypatch):
+    """Review, 2026-10-12: nothing marked a restart as under way, so a second
+    tap during the ~9 s the skins take to load restarted the unit again and
+    killed the half-loaded one. The second ask now waits for the first."""
+    from gexis_core import wsserver
+
+    restarts = []
+
+    async def started(*args, **kw):
+        restarts.append(args)
+
+        class _Done:
+            async def wait(self):
+                return 0
+        return _Done()
+
+    class _Slow:
+        """No window until three looks after the restart."""
+        def __init__(self):
+            self.looks = 0
+
+        def _has_levels(self):
+            return True
+
+        def request(self, action):
+            if restarts:
+                self.looks += 1
+            return self.looks >= 3
+
+    import asyncio
+    real_sleep = asyncio.sleep
+
+    async def quick(_s):
+        await real_sleep(0.01)  # the 1.5 s between looks, shortened
+
+    monkeypatch.setattr(wsserver.asyncio, "create_subprocess_exec", started)
+    server = StateServer(StateStore(_caps("lms")), peppy=_Slow())
+    monkeypatch.setattr(wsserver.asyncio, "sleep", quick)
+    async with TestClient(TestServer(server.make_app())) as client:
+        first, second = await asyncio.gather(client.post("/peppy/show"), client.post("/peppy/show"))
+    assert (first.status, second.status) == (200, 200)
+    assert len(restarts) == 1, "one restart, however many asked"
+
+
 class _PeppyWithoutWindow:
     """No window at first; shown once it has been started again, and saying
     so the way the real one does - `on_change` into the state store."""
