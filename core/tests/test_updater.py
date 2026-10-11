@@ -58,6 +58,34 @@ def test_a_serial_that_went_down_is_refused(monkeypatch, up):
         up.read_channel("testing")
 
 
+def test_a_serial_file_a_power_cut_emptied_does_not_stop_every_check(monkeypatch, up):
+    """**The review of 2026-10-12.** ShelvesPi's power cut left files just
+    written at 0 bytes; an empty `serial-stable` made every check raise
+    ValueError after saying "checking" - the tile stood at Checking… until
+    someone deleted it over SSH. Unreadable, it counts as none seen."""
+    up.STATE.mkdir(parents=True)
+    for text in ("", "7\x00\x00", "garbage"):
+        (up.STATE / "serial-testing").write_text(text)
+        serve(monkeypatch, up, channel_text(serial=3))
+        assert up.read_channel("testing")["_serial"] == 3
+
+
+def test_the_serial_is_written_beside_and_renamed(monkeypatch, up):
+    """So a cut mid-write leaves the serial before, never half of one."""
+    up.remember_serial("testing", 5)
+    real = Path.write_text
+
+    def cut(self, text, *a, **k):
+        real(self, text[:0])
+        raise OSError("the power went")
+
+    monkeypatch.setattr(Path, "write_text", cut)
+    with pytest.raises(OSError):
+        up.remember_serial("testing", 6)
+    monkeypatch.setattr(Path, "write_text", real)
+    assert (up.STATE / "serial-testing").read_text() == "5"
+
+
 def test_a_channel_in_a_newer_format_says_the_updater_is_too_old(monkeypatch, up):
     """LESSONS 49: a layout this updater cannot read is named, not a 404."""
     serve(monkeypatch, up, "Format: 3\n" + channel_text())

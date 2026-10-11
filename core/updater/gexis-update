@@ -154,16 +154,32 @@ def read_channel(channel: str) -> dict:
                    f"(channel format {fmt}, this one reads {FORMAT}); install a newer image")
     serial = int(fields.get("Serial", "0"))
     seen_path = STATE / f"serial-{channel}"
-    seen = int(seen_path.read_text()) if seen_path.exists() else 0
+    seen = seen_serial(seen_path)
     if serial < seen:
         raise Stop(f"the {channel} file's serial went down ({serial} after {seen}); refused")
     fields["_serial"] = serial
     return fields
 
 
+def seen_serial(path: Path) -> int:
+    """The serial last accepted, or 0. **A file that does not read as one
+    counts as none** (the review of 2026-10-12): a power cut can leave it
+    empty (ShelvesPi's lists, `drop_empty_lists`), and an empty one made
+    every check end in a ValueError, for good. 0 accepts the next genuine
+    file, which a check then remembers again."""
+    try:
+        return int(path.read_text())
+    except (OSError, ValueError):
+        return 0
+
+
 def remember_serial(channel: str, serial: int) -> None:
+    """Written beside and renamed, as status.json is: a cut mid-write
+    leaves the serial before, never half of one."""
     STATE.mkdir(parents=True, exist_ok=True)
-    (STATE / f"serial-{channel}").write_text(str(serial))
+    tmp = STATE / f"serial-{channel}.tmp"
+    tmp.write_text(str(serial))
+    tmp.replace(STATE / f"serial-{channel}")
 
 
 def parts_of(version: str) -> tuple[list[str], list[str]]:
