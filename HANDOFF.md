@@ -45,11 +45,19 @@ clear it) and **ShelvesPi** (the bar) both run the `phase-13d` preview
 since 0.9.8. George's reset-and-restore check on the bar is still owed, now
 on this. **guestpi** offline.
 
-**Waiting on George:** a look at the player switcher on his phone (ADR-0136,
-built and tried on both players). Checks owed: a reset and restore on the
-bar; display standby on the bar (dark or a lasting "No signal"? turned the
-right way after waking?); the boot screen's seam. Phase 13g (the player in
-Home Assistant) is queued before themes, ADR first.
+**Next release, 0.10.1 - George testing first** (2026-10-11: "Let me test
+some more and then we can cut another release"). In it, on `phase-13d` and
+on both players as a preview (0.10.0+git29/31): the player switcher (ADR-0136;
+a 34 px square at the right of the Settings title; the list kept warm, about
+10 ms); setup's Keep warning only for a screen that changes what is applied
+(ADR-0109 amended); the settling screen's *Installing…* step (ADR-0128
+amended). Notes to be drafted and approved when he says so.
+
+**Checked by George 2026-10-11:** a clean setup with a restore; setup
+recognising the bar; the boot seam; display standby on the bar. **Still
+owed:** standby on the 13.3" (guestpi offline); the tests listed below.
+Phase 13g (the player in Home Assistant) is queued before themes, Phase 14a
+(a sound bar on optical) after them; HDMI audio on the second port to revisit.
 
 **At the first Stable release** (George, 2026-10-09): revisit how the image
 reaches people - most likely all three of ADR-0021's routes: the image file
