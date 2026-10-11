@@ -1507,6 +1507,108 @@ class StateServer:
             "Cache-Control": "no-store",
         })
 
+    #: ADR-0138 decision 4: a prepared report is kept this long, then dropped.
+    REPORT_KEEP_S = 3600
+    _report_job: dict | None = None
+
+    def _report_inputs(self):
+        """What the report is built from, read on the loop (the settings store
+        is SQLite, bound to this thread)."""
+        rows = self._settings.all_rows()
+        values = {}
+        for row in rows:
+            try:
+                values[row["key"]] = self._settings.value(row["key"])
+            except Exception:  # noqa: BLE001 - a row that cannot be read is left out
+                values[row["key"]] = None
+        shares = self._lyrion_shares.all() if self._lyrion_shares is not None else []
+        state = self._store.state
+        playing = []
+        for item in ((state.metadata,) if state.metadata else ()) + (tuple(state.queue.items) if state.queue else ()):
+            playing += [item.title, item.artist, item.album]
+        return rows, values, shares, [p for p in playing if p]
+
+    def _report_now(self) -> dict | None:
+        job = self._report_job
+        if job and job.get("at") and time.monotonic() - job["at"] > self.REPORT_KEEP_S:
+            self._report_job = job = None
+        return job
+
+    async def _handle_report_prepare(self, request: web.Request) -> web.Response:
+        """ADR-0138 §1: the report prepared in the background, its checklist
+        ticked as it goes (`/report/status`)."""
+        if self._settings is None:
+            return web.json_response({"error": "settings are not wired up"}, status=503)
+        try:
+            body = await request.json() if request.can_read_body else {}
+        except ValueError:
+            body = {}
+        if not isinstance(body, dict):
+            body = {}
+        job = self._report_now()
+        if job and job["state"] == "preparing":
+            return web.json_response({"error": "a report is already being prepared"}, status=409)
+        what = str(body.get("what") or "")[:4000]
+        often = body.get("often") if body.get("often") in problem_report.OFTEN else None
+        rows, values, shares, playing = self._report_inputs()
+        job = {"state": "preparing", "what": what, "often": often, "done": {}, "at": None,
+               "report": None, "error": None, "version": ""}
+        self._report_job = job
+
+        def tell(step: str, detail: str) -> None:
+            job["done"][step] = detail          # read by /report/status; plain assignment
+
+        def work():
+            report = problem_report.build(what, rows, values.get, shares=shares, now_playing=playing,
+                                          progress=tell)
+            version = problem_report._run("dpkg-query", "-W", "-f", "${Version}", "gexis-player").strip()
+            return report, version
+
+        async def run() -> None:
+            async with self._report_lock:
+                try:
+                    report, version = await asyncio.get_running_loop().run_in_executor(None, work)
+                except Exception as exc:  # noqa: BLE001 - said on the sheet, not lost
+                    logger.exception("report: preparing failed")
+                    job.update(state="failed", error=str(exc) or type(exc).__name__)
+                    return
+            logger.info("report: %s, %d bytes; taken out: %s", report.name, len(report.data), report.summary)
+            job.update(state="ready", report=report, version=version.split("+")[0], at=time.monotonic())
+
+        asyncio.ensure_future(run())
+        return web.json_response({"ok": True})
+
+    async def _handle_report_status(self, request: web.Request) -> web.Response:
+        job = self._report_now()
+        if job is None:
+            return web.json_response({"state": "idle"})
+        report = job["report"]
+        return web.json_response({
+            "state": job["state"],
+            "steps": [{"id": sid, "label": label, "done": sid in job["done"], "detail": job["done"].get(sid, "")}
+                      for sid, label in problem_report.STEPS],
+            "error": job["error"],
+            "name": report.name if report else None,
+            "size": len(report.data) if report else None,
+            "files": [{"name": n, "size": b} for n, b in report.files] if report else [],
+            "summary": report.summary if report else None,
+        })
+
+    async def _handle_report_file(self, request: web.Request) -> web.Response:
+        job = self._report_now()
+        if not job or job["state"] != "ready":
+            return web.json_response({"error": "No report is ready. Prepare it again."}, status=404)
+        report = job["report"]
+        return web.Response(body=report.data, content_type="application/zip", headers={
+            "Content-Disposition": f'attachment; filename="{report.name}"', "Cache-Control": "no-store"})
+
+    async def _handle_report_issue(self, request: web.Request) -> web.Response:
+        job = self._report_now()
+        if not job or job["state"] != "ready":
+            return web.json_response({"error": "No report is ready. Prepare it again."}, status=404)
+        return web.json_response({"url": problem_report.issue_url(job["what"], job["often"], job["version"],
+                                                                  job["report"])})
+
     async def _hardware_facts(self):
         """ADR-0126: what the device reads of its sound card and screen. The
         settings are read here, on the loop (SQLite is bound to this thread);
@@ -1653,6 +1755,19 @@ class StateServer:
         if kept is None:
             return web.json_response({"kept": None})
         return web.json_response({"kept": {k: kept.get(k) for k in ("at", "board", "screen", "url")}})
+
+    async def _handle_hardware_file(self, request: web.Request) -> web.Response:
+        """ADR-0138 decision 3: the prepared feedback as a text file, to send
+        by e-mail."""
+        stored = self._settings.kept(hardware_report.KEPT_KEY) if self._settings is not None else None
+        kept = hardware_report.kept_for(stored, await self._hardware_identity())
+        if kept is None:
+            return web.json_response({"error": "No feedback is prepared."}, status=404)
+        stamp = time.strftime("%Y-%m-%d", time.localtime(kept.get("at") or time.time()))
+        return web.Response(text=hardware_report.feedback_text(kept["url"]), content_type="text/plain",
+                            charset="utf-8", headers={
+                                "Content-Disposition": f'attachment; filename="gexis-hardware-{stamp}.txt"',
+                                "Cache-Control": "no-store"})
 
     async def _handle_hardware_kept_clear(self, request: web.Request) -> web.Response:
         """*Start over*: the kept feedback forgotten."""
@@ -2452,6 +2567,10 @@ class StateServer:
         app.router.add_get("/settings/{key}/items", self._handle_list_items)
         app.router.add_get("/network/wifi", self._handle_wifi_details)
         app.router.add_post("/report", self._handle_report)
+        app.router.add_post("/report/prepare", self._handle_report_prepare)
+        app.router.add_get("/report/status", self._handle_report_status)
+        app.router.add_get("/report/file", self._handle_report_file)
+        app.router.add_get("/report/issue", self._handle_report_issue)
         app.router.add_get("/backups/{name}", self._handle_backup_download)
         app.router.add_get("/network/cable", self._handle_cable)
         app.router.add_post("/network/cable", self._handle_cable_change)
@@ -2464,6 +2583,7 @@ class StateServer:
         app.router.add_get("/hardware-report/prompt", self._handle_hardware_prompt)
         app.router.add_get("/hardware-report/kept", self._handle_hardware_kept)
         app.router.add_post("/hardware-report/kept/clear", self._handle_hardware_kept_clear)
+        app.router.add_get("/hardware-report/file", self._handle_hardware_file)
         app.router.add_post("/hardware-report/prompt/dismiss", self._handle_hardware_prompt_dismiss)
         app.router.add_post("/hardware-report/screen", self._handle_hardware_screen)
         app.router.add_post("/hardware-report/screen/result", self._handle_hardware_screen_result)

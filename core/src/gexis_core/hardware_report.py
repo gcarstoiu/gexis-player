@@ -500,3 +500,21 @@ def issue_url(facts: Facts, answers: dict[str, str], notes: str = "", tones: lis
         notes_now = notes_now[: max(0, len(notes_now) - 50)]
         url = build(cut + (" [cut]" if cut != details else ""), notes_now + " [cut]")
     return url
+
+
+#: The form's questions, by field id, as the text file names them.
+QUESTIONS = {"sound": "Did the music sound right?", "volume": "Did the volume change with the slider?",
+             "clicks": "Any clicks or gaps between tracks?", "picture": "Is the whole picture visible on the screen?",
+             "touch": "Does a tap land where the finger is?"}
+
+
+def feedback_text(url: str) -> str:
+    """**ADR-0138 decision 3: the feedback as one readable text file**, for
+    e-mail - made from the link it was prepared as, so the two never differ."""
+    from urllib.parse import parse_qs, urlsplit
+    q = {k: v[0] for k, v in parse_qs(urlsplit(url).query).items()}
+    lines = [q.get("title", "[Hardware]"), "",
+             f"Sound card: {q.get('board', '?')}", f"Screen: {q.get('screen', 'none')}", ""]
+    lines += [f"{label} {q.get(key, '-')}" for key, label in QUESTIONS.items()]
+    lines += ["", "Anything else:", q.get("notes") or "-", "", "What the player read:", q.get("details", "")]
+    return "\n".join(lines).rstrip() + "\n"

@@ -354,25 +354,84 @@ class Report:
     data: bytes
     name: str
     summary: str
+    #: ADR-0138: what the zip holds (name, bytes), and the log's last errors
+    #: and warnings, cleaned, for the GitHub issue.
+    files: list[tuple[str, int]] = field(default_factory=list)
+    errors: str = ""
+
+
+#: ADR-0138 §1: the checklist the Preparing step shows, in the order the
+#: player works down it.
+STEPS = (
+    ("log", "Reading the player's log"),
+    ("updater", "Reading the updater's log"),
+    ("versions", "Reading the versions and the hardware"),
+    ("settings", "Reading the settings - keys, tokens and passwords left out"),
+    ("learn", "Learning what is personal on this player"),
+    ("scrub", "Taking out personal details"),
+    ("write", "Writing the file"),
+)
+
+
+def _size(n: int) -> str:
+    return f"{n / 1024 / 1024:.1f} MB" if n >= 1024 * 1024 else f"{max(1, round(n / 1024))} KB"
+
+
+def _journal_said(text: str) -> str:
+    """How much of the log, and from when: the first line's time."""
+    first = re.match(r"(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})", text)
+    since = f", from {first.group(1)} {first.group(2)}" if first else ""
+    return f"{_size(len(text.encode('utf-8', errors='replace')))}{since}"
+
+
+#: The last errors and warnings, for the issue itself (ADR-0138 decision 1):
+#: a link carries about 7,500 characters in all.
+ERRORS_MAX = 3000
+_ERRORISH = re.compile(r"\b(ERROR|WARNING|CRITICAL|Traceback|Exception|failed|refused)\b")
+
+
+def last_errors(journal_text: str, limit: int = ERRORS_MAX) -> str:
+    """The newest error and warning lines of a cleaned journal, newest last,
+    each at most 220 characters, together at most `limit`."""
+    picked: list[str] = []
+    total = 0
+    for line in reversed(journal_text.splitlines()):
+        if not _ERRORISH.search(line):
+            continue
+        line = line[:220]
+        if total + len(line) + 1 > limit:
+            break
+        picked.append(line)
+        total += len(line) + 1
+    return "\n".join(reversed(picked))
 
 
 def build(note: str, rows: list[dict], get: Callable[[str], object], *, shares: Iterable[dict] = (),
           now_playing: Iterable[str] = (), run: Callable[..., str] = _run,
-          clock: Callable[[], float] = time.time) -> Report:
+          clock: Callable[[], float] = time.time,
+          progress: Callable[[str, str], None] | None = None) -> Report:
+    """The report, step by step; `progress(step, detail)` is told as each of
+    `STEPS` is done (ADR-0138)."""
+    tell = progress or (lambda step, detail: None)
+    stamp = time.strftime("%Y-%m-%d-%H%M", time.localtime(clock()))
+    files = {"what-happened.txt": (note or "").strip() + "\n"}
+    files["journal.txt"] = journal(run=run)
+    tell("log", _journal_said(files["journal.txt"]))
+    files["updater/apt.log"] = _read(UPDATES / "apt.log", APT_LOG_MAX)
+    files["updater/status.json"] = _read(UPDATES / "status.json")
+    tell("updater", _size(len(files["updater/apt.log"].encode())) if files["updater/apt.log"] else "nothing yet")
+    files["versions.txt"] = versions(run=run)
+    files["hardware.txt"] = hardware(run=run)
+    tell("versions", "")
+    secret_rows = sum(1 for r in rows if r.get("secret") and get(r.get("key")) not in (None, "", r.get("default")))
+    tell("settings", f"{len(rows)} rows, {secret_rows} kept back" if secret_rows else f"{len(rows)} rows")
     scrubber = Scrubber()
     learn(scrubber, rows, get, shares=shares, now_playing=now_playing)
-    stamp = time.strftime("%Y-%m-%d-%H%M", time.localtime(clock()))
-    files = {
-        "what-happened.txt": (note or "").strip() + "\n",
-        "journal.txt": journal(run=run),
-        "updater/apt.log": _read(UPDATES / "apt.log", APT_LOG_MAX),
-        "updater/status.json": _read(UPDATES / "status.json"),
-        "versions.txt": versions(run=run),
-        "hardware.txt": hardware(run=run),
-    }
+    tell("learn", "network names, this player's name, paired devices, music shares, what is playing")
     scrubbed = {name: scrubber.scrub(text) for name, text in files.items()}
     scrubbed["settings.txt"] = settings_text(rows, get, scrubber)
     summary = scrubber.summary()
+    tell("scrub", summary)
     readme = (
         "Gexis Player problem report\n"
         f"Made {stamp}.\n\n"
@@ -385,8 +444,50 @@ def build(note: str, rows: list[dict], get: Callable[[str], object], *, shares: 
         f"Or by e-mail, with this file attached: {EMAIL}\n"
     )
     buf = io.BytesIO()
+    listed = [("README.txt", len(readme.encode()))]
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("README.txt", readme)
         for name, text in scrubbed.items():
             z.writestr(name, text)
-    return Report(buf.getvalue(), f"gexis-report-{stamp}.zip", summary)
+            listed.append((name, len(text.encode("utf-8", errors="replace"))))
+    name = f"gexis-report-{stamp}.zip"
+    data = buf.getvalue()
+    tell("write", f"{name}, {_size(len(data))}")
+    return Report(data, name, summary, listed, last_errors(scrubbed["journal.txt"]))
+
+
+#: The issue form's fields (`.github/ISSUE_TEMPLATE/problem-report.yml`).
+OFTEN = ("Every time", "Sometimes", "Once so far")
+URL_MAX = 7500
+
+
+def issue_url(what: str, often: str | None, version: str, report: Report) -> str:
+    """ADR-0138 §3: the problem on GitHub, filled in - what happened, how
+    often, the version, what was taken out and the log's last errors. A link
+    cannot carry the file; the step offers it to attach. The errors are cut
+    first, then what happened, to stay under what GitHub takes."""
+    from urllib.parse import urlencode
+    base = "https://github.com/gcarstoiu/gexis-player/issues/new"
+    title = "[Problem] " + (what.strip().splitlines()[0][:70] if what.strip() else "")
+
+    def body(errors: str) -> str:
+        head = (f"Prepared on the player: {report.name}. Taken out: {report.summary}.\n"
+                "The full report can be attached here too: drag the file onto this box.\n")
+        return head + (f"\nLast errors and warnings in the log (cleaned):\n```\n{errors}\n```\n" if errors else "")
+
+    def build_url(what_now: str, errors: str) -> str:
+        params = {"template": "problem-report.yml", "title": title, "what": what_now,
+                  "version": version, "report": body(errors)}
+        if often in OFTEN:
+            params["often"] = often
+        return f"{base}?{urlencode(params)}"
+
+    errors, what_now = report.errors, what.strip()
+    url = build_url(what_now, errors)
+    while len(url) > URL_MAX and errors:
+        errors = errors[errors.find("\n") + 1:] if "\n" in errors else ""
+        url = build_url(what_now, errors)
+    while len(url) > URL_MAX and what_now:
+        what_now = what_now[:-50]
+        url = build_url(what_now + " [cut]", errors)
+    return url

@@ -289,3 +289,13 @@ def test_the_pi_s_own_output_is_named_never_a_dac_and_no_screen_is_none():
     assert "- card: none - HDMI, the Pi's own output" in f.text()
     connected = facts()
     assert hr.names(connected, display=False)[1] == "", "Headless: no screen named"
+
+
+def test_the_feedback_as_a_text_file_says_what_the_link_says():
+    """ADR-0138 decision 3: for e-mail, one readable text file."""
+    url = hr.issue_url(facts(), {"sound": "Yes", "touch": "No"}, "Clicks at 96 kHz.", ["44.1 kHz: played"])
+    text = hr.feedback_text(url)
+    assert text.startswith("[Hardware] IQaudIO Pi-DAC PRO")
+    assert "Did the music sound right? Yes" in text and "Does a tap land where the finger is? No" in text
+    assert "Did the volume change with the slider? -" in text
+    assert "Clicks at 96 kHz." in text and "Gexis 0.9.4 on a" in text
