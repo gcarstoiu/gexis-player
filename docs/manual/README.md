@@ -253,7 +253,12 @@ same network.
 ![Phone: Settings](images/phone-settings.webp)
 
 The phone page shows **Settings** above and the **mini player** at the
-bottom:
+bottom. With more than one player on the network, the line under *Settings*
+(the player's name and address) carries a switch mark: tap it for every
+player, each with what it is doing - *Playing · Spotify*, *Stopped · Lyrion*,
+*Idle* - and choose one to open its page in the same tab.
+
+The mini player has:
 
 - the track playing;
 - a row of buttons for the panel: **Home**, **Now Playing** (lit while the

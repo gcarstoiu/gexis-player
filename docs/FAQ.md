@@ -175,6 +175,13 @@ the library.
 
 ## Idle screen and visualiser
 
+**I have more than one player. Do I need a tab for each?**
+No. On the phone page, tap the line under *Settings* - the player's name and
+address, with a switch mark when another player is on the network. It lists
+every player with what it is playing and through which source; choosing one
+opens its page in the same tab. A player is listed once it runs this release
+or later and is on the same network.
+
 **Can the screen turn off, at night or on demand?**
 Yes. The *Screen* button in the phone's mini player darkens it until a
 touch, music starting or the button again wakes it; the player keeps playing meanwhile.
