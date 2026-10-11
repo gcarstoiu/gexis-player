@@ -274,6 +274,26 @@ class TestGetRawNegativeValues:
 
         assert await get_raw("DAC") == 216
 
+    @pytest.mark.asyncio
+    async def test_a_mono_control_is_read(self, monkeypatch):
+        """**Code review, 2026-10-12.** The Pi's headphone jack's `PCM` has one
+        value, and amixer prints it as `Mono:`; only `Front Left:` matched, so
+        the jack's level was never read."""
+        stdout = (
+            b"Simple mixer control 'PCM',0\n"
+            b"  Capabilities: pvolume pvolume-joined pswitch pswitch-joined\n"
+            b"  Playback channels: Mono\n"
+            b"  Limits: Playback -10239 - 400\n"
+            b"  Mono: Playback -2000 [77%] [-20.00dB] [on]\n"
+        )
+
+        async def fake_exec(*args, **kwargs):
+            return FakeProcess(stdout)
+
+        monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
+
+        assert await get_raw("PCM") == -2000
+
 
 class TestDbConversion:
     """ADR-0018's documented scale: raw 0 = -120dB (mute), raw 240 =

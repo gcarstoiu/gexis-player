@@ -169,7 +169,13 @@ ATTENUATION_PATH = Path("/run/gexis/attenuation")
 # ("-50" parsed as 50). Silent, not a parse failure - `re.search` still
 # matches, just the wrong number - so nothing short of comparing against
 # a live reading would catch it.
-_VALUE_RE = re.compile(rb"Front Left: (?:Playback )?(-?\d+) \[")
+#
+# **`Mono:` as well** (code review, 2026-10-12): a control with one value -
+# the Pi's own headphone jack's `PCM`, many USB DACs' - prints as
+# "Mono: Playback -2000 [..]", never "Front Left". Unmatched, the jack's
+# level was never read: nothing published at start, every monitor event
+# skipped, and a Spotify takeover not held to its starting volume.
+_VALUE_RE = re.compile(rb"(?:Front Left|Mono): (?:Playback )?(-?\d+) \[")
 
 # snd-dummy's own scale (mixer_volume_level_min/max module params, left
 # at their defaults) - measured on hardware, 2026-09-08, from a fresh
