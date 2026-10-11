@@ -751,6 +751,15 @@ class LmsAdapter(Adapter):
                 if self._on_availability is not None:
                     self._on_availability(False)
                 await asyncio.sleep(5)
+            except Exception:  # noqa: BLE001 - keep watching regardless
+                # **Anything else too** (code review, 2026-10-12): one empty or
+                # malformed reply - `frames[0]` of nothing, a non-numeric
+                # samplerate - ended the watch for the life of the process, in
+                # silence, with the source still shown as available.
+                logger.exception("lms: the watch failed unexpectedly, retrying in 5s")
+                if self._on_availability is not None:
+                    self._on_availability(False)
+                await asyncio.sleep(5)
 
     async def _watch(self, on_acquire, on_release) -> None:
         async with aiohttp.ClientSession() as session:

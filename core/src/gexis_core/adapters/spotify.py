@@ -167,6 +167,14 @@ class SpotifyAdapter(Adapter):
                 if self._on_availability is not None:
                     self._on_availability(False)
                 await asyncio.sleep(5)
+            except Exception:  # noqa: BLE001 - keep watching regardless
+                # As LMS's (code review, 2026-10-12): anything else - an
+                # unexpected frame, a callback that raised - ended the watch
+                # for good, in silence.
+                logger.exception("spotify: the watch failed unexpectedly, retrying in 5s")
+                if self._on_availability is not None:
+                    self._on_availability(False)
+                await asyncio.sleep(5)
 
     async def _watch_events(self, on_acquire, on_release) -> None:
         async with aiohttp.ClientSession() as session:

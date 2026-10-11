@@ -122,3 +122,43 @@ class TestWhichPcmIsOurs:
 
     def test_a_pcm_with_no_properties_at_all_is_not_adopted_by_accident(self):
         assert not BluealsaVolume._is_ours({})
+
+
+class _FakeBus:
+    """Enough of dbus_next's bus for `_adopt`."""
+
+    class _Obj:
+        def get_interface(self, _name):
+            class _Iface:
+                def on_properties_changed(self, _callback):
+                    pass
+            return _Iface()
+
+    async def introspect(self, _service, _path):
+        return None
+
+    def get_proxy_object(self, _service, _path, _introspection):
+        return self._Obj()
+
+
+@pytest.mark.asyncio
+async def test_a_phone_that_reconnects_is_followed_again():
+    """**Code review, 2026-10-12.** A PCM going away cleared the bus as well
+    as the PCM, while the connection and its watch for new PCMs were still
+    live - so the next phone's PCM was adopted into nothing, silently, and
+    the phone's level never reached the player again until a restart."""
+    from dbus_next import Variant
+
+    reported = []
+    volume = BluealsaVolume(on_value=lambda v, s: reported.append(v))
+    volume._bus = _FakeBus()
+    props = {"Transport": Variant("s", "A2DP-sink"), "Volume": Variant("q", encode(100))}
+    await volume._adopt("/org/bluealsa/hci0/dev_X/a2dpsnk/source", props)
+    assert volume.level == 100
+
+    volume._forget()  # what the InterfacesRemoved handler does
+    assert volume.level is None
+
+    props["Volume"] = Variant("q", encode(40))
+    await volume._adopt("/org/bluealsa/hci0/dev_Y/a2dpsnk/source", props)
+    assert volume.level == 40 and reported == [100, 40]

@@ -62,3 +62,107 @@ def test_the_player_writes_on_the_chosen_output_s_scale():
     finally:
         volume.use_scale(None)
     assert volume.hardware_max() == 240 and volume.raw_to_db(240) == 0.0
+
+
+class _FakeMixer:
+    def __init__(self):
+        self.values = []
+
+    def set(self, value):
+        self.values.append(value)
+        return True
+
+
+async def test_silence_on_the_headphone_jack_is_its_bottom_not_raw_0():
+    """**Code review, 2026-10-12.** Everything treated raw 0 as silence, which
+    holds on the DAC2 HD's 0..240 and nowhere else: on the jack's -10239..400
+    raw 0 is 0 dB. Mute, a renderer's 0 and the slider's 0% all wrote it -
+    full scale into headphones - and every real (negative) level read back
+    as 0%, which was then handed to Spotify and came back as full scale."""
+    jack = ms.playback_controls(JACK)[0][1]
+    try:
+        volume.use_scale(jack)
+        assert volume.hardware_silence() == -10239
+        assert volume.renderer_value_to_hardware_raw(0, 100) == -10239
+        assert volume.slider_percent_to_raw(0) == -10239
+        assert volume.spotify_fraction_to_hardware_raw(0.0) == -10239
+        # Real levels read back as themselves, not as 0%.
+        assert volume.raw_to_slider_percent(volume.slider_percent_to_raw(50)) == 50
+        assert volume.raw_to_slider_percent(-2000) > 0
+        assert volume.raw_to_slider_percent(-10239) == 0
+
+        writes = []
+
+        async def write(raw):
+            writes.append(raw)
+
+        mute = volume.Mute(write, lambda: -2000)
+        await mute.set(True)
+        assert writes == [-10239], "mute writes the bottom, never 0 dB"
+        mute.observe(-10239)
+        assert mute.muted, "its own silence does not end mute"
+        await mute.set(False)
+        assert writes == [-10239, -2000]
+    finally:
+        volume.use_scale(None)
+    assert volume.hardware_silence() == 0
+
+
+async def test_a_level_given_to_another_scale_is_clamped_to_that_scale():
+    """`set_raw` with a scale of its own clamped below at 0: the jack's
+    -20 dB (raw -2000), handed back to the card when the software stage is
+    switched off, was written as raw 0 - 0 dB there."""
+    jack = ms.playback_controls(JACK)[0][1]
+    fake = _FakeMixer()
+    volume._MIXERS[("output", "PCM")] = fake
+    try:
+        await volume.set_raw("PCM", -2000, scale=jack)
+        await volume.set_raw("PCM", -20000, scale=jack)
+    finally:
+        volume._MIXERS.pop(("output", "PCM"), None)
+    assert fake.values == [-2000, -10239]
+
+
+class TestALevelCarriedToAnotherScale:
+    """**Code review, 2026-10-12.** A raw number means something only on its
+    own scale, and a change of output or of volume type moved the scale under
+    every level kept as a raw. -20 dB on the software stage is raw 280, which
+    on the DAC2 HD is past its top - unmuting after Software -> Hardware wrote
+    full scale. Carried through dB instead."""
+
+    def _jack(self):
+        return ms.playback_controls(JACK)[0][1]
+
+    def test_the_same_level_on_the_new_scale(self):
+        from gexis_core.outputs import SOFTVOL_SCALE
+
+        jack = self._jack()
+        assert volume.carry_raw(280, SOFTVOL_SCALE, ms.DAC2_HD) == 200
+        assert volume.carry_raw(200, ms.DAC2_HD, jack) == -2000
+        assert volume.carry_raw(-2000, jack, ms.DAC2_HD) == 200
+        assert volume.carry_raw(200, ms.DAC2_HD, SOFTVOL_SCALE) == 280
+
+    def test_silence_stays_silence_and_nothing_goes_above_0_db(self):
+        from gexis_core.outputs import SOFTVOL_SCALE
+
+        jack = self._jack()
+        assert volume.carry_raw(0, ms.DAC2_HD, jack) == -10239
+        assert volume.carry_raw(-10239, jack, SOFTVOL_SCALE) == 0
+        # The software stage's floor is -90 dB, above the DAC2 HD's mute.
+        assert volume.carry_raw(0, SOFTVOL_SCALE, ms.DAC2_HD) == 0
+        assert volume.carry_raw(400, jack, ms.DAC2_HD) == 240
+        assert volume.carry_raw(None, jack, ms.DAC2_HD) is None
+
+    async def test_unmute_after_the_scale_moved_restores_the_same_level(self):
+        from gexis_core.outputs import SOFTVOL_SCALE
+
+        writes = []
+
+        async def write(raw):
+            writes.append(raw)
+
+        mute = volume.Mute(write, lambda: 280)
+        await mute.set(True)
+        mute.carry(SOFTVOL_SCALE, ms.DAC2_HD)
+        await mute.set(False)
+        assert writes[-1] == 200, "-20 dB, not the DAC2 HD's full scale"
