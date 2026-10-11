@@ -1931,7 +1931,11 @@ class StateServer:
         deadline = asyncio.get_running_loop().time() + self.PEPPY_AGAIN_S
         while asyncio.get_running_loop().time() < deadline:
             await asyncio.sleep(1.5)
-            if await asyncio.to_thread(self._peppy.request, "show"):
+            # On the loop, as the first ask is: showing publishes the panel's
+            # change to the phones, and that needs the loop (a worker thread
+            # here answered the first visualiser of an evening with a 500,
+            # sofapi 2026-10-11, though it came up).
+            if self._peppy.request("show"):
                 return True
         return False
 
