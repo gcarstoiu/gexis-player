@@ -2,7 +2,7 @@
 // Settings from the daemon's registry (ADR-0035), refetched whenever
 // `settings_revision` moves so a change on one surface reaches the other.
 import { writable, derived } from 'svelte/store';
-import { playback } from './state.js';
+import { playback, connection } from './state.js';
 
 export const settingsGroups = writable([]);
 export const settingsError = writable(null);
@@ -55,6 +55,17 @@ playback.subscribe(($s) => {
   const first = seenRevision === undefined;
   seenRevision = revision;
   if (!first) loadSettings();
+});
+
+//: **A reconnect reads the settings again** (code review, 2026-10-12). The
+//: revision is the core's own counter and starts at 0 with it, so a page
+//: that outlives a core restart - the panel always does - can land on the
+//: number it last saw and never hear that a plugin was put on or taken off
+//: across the restart.
+let lastConnection;
+connection.subscribe((c) => {
+  if (c === 'open' && lastConnection === 'reconnecting') loadSettings();
+  lastConnection = c;
 });
 
 export const settingValues = derived(settingsGroups, ($groups) => {
