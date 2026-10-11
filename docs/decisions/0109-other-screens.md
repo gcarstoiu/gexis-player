@@ -387,3 +387,12 @@ setup too.
    Keep after setup, as before.
 4. Applied once per setup: a screen applied provisionally is not applied
    again at the next start while setup is still under way.
+
+## Amended 2026-10-11: the Keep warning only where it is true
+
+George, on the bar after a reset: setup warned that the player would restart
+and ask *Keep this screen?* for the recognised, tested 11.9" - already
+applied for setup, so choosing it changes nothing and nothing is asked. The
+Screen step's data now names the screens whose picture is the one on the
+screen now (`unchanged`, from `screen_apply.picture_of`); the warning's Keep
+sentence shows only for a choice outside it. An untested model still says so.
