@@ -1415,15 +1415,15 @@
         ><span></span></button>
       {/if}
       <div class="head__text">
-        <div class="title" class:title--wide={wide}>{!wide && current ? current.label : 'Settings'}</div>
+        <div class="title-row">
+          <div class="title" class:title--wide={wide}>{!wide && current ? current.label : 'Settings'}</div>
+          <!-- ADR-0136: on a phone, the way to the other players - at the
+               right end of the title's line (George, 2026-10-11). -->
+          {#if !onPanel()}<PlayerSwitcher />{/if}
+        </div>
         <!-- Shown at both widths: the panel is where someone types the
              name, so it is where the resolved host has to sit beside it. -->
-        {#if onPanel()}
-          <div class="subtitle">{subtitle}</div>
-        {:else}
-          <!-- ADR-0136: on a phone, the way to the other players. -->
-          <PlayerSwitcher line={subtitle} />
-        {/if}
+        <div class="subtitle">{subtitle}</div>
       </div>
     </div>
 
@@ -2540,6 +2540,15 @@
     transform: translateX(3.9px) rotate(45deg);
   }
   .head__text {
+    flex: 1;
+    min-width: 0;
+  }
+  .title-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .title-row .title {
     flex: 1;
     min-width: 0;
   }
