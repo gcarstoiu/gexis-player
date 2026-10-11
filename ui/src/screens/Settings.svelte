@@ -835,6 +835,17 @@
     }
   }
 
+  //: **The option tapped is drawn chosen at once** (George, 2026-10-11:
+  //: "The option flashes but then it takes a bit to be selected"). Since a
+  //: sheet with option notes stays open, the tick waited for the player to
+  //: save and send the settings back; it now moves on the tap, and goes back
+  //: to what is stored if the save fails.
+  let choiceShown = $state(null);
+  $effect(() => {
+    // Let go once the stored value has caught up, or the sheet changes.
+    if (!sheet || String(sheet.value) === untrack(() => choiceShown)) choiceShown = null;
+  });
+
   async function choose(option) {
     const row = sheet;
     //: **A sheet whose options are described stays open** (George,
@@ -860,7 +871,9 @@
       return;
     }
     if (!stays) sheetKey = null;
+    else choiceShown = option;
     if (await write(row, option)) said(row, option);
+    else if (choiceShown === option) choiceShown = null;
   }
 
   //: ADR-0044 §7. Each tap is a write, because nothing on this screen has
@@ -2040,7 +2053,7 @@
       {#if sheet.grouped && region === null}
         <div class="options" data-noscrollbar>
           {#each loose as option (option)}
-            {@const selected = choicePending !== null ? choicePending === option : String(sheet.value) === option}
+            {@const selected = choicePending !== null ? choicePending === option : (choiceShown ?? String(sheet.value)) === option}
             <button class="option" class:is-selected={selected} type="button" onclick={() => choose(option)}>
               <span class="radio"><span></span></span>
               <span class="option__label">{option}</span>
@@ -2063,7 +2076,7 @@
       {:else if sheet.grouped}
         <div class="options" data-noscrollbar>
           {#each places as option (option)}
-            {@const selected = choicePending !== null ? choicePending === option : String(sheet.value) === option}
+            {@const selected = choicePending !== null ? choicePending === option : (choiceShown ?? String(sheet.value)) === option}
             <button class="option" class:is-selected={selected} type="button" onclick={() => choose(option)}>
               <span class="radio"><span></span></span>
               <span class="option__label">{placeLabel(option)}</span>
@@ -2145,7 +2158,7 @@
       {:else if sheet.type === 'choice'}
         <div class="options" data-noscrollbar>
           {#each sheet.options ?? [] as option (option)}
-            {@const selected = choicePending !== null ? choicePending === option : String(sheet.value) === option}
+            {@const selected = choicePending !== null ? choicePending === option : (choiceShown ?? String(sheet.value)) === option}
             {@const p = sheet.optionsFrom ? parts(option) : { ord: '', label: option }}
             {@const why = sheet.unavailable?.[option]}
             <!-- ADR-0044's `unavailable`: greyed, not hidden. George,
