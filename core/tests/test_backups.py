@@ -521,3 +521,95 @@ async def test_the_route_sends_it_as_a_file_to_save(tmp_path, monkeypatch):
         assert await r.read() == (out / name).read_bytes()
         assert (await client.get("/backups/..%2Fsettings.db")).status in (400, 404)
         assert (await client.get("/backups/gexis-gone-20260101-000000.tgz")).status == 404
+
+
+# -- the review of 2026-10-12: the Beszel hub's live database ------------------
+
+def _live_hub(root):
+    """The hub's PocketBase store as the hub leaves it while it runs: WAL
+    mode, the newest rows still in `data.db-wal`. The connection returned
+    is the hub, holding it open."""
+    hub = root / "var/lib/beszel-hub"
+    (hub / "data.db").unlink()
+    conn = sqlite3.connect(hub / "data.db")
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA wal_autocheckpoint=0")
+    conn.execute("CREATE TABLE history (n INTEGER)")
+    conn.executemany("INSERT INTO history VALUES (?)", [(n,) for n in range(3000)])
+    conn.commit()
+    assert (hub / "data.db-wal").stat().st_size > 0
+    return conn
+
+
+def test_a_live_database_is_backed_up_as_one_consistent_file(tmp_path):
+    """The hub was tarred while it wrote: `data.db` and `data.db-wal` read at
+    different moments restored to a state that never existed. Now a store
+    with a WAL beside it goes in as SQLite's own copy of it, whole, and its
+    WAL and index stay out."""
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    hub = _live_hub(root)
+    name = backups.create("gexis", out, root)
+    hub.close()
+
+    with tarfile.open(out / name) as archive:
+        held = set(archive.getnames())
+        assert "var/lib/beszel-hub/data.db" in held
+        assert not {"var/lib/beszel-hub/data.db-wal", "var/lib/beszel-hub/data.db-shm"} & held
+        archive.extract("var/lib/beszel-hub/data.db", tmp_path / "x", filter="tar")
+    copy = sqlite3.connect(tmp_path / "x/var/lib/beszel-hub/data.db")
+    assert copy.execute("SELECT count(*) FROM history").fetchone()[0] == 3000
+    assert copy.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+
+
+def test_the_hub_is_stopped_before_its_files_are_put_back(tmp_path):
+    """Restored under a running hub, its own WAL was checkpointed into the
+    restored file at the reboot - "database disk image is malformed", both
+    histories lost. The hub stops first; a WAL the archive does not bring is
+    not left beside the file it brings."""
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    name = backups.create("gexis", out, root)
+    target = _device(tmp_path / "target")
+    (target / "var/lib/beszel-hub/data.db-wal").write_bytes(b"the running hub's")
+    (target / "var/lib/beszel-hub/data.db-shm").write_bytes(b"its index")
+    calls = []
+
+    def run(argv, **kw):
+        calls.append((argv, (target / "var/lib/beszel-hub/data.db-wal").exists()))
+        import subprocess
+        return subprocess.CompletedProcess(argv, 0, "", "")
+
+    backups.restore_file(out / name, target, run=run)
+    stops = [argv for argv, _ in calls if argv[:2] == ["systemctl", "stop"]]
+    assert stops == [["systemctl", "stop", "beszel-hub.service"]]
+    assert not (target / "var/lib/beszel-hub/data.db-wal").exists()
+    assert not (target / "var/lib/beszel-hub/data.db-shm").exists()
+    assert (target / "var/lib/beszel-hub/data.db").read_bytes() == b"hub"
+
+
+def test_an_archive_without_the_hub_leaves_it_running(tmp_path):
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    import shutil
+    shutil.rmtree(root / "var/lib/beszel-hub")
+    name = backups.create("gexis", out, root)
+    calls = []
+    backups.restore_file(out / name, _device(tmp_path / "target"), run=lambda argv, **kw: calls.append(argv))
+    assert calls == []
+
+
+def test_a_restore_that_fails_starts_the_hub_it_stopped(tmp_path, monkeypatch):
+    import subprocess
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    name = backups.create("gexis", out, root)
+    calls = []
+
+    def run(argv, **kw):
+        calls.append(argv)
+        return subprocess.CompletedProcess(argv, 0, "", "")   # is-active: it was running
+
+    def full(*a, **k):
+        raise OSError("no space left on device")
+
+    monkeypatch.setattr(tarfile.TarFile, "extractall", full)
+    with pytest.raises(OSError):
+        backups.restore_file(out / name, _device(tmp_path / "target"), run=run)
+    assert calls[-1] == ["systemctl", "start", "beszel-hub.service"]
