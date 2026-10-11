@@ -29,9 +29,11 @@ import json
 import logging
 import os
 import random
+import subprocess
 import tarfile
 import threading
 import time
+import zlib
 from collections.abc import Callable
 from urllib.parse import quote, unquote
 from pathlib import Path
@@ -961,7 +963,8 @@ class StateServer:
             item_id = int(body["id"])
             target = body.get("playlist_id")
             playlist_id = None if target is None else int(target)
-        except (ValueError, KeyError, TypeError, json.JSONDecodeError):
+        # OverflowError: an id of Infinity, which `json` reads as a float.
+        except (ValueError, KeyError, TypeError, OverflowError, json.JSONDecodeError):
             return web.json_response(
                 {"error": 'expected {"kind": ..., "id": <int>, "action": ...}'}, status=400
             )
@@ -1432,6 +1435,8 @@ class StateServer:
                                                "it to go back."}, status=409)
         try:
             body = await request.json()
+            if not isinstance(body, dict):
+                raise ValueError('expected {"method": ..., "address": ...}')
             told = await port.change(body.get("method"), body.get("address") or "",
                                      body.get("gateway") or "", body.get("dns") or [])
         except ValueError as exc:
@@ -1485,7 +1490,7 @@ class StateServer:
             body = await request.json() if request.can_read_body else {}
         except ValueError:
             body = {}
-        note = str((body or {}).get("note") or "")[:4000]
+        note = str((body if isinstance(body, dict) else {}).get("note") or "")[:4000]
         rows = self._settings.all_rows()
         values = {}
         for row in rows:
@@ -2433,7 +2438,8 @@ class StateServer:
                 # which can take seconds, in a worker.
                 if action == "browse":
                     # One server's shares, or a request for a login.
-                    target = body.get("server") or {}
+                    target = body.get("server")
+                    target = target if isinstance(target, dict) else {}
                     server = lyrion_scan.Server(name=name, host=str(target.get("host") or name),
                                                 kind="nfs" if target.get("kind") == "nfs" else "smb")
                     try:
@@ -2442,6 +2448,14 @@ class StateServer:
                     except lyrion_scan.NeedsLogin:
                         return web.json_response({"ok": False, "login": True,
                                                   "error": f"{name} needs a user and password to show its shares"})
+                    # A NAS asleep past smbclient's 15 s, or the tool missing:
+                    # a sentence on the sheet rather than a 500 (review,
+                    # 2026-10-12).
+                    except subprocess.TimeoutExpired:
+                        return web.json_response({"ok": False, "error": f"{name} did not answer. Is it switched on?"})
+                    except (subprocess.SubprocessError, OSError) as exc:
+                        logger.warning("lyrion: %s's shares not listed: %s", name, exc)
+                        return web.json_response({"ok": False, "error": f"{name}'s shares could not be listed."})
                     return web.json_response({"ok": True, "error": None, "items": [
                         {"name": lyrion_shares.label(s["address"])[0], "meta": s["comment"] or None,
                          "bars": None, "state": "found", "share": True, "address": s["address"]}
@@ -2479,7 +2493,9 @@ class StateServer:
                 return web.json_response({"ok": False, "error": "restoring is not wired up"})
             try:
                 await asyncio.to_thread(backups.restore, name)
-            except (OSError, ValueError, tarfile.TarError) as exc:
+            # EOFError and zlib.error: a backup cut short - half-copied into
+            # the Backups share - which tarfile reads that far and no further.
+            except (OSError, ValueError, tarfile.TarError, EOFError, zlib.error) as exc:
                 logger.warning("restore: %s failed: %s", name, exc)
                 return web.json_response({"ok": False, "error": str(exc)})
             # The backup's name, in all four places, before the reboot reads
