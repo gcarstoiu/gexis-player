@@ -291,7 +291,18 @@
       hwOpening += 1;
       return;
     }
-    if (hw === null && !onPanel() && untrack(() => !hwError)) loadHardware();
+    if (hw === null && !onPanel() && untrack(() => !hwError)) {
+      const ready = hwPreloaded;
+      hwPreloaded = null;
+      if (ready) {
+        hw = ready;
+        hwStep = ready.display ? 'screen' : 'sound';
+      } else if (ready === false) {
+        hwError = 'The player could not read its hardware. Try again.';
+      } else {
+        loadHardware();
+      }
+    }
   });
   function loadHardware() {
     const opening = hwOpening;
@@ -1030,7 +1041,36 @@
 
   let draft = $state(null);
 
+  //: **Hardware feedback opens whole** (George, 2026-10-11: it "still loads
+  //: in two steps which is making the entire thing look like it's
+  //: jumping"). The sheet opened on "Reading the hardware…" and grew when
+  //: the answer came; the read takes about 0.2 s, so the sheet now waits for
+  //: it and opens once, complete. A read that fails or takes over 4 s opens
+  //: the sheet anyway, on its error and Try again.
+  let hwPreloaded = null; // the answer, false when it failed, null when not asked
+  let hwPreloading = false;
+  async function preloadHardware(row) {
+    if (hwPreloading) return;
+    hwPreloading = true;
+    const stop = new AbortController();
+    const late = setTimeout(() => stop.abort(), 4000);
+    try {
+      const r = await fetch('/hardware-report', { signal: stop.signal });
+      hwPreloaded = r.ok ? await r.json() : false;
+    } catch {
+      hwPreloaded = false;
+    } finally {
+      clearTimeout(late);
+      hwPreloading = false;
+    }
+    openSheet(row);
+  }
+
   function openSheet(row) {
+    if (row.kind === 'hardware' && !onPanel() && hwPreloaded === null) {
+      preloadHardware(row);
+      return;
+    }
     sheetKey = row.key;
     manual = false;
     shareBrowse = null;
