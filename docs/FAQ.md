@@ -368,7 +368,9 @@ plugins to install (Plexamp, the Lyrion Server, Beszel); a backup asks only
 for this player's output and screen and answers the rest, and the phone shows
 what it brings before the player restarts. Step by step, from flashing the
 card: the [installation guide](INSTALL.md). Once the player is on your
-network it shows what it is downloading, each with its progress, until it is
+network it shows what it is downloading and installing, each with its
+progress (a skin pack's install says *Installing*: minutes, with nothing to
+count), until it is
 ready. *Use the player now* puts that screen away at any time: the downloads
 go on, Settings shows how far they are, and music may be slow to start until
 they finish. A download that does not finish brings the screen back, named,
