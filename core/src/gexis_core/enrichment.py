@@ -389,6 +389,12 @@ class Cache:
         columns = {row[1] for row in self._conn.execute("PRAGMA table_info(enrichment)")}
         if "confidence" not in columns:
             self._conn.execute("ALTER TABLE enrichment ADD COLUMN confidence INTEGER NOT NULL DEFAULT 100")
+        # **A "nothing" no longer believed is not kept** (review, 2026-10-12:
+        # the file only ever grew). `get` already ignores one past
+        # MISSING_TTL_S, but deleted it only if the same track came up
+        # again; most never do. What is FOUND is kept, as before.
+        self._conn.execute("DELETE FROM enrichment WHERE outcome = ? AND stored_at < ?",
+                           (Outcome.MISSING.value, self._clock() - MISSING_TTL_S))
         self._conn.commit()
 
     def get(self, key: TrackKey, provider: str) -> Answer | None:
