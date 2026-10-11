@@ -1,81 +1,55 @@
 # Handoff
 
-Last updated: 2026-10-10, evening (on R2D2).
+Last updated: 2026-10-11 (on R2D2).
 
 ## Start here
 
 Branches: **`phase-13b`** in the main checkout holds the documents and shared
 work; **`phase-13d`** in `~/projects/gexis-player-13d` is the release branch,
 and `phase-13b` is merged into it after each docs change. The worktrees
-`~/projects/gexis-player-r098` and `-r099` sit at their tags.
-Earlier narrative: `docs/HANDOFF-ARCHIVE.md` (0.9.5 to 0.9.7 moved there
-2026-10-10).
+`~/projects/gexis-player-r099` and `-r0100` sit at their tags.
+Earlier narrative: `docs/HANDOFF-ARCHIVE.md` (0.9.8 and 0.9.9 moved there
+2026-10-11).
 
-**0.9.9 cut 2026-10-10 for Testing** (tag `v0.9.9`, release `r0.9.9`,
-serial 33, image `image/deploy/2026-10-10-gexis-player-v0.9.9.img`, 113
-checks; notes approved by George). **PR #58 open - George merges it.** No
-preview on a device first: George asked for the release directly. In it:
-- **The settling screen can be put away at once** (ADR-0128 amended):
-  *Use the player now*, `POST /settling/hide`, `hidden` in `settling.json`;
-  a failure brings it back (George confirmed).
-- **Setup's Screen step: makers as chips**, one open at a time (ADR-0109
-  amended).
-- **The bar's 11.9" screen is recognised in setup** (its fingerprint, read on
-  ShelvesPi: EDID `WSD`/`WaveShare-119`, touch `0712:000a`).
-- **A restore switches on only plugins stored on** (ADR-0131's "not stored
-  is on" withdrawn; sofapi had waited for a Lyrion Server never chosen).
+**0.10.0 cut 2026-10-11 for Testing** (tag `v0.10.0`, release `r0.10.0`,
+serial 34, image `image/deploy/2026-10-11-gexis-player-v0.10.0.img`, 113
+checks; notes approved by George). **PR #59 open - George merges it.**
+Previewed on sofapi step by step through the day. In it:
+- **Display standby** (ADR-0135): the phone's *Screen* button; touch, music
+  and the button wake it; *Scheduled standby* at up to six owner-set times
+  with days (the new `intervals` row, our own time grid); woken during one,
+  back off after 2 min unused (1-30). Output off measured on the 10.1"
+  (touch still reaches the page; a "No signal" box for ~10 s, 30 s in).
+  **Not yet seen:** the bars and the 13.3"; waking a bar keeping its turn
+  (re-applied by the code); the schedule overnight on a real clock.
+- **Display in sections**: Panel, Display standby, Touchpad, Volume, Photo
+  service and location, Home screen, Idle screen, Visualiser; a background
+  each for the home and idle screens (`waiting_*` keys); an *Idle screen*
+  switch, off on new players, kept on by a migration (ADR-0133 amended three
+  times).
+- **Space pictures removed** (NASA/ESA download and the 12 built-in); Space
+  and Calm are Pixabay searches; Seasons for Gexis wallpapers only; Holidays
+  supersede online topics. A stored option a row no longer offers falls away
+  when read.
+- **Weather icon motion** (Finding 118: the idle screen's half core was its
+  icons' animation; one animation costs what eleven do).
+- **A network lost after boot** opens the setup network after 2 min (ADR-0134);
+  simulated on sofapi, rejoined on its own at +7 min. A phone page that saw
+  "joining" no longer gets stuck on setup.
+- Settings: explanations beside the options (ten sheets); such sheets stay
+  open until Close; only Fixed asks to confirm in Volume.
 
-**0.9.8 cut 2026-10-10 for Testing** (tag `v0.9.8`, release `r0.9.8`,
-serial 32 after the rewrite below, image
-`image/deploy/2026-10-10-gexis-player-v0.9.8.img`, 113 checks; notes approved
-by George). **PR #57 merged 2026-10-10**; main merged back into both
-branches. In it:
-- **Reset to factory settings** (ADR-0132): hold 3 s; the wipe runs early in
-  the next boot; music, playlists and Pictures stay; a reset screen on every
-  surface. **TEMPORARY until the first public release**: a reset keeps its
-  own boot's log and setup's on the card (`61-gexis-after-reset.conf`, code
-  marked TEMPORARY in `journal.py`, `factory_reset.py`, `__main__.py`; on the
-  to-do list).
-- **The player's own wallpapers and Space pictures** (ADR-0133): 101
-  pictures chosen by George in `wallpapers/` (package `gexis-wallpapers`,
-  26 MB, credits.json), styles / time of day / seasons / holidays by
-  country (Western or Orthodox Easter); Space pictures downloaded from
-  NASA's library and ESA's Webb and Hubble feeds, with a built-in set.
-- **The waiting screen** with the LMS client off: clock, wallpaper, source
-  tiles (`WaitingHome` + the shared `Backdrop`).
-- **Settings**: Device merged into System under headings; Version hidden;
-  the `lms` source is shown as **Lyrion** everywhere.
-- **Fixes**: setup's Wi-Fi WPA2 only; Lyrion finds our player by MAC;
-  setup's restart after a restore (a skin install's shutdown block refused
-  it - now the skins wait until setup is over, and a refused restart is
-  asked again; LESSONS 64); a restore keeps every switch (a switch at its
-  default was read as off) and the Plugins step lists only plugins
-  (`built_in` was never set); Fixed output says it waits for a pause
-  (ADR-0046 amended); the boot screen's seam on a bar (the ground drawn as
-  an image of the still's colour - **not yet seen by George on a boot**);
-  the bar's Minimise where the library's Back is; the tab titled with the
-  player's name.
+**Devices.** **sofapi** (Waveshare 10.1", Lyrion queue of George's - do not
+clear it) runs the `phase-13d` preview that became 0.10.0 (0.9.9+git73;
+0.10.0 sorts above it). **ShelvesPi** (the bar) runs release 0.9.8, not yet
+updated - George's reset-and-restore check on 0.9.9 or later is still owed.
+**guestpi** offline. Previews went to sofapi today at George's request.
 
-**Local history rewritten 2026-10-10 before pushing 0.9.8** (George: the
-recommendation, "go ahead - I allow it"): ADR-0133 had linked the design
-page in George's Claude account, the same kind of link CLAUDE.md keeps out of
-commits. The sentence now says the options were on a private design page;
-nothing else changed. Its backups and the older `-before-clean` ones were
-deleted once 0.9.8 was merged. **Do not put `claude.ai/artifact` links in the
-repository.**
-
-**Devices.** **ShelvesPi** (the bar, DAC2 HD, 11.9" bar screen; reached at
-its fixed lease) runs release 0.9.8 (its earlier preview packages sorted
-above the rewritten release, so the 0.9.8 debs went on with
-`--allow-downgrades`). **sofapi** runs release 0.9.8, reset and restored
-(its settling screen was unblocked by hand: the plugin fix in 0.9.9).
-Previews go to the bar, not sofapi (George). **guestpi** was offline at the
-end of the day.
-
-**Waiting on George:** merge PR #58. Then, on 0.9.9: one more reset and
-restore on the bar to see setup restart by itself, recognise the bar screen,
-and the skins arrive on the settling screen - with *Use the player now* (none
-of it yet seen on a device); a look at the boot screen's seam.
+**Waiting on George:** merge PR #59. Decisions owed: Home Assistant (the
+player in an existing Home Assistant, recommended, or hosted as a plugin, to
+be measured first); several players (a switcher in the phone page's header,
+recommended). Checks owed: a reset and restore on the bar; standby on the
+bars; the boot screen's seam.
 
 **At the first Stable release** (George, 2026-10-09): revisit how the image
 reaches people - most likely all three of ADR-0021's routes: the image file
