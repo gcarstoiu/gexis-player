@@ -186,7 +186,7 @@ player back.
 **Where do the idle screen's pictures come from?**
 *Settings → Display → Idle screen → Background* chooses: *Gexis wallpapers*,
 the player's own public-domain photographs, built in (the default on a new
-player); *Space pictures* from NASA and ESA; *Artist pictures* from the
+player); *Artist pictures* from the
 library (while the Lyrion client is off they show the player's own instead);
 *Wallpapers online* from Pixabay (it needs a free key, entered under
 *Photo service and location*); *Wallpapers on device*, read from the player's Pictures share on the
@@ -206,17 +206,14 @@ from the weather location, or from the time zone until a location is set,
 and decides whether Easter follows the Western or the Orthodox date. Every
 picture is public domain or CC0, and its author is shown in the corner.
 
-*Space pictures* download new pictures from NASA and ESA (the Webb and
-Hubble pictures of the week) about once a day and keep the latest 40, so
-they still show without a network; until the first ones arrive, a built-in
-set shows. ESA's pictures carry their credit line in the corner, as their
-licence asks.
+Space photos come from Pixabay: choose *Space* among the *Wallpaper topics*
+of *Wallpapers online*.
 
 **The online wallpapers keep repeating.**
 They no longer repeat until every picture of the day has been shown, and
 each day brings a new set. *Wallpaper topics* sets what is drawn from:
-*Calm* searches Pixabay's selected photos and the rest are Pixabay's own
-categories; choosing several mixes them. *Seasons* adds the current season's
+*Space* and *Calm* search Pixabay's selected photos and the rest are Pixabay's
+own categories; choosing several mixes them. *Seasons* adds the current season's
 pictures, and *Holidays* shows a holiday's in their place on its days.
 
 **The weather is for the wrong place, or not shown.**

@@ -221,3 +221,22 @@ organisation wise"*. The home screen and the idle screen each get their own.
 5. **The picture route says which screen asks** (`/idle/wallpaper?for=home`);
    each screen keeps its own last picture, so the two do not show the same
    one by turns.
+
+## Amended 2026-10-11 (third): Space is a topic, not a background
+
+George: *"There was a misunderstanding with Space. It should be a topic not
+a background type."* The first amendment's revision had taken it the other
+way round.
+
+1. **The *Space pictures* background is removed, all of it** (George chose
+   "Remove it all"): the option on both backgrounds, the daily NASA and ESA
+   download (`space_pictures.py`), its route, and the twelve built-in space
+   pictures with their credits - five of them ESA's, the only CC BY ones;
+   `gexis-wallpapers` is now 89 pictures, every one public domain or CC0. A
+   player that had chosen it falls back to *Gexis wallpapers*, the default
+   (a stored option no longer offered falls away); what it had downloaded is
+   deleted once when the core starts.
+2. **Space is a Pixabay topic again**, beside Calm, a search as before.
+3. **Explanations beside the options** (George): the Background sheets, and
+   eight others whose top note explained their options, carry a short line
+   per option instead; such a sheet stays open after a choice until Close.
