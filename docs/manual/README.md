@@ -258,7 +258,9 @@ bottom:
 - the track playing;
 - a row of buttons for the panel: **Home**, **Now Playing** (lit while the
   panel shows it; tap again to minimise), **Lyrics**, **Visualiser**, the
-  **Screen** button (the panel's screen off, or back on) and **Idle screen**
+  **Screen** button (the panel's screen off until a touch, music starting or
+  the button again wakes it; the player keeps playing, and some screens show
+  their own "No signal" for a few seconds first) and **Idle screen**
   (not offered while the idle screen is switched off);
 - the volume slider.
 
@@ -382,8 +384,7 @@ the player itself, with its music folders and network shares).
 | Attached screen | Sets the layout, Standard or Bar, and which visualiser skins are offered. |
 | Screen rotation | For a screen mounted the other way up. |
 | Headless | Turns the player's screen off; settings that only affect the screen are hidden while it is on. |
-| Display standby: Turn the screen off | The screen goes dark and the player keeps playing. A touch, music starting or the phone's *Screen* button wakes it. Some screens show their own "No signal" for a few seconds before going dark. |
-| Display standby: Scheduled standby, Standby times | With *Scheduled standby* on, the screen goes off during the standby times whenever nothing is playing. Up to six times, each a start and an end on the chosen days; one may run past midnight, counting for the day it starts. |
+| Display standby: Scheduled standby, Standby times | With *Scheduled standby* on, the screen goes off during the standby times whenever nothing is playing. Up to six times, each a start and an end - picked from a grid of hours and quarters - on the chosen days; one may run past midnight, counting for the day it starts. |
 | Display standby: Back to standby after | A screen woken during a standby time goes dark again after this long with no touch and nothing playing (2 minutes unless changed; up to 30). |
 | Touchpad: Phone touchpad, Pointer speed, Pointer style | The phone's touchpad (section 7). |
 | Volume: Show volume when changed elsewhere | A phone's volume change opens the drawer; the panel's own changes do not. |

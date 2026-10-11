@@ -91,3 +91,12 @@ player, and an interval whose start and end are the same is refused.
    off"), *Scheduled standby*, *Back to standby after*.
 3. *Standby times*: the `intervals` row (ADR-0044 amended).
 4. The schedule (`Schedule`), every 15 s.
+
+## Amended 2026-10-11: after George tried it on his phone
+
+- **No *Turn the screen off* row**: the phone's *Screen* button is enough
+  (George). The route stays for it.
+- **Standby times**: our own time grid (hours, then quarters) in place of the
+  browser's list (*"really old school"*); changes drawn at once and written
+  400 ms after the last one, or as the sheet closes (a day chip waiting for
+  the player *"is slow to react"*); the remove button in the card's corner.
