@@ -5,8 +5,9 @@
   mix all three into one design? A bit less text, but with the clock and
   wallpaper."*
 
-  - **The background is the idle screen's** (`Backdrop`, the same
-    *Background*): the player's own wallpapers by default.
+  - **The background is its own** (`Backdrop` with `screen="home"`, the
+    Home screen section's rows since 2026-10-11): the player's own
+    wallpapers by default.
   - **The clock, the date and the player's name** sit in the top left,
     smaller than the idle screen's (*Clock on the waiting screen*).
   - **Each waiting source is a tile** along the foot - its mark, its name,
@@ -80,7 +81,7 @@
 </script>
 
 <div class="waithome" class:waithome--bar={bar} class:waithome--plain={!shown}>
-  <Backdrop {settings} bind:picture bind:shown />
+  <Backdrop {settings} screen="home" bind:picture bind:shown />
   <div class="veil"></div>
 
   <button

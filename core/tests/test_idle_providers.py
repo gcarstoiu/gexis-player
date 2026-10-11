@@ -786,3 +786,20 @@ async def test_calm_is_a_search_the_season_joins_and_a_holiday_replaces_them(tmp
         for _ in range(6):
             await client.get("/idle/wallpaper")
         assert (None, "christmas", "true") not in set(asked())
+
+
+async def test_the_home_screen_asks_for_its_own_background(tmp_path):
+    """ADR-0133 amended 2026-10-11 (second): `?for=home` reads the waiting
+    screen's rows; without it, the idle screen's."""
+    source = Wallpapers(FakeSession(pixabay_any), tmp_path / "pics")
+    settings, client = client_for(tmp_path, wallpapers=source)
+    for key in ("waiting_background",):
+        settings._wired[key] = None
+    async with client:
+        settings.set("idle_background", "Black")
+        settings.set("waiting_background", "Wallpapers on device")
+        assert (await (await client.get("/idle/wallpaper")).json())["off"] is True
+        home = await (await client.get("/idle/wallpaper?for=home")).json()
+        assert home.get("off") is not True and home["error"] == "No pictures on this device yet."
+        settings.set("waiting_background", "Black")
+        assert (await (await client.get("/idle/wallpaper?for=home")).json())["off"] is True

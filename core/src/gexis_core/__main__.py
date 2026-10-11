@@ -2040,6 +2040,14 @@ async def main() -> None:
                "idle_icons": None,
                # Finding 118: read by the idle screen as it draws the icons.
                "idle_icon_motion": None,
+               # ADR-0133 amended 2026-10-11 (second): the idle screen's own
+               # switch, and the home screen's background - all read by the
+               # panel or the picture route as they are used.
+               "idle_enabled": None,
+               "waiting_background": None, "waiting_background_brightness": None,
+               "waiting_background_interval": None, "waiting_wallpaper_topics": None,
+               "waiting_wallpaper_styles": None, "waiting_wallpaper_time_of_day": None,
+               "waiting_wallpaper_seasons": None, "waiting_wallpaper_holidays": None,
                "viz_timeout": None, "viz_stop": None,
                # ADR-0022's handoff rows, wired 2026-09-25. Read where they
                # are used - the adapter at a takeover, the panel for the

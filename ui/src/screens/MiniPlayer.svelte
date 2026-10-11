@@ -449,6 +449,8 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V11M10 19V5M15 19V9M20 19V13" /></svg>
       </button>
     {/if}
+    {#if $settingValues.idle_enabled === true}
+    <!-- Not offered with the idle screen switched off (2026-10-11). -->
     <button
       class="mini__icon"
       class:is-on={$panel.idle}
@@ -459,6 +461,7 @@
     >
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 14.5A7.5 7.5 0 0 1 9.5 5 7.5 7.5 0 1 0 19 14.5Z" /></svg>
     </button>
+    {/if}
   </div>
 
   <!-- ADR-0046 as amended: a Volume change waiting for a pause says so. -->

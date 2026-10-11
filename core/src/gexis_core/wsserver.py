@@ -269,7 +269,9 @@ class StateServer:
         #: What the idle screen is showing, so the next change is a change.
         #: One value for three sources, because only one of them is on
         #: screen at a time: a file name, a Pixabay id, or an artist.
-        self._last_background: str | None = None
+        #: Each screen's last picture (ADR-0133 amended 2026-10-11, second):
+        #: the home and the idle screen pick theirs apart.
+        self._last_background: dict[str, str | None] = {"idle": None, "home": None}
         self._ui_dir = ui_dir
         self._clients: set[web.WebSocketResponse] = set()
         store.subscribe(self._broadcast)
@@ -514,11 +516,12 @@ class StateServer:
             return web.json_response({"error": "wallpapers are not wired up"}, status=503)
         # The player's own pictures need nothing wired; the downloaded and
         # the on-device ones need the wallpaper source.
-        if self._wallpapers is None and self._settings.value("idle_background") in (
+        keys = self.HOME_KEYS if request.query.get("for") == "home" else self.IDLE_KEYS
+        if self._wallpapers is None and self._settings.value(keys["background"]) in (
                 "Wallpapers online", "Wallpapers on device"):
             return web.json_response({"error": "wallpapers are not wired up"}, status=503)
         screen = _screen_size(request)
-        answer = await self._next_background()
+        answer = await self._next_background(keys)
         if self._placer is None or screen is None:
             return web.json_response(answer)
         for _ in range(self.PLACE_TRIES):
@@ -530,7 +533,7 @@ class StateServer:
             if not place.get("skip"):
                 return web.json_response({**answer, "place": place})
             logger.info("idle: %s passed over (%s)", answer["url"], place.get("how"))
-            answer = await self._next_background()
+            answer = await self._next_background(keys)
         return web.json_response(answer)
 
     async def _place(self, url: str, screen: tuple[int, int]) -> dict | None:
@@ -583,7 +586,17 @@ class StateServer:
         except OSError:
             return None
 
-    async def _next_background(self) -> dict:
+    #: **Which rows each screen reads** (ADR-0133 amended 2026-10-11, second).
+    #: The idle screen keeps the keys it always had; the home screen's are
+    #: the waiting screen's own.
+    IDLE_KEYS = {"screen": "idle", "background": "idle_background", "topics": "wallpaper_topics",
+                 "styles": "wallpaper_styles", "time_of_day": "wallpaper_time_of_day",
+                 "seasons": "wallpaper_seasons", "holidays": "wallpaper_holidays"}
+    HOME_KEYS = {"screen": "home", "background": "waiting_background", "topics": "waiting_wallpaper_topics",
+                 "styles": "waiting_wallpaper_styles", "time_of_day": "waiting_wallpaper_time_of_day",
+                 "seasons": "waiting_wallpaper_seasons", "holidays": "waiting_wallpaper_holidays"}
+
+    async def _next_background(self, keys: dict | None = None) -> dict:
         """The next background, whatever `idle_background` says it is.
 
         **One route for four sources**, so the panel asks for "the next
@@ -592,7 +605,9 @@ class StateServer:
         daemon can reach anyway. *When* the picture changes is the panel
         counting `background_interval`; nothing here holds a timer.
         """
-        background = self._settings.value("idle_background") or "Gexis wallpapers"
+        keys = keys or self.IDLE_KEYS
+        last = keys["screen"]
+        background = self._settings.value(keys["background"]) or "Gexis wallpapers"
         if background == "Black":
             return {"off": True, "error": None}
         # ADR-0133 §2: artist pictures come from the library, which is not
@@ -602,25 +617,25 @@ class StateServer:
         if background == "Artist pictures":
             return await self._artist_picture()
         if background in ("Gexis wallpapers", "Space pictures"):
-            return await self._own_picture(background)
+            return await self._own_picture(background, keys)
         if background == "Wallpapers on device":
             # None twice until every one has been shown, and never the one
             # already on screen when there is another (ADR-0047 §2e).
-            name = self._wallpapers.next_local(avoid=self._last_background)
+            name = self._wallpapers.next_local(avoid=self._last_background[last])
             if name is None:
                 return {"error": "No pictures on this device yet."}
-            self._last_background = name
+            self._last_background[last] = name
             # **Quoted**: a name can now carry folders, spaces and anything
             # else a person types, and it travels as a URL.
             return {"url": f"/idle/wallpaper/local/{quote(name)}", "by": "", "page": "",
                     "credit": None, "error": None}
         key = str(self._settings.value("wallpaper_key") or "").strip()
-        topics = await self._pixabay_topics(self._settings.value("wallpaper_topics") or [])
+        topics = await self._pixabay_topics(self._settings.value(keys["topics"]) or [], keys)
         # A bar asks for wide pictures (George, 2026-10-04).
         bar = skin_packs.family(*skin_packs.screen_size()) == "bar"
-        answer = await self._wallpapers.next(key, list(topics), avoid=self._last_background, wide=bar)
+        answer = await self._wallpapers.next(key, list(topics), avoid=self._last_background[last], wide=bar)
         if answer.get("file"):
-            self._last_background = answer["file"]
+            self._last_background[last] = answer["file"]
             answer = {**answer, "url": f"/idle/wallpaper/{answer['file']}"}
         return answer
 
@@ -629,16 +644,17 @@ class StateServer:
     PIXABAY_SEARCHES = {"Calm": "calm"}
     PIXABAY_HOLIDAYS = {"newyear": "new year", "christmas": "christmas", "easter": "easter"}
 
-    async def _pixabay_topics(self, chosen: list) -> list[str]:
+    async def _pixabay_topics(self, chosen: list, keys: dict | None = None) -> list[str]:
         """What `Wallpapers.next` is asked for: on a holiday, with *Holidays*
         on, that holiday alone (George: *"holidays are a toggle that
         supersede the choice of wallpaper"*); otherwise each chosen topic - a
         category as it is, Calm as a search - and, with *Seasons* on, the
         season it is by the player's hemisphere beside them (George chose
         the toggle over a Season topic, 2026-10-11)."""
+        keys = keys or self.IDLE_KEYS
         value = self._settings.value
-        holidays_on = value("wallpaper_holidays") is not False
-        seasons_on = value("wallpaper_seasons") is not False
+        holidays_on = value(keys["holidays"]) is not False
+        seasons_on = value(keys["seasons"]) is not False
         country, latitude = await self._where() if (holidays_on or seasons_on) else (None, None)
         today = datetime.datetime.now().date()
         if holidays_on:
@@ -652,33 +668,35 @@ class StateServer:
                 today, southern=latitude is not None and latitude < 0))
         return topics
 
-    async def _own_picture(self, background: str) -> dict:
+    async def _own_picture(self, background: str, keys: dict | None = None) -> dict:
         """**ADR-0133.** The next of the player's own pictures. Space
         pictures are their built-in set; Gexis wallpapers are chosen by the
         style, hour, season and holiday rows (`own_wallpapers.active_sets`)."""
+        keys = keys or self.IDLE_KEYS
+        last = keys["screen"]
         if background == "Space pictures":
             # Downloaded ones first; the built-in set until one has arrived.
             if self._space is not None:
-                answer = await self._space.next(avoid=self._last_background)
+                answer = await self._space.next(avoid=self._last_background[last])
                 if answer is not None:
-                    self._last_background = answer["file"]
+                    self._last_background[last] = answer["file"]
                     return answer
             sets = [own_wallpapers.SPACE]
         else:
             country, latitude = await self._where()
             value = self._settings.value
-            styles = value("wallpaper_styles")
+            styles = value(keys["styles"])
             sets = own_wallpapers.active_sets(
                 datetime.datetime.now(),
                 styles=list(styles) if isinstance(styles, list) else ["Calm"],
-                time_of_day_on=value("wallpaper_time_of_day") is not False,
-                seasons_on=value("wallpaper_seasons") is not False,
-                holidays_on=value("wallpaper_holidays") is not False,
+                time_of_day_on=value(keys["time_of_day"]) is not False,
+                seasons_on=value(keys["seasons"]) is not False,
+                holidays_on=value(keys["holidays"]) is not False,
                 country=country, latitude=latitude)
-        answer = self._own.next(sets, avoid=self._last_background)
+        answer = self._own.next(sets, avoid=self._last_background[last])
         if answer is None:
             return {"error": "The player's own pictures are not installed."}
-        self._last_background = answer["file"]
+        self._last_background[last] = answer["file"]
         return answer
 
     async def _where(self) -> tuple[str | None, float | None]:
@@ -739,7 +757,7 @@ class StateServer:
         if not items:
             return {"error": "No artists in the library yet."}
         # Not the artist already on screen, when there is another.
-        items = [a for a in items if a.get("name") != self._last_background] or items
+        items = [a for a in items if a.get("name") != self._last_background["idle"]] or items
         picked = random.sample(items, min(ARTIST_BATCH, len(items)))
 
         # **fanart is asked about one artist, not the batch.** Each name
@@ -752,7 +770,7 @@ class StateServer:
         for artist in shuffled[:ARTIST_FANART_TRIES]:
             url, source = await self._fanart_background(artist.get("name") or "")
             if url:
-                self._last_background = artist.get("name") or ""
+                self._last_background["idle"] = artist.get("name") or ""
                 return {"url": url, "by": artist.get("name") or "", "page": "",
                         "credit": None, "source": source, "error": None}
 
@@ -761,7 +779,7 @@ class StateServer:
         if not with_photos:
             return {"error": "No artist pictures for these artists."}
         artist, url = random.choice(with_photos)
-        self._last_background = artist.get("name") or ""
+        self._last_background["idle"] = artist.get("name") or ""
         # The credit is the artist's name rather than a licence line: both
         # sources come through the owner's own server.
         return {"url": url, "by": artist.get("name") or "", "page": "",

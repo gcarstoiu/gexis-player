@@ -429,27 +429,9 @@
         "default": false
       },
       {
-        "key": "drawer_on_external",
-        "type": "toggle",
-        "label": "Show volume when changed elsewhere",
-        "marks": "N",
-        "note": "A phone’s volume change opens the drawer; the panel’s own changes do not.",
-        "default": true,
-        "onlyWhen": [
-          "headless",
-          false
-        ]
-      },
-      {
-        "key": "drawer_autohide",
-        "type": "number",
-        "label": "Volume drawer auto-hide",
-        "marks": "N",
-        "min": 1,
-        "max": 30,
-        "unit": "s",
-        "note": "When a change from elsewhere opened it.",
-        "default": 3,
+        "type": "group",
+        "label": "Touchpad",
+        "accent": "#c8a2d8",
         "onlyWhen": [
           "headless",
           false
@@ -510,6 +492,70 @@
             true
           ]
         ]
+      },
+      {
+        "type": "group",
+        "label": "Volume",
+        "accent": "#c8a2d8",
+        "onlyWhen": [
+          "headless",
+          false
+        ]
+      },
+      {
+        "key": "drawer_on_external",
+        "type": "toggle",
+        "label": "Show volume when changed elsewhere",
+        "marks": "N",
+        "note": "A phone’s volume change opens the drawer; the panel’s own changes do not.",
+        "default": true,
+        "onlyWhen": [
+          "headless",
+          false
+        ]
+      },
+      {
+        "key": "drawer_autohide",
+        "type": "number",
+        "label": "Volume drawer auto-hide",
+        "marks": "N",
+        "min": 1,
+        "max": 30,
+        "unit": "s",
+        "note": "When a change from elsewhere opened it.",
+        "default": 3,
+        "onlyWhen": [
+          "headless",
+          false
+        ]
+      },
+      {
+        "type": "group",
+        "label": "Photo service and location",
+        "accent": "#c8a2d8",
+        "onlyWhen": [
+          "headless",
+          false
+        ]
+      },
+      {
+        "key": "wallpaper_key",
+        "type": "text",
+        "label": "Pixabay API key",
+        "marks": "N",
+        "note": "For online wallpapers: a Pixabay key, from a free account. Use one per player to avoid throttling.",
+        "secret": true,
+        "placeholder": "Pixabay API key",
+        "default": null
+      },
+      {
+        "key": "weather_location",
+        "type": "text",
+        "label": "Location",
+        "marks": "N",
+        "note": "A city or place name: the weather, and the wallpapers' seasons and holidays, follow it. It can be changed at any time.",
+        "placeholder": "City, country",
+        "default": null
       },
       {
         "type": "group",
@@ -577,32 +623,128 @@
         ]
       },
       {
-        "type": "group",
-        "label": "Background",
-        "accent": "#c8a2d8",
-        "onlyWhen": [
-          "headless",
-          false
-        ]
-      },
-      {
-        "key": "idle_background",
+        "key": "waiting_background",
         "type": "choice",
         "label": "Background",
         "marks": "N",
-        "note": "One picture behind the idle screen and the waiting screen. Gexis wallpapers and Space pictures are the player's own, built in. Artist pictures come from the library, and show the player's own while the Lyrion client is off. Online wallpapers come from Pixabay and need a key. On-device wallpapers are read from local storage.",
+        "note": "Behind the waiting screen. Gexis wallpapers and Space pictures are the player's own, built in. Online wallpapers come from Pixabay and need its key. On-device wallpapers are read from local storage.",
         "options": [
           "Gexis wallpapers",
           "Space pictures",
-          "Artist pictures",
           "Wallpapers online",
           "Wallpapers on device",
           "Black"
         ],
-        "default": "Gexis wallpapers"
+        "default": "Gexis wallpapers",
+        "onlyWhen": [
+          "lms_enabled",
+          false
+        ]
       },
       {
-        "key": "background_brightness",
+        "key": "waiting_wallpaper_topics",
+        "type": "multi",
+        "label": "Wallpaper topics",
+        "marks": "N",
+        "note": "Calm is a search; the rest are Pixabay's own categories. Each new picture comes from one of the chosen ones at random.",
+        "options": [
+          "Calm",
+          "Backgrounds",
+          "Fashion",
+          "Nature",
+          "Science",
+          "Education",
+          "Feelings",
+          "Health",
+          "People",
+          "Religion",
+          "Places",
+          "Animals",
+          "Industry",
+          "Computer",
+          "Food",
+          "Sports",
+          "Transportation",
+          "Travel",
+          "Buildings",
+          "Business",
+          "Music"
+        ],
+        "default": [
+          "Nature"
+        ],
+        "onlyWhen": [
+          "waiting_background",
+          "Wallpapers online"
+        ]
+      },
+      {
+        "key": "waiting_wallpaper_styles",
+        "type": "multi",
+        "label": "Wallpaper styles",
+        "marks": "N",
+        "note": "Each new picture comes from one of the chosen styles at random.",
+        "options": [
+          "Calm",
+          "Colourful",
+          "Psychedelic"
+        ],
+        "default": [
+          "Calm"
+        ],
+        "onlyWhen": [
+          "waiting_background",
+          "Gexis wallpapers"
+        ]
+      },
+      {
+        "key": "waiting_wallpaper_time_of_day",
+        "type": "toggle",
+        "label": "Follow the time of day",
+        "marks": "N",
+        "note": "Pictures for dawn, day, dusk and night join the styles, each at its hour.",
+        "default": true,
+        "onlyWhen": [
+          "waiting_background",
+          "Gexis wallpapers"
+        ]
+      },
+      {
+        "key": "waiting_wallpaper_seasons",
+        "type": "toggle",
+        "label": "Seasons",
+        "marks": "N",
+        "note": "The season's pictures join the styles or topics, by hemisphere.",
+        "default": true,
+        "onlyWhen": [
+          "waiting_background",
+          {
+            "in": [
+              "Gexis wallpapers",
+              "Wallpapers online"
+            ]
+          }
+        ]
+      },
+      {
+        "key": "waiting_wallpaper_holidays",
+        "type": "toggle",
+        "label": "Holidays",
+        "marks": "N",
+        "note": "On New Year, and on Christmas and Easter where they are holidays, only their pictures show, in place of the styles or topics. The country comes from the weather location, or the time zone until one is set.",
+        "default": true,
+        "onlyWhen": [
+          "waiting_background",
+          {
+            "in": [
+              "Gexis wallpapers",
+              "Wallpapers online"
+            ]
+          }
+        ]
+      },
+      {
+        "key": "waiting_background_brightness",
         "type": "number",
         "label": "Background brightness",
         "marks": "N",
@@ -613,14 +755,14 @@
         "unit": "%",
         "default": 62,
         "onlyWhen": [
-          "idle_background",
+          "waiting_background",
           {
             "not": "Black"
           }
         ]
       },
       {
-        "key": "background_interval",
+        "key": "waiting_background_interval",
         "type": "number",
         "label": "Change the picture every",
         "marks": "N",
@@ -630,24 +772,90 @@
         "unit": "min",
         "default": 15,
         "onlyWhen": [
-          "idle_background",
+          "waiting_background",
           {
             "not": "Black"
           }
         ]
       },
       {
-        "key": "wallpaper_key",
-        "type": "text",
-        "label": "Pixabay API key",
+        "type": "group",
+        "label": "Idle screen",
+        "accent": "#c8a2d8",
+        "onlyWhen": [
+          "headless",
+          false
+        ]
+      },
+      {
+        "key": "idle_enabled",
+        "type": "toggle",
+        "label": "Idle screen",
         "marks": "N",
-        "note": "A Pixabay key, from a free account. Use one per player to avoid throttling.",
-        "secret": true,
-        "placeholder": "Pixabay API key",
+        "note": "A clock and picture screen when nobody has used the panel for a while. Off, the panel stays on what it shows.",
+        "default": false
+      },
+      {
+        "key": "idle_screen",
+        "type": "choice",
+        "label": "Screen",
+        "marks": "R",
+        "note": "The built-in screen shows the clock and weather. An external page loads the URL provided.",
+        "options": [
+          "Built in",
+          "External URL"
+        ],
+        "default": "Built in",
+        "onlyWhen": [
+          "idle_enabled",
+          true
+        ]
+      },
+      {
+        "key": "idle_url",
+        "type": "text",
+        "label": "URL",
+        "marks": "R",
+        "note": "External and lazy loaded. Falls back to the built-in screen when unreachable, unconfigured, or refusing to be framed.",
         "default": null,
         "onlyWhen": [
-          "idle_background",
-          "Wallpapers online"
+          "idle_screen",
+          "External URL"
+        ]
+      },
+      {
+        "key": "idle_timeout",
+        "type": "number",
+        "label": "Timeout",
+        "marks": "R",
+        "note": "One timeout on every screen, counted while nothing is playing and nobody touches the panel.",
+        "min": 1,
+        "max": 60,
+        "unit": "min",
+        "default": 5,
+        "onlyWhen": [
+          "idle_enabled",
+          true
+        ]
+      },
+      {
+        "key": "idle_background",
+        "type": "choice",
+        "label": "Background",
+        "marks": "N",
+        "note": "Gexis wallpapers and Space pictures are the player's own, built in. Artist pictures come from the library, and show the player's own while the Lyrion client is off. Online wallpapers come from Pixabay and need a key. On-device wallpapers are read from local storage.",
+        "options": [
+          "Gexis wallpapers",
+          "Space pictures",
+          "Artist pictures",
+          "Wallpapers online",
+          "Wallpapers on device",
+          "Black"
+        ],
+        "default": "Gexis wallpapers",
+        "onlyWhen": [
+          "idle_screen",
+          "Built in"
         ]
       },
       {
@@ -753,48 +961,39 @@
         ]
       },
       {
-        "type": "group",
-        "label": "Idle screen",
-        "accent": "#c8a2d8",
-        "onlyWhen": [
-          "headless",
-          false
-        ]
-      },
-      {
-        "key": "idle_screen",
-        "type": "choice",
-        "label": "Screen",
-        "marks": "R",
-        "note": "The built-in screen shows the clock and weather. An external page loads the URL provided.",
-        "options": [
-          "Built in",
-          "External URL"
-        ],
-        "default": "Built in"
-      },
-      {
-        "key": "idle_url",
-        "type": "text",
-        "label": "URL",
-        "marks": "R",
-        "note": "External and lazy loaded. Falls back to the built-in screen when unreachable, unconfigured, or refusing to be framed.",
-        "default": null,
-        "onlyWhen": [
-          "idle_screen",
-          "External URL"
-        ]
-      },
-      {
-        "key": "idle_timeout",
+        "key": "background_brightness",
         "type": "number",
-        "label": "Timeout",
-        "marks": "R",
-        "note": "One timeout on every screen, counted while nothing is playing and nobody touches the panel.",
+        "label": "Background brightness",
+        "marks": "N",
+        "note": "Brightness of the background picture. Recommended: 62%.",
+        "min": 20,
+        "max": 100,
+        "step": 5,
+        "unit": "%",
+        "default": 62,
+        "onlyWhen": [
+          "idle_background",
+          {
+            "not": "Black"
+          }
+        ]
+      },
+      {
+        "key": "background_interval",
+        "type": "number",
+        "label": "Change the picture every",
+        "marks": "N",
+        "note": "How often the background changes — artist pictures, online wallpapers and the player's own.",
         "min": 1,
         "max": 60,
         "unit": "min",
-        "default": 5
+        "default": 15,
+        "onlyWhen": [
+          "idle_background",
+          {
+            "not": "Black"
+          }
+        ]
       },
       {
         "key": "idle_clock",
@@ -834,19 +1033,6 @@
         "onlyWhen": [
           "idle_screen",
           "Built in"
-        ]
-      },
-      {
-        "key": "weather_location",
-        "type": "text",
-        "label": "Location",
-        "marks": "N",
-        "note": "A city or place name. It can be changed at any time.",
-        "placeholder": "City, country",
-        "default": null,
-        "onlyWhen": [
-          "idle_weather",
-          true
         ]
       },
       {

@@ -181,6 +181,11 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         # Finding 118: the weather icons' animations hold half a core; the
         # owner chooses (George, 2026-10-11).
         "idle_icon_motion",
+        # ADR-0133 amended 2026-10-11 (second): the idle screen's switch, and
+        # the home screen's own background (George).
+        "idle_enabled", "waiting_background", "waiting_background_brightness",
+        "waiting_background_interval", "waiting_wallpaper_topics", "waiting_wallpaper_styles",
+        "waiting_wallpaper_time_of_day", "waiting_wallpaper_seasons", "waiting_wallpaper_holidays",
         # ADR-0058, 2026-09-23: George asked for the three numbers that decide
         # how the visualisation *moves*. The design has no rows for them
         # because until this week nobody knew which knobs there were.
@@ -627,7 +632,7 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # **98**: Cable (ADR-0123, 2026-10-08). **102**: the player's own
     # wallpapers' four rows (ADR-0133, 2026-10-10). **104**: the waiting
     # screen's clock and hint (ADR-0133).
-    assert len(rows) == 105
+    assert len(rows) == 114
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
@@ -647,7 +652,7 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # 82 with Report this hardware (ADR-0126).
     # **81**: Software volume merged into Volume (ADR-0127). **80**: Pexels
     # removed.
-    assert len(rows) - len(kept) == 88  # 88: Weather icon motion (Finding 118); 87: Version hidden, it repeated Release; 88: the waiting screen's two rows (ADR-0133); 86: the own wallpapers (ADR-0133); 82: the factory reset (ADR-0132); 81: Cable (ADR-0123)
+    assert len(rows) - len(kept) == 97  # 97: the idle switch and the home background (ADR-0133, 2026-10-11); 88: Weather icon motion (Finding 118); 87: Version hidden, it repeated Release; 88: the waiting screen's two rows (ADR-0133); 86: the own wallpapers (ADR-0133); 82: the factory reset (ADR-0132); 81: Cable (ADR-0123)
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():
@@ -664,6 +669,7 @@ def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():
     assert (clock["type"], clock["default"]) == ("toggle", True)
     assert clock["onlyWhen"] == ["idle_screen", "Built in"]
     values = {k: rows[k].get("default") for k in rows}
+    values["idle_enabled"] = True  # off on a new player since 2026-10-11
     assert visible(clock, rows, values)
     values["idle_screen"] = "External URL"
     assert not visible(clock, rows, values), "an external page replaces all of it"
@@ -679,6 +685,7 @@ def test_every_picture_background_carries_the_same_two_rows():
     """
     rows = {r["key"]: r for r in _rows()}
     values = {k: rows[k].get("default") for k in rows}
+    values["idle_enabled"] = True
     for key in ("background_brightness", "background_interval"):
         assert rows[key]["onlyWhen"] == ["idle_background", {"not": "Black"}], key
         for background in ("Artist pictures", "Wallpapers online", "Wallpapers on device"):
@@ -686,9 +693,12 @@ def test_every_picture_background_carries_the_same_two_rows():
             assert visible(rows[key], rows, values), f"{key} under {background}"
         values["idle_background"] = "Black"
         assert not visible(rows[key], rows, values), key
-    # A key and a topic list are about the service, not about the picture.
-    for key in ("wallpaper_key", "wallpaper_topics"):
-        assert rows[key]["onlyWhen"] == ["idle_background", "Wallpapers online"], key
+    # A topic list is about the service, not about the picture. The key is
+    # shared by both screens since 2026-10-11, under *Photo service and
+    # location*, and hangs off neither.
+    assert rows["wallpaper_topics"]["onlyWhen"] == ["idle_background", "Wallpapers online"]
+    assert rows["waiting_wallpaper_topics"]["onlyWhen"] == ["waiting_background", "Wallpapers online"]
+    assert "onlyWhen" not in rows["wallpaper_key"]
 
 
 def test_a_row_can_be_shown_for_everything_but_one_value():
@@ -703,16 +713,18 @@ def test_a_row_can_be_shown_for_everything_but_one_value():
     brightness = rows["background_brightness"]
     assert brightness["onlyWhen"] == ["idle_background", {"not": "Black"}]
     values = {k: rows[k].get("default") for k in rows}
+    values["idle_enabled"] = True
     for background in ("Artist pictures", "Wallpapers online", "Wallpapers on device"):
         values["idle_background"] = background
         assert visible(brightness, rows, values), background
     values["idle_background"] = "Black"
     assert not visible(brightness, rows, values)
-    # ADR-0133 amended 2026-10-11: the background serves the waiting screen
-    # too, so an external idle page no longer hides it.
+    # And it is still transitive: an external screen hides the idle
+    # screen's background row, which hides this one (the waiting screen has
+    # its own since 2026-10-11).
     values["idle_background"] = "Wallpapers online"
     values["idle_screen"] = "External URL"
-    assert visible(brightness, rows, values)
+    assert not visible(brightness, rows, values)
 
 
 def test_a_malformed_negation_fails_the_load():
@@ -788,13 +800,17 @@ def test_every_weather_row_hangs_off_the_toggle_now_that_there_is_no_key():
     - which itself hangs off the built-in screen."""
     rows = {r["key"]: r for r in _rows()}
     assert "weather_key" not in rows
-    for key in ("weather_location", "idle_forecast", "idle_icons"):
+    for key in ("idle_forecast", "idle_icons"):
         assert rows[key]["onlyWhen"] == ["idle_weather", True], key
     assert rows["idle_weather"]["onlyWhen"] == ["idle_screen", "Built in"]
-    # Transitively: an external URL hides all five, not just the toggle.
+    # The location serves the wallpapers' seasons and holidays too since
+    # 2026-10-11, under *Photo service and location*: on its own.
+    assert "onlyWhen" not in rows["weather_location"]
+    # Transitively: an external URL hides the rest, not just the toggle.
     values = {k: rows[k].get("default") for k in rows}
+    values["idle_enabled"] = True
     values["idle_screen"] = "External URL"
-    for key in ("idle_weather", "weather_location", "idle_forecast", "idle_icons"):
+    for key in ("idle_weather", "idle_forecast", "idle_icons"):
         assert not visible(rows[key], rows, values), key
 
 
@@ -978,9 +994,10 @@ def test_a_recommended_value_in_a_note_is_that_row_s_own_default():
             assert f"{row['default']}{'' if unit == '%' else ' '}{unit}" in note, (
                 f"{row['key']}: the recommendation should carry its unit"
             )
-    assert checked == 5, (
+    assert checked == 6, (
         "expected ADR-0058's three rows, the confidence threshold and the "
-        f"idle background's brightness (2026-10-05) to recommend a value, found {checked}"
+        "idle and home backgrounds' brightness (2026-10-05, 2026-10-11) to "
+        f"recommend a value, found {checked}"
     )
 
 
@@ -1441,7 +1458,9 @@ def test_headless_hides_every_setting_that_needs_a_screen(store):
     visualiser and its tweaks, the volume drawer, the transition screen and
     all of Enrichment are hidden - by their headings' and group's conditions,
     on top of each row's own (`home_strip` keeps Lyrion Client's)."""
-    settings = Settings(store, registry=load_registry(), wired={"headless": lambda v: None})
+    settings = Settings(store, registry=load_registry(), wired={"headless": lambda v: None,
+                                                                "idle_enabled": None})
+    settings.set("idle_enabled", True)
     def shown():
         return {r["key"] for g in settings.to_json() for r in g["rows"]
                 if r.get("key") and r["visible"]}
@@ -1587,25 +1606,53 @@ def test_weather_icon_motion_hangs_off_the_weather_and_is_wired():
 
 
 def test_holidays_show_for_either_wallpaper_background_and_no_other():
-    """ADR-0133 amended 2026-10-11: `{"in": [...]}`, and the Background
-    section between Home screen and Idle screen."""
+    """ADR-0133 amended 2026-10-11: `{"in": [...]}` - and, since the second
+    amendment, Display in its sections with a background for each screen,
+    in one order (George: *"background should be followed by Topics and then
+    season toggle"*)."""
     rows = {r["key"]: r for r in _rows()}
     holidays = rows["wallpaper_holidays"]
     values = {k: rows[k].get("default") for k in rows}
     values["headless"] = False
+    values["idle_enabled"] = True
     for background, shown in (("Gexis wallpapers", True), ("Wallpapers online", True),
                               ("Space pictures", False), ("Black", False)):
         values["idle_background"] = background
         assert visible(holidays, rows, values) is shown, background
     display = next(g for g in load_registry() if g.get("label") == "Display")
     heads = [r["label"] for r in display["rows"] if r.get("type") == "group"]
-    assert heads.index("Background") == heads.index("Home screen") + 1 == heads.index("Idle screen") - 1
+    assert heads == ["Panel", "Touchpad", "Volume", "Photo service and location", "Home screen",
+                     "Idle screen", "Visualiser", "Visualiser tweaks"]
     keys = [r.get("key") for r in display["rows"]]
-    start = keys.index(None, keys.index("waiting_hint"))
-    assert keys[start + 1:start + 10] == [
-        "idle_background", "background_brightness", "background_interval", "wallpaper_key",
-        "wallpaper_topics", "wallpaper_styles", "wallpaper_time_of_day", "wallpaper_seasons",
-        "wallpaper_holidays"]
+    order = ["background", "wallpaper_topics", "wallpaper_styles", "wallpaper_time_of_day",
+             "wallpaper_seasons", "wallpaper_holidays", "background_brightness", "background_interval"]
+    idle = keys[keys.index("idle_background"):keys.index("idle_background") + 8]
+    home = keys[keys.index("waiting_background"):keys.index("waiting_background") + 8]
+    assert idle == ["idle_" + order[0]] + order[1:]
+    assert home == ["waiting_" + k for k in order]
+    assert keys.index("idle_enabled") == keys.index(None, keys.index("waiting_background")) + 1
+
+
+def test_the_idle_screen_switch_hides_its_section_and_the_home_background_needs_lyrion_off():
+    """ADR-0133 amended 2026-10-11 (second): the idle screen off by default,
+    every row under it hidden when off; the home screen's background only
+    with the Lyrion client off, without Artist pictures, at fresh defaults."""
+    rows = {r["key"]: r for r in _rows()}
+    assert rows["idle_enabled"]["default"] is False
+    values = {k: rows[k].get("default") for k in rows}
+    values["headless"] = False
+    idle_rows = ["idle_screen", "idle_timeout", "idle_background", "background_brightness",
+                 "idle_clock", "idle_weather", "idle_icon_motion"]
+    assert not any(visible(rows[k], rows, values) for k in idle_rows)
+    values["idle_enabled"] = True
+    assert all(visible(rows[k], rows, values) for k in idle_rows)
+    home = rows["waiting_background"]
+    assert "Artist pictures" not in home["options"] and home["default"] == "Gexis wallpapers"
+    assert rows["waiting_wallpaper_styles"]["default"] == ["Calm"]
+    values["lms_enabled"] = True
+    assert not visible(home, rows, values)
+    values["lms_enabled"] = False
+    assert visible(home, rows, values) and visible(rows["waiting_wallpaper_styles"], rows, values)
 
 
 def test_an_in_condition_must_name_a_list():

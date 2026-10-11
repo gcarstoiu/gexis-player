@@ -43,6 +43,7 @@
   // ADR-0033: idle is "not playing and not touched", one timeout everywhere.
   // From settings (idle_timeout, minutes); `?idle_seconds=` overrides it for testing.
   const IDLE_OVERRIDE_S = Number(new URLSearchParams(location.search).get('idle_seconds')) || null;
+  const idleOn = $derived($settingValues.idle_enabled === true);
   const IDLE_MS = $derived((IDLE_OVERRIDE_S ?? ($settingValues.idle_timeout ?? 5) * 60) * 1000);
 
   let idle = $state(false);
@@ -160,6 +161,12 @@
       untrack(() => { idle = false; askedIdle = false; });
       return;
     }
+    // **The idle screen can be off** (ADR-0133 amended 2026-10-11, second;
+    // off on a new player): the panel then stays on what it shows.
+    if (!idleOn) {
+      untrack(() => { idle = false; askedIdle = false; });
+      return;
+    }
     if (playing) {
       if (!untrack(() => askedIdle)) idle = false;
       return;
@@ -235,8 +242,8 @@
     appliedIdleAsk = ask.seq;
     if (ask.at && Date.now() / 1000 - ask.at > 60) return;
     untrack(() => {
-      idle = ask.show;
-      askedIdle = ask.show;
+      idle = ask.show && idleOn;
+      askedIdle = ask.show && idleOn;
       if (!ask.show) touches += 1;
     });
   });
