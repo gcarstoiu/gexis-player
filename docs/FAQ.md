@@ -213,8 +213,8 @@ of *Wallpapers online*.
 They no longer repeat until every picture of the day has been shown, and
 each day brings a new set. *Wallpaper topics* sets what is drawn from:
 *Space* and *Calm* search Pixabay's selected photos and the rest are Pixabay's
-own categories; choosing several mixes them. *Seasons* adds the current season's
-pictures, and *Holidays* shows a holiday's in their place on its days.
+own categories; choosing several mixes them. *Holidays* shows a holiday's
+pictures in their place on its days.
 
 **The weather is for the wrong place, or not shown.**
 Set *Settings → Display → Photo service and location → Location* to a city or
