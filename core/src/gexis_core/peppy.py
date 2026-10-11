@@ -427,6 +427,31 @@ def meter_smoothing_samples(window_ms: int) -> int:
     return max(1, int(window_ms / METER_POLL_MS + 0.5))
 
 
+def _replace(path: Path, text: str) -> bool:
+    """The config written whole or not at all, with the image's owner and
+    mode. Both setters only rewrite keys already there, so a file a power
+    cut left cut short was never mended, and PeppyMeter, which reads it at
+    start, stayed dead (review, 2026-10-12)."""
+    tmp = path.with_name(path.name + ".tmp")
+    try:
+        with open(tmp, "w") as out:
+            out.write(text)
+            out.flush()
+            os.fsync(out.fileno())
+        was = path.stat()
+        os.chmod(tmp, was.st_mode & 0o7777)
+        try:
+            os.chown(tmp, was.st_uid, was.st_gid)
+        except PermissionError:
+            pass    # not root (tests): the file is ours already
+        os.replace(tmp, path)
+        return True
+    except OSError as exc:
+        logger.warning("peppy: cannot write %s: %s", path, exc)
+        tmp.unlink(missing_ok=True)
+        return False
+
+
 def set_meter_smoothing(window_ms: int, path: Path) -> bool:
     """Put `smooth.buffer.size` in PeppyMeter's config. True if it changed.
 
@@ -456,10 +481,7 @@ def set_meter_smoothing(window_ms: int, path: Path) -> bool:
         return False
     if "".join(out) == "".join(lines):
         return False
-    try:
-        path.write_text("".join(out))
-    except OSError as exc:
-        logger.warning("peppy: cannot write %s: %s", path, exc)
+    if not _replace(path, "".join(out)):
         return False
     logger.info("peppy: the needle is averaged over %s samples (%s ms)", samples, samples * METER_POLL_MS)
     return True
@@ -488,10 +510,7 @@ def set_meter_skins(path: Path, base_folder: Path, meter_folder: str, width: int
         out.append(f"{key} = {wanted[key]}\n" if section == "current" and key in wanted else line)
     if out == lines:
         return False
-    try:
-        path.write_text("".join(out))
-    except OSError as exc:
-        logger.warning("peppy: cannot write %s: %s", path, exc)
+    if not _replace(path, "".join(out)):
         return False
     logger.info("peppy: drawing %s at %s x %s from %s", meter_folder, width, height, base_folder)
     return True

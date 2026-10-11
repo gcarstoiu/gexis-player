@@ -654,3 +654,35 @@ async def test_a_touch_during_a_raise_lowers_it_after_not_before(tmp_path, monke
     await raising
     await asyncio.gather(*controller._lowering)
     assert order == ["focus", "minimize"] and not screen.visible
+
+
+@pytest.mark.parametrize("which", ["smoothing", "skins"])
+def test_peppymeter_s_config_is_replaced_whole_never_rewritten_in_place(tmp_path, which):
+    """Review, 2026-10-12: rewritten in place, a power cut could leave it cut
+    short - and both setters only rewrite keys already there, so it was
+    never mended and the visualiser stayed dead."""
+    import os
+
+    from gexis_core.peppy import set_meter_skins, set_meter_smoothing
+
+    conf = tmp_path / "config.txt"
+    conf.write_text("[current]\nbase.folder = /old\nmeter.folder = a\nscreen.width = 800\n"
+                    "screen.height = 480\n[data.source]\nsmooth.buffer.size = 6\n")
+    conf.chmod(0o640)
+    before = conf.stat().st_ino
+    if which == "smoothing":
+        assert set_meter_smoothing(400, conf) is True
+    else:
+        assert set_meter_skins(conf, tmp_path / "pack", "b", 1280, 720) is True
+    assert conf.stat().st_ino != before, "a new file renamed into place"
+    assert oct(conf.stat().st_mode & 0o777) == oct(0o640)
+    assert [p.name for p in tmp_path.iterdir()] == ["config.txt"]
+    assert "smooth.buffer.size = " in conf.read_text() and "[current]" in conf.read_text()
+    if os.geteuid() == 0:
+        return                          # root writes anywhere
+    os.chmod(tmp_path, 0o500)           # nowhere to put the new one: the old one stands
+    try:
+        assert set_meter_smoothing(800, conf) is False
+        assert "[current]" in conf.read_text()
+    finally:
+        os.chmod(tmp_path, 0o700)
