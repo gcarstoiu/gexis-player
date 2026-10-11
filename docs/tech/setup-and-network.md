@@ -329,7 +329,11 @@ All under the core's HTTP server on port 8090 (`wsserver.py`):
 Every route but `/setup/status` answers 409 once setup is over (`_setup_closed`):
 a configured device has Settings for all of this. On a phone, `App.svelte`
 renders `SetupPage` in place of Settings while setup is needed or the setup
-network is up; on the panel, `SetupScreen` covers the ordinary screens.
+network is up (`open` or `failed`), and holds it once shown so a join cannot
+swap it for Settings under the phone. `joining` keeps a page already shown
+but never opens one: a page reconnecting as the player rejoins its own Wi-Fi
+would otherwise hold a setup page with no setup running (found 2026-10-11).
+On the panel, `SetupScreen` covers the ordinary screens.
 
 ---
 
