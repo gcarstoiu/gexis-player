@@ -42,6 +42,7 @@ from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
 from gexis_core import own_wallpapers
+from gexis_core.players import Players, status_line
 from gexis_core.wallpapers import SEARCH as PIXABAY_SEARCH
 from gexis_core import backups, bluetooth_devices, skin_packs, device_name, discovery, hardware_report, lyrion_scan, lyrion_shares, problem_report, skin_previews, skins, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
@@ -192,6 +193,8 @@ class StateServer:
         self._peppy = peppy
         #: ADR-0135: the screen's standby, which a touch and the phone wake.
         self._standby = standby
+        #: ADR-0136: the other players on the network, for the phone's switcher.
+        self._players = Players(lambda: device_name.hostname())
         self._library = library
         self._artistinfo = artistinfo
         self._enrichment = enrichment
@@ -1308,6 +1311,23 @@ class StateServer:
                 await self._standby.wake("touch")
         return web.json_response({"touched": True})
 
+    def _player_status(self) -> dict:
+        """**ADR-0136: what this player says of itself** to the others."""
+        state = self._store.state
+        return {"name": self._setting_or_none("device_name") or device_name.hostname(),
+                "host": f"{device_name.hostname()}.local",
+                **status_line(state, state.sources)}
+
+    async def _handle_player_status(self, request: web.Request) -> web.Response:
+        return web.json_response(self._player_status())
+
+    async def _handle_players(self, request: web.Request) -> web.Response:
+        """ADR-0136: this player and the others found, each with its status;
+        the phone moves its tab to the one chosen."""
+        async with aiohttp.ClientSession() as session:
+            others = await self._players.others(session)
+        return web.json_response({"self": self._player_status(), "others": others})
+
     async def _handle_standby(self, request: web.Request) -> web.Response:
         """**ADR-0135: the screen off or on from a phone, or the Settings
         action.** `on` is standby on - the screen off."""
@@ -2303,6 +2323,8 @@ class StateServer:
         # ADR-0101: the phone's idle toggle, and the panel saying what it shows.
         app.router.add_post("/panel/idle/{action}", self._handle_idle_request)
         app.router.add_post("/panel/standby/{action}", self._handle_standby)
+        app.router.add_get("/player/status", self._handle_player_status)
+        app.router.add_get("/players", self._handle_players)
         app.router.add_post("/panel/shown", self._handle_panel_shown)
         app.router.add_post("/panel/go/{to}", self._handle_view_request)
         app.router.add_post("/peppy/{action}", self._handle_peppy)

@@ -6,6 +6,7 @@
   standalone on a phone and will be embedded on the panel.
 -->
 <script>
+  import PlayerSwitcher from './PlayerSwitcher.svelte';
   import CableSheet from './CableSheet.svelte';
   import { onMount, untrack } from 'svelte';
   import { pressing } from '../lib/press.svelte.js';
@@ -1417,7 +1418,12 @@
         <div class="title" class:title--wide={wide}>{!wide && current ? current.label : 'Settings'}</div>
         <!-- Shown at both widths: the panel is where someone types the
              name, so it is where the resolved host has to sit beside it. -->
-        <div class="subtitle">{subtitle}</div>
+        {#if onPanel()}
+          <div class="subtitle">{subtitle}</div>
+        {:else}
+          <!-- ADR-0136: on a phone, the way to the other players. -->
+          <PlayerSwitcher line={subtitle} />
+        {/if}
       </div>
     </div>
 
