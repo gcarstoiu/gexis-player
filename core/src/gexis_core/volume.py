@@ -857,7 +857,6 @@ class VolumeBridge:
         get_active_renderer,
         on_hardware_level=None,
         on_renderer_value=None,
-        ceiling_db=None,
     ) -> None:
         """`adapter` is any `VolumeMechanism.SOFTWARE_API` renderer
         (`adapters/base.py`'s `SoftwareVolumeAdapter` protocol) - only
@@ -890,10 +889,6 @@ class VolumeBridge:
         # docstring on why this is value-matched rather than a time window.
         self._expected_hw_raw: tuple[int, float] | None = None
         self._expected_adapter_value: tuple[int, float] | None = None
-        #: ADR-0052 §3: `max_ceiling`, read through a callable so a change
-        #: applies to the next write rather than the next restart. Returns
-        #: dB or None.
-        self._ceiling_db = ceiling_db or (lambda: None)
         #: The ramp in flight, cancelled when a newer target arrives.
         self._ramp: asyncio.Task | None = None
         self._last_written: int | None = None
@@ -951,11 +946,15 @@ class VolumeBridge:
         place. What still can is an *absolute* raw: a level remembered
         before the ceiling was set, or somebody's `amixer`. Those are
         clamped, and a clamp is the right answer for them - there is no
-        position to reinterpret."""
-        ceiling = self._ceiling_db()
-        if ceiling is None:
-            return raw
-        return min(raw, db_to_raw(float(ceiling)))
+        position to reinterpret.
+
+        **The module's own `ceiling_db()`, not a reader of its own** (code
+        review, 2026-10-12): the daemon handed this the `max_ceiling` row,
+        which has been a percentage since 2026-09-23, and it was read as dB -
+        `db_to_raw(50.0)` is the top of the scale, so the backstop never
+        lowered anything, and unmuting a level remembered before the ceiling
+        came down went back above it."""
+        return min(raw, db_to_raw(ceiling_db()))
 
     def _note_written(self, raw: int) -> None:
         now = time.monotonic()

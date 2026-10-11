@@ -661,10 +661,9 @@ async def main() -> None:
             rid, value, steps
         ),
         # ADR-0052 §3: the backstop for an absolute level that was never a
-        # slider position - see `_capped`. The ceiling proper is the shift
-        # installed by `set_ceiling_reader` below. `_number` is defined
-        # further down `main()` and resolved when this is called, not now.
-        ceiling_db=lambda: _number("max_ceiling"),
+        # slider position (`_capped`) reads the ceiling `set_ceiling_reader`
+        # installs below, as a percentage - it took the row here once, and
+        # read it as dB.
     )
     async def restore_volume(renderer_id: str) -> None:
         """**ADR-0054 §5, and since 2026-09-23 there is nothing behind it.**

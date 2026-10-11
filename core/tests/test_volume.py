@@ -1167,3 +1167,30 @@ class TestASupersededWriteDoesNotRaise:
         writer.cancel()
         with pytest.raises(asyncio.CancelledError):
             await writer
+
+
+class TestTheBackstopCapsAtTheCeiling:
+    """**Code review, 2026-10-12.** `_capped` is the backstop for absolute
+    raws - a level remembered before the ceiling came down, restored by
+    unmute or on leaving Fixed. The daemon handed it the `max_ceiling` row,
+    a percentage since 2026-09-23, and it read it as dB: `db_to_raw(50.0)`
+    is the top of the scale, so nothing was ever capped."""
+
+    @pytest.fixture(autouse=True)
+    def _no_ceiling_afterwards(self):
+        yield
+        volume_module.set_ceiling_reader(lambda: None)
+
+    @pytest.mark.asyncio
+    async def test_a_remembered_full_scale_comes_back_at_the_ceiling(self, fake_set_raw):
+        volume_module.set_ceiling_reader(lambda: 50)
+        bridge, _ = make_bridge()
+        await bridge.write_hardware(volume_module.hardware_max())
+        assert fake_set_raw[-1] == ("DAC", db_to_raw(volume_module.ceiling_db()))
+        assert raw_to_db(fake_set_raw[-1][1]) == pytest.approx(-15.5, abs=0.5)
+
+    @pytest.mark.asyncio
+    async def test_no_ceiling_caps_nothing(self, fake_set_raw):
+        bridge, _ = make_bridge()
+        await bridge.write_hardware(volume_module.hardware_max())
+        assert fake_set_raw[-1] == ("DAC", volume_module.hardware_max())
