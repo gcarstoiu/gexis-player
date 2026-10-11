@@ -635,7 +635,14 @@
       danger: true,
       run: async () => {
         task = { title: row.label, phase: 'checking' };
-        const res = await fetch(`/plugins/${encodeURIComponent(id)}/uninstall`, { method: 'POST' });
+        // A request that never arrives fails the card, as an upload's does:
+        // a rejection left it on *Checking* with no OK (code review,
+        // 2026-10-12).
+        const res = await fetch(`/plugins/${encodeURIComponent(id)}/uninstall`, { method: 'POST' }).catch(() => null);
+        if (!res) {
+          task = { ...task, phase: 'failed', text: 'The request did not reach the player.' };
+          return;
+        }
         const body = await res.json().catch(() => ({}));
         if (!res.ok) {
           task = { ...task, phase: 'failed', text: body.error ?? `The player answered HTTP ${res.status}.` };

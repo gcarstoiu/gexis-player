@@ -74,11 +74,27 @@ export const settingValues = derived(settingsGroups, ($groups) => {
   return values;
 });
 
+//: **A request that never reached the player is an answer too** (code
+//: review, 2026-10-12). These used to reject, and no caller caught it: a
+//: Wi-Fi blip on the phone left a sheet on *Joining…* or a list spinning,
+//: with no button to leave by. Each now comes back as the refusal it is, in
+//: the shape its callers already handle.
+const UNREACHED = 'The player did not answer. Check the connection and try again.';
+async function reach(url, options) {
+  try {
+    return await fetch(url, options);
+  } catch (err) {
+    console.warn(`settings: ${url} did not reach the player:`, err.message);
+    return null;
+  }
+}
+
 /** A `list` row's items, fetched when its sheet opens (ADR-0044 §1). A Wi-Fi
  *  scan takes seconds and LMS discovery listens for 2.5 s, so this is slow on
  *  purpose and the sheet shows that it is searching. */
 export async function listItems(key) {
-  const response = await fetch(`/settings/${key}/items`);
+  const response = await reach(`/settings/${key}/items`);
+  if (!response) return { items: [], error: UNREACHED };
   const body = await response.json().catch(() => ({}));
   if (!response.ok) return { items: [], error: body.error ?? `HTTP ${response.status}` };
   return { items: body.items ?? [], error: body.error ?? null };
@@ -88,11 +104,12 @@ export async function listItems(key) {
  *  back as `{ok: false, error}` with a 200, because "that password was not
  *  accepted" is an answer, not a broken request. */
 export async function listAction(key, body) {
-  const response = await fetch(`/settings/${key}/items`, {
+  const response = await reach(`/settings/${key}/items`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
+  if (!response) return { ok: false, error: UNREACHED, items: null, login: false };
   const answer = await response.json().catch(() => ({}));
   if (!response.ok) return { ok: false, error: answer.error ?? `HTTP ${response.status}` };
   if (answer.ok) await loadSettings();
@@ -104,17 +121,19 @@ export async function listAction(key, body) {
 /** An `action` row. Nothing called this before `reboot` was wired: `power`
  *  has never been, so the panel's only answer was the 409 flash. */
 export async function runSetting(key) {
-  const response = await fetch(`/settings/${key}`, { method: 'POST' });
+  const response = await reach(`/settings/${key}`, { method: 'POST' });
+  if (!response) return { ok: false, status: 0, error: UNREACHED };
   const body = await response.json().catch(() => ({}));
   return { ok: response.ok, status: response.status, error: body.error };
 }
 
 export async function writeSetting(key, value) {
-  const response = await fetch(`/settings/${key}`, {
+  const response = await reach(`/settings/${key}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ value }),
   });
+  if (!response) return { ok: false, status: 0, error: UNREACHED };
   const body = await response.json().catch(() => ({}));
   // The answer is the save; the list catches up behind it. Waiting for the
   // reload held the sheet's button disabled for seconds on the player
