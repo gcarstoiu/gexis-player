@@ -2,8 +2,9 @@
 
 `main()` builds the whole daemon in one function - D-Bus, ALSA, systemd -
 so what these check is read from its source, the way
-`test_sources_off.py` checks the reconciliation. Each is a defect found by
-the code review of 2026-10-12 and fixed in `main()` itself.
+`test_sources_off.py` checks the reconciliation - with, at the end, the
+adapters' watch loops its renderer gate relies on. Each is a defect found
+by the code review of 2026-10-12.
 """
 from __future__ import annotations
 
@@ -140,3 +141,56 @@ def test_a_plugin_s_queue_is_published_as_a_queue():
     json.dumps(queue.to_json())
     assert plugin_queue("plexamp", {"items": []}) is None
     assert "plugin_queue(session.id" in _closure("_plugin_event")
+
+
+class _Stop(BaseException):
+    """Ends a `run()` loop from inside a test, as a cancel would."""
+
+
+async def _second_watch_reached(adapter, watch_name, monkeypatch):
+    calls = []
+
+    async def watch(*_args):
+        calls.append(1)
+        if len(calls) == 1:
+            raise ValueError("an empty reply")
+        raise _Stop
+
+    async def no_wait(_seconds):
+        pass
+
+    import asyncio as _asyncio
+    monkeypatch.setattr(adapter, watch_name, watch)
+    monkeypatch.setattr(_asyncio, "sleep", no_wait)
+    available = []
+    adapter.on_availability_change(available.append)
+    try:
+        await adapter.run(None, None)
+    except _Stop:
+        pass
+    return len(calls), available
+
+
+async def test_an_unexpected_error_does_not_end_lms_s_watch(monkeypatch):
+    """LMS's `run()` caught only connection errors, so one malformed reply -
+    ValueError, TypeError, IndexError - ended its watch for the life of the
+    process, in silence."""
+    from gexis_core.adapters.lms import LmsAdapter
+
+    calls, available = await _second_watch_reached(
+        LmsAdapter("127.0.0.1", 9000, "gexis"), "_watch", monkeypatch)
+    assert calls == 2 and available == [False]
+
+
+async def test_an_unexpected_error_does_not_end_spotify_s_watch(monkeypatch):
+    from gexis_core.adapters.spotify import SpotifyAdapter
+
+    calls, available = await _second_watch_reached(
+        SpotifyAdapter("127.0.0.1", 3678), "_watch_events", monkeypatch)
+    assert calls == 2 and available == [False]
+
+
+def test_a_watch_that_ends_is_logged_and_started_again():
+    gate = _closure("_run_renderer")
+    assert "task.add_done_callback(ended)" in gate
+    assert "if task is not None and task.done():" in gate

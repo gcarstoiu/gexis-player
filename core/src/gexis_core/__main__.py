@@ -2493,12 +2493,28 @@ async def main() -> None:
         seconds forever, logging a warning each time.
         """
         task: asyncio.Task | None = None
+
+        def ended(done: asyncio.Task) -> None:
+            # **A watch that ends on its own is said, and started again**
+            # (code review, 2026-10-12): kept here, it never had its exception
+            # retrieved, so nothing reached the journal and the source stopped
+            # being watched until a restart. Woken in 5 s, so one that keeps
+            # ending cannot spin.
+            if done.cancelled():
+                return
+            logger.error("sources: %s's watch ended (%r); starting it again in 5s",
+                         renderer_id, done.exception())
+            asyncio.get_running_loop().call_later(5, sources_changed.set)
+
         try:
             while True:
                 wanted = renderer_enabled(renderer_id)
+                if task is not None and task.done():
+                    task = None
                 if wanted and task is None:
                     logger.info("sources: %s is on, watching", renderer_id)
                     task = asyncio.ensure_future(adapter.run(on_acquire, on_release))
+                    task.add_done_callback(ended)
                 elif not wanted and task is not None:
                     logger.info("sources: %s is off, stopping its watch", renderer_id)
                     task.cancel()
