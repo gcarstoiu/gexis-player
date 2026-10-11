@@ -45,7 +45,9 @@
 
 {#if others.length}
   <button class="switch" type="button" aria-haspopup="dialog" aria-label="Other players" onclick={show}>
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v14M7 18l-3-3M7 18l3-3M17 20V6M17 6l-3 3M17 6l3 3" /></svg>
+    <span class="switch__face">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v14M7 18l-3-3M7 18l3-3M17 20V6M17 6l-3 3M17 6l3 3" /></svg>
+    </span>
   </button>
 {/if}
 
@@ -78,21 +80,32 @@
 {/if}
 
 <style>
+  /* A square to balance the title (George, 2026-10-11), drawn at 34 px and
+     tappable at the touch floor, 44 px. */
   .switch {
     flex-shrink: 0;
-    width: 44px;
-    height: 44px;
+    width: var(--touch-min, 44px);
+    height: var(--touch-min, 44px);
+    margin-right: -5px;
     padding: 0;
     display: grid;
     place-items: center;
-    border-radius: 50%;
-    border: 1px solid var(--ink-line);
-    background: var(--ink-fill);
+    border: 0;
+    background: none;
     cursor: pointer;
   }
+  .switch__face {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--r-sm, 8px);
+    border: 1px solid var(--ink-line);
+    background: var(--ink-fill);
+  }
   .switch svg {
-    width: 26px;
-    height: 26px;
+    width: 20px;
+    height: 20px;
     fill: none;
     stroke: var(--accent-lms);
     stroke-width: 2;
