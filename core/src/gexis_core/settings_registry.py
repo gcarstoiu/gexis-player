@@ -51,6 +51,12 @@ ONLY_WHEN_ANY = "*any*"
 #: mistaken for one.
 ONLY_WHEN_NOT = "not"
 
+#: `onlyWhen: [key, {"in": [a, b]}]` - shown while the key holds one of
+#: these (ADR-0133 amended 2026-10-11: *Holidays* governs both wallpaper
+#: backgrounds, and no third one). Where a negation would be right for every
+#: background but one, it stays the better form, for the reason above.
+ONLY_WHEN_IN = "in"
+
 #: Sources a `choice` may draw its options from instead of a literal list
 #: (ADR-0044 §4). Adding one is a code change, not a registry edit, which is
 #: the point: an unknown name is a typo and must fail the load.
@@ -231,11 +237,14 @@ def _check_only_when(name: str, only: Any) -> None:
 def _check_pair(name: str, only: Any) -> None:
     if not isinstance(only, list) or len(only) != 2:
         raise ValueError(f"{name}: onlyWhen is [key, value]")
-    if isinstance(only[1], dict) and set(only[1]) != {ONLY_WHEN_NOT}:
+    if isinstance(only[1], dict) and set(only[1]) not in ({ONLY_WHEN_NOT}, {ONLY_WHEN_IN}):
         # A typo in the one key this form has would otherwise read as
         # "not equal to nothing", which is every value, which is a row
         # that never hides and never says why.
-        raise ValueError(f"{name}: onlyWhen's object form is {{\"not\": value}}")
+        raise ValueError(f"{name}: onlyWhen's object form is {{\"not\": value}} or {{\"in\": [values]}}")
+    if isinstance(only[1], dict) and ONLY_WHEN_IN in only[1] and not (
+            isinstance(only[1][ONLY_WHEN_IN], list) and only[1][ONLY_WHEN_IN]):
+        raise ValueError(f"{name}: onlyWhen's \"in\" takes a non-empty list")
 
 
 def visible(row: dict, rows: dict[str, dict], values: dict[str, Any]) -> bool:
@@ -281,6 +290,8 @@ def _holds(row: dict, only: list, rows: dict[str, dict], values: dict[str, Any],
     held = values.get(key)
     if wanted == ONLY_WHEN_ANY:
         return held not in (None, "", False)
+    if isinstance(wanted, dict) and ONLY_WHEN_IN in wanted:
+        return held in wanted[ONLY_WHEN_IN]
     if isinstance(wanted, dict):
         return held != wanted[ONLY_WHEN_NOT]
     return held == wanted

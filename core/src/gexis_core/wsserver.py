@@ -42,6 +42,7 @@ from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
 from gexis_core import own_wallpapers
+from gexis_core.wallpapers import SEARCH as PIXABAY_SEARCH
 from gexis_core import backups, bluetooth_devices, skin_packs, device_name, discovery, hardware_report, lyrion_scan, lyrion_shares, problem_report, skin_previews, skins, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
 from gexis_core.artistinfo import PHOTO_BACKGROUND, PHOTO_LARGE, PHOTO_THUMB
@@ -614,7 +615,7 @@ class StateServer:
             return {"url": f"/idle/wallpaper/local/{quote(name)}", "by": "", "page": "",
                     "credit": None, "error": None}
         key = str(self._settings.value("wallpaper_key") or "").strip()
-        topics = self._settings.value("wallpaper_topics") or []
+        topics = await self._pixabay_topics(self._settings.value("wallpaper_topics") or [])
         # A bar asks for wide pictures (George, 2026-10-04).
         bar = skin_packs.family(*skin_packs.screen_size()) == "bar"
         answer = await self._wallpapers.next(key, list(topics), avoid=self._last_background, wide=bar)
@@ -622,6 +623,36 @@ class StateServer:
             self._last_background = answer["file"]
             answer = {**answer, "url": f"/idle/wallpaper/{answer['file']}"}
         return answer
+
+    #: ADR-0133 amended 2026-10-11: the topics that are searches, and what each
+    #: holiday asks Pixabay for when it supersedes them.
+    PIXABAY_SEARCHES = {"Space": "space", "Calm": "calm"}
+    PIXABAY_HOLIDAYS = {"newyear": "new year", "christmas": "christmas", "easter": "easter"}
+
+    async def _pixabay_topics(self, chosen: list) -> list[str]:
+        """What `Wallpapers.next` is asked for: on a holiday, with *Holidays*
+        on, that holiday alone (George: *"holidays are a toggle that
+        supersede the choice of wallpaper"*); otherwise each chosen topic -
+        a category as it is, Space and Calm as searches, Season as the
+        season it is by the player's hemisphere."""
+        names = [str(t) for t in chosen]
+        needs_place = "Season" in names or self._settings.value("wallpaper_holidays") is not False
+        country, latitude = await self._where() if needs_place else (None, None)
+        today = datetime.datetime.now().date()
+        if self._settings.value("wallpaper_holidays") is not False:
+            holiday = own_wallpapers.holiday(today, country)
+            if holiday in self.PIXABAY_HOLIDAYS:
+                return [PIXABAY_SEARCH + self.PIXABAY_HOLIDAYS[holiday]]
+        topics = []
+        for name in names:
+            if name in self.PIXABAY_SEARCHES:
+                topics.append(PIXABAY_SEARCH + self.PIXABAY_SEARCHES[name])
+            elif name == "Season":
+                topics.append(PIXABAY_SEARCH + own_wallpapers.season(
+                    today, southern=latitude is not None and latitude < 0))
+            else:
+                topics.append(name)
+        return topics
 
     async def _own_picture(self, background: str) -> dict:
         """**ADR-0133.** The next of the player's own pictures. Space

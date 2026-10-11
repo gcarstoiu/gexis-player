@@ -718,7 +718,11 @@ def test_the_topics_row_and_pixabays_categories_cannot_drift():
     which is why this is a test and not a comment in two places."""
     rows = {r["key"]: r for g in load_registry() for r in g["rows"] if r["type"] != "group"}
     options = rows["wallpaper_topics"]["options"]
-    assert {o.lower() for o in options} == set(wallpapers_mod.CATEGORIES)
+    # ADR-0133 amended 2026-10-11: three searches beside the categories, and
+    # each of them is one the route knows how to ask for.
+    searches = set(StateServer.PIXABAY_SEARCHES) | {"Season"}
+    assert {o.lower() for o in options if o not in searches} == set(wallpapers_mod.CATEGORIES)
+    assert searches <= set(options)
 
 
 def test_an_empty_topic_set_is_refused_at_the_registry(tmp_path):
@@ -727,3 +731,49 @@ def test_an_empty_topic_set_is_refused_at_the_registry(tmp_path):
     settings = Settings(SettingsStore(tmp_path / "s.db"), wired={"wallpaper_topics": None})
     with pytest.raises(InvalidValue):
         settings.set("wallpaper_topics", [])
+
+
+def pixabay_any(url, params):
+    """Every request answers: a category or a search, one hit named after it."""
+    if url.startswith("https://pixabay.com/api/"):
+        what = params.get("category") or params.get("q")
+        return (200, {"hits": [hit(abs(hash(what)) % 10**6, what.replace(" ", "-"))]})
+    return (200, b"\xff\xd8jpeg-bytes")
+
+
+async def test_space_calm_and_the_season_are_searches_and_a_holiday_replaces_them(tmp_path, monkeypatch):
+    """ADR-0133 amended 2026-10-11: Space and Calm ask Pixabay by word, Season
+    by the season it is, all as editors' choice; with *Holidays* on, a
+    holiday's day asks for the holiday alone (George: *"holidays are a toggle
+    that supersede the choice of wallpaper"*)."""
+    from gexis_core import own_wallpapers
+    session = FakeSession(pixabay_any)
+    settings, client = client_for(tmp_path, wallpapers=Wallpapers(session, tmp_path / "pics"))
+    for key in ("wallpaper_holidays",):
+        settings._wired[key] = None
+    monkeypatch.setattr(own_wallpapers, "season", lambda day, southern: "autumn")
+    asked = lambda: [(p.get("category"), p.get("q"), p.get("editors_choice"))
+                     for u, p in session.calls if u.startswith("https://pixabay.com/api/")]
+    async with client:
+        settings.set("idle_background", "Wallpapers online")
+        settings.set("wallpaper_key", "key")
+        settings.set("wallpaper_topics", ["Space", "Calm", "Season", "Nature"])
+        monkeypatch.setattr(own_wallpapers, "holiday", lambda day, country: None)
+        for _ in range(8):
+            assert (await (await client.get("/idle/wallpaper")).json())["error"] is None
+        seen = set(asked())
+        assert ("nature", None, None) in seen
+        assert {(None, "space", "true"), (None, "calm", "true"), (None, "autumn", "true")} <= seen
+
+        session.calls.clear()
+        monkeypatch.setattr(own_wallpapers, "holiday", lambda day, country: "christmas")
+        for _ in range(3):
+            await client.get("/idle/wallpaper")
+        assert set(asked()) == {(None, "christmas", "true")}
+
+        # Holidays off: the topics again, on the holiday too.
+        session.calls.clear()
+        settings.set("wallpaper_holidays", False)
+        for _ in range(6):
+            await client.get("/idle/wallpaper")
+        assert (None, "christmas", "true") not in set(asked())

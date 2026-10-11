@@ -574,7 +574,7 @@
       },
       {
         "type": "group",
-        "label": "Idle screen",
+        "label": "Background",
         "accent": "#c8a2d8",
         "onlyWhen": [
           "headless",
@@ -582,46 +582,11 @@
         ]
       },
       {
-        "key": "idle_screen",
-        "type": "choice",
-        "label": "Screen",
-        "marks": "R",
-        "note": "The built-in screen shows the clock and weather. An external page loads the URL provided.",
-        "options": [
-          "Built in",
-          "External URL"
-        ],
-        "default": "Built in"
-      },
-      {
-        "key": "idle_url",
-        "type": "text",
-        "label": "URL",
-        "marks": "R",
-        "note": "External and lazy loaded. Falls back to the built-in screen when unreachable, unconfigured, or refusing to be framed.",
-        "default": null,
-        "onlyWhen": [
-          "idle_screen",
-          "External URL"
-        ]
-      },
-      {
-        "key": "idle_timeout",
-        "type": "number",
-        "label": "Timeout",
-        "marks": "R",
-        "note": "One timeout on every screen, counted while nothing is playing and nobody touches the panel.",
-        "min": 1,
-        "max": 60,
-        "unit": "min",
-        "default": 5
-      },
-      {
         "key": "idle_background",
         "type": "choice",
         "label": "Background",
         "marks": "N",
-        "note": "Gexis wallpapers and Space pictures are the player's own, built in. Artist pictures come from the library, and show the player's own while the Lyrion client is off. Online wallpapers come from Pixabay and need a key. On-device wallpapers are read from local storage.",
+        "note": "One picture behind the idle screen and the waiting screen. Gexis wallpapers and Space pictures are the player's own, built in. Artist pictures come from the library, and show the player's own while the Lyrion client is off. Online wallpapers come from Pixabay and need a key. On-device wallpapers are read from local storage.",
         "options": [
           "Gexis wallpapers",
           "Space pictures",
@@ -630,11 +595,7 @@
           "Wallpapers on device",
           "Black"
         ],
-        "default": "Gexis wallpapers",
-        "onlyWhen": [
-          "idle_screen",
-          "Built in"
-        ]
+        "default": "Gexis wallpapers"
       },
       {
         "key": "background_brightness",
@@ -690,8 +651,11 @@
         "type": "multi",
         "label": "Wallpaper topics",
         "marks": "N",
-        "note": "Pixabay's own categories. Each new picture is drawn from one of the chosen ones at random, so several stay mixed rather than taking turns.",
+        "note": "Space, Calm and Season (the current season) are searches; the rest are Pixabay's own categories. Each new picture comes from one of the chosen ones at random.",
         "options": [
+          "Space",
+          "Calm",
+          "Season",
           "Backgrounds",
           "Fashion",
           "Nature",
@@ -769,12 +733,61 @@
         "type": "toggle",
         "label": "Holidays",
         "marks": "N",
-        "note": "On New Year, and on Christmas and Easter where they are holidays, only their pictures show. The country comes from the weather location, or the time zone until one is set.",
+        "note": "On New Year, and on Christmas and Easter where they are holidays, only their pictures show, in place of the styles or topics. The country comes from the weather location, or the time zone until one is set.",
         "default": true,
         "onlyWhen": [
           "idle_background",
-          "Gexis wallpapers"
+          {
+            "in": [
+              "Gexis wallpapers",
+              "Wallpapers online"
+            ]
+          }
         ]
+      },
+      {
+        "type": "group",
+        "label": "Idle screen",
+        "accent": "#c8a2d8",
+        "onlyWhen": [
+          "headless",
+          false
+        ]
+      },
+      {
+        "key": "idle_screen",
+        "type": "choice",
+        "label": "Screen",
+        "marks": "R",
+        "note": "The built-in screen shows the clock and weather. An external page loads the URL provided.",
+        "options": [
+          "Built in",
+          "External URL"
+        ],
+        "default": "Built in"
+      },
+      {
+        "key": "idle_url",
+        "type": "text",
+        "label": "URL",
+        "marks": "R",
+        "note": "External and lazy loaded. Falls back to the built-in screen when unreachable, unconfigured, or refusing to be framed.",
+        "default": null,
+        "onlyWhen": [
+          "idle_screen",
+          "External URL"
+        ]
+      },
+      {
+        "key": "idle_timeout",
+        "type": "number",
+        "label": "Timeout",
+        "marks": "R",
+        "note": "One timeout on every screen, counted while nothing is playing and nobody touches the panel.",
+        "min": 1,
+        "max": 60,
+        "unit": "min",
+        "default": 5
       },
       {
         "key": "idle_clock",

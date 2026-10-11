@@ -19,6 +19,7 @@ from gexis_core.settings_registry import (
     NotWired,
     Settings,
     UnknownSetting,
+    _check_pair,
     load_registry,
     validate,
     visible,
@@ -707,11 +708,11 @@ def test_a_row_can_be_shown_for_everything_but_one_value():
         assert visible(brightness, rows, values), background
     values["idle_background"] = "Black"
     assert not visible(brightness, rows, values)
-    # And it is still transitive: an external screen hides the background
-    # row, which hides this one whatever the background happens to hold.
+    # ADR-0133 amended 2026-10-11: the background serves the waiting screen
+    # too, so an external idle page no longer hides it.
     values["idle_background"] = "Wallpapers online"
     values["idle_screen"] = "External URL"
-    assert not visible(brightness, rows, values)
+    assert visible(brightness, rows, values)
 
 
 def test_a_malformed_negation_fails_the_load():
@@ -774,7 +775,9 @@ def test_the_wallpaper_topics_row_offers_pixabays_own_categories():
     }
     row = next(r for r in _rows() if r["key"] == "wallpaper_topics")
     assert row["type"] == "multi"
-    assert {o.lower() for o in row["options"]} == pixabay
+    # ADR-0133 amended 2026-10-11: Space, Calm and Season, searches, join them.
+    assert row["options"][:3] == ["Space", "Calm", "Season"]
+    assert {o.lower() for o in row["options"][3:]} == pixabay
     # A default that is empty would be a row the validator itself refuses.
     assert row["default"] == ["Nature"]
 
@@ -1580,3 +1583,34 @@ def test_weather_icon_motion_hangs_off_the_weather_and_is_wired():
     assert row["note"] and len(row["note"]) < 160
     main = (Path(__file__).parents[1] / "src" / "gexis_core" / "__main__.py").read_text()
     assert '"idle_icon_motion": None' in main
+
+
+
+def test_holidays_show_for_either_wallpaper_background_and_no_other():
+    """ADR-0133 amended 2026-10-11: `{"in": [...]}`, and the Background
+    section between Home screen and Idle screen."""
+    rows = {r["key"]: r for r in _rows()}
+    holidays = rows["wallpaper_holidays"]
+    values = {k: rows[k].get("default") for k in rows}
+    values["headless"] = False
+    for background, shown in (("Gexis wallpapers", True), ("Wallpapers online", True),
+                              ("Space pictures", False), ("Black", False)):
+        values["idle_background"] = background
+        assert visible(holidays, rows, values) is shown, background
+    display = next(g for g in load_registry() if g.get("label") == "Display")
+    heads = [r["label"] for r in display["rows"] if r.get("type") == "group"]
+    assert heads.index("Background") == heads.index("Home screen") + 1 == heads.index("Idle screen") - 1
+    keys = [r.get("key") for r in display["rows"]]
+    start = keys.index(None, keys.index("waiting_hint"))
+    assert keys[start + 1:start + 10] == [
+        "idle_background", "background_brightness", "background_interval", "wallpaper_key",
+        "wallpaper_topics", "wallpaper_styles", "wallpaper_time_of_day", "wallpaper_seasons",
+        "wallpaper_holidays"]
+
+
+def test_an_in_condition_must_name_a_list():
+    with pytest.raises(ValueError):
+        _check_pair("row", ["idle_background", {"in": "Black"}])
+    with pytest.raises(ValueError):
+        _check_pair("row", ["idle_background", {"in": []}])
+    _check_pair("row", ["idle_background", {"in": ["Black"]}])
