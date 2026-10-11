@@ -178,3 +178,11 @@ the two screens share one background (§5).
    rule as the Gexis wallpapers (§4).
 4. **The registry learns "one of"** (`{"in": [...]}` in `onlyWhen`): the
    *Holidays* row shows for either wallpaper background.
+
+**Revised the same day, after George saw it on sofapi:** Space left the
+topics - the *Space pictures* background covers it - and so did Season:
+the *Seasons* toggle now governs *Wallpapers online* as it does the Gexis
+wallpapers, adding the season's search beside the chosen topics (George
+chose the toggle over the topic). Calm stays a search. Space's searches had
+been fine (the top results were the Milky Way, galaxies and Earth from
+orbit); the topic was redundant, not broken.
