@@ -23,6 +23,19 @@
     return p.renderer ? `Stopped · ${p.renderer}` : 'Idle';
   }
 
+  //: **The last list, remembered on this phone** (George, 2026-10-11: the
+  //: switch "takes some time to show up"), so the button is there at once
+  //: and the fresh answer replaces it. A browser that keeps nothing simply
+  //: waits for the answer.
+  const KEPT = 'gexis.players';
+  function remembered() {
+    try {
+      return JSON.parse(localStorage.getItem(KEPT) ?? 'null');
+    } catch {
+      return null;
+    }
+  }
+
   async function load() {
     try {
       const response = await fetch('/players');
@@ -30,6 +43,11 @@
       const body = await response.json();
       me = body.self;
       others = body.others ?? [];
+      try {
+        localStorage.setItem(KEPT, JSON.stringify({ self: me, others }));
+      } catch {
+        // Not kept: the next visit waits for the answer, as before.
+      }
     } catch {
       // No list is no switcher.
     }
@@ -40,7 +58,14 @@
     load();
   }
 
-  onMount(load);
+  onMount(() => {
+    const kept = remembered();
+    if (kept) {
+      me = kept.self ?? null;
+      others = kept.others ?? [];
+    }
+    load();
+  });
 </script>
 
 {#if others.length}

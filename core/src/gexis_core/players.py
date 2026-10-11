@@ -19,8 +19,10 @@ logger = logging.getLogger(__name__)
 SERVICE = "_gexis._tcp"
 BROWSE_TIMEOUT_S = 5.0
 STATUS_TIMEOUT_S = 2.0
-#: The list is asked for when the phone opens it; a second phone, or a second
-#: look, within this long gets the same answer.
+#: **Kept warm in the background** (George, 2026-10-11: the switch "takes some
+#: time to show up" - a search measured 1.0 s of the 1.16 s the phone waited).
+#: The core looks every `FRESH_S`, so the phone's request is answered from
+#: what was found.
 FRESH_S = 30.0
 
 
@@ -79,14 +81,29 @@ class Players:
         self._lock = asyncio.Lock()
 
     async def others(self, session: aiohttp.ClientSession) -> list[dict]:
+        """What was last found; looked for now only if nothing has been yet,
+        or what was found has gone stale (the watch not running)."""
+        if self._kept and self._clock() - self._kept[0] < 2 * FRESH_S:
+            return self._kept[1]
+        return await self.refresh(session)
+
+    async def refresh(self, session: aiohttp.ClientSession) -> list[dict]:
         async with self._lock:
-            if self._kept and self._clock() - self._kept[0] < FRESH_S:
-                return self._kept[1]
             peers = parse_browse(await self._browse(), self._own_host())
             answers = await asyncio.gather(*(self._status(session, p) for p in peers))
             listed = [a for a in answers if a is not None]
             self._kept = (self._clock(), listed)
             return listed
+
+    async def watch(self, every: float = FRESH_S) -> None:
+        """Look for the others every `every` seconds, for the life of the core."""
+        async with aiohttp.ClientSession() as session:
+            while True:
+                try:
+                    await self.refresh(session)
+                except Exception:  # noqa: BLE001 - a watch must not die quietly
+                    logger.exception("players: looking for other players failed")
+                await asyncio.sleep(every)
 
     @staticmethod
     async def _status(session: aiohttp.ClientSession, peer: dict) -> dict | None:

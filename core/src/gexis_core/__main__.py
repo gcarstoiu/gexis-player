@@ -3647,6 +3647,8 @@ async def main() -> None:
         setup_network.watch(),
         # ADR-0135: the screen off at the owner's standby times.
         standby_schedule.run(),
+        # ADR-0136: the other players on the network, kept warm for the phone.
+        state_server.watch_players(),
         # ADR-0084: the socket plugins connect to. Served for the life of the
         # process, beside the one the browser uses.
         plugin_server.run(),

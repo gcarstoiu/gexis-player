@@ -1318,6 +1318,10 @@ class StateServer:
                 "host": f"{device_name.hostname()}.local",
                 **status_line(state, state.sources)}
 
+    async def watch_players(self) -> None:
+        """ADR-0136: the other players kept warm, so the phone's list is ready."""
+        await self._players.watch()
+
     async def _handle_player_status(self, request: web.Request) -> web.Response:
         return web.json_response(self._player_status())
 
