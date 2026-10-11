@@ -113,8 +113,13 @@ stateDiagram-v2
   joining --> open: join failed (reason kept, password dropped)
   joining --> online: retry join ok
   done --> online: after 10 s, or reboot if name/screen changed
-  online --> [*]
+  online --> open: no network for 2 min after boot (watch, ADR-0134)
 ```
+
+**After boot** `SetupNetwork.watch()` (ADR-0134) looks every 15 s
+(`WATCH_S`), only while the state is `online`, setup is finished and no
+`join_new` is under way. Two minutes (`LOST_S`) with no device `online()`
+accepts opens the setup network and runs the same `_hold` retry as at boot.
 
 State strings are the ones `SetupNetwork.status()` publishes:
 `starting`, `waiting`, `open`, `joining`, `failed`, `done`, `online`.

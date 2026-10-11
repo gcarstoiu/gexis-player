@@ -313,10 +313,12 @@ guide, a signal above −67 dBm is good for music; below −75 dBm, stutter
 becomes likely. A 5 GHz network is usually faster but reaches less far than
 2.4 GHz.
 
-**The player lost Wi-Fi while running and has not come back.**
-Restart it. A player only checks its Wi-Fi when it starts: if it cannot reach
-its network then, it opens its own setup network after 90 seconds, and keeps
-looking for the saved network every few minutes.
+**The player lost Wi-Fi while running.**
+After two minutes without a network, the player opens its own setup network
+and the screen shows how to join it, as at start (after 90 seconds there). It
+keeps looking for its saved network every five minutes and goes back to it
+when it is in range; or choose a network from the setup screen. This counts
+a network that gave the player no address as no network.
 
 **What is the player's name, and can it be changed?**
 *Settings → System → Device name* is one name for everything: the network

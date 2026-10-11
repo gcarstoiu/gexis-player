@@ -169,3 +169,10 @@ on the panel. Its first-try start is still to be seen on hardware.
   shows setup one step at a time, one QR code each: the join code, then the
   page's code once a phone is on the setup network, then the progress
   (George, 2026-09-29; `ui/src/screens/SetupScreen.svelte`).
+
+## Amended 2026-10-11: after boot too
+
+[ADR-0134](0134-the-panel-says-when-the-player-has-no-network.md): a network
+lost after boot, gone for two minutes, opens the setup network as boot does
+(George). §3's "at boot only" holds for the decision at boot; the watch after
+it is ADR-0134's.
