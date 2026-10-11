@@ -317,6 +317,40 @@ async def test_on_connect_can_refuse_the_connection(tmp_path):
         writer.close()
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", [ConnectionResetError, ValueError])
+async def test_a_plugin_lost_before_its_welcome_can_connect_again(tmp_path, failure):
+    """Code review, 2026-10-12. A plugin that died between `hello` and
+    `welcome` - the welcome's write failing, or its settings unreadable - was
+    already in `sessions` and already registered by `on_connect`, but the
+    cleanup only ran for a session `_greet` had returned. Every reconnect was
+    then refused as "already connected" until the core restarted, and the
+    panel kept offering a renderer whose process was gone."""
+    fail = {"once": True}
+
+    def settings_for(plugin_id):
+        if fail.pop("once", False):
+            raise failure("the plugin went away")
+        return {}
+
+    async with Harness(tmp_path, settings_for=settings_for) as h:
+        reader, writer = await h.connect()
+        try:
+            await _say(writer, {"t": "hello", "contract": CONTRACT, "id": "plexamp"})
+            assert await _hear(reader) is None
+        finally:
+            writer.close()
+        assert h.connected == ["plexamp"]
+        assert h.gone == ["plexamp"]
+        assert "plexamp" not in h.server.sessions
+
+        reader, writer, answer = await _hello(h)
+        try:
+            assert answer["t"] == "welcome"
+        finally:
+            writer.close()
+
+
 def test_the_socket_names_a_group_that_is_not_root():
     """**ADR-0084 as amended 2026-09-25.** The daemon runs as root, so `0660`
     on its own authorised nobody else - and the first plugin written outside

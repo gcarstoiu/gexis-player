@@ -203,6 +203,7 @@ class PluginServer:
             session = await self._greet(reader, writer)
             if session is None:
                 return
+            await self._welcome(session)
             # Sent once the listener runs: the answer is read there.
             if self._output_fixed is not None:
                 asyncio.ensure_future(self._tell(session, bool(self._output_fixed())))
@@ -310,13 +311,23 @@ class PluginServer:
                 self.sessions.pop(plugin.id, None)
                 await self._refuse(writer, f"{plugin.id}: {exc}")
                 return None
+        return session
+
+    async def _welcome(self, session: Session) -> None:
+        """**Sent once `_serve` holds the session** (code review, 2026-10-12).
+
+        It used to be the end of `_greet`, after `on_connect` had registered
+        the plugin - so a plugin that died between its `hello` and this write
+        made the drain raise before `_greet` returned, `_serve`'s cleanup saw
+        no session, and the plugin stayed connected as far as the core knew:
+        every reconnect refused as "already connected" until a restart.
+        """
         welcome = {"t": "welcome", "contract": self._contract}
         if self._settings_for is not None:
-            welcome["settings"] = self._settings_for(plugin.id)
+            welcome["settings"] = self._settings_for(session.id)
         session._write(welcome)
-        await writer.drain()
-        logger.info("plugins: %s connected (%s)", plugin.id, plugin.kind)
-        return session
+        await session._writer.drain()
+        logger.info("plugins: %s connected (%s)", session.id, session.kind)
 
     async def _listen(self, session: Session, reader) -> None:
         while True:
