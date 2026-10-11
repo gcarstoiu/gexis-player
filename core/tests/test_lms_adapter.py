@@ -1125,6 +1125,76 @@ async def test_a_player_on_at_connection_is_still_an_acquisition(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_a_slow_lms_is_still_powered_off_after_the_supervisor_moves_on(monkeypatch):
+    """Code review, 2026-10-12. The supervisor waits two seconds for
+    `release()` and then cancels it. An LMS slow to answer - a library scan,
+    a remote server - had the call cancelled between the pause and the
+    power-off, and the player stayed on while another renderer held the
+    device. LMS acquires only on a power-on edge, so after that neither
+    `power 1` nor play in the Lyrion app could make it the active renderer
+    again. The release carries on to its power-off however long LMS takes."""
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+    plain = FakeRpc.__call__
+
+    async def slow(self, session, player, command):
+        if command[0] == "pause":
+            await asyncio.sleep(0.05)
+        return await plain(self, session, player, command)
+
+    monkeypatch.setattr(FakeRpc, "__call__", slow)
+
+    with pytest.raises(asyncio.TimeoutError):
+        await asyncio.wait_for(adapter.release(), 0.01)
+    await asyncio.sleep(0.1)
+
+    assert rpc.commands == [["status", "-", 1], ["pause", 1], ["power", 0]]
+
+
+@pytest.mark.asyncio
+async def test_a_power_off_that_failed_is_sent_when_lms_is_back(monkeypatch):
+    """LMS unreachable during the release: nothing reached it. When the
+    connection comes back the player is still on, and the seed used to read
+    that as LMS taking the device again - from the renderer that took over.
+    The power-off is owed, and sent instead."""
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+    plain = FakeRpc.__call__
+    down = {"yes": True}
+
+    async def unreachable(self, session, player, command):
+        if down["yes"] and command[0] == "pause":
+            raise aiohttp.ClientConnectionError("LMS is not answering")
+        return await plain(self, session, player, command)
+
+    monkeypatch.setattr(FakeRpc, "__call__", unreachable)
+    assert await adapter.release() is False
+    down["yes"] = False
+    rpc.commands.clear()
+
+    acquired, released = await _watch_once(monkeypatch, adapter)
+
+    assert acquired == []
+    assert ["pause", 1] in rpc.commands and ["power", 0] in rpc.commands
+    assert rpc.commands.index(["pause", 1]) < rpc.commands.index(["power", 0])
+
+
+@pytest.mark.asyncio
+async def test_a_player_seen_off_owes_nothing(monkeypatch):
+    """The user powered the player off and on again themselves: that is an
+    acquisition, not a power-off still to send."""
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+    adapter._power_off_owed = True
+    rpc.power = 0
+    await _watch_once(monkeypatch, adapter)
+    rpc.power = 1
+    rpc.commands.clear()
+
+    acquired, _ = await _watch_once(monkeypatch, adapter)
+
+    assert acquired == [1]
+    assert ["power", 0] not in rpc.commands
+
+
+@pytest.mark.asyncio
 async def test_the_current_artist_id_is_a_value_not_a_method(monkeypatch):
     """**The defect this test exists for.** As a method it was truthy at the
     call site, so the enrichment service asked LMS's plugin about a bound

@@ -308,6 +308,12 @@ class LmsAdapter(Adapter):
         self._resume_position: float | None = None
         self._resume_timestamp: float | None = None
         self._resume_index: int | None = None
+        #: **A takeover's power-off that never reached LMS** (code review,
+        #: 2026-10-12). Set when `release()` failed against an unreachable
+        #: LMS; sent when the connection is back, instead of the seed reading
+        #: a player still on as LMS taking the device again. Cleared the
+        #: moment the player is seen off, whoever turned it off.
+        self._power_off_owed = False
         self._on_metadata: Callable[[TrackMetadata], None] | None = None
         self._on_queue = None
         #: (playlist_timestamp, current index) when the queue was last read.
@@ -838,10 +844,13 @@ class LmsAdapter(Adapter):
             # race ADR-0027 exists to win. The old base-slot model dodged
             # this by assuming LMS was current at all times; with the base
             # slot gone the startup state has to be read, not assumed.
-            if last_power:
+            if last_power and self._power_off_owed:
+                await self._pay_power_off(session)
+            elif last_power:
                 logger.info("lms: player already powered on at startup (acquisition)")
                 on_acquire()
             else:
+                self._power_off_owed = False
                 # **And off is said too** (code review, 2026-10-12): a player
                 # powered off while the connection was down produced no edge
                 # this loop could see, and LMS stayed active - its old track
@@ -884,6 +893,8 @@ class LmsAdapter(Adapter):
                     power = data.get("power")
                     if power is None:
                         continue
+                    if not power:
+                        self._power_off_owed = False
                     if power and not last_power:
                         # ADR-0027: activating the player is the
                         # acquisition. Play is a separate intention
@@ -1063,6 +1074,16 @@ class LmsAdapter(Adapter):
         """
         if self._player_id is None:
             return False
+        # **Shielded** (code review, 2026-10-12): the supervisor gives this
+        # two seconds and then cancels it. An LMS slow to answer had the call
+        # cut between the pause and the power-off, and the player stayed on
+        # while another renderer held the device - after which LMS could not
+        # be acquired at all, because only a power-on edge does that. The
+        # supervisor still moves on at two seconds; the power-off lands when
+        # LMS answers.
+        return await asyncio.shield(self._pause_and_power_off())
+
+    async def _pause_and_power_off(self) -> bool:
         async with aiohttp.ClientSession() as session:
             try:
                 status = await self._rpc(session, self._player_id, ["status", "-", 1])
@@ -1082,9 +1103,21 @@ class LmsAdapter(Adapter):
                     self._resume_playing,
                 )
                 return True
-            except aiohttp.ClientError as exc:
-                logger.warning("lms: pause/power-off failed: %s", exc)
+            except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
+                logger.warning("lms: pause/power-off failed, owed until LMS is back: %s", exc)
+                self._power_off_owed = True
                 return False
+
+    async def _pay_power_off(self, session: aiohttp.ClientSession) -> None:
+        """The takeover's pause and power-off, sent late - in that order, for
+        the reason `release()` gives."""
+        self._power_off_owed = False
+        try:
+            await self._rpc(session, self._player_id, ["pause", 1])
+            await self._rpc(session, self._player_id, ["power", 0])
+            logger.info("lms: back; paused and powered off as the takeover asked")
+        except aiohttp.ClientError as exc:
+            logger.warning("lms: the owed power-off failed again: %s", exc)
 
     async def device_freed(self) -> None:
         """ADR-0027: put back what `release()` recorded - the transport state,
