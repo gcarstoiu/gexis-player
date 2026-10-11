@@ -40,10 +40,18 @@ signed it out); the bar on its own supply, then Claude reads
 clear it) and ShelvesPi (the bar) run the `phase-13d` preview 0.10.0+git75,
 which 0.10.1 supersedes on the Testing channel. guestpi offline.
 
-**Next** (ADR first, each): Phase 13g (the player in Home Assistant), then
-themes, then 14a (a sound bar on optical). **Before 1.0:** the final thorough
-code check; removing the temporary post-reset log (c20); Stable promotion
-(c16, and the Imager routes, g14); removing passwordless sudo, last.
+**Next: the first public release** (George, 2026-10-12), then Phase 13g
+(the player in Home Assistant - *after* the release, George), themes, 14a.
+Decided 2026-10-12 for the release: **it waits for guestpi**, for Phase 13d's
+two tests (Plexamp through the Pi-DAC PRO; a chosen board not fitted taken
+back); **the final code check as a multi-agent review** (George's choice;
+workflow to be confirmed in his words, with its cost); **Imager: the image
+file and *Use custom* at the release**, our own Imager repository and the
+community application after. Also before it: removing the temporary
+post-reset log (c20); Stable promotion with the image file (c16); README's
+"first Stable release is next"; removing passwordless sudo last, ADR first
+(provisioned test cards keep it). George to test: 0.10.1's owed items, a
+freshly flashed card without a restore, 13f's look.
 
 **At the first Stable release** (George, 2026-10-09): revisit how the image
 reaches people - most likely all three of ADR-0021's routes: the image file
