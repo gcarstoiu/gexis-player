@@ -93,3 +93,18 @@ deleted after. Hardware feedback keeps its last one as now (ADR-0126 amended).
 ## Not a setting
 
 No ADR-0022 row: both stay actions on the System page.
+
+## Built (2026-10-11, on `phase-13d`)
+
+- `problem_report.build` tells each of `STEPS` as it is done; `/report/prepare`,
+  `/report/status`, `/report/file`, `/report/issue` (the report kept an hour,
+  in memory). `last_errors` picks the newest error and warning lines of the
+  cleaned journal, at most 3,000 characters; `issue_url` cuts them first,
+  then what happened, to stay under 7,500.
+- The problem form's *How often* is a text field the link fills (a dropdown
+  is not); its *Problem report* box carries what was taken out and the errors.
+  Like the hardware form, it reaches users from `main`, with the release.
+- `SendStep.svelte`, used by both; hardware feedback's file is
+  `/hardware-report/file`, made from the link it was prepared as.
+- Tried in the demo front only (the steps, the checklist ticking, both Send
+  steps); on a player, not yet.

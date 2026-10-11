@@ -617,8 +617,9 @@ sent on GitHub (a GitHub account is needed), filled in with what the player
 reads of the hardware itself - never a serial number or anything about you -
 and it is public, so the next owner can see what works. A week after a sound
 card or screen that is not Tested is first used, the System page offers this
-once in a line at its top; its × puts it away for good. The last step's
-*Send on GitHub* opens the feedback there; *Create* on GitHub sends it. The
+once in a line at its top; its × puts it away for good. The last step
+offers the same two ways as the problem report: *On GitHub* opens the feedback
+there, and *Create* on GitHub sends it; *By e-mail* downloads it as a text file. The
 player keeps it: the *Hardware feedback* row then shows *Send again* and
 *Start over*, until the sound card or screen is changed, when it is
 forgotten. Once feedback is accepted, the next release marks that card or screen *Reported* in the player
@@ -626,13 +627,15 @@ and in the project's hardware list.
 
 **Something is wrong. How do I report it?**
 Open *Settings → System → Problem report* on a phone or computer on the same
-network, say in a line what happened, and tap *Download*. The player prepares
-one file with its logs, versions, hardware and settings; this takes up to a
-minute. Before the file is written, the player takes out addresses, network
-and device names, shares, accounts, keys, the weather location and the names
-of what you play, each replaced by a token such as `ip-3`. Read the file before
-sharing it, then attach it to a new report on GitHub with *Report a problem*,
-or e-mail it to george.carstoiu@gexis.net.
+network. Say what happened and how often, then *Next*: the player prepares
+one file with its logs, versions, hardware and settings, ticking off each step
+as it goes; this takes up to a minute. Before the file is written, the player
+takes out addresses, network and device names, shares, accounts, keys, the
+weather location and the names of what you play, each replaced by a token such
+as `ip-3`. Then choose how to send it: *On GitHub* opens a report already
+filled in with what happened and the log's last errors (the file itself can be
+dragged onto it too - a link cannot attach it), or *By e-mail* downloads the
+file to send to george.carstoiu@gexis.net. Read the file before sharing it.
 If the problem goes away at a restart, switch on *Debug logs* first, so the
 logs from before the restart are kept.
 
