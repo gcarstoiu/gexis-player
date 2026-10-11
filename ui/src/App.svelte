@@ -772,12 +772,25 @@
 </div>
 {/if}
 
+<!-- ADR-0135: the screen in standby. Its output is off; this black is for a
+     screen whose output could not be switched, and it takes the tap that
+     wakes it, so that tap presses nothing underneath. -->
+{#if surface === 'panel' && $panel.standby}
+  <div class="standby-cover" aria-hidden="true"></div>
+{/if}
+
 <!-- ADR-0132: a factory reset under way - over everything, on every surface. -->
 {#if $resetting}
   <ResetScreen surface={surface === 'remote' ? 'remote' : 'panel'} />
 {/if}
 
 <style>
+  .standby-cover {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: #000;
+  }
   :global(*, *::before, *::after) {
     box-sizing: border-box;
   }

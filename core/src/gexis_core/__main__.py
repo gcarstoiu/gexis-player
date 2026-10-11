@@ -77,6 +77,7 @@ from gexis_core.fanart import Fanart
 from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, TrackMetadata
 from gexis_core import connections, hardware_report, settings_migrations, settling, updates, wired
+from gexis_core.standby import Standby
 from gexis_core.settings import SettingsStore
 from gexis_core.settings_registry import InvalidValue, Settings, UnknownSetting, load_registry
 from gexis_core.splash import Splash
@@ -2538,6 +2539,15 @@ async def main() -> None:
     )
     # ADR-0101: the phone's visualiser toggle says what the panel shows.
     peppy_screen.on_change = lambda shown: state_store.set_panel(visualiser=shown)
+
+    # ADR-0135: display standby. The panel and the phones learn it from the
+    # panel state; the visualiser goes down with the screen.
+    def _standby_published(off: bool, reason: str | None) -> None:
+        state_store.set_panel(standby=off)
+        if off and peppy_screen.visible:
+            peppy_screen.hide()
+
+    standby = Standby(publish=_standby_published)
     peppy = PeppyController(
         peppy_screen,
         UnattendedPlayback(
@@ -2546,6 +2556,8 @@ async def main() -> None:
         ),
         # ADR-0055 §6: nothing raises a screen this output cannot feed.
         has_levels=lambda: state_store.state.meters,
+        # ADR-0135: nor one that is in standby.
+        blocked=lambda: standby.off,
     )
 
     # **ADR-0055 §5.** An output with no volume control takes the choice
@@ -2563,6 +2575,7 @@ async def main() -> None:
     _publish_meters()
 
     previous_active = state_store.state.active
+    previous_playing = state_store.state.metadata.transport == "playing"
 
     async def _find_cover(renderer_id: str, metadata) -> None:
         """**The cover for a track the renderer sent none for** (ADR-0081).
@@ -2603,7 +2616,12 @@ async def main() -> None:
         state_store.set_found_artwork(renderer_id, metadata, found.album_art)
 
     def follow_playback(state) -> None:
-        nonlocal previous_active
+        nonlocal previous_active, previous_playing
+        # ADR-0135: music starting wakes a screen in standby.
+        playing = state.metadata.transport == "playing"
+        if playing and not previous_playing and standby.off:
+            asyncio.ensure_future(standby.wake("music"))
+        previous_playing = playing
         # ADR-0018/0046: a mode change waits for playback to stop, and this
         # is where stopping is noticed.
         if fixed_wanted["value"] != fixed_now["value"]:
@@ -3322,6 +3340,7 @@ async def main() -> None:
         idle_page=idle_page,
         settings=settings,
         peppy=peppy,
+        standby=standby,
         # Phase 7 (ADR-0038): the same server, and the same player, the
         # renderer adapter talks to.
         library=library,

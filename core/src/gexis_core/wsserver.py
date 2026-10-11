@@ -129,6 +129,7 @@ class StateServer:
         idle_page=None,
         settings=None,
         peppy=None,
+        standby=None,
         library=None,
         artistinfo=None,
         notes=None,
@@ -189,6 +190,8 @@ class StateServer:
         self._idle_page = idle_page
         self._settings = settings
         self._peppy = peppy
+        #: ADR-0135: the screen's standby, which a touch and the phone wake.
+        self._standby = standby
         self._library = library
         self._artistinfo = artistinfo
         self._enrichment = enrichment
@@ -1297,7 +1300,25 @@ class StateServer:
         see touches itself: they land in whichever window has the screen."""
         if self._peppy is not None:
             self._peppy.on_touch()
+        # ADR-0135: a touch wakes a screen in standby - measured to reach the
+        # page with the output off.
+        if self._standby is not None and self._standby.off:
+            await self._standby.wake("touch")
         return web.json_response({"touched": True})
+
+    async def _handle_standby(self, request: web.Request) -> web.Response:
+        """**ADR-0135: the screen off or on from a phone, or the Settings
+        action.** `on` is standby on - the screen off."""
+        action = request.match_info["action"]
+        if self._standby is None:
+            return web.json_response({"error": "standby is not wired up"}, status=503)
+        if action == "on":
+            await self._standby.sleep("asked")
+        elif action == "off":
+            await self._standby.wake("phone")
+        else:
+            return web.json_response({"error": f"unknown action {action}"}, status=404)
+        return web.json_response({"standby": self._standby.off})
 
     async def _handle_idle_request(self, request: web.Request) -> web.Response:
         """**ADR-0101: the phone's idle-screen toggle.** Attention first, as a
@@ -2279,6 +2300,7 @@ class StateServer:
         app.router.add_post("/settling/hide", self._handle_settling_hide)
         # ADR-0101: the phone's idle toggle, and the panel saying what it shows.
         app.router.add_post("/panel/idle/{action}", self._handle_idle_request)
+        app.router.add_post("/panel/standby/{action}", self._handle_standby)
         app.router.add_post("/panel/shown", self._handle_panel_shown)
         app.router.add_post("/panel/go/{to}", self._handle_view_request)
         app.router.add_post("/peppy/{action}", self._handle_peppy)

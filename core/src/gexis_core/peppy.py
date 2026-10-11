@@ -246,8 +246,12 @@ class PeppyController:
         *,
         tick_s: float = 5.0,
         has_levels=None,
+        blocked=None,
     ) -> None:
         self._screen = screen
+        #: **ADR-0135: not while the screen is in standby.** Drawn on an
+        #: output that is off, it would only cost the CPU.
+        self._blocked = blocked or (lambda: False)
         self._timer = timer
         self._tick_s = tick_s
         #: **ADR-0055 §6.** On an output whose chain carries no meter the
@@ -313,6 +317,9 @@ class PeppyController:
     def request(self, action: str) -> bool:
         """The UI's own button (criterion 8) and anything else that asks."""
         self._timer.attention()
+        if action == "show" and self._blocked():
+            logger.info("peppy: not showing - the screen is in standby")
+            return False
         if action == "show" and not self._has_levels():
             logger.info("peppy: not showing - this output feeds it no levels")
             return False
@@ -330,7 +337,7 @@ class PeppyController:
         self._screen.hide()
         while True:
             await asyncio.sleep(self._tick_s)
-            if self._timer.due() and not self._screen.visible and self._has_levels():
+            if self._timer.due() and not self._screen.visible and self._has_levels() and not self._blocked():
                 self._screen.show()
             # `viz_stop`. Checked after the raise and only while the meter is
             # up, so the two rules cannot argue: one of them needs playback

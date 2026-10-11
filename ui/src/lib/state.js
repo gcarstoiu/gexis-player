@@ -174,6 +174,8 @@ export const showPeppy = () => post('/peppy/show');
 export const hidePeppy = () => post('/peppy/hide');
 //: ADR-0101: the phone's idle toggle, and the panel saying what it shows.
 export const requestIdle = (show) => post(`/panel/idle/${show ? 'show' : 'hide'}`);
+/** ADR-0135: the panel's screen off (`true`) or back on. */
+export const requestStandby = (off) => post(`/panel/standby/${off ? 'on' : 'off'}`);
 // `{ idle }`, `{ lyrics }` or both: what the panel shows (ADR-0101).
 export const reportShown = (shown) => post('/panel/shown', shown);
 // ADR-0101 as amended 2026-10-05: 'home', 'now', 'lyrics', 'track' or
