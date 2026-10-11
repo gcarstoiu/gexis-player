@@ -33,7 +33,9 @@ KEY = "lyrion-server.shares"
 ROOT = Path("/mnt/gexis-shares")
 CREDENTIALS = Path("/etc/gexis/shares")
 SMB = re.compile(r"^//[^/\s]+/[^\s].*$")
-NFS = re.compile(r"^[^/:\s]+:/(?!/).*$")  # not a URL: "http://..." has two slashes
+#: Not a URL ("http://..." has two slashes), and not an option: mount runs
+#: as root, and "-o...:/x" would reach it as one (review, 2026-10-12).
+NFS = re.compile(r"^(?!-)[^/:\s]+:/(?!/).*$")
 
 
 def kind(address: str) -> str | None:
@@ -223,10 +225,11 @@ class Shares:
                 if self._needs_login(share):
                     return "Needs its password again"
                 self._write_login(address, share.get("user"), None)  # a guest, restored
-            command = ["mount", "-t", "cifs", address, str(point), "-o",
-                       f"ro,credentials={cred},uid=squeezeboxserver,gid=nogroup,iocharset=utf8,nosuid,nodev,noexec"]
+            command = ["mount", "-t", "cifs", "-o",
+                       f"ro,credentials={cred},uid=squeezeboxserver,gid=nogroup,iocharset=utf8,nosuid,nodev,noexec",
+                       "--", address, str(point)]
         else:
-            command = ["mount", "-t", "nfs", address, str(point), "-o", "ro,soft,timeo=100,nosuid,nodev,noexec"]
+            command = ["mount", "-t", "nfs", "-o", "ro,soft,timeo=100,nosuid,nodev,noexec", "--", address, str(point)]
         try:
             result = self._run(command, capture_output=True, text=True, timeout=30, check=False)
         except subprocess.TimeoutExpired:

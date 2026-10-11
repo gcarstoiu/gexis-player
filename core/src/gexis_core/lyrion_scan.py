@@ -87,7 +87,8 @@ def shares(server: Server, user: str | None = None, password: str | None = None,
     guest (or the user given). The password reaches smbclient through a
     root-only file, never its command line."""
     if server.kind == "nfs":
-        result = run(["showmount", "-e", server.host], capture_output=True, text=True,
+        # "--": the host comes from the request, and is never an option.
+        result = run(["showmount", "-e", "--", server.host], capture_output=True, text=True,
                      timeout=TIMEOUT_S, check=False)
         return parse_nfs_exports(result.stdout or "", server.host)
     with tempfile.NamedTemporaryFile("w", prefix="gexis-smb-", delete=True) as auth:

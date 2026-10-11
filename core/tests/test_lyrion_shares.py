@@ -26,9 +26,9 @@ def shares(tmp_path, *, fail=None, mounted=None):
     def run(command, **kw):
         calls.append(command)
         if command[0] == "mount":
-            if fail and fail in command[3]:
+            if fail and fail in command[-2]:
                 return subprocess.CompletedProcess(command, 32, "", "mount error(13): Permission denied")
-            mounted.add(command[4])
+            mounted.add(command[-1])
         if command[0] == "umount":
             mounted.discard(command[-1])
         return subprocess.CompletedProcess(command, 0, "", "")
@@ -41,7 +41,7 @@ def shares(tmp_path, *, fail=None, mounted=None):
 def test_smb_and_nfs_addresses_and_nothing_else():
     assert ls.kind("//nas/music") == "smb"
     assert ls.kind("nas.local:/volume1/music") == "nfs"
-    for bad in ("nas/music", "//nas", "http://nas/music", ""):
+    for bad in ("nas/music", "//nas", "http://nas/music", "", "-ofoo:/x", "-a:/x"):
         assert ls.kind(bad) is None
 
 
@@ -61,7 +61,7 @@ def test_mounting_reads_the_password_from_a_root_only_file(tmp_path):
     s.add("//nas/music", "george", "s3cret")
     s.mount_all(s.all())
     mount = next(c for c in calls if c[0] == "mount")
-    assert mount[:3] == ["mount", "-t", "cifs"] and "ro," in mount[-1]
+    assert mount[:3] == ["mount", "-t", "cifs"] and "ro," in mount[4]
     assert not any("s3cret" in part for part in mount)
     cred = next((tmp_path / "cred").iterdir())
     assert cred.read_text() == "username=george\npassword=s3cret\n"
@@ -211,3 +211,16 @@ def test_a_server_that_does_not_answer_does_not_stop_the_shares_after_it(tmp_pat
     off, on = s.items()
     assert off["meta"] == "On nas-off · Not mounted: the server did not answer"
     assert on["meta"] == "On nas-on · Mounted, read-only"
+
+
+def test_an_address_is_never_read_as_one_of_mount_s_options(tmp_path):
+    """Review, 2026-10-12: mount runs as root; "-o...:/x" was refused by
+    nothing and reached it as an option."""
+    s, calls, _ = shares(tmp_path)
+    with pytest.raises(ValueError):
+        s.add("-ofoo:/x", None, None)
+    s.add("nas:/music", None, None)
+    s.add("//nas/a", "me", "pw")
+    s.mount_all(s.all())
+    for mount in (c for c in calls if c[0] == "mount"):
+        assert mount[-3] == "--" and mount[-2] in ("nas:/music", "//nas/a")

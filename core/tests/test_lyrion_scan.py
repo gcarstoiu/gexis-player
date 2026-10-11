@@ -45,3 +45,15 @@ def test_a_nas_that_refuses_a_guest_asks_for_a_login_and_the_password_stays_off_
     assert sc.shares(box, "me", "s3cret", run=run) == [{"address": "//Box.local/Music", "comment": ""}]
     assert not any("s3cret" in part for c in calls for part in c)
     assert "-A" in calls[-1]
+
+
+def test_a_host_from_the_request_is_never_read_as_an_option():
+    """Review, 2026-10-12: the browsed host comes from the request."""
+    calls = []
+
+    def run(command, **kw):
+        calls.append(command)
+        return subprocess.CompletedProcess(command, 0, "Export list:\n", "")
+
+    sc.shares(sc.Server("x", "-d", "nfs"), run=run)
+    assert calls[-1] == ["showmount", "-e", "--", "-d"]
