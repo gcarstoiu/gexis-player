@@ -426,6 +426,10 @@ else
 fi
 rm -f "$OUT/one"
 
+echo "== ADR-0139: no passwordless sudo in the public image"
+dfs "stat /etc/sudoers.d/010_pi-nopasswd" | grep -q 'Inode:' \
+	&& bad "/etc/sudoers.d/010_pi-nopasswd is in the image" || ok "no sudoers rule for pi"
+
 echo
 [ $fail -eq 0 ] && echo "RESULT: all checks passed" || echo "RESULT: FAILURES above"
 exit $fail

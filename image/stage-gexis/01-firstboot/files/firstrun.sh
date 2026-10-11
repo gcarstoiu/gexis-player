@@ -22,6 +22,7 @@ HOSTNAME=""                     # leave blank to keep the built-in default
 TIMEZONE=""                     # e.g. "Europe/Berlin"; blank keeps the image default
 IDLE_URL=""                     # idle screen page (ADR-0019); blank shows the built-in clock
 SETTINGS=""                     # JSON of settings to start from, e.g. {"idle_timeout": 10}
+DEV_SUDO=""                     # test cards only (ADR-0139): "yes" gives pi passwordless sudo
 
 IMAGER_CUSTOM=/usr/lib/raspberrypi-sys-mods/imager_custom
 USERCONF=/usr/lib/userconf-pi/userconf
@@ -40,6 +41,22 @@ fi
 # existing locked/no-password state untouched — this image is SSH-key-only.
 if [ -x "$USERCONF" ]; then
 	"$USERCONF" pi ""
+fi
+
+# ADR-0139: the public image gives pi no sudo - pi runs the kiosk and
+# Squeezelite, and a flaw in either would otherwise be a flaw as root. A card
+# provisioned for testing asks for it. Written beside the target and checked
+# with visudo before it is renamed into place: sudo ignores a file whose name
+# has a dot in it, and silently ignores a broken one.
+if [ "$DEV_SUDO" = "yes" ]; then
+	printf 'pi ALL=(ALL) NOPASSWD:ALL\n' > /etc/sudoers.d/010_pi-nopasswd.new
+	chown root:root /etc/sudoers.d/010_pi-nopasswd.new
+	chmod 440 /etc/sudoers.d/010_pi-nopasswd.new
+	if visudo -cf /etc/sudoers.d/010_pi-nopasswd.new >/dev/null 2>&1; then
+		mv /etc/sudoers.d/010_pi-nopasswd.new /etc/sudoers.d/010_pi-nopasswd
+	else
+		rm -f /etc/sudoers.d/010_pi-nopasswd.new
+	fi
 fi
 
 if [ -n "$WIFI_SSID" ] && [ -x "$IMAGER_CUSTOM" ]; then
