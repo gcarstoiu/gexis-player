@@ -20,8 +20,9 @@ over mDNS (avahi), and avahi already advertises each player's share
    address, whether it plays, and the renderer connected. The phone reads
    `GET /players` from the player it is on; the core asks the others, so the
    browser never reaches across addresses.
-3. **On the phone, the line under *Settings*** (name, address) becomes a
-   button when another player is found. It opens a list of every player,
+3. **On the phone, a switch button at the right end of the *Settings*
+   line** (amended the same day, George: larger, in line with the title;
+   first drawn as the line under it) when another player is found. It opens a list of every player,
    this one marked, each with its status - *Playing · Spotify*, *Paused ·
    Lyrion*, *Idle* - and choosing another opens that player's page **in the
    same tab**.

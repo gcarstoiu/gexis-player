@@ -176,8 +176,8 @@ the library.
 ## Idle screen and visualiser
 
 **I have more than one player. Do I need a tab for each?**
-No. On the phone page, tap the line under *Settings* - the player's name and
-address, with a switch mark when another player is on the network. It lists
+No. On the phone page, tap the switch button at the right of the *Settings*
+title - there when another player is on the network. It lists
 every player with what it is playing and through which source; choosing one
 opens its page in the same tab. A player is listed once it runs this release
 or later and is on the same network.
