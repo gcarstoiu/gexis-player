@@ -1647,6 +1647,11 @@ def test_the_idle_screen_switch_hides_its_section_and_the_home_background_needs_
     assert not any(visible(rows[k], rows, values) for k in idle_rows)
     values["idle_enabled"] = True
     assert all(visible(rows[k], rows, values) for k in idle_rows)
+    # Seasons are the Gexis wallpapers' alone (George, 2026-10-11).
+    values["idle_background"] = "Wallpapers online"
+    assert not visible(rows["wallpaper_seasons"], rows, values)
+    values["idle_background"] = "Gexis wallpapers"
+    assert visible(rows["wallpaper_seasons"], rows, values)
     home = rows["waiting_background"]
     assert "Artist pictures" not in home["options"] and home["default"] == "Gexis wallpapers"
     assert rows["waiting_wallpaper_styles"]["default"] == ["Calm"]

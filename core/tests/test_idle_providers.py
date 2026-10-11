@@ -741,11 +741,12 @@ def pixabay_any(url, params):
     return (200, b"\xff\xd8jpeg-bytes")
 
 
-async def test_calm_is_a_search_the_season_joins_and_a_holiday_replaces_them(tmp_path, monkeypatch):
-    """ADR-0133 amended 2026-10-11: Calm asks Pixabay by word and the
-    *Seasons* toggle adds the season it is, both as editors' choice; with
-    *Holidays* on, a holiday's day asks for the holiday alone (George:
-    *"holidays are a toggle that supersede the choice of wallpaper"*)."""
+async def test_space_and_calm_are_searches_no_season_joins_and_a_holiday_replaces_them(tmp_path, monkeypatch):
+    """ADR-0133 amended 2026-10-11: Space and Calm ask Pixabay by word, as
+    editors' choice; *Seasons* is the Gexis wallpapers' alone, so no season
+    joins the topics; with *Holidays* on, a holiday's day asks for the
+    holiday alone (George: *"holidays are a toggle that supersede the choice
+    of wallpaper"*)."""
     from gexis_core import own_wallpapers
     session = FakeSession(pixabay_any)
     settings, client = client_for(tmp_path, wallpapers=Wallpapers(session, tmp_path / "pics"))
@@ -757,21 +758,15 @@ async def test_calm_is_a_search_the_season_joins_and_a_holiday_replaces_them(tmp
     async with client:
         settings.set("idle_background", "Wallpapers online")
         settings.set("wallpaper_key", "key")
-        settings.set("wallpaper_topics", ["Calm", "Nature"])
+        settings.set("wallpaper_topics", ["Space", "Calm", "Nature"])
+        settings.set("wallpaper_seasons", True)
         monkeypatch.setattr(own_wallpapers, "holiday", lambda day, country: None)
-        # Random across the topics: ask until all three have been asked for.
-        want = {("nature", None, None), (None, "calm", "true"), (None, "autumn", "true")}
+        want = {("nature", None, None), (None, "calm", "true"), (None, "space", "true")}
         for _ in range(60):
             assert (await (await client.get("/idle/wallpaper")).json())["error"] is None
             if want <= set(asked()):
                 break
         assert want <= set(asked())
-
-        # Seasons off: no season among them.
-        session.calls.clear()
-        settings.set("wallpaper_seasons", False)
-        for _ in range(12):
-            await client.get("/idle/wallpaper")
         assert (None, "autumn", "true") not in set(asked())
 
         session.calls.clear()

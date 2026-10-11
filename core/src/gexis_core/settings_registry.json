@@ -728,16 +728,11 @@
         "type": "toggle",
         "label": "Seasons",
         "marks": "N",
-        "note": "The season's pictures join the styles or topics, by hemisphere.",
+        "note": "The season's pictures join the styles, by hemisphere.",
         "default": true,
         "onlyWhen": [
           "waiting_background",
-          {
-            "in": [
-              "Gexis wallpapers",
-              "Wallpapers online"
-            ]
-          }
+          "Gexis wallpapers"
         ]
       },
       {
@@ -956,16 +951,11 @@
         "type": "toggle",
         "label": "Seasons",
         "marks": "N",
-        "note": "The season's pictures join the styles or topics, by hemisphere.",
+        "note": "The season's pictures join the styles, by hemisphere.",
         "default": true,
         "onlyWhen": [
           "idle_background",
-          {
-            "in": [
-              "Gexis wallpapers",
-              "Wallpapers online"
-            ]
-          }
+          "Gexis wallpapers"
         ]
       },
       {

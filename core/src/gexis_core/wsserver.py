@@ -643,14 +643,13 @@ class StateServer:
         """What `Wallpapers.next` is asked for: on a holiday, with *Holidays*
         on, that holiday alone (George: *"holidays are a toggle that
         supersede the choice of wallpaper"*); otherwise each chosen topic - a
-        category as it is, Calm as a search - and, with *Seasons* on, the
-        season it is by the player's hemisphere beside them (George chose
-        the toggle over a Season topic, 2026-10-11)."""
+        category as it is, Space and Calm as searches. *Seasons* is the Gexis
+        wallpapers' alone (George, 2026-10-11: "Seasons only for Gexis
+        wallpapers" - a season beside Science only took turns with it)."""
         keys = keys or self.IDLE_KEYS
         value = self._settings.value
         holidays_on = value(keys["holidays"]) is not False
-        seasons_on = value(keys["seasons"]) is not False
-        country, latitude = await self._where() if (holidays_on or seasons_on) else (None, None)
+        country, _ = await self._where() if holidays_on else (None, None)
         today = datetime.datetime.now().date()
         if holidays_on:
             holiday = own_wallpapers.holiday(today, country)
@@ -658,9 +657,6 @@ class StateServer:
                 return [PIXABAY_SEARCH + self.PIXABAY_HOLIDAYS[holiday]]
         topics = [PIXABAY_SEARCH + self.PIXABAY_SEARCHES[t] if t in self.PIXABAY_SEARCHES else t
                   for t in (str(t) for t in chosen)]
-        if seasons_on:
-            topics.append(PIXABAY_SEARCH + own_wallpapers.season(
-                today, southern=latitude is not None and latitude < 0))
         return topics
 
     async def _own_picture(self, background: str, keys: dict | None = None) -> dict:
