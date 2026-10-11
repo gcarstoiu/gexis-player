@@ -1815,7 +1815,7 @@ async def main() -> None:
                         return
                     have = await asyncio.to_thread(skin_packs.installed)
                     # Onto the new pack before the old one goes from under it.
-                    await _configure_visualiser()
+                    await _configure_visualiser(installed=True)
                     _, extra = skin_packs.plan(skin_packs.screen_size(), have)
                 if skin_packs.for_screen(*skin_packs.screen_size()) in have:
                     for size in extra:
@@ -1874,9 +1874,13 @@ async def main() -> None:
         visualiser_held["restart"] = False
         await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-peppy.service")
 
-    async def _configure_visualiser() -> None:
+    async def _configure_visualiser(installed: bool = False) -> None:
         """ADR-0111: PeppyMeter draws the pack skins_at() names, at its size.
-        Restarted only when its config changed."""
+        Restarted when its config changed, **or a pack has just been
+        installed**: a visualiser that started before its pack was there
+        ends ("no skin pack for this screen yet"), and its config may already
+        name the folder the pack fills - sofapi after a fresh setup,
+        2026-10-11, whose first visualiser had to be started from the phone."""
         at = skins_at()
         if at is None:
             return
@@ -1884,7 +1888,8 @@ async def main() -> None:
         if base is None:
             return
         width, height = (int(n) for n in at[1].split("x"))
-        if await asyncio.to_thread(set_meter_skins, Path(config.meter_consumer_config), base, at[1], width, height):
+        changed = await asyncio.to_thread(set_meter_skins, Path(config.meter_consumer_config), base, at[1], width, height)
+        if changed or installed:
             await _restart_visualiser()
 
     def _package_on_disk(size: tuple[int, int]) -> str:
