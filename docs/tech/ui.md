@@ -305,10 +305,15 @@ every source off it says so, and the Settings button stays in the corner.
 Tiles are a translucent plate: ADR-0041 bans live backdrop blur.
 
 `Backdrop.svelte` is the background picture for both this and the idle
-screen: it asks `/idle/wallpaper?w=&h=` for the next picture, preloads it,
-places it by the core's `place` (ADR-0120) or the crop rule, dims it by
-`background_brightness`, and changes it every `background_interval`
-minutes. The screen binds `picture` and `shown` for its credit line.
+screen, each from its own rows since 2026-10-11 (ADR-0133 amended): with
+`screen="home"` it reads `waiting_background`, `waiting_background_brightness`
+and `waiting_background_interval` and asks `/idle/wallpaper?for=home`;
+otherwise the idle screen's `idle_background`, `background_brightness`,
+`background_interval`. It preloads the picture, places it by the core's
+`place` (ADR-0120) or the crop rule, dims it and changes it every interval.
+The core reads each screen's rows through `StateServer.IDLE_KEYS` and
+`HOME_KEYS` and keeps each screen's last picture apart. The screen binds
+`picture` and `shown` for its credit line.
 
 The root's data is loaded once at start-up, and its covers are decoded
 before it is shown, so that Home appears complete (`lib/library.js`).
@@ -327,6 +332,10 @@ answer. Enrichment only adds; it never overwrites what the renderer supplied
 (ADR-0012).
 
 ### Idle screen
+
+**`idle_enabled`** switches the idle screen off (off on a new player, kept on
+for one in use by a migration): `App.svelte` then never starts the idle
+timer, ignores the phone's idle request, and the phone hides its idle button.
 
 `IdleScreen.svelte` (ADR-0033, ADR-0047) shows a drifting clock and date and
 a weather band (3 days or today only). The background is one of *Gexis

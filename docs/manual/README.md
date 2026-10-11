@@ -381,16 +381,21 @@ the player itself, with its music folders and network shares).
 | Attached screen | Sets the layout, Standard or Bar, and which visualiser skins are offered. |
 | Screen rotation | For a screen mounted the other way up. |
 | Headless | Turns the player's screen off; settings that only affect the screen are hidden while it is on. |
-| Show volume when changed elsewhere | A phone's volume change opens the drawer; the panel's own changes do not. |
-| Volume drawer auto-hide | How long the drawer stays when a change from elsewhere opened it. |
-| Phone touchpad, Pointer speed, Pointer style | The phone's touchpad (section 7). |
-| Home screen list, Items in the strip | What the row under Home's cards shows, and how many. |
-| Clock on the waiting screen, Hint on the waiting screen | With the Lyrion client off: the time, date and name in the top left, and the line *Start music from your phone* above the sources. |
+| Touchpad: Phone touchpad, Pointer speed, Pointer style | The phone's touchpad (section 7). |
+| Volume: Show volume when changed elsewhere | A phone's volume change opens the drawer; the panel's own changes do not. |
+| Volume: Volume drawer auto-hide | How long the drawer stays when a change from elsewhere opened it. |
+| Photo service and location: Pixabay API key, Location | Shared by both screens below. The key is for online wallpapers (Pixabay, free). The location is for the weather and for the wallpapers' seasons and holidays; until one is set, the country comes from the time zone. |
+| Home screen: Home screen list, Items in the strip | With the Lyrion client on: what the row under Home's cards shows, and how many. |
+| Home screen: Clock on the waiting screen, Hint on the waiting screen | With the Lyrion client off: the time, date and name in the top left, and the line *Start music from your phone* above the sources. |
+| Home screen: Background and the rows after it | With the Lyrion client off: the waiting screen's own picture, set apart from the idle screen's, with the same rows as below (no artist pictures). |
+| Idle screen | On or off. Off (the default on a new player), the panel stays on what it shows and the rows below are hidden. |
 | Idle screen: Screen, Timeout | The built-in clock-and-weather screen, or an external page; and after how long, with nothing playing and nobody touching the panel. |
-| Background: Background, Background brightness, Change the picture every | One picture behind the idle screen and the waiting screen. **Gexis wallpapers**, the player's own pictures (the default on a new player); **Space pictures** from NASA and ESA; artist pictures from the library, which show the player's own while the Lyrion client is off; online wallpapers (Pixabay, with a free key); pictures on the device; or black. |
-| Background: Wallpaper styles, Follow the time of day, Seasons, Holidays | With Gexis wallpapers. Each picture comes from one of the chosen styles (Calm, Colourful, Psychedelic), the hour's pictures (dawn, day, dusk, night) or the season's. On New Year, and on Christmas and Easter where they are public holidays, only those days' pictures show. *Seasons* and *Holidays* work with online wallpapers too. The country comes from the weather location, or the time zone until one is set; Easter follows the Western or Orthodox date by country. |
-| Background: Pixabay API key, Wallpaper topics | With online wallpapers. *Calm* searches Pixabay's selected photos; the others are Pixabay's own categories. Choosing several mixes them; *Seasons* adds the current season's pictures and *Holidays* replaces them on a holiday. |
-| Idle screen: Clock, Clock format, Weather, Location, Forecast, Weather icons | What the idle screen shows over the picture; forecasts come from Open-Meteo. |
+| Idle screen: Background | **Gexis wallpapers**, the player's own pictures; **Space pictures** from NASA and ESA; artist pictures from the library, which show the player's own while the Lyrion client is off; online wallpapers (Pixabay); pictures on the device; or black. |
+| Idle screen: Wallpaper topics | With online wallpapers. *Calm* searches Pixabay's selected photos; the others are Pixabay's own categories. Choosing several mixes them. |
+| Idle screen: Wallpaper styles, Follow the time of day | With Gexis wallpapers: the chosen styles (Calm, Colourful, Psychedelic), and the hour's pictures (dawn, day, dusk, night). |
+| Idle screen: Seasons, Holidays | With Gexis wallpapers or online wallpapers. *Seasons* adds the season's pictures, by hemisphere. On New Year, and on Christmas and Easter where they are public holidays, *Holidays* shows only those days' pictures; Easter follows the Western or Orthodox date by country. |
+| Idle screen: Background brightness, Change the picture every | How dark the picture is behind the text, and how often it changes. |
+| Idle screen: Clock, Clock format, Weather, Forecast, Weather icons | What the idle screen shows over the picture; forecasts come from Open-Meteo. |
 | Idle screen: Weather icon motion | *Animated* or *Static*. Animated icons use about half of one of the Pi's four processor cores while the idle screen is up; Static uses almost none. |
 | Visualiser: Timeout, Stop when nothing is playing | When the visualiser takes the screen while music plays, and when it gives it back. |
 | Visualiser: Skin type, Rotate skin per track, Skin | Which skins it uses; tap a skin to preview it, then *Use this skin*. |

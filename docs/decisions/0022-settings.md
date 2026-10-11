@@ -108,6 +108,7 @@ Phase 2 and ADR-0027.
 | Screen brightness | [N] | The panel never sleeps by decision (ADR-0019); brightness is a separate question that record does not answer |
 | Elapsed vs remaining time | [N] | Both are published |
 | Show the transition screen at all | [R] | **Wired 2026-09-25**, with the screen's length beside it. Off means a takeover changes screen with no announcement |
+| Idle screen (on or off) | [N] | **Appended 2026-10-11, confirmed by George** ([ADR-0133](0133-the-waiting-screen-and-the-players-own-wallpapers.md) amended, second): `idle_enabled`, heading its section; **off on a new player**, kept on for a player already in use by a migration; off, every idle row is hidden and the phone's idle button goes |
 | Idle screen: built-in or external URL | [R] | [ADR-0047](0047-the-idle-screen-gains-backgrounds-and-weather.md). ADR-0033's external page, demoted from *the* answer to one of two |
 | Idle background: artist pictures / wallpapers online / wallpapers on device / black | [N] | ADR-0047 §1 |
 | Wallpaper API key | [N] | **Pixabay**, chosen by George on 2026-09-21 ([Finding 043](../findings/043-the-idle-screens-two-providers.md)). A key per owner: its guidelines allow this use but not a shipped credential **Labelled *Pixabay API key* from 2026-10-05** ([ADR-0120](0120-backgrounds-cropped-by-what-they-show.md)), with Pexels beside it; the key stays `wallpaper_key`. |
@@ -327,6 +328,8 @@ in Display:
 | Holidays | [N] | New Year, Christmas and Easter (Western or Orthodox) for the player's country, from the time zone and then the weather location; default on. On a holiday's days its pictures replace the styles (George: *"They replace them. For the time being if option is selected."*). **From 2026-10-11 it governs *Wallpapers online* too**, replacing the topics (George: *"holidays are a toggle that supersede the choice of wallpaper"*); `onlyWhen` names both backgrounds |
 | Clock on the waiting screen | [N] | Time, date and the player's name, top left; follows *Clock format*; default on |
 | Hint on the waiting screen | [N] | *Start music from your phone* above the source tiles; default on |
+| The home screen's background: Background, Wallpaper topics, Wallpaper styles, Follow the time of day, Seasons, Holidays, Background brightness, Change the picture every | [N] | **Appended 2026-10-11, confirmed by George** (ADR-0133 amended, second): the waiting screen's own, `waiting_*`, under *Home screen*, with the Lyrion client off; the idle screen's rows unchanged. **Fresh defaults** (George), not a copy; no *Artist pictures* |
+| Section headings: Touchpad, Volume, Photo service and location | — | Not settings: Display's sections from 2026-10-11 (George). *Photo service and location* holds the Pixabay key and the location, shared by both screens |
 
 ## Settled by prior records
 
