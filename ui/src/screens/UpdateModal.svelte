@@ -22,17 +22,23 @@
   const CHECK_TIMEOUT_MS = 90_000;
 
   let phase = $state(start === 'progress' ? 'progress' : start === 'check' ? 'checking' : 'answer');
-  let askedAt = 0;
+  //: What the updater's file said when the ask went out. **An answer is a
+  //: change from it**, not a time after the phone's clock: `at` is the
+  //: player's clock, to the second, and a player even two seconds behind the
+  //: phone never answered - the check timed out, the install never ended
+  //: (code review, 2026-10-12). A Pi has no clock of its own to keep it right.
+  let asked = $state(null);
   let from = $state($update?.installed ?? null);
   let timedOut = $state(false);
 
   const u = $derived($update ?? {});
   const playing = $derived($metadata?.transport === 'playing');
-  const fresh = $derived(u.at ? Date.parse(u.at) >= askedAt - 2000 : false);
+  const fresh = $derived(!!u.at && !!asked && (u.at !== asked.at || u.state !== asked.state));
+  const answered = $derived(fresh && ['current', 'available', 'failed'].includes(u.state));
 
   onMount(() => {
     if (start !== 'check') return;
-    askedAt = Date.now();
+    asked = { at: u.at, state: u.state };
     runSetting('update_check');
     const id = setTimeout(() => (timedOut = true), CHECK_TIMEOUT_MS);
     return () => clearTimeout(id);
@@ -41,7 +47,7 @@
   // The check's answer, once the updater has written one newer than the ask.
   $effect(() => {
     if (phase !== 'checking') return;
-    if (fresh && ['current', 'available', 'failed'].includes(u.state)) phase = 'answer';
+    if (answered) phase = 'answer';
     else if (timedOut) phase = 'answer';
   });
 
@@ -59,7 +65,7 @@
 
   function go() {
     from = u.installed ?? from;
-    askedAt = Date.now();
+    asked = { at: u.at, state: u.state };
     phase = 'progress';
     runSetting('update_install');
   }
@@ -81,7 +87,7 @@
       <div class="ask__title">Checking for updates…</div>
       <span class="task__bar task__bar--busy"><span></span></span>
     {:else if phase === 'answer'}
-      {#if timedOut && !fresh}
+      {#if timedOut && !answered}
         <div class="ask__title">Could not check for updates</div>
         <div class="task__text">The player did not answer in time. Try again in a minute.</div>
         <div class="ask__buttons"><button type="button" class="btn btn--confirm" onclick={close}>OK</button></div>
