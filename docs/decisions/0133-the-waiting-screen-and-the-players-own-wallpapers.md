@@ -240,3 +240,9 @@ way round.
 3. **Explanations beside the options** (George): the Background sheets, and
    eight others whose top note explained their options, carry a short line
    per option instead; such a sheet stays open after a choice until Close.
+4. **Seasons only for Gexis wallpapers** (George, the same day, of three
+   ways put to him): with online wallpapers a season beside a topic such as
+   Science only took turns with it, half the pictures each, and Pixabay
+   cannot ask for "science in autumn". The *Seasons* row shows with Gexis
+   wallpapers alone, on both screens; online wallpapers' topics carry no
+   season. *Holidays* still governs both.
