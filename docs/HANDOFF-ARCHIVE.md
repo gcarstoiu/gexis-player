@@ -6217,3 +6217,67 @@ commits. The sentence now says the options were on a private design page;
 nothing else changed. Its backups and the older `-before-clean` ones were
 deleted once 0.9.8 was merged. **Do not put `claude.ai/artifact` links in the
 repository.**
+
+## From HANDOFF.md, 2026-10-11 (evening) - 0.10.0 as it stood when cut (PR #59, merged), and the list then left before the first public release
+
+**0.10.0 cut 2026-10-11 for Testing** (tag `v0.10.0`, release `r0.10.0`,
+serial 34, image `image/deploy/2026-10-11-gexis-player-v0.10.0.img`, 113
+checks; notes approved by George). **PR #59 open - George merges it.**
+Previewed on sofapi step by step through the day. In it:
+- **Display standby** (ADR-0135): the phone's *Screen* button; touch, music
+  and the button wake it; *Scheduled standby* at up to six owner-set times
+  with days (the new `intervals` row, our own time grid); woken during one,
+  back off after 2 min unused (1-30). Output off measured on the 10.1"
+  (touch still reaches the page; a "No signal" box for ~10 s, 30 s in).
+  **Not yet seen:** the bars and the 13.3"; waking a bar keeping its turn
+  (re-applied by the code); the schedule overnight on a real clock.
+- **Display in sections**: Panel, Display standby, Touchpad, Volume, Photo
+  service and location, Home screen, Idle screen, Visualiser; a background
+  each for the home and idle screens (`waiting_*` keys); an *Idle screen*
+  switch, off on new players, kept on by a migration (ADR-0133 amended three
+  times).
+- **Space pictures removed** (NASA/ESA download and the 12 built-in); Space
+  and Calm are Pixabay searches; Seasons for Gexis wallpapers only; Holidays
+  supersede online topics. A stored option a row no longer offers falls away
+  when read.
+- **Weather icon motion** (Finding 118: the idle screen's half core was its
+  icons' animation; one animation costs what eleven do).
+- **A network lost after boot** opens the setup network after 2 min (ADR-0134);
+  simulated on sofapi, rejoined on its own at +7 min. A phone page that saw
+  "joining" no longer gets stuck on setup.
+- Settings: explanations beside the options (ten sheets); such sheets stay
+  open until Close; only Fixed asks to confirm in Volume.
+
+**Devices.** **sofapi** (Waveshare 10.1", Lyrion queue of George's - do not
+clear it) and **ShelvesPi** (the bar) both run the `phase-13d` preview
+0.10.0+git14 (ADR-0136's switcher needs two players), the bar's first update
+since 0.9.8. George's reset-and-restore check on the bar is still owed, now
+on this. **guestpi** offline.
+
+**Next release, 0.10.1 - George testing first** (2026-10-11: "Let me test
+some more and then we can cut another release"). In it, on `phase-13d` and
+on both players as a preview (0.10.0+git29/31): the player switcher (ADR-0136;
+a 34 px square at the right of the Settings title; the list kept warm, about
+10 ms); setup's Keep warning only for a screen that changes what is applied
+(ADR-0109 amended); the settling screen's *Installing…* step (ADR-0128
+amended). Notes to be drafted and approved when he says so.
+
+**Checked by George 2026-10-11:** a clean setup with a restore; setup
+recognising the bar; the boot seam; display standby on the bar. **Still
+owed:** standby on the 13.3" (guestpi offline); the tests listed below.
+Phase 13g (the player in Home Assistant) is queued before themes, Phase 14a
+(a sound bar on optical) after them; HDMI audio on the second port to revisit.
+
+**Left before the first public release.** Tested by George 2026-10-10 on
+sofapi: software volume kept across a reboot for LMS and Spotify; Fixed
+chosen while playing waits for a pause (by design; now shown, ADR-0046
+amended - not yet seen by George). Still to test: Fixed taking effect at a
+pause, the volume-jump fixes (Spotify after a mode change, Bluetooth's late
+level), HDMI with Software volume (visualiser; Bluetooth with the volume
+raised), the small fixes, Hardware feedback on the real panel (pattern,
+taps, tones, GitHub - labels exist), and a **freshly flashed card** (the
+Plugins step, the settling screen, the screen applied in setup). The update
+safety can only be seen on the release after 0.9.4. Claude to do: **the final thorough code check**
+(George: everything once more; volume, the adapters and arbitration must
+work perfectly from the start), the first public release, and removing
+passwordless sudo from the image - last.
