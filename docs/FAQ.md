@@ -721,8 +721,9 @@ Each output in *Settings → Audio → Output* shows *Tested*, *Reported*,
 *Known* or *Detected*. The HiFiBerry DAC2 HD and the IQaudIO Pi-DAC PRO are
 tested; a board owners have reported working is *Reported* (*Reported with
 problems* if a report says otherwise); the other boards on the player's list
-are known but untested; a class-compliant USB DAC should be detected by
-itself but has not been tried. A board that is not found by itself can be
+are known but untested; a class-compliant USB DAC is detected by itself
+and shown by its maker (tried with an SMSL; most USB DACs have no volume
+control of their own, so their volume is Software or Fixed). A board that is not found by itself can be
 chosen in *Settings → Audio → Sound card board*. The screen's HDMI audio
 can be chosen too; it is not bit-perfect, its volume is set in software
 (or fixed), and the visualiser moves with it only while the volume is in
