@@ -187,8 +187,8 @@ The section, to paste and fill in:
 **Gexis Player X** is the current release. You need a Raspberry Pi 4 and a
 microSD card of 32 GB or more. A DAC gives the best sound (the
 [hardware list](docs/HARDWARE.md) says which are tested), but the Pi's own
-HDMI (to a sound bar, receiver or TV) or headphone jack works too; an HDMI
-touch screen is optional.
+HDMI (to a sound bar or AV receiver) or headphone jack works too; an HDMI
+touch screen from the hardware list is optional.
 
 1. **Download** [gexis-player.img.xz](https://github.com/gcarstoiu/gexis-player/releases/latest/download/gexis-player.img.xz)
    ([checksum](https://github.com/gcarstoiu/gexis-player/releases/latest/download/gexis-player.img.xz.sha256),
