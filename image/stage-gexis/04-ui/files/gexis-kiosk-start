@@ -1,5 +1,8 @@
 #!/bin/bash -e
-# Launched by labwc as its session (labwc -s). When this exits, labwc
+# Run twice per start. First by gexis-kiosk.service as `gexis-kiosk-start
+# compositor`: it writes labwc's configuration for the screen's port and
+# becomes labwc. Then by labwc as its session (labwc -s), with no argument -
+# everything below the two functions. When the session exits, labwc
 # exits, so Chromium runs in the foreground deliberately: the compositor's
 # lifetime is the browser's lifetime, and neither outlives the other as an
 # invisible orphan.
@@ -41,6 +44,67 @@
 #   --autoplay-policy         nothing autoplays today, but the UI will own
 #                             sound cues later and a user-gesture
 #                             requirement has no user to gesture.
+
+# **The HDMI port the screen is on** (ADR-0109; George, 2026-10-12: a panel
+# on the second port was turned, touched and put to standby as if it were on
+# the first). The core names it in screen.env; with no screen chosen, the
+# first port a screen is connected to, as the core's own detection reads it;
+# else HDMI-A-1. Only a name of that shape: it goes into an XML attribute.
+screen_connector() {
+	if [[ "${GEXIS_SCREEN_CONNECTOR:-}" =~ ^HDMI-A-[0-9]+$ ]]; then
+		echo "${GEXIS_SCREEN_CONNECTOR}"
+		return
+	fi
+	local status name
+	for status in "${GEXIS_DRM:-/sys/class/drm}"/card*-HDMI-A-*/status; do
+		[ "$(cat "${status}" 2>/dev/null)" = connected ] || continue
+		name=${status%/status}
+		name=${name##*/}
+		name=${name#*-}
+		[[ "${name}" =~ ^HDMI-A-[0-9]+$ ]] && { echo "${name}"; return; }
+	done
+	echo HDMI-A-1
+}
+
+# **labwc's configuration for that port.** Touch is tied to an output in
+# rc.xml, which labwc reads before its session starts, so the configuration
+# is written for the port and labwc pointed at it (-C). Everything labwc
+# would otherwise read from /etc/xdg/labwc comes along, so the one change is
+# the port. Off HDMI-A-1 the window is moved to the screen's output as well:
+# with a second screen or a receiver on HDMI-A-1, labwc would open it there.
+# On HDMI-A-1 the configuration is the installed one as it is.
+write_labwc_config() {
+	local dir=$1 source=${GEXIS_LABWC_SOURCE:-/etc/xdg/labwc} connector
+	connector=$(screen_connector)
+	# Written afresh every start: what the last start wrote is not this one's.
+	[ -n "${dir}" ] && rm -rf "${dir}" && mkdir -p "${dir}" || return 1
+	cp -R "${source}/." "${dir}/" || return 1
+	sed -i -E "s/mapToOutput=\"[^\"]*\"/mapToOutput=\"${connector}\"/" "${dir}/rc.xml" || return 1
+	if [ "${connector}" != HDMI-A-1 ]; then
+		sed -i "s|</labwc_config>|  <windowRules>\n    <windowRule identifier=\"*\">\n      <action name=\"MoveToOutput\" output=\"${connector}\"/>\n    </windowRule>\n  </windowRules>\n</labwc_config>|" \
+			"${dir}/rc.xml" || return 1
+	fi
+	grep -q "mapToOutput=\"${connector}\"" "${dir}/rc.xml" || return 1
+	echo "gexis-kiosk: touch and the window on ${connector}" >&2
+}
+
+case "${1:-}" in
+	compositor)
+		# A configuration that cannot be written must not cost the panel:
+		# labwc then reads the installed one, which is HDMI-A-1's.
+		config="${XDG_RUNTIME_DIR:-/tmp}/gexis-labwc"
+		if write_labwc_config "${config}"; then
+			exec labwc -C "${config}" -s "$0"
+		fi
+		echo "gexis-kiosk: labwc's configuration for the screen's port not written; HDMI-A-1's" >&2
+		exec labwc -s "$0"
+		;;
+	labwc-config)
+		write_labwc_config "$2"
+		exit
+		;;
+esac
+
 # Empty unless /etc/gexis/kiosk.env sets it; see the comment there. An
 # unset variable must add no flag at all, so it is built as an array rather
 # than interpolated - an empty string in the argument list is an empty URL
@@ -98,10 +162,11 @@ rm -f "${GEXIS_KIOSK_PROFILE}/SingletonLock" \
 # and Chromium's scale makes the page 1280 logical px wide on a Standard
 # screen, 400 tall on a bar, drawn at the screen's own resolution.
 scale=()
+connector=$(screen_connector)
 if [ -n "${GEXIS_SCREEN_TRANSFORM:-}" ] && [ "${GEXIS_SCREEN_TRANSFORM}" != normal ]; then
 	if command -v wlr-randr >/dev/null; then
-		wlr-randr --output "${GEXIS_SCREEN_CONNECTOR:-HDMI-A-1}" --transform "${GEXIS_SCREEN_TRANSFORM}" \
-			|| echo "gexis-kiosk: could not turn ${GEXIS_SCREEN_CONNECTOR:-HDMI-A-1} to ${GEXIS_SCREEN_TRANSFORM}" >&2
+		wlr-randr --output "${connector}" --transform "${GEXIS_SCREEN_TRANSFORM}" \
+			|| echo "gexis-kiosk: could not turn ${connector} to ${GEXIS_SCREEN_TRANSFORM}" >&2
 	else
 		echo "gexis-kiosk: wlr-randr missing; the screen stays unturned" >&2
 	fi
