@@ -2371,14 +2371,16 @@
             >
               <span class="radio"><span></span></span>
               {#if p.ord}<span class="option__ord">{p.ord}</span>{/if}
-              {#if sheet.optionNotes?.[option]}
+              {#if sheet.optionNotes?.[option] || why}
                 <!-- A line under the option (George, 2026-10-11: Volume's
-                     three, each short; only Fixed keeps the amber warning). -->
-                <span class="option__text"><span class="option__label">{p.label}</span><span class="option__note">{sheet.optionNotes[option]}</span></span>
+                     three, each short; only Fixed keeps the amber warning).
+                     Why it cannot be chosen goes last, under the note: beside
+                     it, it squeezed the note into a column a word wide
+                     (George, 2026-10-12, Hardware on a USB DAC). -->
+                <span class="option__text"><span class="option__label">{p.label}</span>{#if sheet.optionNotes?.[option]}<span class="option__note">{sheet.optionNotes[option]}</span>{/if}{#if why}<span class="option__why">{why}</span>{/if}</span>
               {:else}
                 <span class="option__label">{p.label}</span>
               {/if}
-              {#if why}<span class="option__why">{why}</span>{/if}
             </button>
           {/each}
         </div>
@@ -3579,11 +3581,9 @@
     color: var(--ink-quiet);
   }
   .option__why {
-    margin-left: auto;
-    padding-left: 14px;
-    font-size: 17px;
+    font-size: 14px;
+    line-height: 1.35;
     color: var(--ink-dim, #9fb0bd);
-    text-align: right;
   }
 
   .option__meta {
