@@ -350,9 +350,9 @@ Changes take effect at once unless the row says otherwise.
 
 | Setting | What it does |
 | --- | --- |
-| Output | Where the sound goes. Over HDMI the sound is not bit-perfect; HDMI has no volume control of its own, so its volume is Software or Fixed, and the visualiser moves only on Software. A change of output while music plays stops playback; start it again when ready. |
+| Output | Where the sound goes. A USB DAC is shown by its maker, with a line saying what it reports it can take (for example *USB 2.0 · up to 768 kHz / 32-bit · native DSD*). Over HDMI the sound is not bit-perfect; HDMI has no volume control of its own, so its volume is Software or Fixed, and the visualiser moves only on Software. A change of output while music plays stops playback; start it again when ready. |
 | Sound card board | Most boards and every USB DAC are found by themselves. A board that is not (it does not show under Output) can be chosen here. Each board is marked *Tested* (played and measured by the project), *Reported* (owners reported it working; *Reported with problems* if one did not) or *Known*. |
-| Volume | How the level is set. *Hardware* (default): by the sound card's own volume control, bit-perfect at every level. *Software*: by the player recalculating the sound, on any output; not bit-perfect below 100 %. *Fixed*: always full level, for an amplifier that sets the volume itself; it asks first. Any change of volume type stops playback while the sources reconnect on it. On an output with no volume control of its own, such as HDMI, Hardware is greyed out and Software is used in its place. The level carries across between Hardware and Software. |
+| Volume | How the level is set. *Hardware* (default): by the sound card's own volume control, bit-perfect at every level. *Software*: by the player recalculating the sound, on any output; not bit-perfect below 100 %. *Fixed*: always full level, for an amplifier that sets the volume itself; it asks first. Any change of volume type stops playback while the sources reconnect on it. On a DAC that takes DSD natively (some USB DACs), *Fixed* also plays DSD files from Lyrion as DSD, unconverted, and the Fixed choice says so; otherwise DSD files are converted to PCM. The visualiser stays still during DSD. On an output with no volume control of its own, such as HDMI, Hardware is greyed out and Software is used in its place. The level carries across between Hardware and Software. |
 | Maximum volume | The loudest the player will go, on any input. At 80, 100 % on every control means that level. Hidden with Volume on *Fixed*. |
 | Volume curve | How the slider's travel maps to loudness. *Cubic* (half travel is −15.5 dB) is the usual shape; *Linear* puts half travel at −30 dB. |
 
@@ -390,7 +390,7 @@ answer*; the other shares are still mounted.
 
 | Setting | What it does |
 | --- | --- |
-| Attached screen | Sets the layout, Standard or Bar, and which visualiser skins are offered. |
+| Attached screen | Sets the layout, Standard or Bar, and which visualiser skins are offered. A screen not in the list is shown as *Other screen* with its size. |
 | Screen rotation | For a screen mounted the other way up. |
 | Headless | Turns the player's screen off; settings that only affect the screen are hidden while it is on. |
 | Display standby: Scheduled standby, Standby times | With *Scheduled standby* on, the screen goes off during the standby times whenever nothing is playing. Up to six times, each a start and an end - picked from a grid of hours and quarters - on the chosen days; one may run past midnight, counting for the day it starts. |
@@ -434,6 +434,9 @@ screen's size, **Plexamp**, the **Lyrion Server** and the **Beszel**
 monitoring agent, among others. A plugin that needs software from its maker
 downloads it when switched on. Setup offers the same plugins, and the first
 start shows each download arriving. A plugin file can also be uploaded here.
+Each plugin's switch says its version (for example *Version 0.4.7*); the
+software it downloads is named, with its own version, on the line below once
+it is installed.
 While Beszel is on, its heading in **System**, above the hub address, token
 and key, says whether the agent has reached its hub: **Connected** in green,
 **Connecting** in orange for its first minute, **Not connected** in red after

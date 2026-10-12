@@ -22,7 +22,7 @@ bytes were handed to systemd and the process's own `os.environ` compared with th
 input:
 
 ```
-PLAIN="http://192.168.178.69:8090"
+PLAIN="http://192.0.2.69:8090"
 SPACES="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI hub@host"
 QUOTE="a\"b"
 BSLASH="a\\b"
@@ -32,7 +32,7 @@ TICK="a`b'c"
 ```
 
 ```
-  OK   PLAIN   want='http://192.168.178.69:8090'
+  OK   PLAIN   want='http://192.0.2.69:8090'
   OK   SPACES  want='ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI hub@host'
   OK   QUOTE   want='a"b'
   OK   BSLASH  want='a\\b'
@@ -102,9 +102,9 @@ forever, in a file the image does not own.
   process saw: started HUB_URL=[] TOKEN=[] NOTE=[]
 === 2. give it a hub and a token (spaces and a quote in the token)
   env file:
-    HUB_URL="http://192.168.178.69:8090"
+    HUB_URL="http://192.0.2.69:8090"
     TOKEN="ssh-ed25519 AAAAC3 hub@host \"x\""
-  process saw: started HUB_URL=[http://192.168.178.69:8090] TOKEN=[ssh-ed25519 AAAAC3 hub@host "x"] NOTE=[]
+  process saw: started HUB_URL=[http://192.0.2.69:8090] TOKEN=[ssh-ed25519 AAAAC3 hub@host "x"] NOTE=[]
 === 3. a row with no env must not restart it
   restarted: no (correct)
 === 4. rewriting the same value must not restart it either
@@ -114,7 +114,7 @@ forever, in a file the image does not own.
 === 6. changing a value while off must not start it
   unit:    disabled / inactive
   env file still written:
-    HUB_URL="http://192.168.178.69:8090"
+    HUB_URL="http://192.0.2.69:8090"
     TOKEN="changed-while-off"
 ```
 

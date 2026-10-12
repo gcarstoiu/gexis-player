@@ -38,6 +38,7 @@ which under ADR-0027 silently means the press-play route - measuring the
 variant while believing it measured the primary one.
 """
 
+import os
 import statistics
 import sys
 import threading
@@ -52,7 +53,8 @@ import pcm_holder
 import spotify_api
 from spectrum_fifo import SpectrumReader, measure_takeover_gap
 
-LMS_BASE = "http://192.168.178.188:9000"
+# The Lyrion server to test against: GEXIS_LMS_HOST (host or host:port).
+LMS_BASE = "http://" + os.environ.get("GEXIS_LMS_HOST", "192.0.2.188:9000")
 LMS_PLAYER = "aa:bb:cc:00:00:01"
 _rpc_id = [0]
 

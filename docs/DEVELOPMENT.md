@@ -2798,6 +2798,8 @@ image has none; `DEV_SUDO="yes"` at provisioning gives it to a test card.
 
 ### Phase 13d — DACs we have not tested
 
+**Closed 2026-10-12**: both tests passed on guestpi (Finding 114, addendum).
+
 **Closes after two tests** (George, 2026-10-10, agreeing to the
 recommendation): Plexamp through the IQaudio Pi-DAC PRO, and a chosen board
 that is not fitted, taken back - both on guestpi. The DAC+ the phase planned

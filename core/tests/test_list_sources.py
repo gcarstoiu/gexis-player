@@ -52,8 +52,8 @@ def test_a_truncated_reply_keeps_the_fields_that_arrived_whole():
 
 def test_the_address_is_the_senders_and_the_port_is_the_json_one():
     protocol = discovery._Protocol()
-    protocol.datagram_received(REAL_REPLY, ("192.168.178.188", 3483))
-    assert "192.168.178.188:9000" in protocol.found
+    protocol.datagram_received(REAL_REPLY, ("192.0.2.188", 3483))
+    assert "192.0.2.188:9000" in protocol.found
     # IPAD came back absent from the real server, so a reply with no JSON
     # field still has to produce an address.
     protocol.datagram_received(b"ENAME\x03box", ("10.0.0.5", 3483))

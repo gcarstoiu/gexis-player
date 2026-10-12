@@ -152,7 +152,7 @@ repeat/random-mix setting active in LMS's own status, nothing in
 **Not fixed this round.** No further code change was made here - the
 evidence available from `gexis`'s own logs and live testing has been
 exhausted; making further progress needs either LMS server's own logs
-(a different machine, `192.168.178.188`, out of reach from `gexis`) or
+(a different machine, `192.0.2.188`, out of reach from `gexis`) or
 context only George has (another LMS client left open during testing, a
 sync group, anything else that could be issuing play commands
 independently).

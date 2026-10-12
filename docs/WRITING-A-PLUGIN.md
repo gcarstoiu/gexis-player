@@ -52,7 +52,7 @@ brings one is refused.
 | `id` | yes | Lowercase letters, digits and `-`, starting with a letter, 2-31 characters. It is the folder, the prefix of your settings, and a URL part. It may not be one of the player's own (`lms`, `spotify`, `bluetooth`, `plexamp`, `beszel`, …) |
 | `name` | yes | What people see |
 | `kind` | yes | `renderer` or `service` |
-| `version` | yes | Letters, digits and `. + ~ -`, up to 40 characters, starting with a letter or digit. Uploading a different version updates the plugin; the same version again is refused |
+| `version` | yes | Letters, digits and `. + ~ -`, up to 40 characters, starting with a letter or digit. Uploading a different version updates the plugin; the same version again is refused. Shown on your plugin's switch in Settings → Plugins |
 | `run` | yes | The command to start, **relative to the package**. An **aarch64** program (the Pi 4 on a 64-bit system) or a script with a `#!` line |
 | `area` | no | The Settings page your plugin belongs on: `audio`, `sources`, `handoff`, `display`, `enrichment`, `device` or `system`. Absent: `sources` for a renderer, `system` for a service. It places your plugin; it does not change what it may do |
 | `label` | no | A renderer's status line for the moOde-compatible metadata file (`"Radio Foo Active"` style) |
@@ -78,7 +78,8 @@ Every uploaded plugin runs under `gexis-uploaded-<kind>@<id>.service`:
 | **Network** | Open |
 | **The player** | The plugin socket, `$GEXIS_PLUGIN_SOCKET` (`/run/gexis/plugins.sock`) |
 | **Limits** | 1 GB of memory (past it, the kernel ends your plugin and it restarts), 1.5 CPU cores, 128 tasks |
-| **Restart** | Restarted 3 s after it exits with an error |
+| **Restart** | Restarted 3 s after it exits with an error. A plugin switched on but missing its package (restored from a backup without it) is not retried; it starts when the package is uploaded. When the player starts, any plugin switched on and not running is started |
+| **mDNS** | **Port 5353 is closed to your plugin**: an mDNS responder of its own cannot answer. To be found on the network, send `announce` and the player publishes your service under the device's own name (see the contract, ADR-0142). A responder that published the device's host name made avahi rename the device (`name-2.local`), and every link to the player broke |
 
 Your process starts **in its package folder** (`current/`), so relative paths
 to your own files work.

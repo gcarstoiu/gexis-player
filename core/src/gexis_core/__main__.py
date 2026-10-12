@@ -89,7 +89,7 @@ from gexis_core.softvol_boot import (
 from gexis_core.settings_registry import InvalidValue, Settings, UnknownSetting, load_registry
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
-from gexis_core import backups, bluealsa_volume, components, outputs, plugin_env, plugins, uploads
+from gexis_core import announce, backups, bluealsa_volume, components, outputs, plugin_env, plugins, uploads
 from gexis_core.setup_network import SetupNetwork
 from gexis_core.setup_flow import SetupFlow
 from gexis_core.adapters.plugin import PluginAdapter
@@ -189,6 +189,25 @@ async def set_unit_enabled(unit: str, enabled: bool, *, now: bool = True) -> Non
     inline.
     """
     await asyncio.to_thread(functools.partial(_set_unit_enabled, unit, enabled, now=now))
+
+
+def _start_uploaded(installed, *, enabled=None, state=None, start=None) -> list[str]:
+    """Start every uploaded plugin's unit that is switched on and not
+    running; the units started. See its call in `main`."""
+    from gexis_core import systemd
+    enabled = enabled or _unit_is_enabled
+    state = state or _unit_state
+    start = start or systemd.start_unit
+    started = []
+    for plugin in installed:
+        if not plugin.uploaded or not enabled(plugin.unit) or state(plugin.unit) in ("active", "activating"):
+            continue
+        subprocess.run(["systemctl", "reset-failed", plugin.unit], check=False, capture_output=True)
+        start(plugin.unit)
+        started.append(plugin.unit)
+    if started:
+        logger.info("uploads: started %s, switched on and not running", ", ".join(started))
+    return started
 
 
 async def restart_if_enabled(unit: str) -> None:
@@ -411,7 +430,10 @@ def screen_question(state: dict, now: float | None = None) -> dict | None:
     previous = state.get("previous") or None
     model = screens.by_id(current["screen"])
     before = screens.by_id(previous["screen"]) if previous else None
-    rotation_only = bool(previous and previous["screen"] == current["screen"])
+    # The same screen on another port is not a rotation: it asks as a screen.
+    rotation_only = bool(previous and previous["screen"] == current["screen"]
+                         and (previous.get("connector") or screen_apply.CONNECTOR)
+                         == (current.get("connector") or screen_apply.CONNECTOR))
     return {
         "model": f"{model.maker} {model.model}" if model else current["screen"],
         "untested": bool(model and not model.tested),
@@ -589,12 +611,30 @@ async def main() -> None:
                 stored.split(outputs.SEP)[0] in (chosen_output.label, chosen_output.aka, chosen_output.card):
             settings_store.set("output_device", chosen_output.option)
             logger.info("outputs: the stored choice %r is now offered as %r", stored, chosen_output.option)
-        if outputs.write(chosen_output):
+        def _squeezelite_env() -> str | None:
+            try:
+                return outputs.SQUEEZELITE_ENV.read_text()
+            except OSError:
+                return None
+        squeezelite_env_was = _squeezelite_env()
+        if outputs.write(chosen_output,
+                         fixed=volume_mode(settings_store.get(VOLUME_KEY), chosen_output) == FIXED):
             logger.warning(
                 "outputs: output.conf did not match %s and was rewritten; "
                 "renderers pick it up on their next open",
                 chosen_output.label,
             )
+        if _squeezelite_env() != squeezelite_env_was:
+            # ADR-0143: Squeezelite reads its options only when it starts, and
+            # it started before this core (ADR-0140) - unlike the chain, which
+            # it reads at its next open. Restarted now, unless it is playing:
+            # then the next change of output does it.
+            if outputs.card_running(chosen_output.card):
+                logger.info("outputs: squeezelite's options changed while %s plays; "
+                            "they apply at its next start", chosen_output.label)
+            else:
+                logger.info("outputs: squeezelite's options changed; restarting it")
+                subprocess.run(["systemctl", "restart", "squeezelite.service"], check=False, capture_output=True)
         # ADR-0055: arbitration asks about the output the device is
         # playing to, not about the card it shipped with (Finding 048 §5).
         alsa.set_card(chosen_output.card)
@@ -639,11 +679,24 @@ async def main() -> None:
     # upload, and this refuses it again if one was placed by hand.
     shipped_ids = {p.id for p in shipped_plugins}
     installed_plugins = shipped_plugins + [p for p in uploads.installed() if p.id not in shipped_ids]
+    # What each plugin's row says it is (George, 2026-10-12): its version -
+    # an upload's manifest, else the package that installed it - and the
+    # program it downloads, as its pin names it.
+    installed_plugins = plugins.with_software(
+        plugins.with_package_versions(installed_plugins),
+        {pin["PLUGIN"]: pin["LABEL"] for pin in components.pins().values()
+         if pin.get("PLUGIN") and pin.get("LABEL")})
     # ADR-0106: what backups need to know, kept current at every start.
     try:
         uploads.remember()
     except OSError as exc:
         logger.warning("uploads: cannot record the uploaded plugins: %s", exc)
+    # ADR-0142: what was announced for plugins goes with the core that wrote
+    # it; each plugin asks again when it connects.
+    try:
+        announce.clear()
+    except OSError as exc:
+        logger.warning("plugins: cannot clear old announcements: %s", exc)
     restored_missing = [m for m in uploads.missing() if m["id"] not in shipped_ids]
     if restored_missing:
         logger.info("uploads: restored without a package: %s", ", ".join(m["id"] for m in restored_missing))
@@ -1035,6 +1088,15 @@ async def main() -> None:
             # Nothing is attenuating, so the one level the DAC may hold is
             # full scale. Written directly: `write_hardware` now refuses
             # every write in this mode, including this one.
+            # **An output with no control of its own has nothing to set**
+            # (George, 2026-10-12, a USB DAC): Fixed takes the software stage
+            # out of the chain, so it already plays at full scale. Writing
+            # anyway went to the HAT's control name, which the card does not
+            # have, and logged a warning for it.
+            fixed_on = outputs.resolve(settings.value("output_device"))
+            if fixed_on is not None and fixed_on.control is None:
+                logger.info("output: fixed - %s has no control of its own; nothing attenuates", fixed_on.label)
+                return
             logger.info("output: fixed - DAC to full scale, the panel can no longer lower it")
             # **The control in use now**, not the one the daemon started
             # with (code review, 2026-10-12): after a change of output, or
@@ -1139,7 +1201,7 @@ async def main() -> None:
             "bluealsa-aplay.service", *_plugin_renderer_units(),
         )
         await stop.wait()
-        outputs.write(chosen, tuning=_tuning())
+        outputs.write(chosen, tuning=_tuning(), fixed=fixed_wanted["value"])
         # The mixer handles open on the old card are let go of: the next
         # write opens the new one's.
         await forget_mixers()
@@ -1277,7 +1339,7 @@ async def main() -> None:
             if raw is not None:
                 publish_volume(raw)
 
-    async def _rewrite_output_conf(reason: str) -> None:
+    async def _rewrite_output_conf(reason: str, wait: bool = False) -> None:
         """Put the current output and tuning in `output.conf` and reopen.
 
         **The renderers stop first.** Not for politeness: `outputs.write`
@@ -1296,8 +1358,8 @@ async def main() -> None:
             "bluealsa-aplay.service", *_plugin_renderer_units(),
         )
         await stop.wait()
-        outputs.write(chosen, tuning=_tuning())
-        await _restart_renderers()
+        outputs.write(chosen, tuning=_tuning(), fixed=fixed_wanted["value"])
+        await _restart_renderers(wait=wait)
 
     def _apply_scope_tuning(_value=None) -> None:
         """`spectrum_smoothing` and `meter_fall` both live in `output.conf`."""
@@ -1355,8 +1417,10 @@ async def main() -> None:
                 await _apply_output_mode(force=True)
                 return
             await _apply_output_mode(force=True)
-            logger.info("volume: restarting the renderers on the new volume type")
-            await _restart_renderers(wait=True)
+            # ADR-0144: Fixed or not decides native DSD - Squeezelite's
+            # options and its chain - so the output is written again, which
+            # stops and restarts the renderers.
+            await _rewrite_output_conf("the volume type changed", wait=True)
 
     def _choose_volume(value=None) -> None:
         """ADR-0127: the Volume row - Hardware, Software or Fixed."""
@@ -1725,6 +1789,15 @@ async def main() -> None:
         if (name := components.for_plugin(plugin.id)) is not None
     }
 
+    def _volume_notes() -> dict:
+        """The Fixed note, with what it means for DSD on this DAC."""
+        chosen = outputs.resolve(settings_store.get("output_device"))
+        if chosen is None or outputs.native_dsd(chosen.card) is None:
+            return {}
+        row = next((r for g in load_registry() for r in g["rows"] if r.get("key") == VOLUME_KEY), {})
+        fixed = (row.get("optionNotes") or {}).get(FIXED, "")
+        return {FIXED: f"{fixed} DSD files play natively on {chosen.label}.".strip()}
+
     def _all_components() -> dict:
         status = components.all_status()
         status["skins"] = skins_status()
@@ -2058,14 +2131,20 @@ async def main() -> None:
         (screen.env, and video= for a bar), then restart on it - unless
         setup is under way, which restarts when it finishes."""
         chosen = label if label is not None else settings.value("screen")
-        model = screens.by_label(chosen) if chosen else None
+        # By the screen in use first: a rotation on an "Other screen" turned
+        # nothing when this looked only in the list (ADR-0109; George,
+        # 2026-10-12).
+        model = screen_apply.named(chosen)
         if model is None:
             logger.warning("screen: %r is not a screen gexis knows; nothing applied", chosen)
             return
         turn = screen_apply.parse_rotation(rotation if rotation is not None else settings.value("rotation"))
         in_setup = _setup_running(state_store.state.setup)
-        asks = screen_apply.choose(screen_apply.Applied(model.id, turn), after_setup=in_setup)
-        logger.info("screen: %s at %d° chosen; %s", model.id, turn,
+        # On the port the screen is on - not always HDMI-A-1 (ADR-0109;
+        # George, 2026-10-12).
+        applied = screen_apply.Applied(model.id, turn, screen_apply.connector_now())
+        asks = screen_apply.choose(applied, after_setup=in_setup)
+        logger.info("screen: %s at %d° on %s chosen; %s", model.id, turn, applied.connector,
                     "it waits for Keep on the panel" if asks else "the picture is unchanged, so it is kept")
         if in_setup:
             return
@@ -2163,6 +2242,12 @@ async def main() -> None:
             # without a restart.
             "output_device": lambda: [o.option for o in outputs.discover()],
         },
+        # A line under a USB DAC: what it reports it can do (George,
+        # 2026-10-12). Worked out with the outputs, so asking costs nothing.
+        option_notes={"output_device": lambda: {o.option: o.details for o in outputs.discover() if o.details},
+                      # ADR-0144: on a DAC that takes DSD, Fixed is what plays
+                      # it natively - said where the choice is made.
+                      VOLUME_KEY: lambda: _volume_notes()},
         # The Release row's note: what the waiting or just-installed release
         # says changed (2026-10-01, George).
         notes={"software_update": updates.whats_new,
@@ -2372,6 +2457,14 @@ async def main() -> None:
     # has not been started yet either.
     for plugin in installed_plugins:
         _plugin_env(plugin)
+
+    # **An uploaded plugin switched on is running once the core is**
+    # (2026-10-12, a renderer uploaded to sofapi never ran): an upload
+    # restarts the plugin's unit while this core does not know it yet - it
+    # is refused, ends cleanly, and systemd has no failure to restart; the
+    # core restarts next and knows it, but nothing started it again. So
+    # whatever is switched on and not running is started here.
+    asyncio.ensure_future(asyncio.to_thread(_start_uploaded, installed_plugins))
 
     # The fourth corpus word was `Random` until 2026-09-22 and is `All`
     # now; a device that stored the old one is moved over rather than left
@@ -3759,6 +3852,11 @@ async def main() -> None:
         one, and marked unavailable - the panel must not keep offering a source
         whose process has left.
         """
+        # ADR-0142: nothing stays announced for a plugin that is not here.
+        try:
+            announce.withdraw(session.id)
+        except OSError as exc:
+            logger.warning("plugins: cannot withdraw %s's announcements: %s", session.id, exc)
         if settings.forget_reports(f"{session.id}."):
             state_store.bump_settings_revision()
         adapter = plugin_adapters.pop(session.id, None)
@@ -3775,6 +3873,23 @@ async def main() -> None:
         # Availability is the one event that means something without an
         # adapter: it is the panel's own question, and the state store has
         # held a slot per renderer since Phase 3.
+        if kind == "announce":
+            # ADR-0142: what a plugin wants found on the network, announced
+            # by avahi under the Pi's own name - never by the plugin.
+            try:
+                services = announce.checked(message.get("services"),
+                                            settings.value("device_name") or device_name.hostname())
+            except announce.Refused as exc:
+                logger.warning("plugins: %s asked to announce something refused: %s", session.id, exc)
+                return
+            try:
+                announce.write(session.id, services)
+            except OSError as exc:
+                logger.warning("plugins: cannot announce for %s: %s", session.id, exc)
+                return
+            logger.info("plugins: announcing for %s: %s", session.id,
+                        ", ".join(f"{s['name']} {s['type']} {s['port']}" for s in services) or "nothing")
+            return
         if kind == "row":
             # ADR-0119: a plugin says what one of its own rows is - a
             # service as much as a renderer, so before the adapter lookup.

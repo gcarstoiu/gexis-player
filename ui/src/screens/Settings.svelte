@@ -1804,6 +1804,8 @@
                         <span class="row__name">{r.label}</span>
                         {#if pending(r)}<span class="dot dot--sm"></span>{/if}
                       </span>
+                      <!-- A plugin's version, and the program it runs (George, 2026-10-12). -->
+                      {#if r.version}<span class="row__note row__version">{r.version}</span>{/if}
                       {#if r.note && !opensItsOwn(r)}<span class="row__note"><NoteText text={r.note} links={false} /></span>{/if}
                       {#if r.status?.error}<span class="row__note row__note--failed">{r.status.error}</span>{/if}
                       {#if r.status?.text && r.again}
@@ -2378,6 +2380,10 @@
               {:else}
                 <span class="option__label">{p.label}</span>
               {/if}
+              <!-- Why it cannot be chosen: a line of its own across the whole
+                   tile, in amber and not dimmed with the rest (George,
+                   2026-10-12, Hardware on a USB DAC - beside the note it
+                   squeezed the note into a column a word wide). -->
               {#if why}<span class="option__why">{why}</span>{/if}
             </button>
           {/each}
@@ -3120,6 +3126,10 @@
     color: var(--ink-quiet);
     text-wrap: pretty;
   }
+  .row__note.row__version {
+    font-family: var(--font-mono);
+    font-size: 13px;
+  }
   .row__note {
     display: block;
     font-size: 14px;
@@ -3362,6 +3372,7 @@
   .option {
     flex-shrink: 0;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 16px;
     min-height: 62px;
@@ -3411,7 +3422,7 @@
     width: 12px;
     height: 12px;
   }
-  .option.is-unavailable {
+  .option.is-unavailable > :not(.option__why) {
     opacity: 0.42;
   }
 
@@ -3579,11 +3590,10 @@
     color: var(--ink-quiet);
   }
   .option__why {
-    margin-left: auto;
-    padding-left: 14px;
-    font-size: 17px;
-    color: var(--ink-dim, #9fb0bd);
-    text-align: right;
+    flex-basis: 100%;
+    font-size: 14px;
+    line-height: 1.35;
+    color: var(--accent-warn);
   }
 
   .option__meta {

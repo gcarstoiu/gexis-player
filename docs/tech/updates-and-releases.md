@@ -145,6 +145,66 @@ A release is built **from the image it was tested as**, not from a package
 list. `packaging/release/build.sh <image.img>` refuses to run if the image's
 `gexis-player` differs from the one in `packaging/out`.
 
+### The steps, in order
+
+1. **Notes** into `core/src/gexis_core/release_notes.json` (New / Fixed / Good
+   to know, impersonal, no restart promises), approved by George; then
+   `python -m gexis_core.changelog ../CHANGELOG.md` from `core/`. Commit
+   "Release notes: X (approved by George)" on `phase-13d` and tag `vX`.
+2. **Image**: a worktree at the tag, `git submodule update --init`, `make
+   image` (about 15 min); move the image to the main checkout's
+   `image/deploy/`; `image/verify-image.sh` must pass every check.
+3. **Release**: `packaging/release/build.sh <image>`, then
+   `packaging/release/publish.sh rX --channel testing`; read the channel file
+   back from GitHub and verify it with the release key (serial, release).
+4. **PR**: push the tag and a `release-X` branch at the tagged commit; open
+   one PR into `main` with the approved notes and what was checked. **George
+   merges it**, never Claude.
+5. **After the merge**: merge `origin/main` into both working branches,
+   delete `release-X`, remove the release worktree, then the routine clean-up
+   (`docs/ROUTINE-CLEANUP.md`).
+6. **Promotion to Stable** (when George says): `publish.sh --promote rX`
+   attaches `gexis-player.img.xz` with its checksum and signature, points
+   `stable` at the release and marks it GitHub's latest. Then **README's
+   *Download and install* section** (George, 2026-10-12: *"a section on the
+   overview page in GitHub pointing to the IMG file download with a brief
+   installation instruction"*):
+   - at the **first** Stable release it goes into that release's PR (step 4),
+     replacing the *"Testing releases are out"* note, from the text below -
+     README reaches `main` only with a release PR, and the link works only
+     once a release is promoted;
+   - at **every** promotion, check it still names the right version and
+     that `releases/latest/download/gexis-player.img.xz` downloads (and its
+     `.sha256` matches) - before telling anyone it is out;
+   - the image is about 1.1 GB compressed (0.10.2, 2026-10-12), under GitHub's
+     2 GB limit per file; check the size if the image grows.
+
+The section, to paste and fill in:
+
+```markdown
+## 💾 Download and install
+
+**Gexis Player X** is the current release. You need a Raspberry Pi 4 and a
+microSD card of 32 GB or more. A DAC gives the best sound (the
+[hardware list](docs/HARDWARE.md) says which are tested), but the Pi's own
+HDMI (to a sound bar or AV receiver) or headphone jack works too; an HDMI
+touch screen from the hardware list is optional.
+
+1. **Download** [gexis-player.img.xz](https://github.com/gcarstoiu/gexis-player/releases/latest/download/gexis-player.img.xz)
+   ([checksum](https://github.com/gcarstoiu/gexis-player/releases/latest/download/gexis-player.img.xz.sha256),
+   [signature](https://github.com/gcarstoiu/gexis-player/releases/latest/download/gexis-player.img.xz.asc)).
+2. **Write it to the card** with [Raspberry Pi Imager](https://www.raspberrypi.com/software/):
+   *Choose OS → Use custom*, pick the file, and skip Imager's own settings.
+3. **Start the Pi** with the card in, and the DAC and screen if you use them.
+   The screen shows two QR codes: the first joins your phone to the player's
+   own Wi-Fi, **gexis-setup**, the second opens the setup page. Without a screen, join
+   **gexis-setup** (password `gexis-setup`) and open http://10.42.0.1:8090.
+   Setup takes a few minutes.
+
+Updates arrive over the network from then on; you never need to flash again.
+The [installation guide](docs/INSTALL.md) has every step in detail.
+```
+
 Three things that have each cost a build:
 
 - **A release worktree needs `git submodule update --init`** before

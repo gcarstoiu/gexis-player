@@ -390,3 +390,47 @@ def test_the_three_renderers_this_repository_ships_are_built_in(tmp_path):
         (tmp_path / pid / "plugin.json").write_text(json.dumps({"id": pid, "name": pid.title(), **extra}))
     found = {p.id: p for p in plugins.installed(tmp_path)}
     assert found["lms"].built_in is True and found["plexamp"].built_in is False
+
+
+# --- What a plugin's row says it is (George, 2026-10-12) ---------------------
+
+def test_a_debian_version_reads_as_the_plugins_own():
+    from gexis_core.plugins import upstream
+    assert upstream("0.4.7-2+0.10.0+git60.28891d2") == "0.4.7"
+    assert upstream("9.1.1-3+0.9.3+git85.f9f9a0c") == "9.1.1"
+    assert upstream("0.21.0-2") == "0.21.0"
+    assert upstream("1:2.0~rc1-1") == "2.0"
+
+
+def test_a_shipped_plugin_gets_its_packages_version_and_an_upload_keeps_its_own():
+    from dataclasses import replace
+    from pathlib import Path
+    from gexis_core.plugins import Plugin, with_package_versions
+    d = Path("/usr/share/gexis/plugins")
+    found = [Plugin("plexamp", "Plexamp", "renderer", "plexamp.service"),
+             Plugin("beszel", "Beszel", "service", "beszel.service"),
+             replace(Plugin("radio", "Radio", "renderer", "u@radio"), version="2.0-test1"),
+             Plugin("handmade", "Hand", "service", "h.service")]
+    calls = []
+
+    def run(args):
+        calls.append(args[:2])
+        if args[1] == "-S":
+            return (f"gexis-plexamp: {d}/plexamp/plugin.json\n"
+                    f"gexis-beszel-agent: {d}/beszel/plugin.json\n")
+        return "gexis-beszel-agent\t0.21.0-2\ngexis-plexamp\t0.4.7-2+0.10.0+git60.28891d2\n"
+    out = {p.id: p.version for p in with_package_versions(found, d, run=run)}
+    assert out == {"plexamp": "0.4.7", "beszel": "0.21.0", "radio": "2.0-test1", "handmade": None}
+    assert len(calls) == 2, "one dpkg-query for the owners, one for the versions"
+
+
+def test_the_version_line_never_repeats_what_the_download_line_says():
+    """George, 2026-10-12: Plexamp's switch said "Plexamp 4.13.2" twice -
+    once in the version line, once in its download's."""
+    from dataclasses import replace
+    from gexis_core.plugins import Plugin
+    p = Plugin("plexamp", "Plexamp", "renderer", "plexamp.service")
+    assert replace(p, version="0.4.7", software="Plexamp 4.13.2").version_line() == "Version 0.4.7"
+    assert replace(p, version="9.1.1", software="Lyrion Music Server 9.1.1").version_line() is None
+    assert replace(p, version="0.21.0").version_line() == "Version 0.21.0"
+    assert p.version_line() is None

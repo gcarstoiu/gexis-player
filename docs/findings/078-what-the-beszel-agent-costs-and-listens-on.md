@@ -94,7 +94,7 @@ numbers.
 - **Whether it ships in the image or installs on demand** — the remaining
   question of criterion 3's four, and George's, not measurable. The first two
   are answered above; the hub's location he answered on 2026-09-25: *"Hub is
-  present at http://192.168.178.69:8090/"*, so not this device.
+  present at http://192.0.2.69:8090/"*, so not this device.
 - **Enrolment is blocked** on the token and the hub's public key, which live in
-  the hub's Add System dialog. `http://192.168.178.69:8090/api/beszel/getkey`
+  the hub's Add System dialog. `http://192.0.2.69:8090/api/beszel/getkey`
   returns 401 unauthenticated, so this session cannot read the key itself.

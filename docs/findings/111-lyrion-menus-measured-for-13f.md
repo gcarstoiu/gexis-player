@@ -8,7 +8,7 @@ page - and, for decision A's tiles, exactly which top categories Lyrion's home
 menu has and how My Music's entries can be told apart.
 
 **Scope:**
-- **One server:** George's Lyrion (LMS 9.x at 192.168.178.188:9000), player
+- **One server:** George's Lyrion (LMS 9.x at 192.0.2.188:9000), player
   `gexis` (aa:bb:cc:00:00:02), over JSON-RPC (`slim.request`), from R2D2 on
   the same LAN. Apps installed: Qobuz, Spotty, YouTube, Radio Paradise,
   Sounds & Effects, and TIDAL (no account; not measured, at George's word:

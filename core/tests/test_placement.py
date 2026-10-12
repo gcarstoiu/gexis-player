@@ -1,6 +1,8 @@
 """ADR-0120: where a background picture sits, by what it shows."""
 from __future__ import annotations
 
+import os
+
 from pathlib import Path
 
 import pytest
@@ -58,18 +60,19 @@ def test_without_the_models_pictures_sit_where_they_always_did(tmp_path):
     assert p == pl.Placement() and p.y == pl.DEFAULT_Y
 
 
-SCRATCH = Path("/tmp/claude-1000/-home-george-projects-gexis-player/0e15ccba-1aa7-41e5-9e7f-eeee6edec5db/scratchpad/crop")
+#: The real models and a photo with a face, on a developer's machine: the
+#: models are fetched by the image build (ADR-0120), the photo is anyone's.
+#: Neither is in the repository, so the test runs only when both are given.
+MODELS_DIR = os.environ.get("GEXIS_TEST_MODELS")
+FACE_PICTURE = os.environ.get("GEXIS_TEST_FACE_PICTURE")
 
 
-@pytest.mark.skipif(not (SCRATCH / "yolox.onnx").exists(), reason="the models are on the player, not here")
-def test_the_real_models_place_a_real_picture(tmp_path):
+@pytest.mark.skipif(not (MODELS_DIR and FACE_PICTURE), reason="set GEXIS_TEST_MODELS (the two .onnx models) and "
+                    "GEXIS_TEST_FACE_PICTURE (a photo with a face) to run it")
+def test_the_real_models_place_a_real_picture():
     pytest.importorskip("cv2")
-    models = tmp_path
-    (models / pl.FACE_MODEL).symlink_to(SCRATCH / "yunet.onnx")
-    (models / pl.SUBJECT_MODEL).symlink_to(SCRATCH / "yolox.onnx")
-    placer = pl.Placer(models=models)
-    artist = next((SCRATCH / "artists").glob("*.jpg"))
-    assert placer.place(artist.read_bytes(), BAR).how.startswith("faces")
+    placer = pl.Placer(models=Path(MODELS_DIR))
+    assert placer.place(Path(FACE_PICTURE).read_bytes(), BAR).how.startswith("faces")
 
 
 async def test_the_route_passes_over_a_picture_too_big_and_places_the_next():

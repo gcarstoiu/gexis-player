@@ -396,3 +396,62 @@ applied for setup, so choosing it changes nothing and nothing is asked. The
 Screen step's data now names the screens whose picture is the one on the
 screen now (`unchanged`, from `screen_apply.picture_of`); the warning's Keep
 sentence shows only for a choice outside it. An untested model still says so.
+
+## Amended 2026-10-12: a TV as the screen is out of scope - a possibility for later
+
+George: *"Let's keep 4k TVs out of scope for now. Record them as a could in the
+future."* ADR-0111 had already answered for the skins (*"We will not support
+4k"*). A code trace the same day found what would happen with one (the
+to-do list's item, and below), so a later phase starts from it rather than
+from nothing:
+
+- setup does not lock: a 3840 x 2160 TV is an unknown Standard screen, drawn
+  at x3 (the 13.3"'s 1280 x 720 layout); the phone's touchpad answers what a
+  touch would;
+- but a TV off or on another input at boot leaves the page unscaled in a
+  1280-wide strip with no re-check; the Pi 4 is not set for 4K at 60 Hz (the
+  list's *Generic 60Hz* preset writes nothing to make it so) and the mode a
+  TV comes up in may not be the one assumed; *Keep this screen?* can only be
+  answered from the phone's touchpad, with nothing saying so; the visualiser
+  fills a quarter of the screen (the 1920 x 1080 pack, centred); a TV's own
+  auto-off after no signal defeats standby's wake, and there is no CEC;
+- only a real TV can show the mode chosen, frame drops at x3, overscan and
+  what its auto-off does.
+
+A *could* for later, not on the plan: it would be its own phase, ADR first.
+
+## Amended 2026-10-12: the screen on the port it is plugged into
+
+George: *"The two bugs we need to fix now"* - two faults found tracing a TV
+as the screen the same day:
+
+- **Rotation on an unlisted screen did nothing.** *Screen rotation* re-applied
+  the screen by its label, and `Other screen/W × H` is in no list, so the core
+  logged "not a screen gexis knows" and turned nothing. The screen in use is
+  now found by its stored id when the label is its own (`screen_apply.named`),
+  so a portrait panel used sideways keeps its turn, and *Attached screen*
+  offers the unlisted screen in use, tagged Untested.
+- **The screen was taken to be on HDMI-A-1.** Detection found the right port,
+  but the mode (`video=`), touch, the turn and standby all went to HDMI-A-1.
+  Now:
+  - the screen is applied on the port it is seen on, and `screen.json` keeps
+    that port; a state written before it was kept reads as HDMI-A-1, which
+    every such player ran on - no migration;
+  - with no screen connected (switched off at the boot) the port applied last
+    stays;
+  - **the same screen moved to the other port** is applied again there at the
+    next start. For a bar its `video=` moves with it: a change of picture,
+    which restarts and asks *Keep* like any other, and goes back if not kept.
+    A screen without a forced mode moves without asking;
+  - `gexis-kiosk-start compositor` writes a copy of labwc's configuration
+    with touch mapped to that port, and off HDMI-A-1 a window rule moving the
+    kiosk and the visualiser there, then starts labwc on it (`labwc -C`); if
+    the copy cannot be written labwc starts on the installed file, as before.
+
+**Still open** (ADR-0141): with **both** ports connected, the first connected
+one is the screen. A receiver on HDMI 1 and the panel on HDMI 2 is the case
+that record decides.
+
+**Unverified** on the hardware when written: `labwc -C` and the window rule on
+labwc 0.20.2, the boot picture's hand-over on HDMI-A-2, and a bar moved
+between ports.

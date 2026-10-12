@@ -430,7 +430,7 @@ enumerable to Plexamp, which is untried.
   works once a queue is created on the PMS and passed as `containerKey`.
 - **Setup needs two answers in one session** — a claim token *and* a player
   name. Answering only the first consumes the token and persists nothing.
-- **`plex.direct` hostnames carry a dashed IP** (`https://192-168-178-191.<hash>.plex.direct:32400`),
+- **`plex.direct` hostnames carry a dashed IP** (`https://192-0-2-191.<hash>.plex.direct:32400`),
   the same shape moOde's Route B had to unwrap.
 - Plexamp's settings live in `~/.local/share/Plexamp/Settings/` as one file per
   key, URL-encoded names, each value prefixed with a **type marker byte**

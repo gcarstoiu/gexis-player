@@ -11,16 +11,16 @@ log of that attempt is quoted below. One direction, one holder at a time.
 
 ## It is not ADR-0091, and it is not Spotify
 
-George's own attempt, from the player's log — the phone (`192.168.178.61`) sends
+George's own attempt, from the player's log — the phone (`192.0.2.61`) sends
 `createPlayQueue`, the player cannot start, and the phone gives up half a second
 later:
 
 ```
-16:47:32  HttpServer: [192.168.178.61] GET /player/playback/createPlayQueue …
+16:47:32  HttpServer: [192.0.2.61] GET /player/playback/createPlayQueue …
 16:48:12  BASS: Resetting device (soft: 0, force: 0, initialized: 1).
 16:48:12  WARNING - BASS: Couldn't start, so we're not doing a soft configure.
 16:48:12  …/:/timeline?state=error…
-16:48:13  HttpServer: [192.168.178.61] GET /player/playback/stop commandID=98
+16:48:13  HttpServer: [192.0.2.61] GET /player/playback/stop commandID=98
 ```
 
 `go-librespot` held the DAC at the time (`fuser /dev/snd/pcmC5D0p` → PID 34334,
@@ -91,7 +91,7 @@ full:
  'containerKey': '/playQueues/2930', 'type': 'music', 'itemType': 'music',
  'volume': '64', 'shuffle': '0', 'repeat': '0',
  'machineIdentifier': '4548551a…', 'protocol': 'https',
- 'address': '192-168-178-191.….plex.direct', 'port': '32400'}
+ 'address': '192-0-2-191.….plex.direct', 'port': '32400'}
 ```
 
 ## A plain play is not enough

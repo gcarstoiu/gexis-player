@@ -8,7 +8,7 @@ issues and now I am seeing them back."* Is it a regression, and what is it?
 
 **Scope:** `gexis`, image `v0.2.1-608-gd29ee48` plus this session's hand-deployed
 core. squeezelite `2.0.0-1517+git20241227.262994a-1+b1` (Debian's package). LMS
-at `192.168.178.188`, player `gexis`, one track queued. **Plexamp** was the
+at `192.0.2.188`, player `gexis`, one track queued. **Plexamp** was the
 renderer holding the device, not Spotify, so George's paused Spotify session was
 not touched; George's own two occurrences (20:56:35, 20:57:14) were against
 Spotify and show the same signature. `play` was sent through LMS's JSON-RPC, the

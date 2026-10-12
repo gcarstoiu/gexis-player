@@ -172,3 +172,32 @@ def test_an_area_that_is_not_a_settings_page_is_refused(tmp_path):
          "run": "bin/radiofoo", "area": "plugins"}
     with pytest.raises(uploads.Refused, match="is not one of"):
         uploads.install(package(m), ours=set(), root=tmp_path)
+
+
+def test_an_uploaded_plugin_switched_on_and_not_running_is_started():
+    """2026-10-12, sofapi: an upload restarted the plugin before the core knew
+    it; refused, it ended cleanly and nothing started it after the core's
+    restart. Started at the core's start - only uploaded, switched-on, idle."""
+    from types import SimpleNamespace
+    from gexis_core.__main__ import _start_uploaded
+    p = lambda pid, uploaded=True: SimpleNamespace(id=pid, uploaded=uploaded, unit=f"u@{pid}")
+    plugins = [p("qobuz"), p("running"), p("off"), p("shipped", uploaded=False)]
+    started = []
+    out = _start_uploaded(plugins, enabled=lambda u: u != "u@off",
+                          state=lambda u: "active" if u == "u@running" else "inactive",
+                          start=started.append)
+    assert out == started == ["u@qobuz"]
+
+
+def test_a_plugin_switched_on_without_its_package_is_not_retried():
+    """A day of restarts every 3 s on sofapi: restored switched on, without
+    its package. The run script says so and exits 78, which both units do
+    not restart on."""
+    import subprocess, sys
+    from pathlib import Path
+    files = Path(__file__).resolve().parents[2] / "image" / "stage-gexis" / "03-core" / "files"
+    result = subprocess.run([sys.executable, str(files / "gexis-run-uploaded"), "no-such-plugin-here"],
+                            capture_output=True, text=True)
+    assert result.returncode == 78 and "not installed" in result.stderr
+    for unit in ("gexis-uploaded-renderer@.service", "gexis-uploaded-service@.service"):
+        assert "RestartPreventExitStatus=78" in (files / unit).read_text()

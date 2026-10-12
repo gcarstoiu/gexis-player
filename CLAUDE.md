@@ -6,18 +6,21 @@ Custom high-fidelity music player distribution for Raspberry Pi 4.
 
 - `HANDOFF.md` — current state and next action. **Start with its "Start
   here" block**; it orients you in a few hundred words.
-- `docs/LESSONS.md` — how verification itself has failed here. Short, and
-  the cheapest thing to read: every entry is a mistake already made that
-  looked like a normal result at the time.
+- `docs/LESSONS.md` — how verification itself has failed here, one rule per
+  case: every entry is a mistake already made that looked like a normal
+  result at the time. The full stories are in `docs/LESSONS-ARCHIVE.md`;
+  a new lesson goes there in full and here as its rule.
 - `docs/ARCHITECTURE.md` — layer model and requirements
 - `docs/decisions/` — numbered ADRs, one per decision. Use
-  `docs/decisions/README.md` as the index; do not read all of them.
+  `docs/decisions/README.md` as the index (one line each; longer summaries
+  in `INDEX-FULL.md`, to search); do not read all of them.
 - `docs/findings/` — measured results, each with scope stated
 
-Reading everything listed here is ~100,000 words. Don't. Take `HANDOFF.md`
-and `docs/LESSONS.md` in full, then the specific records the task touches.
-`docs/HANDOFF-ARCHIVE.md` is dated history — search it when you need to know
-why something is the way it is, never as orientation.
+Take `HANDOFF.md` and `docs/LESSONS.md` in full (together about 4,300
+words), then the specific records the task touches. The archives
+(`docs/HANDOFF-ARCHIVE.md`, `docs/LESSONS-ARCHIVE.md`,
+`docs/decisions/INDEX-FULL.md`) are dated history — search them when you need
+to know why something is the way it is, never read them as orientation.
 
 ## Roles
 

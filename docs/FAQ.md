@@ -165,12 +165,21 @@ which are turned to landscape. On the very first start, setup's own screens
 are already laid out for the attached screen; setup's Screen step then
 confirms it.
 
+**Does the player play DSD?**
+Yes. DSD files from Lyrion play natively, unconverted, on a DAC that takes
+DSD itself (some USB DACs; tested with an SMSL), with *Settings → Audio →
+Volume* on *Fixed*, so the amplifier sets the level. In every other case
+(other volume types, DAC HATs, HDMI) they are converted to PCM and play as
+usual. The visualiser stays still while DSD plays.
+
 **Which screens work?**
 HDMI screens only. Tested on the hardware: a 10.1″ 1280 × 800 (the reference
 screen), a 13.3″ at 1920 × 1080, and the 1280 × 400 and 1480 × 320 bars.
 Others in *Settings → Display → Attached screen* are listed but untested;
 those tested are marked *Tested*, those owners have reported working
-*Reported*. DSI and DPI screens are not supported.
+*Reported*. DSI and DPI screens are not supported. The screen can be on
+either of the Pi's HDMI ports; a bar screen moved from one port to the other
+is set up again at the next start and asks *Keep this screen?*.
 
 **Can the player run without a screen?**
 Yes. *Settings → Display → Headless* turns the screen off, and every setting
@@ -719,8 +728,11 @@ Each output in *Settings → Audio → Output* shows *Tested*, *Reported*,
 *Known* or *Detected*. The HiFiBerry DAC2 HD and the IQaudIO Pi-DAC PRO are
 tested; a board owners have reported working is *Reported* (*Reported with
 problems* if a report says otherwise); the other boards on the player's list
-are known but untested; a class-compliant USB DAC should be detected by
-itself but has not been tried. A board that is not found by itself can be
+are known but untested; a class-compliant USB DAC is detected by itself
+and shown by its maker, with a line under it saying what it reports it can
+take - its USB generation, its highest rate and sample size, and native DSD
+(tried with an SMSL; most USB DACs have no volume
+control of their own, so their volume is Software or Fixed). A board that is not found by itself can be
 chosen in *Settings → Audio → Sound card board*. The screen's HDMI audio
 can be chosen too; it is not bit-perfect, its volume is set in software
 (or fixed), and the visualiser moves with it only while the volume is in

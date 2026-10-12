@@ -1,7 +1,7 @@
 """ADR-0109: a chosen screen becomes screen.env and, when needed, video=."""
 from __future__ import annotations
 
-from gexis_core import screen_apply, screens
+from gexis_core import screen_apply, screen_detect, screens
 from gexis_core.screen_apply import Applied
 
 CMDLINE = "console=serial0,115200 console=tty3 root=PARTUUID=758b8ca3-02 rootwait quiet splash\n"
@@ -224,3 +224,78 @@ def test_a_cmdline_txt_that_cannot_be_written_is_left_as_it_was(tmp_path, monkey
     except OSError:
         pass
     assert f["cmdline"].read_text() == CMDLINE
+
+
+# ADR-0109 (George, 2026-10-12: "The two bugs we need to fix now"): a screen
+# laid out from its own mode is called "Other screen/W × H" in Settings, and
+# that name was in no list - so *Screen rotation* on one logged "not a screen
+# gexis knows" and turned nothing.
+
+def test_a_screen_from_its_own_mode_is_found_by_the_name_settings_gives_it(tmp_path):
+    f = files(tmp_path)
+    screen_apply.choose(Applied("other-1920x1080", 0), **f, now=1)
+    label = screen_apply.settings_of(f["state"])["screen"]
+    assert label == "Other screen/1920 × 1080"
+    assert screen_apply.named(label, f["state"]).id == "other-1920x1080"
+
+
+def test_rotating_a_screen_from_its_own_mode_writes_the_turned_picture(tmp_path):
+    f = files(tmp_path)
+    screen_apply.choose(Applied("other-1920x1080", 0), **f, now=1)
+    screen_apply.keep(state=f["state"])
+    model = screen_apply.named(screen_apply.settings_of(f["state"])["screen"], f["state"])
+    assert screen_apply.choose(Applied(model.id, 180), **f, now=2) is True
+    assert env_of(f["env"])["GEXIS_SCREEN_TRANSFORM"] == "180"
+
+
+def test_a_portrait_panel_used_sideways_keeps_its_turn_when_rotated(tmp_path):
+    """`other-1920x1080-turned` and `other-1920x1080` share a name; the one
+    in use is the one meant, so a turned panel is not straightened."""
+    f = files(tmp_path)
+    screen_apply.choose(Applied("other-1920x1080-turned", 0), **f, now=1)
+    screen_apply.keep(state=f["state"])
+    model = screen_apply.named("Other screen/1920 × 1080", f["state"])
+    assert model.id == "other-1920x1080-turned"
+    screen_apply.choose(Applied(model.id, 180), **f, now=2)
+    assert env_of(f["env"])["GEXIS_SCREEN_TRANSFORM"] == "270"
+
+
+def test_a_listed_screen_is_still_found_by_its_name(tmp_path):
+    f = files(tmp_path)
+    screen_apply.choose(Applied("other-1920x1080", 0), **f, now=1)
+    ten = screens.by_id("waveshare-10.1-hdmi-b")
+    assert screen_apply.named(ten.label, f["state"]) == ten
+    assert screen_apply.named("Nobody/Nothing", f["state"]) is None
+    assert screen_apply.named(None, f["state"]) is None
+
+
+# ADR-0109 (George, 2026-10-12): the screen applied on the port it is on.
+
+def test_a_state_written_before_the_connector_was_kept_reads_as_hdmi_1(tmp_path):
+    """Every player before this ran its screen on HDMI-A-1: nothing to migrate."""
+    f = files(tmp_path)
+    screen_apply.choose(Applied("waveshare-11.9-hdmi", 0), **f, now=1)
+    screen_apply.keep(state=f["state"])
+    old = screen_apply.read_state(f["state"])
+    for entry in ("current", "previous"):
+        if old.get(entry):
+            old[entry].pop("connector")
+    screen_apply.write_state(old, f["state"])
+    assert Applied.of(old["current"]) == Applied("waveshare-11.9-hdmi", 0, "HDMI-A-1")
+    assert screen_apply.refresh(**f) is False, "the files it wrote are the files it writes"
+    assert screen_apply.connector_now(screen_detect.Seen(), f["state"]) == "HDMI-A-1"
+    assert screen_apply.connector_now(screen_detect.Seen(), tmp_path / "none.json") == "HDMI-A-1"
+
+
+def test_a_screen_on_the_second_port_gets_its_mode_and_settings_there(tmp_path):
+    f = files(tmp_path)
+    screen_apply.choose(Applied("waveshare-11.9-hdmi", 0, "HDMI-A-2"), **f, now=1)
+    assert f["cmdline"].read_text().split()[-1] == "video=HDMI-A-2:320x1480,panel_orientation=left_side_up"
+    assert env_of(f["env"])["GEXIS_SCREEN_CONNECTOR"] == "HDMI-A-2"
+    assert screen_apply.read_state(f["state"])["current"]["connector"] == "HDMI-A-2"
+    seen = screen_detect.Seen(connected=True, connector="HDMI-A-2", preferred=(320, 1480))
+    assert screen_apply.connector_now(seen, f["state"]) == "HDMI-A-2"
+    # Back on the first port: its mode moves with it, none left behind.
+    screen_apply.choose(Applied("waveshare-11.9-hdmi", 0, "HDMI-A-1"), **f, now=2)
+    assert [w for w in f["cmdline"].read_text().split() if w.startswith("video=")] == [
+        "video=HDMI-A-1:320x1480,panel_orientation=left_side_up"]

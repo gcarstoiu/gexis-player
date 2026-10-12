@@ -512,3 +512,209 @@ def test_hardware_gives_way_to_software_where_a_card_has_no_control():
     assert volume_mode(None, hdmi) == "Software", "the default is Hardware"
     assert volume_mode("Fixed", hdmi) == "Fixed"
     assert volume_mode("Variable", dac) == "Hardware", "an unmigrated value"
+
+
+# --- A USB DAC by its maker (George, 2026-10-12) ------------------------------
+
+def _usb_card(tmp_path, number, manufacturer, product, usb=True):
+    """/proc/asound/<id> -> cardN, and /sys/class/sound/cardN/device under a
+    USB device holding `manufacturer` and `product`, as on sofapi."""
+    proc, sound = tmp_path / "proc", tmp_path / "sound"
+    proc.mkdir(exist_ok=True)
+    root = tmp_path / ("usb1/1-1/1-1.1" if usb else "soc/sound")
+    iface = root / "1-1.1:1.0"
+    iface.mkdir(parents=True)
+    (root / "manufacturer").write_text(manufacturer + "\n")
+    (root / "product").write_text(product + "\n")
+    (sound / f"card{number}").mkdir(parents=True)
+    (sound / f"card{number}" / "device").symlink_to(iface)
+    (proc / f"card{number}").mkdir()
+    return proc, sound
+
+
+def test_a_usb_dac_calling_itself_usb_audio_is_named_by_its_maker(tmp_path):
+    """sofapi's SMSL: the driver says "USB Audio", the device "SMSL" and
+    "SMSL USB AUDIO" - shown as "SMSL USB DAC"."""
+    proc, sound = _usb_card(tmp_path, 6, "SMSL", "SMSL USB AUDIO")
+    (proc / "AUDIO").symlink_to("card6")
+    assert outputs.usb_name("AUDIO", sound, proc) == "SMSL USB DAC"
+
+
+def test_a_usb_dac_with_a_model_name_keeps_it_once(tmp_path):
+    proc, sound = _usb_card(tmp_path, 3, "Topping", "Topping D10s")
+    (proc / "D10s").symlink_to("card3")
+    assert outputs.usb_name("D10s", sound, proc) == "Topping D10s"
+
+
+def test_a_card_not_on_usb_is_not_renamed(tmp_path):
+    proc, sound = _usb_card(tmp_path, 5, "x", "y", usb=False)
+    (proc / "sndrpihifiberry").symlink_to("card5")
+    assert outputs.usb_name("sndrpihifiberry", sound, proc) is None
+    assert outputs.usb_name("missing", sound, proc) is None
+
+
+def test_discovery_shows_the_maker_and_still_finds_the_old_name(tmp_path, monkeypatch):
+    """A choice stored as "USB Audio" before the rename still resolves."""
+    from gexis_core import boards
+    proc, sound = _usb_card(tmp_path, 6, "SMSL", "SMSL USB AUDIO")
+    (proc / "AUDIO").symlink_to("card6")
+    monkeypatch.setattr(outputs, "PROC_ASOUND", proc)
+    monkeypatch.setattr(outputs, "SOUND", sound)
+    monkeypatch.setattr(outputs, "_run", lambda *a: (
+        "card 6: AUDIO [SMSL USB AUDIO], device 0: USB Audio [USB Audio]\n" if a[0] == "aplay" else ""))
+    monkeypatch.setattr(outputs, "DRM", tmp_path / "drm")
+    monkeypatch.setattr(boards, "hat_product", lambda: None)
+    [usb] = outputs._discover("none", None)
+    assert usb.label == "SMSL USB DAC" and usb.aka == "USB Audio"
+    assert outputs.resolve("USB Audio — Detected", [usb], current=None) is usb
+
+
+SMSL_STREAM = """SMSL SMSL USB AUDIO at usb-0000:01:00.0-1.1, high speed : USB Audio
+
+Playback:
+  Status: Stop
+  Interface 1
+    Altset 1
+    Format: S32_LE
+    Channels: 2
+    Rates: 44100, 48000, 88200, 96000, 176400, 192000, 352800, 384000, 705600, 768000
+    Bits: 32
+  Interface 1
+    Altset 2
+    Format: S32_LE
+    Rates: 44100, 48000, 88200, 96000, 176400, 192000, 352800, 384000, 705600, 768000
+    Bits: 24
+  Interface 1
+    Altset 3
+    Format: SPECIAL DSD_U32_BE
+    Rates: 44100, 48000, 88200, 96000, 176400, 192000, 352800, 384000, 705600, 768000
+    Bits: 32
+    DSD raw: DOP=0, bitrev=0
+"""
+
+
+def test_a_usb_dacs_details_are_what_it_reports(tmp_path):
+    """sofapi's SMSL, as its sysfs and stream0 read on 2026-10-12."""
+    proc, sound = _usb_card(tmp_path, 6, "SMSL", "SMSL USB AUDIO")
+    (proc / "AUDIO").symlink_to("card6")
+    (tmp_path / "usb1/1-1/1-1.1/speed").write_text("480\n")
+    (proc / "card6" / "stream0").write_text(SMSL_STREAM)
+    assert outputs.usb_details("AUDIO", sound, proc) == "USB 2.0 · up to 768 kHz / 32-bit · native DSD"
+
+
+def test_a_small_usb_dac_says_less_and_capture_is_not_counted(tmp_path):
+    proc, sound = _usb_card(tmp_path, 3, "C-Media", "USB Audio Device")
+    (proc / "Device").symlink_to("card3")
+    (tmp_path / "usb1/1-1/1-1.1/speed").write_text("12\n")
+    (proc / "card3" / "stream0").write_text(
+        "Playback:\n  Interface 1\n    Format: S16_LE\n    Rates: 44100, 48000\n"
+        "Capture:\n  Interface 2\n    Format: S24_3LE\n    Rates: 96000\n    Bits: 24\n")
+    assert outputs.usb_details("Device", sound, proc) == "USB 1.1 · up to 48 kHz / 16-bit"
+
+
+def test_a_card_not_on_usb_has_no_details(tmp_path):
+    proc, sound = _usb_card(tmp_path, 5, "x", "y", usb=False)
+    (proc / "sndrpihifiberry").symlink_to("card5")
+    assert outputs.usb_details("sndrpihifiberry", sound, proc) is None
+
+
+# --- ADR-0143: a 32-bit-only DAC, and Lyrion's 384 kHz -----------------------
+
+SMSL_DUMP = "FORMAT:  S32_LE SPECIAL DSD_U32_BE\nSAMPLE_BITS: 32\nRATE: [44100 768000]\n"
+HAT_DUMP = "FORMAT:  S16_LE S24_LE S32_LE\nSAMPLE_BITS: [16 32]\nRATE: [44100 192000]\n"
+
+
+def _asked(monkeypatch, dumps):
+    import subprocess as sp
+    monkeypatch.setattr(outputs, "_needs_plug", {})
+    monkeypatch.setattr(outputs, "_formats", {})
+    monkeypatch.setattr(outputs, "_rates", {})
+    def run(args, **kw):
+        return sp.CompletedProcess(args, 0, "", dumps[args[3].split(":", 1)[1]])
+    monkeypatch.setattr(outputs.subprocess, "run", run)
+
+
+def test_a_dac_taking_only_32_bits_is_widened_and_no_other(monkeypatch):
+    _asked(monkeypatch, {"AUDIO": SMSL_DUMP, "sndrpihifiberry": HAT_DUMP})
+    assert outputs.needs_plug("AUDIO") is False and outputs.widens("AUDIO") is True
+    assert outputs.needs_plug("sndrpihifiberry") is False and outputs.widens("sndrpihifiberry") is False
+
+
+def test_the_widened_chain_pads_to_32_bits_under_the_meter_and_the_card_reads_back(tmp_path):
+    out = outputs.Output(card="AUDIO", label="SMSL USB DAC", control=None)
+    conf = outputs.render(out, False, widen=True)
+    head = conf[conf.index("pcm.output {"):conf.index("pcm.output_wait")]
+    assert "type meter" in head and 'type linear slave { pcm "hw:AUDIO" format S32_LE }' in head
+    assert "{ type linear slave { pcm { type hw card AUDIO nonblock 0 } format S32_LE } }" in conf
+    assert "type plug" not in conf, "widening is not plug: it never changes the rate"
+    soft = outputs.render(outputs.with_software_volume(out), False, widen=True)
+    assert 'type linear slave { pcm "hw:AUDIO" format S32_LE }' in soft and "type softvol" in soft
+    path = tmp_path / "output.conf"
+    path.write_text(conf)
+    assert outputs.configured(path) == "AUDIO"
+
+
+def test_squeezelite_is_told_rates_only_for_a_dac_beyond_384_khz(monkeypatch, tmp_path):
+    _asked(monkeypatch, {"AUDIO": SMSL_DUMP, "sndrpihifiberry": HAT_DUMP})
+    outputs.needs_plug("AUDIO"); outputs.needs_plug("sndrpihifiberry")
+    assert outputs.squeezelite_options("AUDIO") == "-r 44100,48000,88200,96000,176400,192000,352800,384000"
+    assert outputs.squeezelite_options("sndrpihifiberry") == ""
+    env = tmp_path / "squeezelite.env"
+    assert outputs.write_squeezelite_env("AUDIO", env) is True
+    assert "GEXIS_SQUEEZELITE_OPTIONS=-r 44100," in env.read_text()
+    assert outputs.write_squeezelite_env("AUDIO", env) is False
+    outputs.write_squeezelite_env("sndrpihifiberry", env)
+    assert env.read_text().splitlines()[-1] == "GEXIS_SQUEEZELITE_OPTIONS="
+
+
+def test_the_squeezelite_unit_reads_the_options_unbraced():
+    from pathlib import Path
+    unit = (Path(__file__).resolve().parents[2] / "image/stage-gexis/02-renderers/files/squeezelite.service").read_text()
+    assert "EnvironmentFile=-/etc/gexis/squeezelite.env" in unit
+    assert unit.rstrip().split("ExecStart=")[1].splitlines()[0].endswith(" $GEXIS_SQUEEZELITE_OPTIONS")
+
+
+def test_a_card_is_running_when_any_playback_substream_is(tmp_path):
+    sub = tmp_path / "AUDIO" / "pcm0p" / "sub0"
+    sub.mkdir(parents=True)
+    (sub / "status").write_text("closed\n")
+    assert outputs.card_running("AUDIO", tmp_path) is False
+    (sub / "status").write_text("state: RUNNING\nowner_pid   : 1\n")
+    assert outputs.card_running("AUDIO", tmp_path) is True
+    assert outputs.card_running("missing", tmp_path) is False
+
+
+# --- ADR-0144: native DSD ----------------------------------------------------
+
+def test_native_dsd_is_the_cards_own_format_and_only_with_the_volume_fixed(monkeypatch):
+    _asked(monkeypatch, {"AUDIO": SMSL_DUMP, "sndrpihifiberry": HAT_DUMP})
+    outputs.needs_plug("AUDIO"); outputs.needs_plug("sndrpihifiberry")
+    assert outputs.native_dsd("AUDIO") == "u32be"
+    assert outputs.native_dsd("sndrpihifiberry") is None
+    assert outputs.squeezelite_options("AUDIO", dsd=True).endswith(" -D :u32be")
+    assert "-D" not in outputs.squeezelite_options("AUDIO")
+    assert outputs.squeezelite_options("sndrpihifiberry", dsd=True) == "", "no DSD on a board that takes none"
+
+
+def test_with_dsd_squeezelites_chain_skips_the_widening_and_the_others_keep_it():
+    out = outputs.Output(card="AUDIO", label="SMSL USB DAC", control=None)
+    conf = outputs.render(out, False, widen=True, dsd=True)
+    head = conf[conf.index("pcm.output {"):conf.index("pcm.output_wait")]
+    wait = conf[conf.index("pcm.output_wait {"):conf.index("ctl.output")]
+    assert "type linear" in head, "Bluetooth and Spotify still get 32 bits"
+    assert "type linear" not in wait and "{ type hw card AUDIO nonblock 0 }" in wait
+    assert "type meter" in wait, "the meter stays: peppyalsa draws nothing from DSD"
+
+
+def test_write_turns_dsd_on_only_when_fixed(monkeypatch, tmp_path):
+    _asked(monkeypatch, {"AUDIO": SMSL_DUMP})
+    seen = {}
+    monkeypatch.setattr(outputs, "write_squeezelite_env", lambda card, path=None, dsd=False: seen.update(dsd=dsd))
+    monkeypatch.setattr(outputs, "CONF_PATH", tmp_path / "output.conf")
+    out = outputs.Output(card="AUDIO", label="SMSL USB DAC", control=None)
+    outputs.write(out, tmp_path / "output.conf", fixed=True)
+    assert seen == {"dsd": True}
+    outputs.write(out, tmp_path / "output.conf", fixed=False)
+    assert seen == {"dsd": False}
+    outputs.write(outputs.with_software_volume(out), tmp_path / "output.conf", fixed=True)
+    assert seen == {"dsd": False}, "never through the software stage"

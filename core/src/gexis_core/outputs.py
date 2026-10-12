@@ -90,6 +90,96 @@ PCM_FORMATS = frozenset(
 _needs_plug: dict[str, bool] = {}
 
 
+#: What each card said it takes, from `needs_plug`'s question (`widens`).
+_formats: dict[str, frozenset[str]] = {}
+#: Its lowest and highest rate, from the same question (`squeezelite_options`).
+_rates: dict[str, tuple[int, int]] = {}
+
+#: **The highest PCM rate Lyrion hands Squeezelite as it is** (ADR-0143;
+#: measured 2026-10-12 on an SMSL USB DAC, which takes 768 kHz): FLAC and WAV
+#: up to 384 kHz reached the card unchanged, 705.6 and 768 kHz WAV opened it
+#: at 44.1 kHz - played some sixteen times too slow.
+LYRION_MAX_RATE = 384000
+#: The rates told to Squeezelite for a card above that, so Lyrion converts a
+#: file beyond them rather than sending what plays wrong.
+SQUEEZELITE_RATES = (44100, 48000, 88200, 96000, 176400, 192000, 352800, 384000)
+SQUEEZELITE_ENV = Path("/etc/gexis/squeezelite.env")
+
+
+#: **Native DSD, by the format the card takes it in** (ADR-0144), most
+#: preferred first, with the name Squeezelite's `-D` gives it.
+DSD_FORMATS = (("DSD_U32_BE", "u32be"), ("DSD_U32_LE", "u32le"), ("DSD_U16_BE", "u16be"),
+               ("DSD_U16_LE", "u16le"), ("DSD_U8", "u8"))
+
+
+def native_dsd(card: str) -> str | None:
+    """Squeezelite's name for the DSD format this card takes, or None for a
+    card that takes no DSD (every I2S board: the Pi's I2S is PCM only)."""
+    formats = _formats.get(card, frozenset())
+    return next((name for fmt, name in DSD_FORMATS if fmt in formats), None)
+
+
+def squeezelite_options(card: str, dsd: bool = False) -> str:
+    """Squeezelite's extra options for this card: none for one that goes no
+    higher than Lyrion can hand over - it asks the card, as before - and a
+    list of rates up to `LYRION_MAX_RATE` for one that does. With `dsd`
+    (ADR-0144: the volume Fixed and the card taking DSD), `-D` in the card's
+    format: Lyrion then sends DSD files as DSD, and Squeezelite plays them
+    natively instead of converting them to PCM."""
+    options = []
+    low, high = _rates.get(card, (0, 0))
+    if high > LYRION_MAX_RATE:
+        options.append("-r " + ",".join(str(r) for r in SQUEEZELITE_RATES if r >= low))
+    fmt = native_dsd(card) if dsd else None
+    if fmt:
+        options.append(f"-D :{fmt}")
+    return " ".join(options)
+
+
+def card_running(card: str, proc: Path = Path("/proc/asound")) -> bool:
+    """Whether anything is playing on the card now (any playback substream
+    RUNNING)."""
+    try:
+        return any("RUNNING" in p.read_text() for p in (proc / card).glob("pcm*p/sub*/status"))
+    except OSError:
+        return False
+
+
+def write_squeezelite_env(card: str, path: Path = SQUEEZELITE_ENV, dsd: bool = False) -> bool:
+    """`GEXIS_SQUEEZELITE_OPTIONS` for the unit; True if it changed. Read
+    when Squeezelite starts, which the output switch does after this."""
+    wanted = (
+        "# Written by gexis-core for the chosen output (ADR-0143). Do not edit.\n"
+        f"GEXIS_SQUEEZELITE_OPTIONS={squeezelite_options(card, dsd)}\n")
+    try:
+        if path.read_text() == wanted:
+            return False
+    except OSError:
+        pass
+    try:
+        tmp = path.with_name(path.name + ".tmp")
+        tmp.write_text(wanted)
+        tmp.replace(path)
+    except OSError as exc:
+        logger.error("outputs: could not write %s: %s", path, exc)
+        return False
+    logger.info("outputs: squeezelite options for %s: %s", card, squeezelite_options(card, dsd) or "none")
+    return True
+
+
+def widens(card: str) -> bool:
+    """**A card that takes 32-bit and not 16-bit gets its samples widened**
+    (ADR-0143; George, 2026-10-12, an SMSL USB DAC: *"Agreed"*). Such a card
+    refuses what Bluetooth sends (16-bit) and what a 24-bit source sends,
+    and ADR-0009's no-`plug` chain had nothing to offer it but silence.
+    `type linear` to S32_LE only *pads*: 16 and 24 bits are shifted into
+    32, every sample's value kept (measured exact, 2026-10-12), 32 bits pass
+    untouched, and the rate is never changed - a rate the card lacks still
+    fails loudly. Asked after `needs_plug`, which reads the card."""
+    formats = _formats.get(card, frozenset())
+    return "S32_LE" in formats and "S16_LE" not in formats
+
+
 def needs_plug(card: str) -> bool | None:
     """Whether this card has to be written through a conversion layer.
 
@@ -132,10 +222,13 @@ def needs_plug(card: str) -> bool | None:
         logger.warning("outputs: could not ask %s what it takes: %s", card, exc)
         return None
     formats: set[str] = set()
+    rates: tuple[int, int] | None = None
     for line in dump.splitlines():
-        if line.startswith("FORMAT:"):
+        if line.startswith("FORMAT:") and not formats:
             formats = set(line.split(":", 1)[1].split())
-            break
+        elif line.startswith("RATE:") and rates is None:
+            found = [int(n) for n in re.findall(r"\d+", line)]
+            rates = (min(found), max(found)) if found else None
     if not formats:
         # **A busy card answers nothing, and nothing is not an answer.**
         # Caching it turned a transient "the old renderer still has this
@@ -146,6 +239,9 @@ def needs_plug(card: str) -> bool | None:
         return None
     answer = not (formats & PCM_FORMATS)
     _needs_plug[card] = answer
+    _formats[card] = frozenset(formats)
+    if rates is not None:
+        _rates[card] = rates
     if answer:
         logger.info("outputs: %s takes only %s; it needs a conversion layer",
                     card, " ".join(sorted(formats)))
@@ -171,6 +267,9 @@ class Output:
     #: ADR-0124: the level set by the player's own software stage, not the
     #: card's control.
     software: bool = field(default=False, compare=False)
+    #: A line under the name, from what a USB DAC reports of itself
+    #: (`usb_details`); None for every other card.
+    details: str | None = field(default=None, compare=False)
 
     @property
     def option(self) -> str:
@@ -327,6 +426,97 @@ def discover(chosen_board: str | None = None) -> list[Output]:
     return list(found)
 
 
+#: Where a card's device sits, and the USB device above it (`usb_name`).
+SOUND = Path("/sys/class/sound")
+PROC_ASOUND = Path("/proc/asound")
+#: Product strings that name the kind of thing, not the thing: a DAC that
+#: calls itself "SMSL USB AUDIO" is shown as "SMSL USB DAC".
+GENERIC_PRODUCTS = frozenset({"", "USB AUDIO", "USB AUDIO DEVICE", "USB DAC", "USB AUDIO DAC", "AUDIO"})
+
+
+def usb_name(card: str, sound: Path | None = None, proc: Path | None = None) -> str | None:
+    """**A USB DAC by its maker** (George, 2026-10-12: *"you can see that it
+    is an SMSL - why not show it in the output"*). The driver's description
+    of a USB card is the class's - "USB Audio" for every one - but the
+    device itself says who made it (`manufacturer`, `product` in sysfs).
+    None for a card that is not on USB, or says nothing."""
+    found = _usb_device(card, sound or SOUND, proc or PROC_ASOUND)
+    if found is None:
+        return None
+    usb = found[0]
+
+    def read(name: str) -> str:
+        try:
+            return " ".join((usb / name).read_text().split())
+        except OSError:
+            return ""
+
+    maker, product = read("manufacturer"), read("product")
+    if maker and product.upper().startswith(maker.upper()):
+        product = product[len(maker):].strip()
+    if product.upper() in GENERIC_PRODUCTS:
+        return f"{maker} USB DAC" if maker else None
+    return f"{maker} {product}" if maker else product
+
+
+def _usb_device(card: str, sound: Path, proc: Path) -> tuple[Path, Path] | None:
+    """(the USB device's sysfs directory, the card's /proc/asound directory),
+    or None for a card that is not on USB."""
+    try:
+        number = (proc / card).readlink().name          # "card6"
+        device = (sound / number / "device").resolve()
+    except OSError:
+        return None
+    if "/usb" not in str(device):
+        return None
+    return device.parent, proc / number
+
+
+#: sysfs `speed` (Mbit/s) as the USB generation people know it by.
+USB_SPEEDS = ((5000, "USB 3"), (480, "USB 2.0"), (0, "USB 1.1"))
+
+
+def _khz(rate: int) -> str:
+    return f"{rate / 1000:g} kHz"
+
+
+def usb_details(card: str, sound: Path | None = None, proc: Path | None = None) -> str | None:
+    """**What a USB DAC says it can do, as one line** (George, 2026-10-12:
+    *"Add a second line with the details"*): the USB generation it is
+    connected at, the highest rate and sample size it takes, and whether it
+    takes DSD natively - read from sysfs and the driver's `stream0`, so it
+    is what this DAC reports, never a model's datasheet. "USB 2.0 · up to
+    768 kHz / 32-bit · native DSD" for sofapi's SMSL. None for a card not on
+    USB."""
+    found = _usb_device(card, sound or SOUND, proc or PROC_ASOUND)
+    if found is None:
+        return None
+    usb, card_dir = found
+    parts = []
+    try:
+        speed = float((usb / "speed").read_text().strip())
+        parts.append(next(name for floor, name in USB_SPEEDS if speed >= floor))
+    except (OSError, ValueError):
+        pass
+    try:
+        stream = (card_dir / "stream0").read_text()
+    except OSError:
+        stream = ""
+    # Only what the playback side offers: a DAC with a recording side lists
+    # it after "Capture:".
+    playback = stream.split("Capture:")[0]
+    rates = [int(r) for line in re.findall(r"Rates:([^\n]*)", playback) for r in re.findall(r"\d+", line)]
+    bits = [int(b) for b in re.findall(r"Bits: (\d+)", playback)]
+    pcm = [f for f in re.findall(r"Format: ([^\n]*)", playback) if "DSD" not in f]
+    if pcm and not bits:
+        bits = [int(n) for f in pcm for n in re.findall(r"[SU](\d+)", f)]
+    if rates:
+        parts.append(f"up to {_khz(max(rates))}" + (f" / {max(bits)}-bit" if bits else ""))
+    if re.search(r"Format: [^\n]*DSD_U", playback):
+        parts.append("native DSD")
+    return " · ".join(parts) or None
+
+
 def _discover(chosen_board: str | None, product) -> list[Output]:
     found: list[Output] = []
     # **The device's description, not the card's.** `aplay -l` gives both,
@@ -344,15 +534,17 @@ def _discover(chosen_board: str | None, product) -> list[Output]:
         label = LABELS.get(card) or re.split(r" HiFi | hifi", description.strip())[0].strip() or card
         board, state = boards.identify(card, chosen=chosen_board, product=product)
         control, scale = playback_control(card)
+        named = board.name if board else (None if card in BUILT_IN_CARDS else usb_name(card))
         found.append(
             Output(
                 card=card,
-                label=board.name if board else label,
+                label=named or label,
                 control=control,
                 connected=_connected(card),
                 scale=scale,
                 state=state,
-                aka=label if board else None,
+                aka=label if named else None,
+                details=None if card in BUILT_IN_CARDS else usb_details(card),
             )
         )
     return found
@@ -361,7 +553,7 @@ def _discover(chosen_board: str | None, product) -> list[Output]:
 def configured(path: Path = CONF_PATH) -> str | None:
     """The card `output.conf` names right now, or None."""
     try:
-        match = re.search(r'slave\.pcm\s+"hw:([^"]+)"', path.read_text())
+        match = re.search(r'(?:slave\.)?pcm\s+"hw:([^"]+)"', path.read_text())
     except OSError:
         return None
     return match.group(1) if match else None
@@ -407,7 +599,14 @@ def resolve(
     return available[0]
 
 
-def render(output: Output, plug: bool, tuning: Tuning = Tuning()) -> str:
+def _widened(card: str, wait: bool = False) -> str:
+    """The card under a widening step to 32 bits (`widens`)."""
+    hw = f"{{ type hw card {card} nonblock 0 }}" if wait else f'"hw:{card}"'
+    return f"{{ type linear slave {{ pcm {hw} format S32_LE }} }}"
+
+
+def render(output: Output, plug: bool, tuning: Tuning = Tuning(), widen: bool = False,
+           dsd: bool = False) -> str:
     """`output.conf`, with this output's card in the two places it goes.
 
     The rest is verbatim from what the image ships - the comment earns its
@@ -429,8 +628,10 @@ def render(output: Output, plug: bool, tuning: Tuning = Tuning()) -> str:
         # the meter straight over `plug`; with `softvol` between them LMS and
         # Spotify play and the levels arrive. `plug` then converts for the
         # card, under the software stage (Finding 115).
-        card = f'{{ type plug slave.pcm "hw:{output.card}" }}' if plug else f'"hw:{output.card}"'
+        card = (f'{{ type plug slave.pcm "hw:{output.card}" }}' if plug
+                else _widened(output.card) if widen else f'"hw:{output.card}"')
         card_wait = (f"{{ type plug slave.pcm {{ type hw card {output.card} nonblock 0 }} }}" if plug
+                     else _widened(output.card, wait=True) if widen
                      else f"{{ type hw card {output.card} nonblock 0 }}")
         head = f'''pcm.output {{
     type meter
@@ -465,6 +666,25 @@ def render(output: Output, plug: bool, tuning: Tuning = Tuning()) -> str:
         wait = f'''pcm.output_wait {{
     type plug
     slave.pcm {{ type hw card {output.card} nonblock 0 }}
+}}'''
+    elif widen:
+        # ADR-0143: the meter over the widening step - measured to play and
+        # meter 16, 24 and 32 bits on the SMSL, where the meter over `plug`
+        # aborted (above).
+        head = f'''pcm.output {{
+    type meter
+    slave.pcm {_widened(output.card)}
+    scopes.0 peppyalsa
+}}'''
+        # ADR-0144: with native DSD, Squeezelite's chain goes straight to the
+        # card - `type linear` takes PCM only, and Squeezelite sends 32-bit
+        # PCM itself. The meter stays: peppyalsa draws nothing from DSD.
+        wait_slave = (f"{{ type hw card {output.card} nonblock 0 }}" if dsd
+                      else _widened(output.card, wait=True))
+        wait = f'''pcm.output_wait {{
+    type meter
+    slave.pcm {wait_slave}
+    scopes.0 peppyalsa
 }}'''
     else:
         head = f'''pcm.output {{
@@ -522,7 +742,7 @@ pcm_scope_type.peppyalsa {{
 '''
 
 
-def write(output: Output, path: Path = CONF_PATH, tuning: Tuning = Tuning()) -> bool:
+def write(output: Output, path: Path = CONF_PATH, tuning: Tuning = Tuning(), fixed: bool = False) -> bool:
     """Put `output` in the config. True if the file changed.
 
     ALSA reads this when a PCM is *opened*, so writing it changes nothing
@@ -541,7 +761,14 @@ def write(output: Output, path: Path = CONF_PATH, tuning: Tuning = Tuning()) -> 
             path, output.card,
         )
         return False
-    wanted = render(output, plug, tuning)
+    # ADR-0144: native DSD only with the volume Fixed - DSD cannot be
+    # attenuated by the software stage, nor read by it - on a card taking it.
+    dsd = fixed and not output.software and not plug and native_dsd(output.card) is not None
+    wanted = render(output, plug, tuning, widen=not plug and widens(output.card), dsd=dsd)
+    # ADR-0143: Squeezelite's rates follow the card; restarted with the
+    # renderers after this, as the config is. The device's own file only.
+    if path == CONF_PATH:
+        write_squeezelite_env(output.card, dsd=dsd)
     try:
         if path.read_text() == wanted:
             logger.info("outputs: %s is already the output", output.label)

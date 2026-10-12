@@ -68,3 +68,20 @@ async def test_a_peer_that_answers_something_other_than_an_object_is_left_out():
         finder = pl.Players(lambda: "sofapi", browse=browse)
         async with aiohttp.ClientSession() as session:
             assert await finder.others(session) == []
+
+
+async def test_this_player_under_a_name_avahi_gave_it_is_still_left_out():
+    """George, 2026-10-12: GuestPi twice in the switcher. avahi had renamed it
+    `guestpi-2.local` after a name conflict, so its hostname did not match;
+    its own status, carrying this core's token, does."""
+    app = web.Application()
+    app.router.add_get("/player/status", lambda r: web.json_response(
+        {"name": "GuestPi", "host": "guestpi.local", "instance": "me", "transport": "stopped"}))
+    async with TestServer(app) as peer:
+        async def browse():
+            return f"=;wlan0;IPv4;guestpi-2;_gexis._tcp;local;guestpi-2.local;127.0.0.1;{peer.port};\n"
+        finder = pl.Players(lambda: "guestpi", own_instance="me", browse=browse)
+        other = pl.Players(lambda: "sofapi", own_instance="someone-else", browse=browse)
+        async with aiohttp.ClientSession() as session:
+            assert await finder.refresh(session) == []
+            assert [p["name"] for p in await other.refresh(session)] == ["GuestPi"]

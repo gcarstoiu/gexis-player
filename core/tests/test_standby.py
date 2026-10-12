@@ -261,3 +261,21 @@ def test_the_schedule_leaves_alone_a_screen_the_owner_turned_off_and_wakes_its_o
         await schedule.tick()
         assert not standby.off
     asyncio.run(go())
+
+
+def test_standby_turns_off_the_port_the_screen_is_on(tmp_path, monkeypatch):
+    """ADR-0109 (George, 2026-10-12): a screen on the second port is applied
+    there, and standby turns off the output screen.env names - with no
+    screen chosen, the one a screen is connected to, not always HDMI-A-1."""
+    from gexis_core import screen_apply, screen_detect
+
+    env = tmp_path / "screen.env"
+    screen_apply.write_files(screen_apply.Applied("waveshare-13.3-hdmi-h", 0, "HDMI-A-2"),
+                             env=env, cmdline=tmp_path / "cmdline.txt")
+    assert sb.output_command(False, sb.screen_env(env), 1000)[-2:] == ["HDMI-A-2", "--off"]
+    monkeypatch.setattr(screen_detect, "seen",
+                        lambda *a, **k: screen_detect.Seen(connected=True, connector="HDMI-A-2"))
+    assert sb.seen_connector() == "HDMI-A-2"
+    assert sb.output_command(False, {}, 1000, sb.seen_connector())[-2:] == ["HDMI-A-2", "--off"]
+    monkeypatch.setattr(screen_detect, "seen", lambda *a, **k: screen_detect.Seen())
+    assert sb.seen_connector() == "HDMI-A-1"

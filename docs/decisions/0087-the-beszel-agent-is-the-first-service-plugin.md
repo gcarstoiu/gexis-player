@@ -25,7 +25,7 @@ a trusted LAN — the stance this plugin was expected to test),
 Criterion 3 asks for a plugin with no metadata, no transport and no claim on the
 audio device. The Beszel agent is that: it samples CPU, temperature, clocks,
 memory, disk and network, and reports them to a hub elsewhere. George's hub is
-already running — *"Hub is present at http://192.168.178.69:8090/"*, 2026-09-25
+already running — *"Hub is present at http://<hub address>:8090/"*, 2026-09-25
 — so the hub is not this device's job and never was.
 
 It has already earned its keep before shipping. **It found the gap in ADR-0086**

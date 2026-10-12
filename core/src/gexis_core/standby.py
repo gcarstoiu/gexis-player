@@ -43,10 +43,24 @@ def screen_env(path: Path = SCREEN_ENV) -> dict[str, str]:
     return {k.strip(): v.strip() for k, v in pairs}
 
 
-def output_command(on: bool, env: dict[str, str], uid: int) -> list[str]:
+def seen_connector() -> str:
+    """The port a screen is connected to now, for a player with no screen
+    chosen - whose screen.env names none - else HDMI-A-1. Not always the
+    first port (ADR-0109; George, 2026-10-12)."""
+    from . import screen_detect
+    try:
+        seen = screen_detect.seen()
+    except OSError:
+        return DEFAULT_CONNECTOR
+    return seen.connector if seen.connected and seen.connector else DEFAULT_CONNECTOR
+
+
+def output_command(on: bool, env: dict[str, str], uid: int, fallback: str = DEFAULT_CONNECTOR) -> list[str]:
     """`wlr-randr` for the kiosk's output, run as the kiosk's user in its
-    session. Waking re-applies the turn the kiosk set."""
-    connector = env.get("GEXIS_SCREEN_CONNECTOR") or DEFAULT_CONNECTOR
+    session. Waking re-applies the turn the kiosk set. The output is the one
+    the core applied the screen on (screen.env); `fallback` when it names
+    none."""
+    connector = env.get("GEXIS_SCREEN_CONNECTOR") or fallback
     args = ["runuser", "-u", KIOSK_USER, "--", "env", f"WAYLAND_DISPLAY={WAYLAND_DISPLAY}",
             f"XDG_RUNTIME_DIR=/run/user/{uid}", "wlr-randr", "--output", connector]
     if not on:
@@ -65,7 +79,9 @@ async def switch_output(on: bool) -> bool:
     except KeyError:
         logger.warning("standby: no %s user; the screen stays as it is", KIOSK_USER)
         return False
-    args = output_command(on, screen_env(), uid)
+    env = screen_env()
+    # The ports are looked at only when screen.env names none.
+    args = output_command(on, env, uid, env.get("GEXIS_SCREEN_CONNECTOR") or seen_connector())
     try:
         proc = await asyncio.create_subprocess_exec(
             *args, stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE)

@@ -5,6 +5,29 @@ Every release of Gexis Player and its notes, newest first. Generated from
 edit that file, not this one. The player shows the last 10 under
 Settings → System → Change logs.
 
+## 0.11.0 — 12 October 2026
+
+### New
+
+- USB DACs are shown by their maker, with a line saying what each reports it can play, for example "USB 2.0 · up to 768 kHz / 32-bit · native DSD".
+- Native DSD: on a DAC that takes DSD, with the volume on Fixed, DSD files from Lyrion play unconverted.
+- Each plugin in Settings → Plugins shows its version.
+- The screen works on either HDMI port; a bar screen moved to the other port asks "Keep this screen?" at the next start.
+
+### Fixed
+
+- A DAC that accepts only 32-bit audio (as many USB DACs do) now plays Bluetooth and other 16- and 24-bit sources, every sample kept as it was.
+- On a DAC that goes above 384 kHz, Lyrion files above that rate no longer play at the wrong speed.
+- Screen rotation works on a screen that is not in the player's list.
+- The player switcher shows each player once.
+- Uploaded plugins that are switched on start with the player, and one restored without its package no longer retries endlessly.
+- Why an option cannot be chosen now shows on its own line across the tile, in amber.
+
+### Good to know
+
+- Uploaded plugins can no longer announce themselves on the network; the player announces them, so the player keeps its own network name.
+- The visualiser stays still while DSD plays.
+
 ## 0.10.2 — 12 October 2026
 
 ### Fixed

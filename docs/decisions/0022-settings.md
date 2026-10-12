@@ -132,7 +132,7 @@ background that is a picture — which is the negated form
 | Setting | Mark | Notes |
 |---|---|---|
 | LMS on/off, Spotify Connect on/off, Bluetooth on/off | [R] | **Wired 2026-09-25** ([ADR-0077](0077-a-source-that-is-off-is-not-running.md)). Three rows the design has always carried and this inventory never listed - noticed when they were the last `R` rows left unwired ([Finding 068](../findings/068-what-is-left-unwired-in-settings.md)). Off means the renderer's unit is **stopped and disabled**, its adapter is not watching, the state reports it unavailable and arbitration refuses it; Bluetooth off also powers the radio down. A row only the panel honoured would not be a switch - all three sources are reachable without the panel. Proved on the hardware, all three ways and back. **LMS off also removes the library**, browse and radio ([ADR-0079](0079-with-lms-off-the-panel-is-two-screens.md), George's answer) |
-| LMS server address, or discovery | [R][H] | Must. Hardcoded to `192.168.178.188:9000` in `core.toml` today |
+| LMS server address, or discovery | [R][H] | Must. Hardcoded to `<LMS server address>:9000` in `core.toml` today |
 | LMS player name | [H] | `gexis` |
 | Bluetooth pairing: PIN-free vs confirmation | [R] | **Decided and wired 2026-09-25.** George: *"confirmation is default, pin free as viable option."* The capability is fixed when the agent registers - `NoInputNoOutput` means BlueZ never asks at all - so changing this unregisters and registers again rather than waiting for a reboot. Proved on the hardware, both ways |
 | Bluetooth discoverability | [R] | `bt_discoverable`: Always / 3 min after boot / Off. **Default *Always* since 2026-10-07** (George: *"Bluetooth - set the Discoverable to Always as default from now on"*), after a phone found nothing once the three minutes after a start had passed. A device that stored another choice keeps it |
@@ -341,6 +341,17 @@ Confirmed by George, 2026-10-12 (*"Ok"*), from the fixes recorded in
 |---|---|---|
 | A stranded update screen lets go after | [H] | 30 s: when the updater stops without writing an outcome, the panel's *Updating…* lock is released after half a minute and Settings shows what the updater last reported. Fixed, not a row |
 | A volume drawer that opened by itself ignores touches for | [H] | 400 ms: a drawer or tray opened by a change elsewhere (a phone, a renderer) takes no touch for that long, so a tap meant for the screen under it does not set the level. One the panel opened itself takes touches at once. Fixed, not a row |
+
+Confirmed by George, 2026-10-12 (*"Confirmed"*), from his answers to the
+review's questions the same day:
+
+| Setting | Mark | Notes |
+|---|---|---|
+| A phone on the setup network holds a configured player off its Wi-Fi for | [H] | 10 min after the setup page was last used, or after the phone was first found on it (`SETUP_ACTIVE_S`); the open page checks in once a minute. A new player is held by any phone. Fixed, not a row |
+| Update backups kept | [H] | The newest 3 made before an update (`KEEP_AUTOMATIC`); backups made by hand are never deleted. Fixed, not a row |
+| The lyrics-and-info cache's limits | [H] | At least 2 GiB left free and at most 10 % of the card, checked at start and hourly; least recently used answers go first, never the playing track's. Fixed, not a row |
+| "No photos" for an artist is asked again after | [H] | 30 days. Fixed, not a row |
+| A Settings request with no answer ends after | [H] | 20 s; 120 s for the slow ones (a Wi-Fi join, an address change, backup, a plugin upload or removal, network shares, a problem report's start); 15 min for a restore. Fixed, not a row |
 
 ## Settled by prior records
 

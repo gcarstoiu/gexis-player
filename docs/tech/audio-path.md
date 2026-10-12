@@ -393,7 +393,36 @@ Mechanics behind the picture:
 the dummy cards), labels them, and notes which have a volume control and
 whether an HDMI connector has anything plugged in. Each card brings its own
 control name (`DAC` on the HiFiBerry, something else on the headphone jack,
-none on HDMI) and its own scale, read per card (ADR-0117).
+none on HDMI) and its own scale, read per card (ADR-0117). A USB card, which
+the driver calls "USB Audio" whatever it is, is named from its device's
+`manufacturer` and `product` in sysfs (`usb_name`; "SMSL USB AUDIO" reads
+"SMSL USB DAC"), the driver's name kept as `aka` so a choice stored under
+it still resolves. `usb_details` adds the line shown under it - the USB
+generation from sysfs `speed`, the highest rate and bits and any native DSD
+format from the playback half of `/proc/asound/cardN/stream0` - passed to the
+Output row as `optionNotes` (`Settings(option_notes=...)`).
+
+**A card that takes 32-bit and not 16-bit is widened** (ADR-0143, Finding
+120): `widens()` reads the formats `needs_plug` asked for, and `render`
+puts `type linear` with slave format `S32_LE` between the chain (meter, or
+meter and software stage) and `hw:`. It pads 16 and 24 bits and never
+changes the rate - not `plug`. **A card above 384 kHz** gets
+`GEXIS_SQUEEZELITE_OPTIONS=-r <rates up to 384000>` in
+`/etc/gexis/squeezelite.env`, written with `output.conf` (and Squeezelite
+restarted at the core's start when it changed, unless the card is playing),
+because above 384 kHz Lyrion's PCM opened the card at 44.1 kHz; with the list,
+a 705.6/768 kHz stream is refused instead (Finding 120); Squeezelite's unit
+reads it unbraced, so the empty value of every other card adds no argument.
+
+**Native DSD** (ADR-0144): `native_dsd()` names the card's DSD format from
+the same question (`DSD_U32_BE` first). With the volume Fixed (`write(...,
+fixed=True)`, from the start-up, an output switch and every change of volume
+type), the options gain `-D :<format>`, and `output_wait` - Squeezelite's
+chain - goes to `hw:` without the widening step, which takes PCM only.
+`output` keeps it. The meter stays: `peppyalsa-skip-non-pcm.patch` makes the
+scope read levels only for the formats alsa-lib's s16 scope converts, since
+for DSD that scope leaves its buffer unset and reading it aborted the
+renderer. The Volume row's Fixed note names the DAC (`_volume_notes`).
 
 Choosing one does not restart the core. The core first stops whoever is
 playing (`Supervisor.stop_active`, as a change of volume type does; George,

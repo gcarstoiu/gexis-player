@@ -20,7 +20,7 @@ import hashlib
 import json
 import logging
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 logger = logging.getLogger("gexis_core.plugins")
@@ -112,6 +112,26 @@ class Plugin:
     #: **ADR-0106: uploaded by the user**, not part of Gexis Player. Run under
     #: the player's own sandboxed unit; the screen tags it so.
     uploaded: bool = False
+    #: **What its Plugins row says it is** (George, 2026-10-12: "the plugins
+    #: do not have a version number stated in settings"): the manifest's
+    #: `version`, else the version of the package that installed the
+    #: manifest (`with_package_versions`), upstream part only.
+    version: str | None = None
+    #: The program it downloads and runs, as its pin names it - "Plexamp
+    #: 4.13.2" - when that is not the plugin itself (`with_software`).
+    software: str | None = None
+
+    def version_line(self) -> str | None:
+        """"Version 0.4.7" - the plugin's own only. The program it downloads
+        is named by the download's own line on the same switch ("Installed ·
+        Plexamp 4.13.2"), so it is not said twice (George, 2026-10-12); and a
+        plugin whose version *is* that program's (the Lyrion server's 9.1.1)
+        has no line of its own."""
+        if not self.version:
+            return None
+        if self.software and self.software.rsplit(" ", 1)[-1] == self.version:
+            return None
+        return f"Version {self.version}"
 
     def to_json(self) -> dict:
         """What the panel needs to draw this source without knowing it."""
@@ -190,7 +210,48 @@ def parse(raw: dict, *, directory: Path | None = None, built_in: bool = False) -
         mark=mark,
         settings=tuple(settings),
         built_in=built_in,
+        version=raw["version"] if isinstance(raw.get("version"), str) and raw["version"].strip() else None,
     )
+
+
+def upstream(version: str) -> str:
+    """A Debian version as a person reads it: "0.4.7-2+0.10.0+git60.28891d2"
+    is 0.4.7 - the packaging revision and the player's build after it say
+    nothing about the plugin."""
+    return re.split(r"[-+~]", version.split(":", 1)[-1], maxsplit=1)[0]
+
+
+def with_package_versions(found: list[Plugin], directory: Path = DEFAULT_DIR, *, run=None) -> list[Plugin]:
+    """A version for each manifest that names none, from the package that
+    installed it - two `dpkg-query` calls for them all. Unchanged where dpkg
+    knows nothing (a test, a hand-placed manifest)."""
+    import subprocess
+    run = run or (lambda args: subprocess.run(args, capture_output=True, text=True, timeout=10).stdout)
+    paths = {str(directory / p.id / "plugin.json"): p.id for p in found if not p.version}
+    if not paths:
+        return found
+    try:
+        owners = {}
+        for line in run(["dpkg-query", "-S", *paths]).splitlines():
+            package, _, path = line.partition(": ")
+            if path in paths:
+                owners[paths[path]] = package.split(":")[0].split(",")[0].strip()
+        versions = {}
+        if owners:
+            for line in run(["dpkg-query", "-W", "-f", "${Package}\t${Version}\n",
+                             *sorted(set(owners.values()))]).splitlines():
+                package, _, version = line.partition("\t")
+                if version:
+                    versions[package] = upstream(version)
+    except (OSError, ValueError, subprocess.SubprocessError) as exc:
+        logger.info("plugins: no package versions: %s", exc)
+        return found
+    return [replace(p, version=versions.get(owners.get(p.id, ""))) if not p.version else p for p in found]
+
+
+def with_software(found: list[Plugin], labels: dict[str, str]) -> list[Plugin]:
+    """The program each plugin downloads, by plugin id (the pins' `LABEL`)."""
+    return [replace(p, software=labels[p.id]) if p.id in labels else p for p in found]
 
 
 #: The renderers this repository ships, with rows of their own

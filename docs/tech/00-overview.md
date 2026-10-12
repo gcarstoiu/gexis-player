@@ -138,6 +138,16 @@ Notes on the diagram:
   (ADR-0115).
 - **Uploaded plugins** run under sandboxed template units,
   `gexis-uploaded-renderer@` and `gexis-uploaded-service@` (ADR-0106).
+  They may not bind port 5353; a plugin that wants to be found sends
+  `announce`, and the core writes `/etc/avahi/services/gexis-plugin-<id>.service`
+  (`announce.py`), removed when the plugin disconnects and cleared at every
+  core start (ADR-0142).
+- **A plugin's switch says its version** (`Plugin.version_line()`): an
+  upload's manifest `version`, else the upstream part of the package that
+  installed the manifest (`plugins.with_package_versions`, two `dpkg-query`
+  calls at start). The program it downloads is named by its download line,
+  so it is not repeated; a plugin whose version is that program's (the pin's
+  `LABEL` ends in it) has no version line.
 
 ### Smaller units worth knowing
 

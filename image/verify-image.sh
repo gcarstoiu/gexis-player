@@ -414,6 +414,9 @@ for u in gexis-uploaded-renderer@.service gexis-uploaded-service@.service; do
 	dfs "dump /usr/lib/systemd/system/$u $OUT/one" >/dev/null
 	if grep -q '^DynamicUser=yes' "$OUT/one" && grep -q '^ProtectSystem=strict' "$OUT/one"; then ok "$u sandboxed"
 	else bad "$u missing or not sandboxed"; fi
+	# ADR-0142: no mDNS responder of a plugin's own.
+	if grep -q '^SocketBindDeny=ipv4:udp:5353' "$OUT/one" && grep -q '^SocketBindDeny=ipv6:udp:5353' "$OUT/one"; then ok "$u denies port 5353"
+	else bad "$u lets a plugin answer mDNS itself"; fi
 	rm -f "$OUT/one"
 done
 dfs "stat /usr/lib/gexis/gexis-run-uploaded" | grep -q 'Mode:  0755' && ok "gexis-run-uploaded executable" || bad "gexis-run-uploaded missing or not executable"

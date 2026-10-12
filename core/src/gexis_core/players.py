@@ -73,8 +73,12 @@ async def _browse() -> str:
 class Players:
     """The others, with their status, kept for `FRESH_S`."""
 
-    def __init__(self, own_host, *, browse=_browse, clock=time.monotonic) -> None:
+    def __init__(self, own_host, *, own_instance: str | None = None, browse=_browse,
+                 clock=time.monotonic) -> None:
         self._own_host = own_host
+        #: What this core's own status carries: an answer with it is this
+        #: player, whatever name it was found under (see `refresh`).
+        self._own_instance = own_instance
         self._browse = browse
         self._clock = clock
         self._kept: tuple[float, list[dict]] | None = None
@@ -91,7 +95,12 @@ class Players:
         async with self._lock:
             peers = parse_browse(await self._browse(), self._own_host())
             answers = await asyncio.gather(*(self._status(session, p) for p in peers))
-            listed = [a for a in answers if a is not None]
+            # **This player, found under another name, is still this player**
+            # (George, 2026-10-12: GuestPi twice in the switcher). avahi had
+            # renamed it `guestpi-2.local` after a name conflict, so the
+            # hostname did not leave it out; its own status does.
+            listed = [a for a in answers if a is not None
+                      and not (self._own_instance and a.get("instance") == self._own_instance)]
             self._kept = (self._clock(), listed)
             return listed
 

@@ -178,6 +178,17 @@ def by_id(screen_id: str) -> Screen | None:
     return found
 
 
+#: What `other()` is called in Settings: `Other screen/W × H`.
+OTHER_LABEL = re.compile(r"^Other screen/(\d+) × (\d+)$")
+
+
 def by_label(label: str) -> Screen | None:
+    """The screen Settings names `label`. **An "Other screen" too** (ADR-0109;
+    George, 2026-10-12: *Screen rotation* on one turned nothing - its name was
+    in no list). Its name does not say whether the panel is used turned;
+    `screen_apply.named` asks the screen in use first, and this is the
+    landscape one."""
+    if m := OTHER_LABEL.match(label or ""):
+        return other(int(m.group(1)), int(m.group(2)))
     label = CASE.sub("", label)
     return next((s for s in all_screens() if s.label == label), None)

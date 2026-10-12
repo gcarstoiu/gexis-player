@@ -99,7 +99,9 @@ def test_a_switched_off_source_is_not_restarted_with_the_others():
     for name in ("_switch_output", "_rewrite_output_conf", "_change_volume_type"):
         body = _closure(name)
         assert "'restart', 'squeezelite.service'" not in body, name
-        assert "_restart_renderers(" in body, name
+        # Directly, or through `_rewrite_output_conf`, checked here as well
+        # (a change of volume type rewrites the output since ADR-0144).
+        assert "_restart_renderers(" in body or "_rewrite_output_conf(" in body, name
     assert "renderer_enabled(rid)" in _closure("_restart_renderers")
 
 
@@ -221,3 +223,60 @@ def test_a_change_of_output_stops_the_source_playing_first():
     assert change.index("async with volume_change") < change.index("await _switch_output()")
     assert re.search(r'"output_device": lambda _value=None: asyncio\.ensure_future\(\s*_change_output\(\)',
                      MAIN.read_text())
+
+
+def test_rotating_finds_the_screen_in_use_by_the_name_settings_shows():
+    """ADR-0109 (George, 2026-10-12): *Screen rotation* on a screen laid out
+    from its own mode logged "not a screen gexis knows" and turned nothing -
+    the screen was looked up in the list by its Settings name, and an
+    "Other screen" is in no list."""
+    choose = _closure("_choose_screen")
+    assert "screen_apply.named(" in choose and "screens.by_label(" not in choose
+
+
+def test_a_screen_chosen_in_settings_is_applied_on_the_port_it_is_on():
+    """ADR-0109 (George, 2026-10-12): a choice was always written for
+    HDMI-A-1, so a screen on the second port lost its mode, touch and
+    standby the moment it was chosen."""
+    choose = _closure("_choose_screen")
+    assert "screen_apply.connector_now()" in choose
+
+
+def test_fixed_on_an_output_with_no_control_writes_nothing():
+    """sofapi's USB DAC, 2026-10-12: Fixed wrote full scale to the HAT's
+    control name, which the card does not have, and warned for it. With no
+    control, Fixed has already taken the software stage out: nothing to set."""
+    source = MAIN.read_text()
+    guard = source.index("fixed_on.control is None")
+    write = source.index("await set_raw(volume_bridge.mixer_name, hardware_max())")
+    assert guard < write
+    assert "return" in source[guard:write]
+
+
+def test_a_plugins_announcements_are_written_on_its_event_and_go_with_it():
+    """ADR-0142: `announce` written through the checks, withdrawn at disconnect,
+    and every plugin's cleared when the core starts."""
+    source = MAIN.read_text()
+    event = source[source.index("def _plugin_event"):]
+    assert "announce.checked(" in event[:event.index("announce.write(")]
+    gone = source[source.index("def _plugin_disconnected"):]
+    assert "announce.withdraw(session.id)" in gone[:gone.index("supervisor.forget")]
+    assert "announce.clear()" in source
+
+
+def test_squeezelite_is_restarted_at_start_when_its_options_changed():
+    """ADR-0143: it reads them only when it starts, and it starts before the
+    core - so a first boot with a DAC above 384 kHz would keep no limit."""
+    source = MAIN.read_text()
+    block = source[source.index("squeezelite_env_was = _squeezelite_env()"):]
+    block = block[:block.index("alsa.set_card(chosen_output.card)")]
+    assert "outputs.card_running(" in block and '"restart", "squeezelite.service"' in block
+
+
+def test_the_fixed_note_says_dsd_plays_natively_only_where_the_dac_takes_it():
+    """ADR-0144: native DSD follows Fixed; said on the Volume row, and only
+    for a DAC that takes DSD."""
+    notes = _closure("_volume_notes")
+    assert "outputs.native_dsd(chosen.card) is None" in notes and "return {}" in notes
+    assert "DSD files play natively" in notes
+    assert "VOLUME_KEY: lambda: _volume_notes()" in MAIN.read_text()

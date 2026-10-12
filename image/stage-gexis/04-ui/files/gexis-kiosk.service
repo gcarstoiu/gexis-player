@@ -88,7 +88,10 @@ Environment=XCURSOR_THEME=gexis-blank
 # time, which is why the console text was intermittent.
 ExecStartPre=-+/bin/sh -c 'printf "\033c" > /dev/tty1'
 ExecStartPre=-+/usr/bin/gexis-splash-fb handover /usr/share/gexis/panel-background.png
-ExecStart=/usr/bin/labwc -s /usr/bin/gexis-kiosk-start
+# labwc, with its configuration written for the HDMI port the screen is on
+# - touch is tied to that output - and the script again as its session
+# (ADR-0109; George, 2026-10-12: touch went to HDMI-A-1 whatever the port).
+ExecStart=/usr/bin/gexis-kiosk-start compositor
 
 # Put the console back when this unit stops - including when it FAILS.
 # Without it a failed boot sits on the boot screen looking exactly like a

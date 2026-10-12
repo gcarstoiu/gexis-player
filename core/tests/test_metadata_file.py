@@ -21,7 +21,7 @@ def test_writes_key_value_lines_for_an_active_renderer(tmp_path: Path):
             title="Song Title",
             artist="The Artist",
             album="The Album",
-            artwork="http://192.168.178.188:9000/music/abc/cover.jpg",
+            artwork="http://192.0.2.188:9000/music/abc/cover.jpg",
             source_type="lms",
         ),
     )
@@ -33,7 +33,7 @@ def test_writes_key_value_lines_for_an_active_renderer(tmp_path: Path):
         "artist=The Artist\n"
         "album=The Album\n"
         "title=Song Title\n"
-        "coverurl=http://192.168.178.188:9000/music/abc/cover.jpg\n"
+        "coverurl=http://192.0.2.188:9000/music/abc/cover.jpg\n"
     )
 
 
