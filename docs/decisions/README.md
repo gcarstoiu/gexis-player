@@ -163,6 +163,7 @@ been written properly. **0098 has no record either.**
 | [0140](0140-the-software-volume-is-set-before-the-renderers-start.md) | The software volume is set before the renderers start | Accepted and built 2026-10-12: `gexis-softvol-restore.service`, a oneshot before the renderers |
 | [0141](0141-picture-and-sound-on-different-hdmi-ports.md) | Picture and sound on different HDMI ports | Proposed 2026-10-12: screen port detected, sound-only port black; six decisions owed |
 | [0142](0142-the-player-announces-for-its-plugins.md) | The player announces for its plugins | Accepted 2026-10-12: uploaded plugins denied port 5353; `announce` event, avahi file per plugin |
+| [0143](0143-usb-dacs-widened-to-32-bits-and-lyrion-at-384-khz.md) | USB DACs: widened to 32 bits, and Lyrion at 384 kHz | Accepted 2026-10-12: `type linear` to S32 for 32-bit-only cards; Squeezelite told rates ≤384 kHz |
 
 ## Cross-cutting rules
 
