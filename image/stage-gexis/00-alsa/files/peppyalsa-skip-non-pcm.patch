@@ -1,14 +1,17 @@
 diff --git a/src/peppyalsa.c b/src/peppyalsa.c
-index 26bc156..1083943 100644
+index 26bc156..7e5a1d3 100644
 --- a/src/peppyalsa.c
 +++ b/src/peppyalsa.c
-@@ -142,9 +142,28 @@ decay:
+@@ -142,9 +142,52 @@ decay:
      return lev;
  }
  
-+/* Gexis (ADR-0144): whether the stream is PCM. Native DSD is not: alsa-lib's
-+   s16 scope refuses the format and leaves its buffer unset, and reading that
-+   buffer aborts the program playing (pcm_meter.c, "s16->buf_areas"). */
++/* Gexis (ADR-0144): whether alsa-lib's s16 scope has a buffer for this
++   stream - exactly the formats its s16_enable() converts (alsa-lib
++   pcm_meter.c). For any other, native DSD above all, it refuses the format
++   and leaves the buffer unset, and reading that buffer aborts the program
++   playing ("s16->buf_areas"). Not snd_pcm_format_linear(): DSD formats count
++   as unsigned, so it calls them linear. */
 +static int pcm_is_linear(snd_pcm_t *pcm) {
 +    snd_pcm_hw_params_t *params;
 +    snd_pcm_format_t format;
@@ -17,7 +20,28 @@ index 26bc156..1083943 100644
 +        return 0;
 +    if (snd_pcm_hw_params_get_format(params, &format) < 0)
 +        return 0;
-+    return snd_pcm_format_linear(format) == 1;
++    switch (format) {
++    case SND_PCM_FORMAT_A_LAW:
++    case SND_PCM_FORMAT_MU_LAW:
++    case SND_PCM_FORMAT_IMA_ADPCM:
++    case SND_PCM_FORMAT_S8:
++    case SND_PCM_FORMAT_S16_LE:
++    case SND_PCM_FORMAT_S16_BE:
++    case SND_PCM_FORMAT_S24_LE:
++    case SND_PCM_FORMAT_S24_BE:
++    case SND_PCM_FORMAT_S32_LE:
++    case SND_PCM_FORMAT_S32_BE:
++    case SND_PCM_FORMAT_U8:
++    case SND_PCM_FORMAT_U16_LE:
++    case SND_PCM_FORMAT_U16_BE:
++    case SND_PCM_FORMAT_U24_LE:
++    case SND_PCM_FORMAT_U24_BE:
++    case SND_PCM_FORMAT_U32_LE:
++    case SND_PCM_FORMAT_U32_BE:
++        return 1;
++    default:
++        return 0;
++    }
 +}
 +
  static void level_update(snd_pcm_scope_t * scope) {

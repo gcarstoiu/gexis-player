@@ -40,7 +40,7 @@ DSD_SHA256=$(sha256sum "$DSD_PATCH" | cut -d' ' -f1)
 SHORT=$(printf '%s' "$COMMIT" | cut -c1-7)
 # The revision is ours: raised with every change to the patches (-2: the
 # bands, ADR-0130), or apt keeps the old library (LESSONS 53).
-VERSION="${UPSTREAM}+git${COMMIT_DATE}.${SHORT}-3"
+VERSION="${UPSTREAM}+git${COMMIT_DATE}.${SHORT}-4"
 # Staged where dpkg-shlibdeps expects a package's files: debian/<package>.
 STAGE=/tmp/pkg/debian/gexis-peppyalsa
 
