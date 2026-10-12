@@ -131,3 +131,27 @@ Software mode can play the first second at the software stage's 0 dB before
 the saved level is set - fixing it needs a boot step and an ADR), and how
 long a phone merely connected to the setup network may keep the player from
 rejoining its home Wi-Fi.
+
+## Run on a device afterwards (2026-10-12, the bar, 0.10.1+git122 preview)
+
+George allowed device tests (*"You can test. As much as possibly independent
+of me"*). Driven through the player's own API, the mixer controls read over SSH
+after each step; nothing played; the bar put back exactly as found (Hardware,
+DAC at -18 dB).
+
+- **The headphone jack (critical, volume-main-1): fixed on the device.** Output
+  to *Headphones (3.5 mm)*: 0 % wrote -10239 (silence, where it had written
+  0 dB); Mute wrote -10239; unmute put back -20.23 dB.
+- **Levels carried through dB across an output change** (volume-main-2): DAC
+  at -20.00 dB -> jack -20.00 dB -> DAC -20.00 dB.
+- **Volume types** Hardware -> Software -> Fixed -> Hardware -> Fixed ->
+  Software -> Hardware: the level kept at -20 dB throughout; Fixed sets the DAC
+  to full scale and takes the software stage out of the chain (read in
+  `output.conf`); leaving Fixed puts back the level before it.
+- **The boot step in Software (ADR-0140)**: across a reboot, the software
+  level (-20 dB) was written at boot +0.8 s before bluealsa-aplay, +8.6 s
+  before go-librespot, +10.4 s before squeezelite and the core.
+- **Not run:** an update cut short by a power cut (an immediate reboot during
+  an install was refused by Claude's command safety check as destructive; it
+  needs George's go-ahead or his hand), and a factory reset (it also needs a
+  phone on the setup network afterwards).
