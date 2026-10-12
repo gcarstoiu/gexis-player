@@ -37,9 +37,10 @@ from now on have no passwordless sudo: provision test cards with
 - The bar's Plexamp needs a new claim token; the bar on its own supply, then
   Claude reads `vcgencmd get_throttled` again.
 
-**Not run on a device yet:** the headphone jack, output and volume-type
-switches after the carry-through-dB change, the boot step in Software, a
-factory reset, a cut-short update, setup over Ethernet.
+**Run on the bar 2026-10-12 and right** (Finding 119): the headphone jack
+(0 % and Mute silent), levels carried across output and volume-type changes,
+the boot step in Software. **Not run yet:** a cut-short update and a factory
+reset (both need George), setup over Ethernet (g26).
 
 **Next: the first public release** (George, 2026-10-12). It waits for
 guestpi (Phase 13d's two tests). Then: promote to Stable with the image file
