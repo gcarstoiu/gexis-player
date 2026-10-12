@@ -53,6 +53,13 @@ the bar: HDMI-A-1 unchanged, `labwc -C` running, turn and standby right.
 Not yet run: a screen on HDMI-A-2 (g35). Seen in passing: the bar's
 `screen.json` still says `provisional: true` long after setup - to look at.
 
+**2026-10-12, plugins and the network** (ADR-0142): an uploaded plugin's own
+mDNS responder made avahi rename a Pi (`name-2.local`). Uploaded units now
+deny port 5353 and the core announces for a plugin that sends `announce`;
+uploaded plugins switched on are started with the core; the switcher leaves
+its own player out by a token. On guestpi and sofapi as previews. Learned on
+the way: a systemd dynamic user cannot reach the system bus on our image.
+
 **Next: the first public release** (George, 2026-10-12). It waits for
 guestpi (Phase 13d's two tests). Then: promote to Stable with the image file
 (c16; the installation guide's download works from then), README's "first
