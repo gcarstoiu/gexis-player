@@ -35,6 +35,11 @@ LINK = re.compile(r"\[[^\]]*\]\(([^)\s#]+)(?:#[^)]*)?\)")
 #: 2026-09-25: *"Keep it."*
 VERBATIM = {"HANDOFF-ARCHIVE.md"}
 
+#: A fenced block is text to paste somewhere else - the README's download
+#: section is kept in `docs/tech/updates-and-releases.md` as a template, its
+#: links written for the repository root it is pasted into - not a link here.
+FENCE = re.compile(r"^```.*?^```", re.S | re.M)
+
 
 def _markdown() -> list[Path]:
     out = [p for p in (REPO / "docs").rglob("*.md") if p.name not in VERBATIM]
@@ -52,7 +57,7 @@ def test_the_sweep_finds_files_at_all():
 def test_every_relative_link_in_the_records_lands():
     broken = []
     for f in _markdown():
-        for match in LINK.finditer(f.read_text()):
+        for match in LINK.finditer(FENCE.sub("", f.read_text())):
             target = match.group(1)
             if "://" in target or target.startswith("mailto:"):
                 continue
