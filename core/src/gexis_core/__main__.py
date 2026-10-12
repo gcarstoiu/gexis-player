@@ -411,7 +411,10 @@ def screen_question(state: dict, now: float | None = None) -> dict | None:
     previous = state.get("previous") or None
     model = screens.by_id(current["screen"])
     before = screens.by_id(previous["screen"]) if previous else None
-    rotation_only = bool(previous and previous["screen"] == current["screen"])
+    # The same screen on another port is not a rotation: it asks as a screen.
+    rotation_only = bool(previous and previous["screen"] == current["screen"]
+                         and (previous.get("connector") or screen_apply.CONNECTOR)
+                         == (current.get("connector") or screen_apply.CONNECTOR))
     return {
         "model": f"{model.maker} {model.model}" if model else current["screen"],
         "untested": bool(model and not model.tested),
@@ -2067,8 +2070,11 @@ async def main() -> None:
             return
         turn = screen_apply.parse_rotation(rotation if rotation is not None else settings.value("rotation"))
         in_setup = _setup_running(state_store.state.setup)
-        asks = screen_apply.choose(screen_apply.Applied(model.id, turn), after_setup=in_setup)
-        logger.info("screen: %s at %d° chosen; %s", model.id, turn,
+        # On the port the screen is on - not always HDMI-A-1 (ADR-0109;
+        # George, 2026-10-12).
+        applied = screen_apply.Applied(model.id, turn, screen_apply.connector_now())
+        asks = screen_apply.choose(applied, after_setup=in_setup)
+        logger.info("screen: %s at %d° on %s chosen; %s", model.id, turn, applied.connector,
                     "it waits for Keep on the panel" if asks else "the picture is unchanged, so it is kept")
         if in_setup:
             return

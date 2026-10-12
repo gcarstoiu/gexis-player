@@ -191,7 +191,7 @@ def during_setup(seen: screen_detect.Seen | None = None, *, path: Path = STATE, 
     if not seen.connected or not seen.preferred:
         return "same"
     model = target(seen)
-    applied = screen_apply.Applied(model.id, 0)
+    applied = screen_apply.Applied(model.id, 0, seen.connector or screen_apply.CONNECTOR)
     where = {k: files[k] for k in ("env", "cmdline") if k in files}
     restart = screen_apply.picture(**where)[0] != screen_apply.picture_of(applied)[0]
     screen_apply.write_files(applied, **where)
@@ -218,14 +218,15 @@ def at_start(seen: screen_detect.Seen | None = None, *, headless: bool | None = 
     if screen_apply.read_state(state).get("pending"):
         return "pending"
     seen = screen_detect.seen() if seen is None else seen
-    q = question(seen, headless=_headless() if headless is None else headless, path=path)
+    headless = _headless() if headless is None else headless
+    q = question(seen, headless=headless, path=path)
     if q is None:
-        return "same"
+        return moved(seen, headless=headless, files=files)
     if q["tried"]:
         return "asks"
     model = target(seen)
     tried(q["key"], path)
-    applied = screen_apply.Applied(model.id, 0)
+    applied = screen_apply.Applied(model.id, 0, seen.connector or screen_apply.CONNECTOR)
     # `files`: screen_apply's env, cmdline and state, for a test.
     files = files or {}
     where = {k: files[k] for k in ("env", "cmdline") if k in files}
@@ -234,6 +235,40 @@ def at_start(seen: screen_detect.Seen | None = None, *, headless: bool | None = 
         kept(seen, path)
         return "same"
     logger.info("screen: %s attached, switched to %s before the panel starts", q["key"], model.id)
+    return "restart" if restart else "switched"
+
+
+def moved(seen: screen_detect.Seen, *, headless: bool, files: dict | None = None) -> str:
+    """**The screen in use, on the port it is plugged into now** (ADR-0109;
+    George, 2026-10-12: the screen was taken to be on HDMI-A-1). The same
+    screen moved to the other port - or one on the second port since before
+    the connector was kept - is applied again there: its touch, its standby
+    and, for a bar, its `video=`. Where that changes the picture it waits for
+    Keep, as any change of picture does, and a bar's new mode restarts
+    first. A screen not connected now changes nothing: the port applied last
+    stays. Returns as `at_start` does."""
+    from . import screen_apply
+    if headless or not seen.connected or not seen.connector:
+        return "same"
+    files = files or {}
+    state = files.get("state", screen_apply.STATE)
+    current = screen_apply.read_state(state).get("current")
+    if not isinstance(current, dict) or screens.by_id(current.get("screen") or "") is None:
+        return "same"
+    was = screen_apply.Applied.of(current)
+    if was.connector == seen.connector:
+        return "same"
+    applied = screen_apply.Applied(was.screen_id, was.rotation, seen.connector)
+    where = {k: files[k] for k in ("env", "cmdline") if k in files}
+    restart = screen_apply.picture(**where)[0] != screen_apply.picture_of(applied)[0]
+    provisional = bool(screen_apply.read_state(state).get("provisional"))
+    asks = screen_apply.choose(applied, **files)
+    if provisional and not asks:
+        # Still setup's screen, not one anybody has kept (ADR-0104's fixed
+        # password depends on it): a move of port does not confirm it.
+        screen_apply.write_state({**screen_apply.read_state(state), "provisional": True}, state)
+    logger.info("screen: %s moved from %s to %s; %s", was.screen_id, was.connector, seen.connector,
+                "it waits for Keep" if asks else "the picture is unchanged, so it is kept")
     return "restart" if restart else "switched"
 
 

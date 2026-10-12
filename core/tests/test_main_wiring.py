@@ -230,3 +230,11 @@ def test_rotating_finds_the_screen_in_use_by_the_name_settings_shows():
     "Other screen" is in no list."""
     choose = _closure("_choose_screen")
     assert "screen_apply.named(" in choose and "screens.by_label(" not in choose
+
+
+def test_a_screen_chosen_in_settings_is_applied_on_the_port_it_is_on():
+    """ADR-0109 (George, 2026-10-12): a choice was always written for
+    HDMI-A-1, so a screen on the second port lost its mode, touch and
+    standby the moment it was chosen."""
+    choose = _closure("_choose_screen")
+    assert "screen_apply.connector_now()" in choose

@@ -29,7 +29,15 @@ from . import screens
 SCREEN_ENV = Path("/etc/gexis/screen.env")
 STATE = Path("/var/lib/gexis/screen.json")
 CMDLINE = Path("/boot/firmware/cmdline.txt")
+#: **The connector when none is known** - nothing connected, or a state
+#: written before the connector was kept, which every one of those players
+#: ran on. Otherwise the screen is applied on the connector it was seen on
+#: (ADR-0109; George, 2026-10-12: a screen on the second HDMI port was given
+#: the first one's mode, touch and standby).
 CONNECTOR = "HDMI-A-1"
+#: Every `video=` this writes is for an HDMI connector, and a screen moved
+#: from one to the other must not leave its mode behind on the first.
+HDMI_VIDEO = "video=HDMI-A-"
 
 #: The logical size each family lays out at (ADR-0109): Standard is 1280
 #: wide, a bar 400 tall.
@@ -47,9 +55,33 @@ TRANSFORMS = {0: "normal", 90: "90", 180: "180", 270: "270"}
 class Applied:
     screen_id: str
     rotation: int                 # the user's: 0 or 180
+    connector: str = CONNECTOR    # the HDMI port the screen is on
 
     def to_json(self) -> dict:
-        return {"screen": self.screen_id, "rotation": self.rotation}
+        return {"screen": self.screen_id, "rotation": self.rotation, "connector": self.connector}
+
+    @classmethod
+    def of(cls, data: dict) -> "Applied":
+        """From screen.json. A state without a connector was written when
+        every screen was applied on HDMI-A-1, so it reads as that."""
+        return cls(data["screen"], int(data.get("rotation", 0)), data.get("connector") or CONNECTOR)
+
+
+def connector_now(seen=None, state: Path | None = None) -> str:
+    """**The connector to apply a screen on**: the one a screen is connected
+    to now; with none connected (switched off at the boot, or not there) the
+    one applied last, rather than moving the panel's settings to a port
+    nothing was seen on; and HDMI-A-1 when there is neither."""
+    if seen is None:
+        from . import screen_detect
+        try:
+            seen = screen_detect.seen()
+        except OSError:
+            seen = None
+    if seen is not None and seen.connected and seen.connector:
+        return seen.connector
+    current = read_state(state or STATE).get("current")
+    return (current.get("connector") if isinstance(current, dict) else None) or CONNECTOR
 
 
 def env_for(screen: screens.Screen, rotation: int, connector: str = CONNECTOR) -> str:
@@ -101,19 +133,22 @@ def video_for(screen: screens.Screen, connector: str = CONNECTOR, rotation: int 
     return f"video={connector}:{mode}" + (f",panel_orientation={orientation}" if orientation else "")
 
 
-def with_video(cmdline: str, video: str | None, connector: str = CONNECTOR) -> str:
-    """cmdline.txt with this connector's `video=` replaced, added or removed.
+def with_video(cmdline: str, video: str | None) -> str:
+    """cmdline.txt with the HDMI `video=` replaced, added or removed - on
+    either connector, so a screen that moved port takes its mode with it.
     One line, other entries untouched."""
-    words = [w for w in cmdline.split() if not w.startswith(f"video={connector}:")]
+    words = [w for w in cmdline.split() if not w.startswith(HDMI_VIDEO)]
     if video:
         words.append(video)
     return " ".join(words) + "\n"
 
 
-def picture(env: Path = SCREEN_ENV, cmdline: Path = CMDLINE, connector: str = CONNECTOR) -> tuple:
+def picture(env: Path = SCREEN_ENV, cmdline: Path = CMDLINE) -> tuple:
     """**What the screen shows**, as far as a choice can change it: the
     forced mode, the scale and the rotation. No screen.env is the screen's
-    own mode at scale 1, unrotated."""
+    own mode at scale 1, unrotated. The mode names its connector, so the
+    same bar moved to the other port is a different picture, and asks Keep;
+    a screen without a forced mode looks the same on either."""
     try:
         fields = dict(l.split("=", 1) for l in env.read_text().splitlines() if "=" in l and not l.startswith("#"))
     except OSError:
@@ -122,18 +157,19 @@ def picture(env: Path = SCREEN_ENV, cmdline: Path = CMDLINE, connector: str = CO
         words = cmdline.read_text().split()
     except OSError:
         words = []
-    video = next((w for w in words if w.startswith(f"video={connector}:")), None)
+    video = next((w for w in words if w.startswith(HDMI_VIDEO)), None)
     return video, float(fields.get("GEXIS_SCREEN_SCALE", 1)), fields.get("GEXIS_SCREEN_TRANSFORM", "normal")
 
 
-def picture_of(applied: Applied, connector: str = CONNECTOR) -> tuple:
+def picture_of(applied: Applied) -> tuple:
     """`picture()` as it will be once `applied` is written."""
     screen = screens.by_id(applied.screen_id)
     if screen is None:
         raise ValueError(f"no such screen {applied.screen_id!r}")
-    fields = dict(l.split("=", 1) for l in env_for(screen, applied.rotation, connector).splitlines()
+    fields = dict(l.split("=", 1) for l in env_for(screen, applied.rotation, applied.connector).splitlines()
                   if "=" in l and not l.startswith("#"))
-    return video_for(screen, connector, applied.rotation), float(fields["GEXIS_SCREEN_SCALE"]), fields["GEXIS_SCREEN_TRANSFORM"]
+    return (video_for(screen, applied.connector, applied.rotation), float(fields["GEXIS_SCREEN_SCALE"]),
+            fields["GEXIS_SCREEN_TRANSFORM"])
 
 
 def would_ask(applied: Applied, *, env: Path = SCREEN_ENV, cmdline: Path = CMDLINE) -> bool:
@@ -177,13 +213,13 @@ def write_files(applied: Applied | None, *, env: Path = SCREEN_ENV, cmdline: Pat
         env.unlink(missing_ok=True)
     else:
         tmp = env.with_name(env.name + ".tmp")
-        tmp.write_text(env_for(screen, applied.rotation))
+        tmp.write_text(env_for(screen, applied.rotation, applied.connector))
         tmp.replace(env)
     try:
         before = cmdline.read_text()
     except OSError:
         return False
-    after = with_video(before.strip(), video_for(screen, rotation=applied.rotation) if screen else None)
+    after = with_video(before.strip(), video_for(screen, applied.connector, applied.rotation) if screen else None)
     if after.strip() == before.strip():
         return False
     _replace_durably(cmdline, after)
@@ -247,7 +283,7 @@ def refresh(*, state: Path = STATE, env: Path = SCREEN_ENV, cmdline: Path = CMDL
     current = data.get("current")
     if not current or data.get("pending") or screens.by_id(current["screen"]) is None:
         return False
-    return write_files(Applied(current["screen"], int(current.get("rotation", 0))), env=env, cmdline=cmdline)
+    return write_files(Applied.of(current), env=env, cmdline=cmdline)
 
 
 def keep(*, state: Path = STATE) -> None:
@@ -262,7 +298,7 @@ def revert(*, state: Path = STATE, env: Path = SCREEN_ENV, cmdline: Path = CMDLI
     *no screen chosen* - the screen's own mode)."""
     data = read_state(state)
     previous = data.get("previous")
-    applied = Applied(previous["screen"], int(previous.get("rotation", 0))) if previous else None
+    applied = Applied.of(previous) if previous else None
     write_files(applied, env=env, cmdline=cmdline)
     write_state({"current": previous, "previous": None, "pending": False, "reverted": data.get("current")}, state)
 

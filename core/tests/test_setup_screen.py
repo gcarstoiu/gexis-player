@@ -227,3 +227,24 @@ def test_the_list_alone_is_offered_when_no_other_screen_is_in_use(tmp_path, monk
     assert settings_registry._screens() == tuple(s.label for s in screens.all_screens())
     screen_apply.write_state({"current": {"screen": "waveshare-10.1-hdmi-b", "rotation": 0}}, tmp_path / "screen.json")
     assert settings_registry._screens() == tuple(s.label for s in screens.all_screens())
+
+
+def test_setup_applies_and_compares_the_screen_on_the_port_it_is_on(tmp_path, monkeypatch):
+    """ADR-0109 (George, 2026-10-12): the Screen step's choice is applied on
+    the port the screen was seen on, and a bar already laid out there for
+    setup is one that changes nothing."""
+    from gexis_core import screen_apply
+
+    seen = screen_detect.Seen(connected=True, connector="HDMI-A-2", edid_maker="WSD",
+                              edid_name="WaveShare-119", preferred=(320, 1480), usb=("0712:000a",))
+    monkeypatch.setattr(screen_detect, "seen", lambda *a, **k: seen)
+    monkeypatch.setattr(screen_apply, "STATE", tmp_path / "screen.json")
+    asked = []
+    monkeypatch.setattr(screen_apply, "would_ask", lambda applied, **kw: asked.append(applied) or True)
+    flow, net, *_ = make(tmp_path, FakeNM(devices=NOTHING))
+    flow.save({"ssid": "Home", "password": "hunter22", "screen": PANEL})
+    _finish_told(flow, net)
+    assert asked[0].connector == "HDMI-A-2"
+    bar = screen_apply.Applied("waveshare-11.9-hdmi", 0, "HDMI-A-2")
+    choices = screen_choices(seen, now=screen_apply.picture_of(bar))
+    assert "waveshare-11.9-hdmi" in choices["unchanged"]

@@ -1,7 +1,7 @@
 """ADR-0109: a chosen screen becomes screen.env and, when needed, video=."""
 from __future__ import annotations
 
-from gexis_core import screen_apply, screens
+from gexis_core import screen_apply, screen_detect, screens
 from gexis_core.screen_apply import Applied
 
 CMDLINE = "console=serial0,115200 console=tty3 root=PARTUUID=758b8ca3-02 rootwait quiet splash\n"
@@ -267,3 +267,35 @@ def test_a_listed_screen_is_still_found_by_its_name(tmp_path):
     assert screen_apply.named(ten.label, f["state"]) == ten
     assert screen_apply.named("Nobody/Nothing", f["state"]) is None
     assert screen_apply.named(None, f["state"]) is None
+
+
+# ADR-0109 (George, 2026-10-12): the screen applied on the port it is on.
+
+def test_a_state_written_before_the_connector_was_kept_reads_as_hdmi_1(tmp_path):
+    """Every player before this ran its screen on HDMI-A-1: nothing to migrate."""
+    f = files(tmp_path)
+    screen_apply.choose(Applied("waveshare-11.9-hdmi", 0), **f, now=1)
+    screen_apply.keep(state=f["state"])
+    old = screen_apply.read_state(f["state"])
+    for entry in ("current", "previous"):
+        if old.get(entry):
+            old[entry].pop("connector")
+    screen_apply.write_state(old, f["state"])
+    assert Applied.of(old["current"]) == Applied("waveshare-11.9-hdmi", 0, "HDMI-A-1")
+    assert screen_apply.refresh(**f) is False, "the files it wrote are the files it writes"
+    assert screen_apply.connector_now(screen_detect.Seen(), f["state"]) == "HDMI-A-1"
+    assert screen_apply.connector_now(screen_detect.Seen(), tmp_path / "none.json") == "HDMI-A-1"
+
+
+def test_a_screen_on_the_second_port_gets_its_mode_and_settings_there(tmp_path):
+    f = files(tmp_path)
+    screen_apply.choose(Applied("waveshare-11.9-hdmi", 0, "HDMI-A-2"), **f, now=1)
+    assert f["cmdline"].read_text().split()[-1] == "video=HDMI-A-2:320x1480,panel_orientation=left_side_up"
+    assert env_of(f["env"])["GEXIS_SCREEN_CONNECTOR"] == "HDMI-A-2"
+    assert screen_apply.read_state(f["state"])["current"]["connector"] == "HDMI-A-2"
+    seen = screen_detect.Seen(connected=True, connector="HDMI-A-2", preferred=(320, 1480))
+    assert screen_apply.connector_now(seen, f["state"]) == "HDMI-A-2"
+    # Back on the first port: its mode moves with it, none left behind.
+    screen_apply.choose(Applied("waveshare-11.9-hdmi", 0, "HDMI-A-1"), **f, now=2)
+    assert [w for w in f["cmdline"].read_text().split() if w.startswith("video=")] == [
+        "video=HDMI-A-1:320x1480,panel_orientation=left_side_up"]
