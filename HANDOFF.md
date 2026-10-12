@@ -19,7 +19,9 @@ renderers, and ten others - see the PR and Finding 119). Suite 2,255.
 
 **Devices.** sofapi (Waveshare 10.1"; its Lyrion queue is George's - do not
 clear it) and the bar (ShelvesPi, 11.9") run `phase-13d` previews
-(0.10.1+git122), which 0.10.2 supersedes. guestpi offline. **Cards flashed
+(0.10.1+git122), which 0.10.2 supersedes; the bar has core 0.10.2+git40 and
+system 0.10.2+git37 since 2026-10-12 (the screen-port fixes). guestpi
+offline. **Cards flashed
 from now on have no passwordless sudo: provision test cards with
 `DEV_SUDO="yes"`** (ADR-0139).
 
@@ -31,6 +33,8 @@ from now on have no passwordless sudo: provision test cards with
   Fixed (g22), the Space topic, a freshly flashed card without a restore
   (g24), setup over a network cable (g26), a USB DAC at its highest rate
   (g10), Phase 13f's look (g25).
+- ADR-0141 (picture and sound on different HDMI ports): six decisions (g36).
+  The screen on the bar's second port (g35).
 - Decide the version (g27, 1.0.0 suggested) and allow Claude's device tests on
   the bar (g29: headphone jack, switches, the boot step in Software, a reset,
   a cut-short update).
@@ -41,6 +45,13 @@ from now on have no passwordless sudo: provision test cards with
 (0 % and Mute silent), levels carried across output and volume-type changes,
 the boot step in Software. **Not run yet:** a cut-short update and a factory
 reset (both need George), setup over Ethernet (g26).
+
+**2026-10-12, the screen's port** (ADR-0109 amended): rotation now works on
+an unlisted screen, and the screen is applied on the HDMI port it is on
+(mode, touch via a generated labwc config, the kiosk window, standby). On
+the bar: HDMI-A-1 unchanged, `labwc -C` running, turn and standby right.
+Not yet run: a screen on HDMI-A-2 (g35). Seen in passing: the bar's
+`screen.json` still says `provisional: true` long after setup - to look at.
 
 **Next: the first public release** (George, 2026-10-12). It waits for
 guestpi (Phase 13d's two tests). Then: promote to Stable with the image file
