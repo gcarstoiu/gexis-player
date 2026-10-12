@@ -49,6 +49,10 @@ for itself (15) - each ADR first. HDMI audio on the second port: to revisit.
 The shared to-do list (an artifact with a `todos` collection; its address is
 in Claude's memory, not here) holds the open items with their detail.
 
+**Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
+every merged release PR, otherwise weekly on Sunday evening. **Last run:
+2026-10-12** (~102 GB freed; start-of-session reading ~30,500 -> ~9,500 words).
+
 ## Phases
 
 Closed: 0-12, 13, 13a, 13b, 13c, 13e (`docs/DEVELOPMENT.md` holds each phase's
