@@ -12,7 +12,7 @@ second volume in series with it?
 
 - **Measured on `gexis`**, the image-built device, on 2026-09-22, against
   the build deployed that afternoon. LMS is the one on the house network at
-  `192.168.178.188:9000`; the player is `gexis`.
+  `192.0.2.188:9000`; the player is `gexis`.
 - **Nothing was playing.** Every number here is a *transport* cost —
   how long a value takes to travel a path — and none of them is a
   measurement of the sound. The daemon's mirror only writes the DAC while

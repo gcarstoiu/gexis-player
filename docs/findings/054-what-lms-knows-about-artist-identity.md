@@ -6,7 +6,7 @@ portraits… I would like to change them with ones from fanart, having LMS as
 fall back. I think we checked this in the past and the problem was getting
 the link for musicbrainz to link back to the artist in fanart. I think LMS
 might have that. Can you check?"*
-**Scope:** George's own LMS 9.1.1 at `192.168.178.188:9000` — **thousands of contributors, 917 album artists, thousands of albums, tens of thousands of songs** — and the
+**Scope:** George's own LMS 9.1.1 at `192.0.2.188:9000` — **thousands of contributors, 917 album artists, thousands of albums, tens of thousands of songs** — and the
 daemon on `gexis`, 2026-09-23. Ten tracks sampled for MusicBrainz tags, four
 artists fetched cold through the daemon's own `/library/artist-info`, every
 album counted for artwork, every album artist checked against the resolved

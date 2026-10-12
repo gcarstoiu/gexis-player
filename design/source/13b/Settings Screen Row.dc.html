@@ -363,7 +363,7 @@ const INV = [
   ["sources", "Sources", "Renderers and services", "#9fb4e8", [
     {type: "group",label: "LMS",accent: "#7ed6bc"},
     {k: "lms_enabled",type: "toggle",label: "Enabled",value: true,marks: "R"},
-    {k: "lms_server",type: "list",label: "Server",value: "192.168.178.188:9000",marks: "RH",kind: "server",discover: true,manual: "Enter an address",empty: "No servers found. Check the server is running, or enter its address by hand.",note: "Servers announce themselves on the network. Typing an address is the fallback, not the route.",items: [["192.168.178.188:9000","gexis-lms · thousands of albums","current"],["192.168.178.42:9000","studio-pi","found"],["192.168.178.7:9000","NAS · Logitech Media Server","found"]]},
+    {k: "lms_server",type: "list",label: "Server",value: "192.0.2.188:9000",marks: "RH",kind: "server",discover: true,manual: "Enter an address",empty: "No servers found. Check the server is running, or enter its address by hand.",note: "Servers announce themselves on the network. Typing an address is the fallback, not the route.",items: [["192.0.2.188:9000","gexis-lms · thousands of albums","current"],["192.0.2.42:9000","studio-pi","found"],["192.0.2.7:9000","NAS · Logitech Media Server","found"]]},
     {k: "sweep_portraits",type: "action",label: "Update artist portraits",value: "",marks: "R",onlyWhen: ["lms_enabled",true],note: "Looks up every album artist on fanart.tv and keeps LMS's picture where fanart has none. Checks all of them, every time. Runs in the background; playback is not interrupted."},
     {k: "sweep_covers",type: "action",label: "Update album covers",value: "",marks: "R",onlyWhen: ["lms_enabled",true],note: "The same walk, for every album rather than only the ones with no cover. One of the two runs at a time."},
     {k: "sweep_status",type: "readonly",label: "Progress",value: "",marks: "R",onlyWhen: ["lms_enabled",true],note: "What the last or current run has done."},
@@ -394,7 +394,7 @@ const INV = [
     {k: "home_strip_count",type: "number",label: "Items in the strip",value: "10",marks: "N",unit: "",min: 4,max: 20,onlyWhen: ["lms_enabled",true]},
     {type: "group",label: "Idle screen",accent: "#c8a2d8"},
     {k: "idle_screen",type: "choice",label: "Screen",value: "Built in",marks: "R",options: ["Built in","External URL"],note: "The built-in screen shows the clock and weather. An external page replaces it entirely."},
-    {k: "idle_url",type: "text",label: "URL",value: "http://192.168.178.42:8000/idle",marks: "R",onlyWhen: ["idle_screen","External URL"],note: "External and lazy loaded. Falls back to the built-in screen when unreachable, unconfigured, or refusing to be framed."},
+    {k: "idle_url",type: "text",label: "URL",value: "http://192.0.2.42:8000/idle",marks: "R",onlyWhen: ["idle_screen","External URL"],note: "External and lazy loaded. Falls back to the built-in screen when unreachable, unconfigured, or refusing to be framed."},
     {k: "idle_timeout",type: "number",label: "Timeout",value: "5 min",marks: "R",unit: "min",min: 1,max: 60,note: "One timeout on every screen, counted while nothing is playing and nobody touches the panel."},
     {k: "idle_background",type: "choice",label: "Background",value: "Artist pictures",marks: "N",options: ["Artist pictures","Wallpapers online","Wallpapers on device","Black"],onlyWhen: ["idle_screen","Built in"],note: "Artist pictures come from the library. Online wallpapers come from Pixabay and need a key; on-device wallpapers are read from local storage."},
     {k: "background_brightness",type: "number",label: "Background brightness",value: "62%",marks: "N",unit: "%",min: 20,max: 100,step: 5,onlyWhen: ["idle_background",{not: "Black"}],note: "How bright the picture behind the clock is. The design's own value is 62%, which is what keeps white type readable over a photograph."},
@@ -883,7 +883,7 @@ class Component extends DCLogic {
     return {
       rootRef: (el) => this.observe(el),
       title: wide ? 'Settings' : (this.state.drilled ? active[1] : 'Settings'),
-      subtitle: name + '  \u00b7  ' + hostOf(name) + '  \u00b7  192.168.178.51',
+      subtitle: name + '  \u00b7  ' + hostOf(name) + '  \u00b7  192.0.2.51',
       // shown in both modes: the record requires the sanitised hostname to sit
       // beside the typed name, never to replace it silently, and the panel is
       // where someone types the name in the first place

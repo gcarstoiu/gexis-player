@@ -6,10 +6,12 @@ documentation - fields are individually URL-encoded (colons in a MAC-style
 playerid become %3A), not the whole line.
 """
 
+import os
 import socket
 import urllib.parse
 
-LMS_HOST = "192.168.178.188"
+# The Lyrion server to test against: GEXIS_LMS_HOST.
+LMS_HOST = os.environ.get("GEXIS_LMS_HOST", "192.0.2.188")
 LMS_CLI_PORT = 9090
 GEXIS_PLAYER_ID = "aa:bb:cc:00:00:01"
 

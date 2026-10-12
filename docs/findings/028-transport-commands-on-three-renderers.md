@@ -8,7 +8,7 @@ work (so its button is disabled)?
 from the device's shell straight to each renderer's API. **No product code
 involved:** the core only observed, through its published state.
 
-- **LMS:** server `192.168.178.188`, player `gexis`. A 12-track playlist, then a
+- **LMS:** server `192.0.2.188`, player `gexis`. A 12-track playlist, then a
   TuneIn station. JSON-RPC `slim.request`.
 - **Spotify:** go-librespot v0.9.0, local API `127.0.0.1:3678`, a playlist
   started from George's phone.

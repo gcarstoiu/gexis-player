@@ -5,7 +5,7 @@
 volume goes to 0."* What moves the volume, and what can tell that apart from
 a volume change?
 **System:** `gexis` on the Phase 6 image with Phase 7 steps hand-installed,
-LMS 9.1.1 at `192.168.178.188`, player `gexis`, `digitalVolumeControl` 1,
+LMS 9.1.1 at `192.0.2.188`, player `gexis`, `digitalVolumeControl` 1,
 squeezelite `-o output -O hw:gexislmsvol -V Master -C 1`. Commands by
 JSON-RPC from R2D2; levels read with `amixer` on the device and from the
 core's own published state.

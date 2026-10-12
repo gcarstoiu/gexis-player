@@ -85,7 +85,7 @@ either. **The phone never connects to Plexamp at all:**
 
 ```
 ss -tn state established sport = :32500   ->   header only, no rows
-192.168.178.131:51542 -> 192.168.178.191:32400   (this device, talking to the server)
+192.0.2.131:51542 -> 192.0.2.191:32400   (this device, talking to the server)
 ```
 
 A Plex controller talks to the **server**, which relays commands to the player.
@@ -106,7 +106,7 @@ And the session itself names only the **player**:
 ```
 === session on Gexis: Whitney Houston - Where Do Broken Hearts Go
     <User>   {'title': 'george.carstoiu'}
-    <Player> {'address': '192.168.178.131', 'platform': 'Linux',
+    <Player> {'address': '192.0.2.131', 'platform': 'Linux',
               'product': 'Plexamp', 'state': 'playing', 'title': 'Gexis'}
 ```
 
@@ -137,7 +137,7 @@ behaviour observed at 09:00:00 above.
 
 **One more thing the disconnect did**, and it is George's phone rather than this
 device: Plexamp on the phone became a player in its own right, with its own
-paused session (`Android[Plexamp]`, `192.168.178.61`). So "disconnect" in the
+paused session (`Android[Plexamp]`, `192.0.2.61`). So "disconnect" in the
 Plex app means *take playback back*, not *end the session* — which is why the
 Gexis session simply carried on.
 
