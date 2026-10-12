@@ -1752,3 +1752,14 @@ def test_option_notes_from_the_hardware_go_over_the_registrys(store):
                         option_notes={"output_device": lambda: {"SMSL USB DAC — Detected": "USB 2.0"}})
     [row] = settings.to_json()[0]["rows"]
     assert row["optionNotes"] == {"HDMI 1": "kept", "SMSL USB DAC — Detected": "USB 2.0"}
+
+
+def test_a_plugins_switch_carries_its_version_line():
+    from dataclasses import replace
+    from gexis_core.plugins import Plugin
+    plexamp = replace(Plugin("plexamp", "Plexamp", "renderer", "plexamp.service",
+                             settings=({"key": "claim_token", "type": "text", "label": "Claim token"},)),
+                      version="0.4.7", software="Plexamp 4.13.2")
+    merged = Settings.with_plugins(load_registry(), [plexamp])
+    [switch] = [r for g in merged for r in g["rows"] if r.get("key") == "plexamp.enabled"]
+    assert switch["version"] == "Version 0.4.7 · Plexamp 4.13.2"

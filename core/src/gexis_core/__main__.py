@@ -661,6 +661,13 @@ async def main() -> None:
     # upload, and this refuses it again if one was placed by hand.
     shipped_ids = {p.id for p in shipped_plugins}
     installed_plugins = shipped_plugins + [p for p in uploads.installed() if p.id not in shipped_ids]
+    # What each plugin's row says it is (George, 2026-10-12): its version -
+    # an upload's manifest, else the package that installed it - and the
+    # program it downloads, as its pin names it.
+    installed_plugins = plugins.with_software(
+        plugins.with_package_versions(installed_plugins),
+        {pin["PLUGIN"]: pin["LABEL"] for pin in components.pins().values()
+         if pin.get("PLUGIN") and pin.get("LABEL")})
     # ADR-0106: what backups need to know, kept current at every start.
     try:
         uploads.remember()

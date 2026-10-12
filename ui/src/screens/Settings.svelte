@@ -1804,6 +1804,8 @@
                         <span class="row__name">{r.label}</span>
                         {#if pending(r)}<span class="dot dot--sm"></span>{/if}
                       </span>
+                      <!-- A plugin's version, and the program it runs (George, 2026-10-12). -->
+                      {#if r.version}<span class="row__note row__version">{r.version}</span>{/if}
                       {#if r.note && !opensItsOwn(r)}<span class="row__note"><NoteText text={r.note} links={false} /></span>{/if}
                       {#if r.status?.error}<span class="row__note row__note--failed">{r.status.error}</span>{/if}
                       {#if r.status?.text && r.again}
@@ -3123,6 +3125,10 @@
     line-height: 1.4;
     color: var(--ink-quiet);
     text-wrap: pretty;
+  }
+  .row__note.row__version {
+    font-family: var(--font-mono);
+    font-size: 13px;
   }
   .row__note {
     display: block;
