@@ -672,3 +672,13 @@ def test_the_squeezelite_unit_reads_the_options_unbraced():
     unit = (Path(__file__).resolve().parents[2] / "image/stage-gexis/02-renderers/files/squeezelite.service").read_text()
     assert "EnvironmentFile=-/etc/gexis/squeezelite.env" in unit
     assert unit.rstrip().split("ExecStart=")[1].splitlines()[0].endswith(" $GEXIS_SQUEEZELITE_OPTIONS")
+
+
+def test_a_card_is_running_when_any_playback_substream_is(tmp_path):
+    sub = tmp_path / "AUDIO" / "pcm0p" / "sub0"
+    sub.mkdir(parents=True)
+    (sub / "status").write_text("closed\n")
+    assert outputs.card_running("AUDIO", tmp_path) is False
+    (sub / "status").write_text("state: RUNNING\nowner_pid   : 1\n")
+    assert outputs.card_running("AUDIO", tmp_path) is True
+    assert outputs.card_running("missing", tmp_path) is False

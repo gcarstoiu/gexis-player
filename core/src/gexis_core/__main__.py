@@ -611,12 +611,29 @@ async def main() -> None:
                 stored.split(outputs.SEP)[0] in (chosen_output.label, chosen_output.aka, chosen_output.card):
             settings_store.set("output_device", chosen_output.option)
             logger.info("outputs: the stored choice %r is now offered as %r", stored, chosen_output.option)
+        def _squeezelite_env() -> str | None:
+            try:
+                return outputs.SQUEEZELITE_ENV.read_text()
+            except OSError:
+                return None
+        squeezelite_env_was = _squeezelite_env()
         if outputs.write(chosen_output):
             logger.warning(
                 "outputs: output.conf did not match %s and was rewritten; "
                 "renderers pick it up on their next open",
                 chosen_output.label,
             )
+        if _squeezelite_env() != squeezelite_env_was:
+            # ADR-0143: Squeezelite reads its options only when it starts, and
+            # it started before this core (ADR-0140) - unlike the chain, which
+            # it reads at its next open. Restarted now, unless it is playing:
+            # then the next change of output does it.
+            if outputs.card_running(chosen_output.card):
+                logger.info("outputs: squeezelite's options changed while %s plays; "
+                            "they apply at its next start", chosen_output.label)
+            else:
+                logger.info("outputs: squeezelite's options changed; restarting it")
+                subprocess.run(["systemctl", "restart", "squeezelite.service"], check=False, capture_output=True)
         # ADR-0055: arbitration asks about the output the device is
         # playing to, not about the card it shipped with (Finding 048 §5).
         alsa.set_card(chosen_output.card)

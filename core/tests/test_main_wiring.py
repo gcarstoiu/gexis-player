@@ -260,3 +260,12 @@ def test_a_plugins_announcements_are_written_on_its_event_and_go_with_it():
     gone = source[source.index("def _plugin_disconnected"):]
     assert "announce.withdraw(session.id)" in gone[:gone.index("supervisor.forget")]
     assert "announce.clear()" in source
+
+
+def test_squeezelite_is_restarted_at_start_when_its_options_changed():
+    """ADR-0143: it reads them only when it starts, and it starts before the
+    core - so a first boot with a DAC above 384 kHz would keep no limit."""
+    source = MAIN.read_text()
+    block = source[source.index("squeezelite_env_was = _squeezelite_env()"):]
+    block = block[:block.index("alsa.set_card(chosen_output.card)")]
+    assert "outputs.card_running(" in block and '"restart", "squeezelite.service"' in block

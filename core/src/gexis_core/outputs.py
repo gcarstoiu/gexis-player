@@ -116,6 +116,15 @@ def squeezelite_options(card: str) -> str:
     return "-r " + ",".join(str(r) for r in SQUEEZELITE_RATES if r >= low)
 
 
+def card_running(card: str, proc: Path = Path("/proc/asound")) -> bool:
+    """Whether anything is playing on the card now (any playback substream
+    RUNNING)."""
+    try:
+        return any("RUNNING" in p.read_text() for p in (proc / card).glob("pcm*p/sub*/status"))
+    except OSError:
+        return False
+
+
 def write_squeezelite_env(card: str, path: Path = SQUEEZELITE_ENV) -> bool:
     """`GEXIS_SQUEEZELITE_OPTIONS` for the unit; True if it changed. Read
     when Squeezelite starts, which the output switch does after this."""
