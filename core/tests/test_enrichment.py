@@ -623,3 +623,52 @@ def test_a_nothing_past_believing_is_cleared_when_the_cache_opens(tmp_path):
     reopened = Cache(tmp_path / "e.db", clock=clock)
     rows = reopened._conn.execute("SELECT outcome FROM enrichment ORDER BY outcome").fetchall()
     assert rows == [("found",), ("missing",)], "the old nothing gone, the fresh one and the answer kept"
+
+
+def test_the_answers_of_named_providers_can_be_dropped():
+    cache = _cache()
+    for provider in ("lms", "lms-release", "wikipedia"):
+        cache.put(KEY, provider, _found(biography=provider))
+    cache.forget_providers("lms", "lms-release")
+    assert cache.get(KEY, "lms") is None and cache.get(KEY, "lms-release") is None
+    assert cache.get(KEY, "wikipedia") is not None
+
+
+@pytest.mark.asyncio
+async def test_lyrions_stored_answers_go_when_the_library_is_rescanned():
+    """George, 2026-10-12 (answer 8): LMS's answers carry picture paths with
+    its ids, and a rescan renumbers them. The check runs before a stored
+    answer is believed, not only when the provider happens to be asked."""
+    from gexis_core.artistinfo import SCOPE_CHECK_S, LmsArtistInfo
+    from gexis_core.providers import LmsArtistProvider, LmsReleaseProvider
+
+    clock = FakeClock()
+
+    class Lms:
+        lastscan = "1"
+        asked = 0
+
+        async def __call__(self, command, player="", timeout=None):
+            if command[0] == "serverstatus":
+                return {"lastscan": self.lastscan}
+            self.asked += 1
+            if command[1] == "artistphoto":
+                return {"url": f"imageproxy/mai/artist/{self.lastscan}/image.png"}
+            return {"biography": "Born somewhere."}
+
+    lms = Lms()
+    cache = _cache()
+    info = LmsArtistInfo(lms, "http://lms:9000", store=cache, clock=clock)
+    info.on_forget(lambda: cache.forget_providers(LmsArtistProvider.name, LmsReleaseProvider.name))
+    service = EnrichmentService([LmsArtistProvider(info, lambda: 7)], cache, clock=clock)
+
+    first = await service.for_track(KEY, renderer="lms")
+    assert "/artist/1/" in first.artist_image
+    asked = lms.asked
+    assert (await service.for_track(KEY, renderer="lms")).artist_image == first.artist_image
+    assert lms.asked == asked, "the same scan: the stored answer"
+
+    lms.lastscan = "2"
+    clock.advance(SCOPE_CHECK_S)
+    again = await service.for_track(KEY, renderer="lms")
+    assert "/artist/2/" in again.artist_image and lms.asked > asked

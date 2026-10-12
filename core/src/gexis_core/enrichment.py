@@ -490,6 +490,13 @@ class Cache:
         self._conn.execute("DELETE FROM notes WHERE namespace = ?", (namespace,))
         self._conn.commit()
 
+    def forget_providers(self, *providers: str) -> None:
+        """Every stored answer of these providers. For LMS's own, after a
+        rescan or on another server (George, 2026-10-12, answer 8)."""
+        self._conn.executemany("DELETE FROM enrichment WHERE provider = ?",
+                               [(p,) for p in providers])
+        self._conn.commit()
+
     def forget(self, key: TrackKey, provider: str) -> None:
         self._conn.execute(
             "DELETE FROM enrichment WHERE key = ? AND provider = ?",
@@ -661,6 +668,15 @@ class EnrichmentService:
 
     async def _ask(self, provider, key: TrackKey) -> Answer:
         key = key.scoped(SCOPES.get(provider.name, "track"))
+        # **Is a stored answer still this provider's?** LMS's are read by its
+        # ids, which a rescan renumbers (George, 2026-10-12, answer 8): the
+        # provider looks first, and drops them if they are not.
+        before = getattr(provider, "before_cached", None)
+        if before is not None:
+            try:
+                await before()
+            except Exception as exc:  # unchecked is what it was before
+                logger.info("enrichment: %s could not check its stored answers (%s)", provider.name, exc)
         cached = self._cache.get(key, provider.name)
         if cached is not None:
             base = self._lms_base() if callable(self._lms_base) else self._lms_base

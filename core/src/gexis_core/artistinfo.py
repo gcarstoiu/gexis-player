@@ -172,6 +172,8 @@ class LmsArtistInfo:
         #: store the first time.
         self._scope: dict | None = None
         self._scope_checked: float | None = None
+        #: Told whenever what is held is dropped (`on_forget`).
+        self._on_forget: list = []
 
     # --- the plugin --------------------------------------------------------
 
@@ -258,9 +260,12 @@ class LmsArtistInfo:
 
     # --- whose photos -------------------------------------------------------
 
-    async def _check_scope(self) -> None:
+    async def check_scope(self) -> None:
         """Drop what is held if it was read from another server or before
-        the server's last scan (`SCOPE_NAMESPACE`)."""
+        the server's last scan (`SCOPE_NAMESPACE`). Public because the
+        enrichment service's LMS answers are built from the same ids, and
+        are looked at before a stored one is believed (George, 2026-10-12,
+        answer 8)."""
         now = self._clock()
         if self._scope_checked is not None and now - self._scope_checked < SCOPE_CHECK_S:
             return
@@ -312,7 +317,7 @@ class LmsArtistInfo:
     async def photos(self, artist_ids, size: int = PHOTO_THUMB) -> dict[int, str | None]:
         """A photo URL per artist, or None where the plugin has none. Asked
         concurrently; already-known artists cost nothing."""
-        await self._check_scope()
+        await self.check_scope()
         for artist_id in dict.fromkeys(artist_ids):
             if artist_id in self._photos or self._store is None:
                 continue
@@ -386,9 +391,21 @@ class LmsArtistInfo:
         note = result.get("albumreview")
         return str(note).strip() or None if note else None
 
+    def on_forget(self, callback) -> None:
+        """Call `callback()` whenever what is held is dropped. **LMS's own
+        answers in the enrichment cache** - the `lms` and `lms-release`
+        providers' - carry picture paths with these same ids, which a rescan
+        renumbers, so they go too (George, 2026-10-12, answer 8)."""
+        self._on_forget.append(callback)
+
     def forget(self) -> None:
         """Drop what is remembered - after a rescan, when every artist id may
         mean a different artist (Finding 029 §4)."""
+        for callback in self._on_forget:
+            try:
+                callback()
+            except Exception as exc:  # a listener's failure keeps nothing stale here
+                logger.info("artistinfo: a listener could not drop its answers (%s)", exc)
         self._photos.clear()
         self._slow_until.clear()
         if self._store is not None:
