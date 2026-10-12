@@ -248,3 +248,13 @@ def test_setup_applies_and_compares_the_screen_on_the_port_it_is_on(tmp_path, mo
     bar = screen_apply.Applied("waveshare-11.9-hdmi", 0, "HDMI-A-2")
     choices = screen_choices(seen, now=screen_apply.picture_of(bar))
     assert "waveshare-11.9-hdmi" in choices["unchanged"]
+
+
+def test_setup_keeps_the_screen_it_confirms():
+    """Setup's answers are written only when they differ, so confirming the
+    screen already applied wrote nothing; it is kept explicitly."""
+    from pathlib import Path
+    src = (Path(__file__).resolve().parents[1] / "src" / "gexis_core" / "setup_flow.py").read_text()
+    apply = src[src.index("    async def _apply(self, data: dict)"):src.index("    def _restore_values")]
+    assert 'screen_apply.confirm_provisional(data["screen"])' in apply
+    assert apply.index("confirm_provisional") < apply.index("self._network.finished(")
