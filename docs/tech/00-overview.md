@@ -142,6 +142,11 @@ Notes on the diagram:
   `announce`, and the core writes `/etc/avahi/services/gexis-plugin-<id>.service`
   (`announce.py`), removed when the plugin disconnects and cleared at every
   core start (ADR-0142).
+- **A plugin's switch says its version** (`Plugin.version_line()`): an
+  upload's manifest `version`, else the upstream part of the package that
+  installed the manifest (`plugins.with_package_versions`, two `dpkg-query`
+  calls at start), with the program it downloads from its pin's `LABEL` when
+  that version differs.
 
 ### Smaller units worth knowing
 
