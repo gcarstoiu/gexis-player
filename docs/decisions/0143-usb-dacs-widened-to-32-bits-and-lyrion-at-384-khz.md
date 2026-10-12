@@ -44,13 +44,15 @@ shifted left, none different.
 
 - Bluetooth, and any source sending 16 or 24 bits, plays on a 32-bit-only
   DAC, bit-perfect in value.
-- A 705.6 or 768 kHz file from Lyrion is converted down; it is not
-  bit-perfect, and plays at the right speed. Other sources (Spotify, Plexamp)
-  are not affected by this limit.
+- A 705.6 or 768 kHz file from Lyrion no longer plays at the wrong speed:
+  measured on files served over HTTP, Lyrion now stops instead of sending it
+  (Finding 120, result 6). Whether it converts such a file from its own
+  library was not measured. Other sources (Spotify, Plexamp) are not affected
+  by this limit.
 - The rule reads what the card reports, so it applies to any DAC of the kind,
   USB or not.
 
 ## Unverified
 
-Bluetooth on the SMSL (George's test). How Lyrion converts a file above the
-told rates, and to which rate, until it is played after this change.
+Bluetooth on the SMSL (George's test). Whether Lyrion converts a library
+file above the told rates.
