@@ -9,6 +9,7 @@ by the code review of 2026-10-12.
 from __future__ import annotations
 
 import ast
+import re
 from pathlib import Path
 
 MAIN = Path(__file__).resolve().parents[1] / "src" / "gexis_core" / "__main__.py"
@@ -204,3 +205,19 @@ def test_setup_over_the_cable_counts_as_setup_running():
     assert _setup_running({"network": "open", "needed": False})
     assert not _setup_running({"network": "online", "needed": False})
     assert not _setup_running(None)
+
+
+def test_a_change_of_output_stops_the_source_playing_first():
+    """George, 2026-10-12 (answer 12: "Yes"): switching the output while music
+    plays stops the playing source first, as a change of volume type does
+    (ADR-0046 amended 2026-10-11) - so nothing resumes onto the new output by
+    itself, and whoever plays next starts fresh, with its Starting volume.
+    Before the renderers are stopped, and under the same lock as a change of
+    volume type, which also rewrites the output and restarts the renderers."""
+    switch = _closure("_switch_output")
+    assert "await supervisor.stop_active()" in switch
+    assert switch.index("supervisor.stop_active()") < switch.index("'systemctl', 'stop'")
+    change = _closure("_change_output")
+    assert change.index("async with volume_change") < change.index("await _switch_output()")
+    assert re.search(r'"output_device": lambda _value=None: asyncio\.ensure_future\(\s*_change_output\(\)',
+                     MAIN.read_text())

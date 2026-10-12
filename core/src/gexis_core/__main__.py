@@ -79,6 +79,13 @@ from gexis_core.model import BLANK_METADATA, Queue, TrackMetadata
 from gexis_core import connections, hardware_report, settings_migrations, settling, updates, wired
 from gexis_core.standby import Schedule, Standby
 from gexis_core.settings import SettingsStore
+# ADR-0127's `output_mode` row and ADR-0124's remembered software level, kept
+# with the boot step that sets that level before the renderers start
+# (ADR-0140), which reads them without importing the core.
+from gexis_core.softvol_boot import (
+    FIXED, HARDWARE, SOFTWARE, SOFTWARE_LEVEL_FIRST_DB, SOFTWARE_LEVEL_KEY, VOLUME_KEY,
+    start_level, volume_mode,
+)
 from gexis_core.settings_registry import InvalidValue, Settings, UnknownSetting, load_registry
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
@@ -482,25 +489,6 @@ def plugin_queue(renderer_id: str, raw) -> Queue | None:
 #: restart on guestpi (2026-10-07), so twice that.
 RESTART_HOLD_S = 30.0
 
-#: ADR-0127: one row, `output_mode` - Hardware, Software or Fixed.
-VOLUME_KEY = "output_mode"
-HARDWARE, SOFTWARE, FIXED = "Hardware", "Software", "Fixed"
-
-
-def volume_mode(stored, output) -> str:
-    """What is in force for `output` (ADR-0127 §2): the stored choice, except
-    Hardware on an output with no control of its own, where Software takes
-    its place. The same answer `Settings.value` gives once the row is
-    restricted; this one is for start-up, before `Settings` exists."""
-    mode = stored if stored in (HARDWARE, SOFTWARE, FIXED) else HARDWARE
-    if mode == HARDWARE and output is not None and output.control is None:
-        return SOFTWARE
-    return mode
-SOFTWARE_LEVEL_KEY = "_software_level_db"
-#: A first start with no level remembered and none to carry over: quiet.
-SOFTWARE_LEVEL_FIRST_DB = -30.0
-
-
 async def _start_software_volume(card_output, store) -> None:
     """**Before anything plays** (ADR-0124): the software control made and
     set to the remembered level, and the card's own control parked at 0 dB,
@@ -508,12 +496,13 @@ async def _start_software_volume(card_output, store) -> None:
 
     The level, in order: the one remembered; else the card's own, which is
     what the listener was hearing when it was switched on; else quiet."""
-    db = store.get(SOFTWARE_LEVEL_KEY)
-    if db is None and card_output.control and card_output.scale:
+    remembered, card_db = store.get(SOFTWARE_LEVEL_KEY), None
+    if remembered is None and card_output.control and card_output.scale:
         raw = await get_raw(card_output.control)
         if raw is not None:
-            db = card_output.scale.db(raw)
-    db = float(db) if db is not None else SOFTWARE_LEVEL_FIRST_DB
+            card_db = card_output.scale.db(raw)
+    # The same rule as the boot step's (ADR-0140), which set this already.
+    db = start_level(remembered, card_db)
     if not await asyncio.to_thread(outputs.create_softvol_control):
         logger.warning("volume: the software control could not be made; the level stays where ALSA puts it")
     want = outputs.SOFTVOL_SCALE.raw(db)
@@ -1134,6 +1123,16 @@ async def main() -> None:
         # is how HDMI was written back with no conversion layer at all on
         # 2026-09-23: the card was busy, the query returned nothing, and
         # nothing was taken for "needs nothing".
+        #
+        # **Whoever plays is stopped first** (George, 2026-10-12, answer 12:
+        # "Yes"), as a change of volume type does (ADR-0046 amended
+        # 2026-10-11): nobody holds the device, so nothing resumes onto the
+        # new output by itself, and whoever plays next is a new takeover with
+        # its Starting volume. Called from a change of volume type, it has
+        # stopped them already and this finds nobody.
+        stopped = await supervisor.stop_active()
+        if stopped:
+            logger.info("outputs: %s stopped for the change of output", stopped)
         logger.info("outputs: stopping the renderers to switch to %s", chosen.label)
         stop = await asyncio.create_subprocess_exec(
             "systemctl", "stop", "squeezelite.service", "go-librespot.service",
@@ -1173,11 +1172,20 @@ async def main() -> None:
         # full level 12 s after Volume went from Hardware to Software -
         # go-librespot's first report after its restart was 100). The source
         # keeps the device across the restart, so no takeover arms the start
-        # guard; this does, for as long as a phone takes to reconnect.
+        # guard; this does, for as long as a phone takes to reconnect. (Since
+        # 2026-10-12 the source is stopped first, so this is only for one that
+        # took the device in the meantime.)
         if supervisor.active is not None:
             _hold_the_level_playing(supervisor.active, untold_max_s=RESTART_HOLD_S)
         logger.info("outputs: starting the renderers again for %s", chosen.label)
         await _restart_renderers()
+
+    async def _change_output() -> None:
+        """The output row (ADR-0055): under the lock a change of volume type
+        takes, as both stop playback, rewrite the output and restart the
+        renderers - one after the other, never interleaved."""
+        async with volume_change:
+            await _switch_output()
 
     async def _restart_renderers(wait: bool = False) -> None:
         """**The renderers whose source is on, and only those** (ADR-0077).
@@ -2266,7 +2274,7 @@ async def main() -> None:
                # that holds a PCM - including this daemon, which is how the
                # new card's control name gets picked up.
                "output_device": lambda _value=None: asyncio.ensure_future(
-                   _switch_output()
+                   _change_output()
                ),
                # Readonly: nothing to do on a write, and the value is the
                # live one below rather than the registry's literal.

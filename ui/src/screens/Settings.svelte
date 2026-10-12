@@ -937,13 +937,18 @@
   });
 
   //: What a written choice says. A change of volume type stops playback
-  //: (ADR-0046 amended 2026-10-11), and says so.
+  //: (ADR-0046 amended 2026-10-11), and so does a change of output (George,
+  //: 2026-10-12), and each says so.
   function said(row, option) {
     const playing = $metadata?.transport === 'playing';
     // ADR-0046 amended 2026-10-11: a change of volume type stops playback
     // and reopens the sources at once (George) - no more waiting for a pause.
     if (row.key === 'output_mode' && playing) {
       flash(`Volume: ${option}. Playback stopped for the change; start it again when ready.`, 7000);
+    } else if (row.key === 'output_device' && playing) {
+      // George, 2026-10-12 (answer 12): the source playing is stopped before
+      // the output changes, so nothing resumes on the new one by itself.
+      flash(`${row.label}: ${option}. Playback stopped for the change; start it again when ready.`, 7000);
     } else {
       flash(`${row.label}: ${option}`);
     }

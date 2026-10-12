@@ -312,8 +312,15 @@ class LmsAdapter(Adapter):
         #: 2026-10-12). Set when `release()` failed against an unreachable
         #: LMS; sent when the connection is back, instead of the seed reading
         #: a player still on as LMS taking the device again. Cleared the
-        #: moment the player is seen off, whoever turned it off.
+        #: moment the player is seen off, whoever turned it off - and the
+        #: moment LMS takes the device back (George, 2026-10-12, answer 9:
+        #: "Take it back"), never sent after that.
         self._power_off_owed = False
+        #: How many times this adapter has said LMS acquired. A release still
+        #: in flight (it is shielded) compares it to what it was when it
+        #: began: LMS took the device back in between, so the power-off is
+        #: neither sent nor owed.
+        self._acquisitions = 0
         self._on_metadata: Callable[[TrackMetadata], None] | None = None
         self._on_queue = None
         #: (playlist_timestamp, current index) when the queue was last read.
@@ -762,6 +769,15 @@ class LmsAdapter(Adapter):
                 await asyncio.sleep(5)
 
     async def _watch(self, on_acquire, on_release) -> None:
+        reported_acquire = on_acquire
+
+        def on_acquire() -> None:
+            # **LMS taking the device cancels what a takeover still owed it**
+            # (George, 2026-10-12, answer 9: "Take it back").
+            self._power_off_owed = False
+            self._acquisitions += 1
+            reported_acquire()
+
         async with aiohttp.ClientSession() as session:
             if self._player_id is None:
                 self._player_id = await self._resolve_player_id(session)
@@ -840,6 +856,9 @@ class LmsAdapter(Adapter):
             )
             result = status.get("result", {})
             last_power = result.get("power")
+            #: The transport last seen on the connected player, for a play
+            #: while a power-off is owed (below).
+            last_mode = result.get("mode") if result.get("player_connected", 1) else None
             self._report_metadata(result)
             self._report_volume(result)
             await self._report_queue_if_changed(session, result)
@@ -904,7 +923,24 @@ class LmsAdapter(Adapter):
                         continue
                     if not power:
                         self._power_off_owed = False
-                    if power and not last_power:
+                    mode = data.get("mode")
+                    connected = bool(data.get("player_connected", 1))
+                    deliberate_play = (power and last_power and mode == "play"
+                                       and last_mode not in (None, "play") and connected)
+                    if mode is not None:
+                        last_mode = mode if connected else None
+                    if deliberate_play and self._power_off_owed:
+                        # **Play on a player still on because a takeover's
+                        # power-off never reached it** (George, 2026-10-12,
+                        # answer 9: "Take it back"): LMS takes the device as it
+                        # would from off. There is no power-on edge to say so,
+                        # so the play does. Only a play from a pause or stop
+                        # seen on the connected player: LMS carrying on to a
+                        # squeezelite that reconnects after the ladder is not
+                        # the listener's play.
+                        logger.info("lms: played on the still-on player (acquisition; the owed power-off is cancelled)")
+                        on_acquire()
+                    elif power and not last_power:
                         # ADR-0027: activating the player is the
                         # acquisition. Play is a separate intention
                         # afterwards - if the user left it playing, the
@@ -1093,6 +1129,7 @@ class LmsAdapter(Adapter):
         return await asyncio.shield(self._pause_and_power_off())
 
     async def _pause_and_power_off(self) -> bool:
+        acquisitions = self._acquisitions
         async with aiohttp.ClientSession() as session:
             try:
                 status = await self._rpc(session, self._player_id, ["status", "-", 1])
@@ -1105,6 +1142,11 @@ class LmsAdapter(Adapter):
                 self._resume_timestamp = _as_float(result.get("playlist_timestamp"))
                 self._resume_index = _as_int(result.get("playlist_cur_index"))
                 await self._rpc(session, self._player_id, ["pause", 1])
+                if self._acquisitions != acquisitions:
+                    # Late, and LMS has taken the device back since (George,
+                    # 2026-10-12): its player is not turned off under it.
+                    logger.info("lms: taken back during a slow release; not powered off")
+                    return False
                 await self._rpc(session, self._player_id, ["power", 0])
                 logger.info(
                     "lms: paused and powered off at %s (will resume playing: %s)",
@@ -1113,6 +1155,11 @@ class LmsAdapter(Adapter):
                 )
                 return True
             except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
+                if self._acquisitions != acquisitions:
+                    # LMS took the device back while this was failing: nothing
+                    # is owed (George, 2026-10-12, answer 9).
+                    logger.warning("lms: pause/power-off failed, but LMS has the device again: %s", exc)
+                    return False
                 logger.warning("lms: pause/power-off failed, owed until LMS is back: %s", exc)
                 self._power_off_owed = True
                 return False

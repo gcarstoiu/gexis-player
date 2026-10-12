@@ -1,0 +1,23 @@
+[Unit]
+Description=Gexis: the software volume is set before any renderer starts
+Documentation=file:///opt/gexis-core/venv/lib/python3.13/site-packages/gexis_core/softvol_boot.py
+# ADR-0140 (George, 2026-10-12: "Do it now"). ALSA makes the software
+# stage's control at 0 dB, and the core - which sets the remembered level -
+# starts after the renderers; a renderer resuming after a power cut played
+# its first second through the software stage at 0 dB (HDMI above all). This
+# sets that level first, when the volume type is Software, and nothing
+# otherwise. Uploaded renderers start after the core, which sets it too.
+After=local-fs.target sound.target gexis-factory-reset.service
+Before=squeezelite.service go-librespot.service bluealsa-aplay.service plexamp.service
+Before=gexis-core.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/gexis-core/venv/bin/python -m gexis_core.softvol_boot
+# Never holds the renderers for long, never fails the boot: the step exits 0
+# whatever it finds, and one that hangs is given up on.
+TimeoutStartSec=15
+StandardOutput=journal
+
+[Install]
+WantedBy=multi-user.target
