@@ -17,8 +17,8 @@ attached lets test it so we can cover this angle as well"*).
   each time.
 - **With George's own use:** Spotify Connect played on it earlier the same day
   (S32_LE, 44.1 kHz), the amplifier on the wrong input at first.
-- **Not measured:** the analogue output (no analyser); Plexamp and uploaded
-  renderers on it; DSD from a file in a Lyrion library; volume in DSD.
+- **Not measured:** the analogue output (no analyser); uploaded renderers on
+  it; DSD from a file in a Lyrion library; volume in DSD.
 
 ## Results
 
@@ -80,6 +80,10 @@ attached lets test it so we can cover this angle as well"*).
    on `output`, the card open in `S32_LE` at 44.1 kHz and running - the
    16-bit stream widened; George: *"Bluetooth works without problems on the
    sofapi"*.
+
+9. **Plexamp** (George, 19:14): Plexamp's process holding the card, open in
+   `S32_LE` at 44.1 kHz and running, volume Fixed. Whether Plexamp sent 32
+   bits itself or was widened was not read.
 
 ## What it means
 
