@@ -83,20 +83,26 @@ class FakeRpc:
     change them between `release()` and `device_freed()` to model what LMS
     did in between - restarting the track from zero, say. `timestamp` is
     the queue's `playlist_timestamp`; a test changes it to model a load or
-    an edit, and sets it to None for an LMS that does not report one."""
+    an edit, and sets it to None for an LMS that does not report one.
+    `index` is `playlist_cur_index`, which LMS reports as a string; a test
+    changes it to model a skip or a jump within the same queue."""
 
     def __init__(self, mode="play", position=60.0):
         self.mode = mode
         self.position = position
         self.timestamp = 1789663581.32885
+        self.index = "2"
+        self.power = 1
         self.commands = []
 
     async def __call__(self, session, player, command):
         self.commands.append(list(command))
         if command[0] == "status":
-            result = {"mode": self.mode, "power": 1, "time": self.position}
+            result = {"mode": self.mode, "power": self.power, "time": self.position}
             if self.timestamp is not None:
                 result["playlist_timestamp"] = self.timestamp
+            if self.index is not None:
+                result["playlist_cur_index"] = self.index
             return {"result": result}
         return {"result": {}}
 
@@ -392,6 +398,55 @@ async def test_an_lms_reporting_no_timestamp_behaves_as_before(monkeypatch):
     restore stands rather than silently switching itself off."""
     adapter, rpc = _adapter(monkeypatch, mode="play", position=60.0)
     rpc.timestamp = None
+    await adapter.release()
+    rpc.position = 1.2
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert ["time", "60.00"] in rpc.commands
+
+
+@pytest.mark.asyncio
+async def test_another_track_of_the_same_queue_is_not_seeked_to_the_old_position(monkeypatch):
+    """Code review, 2026-10-12: next, previous and a jump within the queue
+    leave `playlist_timestamp` alone (Finding 029's addendum), so track 7
+    picked in the Lyrion app while Spotify played was seeked to the 1:55
+    track 3 had been released at. A track the user just picked is content
+    just chosen (ADR-0027, rule A), so neither the position nor the play
+    state is put back."""
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=115.0)
+    await adapter.release()
+    rpc.index = "6"
+    rpc.mode = "pause"
+    rpc.position = 0.4
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert not any(c[0] == "time" for c in rpc.commands)
+    assert ["play"] not in rpc.commands
+
+
+@pytest.mark.asyncio
+async def test_another_track_after_a_deactivation_is_not_seeked_either(monkeypatch):
+    """The same, for the user's own power-off: the position noted then
+    belongs to the track that was playing, not to the one picked since."""
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=72.0)
+    await adapter._note_position_if_unset(session=None)
+    rpc.index = "3"
+    rpc.position = 0.4
+    rpc.commands.clear()
+
+    await adapter.device_freed()
+
+    assert not any(c[0] == "time" for c in rpc.commands)
+
+
+@pytest.mark.asyncio
+async def test_an_lms_reporting_no_index_behaves_as_before(monkeypatch):
+    adapter, rpc = _adapter(monkeypatch, mode="play", position=60.0)
+    rpc.index = None
     await adapter.release()
     rpc.position = 1.2
     rpc.commands.clear()
@@ -1026,6 +1081,251 @@ async def test_a_push_re_reads_the_queue(monkeypatch):
 
     # One for the seed query, one for the push.
     assert rpc.queue_reads == 2
+
+
+async def _watch_once(monkeypatch, adapter):
+    """Run `_watch` through its seed and stop at the first long poll."""
+    async def fake_post(self, session, message, timeout=None):
+        if message["channel"] == "/meta/connect":
+            raise asyncio.CancelledError
+        return []
+
+    monkeypatch.setattr(LmsAdapter, "_cometd_handshake", lambda self, session: _done("cid"))
+    monkeypatch.setattr(LmsAdapter, "_cometd_post", fake_post)
+    acquired, released = [], []
+    with pytest.raises(asyncio.CancelledError):
+        await adapter._watch(lambda: acquired.append(1), lambda: released.append(1))
+    return acquired, released
+
+
+@pytest.mark.asyncio
+async def test_a_player_powered_off_while_the_connection_was_down_is_released(monkeypatch):
+    """Code review, 2026-10-12. The seed on (re)connecting acquired for a
+    player already on, and said nothing for one that was off - so a power-off
+    that happened while the connection was lost left LMS active, its old
+    track on the panel, until something else took over. Releasing is safe to
+    send unconditionally: the supervisor ignores it unless LMS is active."""
+    adapter, rpc = _adapter(monkeypatch, mode="stop")
+    rpc.power = 0
+
+    acquired, released = await _watch_once(monkeypatch, adapter)
+
+    assert acquired == []
+    assert released == [1]
+
+
+@pytest.mark.asyncio
+async def test_a_player_on_at_connection_is_still_an_acquisition(monkeypatch):
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+
+    acquired, released = await _watch_once(monkeypatch, adapter)
+
+    assert acquired == [1]
+    assert released == []
+
+
+@pytest.mark.asyncio
+async def test_a_slow_lms_is_still_powered_off_after_the_supervisor_moves_on(monkeypatch):
+    """Code review, 2026-10-12. The supervisor waits two seconds for
+    `release()` and then cancels it. An LMS slow to answer - a library scan,
+    a remote server - had the call cancelled between the pause and the
+    power-off, and the player stayed on while another renderer held the
+    device. LMS acquires only on a power-on edge, so after that neither
+    `power 1` nor play in the Lyrion app could make it the active renderer
+    again. The release carries on to its power-off however long LMS takes."""
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+    plain = FakeRpc.__call__
+
+    async def slow(self, session, player, command):
+        if command[0] == "pause":
+            await asyncio.sleep(0.05)
+        return await plain(self, session, player, command)
+
+    monkeypatch.setattr(FakeRpc, "__call__", slow)
+
+    with pytest.raises(asyncio.TimeoutError):
+        await asyncio.wait_for(adapter.release(), 0.01)
+    await asyncio.sleep(0.1)
+
+    assert rpc.commands == [["status", "-", 1], ["pause", 1], ["power", 0]]
+
+
+@pytest.mark.asyncio
+async def test_a_power_off_that_failed_is_sent_when_lms_is_back(monkeypatch):
+    """LMS unreachable during the release: nothing reached it. When the
+    connection comes back the player is still on, and the seed used to read
+    that as LMS taking the device again - from the renderer that took over.
+    The power-off is owed, and sent instead."""
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+    plain = FakeRpc.__call__
+    down = {"yes": True}
+
+    async def unreachable(self, session, player, command):
+        if down["yes"] and command[0] == "pause":
+            raise aiohttp.ClientConnectionError("LMS is not answering")
+        return await plain(self, session, player, command)
+
+    monkeypatch.setattr(FakeRpc, "__call__", unreachable)
+    assert await adapter.release() is False
+    down["yes"] = False
+    rpc.commands.clear()
+
+    acquired, released = await _watch_once(monkeypatch, adapter)
+
+    assert acquired == []
+    assert ["pause", 1] in rpc.commands and ["power", 0] in rpc.commands
+    assert rpc.commands.index(["pause", 1]) < rpc.commands.index(["power", 0])
+
+
+@pytest.mark.asyncio
+async def test_a_player_seen_off_owes_nothing(monkeypatch):
+    """The user powered the player off and on again themselves: that is an
+    acquisition, not a power-off still to send."""
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+    adapter._power_off_owed = True
+    rpc.power = 0
+    await _watch_once(monkeypatch, adapter)
+    rpc.power = 1
+    rpc.commands.clear()
+
+    acquired, _ = await _watch_once(monkeypatch, adapter)
+
+    assert acquired == [1]
+    assert ["power", 0] not in rpc.commands
+
+
+async def _watch_pushes(monkeypatch, adapter, pushes, during=None):
+    """Run `_watch` through its seed and then `pushes`, one long poll each;
+    `during` is awaited at the first long poll, before any push arrives."""
+    channel = "/cid/slim/playerstatus/aa:bb:cc:dd:ee:ff"
+    frames = [[{"channel": channel, "data": data}] for data in pushes]
+    first = {"yes": True}
+
+    async def fake_post(self, session, message, timeout=None):
+        if message["channel"] != "/meta/connect":
+            return []
+        if first["yes"] and during is not None:
+            first["yes"] = False
+            await during()
+        if not frames:
+            raise asyncio.CancelledError
+        return frames.pop(0)
+
+    monkeypatch.setattr(LmsAdapter, "_cometd_handshake", lambda self, session: _done("cid"))
+    monkeypatch.setattr(LmsAdapter, "_cometd_post", fake_post)
+    acquired, released = [], []
+    with pytest.raises(asyncio.CancelledError):
+        await adapter._watch(lambda: acquired.append(1), lambda: released.append(1))
+    return acquired, released
+
+
+def _lms_unreachable_for_the_release(monkeypatch, rpc):
+    plain = FakeRpc.__call__
+    down = {"yes": True}
+
+    async def unreachable(self, session, player, command):
+        if down["yes"] and command[0] == "pause":
+            raise aiohttp.ClientConnectionError("LMS is not answering")
+        return await plain(self, session, player, command)
+
+    monkeypatch.setattr(FakeRpc, "__call__", unreachable)
+    return down
+
+
+@pytest.mark.asyncio
+async def test_play_on_the_still_on_player_takes_the_device_back(monkeypatch):
+    """George, 2026-10-12 (answer 9: "Take it back"). A takeover's pause and
+    power-off failed, so the player stayed on, owing its power-off. Play in
+    the Lyrion app on that player is LMS taking the device as it would from
+    off: an acquisition - there is no power-on edge to give one - and the
+    owed power-off is cancelled then, never sent after it (the reconnect's
+    seed used to send it, powering off the player being listened to)."""
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+    down = _lms_unreachable_for_the_release(monkeypatch, rpc)
+    rpc.power = 1
+
+    async def takeover_fails():
+        assert await adapter.release() is False
+        assert adapter._power_off_owed
+        down["yes"] = False
+
+    # The user pauses and then plays in the Lyrion app; the player stays on.
+    acquired, _ = await _watch_pushes(monkeypatch, adapter, [
+        {"power": 1, "mode": "pause", "player_connected": 1},
+        {"power": 1, "mode": "play", "player_connected": 1},
+    ], during=takeover_fails)
+
+    # The seed's (LMS held the device before the takeover), then the play's.
+    assert acquired == [1, 1], "play on the still-on player is LMS acquiring"
+    assert not adapter._power_off_owed
+    rpc.commands.clear()
+    acquired, _ = await _watch_once(monkeypatch, adapter)
+    assert ["power", 0] not in rpc.commands and ["pause", 1] not in rpc.commands
+    assert acquired == [1], "back on, the player is LMS's as at any start"
+
+
+@pytest.mark.asyncio
+async def test_lms_resuming_a_reconnecting_player_is_not_a_deliberate_play(monkeypatch):
+    """The ladder kills squeezelite after a failed release, and LMS carries on
+    playing to a player that reconnects (George, 2026-09-29). That is not
+    the listener's play: only a play from a pause or stop seen on the
+    connected player is, so nothing is taken from whoever took over."""
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+    down = _lms_unreachable_for_the_release(monkeypatch, rpc)
+
+    async def takeover_fails():
+        assert await adapter.release() is False
+        down["yes"] = False
+
+    acquired, _ = await _watch_pushes(monkeypatch, adapter, [
+        {"power": 1, "mode": "stop", "player_connected": 0},
+        {"power": 1, "mode": "play", "player_connected": 1},
+    ], during=takeover_fails)
+
+    assert acquired == [1], "the seed's alone: LMS held the device before the takeover"
+    assert adapter._power_off_owed
+
+
+@pytest.mark.asyncio
+async def test_a_release_that_fails_after_lms_took_the_device_back_owes_nothing(monkeypatch):
+    """A slow release, shielded and still in flight, that fails only after the
+    listener has powered the player on again must not owe a power-off for a
+    device LMS now holds - nor send one, if it gets through after all."""
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+    rpc.power = 0
+    plain = FakeRpc.__call__
+    gate, waiting = asyncio.Event(), asyncio.Event()
+    outcome = {"fail": True}
+
+    async def slow(self, session, player, command):
+        if command[0] == "pause":
+            waiting.set()
+            await gate.wait()
+            if outcome["fail"]:
+                raise aiohttp.ClientConnectionError("LMS is not answering")
+        return await plain(self, session, player, command)
+
+    monkeypatch.setattr(FakeRpc, "__call__", slow)
+    for fail in (True, False):
+        outcome["fail"] = fail
+        gate.clear()
+        waiting.clear()
+        rpc.power = 0
+        rpc.commands.clear()
+        release = asyncio.ensure_future(adapter.release())
+
+        async def let_it_finish():
+            # The release has sent its pause and waits on LMS.
+            await asyncio.wait_for(waiting.wait(), 1)
+
+        acquired, _ = await _watch_pushes(monkeypatch, adapter, [{"power": 1, "mode": "play"}],
+                                          during=let_it_finish)
+        assert acquired == [1]
+        rpc.commands.clear()
+        gate.set()
+        await release
+        assert not adapter._power_off_owed, f"fail={fail}"
+        assert ["power", 0] not in rpc.commands, f"fail={fail}"
 
 
 @pytest.mark.asyncio

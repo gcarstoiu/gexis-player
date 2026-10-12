@@ -10,7 +10,9 @@
   import LockIcon from '../lib/LockIcon.svelte';
   import VolumeIcon from '../lib/VolumeIcon.svelte';
 
-  let { open, volume, active, onclose, onexternal, onactivity, onsettled } = $props();
+  //: `armsAt`: before this (performance.now()), a drawer that opened by
+  //: itself takes no touch on its level or mute (App.svelte, VOLUME_ARM_MS).
+  let { open, armsAt = 0, volume, active, onclose, onexternal, onactivity, onsettled } = $props();
 
   //: The level, dragging, mute and the changes from elsewhere: one copy,
   //: shared with the bar's tray (lib/volumeControl.svelte.js).
@@ -24,10 +26,11 @@
   const shown = $derived(vol.shown);
   const pct = $derived(vol.pct);
   const toast = $derived(vol.toast);
-  const down = (event) => vol.down(event, event.currentTarget);
+  const armed = () => performance.now() >= armsAt;
+  const down = (event) => armed() && vol.down(event, event.currentTarget);
   const move = (event) => vol.move(event, event.currentTarget);
   const up = () => vol.up();
-  const toggleMute = () => vol.toggleMute();
+  const toggleMute = () => armed() && vol.toggleMute();
 </script>
 
 <div class="scrim" class:is-open={open} role="presentation" onclick={onclose}></div>

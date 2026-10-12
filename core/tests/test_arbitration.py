@@ -239,6 +239,49 @@ async def _make_spotify_active(supervisor, holder):
 
 
 @pytest.mark.asyncio
+async def test_while_the_outgoing_renderer_is_released_the_incoming_one_is_named():
+    """Code review, 2026-10-12. `active` names the incoming renderer before the
+    outgoing one is released, and the core writes a renderer's volume report
+    to the DAC whenever it is the active one - so a phone's slider position
+    arriving during a Bluetooth release went to the DAC under the still-playing
+    Bluetooth audio, which Finding 012 moved the volume step to prevent.
+    `releasing_for` lets the caller tell that window apart: set for exactly
+    the release, not for the volume step or `device_freed` after it."""
+    supervisor, adapters, holder = build(active="bluetooth")
+    seen = {}
+
+    async def release():
+        seen["release"] = supervisor.releasing_for
+        holder["who"] = None
+        return True
+
+    async def restore(renderer_id):
+        seen["volume"] = supervisor.releasing_for
+
+    adapters["bluetooth"].release = release
+    supervisor._restore_volume = restore
+    assert supervisor.releasing_for is None
+
+    await supervisor.acquire("spotify")
+
+    assert seen == {"release": "spotify", "volume": None}
+    assert supervisor.releasing_for is None
+
+
+@pytest.mark.asyncio
+async def test_releasing_for_is_cleared_when_the_release_raises():
+    supervisor, adapters, _ = build(active="lms")
+
+    async def boom():
+        raise RuntimeError("LMS went away")
+
+    adapters["lms"].release = boom
+    await supervisor.acquire("spotify")
+
+    assert supervisor.releasing_for is None
+
+
+@pytest.mark.asyncio
 async def test_ladder_stops_at_polite_when_that_frees_the_device():
     supervisor, adapters, holder = build({"spotify": "release"})
     await _make_spotify_active(supervisor, holder)
@@ -833,8 +876,10 @@ async def test_a_failing_active_change_does_not_leave_the_screen_up():
     )
     supervisor._active = "lms"
 
-    with pytest.raises(RuntimeError):
-        await supervisor.acquire("spotify")
+    # Since the review of 2026-10-12 the listener's failure is logged and the
+    # takeover completes; the handoff screen still comes down.
+    await supervisor.acquire("spotify")
+    assert supervisor.active == "spotify"
     assert seen == [("lms", "spotify"), (None, None)]
 
 
@@ -1197,3 +1242,23 @@ async def test_nothing_takes_the_device_while_an_update_installs():
     installing["now"] = False
     await supervisor.acquire("spotify")
     assert supervisor.active == "spotify"
+
+
+def test_a_listener_that_raises_does_not_stop_the_change():
+    """Review, 2026-10-12: a broadcast that raised left a takeover half-done."""
+    import asyncio
+    from gexis_core.arbitration import Supervisor
+
+    seen = []
+
+    def boom(active):
+        seen.append(active)
+        raise RuntimeError("listener broke")
+
+    sup = Supervisor.__new__(Supervisor)
+    sup._on_active_change = boom
+    sup._on_handoff_change = lambda a, b: (_ for _ in ()).throw(RuntimeError("x"))
+    sup._active = "spotify"
+    sup._notify_active_change()
+    sup._notify_handoff("lms", "spotify")
+    assert seen == ["spotify"]

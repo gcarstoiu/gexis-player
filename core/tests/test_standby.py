@@ -78,6 +78,12 @@ class FakeScreen:
         self.visible = False
         return True
 
+    async def show_async(self):
+        return self.show()
+
+    async def hide_async(self):
+        return self.hide()
+
 
 def test_the_visualiser_does_not_come_up_in_standby():
     asleep = {"off": True}
@@ -106,6 +112,46 @@ async def test_a_touch_and_the_phone_wake_the_screen_and_the_phone_can_put_it_to
         assert (await (await client.post("/panel/standby/off")).json()) == {"standby": False}
         assert (await client.post("/panel/standby/sideways")).status == 404
     assert switched == [False, True, False, True]
+
+
+async def test_after_a_core_restart_the_first_touch_or_the_phone_gives_the_picture_back():
+    """Review, 2026-10-12: the output's state lives in the kiosk's session,
+    which outlives a core restart, while `off` starts False. A restart during
+    standby (a plugin upload, a crash) left a dark panel that no touch, no
+    phone and no music could wake."""
+    switched = []
+
+    async def switch(on):
+        switched.append(on)
+        return True
+
+    store = StateStore({})
+    standby = sb.Standby(switch=switch, publish=lambda off, reason: store.set_panel(standby=off))
+    server = StateServer(store, standby=standby)
+    async with TestClient(TestServer(server.make_app())) as client:
+        await client.post("/touch")
+        assert switched == [True], "the output is turned on, whatever the core last knew"
+        await client.post("/touch")
+        assert switched == [True], "once: a touch is not a subprocess every time"
+    fresh = sb.Standby(switch=switch)
+    await fresh.wake("phone")
+    assert switched == [True, True] and not fresh.off
+
+
+async def test_an_output_that_would_not_come_on_is_tried_again_at_the_next_touch():
+    results = [False, True]
+    switched = []
+
+    async def switch(on):
+        switched.append(on)
+        return results.pop(0)
+
+    standby = sb.Standby(switch=switch)
+    assert standby.may_be_dark
+    await standby.wake("touch")
+    assert standby.may_be_dark
+    await standby.wake("touch")
+    assert not standby.may_be_dark and switched == [True, True]
 
 
 # -- the schedule -------------------------------------------------------------

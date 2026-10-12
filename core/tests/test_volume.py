@@ -274,6 +274,26 @@ class TestGetRawNegativeValues:
 
         assert await get_raw("DAC") == 216
 
+    @pytest.mark.asyncio
+    async def test_a_mono_control_is_read(self, monkeypatch):
+        """**Code review, 2026-10-12.** The Pi's headphone jack's `PCM` has one
+        value, and amixer prints it as `Mono:`; only `Front Left:` matched, so
+        the jack's level was never read."""
+        stdout = (
+            b"Simple mixer control 'PCM',0\n"
+            b"  Capabilities: pvolume pvolume-joined pswitch pswitch-joined\n"
+            b"  Playback channels: Mono\n"
+            b"  Limits: Playback -10239 - 400\n"
+            b"  Mono: Playback -2000 [77%] [-20.00dB] [on]\n"
+        )
+
+        async def fake_exec(*args, **kwargs):
+            return FakeProcess(stdout)
+
+        monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
+
+        assert await get_raw("PCM") == -2000
+
 
 class TestDbConversion:
     """ADR-0018's documented scale: raw 0 = -120dB (mute), raw 240 =
@@ -1142,3 +1162,127 @@ def test_leaving_fixed_goes_back_to_the_level_before_it_or_the_starting_volume()
     assert level_after_fixed(180, 60) == 180
     assert level_after_fixed(None, 60) == renderer_value_to_hardware_raw(renderer_percent_to_value(60, 100), 100)
     assert level_after_fixed(None, None) is None
+
+
+class TestASupersededWriteDoesNotRaise:
+    """**Code review, 2026-10-12.** A second `write_hardware` that cancels a
+    ramp which has not started yet cancels it before `_ramp_to`'s own
+    `except CancelledError` exists, and the first caller's `await` raised -
+    out of `hand_level_to`, ending a Spotify takeover before `device_freed`."""
+
+    @pytest.mark.asyncio
+    async def test_two_writes_in_the_same_tick_both_return(self, fake_set_raw):
+        bridge, _ = make_bridge()
+        first = asyncio.ensure_future(bridge.write_hardware(100))
+        second = asyncio.ensure_future(bridge.write_hardware(200))
+        results = await asyncio.gather(first, second, return_exceptions=True)
+        assert results == [None, None]
+        assert fake_set_raw[-1] == ("DAC", 200)
+
+    @pytest.mark.asyncio
+    async def test_a_caller_that_is_itself_cancelled_still_is(self):
+        bridge, _ = make_bridge()
+        writer = asyncio.ensure_future(bridge.write_hardware(100))
+        await asyncio.sleep(0)  # the writer is awaiting a ramp not yet started
+        writer.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await writer
+
+
+class TestTheBackstopCapsAtTheCeiling:
+    """**Code review, 2026-10-12.** `_capped` is the backstop for absolute
+    raws - a level remembered before the ceiling came down, restored by
+    unmute or on leaving Fixed. The daemon handed it the `max_ceiling` row,
+    a percentage since 2026-09-23, and it read it as dB: `db_to_raw(50.0)`
+    is the top of the scale, so nothing was ever capped."""
+
+    @pytest.fixture(autouse=True)
+    def _no_ceiling_afterwards(self):
+        yield
+        volume_module.set_ceiling_reader(lambda: None)
+
+    @pytest.mark.asyncio
+    async def test_a_remembered_full_scale_comes_back_at_the_ceiling(self, fake_set_raw):
+        volume_module.set_ceiling_reader(lambda: 50)
+        bridge, _ = make_bridge()
+        await bridge.write_hardware(volume_module.hardware_max())
+        assert fake_set_raw[-1] == ("DAC", db_to_raw(volume_module.ceiling_db()))
+        assert raw_to_db(fake_set_raw[-1][1]) == pytest.approx(-15.5, abs=0.5)
+
+    @pytest.mark.asyncio
+    async def test_no_ceiling_caps_nothing(self, fake_set_raw):
+        bridge, _ = make_bridge()
+        await bridge.write_hardware(volume_module.hardware_max())
+        assert fake_set_raw[-1] == ("DAC", volume_module.hardware_max())
+
+
+class TestAMonitorThatKeepsExitingDoesNotRecurse:
+    """**Code review, 2026-10-12.** Both bridges restarted `alsactl monitor`
+    with `return await self.run()`. On a card that cannot be monitored it
+    exits at once, so every 5 s added a frame, and after ~1000 of them -
+    about 80 minutes with a USB DAC unplugged - RecursionError ended main()."""
+
+    class _Done(Exception):
+        pass
+
+    def _exiting_monitor(self, monkeypatch, restarts):
+        spawned = []
+
+        class Stdout:
+            async def readline(self):
+                return b""
+
+        class Proc:
+            stdout = Stdout()
+            returncode = 0
+
+        async def fake_exec(*args, **kwargs):
+            spawned.append(args)
+            if len(spawned) > restarts:
+                raise self._Done
+            return Proc()
+
+        async def no_wait(_seconds):
+            pass
+
+        monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
+        monkeypatch.setattr(volume_module.asyncio, "sleep", no_wait)
+        return spawned
+
+    @pytest.mark.asyncio
+    async def test_the_output_s_monitor(self, monkeypatch):
+        spawned = self._exiting_monitor(monkeypatch, 2000)
+        bridge, _ = make_bridge()
+        with pytest.raises(self._Done):
+            await bridge.run()
+        assert len(spawned) == 2001
+
+    @pytest.mark.asyncio
+    async def test_a_dummy_card_s_monitor(self, monkeypatch):
+        spawned = self._exiting_monitor(monkeypatch, 2000)
+        bridge = volume_module.DummyMixerBridge(
+            "lms", "gexislmsvol", "Master", "DAC", get_active_renderer=lambda: None
+        )
+        with pytest.raises(self._Done):
+            await bridge.run()
+        assert len(spawned) == 2001
+
+
+class TestAChangeOfScaleStartsFromNoPosition:
+    """**Code review, 2026-10-12.** The last value written is a raw on the old
+    scale; a ramp from the DAC2 HD's 200 to the jack's -2000 walked through
+    0, which is 0 dB on the jack."""
+
+    @pytest.mark.asyncio
+    async def test_the_next_write_goes_straight_to_its_target(self, fake_set_raw):
+        bridge, _ = make_bridge()
+        await bridge.write_hardware(200)
+        fake_set_raw.clear()
+        bridge.forget_position()
+        await bridge.write_hardware(100)
+        assert fake_set_raw == [("DAC", 100)]
+
+    def test_the_control_in_use_is_the_current_one(self):
+        bridge, _ = make_bridge()
+        bridge.set_mixer_name("PCM")
+        assert bridge.mixer_name == "PCM"

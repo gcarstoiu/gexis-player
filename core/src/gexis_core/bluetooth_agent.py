@@ -28,9 +28,9 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass
-from typing import Callable
+from typing import Awaitable, Callable
 
-from dbus_next import DBusError, Variant
+from dbus_next import DBusError, Message, MessageType, Variant
 from dbus_next.aio import MessageBus
 from dbus_next.service import ServiceInterface, method
 
@@ -361,3 +361,40 @@ async def register(bus: MessageBus, agent: Agent, capability: str) -> bool:
         return False
     logger.info("bt-agent: registered as %s with capability %s", AGENT_PATH, capability)
     return True
+
+
+#: bluetoothd taking or giving up its name on the system bus.
+BLUEZ_OWNER_RULE = (
+    "type='signal',sender='org.freedesktop.DBus',interface='org.freedesktop.DBus',"
+    f"member='NameOwnerChanged',arg0='{BLUEZ_SERVICE}'"
+)
+
+
+async def follow_bluez(bus: MessageBus, again: Callable[[], Awaitable[None]]) -> None:
+    """Run `again` each time bluetoothd comes back on the bus.
+
+    **BlueZ keeps agents in memory only** (review, 2026-10-12). The core's
+    connection is to the bus, not to bluetoothd, so it outlives a restart of
+    the daemon - a bluez upgrade, a crash - and `wait_for_disconnect` never
+    returns; nothing registered the agent again, and pairing stopped asking
+    on the panel until the core restarted. `again` is the caller's: register
+    the agent, apply the adapter's switches.
+    """
+    await bus.call(Message(
+        destination="org.freedesktop.DBus", path="/org/freedesktop/DBus",
+        interface="org.freedesktop.DBus", member="AddMatch", signature="s", body=[BLUEZ_OWNER_RULE],
+    ))
+
+    async def run() -> None:
+        try:
+            await again()
+        except Exception:  # noqa: BLE001 - a later restart tries again
+            logger.exception("bt-agent: bluetoothd came back and the agent was not registered again")
+
+    def handler(message: Message) -> None:
+        if (message.message_type == MessageType.SIGNAL and message.member == "NameOwnerChanged"
+                and message.body and message.body[0] == BLUEZ_SERVICE and message.body[2]):
+            logger.info("bt-agent: bluetoothd is back on the bus")
+            asyncio.ensure_future(run())
+
+    bus.add_message_handler(handler)

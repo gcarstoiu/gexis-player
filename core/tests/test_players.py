@@ -55,3 +55,16 @@ async def test_the_others_are_asked_for_their_status_and_kept_a_while():
     assert first == [{"name": "ShelvesPi", "host": "shelvespi.local", "transport": "paused",
                       "renderer": "Lyrion", "url": f"http://shelvespi.local:{port}/"}]
     assert again == first and len(calls) == 1
+
+
+async def test_a_peer_that_answers_something_other_than_an_object_is_left_out():
+    """Review, 2026-10-12: `{**body}` on a list raised TypeError, which failed
+    the whole refresh and with it `/players`."""
+    app = web.Application()
+    app.router.add_get("/player/status", lambda r: web.json_response([1, 2]))
+    async with TestServer(app) as peer:
+        async def browse():
+            return f"=;wlan0;IPv4;odd;_gexis._tcp;local;odd.local;127.0.0.1;{peer.port};\n"
+        finder = pl.Players(lambda: "sofapi", browse=browse)
+        async with aiohttp.ClientSession() as session:
+            assert await finder.others(session) == []

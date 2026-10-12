@@ -36,6 +36,7 @@ import math
 import sys
 import threading
 import time
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -61,6 +62,21 @@ BACKUP_S = 120      # how long a backup may take to appear
 #: put in, the one to go back to, the steps so far. Read by `postboot`.
 def pending() -> Path:
     return STATE / "pending-check.json"
+
+
+#: `how` in pending-check.json for an install still running (the review of
+#: 2026-10-12): written before dpkg starts, so a boot that finds it found an
+#: install the power cut short.
+CUT_SHORT_HOW = "cut-short"
+
+
+def leave_for_the_boot(left: dict) -> None:
+    """pending-check.json, written beside and renamed: a boot must never
+    find half of it."""
+    STATE.mkdir(parents=True, exist_ok=True)
+    tmp = STATE / "pending-check.json.tmp"
+    tmp.write_text(json.dumps(left))
+    tmp.replace(pending())
 
 
 INHIBIT = ["systemd-inhibit", "--what=shutdown:sleep", "--who=gexis-update", "--mode=block"]
@@ -154,16 +170,32 @@ def read_channel(channel: str) -> dict:
                    f"(channel format {fmt}, this one reads {FORMAT}); install a newer image")
     serial = int(fields.get("Serial", "0"))
     seen_path = STATE / f"serial-{channel}"
-    seen = int(seen_path.read_text()) if seen_path.exists() else 0
+    seen = seen_serial(seen_path)
     if serial < seen:
         raise Stop(f"the {channel} file's serial went down ({serial} after {seen}); refused")
     fields["_serial"] = serial
     return fields
 
 
+def seen_serial(path: Path) -> int:
+    """The serial last accepted, or 0. **A file that does not read as one
+    counts as none** (the review of 2026-10-12): a power cut can leave it
+    empty (ShelvesPi's lists, `drop_empty_lists`), and an empty one made
+    every check end in a ValueError, for good. 0 accepts the next genuine
+    file, which a check then remembers again."""
+    try:
+        return int(path.read_text())
+    except (OSError, ValueError):
+        return 0
+
+
 def remember_serial(channel: str, serial: int) -> None:
+    """Written beside and renamed, as status.json is: a cut mid-write
+    leaves the serial before, never half of one."""
     STATE.mkdir(parents=True, exist_ok=True)
-    (STATE / f"serial-{channel}").write_text(str(serial))
+    tmp = STATE / f"serial-{channel}.tmp"
+    tmp.write_text(str(serial))
+    tmp.replace(STATE / f"serial-{channel}")
 
 
 def parts_of(version: str) -> tuple[list[str], list[str]]:
@@ -337,6 +369,42 @@ def heal(opts: list[str]) -> None:
     if journal or broken:
         print(f"dpkg is still not clean: {', '.join(broken) or 'its journal'}", flush=True)
         raise Stop(CUT_SHORT)
+
+
+def prune_cache() -> list[str]:
+    """**The cache keeps what is installed, and nothing else** (the review
+    of 2026-10-12). apt keeps every file it fetches, and nothing cleaned
+    this cache - the system's apt-daily cleans only /var/cache/apt: each
+    release's packages, the copies fetched for going back, every new skin
+    pack version (up to 462 MB) stayed on the card for good. Run when an
+    update or a pack has ended well. The installed versions stay: they are
+    what the next update goes back to, and keeping them spares it the
+    download. Half-fetched files in `partial/` stay for apt to resume. When
+    dpkg cannot say what is installed, nothing goes; nor while a boot has
+    an update still to check, which may need the release before."""
+    if pending().exists():
+        return []
+    try:
+        listed = run("dpkg-query", "-W", "-f", "${Package} ${Version}\n", check=False)
+    except OSError:  # no dpkg to ask: nothing is known to be spare
+        return []
+    have = {tuple(line.split(" ", 1)) for line in listed.stdout.splitlines() if line.count(" ") == 1}
+    if listed.returncode or not have:
+        return []
+    dropped = []
+    for deb in sorted((STATE / "apt" / "archives").glob("*.deb")):
+        # apt names them <package>_<version>_<arch>.deb, the epoch's ":" as %3a.
+        fields = deb.name[:-len(".deb")].split("_")
+        if len(fields) != 3 or (fields[0], urllib.parse.unquote(fields[1])) in have:
+            continue
+        try:
+            deb.unlink()
+            dropped.append(deb.name)
+        except OSError:
+            continue
+    if dropped:
+        print(f"dropped {len(dropped)} package(s) no longer installed from the cache", flush=True)
+    return dropped
 
 
 def apt_download(opts: list[str], *args: str, report_as: dict, reporter=None) -> subprocess.CompletedProcess:
@@ -645,7 +713,10 @@ def stop_playback() -> None:
 
 def back_up() -> str:
     before = {p.name for p in BACKUPS.glob("*.tgz")}
-    req = urllib.request.Request(f"{CORE}/settings/backup", method="POST")
+    # `before=update` (George, 2026-10-12): the core names it as an
+    # update's and keeps the newest three of those; a backup taken by hand
+    # is never deleted.
+    req = urllib.request.Request(f"{CORE}/settings/backup?before=update", method="POST")
     try:
         urllib.request.urlopen(req, timeout=20).read()
     except OSError as exc:
@@ -711,6 +782,8 @@ def go_back(about: dict, channel: str, target: str, current: str, back_repos, ba
     apt(back, "--no-download", "--allow-downgrades", "--allow-change-held-packages",
         "dist-upgrade", prefix=INHIBIT + [f"--why=Putting {current} back"])
     run("dpkg", "--configure", "-a", check=False)
+    # Gone back: nothing left for a boot to check or finish.
+    pending().unlink(missing_ok=True)
     ok = installed("gexis-player") == current
     # Remembered, so a night's Automatic run does not try it again
     # (Finding 105); "Update now" still does - it is asked for.
@@ -779,6 +852,15 @@ def install(args) -> int:
     step("install")
     PROGRESS["progress"] = 0.0
     report("installing", **about, backup=backup, message=f"installing {target}")
+    # **Left for the boot before dpkg starts** (the review of 2026-10-12):
+    # written only for a planned reboot, an install the power cut short left
+    # the boot nothing - dpkg dirty, postinsts never run, `verify` never run;
+    # and with gexis-player already unpacked at `target`, every later check
+    # said "current" and never reached `heal`. `postboot` finishes it from
+    # `repos` and checks it, or puts `current` back.
+    left = {"about": about, "channel": channel, "target": target, "current": current, "repos": repos,
+            "back_repos": back_repos, "back_pins": back_pins, "backup": backup, "changes": changes}
+    leave_for_the_boot({**left, "steps": PROGRESS.get("steps"), "how": CUT_SHORT_HOW})
     opts = apt_env(repos)
     inhibit = INHIBIT + [f"--why=Installing {target}"]
     # ADR-0111 decision 10: a device that has gexis-skins keeps it. Releases
@@ -823,10 +905,7 @@ def install(args) -> int:
         # 2026-10-07): the boot's `postboot` reads this, checks the device
         # and goes back if it does not answer.
         step("restart", "active")
-        pending().write_text(json.dumps({
-            "about": about, "channel": channel, "target": target, "current": current,
-            "back_repos": back_repos, "back_pins": back_pins, "backup": backup,
-            "changes": changes, "steps": PROGRESS.get("steps"), "how": how}))
+        leave_for_the_boot({**left, "steps": PROGRESS.get("steps"), "how": how})
         report("restarting", **about, backup=backup, reboot=True, message="restarting the device")
         run("systemctl", "reboot", check=False)
         return 0
@@ -839,6 +918,8 @@ def install(args) -> int:
         return go_back(about, channel, target, current, back_repos, back_pins, backup,
                        "the player did not answer after the update", changes)
     step("check", "done")
+    pending().unlink(missing_ok=True)
+    prune_cache()
     report("done", **about, backup=backup, changed=len(changes), restart=how,
            message=f"{target} installed ({how})")
     return 0
@@ -862,6 +943,18 @@ def postboot(args) -> int:
     step("check")
     report("checking-device", **about, backup=left.get("backup"), message="checking the player answers")
     try:
+        # **An install the power cut short is finished first** (the review
+        # of 2026-10-12), from the release going in, as `install` heals; what
+        # cannot be finished is a failure like any other, and goes back.
+        journal, broken = interrupted()
+        if journal or broken or left.get("how") == CUT_SHORT_HOW:
+            report("checking-device", **about, backup=left.get("backup"),
+                   message="finishing the install that was cut short")
+            opts = apt_env(left.get("repos") or left["back_repos"])
+            apt(opts, "update")
+            heal(opts)
+        if PROGRESS["steps"].get("install") == "active":
+            step("install", "done")
         verify(target)
         if not core_answers():
             raise Stop("the player did not answer after the restart")
@@ -870,6 +963,7 @@ def postboot(args) -> int:
         return go_back(about, left["channel"], target, current, left["back_repos"], left["back_pins"],
                        left.get("backup"), str(failure), changes)
     step("check", "done")
+    prune_cache()
     report("done", **about, backup=left.get("backup"), changed=len(left.get("changes") or []),
            restart=left.get("how", "reboot"), message=f"{target} installed (reboot)")
     return 0
@@ -1062,6 +1156,7 @@ def pack_install(name: str) -> int:
     if r.returncode:
         print(f"pack install failed: {why(r)}", flush=True)
         raise Stop("They were downloaded but could not be installed. It is tried again in a few minutes.")
+    prune_cache()
     report_pack("installed", package=name, version=installed(name), message=f"{name} installed")
     return 0
 
@@ -1108,6 +1203,26 @@ def take_turn(waiting) -> object:
     raise Stop("another update or skin pack download did not finish within an hour")
 
 
+def hold_status(wait: bool = True) -> object | None:
+    """**One writer of status.json at a time** (the review of 2026-10-12).
+    An install, the nightly run and the boot's check hold it for as long as
+    they run; "Check for updates" only when it is free. Without it a check
+    started during an install wrote "checking" and then "available" over
+    the install's state: the panel lock and the renderers' freeze lifted
+    while dpkg ran, and a check that ended last could replace "restore the
+    backup". Separate from `take_turn`, which a pack download holds too, and
+    a check while a pack downloads is harmless. None when not waiting and
+    held; the lock is the open file, as the turn's is."""
+    STATE.mkdir(parents=True, exist_ok=True)
+    held = (STATE / "status.lock").open("w")
+    try:
+        fcntl.flock(held, fcntl.LOCK_EX | (0 if wait else fcntl.LOCK_NB))
+        return held
+    except BlockingIOError:
+        held.close()
+        return None
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("action", choices=["check", "install", "scheduled", "postboot", "pack-install", "pack-remove"])
@@ -1124,8 +1239,13 @@ def main() -> int:
             return 1
     try:
         if args.action == "check":
+            _status = hold_status(wait=False)
+            if _status is None:
+                print("an update is running; its status is left as it is", flush=True)
+                return 0
             check(args)
             return 0
+        _status = hold_status()
         if args.action == "scheduled":
             _turn = take_turn(lambda: None)
             return scheduled(args)

@@ -510,3 +510,36 @@ async def test_the_lyrion_shares_row_names_its_shares_and_never_sends_their_logi
     assert row["value"] is None
     assert [(i["name"], i["address"]) for i in row["items"]] == [("Music", "//Tower.local/Music")]
     assert "s3cret" not in text
+
+
+@pytest.mark.asyncio
+async def test_a_share_s_mount_is_checked_off_the_event_loop(tmp_path, monkeypatch):
+    """Review, 2026-10-12: `os.path.ismount` on a share whose NAS is off waits
+    out the NFS timeout, and on the loop that froze volume, transport and
+    every broadcast for as long - from the panel's own `/settings` fetch.
+    The store is still read on the loop, which SQLite insists on."""
+    import threading
+
+    from gexis_core import lyrion_scan, lyrion_shares
+
+    registry = [{"id": "g", "label": "G", "rows": [
+        {"key": "lyrion-server.shares", "type": "list", "kind": "share", "discover": True}]}]
+    store = SettingsStore(tmp_path / "s.db")
+    settings = Settings(store, registry=registry, wired={"lyrion-server.shares": None})
+    checked_on = []
+
+    def is_mount(path):
+        checked_on.append(threading.current_thread())
+        return True
+
+    shares = lyrion_shares.Shares(store, root=tmp_path / "mnt", credentials=tmp_path / "cred",
+                                  is_mount=is_mount)
+    shares.add("nas:/music", None, None)
+    monkeypatch.setattr(lyrion_scan, "servers", lambda own: [])
+    server = StateServer(StateStore({}), settings=settings, lyrion_shares=shares)
+    async with TestClient(TestServer(server.make_app())) as client:
+        row = _row(await (await client.get("/settings")).json(), "lyrion-server.shares")
+        items = (await (await client.get("/settings/lyrion-server.shares/items")).json())["items"]
+    assert row["items"][0]["meta"] == "On nas · Mounted, read-only"
+    assert items[0]["meta"] == "On nas · Mounted, read-only"
+    assert len(checked_on) == 2 and threading.main_thread() not in checked_on

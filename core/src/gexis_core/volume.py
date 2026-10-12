@@ -134,9 +134,42 @@ def use_scale(scale: mixer_scale.Scale | None) -> None:
     _scale = scale or mixer_scale.DAC2_HD
 
 
+def current_scale() -> mixer_scale.Scale:
+    """The scale raw values mean now - kept by whoever holds one across a
+    `use_scale`, to `carry_raw` it."""
+    return _scale
+
+
+def carry_raw(raw: int | None, old: mixer_scale.Scale, new: mixer_scale.Scale) -> int | None:
+    """**A raw level kept from before a change of scale, as the same level
+    after it** (code review, 2026-10-12).
+
+    A raw number only means something on its own scale: -20 dB is 200 on the
+    DAC2 HD, -2000 on the headphone jack and 280 on the software stage. A
+    change of output or of volume type moved the scale under the levels kept
+    as raws - the published one, Mute's, the one before Fixed - and they were
+    replayed on the new scale: the software stage's -20 dB unmuted onto the
+    DAC2 HD as its top, full scale. Carried through dB instead, never above
+    0 dB (`Scale.raw`), and silence stays silence."""
+    if raw is None:
+        return None
+    if raw <= old.raw_min:
+        return new.raw_min
+    return new.raw(old.db(raw))
+
+
 def hardware_max() -> int:
     """The loudest raw value written: the control's 0 dB, never above it."""
     return _scale.top
+
+
+def hardware_silence() -> int:
+    """**Silence: the bottom of the control, which is not always raw 0.**
+    It was 0 here until the scale came from the card (ADR-0117) - true of the
+    DAC2 HD's 0..240, but the Pi's own headphone jack runs -10239..400, where
+    raw 0 is 0 dB. Mute, a renderer's 0 and the slider's 0% all wrote 0 there:
+    full scale into headphones (code review, 2026-10-12)."""
+    return _scale.raw_min
 
 #: **Where the current attenuation is left for the meter service to read**
 #: ([ADR-0057](../../../docs/decisions/0057-the-meters-follow-the-volume.md)).
@@ -160,7 +193,13 @@ ATTENUATION_PATH = Path("/run/gexis/attenuation")
 # ("-50" parsed as 50). Silent, not a parse failure - `re.search` still
 # matches, just the wrong number - so nothing short of comparing against
 # a live reading would catch it.
-_VALUE_RE = re.compile(rb"Front Left: (?:Playback )?(-?\d+) \[")
+#
+# **`Mono:` as well** (code review, 2026-10-12): a control with one value -
+# the Pi's own headphone jack's `PCM`, many USB DACs' - prints as
+# "Mono: Playback -2000 [..]", never "Front Left". Unmatched, the jack's
+# level was never read: nothing published at start, every monitor event
+# skipped, and a Spotify takeover not held to its starting volume.
+_VALUE_RE = re.compile(rb"(?:Front Left|Mono): (?:Playback )?(-?\d+) \[")
 
 # snd-dummy's own scale (mixer_volume_level_min/max module params, left
 # at their defaults) - measured on hardware, 2026-09-08, from a fresh
@@ -439,14 +478,14 @@ def renderer_value_to_hardware_raw(value: int, steps: int) -> int:
     (ADR-0052 amended).
     """
     if steps <= 0 or value <= 0:
-        return 0
+        return hardware_silence()
     return db_to_raw(ceiling_db() + _curve_db(value / steps))
 
 
 def hardware_raw_to_renderer_value(raw: int, steps: int) -> int:
     """The inverse, for the one case that needs it: reporting a level the
     *hardware* has to a renderer that did not set it."""
-    if steps <= 0 or raw <= 0:
+    if steps <= 0 or raw <= hardware_silence():
         return 0
     short = ceiling_db() - raw_to_db(raw)
     if curve() == CURVE_LINEAR:
@@ -575,12 +614,16 @@ class Mute:
                 return False
             self._restore = raw
             self.muted = True
-            await self._write_hardware(0)
+            await self._write_hardware(hardware_silence())
         else:
             restore, self._restore = self._restore, None
             self.muted = False
             await self._write_hardware(restore)
         return True
+
+    def carry(self, old: mixer_scale.Scale, new: mixer_scale.Scale) -> None:
+        """The level unmute restores, onto a new scale (`carry_raw`)."""
+        self._restore = carry_raw(self._restore, old, new)
 
     def audible_raw(self, current: int | None) -> int | None:
         """The level this device is at, as a listener means it: the one
@@ -588,7 +631,7 @@ class Mute:
         return self._restore if self.muted else current
 
     def observe(self, raw: int) -> None:
-        if self.muted and raw != 0:
+        if self.muted and raw != hardware_silence():
             self.muted = False
             self._restore = None
 
@@ -779,19 +822,24 @@ async def set_raw(
     mixer_name: str,
     value: int,
     device: str = MIXER_DEVICE,
-    maximum: int | None = None,
+    scale: mixer_scale.Scale | None = None,
 ) -> None:
     """Write a raw value to a mixer control.
 
-    `device` and `maximum` default to the output's control and its scale
-    (ADR-0117). `maximum` is passed for a control on another scale: the
+    `device` and `scale` default to the output's control and its scale
+    (ADR-0117). `scale` is passed for a control on another one: the
     software stage `Gexis` (0-360, ADR-0124), or the card's own control
     while it is parked at 0 dB or given its level back (ADR-0127).
+
+    **Clamped to that scale's own bottom, not to 0** (code review,
+    2026-10-12): this took a bare `maximum` and clamped below at 0, so the
+    headphone jack's -20 dB (raw -2000) handed back to the card was written
+    as raw 0, which is 0 dB there.
     """
-    if maximum is None:
+    if scale is None:
         value = max(_scale.raw_min, min(hardware_max(), value))
     else:
-        value = max(0, min(maximum, value))
+        value = max(scale.raw_min, min(scale.raw_max, value))
     key = (device, mixer_name)
     mixer = _MIXERS.get(key)
     if mixer is None:
@@ -843,7 +891,6 @@ class VolumeBridge:
         get_active_renderer,
         on_hardware_level=None,
         on_renderer_value=None,
-        ceiling_db=None,
     ) -> None:
         """`adapter` is any `VolumeMechanism.SOFTWARE_API` renderer
         (`adapters/base.py`'s `SoftwareVolumeAdapter` protocol) - only
@@ -876,10 +923,6 @@ class VolumeBridge:
         # docstring on why this is value-matched rather than a time window.
         self._expected_hw_raw: tuple[int, float] | None = None
         self._expected_adapter_value: tuple[int, float] | None = None
-        #: ADR-0052 §3: `max_ceiling`, read through a callable so a change
-        #: applies to the next write rather than the next restart. Returns
-        #: dB or None.
-        self._ceiling_db = ceiling_db or (lambda: None)
         #: The ramp in flight, cancelled when a newer target arrives.
         self._ramp: asyncio.Task | None = None
         self._last_written: int | None = None
@@ -909,6 +952,20 @@ class VolumeBridge:
         logger.info("volume: moving the mixer monitor to %s", alsa.card())
         proc.terminate()
 
+    @property
+    def mixer_name(self) -> str:
+        """The control written now - the chosen output's, not the one the
+        daemon started with."""
+        return self._mixer_name
+
+    def forget_position(self) -> None:
+        """**After a change of scale** (code review, 2026-10-12): the last value
+        written is a raw on the old scale, and a ramp from it on the new one
+        walks through levels that mean something else - from the DAC2 HD's
+        200 down to the jack's -2000 passes 0, which is 0 dB there. The next
+        write goes straight to its target instead."""
+        self._last_written = None
+
     def set_mixer_name(self, mixer_name: str) -> None:
         """**The control's name follows the chosen output** (ADR-0055 §3):
         `DAC` on this HAT, `PCM` on the Pi's own jack. Settable rather than
@@ -937,11 +994,15 @@ class VolumeBridge:
         place. What still can is an *absolute* raw: a level remembered
         before the ceiling was set, or somebody's `amixer`. Those are
         clamped, and a clamp is the right answer for them - there is no
-        position to reinterpret."""
-        ceiling = self._ceiling_db()
-        if ceiling is None:
-            return raw
-        return min(raw, db_to_raw(float(ceiling)))
+        position to reinterpret.
+
+        **The module's own `ceiling_db()`, not a reader of its own** (code
+        review, 2026-10-12): the daemon handed this the `max_ceiling` row,
+        which has been a percentage since 2026-09-23, and it was read as dB -
+        `db_to_raw(50.0)` is the top of the scale, so the backstop never
+        lowered anything, and unmuting a level remembered before the ceiling
+        came down went back above it."""
+        return min(raw, db_to_raw(ceiling_db()))
 
     def _note_written(self, raw: int) -> None:
         now = time.monotonic()
@@ -1008,8 +1069,18 @@ class VolumeBridge:
             self._ramp.cancel()
         self._ramp = asyncio.ensure_future(self._ramp_to(raw))
         # Never raises: a ramp the next target supersedes ends quietly, and
-        # its caller is not the one who cancelled it.
-        await self._ramp
+        # its caller is not the one who cancelled it. `_ramp_to` swallows
+        # that only once it is running; one superseded before its first step
+        # is cancelled without running, and the CancelledError came out here
+        # instead - out of a Spotify takeover, skipping the steps after its
+        # starting volume (code review, 2026-10-12). Re-raised only when it
+        # is *this* caller that is being cancelled.
+        try:
+            await self._ramp
+        except asyncio.CancelledError:
+            task = asyncio.current_task()
+            if task is not None and task.cancelling():
+                raise
 
     async def _ramp_to(self, target: int) -> None:
         """Walk the DAC to `target` in single raw steps of the output's own
@@ -1085,7 +1156,20 @@ class VolumeBridge:
         not every card: LMS's dummy card is watched by its own
         `DummyMixerBridge`, and an unscoped monitor would process its
         changes here as well.
+
+        **A loop, not a recursion** (code review, 2026-10-12): the restart
+        used to be `return await self.run()`, one more frame each time, and
+        on a card that cannot be monitored - a USB DAC unplugged - alsactl
+        exits at once, so after ~80 minutes of restarts every 5 s the
+        RecursionError ended the daemon.
         """
+        while True:
+            await self._monitor_once()
+            logger.warning("volume: alsactl monitor exited, restarting in 5s")
+            await asyncio.sleep(5)
+
+    async def _monitor_once(self) -> None:
+        """One `alsactl monitor`, read until it exits."""
         proc = await asyncio.create_subprocess_exec(
             "alsactl",
             "monitor",
@@ -1101,9 +1185,7 @@ class VolumeBridge:
         while True:
             line = await proc.stdout.readline()
             if not line:
-                logger.warning("volume: alsactl monitor exited, restarting in 5s")
-                await asyncio.sleep(5)
-                return await self.run()
+                return
             raw = await get_raw(self._mixer_name)
             if raw is None or raw == last_raw:
                 # `raw == last_raw` also absorbs the extra monitor lines a
@@ -1336,6 +1418,16 @@ class DummyMixerBridge:
         await self._mirror(raw)
 
     async def run(self) -> None:
+        """A loop rather than a recursion, as `VolumeBridge.run`: a dummy card
+        that failed to load would otherwise end the daemon in ~80 minutes."""
+        while True:
+            await self._monitor_once()
+            logger.warning(
+                "volume: alsactl monitor(%s) exited, restarting in 5s", self._dummy_card
+            )
+            await asyncio.sleep(5)
+
+    async def _monitor_once(self) -> None:
         proc = await asyncio.create_subprocess_exec(
             "alsactl",
             "monitor",
@@ -1346,11 +1438,7 @@ class DummyMixerBridge:
         while True:
             line = await proc.stdout.readline()
             if not line:
-                logger.warning(
-                    "volume: alsactl monitor(%s) exited, restarting in 5s", self._dummy_card
-                )
-                await asyncio.sleep(5)
-                return await self.run()
+                return
             await self._on_dummy_change(
                 await get_raw(self._dummy_control, device=f"hw:{self._dummy_card}")
             )

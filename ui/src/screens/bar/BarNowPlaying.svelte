@@ -138,6 +138,12 @@
       if (tap || travel > TRAY_H * 0.35) onvolume?.();
     },
   });
+  //: **A pull ends with the strip** (code review, 2026-10-12). `pull` is
+  //: shared with the tray, which stays mounted: a strip swapped out under a
+  //: finger on the band (a phone's Home, Settings opening, the source going)
+  //: never saw its pointerup, so the tray went on following a pull that had
+  //: ended - its scrim over every screen, and nothing left to clear it.
+  onDestroy(() => (pull.offset = null));
 </script>
 
 <div
@@ -278,7 +284,8 @@
 
   <!-- The tray's handle and the 44px band that pulls it: drag down, or tap. -->
   <div class="pullband" role="button" tabindex="-1" aria-label="Controls"
-    onpointerdown={band.down} onpointermove={band.move} onpointerup={band.up} onpointercancel={band.cancel}></div>
+    onpointerdown={band.down} onpointermove={band.move} onpointerup={band.up} onpointercancel={band.cancel}
+    onlostpointercapture={band.cancel}></div>
   <div class="handle"></div>
 
   {#if lmsOnly}

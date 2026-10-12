@@ -22,9 +22,39 @@
   let playlists = $state([]);
   let failed = $state(new Set());
 
-  const index = $derived(queue?.index ?? 0);
+  //: **The same queue is the same queue** (code review, 2026-10-12). Every
+  //: `/state` frame is parsed afresh, so the queue arrived as a new object
+  //: with each one - a volume drag on LMS sends one per step - and the rail,
+  //: mounted while closed too, rebuilt its rows, keys and window for up to
+  //: 2,500 tracks each time. A queue that matches the one held, in every
+  //: field the rail draws, is that one, so nothing below it moves. Fields
+  //: named, not walked: walking each row's keys cost as much as the rebuild
+  //: it saves (0.27 ms against 0.15 for 2,000 rows on a desktop; named, 0.02).
+  //: A field the rail starts to draw goes in here too.
+  function sameQueue(a, b) {
+    if (a === b) return true;
+    if (!a || !b || a.index !== b.index || a.name !== b.name || a.id !== b.id || a.modified !== b.modified) return false;
+    const x = a.items ?? [];
+    const y = b.items ?? [];
+    if (x.length !== y.length) return false;
+    for (let n = 0; n < x.length; n += 1) {
+      const p = x[n];
+      const q = y[n];
+      if (p.track_id !== q.track_id || p.title !== q.title || p.artist !== q.artist || p.album !== q.album
+        || p.artwork !== q.artwork || p.duration !== q.duration) return false;
+    }
+    return true;
+  }
+  //: Plain, not state: read and written only by the derived below.
+  let held = null;
+  const steady = $derived.by(() => {
+    if (!sameQueue(held, queue)) held = queue;
+    return held;
+  });
+
+  const index = $derived(steady?.index ?? 0);
   //: The track playing now, then what follows it.
-  const rows = $derived((queue?.items ?? []).slice(index));
+  const rows = $derived((steady?.items ?? []).slice(index));
 
   //: **Each row with an identity of its own** (ADR-0064). Keyed by position,
   //: removing one track handed every row below it a different track: Svelte
@@ -58,9 +88,9 @@
   //: way to pick one (the design's own wording). LMS reports the playlist a
   //: queue came from until the queue is changed, and says when it has been
   //: (Finding 029 §7) - so a queue built by hand has no source to name.
-  const hasSource = $derived(rows.length > 0 && !!queue?.name);
-  const sourceKicker = $derived(hasSource ? (queue.modified ? 'Started from' : 'Playing from') : 'Play from');
-  const sourceName = $derived(hasSource ? queue.name : 'Choose a playlist');
+  const hasSource = $derived(rows.length > 0 && !!steady?.name);
+  const sourceKicker = $derived(hasSource ? (steady.modified ? 'Started from' : 'Playing from') : 'Play from');
+  const sourceName = $derived(hasSource ? steady.name : 'Choose a playlist');
   const sourceAction = $derived(hasSource ? 'Change' : 'Browse');
 
   //: **The rail builds only the rows on screen** (ADR-0067, extended to the
@@ -145,7 +175,7 @@
   //: window is whatever just moved into it, so it changes when the length
   //: cannot.
   const shape = $derived(
-    `${queue?.items?.length ?? 0}:${index}:${queue?.items?.at(-1)?.title ?? ''}`,
+    `${steady?.items?.length ?? 0}:${index}:${steady?.items?.at(-1)?.title ?? ''}`,
   );
   //: A removal made anywhere else - a phone, the server - ends a swipe
   //: here too. **This only writes `swipe`.** Reading it as well made the
@@ -389,7 +419,7 @@
     {#each playlists as playlist (playlist.id)}
       <button
         class="sw__row"
-        class:is-current={hasSource && playlist.name === queue.name}
+        class:is-current={hasSource && playlist.name === steady.name}
         type="button"
         onclick={() => playPlaylist(playlist)}
       >
@@ -398,7 +428,7 @@
           <span class="sw__name">{playlist.name}</span>
           <span class="sw__meta">{playlist.tracks} tracks</span>
         </span>
-        {#if hasSource && playlist.name === queue.name}
+        {#if hasSource && playlist.name === steady.name}
           <span class="sw__current">Playing</span>
         {/if}
       </button>

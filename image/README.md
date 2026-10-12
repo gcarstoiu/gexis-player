@@ -432,6 +432,13 @@ sudo silently ignores a sudoers.d file with the wrong permissions or a
 syntax error rather than erroring, which is exactly the failure mode this
 gap already took the shape of once.
 
+*Superseded 2026-10-12 (ADR-0139):* the public image ships no sudoers rule
+for `pi` - `pi` runs the kiosk and Squeezelite, and a flaw in either would
+be a flaw as root. A card provisioned for testing gets the same rule at first
+boot from `DEV_SUDO="yes"` in `image/provision.local.env`, written by
+`firstrun.sh` with the same `440` and `visudo -cf` checks. `verify-image.sh`
+asserts the image has none.
+
 **go-librespot's `--config_dir` was `-config_dir`** — a single dash. Its
 own CLI parses `-c` as a distinct short flag for config overrides
 (`field=value`, documented in its own README), POSIX-style, not Go's

@@ -183,7 +183,7 @@ async def test_the_routes_reach_each_port_and_leave_the_wi_fi_details_alone():
 
     class Port:
         def __init__(self, name):
-            self.name, self.pending = name, None
+            self.name, self.pending, self.changing = name, None, False
         async def status(self):
             return {"port": True, "link": True, "speed": None, "address": f"{self.name}/24", "method": "auto",
                     "profile": self.name, "gateway": None, "dns": []}
@@ -287,3 +287,49 @@ def test_the_wi_fi_stays_until_the_cable_has_its_address(sys_net):
     ports.cable_up = True
     asyncio.run(rule.step(True))
     assert ports.done == [("device", "disconnect", "wlan0")]
+
+
+def test_a_second_change_while_the_first_is_still_applying_is_refused(sys_net):
+    """Review, 2026-10-12: `pending` was set only at the end of a change,
+    after nmcli and up to 20 s of waiting for the address. A second change
+    in that window took its `before` from the first's settings, so the
+    safety net put back the first, unconfirmed address - not the original."""
+    class Slow(FakeNM):
+        async def __call__(self, *args, timeout=None):
+            await asyncio.sleep(0)  # nmcli takes its time; the loop serves others meanwhile
+            return await super().__call__(*args, timeout=timeout)
+
+    nm = Slow()
+
+    async def go():
+        cable = _cable(sys_net, nm, [])
+        cable._sleep = lambda s: asyncio.sleep(3600) if s == wired.KEEP_S else asyncio.sleep(0)
+        first = asyncio.ensure_future(cable.change("manual", "192.0.2.50/24", "192.0.2.1", "192.0.2.1"))
+        await asyncio.sleep(0)
+        assert cable.changing
+        with pytest.raises(ValueError, match="under way"):
+            await cable.change("manual", "192.0.2.60/24", "192.0.2.1", "192.0.2.1")
+        told = await first
+        assert told["address"] == "192.0.2.50" and not cable.changing
+        assert cable.pending.before["method"] == "auto", "the original is what goes back"
+        cable._timer.cancel()
+    asyncio.run(go())
+
+
+async def test_a_change_under_way_on_one_port_holds_the_other():
+    from aiohttp.test_utils import TestClient, TestServer
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+
+    class Port:
+        pending, changing = None, False
+        async def change(self, *args):
+            return {"address": None, "until": 0}
+
+    cable, wifi = Port(), Port()
+    cable.changing = True
+    async with TestClient(TestServer(StateServer(StateStore({}), cable=cable, wifi_address=wifi).make_app())) as client:
+        r = await client.post("/network/wifi/address", json={"method": "auto"})
+        assert r.status == 409
+        cable.changing = False
+        assert (await client.post("/network/wifi/address", json={"method": "auto"})).status == 200

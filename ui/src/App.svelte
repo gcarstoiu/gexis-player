@@ -116,8 +116,18 @@
   // 2026-09-23). It is pinned only while a finger is actually on it.
   const AUTO_HIDE_MS = $derived(($settingValues.drawer_autohide ?? 3) * 1000);
   let autoHide = null;
+  //: **A drawer that opened by itself takes no touch at first** (code
+  //: review, 2026-10-12). A change from a phone opens it over whatever is on
+  //: the panel, taking touches while it is still fading in: a tap meant for
+  //: an album card under the slider set the level at that point, near 100%
+  //: from the right of the card. Until this long after such an opening the
+  //: level and mute take nothing; someone who meant the slider has not yet
+  //: seen it.
+  const VOLUME_ARM_MS = 400;
+  let volumeArmsAt = $state(0);
   function openFromExternal() {
     if ($settingValues.drawer_on_external === false) return;
+    if (!volumeOpen) volumeArmsAt = performance.now() + VOLUME_ARM_MS;
     volumeOpen = true;
     armAutoHide();
   }
@@ -399,6 +409,7 @@
 
   const openVolume = () => {
     armAutoHide();
+    volumeArmsAt = 0;
     volumeOpen = true;
   };
 
@@ -443,6 +454,22 @@
 
   // ADR-0032: the panel renders everything; a remote browser only settings.
   let surface = $state(null);
+  //: **No answer is asked again, not taken for the panel** (code review,
+  //: 2026-10-12). A phone that loaded the page as the core restarted used to
+  //: become a panel until reloaded: drawn at 1280 px, its taps ending the
+  //: real panel's visualiser, its screens reported as the panel's. Nothing
+  //: shows until the core says which this is - on the panel too, which only
+  //: waits for the restart it was going to wait for anyway.
+  const SURFACE_RETRY_MAX_MS = 5000;
+  function askSurface(delay = 500) {
+    fetch('/surface')
+      .then((r) => r.json())
+      .then((body) => {
+        if (body?.surface !== 'panel' && body?.surface !== 'remote') throw new Error(`surface ${body?.surface}`);
+        surface = body.surface;
+      })
+      .catch(() => setTimeout(() => askSurface(Math.min(delay * 2, SURFACE_RETRY_MAX_MS)), delay));
+  }
 
   // **No system cursor on the panel** (George, 2026-10-05: "two cursors").
   // The compositor draws one where it starts and hides it only at the
@@ -483,6 +510,16 @@
       updateOutcome = null;
     }
   }
+  //: **An update that ends without an outcome lets the panel go** (code
+  //: review, 2026-10-12). An updater killed mid-way leaves its file on
+  //: *installing*; an install whose own check finds nothing newer ends on
+  //: *current*. Either way the unit stops and `active` drops with no *done*
+  //: or *failed* to show, and the lock - which takes no input - stayed up
+  //: until a power cycle, which it tells the user not to do. Not at once:
+  //: between two steps the file can sit a moment on a state the core does
+  //: not count as running.
+  const STRANDED_MS = 30 * 1000;
+  let strandedTimer;
   let updateLock = $state(false);
   let updateOutcome = $state(null);
   let updateChanged = false;
@@ -494,14 +531,27 @@
       if (!untrack(() => updateLock)) hidePeppy();
       updateLock = true;
       updateOutcome = null;
+      clearTimeout(strandedTimer);
+      strandedTimer = undefined;
       return;
     }
-    if (!untrack(() => updateLock) || untrack(() => updateOutcome) || $connection !== 'open') return;
+    if (!untrack(() => updateLock) || untrack(() => updateOutcome) || $connection !== 'open') {
+      clearTimeout(strandedTimer);
+      strandedTimer = undefined;
+      return;
+    }
     if (u && ['done', 'failed'].includes(u.state)) {
+      clearTimeout(strandedTimer);
+      strandedTimer = undefined;
       updateOutcome = u.state;
       const changed = u.state === 'done' && u.installed && u.installed !== loadedRelease;
       updateChanged = changed;
       outcomeTimer = setTimeout(() => leaveUpdate(changed), u.state === 'done' ? DONE_MS : OUTCOME_MS);
+    } else if (strandedTimer === undefined) {
+      strandedTimer = setTimeout(() => {
+        strandedTimer = undefined;
+        leaveUpdate(Boolean($update?.installed && $update.installed !== loadedRelease));
+      }, STRANDED_MS);
     }
   });
   //: **A new UI build reloads the panel too** (ADR-0110 as amended
@@ -552,10 +602,7 @@
     // off: there is no home to be ahead of, and the read would be three
     // requests to a server this device is not using (ADR-0079).
     if ($settingValues.lms_enabled !== false) loadLibraryRoot();
-    fetch('/surface')
-      .then((r) => r.json())
-      .then((body) => (surface = body.surface))
-      .catch(() => (surface = 'panel'));
+    askSurface();
 
 
     // ADR-0043: end the boot animation only once something is actually on
@@ -678,6 +725,7 @@
          show. -->
     <BarTray
       open={volumeOpen}
+      armsAt={volumeArmsAt}
       volume={$volume}
       active={$active}
       onclose={closeVolume}
@@ -691,6 +739,7 @@
   {:else if $volume || $fixedOutput}
     <VolumeDrawer
       open={volumeOpen}
+      armsAt={volumeArmsAt}
       volume={$volume}
       active={$active}
       onclose={closeVolume}

@@ -451,6 +451,27 @@ def test_a_bad_seed_entry_is_dropped_not_fatal(store, tmp_path, text):
     assert settings.value("idle_timeout") == 5
 
 
+def test_a_seeded_output_or_skin_is_kept_though_only_the_daemon_knows_the_options(store, tmp_path):
+    """Review, 2026-10-12: the seed was checked against the module's
+    placeholder resolvers, which offer nothing, so every flash-time output or
+    skin was dropped as "not an available option"."""
+    groups = [{"group": "g", "label": "G", "rows": [
+        {"key": "output_device", "type": "choice", "optionsFrom": "output_device", "default": None},
+        {"key": "skin", "type": "choice", "options": [], "optionsFrom": "skin_corpus", "default": None},
+        {"key": "tz", "type": "choice", "options": [], "optionsFrom": "timezones", "default": "UTC"},
+    ]}]
+    settings = Settings(
+        store, registry=groups,
+        options={"output_device": lambda: ["dac-a", "hdmi"], "skin_corpus": lambda: ["skin-a"]},
+        seed_path=_seed(tmp_path, '{"output_device": "dac-b", "skin": "skin-a", "tz": "Nowhere/Never"}'),
+    )
+    assert settings.value("output_device") == "dac-b", "a card not plugged in at boot is still the choice"
+    assert settings.value("skin") == "skin-a"
+    assert settings.value("tz") == "UTC", "a source the module can answer is still checked"
+    bad = Settings(store, registry=groups, seed_path=_seed(tmp_path, '{"output_device": 3, "skin": " "}'))
+    assert bad.value("output_device") is None and bad.value("skin") is None
+
+
 # ── ADR-0044's six mechanics ──────────────────────────────────────────────
 
 def _vis(rows, values):

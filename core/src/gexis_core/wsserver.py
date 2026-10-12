@@ -29,9 +29,11 @@ import json
 import logging
 import os
 import random
+import subprocess
 import tarfile
 import threading
 import time
+import zlib
 from collections.abc import Callable
 from urllib.parse import quote, unquote
 from pathlib import Path
@@ -212,6 +214,8 @@ class StateServer:
         #: the daemon owns what "restart the device" means, and a test can
         #: watch it without one.
         self._restore = restore
+        #: The updater's backups under way, held so none is collected half-run.
+        self._backup_tasks: set[asyncio.Task] = set()
         #: **A row that takes effect at a restart, restarts** (ADR-0048,
         #: amended 2026-10-05): saving the device name from Settings reboots,
         #: after the answer. Here, in the route, and not in the row's own
@@ -224,6 +228,8 @@ class StateServer:
         self._placer = placer
         self._placements: dict[tuple, dict | None] = {}
         self._placing = None
+        #: The visualiser's restart under way, if one is (`_peppy_again`).
+        self._peppy_restarting: asyncio.Future | None = None
         #: ADR-0115: the Lyrion server's network shares.
         self._lyrion_shares = lyrion_shares
         self._lyrion_shares_changed = lyrion_shares_changed
@@ -959,7 +965,8 @@ class StateServer:
             item_id = int(body["id"])
             target = body.get("playlist_id")
             playlist_id = None if target is None else int(target)
-        except (ValueError, KeyError, TypeError, json.JSONDecodeError):
+        # OverflowError: an id of Infinity, which `json` reads as a float.
+        except (ValueError, KeyError, TypeError, OverflowError, json.JSONDecodeError):
             return web.json_response(
                 {"error": 'expected {"kind": ..., "id": <int>, "action": ...}'}, status=400
             )
@@ -1308,14 +1315,18 @@ class StateServer:
 
     async def _handle_touch(self, request: web.Request) -> web.Response:
         """The panel telling the daemon somebody touched it. The daemon cannot
-        see touches itself: they land in whichever window has the screen."""
+        see touches itself: they land in whichever window has the screen.
+        **The panel only** (review, 2026-10-12): a phone's request would wake a
+        screen in standby and count as attention it never paid."""
+        if request.remote not in ("127.0.0.1", "::1"):
+            return web.json_response({"error": "only the panel reports touches"}, status=403)
         if self._peppy is not None:
             self._peppy.on_touch()
         # ADR-0135: a touch wakes a screen in standby - measured to reach the
         # page with the output off.
         if self._standby is not None:
             self._standby.used()
-            if self._standby.off:
+            if self._standby.may_be_dark:
                 await self._standby.wake("touch")
         return web.json_response({"touched": True})
 
@@ -1423,11 +1434,15 @@ class StateServer:
         if port is None:
             return web.json_response({"error": "not wired up"}, status=503)
         other = self._cable if port is self._wifi_address else self._wifi_address
-        if other is not None and other.pending is not None:
+        # Applying counts as waiting: `pending` is set only once the address
+        # has come, up to 20 s after the change began.
+        if other is not None and (other.pending is not None or other.changing):
             return web.json_response({"error": "Another address change is waiting to be kept. Keep it, or wait for "
                                                "it to go back."}, status=409)
         try:
             body = await request.json()
+            if not isinstance(body, dict):
+                raise ValueError('expected {"method": ..., "address": ...}')
             told = await port.change(body.get("method"), body.get("address") or "",
                                      body.get("gateway") or "", body.get("dns") or [])
         except ValueError as exc:
@@ -1481,7 +1496,7 @@ class StateServer:
             body = await request.json() if request.can_read_body else {}
         except ValueError:
             body = {}
-        note = str((body or {}).get("note") or "")[:4000]
+        note = str((body if isinstance(body, dict) else {}).get("note") or "")[:4000]
         rows = self._settings.all_rows()
         values = {}
         for row in rows:
@@ -1840,12 +1855,11 @@ class StateServer:
         # a screen in standby is dark (review, 2026-10-11): both would hide it
         # while the phone said it was up.
         if self._peppy is not None:
-            # On the loop: hiding publishes the panel's change (see
-            # `_peppy_again`, which answered a 500 from a worker thread).
-            self._peppy.request("hide")
+            # Lowered off the loop, its change published back on it.
+            await self._peppy.request_async("hide")
         if self._standby is not None:
             self._standby.used()
-            if self._standby.off:
+            if self._standby.may_be_dark:
                 await self._standby.wake("screen check")
         seq = int(check.get("seq", 0)) + 1
         self._store.set_screen_check({"showing": True, "touch": touch, "seq": seq, "result": None})
@@ -1875,7 +1889,10 @@ class StateServer:
     async def _handle_panel_shown(self, request: web.Request) -> web.Response:
         """ADR-0101: the panel reporting whether its idle screen is up - and,
         as amended, whether its lyrics are - so the phone's toggles say what
-        the panel shows, whatever changed it."""
+        the panel shows, whatever changed it. **The panel only** (review,
+        2026-10-12): a phone saying so would set the toggles to a lie."""
+        if request.remote not in ("127.0.0.1", "::1"):
+            return web.json_response({"error": "only the panel reports what it shows"}, status=403)
         try:
             body = await request.json()
             shown = {key: bool(body[key]) for key in ("idle", "lyrics", "now") if key in body}
@@ -1904,6 +1921,18 @@ class StateServer:
 
         logger.info("setup: answered %s: %s", status, raw)
         return web.json_response({"error": setup_flow.said(raw)}, status=status)
+
+    @web.middleware
+    async def _note_setup_use(self, request: web.Request, handler):
+        """**Somebody is using the setup page** (George, 2026-10-12): the
+        page itself or any `/setup/...` route, from a phone - the panel is on
+        loopback and asks `/setup/status` for itself. A phone on the setup
+        network holds a configured player off its saved Wi-Fi only while
+        this was recent (`setup_network.SETUP_ACTIVE_S`)."""
+        if (self._setup is not None and (request.path == "/" or request.path.startswith("/setup/"))
+                and not self._from_panel(request)):
+            self._setup.page_used()
+        return await handler(request)
 
     def _setup_closed(self) -> web.Response | None:
         """ADR-0104: the setup routes answer only while setup is on - the
@@ -2120,9 +2149,16 @@ class StateServer:
             return web.json_response({"error": "the Peppy screen is not wired up"}, status=503)
         if action not in ("show", "hide"):
             return web.json_response({"error": f"unknown action {action}"}, status=404)
-        shown = self._peppy.request(action)
+        # Off the loop: raising or lowering waits on wlrctl (review, 2026-10-12).
+        shown = await self._peppy.request_async(action)
         if not shown and action == "show" and self._peppy._has_levels():
-            shown = await self._peppy_again()
+            # **One restart at a time** (review, 2026-10-12): a second tap
+            # while the skins load (~9 s) restarted the unit again and killed
+            # the half-loaded one. A later ask waits for the restart under way;
+            # shielded, so a phone that gives up does not cancel it for all.
+            if self._peppy_restarting is None or self._peppy_restarting.done():
+                self._peppy_restarting = asyncio.ensure_future(self._peppy_again())
+            shown = await asyncio.shield(self._peppy_restarting)
         if not shown:
             return web.json_response({"error": "no Peppy screen window to act on"}, status=409)
         return web.json_response({"peppy": action})
@@ -2147,7 +2183,7 @@ class StateServer:
             # change to the phones, and that needs the loop (a worker thread
             # here answered the first visualiser of an evening with a 500,
             # sofapi 2026-10-11, though it came up).
-            if self._peppy.request("show"):
+            if await self._peppy.request_async("show"):
                 return True
         return False
 
@@ -2230,7 +2266,7 @@ class StateServer:
                     # what the row shows (George, 2026-10-03: "look like just
                     # code"), so it is not sent.
                     row["value"] = None
-                    row["items"] = self._lyrion_shares.items() if self._lyrion_shares else []
+                    row["items"] = await self._share_items() if self._lyrion_shares else []
                     continue
                 source = self.SEEDED_LISTS.get(key)
                 if source is None:
@@ -2240,6 +2276,15 @@ class StateServer:
                 # so an unavailable BlueZ reads as the row's own empty state
                 # rather than failing the whole settings payload.
                 row["items"] = await self._bluetooth(getattr(module, name))
+
+    async def _share_items(self) -> list[dict]:
+        """The Lyrion shares' rows. The list is read on this thread - the
+        settings store is SQLite, which answers only the thread that opened
+        it - and the mount checks in a worker: a share whose NAS is off
+        holds a stat for the whole NFS timeout (review, 2026-10-12)."""
+        shares = self._lyrion_shares.all()
+        mounted = await asyncio.to_thread(self._lyrion_shares.mounted, shares)
+        return self._lyrion_shares.items(mounted)
 
     async def _handle_pairing_answer(self, request: web.Request) -> web.Response:
         """Accept or reject the open pairing request (ADR-0045).
@@ -2314,12 +2359,49 @@ class StateServer:
         if self._settings is None:
             return web.json_response({"error": "settings are not wired up"}, status=503)
         key = request.match_info["key"]
+        if key == "backup" and request.query.get("before") == "update":
+            return self._backup_before_update()
 
         def run():
             self._settings.run(key)
             return {"key": key}
 
         return self._settings_call(run)
+
+    def _backup_before_update(self) -> web.Response:
+        """**The updater's backup, kept three deep** (George, 2026-10-12,
+        answer 3). `POST /settings/backup?before=update`: named as the
+        updater's own, and the updater's older ones beyond
+        `backups.KEEP_AUTOMATIC` deleted once it is written - never one
+        taken by hand. A core before this ignores the query and takes an
+        ordinary one, as it always did.
+
+        Answered at once, as the row's own action is: the updater watches
+        the share for the file, and a backup can outlast the request.
+        """
+        # Read here, on the loop: the settings store is bound to this thread.
+        name = str(self._setting_or_none("device_name") or "gexis")
+        directory = backups.DEFAULT_DIR
+
+        def make() -> str:
+            made = backups.create(name, directory, automatic=True)
+            backups.prune_automatic(made, directory)
+            return made
+
+        async def run() -> None:
+            try:
+                made = await asyncio.to_thread(make)
+            except Exception as exc:  # noqa: BLE001 - the updater stops without one
+                logger.warning("backup before update: failed: %s", exc)
+                return
+            logger.info("backup before update: %s", made)
+            # The Restore row lists the share, as after the row's own backup.
+            self._store.bump_settings_revision()
+
+        task = asyncio.ensure_future(run())
+        self._backup_tasks.add(task)
+        task.add_done_callback(self._backup_tasks.discard)
+        return web.json_response({"key": "backup", "before": "update"})
 
     #: Where a `list` row's items come from - ADR-0044 §1's first open
     #: question, now answered for all three.
@@ -2355,8 +2437,7 @@ class StateServer:
         if key == "lyrion-server.shares":
             if self._lyrion_shares is None:
                 return web.json_response({"items": []})
-            # On this thread: it reads the settings store (SQLite, one thread).
-            saved = self._lyrion_shares.items()
+            saved = await self._share_items()
             # ADR-0115's scan: the servers announcing themselves, after the
             # shares already added; this device's own left out.
             own = {device_name.hostname(), f"{device_name.hostname()}.local", device_name.address() or ""}
@@ -2415,7 +2496,8 @@ class StateServer:
                 # which can take seconds, in a worker.
                 if action == "browse":
                     # One server's shares, or a request for a login.
-                    target = body.get("server") or {}
+                    target = body.get("server")
+                    target = target if isinstance(target, dict) else {}
                     server = lyrion_scan.Server(name=name, host=str(target.get("host") or name),
                                                 kind="nfs" if target.get("kind") == "nfs" else "smb")
                     try:
@@ -2424,6 +2506,14 @@ class StateServer:
                     except lyrion_scan.NeedsLogin:
                         return web.json_response({"ok": False, "login": True,
                                                   "error": f"{name} needs a user and password to show its shares"})
+                    # A NAS asleep past smbclient's 15 s, or the tool missing:
+                    # a sentence on the sheet rather than a 500 (review,
+                    # 2026-10-12).
+                    except subprocess.TimeoutExpired:
+                        return web.json_response({"ok": False, "error": f"{name} did not answer. Is it switched on?"})
+                    except (subprocess.SubprocessError, OSError) as exc:
+                        logger.warning("lyrion: %s's shares not listed: %s", name, exc)
+                        return web.json_response({"ok": False, "error": f"{name}'s shares could not be listed."})
                     return web.json_response({"ok": True, "error": None, "items": [
                         {"name": lyrion_shares.label(s["address"])[0], "meta": s["comment"] or None,
                          "bars": None, "state": "found", "share": True, "address": s["address"]}
@@ -2461,7 +2551,9 @@ class StateServer:
                 return web.json_response({"ok": False, "error": "restoring is not wired up"})
             try:
                 await asyncio.to_thread(backups.restore, name)
-            except (OSError, ValueError, tarfile.TarError) as exc:
+            # EOFError and zlib.error: a backup cut short - half-copied into
+            # the Backups share - which tarfile reads that far and no further.
+            except (OSError, ValueError, tarfile.TarError, EOFError, zlib.error) as exc:
                 logger.warning("restore: %s failed: %s", name, exc)
                 return web.json_response({"ok": False, "error": str(exc)})
             # The backup's name, in all four places, before the reboot reads
@@ -2518,7 +2610,7 @@ class StateServer:
         (DEVELOPMENT.md: "tested with a WebSocket client") - rather than
         binding a fixed port or reaching into `run()`'s internals.
         """
-        app = web.Application()
+        app = web.Application(middlewares=[self._note_setup_use])
         app.router.add_get("/state", self._handle)
         app.router.add_post("/renderer/{renderer_id}/activate", self._handle_activate)
         app.router.add_post("/transport/{command}", self._handle_transport)

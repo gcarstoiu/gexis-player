@@ -194,6 +194,24 @@ async def test_run_parks_and_keeps_the_callbacks():
     task.cancel()
 
 
+async def test_an_edge_before_run_is_delivered_when_it_starts():
+    """Code review, 2026-10-12: a plugin that writes `hello` and `acquire`
+    together has its `acquire` read before `run` was ever scheduled, and the
+    callbacks did not exist yet - the AttributeError was logged and the
+    acquisition lost. Held until `run` has them, in the order they came."""
+    adapter, _, _ = _adapter({})
+    adapter.on_acquire()
+    adapter.on_release()
+    adapter.on_acquire()
+    seen = []
+    task = asyncio.ensure_future(adapter.run(lambda: seen.append("a"), lambda: seen.append("r")))
+    await asyncio.sleep(0)
+    assert seen == ["a", "r", "a"]
+    adapter.on_acquire()
+    assert seen == ["a", "r", "a", "a"]
+    task.cancel()
+
+
 def test_defaults_are_the_quiet_ones():
     """A renderer that declares nothing gets a renderer that claims nothing -
     no artwork, no managed volume, no controls. The panel then offers none of

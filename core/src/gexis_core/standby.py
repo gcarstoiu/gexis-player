@@ -94,6 +94,12 @@ class Standby:
         self._publish = publish or (lambda off, reason: None)
         self.off = False
         self.reason: str | None = None
+        #: Whether the output was last switched on, as far as this process
+        #: knows: None until it has switched it. **The output's state lives in
+        #: the kiosk's session, which outlives a core restart** (review,
+        #: 2026-10-12): `off` starts False, so a restart during standby (a
+        #: plugin upload, a crash) left a dark panel nothing could wake.
+        self._output_on: bool | None = None
         self._lock = asyncio.Lock()
         #: When the screen was last used: a touch, music playing, a wake.
         #: The schedule counts *Back to standby after* from here.
@@ -102,6 +108,12 @@ class Standby:
 
     def used(self) -> None:
         self.last_use = self._clock()
+
+    @property
+    def may_be_dark(self) -> bool:
+        """In standby, or the output not switched on since the core started:
+        what a touch checks before waking."""
+        return self.off or self._output_on is not True
 
     async def sleep(self, reason: str) -> None:
         async with self._lock:
@@ -112,13 +124,19 @@ class Standby:
             # drawn while there is still a picture to replace.
             self._publish(True, reason)
             await self._switch(False)
+            self._output_on = False
             logger.info("standby: screen off (%s)", reason)
 
     async def wake(self, reason: str) -> None:
         async with self._lock:
             if not self.off:
+                # Not in standby here - but the output may still be off from
+                # before a restart. Switched on once, and again until it takes.
+                if self._output_on is not True and await self._switch(True):
+                    self._output_on = True
+                    logger.info("standby: screen on (%s; its state was unknown)", reason)
                 return
-            await self._switch(True)
+            self._output_on = True if await self._switch(True) else None
             self.off, self.reason = False, None
             self.used()
             self._publish(False, None)

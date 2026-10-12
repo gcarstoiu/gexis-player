@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from typing import Callable
 
 from dbus_next import BusType, Variant
@@ -54,6 +55,9 @@ PROPERTIES_IFACE = "org.freedesktop.DBus.Properties"
 DEVICE_IFACE = "org.bluez.Device1"
 MEDIA_PLAYER_IFACE = "org.bluez.MediaPlayer1"
 MEDIA_TRANSPORT_IFACE = "org.bluez.MediaTransport1"
+
+#: A Device1's object path, at the front of every object BlueZ nests under it.
+_DEVICE_PATH = re.compile(r"/org/bluez/[^/]+/dev_[^/]+")
 UNIT_NAME = "bluealsa-aplay.service"
 
 
@@ -408,10 +412,20 @@ class BluetoothAdapter(Adapter):
 
     @staticmethod
     def _device_path_for_player(player_path: str) -> str:
-        # BlueZ nests MediaPlayer1 under its owning Device1, e.g.
-        # /org/bluez/hci0/dev_AA_BB_CC_DD_EE_FF/player0 -> strip the
-        # trailing /playerN segment to get the Device1 path.
-        return player_path.rsplit("/", 1)[0]
+        # BlueZ nests MediaPlayer1 and MediaTransport1 under their owning
+        # Device1, e.g. /org/bluez/hci0/dev_AA_BB_CC_DD_EE_FF/player0. The
+        # Device1 path is the `dev_` segment and everything before it.
+        #
+        # **Not "strip the last segment"** (code review, 2026-10-12): a
+        # transport lives under its remote endpoint whenever BlueZ knows it -
+        # `dev_XX/sep1/fd0` - and stripping one segment gave `dev_XX/sep1`,
+        # which is no Device1. A transport appearing after the player (the
+        # stream reopened after a call, a codec renegotiated) stored that, so
+        # the phone leaving never relinquished and a takeover could not
+        # disconnect it. Anything not shaped like a device path is stripped
+        # by one segment, as before.
+        match = _DEVICE_PATH.match(player_path)
+        return match.group(0) if match else player_path.rsplit("/", 1)[0]
 
     async def play(self) -> bool:
         return await self._player_call("Play")

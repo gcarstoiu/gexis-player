@@ -301,12 +301,71 @@ def test_the_retry_rejoins_a_saved_network_in_range_when_nobody_is_on(tmp_path):
     assert clock.now >= sn.CONFIGURED_WAIT_S + sn.RETRY_S
 
 
-def test_the_retry_never_scans_with_a_phone_on_the_network(tmp_path):
+def test_the_retry_never_scans_with_a_phone_using_the_page(tmp_path):
     nm = FakeNM(devices=NOTHING, saved={"Home": "preconfigured"}, in_range={"Home"})
-    net, clock = setup(tmp_path, nm, stations=1)
+
+    def phone():
+        # The phone on the setup page, asking it something now and then.
+        net.page_used()
+        return 1
+
+    net, clock = setup(tmp_path, nm, stations=phone)
     hold(net, nm, clock, lambda: clock.now > sn.CONFIGURED_WAIT_S + 3 * sn.RETRY_S)
     assert net.status()["network"] == "open"
     assert not [c for c in nm.calls if "--rescan" in c]
+
+
+def test_a_phone_that_never_opened_the_page_does_not_hold_the_player(tmp_path):
+    """George, 2026-10-12: a phone that joined the setup network by itself
+    and never opened the page does not keep the player off its Wi-Fi - once
+    it has had SETUP_ACTIVE_S to open it, since one that has just joined may
+    be about to."""
+    nm = FakeNM(devices=NOTHING, saved={"Home": "preconfigured"}, in_range={"Home"})
+    net, clock = setup(tmp_path, nm, stations=1)
+    hold(net, nm, clock, lambda: net.status()["network"] == "online")
+    assert net.status()["network"] == "online"
+    assert nm.did("connection", "up", "preconfigured")
+    assert net._phone_since is not None and clock.now >= net._phone_since + sn.SETUP_ACTIVE_S
+
+
+def test_a_phone_idle_on_the_page_for_ten_minutes_no_longer_holds(tmp_path):
+    nm = FakeNM(devices=NOTHING, saved={"Home": "preconfigured"}, in_range={"Home"})
+    stopped = sn.CONFIGURED_WAIT_S + 2 * sn.RETRY_S
+
+    def phone():
+        if clock.now < stopped:
+            net.page_used()
+        return 1
+
+    net, clock = setup(tmp_path, nm, stations=phone)
+    hold(net, nm, clock, lambda: net.status()["network"] == "online")
+    assert net.status()["network"] == "online"
+    assert clock.now >= stopped + sn.SETUP_ACTIVE_S
+
+
+def test_the_page_counts_for_ten_minutes(tmp_path):
+    """A phone that used the page 2 min ago holds; 10 min ago, it does not."""
+    nm = FakeNM(devices=NOTHING, saved={"Home": "preconfigured"})
+    net, clock = setup(tmp_path, nm)
+    net._state = "open"
+    clock.now = 1000.0
+    net.page_used()
+    clock.now += 120
+    assert net._page_in_use()
+    clock.now = 1000.0 + sn.SETUP_ACTIVE_S
+    assert not net._page_in_use()
+    assert sn.SETUP_ACTIVE_S == 600
+
+
+def test_the_page_used_before_the_setup_network_opened_does_not_count(tmp_path):
+    """The Settings page on the home network, minutes before it was lost, is
+    not somebody setting the player up."""
+    nm = FakeNM(devices=NOTHING, saved={"Home": "preconfigured"})
+    net, clock = setup(tmp_path, nm)
+    net._state = "online"
+    net.page_used()
+    net._state = "open"
+    assert not net._page_in_use()
 
 
 def test_a_saved_network_out_of_range_keeps_the_setup_network(tmp_path):
@@ -595,3 +654,77 @@ def test_after_the_setup_network_opens_a_saved_network_in_range_is_rejoined(tmp_
     watching(net, clock, lambda: nm.hotspot_at is not None and net.status()["network"] == "online")
     assert nm.hotspot_at is not None and nm.did("connection", "up", "preconfigured")
     assert net.status()["network"] == "online"
+
+
+# -- the cable coming back (review, 2026-10-12) -----------------------------
+
+
+def cable_back(net, nm, clock, *, after, limit=3000.0):
+    """Run the boot decision with no network, then give the cable its address
+    `after` seconds once the setup network is open."""
+    async def go():
+        task = asyncio.create_task(net.run())
+        opened_at = None
+        for _ in range(100_000):
+            await asyncio.sleep(0)
+            if opened_at is None and net.status()["network"] == "open":
+                opened_at = clock.now
+            if opened_at is not None and clock.now >= opened_at + after:
+                nm.devices = [list(ETH_UP)]
+            if task.done() or clock.now > limit:
+                break
+        task.cancel()
+        return opened_at
+    return run(go())
+
+
+def test_a_configured_player_whose_cable_comes_back_closes_the_setup_network(tmp_path):
+    """An Ethernet-only player that booted before its router (or lost the
+    network for two minutes): the setup network opened, and only a saved
+    Wi-Fi in range ever closed it - so with none it stayed 'open' until a
+    reboot, and every phone on the LAN got the setup page."""
+    nm = FakeNM(devices=NOTHING)
+    (tmp_path / "setup-done").touch()
+    net, clock = setup(tmp_path, nm, stations=0)
+    opened_at = cable_back(net, nm, clock, after=60.0)
+    assert opened_at is not None
+    assert net.status()["network"] == "online" and net.status()["ssid"] is None
+    assert nm.did("connection", "delete", sn.PROFILE)[-1:], "the setup network is taken down"
+    assert clock.now <= opened_at + 60.0 + 2 * sn.WATCH_S, "within seconds, not the five-minute retry"
+
+
+def test_the_cable_coming_back_does_not_cut_off_a_phone_doing_first_setup(tmp_path):
+    """A new player: a phone on the setup network may be half-way through
+    setup, so the setup network stays while one is on it."""
+    nm = FakeNM(devices=NOTHING)
+    net, clock = setup(tmp_path, nm, stations=1)
+    cable_back(net, nm, clock, after=30.0, limit=1500.0)
+    assert net.status()["network"] == "open"
+
+
+def test_a_new_player_with_nobody_on_the_setup_network_moves_to_the_cable(tmp_path):
+    nm = FakeNM(devices=NOTHING)
+    net, clock = setup(tmp_path, nm, stations=0)
+    cable_back(net, nm, clock, after=30.0)
+    assert net.needed and net.status()["network"] == "online"
+    assert net.status()["address"] == "http://192.168.1.50:8090/", "setup carries on over the cable"
+
+
+
+def test_a_failed_join_during_setup_over_ethernet_stays_on_the_cable(tmp_path):
+    """A mistyped Wi-Fi password during setup over the cable opened the setup
+    network with nothing to retry it, and Finish without Wi-Fi was then
+    refused because the state was no longer 'online'."""
+    nm = FakeNM(devices=ETH_UP, up_rc=4)
+    net, clock = setup(tmp_path, nm, carrier=True)
+    run(net.run())
+
+    async def go():
+        return await net.join_new("Home", "wrongpass", hold=True)
+    joined, reason = run(go())
+    assert not joined and reason == "The password was not accepted."
+    assert not nm.did("device", "wifi", "hotspot"), "no setup network on a cabled player"
+    status = net.status()
+    assert status["network"] == "online" and status["needed"]
+    assert status["address"] == "http://192.168.1.50:8090/"
+    assert status["failed"] == "Home" and status["reason"] == reason

@@ -215,6 +215,9 @@ class Cable:
         self._sleep = sleep
         self._clock = clock
         self.pending: Pending | None = None
+        #: A change being applied, before it is `pending`: nmcli and up to
+        #: `ADDRESS_WAIT_S` of waiting for the address (review, 2026-10-12).
+        self.changing = False
         self._timer: asyncio.Task | None = None
         #: Whether the profile holds a manual address - read at each status,
         #: so the row can stay shown without a cable (ADR-0123).
@@ -265,6 +268,19 @@ class Cable:
         address the phone opens to keep it."""
         if self.pending is not None:
             raise ValueError("A change is waiting to be kept. Keep it, or wait for it to go back.")
+        # **Busy from the first await, not from the end** (review,
+        # 2026-10-12). A second change in that window read its `before` from
+        # the first's settings, so the safety net put back the first,
+        # unconfirmed address rather than the original.
+        if self.changing:
+            raise ValueError("An address change is under way. Wait for it, then keep it or let it go back.")
+        self.changing = True
+        try:
+            return await self._change(method, address, gateway, dns)
+        finally:
+            self.changing = False
+
+    async def _change(self, method: str, address: str, gateway: str, dns) -> dict:
         name = await profile(self._device, self._run)
         if name is None:
             raise ValueError(self._missing)

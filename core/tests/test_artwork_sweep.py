@@ -411,6 +411,32 @@ class TestTheAudioDB:
         assert sum("album-mb.php" in c for c in http.calls) == 1, "only for the one with a release group"
 
 
+class TestMusicBrainzUnreachable:
+    async def test_covers_are_not_stored_as_none_when_the_release_groups_could_not_be_asked(self):
+        """Review, 2026-10-12: MusicBrainz's 503 came back as "no release
+        groups", so with fanart and TheAudioDB both answering, every album of
+        the artist was stored as "asked, neither had one" - over a cover an
+        earlier run had found."""
+        store = FakeStore()
+        store.remember(ALBUM_NAMESPACE, "example artist\x1ffirst album", "https://fan/earlier.jpg")
+        sweep, store, _, _ = build(
+            store=store,
+            library=FakeLibrary([(1, "Example Artist")], {1: ["First Album", "Second Album", "Third Album"]}),
+            identity=FakeIdentity({"example artist": ("MB1", 100)}),
+            http=FakeHttp({
+                "webservice.fanart.tv": {"albums": {"RG1": {"albumcover": [{"url": "https://fan/one.jpg"}]}}},
+                "artist-mb.php": {"artists": [{"idArtist": "7"}]},
+                "album.php": {"album": [{"strMusicBrainzID": None, "strAlbum": "Second Album",
+                                         "strAlbumThumb": "https://tadb/second.jpg"}]},
+            }))
+        await run(sweep, "covers")
+        rows = artwork(store)
+        assert rows[(ALBUM_NAMESPACE, "example artist\x1ffirst album")] == "https://fan/earlier.jpg"
+        assert rows[(ALBUM_NAMESPACE, "example artist\x1fsecond album")] == "https://tadb/second.jpg", \
+            "what a title still finds is kept"
+        assert (ALBUM_NAMESPACE, "example artist\x1fthird album") not in rows
+
+
 class TestOneTileForBoth:
     """George, 2026-10-06: "the lyrion client 3 tiles should be collapsed
     into one. Triggering it enriches both artists and albums, with the status

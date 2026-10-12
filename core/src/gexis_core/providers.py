@@ -296,6 +296,12 @@ class LmsArtistProvider:
     def serves(self, renderer) -> bool:
         return renderer == "lms"
 
+    async def before_cached(self) -> None:
+        """Before a stored answer is believed: is it from this server and
+        this scan? Its picture carries an LMS id (George, 2026-10-12,
+        answer 8); a change drops it through `LmsArtistInfo.on_forget`."""
+        await self._info.check_scope()
+
     async def fetch(self, key) -> Answer:
         artist_id = self._current_artist_id()
         if not artist_id:
@@ -332,6 +338,10 @@ class LmsReleaseProvider:
 
     def serves(self, renderer) -> bool:
         return renderer == "lms"
+
+    async def before_cached(self) -> None:
+        """As `LmsArtistProvider.before_cached`: read by LMS album id."""
+        await self._info.check_scope()
 
     async def fetch(self, key) -> Answer:
         album_id = self._current_album_id()
