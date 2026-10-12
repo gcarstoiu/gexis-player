@@ -40,18 +40,25 @@ signed it out); the bar on its own supply, then Claude reads
 clear it) and ShelvesPi (the bar) run the `phase-13d` preview 0.10.0+git75,
 which 0.10.1 supersedes on the Testing channel. guestpi offline.
 
-**Next: the first public release** (George, 2026-10-12), then Phase 13g
-(the player in Home Assistant - *after* the release, George), themes, 14a.
-Decided 2026-10-12 for the release: **it waits for guestpi**, for Phase 13d's
-two tests (Plexamp through the Pi-DAC PRO; a chosen board not fitted taken
-back); **the final code check as a multi-agent review** (George's choice;
-workflow to be confirmed in his words, with its cost); **Imager: the image
-file and *Use custom* at the release**, our own Imager repository and the
-community application after. Also before it: removing the temporary
-post-reset log (c20); Stable promotion with the image file (c16); README's
-"first Stable release is next"; removing passwordless sudo last, ADR first
-(provisioned test cards keep it). George to test: 0.10.1's owed items, a
-freshly flashed card without a restore, 13f's look.
+**The final code check is done** (2026-10-12, Finding 119): a multi-agent
+review, 78 reported, 77 confirmed by a second agent, all addressed - 72
+fixed outright, 3 in part and 2 open on George's answers. Fixed by six agents
+in worktrees, merged on `phase-13d` with the core's wiring after; the
+temporary post-reset log (c20) and passwordless sudo (ADR-0139, c11) are gone
+with it. **Suite 2,206 passed.** Previewed on sofapi and the bar
+(0.10.1+git98: clean start, routes answer, the problem report scrubs the
+weather town). **Not run on a device:** the headphone jack, output and
+volume-type switches after the carry-through-dB change, a factory reset, a
+cut-short update, setup over Ethernet. **Next: 0.10.2 on Testing**, notes to
+George; then George's questions (`scratchpad` list in the session; the
+open ones are in Finding 119 and the hand-back of 2026-10-12).
+
+**Then the first public release** (George, 2026-10-12): it waits for guestpi
+(Phase 13d's two tests); Imager: the image file and *Use custom* at the
+release, our own repository and the community application after; Stable
+promotion with the image file (c16); README's "first Stable release is next".
+George to test: 0.10.1's owed items, a freshly flashed card without a
+restore, 13f's look. Phase 13g after the release.
 
 **At the first Stable release** (George, 2026-10-09): revisit how the image
 reaches people - most likely all three of ADR-0021's routes: the image file
