@@ -238,3 +238,14 @@ def test_a_screen_chosen_in_settings_is_applied_on_the_port_it_is_on():
     standby the moment it was chosen."""
     choose = _closure("_choose_screen")
     assert "screen_apply.connector_now()" in choose
+
+
+def test_fixed_on_an_output_with_no_control_writes_nothing():
+    """sofapi's USB DAC, 2026-10-12: Fixed wrote full scale to the HAT's
+    control name, which the card does not have, and warned for it. With no
+    control, Fixed has already taken the software stage out: nothing to set."""
+    source = MAIN.read_text()
+    guard = source.index("fixed_on.control is None")
+    write = source.index("await set_raw(volume_bridge.mixer_name, hardware_max())")
+    assert guard < write
+    assert "return" in source[guard:write]

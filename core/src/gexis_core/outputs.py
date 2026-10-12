@@ -327,6 +327,45 @@ def discover(chosen_board: str | None = None) -> list[Output]:
     return list(found)
 
 
+#: Where a card's device sits, and the USB device above it (`usb_name`).
+SOUND = Path("/sys/class/sound")
+PROC_ASOUND = Path("/proc/asound")
+#: Product strings that name the kind of thing, not the thing: a DAC that
+#: calls itself "SMSL USB AUDIO" is shown as "SMSL USB DAC".
+GENERIC_PRODUCTS = frozenset({"", "USB AUDIO", "USB AUDIO DEVICE", "USB DAC", "USB AUDIO DAC", "AUDIO"})
+
+
+def usb_name(card: str, sound: Path | None = None, proc: Path | None = None) -> str | None:
+    """**A USB DAC by its maker** (George, 2026-10-12: *"you can see that it
+    is an SMSL - why not show it in the output"*). The driver's description
+    of a USB card is the class's - "USB Audio" for every one - but the
+    device itself says who made it (`manufacturer`, `product` in sysfs).
+    None for a card that is not on USB, or says nothing."""
+    sound = sound or SOUND
+    proc = proc or PROC_ASOUND
+    try:
+        number = (proc / card).readlink().name          # "card6"
+        device = (sound / number / "device").resolve()
+    except OSError:
+        return None
+    if "/usb" not in str(device):
+        return None
+    usb = device.parent                                  # the interface's device
+
+    def read(name: str) -> str:
+        try:
+            return " ".join((usb / name).read_text().split())
+        except OSError:
+            return ""
+
+    maker, product = read("manufacturer"), read("product")
+    if maker and product.upper().startswith(maker.upper()):
+        product = product[len(maker):].strip()
+    if product.upper() in GENERIC_PRODUCTS:
+        return f"{maker} USB DAC" if maker else None
+    return f"{maker} {product}" if maker else product
+
+
 def _discover(chosen_board: str | None, product) -> list[Output]:
     found: list[Output] = []
     # **The device's description, not the card's.** `aplay -l` gives both,
@@ -344,15 +383,16 @@ def _discover(chosen_board: str | None, product) -> list[Output]:
         label = LABELS.get(card) or re.split(r" HiFi | hifi", description.strip())[0].strip() or card
         board, state = boards.identify(card, chosen=chosen_board, product=product)
         control, scale = playback_control(card)
+        named = board.name if board else (None if card in BUILT_IN_CARDS else usb_name(card))
         found.append(
             Output(
                 card=card,
-                label=board.name if board else label,
+                label=named or label,
                 control=control,
                 connected=_connected(card),
                 scale=scale,
                 state=state,
-                aka=label if board else None,
+                aka=label if named else None,
             )
         )
     return found

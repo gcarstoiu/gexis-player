@@ -1038,6 +1038,15 @@ async def main() -> None:
             # Nothing is attenuating, so the one level the DAC may hold is
             # full scale. Written directly: `write_hardware` now refuses
             # every write in this mode, including this one.
+            # **An output with no control of its own has nothing to set**
+            # (George, 2026-10-12, a USB DAC): Fixed takes the software stage
+            # out of the chain, so it already plays at full scale. Writing
+            # anyway went to the HAT's control name, which the card does not
+            # have, and logged a warning for it.
+            fixed_on = outputs.resolve(settings.value("output_device"))
+            if fixed_on is not None and fixed_on.control is None:
+                logger.info("output: fixed - %s has no control of its own; nothing attenuates", fixed_on.label)
+                return
             logger.info("output: fixed - DAC to full scale, the panel can no longer lower it")
             # **The control in use now**, not the one the daemon started
             # with (code review, 2026-10-12): after a change of output, or

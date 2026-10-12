@@ -512,3 +512,58 @@ def test_hardware_gives_way_to_software_where_a_card_has_no_control():
     assert volume_mode(None, hdmi) == "Software", "the default is Hardware"
     assert volume_mode("Fixed", hdmi) == "Fixed"
     assert volume_mode("Variable", dac) == "Hardware", "an unmigrated value"
+
+
+# --- A USB DAC by its maker (George, 2026-10-12) ------------------------------
+
+def _usb_card(tmp_path, number, manufacturer, product, usb=True):
+    """/proc/asound/<id> -> cardN, and /sys/class/sound/cardN/device under a
+    USB device holding `manufacturer` and `product`, as on sofapi."""
+    proc, sound = tmp_path / "proc", tmp_path / "sound"
+    proc.mkdir(exist_ok=True)
+    root = tmp_path / ("usb1/1-1/1-1.1" if usb else "soc/sound")
+    iface = root / "1-1.1:1.0"
+    iface.mkdir(parents=True)
+    (root / "manufacturer").write_text(manufacturer + "\n")
+    (root / "product").write_text(product + "\n")
+    (sound / f"card{number}").mkdir(parents=True)
+    (sound / f"card{number}" / "device").symlink_to(iface)
+    (proc / f"card{number}").mkdir()
+    return proc, sound
+
+
+def test_a_usb_dac_calling_itself_usb_audio_is_named_by_its_maker(tmp_path):
+    """sofapi's SMSL: the driver says "USB Audio", the device "SMSL" and
+    "SMSL USB AUDIO" - shown as "SMSL USB DAC"."""
+    proc, sound = _usb_card(tmp_path, 6, "SMSL", "SMSL USB AUDIO")
+    (proc / "AUDIO").symlink_to("card6")
+    assert outputs.usb_name("AUDIO", sound, proc) == "SMSL USB DAC"
+
+
+def test_a_usb_dac_with_a_model_name_keeps_it_once(tmp_path):
+    proc, sound = _usb_card(tmp_path, 3, "Topping", "Topping D10s")
+    (proc / "D10s").symlink_to("card3")
+    assert outputs.usb_name("D10s", sound, proc) == "Topping D10s"
+
+
+def test_a_card_not_on_usb_is_not_renamed(tmp_path):
+    proc, sound = _usb_card(tmp_path, 5, "x", "y", usb=False)
+    (proc / "sndrpihifiberry").symlink_to("card5")
+    assert outputs.usb_name("sndrpihifiberry", sound, proc) is None
+    assert outputs.usb_name("missing", sound, proc) is None
+
+
+def test_discovery_shows_the_maker_and_still_finds_the_old_name(tmp_path, monkeypatch):
+    """A choice stored as "USB Audio" before the rename still resolves."""
+    from gexis_core import boards
+    proc, sound = _usb_card(tmp_path, 6, "SMSL", "SMSL USB AUDIO")
+    (proc / "AUDIO").symlink_to("card6")
+    monkeypatch.setattr(outputs, "PROC_ASOUND", proc)
+    monkeypatch.setattr(outputs, "SOUND", sound)
+    monkeypatch.setattr(outputs, "_run", lambda *a: (
+        "card 6: AUDIO [SMSL USB AUDIO], device 0: USB Audio [USB Audio]\n" if a[0] == "aplay" else ""))
+    monkeypatch.setattr(outputs, "DRM", tmp_path / "drm")
+    monkeypatch.setattr(boards, "hat_product", lambda: None)
+    [usb] = outputs._discover("none", None)
+    assert usb.label == "SMSL USB DAC" and usb.aka == "USB Audio"
+    assert outputs.resolve("USB Audio — Detected", [usb], current=None) is usb
