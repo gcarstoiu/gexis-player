@@ -79,3 +79,28 @@ A dump of the chip's registers before and after flipping the switch differed
 in dozens of places: register 0 is the chip's page selector, and reading the
 dump moves it, so the diff was mostly noise. Only register 7, read against the
 driver's definition, was used.
+
+## Addendum 2026-10-12: the two tests left (Phase 13d closes)
+
+George allowed both (*"9. You can do it"*); guestpi on the 0.10.2 previews
+(core `+git52`).
+
+- **A chosen board that is not fitted, taken back** (ADR-0117 decision 3).
+  *Sound card board* set to *HiFiBerry / DAC Plus* (overlay
+  `hifiberry-dacplus`) at 19:40:44: the block was written to `config.txt` and
+  the player restarted (19:40:51). That start found no HiFiBerry card, logged
+  "board: hifiberry-dacplus made no sound card; went back, restarting",
+  wrote the block out and restarted again (19:40:53). After it: `config.txt`
+  byte-for-byte as before (same md5), the Pi-DAC PRO the card again, the row
+  *Found by itself* with the note "The HiFiBerry DAC Plus was not found after
+  the restart, so the player went back. Check the board is seated on the Pi's
+  pins, or choose another." About 70 s in all.
+- **Plexamp through the board.** A FLAC from George's Plex library, started
+  on guestpi's Plexamp through a play queue (no phone): Plexamp's own process
+  held `hw` on the Pi-DAC PRO in `S32_LE` at 44.1 kHz, running; *Digital* at
+  207 (0 dB) - the volume type Hardware and Plexamp at 100. Stopped after the
+  reading; Plexamp let the card go about 25 s later ("plexamp gave up the
+  device"). Plexamp shares the path the others measured above.
+
+Not measured: Plexamp at other rates on this board; the analogue output.
+
