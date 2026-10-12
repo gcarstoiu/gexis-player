@@ -317,12 +317,15 @@ def test_the_retry_never_scans_with_a_phone_using_the_page(tmp_path):
 
 def test_a_phone_that_never_opened_the_page_does_not_hold_the_player(tmp_path):
     """George, 2026-10-12: a phone that joined the setup network by itself
-    and never opened the page does not keep the player off its Wi-Fi."""
+    and never opened the page does not keep the player off its Wi-Fi - once
+    it has had SETUP_ACTIVE_S to open it, since one that has just joined may
+    be about to."""
     nm = FakeNM(devices=NOTHING, saved={"Home": "preconfigured"}, in_range={"Home"})
     net, clock = setup(tmp_path, nm, stations=1)
     hold(net, nm, clock, lambda: net.status()["network"] == "online")
     assert net.status()["network"] == "online"
     assert nm.did("connection", "up", "preconfigured")
+    assert net._phone_since is not None and clock.now >= net._phone_since + sn.SETUP_ACTIVE_S
 
 
 def test_a_phone_idle_on_the_page_for_ten_minutes_no_longer_holds(tmp_path):

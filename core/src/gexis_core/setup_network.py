@@ -349,6 +349,10 @@ class SetupNetwork:
         self._page_opened = False
         #: When a phone last asked the setup page anything (`SETUP_ACTIVE_S`).
         self._page_used_at: float | None = None
+        #: When the retry first found a phone on the setup network: one that
+        #: has just joined counts as about to use the page, for as long as
+        #: a use of the page would (`SETUP_ACTIVE_S`).
+        self._phone_since: float | None = None
         #: The last word, shown on the panel for a few seconds after a
         #: successful join: where the device went and what it found.
         self._finished: dict | None = None
@@ -828,8 +832,17 @@ class SetupNetwork:
             # A new player has no saved network to go back to, so any phone
             # still holds it as before; a configured one is held only by a
             # phone using the page (SETUP_ACTIVE_S).
-            if await self._count_stations() > 0:
-                if self._needed or self._page_in_use():
+            phones = await self._count_stations()
+            if phones == 0:
+                self._phone_since = None
+            elif self._phone_since is None:
+                self._phone_since = self._clock()
+            if phones > 0:
+                # A phone that joined in the last SETUP_ACTIVE_S counts as
+                # about to open the page: someone who has just joined to set
+                # the player up must not see it leave first.
+                joined_lately = self._clock() - self._phone_since < SETUP_ACTIVE_S
+                if self._needed or self._page_in_use() or joined_lately:
                     logger.info("setup: a phone is on %s; not looking for other networks", SSID)
                     continue
                 logger.info("setup: a phone is on %s but nobody has used the page for %d s", SSID, SETUP_ACTIVE_S)
