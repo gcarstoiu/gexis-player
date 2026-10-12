@@ -79,7 +79,7 @@ Every uploaded plugin runs under `gexis-uploaded-<kind>@<id>.service`:
 | **The player** | The plugin socket, `$GEXIS_PLUGIN_SOCKET` (`/run/gexis/plugins.sock`) |
 | **Limits** | 1 GB of memory (past it, the kernel ends your plugin and it restarts), 1.5 CPU cores, 128 tasks |
 | **Restart** | Restarted 3 s after it exits with an error. A plugin switched on but missing its package (restored from a backup without it) is not retried; it starts when the package is uploaded. When the player starts, any plugin switched on and not running is started |
-| **mDNS** | Announce through the system's avahi, over its D-Bus API (`/etc/avahi/services` is read-only to a plugin). **Do not run your own mDNS responder that publishes the device's host name**: avahi sees a second claim on it and renames the device (`name-2.local`), and every bookmark and link to the player breaks. A responder that publishes only its own service, under its own instance name and pointing at the existing host, is tolerated |
+| **mDNS** | **Port 5353 is closed to your plugin**: an mDNS responder of its own cannot answer. To be found on the network, send `announce` and the player publishes your service under the device's own name (see the contract, ADR-0142). A responder that published the device's host name made avahi rename the device (`name-2.local`), and every link to the player broke |
 
 Your process starts **in its package folder** (`current/`), so relative paths
 to your own files work.

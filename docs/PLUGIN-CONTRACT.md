@@ -168,6 +168,7 @@ Taken from `Adapter` and `Capabilities` as they are. The prose for each is in
 {"t": "queue", "queue": [ … ]}
 {"t": "volume", "value": 62, "steps": 100}
 {"t": "row", "key": "claim_token", "state": "done", "text": "Claimed"}
+{"t": "announce", "services": [{"type": "_radio-foo._tcp", "port": 8200, "txt": {"id": "abc"}}]}
 ```
 
 - **`acquire`** — a deliberate acquisition (ADR-0010's table as amended by
@@ -202,6 +203,22 @@ Taken from `Adapter` and `Capabilities` as they are. The prose for each is in
   never stored, and a plugin that disconnects takes its reports with it, so
   a plugin says it again after reconnecting. A core older than this logs the
   event and ignores it.
+- **`announce`** — *added 2026-10-12* ([ADR-0142](decisions/0142-the-player-announces-for-its-plugins.md)).
+  What the plugin wants found on the local network, announced **by the
+  player** through avahi under the device's own host name. **An uploaded
+  plugin cannot answer mDNS itself**: its unit denies it port 5353, because a
+  plugin's own responder that publishes the device's host name makes avahi
+  rename the device. `services` is the plugin's whole set, at most 4; each
+  replaces what was sent before, and `[]` withdraws them. Each service:
+  `type` (`_name._tcp` or `_name._udp`, never one of the player's own:
+  `_gexis._tcp`, `_smb._tcp`, `_device-info._tcp`, `_workstation._tcp`,
+  `_ssh._tcp`, `_sftp-ssh._tcp`), `port` (1-65535), `name` (up to 63
+  characters; the device's name when left out) and `txt` (an object of at
+  most 20 entries, keys of letters, digits, `.`, `_`, `-`, each `key=value`
+  at most 255 bytes). A message that breaks any of this is refused whole and
+  logged. The announcement lasts while the plugin is connected: it goes when
+  the plugin disconnects, so a plugin sends it again after reconnecting. A
+  core older than this logs the event and ignores it.
 
 ## Core → plugin
 
