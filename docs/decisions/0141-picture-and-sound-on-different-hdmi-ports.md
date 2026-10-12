@@ -1,6 +1,7 @@
 # ADR-0141 — Picture and sound on different HDMI ports
 
-**Status:** **Proposed** — 2026-10-12. Decisions owed by George (below).
+**Status:** **Partly accepted** — 2026-10-12. D2 and D4 accepted and built
+(George: *"I agree to both. Go ahead."*); D1, D3, D5, D6 still owed.
 **Touches:** [ADR-0055](0055-which-output-the-device-plays-to.md) (Open §1),
 [ADR-0109](0109-other-screens.md), [ADR-0127](0127-one-volume-row.md),
 [ADR-0135](0135-display-standby.md).
@@ -88,3 +89,28 @@ ports connected):
 A TV as the screen (ADR-0109 amendment, 2026-10-12). Fixed volume with the
 visualiser on HDMI (ADR-0055 §6) is a separate question, though a receiver
 is the obvious case for it.
+
+## Decided 2026-10-12: D2 and D4
+
+George, asking *"how should I change screen to the other HDMI if I'm only see
+the one screen in settings. Shouldn't we have two entries, similar to audio
+output?"*, then *"I agree to both. Go ahead."*:
+
+- **D4: the Screen section lists both ports** - *HDMI 1*, *HDMI 2*, each
+  saying the screen by its model, another device by the name it gives, *sound*
+  when the output is that port, or *Nothing connected*.
+- **D2: the port is detected, and a choice only while both have something on
+  them** (*Screen port*, ADR-0022). With one port connected the cable decides,
+  as the fix of the same day made it (ADR-0109's amendment). Choosing the
+  other port applies the same screen there: a restart and *Keep this screen?*.
+- **Detection with both connected** (proposal 1, built): the applied port if a
+  known panel is there; any port a known panel is on; the applied port; else
+  the first connected. A chosen port therefore holds across starts, and a
+  panel moved away from it is followed.
+- **The kiosk window is pinned to the screen's port** whenever both ports are
+  connected, not only off HDMI-A-1.
+
+Still owed: **D1** (the rest before or after 1.0), **D3** (what a sound-only
+port shows - today the boot artwork, as labwc extends the desktop onto it),
+**D5** (a receiver that disappears), **D6** (hardware to test with).
+

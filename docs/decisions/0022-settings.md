@@ -290,6 +290,8 @@ recognition.
 |---|---|---|
 | Attached screen | [N] | A choice from the list of supported screens (grouped by maker, from `foonerd/pi_screen_setup`'s presets, Finding 100). Sets the layout family (Standard or Bar) and the visualiser's skin set. The same list as setup's Screen step, where a recognised screen is confirmed or another chosen. Applies at the next restart |
 | Screen rotation | [N] | 0° / 180° (ADR-0109 decision 6, George 2026-09-30: portrait is not designed). 0° is the model's landscape: the two bar screens are portrait panels used sideways (Finding 100), and their list entry carries that turn. Applies at the next restart |
+| Screen port | [R] | HDMI 1 / HDMI 2 - which port the screen is on, offered only while something is connected to both (ADR-0141 D2; George, 2026-10-12: *"I agree to both"*). With one port connected it is detected, the cable decides. Applies at once with a restart and *Keep this screen?* |
+| HDMI 1, HDMI 2 | [R] | Read-only: what is on each port - the screen, another device by its name, the port's sound, or *Nothing connected* (ADR-0141 D4) |
 
 ### Appended 2026-10-04 — Phase 13d's row
 
