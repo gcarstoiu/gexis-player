@@ -9,8 +9,8 @@ the phone in your pocket. Gexis Player brings all of it to one place: a
 Raspberry Pi 4 with a good DAC and a touchscreen, next to your amplifier.**
 
 An audiophile streamer for the Raspberry Pi and the DIY audio community.
-Bit-perfect, tested up to 24-bit / 192 kHz and likely higher with DACs that
-go further, every source on one screen, set up from your phone in minutes.
+Bit-perfect, tested up to 32-bit / 768 kHz and native DSD with a USB DAC,
+every source on one screen, set up from your phone in minutes.
 Free and open source: Gexis itself has no ads and needs no account or
 subscription. Some streaming services bring their own: Spotify Connect needs
 Spotify Premium, and Plexamp a Plex account, on Plex's terms.
@@ -67,9 +67,9 @@ newest deliberate choice wins, and the others are told.
 
 ### 🎚️ Sounds the way the file does
 
-Bit-perfect to the DAC, tested up to 24/192. Nothing in the chain resamples,
-so a DAC that takes higher rates, a USB DAC for example, should get them too,
-though that is untested. The volume is set in the DAC's own
+Bit-perfect to the DAC: nothing in the chain resamples. Tested up to 24/192
+on DAC boards, and on a USB DAC every rate to 768 kHz (384 kHz from Lyrion)
+and native DSD64 to DSD256 from Lyrion with the volume fixed. The volume is set in the DAC's own
 hardware, in software for an output with none of its own (HDMI), or fixed for
 an amplifier that does it. A maximum level holds for every source, and
 Spotify never starts louder than you allow. Because Gexis is the whole
@@ -150,7 +150,7 @@ or removed from Settings, with its progress shown in the switch itself.
 | | |
 |---|---|
 | 🔊 **Sources** | Spotify Connect · Lyrion (squeezelite) · Bluetooth (A2DP) · Plexamp · your own plugins |
-| 🎚️ **Sound** | Bit-perfect, tested up to 24/192, higher rates possible with other DACs (untested) · hardware, software or fixed volume · a maximum level for every source · a starting volume Spotify never exceeds |
+| 🎚️ **Sound** | Bit-perfect, tested up to 24/192 on DAC boards and to 768 kHz on a USB DAC · native DSD on a DAC that takes it · hardware, software or fixed volume · a maximum level for every source · a starting volume Spotify never exceeds |
 | 🔀 **Handover** | One source at a time, never mixed · takeover in any direction · the previous source released before the next one plays |
 | 🖼️ **Now playing** | Artwork · synced or plain lyrics · artist information and photos · the Lyrion queue |
 | 📈 **Visualiser** | Up to 287 skins, depending on the screen · VU meters, spectrum, turntables and tape decks · progress, time, volume and play-state in each skin's own style · skins that rotate per track |
@@ -168,9 +168,9 @@ or removed from Settings, with its progress shown in the switch itself.
 I'd rather you knew these up front:
 
 - **Tested hardware is narrow, for now.** A Raspberry Pi 4 (4 GB); the
-  HiFiBerry DAC2 HD and IQaudIO Pi-DAC PRO; four HDMI touch screens. Other
-  DACs and screens are listed but untested, as are USB DACs and rates above
-  24/192 - see the [hardware requirements](docs/HARDWARE.md). Community
+  HiFiBerry DAC2 HD and IQaudIO Pi-DAC PRO; one USB DAC (an SMSL); four
+  HDMI touch screens. Other DACs and screens are listed but untested - see
+  the [hardware requirements](docs/HARDWARE.md). Community
   testing is very welcome and is how this list grows: if you run Gexis on
   other hardware, *Hardware feedback* on the player tests it and fills in
   most of the report for you.
