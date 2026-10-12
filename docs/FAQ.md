@@ -338,7 +338,9 @@ After two minutes without a network, the player opens its own setup network
 and the screen shows how to join it, as at start (after 90 seconds there). It
 keeps looking for its saved network every five minutes and goes back to it
 when it is in range; or choose a network from the setup screen. This counts
-a network that gave the player no address as no network.
+a network that gave the player no address as no network. A player on a
+network cable leaves the setup network by itself once the cable has an
+address again.
 
 **What is the player's name, and can it be changed?**
 *Settings → System → Device name* is one name for everything: the network
@@ -529,7 +531,10 @@ ListenBrainz token*.
 Installing stops the music (it asks first), restarts the player and checks
 it; the device itself restarts only if the system needs it, and the update
 says so before starting. If the new release fails its check - also after the
-device restarts - the player goes back to the release it had. While it
+device restarts - the player goes back to the release it had; after a power
+cut during the install, it finishes the install or goes back when it starts
+again. The updater keeps only the downloads of what is installed, so old
+releases do not fill the card. While it
 installs, no phone or app can start playing on it. *Settings → System → Change logs* lists what
 changed in the last 10 releases.
 
@@ -584,8 +589,9 @@ say the player is resetting, and the phone says how to reach setup. The
 player restarts, clears everything and comes up in setup, as on a freshly
 flashed card. It
 removes every setting and the name, the saved Wi-Fi networks, paired devices
-and sign-ins, the skins, the plugins, the Lyrion Server's library, and the
-backups kept on the player, so download a backup first (*Restore →
+and sign-ins, the skins, the plugins, the Lyrion Server's library, the
+screen's browser data, and the backups kept on the player (the Backups share
+itself stays, empty), so download a backup first (*Restore →
 Download* on a phone or computer). The music folder, its playlists and the
 Pictures share stay, and the Lyrion Server scans the music again. The
 installed version stays, so there is nothing to download again except the

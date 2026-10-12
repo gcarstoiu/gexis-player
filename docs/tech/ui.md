@@ -151,6 +151,11 @@ Release tabs (ADR-0109 decision 7). Lists run sideways on a bar
 (`bar/sideways.svelte.js`). `bar/JumpStrip.svelte` is the letter-pair jump
 strip; Artists and Lyrion's lettered lists share it.
 
+A volume drawer or bar tray that opened by itself, for a change made
+elsewhere, takes no touch on its level or mute for 400 ms
+(`VOLUME_ARM_MS` in `App.svelte`), so a tap meant for what was under it does
+not set the level; one opened from the panel is unaffected.
+
 ---
 
 ## 5. The panel's layer stack
@@ -369,7 +374,10 @@ On a phone, `Settings.svelte` fills the page and `MiniPlayer.svelte` is
 pinned below it (ADR-0101). The mini player provides:
 
 - what is playing and from which source;
-- the volume (`POST /volume`), shown as a padlock in fixed output (ADR-0046);
+- the volume (`POST /volume`), shown as a padlock in fixed output (ADR-0046).
+  As the bar tray's slider does, it waits for the finger to move 8 px
+  (`SLIDE_DECIDE`): mostly vertical sends nothing (a swipe that starts on
+  it), sideways follows the finger, and a tap sets the level on lift;
 - toggles that act on the panel: the visualiser (`/peppy/show|hide`), the
   idle screen, and Home / Now playing / Lyrics. Each toggle reflects what the
   panel reports it is showing (`panel.visualiser`, `panel.idle`,
@@ -487,8 +495,8 @@ flowchart LR
 | `SetupPage` (phone) | the device needs setup | The first-time setup flow; answers are saved step by step to the core |
 | `NewScreen` / `KeepScreen` | a different screen is attached / a new screen awaits confirmation | Only the panel answers Keep; a countdown reverts (ADR-0109 decision 5) |
 | `TestPattern` (panel) | `screen_check` showing | The hardware feedback's test pattern; the panel's four corner taps go back to the core. Mounted over everything but *Keep this screen?* and the update lock (ADR-0126) |
-| `UpdateModal` (Settings) | the user checks for an update | One modal, from the check to the outcome (ADR-0110 §3) |
-| `UpdateScreen` (panel) | `update.active` | Locks the panel and stays up through the core restart and reconnect. At the end it waits for Done, or 10 min. It reloads the page if the installed release changed (ADR-0110 §6). Separately, the panel reads its own `index.html` once a minute and reloads when the UI build it names differs from the one running, unless the update lock, setup, *Keep this screen?* or the test pattern is up (ADR-0110 as amended 2026-10-09) |
+| `UpdateModal` (Settings) | the user checks for an update | One modal, from the check to the outcome (ADR-0110 §3). It notes the status when it asks and takes any change from it as the answer, not a comparison of the player's clock with the phone's |
+| `UpdateScreen` (panel) | `update.active` | Locks the panel and stays up through the core restart and reconnect. At the end it waits for Done, or 10 min. An update that goes inactive with no *done* or *failed* (an updater killed mid-install) lets the panel go after 30 s with the socket open (`STRANDED_MS` in `App.svelte`). It reloads the page if the installed release changed (ADR-0110 §6). Separately, the panel reads its own `index.html` once a minute and reloads when the UI build it names differs from the one running, unless the update lock, setup, *Keep this screen?* or the test pattern is up (ADR-0110 as amended 2026-10-09) |
 
 ---
 
