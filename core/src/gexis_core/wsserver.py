@@ -214,6 +214,8 @@ class StateServer:
         #: the daemon owns what "restart the device" means, and a test can
         #: watch it without one.
         self._restore = restore
+        #: The updater's backups under way, held so none is collected half-run.
+        self._backup_tasks: set[asyncio.Task] = set()
         #: **A row that takes effect at a restart, restarts** (ADR-0048,
         #: amended 2026-10-05): saving the device name from Settings reboots,
         #: after the answer. Here, in the route, and not in the row's own
@@ -2357,12 +2359,49 @@ class StateServer:
         if self._settings is None:
             return web.json_response({"error": "settings are not wired up"}, status=503)
         key = request.match_info["key"]
+        if key == "backup" and request.query.get("before") == "update":
+            return self._backup_before_update()
 
         def run():
             self._settings.run(key)
             return {"key": key}
 
         return self._settings_call(run)
+
+    def _backup_before_update(self) -> web.Response:
+        """**The updater's backup, kept three deep** (George, 2026-10-12,
+        answer 3). `POST /settings/backup?before=update`: named as the
+        updater's own, and the updater's older ones beyond
+        `backups.KEEP_AUTOMATIC` deleted once it is written - never one
+        taken by hand. A core before this ignores the query and takes an
+        ordinary one, as it always did.
+
+        Answered at once, as the row's own action is: the updater watches
+        the share for the file, and a backup can outlast the request.
+        """
+        # Read here, on the loop: the settings store is bound to this thread.
+        name = str(self._setting_or_none("device_name") or "gexis")
+        directory = backups.DEFAULT_DIR
+
+        def make() -> str:
+            made = backups.create(name, directory, automatic=True)
+            backups.prune_automatic(made, directory)
+            return made
+
+        async def run() -> None:
+            try:
+                made = await asyncio.to_thread(make)
+            except Exception as exc:  # noqa: BLE001 - the updater stops without one
+                logger.warning("backup before update: failed: %s", exc)
+                return
+            logger.info("backup before update: %s", made)
+            # The Restore row lists the share, as after the row's own backup.
+            self._store.bump_settings_revision()
+
+        task = asyncio.ensure_future(run())
+        self._backup_tasks.add(task)
+        task.add_done_callback(self._backup_tasks.discard)
+        return web.json_response({"key": "backup", "before": "update"})
 
     #: Where a `list` row's items come from - ADR-0044 §1's first open
     #: question, now answered for all three.

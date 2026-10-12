@@ -1007,3 +1007,20 @@ def test_empty_package_lists_are_dropped_before_an_update(up, tmp_path, monkeypa
                         or subprocess.CompletedProcess(a, 0, "", ""))
     up.apt(["-o", "x"], "update")
     assert seen == [["lock", "x_ours_._Packages", "x_skins-bbb_._InRelease"]]
+
+
+def test_the_backup_before_an_update_is_asked_for_as_one(up, monkeypatch, tmp_path):
+    """George, 2026-10-12, answer 3: the core names it as an update's and
+    keeps the newest three of those, so the updater has to say so."""
+    monkeypatch.setattr(up, "BACKUPS", tmp_path / "backups")
+    (tmp_path / "backups").mkdir()
+    asked = []
+
+    def core(req, timeout=0):
+        asked.append((req.full_url, req.get_method()))
+        (tmp_path / "backups" / "gexis-den.before-update-20261012-101500.tgz").write_bytes(b"x")
+        return io.BytesIO(b"{}")
+
+    monkeypatch.setattr(up.urllib.request, "urlopen", core)
+    assert up.back_up() == "gexis-den.before-update-20261012-101500.tgz"
+    assert asked == [(f"{up.CORE}/settings/backup?before=update", "POST")]

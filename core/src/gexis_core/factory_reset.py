@@ -52,6 +52,10 @@ REMOVED = (
     "var/lib/squeezeboxserver/prefs", "var/lib/squeezeboxserver/cache",
     "var/lib/gexis/lyrion-addons.done", "var/lib/gexis/lyrion-scan-stopped.json",
     "var/lib/gexis/lyrion-usb-seen.json",
+    # **The settings chosen when the card was flashed** (George, 2026-10-12,
+    # answer 4: "Yes"): firstrun.sh's `SETTINGS`, which the core reads as
+    # defaults at every start. Left, a reset came back with them.
+    "etc/gexis/settings-seed.json",
 )
 #: Emptied, the folder itself kept (its owner and mode belong to the image).
 #: Never the music folder (`/var/lib/gexis-music`, with Lyrion's playlists)
@@ -74,6 +78,14 @@ EMPTIED = (
     # wiped it. The folder is `pi`'s, so emptied; this runs before the kiosk.
     "var/lib/gexis-kiosk",
 )
+#: **The core's config, and the image's copy of it** (George, 2026-10-12,
+#: answer 4). firstrun.sh appends the flash-time `idle_url` to `CORE_TOML`;
+#: the reset puts back `DEFAULT_CORE_TOML`, which gexis-core installs and its
+#: postinst copied into place on a fresh card - so the result is exactly that
+#: card's. Nothing else the device needs lives in it: the LMS server is the
+#: `lms_server` setting (ADR-0107), and the rest are the code's defaults.
+CORE_TOML = "etc/gexis/core.toml"
+DEFAULT_CORE_TOML = "usr/share/gexis/defaults/core.toml"
 #: The image's own name and time zone (pi-gen's defaults; ADR-0132 §3).
 HOSTNAME = "raspberrypi"
 TIMEZONE = "Europe/London"
@@ -130,6 +142,23 @@ def wipe(root: Path = Path("/"), run=subprocess.run) -> list[str]:
         step(rel, lambda rel=rel: _remove(root / rel))
     for rel in EMPTIED:
         step(f"{rel}/*", lambda rel=rel: _empty(root / rel) > 0)
+
+    def core_toml() -> bool:
+        default, target = root / DEFAULT_CORE_TOML, root / CORE_TOML
+        if not default.is_file():
+            # No copy to go back to (a core from before the package shipped
+            # one): without the file the core reads the code's defaults,
+            # which is what the image's copy - comments only - amounts to.
+            return _remove(target)
+        if target.is_file() and target.read_bytes() == default.read_bytes():
+            return False
+        target.parent.mkdir(parents=True, exist_ok=True)
+        partial = target.with_name(f".{target.name}.reset")
+        shutil.copyfile(default, partial)
+        partial.chmod(0o644)
+        partial.replace(target)
+        return True
+    step(CORE_TOML, core_toml)
 
     def hostname() -> bool:
         (root / "etc/hostname").write_text(HOSTNAME + "\n")

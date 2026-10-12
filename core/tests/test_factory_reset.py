@@ -141,3 +141,48 @@ async def test_a_restart_refused_for_too_long_gives_up():
         pass
 
     assert await _systemctl_reboot(retry_s=15, give_up_s=45, exec_=exec_, sleep=sleep) is False
+
+
+def test_the_settings_chosen_at_flash_time_go(tmp_path):
+    """George, 2026-10-12, answer 4: firstrun.sh's `SETTINGS`, read as
+    defaults at every start, do not survive a reset."""
+    seed = tmp_path / "etc/gexis/settings-seed.json"
+    seed.parent.mkdir(parents=True)
+    seed.write_text('{"idle_timeout": 10}\n')
+    factory_reset.wipe(tmp_path)
+    assert not seed.exists()
+
+
+def test_core_toml_goes_back_to_the_images_copy(tmp_path):
+    """The flash-time `idle_url` firstrun.sh appended is gone; the file is
+    the one gexis-core installs, byte for byte."""
+    shipped = Path(__file__).resolve().parents[2] / "image/stage-gexis/03-core/files/core.toml"
+    default = tmp_path / factory_reset.DEFAULT_CORE_TOML
+    default.parent.mkdir(parents=True)
+    default.write_bytes(shipped.read_bytes())
+    target = tmp_path / factory_reset.CORE_TOML
+    target.parent.mkdir(parents=True)
+    target.write_bytes(shipped.read_bytes() + b'\nidle_url = "https://example.invalid/display/1"\n')
+    done = factory_reset.wipe(tmp_path)
+    assert target.read_bytes() == shipped.read_bytes()
+    assert factory_reset.CORE_TOML in done
+    assert (target.stat().st_mode & 0o777) == 0o644
+    # And the core reads the code's defaults from it.
+    from gexis_core.config import Config
+    assert Config.load(target) == Config()
+
+
+def test_core_toml_without_the_images_copy_is_removed(tmp_path):
+    """No copy to go back to: without the file the core reads its defaults,
+    which is what the image's copy amounts to."""
+    target = tmp_path / factory_reset.CORE_TOML
+    target.parent.mkdir(parents=True)
+    target.write_text('idle_url = "https://example.invalid/display/1"\n')
+    factory_reset.wipe(tmp_path)
+    assert not target.exists()
+
+
+def test_the_images_copy_is_where_gexis_core_installs_it():
+    """`DEFAULT_CORE_TOML` is the package's path, not a guess."""
+    build = (Path(__file__).resolve().parents[2] / "packaging/core/build.sh").read_text()
+    assert f'"$STAGE/{factory_reset.DEFAULT_CORE_TOML}"' in build

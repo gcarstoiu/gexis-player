@@ -873,3 +873,40 @@ async def test_a_truncated_backup_is_refused_with_a_reason(tmp_path, monkeypatch
     async with TestClient(TestServer(server.make_app())) as client:
         r = await client.post("/settings/restore/items", json={"name": "gexis-backup.tgz", "action": "join"})
         assert r.status == 200 and (await r.json())["ok"] is False
+
+
+@pytest.mark.asyncio
+async def test_the_updaters_backup_is_named_as_its_own_and_pruned(tmp_path, monkeypatch):
+    """George, 2026-10-12, answer 3: `POST /settings/backup?before=update`
+    makes an update's backup and keeps the newest three of those."""
+    import asyncio
+
+    from gexis_core import backups
+    from gexis_core.settings import SettingsStore
+    from gexis_core.settings_registry import Settings
+
+    registry = [{"id": "g", "label": "G", "rows": [{"key": "backup", "type": "action"},
+                                                    {"key": "device_name", "type": "text"}]}]
+    store = SettingsStore(tmp_path / "s.db")
+    settings = Settings(store, registry=registry, wired={"backup": lambda _=None: hand.append(1), "device_name": None})
+    settings.set("device_name", "Den")
+    hand = []
+    made, pruned = [], []
+    monkeypatch.setattr(backups, "create", lambda name, directory=None, root=None, automatic=False:
+                        made.append((name, automatic)) or "gexis-den.before-update-20261012-101500.tgz")
+    monkeypatch.setattr(backups, "prune_automatic", lambda name, directory=None: pruned.append(name))
+    state = StateStore({})
+    server = StateServer(state, settings=settings)
+    async with TestClient(TestServer(server.make_app())) as client:
+        r = await client.post("/settings/backup?before=update")
+        assert r.status == 200
+        for _ in range(100):
+            if pruned:
+                break
+            await asyncio.sleep(0.01)
+        assert made == [("Den", True)]
+        assert pruned == ["gexis-den.before-update-20261012-101500.tgz"]
+        assert hand == [], "the row's own backup, taken by hand, is not run"
+        assert state.state.settings_revision == 1, "the Restore list is told"
+        r = await client.post("/settings/backup")
+        assert r.status == 200 and hand == [1]

@@ -139,6 +139,19 @@ WAL_FILES = ("-wal", "-shm")
 #: archive onto another, and this is what makes it visible.
 NAME = re.compile(r"^gexis-.*-\d{8}-\d{6}\.tgz$")
 
+#: **The backup the updater asks for before each update** (George,
+#: 2026-10-12, answer 3: pruned, the three most recent kept). Named
+#: `gexis-<name>.before-update-<stamp>.tgz`: still a `NAME`, so a release
+#: before this one - the one an update goes back to - lists and restores it,
+#: and marked by a `.`, which `_slug` never writes, so no device's name can
+#: make a backup taken by hand look like one of these.
+AUTOMATIC_MARK = ".before-update"
+AUTOMATIC = re.compile(r"^gexis-[a-z0-9-]+\.before-update-(\d{8}-\d{6})\.tgz$")
+
+#: How many of them are kept (George, 2026-10-12). A backup taken by hand,
+#: or one from before the mark existed, is never counted and never deleted.
+KEEP_AUTOMATIC = 3
+
 #: Nothing outside the backup directory is ever read or written by name, and a
 #: name that tries is refused rather than sanitised.
 SAFE = re.compile(r"^[A-Za-z0-9._-]+$")
@@ -155,7 +168,8 @@ class Archive:
         when = time.strftime("%-d %b %Y, %H:%M", time.localtime(self.made))
         return {
             "name": self.name,
-            "meta": f"{when} · {self.size / 1_048_576:.1f} MB",
+            "meta": f"{when} · {self.size / 1_048_576:.1f} MB"
+                    + (" · before an update" if AUTOMATIC.match(self.name) else ""),
             "state": "saved",
             "bars": None,
         }
@@ -209,7 +223,8 @@ def _snapshot(source: Path, into: Path) -> bool:
         return False
 
 
-def create(device_name: str, directory: Path = DEFAULT_DIR, root: Path = Path("/")) -> str:
+def create(device_name: str, directory: Path = DEFAULT_DIR, root: Path = Path("/"),
+           automatic: bool = False) -> str:
     """Write one, and return its name.
 
     **Written to a temporary name and renamed**, so a half-written archive is
@@ -222,9 +237,13 @@ def create(device_name: str, directory: Path = DEFAULT_DIR, root: Path = Path("/
     never existed. SQLite's backup copies it whole; the WAL and its index
     stay out. A database with no WAL - the core's own, and the hub's when it
     is stopped - is one file already, and goes in as it is.
+
+    `automatic`: the updater's, named with `AUTOMATIC_MARK` so that
+    `prune_automatic` can find it later.
     """
     directory.mkdir(parents=True, exist_ok=True)
-    name = f"gexis-{_slug(device_name)}-{time.strftime('%Y%m%d-%H%M%S')}.tgz"
+    mark = AUTOMATIC_MARK if automatic else ""
+    name = f"gexis-{_slug(device_name)}{mark}-{time.strftime('%Y%m%d-%H%M%S')}.tgz"
     final = directory / name
     partial = directory / f".{name}.part"
     try:
@@ -268,6 +287,36 @@ def create(device_name: str, directory: Path = DEFAULT_DIR, root: Path = Path("/
         pass
     logger.info("backup: wrote %s (%d bytes)", name, final.stat().st_size)
     return name
+
+
+def prune_automatic(keep_name: str, directory: Path = DEFAULT_DIR, keep: int = KEEP_AUTOMATIC) -> list[str]:
+    """**The updater's backups beyond the newest `keep`, deleted** (George,
+    2026-10-12), after `keep_name` - the one just made - was written.
+    Returns the names deleted.
+
+    Only names `AUTOMATIC` matches are ever looked at: a backup taken by
+    hand, one copied in, one from before the mark, are not this function's.
+    **Newest by the time in the name, and the one just made always kept**:
+    a Pi has no clock of its own, and one that came up behind the time
+    stamped a new backup older than the ones before it.
+    """
+    try:
+        entries = [e.name for e in directory.iterdir() if e.is_file()]
+    except OSError:
+        return []
+    theirs = sorted((n for n in entries if AUTOMATIC.match(n) and n != keep_name),
+                    key=lambda n: AUTOMATIC.match(n).group(1), reverse=True)
+    kept = 1 if AUTOMATIC.match(keep_name) and keep_name in entries else 0
+    gone = []
+    for name in theirs[max(keep - kept, 0):]:
+        try:
+            (directory / name).unlink()
+        except OSError as exc:
+            logger.warning("backup: could not delete %s: %s", name, exc)
+            continue
+        gone.append(name)
+        logger.info("backup: deleted %s, an update's backup beyond the newest %d", name, keep)
+    return gone
 
 
 def _under(name: str, paths) -> bool:

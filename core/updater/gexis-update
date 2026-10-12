@@ -713,7 +713,10 @@ def stop_playback() -> None:
 
 def back_up() -> str:
     before = {p.name for p in BACKUPS.glob("*.tgz")}
-    req = urllib.request.Request(f"{CORE}/settings/backup", method="POST")
+    # `before=update` (George, 2026-10-12): the core names it as an
+    # update's and keeps the newest three of those; a backup taken by hand
+    # is never deleted.
+    req = urllib.request.Request(f"{CORE}/settings/backup?before=update", method="POST")
     try:
         urllib.request.urlopen(req, timeout=20).read()
     except OSError as exc:
