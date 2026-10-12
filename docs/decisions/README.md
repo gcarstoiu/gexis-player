@@ -158,6 +158,7 @@ the question blocking it was answered.
 | [0137](0137-plugins-are-told-when-output-is-fixed.md) | Plugins are told when the output is Fixed | **Accepted** 2026-10-11 (George) - a new `output` message within contract 1; Plexamp's plugin keeps Plexamp at 100 in Fixed, its app's slider snapping back. Plexamp has no setting to hide it |
 | [0138](0138-reports-in-steps-and-one-way-to-send.md) | Reports in steps, a visible checklist, and one way to send for both | **Accepted** 2026-10-11 (George) - the problem report in three steps (what happened, a checklist of what is prepared, send); one Send step for it and hardware feedback: GitHub filled in (the problem report's log errors inline, the file an extra) or a download to e-mail; a prepared report kept one hour |
 | [0139](0139-no-passwordless-sudo-in-the-public-image.md) | No passwordless sudo in the public image; test cards get it by provisioning | **Accepted** 2026-10-12 (George's direction: remove it last) - the image installs no sudoers rule for `pi`; `DEV_SUDO="yes"` in provisioning puts it back on a test card at first boot; cards already flashed keep theirs |
+| [0140](0140-the-software-volume-is-set-before-the-renderers-start.md) | The software volume is set before the renderers start | **Accepted** 2026-10-12 (George: *"Do it now"*) - a oneshot unit before the renderers writes the saved software level when Volume is Software, so a power cut cannot play the first second at the software stage's 0 dB |
 
 ## Cross-cutting rules
 
