@@ -224,3 +224,46 @@ def test_a_cmdline_txt_that_cannot_be_written_is_left_as_it_was(tmp_path, monkey
     except OSError:
         pass
     assert f["cmdline"].read_text() == CMDLINE
+
+
+# ADR-0109 (George, 2026-10-12: "The two bugs we need to fix now"): a screen
+# laid out from its own mode is called "Other screen/W × H" in Settings, and
+# that name was in no list - so *Screen rotation* on one logged "not a screen
+# gexis knows" and turned nothing.
+
+def test_a_screen_from_its_own_mode_is_found_by_the_name_settings_gives_it(tmp_path):
+    f = files(tmp_path)
+    screen_apply.choose(Applied("other-1920x1080", 0), **f, now=1)
+    label = screen_apply.settings_of(f["state"])["screen"]
+    assert label == "Other screen/1920 × 1080"
+    assert screen_apply.named(label, f["state"]).id == "other-1920x1080"
+
+
+def test_rotating_a_screen_from_its_own_mode_writes_the_turned_picture(tmp_path):
+    f = files(tmp_path)
+    screen_apply.choose(Applied("other-1920x1080", 0), **f, now=1)
+    screen_apply.keep(state=f["state"])
+    model = screen_apply.named(screen_apply.settings_of(f["state"])["screen"], f["state"])
+    assert screen_apply.choose(Applied(model.id, 180), **f, now=2) is True
+    assert env_of(f["env"])["GEXIS_SCREEN_TRANSFORM"] == "180"
+
+
+def test_a_portrait_panel_used_sideways_keeps_its_turn_when_rotated(tmp_path):
+    """`other-1920x1080-turned` and `other-1920x1080` share a name; the one
+    in use is the one meant, so a turned panel is not straightened."""
+    f = files(tmp_path)
+    screen_apply.choose(Applied("other-1920x1080-turned", 0), **f, now=1)
+    screen_apply.keep(state=f["state"])
+    model = screen_apply.named("Other screen/1920 × 1080", f["state"])
+    assert model.id == "other-1920x1080-turned"
+    screen_apply.choose(Applied(model.id, 180), **f, now=2)
+    assert env_of(f["env"])["GEXIS_SCREEN_TRANSFORM"] == "270"
+
+
+def test_a_listed_screen_is_still_found_by_its_name(tmp_path):
+    f = files(tmp_path)
+    screen_apply.choose(Applied("other-1920x1080", 0), **f, now=1)
+    ten = screens.by_id("waveshare-10.1-hdmi-b")
+    assert screen_apply.named(ten.label, f["state"]) == ten
+    assert screen_apply.named("Nobody/Nothing", f["state"]) is None
+    assert screen_apply.named(None, f["state"]) is None

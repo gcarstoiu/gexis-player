@@ -196,3 +196,34 @@ def test_headless_is_never_asked(tmp_path):
     flow, net, *_ = make(tmp_path, FakeNM(devices=NOTHING))
     flow.save({"ssid": "Home", "password": "hunter22", "headless": True})
     assert _finish_told(flow, net) == {"keep_question": False}
+
+
+def test_a_screen_from_its_own_mode_is_one_setup_and_settings_can_name(tmp_path, monkeypatch):
+    """ADR-0109 (George, 2026-10-12): a screen laid out from its own mode -
+    applied for setup when nothing in the list matches it - is called
+    `Other screen/W × H`, and that name has to stay one gexis can apply: the
+    Settings row offers it, and finishing setup or a restore resolves it to
+    the screen in use, turn and all."""
+    from gexis_core import screen_apply, settings_registry
+
+    state = tmp_path / "screen.json"
+    screen_apply.write_state({"current": {"screen": "other-1920x1080-turned", "rotation": 0}}, state)
+    monkeypatch.setattr(screen_apply, "STATE", state)
+    label = "Other screen/1920 × 1080"
+    assert label in settings_registry._screens()
+    assert settings_registry._screen_tags()[label] == "Untested"
+    asked = []
+    monkeypatch.setattr(screen_apply, "would_ask", lambda applied, **kw: asked.append(applied) or True)
+    flow, net, *_ = make(tmp_path, FakeNM(devices=NOTHING))
+    flow.save({"ssid": "Home", "password": "hunter22", "screen": label})
+    assert _finish_told(flow, net) == {"keep_question": True}
+    assert asked[0].screen_id == "other-1920x1080-turned"
+
+
+def test_the_list_alone_is_offered_when_no_other_screen_is_in_use(tmp_path, monkeypatch):
+    from gexis_core import screen_apply, settings_registry
+
+    monkeypatch.setattr(screen_apply, "STATE", tmp_path / "screen.json")
+    assert settings_registry._screens() == tuple(s.label for s in screens.all_screens())
+    screen_apply.write_state({"current": {"screen": "waveshare-10.1-hdmi-b", "rotation": 0}}, tmp_path / "screen.json")
+    assert settings_registry._screens() == tuple(s.label for s in screens.all_screens())

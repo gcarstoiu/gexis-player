@@ -221,3 +221,12 @@ def test_a_change_of_output_stops_the_source_playing_first():
     assert change.index("async with volume_change") < change.index("await _switch_output()")
     assert re.search(r'"output_device": lambda _value=None: asyncio\.ensure_future\(\s*_change_output\(\)',
                      MAIN.read_text())
+
+
+def test_rotating_finds_the_screen_in_use_by_the_name_settings_shows():
+    """ADR-0109 (George, 2026-10-12): *Screen rotation* on a screen laid out
+    from its own mode logged "not a screen gexis knows" and turned nothing -
+    the screen was looked up in the list by its Settings name, and an
+    "Other screen" is in no list."""
+    choose = _closure("_choose_screen")
+    assert "screen_apply.named(" in choose and "screens.by_label(" not in choose

@@ -2058,7 +2058,10 @@ async def main() -> None:
         (screen.env, and video= for a bar), then restart on it - unless
         setup is under way, which restarts when it finishes."""
         chosen = label if label is not None else settings.value("screen")
-        model = screens.by_label(chosen) if chosen else None
+        # By the screen in use first: a rotation on an "Other screen" turned
+        # nothing when this looked only in the list (ADR-0109; George,
+        # 2026-10-12).
+        model = screen_apply.named(chosen)
         if model is None:
             logger.warning("screen: %r is not a screen gexis knows; nothing applied", chosen)
             return

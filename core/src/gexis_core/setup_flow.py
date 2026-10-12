@@ -278,7 +278,7 @@ class SetupFlow:
     def _keep_question(self, data: dict) -> bool:
         """`data` is setup's answers, or a backup's settings by their keys."""
         label = data.get("screen")
-        model = screens.by_label(label) if label and not data.get("headless") else None
+        model = screen_apply.named(label) if label and not data.get("headless") else None
         if model is None:
             return False
         try:
@@ -399,7 +399,7 @@ class SetupFlow:
         self._path.unlink(missing_ok=True)
         if values.get("headless"):
             values.pop("screen", None)
-        elif values.get("screen") and screens.by_label(values["screen"]) is None:
+        elif values.get("screen") and screen_apply.named(values["screen"]) is None:
             # A model this version does not know - a newer backup's.
             logger.warning("setup: the backup's screen %s is not known here; left to Settings", values["screen"])
             values.pop("screen")

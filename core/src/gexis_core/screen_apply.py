@@ -278,6 +278,23 @@ def settings_of(path: Path = STATE) -> dict[str, str | None]:
             "rotation": next(k for k, v in ROTATIONS.items() if v == turn) if screen else None}
 
 
+def named(label: str | None, path: Path | None = None) -> screens.Screen | None:
+    """**The screen Settings' *Attached screen* names** - the one in use when
+    it is called that, else the one the list calls that. ADR-0109; George,
+    2026-10-12: changing *Screen rotation* on a screen laid out from its own
+    mode logged "not a screen gexis knows" and turned nothing, because
+    `Other screen/W × H` is in no list. And a portrait panel used sideways
+    (`other-WxH-turned`) is called what the landscape one of its size is: the
+    stored id keeps its turn when it is rotated."""
+    if not label:
+        return None
+    current = read_state(path or STATE).get("current")
+    in_use = screens.by_id(current["screen"]) if current else None
+    if in_use is not None and in_use.label == label:
+        return in_use
+    return screens.by_label(label)
+
+
 def parse_rotation(value: str | None) -> int:
     return ROTATIONS.get(value or "0°", 0)
 
