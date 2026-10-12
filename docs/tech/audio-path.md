@@ -393,7 +393,11 @@ Mechanics behind the picture:
 the dummy cards), labels them, and notes which have a volume control and
 whether an HDMI connector has anything plugged in. Each card brings its own
 control name (`DAC` on the HiFiBerry, something else on the headphone jack,
-none on HDMI) and its own scale, read per card (ADR-0117).
+none on HDMI) and its own scale, read per card (ADR-0117). A USB card, which
+the driver calls "USB Audio" whatever it is, is named from its device's
+`manufacturer` and `product` in sysfs (`usb_name`; "SMSL USB AUDIO" reads
+"SMSL USB DAC"), the driver's name kept as `aka` so a choice stored under
+it still resolves.
 
 Choosing one does not restart the core. The core first stops whoever is
 playing (`Supervisor.stop_active`, as a change of volume type does; George,
