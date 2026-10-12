@@ -5,8 +5,9 @@ on Windows, macOS and Linux.
 
 ## What you need
 
-- A **Raspberry Pi 4** with a **DAC** on it (a HAT such as the HiFiBerry
-  DAC2 HD), or a USB DAC.
+- A **Raspberry Pi 4**. A **DAC** gives the best sound (a HAT such as the
+  HiFiBerry DAC2 HD, or a USB DAC), but it is not required: the Pi's own HDMI
+  (to a sound bar, receiver or TV) or its headphone jack works too.
 - A **microSD card**, 32 GB or more, A1 or A2 rated, from a known brand.
 - The **official Raspberry Pi 5.1 V / 3 A power supply**. A phone charger is
   the most common cause of a player that restarts by itself.
