@@ -80,7 +80,13 @@ write_labwc_config() {
 	[ -n "${dir}" ] && rm -rf "${dir}" && mkdir -p "${dir}" || return 1
 	cp -R "${source}/." "${dir}/" || return 1
 	sed -i -E "s/mapToOutput=\"[^\"]*\"/mapToOutput=\"${connector}\"/" "${dir}/rc.xml" || return 1
-	if [ "${connector}" != HDMI-A-1 ]; then
+	# Off HDMI-A-1, or with something on the other port too (ADR-0141: a
+	# sound bar on HDMI 2), labwc could open the window on the wrong output.
+	local others=0 status
+	for status in "${GEXIS_DRM:-/sys/class/drm}"/card*-HDMI-A-*/status; do
+		[ "$(cat "${status}" 2>/dev/null)" = connected ] && others=$((others + 1))
+	done
+	if [ "${connector}" != HDMI-A-1 ] || [ "${others}" -gt 1 ]; then
 		sed -i "s|</labwc_config>|  <windowRules>\n    <windowRule identifier=\"*\">\n      <action name=\"MoveToOutput\" output=\"${connector}\"/>\n    </windowRule>\n  </windowRules>\n</labwc_config>|" \
 			"${dir}/rc.xml" || return 1
 	fi

@@ -2154,6 +2154,56 @@ async def main() -> None:
             await _systemctl_reboot()
         asyncio.ensure_future(_restart())
 
+    def _port_label(connector: str | None) -> str:
+        """`HDMI-A-2` as Settings says it: *HDMI 2*."""
+        return f"HDMI {(connector or screen_apply.CONNECTOR).rsplit('-', 1)[-1]}"
+
+    def _port_line(connector: str) -> str:
+        """**What is on one HDMI port** (ADR-0141 D4; George, 2026-10-12:
+        *"Shouldn't we have two entries, similar to audio output?"*): the
+        screen by its model, anything else by the name it gives, and the
+        port's sound when the output is that port."""
+        port = next((p for p in screen_detect.ports() if p.connector == connector), None)
+        if port is None or not port.connected:
+            return "Nothing connected"
+        parts = []
+        if not settings.value("headless") and screen_detect.seen().connector == connector:
+            current = screen_apply.read_state().get("current")
+            model = screens.by_id(current.get("screen") or "") if isinstance(current, dict) else None
+            parts.append(f"{model.maker} {model.model} · the screen" if model else "The screen")
+        else:
+            parts.append(port.edid_name or port.edid_maker or "Connected")
+        if alsa.card() == outputs.CARD_FOR_CONNECTOR.get(connector):
+            parts.append("sound")
+        return " · ".join(parts)
+
+    def _choose_screen_port(label: str) -> None:
+        """**ADR-0141 D2: the screen's port, when both have something on
+        them.** The same screen, applied on the other port - which, as any
+        change of picture, restarts and asks Keep. The stored choice goes:
+        the row shows the port in use, cable moves included."""
+        settings_store.delete("screen_port")
+        connector = f"HDMI-A-{label.rsplit(' ', 1)[-1]}"
+        current = screen_apply.read_state().get("current")
+        if not isinstance(current, dict) or screens.by_id(current.get("screen") or "") is None:
+            logger.warning("screen: no screen applied to move to %s", connector)
+            return
+        was = screen_apply.Applied.of(current)
+        if was.connector == connector:
+            return
+        in_setup = _setup_running(state_store.state.setup)
+        applied = screen_apply.Applied(was.screen_id, was.rotation, connector)
+        asks = screen_apply.choose(applied, after_setup=in_setup)
+        logger.info("screen: %s moved from %s to %s by choice; %s", was.screen_id, was.connector, connector,
+                    "it waits for Keep on the panel" if asks else "the picture is unchanged, so it is kept")
+        if in_setup:
+            return
+
+        async def _restart() -> None:
+            await asyncio.sleep(2.0)
+            await _systemctl_reboot()
+        asyncio.ensure_future(_restart())
+
     def _reports_note(key: str, reported: str | None) -> str | None:
         """ADR-0126 decision 5: the row's own note, then what owners
         reported; None leaves the note as it is."""
@@ -2168,11 +2218,18 @@ async def main() -> None:
     wifi_address = wired.Cable(device="wlan0", on_change=lambda _pending: state_store.bump_settings_revision())
     settings = Settings(
         settings_store,
-        shown={"cable": cable.shown},
+        shown={"cable": cable.shown,
+               # ADR-0141 D2: a choice only while both ports have something on them.
+               "screen_port": lambda: not settings_store.get("headless")
+               and sum(p.connected for p in screen_detect.ports()) >= 2},
         registry=Settings.with_plugins(load_registry(), installed_plugins, downloads,
                                        missing=restored_missing),
         defaults={
             "lms_server": lambda: f"{config.lms_host}:{config.lms_port}",
+            # ADR-0141 D4: both HDMI ports, read when Settings is.
+            "hdmi_1": lambda: _port_line("HDMI-A-1"),
+            "hdmi_2": lambda: _port_line("HDMI-A-2"),
+            "screen_port": lambda: _port_label(screen_apply.connector_now()),
             "lms_player": lambda: lms_player_name,
             "idle_url": lambda: config.idle_url or None,
             "device_name": device_name.hostname,
@@ -2411,6 +2468,7 @@ async def main() -> None:
                "screen": lambda value: _choose_screen(label=value),
                "sound_card_board": lambda value: _choose_board(value),
                "rotation": lambda value: _choose_screen(rotation=value),
+               "screen_port": _choose_screen_port,
                # **ADR-0083.** A backup that stays on the device does not
                # survive the event it exists for, so this writes into a share
                # of its own. `restore` is the other half and is a `list` row -

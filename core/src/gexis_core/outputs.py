@@ -70,6 +70,8 @@ LABELS = {
 #: Which DRM connector a card's audio comes out of, so "nothing is plugged
 #: in" can be said rather than discovered by the user.
 CONNECTORS = {"vc4hdmi0": "HDMI-A-1", "vc4hdmi1": "HDMI-A-2"}
+#: The other way: the sound card on each HDMI port (ADR-0141 D4).
+CARD_FOR_CONNECTOR = {v: k for k, v in CONNECTORS.items()}
 
 #: **George, 2026-09-23:** *"Offer all, but maybe it clears that the one
 #: that is not connected looks disabled or has a note saying that nothing

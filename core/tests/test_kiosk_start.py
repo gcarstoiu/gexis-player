@@ -65,3 +65,9 @@ def test_the_service_starts_labwc_through_the_script():
     script = SCRIPT.read_text()
     assert 'exec labwc -C "${config}" -s "$0"' in script
     assert 'exec labwc -s "$0"' in script, "a configuration not written still starts the panel"
+
+
+def test_with_both_ports_connected_the_window_is_pinned_to_the_screen_on_the_first(tmp_path):
+    """ADR-0141: a sound bar on HDMI 2 could take the window otherwise."""
+    rc = _write(tmp_path, "HDMI-A-1", connected=("HDMI-A-1", "HDMI-A-2"))
+    assert '<action name="MoveToOutput" output="HDMI-A-1"/>' in rc

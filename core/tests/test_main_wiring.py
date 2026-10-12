@@ -280,3 +280,16 @@ def test_the_fixed_note_says_dsd_plays_natively_only_where_the_dac_takes_it():
     assert "outputs.native_dsd(chosen.card) is None" in notes and "return {}" in notes
     assert "DSD files play natively" in notes
     assert "VOLUME_KEY: lambda: _volume_notes()" in MAIN.read_text()
+
+
+def test_the_screen_port_choice_moves_the_screen_and_forgets_itself():
+    """ADR-0141 D2: shown only with both ports connected; choosing applies the
+    same screen on the other port (Keep, restart), and the stored value goes
+    so the row shows the port in use."""
+    body = _closure("_choose_screen_port")
+    assert "settings_store.delete('screen_port')" in body
+    assert "screen_apply.Applied(was.screen_id, was.rotation, connector)" in body
+    assert "screen_apply.choose(applied" in body and "_systemctl_reboot()" in body
+    source = MAIN.read_text()
+    assert '"screen_port": lambda: not settings_store.get("headless")' in source
+    assert '"hdmi_1": lambda: _port_line("HDMI-A-1")' in source

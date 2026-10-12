@@ -168,6 +168,9 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         "hardware_report",
         # ADR-0123 (2026-10-08): the cable, shown while one is plugged in.
         "cable",
+        # ADR-0141 D2/D4 (George, 2026-10-12): both HDMI ports listed, and the
+        # screen's port a choice while both have something on them.
+        "hdmi_1", "hdmi_2", "screen_port",
         # ADR-0055, 2026-09-23: the design has no output picker, because
         # the design did not know the device has four playback outputs and
         # that two of them cannot be turned down.
@@ -654,8 +657,9 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # 2026-10-07).
     # **98**: Cable (ADR-0123, 2026-10-08). **102**: the player's own
     # wallpapers' four rows (ADR-0133, 2026-10-10). **104**: the waiting
-    # screen's clock and hint (ADR-0133).
-    assert len(rows) == 117
+    # screen's clock and hint (ADR-0133). **120**: HDMI 1, HDMI 2 and Screen
+    # port (ADR-0141 D2/D4, 2026-10-12).
+    assert len(rows) == 120
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
@@ -675,7 +679,7 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # 82 with Report this hardware (ADR-0126).
     # **81**: Software volume merged into Volume (ADR-0127). **80**: Pexels
     # removed.
-    assert len(rows) - len(kept) == 100  # 100: display standby (ADR-0135); 97: the idle switch and the home background (ADR-0133, 2026-10-11); 88: Weather icon motion (Finding 118); 87: Version hidden, it repeated Release; 88: the waiting screen's two rows (ADR-0133); 86: the own wallpapers (ADR-0133); 82: the factory reset (ADR-0132); 81: Cable (ADR-0123)
+    assert len(rows) - len(kept) == 103  # 103: HDMI 1, HDMI 2, Screen port (ADR-0141); 100: display standby (ADR-0135); 97: the idle switch and the home background (ADR-0133, 2026-10-11); 88: Weather icon motion (Finding 118); 87: Version hidden, it repeated Release; 88: the waiting screen's two rows (ADR-0133); 86: the own wallpapers (ADR-0133); 82: the factory reset (ADR-0132); 81: Cable (ADR-0123)
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():
