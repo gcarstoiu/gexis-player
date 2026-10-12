@@ -566,10 +566,12 @@ Each player announces `_gexis._tcp` on port 8090
 (`/etc/avahi/services/gexis-player.service`, from `gexis-system`, beside the
 share's). `players.py`: `Players.watch()` (started with the core) runs
 `avahi-browse -rpt _gexis._tcp` every 30 s, keeps one resolved IPv4 entry per
-host (`parse_browse`, this player left out) and asks each `GET
+host (`parse_browse`, this player left out by hostname) and asks each `GET
 /player/status` (2 s); `/players` answers from that, in about 10 ms where a
 search on request took 1.1 s (measured on sofapi, 2026-10-11). The phone
-remembers the last list (`localStorage`), so the button shows at once. `/player/status` is `{name, host, transport, renderer}` - the renderer
-named as the source list names it; `/players` is `{self, others}`, each other
+remembers the last list (`localStorage`), so the button shows at once. `/player/status` is `{name, host, instance, transport, renderer}` - the
+renderer named as the source list names it; `instance` a token made at each
+core start, by which a player found under a name avahi changed after a
+conflict (`guestpi-2.local`, 2026-10-12) still leaves itself out; `/players` is `{self, others}`, each other
 with the `url` of its page by name. `PlayerSwitcher.svelte` draws it on the
 phone only.
