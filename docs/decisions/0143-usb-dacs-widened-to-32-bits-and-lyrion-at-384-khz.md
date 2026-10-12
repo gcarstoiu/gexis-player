@@ -36,8 +36,9 @@ shifted left, none different.
 2. **For a card above 384 kHz, Squeezelite is told the rates Lyrion can
    hand over** - 44.1 to 384 kHz, from the card's lowest - through
    `GEXIS_SQUEEZELITE_OPTIONS` in `/etc/gexis/squeezelite.env`, written by
-   the core with `output.conf`. Lyrion then converts a file beyond them
-   instead of sending what plays wrong. A card at or below 384 kHz gets no
+   the core with `output.conf`. Lyrion then no longer sends a file beyond
+   them as something that plays wrong (it refused one served over HTTP;
+   Consequences). A card at or below 384 kHz gets no
    option: Squeezelite asks it, as before.
 
 ## Consequences
