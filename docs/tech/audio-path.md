@@ -408,7 +408,10 @@ puts `type linear` with slave format `S32_LE` between the chain (meter, or
 meter and software stage) and `hw:`. It pads 16 and 24 bits and never
 changes the rate - not `plug`. **A card above 384 kHz** gets
 `GEXIS_SQUEEZELITE_OPTIONS=-r <rates up to 384000>` in
-`/etc/gexis/squeezelite.env`, written with `output.conf`; Squeezelite's unit
+`/etc/gexis/squeezelite.env`, written with `output.conf` (and Squeezelite
+restarted at the core's start when it changed, unless the card is playing),
+because above 384 kHz Lyrion's PCM opened the card at 44.1 kHz; with the list,
+a 705.6/768 kHz stream is refused instead (Finding 120); Squeezelite's unit
 reads it unbraced, so the empty value of every other card adds no argument.
 
 Choosing one does not restart the core. The core first stops whoever is

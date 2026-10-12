@@ -60,6 +60,12 @@ attached lets test it so we can cover this angle as well"*).
    visualiser's meter cannot take DSD. Today nothing sends DSD (Squeezelite
    runs without `-D`).
 
+6. **After ADR-0143** (Squeezelite told 44.1-384 kHz, sofapi rebooted on
+   `+git71`): FLAC 192 and 384 kHz unchanged as before; the 705.6 and 768 kHz
+   WAV files, served over HTTP, **did not play** - Lyrion stopped rather than
+   convert them - instead of playing at the wrong speed. A file in a Lyrion
+   library at those rates was not tried.
+
 ## What it means
 
 ADR-0143: a 32-bit-only card is widened (so Bluetooth plays on it), and
