@@ -153,7 +153,10 @@ list. `packaging/release/build.sh <image.img>` refuses to run if the image's
    "Release notes: X (approved by George)" on `phase-13d` and tag `vX`.
 2. **Image**: a worktree at the tag, `git submodule update --init`, `make
    image` (about 15 min); move the image to the main checkout's
-   `image/deploy/`; `image/verify-image.sh` must pass every check.
+   `image/deploy/`; `image/verify-image.sh <that image>` **run from the
+   release worktree** must pass every check - it compares the image with the
+   sources beside the script, and the main checkout (`phase-13b`) does not
+   carry the release's code (0.11.0: five false failures from there).
 3. **Release**: `packaging/release/build.sh <image>`, then
    `packaging/release/publish.sh rX --channel testing`; read the channel file
    back from GitHub and verify it with the release key (serial, release).

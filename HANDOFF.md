@@ -10,12 +10,13 @@ and `phase-13b` is merged into it after each docs change. A release is built
 from a worktree made at its tag, then removed. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 0.10.2 on Testing** (2026-10-12; tag `v0.10.2`, release
-`r0.10.2`, serial 36, PR #61 merged; image `image/deploy/2026-10-12-gexis-player-v0.10.2.img`,
-the only one kept). It holds the final code review's fixes (Finding 119: 77
-confirmed, all addressed) and George's twelve answers to its questions
-(ADR-0139 no sudo in the image, ADR-0140 software level before the
-renderers, and ten others - see the PR and Finding 119). Suite 2,255.
+**Current release: 0.11.0 on Testing** (2026-10-12; tag `v0.11.0`, release
+`r0.11.0`, serial 37, PR #62 open for George; image
+`image/deploy/2026-10-12-gexis-player-v0.11.0.img`). USB DACs and native DSD
+(ADR-0143/0144, Finding 120), the screen on either HDMI port (ADR-0109
+amended), the player announcing for its plugins (ADR-0142), plugin versions,
+Phase 13d closed. After the tag on `phase-13d`: setup keeps the screen it
+applied (the bar's lingering "provisional"). Suite 2,322.
 
 **Devices.** sofapi (Waveshare 10.1"; a test machine - its Lyrion queue may
 be lost, George 2026-10-12; an SMSL USB DAC on it), the bar (ShelvesPi,
