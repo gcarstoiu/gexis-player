@@ -12,6 +12,7 @@
 <script>
   import { onDestroy } from 'svelte';
   import { playback } from '../lib/state.js';
+  import { ask } from '../lib/settings.js';
 
   let pending = $state(null);
   let now = $state(Date.now());
@@ -25,9 +26,9 @@
     let found = null;
     for (const p of ['cable', 'wifi']) {
       try {
-        const r = await fetch(p === 'wifi' ? '/network/wifi/address' : '/network/cable');
+        const { response: r, body } = await ask(p === 'wifi' ? '/network/wifi/address' : '/network/cable');
         if (!r.ok) continue;
-        const waiting = (await r.json()).pending;
+        const waiting = body.pending;
         if (waiting) {
           found = waiting;
           port = p;
@@ -62,8 +63,9 @@
     busy = true;
     answer = null;
     try {
-      const r = await fetch('/network/keep', { method: 'POST' });
-      const body = await r.json().catch(() => ({}));
+      // Given up after REQUEST_TIMEOUT_MS (George, 2026-10-12, answer 10),
+      // or Keep stays busy for ever after the address has moved under it.
+      const { response: r, body } = await ask('/network/keep', { method: 'POST' });
       if (r.ok) pending = null;
       else answer = body.error ?? 'It could not be kept from here.';
     } catch {
