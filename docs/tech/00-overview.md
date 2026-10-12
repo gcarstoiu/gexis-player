@@ -145,8 +145,9 @@ Notes on the diagram:
 - **A plugin's switch says its version** (`Plugin.version_line()`): an
   upload's manifest `version`, else the upstream part of the package that
   installed the manifest (`plugins.with_package_versions`, two `dpkg-query`
-  calls at start), with the program it downloads from its pin's `LABEL` when
-  that version differs.
+  calls at start). The program it downloads is named by its download line,
+  so it is not repeated; a plugin whose version is that program's (the pin's
+  `LABEL` ends in it) has no version line.
 
 ### Smaller units worth knowing
 

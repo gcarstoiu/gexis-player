@@ -434,9 +434,9 @@ screen's size, **Plexamp**, the **Lyrion Server** and the **Beszel**
 monitoring agent, among others. A plugin that needs software from its maker
 downloads it when switched on. Setup offers the same plugins, and the first
 start shows each download arriving. A plugin file can also be uploaded here.
-Each plugin's switch says its version, and the version of the software it
-downloads when that is a separate program (for example *Version 0.4.7 ·
-Plexamp 4.13.2*).
+Each plugin's switch says its version (for example *Version 0.4.7*); the
+software it downloads is named, with its own version, on the line below once
+it is installed.
 While Beszel is on, its heading in **System**, above the hub address, token
 and key, says whether the agent has reached its hub: **Connected** in green,
 **Connecting** in orange for its first minute, **Not connected** in red after
