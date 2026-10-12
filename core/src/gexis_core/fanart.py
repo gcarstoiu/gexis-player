@@ -19,6 +19,7 @@ import asyncio
 import logging
 import re
 import shutil
+import time
 from pathlib import Path
 from typing import Awaitable, Callable
 
@@ -33,6 +34,12 @@ ARTISTS_KEPT = 60
 #: the proxy only scales down - Discogs' are about 600 px anyway.
 PROXY_SIZE = 1280
 CALL_TIMEOUT_S = 20.0
+#: **"No photos" is believed for this long, then asked again** (George,
+#: 2026-10-12, answer 7). The plugin gains photos as Discogs and Last.fm do,
+#: and players kept empty answers from before LMS-away stopped counting as
+#: one (review, 2026-10-12): those age out by this too. An answer that found
+#: photos is kept as it is.
+EMPTY_RECHECK_S = 30 * 24 * 3600
 
 #: "X feat. Y", "X ft. Y", "X featuring Y", "X & Y", "X, Y", "X / Y", "X; Y".
 _JOINS = re.compile(r"\s+(?:feat\.?|ft\.?|featuring)\s+|\s*[&,/;]\s*", re.IGNORECASE)
@@ -136,9 +143,12 @@ class Fanart:
         if artist_id is None:
             return []
         folder = self._dir / str(artist_id)
-        if (folder / ".done").exists():
+        marker = folder / ".done"
+        if marker.exists():
             folder.touch()
-            return sorted(p for p in folder.iterdir() if p.suffix == ".jpg")
+            kept = sorted(p for p in folder.iterdir() if p.suffix == ".jpg")
+            if kept or not self._empty_aged(marker):
+                return kept
         task = self._busy.get(artist_id)
         if task is None:
             task = asyncio.ensure_future(self._fetch(artist_id, folder))
@@ -171,6 +181,15 @@ class Fanart:
         logger.info("fanart: %d photos for artist %d", len(kept), artist_id)
         self._trim()
         return kept
+
+    @staticmethod
+    def _empty_aged(marker: Path) -> bool:
+        """An empty answer past `EMPTY_RECHECK_S`. The marker's own time is
+        when it was answered: only the folder is touched on use."""
+        try:
+            return time.time() - marker.stat().st_mtime > EMPTY_RECHECK_S
+        except OSError:
+            return False
 
     def _trim(self) -> None:
         """Oldest artists out above `ARTISTS_KEPT` (a folder is touched each

@@ -131,3 +131,35 @@ def test_photos_named_but_none_downloaded_are_asked_for_again(tmp_path):
     assert run(f.photos(7)) == [] and not (tmp_path / "7" / ".done").exists()
     offline = False
     assert len(run(f.photos(7))) == 2
+
+
+def test_a_no_photos_answer_is_asked_again_after_thirty_days(tmp_path):
+    """George, 2026-10-12 (answer 7): an artist found with no photos is asked
+    again once the answer is a month old - which also clears the empty
+    answers players kept from before LMS-away stopped being one."""
+    import os
+    import time
+
+    lms = FakeLms({}, {})
+    f = Fanart(lms.rpc, download, BASE, directory=tmp_path)
+    assert run(f.photos(8)) == []
+    marker = tmp_path / "8" / ".done"
+    young = time.time() - fa.EMPTY_RECHECK_S + 3600
+    os.utime(marker, (young, young))
+    assert run(f.photos(8)) == [] and len(lms.calls) == 1, "younger than 30 days: believed"
+    lms.photos[8] = ["https://x/1.jpg"]
+    old = time.time() - fa.EMPTY_RECHECK_S - 3600
+    os.utime(marker, (old, old))
+    assert len(run(f.photos(8))) == 1 and len(lms.calls) == 2, "older: asked again"
+
+
+def test_an_answer_with_photos_is_not_asked_again_however_old(tmp_path):
+    import os
+    import time
+
+    lms = FakeLms({}, {7: ["https://x/1.jpg"]})
+    f = Fanart(lms.rpc, download, BASE, directory=tmp_path)
+    assert len(run(f.photos(7))) == 1
+    old = time.time() - 10 * fa.EMPTY_RECHECK_S
+    os.utime(tmp_path / "7" / ".done", (old, old))
+    assert len(run(f.photos(7))) == 1 and len(lms.calls) == 1
