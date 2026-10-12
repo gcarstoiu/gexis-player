@@ -99,7 +99,9 @@ def test_a_switched_off_source_is_not_restarted_with_the_others():
     for name in ("_switch_output", "_rewrite_output_conf", "_change_volume_type"):
         body = _closure(name)
         assert "'restart', 'squeezelite.service'" not in body, name
-        assert "_restart_renderers(" in body, name
+        # Directly, or through `_rewrite_output_conf`, checked here as well
+        # (a change of volume type rewrites the output since ADR-0144).
+        assert "_restart_renderers(" in body or "_rewrite_output_conf(" in body, name
     assert "renderer_enabled(rid)" in _closure("_restart_renderers")
 
 
@@ -269,3 +271,12 @@ def test_squeezelite_is_restarted_at_start_when_its_options_changed():
     block = source[source.index("squeezelite_env_was = _squeezelite_env()"):]
     block = block[:block.index("alsa.set_card(chosen_output.card)")]
     assert "outputs.card_running(" in block and '"restart", "squeezelite.service"' in block
+
+
+def test_the_fixed_note_says_dsd_plays_natively_only_where_the_dac_takes_it():
+    """ADR-0144: native DSD follows Fixed; said on the Volume row, and only
+    for a DAC that takes DSD."""
+    notes = _closure("_volume_notes")
+    assert "outputs.native_dsd(chosen.card) is None" in notes and "return {}" in notes
+    assert "DSD files play natively" in notes
+    assert "VOLUME_KEY: lambda: _volume_notes()" in MAIN.read_text()

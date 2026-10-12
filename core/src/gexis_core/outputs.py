@@ -106,14 +106,34 @@ SQUEEZELITE_RATES = (44100, 48000, 88200, 96000, 176400, 192000, 352800, 384000)
 SQUEEZELITE_ENV = Path("/etc/gexis/squeezelite.env")
 
 
-def squeezelite_options(card: str) -> str:
+#: **Native DSD, by the format the card takes it in** (ADR-0144), most
+#: preferred first, with the name Squeezelite's `-D` gives it.
+DSD_FORMATS = (("DSD_U32_BE", "u32be"), ("DSD_U32_LE", "u32le"), ("DSD_U16_BE", "u16be"),
+               ("DSD_U16_LE", "u16le"), ("DSD_U8", "u8"))
+
+
+def native_dsd(card: str) -> str | None:
+    """Squeezelite's name for the DSD format this card takes, or None for a
+    card that takes no DSD (every I2S board: the Pi's I2S is PCM only)."""
+    formats = _formats.get(card, frozenset())
+    return next((name for fmt, name in DSD_FORMATS if fmt in formats), None)
+
+
+def squeezelite_options(card: str, dsd: bool = False) -> str:
     """Squeezelite's extra options for this card: none for one that goes no
     higher than Lyrion can hand over - it asks the card, as before - and a
-    list of rates up to `LYRION_MAX_RATE` for one that does."""
+    list of rates up to `LYRION_MAX_RATE` for one that does. With `dsd`
+    (ADR-0144: the volume Fixed and the card taking DSD), `-D` in the card's
+    format: Lyrion then sends DSD files as DSD, and Squeezelite plays them
+    natively instead of converting them to PCM."""
+    options = []
     low, high = _rates.get(card, (0, 0))
-    if high <= LYRION_MAX_RATE:
-        return ""
-    return "-r " + ",".join(str(r) for r in SQUEEZELITE_RATES if r >= low)
+    if high > LYRION_MAX_RATE:
+        options.append("-r " + ",".join(str(r) for r in SQUEEZELITE_RATES if r >= low))
+    fmt = native_dsd(card) if dsd else None
+    if fmt:
+        options.append(f"-D :{fmt}")
+    return " ".join(options)
 
 
 def card_running(card: str, proc: Path = Path("/proc/asound")) -> bool:
@@ -125,12 +145,12 @@ def card_running(card: str, proc: Path = Path("/proc/asound")) -> bool:
         return False
 
 
-def write_squeezelite_env(card: str, path: Path = SQUEEZELITE_ENV) -> bool:
+def write_squeezelite_env(card: str, path: Path = SQUEEZELITE_ENV, dsd: bool = False) -> bool:
     """`GEXIS_SQUEEZELITE_OPTIONS` for the unit; True if it changed. Read
     when Squeezelite starts, which the output switch does after this."""
     wanted = (
         "# Written by gexis-core for the chosen output (ADR-0143). Do not edit.\n"
-        f"GEXIS_SQUEEZELITE_OPTIONS={squeezelite_options(card)}\n")
+        f"GEXIS_SQUEEZELITE_OPTIONS={squeezelite_options(card, dsd)}\n")
     try:
         if path.read_text() == wanted:
             return False
@@ -143,7 +163,7 @@ def write_squeezelite_env(card: str, path: Path = SQUEEZELITE_ENV) -> bool:
     except OSError as exc:
         logger.error("outputs: could not write %s: %s", path, exc)
         return False
-    logger.info("outputs: squeezelite options for %s: %s", card, squeezelite_options(card) or "none")
+    logger.info("outputs: squeezelite options for %s: %s", card, squeezelite_options(card, dsd) or "none")
     return True
 
 
@@ -585,7 +605,8 @@ def _widened(card: str, wait: bool = False) -> str:
     return f"{{ type linear slave {{ pcm {hw} format S32_LE }} }}"
 
 
-def render(output: Output, plug: bool, tuning: Tuning = Tuning(), widen: bool = False) -> str:
+def render(output: Output, plug: bool, tuning: Tuning = Tuning(), widen: bool = False,
+           dsd: bool = False) -> str:
     """`output.conf`, with this output's card in the two places it goes.
 
     The rest is verbatim from what the image ships - the comment earns its
@@ -655,9 +676,14 @@ def render(output: Output, plug: bool, tuning: Tuning = Tuning(), widen: bool = 
     slave.pcm {_widened(output.card)}
     scopes.0 peppyalsa
 }}'''
+        # ADR-0144: with native DSD, Squeezelite's chain goes straight to the
+        # card - `type linear` takes PCM only, and Squeezelite sends 32-bit
+        # PCM itself. The meter stays: peppyalsa draws nothing from DSD.
+        wait_slave = (f"{{ type hw card {output.card} nonblock 0 }}" if dsd
+                      else _widened(output.card, wait=True))
         wait = f'''pcm.output_wait {{
     type meter
-    slave.pcm {_widened(output.card, wait=True)}
+    slave.pcm {wait_slave}
     scopes.0 peppyalsa
 }}'''
     else:
@@ -716,7 +742,7 @@ pcm_scope_type.peppyalsa {{
 '''
 
 
-def write(output: Output, path: Path = CONF_PATH, tuning: Tuning = Tuning()) -> bool:
+def write(output: Output, path: Path = CONF_PATH, tuning: Tuning = Tuning(), fixed: bool = False) -> bool:
     """Put `output` in the config. True if the file changed.
 
     ALSA reads this when a PCM is *opened*, so writing it changes nothing
@@ -735,11 +761,14 @@ def write(output: Output, path: Path = CONF_PATH, tuning: Tuning = Tuning()) -> 
             path, output.card,
         )
         return False
-    wanted = render(output, plug, tuning, widen=not plug and widens(output.card))
+    # ADR-0144: native DSD only with the volume Fixed - DSD cannot be
+    # attenuated by the software stage, nor read by it - on a card taking it.
+    dsd = fixed and not output.software and not plug and native_dsd(output.card) is not None
+    wanted = render(output, plug, tuning, widen=not plug and widens(output.card), dsd=dsd)
     # ADR-0143: Squeezelite's rates follow the card; restarted with the
     # renderers after this, as the config is. The device's own file only.
     if path == CONF_PATH:
-        write_squeezelite_env(output.card)
+        write_squeezelite_env(output.card, dsd=dsd)
     try:
         if path.read_text() == wanted:
             logger.info("outputs: %s is already the output", output.label)

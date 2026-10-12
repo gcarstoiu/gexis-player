@@ -682,3 +682,39 @@ def test_a_card_is_running_when_any_playback_substream_is(tmp_path):
     (sub / "status").write_text("state: RUNNING\nowner_pid   : 1\n")
     assert outputs.card_running("AUDIO", tmp_path) is True
     assert outputs.card_running("missing", tmp_path) is False
+
+
+# --- ADR-0144: native DSD ----------------------------------------------------
+
+def test_native_dsd_is_the_cards_own_format_and_only_with_the_volume_fixed(monkeypatch):
+    _asked(monkeypatch, {"AUDIO": SMSL_DUMP, "sndrpihifiberry": HAT_DUMP})
+    outputs.needs_plug("AUDIO"); outputs.needs_plug("sndrpihifiberry")
+    assert outputs.native_dsd("AUDIO") == "u32be"
+    assert outputs.native_dsd("sndrpihifiberry") is None
+    assert outputs.squeezelite_options("AUDIO", dsd=True).endswith(" -D :u32be")
+    assert "-D" not in outputs.squeezelite_options("AUDIO")
+    assert outputs.squeezelite_options("sndrpihifiberry", dsd=True) == "", "no DSD on a board that takes none"
+
+
+def test_with_dsd_squeezelites_chain_skips_the_widening_and_the_others_keep_it():
+    out = outputs.Output(card="AUDIO", label="SMSL USB DAC", control=None)
+    conf = outputs.render(out, False, widen=True, dsd=True)
+    head = conf[conf.index("pcm.output {"):conf.index("pcm.output_wait")]
+    wait = conf[conf.index("pcm.output_wait {"):conf.index("ctl.output")]
+    assert "type linear" in head, "Bluetooth and Spotify still get 32 bits"
+    assert "type linear" not in wait and "{ type hw card AUDIO nonblock 0 }" in wait
+    assert "type meter" in wait, "the meter stays: peppyalsa draws nothing from DSD"
+
+
+def test_write_turns_dsd_on_only_when_fixed(monkeypatch, tmp_path):
+    _asked(monkeypatch, {"AUDIO": SMSL_DUMP})
+    seen = {}
+    monkeypatch.setattr(outputs, "write_squeezelite_env", lambda card, path=None, dsd=False: seen.update(dsd=dsd))
+    monkeypatch.setattr(outputs, "CONF_PATH", tmp_path / "output.conf")
+    out = outputs.Output(card="AUDIO", label="SMSL USB DAC", control=None)
+    outputs.write(out, tmp_path / "output.conf", fixed=True)
+    assert seen == {"dsd": True}
+    outputs.write(out, tmp_path / "output.conf", fixed=False)
+    assert seen == {"dsd": False}
+    outputs.write(outputs.with_software_volume(out), tmp_path / "output.conf", fixed=True)
+    assert seen == {"dsd": False}, "never through the software stage"

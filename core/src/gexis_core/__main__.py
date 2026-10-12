@@ -617,7 +617,8 @@ async def main() -> None:
             except OSError:
                 return None
         squeezelite_env_was = _squeezelite_env()
-        if outputs.write(chosen_output):
+        if outputs.write(chosen_output,
+                         fixed=volume_mode(settings_store.get(VOLUME_KEY), chosen_output) == FIXED):
             logger.warning(
                 "outputs: output.conf did not match %s and was rewritten; "
                 "renderers pick it up on their next open",
@@ -1200,7 +1201,7 @@ async def main() -> None:
             "bluealsa-aplay.service", *_plugin_renderer_units(),
         )
         await stop.wait()
-        outputs.write(chosen, tuning=_tuning())
+        outputs.write(chosen, tuning=_tuning(), fixed=fixed_wanted["value"])
         # The mixer handles open on the old card are let go of: the next
         # write opens the new one's.
         await forget_mixers()
@@ -1338,7 +1339,7 @@ async def main() -> None:
             if raw is not None:
                 publish_volume(raw)
 
-    async def _rewrite_output_conf(reason: str) -> None:
+    async def _rewrite_output_conf(reason: str, wait: bool = False) -> None:
         """Put the current output and tuning in `output.conf` and reopen.
 
         **The renderers stop first.** Not for politeness: `outputs.write`
@@ -1357,8 +1358,8 @@ async def main() -> None:
             "bluealsa-aplay.service", *_plugin_renderer_units(),
         )
         await stop.wait()
-        outputs.write(chosen, tuning=_tuning())
-        await _restart_renderers()
+        outputs.write(chosen, tuning=_tuning(), fixed=fixed_wanted["value"])
+        await _restart_renderers(wait=wait)
 
     def _apply_scope_tuning(_value=None) -> None:
         """`spectrum_smoothing` and `meter_fall` both live in `output.conf`."""
@@ -1416,8 +1417,10 @@ async def main() -> None:
                 await _apply_output_mode(force=True)
                 return
             await _apply_output_mode(force=True)
-            logger.info("volume: restarting the renderers on the new volume type")
-            await _restart_renderers(wait=True)
+            # ADR-0144: Fixed or not decides native DSD - Squeezelite's
+            # options and its chain - so the output is written again, which
+            # stops and restarts the renderers.
+            await _rewrite_output_conf("the volume type changed", wait=True)
 
     def _choose_volume(value=None) -> None:
         """ADR-0127: the Volume row - Hardware, Software or Fixed."""
@@ -1785,6 +1788,15 @@ async def main() -> None:
         plugin.id: name for plugin in installed_plugins
         if (name := components.for_plugin(plugin.id)) is not None
     }
+
+    def _volume_notes() -> dict:
+        """The Fixed note, with what it means for DSD on this DAC."""
+        chosen = outputs.resolve(settings_store.get("output_device"))
+        if chosen is None or outputs.native_dsd(chosen.card) is None:
+            return {}
+        row = next((r for g in load_registry() for r in g["rows"] if r.get("key") == VOLUME_KEY), {})
+        fixed = (row.get("optionNotes") or {}).get(FIXED, "")
+        return {FIXED: f"{fixed} DSD files play natively on {chosen.label}.".strip()}
 
     def _all_components() -> dict:
         status = components.all_status()
@@ -2232,7 +2244,10 @@ async def main() -> None:
         },
         # A line under a USB DAC: what it reports it can do (George,
         # 2026-10-12). Worked out with the outputs, so asking costs nothing.
-        option_notes={"output_device": lambda: {o.option: o.details for o in outputs.discover() if o.details}},
+        option_notes={"output_device": lambda: {o.option: o.details for o in outputs.discover() if o.details},
+                      # ADR-0144: on a DAC that takes DSD, Fixed is what plays
+                      # it natively - said where the choice is made.
+                      VOLUME_KEY: lambda: _volume_notes()},
         # The Release row's note: what the waiting or just-installed release
         # says changed (2026-10-01, George).
         notes={"software_update": updates.whats_new,
