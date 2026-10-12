@@ -138,6 +138,10 @@ Notes on the diagram:
   (ADR-0115).
 - **Uploaded plugins** run under sandboxed template units,
   `gexis-uploaded-renderer@` and `gexis-uploaded-service@` (ADR-0106).
+  They may not bind port 5353; a plugin that wants to be found sends
+  `announce`, and the core writes `/etc/avahi/services/gexis-plugin-<id>.service`
+  (`announce.py`), removed when the plugin disconnects and cleared at every
+  core start (ADR-0142).
 
 ### Smaller units worth knowing
 
