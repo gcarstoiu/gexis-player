@@ -1123,6 +1123,16 @@ async def main() -> None:
         # is how HDMI was written back with no conversion layer at all on
         # 2026-09-23: the card was busy, the query returned nothing, and
         # nothing was taken for "needs nothing".
+        #
+        # **Whoever plays is stopped first** (George, 2026-10-12, answer 12:
+        # "Yes"), as a change of volume type does (ADR-0046 amended
+        # 2026-10-11): nobody holds the device, so nothing resumes onto the
+        # new output by itself, and whoever plays next is a new takeover with
+        # its Starting volume. Called from a change of volume type, it has
+        # stopped them already and this finds nobody.
+        stopped = await supervisor.stop_active()
+        if stopped:
+            logger.info("outputs: %s stopped for the change of output", stopped)
         logger.info("outputs: stopping the renderers to switch to %s", chosen.label)
         stop = await asyncio.create_subprocess_exec(
             "systemctl", "stop", "squeezelite.service", "go-librespot.service",
@@ -1162,11 +1172,20 @@ async def main() -> None:
         # full level 12 s after Volume went from Hardware to Software -
         # go-librespot's first report after its restart was 100). The source
         # keeps the device across the restart, so no takeover arms the start
-        # guard; this does, for as long as a phone takes to reconnect.
+        # guard; this does, for as long as a phone takes to reconnect. (Since
+        # 2026-10-12 the source is stopped first, so this is only for one that
+        # took the device in the meantime.)
         if supervisor.active is not None:
             _hold_the_level_playing(supervisor.active, untold_max_s=RESTART_HOLD_S)
         logger.info("outputs: starting the renderers again for %s", chosen.label)
         await _restart_renderers()
+
+    async def _change_output() -> None:
+        """The output row (ADR-0055): under the lock a change of volume type
+        takes, as both stop playback, rewrite the output and restart the
+        renderers - one after the other, never interleaved."""
+        async with volume_change:
+            await _switch_output()
 
     async def _restart_renderers(wait: bool = False) -> None:
         """**The renderers whose source is on, and only those** (ADR-0077).
@@ -2255,7 +2274,7 @@ async def main() -> None:
                # that holds a PCM - including this daemon, which is how the
                # new card's control name gets picked up.
                "output_device": lambda _value=None: asyncio.ensure_future(
-                   _switch_output()
+                   _change_output()
                ),
                # Readonly: nothing to do on a write, and the value is the
                # live one below rather than the registry's literal.
