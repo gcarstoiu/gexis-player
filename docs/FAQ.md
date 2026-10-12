@@ -165,6 +165,13 @@ which are turned to landscape. On the very first start, setup's own screens
 are already laid out for the attached screen; setup's Screen step then
 confirms it.
 
+**Does the player play DSD?**
+Yes. DSD files from Lyrion play natively, unconverted, on a DAC that takes
+DSD itself (some USB DACs; tested with an SMSL), with *Settings → Audio →
+Volume* on *Fixed*, so the amplifier sets the level. In every other case
+(other volume types, DAC HATs, HDMI) they are converted to PCM and play as
+usual. The visualiser stays still while DSD plays.
+
 **Which screens work?**
 HDMI screens only. Tested on the hardware: a 10.1″ 1280 × 800 (the reference
 screen), a 13.3″ at 1920 × 1080, and the 1280 × 400 and 1480 × 320 bars.

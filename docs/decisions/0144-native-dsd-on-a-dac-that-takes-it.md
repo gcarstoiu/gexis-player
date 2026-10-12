@@ -54,6 +54,6 @@ sofapi's Squeezelite is built with `-D`. Measured the same day:
 
 ## Unverified
 
-A DSD file through Lyrion end to end (Lyrion's DSD support is the server's);
-Hardware volume in DSD on a card with a control of its own (excluded: not
+A DSD file from a Lyrion *library* (measured: generated DSF files streamed
+over HTTP, DSD64 to DSD256, Finding 120 result 7); Hardware volume in DSD on a card with a control of its own (excluded: not
 measured); DoP for I2S boards (still postponed).

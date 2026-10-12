@@ -66,6 +66,17 @@ attached lets test it so we can cover this angle as well"*).
    convert them - instead of playing at the wrong speed. A file in a Lyrion
    library at those rates was not tried.
 
+7. **Native DSD through Lyrion, after ADR-0144** (`+git76`, peppyalsa `-4`,
+   volume Fixed): generated DSF files (a 1 kHz sine through a second-order
+   sigma-delta modulator, 0.25 of full scale; decoded by ffmpeg as exactly
+   1000.0 Hz) played over HTTP opened the card in `DSD_U32_BE` at 88.2 kHz
+   (DSD64), 176.4 kHz (DSD128) and 352.8 kHz (DSD256); a 24/192 FLAC after
+   them opened it in `S32_LE`, 192 kHz, Squeezelite running throughout.
+   Switched to Software, Squeezelite came back without `-D` and through the
+   software stage; to Fixed, with it again. The first peppyalsa guard
+   (`snd_pcm_format_linear`) let DSD through to the same abort - DSD formats
+   count as unsigned, so linear; the second uses the s16 scope's own list.
+
 ## What it means
 
 ADR-0143: a 32-bit-only card is widened (so Bluetooth plays on it), and
