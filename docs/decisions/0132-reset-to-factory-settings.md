@@ -111,3 +111,17 @@ the reset and of setup survive setup's restart; from the next start
 
 *Reset to factory settings* [R], System, after Restore; an action, no stored
 value. Appended on George's confirmation, 2026-10-09.
+
+## Amended 2026-10-12 (final code review)
+
+- **The 2026-10-10 amendment is withdrawn**, as it said it would be before the
+  first public release: the wipe no longer writes `61-gexis-after-reset.conf`,
+  and the core deletes a leftover one at start. Nothing of the reset's boot or
+  of setup's is kept on the card.
+- **The backups folder is emptied, not removed.** It is the Backups share,
+  `pi`'s and group-writable; removed, it came back as root's with the next
+  backup, and the share refused every backup copied into it. Decision 3's
+  "the backups kept on the player" still all go.
+- **The panel browser's profile is emptied too** (`/var/lib/gexis-kiosk`):
+  cookies, storage, history and cache of every page the panel showed,
+  an external idle page's included. It had been left out of decision 3.

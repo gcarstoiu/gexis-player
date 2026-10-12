@@ -255,3 +255,20 @@ Read against `core/updater/gexis-update` on phase-13d.
   locked while the update runs (ADR-0110 §6), but the core does not refuse a
   takeover during an install, and `systemd-inhibit` holds off shutdown and
   sleep for the install step only, not the whole update.
+
+## Amended 2026-10-12 (final code review)
+
+**§4: a cut-short install is no longer left to a reflash, when the card
+boots.** The question in §4 accepted that a power cut during step 5 might
+need a reflash and a Restore. The updater now writes `pending-check.json`
+before dpkg starts, not only before a planned reboot; the boot that finds it
+finishes the install from the new release's repositories and checks it, or
+goes back to the previous release like any other failure. A card that does
+not boot still needs the reflash: there are still no A/B partitions.
+
+Also: a *Check for updates* that starts while an update runs leaves the
+update's status alone (one writer at a time, ADR-0110); the updater's apt
+cache keeps only the installed versions once an update ends well; the
+serial last seen is written atomically, and an unreadable one counts as 0;
+`publish.sh` starts a channel at serial 1 only when it has no channel file,
+and stops on any other failed fetch.

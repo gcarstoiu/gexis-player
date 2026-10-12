@@ -52,7 +52,9 @@ Both use the same handshake; a renderer simply declares more.
 
 - **Socket:** `/run/gexis/plugins.sock`, Unix domain, stream.
 - **Framing:** one JSON object per line, `\n`-terminated, UTF-8. No length
-  prefix, no envelope.
+  prefix, no envelope. *Noted 2026-10-12:* a line may be up to **1 MiB**; a
+  longer one is dropped and logged, exactly that line, and the session goes
+  on.
 - **Permissions:** `root:gexis-plugins`, mode `0660`. Your user joins that
   group; running as root is not the answer.
 - **Direction:** the core listens, the plugin connects. A plugin may reconnect
@@ -105,6 +107,10 @@ or refuses and closes, saying why:
 ```json
 {"t": "refused", "reason": "contract 2 is not served here"}
 ```
+
+*Noted 2026-10-12:* a plugin need not wait for `welcome` before sending
+events. Lines sent straight after `hello` are read, in order, once the
+session is accepted; if it is refused, they are not.
 
 ### Versioning
 
@@ -183,7 +189,9 @@ Taken from `Adapter` and `Capabilities` as they are. The prose for each is in
   `artwork`, `artwork_small`, `sample_rate` (Hz), `bit_depth` (bits; added 2026-10-02), `codec`, `position`, `duration`,
   `transport`, `source_type`, `shuffle`, `repeat`, `unavailable`.
 - **`queue`** — only a renderer that has one (ADR-0038 §5). Others send a
-  stream and no queue.
+  stream and no queue. *Noted 2026-10-12:* each entry of the list has the
+  same fields as `metadata`, read the same way; anything but a list is no
+  queue.
 - **`row`** — *added 2026-10-05* ([ADR-0119](decisions/0119-plexamp-is-claimed-from-settings.md)).
   What one of the plugin's **own** settings rows is, as opposed to its value:
   `state` is `done` (with `text`, a few words - *Claimed*) or `failed` (with
@@ -303,6 +311,12 @@ configuration from the environment like most daemons do.
 - The variable name must match `[A-Za-z_][A-Za-z0-9_]*`. A manifest naming
   anything else is refused outright, because a credential that silently never
   reaches your process is the hardest kind of broken to find.
+
+**The device's name** is in `/etc/gexis/device-name.env` as
+`GEXIS_DEVICE_NAME`, and since 2026-10-12 its value is double-quoted, in the
+same systemd form. A plugin that reads it through its unit's
+`EnvironmentFile=` sees no change; one that parses the file itself has to
+take the quotes and the `\` escapes off.
 
 **This is not encryption.** The values are in the settings store and `GET
 /settings` serves them to the same LAN, which

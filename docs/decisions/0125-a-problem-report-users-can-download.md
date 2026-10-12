@@ -84,3 +84,19 @@ user has seen what goes.
 
 1. **Track, album and artist names are taken out** with the rest.
 2. **Both routes:** the GitHub issue form and an e-mail address.
+
+## Amended 2026-10-12 (final code review)
+
+The scrubber's rules, after the review:
+
+- **Known values are matched in any case** - a place typed "town, country"
+  is logged by others capitalised - except the log's own level words, so a
+  track called "Warning" does not take every `WARNING`.
+- **Lines are recognised by their shape** where no known value covers them:
+  the weather's geocoded town (the geocoder's own name, not what was typed)
+  and the artist names in the artwork sweep's lines.
+- **Coordinates in a query string are a place**, though they read as
+  numbers.
+- **The scrub runs in pieces** of whole lines, looked up word by word rather
+  than as one pattern of every value, so the core's event loop - volume,
+  arbitration - is not held up for seconds by a long journal.

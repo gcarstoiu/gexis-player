@@ -109,7 +109,7 @@ prerequisites and disk housekeeping.
 ```mermaid
 flowchart TD
     s0[stage0-2: Raspberry Pi OS Lite 64-bit] --> a["00-alsa: pin + hold alsa-lib,<br/>dist-upgrade while there is room"]
-    a --> f["01-firstboot: firstrun.sh via<br/>systemd.run on cmdline; sudoers"]
+    a --> f["01-firstboot: firstrun.sh via<br/>systemd.run on cmdline<br/>(no sudoers rule, ADR-0139)"]
     f --> p["01-packages: install every .deb from<br/>packaging/out except skin packs"]
     p --> st["stamp /etc/gexis/image.info;<br/>assert cmdline, Samba shares,<br/>Plymouth, enabled / disabled / masked units"]
     st --> e[export-image] --> img[(image/deploy/*-gexis-player-&lt;ver&gt;.img)]
@@ -210,7 +210,13 @@ Notes: <release page URL>
 ```
 
 `Serial` only increases; the device refuses a file whose serial went down
-(rollback attack). `Format` lets a newer publishing layout tell an older
+(rollback attack). The device keeps the serial it last accepted in a file
+written beside and renamed, so a cut mid-write leaves the one before; a file
+that does not read as a number counts as 0 (`seen_serial()`). `publish.sh`
+starts a channel's serial at 1 only when the channel file truly does not
+exist: a fetch that fails any other way (a 5xx, the rate limit, no network),
+or a 404 for a file the `channels` release lists, stops it before anything is
+signed or uploaded. `Format` lets a newer publishing layout tell an older
 updater to reflash rather than fail with a 404. A release goes to Testing
 first and keeps its number when promoted to Stable.
 
@@ -235,7 +241,11 @@ indexing).
 
 *Check for updates* runs `check` through its own unit. Until 2026-10-06 it
 started the nightly unit, whose `scheduled` run went on to install on a device
-set to Automatic with nothing playing; fixed after 0.9.2.
+set to Automatic with nothing playing; fixed after 0.9.2. **One writer of
+`status.json` at a time** (`hold_status()`, a `flock` on `status.lock`): an
+install, the nightly run and the boot's check hold it while they run, and a
+`check` that finds it held leaves the status alone and ends, so it cannot
+write `available` over an install in progress.
 
 The channel is the `update_channel` setting (Stable unless set to Testing),
 read straight from the core's SQLite store, read-only. Leaving Testing for
@@ -246,7 +256,11 @@ passes the device.
 `sources.list` naming only the release's parts (each `signed-by` the release
 key), with lists per release under `/var/lib/gexis/updates/apt/<hash>/` and one
 shared archive cache. For going back it adds `Pin-Priority: 1001` on the old
-release's suites so apt prefers them even over newer versions.
+release's suites so apt prefers them even over newer versions. When an update
+or a skin pack ends well, `prune_cache()` deletes every archive in that cache
+except the installed versions (what the next update goes back to) and
+half-fetched files; nothing is pruned while a boot still has an update to
+check, or when dpkg cannot say what is installed.
 
 **One apt at a time.** An update and a skin pack share the archive cache; a
 `flock` on `apt-turn.lock` makes the second wait (up to an hour) and say so,
@@ -277,7 +291,9 @@ key, or for another release, stops the update.
    until the update ends the core refuses every takeover and releases the
    source that asked (`Supervisor(frozen=...)`, the states `stopping` to
    `going-back`; ADR-0105 §4 step 4, built 2026-10-07).
-4. **install** - `apt-get --no-download dist-upgrade`, then `install
+4. **install** - first `pending-check.json` (below) is written with
+   `how: cut-short`, so a boot after a power cut mid-install finds it; then
+   `apt-get --no-download dist-upgrade`, then `install
    gexis-player=<version>`, under `systemd-inhibit --what=shutdown:sleep`.
    Then **verify**: `gexis-player` is the target version, `dpkg --audit` is
    clean, and `libasound2t64` matches the release's pinned dependency.
@@ -287,7 +303,10 @@ key, or for another release, stops the update.
    to, the steps so far) and reports `restarting` with the restart step
    active; after the boot `gexis-update-postboot.service` (after the core;
    only when that file exists) runs `gexis-update postboot`, which does step 6
-   and goes back on failure, once. Otherwise `systemctl try-restart` every
+   and goes back on failure, once. When the file says the install was cut
+   short, or dpkg is not clean, postboot first finishes the install from the
+   new release's repositories (`heal()`); what cannot be finished goes back
+   to the previous release like any other failure. Otherwise `systemctl try-restart` every
    `.service` the changed packages ship, except the updater's own units
    (`gexis-update-install`, `gexis-update-check`, `gexis-update-checknow`,
    `gexis-update-postboot`) and
@@ -475,7 +494,9 @@ the previous version kept, and run under the sandboxed template
 A new Debian release, a new partition layout or boot mechanism (ADR-0105 §7).
 There are no A/B partitions: a power cut during the install step can leave a
 card that does not boot; the fallback is reflash and restore a backup
-(ADR-0105 §4, decided).
+(ADR-0105 §4, decided). A card that does boot after such a cut finishes the
+install, or goes back to the previous release, in `postboot` (§5, step 5;
+ADR-0105 amended 2026-10-12).
 
 ## Key files
 

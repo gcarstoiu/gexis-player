@@ -336,3 +336,22 @@ caught:**
 - With both, the updater on ShelvesPi dropped four empty lists, finished
   dpkg, and installed the 1480x320 pack it had been missing for a day.
 
+## Amended 2026-10-12 (final code review)
+
+- **A check leaves the status alone during an update.** *Check for updates*
+  wrote "checking" and then "available" over an install's state: the panel
+  lock and the takeover freeze lifted while dpkg ran. The install, the
+  nightly run and the boot's check now hold `status.lock`; a check that
+  finds it held ends without writing.
+- **An update that ends with no outcome lets the panel go.** An updater
+  killed mid-install leaves its status on *installing*; the panel waited for
+  a *done* or *failed* that never came. After 30 s of an inactive update with
+  no outcome it lets go, and Settings shows what the updater last reported.
+  The update modal also counts any change in the status as the answer,
+  rather than comparing the player's clock with the phone's.
+- **The cache is pruned.** Nothing cleaned the updater's private apt cache.
+  When an update or a skin pack ends well, everything but the installed
+  versions (what the next update goes back to) and half-fetched files is
+  deleted.
+- **An install the power cut short is finished, or rolled back, at the next
+  boot** (ADR-0105 §4 as amended today), using this record's 2026-10-09 heal.

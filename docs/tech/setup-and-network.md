@@ -35,13 +35,15 @@ script calls (`imager_custom`, `userconf`), each only if its variable is set:
 | `WIFI_SSID` / `WIFI_PASS` / `WIFI_COUNTRY` | saves a NetworkManager connection named `preconfigured` and sets the country |
 | `HOSTNAME`, `TIMEZONE` | as named |
 | `IDLE_URL` | appended to `/etc/gexis/core.toml` |
-| `SETTINGS` | JSON written to `/etc/gexis/settings-seed.json`; the settings registry treats it as defaults, so later changes still win |
+| `SETTINGS` | JSON written to `/etc/gexis/settings-seed.json`; the settings registry treats it as defaults, so later changes still win. Seeds for `output_device` and `skin` are checked for form only (a non-empty name), since only the daemon can list their options, and at run time |
+| `DEV_SUDO` | test cards only: `yes` writes `/etc/sudoers.d/010_pi-nopasswd`, mode 440 and `visudo`-checked before it is renamed into place (ADR-0139) |
 
 `userconf pi ""` always runs: it finalises the `pi` account and cancels the
 stock first-boot wizard. The script then deletes itself and its `cmdline.txt`
-entry. `01-run.sh` ships `/etc/sudoers.d/010_pi-nopasswd`, asserted mode 440
-and `visudo`-checked at build time, because nothing in this boot path would
-otherwise create it.
+entry. **The public image gives `pi` no sudo** (ADR-0139): `pi` runs the kiosk
+and Squeezelite, and a flaw in either would otherwise be a flaw as root.
+Nothing in the player calls sudo; `verify-image.sh` asserts the image has no
+sudoers rule for `pi`, and only `DEV_SUDO="yes"` puts one on a test card.
 
 **On a user's card every variable is blank** except `WIFI_COUNTRY`, which is
 used only when `WIFI_SSID` is set; so first boot only finalises the account, and the core's setup flow (below) does the rest.
@@ -87,9 +89,20 @@ Wi-Fi device `connected`:
 | Needs setup, cable has link | up to 90 s for an address | Ethernet: setup served over the LAN, no setup network (ADR-0031 amendment 8) |
 | Configured | up to 90 s | online: nothing; otherwise opens the setup network |
 
-The setup network **never opens while Ethernet has an address**, and it is
-decided **at boot only**: a running device that loses its Wi-Fi stays as it is
-until restarted (ADR-0104, answer 3).
+The setup network **never opens while Ethernet has an address**. It is
+decided at boot and, since ADR-0134, also two minutes after a running device
+loses its network (§3); ADR-0104's answer 3 (*at boot only*) stood until then.
+
+**A cable that gets its address back closes it.** A setup network opened at
+boot, or after a lost network (§3), is closed as soon as Ethernet has an
+address again (`_cable_back()`, looked for every `WATCH_S` inside `_hold()`),
+and the state goes `online`. A new player, which needs setup, waits while a
+phone is on the setup network: that phone may be half-way through setup, and
+setup over the cable can start once it leaves.
+
+**Setup over the cable counts as setup running** (`_setup_running()` in
+`__main__.py`): while setup is still needed, a screen chosen during it does
+not restart the player; setup's own restart after Finish is the only one.
 
 A test hook: `/run/gexis-setup-trial` present at start opens the setup network
 on a configured device regardless; it is read once and deleted, and a
@@ -162,7 +175,8 @@ these, and takes no input (ADR-0029).
 **Retry** (`_hold()`): every 5 minutes, *only if no phone is associated*, scan
 while hosting; if a saved network is in range, take the setup network down and
 join it, reopening it if the join fails. A failed hotspot start is retried
-every 15 s instead.
+every 15 s instead. Every 15 s it also looks for a cable with an address,
+which closes the setup network (§2).
 
 ---
 
@@ -219,7 +233,7 @@ sequenceDiagram
   else join fails
     C->>NM: delete the profile just made
     C->>C: drop password, keep other answers + error, step=wifi
-    C->>NM: reopen the setup network
+    C->>NM: reopen the setup network (only if it was the way in, or nothing else is online)
     Ph->>C: (rejoins) page opens on Network with the reason
   end
 ```
@@ -238,7 +252,9 @@ sequenceDiagram
 3. **The network, last**, because it is the step that loses the page.
    `join_new()` replaces only a profile named after the network; a failed join
    deletes what it saved, since NetworkManager would otherwise retry a wrong
-   password forever.
+   password forever. It brings the setup network back only when that was the
+   way in, or when nothing else is online: a failed join during setup over the
+   cable stays on the cable.
 4. On success: write `setup-done`, delete the answers, then **Lyrion**. Over the
    setup network there is nothing to discover, so the Music step's *Find* mode
    runs after the join: `discovery.find_servers()` broadcasts Lyrion's UDP
@@ -256,8 +272,11 @@ sequenceDiagram
    `setup-backup.tgz.part` beside the answers (cap 1 GB). `take_backup()`
    reads it with `backups.inspect()`:
    - it refuses, in a sentence, a file that is not a gzip tar, one with a
-     path no backup holds or a link, one with no settings, or one whose
-     `settings.db` will not open or has no `settings` table;
+     path no backup holds (matched by whole path component), a link, a
+     device or a pipe, or a name not in plain form (`..`, `.`, an empty
+     part, a leading `/`), one with no settings, or one whose `settings.db`
+     will not open or has no `settings` table (`backups._checked()`, the same
+     check a restore from Settings makes);
    - it returns the backup's main settings (`backups.APPLIED`), the plugins
      it has on, what else it carries, when it was made (from its name), and
      whether a newer release made it (more migrations than this one knows).
@@ -283,7 +302,14 @@ sequenceDiagram
      Settings;
    - `backups.restore_file()`, with the two databases written beside
      themselves and renamed into place, so the core's open connection is
-     never overwritten underneath it;
+     never overwritten underneath it. The rest is extracted with Python's
+     `tar` filter (owners kept, setuid bits dropped). A backup that brings
+     `var/lib/beszel-hub` stops `beszel-hub.service` first
+     (`STOPPED_FOR_RESTORE`; the reboot starts it again), and a `-wal` or
+     `-shm` file the archive does not bring is removed from beside each file
+     it restores. (When a backup is made, a live SQLite database with a
+     `-wal` beside it - the Beszel hub's - goes in as one consistent file,
+     copied with SQLite's own backup, without its `-wal` and `-shm`.)
    - with a name that differs from the backup's and `second_player` not
      false, `backups.IDENTITIES` are left out of `restore_file()` (the
      Beszel agent's data, Plexamp's store, go-librespot's `state.json` and
@@ -348,12 +374,20 @@ advertising two names.
 ```mermaid
 flowchart LR
   S[Settings: device_name] --> A[device_name.apply]
-  A -->|verbatim| L["/var/lib/go-librespot/config.yml<br/>device_name: (Spotify Connect)"]
-  A -->|verbatim| B["/etc/machine-info<br/>PRETTY_HOSTNAME (BlueZ alias)"]
-  A -->|verbatim| E["/etc/gexis/device-name.env<br/>GEXIS_DEVICE_NAME -> squeezelite -n"]
+  A -->|quoted| L["/var/lib/go-librespot/config.yml<br/>device_name: #quot;...#quot; (Spotify Connect)"]
+  A -->|quoted| B["/etc/machine-info<br/>PRETTY_HOSTNAME=#quot;...#quot; (BlueZ alias)"]
+  A -->|quoted| E["/etc/gexis/device-name.env<br/>GEXIS_DEVICE_NAME=#quot;...#quot; -> squeezelite -n"]
   A -->|sanitised| H["/etc/hostname + 127.0.1.1 in /etc/hosts<br/>-> avahi: name.local"]
 ```
 
+- The three display names keep the name as typed, spaces and capitals and
+  all, but quoted: `device_name:` as a YAML double-quoted string (unquoted,
+  `Kitchen: Main` made go-librespot's config unparseable and `#2` was cut off
+  as a comment), and `PRETTY_HOSTNAME` and `GEXIS_DEVICE_NAME` in systemd's
+  env-file form, `"..."` with `\` and `"` escaped (`plugin_env.quote()`).
+  Control characters and line breaks are refused by the settings row (*A name
+  is one line of text.*); a name that arrives another way (a restored backup,
+  setup's own rename) has them turned into a space (`UNWRITABLE`).
 - The hostname takes a sanitised form: accents folded, lowercase, anything
   outside `[a-z0-9-]` becomes `-`, capped at 63; an empty result falls back to
   `gexis`. avahi publishes it as `<hostname>.local` (e.g. `gexis.local`).
@@ -384,8 +418,9 @@ Settings' Wi-Fi row is a `list` row (ADR-0044) backed by `wifi.py`, through
 - The connected SSID is refreshed in the background every 20 s; it was once
   read on the request path and blocked the daemon for seconds.
 - Nothing changes the connection the daemon is reached over without an explicit
-  per-item action. A device that loses its Wi-Fi recovers by restarting, which
-  re-runs the boot decision in §2.
+  per-item action. A device that loses its network opens the setup network
+  after two minutes and goes back to its saved one when it returns (§3,
+  ADR-0134); it no longer needs a restart.
 
 ## 6b. The cable, and the Wi-Fi address (ADR-0123)
 
@@ -480,11 +515,16 @@ screen check, the core, the kiosk, the renderers and the Lyrion Server.
 `wipe()` then:
 
 - removes the files and folders in `REMOVED` (settings and enrichment
-  databases, caches, backups, the device name, share passwords, the setup
+  databases, caches, the device name, share passwords, the setup
   marker and answers, the screen and board records, components, uploaded
   plugins, Plexamp, Spotify's state, Beszel, the Lyrion Server's prefs and
-  cache) and empties those in `EMPTIED` (NetworkManager's connections,
-  Bluetooth, the journal), keeping the folders' owners and modes. The music
+  cache) and empties those in `EMPTIED` (the backups kept on the player,
+  NetworkManager's connections, Bluetooth, the journal, and the panel
+  browser's profile in `/var/lib/gexis-kiosk`: cookies, storage, history and
+  cache of every page the panel showed), keeping the folders' owners and
+  modes. The backups folder is emptied rather than removed because it is the
+  Backups share, `pi`'s and group-writable: removed, it came back as root's
+  with the next backup and the share refused every file copied into it. The music
   folder (`/var/lib/gexis-music`) and the Pictures share
   (`/var/lib/gexis-core/pictures`) are never touched; Lyrion's new
   preferences point at the music again and it rescans;
@@ -494,9 +534,9 @@ screen check, the core, the kiosk, the renderers and the Lyrion Server.
   the sound card board's block from `config.txt`;
 - purges every installed `gexis-skins*` package.
 
-**Temporary, until the first public release:** the wipe also writes
-`61-gexis-after-reset.conf`, keeping this boot's log and setup's on the card
-until the first start after setup (ADR-0132, amendment of 2026-10-10).
+The 2026-10-10 step that kept this boot's log after a reset
+(`61-gexis-after-reset.conf`) is gone (ADR-0132, amended 2026-10-12); the core
+deletes a leftover drop-in at start.
 
 Each step is on its own: one that fails is logged and the rest go on. The
 request is removed last, so the boot continues into setup with no marker

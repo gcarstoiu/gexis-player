@@ -140,3 +140,25 @@ backup to also download one of the backups locally?"*):
   offer (ADR-0028: the LAN is unauthenticated by decision).
 - With it, the file a newly flashed card's setup asks for (ADR-0131) is one
   tap away.
+
+## Amended 2026-10-12 (final code review)
+
+- **A restore takes only plain files and folders, by plain names.** An
+  archive member that is a link, a device or a pipe is refused, and so is a
+  name with `..`, `.`, an empty part or a leading `/`, rather than tidied; a
+  path outside the ones a backup writes is matched by whole path component
+  (`var/lib/bluetoothX` is not under `var/lib/bluetooth`). The first version
+  matched by leading characters, so a `..` name could write anywhere, as
+  root, with the reboot after a restore to run it - and the Backups share is
+  guest-writable, so an archive there is not necessarily one the player
+  made. The extraction uses Python's `tar` filter: owners kept, setuid bits
+  dropped.
+- **A live SQLite database with a WAL goes into a backup as one file.** The
+  Beszel hub writes its store while a backup runs; its `data.db` and
+  `data.db-wal` read a moment apart restored to a state that never existed.
+  SQLite's own backup now copies it whole, without the `-wal` and `-shm`.
+- **A restore that brings the hub's data stops `beszel-hub` first**; the
+  reboot starts it again. Put back under the running hub, its own WAL was
+  applied to the restored file at the reboot and the database was malformed.
+  A `-wal` or `-shm` file the archive does not bring is removed from beside
+  each file it restores.
