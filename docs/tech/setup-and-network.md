@@ -345,6 +345,14 @@ only. The choice is **provisional** in `screen.json`: no Keep is asked, and
 `screen_apply.confirmed()` stays false, so the setup network keeps the fixed
 password. The Screen step confirms it, or replaces it and asks Keep.
 
+**The port is part of what is applied** (ADR-0109 amended 2026-10-12):
+`screen.json` keeps the HDMI connector the screen was seen on
+(`screen_apply.connector_now`: the connected one, else the one applied last,
+else HDMI-A-1). At each start `screen_watch.moved()` re-applies the same
+screen on a new port; for a bar that moves its `video=` and goes through
+Keep, a screen without a forced mode moves silently, and a provisional
+setup screen stays provisional.
+
 **Errors** reach the phone as sentences (`setup_flow.said()`); the core's own
 text goes to the log.
 

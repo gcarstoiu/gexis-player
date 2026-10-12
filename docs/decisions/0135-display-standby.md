@@ -24,7 +24,10 @@ be put to rest, with the player still playing and still reachable.
 ## Proposal
 
 1. **Screen off is the HDMI output off** (`wlr-randr --output <connector>
-   --off` in the kiosk's labwc session, `--on` to wake). The player, its
+   --off` in the kiosk's labwc session, `--on` to wake). The connector is the
+   port the screen is on, from `screen.env`; with none named there, the port
+   a screen is connected to (amended 2026-10-12, ADR-0109; it was always
+   HDMI-A-1). The player, its
    renderers and the phone page keep running: a cast from Spotify or Lyrion
    still plays. The visualiser and the idle screen stop while it is off.
 2. **On demand**: *Turn the screen off* in Display standby, and a screen

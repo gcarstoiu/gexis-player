@@ -390,7 +390,7 @@ answer*; the other shares are still mounted.
 
 | Setting | What it does |
 | --- | --- |
-| Attached screen | Sets the layout, Standard or Bar, and which visualiser skins are offered. |
+| Attached screen | Sets the layout, Standard or Bar, and which visualiser skins are offered. A screen not in the list is shown as *Other screen* with its size. |
 | Screen rotation | For a screen mounted the other way up. |
 | Headless | Turns the player's screen off; settings that only affect the screen are hidden while it is on. |
 | Display standby: Scheduled standby, Standby times | With *Scheduled standby* on, the screen goes off during the standby times whenever nothing is playing. Up to six times, each a start and an end - picked from a grid of hours and quarters - on the chosen days; one may run past midnight, counting for the day it starts. |
