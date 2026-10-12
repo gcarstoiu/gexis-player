@@ -32,7 +32,9 @@ import asyncio
 import json
 import logging
 import re
+import shutil
 import sqlite3
+import threading
 import time
 import unicodedata
 from dataclasses import dataclass, field, replace
@@ -51,6 +53,23 @@ MISSING_TTL_S = 7 * 24 * 3600
 #: How long before a provider that could not answer is asked again. Short,
 #: because this is a transient failure, not an answer.
 RETRY_AFTER_S = 900.0
+
+#: **How large the cache may grow** (George, 2026-10-12, answer 6: "As large
+#: as it can afford without compromising the functioning of the player
+#: because of low space"). At least this much is left free on the
+#: filesystem that holds it...
+FREE_FLOOR_BYTES = 2 * 1024 ** 3
+#: ...and it never takes more than this share of that filesystem. Above
+#: either, the answers used longest ago go first (`Cache.tidy`).
+CACHE_SHARE = 0.10
+#: When it is trimmed, it is trimmed to this share of what the two limits
+#: allow - so it is not trimmed again on the next answer.
+TIDY_TO = 0.8
+#: Looked at when the daemon starts and then no oftener than this.
+TIDY_EVERY_S = 3600.0
+#: Freed pages are handed back to the filesystem from this much on; below
+#: it, they are left for the cache's next answers to reuse.
+RECLAIM_MIN_BYTES = 1024 ** 2
 
 #: Below this, show nothing (ADR-0012). MusicBrainz scores a search hit 0-100
 #: and answered 100 for every correct match in Finding 036, so the bar is set
@@ -375,12 +394,29 @@ class Cache:
     )
     """
 
-    def __init__(self, path: Path = DEFAULT_PATH, *, clock=time.time) -> None:
+    def __init__(self, path: Path = DEFAULT_PATH, *, clock=time.time,
+                 disk_usage=shutil.disk_usage) -> None:
         self.path = path
         self._clock = clock
+        #: `shutil.disk_usage`'s shape - `total` and `free` - for the
+        #: filesystem the cache is on (`tidy`).
+        self._disk_usage = disk_usage
+        #: Answers read since the last write, by row: when each was last used.
+        #: Written with the next write rather than on every read, which would
+        #: be a commit per panel ask on an SD card.
+        self._used: dict[tuple[str, str], float] = {}
+        #: Set while `tidy` compacts the file (`_reclaim`): the event loop's
+        #: reads miss and its writes are skipped rather than wait on it.
+        self._compacting = threading.Event()
         if path != Path(":memory:"):
             path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(path)
+            # New files are made so that freed pages can be handed back in
+            # small steps (`_reclaim`); existing ones are changed the first
+            # time that is needed.
+            self._conn = sqlite3.connect(path)
+            self._conn.execute("PRAGMA auto_vacuum = INCREMENTAL")
+        else:
+            self._conn = sqlite3.connect(path)
         self._conn.execute(self._SCHEMA)
         # **The match's score is kept with it** (2026-10-06): a cached answer
         # came back at the default 100, so a match below the threshold was
@@ -389,6 +425,13 @@ class Cache:
         columns = {row[1] for row in self._conn.execute("PRAGMA table_info(enrichment)")}
         if "confidence" not in columns:
             self._conn.execute("ALTER TABLE enrichment ADD COLUMN confidence INTEGER NOT NULL DEFAULT 100")
+        # **When each answer was last used** (George, 2026-10-12, answer 6):
+        # what `tidy` drops first. Rows from before were last used, as far
+        # as anyone knows, when they were stored - set again on every open,
+        # so a migration interrupted between the two statements finishes.
+        if "used_at" not in columns:
+            self._conn.execute("ALTER TABLE enrichment ADD COLUMN used_at REAL")
+        self._conn.execute("UPDATE enrichment SET used_at = stored_at WHERE used_at IS NULL")
         # **A "nothing" no longer believed is not kept** (review, 2026-10-12:
         # the file only ever grew). `get` already ignores one past
         # MISSING_TTL_S, but deleted it only if the same track came up
@@ -398,6 +441,8 @@ class Cache:
         self._conn.commit()
 
     def get(self, key: TrackKey, provider: str) -> Answer | None:
+        if self._compacting.is_set():
+            return None     # a miss for the few seconds `tidy` compacts
         row = self._conn.execute(
             "SELECT outcome, value, stored_at, confidence FROM enrichment WHERE key = ? AND provider = ?",
             (key.as_text(), provider),
@@ -409,6 +454,7 @@ class Cache:
             # A provider that had nothing a week ago may have something now.
             self.forget(key, provider)
             return None
+        self._used[(key.as_text(), provider)] = self._clock()
         return Answer(Outcome(outcome), Enrichment(**_rehydrate(json.loads(value))),
                       confidence=int(confidence))
 
@@ -419,15 +465,118 @@ class Cache:
             # deny a track its enrichment permanently because a server was
             # busy once.
             return
+        if self._compacting.is_set():
+            return          # not kept this once: asked again next time
+        now = self._clock()
+        self._write_used()
         self._conn.execute(
-            "INSERT INTO enrichment (key, provider, outcome, value, stored_at, confidence) "
-            "VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(key, provider) DO UPDATE SET "
+            "INSERT INTO enrichment (key, provider, outcome, value, stored_at, confidence, used_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(key, provider) DO UPDATE SET "
             "outcome = excluded.outcome, value = excluded.value, stored_at = excluded.stored_at, "
-            "confidence = excluded.confidence",
+            "confidence = excluded.confidence, used_at = excluded.used_at",
             (key.as_text(), provider, answer.outcome.value,
-             json.dumps(answer.enrichment.to_json()), self._clock(), int(answer.confidence)),
+             json.dumps(answer.enrichment.to_json()), now, int(answer.confidence), now),
         )
         self._conn.commit()
+
+    def _write_used(self) -> None:
+        """The last-used times `get` noted, into the table (uncommitted: the
+        caller commits)."""
+        if self._used:
+            used, self._used = self._used, {}
+            self._conn.executemany(
+                "UPDATE enrichment SET used_at = ? WHERE key = ? AND provider = ?",
+                [(when, key, provider) for (key, provider), when in used.items()])
+
+    def flush_used(self) -> None:
+        if self._used and not self._compacting.is_set():
+            self._write_used()
+            self._conn.commit()
+
+    # --- how large it may grow ---------------------------------------------
+
+    def tidy(self, playing=()) -> dict:
+        """**Keep the cache within what the card can afford** (George,
+        2026-10-12, answer 6). Above `CACHE_SHARE` of its filesystem, or with
+        less than `FREE_FLOOR_BYTES` free there, the answers used longest ago
+        are deleted until it is under `TIDY_TO` of what those limits allow,
+        and the space handed back. **Never the answers for `playing`** -
+        the track keys playing now.
+
+        Blocking: run off the event loop (`keep_tidy`), on a connection of
+        its own. What it found and did is returned, for the log."""
+        if self.path == Path(":memory:"):
+            return {}
+        protected = sorted({k.scoped(scope).as_text()
+                            for k in playing if not k.is_empty()
+                            for scope in ("artist", "album", "track")})
+        conn = sqlite3.connect(self.path, timeout=30.0)
+        try:
+            page = conn.execute("PRAGMA page_size").fetchone()[0]
+
+            def pages(name):
+                return conn.execute(f"PRAGMA {name}").fetchone()[0]
+            size = pages("page_count") * page
+            disk = self._disk_usage(self.path.parent)
+            allowed = min(disk.total * CACHE_SHARE, size + disk.free - FREE_FLOOR_BYTES)
+            report = {"size": size, "allowed": max(0, int(allowed)), "deleted": 0, "reclaimed": 0}
+            if size <= allowed:
+                return report
+            target = max(0.0, TIDY_TO * allowed)
+            spare = ",".join("?" * len(protected))
+            oldest = ("SELECT rowid FROM enrichment"
+                      + (f" WHERE key NOT IN ({spare})" if protected else "")
+                      + " ORDER BY COALESCE(used_at, stored_at) LIMIT 200")
+            # In small steps, each its own transaction: the event loop's own
+            # reads and writes wait on one step, not on all of them.
+            while (pages("page_count") - pages("freelist_count")) * page > target:
+                rows = conn.execute(oldest, protected).fetchall()
+                if not rows:
+                    break
+                conn.executemany("DELETE FROM enrichment WHERE rowid = ?", rows)
+                conn.commit()
+                report["deleted"] += len(rows)
+            if pages("freelist_count") * page >= RECLAIM_MIN_BYTES:
+                self._reclaim(conn)
+                report["reclaimed"] = size - pages("page_count") * page
+            return report
+        finally:
+            conn.close()
+
+    def _reclaim(self, conn) -> None:
+        """Hand freed pages back to the filesystem. A file made before
+        `auto_vacuum` was set needs one VACUUM to take it - the whole file
+        rewritten, once, while the event loop's reads and writes pass it by
+        (`_compacting`); after that, a few pages at a time."""
+        try:
+            if conn.execute("PRAGMA auto_vacuum").fetchone()[0] != 2:
+                self._compacting.set()
+                try:
+                    conn.execute("PRAGMA auto_vacuum = INCREMENTAL")
+                    conn.execute("VACUUM")
+                finally:
+                    self._compacting.clear()
+                return
+            while conn.execute("PRAGMA freelist_count").fetchone()[0]:
+                conn.execute("PRAGMA incremental_vacuum(256)").fetchall()
+        except sqlite3.Error as exc:  # space too short to rewrite it: rows are gone all the same
+            logger.info("enrichment: the cache's freed space was not handed back (%s)", exc)
+
+    async def keep_tidy(self, playing=lambda: None, *, sleep=asyncio.sleep) -> None:
+        """`tidy` at once and then every `TIDY_EVERY_S`, off the event loop.
+        `playing()` gives the `TrackKey` playing now, or None."""
+        while True:
+            try:
+                self.flush_used()
+                now = playing()
+                report = await asyncio.to_thread(self.tidy, (now,) if now else ())
+                if report.get("deleted") or report.get("reclaimed"):
+                    logger.info("enrichment: the cache was %d bytes, %d allowed; %d answers "
+                                "dropped, %d bytes handed back", report["size"], report["allowed"],
+                                report["deleted"], report["reclaimed"])
+            except Exception as exc:  # a full cache is kept, never a reason to stop
+                logger.warning("enrichment: the cache could not be tidied (%s)", exc)
+            await sleep(TIDY_EVERY_S)
 
     # --- small persistent notes -------------------------------------------
     #
@@ -505,6 +654,10 @@ class Cache:
         self._conn.commit()
 
     def close(self) -> None:
+        try:
+            self.flush_used()
+        except sqlite3.Error:
+            pass
         self._conn.close()
 
 
