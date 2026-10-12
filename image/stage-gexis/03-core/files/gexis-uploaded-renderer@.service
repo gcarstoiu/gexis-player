@@ -17,6 +17,8 @@ Environment=GEXIS_PLUGIN_SOCKET=/run/gexis/plugins.sock
 Environment=GEXIS_PLUGIN_DATA=/var/lib/gexis-uploaded/%i
 Restart=on-failure
 RestartSec=3
+# gexis-run-uploaded's "no package": not retried (2026-10-12).
+RestartPreventExitStatus=78
 
 # A temporary user for each run, never root (George: "temporary").
 DynamicUser=yes

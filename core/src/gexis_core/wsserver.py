@@ -33,6 +33,7 @@ import subprocess
 import tarfile
 import threading
 import time
+import uuid
 import zlib
 from collections.abc import Callable
 from urllib.parse import quote, unquote
@@ -196,7 +197,11 @@ class StateServer:
         #: ADR-0135: the screen's standby, which a touch and the phone wake.
         self._standby = standby
         #: ADR-0136: the other players on the network, for the phone's switcher.
-        self._players = Players(lambda: device_name.hostname())
+        #: This core, as the others see it in its status: a player whose mDNS
+        #: name was changed by a conflict (`guestpi-2.local`, 2026-10-12) is
+        #: not its hostname, and listed itself as another player.
+        self._instance = uuid.uuid4().hex
+        self._players = Players(lambda: device_name.hostname(), own_instance=self._instance)
         self._library = library
         self._artistinfo = artistinfo
         self._enrichment = enrichment
@@ -1335,6 +1340,7 @@ class StateServer:
         state = self._store.state
         return {"name": self._setting_or_none("device_name") or device_name.hostname(),
                 "host": f"{device_name.hostname()}.local",
+                "instance": self._instance,
                 **status_line(state, state.sources)}
 
     async def watch_players(self) -> None:

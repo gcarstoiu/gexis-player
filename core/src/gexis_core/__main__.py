@@ -191,6 +191,25 @@ async def set_unit_enabled(unit: str, enabled: bool, *, now: bool = True) -> Non
     await asyncio.to_thread(functools.partial(_set_unit_enabled, unit, enabled, now=now))
 
 
+def _start_uploaded(installed, *, enabled=None, state=None, start=None) -> list[str]:
+    """Start every uploaded plugin's unit that is switched on and not
+    running; the units started. See its call in `main`."""
+    from gexis_core import systemd
+    enabled = enabled or _unit_is_enabled
+    state = state or _unit_state
+    start = start or systemd.start_unit
+    started = []
+    for plugin in installed:
+        if not plugin.uploaded or not enabled(plugin.unit) or state(plugin.unit) in ("active", "activating"):
+            continue
+        subprocess.run(["systemctl", "reset-failed", plugin.unit], check=False, capture_output=True)
+        start(plugin.unit)
+        started.append(plugin.unit)
+    if started:
+        logger.info("uploads: started %s, switched on and not running", ", ".join(started))
+    return started
+
+
 async def restart_if_enabled(unit: str) -> None:
     """`systemd.restart_if_enabled` off the event loop, for the same reason
     `set_unit_enabled` is: it stops a process, and how long that takes is the
@@ -2393,6 +2412,14 @@ async def main() -> None:
     # has not been started yet either.
     for plugin in installed_plugins:
         _plugin_env(plugin)
+
+    # **An uploaded plugin switched on is running once the core is**
+    # (2026-10-12, a renderer uploaded to sofapi never ran): an upload
+    # restarts the plugin's unit while this core does not know it yet - it
+    # is refused, ends cleanly, and systemd has no failure to restart; the
+    # core restarts next and knows it, but nothing started it again. So
+    # whatever is switched on and not running is started here.
+    asyncio.ensure_future(asyncio.to_thread(_start_uploaded, installed_plugins))
 
     # The fourth corpus word was `Random` until 2026-09-22 and is `All`
     # now; a device that stored the old one is moved over rather than left

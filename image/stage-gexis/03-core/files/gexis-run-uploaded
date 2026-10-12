@@ -9,8 +9,16 @@ import sys
 
 plugin_id = sys.argv[1]
 home = os.path.join("/var/lib/gexis/plugins", plugin_id, "current")
-with open(os.path.join(home, "plugin.json")) as f:
-    run = json.load(f)["run"]
+# **No package, no retry** (2026-10-12: a plugin restored from a backup
+# without its package, still switched on, failed every 3 s for a day and
+# more). 78 (EX_CONFIG) is the unit's RestartPreventExitStatus: it waits,
+# failed, for the package to be uploaded again - the core starts it then.
+try:
+    with open(os.path.join(home, "plugin.json")) as f:
+        run = json.load(f)["run"]
+except FileNotFoundError:
+    print(f"gexis-run-uploaded: {plugin_id} is switched on but its package is not installed", file=sys.stderr)
+    sys.exit(78)
 command = os.path.realpath(os.path.join(home, run))
 if not command.startswith(os.path.realpath(home) + os.sep):
     sys.exit(f"gexis-run-uploaded: {run!r} is outside {plugin_id}'s package")
