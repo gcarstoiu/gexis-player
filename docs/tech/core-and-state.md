@@ -401,9 +401,26 @@ looks for a cover and publishes it into the state (ADR-0081). Everything else
 is fetched when the panel or phone asks `GET /enrichment`.
 
 **The cache** is `/var/lib/gexis-core/enrichment.db`: an `enrichment` table
-(key, provider, outcome, value, confidence) and a `notes` key-value table for
-non-track facts (artist photo URLs, MusicBrainz ids, sweep results), keyed on
-folded names.
+(key, provider, outcome, value, confidence, `used_at`) and a `notes`
+key-value table for non-track facts (artist photo URLs, MusicBrainz ids,
+sweep results), keyed on folded names.
+
+**How large it may grow** (George, 2026-10-12: as large as the card can
+afford without the player running short of space). `Cache.tidy` keeps at
+least `FREE_FLOOR_BYTES` (2 GiB) free on the filesystem that holds the file
+and never lets the cache take more than `CACHE_SHARE` (10 %) of it. Past
+either, it deletes `enrichment` rows used longest ago (`used_at`, which rows
+from before take from their stored time) - never those for the track
+playing - in small transactions until the cache is under `TIDY_TO` (80 %) of
+what the two limits allow, so the next answer does not trip it again. Freed
+pages from `RECLAIM_MIN_BYTES` (1 MiB) on are handed back to the filesystem:
+new files use incremental auto-vacuum, and an existing file is `VACUUM`ed
+once, the first time, while the event loop's reads miss and its writes are
+skipped rather than wait. A read notes `used_at` in memory and it is written
+with the next write, so a cache hit costs no commit. `Cache.keep_tidy` runs
+it at start and every `TIDY_EVERY_S` (an hour), in a worker thread on a
+connection of its own. The `notes` table is not trimmed. A backup carries
+this file (ADR-0083), so a large cache makes a large backup.
 
 **Artist photos from LMS** (`LmsArtistInfo`) are kept together with the LMS
 server they came from and its last scan: LMS artist ids are renumbered by a
@@ -411,7 +428,15 @@ full rescan and differ on another server. At most once a minute, when photos
 are asked for, the server's status is read; if the address or the last scan
 differs, the stored photos are dropped and asked for again. A scan under way
 drops nothing, and a server that gives no status is judged by its address
-alone; photos stored before this record existed are asked for again once. Stored enrichment answers whose
+alone; photos stored before this record existed are asked for again once.
+**The `lms` and `lms-release` providers' stored answers go with the photos**
+(George, 2026-10-12): their pictures carry the same LMS ids, so
+`LmsArtistInfo.forget` tells its `on_forget` listeners, wired in `__main__.py`
+to `Cache.forget_providers("lms", "lms-release")`. The two providers'
+`before_cached` hook runs the same check (`check_scope`, at most once a
+minute) before a stored answer of theirs is read, so a rescan is noticed even
+when only cached answers are being read. A player that never recorded whose
+photos it held drops them once, after the upgrade. Stored enrichment answers whose
 picture links go through LMS's image proxy are moved to the LMS address in
 use as they are read (`EnrichmentService(lms_base=...)`).
 
@@ -422,7 +447,10 @@ Related modules:
   ADR-0068, ADR-0075); bumps `pictures_revision` once at the end.
 - `fanart.py` - the visualiser's fanart frame: up to 10 photos per artist
   from LMS's `artistphotos`, kept on disk in `/var/cache/gexis-core/fanart`
-  (60 artists) and fetched ahead for the next track (ADR-0112).
+  (60 artists) and fetched ahead for the next track (ADR-0112). An artist
+  answered with no photos is asked again once that answer is older than
+  `EMPTY_RECHECK_S` (30 days, by the `.done` marker's own time); an artist
+  whose photos were found is not asked again.
 
 ## Plugins
 

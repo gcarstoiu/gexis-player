@@ -271,3 +271,25 @@ either turns out to be audible or annoying in real use.
 - Criterion 8's takeover-gap numbers (Finding 015) were measured against the old
   mechanism and need re-collecting. The 0.7s LMS→Spotify figure seen here is far
   better than that finding's 1827.8ms median.
+
+## Amended 2026-10-12 (George's answers)
+
+**LMS takes the device back from a power-off it still owed** (George,
+answer 9: *"Take it back"*). When a takeover's pause and power-off failed
+against an unreachable LMS (final code review, Finding 119
+arbitration-4), the power-off is owed and sent once LMS answers again. While
+one was owed the player stayed on, so play in the Lyrion app acquired
+nothing - there was no power-on edge - and the reconnect then sent the
+power-off to the player being listened to.
+
+- **Every acquisition cancels an owed power-off**; it is never sent after
+  LMS has taken the device back.
+- **While one is owed, a deliberate play counts as LMS acquiring:** the
+  connected player going to `play` from a pause or stop seen on it, as well
+  as the power-on that is the acquisition everywhere else. LMS carrying on to
+  a squeezelite that reconnects after the release ladder is not taken for the
+  listener's play.
+- **A release still in flight** (it is shielded, so it outlives the
+  supervisor's two seconds) that finds LMS has acquired since it began
+  neither sends its power-off nor leaves one owed
+  (`LmsAdapter._acquisitions`).

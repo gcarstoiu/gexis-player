@@ -119,7 +119,7 @@ stateDiagram-v2
   waiting --> online: Ethernet or saved Wi-Fi connected
   waiting --> open: no network in time
   open --> joining: phone taps Finish (join_new)
-  open --> joining: retry finds a saved network in range,<br/>no phone associated
+  open --> joining: retry finds a saved network in range,<br/>no phone holding it
   open --> failed: hotspot did not start
   failed --> open: retried after 15 s
   joining --> done: join ok, setup answers applied
@@ -172,9 +172,20 @@ The page's first `GET /setup/answers` marks `page_opened`. The panel
 (`SetupScreen.svelte`) walks *join -> joined -> page -> phone -> joining* from
 these, and takes no input (ADR-0029).
 
-**Retry** (`_hold()`): every 5 minutes, *only if no phone is associated*, scan
-while hosting; if a saved network is in range, take the setup network down and
-join it, reopening it if the join fails. A failed hotspot start is retried
+**Retry** (`_hold()`): every 5 minutes, *only if no phone holds the player*,
+scan while hosting; if a saved network is in range, take the setup network
+down and join it, reopening it if the join fails. On a new player (setup
+needed) any associated phone holds it, as it has nothing saved to go back to.
+On a configured one a phone holds it only while the setup page is in use
+(George, 2026-10-12): a request to `/` or a `/setup/...` route from a phone in
+the last `SETUP_ACTIVE_S` (600 s) - noted by the `_note_setup_use`
+middleware in `wsserver.py`, the panel's own loopback requests excluded - or
+when the retry first found a phone on the network less than `SETUP_ACTIVE_S`
+ago (`_phone_since`, cleared when a retry finds none), so a phone that has
+just joined is not left behind. The page's live status comes over the state
+socket, which does not count, so `SetupPage.svelte` asks `/setup/status` once
+a minute while it is in front. A phone that joined by itself and never opened
+the page no longer holds a configured player off its Wi-Fi for ever. A failed hotspot start is retried
 every 15 s instead. Every 15 s it also looks for a cable with an address,
 which closes the setup network (§2).
 
@@ -518,7 +529,8 @@ screen check, the core, the kiosk, the renderers and the Lyrion Server.
   databases, caches, the device name, share passwords, the setup
   marker and answers, the screen and board records, components, uploaded
   plugins, Plexamp, Spotify's state, Beszel, the Lyrion Server's prefs and
-  cache) and empties those in `EMPTIED` (the backups kept on the player,
+  cache, and `/etc/gexis/settings-seed.json`, the settings chosen when the
+  card was flashed) and empties those in `EMPTIED` (the backups kept on the player,
   NetworkManager's connections, Bluetooth, the journal, and the panel
   browser's profile in `/var/lib/gexis-kiosk`: cookies, storage, history and
   cache of every page the panel showed), keeping the folders' owners and
@@ -528,6 +540,11 @@ screen check, the core, the kiosk, the renderers and the Lyrion Server.
   folder (`/var/lib/gexis-music`) and the Pictures share
   (`/var/lib/gexis-core/pictures`) are never touched; Lyrion's new
   preferences point at the music again and it rescans;
+- puts `/etc/gexis/core.toml` back to the package's copy,
+  `/usr/share/gexis/defaults/core.toml` - the file `gexis-core`'s postinst
+  places on a fresh card - so the flash-time `idle_url` goes with it; with no
+  such copy (a core from before the package shipped one) it removes
+  `core.toml`, which the core reads as its defaults (George, 2026-10-12);
 - writes back the image's hostname `raspberrypi` (and sets it on the running
   kernel), Spotify's name `gexis` and the time zone Europe/London;
 - strips the screen's `video=` and the Wi-Fi country from `cmdline.txt` and

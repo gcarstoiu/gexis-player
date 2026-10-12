@@ -144,6 +144,7 @@ Notes on the diagram:
 | Unit | Job |
 |---|---|
 | `gexis-screen-check.service` | Before the kiosk starts, notices a different screen and switches to it; during setup, lays setup's screens out for it, provisionally (ADR-0109) |
+| `gexis-softvol-restore.service` | Before the renderers and the core start, sets the saved software level when Volume is Software, so nothing resumes at the software stage's 0 dB; does nothing otherwise and never fails the boot (ADR-0140) |
 | `gexis-park.service` | On shutdown, asks the core to pause LMS so nothing resumes by itself at the next boot |
 | `gexis-fetch@<name>.service` | Downloads pinned third-party software on the device (ADR-0100) |
 | `gexis-panel-warmup.service` | Reads the kiosk's binaries into page cache before the kiosk needs them |

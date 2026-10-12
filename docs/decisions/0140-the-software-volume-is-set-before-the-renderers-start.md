@@ -35,3 +35,37 @@ final code review (Finding 119, volume-main-12); not measured on a device.
 - One more unit at boot, measured in milliseconds; installed by the image
   and by updates (the package that carries the core's units).
 - The technical guide's audio path and boot order describe it.
+
+## Built (2026-10-12)
+
+- **The unit:** `gexis-softvol-restore.service`, `Type=oneshot`, running
+  `python -m gexis_core.softvol_boot` from the core's venv. Ordered
+  `After=local-fs.target sound.target gexis-factory-reset.service` and
+  `Before=` squeezelite, go-librespot, bluealsa-aplay, plexamp and
+  `gexis-core`; `TimeoutStartSec=15`, so a step that hangs is given up on
+  rather than holding the renderers. Shipped in `gexis-core` and enabled by
+  its postinst on every device, an updated one included, as
+  `gexis-factory-reset.service` is.
+- **What it does:** only when the volume type in force is Software (the
+  stored `output_mode`, or Hardware on an output with no control of its
+  own - the same `volume_mode()` the core uses), it makes the software
+  control and writes the level onto `Gexis` on `output`, then reads it back.
+  The settings store is opened read-only; the card's own control is never
+  touched (the core still parks it at 0 dB, once its own write has read
+  back). It waits up to 3 s (`CARD_WAIT_S`) for the configured card to be
+  listed. A missing store, card or output, or a failure of any kind, is
+  logged and the step exits 0. In Hardware or Fixed it does nothing.
+- **One rule for the start level, shared with the core**
+  (`softvol_boot.start_level`): the remembered level, else the card's own,
+  else -30 dB. The core's `_start_software_volume()` now calls the same
+  function, so the step never sets more than the core then does.
+- **What it carries across a boot is only the software level ADR-0124
+  already keeps.** ADR-0018's rule that nothing carries a level across a
+  boot stands for everything else.
+- **Uploaded renderers are not in its `Before=`** (decision 1 named renderer
+  plugins): they start after the core, which sets the level itself. Plexamp
+  is.
+- **Checked on sofapi and the bar player:** installed, enabled, ordered
+  before the renderers; in Hardware it does nothing. A power cut while
+  playing in Software, the case that asked for it, was not part of that
+  check.
