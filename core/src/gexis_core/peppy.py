@@ -79,6 +79,10 @@ class PeppyScreen:
             "WAYLAND_DISPLAY": wayland_display,
         }
         self.visible = False
+        #: One raise or lower at a time from the loop: with the settle and
+        #: wlrctl off it, a touch could otherwise lower the window before a
+        #: raise already under way puts it up.
+        self._turn = asyncio.Lock()
         # Hidden from the start: the driver begins minimised (gexis-peppy-start).
         self._tell(False)
         #: ADR-0101: told whenever the screen goes up or down, so the phone's
@@ -118,10 +122,36 @@ class PeppyScreen:
             logger.info("peppy: could not write %s (%s)", self._shown_path, exc)
 
     def show(self) -> bool:
+        """Blocks for the settle and a wlrctl call: on the event loop, use
+        `show_async`."""
         self._tell(True)
         if self._settle_s:
             time.sleep(self._settle_s)
-        if self._run("focus"):
+        return self._shown(self._run("focus"))
+
+    def hide(self) -> bool:
+        """Blocks for a wlrctl call: on the event loop, use `hide_async`."""
+        return self._hidden(self._run("minimize"))
+
+    async def show_async(self) -> bool:
+        """`show` without holding the event loop: the settle is slept and
+        wlrctl - up to 5 s when the compositor is busy - runs in a worker
+        (review, 2026-10-12: every raise held volume and arbitration for at
+        least 0.25 s). What follows - `on_change` publishing to the phones -
+        stays on the loop, where it must be (a worker thread there answered
+        a 500, sofapi 2026-10-11)."""
+        async with self._turn:
+            self._tell(True)
+            if self._settle_s:
+                await asyncio.sleep(self._settle_s)
+            return self._shown(await asyncio.to_thread(self._run, "focus"))
+
+    async def hide_async(self) -> bool:
+        async with self._turn:
+            return self._hidden(await asyncio.to_thread(self._run, "minimize"))
+
+    def _shown(self, focused: bool) -> bool:
+        if focused:
             self.visible = True
             logger.info("peppy: shown")
             if self.on_change:
@@ -131,8 +161,8 @@ class PeppyScreen:
         self._tell(False)
         return False
 
-    def hide(self) -> bool:
-        if self._run("minimize"):
+    def _hidden(self, minimised: bool) -> bool:
+        if minimised:
             self._tell(False)
             self.visible = False
             logger.info("peppy: hidden")
@@ -271,6 +301,20 @@ class PeppyController:
         # screen never came up (found on hardware, 2026-09-16). The UI's
         # progress bar interpolates the same way.
         self._anchor: tuple[float | None, float | None, bool, float] = (None, None, False, 0.0)
+        #: Lowers started from a callback, held until done.
+        self._lowering: set[asyncio.Task] = set()
+
+    def _lower(self) -> None:
+        """Hide, from a callback that cannot wait: on the loop, in the
+        background (`PeppyScreen.show_async` says why)."""
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            self._screen.hide()
+            return
+        task = asyncio.ensure_future(self._screen.hide_async())
+        self._lowering.add(task)
+        task.add_done_callback(self._lowering.discard)
 
     def on_active_change(self, renderer_id: str | None) -> None:
         """Criterion 6: a renderer change exits to now playing. The timer then
@@ -278,12 +322,12 @@ class PeppyController:
         self._timer.attention()
         if self._screen.visible:
             logger.info("peppy: renderer changed to %s, exiting to now playing", renderer_id or "nobody")
-            self._screen.hide()
+            self._lower()
 
     def on_touch(self) -> None:
         self._timer.attention()
         if self._screen.visible:
-            self._screen.hide()
+            self._lower()
 
     def _position_now(self) -> float | None:
         position, _, playing, at = self._anchor
@@ -315,7 +359,19 @@ class PeppyController:
             self._anchor = (self._position_now(), duration, playing, self._now())
 
     def request(self, action: str) -> bool:
-        """The UI's own button (criterion 8) and anything else that asks."""
+        """The UI's own button (criterion 8) and anything else that asks.
+        Blocks: on the event loop, use `request_async`."""
+        if not self._may(action):
+            return False
+        return self._screen.show() if action == "show" else self._screen.hide()
+
+    async def request_async(self, action: str) -> bool:
+        """`request` without holding the event loop."""
+        if not self._may(action):
+            return False
+        return await (self._screen.show_async() if action == "show" else self._screen.hide_async())
+
+    def _may(self, action: str) -> bool:
         self._timer.attention()
         if action == "show" and self._blocked():
             logger.info("peppy: not showing - the screen is in standby")
@@ -323,7 +379,7 @@ class PeppyController:
         if action == "show" and not self._has_levels():
             logger.info("peppy: not showing - this output feeds it no levels")
             return False
-        return self._screen.show() if action == "show" else self._screen.hide()
+        return True
 
     async def run(self) -> None:
         # Whether the meter is up is held in memory, so a daemon that starts
@@ -334,18 +390,18 @@ class PeppyController:
         # the same on its own after a crash). Minimising once at startup
         # makes the two agree: the device comes up on now playing, and the
         # timer raises the meter again in its own time.
-        self._screen.hide()
+        await self._screen.hide_async()
         while True:
             await asyncio.sleep(self._tick_s)
             if self._timer.due() and not self._screen.visible and self._has_levels() and not self._blocked():
-                self._screen.show()
+                await self._screen.show_async()
             # `viz_stop`. Checked after the raise and only while the meter is
             # up, so the two rules cannot argue: one of them needs playback
             # and the other needs silence.
             elif self._screen.visible and self._timer.stop_due():
                 logger.info("peppy: nothing playing for %.0fs, exiting to the panel",
                             self._timer.stop_after_s or 0)
-                self._screen.hide()
+                await self._screen.hide_async()
 
 
 #: PeppyMeter polls its pipe at this rate (`polling.interval` in the config
@@ -369,6 +425,31 @@ def meter_smoothing_samples(window_ms: int) -> int:
     # neighbour, so 100 ms would become 80 rather than 120 and the row
     # would not do what "nearest" says.
     return max(1, int(window_ms / METER_POLL_MS + 0.5))
+
+
+def _replace(path: Path, text: str) -> bool:
+    """The config written whole or not at all, with the image's owner and
+    mode. Both setters only rewrite keys already there, so a file a power
+    cut left cut short was never mended, and PeppyMeter, which reads it at
+    start, stayed dead (review, 2026-10-12)."""
+    tmp = path.with_name(path.name + ".tmp")
+    try:
+        with open(tmp, "w") as out:
+            out.write(text)
+            out.flush()
+            os.fsync(out.fileno())
+        was = path.stat()
+        os.chmod(tmp, was.st_mode & 0o7777)
+        try:
+            os.chown(tmp, was.st_uid, was.st_gid)
+        except PermissionError:
+            pass    # not root (tests): the file is ours already
+        os.replace(tmp, path)
+        return True
+    except OSError as exc:
+        logger.warning("peppy: cannot write %s: %s", path, exc)
+        tmp.unlink(missing_ok=True)
+        return False
 
 
 def set_meter_smoothing(window_ms: int, path: Path) -> bool:
@@ -400,10 +481,7 @@ def set_meter_smoothing(window_ms: int, path: Path) -> bool:
         return False
     if "".join(out) == "".join(lines):
         return False
-    try:
-        path.write_text("".join(out))
-    except OSError as exc:
-        logger.warning("peppy: cannot write %s: %s", path, exc)
+    if not _replace(path, "".join(out)):
         return False
     logger.info("peppy: the needle is averaged over %s samples (%s ms)", samples, samples * METER_POLL_MS)
     return True
@@ -432,10 +510,7 @@ def set_meter_skins(path: Path, base_folder: Path, meter_folder: str, width: int
         out.append(f"{key} = {wanted[key]}\n" if section == "current" and key in wanted else line)
     if out == lines:
         return False
-    try:
-        path.write_text("".join(out))
-    except OSError as exc:
-        logger.warning("peppy: cannot write %s: %s", path, exc)
+    if not _replace(path, "".join(out)):
         return False
     logger.info("peppy: drawing %s at %s x %s from %s", meter_folder, width, height, base_folder)
     return True

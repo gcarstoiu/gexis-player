@@ -58,7 +58,7 @@ set +a
 
 # Added after the first env files were written, so an older file without
 # them provisions exactly as before rather than failing.
-: "${TIMEZONE=}" "${IDLE_URL=}" "${SETTINGS=}"
+: "${TIMEZONE=}" "${IDLE_URL=}" "${SETTINGS=}" "${DEV_SUDO=}"
 
 # "Missing" (key absent from the file entirely) is checked separately from
 # "empty" (present, blank) - WIFI_SSID etc. are legitimately blank by
@@ -131,6 +131,7 @@ while IFS= read -r line || [ -n "${line}" ]; do
 		TIMEZONE=*)      printf "TIMEZONE='%s'\n" "$(sq_escape "${TIMEZONE}")" ;;
 		IDLE_URL=*)      printf "IDLE_URL='%s'\n" "$(sq_escape "${IDLE_URL}")" ;;
 		SETTINGS=*)      printf "SETTINGS='%s'\n" "$(sq_escape "${SETTINGS}")" ;;
+		DEV_SUDO=*)      printf "DEV_SUDO='%s'\n" "$(sq_escape "${DEV_SUDO}")" ;;
 		*)               printf '%s\n' "${line}" ;;
 	esac
 done < "${FIRSTRUN}" > "${TMP_FIRSTRUN}"
@@ -143,7 +144,7 @@ mv "${TMP_FIRSTRUN}" "${FIRSTRUN}"
 # is consistent with itself, not that the file actually holds the right
 # value.
 FAILED=0
-for key in SSH_PUBKEY WIFI_SSID WIFI_PASS WIFI_COUNTRY HOSTNAME TIMEZONE IDLE_URL SETTINGS; do
+for key in SSH_PUBKEY WIFI_SSID WIFI_PASS WIFI_COUNTRY HOSTNAME TIMEZONE IDLE_URL SETTINGS DEV_SUDO; do
 	expected_value="${!key}"
 	written_line="$(grep "^${key}='" "${FIRSTRUN}" || true)"
 	if [ -z "${written_line}" ]; then

@@ -25,6 +25,9 @@
     loadSettings,
     runSetting,
     writeSetting,
+    ask as askPlayer,
+    UNREACHED,
+    LONG_REQUEST_TIMEOUT_MS,
   } from '../lib/settings.js';
 
   // On the panel, Settings is a layer over the library and Back closes it
@@ -88,8 +91,8 @@
     let stop = false;
     const read = async () => {
       try {
-        const r = await fetch('/network/wifi');
-        const body = r.ok ? await r.json() : null;
+        const { response: r, body: answer } = await askPlayer('/network/wifi');
+        const body = r.ok ? answer : null;
         if (!stop) netLive = body?.connected ? body : null;
       } catch {
         // A missed read keeps the last one on screen.
@@ -226,8 +229,7 @@
     hwTonesBusy = true;
     hwError = null;
     try {
-      const r = await fetch('/hardware-report/tones', { method: 'POST' });
-      const body = await r.json();
+      const { response: r, body } = await askPlayer('/hardware-report/tones', { method: 'POST' });
       if (opening !== hwOpening) return;
       if (!r.ok) throw new Error(body?.error ?? `HTTP ${r.status}`);
       hwTones = body.tones;
@@ -307,7 +309,7 @@
   function loadHardware() {
     const opening = hwOpening;
     hwError = null;
-    fetch('/hardware-report').then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+    askPlayer('/hardware-report').then(({ response: r, body }) => (r.ok ? body : Promise.reject(r.status)))
       .then((body) => { if (opening === hwOpening) { hw = body; hwStep = body?.display ? 'screen' : 'sound'; } })
       .catch(() => { if (opening === hwOpening) hwError = 'The player could not read its hardware. Try again.'; });
   }
@@ -316,7 +318,7 @@
   let hwPrompt = $state(null);
   $effect(() => {
     if (current?.id !== 'system') return;
-    fetch('/hardware-report/prompt').then((r) => (r.ok ? r.json() : null))
+    askPlayer('/hardware-report/prompt').then(({ response: r, body }) => (r.ok ? body : null))
       .then((body) => (hwPrompt = body?.text ?? null))
       .catch(() => (hwPrompt = null));
   });
@@ -325,7 +327,7 @@
   //: the System row.
   let hwKept = $state(null);
   function loadHardwareKept() {
-    fetch('/hardware-report/kept').then((r) => (r.ok ? r.json() : null))
+    askPlayer('/hardware-report/kept').then(({ response: r, body }) => (r.ok ? body : null))
       .then((body) => (hwKept = body?.kept ?? null))
       .catch(() => (hwKept = null));
   }
@@ -343,7 +345,7 @@
   }
   async function startHardwareOver(row) {
     hwKept = null;
-    await fetch('/hardware-report/kept/clear', { method: 'POST' }).catch(() => {});
+    await askPlayer('/hardware-report/kept/clear', { method: 'POST' }).catch(() => {});
     openSheet(row);
   }
   function dismissHardwarePrompt() {
@@ -366,7 +368,7 @@
     const answers = !hw?.display ? { ...hwAnswers, picture: 'No screen', touch: 'No touch' }
       : !hw?.touch ? { ...hwAnswers, touch: 'No touch' } : hwAnswers;
     try {
-      const r = await fetch('/hardware-report/issue', {
+      const { response: r, body } = await askPlayer('/hardware-report/issue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -376,8 +378,7 @@
         }),
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const { url } = await r.json();
-      if (opening === hwOpening) hwUrl = url;
+      if (opening === hwOpening) hwUrl = body.url;
     } catch (e) {
       if (opening === hwOpening) hwError = plainly(e?.message, 'The report could not be prepared. Try again.');
     } finally {
@@ -408,11 +409,13 @@
     reportIssue = null;
     reportStep = 'preparing';
     try {
-      const r = await fetch('/report/prepare', {
+      // Its start gathers what the report is built from before it answers
+      // (George, 2026-10-12, answer 10: one of the long requests).
+      const { response: r } = await askPlayer('/report/prepare', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ what: reportNote, often: reportOften }),
-      });
+      }, LONG_REQUEST_TIMEOUT_MS);
       if (!r.ok) throw new Error(r.status === 409 ? 'A report is already being prepared. Try again in a minute.' : `HTTP ${r.status}`);
     } catch (e) {
       if (opening === reportOpening) reportError = plainly(e?.message, 'The report could not be prepared. Try again.');
@@ -425,11 +428,11 @@
   async function followReport(opening) {
     if (opening !== reportOpening) return;
     try {
-      const status = await (await fetch('/report/status')).json();
+      const { body: status } = await askPlayer('/report/status');
       if (opening !== reportOpening) return;
       reportStatus = status;
       if (status.state === 'ready') {
-        fetch('/report/issue').then((r) => (r.ok ? r.json() : null))
+        askPlayer('/report/issue').then(({ response: r, body }) => (r.ok ? body : null))
           .then((body) => { if (opening === reportOpening) reportIssue = body?.url ?? null; })
           .catch(() => {});
         return;
@@ -560,18 +563,32 @@
       const xhr = new XMLHttpRequest();
       xhr.open('POST', '/plugins/upload');
       xhr.setRequestHeader('Content-Type', 'application/gzip');
+      // George, 2026-10-12 (answer 10): an upload that stalls ends. Not a
+      // limit on the whole request - a large file over a slow link may take
+      // longer than that - but on silence: no bytes going out, or no answer
+      // once they are all sent, for LONG_REQUEST_TIMEOUT_MS.
+      let late;
+      const arm = () => {
+        clearTimeout(late);
+        late = setTimeout(() => xhr.abort(), LONG_REQUEST_TIMEOUT_MS);
+      };
       xhr.upload.onprogress = (e) => {
+        arm();
         if (e.lengthComputable && task) task.share = e.loaded / e.total;
       };
       xhr.upload.onload = () => {
+        arm();
         if (task) task.phase = 'checking';
       };
+      xhr.onloadend = () => clearTimeout(late);
+      xhr.onabort = () => resolve({ ok: false, status: 0, body: { error: UNREACHED } });
       xhr.onload = () => {
         let body = {};
         try { body = JSON.parse(xhr.responseText); } catch { /* not JSON */ }
         resolve({ ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status, body });
       };
       xhr.onerror = () => resolve({ ok: false, status: 0, body: { error: 'The upload did not reach the player.' } });
+      arm();
       xhr.send(file);
     });
   }
@@ -583,7 +600,7 @@
     let seenDown = false;
     while (Date.now() - started < 90000) {
       await new Promise((r) => setTimeout(r, 1000));
-      const up = await fetch('/settings', { cache: 'no-store' }).then((r) => r.ok, () => false);
+      const up = await askPlayer('/settings', { cache: 'no-store' }).then(({ response: r }) => r.ok, () => false);
       if (!up) seenDown = true;
       else if (seenDown || Date.now() - started > 10000) {
         await loadSettings();
@@ -635,8 +652,17 @@
       danger: true,
       run: async () => {
         task = { title: row.label, phase: 'checking' };
-        const res = await fetch(`/plugins/${encodeURIComponent(id)}/uninstall`, { method: 'POST' });
-        const body = await res.json().catch(() => ({}));
+        // A request that never arrives fails the card, as an upload's does:
+        // a rejection left it on *Checking* with no OK (code review,
+        // 2026-10-12).
+        // A removal takes the package off, as an upload puts one on: long.
+        const got = await askPlayer(`/plugins/${encodeURIComponent(id)}/uninstall`, { method: 'POST' },
+                              LONG_REQUEST_TIMEOUT_MS).catch(() => null);
+        if (!got) {
+          task = { ...task, phase: 'failed', text: UNREACHED };
+          return;
+        }
+        const { response: res, body } = got;
         if (!res.ok) {
           task = { ...task, phase: 'failed', text: body.error ?? `The player answered HTTP ${res.status}.` };
           return;
@@ -690,6 +716,10 @@
   // (the copy review, 2026-10-05 - as Setup's errors were).
   function plainly(raw, sentence) {
     if (raw) console.warn('settings:', raw);
+    // A request that never reached the player, or never came back, says
+    // so in its own words (George, 2026-10-12, answer 10): "Try again"
+    // alone reads as if the player had refused.
+    if (raw === UNREACHED) return raw;
     return sentence;
   }
 
@@ -816,9 +846,9 @@
     docPage = null;
     docError = null;
     try {
-      const res = await fetch(`/notices/${encodeURIComponent(row.document)}`);
+      const { response: res, body } = await askPlayer(`/notices/${encodeURIComponent(row.document)}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      docPage = await res.json();
+      docPage = body;
     } catch (e) {
       docError = 'This page could not be loaded.';
     }
@@ -907,13 +937,18 @@
   });
 
   //: What a written choice says. A change of volume type stops playback
-  //: (ADR-0046 amended 2026-10-11), and says so.
+  //: (ADR-0046 amended 2026-10-11), and so does a change of output (George,
+  //: 2026-10-12), and each says so.
   function said(row, option) {
     const playing = $metadata?.transport === 'playing';
     // ADR-0046 amended 2026-10-11: a change of volume type stops playback
     // and reopens the sources at once (George) - no more waiting for a pause.
     if (row.key === 'output_mode' && playing) {
       flash(`Volume: ${option}. Playback stopped for the change; start it again when ready.`, 7000);
+    } else if (row.key === 'output_device' && playing) {
+      // George, 2026-10-12 (answer 12): the source playing is stopped before
+      // the output changes, so nothing resumes on the new one by itself.
+      flash(`${row.label}: ${option}. Playback stopped for the change; start it again when ready.`, 7000);
     } else {
       flash(`${row.label}: ${option}`);
     }

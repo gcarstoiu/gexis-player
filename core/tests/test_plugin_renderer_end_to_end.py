@@ -190,6 +190,25 @@ async def test_a_plugin_acquires_the_device_from_a_built_in(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_an_acquire_sent_with_the_hello_is_not_lost(tmp_path):
+    """Code review, 2026-10-12. The contract does not say to wait for
+    `welcome`, and a plugin whose player is already playing may write both
+    lines at once. The `acquire` was read before the adapter's `run` had
+    been given its callbacks, and the acquisition was dropped."""
+    async with Wiring(tmp_path, killed=[]) as w:
+        reader, writer = await asyncio.open_unix_connection(str(w.path))
+        writer.write((json.dumps({"t": "hello", "contract": CONTRACT, "id": "plexamp"}) + "\n"
+                      + json.dumps({"t": "acquire"}) + "\n").encode())
+        await writer.drain()
+        try:
+            assert json.loads(await reader.readline())["t"] == "welcome"
+            await _settle()
+            assert w.supervisor.active == "plexamp"
+        finally:
+            writer.close()
+
+
+@pytest.mark.asyncio
 async def test_the_core_releases_the_plugin_when_something_takes_over(tmp_path):
     """The other direction, which is the half that has to work for the plugin
     to be a good citizen rather than a squatter."""

@@ -17,6 +17,7 @@ would leave a device half-renamed with nothing on screen to say so.
 """
 from __future__ import annotations
 
+import json
 import logging
 import re
 import socket
@@ -24,11 +25,21 @@ import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 
+from gexis_core import plugin_env
+
 logger = logging.getLogger(__name__)
 
 #: What the image ships and what a name that sanitises to nothing falls back
 #: to. The design's own fallback.
 FALLBACK = "gexis"
+#: What no name may carry into the four files: control characters (C0, DEL,
+#: C1 - NEL among them), Unicode's line and paragraph separators, and lone
+#: surrogates, which no encoder writes. Every line break here is a line of
+#: someone else's choosing in an EnvironmentFile two renderer units read
+#: (review, 2026-10-12). The settings row refuses the same set where it is
+#: typed; this is for the ways in that do not pass the row - a restored
+#: backup, setup's own rename.
+UNWRITABLE = re.compile(r"[\x00-\x1f\x7f-\x9f\u2028\u2029\ud800-\udfff]+")
 #: RFC 1123's limit on one label, which is what a `.local` name is.
 HOSTNAME_MAX = 63
 
@@ -81,9 +92,14 @@ class Written:
 def _replace_line(path: Path, pattern: str, line: str) -> None:
     """Rewrite the one line a pattern matches, or append it. Read, edit,
     write - the files are small and a rename is rare, so nothing here is
-    worth streaming."""
+    worth streaming.
+
+    **The line goes in through a function, not as a template** (review,
+    2026-10-12): as a template its backslashes were read as escapes, so a
+    player named 'AC\\DC' raised `bad escape \\D` before any file was
+    written, and 'Den\\n' wrote a real newline."""
     text = path.read_text()
-    new, count = re.subn(pattern, line, text, count=1, flags=re.MULTILINE)
+    new, count = re.subn(pattern, lambda _match: line, text, count=1, flags=re.MULTILINE)
     if count == 0:
         new = text if text.endswith("\n") or not text else text + "\n"
         new += line + "\n"
@@ -111,24 +127,35 @@ def _write_hostname(host: str) -> None:
 
 
 def _write_env(name: str) -> None:
+    # Quoted the way systemd documents for an EnvironmentFile: unquoted, a
+    # backslash is an escape there too, and 'AC\\DC' reached squeezelite as
+    # 'ACDC' while the core looked for the name as typed.
     ENV_PATH.parent.mkdir(parents=True, exist_ok=True)
-    ENV_PATH.write_text(f"{ENV_KEY}={name}\n")
+    ENV_PATH.write_text(f"{ENV_KEY}={plugin_env.quote(name)}\n")
 
 
 def _write_librespot(name: str) -> None:
-    _replace_line(LIBRESPOT_PATH, r"^device_name:.*$", f"device_name: {name}")
+    # **A quoted scalar** (review, 2026-10-12). Unquoted, 'Kitchen: Main'
+    # left go-librespot's config unparseable - Spotify Connect gone after the
+    # restart, with the rename reported ok - '#2' was cut off as a comment
+    # and '[Den]' became a list. A JSON string is a YAML double-quoted one.
+    value = json.dumps(name, ensure_ascii=False)
+    _replace_line(LIBRESPOT_PATH, r"^device_name:.*$", f"device_name: {value}")
 
 
 def _write_bluetooth(name: str) -> None:
     # Verbatim, spaces and capitals and all: PRETTY_HOSTNAME exists for a
     # human-readable name, which is exactly what the three display names
     # are. Read by bluetoothd at start, so it lands at the restart like the
-    # other three rather than half-renaming a running device.
+    # other three rather than half-renaming a running device. Quoted, as
+    # hostnamectl writes it: the file is read with systemd's env-file rules,
+    # where an unquoted backslash is an escape.
+    line = f"PRETTY_HOSTNAME={plugin_env.quote(name)}"
     MACHINE_INFO_PATH.parent.mkdir(parents=True, exist_ok=True)
     if not MACHINE_INFO_PATH.exists():
-        MACHINE_INFO_PATH.write_text(f"PRETTY_HOSTNAME={name}\n")
+        MACHINE_INFO_PATH.write_text(line + "\n")
         return
-    _replace_line(MACHINE_INFO_PATH, r"^PRETTY_HOSTNAME=.*$", f"PRETTY_HOSTNAME={name}")
+    _replace_line(MACHINE_INFO_PATH, r"^PRETTY_HOSTNAME=.*$", line)
 
 
 #: The four, by the name the user would recognise.
@@ -143,6 +170,9 @@ def apply(name: str) -> Written:
     `None` special case inside the loop and made the failure path
     unreachable from a test.
     """
+    # A run of line breaks or other controls becomes one space rather than
+    # refusing the rename: the files take what the person meant, on one line.
+    name = UNWRITABLE.sub(" ", name).strip() or FALLBACK
     host = sanitise(name)
     steps = (
         ("Spotify", lambda: _write_librespot(name)),
@@ -155,7 +185,7 @@ def apply(name: str) -> Written:
     for label, write in steps:
         try:
             write()
-        except OSError as exc:
+        except (OSError, ValueError) as exc:  # ValueError: a name the encoder refuses
             logger.warning("device name: %s not written: %s", label, exc)
             failed.append(label)
     return Written(hostname=host, failed=tuple(failed))
@@ -191,11 +221,21 @@ def lms_player(fallback: str, path: Path | None = None) -> str:
     try:
         for line in path.read_text().splitlines():
             key, _, value = line.partition("=")
+            value = _unquoted(value.strip())
             if key.strip() == ENV_KEY and value.strip():
-                return value.strip().strip('"')
+                return value.strip()
     except OSError:
         pass
     return fallback
+
+
+def _unquoted(value: str) -> str:
+    """The value systemd hands the unit, for the forms this module writes:
+    `plugin_env.quote`'s double quotes with `\\` and `"` escaped, or a bare
+    word from an image older than the quoting."""
+    if len(value) >= 2 and value[0] == value[-1] == '"':
+        return re.sub(r"\\(.)", lambda m: m.group(1), value[1:-1])
+    return value
 
 
 def hostname() -> str:

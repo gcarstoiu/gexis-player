@@ -16,7 +16,7 @@ import sys
 import time
 from pathlib import Path
 
-from gexis_core import board_apply, journal, screen_apply
+from gexis_core import board_apply, screen_apply
 
 logger = logging.getLogger("gexis_core.factory_reset")
 
@@ -29,8 +29,6 @@ REMOVED = (
     "var/lib/gexis-core/settings.db", "var/lib/gexis-core/settings.db-wal", "var/lib/gexis-core/settings.db-shm",
     "var/lib/gexis-core/enrichment.db", "var/lib/gexis-core/enrichment.db-wal", "var/lib/gexis-core/enrichment.db-shm",
     "var/cache/gexis-core",
-    # The backups kept on the player (George: deleted).
-    "var/lib/gexis-core/backups",
     # The name.
     "etc/gexis/device-name.env", "etc/machine-info",
     # Network share passwords; kept debug logs.
@@ -54,16 +52,40 @@ REMOVED = (
     "var/lib/squeezeboxserver/prefs", "var/lib/squeezeboxserver/cache",
     "var/lib/gexis/lyrion-addons.done", "var/lib/gexis/lyrion-scan-stopped.json",
     "var/lib/gexis/lyrion-usb-seen.json",
+    # **The settings chosen when the card was flashed** (George, 2026-10-12,
+    # answer 4: "Yes"): firstrun.sh's `SETTINGS`, which the core reads as
+    # defaults at every start. Left, a reset came back with them.
+    "etc/gexis/settings-seed.json",
 )
 #: Emptied, the folder itself kept (its owner and mode belong to the image).
 #: Never the music folder (`/var/lib/gexis-music`, with Lyrion's playlists)
 #: or the Pictures share (`/var/lib/gexis-core/pictures`): what the owner put
 #: there stays (George, 2026-10-09, amending ADR-0132).
 EMPTIED = (
+    # The backups kept on the player (George: deleted). **Emptied, not
+    # removed** (the review of 2026-10-12): the folder is the Backups share,
+    # `pi`'s and group-writable from gexis-core's postinst. Removed, the share
+    # was gone until the first backup, which made it again as root's - and
+    # Samba, writing as `pi`, refused every backup copied back into it.
+    "var/lib/gexis-core/backups",
     "etc/NetworkManager/system-connections",
     "var/lib/bluetooth",
     "var/log/journal",
+    # **The panel browser's profile** (the review of 2026-10-12): cookies,
+    # storage, history and cache of every page the panel showed, an external
+    # idle page's included. kiosk.env keeps it off ~/.config "so a factory
+    # reset or a wipe of browser state is one directory"; the reset had not
+    # wiped it. The folder is `pi`'s, so emptied; this runs before the kiosk.
+    "var/lib/gexis-kiosk",
 )
+#: **The core's config, and the image's copy of it** (George, 2026-10-12,
+#: answer 4). firstrun.sh appends the flash-time `idle_url` to `CORE_TOML`;
+#: the reset puts back `DEFAULT_CORE_TOML`, which gexis-core installs and its
+#: postinst copied into place on a fresh card - so the result is exactly that
+#: card's. Nothing else the device needs lives in it: the LMS server is the
+#: `lms_server` setting (ADR-0107), and the rest are the code's defaults.
+CORE_TOML = "etc/gexis/core.toml"
+DEFAULT_CORE_TOML = "usr/share/gexis/defaults/core.toml"
 #: The image's own name and time zone (pi-gen's defaults; ADR-0132 §3).
 HOSTNAME = "raspberrypi"
 TIMEZONE = "Europe/London"
@@ -120,6 +142,23 @@ def wipe(root: Path = Path("/"), run=subprocess.run) -> list[str]:
         step(rel, lambda rel=rel: _remove(root / rel))
     for rel in EMPTIED:
         step(f"{rel}/*", lambda rel=rel: _empty(root / rel) > 0)
+
+    def core_toml() -> bool:
+        default, target = root / DEFAULT_CORE_TOML, root / CORE_TOML
+        if not default.is_file():
+            # No copy to go back to (a core from before the package shipped
+            # one): without the file the core reads the code's defaults,
+            # which is what the image's copy - comments only - amounts to.
+            return _remove(target)
+        if target.is_file() and target.read_bytes() == default.read_bytes():
+            return False
+        target.parent.mkdir(parents=True, exist_ok=True)
+        partial = target.with_name(f".{target.name}.reset")
+        shutil.copyfile(default, partial)
+        partial.chmod(0o644)
+        partial.replace(target)
+        return True
+    step(CORE_TOML, core_toml)
 
     def hostname() -> bool:
         (root / "etc/hostname").write_text(HOSTNAME + "\n")
@@ -192,18 +231,6 @@ def wipe(root: Path = Path("/"), run=subprocess.run) -> list[str]:
         return True
     step("skin packs", skin_packs)
 
-    def keep_this_boots_log() -> bool:
-        # TEMPORARY - remove before the first public release (journal.AFTER_RESET).
-        dropin = root / journal.AFTER_RESET.relative_to("/")
-        dropin.parent.mkdir(parents=True, exist_ok=True)
-        dropin.write_text(journal.AFTER_RESET_CONTENT)
-        if root == Path("/"):
-            # journald read its settings before this ran; the restart takes
-            # the new one, and the flush ordered after this unit then moves the
-            # boot's log so far onto the card.
-            run(["systemctl", "restart", "systemd-journald"], capture_output=True, text=True, check=False)
-        return True
-    step("this boot's log kept (temporary)", keep_this_boots_log)
     return done
 
 

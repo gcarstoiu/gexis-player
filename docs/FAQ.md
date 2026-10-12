@@ -65,6 +65,16 @@ louder than its *Starting volume*. Leaving *Fixed*, the volume goes back to
 where it was before *Fixed* was chosen (or to the *Starting volume*, on a
 player that started in *Fixed*) rather than staying at full.
 
+**What happens when I change the output while music plays?**
+The same as for the volume type: playback stops, the sources reconnect on the
+new output, and the screen says so. Start the music again when ready; the
+source starts afresh on the new output, no louder than its *Starting volume*.
+
+**Does the music come back loud after a power cut?**
+No. With *Volume* on *Software* (HDMI, for instance), the player sets the
+volume it was left at before any source can start playing, so a source that
+picks up where it was after a power cut starts at that level, not at full.
+
 **Can the player be stopped from ever playing too loud?**
 Yes: *Settings → Audio → Maximum volume*. Set it to 80 and the player is never
 louder than the slider at 80, from any source. 100 % on the screen, in
@@ -282,7 +292,9 @@ while the sound card is reopened.
 
 **Some skins show a slideshow of the artist. Where do the photos come from?**
 From the Lyrion server's Music & Artist Information plugin. They are the
-*Fanart* skins; the photo changes every 20 seconds.
+*Fanart* skins; the photo changes every 20 seconds. An artist the plugin had
+no photos for is asked about again after 30 days, since the plugin finds more
+over time; an artist whose photos were found is not asked again.
 
 ---
 
@@ -315,6 +327,15 @@ The phone and the player must be on the same network. If the page loads but
 is slow or drops out, see the Wi-Fi questions: a poor connection shows on the
 phone first.
 
+**Settings says "The player did not answer. Check the connection and try again."**
+A change in *Settings* that gets no answer is given up rather than left
+spinning: after 20 seconds, or 2 minutes for what is slow on purpose (joining
+a Wi-Fi network, a Wi-Fi scan, network shares, making a backup, changing an
+address, uploading or removing a plugin, starting a problem report), or 15
+minutes for restoring a backup. Usually the phone went to sleep or lost the
+network on the way. Check that it is on the same network as the player, then
+try again; the change may have been made, so look before repeating it.
+
 ---
 
 ## Network and Wi-Fi
@@ -337,8 +358,13 @@ becomes likely. A 5 GHz network is usually faster but reaches less far than
 After two minutes without a network, the player opens its own setup network
 and the screen shows how to join it, as at start (after 90 seconds there). It
 keeps looking for its saved network every five minutes and goes back to it
-when it is in range; or choose a network from the setup screen. This counts
-a network that gave the player no address as no network.
+when it is in range; or choose a network from the setup screen. A phone on
+the setup network keeps the player there only while someone is using the
+setup page (in the last ten minutes) or the phone has only just joined; a
+phone that joined by itself and was left there does not. This counts
+a network that gave the player no address as no network. A player on a
+network cable leaves the setup network by itself once the cable has an
+address again.
 
 **What is the player's name, and can it be changed?**
 *Settings → System → Device name* is one name for everything: the network
@@ -516,6 +542,14 @@ picture where neither has one. It runs in the background without stopping
 the music, and shows what its last run found. Without a TheAudioDB key of
 your own it uses a shared key and can take noticeably longer.
 
+**Does artist and lyrics information fill the card?**
+No. The player stores what it looks up (lyrics, biographies, album and
+artist details) so it need not ask again, but this store never takes more
+than a tenth of the card, nor so much that less than 2 GB of the card is
+left free. Past either, it deletes what was used longest ago - never what
+belongs to the track playing - and gives the space back. It looks when it
+starts and then every hour.
+
 **The artist page's Popular list is empty.**
 It needs a free ListenBrainz user token, in *Settings → Enrichment →
 ListenBrainz token*.
@@ -529,7 +563,10 @@ ListenBrainz token*.
 Installing stops the music (it asks first), restarts the player and checks
 it; the device itself restarts only if the system needs it, and the update
 says so before starting. If the new release fails its check - also after the
-device restarts - the player goes back to the release it had. While it
+device restarts - the player goes back to the release it had; after a power
+cut during the install, it finishes the install or goes back when it starts
+again. The updater keeps only the downloads of what is installed, so old
+releases do not fill the card. While it
 installs, no phone or app can start playing on it. *Settings → System → Change logs* lists what
 changed in the last 10 releases.
 
@@ -577,15 +614,26 @@ backup can also be restored later: copy it into the Backups share and choose
 it under *Settings → System → Restore*. Network share passwords are not kept
 in backups, so enter them again.
 
+**Do the backups fill the card?**
+Each update makes a backup before it installs. *Settings → System → Restore*
+marks those *before an update*, and the player keeps only the newest three of
+them. Backups made with *Back up now*, copied into the Backups share, or left
+by an update of an earlier release are never deleted by the player; remove
+those that are no longer needed with *Forget* beside them under *Restore*. A backup carries the
+artist and lyrics information the player has stored, so it can be larger than
+the settings alone suggest.
+
 **How do I start the player over, without re-flashing the card?**
 *Settings → System → Reset to factory settings*, on the screen or a phone.
 Hold the button for 3 seconds, until its bar fills; the screen and the phone
 say the player is resetting, and the phone says how to reach setup. The
 player restarts, clears everything and comes up in setup, as on a freshly
 flashed card. It
-removes every setting and the name, the saved Wi-Fi networks, paired devices
-and sign-ins, the skins, the plugins, the Lyrion Server's library, and the
-backups kept on the player, so download a backup first (*Restore →
+removes every setting and the name, the settings and idle page chosen when
+the card was flashed, the saved Wi-Fi networks, paired devices
+and sign-ins, the skins, the plugins, the Lyrion Server's library, the
+screen's browser data, and the backups kept on the player (the Backups share
+itself stays, empty), so download a backup first (*Restore →
 Download* on a phone or computer). The music folder, its playlists and the
 Pictures share stay, and the Lyrion Server scans the music again. The
 installed version stays, so there is nothing to download again except the

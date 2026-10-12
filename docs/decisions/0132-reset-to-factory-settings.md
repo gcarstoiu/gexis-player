@@ -111,3 +111,33 @@ the reset and of setup survive setup's restart; from the next start
 
 *Reset to factory settings* [R], System, after Restore; an action, no stored
 value. Appended on George's confirmation, 2026-10-09.
+
+## Amended 2026-10-12 (final code review)
+
+- **The 2026-10-10 amendment is withdrawn**, as it said it would be before the
+  first public release: the wipe no longer writes `61-gexis-after-reset.conf`,
+  and the core deletes a leftover one at start. Nothing of the reset's boot or
+  of setup's is kept on the card.
+- **The backups folder is emptied, not removed.** It is the Backups share,
+  `pi`'s and group-writable; removed, it came back as root's with the next
+  backup, and the share refused every backup copied into it. Decision 3's
+  "the backups kept on the player" still all go.
+- **The panel browser's profile is emptied too** (`/var/lib/gexis-kiosk`):
+  cookies, storage, history and cache of every page the panel showed,
+  an external idle page's included. It had been left out of decision 3.
+
+## Amended 2026-10-12 (George's answers)
+
+**Decision 3 includes the settings chosen when the card was flashed**
+(George, answer 4: *"Yes"*). A reset came back with them, which a freshly
+flashed card without them would not have:
+
+- `/etc/gexis/settings-seed.json` - `firstrun.sh`'s `SETTINGS`, which the
+  core reads as defaults at every start - is removed (`REMOVED`).
+- `/etc/gexis/core.toml`, where `firstrun.sh` appends the flash-time
+  `idle_url`, is put back to `/usr/share/gexis/defaults/core.toml`, the copy
+  `gexis-core` installs and its postinst places on a fresh card. With no such
+  copy (a core from before the package shipped one) the file is removed,
+  which the core reads as its defaults: the shipped file is comments only.
+  Nothing else the device needs is in it; the LMS server is the `lms_server`
+  setting ([ADR-0107](0107-our-parts-as-debian-packages.md) decision 2).

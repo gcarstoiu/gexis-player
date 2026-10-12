@@ -112,7 +112,9 @@ to play it; **Clear** empties the queue; **Play from** starts a playlist.
 Drag the slider or tap along it. The drawer closes by itself after a few
 seconds, but stays open while the phone's pointer rests on it. A change made
 elsewhere (a phone, a Lyrion app) can open the drawer too
-(*Settings → Display → Show volume when changed elsewhere*).
+(*Settings → Display → Show volume when changed elsewhere*); a drawer opened
+that way ignores touches for a moment, so a tap meant for what was under it
+does not set the level.
 
 With **Volume** set to *Fixed*, the player always plays at full level
 for an amplifier that sets the volume; the button then shows a padlock and
@@ -265,7 +267,9 @@ The mini player has:
   the button again wakes it; the player keeps playing, and some screens show
   their own "No signal" for a few seconds first) and **Idle screen**
   (not offered while the idle screen is switched off);
-- the volume slider.
+- the volume slider. A tap sets the level where it lands and a sideways
+  drag moves it; a swipe up or down that starts on the slider changes
+  nothing.
 
 ### The touchpad
 
@@ -346,7 +350,7 @@ Changes take effect at once unless the row says otherwise.
 
 | Setting | What it does |
 | --- | --- |
-| Output | Where the sound goes. Over HDMI the sound is not bit-perfect; HDMI has no volume control of its own, so its volume is Software or Fixed, and the visualiser moves only on Software. |
+| Output | Where the sound goes. Over HDMI the sound is not bit-perfect; HDMI has no volume control of its own, so its volume is Software or Fixed, and the visualiser moves only on Software. A change of output while music plays stops playback; start it again when ready. |
 | Sound card board | Most boards and every USB DAC are found by themselves. A board that is not (it does not show under Output) can be chosen here. Each board is marked *Tested* (played and measured by the project), *Reported* (owners reported it working; *Reported with problems* if one did not) or *Known*. |
 | Volume | How the level is set. *Hardware* (default): by the sound card's own volume control, bit-perfect at every level. *Software*: by the player recalculating the sound, on any output; not bit-perfect below 100 %. *Fixed*: always full level, for an amplifier that sets the volume itself; it asks first. Any change of volume type stops playback while the sources reconnect on it. On an output with no volume control of its own, such as HDMI, Hardware is greyed out and Software is used in its place. The level carries across between Hardware and Software. |
 | Maximum volume | The loudest the player will go, on any input. At 80, 100 % on every control means that level. Hidden with Volume on *Fixed*. |
@@ -369,7 +373,9 @@ Changes take effect at once unless the row says otherwise.
 
 Plugins add their own rows here once switched on: **Plexamp** (claim the
 player into your Plex account) and the **Lyrion Server** (a music server on
-the player itself, with its music folders and network shares).
+the player itself, with its music folders and network shares). A network
+share whose server does not answer reads *Not mounted: the server did not
+answer*; the other shares are still mounted.
 
 ### Handoff — *Who gets the player*
 
@@ -441,7 +447,7 @@ Everything about the player itself, under seven headings.
 
 | Setting | What it does |
 | --- | --- |
-| Device name | One name for everything: the network address (*name*.local), the Lyrion player, the Spotify device and the Bluetooth name. |
+| Device name | One name for everything: the network address (*name*.local), the Lyrion player, the Spotify device and the Bluetooth name. A name is one line of text. |
 | Time zone | Taken from the network; set it by hand only when that is wrong. |
 
 **Network**
@@ -466,7 +472,7 @@ Everything about the player itself, under seven headings.
 | --- | --- |
 | Back up now | Saves the settings, the library's pictures, the paired devices and the device's configuration into the Backups share. |
 | Restore | Puts a backup from the Backups share back and restarts the device. On a phone or computer, *Download* beside a backup saves it there. A freshly flashed card can restore one during setup instead, straight from the phone: setup asks for this player's output and screen, and anything else it asks (the name, say) can be changed on the way. |
-| Reset to factory settings | Puts the player back as on a freshly flashed card, then restarts into setup. Everything goes: every setting and the name, the Wi-Fi networks, paired devices and sign-ins, the skins and plugins, the Lyrion Server's library, and the backups kept on the player. The music folder, its playlists and the Pictures share stay. Download a backup first under *Restore*. To confirm, hold *Hold to reset and restart* for 3 seconds, until its bar fills; letting go earlier cancels. The screen and every phone then say the player is resetting; a phone also says how to reach setup. The installed version stays. |
+| Reset to factory settings | Puts the player back as on a freshly flashed card, then restarts into setup. Everything goes: every setting and the name, the settings and idle page chosen when the card was flashed, the Wi-Fi networks, paired devices and sign-ins, the skins and plugins, the Lyrion Server's library, the screen's browser data, and the backups kept on the player (the Backups share stays, empty). The music folder, its playlists and the Pictures share stay. Download a backup first under *Restore*. To confirm, hold *Hold to reset and restart* for 3 seconds, until its bar fills; letting go earlier cancels. The screen and every phone then say the player is resetting; a phone also says how to reach setup. The installed version stays. |
 
 **Help**
 
@@ -504,5 +510,16 @@ release it skips, newest first, each under its number and date. **Update** runs 
 The panel shows the steps full-screen and keeps them up, all ticked, until
 you press **Done**.
 
+The backup from step 2 is listed under *Restore* as *before an update*. The
+player keeps the newest three of these and deletes older ones; a backup made
+with *Back up now*, or copied into the Backups share, is never deleted.
+
+*Check for updates* pressed while an update is being installed - the
+automatic one at night included - shows that install's steps instead, with
+*An update is being installed. Check for updates again once it has finished.*
+
 If something goes wrong during the install, the player puts the previous
-release back by itself.
+release back by itself. If an update stops without finishing, the panel lets
+go after about half a minute, and *Software update* shows what the updater
+last reported. When the player starts again after a power cut during the
+install, it finishes the install, or puts the previous release back.

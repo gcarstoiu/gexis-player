@@ -24,7 +24,9 @@
   import VolumeIcon from '../../lib/VolumeIcon.svelte';
   import { pull, bandDrag, TRAY_H } from './tray.svelte.js';
 
-  let { open, volume, active, onclose, onexternal, onactivity, onsettled, onhome, onvisualisation, rootless = false } = $props();
+  //: `armsAt`: before this (performance.now()), a tray that came down by
+  //: itself takes no touch on its level or mute (App.svelte, VOLUME_ARM_MS).
+  let { open, armsAt = 0, volume, active, onclose, onexternal, onactivity, onsettled, onhome, onvisualisation, rootless = false } = $props();
 
   const press = pressing();
 
@@ -52,6 +54,7 @@
   const DECIDE = 8;
   let pending = null;
   function down(event) {
+    if (performance.now() < armsAt) return;
     pending = { x: event.clientX, y: event.clientY, id: event.pointerId, way: null };
     event.currentTarget.setPointerCapture?.(event.pointerId);
   }
@@ -88,7 +91,7 @@
     if (pending?.way === 'slide') vol.up();
     pending = null;
   }
-  const toggleMute = () => vol.toggleMute();
+  const toggleMute = () => performance.now() >= armsAt && vol.toggleMute();
 
   // ---- open, closed and in between -------------------------------------------
   //: How far the tray is from closed, 0 to TRAY_H: the strip's band while it

@@ -70,3 +70,13 @@ with nothing are collaborations.
   are not used: Finding 108 measured the plugin only.
 - Photos smaller than the frame are scaled up and look soft on 1920×1080;
   nothing here finds larger ones.
+
+## Amended 2026-10-12 (George's answers)
+
+**"No photos" is believed for 30 days, then asked again** (George, answer
+7). An artist the plugin had no photos for was remembered as such for good,
+while the plugin gains photos as its sources do. An empty answer older than
+`fanart.EMPTY_RECHECK_S` (30 days, by its `.done` marker's own time) is now
+asked again the next time the artist's photos are wanted; empty answers kept from before
+this age out the same way. An artist whose photos were found is never asked
+again.

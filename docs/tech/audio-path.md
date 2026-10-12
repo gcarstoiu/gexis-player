@@ -60,7 +60,7 @@ refused rather than converted, because nothing in the chain is a `plug`
 |---|---|---|
 | `pcm.output` | `type meter` over `hw:sndrpihifiberry`, with the peppyalsa scope | go-librespot, bluealsa-aplay, and (through `default`) Plexamp |
 | `pcm.output_wait` | The same chain, but the slave is opened with `nonblock 0` so a busy DAC makes the open *wait* instead of failing (ADR-0095) | squeezelite only |
-| `gexis_softvol`, `gexis_softvol_wait` | **With Volume on Software (ADR-0124, ADR-0127):** `meter → softvol → card`; on HDMI `meter → softvol → plug → card` (the meter there since 2026-10-07, Finding 116; HDMI on Fixed is `plug → card` with no meter). One control for both, `Gexis Playback Volume` (`Gexis` to amixer), -90..0 dB in 0.25 dB steps; at 0 dB it passes every sample unchanged (Finding 115). The core makes the control at start and sets the saved level before anything plays (ALSA would make it at 0 dB), parks the card's own control at 0 dB only after that level reads back, and gives the card the level back when Hardware is chosen again. On every change of output the core closes its mixer handles and frees libasound's cached configuration (`volume.forget_mixers`): a running process otherwise keeps resolving `output` to the card it first saw | every renderer, through `output` / `output_wait` |
+| `gexis_softvol`, `gexis_softvol_wait` | **With Volume on Software (ADR-0124, ADR-0127):** `meter → softvol → card`; on HDMI `meter → softvol → plug → card` (the meter there since 2026-10-07, Finding 116; HDMI on Fixed is `plug → card` with no meter). One control for both, `Gexis Playback Volume` (`Gexis` to amixer), -90..0 dB in 0.25 dB steps; at 0 dB it passes every sample unchanged (Finding 115). Before any renderer starts, `gexis-softvol-restore.service` (ADR-0140) makes the control and writes the saved level, so a renderer resuming after a power cut never plays through it at the 0 dB ALSA makes it with; the core makes it again at start and sets the same level (`softvol_boot.start_level`), parks the card's own control at 0 dB only after that level reads back, and gives the card the level back when Hardware is chosen again. On every change of output the core closes its mixer handles and frees libasound's cached configuration (`volume.forget_mixers`): a running process otherwise keeps resolving `output` to the card it first saw | every renderer, through `output` / `output_wait` |
 | `ctl.output` | The DAC's control interface, so `amixer -D output` and the core reach the hardware mixer by name | gexis-core |
 | `pcm_scope.peppyalsa` | Level and 30-band spectrum analysis, written to FIFOs in `/run/gexis` | loaded inside whichever renderer has the device open |
 
@@ -228,7 +228,7 @@ sequenceDiagram
     SV->>ST: handoff lms → spotify (UI shows transition screen)
     SV->>ST: active = spotify
     SV->>LA: release()
-    LA->>LMS: status (remember mode, time, playlist_timestamp)
+    LA->>LMS: status (remember mode, time, playlist_timestamp, playlist_cur_index)
     LA->>LMS: pause 1, power 0
     LMS->>SQ: stop
     SQ-->>SQ: closes output_wait
@@ -251,13 +251,30 @@ Details worth knowing:
   1.5 s), longer if the takeover is still in flight (ADR-0094).
 - **Release before volume.** The incoming renderer's level is applied only
   after the outgoing one has let go; otherwise the outgoing audio would
-  briefly play at the new level.
+  briefly play at the new level. For the same reason a volume report from
+  the incoming renderer while the outgoing one is still being released is
+  not applied (`Supervisor.releasing_for`); its level is set once the
+  release is done.
 - **LMS pauses before powering off.** A playing player powered off comes back
   "playing" and squeezelite tries to open the device immediately; pausing
   first avoids that. When LMS later takes the device back, its
   `device_freed()` resumes playback and seeks back to the recorded position,
   but only if `playlist_timestamp` shows the queue was not changed meanwhile
-  (ADR-0027). The `restore_transport` setting can override whether it resumes.
+  and `playlist_cur_index` shows it is still on the same track (ADR-0027).
+  The `restore_transport` setting can override whether it resumes.
+- **The pause and power-off complete even when LMS is slow.** The supervisor
+  gives `release()` two seconds and moves on; the call itself is shielded, so
+  the power-off still lands when LMS answers. If LMS could not be reached at
+  all, the power-off is owed and sent when the connection is back, rather
+  than a player still on being read as LMS taking the device again.
+- **LMS takes the device back from an owed power-off** (George,
+  2026-10-12). Any acquisition cancels the debt. While one is owed, a
+  deliberate play counts as LMS acquiring: the connected player going to
+  `play` from a pause or stop seen on it, since there is no power-on edge to
+  say so (LMS carrying on to a squeezelite that reconnects after the ladder
+  does not count). A shielded release that finds LMS has acquired since it
+  began neither sends its power-off nor leaves one owed
+  (`LmsAdapter._acquisitions`).
 - **Echoes of our own release are harmless.** Releasing LMS makes LMS report
   "powered off"; that arrives as `relinquish("lms")`, which the supervisor
   ignores because LMS is no longer the active renderer.
@@ -274,7 +291,7 @@ toggle into ADR-0046's Output mode).
 | Mode | What happens | Claim |
 |---|---|---|
 | **Hardware** (default; was *Variable*) | The output's own volume control sets the level, on the scale read for that card (ADR-0117): on the DAC2 HD, `DAC Playback Volume`, 240 steps of 0.5 dB. Samples reach the card unmodified. | Bit-perfect up to the DAC chip |
-| **Software** | `meter → softvol → card` (HDMI: `meter → softvol → plug → card`); the card's own control parked at 0 dB. On an output with no control of its own, `Settings.restrict` greys Hardware and `Settings.value` answers Software, the next option (`volume_mode()` in `__main__.py` for start-up). | Bit-perfect at 100 % only (Finding 115) |
+| **Software** | `meter → softvol → card` (HDMI: `meter → softvol → plug → card`); the card's own control parked at 0 dB. On an output with no control of its own, `Settings.restrict` greys Hardware and `Settings.value` answers Software, the next option (`volume_mode()` in `softvol_boot.py` for start-up, shared by the core and the boot step). | Bit-perfect at 100 % only (Finding 115) |
 | **Fixed** | The output's control is set to its own 0 dB (240 on the DAC2 HD) and nothing may write it; the amplifier sets the level. Volume controls are hidden, with a padlock and a reason, not greyed (ADR-0046). | Nothing in the signal path is touched |
 
 Switching to Fixed while playing waits until playback stops, because a jump to
@@ -282,7 +299,11 @@ full scale into an amplifier set for a quieter signal is the loudest mistake
 the device can make (ADR-0018, ADR-0046; `_apply_output_mode()` in
 `__main__.py`). An output with no volume control (HDMI) no longer forces Fixed: Software
 takes Hardware's place there (ADR-0127). Between Hardware and Software the
-chain changes, so the renderers restart with the level carried across. In code, `volume.fixed_output()` gates `VolumeBridge.write_hardware()`,
+chain changes, so the renderers restart with the level carried across. From
+Fixed to Software the software stage starts at the level before Fixed, else
+at the Starting volume, else at -30 dB (`level_after_fixed()`,
+`SOFTWARE_LEVEL_FIRST_DB`); nothing is published in Fixed, and the card's own
+control, which Fixed holds at full scale, is never read for it. In code, `volume.fixed_output()` gates `VolumeBridge.write_hardware()`,
 the one function every write to the DAC goes through.
 
 ### One DAC, many sliders
@@ -297,7 +318,9 @@ ADR-0053 and ADR-0054:
 2. **One curve, ours.** The core maps a renderer's value onto the DAC with a
    single function, `renderer_value_to_hardware_raw(value, steps)` in
    `core/src/gexis_core/volume.py`. Default is cubic over a 60 dB span; zero is
-   silence; the `travel_curve` setting can switch to linear-in-dB.
+   silence, which is the bottom of the control's own range
+   (`hardware_silence()`), not raw 0: on the Pi's headphone jack, which runs
+   -10239..400, raw 0 is 0 dB; the `travel_curve` setting can switch to linear-in-dB.
 3. **Only the active renderer reaches the DAC.** Reports from inactive
    renderers are kept for display but never applied.
 4. **A renderer's value is never sent back to it.** The panel's 101 positions
@@ -358,8 +381,11 @@ Mechanics behind the picture:
   louder first report by handing the level again, and follows a quieter one.
 - **Ceiling.** `max_ceiling` (a percentage) shifts the top of every scale down
   rather than clipping, so 100 in any app means the ceiling (ADR-0052 §3).
-- **Mute** remembers the level and writes 0; any other change ends mute
-  (ADR-0034).
+- **Mute** remembers the level and writes silence, the bottom of the
+  control's range; any other change ends mute (ADR-0034).
+- **Single-value controls are read.** A control with one value (the jack's
+  `PCM`, many USB DACs) prints as `Mono:` rather than `Front Left:`, and both
+  forms are parsed.
 
 ### Choosing an output
 
@@ -369,13 +395,26 @@ whether an HDMI connector has anything plugged in. Each card brings its own
 control name (`DAC` on the HiFiBerry, something else on the headphone jack,
 none on HDMI) and its own scale, read per card (ADR-0117).
 
-Choosing one does not restart the core. The core stops the renderers,
+Choosing one does not restart the core. The core first stops whoever is
+playing (`Supervisor.stop_active`, as a change of volume type does; George,
+2026-10-12), so nothing resumes onto the new output by itself and the next
+source is a new takeover under its *Starting volume*; the output row runs
+`_change_output()`, which holds the `volume_change` lock a change of volume
+type takes, so the two never interleave. It then stops the renderers,
 rewrites `output.conf` (ALSA reads it only when a PCM is opened), frees its
 own mixer handles and libasound's cached configuration
 (`volume.forget_mixers`), makes the software control at the remembered level
-when Software is in force, and starts the renderers again. For 30 s afterwards
+when Software is in force, and starts the renderers again. Renderer plugins
+(Plexamp) are stopped and restarted with the built-ins, since they play
+through the same `output`; only sources that are switched on are restarted
+(`_restart_renderers()`), so a switched-off source stays off. Every level kept
+as a raw number - the one shown, Mute's, and the one before Fixed - is carried
+to the new output's scale through dB (`carry_raw()`, `_carry_levels()`); in
+Hardware the new card is given the level shown, in Fixed it is set to full
+scale. For 30 s afterwards
 the start guard answers a renderer's report above the level playing
-(`RESTART_HOLD_S`).
+(`RESTART_HOLD_S`) - now only for a source that took the device while the
+output was changing, since the one playing was stopped first.
 
 The chains `outputs.render()` writes:
 

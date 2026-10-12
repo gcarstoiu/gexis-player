@@ -3,6 +3,7 @@ here is invented; the shapes are the ones a real journal holds."""
 from __future__ import annotations
 
 import io
+import re
 import zipfile
 
 from gexis_core import problem_report as pr
@@ -77,6 +78,103 @@ def test_the_product_name_is_not_taken_for_a_private_one():
     s = pr.Scrubber()
     pr.learn(s, ROWS, {**VALUES, "device_name": "gexis"}.get)
     assert "gexis-core.service" in s.scrub(JOURNAL)
+
+
+def test_a_long_queue_over_a_long_journal_never_holds_up_the_rest_of_the_core():
+    """Review, 2026-10-12: the known values were one alternation, and the
+    regex engine holds the interpreter's lock for a whole call - a long
+    queue's titles over the journal kept the event loop (volume,
+    arbitration) waiting for seconds. A thread that wakes every 5 ms
+    stands in for the loop."""
+    import threading
+    import time
+    line = ("2026-10-07T08:12:49+02:00 box python[812]: 2026-10-07 08:12:49,004 gexis_core.library "
+            "INFO library: queue add 1234 -> 17 tracks at 0.0123 s\n")
+    text = line * 5000 + "2026-10-07T08:13:00+02:00 box python[812]: Jl title 2999 ends here\n"
+    s = pr.Scrubber()
+    for i in range(3000):       # a queue's worth, no two alike
+        s.know(f"{chr(65 + i % 26)}{chr(97 + i // 26 % 26)} title {i}", "title")
+    gaps, done = [], threading.Event()
+
+    def loop():
+        last = time.perf_counter()
+        while not done.is_set():
+            time.sleep(0.005)
+            now = time.perf_counter()
+            gaps.append(now - last)
+            last = now
+    ticker = threading.Thread(target=loop)
+    ticker.start()
+    try:
+        out = s.scrub(text)
+    finally:
+        done.set()
+        ticker.join()
+    assert "Jl title 2999" not in out and "title-1 ends here" in out
+    assert max(gaps) < 0.25, f"the loop waited {max(gaps):.2f} s"
+
+
+def test_a_journal_is_scrubbed_in_whole_lines():
+    s = pr.Scrubber()
+    s.know("Nina Example", "title")
+    text = "".join(f"line {n} by Nina Example at 10.0.4.{n % 200}\n" for n in range(400))
+    assert "".join(pr._pieces(text, size=100)) == text
+    assert all(p.endswith("\n") for p in pr._pieces(text, size=100))
+    out = s.scrub(text)
+    assert "Nina" not in out and "10.0.4." not in out and out.count("\n") == 400
+
+
+def _line(logger, message, level="INFO"):
+    return (f"2026-10-12T09:00:00+02:00 box python[812]: 2026-10-12 09:00:00,001 gexis_core.{logger} "
+            f"{level} {message}")
+
+
+def test_the_geocoders_own_name_for_the_place_is_taken_out():
+    """Review, 2026-10-12: the owner types "smalltown, xx" and Open-Meteo
+    answers with its own spelling, which no known value matched."""
+    s = pr.Scrubber()
+    pr.learn(s, ROWS, {**VALUES, "weather_location": "smalltown, xx"}.get)
+    out = s.scrub("\n".join([
+        _line("weather", "weather: 'smalltown, xx' is Smålltown-on-Sea, XX (52.1235, 13.5432)"),
+        _line("idle_page", "idle: forecast for Smalltown asked"),
+        "2026-10-12T09:00:02+02:00 box python[812]: GET https://api.open-meteo.com/v1/forecast?latitude=52.1235&longitude=13.5432&forecast_days=4",
+    ]))
+    for private in ("Smålltown", "Sea", "Smalltown", "smalltown", "52.12", "13.54"):
+        assert private not in out, private
+    assert re.search(r"weather: 'name-1' is place-1 \(place-\d\)", out) and "forecast_days=4" in out
+
+
+def test_library_artists_the_covers_sweep_names_are_taken_out():
+    """Review, 2026-10-12: the sweep logs artists from the library, which the
+    device knows only while they play, and "failed" puts the line into the
+    public issue."""
+    s = pr.Scrubber()
+    log = "\n".join([
+        _line("artwork_sweep", "sweep: Example Band failed (Cannot connect to host example.invalid:443)"),
+        _line("artwork_sweep", "sweep: quietname scored 71, below the threshold"),
+        _line("artwork_sweep", "sweep: 'Other Example' failed (timed out)"),
+        _line("artwork_sweep", "sweep: could not store fanart-artist/'example band' (database is locked)"),
+        _line("artwork_sweep", "sweep: could not read the last run (no such file)"),
+        _line("artwork_sweep", "sweep: covers finished - 917 of 917, 870 found"),
+    ])
+    out = s.scrub(log)
+    for private in ("Example Band", "quietname", "Other Example", "example band"):
+        assert private not in out, private
+    for kept in ("sweep: title-1 failed (Cannot connect", "sweep: title-2 scored 71, below the threshold",
+                 "sweep: 'title-3' failed (timed out)", "could not store fanart-artist/'title-4' (database",
+                 "could not read the last run (no such file)", "covers finished - 917 of 917"):
+        assert kept in out, kept
+    assert "Example" not in pr.last_errors(out) and "title-1 failed" in pr.last_errors(out)
+
+
+def test_a_known_value_is_found_in_any_case_but_the_logs_own_words_stay():
+    s = pr.Scrubber()
+    pr.learn(s, ROWS, VALUES.get, now_playing=("Warning", "Nina Example"))
+    out = s.scrub("\n".join([_line("adapters.lms", "lms: NINA EXAMPLE - warning", level="WARNING"),
+                              _line("enrichment", "enrichment: nina example has no Warning")]))
+    assert "nina" not in out.lower() and "warning" not in out
+    assert " WARNING lms: title-" in out and "has no title-" in out
+    assert pr.last_errors(out).count("WARNING") == 1
 
 
 def test_settings_show_choices_and_hide_what_a_person_typed():

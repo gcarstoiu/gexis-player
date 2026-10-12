@@ -13,7 +13,7 @@
         "note": "Where the sound goes. Over HDMI the sound is not bit-perfect; HDMI has no volume control of its own, so its volume is Software or Fixed, and the visualiser moves only on Software.",
         "optionsFrom": "output_device",
         "default": null,
-        "warn": "Playback stops while the output changes."
+        "warn": "Playback stops for the change; start it again when ready."
       },
       {
         "key": "sound_card_board",
@@ -1473,7 +1473,9 @@
         "default": null,
         "restart": true,
         "warn": "Changing it will restart the device.",
-        "placeholder": "Device name"
+        "placeholder": "Device name",
+        "pattern": "[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029\\ud800-\\udfff]*",
+        "invalid": "A name is one line of text."
       },
       {
         "key": "timezone",

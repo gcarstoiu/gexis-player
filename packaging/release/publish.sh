@@ -72,12 +72,30 @@ channel_file() {  # channel tag -> writes, signs and uploads channels/<channel>
 	local channel="$1" tag="$2" work serial version parts
 	work=$(mktemp -d)
 	# The serial only increases (ADR-0108): read what is published, add one.
-	if curl -fsSL -o "$work/current" "$BASE/channels/$channel" 2>/dev/null; then
+	# **1 only when there is no file yet** (the review of 2026-10-12): any
+	# failed fetch - a 5xx, the rate limit above, no network - used to mean
+	# "none yet", and a signed Serial: 1 replaced the real file; every device
+	# that had seen more refused the channel ("serial went down") for good.
+	# A 404 is asked again of the release itself before it is believed.
+	local code previous
+	code=$(curl -sSL -o "$work/current" -w '%{http_code}' "$BASE/channels/$channel" 2>/dev/null) || code=failed
+	case "$code" in
+	200)
 		gpg --batch --verify "$work/current" 2>/dev/null || { echo "ERROR: the published $channel file does not verify; not moving it" >&2; exit 1; }
-		serial=$(( $(sed -n 's/^Serial: //p' "$work/current") + 1 ))
-	else
+		previous=$(gpg --batch --decrypt "$work/current" 2>/dev/null | sed -n 's/^Serial: //p')
+		[[ "$previous" =~ ^[0-9]+$ ]] || { echo "ERROR: the published $channel file has no serial; not moving it" >&2; exit 1; }
+		serial=$((previous + 1))
+		;;
+	404)
+		if exists channels && gh_retry gh release view channels --repo "$REPO" --json assets --jq '.assets[].name' | grep -qxF "$channel"; then
+			echo "ERROR: $BASE/channels/$channel answered 404, but the channels release has it; not moving it" >&2; exit 1
+		fi
 		serial=1
-	fi
+		;;
+	*)
+		echo "ERROR: could not read the published $channel file ($code); not moving it - run again later" >&2; exit 1
+		;;
+	esac
 	curl -fsSL -o "$work/parts" "$BASE/$tag/parts" || { echo "ERROR: $tag has no parts file" >&2; exit 1; }
 	gpg --batch --verify "$work/parts" 2>/dev/null || { echo "ERROR: $tag's parts file does not verify" >&2; exit 1; }
 	version=$(gpg --batch --decrypt "$work/parts" 2>/dev/null | sed -n 's/^Release: //p')

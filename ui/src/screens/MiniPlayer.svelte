@@ -272,21 +272,52 @@
     }
   }
 
-  function fromPointer(event) {
-    const r = event.currentTarget.getBoundingClientRect();
-    local = Math.round(Math.min(1, Math.max(0, (event.clientX - r.left) / r.width)) * 100);
+  function fromPointer(target, x) {
+    const r = target.getBoundingClientRect();
+    local = Math.round(Math.min(1, Math.max(0, (x - r.left) / r.width)) * 100);
     send(local);
   }
-  function down(event) {
-    dragging = true;
-    settling = true;
+  //: **The slider waits to see which way the finger goes** (code review,
+  //: 2026-10-12; the bar tray's rule of 2026-10-04, BarTray.svelte). It sat
+  //: at the foot of the phone, where a thumb starts a swipe, and set the
+  //: level wherever one landed - 20% to 85% from a swipe that meant nothing
+  //: of the kind. Now a move of 8 px decides: mostly up or down is not the
+  //: slider's, and sends nothing; sideways is, and follows the finger. A tap
+  //: sets the level, on lift.
+  const SLIDE_DECIDE = 8;
+  let landed = null;
+  function slideDown(event) {
+    landed = { x: event.clientX, y: event.clientY, way: null };
     event.currentTarget.setPointerCapture?.(event.pointerId);
-    fromPointer(event);
   }
-  function move(event) {
-    if (dragging) fromPointer(event);
+  function slideMove(event) {
+    if (!landed) return;
+    if (landed.way === null) {
+      const dx = event.clientX - landed.x;
+      const dy = event.clientY - landed.y;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < SLIDE_DECIDE) return;
+      if (Math.abs(dy) > Math.abs(dx)) {
+        landed = null;
+        return;
+      }
+      landed.way = 'slide';
+      dragging = true;
+      settling = true;
+    }
+    fromPointer(event.currentTarget, event.clientX);
   }
-  function up() {
+  function slideUp(event) {
+    if (landed?.way === null) {
+      // A tap: the level where it landed.
+      settling = true;
+      fromPointer(event.currentTarget, landed.x);
+    }
+    landed = null;
+    dragging = false;
+    if (!inFlight && queued === null) settling = false;
+  }
+  function slideCancel() {
+    landed = null;
     dragging = false;
     if (!inFlight && queued === null) settling = false;
   }
@@ -486,10 +517,10 @@
         aria-valuemin="0"
         aria-valuemax="100"
         aria-valuenow={pct}
-        onpointerdown={down}
-        onpointermove={move}
-        onpointerup={up}
-        onpointercancel={up}
+        onpointerdown={slideDown}
+        onpointermove={slideMove}
+        onpointerup={slideUp}
+        onpointercancel={slideCancel}
         onkeydown={key}
       >
         <span class="mini__track"><span class="mini__fill" style:width={`${pct}%`}></span></span>

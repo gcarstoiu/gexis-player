@@ -122,6 +122,9 @@ def _board_tags() -> dict[str, str]:
 
 OPTION_RESOLVERS = {"timezones": _timezones, "skin_corpus": tuple, "output_device": tuple,
                     "screens": _screens, "boards": _boards}
+#: Sources only the daemon can answer: the resolvers above are placeholders
+#: for them, and the daemon's own are injected into `Settings`.
+INJECTED_ONLY = {"skin_corpus", "output_device"}
 
 #: A word beside an option in the picker, by source (round 2's Attached
 #: screen: *Tested* / *Untested* on every model).
@@ -420,7 +423,19 @@ def load_seed(settings_rows: dict[str, dict], path: Path = SEED_PATH) -> dict[st
             logger.warning("settings: %s has unknown setting %r", path, key)
             continue
         try:
-            checked[key] = validate(row, value)
+            if row["type"] == "choice" and row.get("optionsFrom") in INJECTED_ONLY:
+                # **Checked for its form only** (review, 2026-10-12): against
+                # the placeholder resolver every seeded output or skin was
+                # "not an available option" and dropped. Nor is the daemon's
+                # own resolver the test - which sound cards are there at
+                # boot is not which will be. Such a value is then read as a
+                # stored one is: left alone, with what cannot be had said
+                # through `unavailable`.
+                if not isinstance(value, str) or not value.strip():
+                    raise InvalidValue("expected the name of an option")
+                checked[key] = value.strip()
+            else:
+                checked[key] = validate(row, value)
         except (InvalidValue, NotSettable) as exc:
             logger.warning("settings: %s: %s is invalid: %s", path, key, exc)
     return checked

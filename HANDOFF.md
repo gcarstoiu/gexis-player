@@ -6,58 +6,59 @@ Last updated: 2026-10-11 (on R2D2).
 
 Branches: **`phase-13b`** in the main checkout holds the documents and shared
 work; **`phase-13d`** in `~/projects/gexis-player-13d` is the release branch,
-and `phase-13b` is merged into it after each docs change. The worktrees
-`~/projects/gexis-player-r099` and `-r0100` sit at their tags.
+and `phase-13b` is merged into it after each docs change. No release
+worktree is left (each is made at its tag for the image, then removed).
 Earlier narrative: `docs/HANDOFF-ARCHIVE.md` (0.9.8 and 0.9.9 moved there
-2026-10-11).
+2026-10-11; 0.10.0 and the old *Left before the first public release*
+moved there the same evening).
 
-**0.10.0 cut 2026-10-11 for Testing** (tag `v0.10.0`, release `r0.10.0`,
-serial 34, image `image/deploy/2026-10-11-gexis-player-v0.10.0.img`, 113
-checks; notes approved by George). **PR #59 open - George merges it.**
-Previewed on sofapi step by step through the day. In it:
-- **Display standby** (ADR-0135): the phone's *Screen* button; touch, music
-  and the button wake it; *Scheduled standby* at up to six owner-set times
-  with days (the new `intervals` row, our own time grid); woken during one,
-  back off after 2 min unused (1-30). Output off measured on the 10.1"
-  (touch still reaches the page; a "No signal" box for ~10 s, 30 s in).
-  **Not yet seen:** the bars and the 13.3"; waking a bar keeping its turn
-  (re-applied by the code); the schedule overnight on a real clock.
-- **Display in sections**: Panel, Display standby, Touchpad, Volume, Photo
-  service and location, Home screen, Idle screen, Visualiser; a background
-  each for the home and idle screens (`waiting_*` keys); an *Idle screen*
-  switch, off on new players, kept on by a migration (ADR-0133 amended three
-  times).
-- **Space pictures removed** (NASA/ESA download and the 12 built-in); Space
-  and Calm are Pixabay searches; Seasons for Gexis wallpapers only; Holidays
-  supersede online topics. A stored option a row no longer offers falls away
-  when read.
-- **Weather icon motion** (Finding 118: the idle screen's half core was its
-  icons' animation; one animation costs what eleven do).
-- **A network lost after boot** opens the setup network after 2 min (ADR-0134);
-  simulated on sofapi, rejoined on its own at +7 min. A phone page that saw
-  "joining" no longer gets stuck on setup.
-- Settings: explanations beside the options (ten sheets); such sheets stay
-  open until Close; only Fixed asks to confirm in Volume.
+**0.10.1 cut 2026-10-11 for Testing** (tag `v0.10.1`, release `r0.10.1`,
+serial 35, image `image/deploy/2026-10-11-gexis-player-v0.10.1.img`, 113
+checks; notes approved by George). **PR #60 merged** 2026-10-11; `main`
+merged into both branches, `release-0.10.1` deleted, the release worktrees
+removed. The GitHub forms on `main` now have text fields, which links fill.
+In it: the player switcher (ADR-0136); plugins told when the output is Fixed
+and Plexamp held at 100 there (ADR-0137, plugin **0.4.7** - 0.4.6 ran a second
+poller and lost Plexamp after a restart in Fixed; never released); every
+volume type change stops playback, and leaving Fixed restores the level
+before it (ADR-0046 amended); Space as an OR of astronomy words (ADR-0133);
+hardware feedback reviewed through and fixed (ADR-0126 amended twice); the
+problem report in three steps with a checklist and one Send step shared with
+hardware feedback (ADR-0138); Copy over http (`lib/copy.js`); the phone's
+socket reconnecting on return; stepped sheets anchored at the top; package
+versions held at 7 hex characters (`build.sh --abbrev=7`).
 
-**Devices.** **sofapi** (Waveshare 10.1", Lyrion queue of George's - do not
-clear it) and **ShelvesPi** (the bar) both run the `phase-13d` preview
-0.10.0+git14 (ADR-0136's switcher needs two players), the bar's first update
-since 0.9.8. George's reset-and-restore check on the bar is still owed, now
-on this. **guestpi** offline.
+**Confirmed by George on the previews:** problem report and hardware feedback
+(steps, Send both ways, pattern and tones, also on the panel), the instant
+option tick, Copy, the switcher. **Still owed by George on 0.10.1:** volume
+type changes (g04, g05), Plexamp's slider in Fixed (g22), the Space topic.
+**For George, not blocking:** the bar's Plexamp needs a new claim token (Plex
+signed it out); the bar on its own supply, then Claude reads
+`vcgencmd get_throttled` again. The GitHub forms reached `main` with 0.10.1's merge.
 
-**Next release, 0.10.1 - George testing first** (2026-10-11: "Let me test
-some more and then we can cut another release"). In it, on `phase-13d` and
-on both players as a preview (0.10.0+git29/31): the player switcher (ADR-0136;
-a 34 px square at the right of the Settings title; the list kept warm, about
-10 ms); setup's Keep warning only for a screen that changes what is applied
-(ADR-0109 amended); the settling screen's *Installing…* step (ADR-0128
-amended). Notes to be drafted and approved when he says so.
+**Devices.** sofapi (Waveshare 10.1"; its Lyrion queue is George's - do not
+clear it) and ShelvesPi (the bar) run the `phase-13d` preview 0.10.0+git75,
+which 0.10.1 supersedes on the Testing channel. guestpi offline.
 
-**Checked by George 2026-10-11:** a clean setup with a restore; setup
-recognising the bar; the boot seam; display standby on the bar. **Still
-owed:** standby on the 13.3" (guestpi offline); the tests listed below.
-Phase 13g (the player in Home Assistant) is queued before themes, Phase 14a
-(a sound bar on optical) after them; HDMI audio on the second port to revisit.
+**The final code check is done** (2026-10-12, Finding 119): a multi-agent
+review, 78 reported, 77 confirmed by a second agent, all addressed - 72
+fixed outright, 3 in part and 2 open on George's answers. Fixed by six agents
+in worktrees, merged on `phase-13d` with the core's wiring after; the
+temporary post-reset log (c20) and passwordless sudo (ADR-0139, c11) are gone
+with it. **Suite 2,206 passed.** Previewed on sofapi and the bar
+(0.10.1+git98: clean start, routes answer, the problem report scrubs the
+weather town). **Not run on a device:** the headphone jack, output and
+volume-type switches after the carry-through-dB change, a factory reset, a
+cut-short update, setup over Ethernet. **Next: 0.10.2 on Testing**, notes to
+George; then George's questions (`scratchpad` list in the session; the
+open ones are in Finding 119 and the hand-back of 2026-10-12).
+
+**Then the first public release** (George, 2026-10-12): it waits for guestpi
+(Phase 13d's two tests); Imager: the image file and *Use custom* at the
+release, our own repository and the community application after; Stable
+promotion with the image file (c16); README's "first Stable release is next".
+George to test: 0.10.1's owed items, a freshly flashed card without a
+restore, 13f's look. Phase 13g after the release.
 
 **At the first Stable release** (George, 2026-10-09): revisit how the image
 reaches people - most likely all three of ADR-0021's routes: the image file
@@ -65,20 +66,6 @@ with Raspberry Pi Imager's *Use custom* (`docs/INSTALL.md`, written), our own
 Imager repository, and an application to Imager's community categories
 (Raspberry Pi reviews it). The image file is published only on promotion to
 Stable, so the installation guide's download works from then.
-
-**Left before the first public release.** Tested by George 2026-10-10 on
-sofapi: software volume kept across a reboot for LMS and Spotify; Fixed
-chosen while playing waits for a pause (by design; now shown, ADR-0046
-amended - not yet seen by George). Still to test: Fixed taking effect at a
-pause, the volume-jump fixes (Spotify after a mode change, Bluetooth's late
-level), HDMI with Software volume (visualiser; Bluetooth with the volume
-raised), the small fixes, Hardware feedback on the real panel (pattern,
-taps, tones, GitHub - labels exist), and a **freshly flashed card** (the
-Plugins step, the settling screen, the screen applied in setup). The update
-safety can only be seen on the release after 0.9.4. Claude to do: **the final thorough code check**
-(George: everything once more; volume, the adapters and arbitration must
-work perfectly from the start), the first public release, and removing
-passwordless sudo from the image - last.
 
 **Learned 2026-10-07/10:** now LESSONS 65-68, and the build notes in the
 technical guide's release section (`docs/tech/updates-and-releases.md` §4).

@@ -367,3 +367,63 @@ async def test_forgetting_something_that_is_not_paired_says_so():
     bus = _Bus(_tree())
     assert await bd.forget(bus, "Someone's Laptop") == (False, "That device is not paired.")
     assert bus.remover.removed == []
+
+
+# ── bluetoothd restarting under a running core (review, 2026-10-12) ──────
+
+class _SignalBus:
+    """As much of a MessageBus as `follow_bluez` uses: one match rule asked
+    for, one handler kept."""
+
+    def __init__(self):
+        self.calls, self.handlers = [], []
+
+    async def call(self, message):
+        self.calls.append(message)
+
+    def add_message_handler(self, handler):
+        self.handlers.append(handler)
+
+    def owner_changed(self, name, old, new):
+        from dbus_next import Message, MessageType
+        message = Message(path="/org/freedesktop/DBus", interface="org.freedesktop.DBus",
+                          member="NameOwnerChanged", message_type=MessageType.SIGNAL,
+                          signature="sss", body=[name, old, new])
+        for handler in self.handlers:
+            handler(message)
+
+
+@pytest.mark.asyncio
+async def test_bluetoothd_coming_back_registers_the_agent_again():
+    """BlueZ keeps agents in memory only, and the core's connection is to the
+    bus, not to bluetoothd - so after a bluez upgrade or a crash nothing
+    registered the agent again, and pairing stopped asking on the panel."""
+    bus, again = _SignalBus(), []
+
+    async def back():
+        again.append(True)
+
+    await ba.follow_bluez(bus, back)
+    [rule] = bus.calls
+    assert rule.member == "AddMatch" and "arg0='org.bluez'" in rule.body[0]
+    bus.owner_changed("org.bluez", ":1.5", "")          # going away: nothing to do
+    bus.owner_changed("org.example.Other", "", ":1.9")  # someone else's name
+    await asyncio.sleep(0)
+    assert again == []
+    bus.owner_changed("org.bluez", "", ":1.12")         # back
+    await asyncio.sleep(0)
+    assert again == [True]
+
+
+@pytest.mark.asyncio
+async def test_a_failed_registration_after_a_restart_is_logged_not_lost(caplog):
+    bus = _SignalBus()
+
+    async def back():
+        raise RuntimeError("adapter not there yet")
+
+    await ba.follow_bluez(bus, back)
+    bus.owner_changed("org.bluez", "", ":1.12")
+    for _ in range(3):
+        await asyncio.sleep(0)
+    assert "adapter not there yet" in caplog.text

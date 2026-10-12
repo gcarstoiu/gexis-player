@@ -176,3 +176,25 @@ on the panel. Its first-try start is still to be seen on hardware.
 lost after boot, gone for two minutes, opens the setup network as boot does
 (George). §3's "at boot only" holds for the decision at boot; the watch after
 it is ADR-0134's.
+
+## Amended 2026-10-12 (George's answers)
+
+§3's *"if no phone is associated"* now holds as written only for a new
+device (setup needed), which has no saved network to go back to. **A
+configured device is held off its saved Wi-Fi only while someone is using the
+setup page** (George, final code review): a phone that joined the setup
+network by itself and never opened the page kept a configured player off its
+home Wi-Fi for ever. At each 5-minute retry, a phone on the setup network
+holds the device when either is true:
+
+- a phone asked the page (`/`) or a `/setup/...` route in the last
+  `SETUP_ACTIVE_S`, 600 s (`SetupNetwork.page_used`, noted by `wsserver.py`'s
+  `_note_setup_use` middleware; the panel's loopback requests do not count).
+  The page's live status comes over the state socket, which is not counted,
+  so `SetupPage.svelte` asks `/setup/status` once a minute while in front;
+- the retry first found a phone on the network less than `SETUP_ACTIVE_S` ago
+  (`_phone_since`, cleared when a retry finds none): someone who has just
+  joined to set the player up must not see it leave before opening the page.
+
+Otherwise the retry scans and rejoins a saved network in range, as it would
+with no phone on it.

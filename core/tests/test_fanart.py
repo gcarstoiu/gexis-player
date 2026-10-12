@@ -99,3 +99,67 @@ def test_a_collaboration_lms_lists_as_its_own_artist_falls_back_to_the_first(tmp
     assert len(run(f.for_artist("Snoop Dogg feat. Mystikal"))) == 1
     assert len(run(f.for_artist("Snoop Dogg feat. Mystikal", artist_id=12))) == 1, "by LMS id too"
     assert run(f.for_artist("Nick Cave")) == []
+
+
+def test_lms_away_or_the_plugin_not_there_yet_is_not_remembered_as_no_photos(tmp_path):
+    """Review, 2026-10-12: on a fresh player the plugin is installed only
+    after Lyrion restarts; every artist played before then kept an empty
+    `.done` for good, and a failed name lookup was kept as "no artist"."""
+    lms = FakeLms({"Example Artist": 7}, {7: ["https://x/1.jpg"]})
+    down = True
+
+    async def rpc(command, timeout=None):
+        if down:
+            raise ConnectionError("Lyrion restarting")
+        return await lms.rpc(command, timeout)
+    f = Fanart(rpc, download, BASE, directory=tmp_path)
+    assert run(f.for_artist("Example Artist")) == []
+    assert run(f.photos(7)) == []
+    assert not (tmp_path / "7" / ".done").exists()
+    down = False
+    assert len(run(f.for_artist("Example Artist"))) == 1, "asked again once LMS answers"
+    assert len(run(Fanart(rpc, download, BASE, directory=tmp_path).photos(7))) == 1, "and after a restart"
+
+
+def test_photos_named_but_none_downloaded_are_asked_for_again(tmp_path):
+    lms = FakeLms({}, {7: ["https://x/1.jpg", "https://x/2.jpg"]})
+    offline = True
+
+    async def fetch(url):
+        return None if offline else b"jpeg"
+    f = Fanart(lms.rpc, fetch, BASE, directory=tmp_path)
+    assert run(f.photos(7)) == [] and not (tmp_path / "7" / ".done").exists()
+    offline = False
+    assert len(run(f.photos(7))) == 2
+
+
+def test_a_no_photos_answer_is_asked_again_after_thirty_days(tmp_path):
+    """George, 2026-10-12 (answer 7): an artist found with no photos is asked
+    again once the answer is a month old - which also clears the empty
+    answers players kept from before LMS-away stopped being one."""
+    import os
+    import time
+
+    lms = FakeLms({}, {})
+    f = Fanart(lms.rpc, download, BASE, directory=tmp_path)
+    assert run(f.photos(8)) == []
+    marker = tmp_path / "8" / ".done"
+    young = time.time() - fa.EMPTY_RECHECK_S + 3600
+    os.utime(marker, (young, young))
+    assert run(f.photos(8)) == [] and len(lms.calls) == 1, "younger than 30 days: believed"
+    lms.photos[8] = ["https://x/1.jpg"]
+    old = time.time() - fa.EMPTY_RECHECK_S - 3600
+    os.utime(marker, (old, old))
+    assert len(run(f.photos(8))) == 1 and len(lms.calls) == 2, "older: asked again"
+
+
+def test_an_answer_with_photos_is_not_asked_again_however_old(tmp_path):
+    import os
+    import time
+
+    lms = FakeLms({}, {7: ["https://x/1.jpg"]})
+    f = Fanart(lms.rpc, download, BASE, directory=tmp_path)
+    assert len(run(f.photos(7))) == 1
+    old = time.time() - 10 * fa.EMPTY_RECHECK_S
+    os.utime(tmp_path / "7" / ".done", (old, old))
+    assert len(run(f.photos(7))) == 1 and len(lms.calls) == 1

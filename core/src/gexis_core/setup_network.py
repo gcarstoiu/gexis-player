@@ -13,7 +13,8 @@ until it is restarted (George, 2026-09-28: *"Restarting is the way"*).
 **One radio.** The setup network takes `wlan0` from the home Wi-Fi, so it
 opens only when there is no home Wi-Fi to take it from, and a retry every five
 minutes gives it back when a saved network comes into range - only while no
-phone is on it, so nobody's setup is cut off (ADR-0031 amendment 7).
+phone is on it, so nobody's setup is cut off (ADR-0031 amendment 7). A phone
+counts only while someone is using the setup page (George, 2026-10-12).
 
 **A trial on a configured device** (gexis has no Ethernet, ADR-0031's
 Testing): `/run/gexis-setup-trial` present at startup opens the setup network
@@ -76,6 +77,12 @@ WLAN_READY_S = 20.0
 FAILED_RETRY_S = 15.0
 #: How often the panel's step follows the phones on the setup network.
 PHONES_EVERY_S = 2.0
+#: **A phone holds a configured player off its saved Wi-Fi only while someone
+#: is using the setup page** (George, 2026-10-12, the final code review): a
+#: request to the page or a `/setup/...` route this recently. A phone that
+#: joined the setup network by itself and never opened the page held the
+#: player off its home Wi-Fi for ever.
+SETUP_ACTIVE_S = 600.0
 RFKILL = Path("/sys/class/rfkill")
 #: NetworkManager's dnsmasq writes the setup network's leases here.
 LEASES = Path("/var/lib/NetworkManager/dnsmasq-wlan0.leases")
@@ -340,6 +347,12 @@ class SetupNetwork:
         #: move to the next step").
         self._phones = 0
         self._page_opened = False
+        #: When a phone last asked the setup page anything (`SETUP_ACTIVE_S`).
+        self._page_used_at: float | None = None
+        #: When the retry first found a phone on the setup network: one that
+        #: has just joined counts as about to use the page, for as long as
+        #: a use of the page would (`SETUP_ACTIVE_S`).
+        self._phone_since: float | None = None
         #: The last word, shown on the panel for a few seconds after a
         #: successful join: where the device went and what it found.
         self._finished: dict | None = None
@@ -538,6 +551,17 @@ class SetupNetwork:
             self._page_opened = True
             self._publish()
 
+    def page_used(self) -> None:
+        """A phone asked the setup page something: the page itself or a
+        `/setup/...` route. Noted only while setup is on, so the Settings
+        page used on the home network before it was lost is not somebody
+        setting the player up."""
+        if self._state in ("open", "failed", "joining"):
+            self._page_used_at = self._clock()
+
+    def _page_in_use(self) -> bool:
+        return self._page_used_at is not None and self._clock() - self._page_used_at < SETUP_ACTIVE_S
+
     async def _watch_phones(self) -> None:
         """Keep `phones` current while the setup network is open. The last
         phone leaving takes the panel back to the first step."""
@@ -621,7 +645,12 @@ class SetupNetwork:
             await self._nmcli("connection", "delete", ssid)
             self._target = None
             self._failed, self._reason = ssid, reason
-            if hosting or self._needed:
+            # **Back to the setup network only when it was the way in, or
+            # there is no other** (review, 2026-10-12). Setup over the cable
+            # (ADR-0031 amendment 8) is not hosting, and a mistyped password
+            # there raised the setup network with no retry behind it, and left
+            # Finish without Wi-Fi refused because the state was not 'online'.
+            if hosting or (self._needed and online(await self._devices()) is None):
                 await self.open()
             else:
                 self._state = "online"
@@ -750,24 +779,73 @@ class SetupNetwork:
                 return None
             await self._sleep(POLL_S)
 
+    async def _cable_back(self) -> bool:
+        """Leave the setup network for a cable that has an address. A new
+        player waits while a phone is on it: that phone may be half-way
+        through setup, and setup over the cable can start once it leaves."""
+        devices = await self._devices()
+        if not ethernet_address(devices):
+            return False
+        if self._needed and await self._count_stations() > 0:
+            return False
+        where = next(d for d, k, st, _ in devices if k == "ethernet" and st.startswith("connected"))
+        await self.close()
+        self._state, self._target = "online", None
+        self._reason = self._failed = None
+        if self._needed:
+            self._lan_address = await self._address_of(where)
+        self._publish()
+        logger.info("setup: on the network through %s again; %s closed", where, SSID)
+        return True
+
     async def _hold(self, retry: float) -> None:
-        """While open: every `retry` seconds with nobody on it, look for a
-        saved network and go back to it. A join that fails brings the setup
+        """While open: every `retry` seconds with nobody on it - or nobody
+        using the page, `SETUP_ACTIVE_S` - look for a saved network and go
+        back to it. A join that fails brings the setup
         network back.
 
         **Until the device is online, not while the network is open**: a
         join from setup takes the network down and may bring it back, and a
-        loop that ended when it went down would never retry again."""
+        loop that ended when it went down would never retry again.
+
+        **A cable that gets its address back ends it too** (review,
+        2026-10-12). Only a saved Wi-Fi in range used to, so an Ethernet-only
+        player that booted before its router, or lost it for two minutes
+        (ADR-0134), kept the setup network up until a reboot - and every phone
+        on the LAN got the setup page. ADR-0104 §3: the setup network never
+        opens while Ethernet has an address. Looked for every `WATCH_S`, not
+        at the five-minute retry, since the cable takes nothing from anyone."""
+        last = self._clock()
         while self._state != "online":
-            await self._sleep(FAILED_RETRY_S if self._state == "failed" else retry)
+            due = retry - (self._clock() - last)
+            await self._sleep(FAILED_RETRY_S if self._state == "failed" else min(WATCH_S, max(due, POLL_S)))
             if self._busy or self._state not in ("open", "failed"):
                 continue
+            if await self._cable_back():
+                return
             if self._state == "failed":
                 await self.open()
                 continue
-            if await self._count_stations() > 0:
-                logger.info("setup: a phone is on %s; not looking for other networks", SSID)
+            if self._clock() - last < retry:
                 continue
+            last = self._clock()
+            # A new player has no saved network to go back to, so any phone
+            # still holds it as before; a configured one is held only by a
+            # phone using the page (SETUP_ACTIVE_S).
+            phones = await self._count_stations()
+            if phones == 0:
+                self._phone_since = None
+            elif self._phone_since is None:
+                self._phone_since = self._clock()
+            if phones > 0:
+                # A phone that joined in the last SETUP_ACTIVE_S counts as
+                # about to open the page: someone who has just joined to set
+                # the player up must not see it leave first.
+                joined_lately = self._clock() - self._phone_since < SETUP_ACTIVE_S
+                if self._needed or self._page_in_use() or joined_lately:
+                    logger.info("setup: a phone is on %s; not looking for other networks", SSID)
+                    continue
+                logger.info("setup: a phone is on %s but nobody has used the page for %d s", SSID, SETUP_ACTIVE_S)
             saved = await self._saved_wifi()
             if not saved:
                 continue

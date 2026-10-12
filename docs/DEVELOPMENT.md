@@ -2793,7 +2793,8 @@ Merged as PR #42; ten releases since (0.3.0-0.8.6) have gone through it.
    Manual / Automatic (ADR-0110, ADR-0116). 7. **Met** - ADR-0105 §7.
    8. **Met** - Finding 105, measured on `gexis`.
 **Still before the first public release, not part of 13c:** the `pi` user's
-passwordless `sudo` (above).
+passwordless `sudo` (above). *Decided 2026-10-12 (ADR-0139):* the public
+image has none; `DEV_SUDO="yes"` at provisioning gives it to a test card.
 
 ### Phase 13d — DACs we have not tested
 

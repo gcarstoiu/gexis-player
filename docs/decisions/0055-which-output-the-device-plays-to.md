@@ -250,3 +250,18 @@ does. Not yet measured on that chain: Bluetooth, rates above 44.1 kHz.
   record is what makes a second output reachable. Wants its own decision:
   does the card follow the output, or is arbitration scoped to the DAC by
   definition?
+
+## Amended 2026-10-12 (George's answers)
+
+**A change of output stops the source playing first** (George, answer 12:
+*"Yes"*), as a change of volume type does
+([ADR-0046](0046-fixed-output-hides-the-slider.md) amended 2026-10-11).
+`_switch_output` now calls `Supervisor.stop_active` before it stops the
+renderers, so nobody holds the device and nothing resumes onto the new
+output by itself; whoever plays next is a new takeover and starts under its
+*Starting volume*. The output row goes through `_change_output`, under the
+`volume_change` lock a change of volume type takes, so the two never
+interleave. Settings says so when it happens while playing (*"Output: X.
+Playback stopped for the change; start it again when ready."*), and the
+row's warning reads *"Playback stops for the change; start it again when
+ready."*

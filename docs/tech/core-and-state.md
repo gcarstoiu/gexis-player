@@ -176,7 +176,10 @@ partly because of that.
 from the LAN, so `request.remote` is the discriminator (ADR-0035 §6). A few
 routes are loopback-only or behave differently by origin: `/surface`,
 `/touchpad`, `/setup/status` (the setup password goes to the panel only),
-`/panel/painted`, `/screen/{action}` and `/renderers/park`.
+`/panel/painted`, `/screen/{action}` and `/renderers/park`. `POST /touch` and
+`POST /panel/shown` are the panel's only: a phone gets `403` (a phone's touch
+would wake a screen in standby, and its "shown" would set the toggles to
+something the panel is not showing).
 
 | Group | Routes | Used by |
 |---|---|---|
@@ -196,7 +199,7 @@ routes are loopback-only or behave differently by origin: `/surface`,
 | Hardware report | `GET /hardware-report` (the board by EEPROM, driver, overlays, controls, formats and rates; the screen's EDID and touch controller - no serials), `POST /hardware-report/tones` (a 1 kHz tone at -20 dBFS at 44.1, 96 and 192 kHz through `output`, and the rate and format the card ran at; `409` while any card plays), `GET /hardware-report/prompt` and `POST /hardware-report/prompt/dismiss` (the System page's one line, a week after a board or screen that is not Tested was first seen, per piece of hardware; kept in the internal `_hardware_prompt` key; a prepared report dismisses it too), `POST /hardware-report/screen` (`{"show"}`: the test pattern on the panel, through `screen_check` in `/state`; taken down after 120 s) and `POST /hardware-report/screen/result` (the panel's four corner taps in screen pixels, measured against 6 % of the diagonal), `POST /hardware-report/issue` (`{"answers", "notes", "tones"}` -> the pre-filled GitHub *Hardware feedback* form's address; its answers are text fields, which GitHub fills from a link and dropdowns are not; the result is kept in `_hardware_feedback` with the sound card and screen it was made on), `GET /hardware-report/kept` (that one, or `null` - dropped once the board or screen in use is another) and `POST /hardware-report/kept/clear` (*Start over*), `GET /hardware-report/file` (that feedback as a text file, for e-mail - ADR-0138) - `hardware_report.py`; the *Reported* state from `hardware_reports.json` (`hardware_reports.py`), which only `tools/hardware-reports.py` writes, from the issues labelled `accepted`, along with HARDWARE.md's table | Settings on a phone or computer (ADR-0126) |
 | Network | `GET`/`POST /network/cable` and `/network/wifi/address` (an address, Automatic or Manual), `POST /network/keep` (ADR-0123); `GET /network/wifi` (the connected network's details) | Phone, computer, panel |
 | Backups | `GET /backups/{name}` - one backup from the Backups share, as a file to save (ADR-0083 as amended 2026-10-08); a name that is not one of ours is refused | Phone, computer |
-| Problem report | `POST /report/prepare` (`{"what", "often"}`) starts it in the background; `GET /report/status` gives the seven steps of `problem_report.STEPS`, each `done` with what it found, then the file's name, size and contents; `GET /report/file` (the zip) and `GET /report/issue` (the GitHub form's address: what happened, how often, the version, what was taken out and the log's last errors, cleaned, under 7,500 characters) for an hour after; one at a time (`409`). The zip holds the journal, the updater's log, versions, hardware and settings, scrubbed on the device. `POST /report` still answers the zip in one request | Settings on a phone or computer (ADR-0125, ADR-0138) |
+| Problem report | `POST /report/prepare` (`{"what", "often"}`) starts it in the background; `GET /report/status` gives the seven steps of `problem_report.STEPS`, each `done` with what it found, then the file's name, size and contents; `GET /report/file` (the zip) and `GET /report/issue` (the GitHub form's address: what happened, how often, the version, what was taken out and the log's last errors, cleaned, under 7,500 characters) for an hour after; one at a time (`409`). The zip holds the journal, the updater's log, versions, hardware and settings, scrubbed on the device: known values are matched in any case (except the log's own level words, so a track called "Warning" does not take every `WARNING`); line-shape rules take out the geocoded town on weather lines and the artist names on the artwork sweep's lines; a query string's coordinates count as a place; the log is scrubbed in pieces of whole lines (`PIECE`), looked up word by word, so the core's event loop is not held up. `POST /report` still answers the zip in one request | Settings on a phone or computer (ADR-0125, ADR-0138) |
 | Screens | `POST /screen/{action}`, `/screen-new/{action}` | Panel (ADR-0109) |
 | Setup | `GET /setup/status`, `/setup/answers`, `/setup/networks`, `/setup/screen`, `/setup/plugins`; `POST /setup/answers`, `/setup/finish`, `/renderers/park`, `/settling/hide` (*Use the player now*), `/settling/done` (the OK on a settling screen that names a failed download, ADR-0128) | Setup page (ADR-0104) |
 | UI files | `GET /`, `/assets/*`, a fixed list of web-app files | Browser |
@@ -277,7 +280,9 @@ row mechanics `list`, `warn`, `onlyWhen`, `optionsFrom`, `picker` and
   `wired` map of key → callback; a write to an unwired row is refused with
   `409`, and the payload marks it `wired: false`.
 - **Value precedence**, highest first: the stored value, the flash-time seed
-  (`/etc/gexis/settings-seed.json`, validated row by row), a `defaults`
+  (`/etc/gexis/settings-seed.json`, validated row by row; seeds for
+  `output_device` and `skin` are checked for form only, since only the
+  daemon lists their options, and at run time), a `defaults`
   callable (deployment config or the running system), the registry default.
 - **The API publishes every row and the panel filters**: each row carries a
   computed `visible` (from `onlyWhen` - a value, `"*any*"`, `{"not": v}` or,
@@ -396,9 +401,44 @@ looks for a cover and publishes it into the state (ADR-0081). Everything else
 is fetched when the panel or phone asks `GET /enrichment`.
 
 **The cache** is `/var/lib/gexis-core/enrichment.db`: an `enrichment` table
-(key, provider, outcome, value, confidence) and a `notes` key-value table for
-non-track facts (artist photo URLs, MusicBrainz ids, sweep results), keyed on
-folded names.
+(key, provider, outcome, value, confidence, `used_at`) and a `notes`
+key-value table for non-track facts (artist photo URLs, MusicBrainz ids,
+sweep results), keyed on folded names.
+
+**How large it may grow** (George, 2026-10-12: as large as the card can
+afford without the player running short of space). `Cache.tidy` keeps at
+least `FREE_FLOOR_BYTES` (2 GiB) free on the filesystem that holds the file
+and never lets the cache take more than `CACHE_SHARE` (10 %) of it. Past
+either, it deletes `enrichment` rows used longest ago (`used_at`, which rows
+from before take from their stored time) - never those for the track
+playing - in small transactions until the cache is under `TIDY_TO` (80 %) of
+what the two limits allow, so the next answer does not trip it again. Freed
+pages from `RECLAIM_MIN_BYTES` (1 MiB) on are handed back to the filesystem:
+new files use incremental auto-vacuum, and an existing file is `VACUUM`ed
+once, the first time, while the event loop's reads miss and its writes are
+skipped rather than wait. A read notes `used_at` in memory and it is written
+with the next write, so a cache hit costs no commit. `Cache.keep_tidy` runs
+it at start and every `TIDY_EVERY_S` (an hour), in a worker thread on a
+connection of its own. The `notes` table is not trimmed. A backup carries
+this file (ADR-0083), so a large cache makes a large backup.
+
+**Artist photos from LMS** (`LmsArtistInfo`) are kept together with the LMS
+server they came from and its last scan: LMS artist ids are renumbered by a
+full rescan and differ on another server. At most once a minute, when photos
+are asked for, the server's status is read; if the address or the last scan
+differs, the stored photos are dropped and asked for again. A scan under way
+drops nothing, and a server that gives no status is judged by its address
+alone; photos stored before this record existed are asked for again once.
+**The `lms` and `lms-release` providers' stored answers go with the photos**
+(George, 2026-10-12): their pictures carry the same LMS ids, so
+`LmsArtistInfo.forget` tells its `on_forget` listeners, wired in `__main__.py`
+to `Cache.forget_providers("lms", "lms-release")`. The two providers'
+`before_cached` hook runs the same check (`check_scope`, at most once a
+minute) before a stored answer of theirs is read, so a rescan is noticed even
+when only cached answers are being read. A player that never recorded whose
+photos it held drops them once, after the upgrade. Stored enrichment answers whose
+picture links go through LMS's image proxy are moved to the LMS address in
+use as they are read (`EnrichmentService(lms_base=...)`).
 
 Related modules:
 
@@ -407,7 +447,10 @@ Related modules:
   ADR-0068, ADR-0075); bumps `pictures_revision` once at the end.
 - `fanart.py` - the visualiser's fanart frame: up to 10 photos per artist
   from LMS's `artistphotos`, kept on disk in `/var/cache/gexis-core/fanart`
-  (60 artists) and fetched ahead for the next track (ADR-0112).
+  (60 artists) and fetched ahead for the next track (ADR-0112). An artist
+  answered with no photos is asked again once that answer is older than
+  `EMPTY_RECHECK_S` (30 days, by the `.done` marker's own time); an artist
+  whose photos were found is not asked again.
 
 ## Plugins
 
@@ -436,6 +479,14 @@ pieces in code:
   installed under `/var/lib/gexis/plugins/<id>/<version>/` and run by the
   sandboxed template units `gexis-uploaded-{renderer,service}@<id>.service`.
   An uploaded id may never shadow a shipped one.
+- **The Lyrion Server's network shares** (`lyrion_shares.py`, the
+  `lyrion-server.shares` list row): each SMB or NFS share is mounted
+  read-only under `/mnt/gexis-shares/`, with a 30 s limit per mount. One
+  that does not answer reads *Not mounted: the server did not answer* and no
+  longer stops the shares after it. An NFS address may not begin with `-`
+  (`mount` runs as root and would read it as an option). Mounting and the
+  "is it mounted" checks run in a worker thread, never on the event loop: on
+  a NAS that is off, a check waits out the NFS timeout.
 
 ```mermaid
 sequenceDiagram
@@ -493,8 +544,13 @@ plugin may send: `acquire`, `release`, `available`, `metadata`, `queue`,
 black cover, which also takes the waking tap - then turns the output off with
 `wlr-randr` in the kiosk's labwc session (`runuser -u pi`, the connector and
 turn from `/etc/gexis/screen.env`); `wake()` turns it back on with the turn
-re-applied, then publishes. A touch (`POST /touch`), music starting
-(`follow_playback` in `__main__.py`) and `POST /panel/standby/off` wake it;
+re-applied, then publishes. A touch (`POST /touch`, the panel's only), music
+starting (`follow_playback` in `__main__.py`), a Bluetooth pairing request
+that asks for confirmation, and `POST /panel/standby/off` wake it. They wake
+on `may_be_dark`: in standby, or the output not switched on since the core
+started - the output's state lives in the kiosk's session, which outlives a
+core restart, so after a restart during standby the first touch brings the
+picture back;
 the visualiser does not come up while it is off (`PeppyController(blocked=)`).
 `Schedule.tick()`, every 15 s: inside a standby time (`in_standby_time`; an
 interval belongs to the days it starts on) the screen goes off once nothing

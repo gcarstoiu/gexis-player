@@ -274,6 +274,87 @@ def test_a_link_is_refused(tmp_path):
         backups.restore(name, out, tmp_path / "root")
 
 
+@pytest.mark.parametrize("member", [
+    # Under an allowed path by its first characters, then back out.
+    "var/lib/bluetooth/../../../etc/cron.d/evil",
+    "var/lib/bluetooth/11:22/../../../../etc/cron.d/evil",
+    # A sibling that only starts like one of ours.
+    "var/lib/bluetoothX/evil",
+    "var/lib/gexis-core/settings.db.evil",
+    # Absolute, and spelled so a prefix match would not see it.
+    "/var/lib/bluetooth/evil",
+    "./var/lib/bluetooth/evil",
+    "var/lib/bluetooth//evil",
+])
+def test_a_member_that_climbs_out_of_our_paths_is_refused(tmp_path, member):
+    """**The review of 2026-10-12.** The check matched names by their first
+    characters, so `var/lib/bluetooth/../../../etc/cron.d/evil` passed it;
+    on the device's Python 3.13 `extractall` follows the `..`, as root, and
+    the reboot after a restore runs what it planted. Here the root is a
+    folder, so the escape lands inside it - which is where we look."""
+    out = tmp_path / "out"
+    out.mkdir()
+    name = "gexis-gexis-20260925-120000.tgz"
+    _hostile(out / name, member)
+    root = tmp_path / "root"
+
+    with pytest.raises(ValueError, match="refuses"):
+        backups.restore(name, out, root)
+    assert not (root / "etc/cron.d/evil").exists()
+    assert not list(tmp_path.rglob("evil"))
+
+
+@pytest.mark.parametrize("kind", [tarfile.LNKTYPE, tarfile.FIFOTYPE, tarfile.CHRTYPE, tarfile.BLKTYPE])
+def test_a_hard_link_or_a_device_is_refused(tmp_path, kind):
+    out = tmp_path / "out"
+    out.mkdir()
+    name = "gexis-gexis-20260925-120000.tgz"
+    with tarfile.open(out / name, "w:gz") as archive:
+        info = tarfile.TarInfo("var/lib/bluetooth/evil")
+        info.type = kind
+        info.linkname = "/etc/shadow" if kind == tarfile.LNKTYPE else ""
+        archive.addfile(info)
+
+    with pytest.raises(ValueError, match="refuses"):
+        backups.restore(name, out, tmp_path / "root")
+    assert not (tmp_path / "root").exists()
+
+
+def test_a_setuid_bit_is_not_put_back(tmp_path):
+    """A file under one of our paths, but marked to run as its owner."""
+    import io
+    out = tmp_path / "out"
+    out.mkdir()
+    name = "gexis-gexis-20260925-120000.tgz"
+    with tarfile.open(out / name, "w:gz") as archive:
+        info = tarfile.TarInfo("home/pi/.local/share/Plexamp/run")
+        info.mode = 0o4755
+        info.size = 5
+        archive.addfile(info, io.BytesIO(b"pwned"))
+
+    backups.restore(name, out, tmp_path / "root")
+    assert (tmp_path / "root/home/pi/.local/share/Plexamp/run").stat().st_mode & 0o7000 == 0
+
+
+def test_the_extraction_keeps_owners_and_refuses_what_escapes(tmp_path, monkeypatch):
+    """**Not the default filter**: Python 3.13, on the device, has none (every
+    file as the archive says, links and all), and 3.14's `data` would put
+    Plexamp's claim back owned by root, where `pi` cannot write it. `tar`
+    keeps owners and still refuses a path that leaves the root."""
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    name = backups.create("gexis", out, root)
+    seen = []
+    real = tarfile.TarFile.extractall
+
+    def spy(self, path=".", members=None, *, numeric_owner=False, filter=None):
+        seen.append(filter)
+        return real(self, path, members, numeric_owner=numeric_owner, filter=filter)
+
+    monkeypatch.setattr(tarfile.TarFile, "extractall", spy)
+    backups.restore(name, out, tmp_path / "fresh")
+    assert seen == ["tar"]
+
+
 def test_restoring_something_that_is_not_there(tmp_path):
     with pytest.raises(FileNotFoundError):
         backups.restore("gexis-gexis-20260925-120000.tgz", tmp_path, tmp_path)
@@ -440,3 +521,170 @@ async def test_the_route_sends_it_as_a_file_to_save(tmp_path, monkeypatch):
         assert await r.read() == (out / name).read_bytes()
         assert (await client.get("/backups/..%2Fsettings.db")).status in (400, 404)
         assert (await client.get("/backups/gexis-gone-20260101-000000.tgz")).status == 404
+
+
+# -- the review of 2026-10-12: the Beszel hub's live database ------------------
+
+def _live_hub(root):
+    """The hub's PocketBase store as the hub leaves it while it runs: WAL
+    mode, the newest rows still in `data.db-wal`. The connection returned
+    is the hub, holding it open."""
+    hub = root / "var/lib/beszel-hub"
+    (hub / "data.db").unlink()
+    conn = sqlite3.connect(hub / "data.db")
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA wal_autocheckpoint=0")
+    conn.execute("CREATE TABLE history (n INTEGER)")
+    conn.executemany("INSERT INTO history VALUES (?)", [(n,) for n in range(3000)])
+    conn.commit()
+    assert (hub / "data.db-wal").stat().st_size > 0
+    return conn
+
+
+def test_a_live_database_is_backed_up_as_one_consistent_file(tmp_path):
+    """The hub was tarred while it wrote: `data.db` and `data.db-wal` read at
+    different moments restored to a state that never existed. Now a store
+    with a WAL beside it goes in as SQLite's own copy of it, whole, and its
+    WAL and index stay out."""
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    hub = _live_hub(root)
+    name = backups.create("gexis", out, root)
+    hub.close()
+
+    with tarfile.open(out / name) as archive:
+        held = set(archive.getnames())
+        assert "var/lib/beszel-hub/data.db" in held
+        assert not {"var/lib/beszel-hub/data.db-wal", "var/lib/beszel-hub/data.db-shm"} & held
+        archive.extract("var/lib/beszel-hub/data.db", tmp_path / "x", filter="tar")
+    copy = sqlite3.connect(tmp_path / "x/var/lib/beszel-hub/data.db")
+    assert copy.execute("SELECT count(*) FROM history").fetchone()[0] == 3000
+    assert copy.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+
+
+def test_the_hub_is_stopped_before_its_files_are_put_back(tmp_path):
+    """Restored under a running hub, its own WAL was checkpointed into the
+    restored file at the reboot - "database disk image is malformed", both
+    histories lost. The hub stops first; a WAL the archive does not bring is
+    not left beside the file it brings."""
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    name = backups.create("gexis", out, root)
+    target = _device(tmp_path / "target")
+    (target / "var/lib/beszel-hub/data.db-wal").write_bytes(b"the running hub's")
+    (target / "var/lib/beszel-hub/data.db-shm").write_bytes(b"its index")
+    calls = []
+
+    def run(argv, **kw):
+        calls.append((argv, (target / "var/lib/beszel-hub/data.db-wal").exists()))
+        import subprocess
+        return subprocess.CompletedProcess(argv, 0, "", "")
+
+    backups.restore_file(out / name, target, run=run)
+    stops = [argv for argv, _ in calls if argv[:2] == ["systemctl", "stop"]]
+    assert stops == [["systemctl", "stop", "beszel-hub.service"]]
+    assert not (target / "var/lib/beszel-hub/data.db-wal").exists()
+    assert not (target / "var/lib/beszel-hub/data.db-shm").exists()
+    assert (target / "var/lib/beszel-hub/data.db").read_bytes() == b"hub"
+
+
+def test_an_archive_without_the_hub_leaves_it_running(tmp_path):
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    import shutil
+    shutil.rmtree(root / "var/lib/beszel-hub")
+    name = backups.create("gexis", out, root)
+    calls = []
+    backups.restore_file(out / name, _device(tmp_path / "target"), run=lambda argv, **kw: calls.append(argv))
+    assert calls == []
+
+
+def test_a_restore_that_fails_starts_the_hub_it_stopped(tmp_path, monkeypatch):
+    import subprocess
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    name = backups.create("gexis", out, root)
+    calls = []
+
+    def run(argv, **kw):
+        calls.append(argv)
+        return subprocess.CompletedProcess(argv, 0, "", "")   # is-active: it was running
+
+    def full(*a, **k):
+        raise OSError("no space left on device")
+
+    monkeypatch.setattr(tarfile.TarFile, "extractall", full)
+    with pytest.raises(OSError):
+        backups.restore_file(out / name, _device(tmp_path / "target"), run=run)
+    assert calls[-1] == ["systemctl", "start", "beszel-hub.service"]
+
+
+# --- the updater's backups, kept three deep (George, 2026-10-12, answer 3) ---
+
+
+def _archive(directory, name):
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / name).write_bytes(b"x")
+    return name
+
+
+def test_an_updates_backup_is_named_as_one_and_still_restorable_by_an_older_core(tmp_path):
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    name = backups.create("Living Room", out, root, automatic=True)
+    assert backups.AUTOMATIC.match(name), name
+    assert name.startswith("gexis-living-room.before-update-")
+    # Still a backup to the release an update goes back to.
+    assert backups.NAME.match(name) and backups.SAFE.match(name)
+    assert [a.name for a in backups.available(out)] == [name]
+
+
+def test_a_backup_taken_by_hand_is_not_an_updates(tmp_path):
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    name = backups.create("Living Room", out, root)
+    assert not backups.AUTOMATIC.match(name)
+
+
+def test_no_device_name_makes_a_hand_backup_look_like_an_updates():
+    """The mark is a `.`, which a device's name never becomes."""
+    for device in ("before update", "x.before-update", "gexis.before-update", "Kitchen .before-update"):
+        name = f"gexis-{backups._slug(device)}-20261012-101500.tgz"
+        assert not backups.AUTOMATIC.match(name), name
+
+
+def test_the_newest_three_updates_backups_are_kept_and_no_other_kind_is_touched(tmp_path):
+    out = tmp_path / "out"
+    autos = [_archive(out, f"gexis-den.before-update-2026100{d}-101500.tgz") for d in range(1, 7)]
+    by_hand = [_archive(out, "gexis-den-20261001-090000.tgz"),
+               _archive(out, "gexis-den-20261009-090000.tgz"),
+               # From before the mark: kept, whatever its age.
+               _archive(out, "gexis-den-20250101-000000.tgz"),
+               _archive(out, "something-else.tgz")]
+    gone = backups.prune_automatic(autos[-1], out)
+    assert backups.KEEP_AUTOMATIC == 3
+    assert sorted(gone) == autos[:3]
+    left = {p.name for p in out.iterdir()}
+    assert left == set(autos[3:]) | set(by_hand)
+
+
+def test_the_one_just_made_is_kept_when_the_clock_came_up_behind(tmp_path):
+    """No clock of its own: a Pi that has not reached a time server yet
+    stamps a new backup older than the ones before it."""
+    out = tmp_path / "out"
+    older_clock = _archive(out, "gexis-den.before-update-20240101-000000.tgz")
+    later = [_archive(out, f"gexis-den.before-update-2026100{d}-101500.tgz") for d in range(1, 5)]
+    backups.prune_automatic(older_clock, out)
+    left = sorted(p.name for p in out.iterdir())
+    assert older_clock in left and len(left) == backups.KEEP_AUTOMATIC
+    assert later[-2:] == left[-2:]
+
+
+def test_three_or_fewer_are_all_kept(tmp_path):
+    out = tmp_path / "out"
+    autos = [_archive(out, f"gexis-den.before-update-2026100{d}-101500.tgz") for d in range(1, 4)]
+    assert backups.prune_automatic(autos[-1], out) == []
+    assert {p.name for p in out.iterdir()} == set(autos)
+
+
+def test_settings_says_which_backups_an_update_made(tmp_path):
+    out = tmp_path / "out"
+    _archive(out, "gexis-den.before-update-20261001-101500.tgz")
+    _archive(out, "gexis-den-20261002-101500.tgz")
+    metas = {a.name: a.to_item()["meta"] for a in backups.available(out)}
+    assert metas["gexis-den.before-update-20261001-101500.tgz"].endswith("· before an update")
+    assert "update" not in metas["gexis-den-20261002-101500.tgz"]

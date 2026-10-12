@@ -195,3 +195,13 @@ level to start under. **Leaving Fixed, the DAC comes back to the level it
 had before Fixed was chosen**, or, on a player started in Fixed, to the
 *Starting volume*; that level is published, so the next source starts under
 it as after any other change.
+
+## Amended 2026-10-12 (final code review)
+
+- **Fixed to Software starts at the level to come back to.** The 2026-10-11
+  rule for leaving Fixed covered Hardware only; to Software, the software
+  stage read the card, which Fixed holds at full scale, and came up at 0 dB.
+  It now starts at the level before Fixed, else the *Starting volume*, else
+  -30 dB.
+- **A change of output in Fixed sets the new card to full scale**; the new
+  card's control had been left at whatever it held.

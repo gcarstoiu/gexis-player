@@ -291,8 +291,20 @@
     return rows;
   }
 
+  //: **The page says it is still open** (George, 2026-10-12: a phone on the
+  //: setup network holds the player off its home Wi-Fi only while the page is
+  //: in use, SETUP_ACTIVE_S, 10 min). Its live status comes over the state
+  //: socket, which the player does not count; someone reading one step for
+  //: longer would otherwise see the player leave under them. Once a minute,
+  //: while the page is in front.
+  const STILL_HERE_MS = 60 * 1000;
+  function stillHere() {
+    if (document.visibilityState === 'visible') fetch('/setup/status').catch(() => {});
+  }
+
   onMount(() => {
     const clock = setInterval(() => (tick = new Date()), 1000);
+    const here = setInterval(stillHere, STILL_HERE_MS);
     (async () => {
       let saved = {};
       let rows = {};
@@ -348,7 +360,10 @@
       loaded = true;
       rescan();
     })();
-    return () => clearInterval(clock);
+    return () => {
+      clearInterval(clock);
+      clearInterval(here);
+    };
   });
 
   function answersFor(stepId) {
@@ -581,7 +596,11 @@
           <div class="row-spin"><span class="spin" style="border-top-color:#8fc4d8"></span><span>Opening setup</span></div>
         {:else if finished}
           <section class="pane">
-            <h1 class="hero">{restoring ? (backup?.settings?.device_name ?? backup?.name ?? shownName) : shownName} is {picked ? 'joining your network' : 'set up'}</h1>
+            <!-- The name the player restarts with, restoring or not: the
+                 setup answer over the backup's, as the Review showed it
+                 (ADR-0131 as amended). The backup's own name sent a second
+                 player's owner to the first one (code review, 2026-10-12). -->
+            <h1 class="hero">{shownName} is {picked ? 'joining your network' : 'set up'}</h1>
             {#if restoring}
               <p class="lead">Then it puts the backup back and restarts. Plugins and the visualiser download again after the restart, and the player's screen shows them arriving.</p>
             {/if}
@@ -593,7 +612,7 @@
             {/if}
             <div class="addr-card">
               <div class="label">Open in any browser</div>
-              <div class="addr">http://{restoring && backup?.settings?.device_name ? slugOf(backup.settings.device_name) || 'gexis' : slug}.local:8090</div>
+              <div class="addr">http://{slug}.local:8090</div>
             </div>
             <!-- The password line only when there was a password to refuse: a
                  secured Wi-Fi was chosen - not over a cable with no Wi-Fi, nor

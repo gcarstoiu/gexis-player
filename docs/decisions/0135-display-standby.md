@@ -100,3 +100,14 @@ player, and an interval whose start and end are the same is refused.
   browser's list (*"really old school"*); changes drawn at once and written
   400 ms after the last one, or as the sheet closes (a day chip waiting for
   the player *"is slow to react"*); the remove button in the card's corner.
+
+## Amended 2026-10-12 (final code review)
+
+- **A Bluetooth pairing request wakes the screen.** One that came in standby
+  was drawn under the black cover and expired unseen.
+- **After a core restart during standby, the first touch brings the picture
+  back**, and music starting wakes it as before. The output's state lives in
+  the kiosk's session, which outlives the core; the core now treats an
+  output it has not switched on since it started as possibly dark.
+- **`POST /touch` is the panel's only**: a phone's would wake the screen and
+  count as attention.

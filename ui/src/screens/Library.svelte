@@ -677,10 +677,26 @@
    *  photo for a page nobody may visit. */
   const artistPath = (name) => (name ? [{ kind: 'artist', byName: name, label: name }] : []);
 
+  //: **A page arrives only if it is still the one asked for** (code review,
+  //: 2026-10-12). A page is pushed once its fetch answers, and a second tap
+  //: in the meantime - a common answer to a slow first one - pushed the same
+  //: artist twice, so Back led to it again; Back pressed while it loaded was
+  //: followed by the page anyway. The newest opening wins, and only while
+  //: the path is still the one it set out from.
+  let navTicket = 0;
+  function navigating() {
+    const ticket = ++navTicket;
+    const from = path;
+    return { wanted: () => ticket === navTicket && path === from, latest: () => ticket === navTicket };
+  }
+
   async function openArtist(entry) {
+    const nav = navigating();
     busy = entry.id;
     try {
-      discography = await loadArtistAlbums(entry.id);
+      const albums = await loadArtistAlbums(entry.id);
+      if (!nav.wanted()) return;
+      discography = albums;
       artist = entry;
       // Genres come off the library, not the network, so they arrive with the
       // page rather than with the biography. An artist with none simply has
@@ -713,7 +729,7 @@
     } catch (err) {
       console.info('library:', err.message);
     } finally {
-      busy = null;
+      if (nav.latest()) busy = null;
     }
   }
 
@@ -732,17 +748,20 @@
   });
 
   async function openAlbum(id, label, from = null) {
+    const nav = navigating();
     busy = id;
     try {
       // Fetched and decoded before the screen changes, so the album page
       // arrives whole rather than filling in (George, 2026-09-17).
-      album = await loadAlbum(id);
+      const loaded = await loadAlbum(id);
+      if (!nav.wanted()) return;
+      album = loaded;
       revealed = null;
       path = [...(from ?? []), { kind: 'album', id, label }];
     } catch (err) {
       console.info('library:', err.message);
     } finally {
-      busy = null;
+      if (nav.latest()) busy = null;
     }
   }
 
@@ -773,9 +792,11 @@
   let radio = $state(null);
 
   async function openRadio(handle = null, label = 'Radio', push = true) {
+    const nav = navigating();
     busy = handle ?? 'radio';
     try {
       const page = await browseRadio(handle);
+      if (!nav.wanted()) return;
       radio = page;
       revealed = null;
       if (!push) return;
@@ -786,7 +807,7 @@
       flash(err.message);
       console.info('radio:', err.message);
     } finally {
-      busy = null;
+      if (nav.latest()) busy = null;
     }
   }
 
@@ -1001,15 +1022,18 @@
   }
 
   async function openPlaylist(entry) {
+    const nav = navigating();
     busy = entry.id;
     try {
-      playlist = await loadPlaylist(entry.id);
+      const loaded = await loadPlaylist(entry.id);
+      if (!nav.wanted()) return;
+      playlist = loaded;
       revealed = null;
       path = [...path, { kind: 'playlist', id: entry.id, label: entry.name }];
     } catch (err) {
       console.info('library:', err.message);
     } finally {
-      busy = null;
+      if (nav.latest()) busy = null;
     }
   }
 

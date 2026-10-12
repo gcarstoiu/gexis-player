@@ -193,3 +193,14 @@ afterwards. The full test is a card flashed with nothing pre-seeded.
   `ui/src/screens/SetupScreen.svelte`).
 - **Amendment 7, the 90 s:** counted from the core's setup task starting,
   not from boot (`_wait_for_network` in `setup_network.py`).
+
+## Amended 2026-10-12 (George's answers)
+
+- **Amendment 7, re-entry:** *"and no client is connected to it"* is now
+  *and nobody is setting it up*. On a configured device, a phone on the
+  setup network holds it there only while the setup page was used in the
+  last 10 minutes, or for 10 minutes after the phone was first seen there; a
+  phone left on the network without using the page no longer strands the
+  device off its home Wi-Fi. A new device is held by any phone, as before.
+  The mechanism is [ADR-0104](0104-how-the-device-knows-it-needs-setup.md)'s
+  amendment of the same date.

@@ -5,6 +5,29 @@ Every release of Gexis Player and its notes, newest first. Generated from
 edit that file, not this one. The player shows the last 10 under
 Settings → System → Change logs.
 
+## 0.10.2 — 12 October 2026
+
+### Fixed
+
+- On the Raspberry Pi's own headphone output, mute and volume 0 are silent; they had played at full volume.
+- The volume keeps its level across a change of output or volume type, and Software volume no longer starts loud after a power cut.
+- Changing the output stops playback, as a change of volume type does, and no longer starts sources that were switched off.
+- Bluetooth follows each phone's volume, and a pairing request wakes the screen from standby.
+- A player on a cable leaves the setup network by itself, and setup over a cable no longer restarts before Finish.
+- Restoring a backup can no longer place files outside the player's settings.
+- An update cut short by a power cut is finished or undone at the next start.
+- The problem report takes out more personal details, and the player keeps responding while it is prepared.
+- A network share that does not answer no longer holds up the others or Settings.
+- The phone's volume slider moves only on a tap or a sideways drag.
+- The screen no longer stays on "Updating…" when an update stops without finishing.
+
+### Good to know
+
+- Only the three newest backups made before updates are kept; backups made by hand are never deleted.
+- A factory reset also clears the screen's browser data and the settings chosen when the card was flashed.
+- Artist and lyrics information stays within what the card can spare.
+- A device name is one line of text.
+
 ## 0.10.1 — 11 October 2026
 
 ### New

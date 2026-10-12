@@ -682,6 +682,54 @@ async def test_uninstall_is_only_for_uploaded_plugins():
     assert ok.status == 200 and ours.status == 404
 
 
+@pytest.mark.asyncio
+async def test_a_second_show_while_the_visualiser_is_starting_again_waits_for_it(monkeypatch):
+    """Review, 2026-10-12: nothing marked a restart as under way, so a second
+    tap during the ~9 s the skins take to load restarted the unit again and
+    killed the half-loaded one. The second ask now waits for the first."""
+    from gexis_core import wsserver
+
+    restarts = []
+
+    async def started(*args, **kw):
+        restarts.append(args)
+
+        class _Done:
+            async def wait(self):
+                return 0
+        return _Done()
+
+    class _Slow:
+        """No window until three looks after the restart."""
+        def __init__(self):
+            self.looks = 0
+
+        def _has_levels(self):
+            return True
+
+        def request(self, action):
+            if restarts:
+                self.looks += 1
+            return self.looks >= 3
+
+        async def request_async(self, action):
+            return self.request(action)
+
+    import asyncio
+    real_sleep = asyncio.sleep
+
+    async def quick(_s):
+        await real_sleep(0.01)  # the 1.5 s between looks, shortened
+
+    monkeypatch.setattr(wsserver.asyncio, "create_subprocess_exec", started)
+    server = StateServer(StateStore(_caps("lms")), peppy=_Slow())
+    monkeypatch.setattr(wsserver.asyncio, "sleep", quick)
+    async with TestClient(TestServer(server.make_app())) as client:
+        first, second = await asyncio.gather(client.post("/peppy/show"), client.post("/peppy/show"))
+    assert (first.status, second.status) == (200, 200)
+    assert len(restarts) == 1, "one restart, however many asked"
+
+
 class _PeppyWithoutWindow:
     """No window at first; shown once it has been started again, and saying
     so the way the real one does - `on_change` into the state store."""
@@ -699,6 +747,10 @@ class _PeppyWithoutWindow:
             return False
         self._store.set_panel(visualiser=True)
         return True
+
+    async def request_async(self, action):
+        # As the real one: worked off the loop, published back on it.
+        return self.request(action)
 
 
 @pytest.mark.asyncio
@@ -726,3 +778,135 @@ async def test_a_visualiser_started_again_is_shown_and_answered(monkeypatch):
             response = await client.post("/peppy/show")
             assert response.status == 200
             assert (await phone.receive_json())["panel"]["visualiser"] is True
+
+
+# -- a body or a failure a route did not expect (review, 2026-10-12) --------
+
+
+@pytest.mark.asyncio
+async def test_a_body_of_the_wrong_shape_is_a_400_not_a_500(tmp_path, monkeypatch):
+    """Each of these answered a generic 500 where the sheet could have said
+    something: a JSON list where an object belongs, an id of Infinity."""
+    from types import SimpleNamespace
+
+    from gexis_core import problem_report
+    from gexis_core.settings import SettingsStore
+    from gexis_core.settings_registry import Settings
+
+    class Port:
+        pending, changing = None, False
+
+        async def change(self, *args):
+            return {"address": None, "until": 0}
+
+    monkeypatch.setattr(problem_report, "build", lambda note, *a, **k: SimpleNamespace(
+        name="report.zip", data=note.encode(), summary="nothing"))
+    settings = Settings(SettingsStore(tmp_path / "s.db"), registry=[])
+    server = StateServer(StateStore(_caps("lms")), cable=Port(), wifi_address=Port(),
+                         library=object(), settings=settings)
+    async with TestClient(TestServer(server.make_app())) as client:
+        for path in ("/network/cable", "/network/wifi/address"):
+            assert (await client.post(path, json=[1])).status == 400, path
+        r = await client.post("/library/action", data='{"kind": "album", "id": Infinity}',
+                              headers={"Content-Type": "application/json"})
+        assert r.status == 400
+        r = await client.post("/report", json=[1])
+        assert r.status == 200 and await r.read() == b"", "a list carries no note"
+
+
+@pytest.mark.asyncio
+async def test_a_share_browse_that_fails_says_so(tmp_path, monkeypatch):
+    """A NAS that takes longer than smbclient's 15 s, a `server` that is a
+    string: each was a 500 on the sheet."""
+    import subprocess
+
+    from gexis_core import lyrion_scan, lyrion_shares
+    from gexis_core.settings import SettingsStore
+    from gexis_core.settings_registry import Settings
+
+    registry = [{"id": "g", "label": "G", "rows": [
+        {"key": "lyrion-server.shares", "type": "list", "kind": "share", "discover": True}]}]
+    store = SettingsStore(tmp_path / "s.db")
+    settings = Settings(store, registry=registry, wired={"lyrion-server.shares": None})
+    shares = lyrion_shares.Shares(store, root=tmp_path / "mnt", credentials=tmp_path / "cred",
+                                  is_mount=lambda p: False)
+    asked = []
+
+    def slow(server, user=None, password=None):
+        asked.append(server)
+        raise subprocess.TimeoutExpired(["smbclient"], 15)
+
+    monkeypatch.setattr(lyrion_scan, "shares", slow)
+    server = StateServer(StateStore({}), settings=settings, lyrion_shares=shares)
+    url = "/settings/lyrion-server.shares/items"
+    async with TestClient(TestServer(server.make_app())) as client:
+        r = await client.post(url, json={"name": "Tower", "action": "browse", "server": "abc"})
+        assert r.status == 200
+        answer = await r.json()
+        assert answer["ok"] is False and "Tower" in answer["error"]
+        assert asked[0].host == "Tower", "a server that is not an object is the name's"
+        monkeypatch.setattr(lyrion_scan, "shares", lambda *a, **k: (_ for _ in ()).throw(FileNotFoundError("smbclient")))
+        r = await client.post(url, json={"name": "Tower", "action": "browse"})
+        assert r.status == 200 and (await r.json())["ok"] is False
+
+
+@pytest.mark.asyncio
+async def test_a_truncated_backup_is_refused_with_a_reason(tmp_path, monkeypatch):
+    """A backup half-copied into the guest-writable share: tarfile raises
+    EOFError reading it, which was a 500 instead of the reason."""
+    from gexis_core import backups
+    from gexis_core.settings import SettingsStore
+    from gexis_core.settings_registry import Settings
+
+    registry = [{"id": "g", "label": "G", "rows": [{"key": "restore", "type": "list"}]}]
+    settings = Settings(SettingsStore(tmp_path / "s.db"), registry=registry, wired={"restore": None})
+
+    def truncated(name):
+        raise EOFError("Compressed file ended before the end-of-stream marker was reached")
+
+    monkeypatch.setattr(backups, "restore", truncated)
+
+    async def restarted():
+        raise AssertionError("nothing restarts for a backup that did not go back")
+
+    server = StateServer(StateStore({}), settings=settings, restore=restarted)
+    async with TestClient(TestServer(server.make_app())) as client:
+        r = await client.post("/settings/restore/items", json={"name": "gexis-backup.tgz", "action": "join"})
+        assert r.status == 200 and (await r.json())["ok"] is False
+
+
+@pytest.mark.asyncio
+async def test_the_updaters_backup_is_named_as_its_own_and_pruned(tmp_path, monkeypatch):
+    """George, 2026-10-12, answer 3: `POST /settings/backup?before=update`
+    makes an update's backup and keeps the newest three of those."""
+    import asyncio
+
+    from gexis_core import backups
+    from gexis_core.settings import SettingsStore
+    from gexis_core.settings_registry import Settings
+
+    registry = [{"id": "g", "label": "G", "rows": [{"key": "backup", "type": "action"},
+                                                    {"key": "device_name", "type": "text"}]}]
+    store = SettingsStore(tmp_path / "s.db")
+    settings = Settings(store, registry=registry, wired={"backup": lambda _=None: hand.append(1), "device_name": None})
+    settings.set("device_name", "Den")
+    hand = []
+    made, pruned = [], []
+    monkeypatch.setattr(backups, "create", lambda name, directory=None, root=None, automatic=False:
+                        made.append((name, automatic)) or "gexis-den.before-update-20261012-101500.tgz")
+    monkeypatch.setattr(backups, "prune_automatic", lambda name, directory=None: pruned.append(name))
+    state = StateStore({})
+    server = StateServer(state, settings=settings)
+    async with TestClient(TestServer(server.make_app())) as client:
+        r = await client.post("/settings/backup?before=update")
+        assert r.status == 200
+        for _ in range(100):
+            if pruned:
+                break
+            await asyncio.sleep(0.01)
+        assert made == [("Den", True)]
+        assert pruned == ["gexis-den.before-update-20261012-101500.tgz"]
+        assert hand == [], "the row's own backup, taken by hand, is not run"
+        assert state.state.settings_revision == 1, "the Restore list is told"
+        r = await client.post("/settings/backup")
+        assert r.status == 200 and hand == [1]
