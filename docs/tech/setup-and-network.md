@@ -353,6 +353,16 @@ screen on a new port; for a bar that moves its `video=` and goes through
 Keep, a screen without a forced mode moves silently, and a provisional
 setup screen stays provisional.
 
+**With both ports connected** (ADR-0141 D2/D4, 2026-10-12):
+`screen_detect.seen()` picks the applied port if a known panel is there, any
+port a known panel is on, the applied port, else the first connected, so a
+chosen port holds across starts. `screen_detect.ports()` lists both for the
+read-only *HDMI 1* / *HDMI 2* rows (`_port_line`), and *Screen port* - shown
+only while both are connected - applies the same screen on the other port
+through `screen_apply.choose` (restart, Keep), dropping its stored value so
+the row reads the port in use. `gexis-kiosk-start` then pins the window to the
+screen's port whenever both are connected.
+
 **Errors** reach the phone as sentences (`setup_flow.said()`); the core's own
 text goes to the log.
 

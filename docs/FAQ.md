@@ -179,7 +179,10 @@ Others in *Settings → Display → Attached screen* are listed but untested;
 those tested are marked *Tested*, those owners have reported working
 *Reported*. DSI and DPI screens are not supported. The screen can be on
 either of the Pi's HDMI ports; a bar screen moved from one port to the other
-is set up again at the next start and asks *Keep this screen?*.
+is set up again at the next start and asks *Keep this screen?*. With
+something connected to both ports (a screen on one, a sound bar on the
+other), *Settings → Display* lists both and lets you choose which is the
+screen (*Screen port*).
 
 **Can the player run without a screen?**
 Yes. *Settings → Display → Headless* turns the screen off, and every setting
