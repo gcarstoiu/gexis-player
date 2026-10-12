@@ -34,8 +34,8 @@ from now on have no passwordless sudo: provision test cards with
 - ADR-0141, picture and sound on different HDMI ports: six decisions, the
   first being before or after 1.0 (g36).
 - Then: 1.0.0 cut from this code as the first Stable release.
-- Optional: Lyrion sync (g09), the bar's own supply (g12), a new Plexamp claim
-  token for the bar (g33), a DSD file from the library (g38).
+- Optional: Lyrion sync (g09), the bar's own supply (g12), a DSD file from the
+  library (g38).
 
 **Not run on a device yet:** a screen on HDMI-A-2; a fresh card from 0.11.0;
 setup over Ethernet; a cut-short update; a factory reset.
