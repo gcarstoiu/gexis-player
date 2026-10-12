@@ -2864,6 +2864,15 @@ async def main() -> None:
     lms.on_restore_transport(lambda: settings.value("restore_transport"))
     artistinfo = LmsArtistInfo(library.rpc, f"http://{config.lms_host}:{config.lms_port}",
                                store=enrichment_cache)
+    # George, 2026-10-12 (answer 8): LMS's own answers in the enrichment
+    # cache carry its ids too, so a rescan or another server drops them.
+    artistinfo.on_forget(lambda: enrichment_cache.forget_providers(
+        LmsArtistProvider.name, LmsReleaseProvider.name))
+    # George, 2026-10-12 (answer 6): the cache grows only as far as the card
+    # can afford - looked at now and hourly, off the event loop, never the
+    # playing track's answers.
+    asyncio.ensure_future(enrichment_cache.keep_tidy(
+        lambda: TrackKey.of(state_store.state.metadata)))
 
     # ADR-0112: the playing artist's photos for the skins' fanart frame -
     # LMS's own tracks by id, any other source by an exact LMS name - fetched
