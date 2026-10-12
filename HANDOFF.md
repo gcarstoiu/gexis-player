@@ -29,7 +29,11 @@ from now on have no passwordless sudo: provision test cards with
   30-day photo re-ask, the 20 s / 120 s / 15 min request limits.
 - Tests on 0.10.1-0.10.2: volume type changes (g04, g05), Plexamp's slider in
   Fixed (g22), the Space topic, a freshly flashed card without a restore
-  (g24), Phase 13f's look (g25).
+  (g24), setup over a network cable (g26), a USB DAC at its highest rate
+  (g10), Phase 13f's look (g25).
+- Decide the version (g27, 1.0.0 suggested) and allow Claude's device tests on
+  the bar (g29: headphone jack, switches, the boot step in Software, a reset,
+  a cut-short update).
 - The bar's Plexamp needs a new claim token; the bar on its own supply, then
   Claude reads `vcgencmd get_throttled` again.
 
