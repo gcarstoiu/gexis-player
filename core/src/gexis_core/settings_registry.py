@@ -96,16 +96,34 @@ def _screens() -> tuple[str, ...]:
     """ADR-0109: the screens gexis offers, as `Maker/Model` for the grouped
     picker (makers, then that maker's models)."""
     from . import screens
-    return tuple(s.label for s in screens.all_screens())
+    listed = tuple(s.label for s in screens.all_screens())
+    in_use = _screen_in_use()
+    return listed + (in_use,) if in_use and in_use not in listed else listed
+
+
+def _screen_in_use() -> str | None:
+    """**The screen in use, offered where the list has no such name** - one
+    laid out from its own mode, `Other screen/W × H` (ADR-0109; George,
+    2026-10-12). Without it the row's value was no option, the picker opened
+    on a maker it did not list, and choosing it again was refused."""
+    from . import screen_apply
+    try:
+        return screen_apply.settings_of(screen_apply.STATE)["screen"]
+    except (KeyError, TypeError, ValueError, StopIteration):  # a state it cannot read offers the list
+        return None
 
 
 def _screen_tags() -> dict[str, str]:
     """ADR-0109 decision 1: each model marked Tested or Untested."""
     from . import screens
     from . import hardware_reports
-    return {s.label: "Tested" if s.tested else
+    tags = {s.label: "Tested" if s.tested else
             (hardware_reports.state(hardware_reports.screen(s.label)) or "Untested")
             for s in screens.all_screens()}
+    in_use = _screen_in_use()
+    if in_use and in_use not in tags:
+        tags[in_use] = "Untested"
+    return tags
 
 
 def _boards() -> tuple[str, ...]:
@@ -541,6 +559,9 @@ class Settings:
                 switch = f"{plugin.id}.enabled"
                 switches.append({"key": switch, "type": "toggle",
                                  "label": plugin.name, "default": True})
+                if getattr(plugin, "version_line", None) and plugin.version_line():
+                    # A line of its own on the row (George, 2026-10-12).
+                    switches[-1]["version"] = plugin.version_line()
                 if getattr(plugin, "notice", None):
                     # ADR-0098: read and confirmed before it turns on.
                     switches[-1]["warn"] = plugin.notice
@@ -682,6 +703,7 @@ class Settings:
         labels: dict[str, Callable[[], dict]] | None = None,
         restrictions: dict[str, Callable[[], dict]] | None = None,
         shown: dict[str, Callable[[], bool]] | None = None,
+        option_notes: dict[str, Callable[[], dict]] | None = None,
     ) -> None:
         self._store = store
         #: key -> whether the row is there at all, for a row that follows the
@@ -735,9 +757,13 @@ class Settings:
         #: the device (the Release row's *What's new*). None keeps the
         #: registry's own note.
         self._notes = notes or {}
+        #: key -> {option: a line under it} as things are now, over the
+        #: registry's own `optionNotes` - for options the hardware names (a
+        #: USB DAC's details, George, 2026-10-12).
+        self._option_notes = option_notes or {}
         self._seed = load_seed(self._rows, seed_path)
         unknown = (set(self._defaults) | set(self._wired) | self._lists | set(self._notes)
-                   | set(self._restrictions) | set(self._shown)) - set(self._rows)
+                   | set(self._restrictions) | set(self._shown) | set(self._option_notes)) - set(self._rows)
         if unknown:
             raise ValueError(f"not in the registry: {sorted(unknown)}")
         not_lists = {k for k in self._lists if self._rows[k]["type"] != "list"}
@@ -923,6 +949,10 @@ class Settings:
                 # default can be a system read, and every one was being made
                 # twice per request (2026-10-05).
                 public["value"] = values[row["key"]]
+                if row["key"] in self._option_notes:
+                    extra = self._option_notes[row["key"]]()
+                    if extra:
+                        public["optionNotes"] = {**(row.get("optionNotes") or {}), **extra}
                 if row["key"] in self._notes:
                     note = self._notes[row["key"]]()
                     if note:

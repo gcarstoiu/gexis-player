@@ -278,12 +278,12 @@ class SetupFlow:
     def _keep_question(self, data: dict) -> bool:
         """`data` is setup's answers, or a backup's settings by their keys."""
         label = data.get("screen")
-        model = screens.by_label(label) if label and not data.get("headless") else None
+        model = screen_apply.named(label) if label and not data.get("headless") else None
         if model is None:
             return False
         try:
             turn = screen_apply.parse_rotation(self._settings.value("rotation"))
-            return screen_apply.would_ask(screen_apply.Applied(model.id, turn))
+            return screen_apply.would_ask(screen_apply.Applied(model.id, turn, screen_apply.connector_now()))
         except Exception as exc:  # a guess for the phone's wording, never a failure
             logger.info("setup: cannot tell whether Keep will be asked: %s", exc)
             return True
@@ -399,7 +399,7 @@ class SetupFlow:
         self._path.unlink(missing_ok=True)
         if values.get("headless"):
             values.pop("screen", None)
-        elif values.get("screen") and screens.by_label(values["screen"]) is None:
+        elif values.get("screen") and screen_apply.named(values["screen"]) is None:
             # A model this version does not know - a newer backup's.
             logger.warning("setup: the backup's screen %s is not known here; left to Settings", values["screen"])
             values.pop("screen")
@@ -580,7 +580,9 @@ def screen_choices(report: screen_detect.Seen, turn: int = 0, *, now: tuple | No
     # others restart the player and ask Keep this screen?.
     try:
         current = screen_apply.picture() if now is None else now
-        unchanged = [s.id for s in every if screen_apply.picture_of(screen_apply.Applied(s.id, turn)) == current]
+        port = screen_apply.connector_now(report)
+        unchanged = [s.id for s in every
+                     if screen_apply.picture_of(screen_apply.Applied(s.id, turn, port)) == current]
     except Exception as exc:  # a guess for the phone's wording, never a failure
         logger.info("setup: cannot tell which screens change nothing: %s", exc)
         unchanged = []

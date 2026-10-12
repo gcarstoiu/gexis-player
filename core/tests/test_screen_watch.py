@@ -177,3 +177,87 @@ def test_a_switch_waiting_for_keep_after_its_restart_is_left_to_the_core(tmp_pat
     sw.kept(TEN, path)
     assert sw.at_start(BAR, headless=False, setup_needed=False, path=path, files=files) == "restart"
     assert sw.at_start(BAR, headless=False, setup_needed=False, path=path, files=files) == "pending"
+
+
+# ADR-0109 (George, 2026-10-12: "The two bugs we need to fix now"): the screen
+# was taken to be on HDMI-A-1 whichever port it was plugged into - its mode,
+# touch and standby all went to the first port.
+
+from dataclasses import replace as _on  # noqa: E402
+
+
+def _env(path):
+    return dict(l.split("=", 1) for l in path.read_text().splitlines() if l and not l.startswith("#"))
+
+
+def test_a_new_screen_on_the_second_port_is_applied_there(tmp_path):
+    path, files = tmp_path / "seen.json", _files(tmp_path)
+    sw.kept(TEN, path)
+    assert sw.at_start(_on(BAR, connector="HDMI-A-2"), headless=False, setup_needed=False,
+                       path=path, files=files) == "restart"
+    words = files["cmdline"].read_text().split()
+    assert "video=HDMI-A-2:320x1480,panel_orientation=left_side_up" in words
+    assert not any(w.startswith("video=HDMI-A-1") for w in words)
+    assert _env(files["env"])["GEXIS_SCREEN_CONNECTOR"] == "HDMI-A-2"
+
+
+def test_during_setup_the_screen_on_the_second_port_is_laid_out_there(tmp_path):
+    path, files = tmp_path / "seen.json", _files(tmp_path)
+    assert sw.at_start(_on(BAR, connector="HDMI-A-2"), headless=False, setup_needed=True,
+                       path=path, files=files) == "restart"
+    assert "video=HDMI-A-2:320x1480,panel_orientation=left_side_up" in files["cmdline"].read_text().split()
+    assert _env(files["env"])["GEXIS_SCREEN_CONNECTOR"] == "HDMI-A-2"
+
+
+def test_a_bar_moved_to_the_other_port_takes_its_mode_there_and_asks_keep(tmp_path):
+    """A change of picture - the `video=` moves - so the existing Keep flow:
+    the restart for the kernel's mode first, then the question."""
+    from gexis_core import screen_apply
+    from gexis_core.__main__ import screen_question
+    path, files = tmp_path / "seen.json", _files(tmp_path)
+    sw.kept(BAR, path)
+    screen_apply.choose(screen_apply.Applied("waveshare-11.9-hdmi", 0), **files, now=1)
+    screen_apply.keep(state=files["state"])
+    assert sw.at_start(_on(BAR, connector="HDMI-A-2"), headless=False, setup_needed=False,
+                       path=path, files=files) == "restart"
+    words = files["cmdline"].read_text().split()
+    assert [w for w in words if w.startswith("video=")] == ["video=HDMI-A-2:320x1480,panel_orientation=left_side_up"]
+    state = screen_apply.read_state(files["state"])
+    assert state["pending"] and state["current"]["connector"] == "HDMI-A-2"
+    q = screen_question(state)
+    assert not q["rotation_only"], "the same screen on another port is not a rotation"
+    # Not kept: back to the port before, and the next start tries again.
+    screen_apply.revert(**files)
+    assert "video=HDMI-A-1:320x1480,panel_orientation=left_side_up" in files["cmdline"].read_text().split()
+    assert sw.at_start(_on(BAR, connector="HDMI-A-2"), headless=False, setup_needed=False,
+                       path=path, files=files) == "restart"
+
+
+def test_a_screen_without_its_own_mode_moves_port_without_asking(tmp_path):
+    """Nothing the screen shows changes - only which output touch and standby
+    go to - so it is kept, and the panel starts on it without a restart."""
+    from gexis_core import screen_apply
+    path, files = tmp_path / "seen.json", _files(tmp_path)
+    sw.kept(THIRTEEN, path)
+    screen_apply.choose(screen_apply.Applied("waveshare-13.3-hdmi-h", 0), **files, now=1)
+    screen_apply.keep(state=files["state"])
+    assert sw.at_start(_on(THIRTEEN, connector="HDMI-A-2"), headless=False, setup_needed=False,
+                       path=path, files=files) == "switched"
+    assert _env(files["env"])["GEXIS_SCREEN_CONNECTOR"] == "HDMI-A-2"
+    assert screen_apply.confirmed(files["state"])
+    assert sw.at_start(_on(THIRTEEN, connector="HDMI-A-2"), headless=False, setup_needed=False,
+                       path=path, files=files) == "same", "once"
+
+
+def test_a_screen_off_at_the_start_keeps_the_port_applied_last(tmp_path):
+    from gexis_core import screen_apply
+    path, files = tmp_path / "seen.json", _files(tmp_path)
+    sw.kept(THIRTEEN, path)
+    screen_apply.choose(screen_apply.Applied("waveshare-13.3-hdmi-h", 0, "HDMI-A-2"), **files, now=1)
+    screen_apply.keep(state=files["state"])
+    nothing = screen_detect.Seen(connected=False)
+    assert sw.at_start(nothing, headless=False, setup_needed=False, path=path, files=files) == "same"
+    assert _env(files["env"])["GEXIS_SCREEN_CONNECTOR"] == "HDMI-A-2"
+    assert screen_apply.connector_now(nothing, files["state"]) == "HDMI-A-2"
+    assert sw.at_start(_on(THIRTEEN, connector="HDMI-A-2"), headless=True, setup_needed=False,
+                       path=path, files=files) == "same"

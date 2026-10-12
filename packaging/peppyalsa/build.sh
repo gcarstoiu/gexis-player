@@ -33,10 +33,14 @@ PATCH=/src/image/stage-gexis/00-alsa/files/peppyalsa-one-write-per-frame.patch
 PATCH_SHA256=$(sha256sum "$PATCH" | cut -d' ' -f1)
 BANDS_PATCH=/src/image/stage-gexis/00-alsa/files/peppyalsa-spectrum-bands.patch
 BANDS_SHA256=$(sha256sum "$BANDS_PATCH" | cut -d' ' -f1)
+# ADR-0144: a stream that is not PCM (native DSD) draws nothing instead of
+# aborting the program playing it.
+DSD_PATCH=/src/image/stage-gexis/00-alsa/files/peppyalsa-skip-non-pcm.patch
+DSD_SHA256=$(sha256sum "$DSD_PATCH" | cut -d' ' -f1)
 SHORT=$(printf '%s' "$COMMIT" | cut -c1-7)
 # The revision is ours: raised with every change to the patches (-2: the
 # bands, ADR-0130), or apt keeps the old library (LESSONS 53).
-VERSION="${UPSTREAM}+git${COMMIT_DATE}.${SHORT}-2"
+VERSION="${UPSTREAM}+git${COMMIT_DATE}.${SHORT}-4"
 # Staged where dpkg-shlibdeps expects a package's files: debian/<package>.
 STAGE=/tmp/pkg/debian/gexis-peppyalsa
 
@@ -59,6 +63,8 @@ git apply --verbose "$PATCH"
 grep -q 'frame_buffer' src/spectrum.c || { echo "ERROR: the peppyalsa patch did not apply" >&2; exit 1; }
 git apply --verbose "$BANDS_PATCH"
 grep -q 'BAND_HIGH_HZ' src/spectrum.c || { echo "ERROR: the peppyalsa bands patch did not apply" >&2; exit 1; }
+git apply --verbose "$DSD_PATCH"
+grep -q 'pcm_is_linear' src/peppyalsa.c || { echo "ERROR: the peppyalsa DSD patch did not apply" >&2; exit 1; }
 
 aclocal
 libtoolize
@@ -113,7 +119,8 @@ Description: peppyalsa ALSA scope plugin, patched for Gexis Player
  (source sha256 over its tracked files $SOURCE_SHA256)
  with peppyalsa-one-write-per-frame.patch applied
  (sha256 $PATCH_SHA256, Finding 052), then
- peppyalsa-spectrum-bands.patch (sha256 $BANDS_SHA256, ADR-0130).
+ peppyalsa-spectrum-bands.patch (sha256 $BANDS_SHA256, ADR-0130), then
+ peppyalsa-skip-non-pcm.patch (sha256 $DSD_SHA256, ADR-0144).
 CTL
 chmod 644 "$STAGE/DEBIAN/control" "$STAGE/DEBIAN/triggers"
 mkdir -p /out

@@ -547,7 +547,7 @@ def test_report_metadata_maps_the_current_song():
 def _radio(song, **top):
     """A stream's status result: only what LMS sends for one (no album,
     duration or samplerate unless a test adds them)."""
-    adapter = LmsAdapter("192.168.178.188", 9000, "gexis")
+    adapter = LmsAdapter("192.0.2.188", 9000, "gexis")
     received = []
     adapter.on_metadata_change(received.append)
     result = {"power": 1, "mode": "play", "time": 6.6, "remote": 1, "playlist_loop": [song]}
@@ -575,7 +575,7 @@ def test_a_station_shows_the_song_as_title_and_the_station_as_album():
     assert meta.artist == "Julian le Play"
     assert meta.album == "SCHLAGERPLANET RADIO Deutsch"
     assert meta.artwork == (
-        "http://192.168.178.188:9000/imageproxy/"
+        "http://192.0.2.188:9000/imageproxy/"
         "https%3A%2F%2Flastfm.freetls.fastly.net%2Fi%2Fu%2Fb97d5d1f.jpg/image.jpg"
     )
 

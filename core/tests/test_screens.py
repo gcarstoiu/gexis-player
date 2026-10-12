@@ -61,3 +61,12 @@ def test_a_case_is_listed_once_as_its_panel():
     assert screens.by_label('Waveshare/10.1" HDMI LCD (B) with Case (1280x800)') == panel
     alone = screens.by_id("waveshare-10.1-hdmi-d-case")
     assert alone is not None and alone.model == '10.1" HDMI LCD (D) (1024x600)', "no bare twin: renamed"
+
+
+def test_a_screen_from_its_own_mode_is_found_by_its_name():
+    """ADR-0109 (George, 2026-10-12): Settings names one "Other screen/W × H",
+    and the name has to lead back to a screen - from a backup too, on a card
+    whose screen state is not the backup's."""
+    found = screens.by_label("Other screen/1920 × 1080")
+    assert found is not None and found.id == "other-1920x1080" and found.rotation == 0
+    assert screens.by_label("Other screen/1920 x 1080") is None

@@ -21,7 +21,7 @@ from gexis_core.artistinfo import (
     LmsArtistInfo,
 )
 
-BASE = "http://192.168.178.188:9000"
+BASE = "http://192.0.2.188:9000"
 NOTHING = {"error": "I'm sorry, didn't find any relevant information."}
 
 

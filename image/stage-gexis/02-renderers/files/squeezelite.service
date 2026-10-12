@@ -54,7 +54,12 @@ EnvironmentFile=-/etc/gexis/device-name.env
 # that waits for a busy DAC instead of failing: squeezelite sleeps a fixed 5 s
 # after a failed open, which was Finding 091's gap after *play* on a
 # powered-off player. The mixer is named by -O, so no ctl.output_wait is needed.
-ExecStart=/usr/bin/squeezelite -o output_wait -O hw:gexislmsvol -V Master -C 1 -n ${GEXIS_DEVICE_NAME}
+# ADR-0143: options the chosen output needs - for a DAC above 384 kHz, the
+# rates Lyrion can hand over unchanged. Written by gexis-core; empty for every
+# other DAC, which Squeezelite asks itself. Unbraced, so empty is no argument.
+Environment=GEXIS_SQUEEZELITE_OPTIONS=
+EnvironmentFile=-/etc/gexis/squeezelite.env
+ExecStart=/usr/bin/squeezelite -o output_wait -O hw:gexislmsvol -V Master -C 1 -n ${GEXIS_DEVICE_NAME} $GEXIS_SQUEEZELITE_OPTIONS
 # A squeezelite waiting for the device does not exit on SIGTERM - its handler
 # restarts the interrupted open - so a stop would otherwise wait out systemd's
 # 90 s default before the SIGKILL that ends the wait at once (ADR-0095).

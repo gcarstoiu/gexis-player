@@ -1740,3 +1740,26 @@ def test_standby_times_take_intervals_on_days_and_refuse_what_cannot_be_kept():
                 [night] * 7, "23:00-07:00"):
         with pytest.raises(InvalidValue):
             validate(row, bad)
+
+
+def test_option_notes_from_the_hardware_go_over_the_registrys(store):
+    """A USB DAC's details under its name in Output (George, 2026-10-12)."""
+    registry = [{"group": "Audio", "rows": [
+        {"key": "output_device", "label": "Output", "type": "choice", "optionsFrom": "output_device",
+         "default": None, "optionNotes": {"HDMI 1": "kept"}}]}]
+    settings = Settings(store, registry=registry,
+                        options={"output_device": lambda: ["HDMI 1", "SMSL USB DAC — Detected"]},
+                        option_notes={"output_device": lambda: {"SMSL USB DAC — Detected": "USB 2.0"}})
+    [row] = settings.to_json()[0]["rows"]
+    assert row["optionNotes"] == {"HDMI 1": "kept", "SMSL USB DAC — Detected": "USB 2.0"}
+
+
+def test_a_plugins_switch_carries_its_version_line():
+    from dataclasses import replace
+    from gexis_core.plugins import Plugin
+    plexamp = replace(Plugin("plexamp", "Plexamp", "renderer", "plexamp.service",
+                             settings=({"key": "claim_token", "type": "text", "label": "Claim token"},)),
+                      version="0.4.7", software="Plexamp 4.13.2")
+    merged = Settings.with_plugins(load_registry(), [plexamp])
+    [switch] = [r for g in merged for r in g["rows"] if r.get("key") == "plexamp.enabled"]
+    assert switch["version"] == "Version 0.4.7"

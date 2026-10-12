@@ -214,6 +214,8 @@
   let nets = $state([]);
   let scan = $state('scanning');
   let outputs = $state([]);
+  // A line under an output: what a USB DAC reports it can do (George, 2026-10-12).
+  let outputNotes = $state({});
   // ADR-0117: only the Pi's own outputs - a DAC board with no EEPROM is not
   // seen until it is chosen, which restarts the player, so after setup.
   const PI_OWN = ['Headphones (3.5 mm)', 'HDMI 1', 'HDMI 2'];
@@ -313,6 +315,7 @@
       await loadScreens();
       try { offered = await json('/setup/plugins'); } catch { offered = []; }
       outputs = rows.output_device?.options ?? [];
+      outputNotes = rows.output_device?.optionNotes ?? {};
       zones = rows.timezone?.options ?? [];
       let phoneTz = null;
       try { phoneTz = Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch { /* none */ }
@@ -823,7 +826,7 @@
                 {#each outputs as o}
                   <button class="net" class:sel={out === o} onclick={() => (out = o)}>
                     <span class="radio" class:on={out === o}><span></span></span>
-                    <span class="grow nm">{o}</span>
+                    <span class="grow"><span class="nm">{o}</span>{#if outputNotes[o]}<small class="out-note">{outputNotes[o]}</small>{/if}</span>
                   </button>
                 {/each}
               </div>
@@ -1192,6 +1195,7 @@
   .picked small, .meta { display: block; font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.04em; margin-top: 4px; color: var(--ink-quiet); }
   .meta.plain { font-family: var(--font-ui); font-size: 14px; letter-spacing: 0; line-height: 1.4; }
   .grow { flex: 1; min-width: 0; }
+  .out-note { display: block; margin-top: 2px; font-size: 13px; color: rgba(233, 238, 242, 0.6); }
   .nm { display: block; font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .bars { width: 26px; height: 20px; display: flex; align-items: flex-end; gap: 3px; flex-shrink: 0; }
   .bars span { width: 4px; border-radius: 1px; display: block; }
