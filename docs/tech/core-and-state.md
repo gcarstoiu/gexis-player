@@ -543,7 +543,8 @@ plugin may send: `acquire`, `release`, `available`, `metadata`, `queue`,
 `schedule`); `sleep()` publishes `panel.standby` first - the panel draws a
 black cover, which also takes the waking tap - then turns the output off with
 `wlr-randr` in the kiosk's labwc session (`runuser -u pi`, the connector and
-turn from `/etc/gexis/screen.env`); `wake()` turns it back on with the turn
+turn from `/etc/gexis/screen.env`; with no connector there, the port a screen
+is connected to); `wake()` turns it back on with the turn
 re-applied, then publishes. A touch (`POST /touch`, the panel's only), music
 starting (`follow_playback` in `__main__.py`), a Bluetooth pairing request
 that asks for confirmation, and `POST /panel/standby/off` wake it. They wake

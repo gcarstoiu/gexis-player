@@ -139,7 +139,9 @@ How a screen gets its scale:
 
 1. When a screen is chosen, the core writes `/etc/gexis/screen.env`
    (`core/src/gexis_core/screen_apply.py: env_for`): `GEXIS_SCREEN_FAMILY`,
-   `GEXIS_SCREEN_SCALE`, `GEXIS_SCREEN_TRANSFORM` and the connector. The
+   `GEXIS_SCREEN_SCALE`, `GEXIS_SCREEN_TRANSFORM` and the connector - the
+   HDMI port the screen was seen on, kept in `/var/lib/gexis/screen.json`
+   (HDMI-A-1 for a state older than that, or with nothing ever seen). The
    known screens come from `screens_data/display_presets.json` and
    `screens.py`.
 2. `gexis-kiosk-start` rotates the output with `wlr-randr` (bar panels are
@@ -460,7 +462,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-  SD["systemd: gexis-kiosk.service<br/>(Conflicts=getty@tty1, Restart=no)"] --> LW["labwc -s gexis-kiosk-start"]
+  SD["systemd: gexis-kiosk.service<br/>(Conflicts=getty@tty1, Restart=no)"] --> LW["gexis-kiosk-start compositor<br/>then labwc -C … -s gexis-kiosk-start"]
   LW --> CR["Chromium --kiosk<br/>--ozone-platform=wayland<br/>--force-device-scale-factor<br/>http://127.0.0.1:8090/"]
   SP["systemd: gexis-peppy.service<br/>(PartOf=gexis-kiosk.service)"] --> PY["PeppyMeter window"]
   LW -. "hosts its window" .- PY
@@ -471,7 +473,11 @@ flowchart LR
 - `image/stage-gexis/04-ui/files/gexis-kiosk.service` starts labwc on tty1
   with a logind seat. The service runs `gexis-splash-fb handover` first, so
   the boot picture carries over to labwc without a black frame (ADR-0043).
-  labwc's session script is `gexis-kiosk-start`. When the script exits,
+  It runs `gexis-kiosk-start compositor`, which copies `/etc/xdg/labwc` to
+  `$XDG_RUNTIME_DIR/gexis-labwc` with touch mapped to the screen's port (and,
+  off HDMI-A-1, a window rule moving every window there), then becomes
+  `labwc -C` on that copy - or on the installed file if the copy fails.
+  labwc's session script is `gexis-kiosk-start` again. When the script exits,
   labwc exits, so Chromium is never left running as an orphan.
 - `gexis-kiosk-start` reads `/etc/gexis/kiosk.env` (the URL and profile
   directory) and `/etc/gexis/screen.env` (§4). It sets a `swaybg` wallpaper
@@ -481,7 +487,8 @@ flowchart LR
   `--disable-lcd-text` (ADR-0061), `--disable-pinch` and
   `--overscroll-history-navigation=0`.
 - `labwc-rc.xml` is deliberately almost empty: no decorations, no
-  keybindings, and touch mapped to the panel's output.
+  keybindings, and touch mapped to HDMI-A-1; the copy written at each start
+  names the screen's actual port (ADR-0109, amended 2026-10-12).
 - **The Peppy screen is not part of this app** (ADR-0014, ADR-0026).
   PeppyMeter is a separate native window under the same compositor. The UI
   only asks for it (`POST /peppy/show`, `/peppy/hide`). `core/.../peppy.py`

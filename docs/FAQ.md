@@ -170,7 +170,9 @@ HDMI screens only. Tested on the hardware: a 10.1″ 1280 × 800 (the reference
 screen), a 13.3″ at 1920 × 1080, and the 1280 × 400 and 1480 × 320 bars.
 Others in *Settings → Display → Attached screen* are listed but untested;
 those tested are marked *Tested*, those owners have reported working
-*Reported*. DSI and DPI screens are not supported.
+*Reported*. DSI and DPI screens are not supported. The screen can be on
+either of the Pi's HDMI ports; a bar screen moved from one port to the other
+is set up again at the next start and asks *Keep this screen?*.
 
 **Can the player run without a screen?**
 Yes. *Settings → Display → Headless* turns the screen off, and every setting
