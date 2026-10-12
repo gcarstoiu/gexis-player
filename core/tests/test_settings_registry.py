@@ -1762,4 +1762,4 @@ def test_a_plugins_switch_carries_its_version_line():
                       version="0.4.7", software="Plexamp 4.13.2")
     merged = Settings.with_plugins(load_registry(), [plexamp])
     [switch] = [r for g in merged for r in g["rows"] if r.get("key") == "plexamp.enabled"]
-    assert switch["version"] == "Version 0.4.7 · Plexamp 4.13.2"
+    assert switch["version"] == "Version 0.4.7"

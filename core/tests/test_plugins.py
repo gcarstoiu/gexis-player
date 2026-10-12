@@ -424,11 +424,13 @@ def test_a_shipped_plugin_gets_its_packages_version_and_an_upload_keeps_its_own(
     assert len(calls) == 2, "one dpkg-query for the owners, one for the versions"
 
 
-def test_the_version_line_names_the_software_only_when_it_is_another_version():
+def test_the_version_line_never_repeats_what_the_download_line_says():
+    """George, 2026-10-12: Plexamp's switch said "Plexamp 4.13.2" twice -
+    once in the version line, once in its download's."""
     from dataclasses import replace
     from gexis_core.plugins import Plugin
     p = Plugin("plexamp", "Plexamp", "renderer", "plexamp.service")
-    assert replace(p, version="0.4.7", software="Plexamp 4.13.2").version_line() == "Version 0.4.7 · Plexamp 4.13.2"
-    assert replace(p, version="9.1.1", software="Lyrion Music Server 9.1.1").version_line() == "Version 9.1.1"
+    assert replace(p, version="0.4.7", software="Plexamp 4.13.2").version_line() == "Version 0.4.7"
+    assert replace(p, version="9.1.1", software="Lyrion Music Server 9.1.1").version_line() is None
     assert replace(p, version="0.21.0").version_line() == "Version 0.21.0"
     assert p.version_line() is None

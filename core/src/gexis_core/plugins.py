@@ -122,14 +122,16 @@ class Plugin:
     software: str | None = None
 
     def version_line(self) -> str | None:
-        """"Version 0.4.7 · Plexamp 4.13.2"; the software left out when its
-        version is the plugin's own (the Lyrion server's 9.1.1 is both)."""
+        """"Version 0.4.7" - the plugin's own only. The program it downloads
+        is named by the download's own line on the same switch ("Installed ·
+        Plexamp 4.13.2"), so it is not said twice (George, 2026-10-12); and a
+        plugin whose version *is* that program's (the Lyrion server's 9.1.1)
+        has no line of its own."""
         if not self.version:
-            return self.software
-        line = f"Version {self.version}"
-        if self.software and self.software.rsplit(" ", 1)[-1] != self.version:
-            line += f" · {self.software}"
-        return line
+            return None
+        if self.software and self.software.rsplit(" ", 1)[-1] == self.version:
+            return None
+        return f"Version {self.version}"
 
     def to_json(self) -> dict:
         """What the panel needs to draw this source without knowing it."""
