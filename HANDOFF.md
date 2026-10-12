@@ -30,7 +30,7 @@ from now on have no passwordless sudo: provision test cards with
 - On a card flashed from the 0.11.0 image: setup without a restore (g24),
   setup over a network cable (g26), an update cut short and a factory reset
   (g34).
-- Phase 13f's look (g25); the screen on the bar's second HDMI port (g35).
+- The screen on the bar's second HDMI port (g35).
 - ADR-0141, picture and sound on different HDMI ports: six decisions, the
   first being before or after 1.0 (g36).
 - Then: 1.0.0 cut from this code as the first Stable release.
@@ -46,7 +46,7 @@ download works from then), README's *Download and install* section, Raspberry
 Pi Imager - the image file and *Use custom*, our own Imager repository and the
 community application after (g14). **After it:** Phase 13g (the player in Home
 Assistant), themes (14), a sound bar on optical (14a), the library answering
-for itself (15) - each ADR first.
+for itself (15), Lyrion's own menus' look (16) - each ADR first.
 
 The shared to-do list (an artifact with a `todos` collection; its address is
 in Claude's memory, not here) holds the open items with their detail.
@@ -59,12 +59,14 @@ words in the morning).
 ## Phases
 
 Closed: 0-12, 13, 13a, 13b, 13c, 13d (2026-10-12, Finding 114's addendum),
-13e (`docs/DEVELOPMENT.md` holds each phase's acceptance criteria; the archive
-holds the order as it was argued). Open: **13f** Lyrion's own menus - closes on George's look; **13g** the player
+13e, 13f (2026-10-12: shipped behind *Extended navigation*; its look is Phase
+16) (`docs/DEVELOPMENT.md` holds each phase's acceptance criteria; the archive
+holds the order as it was argued). Open: **13g** the player
 in Home Assistant - after the release; **14** themes - settle first what a
 theme is if plugins are processes (ADR-0016); **14a** a sound bar on optical
 (a maximum sample rate per output); **15** the library answers for itself
-(Plex server metadata first, internet providers as fallback; Finding 086).
+(Plex server metadata first, internet providers as fallback; Finding 086);
+**16** Lyrion's own menus: George's look (from 13f, after the release).
 
 ## Machines
 
