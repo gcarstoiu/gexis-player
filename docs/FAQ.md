@@ -722,7 +722,9 @@ Each output in *Settings → Audio → Output* shows *Tested*, *Reported*,
 tested; a board owners have reported working is *Reported* (*Reported with
 problems* if a report says otherwise); the other boards on the player's list
 are known but untested; a class-compliant USB DAC is detected by itself
-and shown by its maker (tried with an SMSL; most USB DACs have no volume
+and shown by its maker, with a line under it saying what it reports it can
+take - its USB generation, its highest rate and sample size, and native DSD
+(tried with an SMSL; most USB DACs have no volume
 control of their own, so their volume is Software or Fixed). A board that is not found by itself can be
 chosen in *Settings → Audio → Sound card board*. The screen's HDMI audio
 can be chosen too; it is not bit-perfect, its volume is set in software

@@ -397,7 +397,10 @@ none on HDMI) and its own scale, read per card (ADR-0117). A USB card, which
 the driver calls "USB Audio" whatever it is, is named from its device's
 `manufacturer` and `product` in sysfs (`usb_name`; "SMSL USB AUDIO" reads
 "SMSL USB DAC"), the driver's name kept as `aka` so a choice stored under
-it still resolves.
+it still resolves. `usb_details` adds the line shown under it - the USB
+generation from sysfs `speed`, the highest rate and bits and any native DSD
+format from the playback half of `/proc/asound/cardN/stream0` - passed to the
+Output row as `optionNotes` (`Settings(option_notes=...)`).
 
 Choosing one does not restart the core. The core first stops whoever is
 playing (`Supervisor.stop_active`, as a change of volume type does; George,
