@@ -40,18 +40,24 @@ signed it out); the bar on its own supply, then Claude reads
 clear it) and ShelvesPi (the bar) run the `phase-13d` preview 0.10.0+git75,
 which 0.10.1 supersedes on the Testing channel. guestpi offline.
 
-**The final code check is done** (2026-10-12, Finding 119): a multi-agent
-review, 78 reported, 77 confirmed by a second agent, all addressed - 72
-fixed outright, 3 in part and 2 open on George's answers. Fixed by six agents
-in worktrees, merged on `phase-13d` with the core's wiring after; the
-temporary post-reset log (c20) and passwordless sudo (ADR-0139, c11) are gone
-with it. **Suite 2,206 passed.** Previewed on sofapi and the bar
-(0.10.1+git98: clean start, routes answer, the problem report scrubs the
-weather town). **Not run on a device:** the headphone jack, output and
-volume-type switches after the carry-through-dB change, a factory reset, a
-cut-short update, setup over Ethernet. **Next: 0.10.2 on Testing**, notes to
-George; then George's questions (`scratchpad` list in the session; the
-open ones are in Finding 119 and the hand-back of 2026-10-12).
+**0.10.2 cut 2026-10-12 for Testing** (tag `v0.10.2`, release `r0.10.2`,
+serial 36, image `image/deploy/2026-10-12-gexis-player-v0.10.2.img`, 116
+checks; notes approved by George, shortened). **PR #61 open - George merges
+it**; then merge `origin/main` into both branches, delete `release-0.10.2`,
+remove the worktree `-r0102`. In it: the final code review's fixes (Finding
+119: 77 confirmed, all addressed) and George's twelve answers to its
+questions (ADR-0140 boot step; setup phone rule; update backups kept three;
+reset clears flash-time settings; check during an install; cache bounded by
+free space; photos re-asked after 30 days; Lyrion answers dropped on a
+rescan; LMS takes the device back; request timeouts; output change stops
+playback). Passwordless sudo gone from the image (ADR-0139): **test cards
+need `DEV_SUDO="yes"` when provisioned**. Suite 2,255. sofapi and the bar run
+the preview (0.10.1+git122). **Owed by George, inventory:** confirm the new
+[H] values for ADR-0022 - SETUP_ACTIVE_S 600 s, KEEP_AUTOMATIC 3, the
+cache's 2 GiB / 10 % / hourly, the 30-day photo re-ask, the 20 s / 120 s /
+15 min request limits. **Not run on a device:** the headphone jack, switches
+after the carry-through-dB change, the boot step in Software, a reset, a
+cut-short update, setup over Ethernet.
 
 **Then the first public release** (George, 2026-10-12): it waits for guestpi
 (Phase 13d's two tests); Imager: the image file and *Use custom* at the
