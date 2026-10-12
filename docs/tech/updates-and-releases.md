@@ -196,9 +196,8 @@ touch screen is optional.
 2. **Write it to the card** with [Raspberry Pi Imager](https://www.raspberrypi.com/software/):
    *Choose OS → Use custom*, pick the file, and skip Imager's own settings.
 3. **Start the Pi** with the card in, and the DAC and screen if you use them.
-   The screen shows
-   two QR codes: the first joins your phone to the player's own Wi-Fi,
-   **gexis-setup**, the second opens the setup page. Without a screen, join
+   The screen shows two QR codes: the first joins your phone to the player's
+   own Wi-Fi, **gexis-setup**, the second opens the setup page. Without a screen, join
    **gexis-setup** (password `gexis-setup`) and open http://10.42.0.1:8090.
    Setup takes a few minutes.
 
