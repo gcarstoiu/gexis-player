@@ -616,3 +616,59 @@ def test_a_card_not_on_usb_has_no_details(tmp_path):
     proc, sound = _usb_card(tmp_path, 5, "x", "y", usb=False)
     (proc / "sndrpihifiberry").symlink_to("card5")
     assert outputs.usb_details("sndrpihifiberry", sound, proc) is None
+
+
+# --- ADR-0143: a 32-bit-only DAC, and Lyrion's 384 kHz -----------------------
+
+SMSL_DUMP = "FORMAT:  S32_LE SPECIAL DSD_U32_BE\nSAMPLE_BITS: 32\nRATE: [44100 768000]\n"
+HAT_DUMP = "FORMAT:  S16_LE S24_LE S32_LE\nSAMPLE_BITS: [16 32]\nRATE: [44100 192000]\n"
+
+
+def _asked(monkeypatch, dumps):
+    import subprocess as sp
+    monkeypatch.setattr(outputs, "_needs_plug", {})
+    monkeypatch.setattr(outputs, "_formats", {})
+    monkeypatch.setattr(outputs, "_rates", {})
+    def run(args, **kw):
+        return sp.CompletedProcess(args, 0, "", dumps[args[3].split(":", 1)[1]])
+    monkeypatch.setattr(outputs.subprocess, "run", run)
+
+
+def test_a_dac_taking_only_32_bits_is_widened_and_no_other(monkeypatch):
+    _asked(monkeypatch, {"AUDIO": SMSL_DUMP, "sndrpihifiberry": HAT_DUMP})
+    assert outputs.needs_plug("AUDIO") is False and outputs.widens("AUDIO") is True
+    assert outputs.needs_plug("sndrpihifiberry") is False and outputs.widens("sndrpihifiberry") is False
+
+
+def test_the_widened_chain_pads_to_32_bits_under_the_meter_and_the_card_reads_back(tmp_path):
+    out = outputs.Output(card="AUDIO", label="SMSL USB DAC", control=None)
+    conf = outputs.render(out, False, widen=True)
+    head = conf[conf.index("pcm.output {"):conf.index("pcm.output_wait")]
+    assert "type meter" in head and 'type linear slave { pcm "hw:AUDIO" format S32_LE }' in head
+    assert "{ type linear slave { pcm { type hw card AUDIO nonblock 0 } format S32_LE } }" in conf
+    assert "type plug" not in conf, "widening is not plug: it never changes the rate"
+    soft = outputs.render(outputs.with_software_volume(out), False, widen=True)
+    assert 'type linear slave { pcm "hw:AUDIO" format S32_LE }' in soft and "type softvol" in soft
+    path = tmp_path / "output.conf"
+    path.write_text(conf)
+    assert outputs.configured(path) == "AUDIO"
+
+
+def test_squeezelite_is_told_rates_only_for_a_dac_beyond_384_khz(monkeypatch, tmp_path):
+    _asked(monkeypatch, {"AUDIO": SMSL_DUMP, "sndrpihifiberry": HAT_DUMP})
+    outputs.needs_plug("AUDIO"); outputs.needs_plug("sndrpihifiberry")
+    assert outputs.squeezelite_options("AUDIO") == "-r 44100,48000,88200,96000,176400,192000,352800,384000"
+    assert outputs.squeezelite_options("sndrpihifiberry") == ""
+    env = tmp_path / "squeezelite.env"
+    assert outputs.write_squeezelite_env("AUDIO", env) is True
+    assert "GEXIS_SQUEEZELITE_OPTIONS=-r 44100," in env.read_text()
+    assert outputs.write_squeezelite_env("AUDIO", env) is False
+    outputs.write_squeezelite_env("sndrpihifiberry", env)
+    assert env.read_text().splitlines()[-1] == "GEXIS_SQUEEZELITE_OPTIONS="
+
+
+def test_the_squeezelite_unit_reads_the_options_unbraced():
+    from pathlib import Path
+    unit = (Path(__file__).resolve().parents[2] / "image/stage-gexis/02-renderers/files/squeezelite.service").read_text()
+    assert "EnvironmentFile=-/etc/gexis/squeezelite.env" in unit
+    assert unit.rstrip().split("ExecStart=")[1].splitlines()[0].endswith(" $GEXIS_SQUEEZELITE_OPTIONS")

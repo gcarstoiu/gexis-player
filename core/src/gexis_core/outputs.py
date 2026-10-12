@@ -90,6 +90,67 @@ PCM_FORMATS = frozenset(
 _needs_plug: dict[str, bool] = {}
 
 
+#: What each card said it takes, from `needs_plug`'s question (`widens`).
+_formats: dict[str, frozenset[str]] = {}
+#: Its lowest and highest rate, from the same question (`squeezelite_options`).
+_rates: dict[str, tuple[int, int]] = {}
+
+#: **The highest PCM rate Lyrion hands Squeezelite as it is** (ADR-0143;
+#: measured 2026-10-12 on an SMSL USB DAC, which takes 768 kHz): FLAC and WAV
+#: up to 384 kHz reached the card unchanged, 705.6 and 768 kHz WAV opened it
+#: at 44.1 kHz - played some sixteen times too slow.
+LYRION_MAX_RATE = 384000
+#: The rates told to Squeezelite for a card above that, so Lyrion converts a
+#: file beyond them rather than sending what plays wrong.
+SQUEEZELITE_RATES = (44100, 48000, 88200, 96000, 176400, 192000, 352800, 384000)
+SQUEEZELITE_ENV = Path("/etc/gexis/squeezelite.env")
+
+
+def squeezelite_options(card: str) -> str:
+    """Squeezelite's extra options for this card: none for one that goes no
+    higher than Lyrion can hand over - it asks the card, as before - and a
+    list of rates up to `LYRION_MAX_RATE` for one that does."""
+    low, high = _rates.get(card, (0, 0))
+    if high <= LYRION_MAX_RATE:
+        return ""
+    return "-r " + ",".join(str(r) for r in SQUEEZELITE_RATES if r >= low)
+
+
+def write_squeezelite_env(card: str, path: Path = SQUEEZELITE_ENV) -> bool:
+    """`GEXIS_SQUEEZELITE_OPTIONS` for the unit; True if it changed. Read
+    when Squeezelite starts, which the output switch does after this."""
+    wanted = (
+        "# Written by gexis-core for the chosen output (ADR-0143). Do not edit.\n"
+        f"GEXIS_SQUEEZELITE_OPTIONS={squeezelite_options(card)}\n")
+    try:
+        if path.read_text() == wanted:
+            return False
+    except OSError:
+        pass
+    try:
+        tmp = path.with_name(path.name + ".tmp")
+        tmp.write_text(wanted)
+        tmp.replace(path)
+    except OSError as exc:
+        logger.error("outputs: could not write %s: %s", path, exc)
+        return False
+    logger.info("outputs: squeezelite options for %s: %s", card, squeezelite_options(card) or "none")
+    return True
+
+
+def widens(card: str) -> bool:
+    """**A card that takes 32-bit and not 16-bit gets its samples widened**
+    (ADR-0143; George, 2026-10-12, an SMSL USB DAC: *"Agreed"*). Such a card
+    refuses what Bluetooth sends (16-bit) and what a 24-bit source sends,
+    and ADR-0009's no-`plug` chain had nothing to offer it but silence.
+    `type linear` to S32_LE only *pads*: 16 and 24 bits are shifted into
+    32, every sample's value kept (measured exact, 2026-10-12), 32 bits pass
+    untouched, and the rate is never changed - a rate the card lacks still
+    fails loudly. Asked after `needs_plug`, which reads the card."""
+    formats = _formats.get(card, frozenset())
+    return "S32_LE" in formats and "S16_LE" not in formats
+
+
 def needs_plug(card: str) -> bool | None:
     """Whether this card has to be written through a conversion layer.
 
@@ -132,10 +193,13 @@ def needs_plug(card: str) -> bool | None:
         logger.warning("outputs: could not ask %s what it takes: %s", card, exc)
         return None
     formats: set[str] = set()
+    rates: tuple[int, int] | None = None
     for line in dump.splitlines():
-        if line.startswith("FORMAT:"):
+        if line.startswith("FORMAT:") and not formats:
             formats = set(line.split(":", 1)[1].split())
-            break
+        elif line.startswith("RATE:") and rates is None:
+            found = [int(n) for n in re.findall(r"\d+", line)]
+            rates = (min(found), max(found)) if found else None
     if not formats:
         # **A busy card answers nothing, and nothing is not an answer.**
         # Caching it turned a transient "the old renderer still has this
@@ -146,6 +210,9 @@ def needs_plug(card: str) -> bool | None:
         return None
     answer = not (formats & PCM_FORMATS)
     _needs_plug[card] = answer
+    _formats[card] = frozenset(formats)
+    if rates is not None:
+        _rates[card] = rates
     if answer:
         logger.info("outputs: %s takes only %s; it needs a conversion layer",
                     card, " ".join(sorted(formats)))
@@ -457,7 +524,7 @@ def _discover(chosen_board: str | None, product) -> list[Output]:
 def configured(path: Path = CONF_PATH) -> str | None:
     """The card `output.conf` names right now, or None."""
     try:
-        match = re.search(r'slave\.pcm\s+"hw:([^"]+)"', path.read_text())
+        match = re.search(r'(?:slave\.)?pcm\s+"hw:([^"]+)"', path.read_text())
     except OSError:
         return None
     return match.group(1) if match else None
@@ -503,7 +570,13 @@ def resolve(
     return available[0]
 
 
-def render(output: Output, plug: bool, tuning: Tuning = Tuning()) -> str:
+def _widened(card: str, wait: bool = False) -> str:
+    """The card under a widening step to 32 bits (`widens`)."""
+    hw = f"{{ type hw card {card} nonblock 0 }}" if wait else f'"hw:{card}"'
+    return f"{{ type linear slave {{ pcm {hw} format S32_LE }} }}"
+
+
+def render(output: Output, plug: bool, tuning: Tuning = Tuning(), widen: bool = False) -> str:
     """`output.conf`, with this output's card in the two places it goes.
 
     The rest is verbatim from what the image ships - the comment earns its
@@ -525,8 +598,10 @@ def render(output: Output, plug: bool, tuning: Tuning = Tuning()) -> str:
         # the meter straight over `plug`; with `softvol` between them LMS and
         # Spotify play and the levels arrive. `plug` then converts for the
         # card, under the software stage (Finding 115).
-        card = f'{{ type plug slave.pcm "hw:{output.card}" }}' if plug else f'"hw:{output.card}"'
+        card = (f'{{ type plug slave.pcm "hw:{output.card}" }}' if plug
+                else _widened(output.card) if widen else f'"hw:{output.card}"')
         card_wait = (f"{{ type plug slave.pcm {{ type hw card {output.card} nonblock 0 }} }}" if plug
+                     else _widened(output.card, wait=True) if widen
                      else f"{{ type hw card {output.card} nonblock 0 }}")
         head = f'''pcm.output {{
     type meter
@@ -561,6 +636,20 @@ def render(output: Output, plug: bool, tuning: Tuning = Tuning()) -> str:
         wait = f'''pcm.output_wait {{
     type plug
     slave.pcm {{ type hw card {output.card} nonblock 0 }}
+}}'''
+    elif widen:
+        # ADR-0143: the meter over the widening step - measured to play and
+        # meter 16, 24 and 32 bits on the SMSL, where the meter over `plug`
+        # aborted (above).
+        head = f'''pcm.output {{
+    type meter
+    slave.pcm {_widened(output.card)}
+    scopes.0 peppyalsa
+}}'''
+        wait = f'''pcm.output_wait {{
+    type meter
+    slave.pcm {_widened(output.card, wait=True)}
+    scopes.0 peppyalsa
 }}'''
     else:
         head = f'''pcm.output {{
@@ -637,7 +726,11 @@ def write(output: Output, path: Path = CONF_PATH, tuning: Tuning = Tuning()) -> 
             path, output.card,
         )
         return False
-    wanted = render(output, plug, tuning)
+    wanted = render(output, plug, tuning, widen=not plug and widens(output.card))
+    # ADR-0143: Squeezelite's rates follow the card; restarted with the
+    # renderers after this, as the config is. The device's own file only.
+    if path == CONF_PATH:
+        write_squeezelite_env(output.card)
     try:
         if path.read_text() == wanted:
             logger.info("outputs: %s is already the output", output.label)
