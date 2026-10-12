@@ -107,3 +107,11 @@ def test_the_installed_release_is_asked_of_dpkg_once_per_change(tmp_path, monkey
     os.utime(status, (2000, 2000))  # an install
     assert updates.installed_release(status) == "0.9.0"
     assert len(calls) == 2
+
+
+def test_the_nightly_install_counts_as_an_update_running(tmp_path, monkeypatch):
+    """Review, 2026-10-12: an automatic install runs under the nightly
+    check's own unit; it was not counted, so the panel's lock stayed off."""
+    path = write(tmp_path, state="installing", release="0.2.5")
+    monkeypatch.setattr(updates, "unit_running", lambda unit: unit == updates.SCHEDULED_UNIT)
+    assert updates.view(path, installed="0.2.4")["active"]

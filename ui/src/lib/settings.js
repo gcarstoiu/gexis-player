@@ -92,6 +92,10 @@ export const REQUEST_TIMEOUT_MS = 20_000;
 //: restoring a backup, a plugin's upload or removal, finding and browsing
 //: network shares (15 s per look, two kinds), preparing a problem report.
 export const LONG_REQUEST_TIMEOUT_MS = 120_000;
+//: A restore answers only once it has put every file back, and a backup
+//: holds the lyrics-and-info cache, which may now grow to a tenth of the card
+//: (George, 2026-10-12): it gets far longer than any other request.
+export const RESTORE_TIMEOUT_MS = 15 * 60_000;
 
 /** A request and its JSON answer within `ms`: `{response, body}`, `body`
  *  `{}` when the answer is not JSON. Throws an Error saying UNREACHED when
@@ -146,7 +150,7 @@ export async function listAction(key, body) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-  }, longAction(key, body) ? LONG_REQUEST_TIMEOUT_MS : REQUEST_TIMEOUT_MS);
+  }, key === 'restore' ? RESTORE_TIMEOUT_MS : longAction(key, body) ? LONG_REQUEST_TIMEOUT_MS : REQUEST_TIMEOUT_MS);
   if (!got) return { ok: false, error: UNREACHED, items: null, login: false };
   const { response, body: answer } = got;
   if (!response.ok) return { ok: false, error: answer.error ?? `HTTP ${response.status}` };

@@ -27,6 +27,10 @@ INSTALL_UNIT = "gexis-update-install.service"
 #: ADR-0105 §4 step 5 (built 2026-10-07): the check an update that ended in
 #: a reboot leaves for the boot - an update is still running while it does.
 POSTBOOT_UNIT = "gexis-update-postboot.service"
+#: The nightly check, which installs by itself when updates are automatic -
+#: under its own unit, holding the same status lock (review, 2026-10-12: its
+#: installs were not counted as running, so the panel's lock stayed off).
+SCHEDULED_UNIT = "gexis-update-check.service"
 
 
 #: dpkg's own record of what is installed. Its change time is when the
@@ -144,7 +148,8 @@ def view(path: Path = STATUS, installed: str | None = None, running: bool | None
     doc = status(path)
     state = doc.get("state")
     if running is None:
-        running = state in INSTALLING and (unit_running(INSTALL_UNIT) or unit_running(POSTBOOT_UNIT))
+        running = state in INSTALLING and (unit_running(INSTALL_UNIT) or unit_running(POSTBOOT_UNIT)
+                                           or unit_running(SCHEDULED_UNIT))
     return {
         "installed": short(installed if installed is not None else installed_release()),
         "state": state,
