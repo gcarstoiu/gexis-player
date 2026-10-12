@@ -21,7 +21,17 @@
 
   const CHECK_TIMEOUT_MS = 90_000;
 
-  let phase = $state(start === 'progress' ? 'progress' : start === 'check' ? 'checking' : 'answer');
+  //: **A check asked for while an update runs is not sent** (George,
+  //: 2026-10-12, answer 5: "Yes"). The updater holds its status lock for the
+  //: whole install and leaves a check unanswered, so the modal waited out
+  //: CHECK_TIMEOUT_MS and then said the player had not answered. It shows
+  //: the install instead, and says that is what is happening.
+  const running = !!$update?.active;
+  let phase = $state(start === 'progress' || (start === 'check' && running) ? 'progress'
+    : start === 'check' ? 'checking' : 'answer');
+  //: True when a check found an update already under way - the progress
+  //: view says so, and follows that install to its end as `progress` does.
+  let busy = $state(start === 'check' && running);
   //: What the updater's file said when the ask went out. **An answer is a
   //: change from it**, not a time after the phone's clock: `at` is the
   //: player's clock, to the second, and a player even two seconds behind the
@@ -37,7 +47,7 @@
   const answered = $derived(fresh && ['current', 'available', 'failed'].includes(u.state));
 
   onMount(() => {
-    if (start !== 'check') return;
+    if (start !== 'check' || busy) return;
     asked = { at: u.at, state: u.state };
     runSetting('update_check');
     const id = setTimeout(() => (timedOut = true), CHECK_TIMEOUT_MS);
@@ -47,13 +57,18 @@
   // The check's answer, once the updater has written one newer than the ask.
   $effect(() => {
     if (phase !== 'checking') return;
-    if (answered) phase = 'answer';
+    // An install that started while the check waited: the updater will not
+    // answer the check until it is over, so show the install.
+    if (u.active) {
+      busy = true;
+      phase = 'progress';
+    } else if (answered) phase = 'answer';
     else if (timedOut) phase = 'answer';
   });
 
   // The install's end: done, or failed and back where it was.
   $effect(() => {
-    if (phase === 'progress' && !u.active && ['done', 'failed'].includes(u.state) && (fresh || start === 'progress')) {
+    if (phase === 'progress' && !u.active && ['done', 'failed'].includes(u.state) && (fresh || start === 'progress' || busy)) {
       phase = 'end';
     }
   });
@@ -127,6 +142,9 @@
       </div>
     {:else if phase === 'progress'}
       <div class="ask__title">Updating to {u.release ?? '…'}</div>
+      {#if busy}
+        <div class="task__text">An update is being installed. Check for updates again once it has finished.</div>
+      {/if}
       <UpdateSteps update={u} />
       <div class="task__text task__text--quiet">
         {#if $connection !== 'open'}The player is restarting. Reconnecting…{:else}The update carries on if you close this.{/if}
