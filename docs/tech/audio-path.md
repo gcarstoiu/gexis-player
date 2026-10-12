@@ -414,6 +414,16 @@ because above 384 kHz Lyrion's PCM opened the card at 44.1 kHz; with the list,
 a 705.6/768 kHz stream is refused instead (Finding 120); Squeezelite's unit
 reads it unbraced, so the empty value of every other card adds no argument.
 
+**Native DSD** (ADR-0144): `native_dsd()` names the card's DSD format from
+the same question (`DSD_U32_BE` first). With the volume Fixed (`write(...,
+fixed=True)`, from the start-up, an output switch and every change of volume
+type), the options gain `-D :<format>`, and `output_wait` - Squeezelite's
+chain - goes to `hw:` without the widening step, which takes PCM only.
+`output` keeps it. The meter stays: `peppyalsa-skip-non-pcm.patch` makes the
+scope read levels only for the formats alsa-lib's s16 scope converts, since
+for DSD that scope leaves its buffer unset and reading it aborted the
+renderer. The Volume row's Fixed note names the DAC (`_volume_notes`).
+
 Choosing one does not restart the core. The core first stops whoever is
 playing (`Supervisor.stop_active`, as a change of volume type does; George,
 2026-10-12), so nothing resumes onto the new output by itself and the next
