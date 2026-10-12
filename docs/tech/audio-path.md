@@ -402,6 +402,15 @@ generation from sysfs `speed`, the highest rate and bits and any native DSD
 format from the playback half of `/proc/asound/cardN/stream0` - passed to the
 Output row as `optionNotes` (`Settings(option_notes=...)`).
 
+**A card that takes 32-bit and not 16-bit is widened** (ADR-0143, Finding
+120): `widens()` reads the formats `needs_plug` asked for, and `render`
+puts `type linear` with slave format `S32_LE` between the chain (meter, or
+meter and software stage) and `hw:`. It pads 16 and 24 bits and never
+changes the rate - not `plug`. **A card above 384 kHz** gets
+`GEXIS_SQUEEZELITE_OPTIONS=-r <rates up to 384000>` in
+`/etc/gexis/squeezelite.env`, written with `output.conf`; Squeezelite's unit
+reads it unbraced, so the empty value of every other card adds no argument.
+
 Choosing one does not restart the core. The core first stops whoever is
 playing (`Supervisor.stop_active`, as a change of volume type does; George,
 2026-10-12), so nothing resumes onto the new output by itself and the next
