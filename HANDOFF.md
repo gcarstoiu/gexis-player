@@ -42,9 +42,11 @@ which 0.10.1 supersedes on the Testing channel. guestpi offline.
 
 **0.10.2 cut 2026-10-12 for Testing** (tag `v0.10.2`, release `r0.10.2`,
 serial 36, image `image/deploy/2026-10-12-gexis-player-v0.10.2.img`, 116
-checks; notes approved by George, shortened). **PR #61 open - George merges
-it**; then merge `origin/main` into both branches, delete `release-0.10.2`,
-remove the worktree `-r0102`. In it: the final code review's fixes (Finding
+checks; notes approved by George, shortened). **PR #61 merged** 2026-10-12;
+`main` merged into both branches. Disk cleaned the same day (George): every
+worktree but `-13d` removed, merged local branches deleted (all still on
+GitHub), `image/deploy` holds only the 0.10.2 image, `packaging/out` emptied,
+`make prune` run (the warm pi-gen stages kept). In it: the final code review's fixes (Finding
 119: 77 confirmed, all addressed) and George's twelve answers to its
 questions (ADR-0140 boot step; setup phone rule; update backups kept three;
 reset clears flash-time settings; check during an install; cache bounded by
