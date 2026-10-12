@@ -9,6 +9,7 @@
 -->
 <script>
   import { onDestroy, onMount } from 'svelte';
+  import { ask, LONG_REQUEST_TIMEOUT_MS } from '../lib/settings.js';
 
   let { port = 'cable', facts = true } = $props();
   const url = port === 'wifi' ? '/network/wifi/address' : '/network/cable';
@@ -25,9 +26,9 @@
 
   async function read() {
     try {
-      const r = await fetch(url);
+      const { response: r, body } = await ask(url);
       if (!r.ok) throw new Error();
-      cable = await r.json();
+      cable = body;
       if (!touched) {
         method = cable.method;
         address = cable.address ?? '';
@@ -60,14 +61,16 @@
     saving = true;
     error = null;
     try {
-      const r = await fetch(url, {
+      // Changing an address waits for NetworkManager: a long request
+      // (George, 2026-10-12, answer 10) - and one that hangs ends with
+      // ask's own words.
+      const { response: r, body } = await ask(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(method === 'manual'
           ? { method, address: address.trim(), gateway: gateway.trim(), dns: dns.trim().split(/[\s,]+/).filter(Boolean) }
           : { method }),
-      });
-      const body = await r.json().catch(() => ({}));
+      }, LONG_REQUEST_TIMEOUT_MS);
       if (!r.ok) throw new Error(body.error ?? 'The address was not saved. Try again.');
       told = body;
       touched = false;
