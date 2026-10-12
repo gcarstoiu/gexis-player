@@ -161,6 +161,7 @@ been written properly. **0098 has no record either.**
 | [0138](0138-reports-in-steps-and-one-way-to-send.md) | Reports in steps, a visible checklist, and one way to send for both | Accepted 2026-10-11: three steps; one Send step: GitHub issue or a download to e-mail |
 | [0139](0139-no-passwordless-sudo-in-the-public-image.md) | No passwordless sudo in the public image; test cards get it by provisioning | Accepted 2026-10-12: no sudoers rule for `pi`; `DEV_SUDO="yes"` for test cards |
 | [0140](0140-the-software-volume-is-set-before-the-renderers-start.md) | The software volume is set before the renderers start | Accepted and built 2026-10-12: `gexis-softvol-restore.service`, a oneshot before the renderers |
+| [0141](0141-picture-and-sound-on-different-hdmi-ports.md) | Picture and sound on different HDMI ports | Proposed 2026-10-12: screen port detected, sound-only port black; six decisions owed |
 
 ## Cross-cutting rules
 
