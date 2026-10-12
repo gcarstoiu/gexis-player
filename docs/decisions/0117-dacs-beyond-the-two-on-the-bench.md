@@ -125,6 +125,9 @@ to judge by on a panel.
    decode it, since any other plays it as full-scale noise; the meters to
    recognise DoP, which they would read as full-scale noise; and the
    board's volume in DSD measured. It needs an ESS board on the bench.
+   *Reopened 2026-10-12 for USB DACs that take native DSD:*
+   [ADR-0144](0144-native-dsd-on-a-dac-that-takes-it.md). DoP for I2S boards
+   stays postponed.
 
 ## Acceptance (from DEVELOPMENT.md's draft)
 
