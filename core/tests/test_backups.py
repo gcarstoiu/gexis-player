@@ -613,3 +613,78 @@ def test_a_restore_that_fails_starts_the_hub_it_stopped(tmp_path, monkeypatch):
     with pytest.raises(OSError):
         backups.restore_file(out / name, _device(tmp_path / "target"), run=run)
     assert calls[-1] == ["systemctl", "start", "beszel-hub.service"]
+
+
+# --- the updater's backups, kept three deep (George, 2026-10-12, answer 3) ---
+
+
+def _archive(directory, name):
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / name).write_bytes(b"x")
+    return name
+
+
+def test_an_updates_backup_is_named_as_one_and_still_restorable_by_an_older_core(tmp_path):
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    name = backups.create("Living Room", out, root, automatic=True)
+    assert backups.AUTOMATIC.match(name), name
+    assert name.startswith("gexis-living-room.before-update-")
+    # Still a backup to the release an update goes back to.
+    assert backups.NAME.match(name) and backups.SAFE.match(name)
+    assert [a.name for a in backups.available(out)] == [name]
+
+
+def test_a_backup_taken_by_hand_is_not_an_updates(tmp_path):
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    name = backups.create("Living Room", out, root)
+    assert not backups.AUTOMATIC.match(name)
+
+
+def test_no_device_name_makes_a_hand_backup_look_like_an_updates():
+    """The mark is a `.`, which a device's name never becomes."""
+    for device in ("before update", "x.before-update", "gexis.before-update", "Kitchen .before-update"):
+        name = f"gexis-{backups._slug(device)}-20261012-101500.tgz"
+        assert not backups.AUTOMATIC.match(name), name
+
+
+def test_the_newest_three_updates_backups_are_kept_and_no_other_kind_is_touched(tmp_path):
+    out = tmp_path / "out"
+    autos = [_archive(out, f"gexis-den.before-update-2026100{d}-101500.tgz") for d in range(1, 7)]
+    by_hand = [_archive(out, "gexis-den-20261001-090000.tgz"),
+               _archive(out, "gexis-den-20261009-090000.tgz"),
+               # From before the mark: kept, whatever its age.
+               _archive(out, "gexis-den-20250101-000000.tgz"),
+               _archive(out, "something-else.tgz")]
+    gone = backups.prune_automatic(autos[-1], out)
+    assert backups.KEEP_AUTOMATIC == 3
+    assert sorted(gone) == autos[:3]
+    left = {p.name for p in out.iterdir()}
+    assert left == set(autos[3:]) | set(by_hand)
+
+
+def test_the_one_just_made_is_kept_when_the_clock_came_up_behind(tmp_path):
+    """No clock of its own: a Pi that has not reached a time server yet
+    stamps a new backup older than the ones before it."""
+    out = tmp_path / "out"
+    older_clock = _archive(out, "gexis-den.before-update-20240101-000000.tgz")
+    later = [_archive(out, f"gexis-den.before-update-2026100{d}-101500.tgz") for d in range(1, 5)]
+    backups.prune_automatic(older_clock, out)
+    left = sorted(p.name for p in out.iterdir())
+    assert older_clock in left and len(left) == backups.KEEP_AUTOMATIC
+    assert later[-2:] == left[-2:]
+
+
+def test_three_or_fewer_are_all_kept(tmp_path):
+    out = tmp_path / "out"
+    autos = [_archive(out, f"gexis-den.before-update-2026100{d}-101500.tgz") for d in range(1, 4)]
+    assert backups.prune_automatic(autos[-1], out) == []
+    assert {p.name for p in out.iterdir()} == set(autos)
+
+
+def test_settings_says_which_backups_an_update_made(tmp_path):
+    out = tmp_path / "out"
+    _archive(out, "gexis-den.before-update-20261001-101500.tgz")
+    _archive(out, "gexis-den-20261002-101500.tgz")
+    metas = {a.name: a.to_item()["meta"] for a in backups.available(out)}
+    assert metas["gexis-den.before-update-20261001-101500.tgz"].endswith("· before an update")
+    assert "update" not in metas["gexis-den-20261002-101500.tgz"]
