@@ -48,6 +48,11 @@ DeviceAllow=char-alsa rw
 SupplementaryGroups=gexis-plugins audio
 # The network open (George: "open"): a streaming renderer needs it.
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+# ADR-0142: no mDNS responder of its own - one published a host named after
+# the device and avahi renamed the Pi. The player announces for a plugin that
+# asks (the `announce` event).
+SocketBindDeny=ipv4:udp:5353
+SocketBindDeny=ipv6:udp:5353
 # Limits (George, 2026-09-29: "Limit of 1gb"). MemoryMax holds only with
 # cgroup_enable=memory on the kernel command line, which the image sets.
 MemoryMax=1G

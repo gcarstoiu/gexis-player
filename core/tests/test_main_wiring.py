@@ -249,3 +249,14 @@ def test_fixed_on_an_output_with_no_control_writes_nothing():
     write = source.index("await set_raw(volume_bridge.mixer_name, hardware_max())")
     assert guard < write
     assert "return" in source[guard:write]
+
+
+def test_a_plugins_announcements_are_written_on_its_event_and_go_with_it():
+    """ADR-0142: `announce` written through the checks, withdrawn at disconnect,
+    and every plugin's cleared when the core starts."""
+    source = MAIN.read_text()
+    event = source[source.index("def _plugin_event"):]
+    assert "announce.checked(" in event[:event.index("announce.write(")]
+    gone = source[source.index("def _plugin_disconnected"):]
+    assert "announce.withdraw(session.id)" in gone[:gone.index("supervisor.forget")]
+    assert "announce.clear()" in source

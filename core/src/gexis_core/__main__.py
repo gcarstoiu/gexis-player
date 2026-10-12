@@ -89,7 +89,7 @@ from gexis_core.softvol_boot import (
 from gexis_core.settings_registry import InvalidValue, Settings, UnknownSetting, load_registry
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
-from gexis_core import backups, bluealsa_volume, components, outputs, plugin_env, plugins, uploads
+from gexis_core import announce, backups, bluealsa_volume, components, outputs, plugin_env, plugins, uploads
 from gexis_core.setup_network import SetupNetwork
 from gexis_core.setup_flow import SetupFlow
 from gexis_core.adapters.plugin import PluginAdapter
@@ -666,6 +666,12 @@ async def main() -> None:
         uploads.remember()
     except OSError as exc:
         logger.warning("uploads: cannot record the uploaded plugins: %s", exc)
+    # ADR-0142: what was announced for plugins goes with the core that wrote
+    # it; each plugin asks again when it connects.
+    try:
+        announce.clear()
+    except OSError as exc:
+        logger.warning("plugins: cannot clear old announcements: %s", exc)
     restored_missing = [m for m in uploads.missing() if m["id"] not in shipped_ids]
     if restored_missing:
         logger.info("uploads: restored without a package: %s", ", ".join(m["id"] for m in restored_missing))
@@ -3807,6 +3813,11 @@ async def main() -> None:
         one, and marked unavailable - the panel must not keep offering a source
         whose process has left.
         """
+        # ADR-0142: nothing stays announced for a plugin that is not here.
+        try:
+            announce.withdraw(session.id)
+        except OSError as exc:
+            logger.warning("plugins: cannot withdraw %s's announcements: %s", session.id, exc)
         if settings.forget_reports(f"{session.id}."):
             state_store.bump_settings_revision()
         adapter = plugin_adapters.pop(session.id, None)
@@ -3823,6 +3834,23 @@ async def main() -> None:
         # Availability is the one event that means something without an
         # adapter: it is the panel's own question, and the state store has
         # held a slot per renderer since Phase 3.
+        if kind == "announce":
+            # ADR-0142: what a plugin wants found on the network, announced
+            # by avahi under the Pi's own name - never by the plugin.
+            try:
+                services = announce.checked(message.get("services"),
+                                            settings.value("device_name") or device_name.hostname())
+            except announce.Refused as exc:
+                logger.warning("plugins: %s asked to announce something refused: %s", session.id, exc)
+                return
+            try:
+                announce.write(session.id, services)
+            except OSError as exc:
+                logger.warning("plugins: cannot announce for %s: %s", session.id, exc)
+                return
+            logger.info("plugins: announcing for %s: %s", session.id,
+                        ", ".join(f"{s['name']} {s['type']} {s['port']}" for s in services) or "nothing")
+            return
         if kind == "row":
             # ADR-0119: a plugin says what one of its own rows is - a
             # service as much as a renderer, so before the adapter lookup.
