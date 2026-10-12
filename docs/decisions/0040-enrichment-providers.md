@@ -229,3 +229,32 @@ duration), which survives one.
   an artist's LMS photos by exact name (letter case aside) for any source
   ([ADR-0112](0112-the-visualisers-fanart-frame-shows-the-artists-photos.md);
   `core/src/gexis_core/fanart.py`).
+
+## Amended 2026-10-12 (George's answers)
+
+- **The cache grows only as far as the card can afford** (George, answer 6:
+  *"As large as it can afford without compromising the functioning of the
+  player because of low space"*). Nothing bounded `enrichment.db` before.
+  `Cache.tidy` now keeps at least 2 GiB free on its filesystem
+  (`FREE_FLOOR_BYTES`) and never lets the cache take more than 10 % of it
+  (`CACHE_SHARE`). Past either, the answers used longest ago are deleted
+  (a new `used_at` column; rows from before take their stored time) - never
+  those for the track playing - until the cache is under 80 % of what the
+  limits allow (`TIDY_TO`), and the freed space is handed back to the
+  filesystem from 1 MiB on (`RECLAIM_MIN_BYTES`; incremental auto-vacuum,
+  and one full `VACUUM` the first time on a file made before it). It runs at
+  start and then hourly (`TIDY_EVERY_S`), off the event loop. The `notes`
+  table is not trimmed. A backup carries the cache
+  ([ADR-0083](0083-a-backup-leaves-the-device.md)), so it can be that much
+  larger.
+- **LMS's own stored answers go on a rescan or another server** (George,
+  answer 8). The cache is still not keyed on LMS ids, but the `lms` and
+  `lms-release` providers' answers carry picture paths with them, which a
+  rescan renumbers. When `LmsArtistInfo` notices a new server address or a
+  new last scan and drops its photos, it now tells `on_forget` listeners,
+  and the daemon drops those two providers' answers
+  (`Cache.forget_providers`). The two providers run the same check before a
+  stored answer of theirs is read (`before_cached`, at most once a minute),
+  so a rescan is seen even when only cached answers are read; a scan under
+  way drops nothing. A player that never recorded whose photos it held drops
+  them once, after the upgrade.

@@ -80,6 +80,20 @@ flowchart LR
 - **Settings** are loaded from `/settings` (ADR-0035) and loaded again
   whenever `settings_revision` changes in the state. A change made on the
   phone therefore reaches the panel.
+- **Settings' requests end** (George, 2026-10-12). One the player took but
+  never answered used to leave a sheet spinning; Settings' requests now go
+  through `ask()` in `lib/settings.js`, which aborts one
+  (`AbortController`, the body's read included) after `REQUEST_TIMEOUT_MS`
+  (20 s); `LONG_REQUEST_TIMEOUT_MS` (120 s) for what is slow on purpose - a
+  Wi-Fi join, anything on the network shares (search, browse, add, forget),
+  a Wi-Fi scan, making a backup, an address change (`CableSheet.svelte`), a
+  plugin's removal, a problem report's start, and a plugin upload (an
+  `XMLHttpRequest`, for its progress), where the limit counts silence (no bytes going out, or no answer once all are sent) rather
+  than the whole request; `RESTORE_TIMEOUT_MS` (15 min) for a restore, which
+  answers only once every file is back. A timeout ends as the failure its
+  caller already handles, with `UNREACHED`: *"The player did not answer.
+  Check the connection and try again."*, which Settings' plain-words filter
+  lets through.
 
 ---
 

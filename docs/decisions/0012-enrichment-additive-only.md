@@ -64,3 +64,11 @@ Audio-similarity via local embedding models (LAION-CLAP, MERT, MuQ-MuLan) needs
 a batch pass over audio files. Local library is out of scope and the files live
 on the LMS server, not the Pi. That work is a separate product operating on the
 LMS library, not a feature of the player.
+
+## Amended 2026-10-12 (George's answers)
+
+**The persistent cache has a ceiling.** It may take no more than 10 % of its
+filesystem and must leave 2 GiB of it free; past either, the answers used
+longest ago go first, never the playing track's
+([ADR-0040](0040-enrichment-providers.md) amended today). Negative results
+are still cached.

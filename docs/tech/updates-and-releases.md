@@ -282,9 +282,14 @@ key, or for another release, stops the update.
    installed release, the current versions of every package that will change,
    so going back needs no network. If those repositories can't be read, the
    update continues and says going back won't be possible.
-2. **backup** - `POST /settings/backup` on the core, then wait up to 120 s for
-   a new `.tgz` in `/var/lib/gexis-core/backups/` (ADR-0083). No backup, no
-   update.
+2. **backup** - `POST /settings/backup?before=update` on the core, then wait
+   up to 120 s for a new `.tgz` in `/var/lib/gexis-core/backups/` (ADR-0083).
+   No backup, no update. The core names it
+   `gexis-<name>.before-update-<stamp>.tgz` (`backups.AUTOMATIC_MARK`) and,
+   once it is written, deletes the update backups beyond the newest three
+   (`backups.KEEP_AUTOMATIC`, `prune_automatic()`); a backup made by hand,
+   copied into the share, or made before 2026-10-12 has no mark and is never
+   deleted. *Restore* lists these with `· before an update`.
 3. **stop** - `POST /renderers/park?stop=all`: the core pauses or disconnects
    every source, the same path as shutdown; nothing resumes afterwards
    (ADR-0110 §4). Failure to reach the core is logged, not fatal. From here
@@ -398,7 +403,7 @@ sequenceDiagram
     Sd->>Upd: install
     Upd->>GH: apt update + download new parts
     Upd->>GH: old release's parts file, download old versions
-    Upd->>Core: POST /settings/backup
+    Upd->>Core: POST /settings/backup?before=update
     Upd->>Core: POST /renderers/park?stop=all
     Upd->>Upd: apt install (inhibit shutdown), verify
     Upd->>Sd: try-restart changed units (core included) or reboot
@@ -420,7 +425,9 @@ the units (`systemctl start --no-block`) and reads `status.json`:
   `attempted` (the release a failed install was trying), steps, progress,
   notes (`whats_new`, and `whats_new_all` for every release skipped),
   message, reboot, `at` (when the status was written), and **`active`** - true only while
-  the state is an installing one *and* the install unit is actually running, so
+  the state is an installing one *and* an installing unit is actually running
+  (the install unit, the boot's check, or the nightly
+  `gexis-update-check.service`, `updates.SCHEDULED_UNIT`, since 2026-10-12), so
   a killed updater cannot lock the panel forever.
 - Settings rows: *Release* (`0.9.2 · Testing`, read-only) and the *Software
   update* tile (one sentence from `updates.sentence()`, its button opening the
@@ -429,7 +436,11 @@ the units (`systemctl start --no-block`) and reads `status.json`:
   updater itself.
 - `ui/src/screens/UpdateModal.svelte`: checking → answer (with notes) →
   confirm if playing → progress (`UpdateSteps`) → end. Closing it on a phone
-  leaves the update running.
+  leaves the update running. *Check for updates* opened while `update.active`
+  sends no check (the updater would leave it unanswered behind `status.lock`):
+  it goes straight to the install's progress, saying *"An update is being
+  installed. Check for updates again once it has finished."*, and so does a
+  check during which an install starts (George, 2026-10-12).
 - `ui/src/App.svelte`: while `update.active`, the panel shows `UpdateScreen`
   over everything (Peppy hidden), stays up through the core's restart and
   reconnect, then holds the outcome until *Done* (10 min limit; 6 s for a

@@ -162,3 +162,27 @@ backup to also download one of the backups locally?"*):
   applied to the restored file at the reboot and the database was malformed.
   A `-wal` or `-shm` file the archive does not bring is removed from beside
   each file it restores.
+
+## Amended 2026-10-12 (George's answers)
+
+- **An update's backups are named as such, and only the newest three are
+  kept** (George: automatic pre-update backups are pruned, the three most
+  recent kept). The updater (ADR-0105 §4 step 3) asks
+  `POST /settings/backup?before=update`; the core names that archive
+  `gexis-<name>.before-update-<stamp>.tgz` (`backups.AUTOMATIC_MARK`) and,
+  once it is written, deletes the update backups beyond the newest three
+  (`backups.KEEP_AUTOMATIC`, `prune_automatic`), newest by the time in the
+  name, the one just made always kept. A backup made by hand, one copied into
+  the share, or an update's from before this change (no mark in its name) is
+  never counted and never deleted. The mark begins with a `.`, which a
+  device name's slug never contains, so no name makes a hand backup look like
+  an update's; the name still matches `NAME`, so the release an update goes
+  back to lists and restores it. *Restore* shows `· before an update` after
+  these. A core from before this ignores the query and makes an ordinary
+  backup.
+- **What this does not settle, *Automatic backups*:** still none on a
+  schedule; the update's backup is the only one nobody pressed a button for.
+- **A backup carries the enrichment cache**, which may now grow to a tenth
+  of its filesystem ([ADR-0040](0040-enrichment-providers.md) amended
+  today), so a backup can be that much larger; Settings gives a restore 15
+  minutes to answer.

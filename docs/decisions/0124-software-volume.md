@@ -103,3 +103,14 @@ the panel says *Fixed* and offers no slider.
 - **A change of output restarts renderer plugins too** (Plexamp plays through
   the same output and kept the old card), and only the sources that are
   switched on.
+
+## Amended 2026-10-12 (George's answers)
+
+- **The saved level is set before the renderers start**
+  ([ADR-0140](0140-the-software-volume-is-set-before-the-renderers-start.md),
+  built 2026-10-12). The core starts after the renderers, so after a power
+  cut a renderer resuming by itself could play its first second through the
+  software stage at the 0 dB ALSA makes it with. `gexis-softvol-restore.service`
+  now writes the level first, by the same rule as the core
+  (`softvol_boot.start_level`: the remembered level, else the card's own,
+  else -30 dB); the core still sets it when it runs.

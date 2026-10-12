@@ -332,6 +332,16 @@ in Display:
 | The home screen's background: Background, Wallpaper topics, Wallpaper styles, Follow the time of day, Seasons, Holidays, Background brightness, Change the picture every | [N] | **Appended 2026-10-11, confirmed by George** (ADR-0133 amended, second): the waiting screen's own, `waiting_*`, under *Home screen*, with the Lyrion client off; the idle screen's rows unchanged. **Fresh defaults** (George), not a copy; no *Artist pictures* |
 | Section headings: Touchpad, Volume, Photo service and location | — | Not settings: Display's sections from 2026-10-11 (George). *Photo service and location* holds the Pixabay key and the location, shared by both screens |
 
+### Appended 2026-10-12 — the final code review
+
+Confirmed by George, 2026-10-12 (*"Ok"*), from the fixes recorded in
+[Finding 119](../findings/119-the-final-code-review.md):
+
+| Setting | Mark | Notes |
+|---|---|---|
+| A stranded update screen lets go after | [H] | 30 s: when the updater stops without writing an outcome, the panel's *Updating…* lock is released after half a minute and Settings shows what the updater last reported. Fixed, not a row |
+| A volume drawer that opened by itself ignores touches for | [H] | 400 ms: a drawer or tray opened by a change elsewhere (a phone, a renderer) takes no touch for that long, so a tap meant for the screen under it does not set the level. One the panel opened itself takes touches at once. Fixed, not a row |
+
 ## Settled by prior records
 
 - **Output mode switching is not instantaneous.** Confirmation dialogue, and the

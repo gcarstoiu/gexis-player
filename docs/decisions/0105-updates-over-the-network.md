@@ -272,3 +272,12 @@ cache keeps only the installed versions once an update ends well; the
 serial last seen is written atomically, and an unreadable one counts as 0;
 `publish.sh` starts a channel at serial 1 only when it has no channel file,
 and stops on any other failed fetch.
+
+## Amended 2026-10-12 (George's answers)
+
+**§4 step 3: the automatic backup is marked, and kept three deep.** The
+updater asks for it with `POST /settings/backup?before=update`; the core
+names it `gexis-<name>.before-update-<stamp>.tgz` and deletes the update
+backups beyond the newest three. Backups made by hand, copied in, or made
+before this change are never deleted
+([ADR-0083](0083-a-backup-leaves-the-device.md) amended today).

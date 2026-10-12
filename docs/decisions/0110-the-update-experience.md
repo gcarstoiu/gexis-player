@@ -355,3 +355,22 @@ caught:**
   deleted.
 - **An install the power cut short is finished, or rolled back, at the next
   boot** (ADR-0105 §4 as amended today), using this record's 2026-10-09 heal.
+
+## Amended 2026-10-12 (George's answers)
+
+- **Check for updates during an update is not sent** (George, answer 5:
+  *"Yes"*). The updater holds `status.lock` for the whole install and leaves
+  a check unanswered, so the modal waited out its 90 s and then said the
+  player had not answered. Pressed while an update is running, the modal
+  (`UpdateModal.svelte`) goes straight to the install's progress and says
+  *"An update is being installed. Check for updates again once it has
+  finished."*; an install that starts while a check waits does the same. It
+  follows that install to its end, as an *Update* does.
+- **The nightly automatic install counts as an update running.** It runs
+  under the scheduled check's own unit, `gexis-update-check.service`
+  (`updates.SCHEDULED_UNIT`), which `updates.view` did not look at: the
+  panel's lock (§6) stayed off and a check waited 90 s. It is now counted
+  with the install unit and the boot's check.
+- **The backup before an update is listed as such** in *Restore*
+  (`· before an update`), and the player keeps the newest three
+  ([ADR-0083](0083-a-backup-leaves-the-device.md) amended today).
