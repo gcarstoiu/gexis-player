@@ -623,3 +623,203 @@ def test_a_nothing_past_believing_is_cleared_when_the_cache_opens(tmp_path):
     reopened = Cache(tmp_path / "e.db", clock=clock)
     rows = reopened._conn.execute("SELECT outcome FROM enrichment ORDER BY outcome").fetchall()
     assert rows == [("found",), ("missing",)], "the old nothing gone, the fresh one and the answer kept"
+
+
+def test_the_answers_of_named_providers_can_be_dropped():
+    cache = _cache()
+    for provider in ("lms", "lms-release", "wikipedia"):
+        cache.put(KEY, provider, _found(biography=provider))
+    cache.forget_providers("lms", "lms-release")
+    assert cache.get(KEY, "lms") is None and cache.get(KEY, "lms-release") is None
+    assert cache.get(KEY, "wikipedia") is not None
+
+
+@pytest.mark.asyncio
+async def test_lyrions_stored_answers_go_when_the_library_is_rescanned():
+    """George, 2026-10-12 (answer 8): LMS's answers carry picture paths with
+    its ids, and a rescan renumbers them. The check runs before a stored
+    answer is believed, not only when the provider happens to be asked."""
+    from gexis_core.artistinfo import SCOPE_CHECK_S, LmsArtistInfo
+    from gexis_core.providers import LmsArtistProvider, LmsReleaseProvider
+
+    clock = FakeClock()
+
+    class Lms:
+        lastscan = "1"
+        asked = 0
+
+        async def __call__(self, command, player="", timeout=None):
+            if command[0] == "serverstatus":
+                return {"lastscan": self.lastscan}
+            self.asked += 1
+            if command[1] == "artistphoto":
+                return {"url": f"imageproxy/mai/artist/{self.lastscan}/image.png"}
+            return {"biography": "Born somewhere."}
+
+    lms = Lms()
+    cache = _cache()
+    info = LmsArtistInfo(lms, "http://lms:9000", store=cache, clock=clock)
+    info.on_forget(lambda: cache.forget_providers(LmsArtistProvider.name, LmsReleaseProvider.name))
+    service = EnrichmentService([LmsArtistProvider(info, lambda: 7)], cache, clock=clock)
+
+    first = await service.for_track(KEY, renderer="lms")
+    assert "/artist/1/" in first.artist_image
+    asked = lms.asked
+    assert (await service.for_track(KEY, renderer="lms")).artist_image == first.artist_image
+    assert lms.asked == asked, "the same scan: the stored answer"
+
+    lms.lastscan = "2"
+    clock.advance(SCOPE_CHECK_S)
+    again = await service.for_track(KEY, renderer="lms")
+    assert "/artist/2/" in again.artist_image and lms.asked > asked
+
+
+# --- how large it may grow (George, 2026-10-12, answer 6) --------------------
+
+
+class FakeDisk:
+    """`shutil.disk_usage` for a filesystem the test describes."""
+
+    def __init__(self, total, free):
+        self.total, self.free = total, free
+
+    def __call__(self, _path):
+        return self
+
+
+def _track(n):
+    return TrackKey(artist=f"artist {n}", album=f"album {n}", title=f"title {n}", duration=200)
+
+
+def _filled(path, clock, disk, rows=600):
+    cache = Cache(path, clock=clock, disk_usage=disk)
+    for n in range(rows):
+        cache.put(_track(n), "lrclib", _found(lyrics="la " * 1500))
+        clock.advance(1)
+    return cache
+
+
+def _rows(cache):
+    return {row[0] for row in cache._conn.execute("SELECT key FROM enrichment")}
+
+
+def test_an_older_cache_gains_a_last_used_time_from_when_each_answer_was_stored(tmp_path):
+    import sqlite3
+
+    path = tmp_path / "enrichment.db"
+    old = sqlite3.connect(path)
+    old.execute("CREATE TABLE enrichment (key TEXT NOT NULL, provider TEXT NOT NULL, outcome TEXT NOT NULL,"
+                " value TEXT NOT NULL, stored_at REAL NOT NULL, PRIMARY KEY (key, provider))")
+    old.execute("INSERT INTO enrichment VALUES (?, 'lrclib', 'found', '{}', 1234.0)", (KEY.as_text(),))
+    old.commit()
+    old.close()
+    cache = Cache(path)
+    assert cache._conn.execute("SELECT used_at FROM enrichment").fetchone() == (1234.0,)
+    assert cache.get(KEY, "lrclib") is not None
+
+
+def test_a_cache_within_its_limits_is_left_alone(tmp_path):
+    clock = FakeClock()
+    cache = _filled(tmp_path / "enrichment.db", clock, FakeDisk(total=64 * 1024 ** 3, free=30 * 1024 ** 3))
+    report = cache.tidy()
+    assert report["deleted"] == 0 and len(_rows(cache)) == 600
+
+
+def test_low_space_drops_the_answers_used_longest_ago_but_not_what_is_playing(tmp_path):
+    from gexis_core import enrichment as en
+
+    clock = FakeClock()
+    path = tmp_path / "enrichment.db"
+    disk = FakeDisk(total=64 * 1024 ** 3, free=30 * 1024 ** 3)
+    cache = _filled(path, clock, disk)
+    # Track 0 is the oldest stored, but was read just now; track 1 is
+    # playing. Both stay; tracks 2 onwards go oldest first.
+    assert cache.get(_track(0), "lrclib") is not None
+    cache.flush_used()
+    size = path.stat().st_size
+    disk.free = en.FREE_FLOOR_BYTES - size // 2       # half the cache over the floor
+    report = cache.tidy(playing=[_track(1)])
+
+    kept = _rows(cache)
+    assert report["deleted"] > 0 and len(kept) < 600
+    assert _track(0).as_text() in kept and _track(1).as_text() in kept
+    assert _track(2).as_text() not in kept and _track(599).as_text() in kept
+    assert path.stat().st_size <= en.TIDY_TO * (size // 2) + 64 * 1024, "the space is handed back"
+    assert cache.get(_track(599), "lrclib") is not None, "still usable afterwards"
+
+
+def test_a_cache_over_its_share_of_the_card_is_trimmed(tmp_path):
+    from gexis_core import enrichment as en
+
+    clock = FakeClock()
+    path = tmp_path / "enrichment.db"
+    disk = FakeDisk(total=64 * 1024 ** 3, free=30 * 1024 ** 3)
+    cache = _filled(path, clock, disk)
+    size = path.stat().st_size
+    disk.total = int(size / en.CACHE_SHARE) // 2      # the cache is 20% of this card
+    cache.tidy()
+    assert path.stat().st_size <= en.TIDY_TO * size / 2 + 64 * 1024
+    assert _track(599).as_text() in _rows(cache)
+
+
+def test_a_card_made_before_the_limit_is_compacted_once_then_in_steps(tmp_path):
+    import sqlite3
+
+    from gexis_core import enrichment as en
+
+    path = tmp_path / "enrichment.db"
+    old = sqlite3.connect(path)                     # as every card's is today
+    old.execute(Cache._SCHEMA)
+    old.commit()
+    old.close()
+    clock = FakeClock()
+    disk = FakeDisk(total=64 * 1024 ** 3, free=30 * 1024 ** 3)
+    cache = _filled(path, clock, disk)
+    assert cache._conn.execute("PRAGMA auto_vacuum").fetchone() == (0,)
+    disk.free = en.FREE_FLOOR_BYTES - path.stat().st_size // 2
+    cache.tidy()
+    assert sqlite3.connect(path).execute("PRAGMA auto_vacuum").fetchone() == (2,)
+    assert not cache._compacting.is_set()
+    cache.put(KEY, "lms", _found(biography="b"))      # the daemon's own connection goes on
+    assert cache.get(KEY, "lms") is not None
+    assert cache._conn.execute("PRAGMA integrity_check").fetchone() == ("ok",)
+    # And next time, a few pages at a time rather than the whole file again.
+    for n in range(1000, 1600):
+        cache.put(_track(n), "lrclib", _found(lyrics="la " * 1500))
+    size = path.stat().st_size
+    disk.free = en.FREE_FLOOR_BYTES - size // 2
+    cache.tidy()
+    assert path.stat().st_size < size
+
+
+@pytest.mark.asyncio
+async def test_the_cache_is_looked_at_on_opening_then_hourly_off_the_loop(tmp_path):
+    import threading
+
+    from gexis_core import enrichment as en
+
+    cache = Cache(tmp_path / "enrichment.db", disk_usage=FakeDisk(64 * 1024 ** 3, 30 * 1024 ** 3))
+    seen, slept = [], []
+    tidy = cache.tidy
+
+    def watched(playing=()):
+        seen.append((threading.current_thread() is threading.main_thread(), tuple(playing)))
+        return tidy(playing)
+    cache.tidy = watched
+
+    async def sleep(seconds):
+        slept.append(seconds)
+        raise asyncio.CancelledError
+    with pytest.raises(asyncio.CancelledError):
+        await cache.keep_tidy(lambda: KEY, sleep=sleep)
+    assert seen == [(False, (KEY,))] and slept == [en.TIDY_EVERY_S]
+
+
+def test_a_read_while_the_file_is_compacted_is_a_miss_not_a_wait():
+    cache = _cache()
+    cache.put(KEY, "lrclib", _found(lyrics="la"))
+    cache._compacting.set()
+    assert cache.get(KEY, "lrclib") is None
+    cache.put(KEY, "lms", _found(biography="b"))
+    cache._compacting.clear()
+    assert cache.get(KEY, "lms") is None and cache.get(KEY, "lrclib") is not None

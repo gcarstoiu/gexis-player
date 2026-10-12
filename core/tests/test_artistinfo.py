@@ -709,3 +709,37 @@ async def test_a_scan_under_way_or_a_server_that_gives_no_status_drops_nothing()
     lms.status = no_status
     await LmsArtistInfo(lms, BASE, store=store, clock=clock).photos([7452])
     assert len(lms.commands) == 1
+
+
+@pytest.mark.asyncio
+async def test_what_is_dropped_after_a_rescan_is_told_to_whoever_asked():
+    """George, 2026-10-12 (answer 8): the enrichment cache's answers from
+    LMS carry the same ids, so they go when the photos do."""
+    lms = FakeLms(photos={7452: "imageproxy/mai/artist/7452/image.png"})
+    store, clock = _store(), FakeClock()
+    info = LmsArtistInfo(lms, BASE, store=store, clock=clock)
+    dropped = []
+    info.on_forget(lambda: dropped.append("drop"))
+    await info.check_scope()
+    assert dropped == ["drop"], "nothing known about whose they were: dropped once"
+    clock.advance(3600)
+    await info.check_scope()
+    assert dropped == ["drop"], "the same server and scan: kept"
+    lms.lastscan = "1800000000"
+    clock.advance(3600)
+    await info.check_scope()
+    assert dropped == ["drop", "drop"]
+
+
+@pytest.mark.asyncio
+async def test_a_listener_that_fails_does_not_stop_the_photos_going():
+    store = _store()
+    store.remember(LmsArtistInfo.NAMESPACE, 7452, "http://x/image_200x200_o.jpg")
+    info = LmsArtistInfo(FakeLms(), BASE, store=store)
+
+    def broken():
+        raise RuntimeError("no")
+    info.on_forget(broken)
+    info.forget()
+    with pytest.raises(KeyError):
+        store.recall(LmsArtistInfo.NAMESPACE, 7452)
