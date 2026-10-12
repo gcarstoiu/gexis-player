@@ -1,0 +1,33 @@
+diff --git a/src/peppyalsa.c b/src/peppyalsa.c
+index 26bc156..1083943 100644
+--- a/src/peppyalsa.c
++++ b/src/peppyalsa.c
+@@ -142,9 +142,28 @@ decay:
+     return lev;
+ }
+ 
++/* Gexis (ADR-0144): whether the stream is PCM. Native DSD is not: alsa-lib's
++   s16 scope refuses the format and leaves its buffer unset, and reading that
++   buffer aborts the program playing (pcm_meter.c, "s16->buf_areas"). */
++static int pcm_is_linear(snd_pcm_t *pcm) {
++    snd_pcm_hw_params_t *params;
++    snd_pcm_format_t format;
++    snd_pcm_hw_params_alloca(&params);
++    if (snd_pcm_hw_params_current(pcm, params) < 0)
++        return 0;
++    if (snd_pcm_hw_params_get_format(params, &format) < 0)
++        return 0;
++    return snd_pcm_format_linear(format) == 1;
++}
++
+ static void level_update(snd_pcm_scope_t * scope) {
+     snd_pcm_scope_peppyalsa_t *level = snd_pcm_scope_get_callback_private(scope);
+     snd_pcm_t *pcm = level->pcm;
++    if (!pcm_is_linear(pcm)) {
++        /* Nothing to draw from DSD: the meters and spectrum stay still. */
++        level->old = snd_pcm_meter_get_now(pcm);
++        return;
++    }
+     snd_pcm_sframes_t size;
+     snd_pcm_uframes_t size1, size2;
+     snd_pcm_uframes_t offset, cont;
