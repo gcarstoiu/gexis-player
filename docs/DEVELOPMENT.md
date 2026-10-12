@@ -2915,6 +2915,11 @@ per file on Pis other than 4 GB, and temperatures with a case (HARDWARE.md).
 
 ### Phase 13f — Lyrion's own menus, plugins included
 
+**Closed 2026-10-12 for the release; George's look moved to Phase 16**
+(George: *"create a separate phase for this at the end of the current phase
+list"*). It ships as built, behind *Extended navigation* (ADR-0118); the hidden
+library's hour was measured (Finding 118).
+
 **Closes after the hidden library's hour** on the Pi (ADR-0122,
 Consequences; measured 2026-10-10, nothing - Finding 118) **and George's look** (George, 2026-10-10, agreeing to the
 recommendation). It was built and released behind *Extended navigation*
@@ -3030,6 +3035,25 @@ rate, a 96 or 192 kHz file goes out at that rate, and many sound bars take only
    converted, with the maximum set.
 3. Tracks at or under the maximum stay bit-perfect, measured as Findings
    002 and 003 measured the DAC.
+
+### Phase 16 — Lyrion's own menus: the look
+
+**Added 2026-10-12** (George, taking it out of the first public release:
+*"create a separate phase for this at the end of the current phase list"*).
+Phase 13f built Lyrion's own menu tree, plugins included, and it ships behind
+*Extended navigation* (ADR-0118; Finding 110 for what the tree holds, Finding
+118 for the hidden library's hour). What it never had is George's look: it
+had no written acceptance criteria, so how it should look and behave is
+decided here.
+
+**Acceptance (draft):**
+
+1. George goes through Lyrion's own menus on the panel and the phone, *My
+   Apps* and at least one plugin's menu included, and says what changes.
+2. What he asks for is built, each change that alters the navigation's design
+   recorded in ADR-0118 first.
+3. Whether *Extended navigation* stays an option or becomes the default is
+   his decision, recorded in ADR-0022's inventory.
 
 ## Test tiers
 
