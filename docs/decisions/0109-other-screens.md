@@ -396,3 +396,26 @@ applied for setup, so choosing it changes nothing and nothing is asked. The
 Screen step's data now names the screens whose picture is the one on the
 screen now (`unchanged`, from `screen_apply.picture_of`); the warning's Keep
 sentence shows only for a choice outside it. An untested model still says so.
+
+## Amended 2026-10-12: a TV as the screen is out of scope - a possibility for later
+
+George: *"Let's keep 4k TVs out of scope for now. Record them as a could in the
+future."* ADR-0111 had already answered for the skins (*"We will not support
+4k"*). A code trace the same day found what would happen with one (the
+to-do list's item, and below), so a later phase starts from it rather than
+from nothing:
+
+- setup does not lock: a 3840 x 2160 TV is an unknown Standard screen, drawn
+  at x3 (the 13.3"'s 1280 x 720 layout); the phone's touchpad answers what a
+  touch would;
+- but a TV off or on another input at boot leaves the page unscaled in a
+  1280-wide strip with no re-check; the Pi 4 is not set for 4K at 60 Hz (the
+  list's *Generic 60Hz* preset writes nothing to make it so) and the mode a
+  TV comes up in may not be the one assumed; *Keep this screen?* can only be
+  answered from the phone's touchpad, with nothing saying so; the visualiser
+  fills a quarter of the screen (the 1920 x 1080 pack, centred); a TV's own
+  auto-off after no signal defeats standby's wake, and there is no CEC;
+- only a real TV can show the mode chosen, frame drops at x3, overscan and
+  what its auto-off does.
+
+A *could* for later, not on the plan: it would be its own phase, ADR first.
