@@ -216,7 +216,7 @@ proposals:
   lists, no search field, no keyboard — 350 IANA names in one list is not a
   touch target.
 - **`readonly` rows take no tap** and draw no chevron.
-- **The header carries the IP**: `gexis · gexis.local · 192.168.178.51`.
+- **The header carries the IP**: `gexis · gexis.local · <the player's address>`.
   The build stamp that sat at the right of the header is gone; `version` in
   System still reports the build.
 - **The LMS server sheet's hint line was removed.**
@@ -240,7 +240,7 @@ categories, 6 wired.
 **Device name.** `device_name` is one name feeding mDNS, Spotify and
 Bluetooth. The header shows the name **as typed** with the sanitised hostname
 beside it, and the device's address after that — `gexis · gexis.local ·
-192.168.178.51`. Never substitute silently. The sanitiser
+<the player's address>`. Never substitute silently. The sanitiser
 folds accents, lowercases, replaces illegal characters with hyphens, trims
 them from the ends, and caps at 63 characters.
 

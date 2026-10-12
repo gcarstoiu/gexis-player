@@ -69,7 +69,7 @@ timeline, and the plugin's existing `wait=1` long poll returns on the change:
 ```
 t+0.14s  {'state': 'error', 'playQueueID': '2930', 'key': '/library/metadata/91795',
           'containerKey': '/playQueues/2930', 'machineIdentifier': '…',
-          'address': '192-168-178-191.….plex.direct', 'port': '32400', …}
+          'address': '<address>.….plex.direct', 'port': '32400', …}
 t+0.19s  {'state': 'stopped'}
 ```
 
