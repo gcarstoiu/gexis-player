@@ -4,7 +4,7 @@
 **Question:** George, when the Phase 8 provider decisions were put to him:
 *"doesn't LMS already have artist photos? couldn't we cover some of it from
 there directly?"*
-**System:** George's LMS 9.1.1 at `192.168.178.188:9000`, probed read-only
+**System:** George's LMS 9.1.1 at `192.0.2.188:9000`, probed read-only
 from `gexis`. The server reports `Plugins have been updated - Restart
 Required (Music and Artist Information)`.
 

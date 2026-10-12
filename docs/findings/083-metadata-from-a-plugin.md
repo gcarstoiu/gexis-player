@@ -18,7 +18,7 @@ file=plexamp
 artist=2 Unlimited
 album=Get Ready
 title=Get Ready for This (orchestral mix)
-coverurl=http://192.168.178.191:32400/library/metadata/91794/thumb/…?X-Plex-Token=…
+coverurl=http://192.0.2.191:32400/library/metadata/91794/thumb/…?X-Plex-Token=…
 ```
 
 Title, artist, album and artwork, from a plugin in another repository, through a

@@ -9,7 +9,7 @@ connected… When plexamp takes over the panel is still showing that it's waitin
 for renderers until I start playing something."* Then: *"look at all options,
 hacks, outside the box ideas… Really thorough sweep on what is possible."*
 **Scope:** `gexis`, Plexamp headless **4.13.2**, Squeeze Plex Hub **1.43.0** at
-`192.168.178.53:3000`, LMS **9.1.1**, George's own PMS and library. The DAC's
+`192.0.2.53:3000`, LMS **9.1.1**, George's own PMS and library. The DAC's
 card resolved by name every time. Measurements are single runs unless a count is
 given; each is stated with what it was. **Nothing was booted from the image.**
 Read-only against PMS and plex.tv apart from starting and stopping playback;
@@ -84,9 +84,9 @@ A GDM broadcast to `udp/32412` from this device — which is what a controller
 does — is answered by:
 
 ```
-192.168.178.131:32412   Name: Gexis      Product: Plexamp            Port: 32500
-192.168.178.53:32412    Name: gexis      Product: Squeeze Plex Hub   Port: 3000
-192.168.178.53:32412    Name: ShelvesPi  Product: Squeeze Plex Hub   Port: 3000
+192.0.2.131:32412   Name: Gexis      Product: Plexamp            Port: 32500
+192.0.2.53:32412    Name: gexis      Product: Squeeze Plex Hub   Port: 3000
+192.0.2.53:32412    Name: ShelvesPi  Product: Squeeze Plex Hub   Port: 3000
 ```
 
 The same player also appears in the PMS client table and in plex.tv's resources,
@@ -134,13 +134,13 @@ source address across the full retained log (2026-09-25 16:35 → 2026-09-26
 13:54), records the phone talking straight to the player:
 
 ```
-196  192.168.178.61  /player/playback/setParameters
-104  192.168.178.61  /resources
- 10  192.168.178.61  /player/playback/skipNext
-  9  192.168.178.61  /player/playback/stop
-  7  192.168.178.61  /player/playback/createPlayQueue
-  6  192.168.178.61  /player/playback/pause
-  2  192.168.178.61  /settings/values
+196  192.0.2.61  /player/playback/setParameters
+104  192.0.2.61  /resources
+ 10  192.0.2.61  /player/playback/skipNext
+  9  192.0.2.61  /player/playback/stop
+  7  192.0.2.61  /player/playback/createPlayQueue
+  6  192.0.2.61  /player/playback/pause
+  2  192.0.2.61  /settings/values
 ```
 
 **The `ss` observation was still real**, and both can be true: these are

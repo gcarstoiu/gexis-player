@@ -5,7 +5,7 @@
 `phase-3-core-daemon` commit `02fc0dc` into the existing
 `/opt/gexis-core/venv` (not baked into a rebuilt image — see HANDOFF.md's
 note on this session's hand-install workflow). LMS server
-`192.168.178.188:9000`, player `aa:bb:cc:00:00:01`.
+`192.0.2.188:9000`, player `aa:bb:cc:00:00:01`.
 **Question:** Phase 3 criterion 6 — "Track change on LMS appears on the
 WebSocket within a bounded time, measured and recorded."
 
@@ -28,7 +28,7 @@ saw on a different pair. The full range spans 143.3 ms.
 
 One long-lived script, run on `gexis` itself (not from a separate
 machine — deliberately, so nothing beyond LMS's own real network hop to
-`192.168.178.188` is added to the timing, per this project's own
+`192.0.2.188` is added to the timing, per this project's own
 "wrong-host" lesson): a single WebSocket client connected to
 `ws://127.0.0.1:8090/state`, alternating `playlist play <url>` JSON-RPC
 calls between two distinct local library tracks (Snow Patrol / Yiruma,

@@ -6,7 +6,7 @@ load-bearing assumption that playback from a typed id works. What does each
 designed screen cost, how does LMS file and group, what does radio look like
 below its first level, and what happens on `gexis` when the library starts
 playback?
-**System:** LMS 9.1.1 at `192.168.178.188`, player `gexis`
+**System:** LMS 9.1.1 at `192.0.2.188`, player `gexis`
 (`aa:bb:cc:00:00:02`), device on the Phase 6 image
 `v0.2.1-202-gf3674f3`. JSON-RPC `slim.request` sent from R2D2. **No product
 code involved:** nothing was sent to the panel or the core's routes; the core

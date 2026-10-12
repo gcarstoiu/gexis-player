@@ -14,7 +14,7 @@ unit's cgroup memory (own memory - `anon` - and file cache apart), each
 Lyrion process's RSS, CPU time, load, temperature, Lyrion's scan progress.
 Speeds: `lyrion_bench.py` (scratch) - eight requests, each ten times after
 one warm-up, one at a time, median and slowest. The other server: George's
-`192.168.178.188`, *Lyrion Music Server (Docker)* 9.1.1, tens of thousands of songs; its
+`192.0.2.188`, *Lyrion Music Server (Docker)* 9.1.1, tens of thousands of songs; its
 hardware was not recorded.
 
 **Not measured:** a Pi 4 with other than 4 GB, or any other model; a wired

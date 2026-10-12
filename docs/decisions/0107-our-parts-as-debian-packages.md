@@ -99,7 +99,7 @@ install, not frozen at build.
    image build. The cost is one careful step, before there are devices in the
    field whose paths would have to be migrated.
 2. **`core.toml` ships without an LMS address.** Today every image points at
-   `192.168.178.188:9000`, George's server, as its default. First-boot setup
+   `<LMS server address>:9000`, George's server, as its default. First-boot setup
    already asks (*find / address / off*, ADR-0104), and the `lms_server`
    setting overrides the file. **Decided: ship none**; a device with no
    answer has LMS off until setup gives it one. George's own card keeps its

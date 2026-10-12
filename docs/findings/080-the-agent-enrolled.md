@@ -7,7 +7,7 @@ connected, which [Finding 078](078-what-the-beszel-agent-costs-and-listens-on.md
 could only bound from below, and whether it records what that record claims it
 does.
 **Scope:** `gexis`, `beszel-agent` **0.20.0**, connected to George's hub at
-`192.168.178.69:8090` with his own token and key, which he entered through the
+`192.0.2.69:8090` with his own token and key, which he entered through the
 settings screen and confirmed working. One 60-second sample, on an otherwise
 idle device with no renderer playing. **The hub's own display was not seen from
 here** — every claim below about what the agent *records* comes from the arm64
@@ -82,7 +82,7 @@ out of the archive rather than off the device:
     var/lib/beszel-agent/fingerprint
 
     beszel.enabled   true
-    beszel.hub       "http://192.168.178.69:8090/"
+    beszel.hub       "http://192.0.2.69:8090/"
     beszel.key       82 chars
     beszel.token     32 chars
     fingerprint      present, 48 bytes

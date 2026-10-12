@@ -25,6 +25,7 @@ flag any moment two renderers hold the device at once.
 Runs on gexis under the gexis-core venv.
 """
 
+import os
 import gzip
 import json
 import subprocess
@@ -38,7 +39,8 @@ import lms_cli  # noqa: E402
 import pcm_holder  # noqa: E402
 import spotify_api  # noqa: E402
 
-LMS_BASE = "http://192.168.178.188:9000"
+# The Lyrion server to test against: GEXIS_LMS_HOST (host or host:port).
+LMS_BASE = "http://" + os.environ.get("GEXIS_LMS_HOST", "192.0.2.188:9000")
 PLAYER = "aa:bb:cc:00:00:01"
 POLL_INTERVAL_S = 0.02
 _id = [0]

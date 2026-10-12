@@ -6,7 +6,7 @@ their API… Anything that can reduce the dependency on internet providers is a
 good thing. They can be kept as fallbacks, not removed."* So: what is actually
 there, how much of **this** library does it cover, and is it better than what we
 fetch now?
-**Scope:** George's own Plex Media Server at `192.168.178.191:32400`, read with
+**Scope:** George's own Plex Media Server at `192.0.2.191:32400`, read with
 Plexamp's token, and the daemon's own `enrichment.db` (3,734 rows) as the record
 of what has really been asked. **Nothing was built.** Counts are that server's
 answers today; coverage is measured against the artists this device has looked
