@@ -79,6 +79,13 @@ from gexis_core.model import BLANK_METADATA, Queue, TrackMetadata
 from gexis_core import connections, hardware_report, settings_migrations, settling, updates, wired
 from gexis_core.standby import Schedule, Standby
 from gexis_core.settings import SettingsStore
+# ADR-0127's `output_mode` row and ADR-0124's remembered software level, kept
+# with the boot step that sets that level before the renderers start
+# (ADR-0140), which reads them without importing the core.
+from gexis_core.softvol_boot import (
+    FIXED, HARDWARE, SOFTWARE, SOFTWARE_LEVEL_FIRST_DB, SOFTWARE_LEVEL_KEY, VOLUME_KEY,
+    start_level, volume_mode,
+)
 from gexis_core.settings_registry import InvalidValue, Settings, UnknownSetting, load_registry
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
@@ -482,25 +489,6 @@ def plugin_queue(renderer_id: str, raw) -> Queue | None:
 #: restart on guestpi (2026-10-07), so twice that.
 RESTART_HOLD_S = 30.0
 
-#: ADR-0127: one row, `output_mode` - Hardware, Software or Fixed.
-VOLUME_KEY = "output_mode"
-HARDWARE, SOFTWARE, FIXED = "Hardware", "Software", "Fixed"
-
-
-def volume_mode(stored, output) -> str:
-    """What is in force for `output` (ADR-0127 §2): the stored choice, except
-    Hardware on an output with no control of its own, where Software takes
-    its place. The same answer `Settings.value` gives once the row is
-    restricted; this one is for start-up, before `Settings` exists."""
-    mode = stored if stored in (HARDWARE, SOFTWARE, FIXED) else HARDWARE
-    if mode == HARDWARE and output is not None and output.control is None:
-        return SOFTWARE
-    return mode
-SOFTWARE_LEVEL_KEY = "_software_level_db"
-#: A first start with no level remembered and none to carry over: quiet.
-SOFTWARE_LEVEL_FIRST_DB = -30.0
-
-
 async def _start_software_volume(card_output, store) -> None:
     """**Before anything plays** (ADR-0124): the software control made and
     set to the remembered level, and the card's own control parked at 0 dB,
@@ -508,12 +496,13 @@ async def _start_software_volume(card_output, store) -> None:
 
     The level, in order: the one remembered; else the card's own, which is
     what the listener was hearing when it was switched on; else quiet."""
-    db = store.get(SOFTWARE_LEVEL_KEY)
-    if db is None and card_output.control and card_output.scale:
+    remembered, card_db = store.get(SOFTWARE_LEVEL_KEY), None
+    if remembered is None and card_output.control and card_output.scale:
         raw = await get_raw(card_output.control)
         if raw is not None:
-            db = card_output.scale.db(raw)
-    db = float(db) if db is not None else SOFTWARE_LEVEL_FIRST_DB
+            card_db = card_output.scale.db(raw)
+    # The same rule as the boot step's (ADR-0140), which set this already.
+    db = start_level(remembered, card_db)
     if not await asyncio.to_thread(outputs.create_softvol_control):
         logger.warning("volume: the software control could not be made; the level stays where ALSA puts it")
     want = outputs.SOFTVOL_SCALE.raw(db)

@@ -36,6 +36,7 @@ done <<'EOF'
 image/stage-gexis/03-core/files/core.toml /etc/gexis/core.toml
 image/stage-gexis/03-core/files/gexis-core.service /usr/lib/systemd/system/gexis-core.service
 image/stage-gexis/03-core/files/gexis-meter.service /usr/lib/systemd/system/gexis-meter.service
+image/stage-gexis/03-core/files/gexis-softvol-restore.service /usr/lib/systemd/system/gexis-softvol-restore.service
 image/stage-gexis/04-ui/files/gexis-kiosk.service /usr/lib/systemd/system/gexis-kiosk.service
 image/stage-gexis/04-ui/files/gexis-kiosk-start /usr/bin/gexis-kiosk-start
 image/stage-gexis/04-ui/files/kiosk.env /etc/gexis/kiosk.env
@@ -120,7 +121,7 @@ for old in /etc/systemd/system/gexis-core.service /etc/systemd/system/gexis-kios
 done
 
 echo "== units enabled (symlink targets)"
-for u in gexis-core gexis-meter gexis-kiosk gexis-peppy; do
+for u in gexis-core gexis-meter gexis-kiosk gexis-peppy gexis-softvol-restore; do
 	t=$(dfs "stat /etc/systemd/system/multi-user.target.wants/$u.service" | grep -o 'Fast link dest: ".*"')
 	[ "$t" = "Fast link dest: \"/usr/lib/systemd/system/$u.service\"" ] && ok "$u -> $t" || bad "$u enablement: '${t:-missing}'"
 done
