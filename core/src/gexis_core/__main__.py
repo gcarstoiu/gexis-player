@@ -2181,6 +2181,9 @@ async def main() -> None:
             # without a restart.
             "output_device": lambda: [o.option for o in outputs.discover()],
         },
+        # A line under a USB DAC: what it reports it can do (George,
+        # 2026-10-12). Worked out with the outputs, so asking costs nothing.
+        option_notes={"output_device": lambda: {o.option: o.details for o in outputs.discover() if o.details}},
         # The Release row's note: what the waiting or just-installed release
         # says changed (2026-10-01, George).
         notes={"software_update": updates.whats_new,

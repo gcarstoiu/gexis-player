@@ -171,6 +171,9 @@ class Output:
     #: ADR-0124: the level set by the player's own software stage, not the
     #: card's control.
     software: bool = field(default=False, compare=False)
+    #: A line under the name, from what a USB DAC reports of itself
+    #: (`usb_details`); None for every other card.
+    details: str | None = field(default=None, compare=False)
 
     @property
     def option(self) -> str:
@@ -341,16 +344,10 @@ def usb_name(card: str, sound: Path | None = None, proc: Path | None = None) -> 
     of a USB card is the class's - "USB Audio" for every one - but the
     device itself says who made it (`manufacturer`, `product` in sysfs).
     None for a card that is not on USB, or says nothing."""
-    sound = sound or SOUND
-    proc = proc or PROC_ASOUND
-    try:
-        number = (proc / card).readlink().name          # "card6"
-        device = (sound / number / "device").resolve()
-    except OSError:
+    found = _usb_device(card, sound or SOUND, proc or PROC_ASOUND)
+    if found is None:
         return None
-    if "/usb" not in str(device):
-        return None
-    usb = device.parent                                  # the interface's device
+    usb = found[0]
 
     def read(name: str) -> str:
         try:
@@ -364,6 +361,64 @@ def usb_name(card: str, sound: Path | None = None, proc: Path | None = None) -> 
     if product.upper() in GENERIC_PRODUCTS:
         return f"{maker} USB DAC" if maker else None
     return f"{maker} {product}" if maker else product
+
+
+def _usb_device(card: str, sound: Path, proc: Path) -> tuple[Path, Path] | None:
+    """(the USB device's sysfs directory, the card's /proc/asound directory),
+    or None for a card that is not on USB."""
+    try:
+        number = (proc / card).readlink().name          # "card6"
+        device = (sound / number / "device").resolve()
+    except OSError:
+        return None
+    if "/usb" not in str(device):
+        return None
+    return device.parent, proc / number
+
+
+#: sysfs `speed` (Mbit/s) as the USB generation people know it by.
+USB_SPEEDS = ((5000, "USB 3"), (480, "USB 2.0"), (0, "USB 1.1"))
+
+
+def _khz(rate: int) -> str:
+    return f"{rate / 1000:g} kHz"
+
+
+def usb_details(card: str, sound: Path | None = None, proc: Path | None = None) -> str | None:
+    """**What a USB DAC says it can do, as one line** (George, 2026-10-12:
+    *"Add a second line with the details"*): the USB generation it is
+    connected at, the highest rate and sample size it takes, and whether it
+    takes DSD natively - read from sysfs and the driver's `stream0`, so it
+    is what this DAC reports, never a model's datasheet. "USB 2.0 · up to
+    768 kHz / 32-bit · native DSD" for sofapi's SMSL. None for a card not on
+    USB."""
+    found = _usb_device(card, sound or SOUND, proc or PROC_ASOUND)
+    if found is None:
+        return None
+    usb, card_dir = found
+    parts = []
+    try:
+        speed = float((usb / "speed").read_text().strip())
+        parts.append(next(name for floor, name in USB_SPEEDS if speed >= floor))
+    except (OSError, ValueError):
+        pass
+    try:
+        stream = (card_dir / "stream0").read_text()
+    except OSError:
+        stream = ""
+    # Only what the playback side offers: a DAC with a recording side lists
+    # it after "Capture:".
+    playback = stream.split("Capture:")[0]
+    rates = [int(r) for line in re.findall(r"Rates:([^\n]*)", playback) for r in re.findall(r"\d+", line)]
+    bits = [int(b) for b in re.findall(r"Bits: (\d+)", playback)]
+    pcm = [f for f in re.findall(r"Format: ([^\n]*)", playback) if "DSD" not in f]
+    if pcm and not bits:
+        bits = [int(n) for f in pcm for n in re.findall(r"[SU](\d+)", f)]
+    if rates:
+        parts.append(f"up to {_khz(max(rates))}" + (f" / {max(bits)}-bit" if bits else ""))
+    if re.search(r"Format: [^\n]*DSD_U", playback):
+        parts.append("native DSD")
+    return " · ".join(parts) or None
 
 
 def _discover(chosen_board: str | None, product) -> list[Output]:
@@ -393,6 +448,7 @@ def _discover(chosen_board: str | None, product) -> list[Output]:
                 scale=scale,
                 state=state,
                 aka=label if named else None,
+                details=None if card in BUILT_IN_CARDS else usb_details(card),
             )
         )
     return found

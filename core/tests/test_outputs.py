@@ -567,3 +567,52 @@ def test_discovery_shows_the_maker_and_still_finds_the_old_name(tmp_path, monkey
     [usb] = outputs._discover("none", None)
     assert usb.label == "SMSL USB DAC" and usb.aka == "USB Audio"
     assert outputs.resolve("USB Audio — Detected", [usb], current=None) is usb
+
+
+SMSL_STREAM = """SMSL SMSL USB AUDIO at usb-0000:01:00.0-1.1, high speed : USB Audio
+
+Playback:
+  Status: Stop
+  Interface 1
+    Altset 1
+    Format: S32_LE
+    Channels: 2
+    Rates: 44100, 48000, 88200, 96000, 176400, 192000, 352800, 384000, 705600, 768000
+    Bits: 32
+  Interface 1
+    Altset 2
+    Format: S32_LE
+    Rates: 44100, 48000, 88200, 96000, 176400, 192000, 352800, 384000, 705600, 768000
+    Bits: 24
+  Interface 1
+    Altset 3
+    Format: SPECIAL DSD_U32_BE
+    Rates: 44100, 48000, 88200, 96000, 176400, 192000, 352800, 384000, 705600, 768000
+    Bits: 32
+    DSD raw: DOP=0, bitrev=0
+"""
+
+
+def test_a_usb_dacs_details_are_what_it_reports(tmp_path):
+    """sofapi's SMSL, as its sysfs and stream0 read on 2026-10-12."""
+    proc, sound = _usb_card(tmp_path, 6, "SMSL", "SMSL USB AUDIO")
+    (proc / "AUDIO").symlink_to("card6")
+    (tmp_path / "usb1/1-1/1-1.1/speed").write_text("480\n")
+    (proc / "card6" / "stream0").write_text(SMSL_STREAM)
+    assert outputs.usb_details("AUDIO", sound, proc) == "USB 2.0 · up to 768 kHz / 32-bit · native DSD"
+
+
+def test_a_small_usb_dac_says_less_and_capture_is_not_counted(tmp_path):
+    proc, sound = _usb_card(tmp_path, 3, "C-Media", "USB Audio Device")
+    (proc / "Device").symlink_to("card3")
+    (tmp_path / "usb1/1-1/1-1.1/speed").write_text("12\n")
+    (proc / "card3" / "stream0").write_text(
+        "Playback:\n  Interface 1\n    Format: S16_LE\n    Rates: 44100, 48000\n"
+        "Capture:\n  Interface 2\n    Format: S24_3LE\n    Rates: 96000\n    Bits: 24\n")
+    assert outputs.usb_details("Device", sound, proc) == "USB 1.1 · up to 48 kHz / 16-bit"
+
+
+def test_a_card_not_on_usb_has_no_details(tmp_path):
+    proc, sound = _usb_card(tmp_path, 5, "x", "y", usb=False)
+    (proc / "sndrpihifiberry").symlink_to("card5")
+    assert outputs.usb_details("sndrpihifiberry", sound, proc) is None

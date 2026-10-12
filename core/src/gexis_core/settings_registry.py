@@ -700,6 +700,7 @@ class Settings:
         labels: dict[str, Callable[[], dict]] | None = None,
         restrictions: dict[str, Callable[[], dict]] | None = None,
         shown: dict[str, Callable[[], bool]] | None = None,
+        option_notes: dict[str, Callable[[], dict]] | None = None,
     ) -> None:
         self._store = store
         #: key -> whether the row is there at all, for a row that follows the
@@ -753,9 +754,13 @@ class Settings:
         #: the device (the Release row's *What's new*). None keeps the
         #: registry's own note.
         self._notes = notes or {}
+        #: key -> {option: a line under it} as things are now, over the
+        #: registry's own `optionNotes` - for options the hardware names (a
+        #: USB DAC's details, George, 2026-10-12).
+        self._option_notes = option_notes or {}
         self._seed = load_seed(self._rows, seed_path)
         unknown = (set(self._defaults) | set(self._wired) | self._lists | set(self._notes)
-                   | set(self._restrictions) | set(self._shown)) - set(self._rows)
+                   | set(self._restrictions) | set(self._shown) | set(self._option_notes)) - set(self._rows)
         if unknown:
             raise ValueError(f"not in the registry: {sorted(unknown)}")
         not_lists = {k for k in self._lists if self._rows[k]["type"] != "list"}
@@ -941,6 +946,10 @@ class Settings:
                 # default can be a system read, and every one was being made
                 # twice per request (2026-10-05).
                 public["value"] = values[row["key"]]
+                if row["key"] in self._option_notes:
+                    extra = self._option_notes[row["key"]]()
+                    if extra:
+                        public["optionNotes"] = {**(row.get("optionNotes") or {}), **extra}
                 if row["key"] in self._notes:
                     note = self._notes[row["key"]]()
                     if note:
