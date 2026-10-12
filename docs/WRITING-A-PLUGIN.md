@@ -52,7 +52,7 @@ brings one is refused.
 | `id` | yes | Lowercase letters, digits and `-`, starting with a letter, 2-31 characters. It is the folder, the prefix of your settings, and a URL part. It may not be one of the player's own (`lms`, `spotify`, `bluetooth`, `plexamp`, `beszel`, …) |
 | `name` | yes | What people see |
 | `kind` | yes | `renderer` or `service` |
-| `version` | yes | Letters, digits and `. + ~ -`, up to 40 characters, starting with a letter or digit. Uploading a different version updates the plugin; the same version again is refused |
+| `version` | yes | Letters, digits and `. + ~ -`, up to 40 characters, starting with a letter or digit. Uploading a different version updates the plugin; the same version again is refused. Shown on your plugin's switch in Settings → Plugins |
 | `run` | yes | The command to start, **relative to the package**. An **aarch64** program (the Pi 4 on a 64-bit system) or a script with a `#!` line |
 | `area` | no | The Settings page your plugin belongs on: `audio`, `sources`, `handoff`, `display`, `enrichment`, `device` or `system`. Absent: `sources` for a renderer, `system` for a service. It places your plugin; it does not change what it may do |
 | `label` | no | A renderer's status line for the moOde-compatible metadata file (`"Radio Foo Active"` style) |
