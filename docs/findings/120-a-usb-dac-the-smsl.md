@@ -17,9 +17,8 @@ attached lets test it so we can cover this angle as well"*).
   each time.
 - **With George's own use:** Spotify Connect played on it earlier the same day
   (S32_LE, 44.1 kHz), the amplifier on the wrong input at first.
-- **Not measured:** the analogue output (no analyser); Bluetooth, Plexamp and
-  uploaded renderers on it (Bluetooth is George's test); DSD from a real
-  file; volume in DSD.
+- **Not measured:** the analogue output (no analyser); Plexamp and uploaded
+  renderers on it; DSD from a file in a Lyrion library; volume in DSD.
 
 ## Results
 
@@ -76,6 +75,11 @@ attached lets test it so we can cover this angle as well"*).
    software stage; to Fixed, with it again. The first peppyalsa guard
    (`snd_pcm_format_linear`) let DSD through to the same abort - DSD formats
    count as unsigned, so linear; the second uses the s16 scope's own list.
+
+8. **Bluetooth after ADR-0143** (George's phone, SBC, 19:03): `bluealsa-aplay`
+   on `output`, the card open in `S32_LE` at 44.1 kHz and running - the
+   16-bit stream widened; George: *"Bluetooth works without problems on the
+   sofapi"*.
 
 ## What it means
 

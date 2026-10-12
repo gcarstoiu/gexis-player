@@ -55,5 +55,5 @@ shifted left, none different.
 
 ## Unverified
 
-Bluetooth on the SMSL (George's test). Whether Lyrion converts a library
-file above the told rates.
+Whether Lyrion converts a library file above the told rates. (Bluetooth on
+the SMSL: measured, Finding 120 result 8.)
