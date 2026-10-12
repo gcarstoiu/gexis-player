@@ -332,6 +332,11 @@ release on the devices that ran its previews, or after a history rewrite put
 those devices back on release packages (`--allow-downgrades`, dry run first)
 before anyone updates them.
 
+**69. A "restores afterwards" that did not** (2026-10-12, Lyrion's `playlist
+preview` replaced a queue that was George's). Prove a restore on a queue that
+does not matter first, and record what is in a queue (track ids) before
+touching it, so it can be put back whatever the mechanism does.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target, the check quietly

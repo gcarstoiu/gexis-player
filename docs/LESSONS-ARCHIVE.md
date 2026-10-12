@@ -1296,6 +1296,25 @@ rewrite is followed by putting those devices back on release packages
 (`apt-get install --allow-downgrades`, dry run first) before anyone updates
 them.
 
+**69. A "restores afterwards" that did not** (2026-10-12, a high-rate test
+through Lyrion on a player whose queue is George's).
+- **What went wrong.** To play test files without touching the queue, the
+  test used Lyrion's `playlist preview`, documented as setting the queue
+  aside and restoring it on `cmd:stop`. On this server it replaced the queue:
+  the one track in it became the last test file. The test files did not even
+  play - the server could not resolve the `.local` name they were served
+  under - so nothing was gained for the loss.
+- **What it looked like.** Every command answered normally; the status after
+  `cmd:stop` said "1 track", as before.
+- **How it was caught.** Reading the queue's contents, not its count. The
+  track was recovered from the enrichment database's lookups (album and
+  length matched) and added back, stopped; its position (55.4 s) was lost.
+
+**A mechanism that promises to restore is proved on a queue that does not
+matter before it is used on one that does** - and before touching someone's
+queue, write down what is in it (track ids), so it can be put back whatever
+the mechanism does.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build
