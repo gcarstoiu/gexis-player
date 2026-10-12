@@ -301,12 +301,68 @@ def test_the_retry_rejoins_a_saved_network_in_range_when_nobody_is_on(tmp_path):
     assert clock.now >= sn.CONFIGURED_WAIT_S + sn.RETRY_S
 
 
-def test_the_retry_never_scans_with_a_phone_on_the_network(tmp_path):
+def test_the_retry_never_scans_with_a_phone_using_the_page(tmp_path):
     nm = FakeNM(devices=NOTHING, saved={"Home": "preconfigured"}, in_range={"Home"})
-    net, clock = setup(tmp_path, nm, stations=1)
+
+    def phone():
+        # The phone on the setup page, asking it something now and then.
+        net.page_used()
+        return 1
+
+    net, clock = setup(tmp_path, nm, stations=phone)
     hold(net, nm, clock, lambda: clock.now > sn.CONFIGURED_WAIT_S + 3 * sn.RETRY_S)
     assert net.status()["network"] == "open"
     assert not [c for c in nm.calls if "--rescan" in c]
+
+
+def test_a_phone_that_never_opened_the_page_does_not_hold_the_player(tmp_path):
+    """George, 2026-10-12: a phone that joined the setup network by itself
+    and never opened the page does not keep the player off its Wi-Fi."""
+    nm = FakeNM(devices=NOTHING, saved={"Home": "preconfigured"}, in_range={"Home"})
+    net, clock = setup(tmp_path, nm, stations=1)
+    hold(net, nm, clock, lambda: net.status()["network"] == "online")
+    assert net.status()["network"] == "online"
+    assert nm.did("connection", "up", "preconfigured")
+
+
+def test_a_phone_idle_on_the_page_for_ten_minutes_no_longer_holds(tmp_path):
+    nm = FakeNM(devices=NOTHING, saved={"Home": "preconfigured"}, in_range={"Home"})
+    stopped = sn.CONFIGURED_WAIT_S + 2 * sn.RETRY_S
+
+    def phone():
+        if clock.now < stopped:
+            net.page_used()
+        return 1
+
+    net, clock = setup(tmp_path, nm, stations=phone)
+    hold(net, nm, clock, lambda: net.status()["network"] == "online")
+    assert net.status()["network"] == "online"
+    assert clock.now >= stopped + sn.SETUP_ACTIVE_S
+
+
+def test_the_page_counts_for_ten_minutes(tmp_path):
+    """A phone that used the page 2 min ago holds; 10 min ago, it does not."""
+    nm = FakeNM(devices=NOTHING, saved={"Home": "preconfigured"})
+    net, clock = setup(tmp_path, nm)
+    net._state = "open"
+    clock.now = 1000.0
+    net.page_used()
+    clock.now += 120
+    assert net._page_in_use()
+    clock.now = 1000.0 + sn.SETUP_ACTIVE_S
+    assert not net._page_in_use()
+    assert sn.SETUP_ACTIVE_S == 600
+
+
+def test_the_page_used_before_the_setup_network_opened_does_not_count(tmp_path):
+    """The Settings page on the home network, minutes before it was lost, is
+    not somebody setting the player up."""
+    nm = FakeNM(devices=NOTHING, saved={"Home": "preconfigured"})
+    net, clock = setup(tmp_path, nm)
+    net._state = "online"
+    net.page_used()
+    net._state = "open"
+    assert not net._page_in_use()
 
 
 def test_a_saved_network_out_of_range_keeps_the_setup_network(tmp_path):

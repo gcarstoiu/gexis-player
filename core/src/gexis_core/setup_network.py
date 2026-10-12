@@ -13,7 +13,8 @@ until it is restarted (George, 2026-09-28: *"Restarting is the way"*).
 **One radio.** The setup network takes `wlan0` from the home Wi-Fi, so it
 opens only when there is no home Wi-Fi to take it from, and a retry every five
 minutes gives it back when a saved network comes into range - only while no
-phone is on it, so nobody's setup is cut off (ADR-0031 amendment 7).
+phone is on it, so nobody's setup is cut off (ADR-0031 amendment 7). A phone
+counts only while someone is using the setup page (George, 2026-10-12).
 
 **A trial on a configured device** (gexis has no Ethernet, ADR-0031's
 Testing): `/run/gexis-setup-trial` present at startup opens the setup network
@@ -76,6 +77,12 @@ WLAN_READY_S = 20.0
 FAILED_RETRY_S = 15.0
 #: How often the panel's step follows the phones on the setup network.
 PHONES_EVERY_S = 2.0
+#: **A phone holds a configured player off its saved Wi-Fi only while someone
+#: is using the setup page** (George, 2026-10-12, the final code review): a
+#: request to the page or a `/setup/...` route this recently. A phone that
+#: joined the setup network by itself and never opened the page held the
+#: player off its home Wi-Fi for ever.
+SETUP_ACTIVE_S = 600.0
 RFKILL = Path("/sys/class/rfkill")
 #: NetworkManager's dnsmasq writes the setup network's leases here.
 LEASES = Path("/var/lib/NetworkManager/dnsmasq-wlan0.leases")
@@ -340,6 +347,8 @@ class SetupNetwork:
         #: move to the next step").
         self._phones = 0
         self._page_opened = False
+        #: When a phone last asked the setup page anything (`SETUP_ACTIVE_S`).
+        self._page_used_at: float | None = None
         #: The last word, shown on the panel for a few seconds after a
         #: successful join: where the device went and what it found.
         self._finished: dict | None = None
@@ -537,6 +546,17 @@ class SetupNetwork:
         if not self._page_opened:
             self._page_opened = True
             self._publish()
+
+    def page_used(self) -> None:
+        """A phone asked the setup page something: the page itself or a
+        `/setup/...` route. Noted only while setup is on, so the Settings
+        page used on the home network before it was lost is not somebody
+        setting the player up."""
+        if self._state in ("open", "failed", "joining"):
+            self._page_used_at = self._clock()
+
+    def _page_in_use(self) -> bool:
+        return self._page_used_at is not None and self._clock() - self._page_used_at < SETUP_ACTIVE_S
 
     async def _watch_phones(self) -> None:
         """Keep `phones` current while the setup network is open. The last
@@ -775,8 +795,9 @@ class SetupNetwork:
         return True
 
     async def _hold(self, retry: float) -> None:
-        """While open: every `retry` seconds with nobody on it, look for a
-        saved network and go back to it. A join that fails brings the setup
+        """While open: every `retry` seconds with nobody on it - or nobody
+        using the page, `SETUP_ACTIVE_S` - look for a saved network and go
+        back to it. A join that fails brings the setup
         network back.
 
         **Until the device is online, not while the network is open**: a
@@ -804,9 +825,14 @@ class SetupNetwork:
             if self._clock() - last < retry:
                 continue
             last = self._clock()
+            # A new player has no saved network to go back to, so any phone
+            # still holds it as before; a configured one is held only by a
+            # phone using the page (SETUP_ACTIVE_S).
             if await self._count_stations() > 0:
-                logger.info("setup: a phone is on %s; not looking for other networks", SSID)
-                continue
+                if self._needed or self._page_in_use():
+                    logger.info("setup: a phone is on %s; not looking for other networks", SSID)
+                    continue
+                logger.info("setup: a phone is on %s but nobody has used the page for %d s", SSID, SETUP_ACTIVE_S)
             saved = await self._saved_wifi()
             if not saved:
                 continue

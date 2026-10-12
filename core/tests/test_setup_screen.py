@@ -92,6 +92,9 @@ class FakeSetup:
     def page_opened(self):
         pass
 
+    def page_used(self):
+        self.used = getattr(self, "used", 0) + 1
+
 
 @pytest.mark.asyncio
 async def test_the_screen_route_answers_only_while_setup_is_open(tmp_path):
@@ -113,6 +116,31 @@ async def test_the_screen_route_without_detection_says_so(tmp_path):
     server = StateServer(StateStore({}), setup=FakeSetup(), setup_flow=flow)
     async with TestClient(TestServer(server.make_app())) as client:
         assert (await client.get("/setup/screen")).status == 503
+
+
+@pytest.mark.asyncio
+async def test_a_phone_asking_the_setup_page_anything_is_noted(tmp_path):
+    """George, 2026-10-12: a phone on the setup network holds the player
+    off its Wi-Fi only while the page is in use - the page itself or any
+    `/setup/...` route, from a phone, not the panel."""
+    flow, *_ = make(tmp_path, FakeNM(devices=NOTHING))
+    (tmp_path / "ui" / "assets").mkdir(parents=True)
+    (tmp_path / "ui" / "index.html").write_text("<html></html>")
+    fake = FakeSetup()
+    server = StateServer(StateStore({}), setup=fake, setup_flow=flow, ui_dir=tmp_path / "ui")
+    phone = {"on": True}
+    server._from_panel = lambda request: not phone["on"]
+    async with TestClient(TestServer(server.make_app())) as client:
+        for path in ("/", "/setup/status", "/setup/answers"):
+            assert (await client.get(path)).status == 200
+        assert fake.used == 3
+        await client.get("/state")
+        await client.get("/players")
+        assert fake.used == 3, "only the setup page"
+        phone["on"] = False
+        await client.get("/")
+        await client.get("/setup/status")
+        assert fake.used == 3, "the panel is not somebody setting up"
 
 
 def test_each_screen_names_its_skin_pack():

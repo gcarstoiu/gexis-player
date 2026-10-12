@@ -1920,6 +1920,18 @@ class StateServer:
         logger.info("setup: answered %s: %s", status, raw)
         return web.json_response({"error": setup_flow.said(raw)}, status=status)
 
+    @web.middleware
+    async def _note_setup_use(self, request: web.Request, handler):
+        """**Somebody is using the setup page** (George, 2026-10-12): the
+        page itself or any `/setup/...` route, from a phone - the panel is on
+        loopback and asks `/setup/status` for itself. A phone on the setup
+        network holds a configured player off its saved Wi-Fi only while
+        this was recent (`setup_network.SETUP_ACTIVE_S`)."""
+        if (self._setup is not None and (request.path == "/" or request.path.startswith("/setup/"))
+                and not self._from_panel(request)):
+            self._setup.page_used()
+        return await handler(request)
+
     def _setup_closed(self) -> web.Response | None:
         """ADR-0104: the setup routes answer only while setup is on - the
         setup network is up, or a new device waits to be set up. A configured
@@ -2559,7 +2571,7 @@ class StateServer:
         (DEVELOPMENT.md: "tested with a WebSocket client") - rather than
         binding a fixed port or reaching into `run()`'s internals.
         """
-        app = web.Application()
+        app = web.Application(middlewares=[self._note_setup_use])
         app.router.add_get("/state", self._handle)
         app.router.add_post("/renderer/{renderer_id}/activate", self._handle_activate)
         app.router.add_post("/transport/{command}", self._handle_transport)
