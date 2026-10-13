@@ -519,6 +519,43 @@ def usb_details(card: str, sound: Path | None = None, proc: Path | None = None) 
     return " · ".join(parts) or None
 
 
+def hdmi_sound(card: str, proc: Path | None = None) -> tuple[str | None, str] | None:
+    """**What is on an HDMI port, for sound** (George, 2026-10-13: *"add some
+    information about what's on each HDMI, like we have in the video
+    output"*): the name the connected device gives, and the highest rate and
+    sample size it takes as PCM - from the port's ELD, which the device
+    itself sends, so it is that receiver's or TV's own answer. "takes no
+    sound" when it lists no PCM. None when nothing is connected, or the card
+    is not an HDMI port.
+
+    Only PCM: the Pi sends no one-bit DSD and no Dolby or DTS stream over
+    HDMI, and plays two channels until Phase 14 (`ph-mpd`), so a receiver's
+    other formats and its channel count would promise what does not play."""
+    if card not in CONNECTORS:
+        return None
+    try:
+        eld = next(iter(sorted((proc or PROC_ASOUND).joinpath(card).glob("eld#*")))).read_text()
+    except (OSError, StopIteration):
+        return None
+    fields = dict(re.findall(r"^(\S+)\s+(.*)$", eld, re.M))
+    if fields.get("eld_valid", "1").strip() == "0" or fields.get("monitor_present", "1").strip() == "0":
+        return None
+    name = fields.get("monitor_name", "").strip() or None
+    rates, bits = [], []
+    for i in range(int(fields.get("sad_count", "0") or 0)):
+        if "LPCM" not in fields.get(f"sad{i}_coding_type", ""):
+            continue
+        listed = fields.get(f"sad{i}_rates", "").split("]", 1)[-1]
+        rates += [int(r) for r in re.findall(r"\d+", listed)]
+        listed = fields.get(f"sad{i}_bits", "").split("]", 1)[-1]
+        bits += [int(b) for b in re.findall(r"\d+", listed)]
+    if name is None and not rates:
+        return None
+    if not rates:
+        return name, "takes no sound"
+    return name, f"up to {_khz(max(rates))}" + (f" / {max(bits)}-bit" if bits else "")
+
+
 def _discover(chosen_board: str | None, product) -> list[Output]:
     found: list[Output] = []
     # **The device's description, not the card's.** `aplay -l` gives both,

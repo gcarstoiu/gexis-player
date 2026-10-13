@@ -2236,6 +2236,25 @@ async def main() -> None:
             parts.append("sound")
         return " · ".join(parts)
 
+    def _output_line(output) -> str | None:
+        """**The line under an output in the Output picker.** A USB DAC's
+        details; for an HDMI port, what is on it and what sound it takes
+        (George, 2026-10-13: *"like we have in the video output"*) - the
+        screen by its model, as the Screen port tile names it, anything else
+        by the name it gives: "LG TV · up to 192 kHz / 24-bit"."""
+        connector = outputs.CONNECTORS.get(output.card)
+        if connector is None:
+            return output.details
+        sound = outputs.hdmi_sound(output.card)
+        if sound is None:
+            return None
+        name, takes = sound
+        if not settings.value("headless") and screen_detect.seen().connector == connector:
+            current = screen_apply.read_state().get("current")
+            model = screens.by_id(current.get("screen") or "") if isinstance(current, dict) else None
+            name = f"{model.maker} {model.model}" if model else "The screen"
+        return " · ".join(p for p in (name, takes) if p)
+
     def _choose_screen_port(label: str) -> None:
         """**ADR-0141 D2: the screen's port, when both have something on
         them.** The same screen, applied on the other port - which, as any
@@ -2367,7 +2386,9 @@ async def main() -> None:
         },
         # A line under a USB DAC: what it reports it can do (George,
         # 2026-10-12). Worked out with the outputs, so asking costs nothing.
-        option_notes={"output_device": lambda: {o.option: o.details for o in outputs.discover() if o.details},
+        # And under an HDMI port, what is on it and the sound it takes.
+        option_notes={"output_device": lambda: {o.option: line for o in outputs.discover()
+                                                if (line := _output_line(o))},
                       # ADR-0144: on a DAC that takes DSD, Fixed is what plays
                       # it natively - said where the choice is made.
                       VOLUME_KEY: lambda: _volume_notes(),
