@@ -424,6 +424,14 @@ scope read levels only for the formats alsa-lib's s16 scope converts, since
 for DSD that scope leaves its buffer unset and reading it aborted the
 renderer. The Volume row's Fixed note names the DAC (`_volume_notes`).
 
+**The jack stands in for an HDMI output with nothing connected** (ADR-0141
+D5): `outputs.in_force(stored)` returns the stored output, or the jack while
+it is an HDMI port whose connector is not connected; every lookup in the core
+goes through it, so the chain, the mixer and the volume follow. `_fixed_wanted`
+is never true while the jack stands in (Fixed would be full level into
+headphones). `_watch_standin` polls every 3 s and calls `_switch_output` when
+the card in force changes; `_standin_note` is the Output row's note.
+
 Choosing one does not restart the core. The core first stops whoever is
 playing (`Supervisor.stop_active`, as a change of volume type does; George,
 2026-10-12), so nothing resumes onto the new output by itself and the next

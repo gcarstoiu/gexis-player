@@ -1,7 +1,7 @@
 # ADR-0141 — Picture and sound on different HDMI ports
 
-**Status:** **Partly accepted** — 2026-10-12. D2 and D4 accepted and built
-(George: *"I agree to both. Go ahead."*); D1, D3, D5, D6 still owed.
+**Status:** **Accepted** — 2026-10-12. D1-D5 decided by George and built;
+D6 (hardware to test with) answered by sofapi's own Sony receiver on HDMI 2.
 **Touches:** [ADR-0055](0055-which-output-the-device-plays-to.md) (Open §1),
 [ADR-0109](0109-other-screens.md), [ADR-0127](0127-one-volume-row.md),
 [ADR-0135](0135-display-standby.md).
@@ -113,4 +113,30 @@ output?"*, then *"I agree to both. Go ahead."*:
 Still owed: **D1** (the rest before or after 1.0), **D3** (what a sound-only
 port shows - today the boot artwork, as labwc extends the desktop onto it),
 **D5** (a receiver that disappears), **D6** (hardware to test with).
+
+## Decided 2026-10-12: D1, D3, D5
+
+George: *"D3 what Is the startup screen? The boot logo? D5 fallback to jack.
+D1. Before"*, then, on the details: black; back to HDMI by itself; the jack at
+Hardware volume from the Starting volume.
+
+- **D1: before the first public release.**
+- **D3: a port that carries only sound is black.** It had shown the boot still
+  (`still.png`, the "gexis SOUND" logo), scaled to that device: labwc extends
+  the desktop onto every connected output. `swaybg` now paints the still only
+  on the screen's port and every other output black (`-o '*'`).
+- **D5: the jack stands in for an HDMI output with nothing connected**
+  (`outputs.in_force`). The stored choice stays the HDMI port; a watch in the
+  core switches to the jack when the port goes and back when it returns -
+  each a change of output, which stops whoever plays. While it stands in the
+  jack is never Fixed - Fixed there would be full level into whatever is
+  plugged in, headphones included - but plays on its own control from the
+  level to come back to (the Starting volume's); the stored volume type
+  returns with the port. The Output row says why the jack is playing.
+- **D6:** sofapi has a Sony receiver on HDMI 2 ("SONY AVSYSTEM"), seen by the
+  new rows on 2026-10-12.
+
+**Unverified on the device when written:** the receiver switched off and on
+again (does its port drop hot-plug, and does the switch follow); black on the
+receiver's screen.
 
