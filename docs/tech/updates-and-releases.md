@@ -361,7 +361,9 @@ key, or for another release, stops the update.
    source that asked (`Supervisor(frozen=...)`, the states `stopping` to
    `going-back`; ADR-0105 §4 step 4, built 2026-10-07).
 4. **install** - first `pending-check.json` (below) is written with
-   `how: cut-short`, so a boot after a power cut mid-install finds it; then
+   `how: cut-short` and synced to the card (file and folder: an unsynced
+   one was empty after a real power cut, Finding 123), so a boot after a
+   power cut mid-install finds it; then
    `apt-get --no-download dist-upgrade`, then `install
    gexis-player=<version>`, under `systemd-inhibit --what=shutdown:sleep`.
    Then **verify**: `gexis-player` is the target version, `dpkg --audit` is
@@ -411,13 +413,24 @@ stateDiagram-v2
 2026-10-09). After `apt update`, both an update and a skin pack check dpkg:
 a non-empty `/var/lib/dpkg/updates` or anything `dpkg --audit` lists means an
 earlier run was cut short (a power cut, on ShelvesPi). The updater runs
-`dpkg --configure -a`, installs again any package still listed - or, for a
-skin pack whose exact version is no longer published, removes it so it is
-installed fresh - and only then goes on; if dpkg is still not clean it stops
+`dpkg --configure -a`, installs again the packages `dpkg --audit` says must
+be reinstalled (half installed, in a mess, missing a control file - not those
+only waiting to be configured) and configures again - or, for a skin pack
+whose exact version is no longer published, removes it so it is installed
+fresh - and only then goes on; if dpkg is still not clean it stops
 with a sentence saying so, rather than the download error apt's refusal used
 to be shown as. Before every `apt update` it also drops empty package lists
 in its own apt folders (`drop_empty_lists()`): a power cut can leave them at
 0 bytes, and apt would otherwise keep them for good.
+
+**A cut-short install with no note is finished too** (`finish_cut_short()`,
+Finding 123). At boot when `pending-check.json` is missing or unreadable, and
+at the start of every check unless dpkg's lock is held, dpkg's own record
+decides: the release is the `gexis-player` it unpacked, finished from that
+release's parts (`heal`, then the release's `dist-upgrade` and `install
+gexis-player=<version>`, `complete_release()`), verified, a note left, and
+the device restarted for `postboot` to check it. Without this, a check
+compared `gexis-player`'s unpacked version and called the device current.
 
 **Going back** (`go_back()`) follows any failure from the install step on -
 the install, its verify, the core not answering after the restart, or the
