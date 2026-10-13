@@ -348,7 +348,10 @@ it.
 `stage-gexis/02-renderers` installs squeezelite, go-librespot and
 bluealsa-aplay, each as a systemd unit writing to `output`.
 
-- **squeezelite** — `apt install squeezelite` (Debian trixie, arm64,
+- **squeezelite** — since ADR-0145 our own package, `gexis-squeezelite`
+  (`packaging/squeezelite/`): Debian's source and build options with a patch
+  that folds multichannel files down to stereo. What follows is the Phase 2a
+  record. Then: `apt install squeezelite` (Debian trixie, arm64,
   confirmed via packages.debian.org — not assumed). Not held: no Finding
   ties us to an exact version the way `libasound2t64` is. `-V DAC`'s mixer
   resolution needed `output.conf`'s new `ctl.output` block (see below) —

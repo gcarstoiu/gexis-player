@@ -69,7 +69,8 @@ newest deliberate choice wins, and the others are told.
 
 Bit-perfect to the DAC: nothing in the chain resamples. Tested up to 24/192
 on DAC boards, and on a USB DAC every rate to 768 kHz (384 kHz from Lyrion)
-and native DSD64 to DSD256 from Lyrion with the volume fixed. The volume is set in the DAC's own
+and native DSD64 to DSD256 from Lyrion with the volume fixed. A 5.1 or 7.1
+file from Lyrion plays whole, folded down to stereo. The volume is set in the DAC's own
 hardware, in software for an output with none of its own (HDMI), or fixed for
 an amplifier that does it. A maximum level holds for every source, and
 Spotify never starts louder than you allow. Because Gexis is the whole
