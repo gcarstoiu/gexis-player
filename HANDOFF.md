@@ -10,15 +10,16 @@ and `phase-13b` is merged into it after each docs change. A release is built
 from a worktree made at its tag, then removed. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 0.13.0 on Testing** (2026-10-13; tag `v0.13.0`, release
-`r0.13.0`, serial 39; **PR #64 open for George to merge**; image
-`image/deploy/2026-10-13-gexis-player-v0.13.0.img`, 121 checks passed; release
-worktree `~/projects/gexis-player-r0130`, removed after the merge). A TV as the
-screen by choosing its port (ADR-0147), the Output picker's HDMI lines, the
-updater recovering from a power cut (Finding 123), *Update…* checking again,
-the update errors in words. 0.12.0 (PR #63) merged 2026-10-13 and its
-post-merge steps done; its disk clean-up runs after this publish. **Players
-are not updated to a release by Claude** (George, 2026-10-13).
+**Current release: 0.14.0 on Testing** (2026-10-13; tag `v0.14.0`, release
+`r0.14.0`, serial 40; **PR #65 open for George to merge**; image
+`image/deploy/2026-10-13-gexis-player-v0.14.0.img`, 121 checks passed; release
+worktree `~/projects/gexis-player-r0140`, removed after the merge). One Screen
+tile; a TV as the screen at 1080p (ADR-0147 amended twice after George's TV
+tests); standby keeps a sound port on; the update backup survives a vanishing
+file. 0.13.0 (PR #64) merged and its post-merge steps done. The bar is on
+0.13.0 (fixed updater), ready for the second power cut during its update to
+0.14.0 (7b2). sofapi runs a preview of 0.14.0's code. **Players are not
+updated to a release by Claude** (George, 2026-10-13).
 
 **From the power-cut test, in 0.13.0:** George's power cut on the bar (g34,
 Finding 123) found the updater could not recover - its note for the boot was
