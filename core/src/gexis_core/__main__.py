@@ -2214,7 +2214,7 @@ async def main() -> None:
         if not settings.value("headless") and screen_detect.seen().connector == connector:
             current = screen_apply.read_state().get("current")
             model = screens.by_id(current.get("screen") or "") if isinstance(current, dict) else None
-            parts.append(f"{model.maker} {model.model} · the screen" if model else "The screen")
+            parts.append(f"{model.maker} {model.model}" if model else "The screen")
         else:
             parts.append(port.edid_name or port.edid_maker or "Connected")
         if alsa.card() == outputs.CARD_FOR_CONNECTOR.get(connector):
@@ -2265,15 +2265,18 @@ async def main() -> None:
         shown={"cable": cable.shown,
                # ADR-0141 D2: a choice only while both ports have something on them.
                "screen_port": lambda: not settings_store.get("headless")
-               and sum(p.connected for p in screen_detect.ports()) >= 2},
+               and len(screen_detect.ports()) >= 2,
+               "screen_port_info": lambda: not settings_store.get("headless")
+               and len(screen_detect.ports()) == 1},
         registry=Settings.with_plugins(load_registry(), installed_plugins, downloads,
                                        missing=restored_missing),
         defaults={
             "lms_server": lambda: f"{config.lms_host}:{config.lms_port}",
             # ADR-0141 D4: both HDMI ports, read when Settings is.
-            "hdmi_1": lambda: _port_line("HDMI-A-1"),
-            "hdmi_2": lambda: _port_line("HDMI-A-2"),
             "screen_port": lambda: _port_label(screen_apply.connector_now()),
+            # A board with one HDMI port: what is on it, as information.
+            "screen_port_info": lambda: next((f"{_port_label(p.connector)} · {_port_line(p.connector)}"
+                                              for p in screen_detect.ports()), None),
             "lms_player": lambda: lms_player_name,
             "idle_url": lambda: config.idle_url or None,
             "device_name": device_name.hostname,
@@ -2335,7 +2338,11 @@ async def main() -> None:
         # offered - greyed, with why (ADR-0044's `unavailable`), and a stored
         # one falls back to the first type that has some.
         restrictions={"skin_corpus": lambda: (lambda at: skins.unavailable_corpora(at[0], resolution=at[1])
-                                              if at else {})(skins_at())},
+                                              if at else {})(skins_at()),
+                      # ADR-0141 D2: a port with nothing on it cannot take the
+                      # screen - greyed, with why, in the picker.
+                      "screen_port": lambda: {_port_label(p.connector): "Nothing connected"
+                                              for p in screen_detect.ports() if not p.connected}},
         options={
             "skin_corpus": skins_offered,
             # ADR-0055 §1: discovered, not written down. Re-read on every
@@ -2348,7 +2355,11 @@ async def main() -> None:
         option_notes={"output_device": lambda: {o.option: o.details for o in outputs.discover() if o.details},
                       # ADR-0144: on a DAC that takes DSD, Fixed is what plays
                       # it natively - said where the choice is made.
-                      VOLUME_KEY: lambda: _volume_notes()},
+                      VOLUME_KEY: lambda: _volume_notes(),
+                      # ADR-0141 D4 (George, 2026-10-12: one tile, what is on
+                      # each port beside its choice in the picker).
+                      "screen_port": lambda: {_port_label(p.connector): _port_line(p.connector)
+                                              for p in screen_detect.ports()}},
         # The Release row's note: what the waiting or just-installed release
         # says changed (2026-10-01, George).
         notes={"software_update": updates.whats_new,

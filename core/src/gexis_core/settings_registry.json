@@ -390,32 +390,24 @@
         "default": "0°"
       },
       {
-        "key": "hdmi_1",
-        "type": "readonly",
-        "label": "HDMI 1",
-        "marks": "N",
-        "note": null,
-        "default": null
-      },
-      {
-        "key": "hdmi_2",
-        "type": "readonly",
-        "label": "HDMI 2",
-        "marks": "N",
-        "note": null,
-        "default": null
-      },
-      {
         "key": "screen_port",
         "type": "choice",
         "label": "Screen port",
         "marks": "N",
-        "note": "Which HDMI port the screen is on. Offered only while something is connected to both.",
+        "note": "Which HDMI port the screen is on, and what is on each.",
         "warn": "Changing it restarts the player with the screen on that port and asks Keep this screen? on the panel. If nobody touches Keep within 2 minutes, it goes back.",
         "options": [
           "HDMI 1",
           "HDMI 2"
         ],
+        "default": null
+      },
+      {
+        "key": "screen_port_info",
+        "type": "readonly",
+        "label": "Screen port",
+        "marks": "N",
+        "note": null,
         "default": null
       },
       {

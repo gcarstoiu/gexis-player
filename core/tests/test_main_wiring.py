@@ -292,7 +292,10 @@ def test_the_screen_port_choice_moves_the_screen_and_forgets_itself():
     assert "screen_apply.choose(applied" in body and "_systemctl_reboot()" in body
     source = MAIN.read_text()
     assert '"screen_port": lambda: not settings_store.get("headless")' in source
-    assert '"hdmi_1": lambda: _port_line("HDMI-A-1")' in source
+    # One tile (George, 2026-10-12): what is on each port beside its choice,
+    # an empty port greyed, and information only on a one-port board.
+    assert '"screen_port": lambda: {_port_label(p.connector): _port_line(p.connector)' in source
+    assert '"Nothing connected"' in source and '"screen_port_info": lambda: not settings_store.get("headless")' in source
 
 
 def test_the_jack_stands_in_and_is_never_fixed_while_it_does():
