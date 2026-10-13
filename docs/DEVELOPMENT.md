@@ -2913,7 +2913,12 @@ database (`database { plugin "proxy" }`, the music on a share).
 - the chain at 6-8 channels: the meter, the software volume stage and HDMI's
   conversion layer have only carried two;
 - DSD: native to a DAC that takes it, PCM over HDMI (the Pi sends no one-bit
-  audio).
+  audio);
+- **setup, reordered and split for the new source** (George, 2026-10-13:
+  *"Phase 14 also comes with a reordering and splitting of the setup process
+  to accommodate this new source."*): where MPD and its library are chosen
+  in first-time setup, and how setup's steps are reordered and split around
+  it. Which steps move and how they split is for the ADR.
 
 **Acceptance (draft):**
 
@@ -2922,6 +2927,8 @@ database (`database { plugin "proxy" }`, the music on a share).
 2. A multichannel DSD file reaches the receiver as multichannel PCM, and a
    stereo DSD file a DSD DAC natively.
 3. Volume, arbitration and now playing behave as for the other sources.
+4. First-time setup takes in MPD in its new order, and a player set up without
+   it is unchanged.
 
 ### Phase 15 — The player in Home Assistant
 
