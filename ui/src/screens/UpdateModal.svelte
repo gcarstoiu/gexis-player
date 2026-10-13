@@ -15,8 +15,10 @@
   import UpdateSteps from './UpdateSteps.svelte';
   import ReleaseHistory from './ReleaseHistory.svelte';
 
-  //: `check` runs a check first; `available` opens on the waiting release
-  //: (the tile's *Update…*); `progress` reopens an install already running.
+  //: `check` runs a check first - the tile's *Check for updates* and, since
+  //: 2026-10-13, its *Update…* too, so a release the channel has moved past
+  //: is never offered; `available` opens on the waiting release as the
+  //: updater last wrote it; `progress` reopens an install already running.
   let { start = 'check', onclose } = $props();
 
   const CHECK_TIMEOUT_MS = 90_000;
