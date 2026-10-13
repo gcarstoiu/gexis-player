@@ -44,9 +44,10 @@ setup over Ethernet; a cut-short update; a factory reset.
 notes, promote to Stable with the image file (c16; the installation guide's
 download works from then), README's *Download and install* section, Raspberry
 Pi Imager - the image file and *Use custom*, our own Imager repository and the
-community application after (g14). **After it:** Phase 13g (the player in Home
-Assistant), themes (14), a sound bar on optical (14a), the library answering
-for itself (15), Lyrion's own menus' look (16) - each ADR first.
+community application after (g14). **After it, first:** MPD for real 5.1/7.1 (17,
+George 2026-10-13). Then Phase 13g (the player in Home Assistant), themes
+(14), a sound bar on optical (14a), the library answering for itself (15),
+Lyrion's own menus' look (16) - each ADR first.
 
 The shared to-do list (an artifact with a `todos` collection; its address is
 in Claude's memory, not here) holds the open items with their detail.
@@ -66,7 +67,8 @@ in Home Assistant - after the release; **14** themes - settle first what a
 theme is if plugins are processes (ADR-0016); **14a** a sound bar on optical
 (a maximum sample rate per output); **15** the library answers for itself
 (Plex server metadata first, internet providers as fallback; Finding 086);
-**16** Lyrion's own menus: George's look (from 13f, after the release).
+**16** Lyrion's own menus: George's look (from 13f, after the release);
+**17** MPD for real multichannel - first after the release.
 
 ## Machines
 

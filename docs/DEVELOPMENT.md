@@ -3055,6 +3055,37 @@ decided here.
 3. Whether *Extended navigation* stays an option or becomes the default is
    his decision, recorded in ADR-0022's inventory.
 
+### Phase 17 — MPD: real multichannel
+
+**Added 2026-10-13** (George: *"have another phase for mpd right after"* the
+first public release, after Finding 121 showed Lyrion delivers two channels
+and ADR-0145 folded multichannel down to stereo meanwhile). MPD decodes and
+plays up to 8 channels, in ALSA's channel order, and DSD natively, as DoP or
+converted per channel (read in its source, 2026-10-12). It plays on the
+machine it runs on - clients only control it - so it would run on the player:
+on its own library, or as a *satellite* of a central MPD that holds the
+database (`database { plugin "proxy" }`, the music on a share).
+
+**An ADR before anything is built**, to understand the ramifications first
+(George: *"we would need to understand the ramifications"*). It must settle:
+- MPD on the player alone, or a satellite of a central library - and what
+  that means beside Lyrion's own library;
+- how it is controlled (upmpdcli as a UPnP/OpenHome renderer and its apps,
+  MPD clients, the panel) and whether it is a source in the arbitration like
+  the others;
+- the chain at 6-8 channels: the meter, the software volume stage and HDMI's
+  conversion layer have only carried two;
+- DSD: native to a DAC that takes it, PCM over HDMI (the Pi sends no one-bit
+  audio).
+
+**Acceptance (draft):**
+
+1. A 5.1 and a 7.1 file reach an AV receiver over HDMI as 6 and 8 channels,
+   each channel where its name says, measured as Finding 121 measured two.
+2. A multichannel DSD file reaches the receiver as multichannel PCM, and a
+   stereo DSD file a DSD DAC natively.
+3. Volume, arbitration and now playing behave as for the other sources.
+
 ## Test tiers
 
 | Tier | Runs | Scope |
