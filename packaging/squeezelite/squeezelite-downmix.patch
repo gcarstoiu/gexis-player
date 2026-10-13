@@ -1,0 +1,775 @@
+diff --git a/Makefile b/Makefile
+index 78511dc..fd75a76 100644
+--- a/Makefile
++++ b/Makefile
+@@ -26,7 +26,7 @@ OPT_PULSEAUDIO = -DPULSEAUDIO
+ SOURCES = \
+ 	main.c slimproto.c buffer.c stream.c utils.c \
+ 	output.c output_alsa.c output_pa.c output_stdout.c output_pack.c output_pulse.c decode.c \
+-	flac.c pcm.c vorbis.c
++	flac.c pcm.c vorbis.c downmix.c
+ 
+ SOURCES_DSD      = dsd.c dop.c dsd2pcm/dsd2pcm.c
+ SOURCES_FF       = ffmpeg.c
+@@ -58,7 +58,7 @@ LINKALL_OPUS     = -lopusfile -lopus
+ LINKALL_MAD      = -lmad
+ LINKALL_MPG123   = -lmpg123
+ 
+-DEPS             = squeezelite.h slimproto.h
++DEPS             = squeezelite.h slimproto.h downmix.h
+ 
+ UNAME            = $(shell uname -s)
+ 
+diff --git a/downmix.c b/downmix.c
+new file mode 100644
+index 0000000..bc62e18
+--- /dev/null
++++ b/downmix.c
+@@ -0,0 +1,187 @@
++/*
++ *  Squeezelite - lightweight headless squeezebox emulator
++ *
++ *  downmix: a file of more than two channels folded down to stereo.
++ *  Added by Gexis Player (ADR-0145), 2026. See downmix.h.
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ */
++
++#include "downmix.h"
++
++#include <math.h>
++#include <string.h>
++
++#define SQRT1_2 0.70710678118654752440 // ffmpeg's centre and surround mix level, -3 dB
++
++static const char *const names[] = {
++	"FL", "FR", "FC", "LFE", "BL", "BR", "FLC", "FRC", "BC",
++	"SL", "SR", "TC", "TFL", "TFC", "TFR", "TBL", "TBC", "TBR", "?"
++};
++
++// Each position's share of left and right, before normalisation.
++static void coefficients(dm_speaker s, double *l, double *r) {
++	*l = *r = 0.0;
++	switch (s) {
++	case DM_FL:
++	case DM_FLC: *l = 1.0; break;
++	case DM_FR:
++	case DM_FRC: *r = 1.0; break;
++	case DM_FC:  *l = *r = SQRT1_2; break;
++	case DM_BL:
++	case DM_SL:  *l = SQRT1_2; break;
++	case DM_BR:
++	case DM_SR:  *r = SQRT1_2; break;
++	case DM_BC:  *l = *r = SQRT1_2 * SQRT1_2; break;
++	default:     break; // the LFE, the height channels and unknown ones are left out
++	}
++}
++
++bool downmix_init(struct downmix *dm, unsigned channels, const dm_speaker *speakers) {
++	double suml = 0.0, sumr = 0.0, norm;
++	unsigned c;
++
++	memset(dm, 0, sizeof(*dm));
++	if (channels < 3 || channels > DOWNMIX_MAX_CHANNELS) {
++		return false;
++	}
++	for (c = 0; c < channels; c++) {
++		dm_speaker s = (unsigned)speakers[c] < DM_UNKNOWN ? speakers[c] : DM_UNKNOWN;
++		dm->speaker[c] = s;
++		coefficients(s, &dm->l[c], &dm->r[c]);
++		suml += dm->l[c];
++		sumr += dm->r[c];
++		if (c) strcat(dm->layout, " ");
++		strcat(dm->layout, names[s]);
++	}
++	norm = suml > sumr ? suml : sumr;
++	if (norm <= 0.0) {
++		memset(dm, 0, sizeof(*dm));
++		return false;
++	}
++	// As ffmpeg's rematrix normalises an integer output: only ever down.
++	if (norm > 1.0) {
++		for (c = 0; c < channels; c++) {
++			dm->l[c] /= norm;
++			dm->r[c] /= norm;
++		}
++	}
++	dm->channels = channels;
++	return true;
++}
++
++bool downmix_init_default(struct downmix *dm, unsigned channels) {
++	static const dm_speaker orders[DOWNMIX_MAX_CHANNELS + 1][DOWNMIX_MAX_CHANNELS] = {
++		[3] = { DM_FL, DM_FR, DM_FC },
++		[4] = { DM_FL, DM_FR, DM_BL, DM_BR },
++		[5] = { DM_FL, DM_FR, DM_FC, DM_BL, DM_BR },
++		[6] = { DM_FL, DM_FR, DM_FC, DM_LFE, DM_BL, DM_BR },
++		[7] = { DM_FL, DM_FR, DM_FC, DM_LFE, DM_BC, DM_SL, DM_SR },
++		[8] = { DM_FL, DM_FR, DM_FC, DM_LFE, DM_BL, DM_BR, DM_SL, DM_SR },
++	};
++	if (channels < 3 || channels > DOWNMIX_MAX_CHANNELS) {
++		memset(dm, 0, sizeof(*dm));
++		return false;
++	}
++	return downmix_init(dm, channels, orders[channels]);
++}
++
++bool downmix_init_wav_mask(struct downmix *dm, unsigned channels, uint32_t mask) {
++	dm_speaker speakers[DOWNMIX_MAX_CHANNELS];
++	unsigned c = 0, bit;
++
++	mask &= (1u << DM_UNKNOWN) - 1; // bit 31 (SPEAKER_ALL) and reserved bits mean nothing here
++	if (!mask) {
++		return downmix_init_default(dm, channels);
++	}
++	if (channels < 3 || channels > DOWNMIX_MAX_CHANNELS) {
++		memset(dm, 0, sizeof(*dm));
++		return false;
++	}
++	for (bit = 0; bit < DM_UNKNOWN && c < channels; bit++) {
++		if (mask & (1u << bit)) {
++			speakers[c++] = (dm_speaker)bit;
++		}
++	}
++	while (c < channels) {
++		speakers[c++] = DM_UNKNOWN;
++	}
++	return downmix_init(dm, channels, speakers);
++}
++
++bool downmix_init_dsf(struct downmix *dm, unsigned channels, unsigned channel_type) {
++	static const struct { unsigned channels; dm_speaker order[6]; } types[8] = {
++		[3] = { 3, { DM_FL, DM_FR, DM_FC } },
++		[4] = { 4, { DM_FL, DM_FR, DM_BL, DM_BR } },
++		[5] = { 4, { DM_FL, DM_FR, DM_FC, DM_LFE } },
++		[6] = { 5, { DM_FL, DM_FR, DM_FC, DM_BL, DM_BR } },
++		[7] = { 6, { DM_FL, DM_FR, DM_FC, DM_LFE, DM_BL, DM_BR } },
++	};
++	if (channel_type < 8 && types[channel_type].channels && types[channel_type].channels == channels) {
++		return downmix_init(dm, channels, types[channel_type].order);
++	}
++	return downmix_init_default(dm, channels);
++}
++
++dm_speaker downmix_dsdiff_speaker(const unsigned char id[4]) {
++	if (!memcmp(id, "SLFT", 4) || !memcmp(id, "MLFT", 4)) return DM_FL;
++	if (!memcmp(id, "SRGT", 4) || !memcmp(id, "MRGT", 4)) return DM_FR;
++	if (!memcmp(id, "C   ", 4)) return DM_FC;
++	if (!memcmp(id, "LFE ", 4)) return DM_LFE;
++	if (!memcmp(id, "LS  ", 4)) return DM_BL;
++	if (!memcmp(id, "RS  ", 4)) return DM_BR;
++	return DM_UNKNOWN;
++}
++
++static inline int32_t clamp32(double v) {
++	if (v >= 2147483647.0) return INT32_MAX;
++	if (v <= -2147483648.0) return INT32_MIN;
++	return (int32_t)lrint(v);
++}
++
++void downmix_s32(const struct downmix *dm, const int32_t *const *in, size_t stride,
++				 unsigned shift, size_t frames, int32_t *out) {
++	const double scale = (double)((int64_t)1 << shift);
++	const unsigned channels = dm->channels;
++	size_t n;
++	unsigned c;
++
++	for (n = 0; n < frames; n++) {
++		double l = 0.0, r = 0.0;
++		for (c = 0; c < channels; c++) {
++			const double x = (double)in[c][n * stride] * scale;
++			l += dm->l[c] * x;
++			r += dm->r[c] * x;
++		}
++		*out++ = clamp32(l);
++		*out++ = clamp32(r);
++	}
++}
++
++void downmix_float(const struct downmix *dm, const float *const *in, size_t frames, int32_t *out) {
++	const unsigned channels = dm->channels;
++	size_t n;
++	unsigned c;
++
++	for (n = 0; n < frames; n++) {
++		double l = 0.0, r = 0.0;
++		for (c = 0; c < channels; c++) {
++			const double x = in[c][n];
++			l += dm->l[c] * x;
++			r += dm->r[c] * x;
++		}
++		*out++ = clamp32(l * 0x7fffffff);
++		*out++ = clamp32(r * 0x7fffffff);
++	}
++}
+diff --git a/downmix.h b/downmix.h
+new file mode 100644
+index 0000000..b491432
+--- /dev/null
++++ b/downmix.h
+@@ -0,0 +1,91 @@
++/*
++ *  Squeezelite - lightweight headless squeezebox emulator
++ *
++ *  downmix: a file of more than two channels folded down to stereo.
++ *  Added by Gexis Player (ADR-0145), 2026.
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ *
++ * The fold-down is ITU-R BS.775's, as ffmpeg's default rematrix makes it:
++ *   left  = front left  + 0.7071 centre + 0.7071 each left surround (side, back)
++ *   right = front right + 0.7071 centre + 0.7071 each right surround
++ * a back centre goes to both at 0.5, a front left/right of centre to its
++ * side at 1, the LFE is left out. Every coefficient is then divided by the
++ * larger of the two sides' sums, so the largest possible sum is full scale:
++ * nothing can clip, at the cost of a quieter track.
++ *
++ * Depends on nothing of Squeezelite's, so it can be tested on its own.
++ */
++
++#ifndef DOWNMIX_H
++#define DOWNMIX_H
++
++#include <stdbool.h>
++#include <stddef.h>
++#include <stdint.h>
++
++#define DOWNMIX_MAX_CHANNELS 8
++
++// Speaker positions, in the order of WAVE_FORMAT_EXTENSIBLE's channel mask
++// bits (bit n is position n), so a mask maps onto them directly.
++typedef enum {
++	DM_FL = 0, DM_FR, DM_FC, DM_LFE, DM_BL, DM_BR, DM_FLC, DM_FRC, DM_BC,
++	DM_SL, DM_SR, DM_TC, DM_TFL, DM_TFC, DM_TFR, DM_TBL, DM_TBC, DM_TBR,
++	DM_UNKNOWN
++} dm_speaker;
++
++struct downmix {
++	unsigned channels;
++	dm_speaker speaker[DOWNMIX_MAX_CHANNELS];
++	double l[DOWNMIX_MAX_CHANNELS];   // normalised: sum of either side's <= 1
++	double r[DOWNMIX_MAX_CHANNELS];
++	char layout[DOWNMIX_MAX_CHANNELS * 5 + 1]; // "FL FR FC LFE BL BR", for the log
++};
++
++// From explicit positions. False (nothing to fold) for fewer than three
++// channels, more than DOWNMIX_MAX_CHANNELS, or no channel that reaches
++// either side.
++bool downmix_init(struct downmix *dm, unsigned channels, const dm_speaker *speakers);
++
++// The order FLAC's specification gives for its channel count, which is also
++// WAVE_FORMAT_EXTENSIBLE's default (SMPTE) order:
++//   3: FL FR FC            4: FL FR BL BR          5: FL FR FC BL BR
++//   6: FL FR FC LFE BL BR  7: FL FR FC LFE BC SL SR
++//   8: FL FR FC LFE BL BR SL SR
++bool downmix_init_default(struct downmix *dm, unsigned channels);
++
++// A WAV file's dwChannelMask: channel n is the n-th set bit. A mask of 0
++// means the default order; a channel past the mask's bits is left out.
++bool downmix_init_wav_mask(struct downmix *dm, unsigned channels, uint32_t mask);
++
++// A DSF file's channel type (DSF specification 1.01): 3 FL FR FC, 4 quad,
++// 5 FL FR FC LFE, 6 FL FR FC BL BR, 7 5.1. Any other type: the default order.
++bool downmix_init_dsf(struct downmix *dm, unsigned channels, unsigned channel_type);
++
++// A DSDIFF channel ID (the CHNL chunk's four characters) as a position.
++dm_speaker downmix_dsdiff_speaker(const unsigned char id[4]);
++
++// Folds `frames` frames of integer samples into interleaved left/right
++// 32-bit samples at `out`. Sample n of channel c is in[c][n * stride]
++// (stride 1: planar; stride = channels: interleaved); each is multiplied by
++// 2^shift first, so a sample of b bits with shift 32 - b is full scale in
++// 32 bits. Computed in double precision, rounded to nearest, clamped.
++void downmix_s32(const struct downmix *dm, const int32_t *const *in, size_t stride,
++				 unsigned shift, size_t frames, int32_t *out);
++
++// The same for planar float samples of full scale 1.0, written as 32-bit
++// samples scaled by 0x7fffffff (as dsd.c scales its stereo PCM).
++void downmix_float(const struct downmix *dm, const float *const *in, size_t frames, int32_t *out);
++
++#endif
+diff --git a/dsd.c b/dsd.c
+index 82233bd..5df969e 100644
+--- a/dsd.c
++++ b/dsd.c
+@@ -28,6 +28,8 @@
+ // use dsd2pcm from Sebastian Gesemann for conversion to pcm:
+ #include "./dsd2pcm/dsd2pcm.h"
+ 
++#include "downmix.h"
++
+ extern log_level loglevel;
+ 
+ extern struct buffer *streambuf;
+@@ -73,11 +75,19 @@ struct dsd {
+ 	u64_t sample_bytes;
+ 	u32_t block_size;
+ 	bool  lsb_first;
+-	dsd2pcm_ctx *dsd2pcm_ctx[2];
+-	float *transfer[2];
++	// ADR-0145 (Gexis Player): one converter and transfer buffer per channel,
++	// up to DOWNMIX_MAX_CHANNELS, so more than two can be converted and folded
++	dsd2pcm_ctx *dsd2pcm_ctx[DOWNMIX_MAX_CHANNELS];
++	float *transfer[DOWNMIX_MAX_CHANNELS];
++	u32_t channel_type;                         // DSF's
++	dm_speaker speakers[DOWNMIX_MAX_CHANNELS];  // DSDIFF's channel IDs
++	bool  have_speakers;
++	bool  fold;
++	struct downmix downmix;
+ };
+ 
+ static struct dsd *d;
++static struct codec *dsd_codec;
+ 
+ static u64_t unpack64be(const u8_t *p) {
+ 	return 
+@@ -141,6 +151,14 @@ static int _read_header(void) {
+ 			if (!strcmp(id, "CHNL")) {
+ 				d->channels = unpackn((void *)(streambuf->readp + 12));
+ 				LOG_INFO("channels: %u", d->channels);
++				// ADR-0145: the channels' IDs, which say which speaker each is
++				if (d->channels > 2 && d->channels <= DOWNMIX_MAX_CHANNELS && bytes >= 14 + 4 * d->channels) {
++					unsigned c;
++					for (c = 0; c < d->channels; c++) {
++						d->speakers[c] = downmix_dsdiff_speaker(streambuf->readp + 14 + 4 * c);
++					}
++					d->have_speakers = true;
++				}
+ 			}
+ 			if (!strcmp(id, "DSD ")) {
+ 				LOG_INFO("found dsd len: " FMT_u64, len);
+@@ -161,6 +179,7 @@ static int _read_header(void) {
+ 						LOG_WARN("only support DSD raw format");
+ 						return -1;
+ 					}
++					d->channel_type = unpack32le((void *)(streambuf->readp + 20)); // ADR-0145
+ 					d->channels = unpack32le((void *)(streambuf->readp + 24));
+ 					d->sample_rate = unpack32le((void *)(streambuf->readp + 28));
+ 					d->lsb_first = (unpack32le((void *)(streambuf->readp + 32)) == 1);
+@@ -232,6 +251,13 @@ static decode_state _decode_dsf(void) {
+ 	}
+ 	
+ 	if (bytes < d->block_size * d->channels) {
++		if (d->fold && stream.state > DISCONNECT) {
++			// ADR-0145: the rest of the channels' blocks are still to come
++			IF_PROCESS(
++				process.in_frames = 0;
++			);
++			return DECODE_RUNNING;
++		}
+ 		LOG_INFO("stream too short"); // this can occur when scanning the track
+ 		return DECODE_COMPLETE;
+ 	}
+@@ -248,6 +274,7 @@ static decode_state _decode_dsf(void) {
+ 		u8_t *iptrl = (u8_t *)streambuf->readp;
+ 		u8_t *iptrr = (u8_t *)streambuf->readp + d->block_size;
+ 		u32_t *optr;
++		u8_t *iptrc[DOWNMIX_MAX_CHANNELS]; // ADR-0145: every channel's block, when folding
+ 		
+ 		if (iptrr >= streambuf->wrap) {
+ 			iptrr -= streambuf->size;
+@@ -271,6 +298,17 @@ static decode_state _decode_dsf(void) {
+ 
+ 		bytes = min(block_left, min(streambuf->wrap - iptrl, streambuf->wrap - iptrr));
+ 
++		if (d->fold) {
++			unsigned c;
++			for (c = 0; c < d->channels; c++) {
++				iptrc[c] = (u8_t *)streambuf->readp + c * d->block_size;
++				if (iptrc[c] >= streambuf->wrap) {
++					iptrc[c] -= streambuf->size;
++				}
++				bytes = min(bytes, streambuf->wrap - iptrc[c]);
++			}
++		}
++
+ 		IF_DIRECT(
+ 			out = min(_buf_space(outputbuf), _buf_cont_write(outputbuf)) / BYTES_PER_FRAME;
+ 			optr = (u32_t *)outputbuf->writep;
+@@ -457,7 +495,14 @@ static decode_state _decode_dsf(void) {
+ 
+ 		case PCM:
+ 			
+-			if (d->channels == 1) {
++			if (d->fold) {
++				// ADR-0145: every channel converted, then folded into two
++				unsigned c;
++				for (c = 0; c < d->channels; c++) {
++					dsd2pcm_translate(d->dsd2pcm_ctx[c], frames, iptrc[c], 1, d->lsb_first, d->transfer[c], 1);
++				}
++				downmix_float(&d->downmix, (const float *const *)d->transfer, frames, (int32_t *)optr);
++			} else if (d->channels == 1) {
+ 				float *iptrf = d->transfer[0];
+ 				dsd2pcm_translate(d->dsd2pcm_ctx[0], frames, iptrl, 1, d->lsb_first, iptrf, 1);
+ 				while (count--) {
+@@ -520,7 +565,10 @@ static decode_state _decode_dsf(void) {
+ 	if (d->channels > 1) {
+ 		_buf_inc_readp(streambuf, d->block_size);
+ 	}
+-	if (d->channels > 2) {
++	if (d->fold) {
++		// ADR-0145: the other channels were read too, and are in streambuf
++		_buf_inc_readp(streambuf, d->block_size * (d->channels - 2));
++	} else if (d->channels > 2) {
+ 		d->consume = d->block_size * (d->channels - 2);
+ 	}
+ 
+@@ -674,7 +722,14 @@ static decode_state _decode_dsdiff(void) {
+ 		
+ 	case PCM:
+ 		
+-		if (d->channels == 1) {
++		if (d->fold) {
++			// ADR-0145: every channel converted, then folded into two
++			unsigned c;
++			for (c = 0; c < d->channels; c++) {
++				dsd2pcm_translate(d->dsd2pcm_ctx[c], frames, iptr + c, d->channels, 0, d->transfer[c], 1);
++			}
++			downmix_float(&d->downmix, (const float *const *)d->transfer, frames, (int32_t *)optr);
++		} else if (d->channels == 1) {
+ 			float *iptrf = d->transfer[0];
+ 			dsd2pcm_translate(d->dsd2pcm_ctx[0], frames, iptr, 1, 0, iptrf, 1);
+ 			while (count--) {
+@@ -808,6 +863,31 @@ static decode_state dsd_decode(void) {
+ 			break;
+ 		}
+ 
++		// ADR-0145: more than two channels are converted to PCM - one-bit
++		// audio cannot be mixed - and folded down to stereo
++		d->fold = false;
++		if (d->channels > 2) {
++			if (d->type == DSF) {
++				d->fold = downmix_init_dsf(&d->downmix, d->channels, d->channel_type);
++			} else if (d->have_speakers) {
++				d->fold = downmix_init(&d->downmix, d->channels, d->speakers);
++			} else {
++				d->fold = downmix_init_default(&d->downmix, d->channels);
++			}
++			if (d->fold) {
++				LOG_WARN("downmix: %u channels folded to stereo (%s)%s", d->channels, d->downmix.layout,
++						 outfmt != PCM ? ", converted to PCM" : "");
++				outfmt = PCM;
++				// DSF holds a block of every channel in turn: wait until all of
++				// them are here, rather than end the track short of them
++				if (d->type == DSF) {
++					dsd_codec->min_read_bytes = d->block_size * d->channels;
++				}
++			} else {
++				LOG_WARN("downmix: %u channels not folded, the first two played", d->channels);
++			}
++		}
++
+ 		if (outfmt != PCM && output.next_sample_rate > output.supported_rates[0]) {
+ 			LOG_INFO("DSD sample rate too high for device - converting to PCM");
+ 			outfmt = PCM;
+@@ -855,33 +935,39 @@ void dsd_init(dsd_format format, unsigned delay) {
+ }
+ 
+ static void dsd_open(u8_t size, u8_t rate, u8_t chan, u8_t endianness) {
+-	d->type = UNKNOWN;
++	unsigned c;
+ 
+-	if (!d->dsd2pcm_ctx[0]) {
+-		d->dsd2pcm_ctx[0] = dsd2pcm_init();
+-		d->dsd2pcm_ctx[1] = dsd2pcm_init();
+-	} else {
+-		dsd2pcm_reset(d->dsd2pcm_ctx[0]);
+-		dsd2pcm_reset(d->dsd2pcm_ctx[1]);
+-	}
+-	if (!d->transfer[1]) {
+-		d->transfer[0] = malloc(sizeof(float) * BLOCK);
+-		d->transfer[1] = malloc(sizeof(float) * BLOCK);
++	d->type = UNKNOWN;
++	// ADR-0145: what the last track's header said is not this one's
++	d->channel_type = 0;
++	d->have_speakers = false;
++	d->fold = false;
++	dsd_codec->min_read_bytes = BLOCK * 2;
++
++	for (c = 0; c < DOWNMIX_MAX_CHANNELS; c++) {
++		if (!d->dsd2pcm_ctx[c]) {
++			d->dsd2pcm_ctx[c] = dsd2pcm_init();
++		} else {
++			dsd2pcm_reset(d->dsd2pcm_ctx[c]);
++		}
++		if (!d->transfer[c]) {
++			d->transfer[c] = malloc(sizeof(float) * BLOCK);
++		}
+ 	}
+ }
+ 
+ static void dsd_close(void) {
+-	if (d->dsd2pcm_ctx[0]) {
+-		dsd2pcm_destroy(d->dsd2pcm_ctx[0]);
+-		dsd2pcm_destroy(d->dsd2pcm_ctx[1]);
+-		d->dsd2pcm_ctx[0] = NULL;
+-		d->dsd2pcm_ctx[1] = NULL;
+-	}
+-	if (d->transfer[0]) {
+-		free(d->transfer[0]);
+-		free(d->transfer[1]);
+-		d->transfer[0] = NULL;
+-		d->transfer[1] = NULL;
++	unsigned c;
++
++	for (c = 0; c < DOWNMIX_MAX_CHANNELS; c++) {
++		if (d->dsd2pcm_ctx[c]) {
++			dsd2pcm_destroy(d->dsd2pcm_ctx[c]);
++			d->dsd2pcm_ctx[c] = NULL;
++		}
++		if (d->transfer[c]) {
++			free(d->transfer[c]);
++			d->transfer[c] = NULL;
++		}
+ 	}
+ }
+ 
+@@ -902,6 +988,7 @@ struct codec *register_dsd(void) {
+ 	}
+ 
+ 	memset(d, 0, sizeof(struct dsd));
++	dsd_codec = &ret;
+ 
+ 	dsd2pcm_precalc();
+ 
+diff --git a/faad.c b/faad.c
+index 0361dba..8161fa0 100644
+--- a/faad.c
++++ b/faad.c
+@@ -383,6 +383,10 @@ static decode_state faad_decode(void) {
+ 		if (found == 1) {
+ 
+ 			LOG_INFO("samplerate: %u channels: %u", samplerate, channels);
++			// ADR-0145: FAAD2 folds the channels itself (downMatrix, set in faad_open)
++			if (channels > 2) {
++				LOG_WARN("downmix: %u channels folded to stereo (by FAAD2)", channels);
++			}
+ 			bytes_total = _buf_used(streambuf);
+ 			bytes_wrap  = min(bytes_total, _buf_cont_read(streambuf));
+ 
+diff --git a/flac.c b/flac.c
+index 1692833..2b56123 100644
+--- a/flac.c
++++ b/flac.c
+@@ -23,6 +23,8 @@
+ 
+ #include <FLAC/stream_decoder.h>
+ 
++#include "downmix.h"
++
+ #if BYTES_PER_FRAME == 4		
+ #define ALIGN8(n) 	(n << 8)		
+ #define ALIGN16(n) 	(n)
+@@ -38,6 +40,9 @@
+ struct flac {
+ 	FLAC__StreamDecoder *decoder;
+ 	u8_t container;
++	// ADR-0145 (Gexis Player): more than two channels are folded to stereo
++	struct downmix downmix;
++	bool fold;
+ #if !LINKALL
+ 	// FLAC symbols to be dynamically loaded
+ 	const char **FLAC__StreamDecoderErrorStatusString;
+@@ -166,13 +171,27 @@ static FLAC__StreamDecoderWriteStatus write_cb(const FLAC__StreamDecoder *decode
+ 		output.track_start = outputbuf->writep;
+ 		decode.new_stream = false;
+ 
++		// ADR-0145: a file of more than two channels is folded down to stereo,
++		// in the order FLAC's specification gives for its channel count.
++		f->fold = false;
++		if (channels > 2) {
++#if BYTES_PER_FRAME == 8
++			f->fold = downmix_init_default(&f->downmix, channels);
++#endif
++			if (f->fold) {
++				LOG_WARN("downmix: %u channels folded to stereo (%s)", channels, f->downmix.layout);
++			} else {
++				LOG_WARN("downmix: %u channels not folded, the first two played", channels);
++			}
++		}
++
+ #if DSD
+ #if SL_LITTLE_ENDIAN
+ #define MARKER_OFFSET 2
+ #else
+ #define MARKER_OFFSET 1
+ #endif		
+-		if (bits_per_sample == 24 && is_stream_dop(((u8_t *)lptr) + MARKER_OFFSET, ((u8_t *)rptr) + MARKER_OFFSET, 4, frames)) {
++		if (!f->fold && bits_per_sample == 24 && is_stream_dop(((u8_t *)lptr) + MARKER_OFFSET, ((u8_t *)rptr) + MARKER_OFFSET, 4, frames)) {
+ 			LOG_INFO("file contains DOP");
+ 			if (output.dsdfmt == DOP_S24_LE || output.dsdfmt == DOP_S24_3LE)
+ 				output.next_fmt = output.dsdfmt;
+@@ -193,6 +212,13 @@ static FLAC__StreamDecoderWriteStatus write_cb(const FLAC__StreamDecoder *decode
+ 		UNLOCK_O;
+ 	}
+ 
++	// ADR-0145: read before the loop, whose own "f" is a frame count
++	const struct downmix *downmix = (f->fold && channels == f->downmix.channels) ? &f->downmix : NULL;
++	const FLAC__int32 *fold_in[DOWNMIX_MAX_CHANNELS];
++	if (downmix) {
++		for (unsigned c = 0; c < channels; c++) fold_in[c] = buffer[c];
++	}
++
+ 	LOCK_O_direct;
+ 
+ 	while (frames > 0) {
+@@ -213,7 +239,11 @@ static FLAC__StreamDecoderWriteStatus write_cb(const FLAC__StreamDecoder *decode
+ 
+ 		count = f;
+ 
+-		if (bits_per_sample == 8) {
++		if (downmix) {
++			// every channel, left-aligned to 32 bits, folded into left and right
++			downmix_s32(downmix, fold_in, 1, 32 - bits_per_sample, f, (int32_t *)optr);
++			for (unsigned c = 0; c < channels; c++) fold_in[c] += f;
++		} else if (bits_per_sample == 8) {
+ 			while (count--) {
+ 				*optr++ = ALIGN8(*lptr++);
+ 				*optr++ = ALIGN8(*rptr++);
+diff --git a/pcm.c b/pcm.c
+index 87898bc..9b9623d 100644
+--- a/pcm.c
++++ b/pcm.c
+@@ -21,6 +21,8 @@
+ 
+ #include "squeezelite.h"
+ 
++#include "downmix.h"
++
+ #if BYTES_PER_FRAME == 4
+ #define SHIFT 16
+ #define OPTR_T	u16_t
+@@ -74,6 +76,13 @@ static bool  limit;
+ static u32_t audio_left;
+ static u32_t bytes_per_frame;
+ 
++// ADR-0145 (Gexis Player): more than two channels are folded to stereo
++static u32_t channel_mask;       // WAVE_FORMAT_EXTENSIBLE's, when this decoder read the header
++static bool  header_aiff;        // the header it read was AIFF's
++static bool  fold;
++static struct downmix downmix;
++static s32_t fold_buf[MAX_DECODE_FRAMES * DOWNMIX_MAX_CHANNELS];
++
+ typedef enum { UNKNOWN = 0, WAVE, AIFF } header_format;
+ 
+ static void _check_header(void) {
+@@ -148,6 +157,11 @@ static void _check_header(void) {
+ 				sample_rate = *(ptr+12) | *(ptr+13) << 8 | *(ptr+14) << 16 | *(ptr+15) << 24;
+ 				sample_size = (*(ptr+22) | *(ptr+23) << 8) / 8;
+ 				bigendian   = 0;
++				// ADR-0145: WAVE_FORMAT_EXTENSIBLE names its channels
++				if ((*(ptr+8) | *(ptr+9) << 8) == 0xFFFE && len >= 40 && bytes >= 8 + 24) {
++					channel_mask = *(ptr+28) | *(ptr+29) << 8 | *(ptr+30) << 16 | (u32_t)*(ptr+31) << 24;
++					LOG_INFO("channel mask: 0x%x", channel_mask);
++				}
+ 				LOG_INFO("pcm size: %u rate: %u chan: %u bigendian: %u", sample_size, sample_rate, channels, bigendian);
+ 			}
+ 
+@@ -157,6 +171,7 @@ static void _check_header(void) {
+ 				channels    = *(ptr+8) << 8 | *(ptr+9);
+ 				sample_size = (*(ptr+14) << 8 | *(ptr+15)) / 8;
+ 				bigendian   = 1;
++				header_aiff = true;
+ 				// sample rate is encoded as IEEE 80 bit extended format
+ 				// make some assumptions to simplify processing - only use first 32 bits of mantissa
+ 				exponent = ((*(ptr+16) & 0x7f) << 8 | *(ptr+17)) - 16383 - 31;
+@@ -185,7 +200,7 @@ static decode_state pcm_decode(void) {
+ 	frames_t frames, count;
+ 	OPTR_T *optr;
+ 	u8_t  *iptr;
+-	u8_t tmp[3*8];
++	u8_t tmp[4*8]; // a frame of up to 8 channels of 4 bytes (3*8 before ADR-0145's 8 channels)
+ 	
+ 	LOCK_S;
+ 
+@@ -241,6 +256,26 @@ static decode_state pcm_decode(void) {
+ 			out = process.max_in_frames;
+ 		);
+ 		bytes_per_frame = channels * sample_size;
++
++		// ADR-0145: a file of more than two channels is folded down to stereo.
++		// WAV's own channel mask names the channels when this decoder read the
++		// header; otherwise the default (SMPTE) order for the count. AIFF's
++		// specification gives other orders for 4 and 6 channels, but files
++		// written by today's tools follow WAV's, so WAV's is assumed.
++		fold = false;
++		if (channels > 2) {
++#if BYTES_PER_FRAME == 8
++			if (sample_size >= 1 && sample_size <= 4) {
++				fold = downmix_init_wav_mask(&downmix, channels, channel_mask);
++			}
++#endif
++			if (fold) {
++				LOG_WARN("downmix: %u channels folded to stereo (%s%s)", channels, downmix.layout,
++						 (header_aiff || bigendian) ? ", AIFF: WAV's order assumed" : "");
++			} else {
++				LOG_WARN("downmix: %u channels of %u bytes not folded", channels, sample_size);
++			}
++		}
+ 	}
+ 
+ 	IF_DIRECT(
+@@ -412,6 +447,31 @@ static decode_state pcm_decode(void) {
+ 				}
+ 			}
+ 		}
++	} else if (fold) {
++		// ADR-0145: each sample read as the stereo code above reads it,
++		// left-aligned in 32 bits, then every channel folded into two
++		const s32_t *in[DOWNMIX_MAX_CHANNELS];
++		s32_t *u = fold_buf;
++		unsigned c;
++		while (count--) {
++			u32_t v;
++			if (sample_size == 1) {
++				v = (u32_t)*iptr << 24;
++			} else if (sample_size == 2) {
++				v = bigendian ? (u32_t)*iptr << 24 | (u32_t)*(iptr+1) << 16
++				              : (u32_t)*iptr << 16 | (u32_t)*(iptr+1) << 24;
++			} else if (sample_size == 3) {
++				v = bigendian ? (u32_t)*iptr << 24 | (u32_t)*(iptr+1) << 16 | (u32_t)*(iptr+2) << 8
++				              : (u32_t)*iptr << 8 | (u32_t)*(iptr+1) << 16 | (u32_t)*(iptr+2) << 24;
++			} else {
++				v = bigendian ? (u32_t)*iptr << 24 | (u32_t)*(iptr+1) << 16 | (u32_t)*(iptr+2) << 8 | *(iptr+3)
++				              : *iptr | (u32_t)*(iptr+1) << 8 | (u32_t)*(iptr+2) << 16 | (u32_t)*(iptr+3) << 24;
++			}
++			*u++ = (s32_t)v;
++			iptr += sample_size;
++		}
++		for (c = 0; c < channels; c++) in[c] = fold_buf + c;
++		downmix_s32(&downmix, in, channels, 0, frames, (int32_t *)optr);
+ 	} else {
+ 		LOG_ERROR("unsupported channels");
+ 	}
+@@ -443,6 +503,9 @@ static void pcm_open(u8_t size, u8_t rate, u8_t chan, u8_t endianness) {
+ 	channels    = chan - '0';
+ 	bigendian   = (endianness == '0');
+ 	limit       = false;
++	channel_mask = 0;
++	header_aiff = false;
++	fold        = false;
+ 
+ 	LOG_INFO("pcm size: %u rate: %u chan: %u bigendian: %u", sample_size, sample_rate, channels, bigendian);
+ 	buf_adjust(streambuf, sample_size * channels);
