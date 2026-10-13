@@ -139,10 +139,17 @@ if [ -r "${BACKGROUND}" ] && command -v swaybg >/dev/null; then
 	# A bar fits the still to its height, as the boot screens now do
 	# (George, 2026-10-04); filling cut the logo. The colour is the still's
 	# own ground, so the sides are seamless.
+	# Only on the screen's own port: any other output - a sound bar or a
+	# receiver on the other HDMI port - is black (ADR-0141 D3, George,
+	# 2026-10-12: nothing to look at, no logo burnt into a TV). swaybg takes
+	# `-o '*'` as every output without one of its own.
+	screen_output=$(screen_connector)
 	if [ "${GEXIS_SCREEN_FAMILY:-standard}" = bar ]; then
-		swaybg --mode fit --color '#101a21' --image "${BACKGROUND}" &
+		swaybg -o '*' --color '#000000' \
+			-o "${screen_output}" --mode fit --color '#101a21' --image "${BACKGROUND}" &
 	else
-		swaybg --mode fill --image "${BACKGROUND}" &
+		swaybg -o '*' --color '#000000' \
+			-o "${screen_output}" --mode fill --image "${BACKGROUND}" &
 	fi
 else
 	echo "gexis-kiosk: no wallpaper (${BACKGROUND}); the handover will be black" >&2

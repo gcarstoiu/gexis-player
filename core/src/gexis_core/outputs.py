@@ -552,6 +552,27 @@ def _discover(chosen_board: str | None, product) -> list[Output]:
     return found
 
 
+#: The Pi's own headphone jack: what stands in for an HDMI output that has
+#: nothing connected (ADR-0141 D5).
+JACK = "Headphones"
+
+
+def in_force(stored: str | None, available: list[Output] | None = None) -> tuple[Output | None, bool]:
+    """**The output that plays, and whether the jack is standing in**
+    (ADR-0141 D5; George, 2026-10-12: *"fallback to jack"*). The stored
+    choice, as `resolve` gives it - unless that is an HDMI port with nothing
+    connected (a receiver switched off), which cannot play at all (error 524,
+    Finding 116): then the headphone jack, until the port comes back. The
+    stored choice is never changed by this."""
+    available = discover() if available is None else available
+    chosen = resolve(stored, available)
+    if chosen is not None and chosen.card in CONNECTORS and not chosen.connected:
+        jack = next((o for o in available if o.card == JACK), None)
+        if jack is not None:
+            return jack, True
+    return chosen, False
+
+
 def configured(path: Path = CONF_PATH) -> str | None:
     """The card `output.conf` names right now, or None."""
     try:

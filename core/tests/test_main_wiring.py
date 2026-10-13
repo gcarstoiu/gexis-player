@@ -293,3 +293,15 @@ def test_the_screen_port_choice_moves_the_screen_and_forgets_itself():
     source = MAIN.read_text()
     assert '"screen_port": lambda: not settings_store.get("headless")' in source
     assert '"hdmi_1": lambda: _port_line("HDMI-A-1")' in source
+
+
+def test_the_jack_stands_in_and_is_never_fixed_while_it_does():
+    """ADR-0141 D5 (George, 2026-10-12): fall back to the jack, back by itself,
+    and the jack on its own control - Fixed would be full level into
+    headphones."""
+    source = MAIN.read_text()
+    assert "_watch_standin()," in source
+    assert "outputs.resolve(settings.value(\"output_device\"))" not in source, "every lookup goes through in_force"
+    fixed = _closure("_fixed_wanted")
+    assert "not outputs.in_force(settings.value('output_device'))[1]" in fixed
+    assert "await _switch_output()" in _closure("_watch_standin")

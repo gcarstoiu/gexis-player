@@ -589,7 +589,8 @@ async def main() -> None:
             await _systemctl_reboot()
         asyncio.ensure_future(_board_restart())
 
-    chosen_output = outputs.resolve(settings_store.get("output_device"))
+    # ADR-0141 D5: the jack stands in for an HDMI output with nothing connected.
+    chosen_output, standing_in = outputs.in_force(settings_store.get("output_device"))
     #: ADR-0124: the card as it is, before the software stage takes its place.
     card_output = chosen_output
     if chosen_output is not None and volume_mode(settings_store.get(VOLUME_KEY), chosen_output) == SOFTWARE:
@@ -618,7 +619,8 @@ async def main() -> None:
                 return None
         squeezelite_env_was = _squeezelite_env()
         if outputs.write(chosen_output,
-                         fixed=volume_mode(settings_store.get(VOLUME_KEY), chosen_output) == FIXED):
+                         fixed=volume_mode(settings_store.get(VOLUME_KEY), chosen_output) == FIXED
+                         and not standing_in):
             logger.warning(
                 "outputs: output.conf did not match %s and was rewritten; "
                 "renderers pick it up on their next open",
@@ -1024,7 +1026,8 @@ async def main() -> None:
     # ADR-0127: an output with no volume control no longer forces fixed
     # output - Software takes Hardware's place there - so Fixed is only
     # ever the user's choice.
-    fixed_wanted = {"value": volume_mode(settings_store.get(VOLUME_KEY), card_output) == FIXED}
+    fixed_wanted = {"value": volume_mode(settings_store.get(VOLUME_KEY), card_output) == FIXED
+                    and not standing_in}
     #: Whether the software stage is in the chain now (ADR-0124).
     software_on = {"value": bool(chosen_output is not None and chosen_output.software)}
     fixed_now = {"value": False}
@@ -1093,7 +1096,7 @@ async def main() -> None:
             # out of the chain, so it already plays at full scale. Writing
             # anyway went to the HAT's control name, which the card does not
             # have, and logged a warning for it.
-            fixed_on = outputs.resolve(settings.value("output_device"))
+            fixed_on = outputs.in_force(settings.value("output_device"))[0]
             if fixed_on is not None and fixed_on.control is None:
                 logger.info("output: fixed - %s has no control of its own; nothing attenuates", fixed_on.label)
                 return
@@ -1145,7 +1148,7 @@ async def main() -> None:
         card and libasound's cached configuration are freed
         (`forget_mixers`), so the next write opens the new card's.
         """
-        base = outputs.resolve(settings.value("output_device"))
+        base = outputs.in_force(settings.value("output_device"))[0]
         # The row restricted for this output first: what is in force on it
         # (ADR-0127 §2) decides whether the software stage is in the chain.
         _restrict_output_mode(base)
@@ -1209,7 +1212,7 @@ async def main() -> None:
         # - on every change of output, not only when the row is switched on
         # (George, 2026-10-07: on HDMI the volume stayed the same throughout).
         if chosen.software:
-            await _start_software_volume(outputs.resolve(settings.value("output_device")), settings_store)
+            await _start_software_volume(outputs.in_force(settings.value("output_device"))[0], settings_store)
             raw = await get_raw(outputs.SOFTVOL_CONTROL)
             if raw is not None:
                 # Through `publish_volume`, which keeps the mute it shows.
@@ -1321,7 +1324,7 @@ async def main() -> None:
             db = raw_to_db(raw) if raw is not None else SOFTWARE_LEVEL_FIRST_DB
         # The card as it is now - not as it was at start-up: the output may
         # have changed since.
-        base = outputs.resolve(settings.value("output_device"))
+        base = outputs.in_force(settings.value("output_device"))[0]
         if db is not None:
             if on:
                 settings_store.set(SOFTWARE_LEVEL_KEY, db)
@@ -1348,7 +1351,7 @@ async def main() -> None:
         They restart afterwards, which is also what makes the new file
         mean anything - ALSA reads it when a PCM is opened.
         """
-        chosen = _with_software(outputs.resolve(settings.value("output_device")))
+        chosen = _with_software(outputs.in_force(settings.value("output_device"))[0])
         if chosen is None:
             logger.error("outputs: nothing to write the tuning to")
             return
@@ -1386,8 +1389,17 @@ async def main() -> None:
             logger.info("sweep: %s not started", kind)
         state_store.bump_settings_revision()
 
+    def _fixed_wanted() -> bool:
+        """Fixed, as chosen - except on the jack standing in for an HDMI
+        output (ADR-0141 D5, George, 2026-10-12): Fixed there would be full
+        level into whatever is plugged in, headphones included, so it plays
+        on its own control from the level to come back to, the Starting
+        volume's. The stored choice stays Fixed for when the port is back."""
+        return (settings.value(VOLUME_KEY) == FIXED
+                and not outputs.in_force(settings.value("output_device"))[1])
+
     def _choose_output_mode(value=None) -> None:
-        fixed_wanted["value"] = settings.value(VOLUME_KEY) == FIXED
+        fixed_wanted["value"] = _fixed_wanted()
         asyncio.ensure_future(_apply_output_mode())
 
     volume_change = asyncio.Lock()
@@ -1409,7 +1421,7 @@ async def main() -> None:
             stopped = await supervisor.stop_active()
             if stopped:
                 logger.info("volume: %s stopped for the change of volume type", stopped)
-            fixed_wanted["value"] = settings.value(VOLUME_KEY) == FIXED
+            fixed_wanted["value"] = _fixed_wanted()
             software = settings.value(VOLUME_KEY) == SOFTWARE
             if software != software_on["value"]:
                 # Rewrites the output and restarts the renderers itself.
@@ -1791,12 +1803,44 @@ async def main() -> None:
 
     def _volume_notes() -> dict:
         """The Fixed note, with what it means for DSD on this DAC."""
-        chosen = outputs.resolve(settings_store.get("output_device"))
+        chosen = outputs.in_force(settings_store.get("output_device"))[0]
         if chosen is None or outputs.native_dsd(chosen.card) is None:
             return {}
         row = next((r for g in load_registry() for r in g["rows"] if r.get("key") == VOLUME_KEY), {})
         fixed = (row.get("optionNotes") or {}).get(FIXED, "")
         return {FIXED: f"{fixed} DSD files play natively on {chosen.label}.".strip()}
+
+    def _standin_note() -> str | None:
+        """The Output row's note while the jack stands in; None otherwise."""
+        stored = outputs.resolve(settings_store.get("output_device"))
+        if stored is None or not outputs.in_force(settings_store.get("output_device"))[1]:
+            return None
+        return (f"{stored.label} has nothing connected, so the headphone jack plays until it is back. "
+                "While it stands in, its volume is its own, not Fixed.")
+
+    async def _watch_standin(every: float = 3.0) -> None:
+        """**ADR-0141 D5: the jack in when an HDMI output goes, out when it
+        comes back.** A receiver switched off drops its port; the output is
+        switched to the jack, and back by itself when the port returns -
+        each a change of output, which stops whoever plays."""
+        last = None
+        while True:
+            await asyncio.sleep(every)
+            try:
+                out, standing = await asyncio.to_thread(outputs.in_force, settings_store.get("output_device"))
+            except Exception:  # noqa: BLE001 - a watch must not die quietly
+                logger.exception("outputs: cannot tell the output in force")
+                continue
+            now = (out.card if out else None, standing)
+            if last is None:
+                last = now
+                continue
+            if now != last:
+                last = now
+                logger.info("outputs: %s", "the HDMI output has nothing connected; the jack stands in"
+                            if standing else "the HDMI output is back; switching to it")
+                state_store.bump_settings_revision()
+                await _switch_output()
 
     def _all_components() -> dict:
         status = components.all_status()
@@ -2308,6 +2352,8 @@ async def main() -> None:
         # The Release row's note: what the waiting or just-installed release
         # says changed (2026-10-01, George).
         notes={"software_update": updates.whats_new,
+               # ADR-0141 D5: why the jack is playing.
+               "output_device": lambda: _standin_note(),
                "cable": cable.note,
                "sound_card_board": lambda: board_apply.note() or _reports_note(
                    "sound_card_board", hardware_report.board_reports(
@@ -4029,6 +4075,8 @@ async def main() -> None:
         ),
         volume_bridge.run(),
         bluetooth_volume.run(),
+        # ADR-0141 D5: the jack for an HDMI output with nothing connected.
+        _watch_standin(),
         *(bridge.run() for bridge in dummy_mixer_bridges.values()),
         peppy.run(),
         # The `wifi` row's value, kept current from here rather than read on
