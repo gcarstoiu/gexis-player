@@ -44,10 +44,12 @@ setup over Ethernet; a cut-short update; a factory reset.
 notes, promote to Stable with the image file (c16; the installation guide's
 download works from then), README's *Download and install* section, Raspberry
 Pi Imager - the image file and *Use custom*, our own Imager repository and the
-community application after (g14). **After it, first:** MPD for real 5.1/7.1 (17,
-George 2026-10-13). Then Phase 13g (the player in Home Assistant), themes
-(14), a sound bar on optical (14a), the library answering for itself (15),
-Lyrion's own menus' look (16) - each ADR first.
+community application after (g14). **After it**, in order (`docs/DEVELOPMENT.md`, "Phases after the first
+public release"; refer to them by ID): **14** MPD for real 5.1/7.1
+(`ph-mpd`), **15** the player in Home Assistant (`ph-home-assistant`), **16**
+themes (`ph-themes`), **17** a sound bar on optical (`ph-optical`), **18** the
+library answers for itself (`ph-library`), **19** Lyrion's own menus' look
+(`ph-lyrion-menus`) - each ADR first.
 
 The shared to-do list (an artifact with a `todos` collection; its address is
 in Claude's memory, not here) holds the open items with their detail.
@@ -60,15 +62,11 @@ words in the morning).
 ## Phases
 
 Closed: 0-12, 13, 13a, 13b, 13c, 13d (2026-10-12, Finding 114's addendum),
-13e, 13f (2026-10-12: shipped behind *Extended navigation*; its look is Phase
-16) (`docs/DEVELOPMENT.md` holds each phase's acceptance criteria; the archive
-holds the order as it was argued). Open: **13g** the player
-in Home Assistant - after the release; **14** themes - settle first what a
-theme is if plugins are processes (ADR-0016); **14a** a sound bar on optical
-(a maximum sample rate per output); **15** the library answers for itself
-(Plex server metadata first, internet providers as fallback; Finding 086);
-**16** Lyrion's own menus: George's look (from 13f, after the release);
-**17** MPD for real multichannel - first after the release.
+13e, 13f (2026-10-12: shipped behind *Extended navigation*; its look is
+`ph-lyrion-menus`) (`docs/DEVELOPMENT.md` holds each phase's acceptance criteria; the archive
+holds the order as it was argued). **From 2026-10-13 phases are numbered
+consecutively without letters, each with a stable ID** (George); the open ones
+are 14-19, listed under *Next*.
 
 ## Machines
 
