@@ -542,9 +542,14 @@ flowchart LR
   it), on a pair of passthrough FIFOs for our PeppyMeter,
   and optionally by HTTP PUT to an unmodified PeppyMeter elsewhere.
 - **Levels follow the volume** (ADR-0057). The tap is before the DAC's
-  attenuator, so the service reads the attenuation the core publishes and
-  lowers the levels by a third of it (`METER_VOLUME_TRACKING`), mapping the
-  volume's 60 dB onto a VU dial's ~20 dB.
+  attenuator, so the service reads the attenuation the core publishes
+  (`/run/gexis/attenuation`) and lowers the bars by all of it and the
+  needles by half (`BAR_VOLUME_TRACKING`, `NEEDLE_VOLUME_TRACKING`,
+  ADR-0146): the volume's 60 dB would put a needle on its stop by 40 %. The
+  core publishes it at start, with every level it gives the panel, and as 0
+  in Fixed on every output. The *Gain* row is added to both after that
+  (`meters.publish_gain` writes `/run/gexis/meter-gain`; −10 to +20 dB,
+  clipped at the top of the scale); it needs no restart.
 - **The spectrum frame matches its reader** (ADR-0056 as amended
   2026-10-08). peppyalsa measures 30 bands; each skin draws what its own
   panel holds, 18 to 21 on the 1920x1080 packs (`spectrum_bars`: the right
@@ -554,7 +559,8 @@ flowchart LR
   it keeps the last whole frame of what is waiting, so a change of count
   cannot put it out of step.
 - **Movement is configurable**: needle fall time, needle smoothing and
-  spectrum smoothing are settings (ADR-0058). The first two regenerate
+  spectrum smoothing are settings (ADR-0058); *Gain* (ADR-0146) is the
+  fourth row under the same group. The first two regenerate
   `output.conf`'s peppyalsa section; needle smoothing is PeppyMeter's own
   config and needs `gexis-peppy` restarted.
 - **The Peppy screen is a native process**, not a browser page (ADR-0026).

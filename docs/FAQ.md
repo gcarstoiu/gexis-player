@@ -321,6 +321,14 @@ moves to the next or previous skin. Note that applying *Spectrum smoothing*
 or *Needle fall time* under *Visualiser tweaks* stops the music for a moment
 while the sound card is reopened.
 
+**Do the needles and bars follow the volume?**
+Yes, with *Volume type* on *Software* or *Hardware*: they show what comes
+out, so they fall as the volume comes down - the bars by the whole drop, the
+needles by half of it, so they still move when listening low. On *Fixed* the
+player does not change the level, so they show the recording. *Gain* under
+*Settings → Display → Visualiser → Visualiser tweaks* raises or lowers both,
+from −10 to +20 dB, for a quiet recording or a low listening level.
+
 **Some skins show a slideshow of the artist. Where do the photos come from?**
 From the Lyrion server's Music & Artist Information plugin. They are the
 *Fanart* skins; the photo changes every 20 seconds. An artist the plugin had

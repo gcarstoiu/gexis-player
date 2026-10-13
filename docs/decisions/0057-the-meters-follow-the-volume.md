@@ -118,3 +118,10 @@ currently cutting, before anything is published.**
   needle — at 20 dB of cut the needle loses a fifth of its travel and the
   bars a tenth of their height. They will not look like they are doing the
   same thing.
+
+## Amended 2026-10-13 by ADR-0146
+
+The bars follow the whole cut and the needles half of it, no longer a third
+of both; the cut is published at every start and on every change of volume
+type, and Fixed publishes 0 on every output; a Gain row lifts or lowers both.
+See [ADR-0146](0146-the-meters-follow-the-volume-again-with-a-gain.md).
