@@ -648,6 +648,72 @@ index 1692833..2b56123 100644
  			while (count--) {
  				*optr++ = ALIGN8(*lptr++);
  				*optr++ = ALIGN8(*rptr++);
+diff --git a/opus.c b/opus.c
+index baabab0..4339db1 100644
+--- a/opus.c
++++ b/opus.c
+@@ -52,6 +52,7 @@ struct opus {
+ 	// opus symbols to be dynamically loaded
+ 	void (*op_free)(OggOpusFile *_of);
+ 	int  (*op_read)(OggOpusFile *_of, opus_int16 *_pcm, int _buf_size, int *_li);
++	int  (*op_read_stereo)(OggOpusFile *_of, opus_int16 *_pcm, int _buf_size);
+ 	const OpusHead* (*op_head)(OggOpusFile *_of, int _li);
+ 	OggOpusFile*  (*op_open_callbacks) (void *_source, OpusFileCallbacks *_cb, unsigned char *_initial_data, size_t _initial_bytes, int *_error);
+ #endif
+@@ -147,6 +148,14 @@ static decode_state opus_decompress(void) {
+ 
+ 		channels = info->channel_count;
+ 
++		// Gexis (ADR-0145): more than two channels are folded down by
++		// opusfile itself (op_read_stereo). Upstream read every channel into
++		// a buffer sized for stereo and unpacked it as stereo: every tone came
++		// out wrong, the same on both sides.
++		if (channels > 2) {
++			LOG_WARN("downmix: %d channels folded to stereo (opusfile)", channels);
++		}
++
+ 		LOG_INFO("setting track_start");
+ 	}
+ 
+@@ -169,7 +178,11 @@ static decode_state opus_decompress(void) {
+ 	);
+ 	
+ 	// write the decoded frames into outputbuf then unpack them (they are 16 bits)
+-	n = OP(u, read, u->of, (opus_int16*) write_buf, frames * channels, NULL);
++	if (channels > 2) {
++		n = OP(u, read_stereo, u->of, (opus_int16*) write_buf, frames * 2);
++	} else {
++		n = OP(u, read, u->of, (opus_int16*) write_buf, frames * channels, NULL);
++	}
+ 			
+ #if FRAME_BUF
+ 	LOCK_O_direct;
+@@ -181,7 +194,7 @@ static decode_state opus_decompress(void) {
+ 		ISAMPLE_T *optr;
+ 
+ 		frames = n;
+-		count = frames * channels;
++		count = frames * (channels > 2 ? 2 : channels);
+ 
+ 		// work backward to unpack samples (if needed)
+ 		iptr = (s16_t *) write_buf + count;
+@@ -192,7 +205,7 @@ static decode_state opus_decompress(void) {
+ 			optr = (ISAMPLE_T *) write_buf + frames * 2;
+ 		)
+ 		
+-		if (channels == 2) {
++		if (channels >= 2) {
+ #if BYTES_PER_FRAME == 4
+ #if FRAME_BUF
+ 			// copy needed only when DIRECT and FRAME_BUF
+@@ -283,6 +296,7 @@ static bool load_opus(void) {
+ 
+ 	u->op_free = dlsym(handle, "op_free");
+ 	u->op_read = dlsym(handle, "op_read");
++	u->op_read_stereo = dlsym(handle, "op_read_stereo");
+ 	u->op_head = dlsym(handle, "op_head");
+ 	u->op_open_callbacks = dlsym(handle, "op_open_callbacks");
+ 	
 diff --git a/pcm.c b/pcm.c
 index 87898bc..9b9623d 100644
 --- a/pcm.c

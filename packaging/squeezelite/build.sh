@@ -34,7 +34,7 @@ PATCH_SHA256=$(sha256sum "$PATCH" | cut -d' ' -f1)
 SHORT=$(printf '%s' "$COMMIT" | cut -c1-7)
 # The revision is ours: raised with every change to the patch or the build,
 # or apt keeps the old binary (LESSONS 53).
-VERSION="${UPSTREAM}+git${COMMIT_DATE}.${SHORT}-1"
+VERSION="${UPSTREAM}+git${COMMIT_DATE}.${SHORT}-2"
 PKG=gexis-squeezelite
 # Staged where dpkg-shlibdeps expects a package's files: debian/<package>.
 STAGE=/tmp/pkg/debian/$PKG

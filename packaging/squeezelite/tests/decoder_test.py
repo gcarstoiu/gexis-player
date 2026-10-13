@@ -17,7 +17,8 @@ upstream build (`--upstream`) and the patched one (`--patched`):
     the LFE nowhere, and the log says "downmix: N channels folded to stereo";
   - what upstream does with the same files, for the record;
   - AAC: FAAD2's own fold-down, checked the same way, and its level;
-  - formats the patch leaves alone (Opus, Vorbis, ALAC), for the record.
+  - Opus, folded by opusfile (checked by side); Vorbis and ALAC, left alone
+    until Phase 14 (ph-mpd), for the record.
 """
 from __future__ import annotations
 
@@ -401,8 +402,31 @@ def main() -> int:
             err = [l.split("] ", 1)[-1] for l in log.splitlines() if "unsupported" in l or "error" in l.lower()][:1]
             print(f"  {name}: {len(x)} frames of sound; {err}")
 
+    # ADR-0145, George 2026-10-13: Opus folded by opusfile itself (upstream
+    # read six channels into a stereo buffer: every tone wrong, the same on
+    # both sides). Checked by side, not level - opusfile's matrix is its own.
+    if not a.only:
+        raw, log = play(a.patched, "u", w / "mc6.opus", [], ("?", "?", "?", "?"), timeout=30)
+        x = frames(raw)
+        rep.check(len(x) >= 2 * 48000, f"mc6.opus plays: {len(x)} frames")
+        if len(x) >= 2 * 48000:
+            fl, fr, fc, lfe, bl, br = TONES[:6]
+            def lr(f):
+                return amplitude(x[:, 0], f, 48000), amplitude(x[:, 1], f, 48000)
+            # The fronts go to their side only; opusfile's matrix also bleeds
+            # each surround into the other side (rear left at L0.115/R0.066,
+            # measured 2026-10-13) - by its design, so a surround need only
+            # be louder on its own side.
+            for f, side, ratio in ((fl, "L", 10), (fr, "R", 10), (bl, "L", 1.5), (br, "R", 1.5)):
+                l, r = lr(f)
+                ok = (l > ratio * r) if side == "L" else (r > ratio * l)
+                rep.check(ok, f"mc6.opus {f}Hz on {side} (x{ratio}): L{l:.3f}/R{r:.3f}")
+            l, r = lr(fc)
+            rep.check(min(l, r) > 0.5 * max(l, r) > 0, f"mc6.opus centre {fc}Hz on both sides: L{l:.3f}/R{r:.3f}")
+            rep.check("downmix: 6 channels folded to stereo" in log, "mc6.opus logs the fold")
+
     print("\n== formats the patch leaves alone (5.1), through the patched build, for the record")
-    for fmt, name, params in [] if a.only else (("u", "mc6.opus", ()), ("o", "mc6.ogg", ()), ("l", "mc6.m4a", ())):
+    for fmt, name, params in [] if a.only else (("o", "mc6.ogg", ()), ("l", "mc6.m4a", ())):
         raw, log = play(a.patched, fmt, w / name, [], params or ("?", "?", "?", "?"), timeout=30)
         x = frames(raw)
         notes = [l.split("] ", 1)[-1].strip() for l in log.splitlines()
