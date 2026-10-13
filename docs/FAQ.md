@@ -308,9 +308,10 @@ speed. Over HDMI audio output the visualiser moves only with
 **What do a spectrum's bars show?**
 The music's loudness from 50 Hz on the left to 16 kHz on the right, spaced the
 way pitch is heard, so the bass has several bars of its own. It is the same
-at every sample rate. The higher bars are lifted a little, because recordings
-have less energy the higher the pitch; without that the rightmost bars would
-hardly move.
+at every sample rate. Each bar is the music's own level in its range, as an
+audio analyser measures it: most recordings carry less in the treble than in
+the middle, so the bars on the right are usually shorter, and a recording with
+almost nothing up there leaves them nearly still.
 
 **How do I pick one skin and keep it?**
 Under *Settings → Display → Visualiser*, choose a *Skin type*, switch off

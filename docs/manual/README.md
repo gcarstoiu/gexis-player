@@ -242,7 +242,9 @@ The **visualiser** shows a VU meter or spectrum from a collection of skins,
 drawn from the music as it plays. Open it with the visualiser button on Now
 Playing or from the phone; touch the screen to close it. A spectrum's bars run from
 the deep bass on the left (50 Hz) to the top of what recordings carry on the
-right (16 kHz), the same at every sample rate.
+right (16 kHz), the same at every sample rate. Each bar shows the music's own
+level in its range, so a recording with little treble has short bars on the
+right.
 
 ## 7. The phone page
 

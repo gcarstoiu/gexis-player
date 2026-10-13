@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-12 (on R2D2).
+Last updated: 2026-10-13 (on R2D2).
 
 ## Start here
 
@@ -15,14 +15,23 @@ from a worktree made at its tag, then removed. History: `docs/HANDOFF-ARCHIVE.md
 `image/deploy/2026-10-12-gexis-player-v0.11.0.img`). USB DACs and native DSD
 (ADR-0143/0144, Finding 120), the screen on either HDMI port (ADR-0109
 amended), the player announcing for its plugins (ADR-0142), plugin versions,
-Phase 13d closed. After the tag on `phase-13d`: setup keeps the screen it
-applied (the bar's lingering "provisional"). Suite 2,322.
+Phase 13d closed. After the tag on `phase-13d`, for 1.0.0:
+- setup keeps the screen it applied (the bar's lingering "provisional");
+- ADR-0141 decided and built: one *Screen port* tile, black on a sound-only
+  port, the jack standing in while the chosen HDMI sound is unplugged;
+- multichannel files folded to stereo by our own `gexis-squeezelite` (ADR-0145,
+  Finding 121);
+- the spectrum's bands read their energy, with no treble lift (ADR-0130 as
+  amended, Finding 122; `gexis-peppyalsa` `-5`).
+
+Suite 2,332.
 
 **Devices.** sofapi (Waveshare 10.1"; a test machine - its Lyrion queue may
 be lost, George 2026-10-12; an SMSL USB DAC on it), the bar (ShelvesPi,
-11.9") and guestpi (IQaudIO Pi-DAC PRO, 13.3") all run `phase-13d` previews
-of 2026-10-12 (core `+git52` to `+git76`; sofapi carries the newest, with the
-USB DAC and DSD work). **Cards flashed
+11.9") and guestpi (IQaudIO Pi-DAC PRO, 13.3") as read 2026-10-13:
+sofapi runs the newest `phase-13d` preview (core `0.11.0+git29`, player
+`+git46`, `gexis-squeezelite` `-2`, `gexis-peppyalsa` `-5`); the bar and
+guestpi report core `0.10.2+git63` and `gexis-peppyalsa` `-2`. **Cards flashed
 from now on have no passwordless sudo: provision test cards with
 `DEV_SUDO="yes"`** (ADR-0139).
 
@@ -31,8 +40,8 @@ from now on have no passwordless sudo: provision test cards with
   setup over a network cable (g26), an update cut short and a factory reset
   (g34).
 - The screen on the bar's second HDMI port (g35).
-- ADR-0141, picture and sound on different HDMI ports: six decisions, the
-  first being before or after 1.0 (g36).
+- The spectrum on sofapi's panel after the change (Finding 122): whether the
+  bars now look right.
 - Then: 1.0.0 cut from this code as the first Stable release.
 - Optional: Lyrion sync (g09), the bar's own supply (g12), a DSD file from the
   library (g38).
