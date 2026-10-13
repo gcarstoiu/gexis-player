@@ -123,3 +123,30 @@ would draw none with band power.
 sound "reads a little higher". That was measured on one orchestral piece,
 where it was not visible. On pop, rock and electronic material it is 13-17
 dB.
+
+## Addendum 2026-10-13: the change, measured (ADR-0130 as amended)
+
+George chose band energy and no lift. `gexis-peppyalsa` `-5`:
+
+- **The C itself, on the PC.** `spectrum.c`, old and new, compiled behind a
+  harness that stands in for the ALSA meter: a ring buffer, rate / 50 frames
+  per update. The old code matched the numpy port to the mean bar on
+  Britpop, dance and classical vocal; the new one matched "band power, no
+  lift" to the mean bar on those and on the dark track. Single frames
+  differ by up to 3-7 points, from rounding at the bar boundaries.
+- **On sofapi**, nothing else playing, after an install dry-run (two
+  upgrades, nothing removed): 25 s of the Britpop track through `output`,
+  1,216 frames. `aplay` mapped `/usr/lib/libpeppyalsa.so.0.0.0` at the
+  installed file's inode. Mean of 20 bars:
+
+  | | First three | Middle | Last two |
+  |---|---|---|---|
+  | Before (model) | 48-59 | 61-67 | 80, 77 |
+  | After, on sofapi | 48-57 | 53-62 | 48, 43 |
+  | After (model) | 53-62 | 58-67 | 53, 48 |
+
+  The device sits about 5 points under the model on every bar, as the
+  device run in the main results did before the change, and has the same
+  shape.
+- **Not checked:** how it looks on the panel, which is for George; other
+  rates on the device.

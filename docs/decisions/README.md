@@ -150,7 +150,7 @@ been written properly. **0098 has no record either.**
 | [0127](0127-one-volume-row.md) | One Volume row: Hardware, Software or Fixed | Accepted 2026-10-07: default Hardware, Software where there is no control; a migration carries old choices |
 | [0128](0128-setup-installs-plugins-and-settles.md) | First setup installs the plugins and waits until the player has settled | Accepted 2026-10-07: a Plugins step before Review; an unskippable settling screen |
 | [0129](0129-a-service-says-whether-it-is-connected.md) | A service says whether it is connected | Accepted 2026-10-08: read from the unit user's connections, not its log; `"connection": true`; Beszel first |
-| [0130](0130-the-spectrum-covers-what-is-heard.md) | The spectrum covers what is heard: 50 Hz to 16 kHz at every rate | Accepted 2026-10-08: log-spaced bands, rate-sized FFT, 3 dB/octave lift above 1 kHz |
+| [0130](0130-the-spectrum-covers-what-is-heard.md) | The spectrum covers what is heard: 50 Hz to 16 kHz at every rate | Accepted 2026-10-08: log-spaced bands, rate-sized FFT; amended 2026-10-13: a band's level is its energy, no lift |
 | [0131](0131-setup-can-restore-a-backup.md) | Setup can restore a backup | Accepted 2026-10-08 (amended 2026-10-08): after Network, New player or Restore; every answer changeable |
 | [0132](0132-reset-to-factory-settings.md) | Reset to factory settings | Accepted 2026-10-09: in System; wiped at next boot to a fresh card, backups and music included |
 | [0133](0133-the-waiting-screen-and-the-players-own-wallpapers.md) | The waiting screen, and the player's own wallpapers | Accepted 2026-10-10 (amended 2026-10-11): built-in Gexis wallpapers; with LMS off, a waiting screen of clock and source tiles |
