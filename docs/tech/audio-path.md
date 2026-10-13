@@ -124,9 +124,12 @@ Notes per renderer:
   our fold. Each folded track logs `downmix: N channels folded to stereo
   (<layout>)` at warning level, so it is in the journal. Stereo and mono take
   upstream's code path untouched: byte for byte the same output
-  (`packaging/squeezelite/tests/`). Not folded: Ogg Vorbis (refused upstream:
-  "too many channels"), ALAC (ffmpeg: "unsupported number of channels"), Opus
-  (upstream reads the interleaved channels as if stereo - garbled).
+  (`packaging/squeezelite/tests/`). **Opus** with more than two channels goes
+  through opusfile's own `op_read_stereo` (George, 2026-10-13): upstream read
+  every channel into a buffer sized for stereo and unpacked it as stereo,
+  garbled. Not folded, until Phase 14 (`ph-mpd`): Ogg Vorbis (refused
+  upstream: "too many channels") and ALAC (ffmpeg: "unsupported number of
+  channels").
 - **go-librespot** is configured (`go-librespot-config.yml`) with
   `audio_device: output`, `external_volume: true` (it never attenuates the
   stream itself) and `normalisation_disabled: true`, so Spotify reaches the
