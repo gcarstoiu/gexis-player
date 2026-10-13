@@ -204,11 +204,13 @@ you choose which is the screen.
 
 **Can a TV be the screen?**
 Yes: connect it to either HDMI port and choose that port under *Settings →
-Display → Screen port*. The player restarts on the TV at 1920 x 1080 at most
-(a 4K TV scales it to full screen). A TV has no touch, so *Keep this screen?*
-appears on the phone page - answer it there, or the player goes back to the
-screen before. A touch panel left on the other port shows black and ignores
-touches; choose its port again to go back to it.
+Display → Screen port*. The player restarts on the TV at 1920 x 1080, taken from the sizes the TV
+offers (a 4K TV scales it to full screen). A TV has no touch, so *Keep this
+screen?* appears on the phone page - answer it there, or the player goes back
+to the screen before. A touch panel left on the other port is switched off;
+choose its port again to go back to it. If the edges of the picture are cut
+off, set the TV's picture size to *Just Scan* or *Original*: TVs crop HDMI
+pictures otherwise.
 
 **Can the player run without a screen?**
 Yes. *Settings → Display → Headless* turns the screen off, and every setting

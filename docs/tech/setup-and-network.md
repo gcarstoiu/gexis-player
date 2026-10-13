@@ -374,9 +374,16 @@ fingerprint with a USB touch id. Without one, the Keep question carries
 as the panel, and the phone page shows `PhoneKeepScreen`; the panel's own
 Keep says to answer on the phone. screen.env carries `GEXIS_SCREEN_TOUCH_USB`
 (the screen's) and `GEXIS_PANEL_TOUCH_USB` (every known panel's);
-`gexis-kiosk-start` finds the other panels' input names in
-`/proc/bus/input/devices` and switches them off in labwc's config
-(`<libinput><device category="<name>"><sendEventsMode>no`).
+while the screen has no touch, screen.env's `GEXIS_OUTPUTS_OFF` names the
+ports with a known panel and `gexis-kiosk-start` turns them off with
+`wlr-randr`, and the boot's `screen_watch.touch_rules` writes
+`/run/udev/rules.d/90-gexis-panel-touch-off.rules`
+(`LIBINPUT_IGNORE_DEVICE` on each known panel's USB id; labwc's own
+per-device `sendEventsMode` did not hold on sofapi). A TV's mode comes from
+`screen_detect.tv_mode` (the kernel's mode list, 1080p first) as
+`other-WxH-capped`, and a chosen port is not asked about at the start.
+Display standby leaves an output carrying the sound on
+(`standby.carries_sound`).
 
 **Errors** reach the phone as sentences (`setup_flow.said()`); the core's own
 text goes to the log.
