@@ -185,9 +185,10 @@ than two channels is folded down to two: the centre and the surrounds are
 mixed into left and right, the low-frequency (LFE) channel is left out, and
 the result is turned down so that nothing can clip - so such a file plays
 quieter than a stereo one. A multichannel DSD file is converted to PCM for
-this, even where DSD otherwise plays natively. Ogg Vorbis, Opus and ALAC
-files with more than two channels are not folded and may not play properly.
-Surround playback, all channels to an AV receiver, is planned.
+this, even where DSD otherwise plays natively; Opus is folded by its own
+decoder. Ogg Vorbis and ALAC files with more than two channels are not
+folded and may not play. Surround playback, all channels to an AV receiver,
+is planned.
 
 **Which screens work?**
 HDMI screens only. Tested on the hardware: a 10.1″ 1280 × 800 (the reference

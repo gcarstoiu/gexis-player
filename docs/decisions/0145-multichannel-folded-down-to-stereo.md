@@ -56,3 +56,19 @@ through Lyrion should at least be heard whole.
 
 When written: every format on a device; AAC's downmix level against the
 others.
+
+## Decided 2026-10-13: the rest of the formats, the level, the log
+
+George, on the build's open questions: *"I'm going with your recommendation."*
+
+- **Opus is folded by opusfile itself** (`op_read_stereo`): upstream read six
+  channels into a buffer sized for stereo and unpacked it as stereo - every
+  tone wrong, the same on both sides, and possibly past the buffer. Checked by
+  side in the decoder test.
+- **Ogg Vorbis and ALAC with more than two channels stay as they are**
+  (refused upstream) until Phase 14 (`ph-mpd`).
+- **The folded level stays** as decided: a 5.1 file 7.7 dB below its front
+  channels; AAC's own fold 2.2-2.3 dB lower still.
+- **The `downmix:` log line stays at warning level**, so each folded track is
+  in the journal without debug logs.
+
