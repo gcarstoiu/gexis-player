@@ -290,6 +290,7 @@ recognition.
 |---|---|---|
 | Attached screen | [N] | A choice from the list of supported screens (grouped by maker, from `foonerd/pi_screen_setup`'s presets, Finding 100). Sets the layout family (Standard or Bar) and the visualiser's skin set. The same list as setup's Screen step, where a recognised screen is confirmed or another chosen. Applies at the next restart |
 | Screen rotation | [N] | 0° / 180° (ADR-0109 decision 6, George 2026-09-30: portrait is not designed). 0° is the model's landscape: the two bar screens are portrait panels used sideways (Finding 100), and their list entry carries that turn. Applies at the next restart |
+| Screen port | [R] | HDMI 1 / HDMI 2 - which port the screen is on; the picker says what is on each port, and a port with nothing connected is greyed (ADR-0141 D2/D4; George, 2026-10-12: *"I agree to both"*, then *"collapse the 3 hdmi tiles into 1"*). With one port connected the cable decides. Applies at once with a restart and *Keep this screen?*. On a board with one HDMI port: information only (`screen_port_info`) |
 
 ### Appended 2026-10-04 — Phase 13d's row
 
@@ -352,6 +353,15 @@ review's questions the same day:
 | The lyrics-and-info cache's limits | [H] | At least 2 GiB left free and at most 10 % of the card, checked at start and hourly; least recently used answers go first, never the playing track's. Fixed, not a row |
 | "No photos" for an artist is asked again after | [H] | 30 days. Fixed, not a row |
 | A Settings request with no answer ends after | [H] | 20 s; 120 s for the slow ones (a Wi-Fi join, an address change, backup, a plugin upload or removal, network shares, a problem report's start); 15 min for a restore. Fixed, not a row |
+
+### Appended 2026-10-13 — the meters' gain
+
+Confirmed by George, 2026-10-13 (*"Yes, add it"*), [ADR-0146](0146-the-meters-follow-the-volume-again-with-a-gain.md):
+
+| Setting | Mark | Notes |
+|---|---|---|
+| Gain (*Visualiser tweaks*) | [N] | −10 to +20 dB in 1 dB steps, default 0 (`meter_gain`). Added to what the needles and the bars show after the volume, in every volume type, Fixed included. Applies at once |
+| Needles follow the volume (*Visualiser tweaks*) | [N] | *Half the drop* (default) or *Like a real amplifier* (`meter_follow`; George, 2026-10-13: *"Can you add a setting also [in] visualisation tweaks for switching to a real amp behaviour"*). The bars follow the whole cut either way (Software and Hardware); Fixed shows the recording. Applies at once |
 
 ## Settled by prior records
 

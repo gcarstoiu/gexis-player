@@ -2045,7 +2045,7 @@ registry advertises.
 > unit), `docs/PLUGIN-CONTRACT.md` at version 1, and Findings 075-080.
 
 **Themes left this phase on 2026-09-25** (George): *"Themes to be cut out and
-have its own phase at the end of the current list."* They are **Phase 14**, and
+have its own phase at the end of the current list."* They are **Phase 16** (`ph-themes`), and
 he restated it on the day the phase closed: *"I stated before that themes are
 out and have their own phase at the end of the list."*
 
@@ -2165,7 +2165,7 @@ the exercise.
    extends to it, whether it ships in the image or installs on demand, and
    what it costs in memory and CPU on a Pi 4 that is already frame-limited.
    None of that is settled by adding it to this list.
-4. ~~Theme engine.~~ **Moved to Phase 14**, 2026-09-25.
+4. ~~Theme engine.~~ **Moved to Phase 16** (`ph-themes`; numbered 14 until 2026-10-13), 2026-09-25.
 
 ### What closing this means, and what it deliberately does not
 
@@ -2353,84 +2353,9 @@ the ALSA default.
    The design asset is Plexamp's own mark, George's call: *"You can use their
    logo for plexamp."*
 
-### Phase 11a — The library answers for itself
+### Phase 11a — The library answers for itself (moved)
 
-**Added 2026-09-25 (George):** *"Let's introduce another phase … which should tackle the question of how we can we leverage the plexamp/Plex
-server metadata that is available. Anything that can reduce the dependency on
-internet providers is a good thing. They can be kept as fallbacks, not
-removed."*
-
-**Numbered `11a`, not 12.** Phase 7a set the precedent for a phase inserted
-beside one that is finished, and renumbering 12, 13 and 14 for this would churn
-every record that names them.
-
-**The case is measured, not assumed**
-([Finding 086](findings/086-what-the-plex-server-could-answer.md)). For the
-**51.7 %** of looked-up artists that George's Plex server knows, it is more
-complete than every internet provider we ask:
-
-| what | the internet, today | Plex |
-|---|---|---|
-| Album cover | **50 %** | **100 %** — 3,908 of 3,908 |
-| Artist picture | **61 %**, needs a key | **100 %** |
-| Biography | **73 %** | **97 %** |
-| Similar artists | **80 %** | 59 of the first 60 artists |
-
-**One thing that is *not* the case for it**, written down so nobody argues it
-later: **it is not faster.** The internet providers answered in ~110 ms, the
-same as Plex on the LAN.
-
-**And one correction already**, made the day after this phase was drafted
-([Finding 086](findings/086-what-the-plex-server-could-answer.md)): this text
-first said Plex had no timed lyrics and that LRCLIB therefore stayed regardless.
-**George said otherwise and he was right** — 25 of 120 tracks carry `lrc`
-streams with `[mm:ss.xx]` timestamps, the shape ADR-0040's synced strip already
-consumes. **Popular tracks do remain ListenBrainz's**, 404 on that server.
-
-**Acceptance**
-
-1. **An ADR on where the Plex credential lives.** The core would be asking a
-   Plex server for metadata about whatever is playing, **including tracks
-   playing on LMS, Spotify or Bluetooth** — so this belongs in the core's
-   provider chain, not in the Plexamp plugin, which only knows what Plexamp
-   plays. But the only Plex token on this device belongs to that plugin, and
-   the core reading a plugin's private files is the coupling
-   [ADR-0016](decisions/0016-plugins-as-separate-processes.md) exists to
-   prevent. **Decide before building**: a second credential in ADR-0022's
-   inventory, a claim-token exchange the core performs itself, or something
-   else.
-2. **A Plex provider in the existing chain, ahead of the internet ones.**
-   [ADR-0040](decisions/0040-enrichment-providers.md)'s merge is already
-   field-by-field and first-wins — which is exactly *"kept as fallbacks, not
-   removed"*, with no new architecture. Nothing is deleted and no provider is
-   reordered relative to the others.
-3. **Matching stated and measured.** 51.7 % is one folding rule over names. A
-   real strategy — MusicBrainz ids where both sides carry them, names where they
-   do not — must report its own hit rate on this library, and the number goes in
-   a finding rather than in a hope.
-4. **It degrades when the server is not there.** The Plex server is another
-   machine; if it sleeps, every lookup must fall through to the internet
-   providers at the cost of one timeout, not hang the enrichment path. **What
-   that timeout is, measured.**
-5. **Album covers first.** The single largest win and the cheapest to verify:
-   the sweep that reports *"X of Y processed, Z found"* should improve, and by
-   how much is the measurement that closes this criterion.
-6. **Lyrics, and the question the survey could not answer.** Timed lyrics are
-   in the library — **and `/library/streams/<id>` served one fetch and has
-   returned 404 on every attempt since**, for `lrc` and `txt` alike and for the
-   waveform endpoint too, while files, covers and metadata serve normally.
-   Plexamp displays them, so there is a way. **Find it before building a
-   provider**; a lyrics source that works once an evening is worse than none,
-   because it would win the merge and then fail.
-7. **Decided in this phase, not before:** whether the three things Plex has and
-   this project does not — **sonic similarity with distances**, **moods and
-   styles**, and **ReplayGain** — are worth model changes, or are noted and left.
-   They are not enrichment as ADR-0040 defines it, and one of them (ReplayGain)
-   is an audio decision rather than a metadata one.
-
-**Out of scope, and named:** Plex's `UltraBlurColors`, its album reviews, and
-its own catalogue groupings (*Singles & EPs*, *Live Albums*, *Compilations*).
-All are there; none is asked for by anything today.
+Now **Phase 18** (`ph-library`), with the open phases after the release.
 
 ### Phase 12 — Plugins that fetch their software on the device
 
@@ -2915,6 +2840,11 @@ per file on Pis other than 4 GB, and temperatures with a case (HARDWARE.md).
 
 ### Phase 13f — Lyrion's own menus, plugins included
 
+**Closed 2026-10-12 for the release; George's look moved to Phase 19** (`ph-lyrion-menus`)
+(George: *"create a separate phase for this at the end of the current phase
+list"*). It ships as built, behind *Extended navigation* (ADR-0118); the hidden
+library's hour was measured (Finding 118).
+
 **Closes after the hidden library's hour** on the Pi (ADR-0122,
 Consequences; measured 2026-10-10, nothing - Finding 118) **and George's look** (George, 2026-10-10, agreeing to the
 recommendation). It was built and released behind *Extended navigation*
@@ -2949,7 +2879,53 @@ It must settle:
   menus; and what a streaming plugin adds - **measured on a server with one
   installed** first.
 
-### Phase 13g — The player in Home Assistant
+### Phases after the first public release
+
+**Numbered consecutively, without letters, from 2026-10-13** (George:
+*"Renumber then in a sequential consecutive way without letters in phases
+moving forward from now on. You can add unique IDs to each to refer into other
+docs rather than relying in the index which is prone to change during
+development."*). Each has an **ID** (`ph-…`) that never changes; other
+documents refer to a phase by its ID, and its number is only its place in the
+order. A new phase takes the next number and an ID of its own. Closed phases
+keep the numbers they had.
+
+### Phase 14 — MPD: real multichannel
+
+**ID:** `ph-mpd` · numbered 14 on 2026-10-13 (was 17).
+
+**Added 2026-10-13** (George: *"have another phase for mpd right after"* the
+first public release, after Finding 121 showed Lyrion delivers two channels
+and ADR-0145 folded multichannel down to stereo meanwhile). MPD decodes and
+plays up to 8 channels, in ALSA's channel order, and DSD natively, as DoP or
+converted per channel (read in its source, 2026-10-12). It plays on the
+machine it runs on - clients only control it - so it would run on the player:
+on its own library, or as a *satellite* of a central MPD that holds the
+database (`database { plugin "proxy" }`, the music on a share).
+
+**An ADR before anything is built**, to understand the ramifications first
+(George: *"we would need to understand the ramifications"*). It must settle:
+- MPD on the player alone, or a satellite of a central library - and what
+  that means beside Lyrion's own library;
+- how it is controlled (upmpdcli as a UPnP/OpenHome renderer and its apps,
+  MPD clients, the panel) and whether it is a source in the arbitration like
+  the others;
+- the chain at 6-8 channels: the meter, the software volume stage and HDMI's
+  conversion layer have only carried two;
+- DSD: native to a DAC that takes it, PCM over HDMI (the Pi sends no one-bit
+  audio).
+
+**Acceptance (draft):**
+
+1. A 5.1 and a 7.1 file reach an AV receiver over HDMI as 6 and 8 channels,
+   each channel where its name says, measured as Finding 121 measured two.
+2. A multichannel DSD file reaches the receiver as multichannel PCM, and a
+   stereo DSD file a DSD DAC natively.
+3. Volume, arbitration and now playing behave as for the other sources.
+
+### Phase 15 — The player in Home Assistant
+
+**ID:** `ph-home-assistant` · numbered 15 on 2026-10-13 (was 13g).
 
 **Added 2026-10-11** (George: *"Let's add the home assistant with the player
 as a plugin as a separate phase before themes"*, after choosing the player
@@ -2977,7 +2953,9 @@ and the screen's standby (ADR-0135).
 3. Nothing it does disturbs playback, measured as Phase 13e measured the
    Lyrion Server.
 
-### Phase 14 — Themes
+### Phase 16 — Themes
+
+**ID:** `ph-themes` · numbered 16 on 2026-10-13 (was 14).
 
 **Cut out of Phase 10 on 2026-09-25** (George): *"Themes to be cut out and have
 its own phase at the end of the current list."* It was that phase's criterion
@@ -3006,7 +2984,9 @@ that is settled.
 4. **The visualiser is not themed by this.** PeppyMeter skins are ADR-0051's
    separate corpus with their own picker, and share no tokens with the panel.
 
-### Phase 14a — A sound bar on optical, through a USB adapter
+### Phase 17 — A sound bar on optical, through a USB adapter
+
+**ID:** `ph-optical` · numbered 17 on 2026-10-13 (was 14a).
 
 **Added 2026-10-11** (George: *"Add it as a phase after themes"*). A
 class-compliant USB-to-TOSLINK adapter is a USB sound card: the player already
@@ -3030,6 +3010,109 @@ rate, a 96 or 192 kHz file goes out at that rate, and many sound bars take only
    converted, with the maximum set.
 3. Tracks at or under the maximum stay bit-perfect, measured as Findings
    002 and 003 measured the DAC.
+
+### Phase 18 — The library answers for itself
+
+**ID:** `ph-library` · numbered 18 on 2026-10-13 (was 11a).
+
+**Added 2026-09-25 (George):** *"Let's introduce another phase … which should tackle the question of how we can we leverage the plexamp/Plex
+server metadata that is available. Anything that can reduce the dependency on
+internet providers is a good thing. They can be kept as fallbacks, not
+removed."*
+
+**Numbered `11a`, not 12.** Phase 7a set the precedent for a phase inserted
+beside one that is finished, and renumbering 12, 13 and 14 for this would churn
+every record that names them.
+
+**The case is measured, not assumed**
+([Finding 086](findings/086-what-the-plex-server-could-answer.md)). For the
+**51.7 %** of looked-up artists that George's Plex server knows, it is more
+complete than every internet provider we ask:
+
+| what | the internet, today | Plex |
+|---|---|---|
+| Album cover | **50 %** | **100 %** — 3,908 of 3,908 |
+| Artist picture | **61 %**, needs a key | **100 %** |
+| Biography | **73 %** | **97 %** |
+| Similar artists | **80 %** | 59 of the first 60 artists |
+
+**One thing that is *not* the case for it**, written down so nobody argues it
+later: **it is not faster.** The internet providers answered in ~110 ms, the
+same as Plex on the LAN.
+
+**And one correction already**, made the day after this phase was drafted
+([Finding 086](findings/086-what-the-plex-server-could-answer.md)): this text
+first said Plex had no timed lyrics and that LRCLIB therefore stayed regardless.
+**George said otherwise and he was right** — 25 of 120 tracks carry `lrc`
+streams with `[mm:ss.xx]` timestamps, the shape ADR-0040's synced strip already
+consumes. **Popular tracks do remain ListenBrainz's**, 404 on that server.
+
+**Acceptance**
+
+1. **An ADR on where the Plex credential lives.** The core would be asking a
+   Plex server for metadata about whatever is playing, **including tracks
+   playing on LMS, Spotify or Bluetooth** — so this belongs in the core's
+   provider chain, not in the Plexamp plugin, which only knows what Plexamp
+   plays. But the only Plex token on this device belongs to that plugin, and
+   the core reading a plugin's private files is the coupling
+   [ADR-0016](decisions/0016-plugins-as-separate-processes.md) exists to
+   prevent. **Decide before building**: a second credential in ADR-0022's
+   inventory, a claim-token exchange the core performs itself, or something
+   else.
+2. **A Plex provider in the existing chain, ahead of the internet ones.**
+   [ADR-0040](decisions/0040-enrichment-providers.md)'s merge is already
+   field-by-field and first-wins — which is exactly *"kept as fallbacks, not
+   removed"*, with no new architecture. Nothing is deleted and no provider is
+   reordered relative to the others.
+3. **Matching stated and measured.** 51.7 % is one folding rule over names. A
+   real strategy — MusicBrainz ids where both sides carry them, names where they
+   do not — must report its own hit rate on this library, and the number goes in
+   a finding rather than in a hope.
+4. **It degrades when the server is not there.** The Plex server is another
+   machine; if it sleeps, every lookup must fall through to the internet
+   providers at the cost of one timeout, not hang the enrichment path. **What
+   that timeout is, measured.**
+5. **Album covers first.** The single largest win and the cheapest to verify:
+   the sweep that reports *"X of Y processed, Z found"* should improve, and by
+   how much is the measurement that closes this criterion.
+6. **Lyrics, and the question the survey could not answer.** Timed lyrics are
+   in the library — **and `/library/streams/<id>` served one fetch and has
+   returned 404 on every attempt since**, for `lrc` and `txt` alike and for the
+   waveform endpoint too, while files, covers and metadata serve normally.
+   Plexamp displays them, so there is a way. **Find it before building a
+   provider**; a lyrics source that works once an evening is worse than none,
+   because it would win the merge and then fail.
+7. **Decided in this phase, not before:** whether the three things Plex has and
+   this project does not — **sonic similarity with distances**, **moods and
+   styles**, and **ReplayGain** — are worth model changes, or are noted and left.
+   They are not enrichment as ADR-0040 defines it, and one of them (ReplayGain)
+   is an audio decision rather than a metadata one.
+
+**Out of scope, and named:** Plex's `UltraBlurColors`, its album reviews, and
+its own catalogue groupings (*Singles & EPs*, *Live Albums*, *Compilations*).
+All are there; none is asked for by anything today.
+
+### Phase 19 — Lyrion's own menus: the look
+
+**ID:** `ph-lyrion-menus` · numbered 19 on 2026-10-13 (was 16).
+
+**Added 2026-10-12** (George, taking it out of the first public release:
+*"create a separate phase for this at the end of the current phase list"*).
+Phase 13f built Lyrion's own menu tree, plugins included, and it ships behind
+*Extended navigation* (ADR-0118; Finding 110 for what the tree holds, Finding
+118 for the hidden library's hour). What it never had is George's look: it
+had no written acceptance criteria, so how it should look and behave is
+decided here.
+
+**Acceptance (draft):**
+
+1. George goes through Lyrion's own menus on the panel and the phone, *My
+   Apps* and at least one plugin's menu included, and says what changes.
+2. What he asks for is built, each change that alters the navigation's design
+   recorded in ADR-0118 first.
+3. Whether *Extended navigation* stays an option or becomes the default is
+   his decision, recorded in ADR-0022's inventory.
+
 
 ## Test tiers
 

@@ -72,6 +72,7 @@ builds the UI first (`npm ci && npm run build`) and then all packages.
 | `gexis-system` | our units, ALSA files, kiosk, splash, Samba/Avahi files, the Peppy driver - built from `image/stage-gexis/*/files` |
 | `gexis-peppyalsa`, `gexis-peppy-engines` | the meter tap library; PeppyMeter/PeppySpectrum |
 | `gexis-go-librespot`, `gexis-beszel-agent` | upstream binaries, as built upstream (ADR-0093) |
+| `gexis-squeezelite` | Lyrion's player: the commit Debian trixie packages, built with Debian's options and our patch that folds multichannel files down to stereo (ADR-0145); `Provides`/`Conflicts`/`Replaces: squeezelite`, Debian's package, which a device updated from an earlier release has removed |
 | `gexis-beszel-hub`, `gexis-lyrion-server`, `gexis-plexamp` | plugins; Lyrion and Plexamp themselves are *not* inside (see §7) |
 | `gexis-skins-<W>x<H>` | one visualiser skin pack per screen size (ADR-0111); never in the image. Until one is installed, `gexis-peppy` exits cleanly saying so, and the core restarts it once the pack is in (2026-10-09). `gexis-update pack-install` fetches it at 3 MB/s (apt's `Dl-Limit`) while the player is in use - a card playing, or go-librespot, BlueALSA or BlueZ active in the last 10 min - and restarts apt at the other speed when that changes, resuming the partial file (ADR-0111 amended 2026-10-07) |
 | `gexis-player` | **the release**: exact `Depends` on all of the above (skins excepted), on `libasound2t64`, and the OS packages the device runs |
@@ -153,7 +154,10 @@ list. `packaging/release/build.sh <image.img>` refuses to run if the image's
    "Release notes: X (approved by George)" on `phase-13d` and tag `vX`.
 2. **Image**: a worktree at the tag, `git submodule update --init`, `make
    image` (about 15 min); move the image to the main checkout's
-   `image/deploy/`; `image/verify-image.sh` must pass every check.
+   `image/deploy/`; `image/verify-image.sh <that image>` **run from the
+   release worktree** must pass every check - it compares the image with the
+   sources beside the script, and the main checkout (`phase-13b`) does not
+   carry the release's code (0.11.0: five false failures from there).
 3. **Release**: `packaging/release/build.sh <image>`, then
    `packaging/release/publish.sh rX --channel testing`; read the channel file
    back from GitHub and verify it with the release key (serial, release).

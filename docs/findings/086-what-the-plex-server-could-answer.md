@@ -134,7 +134,7 @@ timed LRC, which is exactly the shape ADR-0040's synced strip already consumes:
 
 A track can carry **three** lyric streams at once — one `lrc` and two `txt`.
 
-**So LRCLIB is not untouchable after all.** This record and Phase 11a both said
+**So LRCLIB is not untouchable after all.** This record and Phase 11a (now `ph-library`) both said
 timed lyrics did not exist on Plex and that LRCLIB therefore stayed regardless.
 Wrong: Plex may answer first for the tracks it has, with LRCLIB behind it —
 which is George's own model, not an exception to it.
@@ -162,7 +162,7 @@ path, playing the track through Plexamp first and waiting 16 s, and two waits of
 45 s after a library refresh.
 
 **Plexamp displays these lyrics**, so there is a way to get them and this
-survey did not find it. That is the question Phase 11a's lyrics criterion has to
+survey did not find it. That is the question Phase 11a's (now `ph-library`'s) lyrics criterion has to
 answer before anything is built.
 
 **One side effect to own:** the probe that established storage was healthy hit

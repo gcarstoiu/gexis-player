@@ -60,3 +60,35 @@ pipe still carries 30 bands, so nothing reading it changes.
 - The CPU cost grows with the FFT; Finding 117 measures it on a Pi 4.
 - A skin whose artwork prints frequencies under its bars would now be wrong.
   The corpus was not searched for one.
+
+## Amended 2026-10-13: a band's level is its energy, and no lift
+
+George: *"It feels like the higher frequencies are not correctly represented
+... the top part of the bar spectrum was all the way up."* On the proposal,
+band energy *"I'm going with your recommendation"*, and on the lift: *"I
+would like to remove it ... It's more important to have an accurate
+depiction rather than fitting everything in the middle."*
+
+Finding 122 measured what §4's "a band of noise sums more bins" comes to:
+summing the bins' magnitudes reads noise-like sound - cymbals, breath, the
+treble of most recordings - about 3 dB an octave too high, because the bands
+widen as they rise. On pop, rock and electronic tracks that was 13-17 dB in
+the top bands; with the lift the last bars were the tallest on the display,
+over treble 10-14 dB below the voice.
+
+1. **A band's level is its energy**: the square root of its bins' summed
+   power, as an analyser measures a band, divided by the FFT size as before
+   and multiplied by 1.815 - for the Blackman window `output.conf` sets, a
+   steady tone's magnitudes sum to 1.815 times their root-sum-square - so a
+   tone reads where it did. The scale applies to every band, a one-bin bass
+   band included, so a tone reads the same whichever band it falls in; those
+   bass bands rise about 5 points. Pink noise reads flat.
+2. **§3's lift is removed.** The bars show the recording's own balance: on
+   most music the right-hand bars are shorter than the middle, and a
+   recording with almost nothing above 10 kHz leaves them near zero.
+3. **§5 stands**: fixed in the patch, no ADR-0022 row.
+
+The same patch, `peppyalsa-spectrum-bands.patch`, regenerated;
+`gexis-peppyalsa` `-5`. Measured on the PC (the patched C behind a harness
+that feeds a file as the ALSA meter does) and on sofapi: Finding 122's
+addendum.

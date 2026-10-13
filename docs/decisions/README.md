@@ -150,7 +150,7 @@ been written properly. **0098 has no record either.**
 | [0127](0127-one-volume-row.md) | One Volume row: Hardware, Software or Fixed | Accepted 2026-10-07: default Hardware, Software where there is no control; a migration carries old choices |
 | [0128](0128-setup-installs-plugins-and-settles.md) | First setup installs the plugins and waits until the player has settled | Accepted 2026-10-07: a Plugins step before Review; an unskippable settling screen |
 | [0129](0129-a-service-says-whether-it-is-connected.md) | A service says whether it is connected | Accepted 2026-10-08: read from the unit user's connections, not its log; `"connection": true`; Beszel first |
-| [0130](0130-the-spectrum-covers-what-is-heard.md) | The spectrum covers what is heard: 50 Hz to 16 kHz at every rate | Accepted 2026-10-08: log-spaced bands, rate-sized FFT, 3 dB/octave lift above 1 kHz |
+| [0130](0130-the-spectrum-covers-what-is-heard.md) | The spectrum covers what is heard: 50 Hz to 16 kHz at every rate | Accepted 2026-10-08: log-spaced bands, rate-sized FFT; amended 2026-10-13: a band's level is its energy, no lift |
 | [0131](0131-setup-can-restore-a-backup.md) | Setup can restore a backup | Accepted 2026-10-08 (amended 2026-10-08): after Network, New player or Restore; every answer changeable |
 | [0132](0132-reset-to-factory-settings.md) | Reset to factory settings | Accepted 2026-10-09: in System; wiped at next boot to a fresh card, backups and music included |
 | [0133](0133-the-waiting-screen-and-the-players-own-wallpapers.md) | The waiting screen, and the player's own wallpapers | Accepted 2026-10-10 (amended 2026-10-11): built-in Gexis wallpapers; with LMS off, a waiting screen of clock and source tiles |
@@ -161,10 +161,12 @@ been written properly. **0098 has no record either.**
 | [0138](0138-reports-in-steps-and-one-way-to-send.md) | Reports in steps, a visible checklist, and one way to send for both | Accepted 2026-10-11: three steps; one Send step: GitHub issue or a download to e-mail |
 | [0139](0139-no-passwordless-sudo-in-the-public-image.md) | No passwordless sudo in the public image; test cards get it by provisioning | Accepted 2026-10-12: no sudoers rule for `pi`; `DEV_SUDO="yes"` for test cards |
 | [0140](0140-the-software-volume-is-set-before-the-renderers-start.md) | The software volume is set before the renderers start | Accepted and built 2026-10-12: `gexis-softvol-restore.service`, a oneshot before the renderers |
-| [0141](0141-picture-and-sound-on-different-hdmi-ports.md) | Picture and sound on different HDMI ports | Proposed 2026-10-12: screen port detected, sound-only port black; six decisions owed |
+| [0141](0141-picture-and-sound-on-different-hdmi-ports.md) | Picture and sound on different HDMI ports | Accepted 2026-10-12: both ports listed; Screen port when both connected; sound-only port black; jack stands in |
 | [0142](0142-the-player-announces-for-its-plugins.md) | The player announces for its plugins | Accepted 2026-10-12: uploaded plugins denied port 5353; `announce` event, avahi file per plugin |
 | [0143](0143-usb-dacs-widened-to-32-bits-and-lyrion-at-384-khz.md) | USB DACs: widened to 32 bits, and Lyrion at 384 kHz | Accepted 2026-10-12: `type linear` to S32 for 32-bit-only cards; Squeezelite told rates ≤384 kHz |
 | [0144](0144-native-dsd-on-a-dac-that-takes-it.md) | Native DSD on a DAC that takes it | Accepted 2026-10-12: Fixed volume + card reporting DSD → Squeezelite `-D`; peppyalsa skips non-PCM |
+| [0145](0145-multichannel-folded-down-to-stereo.md) | Multichannel files folded down to stereo | Accepted 2026-10-13: our own Squeezelite folds >2 channels down (ITU, LFE out, no clipping) |
+| [0146](0146-the-meters-follow-the-volume-again-with-a-gain.md) | The meters follow the volume visibly, with a gain of their own | Accepted 2026-10-13: bars the whole cut, needles half, Fixed unchanged; published at every start; a Gain row −10..+20 dB; the needles' share a row (Half the drop / Like a real amplifier) |
 
 ## Cross-cutting rules
 

@@ -102,6 +102,34 @@ Notes per renderer:
   that control is missing, because squeezelite would otherwise fall back to
   software volume silently (ADR-0018). The player name comes from
   `/etc/gexis/device-name.env` (ADR-0048).
+  **It is our own build**, `gexis-squeezelite` (ADR-0145,
+  `packaging/squeezelite/`): the commit Debian trixie packages, Debian's
+  build options, and `squeezelite-downmix.patch`, which **folds a file of
+  more than two channels down to stereo** in the decoder, before anything
+  else sees it - the Squeezebox protocol carries two channels, and upstream
+  played a 5.1 FLAC's front pair alone, refused a 5.1 WAV and kept two of a
+  DSD file's channels (Finding 121). The fold-down is ffmpeg's default
+  (ITU-R BS.775): left = front left + 0.707 centre + 0.707 each left
+  surround, right likewise, a back centre 0.5 to both, LFE left out, every
+  coefficient divided by the larger side's sum so that nothing can clip
+  (5.1 plays 7.7 dB below its front channels' level). It is computed in
+  double precision from every channel left-aligned to 32 bits (`downmix.c`).
+  Channel orders: FLAC's specification; WAV's channel mask when the player
+  reads the header itself, otherwise (the format given in Lyrion's `strm`)
+  the default (SMPTE) order; AIFF the same as WAV, logged as assumed; DSF its
+  channel type; DSDIFF its channel IDs.
+  **DSD with more than two channels is converted to PCM** (dsd2pcm, every
+  channel) and folded, even with `-D` - one-bit audio cannot be mixed. AAC
+  is folded by FAAD2 itself (`downMatrix`, set upstream), 2.2-2.3 dB below
+  our fold. Each folded track logs `downmix: N channels folded to stereo
+  (<layout>)` at warning level, so it is in the journal. Stereo and mono take
+  upstream's code path untouched: byte for byte the same output
+  (`packaging/squeezelite/tests/`). **Opus** with more than two channels goes
+  through opusfile's own `op_read_stereo` (George, 2026-10-13): upstream read
+  every channel into a buffer sized for stereo and unpacked it as stereo,
+  garbled. Not folded, until Phase 14 (`ph-mpd`): Ogg Vorbis (refused
+  upstream: "too many channels") and ALAC (ffmpeg: "unsupported number of
+  channels").
 - **go-librespot** is configured (`go-librespot-config.yml`) with
   `audio_device: output`, `external_volume: true` (it never attenuates the
   stream itself) and `normalisation_disabled: true`, so Spotify reaches the
@@ -423,6 +451,16 @@ chain - goes to `hw:` without the widening step, which takes PCM only.
 scope read levels only for the formats alsa-lib's s16 scope converts, since
 for DSD that scope leaves its buffer unset and reading it aborted the
 renderer. The Volume row's Fixed note names the DAC (`_volume_notes`).
+A DSD file of more than two channels is converted to PCM and folded down to
+stereo regardless (ADR-0145, above).
+
+**The jack stands in for an HDMI output with nothing connected** (ADR-0141
+D5): `outputs.in_force(stored)` returns the stored output, or the jack while
+it is an HDMI port whose connector is not connected; every lookup in the core
+goes through it, so the chain, the mixer and the volume follow. `_fixed_wanted`
+is never true while the jack stands in (Fixed would be full level into
+headphones). `_watch_standin` polls every 3 s and calls `_switch_output` when
+the card in force changes; `_standin_note` is the Output row's note.
 
 Choosing one does not restart the core. The core first stops whoever is
 playing (`Supervisor.stop_active`, as a change of volume type does; George,
@@ -482,16 +520,21 @@ flowchart LR
 - **The tap.** `pcm.output` is `type meter` with the peppyalsa scope, so the
   analysis runs inside whichever renderer has the device open and writes two
   FIFOs in `/run/gexis` (not `/tmp`: bluealsa-aplay has a private `/tmp`).
-  peppyalsa never blocks audio when nobody reads the FIFOs. Two patches are
+  peppyalsa never blocks audio when nobody reads the FIFOs. Three patches are
   applied to it, in this order:
   - `peppyalsa-one-write-per-frame.patch` writes each spectrum frame in one
     `write()`, giving readers whole records;
   - `peppyalsa-spectrum-bands.patch` (ADR-0130) spaces the 30 bands
     logarithmically from 50 Hz to 16 kHz at every sample rate, on an FFT
     sized to the rate (about 10.8 Hz a bin: 4096 points at 44.1 and 48 kHz)
-    over the newest samples, with 3 dB per octave added above 1 kHz.
-    Upstream spread them to the Nyquist frequency, so at 96 kHz the top bars
-    never moved (Finding 117).
+    over the newest samples. A band's level is its energy - the square root
+    of its bins' summed power, times 1.815 so a steady tone reads as
+    upstream's magnitude sum put it - with no lift. Upstream spread the
+    bands to the Nyquist frequency, so at 96 kHz the top bars never moved
+    (Finding 117); summing magnitudes, as upstream does, read noise-like
+    treble 13-17 dB too high in the wide top bands (Finding 122);
+  - `peppyalsa-skip-non-pcm.patch` (ADR-0144) draws nothing for a stream
+    that is not PCM, such as native DSD, instead of aborting the renderer.
 - **One reader, three transports** (ADR-0011). A FIFO splits bytes between
   readers, so `gexis-meter` (`core/src/gexis_core/meter_service.py`, its own
   unit, kept out of the core's event loop) is the only reader. It republishes
@@ -499,9 +542,16 @@ flowchart LR
   it), on a pair of passthrough FIFOs for our PeppyMeter,
   and optionally by HTTP PUT to an unmodified PeppyMeter elsewhere.
 - **Levels follow the volume** (ADR-0057). The tap is before the DAC's
-  attenuator, so the service reads the attenuation the core publishes and
-  lowers the levels by a third of it (`METER_VOLUME_TRACKING`), mapping the
-  volume's 60 dB onto a VU dial's ~20 dB.
+  attenuator, so the service reads the attenuation the core publishes
+  (`/run/gexis/attenuation`) and lowers the bars by all of it and the
+  needles by half (`BAR_VOLUME_TRACKING`, `NEEDLE_VOLUME_TRACKING`,
+  ADR-0146): the volume's 60 dB would put a needle on its stop by 40 %.
+  *Needles follow the volume* set to *Like a real amplifier* makes the
+  needles follow all of it (`/run/gexis/meter-follow`, 0.50 or 1.00). The
+  core publishes it at start, with every level it gives the panel, and as 0
+  in Fixed on every output. The *Gain* row is added to both after that
+  (`meters.publish_gain` writes `/run/gexis/meter-gain`; −10 to +20 dB,
+  clipped at the top of the scale); it needs no restart.
 - **The spectrum frame matches its reader** (ADR-0056 as amended
   2026-10-08). peppyalsa measures 30 bands; each skin draws what its own
   panel holds, 18 to 21 on the 1920x1080 packs (`spectrum_bars`: the right
@@ -511,7 +561,8 @@ flowchart LR
   it keeps the last whole frame of what is waiting, so a change of count
   cannot put it out of step.
 - **Movement is configurable**: needle fall time, needle smoothing and
-  spectrum smoothing are settings (ADR-0058). The first two regenerate
+  spectrum smoothing are settings (ADR-0058); *Needles follow the volume*
+  and *Gain* (ADR-0146) are under the same group. The first two regenerate
   `output.conf`'s peppyalsa section; needle smoothing is PeppyMeter's own
   config and needs `gexis-peppy` restarted.
 - **The Peppy screen is a native process**, not a browser page (ADR-0026).

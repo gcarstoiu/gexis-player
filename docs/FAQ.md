@@ -165,12 +165,30 @@ which are turned to landscape. On the very first start, setup's own screens
 are already laid out for the attached screen; setup's Screen step then
 confirms it.
 
+**My sound goes to a receiver over HDMI. What if the receiver is off?**
+When the HDMI port the sound goes to has nothing connected any more, the
+player plays through the headphone jack until the receiver is back, then
+returns to HDMI by itself. While the jack stands in it uses its own volume,
+never *Fixed*, so headphones are never at full level. *Settings → Audio →
+Output* says when this is happening.
+
 **Does the player play DSD?**
 Yes. DSD files from Lyrion play natively, unconverted, on a DAC that takes
 DSD itself (some USB DACs; tested with an SMSL), with *Settings → Audio →
 Volume* on *Fixed*, so the amplifier sets the level. In every other case
 (other volume types, DAC HATs, HDMI) they are converted to PCM and play as
 usual. The visualiser stays still while DSD plays.
+
+**Does the player play 5.1 and 7.1 files?**
+Yes, as stereo. Through Lyrion, a FLAC, WAV, AIFF, DSD or AAC file with more
+than two channels is folded down to two: the centre and the surrounds are
+mixed into left and right, the low-frequency (LFE) channel is left out, and
+the result is turned down so that nothing can clip - so such a file plays
+quieter than a stereo one. A multichannel DSD file is converted to PCM for
+this, even where DSD otherwise plays natively; Opus is folded by its own
+decoder. Ogg Vorbis and ALAC files with more than two channels are not
+folded and may not play. Surround playback, all channels to an AV receiver,
+is planned.
 
 **Which screens work?**
 HDMI screens only. Tested on the hardware: a 10.1″ 1280 × 800 (the reference
@@ -179,7 +197,10 @@ Others in *Settings → Display → Attached screen* are listed but untested;
 those tested are marked *Tested*, those owners have reported working
 *Reported*. DSI and DPI screens are not supported. The screen can be on
 either of the Pi's HDMI ports; a bar screen moved from one port to the other
-is set up again at the next start and asks *Keep this screen?*.
+is set up again at the next start and asks *Keep this screen?*. With
+something connected to both ports (a screen on one, a sound bar on the
+other), *Settings → Display → Screen port* shows what is on each and lets
+you choose which is the screen.
 
 **Can the player run without a screen?**
 Yes. *Settings → Display → Headless* turns the screen off, and every setting
@@ -287,9 +308,10 @@ speed. Over HDMI audio output the visualiser moves only with
 **What do a spectrum's bars show?**
 The music's loudness from 50 Hz on the left to 16 kHz on the right, spaced the
 way pitch is heard, so the bass has several bars of its own. It is the same
-at every sample rate. The higher bars are lifted a little, because recordings
-have less energy the higher the pitch; without that the rightmost bars would
-hardly move.
+at every sample rate. Each bar is the music's own level in its range, as an
+audio analyser measures it: most recordings carry less in the treble than in
+the middle, so the bars on the right are usually shorter, and a recording with
+almost nothing up there leaves them nearly still.
 
 **How do I pick one skin and keep it?**
 Under *Settings → Display → Visualiser*, choose a *Skin type*, switch off
@@ -298,6 +320,16 @@ nothing changes until *Use this skin*. On the phone, swiping left or right
 moves to the next or previous skin. Note that applying *Spectrum smoothing*
 or *Needle fall time* under *Visualiser tweaks* stops the music for a moment
 while the sound card is reopened.
+
+**Do the needles and bars follow the volume?**
+Yes, with *Volume type* on *Software* or *Hardware*: they show what comes
+out, so they fall as the volume comes down - the bars by the whole drop, the
+needles by half of it, so they still move when listening low. *Needles
+follow the volume* set to *Like a real amplifier* makes the needles follow
+all of it, as an amplifier's meters do. On *Fixed* the
+player does not change the level, so they show the recording. *Gain* under
+*Settings → Display → Visualiser → Visualiser tweaks* raises or lowers both,
+from −10 to +20 dB, for a quiet recording or a low listening level.
 
 **Some skins show a slideshow of the artist. Where do the photos come from?**
 From the Lyrion server's Music & Artist Information plugin. They are the

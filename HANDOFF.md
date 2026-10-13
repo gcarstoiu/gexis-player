@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-12 (on R2D2).
+Last updated: 2026-10-13 (on R2D2).
 
 ## Start here
 
@@ -10,89 +10,77 @@ and `phase-13b` is merged into it after each docs change. A release is built
 from a worktree made at its tag, then removed. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 0.10.2 on Testing** (2026-10-12; tag `v0.10.2`, release
-`r0.10.2`, serial 36, PR #61 merged; image `image/deploy/2026-10-12-gexis-player-v0.10.2.img`,
-the only one kept). It holds the final code review's fixes (Finding 119: 77
-confirmed, all addressed) and George's twelve answers to its questions
-(ADR-0139 no sudo in the image, ADR-0140 software level before the
-renderers, and ten others - see the PR and Finding 119). Suite 2,255.
+**Current release: 0.11.0 on Testing** (2026-10-12; tag `v0.11.0`, release
+`r0.11.0`, serial 37, PR #62 merged; image
+`image/deploy/2026-10-12-gexis-player-v0.11.0.img`). USB DACs and native DSD
+(ADR-0143/0144, Finding 120), the screen on either HDMI port (ADR-0109
+amended), the player announcing for its plugins (ADR-0142), plugin versions,
+Phase 13d closed. After the tag on `phase-13d`, for 1.0.0:
+- setup keeps the screen it applied (the bar's lingering "provisional");
+- ADR-0141 decided and built: one *Screen port* tile, black on a sound-only
+  port, the jack standing in while the chosen HDMI sound is unplugged;
+- multichannel files folded to stereo by our own `gexis-squeezelite` (ADR-0145,
+  Finding 121);
+- the spectrum's bands read their energy, with no treble lift (ADR-0130 as
+  amended, Finding 122; `gexis-peppyalsa` `-5`);
+- the meters follow the volume visibly - bars the whole cut, needles half or
+  *Like a real amplifier* - published from the start, with a *Gain* row
+  (ADR-0146).
+
+Suite 2,343.
 
 **Devices.** sofapi (Waveshare 10.1"; a test machine - its Lyrion queue may
 be lost, George 2026-10-12; an SMSL USB DAC on it), the bar (ShelvesPi,
-11.9") and guestpi (IQaudIO Pi-DAC PRO, 13.3") all run `phase-13d` previews
-of 2026-10-12 (core `+git52` to `+git76`; sofapi carries the newest, with the
-USB DAC and DSD work). **Cards flashed
+11.9") and guestpi (IQaudIO Pi-DAC PRO, 13.3") as read 2026-10-13:
+sofapi runs the newest `phase-13d` preview (core `0.11.0+git53`, player
+`+git55`, `gexis-squeezelite` `-2`, `gexis-peppyalsa` `-5`); the bar and
+guestpi report core `0.10.2+git63` and `gexis-peppyalsa` `-2`. **Cards flashed
 from now on have no passwordless sudo: provision test cards with
 `DEV_SUDO="yes"`** (ADR-0139).
 
-**Owed by George**
-- Confirm the new [H] values for ADR-0022's inventory: `SETUP_ACTIVE_S`
-  600 s, `KEEP_AUTOMATIC` 3, the cache's 2 GiB free / 10 % / hourly, the
-  30-day photo re-ask, the 20 s / 120 s / 15 min request limits.
-- Tests on 0.10.1-0.10.2: volume type changes (g04, g05), Plexamp's slider in
-  Fixed (g22), the Space topic, a freshly flashed card without a restore
-  (g24), setup over a network cable (g26), a USB DAC at its highest rate
-  (g10), Phase 13f's look (g25).
-- ADR-0141 (picture and sound on different HDMI ports): six decisions (g36).
-  The screen on the bar's second port (g35).
-- Decide the version (g27, 1.0.0 suggested) and allow Claude's device tests on
-  the bar (g29: headphone jack, switches, the boot step in Software, a reset,
-  a cut-short update).
-- The bar's Plexamp needs a new claim token; the bar on its own supply, then
-  Claude reads `vcgencmd get_throttled` again.
+**Owed by George** (the shared to-do list has the detail)
+- On a card flashed from the 0.11.0 image: setup without a restore (g24),
+  setup over a network cable (g26), an update cut short and a factory reset
+  (g34).
+- The screen on the bar's second HDMI port (g35).
+- The spectrum on sofapi's panel after the change (Finding 122): whether the
+  bars now look right.
+- On sofapi: the meters falling with the volume, and *Visualiser tweaks* →
+  *Needles follow the volume* and *Gain* (ADR-0146).
+- Then: 1.0.0 cut from this code as the first Stable release.
+- Optional: Lyrion sync (g09), the bar's own supply (g12), a DSD file from the
+  library (g38).
 
-**Run on the bar 2026-10-12 and right** (Finding 119): the headphone jack
-(0 % and Mute silent), levels carried across output and volume-type changes,
-the boot step in Software. **Not run yet:** a cut-short update and a factory
-reset (both need George), setup over Ethernet (g26).
+**Not run on a device yet:** a screen on HDMI-A-2; a fresh card from 0.11.0;
+setup over Ethernet; a cut-short update; a factory reset.
 
-**2026-10-12, the screen's port** (ADR-0109 amended): rotation now works on
-an unlisted screen, and the screen is applied on the HDMI port it is on
-(mode, touch via a generated labwc config, the kiosk window, standby). On
-the bar: HDMI-A-1 unchanged, `labwc -C` running, turn and standby right.
-Not yet run: a screen on HDMI-A-2 (g35). Seen in passing: the bar's
-`screen.json` still says `provisional: true` long after setup - to look at.
-
-**2026-10-12, plugins and the network** (ADR-0142): an uploaded plugin's own
-mDNS responder made avahi rename a Pi (`name-2.local`). Uploaded units now
-deny port 5353 and the core announces for a plugin that sends `announce`;
-uploaded plugins switched on are started with the core; the switcher leaves
-its own player out by a token. On guestpi and sofapi as previews. Learned on
-the way: a systemd dynamic user cannot reach the system bus on our image.
-
-**2026-10-12, a USB DAC and DSD** (Finding 120): the SMSL takes 32-bit only;
-16/24-bit sources are widened to 32 bits, exact (ADR-0143); Squeezelite is
-told rates up to 384 kHz on a DAC above it (Lyrion's 705.6/768 kHz played 16x
-slow; now refused); native DSD64-256 from Lyrion with the volume Fixed
-(ADR-0144; peppyalsa `-4` skips non-PCM, which had aborted the renderer).
-Owed: Bluetooth to sofapi (g37). DSD test files are generated by
-`tools/dsd-test-file/dsfgen.c` (a sigma-delta modulator writing DSF).
-
-**Next: the first public release** (George, 2026-10-12). Phase 13d closed
-2026-10-12; it waits for George's tests on today's preview. Then: promote to Stable with the image file
-(c16; the installation guide's download works from then), README's "first
-Stable release is next", Raspberry Pi Imager - the image file and *Use
-custom* at the release, our own Imager repository and the community
-application after (g14). **After it:** Phase 13g (the player in Home
-Assistant), themes (14), a sound bar on optical (14a), the library answering
-for itself (15) - each ADR first. HDMI audio on the second port: to revisit.
+**Next: 1.0.0, the first public release**, once George's tests pass: the
+notes, promote to Stable with the image file (c16; the installation guide's
+download works from then), README's *Download and install* section, Raspberry
+Pi Imager - the image file and *Use custom*, our own Imager repository and the
+community application after (g14). **After it**, in order (`docs/DEVELOPMENT.md`, "Phases after the first
+public release"; refer to them by ID): **14** MPD for real 5.1/7.1
+(`ph-mpd`), **15** the player in Home Assistant (`ph-home-assistant`), **16**
+themes (`ph-themes`), **17** a sound bar on optical (`ph-optical`), **18** the
+library answers for itself (`ph-library`), **19** Lyrion's own menus' look
+(`ph-lyrion-menus`) - each ADR first.
 
 The shared to-do list (an artifact with a `todos` collection; its address is
 in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-10-12** (~102 GB freed; start-of-session reading ~30,500 -> ~9,500 words).
+2026-10-12 evening, after 0.11.0** (the first: ~102 GB and ~30,500 -> ~9,500
+words in the morning).
 
 ## Phases
 
 Closed: 0-12, 13, 13a, 13b, 13c, 13d (2026-10-12, Finding 114's addendum),
-13e (`docs/DEVELOPMENT.md` holds each phase's acceptance criteria; the archive
-holds the order as it was argued). Open: **13f** Lyrion's own menus - closes on George's look; **13g** the player
-in Home Assistant - after the release; **14** themes - settle first what a
-theme is if plugins are processes (ADR-0016); **14a** a sound bar on optical
-(a maximum sample rate per output); **15** the library answers for itself
-(Plex server metadata first, internet providers as fallback; Finding 086).
+13e, 13f (2026-10-12: shipped behind *Extended navigation*; its look is
+`ph-lyrion-menus`) (`docs/DEVELOPMENT.md` holds each phase's acceptance criteria; the archive
+holds the order as it was argued). **From 2026-10-13 phases are numbered
+consecutively without letters, each with a stable ID** (George); the open ones
+are 14-19, listed under *Next*.
 
 ## Machines
 
@@ -127,7 +115,18 @@ The full list, with how each was found, is in the archive (2026-10-12 block).
   history rewrite after previews makes dpkg see a downgrade - put a preview
   device back with `apt-get install --allow-downgrades`, dry run first.
 
+**Releasing**
+- **Run `verify-image.sh` from the release worktree**: from `phase-13b` it
+  compares against code the release does not carry (0.11.0: five false fails).
+- **GitHub caches `channels/<name>` for minutes after a publish**: verify the
+  new file with `gh release download channels`, not the public URL.
+
 **On the players**
+- **DSD silence is the byte `0x69`**, not zero; never play `/dev/urandom` or
+  zeros as DSD - at Fixed it reaches the amplifier at full scale.
+- **Uploaded plugins run as systemd dynamic users, which the system bus
+  refuses** on our image: what a plugin needs from the system goes through
+  the core (`announce`, ADR-0142).
 - **Dry-run every install** (`apt-get -s`) and read the removals: a lone UI
   package removes `gexis-player`; build the player meta-package with the rest.
 - **Restarting `gexis-core` does not reload the panel**: restart

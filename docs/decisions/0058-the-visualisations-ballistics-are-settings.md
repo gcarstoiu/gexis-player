@@ -115,3 +115,9 @@ unit. Change one and the other has to move.
   they are the ones somebody will tweak by ear and want to undo. The rest
   of the registry does not, and the test only checks the rows that claim
   it.
+
+## Amended 2026-10-13 by ADR-0146
+
+A fourth row, *Gain* (−10 to +20 dB, default 0), under the same group. It
+changes what the meters show, not how they move, and applies without a
+restart. See [ADR-0146](0146-the-meters-follow-the-volume-again-with-a-gain.md).

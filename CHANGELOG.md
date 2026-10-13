@@ -5,6 +5,27 @@ Every release of Gexis Player and its notes, newest first. Generated from
 edit that file, not this one. The player shows the last 10 under
 Settings → System → Change logs.
 
+## 0.12.0 — 13 October 2026
+
+### New
+
+- Multichannel files (5.1, 7.1) from Lyrion play complete, folded down to stereo: FLAC, WAV, AIFF, DSD and Opus. Before, a multichannel FLAC lost its centre and surround channels, and a multichannel WAV did not play.
+- The screen's HDMI port is one tile under Settings → Display. With something on both ports, it chooses which one the screen is on and says what is connected to each. On a board with one HDMI port it is information only.
+- Visualiser tweaks has two new rows. Needles follow the volume is either Half the drop or Like a real amplifier. Gain raises or lowers the needles and bars together, from −10 to +20 dB.
+
+### Fixed
+
+- The spectrum's right-hand bars show the treble at its real level. On most music they used to be the tallest bars on the screen.
+- The needles and bars follow the volume visibly, from the moment the player starts. On Fixed they show the recording, on every output.
+- A screen confirmed in setup is kept. Before, it could stay unconfirmed, and the player kept the setup network's fixed password.
+
+### Good to know
+
+- An HDMI port used only for sound, such as an AV receiver, shows a black picture.
+- If the HDMI output chosen for sound has nothing connected, the headphone jack plays instead, at its own volume. Sound goes back to HDMI by itself when the cable is back. Either switch stops what is playing.
+- A folded-down multichannel file plays about 8 dB quieter than a stereo one, so nothing clips. Ogg Vorbis and ALAC files with more than two channels still do not play.
+- The spectrum no longer lifts the treble: on most music the right-hand bars are now shorter than the middle ones.
+
 ## 0.11.0 — 12 October 2026
 
 ### New

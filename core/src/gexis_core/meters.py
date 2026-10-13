@@ -218,37 +218,109 @@ def read_attenuation(path: Path) -> float:
 #: below that is the bottom stop.
 VU_SCALE_DB = 20.0
 
-#: **How much of the volume's travel the meters follow.**
+#: **How much of the volume's cut the needles follow: half of it**
+#: ([ADR-0146](../../../docs/decisions/0146-the-meters-follow-the-volume-again-with-a-gain.md)).
 #:
 #: The volume curve spans 60 dB ([ADR-0054](../../../docs/decisions/0054-one-curve-and-the-renderers-own-number.md)),
-#: and George has ruled that out of scope for changing: *"For sure we will
-#: not narrow the volume curve though - that stays in place as is."* Applied
-#: to the needle one-for-one, that travel is three times the dial's own, so
-#: the needles reach the bottom stop at about 40% on the slider and the rest
-#: of the range shows nothing - *"a bit quiet on the bottom part"*.
-#:
-#: **So the volume's full travel is mapped onto the dial's full travel**
-#: rather than onto three of them. The meters still fall as the volume comes
-#: down, by a third of the dB, which keeps the needle alive across the whole
-#: slider. This is the one number that decides how far they fall; it is a
-#: candidate for ADR-0022's inventory and is not on it.
-METER_VOLUME_TRACKING = VU_SCALE_DB / 60.0
+#: three times what a VU dial is drawn for. One-for-one, the needles reach
+#: the bottom stop at about 40% on the slider - *"a bit quiet on the bottom
+#: part"* (George, 2026-09-23) - so ADR-0057 had them follow a third. At the
+#: levels people listen at, a third was invisible (5.2 dB at 80% moved them
+#: 1.7 dB), and George asked for the meters to follow the volume again
+#: (2026-10-13). Half: 74% of the travel at 80%, 51% at 60%, 32% at 40%.
+NEEDLE_VOLUME_TRACKING = 0.5
+
+#: **The Needles row's two choices** (ADR-0146 amended, George 2026-10-13:
+#: *"switching to a real amp behaviour"*): how much of the cut the needles
+#: follow. Like a real amplifier, they are on their stop by 40% volume.
+NEEDLE_FOLLOW = {"Half the drop": NEEDLE_VOLUME_TRACKING, "Like a real amplifier": 1.0}
+
+#: **Where the core leaves that choice for the meter service**, as the
+#: fraction it means: one line, 0.50 or 1.00.
+NEEDLE_FOLLOW_PATH = Path("/run/gexis/meter-follow")
+
+#: **The bars follow the whole cut** (ADR-0146): their scale is logarithmic,
+#: a point to the dB, so even the whole 60 dB leaves them alive far down the
+#: slider - about 21 points lower at 40%.
+BAR_VOLUME_TRACKING = 1.0
+
+#: **The Gain row's range** (ADR-0146, `meter_gain`): what a reader accepts
+#: from the file; the settings row holds the same bounds.
+GAIN_MIN_DB, GAIN_MAX_DB = -10.0, 20.0
+
+#: **Where the core leaves the Gain row's value for the meter service**,
+#: beside the attenuation: one line, dB. A separate process reads it, and the
+#: core is the only writer.
+METER_GAIN_PATH = Path("/run/gexis/meter-gain")
+
+#: The top of both scales: `meter_max` and `spectrum_max` in `output.conf`.
+METER_TOP = 100
 
 
-def attenuate(levels: Levels, db: float, tracking: float = METER_VOLUME_TRACKING) -> Levels:
-    """`levels` as they would be after the device's own volume control.
+def read_gain(path: Path) -> float:
+    """The Gain row's dB from the file the core writes; 0 when it is missing
+    or unreadable, and held to the row's range."""
+    try:
+        value = float(path.read_text().strip())
+    except (OSError, ValueError):
+        return 0.0
+    if not math.isfinite(value):
+        return 0.0
+    return min(GAIN_MAX_DB, max(GAIN_MIN_DB, value))
+
+
+def read_needle_follow(path: Path) -> float:
+    """How much of the cut the needles follow, from the file the core
+    writes; half when it is missing or unreadable, and held to 0-1."""
+    try:
+        value = float(path.read_text().strip())
+    except (OSError, ValueError):
+        return NEEDLE_VOLUME_TRACKING
+    if not math.isfinite(value):
+        return NEEDLE_VOLUME_TRACKING
+    return min(1.0, max(0.0, value))
+
+
+def publish_needle_follow(choice: str | None, path: Path = NEEDLE_FOLLOW_PATH) -> None:
+    """Leave the Needles row's choice where the meter service reads it, as
+    the fraction it means. An unknown choice is the default, half."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"{NEEDLE_FOLLOW.get(choice or '', NEEDLE_VOLUME_TRACKING):.2f}\n")
+    except OSError as exc:
+        logger.debug("meters: cannot publish how the needles follow: %s", exc)
+
+
+def publish_gain(db: float, path: Path = METER_GAIN_PATH) -> None:
+    """Leave the Gain row's value where the meter service reads it. Best
+    effort: a meter that cannot read it shows no gain."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"{float(db):.2f}\n")
+    except (OSError, ValueError) as exc:
+        logger.debug("meters: cannot publish the gain: %s", exc)
+
+
+def attenuate(levels: Levels, db: float, gain_db: float = 0.0,
+              needle_tracking: float = NEEDLE_VOLUME_TRACKING,
+              bar_tracking: float = BAR_VOLUME_TRACKING) -> Levels:
+    """`levels` as they would be after the device's own volume control, and
+    the Gain row.
 
     **The meter tap is upstream of it.** `pcm.output` is a `type meter` over
-    the card, and the DAC attenuates in hardware afterwards, so the needles
-    and the bars show the recording rather than what is coming out of the
-    speakers ([ADR-0057](../../../docs/decisions/0057-the-meters-follow-the-volume.md)).
+    the card, and the volume is applied afterwards, so the needles and the
+    bars show the recording rather than what is coming out of the speakers
+    ([ADR-0057](../../../docs/decisions/0057-the-meters-follow-the-volume.md)).
     George, 2026-09-23: *"Shouldn't the vu meters and spectrum amplitude be
     based on volume?"*
 
-    **`tracking` scales the dB before it is applied**, because the volume's
-    60 dB is three times what a VU dial is drawn for. See
-    `METER_VOLUME_TRACKING`. At 1.0 this is the physically exact thing and
-    the needles are at a tenth of scale by 40% on the slider.
+    **The needles follow half the cut and the bars all of it** (ADR-0146);
+    `needle_tracking` and `bar_tracking` say how much. At 1.0 each is the
+    physically exact thing.
+
+    **`gain_db` is then added to both** (the Gain row, ADR-0146): +6 dB
+    doubles a needle and lifts a bar 6 points. Past the top is drawn at the
+    top.
 
     **The two scales are different kinds of number.** peppyalsa's meter
     level is linear amplitude, so this is a multiplication. Its spectrum is
@@ -256,19 +328,26 @@ def attenuate(levels: Levels, db: float, tracking: float = METER_VOLUME_TRACKING
     is a subtraction. Treating them alike would put the bars in the wrong
     place at every volume but full.
 
-    **Nothing to do at 0 dB**, which is also what fixed output looks like -
-    there the device is not attenuating, so the meters show the source and
-    no special case is needed to arrange it.
+    **Nothing to do at 0 dB with no gain**, which is also what fixed output
+    looks like - there the device is not attenuating, so the meters show the
+    source and no special case is needed to arrange it.
     """
-    db = db * tracking
-    if db <= 0:
+    db = max(0.0, db)
+    if db == 0 and gain_db == 0:
         return levels
-    gain = 10 ** (-db / 20)
-    shift = db * 100 / SPECTRUM_DB_FULL_SCALE
+    needle_db = db * needle_tracking - gain_db
+    bar_db = db * bar_tracking - gain_db
+    scale = 10 ** (-needle_db / 20)
+    shift = bar_db * 100 / SPECTRUM_DB_FULL_SCALE
+
+    def needle(v: int) -> int:
+        return min(METER_TOP, max(0, round(v * scale)))
+
     return Levels(
-        max(0, round(levels.left * gain)),
-        max(0, round(levels.right * gain)),
-        tuple(max(0, round(b - shift)) for b in levels.bands),
+        needle(levels.left),
+        needle(levels.right),
+        # A bar at 0 is silence, which no gain lifts.
+        tuple(min(METER_TOP, max(0, round(b - shift))) if b > 0 else 0 for b in levels.bands),
     )
 
 

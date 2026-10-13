@@ -299,3 +299,20 @@ def test_a_screen_on_the_second_port_gets_its_mode_and_settings_there(tmp_path):
     screen_apply.choose(Applied("waveshare-11.9-hdmi", 0, "HDMI-A-1"), **f, now=2)
     assert [w for w in f["cmdline"].read_text().split() if w.startswith("video=")] == [
         "video=HDMI-A-1:320x1480,panel_orientation=left_side_up"]
+
+
+def test_setup_keeping_the_screen_it_applied_clears_provisional(tmp_path):
+    """The bar, 2026-10-12: setup's own screen chosen again in the Screen step
+    changed no setting, so it stayed provisional - and the setup network kept
+    its fixed password."""
+    from gexis_core import screen_apply, screens
+    state = tmp_path / "screen.json"
+    bar = screens.by_id("waveshare-11.9-hdmi")
+    screen_apply.write_state({"current": {"screen": bar.id, "rotation": 0}, "previous": None,
+                              "pending": False, "provisional": True}, state)
+    assert screen_apply.confirmed(state) is False
+    assert screen_apply.confirm_provisional("Some other screen", state=state) is False
+    assert screen_apply.confirmed(state) is False
+    assert screen_apply.confirm_provisional(bar.label, state=state) is True
+    assert screen_apply.confirmed(state) is True
+    assert screen_apply.confirm_provisional(bar.label, state=state) is False, "nothing left to clear"
