@@ -120,7 +120,7 @@ Notes per renderer:
   channel type; DSDIFF its channel IDs.
   **DSD with more than two channels is converted to PCM** (dsd2pcm, every
   channel) and folded, even with `-D` - one-bit audio cannot be mixed. AAC
-  is folded by FAAD2 itself (`downMatrix`, set upstream), about 2.3 dB below
+  is folded by FAAD2 itself (`downMatrix`, set upstream), 2.2-2.3 dB below
   our fold. Each folded track logs `downmix: N channels folded to stereo
   (<layout>)` at warning level, so it is in the journal. Stereo and mono take
   upstream's code path untouched: byte for byte the same output
