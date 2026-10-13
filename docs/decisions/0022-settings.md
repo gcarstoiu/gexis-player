@@ -361,7 +361,7 @@ Confirmed by George, 2026-10-13 (*"Yes, add it"*), [ADR-0146](0146-the-meters-fo
 | Setting | Mark | Notes |
 |---|---|---|
 | Gain (*Visualiser tweaks*) | [N] | −10 to +20 dB in 1 dB steps, default 0 (`meter_gain`). Added to what the needles and the bars show after the volume, in every volume type, Fixed included. Applies at once |
-| How far the meters follow the volume | [H] | The bars the whole cut, the needles half of it (Software and Hardware); Fixed shows the recording. Fixed, not a row |
+| Needles follow the volume (*Visualiser tweaks*) | [N] | *Half the drop* (default) or *Like a real amplifier* (`meter_follow`; George, 2026-10-13: *"Can you add a setting also [in] visualisation tweaks for switching to a real amp behaviour"*). The bars follow the whole cut either way (Software and Hardware); Fixed shows the recording. Applies at once |
 
 ## Settled by prior records
 

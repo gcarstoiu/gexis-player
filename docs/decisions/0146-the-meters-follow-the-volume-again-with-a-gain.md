@@ -58,9 +58,25 @@ nothing:
   comes down, and the spectrum more than the needles.
 - A quiet recording, or listening low, can be lifted with the gain; a loud
   master can be calmed with a negative one.
-- How strongly the meters follow stays fixed in the code (`[H]` in
-  ADR-0022), as ADR-0057 had it.
+- How strongly the needles follow became a row the same day (the
+  amendment below); the bars' share stays fixed in the code.
 
 ## Unverified
 
 When written: how it looks on each panel, which is George's look.
+
+## Amended 2026-10-13: the needles' share is a setting
+
+George, the same day: *"Can you add a setting also [in] visualisation tweaks
+for switching to a real amp behaviour ... the setting would have two options -
+the one you are currently implementing and the real amp behaviour."*
+
+- **A row, *Needles follow the volume***, under *Visualiser tweaks*, before
+  *Gain*: **Half the drop** (default, §1) or **Like a real amplifier** - the
+  needles follow the whole cut, as the bars do: 55 % of their travel at 80 %
+  volume, 26 % at 60 %, 10 % at 40 %.
+- The bars follow the whole cut in both; Fixed is unchanged.
+- It reaches the meter service as Gain does: the core writes the fraction
+  (0.50 or 1.00) to `/run/gexis/meter-follow` at start and on every change; a
+  missing file is half. It applies at once.
+- ADR-0022's inventory: the row is `[N]`, in place of the `[H]` entry above.
