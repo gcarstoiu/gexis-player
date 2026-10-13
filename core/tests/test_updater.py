@@ -1139,3 +1139,16 @@ def test_only_what_must_be_installed_again_is_reinstalled(monkeypatch, up, tmp_p
     up.heal(["-o", "x"])
     assert applied == [["--allow-change-held-packages", "install", "--reinstall", "gexis-core"]]
     assert calls.count(["dpkg", "--configure", "-a"]) == 2, "configured again after the reinstall"
+
+
+def test_the_repair_finishes_the_whole_release_not_only_dpkg(up, monkeypatch):
+    """The bar after the repair: dpkg clean, gexis-player 0.12.0, and four
+    OS packages the install had not reached still old - which every check
+    after would have called current."""
+    _cut_short_no_note(up, monkeypatch)
+    applied = []
+    monkeypatch.setattr(up, "apt", lambda opts, *a, **k: applied.append(list(a))
+                        or subprocess.CompletedProcess(a, 0, "", ""))
+    assert up.finish_cut_short() is True
+    assert ["--allow-change-held-packages", "dist-upgrade"] in applied
+    assert ["--allow-change-held-packages", "install", "gexis-player=0.12.0"] in applied

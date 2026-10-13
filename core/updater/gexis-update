@@ -377,6 +377,20 @@ def dpkg_busy() -> bool:
         os.close(fd)
 
 
+def complete_release(opts: list[str], target: str) -> None:
+    """**The rest of the release, after dpkg is finished** (George's
+    power-cut test on the bar, 2026-10-13). `heal` finishes what dpkg was in
+    the middle of; the packages the install had not reached yet - four OS
+    packages on the bar - were still the old ones, and every check after
+    called the device current, because gexis-player was. The install's own
+    two steps, from the same repositories, with the archives fetched as
+    needed."""
+    for args in (["--allow-change-held-packages", "dist-upgrade"],
+                 ["--allow-change-held-packages", "install", f"gexis-player={target}"]):
+        if apt(opts, *args).returncode:
+            raise Stop(CUT_SHORT)
+
+
 def finish_cut_short() -> bool:
     """**An install cut short with no note left for the boot is finished
     anyway** (George's power-cut test on the bar, 2026-10-13). The note was
@@ -409,6 +423,7 @@ def finish_cut_short() -> bool:
     journal, broken = interrupted()
     if journal or broken:
         raise Stop(CUT_SHORT)
+    complete_release(opts, target)
     verify(target)
     about = dict(channel=channel_name(None), release=target, previous=target)
     leave_for_the_boot({"about": about, "channel": about["channel"], "target": target, "current": target,
@@ -1088,6 +1103,7 @@ def postboot(args) -> int:
             opts = apt_env(left.get("repos") or left["back_repos"])
             apt(opts, "update")
             heal(opts)
+            complete_release(opts, target)
         if PROGRESS["steps"].get("install") == "active":
             step("install", "done")
         verify(target)
