@@ -600,8 +600,9 @@ ListenBrainz token*.
 ## Updates and maintenance
 
 **How are updates installed?**
-*Settings → System → Software update* shows a waiting release and its notes.
-Installing stops the music (it asks first), restarts the player and checks
+*Settings → System → Software update* shows a waiting release and its notes,
+from the last check (every night); *Update…* checks again before offering it,
+so a newer release published since is the one offered. Installing stops the music (it asks first), restarts the player and checks
 it; the device itself restarts only if the system needs it, and the update
 says so before starting. If the new release fails its check - also after the
 device restarts - the player goes back to the release it had; after a power
