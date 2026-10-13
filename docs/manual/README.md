@@ -392,8 +392,7 @@ answer*; the other shares are still mounted.
 | --- | --- |
 | Attached screen | Sets the layout, Standard or Bar, and which visualiser skins are offered. A screen not in the list is shown as *Other screen* with its size. |
 | Screen rotation | For a screen mounted the other way up. |
-| HDMI 1, HDMI 2 | What is plugged into each of the Pi's HDMI ports: the screen, another device by its name (a sound bar or receiver), *sound* when the sound goes to that port, or *Nothing connected*. A port that is not the screen shows black. |
-| Screen port | Which HDMI port the screen is on. It appears only while something is connected to both ports; with one connected, the player finds the screen by itself. Changing it restarts the player and asks *Keep this screen?*. |
+| Screen port | Which HDMI port the screen is on. Its list shows what is plugged into each port beside it - the screen, another device by its name (a sound bar or receiver), *sound* when the sound goes to that port; a port with nothing connected is greyed. Changing it restarts the player and asks *Keep this screen?*. A port that is not the screen shows black. On a board with one HDMI port, the tile only says what is on it. |
 | Headless | Turns the player's screen off; settings that only affect the screen are hidden while it is on. |
 | Display standby: Scheduled standby, Standby times | With *Scheduled standby* on, the screen goes off during the standby times whenever nothing is playing. Up to six times, each a start and an end - picked from a grid of hours and quarters - on the chosen days; one may run past midnight, counting for the day it starts. |
 | Display standby: Back to standby after | A screen woken during a standby time goes dark again after this long with no touch and nothing playing (2 minutes unless changed; up to 30). |

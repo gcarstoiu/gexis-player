@@ -110,6 +110,14 @@ output?"*, then *"I agree to both. Go ahead."*:
 - **The kiosk window is pinned to the screen's port** whenever both ports are
   connected, not only off HDMI-A-1.
 
+**Amended the same evening** (George: *"collapse the 3 hdmi tiles into 1 - the
+modal, the information about what is being shown inside the modal next to the
+selection. For other boards which come only with one hdmi out, the selection
+modal is just an information tile"*): one *Screen port* tile; its picker gives
+each port's line beside it, and a port with nothing connected is greyed with
+*Nothing connected* (ADR-0044's `unavailable`), which keeps D2 - the screen
+cannot be moved to an empty port. On a one-port board the tile is read-only.
+
 Still owed: **D1** (the rest before or after 1.0), **D3** (what a sound-only
 port shows - today the boot artwork, as labwc extends the desktop onto it),
 **D5** (a receiver that disappears), **D6** (hardware to test with).

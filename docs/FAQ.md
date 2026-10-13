@@ -188,8 +188,8 @@ those tested are marked *Tested*, those owners have reported working
 either of the Pi's HDMI ports; a bar screen moved from one port to the other
 is set up again at the next start and asks *Keep this screen?*. With
 something connected to both ports (a screen on one, a sound bar on the
-other), *Settings → Display* lists both and lets you choose which is the
-screen (*Screen port*).
+other), *Settings → Display → Screen port* shows what is on each and lets
+you choose which is the screen.
 
 **Can the player run without a screen?**
 Yes. *Settings → Display → Headless* turns the screen off, and every setting
