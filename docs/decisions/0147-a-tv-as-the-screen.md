@@ -119,3 +119,28 @@ different screen attached.
 the TV runs at 1080p; possibly the kernel's console drawn at another
 screen's size. And whether the TV crops the edges (overscan) at 1080p: TVs
 do unless set to *Just Scan* / *Original*.
+
+## Amended 2026-10-13, second test: the mode held, the boot gap, one tile
+
+George, the second try: *"everything was extremely zoomed in ... The Logo was
+displayed correctly though during boot on the large TV"*, a photo of the
+panel's boot logo overlapped, and *"let's collapse the attached screen and
+screen port into 1 tile which would show the current display. Tapping it
+opens the 2 options. Add a change button to the tile"*.
+
+- **The zoom:** the kernel's `video=` held 1920 x 1080 for the boot (the
+  logo was right), then labwc set the receiver's preferred 1280 x 720 while
+  the page was scaled for 1080p (`wlr-randr`: 1280x720 *preferred, current*).
+  screen.env's `GEXIS_SCREEN_MODE` names a TV's mode and the kiosk sets it
+  with `wlr-randr --mode`. Listed panels and bars keep the compositor's
+  choice, which is their own mode.
+- **The overlapped logo:** fbdev is one buffer (`fb0`), sized for one screen;
+  each screen shows its own top-left corner of it. `gexis-splash-fb` wrote
+  the still for the TV's 1920 x 1080 and the 1280 x 800 panel showed a cut-off
+  logo beside a block of another colour; at the first try the buffer was the
+  panel's and the TV showed a small console in its corner. With two screens
+  connected, the gap after plymouth is now black on both; plymouth draws each
+  screen right before it.
+- **One Screen tile:** *Attached screen* and *Screen port* are one tile
+  showing the display in use and its port; a tap chooses between the ports;
+  *Change* picks the model from the list.
