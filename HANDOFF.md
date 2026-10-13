@@ -10,19 +10,17 @@ and `phase-13b` is merged into it after each docs change. A release is built
 from a worktree made at its tag, then removed. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 0.12.0 on Testing** (2026-10-13; tag `v0.12.0`, release
-`r0.12.0`, serial 38; **PR #63 open for George to merge**; image
-`image/deploy/2026-10-13-gexis-player-v0.12.0.img`, 121 checks passed;
-release worktree `~/projects/gexis-player-r0120`, removed after the merge).
-Multichannel files folded to stereo (ADR-0145, Finding 121), one *Screen port*
-tile with black on a sound-only port and the jack standing in (ADR-0141), the
-spectrum's bands reading their energy with no lift (ADR-0130 amended, Finding
-122), the meters following the volume with *Gain* and *Needles follow the
-volume* (ADR-0146), setup keeping the screen it applied. **Players are not
-updated to it by Claude** (George, 2026-10-13): sofapi and guestpi (Testing,
-Manual) offer it; the bar (on Testing since the test) runs it.
+**Current release: 0.13.0 on Testing** (2026-10-13; tag `v0.13.0`, release
+`r0.13.0`, serial 39; **PR #64 open for George to merge**; image
+`image/deploy/2026-10-13-gexis-player-v0.13.0.img`, 121 checks passed; release
+worktree `~/projects/gexis-player-r0130`, removed after the merge). A TV as the
+screen by choosing its port (ADR-0147), the Output picker's HDMI lines, the
+updater recovering from a power cut (Finding 123), *Update…* checking again,
+the update errors in words. 0.12.0 (PR #63) merged 2026-10-13 and its
+post-merge steps done; its disk clean-up runs after this publish. **Players
+are not updated to a release by Claude** (George, 2026-10-13).
 
-**After the tag on `phase-13d`:** George's power cut on the bar (g34,
+**From the power-cut test, in 0.13.0:** George's power cut on the bar (g34,
 Finding 123) found the updater could not recover - its note for the boot was
 an empty file (never synced), and every check said "current". Fixed: the
 note is synced, a cut-short install is finished with no note (at boot and at
@@ -30,7 +28,7 @@ every check), only half-installed packages are reinstalled, the whole release
 completed after. The bar recovered with the fixed code (run from a copy) and
 is on the complete 0.12.0 set. Also: *Could not check for updates* says why
 in words. **Not proved:** a second real cut with the fixed updater
-installed - possible once a release carries it. LESSONS 70.
+installed - a player on 0.13.0 cut during its next update (7b2). LESSONS 70.
 
 Suite 2,352.
 
