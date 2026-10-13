@@ -354,6 +354,15 @@ review's questions the same day:
 | "No photos" for an artist is asked again after | [H] | 30 days. Fixed, not a row |
 | A Settings request with no answer ends after | [H] | 20 s; 120 s for the slow ones (a Wi-Fi join, an address change, backup, a plugin upload or removal, network shares, a problem report's start); 15 min for a restore. Fixed, not a row |
 
+### Appended 2026-10-13 — the meters' gain
+
+Confirmed by George, 2026-10-13 (*"Yes, add it"*), [ADR-0146](0146-the-meters-follow-the-volume-again-with-a-gain.md):
+
+| Setting | Mark | Notes |
+|---|---|---|
+| Gain (*Visualiser tweaks*) | [N] | −10 to +20 dB in 1 dB steps, default 0 (`meter_gain`). Added to what the needles and the bars show after the volume, in every volume type, Fixed included. Applies at once |
+| How far the meters follow the volume | [H] | The bars the whole cut, the needles half of it (Software and Hardware); Fixed shows the recording. Fixed, not a row |
+
 ## Settled by prior records
 
 - **Output mode switching is not instantaneous.** Confirmation dialogue, and the

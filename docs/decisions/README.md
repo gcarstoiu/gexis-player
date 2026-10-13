@@ -166,6 +166,7 @@ been written properly. **0098 has no record either.**
 | [0143](0143-usb-dacs-widened-to-32-bits-and-lyrion-at-384-khz.md) | USB DACs: widened to 32 bits, and Lyrion at 384 kHz | Accepted 2026-10-12: `type linear` to S32 for 32-bit-only cards; Squeezelite told rates ≤384 kHz |
 | [0144](0144-native-dsd-on-a-dac-that-takes-it.md) | Native DSD on a DAC that takes it | Accepted 2026-10-12: Fixed volume + card reporting DSD → Squeezelite `-D`; peppyalsa skips non-PCM |
 | [0145](0145-multichannel-folded-down-to-stereo.md) | Multichannel files folded down to stereo | Accepted 2026-10-13: our own Squeezelite folds >2 channels down (ITU, LFE out, no clipping) |
+| [0146](0146-the-meters-follow-the-volume-again-with-a-gain.md) | The meters follow the volume visibly, with a gain of their own | Accepted 2026-10-13: bars the whole cut, needles half, Fixed unchanged; published at every start; a Gain row −10..+20 dB |
 
 ## Cross-cutting rules
 
