@@ -49,3 +49,19 @@ with a multichannel file today loses channels without saying so. The other
 sources (Spotify, Bluetooth) are stereo by nature. Multichannel to a receiver
 needs a renderer that outputs more than two channels, and the chain checked
 for it; DSD to a receiver over HDMI is PCM whatever is done.
+
+## Addendum 2026-10-13: folded down on the device (ADR-0145)
+
+sofapi on `gexis-squeezelite` `-2` (core `0.11.0+git29`), output the SMSL USB
+DAC, volume Software; the same generated files streamed through Lyrion:
+
+| File | Squeezelite's log | Card |
+|---|---|---|
+| 5.1 FLAC 24/48 | `downmix: 6 channels folded to stereo (FL FR FC LFE BL BR)` | 2 ch, 48 kHz, running |
+| 5.1 WAV 24/48 | the same, from `pcm_decode` (was "unsupported channels") | 2 ch, 48 kHz, running |
+| 7.1 FLAC 24/96 | `downmix: 8 channels folded to stereo (FL FR FC LFE BL BR SL SR)` | 2 ch, 96 kHz, running |
+| 5.1 DSD64 | `downmix: 6 channels folded to stereo`, from `dsd_decode` | 2 ch PCM, 352.8 kHz, running |
+
+Where each channel lands was measured in the package's decoder tests (299
+checks, upstream against patched, arm64 included), not on the device.
+
