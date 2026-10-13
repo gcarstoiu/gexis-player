@@ -80,7 +80,13 @@ write_labwc_config() {
 	[ -n "${dir}" ] && rm -rf "${dir}" && mkdir -p "${dir}" || return 1
 	cp -R "${source}/." "${dir}/" || return 1
 	sed -i -E "s/mapToOutput=\"[^\"]*\"/mapToOutput=\"${connector}\"/" "${dir}/rc.xml" || return 1
-	if [ "${connector}" != HDMI-A-1 ]; then
+	# Off HDMI-A-1, or with something on the other port too (ADR-0141: a
+	# sound bar on HDMI 2), labwc could open the window on the wrong output.
+	local others=0 status
+	for status in "${GEXIS_DRM:-/sys/class/drm}"/card*-HDMI-A-*/status; do
+		[ "$(cat "${status}" 2>/dev/null)" = connected ] && others=$((others + 1))
+	done
+	if [ "${connector}" != HDMI-A-1 ] || [ "${others}" -gt 1 ]; then
 		sed -i "s|</labwc_config>|  <windowRules>\n    <windowRule identifier=\"*\">\n      <action name=\"MoveToOutput\" output=\"${connector}\"/>\n    </windowRule>\n  </windowRules>\n</labwc_config>|" \
 			"${dir}/rc.xml" || return 1
 	fi
@@ -133,10 +139,17 @@ if [ -r "${BACKGROUND}" ] && command -v swaybg >/dev/null; then
 	# A bar fits the still to its height, as the boot screens now do
 	# (George, 2026-10-04); filling cut the logo. The colour is the still's
 	# own ground, so the sides are seamless.
+	# Only on the screen's own port: any other output - a sound bar or a
+	# receiver on the other HDMI port - is black (ADR-0141 D3, George,
+	# 2026-10-12: nothing to look at, no logo burnt into a TV). swaybg takes
+	# `-o '*'` as every output without one of its own.
+	screen_output=$(screen_connector)
 	if [ "${GEXIS_SCREEN_FAMILY:-standard}" = bar ]; then
-		swaybg --mode fit --color '#101a21' --image "${BACKGROUND}" &
+		swaybg -o '*' --color '#000000' \
+			-o "${screen_output}" --mode fit --color '#101a21' --image "${BACKGROUND}" &
 	else
-		swaybg --mode fill --image "${BACKGROUND}" &
+		swaybg -o '*' --color '#000000' \
+			-o "${screen_output}" --mode fill --image "${BACKGROUND}" &
 	fi
 else
 	echo "gexis-kiosk: no wallpaper (${BACKGROUND}); the handover will be black" >&2

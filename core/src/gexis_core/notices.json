@@ -276,13 +276,13 @@
     {
       "name": "squeezelite",
       "group": "renderer",
-      "role": "Plays what Lyrion Music Server sends.",
+      "role": "Plays what Lyrion Music Server sends. Modified here: a file of more than two channels is folded down to stereo.",
       "author": "Adrian Smith, Ralph Irving and contributors",
-      "licence": "See /usr/share/doc/squeezelite/copyright on the device",
+      "licence": "GPL-3.0-or-later (modified by Gexis Player; the change is in packaging/squeezelite); its dsd2pcm part BSD-2-Clause",
       "url": "https://github.com/ralph-irving/squeezelite",
-      "arrives": "Debian package",
-      "packages": [
-        "squeezelite"
+      "arrives": "Built from the commit Debian packages, with Debian's options and our patch",
+      "sources": [
+        "github.com/ralph-irving/squeezelite"
       ]
     },
     {

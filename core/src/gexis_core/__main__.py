@@ -119,6 +119,7 @@ from gexis_core.volume import (
     hardware_raw_to_renderer_value,
     fixed_output as volume_fixed_output,
     hardware_max,
+    publish_attenuation,
     use_scale,
     set_ceiling_reader,
     set_curve_reader,
@@ -589,7 +590,8 @@ async def main() -> None:
             await _systemctl_reboot()
         asyncio.ensure_future(_board_restart())
 
-    chosen_output = outputs.resolve(settings_store.get("output_device"))
+    # ADR-0141 D5: the jack stands in for an HDMI output with nothing connected.
+    chosen_output, standing_in = outputs.in_force(settings_store.get("output_device"))
     #: ADR-0124: the card as it is, before the software stage takes its place.
     card_output = chosen_output
     if chosen_output is not None and volume_mode(settings_store.get(VOLUME_KEY), chosen_output) == SOFTWARE:
@@ -618,7 +620,8 @@ async def main() -> None:
                 return None
         squeezelite_env_was = _squeezelite_env()
         if outputs.write(chosen_output,
-                         fixed=volume_mode(settings_store.get(VOLUME_KEY), chosen_output) == FIXED):
+                         fixed=volume_mode(settings_store.get(VOLUME_KEY), chosen_output) == FIXED
+                         and not standing_in):
             logger.warning(
                 "outputs: output.conf did not match %s and was rewritten; "
                 "renderers pick it up on their next open",
@@ -810,6 +813,12 @@ async def main() -> None:
         ),
     )
 
+    def _publish_cut(raw: int) -> None:
+        """The dB the device cuts, for the meters (ADR-0057, ADR-0146 §3).
+        Fixed cuts nothing, on every output - a USB DAC without a control
+        of its own included, which writes no level to say so."""
+        publish_attenuation(hardware_max() if volume_fixed_output() else raw)
+
     def publish_volume(raw: int | None = None) -> None:
         """One place builds the published level.
 
@@ -823,6 +832,11 @@ async def main() -> None:
             if volume is None:
                 return
             raw = volume.raw
+        else:
+            # ADR-0146 §3: every level the panel is given, the meters are
+            # given too - the start's, a change of output's, a change of
+            # volume type's - not only the ones the mixer monitor sees.
+            _publish_cut(raw)
         mute.observe(raw)
         state_store.set_volume_raw(raw, muted=mute.muted, percent=remote.percent())
 
@@ -1024,7 +1038,8 @@ async def main() -> None:
     # ADR-0127: an output with no volume control no longer forces fixed
     # output - Software takes Hardware's place there - so Fixed is only
     # ever the user's choice.
-    fixed_wanted = {"value": volume_mode(settings_store.get(VOLUME_KEY), card_output) == FIXED}
+    fixed_wanted = {"value": volume_mode(settings_store.get(VOLUME_KEY), card_output) == FIXED
+                    and not standing_in}
     #: Whether the software stage is in the chain now (ADR-0124).
     software_on = {"value": bool(chosen_output is not None and chosen_output.software)}
     fixed_now = {"value": False}
@@ -1093,9 +1108,12 @@ async def main() -> None:
             # out of the chain, so it already plays at full scale. Writing
             # anyway went to the HAT's control name, which the card does not
             # have, and logged a warning for it.
-            fixed_on = outputs.resolve(settings.value("output_device"))
+            fixed_on = outputs.in_force(settings.value("output_device"))[0]
             if fixed_on is not None and fixed_on.control is None:
                 logger.info("output: fixed - %s has no control of its own; nothing attenuates", fixed_on.label)
+                # Nothing is written, so nothing would tell the meters: the
+                # last cut stayed in force in Fixed (ADR-0146 §3).
+                publish_attenuation(hardware_max())
                 return
             logger.info("output: fixed - DAC to full scale, the panel can no longer lower it")
             # **The control in use now**, not the one the daemon started
@@ -1145,7 +1163,7 @@ async def main() -> None:
         card and libasound's cached configuration are freed
         (`forget_mixers`), so the next write opens the new card's.
         """
-        base = outputs.resolve(settings.value("output_device"))
+        base = outputs.in_force(settings.value("output_device"))[0]
         # The row restricted for this output first: what is in force on it
         # (ADR-0127 §2) decides whether the software stage is in the chain.
         _restrict_output_mode(base)
@@ -1209,7 +1227,7 @@ async def main() -> None:
         # - on every change of output, not only when the row is switched on
         # (George, 2026-10-07: on HDMI the volume stayed the same throughout).
         if chosen.software:
-            await _start_software_volume(outputs.resolve(settings.value("output_device")), settings_store)
+            await _start_software_volume(outputs.in_force(settings.value("output_device"))[0], settings_store)
             raw = await get_raw(outputs.SOFTVOL_CONTROL)
             if raw is not None:
                 # Through `publish_volume`, which keeps the mute it shows.
@@ -1321,7 +1339,7 @@ async def main() -> None:
             db = raw_to_db(raw) if raw is not None else SOFTWARE_LEVEL_FIRST_DB
         # The card as it is now - not as it was at start-up: the output may
         # have changed since.
-        base = outputs.resolve(settings.value("output_device"))
+        base = outputs.in_force(settings.value("output_device"))[0]
         if db is not None:
             if on:
                 settings_store.set(SOFTWARE_LEVEL_KEY, db)
@@ -1348,7 +1366,7 @@ async def main() -> None:
         They restart afterwards, which is also what makes the new file
         mean anything - ALSA reads it when a PCM is opened.
         """
-        chosen = _with_software(outputs.resolve(settings.value("output_device")))
+        chosen = _with_software(outputs.in_force(settings.value("output_device"))[0])
         if chosen is None:
             logger.error("outputs: nothing to write the tuning to")
             return
@@ -1386,8 +1404,17 @@ async def main() -> None:
             logger.info("sweep: %s not started", kind)
         state_store.bump_settings_revision()
 
+    def _fixed_wanted() -> bool:
+        """Fixed, as chosen - except on the jack standing in for an HDMI
+        output (ADR-0141 D5, George, 2026-10-12): Fixed there would be full
+        level into whatever is plugged in, headphones included, so it plays
+        on its own control from the level to come back to, the Starting
+        volume's. The stored choice stays Fixed for when the port is back."""
+        return (settings.value(VOLUME_KEY) == FIXED
+                and not outputs.in_force(settings.value("output_device"))[1])
+
     def _choose_output_mode(value=None) -> None:
-        fixed_wanted["value"] = settings.value(VOLUME_KEY) == FIXED
+        fixed_wanted["value"] = _fixed_wanted()
         asyncio.ensure_future(_apply_output_mode())
 
     volume_change = asyncio.Lock()
@@ -1409,7 +1436,7 @@ async def main() -> None:
             stopped = await supervisor.stop_active()
             if stopped:
                 logger.info("volume: %s stopped for the change of volume type", stopped)
-            fixed_wanted["value"] = settings.value(VOLUME_KEY) == FIXED
+            fixed_wanted["value"] = _fixed_wanted()
             software = settings.value(VOLUME_KEY) == SOFTWARE
             if software != software_on["value"]:
                 # Rewrites the output and restarts the renderers itself.
@@ -1791,12 +1818,44 @@ async def main() -> None:
 
     def _volume_notes() -> dict:
         """The Fixed note, with what it means for DSD on this DAC."""
-        chosen = outputs.resolve(settings_store.get("output_device"))
+        chosen = outputs.in_force(settings_store.get("output_device"))[0]
         if chosen is None or outputs.native_dsd(chosen.card) is None:
             return {}
         row = next((r for g in load_registry() for r in g["rows"] if r.get("key") == VOLUME_KEY), {})
         fixed = (row.get("optionNotes") or {}).get(FIXED, "")
         return {FIXED: f"{fixed} DSD files play natively on {chosen.label}.".strip()}
+
+    def _standin_note() -> str | None:
+        """The Output row's note while the jack stands in; None otherwise."""
+        stored = outputs.resolve(settings_store.get("output_device"))
+        if stored is None or not outputs.in_force(settings_store.get("output_device"))[1]:
+            return None
+        return (f"{stored.label} has nothing connected, so the headphone jack plays until it is back. "
+                "While it stands in, its volume is its own, not Fixed.")
+
+    async def _watch_standin(every: float = 3.0) -> None:
+        """**ADR-0141 D5: the jack in when an HDMI output goes, out when it
+        comes back.** A receiver switched off drops its port; the output is
+        switched to the jack, and back by itself when the port returns -
+        each a change of output, which stops whoever plays."""
+        last = None
+        while True:
+            await asyncio.sleep(every)
+            try:
+                out, standing = await asyncio.to_thread(outputs.in_force, settings_store.get("output_device"))
+            except Exception:  # noqa: BLE001 - a watch must not die quietly
+                logger.exception("outputs: cannot tell the output in force")
+                continue
+            now = (out.card if out else None, standing)
+            if last is None:
+                last = now
+                continue
+            if now != last:
+                last = now
+                logger.info("outputs: %s", "the HDMI output has nothing connected; the jack stands in"
+                            if standing else "the HDMI output is back; switching to it")
+                state_store.bump_settings_revision()
+                await _switch_output()
 
     def _all_components() -> dict:
         status = components.all_status()
@@ -2154,6 +2213,56 @@ async def main() -> None:
             await _systemctl_reboot()
         asyncio.ensure_future(_restart())
 
+    def _port_label(connector: str | None) -> str:
+        """`HDMI-A-2` as Settings says it: *HDMI 2*."""
+        return f"HDMI {(connector or screen_apply.CONNECTOR).rsplit('-', 1)[-1]}"
+
+    def _port_line(connector: str) -> str:
+        """**What is on one HDMI port** (ADR-0141 D4; George, 2026-10-12:
+        *"Shouldn't we have two entries, similar to audio output?"*): the
+        screen by its model, anything else by the name it gives, and the
+        port's sound when the output is that port."""
+        port = next((p for p in screen_detect.ports() if p.connector == connector), None)
+        if port is None or not port.connected:
+            return "Nothing connected"
+        parts = []
+        if not settings.value("headless") and screen_detect.seen().connector == connector:
+            current = screen_apply.read_state().get("current")
+            model = screens.by_id(current.get("screen") or "") if isinstance(current, dict) else None
+            parts.append(f"{model.maker} {model.model}" if model else "The screen")
+        else:
+            parts.append(port.edid_name or port.edid_maker or "Connected")
+        if alsa.card() == outputs.CARD_FOR_CONNECTOR.get(connector):
+            parts.append("sound")
+        return " · ".join(parts)
+
+    def _choose_screen_port(label: str) -> None:
+        """**ADR-0141 D2: the screen's port, when both have something on
+        them.** The same screen, applied on the other port - which, as any
+        change of picture, restarts and asks Keep. The stored choice goes:
+        the row shows the port in use, cable moves included."""
+        settings_store.delete("screen_port")
+        connector = f"HDMI-A-{label.rsplit(' ', 1)[-1]}"
+        current = screen_apply.read_state().get("current")
+        if not isinstance(current, dict) or screens.by_id(current.get("screen") or "") is None:
+            logger.warning("screen: no screen applied to move to %s", connector)
+            return
+        was = screen_apply.Applied.of(current)
+        if was.connector == connector:
+            return
+        in_setup = _setup_running(state_store.state.setup)
+        applied = screen_apply.Applied(was.screen_id, was.rotation, connector)
+        asks = screen_apply.choose(applied, after_setup=in_setup)
+        logger.info("screen: %s moved from %s to %s by choice; %s", was.screen_id, was.connector, connector,
+                    "it waits for Keep on the panel" if asks else "the picture is unchanged, so it is kept")
+        if in_setup:
+            return
+
+        async def _restart() -> None:
+            await asyncio.sleep(2.0)
+            await _systemctl_reboot()
+        asyncio.ensure_future(_restart())
+
     def _reports_note(key: str, reported: str | None) -> str | None:
         """ADR-0126 decision 5: the row's own note, then what owners
         reported; None leaves the note as it is."""
@@ -2168,11 +2277,21 @@ async def main() -> None:
     wifi_address = wired.Cable(device="wlan0", on_change=lambda _pending: state_store.bump_settings_revision())
     settings = Settings(
         settings_store,
-        shown={"cable": cable.shown},
+        shown={"cable": cable.shown,
+               # ADR-0141 D2: a choice only while both ports have something on them.
+               "screen_port": lambda: not settings_store.get("headless")
+               and len(screen_detect.ports()) >= 2,
+               "screen_port_info": lambda: not settings_store.get("headless")
+               and len(screen_detect.ports()) == 1},
         registry=Settings.with_plugins(load_registry(), installed_plugins, downloads,
                                        missing=restored_missing),
         defaults={
             "lms_server": lambda: f"{config.lms_host}:{config.lms_port}",
+            # ADR-0141 D4: both HDMI ports, read when Settings is.
+            "screen_port": lambda: _port_label(screen_apply.connector_now()),
+            # A board with one HDMI port: what is on it, as information.
+            "screen_port_info": lambda: next((f"{_port_label(p.connector)} · {_port_line(p.connector)}"
+                                              for p in screen_detect.ports()), None),
             "lms_player": lambda: lms_player_name,
             "idle_url": lambda: config.idle_url or None,
             "device_name": device_name.hostname,
@@ -2234,7 +2353,11 @@ async def main() -> None:
         # offered - greyed, with why (ADR-0044's `unavailable`), and a stored
         # one falls back to the first type that has some.
         restrictions={"skin_corpus": lambda: (lambda at: skins.unavailable_corpora(at[0], resolution=at[1])
-                                              if at else {})(skins_at())},
+                                              if at else {})(skins_at()),
+                      # ADR-0141 D2: a port with nothing on it cannot take the
+                      # screen - greyed, with why, in the picker.
+                      "screen_port": lambda: {_port_label(p.connector): "Nothing connected"
+                                              for p in screen_detect.ports() if not p.connected}},
         options={
             "skin_corpus": skins_offered,
             # ADR-0055 §1: discovered, not written down. Re-read on every
@@ -2247,10 +2370,16 @@ async def main() -> None:
         option_notes={"output_device": lambda: {o.option: o.details for o in outputs.discover() if o.details},
                       # ADR-0144: on a DAC that takes DSD, Fixed is what plays
                       # it natively - said where the choice is made.
-                      VOLUME_KEY: lambda: _volume_notes()},
+                      VOLUME_KEY: lambda: _volume_notes(),
+                      # ADR-0141 D4 (George, 2026-10-12: one tile, what is on
+                      # each port beside its choice in the picker).
+                      "screen_port": lambda: {_port_label(p.connector): _port_line(p.connector)
+                                              for p in screen_detect.ports()}},
         # The Release row's note: what the waiting or just-installed release
         # says changed (2026-10-01, George).
         notes={"software_update": updates.whats_new,
+               # ADR-0141 D5: why the jack is playing.
+               "output_device": lambda: _standin_note(),
                "cable": cable.note,
                "sound_card_board": lambda: board_apply.note() or _reports_note(
                    "sound_card_board", hardware_report.board_reports(
@@ -2377,6 +2506,11 @@ async def main() -> None:
                "spectrum_smoothing": _apply_scope_tuning,
                "meter_fall": _apply_scope_tuning,
                "meter_smoothing": _apply_meter_smoothing,
+               # ADR-0146: read by the meter service from the file, at once.
+               "meter_follow": lambda value: meters.publish_needle_follow(
+                   value if value is not None else settings.value("meter_follow")),
+               "meter_gain": lambda value: meters.publish_gain(
+                   value if value is not None else (settings.value("meter_gain") or 0)),
                "home_strip": None, "home_strip_count": None,
                "idle_clock": None,
                # George, 2026-09-28: read by the idle screen, asked in setup.
@@ -2411,6 +2545,7 @@ async def main() -> None:
                "screen": lambda value: _choose_screen(label=value),
                "sound_card_board": lambda value: _choose_board(value),
                "rotation": lambda value: _choose_screen(rotation=value),
+               "screen_port": _choose_screen_port,
                # **ADR-0083.** A backup that stays on the device does not
                # survive the event it exists for, so this writes into a share
                # of its own. `restore` is the other half and is a `list` row -
@@ -3722,6 +3857,13 @@ async def main() -> None:
     initial_raw = await get_raw(config.mixer_name)
     if initial_raw is not None:
         state_store.set_volume_raw(initial_raw)
+    # ADR-0146 §3: `/run` is empty after a boot, and the meters showed the
+    # recording at full level until something moved the volume.
+    if initial_raw is not None or volume_fixed_output():
+        _publish_cut(initial_raw if initial_raw is not None else hardware_max())
+    # ADR-0146 §4-5: the Gain row and the Needles row, for the meter service.
+    meters.publish_gain(settings.value("meter_gain") or 0)
+    meters.publish_needle_follow(settings.value("meter_follow"))
 
     if True:
         # ADR-0124: the software level kept across restarts - ALSA makes its
@@ -3971,6 +4113,8 @@ async def main() -> None:
         ),
         volume_bridge.run(),
         bluetooth_volume.run(),
+        # ADR-0141 D5: the jack for an HDMI output with nothing connected.
+        _watch_standin(),
         *(bridge.run() for bridge in dummy_mixer_bridges.values()),
         peppy.run(),
         # The `wifi` row's value, kept current from here rather than read on

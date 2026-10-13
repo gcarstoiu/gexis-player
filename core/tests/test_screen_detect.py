@@ -90,3 +90,53 @@ def test_the_screen_already_on_shows_as_one_that_changes_nothing():
     now = screen_apply.picture_of(screen_apply.Applied(bar.id, 0))
     page = setup_flow.screen_choices(report, 0, now=now)
     assert bar.id in page["unchanged"] and standard.id not in page["unchanged"]
+
+
+# --- ADR-0141 D2/D4: both ports ----------------------------------------------
+
+def _receiver_edid():
+    """Another device's EDID: the panel's, its maker and size changed."""
+    other = bytearray(EDID)
+    other[8], other[9] = 0x4C, 0x2D          # PNP "SAM"
+    other[56] = 1920 & 0xFF
+    other[58] = (other[58] & 0x0F) | ((1920 >> 8) << 4)
+    return bytes(other)
+
+
+def two_ports(tmp_path, one, two):
+    """HDMI-A-1 and HDMI-A-2, each `None` (nothing) or an EDID."""
+    for name, edid in (("card0-HDMI-A-1", one), ("card0-HDMI-A-2", two)):
+        d = tmp_path / "drm" / name
+        d.mkdir(parents=True)
+        (d / "status").write_text("connected\n" if edid else "disconnected\n")
+        (d / "edid").write_bytes(edid or b"")
+    u = tmp_path / "usb" / "1-0"
+    u.mkdir(parents=True)
+    (u / "idVendor").write_text("0712\n"); (u / "idProduct").write_text("0010\n")
+    return tmp_path / "drm", tmp_path / "usb"
+
+
+def test_every_port_is_listed_connected_or_not(tmp_path):
+    drm, usb = two_ports(tmp_path, EDID, None)
+    ports = screen_detect.ports(drm, usb)
+    assert [(p.connector, p.connected) for p in ports] == [("HDMI-A-1", True), ("HDMI-A-2", False)]
+    assert ports[0].edid_name == "WaveShare"
+
+
+def test_with_both_ports_the_known_panel_is_the_screen_not_the_first_port(tmp_path):
+    """A sound bar on HDMI 1 and the panel on HDMI 2: the panel."""
+    drm, usb = two_ports(tmp_path, _receiver_edid(), EDID)
+    assert screen_detect.seen(drm, usb, prefer=None).connector == "HDMI-A-2"
+
+
+def test_with_both_ports_the_applied_port_holds_when_no_panel_is_known(tmp_path):
+    """Two unlisted screens: the one chosen stays the screen across starts."""
+    drm, usb = two_ports(tmp_path, _receiver_edid(), _receiver_edid())
+    assert screen_detect.seen(drm, usb, prefer="HDMI-A-2").connector == "HDMI-A-2"
+    assert screen_detect.seen(drm, usb, prefer=None).connector == "HDMI-A-1"
+
+
+def test_a_panel_moved_away_from_the_applied_port_is_followed(tmp_path):
+    """Applied on HDMI-A-1, now a receiver there and the panel on HDMI-A-2."""
+    drm, usb = two_ports(tmp_path, _receiver_edid(), EDID)
+    assert screen_detect.seen(drm, usb, prefer="HDMI-A-1").connector == "HDMI-A-2"

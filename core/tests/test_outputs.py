@@ -718,3 +718,23 @@ def test_write_turns_dsd_on_only_when_fixed(monkeypatch, tmp_path):
     assert seen == {"dsd": False}
     outputs.write(outputs.with_software_volume(out), tmp_path / "output.conf", fixed=True)
     assert seen == {"dsd": False}, "never through the software stage"
+
+
+# --- ADR-0141 D5: the jack stands in for an HDMI output with nothing on it ----
+
+def _outs(hdmi2_connected):
+    return [outputs.Output(card="vc4hdmi0", label="HDMI 1", control=None),
+            outputs.Output(card="vc4hdmi1", label="HDMI 2", control=None, connected=hdmi2_connected),
+            outputs.Output(card="Headphones", label="Headphones (3.5 mm)", control="PCM")]
+
+
+def test_an_hdmi_output_with_nothing_connected_is_played_through_the_jack():
+    out, standing = outputs.in_force("HDMI 2", _outs(False))
+    assert out.card == "Headphones" and standing is True
+
+
+def test_the_hdmi_output_plays_again_once_connected_and_others_are_untouched():
+    out, standing = outputs.in_force("HDMI 2", _outs(True))
+    assert out.card == "vc4hdmi1" and standing is False
+    out, standing = outputs.in_force("Headphones (3.5 mm)", _outs(False))
+    assert out.card == "Headphones" and standing is False

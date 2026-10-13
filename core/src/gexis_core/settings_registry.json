@@ -390,6 +390,27 @@
         "default": "0°"
       },
       {
+        "key": "screen_port",
+        "type": "choice",
+        "label": "Screen port",
+        "marks": "N",
+        "note": "Which HDMI port the screen is on, and what is on each.",
+        "warn": "Changing it restarts the player with the screen on that port and asks Keep this screen? on the panel. If nobody touches Keep within 2 minutes, it goes back.",
+        "options": [
+          "HDMI 1",
+          "HDMI 2"
+        ],
+        "default": null
+      },
+      {
+        "key": "screen_port_info",
+        "type": "readonly",
+        "label": "Screen port",
+        "marks": "N",
+        "note": null,
+        "default": null
+      },
+      {
         "key": "theme",
         "type": "choice",
         "label": "Theme",
@@ -1281,6 +1302,30 @@
         "note": "Recommended: 240 ms. How long a stretch of the music each needle is averaged over. Short twitches with every beat, long is a real VU movement and arrives late. Rounded to the nearest 40 ms, which is how often the meter reads its level. The visualiser restarts to apply it.",
         "default": 240,
         "warn": "Changing this restarts the visualiser."
+      },
+      {
+        "key": "meter_follow",
+        "type": "choice",
+        "label": "Needles follow the volume",
+        "marks": "N",
+        "note": "With Volume on Software or Hardware, the bars fall by the whole drop in volume. Half the drop keeps the needles moving when listening low; Like a real amplifier makes them follow it all, so they sit near the bottom of the dial from about 40% volume down. On Fixed both show the recording.",
+        "options": [
+          "Half the drop",
+          "Like a real amplifier"
+        ],
+        "default": "Half the drop"
+      },
+      {
+        "key": "meter_gain",
+        "type": "number",
+        "label": "Gain",
+        "marks": "N",
+        "min": -10,
+        "max": 20,
+        "step": 1,
+        "unit": "dB",
+        "note": "Recommended: 0 dB. Raises or lowers the needles and the bars together, on top of the volume: +6 dB doubles a needle’s reading and raises each bar by 6 of its 100 steps. Use it for a quiet recording or when listening low; a negative value calms a loud one. Applies at once.",
+        "default": 0
       },
       {
         "key": "skin_motion",

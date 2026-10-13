@@ -105,18 +105,60 @@ def usb_devices(root: Path = USB) -> tuple[str, ...]:
     return tuple(out)
 
 
-def seen(drm: Path = DRM, usb: Path = USB) -> Seen:
-    """The first connected HDMI connector's report, and the USB devices."""
+def ports(drm: Path = DRM, usb: Path = USB) -> list[Seen]:
+    """**Every HDMI port, connected or not** (ADR-0141 D4; George,
+    2026-10-12: *"for video we don't even show the second hdmi port"*), in
+    connector order, each with what is plugged into it."""
+    devices = usb_devices(usb)
+    out = []
     for connector in sorted(drm.glob("card*-HDMI-A-*")):
+        name = connector.name.split("-", 1)[1]
         try:
-            if (connector / "status").read_text().strip() != "connected":
-                continue
-            data = (connector / "edid").read_bytes()
+            connected = (connector / "status").read_text().strip() == "connected"
+            data = (connector / "edid").read_bytes() if connected else b""
         except OSError:
+            connected, data = False, b""
+        if not connected:
+            out.append(Seen(False, name, usb=devices))
             continue
-        maker, name, preferred = parse_edid(data)
-        return Seen(True, connector.name.split("-", 1)[1], maker, name, preferred, usb_devices(usb))
-    return Seen(usb=usb_devices(usb))
+        maker, edid_name, preferred = parse_edid(data)
+        out.append(Seen(True, name, maker, edid_name, preferred, devices))
+    return out
+
+
+def _applied_connector() -> str | None:
+    """The port the screen was last applied on, from screen.json."""
+    from . import screen_apply
+    current = screen_apply.read_state().get("current")
+    return current.get("connector") if isinstance(current, dict) else None
+
+
+def seen(drm: Path = DRM, usb: Path = USB, prefer: str | None = "applied") -> Seen:
+    """**The screen's port**, and the USB devices. With one port connected,
+    that one. With both (ADR-0141 D2: a panel on one, a sound bar on the
+    other), in this order: the port the screen was applied on, if a known
+    panel is there; any port a known panel is on (a panel moved to HDMI 2
+    with a receiver now on HDMI 1); the port applied on, if anything is
+    there; else the first connected. Until 2026-10-12 it was always the
+    first connected, so a chosen second port could not hold. `prefer` is a
+    connector, or "applied" for screen.json's."""
+    connected = [p for p in ports(drm, usb) if p.connected]
+    if not connected:
+        return Seen(usb=usb_devices(usb))
+    if len(connected) == 1:
+        return connected[0]
+    if prefer == "applied":
+        try:
+            prefer = _applied_connector()
+        except OSError:
+            prefer = None
+    known = [p for p in connected if suggest(p) is not None]
+    chosen = next((p for p in connected if p.connector == prefer), None)
+    if chosen is not None and chosen in known:
+        return chosen
+    if known:
+        return known[0]
+    return chosen or connected[0]
 
 
 def suggest(report: Seen) -> screens.Screen | None:

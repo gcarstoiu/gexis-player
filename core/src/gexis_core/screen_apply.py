@@ -286,6 +286,25 @@ def refresh(*, state: Path = STATE, env: Path = SCREEN_ENV, cmdline: Path = CMDL
     return write_files(Applied.of(current), env=env, cmdline=cmdline)
 
 
+def confirm_provisional(label: str, *, state: Path = STATE) -> bool:
+    """**Setup's Screen step keeps the screen setup applied** (ADR-0109 as
+    amended 2026-10-07). Choosing the very screen applied provisionally
+    changes no setting, so nothing reached `choose` and the flag stayed: the
+    bar, found 2026-10-12, still provisional long after setup - and with it
+    the setup network's fixed password (decision 5). True when it cleared
+    the flag; a different screen goes through `choose`, which clears it."""
+    data = read_state(state)
+    current = data.get("current")
+    if not data.get("provisional") or not isinstance(current, dict):
+        return False
+    model = screens.by_id(current.get("screen") or "")
+    if model is None or model.label != label:
+        return False
+    data.pop("provisional", None)
+    write_state(data, state)
+    return True
+
+
 def keep(*, state: Path = STATE) -> None:
     data = read_state(state)
     if data.get("pending"):

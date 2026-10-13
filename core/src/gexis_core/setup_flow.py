@@ -306,6 +306,15 @@ class SetupFlow:
                 # One setting refusing must not strand the device on the setup
                 # network; it is reported and the rest go on.
                 logger.warning("setup: %s not set: %s", key, exc)
+        # ADR-0109 as amended 2026-10-07: the Screen step confirms setup's
+        # screen. Choosing the one already applied changes no setting above,
+        # so it is kept here, or it stays provisional (found 2026-10-12).
+        if data.get("screen") and not data.get("headless"):
+            try:
+                if screen_apply.confirm_provisional(data["screen"]):
+                    logger.info("setup: the screen applied for setup is kept")
+            except OSError as exc:
+                logger.warning("setup: cannot keep the screen: %s", exc)
         country = setup_network.country_for(data.get("timezone"))
         if country:
             await self._set_country(country)

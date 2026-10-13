@@ -65,3 +65,17 @@ def test_the_service_starts_labwc_through_the_script():
     script = SCRIPT.read_text()
     assert 'exec labwc -C "${config}" -s "$0"' in script
     assert 'exec labwc -s "$0"' in script, "a configuration not written still starts the panel"
+
+
+def test_with_both_ports_connected_the_window_is_pinned_to_the_screen_on_the_first(tmp_path):
+    """ADR-0141: a sound bar on HDMI 2 could take the window otherwise."""
+    rc = _write(tmp_path, "HDMI-A-1", connected=("HDMI-A-1", "HDMI-A-2"))
+    assert '<action name="MoveToOutput" output="HDMI-A-1"/>' in rc
+
+
+def test_any_output_but_the_screens_is_black():
+    """ADR-0141 D3 (George, 2026-10-12): a sound-only port shows black, not
+    the boot logo stretched onto a TV."""
+    script = SCRIPT.read_text()
+    assert script.count("swaybg -o '*' --color '#000000'") == 2
+    assert '-o "${screen_output}"' in script and "screen_output=$(screen_connector)" in script

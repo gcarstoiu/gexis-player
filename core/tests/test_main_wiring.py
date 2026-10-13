@@ -280,3 +280,31 @@ def test_the_fixed_note_says_dsd_plays_natively_only_where_the_dac_takes_it():
     assert "outputs.native_dsd(chosen.card) is None" in notes and "return {}" in notes
     assert "DSD files play natively" in notes
     assert "VOLUME_KEY: lambda: _volume_notes()" in MAIN.read_text()
+
+
+def test_the_screen_port_choice_moves_the_screen_and_forgets_itself():
+    """ADR-0141 D2: shown only with both ports connected; choosing applies the
+    same screen on the other port (Keep, restart), and the stored value goes
+    so the row shows the port in use."""
+    body = _closure("_choose_screen_port")
+    assert "settings_store.delete('screen_port')" in body
+    assert "screen_apply.Applied(was.screen_id, was.rotation, connector)" in body
+    assert "screen_apply.choose(applied" in body and "_systemctl_reboot()" in body
+    source = MAIN.read_text()
+    assert '"screen_port": lambda: not settings_store.get("headless")' in source
+    # One tile (George, 2026-10-12): what is on each port beside its choice,
+    # an empty port greyed, and information only on a one-port board.
+    assert '"screen_port": lambda: {_port_label(p.connector): _port_line(p.connector)' in source
+    assert '"Nothing connected"' in source and '"screen_port_info": lambda: not settings_store.get("headless")' in source
+
+
+def test_the_jack_stands_in_and_is_never_fixed_while_it_does():
+    """ADR-0141 D5 (George, 2026-10-12): fall back to the jack, back by itself,
+    and the jack on its own control - Fixed would be full level into
+    headphones."""
+    source = MAIN.read_text()
+    assert "_watch_standin()," in source
+    assert "outputs.resolve(settings.value(\"output_device\"))" not in source, "every lookup goes through in_force"
+    fixed = _closure("_fixed_wanted")
+    assert "not outputs.in_force(settings.value('output_device'))[1]" in fixed
+    assert "await _switch_output()" in _closure("_watch_standin")

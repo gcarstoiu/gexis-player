@@ -10,11 +10,12 @@
 # /tmp/peppyalsa as the stage does, because that path is recorded in the
 # library's debug information.
 #
-# **PATCHED**: this is not upstream peppyalsa. Two patches, in this order,
+# **PATCHED**: this is not upstream peppyalsa. Three patches, in this order,
 # from image/stage-gexis/00-alsa/files/: Finding 052's one write per spectrum
 # frame (peppyalsa-one-write-per-frame.patch), then ADR-0130's bands - 50 Hz
-# to 16 kHz at every rate, an FFT sized to the rate, a lift above 1 kHz
-# (peppyalsa-spectrum-bands.patch). The version says so with its
+# to 16 kHz at every rate, an FFT sized to the rate, each band's level its
+# energy (peppyalsa-spectrum-bands.patch), then ADR-0144's skip of a stream
+# that is not PCM (peppyalsa-skip-non-pcm.patch). The version says so with its
 # "+git<commit>" and the Description names each patch by sha256.
 set -eu
 
@@ -39,8 +40,9 @@ DSD_PATCH=/src/image/stage-gexis/00-alsa/files/peppyalsa-skip-non-pcm.patch
 DSD_SHA256=$(sha256sum "$DSD_PATCH" | cut -d' ' -f1)
 SHORT=$(printf '%s' "$COMMIT" | cut -c1-7)
 # The revision is ours: raised with every change to the patches (-2: the
-# bands, ADR-0130), or apt keeps the old library (LESSONS 53).
-VERSION="${UPSTREAM}+git${COMMIT_DATE}.${SHORT}-4"
+# bands, ADR-0130; -5: band energy, no lift, ADR-0130 as amended), or apt
+# keeps the old library (LESSONS 53).
+VERSION="${UPSTREAM}+git${COMMIT_DATE}.${SHORT}-5"
 # Staged where dpkg-shlibdeps expects a package's files: debian/<package>.
 STAGE=/tmp/pkg/debian/gexis-peppyalsa
 
