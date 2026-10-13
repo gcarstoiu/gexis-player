@@ -324,7 +324,9 @@ while the sound card is reopened.
 **Do the needles and bars follow the volume?**
 Yes, with *Volume type* on *Software* or *Hardware*: they show what comes
 out, so they fall as the volume comes down - the bars by the whole drop, the
-needles by half of it, so they still move when listening low. On *Fixed* the
+needles by half of it, so they still move when listening low. *Needles
+follow the volume* set to *Like a real amplifier* makes the needles follow
+all of it, as an amplifier's meters do. On *Fixed* the
 player does not change the level, so they show the recording. *Gain* under
 *Settings → Display → Visualiser → Visualiser tweaks* raises or lowers both,
 from −10 to +20 dB, for a quiet recording or a low listening level.

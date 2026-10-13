@@ -545,7 +545,9 @@ flowchart LR
   attenuator, so the service reads the attenuation the core publishes
   (`/run/gexis/attenuation`) and lowers the bars by all of it and the
   needles by half (`BAR_VOLUME_TRACKING`, `NEEDLE_VOLUME_TRACKING`,
-  ADR-0146): the volume's 60 dB would put a needle on its stop by 40 %. The
+  ADR-0146): the volume's 60 dB would put a needle on its stop by 40 %.
+  *Needles follow the volume* set to *Like a real amplifier* makes the
+  needles follow all of it (`/run/gexis/meter-follow`, 0.50 or 1.00). The
   core publishes it at start, with every level it gives the panel, and as 0
   in Fixed on every output. The *Gain* row is added to both after that
   (`meters.publish_gain` writes `/run/gexis/meter-gain`; −10 to +20 dB,
@@ -559,8 +561,8 @@ flowchart LR
   it keeps the last whole frame of what is waiting, so a change of count
   cannot put it out of step.
 - **Movement is configurable**: needle fall time, needle smoothing and
-  spectrum smoothing are settings (ADR-0058); *Gain* (ADR-0146) is the
-  fourth row under the same group. The first two regenerate
+  spectrum smoothing are settings (ADR-0058); *Needles follow the volume*
+  and *Gain* (ADR-0146) are under the same group. The first two regenerate
   `output.conf`'s peppyalsa section; needle smoothing is PeppyMeter's own
   config and needs `gexis-peppy` restarted.
 - **The Peppy screen is a native process**, not a browser page (ADR-0026).
