@@ -73,11 +73,24 @@ CUT_SHORT_HOW = "cut-short"
 
 def leave_for_the_boot(left: dict) -> None:
     """pending-check.json, written beside and renamed: a boot must never
-    find half of it."""
+    find half of it.
+
+    **On the card before dpkg starts** (George's power-cut test on the bar,
+    2026-10-13): without an fsync the rename reached the disk and the data
+    did not, and the boot found an empty file. The file, then the folder
+    holding the new name."""
     STATE.mkdir(parents=True, exist_ok=True)
     tmp = STATE / "pending-check.json.tmp"
-    tmp.write_text(json.dumps(left))
+    with tmp.open("w") as f:
+        f.write(json.dumps(left))
+        f.flush()
+        os.fsync(f.fileno())
     tmp.replace(pending())
+    folder = os.open(STATE, os.O_RDONLY)
+    try:
+        os.fsync(folder)
+    finally:
+        os.close(folder)
 
 
 INHIBIT = ["systemd-inhibit", "--what=shutdown:sleep", "--who=gexis-update", "--mode=block"]
@@ -338,6 +351,69 @@ def interrupted() -> tuple[bool, list[str]]:
             if name not in broken:
                 broken.append(name)
     return journal, broken
+
+
+DPKG_LOCK = Path("/var/lib/dpkg/lock-frontend")
+
+
+def dpkg_busy() -> bool:
+    """Whether apt or dpkg holds the lock now: an install running is not one
+    that was cut short."""
+    try:
+        fd = os.open(DPKG_LOCK, os.O_RDWR)
+    except OSError:
+        return False
+    try:
+        fcntl.lockf(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        return True
+    else:
+        fcntl.lockf(fd, fcntl.LOCK_UN)
+        return False
+    finally:
+        os.close(fd)
+
+
+def finish_cut_short() -> bool:
+    """**An install cut short with no note left for the boot is finished
+    anyway** (George's power-cut test on the bar, 2026-10-13). The note was
+    an empty file; `postboot` read nothing and did nothing, and every check
+    after compared `gexis-player`'s version - already the new release's,
+    unpacked - and said "current", so nothing ever reached `heal`.
+
+    dpkg's own record is the evidence: when it says an install was cut
+    short, the release being installed is the `gexis-player` it unpacked.
+    It is finished from that release's own repositories and checked, and the
+    device restarts so every service runs what is now installed; the boot's
+    `postboot` checks it from the note left here. True when it did this
+    (the device is restarting), False when there was nothing to finish."""
+    if dpkg_busy():
+        return False
+    journal, broken = interrupted()
+    if not journal and not broken:
+        return False
+    target = installed("gexis-player")
+    if not target:
+        raise Stop(CUT_SHORT)
+    print(f"an install of {target} was cut short ({', '.join(broken) or 'dpkg journal'}) "
+          "with no note of it; finishing it", flush=True)
+    report("checking-device", release=target, message="finishing the install that was cut short")
+    repos, pins = parts_of(target)
+    opts = apt_env(repos)
+    if apt(opts, "update").returncode:
+        raise Stop(CUT_SHORT)
+    heal(opts)
+    journal, broken = interrupted()
+    if journal or broken:
+        raise Stop(CUT_SHORT)
+    verify(target)
+    about = dict(channel=channel_name(None), release=target, previous=target)
+    leave_for_the_boot({"about": about, "channel": about["channel"], "target": target, "current": target,
+                        "repos": repos, "back_repos": repos, "back_pins": pins, "backup": None,
+                        "changes": [], "how": "reboot"})
+    report("restarting", **about, reboot=True, message="restarting the device")
+    run("systemctl", "reboot", check=False)
+    return True
 
 
 def heal(opts: list[str]) -> None:
@@ -678,6 +754,10 @@ def release_history(target: str, current: str | None) -> list[dict] | None:
 
 
 def check(args) -> tuple[str, dict] | None:
+    # Before anything is compared: a release dpkg was cut short installing
+    # reads as "current" by its version alone.
+    if finish_cut_short():
+        return None
     channel = channel_name(args.channel)
     report("checking", channel=channel, message=f"reading the {channel} channel")
     ch = read_channel(channel)
@@ -946,6 +1026,9 @@ def postboot(args) -> int:
     try:
         left = json.loads(pending().read_text())
     except (OSError, ValueError):
+        # No note, or one the power cut emptied: dpkg's own record decides.
+        pending().unlink(missing_ok=True)
+        finish_cut_short()
         return 0
     pending().unlink(missing_ok=True)
     about, target, current = left["about"], left["target"], left["current"]

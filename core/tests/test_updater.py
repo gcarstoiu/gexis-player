@@ -1050,3 +1050,68 @@ def test_the_backup_before_an_update_is_asked_for_as_one(up, monkeypatch, tmp_pa
     monkeypatch.setattr(up.urllib.request, "urlopen", core)
     assert up.back_up() == "gexis-den.before-update-20261012-101500.tgz"
     assert asked == [(f"{up.CORE}/settings/backup?before=update", "POST")]
+
+
+# --- George's power-cut test on the bar, 2026-10-13 --------------------------
+
+def test_the_note_for_the_boot_is_on_the_card_before_dpkg_starts(up, monkeypatch):
+    """The bar's note was an empty file after the power cut: renamed, never
+    synced. The file and the folder are synced now."""
+    synced = []
+    real = up.os.fsync
+    monkeypatch.setattr(up.os, "fsync", lambda fd: synced.append(fd) or real(fd))
+    up.leave_for_the_boot({"target": "2"})
+    assert len(synced) == 2
+    assert json.loads(up.pending().read_text()) == {"target": "2"}
+
+
+def _cut_short_no_note(up, monkeypatch, busy=False):
+    """dpkg says an install was cut short; whatever note there was is gone."""
+    states = [(True, ["gexis-core"]), (False, [])]
+    reports, healed, ran = [], [], []
+    monkeypatch.setattr(up, "dpkg_busy", lambda: busy)
+    monkeypatch.setattr(up, "interrupted", lambda: states.pop(0) if len(states) > 1 else states[0])
+    monkeypatch.setattr(up, "installed", lambda p: "0.12.0" if p == "gexis-player" else None)
+    monkeypatch.setattr(up, "parts_of", lambda v: (["ours-x"], ["ours-x"]))
+    monkeypatch.setattr(up, "apt_env", lambda repos, pins=None: ["-o", "x"])
+    monkeypatch.setattr(up, "apt", lambda opts, *a, **k: subprocess.CompletedProcess(a, 0, "", ""))
+    monkeypatch.setattr(up, "heal", lambda opts: healed.append(opts))
+    monkeypatch.setattr(up, "verify", lambda v: None)
+    monkeypatch.setattr(up, "channel_name", lambda given: given or "testing")
+    monkeypatch.setattr(up, "run", lambda *a, check=True, **k: ran.append(list(a)) or subprocess.CompletedProcess(a, 0, "", ""))
+    monkeypatch.setattr(up, "report", lambda state, **f: reports.append((state, f.get("message"))))
+    return reports, healed, ran
+
+
+def test_a_boot_with_an_emptied_note_still_finishes_the_install(up, monkeypatch):
+    reports, healed, ran = _cut_short_no_note(up, monkeypatch)
+    up.STATE.mkdir(parents=True, exist_ok=True)
+    up.pending().write_text("")
+    assert up.postboot(None) == 0
+    assert healed == [["-o", "x"]], "finished from the half-installed release's own repositories"
+    assert ["systemctl", "reboot"] in ran
+    left = json.loads(up.pending().read_text())
+    assert left["target"] == "0.12.0" and left["how"] == "reboot", "the next boot checks it"
+
+
+def test_a_check_after_a_cut_short_install_does_not_call_it_current(up, monkeypatch):
+    """The bar: "0.12.0 is testing's release" with gexis-core half-installed."""
+    reports, healed, ran = _cut_short_no_note(up, monkeypatch)
+    assert up.check(None) is None
+    assert healed and ["systemctl", "reboot"] in ran
+    assert "current" not in [state for state, _ in reports]
+
+
+def test_an_install_running_now_is_not_taken_for_one_cut_short(up, monkeypatch):
+    reports, healed, ran = _cut_short_no_note(up, monkeypatch, busy=True)
+    assert up.finish_cut_short() is False
+    assert healed == [] and ran == []
+
+
+def test_one_that_cannot_be_finished_says_so(up, monkeypatch):
+    reports, healed, ran = _cut_short_no_note(up, monkeypatch)
+    monkeypatch.setattr(up, "interrupted", lambda: (True, ["gexis-core"]))
+    with pytest.raises(up.Stop) as stop:
+        up.finish_cut_short()
+    assert str(stop.value) == up.CUT_SHORT
+    assert ["systemctl", "reboot"] not in ran
