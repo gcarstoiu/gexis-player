@@ -102,6 +102,31 @@ Notes per renderer:
   that control is missing, because squeezelite would otherwise fall back to
   software volume silently (ADR-0018). The player name comes from
   `/etc/gexis/device-name.env` (ADR-0048).
+  **It is our own build**, `gexis-squeezelite` (ADR-0145,
+  `packaging/squeezelite/`): the commit Debian trixie packages, Debian's
+  build options, and `squeezelite-downmix.patch`, which **folds a file of
+  more than two channels down to stereo** in the decoder, before anything
+  else sees it - the Squeezebox protocol carries two channels, and upstream
+  played a 5.1 FLAC's front pair alone, refused a 5.1 WAV and kept two of a
+  DSD file's channels (Finding 121). The fold-down is ffmpeg's default
+  (ITU-R BS.775): left = front left + 0.707 centre + 0.707 each left
+  surround, right likewise, a back centre 0.5 to both, LFE left out, every
+  coefficient divided by the larger side's sum so that nothing can clip
+  (5.1 plays 7.7 dB below its front channels' level). It is computed in
+  double precision from every channel left-aligned to 32 bits (`downmix.c`).
+  Channel orders: FLAC's specification; WAV's channel mask when the player
+  reads the header itself, otherwise (the format given in Lyrion's `strm`)
+  the default (SMPTE) order; AIFF the same as WAV, logged as assumed; DSF its
+  channel type; DSDIFF its channel IDs.
+  **DSD with more than two channels is converted to PCM** (dsd2pcm, every
+  channel) and folded, even with `-D` - one-bit audio cannot be mixed. AAC
+  is folded by FAAD2 itself (`downMatrix`, set upstream), about 2.3 dB below
+  our fold. Each folded track logs `downmix: N channels folded to stereo
+  (<layout>)` at warning level, so it is in the journal. Stereo and mono take
+  upstream's code path untouched: byte for byte the same output
+  (`packaging/squeezelite/tests/`). Not folded: Ogg Vorbis (refused upstream:
+  "too many channels"), ALAC (ffmpeg: "unsupported number of channels"), Opus
+  (upstream reads the interleaved channels as if stereo - garbled).
 - **go-librespot** is configured (`go-librespot-config.yml`) with
   `audio_device: output`, `external_volume: true` (it never attenuates the
   stream itself) and `normalisation_disabled: true`, so Spotify reaches the
@@ -423,6 +448,8 @@ chain - goes to `hw:` without the widening step, which takes PCM only.
 scope read levels only for the formats alsa-lib's s16 scope converts, since
 for DSD that scope leaves its buffer unset and reading it aborted the
 renderer. The Volume row's Fixed note names the DAC (`_volume_notes`).
+A DSD file of more than two channels is converted to PCM and folded down to
+stereo regardless (ADR-0145, above).
 
 **The jack stands in for an HDMI output with nothing connected** (ADR-0141
 D5): `outputs.in_force(stored)` returns the stored output, or the jack while
