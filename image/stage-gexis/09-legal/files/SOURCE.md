@@ -14,8 +14,9 @@ repository.
   releases, which are named in the build scripts under `image/stage-gexis/`.
   Their source is at those upstreams.
 - **peppyalsa is modified here.** The changes are
-  `image/stage-gexis/00-alsa/files/peppyalsa-one-write-per-frame.patch` and
-  `image/stage-gexis/00-alsa/files/peppyalsa-spectrum-bands.patch`, applied in
+  `image/stage-gexis/00-alsa/files/peppyalsa-one-write-per-frame.patch`,
+  `image/stage-gexis/00-alsa/files/peppyalsa-spectrum-bands.patch` and
+  `image/stage-gexis/00-alsa/files/peppyalsa-skip-non-pcm.patch`, applied in
   that order to the pinned upstream commit.
 - **Squeezelite is modified here.** The change is
   `packaging/squeezelite/squeezelite-downmix.patch`, applied to upstream
