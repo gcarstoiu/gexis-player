@@ -339,10 +339,13 @@ def interrupted() -> tuple[bool, list[str]]:
         journal = any(DPKG_UPDATES.iterdir())
     except OSError:
         journal = False
+    global LAST_AUDIT
     try:
         audit = run("dpkg", "--audit", check=False)
     except OSError:  # no dpkg here at all: nothing it could have left
+        LAST_AUDIT = ""
         return journal, []
+    LAST_AUDIT = audit.stdout
     broken: list[str] = []
     for line in audit.stdout.splitlines():
         # The package lines are indented: " name (description)".
@@ -416,6 +419,40 @@ def finish_cut_short() -> bool:
     return True
 
 
+#: What `dpkg --audit` said the last time `interrupted` asked.
+LAST_AUDIT = ""
+
+
+def to_reinstall() -> list[str]:
+    """The packages `dpkg --audit` says must be installed again - half
+    installed, or in a mess, or missing a control file - and not the ones
+    only waiting to be configured. **Only those are reinstalled** (George's
+    power-cut test on the bar, 2026-10-13): gexis-core was half installed,
+    gexis-player and gexis-system only unpacked; asked to reinstall all
+    three, apt stopped with "Internal Error, No file name for
+    gexis-system:arm64", and the two that needed nothing but configuring
+    held up the one that did. Read from the audit `interrupted` last made."""
+    names: list[str] = []
+    heading = ""
+    for line in LAST_AUDIT.splitlines():
+        if not line.strip():
+            heading = ""
+        elif line.startswith(" "):
+            name = line.split()[0]
+            if ("reinstall" in heading or "half installed" in heading) and name not in names:
+                names.append(name)
+        else:
+            heading += " " + line
+    return names
+
+
+def _configure_all() -> None:
+    r = run("dpkg", "--configure", "-a", check=False, env=APT_ENV)
+    with (STATE / "apt.log").open("a") as log:
+        log.write(f"\n=== {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} dpkg --configure -a -> {r.returncode}\n")
+        log.write(r.stdout + r.stderr)
+
+
 def heal(opts: list[str]) -> None:
     """**An install cut short is finished before anything else** (ADR-0110
     as amended 2026-10-09). A power cut on ShelvesPi stopped a skin pack
@@ -431,13 +468,16 @@ def heal(opts: list[str]) -> None:
     if not journal and not broken:
         return
     print(f"dpkg was interrupted ({', '.join(broken) or 'its journal'}); finishing it", flush=True)
-    r = run("dpkg", "--configure", "-a", check=False, env=APT_ENV)
-    with (STATE / "apt.log").open("a") as log:
-        log.write(f"\n=== {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} dpkg --configure -a -> {r.returncode}\n")
-        log.write(r.stdout + r.stderr)
+    _configure_all()
     journal, broken = interrupted()
     if broken:
-        apt(opts, "--allow-change-held-packages", "install", "--reinstall", *broken)
+        # Those that must be installed again, then dpkg finishes the rest -
+        # packages it could not configure while one they depend on was
+        # broken.
+        again = to_reinstall()
+        if again:
+            apt(opts, "--allow-change-held-packages", "install", "--reinstall", *again)
+            _configure_all()
         journal, broken = interrupted()
     # **A skin pack apt cannot reinstall is removed**, and the install that
     # follows fetches it fresh. Found on ShelvesPi itself, after the first

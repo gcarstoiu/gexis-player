@@ -1115,3 +1115,27 @@ def test_one_that_cannot_be_finished_says_so(up, monkeypatch):
         up.finish_cut_short()
     assert str(stop.value) == up.CUT_SHORT
     assert ["systemctl", "reboot"] not in ran
+
+
+AUDIT_BAR = ("The following packages are in a mess due to serious problems during\n"
+             "installation.  They must be reinstalled for them (and any packages\n"
+             "that depend on them) to function properly:\n"
+             " gexis-core           Gexis Player's core, in its own Python environment\n\n"
+             "The following packages have been unpacked but not yet configured.\n"
+             "They must be configured using dpkg --configure or the configure\n"
+             "menu option in dselect for them to work:\n"
+             " gexis-player         Gexis Player, one release\n"
+             " gexis-system         Gexis Player's system files\n")
+
+
+def test_only_what_must_be_installed_again_is_reinstalled(monkeypatch, up, tmp_path):
+    """The bar after George's power cut (2026-10-13), as dpkg --audit put it:
+    gexis-core half installed, gexis-player and gexis-system unpacked and
+    waiting for it. Reinstalling all three stopped apt ("No file name for
+    gexis-system:arm64"); gexis-core alone is reinstalled, then dpkg
+    configures the other two."""
+    calls, applied = _dpkg(monkeypatch, up, tmp_path, journal=False,
+                           audits=[AUDIT_BAR, AUDIT_BAR, ""])
+    up.heal(["-o", "x"])
+    assert applied == [["--allow-change-held-packages", "install", "--reinstall", "gexis-core"]]
+    assert calls.count(["dpkg", "--configure", "-a"]) == 2, "configured again after the reinstall"
