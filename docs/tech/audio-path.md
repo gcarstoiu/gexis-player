@@ -428,7 +428,13 @@ the driver calls "USB Audio" whatever it is, is named from its device's
 it still resolves. `usb_details` adds the line shown under it - the USB
 generation from sysfs `speed`, the highest rate and bits and any native DSD
 format from the playback half of `/proc/asound/cardN/stream0` - passed to the
-Output row as `optionNotes` (`Settings(option_notes=...)`).
+Output row as `optionNotes` (`Settings(option_notes=...)`). Under an HDMI
+port, `hdmi_sound` reads the port's ELD (`/proc/asound/vc4hdmiN/eld#*`, sent
+by the connected device): its `monitor_name` and the highest rate and bits of
+its LPCM entries, or *takes no sound* when it lists none. Only PCM: the Pi
+sends no DSD, Dolby or DTS over HDMI, and two channels until Phase 14. The
+core names the screen's port by the screen's model (`_output_line`, as
+`_port_line` does for the Screen port tile).
 
 **A card that takes 32-bit and not 16-bit is widened** (ADR-0143, Finding
 120): `widens()` reads the formats `needs_plug` asked for, and `render`
