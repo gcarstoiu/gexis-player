@@ -14,6 +14,7 @@ maker or a controller is not named for another.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -124,6 +125,35 @@ def ports(drm: Path = DRM, usb: Path = USB) -> list[Seen]:
         maker, edid_name, preferred = parse_edid(data)
         out.append(Seen(True, name, maker, edid_name, preferred, devices))
     return out
+
+
+def modes(connector: str, drm: Path = DRM) -> list[tuple[int, int]]:
+    """Every mode the device on `connector` offers, from the kernel's list
+    (`card*-<connector>/modes`), in its order; interlaced ones left out."""
+    found: list[tuple[int, int]] = []
+    for path in sorted(drm.glob(f"card*-{connector}/modes")):
+        try:
+            lines = path.read_text().split()
+        except OSError:
+            continue
+        for line in lines:
+            m = re.fullmatch(r"(\d+)x(\d+)", line.strip())
+            if m and (size := (int(m.group(1)), int(m.group(2)))) not in found:
+                found.append(size)
+    return found
+
+
+def tv_mode(connector: str, drm: Path = DRM) -> tuple[int, int] | None:
+    """**The mode a TV is run at** (ADR-0147 D4 as amended; George,
+    2026-10-13: the TV through a receiver came up at 640 x 480 - the
+    receiver's fallback EDID at that moment): 1920 x 1080 from the TV's own
+    list, else the largest 16:9 mode below it; None when it offers neither.
+    From the list, not the EDID's first timing, which a receiver changes."""
+    offered = modes(connector, drm)
+    if (1920, 1080) in offered:
+        return (1920, 1080)
+    sixteen_nine = [(w, h) for w, h in offered if w * 9 == h * 16 and w <= 1920]
+    return max(sixteen_nine) if sixteen_nine else None
 
 
 def has_touch(screen_id: str) -> bool:

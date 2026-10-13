@@ -72,6 +72,13 @@ def output_command(on: bool, env: dict[str, str], uid: int, fallback: str = DEFA
     return args
 
 
+def carries_sound(connector: str) -> bool:
+    """Whether the sound plays to `connector`'s HDMI port now."""
+    from . import alsa, outputs
+    card = outputs.CARD_FOR_CONNECTOR.get(connector)
+    return card is not None and alsa.card() == card
+
+
 async def switch_output(on: bool) -> bool:
     """The screen's output on or off. False, and logged, when it could not be."""
     try:
@@ -80,8 +87,16 @@ async def switch_output(on: bool) -> bool:
         logger.warning("standby: no %s user; the screen stays as it is", KIOSK_USER)
         return False
     env = screen_env()
+    connector = env.get("GEXIS_SCREEN_CONNECTOR") or seen_connector()
+    if not on and carries_sound(connector):
+        # **Black, and the sound goes on** (ADR-0147 as amended; George,
+        # 2026-10-13: a TV through a receiver went silent with the screen -
+        # HDMI's sound rides on its picture). The panel's black cover is the
+        # standby; the output stays on.
+        logger.info("standby: %s carries the sound; the picture goes black, the output stays on", connector)
+        return True
     # The ports are looked at only when screen.env names none.
-    args = output_command(on, env, uid, env.get("GEXIS_SCREEN_CONNECTOR") or seen_connector())
+    args = output_command(on, env, uid, connector)
     try:
         proc = await asyncio.create_subprocess_exec(
             *args, stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE)

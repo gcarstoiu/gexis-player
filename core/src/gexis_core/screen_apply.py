@@ -90,7 +90,7 @@ def connector_now(seen=None, state: Path | None = None) -> str:
     return (current.get("connector") if isinstance(current, dict) else None) or CONNECTOR
 
 
-def env_for(screen: screens.Screen, rotation: int, connector: str = CONNECTOR) -> str:
+def env_for(screen: screens.Screen, rotation: int, connector: str = CONNECTOR, off: tuple = ()) -> str:
     """screen.env: what the kiosk needs to put the page on this screen."""
     turn = (screen.rotation + rotation) % 360
     if screen.family == "bar":
@@ -107,24 +107,26 @@ def env_for(screen: screens.Screen, rotation: int, connector: str = CONNECTOR) -
         f"GEXIS_SCREEN_CONNECTOR={connector}",
         f"GEXIS_SCREEN_TRANSFORM={TRANSFORMS[turn]}",
         f"GEXIS_SCREEN_SCALE={scale:g}",
-        # ADR-0147 D5: the screen's own touch device, and every known
-        # panel's - a panel's touch that is not the screen's is switched off
-        # by the kiosk, so a tap on the panel left black does nothing on a TV.
-        f"GEXIS_SCREEN_TOUCH_USB={_touch_usb(screen.id)}",
-        f"GEXIS_PANEL_TOUCH_USB={' '.join(sorted(_known_touch_usb()))}",
+        # ADR-0147 D5 as amended: a touch panel on another port while a
+        # screen without touch is in use (a TV) - its output is turned off by
+        # the kiosk, backlight and all.
+        f"GEXIS_OUTPUTS_OFF={' '.join(off)}",
     ]
     return "\n".join(lines) + "\n"
 
 
-def _touch_usb(screen_id: str) -> str:
+def panels_off(screen_id: str, connector: str, ports=None) -> list[str]:
+    """The ports with a known touch panel on them, other than the screen's,
+    while the screen has no touch of its own (ADR-0147 D5 as amended)."""
     from . import screen_detect
-    fp = screen_detect.FINGERPRINTS.get(screen_id)
-    return fp.usb if fp and fp.usb else ""
-
-
-def _known_touch_usb() -> set[str]:
-    from . import screen_detect
-    return {fp.usb for fp in screen_detect.FINGERPRINTS.values() if fp.usb}
+    if screen_detect.has_touch(screen_id):
+        return []
+    try:
+        ports = screen_detect.ports() if ports is None else ports
+    except OSError:
+        return []
+    return [p.connector for p in ports
+            if p.connected and p.connector != connector and screen_detect.suggest(p) is not None]
 
 
 #: **The panel's orientation, for the kernel** (George, 2026-10-04, "A": the
@@ -235,7 +237,8 @@ def write_files(applied: Applied | None, *, env: Path = SCREEN_ENV, cmdline: Pat
         env.unlink(missing_ok=True)
     else:
         tmp = env.with_name(env.name + ".tmp")
-        tmp.write_text(env_for(screen, applied.rotation, applied.connector))
+        tmp.write_text(env_for(screen, applied.rotation, applied.connector,
+                               tuple(panels_off(applied.screen_id, applied.connector))))
         tmp.replace(env)
     try:
         before = cmdline.read_text()

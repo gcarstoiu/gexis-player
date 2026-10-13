@@ -2281,6 +2281,10 @@ async def main() -> None:
         current = screen_apply.read_state().get("current")
         was = screen_apply.Applied.of(current) if isinstance(current, dict) and current.get("screen") else None
         model = screen_watch.target(port)
+        if screen_detect.suggest(port) is None and (size := screen_detect.tv_mode(connector)) is not None:
+            # A TV, run at 1080p from its own list and held there by the
+            # kernel's mode, whatever a receiver says at a start (ADR-0147).
+            model = screens.other(*size, capped=True)
         if was is not None and was.connector == connector and was.screen_id == model.id and was.chosen:
             return
         # The panel's own rotation goes with it back to its port.
