@@ -1315,6 +1315,26 @@ matter before it is used on one that does** - and before touching someone's
 queue, write down what is in it (track ids), so it can be put back whatever
 the mechanism does.
 
+**70. A power cut simulated by an exception** (2026-10-13, George pulling
+the bar's power during an update to 0.12.0; Finding 123).
+- **What went wrong.** The updater writes a note before dpkg starts, so the
+  boot after a power cut knows an install was running (the review of
+  2026-10-12). After the real cut the note was an empty file: written beside
+  and renamed, never synced, so the rename reached the card and the contents
+  did not. The boot did nothing, and every check after called the device
+  current.
+- **What it looked like.** The tests passed: `cut_install` stops `install`
+  with an exception at the moment dpkg would run and finds the note in
+  place, with every field right.
+- **How it was caught.** George's real power cut, then reading dpkg's state
+  and the note's size on the device rather than the updater's own report,
+  which said "current".
+
+**A test that stops a process with an exception keeps every write it made;
+a real power cut keeps only what was synced.** Crash safety is proved by a
+real cut, or by a test that checks the sync itself (`os.fsync` of the file
+and its folder), not by finding the file afterwards.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build
