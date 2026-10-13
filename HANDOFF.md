@@ -10,49 +10,53 @@ and `phase-13b` is merged into it after each docs change. A release is built
 from a worktree made at its tag, then removed. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 0.11.0 on Testing** (2026-10-12; tag `v0.11.0`, release
-`r0.11.0`, serial 37, PR #62 merged; image
-`image/deploy/2026-10-12-gexis-player-v0.11.0.img`). USB DACs and native DSD
-(ADR-0143/0144, Finding 120), the screen on either HDMI port (ADR-0109
-amended), the player announcing for its plugins (ADR-0142), plugin versions,
-Phase 13d closed. After the tag on `phase-13d`, for 1.0.0:
-- setup keeps the screen it applied (the bar's lingering "provisional");
-- ADR-0141 decided and built: one *Screen port* tile, black on a sound-only
-  port, the jack standing in while the chosen HDMI sound is unplugged;
-- multichannel files folded to stereo by our own `gexis-squeezelite` (ADR-0145,
-  Finding 121);
-- the spectrum's bands read their energy, with no treble lift (ADR-0130 as
-  amended, Finding 122; `gexis-peppyalsa` `-5`);
-- the meters follow the volume visibly - bars the whole cut, needles half or
-  *Like a real amplifier* - published from the start, with a *Gain* row
-  (ADR-0146).
+**Current release: 0.12.0 on Testing** (2026-10-13; tag `v0.12.0`, release
+`r0.12.0`, serial 38; **PR #63 open for George to merge**; image
+`image/deploy/2026-10-13-gexis-player-v0.12.0.img`, 121 checks passed;
+release worktree `~/projects/gexis-player-r0120`, removed after the merge).
+Multichannel files folded to stereo (ADR-0145, Finding 121), one *Screen port*
+tile with black on a sound-only port and the jack standing in (ADR-0141), the
+spectrum's bands reading their energy with no lift (ADR-0130 amended, Finding
+122), the meters following the volume with *Gain* and *Needles follow the
+volume* (ADR-0146), setup keeping the screen it applied. **Players are not
+updated to it by Claude** (George, 2026-10-13): sofapi and guestpi (Testing,
+Manual) offer it; the bar (on Testing since the test) runs it.
 
-Suite 2,343.
+**After the tag on `phase-13d`:** George's power cut on the bar (g34,
+Finding 123) found the updater could not recover - its note for the boot was
+an empty file (never synced), and every check said "current". Fixed: the
+note is synced, a cut-short install is finished with no note (at boot and at
+every check), only half-installed packages are reinstalled, the whole release
+completed after. The bar recovered with the fixed code (run from a copy) and
+is on the complete 0.12.0 set. Also: *Could not check for updates* says why
+in words. **Not proved:** a second real cut with the fixed updater
+installed - possible once a release carries it. LESSONS 70.
+
+Suite 2,352.
 
 **Devices.** sofapi (Waveshare 10.1"; a test machine - its Lyrion queue may
 be lost, George 2026-10-12; an SMSL USB DAC on it), the bar (ShelvesPi,
 11.9") and guestpi (IQaudIO Pi-DAC PRO, 13.3") as read 2026-10-13:
-sofapi runs the newest `phase-13d` preview (core `0.11.0+git53`, player
-`+git55`, `gexis-squeezelite` `-2`, `gexis-peppyalsa` `-5`); the bar and
-guestpi report core `0.10.2+git63` and `gexis-peppyalsa` `-2`. **Cards flashed
+sofapi runs a `phase-13d` preview (core `0.11.0+git53`, player `+git55`);
+the bar runs release 0.12.0 (updated by George's test, repaired as above);
+guestpi reports core `0.10.2+git63`. **Cards flashed
 from now on have no passwordless sudo: provision test cards with
 `DEV_SUDO="yes"`** (ADR-0139).
 
 **Owed by George** (the shared to-do list has the detail)
-- On a card flashed from the 0.11.0 image: setup without a restore (g24),
-  setup over a network cable (g26), an update cut short and a factory reset
-  (g34).
+- On a card flashed from the 0.12.0 image: setup without a restore (g24),
+  setup over a network cable (g26).
 - The screen on the bar's second HDMI port (g35).
 - The spectrum on sofapi's panel after the change (Finding 122): whether the
   bars now look right.
 - On sofapi: the meters falling with the volume, and *Visualiser tweaks* →
   *Needles follow the volume* and *Gain* (ADR-0146).
 - Then: 1.0.0 cut from this code as the first Stable release.
-- Optional: Lyrion sync (g09), the bar's own supply (g12), a DSD file from the
-  library (g38).
+- Lyrion synced playback with another player (g09, needed since 2026-10-13).
+- Optional: the bar's own supply (g12), a DSD file from the library (g38).
 
-**Not run on a device yet:** a screen on HDMI-A-2; a fresh card from 0.11.0;
-setup over Ethernet; a cut-short update; a factory reset.
+**Not run on a device yet:** a screen on HDMI-A-2; a fresh card from 0.12.0;
+setup over Ethernet; Lyrion sync; a second power cut with the fixed updater.
 
 **Next: 1.0.0, the first public release**, once George's tests pass: the
 notes, promote to Stable with the image file (c16; the installation guide's

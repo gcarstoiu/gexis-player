@@ -337,6 +337,11 @@ preview` replaced a queue that was George's). Prove a restore on a queue that
 does not matter first, and record what is in a queue (track ids) before
 touching it, so it can be put back whatever the mechanism does.
 
+**70. A power cut simulated by an exception** (2026-10-13, the bar's
+cut-short update). A test that stops a process with an exception keeps every
+write it made; a real power cut keeps only what was synced. Crash safety is
+proved by a real cut, or by checking the sync itself.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target, the check quietly

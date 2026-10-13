@@ -5,6 +5,24 @@ Every release of Gexis Player and its notes, newest first. Generated from
 edit that file, not this one. The player shows the last 10 under
 Settings → System → Change logs.
 
+## 0.13.0 — 13 October 2026
+
+### New
+
+- A TV can be the screen: connect it to either HDMI port and choose that port under Settings → Display → Screen port. The port chosen stays the screen, even with a touch panel on the other port. A 4K TV runs at 1920 × 1080 and scales it to its full screen.
+- A TV has no touch, so Keep this screen? is answered on the phone page. Not answered in time, the player goes back to the screen before.
+- Under each HDMI port, the Output picker shows what is connected and the sound it takes, for example "LG TV · up to 192 kHz / 24-bit", or "takes no sound".
+
+### Fixed
+
+- An update cut short by a power cut is finished when the player starts again. Before, it could be left half-installed while Settings said the player was up to date.
+- Update… checks again before offering a release, so it offers what the channel holds now, with its notes. Before, it could show a release from the last nightly check.
+- When there is nothing on the chosen update channel, or no network, Could not check for updates says so in words instead of a web address and an error code.
+
+### Good to know
+
+- While a TV is the screen, a touch panel on the other HDMI port shows black and ignores touches.
+
 ## 0.12.0 — 13 October 2026
 
 ### New

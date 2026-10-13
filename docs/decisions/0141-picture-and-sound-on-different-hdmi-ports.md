@@ -148,3 +148,12 @@ Hardware volume from the Starting volume.
 again (does its port drop hot-plug, and does the switch follow); black on the
 receiver's screen.
 
+
+## Added 2026-10-13: the Output picker says what is on each HDMI port
+
+George: *"When selecting HDMI as an output, can we also add some information
+about what's on each HDMI, like we have in the video output?"* Under each HDMI
+port in the Output picker: the device on it - the screen by its model, a TV or
+receiver by the name its ELD gives - and the highest PCM rate and size it
+takes, or *takes no sound*. Only PCM, since the Pi sends nothing else over
+HDMI and two channels until Phase 14 (`ph-mpd`). No setting.

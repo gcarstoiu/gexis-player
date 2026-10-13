@@ -284,11 +284,13 @@ def test_the_fixed_note_says_dsd_plays_natively_only_where_the_dac_takes_it():
 
 def test_the_screen_port_choice_moves_the_screen_and_forgets_itself():
     """ADR-0141 D2: shown only with both ports connected; choosing applies the
-    same screen on the other port (Keep, restart), and the stored value goes
-    so the row shows the port in use."""
+    screen on that port (Keep, restart), and the stored value goes so the row
+    shows the port in use. ADR-0147 D1: the screen there - the panel, or a TV
+    by its own mode - marked as chosen, so the start honours it."""
     body = _closure("_choose_screen_port")
     assert "settings_store.delete('screen_port')" in body
-    assert "screen_apply.Applied(was.screen_id, was.rotation, connector)" in body
+    assert "screen_watch.target(port)" in body
+    assert "screen_apply.Applied(model.id, rotation, connector, chosen=True)" in body
     assert "screen_apply.choose(applied" in body and "_systemctl_reboot()" in body
     source = MAIN.read_text()
     assert '"screen_port": lambda: not settings_store.get("headless")' in source

@@ -354,15 +354,29 @@ Keep, a screen without a forced mode moves silently, and a provisional
 setup screen stays provisional.
 
 **With both ports connected** (ADR-0141 D2/D4, 2026-10-12):
-`screen_detect.seen()` picks the applied port if a known panel is there, any
-port a known panel is on, the applied port, else the first connected, so a
-chosen port holds across starts. `screen_detect.ports()` lists both for
+`screen_detect.seen()` picks **the port chosen under *Screen port*** when
+something is connected there (ADR-0147 D1: `chosen` in screen.json's
+`current`), else the applied port if a known panel is there, any port a known
+panel is on, the applied port, else the first connected. `screen_detect.ports()` lists both for
 *Screen port*: each port's line (`_port_line`) is its option note, a port with
 nothing connected is `unavailable`, and on a one-port board the read-only
-`screen_port_info` shows instead. Choosing applies the same screen on the other port
-through `screen_apply.choose` (restart, Keep), dropping its stored value so
-the row reads the port in use. `gexis-kiosk-start` then pins the window to the
-screen's port whenever both are connected.
+`screen_port_info` shows instead. Choosing applies **the screen on that port**
+(`screen_watch.target`: the panel recognised there, else the device by its own
+mode, `screens.fitted` holding a 16:9 screen larger than 1080p to
+`other-1920x1080-capped`, which carries a kernel `video=` mode) marked
+`chosen`, through `screen_apply.choose` (restart, Keep), dropping its stored
+value so the row reads the port in use. `gexis-kiosk-start` then pins the
+window to the screen's port whenever both are connected.
+
+**A screen without touch** (ADR-0147 D3, D5): `screen_detect.has_touch` is a
+fingerprint with a USB touch id. Without one, the Keep question carries
+`phone: true`, `POST /screen/keep|revert` is accepted from the phone as well
+as the panel, and the phone page shows `PhoneKeepScreen`; the panel's own
+Keep says to answer on the phone. screen.env carries `GEXIS_SCREEN_TOUCH_USB`
+(the screen's) and `GEXIS_PANEL_TOUCH_USB` (every known panel's);
+`gexis-kiosk-start` finds the other panels' input names in
+`/proc/bus/input/devices` and switches them off in labwc's config
+(`<libinput><device category="<name>"><sendEventsMode>no`).
 
 **Errors** reach the phone as sentences (`setup_flow.said()`); the core's own
 text goes to the log.

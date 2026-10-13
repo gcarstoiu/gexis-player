@@ -738,3 +738,64 @@ def test_the_hdmi_output_plays_again_once_connected_and_others_are_untouched():
     assert out.card == "vc4hdmi1" and standing is False
     out, standing = outputs.in_force("Headphones (3.5 mm)", _outs(False))
     assert out.card == "Headphones" and standing is False
+
+
+# --- What is on an HDMI port, for sound (George, 2026-10-13) ----------------
+
+ELD_TV = """monitor_name\t\tLG TV
+connection_type\t\tHDMI
+sad_count\t\t3
+sad0_coding_type\t[0x1] LPCM
+sad0_channels\t\t8
+sad0_rates\t\t[0x1ee0] 32000 44100 48000 88200 96000 176400 192000
+sad0_bits\t\t[0xe] 16 20 24
+sad1_coding_type\t[0x2] AC-3
+sad1_channels\t\t6
+sad1_rates\t\t[0xe0] 32000 44100 48000
+sad2_coding_type\t[0x9] DSD (One Bit Audio)
+sad2_channels\t\t6
+sad2_rates\t\t[0x40] 44100
+"""
+ELD_SCREEN = """monitor_name\t\tWaveShare
+connection_type\t\tHDMI
+sad_count\t\t1
+sad0_coding_type\t[0x1] LPCM
+sad0_channels\t\t2
+sad0_rates\t\t[0xe0] 32000 44100 48000
+sad0_bits\t\t[0xe] 16 20 24
+"""
+
+
+def _eld(tmp_path, card, text):
+    d = tmp_path / card
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "eld#0.0").write_text(text)
+    return tmp_path
+
+
+def test_an_hdmi_port_says_what_is_on_it_and_the_pcm_it_takes(tmp_path):
+    """Read on sofapi: an LG TV on HDMI 2, the WaveShare screen on HDMI 1.
+    Only PCM: the TV's AC-3 and one-bit DSD are not what the Pi sends."""
+    from gexis_core.outputs import hdmi_sound
+
+    proc = _eld(tmp_path, "vc4hdmi1", ELD_TV)
+    assert hdmi_sound("vc4hdmi1", proc) == ("LG TV", "up to 192 kHz / 24-bit")
+    proc = _eld(tmp_path, "vc4hdmi0", ELD_SCREEN)
+    assert hdmi_sound("vc4hdmi0", proc) == ("WaveShare", "up to 48 kHz / 24-bit")
+
+
+def test_a_device_without_sound_says_so(tmp_path):
+    from gexis_core.outputs import hdmi_sound
+
+    proc = _eld(tmp_path, "vc4hdmi0", "monitor_name\t\tDELL U2415\nsad_count\t\t0\n")
+    assert hdmi_sound("vc4hdmi0", proc) == ("DELL U2415", "takes no sound")
+
+
+def test_nothing_connected_or_not_hdmi_has_no_line(tmp_path):
+    from gexis_core.outputs import hdmi_sound
+
+    assert hdmi_sound("vc4hdmi0", tmp_path) is None, "no ELD file"
+    proc = _eld(tmp_path, "vc4hdmi1", "monitor_present\t\t0\neld_valid\t\t0\n")
+    assert hdmi_sound("vc4hdmi1", proc) is None
+    proc = _eld(tmp_path, "Headphones", ELD_TV)
+    assert hdmi_sound("Headphones", proc) is None

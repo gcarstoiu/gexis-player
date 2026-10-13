@@ -36,6 +36,8 @@
     secondsLeft = 30,
     total = 30,
     rotationOnly = false,
+    //: ADR-0147 D3: a screen without touch (a TV) is answered on the phone.
+    phone = false,
     onkeep,
     onrevert,
   } = $props();
@@ -108,10 +110,14 @@
       {#if untested}
         <div class="pill">{@render warnIcon(34)}<span>This model has not been tested with gexis</span></div>
       {/if}
-      <div class="actions">
-        {@render revert()}
-        {@render keep()}
-      </div>
+      {#if phone}
+        <div class="phone">This screen has no touch: answer on the phone page, Keep or Go back.</div>
+      {:else}
+        <div class="actions">
+          {@render revert()}
+          {@render keep()}
+        </div>
+      {/if}
       <div class="count">Going back to {back} in {left} s</div>
     </div>
   {/if}
@@ -253,6 +259,13 @@
   .stack .btn--keep {
     height: 96px;
     padding: 0 64px;
+  }
+  .phone {
+    font-size: 30px;
+    line-height: 1.35;
+    text-align: center;
+    max-width: 80%;
+    color: var(--accent-warn);
   }
   .stack .count {
     margin-top: 6px;

@@ -202,6 +202,14 @@ something connected to both ports (a screen on one, a sound bar on the
 other), *Settings → Display → Screen port* shows what is on each and lets
 you choose which is the screen.
 
+**Can a TV be the screen?**
+Yes: connect it to either HDMI port and choose that port under *Settings →
+Display → Screen port*. The player restarts on the TV at 1920 x 1080 at most
+(a 4K TV scales it to full screen). A TV has no touch, so *Keep this screen?*
+appears on the phone page - answer it there, or the player goes back to the
+screen before. A touch panel left on the other port shows black and ignores
+touches; choose its port again to go back to it.
+
 **Can the player run without a screen?**
 Yes. *Settings → Display → Headless* turns the screen off, and every setting
 that only affects the screen is hidden while it is on. Everything else,
@@ -600,8 +608,9 @@ ListenBrainz token*.
 ## Updates and maintenance
 
 **How are updates installed?**
-*Settings → System → Software update* shows a waiting release and its notes.
-Installing stops the music (it asks first), restarts the player and checks
+*Settings → System → Software update* shows a waiting release and its notes,
+from the last check (every night); *Update…* checks again before offering it,
+so a newer release published since is the one offered. Installing stops the music (it asks first), restarts the player and checks
 it; the device itself restarts only if the system needs it, and the update
 says so before starting. If the new release fails its check - also after the
 device restarts - the player goes back to the release it had; after a power
