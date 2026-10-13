@@ -1304,6 +1304,18 @@
         "warn": "Changing this restarts the visualiser."
       },
       {
+        "key": "meter_gain",
+        "type": "number",
+        "label": "Gain",
+        "marks": "N",
+        "min": -10,
+        "max": 20,
+        "step": 1,
+        "unit": "dB",
+        "note": "Recommended: 0 dB. Raises or lowers the needles and the bars together, on top of the volume: +6 dB doubles a needle’s reading and raises each bar by 6 of its 100 steps. Use it for a quiet recording or when listening low; a negative value calms a loud one. Applies at once.",
+        "default": 0
+      },
+      {
         "key": "skin_motion",
         "type": "toggle",
         "label": "Animate turntables and tapes",

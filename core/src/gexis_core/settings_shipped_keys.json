@@ -49,6 +49,7 @@
  "lyrics",
  "max_ceiling",
  "meter_fall",
+ "meter_gain",
  "meter_smoothing",
  "output_device",
  "output_mode",

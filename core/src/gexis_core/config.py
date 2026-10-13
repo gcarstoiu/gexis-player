@@ -96,6 +96,9 @@ class Config:
     # are pinned together by a test - a meter reading a path nobody writes
     # would show the source level and say nothing about it.
     attenuation_path: str = "/run/gexis/attenuation"
+    # **Where the core leaves the Gain row's dB** (ADR-0146), beside it.
+    # `meters.METER_GAIN_PATH` is the writer's copy, pinned by a test too.
+    meter_gain_path: str = "/run/gexis/meter-gain"
     meter_frame_rate: int = 30  # the skins' own ui.refresh.period, ADR-0015
     meter_port: int = 8091
     # Empty by default: pushing to a PeppyMeter web server elsewhere is for a

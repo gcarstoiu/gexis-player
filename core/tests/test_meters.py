@@ -226,51 +226,47 @@ class TestTheMetersFollowTheVolume:
     def test_the_vu_level_is_linear_so_it_is_scaled(self):
         from gexis_core.meters import Levels, attenuate
 
-        # tracking=1 is the physically exact case: -6 dB is half the
+        # needle_tracking=1 is the physically exact case: -6 dB is half the
         # amplitude, -20 dB is a tenth
-        assert attenuate(Levels(100, 50, ()), 6.02, tracking=1).left == 50
-        assert attenuate(Levels(100, 50, ()), 20, tracking=1).left == 10
-        assert attenuate(Levels(100, 50, ()), 20, tracking=1).right == 5
+        assert attenuate(Levels(100, 50, ()), 6.02, needle_tracking=1).left == 50
+        assert attenuate(Levels(100, 50, ()), 20, needle_tracking=1).left == 10
+        assert attenuate(Levels(100, 50, ()), 20, needle_tracking=1).right == 5
 
     def test_the_spectrum_is_logarithmic_so_it_is_shifted(self):
         from gexis_core.meters import SPECTRUM_DB_FULL_SCALE, Levels, attenuate
 
         # one unit is 96.3/100 dB, so 20 dB is about 21 units off every bar
-        out = attenuate(Levels(0, 0, (90, 60, 30)), 20, tracking=1).bands
+        out = attenuate(Levels(0, 0, (90, 60, 30)), 20).bands
         shift = round(20 * 100 / SPECTRUM_DB_FULL_SCALE)
         assert out == (90 - shift, 60 - shift, 30 - shift)
 
     def test_nothing_goes_below_silence(self):
         from gexis_core.meters import Levels, attenuate
 
-        out = attenuate(Levels(5, 5, (10, 2)), 60, tracking=1)
+        out = attenuate(Levels(5, 5, (10, 2)), 60, needle_tracking=1)
         assert out.left == 0 and out.right == 0
         assert out.bands == (0, 0)
 
-    def test_the_needle_stays_alive_across_the_whole_slider(self):
-        """**60 dB of volume onto a dial drawn for 20** puts the needle at
-        the bottom stop from about 40% down, which George saw as *"a bit
-        quiet on the bottom part"*. The volume curve is not up for changing
-        (his call, 2026-09-23), so the meters follow a third of it.
-        """
+    # the dB the 60 dB cubic curve cuts at each slider position (ADR-0057)
+    CUT = ((100, 0.0), (80, 5.2), (60, 11.6), (40, 20.2), (20, 33.2), (10, 43.3))
+
+    def test_the_needles_follow_half_the_cut(self):
+        """**ADR-0146**: a third was invisible where people listen - 5.2 dB
+        at 80% moved the needle 1.7 dB. Half: 74% of the travel at 80%,
+        51% at 60%, 32% at 40%, and still moving at 10%."""
         from gexis_core.meters import Levels, attenuate
 
         full = Levels(100, 100, (60,) * 22)
-        # the dB the 60 dB cubic curve cuts at each slider position
-        reads = {percent: attenuate(full, db).left
-                 for percent, db in ((100, 0.0), (60, 11.6), (40, 20.2), (20, 33.2), (10, 43.3))}
-        assert reads[100] == 100
-        # every position below full is lower than the one above it
-        assert list(reads.values()) == sorted(reads.values(), reverse=True)
-        # and none of them is at the stop - the needle still moves at 10%
-        assert reads[10] > 15, reads
-        assert reads[40] > 40, reads
+        reads = {percent: attenuate(full, db).left for percent, db in self.CUT}
+        assert reads == {100: 100, 80: 74, 60: 51, 40: 31, 20: 15, 10: 8}, reads
 
-    def test_the_bars_stay_visible_too(self):
+    def test_the_bars_follow_the_whole_cut(self):
+        """A point per dB, near enough (a unit is 0.963 dB)."""
         from gexis_core.meters import Levels, attenuate
 
         full = Levels(0, 0, (60,) * 22)
-        assert min(attenuate(full, 54.0).bands) > 30
+        bars = {percent: attenuate(full, db).bands[0] for percent, db in self.CUT}
+        assert bars == {100: 60, 80: 55, 60: 48, 40: 39, 20: 26, 10: 15}, bars
 
     def test_fixed_output_needs_no_special_case(self):
         """In fixed output the DAC sits at full scale, so the attenuation
@@ -280,6 +276,12 @@ class TestTheMetersFollowTheVolume:
 
         levels = Levels(80, 70, (50,) * 22)
         assert attenuate(levels, 0.0) is levels
+
+    def test_the_writer_and_the_reader_name_the_same_gain_file(self):
+        from gexis_core.config import Config
+        from gexis_core.meters import METER_GAIN_PATH
+
+        assert Config().meter_gain_path == str(METER_GAIN_PATH)
 
     def test_the_writer_and_the_reader_name_the_same_file(self):
         """A meter reading a path nobody writes would show the source level
@@ -381,3 +383,76 @@ def test_the_read_is_a_whole_number_of_frames(monkeypatch):
     for n, frame in zip(asked, (120, 4)):
         assert n % frame == 0, (n, frame)
         assert n > 0
+
+
+class TestTheGain:
+    """The Gain row (ADR-0146): added to both after the volume, in every
+    volume type, Fixed included."""
+
+    def test_six_db_doubles_a_needle_and_lifts_a_bar_six_points(self):
+        from gexis_core.meters import Levels, attenuate
+
+        out = attenuate(Levels(40, 20, (50, 10)), 0.0, gain_db=6.02)
+        assert (out.left, out.right) == (80, 40)
+        assert out.bands == (56, 16)
+
+    def test_it_applies_in_fixed_too(self):
+        """Fixed publishes no cut; the gain still applies."""
+        from gexis_core.meters import Levels, attenuate
+
+        levels = Levels(50, 50, (50,))
+        assert attenuate(levels, 0.0, gain_db=0.0) is levels
+        assert attenuate(levels, 0.0, gain_db=-6.02).left == 25
+
+    def test_it_adds_to_the_cut(self):
+        from gexis_core.meters import Levels, attenuate
+
+        # 20 dB cut: needles -10 dB, bars -20; +10 dB of gain cancels the
+        # needles' and leaves the bars 10 down
+        out = attenuate(Levels(50, 50, (60,)), 20.0, gain_db=10.0)
+        assert out.left == 50
+        assert out.bands == (50,)
+
+    def test_past_the_top_is_drawn_at_the_top(self):
+        from gexis_core.meters import Levels, attenuate
+
+        out = attenuate(Levels(90, 90, (95,)), 0.0, gain_db=20.0)
+        assert (out.left, out.right, out.bands) == (100, 100, (100,))
+
+    def test_silence_stays_silent(self):
+        from gexis_core.meters import Levels, attenuate
+
+        out = attenuate(Levels(0, 0, (0, 0)), 0.0, gain_db=20.0)
+        assert (out.left, out.right, out.bands) == (0, 0, (0, 0))
+
+    def test_the_file_is_read_within_the_rows_range(self, tmp_path):
+        from gexis_core.meters import publish_gain, read_gain
+
+        path = tmp_path / "meter-gain"
+        assert read_gain(path) == 0.0
+        publish_gain(6, path)
+        assert read_gain(path) == 6.0
+        publish_gain(-4, path)
+        assert read_gain(path) == -4.0
+        path.write_text("99\n")
+        assert read_gain(path) == 20.0
+        path.write_text("nan\n")
+        assert read_gain(path) == 0.0
+        path.write_text("loud\n")
+        assert read_gain(path) == 0.0
+
+    def test_the_meter_service_rereads_it_when_it_changes(self, tmp_path):
+        import os
+        from gexis_core.meter_service import _Watched
+        from gexis_core.meters import publish_gain, read_gain
+
+        path = tmp_path / "meter-gain"
+        watched = _Watched(path, read_gain)
+        assert watched.value() == 0.0
+        publish_gain(3, path)
+        assert watched.value() == 3.0
+        publish_gain(12, path)
+        os.utime(path, ns=(1, 10**9))  # a new mtime even on a coarse clock
+        assert watched.value() == 12.0
+        path.unlink()
+        assert watched.value() == 0.0

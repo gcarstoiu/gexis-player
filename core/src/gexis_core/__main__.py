@@ -119,6 +119,7 @@ from gexis_core.volume import (
     hardware_raw_to_renderer_value,
     fixed_output as volume_fixed_output,
     hardware_max,
+    publish_attenuation,
     use_scale,
     set_ceiling_reader,
     set_curve_reader,
@@ -812,6 +813,12 @@ async def main() -> None:
         ),
     )
 
+    def _publish_cut(raw: int) -> None:
+        """The dB the device cuts, for the meters (ADR-0057, ADR-0146 §3).
+        Fixed cuts nothing, on every output - a USB DAC without a control
+        of its own included, which writes no level to say so."""
+        publish_attenuation(hardware_max() if volume_fixed_output() else raw)
+
     def publish_volume(raw: int | None = None) -> None:
         """One place builds the published level.
 
@@ -825,6 +832,11 @@ async def main() -> None:
             if volume is None:
                 return
             raw = volume.raw
+        else:
+            # ADR-0146 §3: every level the panel is given, the meters are
+            # given too - the start's, a change of output's, a change of
+            # volume type's - not only the ones the mixer monitor sees.
+            _publish_cut(raw)
         mute.observe(raw)
         state_store.set_volume_raw(raw, muted=mute.muted, percent=remote.percent())
 
@@ -1099,6 +1111,9 @@ async def main() -> None:
             fixed_on = outputs.in_force(settings.value("output_device"))[0]
             if fixed_on is not None and fixed_on.control is None:
                 logger.info("output: fixed - %s has no control of its own; nothing attenuates", fixed_on.label)
+                # Nothing is written, so nothing would tell the meters: the
+                # last cut stayed in force in Fixed (ADR-0146 §3).
+                publish_attenuation(hardware_max())
                 return
             logger.info("output: fixed - DAC to full scale, the panel can no longer lower it")
             # **The control in use now**, not the one the daemon started
@@ -2491,6 +2506,9 @@ async def main() -> None:
                "spectrum_smoothing": _apply_scope_tuning,
                "meter_fall": _apply_scope_tuning,
                "meter_smoothing": _apply_meter_smoothing,
+               # ADR-0146: read by the meter service from the file, at once.
+               "meter_gain": lambda value: meters.publish_gain(
+                   value if value is not None else (settings.value("meter_gain") or 0)),
                "home_strip": None, "home_strip_count": None,
                "idle_clock": None,
                # George, 2026-09-28: read by the idle screen, asked in setup.
@@ -3837,6 +3855,12 @@ async def main() -> None:
     initial_raw = await get_raw(config.mixer_name)
     if initial_raw is not None:
         state_store.set_volume_raw(initial_raw)
+    # ADR-0146 §3: `/run` is empty after a boot, and the meters showed the
+    # recording at full level until something moved the volume.
+    if initial_raw is not None or volume_fixed_output():
+        _publish_cut(initial_raw if initial_raw is not None else hardware_max())
+    # ADR-0146 §4-5: the Gain row, for the meter service.
+    meters.publish_gain(settings.value("meter_gain") or 0)
 
     if True:
         # ADR-0124: the software level kept across restarts - ALSA makes its
