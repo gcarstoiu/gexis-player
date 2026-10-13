@@ -56,15 +56,21 @@ class Applied:
     screen_id: str
     rotation: int                 # the user's: 0 or 180
     connector: str = CONNECTOR    # the HDMI port the screen is on
+    #: **The port was chosen under *Screen port*** (ADR-0147 D1): it holds
+    #: while something is connected to it, over a known panel on the other
+    #: port. False is the port the screen was found on, which follows it.
+    chosen: bool = False
 
     def to_json(self) -> dict:
-        return {"screen": self.screen_id, "rotation": self.rotation, "connector": self.connector}
+        doc = {"screen": self.screen_id, "rotation": self.rotation, "connector": self.connector}
+        return {**doc, "chosen": True} if self.chosen else doc
 
     @classmethod
     def of(cls, data: dict) -> "Applied":
         """From screen.json. A state without a connector was written when
         every screen was applied on HDMI-A-1, so it reads as that."""
-        return cls(data["screen"], int(data.get("rotation", 0)), data.get("connector") or CONNECTOR)
+        return cls(data["screen"], int(data.get("rotation", 0)), data.get("connector") or CONNECTOR,
+                   bool(data.get("chosen")))
 
 
 def connector_now(seen=None, state: Path | None = None) -> str:
@@ -101,8 +107,24 @@ def env_for(screen: screens.Screen, rotation: int, connector: str = CONNECTOR) -
         f"GEXIS_SCREEN_CONNECTOR={connector}",
         f"GEXIS_SCREEN_TRANSFORM={TRANSFORMS[turn]}",
         f"GEXIS_SCREEN_SCALE={scale:g}",
+        # ADR-0147 D5: the screen's own touch device, and every known
+        # panel's - a panel's touch that is not the screen's is switched off
+        # by the kiosk, so a tap on the panel left black does nothing on a TV.
+        f"GEXIS_SCREEN_TOUCH_USB={_touch_usb(screen.id)}",
+        f"GEXIS_PANEL_TOUCH_USB={' '.join(sorted(_known_touch_usb()))}",
     ]
     return "\n".join(lines) + "\n"
+
+
+def _touch_usb(screen_id: str) -> str:
+    from . import screen_detect
+    fp = screen_detect.FINGERPRINTS.get(screen_id)
+    return fp.usb if fp and fp.usb else ""
+
+
+def _known_touch_usb() -> set[str]:
+    from . import screen_detect
+    return {fp.usb for fp in screen_detect.FINGERPRINTS.values() if fp.usb}
 
 
 #: **The panel's orientation, for the kernel** (George, 2026-10-04, "A": the

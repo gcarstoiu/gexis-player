@@ -2141,8 +2141,11 @@ class StateServer:
     async def _handle_screen_answer(self, request: web.Request) -> web.Response:
         """**ADR-0109 decision 2: Keep is pressed on the panel only** - a touch
         there proves both the picture and the touch input. Loopback: the
-        panel's Chromium is on this device; a phone is not."""
-        if request.remote not in ("127.0.0.1", "::1"):
+        panel's Chromium is on this device; a phone is not. **Except on a
+        screen without touch** (ADR-0147 D3, a TV): nothing there can be
+        pressed, so the phone answers - the question says so (`phone`)."""
+        confirm = self._store.state.screen_confirm or {}
+        if request.remote not in ("127.0.0.1", "::1") and not confirm.get("phone"):
             return web.json_response({"error": "only the panel answers this"}, status=403)
         action = request.match_info["action"]
         if action not in ("keep", "revert") or self._screen_answer is None:

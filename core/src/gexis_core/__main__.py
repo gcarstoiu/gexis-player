@@ -440,6 +440,9 @@ def screen_question(state: dict, now: float | None = None) -> dict | None:
         "untested": bool(model and not model.tested),
         "previous": (f"{before.maker} {before.model}" if before else None),
         "rotation_only": rotation_only,
+        # ADR-0147 D3: a screen with no touch the player knows of - a TV, any
+        # screen in no list - is answered from the phone.
+        "phone": not screen_detect.has_touch(current["screen"]),
         "previous_rotation": f"{previous.get('rotation', 0)}°" if previous else "0°",
         "deadline": None,
         # Two minutes after setup, and for a rotation (George, 2026-10-04,
@@ -2217,6 +2220,19 @@ async def main() -> None:
         """`HDMI-A-2` as Settings says it: *HDMI 2*."""
         return f"HDMI {(connector or screen_apply.CONNECTOR).rsplit('-', 1)[-1]}"
 
+    def _screen_name(connector: str) -> str | None:
+        """The screen's name when `connector` is the screen's port, else
+        None: a listed model by its maker and model; a screen in no list -
+        a TV - by the name it gives (ADR-0147), "The screen" without one."""
+        if settings.value("headless") or screen_detect.seen().connector != connector:
+            return None
+        current = screen_apply.read_state().get("current")
+        model = screens.by_id(current.get("screen") or "") if isinstance(current, dict) else None
+        if model is not None and not screens.OTHER.match(model.id):
+            return f"{model.maker} {model.model}"
+        port = next((p for p in screen_detect.ports() if p.connector == connector), None)
+        return (port.edid_name if port else None) or "The screen"
+
     def _port_line(connector: str) -> str:
         """**What is on one HDMI port** (ADR-0141 D4; George, 2026-10-12:
         *"Shouldn't we have two entries, similar to audio output?"*): the
@@ -2225,13 +2241,7 @@ async def main() -> None:
         port = next((p for p in screen_detect.ports() if p.connector == connector), None)
         if port is None or not port.connected:
             return "Nothing connected"
-        parts = []
-        if not settings.value("headless") and screen_detect.seen().connector == connector:
-            current = screen_apply.read_state().get("current")
-            model = screens.by_id(current.get("screen") or "") if isinstance(current, dict) else None
-            parts.append(f"{model.maker} {model.model}" if model else "The screen")
-        else:
-            parts.append(port.edid_name or port.edid_maker or "Connected")
+        parts = [_screen_name(connector) or port.edid_name or port.edid_maker or "Connected"]
         if alsa.card() == outputs.CARD_FOR_CONNECTOR.get(connector):
             parts.append("sound")
         return " · ".join(parts)
@@ -2249,31 +2259,38 @@ async def main() -> None:
         if sound is None:
             return None
         name, takes = sound
-        if not settings.value("headless") and screen_detect.seen().connector == connector:
-            current = screen_apply.read_state().get("current")
-            model = screens.by_id(current.get("screen") or "") if isinstance(current, dict) else None
-            name = f"{model.maker} {model.model}" if model else "The screen"
+        name = _screen_name(connector) or name
         return " · ".join(p for p in (name, takes) if p)
 
     def _choose_screen_port(label: str) -> None:
         """**ADR-0141 D2: the screen's port, when both have something on
-        them.** The same screen, applied on the other port - which, as any
-        change of picture, restarts and asks Keep. The stored choice goes:
-        the row shows the port in use, cable moves included."""
+        them**, and since ADR-0147 **the choice wins** (George, 2026-10-13:
+        the LG TV chosen on HDMI 2 went back to the panel at every start).
+        The screen applied is the one on that port - the panel recognised
+        there, else the device by its own mode, a TV held to 1920 x 1080 -
+        marked as chosen, so the start honours it over a known panel on the
+        other port. A change of picture restarts and asks Keep; on a screen
+        without touch, the phone answers (ADR-0147 D3). The stored setting
+        goes: the row shows the port in use."""
         settings_store.delete("screen_port")
         connector = f"HDMI-A-{label.rsplit(' ', 1)[-1]}"
+        port = next((p for p in screen_detect.ports() if p.connector == connector and p.connected), None)
+        if port is None or port.preferred is None:
+            logger.warning("screen: nothing on %s to choose", connector)
+            return
         current = screen_apply.read_state().get("current")
-        if not isinstance(current, dict) or screens.by_id(current.get("screen") or "") is None:
-            logger.warning("screen: no screen applied to move to %s", connector)
+        was = screen_apply.Applied.of(current) if isinstance(current, dict) and current.get("screen") else None
+        model = screen_watch.target(port)
+        if was is not None and was.connector == connector and was.screen_id == model.id and was.chosen:
             return
-        was = screen_apply.Applied.of(current)
-        if was.connector == connector:
-            return
+        # The panel's own rotation goes with it back to its port.
+        rotation = was.rotation if was is not None and was.screen_id == model.id else 0
         in_setup = _setup_running(state_store.state.setup)
-        applied = screen_apply.Applied(was.screen_id, was.rotation, connector)
+        applied = screen_apply.Applied(model.id, rotation, connector, chosen=True)
         asks = screen_apply.choose(applied, after_setup=in_setup)
-        logger.info("screen: %s moved from %s to %s by choice; %s", was.screen_id, was.connector, connector,
-                    "it waits for Keep on the panel" if asks else "the picture is unchanged, so it is kept")
+        logger.info("screen: %s chosen on %s (was %s on %s); %s", model.id, connector,
+                    was.screen_id if was else None, was.connector if was else None,
+                    "it waits for Keep" if asks else "the picture is unchanged, so it is kept")
         if in_setup:
             return
 

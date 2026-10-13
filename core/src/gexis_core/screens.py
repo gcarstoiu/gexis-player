@@ -154,24 +154,47 @@ def all_screens(path: Path = PRESETS) -> tuple[Screen, ...]:
 #: A screen known only by its own preferred mode (ADR-0109, amended
 #: 2026-10-04): `other-<W>x<H>`, its size as used - landscape - and
 #: `-turned` for a portrait panel used sideways.
-OTHER = re.compile(r"^other-(\d+)x(\d+)(-turned)?$")
+OTHER = re.compile(r"^other-(\d+)x(\d+)(-turned|-capped)?$")
+
+#: **The most a screen in no list is run at** (ADR-0147 D4, George
+#: 2026-10-13: a TV as the screen, *"1920x1080 at most"*). A TV reports its
+#: 4K mode as preferred; the 1920x1080 skin packs fit 1080p, and the Pi 4's
+#: browser stays light there. The TV scales it to its full screen.
+CAP = (1920, 1080)
 
 
-def other(native_width: int, native_height: int) -> Screen:
+def other(native_width: int, native_height: int, capped: bool = False) -> Screen:
     """**A screen that is in no list, laid out from its own mode.** Used
     landscape: a panel taller than it is wide is turned (90°, as the listed
-    bars are), so a bar arrives as a bar. Its family follows from the shape."""
+    bars are), so a bar arrives as a bar. Its family follows from the shape.
+    **Capped** (`other-1920x1080-capped`): a larger screen run at that size,
+    which the kernel is told by a `video=` line, as a bar's mode is."""
     portrait = native_height > native_width
     width, height = (native_height, native_width) if portrait else (native_width, native_height)
-    return Screen(id=f"other-{width}x{height}" + ("-turned" if portrait else ""), maker="Other screen", model=f"{width} × {height}",
+    suffix = "-turned" if portrait else ("-capped" if capped else "")
+    return Screen(id=f"other-{width}x{height}{suffix}", maker="Other screen", model=f"{width} × {height}",
                   interface="hdmi", width=width, height=height, rotation=90 if portrait else 0,
-                  tested=False, video_mode=None, notes=None)
+                  tested=False, video_mode=f"{width}x{height}" if capped and not portrait else None, notes=None)
+
+
+def fitted(native_width: int, native_height: int) -> Screen:
+    """`other()`, held to `CAP` when the screen is a 16:9 one larger than it
+    - a TV or monitor at 1440p or 4K. Any other shape larger than that keeps
+    its own mode: a size the screen does not offer would be calculated, and
+    may not show at all."""
+    width, height = CAP
+    larger = native_width > width or native_height > height
+    if larger and native_width > native_height and abs(native_width * height - native_height * width) <= native_height * 16:
+        return other(width, height, capped=True)
+    return other(native_width, native_height)
 
 
 def by_id(screen_id: str) -> Screen | None:
     if m := OTHER.match(screen_id or ""):
         width, height = int(m.group(1)), int(m.group(2))
-        return other(height, width) if m.group(3) else other(width, height)
+        if m.group(3) == "-turned":
+            return other(height, width)
+        return other(width, height, capped=m.group(3) == "-capped")
     found = next((s for s in all_screens() if s.id == screen_id), None)
     if found is None and screen_id.endswith("-case"):  # merged into its panel
         found = next((s for s in all_screens() if s.id == screen_id.removesuffix("-case")), None)

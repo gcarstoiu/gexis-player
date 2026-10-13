@@ -143,7 +143,8 @@ def target(seen: screen_detect.Seen) -> screens.Screen:
     # same either way.
     same = [s for s in screens.all_screens()
             if s.interface == "hdmi" and s.family == "bar" and native(s) == (width, height)]
-    return same[0] if len(same) == 1 else screens.other(width, height)
+    # A 4K TV is run at 1920 x 1080 (ADR-0147 D4).
+    return same[0] if len(same) == 1 else screens.fitted(width, height)
 
 
 SETTINGS_DB = Path("/var/lib/gexis-core/settings.db")

@@ -91,7 +91,40 @@ write_labwc_config() {
 			"${dir}/rc.xml" || return 1
 	fi
 	grep -q "mapToOutput=\"${connector}\"" "${dir}/rc.xml" || return 1
+	# ADR-0147 D5 (George, 2026-10-13): a known panel that is not the screen
+	# - left black while a TV is - has its touch switched off, so a tap on
+	# it does nothing on the TV. By the input's name, as libinput gives it,
+	# found from the panel's USB id in /proc/bus/input/devices.
+	local name off="" nl=$'\n'
+	while IFS= read -r name; do
+		[ -n "${name}" ] || continue
+		echo "gexis-kiosk: touch off on '${name}' (a panel that is not the screen)" >&2
+		name=$(printf '%s' "${name}" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' -e 's/"/\&quot;/g')
+		off="${off}    <device category=\"${name}\"><sendEventsMode>no</sendEventsMode></device>${nl}"
+	done < <(other_panel_inputs)
+	if [ -n "${off}" ]; then
+		# awk from the environment, not sed: a name's &amp; would be sed's &.
+		GEXIS_TOUCH_OFF="  <libinput>${nl}${off}  </libinput>${nl}" awk '
+			index($0, "</labwc_config>") { printf "%s", ENVIRON["GEXIS_TOUCH_OFF"] } { print }
+		' "${dir}/rc.xml" > "${dir}/rc.xml.new" && mv "${dir}/rc.xml.new" "${dir}/rc.xml" || return 1
+	fi
 	echo "gexis-kiosk: touch and the window on ${connector}" >&2
+}
+
+# The input names of the known panels whose touch is not the screen's: each
+# USB id in GEXIS_PANEL_TOUCH_USB but GEXIS_SCREEN_TOUCH_USB, one per line.
+other_panel_inputs() {
+	local devices=${GEXIS_INPUT_DEVICES:-/proc/bus/input/devices} usb vendor product
+	[ -r "${devices}" ] || return 0
+	for usb in ${GEXIS_PANEL_TOUCH_USB:-}; do
+		[ "${usb}" = "${GEXIS_SCREEN_TOUCH_USB:-}" ] && continue
+		vendor=${usb%%:*}
+		product=${usb##*:}
+		awk -v v="${vendor}" -v p="${product}" '
+			/^I:/ { hit = (index($0, "Vendor=" v) && index($0, "Product=" p)) }
+			hit && /^N: Name="/ { sub(/^N: Name="/, ""); sub(/"$/, ""); print; hit = 0 }
+		' "${devices}"
+	done | sort -u
 }
 
 case "${1:-}" in
