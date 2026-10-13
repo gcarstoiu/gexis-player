@@ -223,6 +223,47 @@ def _snapshot(source: Path, into: Path) -> bool:
         return False
 
 
+#: **An update's backup that failed says so** (sofapi, 2026-10-13): the
+#: updater watches the share for the new archive, and without this it waited
+#: two minutes for one that was never coming. The core writes the reason
+#: here; the updater reads it while it waits. Hidden, so never listed.
+FAILED_MARK = ".before-update-failed"
+
+
+def update_backup_failed(reason: str | None, directory: Path = DEFAULT_DIR) -> None:
+    """Leave `reason` for the updater, or clear it (None) as a backup starts."""
+    mark = directory / FAILED_MARK
+    try:
+        if reason is None:
+            mark.unlink(missing_ok=True)
+        else:
+            directory.mkdir(parents=True, exist_ok=True)
+            mark.write_text(reason + "\n")
+    except OSError as exc:
+        logger.debug("backup: cannot write %s: %s", mark, exc)
+
+
+def _add(archive: tarfile.TarFile, path: Path, arcname: str, filter) -> None:
+    """`path` and, for a folder, everything in it - one entry at a time, so
+    **a file that goes while the backup runs is left out, not the backup**
+    (sofapi, 2026-10-13: an uploaded plugin's SQLite `-shm` file was listed,
+    then deleted by its program before it was read; `tarfile.add`'s own walk
+    failed the whole backup with "No such file or directory", and the update
+    waiting for it stopped). A file gone has nothing in it to bring back."""
+    try:
+        archive.add(path, arcname=arcname, recursive=False, filter=filter)
+    except FileNotFoundError:
+        logger.info("backup: %s went while it was read, skipping", arcname)
+        return
+    if path.is_dir() and not path.is_symlink():
+        try:
+            names = sorted(os.listdir(path))
+        except FileNotFoundError:
+            return
+        for name in names:
+            _add(archive, path / name, f"{arcname}/{name}", filter)
+
+
 def create(device_name: str, directory: Path = DEFAULT_DIR, root: Path = Path("/"),
            automatic: bool = False) -> str:
     """Write one, and return its name.
@@ -269,7 +310,7 @@ def create(device_name: str, directory: Path = DEFAULT_DIR, root: Path = Path("/
                 if not source.exists():
                     logger.info("backup: %s is not here, skipping", member)
                     continue
-                archive.add(source, arcname=member, filter=live_databases)
+                _add(archive, source, member, live_databases)
             # The copies, under the live files' names, owners and modes.
             for info, into in copied:
                 info.size = into.stat().st_size
