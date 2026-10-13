@@ -218,3 +218,42 @@ def test_standby_leaves_a_port_carrying_the_sound_on(monkeypatch):
     monkeypatch.setattr(standby.asyncio, "create_subprocess_exec", no_exec)
     monkeypatch.setattr(alsa, "card", lambda: "vc4hdmi1")
     assert asyncio.run(standby.switch_output(False)) is True and ran == []
+
+
+# --- After the second try: the TV's mode held by the compositor too ---------
+
+def test_a_tv_s_mode_is_named_for_the_kiosk_and_a_panel_s_is_not():
+    """sofapi, 2026-10-13: the kernel held 1080p for the boot, then labwc took
+    the receiver's preferred 1280 x 720 under a page scaled for 1080p."""
+    tv = screen_apply.env_for(screens.by_id("other-1920x1080-capped"), 0, "HDMI-A-2")
+    assert "GEXIS_SCREEN_MODE=1920x1080\n" in tv
+    for panel in ("waveshare-10.1-hdmi-b", "waveshare-11.9-hdmi"):
+        assert "GEXIS_SCREEN_MODE=\n" in screen_apply.env_for(screens.by_id(panel), 0, "HDMI-A-1")
+    script = (FILES / "gexis-kiosk-start").read_text()
+    assert 'wlr-randr --output "${connector}" --mode "${GEXIS_SCREEN_MODE}"' in script
+
+
+def _splash():
+    import importlib.machinery, importlib.util
+    path = FILES.parents[1] / "06-splash" / "files" / "gexis-splash-fb"
+    loader = importlib.machinery.SourceFileLoader("gexis_splash_fb", str(path))
+    module = importlib.util.module_from_spec(importlib.util.spec_from_loader("gexis_splash_fb", loader))
+    loader.exec_module(module)
+    return module
+
+
+def test_with_two_screens_the_boot_gap_is_black_on_both(tmp_path):
+    """George's photo: the still drawn for the TV showed on the panel as a
+    cut-off logo beside a block of another colour - one framebuffer, two
+    sizes."""
+    splash = _splash()
+    drm = tmp_path / "drm"
+    for name, status in (("card1-HDMI-A-1", "connected"), ("card1-HDMI-A-2", "connected")):
+        (drm / name).mkdir(parents=True)
+        (drm / name / "status").write_text(status + "\n")
+    assert splash.connected_ports(str(drm)) == 2
+    (drm / "card1-HDMI-A-2" / "status").write_text("disconnected\n")
+    assert splash.connected_ports(str(drm)) == 1
+    payload, geometry = splash.black((b"\x10\x20\x30\x40", (1, 1, 32, 4)))
+    assert payload == bytes(4) and geometry == (1, 1, 32, 4)
+    assert splash.black(None) is None

@@ -111,6 +111,11 @@ def env_for(screen: screens.Screen, rotation: int, connector: str = CONNECTOR, o
         # screen without touch is in use (a TV) - its output is turned off by
         # the kiosk, backlight and all.
         f"GEXIS_OUTPUTS_OFF={' '.join(off)}",
+        # **The mode a TV is run at, set by the compositor too** (George,
+        # 2026-10-13: the TV "extremely zoomed in"): the kernel's `video=`
+        # held 1920 x 1080 for the boot, then labwc took the receiver's
+        # preferred 1280 x 720 while the page was scaled for 1080p.
+        f"GEXIS_SCREEN_MODE={screen.video_mode if screens.OTHER.match(screen.id) and screen.video_mode else ''}",
     ]
     return "\n".join(lines) + "\n"
 

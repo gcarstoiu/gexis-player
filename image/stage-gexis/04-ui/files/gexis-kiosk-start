@@ -176,6 +176,15 @@ rm -f "${GEXIS_KIOSK_PROFILE}/SingletonLock" \
 # screen, 400 tall on a bar, drawn at the screen's own resolution.
 scale=()
 connector=$(screen_connector)
+# ADR-0147: a TV's mode, which labwc would otherwise take from the device's
+# preferred one - a receiver's 1280 x 720 under a page scaled for 1080p.
+if [ -n "${GEXIS_SCREEN_MODE:-}" ]; then
+	if command -v wlr-randr >/dev/null && wlr-randr --output "${connector}" --mode "${GEXIS_SCREEN_MODE}"; then
+		echo "gexis-kiosk: ${connector} at ${GEXIS_SCREEN_MODE}" >&2
+	else
+		echo "gexis-kiosk: could not set ${connector} to ${GEXIS_SCREEN_MODE}" >&2
+	fi
+fi
 if [ -n "${GEXIS_SCREEN_TRANSFORM:-}" ] && [ "${GEXIS_SCREEN_TRANSFORM}" != normal ]; then
 	if command -v wlr-randr >/dev/null; then
 		wlr-randr --output "${connector}" --transform "${GEXIS_SCREEN_TRANSFORM}" \

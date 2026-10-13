@@ -248,10 +248,42 @@ def paint(png_path: str) -> int:
     return write_fb(prepare(png_path))
 
 
+def connected_ports(drm: str = "/sys/class/drm") -> int:
+    """How many HDMI ports have something connected."""
+    import glob
+    count = 0
+    for status in glob.glob(f"{drm}/card*-HDMI-A-*/status"):
+        try:
+            with open(status) as handle:
+                count += handle.read().strip() == "connected"
+        except OSError:
+            pass
+    return count
+
+
+def black(prepared):
+    """The same write, every byte black."""
+    if prepared is None:
+        return None
+    payload, geometry = prepared
+    return bytes(len(payload)), geometry
+
+
 def handover(png_path: str) -> int:
-    """Graphics mode, decode, end plymouth, write - in that order."""
+    """Graphics mode, decode, end plymouth, write - in that order.
+
+    **Two screens get black** (ADR-0147, George's photos 2026-10-13): fbdev is
+    one buffer, sized for one of them, and each screen shows its own
+    top-left corner of it - the still drawn for a 1920 x 1080 TV showed on
+    the 1280 x 800 panel as a cut-off logo beside a block of another colour,
+    and a buffer sized for the panel showed on the TV as a small console in
+    its corner. Plymouth draws each screen right; for the gap after it, one
+    black for both, never a picture fitted to one."""
     set_mode(KD_GRAPHICS, "KD_GRAPHICS")
     prepared = prepare(png_path)          # paid while plymouth is still drawing
+    if connected_ports() > 1:
+        log("two screens connected: the gap is black on both")
+        prepared = black(prepared)
     try:
         subprocess.run(
             ["/bin/plymouth", "quit", "--retain-splash"],
