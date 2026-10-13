@@ -149,7 +149,7 @@ before, so nothing is lost.
 
 **What is "Keep this screen?"**
 Whenever a screen change alters the picture (a new screen, another model
-chosen in *Settings → Display → Attached screen*, or *Screen rotation*), the
+chosen with *Change* on *Settings → Display → Screen*, or *Screen rotation*), the
 player restarts on it and asks *Keep this screen?* (*Keep this rotation?*
 after a rotation change). Without a tap on Keep
 within two minutes it goes back to how it was, so a screen that shows nothing
@@ -193,18 +193,18 @@ is planned.
 **Which screens work?**
 HDMI screens only. Tested on the hardware: a 10.1″ 1280 × 800 (the reference
 screen), a 13.3″ at 1920 × 1080, and the 1280 × 400 and 1480 × 320 bars.
-Others in *Settings → Display → Attached screen* are listed but untested;
+Others under *Change* on *Settings → Display → Screen* are listed but untested;
 those tested are marked *Tested*, those owners have reported working
 *Reported*. DSI and DPI screens are not supported. The screen can be on
 either of the Pi's HDMI ports; a bar screen moved from one port to the other
 is set up again at the next start and asks *Keep this screen?*. With
 something connected to both ports (a screen on one, a sound bar on the
-other), *Settings → Display → Screen port* shows what is on each and lets
+other), tapping *Settings → Display → Screen* shows what is on each and lets
 you choose which is the screen.
 
 **Can a TV be the screen?**
-Yes: connect it to either HDMI port and choose that port under *Settings →
-Display → Screen port*. The player restarts on the TV at 1920 x 1080, taken from the sizes the TV
+Yes: connect it to either HDMI port, tap *Settings → Display → Screen* and
+choose that port. The player restarts on the TV at 1920 x 1080, taken from the sizes the TV
 offers (a 4K TV scales it to full screen). A TV has no touch, so *Keep this
 screen?* appears on the phone page - answer it there, or the player goes back
 to the screen before. A touch panel left on the other port is switched off;

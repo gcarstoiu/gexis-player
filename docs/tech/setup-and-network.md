@@ -354,7 +354,10 @@ Keep, a screen without a forced mode moves silently, and a provisional
 setup screen stays provisional.
 
 **With both ports connected** (ADR-0141 D2/D4, 2026-10-12):
-`screen_detect.seen()` picks **the port chosen under *Screen port*** when
+In Settings the two rows are **one Screen tile** (George, 2026-10-13): the
+UI draws `screen_port` (or `screen_port_info`) at `screen`'s place, showing
+the display in use; a tap opens `screen_port`'s choice, *Change* opens
+`screen`'s list of models. `screen_detect.seen()` picks **the port chosen under *Screen port*** when
 something is connected there (ADR-0147 D1: `chosen` in screen.json's
 `current`), else the applied port if a known panel is there, any port a known
 panel is on, the applied port, else the first connected. `screen_detect.ports()` lists both for
@@ -381,7 +384,11 @@ ports with a known panel and `gexis-kiosk-start` turns them off with
 (`LIBINPUT_IGNORE_DEVICE` on each known panel's USB id; labwc's own
 per-device `sendEventsMode` did not hold on sofapi). A TV's mode comes from
 `screen_detect.tv_mode` (the kernel's mode list, 1080p first) as
-`other-WxH-capped`, and a chosen port is not asked about at the start.
+`other-WxH-capped`, held at boot by its `video=` and after it by the kiosk
+(`GEXIS_SCREEN_MODE`, `wlr-randr --mode`: labwc otherwise takes the device's
+preferred mode, a receiver's 1280 x 720), and a chosen port is not asked
+about at the start. With two screens connected, `gexis-splash-fb` makes the
+gap after plymouth black: fbdev is one buffer, sized for one of them.
 Display standby leaves an output carrying the sound on
 (`standby.carries_sound`).
 
