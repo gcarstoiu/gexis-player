@@ -34,6 +34,8 @@ from gexis_core.meters import (
     attenuate,
     read_attenuation,
     read_gain,
+    read_needle_follow,
+    NEEDLE_VOLUME_TRACKING,
 )
 
 logger = logging.getLogger("gexis_core.meter_service")
@@ -41,22 +43,23 @@ logger = logging.getLogger("gexis_core.meter_service")
 
 class _Watched:
     """A one-number file the core writes, re-read only when it changes: the
-    loop below runs 30 times a second. A missing file reads 0."""
+    loop below runs 30 times a second. A missing file reads `default`."""
 
-    def __init__(self, path: Path | None, read) -> None:
+    def __init__(self, path: Path | None, read, default: float = 0.0) -> None:
         self._path = path
         self._read = read
+        self._default = default
         self._seen: tuple[int, int] | None = None
-        self._value = 0.0
+        self._value = default
 
     def value(self) -> float:
         if self._path is None:
-            return 0.0
+            return self._default
         try:
             stat = os.stat(self._path)
         except OSError:
             self._seen = None
-            return 0.0
+            return self._default
         key = (stat.st_mtime_ns, stat.st_size)
         if key != self._seen:
             self._seen = key
@@ -68,7 +71,8 @@ class MeterServer:
     def __init__(self, source: FifoSource, *, passthrough: FifoPassthrough | None = None,
                  http_target: str = "", interval: float = 1 / 30,
                  attenuation_path: Path | None = None,
-                 gain_path: Path | None = None) -> None:
+                 gain_path: Path | None = None,
+                 follow_path: Path | None = None) -> None:
         self._source = source
         self._passthrough = passthrough
         self._http_target = http_target
@@ -79,6 +83,8 @@ class MeterServer:
         self._attenuation = _Watched(attenuation_path, read_attenuation)
         #: ADR-0146. The Gain row's dB, left by the core the same way.
         self._gain = _Watched(gain_path, read_gain)
+        #: ADR-0146 amended: how much of the cut the needles follow.
+        self._follow = _Watched(follow_path, read_needle_follow, NEEDLE_VOLUME_TRACKING)
         self._clients: set[web.WebSocketResponse] = set()
         self._session: aiohttp.ClientSession | None = None
 
@@ -131,7 +137,8 @@ class MeterServer:
         self._session = aiohttp.ClientSession() if self._http_target else None
         try:
             while True:
-                await self.publish(attenuate(self._source.read(), self.attenuation(), self.gain()))
+                await self.publish(attenuate(self._source.read(), self.attenuation(), self.gain(),
+                                             needle_tracking=self._follow.value()))
                 await asyncio.sleep(self._interval)
         finally:
             if self._session is not None:
@@ -154,6 +161,7 @@ async def main() -> None:
         interval=1 / config.meter_frame_rate,
         attenuation_path=Path(config.attenuation_path),
         gain_path=Path(config.meter_gain_path),
+        follow_path=Path(config.meter_follow_path),
     )
     runner = web.AppRunner(server.make_app())
     await runner.setup()

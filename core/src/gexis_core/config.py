@@ -99,6 +99,9 @@ class Config:
     # **Where the core leaves the Gain row's dB** (ADR-0146), beside it.
     # `meters.METER_GAIN_PATH` is the writer's copy, pinned by a test too.
     meter_gain_path: str = "/run/gexis/meter-gain"
+    # And how much of the cut the needles follow (ADR-0146 amended);
+    # `meters.NEEDLE_FOLLOW_PATH` is the writer's copy.
+    meter_follow_path: str = "/run/gexis/meter-follow"
     meter_frame_rate: int = 30  # the skins' own ui.refresh.period, ADR-0015
     meter_port: int = 8091
     # Empty by default: pushing to a PeppyMeter web server elsewhere is for a

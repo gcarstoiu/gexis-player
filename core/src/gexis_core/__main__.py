@@ -2507,6 +2507,8 @@ async def main() -> None:
                "meter_fall": _apply_scope_tuning,
                "meter_smoothing": _apply_meter_smoothing,
                # ADR-0146: read by the meter service from the file, at once.
+               "meter_follow": lambda value: meters.publish_needle_follow(
+                   value if value is not None else settings.value("meter_follow")),
                "meter_gain": lambda value: meters.publish_gain(
                    value if value is not None else (settings.value("meter_gain") or 0)),
                "home_strip": None, "home_strip_count": None,
@@ -3859,8 +3861,9 @@ async def main() -> None:
     # recording at full level until something moved the volume.
     if initial_raw is not None or volume_fixed_output():
         _publish_cut(initial_raw if initial_raw is not None else hardware_max())
-    # ADR-0146 §4-5: the Gain row, for the meter service.
+    # ADR-0146 §4-5: the Gain row and the Needles row, for the meter service.
     meters.publish_gain(settings.value("meter_gain") or 0)
+    meters.publish_needle_follow(settings.value("meter_follow"))
 
     if True:
         # ADR-0124: the software level kept across restarts - ALSA makes its

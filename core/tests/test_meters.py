@@ -279,9 +279,10 @@ class TestTheMetersFollowTheVolume:
 
     def test_the_writer_and_the_reader_name_the_same_gain_file(self):
         from gexis_core.config import Config
-        from gexis_core.meters import METER_GAIN_PATH
+        from gexis_core.meters import METER_GAIN_PATH, NEEDLE_FOLLOW_PATH
 
         assert Config().meter_gain_path == str(METER_GAIN_PATH)
+        assert Config().meter_follow_path == str(NEEDLE_FOLLOW_PATH)
 
     def test_the_writer_and_the_reader_name_the_same_file(self):
         """A meter reading a path nobody writes would show the source level
@@ -456,3 +457,52 @@ class TestTheGain:
         assert watched.value() == 12.0
         path.unlink()
         assert watched.value() == 0.0
+
+
+class TestTheNeedlesRow:
+    """*Needles follow the volume* (ADR-0146 amended, George 2026-10-13):
+    half the drop, or all of it like a real amplifier."""
+
+    def test_the_choices_are_the_rows_options(self):
+        import json
+        from pathlib import Path
+        from gexis_core.meters import NEEDLE_FOLLOW
+
+        registry = json.loads((Path(__file__).parents[1] / "src/gexis_core/settings_registry.json").read_text())
+
+        def rows(node):
+            if isinstance(node, dict):
+                if node.get("key") == "meter_follow":
+                    yield node
+                for v in node.values():
+                    yield from rows(v)
+            elif isinstance(node, list):
+                for v in node:
+                    yield from rows(v)
+
+        (row,) = list(rows(registry))
+        assert set(row["options"]) == set(NEEDLE_FOLLOW)
+        assert NEEDLE_FOLLOW[row["default"]] == 0.5
+
+    def test_like_a_real_amplifier_follows_it_all(self, tmp_path):
+        from gexis_core.meters import Levels, attenuate, publish_needle_follow, read_needle_follow
+
+        path = tmp_path / "meter-follow"
+        assert read_needle_follow(path) == 0.5
+        publish_needle_follow("Like a real amplifier", path)
+        follow = read_needle_follow(path)
+        assert follow == 1.0
+        # 20.2 dB at 40 %: a tenth of the travel, as ADR-0057 measured
+        assert attenuate(Levels(100, 100, ()), 20.2, needle_tracking=follow).left == 10
+        publish_needle_follow("Half the drop", path)
+        assert read_needle_follow(path) == 0.5
+        publish_needle_follow("something else", path)
+        assert read_needle_follow(path) == 0.5
+        path.write_text("7\n")
+        assert read_needle_follow(path) == 1.0
+
+    def test_the_meter_service_starts_at_half(self, tmp_path):
+        from gexis_core.meter_service import _Watched
+        from gexis_core.meters import read_needle_follow
+
+        assert _Watched(tmp_path / "nope", read_needle_follow, 0.5).value() == 0.5

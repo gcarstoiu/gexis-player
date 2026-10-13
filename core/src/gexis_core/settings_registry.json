@@ -1304,6 +1304,18 @@
         "warn": "Changing this restarts the visualiser."
       },
       {
+        "key": "meter_follow",
+        "type": "choice",
+        "label": "Needles follow the volume",
+        "marks": "N",
+        "note": "With Volume on Software or Hardware, the bars fall by the whole drop in volume. Half the drop keeps the needles moving when listening low; Like a real amplifier makes them follow it all, so they sit near the bottom of the dial from about 40% volume down. On Fixed both show the recording.",
+        "options": [
+          "Half the drop",
+          "Like a real amplifier"
+        ],
+        "default": "Half the drop"
+      },
+      {
         "key": "meter_gain",
         "type": "number",
         "label": "Gain",

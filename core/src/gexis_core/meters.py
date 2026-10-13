@@ -230,6 +230,15 @@ VU_SCALE_DB = 20.0
 #: (2026-10-13). Half: 74% of the travel at 80%, 51% at 60%, 32% at 40%.
 NEEDLE_VOLUME_TRACKING = 0.5
 
+#: **The Needles row's two choices** (ADR-0146 amended, George 2026-10-13:
+#: *"switching to a real amp behaviour"*): how much of the cut the needles
+#: follow. Like a real amplifier, they are on their stop by 40% volume.
+NEEDLE_FOLLOW = {"Half the drop": NEEDLE_VOLUME_TRACKING, "Like a real amplifier": 1.0}
+
+#: **Where the core leaves that choice for the meter service**, as the
+#: fraction it means: one line, 0.50 or 1.00.
+NEEDLE_FOLLOW_PATH = Path("/run/gexis/meter-follow")
+
 #: **The bars follow the whole cut** (ADR-0146): their scale is logarithmic,
 #: a point to the dB, so even the whole 60 dB leaves them alive far down the
 #: slider - about 21 points lower at 40%.
@@ -258,6 +267,28 @@ def read_gain(path: Path) -> float:
     if not math.isfinite(value):
         return 0.0
     return min(GAIN_MAX_DB, max(GAIN_MIN_DB, value))
+
+
+def read_needle_follow(path: Path) -> float:
+    """How much of the cut the needles follow, from the file the core
+    writes; half when it is missing or unreadable, and held to 0-1."""
+    try:
+        value = float(path.read_text().strip())
+    except (OSError, ValueError):
+        return NEEDLE_VOLUME_TRACKING
+    if not math.isfinite(value):
+        return NEEDLE_VOLUME_TRACKING
+    return min(1.0, max(0.0, value))
+
+
+def publish_needle_follow(choice: str | None, path: Path = NEEDLE_FOLLOW_PATH) -> None:
+    """Leave the Needles row's choice where the meter service reads it, as
+    the fraction it means. An unknown choice is the default, half."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"{NEEDLE_FOLLOW.get(choice or '', NEEDLE_VOLUME_TRACKING):.2f}\n")
+    except OSError as exc:
+        logger.debug("meters: cannot publish how the needles follow: %s", exc)
 
 
 def publish_gain(db: float, path: Path = METER_GAIN_PATH) -> None:
