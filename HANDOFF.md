@@ -10,22 +10,17 @@ and `phase-13b` is merged into it after each docs change. A release is built
 from a worktree made at its tag, then removed. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 0.11.0 on Testing** (2026-10-12; tag `v0.11.0`, release
-`r0.11.0`, serial 37, PR #62 merged; image
-`image/deploy/2026-10-12-gexis-player-v0.11.0.img`). USB DACs and native DSD
-(ADR-0143/0144, Finding 120), the screen on either HDMI port (ADR-0109
-amended), the player announcing for its plugins (ADR-0142), plugin versions,
-Phase 13d closed. After the tag on `phase-13d`, for 1.0.0:
-- setup keeps the screen it applied (the bar's lingering "provisional");
-- ADR-0141 decided and built: one *Screen port* tile, black on a sound-only
-  port, the jack standing in while the chosen HDMI sound is unplugged;
-- multichannel files folded to stereo by our own `gexis-squeezelite` (ADR-0145,
-  Finding 121);
-- the spectrum's bands read their energy, with no treble lift (ADR-0130 as
-  amended, Finding 122; `gexis-peppyalsa` `-5`);
-- the meters follow the volume visibly - bars the whole cut, needles half or
-  *Like a real amplifier* - published from the start, with a *Gain* row
-  (ADR-0146).
+**Current release: 0.12.0 on Testing** (2026-10-13; tag `v0.12.0`, release
+`r0.12.0`, serial 38; **PR #63 open for George to merge**; image
+`image/deploy/2026-10-13-gexis-player-v0.12.0.img`, 121 checks passed;
+release worktree `~/projects/gexis-player-r0120`, removed after the merge).
+Multichannel files folded to stereo (ADR-0145, Finding 121), one *Screen port*
+tile with black on a sound-only port and the jack standing in (ADR-0141), the
+spectrum's bands reading their energy with no lift (ADR-0130 amended, Finding
+122), the meters following the volume with *Gain* and *Needles follow the
+volume* (ADR-0146), setup keeping the screen it applied. **Players are not
+updated to it by Claude** (George, 2026-10-13): sofapi and guestpi (Testing,
+Manual) offer it for George's cut-short-update test (g34); the bar is on Stable.
 
 Suite 2,343.
 
