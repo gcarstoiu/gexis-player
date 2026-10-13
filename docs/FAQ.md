@@ -165,6 +165,13 @@ which are turned to landscape. On the very first start, setup's own screens
 are already laid out for the attached screen; setup's Screen step then
 confirms it.
 
+**My sound goes to a receiver over HDMI. What if the receiver is off?**
+When the HDMI port the sound goes to has nothing connected any more, the
+player plays through the headphone jack until the receiver is back, then
+returns to HDMI by itself. While the jack stands in it uses its own volume,
+never *Fixed*, so headphones are never at full level. *Settings → Audio →
+Output* says when this is happening.
+
 **Does the player play DSD?**
 Yes. DSD files from Lyrion play natively, unconverted, on a DAC that takes
 DSD itself (some USB DACs; tested with an SMSL), with *Settings → Audio →
