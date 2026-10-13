@@ -27,6 +27,7 @@
   import CableKeep from './screens/CableKeep.svelte';
   import { settling, settlingDone, settlingHide, resetting } from './lib/state.js';
   import KeepScreen from './screens/KeepScreen.svelte';
+  import PhoneKeepScreen from './screens/PhoneKeepScreen.svelte';
   import NewScreen from './screens/NewScreen.svelte';
   import { loadSettings, settingValues, settingsDevice } from './lib/settings.js';
   import { loadLibraryRoot } from './lib/library.js';
@@ -629,6 +630,15 @@
   {/if}
   <!-- ADR-0123: a new cable address waiting to be kept, on every page. -->
   <CableKeep />
+  <!-- ADR-0147 D3: a screen without touch - a TV - is kept from here. -->
+  {#if $screenConfirm?.phone}
+    <PhoneKeepScreen
+      question={$screenConfirm}
+      secondsLeft={keepLeft}
+      onkeep={() => answerScreen('keep')}
+      onrevert={() => answerScreen('revert')}
+    />
+  {/if}
 {:else if surface === 'panel'}
 
 <div class="panel" class:panel--bar={screen.family === 'bar'} data-family={screen.family}>
@@ -802,6 +812,7 @@
       previous={$screenConfirm.rotation_only ? $screenConfirm.previous_rotation : ($screenConfirm.previous ?? "the screen's own settings")}
       untested={$screenConfirm.untested}
       rotationOnly={$screenConfirm.rotation_only}
+      phone={!!$screenConfirm.phone}
       secondsLeft={keepLeft}
       total={$screenConfirm.total ?? 30}
       onkeep={() => answerScreen('keep')}

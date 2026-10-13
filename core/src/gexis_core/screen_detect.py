@@ -126,6 +126,21 @@ def ports(drm: Path = DRM, usb: Path = USB) -> list[Seen]:
     return out
 
 
+def has_touch(screen_id: str) -> bool:
+    """Whether the player knows `screen_id` has a touch input: a model whose
+    fingerprint names its USB touch device (ADR-0147 D3)."""
+    fp = FINGERPRINTS.get(screen_id)
+    return bool(fp and fp.usb)
+
+
+def _chosen_connector() -> str | None:
+    """The port chosen under *Screen port*, if the screen in use was put
+    there by choice (ADR-0147 D1)."""
+    from . import screen_apply
+    current = screen_apply.read_state().get("current") or {}
+    return current.get("connector") if current.get("chosen") else None
+
+
 def _applied_connector() -> str | None:
     """The port the screen was last applied on, from screen.json."""
     from . import screen_apply
@@ -148,6 +163,16 @@ def seen(drm: Path = DRM, usb: Path = USB, prefer: str | None = "applied") -> Se
     if len(connected) == 1:
         return connected[0]
     if prefer == "applied":
+        # **A port chosen holds** (ADR-0147 D1; George, 2026-10-13: the
+        # LG TV chosen on HDMI 2 went back to the panel on HDMI 1 at every
+        # start), as long as something is connected to it.
+        try:
+            chosen = _chosen_connector()
+        except (OSError, AttributeError):
+            chosen = None
+        held = next((p for p in connected if p.connector == chosen), None)
+        if held is not None:
+            return held
         try:
             prefer = _applied_connector()
         except OSError:

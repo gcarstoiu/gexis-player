@@ -1711,6 +1711,10 @@
                      Software update tile - what the updater found and when,
                      the waiting release's notes, and one button. Release,
                      above it, only says what this device runs. -->
+                <!-- *Update…* checks again before it offers anything (George,
+                     2026-10-13): the waiting release is last night's check's,
+                     and the channel may have moved since - guestpi offered
+                     0.11.0 with its notes, then installed 0.12.0. -->
                 {@const waiting = $update?.state === 'available'}
                 <div class="row row--tile">
                   <span class="row__body">
@@ -1732,7 +1736,7 @@
                       class="tile__btn"
                       class:tile__btn--go={waiting}
                       class:tile__btn--busy={$update?.active}
-                      onclick={() => (updateModal = $update?.active ? 'progress' : waiting ? 'available' : 'check')}
+                      onclick={() => (updateModal = $update?.active ? 'progress' : 'check')}
                     >{$update?.active ? 'Updating…' : waiting ? 'Update…' : 'Check for updates'}</button>
                   </span>
                 </div>
