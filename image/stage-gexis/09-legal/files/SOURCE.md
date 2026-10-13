@@ -17,6 +17,10 @@ repository.
   `image/stage-gexis/00-alsa/files/peppyalsa-one-write-per-frame.patch` and
   `image/stage-gexis/00-alsa/files/peppyalsa-spectrum-bands.patch`, applied in
   that order to the pinned upstream commit.
+- **Squeezelite is modified here.** The change is
+  `packaging/squeezelite/squeezelite-downmix.patch`, applied to upstream
+  commit `262994a989dc29ce3be4390c57c6a43373dfdca2` (the one Debian packages)
+  by `packaging/squeezelite/build.sh`, which names the build options.
 - Debian and Raspberry Pi OS packages are listed with their exact versions in
   `packages.txt`, beside this file. Their source is in the Debian and Raspberry
   Pi OS source archives at those versions.

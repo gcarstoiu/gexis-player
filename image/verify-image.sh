@@ -384,6 +384,24 @@ else
 fi
 rm -f "$OUT/one"
 
+echo "== ADR-0145: Squeezelite is ours, which folds multichannel down to stereo"
+# dpkg's own record of who installed the file: Debian's squeezelite has the
+# same path, and would play a 5.1 file's front pair alone.
+dfs "dump /var/lib/dpkg/info/gexis-squeezelite.list $OUT/one" >/dev/null
+grep -qx '/usr/bin/squeezelite' "$OUT/one" 2>/dev/null \
+	&& ok "/usr/bin/squeezelite comes from gexis-squeezelite" \
+	|| bad "/usr/bin/squeezelite is not gexis-squeezelite's"
+rm -f "$OUT/one"
+dfs "dump /var/lib/dpkg/status $OUT/status" >/dev/null
+if [ ! -s "$OUT/status" ]; then
+	bad "/var/lib/dpkg/status missing"
+elif awk -v RS= '/^Package: squeezelite\n/ && /\nStatus: [a-z]+ ok installed/' "$OUT/status" | grep -q .; then
+	bad "Debian's squeezelite is installed"
+else
+	ok "Debian's squeezelite is not installed"
+fi
+rm -f "$OUT/status"
+
 echo "== ADR-0099: licences and the source offer reach the device"
 # peppy_templates' notice is not here since ADR-0111: nothing of that
 # repository is in the image, and each skin pack carries it in its own
@@ -396,6 +414,7 @@ for f in /usr/share/doc/gexis-player/COPYING \
          /usr/share/doc/gexis-player/licenses/beszel/LICENSE \
          /usr/share/doc/gexis-player/licenses/go-librespot/README \
          /usr/share/doc/gexis-player/licenses/peppyalsa/README \
+         /usr/share/doc/gexis-player/licenses/squeezelite/README \
          /opt/gexis-ui/licenses/svelte/LICENSE.md \
          /opt/gexis-ui/licenses/@fontsource-variable__nunito-sans/LICENSE \
          /opt/gexis-ui/licenses/@fontsource__ibm-plex-mono/LICENSE \
