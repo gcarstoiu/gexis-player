@@ -50,6 +50,32 @@ def test_an_unverified_channel_is_refused(monkeypatch, up):
         up.read_channel("testing")
 
 
+def test_a_channel_with_nothing_on_it_says_so_in_words(monkeypatch, up, capsys):
+    """George, 2026-10-13: the bar on Stable, before any release was
+    promoted, showed the URL and "HTTP Error 404: Not Found"."""
+    def missing(url, timeout=0):
+        raise up.urllib.error.HTTPError(url, 404, "Not Found", {}, None)
+    monkeypatch.setattr(up.urllib.request, "urlopen", missing)
+    with pytest.raises(up.Stop) as stop:
+        up.read_channel("stable")
+    assert str(stop.value) == ("Nothing has been released on the Stable channel yet. "
+                               "Test releases come out on Testing, under Update channel.")
+    assert "channels/stable" in capsys.readouterr().err
+
+
+def test_no_network_is_a_sentence_too(monkeypatch, up):
+    def offline(url, timeout=0):
+        raise up.urllib.error.URLError("Name or service not known")
+    monkeypatch.setattr(up.urllib.request, "urlopen", offline)
+    with pytest.raises(up.Stop, match="^The player could not reach the update server"):
+        up.read_channel("testing")
+    def broken(url, timeout=0):
+        raise up.urllib.error.HTTPError(url, 503, "Unavailable", {}, None)
+    monkeypatch.setattr(up.urllib.request, "urlopen", broken)
+    with pytest.raises(up.Stop, match=r"answered with an error \(503\)"):
+        up.read_channel("testing")
+
+
 def test_a_serial_that_went_down_is_refused(monkeypatch, up):
     """ADR-0108: an old, genuinely signed file cannot hold a device back."""
     up.remember_serial("testing", 5)
