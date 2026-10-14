@@ -218,7 +218,7 @@ def test_an_update_never_restarts_itself_or_the_shutdown_pause(up, monkeypatch):
 
 
 def test_manual_never_installs_at_night(up, monkeypatch):
-    monkeypatch.setattr(up, "check", lambda args: ("testing", {"Release": "2", "_serial": 2}))
+    monkeypatch.setattr(up, "check", lambda args, **kw: ("testing", {"Release": "2", "_serial": 2}))
     monkeypatch.setattr(up, "setting", lambda key: "Manual" if key == "updates" else None)
     monkeypatch.setattr(up, "install", lambda args: (_ for _ in ()).throw(AssertionError("installed")))
     assert up.scheduled(None) == 0
@@ -233,10 +233,10 @@ def test_automatic_skips_a_release_that_failed_here_and_takes_a_newer_one(up, mo
     monkeypatch.setattr(up, "playing", lambda: False)
     installs = []
     monkeypatch.setattr(up, "install", lambda args: installs.append(1) or 0)
-    monkeypatch.setattr(up, "check", lambda args: ("testing", {"Release": "2", "_serial": 2}))
+    monkeypatch.setattr(up, "check", lambda args, **kw: ("testing", {"Release": "2", "_serial": 2}))
     up.scheduled(None)
     assert installs == [], "the failed release is not retried by itself"
-    monkeypatch.setattr(up, "check", lambda args: ("testing", {"Release": "3", "_serial": 3}))
+    monkeypatch.setattr(up, "check", lambda args, **kw: ("testing", {"Release": "3", "_serial": 3}))
     up.scheduled(None)
     assert installs == [1], "a newer release is"
 
@@ -272,7 +272,7 @@ def test_a_night_that_finds_music_does_not_wait_and_tries_tomorrow(up, monkeypat
     """ADR-0110 §4: nobody can be asked at night, so nothing is stopped."""
     monkeypatch.setattr(up, "setting", lambda key: "Automatic" if key == "updates" else None)
     monkeypatch.setattr(up, "installed", lambda p: "1")
-    monkeypatch.setattr(up, "check", lambda args: ("testing", {"Release": "2", "_serial": 2}))
+    monkeypatch.setattr(up, "check", lambda args, **kw: ("testing", {"Release": "2", "_serial": 2}))
     monkeypatch.setattr(up, "playing", lambda: True)
     monkeypatch.setattr(up, "install", lambda args: (_ for _ in ()).throw(AssertionError("installed")))
     assert up.scheduled(None) == 0
@@ -289,7 +289,7 @@ def fake_install(up, monkeypatch, *, fail_install=False, answers=True):
         real_report(state, **fields)
         seen.append(json.loads((up.STATE / "status.json").read_text()))
     monkeypatch.setattr(up, "report", report)
-    monkeypatch.setattr(up, "check", lambda args: ("testing", {"Release": "2", "_serial": 2,
+    monkeypatch.setattr(up, "check", lambda args, **kw: ("testing", {"Release": "2", "_serial": 2,
                                                                 "Repositories": "ours-x", "_whats_new": "New."}))
     monkeypatch.setattr(up, "installed", lambda p: "1")
     monkeypatch.setattr(up, "parts_of", lambda v: (["ours-old"], ["ours-old"]))
@@ -1247,3 +1247,46 @@ def test_the_install_unit_has_no_time_limit_and_the_button_s_has_one():
     units = Path(__file__).resolve().parents[1] / "updater" / "units"
     assert "TimeoutStartSec=infinity" in (units / "gexis-update-install.service").read_text()
     assert "TimeoutStartSec=300" in (units / "gexis-update-checknow.service").read_text()
+
+
+def test_a_cut_short_skin_pack_is_not_a_release_to_finish(up, monkeypatch):
+    """**Finding 125 #16.** A power cut while a pack installed left dpkg
+    dirty with only the pack broken; the next check took it for a release
+    cut short, reinstalled the release already there and restarted the
+    device, mid-playback. A pack is the pack path's to finish - its own
+    `heal`, and an install's - and the check goes on to read the channel."""
+    for where in (up.REPAIR_HERE, up.REPAIR_HAND_OVER, up.REPAIR_IF_QUIET):
+        reports, healed, ran = _cut_short_no_note(up, monkeypatch)
+        monkeypatch.setattr(up, "interrupted", lambda: (True, ["gexis-skins-1480x320"]))
+        applied = []
+        monkeypatch.setattr(up, "apt", lambda opts, *a, **k: applied.append(list(a))
+                            or subprocess.CompletedProcess(a, 0, "", ""))
+        monkeypatch.setattr(up, "playing", lambda: False)
+        assert up.finish_cut_short(where) is False, where
+        assert healed == [] and applied == [] and ran == [], where
+
+
+def test_a_night_with_music_leaves_a_cut_short_release_for_later(up, monkeypatch):
+    """**Finding 125 #16.** The nightly check repaired and rebooted in any
+    update mode, whatever was playing. While something plays it does
+    neither, and says why; the next quiet check finishes it."""
+    reports, healed, ran = _cut_short_no_note(up, monkeypatch)
+    monkeypatch.setattr(up, "playing", lambda: True)
+    monkeypatch.setattr(up, "setting", lambda key: (_ for _ in ()).throw(AssertionError("read on")))
+    assert up.scheduled(None) == 0
+    assert healed == [] and ["systemctl", "reboot"] not in ran
+    assert reports[-1][0] == "failed" and "nothing is playing" in reports[-1][1]
+
+    reports, healed, ran = _cut_short_no_note(up, monkeypatch)
+    monkeypatch.setattr(up, "playing", lambda: False)
+    assert up.scheduled(None) == 0
+    assert healed and ["systemctl", "reboot"] in ran, "a quiet night finishes it"
+
+
+def test_check_for_updates_with_music_hands_nothing_over(up, monkeypatch):
+    """**Finding 125 #16.** Nobody asked for an install or a restart."""
+    reports, healed, ran = _cut_short_no_note(up, monkeypatch)
+    monkeypatch.setattr(up, "playing", lambda: True)
+    assert _check_button(up, monkeypatch) == 0
+    assert healed == [] and ran == []
+    assert reports[-1][0] == "failed" and "nothing is playing" in reports[-1][1]
