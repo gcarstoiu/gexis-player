@@ -17,8 +17,8 @@ routine clean-up done; image `image/deploy/2026-10-13-gexis-player-v0.14.0.img`,
 tile; a TV as the screen at 1080p (ADR-0147 amended twice after George's TV
 tests); standby keeps a sound port on; the update backup survives a vanishing
 file. 0.13.0 (PR #64) merged and its post-merge steps done. The bar is on
-0.13.0 (fixed updater), ready for the second power cut during its update to
-0.14.0 (7b2). sofapi runs a preview of 0.14.0's code. **Players are not
+0.14.0: **the second power cut passed** (2026-10-14, Finding 123
+addendum) - cut mid-install, finished by itself at the next start. sofapi runs a preview of 0.14.0's code. **Players are not
 updated to a release by Claude** (George, 2026-10-13).
 
 **From the power-cut test, in 0.13.0:** George's power cut on the bar (g34,
@@ -29,7 +29,7 @@ every check), only half-installed packages are reinstalled, the whole release
 completed after. The bar recovered with the fixed code (run from a copy) and
 is on the complete 0.12.0 set. Also: *Could not check for updates* says why
 in words. **Not proved:** a second real cut with the fixed updater
-installed - a player on 0.13.0 cut during its next update (7b2). LESSONS 70.
+installed - done 2026-10-14, passed. LESSONS 70.
 
 Suite 2,352.
 
