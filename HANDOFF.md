@@ -22,16 +22,6 @@ everything since 0.10.1, two of them security issues in backups), on sofapi
 as a preview - for the next release, 1.0.0. **Players are not updated to a
 release by Claude** (George, 2026-10-13).
 
-**From the power-cut test, in 0.13.0:** George's power cut on the bar (g34,
-Finding 123) found the updater could not recover - its note for the boot was
-an empty file (never synced), and every check said "current". Fixed: the
-note is synced, a cut-short install is finished with no note (at boot and at
-every check), only half-installed packages are reinstalled, the whole release
-completed after. The bar recovered with the fixed code (run from a copy) and
-is on the complete 0.12.0 set. Also: *Could not check for updates* says why
-in words. **Not proved:** a second real cut with the fixed updater
-installed - done 2026-10-14, passed. LESSONS 70.
-
 Suite 2,386 passed, 47 skipped (2026-10-14).
 
 **Devices.** sofapi (Waveshare 10.1"; a test machine - its Lyrion queue may
@@ -77,7 +67,7 @@ in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-10-14, after 0.14.0's PR** (the first: ~102 GB and ~30,500 -> ~9,500
+2026-10-14, after 0.15.0's PR (#66)** (the first: ~102 GB and ~30,500 -> ~9,500
 words in the morning).
 
 ## Phases
