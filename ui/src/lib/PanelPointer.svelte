@@ -59,6 +59,8 @@
   //: as square, and a ring round it would cover the screen.
   const ROUND = 1.6;
   const RING_MAX = 96;
+  //: How far outside the element its outline is drawn.
+  const RING_GAP = 6;
 
   /** The pointer's shape for what lies under it, what it is over, and
    *  whether that takes text - asked on every move and four times a second
@@ -79,15 +81,23 @@
     kind = performance.now() - scrolledAt < 400 ? (scrolledX ? 'scrollx' : 'scroll') : slider ? 'slide' : pressable ? 'press' : 'plain';
     ring = null;
     if (tapped) return;
-    // A ring for a button that is only an icon: a tab or a row with words in
-    // it is not the design's round control, however square (George,
-    // 2026-10-05: "the track entry in now playing shouldn't get the
-    // highlight").
-    if (kind === 'press' && !arrow && !words(pressable)) {
+    // **Everything that can be pressed is outlined, in its own shape**
+    // (George, 2026-10-14: "The hover effect on square items should be
+    // removed or we can have a square outlining effect to be consistent.
+    // Also all items that can be clicked should come with some effect").
+    // The ring was a circle, drawn only round small icon buttons - a rounded
+    // square got a circle, and a row or a card nothing. Now it follows the
+    // element's box and corners; the light fill only on a small control, so
+    // a row is outlined, not washed over. Not round something that covers
+    // most of the screen.
+    if (kind === 'press') {
       const r = pressable.getBoundingClientRect();
-      const long = Math.max(r.width, r.height);
-      if (long / Math.max(1, Math.min(r.width, r.height)) < ROUND && long <= RING_MAX) {
-        ring = { cx: r.left + r.width / 2, cy: r.top + r.height / 2, size: long + 16 };
+      if (r.width * r.height < window.innerWidth * window.innerHeight * 0.5) {
+        const long = Math.max(r.width, r.height);
+        const small = !words(pressable) && long / Math.max(1, Math.min(r.width, r.height)) < ROUND && long <= RING_MAX;
+        const radius = parseFloat(getComputedStyle(pressable).borderTopLeftRadius) || 0;
+        ring = { x: r.left - RING_GAP, y: r.top - RING_GAP, w: r.width + 2 * RING_GAP, h: r.height + 2 * RING_GAP,
+                 radius: radius + RING_GAP, small };
       }
     }
   }
@@ -415,10 +425,13 @@
   {#if ring}
     <div
       class="ring"
+      class:ring--small={ring.small}
       class:shown
       use:outside
-      style:transform={`translate(${ring.cx}px, ${ring.cy}px)`}
-      style:--size={`${ring.size}px`}
+      style:transform={`translate(${ring.x}px, ${ring.y}px)`}
+      style:--w={`${ring.w}px`}
+      style:--h={`${ring.h}px`}
+      style:--radius={`${ring.radius}px`}
       aria-hidden="true"
     ></div>
   {/if}
@@ -439,7 +452,7 @@
       <!-- The Dot set: a 28 px dot that becomes a pill over a slider (48 x 22)
            or while two fingers scroll (22 x 48), and a small dot inside a
            ring round a small round control. -->
-      <span class="dot dot--{ring ? 'ringed' : kind}">
+      <span class="dot dot--{ring?.small ? 'ringed' : kind}">
         <svg class="dot__marks" class:on={kind === 'slide' || kind === 'scroll' || kind === 'scrollx'} viewBox="0 0 64 64" aria-hidden="true">
           {#if kind === 'scroll'}
             <path d="M26 22l6-6 6 6M26 42l6 6 6-6" />
@@ -472,6 +485,9 @@
   .ring.shown {
     opacity: 1;
     transition-duration: 0ms;
+  }
+  .ring--small {
+    background: rgba(233, 238, 242, 0.14);
   }
 
   /* The Arrow set (Claude Design, Cursors, mouse 2c). */
@@ -551,12 +567,11 @@
     opacity: 1;
   }
   .ring {
-    width: var(--size);
-    height: var(--size);
-    margin: calc(var(--size) / -2) 0 0 calc(var(--size) / -2);
-    border-radius: 999px;
+    width: var(--w);
+    height: var(--h);
+    border-radius: var(--radius);
     border: 4px solid #7ed6bc;
-    background: rgba(233, 238, 242, 0.14);
+    background: transparent;
     box-sizing: border-box;
   }
 </style>
