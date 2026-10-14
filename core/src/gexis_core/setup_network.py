@@ -110,6 +110,55 @@ def panel_attached(drm: Path = DRM) -> bool:
     return False
 
 
+#: The 2.4 GHz channels the setup network may use: the three that do not
+#: overlap one another.
+CHANNELS = (1, 6, 11)
+CHANNEL_MHZ = {1: 2412, 6: 2437, 11: 2462}
+
+
+def pixel_clocks(drm: Path = DRM) -> list[float]:
+    """The preferred mode's pixel clock, in MHz, of every connected HDMI
+    screen - the first detailed timing of its EDID (bytes 54-55, in 10 kHz).
+    A screen without a readable EDID adds nothing."""
+    clocks = []
+    try:
+        connectors = sorted(drm.glob("card*-HDMI-A-*"))
+    except OSError:
+        return clocks
+    for connector in connectors:
+        try:
+            if (connector / "status").read_text().strip() != "connected":
+                continue
+            edid = (connector / "edid").read_bytes()
+        except OSError:
+            continue
+        if len(edid) >= 128:
+            clock = (edid[54] | edid[55] << 8) / 100
+            if clock > 0:
+                clocks.append(clock)
+    return clocks
+
+
+def quiet_channel(clocks: list[float]) -> int:
+    """**The 2.4 GHz channel farthest from the screens' own interference**
+    (George's bar, 2026-10-15: gexis-setup on channel 6 could not be joined,
+    the phone seeing it come and go). An HDMI link radiates at multiples of
+    its pixel clock: the 11.9" bar's 59.4 MHz has one at 2435.4 MHz, 1.6 MHz
+    from channel 6 - with the display off, or on channel 1, the phone joined
+    at once. sofapi's 77.0 MHz panel is clear of 6 and 2 MHz from 11, so no
+    one channel suits every screen. Channel 6 - NetworkManager's own choice -
+    when nothing is known."""
+    if not clocks:
+        return 6
+
+    def clearance(channel: int) -> float:
+        mhz = CHANNEL_MHZ[channel]
+        return min(abs(round(mhz / c) * c - mhz) for c in clocks)
+
+    # Ties keep the order of preference: 6 first, as before, then 1 and 11.
+    return max((6, 1, 11), key=clearance)
+
+
 #: Between the phone being told setup is finishing and the radio leaving it,
 #: so the page's last screen - where to go next - arrives before the page
 #: can no longer be reached.
@@ -480,6 +529,12 @@ class SetupNetwork:
             await self._nmcli("connection", "delete", PROFILE)
             logger.info("setup: deleted a %s profile left from before", PROFILE)
 
+    def _channel(self) -> int:
+        channel = quiet_channel(pixel_clocks(self._drm))
+        logger.info("setup: %s on channel %d (screens' pixel clocks: %s)", SSID, channel,
+                    ", ".join(f"{c:g} MHz" for c in pixel_clocks(self._drm)) or "none known")
+        return channel
+
     async def open(self) -> bool:
         """Raise the setup network: the command Finding 099 measured, then
         `autoconnect no` so the profile can never come up by itself at boot in
@@ -504,7 +559,7 @@ class SetupNetwork:
         ready = await self._wait_for_wlan()
         rc, _, err = await self._nmcli(
             "device", "wifi", "hotspot", "ifname", IFACE, "con-name", PROFILE,
-            "ssid", SSID, "band", "bg", "password", self._password,
+            "ssid", SSID, "band", "bg", "channel", str(self._channel()), "password", self._password,
             timeout=wifi.JOIN_TIMEOUT_S,
         )
         await self._nmcli("connection", "modify", PROFILE, "connection.autoconnect", "no")
