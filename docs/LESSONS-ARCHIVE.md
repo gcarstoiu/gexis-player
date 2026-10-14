@@ -1335,6 +1335,27 @@ a real power cut keeps only what was synced.** Crash safety is proved by a
 real cut, or by a test that checks the sync itself (`os.fsync` of the file
 and its folder), not by finding the file afterwards.
 
+**71. A package named after a commit it did not contain** (2026-10-14,
+George's photos of the outline on sofapi's TV, cut at the top and bottom).
+- **What went wrong.** The outline's cut was corrected in the headless test
+  (a list's edge cut it even where it hid nothing), committed, and packaged.
+  But `packaging/ui/build.sh` packs `ui/dist` as it finds it, and `ui/dist`
+  had been built before the correction. sofapi got `gexis-ui
+  0.14.0+git28.7301754` - the commit with the correction - holding the code
+  without it.
+- **What it looked like.** The headless test passed (it runs the sources
+  through Vite, not the package); the install was clean; `dpkg-query` named
+  the right commit; a grep for the feature found it in the installed bundle,
+  since the first version had it too.
+- **How it was caught.** George's photos: outlines cut top and bottom, on
+  tiles that had always been outlined whole. The installed bundle, read on
+  the device, lacked the correction's condition.
+
+**A version string says which commit a package was built at, not what it
+was built from.** Check the change itself in what was installed - the
+specific condition, not the feature's name - and make the build refuse
+inputs older than their sources (`packaging/ui/build.sh` now does).
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

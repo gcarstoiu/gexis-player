@@ -342,6 +342,12 @@ cut-short update). A test that stops a process with an exception keeps every
 write it made; a real power cut keeps only what was synced. Crash safety is
 proved by a real cut, or by checking the sync itself.
 
+**71. A package named after a commit it did not contain** (2026-10-14, the
+panel's outline on sofapi). The UI package packs `ui/dist` as found; built
+before the last edit, it went out under the next commit's version. Check
+what a package holds, not its name: unpack it and find the change, and let
+the build refuse a `ui/dist` older than its sources.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target, the check quietly
