@@ -386,7 +386,13 @@ per-device `sendEventsMode` did not hold on sofapi). A TV's mode comes from
 `screen_detect.tv_mode` (the kernel's mode list, 1080p first) as
 `other-WxH-capped`, held at boot by its `video=` and after it by the kiosk
 (`GEXIS_SCREEN_MODE`, `wlr-randr --mode`: labwc otherwise takes the device's
-preferred mode, a receiver's 1280 x 720), and a chosen port is not asked
+preferred mode, a receiver's 1280 x 720). **And kept**: `keep_outputs` in
+`gexis-kiosk-start` reads `wlr-randr --json` every 3 s and puts the screen's
+port back at `GEXIS_SCREEN_MODE` once that mode is offered, and switches a
+`GEXIS_OUTPUTS_OFF` port off again if it came back on; a screen output that
+is off is left off. A TV woken behind a receiver is first offered the
+receiver's 640 x 480 alone (the kernel refuses 1920x1080 then), and labwc took
+it. A chosen port is not asked
 about at the start. With two screens connected, `gexis-splash-fb` makes the
 gap after plymouth black: fbdev is one buffer, sized for one of them.
 Display standby leaves an output carrying the sound on
