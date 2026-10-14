@@ -48,6 +48,9 @@ put 644 "$S/03-core/files/gexis-wifi-powersave.conf" /etc/NetworkManager/conf.d/
 put 644 "$S/03-core/files/gexis-smb.service" /etc/avahi/services/gexis-smb.service
 # ADR-0136: each player announces itself to the others.
 put 644 "$S/03-core/files/gexis-player-mdns.service" /etc/avahi/services/gexis-player.service
+put 755 "$S/03-core/files/gexis-mdns-name.sh" /usr/lib/gexis/mdns-name.sh
+put 644 "$S/03-core/files/gexis-mdns-name.service" "$U/gexis-mdns-name.service"
+put 644 "$S/03-core/files/gexis-mdns-name.timer" "$U/gexis-mdns-name.timer"
 
 # --- The panel (04-ui) --------------------------------------------------------
 put 644 "$S/04-ui/files/kiosk.env" /etc/gexis/kiosk.env
@@ -164,7 +167,12 @@ if command -v systemctl >/dev/null; then
 			gexis-kiosk.service gexis-panel-warmup.service gexis-peppy.service \
 			gexis-splash-backstop.timer
 	fi
-	if [ -d /run/systemd/system ]; then systemctl daemon-reload; fi
+	# Every install, so an update brings it too (2026-10-14).
+	systemctl enable gexis-mdns-name.timer >/dev/null 2>&1 || true
+	if [ -d /run/systemd/system ]; then
+		systemctl daemon-reload
+		systemctl start gexis-mdns-name.timer || true
+	fi
 else
 	echo "gexis-system: no systemctl here; units not masked or enabled" >&2
 fi
