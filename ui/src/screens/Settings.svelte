@@ -1706,30 +1706,27 @@
                     </span>
                   {/if}
                 </div>
-              {:else if (r.key === 'screen_port' || r.key === 'screen_port_info') && rowOf('screen')}
-                <!-- Folded into the Screen tile, drawn at Attached screen's place. -->
-              {:else if r.key === 'screen' && (rowOf('screen_port') || rowOf('screen_port_info'))}
-                <!-- **One Screen tile** (George, 2026-10-13: "collapse the
-                     attached screen and screen port into 1 tile which would
-                     show the current display. Tapping it opens the 2 options.
-                     Add a change button to the tile in case the user wants
-                     to select from the list of displays."). The display in
-                     use and its port; a tap chooses between the ports, where
-                     there are two; Change picks the model from the list. -->
+              {:else if r.key === 'screen'}
+                <!-- **The display in use, with Change** (George, 2026-10-14:
+                     "Let's go back to two tiles. One displaying the current
+                     display used by the pi together with the change button.
+                     And another one for switching between ports"). Change
+                     opens the list at its makers: opened inside the current
+                     maker, a TV's "Other screen" held one size, and it read
+                     as a button that did nothing. -->
                 {@const port = rowOf('screen_port') ?? rowOf('screen_port_info')}
-                {@const choosable = port.key === 'screen_port'}
-                {@const shown = choosable
-                  ? [port.optionNotes?.[port.value], port.value].filter(Boolean).join(' · ')
-                  : port.value}
+                {@const portLine = port?.key === 'screen_port' ? port.optionNotes?.[port.value] : port?.value}
+                {@const named = String(r.value ?? '').startsWith('Other screen/')
+                  ? (String(portLine ?? '').replace(/^HDMI \d+ · /, '').split(' · ')[0] || String(r.value).replace('/', ' '))
+                  : r.value}
                 <div class="row row--tile">
                   <span class="row__body">
-                    <button type="button" class="row__text screentile__open" disabled={!choosable}
-                      onclick={() => choosable && openSheet(port)}>
-                      <span class="row__label"><span class="row__name">Screen</span></span>
-                      <span class="row__value row__value--tile">{shown || r.value || '—'}</span>
-                      <span class="row__note">{choosable ? 'Tap to choose which HDMI port is the screen.' : (r.note ?? '')}</span>
-                    </button>
-                    <button type="button" class="tile__btn" onclick={() => openSheet(r)}>Change</button>
+                    <span class="row__text">
+                      <span class="row__label"><span class="row__name">{r.label}</span></span>
+                      <span class="row__value row__value--tile">{named || '—'}</span>
+                      {#if r.note}<span class="row__note">{r.note}</span>{/if}
+                    </span>
+                    <button type="button" class="tile__btn" onclick={() => { openSheet(r); region = null; }}>Change</button>
                   </span>
                 </div>
               {:else if r.key === 'software_update'}
@@ -3065,18 +3062,6 @@
      that Hide put away (George, 2026-10-02: "how do I see it again?"). */
   .tile__btn--busy { opacity: 0.6; }
   .tile__notes { display: block; margin-top: 8px; color: var(--ink-body); }
-  .screentile__open {
-    flex: 1;
-    min-width: 0;
-    background: none;
-    border: none;
-    padding: 0;
-    text-align: left;
-    color: inherit;
-    font: inherit;
-    cursor: pointer;
-  }
-  .screentile__open:disabled { cursor: default; opacity: 1; }
   .row--readonly:active { transform: none; }
 
   .chev {
