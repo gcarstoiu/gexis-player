@@ -311,6 +311,11 @@ drawn per kind:
   the album page (`layout === 'album'`); when its tracks' artists differ, each
   row shows the artist under the title, taken from the second line before
   the album (Spotty's `Artist • Album`, Qobuz's `Artist - Album`).
+  The page says *Play playlist* for a playlist: the core's `hint:
+  "playlist"` (`menus._hint`: a `:playlist:` favourites link, Spotty's; a
+  cover under `/images/playlists/`, Qobuz's), else the list it was opened
+  from (`ctx.under` matching "playlist"), else tracks by different artists
+  on a page the service did not mark an album.
   `LyrionSearch.svelte` runs a search entry's
   searches as typing pauses. The panel only ever holds *handles* the core
   issued (`lib/menus.js`), never Lyrion commands. Each list's list/tiles
