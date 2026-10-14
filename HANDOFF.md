@@ -10,29 +10,31 @@ and `phase-13b` is merged into it after each docs change. A release is built
 from a worktree made at its tag, then removed. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.0.0, the first Stable release** (2026-10-15; tag
-`v1.0.0`, release `r1.0.0`; Testing serial 42, Stable serial 1, signatures
-checked; image `image/deploy/2026-10-14-gexis-player-v1.0.0.img`, 121 checks;
-the public `releases/latest/download/gexis-player.img.xz` downloaded, checksum
-and signature good). **PR #67 open for George to merge** (it adds README's
-*Download and install*). After the merge: post-merge steps, the routine
-clean-up, remove `~/projects/gexis-player-rel-1.0.0`. In it: Finding 125's 26
-fixes, the skin pack's progress race, the Wi-Fi radio on for setup over the
-cable. **Players are not updated to a release by Claude** (George, 2026-10-13).
+**Current release: 1.0.0 on Testing only - pulled back from Stable**
+(2026-10-15, George). Tag `v1.0.0`, release `r1.0.0`, Testing serial 42.
+Promoted and then withdrawn the same night: the `stable` channel file and the
+image (`gexis-player.img.xz`, `.sha256`, `.asc`) deleted from GitHub, `r1.0.0`
+a pre-release again (a Stable player says nothing has been released on
+Stable). PR #67 (with README's *Download and install*) was merged; **PR #68
+puts README's Testing note back - for George to merge.** To re-promote:
+`publish.sh --promote r1.0.0` from a worktree at the tag (the image is
+`image/deploy/2026-10-14-gexis-player-v1.0.0.img`), then a README PR again.
 
-**Open, being looked into (2026-10-15): the setup network opened after a
-lost network cannot be joined** (bedroompi, a 0.15.0 card set up over the
-cable, cable then pulled). The core's log says gexis-setup opened WPA2-only on
-channel 6 (`key_mgmt WPA-PSK WPA-PSK-SHA256`, `ieee80211w 0`), but nothing
-from George's phone reached it, the phone showed the network with frequency
-"Unknown", and a test access point raised the same way on bedroompi was seen
-neither from sofapi nor from R2D2, on channel 6 or 13, under DE or the world
-domain. The driver logs `brcmf_vif_set_mgmt_ie: vndr ie set error : -52` at
-each start. Not yet tried: an A/B with today's Wi-Fi power-save conf removed
-(it applies to every Wi-Fi connection, the access point included, and every
-image whose setup network worked predates it) - needs bedroompi restarted
-without the conf and George's phone. Debug logs should be on for test
-players (they keep the journal across restarts only on Testing by default).
+**Why it was pulled, and what was found (2026-10-15):** on the bar's Pi
+(Rev 1.4, here running a fresh card as "bedroompi") the setup network
+**gexis-setup** cannot be joined - a phone does not see it, and R2D2, which
+does see sofapi's, never sees it either, on 2.4 or 5 GHz, under DE or the
+world domain, from setup's own code or a bare `nmcli` hotspot. The same Pi
+works as a client (5 GHz, -53 dBm, 351 Mbit/s), its power is clean, and the
+`vndr ie set error -52` it logs appears on sofapi too (harmless). **On
+sofapi (Rev 1.5) the same commands work:** George's phone joined in 20 s and
+opened the page. On 2026-10-09 this same bar Pi hosted the setup network and
+a phone joined it. So it looks like that one Pi or where it now stands, not
+the software - **not yet proved:** a fresh 1.0.0 card's first setup over
+Wi-Fi on a Rev 1.5 Pi (sofapi or guestpi), which is what re-promotion waits
+on. Debug logs keep the journal across restarts only on Testing by default;
+the 1.0.0 test card was provisioned with them on. Trial scripts left in
+`/usr/local/lib/gexis/ap-trial.sh` on sofapi, guestpi and the bedroompi card.
 
 Suite 2,386 passed, 47 skipped (2026-10-14).
 
