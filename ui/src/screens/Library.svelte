@@ -729,7 +729,9 @@
     return { wanted: () => ticket === navTicket && path === from, latest: () => ticket === navTicket };
   }
 
-  async function openArtist(entry) {
+  //: `push` false reopens the artist whose entry is already the path's top
+  //: - Back to it from a similar artist (Finding 125 #12).
+  async function openArtist(entry, push = true) {
     const nav = navigating();
     busy = entry.id;
     try {
@@ -744,7 +746,7 @@
       loadArtistGenres(entry.id)
         .then((found) => { if (artist?.id === entry.id) genres = found ?? []; })
         .catch(() => {});
-      path = [...path, { kind: 'artist', id: entry.id, label: entry.name }];
+      if (push) path = [...path, { kind: 'artist', id: entry.id, label: entry.name }];
       // The page's disc is 262px, the grid's card 132px, so the page asks
       // for its own size rather than stretching the grid's thumbnail.
       if ($artistPhotos[`${entry.id}@600`] === undefined) loadArtistPhotos([entry.id], 600);
@@ -1191,6 +1193,10 @@
   const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
   const here = $derived(path.length ? path[path.length - 1] : null);
+  //: The artist the path is on while the page still holds another - Back
+  //: from a similar artist, until the first one's page is read again
+  //: (Finding 125 #12, 2026-10-14). Its name, for the "Opening..." page.
+  const reopening = $derived(here?.kind === 'artist' && !here.byName && artist?.id !== here.id ? here.label : null);
   const title = $derived(here ? (album?.title ?? here.label) : 'Library');
   // The design puts the album's artist where a deeper path would put its
   // parents.
@@ -1237,6 +1243,33 @@
       album = null;
       openArtistByName(top.byName);
     }
+    // **An artist's entry under another artist's page** (Finding 125 #12,
+    // 2026-10-14): a similar artist's chip opens that artist over this one,
+    // and the page's state - `artist`, its discography, About - is held
+    // once, so Back to the first artist's entry still drew the second's
+    // page. The entry is opened again in place: the path stays on it, and
+    // the page shows the artist's own "Opening..." until it arrives -
+    // dropping the entry first drew the level beneath it, the home grid
+    // from a first artist, for the length of the fetch. If the artist does
+    // not come (the server gone), the entry is dropped after all rather
+    // than left opening for ever.
+    else if (top.kind === 'artist' && artist?.id !== top.id) {
+      album = null;
+      reopenArtist(top);
+    }
+  }
+
+  /** The artist entry on top of the path, read again; if it does not come,
+   *  dropped, and the one beneath read again in turn when it is another
+   *  artist - never left "Opening..." under an entry no load is running for
+   *  (Finding 125 #12, the second review, 2026-10-14). */
+  function reopenArtist(top) {
+    openArtist({ id: top.id, name: top.label }, false).then(() => {
+      if (path.at(-1) !== top || artist?.id === top.id) return;
+      path = path.slice(0, -1);
+      const below = path.at(-1);
+      if (below?.kind === 'artist' && !below.byName && artist?.id !== below.id) reopenArtist(below);
+    });
   }
 
   const mmss = (s) => {
@@ -1341,16 +1374,18 @@
   {/if}
 
   <div class="content">
-    {#if resolvingArtist && path.length === 0}
+    {#if (resolvingArtist && path.length === 0) || reopening}
       <!-- The artist page on its way. Its own head, so the screen that
-           appears is the one that was asked for. -->
+           appears is the one that was asked for. Also an artist reopened
+           by Back from a similar one (Finding 125 #12, 2026-10-14). -->
+      {@const opening = reopening ?? openArtistNamed ?? ''}
       <div class="artistpage">
         <div class="artistpage__side">
-          <span class="artist__disc artist__disc--big" style:background={tintOf(openArtistNamed ?? '')}>
-            <span class="artist__initials artist__initials--big">{initialsOf(openArtistNamed ?? '')}</span>
+          <span class="artist__disc artist__disc--big" style:background={tintOf(opening)}>
+            <span class="artist__initials artist__initials--big">{initialsOf(opening)}</span>
           </span>
           <div>
-            <div class="artistpage__name">{openArtistNamed ?? ''}</div>
+            <div class="artistpage__name">{opening}</div>
             <div class="artistpage__meta">Opening…</div>
           </div>
         </div>

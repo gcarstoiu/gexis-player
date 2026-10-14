@@ -295,7 +295,12 @@
       touches += 1;
       settingsOpen = false;
       closeVolume();
+      // An artist or album asked for earlier is not asked for again: the
+      // library remounts on `libraryHome` with these as its props, and an
+      // album left here reopened at every phone Home (Finding 125 #13,
+      // 2026-10-14).
       libraryArtist = null;
+      libraryAlbum = null;
       if (ask.to === 'home') {
         libraryRequested = !lmsOff;
         libraryHome += 1;
@@ -357,7 +362,15 @@
   let libraryKept = $state(false);
   $effect(() => {
     if (libraryOpen) libraryKept = true;
-    if (lmsOff) libraryKept = false;
+    if (lmsOff) {
+      libraryKept = false;
+      // The library is dropped, and mounts afresh when LMS comes back - with
+      // these as its props, so an artist or album opened from Now Playing
+      // before LMS was turned off reopened then, not the root (Finding 125
+      // #13, 2026-10-14).
+      libraryArtist = null;
+      libraryAlbum = null;
+    }
   });
   const libraryShown = $derived(libraryOpen && !settingsOpen && !waitingOpen);
   function openLibraryHome() {
@@ -742,7 +755,7 @@
         availability={$availability}
         openArtistNamed={libraryArtist}
         openAlbumNamed={libraryAlbum}
-        onclose={() => { libraryRequested = false; libraryArtist = null; }}
+        onclose={() => { libraryRequested = false; libraryArtist = null; libraryAlbum = null; }}
         onsettings={openSettings}
         onvolume={openVolume}
       />
@@ -757,7 +770,7 @@
         availability={$availability}
         openArtistNamed={libraryArtist}
         openAlbumNamed={libraryAlbum}
-        onclose={() => { libraryRequested = false; libraryArtist = null; }}
+        onclose={() => { libraryRequested = false; libraryArtist = null; libraryAlbum = null; }}
         onsettings={openSettings}
         onvolume={openVolume}
       />
