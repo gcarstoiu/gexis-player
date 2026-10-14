@@ -76,6 +76,35 @@ def test_choosing_the_tv_asks_keep_and_going_back_forgets_the_choice(tmp_path):
     assert current["connector"] == "HDMI-A-1" and not current.get("chosen")
 
 
+def test_a_rotation_or_model_change_on_a_chosen_tv_keeps_it_chosen(tmp_path):
+    """Finding 125 #7 (2026-10-14): the LG TV chosen on HDMI 2, the panel on
+    HDMI 1. A rotation, or another model under Attached screen, rebuilt the
+    screen without the chosen mark; at the next start the panel's port won
+    and the TV's settings were moved onto it."""
+    f = {"state": tmp_path / "screen.json", "env": tmp_path / "screen.env", "cmdline": tmp_path / "cmdline.txt"}
+    f["cmdline"].write_text("console=tty1\n")
+    screen_apply.choose(Applied("other-1920x1080-capped", 0, "HDMI-A-2", chosen=True), **f, now=1)
+    screen_apply.keep(state=f["state"])
+    applied = screen_apply.applied_on("other-1920x1080-capped", 180, "HDMI-A-2", state=f["state"])
+    assert applied == Applied("other-1920x1080-capped", 180, "HDMI-A-2", chosen=True)
+    screen_apply.choose(applied, **f, now=2)
+    assert screen_apply.read_state(f["state"])["current"]["chosen"] is True
+    # Another model on the chosen port is still the choice of that port.
+    assert screen_apply.applied_on("other-1280x720", 0, "HDMI-A-2", state=f["state"]).chosen
+    # On another port it is not: the choice was of HDMI 2.
+    assert not screen_apply.applied_on("waveshare-10.1-hdmi-b", 0, "HDMI-A-1", state=f["state"]).chosen
+    # Nothing chosen before, nothing chosen now.
+    screen_apply.write_state({"current": Applied("waveshare-10.1-hdmi-b", 0, "HDMI-A-1").to_json()}, f["state"])
+    assert not screen_apply.applied_on("waveshare-10.1-hdmi-b", 90, "HDMI-A-1", state=f["state"]).chosen
+
+
+def test_attached_screen_and_rotation_carry_the_port_choice():
+    """Finding 125 #7: the Settings handler builds its screen through it."""
+    from test_main_wiring import _closure
+    choose = _closure("_choose_screen")
+    assert "screen_apply.applied_on(model.id, turn, screen_apply.connector_now())" in choose
+
+
 # --- D3: Keep from the phone on a screen without touch ----------------------
 
 def test_only_a_screen_without_known_touch_is_answered_from_the_phone():
