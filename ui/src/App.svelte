@@ -490,6 +490,15 @@
     document.documentElement.classList.toggle('on-panel', surface === 'panel');
   });
 
+  //: **Text size** (ADR-0148; George, 2026-10-14): every font size in
+  //: pixels is multiplied by `--text-scale` (vite.config.js), on the
+  //: player's own screen only - a phone keeps its own size.
+  $effect(() => {
+    const percent = Number($settingValues.text_size ?? 100);
+    const scale = surface === 'panel' && percent >= 90 && percent <= 130 ? percent / 100 : 1;
+    document.documentElement.style.setProperty('--text-scale', String(scale));
+  });
+
   //: **ADR-0109 decision 5: Keep this screen?** The core asks while a newly
   //: chosen screen waits; its countdown runs from the panel's first frame
   //: (`deadline`, this device's clock). Only the panel answers (decision 2).

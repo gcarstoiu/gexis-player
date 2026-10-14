@@ -1641,7 +1641,9 @@
   .cards--more {
     grid-template-columns: none;
     grid-auto-flow: column;
-    grid-auto-columns: 196px;
+    /* Wider with larger text (ADR-0148): the bar's height is the screen's,
+       so its tiles grow sideways only; the row scrolls. */
+    grid-auto-columns: calc(196px * max(1, var(--text-scale, 1)));
     height: 300px;
     --t-card-sub: 13px;
     overflow-x: auto;

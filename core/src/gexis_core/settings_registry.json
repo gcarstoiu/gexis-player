@@ -411,6 +411,22 @@
         "default": null
       },
       {
+        "key": "text_size",
+        "type": "number",
+        "label": "Text size",
+        "marks": "N",
+        "note": "Makes the writing on this screen larger or smaller; Home's tiles grow with it. Applies at once.",
+        "min": 90,
+        "max": 130,
+        "step": 5,
+        "unit": "%",
+        "default": 100,
+        "onlyWhen": [
+          "headless",
+          false
+        ]
+      },
+      {
         "key": "theme",
         "type": "choice",
         "label": "Theme",

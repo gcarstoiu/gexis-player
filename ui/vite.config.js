@@ -2,8 +2,24 @@
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 
+//: **Text size** (George, 2026-10-14: "Try the text and see how it looks"):
+//: every font size written in pixels - in the type tokens and in each
+//: screen, 460-odd places - is multiplied by `--text-scale` (1 unless the
+//: setting says otherwise), here at build time rather than by hand.
+const PX = /(-?\d*\.?\d+)px/g;
+const textScale = {
+  postcssPlugin: 'gexis-text-scale',
+  Declaration(decl) {
+    const sized = decl.prop === 'font-size' || /^--t-/.test(decl.prop);
+    if (!sized || decl.value.includes('--text-scale') || !PX.test(decl.value)) return;
+    PX.lastIndex = 0;
+    decl.value = decl.value.replace(PX, 'calc($1px * var(--text-scale, 1))');
+  },
+};
+
 export default defineConfig({
   plugins: [svelte()],
+  css: { postcss: { plugins: [textScale] } },
   build: {
     // Everything hashed under assets/, so the daemon serves exactly two
     // things: `/` (index.html) and `/assets/*`. Keeping the built output

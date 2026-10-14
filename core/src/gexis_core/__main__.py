@@ -2443,6 +2443,8 @@ async def main() -> None:
         wired={"idle_url": None, "idle_timeout": None, "drawer_on_external": None,
                "drawer_autohide": None, "phone_touchpad": None, "pointer_speed": None,
                "pointer_style": None, "listenbrainz_token": None,
+               # Text size: read by the panel as it draws (George, 2026-10-14).
+               "text_size": None,
                # ADR-0118 B: read by the menus route and the panel's home.
                "lms_extended_nav": None,
                "fanart_key": None, "lms_server": None,

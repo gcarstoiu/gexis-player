@@ -2333,6 +2333,10 @@
     padding: 30px 60px;
   }
   .cards {
+    /* **The tiles grow with larger text** (ADR-0148; George, 2026-10-14:
+       "the home tiles stretch to fit the text"), in both directions; below
+       100 % they keep their size. */
+    --tile-grow: max(1, var(--text-scale, 1));
     display: grid;
     gap: 26px;
     flex-shrink: 0;
@@ -2353,7 +2357,7 @@
        proportion: 200 / 229 at 800 / 853. **Never under 164**, what the icon,
        name and count need - the rule alone gives 157 at 720 (the handoff
        review; round 2 took it back as max(200k, 164)). */
-    height: max(164px, calc(200px + (var(--panel-h) - 800px) * 200 / 376));
+    height: calc(max(164px, calc(200px + (var(--panel-h) - 800px) * 200 / 376)) * var(--tile-grow));
     transition:
       transform 110ms cubic-bezier(0.2, 0.8, 0.2, 1),
       background 110ms linear,
@@ -2415,7 +2419,7 @@
     grid-auto-flow: column;
     /* 200 px, so the sixth card peeks about 110 px and the row reads as one
        that scrolls (the handover's note 1, George 2026-10-06). */
-    grid-auto-columns: 200px;
+    grid-auto-columns: calc(200px * var(--tile-grow));
     overflow-x: auto;
     overscroll-behavior-x: contain;
     /* **No snap, and sideways only** (George, 2026-10-14: this row would not
