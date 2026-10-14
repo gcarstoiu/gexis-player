@@ -455,6 +455,15 @@ flowchart LR
 - The hostname takes a sanitised form: accents folded, lowercase, anything
   outside `[a-z0-9-]` becomes `-`, capped at 63; an empty result falls back to
   `gexis`. avahi publishes it as `<hostname>.local` (e.g. `gexis.local`).
+  **After a name clash** at a start (another answer for the name still on the
+  network, most likely a cache of the previous start), avahi takes
+  `<hostname>-2` and keeps it until the next start - the bar did, 2026-10-14.
+  `gexis-mdns-name.timer` (every 2 min, from 2 min after boot) runs
+  `/usr/lib/gexis/mdns-name.sh`: when avahi's name (D-Bus `GetHostName`) is
+  the hostname with `-<number>` added, it asks for the hostname again
+  (`SetHostName`) and logs it, at most 5 times a start
+  (`/run/gexis/mdns-name-tries`), so a genuine second device of the same name
+  does not set the two flipping.
 - BlueZ's name comes from `PRETTY_HOSTNAME`, not `main.conf`'s `Name =`, which
   the hostname plugin overrides.
 - `/etc/hosts` carries both old and new names between a rename and its restart,
