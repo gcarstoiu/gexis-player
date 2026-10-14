@@ -362,6 +362,13 @@ over time; an artist whose photos were found is not asked again.
 
 ## Phone and touchpad
 
+**My phone sees gexis-setup but cannot connect to it.**
+Since 1.0.1 the player puts its setup network on the Wi-Fi channel least
+disturbed by its own screen, whose cable can drown out one channel (the 11.9"
+bar's did). On an older release, switching the screen off is a way round it,
+or connecting the player with a network cable and setting it up from a phone
+on the home network.
+
 **How do I open the player on a phone?**
 In any browser on the same network, open `http://gexis.local:8090`, with the
 player's own name in place of *gexis*. It can be saved as a bookmark or added

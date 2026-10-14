@@ -1356,6 +1356,28 @@ was built from.** Check the change itself in what was installed - the
 specific condition, not the feature's name - and make the build refuse
 inputs older than their sources (`packaging/ui/build.sh` now does).
 
+**72. A test the player itself undid** (2026-10-15, George's bar: the setup
+network could not be joined; Finding 126).
+- **What went wrong.** To tell hardware from software, test access points
+  were raised by hand on the bar's Pi with its network cable in, so the Pi
+  stayed reachable. The core's `CableFirst` (ADR-0123) disconnects every
+  Wi-Fi connection but one named exactly `gexis-setup` within 5 s while the
+  cable has a link; the test profiles had other names. R2D2 was used as a
+  second receiver before it had been seen to pick up a network that works,
+  and its scan list kept stale entries.
+- **What it looked like.** Every test agreed: the access point "up", nobody
+  seeing it, from two receivers, on two bands, under two regulatory domains.
+  It read as a Pi that cannot transmit, and was reported as such.
+- **How it was caught.** George: *"I have setup this specific RPI4 several
+  times and it worked fine every time ... I suspect something is off there
+  rather than with the device."* Reading what our own code does with wlan0
+  turned up CableFirst; the trial renamed to `gexis-setup`, a display-off run
+  and a channel-1 run then found the HDMI interference.
+
+**Before reading a device's behaviour from a test, look for what of our own
+software acts on the same thing during it, and prove the observer on a case
+known to work.**
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

@@ -348,6 +348,13 @@ before the last edit, it went out under the next commit's version. Check
 what a package holds, not its name: unpack it and find the change, and let
 the build refuse a `ui/dist` older than its sources.
 
+**72. A test the player itself undid** (2026-10-15, the bar's setup network,
+Finding 126). Test access points raised on a player with its cable in were
+taken down within 5 s by the core's own cable rule, and a second receiver was
+trusted before it was shown to see a working network. Before reading a
+device's behaviour from a test, check what of our own software acts on the
+same thing, and prove the observer on a known-good case first.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target, the check quietly
