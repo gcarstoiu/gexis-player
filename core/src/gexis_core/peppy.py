@@ -83,13 +83,6 @@ class PeppyScreen:
         #: wlrctl off it, a touch could otherwise lower the window before a
         #: raise already under way puts it up.
         self._turn = asyncio.Lock()
-        #: Raises asked for and not yet finished. `visible` turns True only
-        #: after the settle and wlrctl's focus, so a touch or a change of
-        #: source in between saw a hidden screen, lowered nothing, and the
-        #: meter came up over the panel just touched (Finding 125 #14,
-        #: 2026-10-14). The controller lowers while this is non-zero too;
-        #: that lower waits on `_turn`, so it runs after the raise.
-        self._raising = 0
         # Hidden from the start: the driver begins minimised (gexis-peppy-start).
         self._tell(False)
         #: ADR-0101: told whenever the screen goes up or down, so the phone's
@@ -147,21 +140,11 @@ class PeppyScreen:
         least 0.25 s). What follows - `on_change` publishing to the phones -
         stays on the loop, where it must be (a worker thread there answered
         a 500, sofapi 2026-10-11)."""
-        # Counted before the first await, the wait for `_turn` included.
-        self._raising += 1
-        try:
-            async with self._turn:
-                self._tell(True)
-                if self._settle_s:
-                    await asyncio.sleep(self._settle_s)
-                return self._shown(await asyncio.to_thread(self._run, "focus"))
-        finally:
-            self._raising -= 1
-
-    @property
-    def raising(self) -> bool:
-        """A raise is under way and not yet on screen (`_raising` says why)."""
-        return self._raising > 0
+        async with self._turn:
+            self._tell(True)
+            if self._settle_s:
+                await asyncio.sleep(self._settle_s)
+            return self._shown(await asyncio.to_thread(self._run, "focus"))
 
     async def hide_async(self) -> bool:
         async with self._turn:
@@ -320,6 +303,15 @@ class PeppyController:
         self._anchor: tuple[float | None, float | None, bool, float] = (None, None, False, 0.0)
         #: Lowers started from a callback, held until done.
         self._lowering: set[asyncio.Task] = set()
+        #: The timer's own raise is under way. `visible` turns True only
+        #: after the settle and wlrctl's focus, so a touch or a change of
+        #: source in between saw a hidden screen, lowered nothing, and the
+        #: meter came up over the panel just touched (Finding 125 #14,
+        #: 2026-10-14). Only the timer's raise: a raise the user asked for
+        #: comes from a tap that sends /touch and /peppy/show back to back,
+        #: so a touch during it is that same tap and must not take it down.
+        #: The lower waits on the screen's `_turn`, so it runs after the raise.
+        self._auto_raising = False
 
     def _lower(self) -> None:
         """Hide, from a callback that cannot wait: on the loop, in the
@@ -347,9 +339,9 @@ class PeppyController:
             self._lower()
 
     def _up(self) -> bool:
-        """Up, or on its way up: a raise still settling is lowered too, after
-        it (Finding 125 #14). A screen without the notion is never raising."""
-        return self._screen.visible or getattr(self._screen, "raising", False)
+        """Up, or on the timer's way up: that raise still settling is lowered
+        too, after it (Finding 125 #14; `_auto_raising` says why only that one)."""
+        return self._screen.visible or self._auto_raising
 
     def _position_now(self) -> float | None:
         position, _, playing, at = self._anchor
@@ -416,7 +408,13 @@ class PeppyController:
         while True:
             await asyncio.sleep(self._tick_s)
             if self._timer.due() and not self._screen.visible and self._has_levels() and not self._blocked():
-                await self._screen.show_async()
+                # Set before the first await, the wait for the screen's turn
+                # included (Finding 125 #14, 2026-10-14).
+                self._auto_raising = True
+                try:
+                    await self._screen.show_async()
+                finally:
+                    self._auto_raising = False
             # `viz_stop`. Checked after the raise and only while the meter is
             # up, so the two rules cannot argue: one of them needs playback
             # and the other needs silence.
