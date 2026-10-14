@@ -1256,10 +1256,21 @@
     // than left opening for ever.
     else if (top.kind === 'artist' && artist?.id !== top.id) {
       album = null;
-      openArtist({ id: top.id, name: top.label }, false).then(() => {
-        if (path.at(-1) === top && artist?.id !== top.id) path = path.slice(0, -1);
-      });
+      reopenArtist(top);
     }
+  }
+
+  /** The artist entry on top of the path, read again; if it does not come,
+   *  dropped, and the one beneath read again in turn when it is another
+   *  artist - never left "Opening..." under an entry no load is running for
+   *  (Finding 125 #12, the second review, 2026-10-14). */
+  function reopenArtist(top) {
+    openArtist({ id: top.id, name: top.label }, false).then(() => {
+      if (path.at(-1) !== top || artist?.id === top.id) return;
+      path = path.slice(0, -1);
+      const below = path.at(-1);
+      if (below?.kind === 'artist' && !below.byName && artist?.id !== below.id) reopenArtist(below);
+    });
   }
 
   const mmss = (s) => {
