@@ -186,7 +186,19 @@
     //: Nothing here plays: Qobuz streams none of it (not licensed here, or
     //: not yet released - its "* ").
     const none = !!ctx.from?.unavailable || (tracks.length > 0 && tracks.every((r) => r.unavailable && !r.can?.length));
-    return { tracks, facts: facts.slice(0, 5), links, year, minutes, none };
+    //: **A playlist's tracks name their artist** (George, 2026-10-14:
+    //: "Playlists in general should contain artist name besides track
+    //: name", Spotify's and Qobuz's too). An app's playlist opens as this
+    //: page, which drew titles only - right for one artist's album. Shown
+    //: whenever the tracks' artists differ; the artist is the second line's
+    //: part before the album: Spotty's "Artist • Album", Qobuz's "Artist -
+    //: Album" (both read 2026-10-14).
+    const artistOf = (r) => {
+      const line = String(r.subtitle ?? '');
+      return (line.includes(' • ') ? line.split(' • ')[0] : line.split(' - ')[0]).trim();
+    };
+    const mixed = new Set(tracks.map(artistOf).filter(Boolean)).size > 1;
+    return { tracks, facts: facts.slice(0, 5), links, year, minutes, none, artistOf: mixed ? artistOf : () => '' };
   });
 
   // ── Cards at an app's first level: the search as a field-button, and
@@ -517,7 +529,11 @@
           {@const off = r.unavailable && !r.can?.length}
           <button class="trow" class:is-sel={isSel} class:is-off={off} type="button" disabled={off} onclick={() => tapLeaf(r)}>
             <span class="trow__n">{String(i + 1).padStart(2, '0')}</span>
-            <span class="trow__t">{r.label}</span>
+            {#if album.artistOf(r)}
+              <span class="trow__tt"><span class="trow__t">{r.label}</span><span class="trow__a">{album.artistOf(r)}</span></span>
+            {:else}
+              <span class="trow__t">{r.label}</span>
+            {/if}
             {#if isSel}{@render actionsFor(r, bar)}{:else if off}<span class="trow__d">Not available</span>{:else if r.duration}<span class="trow__d">{mmss(r.duration)}</span>{/if}
           </button>
         {/each}
@@ -705,6 +721,10 @@
   .cover.is-off .cover__art { opacity: 0.45; }
   .albumpage__none { font-size: 16px; line-height: 1.4; color: rgba(233, 238, 242, 0.72); padding: 12px 14px; border-radius: 14px; background: rgba(233, 238, 242, 0.05); border: 1px solid rgba(233, 238, 242, 0.1); }
   .trow__t { flex: 1; min-width: 0; font-size: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .trow__tt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .trow__tt .trow__t { flex: none; }
+  .trow__a { font-size: 15px; color: rgba(233, 238, 242, 0.62); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .trow.is-sel .trow__a { color: rgba(126, 214, 188, 0.8); }
   .sechead--release { margin: 28px 0 14px; padding-top: 0; }
   .facts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
   .facts__k { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(233, 238, 242, 0.62); }
@@ -788,6 +808,7 @@
   .level--bar .big { height: 52px; font-size: 17px; border-radius: 14px; }
   .level--bar .trow { height: 50px; gap: 14px; }
   .level--bar .trow__t { font-size: 18px; }
+  .level--bar .trow__a { font-size: 13px; }
   .albumpage__facts { width: 250px; flex-shrink: 0; padding-left: 24px; border-left: 1px solid rgba(233, 238, 242, 0.08); }
   .level--wide .albumpage__facts { width: 420px; }
   .level--bar .facts { grid-template-columns: 1fr; gap: 10px; }
