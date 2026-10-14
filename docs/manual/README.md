@@ -148,7 +148,7 @@ The library is your Lyrion server's music. Home offers:
 ![Browse](images/panel-browse.webp)
 
 Pick an artist, then an album, then a track. A tap on a row shows its
-actions:
+actions, and the row turns teal while they show:
 
 - **Play** plays it now;
 - **Add to queue** adds it to the end;
@@ -163,8 +163,9 @@ Artists are grouped by letter; tap a letter on the rail to jump.
 ![Artist page](images/panel-artist-page.webp)
 
 An artist's page shows their portrait, genres and albums. It also has
-**Play** and **Shuffle** for everything by them, a biography and similar
-artists; a similar artist the library has opens their page.
+**Play** and **Shuffle** for everything by them, a biography, their
+*Popular* tracks and similar artists; a similar artist the library has opens
+their page. A tap on a Popular track shows its actions, as anywhere else.
 
 ### Album page
 
@@ -212,7 +213,8 @@ with its artist under the title (a single artist's album shows titles only),
 and its button says *Play playlist*.
 
 **Search**: tap a search field and type on your phone (section 7); results
-arrive as you type. My Music's Search looks for artists, albums, works,
+arrive as you type. A service's *Search* opens straight on its field, and
+tapped from the phone's touchpad it brings up the phone's keyboard. My Music's Search looks for artists, albums, works,
 songs and playlists at once.
 
 A few things are left out on purpose:
@@ -297,7 +299,8 @@ Swipe it down to close it.
 Tap a text field on the panel (a search, for example) and the phone's
 keyboard comes up: what you type appears on the panel. Whatever the pointer
 is over that can be pressed is outlined, and the dot shrinks inside the
-outline; only the part that shows is outlined, so a button half under the
+outline (Now Playing's tabs are underlined instead); only the part that
+shows is outlined, so a button half under the
 mini strip is outlined down to the strip. A track whose Play, Queue and Add
 buttons are showing is not outlined itself. The pointer hides after a few
 seconds of rest. *Settings → Display* sets **Pointer speed**,
