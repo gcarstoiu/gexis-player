@@ -483,7 +483,8 @@ sequenceDiagram
 - **The outline** follows whatever pressable is under the pointer, in its
   own box and corner radius, 6 px out; a light fill only on a small icon
   button. It skips anything covering half the screen, and a row whose
-  actions are revealed (an `.act` inside it or beside it). **Only the part
+  actions are revealed (an `.act` inside it or beside it); the actions
+  themselves are always outlined. **Only the part
   that shows is outlined** (`visiblePart`): cut at the edge of a clipping
   container that hides part of the element, and at whatever covers it (the
   mini strip), found with `elementFromPoint` halving between the pointer and
