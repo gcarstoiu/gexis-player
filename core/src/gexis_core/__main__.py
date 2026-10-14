@@ -3036,7 +3036,9 @@ async def main() -> None:
     # ADR-0135: the owner's standby times. Their rows are read each tick.
     standby_schedule = Schedule(
         standby, lambda key: settings.value(key),
-        lambda: state_store.state.metadata.transport == "playing")
+        lambda: state_store.state.metadata.transport == "playing",
+        # Not over Keep this screen? (Finding 125 #17, 2026-10-14).
+        blocked=lambda: state_store.state.screen_confirm is not None)
     peppy = PeppyController(
         peppy_screen,
         UnattendedPlayback(
@@ -3687,6 +3689,12 @@ async def main() -> None:
         question = state_store.state.screen_confirm
         if question is None or question.get("deadline") is not None:
             return
+        # Drawn under the black cover with the output off, it would count
+        # down unseen (Finding 125 #17, 2026-10-14), as a pairing request
+        # did (review, 2026-10-12).
+        standby.used()
+        if standby.may_be_dark:
+            asyncio.ensure_future(standby.wake("screen"))
         total = question.get("total") or KEEP_S
         state_store.set_screen_confirm({**question, "deadline": time.time() + total})
         if screen_wait["task"] is not None:
