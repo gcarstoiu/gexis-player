@@ -32,6 +32,7 @@ from pathlib import Path
 import itertools
 import logging
 from typing import Callable
+from urllib.parse import quote
 
 import aiohttp
 
@@ -443,11 +444,7 @@ class LmsAdapter(Adapter):
                 title=song.get("title"),
                 artist=song.get("artist"),
                 album=song.get("album"),
-                artwork=(
-                    f"{self._base}/music/{song['coverid']}/cover_{ARTWORK_ROW}x{ARTWORK_ROW}_o.jpg"
-                    if song.get("coverid")
-                    else None
-                ),
+                artwork=self._row_artwork(song),
                 duration=_as_float(song.get("duration")),
                 source_type="lms",
             )
@@ -462,6 +459,26 @@ class LmsAdapter(Adapter):
                 modified=bool(_as_int(queue.get("playlist_modified"))),
             )
         )
+
+    def _row_artwork(self, song: dict) -> str | None:
+        """A queue row's picture. **A stream's own artwork first** (George,
+        2026-10-14: a Spotty playlist's queue showed one tower icon per
+        track where Lyrion's own app shows covers): a Spotify or Qobuz track
+        not yet played has a `coverid` whose cover is Lyrion's generic
+        placeholder (`coverart: 0`), and its real picture is `artwork_url`,
+        sized here through Lyrion's image proxy. A library track has no
+        `artwork_url` and keeps its own cover."""
+        url = (song.get("artwork_url") or "").strip()
+        size = f"image_{ARTWORK_ROW}x{ARTWORK_ROW}_o.jpg"
+        if url.startswith(("http://", "https://")):
+            return f"{self._base}/imageproxy/{quote(url, safe='')}/{size}"
+        if url.startswith("/imageproxy/"):
+            return f"{self._base}{url.rpartition('/')[0]}/{size}"
+        if url:
+            return f"{self._base}/{url.lstrip('/')}"
+        if song.get("coverid"):
+            return f"{self._base}/music/{song['coverid']}/cover_{ARTWORK_ROW}x{ARTWORK_ROW}_o.jpg"
+        return None
 
     def on_metadata_change(self, callback: Callable[[TrackMetadata], None]) -> None:
         """state.py hooks in here (Phase 3 criterion 1). Fired on every
