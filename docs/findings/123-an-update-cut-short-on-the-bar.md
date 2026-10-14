@@ -69,3 +69,27 @@ with `check`:
 
 After it: gexis-player, gexis-core 0.12.0; the core, the meter service, the
 panel and Squeezelite active. Tests: 2,352 passed.
+
+## Addendum 2026-10-14: the second power cut, with the fixed updater installed
+
+The bar on 0.13.0 (the fixed updater, installed by an ordinary update the
+evening before); George started *Update now* to 0.14.0 at 08:14 and pulled
+the power once it was installing.
+
+- **The cut came mid-install:** at the next start dpkg was interrupted with
+  gexis-core, gexis-player, gexis-system and gexis-ui unfinished.
+- **The note survived** (synced to the card): `postboot` read it at 08:15:29
+  and logged *"finishing the install that was cut short"*.
+- **Finished by itself, nobody touching it:** `dpkg --configure -a` (exit 1,
+  gexis-core half installed), only gexis-core reinstalled, `dpkg --configure
+  -a` clean, the release's `dist-upgrade` and `install gexis-player=0.14.0`,
+  verified, the core answering - *"done: 0.14.0 installed"* at 08:19:07, one
+  start, about four minutes.
+- **The whole release:** a dry run of 0.14.0's upgrade afterwards: 0 to
+  change; `dpkg --audit` clean; the core, the panel, the meters and
+  Squeezelite active.
+
+**Not tested:** a cut at other moments (the download, the backup, the
+restart); the case with no note at all (the updater's own fallback,
+`finish_cut_short` at a check, proved only on the bar's state of 2026-10-13
+by hand). The bar still reports undervoltage (`0x50005`, the extension cord).
