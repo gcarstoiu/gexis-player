@@ -190,6 +190,8 @@ class LmsArtistInfo:
         self._scope_task: asyncio.Future | None = None
         #: Told whenever what is held is dropped (`on_forget`).
         self._on_forget: list = []
+        #: Told which ids still name the same artist (`on_renumber`).
+        self._on_renumber: list = []
 
     # --- the plugin --------------------------------------------------------
 
@@ -396,6 +398,7 @@ class LmsArtistInfo:
         if self._store is not None and gone:
             self._store.forget_keys(self.NAMESPACE, gone)
             self._store.forget_keys(SLOW_NAMESPACE, gone)
+        self._renumbered(unchanged)
         # Counted as ids, not photos: most ids have no photo asked for yet,
         # and "8400 kept their photos" read as 8400 photos (2026-10-14).
         logger.info("artistinfo: after the rescan %d artist id(s) unchanged; %d held for "
@@ -499,6 +502,21 @@ class LmsArtistInfo:
         renumbers, so they go too (George, 2026-10-12, answer 8)."""
         self._on_forget.append(callback)
 
+    def on_renumber(self, callback) -> None:
+        """Call `callback(unchanged)` whenever ids may have changed hands:
+        with the set of ids (as text) that still name the same artist after
+        a rescan, or None when none can be trusted. For what is kept by LMS
+        artist id elsewhere - the fanart frame's photos on disk (Finding 125
+        #22) - and dropped by the same names check rather than a second."""
+        self._on_renumber.append(callback)
+
+    def _renumbered(self, unchanged: set | None) -> None:
+        for callback in self._on_renumber:
+            try:
+                callback(unchanged)
+            except Exception as exc:  # as `on_forget`'s: nothing stale kept here
+                logger.info("artistinfo: a listener could not drop its photos (%s)", exc)
+
     def forget(self) -> None:
         """Drop what is remembered - after a rescan, when every artist id may
         mean a different artist (Finding 029 §4)."""
@@ -507,6 +525,7 @@ class LmsArtistInfo:
                 callback()
             except Exception as exc:  # a listener's failure keeps nothing stale here
                 logger.info("artistinfo: a listener could not drop its answers (%s)", exc)
+        self._renumbered(None)
         self._photos.clear()
         self._slow_until.clear()
         if self._store is not None:

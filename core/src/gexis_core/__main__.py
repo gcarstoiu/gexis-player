@@ -3170,7 +3170,12 @@ async def main() -> None:
             logger.info("fanart: %s not fetched (%r)", url, exc)
             return None
 
-    fanart = Fanart(library.rpc, _fanart_download, f"http://{config.lms_host}:{config.lms_port}")
+    # Finding 125 #22: the photos on disk are kept by LMS artist id, so they
+    # go by the artist photos' own check when a rescan or another server
+    # gives an id to someone else.
+    fanart = Fanart(library.rpc, _fanart_download, f"http://{config.lms_host}:{config.lms_port}",
+                    before=artistinfo.check_scope)
+    artistinfo.on_renumber(fanart.drop)
     fanart_follow = {"key": None, "next": None}
 
     async def _fanart_for(state) -> None:
