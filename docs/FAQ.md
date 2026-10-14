@@ -152,8 +152,8 @@ Whenever a screen change alters the picture (a new screen, another model
 chosen with *Change* on *Settings → Display → Attached screen*, or *Screen rotation*), the
 player restarts on it and asks *Keep this screen?* (*Keep this rotation?*
 after a rotation change). Without a tap on Keep
-within two minutes it goes back to how it was, so a screen that shows nothing
-cannot lock anyone out. A screen mounted upside down is set with *Screen
+within two minutes of the question appearing, it goes back to how it was, so a
+screen that shows nothing cannot lock anyone out. A screen mounted upside down is set with *Screen
 rotation*, 180°.
 
 **I attached a different screen. Does it need setting up?**
