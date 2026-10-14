@@ -101,6 +101,31 @@ def test_a_panel_kept_under_its_old_cased_name_still_has_its_touch(tmp_path):
     assert question["phone"] is False
 
 
+@pytest.mark.parametrize("screen_id", ["waveshare-7.9-hdmi", "btt-hdmi7-v1.2", "geeekpi-7-hdmi"])
+def test_a_listed_touch_panel_without_a_fingerprint_has_touch(tmp_path, screen_id):
+    """Finding 125 #9 and #11 (2026-10-14): only the three fingerprinted
+    models counted as touch, so the tested 7.9" bar and every other listed
+    touch panel had Keep sent to the phone, its buttons hidden, and the
+    known panels' touch ids ignored by udev while it was in use."""
+    from gexis_core import screen_watch
+    from gexis_core.__main__ import screen_question
+    assert screen_detect.has_touch(screen_id)
+    state, rules = tmp_path / "screen.json", tmp_path / "rules" / "90.rules"
+    current = {"screen": screen_id, "rotation": 0, "connector": "HDMI-A-1"}
+    screen_apply.write_state({"current": current}, state)
+    assert screen_watch.touch_rules(state, rules, run=lambda args, check=False: None) == []
+    assert screen_question({"pending": True, "current": current})["phone"] is False
+    assert screen_apply.panels_off(screen_id, "HDMI-A-1", []) == []
+
+
+@pytest.mark.parametrize("screen_id", ["other-1920x1080-capped", "other-1280x800", "generic-1080p",
+                                       "hmtech-7-hdmi", "no-such-screen"])
+def test_a_screen_known_to_have_no_touch_is_still_answered_from_the_phone(screen_id):
+    """A TV or a screen in no list, a generic monitor mode, and a listed
+    model its maker says has no touch."""
+    assert not screen_detect.has_touch(screen_id)
+
+
 def test_the_question_says_the_phone_answers_for_a_tv(tmp_path):
     from gexis_core.__main__ import screen_question
     state = {"pending": True, "current": {"screen": "other-1920x1080-capped", "rotation": 0,

@@ -156,16 +156,29 @@ def tv_mode(connector: str, drm: Path = DRM) -> tuple[int, int] | None:
     return max(sixteen_nine) if sixteen_nine else None
 
 
+#: A listed model its maker says has no touch (the preset's notes).
+NO_TOUCH = re.compile(r"\bno touch\b", re.IGNORECASE)
+
+
 def has_touch(screen_id: str) -> bool:
-    """Whether the player knows `screen_id` has a touch input: a model whose
-    fingerprint names its USB touch device (ADR-0147 D3)."""
+    """Whether `screen_id` has a touch input, so Keep is answered on it
+    (ADR-0147 D3). **Not touch only where it is known not to be** (Finding
+    125 #9, #11, 2026-10-14): a TV or a screen in no list (`other-*`), a
+    generic monitor mode, a listed model its maker says has none. Until then
+    only the three fingerprinted models counted, so the tested 7.9" bar and
+    every other listed touch panel had Keep sent to the phone, its buttons
+    hidden, and the known panels' touch ignored by udev."""
     # **By the model's id, not the stored one** (Finding 125 #8, 2026-10-14):
     # a panel kept before the cased presets were merged has `<panel>-case`
     # in screen.json, which `by_id` still finds and no fingerprint names -
     # its own touch was ignored by udev at every start.
     model = screens.by_id(screen_id)
-    fp = FINGERPRINTS.get(model.id if model else screen_id)
-    return bool(fp and fp.usb)
+    if model is None or screens.OTHER.match(model.id):
+        return False
+    fp = FINGERPRINTS.get(model.id)
+    if fp is not None:
+        return bool(fp.usb)
+    return model.maker != "Generic" and not NO_TOUCH.search(model.notes or "")
 
 
 def _chosen_connector() -> str | None:
