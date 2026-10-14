@@ -295,7 +295,12 @@
       touches += 1;
       settingsOpen = false;
       closeVolume();
+      // An artist or album asked for earlier is not asked for again: the
+      // library remounts on `libraryHome` with these as its props, and an
+      // album left here reopened at every phone Home (Finding 125 #13,
+      // 2026-10-14).
       libraryArtist = null;
+      libraryAlbum = null;
       if (ask.to === 'home') {
         libraryRequested = !lmsOff;
         libraryHome += 1;
@@ -740,7 +745,7 @@
         availability={$availability}
         openArtistNamed={libraryArtist}
         openAlbumNamed={libraryAlbum}
-        onclose={() => { libraryRequested = false; libraryArtist = null; }}
+        onclose={() => { libraryRequested = false; libraryArtist = null; libraryAlbum = null; }}
         onsettings={openSettings}
         onvolume={openVolume}
       />
@@ -755,7 +760,7 @@
         availability={$availability}
         openArtistNamed={libraryArtist}
         openAlbumNamed={libraryAlbum}
-        onclose={() => { libraryRequested = false; libraryArtist = null; }}
+        onclose={() => { libraryRequested = false; libraryArtist = null; libraryAlbum = null; }}
         onsettings={openSettings}
         onvolume={openVolume}
       />
