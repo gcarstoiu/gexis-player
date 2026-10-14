@@ -186,6 +186,8 @@ class LmsArtistInfo:
         #: store the first time.
         self._scope: dict | None = None
         self._scope_checked: float | None = None
+        #: The check under way, which callers arriving meanwhile wait for.
+        self._scope_task: asyncio.Future | None = None
         #: Told whenever what is held is dropped (`on_forget`).
         self._on_forget: list = []
 
@@ -280,10 +282,20 @@ class LmsArtistInfo:
         enrichment service's LMS answers are built from the same ids, and
         are looked at before a stored one is believed (George, 2026-10-12,
         answer 8)."""
-        now = self._clock()
-        if self._scope_checked is not None and now - self._scope_checked < SCOPE_CHECK_S:
-            return
-        self._scope_checked = now
+        # **One check at a time, and everyone waits for it** (Finding 125
+        # #23, 2026-10-14). The gate below is set before the check's awaits,
+        # and a second photo batch arriving while the first was fetching
+        # 8400 names went straight past it to the renumbered id's old photo.
+        # Shielded: a caller that goes away does not cancel it for the rest.
+        if self._scope_task is None or self._scope_task.done():
+            now = self._clock()
+            if self._scope_checked is not None and now - self._scope_checked < SCOPE_CHECK_S:
+                return
+            self._scope_checked = now
+            self._scope_task = asyncio.ensure_future(self._check_scope())
+        await asyncio.shield(self._scope_task)
+
+    async def _check_scope(self) -> None:
         try:
             status = await self._rpc(["serverstatus", 0, 0], timeout=CALL_TIMEOUT_S) or {}
         except Exception as exc:  # the server is not told apart then, only the address

@@ -837,3 +837,34 @@ async def test_a_names_fetch_that_fails_leaves_no_names_to_trust():
     clock.advance(SCOPE_CHECK_S)
     await LmsArtistInfo(lms, other, store=store, clock=clock).photos([7])
     assert [c[-1] for c in lms.commands[asked:]] == ["artist_id:7"]
+
+
+@pytest.mark.asyncio
+async def test_callers_during_a_scope_check_wait_for_it():
+    """Finding 125 #23 (2026-10-14): the 60 s gate was set before the
+    check's awaits, so a second photo batch arriving while the first was
+    fetching the names skipped the check and served the renumbered id's old
+    photo."""
+    lms = FakeLms(photos={5: "imageproxy/a/old/image.png"})
+    store, clock = _store(), FakeClock()
+    await LmsArtistInfo(lms, BASE, store=store, clock=clock).photos([5])
+    lms.lastscan = "1800000000"             # renumbered while the player was off
+    lms.names["5"] = "Somebody New"
+    lms._photos[5] = "imageproxy/a/new/image.png"
+    release = asyncio.Event()
+    real_call = lms.__call__
+
+    async def slow_names(command, player="", timeout=None):
+        if command[0] == "artists":
+            await release.wait()
+        return await real_call(command, player, timeout)
+
+    info = LmsArtistInfo(slow_names, BASE, store=store, clock=clock)
+    first = asyncio.ensure_future(info.photos([5]))
+    await asyncio.sleep(0)
+    second = asyncio.ensure_future(info.photos([5]))
+    for _ in range(5):
+        await asyncio.sleep(0)
+    assert not second.done(), "answered before the check it skipped"
+    release.set()
+    assert "/new/" in (await first)[5] and "/new/" in (await second)[5]
