@@ -666,7 +666,9 @@
   {/if}
   <!-- ADR-0123: a new cable address waiting to be kept, on every page. -->
   <CableKeep />
-  <!-- ADR-0147 D3: a screen without touch - a TV - is kept from here. -->
+  <!-- ADR-0147 D3: a screen without touch - a TV - is kept from here; so is
+       a listed panel whose touch the player does not recognise, which may
+       need a driver it never installs (Finding 125, 2026-10-14). -->
   {#if $screenConfirm?.phone}
     <PhoneKeepScreen
       question={$screenConfirm}
@@ -853,6 +855,7 @@
       untested={$screenConfirm.untested}
       rotationOnly={$screenConfirm.rotation_only}
       phone={!!$screenConfirm.phone}
+      buttons={$screenConfirm.panel_buttons ?? !$screenConfirm.phone}
       secondsLeft={keepLeft}
       total={$screenConfirm.total ?? 30}
       onkeep={() => answerScreen('keep')}

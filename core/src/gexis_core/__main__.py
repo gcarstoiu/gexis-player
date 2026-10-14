@@ -440,9 +440,16 @@ def screen_question(state: dict, now: float | None = None) -> dict | None:
         "untested": bool(model and not model.tested),
         "previous": (f"{before.maker} {before.model}" if before else None),
         "rotation_only": rotation_only,
-        # ADR-0147 D3: a screen with no touch the player knows of - a TV, any
-        # screen in no list - is answered from the phone.
-        "phone": not screen_detect.has_touch(current["screen"]),
+        # Who may answer (Finding 125, 2026-10-14). `panel_buttons`: the
+        # panel shows Keep and Go back - every listed panel, not a TV, a
+        # screen in no list, a generic monitor mode or a model without touch.
+        # `phone`: the phone may answer (ADR-0147 D3) - every screen whose
+        # touch is not recognised by its USB fingerprint, since a listed
+        # panel's touch may need a driver the player never installs, and a
+        # panel with dead touch could otherwise only wait for the countdown.
+        # A fingerprinted panel stays answered on itself (ADR-0109 D2).
+        "panel_buttons": screen_detect.has_touch(current["screen"]),
+        "phone": not screen_detect.touch_recognised(current["screen"]),
         "previous_rotation": f"{previous.get('rotation', 0)}°" if previous else "0°",
         "deadline": None,
         # Two minutes after setup, and for a rotation (George, 2026-10-04,

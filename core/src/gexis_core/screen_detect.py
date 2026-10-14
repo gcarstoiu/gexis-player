@@ -181,6 +181,21 @@ def has_touch(screen_id: str) -> bool:
     return model.maker != "Generic" and not NO_TOUCH.search(model.notes or "")
 
 
+def touch_recognised(screen_id: str) -> bool:
+    """Whether `screen_id`'s touch is one the player recognises: a model
+    whose fingerprint names its USB touch device (ADR-0147 D3).
+
+    **Narrower than `has_touch` on purpose** (Finding 125, 2026-10-14): many
+    listed panels need an SPI ads7846 overlay or a goodtft driver the player
+    never installs, so a listed panel's touch may not work. Only a panel
+    recognised by its USB touch is answered on itself alone (ADR-0109
+    decision 2); any other screen may also be answered from the phone, so a
+    panel whose touch is dead is not left to its countdown."""
+    model = screens.by_id(screen_id)
+    fp = FINGERPRINTS.get(model.id) if model is not None else None
+    return bool(fp and fp.usb)
+
+
 def _chosen_connector() -> str | None:
     """The port chosen under *Screen port*, if the screen in use was put
     there by choice (ADR-0147 D1)."""

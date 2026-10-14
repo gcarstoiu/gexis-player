@@ -7,6 +7,11 @@
   touch still answers on itself (ADR-0109 decision 2), and the core refuses
   a phone's answer otherwise. Not answered within the time, the player goes
   back, as on a panel.
+
+  **Also a listed panel whose touch is not recognised** (Finding 125,
+  2026-10-14): many need an SPI ads7846 overlay or a goodtft driver the
+  player never installs, so their touch may not work. The panel shows its
+  own buttons (`panel_buttons`) and this page answers as well.
 -->
 <script>
   let { question, secondsLeft = 0, onkeep, onrevert } = $props();
@@ -28,7 +33,9 @@
   <div class="keep__text">
     <b>Keep this screen?</b>
     <span>
-      The picture is on {question.model}. Is it showing properly? It has no touch, so answer here.
+      The picture is on {question.model}. Is it showing properly? {question.panel_buttons
+        ? 'Answer on the screen, or here if its touch does not respond.'
+        : 'It has no touch, so answer here.'}
       Not kept within {left} s, the player goes back to {question.previous ?? "the screen before"}.
     </span>
   </div>

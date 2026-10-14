@@ -2150,7 +2150,9 @@ class StateServer:
         there proves both the picture and the touch input. Loopback: the
         panel's Chromium is on this device; a phone is not. **Except on a
         screen without touch** (ADR-0147 D3, a TV): nothing there can be
-        pressed, so the phone answers - the question says so (`phone`)."""
+        pressed, so the phone answers - the question says so (`phone`); and
+        on a listed panel whose touch the player does not recognise, which
+        may need a driver it never installs (Finding 125, 2026-10-14)."""
         confirm = self._store.state.screen_confirm or {}
         action = request.match_info["action"]
         local = request.remote in ("127.0.0.1", "::1")

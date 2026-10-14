@@ -127,7 +127,7 @@ def test_a_panel_kept_under_its_old_cased_name_still_has_its_touch(tmp_path):
     assert not rules.exists()
     question = screen_question({"pending": True, "current": {"screen": "waveshare-10.1-hdmi-b-case",
                                                              "rotation": 180, "connector": "HDMI-A-1"}})
-    assert question["phone"] is False
+    assert question["phone"] is False and question["panel_buttons"] is True
 
 
 @pytest.mark.parametrize("screen_id", ["waveshare-7.9-hdmi", "btt-hdmi7-v1.2", "geeekpi-7-hdmi"])
@@ -143,8 +143,50 @@ def test_a_listed_touch_panel_without_a_fingerprint_has_touch(tmp_path, screen_i
     current = {"screen": screen_id, "rotation": 0, "connector": "HDMI-A-1"}
     screen_apply.write_state({"current": current}, state)
     assert screen_watch.touch_rules(state, rules, run=lambda args, check=False: None) == []
-    assert screen_question({"pending": True, "current": current})["phone"] is False
+    assert screen_question({"pending": True, "current": current})["panel_buttons"] is True
     assert screen_apply.panels_off(screen_id, "HDMI-A-1", []) == []
+
+
+# --- Who answers Keep: the panel, the phone, or both (Finding 125, 2026-10-14) -
+
+def _question(screen_id):
+    from gexis_core.__main__ import screen_question
+    return screen_question({"pending": True, "current": {"screen": screen_id, "rotation": 0,
+                                                         "connector": "HDMI-A-1"}})
+
+
+@pytest.mark.parametrize("screen_id", ["waveshare-10.1-hdmi-b", "waveshare-13.3-hdmi-h",
+                                       "waveshare-11.9-hdmi", "waveshare-10.1-hdmi-b-case"])
+def test_a_fingerprinted_panel_is_answered_on_itself_only(screen_id):
+    """ADR-0109 decision 2: its USB touch is known, so a touch there proves
+    the picture and the touch; the phone may not answer."""
+    q = _question(screen_id)
+    assert q["panel_buttons"] is True and q["phone"] is False
+    assert _answer(q, "192.168.1.20")[0] == 403
+    assert _answer(q, "127.0.0.1") == (200, ["keep"])
+
+
+@pytest.mark.parametrize("screen_id", ["waveshare-7.9-hdmi", "btt-hdmi7-v1.2", "geeekpi-7-hdmi"])
+def test_a_listed_panel_not_fingerprinted_is_answered_on_itself_or_the_phone(screen_id):
+    """Finding 125 (2026-10-14): many listed panels need an SPI ads7846
+    overlay or a goodtft driver the player never installs, so their touch
+    may not work; with the buttons only on the panel, a panel whose touch is
+    dead could only wait for the countdown. Its buttons are shown and the
+    phone may answer too."""
+    q = _question(screen_id)
+    assert q["panel_buttons"] is True and q["phone"] is True
+    assert _answer(q, "192.168.1.20") == (200, ["keep"])
+    assert _answer(q, "127.0.0.1") == (200, ["keep"])
+
+
+@pytest.mark.parametrize("screen_id", ["other-1920x1080-capped", "generic-1080p", "hmtech-7-hdmi",
+                                       "no-such-screen"])
+def test_a_screen_without_touch_is_answered_from_the_phone_only(screen_id):
+    """A TV, a generic monitor mode, a model whose maker says it has no
+    touch: no buttons on it (nothing can press them), the phone answers."""
+    q = _question(screen_id)
+    assert q["panel_buttons"] is False and q["phone"] is True
+    assert _answer(q, "192.168.1.20") == (200, ["keep"])
 
 
 @pytest.mark.parametrize("screen_id", ["other-1920x1080-capped", "other-1280x800", "generic-1080p",
