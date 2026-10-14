@@ -64,7 +64,7 @@ from now on have no passwordless sudo: provision test cards with
 - On sofapi: the meters falling with the volume, and *Visualiser tweaks* →
   *Needles follow the volume* and *Gain* (ADR-0146).
 - Then: 1.0.0 cut from this code as the first Stable release.
-- Optional: a DSD file from the library (g38).
+- The fixes since 0.14.0, on sofapi (g46).
 - Done 2026-10-14: Lyrion synced playback (7e/g09, passed); the bar's supply
   (g12: the undervoltage was the USB extension cord, 0x0 plugged in
   directly).
