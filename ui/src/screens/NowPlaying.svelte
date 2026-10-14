@@ -1806,8 +1806,9 @@
   .album--link,
   .reltab__name--link,
   .artisttab__name--link {
-    font: inherit;
-    color: inherit;
+    /* Their own size and colour stay (.album, .reltab__name,
+       .artisttab__name); only a button's own look goes. */
+    font-family: inherit;
     background: none;
     border: none;
     padding: 0;
