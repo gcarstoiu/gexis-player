@@ -13,12 +13,17 @@ once a month is the wrong place for a mechanism.
 """
 from __future__ import annotations
 
+import errno
+import grp
 import json
 import logging
 import os
+import pwd
 import re
+import secrets
 import shutil
 import sqlite3
+import stat
 import subprocess
 import tarfile
 import tempfile
@@ -129,7 +134,16 @@ SETTINGS_DB = "var/lib/gexis-core/settings.db"
 #: was checkpointed into the restored file at the reboot - "database disk
 #: image is malformed", the history the restore was for and the hub's own
 #: both lost. Not started again: the reboot that follows starts it.
-STOPPED_FOR_RESTORE = (("var/lib/beszel-hub", "beszel-hub.service"),)
+#:
+#: **Uploaded plugins, every one** (Finding 125 #4, 2026-10-14): the same
+#: for a plugin with a SQLite store of its own - its last connection
+#: checkpointed what it wrote after the backup into the restored file, and
+#: the restore was undone for it, or the file corrupted. A unit with a `*`
+#: is a pattern: each one of them that runs is stopped.
+STOPPED_FOR_RESTORE = (
+    ("var/lib/beszel-hub", "beszel-hub.service"),
+    ("var/lib/private/gexis-uploaded", "gexis-uploaded-*@*.service"),
+)
 
 #: SQLite's companions of a database in WAL mode.
 WAL_FILES = ("-wal", "-shm")
@@ -231,16 +245,39 @@ FAILED_MARK = ".before-update-failed"
 
 
 def update_backup_failed(reason: str | None, directory: Path = DEFAULT_DIR) -> None:
-    """Leave `reason` for the updater, or clear it (None) as a backup starts."""
+    """Leave `reason` for the updater, or clear it (None) as a backup starts.
+
+    **Never through a link** (Finding 125 #2, 2026-10-14): the share belongs
+    to `pi`, setgid but not sticky, so the kernel's guard against following
+    links does not apply in it, and root wrote the reason into whatever a
+    link left at this name pointed to. What is there is removed - `unlink`
+    removes a link, not what it names - and the mark made new; a link put
+    back in between makes the write fail rather than follow it."""
     mark = directory / FAILED_MARK
     try:
         if reason is None:
             mark.unlink(missing_ok=True)
         else:
             directory.mkdir(parents=True, exist_ok=True)
-            mark.write_text(reason + "\n")
+            mark.unlink(missing_ok=True)
+            fd = os.open(mark, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC, 0o644)
+            with os.fdopen(fd, "w") as out:
+                out.write(reason + "\n")
     except OSError as exc:
         logger.debug("backup: cannot write %s: %s", mark, exc)
+
+
+def _give_to_pi(fd: int) -> None:
+    """The share is `force user = pi`; an archive root wrote has to be
+    replaceable by the next writer. **Through the open file** (Finding 125
+    #2): `chown(1)` on the name followed a link `pi` had left there, and
+    handed whatever it named to `pi`."""
+    try:
+        uid = pwd.getpwnam("pi").pw_uid
+        gid = grp.getgrnam("pi").gr_gid
+        os.fchown(fd, uid, gid)
+    except (KeyError, OSError):  # no `pi`, or not root: the tests
+        pass
 
 
 def _add(archive: tarfile.TarFile, path: Path, arcname: str, filter) -> None:
@@ -281,53 +318,74 @@ def create(device_name: str, directory: Path = DEFAULT_DIR, root: Path = Path("/
 
     `automatic`: the updater's, named with `AUTOMATIC_MARK` so that
     `prune_automatic` can find it later.
+
+    **The temporary name is not one anybody can guess** (Finding 125 #2,
+    2026-10-14). It was `.<name>.part`, in a share `pi` writes: a link left
+    at that name had root write the archive into `cmdline.txt`, or
+    `/etc/shadow`. `mkstemp` makes a new file under a random name and never
+    opens one already there; the rename puts it in place of whatever holds
+    the final name, a link included, without following it.
+
+    **Only files and folders go in** (Finding 125 #5, 2026-10-14): a
+    plugin's pipe, or the `lib64 -> lib` of a venv, went into every backup
+    as what it was, and restore - which writes nothing but files and
+    folders - refused the whole archive for it. Left out, and said.
     """
     directory.mkdir(parents=True, exist_ok=True)
     mark = AUTOMATIC_MARK if automatic else ""
     name = f"gexis-{_slug(device_name)}{mark}-{time.strftime('%Y%m%d-%H%M%S')}.tgz"
     final = directory / name
-    partial = directory / f".{name}.part"
+    fd, partial_name = tempfile.mkstemp(prefix=f".{name}.", suffix=".part", dir=directory)
+    partial = Path(partial_name)
     try:
-        with tempfile.TemporaryDirectory() as work, tarfile.open(partial, "w:gz") as archive:
-            copied: list[tuple[tarfile.TarInfo, Path]] = []
-
-            def live_databases(info: tarfile.TarInfo) -> tarfile.TarInfo | None:
-                path = root / info.name
-                if not info.isfile():
-                    return info
-                if any(info.name.endswith(s) for s in WAL_FILES) and \
-                        any(c.name == info.name[:-4] for c, _ in copied):
-                    return None
-                if Path(f"{path}-wal").exists():
-                    into = Path(work) / str(len(copied))
-                    if _snapshot(path, into):
-                        copied.append((info, into))
-                        return None
-                return info
-
-            for member in MEMBERS:
-                source = root / member
-                if not source.exists():
-                    logger.info("backup: %s is not here, skipping", member)
-                    continue
-                _add(archive, source, member, live_databases)
-            # The copies, under the live files' names, owners and modes.
-            for info, into in copied:
-                info.size = into.stat().st_size
-                with open(into, "rb") as data:
-                    archive.addfile(info, data)
+        with os.fdopen(fd, "wb") as raw:
+            with tempfile.TemporaryDirectory() as work, tarfile.open(fileobj=raw, mode="w:gz") as archive:
+                _fill(archive, work, root)
+            raw.flush()
+            os.fchmod(raw.fileno(), 0o644)
+            _give_to_pi(raw.fileno())
+            size = os.fstat(raw.fileno()).st_size
         partial.replace(final)
     except Exception:
         partial.unlink(missing_ok=True)
         raise
-    # The share is `force user = pi`; an archive root wrote has to be
-    # replaceable by the next writer.
-    try:
-        subprocess.run(["chown", "pi:pi", str(final)], check=False, capture_output=True)
-    except OSError:
-        pass
-    logger.info("backup: wrote %s (%d bytes)", name, final.stat().st_size)
+    logger.info("backup: wrote %s (%d bytes)", name, size)
     return name
+
+
+def _fill(archive: tarfile.TarFile, work: str, root: Path) -> None:
+    """Everything in `MEMBERS` into `archive`; `work`, a folder for the
+    databases' copies."""
+    copied: list[tuple[tarfile.TarInfo, Path]] = []
+
+    def live_databases(info: tarfile.TarInfo) -> tarfile.TarInfo | None:
+        path = root / info.name
+        if info.isdir():
+            return info
+        if not info.isfile():
+            logger.info("backup: %s is not a file or a folder, leaving it out", info.name)
+            return None
+        if any(info.name.endswith(s) for s in WAL_FILES) and \
+                any(c.name == info.name[:-4] for c, _ in copied):
+            return None
+        if Path(f"{path}-wal").exists():
+            into = Path(work) / str(len(copied))
+            if _snapshot(path, into):
+                copied.append((info, into))
+                return None
+        return info
+
+    for member in MEMBERS:
+        source = root / member
+        if not source.exists():
+            logger.info("backup: %s is not here, skipping", member)
+            continue
+        _add(archive, source, member, live_databases)
+    # The copies, under the live files' names, owners and modes.
+    for info, into in copied:
+        info.size = into.stat().st_size
+        with open(into, "rb") as data:
+            archive.addfile(info, data)
 
 
 def prune_automatic(keep_name: str, directory: Path = DEFAULT_DIR, keep: int = KEEP_AUTOMATIC) -> list[str]:
@@ -377,17 +435,26 @@ def _checked(archive: tarfile.TarFile, label: str) -> list[tarfile.TarInfo]:
     and on the device's Python 3.13 `extractall` followed the `..` - as
     root, with the reboot after a restore to run what it planted. A name
     with `..`, `.`, an empty part or a leading `/` is refused, not tidied: no
-    archive `create` writes has one."""
+    archive `create` writes has one.
+
+    **A link, a pipe or a device under our paths is left out, not the
+    archive** (Finding 125 #5, 2026-10-14). Refused, one plugin's pipe or
+    venv link made every backup 0.15.0 wrote unrestorable - the ones an
+    update keeps to go back to among them. Left out, nothing is made for
+    it, which is all refusing it ever protected; one under any other path
+    is still refused with the archive."""
     members = []
     for member in archive.getmembers():
-        if member.issym() or member.islnk():
-            raise ValueError(f"{label}: refuses a link, {member.name!r}")
-        if not (member.isfile() or member.isdir()):
-            raise ValueError(f"{label}: refuses a device or a pipe, {member.name!r}")
         parts = member.name.split("/")
         if member.name.startswith("/") or any(part in ("", ".", "..") for part in parts):
             raise ValueError(f"{label}: refuses to write {member.name!r}")
-        if _under(member.name, MEMBERS):
+        ours = _under(member.name, MEMBERS)
+        if not (member.isfile() or member.isdir()):
+            if not (ours or _under(member.name, FORMERLY_BACKED_UP)):
+                raise ValueError(f"{label}: refuses to write {member.name!r}")
+            logger.info("backup: %s: leaving out %s, not a file or a folder", label, member.name)
+            continue
+        if ours:
             members.append(member)
         elif _under(member.name, FORMERLY_BACKED_UP):
             # An archive from before a member was narrowed: skipped, not
@@ -419,6 +486,7 @@ def restore_file(path: Path, root: Path = Path("/"), leave: tuple[str, ...] = ()
         run = subprocess.run
     with tarfile.open(path, "r:gz") as archive:
         members = [m for m in _checked(archive, path.name) if not _under(m.name, leave)]
+        _refuse_links_on_disk(members, root, path.name)
         stopped = _stop_for_restore(members, run)
         try:
             _put_back(archive, members, root)
@@ -432,6 +500,35 @@ def restore_file(path: Path, root: Path = Path("/"), leave: tuple[str, ...] = ()
     return len(members)
 
 
+def _refuse_links_on_disk(members: list[tarfile.TarInfo], root: Path, label: str) -> None:
+    """**Nothing is written through a link already on the disk** (Finding
+    125 #1, 2026-10-14). An uploaded plugin owns its data folder, and
+    Plexamp, as `pi`, its own; a link left in either - `link -> /etc/cron.d`
+    - had root write a member named `.../link/evil` into `/etc/cron.d`, and
+    the reboot after a restore ran it. `_checked` looks only at names; this
+    looks at the disk, before anything is stopped or written, so the
+    archive is refused whole. `_put_back` refuses the same again as it
+    writes, for a link made in between."""
+    for member in members:
+        here = root
+        for part in member.name.split("/"):
+            here = here / part
+            try:
+                mode = os.lstat(here).st_mode
+            except FileNotFoundError:
+                break
+            if stat.S_ISLNK(mode):
+                raise ValueError(f"{label}: refuses to write {member.name!r} through a link already on "
+                                 f"the disk, {str(here.relative_to(root))!r}")
+
+
+def _units_running(pattern: str, run) -> list[str]:
+    """The units `pattern` names that are running now."""
+    listed = run(["systemctl", "list-units", "--state=active", "--plain", "--no-legend", pattern],
+                 check=False, capture_output=True, text=True)
+    return [line.split()[0] for line in (getattr(listed, "stdout", "") or "").splitlines() if line.split()]
+
+
 def _stop_for_restore(members: list[tarfile.TarInfo], run) -> list[str]:
     """Stop each service whose files the archive brings; return those that
     were running."""
@@ -441,6 +538,14 @@ def _stop_for_restore(members: list[tarfile.TarInfo], run) -> list[str]:
     for prefix, unit in STOPPED_FOR_RESTORE:
         if not any(_under(m.name, (prefix,)) for m in members):
             continue
+        if "*" in unit:
+            # Stopped by the pattern, so one restarting after a failure
+            # stops as well; started again by name, only those that ran.
+            running = _units_running(unit, run)
+            run(["systemctl", "stop", unit], check=False, capture_output=True)
+            stopped.extend(running)
+            logger.info("backup: %s stopped for the restore", ", ".join(running) or unit)
+            continue
         active = run(["systemctl", "is-active", "--quiet", unit], check=False, capture_output=True)
         run(["systemctl", "stop", unit], check=False, capture_output=True)
         if getattr(active, "returncode", 1) == 0:
@@ -449,39 +554,148 @@ def _stop_for_restore(members: list[tarfile.TarInfo], run) -> list[str]:
     return stopped
 
 
-def _put_back(archive: tarfile.TarFile, members: list[tarfile.TarInfo], root: Path) -> None:
-    """The extraction itself: the core's databases beside and renamed, the
-    rest by `extractall`."""
-    swapped = [m for m in members if m.name in REPLACED and m.isfile()]
-    # **`tar`, named** (the review of 2026-10-12): Python 3.13 on the
-    # device has no default filter and 3.14's is `data`, which would put
-    # Plexamp's claim back owned by root, where `pi` cannot write it.
-    # `tar` keeps owners, drops setuid bits, and refuses a path that
-    # would leave `root` - a second guard behind `_checked`.
-    archive.extractall(root, members=[m for m in members if m not in swapped], filter="tar")
-    for member in swapped:
-        target = root / member.name
-        target.parent.mkdir(parents=True, exist_ok=True)
-        partial = target.with_name(f".{target.name}.restoring")
-        source = archive.extractfile(member)
-        if source is None:
-            continue
-        with source, open(partial, "wb") as out:
-            shutil.copyfileobj(source, out)
-        os.chmod(partial, member.mode & 0o777)
+#: A folder opened to write in: never through a link (Finding 125 #1).
+_FOLDER = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+
+
+def _open_folder(root_fd: int, parts: list[str], label: str, make: bool = True) -> int:
+    """The folder `parts` below `root_fd`, made where it is missing, each
+    step opened relative to the one before and **never through a link**: a
+    link at any step, even one made a moment ago, is refused rather than
+    followed. Returns its descriptor, the caller's to close."""
+    fd = os.dup(root_fd)
+    try:
+        for part in parts:
+            if make:
+                try:
+                    os.mkdir(part, 0o777, dir_fd=fd)
+                except FileExistsError:
+                    pass
+            try:
+                inner = os.open(part, _FOLDER, dir_fd=fd)
+            except OSError as exc:
+                if exc.errno in (errno.ELOOP, errno.ENOTDIR):
+                    raise ValueError(f"{label}: refuses to write through {'/'.join(parts)!r}: a link "
+                                     f"already on the disk, or not a folder") from None
+                raise
+            os.close(fd)
+            fd = inner
+        return fd
+    except BaseException:
+        os.close(fd)
+        raise
+
+
+def _owner(member: tarfile.TarInfo) -> tuple[int, int]:
+    """Who a member belongs to, as `tarfile` decides it: by name where this
+    system knows the name, by number where it does not."""
+    uid, gid = member.uid, member.gid
+    try:
+        if member.gname:
+            gid = grp.getgrnam(member.gname).gr_gid
+    except KeyError:
+        pass
+    try:
+        if member.uname:
+            uid = pwd.getpwnam(member.uname).pw_uid
+    except KeyError:
+        pass
+    return (-1 if uid is None else uid), (-1 if gid is None else gid)
+
+
+def _set_attributes(fd: int, member: tarfile.TarInfo) -> None:
+    """Owner, then mode - a change of owner clears a setuid bit - then time,
+    from `member`, through the open file. As `extractall` had it: one that
+    cannot be set is logged, not fatal."""
+    try:
+        if os.geteuid() == 0:
+            os.fchown(fd, *_owner(member))
+        if member.mode is not None:
+            os.fchmod(fd, member.mode)
+        if member.mtime is not None:
+            os.utime(fd, (member.mtime, member.mtime))
+    except (OSError, OverflowError) as exc:
+        logger.debug("backup: %s: %s", member.name, exc)
+
+
+def _write_beside(archive: tarfile.TarFile, member: tarfile.TarInfo, kept: tarfile.TarInfo,
+                  folder: int, leaf: str) -> None:
+    """One file, written beside its place under a name nobody can guess and
+    renamed over it. The rename replaces a link standing there instead of
+    following it, and a program holding the old file open - the core its
+    databases (ADR-0131 §5.4) - keeps the one it had."""
+    partial = f".{leaf}.{secrets.token_hex(4)}.restoring"
+    fd = os.open(partial, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600,
+                 dir_fd=folder)
+    try:
+        with os.fdopen(fd, "wb") as out:
+            source = archive.extractfile(member)
+            if source is not None:
+                with source:
+                    shutil.copyfileobj(source, out)
+            out.flush()
+            _set_attributes(out.fileno(), kept)
+        os.rename(partial, leaf, src_dir_fd=folder, dst_dir_fd=folder)
+    except BaseException:
         try:
-            os.chown(partial, member.uid, member.gid)
-        except OSError:  # not root: the tests, and nothing else
+            os.unlink(partial, dir_fd=folder)
+        except FileNotFoundError:
             pass
-        partial.replace(target)
-    # A WAL the archive does not bring is not left beside the database it
-    # brings: the next open would apply it to the restored file.
-    brought = {m.name for m in members}
-    for member in members:
-        if member.isfile() and member not in swapped:
-            for suffix in WAL_FILES:
-                if member.name + suffix not in brought:
-                    (root / (member.name + suffix)).unlink(missing_ok=True)
+        raise
+
+
+def _put_back(archive: tarfile.TarFile, members: list[tarfile.TarInfo], root: Path) -> None:
+    """The extraction itself, **the module's own** (Finding 125 #1,
+    2026-10-14). It was `extractall` with the `tar` filter, called here a
+    second guard behind `_checked`; that filter refuses a path only when
+    it leaves `root`, and on the device `root` is `/`, so it refused
+    nothing, and every link on the way was followed. Now each folder is
+    opened from the one above it without following a link, and every file
+    is written beside its place and renamed - the core's databases as
+    before, and now the rest the same way.
+
+    **The `tar` filter still decides what is kept** (the review of
+    2026-10-12): owners as the archive says - `data` would put Plexamp's
+    claim back owned by root, where `pi` cannot write it - and no setuid
+    bit, no write bit for others."""
+    label = Path(archive.name or "backup").name
+    root.mkdir(parents=True, exist_ok=True)
+    root_fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
+    try:
+        brought = {m.name for m in members}
+        folders = []
+        for member in members:
+            kept = tarfile.tar_filter(member, str(root))
+            parts = member.name.split("/")
+            if member.isdir():
+                os.close(_open_folder(root_fd, parts, label))
+                folders.append(kept)
+                continue
+            folder = _open_folder(root_fd, parts[:-1], label)
+            try:
+                _write_beside(archive, member, kept, folder, parts[-1])
+                # A WAL the archive does not bring is not left beside the
+                # database it brings: the next open would apply it to the
+                # restored file. Not the core's own: it holds those open.
+                if member.name not in REPLACED:
+                    for suffix in WAL_FILES:
+                        if member.name + suffix not in brought:
+                            try:
+                                os.unlink(parts[-1] + suffix, dir_fd=folder)
+                            except FileNotFoundError:
+                                pass
+            finally:
+                os.close(folder)
+        # Folders' own modes last, deepest first, as `extractall` had it: one
+        # made read-only before its files were in would refuse them.
+        for kept in sorted(folders, key=lambda m: m.name, reverse=True):
+            fd = _open_folder(root_fd, kept.name.split("/"), label, make=False)
+            try:
+                _set_attributes(fd, kept)
+            finally:
+                os.close(fd)
+    finally:
+        os.close(root_fd)
 
 
 def write_settings(values: dict, root: Path = Path("/")) -> None:

@@ -262,16 +262,24 @@ def test_an_archive_that_writes_outside_our_paths_is_refused(tmp_path):
     assert not (tmp_path / "root").exists()
 
 
-def test_a_link_is_refused(tmp_path):
+def test_a_link_is_never_made(tmp_path):
     """A symlink member is how an archive writes somewhere its names do not
-    mention."""
+    mention. Under our paths it is left out (Finding 125 #5: refusing the
+    archive for it made backups unrestorable); anywhere else the archive is
+    still refused."""
+    import os
     out = tmp_path / "out"
     out.mkdir()
     name = "gexis-gexis-20260925-120000.tgz"
     _hostile(out / name, "var/lib/gexis-core/settings.db", link_to="/etc/shadow")
 
-    with pytest.raises(ValueError, match="refuses a link"):
-        backups.restore(name, out, tmp_path / "root")
+    backups.restore(name, out, tmp_path / "root")
+    assert not os.path.lexists(tmp_path / "root/var/lib/gexis-core/settings.db")
+
+    _hostile(out / name, "etc/shadow", link_to="/tmp/x")
+    with pytest.raises(ValueError, match="refuses to write"):
+        backups.restore(name, out, tmp_path / "elsewhere")
+    assert not (tmp_path / "elsewhere").exists()
 
 
 @pytest.mark.parametrize("member", [
@@ -305,19 +313,25 @@ def test_a_member_that_climbs_out_of_our_paths_is_refused(tmp_path, member):
 
 
 @pytest.mark.parametrize("kind", [tarfile.LNKTYPE, tarfile.FIFOTYPE, tarfile.CHRTYPE, tarfile.BLKTYPE])
-def test_a_hard_link_or_a_device_is_refused(tmp_path, kind):
+def test_a_hard_link_or_a_device_is_never_made(tmp_path, kind):
+    """Left out under our paths (Finding 125 #5), refused anywhere else."""
+    import os
     out = tmp_path / "out"
     out.mkdir()
-    name = "gexis-gexis-20260925-120000.tgz"
-    with tarfile.open(out / name, "w:gz") as archive:
-        info = tarfile.TarInfo("var/lib/bluetooth/evil")
-        info.type = kind
-        info.linkname = "/etc/shadow" if kind == tarfile.LNKTYPE else ""
-        archive.addfile(info)
-
-    with pytest.raises(ValueError, match="refuses"):
-        backups.restore(name, out, tmp_path / "root")
-    assert not (tmp_path / "root").exists()
+    for where, root in (("var/lib/bluetooth/evil", tmp_path / "root"), ("etc/evil", tmp_path / "elsewhere")):
+        name = "gexis-gexis-20260925-120000.tgz"
+        with tarfile.open(out / name, "w:gz") as archive:
+            info = tarfile.TarInfo(where)
+            info.type = kind
+            info.linkname = "/etc/shadow" if kind == tarfile.LNKTYPE else ""
+            archive.addfile(info)
+        if where.startswith("etc/"):
+            with pytest.raises(ValueError, match="refuses"):
+                backups.restore(name, out, root)
+            assert not root.exists()
+        else:
+            assert backups.restore_file(out / name, root) == 0
+            assert not os.path.lexists(root / where)
 
 
 def test_a_setuid_bit_is_not_put_back(tmp_path):
@@ -340,19 +354,21 @@ def test_the_extraction_keeps_owners_and_refuses_what_escapes(tmp_path, monkeypa
     """**Not the default filter**: Python 3.13, on the device, has none (every
     file as the archive says, links and all), and 3.14's `data` would put
     Plexamp's claim back owned by root, where `pi` cannot write it. `tar`
-    keeps owners and still refuses a path that leaves the root."""
+    keeps owners and still refuses a path that leaves the root - decided
+    for every member, now that the extraction is the module's own (Finding
+    125 #1)."""
     root, out = _device(tmp_path / "root"), tmp_path / "out"
     name = backups.create("gexis", out, root)
     seen = []
-    real = tarfile.TarFile.extractall
+    real = tarfile.tar_filter
 
-    def spy(self, path=".", members=None, *, numeric_owner=False, filter=None):
-        seen.append(filter)
-        return real(self, path, members, numeric_owner=numeric_owner, filter=filter)
+    def spy(member, dest_path):
+        seen.append(member.name)
+        return real(member, dest_path)
 
-    monkeypatch.setattr(tarfile.TarFile, "extractall", spy)
-    backups.restore(name, out, tmp_path / "fresh")
-    assert seen == ["tar"]
+    monkeypatch.setattr(tarfile, "tar_filter", spy)
+    count = backups.restore_file(out / name, tmp_path / "fresh")
+    assert len(seen) == count and "var/lib/gexis-core/settings.db" in seen
 
 
 def test_restoring_something_that_is_not_there(tmp_path):
@@ -580,7 +596,7 @@ def test_the_hub_is_stopped_before_its_files_are_put_back(tmp_path):
 
     backups.restore_file(out / name, target, run=run)
     stops = [argv for argv, _ in calls if argv[:2] == ["systemctl", "stop"]]
-    assert stops == [["systemctl", "stop", "beszel-hub.service"]]
+    assert ["systemctl", "stop", "beszel-hub.service"] in stops
     assert not (target / "var/lib/beszel-hub/data.db-wal").exists()
     assert not (target / "var/lib/beszel-hub/data.db-shm").exists()
     assert (target / "var/lib/beszel-hub/data.db").read_bytes() == b"hub"
@@ -593,7 +609,7 @@ def test_an_archive_without_the_hub_leaves_it_running(tmp_path):
     name = backups.create("gexis", out, root)
     calls = []
     backups.restore_file(out / name, _device(tmp_path / "target"), run=lambda argv, **kw: calls.append(argv))
-    assert calls == []
+    assert not any("beszel-hub" in " ".join(argv) for argv in calls)
 
 
 def test_a_restore_that_fails_starts_the_hub_it_stopped(tmp_path, monkeypatch):
@@ -609,7 +625,7 @@ def test_a_restore_that_fails_starts_the_hub_it_stopped(tmp_path, monkeypatch):
     def full(*a, **k):
         raise OSError("no space left on device")
 
-    monkeypatch.setattr(tarfile.TarFile, "extractall", full)
+    monkeypatch.setattr(backups, "_write_beside", full)
     with pytest.raises(OSError):
         backups.restore_file(out / name, _device(tmp_path / "target"), run=run)
     assert calls[-1] == ["systemctl", "start", "beszel-hub.service"]
@@ -721,3 +737,235 @@ def test_an_update_backup_that_failed_leaves_its_reason_and_a_new_one_clears_it(
     assert backups.available(tmp_path) == [], "never listed as a backup"
     backups.update_backup_failed(None, tmp_path)
     assert not (tmp_path / backups.FAILED_MARK).exists()
+
+
+# --- Finding 125 (2026-10-14): the review of everything since 0.10.1 ---------
+
+import os
+import subprocess
+
+
+@pytest.mark.parametrize("member, plant", [
+    # A folder the archive writes into, already a link on the disk.
+    ("var/lib/private/gexis-uploaded/radiofoo/link/evil", "link"),
+    # The file itself, already a link on the disk.
+    ("var/lib/private/gexis-uploaded/radiofoo/state", "state"),
+])
+def test_a_restore_never_writes_through_a_link_already_on_the_disk(tmp_path, member, plant):
+    """**Finding 125 #1.** An uploaded plugin owns its data folder and can put
+    a link in it; `extractall` as root followed it, and on the device, whose
+    root is `/`, the `tar` filter's "outside the root" never fires. Here
+    the link points inside the test's root, as everything does on `/`."""
+    out = tmp_path / "out"
+    out.mkdir()
+    root = tmp_path / "root"
+    plugin = root / "var/lib/private/gexis-uploaded/radiofoo"
+    plugin.mkdir(parents=True)
+    cron = root / "etc/cron.d"
+    cron.mkdir(parents=True)
+    victim = cron / "evil"
+    if plant == "link":
+        (plugin / "link").symlink_to(cron)
+    else:
+        victim.write_text("root's")
+        (plugin / "state").symlink_to(victim)
+    name = "gexis-gexis-20260925-120000.tgz"
+    _hostile(out / name, member)
+
+    with pytest.raises(ValueError, match="link already on the disk"):
+        backups.restore(name, out, root)
+    assert not victim.exists() or victim.read_text() == "root's"
+
+
+def test_a_link_planted_after_the_check_is_still_not_followed(tmp_path, monkeypatch):
+    """**Finding 125 #1**, the race: the plugin runs while the restore does.
+    Each folder is opened without following a link, so one that appears
+    between the look and the write is refused, not written through."""
+    out = tmp_path / "out"
+    out.mkdir()
+    root = tmp_path / "root"
+    plugin = root / "var/lib/private/gexis-uploaded/radiofoo"
+    plugin.mkdir(parents=True)
+    cron = root / "etc/cron.d"
+    cron.mkdir(parents=True)
+    name = "gexis-gexis-20260925-120000.tgz"
+    _hostile(out / name, "var/lib/private/gexis-uploaded/radiofoo/link/evil")
+
+    def plant(members, run):
+        (plugin / "link").symlink_to(cron)
+        return []
+
+    monkeypatch.setattr(backups, "_stop_for_restore", plant)
+    with pytest.raises((ValueError, OSError)):
+        backups.restore(name, out, root)
+    assert not (cron / "evil").exists()
+
+
+def test_a_restore_still_puts_back_owners_modes_and_times(tmp_path):
+    """**Finding 125 #1**: the extraction is the module's own now; what the
+    `tar` filter decided still holds - modes kept less any setuid bit or
+    write bit for others, times kept, folders made."""
+    import io
+    out = tmp_path / "out"
+    out.mkdir()
+    name = "gexis-gexis-20260925-120000.tgz"
+    with tarfile.open(out / name, "w:gz") as archive:
+        folder = tarfile.TarInfo("home/pi/.local/share/Plexamp/Settings")
+        folder.type = tarfile.DIRTYPE
+        folder.mode = 0o750
+        folder.mtime = 1_700_000_000
+        archive.addfile(folder)
+        info = tarfile.TarInfo("home/pi/.local/share/Plexamp/Settings/token")
+        info.mode = 0o6646
+        info.mtime = 1_600_000_000
+        info.size = 5
+        archive.addfile(info, io.BytesIO(b"token"))
+
+    root = tmp_path / "root"
+    backups.restore(name, out, root)
+    token = root / "home/pi/.local/share/Plexamp/Settings/token"
+    assert token.read_bytes() == b"token"
+    assert token.stat().st_mode & 0o7777 == 0o644
+    assert token.stat().st_mtime == 1_600_000_000
+    assert token.parent.stat().st_mode & 0o7777 == 0o750
+    assert token.parent.stat().st_mtime == 1_700_000_000
+    assert not [p for p in token.parent.iterdir() if p.name != "token"], "nothing left beside it"
+
+
+def test_the_part_file_root_writes_is_never_a_link_someone_left(tmp_path, monkeypatch):
+    """**Finding 125 #2.** The share belongs to `pi`, setgid but not sticky,
+    so the kernel's protection for links does not apply there: a link at
+    the name the next backup's partial file would have was written through
+    by root - a gzip stream into `cmdline.txt`."""
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    out.mkdir()
+    monkeypatch.setattr(backups.time, "strftime", lambda fmt, *a: "20261015-030001")
+    victim = tmp_path / "cmdline.txt"
+    victim.write_text("console=tty1")
+    name = "gexis-den.before-update-20261015-030001.tgz"
+    (out / f".{name}.part").symlink_to(victim)
+    (out / name).symlink_to(victim)
+
+    assert backups.create("Den", out, root, automatic=True) == name
+    assert victim.read_text() == "console=tty1"
+    assert not (out / name).is_symlink()
+    with tarfile.open(out / name) as archive:
+        assert "var/lib/gexis-core/settings.db" in archive.getnames()
+
+
+def test_the_failure_mark_is_never_written_through_a_link(tmp_path):
+    """**Finding 125 #2**: the same, for the word an update's failed backup
+    leaves - its text went into whatever the link named."""
+    victim = tmp_path / "shadow"
+    victim.write_text("root:x:0:0")
+    share = tmp_path / "share"
+    share.mkdir()
+    (share / backups.FAILED_MARK).symlink_to(victim)
+
+    backups.update_backup_failed("disk full", share)
+    assert victim.read_text() == "root:x:0:0"
+    assert not (share / backups.FAILED_MARK).is_symlink()
+    assert (share / backups.FAILED_MARK).read_text() == "disk full\n"
+
+
+def test_the_uploaded_plugins_are_stopped_before_their_data_is_put_back(tmp_path):
+    """**Finding 125 #4.** A running uploaded plugin's own SQLite WAL was
+    checkpointed into its restored database at the reboot: the restore
+    undone, or the file corrupted. Its units stop first, as the hub's do."""
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    name = backups.create("gexis", out, root)
+    target = _device(tmp_path / "target")
+    state = target / "var/lib/private/gexis-uploaded/radiofoo/state"
+    state.write_text("newer")
+    seen = []
+
+    def run(argv, **kw):
+        seen.append((argv, state.read_text()))
+        out_ = ""
+        if argv[1:2] == ["list-units"]:
+            out_ = ("gexis-uploaded-service@radiofoo.service loaded active running x\n"
+                    "gexis-uploaded-renderer@other.service loaded active running y\n")
+        return subprocess.CompletedProcess(argv, 0, out_, "")
+
+    backups.restore_file(out / name, target, run=run)
+    stops = [(argv, text) for argv, text in seen if argv[:2] == ["systemctl", "stop"]]
+    # By the pattern: one restarting after a failure stops as well.
+    assert ["systemctl", "stop", "gexis-uploaded-*@*.service"] in [a for a, _ in stops]
+    assert all(text == "newer" for _, text in stops), "stopped before anything was put back"
+    assert state.read_text() == "learned"
+
+
+def test_a_restore_that_fails_starts_the_plugins_it_stopped(tmp_path, monkeypatch):
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    name = backups.create("gexis", out, root)
+    calls = []
+
+    def run(argv, **kw):
+        calls.append(argv)
+        out_ = "gexis-uploaded-service@radiofoo.service loaded active running x\n" \
+            if argv[1:2] == ["list-units"] else ""
+        return subprocess.CompletedProcess(argv, 0, out_, "")
+
+    def full(*a, **k):
+        raise OSError("no space left on device")
+
+    monkeypatch.setattr(backups, "_put_back", full)
+    with pytest.raises(OSError):
+        backups.restore_file(out / name, _device(tmp_path / "target"), run=run)
+    assert ["systemctl", "start", "gexis-uploaded-service@radiofoo.service"] in calls
+
+
+def test_an_archive_without_uploaded_data_leaves_the_plugins_running(tmp_path):
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    import shutil
+    shutil.rmtree(root / "var/lib/private/gexis-uploaded")
+    name = backups.create("gexis", out, root)
+    calls = []
+    backups.restore_file(out / name, _device(tmp_path / "target"),
+                         run=lambda argv, **kw: calls.append(argv) or subprocess.CompletedProcess(argv, 0, "", ""))
+    assert not any("gexis-uploaded" in " ".join(argv) for argv in calls)
+
+
+def test_a_pipe_or_a_link_in_a_plugins_folder_does_not_make_the_backup_unrestorable(tmp_path):
+    """**Finding 125 #5.** A renderer's pipe, or a venv's `lib64 -> lib`,
+    went into every backup, and restore refused the whole archive for it."""
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    plugin = root / "var/lib/private/gexis-uploaded/radiofoo"
+    os.mkfifo(plugin / "pipe")
+    (plugin / "lib").mkdir()
+    (plugin / "lib/site.py").write_text("x = 1")
+    (plugin / "lib64").symlink_to("lib")
+    name = backups.create("gexis", out, root)
+    with tarfile.open(out / name) as archive:
+        held = {m.name: m for m in archive.getmembers()}
+    assert "var/lib/private/gexis-uploaded/radiofoo/lib/site.py" in held
+    assert all(m.isfile() or m.isdir() for m in held.values())
+
+    target = tmp_path / "target"
+    backups.restore_file(out / name, target)
+    assert (target / "var/lib/private/gexis-uploaded/radiofoo/lib/site.py").read_text() == "x = 1"
+    assert (target / "var/lib/private/gexis-uploaded/radiofoo/state").read_text() == "learned"
+
+
+@pytest.mark.parametrize("kind", [tarfile.SYMTYPE, tarfile.LNKTYPE, tarfile.FIFOTYPE, tarfile.CHRTYPE])
+def test_an_older_backup_with_a_link_or_a_pipe_restores_everything_else(tmp_path, kind):
+    """**Finding 125 #5**, for the backups 0.15.0 already wrote - among them
+    the ones an update keeps to go back to: the entry is left out, the
+    archive is not."""
+    import io
+    out = tmp_path / "out"
+    out.mkdir()
+    name = "gexis-gexis-20260925-120000.tgz"
+    with tarfile.open(out / name, "w:gz") as archive:
+        odd = tarfile.TarInfo("var/lib/private/gexis-uploaded/radiofoo/odd")
+        odd.type = kind
+        odd.linkname = "/etc/shadow" if kind in (tarfile.SYMTYPE, tarfile.LNKTYPE) else ""
+        archive.addfile(odd)
+        info = tarfile.TarInfo("var/lib/private/gexis-uploaded/radiofoo/state")
+        info.size = 7
+        archive.addfile(info, io.BytesIO(b"learned"))
+
+    root = tmp_path / "root"
+    assert backups.restore_file(out / name, root) == 1
+    assert (root / "var/lib/private/gexis-uploaded/radiofoo/state").read_text() == "learned"
+    assert not os.path.lexists(root / "var/lib/private/gexis-uploaded/radiofoo/odd")
