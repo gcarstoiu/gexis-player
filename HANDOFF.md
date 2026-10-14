@@ -18,7 +18,20 @@ tile; a TV as the screen at 1080p (ADR-0147 amended twice after George's TV
 tests); standby keeps a sound port on; the update backup survives a vanishing
 file. 0.13.0 (PR #64) merged and its post-merge steps done. The bar is on
 0.14.0: **the second power cut passed** (2026-10-14, Finding 123
-addendum) - cut mid-install, finished by itself at the next start. sofapi runs a preview of 0.14.0's code. **Players are not
+addendum) - cut mid-install, finished by itself at the next start.
+
+**Since 0.14.0, on `phase-13d` and installed on sofapi only** (George's
+fixes of 2026-10-14, all for the next release; its notes need his approval):
+Attached screen and Screen port as two tiles again, the Screen port tile
+listing what is on each port; the home strip scrolls by touchpad; the
+outline follows every pressable in its own shape, cut to the part that
+shows, none round a row with its actions revealed, the dot small inside it;
+similar-artist tags, the artist's name and the release title open their
+pages; the touchpad pings (2 s, fresh socket after 5 s) and probes at the
+first touch after a quiet spell; Wi-Fi power saving off on a player; the
+sheet swipes open and closed; artist photos kept across a Lyrion rescan
+(revalidated by name - the first rescan after the update still drops them
+once). **George is trying these on sofapi.** **Players are not
 updated to a release by Claude** (George, 2026-10-13).
 
 **From the power-cut test, in 0.13.0:** George's power cut on the bar (g34,
@@ -31,14 +44,14 @@ is on the complete 0.12.0 set. Also: *Could not check for updates* says why
 in words. **Not proved:** a second real cut with the fixed updater
 installed - done 2026-10-14, passed. LESSONS 70.
 
-Suite 2,352.
+Suite 2,386 passed, 47 skipped (2026-10-14).
 
 **Devices.** sofapi (Waveshare 10.1"; a test machine - its Lyrion queue may
 be lost, George 2026-10-12; an SMSL USB DAC on it), the bar (ShelvesPi,
 11.9") and guestpi (IQaudIO Pi-DAC PRO, 13.3") as read 2026-10-13:
-sofapi runs a `phase-13d` preview (core `0.11.0+git53`, player `+git55`);
-the bar runs release 0.12.0 (updated by George's test, repaired as above);
-guestpi reports core `0.10.2+git63`. **Cards flashed
+sofapi runs a `phase-13d` preview (core `0.14.0+git20`, UI and player
+`+git28`, 2026-10-14); the bar runs release 0.14.0; guestpi as read
+2026-10-13, core `0.10.2+git63`. **Cards flashed
 from now on have no passwordless sudo: provision test cards with
 `DEV_SUDO="yes"`** (ADR-0139).
 
@@ -51,11 +64,14 @@ from now on have no passwordless sudo: provision test cards with
 - On sofapi: the meters falling with the volume, and *Visualiser tweaks* →
   *Needles follow the volume* and *Gain* (ADR-0146).
 - Then: 1.0.0 cut from this code as the first Stable release.
-- Lyrion synced playback with another player (g09, needed since 2026-10-13).
-- Optional: the bar's own supply (g12), a DSD file from the library (g38).
+- Optional: a DSD file from the library (g38).
+- Done 2026-10-14: Lyrion synced playback (7e/g09, passed); the bar's supply
+  (g12: the undervoltage was the USB extension cord, 0x0 plugged in
+  directly).
 
-**Not run on a device yet:** a screen on HDMI-A-2; a fresh card from 0.12.0;
-setup over Ethernet; Lyrion sync; a second power cut with the fixed updater.
+**Not run on a device yet:** a screen on the bar's HDMI-A-2; a fresh card
+from 0.12.0; setup over Ethernet; the outline cut by the real mini strip (a
+stand-in bar only, headless).
 
 **Next: 1.0.0, the first public release**, once George's tests pass: the
 notes, promote to Stable with the image file (c16; the installation guide's
@@ -73,7 +89,7 @@ in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-10-12 evening, after 0.11.0** (the first: ~102 GB and ~30,500 -> ~9,500
+2026-10-14, after 0.14.0's PR** (the first: ~102 GB and ~30,500 -> ~9,500
 words in the morning).
 
 ## Phases
