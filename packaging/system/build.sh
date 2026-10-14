@@ -44,6 +44,7 @@ chmod 644 "$STAGE$DEF/device-name.env" "$STAGE$DEF/machine-info"
 
 # --- The shares (03-core) -----------------------------------------------------
 put 644 "$S/03-core/files/gexis-pictures.conf" /etc/samba/smb.conf.d/gexis-pictures.conf
+put 644 "$S/03-core/files/gexis-wifi-powersave.conf" /etc/NetworkManager/conf.d/gexis-wifi-powersave.conf
 put 644 "$S/03-core/files/gexis-smb.service" /etc/avahi/services/gexis-smb.service
 # ADR-0136: each player announces itself to the others.
 put 644 "$S/03-core/files/gexis-player-mdns.service" /etc/avahi/services/gexis-player.service
@@ -115,6 +116,12 @@ place "$DEF/device-name.env" /etc/gexis/device-name.env 644 0:0
 place "$DEF/machine-info" /etc/machine-info 644 0:0
 place "$DEF/peppy-spectrum.txt" /opt/gexis-peppy/spectrum/config.txt 644 1000:1000
 install -d -m 755 -o 1000 -g 1000 /var/lib/gexis-kiosk
+
+# Wi-Fi power saving off now, not at the next connection, which is when
+# NetworkManager applies its conf.d (ADR-0121 as amended, 2026-10-14).
+for dev in /sys/class/net/wl*; do
+	[ -e "$dev" ] && command -v iw >/dev/null && iw dev "${dev##*/}" set power_save off 2>/dev/null || true
+done
 
 # Samba reads our share through an include in its own file (ADR-0049).
 SMB=/etc/samba/smb.conf

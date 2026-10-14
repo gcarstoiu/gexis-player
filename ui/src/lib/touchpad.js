@@ -10,12 +10,20 @@
 
 const RECONNECT_MIN_MS = 500;
 const RECONNECT_MAX_MS = 5000;
+//: **Asked whether the socket still answers** (George, 2026-10-14: the
+//: touchpad "loses connection when inactive"). A phone's Wi-Fi dozing, or a
+//: router forgetting an idle connection, leaves a socket that still reads
+//: OPEN and sends into nothing, with no close the page ever hears. A ping
+//: every PING_MS, and a fresh socket when nothing has come back for DEAD_MS.
+const PING_MS = 4000;
+const DEAD_MS = 9000;
 
 export function openTouchpad(onMessage) {
   let socket = null;
   let closed = false;
   let delay = RECONNECT_MIN_MS;
   let retry;
+  let heard = Date.now();
 
   function url() {
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -26,10 +34,16 @@ export function openTouchpad(onMessage) {
     if (closed) return;
     const mine = new WebSocket(url());
     socket = mine;
-    mine.addEventListener('open', () => (delay = RECONNECT_MIN_MS));
+    mine.addEventListener('open', () => {
+      delay = RECONNECT_MIN_MS;
+      heard = Date.now();
+    });
     mine.addEventListener('message', (event) => {
+      heard = Date.now();
       try {
-        onMessage(JSON.parse(event.data));
+        const message = JSON.parse(event.data);
+        if (message?.t === 'pong') return;
+        onMessage(message);
       } catch {
         // A message we cannot read is dropped; the next one stands alone.
       }
@@ -60,13 +74,27 @@ export function openTouchpad(onMessage) {
   window.addEventListener('pageshow', fresh);
   window.addEventListener('online', fresh);
 
+  const watch = setInterval(() => {
+    if (closed || document.visibilityState !== 'visible') return;
+    if (socket?.readyState !== WebSocket.OPEN) return;
+    if (Date.now() - heard > DEAD_MS) {
+      fresh();
+      return;
+    }
+    socket.send('{"t":"ping"}');
+  }, PING_MS);
+
   connect();
   return {
     send(message) {
       if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
+      // A gesture into a socket that is gone: a new one now, not after the
+      // backoff - the next gesture finds it.
+      else if (!socket || socket.readyState === WebSocket.CLOSED) fresh();
     },
     close() {
       closed = true;
+      clearInterval(watch);
       document.removeEventListener('visibilitychange', fresh);
       window.removeEventListener('pageshow', fresh);
       window.removeEventListener('online', fresh);

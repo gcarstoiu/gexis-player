@@ -354,11 +354,18 @@ class StateServer:
             async for msg in ws:
                 if msg.type != aiohttp.WSMsgType.TEXT or len(msg.data) > self.PAD_MAX:
                     continue
-                if not self._touchpad_on():
-                    continue
                 try:
                     kind = json.loads(msg.data).get("t")
                 except (ValueError, AttributeError):
+                    continue
+                if kind == "ping":
+                    # **Answered to the sender alone** (George, 2026-10-14: the
+                    # touchpad "loses connection when inactive"): a phone's
+                    # socket can die with no close it ever hears, and only an
+                    # answer that stops coming tells it so.
+                    asyncio.create_task(self._send(ws, '{"t":"pong"}'))
+                    continue
+                if not self._touchpad_on():
                     continue
                 if kind not in allowed:
                     continue

@@ -196,6 +196,8 @@
   //: so three moves arriving together read as a glide, not a jump. A move
   //: that has stopped arriving is caught up within about four frames.
   const CATCH_UP = 0.6;
+  const LOOK_MS = 80;
+  let lookedAt = 0;
   function applyMove() {
     moveFrame = 0;
     const done = Math.abs(moved.dx) + Math.abs(moved.dy) < 1.5;
@@ -206,7 +208,16 @@
     moved = { dx: moved.dx - sx, dy: moved.dy - sy };
     if (!done) moveFrame = requestAnimationFrame(applyMove);
     wake();
-    look();
+    // **What is under the pointer, at most every LOOK_MS while it moves**,
+    // and on the frame it stops (George, 2026-10-14: the pointer "choppy
+    // sometimes"). `look` asks the page what lies there and sends hover
+    // events, layout work that every frame competed with drawing the
+    // pointer itself.
+    const now = performance.now();
+    if (done || now - lookedAt >= LOOK_MS) {
+      lookedAt = now;
+      look();
+    }
   }
 
   function receive(message) {
