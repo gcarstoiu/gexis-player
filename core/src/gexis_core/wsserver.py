@@ -1486,17 +1486,29 @@ class StateServer:
         one of the backups locally"*) - ready for a newly flashed card's
         setup (ADR-0131). What the Backups share already offers the same
         network, by the same names."""
+        # **Sent from the file opened without following a link** (Finding
+        # 125 #2, 2026-10-14): `FileResponse` opened the name again, and a link
+        # `pi` left in the share under a backup's name sent root's
+        # `/etc/shadow` to whoever asked.
+        name = request.match_info["name"]
         try:
-            path = backups.path_of(request.match_info["name"])
+            source = await asyncio.to_thread(backups.open_archive, name)
         except ValueError:
             return web.json_response({"error": "not a backup"}, status=400)
         except FileNotFoundError:
             return web.json_response({"error": "That backup is not on the player any more."}, status=404)
-        return web.FileResponse(path, headers={
-            "Content-Disposition": f'attachment; filename="{path.name}"',
-            "Content-Type": "application/gzip",
-            "Cache-Control": "no-store",
-        })
+        with source:
+            response = web.StreamResponse(headers={
+                "Content-Disposition": f'attachment; filename="{name}"',
+                "Content-Type": "application/gzip",
+                "Cache-Control": "no-store",
+            })
+            response.content_length = os.fstat(source.fileno()).st_size
+            await response.prepare(request)
+            while chunk := await asyncio.to_thread(source.read, 1 << 16):
+                await response.write(chunk)
+            await response.write_eof()
+        return response
 
     async def _handle_report(self, request: web.Request) -> web.Response:
         """ADR-0125: the problem report, downloaded. The body may carry the
