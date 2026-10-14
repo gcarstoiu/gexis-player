@@ -208,7 +208,8 @@ server offers, including the apps it has installed.
 internet radio and so on), each with its own logo and menus. A service's
 first page can take a second or two to arrive; the panel says which service
 it is waiting for. A service's playlist opens as a page of its tracks, each
-with its artist under the title (a single artist's album shows titles only).
+with its artist under the title (a single artist's album shows titles only),
+and its button says *Play playlist*.
 
 **Search**: tap a search field and type on your phone (section 7); results
 arrive as you type. My Music's Search looks for artists, albums, works,
