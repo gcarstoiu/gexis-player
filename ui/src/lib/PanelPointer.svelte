@@ -22,6 +22,7 @@
   import { onDestroy } from 'svelte';
   import { settingValues } from './settings.js';
   import { openTouchpad, takesText, fieldOf } from './touchpad.js';
+  import { panel, reportTouch } from './state.js';
 
   const HIDE_MS = 5000;
   //: Pinch: from the panel as it is to three times as large (ADR-0121 §2).
@@ -142,9 +143,13 @@
       }
     }
     const px = Math.round(x);
+    // What lies behind the element - the bar a round button sits on, seen
+    // past its corners - does not cover it (George, 2026-10-14: the outline
+    // round the playback bar's buttons grew as the pointer neared their
+    // middle). Only something drawn over it does, as the mini strip is.
     const mine = (at) => {
       const hit = document.elementFromPoint(px, at);
-      return !!hit && el.contains(hit);
+      return !hit || el.contains(hit) || hit.contains(el);
     };
     const bottom = Math.min(r.bottom, seen.bottom, window.innerHeight) - 1;
     if (!mine(bottom)) seen.bottom = edgeAt(mine, y, bottom);
@@ -296,6 +301,16 @@
       case 'tap':
         wake();
         tapped = true;
+        // **Over the visualiser, a tap only takes it down** (George,
+        // 2026-10-14: "tapping on the mouse pad while in the visualization
+        // closes it but then it reopens automatically"). The meters are a
+        // window over this page: a finger's tap lands on them, but this tap
+        // was replayed in the page beneath, pressing whatever the pointer
+        // rested on - the visualiser's own button, or Next.
+        if ($panel.visualiser) {
+          reportTouch();
+          break;
+        }
         tap();
         // What the tap opened is now under the pointer.
         requestAnimationFrame(look);
