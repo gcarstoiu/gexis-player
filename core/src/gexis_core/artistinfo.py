@@ -375,8 +375,10 @@ class LmsArtistInfo:
         if self._store is not None and moved:
             self._store.forget_keys(self.NAMESPACE, moved)
             self._store.forget_keys(SLOW_NAMESPACE, moved)
-        logger.info("artistinfo: after the rescan %d artist(s) kept their photos, %d dropped",
-                    len(before) - len(moved), len(moved))
+        # Counted as ids, not photos: most ids have no photo asked for yet,
+        # and "8400 kept their photos" read as 8400 photos (2026-10-14).
+        logger.info("artistinfo: after the rescan %d artist id(s) unchanged, %d renumbered "
+                    "(their photos dropped)", len(before) - len(moved), len(moved))
 
     def _recall_scope(self) -> dict | None:
         if self._store is None:
