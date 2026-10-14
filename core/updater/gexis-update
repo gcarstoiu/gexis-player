@@ -476,6 +476,9 @@ def finish_cut_short(where: str = REPAIR_HERE) -> bool:
     leave_for_the_boot({"about": about, "channel": about["channel"], "target": target, "current": target,
                         "repos": repos, "back_repos": repos, "back_pins": pins, "backup": None,
                         "changes": [], "how": "reboot"})
+    # The boot lands what a package's postinst asked one for (Finding 125
+    # #6): left, the marker made the next update a reboot.
+    REBOOT_MARKER.unlink(missing_ok=True)
     report("restarting", **about, reboot=True, message="restarting the device")
     run("systemctl", "reboot", check=False)
     return True
@@ -1156,7 +1159,8 @@ def postboot(args) -> int:
         # of 2026-10-12), from the release going in, as `install` heals; what
         # cannot be finished is a failure like any other, and goes back.
         journal, broken = interrupted()
-        if journal or broken or left.get("how") == CUT_SHORT_HOW:
+        finished = journal or broken or left.get("how") == CUT_SHORT_HOW
+        if finished:
             report("checking-device", **about, backup=left.get("backup"),
                    message="finishing the install that was cut short")
             opts = apt_env(left.get("repos") or left["back_repos"])
@@ -1166,6 +1170,22 @@ def postboot(args) -> int:
         if PROGRESS["steps"].get("install") == "active":
             step("install", "done")
         verify(target)
+        if finished:
+            # **The device restarts on what was just finished** (Finding
+            # 125 #6, 2026-10-14): the core running now started from
+            # whatever the power cut had unpacked - often the release
+            # before - and went on running it beside the new UI and files
+            # until some unrelated boot; a system package's reboot marker
+            # waited for the next update. As `finish_cut_short` does: the
+            # note for the boot after, which checks the core answers.
+            step("restart", "active")
+            step("check", "pending")
+            leave_for_the_boot({**left, "steps": PROGRESS.get("steps"), "how": "reboot"})
+            REBOOT_MARKER.unlink(missing_ok=True)
+            report("restarting", **about, backup=left.get("backup"), reboot=True,
+                   message="restarting the device")
+            run("systemctl", "reboot", check=False)
+            return 0
         if not core_answers():
             raise Stop("the player did not answer after the restart")
     except Stop as failure:

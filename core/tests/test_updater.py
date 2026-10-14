@@ -908,6 +908,11 @@ def test_the_boot_after_a_cut_short_install_finishes_it_and_checks_it(up, monkey
     monkeypatch.setattr(up, "heal", lambda opts: healed.append(opts))
     assert up.postboot(None) == 0
     assert envs[0] == ["ours-x"] and healed == [["-o", "x"]], "finished from the release going in"
+    # Finding 125 #6: finished, the device restarts, and that boot checks it.
+    assert seen[-1]["state"] == "restarting" and up.pending().exists()
+    monkeypatch.setattr(up, "interrupted", lambda: (False, []))
+    assert up.postboot(None) == 0
+    assert healed == [["-o", "x"]], "not finished twice"
     assert seen[-1]["state"] == "done" and set(seen[-1]["steps"].values()) == {"done"}
     assert not up.pending().exists()
 
@@ -1290,3 +1295,46 @@ def test_check_for_updates_with_music_hands_nothing_over(up, monkeypatch):
     assert _check_button(up, monkeypatch) == 0
     assert healed == [] and ran == []
     assert reports[-1][0] == "failed" and "nothing is playing" in reports[-1][1]
+
+
+def test_a_boot_that_finishes_a_cut_short_install_restarts_the_device(up, monkeypatch, tmp_path):
+    """**Finding 125 #6.** postboot finished the release - the new core,
+    UI and system packages - and reported it installed, while the old core
+    went on running until some unrelated reboot, and the reboot marker a
+    system package's postinst left turned the next update into a reboot.
+    It restarts the device now, as the install it finishes would have, and
+    the boot after checks it."""
+    seen, _ = cut_install(up, monkeypatch)
+    marker = tmp_path / "reboot-required"
+    marker.write_text("")
+    monkeypatch.setattr(up, "REBOOT_MARKER", marker)
+    dirty = [True]
+    monkeypatch.setattr(up, "interrupted", lambda: (True, ["gexis-core"]) if dirty[0] else (False, []))
+    monkeypatch.setattr(up, "heal", lambda opts, prefix=None: dirty.__setitem__(0, False))
+    ran = []
+    monkeypatch.setattr(up, "run", lambda *a, **k: ran.append(list(a)) or subprocess.CompletedProcess(a, 0, "", ""))
+    assert up.postboot(None) == 0
+    assert ["systemctl", "reboot"] in ran
+    assert seen[-1]["state"] == "restarting" and seen[-1]["reboot"] is True
+    assert "done" not in [s["state"] for s in seen]
+    assert not marker.exists(), "the reboot lands what the marker asked for"
+    left = json.loads(up.pending().read_text())
+    assert left["how"] == "reboot" and left["target"] == "2" and left["current"] == "1"
+    assert left["steps"]["install"] == "done" and left["steps"]["check"] == "pending"
+
+    ran.clear()
+    assert up.postboot(None) == 0
+    assert ["systemctl", "reboot"] not in ran
+    assert seen[-1]["state"] == "done" and set(seen[-1]["steps"].values()) == {"done"}
+    assert not up.pending().exists()
+
+
+def test_a_repair_with_no_note_clears_the_reboot_marker_it_reboots_for(up, monkeypatch, tmp_path):
+    """**Finding 125 #6**, `finish_cut_short`'s side: its reboot lands what a
+    package asked a boot for; the marker is not left for the next update."""
+    reports, healed, ran = _cut_short_no_note(up, monkeypatch)
+    marker = tmp_path / "reboot-required"
+    marker.write_text("")
+    monkeypatch.setattr(up, "REBOOT_MARKER", marker)
+    assert up.finish_cut_short() is True
+    assert ["systemctl", "reboot"] in ran and not marker.exists()
