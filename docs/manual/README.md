@@ -294,7 +294,10 @@ Swipe it down to close it.
 
 Tap a text field on the panel (a search, for example) and the phone's
 keyboard comes up: what you type appears on the panel. Whatever the pointer
-is over that can be pressed is outlined. The pointer hides after a few
+is over that can be pressed is outlined, and the dot shrinks inside the
+outline; only the part that shows is outlined, so a button half under the
+mini strip is outlined down to the strip. A track whose Play, Queue and Add
+buttons are showing is not outlined itself. The pointer hides after a few
 seconds of rest. *Settings → Display* sets **Pointer speed**,
 **Pointer style** (Dot or Arrow), and whether the touchpad is offered at
 all (**Phone touchpad**). A tap outside the open sheet just closes it, so
@@ -398,7 +401,7 @@ answer*; the other shares are still mounted.
 | Setting | What it does |
 | --- | --- |
 | Attached screen | The display in use, by its name (a TV by the name it gives). **Change** picks the screen's model from the list, by maker; it sets the layout, Standard or Bar, and which visualiser skins are offered. A screen not in the list is shown as *Other screen* with its size. |
-| Screen port | Which HDMI port the screen is on. Its list shows what is plugged into each port - the screen, another device by its name (a sound bar or receiver), *sound* when the sound goes to that port; a port with nothing connected is greyed. A change that alters the picture restarts the player and asks *Keep this screen?*. The port chosen stays the screen, even with a touch panel on the other port. **A TV can be the screen**: it runs at 1920 x 1080 (or the largest 16:9 size below it that it offers), and since it has no touch, *Keep this screen?* is answered on the phone page. A touch panel left on the other port is switched off. A port that is not the screen shows black. If the TV crops the edges of the picture, set its picture size to *Just Scan* or *Original*. When the TV's port also carries the sound, display standby only blacks the picture, so the music goes on. On a board with one HDMI port, the row only says what is on it. |
+| Screen port | Which HDMI port the screen is on. The tile and its list show what is plugged into each port - the screen, another device by its name (a sound bar or receiver), *sound* when the sound goes to that port; a port with nothing connected is greyed. A change that alters the picture restarts the player and asks *Keep this screen?*. The port chosen stays the screen, even with a touch panel on the other port. **A TV can be the screen**: it runs at 1920 x 1080 (or the largest 16:9 size below it that it offers), and since it has no touch, *Keep this screen?* is answered on the phone page. A touch panel left on the other port is switched off. A port that is not the screen shows black. If the TV crops the edges of the picture, set its picture size to *Just Scan* or *Original*. When the TV's port also carries the sound, display standby only blacks the picture, so the music goes on. On a board with one HDMI port, the row only says what is on it. |
 | Screen rotation | For a screen mounted the other way up. |
 | Headless | Turns the player's screen off; settings that only affect the screen are hidden while it is on. |
 | Display standby: Scheduled standby, Standby times | With *Scheduled standby* on, the screen goes off during the standby times whenever nothing is playing. Up to six times, each a start and an end - picked from a grid of hours and quarters - on the chosen days; one may run past midnight, counting for the day it starts. |

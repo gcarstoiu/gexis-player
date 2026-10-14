@@ -153,3 +153,8 @@ Let's go back to two tiles."* *Change* opened the list inside the current
 maker, which for a TV is *Other screen* with one size. Now *Attached screen*
 shows the display in use with *Change*, opening at the makers, and *Screen
 port* is its own row.
+
+George, the same day: *"The screen port tile should display also the info on
+what is connected directly in the tile before opening the modal."* The
+*Screen port* tile lists each port's line - the port in use first - with
+*Change* opening the picker.
