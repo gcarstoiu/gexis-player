@@ -1,4 +1,4 @@
-# Finding 125 — The review of everything since 0.10.1: 26 confirmed defects
+# Finding 125 — The review of everything since 0.10.1: 26 confirmed defects, all addressed
 
 **Date:** 2026-10-14. **For:** George, while 0.15.0 was published (*"run another full multi agent thorough check since we introduced a lot of things since the last one"*).
 
@@ -6,7 +6,8 @@
 
 - **What was reviewed:** every change from the last full review ([Finding 119](119-the-final-code-review.md), commit `323b0f34`, 0.10.1) to `v0.15.0`: 103 code files, +7,512 / -766 lines - the core, the updater, the image stages, packaging and the UI.
 - **Method:** eight reviewers, one per area (the audio chain; updates and backups; screens; the core's wiring and server; library and enrichment; the touchpad and pointer; the UI screens; security across everything), each reading the diff and the code around it, running the test suite or throwaway scripts. **Every finding was then given to a second, independent agent told to refute it** against the code, often by running it. 26 were reported; all 26 were confirmed (none refuted, none left uncertain).
-- **Not done:** nothing was run on a device; nothing was fixed yet. Severities are the verifiers'.
+- **Fixes (the same day):** seven agents in separate worktrees, one per group of files, each writing a test that failed before its fix; each branch then reviewed by another agent told to find what the fix got wrong, and a second round for what they found (a Qobuz cover marker dropped, the Keep question answerable on the phone for panels whose touch is not recognised, the visualiser rule limited to the timer's raise, the check's hand-over made repair-only). One second-round change was backed out by hand: asking apt whether a release was whole with a cut-short pack (#16) - as root apt refuses a dirty dpkg journal, so a lone pack would always have cost a full repair and a restart. Merged one branch at a time into `phase-13d` with the full suite after each: 2,470 passed (77 new). Installed on sofapi: the core, Squeezelite and the panel up with no warnings; the main routes answer; `/screen/shown` refuses the network.
+- **Not run on a device:** a real backup restore, a Keep question on a panel without a recognised touch, an updater repair. Severities are the verifiers'.
 
 ## The findings
 
