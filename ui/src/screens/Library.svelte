@@ -1238,6 +1238,17 @@
       album = null;
       openArtistByName(top.byName);
     }
+    // **An artist's entry under another artist's page** (Finding 125 #12,
+    // 2026-10-14): a similar artist's chip opens that artist over this one,
+    // and the page's state - `artist`, its discography, About - is held
+    // once, so Back to the first artist's entry still drew the second's
+    // page. The entry is opened again, as the placeholder above is: dropped
+    // here, since `openArtist` pushes its own.
+    else if (top.kind === 'artist' && artist?.id !== top.id) {
+      path = path.slice(0, -1);
+      album = null;
+      openArtist({ id: top.id, name: top.label });
+    }
   }
 
   const mmss = (s) => {
