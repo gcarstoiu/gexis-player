@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-13 (on R2D2).
+Last updated: 2026-10-14 (on R2D2).
 
 ## Start here
 
@@ -11,9 +11,9 @@ from a worktree made at its tag, then removed. History: `docs/HANDOFF-ARCHIVE.md
 (search it; never read it whole).
 
 **Current release: 0.14.0 on Testing** (2026-10-13; tag `v0.14.0`, release
-`r0.14.0`, serial 40; **PR #65 open for George to merge**; image
-`image/deploy/2026-10-13-gexis-player-v0.14.0.img`, 121 checks passed; release
-worktree `~/projects/gexis-player-r0140`, removed after the merge). One Screen
+`r0.14.0`, serial 40; PR #65 merged 2026-10-14, post-merge steps and the
+routine clean-up done; image `image/deploy/2026-10-13-gexis-player-v0.14.0.img`,
+121 checks passed). One Screen
 tile; a TV as the screen at 1080p (ADR-0147 amended twice after George's TV
 tests); standby keeps a sound port on; the update backup survives a vanishing
 file. 0.13.0 (PR #64) merged and its post-merge steps done. The bar is on
