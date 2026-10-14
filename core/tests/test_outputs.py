@@ -21,6 +21,7 @@ def _known_cards():
     """What each card takes, measured on `gexis` 2026-09-23, so the tests
     do not shell out to `aplay`."""
     outputs._needs_plug.clear()
+    outputs._asked_of.clear()
     outputs._needs_plug.update(
         {"sndrpihifiberry": False, "Headphones": False, "vc4hdmi0": True, "vc4hdmi1": True}
     )
@@ -629,6 +630,7 @@ def _asked(monkeypatch, dumps):
     monkeypatch.setattr(outputs, "_needs_plug", {})
     monkeypatch.setattr(outputs, "_formats", {})
     monkeypatch.setattr(outputs, "_rates", {})
+    monkeypatch.setattr(outputs, "_asked_of", {})
     def run(args, **kw):
         return sp.CompletedProcess(args, 0, "", dumps[args[3].split(":", 1)[1]])
     monkeypatch.setattr(outputs.subprocess, "run", run)
@@ -638,6 +640,70 @@ def test_a_dac_taking_only_32_bits_is_widened_and_no_other(monkeypatch):
     _asked(monkeypatch, {"AUDIO": SMSL_DUMP, "sndrpihifiberry": HAT_DUMP})
     assert outputs.needs_plug("AUDIO") is False and outputs.widens("AUDIO") is True
     assert outputs.needs_plug("sndrpihifiberry") is False and outputs.widens("sndrpihifiberry") is False
+
+
+def _plugged_dac(tmp_path, monkeypatch, card="AUDIO", devnum=5):
+    """A USB card as sysfs and /proc/asound show it: the card's link, its
+    device under a USB device, and that device's bus number on the bus."""
+    proc, sound = tmp_path / "proc", tmp_path / "sound"
+    usb = tmp_path / "devices" / "usb1" / "1-1"
+    interface = usb / "1-1:1.0"
+    for d in (proc, sound / "card6", interface):
+        d.mkdir(parents=True, exist_ok=True)
+    (proc / "card6").mkdir(exist_ok=True)
+    if not (proc / card).is_symlink():
+        (proc / card).symlink_to("card6")
+    if not (sound / "card6" / "device").is_symlink():
+        (sound / "card6" / "device").symlink_to(interface)
+    (usb / "busnum").write_text("1\n")
+    (usb / "devnum").write_text(f"{devnum}\n")
+    monkeypatch.setattr(outputs, "SOUND", sound)
+    monkeypatch.setattr(outputs, "PROC_ASOUND", proc)
+
+
+S16_S24_DUMP = "FORMAT:  S16_LE S24_3LE\nSAMPLE_BITS: [16 24]\nRATE: [44100 96000]\n"
+
+
+def test_a_different_dac_under_the_same_card_id_is_asked_again(monkeypatch, tmp_path):
+    """Finding 125 #15 (2026-10-14): what a card takes was cached by its
+    ALSA id for the life of the core. A 32-bit-only DAC unplugged and
+    another with the same id plugged in inherited its widening, its rates
+    and its native DSD: the chain was written S32_LE to a card refusing it,
+    and nothing played until gexis-core restarted."""
+    dumps = {"AUDIO": SMSL_DUMP}
+    _asked(monkeypatch, dumps)
+    _plugged_dac(tmp_path, monkeypatch, devnum=5)
+    assert outputs.needs_plug("AUDIO") is False and outputs.widens("AUDIO") is True
+    assert outputs.native_dsd("AUDIO") == "u32be"
+    # Unplugged, and another DAC taking 16 and 24 bits plugged in: the bus
+    # numbers it afresh.
+    dumps["AUDIO"] = S16_S24_DUMP
+    _plugged_dac(tmp_path, monkeypatch, devnum=6)
+    assert outputs.widens("AUDIO") is False, "nothing asked yet: what the old DAC took is gone"
+    assert outputs.native_dsd("AUDIO") is None
+    assert outputs.squeezelite_options("AUDIO", dsd=True) == ""
+    assert outputs.needs_plug("AUDIO") is False and outputs.widens("AUDIO") is False
+
+
+def test_the_same_dac_is_not_asked_twice_and_a_busy_new_one_is_unknown(monkeypatch, tmp_path):
+    """Asking plays a second of zeroes, so the same device keeps its answer;
+    a replaced one that is busy answers nothing, which is not the old card's
+    answer (Finding 125 #15)."""
+    import subprocess as sp
+    asked = []
+    dumps = {"AUDIO": SMSL_DUMP}
+    _asked(monkeypatch, dumps)
+    def run(args, **kw):
+        asked.append(args[3])
+        return sp.CompletedProcess(args, 0, "", dumps["AUDIO"])
+    monkeypatch.setattr(outputs.subprocess, "run", run)
+    _plugged_dac(tmp_path, monkeypatch, devnum=5)
+    assert outputs.needs_plug("AUDIO") is False and outputs.needs_plug("AUDIO") is False
+    assert len(asked) == 1
+    dumps["AUDIO"] = ""                                    # busy: says nothing
+    _plugged_dac(tmp_path, monkeypatch, devnum=7)
+    assert outputs.needs_plug("AUDIO") is None
+    assert outputs.widens("AUDIO") is False and outputs.native_dsd("AUDIO") is None
 
 
 def test_the_widened_chain_pads_to_32_bits_under_the_meter_and_the_card_reads_back(tmp_path):
