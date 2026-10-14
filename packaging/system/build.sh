@@ -44,9 +44,13 @@ chmod 644 "$STAGE$DEF/device-name.env" "$STAGE$DEF/machine-info"
 
 # --- The shares (03-core) -----------------------------------------------------
 put 644 "$S/03-core/files/gexis-pictures.conf" /etc/samba/smb.conf.d/gexis-pictures.conf
+put 644 "$S/03-core/files/gexis-wifi-powersave.conf" /etc/NetworkManager/conf.d/gexis-wifi-powersave.conf
 put 644 "$S/03-core/files/gexis-smb.service" /etc/avahi/services/gexis-smb.service
 # ADR-0136: each player announces itself to the others.
 put 644 "$S/03-core/files/gexis-player-mdns.service" /etc/avahi/services/gexis-player.service
+put 755 "$S/03-core/files/gexis-mdns-name.sh" /usr/lib/gexis/mdns-name.sh
+put 644 "$S/03-core/files/gexis-mdns-name.service" "$U/gexis-mdns-name.service"
+put 644 "$S/03-core/files/gexis-mdns-name.timer" "$U/gexis-mdns-name.timer"
 
 # --- The panel (04-ui) --------------------------------------------------------
 put 644 "$S/04-ui/files/kiosk.env" /etc/gexis/kiosk.env
@@ -116,6 +120,12 @@ place "$DEF/machine-info" /etc/machine-info 644 0:0
 place "$DEF/peppy-spectrum.txt" /opt/gexis-peppy/spectrum/config.txt 644 1000:1000
 install -d -m 755 -o 1000 -g 1000 /var/lib/gexis-kiosk
 
+# Wi-Fi power saving off now, not at the next connection, which is when
+# NetworkManager applies its conf.d (ADR-0121 as amended, 2026-10-14).
+for dev in /sys/class/net/wl*; do
+	[ -e "$dev" ] && command -v iw >/dev/null && iw dev "${dev##*/}" set power_save off 2>/dev/null || true
+done
+
 # Samba reads our share through an include in its own file (ADR-0049).
 SMB=/etc/samba/smb.conf
 if [ -f "$SMB" ] && ! grep -q "smb.conf.d/gexis-pictures.conf" "$SMB"; then
@@ -157,7 +167,12 @@ if command -v systemctl >/dev/null; then
 			gexis-kiosk.service gexis-panel-warmup.service gexis-peppy.service \
 			gexis-splash-backstop.timer
 	fi
-	if [ -d /run/systemd/system ]; then systemctl daemon-reload; fi
+	# Every install, so an update brings it too (2026-10-14).
+	systemctl enable gexis-mdns-name.timer >/dev/null 2>&1 || true
+	if [ -d /run/systemd/system ]; then
+		systemctl daemon-reload
+		systemctl start gexis-mdns-name.timer || true
+	fi
 else
 	echo "gexis-system: no systemctl here; units not masked or enabled" >&2
 fi

@@ -307,12 +307,39 @@ drawn per kind:
   `LyrionLevel.svelte` draws one level. "What an entry opens decides its
   shape": branches become tinted-disc tiles, albums and playlists a cover
   grid, and tracks and stations leaf rows. A leaf row reveals Play / Play
-  next / Add on the first tap. `LyrionSearch.svelte` runs a search entry's
+  next / Add on the first tap. An album or playlist with a cover opens as
+  the album page (`layout === 'album'`); when its tracks' artists differ, each
+  row shows the artist under the title, taken from the second line before
+  the album (Spotty's `Artist • Album`, Qobuz's `Artist - Album`).
+  The page says *Play playlist* for a playlist: the core's `hint:
+  "playlist"` (`menus._hint`: a `:playlist:` favourites link, Spotty's; a
+  cover under `/images/playlists/`, Qobuz's), else the list it was opened
+  from (`ctx.under` matching "playlist"), else tracks by different artists
+  on a page the service did not mark an album.
+  Every search entry (`searchy`: a `search` row, or an app's first-level
+  "Search" folder) opens on its field (`onsearchentry`) and carries
+  `data-text-entry`, so a touchpad tap on it raises the phone's keyboard.
+  A row whose actions are revealed is the selection, teal
+  (`is-revealed` in `Library.svelte`, `is-on` on the bar, `is-sel` in
+  Lyrion's lists); the artist page's Popular reveals like any track list.
+  `LyrionSearch.svelte` runs a search entry's
   searches as typing pauses. The panel only ever holds *handles* the core
   issued (`lib/menus.js`), never Lyrion commands. Each list's list/tiles
   choice is kept in `localStorage`.
 - **Footer**: `MiniStrip` while something is active. At Home with nothing
   active, `WaitingServices` shows the waiting renderers' marks instead.
+
+### Text size (ADR-0148)
+
+`text_size` (90-130 %, default 100) sets `--text-scale` on `<html>`, on the
+panel only (`App.svelte`). A PostCSS step in `vite.config.js` rewrites every
+`font-size` in pixels and every `--t-*` type token to
+`calc(Npx * var(--text-scale, 1))` at build time, so no screen spells it. Home's
+tiles take `--tile-grow: max(1, var(--text-scale))`: both sides on a Standard
+screen (`.cards`, `.card` in `Library.svelte`), width only on a bar
+(`.cards--more` in `BarLibrary.svelte`). A zoom of the whole page (the device
+scale factor) was tried first and set aside: the layouts are drawn for a
+1280 x 800 page (400 high on a bar) and clipped or left a third empty.
 
 ### Waiting screen (LMS off)
 
@@ -455,6 +482,44 @@ sequenceDiagram
 - **Reconnect**: `lib/touchpad.js` opens a fresh socket on
   `visibilitychange`, `pageshow` and `online`. A phone browser that was in
   the background can lose its socket without the page ever being told.
+  **A socket that died quietly is found too** (George, 2026-10-14): every 2 s
+  the page sends `{"t":"ping"}`, which the core answers to the sender alone
+  with `{"t":"pong"}` (even while the touchpad is off); nothing heard for 5 s,
+  or a gesture into a closed socket, opens a fresh one. **And at the first
+  touch after a quiet spell** (`probe`, called from the pad's
+  `pointerdown`): nothing heard for 1.5 s, a ping at once, and a fresh socket
+  if no answer comes within 0.8 s.
+- **The panel's work per move**: what lies under the pointer (`look`:
+  `elementFromPoint`, hover events, the outline) is asked at most every
+  80 ms while the pointer moves, and on the frame it stops, not every frame.
+- **The outline** follows whatever pressable is under the pointer, in its
+  own box and corner radius, 6 px out; a light fill only on a small icon
+  button. It skips anything covering half the screen, and a row whose
+  actions are revealed (an `.act` inside it or beside it); the actions
+  themselves are always outlined. **Only the part
+  that shows is outlined** (`visiblePart`): cut at the edge of a clipping
+  container that hides part of the element, and at whatever covers it (the
+  mini strip), found with `elementFromPoint` halving between the pointer and
+  the element's edge; drawn as a `clip-path: inset(...)` on the outline. The
+  Dot shrinks to its small dot inside any outline. What lies *behind* the
+  element (an ancestor, such as the bar a round button sits on) never counts
+  as covering it: only something drawn over it does.
+- **An underline instead of the outline**: an element marked
+  `data-pointer="underline"` (Now Playing's tabs) gets `data-pointer-over`
+  while the pointer is on it and draws its own underline; its CSS selects
+  the attribute with `:global(...)`, since Svelte drops a selector for an
+  attribute its markup never sets.
+- **A tap over the visualiser** (`$panel.visualiser`) only reports a touch
+  (`reportTouch`): the meters are a window over the page, and a tap replayed
+  in the page pressed whatever the pointer rested on - the visualiser's
+  button, or Next.
+- **Wi-Fi power saving is off on a player**
+  (`/etc/NetworkManager/conf.d/gexis-wifi-powersave.conf`, `wifi.powersave =
+  2`, and `iw ... set power_save off` at install): on sofapi, round trips
+  from idle spiked to 85-98 ms with it on, 10-11 ms at most with it off.
+- **The phone's sheet swipes**: up opens it, down closes it, anywhere but the
+  touchpad (`MiniPlayer.svelte`, `swipeStart`/`swipeEnd`, 40 px, mostly
+  vertical; `touch-action: none` on the sheet).
 
 ---
 
@@ -514,7 +579,7 @@ flowchart LR
 | `PairingFrame` | `$pairing` set | Bluetooth first-pair confirmation. The agent dismisses it, not the frame's own countdown (ADR-0045) |
 | `SetupScreen` (panel) | setup network up, or the device needs setup | Shows QR codes and the way in. Takes no input. Readable from 2 m (ADR-0104 §5). The password comes from loopback-only `/setup/status`, never from `/state` |
 | `SetupPage` (phone) | the device needs setup | The first-time setup flow; answers are saved step by step to the core |
-| `NewScreen` / `KeepScreen` | a different screen is attached / a new screen awaits confirmation | Only the panel answers Keep; a countdown reverts (ADR-0109 decision 5) |
+| `NewScreen` / `KeepScreen` | a different screen is attached / a new screen awaits confirmation | Only the panel answers Keep; a countdown reverts (ADR-0109 decision 5). The countdown starts when the question is drawn: two frames after it appears the panel posts `/screen/shown` (repeated every 3 s until the core's `deadline` arrives); before that, `NEVER_DRAWN_S` (120 s from the core's start) still reverts |
 | `TestPattern` (panel) | `screen_check` showing | The hardware feedback's test pattern; the panel's four corner taps go back to the core. Mounted over everything but *Keep this screen?* and the update lock (ADR-0126) |
 | `UpdateModal` (Settings) | the user checks for an update | One modal, from the check to the outcome (ADR-0110 §3). It notes the status when it asks and takes any change from it as the answer, not a comparison of the player's clock with the phone's |
 | `UpdateScreen` (panel) | `update.active` | Locks the panel and stays up through the core restart and reconnect. At the end it waits for Done, or 10 min. An update that goes inactive with no *done* or *failed* (an updater killed mid-install) lets the panel go after 30 s with the socket open (`STRANDED_MS` in `App.svelte`). It reloads the page if the installed release changed (ADR-0110 §6). Separately, the panel reads its own `index.html` once a minute and reloads when the UI build it names differs from the one running, unless the update lock, setup, *Keep this screen?* or the test pattern is up (ADR-0110 as amended 2026-10-09) |

@@ -2045,7 +2045,7 @@ registry advertises.
 > unit), `docs/PLUGIN-CONTRACT.md` at version 1, and Findings 075-080.
 
 **Themes left this phase on 2026-09-25** (George): *"Themes to be cut out and
-have its own phase at the end of the current list."* They are **Phase 16** (`ph-themes`), and
+have its own phase at the end of the current list."* They are **Phase 17** (`ph-themes`), and
 he restated it on the day the phase closed: *"I stated before that themes are
 out and have their own phase at the end of the list."*
 
@@ -2165,7 +2165,7 @@ the exercise.
    extends to it, whether it ships in the image or installs on demand, and
    what it costs in memory and CPU on a Pi 4 that is already frame-limited.
    None of that is settled by adding it to this list.
-4. ~~Theme engine.~~ **Moved to Phase 16** (`ph-themes`; numbered 14 until 2026-10-13), 2026-09-25.
+4. ~~Theme engine.~~ **Moved to Phase 17** (`ph-themes`; numbered 14 until 2026-10-13, 16 until 2026-10-14), 2026-09-25.
 
 ### What closing this means, and what it deliberately does not
 
@@ -2355,7 +2355,7 @@ the ALSA default.
 
 ### Phase 11a — The library answers for itself (moved)
 
-Now **Phase 18** (`ph-library`), with the open phases after the release.
+Now **Phase 19** (`ph-library`), with the open phases after the release.
 
 ### Phase 12 — Plugins that fetch their software on the device
 
@@ -2840,7 +2840,7 @@ per file on Pis other than 4 GB, and temperatures with a case (HARDWARE.md).
 
 ### Phase 13f — Lyrion's own menus, plugins included
 
-**Closed 2026-10-12 for the release; George's look moved to Phase 19** (`ph-lyrion-menus`)
+**Closed 2026-10-12 for the release; George's look moved to Phase 20** (`ph-lyrion-menus`)
 (George: *"create a separate phase for this at the end of the current phase
 list"*). It ships as built, behind *Extended navigation* (ADR-0118); the hidden
 library's hour was measured (Finding 118).
@@ -2930,9 +2930,58 @@ database (`database { plugin "proxy" }`, the music on a share).
 4. First-time setup takes in MPD in its new order, and a player set up without
    it is unchanged.
 
-### Phase 15 — The player in Home Assistant
+### Phase 15 — Room correction with a USB microphone
 
-**ID:** `ph-home-assistant` · numbered 15 on 2026-10-13 (was 13g).
+**ID:** `ph-room-correction` · numbered 15 on 2026-10-14.
+
+**Added 2026-10-14** (George: *"let's add another phase about room
+correction using usb microphone after phase 14"*). The player measures the
+room it plays in, through a USB measurement microphone placed where the
+listener sits, and corrects what the room does to the sound: the player
+plays test signals through its own output, records them, works out a
+correction filter and applies it to everything it plays.
+
+**An ADR before anything is built.** It must settle:
+- **The microphone**: which USB measurement microphones are supported, and
+  their per-unit calibration files (for example the miniDSP UMIK-1's) - how
+  one is supplied and checked.
+- **The measurement**: the test signal (log sweeps), how many listening
+  positions, where it is started and followed (the phone, the panel, or
+  both), and what the owner sees while it runs.
+- **The correction**: what is corrected (the bass only, where rooms do most
+  harm, or the whole range), towards which target curve, and with what
+  limits (no deep boosts into a room's nulls).
+- **Where the filter runs**: a convolution or EQ stage in the audio chain
+  (for example CamillaDSP), at which sample rates, and what it costs a Pi 4
+  measured against the meter and the rest of the chain.
+- **What it changes**: a corrected output is no longer bit-perfect, and the
+  volume types (Hardware, Software, Fixed; ADR-0144) and native DSD have to
+  be reconciled with it; every source passes through it, or a choice of
+  which.
+- **One correction per output**, on and off from Settings, and an A/B to
+  hear the difference; with Phase 14's multichannel, one per channel.
+
+**Research done 2026-10-14**:
+[Finding 124](findings/124-room-correction-what-open-source-offers.md) -
+what Dirac Live does, the open-source pieces (CamillaDSP to run the filters,
+our own measurement on pyfar, DRC-FIR for a Dirac-like design; no project
+does Dirac's multi-position mixed-phase design end to end), the pitfalls on a
+Pi, and the microphones (miniDSP UMIK-1 first).
+
+**Acceptance (draft):**
+
+1. With a supported microphone plugged in, a measurement started from the
+   phone completes and shows the room's response before and after.
+2. The corrected response at the listening position is measurably closer
+   to the target than the uncorrected one, recorded as a finding.
+3. Correction on and off can be switched without a restart, and off is
+   bit-perfect as before.
+4. Every source plays through the correction with no audible gap or
+   dropout, and the visualiser keeps working.
+
+### Phase 16 — The player in Home Assistant
+
+**ID:** `ph-home-assistant` · numbered 16 on 2026-10-14 (15 from 2026-10-13; was 13g).
 
 **Added 2026-10-11** (George: *"Let's add the home assistant with the player
 as a plugin as a separate phase before themes"*, after choosing the player
@@ -2960,9 +3009,9 @@ and the screen's standby (ADR-0135).
 3. Nothing it does disturbs playback, measured as Phase 13e measured the
    Lyrion Server.
 
-### Phase 16 — Themes
+### Phase 17 — Themes
 
-**ID:** `ph-themes` · numbered 16 on 2026-10-13 (was 14).
+**ID:** `ph-themes` · numbered 17 on 2026-10-14 (16 from 2026-10-13; was 14).
 
 **Cut out of Phase 10 on 2026-09-25** (George): *"Themes to be cut out and have
 its own phase at the end of the current list."* It was that phase's criterion
@@ -2991,9 +3040,9 @@ that is settled.
 4. **The visualiser is not themed by this.** PeppyMeter skins are ADR-0051's
    separate corpus with their own picker, and share no tokens with the panel.
 
-### Phase 17 — A sound bar on optical, through a USB adapter
+### Phase 18 — A sound bar on optical, through a USB adapter
 
-**ID:** `ph-optical` · numbered 17 on 2026-10-13 (was 14a).
+**ID:** `ph-optical` · numbered 18 on 2026-10-14 (17 from 2026-10-13; was 14a).
 
 **Added 2026-10-11** (George: *"Add it as a phase after themes"*). A
 class-compliant USB-to-TOSLINK adapter is a USB sound card: the player already
@@ -3018,9 +3067,9 @@ rate, a 96 or 192 kHz file goes out at that rate, and many sound bars take only
 3. Tracks at or under the maximum stay bit-perfect, measured as Findings
    002 and 003 measured the DAC.
 
-### Phase 18 — The library answers for itself
+### Phase 19 — The library answers for itself
 
-**ID:** `ph-library` · numbered 18 on 2026-10-13 (was 11a).
+**ID:** `ph-library` · numbered 19 on 2026-10-14 (18 from 2026-10-13; was 11a).
 
 **Added 2026-09-25 (George):** *"Let's introduce another phase … which should tackle the question of how we can we leverage the plexamp/Plex
 server metadata that is available. Anything that can reduce the dependency on
@@ -3099,9 +3148,9 @@ consumes. **Popular tracks do remain ListenBrainz's**, 404 on that server.
 its own catalogue groupings (*Singles & EPs*, *Live Albums*, *Compilations*).
 All are there; none is asked for by anything today.
 
-### Phase 19 — Lyrion's own menus: the look
+### Phase 20 — Lyrion's own menus: the look
 
-**ID:** `ph-lyrion-menus` · numbered 19 on 2026-10-13 (was 16).
+**ID:** `ph-lyrion-menus` · numbered 20 on 2026-10-14 (19 from 2026-10-13; was 16).
 
 **Added 2026-10-12** (George, taking it out of the first public release:
 *"create a separate phase for this at the end of the current phase list"*).

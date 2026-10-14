@@ -114,8 +114,8 @@ library; it uses one of the most mature there is:
   depth, and nothing on the way resamples them.
 - **In time across rooms.** Lyrion can group players so the same music plays
   in sync around the house, with Squeezebox players and other squeezelite
-  players alike. Groups are made in Lyrion's own apps; with Gexis in a group
-  it is untested so far.
+  players alike. Groups are made in Lyrion's own apps; two Gexis players
+  grouped have been seen playing in step.
 - **More than your files, and it grows with plugins.** Lyrion has a large
   plugin library of its own, kept by its community: internet radio, podcasts,
   streaming services, artist information, smart mixes and much more,

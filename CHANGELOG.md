@@ -5,6 +5,34 @@ Every release of Gexis Player and its notes, newest first. Generated from
 edit that file, not this one. The player shows the last 10 under
 Settings → System → Change logs.
 
+## 0.15.0 — 14 October 2026
+
+### New
+
+- Settings → Display → Text size makes the writing on the player's screen larger or smaller, from 90 % to 130 %. Home's tiles grow with larger text.
+- Attached screen and Screen port are two tiles again. Screen port shows what is plugged into each HDMI port; Change on Attached screen opens the list of makers.
+- An artist's name, a similar artist and a release title open their page in the library.
+- A streaming service's playlist shows each track's artist under its title, and its button says Play playlist.
+- The phone's sheet opens and closes with a swipe up or down.
+
+### Fixed
+
+- The touchpad pointer moves more smoothly, and the touchpad reconnects within about a second when the phone has been idle. Wi-Fi power saving is now off on the player, which caused delays.
+- The pointer outlines everything that can be pressed, in its own shape, and only the part that shows; its dot shrinks inside the outline. A track's Play, Queue and Add buttons each keep their outline, and Now Playing's tabs are underlined instead.
+- Home's top row scrolls with the touchpad.
+- A touchpad tap on the visualiser only closes it, without pressing what lies underneath.
+- An artist's Popular tracks show Play, Queue and Add on the first tap, like every other track list, and a row turns teal while its actions show.
+- A service's Search opens straight on its field, with the phone's keyboard up.
+- The queue shows the covers of streaming tracks not played yet.
+- Album Artists keeps its photos when the Lyrion server rescans its library.
+- A TV turned off and on again comes back at its full size.
+- After a name clash on the network, the player takes its own name.local back within a few minutes.
+- Keep this screen? counts its two minutes from when it appears.
+
+### Good to know
+
+- The first library rescan after this update still clears the artist photos once; they are kept from then on.
+
 ## 0.14.0 — 13 October 2026
 
 ### New

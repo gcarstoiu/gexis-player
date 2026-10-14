@@ -205,3 +205,55 @@ the same stream (LESSONS 59).
 - New message types relayed by the core, without meaning to it.
 - 13f's search boxes, and every other text field on the panel, can be
   typed into from a phone.
+
+## Amended 2026-10-14: a ping, lighter moves, Wi-Fi power saving off, swipes
+
+George: *"Mouse is still choppy sometimes and loses connection when
+inactive"*, and *"should open up and close by swipe up and down"*.
+
+- **A socket that died quietly is found:** the page pings every 4 s, the
+  core answers the sender alone, and nothing heard for 9 s (or a gesture into
+  a closed socket) opens a fresh one. A dozing phone Wi-Fi or a router
+  forgetting an idle connection had left a socket that read open and sent
+  into nothing.
+- **The panel asks what is under the pointer at most every 80 ms** while it
+  moves, not every frame.
+- **Wi-Fi power saving is off on a player.** The open question above
+  ("whether gexis's Wi-Fi power saving ... is what bunches the moves") was
+  measured on sofapi: from idle, with it on, round trips spiked to 85-98 ms
+  in two runs of three; with it off, 10-11 ms at most. A player is
+  mains-powered and does not move.
+- **The sheet swipes:** up opens it, down closes it, anywhere but the
+  touchpad.
+- **The pointer's outline** follows any pressable in its own shape (a circle
+  had been drawn round small icon buttons only).
+
+## Amended 2026-10-14, later: a faster reconnect, an outline cut to what shows
+
+George, on sofapi: *"10 seconds for a reconnect? Can we trim that down?"*;
+*"The hover highlight should display partially when the element itself is
+hidden behind something else like the ministrip"*; *"Once the reveal is shown
+then the highlight for the corresponding track should not be shown
+anymore"*; *"The cursor should decrease in size when hovering over these
+tappable elements"*.
+
+- **The ping every 2 s, a fresh socket after 5 s unheard**, and **a probe at
+  the first touch after 1.5 s of quiet**: a ping at once, a fresh socket if
+  nothing answers within 0.8 s. A dead socket is found within about a second
+  of touching the pad again. Each ping is about 20 bytes each way, sent only
+  while the sheet is open (the phone) or the touchpad is on (the panel).
+- **Only the part that shows is outlined**: the outline is cut where a
+  clipping container hides the element, and where something covers it,
+  found by asking what lies between the pointer and the element's edge.
+- **A row with its actions revealed is not outlined**; its actions are.
+- **The Dot shrinks to its small dot inside any outline**, not only round a
+  small round button.
+
+George, the same afternoon: the outline round the playback bar's buttons
+*"gradually increasing its coverage until it's full when the pointer is in
+the middle"* - the bar behind a round button, seen past its corners, had
+counted as covering it; now only what is drawn over an element cuts its
+outline. And a tap on the touchpad over the visualiser *"closes it but then it
+reopens"*: the tap was also replayed in the page beneath the meters' window,
+pressing what the pointer rested on. Over the visualiser a touchpad tap now
+only reports the touch, as a finger's tap on the meters does.

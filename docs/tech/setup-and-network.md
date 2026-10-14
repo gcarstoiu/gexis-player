@@ -354,10 +354,10 @@ Keep, a screen without a forced mode moves silently, and a provisional
 setup screen stays provisional.
 
 **With both ports connected** (ADR-0141 D2/D4, 2026-10-12):
-In Settings the two rows are **one Screen tile** (George, 2026-10-13): the
-UI draws `screen_port` (or `screen_port_info`) at `screen`'s place, showing
-the display in use; a tap opens `screen_port`'s choice, *Change* opens
-`screen`'s list of models. `screen_detect.seen()` picks **the port chosen under *Screen port*** when
+In Settings, *Attached screen* is a tile showing the display in use (a TV by
+the name its port line gives) with *Change*, which opens `screen`'s list at
+its makers; *Screen port* is its own row (George, 2026-10-14, after one
+combined tile for a day). `screen_detect.seen()` picks **the port chosen under *Screen port*** when
 something is connected there (ADR-0147 D1: `chosen` in screen.json's
 `current`), else the applied port if a known panel is there, any port a known
 panel is on, the applied port, else the first connected. `screen_detect.ports()` lists both for
@@ -386,7 +386,13 @@ per-device `sendEventsMode` did not hold on sofapi). A TV's mode comes from
 `screen_detect.tv_mode` (the kernel's mode list, 1080p first) as
 `other-WxH-capped`, held at boot by its `video=` and after it by the kiosk
 (`GEXIS_SCREEN_MODE`, `wlr-randr --mode`: labwc otherwise takes the device's
-preferred mode, a receiver's 1280 x 720), and a chosen port is not asked
+preferred mode, a receiver's 1280 x 720). **And kept**: `keep_outputs` in
+`gexis-kiosk-start` reads `wlr-randr --json` every 3 s and puts the screen's
+port back at `GEXIS_SCREEN_MODE` once that mode is offered, and switches a
+`GEXIS_OUTPUTS_OFF` port off again if it came back on; a screen output that
+is off is left off. A TV woken behind a receiver is first offered the
+receiver's 640 x 480 alone (the kernel refuses 1920x1080 then), and labwc took
+it. A chosen port is not asked
 about at the start. With two screens connected, `gexis-splash-fb` makes the
 gap after plymouth black: fbdev is one buffer, sized for one of them.
 Display standby leaves an output carrying the sound on
@@ -449,6 +455,15 @@ flowchart LR
 - The hostname takes a sanitised form: accents folded, lowercase, anything
   outside `[a-z0-9-]` becomes `-`, capped at 63; an empty result falls back to
   `gexis`. avahi publishes it as `<hostname>.local` (e.g. `gexis.local`).
+  **After a name clash** at a start (another answer for the name still on the
+  network, most likely a cache of the previous start), avahi takes
+  `<hostname>-2` and keeps it until the next start - the bar did, 2026-10-14.
+  `gexis-mdns-name.timer` (every 2 min, from 2 min after boot) runs
+  `/usr/lib/gexis/mdns-name.sh`: when avahi's name (D-Bus `GetHostName`) is
+  the hostname with `-<number>` added, it asks for the hostname again
+  (`SetHostName`) and logs it, at most 5 times a start
+  (`/run/gexis/mdns-name-tries`), so a genuine second device of the same name
+  does not set the two flipping.
 - BlueZ's name comes from `PRETTY_HOSTNAME`, not `main.conf`'s `Name =`, which
   the hostname plugin overrides.
 - `/etc/hosts` carries both old and new names between a rename and its restart,

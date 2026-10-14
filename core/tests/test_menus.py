@@ -380,3 +380,13 @@ async def test_what_qobuz_cannot_stream_is_said_so_without_its_star():
     rows = (await m.browse("list"))["items"]
     assert rows[0]["label"] == "Guardians of the Galaxy: Awesome Mix Vol. 1" and rows[0]["unavailable"] is True
     assert "unavailable" not in rows[1]
+
+
+def test_a_streaming_playlist_is_told_from_an_album():
+    """Spotty's and Qobuz's own markers, as read on George's server
+    (2026-10-14): the page then says Play playlist."""
+    from gexis_core.menus import _hint
+    assert _hint({"type": "playlist", "presetParams": {"favorites_url": "spotify:playlist:2wyY"}}, {}) == "playlist"
+    assert _hint({"type": "playlist", "presetParams": {"favorites_url": "spotify:album:16tY"}}, {}) is None
+    assert _hint({"type": "playlist", "icon": "/imageproxy/https%3A%2F%2Fstatic.qobuz.com%2Fimages%2Fplaylists%2F1_r.jpg/image.jpg"}, {}) == "playlist"
+    assert _hint({"type": "playlist", "icon": "/imageproxy/https%3A%2F%2Fstatic.qobuz.com%2Fimages%2Fcovers%2Fm0.jpg/image.jpg"}, {}) is None

@@ -329,7 +329,12 @@ screens draw. The panel never sends an LMS command. Lists are cached in memory
 until LMS's `lastscan` changes (checked at most once a minute), because a
 rescan renumbers every id. Artwork URLs are LMS's own resizer, requested at a
 ladder of sizes matched to what is drawn (ADR-0070). A queue the daemon itself
-changed is re-read at once rather than waiting for LMS's push (ADR-0071).
+changed is re-read at once rather than waiting for LMS's push (ADR-0071). A
+queue row's picture (`adapters/lms.py:_row_artwork`) is a stream's own
+`artwork_url` when it has one, through LMS's image proxy at the row's size:
+a Spotty or Qobuz track not yet played has a `coverid` whose cover is LMS's
+generic placeholder (`coverart: 0`). A library track keeps its `coverid`
+cover.
 
 **Radio** (`radio.py:RadioBrowser`) and **Lyrion's menus**
 (`menus.py:LyrionMenus`, ADR-0118) are SlimBrowse walkers built on one idea:
@@ -426,7 +431,14 @@ this file (ADR-0083), so a large cache makes a large backup.
 server they came from and its last scan: LMS artist ids are renumbered by a
 full rescan and differ on another server. At most once a minute, when photos
 are asked for, the server's status is read; if the address or the last scan
-differs, the stored photos are dropped and asked for again. A scan under way
+differs, the stored photos are dropped and asked for again - **except after
+a rescan of the same server** (George, 2026-10-14: the Album Artists grid
+took more than 30 s; four rescans in twelve hours on sofapi had each dropped
+all ~950 photos): a snapshot of every artist's id and name
+(`artist-photo-names`) is kept with the photos, and only the photos and slow
+markers of ids that now name someone else are dropped
+(`LmsArtistInfo._revalidate`). Another server, or no snapshot yet, drops
+everything. A scan under way
 drops nothing, and a server that gives no status is judged by its address
 alone; photos stored before this record existed are asked for again once.
 **The `lms` and `lms-release` providers' stored answers go with the photos**

@@ -1,0 +1,8 @@
+[Unit]
+Description=Gexis: claim the player's own .local name back after a clash
+After=avahi-daemon.service
+Requisite=avahi-daemon.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/gexis/mdns-name.sh

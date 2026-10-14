@@ -149,11 +149,11 @@ before, so nothing is lost.
 
 **What is "Keep this screen?"**
 Whenever a screen change alters the picture (a new screen, another model
-chosen with *Change* on *Settings → Display → Screen*, or *Screen rotation*), the
+chosen with *Change* on *Settings → Display → Attached screen*, or *Screen rotation*), the
 player restarts on it and asks *Keep this screen?* (*Keep this rotation?*
 after a rotation change). Without a tap on Keep
-within two minutes it goes back to how it was, so a screen that shows nothing
-cannot lock anyone out. A screen mounted upside down is set with *Screen
+within two minutes of the question appearing, it goes back to how it was, so a
+screen that shows nothing cannot lock anyone out. A screen mounted upside down is set with *Screen
 rotation*, 180°.
 
 **I attached a different screen. Does it need setting up?**
@@ -193,24 +193,31 @@ is planned.
 **Which screens work?**
 HDMI screens only. Tested on the hardware: a 10.1″ 1280 × 800 (the reference
 screen), a 13.3″ at 1920 × 1080, and the 1280 × 400 and 1480 × 320 bars.
-Others under *Change* on *Settings → Display → Screen* are listed but untested;
+Others under *Change* on *Settings → Display → Attached screen* are listed but untested;
 those tested are marked *Tested*, those owners have reported working
 *Reported*. DSI and DPI screens are not supported. The screen can be on
 either of the Pi's HDMI ports; a bar screen moved from one port to the other
 is set up again at the next start and asks *Keep this screen?*. With
 something connected to both ports (a screen on one, a sound bar on the
-other), tapping *Settings → Display → Screen* shows what is on each and lets
+other), *Settings → Display → Screen port* shows what is on each and lets
 you choose which is the screen.
 
 **Can a TV be the screen?**
-Yes: connect it to either HDMI port, tap *Settings → Display → Screen* and
-choose that port. The player restarts on the TV at 1920 x 1080, taken from the sizes the TV
-offers (a 4K TV scales it to full screen). A TV has no touch, so *Keep this
+Yes: connect it to either HDMI port and choose that port under *Settings →
+Display → Screen port*. The player restarts on the TV at 1920 x 1080, taken from the sizes the TV
+offers (a 4K TV scales it to full screen). Turned off and on again, the TV
+may come back small for a few seconds before the player sets it back to
+1920 x 1080. A TV has no touch, so *Keep this
 screen?* appears on the phone page - answer it there, or the player goes back
 to the screen before. A touch panel left on the other port is switched off;
 choose its port again to go back to it. If the edges of the picture are cut
 off, set the TV's picture size to *Just Scan* or *Original*: TVs crop HDMI
 pictures otherwise.
+
+**Can I make the text on the screen bigger?**
+Yes: *Settings → Display → Text size*, from 90 % to 130 %. The writing on the
+player's screen changes at once and Home's tiles grow with it; pictures,
+buttons and the layout stay as they are. A phone's page keeps its own size.
 
 **Can the player run without a screen?**
 Yes. *Settings → Display → Headless* turns the screen off, and every setting
@@ -354,7 +361,10 @@ over time; an artist whose photos were found is not asked again.
 **How do I open the player on a phone?**
 In any browser on the same network, open `http://gexis.local:8090`, with the
 player's own name in place of *gexis*. It can be saved as a bookmark or added
-to the phone's home screen. There is no app to install.
+to the phone's home screen. There is no app to install. If the address
+briefly answers as *gexis-2.local* instead, the network still remembered the
+player from its previous start; the player takes its own name back within a
+few minutes, so keep using the address without the *-2*.
 
 **What can the phone do?**
 Everything in Settings, plus a mini player at the bottom: the source, the
@@ -364,8 +374,11 @@ screen. Browsing the library happens on the screen, or in the
 streaming app.
 
 **How does the touchpad work?**
-Open the volume sheet on the phone. One finger moves a pointer on the
-screen, a tap presses, two fingers scroll, and a pinch zooms. The lines along
+Open the volume sheet on the phone - tap it, or swipe it up; swipe down to
+close it. One finger moves a pointer on the screen, a tap presses, two
+fingers scroll, and a pinch zooms. What the pointer is over is outlined when
+it can be pressed. If the touchpad stops answering, it reconnects by itself:
+within about a second of touching it again, or about five seconds on its own. The lines along
 the right and bottom edges scroll with one finger. Tapping a text field on
 the screen brings up the phone's keyboard. A touch outside the sheet closes it.
 

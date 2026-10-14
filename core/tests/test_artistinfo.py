@@ -36,6 +36,10 @@ class FakeLms:
         self.timeouts = []
         #: What `serverstatus` says; answered without being counted below.
         self.lastscan = "1700000000"
+        #: The library's artists, id -> name (2026-10-14: what a rescan is
+        #: checked against); asked for without being counted below.
+        self.names = {str(i): f"Artist {i}" for i in range(1, 20000)}
+        self.name_asks = 0
 
     def status(self, command):
         return {"lastscan": self.lastscan} if command[0] == "serverstatus" else None
@@ -43,6 +47,9 @@ class FakeLms:
     async def __call__(self, command, player="", timeout=None):
         if (status := self.status(command)) is not None:
             return status
+        if command[0] == "artists":
+            self.name_asks += 1
+            return {"artists_loop": [{"id": int(i), "artist": n} for i, n in self.names.items()]}
         self.commands.append(list(command))
         self.timeouts.append(timeout)
         if self.absent:
@@ -341,6 +348,9 @@ class SlowLms(FakeLms):
     async def __call__(self, command, player="", timeout=None):
         if (status := self.status(command)) is not None:
             return status
+        if command[0] == "artists":
+            self.name_asks += 1
+            return {"artists_loop": [{"id": int(i), "artist": n} for i, n in self.names.items()]}
         self.commands.append(list(command))
         self.timeouts.append(timeout)
         if self._clock is not None:
@@ -681,7 +691,12 @@ async def test_stored_photos_are_dropped_after_a_rescan_or_on_another_server():
     assert len(lms.commands) == 2, "looked at no oftener than SCOPE_CHECK_S"
     clock.advance(SCOPE_CHECK_S)
     await info.photos([7452])
-    assert len(lms.commands) == 3
+    assert len(lms.commands) == 2, "the same artist under the same id: kept (2026-10-14)"
+    lms.lastscan = "1900000000"                      # a rescan that renumbered
+    lms.names["7452"] = "Somebody Else"
+    clock.advance(SCOPE_CHECK_S)
+    await info.photos([7452])
+    assert len(lms.commands) == 3, "the id names someone else now: asked again"
 
 
 @pytest.mark.asyncio
@@ -743,3 +758,27 @@ async def test_a_listener_that_fails_does_not_stop_the_photos_going():
     info.forget()
     with pytest.raises(KeyError):
         store.recall(LmsArtistInfo.NAMESPACE, 7452)
+
+
+@pytest.mark.asyncio
+async def test_a_rescan_keeps_the_photos_of_artists_it_did_not_renumber():
+    """George, 2026-10-14: the Album Artists grid took more than 30 s to show
+    its photos - four rescans in twelve hours on sofapi, each dropping all
+    950. Only an id that now names someone else loses its photo."""
+    from gexis_core.artistinfo import SCOPE_CHECK_S
+    lms = FakeLms(photos={1: "imageproxy/a/1/image.png", 2: "imageproxy/a/2/image.png",
+                          3: "imageproxy/a/3/image.png"})
+    store, clock = _store(), FakeClock()
+    info = LmsArtistInfo(lms, BASE, store=store, clock=clock)
+    await info.photos([1, 2, 3])
+    lms.lastscan = "1800000000"
+    clock.advance(SCOPE_CHECK_S)
+    await info.photos([1])                 # the rescan seen: names kept
+    asked = len(lms.commands)
+    lms.lastscan = "1900000000"
+    lms.names["2"] = "A New Artist"         # id 2 renumbered
+    clock.advance(SCOPE_CHECK_S)
+    restarted = LmsArtistInfo(lms, BASE, store=store, clock=clock)
+    await restarted.photos([1, 2, 3])
+    asks = [c[-1] for c in lms.commands[asked:]]
+    assert asks == ["artist_id:2"], asks

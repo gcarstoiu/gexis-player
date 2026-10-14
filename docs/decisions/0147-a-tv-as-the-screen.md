@@ -144,3 +144,31 @@ opens the 2 options. Add a change button to the tile"*.
 - **One Screen tile:** *Attached screen* and *Screen port* are one tile
   showing the display in use and its port; a tap chooses between the ports;
   *Change* picks the model from the list.
+
+## Amended 2026-10-14: two tiles again
+
+George, after the third try (the TV right, the panel off, standby keeping
+the sound): *"The change button in the settings display tile doesn't work.
+Let's go back to two tiles."* *Change* opened the list inside the current
+maker, which for a TV is *Other screen* with one size. Now *Attached screen*
+shows the display in use with *Change*, opening at the makers, and *Screen
+port* is its own row.
+
+George, the same day: *"The screen port tile should display also the info on
+what is connected directly in the tile before opening the modal."* The
+*Screen port* tile lists each port's line - the port in use first - with
+*Change* opening the picker.
+
+## Amended 2026-10-14, later: the mode kept
+
+George, after turning the TV off and on: the picture came back at 640 x 480.
+On sofapi the receiver re-offered the TV with 640 x 480 alone at first; the
+kernel refused 1920x1080 (*"User-defined mode not supported"*) and labwc took
+the preferred 640 x 480; the full list came moments later, and the kiosk had
+set the mode only at its start. Now the kiosk keeps it: every 3 s the
+outputs are read (`wlr-randr --json`), the screen's port is put back at
+`GEXIS_SCREEN_MODE` once offered, and a panel port switched off is switched
+off again. A screen output that is off (display standby) is left off.
+Verified on sofapi: forced to 640 x 480 by hand, back at 1920 x 1080 within
+5 s, logged. **Not yet seen:** the TV itself turned off and on with the fix
+(George's next try).

@@ -59,6 +59,11 @@
     //: the panel holds no LMS ids and the artist list it already has can
     //: resolve one.
     openArtistNamed = null,
+    //: **An album to open on arrival, by its title and artist** (George,
+    //: 2026-10-14: the release title in Now Playing opens the album page).
+    //: Names, for the same reason as `openArtistNamed`: the panel holds no
+    //: LMS ids. `{title, artist, n}`, `n` so the same album asked twice opens.
+    openAlbumNamed = null,
   } = $props();
 
   // Where in the library the panel is; [] is the root. Each entry is a
@@ -628,6 +633,40 @@
     if (name) untrack(() => openArtistByName(name));
   });
 
+  /** Opens an album by its title and artist, if this library has it: the
+   *  artist by name, then the album of that title among theirs. Back goes to
+   *  the artist. */
+  async function openAlbumByName(title, artistName) {
+    const wantedArtist = foldedName(artistName);
+    const wantedTitle = foldedName(title);
+    if (!wantedArtist || !wantedTitle) return;
+    resolvingArtist = true;
+    try {
+      const all = await artistsCached();
+      artists = all;
+      const match = all.find((a) => foldedName(a.name) === wantedArtist);
+      if (!match) return;
+      const albums = await loadArtistAlbums(match.id);
+      const found = albums.find((a) => foldedName(a.title) === wantedTitle);
+      if (found) await openAlbum(found.id, found.title, artistPath(match.name));
+      else await openArtist(match);
+    } catch (err) {
+      console.info('library:', err.message);
+    } finally {
+      resolvingArtist = false;
+    }
+  }
+
+  $effect(() => {
+    const wanted = openAlbumNamed;
+    if (wanted?.title) untrack(() => openAlbumByName(wanted.title, wanted.artist));
+  });
+
+  //: The library's artists by folded name: a similar artist is a link only
+  //: when it is one of these (ADR-0079: a control that does nothing reads
+  //: as a fault).
+  const knownArtists = $derived(new Set((artists ?? []).map((a) => foldedName(a.name))));
+
   //: Radio categories are read by colour and silhouette before they are read
   //: by word (design/screens.md §8), so each carries its own shape and tint.
   //: Anything LMS reports that is not here - and every station row - falls
@@ -850,6 +889,9 @@
       appTop: app,
       app: app ? row.label : parent.app ?? null,
       appLogo: app ? row.image : parent.appLogo ?? null,
+      //: The list it was opened from ("Playlists"): a page can say what it
+      //: is when the service does not (George, 2026-10-14).
+      under: parent.title ?? null,
     };
   }
 
@@ -900,7 +942,7 @@
       }
       return;
     }
-    openMenu(row.handle, row.label, true, ctxFor(row, here?.ctx ?? {}));
+    openMenu(row.handle, row.label, true, ctxFor(row, { ...(here?.ctx ?? {}), title: here?.label ?? null }));
   }
 
   async function openSearchEntry(row) {
@@ -1629,7 +1671,7 @@
           <span class="playall__meta">{playlistMeta}</span>
         </div>
         {#each playlist.items.slice(0, playlistReveal.shown) as entry, index (entry.id)}
-          <div class="row row--wide">
+          <div class="row row--wide" class:is-revealed={revealed === `pltrack-${index}`}>
             <button class="row__hit" type="button" onclick={() => (revealed = revealed === `pltrack-${index}` ? null : `pltrack-${index}`)}>
               <span class="row__num">{index + 1}</span>
               <span class="row__label">{entry.title}</span>
@@ -1664,7 +1706,7 @@
             >
               <div class="grid__space" style:height="{paneWindow.above}px"></div>
               {#each paneWindow.rows as entry (entry.id)}
-                <div class="row" class:is-on={chosenArtist?.id === entry.id}>
+                <div class="row" class:is-on={chosenArtist?.id === entry.id} class:is-revealed={revealed === `artist-${entry.id}`}>
                   <button class="row__hit" type="button" onclick={() => chooseArtist(entry)}>
                     <span class="row__label">{entry.name}</span>
                   </button>
@@ -1688,7 +1730,7 @@
             </div>
             <div class="pane__list" use:fromTop={chosenArtist?.id ?? where}>
               {#each browseAlbums as entry (entry.id)}
-                <div class="row" class:is-on={chosenAlbum?.id === entry.id}>
+                <div class="row" class:is-on={chosenAlbum?.id === entry.id} class:is-revealed={revealed === `album-${entry.id}`}>
                   <!-- Newest first, with the year beside the title, like
                        the discography (George, 2026-09-18). -->
                   <button class="row__hit" type="button" onclick={() => chooseAlbum(entry)}>
@@ -1718,7 +1760,7 @@
           </div>
           <div class="pane__list" use:fromTop={chosenAlbum?.id ?? where}>
             {#each browseTracks as entry (entry.id)}
-              <div class="row">
+              <div class="row" class:is-revealed={revealed === `track-${entry.id}`}>
                 <button class="row__hit" type="button" onclick={() => (revealed = revealed === `track-${entry.id}` ? null : `track-${entry.id}`)}>
                   <span class="row__num">{entry.tracknum ?? ''}</span>
                   <span class="row__label">{entry.title}</span>
@@ -1925,12 +1967,25 @@
               <span class="sect__note">On this device</span>
             </div>
             <div class="popular">
+              <!-- **Revealed first, as every other track list** (George,
+                   2026-10-14: "top tracks for an artist should not play
+                   directly, but instead also have the reveal and then
+                   play"). -->
               {#each artistInfo.popular as track, i (track.id)}
-                <button class="poprow" type="button" onclick={() => play('track', track.id, track.title)}>
-                  <span class="poprow__n">{i + 1}</span>
-                  <span class="poprow__title">{track.title}</span>
-                  {#if track.duration}<span class="poprow__dur">{mmss(track.duration)}</span>{/if}
-                </button>
+                <div class="poprow" class:is-revealed={revealed === `pop-${track.id}`}>
+                  <button class="poprow__hit" type="button" onclick={() => (revealed = revealed === `pop-${track.id}` ? null : `pop-${track.id}`)}>
+                    <span class="poprow__n">{i + 1}</span>
+                    <span class="poprow__title">{track.title}</span>
+                    {#if track.duration && revealed !== `pop-${track.id}`}<span class="poprow__dur">{mmss(track.duration)}</span>{/if}
+                  </button>
+                  {#if revealed === `pop-${track.id}`}
+                    <span class="row__actions">
+                      <button class="act act--play" type="button" aria-label="Play now" onclick={() => play('track', track.id, track.title)}><span class="act__play"></span></button>
+                      <button class="act" type="button" aria-label="Add to queue" onclick={() => act('track', track.id, 'add', track.title)}><span class="act__queue"><i></i><i></i><i></i></span></button>
+                      <button class="act" type="button" aria-label="Add to playlist" onclick={() => openPicker('track', track.id, track.title)}><span class="act__plus"></span></button>
+                    </span>
+                  {/if}
+                </div>
               {/each}
             </div>
           {/if}
@@ -1980,7 +2035,14 @@
             {:else}
               <div class="artistmeta__similar">
                 {#each artistInfo.found.similar as name (name)}
-                  <span class="artistmeta__chip">{name}</span>
+                  <!-- George, 2026-10-14: an artist named here opens that
+                       artist's page, where the library has them. -->
+                  {#if knownArtists.has(foldedName(name))}
+                    <button type="button" class="artistmeta__chip artistmeta__chip--link"
+                      onclick={() => openArtistByName(name)}>{name}</button>
+                  {:else}
+                    <span class="artistmeta__chip">{name}</span>
+                  {/if}
                 {/each}
               </div>
             {/if}
@@ -2022,7 +2084,7 @@
           </div>
           <div class="tracks__list" use:fromTop={where}>
             {#each album.tracks as track (track.id)}
-              <div class="track">
+              <div class="track" class:is-revealed={revealed === `albumtrack-${track.id}`}>
                 <button class="track__hit" type="button" onclick={() => (revealed = revealed === `albumtrack-${track.id}` ? null : `albumtrack-${track.id}`)}>
                   <span class="track__num">{track.tracknum ?? ''}</span>
                   <span class="track__title">{track.title ?? ''}</span>
@@ -2271,6 +2333,10 @@
     padding: 30px 60px;
   }
   .cards {
+    /* **The tiles grow with larger text** (ADR-0148; George, 2026-10-14:
+       "the home tiles stretch to fit the text"), in both directions; below
+       100 % they keep their size. */
+    --tile-grow: max(1, var(--text-scale, 1));
     display: grid;
     gap: 26px;
     flex-shrink: 0;
@@ -2291,7 +2357,7 @@
        proportion: 200 / 229 at 800 / 853. **Never under 164**, what the icon,
        name and count need - the rule alone gives 157 at 720 (the handoff
        review; round 2 took it back as max(200k, 164)). */
-    height: max(164px, calc(200px + (var(--panel-h) - 800px) * 200 / 376));
+    height: calc(max(164px, calc(200px + (var(--panel-h) - 800px) * 200 / 376)) * var(--tile-grow));
     transition:
       transform 110ms cubic-bezier(0.2, 0.8, 0.2, 1),
       background 110ms linear,
@@ -2353,17 +2419,22 @@
     grid-auto-flow: column;
     /* 200 px, so the sixth card peeks about 110 px and the row reads as one
        that scrolls (the handover's note 1, George 2026-10-06). */
-    grid-auto-columns: 200px;
+    grid-auto-columns: calc(200px * var(--tile-grow));
     overflow-x: auto;
     overscroll-behavior-x: contain;
+    /* **No snap, and sideways only** (George, 2026-10-14: this row would not
+       scroll while New music did). The phone touchpad scrolls by moving
+       `scrollLeft` a few pixels a frame (PanelPointer's glide), and
+       Chromium re-snapped each small step back to the card it left. New
+       music has neither snap nor trouble; pan-x as New music and the bar's
+       copy have it. */
+    touch-action: pan-x;
     scrollbar-width: none;
-    scroll-snap-type: x proximity;
     mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 72px), transparent 100%);
     /* Scrolled to the end, the last card clears the fade. */
     padding-right: 72px;
   }
   .cards--more::-webkit-scrollbar { display: none; }
-  .cards--more .card { scroll-snap-align: start; }
   .card--mymusic { --card: 143, 196, 216; }
   .card--favorites { --card: 232, 160, 180; }
   .card--apps { --card: 200, 162, 216; }
@@ -2933,6 +3004,19 @@
   .row.is-on {
     background: rgba(159, 180, 232, 0.14);
   }
+  /* **The row whose actions are revealed is the selection** (George,
+     2026-10-14: "everywhere we have a reveal, the first tap that shows it
+     also creates a teal background"), as Lyrion's own lists draw it. */
+  .row.is-revealed,
+  .track.is-revealed,
+  .poprow.is-revealed {
+    background: rgba(126, 214, 188, 0.16);
+  }
+  .row.is-revealed .row__label,
+  .track.is-revealed .track__title,
+  .poprow.is-revealed .poprow__title {
+    color: #7ed6bc;
+  }
   .row__hit {
     flex: 1;
     min-width: 0;
@@ -3345,7 +3429,15 @@
     border-radius: 10px;
     flex-shrink: 0;
   }
-  .poprow:active { background: var(--ink-fill-press); }
+  .poprow__hit {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .poprow__hit:active { background: var(--ink-fill-press); border-radius: 10px; }
   .poprow__n {
     font-family: var(--font-mono);
     font-size: 13px;
@@ -3479,6 +3571,11 @@
     color: var(--accent-bluetooth);
     white-space: nowrap;
   }
+  .artistmeta__chip--link {
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .artistmeta__chip--link:active { transform: scale(0.97); }
 
   /* ADR-0109: the photo is 262 x H / 800, and the column is the photo's
      width - the design grew the photo alone, into the gap (handoff review). */

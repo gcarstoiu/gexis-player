@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-13 (on R2D2).
+Last updated: 2026-10-14 (on R2D2).
 
 ## Start here
 
@@ -10,15 +10,34 @@ and `phase-13b` is merged into it after each docs change. A release is built
 from a worktree made at its tag, then removed. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 0.13.0 on Testing** (2026-10-13; tag `v0.13.0`, release
-`r0.13.0`, serial 39; **PR #64 open for George to merge**; image
-`image/deploy/2026-10-13-gexis-player-v0.13.0.img`, 121 checks passed; release
-worktree `~/projects/gexis-player-r0130`, removed after the merge). A TV as the
-screen by choosing its port (ADR-0147), the Output picker's HDMI lines, the
-updater recovering from a power cut (Finding 123), *Update…* checking again,
-the update errors in words. 0.12.0 (PR #63) merged 2026-10-13 and its
-post-merge steps done; its disk clean-up runs after this publish. **Players
-are not updated to a release by Claude** (George, 2026-10-13).
+**Current release: 0.14.0 on Testing** (2026-10-13; tag `v0.14.0`, release
+`r0.14.0`, serial 40; PR #65 merged 2026-10-14, post-merge steps and the
+routine clean-up done; image `image/deploy/2026-10-13-gexis-player-v0.14.0.img`,
+121 checks passed). One Screen
+tile; a TV as the screen at 1080p (ADR-0147 amended twice after George's TV
+tests); standby keeps a sound port on; the update backup survives a vanishing
+file. 0.13.0 (PR #64) merged and its post-merge steps done. The bar is on
+0.14.0: **the second power cut passed** (2026-10-14, Finding 123
+addendum) - cut mid-install, finished by itself at the next start.
+
+**Since 0.14.0, on `phase-13d` and installed on sofapi only** (George's
+fixes of 2026-10-14, all for the next release; its notes need his approval):
+Attached screen and Screen port as two tiles again, the Screen port tile
+listing what is on each port; the home strip scrolls by touchpad; the
+outline follows every pressable in its own shape, cut to the part that
+shows, none round a row with its actions revealed, the dot small inside it;
+similar-artist tags, the artist's name and the release title open their
+pages; the touchpad pings (2 s, fresh socket after 5 s) and probes at the
+first touch after a quiet spell; Wi-Fi power saving off on a player; the
+sheet swipes open and closed; artist photos kept across a Lyrion rescan
+(revalidated by name - the first rescan after the update still drops them
+once); later the same day: the outline cut only by what covers an element, a
+touchpad tap over the visualiser only dismisses it, the TV's mode kept after
+it is turned off and on, artists and *Play playlist* on app playlists, a
+stream's own artwork in the queue, Popular reveals, teal selection, tab
+underline, search opens on its field, and **Text size** (ADR-0148). **George
+checked them on sofapi (g46, done 2026-10-14).** **Players are not
+updated to a release by Claude** (George, 2026-10-13).
 
 **From the power-cut test, in 0.13.0:** George's power cut on the bar (g34,
 Finding 123) found the updater could not recover - its note for the boot was
@@ -28,16 +47,16 @@ every check), only half-installed packages are reinstalled, the whole release
 completed after. The bar recovered with the fixed code (run from a copy) and
 is on the complete 0.12.0 set. Also: *Could not check for updates* says why
 in words. **Not proved:** a second real cut with the fixed updater
-installed - a player on 0.13.0 cut during its next update (7b2). LESSONS 70.
+installed - done 2026-10-14, passed. LESSONS 70.
 
-Suite 2,352.
+Suite 2,386 passed, 47 skipped (2026-10-14).
 
 **Devices.** sofapi (Waveshare 10.1"; a test machine - its Lyrion queue may
 be lost, George 2026-10-12; an SMSL USB DAC on it), the bar (ShelvesPi,
 11.9") and guestpi (IQaudIO Pi-DAC PRO, 13.3") as read 2026-10-13:
-sofapi runs a `phase-13d` preview (core `0.11.0+git53`, player `+git55`);
-the bar runs release 0.12.0 (updated by George's test, repaired as above);
-guestpi reports core `0.10.2+git63`. **Cards flashed
+sofapi runs a `phase-13d` preview (core `0.14.0+git20`, UI and player
+`+git28`, 2026-10-14); the bar runs release 0.14.0; guestpi as read
+2026-10-13, core `0.10.2+git63`. **Cards flashed
 from now on have no passwordless sudo: provision test cards with
 `DEV_SUDO="yes"`** (ADR-0139).
 
@@ -50,11 +69,13 @@ from now on have no passwordless sudo: provision test cards with
 - On sofapi: the meters falling with the volume, and *Visualiser tweaks* →
   *Needles follow the volume* and *Gain* (ADR-0146).
 - Then: 1.0.0 cut from this code as the first Stable release.
-- Lyrion synced playback with another player (g09, needed since 2026-10-13).
-- Optional: the bar's own supply (g12), a DSD file from the library (g38).
+- Done 2026-10-14: the fixes since 0.14.0 on sofapi (g46); Lyrion synced playback (7e/g09, passed); the bar's supply
+  (g12: the undervoltage was the USB extension cord, 0x0 plugged in
+  directly).
 
-**Not run on a device yet:** a screen on HDMI-A-2; a fresh card from 0.12.0;
-setup over Ethernet; Lyrion sync; a second power cut with the fixed updater.
+**Not run on a device yet:** a screen on the bar's HDMI-A-2; a fresh card
+from 0.12.0; setup over Ethernet; the outline cut by the real mini strip (a
+stand-in bar only, headless).
 
 **Next: 1.0.0, the first public release**, once George's tests pass: the
 notes, promote to Stable with the image file (c16; the installation guide's
@@ -62,9 +83,10 @@ download works from then), README's *Download and install* section, Raspberry
 Pi Imager - the image file and *Use custom*, our own Imager repository and the
 community application after (g14). **After it**, in order (`docs/DEVELOPMENT.md`, "Phases after the first
 public release"; refer to them by ID): **14** MPD for real 5.1/7.1
-(`ph-mpd`), **15** the player in Home Assistant (`ph-home-assistant`), **16**
-themes (`ph-themes`), **17** a sound bar on optical (`ph-optical`), **18** the
-library answers for itself (`ph-library`), **19** Lyrion's own menus' look
+(`ph-mpd`), **15** room correction with a USB microphone (`ph-room-correction`),
+**16** the player in Home Assistant (`ph-home-assistant`), **17** themes
+(`ph-themes`), **18** a sound bar on optical (`ph-optical`), **19** the library
+answers for itself (`ph-library`), **20** Lyrion's own menus' look
 (`ph-lyrion-menus`) - each ADR first.
 
 The shared to-do list (an artifact with a `todos` collection; its address is
@@ -72,7 +94,7 @@ in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-10-12 evening, after 0.11.0** (the first: ~102 GB and ~30,500 -> ~9,500
+2026-10-14, after 0.14.0's PR** (the first: ~102 GB and ~30,500 -> ~9,500
 words in the morning).
 
 ## Phases

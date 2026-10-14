@@ -1110,7 +1110,7 @@
             <div class="pane__head"><span class="pane__label">Tracks</span></div>
             <div class="pane__list" use:fromTop={chosenAlbum?.id ?? where}>
               {#each browseTracks as entry (entry.id)}
-                <div class="prow" class:is-on={isPlaying(entry)}>
+                <div class="prow" class:is-on={isPlaying(entry) || revealed === `track-${entry.id}`}>
                   <button class="prow__hit" type="button" onclick={() => toggle(`track-${entry.id}`)}>
                     <span class="prow__label">{entry.title}</span>
                     {#if entry.duration && revealed !== `track-${entry.id}`}<span class="prow__meta">{mmss(entry.duration)}</span>{/if}
@@ -1166,7 +1166,7 @@
           <div class="mask" style:mask-image={mask} style:-webkit-mask-image={mask}>
             <div class="sideways sideways--grid" use:side.attach use:dragScroll use:fromTop={where}>
               {#each playlist.items.slice(0, playlistReveal.shown) as entry, index (`${index}:${entry.id}`)}
-                <div class="trow trow--two" class:is-on={isPlaying(entry)}>
+                <div class="trow trow--two" class:is-on={isPlaying(entry) || revealed === `pltrack-${index}`}>
                   <button class="trow__hit" type="button" onclick={() => toggle(`pltrack-${index}`)}>
                     <span class="trow__num">{String(index + 1).padStart(2, '0')}</span>
                     <span class="trow__text">
@@ -1262,7 +1262,7 @@
           </div>
           <div class="tracks" use:fromTop={where}>
             {#each album.tracks as track (track.id)}
-              <div class="trow" class:is-on={isPlaying(track)}>
+              <div class="trow" class:is-on={isPlaying(track) || revealed === `albumtrack-${track.id}`}>
                 <button class="trow__hit" type="button" onclick={() => toggle(`albumtrack-${track.id}`)}>
                   <span class="trow__num">{track.tracknum ? String(track.tracknum).padStart(2, '0') : ''}</span>
                   <span class="trow__title trow__title--19">{track.title ?? ''}</span>
@@ -1641,7 +1641,9 @@
   .cards--more {
     grid-template-columns: none;
     grid-auto-flow: column;
-    grid-auto-columns: 196px;
+    /* Wider with larger text (ADR-0148): the bar's height is the screen's,
+       so its tiles grow sideways only; the row scrolls. */
+    grid-auto-columns: calc(196px * max(1, var(--text-scale, 1)));
     height: 300px;
     --t-card-sub: 13px;
     overflow-x: auto;

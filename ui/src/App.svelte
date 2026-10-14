@@ -362,11 +362,21 @@
   const libraryShown = $derived(libraryOpen && !settingsOpen && !waitingOpen);
   function openLibraryHome() {
     libraryArtist = null;
+    libraryAlbum = null;
     libraryHome += 1;
     libraryRequested = true;
   }
   function openLibraryArtist(name) {
     libraryArtist = name;
+    libraryAlbum = null;
+    libraryHome += 1;
+    libraryRequested = true;
+  }
+  //: George, 2026-10-14: the release title in Now Playing opens its album.
+  let libraryAlbum = $state(null);
+  function openLibraryAlbum(title, artist) {
+    libraryArtist = null;
+    libraryAlbum = { title, artist, n: (libraryAlbum?.n ?? 0) + 1 };
     libraryHome += 1;
     libraryRequested = true;
   }
@@ -480,14 +490,40 @@
     document.documentElement.classList.toggle('on-panel', surface === 'panel');
   });
 
+  //: **Text size** (ADR-0148; George, 2026-10-14): every font size in
+  //: pixels is multiplied by `--text-scale` (vite.config.js), on the
+  //: player's own screen only - a phone keeps its own size.
+  $effect(() => {
+    const percent = Number($settingValues.text_size ?? 100);
+    const scale = surface === 'panel' && percent >= 90 && percent <= 130 ? percent / 100 : 1;
+    document.documentElement.style.setProperty('--text-scale', String(scale));
+  });
+
   //: **ADR-0109 decision 5: Keep this screen?** The core asks while a newly
-  //: chosen screen waits; its countdown runs from the panel's first frame
+  //: chosen screen waits; its countdown runs from when the question is drawn
   //: (`deadline`, this device's clock). Only the panel answers (decision 2).
   let keepNow = $state(Date.now());
   $effect(() => {
     if (!$screenConfirm) return;
     const id = setInterval(() => (keepNow = Date.now()), 250);
     return () => clearInterval(id);
+  });
+  //: **...and starts when the question is on the glass** (George,
+  //: 2026-10-14: "The countdown should start with the keep screen
+  //: displayed"). Two frames after it is drawn, the panel says so; the core
+  //: sets `deadline` from then. Said again until the deadline arrives, in
+  //: case one report is lost; the core starts it once.
+  $effect(() => {
+    const question = $screenConfirm;
+    if (surface !== 'panel' || !question || question.deadline || updateLock) return;
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => answerScreen('shown').catch(() => {}));
+    });
+    const again = setInterval(() => answerScreen('shown').catch(() => {}), 3000);
+    return () => {
+      cancelAnimationFrame(frame);
+      clearInterval(again);
+    };
   });
   const keepLeft = $derived(
     $screenConfirm?.deadline ? ($screenConfirm.deadline * 1000 - keepNow) / 1000 : ($screenConfirm?.total ?? 30)
@@ -676,13 +712,15 @@
           rootless={lmsOff}
           onhome={lmsOff ? openSettings : openLibraryHome}
           onminimise={lmsOff ? null : minimise}
-          onartist={lmsOff ? undefined : openLibraryArtist} />
+          onartist={lmsOff ? undefined : openLibraryArtist}
+          onalbum={lmsOff ? undefined : openLibraryAlbum} />
       {:else}
       <NowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} queue={$queue} onvolume={openVolume} onvisualisation={showVisualisation}
         rootless={lmsOff}
         onhome={lmsOff ? openSettings : openLibraryHome}
         onminimise={lmsOff ? null : minimise}
-        onartist={lmsOff ? undefined : openLibraryArtist} />
+        onartist={lmsOff ? undefined : openLibraryArtist}
+          onalbum={lmsOff ? undefined : openLibraryAlbum} />
       {/if}
     </div>
   {/if}
@@ -701,6 +739,7 @@
         controls={$active ? ($capabilities[$active]?.controls ?? []) : []}
         availability={$availability}
         openArtistNamed={libraryArtist}
+        openAlbumNamed={libraryAlbum}
         onclose={() => { libraryRequested = false; libraryArtist = null; }}
         onsettings={openSettings}
         onvolume={openVolume}
@@ -715,6 +754,7 @@
         controls={$active ? ($capabilities[$active]?.controls ?? []) : []}
         availability={$availability}
         openArtistNamed={libraryArtist}
+        openAlbumNamed={libraryAlbum}
         onclose={() => { libraryRequested = false; libraryArtist = null; }}
         onsettings={openSettings}
         onvolume={openVolume}

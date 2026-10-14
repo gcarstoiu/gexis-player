@@ -92,6 +92,9 @@ synchronised.
 ![Artist](images/panel-nowplaying-artist.webp)
 
 **Artist** shows a short biography, the artist's genres and similar artists.
+Tap the artist's name for their page in the library, and a similar artist the
+library has for theirs. On **Track** and **Release**, the album's title opens
+the album's page.
 
 ![Release](images/panel-nowplaying-release.webp)
 
@@ -145,7 +148,7 @@ The library is your Lyrion server's music. Home offers:
 ![Browse](images/panel-browse.webp)
 
 Pick an artist, then an album, then a track. A tap on a row shows its
-actions:
+actions, and the row turns teal while they show:
 
 - **Play** plays it now;
 - **Add to queue** adds it to the end;
@@ -160,8 +163,9 @@ Artists are grouped by letter; tap a letter on the rail to jump.
 ![Artist page](images/panel-artist-page.webp)
 
 An artist's page shows their portrait, genres and albums. It also has
-**Play** and **Shuffle** for everything by them, a biography and similar
-artists.
+**Play** and **Shuffle** for everything by them, a biography, their
+*Popular* tracks and similar artists; a similar artist the library has opens
+their page. A tap on a Popular track shows its actions, as anywhere else.
 
 ### Album page
 
@@ -204,10 +208,13 @@ server offers, including the apps it has installed.
 **Apps** lists the apps installed on your Lyrion server (streaming services,
 internet radio and so on), each with its own logo and menus. A service's
 first page can take a second or two to arrive; the panel says which service
-it is waiting for.
+it is waiting for. A service's playlist opens as a page of its tracks, each
+with its artist under the title (a single artist's album shows titles only),
+and its button says *Play playlist*.
 
 **Search**: tap a search field and type on your phone (section 7); results
-arrive as you type. My Music's Search looks for artists, albums, works,
+arrive as you type. A service's *Search* opens straight on its field, and
+tapped from the phone's touchpad it brings up the phone's keyboard. My Music's Search looks for artists, albums, works,
 songs and playlists at once.
 
 A few things are left out on purpose:
@@ -277,8 +284,9 @@ The mini player has:
 
 ![Phone: the touchpad](images/phone-sheet-open.webp)
 
-Tap the track name to open the sheet: its large area is a **touchpad** for
-the panel, so you can drive the screen from across the room.
+Tap the track name, or swipe the sheet up, to open it: its large area is a
+**touchpad** for the panel, so you can drive the screen from across the room.
+Swipe it down to close it.
 
 | Gesture | Does |
 | --- | --- |
@@ -289,10 +297,16 @@ the panel, so you can drive the screen from across the room.
 | Pinch | Zooms the panel in or out around the pointer. |
 
 Tap a text field on the panel (a search, for example) and the phone's
-keyboard comes up: what you type appears on the panel. The pointer hides
-after a few seconds of rest. *Settings → Display* sets **Pointer speed**,
+keyboard comes up: what you type appears on the panel. Whatever the pointer
+is over that can be pressed is outlined, and the dot shrinks inside the
+outline (Now Playing's tabs are underlined instead); only the part that
+shows is outlined, so a button half under the
+mini strip is outlined down to the strip. A track whose Play, Queue and Add
+buttons are showing is not outlined itself. The pointer hides after a few
+seconds of rest. *Settings → Display* sets **Pointer speed**,
 **Pointer style** (Dot or Arrow), and whether the touchpad is offered at
-all (**Phone touchpad**). A tap outside the open sheet just closes it, so
+all (**Phone touchpad**). While the visualiser is up, a tap on the touchpad
+only closes it, as a tap on the screen does. A tap outside the open sheet just closes it, so
 nothing behind it is pressed by mistake.
 
 ### Settings on the phone
@@ -392,7 +406,9 @@ answer*; the other shares are still mounted.
 
 | Setting | What it does |
 | --- | --- |
-| Screen | The display in use and the HDMI port it is on, in one tile. **Tapping it** chooses which port is the screen, where something is on both: its list shows what is plugged into each port - the screen, another device by its name (a sound bar or receiver), *sound* when the sound goes to that port; a port with nothing connected is greyed. **Change** picks the screen's model from the list, which sets the layout, Standard or Bar, and which visualiser skins are offered; a screen not in the list is shown as *Other screen* with its size. A change that alters the picture restarts the player and asks *Keep this screen?*. The port chosen stays the screen, even with a touch panel on the other port. **A TV can be the screen**: it runs at 1920 x 1080 (or the largest 16:9 size below it that it offers), and since it has no touch, *Keep this screen?* is answered on the phone page. A touch panel left on the other port is switched off. A port that is not the screen shows black. If the TV crops the edges of the picture, set its picture size to *Just Scan* or *Original*. When the TV's port also carries the sound, display standby only blacks the picture, so the music goes on. On a board with one HDMI port, tapping does nothing and the tile says what is on it. |
+| Attached screen | The display in use, by its name (a TV by the name it gives). **Change** picks the screen's model from the list, by maker; it sets the layout, Standard or Bar, and which visualiser skins are offered. A screen not in the list is shown as *Other screen* with its size. |
+| Screen port | Which HDMI port the screen is on. The tile and its list show what is plugged into each port - the screen, another device by its name (a sound bar or receiver), *sound* when the sound goes to that port; a port with nothing connected is greyed. A change that alters the picture restarts the player and asks *Keep this screen?*. The port chosen stays the screen, even with a touch panel on the other port. **A TV can be the screen**: it runs at 1920 x 1080 (or the largest 16:9 size below it that it offers), and since it has no touch, *Keep this screen?* is answered on the phone page. A touch panel left on the other port is switched off. A port that is not the screen shows black. If the TV crops the edges of the picture, set its picture size to *Just Scan* or *Original*. When the TV's port also carries the sound, display standby only blacks the picture, so the music goes on. On a board with one HDMI port, the row only says what is on it. |
+| Text size | How large the writing on the player's screen is: 90 % to 130 %, 100 % as it comes. The screen changes at once; Home's tiles grow with larger text. Pictures, buttons and the layout keep their size, so long titles are cut short sooner at large sizes. A phone keeps its own size. |
 | Screen rotation | For a screen mounted the other way up. |
 | Headless | Turns the player's screen off; settings that only affect the screen are hidden while it is on. |
 | Display standby: Scheduled standby, Standby times | With *Scheduled standby* on, the screen goes off during the standby times whenever nothing is playing. Up to six times, each a start and an end - picked from a grid of hours and quarters - on the chosen days; one may run past midnight, counting for the day it starts. |

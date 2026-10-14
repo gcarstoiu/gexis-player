@@ -168,6 +168,7 @@ been written properly. **0098 has no record either.**
 | [0145](0145-multichannel-folded-down-to-stereo.md) | Multichannel files folded down to stereo | Accepted 2026-10-13: our own Squeezelite folds >2 channels down (ITU, LFE out, no clipping) |
 | [0146](0146-the-meters-follow-the-volume-again-with-a-gain.md) | The meters follow the volume visibly, with a gain of their own | Accepted 2026-10-13: bars the whole cut, needles half, Fixed unchanged; published at every start; a Gain row −10..+20 dB; the needles' share a row (Half the drop / Like a real amplifier) |
 | [0147](0147-a-tv-as-the-screen.md) | A TV as the screen, by choosing its port | Accepted 2026-10-13: the Screen port choice wins; 1080p at most; Keep from the phone; the panel's touch off |
+| [0148](0148-text-size.md) | Text size | Accepted 2026-10-14: 90-130 % on the player's screen; Home's tiles grow; a zoom set aside |
 
 ## Cross-cutting rules
 

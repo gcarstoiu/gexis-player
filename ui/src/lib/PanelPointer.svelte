@@ -22,6 +22,7 @@
   import { onDestroy } from 'svelte';
   import { settingValues } from './settings.js';
   import { openTouchpad, takesText, fieldOf } from './touchpad.js';
+  import { panel, reportTouch } from './state.js';
 
   const HIDE_MS = 5000;
   //: Pinch: from the panel as it is to three times as large (ADR-0121 §2).
@@ -59,6 +60,8 @@
   //: as square, and a ring round it would cover the screen.
   const ROUND = 1.6;
   const RING_MAX = 96;
+  //: How far outside the element its outline is drawn.
+  const RING_GAP = 6;
 
   /** The pointer's shape for what lies under it, what it is over, and
    *  whether that takes text - asked on every move and four times a second
@@ -78,18 +81,114 @@
     const pressable = !slider && target?.closest(PRESSABLE);
     kind = performance.now() - scrolledAt < 400 ? (scrolledX ? 'scrollx' : 'scroll') : slider ? 'slide' : pressable ? 'press' : 'plain';
     ring = null;
-    if (tapped) return;
-    // A ring for a button that is only an icon: a tab or a row with words in
-    // it is not the design's round control, however square (George,
-    // 2026-10-05: "the track entry in now playing shouldn't get the
-    // highlight").
-    if (kind === 'press' && !arrow && !words(pressable)) {
+    // **An underline instead, where asked** (George, 2026-10-14: Now
+    // Playing's tabs "should have a simpler highlight when hovering ... just
+    // one underline, similar to the one that is currently selected"). An
+    // element marked `data-pointer="underline"` gets `data-pointer-over`
+    // while the pointer is on it, and draws its own underline - CSS's
+    // :hover never fires for this pointer, its hover being made up.
+    const underlined = kind === 'press' ? pressable.closest('[data-pointer="underline"]') : null;
+    mark(underlined);
+    if (tapped || underlined) return;
+    // **Everything that can be pressed is outlined, in its own shape**
+    // (George, 2026-10-14: "The hover effect on square items should be
+    // removed or we can have a square outlining effect to be consistent.
+    // Also all items that can be clicked should come with some effect").
+    // The ring was a circle, drawn only round small icon buttons - a rounded
+    // square got a circle, and a row or a card nothing. Now it follows the
+    // element's box and corners; the light fill only on a small control, so
+    // a row is outlined, not washed over. Not round something that covers
+    // most of the screen.
+    // **Not round a row whose actions are showing** (George, 2026-10-14:
+    // "Once the reveal is shown then the highlight for the corresponding
+    // track should not be shown anymore"): its Play, Queue and Add are what
+    // is pressed next, and each has its own outline.
+    if (kind === 'press' && !revealed(pressable)) {
       const r = pressable.getBoundingClientRect();
-      const long = Math.max(r.width, r.height);
-      if (long / Math.max(1, Math.min(r.width, r.height)) < ROUND && long <= RING_MAX) {
-        ring = { cx: r.left + r.width / 2, cy: r.top + r.height / 2, size: long + 16 };
+      if (r.width * r.height < window.innerWidth * window.innerHeight * 0.5) {
+        const long = Math.max(r.width, r.height);
+        const small = !words(pressable) && long / Math.max(1, Math.min(r.width, r.height)) < ROUND && long <= RING_MAX;
+        const radius = parseFloat(getComputedStyle(pressable).borderTopLeftRadius) || 0;
+        const box = { x: r.left - RING_GAP, y: r.top - RING_GAP, w: r.width + 2 * RING_GAP, h: r.height + 2 * RING_GAP };
+        const seen = visiblePart(pressable, r);
+        ring = { ...box, radius: radius + RING_GAP, small,
+                 clip: `inset(${Math.max(0, seen.top - box.y)}px ${Math.max(0, box.x + box.w - seen.right)}px `
+                     + `${Math.max(0, box.y + box.h - seen.bottom)}px ${Math.max(0, seen.left - box.x)}px)` };
       }
     }
+  }
+
+  let marked = null;
+  function mark(el) {
+    if (marked === el) return;
+    marked?.removeAttribute('data-pointer-over');
+    marked = el;
+    el?.setAttribute('data-pointer-over', '');
+  }
+
+  /** A row with its actions revealed: they sit inside it or beside it. */
+  function revealed(el) {
+    // An action is never the row: Play's neighbour is Queue, another action,
+    // which took Play's and Queue's outlines away (George, 2026-10-14: "not
+    // all buttons there have the highlight on hover").
+    if (el.classList.contains('act') || el.closest('.row__actions, .acts')) return false;
+    return !!(el.querySelector('.act') || el.nextElementSibling?.querySelector?.('.act')
+              || el.nextElementSibling?.classList.contains('act'));
+  }
+
+  /** **The part of `el` that can be seen** (George, 2026-10-14: "The hover
+   *  highlight should display partially when the element itself is hidden
+   *  behind something else like the ministrip"): its box cut by every
+   *  scrolling or clipping container it is in, then by whatever covers it
+   *  above and below the pointer - found by asking what lies there, between
+   *  the pointer (where it shows) and the edge. Edges not cut are unbounded,
+   *  so the outline keeps its gap round them. */
+  function visiblePart(el, r) {
+    const seen = { left: -Infinity, top: -Infinity, right: Infinity, bottom: Infinity };
+    for (let up = el.parentElement; up && up !== document.body; up = up.parentElement) {
+      const style = getComputedStyle(up);
+      const clipsX = style.overflowX !== 'visible';
+      const clipsY = style.overflowY !== 'visible';
+      if (!clipsX && !clipsY) continue;
+      // Only an edge that hides part of the element: a list's edge the
+      // outline's gap merely crosses leaves the outline whole.
+      const box = up.getBoundingClientRect();
+      if (clipsX) {
+        if (box.left > r.left + 0.5) seen.left = Math.max(seen.left, box.left);
+        if (box.right < r.right - 0.5) seen.right = Math.min(seen.right, box.right);
+      }
+      if (clipsY) {
+        if (box.top > r.top + 0.5) seen.top = Math.max(seen.top, box.top);
+        if (box.bottom < r.bottom - 0.5) seen.bottom = Math.min(seen.bottom, box.bottom);
+      }
+    }
+    const px = Math.round(x);
+    // What lies behind the element - the bar a round button sits on, seen
+    // past its corners - does not cover it (George, 2026-10-14: the outline
+    // round the playback bar's buttons grew as the pointer neared their
+    // middle). Only something drawn over it does, as the mini strip is.
+    const mine = (at) => {
+      const hit = document.elementFromPoint(px, at);
+      return !hit || el.contains(hit) || hit.contains(el);
+    };
+    const bottom = Math.min(r.bottom, seen.bottom, window.innerHeight) - 1;
+    if (!mine(bottom)) seen.bottom = edgeAt(mine, y, bottom);
+    const top = Math.max(r.top, seen.top, 0) + 1;
+    if (!mine(top)) seen.top = edgeAt(mine, y, top);
+    return seen;
+  }
+
+  /** Where `el` stops showing between `from` (shown) and `to` (covered):
+   *  halved down to a pixel, a few questions at most. */
+  function edgeAt(mine, from, to) {
+    let a = from;
+    let b = to;
+    while (Math.abs(b - a) > 1) {
+      const mid = Math.round((a + b) / 2);
+      if (mine(mid)) a = mid;
+      else b = mid;
+    }
+    return b > a ? b : a;
   }
 
   /** A button's own words - a count on a badge is not one (the queue
@@ -146,6 +245,7 @@
     clearInterval(lookTimer);
     lookTimer = undefined;
     hover(null);
+    mark(null);
     ring = null;
   }
 
@@ -186,6 +286,8 @@
   //: so three moves arriving together read as a glide, not a jump. A move
   //: that has stopped arriving is caught up within about four frames.
   const CATCH_UP = 0.6;
+  const LOOK_MS = 80;
+  let lookedAt = 0;
   function applyMove() {
     moveFrame = 0;
     const done = Math.abs(moved.dx) + Math.abs(moved.dy) < 1.5;
@@ -196,7 +298,16 @@
     moved = { dx: moved.dx - sx, dy: moved.dy - sy };
     if (!done) moveFrame = requestAnimationFrame(applyMove);
     wake();
-    look();
+    // **What is under the pointer, at most every LOOK_MS while it moves**,
+    // and on the frame it stops (George, 2026-10-14: the pointer "choppy
+    // sometimes"). `look` asks the page what lies there and sends hover
+    // events, layout work that every frame competed with drawing the
+    // pointer itself.
+    const now = performance.now();
+    if (done || now - lookedAt >= LOOK_MS) {
+      lookedAt = now;
+      look();
+    }
   }
 
   function receive(message) {
@@ -211,6 +322,16 @@
       case 'tap':
         wake();
         tapped = true;
+        // **Over the visualiser, a tap only takes it down** (George,
+        // 2026-10-14: "tapping on the mouse pad while in the visualization
+        // closes it but then it reopens automatically"). The meters are a
+        // window over this page: a finger's tap lands on them, but this tap
+        // was replayed in the page beneath, pressing whatever the pointer
+        // rested on - the visualiser's own button, or Next.
+        if ($panel.visualiser) {
+          reportTouch();
+          break;
+        }
         tap();
         // What the tap opened is now under the pointer.
         requestAnimationFrame(look);
@@ -415,10 +536,14 @@
   {#if ring}
     <div
       class="ring"
+      class:ring--small={ring.small}
       class:shown
       use:outside
-      style:transform={`translate(${ring.cx}px, ${ring.cy}px)`}
-      style:--size={`${ring.size}px`}
+      style:transform={`translate(${ring.x}px, ${ring.y}px)`}
+      style:--w={`${ring.w}px`}
+      style:--h={`${ring.h}px`}
+      style:--radius={`${ring.radius}px`}
+      style:clip-path={ring.clip}
       aria-hidden="true"
     ></div>
   {/if}
@@ -439,6 +564,10 @@
       <!-- The Dot set: a 28 px dot that becomes a pill over a slider (48 x 22)
            or while two fingers scroll (22 x 48), and a small dot inside a
            ring round a small round control. -->
+      <!-- Small inside any outline (George, 2026-10-14: "The cursor should
+           decrease in size when hovering over these tappable elements to be
+           consistent with the behaviour for the ones like queue or play
+           button"). -->
       <span class="dot dot--{ring ? 'ringed' : kind}">
         <svg class="dot__marks" class:on={kind === 'slide' || kind === 'scroll' || kind === 'scrollx'} viewBox="0 0 64 64" aria-hidden="true">
           {#if kind === 'scroll'}
@@ -472,6 +601,9 @@
   .ring.shown {
     opacity: 1;
     transition-duration: 0ms;
+  }
+  .ring--small {
+    background: rgba(233, 238, 242, 0.14);
   }
 
   /* The Arrow set (Claude Design, Cursors, mouse 2c). */
@@ -551,12 +683,11 @@
     opacity: 1;
   }
   .ring {
-    width: var(--size);
-    height: var(--size);
-    margin: calc(var(--size) / -2) 0 0 calc(var(--size) / -2);
-    border-radius: 999px;
+    width: var(--w);
+    height: var(--h);
+    border-radius: var(--radius);
     border: 4px solid #7ed6bc;
-    background: rgba(233, 238, 242, 0.14);
+    background: transparent;
     box-sizing: border-box;
   }
 </style>
