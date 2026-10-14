@@ -455,16 +455,25 @@ sequenceDiagram
 - **Reconnect**: `lib/touchpad.js` opens a fresh socket on
   `visibilitychange`, `pageshow` and `online`. A phone browser that was in
   the background can lose its socket without the page ever being told.
-  **A socket that died quietly is found too** (George, 2026-10-14): every 4 s
+  **A socket that died quietly is found too** (George, 2026-10-14): every 2 s
   the page sends `{"t":"ping"}`, which the core answers to the sender alone
-  with `{"t":"pong"}` (even while the touchpad is off); nothing heard for 9 s,
-  or a gesture into a closed socket, opens a fresh one.
+  with `{"t":"pong"}` (even while the touchpad is off); nothing heard for 5 s,
+  or a gesture into a closed socket, opens a fresh one. **And at the first
+  touch after a quiet spell** (`probe`, called from the pad's
+  `pointerdown`): nothing heard for 1.5 s, a ping at once, and a fresh socket
+  if no answer comes within 0.8 s.
 - **The panel's work per move**: what lies under the pointer (`look`:
   `elementFromPoint`, hover events, the outline) is asked at most every
   80 ms while the pointer moves, and on the frame it stops, not every frame.
 - **The outline** follows whatever pressable is under the pointer, in its
   own box and corner radius, 6 px out; a light fill only on a small icon
-  button. It skips anything covering half the screen.
+  button. It skips anything covering half the screen, and a row whose
+  actions are revealed (an `.act` inside it or beside it). **Only the part
+  that shows is outlined** (`visiblePart`): cut at the edge of a clipping
+  container that hides part of the element, and at whatever covers it (the
+  mini strip), found with `elementFromPoint` halving between the pointer and
+  the element's edge; drawn as a `clip-path: inset(...)` on the outline. The
+  Dot shrinks to its small dot inside any outline.
 - **Wi-Fi power saving is off on a player**
   (`/etc/NetworkManager/conf.d/gexis-wifi-powersave.conf`, `wifi.powersave =
   2`, and `iw ... set power_save off` at install): on sofapi, round trips

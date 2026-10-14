@@ -227,3 +227,24 @@ inactive"*, and *"should open up and close by swipe up and down"*.
   touchpad.
 - **The pointer's outline** follows any pressable in its own shape (a circle
   had been drawn round small icon buttons only).
+
+## Amended 2026-10-14, later: a faster reconnect, an outline cut to what shows
+
+George, on sofapi: *"10 seconds for a reconnect? Can we trim that down?"*;
+*"The hover highlight should display partially when the element itself is
+hidden behind something else like the ministrip"*; *"Once the reveal is shown
+then the highlight for the corresponding track should not be shown
+anymore"*; *"The cursor should decrease in size when hovering over these
+tappable elements"*.
+
+- **The ping every 2 s, a fresh socket after 5 s unheard**, and **a probe at
+  the first touch after 1.5 s of quiet**: a ping at once, a fresh socket if
+  nothing answers within 0.8 s. A dead socket is found within about a second
+  of touching the pad again. Each ping is about 20 bytes each way, sent only
+  while the sheet is open (the phone) or the touchpad is on (the panel).
+- **Only the part that shows is outlined**: the outline is cut where a
+  clipping container hides the element, and where something covers it,
+  found by asking what lies between the pointer and the element's edge.
+- **A row with its actions revealed is not outlined**; its actions are.
+- **The Dot shrinks to its small dot inside any outline**, not only round a
+  small round button.

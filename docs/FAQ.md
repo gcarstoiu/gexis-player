@@ -367,8 +367,8 @@ streaming app.
 Open the volume sheet on the phone - tap it, or swipe it up; swipe down to
 close it. One finger moves a pointer on the screen, a tap presses, two
 fingers scroll, and a pinch zooms. What the pointer is over is outlined when
-it can be pressed. If the touchpad stops answering, it reconnects by itself
-within about ten seconds. The lines along
+it can be pressed. If the touchpad stops answering, it reconnects by itself:
+within about a second of touching it again, or about five seconds on its own. The lines along
 the right and bottom edges scroll with one finger. Tapping a text field on
 the screen brings up the phone's keyboard. A touch outside the sheet closes it.
 
