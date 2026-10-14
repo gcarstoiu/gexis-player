@@ -59,6 +59,11 @@
     //: the panel holds no LMS ids and the artist list it already has can
     //: resolve one.
     openArtistNamed = null,
+    //: **An album to open on arrival, by its title and artist** (George,
+    //: 2026-10-14: the release title in Now Playing opens the album page).
+    //: Names, for the same reason as `openArtistNamed`: the panel holds no
+    //: LMS ids. `{title, artist, n}`, `n` so the same album asked twice opens.
+    openAlbumNamed = null,
   } = $props();
 
   // Where in the library the panel is; [] is the root. Each entry is a
@@ -627,6 +632,40 @@
     const name = openArtistNamed;
     if (name) untrack(() => openArtistByName(name));
   });
+
+  /** Opens an album by its title and artist, if this library has it: the
+   *  artist by name, then the album of that title among theirs. Back goes to
+   *  the artist. */
+  async function openAlbumByName(title, artistName) {
+    const wantedArtist = foldedName(artistName);
+    const wantedTitle = foldedName(title);
+    if (!wantedArtist || !wantedTitle) return;
+    resolvingArtist = true;
+    try {
+      const all = await artistsCached();
+      artists = all;
+      const match = all.find((a) => foldedName(a.name) === wantedArtist);
+      if (!match) return;
+      const albums = await loadArtistAlbums(match.id);
+      const found = albums.find((a) => foldedName(a.title) === wantedTitle);
+      if (found) await openAlbum(found.id, found.title, artistPath(match.name));
+      else await openArtist(match);
+    } catch (err) {
+      console.info('library:', err.message);
+    } finally {
+      resolvingArtist = false;
+    }
+  }
+
+  $effect(() => {
+    const wanted = openAlbumNamed;
+    if (wanted?.title) untrack(() => openAlbumByName(wanted.title, wanted.artist));
+  });
+
+  //: The library's artists by folded name: a similar artist is a link only
+  //: when it is one of these (ADR-0079: a control that does nothing reads
+  //: as a fault).
+  const knownArtists = $derived(new Set((artists ?? []).map((a) => foldedName(a.name))));
 
   //: Radio categories are read by colour and silhouette before they are read
   //: by word (design/screens.md §8), so each carries its own shape and tint.
@@ -1980,7 +2019,14 @@
             {:else}
               <div class="artistmeta__similar">
                 {#each artistInfo.found.similar as name (name)}
-                  <span class="artistmeta__chip">{name}</span>
+                  <!-- George, 2026-10-14: an artist named here opens that
+                       artist's page, where the library has them. -->
+                  {#if knownArtists.has(foldedName(name))}
+                    <button type="button" class="artistmeta__chip artistmeta__chip--link"
+                      onclick={() => openArtistByName(name)}>{name}</button>
+                  {:else}
+                    <span class="artistmeta__chip">{name}</span>
+                  {/if}
                 {/each}
               </div>
             {/if}
@@ -3484,6 +3530,11 @@
     color: var(--accent-bluetooth);
     white-space: nowrap;
   }
+  .artistmeta__chip--link {
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .artistmeta__chip--link:active { transform: scale(0.97); }
 
   /* ADR-0109: the photo is 262 x H / 800, and the column is the photo's
      width - the design grew the photo alone, into the gap (handoff review). */

@@ -28,8 +28,19 @@
   // replaced by settings button... Tapping in the artist does nothing."* An
   // absent `onartist` is what makes the line inert, so nothing here can offer
   // a page that is not reachable.
-  let { active, metadata, volume, controls = [], available = [], shuffle = null, repeat = null, queue = null, onvolume, onvisualisation, onhome, onartist, onminimise = null, rootless = false } = $props();
+  let { active, metadata, volume, controls = [], available = [], shuffle = null, repeat = null, queue = null, onvolume, onvisualisation, onhome, onartist,
+    //: George, 2026-10-14: the release title opens the album page.
+    onalbum, onminimise = null, rootless = false } = $props();
   const artistLinked = $derived(!!onartist);
+  //: The library's artists by folded name: a similar artist is a link only
+  //: when the library has them (ADR-0079).
+  let libraryNames = $state(new Set());
+  $effect(() => {
+    if (!artistLinked) return;
+    artistsCached()
+      .then((all) => (libraryNames = new Set(all.map((a) => foldedName(a.name)))))
+      .catch(() => {});
+  });
 
   const transport = $derived(metadata?.transport ?? null);
 
@@ -385,7 +396,13 @@
                   <span class="artist" class:is-empty={!metadata?.artist}
                     >{metadata?.artist ?? ''}</span>
                 {/if}
-                <span class="album" class:is-empty={!metadata?.album}>{metadata?.album ?? ''}</span>
+                {#if onalbum && metadata?.album}
+                  <!-- George, 2026-10-14: the release title opens its album. -->
+                  <button class="album album--link" type="button"
+                    onclick={() => onalbum(metadata.album, metadata.artist)}>{metadata.album}</button>
+                {:else}
+                  <span class="album" class:is-empty={!metadata?.album}>{metadata?.album ?? ''}</span>
+                {/if}
                 <!-- The release year. LMS first: it carries one per track
                      (songinfo tag `y`) and it is the library's own record.
                      Enrichment's `released` is the fallback - it describes
@@ -477,7 +494,12 @@
                   {#if smallArtwork}<img src={smallArtwork} alt="" />{/if}
                 </span>
                 <span class="reltab__titles">
-                  <span class="reltab__name">{metadata?.album ?? 'No album'}</span>
+                  {#if onalbum && metadata?.album}
+                    <button class="reltab__name reltab__name--link" type="button"
+                      onclick={() => onalbum(metadata.album, metadata.artist)}>{metadata.album}</button>
+                  {:else}
+                    <span class="reltab__name">{metadata?.album ?? 'No album'}</span>
+                  {/if}
                   <span class="reltab__by">
                     {metadata?.artist ?? ''}{info?.released ? `  ·  ${info.released}` : ''}
                   </span>
@@ -540,7 +562,13 @@
                   {/if}
                 </span>
                 <span class="artisttab__titles">
-                  <span class="artisttab__name">{metadata?.artist ?? ''}</span>
+                  {#if artistLinked && metadata?.artist}
+                    <!-- George, 2026-10-14: the name opens the artist page. -->
+                    <button class="artisttab__name artisttab__name--link" type="button"
+                      onclick={() => onartist(metadata.artist)}>{metadata.artist}</button>
+                  {:else}
+                    <span class="artisttab__name">{metadata?.artist ?? ''}</span>
+                  {/if}
                   {#if genres.length}
                     <span class="artisttab__tags">
                       {#each genres as g, i (g)}
@@ -596,7 +624,14 @@
                 </div>
                 <div class="similar">
                   {#each artistInfo.enrichment.similar as name (name)}
-                    <span class="similar__chip">{name}</span>
+                    {#if artistLinked && libraryNames.has(foldedName(name))}
+                      <!-- George, 2026-10-14: an artist named here opens that
+                           artist's page, where the library has them. -->
+                      <button class="similar__chip similar__chip--link" type="button"
+                        onclick={() => onartist(name)}>{name}</button>
+                    {:else}
+                      <span class="similar__chip">{name}</span>
+                    {/if}
                   {/each}
                 </div>
               {/if}
@@ -1765,5 +1800,30 @@
     border-right: 3px solid var(--ink);
     border-bottom: 3px solid var(--ink);
     transform: translateY(-4px) rotate(45deg);
+  }
+  /* George, 2026-10-14: names and titles that open their page. They read
+     as the words they were, with a press. */
+  .album--link,
+  .reltab__name--link,
+  .artisttab__name--link {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    text-align: left;
+    cursor: pointer;
+  }
+  /* A chip keeps its own look (.similar__chip); only what a button lacks. */
+  .similar__chip--link {
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .album--link:active,
+  .reltab__name--link:active,
+  .artisttab__name--link:active,
+  .similar__chip--link:active {
+    opacity: 0.7;
   }
 </style>

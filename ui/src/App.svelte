@@ -362,11 +362,21 @@
   const libraryShown = $derived(libraryOpen && !settingsOpen && !waitingOpen);
   function openLibraryHome() {
     libraryArtist = null;
+    libraryAlbum = null;
     libraryHome += 1;
     libraryRequested = true;
   }
   function openLibraryArtist(name) {
     libraryArtist = name;
+    libraryAlbum = null;
+    libraryHome += 1;
+    libraryRequested = true;
+  }
+  //: George, 2026-10-14: the release title in Now Playing opens its album.
+  let libraryAlbum = $state(null);
+  function openLibraryAlbum(title, artist) {
+    libraryArtist = null;
+    libraryAlbum = { title, artist, n: (libraryAlbum?.n ?? 0) + 1 };
     libraryHome += 1;
     libraryRequested = true;
   }
@@ -676,13 +686,15 @@
           rootless={lmsOff}
           onhome={lmsOff ? openSettings : openLibraryHome}
           onminimise={lmsOff ? null : minimise}
-          onartist={lmsOff ? undefined : openLibraryArtist} />
+          onartist={lmsOff ? undefined : openLibraryArtist}
+          onalbum={lmsOff ? undefined : openLibraryAlbum} />
       {:else}
       <NowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} queue={$queue} onvolume={openVolume} onvisualisation={showVisualisation}
         rootless={lmsOff}
         onhome={lmsOff ? openSettings : openLibraryHome}
         onminimise={lmsOff ? null : minimise}
-        onartist={lmsOff ? undefined : openLibraryArtist} />
+        onartist={lmsOff ? undefined : openLibraryArtist}
+          onalbum={lmsOff ? undefined : openLibraryAlbum} />
       {/if}
     </div>
   {/if}
@@ -701,6 +713,7 @@
         controls={$active ? ($capabilities[$active]?.controls ?? []) : []}
         availability={$availability}
         openArtistNamed={libraryArtist}
+        openAlbumNamed={libraryAlbum}
         onclose={() => { libraryRequested = false; libraryArtist = null; }}
         onsettings={openSettings}
         onvolume={openVolume}
@@ -715,6 +728,7 @@
         controls={$active ? ($capabilities[$active]?.controls ?? []) : []}
         availability={$availability}
         openArtistNamed={libraryArtist}
+        openAlbumNamed={libraryAlbum}
         onclose={() => { libraryRequested = false; libraryArtist = null; }}
         onsettings={openSettings}
         onvolume={openVolume}
