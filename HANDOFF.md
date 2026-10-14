@@ -31,7 +31,12 @@ pages; the touchpad pings (2 s, fresh socket after 5 s) and probes at the
 first touch after a quiet spell; Wi-Fi power saving off on a player; the
 sheet swipes open and closed; artist photos kept across a Lyrion rescan
 (revalidated by name - the first rescan after the update still drops them
-once). **George is trying these on sofapi.** **Players are not
+once); later the same day: the outline cut only by what covers an element, a
+touchpad tap over the visualiser only dismisses it, the TV's mode kept after
+it is turned off and on, artists and *Play playlist* on app playlists, a
+stream's own artwork in the queue, Popular reveals, teal selection, tab
+underline, search opens on its field, and **Text size** (ADR-0148). **George
+checked them on sofapi (g46, done 2026-10-14).** **Players are not
 updated to a release by Claude** (George, 2026-10-13).
 
 **From the power-cut test, in 0.13.0:** George's power cut on the bar (g34,
@@ -64,8 +69,7 @@ from now on have no passwordless sudo: provision test cards with
 - On sofapi: the meters falling with the volume, and *Visualiser tweaks* →
   *Needles follow the volume* and *Gain* (ADR-0146).
 - Then: 1.0.0 cut from this code as the first Stable release.
-- The fixes since 0.14.0, on sofapi (g46).
-- Done 2026-10-14: Lyrion synced playback (7e/g09, passed); the bar's supply
+- Done 2026-10-14: the fixes since 0.14.0 on sofapi (g46); Lyrion synced playback (7e/g09, passed); the bar's supply
   (g12: the undervoltage was the USB extension cord, 0x0 plugged in
   directly).
 
