@@ -220,6 +220,12 @@ def at_start(seen: screen_detect.Seen | None = None, *, headless: bool | None = 
         return "pending"
     seen = screen_detect.seen() if seen is None else seen
     headless = _headless() if headless is None else headless
+    # **A port chosen is the screen whatever it says it is** (ADR-0147):
+    # a TV through a receiver introduces itself differently as the receiver
+    # wakes, which would read as a different screen attached.
+    current = screen_apply.read_state(state).get("current") or {}
+    if current.get("chosen") and seen.connector == current.get("connector"):
+        return "same"
     q = question(seen, headless=headless, path=path)
     if q is None:
         return moved(seen, headless=headless, files=files)
@@ -273,6 +279,45 @@ def moved(seen: screen_detect.Seen, *, headless: bool, files: dict | None = None
     return "restart" if restart else "switched"
 
 
+#: **Where the panels' touch is ignored** (ADR-0147 D5 as amended): a udev
+#: rule in /run, so it lasts one boot and is written afresh at each. labwc's
+#: own per-device switch (`<libinput><device category=...>`) left the 10.1"
+#: panel's touch working on sofapi, 2026-10-13; `LIBINPUT_IGNORE_DEVICE` is
+#: libinput's own: the device is not opened at all.
+TOUCH_RULES = Path("/run/udev/rules.d/90-gexis-panel-touch-off.rules")
+
+
+def touch_rules(state: Path | None = None, rules: Path = TOUCH_RULES, run=None) -> list[str]:
+    """While the screen in use has no touch of its own (a TV), every known
+    touch panel's input is ignored; otherwise none is. Returns the USB ids
+    ignored. `run` triggers udev (None: subprocess.run)."""
+    from . import screen_apply, screen_detect
+    current = screen_apply.read_state(state or screen_apply.STATE).get("current") or {}
+    screen_id = current.get("screen")
+    ids: list[str] = []
+    if screen_id and not screen_detect.has_touch(screen_id):
+        ids = sorted({fp.usb for fp in screen_detect.FINGERPRINTS.values() if fp.usb})
+    had = rules.exists()
+    if ids:
+        rules.parent.mkdir(parents=True, exist_ok=True)
+        lines = ["# Written at each start by gexis-screen-check (ADR-0147): the screen in use has",
+                 "# no touch, so the touch panels' input is ignored."]
+        for usb in ids:
+            vendor, product = usb.split(":")
+            lines.append(f'ACTION=="add|change", SUBSYSTEM=="input", ATTRS{{idVendor}}=="{vendor}", '
+                         f'ATTRS{{idProduct}}=="{product}", ENV{{LIBINPUT_IGNORE_DEVICE}}="1"')
+        rules.write_text("\n".join(lines) + "\n")
+    elif had:
+        rules.unlink()
+    if ids or had:
+        import subprocess
+        run = run or subprocess.run
+        run(["udevadm", "control", "--reload"], check=False)
+        run(["udevadm", "trigger", "--action=change", "--subsystem-match=input"], check=False)
+        logger.info("screen: touch panels' input %s", f"ignored ({', '.join(ids)})" if ids else "used again")
+    return ids
+
+
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     try:
@@ -281,6 +326,10 @@ def main() -> int:
         logger.exception("screen: the attached screen was not compared")
         return 0
     print(f"screen-check: {outcome}", flush=True)
+    try:
+        touch_rules()
+    except Exception:  # noqa: BLE001 - touch as it was is not worth a boot
+        logger.exception("screen: the panels' touch rules were not written")
     if outcome == "restart":
         import subprocess
         subprocess.run(["systemctl", "--no-block", "reboot"], check=False)

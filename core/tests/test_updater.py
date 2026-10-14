@@ -1152,3 +1152,44 @@ def test_the_repair_finishes_the_whole_release_not_only_dpkg(up, monkeypatch):
     assert up.finish_cut_short() is True
     assert ["--allow-change-held-packages", "dist-upgrade"] in applied
     assert ["--allow-change-held-packages", "install", "gexis-player=0.12.0"] in applied
+
+
+def test_the_updater_and_the_core_name_the_same_backup_marker(up):
+    from gexis_core import backups
+    assert up.BACKUP_FAILED == backups.FAILED_MARK and up.BACKUPS == backups.DEFAULT_DIR
+
+
+def test_a_backup_that_failed_stops_the_update_at_once(up, monkeypatch, tmp_path):
+    """sofapi, 2026-10-13: two minutes on "backing up" for a backup that had
+    failed in a second."""
+    shares = tmp_path / "backups"
+    shares.mkdir()
+    monkeypatch.setattr(up, "BACKUPS", shares)
+
+    def core_fails(req, timeout=0):
+        (shares / up.BACKUP_FAILED).write_text("No such file or directory\n")
+        return io.BytesIO(b"{}")
+
+    monkeypatch.setattr(up.urllib.request, "urlopen", core_fails)
+    slept = []
+    monkeypatch.setattr(up.time, "sleep", lambda s: slept.append(s))
+    with pytest.raises(up.Stop, match="^The backup before the update did not work"):
+        up.back_up()
+    assert slept == [], "stopped on the first look, not after the wait"
+
+
+def test_an_old_failure_does_not_stop_a_new_backup(up, monkeypatch, tmp_path):
+    import os as _os
+    shares = tmp_path / "backups"
+    shares.mkdir()
+    old = shares / up.BACKUP_FAILED
+    old.write_text("an earlier one\n")
+    _os.utime(old, (1, 1))
+    monkeypatch.setattr(up, "BACKUPS", shares)
+
+    def core_writes(req, timeout=0):
+        (shares / "gexis-x-before-update-1.tgz").write_bytes(b"x")
+        return io.BytesIO(b"{}")
+
+    monkeypatch.setattr(up.urllib.request, "urlopen", core_writes)
+    assert up.back_up() == "gexis-x-before-update-1.tgz"

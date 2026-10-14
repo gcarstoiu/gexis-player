@@ -1706,6 +1706,32 @@
                     </span>
                   {/if}
                 </div>
+              {:else if (r.key === 'screen_port' || r.key === 'screen_port_info') && rowOf('screen')}
+                <!-- Folded into the Screen tile, drawn at Attached screen's place. -->
+              {:else if r.key === 'screen' && (rowOf('screen_port') || rowOf('screen_port_info'))}
+                <!-- **One Screen tile** (George, 2026-10-13: "collapse the
+                     attached screen and screen port into 1 tile which would
+                     show the current display. Tapping it opens the 2 options.
+                     Add a change button to the tile in case the user wants
+                     to select from the list of displays."). The display in
+                     use and its port; a tap chooses between the ports, where
+                     there are two; Change picks the model from the list. -->
+                {@const port = rowOf('screen_port') ?? rowOf('screen_port_info')}
+                {@const choosable = port.key === 'screen_port'}
+                {@const shown = choosable
+                  ? [port.optionNotes?.[port.value], port.value].filter(Boolean).join(' · ')
+                  : port.value}
+                <div class="row row--tile">
+                  <span class="row__body">
+                    <button type="button" class="row__text screentile__open" disabled={!choosable}
+                      onclick={() => choosable && openSheet(port)}>
+                      <span class="row__label"><span class="row__name">Screen</span></span>
+                      <span class="row__value row__value--tile">{shown || r.value || '—'}</span>
+                      <span class="row__note">{choosable ? 'Tap to choose which HDMI port is the screen.' : (r.note ?? '')}</span>
+                    </button>
+                    <button type="button" class="tile__btn" onclick={() => openSheet(r)}>Change</button>
+                  </span>
+                </div>
               {:else if r.key === 'software_update'}
                 <!-- ADR-0110 §2 as amended (George, 2026-10-01): the
                      Software update tile - what the updater found and when,
@@ -3039,6 +3065,18 @@
      that Hide put away (George, 2026-10-02: "how do I see it again?"). */
   .tile__btn--busy { opacity: 0.6; }
   .tile__notes { display: block; margin-top: 8px; color: var(--ink-body); }
+  .screentile__open {
+    flex: 1;
+    min-width: 0;
+    background: none;
+    border: none;
+    padding: 0;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+  .screentile__open:disabled { cursor: default; opacity: 1; }
   .row--readonly:active { transform: none; }
 
   .chev {

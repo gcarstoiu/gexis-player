@@ -47,6 +47,8 @@ KEY_ASC = Path("/usr/share/gexis/keys/gexis-release.asc")
 KEY_GPG = Path("/usr/share/gexis/keys/gexis-release.gpg")
 SETTINGS_DB = Path("/var/lib/gexis-core/settings.db")
 BACKUPS = Path("/var/lib/gexis-core/backups")
+#: `backups.FAILED_MARK`: the core's word that an update's backup failed.
+BACKUP_FAILED = ".before-update-failed"
 CORE = "http://127.0.0.1:8090"
 REBOOT_MARKER = Path("/var/lib/gexis/reboot-required")
 #: Units an update must not restart: the updater's own (restarting the unit
@@ -863,6 +865,8 @@ def back_up() -> str:
     # `before=update` (George, 2026-10-12): the core names it as an
     # update's and keeps the newest three of those; a backup taken by hand
     # is never deleted.
+    failed = BACKUPS / BACKUP_FAILED
+    asked = time.time()
     req = urllib.request.Request(f"{CORE}/settings/backup?before=update", method="POST")
     try:
         urllib.request.urlopen(req, timeout=20).read()
@@ -873,6 +877,15 @@ def back_up() -> str:
         new = {p.name for p in BACKUPS.glob("*.tgz")} - before
         if new:
             return sorted(new)[-1]
+        # **A backup that failed is said at once** (sofapi, 2026-10-13: two
+        # minutes on "backing up" for one that had failed in a second).
+        try:
+            if failed.stat().st_mtime >= asked - 1:
+                print(f"the backup failed: {failed.read_text().strip()}", flush=True)
+                raise Stop("The backup before the update did not work, so nothing was installed. "
+                           "Try again; a problem report says more.")
+        except FileNotFoundError:
+            pass
         time.sleep(2)
     raise Stop("no backup appeared; not updating without one")
 

@@ -74,3 +74,73 @@ Tests: `core/tests/test_tv_screen.py`.
 
 When written: everything on a device - the LG TV on sofapi's HDMI 2 at
 1080p, Keep from the phone, the panel's touch off, standby on the TV.
+
+## Amended 2026-10-13: after George's test on sofapi
+
+George, with the LG TV on HDMI 2 behind the Sony receiver: the picture
+*"not that good - text is choppy and not the entire image is shown"*; *"If I
+put the TV on standby the music stopped"*; the panel *"had its backlight on
+and its touch resulted in actual touches"*; at the restart *"some smaller
+black screen with what looked like command lines overlapped part of the
+logo"*.
+
+Found on the device:
+- **The TV was set up as `other-640x480`**: the screen applied was read from
+  the EDID's first timing, which the receiver gave as 640 x 480 at that
+  moment (1280 x 720 later; it also names itself *SONY AVSYSTEM* or *LG TV*
+  as it wakes). Page scale 0.5.
+- **The music did not stop**: Lyrion played on. The sound output was HDMI 2
+  through the receiver, and display standby turned that HDMI output off -
+  HDMI's sound rides on its picture.
+- **labwc's per-device switch did not hold**: the panel's touch device was
+  named in `<libinput><device category="WaveShare  WaveShare ">` with
+  `sendEventsMode no`, the name matched, and touches still arrived.
+
+Decided (George, the same day, on the options):
+- **D4 as amended — 1080p from the TV's own list**: `screen_detect.tv_mode`
+  takes 1920 x 1080 from the kernel's mode list (`card*-HDMI-A-n/modes`), else
+  the largest 16:9 mode below it, and the screen is `other-WxH-capped`, whose
+  kernel `video=` holds the mode whatever a receiver says at a start.
+- **Standby on a port carrying the sound: black, sound on**
+  (`standby.carries_sound`): the output stays on, the panel's black cover is
+  the standby. A port without the sound is turned off as before.
+- **D5 as amended — the panel switched off**: screen.env's
+  `GEXIS_OUTPUTS_OFF` names the ports with a known touch panel while the
+  screen has no touch; the kiosk turns them off with `wlr-randr` (the
+  backlight goes dark). Its touch is ignored by a udev rule the boot's screen
+  check writes in `/run/udev/rules.d` (`LIBINPUT_IGNORE_DEVICE`, libinput's
+  own); the labwc block is gone.
+
+And, found with it: **a chosen port is not asked about at the start**
+(`screen_watch.at_start`), since a receiver renaming the TV read as a
+different screen attached.
+
+**Open:** the console text over the boot logo on the TV - looked at once
+the TV runs at 1080p; possibly the kernel's console drawn at another
+screen's size. And whether the TV crops the edges (overscan) at 1080p: TVs
+do unless set to *Just Scan* / *Original*.
+
+## Amended 2026-10-13, second test: the mode held, the boot gap, one tile
+
+George, the second try: *"everything was extremely zoomed in ... The Logo was
+displayed correctly though during boot on the large TV"*, a photo of the
+panel's boot logo overlapped, and *"let's collapse the attached screen and
+screen port into 1 tile which would show the current display. Tapping it
+opens the 2 options. Add a change button to the tile"*.
+
+- **The zoom:** the kernel's `video=` held 1920 x 1080 for the boot (the
+  logo was right), then labwc set the receiver's preferred 1280 x 720 while
+  the page was scaled for 1080p (`wlr-randr`: 1280x720 *preferred, current*).
+  screen.env's `GEXIS_SCREEN_MODE` names a TV's mode and the kiosk sets it
+  with `wlr-randr --mode`. Listed panels and bars keep the compositor's
+  choice, which is their own mode.
+- **The overlapped logo:** fbdev is one buffer (`fb0`), sized for one screen;
+  each screen shows its own top-left corner of it. `gexis-splash-fb` wrote
+  the still for the TV's 1920 x 1080 and the 1280 x 800 panel showed a cut-off
+  logo beside a block of another colour; at the first try the buffer was the
+  panel's and the TV showed a small console in its corner. With two screens
+  connected, the gap after plymouth is now black on both; plymouth draws each
+  screen right before it.
+- **One Screen tile:** *Attached screen* and *Screen port* are one tile
+  showing the display in use and its port; a tap chooses between the ports;
+  *Change* picks the model from the list.

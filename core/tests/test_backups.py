@@ -688,3 +688,36 @@ def test_settings_says_which_backups_an_update_made(tmp_path):
     metas = {a.name: a.to_item()["meta"] for a in backups.available(out)}
     assert metas["gexis-den.before-update-20261001-101500.tgz"].endswith("· before an update")
     assert "update" not in metas["gexis-den-20261002-101500.tgz"]
+
+
+def test_a_file_that_goes_while_the_backup_runs_is_left_out_not_the_backup(tmp_path, monkeypatch):
+    """sofapi, 2026-10-13: an uploaded plugin's SQLite `-shm` file was listed,
+    then deleted by its program before it was read, and the whole update
+    backup failed with "No such file or directory"."""
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    data = root / "var/lib/private/gexis-uploaded/radiofoo/data"
+    data.mkdir()
+    (data / "settings.db-shm").write_bytes(b"shm")
+    (data / "prefs.json").write_text("{}")
+    real = tarfile.TarFile.gettarinfo
+
+    def gone(self, name=None, arcname=None, fileobj=None):
+        if str(name).endswith("settings.db-shm"):
+            raise FileNotFoundError(2, "No such file or directory", str(name))
+        return real(self, name, arcname, fileobj)
+
+    monkeypatch.setattr(tarfile.TarFile, "gettarinfo", gone)
+    name = backups.create("gexis", out, root)
+    with tarfile.open(out / name) as archive:
+        held = set(archive.getnames())
+    assert "var/lib/private/gexis-uploaded/radiofoo/data/prefs.json" in held
+    assert not any(n.endswith("settings.db-shm") for n in held)
+    assert "var/lib/gexis-core/settings.db" in held, "the rest is all there"
+
+
+def test_an_update_backup_that_failed_leaves_its_reason_and_a_new_one_clears_it(tmp_path):
+    backups.update_backup_failed("disk full", tmp_path)
+    assert (tmp_path / backups.FAILED_MARK).read_text() == "disk full\n"
+    assert backups.available(tmp_path) == [], "never listed as a backup"
+    backups.update_backup_failed(None, tmp_path)
+    assert not (tmp_path / backups.FAILED_MARK).exists()
