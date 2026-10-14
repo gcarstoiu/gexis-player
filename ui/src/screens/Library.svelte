@@ -2356,14 +2356,19 @@
     grid-auto-columns: 200px;
     overflow-x: auto;
     overscroll-behavior-x: contain;
+    /* **No snap, and sideways only** (George, 2026-10-14: this row would not
+       scroll while New music did). The phone touchpad scrolls by moving
+       `scrollLeft` a few pixels a frame (PanelPointer's glide), and
+       Chromium re-snapped each small step back to the card it left. New
+       music has neither snap nor trouble; pan-x as New music and the bar's
+       copy have it. */
+    touch-action: pan-x;
     scrollbar-width: none;
-    scroll-snap-type: x proximity;
     mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 72px), transparent 100%);
     /* Scrolled to the end, the last card clears the fade. */
     padding-right: 72px;
   }
   .cards--more::-webkit-scrollbar { display: none; }
-  .cards--more .card { scroll-snap-align: start; }
   .card--mymusic { --card: 143, 196, 216; }
   .card--favorites { --card: 232, 160, 180; }
   .card--apps { --card: 200, 162, 216; }
