@@ -362,7 +362,15 @@
   let libraryKept = $state(false);
   $effect(() => {
     if (libraryOpen) libraryKept = true;
-    if (lmsOff) libraryKept = false;
+    if (lmsOff) {
+      libraryKept = false;
+      // The library is dropped, and mounts afresh when LMS comes back - with
+      // these as its props, so an artist or album opened from Now Playing
+      // before LMS was turned off reopened then, not the root (Finding 125
+      // #13, 2026-10-14).
+      libraryArtist = null;
+      libraryAlbum = null;
+    }
   });
   const libraryShown = $derived(libraryOpen && !settingsOpen && !waitingOpen);
   function openLibraryHome() {
