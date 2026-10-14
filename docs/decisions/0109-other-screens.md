@@ -455,3 +455,14 @@ that record decides.
 **Unverified** on the hardware when written: `labwc -C` and the window rule on
 labwc 0.20.2, the boot picture's hand-over on HDMI-A-2, and a bar moved
 between ports.
+
+## Amended 2026-10-14: the countdown starts with the question on the screen
+
+George, moving the 11.9" bar to HDMI 2 and back: *"The keep timer was in its
+roughly last 40% when it showed up."* The countdown ran from the panel's
+first painted frame (ADR-0043's report), and the question was seen about 70 s
+after it on that start - why is not in the logs. **The countdown now starts
+when the panel has drawn the question** (George: *"The countdown should start
+with the keep screen displayed"*): the panel reports `/screen/shown` (loopback
+only) two frames after it appears, and the core sets the deadline then. A
+question never drawn still goes back after `NEVER_DRAWN_S` from the start.
