@@ -563,7 +563,7 @@ def test_a_check_during_an_update_leaves_its_status_alone(up, monkeypatch):
     other = (up.STATE / "status.lock").open("w")
     fcntl.flock(other, fcntl.LOCK_EX)          # the install, running
     checked = []
-    monkeypatch.setattr(up, "check", lambda args: checked.append(args))
+    monkeypatch.setattr(up, "check", lambda args, **kw: checked.append(args))
     monkeypatch.setattr(sys, "argv", ["gexis-update", "check"])
     assert up.main() == 0
     assert checked == [] and json.loads((up.STATE / "status.json").read_text())["state"] == "installing"
@@ -1075,8 +1075,9 @@ def _cut_short_no_note(up, monkeypatch, busy=False):
     monkeypatch.setattr(up, "parts_of", lambda v: (["ours-x"], ["ours-x"]))
     monkeypatch.setattr(up, "apt_env", lambda repos, pins=None: ["-o", "x"])
     monkeypatch.setattr(up, "apt", lambda opts, *a, **k: subprocess.CompletedProcess(a, 0, "", ""))
-    monkeypatch.setattr(up, "heal", lambda opts: healed.append(opts))
+    monkeypatch.setattr(up, "heal", lambda opts, prefix=None: healed.append(opts))
     monkeypatch.setattr(up, "verify", lambda v: None)
+    monkeypatch.setattr(up, "stop_playback", lambda: None)
     monkeypatch.setattr(up, "channel_name", lambda given: given or "testing")
     monkeypatch.setattr(up, "run", lambda *a, check=True, **k: ran.append(list(a)) or subprocess.CompletedProcess(a, 0, "", ""))
     monkeypatch.setattr(up, "report", lambda state, **f: reports.append((state, f.get("message"))))
@@ -1193,3 +1194,56 @@ def test_an_old_failure_does_not_stop_a_new_backup(up, monkeypatch, tmp_path):
 
     monkeypatch.setattr(up.urllib.request, "urlopen", core_writes)
     assert up.back_up() == "gexis-x-before-update-1.tgz"
+
+
+# --- Finding 125 (the review since 0.10.1, 2026-10-14) ----------------------
+
+def _check_button(up, monkeypatch):
+    """`gexis-update check`, as gexis-update-checknow.service runs it."""
+    import sys
+    monkeypatch.setattr(sys, "argv", ["gexis-update", "check"])
+    return up.main()
+
+
+def test_check_for_updates_hands_a_cut_short_release_to_the_install_unit(up, monkeypatch):
+    """**Finding 125 #3.** The Settings button's unit is killed after 300 s;
+    a whole release repaired inside it - gexis-core reinstalled, the OS
+    packages dist-upgraded - was cut short again, with nothing left for the
+    boot. The check starts the install's unit, which has no limit, and
+    returns."""
+    reports, healed, ran = _cut_short_no_note(up, monkeypatch)
+    applied = []
+    monkeypatch.setattr(up, "apt", lambda opts, *a, **k: applied.append(list(a))
+                        or subprocess.CompletedProcess(a, 0, "", ""))
+    monkeypatch.setattr(up, "playing", lambda: False)
+    assert _check_button(up, monkeypatch) == 0
+    assert healed == [] and applied == [], "nothing repaired under the 300 s unit"
+    assert ["systemctl", "start", "--no-block", "gexis-update-install.service"] in ran
+    assert ["systemctl", "reboot"] not in ran
+    assert reports[-1][0] == "checking-device", "the panel's lock holds while the install unit runs"
+    assert "current" not in [state for state, _ in reports]
+
+
+def test_the_repair_of_a_cut_short_release_blocks_a_shutdown_and_stops_playback(up, monkeypatch):
+    """**Finding 125 #3.** Run where it may take as long as it needs, the
+    repair swaps packages as an install does: playback stopped first, and
+    every apt run under systemd-inhibit."""
+    reports, healed, ran = _cut_short_no_note(up, monkeypatch)
+    prefixes, order = [], []
+    monkeypatch.setattr(up, "apt", lambda opts, *a, prefix=None: prefixes.append((a[-1], prefix))
+                        or subprocess.CompletedProcess(a, 0, "", ""))
+    monkeypatch.setattr(up, "heal", lambda opts, prefix=None: healed.append(prefix) or order.append("heal"))
+    monkeypatch.setattr(up, "stop_playback", lambda: order.append("stop"))
+    assert up.finish_cut_short() is True
+    assert order == ["stop", "heal"]
+    assert healed and healed[0][:len(up.INHIBIT)] == up.INHIBIT
+    for what, prefix in prefixes:
+        if what != "update":
+            assert prefix and prefix[:len(up.INHIBIT)] == up.INHIBIT, what
+
+
+def test_the_install_unit_has_no_time_limit_and_the_button_s_has_one():
+    """What the hand-over relies on (Finding 125 #3)."""
+    units = Path(__file__).resolve().parents[1] / "updater" / "units"
+    assert "TimeoutStartSec=infinity" in (units / "gexis-update-install.service").read_text()
+    assert "TimeoutStartSec=300" in (units / "gexis-update-checknow.service").read_text()

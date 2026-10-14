@@ -379,21 +379,30 @@ def dpkg_busy() -> bool:
         os.close(fd)
 
 
-def complete_release(opts: list[str], target: str) -> None:
+def complete_release(opts: list[str], target: str, prefix: list[str] | None = None) -> None:
     """**The rest of the release, after dpkg is finished** (George's
     power-cut test on the bar, 2026-10-13). `heal` finishes what dpkg was in
     the middle of; the packages the install had not reached yet - four OS
     packages on the bar - were still the old ones, and every check after
     called the device current, because gexis-player was. The install's own
     two steps, from the same repositories, with the archives fetched as
-    needed."""
+    needed. `prefix`: systemd-inhibit, when the repair runs as an install
+    does (Finding 125 #3)."""
     for args in (["--allow-change-held-packages", "dist-upgrade"],
                  ["--allow-change-held-packages", "install", f"gexis-player={target}"]):
-        if apt(opts, *args).returncode:
+        if apt(opts, *args, prefix=prefix).returncode:
             raise Stop(CUT_SHORT)
 
 
-def finish_cut_short() -> bool:
+#: Where `finish_cut_short` repairs a release (Finding 125 #3, 2026-10-14):
+#: in this process, or - from "Check for updates", whose unit systemd stops
+#: after 300 s - in the install's unit, which has no limit.
+REPAIR_HERE = "here"
+REPAIR_HAND_OVER = "hand-over"
+INSTALL_UNIT = "gexis-update-install.service"
+
+
+def finish_cut_short(where: str = REPAIR_HERE) -> bool:
     """**An install cut short with no note left for the boot is finished
     anyway** (George's power-cut test on the bar, 2026-10-13). The note was
     an empty file; `postboot` read nothing and did nothing, and every check
@@ -405,7 +414,16 @@ def finish_cut_short() -> bool:
     It is finished from that release's own repositories and checked, and the
     device restarts so every service runs what is now installed; the boot's
     `postboot` checks it from the note left here. True when it did this
-    (the device is restarting), False when there was nothing to finish."""
+    (the device is restarting) or handed it on, False when there was
+    nothing to finish.
+
+    **Not inside "Check for updates"** (Finding 125 #3, 2026-10-14): that
+    unit is stopped after 300 s, and a repair - gexis-core reinstalled, the
+    rest of the release dist-upgraded - cut short by it was cut short again,
+    with no note for the boot. `REPAIR_HAND_OVER` starts the install's unit
+    instead, whose `install` comes back here and repairs it as an install
+    runs: playback stopped, every apt run under systemd-inhibit, the
+    panel's lock on while that unit runs."""
     if dpkg_busy():
         return False
     journal, broken = interrupted()
@@ -417,15 +435,21 @@ def finish_cut_short() -> bool:
     print(f"an install of {target} was cut short ({', '.join(broken) or 'dpkg journal'}) "
           "with no note of it; finishing it", flush=True)
     report("checking-device", release=target, message="finishing the install that was cut short")
+    if where == REPAIR_HAND_OVER:
+        if run("systemctl", "start", "--no-block", INSTALL_UNIT, check=False).returncode:
+            raise Stop(CUT_SHORT)
+        return True
+    stop_playback()
+    inhibit = INHIBIT + [f"--why=Finishing the install of {target}"]
     repos, pins = parts_of(target)
     opts = apt_env(repos)
     if apt(opts, "update").returncode:
         raise Stop(CUT_SHORT)
-    heal(opts)
+    heal(opts, prefix=inhibit)
     journal, broken = interrupted()
     if journal or broken:
         raise Stop(CUT_SHORT)
-    complete_release(opts, target)
+    complete_release(opts, target, prefix=inhibit)
     verify(target)
     about = dict(channel=channel_name(None), release=target, previous=target)
     leave_for_the_boot({"about": about, "channel": about["channel"], "target": target, "current": target,
@@ -463,14 +487,14 @@ def to_reinstall() -> list[str]:
     return names
 
 
-def _configure_all() -> None:
-    r = run("dpkg", "--configure", "-a", check=False, env=APT_ENV)
+def _configure_all(prefix: list[str] | None = None) -> None:
+    r = run(*(prefix or []), "dpkg", "--configure", "-a", check=False, env=APT_ENV)
     with (STATE / "apt.log").open("a") as log:
         log.write(f"\n=== {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} dpkg --configure -a -> {r.returncode}\n")
         log.write(r.stdout + r.stderr)
 
 
-def heal(opts: list[str]) -> None:
+def heal(opts: list[str], prefix: list[str] | None = None) -> None:
     """**An install cut short is finished before anything else** (ADR-0110
     as amended 2026-10-09). A power cut on ShelvesPi stopped a skin pack
     halfway through installing; from then on every apt run refused with
@@ -480,12 +504,12 @@ def heal(opts: list[str]) -> None:
     `dpkg --configure -a` finishes what dpkg was doing, and a package still
     broken after it - the pack had lost its file list - is installed again
     from the repositories `opts` names. Called after `apt update`, so they
-    are readable."""
+    are readable. `prefix`: systemd-inhibit, as `complete_release` takes."""
     journal, broken = interrupted()
     if not journal and not broken:
         return
     print(f"dpkg was interrupted ({', '.join(broken) or 'its journal'}); finishing it", flush=True)
-    _configure_all()
+    _configure_all(prefix)
     journal, broken = interrupted()
     if broken:
         # Those that must be installed again, then dpkg finishes the rest -
@@ -493,8 +517,8 @@ def heal(opts: list[str]) -> None:
         # broken.
         again = to_reinstall()
         if again:
-            apt(opts, "--allow-change-held-packages", "install", "--reinstall", *again)
-            _configure_all()
+            apt(opts, "--allow-change-held-packages", "install", "--reinstall", *again, prefix=prefix)
+            _configure_all(prefix)
         journal, broken = interrupted()
     # **A skin pack apt cannot reinstall is removed**, and the install that
     # follows fetches it fresh. Found on ShelvesPi itself, after the first
@@ -505,7 +529,7 @@ def heal(opts: list[str]) -> None:
     # player with it - those stop here and say so.
     packs = [name for name in broken if PACK.match(name) or name == "gexis-skins"]
     if packs:
-        r = run("dpkg", "--remove", "--force-remove-reinstreq", *packs, check=False, env=APT_ENV)
+        r = run(*(prefix or []), "dpkg", "--remove", "--force-remove-reinstreq", *packs, check=False, env=APT_ENV)
         with (STATE / "apt.log").open("a") as log:
             log.write(f"\n=== {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} "
                       f"dpkg --remove --force-remove-reinstreq {' '.join(packs)} -> {r.returncode}\n")
@@ -810,10 +834,11 @@ def release_history(target: str, current: str | None) -> list[dict] | None:
     return out or None
 
 
-def check(args) -> tuple[str, dict] | None:
+def check(args, cut_short: str = REPAIR_HERE) -> tuple[str, dict] | None:
     # Before anything is compared: a release dpkg was cut short installing
-    # reads as "current" by its version alone.
-    if finish_cut_short():
+    # reads as "current" by its version alone. `cut_short`: where it is
+    # finished (`finish_cut_short`).
+    if finish_cut_short(cut_short):
         return None
     channel = channel_name(args.channel)
     report("checking", channel=channel, message=f"reading the {channel} channel")
@@ -1407,7 +1432,9 @@ def main() -> int:
             if _status is None:
                 print("an update is running; its status is left as it is", flush=True)
                 return 0
-            check(args)
+            # Finding 125 #3: a release to repair goes to the install's
+            # unit; this one is stopped after 300 s.
+            check(args, cut_short=REPAIR_HAND_OVER)
             return 0
         _status = hold_status()
         if args.action == "scheduled":
