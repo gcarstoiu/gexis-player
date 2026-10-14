@@ -359,26 +359,35 @@ class LmsArtistInfo:
 
     def _revalidate(self, before: dict, now: dict) -> None:
         """After a rescan of the same server: the photos and slow markers of
-        ids that now name another artist, or none, are dropped; the rest
-        stay. LMS's own enrichment answers carry picture paths by id, and go
+        ids that now name another artist, or none, or that the names kept
+        from before never listed, are dropped; the rest stay. LMS's own enrichment answers carry picture paths by id, and go
         as `forget` drops them."""
         for callback in self._on_forget:
             try:
                 callback()
             except Exception as exc:
                 logger.info("artistinfo: a listener could not drop its answers (%s)", exc)
-        moved = [i for i, name in before.items() if now.get(i) != name]
-        for artist_id in moved:
+        # **Kept only what both lists name alike** (Finding 125 #21,
+        # 2026-10-14). Walking `before` alone left every id it never listed -
+        # a composer, whom the unfiltered `artists` leaves out - with its
+        # photo, whoever the id names now. So what is held is walked instead.
+        unchanged = {str(i) for i, name in before.items() if i in now and now[i] == name}
+        held = {str(i) for i in (*self._photos, *self._slow_until)}
+        if self._store is not None:
+            held.update(self._store.keys(self.NAMESPACE))
+            held.update(self._store.keys(SLOW_NAMESPACE))
+        gone = sorted(held - unchanged)
+        for artist_id in gone:
             for key in (artist_id, _int_or(artist_id)):
                 self._photos.pop(key, None)
                 self._slow_until.pop(key, None)
-        if self._store is not None and moved:
-            self._store.forget_keys(self.NAMESPACE, moved)
-            self._store.forget_keys(SLOW_NAMESPACE, moved)
+        if self._store is not None and gone:
+            self._store.forget_keys(self.NAMESPACE, gone)
+            self._store.forget_keys(SLOW_NAMESPACE, gone)
         # Counted as ids, not photos: most ids have no photo asked for yet,
         # and "8400 kept their photos" read as 8400 photos (2026-10-14).
-        logger.info("artistinfo: after the rescan %d artist id(s) unchanged, %d renumbered "
-                    "(their photos dropped)", len(before) - len(moved), len(moved))
+        logger.info("artistinfo: after the rescan %d artist id(s) unchanged; %d held for "
+                    "ids renumbered or unlisted, dropped", len(unchanged), len(gone))
 
     def _recall_scope(self) -> dict | None:
         if self._store is None:
@@ -493,3 +502,8 @@ class LmsArtistInfo:
             # A renumbered id is a different artist, so what the old one
             # cost us says nothing about the new one.
             self._store.forget_namespace(SLOW_NAMESPACE)
+            # **And whom the ids named** (Finding 125 #21): when the names
+            # cannot be fetched again just after this, the old snapshot -
+            # another server's, or an older scan's - stayed, and the next
+            # rescan was judged against it. None kept drops everything then.
+            self._store.forget_namespace(NAMES_NAMESPACE)
