@@ -1671,7 +1671,7 @@
           <span class="playall__meta">{playlistMeta}</span>
         </div>
         {#each playlist.items.slice(0, playlistReveal.shown) as entry, index (entry.id)}
-          <div class="row row--wide">
+          <div class="row row--wide" class:is-revealed={revealed === `pltrack-${index}`}>
             <button class="row__hit" type="button" onclick={() => (revealed = revealed === `pltrack-${index}` ? null : `pltrack-${index}`)}>
               <span class="row__num">{index + 1}</span>
               <span class="row__label">{entry.title}</span>
@@ -1706,7 +1706,7 @@
             >
               <div class="grid__space" style:height="{paneWindow.above}px"></div>
               {#each paneWindow.rows as entry (entry.id)}
-                <div class="row" class:is-on={chosenArtist?.id === entry.id}>
+                <div class="row" class:is-on={chosenArtist?.id === entry.id} class:is-revealed={revealed === `artist-${entry.id}`}>
                   <button class="row__hit" type="button" onclick={() => chooseArtist(entry)}>
                     <span class="row__label">{entry.name}</span>
                   </button>
@@ -1730,7 +1730,7 @@
             </div>
             <div class="pane__list" use:fromTop={chosenArtist?.id ?? where}>
               {#each browseAlbums as entry (entry.id)}
-                <div class="row" class:is-on={chosenAlbum?.id === entry.id}>
+                <div class="row" class:is-on={chosenAlbum?.id === entry.id} class:is-revealed={revealed === `album-${entry.id}`}>
                   <!-- Newest first, with the year beside the title, like
                        the discography (George, 2026-09-18). -->
                   <button class="row__hit" type="button" onclick={() => chooseAlbum(entry)}>
@@ -1760,7 +1760,7 @@
           </div>
           <div class="pane__list" use:fromTop={chosenAlbum?.id ?? where}>
             {#each browseTracks as entry (entry.id)}
-              <div class="row">
+              <div class="row" class:is-revealed={revealed === `track-${entry.id}`}>
                 <button class="row__hit" type="button" onclick={() => (revealed = revealed === `track-${entry.id}` ? null : `track-${entry.id}`)}>
                   <span class="row__num">{entry.tracknum ?? ''}</span>
                   <span class="row__label">{entry.title}</span>
@@ -1967,12 +1967,25 @@
               <span class="sect__note">On this device</span>
             </div>
             <div class="popular">
+              <!-- **Revealed first, as every other track list** (George,
+                   2026-10-14: "top tracks for an artist should not play
+                   directly, but instead also have the reveal and then
+                   play"). -->
               {#each artistInfo.popular as track, i (track.id)}
-                <button class="poprow" type="button" onclick={() => play('track', track.id, track.title)}>
-                  <span class="poprow__n">{i + 1}</span>
-                  <span class="poprow__title">{track.title}</span>
-                  {#if track.duration}<span class="poprow__dur">{mmss(track.duration)}</span>{/if}
-                </button>
+                <div class="poprow" class:is-revealed={revealed === `pop-${track.id}`}>
+                  <button class="poprow__hit" type="button" onclick={() => (revealed = revealed === `pop-${track.id}` ? null : `pop-${track.id}`)}>
+                    <span class="poprow__n">{i + 1}</span>
+                    <span class="poprow__title">{track.title}</span>
+                    {#if track.duration && revealed !== `pop-${track.id}`}<span class="poprow__dur">{mmss(track.duration)}</span>{/if}
+                  </button>
+                  {#if revealed === `pop-${track.id}`}
+                    <span class="row__actions">
+                      <button class="act act--play" type="button" aria-label="Play now" onclick={() => play('track', track.id, track.title)}><span class="act__play"></span></button>
+                      <button class="act" type="button" aria-label="Add to queue" onclick={() => act('track', track.id, 'add', track.title)}><span class="act__queue"><i></i><i></i><i></i></span></button>
+                      <button class="act" type="button" aria-label="Add to playlist" onclick={() => openPicker('track', track.id, track.title)}><span class="act__plus"></span></button>
+                    </span>
+                  {/if}
+                </div>
               {/each}
             </div>
           {/if}
@@ -2071,7 +2084,7 @@
           </div>
           <div class="tracks__list" use:fromTop={where}>
             {#each album.tracks as track (track.id)}
-              <div class="track">
+              <div class="track" class:is-revealed={revealed === `albumtrack-${track.id}`}>
                 <button class="track__hit" type="button" onclick={() => (revealed = revealed === `albumtrack-${track.id}` ? null : `albumtrack-${track.id}`)}>
                   <span class="track__num">{track.tracknum ?? ''}</span>
                   <span class="track__title">{track.title ?? ''}</span>
@@ -2987,6 +3000,19 @@
   .row.is-on {
     background: rgba(159, 180, 232, 0.14);
   }
+  /* **The row whose actions are revealed is the selection** (George,
+     2026-10-14: "everywhere we have a reveal, the first tap that shows it
+     also creates a teal background"), as Lyrion's own lists draw it. */
+  .row.is-revealed,
+  .track.is-revealed,
+  .poprow.is-revealed {
+    background: rgba(126, 214, 188, 0.16);
+  }
+  .row.is-revealed .row__label,
+  .track.is-revealed .track__title,
+  .poprow.is-revealed .poprow__title {
+    color: #7ed6bc;
+  }
   .row__hit {
     flex: 1;
     min-width: 0;
@@ -3399,7 +3425,15 @@
     border-radius: 10px;
     flex-shrink: 0;
   }
-  .poprow:active { background: var(--ink-fill-press); }
+  .poprow__hit {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .poprow__hit:active { background: var(--ink-fill-press); border-radius: 10px; }
   .poprow__n {
     font-family: var(--font-mono);
     font-size: 13px;

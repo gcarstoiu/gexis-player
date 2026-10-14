@@ -62,9 +62,16 @@
     if (selected === row.handle) onact?.(row, 'play');
     else selected = row.handle;
   }
+  //: **A search opens on its field, the phone's keyboard up** (George,
+  //: 2026-10-14: "when opening a search ... the cursor should be in the
+  //: search field and the keyboard should be shown on the phone"). An
+  //: app's "Search" folder drawn as a row opened the folder - "New search"
+  //: and the searches kept - where its card went to the field; and only
+  //: entries marked `data-text-entry` raise the phone's keyboard with the
+  //: tap (ADR-0121 §4), which a row was not.
   function tap(row) {
     if (row.kind === 'play') tapLeaf(row);
-    else if (row.kind === 'search') onsearchentry?.(row);
+    else if (searchy(row)) onsearchentry?.(row);
     else if (row.kind !== 'text') {
       selected = null;
       onopen?.(row);
@@ -278,6 +285,7 @@
     class:is-sel={isSel}
     class:is-busy={busy === r.handle}
     type="button"
+    data-text-entry={searchy(r) ? '' : undefined}
     onclick={() => tap(r)}
   >
     {#if opts.num != null}<span class="num" class:num--top={opts.num <= 3 && opts.podium}>{opts.num}</span>{/if}
@@ -395,7 +403,7 @@
             <div class="bgroup__grid">
               {#each entries as r (r.handle)}
                 {@const look = MY_MUSIC[r.id] ?? ['more', ...shapeFor(r.label, r.hint)]}
-                <button class="entry" class:is-busy={busy === r.handle} type="button" data-text-entry={r.id === 'myMusicSearch' ? '' : undefined} onclick={() => tap(r)}>
+                <button class="entry" class:is-busy={busy === r.handle} type="button" data-text-entry={r.id === 'myMusicSearch' || searchy(r) ? '' : undefined} onclick={() => tap(r)}>
                   <Disc name={look[1]} tint={look[2]} size={D} />
                   <span class="entry__label">{r.label}</span>
                 </button>
@@ -417,7 +425,7 @@
                 <div class="group__head"><span style:color={g.ink}>{g.name}</span><i></i></div>
                 {#each entries as r (r.handle)}
                   {@const look = MY_MUSIC[r.id] ?? ['more', ...shapeFor(r.label, r.hint)]}
-                  <button class="entry" class:is-busy={busy === r.handle} type="button" data-text-entry={r.id === 'myMusicSearch' ? '' : undefined} onclick={() => tap(r)}>
+                  <button class="entry" class:is-busy={busy === r.handle} type="button" data-text-entry={r.id === 'myMusicSearch' || searchy(r) ? '' : undefined} onclick={() => tap(r)}>
                     <Disc name={look[1]} tint={look[2]} size={46} />
                     <span class="entry__label">{r.label}</span>
                   </button>
@@ -432,7 +440,7 @@
     <div class="pad scroll">
       <div class="cards" style:--rows={2} use:across={bar}>
         {#each nonText as r (r.handle)}
-          <button class="card" type="button" class:is-busy={busy === r.handle} onclick={() => tap(r)}>
+          <button class="card" type="button" class:is-busy={busy === r.handle} data-text-entry={searchy(r) ? '' : undefined} onclick={() => tap(r)}>
             <span class="logo">{#if r.image}<img src={r.image} alt="" />{:else}{initials(r.label)}{/if}</span>
             <span class="card__text"><span class="card__label">{r.label}</span></span>
           </button>

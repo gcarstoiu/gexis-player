@@ -81,7 +81,15 @@
     const pressable = !slider && target?.closest(PRESSABLE);
     kind = performance.now() - scrolledAt < 400 ? (scrolledX ? 'scrollx' : 'scroll') : slider ? 'slide' : pressable ? 'press' : 'plain';
     ring = null;
-    if (tapped) return;
+    // **An underline instead, where asked** (George, 2026-10-14: Now
+    // Playing's tabs "should have a simpler highlight when hovering ... just
+    // one underline, similar to the one that is currently selected"). An
+    // element marked `data-pointer="underline"` gets `data-pointer-over`
+    // while the pointer is on it, and draws its own underline - CSS's
+    // :hover never fires for this pointer, its hover being made up.
+    const underlined = kind === 'press' ? pressable.closest('[data-pointer="underline"]') : null;
+    mark(underlined);
+    if (tapped || underlined) return;
     // **Everything that can be pressed is outlined, in its own shape**
     // (George, 2026-10-14: "The hover effect on square items should be
     // removed or we can have a square outlining effect to be consistent.
@@ -108,6 +116,14 @@
                      + `${Math.max(0, box.y + box.h - seen.bottom)}px ${Math.max(0, seen.left - box.x)}px)` };
       }
     }
+  }
+
+  let marked = null;
+  function mark(el) {
+    if (marked === el) return;
+    marked?.removeAttribute('data-pointer-over');
+    marked = el;
+    el?.setAttribute('data-pointer-over', '');
   }
 
   /** A row with its actions revealed: they sit inside it or beside it. */
@@ -225,6 +241,7 @@
     clearInterval(lookTimer);
     lookTimer = undefined;
     hover(null);
+    mark(null);
     ring = null;
   }
 

@@ -359,10 +359,10 @@
 
       <div class="meta">
         <div class="tabs" role="tablist" aria-label="Track detail">
-          <button class="tab" data-tab="track" type="button" role="tab" aria-selected={tab === 'track'} onclick={() => (tab = 'track')}>Track</button>
-          <button class="tab" data-tab="lyrics" type="button" role="tab" aria-selected={tab === 'lyrics'} onclick={() => (tab = 'lyrics')}>Lyrics</button>
-          <button class="tab" data-tab="artist" type="button" role="tab" aria-selected={tab === 'artist'} onclick={() => (tab = 'artist')}>Artist</button>
-          <button class="tab" data-tab="release" type="button" role="tab" aria-selected={tab === 'release'} onclick={() => (tab = 'release')}>Release</button>
+          <button class="tab" data-tab="track" data-pointer="underline" type="button" role="tab" aria-selected={tab === 'track'} onclick={() => (tab = 'track')}>Track</button>
+          <button class="tab" data-tab="lyrics" data-pointer="underline" type="button" role="tab" aria-selected={tab === 'lyrics'} onclick={() => (tab = 'lyrics')}>Lyrics</button>
+          <button class="tab" data-tab="artist" data-pointer="underline" type="button" role="tab" aria-selected={tab === 'artist'} onclick={() => (tab = 'artist')}>Artist</button>
+          <button class="tab" data-tab="release" data-pointer="underline" type="button" role="tab" aria-selected={tab === 'release'} onclick={() => (tab = 'release')}>Release</button>
         </div>
 
         <div class="panel">
@@ -913,6 +913,13 @@
   .tab[data-tab='lyrics'][aria-selected='true']  { border-bottom-color: var(--accent-artist); }
   .tab[data-tab='artist'][aria-selected='true']  { border-bottom-color: var(--accent-bluetooth); }
   .tab[data-tab='release'][aria-selected='true'] { border-bottom-color: var(--accent-lms); }
+  /* Under the phone's pointer (ADR-0121; George, 2026-10-14): the tab's own
+     underline, as when selected, instead of an outline round it. */
+  .tab:global([data-pointer-over]) { color: var(--ink); }
+  .tab[data-tab='track']:global([data-pointer-over])   { border-bottom-color: var(--ink); }
+  .tab[data-tab='lyrics']:global([data-pointer-over])  { border-bottom-color: var(--accent-artist); }
+  .tab[data-tab='artist']:global([data-pointer-over])  { border-bottom-color: var(--accent-bluetooth); }
+  .tab[data-tab='release']:global([data-pointer-over]) { border-bottom-color: var(--accent-lms); }
 
   .panel {
     margin-top: 36px;
