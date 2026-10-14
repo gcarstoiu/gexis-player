@@ -307,7 +307,11 @@ drawn per kind:
   `LyrionLevel.svelte` draws one level. "What an entry opens decides its
   shape": branches become tinted-disc tiles, albums and playlists a cover
   grid, and tracks and stations leaf rows. A leaf row reveals Play / Play
-  next / Add on the first tap. `LyrionSearch.svelte` runs a search entry's
+  next / Add on the first tap. An album or playlist with a cover opens as
+  the album page (`layout === 'album'`); when its tracks' artists differ, each
+  row shows the artist under the title, taken from the second line before
+  the album (Spotty's `Artist • Album`, Qobuz's `Artist - Album`).
+  `LyrionSearch.svelte` runs a search entry's
   searches as typing pauses. The panel only ever holds *handles* the core
   issued (`lib/menus.js`), never Lyrion commands. Each list's list/tiles
   choice is kept in `localStorage`.
@@ -473,7 +477,13 @@ sequenceDiagram
   container that hides part of the element, and at whatever covers it (the
   mini strip), found with `elementFromPoint` halving between the pointer and
   the element's edge; drawn as a `clip-path: inset(...)` on the outline. The
-  Dot shrinks to its small dot inside any outline.
+  Dot shrinks to its small dot inside any outline. What lies *behind* the
+  element (an ancestor, such as the bar a round button sits on) never counts
+  as covering it: only something drawn over it does.
+- **A tap over the visualiser** (`$panel.visualiser`) only reports a touch
+  (`reportTouch`): the meters are a window over the page, and a tap replayed
+  in the page pressed whatever the pointer rested on - the visualiser's
+  button, or Next.
 - **Wi-Fi power saving is off on a player**
   (`/etc/NetworkManager/conf.d/gexis-wifi-powersave.conf`, `wifi.powersave =
   2`, and `iw ... set power_save off` at install): on sofapi, round trips
