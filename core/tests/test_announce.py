@@ -69,3 +69,15 @@ def test_uploaded_plugins_may_not_answer_mdns_themselves():
     for unit in ("gexis-uploaded-renderer@.service", "gexis-uploaded-service@.service"):
         text = (FILES / unit).read_text()
         assert "SocketBindDeny=ipv4:udp:5353" in text and "SocketBindDeny=ipv6:udp:5353" in text
+
+
+def test_an_empty_list_withdraws_every_numbered_file_too(tmp_path):
+    # Finding 125 #18: three services, then [] while still connected - the
+    # second and third must go as well, not only the plain file.
+    three = announce.checked([{"type": "_a._tcp", "port": 1}, {"type": "_b._tcp", "port": 2},
+                              {"type": "_c._tcp", "port": 3}], "P")
+    announce.write("x", three, tmp_path)
+    assert len(list(tmp_path.iterdir())) == 3
+    announce.write("x", [], tmp_path)
+    assert list(tmp_path.iterdir()) == []
+

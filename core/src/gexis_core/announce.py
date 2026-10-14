@@ -93,7 +93,10 @@ def write(plugin_id: str, services: list[dict], directory: Path = SERVICES) -> N
     file. avahi notices the folder change by itself."""
     path = path_for(plugin_id, directory)
     if not services:
-        path.unlink(missing_ok=True)
+        # The numbered files go too: a plugin that announced three services
+        # and then sent [] kept the second and third advertised until it
+        # disconnected (Finding 125 #18, 2026-10-14).
+        withdraw(plugin_id, directory)
         return
     # avahi reads one service-group per file, so several services go in
     # several files: the first keeps the plain name, the rest are numbered.
