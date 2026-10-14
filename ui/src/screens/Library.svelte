@@ -36,7 +36,7 @@
   } from '../lib/library.js';
   import { afterPaint, revealing } from '../lib/chunks.svelte.js';
   import { settingValues } from '../lib/settings.js';
-  import { menuTiles, loadMenuTiles, browseMenu, menuAct, menuLetters as menuLetters_ } from '../lib/menus.js';
+  import { menuTiles, loadMenuTiles, browseMenu, menuAct, menuLetters as menuLetters_, wantsLetters } from '../lib/menus.js';
   import { MY_MUSIC } from '../lib/lyrionLooks.js';
   import LyrionLevel from './LyrionLevel.svelte';
   import LyrionSearch from './LyrionSearch.svelte';
@@ -906,8 +906,7 @@
       if (path[path.length - 1] !== level) return;
       menu = { ...got, handle };
       // The rail, for lists Lyrion files by letter (the handover's note 6).
-      const lettered = got.items.filter((r) => ['artist', 'genre', 'album'].includes(r.hint)).length;
-      if (got.count > 30 && lettered >= got.items.length * 0.6) {
+      if (wantsLetters(got)) {
         // Pending (null): the rail or strip takes its place at once, so the
         // list does not move when the index arrives (George, 2026-10-06).
         menuLetters = null;

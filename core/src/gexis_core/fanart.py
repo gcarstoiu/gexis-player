@@ -73,6 +73,7 @@ class Fanart:
         download: Callable[[str], Awaitable[bytes | None]],
         base_url: str,
         directory: Path = DEFAULT_DIR,
+        before: Callable[[], Awaitable[None]] | None = None,
     ) -> None:
         self._rpc = rpc
         self._download = download
@@ -80,6 +81,14 @@ class Fanart:
         self._dir = directory
         self._ids: dict[str, int | None] = {}
         self._busy: dict[int, asyncio.Task] = {}
+        #: Awaited before photos are looked up: `LmsArtistInfo.check_scope`,
+        #: which calls `drop` when a rescan or another server has moved the
+        #: ids (Finding 125 #22). Asked here too, not only by the artist
+        #: grid and LMS enrichment: a non-LMS source's tracks reach neither.
+        self._before = before
+        #: Moved on by `drop`, so a fetch under way when the ids changed
+        #: hands does not leave the old artist's photos behind it.
+        self._generation = 0
 
     async def _ask(self, command: list) -> dict | None:
         """LMS's answer, or None when there was none - LMS away or
@@ -130,6 +139,11 @@ class Fanart:
         artist of its own ("Snoop Dogg feat. Mystikal" is one on George's
         server), almost always without photos; then the first named
         artist's are used, as George chose."""
+        if self._before is not None:
+            try:
+                await self._before()
+            except Exception as exc:  # unchecked is not a reason for no photos
+                logger.info("fanart: whose ids these are was not checked (%r)", exc)
         if artist_id is None:
             artist_id = await self.artist_id(name)
         found = await self.photos(artist_id)
@@ -156,7 +170,26 @@ class Fanart:
             task.add_done_callback(lambda _t: self._busy.pop(artist_id, None))
         return await task
 
+    def drop(self, keep: set | None = None) -> None:
+        """**Photos kept by an id that now names someone else** (Finding 125
+        #22, 2026-10-14): a rescan's renumbering, another server's. Every
+        folder whose id is not in `keep` (ids as text) goes, all of them when
+        `keep` is None, and the names looked up with them."""
+        self._generation += 1
+        self._ids = {k: v for k, v in self._ids.items()
+                     if keep is not None and v is not None and str(v) in keep}
+        try:
+            folders = [p for p in self._dir.iterdir() if p.is_dir()]
+        except OSError:
+            return
+        gone = [p for p in folders if keep is None or p.name not in keep]
+        for folder in gone:
+            shutil.rmtree(folder, ignore_errors=True)
+        if gone:
+            logger.info("fanart: %d artists' photos dropped, their ids moved", len(gone))
+
     async def _fetch(self, artist_id: int, folder: Path) -> list[Path]:
+        generation = self._generation
         result = await self._ask(["musicartistinfo", "artistphotos", f"artist_id:{artist_id}"])
         if result is None:
             return []           # not an answer: nothing written, asked again next time
@@ -167,6 +200,11 @@ class Fanart:
             data = await self._download(proxied(self._base, url))
             if not data:
                 continue
+            if self._generation != generation:
+                # The ids changed hands while this was fetched: whose these
+                # are is no longer known, so nothing is kept.
+                shutil.rmtree(folder, ignore_errors=True)
+                return []
             path = folder / f"{n:02d}.jpg"
             path.write_bytes(data)
             kept.append(path)
@@ -175,6 +213,9 @@ class Fanart:
             # not. Not an answer either.
             logger.info("fanart: none of %d photos for artist %d came", len(urls), artist_id)
             return kept
+        if self._generation != generation:
+            shutil.rmtree(folder, ignore_errors=True)
+            return []
         # Remembered even when empty: "asked, LMS has none" is an answer, and
         # asking again on every track of that artist costs 0.75 s each.
         (folder / ".done").touch()
