@@ -393,13 +393,13 @@ def test_a_streaming_playlist_is_told_from_an_album():
 def test_a_streaming_album_is_told_as_one():
     """Finding 125 #26 (2026-10-14): a streaming album had no hint, so one
     track crediting a guest artist made its page say Play playlist. The
-    same markers say album: Spotty's `spotify:album:` link, a Qobuz cover
-    under `/images/covers/`. A track carries its album's cover too, and is
-    not an album; nor is one Qobuz cannot stream (an untyped folder)."""
+    marker says album: Spotty's `spotify:album:` link. A Qobuz cover under
+    `/images/covers/` does not (2026-10-14): a Qobuz playlist without its own
+    image carries an album's cover, and would read "Play album"."""
     from gexis_core.menus import _hint
     cover = "/imageproxy/https%3A%2F%2Fstatic.qobuz.com%2Fimages%2Fcovers%2Fm0.jpg/image.jpg"
     assert _hint({"type": "playlist", "presetParams": {"favorites_url": "spotify:album:16tY"}}, {}) == "album"
-    assert _hint({"type": "playlist", "icon": cover}, {}) == "album"
+    assert _hint({"type": "playlist", "icon": cover}, {}) is None
     assert _hint({"type": "audio", "icon": cover}, {}) is None
     assert _hint({"text": "* Unstreamable\nArtist", "icon": cover}, {}) is None
     assert _hint({"type": "audio", "presetParams": {"favorites_url": "spotify:track:4uLU"}}, {}) is None
@@ -408,7 +408,8 @@ def test_a_streaming_album_is_told_as_one():
 @pytest.mark.asyncio
 async def test_a_streaming_list_is_not_read_whole_for_letters():
     """Finding 125 #26's other side: albums are among the hints the panel
-    asks a letter index for, and a service's list carries no `textkey` -
+    asks a letter index for, and a service's list is assumed to carry no
+    `textkey` (Finding 029 measured it on the library's lists only) -
     reading up to LETTERS_MAX of it would find none, slowly."""
     lyrion = Lyrion()
     m = menus(lyrion)

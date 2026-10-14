@@ -332,10 +332,12 @@ class LyrionMenus:
         if spec["kind"] not in ("folder", "container") or "letters" in spec:
             return {"letters": spec.get("letters", {})}
         if "browselibrary" not in (str(word) for word in spec.get("cmd") or ()):
-            # Only the library's lists carry `textkey` (Finding 110). A
-            # service's albums are hinted as albums now (Finding 125 #26),
-            # which the panel asks letters for: reading a whole Qobuz list
-            # to find none is skipped.
+            # The library's lists carry `textkey` (measured in Finding 029
+            # on All Artists); that a service's lists carry none is assumed,
+            # not measured. A service's albums are hinted as albums now
+            # (Finding 125 #26), so reading a whole Qobuz list on the
+            # chance of keys is skipped (corrected 2026-10-14: this cited
+            # Finding 110, which does not say so).
             return {"letters": {}}
         command = list(spec["cmd"]) + [0, LETTERS_MAX]
         command += [f"{k}:{v}" for k, v in spec["params"].items()] + ["menu:1"]
@@ -535,13 +537,13 @@ def _hint(item: dict, spec: dict) -> str | None:
     icon = unquote(str(item.get("icon") or item.get("image") or ""))
     if ":playlist:" in link or "/playlist/" in link or "/images/playlists/" in icon:
         return "playlist"
-    # **And a streaming album, by the same markers** (Finding 125 #26,
+    # **And a streaming album, by Spotty's link** (Finding 125 #26,
     # 2026-10-14): with no hint, one track crediting a guest artist made an
     # album's page say "Play playlist". Only for what Lyrion types as a list:
-    # a track carries its album's cover too, and so does one Qobuz cannot
-    # stream, drawn as an untyped folder.
-    if str(item.get("type") or "") == "playlist" and (
-            ":album:" in link or "/images/covers/" in icon):
+    # a track's link names a track, not an album. Not by a Qobuz cover under
+    # `/images/covers/` (2026-10-14): a Qobuz playlist without its own image
+    # carries an album's cover, so it would read "Play album".
+    if str(item.get("type") or "") == "playlist" and ":album:" in link:
         return "album"
     own = item.get("commonParams") or {}
     for params in (own, {**(item.get("params") or {}), **(spec.get("params") or {})}):
