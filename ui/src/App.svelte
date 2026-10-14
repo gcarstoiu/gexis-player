@@ -500,13 +500,30 @@
   });
 
   //: **ADR-0109 decision 5: Keep this screen?** The core asks while a newly
-  //: chosen screen waits; its countdown runs from the panel's first frame
+  //: chosen screen waits; its countdown runs from when the question is drawn
   //: (`deadline`, this device's clock). Only the panel answers (decision 2).
   let keepNow = $state(Date.now());
   $effect(() => {
     if (!$screenConfirm) return;
     const id = setInterval(() => (keepNow = Date.now()), 250);
     return () => clearInterval(id);
+  });
+  //: **...and starts when the question is on the glass** (George,
+  //: 2026-10-14: "The countdown should start with the keep screen
+  //: displayed"). Two frames after it is drawn, the panel says so; the core
+  //: sets `deadline` from then. Said again until the deadline arrives, in
+  //: case one report is lost; the core starts it once.
+  $effect(() => {
+    const question = $screenConfirm;
+    if (surface !== 'panel' || !question || question.deadline || updateLock) return;
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => answerScreen('shown').catch(() => {}));
+    });
+    const again = setInterval(() => answerScreen('shown').catch(() => {}), 3000);
+    return () => {
+      cancelAnimationFrame(frame);
+      clearInterval(again);
+    };
   });
   const keepLeft = $derived(
     $screenConfirm?.deadline ? ($screenConfirm.deadline * 1000 - keepNow) / 1000 : ($screenConfirm?.total ?? 30)

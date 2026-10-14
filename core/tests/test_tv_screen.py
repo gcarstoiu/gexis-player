@@ -93,7 +93,7 @@ def test_the_question_says_the_phone_answers_for_a_tv(tmp_path):
     assert screen_question(state)["phone"] is False
 
 
-def _answer(confirm, remote):
+def _answer(confirm, remote, action="keep"):
     from aiohttp.test_utils import make_mocked_request
     from gexis_core.state import StateStore
     from gexis_core.wsserver import StateServer
@@ -110,7 +110,7 @@ def _answer(confirm, remote):
     server = StateServer(store, screen_answer=screen_answer)
     transport = mock.Mock()
     transport.get_extra_info.side_effect = lambda name, default=None: (remote, 40000) if name == "peername" else default
-    request = make_mocked_request("POST", "/screen/keep", match_info={"action": "keep"}, transport=transport)
+    request = make_mocked_request("POST", f"/screen/{action}", match_info={"action": action}, transport=transport)
     response = asyncio.run(server._handle_screen_answer(request))
     return response.status, answered
 
@@ -119,6 +119,13 @@ def test_a_phone_answers_keep_for_a_tv_and_not_for_a_panel():
     assert _answer({"model": "LG TV", "phone": True}, "192.168.1.20") == (200, ["keep"])
     assert _answer({"model": "Waveshare 10.1", "phone": False}, "192.168.1.20")[0] == 403
     assert _answer({"model": "Waveshare 10.1", "phone": False}, "127.0.0.1") == (200, ["keep"])
+
+
+def test_only_the_panel_says_the_question_is_shown():
+    """George, 2026-10-14: the countdown starts with the Keep screen
+    displayed - which only the panel can say, a TV's question included."""
+    assert _answer({"model": "Waveshare 11.9", "phone": False}, "127.0.0.1", "shown") == (200, ["shown"])
+    assert _answer({"model": "LG TV", "phone": True}, "192.168.1.20", "shown")[0] == 403
 
 
 # --- D4 as amended: the TV's mode from its own list --------------------------
