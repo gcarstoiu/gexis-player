@@ -121,46 +121,139 @@ def test_a_phone_answers_keep_for_a_tv_and_not_for_a_panel():
     assert _answer({"model": "Waveshare 10.1", "phone": False}, "127.0.0.1") == (200, ["keep"])
 
 
-# --- D5: the panel's touch off while it is not the screen -------------------
+# --- D4 as amended: the TV's mode from its own list --------------------------
 
-def test_screen_env_names_the_screen_s_touch_and_every_known_panel_s():
-    env = screen_apply.env_for(screens.by_id("other-1920x1080-capped"), 0, "HDMI-A-2")
-    assert "GEXIS_SCREEN_TOUCH_USB=\n" in env
-    assert "0712:0010" in env.split("GEXIS_PANEL_TOUCH_USB=", 1)[1]
-    env = screen_apply.env_for(screens.by_id("waveshare-10.1-hdmi-b"), 0, "HDMI-A-1")
-    assert "GEXIS_SCREEN_TOUCH_USB=0712:0010\n" in env
-
-
-DEVICES = ('I: Bus=0003 Vendor=0712 Product=0010 Version=0200\nN: Name="WaveShare  WaveShare "\n\n'
-           'I: Bus=0003 Vendor=046d Product=c52b Version=0111\nN: Name="Logitech USB Receiver"\n')
+def _modes(tmp_path, connector, lines):
+    d = tmp_path / "drm" / f"card1-{connector}"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "modes").write_text("\n".join(lines) + "\n")
+    return tmp_path / "drm"
 
 
-def _kiosk(tmp_path, screen_touch):
-    if shutil.which("bash") is None:
-        pytest.skip("needs bash")
-    source = tmp_path / "xdg"
-    source.mkdir()
-    shutil.copy(FILES / "labwc-rc.xml", source / "rc.xml")
+def test_a_tv_through_a_receiver_is_run_at_1080p_from_its_list(tmp_path):
+    """sofapi's LG TV through the Sony receiver: the EDID's first timing was
+    640 x 480 at the choice, 1280 x 720 later; the list holds 1920 x 1080."""
+    drm = _modes(tmp_path, "HDMI-A-2", ["1280x720", "1280x720", "4096x2160", "3840x2160", "1920x1080",
+                                        "1920x1080i", "720x576", "640x480"])
+    assert screen_detect.tv_mode("HDMI-A-2", drm) == (1920, 1080)
+
+
+def test_without_1080p_the_largest_16_9_below_it(tmp_path):
+    drm = _modes(tmp_path, "HDMI-A-2", ["1024x768", "1280x720", "640x480"])
+    assert screen_detect.tv_mode("HDMI-A-2", drm) == (1280, 720)
+    drm = _modes(tmp_path / "b", "HDMI-A-2", ["1024x768", "800x600"])
+    assert screen_detect.tv_mode("HDMI-A-2", drm) is None
+
+
+def test_the_tv_s_mode_is_forced_by_the_kernel_whatever_a_receiver_says():
+    s = screens.other(1920, 1080, capped=True)
+    assert screen_apply.video_for(s, "HDMI-A-2") == "video=HDMI-A-2:1920x1080"
+    assert screens.other(1280, 720, capped=True).video_mode == "1280x720"
+
+
+def test_choosing_a_tv_takes_its_mode_from_the_list():
+    from test_main_wiring import _closure
+    body = _closure("_choose_screen_port")
+    assert "screen_detect.tv_mode(connector)" in body and "screens.other(*size, capped=True)" in body
+
+
+def test_a_chosen_port_is_not_asked_about_at_the_start(tmp_path):
+    """The receiver names itself SONY AVSYSTEM or LG TV as it wakes: the chosen
+    port is the screen whatever it says."""
+    from gexis_core import screen_watch
+    state = tmp_path / "screen.json"
+    screen_apply.write_state({"current": Applied("other-1920x1080-capped", 0, "HDMI-A-2", chosen=True).to_json(),
+                              "previous": None, "pending": False}, state)
+    seen = screen_detect.Seen(True, "HDMI-A-2", "SNY", "SONY AVSYSTEM", (1280, 720), ())
+    assert screen_watch.at_start(seen, headless=False, setup_needed=False, path=tmp_path / "seen.json",
+                                 files={"state": state}) == "same"
+
+
+# --- D5 as amended: the panel switched off, its touch ignored ---------------
+
+def test_with_a_tv_as_the_screen_the_panels_touch_is_ignored_by_udev(tmp_path):
+    from gexis_core import screen_watch
+    state, rules, ran = tmp_path / "screen.json", tmp_path / "rules" / "90.rules", []
+    screen_apply.write_state({"current": Applied("other-1920x1080-capped", 0, "HDMI-A-2", chosen=True).to_json()},
+                             state)
+    ids = screen_watch.touch_rules(state, rules, run=lambda args, check=False: ran.append(args))
+    assert "0712:0010" in ids
+    text = rules.read_text()
+    assert 'ATTRS{idVendor}=="0712", ATTRS{idProduct}=="0010", ENV{LIBINPUT_IGNORE_DEVICE}="1"' in text
+    assert ["udevadm", "trigger", "--action=change", "--subsystem-match=input"] in ran
+    # The panel the screen again: the rule goes, and udev is told.
+    screen_apply.write_state({"current": Applied("waveshare-10.1-hdmi-b", 0, "HDMI-A-1", chosen=True).to_json()},
+                             state)
+    ran.clear()
+    assert screen_watch.touch_rules(state, rules, run=lambda args, check=False: ran.append(args)) == []
+    assert not rules.exists() and ran
+
+
+def test_a_panel_on_the_other_port_is_switched_off_while_a_tv_is_the_screen(tmp_path):
+    drm, usb = two_ports(tmp_path, EDID, _receiver_edid())
+    ports = screen_detect.ports(drm, usb)
+    assert screen_apply.panels_off("other-1920x1080-capped", "HDMI-A-2", ports) == ["HDMI-A-1"]
+    assert screen_apply.panels_off("waveshare-10.1-hdmi-b", "HDMI-A-1", ports) == []
+    env = screen_apply.env_for(screens.by_id("other-1920x1080-capped"), 0, "HDMI-A-2", ("HDMI-A-1",))
+    assert "GEXIS_OUTPUTS_OFF=HDMI-A-1\n" in env
+    script = (FILES / "gexis-kiosk-start").read_text()
+    assert 'for off in ${GEXIS_OUTPUTS_OFF:-}; do' in script and 'wlr-randr --output "${off}" --off' in script
+
+
+# --- Standby on a port that carries the sound ------------------------------
+
+def test_standby_leaves_a_port_carrying_the_sound_on(monkeypatch):
+    """The TV through the receiver went silent with standby: HDMI's sound rides
+    on its picture. Black, and the sound goes on."""
+    import asyncio
+    from gexis_core import alsa, standby
+    monkeypatch.setattr(standby, "screen_env", lambda: {"GEXIS_SCREEN_CONNECTOR": "HDMI-A-2"})
+    monkeypatch.setattr(standby.pwd, "getpwnam", lambda name: mock.Mock(pw_uid=1000))
+    ran = []
+
+    async def no_exec(*args, **kw):
+        ran.append(args)
+        raise AssertionError("wlr-randr must not run")
+
+    monkeypatch.setattr(standby.asyncio, "create_subprocess_exec", no_exec)
+    monkeypatch.setattr(alsa, "card", lambda: "vc4hdmi1")
+    assert asyncio.run(standby.switch_output(False)) is True and ran == []
+
+
+# --- After the second try: the TV's mode held by the compositor too ---------
+
+def test_a_tv_s_mode_is_named_for_the_kiosk_and_a_panel_s_is_not():
+    """sofapi, 2026-10-13: the kernel held 1080p for the boot, then labwc took
+    the receiver's preferred 1280 x 720 under a page scaled for 1080p."""
+    tv = screen_apply.env_for(screens.by_id("other-1920x1080-capped"), 0, "HDMI-A-2")
+    assert "GEXIS_SCREEN_MODE=1920x1080\n" in tv
+    for panel in ("waveshare-10.1-hdmi-b", "waveshare-11.9-hdmi"):
+        assert "GEXIS_SCREEN_MODE=\n" in screen_apply.env_for(screens.by_id(panel), 0, "HDMI-A-1")
+    script = (FILES / "gexis-kiosk-start").read_text()
+    assert 'wlr-randr --output "${connector}" --mode "${GEXIS_SCREEN_MODE}"' in script
+
+
+def _splash():
+    import importlib.machinery, importlib.util
+    path = FILES.parents[1] / "06-splash" / "files" / "gexis-splash-fb"
+    loader = importlib.machinery.SourceFileLoader("gexis_splash_fb", str(path))
+    module = importlib.util.module_from_spec(importlib.util.spec_from_loader("gexis_splash_fb", loader))
+    loader.exec_module(module)
+    return module
+
+
+def test_with_two_screens_the_boot_gap_is_black_on_both(tmp_path):
+    """George's photo: the still drawn for the TV showed on the panel as a
+    cut-off logo beside a block of another colour - one framebuffer, two
+    sizes."""
+    splash = _splash()
     drm = tmp_path / "drm"
-    for name in ("card1-HDMI-A-1", "card1-HDMI-A-2"):
+    for name, status in (("card1-HDMI-A-1", "connected"), ("card1-HDMI-A-2", "connected")):
         (drm / name).mkdir(parents=True)
-        (drm / name / "status").write_text("connected\n")
-    (tmp_path / "devices").write_text(DEVICES)
-    env = {k: v for k, v in os.environ.items() if not k.startswith("GEXIS_")}
-    env.update(GEXIS_LABWC_SOURCE=str(source), GEXIS_DRM=str(drm), GEXIS_INPUT_DEVICES=str(tmp_path / "devices"),
-               GEXIS_SCREEN_CONNECTOR="HDMI-A-2" if not screen_touch else "HDMI-A-1",
-               GEXIS_SCREEN_TOUCH_USB=screen_touch, GEXIS_PANEL_TOUCH_USB="0712:000a 0712:0010 222a:0001")
-    subprocess.run(["bash", str(FILES / "gexis-kiosk-start"), "labwc-config", str(tmp_path / "out")],
-                   env=env, check=True, capture_output=True, timeout=30)
-    return (tmp_path / "out" / "rc.xml").read_text()
-
-
-def test_with_a_tv_as_the_screen_the_panel_s_touch_is_off(tmp_path):
-    rc = _kiosk(tmp_path, screen_touch="")
-    assert '<device category="WaveShare  WaveShare "><sendEventsMode>no</sendEventsMode></device>' in rc
-    assert "Logitech" not in rc, "only a known panel's touch"
-
-
-def test_with_the_panel_as_the_screen_its_touch_stays(tmp_path):
-    rc = _kiosk(tmp_path, screen_touch="0712:0010")
-    assert "sendEventsMode" not in rc
+        (drm / name / "status").write_text(status + "\n")
+    assert splash.connected_ports(str(drm)) == 2
+    (drm / "card1-HDMI-A-2" / "status").write_text("disconnected\n")
+    assert splash.connected_ports(str(drm)) == 1
+    payload, geometry = splash.black((b"\x10\x20\x30\x40", (1, 1, 32, 4)))
+    assert payload == bytes(4) and geometry == (1, 1, 32, 4)
+    assert splash.black(None) is None

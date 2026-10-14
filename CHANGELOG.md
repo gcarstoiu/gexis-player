@@ -5,6 +5,25 @@ Every release of Gexis Player and its notes, newest first. Generated from
 edit that file, not this one. The player shows the last 10 under
 Settings → System → Change logs.
 
+## 0.14.0 — 13 October 2026
+
+### New
+
+- Settings → Display → Screen is one tile: the display in use and its HDMI port. Tap it to choose which port is the screen; Change picks the screen's model from the list.
+
+### Fixed
+
+- A TV chosen as the screen runs at 1920 × 1080, taken from the sizes it offers, and stays there. Behind an AV receiver it could come up at 640 × 480, or at 1280 × 720 with everything too large.
+- Display standby no longer silences the music when the screen's HDMI port also carries the sound: the picture goes black and the sound goes on.
+- While a TV is the screen, a touch panel on the other HDMI port is switched off, and touching it does nothing.
+- A screen port chosen stays chosen when an AV receiver names the TV differently at a start.
+- With two screens connected, the start no longer shows a cut-off logo or console text on one of them.
+- The backup before an update no longer fails when a plugin removes one of its files while the backup runs. A backup that does fail stops the update at once and says so.
+
+### Good to know
+
+- If a TV cuts off the edges of the picture, set its picture size to Just Scan or Original.
+
 ## 0.13.0 — 13 October 2026
 
 ### New

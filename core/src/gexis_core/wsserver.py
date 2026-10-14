@@ -2393,6 +2393,7 @@ class StateServer:
         directory = backups.DEFAULT_DIR
 
         def make() -> str:
+            backups.update_backup_failed(None, directory)
             made = backups.create(name, directory, automatic=True)
             backups.prune_automatic(made, directory)
             return made
@@ -2402,6 +2403,9 @@ class StateServer:
                 made = await asyncio.to_thread(make)
             except Exception as exc:  # noqa: BLE001 - the updater stops without one
                 logger.warning("backup before update: failed: %s", exc)
+                # **Said, not waited out** (sofapi, 2026-10-13): the updater
+                # watched for a file for two minutes after this had failed.
+                await asyncio.to_thread(backups.update_backup_failed, str(exc), directory)
                 return
             logger.info("backup before update: %s", made)
             # The Restore row lists the share, as after the row's own backup.

@@ -91,40 +91,7 @@ write_labwc_config() {
 			"${dir}/rc.xml" || return 1
 	fi
 	grep -q "mapToOutput=\"${connector}\"" "${dir}/rc.xml" || return 1
-	# ADR-0147 D5 (George, 2026-10-13): a known panel that is not the screen
-	# - left black while a TV is - has its touch switched off, so a tap on
-	# it does nothing on the TV. By the input's name, as libinput gives it,
-	# found from the panel's USB id in /proc/bus/input/devices.
-	local name off="" nl=$'\n'
-	while IFS= read -r name; do
-		[ -n "${name}" ] || continue
-		echo "gexis-kiosk: touch off on '${name}' (a panel that is not the screen)" >&2
-		name=$(printf '%s' "${name}" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' -e 's/"/\&quot;/g')
-		off="${off}    <device category=\"${name}\"><sendEventsMode>no</sendEventsMode></device>${nl}"
-	done < <(other_panel_inputs)
-	if [ -n "${off}" ]; then
-		# awk from the environment, not sed: a name's &amp; would be sed's &.
-		GEXIS_TOUCH_OFF="  <libinput>${nl}${off}  </libinput>${nl}" awk '
-			index($0, "</labwc_config>") { printf "%s", ENVIRON["GEXIS_TOUCH_OFF"] } { print }
-		' "${dir}/rc.xml" > "${dir}/rc.xml.new" && mv "${dir}/rc.xml.new" "${dir}/rc.xml" || return 1
-	fi
 	echo "gexis-kiosk: touch and the window on ${connector}" >&2
-}
-
-# The input names of the known panels whose touch is not the screen's: each
-# USB id in GEXIS_PANEL_TOUCH_USB but GEXIS_SCREEN_TOUCH_USB, one per line.
-other_panel_inputs() {
-	local devices=${GEXIS_INPUT_DEVICES:-/proc/bus/input/devices} usb vendor product
-	[ -r "${devices}" ] || return 0
-	for usb in ${GEXIS_PANEL_TOUCH_USB:-}; do
-		[ "${usb}" = "${GEXIS_SCREEN_TOUCH_USB:-}" ] && continue
-		vendor=${usb%%:*}
-		product=${usb##*:}
-		awk -v v="${vendor}" -v p="${product}" '
-			/^I:/ { hit = (index($0, "Vendor=" v) && index($0, "Product=" p)) }
-			hit && /^N: Name="/ { sub(/^N: Name="/, ""); sub(/"$/, ""); print; hit = 0 }
-		' "${devices}"
-	done | sort -u
 }
 
 case "${1:-}" in
@@ -209,6 +176,15 @@ rm -f "${GEXIS_KIOSK_PROFILE}/SingletonLock" \
 # screen, 400 tall on a bar, drawn at the screen's own resolution.
 scale=()
 connector=$(screen_connector)
+# ADR-0147: a TV's mode, which labwc would otherwise take from the device's
+# preferred one - a receiver's 1280 x 720 under a page scaled for 1080p.
+if [ -n "${GEXIS_SCREEN_MODE:-}" ]; then
+	if command -v wlr-randr >/dev/null && wlr-randr --output "${connector}" --mode "${GEXIS_SCREEN_MODE}"; then
+		echo "gexis-kiosk: ${connector} at ${GEXIS_SCREEN_MODE}" >&2
+	else
+		echo "gexis-kiosk: could not set ${connector} to ${GEXIS_SCREEN_MODE}" >&2
+	fi
+fi
 if [ -n "${GEXIS_SCREEN_TRANSFORM:-}" ] && [ "${GEXIS_SCREEN_TRANSFORM}" != normal ]; then
 	if command -v wlr-randr >/dev/null; then
 		wlr-randr --output "${connector}" --transform "${GEXIS_SCREEN_TRANSFORM}" \
@@ -217,6 +193,16 @@ if [ -n "${GEXIS_SCREEN_TRANSFORM:-}" ] && [ "${GEXIS_SCREEN_TRANSFORM}" != norm
 		echo "gexis-kiosk: wlr-randr missing; the screen stays unturned" >&2
 	fi
 fi
+# ADR-0147 D5 as amended (George, 2026-10-13): a touch panel on another port
+# while a TV is the screen is switched off - its backlight went on showing
+# black. The core names those ports; their touch is ignored by udev.
+for off in ${GEXIS_OUTPUTS_OFF:-}; do
+	if command -v wlr-randr >/dev/null && wlr-randr --output "${off}" --off; then
+		echo "gexis-kiosk: ${off} switched off (a panel that is not the screen)" >&2
+	else
+		echo "gexis-kiosk: could not switch ${off} off" >&2
+	fi
+done
 if [ -n "${GEXIS_SCREEN_SCALE:-}" ]; then
 	scale=(--force-device-scale-factor="${GEXIS_SCREEN_SCALE}")
 	echo "gexis-kiosk: ${GEXIS_SCREEN_ID:-screen} (${GEXIS_SCREEN_FAMILY:-standard}), scale ${GEXIS_SCREEN_SCALE}" >&2
