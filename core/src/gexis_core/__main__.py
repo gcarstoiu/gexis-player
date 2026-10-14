@@ -548,6 +548,16 @@ async def _start_software_volume(card_output, store) -> None:
                 "its own control parked at 0 dB" if card_output.control else "it has no control of its own")
 
 
+def standin_due(seen, now) -> bool:
+    """**Whether the stand-in watcher switches** (ADR-0141 D5): `seen` is what
+    the last switch of output put in force and `now` what is in force, each
+    (stored choice, card, jack standing in). Only the output in force changing
+    under the same stored choice is a port going or coming back; a new stored
+    choice is the user's own change of output, whose switch is under way or
+    queued behind `volume_change` (Finding 125 #10, 2026-10-14)."""
+    return seen is not None and now[0] == seen[0] and now[1:] != seen[1:]
+
+
 async def main() -> None:
     config = Config.load()
 
@@ -1045,6 +1055,11 @@ async def main() -> None:
                     and not standing_in}
     #: Whether the software stage is in the chain now (ADR-0124).
     software_on = {"value": bool(chosen_output is not None and chosen_output.software)}
+    #: What the last switch of output put in force, as `_output_now` gives it:
+    #: set by `_switch_output` itself, so the stand-in watcher measures a port
+    #: going or coming back against it and never takes the user's own change
+    #: of output for one (Finding 125 #10, 2026-10-14).
+    output_seen = {"value": None}
     fixed_now = {"value": False}
     set_fixed_output_reader(lambda: fixed_now["value"])
     # ADR-0137: the plugins are told when Fixed changes. Made further down; a
@@ -1166,7 +1181,11 @@ async def main() -> None:
         card and libasound's cached configuration are freed
         (`forget_mixers`), so the next write opens the new card's.
         """
-        base = outputs.in_force(settings.value("output_device"))[0]
+        stored = settings.value("output_device")
+        base, standing = outputs.in_force(stored)
+        # Before the first await: a switch under way is already seen, so the
+        # stand-in watcher does not switch a second time (Finding 125 #10).
+        output_seen["value"] = (stored, base.card if base else None, standing)
         # The row restricted for this output first: what is in force on it
         # (ADR-0127 §2) decides whether the software stage is in the chain.
         _restrict_output_mode(base)
@@ -1841,24 +1860,46 @@ async def main() -> None:
         comes back.** A receiver switched off drops its port; the output is
         switched to the jack, and back by itself when the port returns -
         each a change of output, which stops whoever plays."""
-        last = None
+        # **Measured against what the last switch put in force, and switched
+        # under the lock** (Finding 125 #10, 2026-10-14). It kept what it saw
+        # to itself, so every change of output the user made looked like a
+        # port going or coming back: within 3 s it logged a stand-in that was
+        # not one and switched again - concurrently with the user's switch,
+        # outside `volume_change` - restarting the renderers twice and
+        # stopping a source started in between.
         while True:
             await asyncio.sleep(every)
             try:
-                out, standing = await asyncio.to_thread(outputs.in_force, settings_store.get("output_device"))
+                now = await asyncio.to_thread(_output_now)
             except Exception:  # noqa: BLE001 - a watch must not die quietly
                 logger.exception("outputs: cannot tell the output in force")
                 continue
-            now = (out.card if out else None, standing)
-            if last is None:
-                last = now
+            if output_seen["value"] is None:
+                output_seen["value"] = now
                 continue
-            if now != last:
-                last = now
+            if not standin_due(output_seen["value"], now):
+                continue
+            async with volume_change:
+                # Looked at again once the lock is held: a switch that held
+                # it may have put this in force already.
+                try:
+                    now = await asyncio.to_thread(_output_now)
+                except Exception:  # noqa: BLE001
+                    logger.exception("outputs: cannot tell the output in force")
+                    continue
+                if not standin_due(output_seen["value"], now):
+                    continue
                 logger.info("outputs: %s", "the HDMI output has nothing connected; the jack stands in"
-                            if standing else "the HDMI output is back; switching to it")
+                            if now[2] else "the HDMI output is back; switching to it")
                 state_store.bump_settings_revision()
                 await _switch_output()
+
+    def _output_now() -> tuple:
+        """The stored choice, and the card in force with whether the jack
+        stands in for it - what `output_seen` holds."""
+        stored = settings.value("output_device")
+        out, standing = outputs.in_force(stored)
+        return (stored, out.card if out else None, standing)
 
     def _all_components() -> dict:
         status = components.all_status()
