@@ -83,6 +83,13 @@ class PeppyScreen:
         #: wlrctl off it, a touch could otherwise lower the window before a
         #: raise already under way puts it up.
         self._turn = asyncio.Lock()
+        #: Raises asked for and not yet finished. `visible` turns True only
+        #: after the settle and wlrctl's focus, so a touch or a change of
+        #: source in between saw a hidden screen, lowered nothing, and the
+        #: meter came up over the panel just touched (Finding 125 #14,
+        #: 2026-10-14). The controller lowers while this is non-zero too;
+        #: that lower waits on `_turn`, so it runs after the raise.
+        self._raising = 0
         # Hidden from the start: the driver begins minimised (gexis-peppy-start).
         self._tell(False)
         #: ADR-0101: told whenever the screen goes up or down, so the phone's
@@ -140,11 +147,21 @@ class PeppyScreen:
         least 0.25 s). What follows - `on_change` publishing to the phones -
         stays on the loop, where it must be (a worker thread there answered
         a 500, sofapi 2026-10-11)."""
-        async with self._turn:
-            self._tell(True)
-            if self._settle_s:
-                await asyncio.sleep(self._settle_s)
-            return self._shown(await asyncio.to_thread(self._run, "focus"))
+        # Counted before the first await, the wait for `_turn` included.
+        self._raising += 1
+        try:
+            async with self._turn:
+                self._tell(True)
+                if self._settle_s:
+                    await asyncio.sleep(self._settle_s)
+                return self._shown(await asyncio.to_thread(self._run, "focus"))
+        finally:
+            self._raising -= 1
+
+    @property
+    def raising(self) -> bool:
+        """A raise is under way and not yet on screen (`_raising` says why)."""
+        return self._raising > 0
 
     async def hide_async(self) -> bool:
         async with self._turn:
@@ -320,14 +337,19 @@ class PeppyController:
         """Criterion 6: a renderer change exits to now playing. The timer then
         runs normally and brings the screen back."""
         self._timer.attention()
-        if self._screen.visible:
+        if self._up():
             logger.info("peppy: renderer changed to %s, exiting to now playing", renderer_id or "nobody")
             self._lower()
 
     def on_touch(self) -> None:
         self._timer.attention()
-        if self._screen.visible:
+        if self._up():
             self._lower()
+
+    def _up(self) -> bool:
+        """Up, or on its way up: a raise still settling is lowered too, after
+        it (Finding 125 #14). A screen without the notion is never raising."""
+        return self._screen.visible or getattr(self._screen, "raising", False)
 
     def _position_now(self) -> float | None:
         position, _, playing, at = self._anchor

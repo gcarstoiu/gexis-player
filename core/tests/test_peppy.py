@@ -656,6 +656,35 @@ async def test_a_touch_during_a_raise_lowers_it_after_not_before(tmp_path, monke
     assert order == ["focus", "minimize"] and not screen.visible
 
 
+@pytest.mark.parametrize("event", ["touch", "source"])
+async def test_a_touch_or_a_new_source_while_the_raise_settles_still_lowers_it(tmp_path, monkeypatch, event):
+    """Finding 125 #14 (2026-10-14): `visible` is set only once the raise
+    has settled and wlrctl has focused the window, so a touch or a change of
+    source in that window saw a hidden screen, lowered nothing, and the
+    meter then came up over the panel the user had just touched."""
+    import asyncio
+
+    class Done:
+        returncode = 0
+        stderr = b""
+
+    order = []
+    monkeypatch.setattr(subprocess, "run", lambda cmd, **kw: (order.append(cmd[2]), Done())[1])
+    screen = PeppyScreen(wlrctl="/usr/bin/wlrctl", shown_path=tmp_path / "shown", settle_s=0.05)
+    controller = PeppyController(screen, UnattendedPlayback(300))
+    raising = asyncio.ensure_future(screen.show_async())     # as run() raises it
+    await asyncio.sleep(0.01)
+    assert not screen.visible                                # mid-raise, as it really is
+    if event == "touch":
+        controller.on_touch()
+    else:
+        controller.on_active_change("spotify")
+    await raising
+    await asyncio.gather(*controller._lowering)
+    assert order == ["focus", "minimize"] and not screen.visible
+    assert (tmp_path / "shown").read_text() == "0"
+
+
 @pytest.mark.parametrize("which", ["smoothing", "skins"])
 def test_peppymeter_s_config_is_replaced_whole_never_rewritten_in_place(tmp_path, which):
     """Review, 2026-10-12: rewritten in place, a power cut could leave it cut
