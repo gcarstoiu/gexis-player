@@ -134,6 +134,8 @@
   }
 
   function padDown(event) {
+    // A finger after a quiet spell: is the socket still there?
+    pad?.probe();
     event.currentTarget.setPointerCapture(event.pointerId);
     fingers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (fingers.size === 1 && gesture === null) {

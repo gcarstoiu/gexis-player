@@ -90,16 +90,80 @@
     // element's box and corners; the light fill only on a small control, so
     // a row is outlined, not washed over. Not round something that covers
     // most of the screen.
-    if (kind === 'press') {
+    // **Not round a row whose actions are showing** (George, 2026-10-14:
+    // "Once the reveal is shown then the highlight for the corresponding
+    // track should not be shown anymore"): its Play, Queue and Add are what
+    // is pressed next, and each has its own outline.
+    if (kind === 'press' && !revealed(pressable)) {
       const r = pressable.getBoundingClientRect();
       if (r.width * r.height < window.innerWidth * window.innerHeight * 0.5) {
         const long = Math.max(r.width, r.height);
         const small = !words(pressable) && long / Math.max(1, Math.min(r.width, r.height)) < ROUND && long <= RING_MAX;
         const radius = parseFloat(getComputedStyle(pressable).borderTopLeftRadius) || 0;
-        ring = { x: r.left - RING_GAP, y: r.top - RING_GAP, w: r.width + 2 * RING_GAP, h: r.height + 2 * RING_GAP,
-                 radius: radius + RING_GAP, small };
+        const box = { x: r.left - RING_GAP, y: r.top - RING_GAP, w: r.width + 2 * RING_GAP, h: r.height + 2 * RING_GAP };
+        const seen = visiblePart(pressable, r);
+        ring = { ...box, radius: radius + RING_GAP, small,
+                 clip: `inset(${Math.max(0, seen.top - box.y)}px ${Math.max(0, box.x + box.w - seen.right)}px `
+                     + `${Math.max(0, box.y + box.h - seen.bottom)}px ${Math.max(0, seen.left - box.x)}px)` };
       }
     }
+  }
+
+  /** A row with its actions revealed: they sit inside it or beside it. */
+  function revealed(el) {
+    return !!(el.querySelector('.act') || el.nextElementSibling?.querySelector?.('.act')
+              || el.nextElementSibling?.classList.contains('act'));
+  }
+
+  /** **The part of `el` that can be seen** (George, 2026-10-14: "The hover
+   *  highlight should display partially when the element itself is hidden
+   *  behind something else like the ministrip"): its box cut by every
+   *  scrolling or clipping container it is in, then by whatever covers it
+   *  above and below the pointer - found by asking what lies there, between
+   *  the pointer (where it shows) and the edge. Edges not cut are unbounded,
+   *  so the outline keeps its gap round them. */
+  function visiblePart(el, r) {
+    const seen = { left: -Infinity, top: -Infinity, right: Infinity, bottom: Infinity };
+    for (let up = el.parentElement; up && up !== document.body; up = up.parentElement) {
+      const style = getComputedStyle(up);
+      const clipsX = style.overflowX !== 'visible';
+      const clipsY = style.overflowY !== 'visible';
+      if (!clipsX && !clipsY) continue;
+      // Only an edge that hides part of the element: a list's edge the
+      // outline's gap merely crosses leaves the outline whole.
+      const box = up.getBoundingClientRect();
+      if (clipsX) {
+        if (box.left > r.left + 0.5) seen.left = Math.max(seen.left, box.left);
+        if (box.right < r.right - 0.5) seen.right = Math.min(seen.right, box.right);
+      }
+      if (clipsY) {
+        if (box.top > r.top + 0.5) seen.top = Math.max(seen.top, box.top);
+        if (box.bottom < r.bottom - 0.5) seen.bottom = Math.min(seen.bottom, box.bottom);
+      }
+    }
+    const px = Math.round(x);
+    const mine = (at) => {
+      const hit = document.elementFromPoint(px, at);
+      return !!hit && el.contains(hit);
+    };
+    const bottom = Math.min(r.bottom, seen.bottom, window.innerHeight) - 1;
+    if (!mine(bottom)) seen.bottom = edgeAt(mine, y, bottom);
+    const top = Math.max(r.top, seen.top, 0) + 1;
+    if (!mine(top)) seen.top = edgeAt(mine, y, top);
+    return seen;
+  }
+
+  /** Where `el` stops showing between `from` (shown) and `to` (covered):
+   *  halved down to a pixel, a few questions at most. */
+  function edgeAt(mine, from, to) {
+    let a = from;
+    let b = to;
+    while (Math.abs(b - a) > 1) {
+      const mid = Math.round((a + b) / 2);
+      if (mine(mid)) a = mid;
+      else b = mid;
+    }
+    return b > a ? b : a;
   }
 
   /** A button's own words - a count on a badge is not one (the queue
@@ -443,6 +507,7 @@
       style:--w={`${ring.w}px`}
       style:--h={`${ring.h}px`}
       style:--radius={`${ring.radius}px`}
+      style:clip-path={ring.clip}
       aria-hidden="true"
     ></div>
   {/if}
@@ -463,7 +528,11 @@
       <!-- The Dot set: a 28 px dot that becomes a pill over a slider (48 x 22)
            or while two fingers scroll (22 x 48), and a small dot inside a
            ring round a small round control. -->
-      <span class="dot dot--{ring?.small ? 'ringed' : kind}">
+      <!-- Small inside any outline (George, 2026-10-14: "The cursor should
+           decrease in size when hovering over these tappable elements to be
+           consistent with the behaviour for the ones like queue or play
+           button"). -->
+      <span class="dot dot--{ring ? 'ringed' : kind}">
         <svg class="dot__marks" class:on={kind === 'slide' || kind === 'scroll' || kind === 'scrollx'} viewBox="0 0 64 64" aria-hidden="true">
           {#if kind === 'scroll'}
             <path d="M26 22l6-6 6 6M26 42l6 6 6-6" />

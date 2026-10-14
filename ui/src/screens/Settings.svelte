@@ -1729,6 +1729,28 @@
                     <button type="button" class="tile__btn" onclick={() => { openSheet(r); region = null; }}>Change</button>
                   </span>
                 </div>
+              {:else if r.key === 'screen_port'}
+                <!-- **What is on each port, in the tile** (George,
+                     2026-10-14: "The screen port tile should display also
+                     the info on what is connected directly in the tile
+                     before opening the modal"): the lines the picker shows
+                     under each port, the port in use first. -->
+                {@const ports = [r.value, ...(r.options ?? []).filter((o) => o !== r.value)]}
+                <div class="row row--tile">
+                  <span class="row__body">
+                    <span class="row__text">
+                      <span class="row__label"><span class="row__name">{r.label}</span></span>
+                      <span class="row__value row__value--tile">{r.value || '—'}</span>
+                      {#each ports as option (option)}
+                        {#if r.optionNotes?.[option]}
+                          <span class="row__note">{option} · {r.optionNotes[option]}</span>
+                        {/if}
+                      {/each}
+                      {#if r.note}<span class="row__note">{r.note}</span>{/if}
+                    </span>
+                    <button type="button" class="tile__btn" onclick={() => openSheet(r)}>Change</button>
+                  </span>
+                </div>
               {:else if r.key === 'software_update'}
                 <!-- ADR-0110 §2 as amended (George, 2026-10-01): the
                      Software update tile - what the updater found and when,

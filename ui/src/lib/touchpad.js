@@ -15,8 +15,15 @@ const RECONNECT_MAX_MS = 5000;
 //: router forgetting an idle connection, leaves a socket that still reads
 //: OPEN and sends into nothing, with no close the page ever hears. A ping
 //: every PING_MS, and a fresh socket when nothing has come back for DEAD_MS.
-const PING_MS = 4000;
-const DEAD_MS = 9000;
+//: **And asked again when a finger comes down after a quiet spell**
+//: (George, 2026-10-14: "10 seconds for a reconnect? Can we trim that
+//: down?"): a ping at once, and a fresh socket if no answer in PROBE_MS -
+//: a dead socket is found within the first second of using it, not at the
+//: next round of pings.
+const PING_MS = 2000;
+const DEAD_MS = 5000;
+const QUIET_MS = 1500;
+const PROBE_MS = 800;
 
 export function openTouchpad(onMessage) {
   let socket = null;
@@ -84,8 +91,27 @@ export function openTouchpad(onMessage) {
     socket.send('{"t":"ping"}');
   }, PING_MS);
 
+  let probing;
+  /** Whether the socket still answers, asked now: nothing heard for
+   *  QUIET_MS, a ping, and a new socket if nothing comes back in PROBE_MS. */
+  function probe() {
+    if (closed || probing) return;
+    if (socket?.readyState !== WebSocket.OPEN) {
+      if (!socket || socket.readyState === WebSocket.CLOSED) fresh();
+      return;
+    }
+    if (Date.now() - heard < QUIET_MS) return;
+    const asked = Date.now();
+    socket.send('{"t":"ping"}');
+    probing = setTimeout(() => {
+      probing = undefined;
+      if (heard < asked) fresh();
+    }, PROBE_MS);
+  }
+
   connect();
   return {
+    probe,
     send(message) {
       if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
       // A gesture into a socket that is gone: a new one now, not after the
@@ -95,6 +121,7 @@ export function openTouchpad(onMessage) {
     close() {
       closed = true;
       clearInterval(watch);
+      clearTimeout(probing);
       document.removeEventListener('visibilitychange', fresh);
       window.removeEventListener('pageshow', fresh);
       window.removeEventListener('online', fresh);
