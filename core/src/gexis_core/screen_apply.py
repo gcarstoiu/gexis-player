@@ -90,6 +90,17 @@ def connector_now(seen=None, state: Path | None = None) -> str:
     return (current.get("connector") if isinstance(current, dict) else None) or CONNECTOR
 
 
+def applied_on(screen_id: str, rotation: int, connector: str, state: Path | None = None) -> Applied:
+    """**A screen chosen in Settings, on `connector`, keeping the port's
+    choice** (Finding 125 #7, 2026-10-14): a rotation or another model on a
+    port chosen under *Screen port* (ADR-0147 D1) is still that port's
+    choice. Built without the mark, the next start found the panel on the
+    other port and moved the TV's settings onto it."""
+    current = read_state(state or STATE).get("current")
+    chosen = isinstance(current, dict) and bool(current.get("chosen")) and current.get("connector") == connector
+    return Applied(screen_id, rotation, connector, chosen=chosen)
+
+
 def env_for(screen: screens.Screen, rotation: int, connector: str = CONNECTOR, off: tuple = ()) -> str:
     """screen.env: what the kiosk needs to put the page on this screen."""
     turn = (screen.rotation + rotation) % 360

@@ -440,9 +440,16 @@ def screen_question(state: dict, now: float | None = None) -> dict | None:
         "untested": bool(model and not model.tested),
         "previous": (f"{before.maker} {before.model}" if before else None),
         "rotation_only": rotation_only,
-        # ADR-0147 D3: a screen with no touch the player knows of - a TV, any
-        # screen in no list - is answered from the phone.
-        "phone": not screen_detect.has_touch(current["screen"]),
+        # Who may answer (Finding 125, 2026-10-14). `panel_buttons`: the
+        # panel shows Keep and Go back - every listed panel, not a TV, a
+        # screen in no list, a generic monitor mode or a model without touch.
+        # `phone`: the phone may answer (ADR-0147 D3) - every screen whose
+        # touch is not recognised by its USB fingerprint, since a listed
+        # panel's touch may need a driver the player never installs, and a
+        # panel with dead touch could otherwise only wait for the countdown.
+        # A fingerprinted panel stays answered on itself (ADR-0109 D2).
+        "panel_buttons": screen_detect.has_touch(current["screen"]),
+        "phone": not screen_detect.touch_recognised(current["screen"]),
         "previous_rotation": f"{previous.get('rotation', 0)}°" if previous else "0°",
         "deadline": None,
         # Two minutes after setup, and for a rotation (George, 2026-10-04,
@@ -2244,8 +2251,9 @@ async def main() -> None:
         turn = screen_apply.parse_rotation(rotation if rotation is not None else settings.value("rotation"))
         in_setup = _setup_running(state_store.state.setup)
         # On the port the screen is on - not always HDMI-A-1 (ADR-0109;
-        # George, 2026-10-12).
-        applied = screen_apply.Applied(model.id, turn, screen_apply.connector_now())
+        # George, 2026-10-12). A port chosen under Screen port stays chosen
+        # (Finding 125 #7, 2026-10-14).
+        applied = screen_apply.applied_on(model.id, turn, screen_apply.connector_now())
         asks = screen_apply.choose(applied, after_setup=in_setup)
         logger.info("screen: %s at %d° on %s chosen; %s", model.id, turn, applied.connector,
                     "it waits for Keep on the panel" if asks else "the picture is unchanged, so it is kept")
@@ -3076,7 +3084,9 @@ async def main() -> None:
     # ADR-0135: the owner's standby times. Their rows are read each tick.
     standby_schedule = Schedule(
         standby, lambda key: settings.value(key),
-        lambda: state_store.state.metadata.transport == "playing")
+        lambda: state_store.state.metadata.transport == "playing",
+        # Not over Keep this screen? (Finding 125 #17, 2026-10-14).
+        blocked=lambda: state_store.state.screen_confirm is not None)
     peppy = PeppyController(
         peppy_screen,
         UnattendedPlayback(
@@ -3732,6 +3742,12 @@ async def main() -> None:
         question = state_store.state.screen_confirm
         if question is None or question.get("deadline") is not None:
             return
+        # Drawn under the black cover with the output off, it would count
+        # down unseen (Finding 125 #17, 2026-10-14), as a pairing request
+        # did (review, 2026-10-12).
+        standby.used()
+        if standby.may_be_dark:
+            asyncio.ensure_future(standby.wake("screen"))
         total = question.get("total") or KEEP_S
         state_store.set_screen_confirm({**question, "deadline": time.time() + total})
         if screen_wait["task"] is not None:
