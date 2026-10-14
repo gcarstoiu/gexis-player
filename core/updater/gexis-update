@@ -33,6 +33,7 @@ import signal
 import sqlite3
 import stat
 import subprocess
+import tempfile
 import math
 import sys
 import threading
@@ -121,14 +122,33 @@ PROGRESS: dict = {}
 _REPORTING = threading.Lock()
 
 
-def report(state: str, **fields) -> None:
-    """status.json, which the core reads and the Updates screen shows."""
+def _write_state(name: str, doc: dict) -> None:
+    """One state file replaced whole, under `_REPORTING`, through a
+    temporary file of its own. **A fixed temporary name raced** (found on
+    bedroompi, 2026-10-14: a skin pack stuck at 26 %): apt's progress is
+    sent from the timer thread and the reading loop at once, one rename took
+    the other's `pack.json.tmp`, the second rename found nothing and the
+    whole pack install died, its row left at its last share."""
     with _REPORTING:
         STATE.mkdir(parents=True, exist_ok=True)
-        doc = {"state": state, "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), **PROGRESS, **fields}
-        tmp = STATE / "status.json.tmp"
-        tmp.write_text(json.dumps(doc, indent=1))
-        tmp.replace(STATE / "status.json")
+        fd, tmp = tempfile.mkstemp(prefix=f".{name}.", suffix=".tmp", dir=STATE)
+        try:
+            with os.fdopen(fd, "w") as f:
+                f.write(json.dumps(doc, indent=1))
+            os.chmod(tmp, 0o644)
+            os.replace(tmp, STATE / name)
+        except BaseException:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+            raise
+
+
+def report(state: str, **fields) -> None:
+    """status.json, which the core reads and the Updates screen shows."""
+    doc = {"state": state, "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), **PROGRESS, **fields}
+    _write_state("status.json", doc)
     print(f"{state}: {fields.get('message', '')}".rstrip(": "), flush=True)
 
 
@@ -1326,12 +1346,9 @@ PACK = re.compile(r"^gexis-skins-[0-9]+x[0-9]+$")
 
 
 def report_pack(state: str, **fields) -> None:
-    """pack.json: what the core shows on the pack's row."""
-    STATE.mkdir(parents=True, exist_ok=True)
+    """pack.json: what the core shows on the pack's row (`_write_state`)."""
     doc = {"state": state, "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), **PROGRESS, **fields}
-    tmp = STATE / "pack.json.tmp"
-    tmp.write_text(json.dumps(doc, indent=1))
-    tmp.replace(STATE / "pack.json")
+    _write_state("pack.json", doc)
     print(f"pack {state}: {fields.get('message', '')}".rstrip(": "), flush=True)
 
 
@@ -1558,6 +1575,12 @@ def main() -> int:
         except Stop as stop:
             report_pack("failed", package=args.package, message=str(stop))
             return 1
+        except Exception as exc:  # noqa: BLE001
+            # **Never a row left "downloading" by a pack install that died**
+            # (bedroompi, 2026-10-14): said as failed, so the row says so and
+            # the core's retry is what the owner sees next.
+            report_pack("failed", package=args.package, message="the pack install stopped unexpectedly")
+            raise
     try:
         if args.action == "check":
             _status = hold_status(wait=False)

@@ -1466,3 +1466,44 @@ def test_a_stale_repair_request_does_not_make_an_install_repair_only(up, monkeyp
     assert up.install(None) == 0
     assert not up.repair_marker().exists(), "removed all the same"
     assert checked and seen[-1]["state"] == "done" and seen[-1]["release"] == "2"
+
+
+def test_progress_written_from_two_threads_at_once_never_kills_the_pack(up):
+    """bedroompi, 2026-10-14: a skin pack stuck at 26 %. apt's progress is
+    sent from the timer thread and the reading loop at once; with one fixed
+    `pack.json.tmp` a rename took the other's file and the second rename
+    raised, killing the whole pack install. Each write now has its own
+    temporary file, under the reporting lock."""
+    import threading
+    errors = []
+
+    def hammer(n):
+        try:
+            for i in range(300):
+                up.PROGRESS["progress"] = i / 300
+                up.report_pack("downloading", package="gexis-skins-1480x320", message=f"t{n}")
+                up.report("downloading", message=f"t{n}")
+        except Exception as exc:  # noqa: BLE001
+            errors.append(exc)
+
+    threads = [threading.Thread(target=hammer, args=(n,)) for n in range(4)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert errors == []
+    assert json.loads((up.STATE / "pack.json").read_text())["state"] == "downloading"
+    assert not list(up.STATE.glob(".*.tmp")), "no temporary file left behind"
+
+
+def test_a_pack_install_that_dies_says_failed(up, monkeypatch):
+    """A pack install that raises something unexpected leaves the row
+    "failed", not frozen at its last share."""
+    monkeypatch.setattr(up, "take_turn", lambda *a, **k: None)
+    monkeypatch.setattr(up, "pack_install", lambda name: (_ for _ in ()).throw(RuntimeError("boom")))
+    import sys
+    monkeypatch.setattr(sys, "argv", ["gexis-update", "pack-install", "gexis-skins-1480x320"])
+    with pytest.raises(RuntimeError):
+        up.main()
+    doc = json.loads((up.STATE / "pack.json").read_text())
+    assert doc["state"] == "failed" and "unexpectedly" in doc["message"]
