@@ -2443,6 +2443,8 @@ async def main() -> None:
         wired={"idle_url": None, "idle_timeout": None, "drawer_on_external": None,
                "drawer_autohide": None, "phone_touchpad": None, "pointer_speed": None,
                "pointer_style": None, "listenbrainz_token": None,
+               # Text size: read by the panel as it draws (George, 2026-10-14).
+               "text_size": None,
                # ADR-0118 B: read by the menus route and the panel's home.
                "lms_extended_nav": None,
                "fanart_key": None, "lms_server": None,
@@ -3674,7 +3676,13 @@ async def main() -> None:
         if screen_apply.read_state().get("pending"):
             await _screen_go_back(reason)
 
-    def _screen_painted() -> None:
+    def _screen_shown() -> None:
+        """**The countdown starts when the question is on the screen**
+        (George, 2026-10-14: on the bar moved to HDMI 2 the question appeared
+        with about 40 % of its time left). It ran from the panel's first
+        painted frame, which can come well before the question is seen; the
+        panel now says when it has drawn the question itself (`/screen/shown`).
+        Until then `NEVER_DRAWN_S` from the start still takes the player back."""
         question = state_store.state.screen_confirm
         if question is None or question.get("deadline") is not None:
             return
@@ -3685,6 +3693,9 @@ async def main() -> None:
         screen_wait["task"] = asyncio.ensure_future(_screen_countdown(total, f"nobody kept it within {total:g} s"))
 
     async def _screen_answer(action: str) -> dict:
+        if action == "shown":
+            _screen_shown()
+            return {"shown": True}
         if action == "keep":
             await asyncio.to_thread(screen_apply.keep)
             if screen_wait["task"] is not None:
@@ -3881,7 +3892,9 @@ async def main() -> None:
         screen_new_answer=_screen_new_answer,
         settling_done=_settling_done,
         settling_hide=_settling_hide,
-        on_painted=_screen_painted,
+        # The first painted frame no longer starts Keep's countdown: the
+        # question being drawn does (`_screen_shown`, 2026-10-14).
+        on_painted=None,
         upload_plugin=_upload_plugin,
         uninstall_plugin=_uninstall_plugin,
         # ADR-0047: the idle screen's two providers.

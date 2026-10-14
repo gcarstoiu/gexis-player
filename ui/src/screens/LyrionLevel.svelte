@@ -62,9 +62,16 @@
     if (selected === row.handle) onact?.(row, 'play');
     else selected = row.handle;
   }
+  //: **A search opens on its field, the phone's keyboard up** (George,
+  //: 2026-10-14: "when opening a search ... the cursor should be in the
+  //: search field and the keyboard should be shown on the phone"). An
+  //: app's "Search" folder drawn as a row opened the folder - "New search"
+  //: and the searches kept - where its card went to the field; and only
+  //: entries marked `data-text-entry` raise the phone's keyboard with the
+  //: tap (ADR-0121 §4), which a row was not.
   function tap(row) {
     if (row.kind === 'play') tapLeaf(row);
-    else if (row.kind === 'search') onsearchentry?.(row);
+    else if (searchy(row)) onsearchentry?.(row);
     else if (row.kind !== 'text') {
       selected = null;
       onopen?.(row);
@@ -186,7 +193,27 @@
     //: Nothing here plays: Qobuz streams none of it (not licensed here, or
     //: not yet released - its "* ").
     const none = !!ctx.from?.unavailable || (tracks.length > 0 && tracks.every((r) => r.unavailable && !r.can?.length));
-    return { tracks, facts: facts.slice(0, 5), links, year, minutes, none };
+    //: **A playlist's tracks name their artist** (George, 2026-10-14:
+    //: "Playlists in general should contain artist name besides track
+    //: name", Spotify's and Qobuz's too). An app's playlist opens as this
+    //: page, which drew titles only - right for one artist's album. Shown
+    //: whenever the tracks' artists differ; the artist is the second line's
+    //: part before the album: Spotty's "Artist • Album", Qobuz's "Artist -
+    //: Album" (both read 2026-10-14).
+    const artistOf = (r) => {
+      const line = String(r.subtitle ?? '');
+      return (line.includes(' • ') ? line.split(' • ')[0] : line.split(' - ')[0]).trim();
+    };
+    const mixed = new Set(tracks.map(artistOf).filter(Boolean)).size > 1;
+    //: **A playlist says so** (George, 2026-10-14: "Play album" on a
+    //: playlist, "in general for other services when playlists are
+    //: displayed"): the service's own marker (the core's `hint`), else the
+    //: list it came from ("Playlists", "My Playlists"), else tracks by
+    //: different artists on a page the service did not call an album.
+    const playlist = ctx.from?.hint === 'playlist'
+      || (ctx.from?.hint !== 'album' && (/playlist/i.test(ctx.under ?? '') || mixed));
+    return { tracks, facts: facts.slice(0, 5), links, year, minutes, none, playlist,
+             artistOf: mixed ? artistOf : () => '' };
   });
 
   // ── Cards at an app's first level: the search as a field-button, and
@@ -258,6 +285,7 @@
     class:is-sel={isSel}
     class:is-busy={busy === r.handle}
     type="button"
+    data-text-entry={searchy(r) ? '' : undefined}
     onclick={() => tap(r)}
   >
     {#if opts.num != null}<span class="num" class:num--top={opts.num <= 3 && opts.podium}>{opts.num}</span>{/if}
@@ -375,7 +403,7 @@
             <div class="bgroup__grid">
               {#each entries as r (r.handle)}
                 {@const look = MY_MUSIC[r.id] ?? ['more', ...shapeFor(r.label, r.hint)]}
-                <button class="entry" class:is-busy={busy === r.handle} type="button" data-text-entry={r.id === 'myMusicSearch' ? '' : undefined} onclick={() => tap(r)}>
+                <button class="entry" class:is-busy={busy === r.handle} type="button" data-text-entry={r.id === 'myMusicSearch' || searchy(r) ? '' : undefined} onclick={() => tap(r)}>
                   <Disc name={look[1]} tint={look[2]} size={D} />
                   <span class="entry__label">{r.label}</span>
                 </button>
@@ -397,7 +425,7 @@
                 <div class="group__head"><span style:color={g.ink}>{g.name}</span><i></i></div>
                 {#each entries as r (r.handle)}
                   {@const look = MY_MUSIC[r.id] ?? ['more', ...shapeFor(r.label, r.hint)]}
-                  <button class="entry" class:is-busy={busy === r.handle} type="button" data-text-entry={r.id === 'myMusicSearch' ? '' : undefined} onclick={() => tap(r)}>
+                  <button class="entry" class:is-busy={busy === r.handle} type="button" data-text-entry={r.id === 'myMusicSearch' || searchy(r) ? '' : undefined} onclick={() => tap(r)}>
                     <Disc name={look[1]} tint={look[2]} size={46} />
                     <span class="entry__label">{r.label}</span>
                   </button>
@@ -412,7 +440,7 @@
     <div class="pad scroll">
       <div class="cards" style:--rows={2} use:across={bar}>
         {#each nonText as r (r.handle)}
-          <button class="card" type="button" class:is-busy={busy === r.handle} onclick={() => tap(r)}>
+          <button class="card" type="button" class:is-busy={busy === r.handle} data-text-entry={searchy(r) ? '' : undefined} onclick={() => tap(r)}>
             <span class="logo">{#if r.image}<img src={r.image} alt="" />{:else}{initials(r.label)}{/if}</span>
             <span class="card__text"><span class="card__label">{r.label}</span></span>
           </button>
@@ -506,7 +534,7 @@
         {/if}
         <div class="albumpage__acts">
           {#if album.none}<div class="albumpage__none">{ctx.app ?? 'The service'} can’t stream this album</div>{/if}
-          {#if ctx.from?.can?.includes('play')}<button class="big big--play" type="button" onclick={() => onact?.(ctx.from, 'play')}><span class="tri tri--l"></span>Play album</button>{/if}
+          {#if ctx.from?.can?.includes('play')}<button class="big big--play" type="button" onclick={() => onact?.(ctx.from, 'play')}><span class="tri tri--l"></span>{album.playlist ? 'Play playlist' : 'Play album'}</button>{/if}
           {#if ctx.from?.can?.includes('add')}<button class="big" type="button" onclick={() => onact?.(ctx.from, 'add')}><span class="plus plus--l"></span>Add to queue</button>{/if}
         </div>
       </div>
@@ -517,7 +545,11 @@
           {@const off = r.unavailable && !r.can?.length}
           <button class="trow" class:is-sel={isSel} class:is-off={off} type="button" disabled={off} onclick={() => tapLeaf(r)}>
             <span class="trow__n">{String(i + 1).padStart(2, '0')}</span>
-            <span class="trow__t">{r.label}</span>
+            {#if album.artistOf(r)}
+              <span class="trow__tt"><span class="trow__t">{r.label}</span><span class="trow__a">{album.artistOf(r)}</span></span>
+            {:else}
+              <span class="trow__t">{r.label}</span>
+            {/if}
             {#if isSel}{@render actionsFor(r, bar)}{:else if off}<span class="trow__d">Not available</span>{:else if r.duration}<span class="trow__d">{mmss(r.duration)}</span>{/if}
           </button>
         {/each}
@@ -705,6 +737,10 @@
   .cover.is-off .cover__art { opacity: 0.45; }
   .albumpage__none { font-size: 16px; line-height: 1.4; color: rgba(233, 238, 242, 0.72); padding: 12px 14px; border-radius: 14px; background: rgba(233, 238, 242, 0.05); border: 1px solid rgba(233, 238, 242, 0.1); }
   .trow__t { flex: 1; min-width: 0; font-size: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .trow__tt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .trow__tt .trow__t { flex: none; }
+  .trow__a { font-size: 15px; color: rgba(233, 238, 242, 0.62); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .trow.is-sel .trow__a { color: rgba(126, 214, 188, 0.8); }
   .sechead--release { margin: 28px 0 14px; padding-top: 0; }
   .facts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
   .facts__k { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(233, 238, 242, 0.62); }
@@ -788,6 +824,7 @@
   .level--bar .big { height: 52px; font-size: 17px; border-radius: 14px; }
   .level--bar .trow { height: 50px; gap: 14px; }
   .level--bar .trow__t { font-size: 18px; }
+  .level--bar .trow__a { font-size: 13px; }
   .albumpage__facts { width: 250px; flex-shrink: 0; padding-left: 24px; border-left: 1px solid rgba(233, 238, 242, 0.08); }
   .level--wide .albumpage__facts { width: 420px; }
   .level--bar .facts { grid-template-columns: 1fr; gap: 10px; }

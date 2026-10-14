@@ -354,11 +354,18 @@ class StateServer:
             async for msg in ws:
                 if msg.type != aiohttp.WSMsgType.TEXT or len(msg.data) > self.PAD_MAX:
                     continue
-                if not self._touchpad_on():
-                    continue
                 try:
                     kind = json.loads(msg.data).get("t")
                 except (ValueError, AttributeError):
+                    continue
+                if kind == "ping":
+                    # **Answered to the sender alone** (George, 2026-10-14: the
+                    # touchpad "loses connection when inactive"): a phone's
+                    # socket can die with no close it ever hears, and only an
+                    # answer that stops coming tells it so.
+                    asyncio.create_task(self._send(ws, '{"t":"pong"}'))
+                    continue
+                if not self._touchpad_on():
                     continue
                 if kind not in allowed:
                     continue
@@ -2145,10 +2152,16 @@ class StateServer:
         screen without touch** (ADR-0147 D3, a TV): nothing there can be
         pressed, so the phone answers - the question says so (`phone`)."""
         confirm = self._store.state.screen_confirm or {}
-        if request.remote not in ("127.0.0.1", "::1") and not confirm.get("phone"):
-            return web.json_response({"error": "only the panel answers this"}, status=403)
         action = request.match_info["action"]
-        if action not in ("keep", "revert") or self._screen_answer is None:
+        local = request.remote in ("127.0.0.1", "::1")
+        # **`shown`: the panel has drawn the question** (George, 2026-10-14:
+        # "The countdown should start with the keep screen displayed") - its
+        # countdown starts then. Only the panel says what is on its glass.
+        if action == "shown" and not local:
+            return web.json_response({"error": "only the panel reports this"}, status=403)
+        if not local and not confirm.get("phone"):
+            return web.json_response({"error": "only the panel answers this"}, status=403)
+        if action not in ("keep", "revert", "shown") or self._screen_answer is None:
             return web.json_response({"error": f"unknown answer {action}"}, status=404)
         return web.json_response(await self._screen_answer(action))
 

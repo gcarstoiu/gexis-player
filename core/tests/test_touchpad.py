@@ -78,3 +78,30 @@ async def test_scrolling_and_zooming_reach_the_panel_and_a_phone_leaving_is_said
         assert await _next(panel) == {"t": "gone", "phones": 0}
     finally:
         await client.close()
+
+
+async def test_a_ping_is_answered_to_its_sender_alone_even_while_off():
+    """George, 2026-10-14: the touchpad "loses connection when inactive". A
+    socket that died without a close still reads open; only an answer that
+    stops coming tells the phone to open a new one."""
+    server = StateServer(StateStore({}), settings=Settings(on=False))
+    client, panel, phone = await _pair(server)
+    try:
+        await phone.send_str('{"t":"ping"}')
+        assert await _next(phone) == {"t": "pong"}
+        assert await _next(panel) is None, "not relayed"
+    finally:
+        await client.close()
+
+
+def test_wifi_power_saving_is_off_on_a_player():
+    """George, 2026-10-14: the pointer "choppy sometimes". On sofapi, round
+    trips from idle spiked to 85-98 ms with power saving on, 10-11 ms at most
+    with it off."""
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[2]
+    conf = (root / "image/stage-gexis/03-core/files/gexis-wifi-powersave.conf").read_text()
+    assert "[connection]" in conf and "wifi.powersave = 2" in conf
+    build = (root / "packaging/system/build.sh").read_text()
+    assert "/etc/NetworkManager/conf.d/gexis-wifi-powersave.conf" in build
+    assert "set power_save off" in build

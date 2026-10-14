@@ -919,6 +919,23 @@ async def test_the_queue_is_read_and_reported(monkeypatch):
     assert queue.items[0].artwork.endswith("/music/abc/cover_100x100_o.jpg")
 
 
+def test_a_stream_in_the_queue_shows_its_own_artwork(monkeypatch):
+    """George, 2026-10-14: a Spotty playlist's queue showed Lyrion's tower
+    placeholder on every row. A stream not yet played has a `coverid` whose
+    cover is that placeholder; its `artwork_url` is the real one."""
+    adapter, _ = _adapter(monkeypatch, mode="play")
+    base = adapter._base
+    spotty = {"coverid": "-947", "coverart": "0", "remote": 1,
+              "artwork_url": "/imageproxy/https%3A%2F%2Fi.scdn.co%2Fimage%2Fab67/image.png"}
+    assert adapter._row_artwork(spotty) == f"{base}/imageproxy/https%3A%2F%2Fi.scdn.co%2Fimage%2Fab67/image_100x100_o.jpg"
+    direct = {"coverid": "-948", "remote": 1, "artwork_url": "https://static.qobuz.com/images/covers/x_600.jpg"}
+    assert adapter._row_artwork(direct) == (
+        f"{base}/imageproxy/https%3A%2F%2Fstatic.qobuz.com%2Fimages%2Fcovers%2Fx_600.jpg/image_100x100_o.jpg")
+    # A library track keeps its own cover.
+    assert adapter._row_artwork({"coverid": "abc"}).endswith("/music/abc/cover_100x100_o.jpg")
+    assert adapter._row_artwork({}) is None
+
+
 @pytest.mark.asyncio
 async def test_the_queue_is_read_as_long_as_lms_allows(monkeypatch):
     """ADR-0063: the length of the queue is the server owner's setting, and
