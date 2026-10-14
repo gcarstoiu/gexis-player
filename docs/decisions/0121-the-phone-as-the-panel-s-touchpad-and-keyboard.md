@@ -248,3 +248,12 @@ tappable elements"*.
 - **A row with its actions revealed is not outlined**; its actions are.
 - **The Dot shrinks to its small dot inside any outline**, not only round a
   small round button.
+
+George, the same afternoon: the outline round the playback bar's buttons
+*"gradually increasing its coverage until it's full when the pointer is in
+the middle"* - the bar behind a round button, seen past its corners, had
+counted as covering it; now only what is drawn over an element cuts its
+outline. And a tap on the touchpad over the visualiser *"closes it but then it
+reopens"*: the tap was also replayed in the page beneath the meters' window,
+pressing what the pointer rested on. Over the visualiser a touchpad tap now
+only reports the touch, as a finger's tap on the meters does.

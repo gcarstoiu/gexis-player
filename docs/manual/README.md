@@ -207,7 +207,8 @@ server offers, including the apps it has installed.
 **Apps** lists the apps installed on your Lyrion server (streaming services,
 internet radio and so on), each with its own logo and menus. A service's
 first page can take a second or two to arrive; the panel says which service
-it is waiting for.
+it is waiting for. A service's playlist opens as a page of its tracks, each
+with its artist under the title (a single artist's album shows titles only).
 
 **Search**: tap a search field and type on your phone (section 7); results
 arrive as you type. My Music's Search looks for artists, albums, works,
@@ -300,7 +301,8 @@ mini strip is outlined down to the strip. A track whose Play, Queue and Add
 buttons are showing is not outlined itself. The pointer hides after a few
 seconds of rest. *Settings → Display* sets **Pointer speed**,
 **Pointer style** (Dot or Arrow), and whether the touchpad is offered at
-all (**Phone touchpad**). A tap outside the open sheet just closes it, so
+all (**Phone touchpad**). While the visualiser is up, a tap on the touchpad
+only closes it, as a tap on the screen does. A tap outside the open sheet just closes it, so
 nothing behind it is pressed by mistake.
 
 ### Settings on the phone
