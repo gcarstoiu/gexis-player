@@ -143,7 +143,8 @@ time, which is typical of a cable problem.
 
 **After choosing a screen, tapping Keep does nothing.**
 Check that the touch cable (the USB lead from the screen to the Pi) is
-plugged in firmly; on one player a loose touch cable was the cause. If Keep
+plugged in firmly; on one player a loose touch cable was the cause. If the
+phone page shows *Keep this screen?* too, answer it there. If Keep
 is not tapped within two minutes, the player goes back to the screen it had
 before, so nothing is lost.
 
@@ -151,7 +152,10 @@ before, so nothing is lost.
 Whenever a screen change alters the picture (a new screen, another model
 chosen with *Change* on *Settings → Display → Attached screen*, or *Screen rotation*), the
 player restarts on it and asks *Keep this screen?* (*Keep this rotation?*
-after a rotation change). Without a tap on Keep
+after a rotation change). A TV, or a screen not in the list, is answered
+on the phone page. A listed touch screen shows Keep on itself; when the
+player cannot tell that its touch works, the phone page offers Keep as well.
+Without an answer
 within two minutes of the question appearing, it goes back to how it was, so a
 screen that shows nothing cannot lock anyone out. A screen mounted upside down is set with *Screen
 rotation*, 180°.
@@ -630,7 +634,8 @@ it; the device itself restarts only if the system needs it, and the update
 says so before starting. If the new release fails its check - also after the
 device restarts - the player goes back to the release it had; after a power
 cut during the install, it finishes the install or goes back when it starts
-again. The updater keeps only the downloads of what is installed, so old
+again. An install found cut short by a later check is finished once nothing
+is playing, and the device restarts. The updater keeps only the downloads of what is installed, so old
 releases do not fill the card. While it
 installs, no phone or app can start playing on it. *Settings → System → Change logs* lists what
 changed in the last 10 releases.

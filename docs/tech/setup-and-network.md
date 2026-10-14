@@ -181,8 +181,10 @@ On a configured one a phone holds it only while the setup page is in use
 the last `SETUP_ACTIVE_S` (600 s) - noted by the `_note_setup_use`
 middleware in `wsserver.py`, the panel's own loopback requests excluded - or
 when the retry first found a phone on the network less than `SETUP_ACTIVE_S`
-ago (`_phone_since`, cleared when a retry finds none), so a phone that has
-just joined is not left behind. The page's live status comes over the state
+ago (`_phone_since`, cleared when a retry finds none, and with the page's
+last use each time the setup network is held again - Finding 125 #19 - so a
+phone left from an earlier opening does not use up a new phone's grace), so
+a phone that has just joined is not left behind. The page's live status comes over the state
 socket, which does not count, so `SetupPage.svelte` asks `/setup/status` once
 a minute while it is in front. A phone that joined by itself and never opened
 the page no longer holds a configured player off its Wi-Fi for ever. A failed hotspot start is retried
@@ -284,8 +286,9 @@ sequenceDiagram
    reads it with `backups.inspect()`:
    - it refuses, in a sentence, a file that is not a gzip tar, one with a
      path no backup holds (matched by whole path component), a link, a
-     device or a pipe, or a name not in plain form (`..`, `.`, an empty
-     part, a leading `/`), one with no settings, or one whose `settings.db`
+     device or a pipe outside the backed-up folders, or a name not in plain
+     form (`..`, `.`, an empty part, a leading `/`), one with no settings,
+     or one whose `settings.db`
      will not open or has no `settings` table (`backups._checked()`, the same
      check a restore from Settings makes);
    - it returns the backup's main settings (`backups.APPLIED`), the plugins
@@ -311,16 +314,15 @@ sequenceDiagram
      once the settings file is replaced, the store the core holds open
      refuses every write. A screen this version does not know is left to
      Settings;
-   - `backups.restore_file()`, with the two databases written beside
-     themselves and renamed into place, so the core's open connection is
-     never overwritten underneath it. The rest is extracted with Python's
-     `tar` filter (owners kept, setuid bits dropped). A backup that brings
-     `var/lib/beszel-hub` stops `beszel-hub.service` first
-     (`STOPPED_FOR_RESTORE`; the reboot starts it again), and a `-wal` or
+   - `backups.restore_file()` (the same as a restore from Settings, below),
+     with every file written beside itself and renamed into place, so the
+     core's open connection to its databases is never overwritten
+     underneath it. A backup that brings `var/lib/beszel-hub` stops
+     `beszel-hub.service` first, and one that brings an uploaded plugin's
+     data stops every running `gexis-uploaded-*@*.service`
+     (`STOPPED_FOR_RESTORE`; the reboot starts them again), and a `-wal` or
      `-shm` file the archive does not bring is removed from beside each file
-     it restores. (When a backup is made, a live SQLite database with a
-     `-wal` beside it - the Beszel hub's - goes in as one consistent file,
-     copied with SQLite's own backup, without its `-wal` and `-shm`.)
+     it restores.
    - with a name that differs from the backup's and `second_player` not
      false, `backups.IDENTITIES` are left out of `restore_file()` (the
      Beszel agent's data, Plexamp's store, go-librespot's `state.json` and
@@ -336,6 +338,42 @@ sequenceDiagram
      is on;
    - the panel's `restart_for: "restore"`, and the reboot. The file is
      deleted whatever happens.
+
+**How a backup is written and put back** (`backups.py`, ADR-0083; the
+links and pipes as of Finding 125 #1, #2, #4, #5, 2026-10-14). The Backups
+share is `pi`'s and writable over SMB, and the core works in it as root, so
+nothing there is followed through a link:
+
+- **Writing.** The archive is written under a random name
+  (`.<name>.<random>.part`, `mkstemp`), handed to `pi` through the open file
+  and renamed into place; a `.part` left by a backup cut short is removed by
+  the next backup once it is 10 minutes old (`STALE_PART_S`), by name only.
+  A live SQLite database with a `-wal` beside it - the Beszel hub's - goes
+  in as one consistent file, copied with SQLite's own backup, without its
+  `-wal` and `-shm`. **Only files and folders go in**: a link, a pipe, a
+  device or a hard-linked second name under a backed-up folder (a plugin's
+  pipe, a venv's `lib64 -> lib`) is left out and logged. The updater's
+  failure mark, `.before-update-failed`, is removed and made anew with
+  `O_EXCL | O_NOFOLLOW`.
+- **Listing, downloading, restoring.** Only a plain file under a backup's
+  name is a backup: `available()` uses `lstat`, and the download and a
+  restore read through one file opened with `O_NOFOLLOW`
+  (`open_archive()`), so a link left under a backup's name is not listed,
+  served or restored.
+- **Putting back.** `_checked()` refuses a name not in plain form or outside
+  the backed-up paths; a link, pipe or device under a backed-up folder is
+  skipped, not the archive, so the backups 0.15.0 wrote with one restore
+  again. Then `_refuse_links_on_disk()` walks each member's path on the
+  disk with `lstat`, **before anything is stopped or written**, and refuses
+  the whole archive if any part of it is already a link - an uploaded
+  plugin owns its data folder, and Plexamp, as `pi`, its own. The
+  extraction is the module's own (`_put_back()`): each folder opened from
+  the one above with `O_NOFOLLOW`, each file written beside its place under
+  a random name and renamed over it; Python's `tar` filter still decides
+  owners and modes (owners kept, setuid bits dropped). The services whose
+  files it brings are stopped first (`STOPPED_FOR_RESTORE`): the Beszel hub,
+  and every uploaded plugin, whose own SQLite would otherwise checkpoint
+  over the restored file.
 
 **Setup's own screens are laid out for the attached screen** (ADR-0109
 amended 2026-10-07): `gexis-screen-check` runs before the kiosk during setup
@@ -371,11 +409,27 @@ mode, `screens.fitted` holding a 16:9 screen larger than 1080p to
 value so the row reads the port in use. `gexis-kiosk-start` then pins the
 window to the screen's port whenever both are connected.
 
-**A screen without touch** (ADR-0147 D3, D5): `screen_detect.has_touch` is a
-fingerprint with a USB touch id. Without one, the Keep question carries
-`phone: true`, `POST /screen/keep|revert` is accepted from the phone as well
-as the panel, and the phone page shows `PhoneKeepScreen`; the panel's own
-Keep says to answer on the phone. screen.env carries `GEXIS_SCREEN_TOUCH_USB`
+**Who answers *Keep this screen?*** (ADR-0147 D3, D5, as amended by
+Finding 125, 2026-10-14). The question carries two fields:
+
+- `panel_buttons` (`screen_detect.has_touch`): the panel shows its own Keep
+  and Go back. True for every listed panel, looked up by the model's id (a
+  panel stored under its old `-case` id included); false for a TV or any
+  screen in no list (`other-*`), a Generic monitor mode, and a listed model
+  whose notes say *no touch*.
+- `phone` (not `screen_detect.touch_recognised`): the phone may answer.
+  Only a panel whose fingerprint names its USB touch device is answered on
+  itself alone (ADR-0109 decision 2); every other screen may also be
+  answered from the phone, since many listed panels need an SPI ads7846
+  overlay or a goodtft driver the player never installs, and a panel whose
+  touch is dead would otherwise only wait for the countdown.
+
+So a fingerprinted panel is answered on the panel; another listed panel
+shows its buttons, says *Or answer on the phone page*, and the phone page
+shows `PhoneKeepScreen` (*Answer on the screen, or here if its touch does
+not respond*); a TV, an unlisted screen, a generic mode or a *no touch*
+model shows no buttons and is answered on the phone. With `phone: true`,
+`POST /screen/keep|revert` is accepted from the phone as well as the panel. screen.env carries `GEXIS_SCREEN_TOUCH_USB`
 (the screen's) and `GEXIS_PANEL_TOUCH_USB` (every known panel's);
 while the screen has no touch, screen.env's `GEXIS_OUTPUTS_OFF` names the
 ports with a known panel and `gexis-kiosk-start` turns them off with

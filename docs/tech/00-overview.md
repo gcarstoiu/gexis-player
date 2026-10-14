@@ -140,8 +140,10 @@ Notes on the diagram:
   `gexis-uploaded-renderer@` and `gexis-uploaded-service@` (ADR-0106).
   They may not bind port 5353; a plugin that wants to be found sends
   `announce`, and the core writes `/etc/avahi/services/gexis-plugin-<id>.service`
-  (`announce.py`), removed when the plugin disconnects and cleared at every
-  core start (ADR-0142).
+  (`announce.py`), removed when the plugin disconnects or announces
+  `services: []`, and cleared at every core start (ADR-0142). A name is at
+  most 63 bytes in UTF-8 (avahi's limit); the device name, used when a plugin
+  gives none, is cut to fit.
 - **A plugin's switch says its version** (`Plugin.version_line()`): an
   upload's manifest `version`, else the upstream part of the package that
   installed the manifest (`plugins.with_package_versions`, two `dpkg-query`

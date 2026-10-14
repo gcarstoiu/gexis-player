@@ -276,8 +276,15 @@ before it is kept on the device for one step back; your data folder is kept.
 **Remove** from the plugin's row (switch it off first). Its package, its data
 folder and its settings are deleted.
 
-**Backups** keep your plugin's settings and data, not its package. After a
-restore, the plugin is listed as needing to be uploaded again.
+**Backups** keep your plugin's settings and data, not its package. Only
+files and folders in the data folder go in: a link, a pipe or a device there
+(a venv's `lib64 -> lib`, a FIFO) is left out of the backup, so make it
+again at start if the plugin needs it. A restore refuses the whole backup
+if a link in the data folder lies on the path of anything it would write.
+Your plugin is stopped while a restore puts its data back, so its own
+SQLite or other open files cannot write over what was restored; the
+restart after the restore starts it again. After a restore, the plugin is
+listed as needing to be uploaded again.
 
 ## 8. When something does not work
 
