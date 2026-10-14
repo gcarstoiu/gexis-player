@@ -448,6 +448,17 @@ because above 384 kHz Lyrion's PCM opened the card at 44.1 kHz; with the list,
 a 705.6/768 kHz stream is refused instead (Finding 120); Squeezelite's unit
 reads it unbraced, so the empty value of every other card adds no argument.
 
+**What a card takes is asked once per device** (Finding 125 #15,
+2026-10-14). `needs_plug` plays a second of zeroes to ask, so its answers -
+formats, lowest and highest rate - are kept by card id, with the device
+that gave them (`_asked_of`): for a USB card its sysfs path, bus number and
+device number, which the bus gives anew at every plug-in. Before
+`needs_plug`, `widens`, `squeezelite_options` or `native_dsd` read them,
+`_current()` drops them when that device has changed, so a DAC unplugged and
+another with the same card id plugged in is asked again rather than
+inheriting the first one's widening, rates and DSD. An I2S board or HDMI
+keeps its answers for the life of the core: only a reboot changes them.
+
 **Native DSD** (ADR-0144): `native_dsd()` names the card's DSD format from
 the same question (`DSD_U32_BE` first). With the volume Fixed (`write(...,
 fixed=True)`, from the start-up, an output switch and every change of volume
@@ -466,7 +477,12 @@ it is an HDMI port whose connector is not connected; every lookup in the core
 goes through it, so the chain, the mixer and the volume follow. `_fixed_wanted`
 is never true while the jack stands in (Fixed would be full level into
 headphones). `_watch_standin` polls every 3 s and calls `_switch_output` when
-the card in force changes; `_standin_note` is the Output row's note.
+the card in force changes under the same stored choice (`standin_due`);
+`_standin_note` is the Output row's note. It measures against what the last
+switch put in force (`output_seen`, set by `_switch_output` before its first
+await), and switches only under the `volume_change` lock, looking again once
+it holds it (Finding 125 #10): a user's own change of output is not taken
+for a port going or coming back and switched a second time.
 
 Choosing one does not restart the core. The core first stops whoever is
 playing (`Supervisor.stop_active`, as a change of volume type does; George,
@@ -580,7 +596,11 @@ flowchart LR
   `/run/gexis/visualiser-shown` (`0` hidden, `1` before a show), and the driver
   skips its drawing and slows to five frames a second (`HIDDEN_FRAME_S`, 0.2 s)
   while it reads `0` (see [ui.md](ui.md)). Entry is the button or five minutes of
-  unattended playback; a renderer change lowers it (ADR-0036).
+  unattended playback; a renderer change lowers it (ADR-0036). A touch or a
+  renderer change that arrives while the timer's own raise is still settling
+  lowers the meter once that raise is done (Finding 125 #14), instead of
+  being lost with the meter left over the panel; a raise the user asked for
+  is not lowered that way, since the tap that asked for it also sends a touch.
 - **What it draws besides levels.** The core writes
   `/run/gexis/nowplaying.json` (`peppy_metadata.py`) for title, artist,
   artwork and times, and `/run/gexis/visualisation.json` (`skins.py`) for the

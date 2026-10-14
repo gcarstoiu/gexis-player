@@ -198,7 +198,7 @@ something the panel is not showing).
 | Bluetooth | `POST /bluetooth/pairing/{answer}` | Panel (ADR-0045) |
 | Hardware report | `GET /hardware-report` (the board by EEPROM, driver, overlays, controls, formats and rates; the screen's EDID and touch controller - no serials), `POST /hardware-report/tones` (a 1 kHz tone at -20 dBFS at 44.1, 96 and 192 kHz through `output`, and the rate and format the card ran at; `409` while any card plays), `GET /hardware-report/prompt` and `POST /hardware-report/prompt/dismiss` (the System page's one line, a week after a board or screen that is not Tested was first seen, per piece of hardware; kept in the internal `_hardware_prompt` key; a prepared report dismisses it too), `POST /hardware-report/screen` (`{"show"}`: the test pattern on the panel, through `screen_check` in `/state`; taken down after 120 s) and `POST /hardware-report/screen/result` (the panel's four corner taps in screen pixels, measured against 6 % of the diagonal), `POST /hardware-report/issue` (`{"answers", "notes", "tones"}` -> the pre-filled GitHub *Hardware feedback* form's address; its answers are text fields, which GitHub fills from a link and dropdowns are not; the result is kept in `_hardware_feedback` with the sound card and screen it was made on), `GET /hardware-report/kept` (that one, or `null` - dropped once the board or screen in use is another) and `POST /hardware-report/kept/clear` (*Start over*), `GET /hardware-report/file` (that feedback as a text file, for e-mail - ADR-0138) - `hardware_report.py`; the *Reported* state from `hardware_reports.json` (`hardware_reports.py`), which only `tools/hardware-reports.py` writes, from the issues labelled `accepted`, along with HARDWARE.md's table | Settings on a phone or computer (ADR-0126) |
 | Network | `GET`/`POST /network/cable` and `/network/wifi/address` (an address, Automatic or Manual), `POST /network/keep` (ADR-0123); `GET /network/wifi` (the connected network's details) | Phone, computer, panel |
-| Backups | `GET /backups/{name}` - one backup from the Backups share, as a file to save (ADR-0083 as amended 2026-10-08); a name that is not one of ours is refused | Phone, computer |
+| Backups | `GET /backups/{name}` - one backup from the Backups share, as a file to save (ADR-0083 as amended 2026-10-08); a name that is not one of ours is refused, and a link under a backup's name is not sent (`backups.open_archive`, `O_NOFOLLOW`; Finding 125 #2) | Phone, computer |
 | Problem report | `POST /report/prepare` (`{"what", "often"}`) starts it in the background; `GET /report/status` gives the seven steps of `problem_report.STEPS`, each `done` with what it found, then the file's name, size and contents; `GET /report/file` (the zip) and `GET /report/issue` (the GitHub form's address: what happened, how often, the version, what was taken out and the log's last errors, cleaned, under 7,500 characters) for an hour after; one at a time (`409`). The zip holds the journal, the updater's log, versions, hardware and settings, scrubbed on the device: known values are matched in any case (except the log's own level words, so a track called "Warning" does not take every `WARNING`); line-shape rules take out the geocoded town on weather lines and the artist names on the artwork sweep's lines; a query string's coordinates count as a place; the log is scrubbed in pieces of whole lines (`PIECE`), looked up word by word, so the core's event loop is not held up. `POST /report` still answers the zip in one request | Settings on a phone or computer (ADR-0125, ADR-0138) |
 | Screens | `POST /screen/{action}`, `/screen-new/{action}` | Panel (ADR-0109) |
 | Setup | `GET /setup/status`, `/setup/answers`, `/setup/networks`, `/setup/screen`, `/setup/plugins`; `POST /setup/answers`, `/setup/finish`, `/renderers/park`, `/settling/hide` (*Use the player now*), `/settling/done` (the OK on a settling screen that names a failed download, ADR-0128) | Setup page (ADR-0104) |
@@ -436,9 +436,13 @@ a rescan of the same server** (George, 2026-10-14: the Album Artists grid
 took more than 30 s; four rescans in twelve hours on sofapi had each dropped
 all ~950 photos): a snapshot of every artist's id and name
 (`artist-photo-names`) is kept with the photos, and only the photos and slow
-markers of ids that now name someone else are dropped
-(`LmsArtistInfo._revalidate`). Another server, or no snapshot yet, drops
-everything. A scan under way
+markers of ids both snapshots name alike are kept
+(`LmsArtistInfo._revalidate`): every id held, in memory or in the store, that
+now names someone else, no one, or that the old snapshot never listed (a
+composer, whom the snapshot's `artists` query leaves out) is dropped
+(Finding 125 #21). Another server, no snapshot yet, or names that cannot
+be read now drop everything, the snapshot with it, so a later rescan is
+never judged against a snapshot that could not be refreshed. A scan under way
 drops nothing, and a server that gives no status is judged by its address
 alone; photos stored before this record existed are asked for again once.
 **The `lms` and `lms-release` providers' stored answers go with the photos**
@@ -447,7 +451,9 @@ alone; photos stored before this record existed are asked for again once.
 to `Cache.forget_providers("lms", "lms-release")`. The two providers'
 `before_cached` hook runs the same check (`check_scope`, at most once a
 minute) before a stored answer of theirs is read, so a rescan is noticed even
-when only cached answers are being read. A player that never recorded whose
+when only cached answers are being read. **One check runs at a time and every
+caller waits for it** (Finding 125 #23): a caller arriving while it fetches
+the names is not served a renumbered id's old photo or answer. A player that never recorded whose
 photos it held drops them once, after the upgrade. Stored enrichment answers whose
 picture links go through LMS's image proxy are moved to the LMS address in
 use as they are read (`EnrichmentService(lms_base=...)`).
@@ -462,7 +468,13 @@ Related modules:
   (60 artists) and fetched ahead for the next track (ADR-0112). An artist
   answered with no photos is asked again once that answer is older than
   `EMPTY_RECHECK_S` (30 days, by the `.done` marker's own time); an artist
-  whose photos were found is not asked again.
+  whose photos were found is not asked again. The folders are named by LMS
+  artist id, so they follow the artist photos' check (Finding 125 #22): the
+  fanart frame calls `check_scope` before it looks photos up (its tracks may
+  come from a source that reaches neither the grid nor LMS enrichment), and
+  `LmsArtistInfo.on_renumber` calls `Fanart.drop` with the ids still naming
+  the same artist - every other folder goes, all of them for another server.
+  A fetch under way when the ids change hands keeps nothing.
 
 ## Plugins
 
@@ -568,7 +580,9 @@ the visualiser does not come up while it is off (`PeppyController(blocked=)`).
 `Schedule.tick()`, every 15 s: inside a standby time (`in_standby_time`; an
 interval belongs to the days it starts on) the screen goes off once nothing
 plays and `last_use` is older than `standby_wake` minutes; outside them, a
-screen the schedule put off wakes. Measured on the 10.1": touch still reaches
+screen the schedule put off wakes. *Keep this screen?* on the screen counts
+as use, as music does (`Schedule(blocked=)`, Finding 125 #17), and drawing
+it wakes a dark screen, so the countdown never runs under the black cover. Measured on the 10.1": touch still reaches
 the page with the output off; the screen shows its own "No signal" for about
 10 s some 30 s in.
 

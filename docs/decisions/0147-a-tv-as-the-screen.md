@@ -53,11 +53,15 @@ the question said, means a TV is the screen.
   on the TV's 1080p mode; any other shape keeps its own mode (a size it does
   not offer would be calculated). New screens found at start take the same
   cap.
-- **D3:** `screen_detect.has_touch`: a fingerprint naming a USB touch device.
-  Without one the question carries `phone: true`; the core accepts the
-  answer from the phone then (from the panel only otherwise, ADR-0109
-  decision 2); the phone page shows *Keep this screen?* with *Go back* and
-  *Keep* and the countdown; the panel's own says to answer on the phone.
+- **D3:** (as amended 2026-10-14, below) `screen_detect.has_touch`: a
+  listed model not known to lack touch - not a TV, a screen in no list, a
+  generic mode or a model whose notes say *no touch*. Without it the
+  question carries `panel_buttons: false` and the panel's own says to answer
+  on the phone. `phone: true` whenever the screen's touch is not recognised
+  by a fingerprint naming a USB touch device (`touch_recognised`); the core
+  accepts the answer from the phone then (from the panel only otherwise,
+  ADR-0109 decision 2), and the phone page shows *Keep this screen?* with
+  *Go back* and *Keep* and the countdown.
 - **D5:** screen.env's `GEXIS_SCREEN_TOUCH_USB` and `GEXIS_PANEL_TOUCH_USB`;
   `gexis-kiosk-start` switches off, in labwc's configuration, the input of
   every known panel that is not the screen, by the name
@@ -172,3 +176,27 @@ off again. A screen output that is off (display standby) is left off.
 Verified on sofapi: forced to 640 x 480 by hand, back at 1920 x 1080 within
 5 s, logged. **Not yet seen:** the TV itself turned off and on with the fix
 (George's next try).
+
+## Amended 2026-10-14 (Finding 125): who answers Keep this screen?
+
+Finding 125 (#9, #11) found that only the three panels whose fingerprint
+names a USB touch device counted as having touch: every other listed panel,
+the tested 7.9" bar among them, had *Keep this screen?* sent to the phone and
+its own Keep and Go back hidden. A listed panel's touch may also not work at
+all - many need an SPI ads7846 overlay or a goodtft driver the player never
+installs. Who answers is now:
+
+- **A panel recognised by its USB touch fingerprint** is answered on the
+  panel only (decision 2 of ADR-0109 as before).
+- **Any other listed touch panel** shows its own *Keep* and *Go back*, and
+  the phone may answer too, so a panel whose touch does not work is not left
+  to its countdown.
+- **A TV, a screen in no list, a generic monitor mode, or a listed model
+  whose notes say it has no touch** shows no buttons and is answered on the
+  phone.
+
+The question carries both: `panel_buttons` (`screen_detect.has_touch`, by the
+model's id, so a panel kept under its old `-case` id keeps its touch, #8) and
+`phone` (not `screen_detect.touch_recognised`, the fingerprint test that
+`has_touch` was until now). Scheduled display standby no longer blanks the
+screen while the question is up, and drawing it wakes a dark screen (#17).
