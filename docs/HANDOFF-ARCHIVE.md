@@ -6948,3 +6948,15 @@ custom* at the release, our own Imager repository and the community
 application after (g14). **After it:** Phase 13g (the player in Home
 Assistant), themes (14), a sound bar on optical (14a), the library answering
 for itself (15) - each ADR first. HDMI audio on the second port: to revisit.
+
+## Moved from HANDOFF 2026-10-14 (routine clean-up after 0.15.0's PR)
+
+**From the power-cut test, in 0.13.0:** George's power cut on the bar (g34,
+Finding 123) found the updater could not recover - its note for the boot was
+an empty file (never synced), and every check said "current". Fixed: the
+note is synced, a cut-short install is finished with no note (at boot and at
+every check), only half-installed packages are reinstalled, the whole release
+completed after. The bar recovered with the fixed code (run from a copy) and
+is on the complete 0.12.0 set. Also: *Could not check for updates* says why
+in words. **Not proved:** a second real cut with the fixed updater
+installed - done 2026-10-14, passed. LESSONS 70.
