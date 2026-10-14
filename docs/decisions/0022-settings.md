@@ -363,6 +363,15 @@ Confirmed by George, 2026-10-13 (*"Yes, add it"*), [ADR-0146](0146-the-meters-fo
 | Gain (*Visualiser tweaks*) | [N] | −10 to +20 dB in 1 dB steps, default 0 (`meter_gain`). Added to what the needles and the bars show after the volume, in every volume type, Fixed included. Applies at once |
 | Needles follow the volume (*Visualiser tweaks*) | [N] | *Half the drop* (default) or *Like a real amplifier* (`meter_follow`; George, 2026-10-13: *"Can you add a setting also [in] visualisation tweaks for switching to a real amp behaviour"*). The bars follow the whole cut either way (Software and Hardware); Fixed shows the recording. Applies at once |
 
+### Appended 2026-10-14 — text size
+
+Confirmed by George, 2026-10-14 (*"Let's do 90 to 130 and the home tiles
+stretch to fit the text"*), [ADR-0148](0148-text-size.md):
+
+| Setting | Mark | Notes |
+|---|---|---|
+| Text size (*Display → Panel*) | [N] | 90 to 130 % in 5 % steps, default 100 (`text_size`). Every font size on the player's own screen, not a phone's; Home's tiles grow with it above 100 %. Applies at once. A zoom of the whole screen was tried first and set aside: the layouts are drawn for one page size |
+
 ## Settled by prior records
 
 - **Output mode switching is not instantaneous.** Confirmation dialogue, and the

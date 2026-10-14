@@ -329,6 +329,18 @@ drawn per kind:
 - **Footer**: `MiniStrip` while something is active. At Home with nothing
   active, `WaitingServices` shows the waiting renderers' marks instead.
 
+### Text size (ADR-0148)
+
+`text_size` (90-130 %, default 100) sets `--text-scale` on `<html>`, on the
+panel only (`App.svelte`). A PostCSS step in `vite.config.js` rewrites every
+`font-size` in pixels and every `--t-*` type token to
+`calc(Npx * var(--text-scale, 1))` at build time, so no screen spells it. Home's
+tiles take `--tile-grow: max(1, var(--text-scale))`: both sides on a Standard
+screen (`.cards`, `.card` in `Library.svelte`), width only on a bar
+(`.cards--more` in `BarLibrary.svelte`). A zoom of the whole page (the device
+scale factor) was tried first and set aside: the layouts are drawn for a
+1280 x 800 page (400 high on a bar) and clipped or left a third empty.
+
 ### Waiting screen (LMS off)
 
 `WaitingHome.svelte` (ADR-0079, drawn as ADR-0133) is the panel's root while
