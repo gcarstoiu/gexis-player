@@ -128,6 +128,10 @@
 
   /** A row with its actions revealed: they sit inside it or beside it. */
   function revealed(el) {
+    // An action is never the row: Play's neighbour is Queue, another action,
+    // which took Play's and Queue's outlines away (George, 2026-10-14: "not
+    // all buttons there have the highlight on hover").
+    if (el.classList.contains('act') || el.closest('.row__actions, .acts')) return false;
     return !!(el.querySelector('.act') || el.nextElementSibling?.querySelector?.('.act')
               || el.nextElementSibling?.classList.contains('act'));
   }
