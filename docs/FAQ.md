@@ -214,6 +214,11 @@ choose its port again to go back to it. If the edges of the picture are cut
 off, set the TV's picture size to *Just Scan* or *Original*: TVs crop HDMI
 pictures otherwise.
 
+**Can I make the text on the screen bigger?**
+Yes: *Settings → Display → Text size*, from 90 % to 130 %. The writing on the
+player's screen changes at once and Home's tiles grow with it; pictures,
+buttons and the layout stay as they are. A phone's page keeps its own size.
+
 **Can the player run without a screen?**
 Yes. *Settings → Display → Headless* turns the screen off, and every setting
 that only affects the screen is hidden while it is on. Everything else,
