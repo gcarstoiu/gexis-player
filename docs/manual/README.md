@@ -92,6 +92,9 @@ synchronised.
 ![Artist](images/panel-nowplaying-artist.webp)
 
 **Artist** shows a short biography, the artist's genres and similar artists.
+Tap the artist's name for their page in the library, and a similar artist the
+library has for theirs. On **Track** and **Release**, the album's title opens
+the album's page.
 
 ![Release](images/panel-nowplaying-release.webp)
 
@@ -161,7 +164,7 @@ Artists are grouped by letter; tap a letter on the rail to jump.
 
 An artist's page shows their portrait, genres and albums. It also has
 **Play** and **Shuffle** for everything by them, a biography and similar
-artists.
+artists; a similar artist the library has opens their page.
 
 ### Album page
 
@@ -277,8 +280,9 @@ The mini player has:
 
 ![Phone: the touchpad](images/phone-sheet-open.webp)
 
-Tap the track name to open the sheet: its large area is a **touchpad** for
-the panel, so you can drive the screen from across the room.
+Tap the track name, or swipe the sheet up, to open it: its large area is a
+**touchpad** for the panel, so you can drive the screen from across the room.
+Swipe it down to close it.
 
 | Gesture | Does |
 | --- | --- |
@@ -289,8 +293,9 @@ the panel, so you can drive the screen from across the room.
 | Pinch | Zooms the panel in or out around the pointer. |
 
 Tap a text field on the panel (a search, for example) and the phone's
-keyboard comes up: what you type appears on the panel. The pointer hides
-after a few seconds of rest. *Settings → Display* sets **Pointer speed**,
+keyboard comes up: what you type appears on the panel. Whatever the pointer
+is over that can be pressed is outlined. The pointer hides after a few
+seconds of rest. *Settings → Display* sets **Pointer speed**,
 **Pointer style** (Dot or Arrow), and whether the touchpad is offered at
 all (**Phone touchpad**). A tap outside the open sheet just closes it, so
 nothing behind it is pressed by mistake.

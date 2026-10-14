@@ -364,8 +364,11 @@ screen. Browsing the library happens on the screen, or in the
 streaming app.
 
 **How does the touchpad work?**
-Open the volume sheet on the phone. One finger moves a pointer on the
-screen, a tap presses, two fingers scroll, and a pinch zooms. The lines along
+Open the volume sheet on the phone - tap it, or swipe it up; swipe down to
+close it. One finger moves a pointer on the screen, a tap presses, two
+fingers scroll, and a pinch zooms. What the pointer is over is outlined when
+it can be pressed. If the touchpad stops answering, it reconnects by itself
+within about ten seconds. The lines along
 the right and bottom edges scroll with one finger. Tapping a text field on
 the screen brings up the phone's keyboard. A touch outside the sheet closes it.
 

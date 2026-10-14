@@ -455,6 +455,23 @@ sequenceDiagram
 - **Reconnect**: `lib/touchpad.js` opens a fresh socket on
   `visibilitychange`, `pageshow` and `online`. A phone browser that was in
   the background can lose its socket without the page ever being told.
+  **A socket that died quietly is found too** (George, 2026-10-14): every 4 s
+  the page sends `{"t":"ping"}`, which the core answers to the sender alone
+  with `{"t":"pong"}` (even while the touchpad is off); nothing heard for 9 s,
+  or a gesture into a closed socket, opens a fresh one.
+- **The panel's work per move**: what lies under the pointer (`look`:
+  `elementFromPoint`, hover events, the outline) is asked at most every
+  80 ms while the pointer moves, and on the frame it stops, not every frame.
+- **The outline** follows whatever pressable is under the pointer, in its
+  own box and corner radius, 6 px out; a light fill only on a small icon
+  button. It skips anything covering half the screen.
+- **Wi-Fi power saving is off on a player**
+  (`/etc/NetworkManager/conf.d/gexis-wifi-powersave.conf`, `wifi.powersave =
+  2`, and `iw ... set power_save off` at install): on sofapi, round trips
+  from idle spiked to 85-98 ms with it on, 10-11 ms at most with it off.
+- **The phone's sheet swipes**: up opens it, down closes it, anywhere but the
+  touchpad (`MiniPlayer.svelte`, `swipeStart`/`swipeEnd`, 40 px, mostly
+  vertical; `touch-action: none` on the sheet).
 
 ---
 
