@@ -466,3 +466,31 @@ when the panel has drawn the question** (George: *"The countdown should start
 with the keep screen displayed"*): the panel reports `/screen/shown` (loopback
 only) two frames after it appears, and the core sets the deadline then. A
 question never drawn still goes back after `NEVER_DRAWN_S` from the start.
+
+## Amended 2026-10-14 (Finding 125): who answers Keep this screen?
+
+Finding 125 (#9, #11) found that only the three panels whose fingerprint
+names a USB touch device counted as having touch: every other listed panel,
+the tested 7.9" bar among them, had *Keep this screen?* sent to the phone and
+its own Keep and Go back hidden. A listed panel's touch may also not work at
+all - many need an SPI ads7846 overlay or a goodtft driver the player never
+installs. Who answers is now:
+
+- **A panel recognised by its USB touch fingerprint** is answered on the
+  panel only (decision 2 as before).
+- **Any other listed touch panel** shows its own *Keep* and *Go back*, and
+  the phone may answer too, so a panel whose touch does not work is not left
+  to its countdown.
+- **A TV, a screen in no list, a generic monitor mode, or a listed model
+  whose notes say it has no touch** shows no buttons and is answered on the
+  phone.
+
+The question carries both: `panel_buttons` (`screen_detect.has_touch`, by the
+model's id, so a panel kept under its old `-case` id keeps its touch, #8) and
+`phone` (not `screen_detect.touch_recognised`, the fingerprint test that
+`has_touch` was until now). Scheduled display standby no longer blanks the
+screen while the question is up, and drawing it wakes a dark screen (#17).
+
+Decision 5's *a touch proves both the picture and the touch input* now holds
+for the fingerprinted panels only; on any other screen an answer from the
+phone proves the picture alone.

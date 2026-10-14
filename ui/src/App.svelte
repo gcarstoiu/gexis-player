@@ -295,7 +295,12 @@
       touches += 1;
       settingsOpen = false;
       closeVolume();
+      // An artist or album asked for earlier is not asked for again: the
+      // library remounts on `libraryHome` with these as its props, and an
+      // album left here reopened at every phone Home (Finding 125 #13,
+      // 2026-10-14).
       libraryArtist = null;
+      libraryAlbum = null;
       if (ask.to === 'home') {
         libraryRequested = !lmsOff;
         libraryHome += 1;
@@ -357,7 +362,15 @@
   let libraryKept = $state(false);
   $effect(() => {
     if (libraryOpen) libraryKept = true;
-    if (lmsOff) libraryKept = false;
+    if (lmsOff) {
+      libraryKept = false;
+      // The library is dropped, and mounts afresh when LMS comes back - with
+      // these as its props, so an artist or album opened from Now Playing
+      // before LMS was turned off reopened then, not the root (Finding 125
+      // #13, 2026-10-14).
+      libraryArtist = null;
+      libraryAlbum = null;
+    }
   });
   const libraryShown = $derived(libraryOpen && !settingsOpen && !waitingOpen);
   function openLibraryHome() {
@@ -666,7 +679,9 @@
   {/if}
   <!-- ADR-0123: a new cable address waiting to be kept, on every page. -->
   <CableKeep />
-  <!-- ADR-0147 D3: a screen without touch - a TV - is kept from here. -->
+  <!-- ADR-0147 D3: a screen without touch - a TV - is kept from here; so is
+       a listed panel whose touch the player does not recognise, which may
+       need a driver it never installs (Finding 125, 2026-10-14). -->
   {#if $screenConfirm?.phone}
     <PhoneKeepScreen
       question={$screenConfirm}
@@ -740,7 +755,7 @@
         availability={$availability}
         openArtistNamed={libraryArtist}
         openAlbumNamed={libraryAlbum}
-        onclose={() => { libraryRequested = false; libraryArtist = null; }}
+        onclose={() => { libraryRequested = false; libraryArtist = null; libraryAlbum = null; }}
         onsettings={openSettings}
         onvolume={openVolume}
       />
@@ -755,7 +770,7 @@
         availability={$availability}
         openArtistNamed={libraryArtist}
         openAlbumNamed={libraryAlbum}
-        onclose={() => { libraryRequested = false; libraryArtist = null; }}
+        onclose={() => { libraryRequested = false; libraryArtist = null; libraryAlbum = null; }}
         onsettings={openSettings}
         onvolume={openVolume}
       />
@@ -853,6 +868,7 @@
       untested={$screenConfirm.untested}
       rotationOnly={$screenConfirm.rotation_only}
       phone={!!$screenConfirm.phone}
+      buttons={$screenConfirm.panel_buttons ?? !$screenConfirm.phone}
       secondsLeft={keepLeft}
       total={$screenConfirm.total ?? 30}
       onkeep={() => answerScreen('keep')}

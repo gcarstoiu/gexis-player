@@ -238,6 +238,49 @@ def test_inside_a_standby_time_the_screen_goes_off_once_unused_and_after_the_wak
     asyncio.run(go())
 
 
+def test_the_schedule_does_not_blank_a_screen_while_keep_this_screen_is_asked():
+    """Finding 125 #17 (2026-10-14): a new screen chosen at 23:30 with *Back
+    to standby after* at 2 min. The question counts down its 120 s from
+    when it is drawn, some seconds after the core starts; the schedule put
+    the black cover over it at 120 s from the start, and the change went
+    back unseen."""
+    values = {"standby_schedule": True, "standby_times": NIGHT, "standby_wake": 2}
+    now = {"at": at("Mon", "23:30")}
+    clock = Clock()
+
+    async def switch(on):
+        return True
+
+    standby = sb.Standby(switch=switch, clock=clock)
+    asked = {"on": True}
+    schedule = sb.Schedule(standby, lambda k: values.get(k), lambda: False, clock=clock,
+                           now=lambda: now["at"], blocked=lambda: asked["on"])
+
+    async def go():
+        clock.t = 121.0
+        await schedule.tick()
+        assert not standby.off, "the question is still on the screen"
+        asked["on"] = False                  # answered: its two minutes from then
+        clock.t += 119
+        await schedule.tick()
+        assert not standby.off
+        clock.t += 2
+        await schedule.tick()
+        assert standby.off and standby.reason == "schedule"
+    asyncio.run(go())
+
+
+def test_the_question_drawn_counts_as_use_and_holds_the_schedule():
+    """Finding 125 #17: wired as the pairing frame is (review, 2026-10-12)."""
+    from test_main_wiring import MAIN, _closure
+    shown = _closure("_screen_shown")
+    assert "standby.used()" in shown and "standby.wake('screen')" in shown
+    source = MAIN.read_text()
+    block = source[source.index("standby_schedule = Schedule("):]
+    block = block[:block.index("peppy = PeppyController(")]
+    assert "blocked=lambda: state_store.state.screen_confirm is not None" in block
+
+
 def test_the_schedule_leaves_alone_a_screen_the_owner_turned_off_and_wakes_its_own_when_switched_off():
     values = {"standby_schedule": True, "standby_times": NIGHT, "standby_wake": 2}
     now = {"at": at("Mon", "12:00")}

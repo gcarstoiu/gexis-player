@@ -96,6 +96,8 @@ _needs_plug: dict[str, bool] = {}
 _formats: dict[str, frozenset[str]] = {}
 #: Its lowest and highest rate, from the same question (`squeezelite_options`).
 _rates: dict[str, tuple[int, int]] = {}
+#: Which device gave those answers (`_device`), by card id.
+_asked_of: dict[str, tuple | None] = {}
 
 #: **The highest PCM rate Lyrion hands Squeezelite as it is** (ADR-0143;
 #: measured 2026-10-12 on an SMSL USB DAC, which takes 768 kHz): FLAC and WAV
@@ -114,9 +116,43 @@ DSD_FORMATS = (("DSD_U32_BE", "u32be"), ("DSD_U32_LE", "u32le"), ("DSD_U16_BE", 
                ("DSD_U16_LE", "u16le"), ("DSD_U8", "u8"))
 
 
+def _device(card: str) -> tuple | None:
+    """The device behind a card id, as far as it can change under a running
+    core: for a USB card, where it sits and the number the bus gave it,
+    which is new at every plug-in; None for any other card, which only a
+    reboot changes."""
+    found = _usb_device(card, SOUND, PROC_ASOUND)
+    if found is None:
+        return None
+    usb = found[0]
+
+    def read(name: str) -> str:
+        try:
+            return (usb / name).read_text().strip()
+        except OSError:
+            return ""
+
+    return (str(usb), read("busnum"), read("devnum"))
+
+
+def _current(card: str) -> None:
+    """**What a card said holds only for the device that said it** (Finding
+    125 #15, 2026-10-14). The answers were kept by card id for the life of
+    the core, and a USB card's id comes from its product: a DAC unplugged
+    and another with the same id plugged in inherited the first one's
+    widening, rates and native DSD, and every renderer failed to open the
+    chain until gexis-core restarted. Forgotten when the device changed, so
+    the next `needs_plug` asks the new one; kept otherwise, because asking
+    plays a second of zeroes on the card."""
+    if card in _asked_of and _asked_of[card] != _device(card):
+        for cache in (_needs_plug, _formats, _rates, _asked_of):
+            cache.pop(card, None)
+
+
 def native_dsd(card: str) -> str | None:
     """Squeezelite's name for the DSD format this card takes, or None for a
     card that takes no DSD (every I2S board: the Pi's I2S is PCM only)."""
+    _current(card)
     formats = _formats.get(card, frozenset())
     return next((name for fmt, name in DSD_FORMATS if fmt in formats), None)
 
@@ -129,6 +165,7 @@ def squeezelite_options(card: str, dsd: bool = False) -> str:
     format: Lyrion then sends DSD files as DSD, and Squeezelite plays them
     natively instead of converting them to PCM."""
     options = []
+    _current(card)
     low, high = _rates.get(card, (0, 0))
     if high > LYRION_MAX_RATE:
         options.append("-r " + ",".join(str(r) for r in SQUEEZELITE_RATES if r >= low))
@@ -178,6 +215,7 @@ def widens(card: str) -> bool:
     32, every sample's value kept (measured exact, 2026-10-12), 32 bits pass
     untouched, and the rate is never changed - a rate the card lacks still
     fails loudly. Asked after `needs_plug`, which reads the card."""
+    _current(card)
     formats = _formats.get(card, frozenset())
     return "S32_LE" in formats and "S16_LE" not in formats
 
@@ -204,6 +242,7 @@ def needs_plug(card: str) -> bool | None:
     loudly than convert quietly, so an unanswered question is not a licence
     to insert a converter.
     """
+    _current(card)
     if card in _needs_plug:
         return _needs_plug[card]
     try:
@@ -242,8 +281,10 @@ def needs_plug(card: str) -> bool | None:
     answer = not (formats & PCM_FORMATS)
     _needs_plug[card] = answer
     _formats[card] = frozenset(formats)
+    _rates.pop(card, None)
     if rates is not None:
         _rates[card] = rates
+    _asked_of[card] = _device(card)
     if answer:
         logger.info("outputs: %s takes only %s; it needs a conversion layer",
                     card, " ".join(sorted(formats)))

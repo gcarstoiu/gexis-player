@@ -640,6 +640,13 @@ class Cache:
                                [(namespace, str(k)) for k in keys])
         self._conn.commit()
 
+    def keys(self, namespace: str) -> list[str]:
+        """Every key a namespace holds: what a rescan has to look at, not
+        only what the names kept from before listed (Finding 125 #21)."""
+        self._conn.execute(self._KV_SCHEMA)
+        return [row[0] for row in self._conn.execute(
+            "SELECT key FROM notes WHERE namespace = ?", (namespace,))]
+
     def forget_namespace(self, namespace: str) -> None:
         """After an LMS rescan, when every id may mean something else."""
         self._conn.execute(self._KV_SCHEMA)

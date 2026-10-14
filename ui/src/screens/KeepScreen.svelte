@@ -36,8 +36,14 @@
     secondsLeft = 30,
     total = 30,
     rotationOnly = false,
-    //: ADR-0147 D3: a screen without touch (a TV) is answered on the phone.
+    //: ADR-0147 D3: the phone may answer too - a TV, or a listed panel
+    //: whose touch the player does not recognise (Finding 125, 2026-10-14).
     phone = false,
+    //: The panel shows its own Keep / Go back: every listed panel, not a TV
+    //: or a screen without touch (Finding 125, 2026-10-14). Until then they
+    //: were hidden whenever the phone could answer, which left a listed
+    //: panel whose touch works with nothing to press.
+    buttons = true,
     onkeep,
     onrevert,
   } = $props();
@@ -96,12 +102,19 @@
         <div class="title">{title}</div>
         {#if model}<div class="model">{model}</div>{/if}
         {#if untested}<div class="untested">This model has not been tested with gexis</div>{/if}
+        {#if !buttons}
+          <div class="phone">This screen has no touch: answer on the phone page.</div>
+        {:else if phone}
+          <div class="also">Or answer on the phone page.</div>
+        {/if}
         <div class="count">Going back to {back} in {left} s</div>
       </div>
-      <div class="actions">
-        {@render keep()}
-        {@render revert()}
-      </div>
+      {#if buttons}
+        <div class="actions">
+          {@render keep()}
+          {@render revert()}
+        </div>
+      {/if}
     </div>
   {:else}
     <div class="stack">
@@ -110,13 +123,14 @@
       {#if untested}
         <div class="pill">{@render warnIcon(34)}<span>This model has not been tested with gexis</span></div>
       {/if}
-      {#if phone}
+      {#if !buttons}
         <div class="phone">This screen has no touch: answer on the phone page, Keep or Go back.</div>
       {:else}
         <div class="actions">
           {@render revert()}
           {@render keep()}
         </div>
+        {#if phone}<div class="also">If the touch does not answer, use the phone page.</div>{/if}
       {/if}
       <div class="count">Going back to {back} in {left} s</div>
     </div>
@@ -266,6 +280,15 @@
     text-align: center;
     max-width: 80%;
     color: var(--accent-warn);
+  }
+  .also {
+    font-size: 20px;
+    color: var(--ink-muted);
+  }
+  .keep--bar .phone {
+    font-size: 20px;
+    text-align: left;
+    max-width: none;
   }
   .stack .count {
     margin-top: 6px;

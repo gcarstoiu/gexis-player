@@ -163,3 +163,54 @@ def test_an_answer_with_photos_is_not_asked_again_however_old(tmp_path):
     old = time.time() - 10 * fa.EMPTY_RECHECK_S
     os.utime(tmp_path / "7" / ".done", (old, old))
     assert len(run(f.photos(7))) == 1 and len(lms.calls) == 1
+
+
+def test_a_rescan_that_renumbers_an_artist_drops_its_photos(tmp_path):
+    """Finding 125 #22 (2026-10-14): the photos on disk are kept by LMS
+    artist id, and nothing dropped them when a rescan gave the id to someone
+    else, or another server numbered its own - the frame showed A's photos
+    during B's tracks. They now go when the artist photos' do, by the same
+    names check (`LmsArtistInfo.on_renumber`)."""
+    from pathlib import Path
+
+    from gexis_core.artistinfo import SCOPE_CHECK_S, LmsArtistInfo
+    from gexis_core.enrichment import Cache
+
+    names = {"123": "Artist A", "9": "Artist C"}
+    photos = {123: ["https://x/a.jpg"], 9: ["https://x/c.jpg"]}
+    server = {"lastscan": "1700000000"}
+    calls = []
+    now = [100.0]
+
+    async def rpc(command, timeout=None, player=""):
+        calls.append(command)
+        if command[0] == "serverstatus":
+            return dict(server)
+        if command[0] == "artists" and len(command) > 3:
+            wanted = command[3].removeprefix("search:").lower()
+            return {"artists_loop": [{"artist": n, "id": int(i)} for i, n in names.items() if n.lower() == wanted]}
+        if command[0] == "artists":
+            return {"artists_loop": [{"artist": n, "id": int(i)} for i, n in names.items()]}
+        artist_id = int(command[2].removeprefix("artist_id:"))
+        return {"item_loop": [{"url": u} for u in photos.get(artist_id, [])]}
+
+    async def scenario():
+        info = LmsArtistInfo(rpc, BASE, store=Cache(Path(":memory:")), clock=lambda: now[0])
+        f = Fanart(rpc, download, BASE, directory=tmp_path, before=info.check_scope)
+        info.on_renumber(f.drop)
+        assert b"a.jpg" in (await f.for_artist("Artist A", 123))[0].read_bytes()
+        assert b"c.jpg" in (await f.for_artist("Artist C"))[0].read_bytes()
+        server["lastscan"] = "1800000000"           # 123 is someone else now
+        names["123"] = "Artist B"
+        photos[123] = ["https://x/b.jpg"]
+        now[0] += SCOPE_CHECK_S
+        assert b"b.jpg" in (await f.for_artist("Artist B", 123))[0].read_bytes()
+        asked = len(calls)
+        assert b"c.jpg" in (await f.for_artist("Artist C"))[0].read_bytes()
+        assert not [c for c in calls[asked:] if c[0] != "serverstatus"], "C unchanged: kept, name and photos"
+        other = LmsArtistInfo(rpc, "http://server-b:9000", store=info._store, clock=lambda: now[0])
+        other.on_renumber(f.drop)
+        await other.check_scope()                   # another server: everything goes
+        assert not [p for p in tmp_path.iterdir() if p.is_dir()]
+
+    run(scenario())

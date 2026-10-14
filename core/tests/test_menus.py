@@ -387,6 +387,32 @@ def test_a_streaming_playlist_is_told_from_an_album():
     (2026-10-14): the page then says Play playlist."""
     from gexis_core.menus import _hint
     assert _hint({"type": "playlist", "presetParams": {"favorites_url": "spotify:playlist:2wyY"}}, {}) == "playlist"
-    assert _hint({"type": "playlist", "presetParams": {"favorites_url": "spotify:album:16tY"}}, {}) is None
     assert _hint({"type": "playlist", "icon": "/imageproxy/https%3A%2F%2Fstatic.qobuz.com%2Fimages%2Fplaylists%2F1_r.jpg/image.jpg"}, {}) == "playlist"
-    assert _hint({"type": "playlist", "icon": "/imageproxy/https%3A%2F%2Fstatic.qobuz.com%2Fimages%2Fcovers%2Fm0.jpg/image.jpg"}, {}) is None
+
+
+def test_a_streaming_album_is_told_as_one():
+    """Finding 125 #26 (2026-10-14): a streaming album had no hint, so one
+    track crediting a guest artist made its page say Play playlist. The
+    marker says album: Spotty's `spotify:album:` link. A Qobuz cover under
+    `/images/covers/` does not (2026-10-14): a Qobuz playlist without its own
+    image carries an album's cover, and would read "Play album"."""
+    from gexis_core.menus import _hint
+    cover = "/imageproxy/https%3A%2F%2Fstatic.qobuz.com%2Fimages%2Fcovers%2Fm0.jpg/image.jpg"
+    assert _hint({"type": "playlist", "presetParams": {"favorites_url": "spotify:album:16tY"}}, {}) == "album"
+    assert _hint({"type": "playlist", "icon": cover}, {}) is None
+    assert _hint({"type": "audio", "icon": cover}, {}) is None
+    assert _hint({"text": "* Unstreamable\nArtist", "icon": cover}, {}) is None
+    assert _hint({"type": "audio", "presetParams": {"favorites_url": "spotify:track:4uLU"}}, {}) is None
+
+
+@pytest.mark.asyncio
+async def test_a_streaming_list_is_not_read_whole_for_letters():
+    """Finding 125 #26's other side: albums are among the hints the panel
+    asks a letter index for, and a service's list is assumed to carry no
+    `textkey` (Finding 029 measured it on the library's lists only) -
+    reading up to LETTERS_MAX of it would find none, slowly."""
+    lyrion = Lyrion()
+    m = menus(lyrion)
+    m._handles["list"] = {"kind": "folder", "cmd": ["qobuz", "items"], "params": {"item_id": "9.9.0"}}
+    assert (await m.letters("list"))["letters"] == {}
+    assert not [c for c in lyrion.asked if c[0] == "qobuz"]

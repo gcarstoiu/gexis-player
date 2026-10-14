@@ -298,8 +298,8 @@ indexing).
 
 | Command | Run by | Does |
 |---|---|---|
-| `check` | `gexis-update-checknow.service`, from Settings' *Check for updates* | read and verify the channel, compare with the installed `gexis-player`, write `available` / `current`; installs nothing |
-| `install` | `gexis-update-install.service` via the update modal | check, then the six steps below |
+| `check` | `gexis-update-checknow.service`, from Settings' *Check for updates* | read and verify the channel, compare with the installed `gexis-player`, write `available` / `current`; installs no new release (a release found cut short is handed to the install unit to finish, below) |
+| `install` | `gexis-update-install.service` via the update modal, or a check handing over a repair | check, then the six steps below; only the repair when a check asked for it (`repair-requested`, below) |
 | `scheduled` | `gexis-update-check.service`, from its timer (03:00, up to 1 h random delay, persistent) | check; install only if *Updates* is Automatic, nothing is playing (`/proc/asound/card*/pcm*p/sub*/status` RUNNING), and this release has not already failed here |
 | `pack-install` / `pack-remove <pkg>` | the core, for skin packs (§6) | install or remove one `gexis-skins-<W>x<H>` |
 
@@ -377,7 +377,10 @@ key, or for another release, stops the update.
    and goes back on failure, once. When the file says the install was cut
    short, or dpkg is not clean, postboot first finishes the install from the
    new release's repositories (`heal()`); what cannot be finished goes back
-   to the previous release like any other failure. Otherwise `systemctl try-restart` every
+   to the previous release like any other failure, and what is finished is
+   verified and **the device restarts** (Finding 125 #6), the note left again
+   with `how: reboot` and any reboot marker cleared, so that every service
+   runs what is now installed and the boot after does step 6. Otherwise `systemctl try-restart` every
    `.service` the changed packages ship, except the updater's own units
    (`gexis-update-install`, `gexis-update-check`, `gexis-update-checknow`,
    `gexis-update-postboot`) and
@@ -432,6 +435,34 @@ gexis-player=<version>`, `complete_release()`), verified, a note left, and
 the device restarted for `postboot` to check it. Without this, a check
 compared `gexis-player`'s unpacked version and called the device current.
 
+Where it is finished depends on who found it (Finding 125 #3, #16,
+2026-10-14):
+
+- **A skin pack alone cut short** is not a release cut short: the check
+  says so and goes on reading the channel, and the pack path's own `heal`
+  (or the next install's) finishes it. Every check used to reinstall the
+  release already there and restart the device for it.
+- ***Check for updates*** does not repair inside its own unit, which
+  systemd stops after 300 s. It writes `repair-requested` (synced, beside
+  `pending-check.json`) and starts `gexis-update-install.service`, whose
+  `install` takes the request and runs the repair and nothing else: no
+  channel read, no newer release. There it runs as an install does -
+  playback stopped, every apt and dpkg run under `systemd-inhibit`, the
+  panel's lock up while the unit runs. A request older than 15 min
+  (`REPAIR_REQUEST_S`) counts for nothing and is removed, so a later real
+  install is never turned into a repair only. While something plays, the
+  check repairs nothing and reports `failed` with *An earlier install was
+  cut short. It is finished once nothing is playing: at night, or by Check
+  for updates.*
+- **The nightly run** repairs in its own unit, but only while nothing plays,
+  in any update mode.
+
+**The backup's failure mark is read without following a link**
+(`backup_failure()`, Finding 125 #2): `.before-update-failed` sits in the
+Backups share, which `pi` can write, so it is opened with `O_NOFOLLOW` (and
+`O_NONBLOCK`, so a pipe there cannot hang the update) and counts only when
+it is a plain file written since the backup was asked for.
+
 **Going back** (`go_back()`) follows any failure from the install step on -
 the install, its verify, the core not answering after the restart, or the
 check after a reboot. The updater runs `dist-upgrade --allow-downgrades`
@@ -469,7 +500,7 @@ sequenceDiagram
     User->>UI: Check for updates
     UI->>Core: POST /settings/update_check
     Core->>Sd: start --no-block gexis-update-checknow.service
-    Sd->>Upd: check (installs nothing)
+    Sd->>Upd: check (installs no release)
     Upd->>GH: channels/<channel> (gpgv)
     Upd->>GH: r<tag>/notes, r<tag>/history (gpgv)
     Upd-->>Core: status.json: available

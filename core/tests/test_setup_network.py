@@ -158,6 +158,28 @@ def test_ethernet_with_an_address_never_opens_the_network_even_when_setup_is_nee
     assert net.status()["address"] == "http://192.168.1.50:8090/", "the page is on the LAN"
 
 
+def test_a_new_player_on_the_cable_has_its_wifi_radio_switched_on(tmp_path):
+    """bedroompi, 2026-10-14: setup over the cable said "No networks found".
+    A new card's Wi-Fi is blocked until a country is set (Raspberry Pi OS),
+    and only opening the setup network unblocked it - which a cabled player
+    never does. Setup's Wi-Fi step scans, so the radio is switched on."""
+    nm = FakeNM(devices=ETH_UP)
+    net, _ = setup(tmp_path, nm, carrier=True)
+    run(net.run())
+    assert net.needed and net.status()["network"] == "online"
+    assert nm.unblocked, "rfkill unblocked"
+    assert nm.did("radio", "wifi", "on")
+    assert not nm.did("device", "wifi", "hotspot")
+
+
+def test_a_configured_player_on_the_cable_leaves_its_radio_alone(tmp_path):
+    nm = FakeNM(devices=ETH_UP, saved={"Home": "preconfigured"})
+    net, _ = setup(tmp_path, nm, carrier=True)
+    run(net.run())
+    assert not net.needed
+    assert not nm.did("radio", "wifi", "on")
+
+
 def test_a_new_device_without_a_cable_opens_after_15_s_not_90(tmp_path):
     nm = FakeNM(devices=NOTHING)
     net, clock = setup(tmp_path, nm, stations=1)
@@ -654,6 +676,21 @@ def test_after_the_setup_network_opens_a_saved_network_in_range_is_rejoined(tmp_
     watching(net, clock, lambda: nm.hotspot_at is not None and net.status()["network"] == "online")
     assert nm.hotspot_at is not None and nm.did("connection", "up", "preconfigured")
     assert net.status()["network"] == "online"
+
+
+def test_a_phone_on_a_reopened_setup_network_gets_its_own_grace(tmp_path):
+    """Finding 125 #19: a phone left on the setup network last time kept the
+    moment it was first seen; hours later the network reopened and a phone
+    that had just joined was cut off at the first retry, not given its
+    SETUP_ACTIVE_S."""
+    nm = FakeNM(devices=NOTHING, saved={"Home": "preconfigured"}, in_range={"Home"})
+    net, clock = online_player(tmp_path, nm, stations=1)
+    # What the last time the setup network was open left behind, hours ago.
+    net._phone_since = net._page_used_at = -4 * 3600.0
+    watching(net, clock, lambda: nm.hotspot_at is not None and clock.now > nm.hotspot_at + sn.RETRY_S + sn.WATCH_S)
+    assert nm.hotspot_at is not None and clock.now > nm.hotspot_at + sn.RETRY_S
+    assert not nm.did("connection", "up", "preconfigured")
+    assert net.status()["network"] == "open"
 
 
 # -- the cable coming back (review, 2026-10-12) -----------------------------

@@ -10,44 +10,17 @@ and `phase-13b` is merged into it after each docs change. A release is built
 from a worktree made at its tag, then removed. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 0.14.0 on Testing** (2026-10-13; tag `v0.14.0`, release
-`r0.14.0`, serial 40; PR #65 merged 2026-10-14, post-merge steps and the
-routine clean-up done; image `image/deploy/2026-10-13-gexis-player-v0.14.0.img`,
-121 checks passed). One Screen
-tile; a TV as the screen at 1080p (ADR-0147 amended twice after George's TV
-tests); standby keeps a sound port on; the update backup survives a vanishing
-file. 0.13.0 (PR #64) merged and its post-merge steps done. The bar is on
-0.14.0: **the second power cut passed** (2026-10-14, Finding 123
-addendum) - cut mid-install, finished by itself at the next start.
-
-**Since 0.14.0, on `phase-13d` and installed on sofapi only** (George's
-fixes of 2026-10-14, all for the next release; its notes need his approval):
-Attached screen and Screen port as two tiles again, the Screen port tile
-listing what is on each port; the home strip scrolls by touchpad; the
-outline follows every pressable in its own shape, cut to the part that
-shows, none round a row with its actions revealed, the dot small inside it;
-similar-artist tags, the artist's name and the release title open their
-pages; the touchpad pings (2 s, fresh socket after 5 s) and probes at the
-first touch after a quiet spell; Wi-Fi power saving off on a player; the
-sheet swipes open and closed; artist photos kept across a Lyrion rescan
-(revalidated by name - the first rescan after the update still drops them
-once); later the same day: the outline cut only by what covers an element, a
-touchpad tap over the visualiser only dismisses it, the TV's mode kept after
-it is turned off and on, artists and *Play playlist* on app playlists, a
-stream's own artwork in the queue, Popular reveals, teal selection, tab
-underline, search opens on its field, and **Text size** (ADR-0148). **George
-checked them on sofapi (g46, done 2026-10-14).** **Players are not
-updated to a release by Claude** (George, 2026-10-13).
-
-**From the power-cut test, in 0.13.0:** George's power cut on the bar (g34,
-Finding 123) found the updater could not recover - its note for the boot was
-an empty file (never synced), and every check said "current". Fixed: the
-note is synced, a cut-short install is finished with no note (at boot and at
-every check), only half-installed packages are reinstalled, the whole release
-completed after. The bar recovered with the fixed code (run from a copy) and
-is on the complete 0.12.0 set. Also: *Could not check for updates* says why
-in words. **Not proved:** a second real cut with the fixed updater
-installed - done 2026-10-14, passed. LESSONS 70.
+**Current release: 0.15.0 on Testing** (2026-10-14; tag `v0.15.0`, release
+`r0.15.0`, serial 41, signature checked; image
+`image/deploy/2026-10-14-gexis-player-v0.15.0.img`, 121 checks passed;
+**PR #66 open for George to merge**). Text size (ADR-0148), two Screen tiles,
+Now Playing links, artists on streaming playlists, the touchpad's probe and
+ping, the `.local` name claimed back, Keep's countdown from the question. The
+release worktree `~/projects/gexis-player-rel-0.15.0` goes after the merge.
+**After the tag, on `phase-13d`:** Finding 125's 26 fixes (a review of
+everything since 0.10.1, two of them security issues in backups), on sofapi
+as a preview - for the next release, 1.0.0. **Players are not updated to a
+release by Claude** (George, 2026-10-13).
 
 Suite 2,386 passed, 47 skipped (2026-10-14).
 
@@ -94,7 +67,7 @@ in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-10-14, after 0.14.0's PR** (the first: ~102 GB and ~30,500 -> ~9,500
+2026-10-14, after 0.15.0's PR (#66)** (the first: ~102 GB and ~30,500 -> ~9,500
 words in the morning).
 
 ## Phases

@@ -209,11 +209,13 @@ Taken from `Adapter` and `Capabilities` as they are. The prose for each is in
   plugin cannot answer mDNS itself**: its unit denies it port 5353, because a
   plugin's own responder that publishes the device's host name makes avahi
   rename the device. `services` is the plugin's whole set, at most 4; each
-  replaces what was sent before, and `[]` withdraws them. Each service:
+  replaces what was sent before, and `[]` withdraws every one of them (until
+  2026-10-14 it left the second and later announced). Each service:
   `type` (`_name._tcp` or `_name._udp`, never one of the player's own:
   `_gexis._tcp`, `_smb._tcp`, `_device-info._tcp`, `_workstation._tcp`,
   `_ssh._tcp`, `_sftp-ssh._tcp`), `port` (1-65535), `name` (up to 63
-  characters; the device's name when left out) and `txt` (an object of at
+  bytes in UTF-8, avahi's limit, so fewer characters outside ASCII; when left
+  out, the device's name, cut to 63 bytes if it is longer) and `txt` (an object of at
   most 20 entries, keys of letters, digits, `.`, `_`, `-`, each `key=value`
   at most 255 bytes). A message that breaks any of this is refused whole and
   logged. The announcement lasts while the plugin is connected: it goes when

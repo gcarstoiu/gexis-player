@@ -55,7 +55,7 @@
   import JumpStrip from './JumpStrip.svelte';
   import Glyph from '../../lib/Glyph.svelte';
   import { settingValues } from '../../lib/settings.js';
-  import { menuTiles, loadMenuTiles, browseMenu, menuAct, menuLetters as menuLetters_ } from '../../lib/menus.js';
+  import { menuTiles, loadMenuTiles, browseMenu, menuAct, menuLetters as menuLetters_, wantsLetters } from '../../lib/menus.js';
   import { MY_MUSIC, levelLayout } from '../../lib/lyrionLooks.js';
   import LyrionLevel from '../LyrionLevel.svelte';
   import LyrionSearch from '../LyrionSearch.svelte';
@@ -193,6 +193,10 @@
 
   // ---- a row's actions, and the playlist picker (Library.svelte) ------------
   //: Which row has its actions showing - one at a time, as on the panel.
+  //: The row showing them carries `is-revealed`: the panel pointer knows a
+  //: reveal only by that marker, and without it outlined the bar's rows
+  //: over their own actions (Finding 125 #24, 2026-10-14). It draws nothing
+  //: here; `is-on` stays the bar's highlight.
   let revealed = $state(null);
   const toggle = (key) => (revealed = revealed === key ? null : key);
   let picker = $state(null); // { kind, id, label } while choosing a playlist
@@ -534,8 +538,7 @@
       if (path[path.length - 1] !== level) return;
       menu = { ...got, handle };
       // The strip, for lists Lyrion files by letter (the handover's note 6).
-      const lettered = got.items.filter((r) => ['artist', 'genre', 'album'].includes(r.hint)).length;
-      if (got.count > 30 && lettered >= got.items.length * 0.6) {
+      if (wantsLetters(got)) {
         // Pending (null): the rail or strip takes its place at once, so the
         // list does not move when the index arrives (George, 2026-10-06).
         menuLetters = null;
@@ -1068,7 +1071,7 @@
             <div class="pane__list" use:watchPane use:fromTop={where}>
               <div style:height="{paneWindow.above}px" class="pane__space"></div>
               {#each paneWindow.rows as entry (entry.id)}
-                <div class="prow" class:is-on={chosenArtist?.id === entry.id}>
+                <div class="prow" class:is-on={chosenArtist?.id === entry.id} class:is-revealed={revealed === `artist-${entry.id}`}>
                   <button class="prow__hit" type="button" onclick={() => chooseArtist(entry)}>
                     <span class="prow__label">{entry.name}</span>
                   </button>
@@ -1088,7 +1091,7 @@
             <div class="pane__head"><span class="pane__label">Albums</span></div>
             <div class="pane__list" use:fromTop={chosenArtist?.id ?? where}>
               {#each browseAlbums as entry (entry.id)}
-                <div class="prow" class:is-on={chosenAlbum?.id === entry.id}>
+                <div class="prow" class:is-on={chosenAlbum?.id === entry.id} class:is-revealed={revealed === `album-${entry.id}`}>
                   <button class="prow__hit" type="button" onclick={() => chooseAlbum(entry)}>
                     <span class="prow__label">{entry.title}</span>
                     {#if entry.year && revealed !== `album-${entry.id}`}<span class="prow__meta">{entry.year}</span>{/if}
@@ -1110,7 +1113,7 @@
             <div class="pane__head"><span class="pane__label">Tracks</span></div>
             <div class="pane__list" use:fromTop={chosenAlbum?.id ?? where}>
               {#each browseTracks as entry (entry.id)}
-                <div class="prow" class:is-on={isPlaying(entry) || revealed === `track-${entry.id}`}>
+                <div class="prow" class:is-on={isPlaying(entry) || revealed === `track-${entry.id}`} class:is-revealed={revealed === `track-${entry.id}`}>
                   <button class="prow__hit" type="button" onclick={() => toggle(`track-${entry.id}`)}>
                     <span class="prow__label">{entry.title}</span>
                     {#if entry.duration && revealed !== `track-${entry.id}`}<span class="prow__meta">{mmss(entry.duration)}</span>{/if}
@@ -1166,7 +1169,7 @@
           <div class="mask" style:mask-image={mask} style:-webkit-mask-image={mask}>
             <div class="sideways sideways--grid" use:side.attach use:dragScroll use:fromTop={where}>
               {#each playlist.items.slice(0, playlistReveal.shown) as entry, index (`${index}:${entry.id}`)}
-                <div class="trow trow--two" class:is-on={isPlaying(entry) || revealed === `pltrack-${index}`}>
+                <div class="trow trow--two" class:is-on={isPlaying(entry) || revealed === `pltrack-${index}`} class:is-revealed={revealed === `pltrack-${index}`}>
                   <button class="trow__hit" type="button" onclick={() => toggle(`pltrack-${index}`)}>
                     <span class="trow__num">{String(index + 1).padStart(2, '0')}</span>
                     <span class="trow__text">
@@ -1262,7 +1265,7 @@
           </div>
           <div class="tracks" use:fromTop={where}>
             {#each album.tracks as track (track.id)}
-              <div class="trow" class:is-on={isPlaying(track) || revealed === `albumtrack-${track.id}`}>
+              <div class="trow" class:is-on={isPlaying(track) || revealed === `albumtrack-${track.id}`} class:is-revealed={revealed === `albumtrack-${track.id}`}>
                 <button class="trow__hit" type="button" onclick={() => toggle(`albumtrack-${track.id}`)}>
                   <span class="trow__num">{track.tracknum ? String(track.tracknum).padStart(2, '0') : ''}</span>
                   <span class="trow__title trow__title--19">{track.title ?? ''}</span>

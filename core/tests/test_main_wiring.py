@@ -310,3 +310,40 @@ def test_the_jack_stands_in_and_is_never_fixed_while_it_does():
     fixed = _closure("_fixed_wanted")
     assert "not outputs.in_force(settings.value('output_device'))[1]" in fixed
     assert "await _switch_output()" in _closure("_watch_standin")
+
+
+def test_the_stand_in_watcher_leaves_a_change_of_output_to_the_one_who_made_it():
+    """Finding 125 #10 (2026-10-14): the watcher kept what it last saw to
+    itself, so every change of output the user made looked to it like a port
+    going or coming back - within 3 s it logged a stand-in that was not one
+    and switched the output a second time, outside the lock the user's own
+    switch holds, stopping a source started in between. It acts now only on
+    the output in force changing under the same stored choice, measured
+    against what the last switch put in force."""
+    from gexis_core.__main__ import standin_due
+
+    hdmi = "HDMI 1"
+    switched = (hdmi, "vc4hdmi0", False)            # what the last switch did
+    assert not standin_due(None, switched)          # nothing seen yet
+    assert not standin_due(switched, switched)
+    # The receiver switched off: the same choice, the jack now in force.
+    assert standin_due(switched, (hdmi, "Headphones", True))
+    # And back.
+    assert standin_due((hdmi, "Headphones", True), switched)
+    # The user chose the jack: a new stored choice is the user's own switch,
+    # which is under way or queued behind the lock - never the watcher's.
+    assert not standin_due(("DAC2 HD", "sndrpihifiberry", False), ("Headphones", "Headphones", False))
+    assert not standin_due(switched, ("HDMI 2", "Headphones", True))
+
+
+def test_the_stand_in_watcher_switches_under_the_lock_from_what_a_switch_recorded():
+    """Finding 125 #10: what a switch put in force is shared, set by
+    `_switch_output` itself, and the watcher switches only under
+    `volume_change`, looking again once it holds it."""
+    switch = _closure("_switch_output")
+    assert "output_seen['value'] =" in switch
+    watch = _closure("_watch_standin")
+    assert "output_seen['value']" in watch and "last" not in re.findall(r"\b\w+\b", watch)
+    held = watch.index("async with volume_change")
+    assert watch.count("standin_due(") == 2 and watch.rindex("standin_due(") > held
+    assert held < watch.index("await _switch_output()")

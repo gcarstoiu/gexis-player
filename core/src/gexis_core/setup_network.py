@@ -718,6 +718,15 @@ class SetupNetwork:
                 self._state = "online"
                 if self._needed:
                     self._lan_address = await self._address_of(where)
+                    # **The Wi-Fi radio on for setup's Wi-Fi step** (bedroompi,
+                    # 2026-10-14: setup over the cable found "No networks").
+                    # A new card's radio is blocked until a country is set
+                    # (see `open`), and only opening the setup network
+                    # lifted it - which a player on the cable never does.
+                    # Scanning is passive under the world domain; Finish
+                    # sets the real country.
+                    await self._unblock()
+                    await self._nmcli("radio", "wifi", "on")
                 self._publish()
                 logger.info("setup: on the network through %s; no setup network", where)
                 return
@@ -815,6 +824,13 @@ class SetupNetwork:
         on the LAN got the setup page. ADR-0104 §3: the setup network never
         opens while Ethernet has an address. Looked for every `WATCH_S`, not
         at the five-minute retry, since the cable takes nothing from anyone."""
+        # **Each time the setup network is held starts from scratch**
+        # (Finding 125 #19, 2026-10-14). A phone still on it when the player
+        # last left kept `_phone_since` set; hours later, when the network
+        # reopened, a phone that had just joined was taken for that old one
+        # and cut off at the first retry instead of getting SETUP_ACTIVE_S.
+        self._phone_since = None
+        self._page_used_at = None
         last = self._clock()
         while self._state != "online":
             due = retry - (self._clock() - last)
