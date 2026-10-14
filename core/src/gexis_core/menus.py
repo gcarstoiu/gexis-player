@@ -331,6 +331,12 @@ class LyrionMenus:
         spec = self._spec(handle)
         if spec["kind"] not in ("folder", "container") or "letters" in spec:
             return {"letters": spec.get("letters", {})}
+        if "browselibrary" not in (str(word) for word in spec.get("cmd") or ()):
+            # Only the library's lists carry `textkey` (Finding 110). A
+            # service's albums are hinted as albums now (Finding 125 #26),
+            # which the panel asks letters for: reading a whole Qobuz list
+            # to find none is skipped.
+            return {"letters": {}}
         command = list(spec["cmd"]) + [0, LETTERS_MAX]
         command += [f"{k}:{v}" for k, v in spec["params"].items()] + ["menu:1"]
         key = tuple(str(part) for part in command)
@@ -529,6 +535,14 @@ def _hint(item: dict, spec: dict) -> str | None:
     icon = unquote(str(item.get("icon") or item.get("image") or ""))
     if ":playlist:" in link or "/playlist/" in link or "/images/playlists/" in icon:
         return "playlist"
+    # **And a streaming album, by the same markers** (Finding 125 #26,
+    # 2026-10-14): with no hint, one track crediting a guest artist made an
+    # album's page say "Play playlist". Only for what Lyrion types as a list:
+    # a track carries its album's cover too, and so does one Qobuz cannot
+    # stream, drawn as an untyped folder.
+    if str(item.get("type") or "") == "playlist" and (
+            ":album:" in link or "/images/covers/" in icon):
+        return "album"
     own = item.get("commonParams") or {}
     for params in (own, {**(item.get("params") or {}), **(spec.get("params") or {})}):
         found = next((word for key, word in HINTS if key in params), None)
