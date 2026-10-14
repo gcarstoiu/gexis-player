@@ -1269,7 +1269,7 @@ def test_a_cut_short_skin_pack_is_not_a_release_to_finish(up, monkeypatch):
         monkeypatch.setattr(up, "playing", lambda: False)
         assert up.finish_cut_short(where) is False, where
         assert healed == [] and ran == [], where
-        assert all(a == ["update"] or "-s" in a for a in applied), "only read and simulated"
+        assert applied == [], "nothing read, simulated or installed"
 
 
 def test_a_night_with_music_leaves_a_cut_short_release_for_later(up, monkeypatch):
@@ -1410,49 +1410,18 @@ def test_an_install_without_the_marker_reads_the_channel_as_before(up, monkeypat
     assert checked and seen[-1]["state"] == "done" and seen[-1]["release"] == "2"
 
 
-def test_a_skin_pack_cut_short_in_the_middle_of_a_release_still_completes_it(up, monkeypatch):
-    """**Finding 125 #16**, the review's low point: the power cut during a
-    release's dist-upgrade while a pack unpacked, gexis-player already at
-    the release. Only the pack is broken, but the release's other packages
-    are still the old ones: it is completed, not left as "current"."""
-    reports, healed, ran = _cut_short_no_note(up, monkeypatch)
-    monkeypatch.setattr(up, "interrupted", lambda: (True, ["gexis-skins-1480x320"]) if not healed else (False, []))
-    applied = []
-    def apt(opts, *a, **k):
-        applied.append(list(a))
-        out = ""
-        if "-s" in a and "dist-upgrade" in a:
-            out = ("Inst gexis-skins-1480x320 [0.12.0] (0.12.0 ours-x [all])\n"
-                   "Inst libasound2t64 [1.2.13-1] (1.2.13-2 ours-x [arm64])\n")
-        return subprocess.CompletedProcess(a, 0, out, "")
-    monkeypatch.setattr(up, "apt", apt)
-    assert up.finish_cut_short() is True
-    assert ["--allow-change-held-packages", "dist-upgrade"] in applied, "complete_release ran"
-    assert healed and ["systemctl", "reboot"] in ran
-
-
-def test_a_skin_pack_cut_short_alone_is_left_to_the_pack(up, monkeypatch):
-    """Finding 125 #16: the release's packages all at the target, only the
-    pack outstanding - no repair, no reboot, nothing installed."""
-    reports, healed, ran = _cut_short_no_note(up, monkeypatch)
-    monkeypatch.setattr(up, "interrupted", lambda: (True, ["gexis-skins-1480x320"]))
-    applied = []
-    def apt(opts, *a, **k):
-        applied.append(list(a))
-        out = "Inst gexis-skins-1480x320 [0.12.0] (0.12.0 ours-x [all])\n" if "-s" in a else ""
-        return subprocess.CompletedProcess(a, 0, out, "")
-    monkeypatch.setattr(up, "apt", apt)
-    assert up.finish_cut_short() is False
-    assert healed == [] and ["systemctl", "reboot"] not in ran
-    assert all(a == ["update"] or "-s" in a for a in applied), "only read and simulated"
-
-
-def test_a_skin_pack_cut_short_apt_cannot_plan_around_is_completed(up, monkeypatch):
-    """Finding 125 #16: when apt cannot say what is outstanding, the
-    release is completed rather than taken as done."""
-    reports, healed, ran = _cut_short_no_note(up, monkeypatch)
-    monkeypatch.setattr(up, "interrupted", lambda: (True, ["gexis-skins-1480x320"]) if not healed else (False, []))
-    monkeypatch.setattr(up, "apt", lambda opts, *a, **k: subprocess.CompletedProcess(
-        a, 100 if "-s" in a else 0, "", "E: broken"))
-    assert up.finish_cut_short() is True
-    assert healed and ["systemctl", "reboot"] in ran
+def test_a_stale_repair_request_does_not_make_an_install_repair_only(up, monkeypatch):
+    """**Finding 125 #3, the second review.** A request left by a unit that
+    never reached `install` (it waited out a pack, or failed) is ignored
+    once older than REPAIR_REQUEST_S, so a later real install reads the
+    channel as usual."""
+    import json as _json
+    seen, order = fake_install(up, monkeypatch)
+    checked = []
+    monkeypatch.setattr(up, "check", lambda args, **kw: checked.append(kw) or
+                        ("testing", {"Release": "2", "_serial": 2, "Repositories": "ours-x", "_whats_new": "New."}))
+    up.repair_marker().parent.mkdir(parents=True, exist_ok=True)
+    up.repair_marker().write_text(_json.dumps({"release": "1", "at": time.time() - up.REPAIR_REQUEST_S - 60}))
+    assert up.install(None) == 0
+    assert not up.repair_marker().exists(), "removed all the same"
+    assert checked and seen[-1]["state"] == "done" and seen[-1]["release"] == "2"

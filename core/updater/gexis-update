@@ -457,8 +457,7 @@ def finish_cut_short(where: str = REPAIR_HERE) -> bool:
     2026-10-14): a pack cut short left dpkg as dirty as a release does, and
     every check - the button's, the night's in any update mode - took it
     for one, reinstalled the release already there and restarted the device
-    in the middle of playback. Only packs broken, and nothing else of the
-    release outstanding (`outstanding`): the pack path's own
+    in the middle of playback. Only packs broken: the pack path's own
     `heal` finishes it, as does an install's, and the check reads the
     channel as usual. A release, from a check nobody asked to install
     (`REPAIR_HAND_OVER`, `REPAIR_IF_QUIET`): left while something plays."""
@@ -468,19 +467,14 @@ def finish_cut_short(where: str = REPAIR_HERE) -> bool:
     if not journal and not broken:
         return False
     target = installed("gexis-player")
-    if broken and all(is_pack(name) for name in broken) and target:
-        # **Only when the release itself is whole** (Finding 125 #16, the
-        # review's low point, 2026-10-14): a pack is unpacked inside a
-        # release's dist-upgrade too, and a power cut there leaves only the
-        # pack broken, gexis-player already at the release - and the
-        # release's other packages still the old ones. Left to the pack,
-        # every check after called it current.
-        left = outstanding(target)
-        if not left:
-            print(f"a skin pack was cut short ({', '.join(broken)}); left to the pack's own repair", flush=True)
-            return False
-        print(f"a skin pack was cut short ({', '.join(broken)}) with {target} not complete "
-              f"({', '.join(left)})", flush=True)
+    if broken and all(is_pack(name) for name in broken):
+        # Left to the pack's own repair. **Not** first asking apt whether the
+        # rest of the release is whole (tried and backed out, Finding 125 #16,
+        # 2026-10-14): as root, `apt-get -s` refuses a dirty dpkg journal, so
+        # a lone pack would always have cost a full repair and a restart, and
+        # a preview or offline player could no longer check at all.
+        print(f"a skin pack was cut short ({', '.join(broken)}); left to the pack's own repair", flush=True)
+        return False
     if not target:
         raise Stop(CUT_SHORT)
     if where != REPAIR_HERE and playing():
@@ -493,7 +487,7 @@ def finish_cut_short(where: str = REPAIR_HERE) -> bool:
     if where == REPAIR_HAND_OVER:
         # The marker first, on the card: the unit must never run as a plain
         # install (`repair_marker`).
-        write_synced(repair_marker(), json.dumps({"release": target}))
+        write_synced(repair_marker(), json.dumps({"release": target, "at": time.time()}))
         if run("systemctl", "start", "--no-block", INSTALL_UNIT, check=False).returncode:
             take_repair_request()
             raise Stop(CUT_SHORT)
@@ -526,38 +520,30 @@ def is_pack(name: str) -> bool:
     return bool(PACK.match(name)) or name == "gexis-skins"
 
 
-def outstanding(target: str) -> list[str]:
-    """What of release `target`, besides skin packs, is not yet installed:
-    the packages `complete_release` would change, as apt simulates it from
-    the release's own repositories (Finding 125 #16, 2026-10-14). apt
-    unable to say counts as something outstanding - the release is
-    completed rather than taken as whole."""
-    repos, _ = parts_of(target)
-    opts = apt_env(repos)
-    if apt(opts, "update").returncode:
-        raise Stop(CUT_SHORT)
-    left: list[str] = []
-    for args in (["--allow-change-held-packages", "dist-upgrade"],
-                 ["--allow-change-held-packages", "install", f"gexis-player={target}"]):
-        sim = apt(opts, "-s", *args)
-        if sim.returncode:
-            return [f"apt could not plan it: {why(sim)}"]
-        for line in sim.stdout.splitlines():
-            m = re.match(r"^Inst (\S+)", line)
-            if m and not is_pack(m.group(1)) and m.group(1) not in left:
-                left.append(m.group(1))
-    return left
+#: How long a check's request for the repair stands. A request left by a
+#: unit that never reached `install` (it waited out a pack, or failed) must
+#: not turn a later, real install into a repair only (Finding 125 #3, the
+#: second review, 2026-10-14).
+REPAIR_REQUEST_S = 15 * 60
 
 
 def take_repair_request() -> bool:
-    """Whether a check asked this run for the repair only (`repair_marker`);
-    the request is removed as it is read, so it counts once."""
+    """Whether a check asked this run for the repair only (`repair_marker`),
+    within `REPAIR_REQUEST_S`; the request is removed as it is read, so it
+    counts once, and a stale one counts not at all."""
+    marker = repair_marker()
     try:
-        repair_marker().unlink()
+        asked = json.loads(marker.read_text()).get("at")
     except FileNotFoundError:
         return False
+    except (OSError, ValueError, AttributeError):
+        asked = None
+    try:
+        marker.unlink()
+    except FileNotFoundError:
+        pass
     _sync_state()
-    return True
+    return isinstance(asked, (int, float)) and 0 <= time.time() - asked <= REPAIR_REQUEST_S
 
 
 #: What `dpkg --audit` said the last time `interrupted` asked.
