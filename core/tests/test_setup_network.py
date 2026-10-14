@@ -656,6 +656,21 @@ def test_after_the_setup_network_opens_a_saved_network_in_range_is_rejoined(tmp_
     assert net.status()["network"] == "online"
 
 
+def test_a_phone_on_a_reopened_setup_network_gets_its_own_grace(tmp_path):
+    """Finding 125 #19: a phone left on the setup network last time kept the
+    moment it was first seen; hours later the network reopened and a phone
+    that had just joined was cut off at the first retry, not given its
+    SETUP_ACTIVE_S."""
+    nm = FakeNM(devices=NOTHING, saved={"Home": "preconfigured"}, in_range={"Home"})
+    net, clock = online_player(tmp_path, nm, stations=1)
+    # What the last time the setup network was open left behind, hours ago.
+    net._phone_since = net._page_used_at = -4 * 3600.0
+    watching(net, clock, lambda: nm.hotspot_at is not None and clock.now > nm.hotspot_at + sn.RETRY_S + sn.WATCH_S)
+    assert nm.hotspot_at is not None and clock.now > nm.hotspot_at + sn.RETRY_S
+    assert not nm.did("connection", "up", "preconfigured")
+    assert net.status()["network"] == "open"
+
+
 # -- the cable coming back (review, 2026-10-12) -----------------------------
 
 
