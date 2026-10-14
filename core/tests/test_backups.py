@@ -969,3 +969,85 @@ def test_an_older_backup_with_a_link_or_a_pipe_restores_everything_else(tmp_path
     assert backups.restore_file(out / name, root) == 1
     assert (root / "var/lib/private/gexis-uploaded/radiofoo/state").read_text() == "learned"
     assert not os.path.lexists(root / "var/lib/private/gexis-uploaded/radiofoo/odd")
+
+
+# -- Finding 125 #2, 2026-10-14: a link in the share is never read as root --------
+
+def _planted(tmp_path):
+    """A link `pi` left in the share under a name that is a backup's."""
+    out = tmp_path / "out"
+    out.mkdir()
+    victim = tmp_path / "shadow"
+    victim.write_text("root:SECRET:0:0")
+    name = "gexis-den-20261014-120000.tgz"
+    (out / name).symlink_to(victim)
+    return out, name
+
+
+def test_a_link_under_a_backups_name_is_not_one(tmp_path):
+    out, name = _planted(tmp_path)
+    assert backups.available(out) == []
+    with pytest.raises(FileNotFoundError):
+        backups.path_of(name, out)
+    with pytest.raises(FileNotFoundError):
+        backups.open_archive(name, out)
+
+
+def test_a_restore_never_reads_an_archive_through_a_link(tmp_path):
+    """A link to a real archive elsewhere: root would have read, and put
+    back, whatever it named."""
+    root, elsewhere = _device(tmp_path / "root"), tmp_path / "elsewhere"
+    made = backups.create("den", elsewhere, root)
+    out, target = tmp_path / "out", tmp_path / "root2"
+    out.mkdir()
+    target.mkdir()
+    (out / made).symlink_to(elsewhere / made)
+    with pytest.raises(FileNotFoundError):
+        backups.restore(made, out, target)
+    assert list(target.iterdir()) == []
+
+
+@pytest.mark.asyncio
+async def test_the_route_never_sends_a_link(tmp_path, monkeypatch):
+    from aiohttp.test_utils import TestClient, TestServer
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+
+    out, name = _planted(tmp_path)
+    monkeypatch.setattr(backups, "DEFAULT_DIR", out)
+    monkeypatch.setattr(backups.path_of, "__defaults__", (out,))
+    async with TestClient(TestServer(StateServer(StateStore({})).make_app())) as client:
+        r = await client.get(f"/backups/{name}")
+        assert r.status == 404
+        assert "SECRET" not in await r.text()
+
+
+def test_a_backup_cut_short_leaves_no_part_file_behind(tmp_path):
+    """Finding 125 #2, 2026-10-14: `mkstemp`'s random name means a backup cut
+    short (power, a kill) left a hidden `.part` nothing removed. The next
+    backup deletes the old ones - a link among them as a link - and leaves
+    one still being written, and anything not ours, alone."""
+    import os
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    out.mkdir()
+    victim = tmp_path / "victim"
+    victim.write_text("keep")
+    old = out / ".gexis-den-20261014-100000.tgz.a1b2c3.part"
+    old.write_bytes(b"half")
+    link = out / ".gexis-den.before-update-20261014-100000.tgz.zz9.part"
+    link.symlink_to(victim)
+    fresh = out / ".gexis-den-20261014-115959.tgz.q7w8.part"
+    fresh.write_bytes(b"being written")
+    theirs = out / ".notes.part"
+    theirs.write_text("someone's")
+    an_hour_ago = time.time() - 3600
+    for path in (old, theirs):
+        os.utime(path, (an_hour_ago, an_hour_ago))
+    os.utime(link, (an_hour_ago, an_hour_ago), follow_symlinks=False)
+
+    backups.create("den", out, root)
+    assert not old.exists()
+    assert not link.is_symlink() and victim.read_text() == "keep"
+    assert fresh.exists() and theirs.exists()
+    assert [p.name for p in out.iterdir() if p.name.endswith(".part")
+            and p.name.startswith(".gexis-")] == [fresh.name]

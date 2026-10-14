@@ -1193,3 +1193,44 @@ def test_an_old_failure_does_not_stop_a_new_backup(up, monkeypatch, tmp_path):
 
     monkeypatch.setattr(up.urllib.request, "urlopen", core_writes)
     assert up.back_up() == "gexis-x-before-update-1.tgz"
+
+
+def test_a_link_at_the_failure_mark_is_no_mark(up, monkeypatch, tmp_path):
+    """Finding 125 #2, 2026-10-14: the share is `pi`'s, so a link at the
+    mark's name made root stop the update and print whatever it named. A
+    link is not the core's word; the backup that appears is taken."""
+    shares = tmp_path / "backups"
+    shares.mkdir()
+    secret = tmp_path / "shadow"
+    secret.write_text("root:SECRET\n")
+    (shares / up.BACKUP_FAILED).symlink_to(secret)
+    monkeypatch.setattr(up, "BACKUPS", shares)
+    looks = []
+
+    def core_writes(req, timeout=0):
+        return io.BytesIO(b"{}")
+
+    def sleep(s):
+        looks.append(s)
+        (shares / "gexis-x-before-update-1.tgz").write_bytes(b"x")
+
+    monkeypatch.setattr(up.urllib.request, "urlopen", core_writes)
+    monkeypatch.setattr(up.time, "sleep", sleep)
+    printed = []
+    monkeypatch.setattr("builtins.print", lambda *a, **k: printed.append(" ".join(map(str, a))))
+    assert up.back_up() == "gexis-x-before-update-1.tgz"
+    assert looks, "the mark was looked at before the backup appeared"
+    assert not any("SECRET" in line for line in printed)
+
+
+def test_a_failure_mark_that_is_a_file_is_still_read(up, monkeypatch, tmp_path):
+    shares = tmp_path / "backups"
+    shares.mkdir()
+    monkeypatch.setattr(up, "BACKUPS", shares)
+    monkeypatch.setattr(up.urllib.request, "urlopen",
+                        lambda req, timeout=0: (shares / up.BACKUP_FAILED).write_text("disk full\n") and io.BytesIO(b"{}"))
+    printed = []
+    monkeypatch.setattr("builtins.print", lambda *a, **k: printed.append(" ".join(map(str, a))))
+    with pytest.raises(up.Stop):
+        up.back_up()
+    assert any("disk full" in line for line in printed)

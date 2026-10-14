@@ -31,6 +31,7 @@ import os
 import re
 import signal
 import sqlite3
+import stat
 import subprocess
 import math
 import sys
@@ -860,6 +861,25 @@ def stop_playback() -> None:
         print(f"could not ask the core to stop playback: {exc}", flush=True)
 
 
+def backup_failure(mark: Path, since: float) -> str | None:
+    """The core's reason, when `mark` is a plain file written since `since`.
+
+    **Never through a link** (Finding 125 #2, 2026-10-14): the share is
+    `pi`'s, so a link `pi` left at this name had root stop the update and
+    print the start of whatever it named. Opened with `O_NOFOLLOW` and
+    looked at through the open file; a link, or anything not a file, is no
+    mark. `O_NONBLOCK`: a pipe at the name must not hang the update."""
+    try:
+        fd = os.open(mark, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
+    except OSError:  # not there, or a link (ELOOP)
+        return None
+    with os.fdopen(fd, "rb") as f:
+        st = os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode) or st.st_mtime < since:
+            return None
+        return f.read(4096).decode(errors="replace").strip()
+
+
 def back_up() -> str:
     before = {p.name for p in BACKUPS.glob("*.tgz")}
     # `before=update` (George, 2026-10-12): the core names it as an
@@ -879,13 +899,11 @@ def back_up() -> str:
             return sorted(new)[-1]
         # **A backup that failed is said at once** (sofapi, 2026-10-13: two
         # minutes on "backing up" for one that had failed in a second).
-        try:
-            if failed.stat().st_mtime >= asked - 1:
-                print(f"the backup failed: {failed.read_text().strip()}", flush=True)
-                raise Stop("The backup before the update did not work, so nothing was installed. "
-                           "Try again; a problem report says more.")
-        except FileNotFoundError:
-            pass
+        reason = backup_failure(failed, asked - 1)
+        if reason is not None:
+            print(f"the backup failed: {reason}", flush=True)
+            raise Stop("The backup before the update did not work, so nothing was installed. "
+                       "Try again; a problem report says more.")
         time.sleep(2)
     raise Stop("no backup appeared; not updating without one")
 

@@ -206,13 +206,18 @@ def available(directory: Path = DEFAULT_DIR) -> list[Archive]:
         return []
     found = []
     for entry in entries:
-        if not entry.is_file() or not NAME.match(entry.name):
+        if not NAME.match(entry.name):
             continue
+        # `lstat`, not `is_file` (Finding 125 #2, 2026-10-14): a link `pi`
+        # left under a backup's name is not a backup, and listing it is
+        # what offered it for download and restore.
         try:
-            stat = entry.stat()
+            info = entry.lstat()
         except OSError:
             continue
-        found.append(Archive(entry.name, stat.st_mtime, stat.st_size))
+        if not stat.S_ISREG(info.st_mode):
+            continue
+        found.append(Archive(entry.name, info.st_mtime, info.st_size))
     return sorted(found, key=lambda a: a.made, reverse=True)
 
 
@@ -301,6 +306,39 @@ def _add(archive: tarfile.TarFile, path: Path, arcname: str, filter) -> None:
             _add(archive, path / name, f"{arcname}/{name}", filter)
 
 
+#: How old a partial archive is before the next backup takes it for one
+#: cut short. A backup being written touches its file all the time.
+STALE_PART_S = 10 * 60
+
+#: `create`'s partial names: `.<final name>.<random>.part`.
+PART = re.compile(r"^\.gexis-.*\.tgz\..+\.part$")
+
+
+def _sweep_parts(directory: Path, now: float | None = None) -> None:
+    """**A backup cut short leaves nothing behind** (Finding 125 #2,
+    2026-10-14): `mkstemp`'s random name is one no later backup reuses, so
+    the partial file of one killed or powered off stayed in the share,
+    hidden, for good. Removed by name only - `unlink` takes a link away
+    without following it, and nothing here is opened - and only once it is
+    old enough not to be another backup still being written."""
+    now = time.time() if now is None else now
+    try:
+        names = os.listdir(directory)
+    except OSError:
+        return
+    for name in names:
+        if not PART.match(name):
+            continue
+        path = directory / name
+        try:
+            if now - os.lstat(path).st_mtime < STALE_PART_S:
+                continue
+            path.unlink()
+        except OSError:
+            continue
+        logger.info("backup: removed %s, left by a backup cut short", name)
+
+
 def create(device_name: str, directory: Path = DEFAULT_DIR, root: Path = Path("/"),
            automatic: bool = False) -> str:
     """Write one, and return its name.
@@ -332,6 +370,7 @@ def create(device_name: str, directory: Path = DEFAULT_DIR, root: Path = Path("/
     folders - refused the whole archive for it. Left out, and said.
     """
     directory.mkdir(parents=True, exist_ok=True)
+    _sweep_parts(directory)
     mark = AUTOMATIC_MARK if automatic else ""
     name = f"gexis-{_slug(device_name)}{mark}-{time.strftime('%Y%m%d-%H%M%S')}.tgz"
     final = directory / name
@@ -469,22 +508,24 @@ def restore(name: str, directory: Path = DEFAULT_DIR, root: Path = Path("/")) ->
     """Put one back. **The caller reboots** (ADR-0083)."""
     if not SAFE.match(name) or not NAME.match(name):
         raise ValueError(f"not a backup name: {name!r}")
-    path = directory / name
-    if not path.is_file():
-        raise FileNotFoundError(str(path))
-    restore_file(path, root)
+    # **Opened without following a link** (Finding 125 #2, 2026-10-14): a
+    # link `pi` left under a backup's name had root read, and put back,
+    # whatever archive it named. Read through the one open file.
+    with open_archive(name, directory) as source:
+        restore_file(directory / name, root, fileobj=source)
 
 
-def restore_file(path: Path, root: Path = Path("/"), leave: tuple[str, ...] = (), run=None) -> int:
+def restore_file(path: Path, root: Path = Path("/"), leave: tuple[str, ...] = (), run=None,
+                 fileobj=None) -> int:
     """Put back the archive at `path`, whatever it is called - setup's
     upload is not in the share (ADR-0131). `leave`: paths not put back, the
     identities of a backup restored as another player. Returns how many
     paths. `run`: how services are stopped (`STOPPED_FOR_RESTORE`) - on the
     device's own root, systemctl; elsewhere nothing unless a test passes
-    one."""
+    one. `fileobj`: the archive already open, read instead of `path`."""
     if run is None and root == Path("/"):
         run = subprocess.run
-    with tarfile.open(path, "r:gz") as archive:
+    with tarfile.open(path, "r:gz", fileobj=fileobj) as archive:
         members = [m for m in _checked(archive, path.name) if not _under(m.name, leave)]
         _refuse_links_on_disk(members, root, path.name)
         stopped = _stop_for_restore(members, run)
@@ -861,9 +902,42 @@ def path_of(name: str, directory: Path = DEFAULT_DIR) -> Path:
     if not SAFE.match(name) or not NAME.match(name):
         raise ValueError(f"not a backup name: {name!r}")
     path = directory / name
-    if not path.is_file():
-        raise FileNotFoundError(name)
+    # `lstat` (Finding 125 #2, 2026-10-14): a link under a backup's name is
+    # not one. The route itself sends through `open_archive`.
+    try:
+        if not stat.S_ISREG(os.lstat(path).st_mode):
+            raise FileNotFoundError(name)
+    except OSError:
+        raise FileNotFoundError(name) from None
     return path
+
+
+def open_archive(name: str, directory: Path | None = None):
+    """**One backup, open for reading - never through a link** (Finding
+    125 #2, 2026-10-14). The share is `pi`'s, setgid but not sticky, so the
+    kernel's guard for links does not apply there: a link left under a
+    backup's name had root send, or restore, whatever it named -
+    `/etc/shadow` to anyone on the network. `O_NOFOLLOW` refuses the link
+    when the file is opened, so nothing can be swapped in after a check;
+    anything that is not a plain file (a pipe: `O_NONBLOCK`, so it cannot
+    hang the open) is not there. Raises ValueError for a name that is not
+    ours, FileNotFoundError for one that is not a backup on the disk."""
+    if not SAFE.match(name) or not NAME.match(name):
+        raise ValueError(f"not a backup name: {name!r}")
+    path = (DEFAULT_DIR if directory is None else directory) / name
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
+    except OSError as exc:
+        if exc.errno in (errno.ENOENT, errno.ELOOP, errno.ENOTDIR):
+            raise FileNotFoundError(name) from None
+        raise
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise FileNotFoundError(name)
+        return os.fdopen(fd, "rb")
+    except BaseException:
+        os.close(fd)
+        raise
 
 
 def forget(name: str, directory: Path = DEFAULT_DIR) -> None:
