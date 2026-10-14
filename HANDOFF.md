@@ -83,9 +83,10 @@ download works from then), README's *Download and install* section, Raspberry
 Pi Imager - the image file and *Use custom*, our own Imager repository and the
 community application after (g14). **After it**, in order (`docs/DEVELOPMENT.md`, "Phases after the first
 public release"; refer to them by ID): **14** MPD for real 5.1/7.1
-(`ph-mpd`), **15** the player in Home Assistant (`ph-home-assistant`), **16**
-themes (`ph-themes`), **17** a sound bar on optical (`ph-optical`), **18** the
-library answers for itself (`ph-library`), **19** Lyrion's own menus' look
+(`ph-mpd`), **15** room correction with a USB microphone (`ph-room-correction`),
+**16** the player in Home Assistant (`ph-home-assistant`), **17** themes
+(`ph-themes`), **18** a sound bar on optical (`ph-optical`), **19** the library
+answers for itself (`ph-library`), **20** Lyrion's own menus' look
 (`ph-lyrion-menus`) - each ADR first.
 
 The shared to-do list (an artifact with a `todos` collection; its address is
