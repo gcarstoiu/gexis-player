@@ -633,6 +633,13 @@ class Cache:
         )
         self._conn.commit()
 
+    def forget_keys(self, namespace: str, keys) -> None:
+        """Some entries of a namespace: those a rescan gave to someone else."""
+        self._conn.execute(self._KV_SCHEMA)
+        self._conn.executemany("DELETE FROM notes WHERE namespace = ? AND key = ?",
+                               [(namespace, str(k)) for k in keys])
+        self._conn.commit()
+
     def forget_namespace(self, namespace: str) -> None:
         """After an LMS rescan, when every id may mean something else."""
         self._conn.execute(self._KV_SCHEMA)

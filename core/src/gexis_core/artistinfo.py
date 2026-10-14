@@ -108,6 +108,13 @@ SLOW_NAMESPACE = "artist-photo-slow"
 #: after a NAS's (ADR-0115), a restored backup - numbers its own, and a new
 #: address breaks every URL. So a change of either drops them.
 SCOPE_NAMESPACE = "artist-photo-scope"
+#: **Who each artist id named when the photos were taken** (George,
+#: 2026-10-14: the Album Artists grid took more than 30 s to show its
+#: photos). Every LMS rescan - four on sofapi in twelve hours, most of them
+#: adding files and renumbering nothing - dropped every stored photo, and the
+#: next look at the grid asked the plugin for 950 artists, four at a time.
+#: Now a rescan drops only the photos whose id names someone else.
+NAMES_NAMESPACE = "artist-photo-names"
 #: How often the server's last scan is looked at, at most.
 SCOPE_CHECK_S = 60.0
 
@@ -143,6 +150,13 @@ def _is_absent(exc: BaseException) -> bool:
     # Unrecognised: treat as transient. Turning photos off for ten minutes
     # is the more expensive mistake of the two.
     return False
+
+
+def _int_or(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return value
 
 
 class LmsArtistInfo:
@@ -289,16 +303,80 @@ class LmsArtistInfo:
             logger.info("artistinfo: photos were from %s (scan %s), the server is %s (scan %s); "
                         "asking again", held.get("server"), held.get("lastscan"), self._base, lastscan)
         try:
-            self.forget()
+            # **The same server rescanned: only the renumbered go.** Another
+            # server, or no names kept from before, and everything goes.
+            before = self._recall_names() if held is not None and held.get("server") == self._base else None
+            now_names = await self._artist_names() if before is not None else None
+            if before is not None and now_names is not None:
+                self._revalidate(before, now_names)
+            else:
+                self.forget()
         except Exception as exc:
             logger.info("artistinfo: could not drop the stored photos (%s)", exc)
             return
+        await self._snapshot_names(now_names if before is not None else None)
         self._scope = {"server": self._base, "lastscan": lastscan}
         if self._store is not None:
             try:
                 self._store.remember(SCOPE_NAMESPACE, "scope", self._scope)
             except Exception as exc:
                 logger.info("artistinfo: could not store whose photos they are (%s)", exc)
+
+    async def _artist_names(self) -> dict[str, str] | None:
+        """Every artist's id and name on the server now, or None."""
+        try:
+            result = await self._rpc(["artists", 0, 100000], timeout=CALL_TIMEOUT_S) or {}
+        except Exception as exc:
+            logger.info("artistinfo: no artist names (%r)", exc)
+            return None
+        loop = result.get("artists_loop")
+        if not isinstance(loop, list):
+            return None
+        return {str(row.get("id")): str(row.get("artist") or "") for row in loop if row.get("id") is not None}
+
+    def _recall_names(self) -> dict | None:
+        if self._store is None:
+            return None
+        try:
+            names = self._store.recall(NAMES_NAMESPACE, "names")
+        except KeyError:
+            return None
+        except Exception as exc:
+            logger.info("artistinfo: could not read the artist names kept (%s)", exc)
+            return None
+        return names if isinstance(names, dict) else None
+
+    async def _snapshot_names(self, names: dict | None = None) -> None:
+        if self._store is None:
+            return
+        names = names if names is not None else await self._artist_names()
+        if names is None:
+            return
+        try:
+            self._store.remember(NAMES_NAMESPACE, "names", names)
+        except Exception as exc:
+            logger.info("artistinfo: could not keep the artist names (%s)", exc)
+
+    def _revalidate(self, before: dict, now: dict) -> None:
+        """After a rescan of the same server: the photos and slow markers of
+        ids that now name another artist, or none, are dropped; the rest
+        stay. LMS's own enrichment answers carry picture paths by id, and go
+        as `forget` drops them."""
+        for callback in self._on_forget:
+            try:
+                callback()
+            except Exception as exc:
+                logger.info("artistinfo: a listener could not drop its answers (%s)", exc)
+        moved = [i for i, name in before.items() if now.get(i) != name]
+        for artist_id in moved:
+            for key in (artist_id, _int_or(artist_id)):
+                self._photos.pop(key, None)
+                self._slow_until.pop(key, None)
+        if self._store is not None and moved:
+            self._store.forget_keys(self.NAMESPACE, moved)
+            self._store.forget_keys(SLOW_NAMESPACE, moved)
+        logger.info("artistinfo: after the rescan %d artist(s) kept their photos, %d dropped",
+                    len(before) - len(moved), len(moved))
 
     def _recall_scope(self) -> dict | None:
         if self._store is None:
