@@ -6,14 +6,31 @@ import { svelte } from '@sveltejs/vite-plugin-svelte';
 //: every font size written in pixels - in the type tokens and in each
 //: screen, 460-odd places - is multiplied by `--text-scale` (1 unless the
 //: setting says otherwise), here at build time rather than by hand.
+//: **And every other way a size reaches a font** (Finding 125 #25,
+//: 2026-10-14): the `font` shorthand (the update screen's 22px label), and a
+//: custom property a font size in the same stylesheet reads, as
+//: WaitingServices' `--wait-name` - both stayed at 100 % while the text
+//: round them grew. A property only other things read (`--wait-ring`) is
+//: left as it is.
 const PX = /(-?\d*\.?\d+)px/g;
+const FONT = /^(font|font-size)$/;
 const textScale = {
   postcssPlugin: 'gexis-text-scale',
-  Declaration(decl) {
-    const sized = decl.prop === 'font-size' || /^--t-/.test(decl.prop);
-    if (!sized || decl.value.includes('--text-scale') || !PX.test(decl.value)) return;
-    PX.lastIndex = 0;
-    decl.value = decl.value.replace(PX, 'calc($1px * var(--text-scale, 1))');
+  prepare() {
+    const read = new Set();
+    return {
+      Once(root) {
+        root.walkDecls(FONT, (decl) => {
+          for (const m of decl.value.matchAll(/var\(\s*(--[\w-]+)/g)) read.add(m[1]);
+        });
+      },
+      Declaration(decl) {
+        const sized = FONT.test(decl.prop) || /^--t-/.test(decl.prop) || read.has(decl.prop);
+        if (!sized || decl.value.includes('--text-scale') || !PX.test(decl.value)) return;
+        PX.lastIndex = 0;
+        decl.value = decl.value.replace(PX, 'calc($1px * var(--text-scale, 1))');
+      },
+    };
   },
 };
 
