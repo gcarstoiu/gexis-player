@@ -10,17 +10,29 @@ and `phase-13b` is merged into it after each docs change. A release is built
 from a worktree made at its tag, then removed. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 0.15.0 on Testing** (2026-10-14; tag `v0.15.0`, release
-`r0.15.0`, serial 41, signature checked; image
-`image/deploy/2026-10-14-gexis-player-v0.15.0.img`, 121 checks passed;
-**PR #66 open for George to merge**). Text size (ADR-0148), two Screen tiles,
-Now Playing links, artists on streaming playlists, the touchpad's probe and
-ping, the `.local` name claimed back, Keep's countdown from the question. The
-release worktree `~/projects/gexis-player-rel-0.15.0` goes after the merge.
-**After the tag, on `phase-13d`:** Finding 125's 26 fixes (a review of
-everything since 0.10.1, two of them security issues in backups), on sofapi
-as a preview - for the next release, 1.0.0. **Players are not updated to a
-release by Claude** (George, 2026-10-13).
+**Current release: 1.0.0, the first Stable release** (2026-10-15; tag
+`v1.0.0`, release `r1.0.0`; Testing serial 42, Stable serial 1, signatures
+checked; image `image/deploy/2026-10-14-gexis-player-v1.0.0.img`, 121 checks;
+the public `releases/latest/download/gexis-player.img.xz` downloaded, checksum
+and signature good). **PR #67 open for George to merge** (it adds README's
+*Download and install*). After the merge: post-merge steps, the routine
+clean-up, remove `~/projects/gexis-player-rel-1.0.0`. In it: Finding 125's 26
+fixes, the skin pack's progress race, the Wi-Fi radio on for setup over the
+cable. **Players are not updated to a release by Claude** (George, 2026-10-13).
+
+**Open, being looked into (2026-10-15): the setup network opened after a
+lost network cannot be joined** (bedroompi, a 0.15.0 card set up over the
+cable, cable then pulled). The core's log says gexis-setup opened WPA2-only on
+channel 6 (`key_mgmt WPA-PSK WPA-PSK-SHA256`, `ieee80211w 0`), but nothing
+from George's phone reached it, the phone showed the network with frequency
+"Unknown", and a test access point raised the same way on bedroompi was seen
+neither from sofapi nor from R2D2, on channel 6 or 13, under DE or the world
+domain. The driver logs `brcmf_vif_set_mgmt_ie: vndr ie set error : -52` at
+each start. Not yet tried: an A/B with today's Wi-Fi power-save conf removed
+(it applies to every Wi-Fi connection, the access point included, and every
+image whose setup network worked predates it) - needs bedroompi restarted
+without the conf and George's phone. Debug logs should be on for test
+players (they keep the journal across restarts only on Testing by default).
 
 Suite 2,386 passed, 47 skipped (2026-10-14).
 
