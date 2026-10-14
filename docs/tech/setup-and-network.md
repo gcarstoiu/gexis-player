@@ -354,10 +354,10 @@ Keep, a screen without a forced mode moves silently, and a provisional
 setup screen stays provisional.
 
 **With both ports connected** (ADR-0141 D2/D4, 2026-10-12):
-In Settings the two rows are **one Screen tile** (George, 2026-10-13): the
-UI draws `screen_port` (or `screen_port_info`) at `screen`'s place, showing
-the display in use; a tap opens `screen_port`'s choice, *Change* opens
-`screen`'s list of models. `screen_detect.seen()` picks **the port chosen under *Screen port*** when
+In Settings, *Attached screen* is a tile showing the display in use (a TV by
+the name its port line gives) with *Change*, which opens `screen`'s list at
+its makers; *Screen port* is its own row (George, 2026-10-14, after one
+combined tile for a day). `screen_detect.seen()` picks **the port chosen under *Screen port*** when
 something is connected there (ADR-0147 D1: `chosen` in screen.json's
 `current`), else the applied port if a known panel is there, any port a known
 panel is on, the applied port, else the first connected. `screen_detect.ports()` lists both for

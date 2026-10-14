@@ -144,3 +144,12 @@ opens the 2 options. Add a change button to the tile"*.
 - **One Screen tile:** *Attached screen* and *Screen port* are one tile
   showing the display in use and its port; a tap chooses between the ports;
   *Change* picks the model from the list.
+
+## Amended 2026-10-14: two tiles again
+
+George, after the third try (the TV right, the panel off, standby keeping
+the sound): *"The change button in the settings display tile doesn't work.
+Let's go back to two tiles."* *Change* opened the list inside the current
+maker, which for a TV is *Other screen* with one size. Now *Attached screen*
+shows the display in use with *Change*, opening at the makers, and *Screen
+port* is its own row.
