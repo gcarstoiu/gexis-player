@@ -361,7 +361,10 @@ over time; an artist whose photos were found is not asked again.
 **How do I open the player on a phone?**
 In any browser on the same network, open `http://gexis.local:8090`, with the
 player's own name in place of *gexis*. It can be saved as a bookmark or added
-to the phone's home screen. There is no app to install.
+to the phone's home screen. There is no app to install. If the address
+briefly answers as *gexis-2.local* instead, the network still remembered the
+player from its previous start; the player takes its own name back within a
+few minutes, so keep using the address without the *-2*.
 
 **What can the phone do?**
 Everything in Settings, plus a mini player at the bottom: the source, the
