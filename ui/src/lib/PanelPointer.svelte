@@ -52,8 +52,11 @@
   const speed = $derived(Math.max(0.25, Number($settingValues.pointer_speed ?? 150) / 100));
   const arrow = $derived($settingValues.pointer_style === 'Arrow');
 
-  //: Pressable things and sliders, as the panel marks them.
-  const PRESSABLE = 'button, a[href], input, select, textarea, label, summary, [role=button], [role=tab], [role=switch], [role=checkbox], [role=option], [role=menuitem], [role=link]';
+  //: Pressable things and sliders, as the panel marks them. And a row's
+  //: action (`.act`) whatever it is drawn as: a Lyrion search's Play, Play
+  //: next and Add are spans inside the result's button, which was outlined
+  //: in their place (Finding 125 #24, 2026-10-14).
+  const PRESSABLE = 'button, a[href], input, select, textarea, label, summary, [role=button], [role=tab], [role=switch], [role=checkbox], [role=option], [role=menuitem], [role=link], .act';
   const SLIDER = '[role=slider], input[type=range], .slider';
   //: The design's round control: width and height within 1.6 of each other.
   //: And small - the design drew rings round buttons; a home screen card is
@@ -132,6 +135,12 @@
     // which took Play's and Queue's outlines away (George, 2026-10-14: "not
     // all buttons there have the highlight on hover").
     if (el.classList.contains('act') || el.closest('.row__actions, .acts')) return false;
+    // **Revealed, not merely beside actions** (Finding 125 #24, 2026-10-14):
+    // a playlist's and a station's Play and Queue are always shown, and
+    // their rows lost the outline for it. A reveal is what the screens mark
+    // - `is-revealed` on the Library's row round its button, `is-sel` on a
+    // Lyrion row that holds its actions.
+    if (!el.matches('.is-revealed, .is-sel') && !el.parentElement?.matches('.is-revealed')) return false;
     return !!(el.querySelector('.act') || el.nextElementSibling?.querySelector?.('.act')
               || el.nextElementSibling?.classList.contains('act'));
   }
