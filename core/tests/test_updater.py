@@ -1268,7 +1268,8 @@ def test_a_cut_short_skin_pack_is_not_a_release_to_finish(up, monkeypatch):
                             or subprocess.CompletedProcess(a, 0, "", ""))
         monkeypatch.setattr(up, "playing", lambda: False)
         assert up.finish_cut_short(where) is False, where
-        assert healed == [] and applied == [] and ran == [], where
+        assert healed == [] and ran == [], where
+        assert all(a == ["update"] or "-s" in a for a in applied), "only read and simulated"
 
 
 def test_a_night_with_music_leaves_a_cut_short_release_for_later(up, monkeypatch):
@@ -1338,3 +1339,120 @@ def test_a_repair_with_no_note_clears_the_reboot_marker_it_reboots_for(up, monke
     monkeypatch.setattr(up, "REBOOT_MARKER", marker)
     assert up.finish_cut_short() is True
     assert ["systemctl", "reboot"] in ran and not marker.exists()
+
+
+def _handed_over(up, monkeypatch):
+    """A cut-short release the button handed to the install unit: the
+    marker it left, and the install unit's run of `install` after it."""
+    reports, healed, ran = _cut_short_no_note(up, monkeypatch)
+    monkeypatch.setattr(up, "playing", lambda: False)
+    assert _check_button(up, monkeypatch) == 0
+    assert up.repair_marker().exists(), "left before the install unit is started"
+    return reports, healed, ran
+
+
+def _no_channel(up, monkeypatch):
+    def refuse(*a, **k):
+        raise AssertionError("the channel was read")
+    monkeypatch.setattr(up, "check", refuse)
+    monkeypatch.setattr(up, "read_channel", refuse)
+    monkeypatch.setattr(up, "release_notes", refuse)
+
+
+def test_the_hand_over_is_repair_only(up, monkeypatch):
+    """**Finding 125 #3, 2026-10-14.** The install unit a check started
+    finishes the release cut short and nothing else: no channel read, no
+    newer release installed - a check never ends in an install."""
+    reports, healed, ran = _handed_over(up, monkeypatch)
+    applied = []
+    monkeypatch.setattr(up, "apt", lambda opts, *a, **k: applied.append(list(a))
+                        or subprocess.CompletedProcess(a, 0, "", ""))
+    _no_channel(up, monkeypatch)
+    # dpkg still dirty when the install unit's turn comes.
+    monkeypatch.setattr(up, "interrupted", lambda: (True, ["gexis-core"]) if not healed else (False, []))
+    assert up.install(None) == 0
+    assert not up.repair_marker().exists(), "read once"
+    assert healed and ["systemctl", "reboot"] in ran
+    installs = [a for a in applied if "install" in a and "--reinstall" not in a]
+    assert installs == [["--allow-change-held-packages", "install", "gexis-player=0.12.0"]], \
+        "only the release already there, finished"
+
+
+def test_the_hand_over_finding_nothing_left_installs_nothing(up, monkeypatch):
+    """Finding 125 #3: dpkg finished by the time the install unit runs (a
+    pack's own repair, say) - still no channel read and no install."""
+    reports, healed, ran = _handed_over(up, monkeypatch)
+    monkeypatch.setattr(up, "interrupted", lambda: (False, []))
+    _no_channel(up, monkeypatch)
+    monkeypatch.setattr(up, "apt", lambda *a, **k: (_ for _ in ()).throw(AssertionError("apt ran")))
+    assert up.install(None) == 0
+    assert not up.repair_marker().exists()
+    assert healed == [] and ["systemctl", "reboot"] not in ran
+    from gexis_core.updates import INSTALLING
+    assert reports[-1][0] not in INSTALLING, "the panel's lock is let go"
+
+
+def test_a_hand_over_that_cannot_start_the_unit_leaves_no_marker(up, monkeypatch):
+    reports, healed, ran = _cut_short_no_note(up, monkeypatch)
+    monkeypatch.setattr(up, "playing", lambda: False)
+    monkeypatch.setattr(up, "run", lambda *a, check=True, **k: subprocess.CompletedProcess(a, 1, "", ""))
+    assert _check_button(up, monkeypatch) == 1
+    assert not up.repair_marker().exists(), "a later Update now is not made repair-only"
+
+
+def test_an_install_without_the_marker_reads_the_channel_as_before(up, monkeypatch):
+    seen, order = fake_install(up, monkeypatch)
+    checked = []
+    monkeypatch.setattr(up, "check", lambda args, **kw: checked.append(kw) or
+                        ("testing", {"Release": "2", "_serial": 2, "Repositories": "ours-x", "_whats_new": "New."}))
+    assert not up.repair_marker().exists()
+    assert up.install(None) == 0
+    assert checked and seen[-1]["state"] == "done" and seen[-1]["release"] == "2"
+
+
+def test_a_skin_pack_cut_short_in_the_middle_of_a_release_still_completes_it(up, monkeypatch):
+    """**Finding 125 #16**, the review's low point: the power cut during a
+    release's dist-upgrade while a pack unpacked, gexis-player already at
+    the release. Only the pack is broken, but the release's other packages
+    are still the old ones: it is completed, not left as "current"."""
+    reports, healed, ran = _cut_short_no_note(up, monkeypatch)
+    monkeypatch.setattr(up, "interrupted", lambda: (True, ["gexis-skins-1480x320"]) if not healed else (False, []))
+    applied = []
+    def apt(opts, *a, **k):
+        applied.append(list(a))
+        out = ""
+        if "-s" in a and "dist-upgrade" in a:
+            out = ("Inst gexis-skins-1480x320 [0.12.0] (0.12.0 ours-x [all])\n"
+                   "Inst libasound2t64 [1.2.13-1] (1.2.13-2 ours-x [arm64])\n")
+        return subprocess.CompletedProcess(a, 0, out, "")
+    monkeypatch.setattr(up, "apt", apt)
+    assert up.finish_cut_short() is True
+    assert ["--allow-change-held-packages", "dist-upgrade"] in applied, "complete_release ran"
+    assert healed and ["systemctl", "reboot"] in ran
+
+
+def test_a_skin_pack_cut_short_alone_is_left_to_the_pack(up, monkeypatch):
+    """Finding 125 #16: the release's packages all at the target, only the
+    pack outstanding - no repair, no reboot, nothing installed."""
+    reports, healed, ran = _cut_short_no_note(up, monkeypatch)
+    monkeypatch.setattr(up, "interrupted", lambda: (True, ["gexis-skins-1480x320"]))
+    applied = []
+    def apt(opts, *a, **k):
+        applied.append(list(a))
+        out = "Inst gexis-skins-1480x320 [0.12.0] (0.12.0 ours-x [all])\n" if "-s" in a else ""
+        return subprocess.CompletedProcess(a, 0, out, "")
+    monkeypatch.setattr(up, "apt", apt)
+    assert up.finish_cut_short() is False
+    assert healed == [] and ["systemctl", "reboot"] not in ran
+    assert all(a == ["update"] or "-s" in a for a in applied), "only read and simulated"
+
+
+def test_a_skin_pack_cut_short_apt_cannot_plan_around_is_completed(up, monkeypatch):
+    """Finding 125 #16: when apt cannot say what is outstanding, the
+    release is completed rather than taken as done."""
+    reports, healed, ran = _cut_short_no_note(up, monkeypatch)
+    monkeypatch.setattr(up, "interrupted", lambda: (True, ["gexis-skins-1480x320"]) if not healed else (False, []))
+    monkeypatch.setattr(up, "apt", lambda opts, *a, **k: subprocess.CompletedProcess(
+        a, 100 if "-s" in a else 0, "", "E: broken"))
+    assert up.finish_cut_short() is True
+    assert healed and ["systemctl", "reboot"] in ran
