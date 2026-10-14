@@ -137,6 +137,12 @@ accepts opens the setup network and runs the same `_hold` retry as at boot.
 State strings are the ones `SetupNetwork.status()` publishes:
 `starting`, `waiting`, `open`, `joining`, `failed`, `done`, `online`.
 
+**A new player already online through the cable** opens no setup network,
+but still has the same two lines run (`rfkill unblock wifi`, `nmcli radio
+wifi on`): setup's Wi-Fi step scans, and the blocked radio of a new card made
+it say "No networks found" (bedroompi, 2026-10-14). The scan is passive under
+the world domain until Finish sets the country.
+
 **Opening** (`SetupNetwork.open()`), in order:
 
 1. `rfkill unblock wifi` and `nmcli radio wifi on`. A blank card's radio is
