@@ -203,6 +203,50 @@ for off in ${GEXIS_OUTPUTS_OFF:-}; do
 		echo "gexis-kiosk: could not switch ${off} off" >&2
 	fi
 done
+# **And kept so** (George, 2026-10-14: after turning the TV off and on, the
+# picture came back at 640 x 480). A TV woken behind a receiver is offered
+# again with the receiver's few modes first - the kernel refused 1920x1080
+# ("User-defined mode not supported") - and labwc took the preferred 640 x
+# 480; the full list came moments later, and nothing set the mode again.
+# Every KEEP_S the outputs are read: the screen's port, while on, is put back
+# at its mode once that mode is offered, and a panel switched off above that
+# came back on is switched off again. Only for a TV (a mode or a port to keep
+# off); a screen that is off (display standby) is left off.
+KEEP_S=3
+keep_outputs() {
+	local want what output was
+	while sleep "${KEEP_S}"; do
+		want=$(wlr-randr --json 2>/dev/null | python3 -c '
+import json, sys
+connector, mode, off = sys.argv[1], sys.argv[2], sys.argv[3].split()
+try:
+    outputs = json.load(sys.stdin)
+except ValueError:
+    sys.exit()
+size = lambda m: "%dx%d" % (m["width"], m["height"])
+for o in outputs:
+    if o["name"] == connector and o["enabled"] and mode:
+        current = next((size(m) for m in o["modes"] if m.get("current")), "none")
+        if current != mode and any(size(m) == mode for m in o["modes"]):
+            print("mode", connector, current)
+    if o["name"] in off and o["enabled"]:
+        print("off", o["name"], "on")
+' "${connector}" "${GEXIS_SCREEN_MODE:-}" "${GEXIS_OUTPUTS_OFF:-}") || continue
+		while read -r what output was; do
+			case "${what}" in
+			mode)
+				wlr-randr --output "${output}" --mode "${GEXIS_SCREEN_MODE}" \
+					&& echo "gexis-kiosk: ${output} back at ${GEXIS_SCREEN_MODE} (was ${was})" >&2 ;;
+			off)
+				wlr-randr --output "${output}" --off \
+					&& echo "gexis-kiosk: ${output} switched off again" >&2 ;;
+			esac
+		done <<<"${want}"
+	done
+}
+if command -v wlr-randr >/dev/null && { [ -n "${GEXIS_SCREEN_MODE:-}" ] || [ -n "${GEXIS_OUTPUTS_OFF:-}" ]; }; then
+	keep_outputs &
+fi
 if [ -n "${GEXIS_SCREEN_SCALE:-}" ]; then
 	scale=(--force-device-scale-factor="${GEXIS_SCREEN_SCALE}")
 	echo "gexis-kiosk: ${GEXIS_SCREEN_ID:-screen} (${GEXIS_SCREEN_FAMILY:-standard}), scale ${GEXIS_SCREEN_SCALE}" >&2
