@@ -158,6 +158,28 @@ def test_ethernet_with_an_address_never_opens_the_network_even_when_setup_is_nee
     assert net.status()["address"] == "http://192.168.1.50:8090/", "the page is on the LAN"
 
 
+def test_a_new_player_on_the_cable_has_its_wifi_radio_switched_on(tmp_path):
+    """bedroompi, 2026-10-14: setup over the cable said "No networks found".
+    A new card's Wi-Fi is blocked until a country is set (Raspberry Pi OS),
+    and only opening the setup network unblocked it - which a cabled player
+    never does. Setup's Wi-Fi step scans, so the radio is switched on."""
+    nm = FakeNM(devices=ETH_UP)
+    net, _ = setup(tmp_path, nm, carrier=True)
+    run(net.run())
+    assert net.needed and net.status()["network"] == "online"
+    assert nm.unblocked, "rfkill unblocked"
+    assert nm.did("radio", "wifi", "on")
+    assert not nm.did("device", "wifi", "hotspot")
+
+
+def test_a_configured_player_on_the_cable_leaves_its_radio_alone(tmp_path):
+    nm = FakeNM(devices=ETH_UP, saved={"Home": "preconfigured"})
+    net, _ = setup(tmp_path, nm, carrier=True)
+    run(net.run())
+    assert not net.needed
+    assert not nm.did("radio", "wifi", "on")
+
+
 def test_a_new_device_without_a_cable_opens_after_15_s_not_90(tmp_path):
     nm = FakeNM(devices=NOTHING)
     net, clock = setup(tmp_path, nm, stations=1)

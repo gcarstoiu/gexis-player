@@ -718,6 +718,15 @@ class SetupNetwork:
                 self._state = "online"
                 if self._needed:
                     self._lan_address = await self._address_of(where)
+                    # **The Wi-Fi radio on for setup's Wi-Fi step** (bedroompi,
+                    # 2026-10-14: setup over the cable found "No networks").
+                    # A new card's radio is blocked until a country is set
+                    # (see `open`), and only opening the setup network
+                    # lifted it - which a player on the cable never does.
+                    # Scanning is passive under the world domain; Finish
+                    # sets the real country.
+                    await self._unblock()
+                    await self._nmcli("radio", "wifi", "on")
                 self._publish()
                 logger.info("setup: on the network through %s; no setup network", where)
                 return
