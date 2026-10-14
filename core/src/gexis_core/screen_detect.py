@@ -159,7 +159,12 @@ def tv_mode(connector: str, drm: Path = DRM) -> tuple[int, int] | None:
 def has_touch(screen_id: str) -> bool:
     """Whether the player knows `screen_id` has a touch input: a model whose
     fingerprint names its USB touch device (ADR-0147 D3)."""
-    fp = FINGERPRINTS.get(screen_id)
+    # **By the model's id, not the stored one** (Finding 125 #8, 2026-10-14):
+    # a panel kept before the cased presets were merged has `<panel>-case`
+    # in screen.json, which `by_id` still finds and no fingerprint names -
+    # its own touch was ignored by udev at every start.
+    model = screens.by_id(screen_id)
+    fp = FINGERPRINTS.get(model.id if model else screen_id)
     return bool(fp and fp.usb)
 
 

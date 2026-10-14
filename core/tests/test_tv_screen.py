@@ -83,6 +83,24 @@ def test_only_a_screen_without_known_touch_is_answered_from_the_phone():
     assert not screen_detect.has_touch("other-1920x1080-capped")
 
 
+def test_a_panel_kept_under_its_old_cased_name_still_has_its_touch(tmp_path):
+    """Finding 125 #8 (2026-10-14): a 10.1" (B) kept before the cased presets
+    were merged into their panels has `waveshare-10.1-hdmi-b-case` in
+    screen.json. Read raw, it had no fingerprint: its own touch was ignored
+    by udev at every start and Keep went to the phone."""
+    from gexis_core import screen_watch
+    from gexis_core.__main__ import screen_question
+    assert screen_detect.has_touch("waveshare-10.1-hdmi-b-case")
+    state, rules = tmp_path / "screen.json", tmp_path / "rules" / "90.rules"
+    screen_apply.write_state({"current": {"screen": "waveshare-10.1-hdmi-b-case", "rotation": 0,
+                                          "connector": "HDMI-A-1"}}, state)
+    assert screen_watch.touch_rules(state, rules, run=lambda args, check=False: None) == []
+    assert not rules.exists()
+    question = screen_question({"pending": True, "current": {"screen": "waveshare-10.1-hdmi-b-case",
+                                                             "rotation": 180, "connector": "HDMI-A-1"}})
+    assert question["phone"] is False
+
+
 def test_the_question_says_the_phone_answers_for_a_tv(tmp_path):
     from gexis_core.__main__ import screen_question
     state = {"pending": True, "current": {"screen": "other-1920x1080-capped", "rotation": 0,
