@@ -2961,6 +2961,13 @@ correction filter and applies it to everything it plays.
 - **One correction per output**, on and off from Settings, and an A/B to
   hear the difference; with Phase 14's multichannel, one per channel.
 
+**Research done 2026-10-14**:
+[Finding 124](findings/124-room-correction-what-open-source-offers.md) -
+what Dirac Live does, the open-source pieces (CamillaDSP to run the filters,
+our own measurement on pyfar, DRC-FIR for a Dirac-like design; no project
+does Dirac's multi-position mixed-phase design end to end), the pitfalls on a
+Pi, and the microphones (miniDSP UMIK-1 first).
+
 **Acceptance (draft):**
 
 1. With a supported microphone plugged in, a measurement started from the
