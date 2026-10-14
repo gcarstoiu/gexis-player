@@ -889,6 +889,9 @@
       appTop: app,
       app: app ? row.label : parent.app ?? null,
       appLogo: app ? row.image : parent.appLogo ?? null,
+      //: The list it was opened from ("Playlists"): a page can say what it
+      //: is when the service does not (George, 2026-10-14).
+      under: parent.title ?? null,
     };
   }
 
@@ -939,7 +942,7 @@
       }
       return;
     }
-    openMenu(row.handle, row.label, true, ctxFor(row, here?.ctx ?? {}));
+    openMenu(row.handle, row.label, true, ctxFor(row, { ...(here?.ctx ?? {}), title: here?.label ?? null }));
   }
 
   async function openSearchEntry(row) {

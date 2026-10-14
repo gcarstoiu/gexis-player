@@ -198,7 +198,15 @@
       return (line.includes(' • ') ? line.split(' • ')[0] : line.split(' - ')[0]).trim();
     };
     const mixed = new Set(tracks.map(artistOf).filter(Boolean)).size > 1;
-    return { tracks, facts: facts.slice(0, 5), links, year, minutes, none, artistOf: mixed ? artistOf : () => '' };
+    //: **A playlist says so** (George, 2026-10-14: "Play album" on a
+    //: playlist, "in general for other services when playlists are
+    //: displayed"): the service's own marker (the core's `hint`), else the
+    //: list it came from ("Playlists", "My Playlists"), else tracks by
+    //: different artists on a page the service did not call an album.
+    const playlist = ctx.from?.hint === 'playlist'
+      || (ctx.from?.hint !== 'album' && (/playlist/i.test(ctx.under ?? '') || mixed));
+    return { tracks, facts: facts.slice(0, 5), links, year, minutes, none, playlist,
+             artistOf: mixed ? artistOf : () => '' };
   });
 
   // ── Cards at an app's first level: the search as a field-button, and
@@ -518,7 +526,7 @@
         {/if}
         <div class="albumpage__acts">
           {#if album.none}<div class="albumpage__none">{ctx.app ?? 'The service'} can’t stream this album</div>{/if}
-          {#if ctx.from?.can?.includes('play')}<button class="big big--play" type="button" onclick={() => onact?.(ctx.from, 'play')}><span class="tri tri--l"></span>Play album</button>{/if}
+          {#if ctx.from?.can?.includes('play')}<button class="big big--play" type="button" onclick={() => onact?.(ctx.from, 'play')}><span class="tri tri--l"></span>{album.playlist ? 'Play playlist' : 'Play album'}</button>{/if}
           {#if ctx.from?.can?.includes('add')}<button class="big" type="button" onclick={() => onact?.(ctx.from, 'add')}><span class="plus plus--l"></span>Add to queue</button>{/if}
         </div>
       </div>

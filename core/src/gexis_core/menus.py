@@ -29,7 +29,7 @@ import logging
 import secrets
 import time
 import unicodedata
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 from gexis_core.radio import PLAY_TAIL, UnknownHandle, _wants_text
 
@@ -520,6 +520,15 @@ def _hint(item: dict, spec: dict) -> str | None:
     alone - before what its action carries."""
     if str(item.get("type") or "") == "redirect":
         return "app"
+    # **A streaming service's playlist** (George, 2026-10-14: a playlist's
+    # page said "Play album"). Lyrion types albums and playlists alike
+    # (`type: playlist`); the services say which in what they carry - Spotty
+    # a `spotify:playlist:` link to favourite, Qobuz a cover under
+    # `/images/playlists/` (read on George's server that day).
+    link = str((item.get("presetParams") or {}).get("favorites_url") or "")
+    icon = unquote(str(item.get("icon") or item.get("image") or ""))
+    if ":playlist:" in link or "/playlist/" in link or "/images/playlists/" in icon:
+        return "playlist"
     own = item.get("commonParams") or {}
     for params in (own, {**(item.get("params") or {}), **(spec.get("params") or {})}):
         found = next((word for key, word in HINTS if key in params), None)
