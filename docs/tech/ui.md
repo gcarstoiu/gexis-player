@@ -316,6 +316,12 @@ drawn per kind:
   cover under `/images/playlists/`, Qobuz's), else the list it was opened
   from (`ctx.under` matching "playlist"), else tracks by different artists
   on a page the service did not mark an album.
+  Every search entry (`searchy`: a `search` row, or an app's first-level
+  "Search" folder) opens on its field (`onsearchentry`) and carries
+  `data-text-entry`, so a touchpad tap on it raises the phone's keyboard.
+  A row whose actions are revealed is the selection, teal
+  (`is-revealed` in `Library.svelte`, `is-on` on the bar, `is-sel` in
+  Lyrion's lists); the artist page's Popular reveals like any track list.
   `LyrionSearch.svelte` runs a search entry's
   searches as typing pauses. The panel only ever holds *handles* the core
   issued (`lib/menus.js`), never Lyrion commands. Each list's list/tiles
@@ -485,6 +491,11 @@ sequenceDiagram
   Dot shrinks to its small dot inside any outline. What lies *behind* the
   element (an ancestor, such as the bar a round button sits on) never counts
   as covering it: only something drawn over it does.
+- **An underline instead of the outline**: an element marked
+  `data-pointer="underline"` (Now Playing's tabs) gets `data-pointer-over`
+  while the pointer is on it and draws its own underline; its CSS selects
+  the attribute with `:global(...)`, since Svelte drops a selector for an
+  attribute its markup never sets.
 - **A tap over the visualiser** (`$panel.visualiser`) only reports a touch
   (`reportTouch`): the meters are a window over the page, and a tap replayed
   in the page pressed whatever the pointer rested on - the visualiser's
