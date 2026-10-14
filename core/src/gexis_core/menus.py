@@ -334,9 +334,8 @@ class LyrionMenus:
         if "browselibrary" not in (str(word) for word in spec.get("cmd") or ()):
             # The library's lists carry `textkey` (measured in Finding 029
             # on All Artists); that a service's lists carry none is assumed,
-            # not measured. A service's albums are hinted as albums now
-            # (Finding 125 #26), so reading a whole Qobuz list on the
-            # chance of keys is skipped (corrected 2026-10-14: this cited
+            # not measured, so a whole service list is not read on the
+            # chance of keys (Finding 125 #26, 2026-10-14; this once cited
             # Finding 110, which does not say so).
             return {"letters": {}}
         command = list(spec["cmd"]) + [0, LETTERS_MAX]
