@@ -152,7 +152,11 @@ the world domain until Finish sets the country.
 2. Wait up to 20 s for NetworkManager to call `wlan0` usable (unblocking is
    not the chip being ready).
 3. `nmcli device wifi hotspot` with profile and SSID `gexis-setup`, WPA2,
-   **pinned to 2.4 GHz** (`band bg`) so nothing radiates on 5 GHz before a
+   **pinned to 2.4 GHz** (`band bg`) on the channel `quiet_channel` picks:
+   1, 6 or 11, whichever is farthest from a multiple of a connected screen's
+   pixel clock (its EDID's first detailed timing) - the 11.9" bar's 59.4 MHz
+   jams channel 6, sofapi's 77.0 MHz panel would jam 11 (Finding 126); 6
+   when no EDID can be read. Pinned to 2.4 GHz so nothing radiates on 5 GHz before a
    country is known. NetworkManager's shared mode serves DHCP and DNS
    (its own dnsmasq) on a private subnet.
 4. `connection.autoconnect no`, read back: a profile left by a crash must never
