@@ -16,6 +16,31 @@
 
   let open = $state(false);
 
+  //: **Swiped open and closed** (George, 2026-10-14: "Mouse touchpad - should
+  //: open up and close by swipe up and down"). Up opens the sheet, down
+  //: closes it, anywhere on it but the touchpad itself, whose one-finger
+  //: moves are the pointer's. Mostly up or down, and SWIPE_PX of it; a swipe
+  //: is not also the header's tap.
+  const SWIPE_PX = 40;
+  let swipe = null;
+  let swallowTap = false;
+  function swipeStart(event) {
+    if (event.target.closest?.('.mini__pad, input')) return;
+    swipe = { id: event.pointerId, x: event.clientX, y: event.clientY };
+  }
+  function swipeEnd(event) {
+    if (!swipe || swipe.id !== event.pointerId) return;
+    const dx = event.clientX - swipe.x;
+    const dy = event.clientY - swipe.y;
+    swipe = null;
+    if (Math.abs(dy) < SWIPE_PX || Math.abs(dy) < Math.abs(dx) * 1.5) return;
+    if (dy < 0 && !open) open = true;
+    else if (dy > 0 && open) open = false;
+    else return;
+    swallowTap = true;
+    setTimeout(() => (swallowTap = false), 400);
+  }
+
   // ── ADR-0121: the touchpad and keyboard for the panel ────────────────
   //: Relative, as a laptop's touchpad: moves are sent as distances, and the
   //: panel scales them by Pointer speed. Open only while the sheet is.
@@ -392,9 +417,13 @@
   class="mini"
   use:closedHeight={open}
   class:mini--open={open}
+  onpointerdown={swipeStart}
+  onpointerup={swipeEnd}
+  onpointercancel={() => (swipe = null)}
   style:--src-accent={`var(--accent-${$active}, var(--accent-lms))`}
 >
-  <button class="mini__now" type="button" aria-expanded={open} onclick={() => (open = !open)}>
+  <button class="mini__now" type="button" aria-expanded={open}
+    onclick={() => { if (swallowTap) return; open = !open; }}>
     {#if $active}
       <SourceMark source={$active} size={open ? 22 : 16} color="var(--src-accent)" />
     {/if}
@@ -546,6 +575,8 @@
     right: 0;
     bottom: 0;
     z-index: 20;
+    /* Its swipes are the sheet's, not the page's to scroll. */
+    touch-action: none;
     display: flex;
     flex-direction: column;
     gap: 8px;
