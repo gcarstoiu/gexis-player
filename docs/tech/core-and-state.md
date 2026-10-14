@@ -426,7 +426,14 @@ this file (ADR-0083), so a large cache makes a large backup.
 server they came from and its last scan: LMS artist ids are renumbered by a
 full rescan and differ on another server. At most once a minute, when photos
 are asked for, the server's status is read; if the address or the last scan
-differs, the stored photos are dropped and asked for again. A scan under way
+differs, the stored photos are dropped and asked for again - **except after
+a rescan of the same server** (George, 2026-10-14: the Album Artists grid
+took more than 30 s; four rescans in twelve hours on sofapi had each dropped
+all ~950 photos): a snapshot of every artist's id and name
+(`artist-photo-names`) is kept with the photos, and only the photos and slow
+markers of ids that now name someone else are dropped
+(`LmsArtistInfo._revalidate`). Another server, or no snapshot yet, drops
+everything. A scan under way
 drops nothing, and a server that gives no status is judged by its address
 alone; photos stored before this record existed are asked for again once.
 **The `lms` and `lms-release` providers' stored answers go with the photos**
