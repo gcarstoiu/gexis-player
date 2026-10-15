@@ -28,8 +28,11 @@ adapter swapped on 2026-10-14 at 19:25 was the suspect, but a cable in its
 place fails the same way (10:13 run); what else changed physically is not on
 record. The pixel-clock rule ignores neighbours:
 on sofapi at 6-7 m only channel 6 was usable (channel 1 crowded).
-**Decision owed by George:** keep the rule, add a rotation fallback, change
-the panel's clock while setup is open, and/or a HARDWARE.md note on adapters.
+**Decided (George, 2026-10-15):** keep the rule and add the rotation - the
+next channel every 2 min until a phone joins, the join step counting down
+(ADR-0031 amended; 5335250f on `phase-13d`, not released). On bedroompi
+since 10:54 for George to try; the 2 minutes proposed for ADR-0022 as [H],
+not appended.
 The bar's test card (`bedroompi.local`, in ShelvesPi's Pi) still runs 1.0.0
 with the fix hand-copied - reflash it from the 1.0.1 image.
 
@@ -39,7 +42,7 @@ the jack never stood in (a539d16d, LESSONS 73); once working, a missing
 output was reported every 3 s (a816c24d, now once). On sofapi since
 2026-10-15 09:47: no errors; the switch itself not yet tried with a receiver.
 
-Suite 2,481 passed, 47 skipped (2026-10-15).
+Suite 2,485 passed, 47 skipped (2026-10-15).
 
 **Devices.** sofapi (Waveshare 10.1"; a test machine - its Lyrion queue may
 be lost, George 2026-10-12; an SMSL USB DAC on it), the bar (ShelvesPi,
