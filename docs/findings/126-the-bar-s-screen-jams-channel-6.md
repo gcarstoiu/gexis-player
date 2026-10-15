@@ -66,6 +66,33 @@ panel's own mode (320 x 1480, 59.4 MHz) as it has since 2026-10-01. The
 change was physical; the adapter swapped that night is the one known, and
 the old one can no longer be tested.
 
+## sofapi, the same test (2026-10-15 morning)
+
+sofapi on Wi-Fi only (its side timed, the core stopped meanwhile), R2D2
+6-7 m away; the panel at 77.0 MHz, whose multiple is 2 MHz from channel 11;
+a second port on throughout, at 640 x 480 (25.2 MHz, a multiple 5.3-5.6 MHz
+from each of channels 1, 6 and 11 alike):
+
+| Run | Channel | Panel | Join | Ping loss | Average delay | PC retries / packets |
+|---|---|---|---|---|---|---|
+| 1 | 11 | on | failed twice | - | - | - |
+| 2 | 6 | on | 9.2 s | 6.3 % | 215 ms | 1,313 / 671 |
+| 3 | 1 | on | failed twice | - | - | - |
+| 4 | 11 | **off** | 3.6 s | 0.3 % | 23 ms | 348 / 533 |
+| 5 | 11 | on | failed twice (the Pi saw a station associate; the join never completed) | - | - | - |
+
+- **The panel is the cause on a second device**: channel 11 failed twice in
+  two with it on, and joined in 3.6 s with it off.
+- **The rule chose the working channel on both devices** (11 on the bar, 6
+  on sofapi), **but its model is too simple**: channel 1, 25 MHz from any
+  multiple of sofapi's panel, failed as well, and 6 worked only poorly. The
+  interference is broader than the multiples; at this distance (signal
+  -61 to -64 dBm, against -37 to -41 at 3 m) there is little margin left on
+  any channel with the panel on.
+
+Not separated: the second port's share; distance against channel; one run
+per channel except 11.
+
 ## The fix (`setup_network.quiet_channel`)
 
 The setup network takes the 2.4 GHz channel - 1, 6 or 11 - farthest from any
