@@ -2919,9 +2919,10 @@ player boots that covers customisations that will make the player
 personalised to the user and be driven by questions"*; before MPD *"because
 mpd will add another option of playing and indexing music ... for a person
 who is just starting it might get too much"*). **ADR-0149**, proposed: part
-1 on the phone asks only what the player needs to run; part 2, on the panel
-(and the phone page) once the player is on the home network, asks how it
-will be used and ends in the downloads (ADR-0128's settling screen).
+1 on the phone asks only what the player needs to run; part 2, on the phone
+once the player is on the home network (the panel shows a QR code to it),
+asks how it will be used and ends in the downloads (ADR-0128's settling
+screen).
 
 **Before building:** George settles ADR-0149's open points (the questions,
 their answers and defaults); then Claude Design draws part 2 for the 10.1"
@@ -2932,18 +2933,20 @@ panel, the bars and the phone, and the shorter part 1.
 1. A new card's setup on the phone asks only Network, New or backup, Name,
    Time, Output, Screen and Review, over the setup network and over the
    cable.
-2. Once on the home network, the panel opens part 2; every question can be
-   answered on the panel, or on the phone page; *Later* leaves with the
-   defaults, and *Settings → System → Personalise* runs it again.
-3. *Only stream* leaves the Lyrion client off; *Play my music library* finds
-   a Lyrion server on the network or installs the Lyrion Server on the
-   player; the services, the visualiser and the plugins chosen are on, and
-   their downloads end part 2.
+2. Once on the home network, part 2 follows part 1 on the phone, and the
+   panel shows a QR code to it; *Later* leaves with the defaults, and
+   *Settings → System → Personalise* runs it again.
+3. *Only what is playing* keeps the Lyrion client running with no library
+   navigation on the screen (its apps still play to the player);
+   *I don't use Lyrion* turns the client off; a Lyrion server is found on
+   the network or installed on the player; the services, the visualiser and
+   the plugins chosen are on, and their downloads end part 2, on the panel
+   and the phone.
 4. A restored player and a player updated from 1.0.x are not shown part 2;
    a factory reset shows both parts.
-5. A player without a screen runs part 2 on the phone page.
-6. Every new screen matches Claude Design's picture on the 10.1" panel, the
-   11.9" and 7.9" bars, and a phone.
+5. A player without a screen is not asked the screen's questions.
+6. Every new screen matches Claude Design's picture: part 2 on a phone; the
+   QR and download screens on the 10.1" panel and the 11.9" and 7.9" bars.
 
 ### Phase 15 — MPD: real multichannel
 
