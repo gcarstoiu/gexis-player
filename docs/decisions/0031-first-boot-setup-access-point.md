@@ -204,3 +204,14 @@ afterwards. The full test is a card flashed with nothing pre-seeded.
   device off its home Wi-Fi. A new device is held by any phone, as before.
   The mechanism is [ADR-0104](0104-how-the-device-knows-it-needs-setup.md)'s
   amendment of the same date.
+
+## Amended 2026-10-15: the channel, away from the screen's interference
+
+George's bar: gexis-setup on channel 6 could not be joined - the phone saw it
+come and go - while sofapi's could. The 11.9" panel's HDMI link radiates at
+multiples of its 59.4 MHz pixel clock, one 1.6 MHz from channel 6; with the
+display off, or on channel 1, the phone joined at once (Finding 126). The
+setup network now takes the 2.4 GHz channel - 1, 6 or 11 - farthest from any
+multiple of a connected screen's pixel clock, read from its EDID; channel 6
+when none can be read. No fixed channel fits every screen: sofapi's 77.0 MHz
+panel has a multiple 2 MHz from channel 11.

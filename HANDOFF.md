@@ -10,17 +10,31 @@ and `phase-13b` is merged into it after each docs change. A release is built
 from a worktree made at its tag, then removed. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 0.15.0 on Testing** (2026-10-14; tag `v0.15.0`, release
-`r0.15.0`, serial 41, signature checked; image
-`image/deploy/2026-10-14-gexis-player-v0.15.0.img`, 121 checks passed;
-**PR #66 open for George to merge**). Text size (ADR-0148), two Screen tiles,
-Now Playing links, artists on streaming playlists, the touchpad's probe and
-ping, the `.local` name claimed back, Keep's countdown from the question. The
-release worktree `~/projects/gexis-player-rel-0.15.0` goes after the merge.
-**After the tag, on `phase-13d`:** Finding 125's 26 fixes (a review of
-everything since 0.10.1, two of them security issues in backups), on sofapi
-as a preview - for the next release, 1.0.0. **Players are not updated to a
-release by Claude** (George, 2026-10-13).
+**Current release: 1.0.0 on Testing only - pulled back from Stable**
+(2026-10-15, George). Tag `v1.0.0`, release `r1.0.0`, Testing serial 42.
+Promoted and then withdrawn the same night: the `stable` channel file and the
+image (`gexis-player.img.xz`, `.sha256`, `.asc`) deleted from GitHub, `r1.0.0`
+a pre-release again (a Stable player says nothing has been released on
+Stable). PR #67 (with README's *Download and install*) was merged; **PR #68
+puts README's Testing note back - for George to merge.** To re-promote:
+`publish.sh --promote r1.0.0` from a worktree at the tag (the image is
+`image/deploy/2026-10-14-gexis-player-v1.0.0.img`), then a README PR again.
+
+**Why it was pulled, and what was found (2026-10-15):** on the bar's Pi
+(Rev 1.4, here running a fresh card as "bedroompi") the setup network
+**gexis-setup** cannot be joined - a phone does not see it, and R2D2, which
+does see sofapi's, never sees it either, on 2.4 or 5 GHz, under DE or the
+world domain, from setup's own code or a bare `nmcli` hotspot. The same Pi
+works as a client (5 GHz, -53 dBm, 351 Mbit/s), its power is clean, and the
+`vndr ie set error -52` it logs appears on sofapi too (harmless). **On
+sofapi (Rev 1.5) the same commands work:** George's phone joined in 20 s and
+opened the page. On 2026-10-09 this same bar Pi hosted the setup network and
+a phone joined it. So it looks like that one Pi or where it now stands, not
+the software - **not yet proved:** a fresh 1.0.0 card's first setup over
+Wi-Fi on a Rev 1.5 Pi (sofapi or guestpi), which is what re-promotion waits
+on. Debug logs keep the journal across restarts only on Testing by default;
+the 1.0.0 test card was provisioned with them on. Trial scripts left in
+`/usr/local/lib/gexis/ap-trial.sh` on sofapi, guestpi and the bedroompi card.
 
 Suite 2,386 passed, 47 skipped (2026-10-14).
 

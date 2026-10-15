@@ -5,6 +5,16 @@ Every release of Gexis Player and its notes, newest first. Generated from
 edit that file, not this one. The player shows the last 10 under
 Settings → System → Change logs.
 
+## 1.0.1 — 15 October 2026
+
+### Fixed
+
+- The setup network, gexis-setup, can be joined on every screen: it now uses the Wi-Fi channel least disturbed by the player's own screen. On the 11.9" bar the screen's cable drowned out the channel it used, and phones saw the network come and go but could not connect.
+
+### Good to know
+
+- Gexis Player 1.0.1 is the first release on the Stable channel, with the image to install it from.
+
 ## 1.0.0 — 14 October 2026
 
 ### New

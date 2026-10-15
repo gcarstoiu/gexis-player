@@ -765,3 +765,57 @@ def test_a_failed_join_during_setup_over_ethernet_stays_on_the_cable(tmp_path):
     assert status["network"] == "online" and status["needed"]
     assert status["address"] == "http://192.168.1.50:8090/"
     assert status["failed"] == "Home" and status["reason"] == reason
+
+
+def _edid(clock_mhz):
+    """An EDID whose first detailed timing has this pixel clock."""
+    e = bytearray(128)
+    v = round(clock_mhz * 100)
+    e[54], e[55] = v & 0xFF, v >> 8
+    return bytes(e)
+
+
+def _screen(tmp_path, name, clock_mhz, status="connected"):
+    d = tmp_path / "drm" / f"card1-{name}"
+    d.mkdir(parents=True)
+    (d / "status").write_text(status + "\n")
+    (d / "edid").write_bytes(_edid(clock_mhz) if clock_mhz else b"")
+    return tmp_path / "drm"
+
+
+def test_the_bar_s_screen_moves_the_setup_network_off_channel_6(tmp_path):
+    """George's bar, 2026-10-15: the 11.9" panel's 59.4 MHz has a multiple
+    at 2435.4 MHz, 1.6 MHz from channel 6, and the phone could not join;
+    on channel 1, with the display on, it joined at once."""
+    drm = _screen(tmp_path, "HDMI-A-1", 59.4)
+    assert sn.pixel_clocks(drm) == [59.4]
+    assert sn.quiet_channel(sn.pixel_clocks(drm)) in (1, 11)
+
+
+def test_sofapi_s_panel_keeps_channel_6_and_never_11(tmp_path):
+    """sofapi's 77.0 MHz panel: 27 MHz clear of channel 6, 2 MHz from 11."""
+    drm = _screen(tmp_path, "HDMI-A-1", 77.0)
+    assert sn.quiet_channel(sn.pixel_clocks(drm)) == 6
+
+
+def test_no_screen_or_no_edid_keeps_channel_6(tmp_path):
+    assert sn.quiet_channel(sn.pixel_clocks(tmp_path / "none")) == 6
+    drm = _screen(tmp_path, "HDMI-A-1", None)
+    assert sn.pixel_clocks(drm) == []
+    assert sn.quiet_channel([]) == 6
+
+
+def test_every_connected_screen_counts_and_a_disconnected_one_does_not(tmp_path):
+    drm = _screen(tmp_path, "HDMI-A-1", 59.4)
+    _screen(tmp_path, "HDMI-A-2", 77.0, status="disconnected")
+    assert sn.pixel_clocks(drm) == [59.4]
+
+
+def test_the_hotspot_is_raised_on_the_quiet_channel(tmp_path):
+    nm = FakeNM(devices=NOTHING)
+    net, _ = setup(tmp_path, nm, stations=1)
+    drm = _screen(tmp_path / "bar", "HDMI-A-1", 59.4)
+    net._drm = drm
+    run(net.open())
+    hotspot = next(c for c in nm.calls if "hotspot" in c)
+    assert hotspot[hotspot.index("channel") + 1] in ("1", "11")
