@@ -27,7 +27,7 @@ Look before deleting; delete only what is listed here as safe.
 | `packaging/out/` (both checkouts) | nothing needed | every `.deb` (rebuilt by the next build) |
 | pi-gen volumes | the warm stage trees | `make prune` only - **never `make clean`** (a cold build is ~40 min) |
 | Docker images | `pi-gen`, `gexis-deb-builder`, the Debian bases, anything a running container uses (`gexis-dev-*` is someone else's - leave it) | dangling images: `docker image prune -f` (not `-a`) |
-| The session scratchpad | the test `venv`, `relkey.gpg`, the players' host-key files, `holddemo.py`, `chipshot.py`, `film.py` | everything else (check first that no memory file, HANDOFF or test points into it) |
+| The session scratchpad | the test `venv`, `relkey.gpg`, the players' host-key files, `holddemo.py` **with its `pd/` folder** (the public-domain demo library; lost once, 2026-10-15, and rebuilt - a copy lives in `~/projects/gexis-blog/demo/`), `chipshot.py`, `film.py` | everything else (check first that no memory file, HANDOFF or test points into it) |
 | The players' `/tmp` | - | `/tmp/pv` and any test script copied there |
 
 ## 2. What sessions read (tokens)
