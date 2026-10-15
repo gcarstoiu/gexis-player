@@ -1,9 +1,10 @@
 # Changelog
 
-Every release of Gexis Player and its notes, newest first. Generated from
-`core/src/gexis_core/release_notes.json` by `python -m gexis_core.changelog` -
-edit that file, not this one. The player shows the last 10 under
-Settings → System → Change logs.
+<!-- Generated from core/src/gexis_core/release_notes.json by
+     `python -m gexis_core.changelog`: edit that file, not this one. -->
+
+Every release of Gexis Player and its notes, newest first. The player
+shows the last 10 under Settings → System → Change logs.
 
 ## 1.0.2 — 15 October 2026
 
