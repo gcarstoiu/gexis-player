@@ -66,7 +66,7 @@ George, on the build's open questions: *"I'm going with your recommendation."*
   tone wrong, the same on both sides, and possibly past the buffer. Checked by
   side in the decoder test.
 - **Ogg Vorbis and ALAC with more than two channels stay as they are**
-  (refused upstream) until Phase 14 (`ph-mpd`).
+  (refused upstream) until Phase 15 (`ph-mpd`).
 - **The folded level stays** as decided: a 5.1 file 7.7 dB below its front
   channels; AAC's own fold 2.2-2.3 dB lower still.
 - **The `downmix:` log line stays at warning level**, so each folded track is

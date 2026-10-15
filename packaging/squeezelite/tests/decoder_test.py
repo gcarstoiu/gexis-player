@@ -18,7 +18,7 @@ upstream build (`--upstream`) and the patched one (`--patched`):
   - what upstream does with the same files, for the record;
   - AAC: FAAD2's own fold-down, checked the same way, and its level;
   - Opus, folded by opusfile (checked by side); Vorbis and ALAC, left alone
-    until Phase 14 (ph-mpd), for the record.
+    until Phase 15 (ph-mpd), for the record.
 """
 from __future__ import annotations
 

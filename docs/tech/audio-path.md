@@ -127,7 +127,7 @@ Notes per renderer:
   (`packaging/squeezelite/tests/`). **Opus** with more than two channels goes
   through opusfile's own `op_read_stereo` (George, 2026-10-13): upstream read
   every channel into a buffer sized for stereo and unpacked it as stereo,
-  garbled. Not folded, until Phase 14 (`ph-mpd`): Ogg Vorbis (refused
+  garbled. Not folded, until Phase 15 (`ph-mpd`): Ogg Vorbis (refused
   upstream: "too many channels") and ALAC (ffmpeg: "unsupported number of
   channels").
 - **go-librespot** is configured (`go-librespot-config.yml`) with
@@ -432,7 +432,7 @@ Output row as `optionNotes` (`Settings(option_notes=...)`). Under an HDMI
 port, `hdmi_sound` reads the port's ELD (`/proc/asound/vc4hdmiN/eld#*`, sent
 by the connected device): its `monitor_name` and the highest rate and bits of
 its LPCM entries, or *takes no sound* when it lists none. Only PCM: the Pi
-sends no DSD, Dolby or DTS over HDMI, and two channels until Phase 14. The
+sends no DSD, Dolby or DTS over HDMI, and two channels until Phase 15 (`ph-mpd`). The
 core names the screen's port by the screen's model (`_output_line`, as
 `_port_line` does for the Screen port tile).
 

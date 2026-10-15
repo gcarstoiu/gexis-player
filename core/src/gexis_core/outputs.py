@@ -570,7 +570,7 @@ def hdmi_sound(card: str, proc: Path | None = None) -> tuple[str | None, str] | 
     is not an HDMI port.
 
     Only PCM: the Pi sends no one-bit DSD and no Dolby or DTS stream over
-    HDMI, and plays two channels until Phase 14 (`ph-mpd`), so a receiver's
+    HDMI, and plays two channels until Phase 15 (`ph-mpd`), so a receiver's
     other formats and its channel count would promise what does not play."""
     if card not in CONNECTORS:
         return None
