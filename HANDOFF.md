@@ -27,9 +27,10 @@ shrinking on a tap); bedroompi's card is out of it.
 drafts with demo-library screenshots in `~/projects/gexis-blog/` (articles,
 media, `import_wp.py` into the LOCAL copy only, the demo tools); the setup
 article left out until setup changes. The theme repository has the
-`gexis/repo-doc` block (commit 9ea5796, **not pushed**, `dist/gexis.zip`
-built): FAQ, Install, Hardware, Manual and Release notes read from `main`,
-cached an hour. Nothing published.
+`gexis/repo-doc` block and, in 1.0.3, Documents on a tag (commits 9ea5796
+and 2ca893a, **not pushed**, `dist/gexis.zip` built): FAQ, Install, Hardware,
+Manual and Release notes read from `main`, cached an hour, tagged `sound` and
+listed above its posts. Nothing published.
 
 Suite 2,485 passed, 47 skipped (2026-10-15).
 
