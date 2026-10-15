@@ -549,8 +549,8 @@ the units (`systemctl start --no-block`) and reads `status.json`:
   it goes straight to the install's progress, saying *"An update is being
   installed. Check for updates again once it has finished."*, and so does a
   check during which an install starts (George, 2026-10-12).
-- `ui/src/App.svelte`: while `update.active`, the panel shows `UpdateScreen`
-  over everything (Peppy hidden), stays up through the core's restart and
+- `ui/src/App.svelte`: from *Update* tapped on the panel (`updateAsked`),
+  and while `update.active`, the panel shows `UpdateScreen` over everything (Peppy hidden), stays up through the core's restart and
   reconnect, then holds the outcome until *Done* (10 min limit; 6 s for a
   failure) and reloads if the installed release changed.
 - Settings that move with the code: `settings_migrations.py` runs ordered,
