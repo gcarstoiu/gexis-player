@@ -10,7 +10,7 @@
 -->
 <script>
   import { onMount } from 'svelte';
-  import { update, metadata, connection } from '../lib/state.js';
+  import { update, metadata, connection, updateAsked } from '../lib/state.js';
   import { runSetting } from '../lib/settings.js';
   import UpdateSteps from './UpdateSteps.svelte';
   import ReleaseHistory from './ReleaseHistory.svelte';
@@ -84,6 +84,7 @@
     from = u.installed ?? from;
     asked = { at: u.at, state: u.state };
     phase = 'progress';
+    updateAsked.set(Date.now());
     runSetting('update_install');
   }
 
