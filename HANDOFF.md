@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-14 (on R2D2).
+Last updated: 2026-10-15 (on R2D2).
 
 ## Start here
 
@@ -13,9 +13,8 @@ from a worktree made at its tag, then removed. History: `docs/HANDOFF-ARCHIVE.md
 **Current release: 1.0.1, the first Stable release** (2026-10-15; tag
 `v1.0.1`, release `r1.0.1`; Testing serial 43, Stable serial 1, signatures
 checked; image `image/deploy/2026-10-14-gexis-player-v1.0.1.img`, 121 checks;
-the public download verified). **PR #69 open for George to merge** (README's
-*Download and install* naming 1.0.1). After the merge: post-merge steps, the
-routine clean-up, remove `~/projects/gexis-player-rel-1.0.1`.
+the public download verified). PR #69 merged by George; both branches carry
+it, the release worktree and branch are removed.
 
 **1.0.0 was promoted and pulled back the same night** (Finding 126): on the
 11.9" bar the setup network could not be joined - the panel's HDMI link
@@ -23,11 +22,12 @@ radiates 1.6 MHz from channel 6. 1.0.1's setup network takes channel 1, 6 or
 11, whichever is farthest from the connected screens' pixel-clock multiples
 (ADR-0031 amended). Shown with George's phone on the bar; why it worked on
 the same Pi before is most likely the HDMI adapter George swapped that night
-(not proved: the old adapter on channel 6 would settle it). Trial scripts
-left in `/usr/local/lib/gexis/ap-trial.sh` on sofapi, guestpi and the test
-card; the test card's core carries the fix as one hand-copied file.
+(not proved: the old adapter on channel 6 would settle it). The trial scripts
+are removed from sofapi and guestpi; the test card in the bar's Pi was not
+reachable and still has `/usr/local/lib/gexis/ap-trial.sh` and a core with
+the fix hand-copied - reflash it from the 1.0.1 image.
 
-Suite 2,386 passed, 47 skipped (2026-10-14).
+Suite 2,479 passed, 47 skipped (2026-10-15).
 
 **Devices.** sofapi (Waveshare 10.1"; a test machine - its Lyrion queue may
 be lost, George 2026-10-12; an SMSL USB DAC on it), the bar (ShelvesPi,
@@ -72,8 +72,8 @@ in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-10-14, after 0.15.0's PR (#66)** (the first: ~102 GB and ~30,500 -> ~9,500
-words in the morning).
+2026-10-15, after 1.0.1's PR (#69)** (/home 224 -> 242 GB free; start-of-session
+reading ~4,800 words).
 
 ## Phases
 
