@@ -18,8 +18,9 @@ and the routine clean-up done. Not seen on a device: the jack taking over
 from a switched-off HDMI device (ADR-0141 D5). The setup network's story -
 1.0.0 pulled back, the screen's HDMI signal jamming one channel, the
 rotation - is in Finding 126 and the archive; why the bar worked before
-2026-10-14 is still not known. The bar's card (`bedroompi.local`) runs a
-pre-1.0.2 preview (core `1.0.1+git28`), George to update or reflash it.
+2026-10-14 is still not known. The bar is ShelvesPi again (1.0.2, with a UI
+preview `1.0.2+git13` since 2026-10-15: the update screen from the tap, Lyrion's
+apps across the bar, no empty facts column); bedroompi's card is out of it.
 
 Suite 2,485 passed, 47 skipped (2026-10-15).
 
