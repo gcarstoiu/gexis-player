@@ -136,6 +136,34 @@ Not as predicted: at 35.5 MHz channel 1 still joined, although a multiple
 (2414 MHz, the 68th) is 2 MHz from it - a higher multiple, presumably
 weaker. Whether the panel shows a picture at 54 Hz was not looked at.
 
+## sofapi with its second port off (2026-10-15, 09:33-09:39)
+
+The same set-up as sofapi's first test (R2D2 6-7 m away, signal -62 to
+-66 dBm):
+
+| Run | Channel | Second port | Join | Ping loss | Average delay |
+|---|---|---|---|---|---|
+| 1 | 1 | off | 22.2 s | **81 %** | 5,146 ms |
+| 2 | 11 | off | failed twice | - | - |
+| 3 | 6 | off | 14.0 s | 0 % | 133 ms (438 retries / 465 packets) |
+| 4 | 1 | on | failed twice | - | - |
+| 5 | 1 | off | failed twice | - | - |
+
+- Channel 11 fails with the panel on, the second port off: the panel's own
+  multiple, as predicted.
+- **Channel 1 is bad on sofapi with or without the second port**, although
+  25 MHz from the panel's multiples: one join in two, and that one unusable.
+  The second port does not explain it. What the bar's Pi heard on channel 1
+  the same morning: four neighbouring networks at -56 to -70 dBm, against one
+  each on 6, 11 and 13 (-74 to -79). Crowding plus a weak link at this
+  distance is the likelier reason; not separated (no panel-off run on
+  channel 1 here).
+- At this distance only channel 6 joined reliably, and slowly.
+
+So the pixel-clock rule avoids the screen's channel, but it knows nothing of
+neighbours: on sofapi it would choose 6, the only usable channel here, by
+luck as much as by design.
+
 ## The fix (`setup_network.quiet_channel`)
 
 The setup network takes the 2.4 GHz channel - 1, 6 or 11 - farthest from any
