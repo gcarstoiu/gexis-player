@@ -23,6 +23,14 @@ preview `1.0.2+git16` since 2026-10-15: the update screen from the tap, Lyrion's
 apps across the bar, no empty facts column, rows that light up instead of
 shrinking on a tap); bedroompi's card is out of it.
 
+**The blog (George's WordPress, tag `sound`), 2026-10-15:** eleven article
+drafts with demo-library screenshots in `~/projects/gexis-blog/` (articles,
+media, `import_wp.py` into the LOCAL copy only, the demo tools); the setup
+article left out until setup changes. The theme repository has the
+`gexis/repo-doc` block (commit 9ea5796, **not pushed**, `dist/gexis.zip`
+built): FAQ, Install, Hardware, Manual and Release notes read from `main`,
+cached an hour. Nothing published.
+
 Suite 2,485 passed, 47 skipped (2026-10-15).
 
 **Devices.** sofapi (Waveshare 10.1"; a test machine - its Lyrion queue may
