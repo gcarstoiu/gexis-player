@@ -10,11 +10,14 @@ and `phase-13b` is merged into it after each docs change. A release is built
 from a worktree made at its tag, then removed. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.0.1, the first Stable release** (2026-10-15; tag
-`v1.0.1`, release `r1.0.1`; Testing serial 43, Stable serial 1, signatures
-checked; image `image/deploy/2026-10-14-gexis-player-v1.0.1.img`, 121 checks;
-the public download verified). PR #69 merged by George; both branches carry
-it, the release worktree and branch are removed.
+**Current release: 1.0.2** (2026-10-15; tag `v1.0.2`, release `r1.0.2`;
+Testing serial 44, Stable serial 2, both read back and verified; image
+`image/deploy/2026-10-15-gexis-player-v1.0.2.img`, 121 checks; the public
+download verified byte for byte). It brings the setup network's channel
+rotation and the stand-in watcher fixes. **PR #70 open for George to merge**
+(README naming 1.0.2). After the merge: the post-merge steps, the routine
+clean-up, remove `~/projects/gexis-player-rel-1.0.2`. Not seen on a device:
+the jack taking over from a switched-off HDMI device.
 
 **1.0.0 was promoted and pulled back the same night** (Finding 126): on the
 11.9" bar the setup network could not be joined. 1.0.1's setup network takes
@@ -30,13 +33,12 @@ record. The pixel-clock rule ignores neighbours:
 on sofapi at 6-7 m only channel 6 was usable (channel 1 crowded).
 **Decided (George, 2026-10-15):** keep the rule and add the rotation - the
 next channel every 2 min until a phone joins, the join step counting down
-(ADR-0031 amended; 5335250f on `phase-13d`, not released). On bedroompi
-since 10:54 for George to try; the 2 minutes proposed for ADR-0022 as [H],
-not appended.
+(ADR-0031 amended), released in 1.0.2 after George tried it on the bar; the
+2 minutes proposed for ADR-0022 as [H], not appended.
 The bar's test card (`bedroompi.local`, in ShelvesPi's Pi) still runs 1.0.0
 with the fix hand-copied - reflash it from the 1.0.1 image.
 
-**Fixed on `phase-13d`, not released:** the stand-in watcher (ADR-0141 D5)
+**Fixed in 1.0.2:** the stand-in watcher (ADR-0141 D5)
 failed every 3 s in 1.0.0/1.0.1 - a settings read from a worker thread - so
 the jack never stood in (a539d16d, LESSONS 73); once working, a missing
 output was reported every 3 s (a816c24d, now once). On sofapi since
