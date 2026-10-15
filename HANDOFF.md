@@ -10,31 +10,22 @@ and `phase-13b` is merged into it after each docs change. A release is built
 from a worktree made at its tag, then removed. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.0.0 on Testing only - pulled back from Stable**
-(2026-10-15, George). Tag `v1.0.0`, release `r1.0.0`, Testing serial 42.
-Promoted and then withdrawn the same night: the `stable` channel file and the
-image (`gexis-player.img.xz`, `.sha256`, `.asc`) deleted from GitHub, `r1.0.0`
-a pre-release again (a Stable player says nothing has been released on
-Stable). PR #67 (with README's *Download and install*) was merged; **PR #68
-puts README's Testing note back - for George to merge.** To re-promote:
-`publish.sh --promote r1.0.0` from a worktree at the tag (the image is
-`image/deploy/2026-10-14-gexis-player-v1.0.0.img`), then a README PR again.
+**Current release: 1.0.1, the first Stable release** (2026-10-15; tag
+`v1.0.1`, release `r1.0.1`; Testing serial 43, Stable serial 1, signatures
+checked; image `image/deploy/2026-10-14-gexis-player-v1.0.1.img`, 121 checks;
+the public download verified). **PR #69 open for George to merge** (README's
+*Download and install* naming 1.0.1). After the merge: post-merge steps, the
+routine clean-up, remove `~/projects/gexis-player-rel-1.0.1`.
 
-**Why it was pulled, and what was found (2026-10-15):** on the bar's Pi
-(Rev 1.4, here running a fresh card as "bedroompi") the setup network
-**gexis-setup** cannot be joined - a phone does not see it, and R2D2, which
-does see sofapi's, never sees it either, on 2.4 or 5 GHz, under DE or the
-world domain, from setup's own code or a bare `nmcli` hotspot. The same Pi
-works as a client (5 GHz, -53 dBm, 351 Mbit/s), its power is clean, and the
-`vndr ie set error -52` it logs appears on sofapi too (harmless). **On
-sofapi (Rev 1.5) the same commands work:** George's phone joined in 20 s and
-opened the page. On 2026-10-09 this same bar Pi hosted the setup network and
-a phone joined it. So it looks like that one Pi or where it now stands, not
-the software - **not yet proved:** a fresh 1.0.0 card's first setup over
-Wi-Fi on a Rev 1.5 Pi (sofapi or guestpi), which is what re-promotion waits
-on. Debug logs keep the journal across restarts only on Testing by default;
-the 1.0.0 test card was provisioned with them on. Trial scripts left in
-`/usr/local/lib/gexis/ap-trial.sh` on sofapi, guestpi and the bedroompi card.
+**1.0.0 was promoted and pulled back the same night** (Finding 126): on the
+11.9" bar the setup network could not be joined - the panel's HDMI link
+radiates 1.6 MHz from channel 6. 1.0.1's setup network takes channel 1, 6 or
+11, whichever is farthest from the connected screens' pixel-clock multiples
+(ADR-0031 amended). Shown with George's phone on the bar; why it worked on
+the same Pi before is most likely the HDMI adapter George swapped that night
+(not proved: the old adapter on channel 6 would settle it). Trial scripts
+left in `/usr/local/lib/gexis/ap-trial.sh` on sofapi, guestpi and the test
+card; the test card's core carries the fix as one hand-copied file.
 
 Suite 2,386 passed, 47 skipped (2026-10-14).
 
