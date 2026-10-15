@@ -542,6 +542,9 @@ with *Back up now*, or copied into the Backups share, is never deleted.
 automatic one at night included - shows that install's steps instead, with
 *An update is being installed. Check for updates again once it has finished.*
 
+On the player's own screen, *Update* (or *Continue*, when music is
+playing) goes straight to the full-screen update view.
+
 If something goes wrong during the install, the player puts the previous
 release back by itself. If an update stops without finishing, the panel lets
 go after about half a minute, and *Software update* shows what the updater
