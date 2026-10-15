@@ -438,7 +438,7 @@
     </div>
   {:else if layout === 'apps'}
     <div class="pad scroll">
-      <div class="cards" style:--rows={2} use:across={bar}>
+      <div class="cards" style:--rows={2} style:--cols={Math.ceil(nonText.length / 2)} use:across={bar}>
         {#each nonText as r (r.handle)}
           <button class="card" type="button" class:is-busy={busy === r.handle} data-text-entry={searchy(r) ? '' : undefined} onclick={() => tap(r)}>
             <span class="logo">{#if r.image}<img src={r.image} alt="" />{:else}{initials(r.label)}{/if}</span>
@@ -468,7 +468,8 @@
         {@const sections = searches.length >= 3 ? [['Lists', others]] : others.some((r) => r.kind === 'play') && others.some((r) => r.kind !== 'play') ? [['Mixes', others.filter((r) => r.kind !== 'play')], ['Streams', others.filter((r) => r.kind === 'play')]] : [[null, others]]}
         {#each sections as [headLabel, cards] (headLabel ?? 'all')}
           {#if headLabel}<div class="sechead"><span>{headLabel}</span><i></i></div>{/if}
-          <div class="cards" style:--rows={searches.length >= 3 || sections.length > 1 ? 1 : 2} use:across={bar}>
+          {@const rows = searches.length >= 3 || sections.length > 1 ? 1 : 2}
+          <div class="cards" style:--rows={rows} style:--cols={Math.ceil(cards.length / rows)} use:across={bar}>
             {#each cards as r, i (r.handle)}
               {@const look = r.kind === 'play' ? ['Rss', [T.amber, T.pink, T.sky, T.green][i % 4]] : headLabel === 'Mixes' ? ['Arcs', [T.mint, T.sky, T.coral, T.blue, T.lilac, T.green][i % 6]] : shapeFor(r.label, r.hint)}
               {@const isSel = r.kind === 'play' && selected === r.handle}
@@ -555,7 +556,9 @@
         {/each}
         {#if !bar}{@render albumFacts()}{/if}
       </div>
-      {#if bar}<div class="albumpage__facts scroll">{@render albumFacts()}</div>{/if}
+      <!-- Only with something in it (George, 2026-10-15: a Qobuz playlist has no
+           facts, and the empty column's border was "a strange separation line"). -->
+      {#if bar && (album.facts.length || album.links.length)}<div class="albumpage__facts scroll">{@render albumFacts()}</div>{/if}
     </div>
   {:else}
     <!-- Rows: genres, artists, ranked, folders, tracks, favourites. -->
@@ -792,9 +795,19 @@
   .bgroup__grid { display: grid; grid-auto-flow: column; grid-template-rows: repeat(5, 56px); grid-auto-columns: 250px; gap: 6px 10px; }
   .bgroup .entry { max-height: none; min-height: 0; border-radius: 14px; gap: 12px; padding: 0 12px 0 7px; }
   .bgroup .entry__label { font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  /* Cards: 300 px columns flowing sideways, one or two rows. */
+  /* Cards: one or two rows of columns sharing the bar's width (George,
+     2026-10-15: the apps "do not take the full width of the bar, but are
+     grouped on one side") - at least 300 px, so more than fit flow sideways
+     as before, and at most 520 px, so two or three are not stretched. */
   .level--bar .cardlevel { overflow: hidden; gap: 12px; }
-  .level--bar .cards { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 300px; grid-template-rows: repeat(var(--rows, 2), 96px); gap: 14px; flex-shrink: 0; }
+  .level--bar .cards {
+    grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr));
+    grid-auto-flow: column;
+    grid-template-rows: repeat(var(--rows, 2), 96px);
+    gap: 14px;
+    flex-shrink: 0;
+    width: max(calc(var(--cols, 1) * 314px - 14px), min(100%, calc(var(--cols, 1) * 534px - 14px)));
+  }
   .level--bar .card { gap: 14px; padding: 0 18px 0 16px; }
   .level--bar .card__label { font-size: 19px; }
   .level--bar .logo { width: 54px; height: 54px; }
