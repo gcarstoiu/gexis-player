@@ -164,6 +164,26 @@ So the pixel-clock rule avoids the screen's channel, but it knows nothing of
 neighbours: on sofapi it would choose 6, the only usable channel here, by
 luck as much as by design.
 
+## A cable instead of the adapter (2026-10-15, 10:13-10:20)
+
+George replaced the bar's adapter with a micro-HDMI cable; the panel ran at
+the same 59.4 MHz. The bar on Wi-Fi only (its side timed, the core stopped
+meanwhile), R2D2 3 m away as in the morning:
+
+| Run | Channel | Panel | Join |
+|---|---|---|---|
+| 1 | 6 | on | failed twice |
+| 2 | 1 | on | 3.6 s, 0 % loss |
+| 3 | 11 | on | 3.6 s, 0.7 % loss |
+| 4 | 6 | off | 3.5 s, 0 % loss |
+| 5 | 6 | on | failed twice |
+
+**The cable changed nothing.** So the adapter alone is not the radiator, and
+"the adapter swapped on 2026-10-14" no longer explains why setup worked
+before: the radiator may be the panel itself, its touch cable, the Pi's own
+connector, or the layout. What else changed physically before 2026-10-14
+evening is not on record.
+
 ## The fix (`setup_network.quiet_channel`)
 
 The setup network takes the 2.4 GHz channel - 1, 6 or 11 - farthest from any

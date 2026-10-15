@@ -23,9 +23,10 @@ channel 1, 6 or 11, farthest from the screens' pixel-clock multiples
 three research reviews): the cause is the HDMI signal - changing only the
 bar's clock (59.4 -> 35.5 MHz) brought channel 6 back; kiosk, CPU load,
 Bluetooth and power saving made no difference; nothing radio-related changed
-in our software or the OS since 0.9.1. Why it worked before: the adapter
-swapped on 2026-10-14 at 19:25, four hours before the first failure (the old
-one no longer gives a picture). The pixel-clock rule ignores neighbours:
+in our software or the OS since 0.9.1. Why it worked before: **open** - the
+adapter swapped on 2026-10-14 at 19:25 was the suspect, but a cable in its
+place fails the same way (10:13 run); what else changed physically is not on
+record. The pixel-clock rule ignores neighbours:
 on sofapi at 6-7 m only channel 6 was usable (channel 1 crowded).
 **Decision owed by George:** keep the rule, add a rotation fallback, change
 the panel's clock while setup is open, and/or a HARDWARE.md note on adapters.
