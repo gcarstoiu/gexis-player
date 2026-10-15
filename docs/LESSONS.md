@@ -355,6 +355,13 @@ trusted before it was shown to see a working network. Before reading a
 device's behaviour from a test, check what of our own software acts on the
 same thing, and prove the observer on a known-good case first.
 
+**73. Tests that read the source while the code never ran** (2026-10-15,
+the stand-in watcher, 1.0.0 and 1.0.1). The Finding 125 #10 fix moved the
+whole lookup into a worker thread; the settings store refuses any thread but
+its own, so it failed every 3 s and the jack never stood in. Its tests only
+asserted the source's shape and passed. Run the changed code once - on a
+device or in a test that executes it - and read the log after a change.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target, the check quietly

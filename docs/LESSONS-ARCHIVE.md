@@ -1415,6 +1415,27 @@ trace, which is a much smaller claim. And before overturning a previous
 conclusion, search this repository for it: the answer was already written
 down, and the retraction contradicted the project's own record.
 
+**73. Tests that read the source while the code never ran** (2026-10-15,
+found on the bar's card and sofapi while looking into Finding 126).
+- **What went wrong.** Finding 125 #10 (2026-10-14) made the stand-in watcher
+  (ADR-0141 D5) measure against what the last switch put in force, and ran
+  its lookup - a settings read and a look at the cards - through
+  `asyncio.to_thread`. The settings store's SQLite connection belongs to the
+  thread that opened it: every 3 s, "outputs: cannot tell the output in
+  force", a `ProgrammingError`, and the jack never stood in for a
+  switched-off receiver. Shipped in 1.0.0 and 1.0.1.
+- **What it looked like.** The fix's two tests passed: both read
+  `__main__.py`'s source (that the watcher held the lock, compared with what
+  a switch recorded, called `_switch_output`). Nothing executed the lookup.
+- **How it was caught.** Reading a player's journal for something else: 200
+  tracebacks in 10 minutes on sofapi. Once fixed, the working watcher brought
+  out a second fault the dead one had hidden: a missing output reported every
+  3 s.
+
+**After changing code, run it once - on a device, or in a test that executes
+the changed path - and read the log; a test of the source's shape is not a
+run.**
+
 **Not the same failure mode as the criteria gaps** (`docs/DEVELOPMENT.md`
 criterion 3's root-access amendment, the provisioning `.gitignore`
 defect). Those were correct checks against the right target, of a

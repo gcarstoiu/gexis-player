@@ -17,24 +17,34 @@ the public download verified). PR #69 merged by George; both branches carry
 it, the release worktree and branch are removed.
 
 **1.0.0 was promoted and pulled back the same night** (Finding 126): on the
-11.9" bar the setup network could not be joined - the panel's HDMI link
-radiates 1.6 MHz from channel 6. 1.0.1's setup network takes channel 1, 6 or
-11, whichever is farthest from the connected screens' pixel-clock multiples
-(ADR-0031 amended). Shown with George's phone on the bar; why it worked on
-the same Pi before is not the software (the channel was always 6, Finding
-126's second measurement: channel 6 fails twice in two with the display on,
-works with it off); most likely the adapter swapped that night, which no
-longer gives a picture, so it cannot be tested. Trial files removed from all
-players; the bar's test card (`bedroompi.local`) still runs 1.0.0 with the fix
-hand-copied - reflash it from the 1.0.1 image.
+11.9" bar the setup network could not be joined. 1.0.1's setup network takes
+channel 1, 6 or 11, farthest from the screens' pixel-clock multiples
+(ADR-0031 amended). **Settled 2026-10-15** (Finding 126, three test rounds,
+three research reviews): the cause is the HDMI signal - changing only the
+bar's clock (59.4 -> 35.5 MHz) brought channel 6 back; kiosk, CPU load,
+Bluetooth and power saving made no difference; nothing radio-related changed
+in our software or the OS since 0.9.1. Why it worked before: the adapter
+swapped on 2026-10-14 at 19:25, four hours before the first failure (the old
+one no longer gives a picture). The pixel-clock rule ignores neighbours:
+on sofapi at 6-7 m only channel 6 was usable (channel 1 crowded).
+**Decision owed by George:** keep the rule, add a rotation fallback, change
+the panel's clock while setup is open, and/or a HARDWARE.md note on adapters.
+The bar's test card (`bedroompi.local`, in ShelvesPi's Pi) still runs 1.0.0
+with the fix hand-copied - reflash it from the 1.0.1 image.
 
-Suite 2,479 passed, 47 skipped (2026-10-15).
+**Fixed on `phase-13d`, not released:** the stand-in watcher (ADR-0141 D5)
+failed every 3 s in 1.0.0/1.0.1 - a settings read from a worker thread - so
+the jack never stood in (a539d16d, LESSONS 73); once working, a missing
+output was reported every 3 s (a816c24d, now once). On sofapi since
+2026-10-15 09:47: no errors; the switch itself not yet tried with a receiver.
+
+Suite 2,481 passed, 47 skipped (2026-10-15).
 
 **Devices.** sofapi (Waveshare 10.1"; a test machine - its Lyrion queue may
 be lost, George 2026-10-12; an SMSL USB DAC on it), the bar (ShelvesPi,
 11.9") and guestpi (IQaudIO Pi-DAC PRO, 13.3") as read 2026-10-13:
-sofapi runs a `phase-13d` preview (core `0.14.0+git20`, UI and player
-`+git28`, 2026-10-14); the bar runs release 0.14.0; guestpi as read
+sofapi runs a `phase-13d` preview (core and player `1.0.1+git23`, UI
+`0.15.0+git44`, 2026-10-15); the bar runs release 0.14.0; guestpi as read
 2026-10-13, core `0.10.2+git63`. **Cards flashed
 from now on have no passwordless sudo: provision test cards with
 `DEV_SUDO="yes"`** (ADR-0139).
