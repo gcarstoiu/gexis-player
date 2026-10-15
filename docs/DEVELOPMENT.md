@@ -197,6 +197,8 @@ looks finished.
 
 ### Phase 0 — Reproducible image that makes a sound
 
+**Closed 2026-09-05**: all seven criteria met, merged as PR #1.
+
 **Acceptance**
 
 1. `make image` on a clean checkout produces a bootable `.img` with no manual
@@ -223,6 +225,8 @@ looks finished.
    identical set.
 
 ### Phase 1 — Takeover gap
+
+**Closed by absorption into Phase 2**: its three criteria became Phase 2's criteria 8-10, closed with Phase 2.
 
 **Absorbed into Phase 2.** The takeover gap has to be measured on the image,
 not a hand-built machine — measuring it on `rig` would characterise `rig`,
@@ -473,6 +477,8 @@ must happen within three minutes of boot.
 
 ### Phase 3 — Core state daemon
 
+**Closed 2026-09-12**: all six criteria met (`docs/HANDOFF-ARCHIVE.md`).
+
 Still no UI. Tested with a WebSocket client.
 
 **Acceptance**
@@ -613,6 +619,8 @@ along the way (availability semantics, criterion 3's in-process fix
 over ADR-0016's separate-process model, criterion 4/5's minimal scope).
 
 ### Phase 4 — UI shell, idle screen, now playing (display-only, plus LMS activation)
+
+**Closed 2026-09-16** (`docs/HANDOFF-ARCHIVE.md`, sessions 12-14).
 
 **Acceptance**
 
@@ -790,6 +798,8 @@ and checked again — not left on hand-installed builds.
 
 ### Phase 5 — Visualisation service and Peppy screen
 
+**Closed 2026-10-15** (George: *"Shouldn't all pre 14 phases be closed?"*): built 2026-09-16 and shipped in every release since; no close had been written down.
+
 **Acceptance**
 
 **Installed by `stage-gexis/05-peppy` since 2026-09-16:** both engines pinned
@@ -962,6 +972,8 @@ restarts a stream, the one-off LMS resume-position jump, and whether the
 Plexamp app's audio stops at the tap.
 
 ### Phase 7 — Library browse
+
+**Closed 2026-09-18** (`docs/HANDOFF-ARCHIVE.md`, *Phase 7, step by step*).
 
 **Status 2026-09-18: every step done; ADR-0038 accepted. What is left of the
 phase is the image build and the PR.**
@@ -1296,6 +1308,8 @@ structural work is never needed.
    panel feels like in the hand.
 
 ### Phase 8 — Enrichment and lyrics
+
+**Closed 2026-09-18**: enrichment and lyrics done (`docs/HANDOFF-ARCHIVE.md`).
 
 Purely additive. Cannot break playback.
 
@@ -2359,6 +2373,8 @@ Now **Phase 19** (`ph-library`), with the open phases after the release.
 
 ### Phase 12 — Plugins that fetch their software on the device
 
+**Closed 2026-10-15** (George, as Phase 5): shipped with PR #34 on 2026-09-28 and in every release since; no close had been written down.
+
 **Defined 2026-09-28 from what the phase delivered**
 ([ADR-0100](decisions/0100-software-we-may-not-redistribute-is-fetched-on-the-device.md)).
 Software the player may not redistribute is not in the image. It is fetched on
@@ -2382,6 +2398,8 @@ download states in Plexamp's row, a failure with Retry, and Remove followed by
 a fresh download.
 
 ### Phase 12b — Legal and credits
+
+**Closed 2026-10-15** (George, as Phase 5): its criteria met on 2026-09-28 (below), shipped with PR #34.
 
 **Added 2026-09-27 (George)** - [ADR-0099](decisions/0099-legal-and-credits-in-settings.md).
 
