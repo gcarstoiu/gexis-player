@@ -19,8 +19,9 @@ from a switched-off HDMI device (ADR-0141 D5). The setup network's story -
 1.0.0 pulled back, the screen's HDMI signal jamming one channel, the
 rotation - is in Finding 126 and the archive; why the bar worked before
 2026-10-14 is still not known. The bar is ShelvesPi again (1.0.2, with a UI
-preview `1.0.2+git13` since 2026-10-15: the update screen from the tap, Lyrion's
-apps across the bar, no empty facts column); bedroompi's card is out of it.
+preview `1.0.2+git16` since 2026-10-15: the update screen from the tap, Lyrion's
+apps across the bar, no empty facts column, rows that light up instead of
+shrinking on a tap); bedroompi's card is out of it.
 
 Suite 2,485 passed, 47 skipped (2026-10-15).
 
