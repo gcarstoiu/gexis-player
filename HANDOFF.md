@@ -21,11 +21,12 @@ it, the release worktree and branch are removed.
 radiates 1.6 MHz from channel 6. 1.0.1's setup network takes channel 1, 6 or
 11, whichever is farthest from the connected screens' pixel-clock multiples
 (ADR-0031 amended). Shown with George's phone on the bar; why it worked on
-the same Pi before is most likely the HDMI adapter George swapped that night
-(not proved: the old adapter on channel 6 would settle it). The trial scripts
-are removed from sofapi and guestpi; the test card in the bar's Pi was not
-reachable and still has `/usr/local/lib/gexis/ap-trial.sh` and a core with
-the fix hand-copied - reflash it from the 1.0.1 image.
+the same Pi before is not the software (the channel was always 6, Finding
+126's second measurement: channel 6 fails twice in two with the display on,
+works with it off); most likely the adapter swapped that night, which no
+longer gives a picture, so it cannot be tested. Trial files removed from all
+players; the bar's test card (`bedroompi.local`) still runs 1.0.0 with the fix
+hand-copied - reflash it from the 1.0.1 image.
 
 Suite 2,479 passed, 47 skipped (2026-10-15).
 
