@@ -38,6 +38,34 @@ The bar's 41st multiple, 2435.4 MHz, sits 1.6 MHz from channel 6's 2437 MHz.
 | bar | on | **1** | joined in 29 s |
 | bar, setup's own network with the fix (channel 11 chosen) | on | 11 | joined (George) |
 
+## Measured again, 2026-10-15 morning
+
+The same Pi and panel through the adapter fitted the night before (the
+earlier adapter no longer gives a picture), on the cable; R2D2 about 3 m
+away joining a `gexis-setup` hotspot set up as the player's (WPA2, PMF off),
+two tries of 25 s per run, then 300 pings of 1,200 bytes:
+
+| Run | Channel | Display | Join | Ping loss | Average delay |
+|---|---|---|---|---|---|
+| 1 | 6 | on | failed twice; the Pi never saw a station | - | - |
+| 2 | 1 | on | 3.4 s | 0 % | 12.4 ms |
+| 3 | 11 | on | 8.3 s | 0 % | 4.6 ms |
+| 4 | 6 | **off** | 8.1 s | 0 % | 4.4 ms |
+| 5 | 6 | on | failed twice; the Pi never saw a station | - | - |
+
+The PC heard the Pi on every run (signal -37 to -41 dBm); on channel 6
+with the display on, the Pi never heard the PC. Channel 6 failed twice in
+two, with other runs between, and worked the moment the display was off.
+
+**Why it worked before.** Not the software: the setup network has been
+`gexis-setup` since 2026-09-28, and NetworkManager (1.52.1,
+`ensure_hotspot_frequency`) takes a hotspot's channel from a fixed hash of
+its name - for `gexis-setup` the order is 6, 11, 13, 1, and 6 is always
+allowed - so every earlier setup was on channel 6 too. The bar runs the
+panel's own mode (320 x 1480, 59.4 MHz) as it has since 2026-10-01. The
+change was physical; the adapter swapped that night is the one known, and
+the old one can no longer be tested.
+
 ## The fix (`setup_network.quiet_channel`)
 
 The setup network takes the 2.4 GHz channel - 1, 6 or 11 - farthest from any
