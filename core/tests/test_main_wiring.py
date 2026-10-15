@@ -336,6 +336,27 @@ def test_the_stand_in_watcher_leaves_a_change_of_output_to_the_one_who_made_it()
     assert not standin_due(switched, ("HDMI 2", "Headphones", True))
 
 
+def test_the_stand_in_watcher_reads_the_setting_on_the_loop(tmp_path):
+    """1.0.0 and 1.0.1: `_output_now` ran whole in a worker thread, and the
+    settings store's SQLite connection refuses any thread but its own - every
+    3 s "cannot tell the output in force", and the jack never stood in. The
+    source tests above passed throughout; this one reads the store as the
+    watcher did."""
+    import asyncio
+    import sqlite3
+
+    import pytest
+
+    from gexis_core.settings import SettingsStore
+
+    store = SettingsStore(tmp_path / "settings.db")
+    with pytest.raises(sqlite3.ProgrammingError):
+        asyncio.run(asyncio.to_thread(store.get, "output_device", None))
+    watch, now = _closure("_watch_standin"), _closure("_output_now")
+    assert "to_thread(_output_now)" not in watch and "await _output_now()" in watch
+    assert now.index("settings.value('output_device')") < now.index("asyncio.to_thread(outputs.in_force, stored)")
+
+
 def test_the_stand_in_watcher_switches_under_the_lock_from_what_a_switch_recorded():
     """Finding 125 #10: what a switch put in force is shared, set by
     `_switch_output` itself, and the watcher switches only under

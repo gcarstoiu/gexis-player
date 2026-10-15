@@ -865,3 +865,22 @@ def test_nothing_connected_or_not_hdmi_has_no_line(tmp_path):
     assert hdmi_sound("vc4hdmi1", proc) is None
     proc = _eld(tmp_path, "Headphones", ELD_TV)
     assert hdmi_sound("Headphones", proc) is None
+
+
+def test_a_missing_output_is_reported_once_until_it_comes_back(caplog, monkeypatch):
+    """With the stand-in watcher working (it runs `resolve` every 3 s), a USB
+    DAC left unplugged was reported every 3 s - sofapi, 2026-10-15, 20 a
+    minute. Once while it is away; again after it has been seen back."""
+    monkeypatch.setattr(outputs, "_said_missing", set())
+    dac = Output(card="DAC", label="SMSL USB DAC", control="PCM")
+    caplog.set_level("WARNING", logger="gexis_core.outputs")
+
+    def said() -> int:
+        return sum("is not here any more" in r.getMessage() for r in caplog.records)
+
+    for _ in range(5):
+        assert outputs.resolve("SMSL USB DAC", [JACK], current="Headphones") is JACK
+    assert said() == 1
+    assert outputs.resolve("SMSL USB DAC", [JACK, dac], current="Headphones") is dac
+    outputs.resolve("SMSL USB DAC", [JACK], current="Headphones")
+    assert said() == 2

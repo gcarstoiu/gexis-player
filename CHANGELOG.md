@@ -5,6 +5,17 @@ Every release of Gexis Player and its notes, newest first. Generated from
 edit that file, not this one. The player shows the last 10 under
 Settings → System → Change logs.
 
+## 1.0.2 — 15 October 2026
+
+### New
+
+- If no phone has joined the setup network within two minutes, it moves to the next Wi-Fi channel, and again every two minutes until one does. The setup screen shows the channel and counts down to the next.
+
+### Fixed
+
+- With HDMI as the output, the headphone jack takes over when the HDMI device (a TV or receiver) is switched off, and hands back when it is on again. In 1.0.0 and 1.0.1 this never happened.
+- An output that is not connected, such as an unplugged USB DAC, is no longer noted in the player's log every three seconds.
+
 ## 1.0.1 — 15 October 2026
 
 ### Fixed

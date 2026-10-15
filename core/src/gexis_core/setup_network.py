@@ -77,6 +77,13 @@ WLAN_READY_S = 20.0
 FAILED_RETRY_S = 15.0
 #: How often the panel's step follows the phones on the setup network.
 PHONES_EVERY_S = 2.0
+#: **ADR-0031 amendment (George, 2026-10-15): the next channel when no phone
+#: has joined in this long.** The channel is chosen against the screen's own
+#: interference (`quiet_channel`), but it knows nothing of the neighbours: on
+#: sofapi at 6-7 m only one of the three channels was usable, and not the one
+#: the screen alone would have suggested (Finding 126). The panel counts it
+#: down.
+ROTATE_S = 120.0
 #: **A phone holds a configured player off its saved Wi-Fi only while someone
 #: is using the setup page** (George, 2026-10-12, the final code review): a
 #: request to the page or a `/setup/...` route this recently. A phone that
@@ -139,6 +146,20 @@ def pixel_clocks(drm: Path = DRM) -> list[float]:
     return clocks
 
 
+def channel_order(clocks: list[float]) -> list[int]:
+    """**The three channels in the order the setup network tries them**: the
+    quiet one first (`quiet_channel`), then the others from the farthest
+    from the screens' interference to the nearest. Ties keep 6, 1, 11."""
+    if not clocks:
+        return [6, 1, 11]
+
+    def clearance(channel: int) -> float:
+        mhz = CHANNEL_MHZ[channel]
+        return min(abs(round(mhz / c) * c - mhz) for c in clocks)
+
+    return sorted((6, 1, 11), key=clearance, reverse=True)
+
+
 def quiet_channel(clocks: list[float]) -> int:
     """**The 2.4 GHz channel farthest from the screens' own interference**
     (George's bar, 2026-10-15: gexis-setup on channel 6 could not be joined,
@@ -148,15 +169,8 @@ def quiet_channel(clocks: list[float]) -> int:
     at once. sofapi's 77.0 MHz panel is clear of 6 and 2 MHz from 11, so no
     one channel suits every screen. Channel 6 - NetworkManager's own choice -
     when nothing is known."""
-    if not clocks:
-        return 6
-
-    def clearance(channel: int) -> float:
-        mhz = CHANNEL_MHZ[channel]
-        return min(abs(round(mhz / c) * c - mhz) for c in clocks)
-
     # Ties keep the order of preference: 6 first, as before, then 1 and 11.
-    return max((6, 1, 11), key=clearance)
+    return channel_order(clocks)[0]
 
 
 #: Between the phone being told setup is finishing and the radio leaving it,
@@ -342,6 +356,7 @@ class SetupNetwork:
         *,
         run=None,
         clock=time.monotonic,
+        wall=time.time,
         sleep=asyncio.sleep,
         marker: Path = DONE_MARKER,
         password_file: Path = PASSWORD_FILE,
@@ -368,6 +383,7 @@ class SetupNetwork:
         self._unblock = unblock or _rfkill_unblock_wifi
         self._rfkill = RFKILL
         self._clock = clock
+        self._wall = wall
         self._sleep = sleep
         self._marker = marker
         self._password_file = password_file
@@ -409,6 +425,14 @@ class SetupNetwork:
         #: broadcast, which every phone reads too, so never the password.
         self._on_change = on_change
         self._published: dict | None = None
+        #: The channels in the order they are tried, the one in use, and when
+        #: the next one is due (`ROTATE_S`): on this clock for the loop, and
+        #: as wall time for the panel's countdown. No deadline once a phone
+        #: has joined.
+        self._channels: list[int] = []
+        self._channel_now: int | None = None
+        self._rotate_at: float | None = None
+        self._rotate_wall: float | None = None
 
     # -- what the panel and the phone read ---------------------------------
 
@@ -436,6 +460,8 @@ class SetupNetwork:
             "phones": self._phones if open_ else 0,
             "finished": self._finished if self._state == "done" else None,
             "page_opened": self._page_opened and open_,
+            "channel": self._channel_now if open_ else None,
+            "rotate_at": self._rotate_wall if open_ and self._rotate_at is not None else None,
         }
 
     def public_status(self) -> dict:
@@ -530,10 +556,45 @@ class SetupNetwork:
             logger.info("setup: deleted a %s profile left from before", PROFILE)
 
     def _channel(self) -> int:
-        channel = quiet_channel(pixel_clocks(self._drm))
+        clocks = pixel_clocks(self._drm)
+        self._channels = channel_order(clocks)
+        channel = self._channels[0]
         logger.info("setup: %s on channel %d (screens' pixel clocks: %s)", SSID, channel,
-                    ", ".join(f"{c:g} MHz" for c in pixel_clocks(self._drm)) or "none known")
+                    ", ".join(f"{c:g} MHz" for c in clocks) or "none known")
         return channel
+
+    def _rotate_later(self) -> None:
+        self._rotate_at = self._clock() + ROTATE_S
+        self._rotate_wall = self._wall() + ROTATE_S
+
+    def _rotate_never(self) -> None:
+        self._rotate_at = self._rotate_wall = None
+
+    async def _rotate(self) -> None:
+        """**The next channel, nobody having joined on this one.** The same
+        profile, password and name, brought up again on it: a phone still
+        trying finds it there by itself."""
+        order = self._channels or channel_order([])
+        following = order[(order.index(self._channel_now) + 1) % len(order)] if self._channel_now in order else order[0]
+        logger.info("setup: no phone joined %s on channel %s in %d s; trying channel %d",
+                    SSID, self._channel_now, ROTATE_S, following)
+        await self._nmcli("connection", "modify", PROFILE, "802-11-wireless.channel", str(following))
+        rc, _, err = await self._nmcli("connection", "up", PROFILE, timeout=wifi.JOIN_TIMEOUT_S)
+        if rc != 0:
+            # As when the network did not start: the hold opens it again
+            # within FAILED_RETRY_S, from the quiet channel.
+            self._state = "failed"
+            self._channel_now = None
+            self._rotate_never()
+            radio = rfkill_state(self._rfkill)
+            self._reason = start_failure("connected", radio)
+            logger.warning("setup: %s did not come back on channel %d: %s [%s]", SSID, following,
+                           err.splitlines()[-1] if err else f"nmcli exited {rc}", radio)
+            self._publish()
+            return
+        self._channel_now = following
+        self._rotate_later()
+        self._publish()
 
     async def open(self) -> bool:
         """Raise the setup network: the command Finding 099 measured, then
@@ -557,9 +618,10 @@ class SetupNetwork:
         # second blank card the hotspot was still refused with "device is
         # not available" (2026-09-29).
         ready = await self._wait_for_wlan()
+        channel = self._channel()
         rc, _, err = await self._nmcli(
             "device", "wifi", "hotspot", "ifname", IFACE, "con-name", PROFILE,
-            "ssid", SSID, "band", "bg", "channel", str(self._channel()), "password", self._password,
+            "ssid", SSID, "band", "bg", "channel", str(channel), "password", self._password,
             timeout=wifi.JOIN_TIMEOUT_S,
         )
         await self._nmcli("connection", "modify", PROFILE, "connection.autoconnect", "no")
@@ -591,6 +653,8 @@ class SetupNetwork:
             return False
         self._state = "open"
         self._opened_at = self._clock()
+        self._channel_now = channel
+        self._rotate_later()
         self._publish()
         logger.info(
             "setup: %s is open at %s (%s password; autoconnect %s)",
@@ -627,6 +691,9 @@ class SetupNetwork:
                     self._phones = count
                     if count == 0:
                         self._page_opened = False
+                    else:
+                        # A phone has joined: this channel works, and stays.
+                        self._rotate_never()
                     logger.info("setup: %d phone(s) on %s", count, SSID)
                     self._publish()
             elif self._phones:
@@ -734,6 +801,8 @@ class SetupNetwork:
         await self._nmcli("connection", "down", PROFILE)
         await self._nmcli("connection", "delete", PROFILE)
         self._opened_at = None
+        self._channel_now = None
+        self._rotate_never()
 
     # -- the decision and the retry ----------------------------------------
 
@@ -889,13 +958,21 @@ class SetupNetwork:
         last = self._clock()
         while self._state != "online":
             due = retry - (self._clock() - last)
-            await self._sleep(FAILED_RETRY_S if self._state == "failed" else min(WATCH_S, max(due, POLL_S)))
+            wait = min(WATCH_S, max(due, POLL_S))
+            if self._rotate_at is not None:
+                # Woken for the channel's turn too, so the panel's countdown
+                # is not left at 0:00.
+                wait = min(wait, max(self._rotate_at - self._clock(), 0.5))
+            await self._sleep(FAILED_RETRY_S if self._state == "failed" else wait)
             if self._busy or self._state not in ("open", "failed"):
                 continue
             if await self._cable_back():
                 return
             if self._state == "failed":
                 await self.open()
+                continue
+            if self._rotate_at is not None and self._clock() >= self._rotate_at and self._phones == 0:
+                await self._rotate()
                 continue
             if self._clock() - last < retry:
                 continue

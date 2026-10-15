@@ -660,6 +660,12 @@ def configured(path: Path = CONF_PATH) -> str | None:
     return match.group(1) if match else None
 
 
+#: The missing outputs already reported, as (which, name): `resolve` runs every
+#: 3 s from the stand-in watcher, and a USB DAC left unplugged would otherwise
+#: be reported 28,800 times a day. Said again once it has been seen back.
+_said_missing: set[tuple[str, str]] = set()
+
+
 def resolve(
     stored: str | None,
     available: list[Output] | None = None,
@@ -692,8 +698,11 @@ def resolve(
         wanted = wanted.split(SEP)[0]
         for output in available:
             if wanted in (output.label, output.card, output.aka):
+                _said_missing.discard((why, wanted))
                 return output
-        logger.warning("outputs: the %s output %r is not here any more", why, wanted)
+        if (why, wanted) not in _said_missing:
+            _said_missing.add((why, wanted))
+            logger.warning("outputs: the %s output %r is not here any more", why, wanted)
     for output in available:
         if output.control is not None:
             return output
