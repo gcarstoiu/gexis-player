@@ -1,6 +1,10 @@
 {
  "_about": "Every release's notes, newest first, exactly as published and signed (ADR-0116). publish.sh reads a release's notes from here; Settings -> Change logs shows the last 10.",
  "releases": {
+  "1.0.2": {
+   "date": "2026-10-15",
+   "notes": "New\n• If no phone has joined the setup network within two minutes, it moves to the next Wi-Fi channel, and again every two minutes until one does. The setup screen shows the channel and counts down to the next.\nFixed\n• With HDMI as the output, the headphone jack takes over when the HDMI device (a TV or receiver) is switched off, and hands back when it is on again. In 1.0.0 and 1.0.1 this never happened.\n• An output that is not connected, such as an unplugged USB DAC, is no longer noted in the player's log every three seconds."
+  },
   "1.0.1": {
    "date": "2026-10-15",
    "notes": "Fixed\n• The setup network, gexis-setup, can be joined on every screen: it now uses the Wi-Fi channel least disturbed by the player's own screen. On the 11.9\" bar the screen's cable drowned out the channel it used, and phones saw the network come and go but could not connect.\nGood to know\n• Gexis Player 1.0.1 is the first release on the Stable channel, with the image to install it from."
