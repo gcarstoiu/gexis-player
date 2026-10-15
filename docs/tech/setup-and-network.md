@@ -163,6 +163,19 @@ the world domain until Finish sets the country.
    come up at boot in place of the home Wi-Fi. Any leftover profile is deleted
    at start.
 
+**The next channel when nobody joins** (ADR-0031, amended 2026-10-15): the
+channel rule knows the screen, not the neighbours (Finding 126: on sofapi at
+6-7 m only one channel of three was usable). If no phone has a lease within
+`ROTATE_S` (120 s), `_hold()` moves the profile to the next channel
+(`connection modify ... 802-11-wireless.channel`, then `connection up`) and
+again every 120 s, round `channel_order()`: the quiet channel first, then the
+others by clearance from the screens' pixel-clock multiples (6, 1, 11 when
+none is known). A phone getting a lease stops it for as long as the network
+stays open. The status carries `channel` and `rotate_at` (wall time) while
+open; the panel's join step counts down (*"Can't join? Channel 6 changes in
+1:42"*). A failed `connection up` is handled as a failed start: the network
+reopens from the quiet channel.
+
 **The password**: with a panel attached (an `HDMI-A-*` connector reporting
 `connected`) *and* a screen already confirmed on it (ADR-0109 decision 5), eight
 characters from an alphabet without `0 o 1 l`, made once and kept in
