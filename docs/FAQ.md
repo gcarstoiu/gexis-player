@@ -364,10 +364,13 @@ over time; an artist whose photos were found is not asked again.
 
 **My phone sees gexis-setup but cannot connect to it.**
 Since 1.0.1 the player puts its setup network on the Wi-Fi channel least
-disturbed by its own screen, whose cable can drown out one channel (the 11.9"
-bar's did). On an older release, switching the screen off is a way round it,
-or connecting the player with a network cable and setting it up from a phone
-on the home network.
+disturbed by its own screen, whose HDMI link can drown out one channel (the
+11.9" bar's did). If no phone has joined within two minutes, it moves to the
+next channel, and again every two minutes until one does; the screen shows
+the channel and counts down, and the phone finds the network again by
+itself. On an older release, switching the screen off is a way round it, or
+connecting the player with a network cable and setting it up from a phone on
+the home network.
 
 **How do I open the player on a phone?**
 In any browser on the same network, open `http://gexis.local:8090`, with the
