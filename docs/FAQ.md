@@ -362,16 +362,6 @@ over time; an artist whose photos were found is not asked again.
 
 ## Phone and touchpad
 
-**My phone sees gexis-setup but cannot connect to it.**
-Since 1.0.1 the player puts its setup network on the Wi-Fi channel least
-disturbed by its own screen, whose HDMI link can drown out one channel (the
-11.9" bar's did). If no phone has joined within two minutes, it moves to the
-next channel, and again every two minutes until one does; the screen shows
-the channel and counts down, and the phone finds the network again by
-itself. On an older release, switching the screen off is a way round it, or
-connecting the player with a network cable and setting it up from a phone on
-the home network.
-
 **How do I open the player on a phone?**
 In any browser on the same network, open `http://gexis.local:8090`, with the
 player's own name in place of *gexis*. It can be saved as a bookmark or added
@@ -492,6 +482,31 @@ with *Settings → Plugins* as the place to try it again.
 The password is shown on the screen; a player without a screen uses
 `gexis-setup`. The phone's warning about no internet is expected: stay
 connected, as the setup page is served by the player itself.
+
+**My phone sees gexis-setup but cannot join it, or keeps dropping off it.**
+The setup network uses 2.4 GHz Wi-Fi, which is where the trouble usually
+comes from:
+- **The player's own screen.** An HDMI screen's link can drown out one Wi-Fi
+  channel right next to the player, while the others stay clear; it was
+  measured with two screens, and a different cable did not help. The player
+  puts its setup network on the channel its screen disturbs least.
+- **Neighbouring networks and distance.** A channel crowded by nearby
+  networks, or a phone several metres and a wall away, can fail even where
+  the screen is not the cause.
+
+So **if no phone has joined within two minutes, the player moves its setup
+network to the next channel**, and again every two minutes until one does.
+The screen shows the channel and counts down to the next; keep the phone
+trying, and it finds the network again on the new channel by itself. It also
+helps to:
+- stand near the player while joining;
+- turn off mobile data on the phone;
+- forget a *gexis-setup* the phone saved from another player: each player
+  with a screen has its own password, and a phone may keep trying the old
+  one.
+
+If it still will not join, plug a network cable into the player: setup then
+runs over your home network instead, at the address the screen shows.
 
 **The setup page disappeared halfway through.**
 The player has one radio, so it either hosts its setup network or joins the
