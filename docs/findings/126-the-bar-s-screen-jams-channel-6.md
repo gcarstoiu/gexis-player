@@ -93,6 +93,49 @@ from each of channels 1, 6 and 11 alike):
 Not separated: the second port's share; distance against channel; one run
 per channel except 11.
 
+## Software or the HDMI signal? Separated (2026-10-15, 09:09-09:23)
+
+George held that this was something we introduced. Three read-only reviews
+(our history v0.14.0 -> v1.0.1, public reports, and how Volumio, moOde,
+piCorePlayer, comitup, wifi-connect and RaspiWiFi run their setup networks)
+found no software change that fits: kernel, Wi-Fi and Bluetooth firmware,
+NetworkManager, wpa_supplicant, regulatory database, `config.txt` and
+`cmdline.txt` are the same from the 0.9.1 image to 1.0.1; the only radio
+change in the window is Wi-Fi power saving forced off (3ca9185d, first in
+0.15.0), which NetworkManager does not apply to an access point anyway. The
+others' setup networks use a fixed channel or NetworkManager's hash, none
+looks at the screen. Public reports of the same symptom with screens sold
+for the Pi exist (a Waveshare 7" HDMI (C): "can identify the SSID, but
+cannot connect"; a Pi access point whose devices "do not connect with
+channel 3 when screen is on"); none names these two panels.
+
+Then the bar on the cable, R2D2 3 m away as before, one thing changed per
+run:
+
+| Run | Channel | Changed | Join |
+|---|---|---|---|
+| 1 | 6 | nothing | failed |
+| 2 | 6 | power saving on (as before 0.15.0) | failed |
+| 3 | 6 | kiosk stopped: no compositor, browser or GPU work; the HDMI link still at 59.4 MHz | failed |
+| 4 | 6 | panel off, all four cores busy | joined, 6.7 s, 0 % loss |
+| 5 | 6 | Bluetooth off | failed |
+| 6 | 6 | **only the HDMI clock changed**: 320 x 1480 at 54 Hz, 35.5 MHz | **joined, 3.4 s, 0 % loss** |
+| 7 | 1 | the same 35.5 MHz | joined, 3.5 s |
+| 8 | 1 | nothing | joined, 11.1 s |
+| 9 | 6 | panel off | joined, 3.5 s |
+| 10 | 6 | power saving on | failed |
+| 11 | 6 | nothing | failed |
+
+**The cause is the HDMI signal at 59.4 MHz.** With the same software,
+content, load, Bluetooth and power saving, moving the clock from 59.4 to
+35.5 MHz alone made channel 6 work; stopping all software drawing to the
+screen, with the link still at 59.4 MHz, did not. CPU load with the panel
+off did not break it; power saving and Bluetooth made no difference.
+
+Not as predicted: at 35.5 MHz channel 1 still joined, although a multiple
+(2414 MHz, the 68th) is 2 MHz from it - a higher multiple, presumably
+weaker. Whether the panel shows a picture at 54 Hz was not looked at.
+
 ## The fix (`setup_network.quiet_channel`)
 
 The setup network takes the 2.4 GHz channel - 1, 6 or 11 - farthest from any
