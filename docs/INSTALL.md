@@ -52,7 +52,9 @@ best mode. Leave it powered.
 
 **With a screen:** it shows two QR codes. Scan the first to join the
 player's own Wi-Fi, **gexis-setup**, then the second to open the setup page.
-The Wi-Fi password is on the screen.
+The Wi-Fi password is on the screen. If the phone cannot join, keep it
+trying: until a phone joins, the player changes its Wi-Fi channel every two
+minutes, and the screen counts down to the next.
 
 **Without a screen:** join the Wi-Fi **gexis-setup** (password
 `gexis-setup`), then open **http://10.42.0.1:8090** in the phone's browser.

@@ -1877,7 +1877,7 @@ async def main() -> None:
         while True:
             await asyncio.sleep(every)
             try:
-                now = await asyncio.to_thread(_output_now)
+                now = await _output_now()
             except Exception:  # noqa: BLE001 - a watch must not die quietly
                 logger.exception("outputs: cannot tell the output in force")
                 continue
@@ -1890,7 +1890,7 @@ async def main() -> None:
                 # Looked at again once the lock is held: a switch that held
                 # it may have put this in force already.
                 try:
-                    now = await asyncio.to_thread(_output_now)
+                    now = await _output_now()
                 except Exception:  # noqa: BLE001
                     logger.exception("outputs: cannot tell the output in force")
                     continue
@@ -1901,11 +1901,15 @@ async def main() -> None:
                 state_store.bump_settings_revision()
                 await _switch_output()
 
-    def _output_now() -> tuple:
+    async def _output_now() -> tuple:
         """The stored choice, and the card in force with whether the jack
-        stands in for it - what `output_seen` holds."""
+        stands in for it - what `output_seen` holds. **The setting is read
+        here, on the loop**: the settings store's connection belongs to the
+        thread that opened it, so a read from a worker raised every 3 s and
+        the jack never stood in (1.0.0, 1.0.1); only the look at the cards
+        goes to a thread."""
         stored = settings.value("output_device")
-        out, standing = outputs.in_force(stored)
+        out, standing = await asyncio.to_thread(outputs.in_force, stored)
         return (stored, out.card if out else None, standing)
 
     def _all_components() -> dict:

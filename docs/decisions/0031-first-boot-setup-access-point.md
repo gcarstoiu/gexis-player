@@ -215,3 +215,27 @@ setup network now takes the 2.4 GHz channel - 1, 6 or 11 - farthest from any
 multiple of a connected screen's pixel clock, read from its EDID; channel 6
 when none can be read. No fixed channel fits every screen: sofapi's 77.0 MHz
 panel has a multiple 2 MHz from channel 11.
+
+## Amended 2026-10-15: the next channel when nobody joins (George)
+
+The channel above avoids the screen but knows nothing of the neighbours: on
+sofapi at 6-7 m channel 1, far from any multiple of its panel's clock, could
+not be used either (Finding 126). George chose to keep the rule and add a
+fallback: **if no phone has joined - been given an address - within two
+minutes, the setup network moves to the next channel**, under the same name
+and password, and again every two minutes, round the three: the quiet one
+first, then the others from the farthest from the screen's interference to
+the nearest (6, 1, 11 when nothing is known). **Once a phone has joined, the
+channel stays** until the network closes. A phone still trying when the
+channel turns finds the network again by itself.
+
+**The panel says so, briefly** (George: *"Keep it really short and showing
+the current channel with a countdown"*): on the join step, *"Can't join?
+Channel 6 changes in 1:42"*, gone once a phone is on. The core gives the
+channel and the deadline (`channel`, `rotate_at` in the setup status, wall
+time); the panel counts down itself.
+
+Not chosen: 5 GHz for the setup network (it needs a country before setup,
+which a new card does not have), and changing the panel's own clock while
+setup is open. Two minutes is fixed; whether it should be a setting is
+proposed for ADR-0022, not decided.

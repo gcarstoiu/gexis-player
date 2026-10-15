@@ -55,6 +55,23 @@
     return () => { cancelled = true; };
   });
 
+  //: **The channel turns every two minutes until a phone joins** (ADR-0031,
+  //: George 2026-10-15: "Keep it really short and showing the current
+  //: channel with a countdown"). The core sends the deadline as wall time.
+  let clockNow = $state(Date.now());
+  $effect(() => {
+    if (!open || !setup?.rotate_at) return;
+    clockNow = Date.now();
+    const timer = setInterval(() => { clockNow = Date.now(); }, 1000);
+    return () => clearInterval(timer);
+  });
+  const rotateLine = $derived.by(() => {
+    if (!open || !setup?.channel || !setup?.rotate_at) return null;
+    const left = Math.ceil(setup.rotate_at - clockNow / 1000);
+    if (left <= 0) return `Can’t join? Changing from channel ${setup.channel}…`;
+    return `Can’t join? Channel ${setup.channel} changes in ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+  });
+
   //: The moment a phone arrives, for the confirmation. Only a change from
   //: none to some counts; a phone that stays does not flash it again.
   let joinedUntil = $state(0);
@@ -245,6 +262,7 @@
           <h1>Set up gexis</h1>
           <p>Scan with a phone on the same network as this player</p>
         {/if}
+        {#if step === 'join' && rotateLine}<p class="bs__rotate">{rotateLine}</p>{/if}
         {#if step !== 'lan'}{@render barMobileData()}{/if}
       </div>
     </div>
@@ -289,6 +307,7 @@
           <dt>Password</dt><dd>{password ?? '…'}</dd>
         </dl>
       </div>
+      {#if rotateLine}<p class="rotate">{rotateLine}</p>{/if}
       {@render mobileData()}
     {:else if step === 'joined'}
       <div class="big-icon">
@@ -499,6 +518,13 @@
   dd.small { font-family: var(--font-ui); font-size: 30px; font-weight: 600; letter-spacing: 0; white-space: nowrap; }
   .nowrap { white-space: nowrap; }
 
+  .rotate {
+    margin: 4px 0 0;
+    font-size: 22px;
+    color: var(--ink-body);
+    font-variant-numeric: tabular-nums;
+  }
+
   .warn {
     margin-top: 8px;
     display: flex;
@@ -599,6 +625,8 @@
     font-size: 40px;
     line-height: 1.08;
   }
+  .bs__words p.bs__rotate { font-size: 19px; font-variant-numeric: tabular-nums; }
+
   .bs__words p {
     margin: 0;
     font-size: 24px;

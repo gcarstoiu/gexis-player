@@ -455,7 +455,10 @@ def test_the_broadcast_follows_the_network_and_never_carries_the_password(tmp_pa
     net, clock = setup(tmp_path, nm, stations=0)
     net._on_change = seen.append
     hold(net, nm, clock, lambda: net.status()["network"] == "online")
-    assert [s["network"] for s in seen] == ["waiting", "open", "joining", "online"]
+    states = [s["network"] for s in seen]
+    # The channel turning while nobody joins is broadcast too (ROTATE_S), the
+    # network staying open.
+    assert [x for i, x in enumerate(states) if i == 0 or x != states[i - 1]] == ["waiting", "open", "joining", "online"]
     assert all(s["password"] is None for s in seen)
     assert seen[1]["ssid"] == sn.SSID and seen[1]["address"] == "http://10.42.0.1:8090/"
 
@@ -819,3 +822,82 @@ def test_the_hotspot_is_raised_on_the_quiet_channel(tmp_path):
     run(net.open())
     hotspot = next(c for c in nm.calls if "hotspot" in c)
     assert hotspot[hotspot.index("channel") + 1] in ("1", "11")
+
+
+# -- the channel turns when nobody joins (ADR-0031, George 2026-10-15) ------
+
+
+def test_the_channels_are_tried_quiet_first_then_by_clearance():
+    """Finding 126: the bar's 59.4 MHz jams channel 6; sofapi's 77.0 MHz
+    jams 11. The quiet one first, the one the screen jams last."""
+    bar, sofa = sn.channel_order([59.4]), sn.channel_order([77.0])
+    assert sorted(bar) == sorted(sofa) == [1, 6, 11]
+    assert bar[-1] == 6 and sofa[-1] == 11
+    assert bar[0] == sn.quiet_channel([59.4]) and sofa[0] == sn.quiet_channel([77.0])
+    assert sn.channel_order([]) == [6, 1, 11], "nothing known: NetworkManager's own 6 first, as before"
+
+
+def _open_and_watch(tmp_path, on, until):
+    nm = FakeNM(devices=NOTHING)
+    net, clock = setup(tmp_path, nm, stations=lambda: on["n"])
+    net._wall = lambda: 1_000.0 + clock.now
+    seen = []
+    net._on_change = seen.append
+
+    async def go():
+        task = asyncio.create_task(net.run())
+        for _ in range(20_000):
+            await asyncio.sleep(0)
+            if until(net, clock):
+                break
+        task.cancel()
+
+    run(go())
+    return net, nm, clock, seen
+
+
+def test_with_nobody_joined_the_channel_turns_every_two_minutes(tmp_path):
+    on = {"n": 0}
+    channels = []
+
+    def until(net, clock):
+        c = net.status()["channel"]
+        if c is not None and (not channels or channels[-1][0] != c):
+            channels.append((c, clock.now, net.status()["rotate_at"]))
+        return len(channels) >= 4
+
+    net, nm, clock, seen = _open_and_watch(tmp_path, on, until)
+    order = [c for c, _, _ in channels]
+    assert order == [6, 1, 11, 6], "nothing known about the screen: 6, 1, 11 and round again"
+    gaps = [b[1] - a[1] for a, b in zip(channels, channels[1:])]
+    assert all(sn.ROTATE_S <= g < sn.ROTATE_S + 3 for g in gaps), gaps
+    # The panel's countdown: a wall-clock deadline two minutes after each turn
+    # (seen up to a WATCH_S sleep of the loop after the turn itself).
+    assert all(sn.ROTATE_S - sn.WATCH_S <= rotate_at - 1_000.0 - at <= sn.ROTATE_S for _, at, rotate_at in channels), channels
+    assert nm.did("connection", "modify", sn.PROFILE, "802-11-wireless.channel", "1")
+    assert all(s["password"] is None for s in seen)
+
+
+def test_a_phone_that_joins_keeps_the_channel_and_stops_the_countdown(tmp_path):
+    on = {"n": 0}
+
+    def until(net, clock):
+        if net.status()["network"] == "open" and clock.now > sn.CONFIGURED_WAIT_S + 30:
+            on["n"] = 1
+        return clock.now > sn.CONFIGURED_WAIT_S + 3 * sn.ROTATE_S
+
+    net, nm, clock, _ = _open_and_watch(tmp_path, on, until)
+    status = net.status()
+    assert status["phones"] == 1 and status["channel"] == 6
+    assert status["rotate_at"] is None, "no countdown once a phone is on"
+    assert not nm.did("connection", "modify", sn.PROFILE, "802-11-wireless.channel")
+
+
+def test_the_channel_and_countdown_show_only_while_the_network_is_open(tmp_path):
+    net, _ = setup(tmp_path, FakeNM(devices=NOTHING))
+    assert net.status()["channel"] is None and net.status()["rotate_at"] is None
+    net._channel_now, net._rotate_at, net._rotate_wall = 6, 10.0, 1_120.0
+    net._state = "joining"
+    assert net.status()["channel"] is None and net.status()["rotate_at"] is None
+    net._state = "open"
+    assert net.status()["channel"] == 6 and net.status()["rotate_at"] == 1_120.0

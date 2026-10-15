@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-14 (on R2D2).
+Last updated: 2026-10-15 (on R2D2).
 
 ## Start here
 
@@ -10,39 +10,45 @@ and `phase-13b` is merged into it after each docs change. A release is built
 from a worktree made at its tag, then removed. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.0.0 on Testing only - pulled back from Stable**
-(2026-10-15, George). Tag `v1.0.0`, release `r1.0.0`, Testing serial 42.
-Promoted and then withdrawn the same night: the `stable` channel file and the
-image (`gexis-player.img.xz`, `.sha256`, `.asc`) deleted from GitHub, `r1.0.0`
-a pre-release again (a Stable player says nothing has been released on
-Stable). PR #67 (with README's *Download and install*) was merged; **PR #68
-puts README's Testing note back - for George to merge.** To re-promote:
-`publish.sh --promote r1.0.0` from a worktree at the tag (the image is
-`image/deploy/2026-10-14-gexis-player-v1.0.0.img`), then a README PR again.
+**Current release: 1.0.1, the first Stable release** (2026-10-15; tag
+`v1.0.1`, release `r1.0.1`; Testing serial 43, Stable serial 1, signatures
+checked; image `image/deploy/2026-10-14-gexis-player-v1.0.1.img`, 121 checks;
+the public download verified). PR #69 merged by George; both branches carry
+it, the release worktree and branch are removed.
 
-**Why it was pulled, and what was found (2026-10-15):** on the bar's Pi
-(Rev 1.4, here running a fresh card as "bedroompi") the setup network
-**gexis-setup** cannot be joined - a phone does not see it, and R2D2, which
-does see sofapi's, never sees it either, on 2.4 or 5 GHz, under DE or the
-world domain, from setup's own code or a bare `nmcli` hotspot. The same Pi
-works as a client (5 GHz, -53 dBm, 351 Mbit/s), its power is clean, and the
-`vndr ie set error -52` it logs appears on sofapi too (harmless). **On
-sofapi (Rev 1.5) the same commands work:** George's phone joined in 20 s and
-opened the page. On 2026-10-09 this same bar Pi hosted the setup network and
-a phone joined it. So it looks like that one Pi or where it now stands, not
-the software - **not yet proved:** a fresh 1.0.0 card's first setup over
-Wi-Fi on a Rev 1.5 Pi (sofapi or guestpi), which is what re-promotion waits
-on. Debug logs keep the journal across restarts only on Testing by default;
-the 1.0.0 test card was provisioned with them on. Trial scripts left in
-`/usr/local/lib/gexis/ap-trial.sh` on sofapi, guestpi and the bedroompi card.
+**1.0.0 was promoted and pulled back the same night** (Finding 126): on the
+11.9" bar the setup network could not be joined. 1.0.1's setup network takes
+channel 1, 6 or 11, farthest from the screens' pixel-clock multiples
+(ADR-0031 amended). **Settled 2026-10-15** (Finding 126, three test rounds,
+three research reviews): the cause is the HDMI signal - changing only the
+bar's clock (59.4 -> 35.5 MHz) brought channel 6 back; kiosk, CPU load,
+Bluetooth and power saving made no difference; nothing radio-related changed
+in our software or the OS since 0.9.1. Why it worked before: **open** - the
+adapter swapped on 2026-10-14 at 19:25 was the suspect, but a cable in its
+place fails the same way (10:13 run); what else changed physically is not on
+record. The pixel-clock rule ignores neighbours:
+on sofapi at 6-7 m only channel 6 was usable (channel 1 crowded).
+**Decided (George, 2026-10-15):** keep the rule and add the rotation - the
+next channel every 2 min until a phone joins, the join step counting down
+(ADR-0031 amended; 5335250f on `phase-13d`, not released). On bedroompi
+since 10:54 for George to try; the 2 minutes proposed for ADR-0022 as [H],
+not appended.
+The bar's test card (`bedroompi.local`, in ShelvesPi's Pi) still runs 1.0.0
+with the fix hand-copied - reflash it from the 1.0.1 image.
 
-Suite 2,386 passed, 47 skipped (2026-10-14).
+**Fixed on `phase-13d`, not released:** the stand-in watcher (ADR-0141 D5)
+failed every 3 s in 1.0.0/1.0.1 - a settings read from a worker thread - so
+the jack never stood in (a539d16d, LESSONS 73); once working, a missing
+output was reported every 3 s (a816c24d, now once). On sofapi since
+2026-10-15 09:47: no errors; the switch itself not yet tried with a receiver.
+
+Suite 2,485 passed, 47 skipped (2026-10-15).
 
 **Devices.** sofapi (Waveshare 10.1"; a test machine - its Lyrion queue may
 be lost, George 2026-10-12; an SMSL USB DAC on it), the bar (ShelvesPi,
 11.9") and guestpi (IQaudIO Pi-DAC PRO, 13.3") as read 2026-10-13:
-sofapi runs a `phase-13d` preview (core `0.14.0+git20`, UI and player
-`+git28`, 2026-10-14); the bar runs release 0.14.0; guestpi as read
+sofapi runs a `phase-13d` preview (core and player `1.0.1+git23`, UI
+`0.15.0+git44`, 2026-10-15); the bar runs release 0.14.0; guestpi as read
 2026-10-13, core `0.10.2+git63`. **Cards flashed
 from now on have no passwordless sudo: provision test cards with
 `DEV_SUDO="yes"`** (ADR-0139).
@@ -81,8 +87,8 @@ in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-10-14, after 0.15.0's PR (#66)** (the first: ~102 GB and ~30,500 -> ~9,500
-words in the morning).
+2026-10-15, after 1.0.1's PR (#69)** (/home 224 -> 242 GB free; start-of-session
+reading ~4,800 words).
 
 ## Phases
 
