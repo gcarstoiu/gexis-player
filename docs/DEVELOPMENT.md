@@ -2059,7 +2059,7 @@ registry advertises.
 > unit), `docs/PLUGIN-CONTRACT.md` at version 1, and Findings 075-080.
 
 **Themes left this phase on 2026-09-25** (George): *"Themes to be cut out and
-have its own phase at the end of the current list."* They are **Phase 17** (`ph-themes`), and
+have its own phase at the end of the current list."* They are **Phase 18** (`ph-themes`), and
 he restated it on the day the phase closed: *"I stated before that themes are
 out and have their own phase at the end of the list."*
 
@@ -2179,7 +2179,7 @@ the exercise.
    extends to it, whether it ships in the image or installs on demand, and
    what it costs in memory and CPU on a Pi 4 that is already frame-limited.
    None of that is settled by adding it to this list.
-4. ~~Theme engine.~~ **Moved to Phase 17** (`ph-themes`; numbered 14 until 2026-10-13, 16 until 2026-10-14), 2026-09-25.
+4. ~~Theme engine.~~ **Moved to Phase 18** (`ph-themes`; numbered 14 until 2026-10-13, 16 until 2026-10-14, 17 until 2026-10-15), 2026-09-25.
 
 ### What closing this means, and what it deliberately does not
 
@@ -2369,7 +2369,7 @@ the ALSA default.
 
 ### Phase 11a — The library answers for itself (moved)
 
-Now **Phase 19** (`ph-library`), with the open phases after the release.
+Now **Phase 20** (`ph-library`), with the open phases after the release.
 
 ### Phase 12 — Plugins that fetch their software on the device
 
@@ -2858,7 +2858,7 @@ per file on Pis other than 4 GB, and temperatures with a case (HARDWARE.md).
 
 ### Phase 13f — Lyrion's own menus, plugins included
 
-**Closed 2026-10-12 for the release; George's look moved to Phase 20** (`ph-lyrion-menus`)
+**Closed 2026-10-12 for the release; George's look moved to Phase 21** (`ph-lyrion-menus`)
 (George: *"create a separate phase for this at the end of the current phase
 list"*). It ships as built, behind *Extended navigation* (ADR-0118); the hidden
 library's hour was measured (Finding 118).
@@ -2908,9 +2908,46 @@ documents refer to a phase by its ID, and its number is only its place in the
 order. A new phase takes the next number and an ID of its own. Closed phases
 keep the numbers they had.
 
-### Phase 14 — MPD: real multichannel
+### Phase 14 — First use in two parts
 
-**ID:** `ph-mpd` · numbered 14 on 2026-10-13 (was 17).
+**ID:** `ph-first-use` · added 2026-10-15, before MPD.
+
+**Added 2026-10-15** (George: *"have 2 parts. One like now on first boot,
+but only with the device specific things to make it work like WiFi,
+display, audio, device name and clock, and then another part shown once the
+player boots that covers customisations that will make the player
+personalised to the user and be driven by questions"*; before MPD *"because
+mpd will add another option of playing and indexing music ... for a person
+who is just starting it might get too much"*). **ADR-0149**, proposed: part
+1 on the phone asks only what the player needs to run; part 2, on the panel
+(and the phone page) once the player is on the home network, asks how it
+will be used and ends in the downloads (ADR-0128's settling screen).
+
+**Before building:** George settles ADR-0149's open points (the questions,
+their answers and defaults); then Claude Design draws part 2 for the 10.1"
+panel, the bars and the phone, and the shorter part 1.
+
+**Acceptance (draft):**
+
+1. A new card's setup on the phone asks only Network, New or backup, Name,
+   Time, Output, Screen and Review, over the setup network and over the
+   cable.
+2. Once on the home network, the panel opens part 2; every question can be
+   answered on the panel, or on the phone page; *Later* leaves with the
+   defaults, and *Settings → System → Personalise* runs it again.
+3. *Only stream* leaves the Lyrion client off; *Play my music library* finds
+   a Lyrion server on the network or installs the Lyrion Server on the
+   player; the services, the visualiser and the plugins chosen are on, and
+   their downloads end part 2.
+4. A restored player and a player updated from 1.0.x are not shown part 2;
+   a factory reset shows both parts.
+5. A player without a screen runs part 2 on the phone page.
+6. Every new screen matches Claude Design's picture on the 10.1" panel, the
+   11.9" and 7.9" bars, and a phone.
+
+### Phase 15 — MPD: real multichannel
+
+**ID:** `ph-mpd` · numbered 14 on 2026-10-13 (was 17), 15 from 2026-10-15.
 
 **Added 2026-10-13** (George: *"have another phase for mpd right after"* the
 first public release, after Finding 121 showed Lyrion delivers two channels
@@ -2932,11 +2969,11 @@ database (`database { plugin "proxy" }`, the music on a share).
   conversion layer have only carried two;
 - DSD: native to a DAC that takes it, PCM over HDMI (the Pi sends no one-bit
   audio);
-- **setup, reordered and split for the new source** (George, 2026-10-13:
-  *"Phase 14 also comes with a reordering and splitting of the setup process
-  to accommodate this new source."*): where MPD and its library are chosen
-  in first-time setup, and how setup's steps are reordered and split around
-  it. Which steps move and how they split is for the ADR.
+- **where MPD is chosen at first use.** Setup's reordering and split
+  (George, 2026-10-13: *"Phase 14 also comes with a reordering and splitting
+  of the setup process to accommodate this new source"*) became its own phase
+  first, Phase 14 (`ph-first-use`, George 2026-10-15); MPD adds *Music on this
+  player or a share* to its question *Where is your music?* (ADR-0149).
 
 **Acceptance (draft):**
 
@@ -2948,9 +2985,9 @@ database (`database { plugin "proxy" }`, the music on a share).
 4. First-time setup takes in MPD in its new order, and a player set up without
    it is unchanged.
 
-### Phase 15 — Room correction with a USB microphone
+### Phase 16 — Room correction with a USB microphone
 
-**ID:** `ph-room-correction` · numbered 15 on 2026-10-14.
+**ID:** `ph-room-correction` · numbered 16 on 2026-10-15 (15 from 2026-10-14).
 
 **Added 2026-10-14** (George: *"let's add another phase about room
 correction using usb microphone after phase 14"*). The player measures the
@@ -2977,7 +3014,7 @@ correction filter and applies it to everything it plays.
   be reconciled with it; every source passes through it, or a choice of
   which.
 - **One correction per output**, on and off from Settings, and an A/B to
-  hear the difference; with Phase 14's multichannel, one per channel.
+  hear the difference; with Phase 15's multichannel, one per channel.
 
 **Research done 2026-10-14**:
 [Finding 124](findings/124-room-correction-what-open-source-offers.md) -
@@ -2997,9 +3034,9 @@ Pi, and the microphones (miniDSP UMIK-1 first).
 4. Every source plays through the correction with no audible gap or
    dropout, and the visualiser keeps working.
 
-### Phase 16 — The player in Home Assistant
+### Phase 17 — The player in Home Assistant
 
-**ID:** `ph-home-assistant` · numbered 16 on 2026-10-14 (15 from 2026-10-13; was 13g).
+**ID:** `ph-home-assistant` · numbered 17 on 2026-10-15 (16 from 2026-10-14, 15 from 2026-10-13; was 13g).
 
 **Added 2026-10-11** (George: *"Let's add the home assistant with the player
 as a plugin as a separate phase before themes"*, after choosing the player
@@ -3027,9 +3064,9 @@ and the screen's standby (ADR-0135).
 3. Nothing it does disturbs playback, measured as Phase 13e measured the
    Lyrion Server.
 
-### Phase 17 — Themes
+### Phase 18 — Themes
 
-**ID:** `ph-themes` · numbered 17 on 2026-10-14 (16 from 2026-10-13; was 14).
+**ID:** `ph-themes` · numbered 18 on 2026-10-15 (17 from 2026-10-14, 16 from 2026-10-13; was 14).
 
 **Cut out of Phase 10 on 2026-09-25** (George): *"Themes to be cut out and have
 its own phase at the end of the current list."* It was that phase's criterion
@@ -3058,9 +3095,9 @@ that is settled.
 4. **The visualiser is not themed by this.** PeppyMeter skins are ADR-0051's
    separate corpus with their own picker, and share no tokens with the panel.
 
-### Phase 18 — A sound bar on optical, through a USB adapter
+### Phase 19 — A sound bar on optical, through a USB adapter
 
-**ID:** `ph-optical` · numbered 18 on 2026-10-14 (17 from 2026-10-13; was 14a).
+**ID:** `ph-optical` · numbered 19 on 2026-10-15 (18 from 2026-10-14, 17 from 2026-10-13; was 14a).
 
 **Added 2026-10-11** (George: *"Add it as a phase after themes"*). A
 class-compliant USB-to-TOSLINK adapter is a USB sound card: the player already
@@ -3085,9 +3122,9 @@ rate, a 96 or 192 kHz file goes out at that rate, and many sound bars take only
 3. Tracks at or under the maximum stay bit-perfect, measured as Findings
    002 and 003 measured the DAC.
 
-### Phase 19 — The library answers for itself
+### Phase 20 — The library answers for itself
 
-**ID:** `ph-library` · numbered 19 on 2026-10-14 (18 from 2026-10-13; was 11a).
+**ID:** `ph-library` · numbered 20 on 2026-10-15 (19 from 2026-10-14, 18 from 2026-10-13; was 11a).
 
 **Added 2026-09-25 (George):** *"Let's introduce another phase … which should tackle the question of how we can we leverage the plexamp/Plex
 server metadata that is available. Anything that can reduce the dependency on
@@ -3166,9 +3203,9 @@ consumes. **Popular tracks do remain ListenBrainz's**, 404 on that server.
 its own catalogue groupings (*Singles & EPs*, *Live Albums*, *Compilations*).
 All are there; none is asked for by anything today.
 
-### Phase 20 — Lyrion's own menus: the look
+### Phase 21 — Lyrion's own menus: the look
 
-**ID:** `ph-lyrion-menus` · numbered 20 on 2026-10-14 (19 from 2026-10-13; was 16).
+**ID:** `ph-lyrion-menus` · numbered 21 on 2026-10-15 (20 from 2026-10-14, 19 from 2026-10-13; was 16).
 
 **Added 2026-10-12** (George, taking it out of the first public release:
 *"create a separate phase for this at the end of the current phase list"*).
