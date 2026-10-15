@@ -138,7 +138,7 @@ export const setup = derived(playback, ($s) => $s?.setup ?? null);
 //: ADR-0110: what the updater is doing - the modal's steps, and `active`,
 //: which locks the panel while an install runs.
 export const update = derived(playback, ($s) => $s?.update ?? null);
-//: **The moment Install is tapped** (George, 2026-10-15, on the bar: "first
+//: **The moment Update (or Continue) is tapped** (George, 2026-10-15, on the bar: "first
 //: the small modal is shown and then after a few seconds the full screen
 //: overlay takes over. We should go directly to the overlay"). The lock
 //: waited for the updater to report `active`, a few seconds after the tap;
