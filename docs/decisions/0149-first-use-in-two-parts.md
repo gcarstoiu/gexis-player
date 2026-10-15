@@ -53,58 +53,70 @@ reached (ADR-0031, ADR-0104). Only what the player needs to run:
 
 Gone from part 1: Music, Visualiser and Plugins.
 
-### Part 2 — make it yours (new)
+### Part 2 — make it yours (new), on the phone
 
-Once the player is on the home network, **the panel offers it, and the phone
-page as well**; a player without a screen offers it on the phone page only.
-Every question has a default, a **Later** that keeps the defaults and leaves,
-and the whole of part 2 can be run again from **Settings → System →
-Personalise**. Typing, where any is needed, comes from the phone (the
-touchpad, ADR-0121).
+**On the phone** (George, 2026-10-15: *"It's where the user sets up the panel
+in the first place and we have more control over the space. A bar might be
+tough to accommodate for certain things."*). Part 1's last page already tells
+the phone to go back to the home Wi-Fi and open the player's address; that
+page now continues with part 2. **The panel**, meanwhile, shows a QR code to
+the same page (*Make it yours on your phone*), and at the end the downloads.
+Every question has a default and a **Later** that keeps the defaults and
+leaves; the whole of part 2 can be run again from **Settings → System →
+Personalise**.
 
 | # | Question | Answers | Default | What it does |
 |---|---|---|---|---|
-| 1 | **How will you use this player?** | *Play my music library* · *Only stream* · *Both* | none: an answer is needed (or Later = *Both*) | Decides which of the questions below are asked |
-| 2 | **Where is your music?** (asked for *library* and *both*) | a Lyrion server found on the network (each listed) · *Enter an address* · *Install the Lyrion Server on this player* | the one server found, if exactly one | `lms_server`; *Install* turns on the Lyrion Server plugin (`gexis-lyrion-server`) |
-| 3 | **Which services?** | Spotify Connect · Plexamp · Bluetooth, each a switch | Spotify Connect and Bluetooth on, Plexamp off (as today) | `spotify_enabled`, `bt_enabled`, Plexamp's plugin switch |
-| 4 | **On the screen** (not asked when Headless) | the visualiser yes/no · a clock and weather when nothing plays yes/no | visualiser: needs an answer as today; idle screen off (ADR-0133) | `visualiser_skins` (its pack downloads), `idle_enabled` |
+| 1 | **What should the player's screen show?** (not asked without a screen) | *My music library, to browse, and what is playing* · *Only what is playing: I choose music on my phone and in apps* | none: an answer is needed (Later = the first) | The second turns **library navigation off on the screen** (below); the Lyrion client keeps running |
+| 2 | **Lyrion Music Server**: plays your music files, and its apps can play to this player | a server found on the network (each listed) · *Enter an address* · *Install the Lyrion Server on this player* · *I don't use Lyrion* (not offered with the first answer to 1) | the one server found, if exactly one | `lms_server`; *Install* turns on the Lyrion Server plugin; *I don't use Lyrion* turns the Lyrion client off (`lms_enabled`), as today |
+| 3 | **Which services?** | Spotify Connect · Plexamp · Bluetooth, each a switch | Spotify Connect and Bluetooth on, Plexamp off (as today) | `spotify_enabled`, `bt_enabled`, Plexamp's plugin switch. With nothing on and no Lyrion, the page says the player would have nothing to play |
+| 4 | **On the screen** (not asked without a screen) | the visualiser yes/no · a clock and weather when nothing plays yes/no, and its place for the weather | visualiser: needs an answer as today; idle screen off (ADR-0133) | `visualiser_skins` (its pack downloads), `idle_enabled`, the weather's location |
 | 5 | **Anything else to install?** | Beszel monitoring, and future plugins | off | the plugin switches |
-| 6 | **Downloads** (today's settling screen, ADR-0128) | — | — | waits for what 2-5 started; *Use the player now* as today |
+| 6 | **Downloads** (ADR-0128's settling) | — | — | on the panel as today, and on the phone at the end of part 2 |
 
-*Only stream* turns the Lyrion client off (`lms_enabled`): the panel then
-has no library, and its home is the waiting screen with every source's state
-(ADR-0079, ADR-0133).
+**Library navigation off, the Lyrion client on** (George, 2026-10-15: *"the
+lyrion client is up and running but there is no library navigation on the
+screen. This would be a modification of the current no lyrion client
+enabled."*): the player is still a Lyrion player - Lyrion's apps, other
+controllers and its radio play to it, and Now Playing shows what they play -
+but the screen has no library, browse or Lyrion menus. Its home is the
+waiting screen, as with the client off (ADR-0079, ADR-0133), with Lyrion
+among the sources. Today's *client off* stays, for *I don't use Lyrion*.
 
-**When Phase 15 (MPD) lands**, question 2 gains *Music on this player or a
-share* (MPD), and question 1 is unchanged. Until then that answer does not
-appear.
+**When Phase 15 (MPD) lands**, question 2 becomes *Where is your music?* and
+gains *Music on this player or a share* (MPD); until then it is Lyrion's.
 
 ### Who sees it
 
-- **A new player** — part 2 opens on the panel once it is on the home network.
-- **A restored player** — not offered; Settings has Personalise.
-- **A player already set up** (an update) — not offered; Settings has
+- **A new player** - part 2 follows part 1 on the phone; the panel shows its
+  QR code until it is done or put off.
+- **Without a screen** - questions 1 and 4 are not asked.
+- **A restored player** - not offered; Settings has Personalise.
+- **A player already set up** (an update) - not offered; Settings has
   Personalise.
-- **After a factory reset** — both parts, as a new player.
+- **After a factory reset** - both parts, as a new player.
 
 ## Settings (ADR-0022)
 
-Proposed, not appended until George confirms: whether part 2 has been
-finished or put off is state, not a setting ([N] none needed). *Personalise*
-is an action row in System, like *Reset to factory settings*.
+Proposed, not appended until George confirms:
+
+- **[N] Library on the screen** - on / off; on by default, off from question
+  1's second answer. Display (or Sources), beside the Lyrion client row,
+  which it needs.
+- *Personalise* is an action row in System, like *Reset to factory settings*;
+  whether part 2 was finished or put off is state, not a setting.
 
 ## Open (George)
 
-1. The questions and wording above, and question 1's three answers.
-2. Whether *Only stream* should hide the library entirely, or only start on
-   Now Playing.
-3. Whether part 2 is offered on the phone page at the same time as on the
-   panel, or only when the panel's is put off.
-4. Claude Design draws part 2 (panel 10.1", bars, phone) and the shorter
-   part 1 once 1-3 are settled.
+1. The questions and wording above.
+2. **Library on the screen** as a setting ([N] above), and where it sits.
+3. Settled 2026-10-15: *Only stream* keeps the Lyrion client and hides the
+   library on the screen; part 2 runs on the phone, the panel showing a QR
+   code to it and then the downloads.
+4. Claude Design draws part 2 on the phone, the panel's QR and download
+   screens (10.1", bars), and the shorter part 1, once 1-2 are settled.
 
 ## Not decided here
 
-The look (Claude Design), the bar's layout for questions with several
-switches, and how part 2 is told apart from Settings for someone who opens
-Personalise again.
+The look (Claude Design), and how part 2 is told apart from Settings for
+someone who opens Personalise again.
