@@ -331,6 +331,13 @@ class LyrionMenus:
         spec = self._spec(handle)
         if spec["kind"] not in ("folder", "container") or "letters" in spec:
             return {"letters": spec.get("letters", {})}
+        if "browselibrary" not in (str(word) for word in spec.get("cmd") or ()):
+            # The library's lists carry `textkey` (measured in Finding 029
+            # on All Artists); that a service's lists carry none is assumed,
+            # not measured, so a whole service list is not read on the
+            # chance of keys (Finding 125 #26, 2026-10-14; this once cited
+            # Finding 110, which does not say so).
+            return {"letters": {}}
         command = list(spec["cmd"]) + [0, LETTERS_MAX]
         command += [f"{k}:{v}" for k, v in spec["params"].items()] + ["menu:1"]
         key = tuple(str(part) for part in command)
@@ -529,6 +536,14 @@ def _hint(item: dict, spec: dict) -> str | None:
     icon = unquote(str(item.get("icon") or item.get("image") or ""))
     if ":playlist:" in link or "/playlist/" in link or "/images/playlists/" in icon:
         return "playlist"
+    # **And a streaming album, by Spotty's link** (Finding 125 #26,
+    # 2026-10-14): with no hint, one track crediting a guest artist made an
+    # album's page say "Play playlist". Only for what Lyrion types as a list:
+    # a track's link names a track, not an album. Not by a Qobuz cover under
+    # `/images/covers/` (2026-10-14): a Qobuz playlist without its own image
+    # carries an album's cover, so it would read "Play album".
+    if str(item.get("type") or "") == "playlist" and ":album:" in link:
+        return "album"
     own = item.get("commonParams") or {}
     for params in (own, {**(item.get("params") or {}), **(spec.get("params") or {})}):
         found = next((word for key, word in HINTS if key in params), None)

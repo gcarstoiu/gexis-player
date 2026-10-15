@@ -34,6 +34,24 @@ export async function loadMenuTiles() {
 export const browseMenu = (handle, start = 0, count = 100) =>
   call(`/menus/browse?at=${encodeURIComponent(handle)}&start=${start}&count=${count}`);
 
+/** Whether a list is long enough, and filed by letter, to be given the
+ *  letter rail or strip (the handover's note 6) - asked before its index
+ *  arrives, so the pending rail takes its place at once and the list does
+ *  not move (George, 2026-10-06).
+ *
+ *  An album counts only when it carries Lyrion's letter (`textkey`, which
+ *  the library's lists carry - Finding 029): since a streaming album is
+ *  hinted "album" too (Finding 125 #26), counting every album drew the
+ *  pending rail over a Spotify list of more than 30 albums and then took it
+ *  away, moving the list (Finding 125 #26 follow-up, 2026-10-14). */
+export function wantsLetters(got) {
+  const items = got?.items ?? [];
+  const lettered = items.filter(
+    (r) => r.hint === 'artist' || r.hint === 'genre' || (r.hint === 'album' && r.letter),
+  ).length;
+  return (got?.count ?? 0) > 30 && lettered >= items.length * 0.6;
+}
+
 /** `play`, `add` or `next`, for an item Lyrion said can. */
 export const menuAct = (handle, action) => post('/menus/act', { handle, action });
 

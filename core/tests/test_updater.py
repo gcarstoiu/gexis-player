@@ -218,7 +218,7 @@ def test_an_update_never_restarts_itself_or_the_shutdown_pause(up, monkeypatch):
 
 
 def test_manual_never_installs_at_night(up, monkeypatch):
-    monkeypatch.setattr(up, "check", lambda args: ("testing", {"Release": "2", "_serial": 2}))
+    monkeypatch.setattr(up, "check", lambda args, **kw: ("testing", {"Release": "2", "_serial": 2}))
     monkeypatch.setattr(up, "setting", lambda key: "Manual" if key == "updates" else None)
     monkeypatch.setattr(up, "install", lambda args: (_ for _ in ()).throw(AssertionError("installed")))
     assert up.scheduled(None) == 0
@@ -233,10 +233,10 @@ def test_automatic_skips_a_release_that_failed_here_and_takes_a_newer_one(up, mo
     monkeypatch.setattr(up, "playing", lambda: False)
     installs = []
     monkeypatch.setattr(up, "install", lambda args: installs.append(1) or 0)
-    monkeypatch.setattr(up, "check", lambda args: ("testing", {"Release": "2", "_serial": 2}))
+    monkeypatch.setattr(up, "check", lambda args, **kw: ("testing", {"Release": "2", "_serial": 2}))
     up.scheduled(None)
     assert installs == [], "the failed release is not retried by itself"
-    monkeypatch.setattr(up, "check", lambda args: ("testing", {"Release": "3", "_serial": 3}))
+    monkeypatch.setattr(up, "check", lambda args, **kw: ("testing", {"Release": "3", "_serial": 3}))
     up.scheduled(None)
     assert installs == [1], "a newer release is"
 
@@ -272,7 +272,7 @@ def test_a_night_that_finds_music_does_not_wait_and_tries_tomorrow(up, monkeypat
     """ADR-0110 §4: nobody can be asked at night, so nothing is stopped."""
     monkeypatch.setattr(up, "setting", lambda key: "Automatic" if key == "updates" else None)
     monkeypatch.setattr(up, "installed", lambda p: "1")
-    monkeypatch.setattr(up, "check", lambda args: ("testing", {"Release": "2", "_serial": 2}))
+    monkeypatch.setattr(up, "check", lambda args, **kw: ("testing", {"Release": "2", "_serial": 2}))
     monkeypatch.setattr(up, "playing", lambda: True)
     monkeypatch.setattr(up, "install", lambda args: (_ for _ in ()).throw(AssertionError("installed")))
     assert up.scheduled(None) == 0
@@ -289,7 +289,7 @@ def fake_install(up, monkeypatch, *, fail_install=False, answers=True):
         real_report(state, **fields)
         seen.append(json.loads((up.STATE / "status.json").read_text()))
     monkeypatch.setattr(up, "report", report)
-    monkeypatch.setattr(up, "check", lambda args: ("testing", {"Release": "2", "_serial": 2,
+    monkeypatch.setattr(up, "check", lambda args, **kw: ("testing", {"Release": "2", "_serial": 2,
                                                                 "Repositories": "ours-x", "_whats_new": "New."}))
     monkeypatch.setattr(up, "installed", lambda p: "1")
     monkeypatch.setattr(up, "parts_of", lambda v: (["ours-old"], ["ours-old"]))
@@ -563,7 +563,7 @@ def test_a_check_during_an_update_leaves_its_status_alone(up, monkeypatch):
     other = (up.STATE / "status.lock").open("w")
     fcntl.flock(other, fcntl.LOCK_EX)          # the install, running
     checked = []
-    monkeypatch.setattr(up, "check", lambda args: checked.append(args))
+    monkeypatch.setattr(up, "check", lambda args, **kw: checked.append(args))
     monkeypatch.setattr(sys, "argv", ["gexis-update", "check"])
     assert up.main() == 0
     assert checked == [] and json.loads((up.STATE / "status.json").read_text())["state"] == "installing"
@@ -908,6 +908,11 @@ def test_the_boot_after_a_cut_short_install_finishes_it_and_checks_it(up, monkey
     monkeypatch.setattr(up, "heal", lambda opts: healed.append(opts))
     assert up.postboot(None) == 0
     assert envs[0] == ["ours-x"] and healed == [["-o", "x"]], "finished from the release going in"
+    # Finding 125 #6: finished, the device restarts, and that boot checks it.
+    assert seen[-1]["state"] == "restarting" and up.pending().exists()
+    monkeypatch.setattr(up, "interrupted", lambda: (False, []))
+    assert up.postboot(None) == 0
+    assert healed == [["-o", "x"]], "not finished twice"
     assert seen[-1]["state"] == "done" and set(seen[-1]["steps"].values()) == {"done"}
     assert not up.pending().exists()
 
@@ -1075,8 +1080,9 @@ def _cut_short_no_note(up, monkeypatch, busy=False):
     monkeypatch.setattr(up, "parts_of", lambda v: (["ours-x"], ["ours-x"]))
     monkeypatch.setattr(up, "apt_env", lambda repos, pins=None: ["-o", "x"])
     monkeypatch.setattr(up, "apt", lambda opts, *a, **k: subprocess.CompletedProcess(a, 0, "", ""))
-    monkeypatch.setattr(up, "heal", lambda opts: healed.append(opts))
+    monkeypatch.setattr(up, "heal", lambda opts, prefix=None: healed.append(opts))
     monkeypatch.setattr(up, "verify", lambda v: None)
+    monkeypatch.setattr(up, "stop_playback", lambda: None)
     monkeypatch.setattr(up, "channel_name", lambda given: given or "testing")
     monkeypatch.setattr(up, "run", lambda *a, check=True, **k: ran.append(list(a)) or subprocess.CompletedProcess(a, 0, "", ""))
     monkeypatch.setattr(up, "report", lambda state, **f: reports.append((state, f.get("message"))))
@@ -1193,3 +1199,311 @@ def test_an_old_failure_does_not_stop_a_new_backup(up, monkeypatch, tmp_path):
 
     monkeypatch.setattr(up.urllib.request, "urlopen", core_writes)
     assert up.back_up() == "gexis-x-before-update-1.tgz"
+
+
+def test_a_link_at_the_failure_mark_is_no_mark(up, monkeypatch, tmp_path):
+    """Finding 125 #2, 2026-10-14: the share is `pi`'s, so a link at the
+    mark's name made root stop the update and print whatever it named. A
+    link is not the core's word; the backup that appears is taken."""
+    shares = tmp_path / "backups"
+    shares.mkdir()
+    secret = tmp_path / "shadow"
+    secret.write_text("root:SECRET\n")
+    (shares / up.BACKUP_FAILED).symlink_to(secret)
+    monkeypatch.setattr(up, "BACKUPS", shares)
+    looks = []
+
+    def core_writes(req, timeout=0):
+        return io.BytesIO(b"{}")
+
+    def sleep(s):
+        looks.append(s)
+        (shares / "gexis-x-before-update-1.tgz").write_bytes(b"x")
+
+    monkeypatch.setattr(up.urllib.request, "urlopen", core_writes)
+    monkeypatch.setattr(up.time, "sleep", sleep)
+    printed = []
+    monkeypatch.setattr("builtins.print", lambda *a, **k: printed.append(" ".join(map(str, a))))
+    assert up.back_up() == "gexis-x-before-update-1.tgz"
+    assert looks, "the mark was looked at before the backup appeared"
+    assert not any("SECRET" in line for line in printed)
+
+
+def test_a_failure_mark_that_is_a_file_is_still_read(up, monkeypatch, tmp_path):
+    shares = tmp_path / "backups"
+    shares.mkdir()
+    monkeypatch.setattr(up, "BACKUPS", shares)
+    monkeypatch.setattr(up.urllib.request, "urlopen",
+                        lambda req, timeout=0: (shares / up.BACKUP_FAILED).write_text("disk full\n") and io.BytesIO(b"{}"))
+    printed = []
+    monkeypatch.setattr("builtins.print", lambda *a, **k: printed.append(" ".join(map(str, a))))
+    with pytest.raises(up.Stop):
+        up.back_up()
+    assert any("disk full" in line for line in printed)
+
+
+# --- Finding 125 (the review since 0.10.1, 2026-10-14) ----------------------
+
+def _check_button(up, monkeypatch):
+    """`gexis-update check`, as gexis-update-checknow.service runs it."""
+    import sys
+    monkeypatch.setattr(sys, "argv", ["gexis-update", "check"])
+    return up.main()
+
+
+def test_check_for_updates_hands_a_cut_short_release_to_the_install_unit(up, monkeypatch):
+    """**Finding 125 #3.** The Settings button's unit is killed after 300 s;
+    a whole release repaired inside it - gexis-core reinstalled, the OS
+    packages dist-upgraded - was cut short again, with nothing left for the
+    boot. The check starts the install's unit, which has no limit, and
+    returns."""
+    reports, healed, ran = _cut_short_no_note(up, monkeypatch)
+    applied = []
+    monkeypatch.setattr(up, "apt", lambda opts, *a, **k: applied.append(list(a))
+                        or subprocess.CompletedProcess(a, 0, "", ""))
+    monkeypatch.setattr(up, "playing", lambda: False)
+    assert _check_button(up, monkeypatch) == 0
+    assert healed == [] and applied == [], "nothing repaired under the 300 s unit"
+    assert ["systemctl", "start", "--no-block", "gexis-update-install.service"] in ran
+    assert ["systemctl", "reboot"] not in ran
+    assert reports[-1][0] == "checking-device", "the panel's lock holds while the install unit runs"
+    assert "current" not in [state for state, _ in reports]
+
+
+def test_the_repair_of_a_cut_short_release_blocks_a_shutdown_and_stops_playback(up, monkeypatch):
+    """**Finding 125 #3.** Run where it may take as long as it needs, the
+    repair swaps packages as an install does: playback stopped first, and
+    every apt run under systemd-inhibit."""
+    reports, healed, ran = _cut_short_no_note(up, monkeypatch)
+    prefixes, order = [], []
+    monkeypatch.setattr(up, "apt", lambda opts, *a, prefix=None: prefixes.append((a[-1], prefix))
+                        or subprocess.CompletedProcess(a, 0, "", ""))
+    monkeypatch.setattr(up, "heal", lambda opts, prefix=None: healed.append(prefix) or order.append("heal"))
+    monkeypatch.setattr(up, "stop_playback", lambda: order.append("stop"))
+    assert up.finish_cut_short() is True
+    assert order == ["stop", "heal"]
+    assert healed and healed[0][:len(up.INHIBIT)] == up.INHIBIT
+    for what, prefix in prefixes:
+        if what != "update":
+            assert prefix and prefix[:len(up.INHIBIT)] == up.INHIBIT, what
+
+
+def test_the_install_unit_has_no_time_limit_and_the_button_s_has_one():
+    """What the hand-over relies on (Finding 125 #3)."""
+    units = Path(__file__).resolve().parents[1] / "updater" / "units"
+    assert "TimeoutStartSec=infinity" in (units / "gexis-update-install.service").read_text()
+    assert "TimeoutStartSec=300" in (units / "gexis-update-checknow.service").read_text()
+
+
+def test_a_cut_short_skin_pack_is_not_a_release_to_finish(up, monkeypatch):
+    """**Finding 125 #16.** A power cut while a pack installed left dpkg
+    dirty with only the pack broken; the next check took it for a release
+    cut short, reinstalled the release already there and restarted the
+    device, mid-playback. A pack is the pack path's to finish - its own
+    `heal`, and an install's - and the check goes on to read the channel."""
+    for where in (up.REPAIR_HERE, up.REPAIR_HAND_OVER, up.REPAIR_IF_QUIET):
+        reports, healed, ran = _cut_short_no_note(up, monkeypatch)
+        monkeypatch.setattr(up, "interrupted", lambda: (True, ["gexis-skins-1480x320"]))
+        applied = []
+        monkeypatch.setattr(up, "apt", lambda opts, *a, **k: applied.append(list(a))
+                            or subprocess.CompletedProcess(a, 0, "", ""))
+        monkeypatch.setattr(up, "playing", lambda: False)
+        assert up.finish_cut_short(where) is False, where
+        assert healed == [] and ran == [], where
+        assert applied == [], "nothing read, simulated or installed"
+
+
+def test_a_night_with_music_leaves_a_cut_short_release_for_later(up, monkeypatch):
+    """**Finding 125 #16.** The nightly check repaired and rebooted in any
+    update mode, whatever was playing. While something plays it does
+    neither, and says why; the next quiet check finishes it."""
+    reports, healed, ran = _cut_short_no_note(up, monkeypatch)
+    monkeypatch.setattr(up, "playing", lambda: True)
+    monkeypatch.setattr(up, "setting", lambda key: (_ for _ in ()).throw(AssertionError("read on")))
+    assert up.scheduled(None) == 0
+    assert healed == [] and ["systemctl", "reboot"] not in ran
+    assert reports[-1][0] == "failed" and "nothing is playing" in reports[-1][1]
+
+    reports, healed, ran = _cut_short_no_note(up, monkeypatch)
+    monkeypatch.setattr(up, "playing", lambda: False)
+    assert up.scheduled(None) == 0
+    assert healed and ["systemctl", "reboot"] in ran, "a quiet night finishes it"
+
+
+def test_check_for_updates_with_music_hands_nothing_over(up, monkeypatch):
+    """**Finding 125 #16.** Nobody asked for an install or a restart."""
+    reports, healed, ran = _cut_short_no_note(up, monkeypatch)
+    monkeypatch.setattr(up, "playing", lambda: True)
+    assert _check_button(up, monkeypatch) == 0
+    assert healed == [] and ran == []
+    assert reports[-1][0] == "failed" and "nothing is playing" in reports[-1][1]
+
+
+def test_a_boot_that_finishes_a_cut_short_install_restarts_the_device(up, monkeypatch, tmp_path):
+    """**Finding 125 #6.** postboot finished the release - the new core,
+    UI and system packages - and reported it installed, while the old core
+    went on running until some unrelated reboot, and the reboot marker a
+    system package's postinst left turned the next update into a reboot.
+    It restarts the device now, as the install it finishes would have, and
+    the boot after checks it."""
+    seen, _ = cut_install(up, monkeypatch)
+    marker = tmp_path / "reboot-required"
+    marker.write_text("")
+    monkeypatch.setattr(up, "REBOOT_MARKER", marker)
+    dirty = [True]
+    monkeypatch.setattr(up, "interrupted", lambda: (True, ["gexis-core"]) if dirty[0] else (False, []))
+    monkeypatch.setattr(up, "heal", lambda opts, prefix=None: dirty.__setitem__(0, False))
+    ran = []
+    monkeypatch.setattr(up, "run", lambda *a, **k: ran.append(list(a)) or subprocess.CompletedProcess(a, 0, "", ""))
+    assert up.postboot(None) == 0
+    assert ["systemctl", "reboot"] in ran
+    assert seen[-1]["state"] == "restarting" and seen[-1]["reboot"] is True
+    assert "done" not in [s["state"] for s in seen]
+    assert not marker.exists(), "the reboot lands what the marker asked for"
+    left = json.loads(up.pending().read_text())
+    assert left["how"] == "reboot" and left["target"] == "2" and left["current"] == "1"
+    assert left["steps"]["install"] == "done" and left["steps"]["check"] == "pending"
+
+    ran.clear()
+    assert up.postboot(None) == 0
+    assert ["systemctl", "reboot"] not in ran
+    assert seen[-1]["state"] == "done" and set(seen[-1]["steps"].values()) == {"done"}
+    assert not up.pending().exists()
+
+
+def test_a_repair_with_no_note_clears_the_reboot_marker_it_reboots_for(up, monkeypatch, tmp_path):
+    """**Finding 125 #6**, `finish_cut_short`'s side: its reboot lands what a
+    package asked a boot for; the marker is not left for the next update."""
+    reports, healed, ran = _cut_short_no_note(up, monkeypatch)
+    marker = tmp_path / "reboot-required"
+    marker.write_text("")
+    monkeypatch.setattr(up, "REBOOT_MARKER", marker)
+    assert up.finish_cut_short() is True
+    assert ["systemctl", "reboot"] in ran and not marker.exists()
+
+
+def _handed_over(up, monkeypatch):
+    """A cut-short release the button handed to the install unit: the
+    marker it left, and the install unit's run of `install` after it."""
+    reports, healed, ran = _cut_short_no_note(up, monkeypatch)
+    monkeypatch.setattr(up, "playing", lambda: False)
+    assert _check_button(up, monkeypatch) == 0
+    assert up.repair_marker().exists(), "left before the install unit is started"
+    return reports, healed, ran
+
+
+def _no_channel(up, monkeypatch):
+    def refuse(*a, **k):
+        raise AssertionError("the channel was read")
+    monkeypatch.setattr(up, "check", refuse)
+    monkeypatch.setattr(up, "read_channel", refuse)
+    monkeypatch.setattr(up, "release_notes", refuse)
+
+
+def test_the_hand_over_is_repair_only(up, monkeypatch):
+    """**Finding 125 #3, 2026-10-14.** The install unit a check started
+    finishes the release cut short and nothing else: no channel read, no
+    newer release installed - a check never ends in an install."""
+    reports, healed, ran = _handed_over(up, monkeypatch)
+    applied = []
+    monkeypatch.setattr(up, "apt", lambda opts, *a, **k: applied.append(list(a))
+                        or subprocess.CompletedProcess(a, 0, "", ""))
+    _no_channel(up, monkeypatch)
+    # dpkg still dirty when the install unit's turn comes.
+    monkeypatch.setattr(up, "interrupted", lambda: (True, ["gexis-core"]) if not healed else (False, []))
+    assert up.install(None) == 0
+    assert not up.repair_marker().exists(), "read once"
+    assert healed and ["systemctl", "reboot"] in ran
+    installs = [a for a in applied if "install" in a and "--reinstall" not in a]
+    assert installs == [["--allow-change-held-packages", "install", "gexis-player=0.12.0"]], \
+        "only the release already there, finished"
+
+
+def test_the_hand_over_finding_nothing_left_installs_nothing(up, monkeypatch):
+    """Finding 125 #3: dpkg finished by the time the install unit runs (a
+    pack's own repair, say) - still no channel read and no install."""
+    reports, healed, ran = _handed_over(up, monkeypatch)
+    monkeypatch.setattr(up, "interrupted", lambda: (False, []))
+    _no_channel(up, monkeypatch)
+    monkeypatch.setattr(up, "apt", lambda *a, **k: (_ for _ in ()).throw(AssertionError("apt ran")))
+    assert up.install(None) == 0
+    assert not up.repair_marker().exists()
+    assert healed == [] and ["systemctl", "reboot"] not in ran
+    from gexis_core.updates import INSTALLING
+    assert reports[-1][0] not in INSTALLING, "the panel's lock is let go"
+
+
+def test_a_hand_over_that_cannot_start_the_unit_leaves_no_marker(up, monkeypatch):
+    reports, healed, ran = _cut_short_no_note(up, monkeypatch)
+    monkeypatch.setattr(up, "playing", lambda: False)
+    monkeypatch.setattr(up, "run", lambda *a, check=True, **k: subprocess.CompletedProcess(a, 1, "", ""))
+    assert _check_button(up, monkeypatch) == 1
+    assert not up.repair_marker().exists(), "a later Update now is not made repair-only"
+
+
+def test_an_install_without_the_marker_reads_the_channel_as_before(up, monkeypatch):
+    seen, order = fake_install(up, monkeypatch)
+    checked = []
+    monkeypatch.setattr(up, "check", lambda args, **kw: checked.append(kw) or
+                        ("testing", {"Release": "2", "_serial": 2, "Repositories": "ours-x", "_whats_new": "New."}))
+    assert not up.repair_marker().exists()
+    assert up.install(None) == 0
+    assert checked and seen[-1]["state"] == "done" and seen[-1]["release"] == "2"
+
+
+def test_a_stale_repair_request_does_not_make_an_install_repair_only(up, monkeypatch):
+    """**Finding 125 #3, the second review.** A request left by a unit that
+    never reached `install` (it waited out a pack, or failed) is ignored
+    once older than REPAIR_REQUEST_S, so a later real install reads the
+    channel as usual."""
+    import json as _json
+    seen, order = fake_install(up, monkeypatch)
+    checked = []
+    monkeypatch.setattr(up, "check", lambda args, **kw: checked.append(kw) or
+                        ("testing", {"Release": "2", "_serial": 2, "Repositories": "ours-x", "_whats_new": "New."}))
+    up.repair_marker().parent.mkdir(parents=True, exist_ok=True)
+    up.repair_marker().write_text(_json.dumps({"release": "1", "at": time.time() - up.REPAIR_REQUEST_S - 60}))
+    assert up.install(None) == 0
+    assert not up.repair_marker().exists(), "removed all the same"
+    assert checked and seen[-1]["state"] == "done" and seen[-1]["release"] == "2"
+
+
+def test_progress_written_from_two_threads_at_once_never_kills_the_pack(up):
+    """bedroompi, 2026-10-14: a skin pack stuck at 26 %. apt's progress is
+    sent from the timer thread and the reading loop at once; with one fixed
+    `pack.json.tmp` a rename took the other's file and the second rename
+    raised, killing the whole pack install. Each write now has its own
+    temporary file, under the reporting lock."""
+    import threading
+    errors = []
+
+    def hammer(n):
+        try:
+            for i in range(300):
+                up.PROGRESS["progress"] = i / 300
+                up.report_pack("downloading", package="gexis-skins-1480x320", message=f"t{n}")
+                up.report("downloading", message=f"t{n}")
+        except Exception as exc:  # noqa: BLE001
+            errors.append(exc)
+
+    threads = [threading.Thread(target=hammer, args=(n,)) for n in range(4)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert errors == []
+    assert json.loads((up.STATE / "pack.json").read_text())["state"] == "downloading"
+    assert not list(up.STATE.glob(".*.tmp")), "no temporary file left behind"
+
+
+def test_a_pack_install_that_dies_says_failed(up, monkeypatch):
+    """A pack install that raises something unexpected leaves the row
+    "failed", not frozen at its last share."""
+    monkeypatch.setattr(up, "take_turn", lambda *a, **k: None)
+    monkeypatch.setattr(up, "pack_install", lambda name: (_ for _ in ()).throw(RuntimeError("boom")))
+    import sys
+    monkeypatch.setattr(sys, "argv", ["gexis-update", "pack-install", "gexis-skins-1480x320"])
+    with pytest.raises(RuntimeError):
+        up.main()
+    doc = json.loads((up.STATE / "pack.json").read_text())
+    assert doc["state"] == "failed" and "unexpectedly" in doc["message"]

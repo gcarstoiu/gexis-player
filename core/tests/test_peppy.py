@@ -656,6 +656,71 @@ async def test_a_touch_during_a_raise_lowers_it_after_not_before(tmp_path, monke
     assert order == ["focus", "minimize"] and not screen.visible
 
 
+def _wlrctl_logged(monkeypatch):
+    class Done:
+        returncode = 0
+        stderr = b""
+
+    order = []
+    monkeypatch.setattr(subprocess, "run", lambda cmd, **kw: (order.append(cmd[2]), Done())[1])
+    return order
+
+
+@pytest.mark.parametrize("event", ["touch", "source"])
+async def test_a_touch_or_a_new_source_while_the_timer_s_raise_settles_still_lowers_it(tmp_path, monkeypatch, event):
+    """Finding 125 #14 (2026-10-14): `visible` is set only once the raise
+    has settled and wlrctl has focused the window, so a touch or a change of
+    source in that window saw a hidden screen, lowered nothing, and the
+    meter then came up over the panel the user had just touched."""
+    import asyncio
+
+    order = _wlrctl_logged(monkeypatch)
+    screen = PeppyScreen(wlrctl="/usr/bin/wlrctl", shown_path=tmp_path / "shown", settle_s=0.1)
+    clock = [0.0]
+    timer = UnattendedPlayback(60, now=lambda: clock[0])
+    controller = PeppyController(screen, timer, tick_s=0.01)
+    task = asyncio.ensure_future(controller.run())
+    timer.set_playing(True)
+    clock[0] += 61
+    for _ in range(100):                                     # the timer's raise, settling
+        await asyncio.sleep(0.005)
+        if order == ["minimize"] and screen._turn.locked():
+            break
+    assert order == ["minimize"] and not screen.visible      # mid-raise, as it really is
+    if event == "touch":
+        controller.on_touch()
+    else:
+        controller.on_active_change("spotify")
+    for _ in range(100):
+        await asyncio.sleep(0.01)
+        if len(order) == 3:
+            break
+    await asyncio.gather(*controller._lowering)
+    task.cancel()
+    assert order == ["minimize", "focus", "minimize"] and not screen.visible
+    assert (tmp_path / "shown").read_text() == "0"
+
+
+async def test_a_touch_during_a_raise_the_user_asked_for_leaves_it_up(tmp_path, monkeypatch):
+    """Finding 125 #14's lower is for the timer's raise only (2026-10-14):
+    a tap on the panel's meter button sends /touch and /peppy/show back to
+    back, so a touch landing while the requested raise settles is that same
+    tap, and lowering on it took down the meter the user had just asked for."""
+    import asyncio
+
+    order = _wlrctl_logged(monkeypatch)
+    screen = PeppyScreen(wlrctl="/usr/bin/wlrctl", shown_path=tmp_path / "shown", settle_s=0.05)
+    controller = PeppyController(screen, UnattendedPlayback(300))
+    raising = asyncio.ensure_future(controller.request_async("show"))
+    await asyncio.sleep(0.01)
+    assert not screen.visible                                # mid-raise
+    controller.on_touch()
+    await raising
+    await asyncio.gather(*controller._lowering)
+    assert order == ["focus"] and screen.visible
+    assert (tmp_path / "shown").read_text() == "1"
+
+
 @pytest.mark.parametrize("which", ["smoothing", "skins"])
 def test_peppymeter_s_config_is_replaced_whole_never_rewritten_in_place(tmp_path, which):
     """Review, 2026-10-12: rewritten in place, a power cut could leave it cut

@@ -158,6 +158,28 @@ def test_ethernet_with_an_address_never_opens_the_network_even_when_setup_is_nee
     assert net.status()["address"] == "http://192.168.1.50:8090/", "the page is on the LAN"
 
 
+def test_a_new_player_on_the_cable_has_its_wifi_radio_switched_on(tmp_path):
+    """bedroompi, 2026-10-14: setup over the cable said "No networks found".
+    A new card's Wi-Fi is blocked until a country is set (Raspberry Pi OS),
+    and only opening the setup network unblocked it - which a cabled player
+    never does. Setup's Wi-Fi step scans, so the radio is switched on."""
+    nm = FakeNM(devices=ETH_UP)
+    net, _ = setup(tmp_path, nm, carrier=True)
+    run(net.run())
+    assert net.needed and net.status()["network"] == "online"
+    assert nm.unblocked, "rfkill unblocked"
+    assert nm.did("radio", "wifi", "on")
+    assert not nm.did("device", "wifi", "hotspot")
+
+
+def test_a_configured_player_on_the_cable_leaves_its_radio_alone(tmp_path):
+    nm = FakeNM(devices=ETH_UP, saved={"Home": "preconfigured"})
+    net, _ = setup(tmp_path, nm, carrier=True)
+    run(net.run())
+    assert not net.needed
+    assert not nm.did("radio", "wifi", "on")
+
+
 def test_a_new_device_without_a_cable_opens_after_15_s_not_90(tmp_path):
     nm = FakeNM(devices=NOTHING)
     net, clock = setup(tmp_path, nm, stations=1)
@@ -656,6 +678,21 @@ def test_after_the_setup_network_opens_a_saved_network_in_range_is_rejoined(tmp_
     assert net.status()["network"] == "online"
 
 
+def test_a_phone_on_a_reopened_setup_network_gets_its_own_grace(tmp_path):
+    """Finding 125 #19: a phone left on the setup network last time kept the
+    moment it was first seen; hours later the network reopened and a phone
+    that had just joined was cut off at the first retry, not given its
+    SETUP_ACTIVE_S."""
+    nm = FakeNM(devices=NOTHING, saved={"Home": "preconfigured"}, in_range={"Home"})
+    net, clock = online_player(tmp_path, nm, stations=1)
+    # What the last time the setup network was open left behind, hours ago.
+    net._phone_since = net._page_used_at = -4 * 3600.0
+    watching(net, clock, lambda: nm.hotspot_at is not None and clock.now > nm.hotspot_at + sn.RETRY_S + sn.WATCH_S)
+    assert nm.hotspot_at is not None and clock.now > nm.hotspot_at + sn.RETRY_S
+    assert not nm.did("connection", "up", "preconfigured")
+    assert net.status()["network"] == "open"
+
+
 # -- the cable coming back (review, 2026-10-12) -----------------------------
 
 
@@ -728,3 +765,57 @@ def test_a_failed_join_during_setup_over_ethernet_stays_on_the_cable(tmp_path):
     assert status["network"] == "online" and status["needed"]
     assert status["address"] == "http://192.168.1.50:8090/"
     assert status["failed"] == "Home" and status["reason"] == reason
+
+
+def _edid(clock_mhz):
+    """An EDID whose first detailed timing has this pixel clock."""
+    e = bytearray(128)
+    v = round(clock_mhz * 100)
+    e[54], e[55] = v & 0xFF, v >> 8
+    return bytes(e)
+
+
+def _screen(tmp_path, name, clock_mhz, status="connected"):
+    d = tmp_path / "drm" / f"card1-{name}"
+    d.mkdir(parents=True)
+    (d / "status").write_text(status + "\n")
+    (d / "edid").write_bytes(_edid(clock_mhz) if clock_mhz else b"")
+    return tmp_path / "drm"
+
+
+def test_the_bar_s_screen_moves_the_setup_network_off_channel_6(tmp_path):
+    """George's bar, 2026-10-15: the 11.9" panel's 59.4 MHz has a multiple
+    at 2435.4 MHz, 1.6 MHz from channel 6, and the phone could not join;
+    on channel 1, with the display on, it joined at once."""
+    drm = _screen(tmp_path, "HDMI-A-1", 59.4)
+    assert sn.pixel_clocks(drm) == [59.4]
+    assert sn.quiet_channel(sn.pixel_clocks(drm)) in (1, 11)
+
+
+def test_sofapi_s_panel_keeps_channel_6_and_never_11(tmp_path):
+    """sofapi's 77.0 MHz panel: 27 MHz clear of channel 6, 2 MHz from 11."""
+    drm = _screen(tmp_path, "HDMI-A-1", 77.0)
+    assert sn.quiet_channel(sn.pixel_clocks(drm)) == 6
+
+
+def test_no_screen_or_no_edid_keeps_channel_6(tmp_path):
+    assert sn.quiet_channel(sn.pixel_clocks(tmp_path / "none")) == 6
+    drm = _screen(tmp_path, "HDMI-A-1", None)
+    assert sn.pixel_clocks(drm) == []
+    assert sn.quiet_channel([]) == 6
+
+
+def test_every_connected_screen_counts_and_a_disconnected_one_does_not(tmp_path):
+    drm = _screen(tmp_path, "HDMI-A-1", 59.4)
+    _screen(tmp_path, "HDMI-A-2", 77.0, status="disconnected")
+    assert sn.pixel_clocks(drm) == [59.4]
+
+
+def test_the_hotspot_is_raised_on_the_quiet_channel(tmp_path):
+    nm = FakeNM(devices=NOTHING)
+    net, _ = setup(tmp_path, nm, stations=1)
+    drm = _screen(tmp_path / "bar", "HDMI-A-1", 59.4)
+    net._drm = drm
+    run(net.open())
+    hotspot = next(c for c in nm.calls if "hotspot" in c)
+    assert hotspot[hotspot.index("channel") + 1] in ("1", "11")

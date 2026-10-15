@@ -782,3 +782,89 @@ async def test_a_rescan_keeps_the_photos_of_artists_it_did_not_renumber():
     await restarted.photos([1, 2, 3])
     asks = [c[-1] for c in lms.commands[asked:]]
     assert asks == ["artist_id:2"], asks
+
+
+@pytest.mark.asyncio
+async def test_a_rescan_drops_photos_of_ids_the_kept_names_never_listed():
+    """Finding 125 #21 (2026-10-14): only ids in the names snapshot were
+    compared, so a photo stored for any other id - a composer, whom the
+    unfiltered `artists` list leaves out - outlived a rescan that gave the
+    id to someone else."""
+    from gexis_core.artistinfo import SCOPE_CHECK_S
+    lms = FakeLms(photos={1: "imageproxy/a/1/image.png", 50000: "imageproxy/a/50000/image.png"})
+    store, clock = _store(), FakeClock()
+    info = LmsArtistInfo(lms, BASE, store=store, clock=clock)
+    await info.photos([1, 50000])
+    lms.lastscan = "1800000000"
+    clock.advance(SCOPE_CHECK_S)
+    await info.photos([1])                 # the rescan seen: names kept
+    asked = len(lms.commands)
+    lms.lastscan = "1900000000"             # 50000 now someone else's, unlisted as before
+    clock.advance(SCOPE_CHECK_S)
+    await LmsArtistInfo(lms, BASE, store=store, clock=clock).photos([1, 50000])
+    asks = [c[-1] for c in lms.commands[asked:]]
+    assert asks == ["artist_id:50000"], asks
+
+
+@pytest.mark.asyncio
+async def test_a_names_fetch_that_fails_leaves_no_names_to_trust():
+    """Finding 125 #21, the second case: another server, its names not
+    fetched, and the first server's snapshot stayed - so a photo stored
+    under the new server's numbering was later checked against the old
+    server's names."""
+    from gexis_core.artistinfo import NAMES_NAMESPACE, SCOPE_CHECK_S
+    lms = FakeLms(photos={7: "imageproxy/a/7/image.png"})
+    lms.names = {"1": "Artist A"}
+    store, clock = _store(), FakeClock()
+    await LmsArtistInfo(lms, BASE, store=store, clock=clock).photos([1])
+    assert store.recall(NAMES_NAMESPACE, "names") == {"1": "Artist A"}
+
+    real_call = lms.__call__
+
+    async def names_fail(command, player="", timeout=None):
+        if command[0] == "artists":
+            raise TimeoutError("8400 names, slow")
+        return await real_call(command, player, timeout)
+
+    other = "http://server-b:9000"
+    info = LmsArtistInfo(names_fail, other, store=store, clock=clock)
+    await info.photos([7])
+    with pytest.raises(KeyError):
+        store.recall(NAMES_NAMESPACE, "names")
+    asked = len(lms.commands)
+    lms.lastscan = "1800000000"             # server B rescans: 7 is someone else
+    lms.names = {"7": "Somebody Else"}
+    clock.advance(SCOPE_CHECK_S)
+    await LmsArtistInfo(lms, other, store=store, clock=clock).photos([7])
+    assert [c[-1] for c in lms.commands[asked:]] == ["artist_id:7"]
+
+
+@pytest.mark.asyncio
+async def test_callers_during_a_scope_check_wait_for_it():
+    """Finding 125 #23 (2026-10-14): the 60 s gate was set before the
+    check's awaits, so a second photo batch arriving while the first was
+    fetching the names skipped the check and served the renumbered id's old
+    photo."""
+    lms = FakeLms(photos={5: "imageproxy/a/old/image.png"})
+    store, clock = _store(), FakeClock()
+    await LmsArtistInfo(lms, BASE, store=store, clock=clock).photos([5])
+    lms.lastscan = "1800000000"             # renumbered while the player was off
+    lms.names["5"] = "Somebody New"
+    lms._photos[5] = "imageproxy/a/new/image.png"
+    release = asyncio.Event()
+    real_call = lms.__call__
+
+    async def slow_names(command, player="", timeout=None):
+        if command[0] == "artists":
+            await release.wait()
+        return await real_call(command, player, timeout)
+
+    info = LmsArtistInfo(slow_names, BASE, store=store, clock=clock)
+    first = asyncio.ensure_future(info.photos([5]))
+    await asyncio.sleep(0)
+    second = asyncio.ensure_future(info.photos([5]))
+    for _ in range(5):
+        await asyncio.sleep(0)
+    assert not second.done(), "answered before the check it skipped"
+    release.set()
+    assert "/new/" in (await first)[5] and "/new/" in (await second)[5]

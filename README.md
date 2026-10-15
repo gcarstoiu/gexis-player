@@ -41,9 +41,27 @@ Spotify Premium, and Plexamp a Plex account, on Plex's terms.
 <p align="center"><sub>Shown with a public-domain demo library.</sub><br>
 📸 <a href="docs/SCREENSHOTS.md"><b>See every screenshot</b></a>: the panel, the bar and the phone.</p>
 
-> 🧪 **Testing releases are out.** Gexis Player is built in the open, plays
-> every day on its reference devices, and updates itself over the network:
-> a new release never needs a reflash. The first Stable release is next.
+## 💾 Download and install
+
+**Gexis Player 1.0.1** is the current release. You need a Raspberry Pi 4 and a
+microSD card of 32 GB or more. A DAC gives the best sound (the
+[hardware list](docs/HARDWARE.md) says which are tested), but the Pi's own
+HDMI (to a sound bar or AV receiver) or headphone jack works too; an HDMI
+touch screen from the hardware list is optional.
+
+1. **Download** [gexis-player.img.xz](https://github.com/gcarstoiu/gexis-player/releases/latest/download/gexis-player.img.xz)
+   ([checksum](https://github.com/gcarstoiu/gexis-player/releases/latest/download/gexis-player.img.xz.sha256),
+   [signature](https://github.com/gcarstoiu/gexis-player/releases/latest/download/gexis-player.img.xz.asc)).
+2. **Write it to the card** with [Raspberry Pi Imager](https://www.raspberrypi.com/software/):
+   *Choose OS → Use custom*, pick the file, and skip Imager's own settings.
+3. **Start the Pi** with the card in, and the DAC and screen if you use them.
+   The screen shows two QR codes: the first joins your phone to the player's
+   own Wi-Fi, **gexis-setup**, the second opens the setup page. Without a screen, join
+   **gexis-setup** (password `gexis-setup`) and open http://10.42.0.1:8090.
+   Setup takes a few minutes.
+
+Updates arrive over the network from then on; you never need to flash again.
+The [installation guide](docs/INSTALL.md) has every step in detail.
 
 I love hi-fi, and I had a clear idea of how a player should work, so I built
 it, carefully, with the help of AI, and tested it on real hardware. It began as the player for one living room and

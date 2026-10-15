@@ -440,9 +440,16 @@ def screen_question(state: dict, now: float | None = None) -> dict | None:
         "untested": bool(model and not model.tested),
         "previous": (f"{before.maker} {before.model}" if before else None),
         "rotation_only": rotation_only,
-        # ADR-0147 D3: a screen with no touch the player knows of - a TV, any
-        # screen in no list - is answered from the phone.
-        "phone": not screen_detect.has_touch(current["screen"]),
+        # Who may answer (Finding 125, 2026-10-14). `panel_buttons`: the
+        # panel shows Keep and Go back - every listed panel, not a TV, a
+        # screen in no list, a generic monitor mode or a model without touch.
+        # `phone`: the phone may answer (ADR-0147 D3) - every screen whose
+        # touch is not recognised by its USB fingerprint, since a listed
+        # panel's touch may need a driver the player never installs, and a
+        # panel with dead touch could otherwise only wait for the countdown.
+        # A fingerprinted panel stays answered on itself (ADR-0109 D2).
+        "panel_buttons": screen_detect.has_touch(current["screen"]),
+        "phone": not screen_detect.touch_recognised(current["screen"]),
         "previous_rotation": f"{previous.get('rotation', 0)}°" if previous else "0°",
         "deadline": None,
         # Two minutes after setup, and for a rotation (George, 2026-10-04,
@@ -546,6 +553,16 @@ async def _start_software_volume(card_output, store) -> None:
         await set_raw(card_output.control, card_output.scale.top, scale=card_output.scale)
     logger.info("volume: software volume at %.2f dB on %s; %s", db, card_output.label,
                 "its own control parked at 0 dB" if card_output.control else "it has no control of its own")
+
+
+def standin_due(seen, now) -> bool:
+    """**Whether the stand-in watcher switches** (ADR-0141 D5): `seen` is what
+    the last switch of output put in force and `now` what is in force, each
+    (stored choice, card, jack standing in). Only the output in force changing
+    under the same stored choice is a port going or coming back; a new stored
+    choice is the user's own change of output, whose switch is under way or
+    queued behind `volume_change` (Finding 125 #10, 2026-10-14)."""
+    return seen is not None and now[0] == seen[0] and now[1:] != seen[1:]
 
 
 async def main() -> None:
@@ -1045,6 +1062,11 @@ async def main() -> None:
                     and not standing_in}
     #: Whether the software stage is in the chain now (ADR-0124).
     software_on = {"value": bool(chosen_output is not None and chosen_output.software)}
+    #: What the last switch of output put in force, as `_output_now` gives it:
+    #: set by `_switch_output` itself, so the stand-in watcher measures a port
+    #: going or coming back against it and never takes the user's own change
+    #: of output for one (Finding 125 #10, 2026-10-14).
+    output_seen = {"value": None}
     fixed_now = {"value": False}
     set_fixed_output_reader(lambda: fixed_now["value"])
     # ADR-0137: the plugins are told when Fixed changes. Made further down; a
@@ -1166,7 +1188,11 @@ async def main() -> None:
         card and libasound's cached configuration are freed
         (`forget_mixers`), so the next write opens the new card's.
         """
-        base = outputs.in_force(settings.value("output_device"))[0]
+        stored = settings.value("output_device")
+        base, standing = outputs.in_force(stored)
+        # Before the first await: a switch under way is already seen, so the
+        # stand-in watcher does not switch a second time (Finding 125 #10).
+        output_seen["value"] = (stored, base.card if base else None, standing)
         # The row restricted for this output first: what is in force on it
         # (ADR-0127 §2) decides whether the software stage is in the chain.
         _restrict_output_mode(base)
@@ -1841,24 +1867,46 @@ async def main() -> None:
         comes back.** A receiver switched off drops its port; the output is
         switched to the jack, and back by itself when the port returns -
         each a change of output, which stops whoever plays."""
-        last = None
+        # **Measured against what the last switch put in force, and switched
+        # under the lock** (Finding 125 #10, 2026-10-14). It kept what it saw
+        # to itself, so every change of output the user made looked like a
+        # port going or coming back: within 3 s it logged a stand-in that was
+        # not one and switched again - concurrently with the user's switch,
+        # outside `volume_change` - restarting the renderers twice and
+        # stopping a source started in between.
         while True:
             await asyncio.sleep(every)
             try:
-                out, standing = await asyncio.to_thread(outputs.in_force, settings_store.get("output_device"))
+                now = await asyncio.to_thread(_output_now)
             except Exception:  # noqa: BLE001 - a watch must not die quietly
                 logger.exception("outputs: cannot tell the output in force")
                 continue
-            now = (out.card if out else None, standing)
-            if last is None:
-                last = now
+            if output_seen["value"] is None:
+                output_seen["value"] = now
                 continue
-            if now != last:
-                last = now
+            if not standin_due(output_seen["value"], now):
+                continue
+            async with volume_change:
+                # Looked at again once the lock is held: a switch that held
+                # it may have put this in force already.
+                try:
+                    now = await asyncio.to_thread(_output_now)
+                except Exception:  # noqa: BLE001
+                    logger.exception("outputs: cannot tell the output in force")
+                    continue
+                if not standin_due(output_seen["value"], now):
+                    continue
                 logger.info("outputs: %s", "the HDMI output has nothing connected; the jack stands in"
-                            if standing else "the HDMI output is back; switching to it")
+                            if now[2] else "the HDMI output is back; switching to it")
                 state_store.bump_settings_revision()
                 await _switch_output()
+
+    def _output_now() -> tuple:
+        """The stored choice, and the card in force with whether the jack
+        stands in for it - what `output_seen` holds."""
+        stored = settings.value("output_device")
+        out, standing = outputs.in_force(stored)
+        return (stored, out.card if out else None, standing)
 
     def _all_components() -> dict:
         status = components.all_status()
@@ -2203,8 +2251,9 @@ async def main() -> None:
         turn = screen_apply.parse_rotation(rotation if rotation is not None else settings.value("rotation"))
         in_setup = _setup_running(state_store.state.setup)
         # On the port the screen is on - not always HDMI-A-1 (ADR-0109;
-        # George, 2026-10-12).
-        applied = screen_apply.Applied(model.id, turn, screen_apply.connector_now())
+        # George, 2026-10-12). A port chosen under Screen port stays chosen
+        # (Finding 125 #7, 2026-10-14).
+        applied = screen_apply.applied_on(model.id, turn, screen_apply.connector_now())
         asks = screen_apply.choose(applied, after_setup=in_setup)
         logger.info("screen: %s at %d° on %s chosen; %s", model.id, turn, applied.connector,
                     "it waits for Keep on the panel" if asks else "the picture is unchanged, so it is kept")
@@ -3035,7 +3084,9 @@ async def main() -> None:
     # ADR-0135: the owner's standby times. Their rows are read each tick.
     standby_schedule = Schedule(
         standby, lambda key: settings.value(key),
-        lambda: state_store.state.metadata.transport == "playing")
+        lambda: state_store.state.metadata.transport == "playing",
+        # Not over Keep this screen? (Finding 125 #17, 2026-10-14).
+        blocked=lambda: state_store.state.screen_confirm is not None)
     peppy = PeppyController(
         peppy_screen,
         UnattendedPlayback(
@@ -3170,7 +3221,12 @@ async def main() -> None:
             logger.info("fanart: %s not fetched (%r)", url, exc)
             return None
 
-    fanart = Fanart(library.rpc, _fanart_download, f"http://{config.lms_host}:{config.lms_port}")
+    # Finding 125 #22: the photos on disk are kept by LMS artist id, so they
+    # go by the artist photos' own check when a rescan or another server
+    # gives an id to someone else.
+    fanart = Fanart(library.rpc, _fanart_download, f"http://{config.lms_host}:{config.lms_port}",
+                    before=artistinfo.check_scope)
+    artistinfo.on_renumber(fanart.drop)
     fanart_follow = {"key": None, "next": None}
 
     async def _fanart_for(state) -> None:
@@ -3686,6 +3742,12 @@ async def main() -> None:
         question = state_store.state.screen_confirm
         if question is None or question.get("deadline") is not None:
             return
+        # Drawn under the black cover with the output off, it would count
+        # down unseen (Finding 125 #17, 2026-10-14), as a pairing request
+        # did (review, 2026-10-12).
+        standby.used()
+        if standby.may_be_dark:
+            asyncio.ensure_future(standby.wake("screen"))
         total = question.get("total") or KEEP_S
         state_store.set_screen_confirm({**question, "deadline": time.time() + total})
         if screen_wait["task"] is not None:

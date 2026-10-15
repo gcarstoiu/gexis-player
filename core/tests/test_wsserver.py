@@ -900,7 +900,7 @@ async def test_the_updaters_backup_is_named_as_its_own_and_pruned(tmp_path, monk
     async with TestClient(TestServer(server.make_app())) as client:
         r = await client.post("/settings/backup?before=update")
         assert r.status == 200
-        for _ in range(100):
+        for _ in range(500):  # 5 s: the prune runs in the background, and a loaded suite was slower than 1 s
             if pruned:
                 break
             await asyncio.sleep(0.01)

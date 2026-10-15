@@ -489,7 +489,7 @@
   const asksKeep = $derived(!chosenModel || !(screenInfo?.unchanged ?? []).includes(chosenModel.id));
   const pickNote = $derived(
     (chosenModel && !chosenModel.tested ? 'This model has not been tested with gexis. ' : '') +
-      (asksKeep ? 'When setup finishes the player restarts on this screen and asks Keep this screen? on it. If nobody touches Keep within two minutes, it goes back.' : '')
+      (asksKeep ? 'When setup finishes the player restarts on this screen and asks Keep this screen?. If nobody answers Keep within two minutes of it appearing, it goes back.' : '')
   );
   //: The preset names carry the panel's own resolution, which the row's note
   //: already gives the way the screen is used ("(400x1280)" on a bar).

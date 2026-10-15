@@ -209,19 +209,26 @@ class Schedule:
     after*; outside them, a screen the schedule put off wakes. A screen the
     owner put off stays off until something wakes it.
 
-    `value(key)` reads a setting; `playing()` says whether music plays."""
+    `value(key)` reads a setting; `playing()` says whether music plays;
+    `blocked()` whether the screen is asking something that must be seen."""
 
     def __init__(self, standby: Standby, value, playing, *, clock=time.monotonic,
-                 now=datetime.datetime.now) -> None:
+                 now=datetime.datetime.now, blocked=lambda: False) -> None:
         self._standby = standby
         self._value = value
         self._playing = playing
         self._clock = clock
         self._now = now
+        self._blocked = blocked
 
     async def tick(self) -> None:
         on = self._value("standby_schedule") is True and self._value("headless") is not True
-        if self._playing():
+        # **Not over Keep this screen?** (Finding 125 #17, 2026-10-14): its
+        # countdown starts when it is drawn, some seconds after the core
+        # starts, and the schedule put the black cover over it at *Back to
+        # standby after* from the start; the change went back unseen. A
+        # question on the screen is use, as music is.
+        if self._playing() or self._blocked():
             self._standby.used()
         inside = on and in_standby_time(self._now(), self._value("standby_times") or [])
         if not inside:

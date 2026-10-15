@@ -110,6 +110,55 @@ def panel_attached(drm: Path = DRM) -> bool:
     return False
 
 
+#: The 2.4 GHz channels the setup network may use: the three that do not
+#: overlap one another.
+CHANNELS = (1, 6, 11)
+CHANNEL_MHZ = {1: 2412, 6: 2437, 11: 2462}
+
+
+def pixel_clocks(drm: Path = DRM) -> list[float]:
+    """The preferred mode's pixel clock, in MHz, of every connected HDMI
+    screen - the first detailed timing of its EDID (bytes 54-55, in 10 kHz).
+    A screen without a readable EDID adds nothing."""
+    clocks = []
+    try:
+        connectors = sorted(drm.glob("card*-HDMI-A-*"))
+    except OSError:
+        return clocks
+    for connector in connectors:
+        try:
+            if (connector / "status").read_text().strip() != "connected":
+                continue
+            edid = (connector / "edid").read_bytes()
+        except OSError:
+            continue
+        if len(edid) >= 128:
+            clock = (edid[54] | edid[55] << 8) / 100
+            if clock > 0:
+                clocks.append(clock)
+    return clocks
+
+
+def quiet_channel(clocks: list[float]) -> int:
+    """**The 2.4 GHz channel farthest from the screens' own interference**
+    (George's bar, 2026-10-15: gexis-setup on channel 6 could not be joined,
+    the phone seeing it come and go). An HDMI link radiates at multiples of
+    its pixel clock: the 11.9" bar's 59.4 MHz has one at 2435.4 MHz, 1.6 MHz
+    from channel 6 - with the display off, or on channel 1, the phone joined
+    at once. sofapi's 77.0 MHz panel is clear of 6 and 2 MHz from 11, so no
+    one channel suits every screen. Channel 6 - NetworkManager's own choice -
+    when nothing is known."""
+    if not clocks:
+        return 6
+
+    def clearance(channel: int) -> float:
+        mhz = CHANNEL_MHZ[channel]
+        return min(abs(round(mhz / c) * c - mhz) for c in clocks)
+
+    # Ties keep the order of preference: 6 first, as before, then 1 and 11.
+    return max((6, 1, 11), key=clearance)
+
+
 #: Between the phone being told setup is finishing and the radio leaving it,
 #: so the page's last screen - where to go next - arrives before the page
 #: can no longer be reached.
@@ -480,6 +529,12 @@ class SetupNetwork:
             await self._nmcli("connection", "delete", PROFILE)
             logger.info("setup: deleted a %s profile left from before", PROFILE)
 
+    def _channel(self) -> int:
+        channel = quiet_channel(pixel_clocks(self._drm))
+        logger.info("setup: %s on channel %d (screens' pixel clocks: %s)", SSID, channel,
+                    ", ".join(f"{c:g} MHz" for c in pixel_clocks(self._drm)) or "none known")
+        return channel
+
     async def open(self) -> bool:
         """Raise the setup network: the command Finding 099 measured, then
         `autoconnect no` so the profile can never come up by itself at boot in
@@ -504,7 +559,7 @@ class SetupNetwork:
         ready = await self._wait_for_wlan()
         rc, _, err = await self._nmcli(
             "device", "wifi", "hotspot", "ifname", IFACE, "con-name", PROFILE,
-            "ssid", SSID, "band", "bg", "password", self._password,
+            "ssid", SSID, "band", "bg", "channel", str(self._channel()), "password", self._password,
             timeout=wifi.JOIN_TIMEOUT_S,
         )
         await self._nmcli("connection", "modify", PROFILE, "connection.autoconnect", "no")
@@ -718,6 +773,15 @@ class SetupNetwork:
                 self._state = "online"
                 if self._needed:
                     self._lan_address = await self._address_of(where)
+                    # **The Wi-Fi radio on for setup's Wi-Fi step** (bedroompi,
+                    # 2026-10-14: setup over the cable found "No networks").
+                    # A new card's radio is blocked until a country is set
+                    # (see `open`), and only opening the setup network
+                    # lifted it - which a player on the cable never does.
+                    # Scanning is passive under the world domain; Finish
+                    # sets the real country.
+                    await self._unblock()
+                    await self._nmcli("radio", "wifi", "on")
                 self._publish()
                 logger.info("setup: on the network through %s; no setup network", where)
                 return
@@ -815,6 +879,13 @@ class SetupNetwork:
         on the LAN got the setup page. ADR-0104 §3: the setup network never
         opens while Ethernet has an address. Looked for every `WATCH_S`, not
         at the five-minute retry, since the cable takes nothing from anyone."""
+        # **Each time the setup network is held starts from scratch**
+        # (Finding 125 #19, 2026-10-14). A phone still on it when the player
+        # last left kept `_phone_since` set; hours later, when the network
+        # reopened, a phone that had just joined was taken for that old one
+        # and cut off at the first retry instead of getting SETUP_ACTIVE_S.
+        self._phone_since = None
+        self._page_used_at = None
         last = self._clock()
         while self._state != "online":
             due = retry - (self._clock() - last)

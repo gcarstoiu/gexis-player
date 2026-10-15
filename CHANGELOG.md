@@ -5,6 +5,37 @@ Every release of Gexis Player and its notes, newest first. Generated from
 edit that file, not this one. The player shows the last 10 under
 Settings → System → Change logs.
 
+## 1.0.1 — 15 October 2026
+
+### Fixed
+
+- The setup network, gexis-setup, can be joined on every screen: it now uses the Wi-Fi channel least disturbed by the player's own screen. On the 11.9" bar the screen's cable drowned out the channel it used, and phones saw the network come and go but could not connect.
+
+### Good to know
+
+- Gexis Player 1.0.1 is the first release on the Stable channel, with the image to install it from.
+
+## 1.0.0 — 14 October 2026
+
+### New
+
+- Gexis Player 1.0.0 is the first release on the Stable channel: players set to Stable receive it, and the image to install it from is published with it.
+
+### Fixed
+
+- Restoring a backup never writes through a link already on the card, and backups taken while a plugin's folder holds links or pipes can be restored. Plugins installed by hand are stopped while their data is put back.
+- Keep this screen? shows its buttons on every listed touch screen; where the player cannot tell that a screen's touch works, it can also be answered from the phone page.
+- A TV chosen as the screen keeps its port after a change of rotation or model, and a screen chosen before 0.12.0 keeps its touch.
+- A change of output is made once, not twice.
+- An update cut short by a power cut is finished safely: Check for updates repairs it without installing anything newer, never while music plays, and the player restarts once it is done.
+- The visualiser's skins no longer stop downloading part-way.
+- Setup over a network cable can add a Wi-Fi network as well.
+- Back from a similar artist's page returns to the artist before it, and Home on the phone after opening an album from Now Playing goes to the library.
+- A streaming album with a guest artist on one track is no longer called a playlist.
+- Text size reaches every piece of text on the screen.
+- A touch on the screen while the visualiser rises lowers it again.
+- Artist photos and backgrounds from before a library rescan are no longer shown for another artist.
+
 ## 0.15.0 — 14 October 2026
 
 ### New
