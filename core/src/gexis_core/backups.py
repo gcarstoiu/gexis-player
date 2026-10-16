@@ -174,22 +174,45 @@ KEEP_AUTOMATIC = 3
 SAFE = re.compile(r"^[A-Za-z0-9._-]+$")
 
 
+#: **What is wrong with a file that cannot be one** (the bar, 2026-10-16: a
+#: power cut during an update's backup left one of 0 bytes, listed and
+#: offered for a restore that would fail). Checked by its first bytes, which
+#: costs nothing; the whole archive is read only when it is restored.
+EMPTY = "Empty: it cannot be restored"
+NOT_GZIP = "Damaged: it cannot be restored"
+
+
 @dataclass(frozen=True)
 class Archive:
     name: str
     made: float
     size: int
+    problem: str | None = None
 
     def to_item(self) -> dict:
         """The shape a `list` row's items take (ADR-0044 §1)."""
         when = time.strftime("%-d %b %Y, %H:%M", time.localtime(self.made))
-        return {
+        item = {
             "name": self.name,
             "meta": f"{when} · {self.size / 1_048_576:.1f} MB"
                     + (" · before an update" if AUTOMATIC.match(self.name) else ""),
             "state": "saved",
             "bars": None,
         }
+        if self.problem:
+            # Listed so it can be forgotten, never offered for a restore.
+            item.update(meta=f"{when} · {self.problem}", broken=True)
+        return item
+
+
+def _problem(path: Path, size: int) -> str | None:
+    if size == 0:
+        return EMPTY
+    try:
+        with path.open("rb") as f:
+            return None if f.read(2) == b"\x1f\x8b" else NOT_GZIP
+    except OSError:
+        return NOT_GZIP
 
 
 def _slug(text: str) -> str:
@@ -220,7 +243,7 @@ def available(directory: Path = DEFAULT_DIR) -> list[Archive]:
             continue
         if not stat.S_ISREG(info.st_mode):
             continue
-        found.append(Archive(entry.name, info.st_mtime, info.st_size))
+        found.append(Archive(entry.name, info.st_mtime, info.st_size, _problem(entry, info.st_size)))
     return sorted(found, key=lambda a: a.made, reverse=True)
 
 
@@ -387,12 +410,32 @@ def create(device_name: str, directory: Path = DEFAULT_DIR, root: Path = Path("/
             os.fchmod(raw.fileno(), 0o644)
             _give_to_pi(raw.fileno())
             size = os.fstat(raw.fileno()).st_size
+            # **On the card before it has its name** (the bar, 2026-10-14: a
+            # power cut during an update's backup left the name and none of
+            # the data - 0 bytes, listed as a backup).
+            os.fsync(raw.fileno())
         partial.replace(final)
+        _sync_dir(directory)
     except Exception:
         partial.unlink(missing_ok=True)
         raise
     logger.info("backup: wrote %s (%d bytes)", name, size)
     return name
+
+
+def _sync_dir(directory: Path) -> None:
+    """The rename itself on the card. Best effort: a filesystem that cannot
+    sync a directory still has the file's data, synced above."""
+    try:
+        fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY)
+    except OSError:
+        return
+    try:
+        os.fsync(fd)
+    except OSError:
+        pass
+    finally:
+        os.close(fd)
 
 
 def _fill(archive: tarfile.TarFile, work: str, root: Path) -> None:

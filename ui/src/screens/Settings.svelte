@@ -1303,6 +1303,12 @@
       return;
     }
     if (row.kind === 'backup') {
+      // An empty or damaged file is listed to be forgotten, never restored
+      // (2026-10-16): its line already says why.
+      if (item.broken) {
+        flash(`${item.name} cannot be restored. Forget it, or copy in a good one.`, 4500);
+        return;
+      }
       // ADR-0083: ask first. Everything this replaces is unrecoverable
       // afterwards, and the device restarts.
       restorePending = item;
@@ -2521,7 +2527,7 @@
                 {:else if item.secured}
                   <span class="lock lock--open" role="img" aria-label="Password saved"><span></span><span></span></span>
                 {/if}
-                {#if sheet.key === 'restore' && !onPanel()}
+                {#if sheet.key === 'restore' && !onPanel() && !item.broken}
                   <!-- ADR-0083 as amended 2026-10-08: a backup saved on the
                        phone or computer, for a newly flashed card's setup
                        (ADR-0131). Not on the panel, which saves nothing. -->
