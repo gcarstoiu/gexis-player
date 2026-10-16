@@ -6996,3 +6996,72 @@ failed every 3 s in 1.0.0/1.0.1 - a settings read from a worker thread - so
 the jack never stood in (a539d16d, LESSONS 73); once working, a missing
 output was reported every 3 s (a816c24d, now once). On sofapi since
 2026-10-15 09:47: no errors; the switch itself not yet tried with a receiver.
+
+## 2026-10-16: 1.0.3 to 1.0.5 (moved from HANDOFF verbatim at the clean-up after PR #73)
+
+**Current release: 1.0.5, on Stable** (2026-10-16; tag `v1.0.5`, release
+`r1.0.5`; Stable serial 3, Testing serial 47, signatures verified through the
+API and the public URL; image `image/deploy/2026-10-16-gexis-player-v1.0.5.img`,
+123 checks, the public download byte for byte the checked image). It carries
+1.0.3 and 1.0.4, which went to Testing only. **PR #73 (`release-1.0.5`, README
+names 1.0.5) is open for George to merge**; #71 and #72 were closed unmerged.
+After the merge: the post-merge steps (merge `origin/main` into both branches,
+delete `release-1.0.5`, remove the `gexis-player-rel-1.0.5` worktree with
+`git submodule deinit -f --all` and `worktree remove --force`, routine
+clean-up). The 1.0.3 and 1.0.4 worktrees are still there too.
+
+**The package cache (`~/.cache/gexis-player/debs`) was emptied by partial
+builds** until 2026-10-16 (`packaging/build.sh core ui player` pruned every
+skin pack not in its output), so 1.0.4 and 1.0.5 rebuilt the skin packs under
+emulation, over an hour each. Fixed on `phase-13d` (833790d7, after the 1.0.5
+tag): only a version a build replaced is pruned.
+Not seen on a device: the jack taking over from a switched-off HDMI device
+(ADR-0141 D5). The setup network's story is in Finding 126 and the archive;
+why the bar worked before 2026-10-14 is still not known. The bar is
+ShelvesPi (1.0.2, UI preview `1.0.2+git16`); bedroompi's card is out of it.
+
+**Release build output lives in `~/.local/share/gexis-release-out`**, not in
+a worktree: `packaging/release/out` in each release worktree is a symlink to
+it (excluded in `.git/info/exclude`). `reuse.py` reuses a published file
+only against a local copy of it, so the output removed with the 13a
+worktree made 1.0.3's first build want every OS file uploaded again; the
+copies were fetched back into `prior/` (1,004 files) and only the 10 changed
+ones uploaded. Make the symlink before `build.sh` in every release worktree.
+
+**The blog (George's WordPress, tag `sound`):** eleven articles in
+`~/projects/gexis-blog/` (articles, media, the demo tools); the setup article
+left out until setup changes. George pushed them to his site as drafts with
+`push_wp.py` (2026-10-15). `schedule_wp.py` schedules nine of them, one a day
+at 18:00 from 2026-10-16 (its `ORDER`); whether George has run it is not
+recorded here. The theme (`gcarstoiu/gexis-wp-theme`, 1.0.3, pushed) has the
+`gexis/repo-doc` block, which reads FAQ, Install, Hardware, Manual and Release
+notes from `main`, cached an hour, and a Documents row on a tag's page.
+
+Suite 2,485 passed, 47 skipped (2026-10-16), run with the venv in
+`~/.local/share/gexis-venv` (never under `/tmp`: LESSONS 74).
+
+**Devices.** sofapi (Waveshare 10.1"; a test machine - its Lyrion queue may
+be lost, George 2026-10-12; an SMSL USB DAC on it), the bar (ShelvesPi,
+11.9") and guestpi (IQaudIO Pi-DAC PRO, 13.3") as read 2026-10-13:
+sofapi and ShelvesPi (the bar) run a `phase-13d` preview, core and UI
+`1.0.4+git3` (2026-10-16, after 1.0.4): headless hides the screen, port and
+rotation rows; no press colour on settings options and Lyrion's list rows;
+the players search keeps who answered (the phone's player switch was gone
+since 2026-10-15: an announcement for `bedroompi-2` never resolved).
+bedroompi did not answer on the network on 2026-10-16 evening; guestpi as read
+2026-10-13, core `0.10.2+git63`. **Cards flashed
+from now on have no passwordless sudo: provision test cards with
+`DEV_SUDO="yes"`** (ADR-0139).
+
+**Owed by George** (the shared to-do list has the detail)
+- On a card flashed from the 0.12.0 image: setup without a restore (g24),
+  setup over a network cable (g26).
+- The screen on the bar's second HDMI port (g35).
+- The spectrum on sofapi's panel after the change (Finding 122): whether the
+  bars now look right.
+- On sofapi: the meters falling with the volume, and *Visualiser tweaks* →
+  *Needles follow the volume* and *Gain* (ADR-0146).
+- Then: 1.0.0 cut from this code as the first Stable release.
+- Done 2026-10-14: the fixes since 0.14.0 on sofapi (g46); Lyrion synced playback (7e/g09, passed); the bar's supply
+  (g12: the undervoltage was the USB extension cord, 0x0 plugged in
+  directly).
