@@ -2929,9 +2929,10 @@
   .fact {
     white-space: nowrap;
   }
-  .fact + .fact::before {
+  /* The dot ends the line it is on, so a wrapped address starts its own. */
+  .fact:not(:last-child)::after {
     content: '\00b7';
-    margin-right: 0.9em;
+    margin-left: 0.9em;
   }
 
   .error {
