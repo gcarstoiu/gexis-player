@@ -1436,6 +1436,24 @@ found on the bar's card and sofapi while looking into Finding 126).
 the changed path - and read the log; a test of the source's shape is not a
 run.**
 
+**74. A test environment emptied by the system's clean-up** (2026-10-16,
+before cutting 1.0.3).
+- **What went wrong.** The core's test venv was made in the session's
+  scratchpad, under `/tmp`. systemd-tmpfiles clears `/tmp` of files unused
+  for 10 days (`q /tmp 1777 root root 10d`); its run of 2026-10-15 17:40
+  took numpy, OpenCV and Pillow out of the venv, file by file.
+- **What it looked like.** The suite still ran. Tests that need those
+  packages skip themselves when they are missing (`importorskip`, "no Pillow
+  here"), so the summary read 2,476 passed and 55 skipped instead of 2,485
+  and 47; one test that imports numpy directly failed. A day earlier one
+  unexplained failure, gone on the next run, was probably the same decay.
+- **How it was caught.** The failure, before tagging 1.0.3. Its error named
+  numpy; numpy was on the system but not in the venv, and the system's
+  package log showed no change, which pointed at the venv itself.
+
+**The test venv lives in `~/.local/share/gexis-venv`, never under `/tmp`;
+and a skip count that moves is a failure to explain, not a detail.**
+
 **Not the same failure mode as the criteria gaps** (`docs/DEVELOPMENT.md`
 criterion 3's root-access amendment, the provisioning `.gitignore`
 defect). Those were correct checks against the right target, of a

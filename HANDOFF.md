@@ -32,7 +32,8 @@ and 2ca893a, **not pushed**, `dist/gexis.zip` built): FAQ, Install, Hardware,
 Manual and Release notes read from `main`, cached an hour, tagged `sound` and
 listed above its posts. Nothing published.
 
-Suite 2,485 passed, 47 skipped (2026-10-15).
+Suite 2,485 passed, 47 skipped (2026-10-16), run with the venv in
+`~/.local/share/gexis-venv` (never under `/tmp`: LESSONS 74).
 
 **Devices.** sofapi (Waveshare 10.1"; a test machine - its Lyrion queue may
 be lost, George 2026-10-12; an SMSL USB DAC on it), the bar (ShelvesPi,
