@@ -45,8 +45,11 @@ Suite 2,485 passed, 47 skipped (2026-10-16), run with the venv in
 **Devices.** sofapi (Waveshare 10.1"; a test machine - its Lyrion queue may
 be lost, George 2026-10-12; an SMSL USB DAC on it), the bar (ShelvesPi,
 11.9") and guestpi (IQaudIO Pi-DAC PRO, 13.3") as read 2026-10-13:
-sofapi runs a `phase-13d` preview (core and player `1.0.1+git23`, UI
-`0.15.0+git44`, 2026-10-15); the bar runs release 0.14.0; guestpi as read
+sofapi runs a `phase-13d` preview (core, UI and player `1.0.3+git7`,
+2026-10-16: host names on the network, wallpaper topics drawn at once, one
+settings reload per save, `/settings` 0.14 s -> 0.06 s); ShelvesPi (the bar)
+runs `1.0.3+git6` (host names), restored from its 2026-10-11 backup that
+morning; guestpi as read
 2026-10-13, core `0.10.2+git63`. **Cards flashed
 from now on have no passwordless sudo: provision test cards with
 `DEV_SUDO="yes"`** (ADR-0139).
