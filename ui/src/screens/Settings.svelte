@@ -696,7 +696,11 @@
     return undefined;
   }
 
-  onMount(loadSettings);
+  onMount(() => {
+    loadSettings();
+    // Leaving Settings inside the 300 ms still writes the last tap.
+    return () => { if (pickedTimer) savePicked(); };
+  });
 
   //: Opened on a row from outside (ADR-0109, amended 2026-10-03: *Choose*,
   //: when a different screen is attached): its page, and its sheet.
@@ -995,25 +999,40 @@
     else if (choiceShown === option) choiceShown = null;
   }
 
-  //: ADR-0044 §7. Each tap is a write, because nothing on this screen has
-  //: an unsaved state and a sheet that collected changes would be the first.
+  //: ADR-0044 §7. **Drawn at once, written just after** (George,
+  //: 2026-10-16: wallpaper topics felt slow on sofapi). A tap used to wait
+  //: for its write and then a full reload of the settings, 0.4-0.65 s on
+  //: sofapi, and a second tap inside that worked from the old value and
+  //: could undo the first. The sheet now draws a copy, as the standby times
+  //: do, and writes it 300 ms after the last tap or as the sheet closes; a
+  //: set the core refuses puts the copy back to what it holds.
   //: **The last one cannot be turned off**: the daemon refuses an empty set
   //: and the sheet says so rather than sending a write it knows will fail.
-  async function toggleOne(option) {
-    if (saving) return; // a tap during a save is not a second request
+  let picked = $state([]);
+  let pickedKey = null;
+  let pickedTimer = null;
+  function toggleOne(option) {
     const row = sheet;
-    const held = Array.isArray(row.value) ? row.value : [];
-    const on = held.includes(option);
-    if (on && held.length === 1) {
+    const on = picked.includes(option);
+    if (on && picked.length === 1) {
       flash('At least one has to stay selected');
       return;
     }
     // Sent in the registry's order so the readout is stable; the daemon
     // sorts it the same way and the two agreeing is worth the sort here.
-    const wanted = (row.options ?? []).filter((o) =>
-      o === option ? !on : held.includes(o)
-    );
-    await write(row, wanted);
+    picked = (row.options ?? []).filter((o) => (o === option ? !on : picked.includes(o)));
+    pickedKey = row.key;
+    clearTimeout(pickedTimer);
+    pickedTimer = setTimeout(savePicked, 300);
+  }
+  async function savePicked() {
+    clearTimeout(pickedTimer);
+    pickedTimer = null;
+    const row = pickedKey ? rowOf(pickedKey) : null;
+    if (!row || row.type !== 'multi') return;
+    const wanted = $state.snapshot(picked);
+    if (JSON.stringify(wanted) === JSON.stringify(row.value ?? [])) return;
+    if (!(await write(row, wanted)) && sheet?.key === row.key) picked = [...(row.value ?? [])];
   }
 
   //: **ADR-0135: standby times.** Edited in a copy the sheet draws at once -
@@ -1102,6 +1121,8 @@
   }
 
   function openSheet(row) {
+    // A multi-choice tap still waiting goes before another sheet takes the copy.
+    if (pickedTimer) savePicked();
     if (row.kind === 'hardware' && !onPanel() && hwPreloaded === null) {
       preloadHardware(row);
       return;
@@ -1132,6 +1153,7 @@
       ivs = structuredClone(row.value ?? []);
       picking = null;
     }
+    if (row.type === 'multi') picked = Array.isArray(row.value) ? [...row.value] : [];
   }
 
   //: Fetched per opening, never cached: a scan is a picture of the room now.
@@ -1528,6 +1550,7 @@
   function cancelSheet() {
     // ADR-0135: standby times still waiting to be written go now.
     if (sheet?.type === 'intervals' && ivTimer) saveIntervals();
+    if (pickedTimer) savePicked();
     // A feedback step after the first goes back one step.
     if (sheet?.kind === 'hardware' && hw && hwAt > 0 && !hwUrl) {
       hwError = null;
@@ -1554,6 +1577,7 @@
   function closeSheet() {
     // ADR-0135: standby times still waiting to be written go now.
     if (sheet?.type === 'intervals' && ivTimer) saveIntervals();
+    if (pickedTimer) savePicked();
     restorePending = null;
     // Inside a level, the same button steps back before it closes.
     if (joinItem && join !== 'connecting') {
@@ -2390,12 +2414,11 @@
              ends it (ADR-0044 §7). -->
         <div class="options" data-noscrollbar>
           {#each sheet.options ?? [] as option (option)}
-            {@const selected = (sheet.value ?? []).includes(option)}
+            {@const selected = picked.includes(option)}
             <button
               class="option"
               class:is-selected={selected}
               type="button"
-              disabled={busy}
               onclick={() => toggleOne(option)}
             >
               <span class="radio radio--box"><span></span></span>

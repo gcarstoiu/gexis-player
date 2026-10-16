@@ -17,6 +17,7 @@ from pathlib import Path
 from collections.abc import Hashable
 from typing import Any, Callable
 
+from gexis_core import memo
 from gexis_core.settings import SettingsStore
 
 REGISTRY_PATH = Path(__file__).with_name("settings_registry.json")
@@ -845,6 +846,7 @@ class Settings:
             del self._status[key]
         return bool(gone)
 
+    @memo.once
     def _blocked(self, key: str) -> dict[Any, str] | None:
         """What cannot be had for this row now: pushed by `restrict`, or
         read from a restriction provider. Pushed wins."""

@@ -383,8 +383,12 @@ async def test_settings_routes(store, monkeypatch):
     async with TestClient(TestServer(server.make_app())) as client:
         body = await (await client.get("/settings")).json()
         assert body["groups"][0]["rows"][1]["key"] == "idle_timeout"
-        assert (await client.put("/settings/idle_timeout", json={"value": 7})).status == 200
+        saved = await client.put("/settings/idle_timeout", json={"value": 7})
+        assert saved.status == 200
         assert state.state.to_json()["settings_revision"] == 1
+        # The answer names the revision the save made, so the page that saved
+        # reloads once, not again when the broadcast arrives (2026-10-16).
+        assert (await saved.json())["revision"] == 1
         assert (await client.put("/settings/idle_timeout", json={"value": 99})).status == 400
         assert (await client.put("/settings/idle_url", json={"value": "x"})).status == 409
         assert (await client.put("/settings/version", json={"value": "x"})).status == 405
