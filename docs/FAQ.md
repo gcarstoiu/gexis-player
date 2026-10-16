@@ -225,7 +225,8 @@ buttons and the layout stay as they are. A phone's page keeps its own size.
 
 **Can the player run without a screen?**
 Yes. *Settings → Display → Headless* turns the screen off, and every setting
-that only affects the screen is hidden while it is on. Everything else,
+that only affects the screen is hidden while it is on, including which
+screen, its ports and its rotation. Everything else,
 including all sources and Settings on the phone, keeps working.
 
 **How do I type into a text field on the screen?**
