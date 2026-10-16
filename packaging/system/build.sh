@@ -159,8 +159,13 @@ fi
 
 if command -v systemctl >/dev/null; then
 	# Units of other packages that must not run on this device.
-	systemctl mask alsa-restore.service nmbd.service samba-ad-dc.service \
+	systemctl mask alsa-restore.service samba-ad-dc.service \
 		plymouth-quit.service plymouth-quit-wait.service >/dev/null
+	# ADR-0049 as amended 2026-10-16: nmbd answers the player's NetBIOS name,
+	# which some file managers name machines by. Every install, so an update
+	# brings it to a player that had it masked.
+	systemctl unmask nmbd.service >/dev/null 2>&1 || true
+	systemctl enable nmbd.service >/dev/null 2>&1 || true
 	if [ -z "$2" ]; then
 		# First install only; after that the core switches the renderers.
 		systemctl enable squeezelite.service gexis-bluetooth-setup.service \
@@ -172,6 +177,7 @@ if command -v systemctl >/dev/null; then
 	if [ -d /run/systemd/system ]; then
 		systemctl daemon-reload
 		systemctl start gexis-mdns-name.timer || true
+		systemctl start nmbd.service || true
 	fi
 else
 	echo "gexis-system: no systemctl here; units not masked or enabled" >&2

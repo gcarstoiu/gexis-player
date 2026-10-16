@@ -54,8 +54,8 @@
 
   function tap(row) {
     if (row.kind === 'play') {
-      if (selected === row.handle) onact?.(row, 'play');
-      else selected = row.handle;
+      // Only Play plays (George, 2026-10-16); a second tap puts the actions away.
+      selected = selected === row.handle ? null : row.handle;
     } else if (row.kind !== 'text') onopen?.(row);
   }
 

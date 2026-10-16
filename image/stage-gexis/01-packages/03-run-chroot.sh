@@ -22,6 +22,14 @@ grep -q "^[[:space:]]*read only = No$" <<<"${share}" || {
 grep -q "^[[:space:]]*guest ok = Yes$" <<<"${share}" || {
 	echo "ERROR: the pictures share is not guest-reachable (ADR-0049)" >&2; exit 1; }
 
+# ADR-0049 as amended 2026-10-16: nmbd answers names and never stands as the
+# network's master browser - asked of samba, as above.
+global="$(testparm -s -v --section-name=global 2>/dev/null || true)"
+for option in "local master" "preferred master" "domain master"; do
+	grep -q "^[[:space:]]*${option} = No$" <<<"${global}" || {
+		echo "ERROR: samba's ${option} is not No (ADR-0049 as amended)" >&2; exit 1; }
+done
+
 # ADR-0083: the backups share, asked the same way and for the same reasons.
 backups="$(testparm -s --section-name=backups 2>/dev/null || true)"
 grep -q "^[[:space:]]*path = /var/lib/gexis-core/backups$" <<<"${backups}" || {

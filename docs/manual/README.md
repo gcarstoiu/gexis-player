@@ -377,7 +377,7 @@ Changes take effect at once unless the row says otherwise.
 | Setting | What it does |
 | --- | --- |
 | Lyrion Client: Enabled | Plays your Lyrion server's music. |
-| Lyrion Client: Server | Which Lyrion server. Servers announce themselves on the network; typing an address is the fallback. |
+| Lyrion Client: Server | Which Lyrion server. Servers announce themselves on the network, each shown by its machine's name, else the library name set in Lyrion, else its address; typing an address is the fallback. |
 | Lyrion Client: Extended navigation | Lyrion's own menus on Home: My Music, Favourites, Apps (section 4). |
 | Spotify Connect: Enabled | The player appears as a Spotify Connect device. |
 | Spotify Connect: Starting volume | The loudest Spotify starts at when it takes over. Hidden with Volume on *Fixed*. |
@@ -410,7 +410,7 @@ answer*; the other shares are still mounted.
 | Screen port | Which HDMI port the screen is on. The tile and its list show what is plugged into each port - the screen, another device by its name (a sound bar or receiver), *sound* when the sound goes to that port; a port with nothing connected is greyed. A change that alters the picture restarts the player and asks *Keep this screen?*. The port chosen stays the screen, even with a touch panel on the other port. **A TV can be the screen**: it runs at 1920 x 1080 (or the largest 16:9 size below it that it offers), and since it has no touch, *Keep this screen?* is answered on the phone page, as for any screen not in the list. A listed touch screen is answered on itself, and on the phone page too when the player cannot tell that its touch works. A touch panel left on the other port is switched off. A port that is not the screen shows black. If the TV crops the edges of the picture, set its picture size to *Just Scan* or *Original*. When the TV's port also carries the sound, display standby only blacks the picture, so the music goes on. On a board with one HDMI port, the row only says what is on it. |
 | Text size | How large the writing on the player's screen is: 90 % to 130 %, 100 % as it comes. The screen changes at once; Home's tiles grow with larger text. Pictures, buttons and the layout keep their size, so long titles are cut short sooner at large sizes. A phone keeps its own size. |
 | Screen rotation | For a screen mounted the other way up. |
-| Headless | Turns the player's screen off; settings that only affect the screen are hidden while it is on. |
+| Headless | Turns the player's screen off; settings that only affect the screen are hidden while it is on, the screen in use, its ports and its rotation included. |
 | Display standby: Scheduled standby, Standby times | With *Scheduled standby* on, the screen goes off during the standby times whenever nothing is playing. Up to six times, each a start and an end - picked from a grid of hours and quarters - on the chosen days; one may run past midnight, counting for the day it starts. |
 | Display standby: Back to standby after | A screen woken during a standby time goes dark again after this long with no touch and nothing playing (2 minutes unless changed; up to 30). |
 | Touchpad: Phone touchpad, Pointer speed, Pointer style | The phone's touchpad (section 7). |
@@ -541,6 +541,9 @@ with *Back up now*, or copied into the Backups share, is never deleted.
 *Check for updates* pressed while an update is being installed - the
 automatic one at night included - shows that install's steps instead, with
 *An update is being installed. Check for updates again once it has finished.*
+
+On the player's own screen, *Update* (or *Continue*, when music is
+playing) goes straight to the full-screen update view.
 
 If something goes wrong during the install, the player puts the previous
 release back by itself. If an update stops without finishing, the panel lets

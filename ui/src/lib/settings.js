@@ -182,7 +182,16 @@ export async function writeSetting(key, value) {
   const { response, body } = got;
   // The answer is the save; the list catches up behind it. Waiting for the
   // reload held the sheet's button disabled for seconds on the player
-  // (George, 2026-10-05).
-  if (response.ok) loadSettings();
+  // (George, 2026-10-05). **Once**: the answer names the revision the save
+  // made, and the revision's broadcast for it is then not a second reload
+  // (George, 2026-10-16: two full reloads followed each tap on sofapi). A
+  // core before this sends none, and the reload runs as it did.
+  if (response.ok) {
+    if (typeof body.revision !== 'number') loadSettings();
+    else if (body.revision !== seenRevision) {
+      seenRevision = body.revision;
+      loadSettings();
+    }
+  }
   return { ok: response.ok, status: response.status, error: body.error };
 }

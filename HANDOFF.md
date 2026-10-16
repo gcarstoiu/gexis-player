@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-15 (on R2D2).
+Last updated: 2026-10-16 (on R2D2).
 
 ## Start here
 
@@ -10,45 +10,50 @@ and `phase-13b` is merged into it after each docs change. A release is built
 from a worktree made at its tag, then removed. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.0.1, the first Stable release** (2026-10-15; tag
-`v1.0.1`, release `r1.0.1`; Testing serial 43, Stable serial 1, signatures
-checked; image `image/deploy/2026-10-14-gexis-player-v1.0.1.img`, 121 checks;
-the public download verified). PR #69 merged by George; both branches carry
-it, the release worktree and branch are removed.
+**Current release: 1.0.2** on Stable (2026-10-15; Stable serial 2). **1.0.4 is
+on Testing only** (2026-10-16; tag `v1.0.4`, release `r1.0.4`, Testing serial
+46, signature verified through the API and the public URL; image
+`image/deploy/2026-10-16-gexis-player-v1.0.4.img`, 121 checks): host names on
+the network, multi-choice sheets drawn at once, one settings reload per
+save, `/settings` read once per answer - and 1.0.3 (the four bar and UI
+fixes, Testing serial 45, never promoted). **Not promoted: George decides.**
+PR #72 (`release-1.0.4`, carrying 1.0.3) is open; #71 was closed unmerged
+and its branch deleted. The README still names 1.0.2; a commit on
+`release-1.0.4` names 1.0.4 when it is promoted, before George merges.
+Not seen on a device: the jack taking over from a switched-off HDMI device
+(ADR-0141 D5). The setup network's story is in Finding 126 and the archive;
+why the bar worked before 2026-10-14 is still not known. The bar is
+ShelvesPi (1.0.2, UI preview `1.0.2+git16`); bedroompi's card is out of it.
 
-**1.0.0 was promoted and pulled back the same night** (Finding 126): on the
-11.9" bar the setup network could not be joined. 1.0.1's setup network takes
-channel 1, 6 or 11, farthest from the screens' pixel-clock multiples
-(ADR-0031 amended). **Settled 2026-10-15** (Finding 126, three test rounds,
-three research reviews): the cause is the HDMI signal - changing only the
-bar's clock (59.4 -> 35.5 MHz) brought channel 6 back; kiosk, CPU load,
-Bluetooth and power saving made no difference; nothing radio-related changed
-in our software or the OS since 0.9.1. Why it worked before: **open** - the
-adapter swapped on 2026-10-14 at 19:25 was the suspect, but a cable in its
-place fails the same way (10:13 run); what else changed physically is not on
-record. The pixel-clock rule ignores neighbours:
-on sofapi at 6-7 m only channel 6 was usable (channel 1 crowded).
-**Decided (George, 2026-10-15):** keep the rule and add the rotation - the
-next channel every 2 min until a phone joins, the join step counting down
-(ADR-0031 amended; 5335250f on `phase-13d`, not released). On bedroompi
-since 10:54 for George to try; the 2 minutes proposed for ADR-0022 as [H],
-not appended.
-The bar's test card (`bedroompi.local`, in ShelvesPi's Pi) still runs 1.0.0
-with the fix hand-copied - reflash it from the 1.0.1 image.
+**Release build output lives in `~/.local/share/gexis-release-out`**, not in
+a worktree: `packaging/release/out` in each release worktree is a symlink to
+it (excluded in `.git/info/exclude`). `reuse.py` reuses a published file
+only against a local copy of it, so the output removed with the 13a
+worktree made 1.0.3's first build want every OS file uploaded again; the
+copies were fetched back into `prior/` (1,004 files) and only the 10 changed
+ones uploaded. Make the symlink before `build.sh` in every release worktree.
 
-**Fixed on `phase-13d`, not released:** the stand-in watcher (ADR-0141 D5)
-failed every 3 s in 1.0.0/1.0.1 - a settings read from a worker thread - so
-the jack never stood in (a539d16d, LESSONS 73); once working, a missing
-output was reported every 3 s (a816c24d, now once). On sofapi since
-2026-10-15 09:47: no errors; the switch itself not yet tried with a receiver.
+**The blog (George's WordPress, tag `sound`):** eleven articles in
+`~/projects/gexis-blog/` (articles, media, the demo tools); the setup article
+left out until setup changes. George pushed them to his site as drafts with
+`push_wp.py` (2026-10-15). `schedule_wp.py` schedules nine of them, one a day
+at 18:00 from 2026-10-16 (its `ORDER`); whether George has run it is not
+recorded here. The theme (`gcarstoiu/gexis-wp-theme`, 1.0.3, pushed) has the
+`gexis/repo-doc` block, which reads FAQ, Install, Hardware, Manual and Release
+notes from `main`, cached an hour, and a Documents row on a tag's page.
 
-Suite 2,485 passed, 47 skipped (2026-10-15).
+Suite 2,485 passed, 47 skipped (2026-10-16), run with the venv in
+`~/.local/share/gexis-venv` (never under `/tmp`: LESSONS 74).
 
 **Devices.** sofapi (Waveshare 10.1"; a test machine - its Lyrion queue may
 be lost, George 2026-10-12; an SMSL USB DAC on it), the bar (ShelvesPi,
 11.9") and guestpi (IQaudIO Pi-DAC PRO, 13.3") as read 2026-10-13:
-sofapi runs a `phase-13d` preview (core and player `1.0.1+git23`, UI
-`0.15.0+git44`, 2026-10-15); the bar runs release 0.14.0; guestpi as read
+sofapi and ShelvesPi (the bar) run a `phase-13d` preview, core and UI
+`1.0.4+git3` (2026-10-16, after 1.0.4): headless hides the screen, port and
+rotation rows; no press colour on settings options and Lyrion's list rows;
+the players search keeps who answered (the phone's player switch was gone
+since 2026-10-15: an announcement for `bedroompi-2` never resolved).
+bedroompi did not answer on the network on 2026-10-16 evening; guestpi as read
 2026-10-13, core `0.10.2+git63`. **Cards flashed
 from now on have no passwordless sudo: provision test cards with
 `DEV_SUDO="yes"`** (ADR-0139).
@@ -66,29 +71,29 @@ from now on have no passwordless sudo: provision test cards with
   (g12: the undervoltage was the USB extension cord, 0x0 plugged in
   directly).
 
-**Not run on a device yet:** a screen on the bar's HDMI-A-2; a fresh card
-from 0.12.0; setup over Ethernet; the outline cut by the real mini strip (a
-stand-in bar only, headless).
+**Not run on a device yet:** the outline cut by the real mini strip (a
+stand-in bar only, headless); the headphone jack taking over from a
+switched-off HDMI device (ADR-0141 D5, fixed in 1.0.2).
 
-**Next: 1.0.0, the first public release**, once George's tests pass: the
-notes, promote to Stable with the image file (c16; the installation guide's
-download works from then), README's *Download and install* section, Raspberry
-Pi Imager - the image file and *Use custom*, our own Imager repository and the
-community application after (g14). **After it**, in order (`docs/DEVELOPMENT.md`, "Phases after the first
-public release"; refer to them by ID): **14** MPD for real 5.1/7.1
-(`ph-mpd`), **15** room correction with a USB microphone (`ph-room-correction`),
-**16** the player in Home Assistant (`ph-home-assistant`), **17** themes
-(`ph-themes`), **18** a sound bar on optical (`ph-optical`), **19** the library
-answers for itself (`ph-library`), **20** Lyrion's own menus' look
-(`ph-lyrion-menus`) - each ADR first.
+**Next: Phase 14, first use in two parts (`ph-first-use`, ADR-0149
+proposed)** - George settles its open points (the questions, answers and
+defaults), then Claude Design draws part 2 (10.1" panel, bars, phone) and the
+shorter part 1, then it is built. Still open from the release: Raspberry Pi
+Imager, the image file and *Use custom* (g14). **After it**, in order
+(`docs/DEVELOPMENT.md`, "Phases after the first public release"; refer to them
+by ID): **15** MPD for real 5.1/7.1 (`ph-mpd`), **16** room correction with a
+USB microphone (`ph-room-correction`), **17** the player in Home Assistant
+(`ph-home-assistant`), **18** themes (`ph-themes`), **19** a sound bar on
+optical (`ph-optical`), **20** the library answers for itself (`ph-library`),
+**21** Lyrion's own menus' look (`ph-lyrion-menus`) - each ADR first.
 
 The shared to-do list (an artifact with a `todos` collection; its address is
 in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-10-15, after 1.0.1's PR (#69)** (/home 224 -> 242 GB free; start-of-session
-reading ~4,800 words).
+2026-10-15, after 1.0.2's PR (#70)** (/home 229 -> 242 GB free; start-of-session
+reading ~5,900 words with the memory index).
 
 ## Phases
 
@@ -97,7 +102,9 @@ Closed: 0-12, 13, 13a, 13b, 13c, 13d (2026-10-12, Finding 114's addendum),
 `ph-lyrion-menus`) (`docs/DEVELOPMENT.md` holds each phase's acceptance criteria; the archive
 holds the order as it was argued). **From 2026-10-13 phases are numbered
 consecutively without letters, each with a stable ID** (George); the open ones
-are 14-19, listed under *Next*.
+are 14-21. **Phase 14 is `ph-first-use`** (George, 2026-10-15): setup split into
+a device part and a personal part, before MPD (now 15); ADR-0149 proposed, its
+open points owed by George, then Claude Design.
 
 ## Machines
 

@@ -79,7 +79,14 @@ flowchart LR
   URLs point straight at LMS (ADR-0020).
 - **Settings** are loaded from `/settings` (ADR-0035) and loaded again
   whenever `settings_revision` changes in the state. A change made on the
-  phone therefore reaches the panel.
+  phone therefore reaches the panel. The page that saved reloads **once**:
+  the save's answer names the revision it made, and the broadcast of that
+  revision is then not a second reload (2026-10-16).
+- **A multi-choice sheet** (Wallpaper topics) draws a copy at the tap and
+  writes it 300 ms after the last tap, or as the sheet closes, another
+  opens or Settings is left; a set the core refuses puts the copy back
+  (2026-10-16, as the standby times do). Each tap used to wait for its
+  write and a full reload, 0.4-0.65 s on sofapi.
 - **Settings' requests end** (George, 2026-10-12). One the player took but
   never answered used to leave a sheet spinning; Settings' requests now go
   through `ask()` in `lib/settings.js`, which aborts one
@@ -582,7 +589,7 @@ flowchart LR
 | `NewScreen` / `KeepScreen` | a different screen is attached / a new screen awaits confirmation | Keep is answered on the panel for a fingerprinted touch panel; another listed panel shows its buttons (`panel_buttons`) and the phone's `PhoneKeepScreen` answers too, and a TV or an unlisted screen is answered on the phone alone (`phone`; ADR-0147 D3 as amended by Finding 125). A countdown reverts (ADR-0109 decision 5). The countdown starts when the question is drawn: two frames after it appears the panel posts `/screen/shown` (repeated every 3 s until the core's `deadline` arrives); before that, `NEVER_DRAWN_S` (120 s from the core's start) still reverts |
 | `TestPattern` (panel) | `screen_check` showing | The hardware feedback's test pattern; the panel's four corner taps go back to the core. Mounted over everything but *Keep this screen?* and the update lock (ADR-0126) |
 | `UpdateModal` (Settings) | the user checks for an update | One modal, from the check to the outcome (ADR-0110 §3). It notes the status when it asks and takes any change from it as the answer, not a comparison of the player's clock with the phone's |
-| `UpdateScreen` (panel) | `update.active` | Locks the panel and stays up through the core restart and reconnect. At the end it waits for Done, or 10 min. An update that goes inactive with no *done* or *failed* (an updater killed mid-install) lets the panel go after 30 s with the socket open (`STRANDED_MS` in `App.svelte`). It reloads the page if the installed release changed (ADR-0110 §6). Separately, the panel reads its own `index.html` once a minute and reloads when the UI build it names differs from the one running, unless the update lock, setup, *Keep this screen?* or the test pattern is up (ADR-0110 as amended 2026-10-09) |
+| `UpdateScreen` (panel) | `update.active`, or *Update* tapped on the panel (`updateAsked`) | Locks the panel from the tap - not a few seconds later, when the updater first reports (George, 2026-10-15) - and stays up through the core restart and reconnect. At the end it waits for Done, or 10 min. An update that goes inactive with no *done* or *failed* (an updater killed mid-install) lets the panel go after 30 s with the socket open (`STRANDED_MS` in `App.svelte`), as does a tap whose install never starts. It reloads the page if the installed release changed (ADR-0110 §6). Separately, the panel reads its own `index.html` once a minute and reloads when the UI build it names differs from the one running, unless the update lock, setup, *Keep this screen?* or the test pattern is up (ADR-0110 as amended 2026-10-09) |
 
 ---
 

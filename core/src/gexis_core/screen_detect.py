@@ -18,7 +18,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import screens
+from . import memo, screens
 
 DRM = Path("/sys/class/drm")
 USB = Path("/sys/bus/usb/devices")
@@ -93,6 +93,7 @@ def parse_edid(data: bytes) -> tuple[str | None, str | None, tuple[int, int] | N
     return maker, name, preferred
 
 
+@memo.once
 def usb_devices(root: Path = USB) -> tuple[str, ...]:
     out = []
     for dev in sorted(root.glob("*")):
@@ -106,6 +107,7 @@ def usb_devices(root: Path = USB) -> tuple[str, ...]:
     return tuple(out)
 
 
+@memo.once
 def ports(drm: Path = DRM, usb: Path = USB) -> list[Seen]:
     """**Every HDMI port, connected or not** (ADR-0141 D4; George,
     2026-10-12: *"for video we don't even show the second hdmi port"*), in

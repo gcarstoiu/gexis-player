@@ -44,7 +44,7 @@ from aiohttp import web
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core import own_wallpapers, screen_apply
+from gexis_core import memo, own_wallpapers, screen_apply
 from gexis_core.players import Players, status_line
 from gexis_core.wallpapers import SEARCH as PIXABAY_SEARCH
 from gexis_core import backups, bluetooth_devices, skin_packs, device_name, discovery, hardware_report, lyrion_scan, lyrion_shares, problem_report, skin_previews, skins, wifi
@@ -2237,8 +2237,10 @@ class StateServer:
     async def _handle_settings(self, request: web.Request) -> web.Response:
         if self._settings is None:
             return web.json_response({"error": "settings are not wired up"}, status=503)
-        groups = self._settings.to_json()
-        await self._seed_lists(groups)
+        # Each callback's reads (ports, skins) once for this answer.
+        with memo.scope():
+            groups = self._settings.to_json()
+            await self._seed_lists(groups)
         # ADR-0048 §5: the header reads name - hostname - address, and the
         # last two are the system's own. After a rename the stored name and
         # the live hostname disagree, and that disagreement is exactly what
@@ -2373,7 +2375,12 @@ class StateServer:
         except (ValueError, KeyError, TypeError):
             return web.json_response({"error": 'body must be {"value": ...}'}, status=400)
         before = self._settings_value(key)
-        response = self._settings_call(lambda: {"key": key, "value": self._settings.set(key, value)})
+        # The answer carries the revision the save made, so the page that
+        # saved reloads the settings once, whichever of this answer and the
+        # revision's broadcast reaches it first (George, 2026-10-16: two
+        # full reloads followed every tap on the phone).
+        response = self._settings_call(lambda: {"key": key, "value": self._settings.set(key, value),
+                                                "revision": self._store.settings_revision})
         if (response.status == 200 and self._restart_device is not None
                 and self._settings_restarts(key) and self._settings_value(key) != before):
             asyncio.ensure_future(self._restart_device(key))
@@ -2494,22 +2501,27 @@ class StateServer:
             return web.json_response(
                 {"items": [a.to_item() for a in backups.available()]}
             )
-        # A discovered server is named by its address, because that is what
-        # the setting stores; the human name is the line underneath.
+        # A found server is shown by its name and carries its address, which
+        # is what the setting stores and what choosing it writes (George,
+        # 2026-10-16: host names rather than addresses).
         current = str(self._settings.value("lms_server") or "")
         items = []
         own = self._own_server() if self._own_server else None
         if own:
-            items.append({"name": own, "meta": "This player's own server", "bars": None,
+            items.append({"name": device_name.hostname() or own, "address": own,
+                          "meta": f"This player's own server · {own}", "bars": None,
                           "state": "current" if own == current else "found"})
         for server in await discovery.find_servers():
             if own and server["address"] == own:
                 continue
-            meta = " · ".join(part for part in (server["name"], server["version"]) if part)
+            name = discovery.label(server)
+            meta = " · ".join(part for part in (server["name"] or "Lyrion server", server["version"],
+                                                server["address"] if name != server["address"] else "") if part)
             items.append(
                 {
-                    "name": server["address"],
-                    "meta": meta or "Lyrion server",
+                    "name": name,
+                    "address": server["address"],
+                    "meta": meta,
                     "bars": None,
                     "state": "current" if server["address"] == current else "found",
                 }

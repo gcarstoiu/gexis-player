@@ -225,7 +225,8 @@ buttons and the layout stay as they are. A phone's page keeps its own size.
 
 **Can the player run without a screen?**
 Yes. *Settings → Display → Headless* turns the screen off, and every setting
-that only affects the screen is hidden while it is on. Everything else,
+that only affects the screen is hidden while it is on, including which
+screen, its ports and its rotation. Everything else,
 including all sources and Settings on the phone, keeps working.
 
 **How do I type into a text field on the screen?**
@@ -541,7 +542,7 @@ Lyrion Client → Server*.
 **Where can the player's Lyrion server find music?**
 The player's own Music folder (shared on the network), USB disks, and
 network shares (SMB or NFS). Under *Network shares*, a scan lists the servers
-on the network and then their shares, with a login where needed; a share
+on the network by their names, once each, and then their shares, with a login where needed; a share
 that does not announce itself can be added with *Add by address*.
 
 **How long does the first scan take?**
@@ -690,6 +691,13 @@ does not downgrade: the player stays where it is until Stable passes it.
 **Do Plexamp and the Lyrion server update?**
 Yes, with the player: a new version of either comes as part of the player
 update that brings it.
+
+**How do I find the player's shares from a computer or phone?**
+The player shares its Pictures and Backups folders (and Music, with the
+Lyrion Server on). They appear under the player's name: in Finder's
+sidebar and Windows' network view, and in file managers that browse the
+local network, which show it in capitals. Or open
+`smb://<player>.local` directly.
 
 **How do I back up the player before re-flashing the card?**
 *Settings → System → Back up now* writes the settings, the library's

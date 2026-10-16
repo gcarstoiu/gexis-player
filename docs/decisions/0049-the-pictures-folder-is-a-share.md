@@ -120,3 +120,30 @@ there** — which is what keeps this decision cheap to reverse.
   the most machinery: nothing on this image handles removable media today.
 - **SSH, documented** (option D). Free, and what happens now. It leaves the
   row unusable by anyone who is not already at a terminal.
+
+## Amended 2026-10-16: `nmbd` on, answering names only
+
+**George, 2026-10-16:** *"The names of the panels are not showing up in a
+samba network search"*, with a phone file manager's *Local Network* list as
+evidence: the NAS (Ark) and the Unraid server (Tower) by name, every player
+by its address. That app names what it finds by NetBIOS, which the players
+did not answer: §4 kept `nmbd` masked. Asked to choose between turning it on
+and leaving it off, George chose *"Turn it on"*.
+
+**What changes:**
+- `nmbd` is unmasked and enabled on every install of `gexis-system`, so an
+  update brings it to a player already in use. The image ships it enabled,
+  and the image build checks that.
+- **It answers names and takes nothing else on**: `local master`,
+  `preferred master` and `domain master` are `no`, so a player never stands
+  for election as the network's master browser against the NAS or a
+  Windows PC. Its NetBIOS name is Samba's default, the host name in
+  capitals (15 characters at most).
+- The mDNS announcement (§4) stays as it was: Finder and Windows keep
+  finding the share that way.
+
+**What it costs:** one more daemon, listening on UDP 137 and 138 on the
+home network, and replying to name queries and broadcasts. §4's reason
+for not running it, that the network already has a working discovery
+protocol, still holds for Macs and Windows. It does not hold for apps that
+know only NetBIOS, and those are the ones George uses.

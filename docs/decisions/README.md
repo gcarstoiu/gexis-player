@@ -70,7 +70,7 @@ been written properly. **0098 has no record either.**
 | [0046](0046-fixed-output-hides-the-slider.md) | Fixed output hides the volume control everywhere, with a padlock and a reason, rather than disabling it | Accepted 2026-09-20, built 2026-09-23; implements 0018's unbuilt half |
 | [0047](0047-the-idle-screen-gains-backgrounds-and-weather.md) | The idle screen gains four backgrounds and a weather stack, both keyed and both optional | Accepted 2026-09-21: Pixabay wallpapers, Open-Meteo weather; the external page becomes one option. Amends 0033 |
 | [0048](0048-how-the-device-name-reaches-four-services.md) | How the one device name reaches squeezelite, go-librespot, BlueZ and the hostname | **Proposed** 2026-09-20: nothing applied while the device runs, not even the hostname |
-| [0049](0049-the-pictures-folder-is-a-share.md) | The on-device pictures folder is an SMB share | Accepted 2026-09-21: one guest-writable directory; Debian's default shares off |
+| [0049](0049-the-pictures-folder-is-a-share.md) | The on-device pictures folder is an SMB share | Accepted 2026-09-21: one guest-writable directory; Debian's default shares off. Amended 2026-10-16: `nmbd` on, answering names only (never master browser) |
 | [0050](0050-skin-previews-are-the-skins-own-picture.md) | A skin's preview is the skin's own picture | Accepted 2026-09-21: each skin's 1280x800 `screen.bgr`; no generated thumbnails or cache |
 | [0051](0051-the-visualiser-reads-its-selection-from-a-file.md) | The visualiser reads its skin selection from a file | Accepted 2026-09-22: `/run/gexis/visualisation.json`, polled; corpus spans both template directories. Amends 0019, 0026, 0050 |
 | [0052](0052-the-volume-path.md) | The volume path: what moves the level, how fast, and how loud it may get on its own | Accepted 2026-09-22, amended the same day: a ramp to each target, no restore ceiling; `max_ceiling` tops every scale |
@@ -169,6 +169,7 @@ been written properly. **0098 has no record either.**
 | [0146](0146-the-meters-follow-the-volume-again-with-a-gain.md) | The meters follow the volume visibly, with a gain of their own | Accepted 2026-10-13: bars the whole cut, needles half, Fixed unchanged; published at every start; a Gain row −10..+20 dB; the needles' share a row (Half the drop / Like a real amplifier) |
 | [0147](0147-a-tv-as-the-screen.md) | A TV as the screen, by choosing its port | Accepted 2026-10-13: the Screen port choice wins; 1080p at most; Keep from the phone; the panel's touch off. Amended 2026-10-14 (Finding 125): a listed panel shows its own Keep, and the phone answers too unless its touch is fingerprinted |
 | [0148](0148-text-size.md) | Text size | Accepted 2026-10-14: 90-130 % on the player's screen; Home's tiles grow; a zoom set aside |
+| [0149](0149-first-use-in-two-parts.md) | First use in two parts: set up, then make it yours | **Proposed** 2026-10-15: part 1 only what the player needs; part 2 on the phone, question-led, ending in the downloads |
 
 ## Cross-cutting rules
 

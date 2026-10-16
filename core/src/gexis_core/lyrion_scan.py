@@ -43,7 +43,11 @@ class Server:
 
 def parse_browse(output: str, own: set[str] = frozenset()) -> list[Server]:
     """`avahi-browse -rtp` lines: `=;iface;proto;name;type;domain;host;address;port;txt`.
-    One per server and kind, IPv4 first; this device's own left out."""
+    One per machine and kind, named by the machine's host name; this
+    device's own left out. **One machine can announce one service under two
+    names** (found 2026-10-16: a player announced as both `BEDROOMPI` and
+    `bedroompi-2`, both on `bedroompi-2.local`), and the scan showed it
+    twice; George asked for host names rather than addresses."""
     seen: dict[tuple[str, str], Server] = {}
     for line in output.splitlines():
         parts = line.split(";")
@@ -55,7 +59,9 @@ def parse_browse(output: str, own: set[str] = frozenset()) -> list[Server]:
             continue
         # By its announced name (Tower.local), which survives a new DHCP
         # address; the player resolves .local names through mDNS.
-        seen[(name, kind)] = Server(name=name, host=host or address, kind=kind)
+        host = host or address
+        label = host.removesuffix(".local") if host != address else name
+        seen[(host.lower(), kind)] = Server(name=label, host=host, kind=kind)
     return sorted(seen.values(), key=lambda s: (s.name.lower(), s.kind))
 
 
