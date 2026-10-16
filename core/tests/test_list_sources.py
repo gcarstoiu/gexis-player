@@ -7,6 +7,7 @@ servers over UDP broadcast. Bluetooth's trusted devices are 9f's.
 from __future__ import annotations
 
 import asyncio
+import os
 
 import pytest
 
@@ -378,9 +379,36 @@ async def test_the_server_in_use_is_marked_current(tmp_path, monkeypatch):
     async with client_for(tmp_path) as client:
         items = (await (await client.get("/settings/lms_server/items")).json())["items"]
     assert [i["state"] for i in items] == ["current", "found"]
-    assert items[0]["meta"] == "Home · 9.1.1"
+    # Shown by a name, carrying the address that choosing it writes.
+    assert [(i["name"], i["address"]) for i in items] == [("Home", "1.2.3.4:9000"), ("5.6.7.8:9000", "5.6.7.8:9000")]
+    assert items[0]["meta"] == "Home · 9.1.1 · 1.2.3.4:9000"
     # A server that answers with no name at all still has to read as one.
     assert items[1]["meta"] == "Lyrion server"
+
+
+def test_a_found_server_is_named_by_its_host_then_its_own_name_then_its_address():
+    """George, 2026-10-16: host names rather than addresses. Lyrion's default
+    library name tells servers apart no better than nothing."""
+    base = {"address": "1.2.3.4:9000", "version": "9.1.1", "uuid": ""}
+    assert discovery.label({**base, "name": "Lyrion Music Server", "host": "Nuc"}) == "Nuc"
+    assert discovery.label({**base, "name": "Kitchen library", "host": ""}) == "Kitchen library"
+    assert discovery.label({**base, "name": "Lyrion Music Server (Docker)", "host": ""}) == "1.2.3.4:9000"
+    assert discovery.label({**base, "name": ""}) == "1.2.3.4:9000"
+
+
+@pytest.mark.asyncio
+async def test_a_host_name_comes_from_mdns_and_its_absence_is_no_error(tmp_path, monkeypatch):
+    tool = tmp_path / "avahi-resolve"
+    tool.write_text('#!/bin/sh\n[ "$2" = 10.0.0.1 ] && printf "10.0.0.1\\tNuc.local\\n"\n'
+                    '[ "$2" = 10.0.0.2 ] && sleep 5\nexit 0\n')
+    tool.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{tmp_path}:{os.environ['PATH']}")
+    assert await discovery.host_name("10.0.0.1") == "Nuc"
+    assert await discovery.host_name("10.0.0.3") == ""
+    # A machine that never answers costs the timeout, not the sheet.
+    assert await discovery.host_name("10.0.0.2", timeout_s=0.2) == ""
+    monkeypatch.setenv("PATH", str(tmp_path / "nothing"))
+    assert await discovery.host_name("10.0.0.1") == ""
 
 
 @pytest.mark.asyncio
@@ -483,8 +511,8 @@ async def test_this_player_s_own_server_is_offered_not_chosen(tmp_path, monkeypa
     before = settings.value("lms_server")
     async with TestClient(TestServer(server.make_app())) as client:
         items = (await (await client.get("/settings/lms_server/items")).json())["items"]
-    assert [i["name"] for i in items] == ["10.0.0.5:9000", "1.2.3.4:9000"], "first, and only once"
-    assert items[0]["meta"] == "This player's own server" and items[0]["state"] == "found"
+    assert [i["address"] for i in items] == ["10.0.0.5:9000", "1.2.3.4:9000"], "first, and only once"
+    assert items[0]["meta"] == "This player's own server · 10.0.0.5:9000" and items[0]["state"] == "found"
     assert settings.value("lms_server") == before, "offered, never chosen"
 
 

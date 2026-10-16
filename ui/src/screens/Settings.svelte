@@ -1270,12 +1270,14 @@
       closeSheet();
       // Tapping the server already in use says "that one", so the sheet
       // closes and nothing is written.
-      if (String(row.value ?? '') === item.name) return;
+      // A found server is shown by its name and stored by its address.
+      const address = item.address ?? item.name;
+      if (String(row.value ?? '') === address) return;
       // The daemon reads this at the next start: moving a running player to
       // another server means dropping its subscription, re-resolving the
       // player and re-arbitrating. Said plainly rather than left to be
       // discovered.
-      if (await write(row, item.name)) flash(`${row.label} set — restart to use it`);
+      if (await write(row, address)) flash(`${row.label} set — restart to use it`);
       return;
     }
     if (row.kind === 'backup') {

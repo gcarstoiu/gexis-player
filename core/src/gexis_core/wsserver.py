@@ -2494,22 +2494,27 @@ class StateServer:
             return web.json_response(
                 {"items": [a.to_item() for a in backups.available()]}
             )
-        # A discovered server is named by its address, because that is what
-        # the setting stores; the human name is the line underneath.
+        # A found server is shown by its name and carries its address, which
+        # is what the setting stores and what choosing it writes (George,
+        # 2026-10-16: host names rather than addresses).
         current = str(self._settings.value("lms_server") or "")
         items = []
         own = self._own_server() if self._own_server else None
         if own:
-            items.append({"name": own, "meta": "This player's own server", "bars": None,
+            items.append({"name": device_name.hostname() or own, "address": own,
+                          "meta": f"This player's own server · {own}", "bars": None,
                           "state": "current" if own == current else "found"})
         for server in await discovery.find_servers():
             if own and server["address"] == own:
                 continue
-            meta = " · ".join(part for part in (server["name"], server["version"]) if part)
+            name = discovery.label(server)
+            meta = " · ".join(part for part in (server["name"] or "Lyrion server", server["version"],
+                                                server["address"] if name != server["address"] else "") if part)
             items.append(
                 {
-                    "name": server["address"],
-                    "meta": meta or "Lyrion server",
+                    "name": name,
+                    "address": server["address"],
+                    "meta": meta,
                     "bars": None,
                     "state": "current" if server["address"] == current else "found",
                 }

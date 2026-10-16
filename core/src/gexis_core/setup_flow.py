@@ -520,9 +520,9 @@ class SetupFlow:
                     logger.warning("setup: lms_server not set: %s", exc)
                     return {"state": "none"}
                 self._set_quietly("lms_enabled", True)
-            return {"state": "found", "name": server.get("name") or server["address"], "address": server["address"]}
+            return {"state": "found", "name": discovery.label(server), "address": server["address"]}
         if servers:
-            return {"state": "several", "names": [s.get("name") or s["address"] for s in servers]}
+            return {"state": "several", "names": [discovery.label(s) for s in servers]}
         return {"state": "none"}
 
 
