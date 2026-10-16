@@ -79,7 +79,14 @@ flowchart LR
   URLs point straight at LMS (ADR-0020).
 - **Settings** are loaded from `/settings` (ADR-0035) and loaded again
   whenever `settings_revision` changes in the state. A change made on the
-  phone therefore reaches the panel.
+  phone therefore reaches the panel. The page that saved reloads **once**:
+  the save's answer names the revision it made, and the broadcast of that
+  revision is then not a second reload (2026-10-16).
+- **A multi-choice sheet** (Wallpaper topics) draws a copy at the tap and
+  writes it 300 ms after the last tap, or as the sheet closes, another
+  opens or Settings is left; a set the core refuses puts the copy back
+  (2026-10-16, as the standby times do). Each tap used to wait for its
+  write and a full reload, 0.4-0.65 s on sofapi.
 - **Settings' requests end** (George, 2026-10-12). One the player took but
   never answered used to leave a sheet spinning; Settings' requests now go
   through `ask()` in `lib/settings.js`, which aborts one
