@@ -58,9 +58,10 @@
     page;
     selected = null;
   });
+  //: **Only Play plays** (George, 2026-10-16): a second tap on the selected
+  //: row puts its actions away, as Browse's columns do; it used to play.
   function tapLeaf(row) {
-    if (selected === row.handle) onact?.(row, 'play');
-    else selected = row.handle;
+    selected = selected === row.handle ? null : row.handle;
   }
   //: **A search opens on its field, the phone's keyboard up** (George,
   //: 2026-10-14: "when opening a search ... the cursor should be in the
