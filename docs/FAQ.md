@@ -541,7 +541,7 @@ Lyrion Client → Server*.
 **Where can the player's Lyrion server find music?**
 The player's own Music folder (shared on the network), USB disks, and
 network shares (SMB or NFS). Under *Network shares*, a scan lists the servers
-on the network and then their shares, with a login where needed; a share
+on the network by their names, once each, and then their shares, with a login where needed; a share
 that does not announce itself can be added with *Add by address*.
 
 **How long does the first scan take?**
