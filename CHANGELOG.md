@@ -6,6 +6,23 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.0.5 — 16 October 2026
+
+### New
+
+- In file managers that browse the local network, players appear by their name instead of their address.
+
+### Fixed
+
+- The switch to other players, at the top of Settings on the phone, shows again: one player that did not answer on the network hid all the others.
+- With Headless on, Settings no longer shows the screen in use, its ports or its rotation.
+- In Settings, ticking and unticking an option shows at once, without the row staying lit after the tap.
+- In lists from Lyrion's apps, a tapped track shows only its selection, without lighting up first.
+
+### Good to know
+
+- In lists from Lyrion's apps and in their search, a second tap on a selected track puts its actions away. Only Play plays it.
+
 ## 1.0.4 — 16 October 2026
 
 ### Fixed
