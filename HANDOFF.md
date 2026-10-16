@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-15 (on R2D2).
+Last updated: 2026-10-16 (on R2D2).
 
 ## Start here
 
@@ -10,27 +10,34 @@ and `phase-13b` is merged into it after each docs change. A release is built
 from a worktree made at its tag, then removed. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.0.2** (2026-10-15; tag `v1.0.2`, release `r1.0.2`;
-Testing serial 44, Stable serial 2, verified; image
-`image/deploy/2026-10-15-gexis-player-v1.0.2.img`, 121 checks; the public
-download verified byte for byte). PR #70 merged by George; post-merge steps
-and the routine clean-up done. Not seen on a device: the jack taking over
-from a switched-off HDMI device (ADR-0141 D5). The setup network's story -
-1.0.0 pulled back, the screen's HDMI signal jamming one channel, the
-rotation - is in Finding 126 and the archive; why the bar worked before
-2026-10-14 is still not known. The bar is ShelvesPi again (1.0.2, with a UI
-preview `1.0.2+git16` since 2026-10-15: the update screen from the tap, Lyrion's
-apps across the bar, no empty facts column, rows that light up instead of
-shrinking on a tap); bedroompi's card is out of it.
+**Current release: 1.0.2** on Stable (2026-10-15; Stable serial 2). **1.0.3 is
+on Testing only** (2026-10-16; tag `v1.0.3`, release `r1.0.3`, Testing serial
+45, signature verified through the API and the public URL; image
+`image/deploy/2026-10-16-gexis-player-v1.0.3.img`, 121 checks): the four bar
+and UI fixes previewed on ShelvesPi. **Not promoted: George is checking it.**
+PR #71 (`release-1.0.3`) is open; the README still names 1.0.2, and a commit
+on that branch names 1.0.3 when it is promoted, before George merges.
+Not seen on a device: the jack taking over from a switched-off HDMI device
+(ADR-0141 D5). The setup network's story is in Finding 126 and the archive;
+why the bar worked before 2026-10-14 is still not known. The bar is
+ShelvesPi (1.0.2, UI preview `1.0.2+git16`); bedroompi's card is out of it.
 
-**The blog (George's WordPress, tag `sound`), 2026-10-15:** eleven article
-drafts with demo-library screenshots in `~/projects/gexis-blog/` (articles,
-media, `import_wp.py` into the LOCAL copy only, the demo tools); the setup
-article left out until setup changes. The theme repository has the
-`gexis/repo-doc` block and, in 1.0.3, Documents on a tag (commits 9ea5796
-and 2ca893a, **not pushed**, `dist/gexis.zip` built): FAQ, Install, Hardware,
-Manual and Release notes read from `main`, cached an hour, tagged `sound` and
-listed above its posts. Nothing published.
+**Release build output lives in `~/.local/share/gexis-release-out`**, not in
+a worktree: `packaging/release/out` in each release worktree is a symlink to
+it (excluded in `.git/info/exclude`). `reuse.py` reuses a published file
+only against a local copy of it, so the output removed with the 13a
+worktree made 1.0.3's first build want every OS file uploaded again; the
+copies were fetched back into `prior/` (1,004 files) and only the 10 changed
+ones uploaded. Make the symlink before `build.sh` in every release worktree.
+
+**The blog (George's WordPress, tag `sound`):** eleven articles in
+`~/projects/gexis-blog/` (articles, media, the demo tools); the setup article
+left out until setup changes. George pushed them to his site as drafts with
+`push_wp.py` (2026-10-15). `schedule_wp.py` schedules nine of them, one a day
+at 18:00 from 2026-10-16 (its `ORDER`); whether George has run it is not
+recorded here. The theme (`gcarstoiu/gexis-wp-theme`, 1.0.3, pushed) has the
+`gexis/repo-doc` block, which reads FAQ, Install, Hardware, Manual and Release
+notes from `main`, cached an hour, and a Documents row on a tag's page.
 
 Suite 2,485 passed, 47 skipped (2026-10-16), run with the venv in
 `~/.local/share/gexis-venv` (never under `/tmp`: LESSONS 74).
