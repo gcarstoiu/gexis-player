@@ -1098,3 +1098,11 @@ def test_a_backup_is_on_the_card_before_it_has_its_name(tmp_path, monkeypatch):
     backups.create("gexis", out, root)
     assert events[:2] == ["fsync", "rename"], events
     assert events.count("fsync") >= 2, "and the folder after the rename"
+
+
+def test_a_small_backup_reads_in_kilobytes_not_as_nothing():
+    """A fresh player's backup is about 12 KB: it read "0.0 MB" beside one
+    that was really empty (the bar, 2026-10-16)."""
+    item = backups.Archive("gexis-bar-20261015-124739.tgz", 0.0, 12548).to_item()
+    assert item["meta"].endswith("· 12 KB")
+    assert backups.Archive("gexis-bar-20261011-160331.tgz", 0.0, 612394 * 4).to_item()["meta"].endswith("· 2.3 MB")

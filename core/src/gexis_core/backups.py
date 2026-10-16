@@ -194,7 +194,7 @@ class Archive:
         when = time.strftime("%-d %b %Y, %H:%M", time.localtime(self.made))
         item = {
             "name": self.name,
-            "meta": f"{when} · {self.size / 1_048_576:.1f} MB"
+            "meta": f"{when} · {_size(self.size)}"
                     + (" · before an update" if AUTOMATIC.match(self.name) else ""),
             "state": "saved",
             "bars": None,
@@ -203,6 +203,14 @@ class Archive:
             # Listed so it can be forgotten, never offered for a restore.
             item.update(meta=f"{when} · {self.problem}", broken=True)
         return item
+
+
+def _size(size: int) -> str:
+    """In KB under a megabyte (2026-10-16): a fresh player's 12 KB backup
+    read "0.0 MB", beside one that really was empty."""
+    if size < 1_048_576:
+        return f"{max(1, round(size / 1024))} KB"
+    return f"{size / 1_048_576:.1f} MB"
 
 
 def _problem(path: Path, size: int) -> str | None:
