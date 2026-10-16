@@ -152,10 +152,9 @@
   //: the typed name (ADR-0022, ADR-0048 §5).
   const device = $derived($settingsDevice);
   const deviceName = $derived(device.name ?? valueOf('device_name') ?? 'gexis');
-  const subtitle = $derived(
+  const facts = $derived(
     [deviceName, device.hostname ? `${device.hostname}.local` : hostOf(deviceName), device.address]
       .filter(Boolean)
-      .join('  \u00b7  ')
   );
   const sheet = $derived(sheetKey ? asSheet(rowOf(sheetKey)) : null);
   //: ADR-0125: the problem report - built on the player, sent from here.
@@ -1652,7 +1651,11 @@
         </div>
         <!-- Shown at both widths: the panel is where someone types the
              name, so it is where the resolved host has to sit beside it. -->
-        <div class="subtitle">{subtitle}</div>
+        <!-- **Each fact whole** (George, 2026-10-16): on a narrow screen
+             the address goes to the next line instead of being cut off. -->
+        <div class="subtitle subtitle--facts">
+          {#each facts as fact, i (i)}<span class="fact">{fact}</span>{/each}
+        </div>
       </div>
     </div>
 
@@ -2914,6 +2917,21 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .subtitle--facts {
+    white-space: normal;
+    overflow: visible;
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 0.9em;
+    row-gap: 2px;
+  }
+  .fact {
+    white-space: nowrap;
+  }
+  .fact + .fact::before {
+    content: '\00b7';
+    margin-right: 0.9em;
   }
 
   .error {
