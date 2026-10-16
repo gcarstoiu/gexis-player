@@ -298,7 +298,8 @@ Which rows reveal actions:
 - **Browse's three columns** — artist, album and track. A tap selects the row
   and reveals its actions; tapping the same row again puts them away.
 - **Leaf rows in any list** — tracks and stations. First tap reveals, second
-  tap plays.
+  tap puts the actions away; only *Play* plays (George, 2026-10-16; it was
+  "second tap plays").
 - **Popular tracks on the artist page.**
 
 Which rows have none, because they have no selected state:
