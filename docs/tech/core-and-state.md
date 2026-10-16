@@ -309,7 +309,15 @@ row mechanics `list`, `warn`, `onlyWhen`, `optionsFrom`, `picker` and
   `GRACE_S` = 60 s, then *Not connected* (`bad`). A failed unit is `bad`
   at once.
 - Every successful `set` calls the row's callback and then bumps
-  `settings_revision`, so every open client refetches.
+  `settings_revision`, so every open client refetches. `PUT
+  /settings/{key}` answers `{key, value, revision}`, the revision being the
+  one the save made.
+- **`GET /settings` reads each source once** (`memo.py`, 2026-10-16): built
+  inside `memo.scope()`, the functions marked `@memo.once` (screen ports, USB
+  devices, installed skins, a row's blocked choices) answer each set of
+  arguments once for that answer and are read fresh for the next, never
+  kept between answers. 0.14 s became 0.06 s on sofapi; while it ran,
+  every other request to the player waited.
 
 ### Migrations
 
