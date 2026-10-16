@@ -96,6 +96,17 @@ async def find_servers(listen_s: float = LISTEN_S) -> list[dict[str, str]]:
     except OSError as exc:
         logger.info("discovery: cannot open a socket: %s", exc)
         return []
+    # Each machine's name asked for as soon as it answers, so the names cost
+    # nothing beyond the listening (measured on the bar, 2026-10-16: asked
+    # afterwards, a server with no name made the sheet 4.5 s instead of 2.5).
+    names: dict[str, asyncio.Task] = {}
+
+    def ask_names() -> None:
+        for address in protocol.found:
+            ip = address.rsplit(":", 1)[0]
+            if ip not in names:
+                names[ip] = asyncio.ensure_future(host_name(ip))
+
     try:
         deadline = loop.time() + listen_s
         while loop.time() < deadline:
@@ -105,10 +116,12 @@ async def find_servers(listen_s: float = LISTEN_S) -> list[dict[str, str]]:
                 logger.info("discovery: cannot broadcast: %s", exc)
                 break
             await asyncio.sleep(min(RETRY_S, max(0.0, deadline - loop.time())))
+            ask_names()
     finally:
         transport.close()
+    ask_names()
     found = sorted(protocol.found.items())
-    hosts = await asyncio.gather(*(host_name(address.rsplit(":", 1)[0]) for address, _ in found))
+    hosts = await asyncio.gather(*(names[address.rsplit(":", 1)[0]] for address, _ in found))
     return [
         {
             "address": address,
