@@ -139,6 +139,10 @@ for gone in /etc/systemd/system/gexis-bluetooth-trust.service \
 done
 t=$(dfs "stat /etc/systemd/system/alsa-restore.service" | grep -o 'Fast link dest: ".*"')
 [ "$t" = 'Fast link dest: "/dev/null"' ] && ok "alsa-restore masked" || bad "alsa-restore mask: '${t:-missing}'"
+# ADR-0049 as amended 2026-10-16: nmbd answers the player's NetBIOS name.
+t=$(dfs "stat /etc/systemd/system/multi-user.target.wants/nmbd.service" | grep -o 'Fast link dest: ".*"')
+[ "$t" = 'Fast link dest: "/usr/lib/systemd/system/nmbd.service"' ] && ok "nmbd enabled" || bad "nmbd enablement: '${t:-missing}'"
+dfs "stat /etc/systemd/system/nmbd.service" | grep -q 'Inode:' && bad "nmbd still masked" || ok "nmbd not masked"
 dfs "stat /etc/systemd/system/default.target" | grep -q 'Inode:' && bad "default.target written" || ok "default.target not written"
 
 echo "== venv code identical to core/src"
