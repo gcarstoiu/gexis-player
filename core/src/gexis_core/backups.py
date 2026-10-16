@@ -150,8 +150,11 @@ WAL_FILES = ("-wal", "-shm")
 
 #: `gexis-<name>-<stamp>.tgz`. The name is the device's, so an archive says
 #: where it came from - ADR-0083 does not prevent restoring one device's
-#: archive onto another, and this is what makes it visible.
-NAME = re.compile(r"^gexis-.*-\d{8}-\d{6}\.tgz$")
+#: archive onto another, and this is what makes it visible. **`.tgz.gz` too**
+#: (found 2026-10-16): the download went out as `application/gzip`, and
+#: Firefox and others saved it with `.gz` added - the same archive, which
+#: copied back into the share was not listed.
+NAME = re.compile(r"^gexis-.*-\d{8}-\d{6}\.tgz(?:\.gz)?$")
 
 #: **The backup the updater asks for before each update** (George,
 #: 2026-10-12, answer 3: pruned, the three most recent kept). Named
@@ -847,7 +850,7 @@ def inspect(path: Path, known_migrations: int, schema_key: str = "_settings_sche
     schema = values.get(schema_key)
     # When it was made: the time in its name, as `create` writes it, or the
     # newest file in it - a renamed file keeps its contents' times.
-    stamp = re.search(r"-(\d{8}-\d{6})\.tgz$", path.name)
+    stamp = re.search(r"-(\d{8}-\d{6})\.tgz(?:\.gz)?$", path.name)
     try:
         made = time.mktime(time.strptime(stamp.group(1), "%Y%m%d-%H%M%S")) if stamp else None
     except ValueError:

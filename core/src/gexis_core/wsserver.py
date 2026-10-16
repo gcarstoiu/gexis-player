@@ -1500,7 +1500,10 @@ class StateServer:
         with source:
             response = web.StreamResponse(headers={
                 "Content-Disposition": f'attachment; filename="{name}"',
-                "Content-Type": "application/gzip",
+                # A plain file, not `application/gzip`: browsers added `.gz`
+                # to a name already ending `.tgz` (2026-10-16), and Restore
+                # did not list what was copied back.
+                "Content-Type": "application/octet-stream",
                 "Cache-Control": "no-store",
             })
             response.content_length = os.fstat(source.fileno()).st_size

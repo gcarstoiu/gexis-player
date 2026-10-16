@@ -508,6 +508,20 @@ def test_made_is_the_time_in_the_name_or_the_newest_file(tmp_path):
 
 # -- ADR-0083 as amended 2026-10-08: a backup downloaded ------------------------
 
+def test_a_backup_saved_by_a_browser_as_tgz_gz_is_still_listed_and_read(tmp_path):
+    """Found 2026-10-16 on the bar: downloaded, saved with `.gz` added,
+    copied back into the share - and not in the Restore list."""
+    root, out = _real_device(tmp_path / "root", VALUES), tmp_path / "out"
+    name = backups.create("gexis", out, root)
+    stamp = time.mktime(time.strptime(name[-19:-4], "%Y%m%d-%H%M%S"))
+    saved = out / f"{name}.gz"
+    (out / name).rename(saved)
+    assert [a.name for a in backups.available(out)] == [saved.name]
+    assert backups.path_of(saved.name, out) == saved
+    # The time still read from the name, the setup's inspection unchanged.
+    assert backups.inspect(saved, 5)["made"] == stamp
+
+
 def test_a_download_is_one_of_ours_by_name(tmp_path):
     root, out = _device(tmp_path / "root"), tmp_path / "out"
     name = backups.create("gexis", out, root)
@@ -534,6 +548,9 @@ async def test_the_route_sends_it_as_a_file_to_save(tmp_path, monkeypatch):
         r = await client.get(f"/backups/{name}")
         assert r.status == 200
         assert r.headers["Content-Disposition"] == f'attachment; filename="{name}"'
+        # A plain file: as `application/gzip` browsers saved it as .tgz.gz
+        # (2026-10-16).
+        assert r.headers["Content-Type"] == "application/octet-stream"
         assert await r.read() == (out / name).read_bytes()
         assert (await client.get("/backups/..%2Fsettings.db")).status in (400, 404)
         assert (await client.get("/backups/gexis-gone-20260101-000000.tgz")).status == 404
