@@ -696,7 +696,7 @@ update that brings it.
 The player shares its Pictures and Backups folders (and Music, with the
 Lyrion Server on). They appear under the player's name: in Finder's
 sidebar and Windows' network view, and in file managers that browse the
-local network, which show it in capitals (for example LIVINGROOM). Or open
+local network, which show it in capitals. Or open
 `smb://<player>.local` directly.
 
 **How do I back up the player before re-flashing the card?**
