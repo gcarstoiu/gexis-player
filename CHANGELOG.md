@@ -6,6 +6,15 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.0.4 — 16 October 2026
+
+### Fixed
+
+- When looking for a Lyrion server, each one is shown by its machine's name, or by the name it was given in Lyrion, rather than by its address.
+- When scanning the network for shares, a machine announced under two names is listed once, by its name.
+- In lists with several choices, such as wallpaper topics, a tap shows at once, and a quick second tap no longer undoes the first.
+- Settings opens and refreshes faster, and the rest of the player waits less while it does.
+
 ## 1.0.3 — 16 October 2026
 
 ### Fixed
