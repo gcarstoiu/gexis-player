@@ -362,6 +362,13 @@ its own, so it failed every 3 s and the jack never stood in. Its tests only
 asserted the source's shape and passed. Run the changed code once - on a
 device or in a test that executes it - and read the log after a change.
 
+**74. A test environment emptied by the system's clean-up** (2026-10-16,
+before 1.0.3). The test venv lived under `/tmp`, where the system deletes
+files unused for 10 days: numpy, OpenCV and Pillow went, the tests that need
+them skipped themselves, and one that does not failed - "47 skipped" became
+"55 skipped". Keep the venv out of `/tmp`, and treat a change in the skip
+count as a failure to explain.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target, the check quietly
