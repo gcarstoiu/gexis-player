@@ -10,13 +10,16 @@ and `phase-13b` is merged into it after each docs change. A release is built
 from a worktree made at its tag, then removed. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.0.2** on Stable (2026-10-15; Stable serial 2). **1.0.3 is
-on Testing only** (2026-10-16; tag `v1.0.3`, release `r1.0.3`, Testing serial
-45, signature verified through the API and the public URL; image
-`image/deploy/2026-10-16-gexis-player-v1.0.3.img`, 121 checks): the four bar
-and UI fixes previewed on ShelvesPi. **Not promoted: George is checking it.**
-PR #71 (`release-1.0.3`) is open; the README still names 1.0.2, and a commit
-on that branch names 1.0.3 when it is promoted, before George merges.
+**Current release: 1.0.2** on Stable (2026-10-15; Stable serial 2). **1.0.4 is
+on Testing only** (2026-10-16; tag `v1.0.4`, release `r1.0.4`, Testing serial
+46, signature verified through the API and the public URL; image
+`image/deploy/2026-10-16-gexis-player-v1.0.4.img`, 121 checks): host names on
+the network, multi-choice sheets drawn at once, one settings reload per
+save, `/settings` read once per answer - and 1.0.3 (the four bar and UI
+fixes, Testing serial 45, never promoted). **Not promoted: George decides.**
+PR #72 (`release-1.0.4`, carrying 1.0.3) is open; #71 was closed unmerged
+and its branch deleted. The README still names 1.0.2; a commit on
+`release-1.0.4` names 1.0.4 when it is promoted, before George merges.
 Not seen on a device: the jack taking over from a switched-off HDMI device
 (ADR-0141 D5). The setup network's story is in Finding 126 and the archive;
 why the bar worked before 2026-10-14 is still not known. The bar is
