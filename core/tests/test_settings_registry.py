@@ -1514,7 +1514,10 @@ def test_headless_hides_every_setting_that_needs_a_screen(store):
     assert needs_a_screen - {"home_strip", "home_strip_count"} <= shown()
     settings.set("headless", True)
     assert not needs_a_screen & shown()
-    assert {"headless", "screen", "rotation"} <= shown(), "the switch back stays"
+    assert "headless" in shown(), "the switch back stays"
+    # The screen in use, its ports and its rotation say nothing without one
+    # (George, 2026-10-16); the screen's tile showed the bar bedroompi once had.
+    assert not {"screen", "screen_port", "screen_port_info", "rotation"} & shown()
     enrich = next(g for g in settings.to_json() if g["id"] == "enrich")
     assert not any(r["visible"] for r in enrich["rows"] if r.get("key"))
 

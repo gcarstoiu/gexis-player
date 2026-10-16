@@ -3455,9 +3455,10 @@
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(233, 238, 242, 0.1);
   }
-  .option:active {
-    background: rgba(233, 238, 242, 0.14);
-  }
+  /* No press colour (George, 2026-10-16): a phone holds :active for about
+     150 ms after the finger lifts, so with a tap drawn at once, unticking
+     put out the box while the row stayed lit - "the teal background is
+     slower than the selection dot". The selection is the feedback. */
   .option.is-selected {
     background: rgba(126, 214, 188, 0.14);
     border-color: rgba(126, 214, 188, 0.4);

@@ -59,15 +59,33 @@ def status_line(state, sources) -> dict:
 
 
 async def _browse() -> str:
+    """What answered within `BROWSE_TIMEOUT_S`. **A player that never
+    resolves does not take the others with it** (sofapi, 2026-10-16): one
+    announced as `bedroompi-2` never answered, avahi-browse waited for it
+    until its own 5 s, this gave up at the same 5 s, and every search came
+    back empty - so the phone's switch to other players disappeared."""
     try:
         proc = await asyncio.create_subprocess_exec(
             "avahi-browse", "-rpt", SERVICE,
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL)
-        out, _ = await asyncio.wait_for(proc.communicate(), timeout=BROWSE_TIMEOUT_S)
-    except (OSError, asyncio.TimeoutError) as exc:
+    except OSError as exc:
         logger.info("players: could not look for other players: %s", exc)
         return ""
-    return out.decode(errors="replace")
+    lines: list[bytes] = []
+
+    async def read() -> None:
+        while line := await proc.stdout.readline():
+            lines.append(line)
+
+    try:
+        await asyncio.wait_for(read(), timeout=BROWSE_TIMEOUT_S)
+    except asyncio.TimeoutError:
+        logger.debug("players: a player did not answer in %s s; the others kept", BROWSE_TIMEOUT_S)
+    finally:
+        if proc.returncode is None:
+            proc.kill()
+        await proc.wait()
+    return b"".join(lines).decode(errors="replace")
 
 
 class Players:

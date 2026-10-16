@@ -612,11 +612,11 @@
   .withrail > .scroll { min-width: 0; }
   .more { height: 1px; }
   button { font: inherit; color: inherit; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
-  /* A press shrinks a button - not a list row, which only lights up as the
-     library's do (George, 2026-10-15: "when tapping on a track, we should
-     see only the selection not also this zoom out and in effect"). */
+  /* A press shrinks a button - not a list row, which shows only its
+     selection, in teal (George, 2026-10-15: "when tapping on a track, we
+     should see only the selection not also this zoom out and in effect";
+     2026-10-16: no lighting up on the press either). */
   button:active:not(.row):not(.trow) { transform: scale(0.95); }
-  .row:not(:disabled):active, .trow:not(:disabled):active { background: rgba(233, 238, 242, 0.08); }
   .is-busy { opacity: 0.6; }
   .is-unnamed { font-style: italic; color: rgba(233, 238, 242, 0.62); }
 
