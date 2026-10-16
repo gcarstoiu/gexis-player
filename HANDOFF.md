@@ -10,16 +10,22 @@ and `phase-13b` is merged into it after each docs change. A release is built
 from a worktree made at its tag, then removed. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.0.2** on Stable (2026-10-15; Stable serial 2). **1.0.4 is
-on Testing only** (2026-10-16; tag `v1.0.4`, release `r1.0.4`, Testing serial
-46, signature verified through the API and the public URL; image
-`image/deploy/2026-10-16-gexis-player-v1.0.4.img`, 121 checks): host names on
-the network, multi-choice sheets drawn at once, one settings reload per
-save, `/settings` read once per answer - and 1.0.3 (the four bar and UI
-fixes, Testing serial 45, never promoted). **Not promoted: George decides.**
-PR #72 (`release-1.0.4`, carrying 1.0.3) is open; #71 was closed unmerged
-and its branch deleted. The README still names 1.0.2; a commit on
-`release-1.0.4` names 1.0.4 when it is promoted, before George merges.
+**Current release: 1.0.5, on Stable** (2026-10-16; tag `v1.0.5`, release
+`r1.0.5`; Stable serial 3, Testing serial 47, signatures verified through the
+API and the public URL; image `image/deploy/2026-10-16-gexis-player-v1.0.5.img`,
+123 checks, the public download byte for byte the checked image). It carries
+1.0.3 and 1.0.4, which went to Testing only. **PR #73 (`release-1.0.5`, README
+names 1.0.5) is open for George to merge**; #71 and #72 were closed unmerged.
+After the merge: the post-merge steps (merge `origin/main` into both branches,
+delete `release-1.0.5`, remove the `gexis-player-rel-1.0.5` worktree with
+`git submodule deinit -f --all` and `worktree remove --force`, routine
+clean-up). The 1.0.3 and 1.0.4 worktrees are still there too.
+
+**The package cache (`~/.cache/gexis-player/debs`) was emptied by partial
+builds** until 2026-10-16 (`packaging/build.sh core ui player` pruned every
+skin pack not in its output), so 1.0.4 and 1.0.5 rebuilt the skin packs under
+emulation, over an hour each. Fixed on `phase-13d` (833790d7, after the 1.0.5
+tag): only a version a build replaced is pruned.
 Not seen on a device: the jack taking over from a switched-off HDMI device
 (ADR-0141 D5). The setup network's story is in Finding 126 and the archive;
 why the bar worked before 2026-10-14 is still not known. The bar is
