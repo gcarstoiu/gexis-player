@@ -692,6 +692,13 @@ does not downgrade: the player stays where it is until Stable passes it.
 Yes, with the player: a new version of either comes as part of the player
 update that brings it.
 
+**How do I find the player's shares from a computer or phone?**
+The player shares its Pictures and Backups folders (and Music, with the
+Lyrion Server on). They appear under the player's name: in Finder's
+sidebar and Windows' network view, and in file managers that browse the
+local network, which show it in capitals (for example LIVINGROOM). Or open
+`smb://<player>.local` directly.
+
 **How do I back up the player before re-flashing the card?**
 *Settings → System → Back up now* writes the settings, the library's
 pictures, the paired devices and the player's configuration into the
