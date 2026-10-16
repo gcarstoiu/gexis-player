@@ -6,6 +6,15 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.0.3 — 16 October 2026
+
+### Fixed
+
+- On the player's own screen, Update goes straight to the full-screen update view, without the small window first.
+- On a bar, the apps from Lyrion fill the screen's width instead of gathering on one side.
+- On a bar, a playlist from one of Lyrion's apps no longer shows an empty column with a line beside its tracks.
+- In lists from Lyrion's apps, a tapped track lights up instead of shrinking and growing back.
+
 ## 1.0.2 — 15 October 2026
 
 ### New
