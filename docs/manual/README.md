@@ -377,7 +377,7 @@ Changes take effect at once unless the row says otherwise.
 | Setting | What it does |
 | --- | --- |
 | Lyrion Client: Enabled | Plays your Lyrion server's music. |
-| Lyrion Client: Server | Which Lyrion server. Servers announce themselves on the network; typing an address is the fallback. |
+| Lyrion Client: Server | Which Lyrion server. Servers announce themselves on the network, each shown by its machine's name, else the library name set in Lyrion, else its address; typing an address is the fallback. |
 | Lyrion Client: Extended navigation | Lyrion's own menus on Home: My Music, Favourites, Apps (section 4). |
 | Spotify Connect: Enabled | The player appears as a Spotify Connect device. |
 | Spotify Connect: Starting volume | The loudest Spotify starts at when it takes over. Hidden with Volume on *Fixed*. |

@@ -295,7 +295,10 @@ sequenceDiagram
    setup network there is nothing to discover, so the Music step's *Find* mode
    runs after the join: `discovery.find_servers()` broadcasts Lyrion's UDP
    discovery datagram on port 3483 and takes each reply's source address.
-   Exactly one server is used; several are named and left to Settings; *Off*
+   Each is named by `discovery.label()`: the machine's mDNS host name
+   (`avahi-resolve -a`, 2 s, all at once), else Lyrion's library name unless
+   it is the default, else the address; the setting always stores the
+   address. Exactly one server is used; several are named and left to Settings; *Off*
    sets `lms_enabled` false.
 5. The panel shows the result for 10 s, then the device **reboots** if any
    screen was chosen in setup, or if the name differs from the old one (both
