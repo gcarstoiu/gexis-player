@@ -70,3 +70,19 @@ def test_a_server_that_does_not_answer_is_said_so_not_an_error_page():
             sc.shares(sc.Server("Box", "Box.local", kind), run=slow)
         assert isinstance(refused.value, ValueError) and str(refused.value) == "Box to answer"
     assert sc.servers(set(), run=slow) == []
+
+
+def test_one_machine_announced_under_two_names_is_one_row_named_by_its_host():
+    """Found 2026-10-16: a player announced its share as `BEDROOMPI` and as
+    `bedroompi-2`, both on `bedroompi-2.local`, and the scan listed it twice."""
+    browse = "\n".join([
+        "=;wlan0;IPv4;bedroompi-2;_smb._tcp;local;bedroompi-2.local;10.0.0.7;445;",
+        "=;wlan0;IPv4;BEDROOMPI;_smb._tcp;local;bedroompi-2.local;10.0.0.7;445;",
+        "=;wlan0;IPv6;BEDROOMPI;_smb._tcp;local;bedroompi-2.local;fe80::7;445;",
+    ])
+    assert sc.parse_browse(browse) == [sc.Server("bedroompi-2", "bedroompi-2.local", "smb")]
+
+
+def test_a_server_with_no_host_name_keeps_its_announced_name():
+    browse = "=;wlan0;IPv4;Shelf;_smb._tcp;local;;10.0.0.9;445;"
+    assert sc.parse_browse(browse) == [sc.Server("Shelf", "10.0.0.9", "smb")]

@@ -34,6 +34,13 @@ LISTEN_S = 2.5
 #: The request is re-sent because UDP broadcast is not reliable and one lost
 #: datagram would read as "no servers found".
 RETRY_S = 0.8
+#: How long a machine has to say its name (mDNS, all asked at once). One that
+#: announces none - a server in Docker on its own address, found 2026-10-16 -
+#: costs this much and is named another way.
+RESOLVE_S = 2.0
+#: The library name Lyrion gives itself unless someone changes it: it tells
+#: one server from another no better than nothing.
+DEFAULT_NAMES = ("Lyrion Music Server", "Logitech Media Server")
 
 
 def _request() -> bytes:
@@ -89,6 +96,17 @@ async def find_servers(listen_s: float = LISTEN_S) -> list[dict[str, str]]:
     except OSError as exc:
         logger.info("discovery: cannot open a socket: %s", exc)
         return []
+    # Each machine's name asked for as soon as it answers, so the names cost
+    # nothing beyond the listening (measured on the bar, 2026-10-16: asked
+    # afterwards, a server with no name made the sheet 4.5 s instead of 2.5).
+    names: dict[str, asyncio.Task] = {}
+
+    def ask_names() -> None:
+        for address in protocol.found:
+            ip = address.rsplit(":", 1)[0]
+            if ip not in names:
+                names[ip] = asyncio.ensure_future(host_name(ip))
+
     try:
         deadline = loop.time() + listen_s
         while loop.time() < deadline:
@@ -98,14 +116,53 @@ async def find_servers(listen_s: float = LISTEN_S) -> list[dict[str, str]]:
                 logger.info("discovery: cannot broadcast: %s", exc)
                 break
             await asyncio.sleep(min(RETRY_S, max(0.0, deadline - loop.time())))
+            ask_names()
     finally:
         transport.close()
+    ask_names()
+    found = sorted(protocol.found.items())
+    hosts = await asyncio.gather(*(names[address.rsplit(":", 1)[0]] for address, _ in found))
     return [
         {
             "address": address,
             "name": fields.get("NAME", "").strip(),
             "version": fields.get("VERS", "").strip(),
             "uuid": fields.get("UUID", "").strip(),
+            "host": host,
         }
-        for address, fields in sorted(protocol.found.items())
+        for (address, fields), host in zip(found, hosts)
     ]
+
+
+async def host_name(ip: str, timeout_s: float = RESOLVE_S) -> str:
+    """The name the machine at `ip` announces over mDNS (`Nuc.local` gives
+    `Nuc`), or "" when it announces none or the tool is missing. Never
+    raises: the address still names the server."""
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "avahi-resolve", "-a", ip,
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL)
+    except OSError as exc:
+        logger.info("discovery: no avahi-resolve: %s", exc)
+        return ""
+    try:
+        out, _ = await asyncio.wait_for(proc.communicate(), timeout_s)
+    except asyncio.TimeoutError:
+        proc.kill()
+        await proc.wait()
+        return ""
+    parts = out.decode("utf-8", "replace").split()
+    name = parts[1] if len(parts) >= 2 and parts[0] == ip else ""
+    return name.removesuffix(".").removesuffix(".local")
+
+
+def label(server: dict[str, str]) -> str:
+    """What a found server is called on the screen (George, 2026-10-16:
+    host names rather than addresses): the machine's own name, else the
+    library name someone gave it in Lyrion, else its address."""
+    name = server.get("name", "")
+    if server.get("host"):
+        return server["host"]
+    if name and not name.startswith(DEFAULT_NAMES):
+        return name
+    return server["address"]

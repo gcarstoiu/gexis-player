@@ -49,11 +49,13 @@ def page(path: Path = NOTES, shown: int = SHOWN) -> dict:
 
 def markdown(path: Path = NOTES) -> str:
     """`CHANGELOG.md` at the repository's root, from the same file."""
+    # The note for whoever edits it is a comment: GitHub and the blog's copy
+    # of this file (George, 2026-10-15) show readers only the sentence below.
     lines = ["# Changelog", "",
-             "Every release of Gexis Player and its notes, newest first. Generated from",
-             "`core/src/gexis_core/release_notes.json` by `python -m gexis_core.changelog` -",
-             "edit that file, not this one. The player shows the last 10 under",
-             "Settings → System → Change logs.", ""]
+             "<!-- Generated from core/src/gexis_core/release_notes.json by",
+             "     `python -m gexis_core.changelog`: edit that file, not this one. -->", "",
+             "Every release of Gexis Player and its notes, newest first. The player",
+             "shows the last 10 under Settings → System → Change logs.", ""]
     for version, entry in releases(path):
         lines += [f"## {version} — {_day(entry['date'])}", ""]
         for line in entry["notes"].splitlines():

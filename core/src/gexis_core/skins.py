@@ -23,6 +23,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from gexis_core import memo
+
 logger = logging.getLogger("gexis_core.skins")
 
 SECTION = re.compile(r"^\[(?P<name>.+?)\]\s*$")
@@ -326,6 +328,7 @@ def load(directory: Path) -> tuple[list[Skin], list[Skin]]:
 RESOLUTION = "1280x800"
 
 
+@memo.once
 def installed(root: Path, pack: str | None = None, resolution: str = RESOLUTION) -> list[tuple[Skin, Path]]:
     """Every skin under `root`, with the directory its files live in.
 
@@ -399,6 +402,7 @@ def _installed(packs: list[Path], resolution: str) -> list[tuple[Skin, Path]]:
     return found
 
 
+@memo.once
 def unavailable_corpora(root: Path, pack: str | None = None, resolution: str = RESOLUTION) -> dict[str, str]:
     """The `skin_corpus` choices with no skin for this screen, each with why
     (George, 2026-10-05: on the 1280x400 bar, Turntables and Fanart offered

@@ -1,7 +1,10 @@
 """ADR-0136: the other players on the network, for the phone's switcher."""
 from __future__ import annotations
 
+import os
+
 import aiohttp
+import pytest
 from aiohttp import web
 from aiohttp.test_utils import TestServer
 
@@ -85,3 +88,19 @@ async def test_this_player_under_a_name_avahi_gave_it_is_still_left_out():
         async with aiohttp.ClientSession() as session:
             assert await finder.refresh(session) == []
             assert [p["name"] for p in await other.refresh(session)] == ["GuestPi"]
+
+
+@pytest.mark.asyncio
+async def test_a_player_that_never_answers_does_not_take_the_others_with_it(tmp_path, monkeypatch):
+    """sofapi, 2026-10-16: one announcement never resolved, avahi-browse
+    waited for it past the search's own limit, and every search came back
+    empty - the phone's switch to other players disappeared."""
+    tool = tmp_path / "avahi-browse"
+    tool.write_text("#!/bin/sh\n"
+                    "echo '=;wlan0;IPv4;guestpi;_gexis._tcp;local;guestpi.local;10.0.0.8;8090;'\n"
+                    "exec sleep 5\n")
+    tool.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{tmp_path}:{os.environ['PATH']}")
+    monkeypatch.setattr(pl, "BROWSE_TIMEOUT_S", 0.5)
+    out = await pl._browse()
+    assert "guestpi.local" in out

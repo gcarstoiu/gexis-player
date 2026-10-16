@@ -419,6 +419,10 @@ class StateStore:
         self._resetting = True
         self._notify()
 
+    @property
+    def settings_revision(self) -> int:
+        return self._settings_revision
+
     def bump_settings_revision(self) -> None:
         self._settings_revision += 1
         self._notify()

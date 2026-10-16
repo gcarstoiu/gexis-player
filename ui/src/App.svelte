@@ -20,7 +20,7 @@
   import { screen } from './lib/family.svelte.js';
   import UpdateScreen from './screens/UpdateScreen.svelte';
   import PanelPointer from './lib/PanelPointer.svelte';
-  import { update, connection, hidePeppy, screenConfirm, answerScreen, screenNew, answerNewScreen, screenCheck, sendScreenCheck } from './lib/state.js';
+  import { update, updateAsked, connection, hidePeppy, screenConfirm, answerScreen, screenNew, answerNewScreen, screenCheck, sendScreenCheck } from './lib/state.js';
   import TestPattern from './screens/TestPattern.svelte';
   import SettlingScreen from './screens/SettlingScreen.svelte';
   import ResetScreen from './screens/ResetScreen.svelte';
@@ -603,6 +603,21 @@
         leaveUpdate(Boolean($update?.installed && $update.installed !== loadedRelease));
       }, STRANDED_MS);
     }
+  });
+  //: **Locked from the tap, not from the updater's first report** (George,
+  //: 2026-10-15). On the panel only - a phone follows the install in the
+  //: modal. An install that never starts lets go after STRANDED_MS, as one
+  //: that ends without an outcome does.
+  $effect(() => {
+    if (!$updateAsked || surface !== 'panel' || untrack(() => updateLock)) return;
+    hidePeppy();
+    updateLock = true;
+    updateOutcome = null;
+    clearTimeout(strandedTimer);
+    strandedTimer = setTimeout(() => {
+      strandedTimer = undefined;
+      if (!$update?.active) leaveUpdate(Boolean($update?.installed && $update.installed !== loadedRelease));
+    }, STRANDED_MS);
   });
   //: **A new UI build reloads the panel too** (ADR-0110 as amended
   //: 2026-10-09). The reload above follows the release; a UI package
