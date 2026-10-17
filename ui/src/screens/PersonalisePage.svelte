@@ -417,7 +417,7 @@
   const canNext = $derived(
     screen === 'listen' ? !!preset
       : screen === 'idle' ? !(idleOn && weather && !loc.trim())
-        : screen === 'plexsign' ? false
+        : screen === 'plexsign' ? plexState === 'ok'
           : true
   );
   const nextLabel = $derived(ret === 'review' ? 'Save' : screen === 'review' ? 'Finish' : 'Next');
@@ -820,6 +820,10 @@
       <footer>
         {#if screen === 'done' || screen === 'later'}
           <button type="button" class="next" style="--a:{C.rev}" onclick={() => onclose?.()}>Close</button>
+        {:else if $pairing?.state === 'asking' && screen === 'bluetooth' && bt}
+          <!-- A phone asking: only its answer, as the design's P2. -->
+          <button type="button" class="ghost" onclick={() => answer(false)}>Decline</button>
+          <button type="button" class="next" style="--a:{accent}" onclick={() => answer(true)}>Accept</button>
         {:else}
           {#if ret || path.indexOf(screen) > 0 || screen === 'review'}<button type="button" class="ghost" onclick={back}>Back</button>{/if}
           {#if screen === 'listen' && !ret}
@@ -828,18 +832,19 @@
             <button type="button" class="ghost" onclick={() => { plexSkipped = true; advance(true); }}>Skip</button>
           {:else if screen === 'plexsign'}
             <button type="button" class="ghost" onclick={() => advance(true)}>Skip</button>
+          {:else if screen === 'lyrion' && !ret}
+            <!-- Skipped, nothing is installed: the client finds a server
+                 later, or one is chosen in Settings. -->
+            <button type="button" class="ghost" onclick={() => { lyrWhere = 'pc'; advance(true); }}>Skip</button>
           {:else if !['listen', 'mix', 'review'].includes(screen) && !ret}
             <button type="button" class="ghost" onclick={() => advance(true)}>Skip</button>
           {/if}
-          {#if $pairing?.state === 'asking' && screen === 'bluetooth' && bt}
-            <button type="button" class="ghost" onclick={() => answer(false)}>Decline</button>
-            <button type="button" class="next" style="--a:{accent}" onclick={() => answer(true)}>Accept</button>
-          {:else if screen === 'plexamp' && !plexOn}
+          {#if screen === 'plexamp' && !plexOn}
             <button type="button" class="next" style="--a:{accent}" onclick={downloadPlexamp}>Download</button>
           {:else if screen === 'plexsign' && plexState !== 'ok'}
             <button type="button" class="next" style="--a:{accent}" disabled={!plexIn || !claim.trim()} onclick={sendClaim}>Claim</button>
           {:else}
-            <button type="button" class="next" style="--a:{accent}" disabled={(!canNext && screen !== 'plexsign') || finishing} onclick={() => advance(false)}>{finishing ? 'Finishing…' : nextLabel}</button>
+            <button type="button" class="next" style="--a:{accent}" disabled={!canNext || finishing} onclick={() => advance(false)}>{finishing ? 'Finishing…' : nextLabel}</button>
           {/if}
         {/if}
       </footer>
