@@ -98,6 +98,8 @@
   let uploadError = $state(null);
   const restoring = $derived(startMode === 'restore');
   const QUESTIONS = ['name', 'tz', 'out', 'music', 'display', 'visualiser', 'plugins'];
+  //: ADR-0149: asked in part 2 for a new player.
+  const PART_TWO = ['music', 'visualiser', 'plugins'];
   //: **Asked on a restore too** (George, 2026-10-08: "leave the two as
   //: mandatory steps next to WiFi"): the output and the screen are this
   //: player's hardware, which a backup from another one does not know. A
@@ -437,6 +439,11 @@
     //: ADR-0131: a backup answers every question after Start but the two
     //: this player's own hardware answers.
     if (restoring && QUESTIONS.includes(s) && !ASKED.includes(s)) return true;
+    //: **ADR-0149: part 1 is only what the player needs to run.** What it
+    //: plays and shows is part 2's, asked from the home network after the
+    //: join. The steps stay for a restore, whose review can change them
+    //: (ADR-0131 as amended).
+    if (!restoring && PART_TWO.includes(s)) return true;
     return (noVisualiser && s === 'visualiser') || (!offered.length && s === 'plugins');
   }
   function back() {
@@ -559,11 +566,11 @@
     ['Name', `${shownName} · ${slug}.local`, at('name')],
     ['Time zone', `${tz || 'Not set'} · ${clock24 ? '24 h' : '12 h'}`, at('tz')],
     ['Output', out || 'Not set', at('out')],
-    ['Library', lmsMode === 'off' ? 'Not used' : lmsMode === 'address' ? lms.trim() : lmsMode === 'find' ? 'Found once on your network' : restoring ? 'As in the backup' : 'Not chosen', at('music')],
-    ['Services', [spotify ? 'Spotify Connect' : null, bt ? 'Bluetooth' : null].filter(Boolean).join(' · ') || 'Lyrion only', at('music')],
+    ...(restoring ? [['Library', lmsMode === 'off' ? 'Not used' : lmsMode === 'address' ? lms.trim() : lmsMode === 'find' ? 'Found once on your network' : restoring ? 'As in the backup' : 'Not chosen', at('music')],
+    ['Services', [spotify ? 'Spotify Connect' : null, bt ? 'Bluetooth' : null].filter(Boolean).join(' · ') || 'Lyrion only', at('music')]] : []),
     ['Screen', headless ? 'Headless' : chosenModel ? `${chosenModel.maker} ${shortOf(chosenModel)} · ${chosenModel.width} × ${chosenModel.height}` : scPick ? scPick.replace('/', ' ') : 'Not chosen', at('display')],
-    ...(noVisualiser ? [] : [['Visualiser', visualiser === true ? `Install · ${chosenModel?.skin_count ? `${chosenModel.skin_count} skins, ` : ''}${packSize}` : visualiser === false ? 'None' : 'Not chosen', at('visualiser')]]),
-    ...(offered.length ? [['Plugins', offered.filter((p) => chosenPlugins.includes(p.id)).map((p) => p.name).join(' · ') || 'None', at('plugins')]] : [])
+    ...(noVisualiser || !restoring ? [] : [['Visualiser', visualiser === true ? `Install · ${chosenModel?.skin_count ? `${chosenModel.skin_count} skins, ` : ''}${packSize}` : visualiser === false ? 'None' : 'Not chosen', at('visualiser')]]),
+    ...(offered.length && restoring ? [['Plugins', offered.filter((p) => chosenPlugins.includes(p.id)).map((p) => p.name).join(' · ') || 'None', at('plugins')]] : [])
   ]);
 </script>
 
@@ -617,6 +624,13 @@
               <div class="label">Open in any browser</div>
               <div class="addr">http://{slug}.local:8090</div>
             </div>
+            {#if !restoring}
+              <!-- ADR-0149: part 2 opens there, on its own. -->
+              <div class="note-card" style="--bar: #7ed6bc">
+                <span class="bar"></span>
+                <span>That address carries on into making it yours: how you listen and what the screen shows.{headless ? '' : " The player's screen shows a code for it too."}</span>
+              </div>
+            {/if}
             <!-- The password line only when there was a password to refuse: a
                  secured Wi-Fi was chosen - not over a cable with no Wi-Fi, nor
                  on an open network (George, 2026-10-04: "Agree"). -->
@@ -638,7 +652,7 @@
                 : "You are connected to the player's own Wi-Fi. This page talks only to the player."}
             </p>
             <div class="cards">
-              <div class="info"><span class="bar" style="background:#8fc4d8"></span><span><b>About two minutes</b><small>A few questions. Every one of them can be changed later in Settings.</small></span></div>
+              <div class="info"><span class="bar" style="background:#8fc4d8"></span><span><b>About a minute</b><small>Network, name, time, output and screen. Every answer can be changed later in Settings.</small></span></div>
               {#if !overLan}
                 <div class="info"><span class="bar" style="background:#7ed6bc"></span><span><b>Keep this phone handy</b><small>When setup finishes, the player leaves its own Wi-Fi for yours and this page stops working. That is by design, not a fault.</small></span></div>
                 <!-- George, 2026-09-29: the page would not load until he
@@ -728,7 +742,7 @@
               </div>
               <div class="list">
                 {#each [
-                  ['new', 'Set up a new player', 'A few questions. Every answer can be changed later in Settings.'],
+                  ['new', 'Set up a new player', 'Four more questions now; the rest from your home Wi-Fi.'],
                   ['restore', 'Restore a backup', 'The file made under Settings → System → Back up now.']
                 ] as o}
                   <button class="net" class:sel={startMode === o[0]} onclick={() => (startMode = o[0])}>
@@ -961,6 +975,7 @@
                   <span class="grow"><span class="nm">Headless</span><span class="meta plain">No local screen. The display stays off and nothing is drawn.</span></span>
                 </button>
                 {#if headless}
+                  <div class="info"><span class="bar" style="background:#8fc4d8"></span><span><b>Fewer questions later</b><small>With no screen, the questions after setup skip how to browse on it, the visualiser, the idle screen and standby.</small></span></div>
                   <div class="warn"><span class="bang">!</span><span>Without a screen, the setup network always uses the password <b>gexis-setup</b>. If gexis starts and cannot reach your Wi-Fi, it opens that network again: join it from your phone, then open <b>10.42.0.1:8090</b>.</span></div>
                 {/if}
               </div>
@@ -1058,6 +1073,8 @@
                   <div class="trow"><span class="what">{r[0]}</span><span class="val grow">{r[1]}</span><button class="chip" onclick={() => { fromReview = true; step = r[2]; }}>Change</button></div>
                 {/each}
               </div>
+              <!-- ADR-0149: what part 2 asks, after the join. -->
+              <div class="info"><span class="bar" style="background:#8fc4d8"></span><span><b>Then, on your home Wi-Fi</b><small>How you listen and what the screen shows. A few questions, each with a default.</small></span></div>
             </section>
           {/if}
         {/if}

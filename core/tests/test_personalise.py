@@ -33,7 +33,9 @@ def test_owed_after_part_one_and_ended_by_finishing_or_putting_off(tmp_path):
     path = tmp_path / "personalise.json"
     assert personalise.state(path) is None, "a player updated from before part 2 is not owed it"
     personalise.mark_pending(path)
-    assert personalise.state(path) == personalise.PENDING
+    assert personalise.state(path) == personalise.PENDING and personalise.first(path)
+    personalise.mark_pending(path, first=False)
+    assert not personalise.first(path), "asked again from Settings starts from what the player has"
     personalise.end(personalise.LATER, path)
     assert personalise.state(path) == personalise.LATER
     path.write_text("not json")
@@ -82,7 +84,7 @@ async def test_the_routes_finish_and_put_off_part_two(tmp_path, monkeypatch):
     from gexis_core.wsserver import StateServer
 
     monkeypatch.setattr(personalise, "PATH", tmp_path / "personalise.json")
-    for fn in (personalise.state, personalise.mark_pending, personalise.end):
+    for fn in (personalise.state, personalise.mark_pending, personalise.end, personalise.first):
         monkeypatch.setattr(fn, "__defaults__", tuple(tmp_path / "personalise.json" if isinstance(d, type(personalise.PATH)) else d
                                                       for d in fn.__defaults__))
     begun = []

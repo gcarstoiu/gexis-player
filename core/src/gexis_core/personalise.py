@@ -68,10 +68,16 @@ def state(path: Path = PATH) -> str | None:
     return value if value in (PENDING, DONE, LATER) else None
 
 
-def mark_pending(path: Path = PATH) -> None:
-    """Part 1 of a new player has finished."""
-    _write({"state": PENDING, "since": time.time()}, path)
-    logger.info("personalise: owed (a new player)")
+def mark_pending(path: Path = PATH, first: bool = True) -> None:
+    """Owed: `first` when part 1 of a new player has just finished - the page
+    then starts from part 2's own defaults - else asked again from Settings,
+    starting from what the player has now."""
+    _write({"state": PENDING, "first": first, "since": time.time()}, path)
+    logger.info("personalise: owed (%s)", "a new player" if first else "asked again from Settings")
+
+
+def first(path: Path = PATH) -> bool:
+    return bool(read(path).get("first"))
 
 
 def end(how: str, path: Path = PATH) -> None:

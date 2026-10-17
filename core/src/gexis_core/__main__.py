@@ -2370,8 +2370,8 @@ async def main() -> None:
     wifi_address = wired.Cable(device="wlan0", on_change=lambda _pending: state_store.bump_settings_revision())
     # **ADR-0149: first use's part 2**, owed by a new player once part 1
     # has finished, or again from Settings -> System -> Personalise.
-    def _personalise_owed() -> None:
-        personalise.mark_pending()
+    def _personalise_owed(first: bool = True) -> None:
+        personalise.mark_pending(first=first)
         state_store.set_personalise(personalise.PENDING)
 
     state_store.set_personalise(personalise.PENDING if personalise.state() == personalise.PENDING else None)
@@ -2513,7 +2513,7 @@ async def main() -> None:
                "lms_library": None,
                # ADR-0149: part 2 owed again - the phone opens on it, the
                # panel shows a code to it - until it is finished or put off.
-               "personalise": lambda _=None: _personalise_owed(),
+               "personalise": lambda _=None: _personalise_owed(first=False),
                "fanart_key": None, "lms_server": None,
                # ADR-0059: read on every ask through `gate` and
                # `confidence_min`, so nothing has to happen on the write.

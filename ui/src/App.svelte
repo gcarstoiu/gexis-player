@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script>
   import { onMount, untrack } from 'svelte';
-  import { connect, active, metadata, volume, handoff, capabilities, available, availability, shuffle, repeat, queue, pairing, fixedOutput, panel, setup } from './lib/state.js';
+  import { connect, active, metadata, volume, handoff, capabilities, available, availability, shuffle, repeat, queue, pairing, fixedOutput, panel, setup, personalise, personaliseLater } from './lib/state.js';
   import NowPlaying from './screens/NowPlaying.svelte';
   import BarNowPlaying from './screens/bar/BarNowPlaying.svelte';
   import BarTray from './screens/bar/BarTray.svelte';
@@ -17,6 +17,7 @@
   import MiniPlayer from './screens/MiniPlayer.svelte';
   import SetupScreen from './screens/SetupScreen.svelte';
   import SetupPage from './screens/SetupPage.svelte';
+  import PersonalisePage from './screens/PersonalisePage.svelte';
   import { screen } from './lib/family.svelte.js';
   import UpdateScreen from './screens/UpdateScreen.svelte';
   import PanelPointer from './lib/PanelPointer.svelte';
@@ -472,6 +473,20 @@
     if (setupPage && surface === 'remote') untrack(() => (setupPageHeld = true));
   });
 
+  //: **ADR-0149: first use's part 2 on the phone** while it is owed. Held
+  //: once shown, as setup's page is: finishing ends it on the player, and
+  //: the page has its own last screen (what is downloading) to show, until
+  //: its Close.
+  let personaliseHeld = $state(false);
+  const personalisePage = $derived(!setupPage && (personaliseHeld || $personalise === 'pending'));
+  $effect(() => {
+    if (personalisePage && surface === 'remote') untrack(() => (personaliseHeld = true));
+  });
+  //: ...and on the panel, the way to it: a code to the player's own page.
+  const personaliseAt = $derived(
+    $settingsDevice.hostname ? `http://${$settingsDevice.hostname}.local:8090` : $settingsDevice.address ? `http://${$settingsDevice.address}:8090` : null
+  );
+
   //: Setup ending is attention, like a touch: the panel comes back to its
   //: own screens and the idle timer starts from there.
   let setupWasShown = false;
@@ -687,6 +702,8 @@
 
 {#if surface === 'remote' && setupPage}
   <SetupPage setup={$setup} />
+{:else if surface === 'remote' && personalisePage}
+  <PersonalisePage onclose={() => (personaliseHeld = false)} />
 {:else if surface === 'remote'}
   <!-- ADR-0101: on a phone, Settings and the mini player under it. -->
   <div class="remote remote--mini"><Settings {openRow} onrowopened={() => (openRow = null)} /></div>
@@ -866,6 +883,9 @@
        everything but Keep this screen and the update lock. -->
   {#if $settling && !$settling.hidden && !$screenConfirm && !updateLock && !setupShown}
     <SettlingScreen settling={$settling} ondone={() => settlingDone().catch(() => {})} onhide={() => settlingHide().catch(() => {})} />
+  {:else if $personalise === 'pending' && personaliseAt && $settingValues.headless !== true && !$screenConfirm && !updateLock && !setupShown}
+    <!-- ADR-0149: part 2 is owed; the panel shows the way to it. -->
+    <SetupScreen setup={$setup} personalise={personaliseAt} onlater={() => personaliseLater().catch(() => {})} />
   {/if}
   {#if !setupShown}
     <CableKeep />

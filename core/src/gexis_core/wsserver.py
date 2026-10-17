@@ -2163,6 +2163,7 @@ class StateServer:
         from gexis_core import personalise
         return web.json_response({
             "state": personalise.state(),
+            "first": personalise.first(),
             "plugins": [{"row": p["row"], "name": p["name"], "component": p.get("component")}
                         for p in self._personalise_offered() if p["row"] in personalise.PLUGIN_ROWS],
         })
