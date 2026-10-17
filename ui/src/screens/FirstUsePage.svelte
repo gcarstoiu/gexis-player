@@ -338,9 +338,12 @@ class Component extends DCLogic {
       case 'p1restore': { const ch = id => () => this.go(id, 'p1restore'), b = (s.backup && s.backup.settings) || {}, en = (s.backup && s.backup.enabled) || [];
         const listens = [b.lms_enabled !== false && 'Lyrion', b.spotify_enabled !== false && 'Spotify', b.bt_enabled !== false && 'Bluetooth'].filter(Boolean).join(' · ') || 'Nothing';
         const installed = [...en.map(live.pluginName), b.visualiser_skins ? 'Visualiser skins' : null].filter(Boolean).join(' · ') || 'Nothing';
-        return { title: 'Check it over', sub: 'Everything else comes from the backup.', blocks: [sum([['Network', s.net || 'Cable only', ch('p1net')], ['Output', s.output || 'Not set', ch('p1output')], ['Screen', s.scr === 'headless' ? 'Headless' : live.labelOf(s.scPick), ch('p1screen')]]), sum([['Name', b.device_name || '—'], ['Time', (b.timezone || '—') + ' · ' + (b.clock_format || '24 h')], ['Listens to', listens], ['Installed', installed]], 'From the backup'),
+        const renamed = !!b.device_name && s.name.trim() !== b.device_name.trim(), left = (s.backup && s.backup.identities) || [];
+        return { title: 'Check it over', sub: 'Everything else comes from the backup.', blocks: [sum([['Network', s.net || 'Cable only', ch('p1net')], ['Name', nm + ' · ' + sl + '.local', ch('p1name')], ['Output', s.output || 'Not set', ch('p1output')], ['Screen', s.scr === 'headless' ? 'Headless' : live.labelOf(s.scPick), ch('p1screen')]]),
+          ...(renamed ? [list([K('A second player', left.length ? 'The player the backup came from keeps its own ' + left.join(', ') + '; this one starts without them.' : 'The player the backup came from keeps what is its own.', s.second, () => live.second(!s.second))])] : []),
+          sum([['Time', (b.timezone || '—') + ' · ' + (b.clock_format || '24 h')], ['Listens to', listens], ['Installed', installed]], 'From the backup'),
           note('info', 'Nothing more to ask', 'The player restores, joins ' + (s.net || 'your network') + ' and downloads again what the backup had installed.'), ...(s.problem ? [note('warn', '', s.problem)] : [])], foot: { next: 'Restore and connect' } }; }
-      case 'p1restored': { const bn = (s.backup && s.backup.settings && s.backup.settings.device_name) || nm, bs = slug(bn) || 'gexis';
+      case 'p1restored': { const bn = nm, bs = sl;
         return { hero: true, crumb: 'Almost done', title: bn + ' is restoring', blocks: [status('spin', 'Restoring, then joining ' + (s.net || 'your network')), P('Put this phone back on ' + (s.net || 'your network') + '. The player opens at http://' + bs + '.local:8090 when it is back.'),
           ...(s.keepQ ? [note('warn', 'Then go to the player’s screen', 'It restarts on the screen you chose and asks whether to keep it. Tap Keep on the screen within two minutes, or it goes back to how it was.')] : [])], foot: { back: false, next: 'Done' } }; }
 
@@ -520,7 +523,7 @@ class Component extends DCLogic {
   //: the player: its name, clock, network, the Lyrion search, Plexamp's
   //: download, a phone asking to pair, the network shares, the downloads.
   let st = $state(Object.assign(init('A', mode === 'p1' ? 'p1' : 'p2', false), {
-    first: true, town: '', net: 'your network', lyrMeta: '', lyrServer: null, pairDevice: '', pairCode: '',
+    first: true, nameSaved: false, second: true, town: '', net: 'your network', lyrMeta: '', lyrServer: null, pairDevice: '', pairCode: '',
     shareServers: [], shareFound: [], shareSrvItem: null, shareError: null, finishError: null, finished: null,
     plugins: [], tick: 0, ready: false,
     // Part 1's own.
@@ -702,7 +705,7 @@ class Component extends DCLogic {
           return a;
         }
         case 'p1start': return { start: s.start === 'backup' ? 'restore' : 'new' };
-        case 'p1name': return { name: s.name.trim() };
+        case 'p1name': st.nameSaved = true; return { name: s.name.trim() };
         case 'p1clock': return { timezone: s.tz, clock: s.fmt ? '12 h' : '24 h' };
         case 'p1output': return { output: s.output };
         case 'p1screen': return s.scr === 'headless' ? { headless: true } : s.scPick ? { headless: false, screen: s.scPick } : {};
@@ -722,6 +725,12 @@ class Component extends DCLogic {
     close() {
       if (mode === 'p1') { window.location.href = home(); return; }
       onclose?.();
+    },
+    //: ADR-0131 as amended (George, 2026-10-08): a backup restored under
+    //: another name can start a second player.
+    second(on) {
+      st.second = on;
+      json('/setup/answers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ second_player: on }) }).catch(() => {});
     },
     async finish1(id) {
       st.problem = null;
@@ -744,14 +753,15 @@ class Component extends DCLogic {
   }
   function setBackup(b) {
     st.backup = b;
+    //: A restore opens on the backup's name; a name typed in setup wins.
+    if (b?.settings?.device_name && !st.nameSaved) st.name = b.settings.device_name;
     st.backupMade = b?.made ? new Date(b.made * 1000).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
   }
   //: **The page carries on into part 2** (the design's p1join): once this page's
   //: own player has gone from the setup network, it asks the player's new
   //: address until it answers, and opens it there - where part 2 is owed.
   function home() {
-    const name = st.start === 'backup' ? st.backup?.settings?.device_name ?? st.name : st.name;
-    return `http://${slug(name) || 'gexis'}.local:8090`;
+    return `http://${slug(st.name) || 'gexis'}.local:8090`;
   }
   function waitForHome() {
     const target = home();
@@ -801,7 +811,8 @@ class Component extends DCLogic {
       scPick, scMaker: null,
       start: saved.start === 'restore' ? 'backup' : 'new',
       net: saved.ssid ?? '', other: !!saved.hidden, otherName: saved.hidden ? saved.ssid ?? '' : '', pw: '',
-      hasPw: !!saved.has_password, joinError: saved.error ?? null
+      hasPw: !!saved.has_password, joinError: saved.error ?? null,
+      nameSaved: saved.name != null, second: saved.second_player ?? true
     });
     if (saved.backup) setBackup(saved.backup);
     const p1 = ['p1welcome', 'p1net', 'p1start', 'p1backup', 'p1name', 'p1clock', 'p1output', 'p1screen', 'p1review', 'p1restore'];
