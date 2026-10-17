@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-17 (on R2D2).
+Last updated: 2026-10-18 (on R2D2).
 
 ## Start here
 
@@ -17,6 +17,19 @@ download byte for byte the checked image; built in 16 minutes, the skin
 packs reused): *Add a backup* in Settings → Restore (ADR-0083 amended
 2026-10-17), the backup fixes, the Settings header wrap. PR #74 merged by
 George; post-merge steps and the routine clean-up done.
+
+**Phase 14 (`ph-first-use`) is built on its own branch, not merged**
+(2026-10-18; worktree `~/projects/gexis-player-14`, branch `ph-first-use`
+off `phase-13d`, pushed). From Claude Design's hand-off (George, with the
+decisions delegated): part 1 shortened, part 2 on the phone
+(`PersonalisePage.svelte`, `personalise.py`), the panel's *Make it yours*
+code, *Library on the screen* (`lms_library`, in ADR-0022), *Personalise* in
+Settings → System. ADR-0149 accepted on that branch, with the 21 decisions
+and their reasons. **sofapi runs it** (core, UI, player `1.0.6+git17`, part 2
+put off after a check). Waiting for George: his test of part 2 through
+Personalise, whether *Personalise* enters ADR-0022, and part 1 on a fresh
+card before a merge. sofapi's packages are newer than 1.0.6 and older than
+the next release cut from `phase-13d`.
 
 **Release build output lives in `~/.local/share/gexis-release-out`**: in each
 release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
