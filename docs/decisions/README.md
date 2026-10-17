@@ -104,7 +104,7 @@ been written properly. **0098 has no record either.**
 | [0080](0080-a-cover-is-matched-on-a-title-both-catalogues-agree-on.md) | A cover is matched on a title both catalogues agree on | Accepted 2026-09-25, amended the same day: asked with the title's own characters; trimmed matches verified both ways |
 | [0081](0081-the-daemon-owns-the-cover-it-found.md) | The daemon owns the cover it found | Accepted 2026-09-25: the daemon publishes the found cover, filling the hole only, keyed on the track |
 | [0082](0082-the-archive-keeps-its-dead-links.md) | The archive keeps its dead links | Accepted 2026-09-25: `HANDOFF-ARCHIVE.md` is not edited; the link test skips it |
-| [0083](0083-a-backup-leaves-the-device.md) | A backup leaves the device | Accepted 2026-09-25: backup and restore through a second SMB share; a restore replaces everything and reboots |
+| [0083](0083-a-backup-leaves-the-device.md) | A backup leaves the device | Accepted 2026-09-25: backup and restore through a second SMB share; a restore replaces everything and reboots. Amended 2026-10-17: upload in Settings, added to the list |
 | [0084](0084-plugins-speak-json-lines-over-a-unix-socket.md) | Plugins speak JSON lines over a Unix socket | Accepted 2026-09-25: access by filesystem permission; D-Bus, loopback HTTP and binary framings rejected |
 | [0085](0085-the-alsa-default-is-our-output.md) | The ALSA default is our output | Accepted 2026-09-25: `pcm.!default "output"`, a plain alias, not a `plug` |
 | [0086](0086-a-plugin-declares-itself-in-a-manifest.md) | A plugin declares itself in a manifest | Accepted 2026-09-25 (amended 2026-09-30): `plugin.json`, read whether or not running; built-ins too; optional `area` |
