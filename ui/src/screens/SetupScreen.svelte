@@ -272,7 +272,7 @@
           <p>Scan with a phone on the same network as this player</p>
         {/if}
         {#if step === 'join' && rotateLine}<p class="bs__rotate">{rotateLine}</p>{/if}
-        {#if step !== 'lan'}{@render barMobileData()}{/if}
+        {#if step !== 'lan' && step !== 'personalise'}{@render barMobileData()}{/if}
       </div>
     </div>
   {:else if step === 'joined'}

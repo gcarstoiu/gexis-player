@@ -348,8 +348,13 @@
         s.lms_library = browse !== 'off';
       }
     }
-    s['lyrion-server.enabled'] = here;
-    s['plexamp.enabled'] = isPlex && plexOn;
+    //: **Plugins are only ever switched on here** (decided 2026-10-18): a
+    //: preset that leaves one out must not uninstall what the player already
+    //: has - asked again from Settings, "Streaming only" would have removed
+    //: Plexamp and its sign-in. Removing one stays a choice in Settings ->
+    //: Plugins.
+    if (here) s['lyrion-server.enabled'] = true;
+    if (isPlex && plexOn) s['plexamp.enabled'] = true;
     if (!headless) {
       Object.assign(s, {
         visualiser_skins: vizOn, viz_timeout: vizAfter, skin_corpus: CORPUS[skin], skin_motion: animate,
