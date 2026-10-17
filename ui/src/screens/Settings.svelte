@@ -2626,7 +2626,7 @@
              Download is; the panel has no files to pick. -->
         <label class="iv__add addbackup" class:is-busy={adding !== null}>
           <input type="file" hidden disabled={adding !== null} onchange={(e) => addBackup(e.currentTarget)} />
-          {adding !== null ? `Adding the backup… ${Math.round(adding * 100)}%` : 'Add a backup from this device'}
+          {adding !== null ? `Adding the backup… ${Math.round(adding * 100)}%` : 'Add a backup'}
         </label>
         {#if addError}<div class="addbackup__error">{addError}</div>{/if}
       {/if}
