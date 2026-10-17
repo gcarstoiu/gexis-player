@@ -387,6 +387,38 @@
 
   //: ADR-0083 as amended 2026-10-08: the file itself, by its own name - a
   //: link, so a large backup goes straight to the browser's downloads.
+  //: **ADR-0083 as amended 2026-10-17: a backup added from this phone or
+  //: computer** (George: "It should stay in the restore list"). Sent as the
+  //: request's body, as setup sends one; checked by the player and added to
+  //: the list, never restored by itself.
+  let adding = $state(null); // the share sent, 0..1, while one goes up
+  let addError = $state(null);
+  function addBackup(input) {
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    addError = null;
+    adding = 0;
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `/backups?name=${encodeURIComponent(file.name)}`);
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable) adding = e.loaded / e.total; };
+    xhr.onload = () => {
+      let body = {};
+      try { body = JSON.parse(xhr.responseText); } catch { /* not JSON */ }
+      adding = null;
+      if (body.ok) {
+        flash(body.already ? `${body.name} is already in the list` : `${body.name} added`, 3500);
+        openList('restore');
+      } else addError = body.error ?? 'The file did not reach the player. Try again.';
+    };
+    xhr.onerror = () => {
+      adding = null;
+      addError = 'The file did not reach the player. Try again.';
+    };
+    xhr.send(file);
+  }
+
   function downloadBackup(item) {
     const a = Object.assign(document.createElement('a'), { href: `/backups/${encodeURIComponent(item.name)}`, download: item.name });
     document.body.append(a);
@@ -1136,6 +1168,7 @@
     joinError = null;
     restoring = null;
     listError = null;
+    addError = null;
     // A grouped choice opens on the region the current value is in, so the
     // zone in use is one tap away rather than two.
     region = row.grouped ? String(row.value ?? '').split('/')[0] || null : null;
@@ -2588,6 +2621,16 @@
         {/if}
       {/if}
 
+      {#if sheet.type === 'list' && sheet.key === 'restore' && !onPanel() && !join && !restorePending}
+        <!-- ADR-0083 as amended 2026-10-17: on a phone or computer, as
+             Download is; the panel has no files to pick. -->
+        <label class="iv__add addbackup" class:is-busy={adding !== null}>
+          <input type="file" hidden disabled={adding !== null} onchange={(e) => addBackup(e.currentTarget)} />
+          {adding !== null ? `Adding the backup… ${Math.round(adding * 100)}%` : 'Add a backup from this device'}
+        </label>
+        {#if addError}<div class="addbackup__error">{addError}</div>{/if}
+      {/if}
+
       <!-- Joining takes real seconds and can fail, so the sheet reports the
            attempt rather than closing and leaving the outcome unsaid. -->
       {#if join}
@@ -3672,6 +3715,24 @@
   }
   .iv__add:disabled {
     opacity: 0.45;
+  }
+  .addbackup {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+    margin-top: 12px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+  .addbackup.is-busy {
+    opacity: 0.6;
+    cursor: default;
+  }
+  .addbackup__error {
+    margin-top: 8px;
+    color: var(--accent-warn);
+    font-size: 15px;
   }
   .iv__none {
     color: var(--ink-quiet);

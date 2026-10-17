@@ -999,3 +999,76 @@ def forget(name: str, directory: Path = DEFAULT_DIR) -> None:
         raise ValueError(f"not a backup name: {name!r}")
     (directory / name).unlink(missing_ok=True)
     logger.info("backup: deleted %s", name)
+
+
+# -- ADR-0083 as amended 2026-10-17: a backup uploaded in Settings -----------
+
+NEWER = "That backup is from a newer version of gexis. Update this player first, then add it."
+
+
+def upload_part(directory: Path = DEFAULT_DIR) -> tuple[int, Path]:
+    """An open file to stream an upload into, hidden in the share under a
+    name `_sweep_parts` removes if the upload never finishes."""
+    directory.mkdir(parents=True, exist_ok=True)
+    fd, name = tempfile.mkstemp(prefix=".gexis-upload.tgz.", suffix=".part", dir=directory)
+    return fd, Path(name)
+
+
+def add_upload(part: Path, filename: str | None, known_migrations: int,
+               directory: Path = DEFAULT_DIR) -> dict:
+    """**Check an uploaded file and add it to the share** (ADR-0083 as
+    amended 2026-10-17; George: *"It should stay in the restore list"*):
+    never restored by itself, never in place of a file already there.
+    Returns `{"name", "already"}`; raises `Refused` with the sentence for the
+    page. `part` is gone afterwards either way."""
+    try:
+        seen = inspect(part, known_migrations)
+        if seen["newer"]:
+            raise Refused(NEWER)
+        # **The same backup under another name is already there** (a file
+        # renamed on the computer): said, not added twice.
+        size = part.stat().st_size
+        for listed in available(directory):
+            if listed.size == size and _same(part, directory / listed.name):
+                return {"name": listed.name, "already": True}
+        given = Path(filename or "").name
+        if given.endswith(".tgz.gz"):
+            given = given[:-3]
+        if not (NAME.match(given) and SAFE.match(given)):
+            stamp = time.strftime("%Y%m%d-%H%M%S", time.localtime(seen["made"] or time.time()))
+            given = f"gexis-{_slug(seen.get('name') or 'gexis')}-{stamp}.tgz"
+        final = directory / given
+        if final.exists() or final.is_symlink():
+            if _same(part, final):
+                return {"name": given, "already": True}
+            given = f"gexis-{_slug(seen.get('name') or 'gexis')}-{time.strftime('%Y%m%d-%H%M%S')}.tgz"
+            final = directory / given
+        with part.open("rb+") as f:
+            os.fchmod(f.fileno(), 0o644)
+            _give_to_pi(f.fileno())
+            os.fsync(f.fileno())
+        # A link, not a rename: it fails rather than replace whatever
+        # arrived under that name in the meantime.
+        os.link(part, final)
+        _sync_dir(directory)
+        logger.info("backup: %s added from an upload (%s)", given, seen.get("name"))
+        return {"name": given, "already": False}
+    except FileExistsError as exc:
+        raise Refused("A backup with that name arrived at the same moment. Try again.") from exc
+    finally:
+        part.unlink(missing_ok=True)
+
+
+def _same(a: Path, b: Path) -> bool:
+    try:
+        if not stat.S_ISREG(b.lstat().st_mode) or a.stat().st_size != b.stat().st_size:
+            return False
+        with a.open("rb") as x, b.open("rb") as y:
+            while True:
+                one, two = x.read(1 << 20), y.read(1 << 20)
+                if one != two:
+                    return False
+                if not one:
+                    return True
+    except OSError:
+        return False

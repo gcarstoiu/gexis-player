@@ -1106,3 +1106,56 @@ def test_a_small_backup_reads_in_kilobytes_not_as_nothing():
     item = backups.Archive("gexis-bar-20261015-124739.tgz", 0.0, 12548).to_item()
     assert item["meta"].endswith("· 12 KB")
     assert backups.Archive("gexis-bar-20261011-160331.tgz", 0.0, 612394 * 4).to_item()["meta"].endswith("· 2.3 MB")
+
+
+# -- ADR-0083 as amended 2026-10-17: a backup uploaded in Settings -----------
+
+@pytest.mark.asyncio
+async def test_an_uploaded_backup_is_checked_and_added_to_the_list_never_restored(tmp_path, monkeypatch):
+    from aiohttp.test_utils import TestClient, TestServer
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+
+    made = tmp_path / "made"
+    name = backups.create("Kitchen", made, _real_device(tmp_path / "root", VALUES))
+    body = (made / name).read_bytes()
+    share = tmp_path / "share"
+    share.mkdir()
+    monkeypatch.setattr(backups, "DEFAULT_DIR", share)
+    monkeypatch.setattr(backups.upload_part, "__defaults__", (share,))
+    monkeypatch.setattr(backups.add_upload, "__defaults__", (share,))
+    restored = []
+    monkeypatch.setattr(backups, "restore", lambda *a, **k: restored.append(a))
+    async with TestClient(TestServer(StateServer(StateStore({})).make_app())) as client:
+        # As a browser saved it: `.gz` added. Kept as the .tgz it is.
+        r = await client.post(f"/backups?name={name}.gz", data=body)
+        assert r.status == 200, await r.text()
+        assert (await r.json()) == {"ok": True, "error": None, "name": name, "already": False}
+        assert (share / name).read_bytes() == body
+        # The same file again: said, nothing added.
+        again = await (await client.post(f"/backups?name={name}", data=body)).json()
+        assert again["already"] is True
+        # No usable name: named for its device and when it was made.
+        r = await client.post("/backups?name=my%20backup.tgz", data=body)
+        assert (await r.json())["already"] is True, "the same archive, under its own name"
+        # Not a backup: refused, in words, and nothing left behind.
+        bad = await client.post("/backups?name=photo.jpg", data=b"\xff\xd8 not an archive")
+        assert bad.status == 400 and "not a gexis backup" in (await bad.json())["error"]
+    assert sorted(p.name for p in share.iterdir()) == [name]
+    assert [a.name for a in backups.available(share)] == [name]
+    assert restored == [], "added to the list, never restored by itself"
+
+
+def test_an_upload_never_replaces_a_different_backup_of_the_same_name(tmp_path):
+    made, share = tmp_path / "made", tmp_path / "share"
+    name = backups.create("Kitchen", made, _real_device(tmp_path / "root", VALUES))
+    share.mkdir()
+    (share / name).write_bytes(gzip.compress(b"another backup"))
+    fd, part = backups.upload_part(share)
+    with os.fdopen(fd, "wb") as f:
+        f.write((made / name).read_bytes())
+    added = backups.add_upload(part, name, 5, share)
+    assert added["name"] != name and not added["already"]
+    assert (share / name).read_bytes() == gzip.compress(b"another backup")
+    assert (share / added["name"]).read_bytes() == (made / name).read_bytes()
+    assert not part.exists()
