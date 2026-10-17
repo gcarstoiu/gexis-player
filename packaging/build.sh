@@ -129,8 +129,16 @@ for deb in packaging/out/gexis-skins_*_all.deb packaging/out/gexis-skins-*_all.d
 	case "$deb" in *.dirty_all.deb) continue ;; esac
 	[ -f "$DEB_CACHE/$(basename "$deb")" ] || cp "$deb" "$DEB_CACHE/"
 done
+# **Only a version this build replaced** (found 2026-10-16): pruning every
+# pack not in packaging/out assumed a build of the whole set, so a build of
+# `core ui player` for a preview emptied the cache of all five skin packs,
+# and the next two release images rebuilt them under emulation - an hour
+# each instead of fifteen minutes.
 for old in "$DEB_CACHE"/gexis-skins*_all.deb "$DEB_CACHE"/gexis-wallpapers_*_all.deb; do
 	[ -f "$old" ] || continue
-	[ -f "packaging/out/$(basename "$old")" ] || rm -f "$old"
+	name=$(basename "$old"); name=${name%%_*}
+	for new in packaging/out/"${name}"_*_all.deb; do
+		[ -f "$new" ] && [ "$(basename "$new")" != "$(basename "$old")" ] && { rm -f "$old"; break; }
+	done
 done
 [ -z "$reused" ] || echo "skin packs reused, not rebuilt:$reused"

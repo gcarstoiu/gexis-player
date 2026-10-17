@@ -6,6 +6,19 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.0.6 — 17 October 2026
+
+### New
+
+- In Settings → System → Restore, on a phone or computer, Add a backup puts a backup file from that device in the list. The player checks it first and restores nothing until it is chosen.
+
+### Fixed
+
+- A backup downloaded from Restore keeps its name when saved, and one a browser saved with an extra ".gz" at the end is listed in Restore too.
+- A backup cut short by a power cut is no longer listed as one that can be restored; an empty or damaged backup says so and offers only Forget.
+- Small backups show their size in KB instead of "0.0 MB".
+- At the top of Settings, the player's address moves to the next line on a narrow screen instead of being cut off.
+
 ## 1.0.5 — 16 October 2026
 
 ### New

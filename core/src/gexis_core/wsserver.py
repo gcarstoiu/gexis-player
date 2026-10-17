@@ -221,6 +221,8 @@ class StateServer:
         self._restore = restore
         #: The updater's backups under way, held so none is collected half-run.
         self._backup_tasks: set[asyncio.Task] = set()
+        #: One upload at a time: each is up to a gigabyte on a small card.
+        self._uploading = False
         #: **A row that takes effect at a restart, restarts** (ADR-0048,
         #: amended 2026-10-05): saving the device name from Settings reboots,
         #: after the answer. Here, in the route, and not in the row's own
@@ -1500,7 +1502,10 @@ class StateServer:
         with source:
             response = web.StreamResponse(headers={
                 "Content-Disposition": f'attachment; filename="{name}"',
-                "Content-Type": "application/gzip",
+                # A plain file, not `application/gzip`: browsers added `.gz`
+                # to a name already ending `.tgz` (2026-10-16), and Restore
+                # did not list what was copied back.
+                "Content-Type": "application/octet-stream",
                 "Cache-Control": "no-store",
             })
             response.content_length = os.fstat(source.fileno()).st_size
@@ -1509,6 +1514,49 @@ class StateServer:
                 await response.write(chunk)
             await response.write_eof()
         return response
+
+    async def _handle_backup_upload(self, request: web.Request) -> web.Response:
+        """**A backup added from a phone or computer** (ADR-0083 as amended
+        2026-10-17; George: *"It should stay in the restore list"*). The body
+        is the file, streamed into the share under setup's cap, checked as
+        setup checks one, and added to the list; nothing is restored.
+        `?name=` is the file's name."""
+        from gexis_core import settings_migrations, setup_flow
+
+        if self._uploading:
+            return web.json_response({"ok": False, "error": "Another backup is being added. Wait for it to finish."}, status=409)
+        self._uploading = True
+        part = None
+        size = 0
+        try:
+            fd, part = await asyncio.to_thread(backups.upload_part)
+            try:
+                with os.fdopen(fd, "wb") as out:
+                    async for chunk in request.content.iter_chunked(1 << 16):
+                        size += len(chunk)
+                        if size > setup_flow.BACKUP_MAX_BYTES:
+                            raise OverflowError
+                        await asyncio.to_thread(out.write, chunk)
+            except OverflowError:
+                part.unlink(missing_ok=True)
+                return web.json_response({"ok": False, "error": "That file is larger than any gexis backup."}, status=413)
+            except (OSError, ConnectionError) as exc:
+                part.unlink(missing_ok=True)
+                logger.warning("backup upload failed after %d bytes: %s", size, exc)
+                # A full card is the likely OSError: said, not a stack trace.
+                return web.json_response({"ok": False, "error": "The file did not arrive whole. Try again."}, status=400)
+            try:
+                added = await asyncio.to_thread(backups.add_upload, part, request.query.get("name"),
+                                                len(settings_migrations.MIGRATIONS))
+            except backups.Refused as exc:
+                return web.json_response({"ok": False, "error": str(exc)}, status=400)
+            except OSError as exc:
+                logger.warning("backup upload not added: %s", exc)
+                return web.json_response({"ok": False, "error": "The player could not keep that file. Is its card full?"}, status=500)
+            self._store.bump_settings_revision()
+            return web.json_response({"ok": True, "error": None, **added})
+        finally:
+            self._uploading = False
 
     async def _handle_report(self, request: web.Request) -> web.Response:
         """ADR-0125: the problem report, downloaded. The body may carry the
@@ -2716,6 +2764,7 @@ class StateServer:
         app.router.add_get("/report/file", self._handle_report_file)
         app.router.add_get("/report/issue", self._handle_report_issue)
         app.router.add_get("/backups/{name}", self._handle_backup_download)
+        app.router.add_post("/backups", self._handle_backup_upload)
         app.router.add_get("/network/cable", self._handle_cable)
         app.router.add_post("/network/cable", self._handle_cable_change)
         app.router.add_get("/network/wifi/address", self._handle_cable)
