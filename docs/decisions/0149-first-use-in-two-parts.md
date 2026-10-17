@@ -1,6 +1,6 @@
 # ADR-0149 — First use in two parts: set up, then make it yours
 
-**Status:** **Proposed** — 2026-10-15. The direction is George's (2026-10-15,
+**Status:** **Accepted** — 2026-10-18: Claude Design's hand-off (*first use, parts 1 and 2*) given by George to build, with the decisions while building delegated to Claude (*"after the initial questions to me, I will let you make the decisions until completion of phase. Document them"*); they are below, under *Decisions taken while building*. Built on the branch `ph-first-use`, not merged. Proposed 2026-10-15. The direction is George's (2026-10-15,
 *"Let's do it"*); the questions, answers and defaults below are for his review.
 On acceptance it amends ADR-0031 (the setup network), ADR-0104 (what setup
 needs), ADR-0128 (plugins and settling in setup) and ADR-0131 (restore in
@@ -120,3 +120,103 @@ Proposed, not appended until George confirms:
 
 The look (Claude Design), and how part 2 is told apart from Settings for
 someone who opens Personalise again.
+
+
+## Decisions taken while building (Claude, delegated by George, 2026-10-18)
+
+George answered three questions first: **Library on the screen** is a setting
+in Sources → Lyrion Client (appended to ADR-0022); SofaPi tests **part 2
+only**, through Settings → System → Personalise, without a reset; the work
+lives on **its own branch**, `ph-first-use`, nothing merged. The rest was left
+to Claude, and each choice is recorded here with its reason.
+
+**How part 2 works**
+1. **Answers are written at Finish, in one request** (`POST
+   /personalise/finish`), never step by step. Back and the review then
+   change nothing on the player, and one place on the core checks them: only
+   part 2's own keys (`personalise.KEYS`), a request with any other key
+   refused whole. *Why:* the design's review walks back into any step; a
+   step that had already written would make Back a lie.
+2. **Three steps act at once**, because they must: Plexamp's download
+   (minutes, and the claim code needs it installed), a Bluetooth phone
+   accepted, a network share added (it is browsed live with a login). Each
+   uses the route Settings already uses.
+3. **Plugins are only switched on, never off.** Found walking the page
+   against sofapi with writes held: asked again from Settings, *My music +
+   streaming* sent `plexamp.enabled: false` and would have removed Plexamp
+   and its sign-in. Removing a plugin stays a choice in Settings → Plugins.
+4. **Owed, done, put off** is the only state kept
+   (`/var/lib/gexis/personalise.json`); `/state` carries `personalise:
+   pending`. A new player's part 1 marks it owed once the join has worked
+   (not a restore, not an update).
+5. **Personalise in Settings marks it owed again.** The phone opens on it and
+   the panel shows its code, exactly as for a new player. *Why:* one
+   mechanism, and the panel says where to go whichever surface started it.
+   On that run the page starts from what the player has now; on a new
+   player's first run, from the design's defaults (the visualiser and the
+   idle screen on, the weather off).
+6. **The panel's code is a step of the existing setup screen**
+   (`SetupScreen`, *Make it yours on your phone*), so the 10.1" panel and
+   both bars get setup's tested layout. **Not now** on the panel puts part 2
+   off, as *Do it later* does on the phone. *Why:* a player nobody scans for
+   must not show a code for ever. No mobile-data warning there: the phone is
+   on the home network.
+7. ***Do it later* keeps the defaults**, and looks for a Lyrion server once,
+   using it when exactly one answers. *Why:* part 1 did that before part 2
+   existed; a player put off should still find its library.
+
+**Part 1**
+8. **Music, Visualiser and Plugins are skipped for a new player, kept for a
+   restore.** The design's restore review lets only Network and Screen be
+   changed; George decided on 2026-10-08 that a restore's review changes
+   everything setup asks (a backup made into a second player), and that
+   stands.
+9. **The last page points to the address; it does not carry on by itself.**
+   A page served over the setup network cannot reach the player on the home
+   network, so the design's *"this page carries on"* became *"That address
+   carries on into making it yours"*, with the panel's code as the other way
+   in.
+10. The welcome, the Start step, Headless and the review take the design's
+    words (*About a minute*; *Four more questions now*; *Fewer questions
+    later*; *Then, on your home Wi-Fi*).
+
+**The questions**
+11. **Lyrion found**: the server in use if it answers, else the first found;
+    shown by its name (Phase 13's host names). Several are not listed here:
+    Settings chooses among them.
+12. **Lyrion on this player** sets `lms_server` to the player's own address
+    and port 9000, as Settings' list offers it, and switches the Lyrion
+    Server on. **Skip** on that step installs nothing.
+13. **Folders**: the Music folder and USB disks are shown as *Always*. They
+    are always offered to Lyrion (ADR-0115), and a switch for them would
+    change nothing. Network shares use Settings' scan, sign-in and add.
+14. **Browse**: Extended = Extended navigation on; Simple = off; Off =
+    Library on the screen off.
+15. **Wallpaper styles are one answer for both screens** (the design has
+    one), written to the idle screen's and the waiting screen's.
+16. **Starts after** offers 2, 10 or 30 min; a player whose timeout is
+    something else starts on the nearest.
+17. **Plex**: after the claim code is given the page says *"has its claim
+    code"*, not *"on your Plex account"*: the player cannot confirm the
+    account here.
+18. **Headless** players still get part 2 on the phone (how you listen, the
+    services); the screen's questions are skipped and the panel shows
+    nothing.
+19. The *Library service* row stays as drawn, marked *Next phase* (MPD,
+    `ph-mpd`).
+
+**The look**
+20. **The panel preview is drawn simply** (`PanelPreview.svelte`): the
+    library, Now Playing, the waiting home, the idle clock, standby and the
+    skins, in miniature, not the design's `Panel Mini` in full detail. The
+    wallpaper previews are the player's own Calm wallpaper and the design's
+    public-domain stand-ins (Kandinsky, *The Starry Night*), small copies.
+21. **Phone layout only.** The design's wide (tablet) layout, with the
+    preview in a left column and the animated *How will you listen?*, is
+    not built; the phone column centres on a wider screen.
+
+**Not settled here (George)**
+- **Personalise** as a row in Settings → System is built (the design names
+  it); its entry in ADR-0022's inventory waits for George's confirmation.
+- Part 1 has not been walked on a freshly flashed card (George chose part 2
+  only on SofaPi).

@@ -378,6 +378,7 @@ Changes take effect at once unless the row says otherwise.
 | --- | --- |
 | Lyrion Client: Enabled | Plays your Lyrion server's music. |
 | Lyrion Client: Server | Which Lyrion server. Servers announce themselves on the network, each shown by its machine's name, else the library name set in Lyrion, else its address; typing an address is the fallback. |
+| Lyrion Client: Library on the screen | Off, the screen shows only what is playing and the sources, with no library to browse; Lyrion's apps on your phone still play to the player. On by default. |
 | Lyrion Client: Extended navigation | Lyrion's own menus on Home: My Music, Favourites, Apps (section 4). |
 | Spotify Connect: Enabled | The player appears as a Spotify Connect device. |
 | Spotify Connect: Starting volume | The loudest Spotify starts at when it takes over. Hidden with Volume on *Fixed*. |
@@ -491,6 +492,7 @@ Everything about the player itself, under seven headings.
 
 | Setting | What it does |
 | --- | --- |
+| Personalise | Asks again, on your phone, how you listen and what the screen shows - the questions after first-time setup - starting from what the player has now. The player's screen shows a code to the page. |
 | Back up now | Saves the settings, the library's pictures, the paired devices and the device's configuration into the Backups share. |
 | Restore | Puts a backup from the Backups share back and restarts the device. On a phone or computer, *Download* beside a backup saves it there, and *Add a backup* puts one from there in the list (checked first; it is not restored until you choose it). A backup that is empty or damaged says so on its line and offers only *Forget*. A freshly flashed card can restore one during setup instead, straight from the phone: setup asks for this player's output and screen, and anything else it asks (the name, say) can be changed on the way. |
 | Reset to factory settings | Puts the player back as on a freshly flashed card, then restarts into setup. Everything goes: every setting and the name, the settings and idle page chosen when the card was flashed, the Wi-Fi networks, paired devices and sign-ins, the skins and plugins, the Lyrion Server's library, the screen's browser data, and the backups kept on the player (the Backups share stays, empty). The music folder, its playlists and the Pictures share stay. Download a backup first under *Restore*. To confirm, hold *Hold to reset and restart* for 3 seconds, until its bar fills; letting go earlier cancels. The screen and every phone then say the player is resetting; a phone also says how to reach setup. The installed version stays. |

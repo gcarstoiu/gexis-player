@@ -657,6 +657,42 @@ ADR-0128 amended 2026-10-10) sets `hidden` in the file: both surfaces drop the
 screen while the downloads go on, and `view()` clears `hidden` when anything
 fails, so a failure is still shown and answered with OK.
 
+## First use, part 2: make it yours (ADR-0149)
+
+**Owed, done or put off.** `personalise.py` keeps one record,
+`/var/lib/gexis/personalise.json` (`pending`, `done`, `later`, and `first`).
+`SetupFlow` marks a new player owed once part 1 has joined (not a restore);
+the `personalise` action in Settings → System marks it owed again with
+`first: false`. `/state` carries `personalise: "pending"` while it is owed.
+
+**The phone** (`App.svelte`): while it is owed, the phone page shows
+`PersonalisePage.svelte` in place of Settings, held until its Close. The
+page reads `/settings`, `GET /personalise` (whether this is a first run, and
+the plugins it may switch on), the Lyrion servers found
+(`/settings/lms_server/items`), and follows `/state` for Plexamp's download,
+a pairing request and the settling.
+
+**The panel**: while it is owed and the player has a screen, `SetupScreen`
+shows the step *Make it yours on your phone*, a QR code to
+`http://<host>.local:8090`; settling, Keep this screen and the update lock
+come first. *Not now* posts `/personalise/later`.
+
+**Writing.** Nothing is written step by step except what must act at once:
+Plexamp's switch (its download) and claim token, a pairing answered
+(`/bluetooth/pairing/{accept,reject}`), a share added
+(`lyrion-server.shares`). Finish posts `/personalise/finish` with
+`{"settings": {...}}`. `personalise.checked` refuses the request whole if any
+key is outside `KEYS` and `PLUGIN_ROWS`. `personalise.apply` writes the
+settings through `Settings.set` (a refusal is logged, named in the answer,
+and the rest go on), then the plugin switches. The page only ever sends them
+on. Then `settling.begin` follows the skins and each plugin's download.
+`/personalise/later` keeps the defaults and, with the Lyrion client on and no
+server, uses the one server found, as part 1 did before part 2.
+
+**Library on the screen** (`lms_library`): off, `App.svelte` treats the
+library as absent (`lmsOff`), so the panel's home is `WaitingHome`; the
+Lyrion client keeps running.
+
 ## Reset to factory settings (ADR-0132)
 
 *Settings → System → Reset to factory settings* is an action row with

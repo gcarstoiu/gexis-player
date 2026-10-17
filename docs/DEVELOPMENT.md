@@ -2924,9 +2924,11 @@ once the player is on the home network (the panel shows a QR code to it),
 asks how it will be used and ends in the downloads (ADR-0128's settling
 screen).
 
-**Before building:** George settles ADR-0149's open points (the questions,
-their answers and defaults); then Claude Design draws part 2 for the 10.1"
-panel, the bars and the phone, and the shorter part 1.
+**Built 2026-10-18 on the branch `ph-first-use`** (not merged) from Claude
+Design's hand-off; ADR-0149 accepted, with the decisions taken while building
+recorded in it (George delegated them). On SofaPi for George to test part 2
+through Settings → System → Personalise. Not yet run: part 1 on a freshly
+flashed card, and the wide (tablet) layout, which is not built.
 
 **Acceptance (draft):**
 

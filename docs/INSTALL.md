@@ -64,14 +64,23 @@ instead, at the address the screen shows, or
 **http://raspberrypi.local:8090**.
 
 The phone may say the setup Wi-Fi has no internet. That is expected: stay
-connected. The page then walks you through your Wi-Fi, a name, the clock,
-the sound output, your music, the screen and the extras, or restores a
-backup of an earlier player.
+connected. The page then walks you through what the player needs to run -
+your Wi-Fi, a name, the clock, the sound output and the screen - or
+restores a backup of an earlier player.
 
 When you finish, the player joins your Wi-Fi, restarting if its name or
-screen changed. Put the phone back on your home Wi-Fi. On the first start after setup the player
-downloads its visualiser skins and the extras you chose, showing each one's
-progress, and is then ready to play.
+screen changed. Put the phone back on your home Wi-Fi and open the address
+the page gives (the player's screen shows a code for it too).
+
+## 5. Make it yours
+
+From your home Wi-Fi, the same page asks how you listen - your own music
+with Lyrion, Plex, or streaming only - and what the screen shows while music
+plays, while it waits and at night. Each question has a default; *Do it
+later* keeps them all. Lyrion, Plexamp and the visualiser's skins then
+download, and the page and the player's screen show each one arriving.
+Everything here can be changed later, or asked again from *Settings → System
+→ Personalise*. A restored player skips this: its backup already answers it.
 
 ## Afterwards
 
