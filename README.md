@@ -43,7 +43,7 @@ Spotify Premium, and Plexamp a Plex account, on Plex's terms.
 
 ## 💾 Download and install
 
-**Gexis Player 1.0.5** is the current release. You need a Raspberry Pi 4 and a
+**Gexis Player 1.0.6** is the current release. You need a Raspberry Pi 4 and a
 microSD card of 32 GB or more. A DAC gives the best sound (the
 [hardware list](docs/HARDWARE.md) says which are tested), but the Pi's own
 HDMI (to a sound bar or AV receiver) or headphone jack works too; an HDMI
