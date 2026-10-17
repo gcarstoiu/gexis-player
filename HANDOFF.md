@@ -15,10 +15,8 @@ serial 48, signatures verified through the API and the public URL; image
 `image/deploy/2026-10-17-gexis-player-v1.0.6.img`, 123 checks, the public
 download byte for byte the checked image; built in 16 minutes, the skin
 packs reused): *Add a backup* in Settings → Restore (ADR-0083 amended
-2026-10-17), the backup fixes, the Settings header wrap. **PR #74
-(`release-1.0.6`, README names 1.0.6) is open for George to merge**; then the
-post-merge steps (the `gexis-player-rel-1.0.6` worktree included) and the
-routine clean-up.
+2026-10-17), the backup fixes, the Settings header wrap. PR #74 merged by
+George; post-merge steps and the routine clean-up done.
 
 **Release build output lives in `~/.local/share/gexis-release-out`**: in each
 release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
@@ -71,7 +69,7 @@ in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-10-16, after 1.0.5's PR (#73)** (/home 216 -> 239 GB free).
+2026-10-17, after 1.0.6's PR (#74)** (/home 225 -> 238 GB free).
 
 ## Phases
 
