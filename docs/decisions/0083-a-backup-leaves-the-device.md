@@ -186,3 +186,33 @@ backup to also download one of the backups locally?"*):
   of its filesystem ([ADR-0040](0040-enrichment-providers.md) amended
   today), so a backup can be that much larger; Settings gives a restore 15
   minutes to answer.
+
+## Amended 2026-10-17: a backup uploaded in Settings
+
+**George, 2026-10-16:** *"let's add the possibility of uploading a backup as
+well in the restore settings section. Similar to what we do during setup."*
+Asked whether an uploaded backup should stay in the list or restore at once:
+*"It should stay in the restore list."*
+
+This reverses *Rejected: restore from an upload* above. That reason was that
+it is phone-only and the panel cannot show a file picker. *Download* (amended
+2026-10-08) is phone-only by the same measure and is used, and setup's
+upload (ADR-0131) built the streaming and the check this reuses.
+
+**What changes:**
+- **`POST /backups`** takes the file as the request's body (`?name=` its
+  file name), streamed to a hidden `.part` file in the Backups share under
+  setup's cap (`BACKUP_MAX_BYTES`, 1 GB). Then `inspect()` checks it as setup
+  does: not a gexis backup, or one from a newer gexis, is refused with
+  setup's sentence and deleted.
+- **It is added to the share, not restored.** It goes in under its own name
+  when that is a backup's name (`.tgz.gz` saved as `.tgz`), otherwise under
+  `gexis-<its device>-<when it was made>.tgz`. A file already there is never
+  replaced. If the identical file is already there, the upload says so. If a
+  different file has the name, the new one is named for the moment it
+  arrived. It is synced to the card before it has its name, as `create()` is.
+- **Phone and computer only**, like *Download*: the panel offers no upload,
+  having no file picker and no files.
+- **Nothing new is exposed.** The Backups share is already writable by
+  anyone on the LAN (§ *The archives contain secrets*). The upload is the
+  same door, with a check in front of it.
