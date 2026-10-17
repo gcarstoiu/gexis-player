@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-16 (on R2D2).
+Last updated: 2026-10-17 (on R2D2).
 
 ## Start here
 
@@ -23,15 +23,17 @@ release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
 (excluded in `.git/info/exclude`). `reuse.py` reuses a published file only
 against a local copy, so losing that folder means re-uploading every OS file.
 
-**Queued, agreed with George, not started:** the backup fixes (a download
-saved as `.tgz.gz` is ignored by Restore - serve it as a plain file and accept
-the name; fsync before the rename, a power cut left a 0-byte "before an
-update" backup on ShelvesPi, kept there to see the fix; list an empty or
-unreadable backup as broken, *Forget* only); the Settings header wrapping the
-address instead of cutting it. **Owed by George:** whether an uploaded backup
-in *Settings → Restore* stays in the list (recommended) or restores at once;
-checking the players by name in his file manager (1.0.5); optionally a
-library name for his Lyrion server (it announces no host name).
+**On `phase-13d` since 1.0.5, previewed on sofapi and ShelvesPi
+(`1.0.5+git19`-`git22`), for the next release:** the package cache fix;
+backups (a download keeps its `.tgz` name and `.tgz.gz` is listed; synced to
+the card before it is named; an empty or damaged one listed for *Forget*
+only - ShelvesPi's 0-byte one from the power-cut test shows it; sizes under
+1 MB in KB); the Settings header wraps the address; **Add a backup** in
+*Settings → Restore* (ADR-0083 amended 2026-10-17: checked, added to the
+list, never restored by itself; tested on ShelvesPi with a copy of its own
+backup, answered "already there", and a junk file, refused - nothing
+added). After that release: blog article 05 mentions *Add a backup* and
+George re-pushes it.
 
 **The blog** (George's WordPress, tag `sound`): eleven articles in
 `~/projects/gexis-blog/`, pushed as drafts by George (2026-10-15);
