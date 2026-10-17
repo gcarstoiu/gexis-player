@@ -23,17 +23,16 @@ release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
 (excluded in `.git/info/exclude`). `reuse.py` reuses a published file only
 against a local copy, so losing that folder means re-uploading every OS file.
 
-**On `phase-13d` since 1.0.5, previewed on sofapi and ShelvesPi
-(`1.0.5+git19`-`git22`), for the next release:** the package cache fix;
-backups (a download keeps its `.tgz` name and `.tgz.gz` is listed; synced to
-the card before it is named; an empty or damaged one listed for *Forget*
-only - ShelvesPi's 0-byte one from the power-cut test shows it; sizes under
-1 MB in KB); the Settings header wraps the address; **Add a backup** in
-*Settings → Restore* (ADR-0083 amended 2026-10-17: checked, added to the
-list, never restored by itself; tested on ShelvesPi with a copy of its own
-backup, answered "already there", and a junk file, refused - nothing
-added). After that release: blog article 05 mentions *Add a backup* and
-George re-pushes it.
+**1.0.6 is on Testing only** (2026-10-17; tag `v1.0.6`, Testing serial 48,
+signature verified both ways; image
+`image/deploy/2026-10-17-gexis-player-v1.0.6.img`, 123 checks, 16 minutes
+with all five skin packs reused from the cache): *Add a backup* in
+Settings → Restore (ADR-0083 amended 2026-10-17), the backup fixes (names,
+synced before named, empty or damaged ones for *Forget* only, KB sizes),
+the Settings header wrap. **Not promoted: George's call.** PR #74
+(`release-1.0.6`) open; README still names 1.0.5. The release worktree
+`gexis-player-rel-1.0.6` is still there (promote runs from it). After the
+release: blog article 05 mentions *Add a backup* and George re-pushes it.
 
 **The blog** (George's WordPress, tag `sound`): eleven articles in
 `~/projects/gexis-blog/`, pushed as drafts by George (2026-10-15);
