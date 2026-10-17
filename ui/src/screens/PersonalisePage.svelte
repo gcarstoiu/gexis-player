@@ -96,6 +96,10 @@
   let finished = $state(null);
   let finishError = $state(null);
   let putOff = $state(false);
+  //: The plugins part 2 can switch on, as the core names them: a download is
+  //: followed by its component's name (the Lyrion Server's is `lyrion`).
+  let plugins = $state([]);
+  const componentOf = (row, fallback) => plugins.find((p) => p.row === row)?.component ?? fallback;
 
   const name = $derived(($settingsDevice.name || 'the player').trim());
   const net = $derived(typeof $settingValues.wifi === 'string' && $settingValues.wifi ? $settingValues.wifi : 'your network');
@@ -192,7 +196,11 @@
     loadSettings();
     try {
       const r = await fetch('/personalise');
-      if (r.ok) first = (await r.json()).first !== false;
+      if (r.ok) {
+        const got = await r.json();
+        first = got.first !== false;
+        plugins = got.plugins ?? [];
+      }
     } catch { /* a first run is assumed */ }
     lookForLyrion();
     loadTrusted();
@@ -784,15 +792,17 @@
       <div class="party" aria-hidden="true"><span class="party__badge">✓</span><span class="note1">♪</span><span class="note2">♫</span></div>
       <h1 class="hero">{name} is ready</h1>
       {#if here}
-        {@const done = doneOf('lyrion-server')}
+        {@const lid = componentOf('lyrion-server.enabled', 'lyrion')}
+        {@const done = doneOf(lid)}
         <div class="head">Lyrion</div>
-        {@render prog(done ? 'Installed' : 'Installing', done ? 100 : pctOf(itemOf('lyrion-server')), done ? 'Folders added, scan started' : null, true)}
+        {@render prog(done ? 'Installed' : 'Installing', done ? 100 : pctOf(itemOf(lid)), done ? 'Folders added, scan started' : null, true)}
         {#if done}{@render note('info', '', 'A large library can take hours to scan. Music shows up as Lyrion finds it.')}{/if}
       {/if}
       {#if isPlex && plexOn}
-        {@const done = doneOf('plexamp') || plexIn}
+        {@const pid = componentOf('plexamp.enabled', 'plexamp')}
+        {@const done = doneOf(pid) || plexIn}
         <div class="head">Plexamp</div>
-        {@render prog(done ? 'Installed' : 'Downloading', done ? 100 : Math.max(plexPct, pctOf(itemOf('plexamp'))), done ? (plexState === 'ok' ? 'Claim code given to Plex' : 'Not signed in yet') : null, plexState === 'ok')}
+        {@render prog(done ? 'Installed' : 'Downloading', done ? 100 : Math.max(plexPct, pctOf(itemOf(pid))), done ? (plexState === 'ok' ? 'Claim code given to Plex' : 'Not signed in yet') : null, plexState === 'ok')}
         {#if done}{@render note('info', '', plexState === 'ok' ? 'Your Plex library plays from the Plexamp app.' : 'Sign in from Settings → Plugins → Plexamp when you’re ready.')}{/if}
       {/if}
       {#if !headless && vizOn}
