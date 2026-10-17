@@ -1,6 +1,10 @@
 {
  "_about": "Every release's notes, newest first, exactly as published and signed (ADR-0116). publish.sh reads a release's notes from here; Settings -> Change logs shows the last 10.",
  "releases": {
+  "1.0.6": {
+   "date": "2026-10-17",
+   "notes": "New\n• In Settings → System → Restore, on a phone or computer, Add a backup puts a backup file from that device in the list. The player checks it first and restores nothing until it is chosen.\nFixed\n• A backup downloaded from Restore keeps its name when saved, and one a browser saved with an extra \".gz\" at the end is listed in Restore too.\n• A backup cut short by a power cut is no longer listed as one that can be restored; an empty or damaged backup says so and offers only Forget.\n• Small backups show their size in KB instead of \"0.0 MB\".\n• At the top of Settings, the player's address moves to the next line on a narrow screen instead of being cut off."
+  },
   "1.0.5": {
    "date": "2026-10-16",
    "notes": "New\n• In file managers that browse the local network, players appear by their name instead of their address.\nFixed\n• The switch to other players, at the top of Settings on the phone, shows again: one player that did not answer on the network hid all the others.\n• With Headless on, Settings no longer shows the screen in use, its ports or its rotation.\n• In Settings, ticking and unticking an option shows at once, without the row staying lit after the tap.\n• In lists from Lyrion's apps, a tapped track shows only its selection, without lighting up first.\nGood to know\n• In lists from Lyrion's apps and in their search, a second tap on a selected track puts its actions away. Only Play plays it."

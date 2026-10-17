@@ -150,8 +150,11 @@ WAL_FILES = ("-wal", "-shm")
 
 #: `gexis-<name>-<stamp>.tgz`. The name is the device's, so an archive says
 #: where it came from - ADR-0083 does not prevent restoring one device's
-#: archive onto another, and this is what makes it visible.
-NAME = re.compile(r"^gexis-.*-\d{8}-\d{6}\.tgz$")
+#: archive onto another, and this is what makes it visible. **`.tgz.gz` too**
+#: (found 2026-10-16): the download went out as `application/gzip`, and
+#: Firefox and others saved it with `.gz` added - the same archive, which
+#: copied back into the share was not listed.
+NAME = re.compile(r"^gexis-.*-\d{8}-\d{6}\.tgz(?:\.gz)?$")
 
 #: **The backup the updater asks for before each update** (George,
 #: 2026-10-12, answer 3: pruned, the three most recent kept). Named
@@ -171,22 +174,53 @@ KEEP_AUTOMATIC = 3
 SAFE = re.compile(r"^[A-Za-z0-9._-]+$")
 
 
+#: **What is wrong with a file that cannot be one** (the bar, 2026-10-16: a
+#: power cut during an update's backup left one of 0 bytes, listed and
+#: offered for a restore that would fail). Checked by its first bytes, which
+#: costs nothing; the whole archive is read only when it is restored.
+EMPTY = "Empty: it cannot be restored"
+NOT_GZIP = "Damaged: it cannot be restored"
+
+
 @dataclass(frozen=True)
 class Archive:
     name: str
     made: float
     size: int
+    problem: str | None = None
 
     def to_item(self) -> dict:
         """The shape a `list` row's items take (ADR-0044 §1)."""
         when = time.strftime("%-d %b %Y, %H:%M", time.localtime(self.made))
-        return {
+        item = {
             "name": self.name,
-            "meta": f"{when} · {self.size / 1_048_576:.1f} MB"
+            "meta": f"{when} · {_size(self.size)}"
                     + (" · before an update" if AUTOMATIC.match(self.name) else ""),
             "state": "saved",
             "bars": None,
         }
+        if self.problem:
+            # Listed so it can be forgotten, never offered for a restore.
+            item.update(meta=f"{when} · {self.problem}", broken=True)
+        return item
+
+
+def _size(size: int) -> str:
+    """In KB under a megabyte (2026-10-16): a fresh player's 12 KB backup
+    read "0.0 MB", beside one that really was empty."""
+    if size < 1_048_576:
+        return f"{max(1, round(size / 1024))} KB"
+    return f"{size / 1_048_576:.1f} MB"
+
+
+def _problem(path: Path, size: int) -> str | None:
+    if size == 0:
+        return EMPTY
+    try:
+        with path.open("rb") as f:
+            return None if f.read(2) == b"\x1f\x8b" else NOT_GZIP
+    except OSError:
+        return NOT_GZIP
 
 
 def _slug(text: str) -> str:
@@ -217,7 +251,7 @@ def available(directory: Path = DEFAULT_DIR) -> list[Archive]:
             continue
         if not stat.S_ISREG(info.st_mode):
             continue
-        found.append(Archive(entry.name, info.st_mtime, info.st_size))
+        found.append(Archive(entry.name, info.st_mtime, info.st_size, _problem(entry, info.st_size)))
     return sorted(found, key=lambda a: a.made, reverse=True)
 
 
@@ -384,12 +418,32 @@ def create(device_name: str, directory: Path = DEFAULT_DIR, root: Path = Path("/
             os.fchmod(raw.fileno(), 0o644)
             _give_to_pi(raw.fileno())
             size = os.fstat(raw.fileno()).st_size
+            # **On the card before it has its name** (the bar, 2026-10-14: a
+            # power cut during an update's backup left the name and none of
+            # the data - 0 bytes, listed as a backup).
+            os.fsync(raw.fileno())
         partial.replace(final)
+        _sync_dir(directory)
     except Exception:
         partial.unlink(missing_ok=True)
         raise
     logger.info("backup: wrote %s (%d bytes)", name, size)
     return name
+
+
+def _sync_dir(directory: Path) -> None:
+    """The rename itself on the card. Best effort: a filesystem that cannot
+    sync a directory still has the file's data, synced above."""
+    try:
+        fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY)
+    except OSError:
+        return
+    try:
+        os.fsync(fd)
+    except OSError:
+        pass
+    finally:
+        os.close(fd)
 
 
 def _fill(archive: tarfile.TarFile, work: str, root: Path) -> None:
@@ -847,7 +901,7 @@ def inspect(path: Path, known_migrations: int, schema_key: str = "_settings_sche
     schema = values.get(schema_key)
     # When it was made: the time in its name, as `create` writes it, or the
     # newest file in it - a renamed file keeps its contents' times.
-    stamp = re.search(r"-(\d{8}-\d{6})\.tgz$", path.name)
+    stamp = re.search(r"-(\d{8}-\d{6})\.tgz(?:\.gz)?$", path.name)
     try:
         made = time.mktime(time.strptime(stamp.group(1), "%Y%m%d-%H%M%S")) if stamp else None
     except ValueError:
@@ -945,3 +999,76 @@ def forget(name: str, directory: Path = DEFAULT_DIR) -> None:
         raise ValueError(f"not a backup name: {name!r}")
     (directory / name).unlink(missing_ok=True)
     logger.info("backup: deleted %s", name)
+
+
+# -- ADR-0083 as amended 2026-10-17: a backup uploaded in Settings -----------
+
+NEWER = "That backup is from a newer version of gexis. Update this player first, then add it."
+
+
+def upload_part(directory: Path = DEFAULT_DIR) -> tuple[int, Path]:
+    """An open file to stream an upload into, hidden in the share under a
+    name `_sweep_parts` removes if the upload never finishes."""
+    directory.mkdir(parents=True, exist_ok=True)
+    fd, name = tempfile.mkstemp(prefix=".gexis-upload.tgz.", suffix=".part", dir=directory)
+    return fd, Path(name)
+
+
+def add_upload(part: Path, filename: str | None, known_migrations: int,
+               directory: Path = DEFAULT_DIR) -> dict:
+    """**Check an uploaded file and add it to the share** (ADR-0083 as
+    amended 2026-10-17; George: *"It should stay in the restore list"*):
+    never restored by itself, never in place of a file already there.
+    Returns `{"name", "already"}`; raises `Refused` with the sentence for the
+    page. `part` is gone afterwards either way."""
+    try:
+        seen = inspect(part, known_migrations)
+        if seen["newer"]:
+            raise Refused(NEWER)
+        # **The same backup under another name is already there** (a file
+        # renamed on the computer): said, not added twice.
+        size = part.stat().st_size
+        for listed in available(directory):
+            if listed.size == size and _same(part, directory / listed.name):
+                return {"name": listed.name, "already": True}
+        given = Path(filename or "").name
+        if given.endswith(".tgz.gz"):
+            given = given[:-3]
+        if not (NAME.match(given) and SAFE.match(given)):
+            stamp = time.strftime("%Y%m%d-%H%M%S", time.localtime(seen["made"] or time.time()))
+            given = f"gexis-{_slug(seen.get('name') or 'gexis')}-{stamp}.tgz"
+        final = directory / given
+        if final.exists() or final.is_symlink():
+            if _same(part, final):
+                return {"name": given, "already": True}
+            given = f"gexis-{_slug(seen.get('name') or 'gexis')}-{time.strftime('%Y%m%d-%H%M%S')}.tgz"
+            final = directory / given
+        with part.open("rb+") as f:
+            os.fchmod(f.fileno(), 0o644)
+            _give_to_pi(f.fileno())
+            os.fsync(f.fileno())
+        # A link, not a rename: it fails rather than replace whatever
+        # arrived under that name in the meantime.
+        os.link(part, final)
+        _sync_dir(directory)
+        logger.info("backup: %s added from an upload (%s)", given, seen.get("name"))
+        return {"name": given, "already": False}
+    except FileExistsError as exc:
+        raise Refused("A backup with that name arrived at the same moment. Try again.") from exc
+    finally:
+        part.unlink(missing_ok=True)
+
+
+def _same(a: Path, b: Path) -> bool:
+    try:
+        if not stat.S_ISREG(b.lstat().st_mode) or a.stat().st_size != b.stat().st_size:
+            return False
+        with a.open("rb") as x, b.open("rb") as y:
+            while True:
+                one, two = x.read(1 << 20), y.read(1 << 20)
+                if one != two:
+                    return False
+                if not one:
+                    return True
+    except OSError:
+        return False

@@ -25,6 +25,8 @@ Look before deleting; delete only what is listed here as safe.
 | Local branches | `main`, `phase-13b`, `phase-13d`, any not contained in `origin/main` | merged ones (`git merge-base --is-ancestor <b> origin/main`); remote branches are never touched |
 | `image/deploy/` | the newest released image and its `.info` | older images (each is rebuilt from its tag) and stray `build*.log` |
 | `packaging/out/` (both checkouts) | nothing needed | every `.deb` (rebuilt by the next build) |
+| `~/.local/share/gexis-release-out` | **all of it**: the local copies `reuse.py` compares published files against (2026-10-16) | nothing; without it a release re-uploads every OS file |
+| `~/.cache/gexis-player/debs` | the skin packs and wallpapers (the build prunes replaced versions itself) | nothing |
 | pi-gen volumes | the warm stage trees | `make prune` only - **never `make clean`** (a cold build is ~40 min) |
 | Docker images | `pi-gen`, `gexis-deb-builder`, the Debian bases, anything a running container uses (`gexis-dev-*` is someone else's - leave it) | dangling images: `docker image prune -f` (not `-a`) |
 | The session scratchpad | the test `venv`, `relkey.gpg`, the players' host-key files, `holddemo.py` **with its `pd/` folder** (the public-domain demo library; lost once, 2026-10-15, and rebuilt - a copy lives in `~/projects/gexis-blog/demo/`), `chipshot.py`, `film.py` | everything else (check first that no memory file, HANDOFF or test points into it) |

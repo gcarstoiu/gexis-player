@@ -371,8 +371,9 @@ share is `pi`'s and writable over SMB, and the core works in it as root, so
 nothing there is followed through a link:
 
 - **Writing.** The archive is written under a random name
-  (`.<name>.<random>.part`, `mkstemp`), handed to `pi` through the open file
-  and renamed into place; a `.part` left by a backup cut short is removed by
+  (`.<name>.<random>.part`, `mkstemp`), handed to `pi` through the open file,
+  `fsync`ed, renamed into place and the folder synced (2026-10-16: a power
+  cut had left a final name with 0 bytes); a `.part` left by a backup cut short is removed by
   the next backup once it is 10 minutes old (`STALE_PART_S`), by name only.
   A live SQLite database with a `-wal` beside it - the Beszel hub's - goes
   in as one consistent file, copied with SQLite's own backup, without its
@@ -385,7 +386,18 @@ nothing there is followed through a link:
   name is a backup: `available()` uses `lstat`, and the download and a
   restore read through one file opened with `O_NOFOLLOW`
   (`open_archive()`), so a link left under a backup's name is not listed,
-  served or restored.
+  served or restored. A name may end `.tgz.gz` (a browser's save of the
+  download, which now goes out as `application/octet-stream`). A file of 0
+  bytes or without gzip's header is listed with `broken: true` and its reason
+  (`EMPTY`, `NOT_GZIP`), for *Forget* only.
+- **Adding from a phone or computer** (ADR-0083 as amended 2026-10-17).
+  `POST /backups?name=<file name>` streams the body into a hidden
+  `.gexis-upload.tgz.<random>.part` in the share (setup's 1 GB cap; one
+  upload at a time), and `add_upload()` checks it with `inspect()` as setup
+  does, refusing a newer gexis's. It is linked in under its own name
+  (`.tgz.gz` as `.tgz`), or `gexis-<device>-<made>.tgz` - `os.link`, so a
+  file already there is never replaced. The same archive already in the
+  share under any name is answered `already: true`. Nothing is restored.
 - **Putting back.** `_checked()` refuses a name not in plain form or outside
   the backed-up paths; a link, pipe or device under a backed-up folder is
   skipped, not the archive, so the backups 0.15.0 wrote with one restore

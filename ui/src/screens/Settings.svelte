@@ -152,10 +152,9 @@
   //: the typed name (ADR-0022, ADR-0048 §5).
   const device = $derived($settingsDevice);
   const deviceName = $derived(device.name ?? valueOf('device_name') ?? 'gexis');
-  const subtitle = $derived(
+  const facts = $derived(
     [deviceName, device.hostname ? `${device.hostname}.local` : hostOf(deviceName), device.address]
       .filter(Boolean)
-      .join('  \u00b7  ')
   );
   const sheet = $derived(sheetKey ? asSheet(rowOf(sheetKey)) : null);
   //: ADR-0125: the problem report - built on the player, sent from here.
@@ -388,6 +387,38 @@
 
   //: ADR-0083 as amended 2026-10-08: the file itself, by its own name - a
   //: link, so a large backup goes straight to the browser's downloads.
+  //: **ADR-0083 as amended 2026-10-17: a backup added from this phone or
+  //: computer** (George: "It should stay in the restore list"). Sent as the
+  //: request's body, as setup sends one; checked by the player and added to
+  //: the list, never restored by itself.
+  let adding = $state(null); // the share sent, 0..1, while one goes up
+  let addError = $state(null);
+  function addBackup(input) {
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    addError = null;
+    adding = 0;
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `/backups?name=${encodeURIComponent(file.name)}`);
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable) adding = e.loaded / e.total; };
+    xhr.onload = () => {
+      let body = {};
+      try { body = JSON.parse(xhr.responseText); } catch { /* not JSON */ }
+      adding = null;
+      if (body.ok) {
+        flash(body.already ? `${body.name} is already in the list` : `${body.name} added`, 3500);
+        openList('restore');
+      } else addError = body.error ?? 'The file did not reach the player. Try again.';
+    };
+    xhr.onerror = () => {
+      adding = null;
+      addError = 'The file did not reach the player. Try again.';
+    };
+    xhr.send(file);
+  }
+
   function downloadBackup(item) {
     const a = Object.assign(document.createElement('a'), { href: `/backups/${encodeURIComponent(item.name)}`, download: item.name });
     document.body.append(a);
@@ -1137,6 +1168,7 @@
     joinError = null;
     restoring = null;
     listError = null;
+    addError = null;
     // A grouped choice opens on the region the current value is in, so the
     // zone in use is one tap away rather than two.
     region = row.grouped ? String(row.value ?? '').split('/')[0] || null : null;
@@ -1303,6 +1335,12 @@
       return;
     }
     if (row.kind === 'backup') {
+      // An empty or damaged file is listed to be forgotten, never restored
+      // (2026-10-16): its line already says why.
+      if (item.broken) {
+        flash(`${item.name} cannot be restored. Forget it, or copy in a good one.`, 4500);
+        return;
+      }
       // ADR-0083: ask first. Everything this replaces is unrecoverable
       // afterwards, and the device restarts.
       restorePending = item;
@@ -1646,7 +1684,11 @@
         </div>
         <!-- Shown at both widths: the panel is where someone types the
              name, so it is where the resolved host has to sit beside it. -->
-        <div class="subtitle">{subtitle}</div>
+        <!-- **Each fact whole** (George, 2026-10-16): on a narrow screen
+             the address goes to the next line instead of being cut off. -->
+        <div class="subtitle subtitle--facts">
+          {#each facts as fact, i (i)}<span class="fact">{fact}</span>{/each}
+        </div>
       </div>
     </div>
 
@@ -2521,7 +2563,7 @@
                 {:else if item.secured}
                   <span class="lock lock--open" role="img" aria-label="Password saved"><span></span><span></span></span>
                 {/if}
-                {#if sheet.key === 'restore' && !onPanel()}
+                {#if sheet.key === 'restore' && !onPanel() && !item.broken}
                   <!-- ADR-0083 as amended 2026-10-08: a backup saved on the
                        phone or computer, for a newly flashed card's setup
                        (ADR-0131). Not on the panel, which saves nothing. -->
@@ -2577,6 +2619,16 @@
             <span class="empty__text">{listError ?? sheet.empty ?? 'Nothing here yet.'}</span>
           </div>
         {/if}
+      {/if}
+
+      {#if sheet.type === 'list' && sheet.key === 'restore' && !onPanel() && !join && !restorePending}
+        <!-- ADR-0083 as amended 2026-10-17: on a phone or computer, as
+             Download is; the panel has no files to pick. -->
+        <label class="iv__add addbackup" class:is-busy={adding !== null}>
+          <input type="file" hidden disabled={adding !== null} onchange={(e) => addBackup(e.currentTarget)} />
+          {adding !== null ? `Adding the backup… ${Math.round(adding * 100)}%` : 'Add a backup'}
+        </label>
+        {#if addError}<div class="addbackup__error">{addError}</div>{/if}
       {/if}
 
       <!-- Joining takes real seconds and can fail, so the sheet reports the
@@ -2908,6 +2960,22 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .subtitle--facts {
+    white-space: normal;
+    overflow: visible;
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 0.9em;
+    row-gap: 2px;
+  }
+  .fact {
+    white-space: nowrap;
+  }
+  /* The dot ends the line it is on, so a wrapped address starts its own. */
+  .fact:not(:last-child)::after {
+    content: '\00b7';
+    margin-left: 0.9em;
   }
 
   .error {
@@ -3647,6 +3715,24 @@
   }
   .iv__add:disabled {
     opacity: 0.45;
+  }
+  .addbackup {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+    margin-top: 12px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+  .addbackup.is-busy {
+    opacity: 0.6;
+    cursor: default;
+  }
+  .addbackup__error {
+    margin-top: 8px;
+    color: var(--accent-warn);
+    font-size: 15px;
   }
   .iv__none {
     color: var(--ink-quiet);

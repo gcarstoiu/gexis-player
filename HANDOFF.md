@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-16 (on R2D2).
+Last updated: 2026-10-17 (on R2D2).
 
 ## Start here
 
@@ -10,66 +10,54 @@ and `phase-13b` is merged into it after each docs change. A release is built
 from a worktree made at its tag, then removed. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.0.2** on Stable (2026-10-15; Stable serial 2). **1.0.4 is
-on Testing only** (2026-10-16; tag `v1.0.4`, release `r1.0.4`, Testing serial
-46, signature verified through the API and the public URL; image
-`image/deploy/2026-10-16-gexis-player-v1.0.4.img`, 121 checks): host names on
-the network, multi-choice sheets drawn at once, one settings reload per
-save, `/settings` read once per answer - and 1.0.3 (the four bar and UI
-fixes, Testing serial 45, never promoted). **Not promoted: George decides.**
-PR #72 (`release-1.0.4`, carrying 1.0.3) is open; #71 was closed unmerged
-and its branch deleted. The README still names 1.0.2; a commit on
-`release-1.0.4` names 1.0.4 when it is promoted, before George merges.
-Not seen on a device: the jack taking over from a switched-off HDMI device
-(ADR-0141 D5). The setup network's story is in Finding 126 and the archive;
-why the bar worked before 2026-10-14 is still not known. The bar is
-ShelvesPi (1.0.2, UI preview `1.0.2+git16`); bedroompi's card is out of it.
+**Current release: 1.0.5, on Stable** (2026-10-16; Stable serial 3, Testing
+serial 47; image `image/deploy/2026-10-16-gexis-player-v1.0.5.img`, 123
+checks, the public download byte for byte the checked image). It carries
+1.0.3 and 1.0.4 (Testing only). PR #73 merged by George; post-merge steps and
+the routine clean-up done. On `phase-13d` since the tag: the package cache
+fix (833790d7) - a partial `packaging/build.sh` had emptied the skin-pack
+cache, so 1.0.4's and 1.0.5's images took over an hour each.
 
-**Release build output lives in `~/.local/share/gexis-release-out`**, not in
-a worktree: `packaging/release/out` in each release worktree is a symlink to
-it (excluded in `.git/info/exclude`). `reuse.py` reuses a published file
-only against a local copy of it, so the output removed with the 13a
-worktree made 1.0.3's first build want every OS file uploaded again; the
-copies were fetched back into `prior/` (1,004 files) and only the 10 changed
-ones uploaded. Make the symlink before `build.sh` in every release worktree.
+**Release build output lives in `~/.local/share/gexis-release-out`**: in each
+release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
+(excluded in `.git/info/exclude`). `reuse.py` reuses a published file only
+against a local copy, so losing that folder means re-uploading every OS file.
 
-**The blog (George's WordPress, tag `sound`):** eleven articles in
-`~/projects/gexis-blog/` (articles, media, the demo tools); the setup article
-left out until setup changes. George pushed them to his site as drafts with
-`push_wp.py` (2026-10-15). `schedule_wp.py` schedules nine of them, one a day
-at 18:00 from 2026-10-16 (its `ORDER`); whether George has run it is not
-recorded here. The theme (`gcarstoiu/gexis-wp-theme`, 1.0.3, pushed) has the
-`gexis/repo-doc` block, which reads FAQ, Install, Hardware, Manual and Release
-notes from `main`, cached an hour, and a Documents row on a tag's page.
+**On `phase-13d` since 1.0.5, previewed on sofapi and ShelvesPi
+(`1.0.5+git19`-`git22`), for the next release:** the package cache fix;
+backups (a download keeps its `.tgz` name and `.tgz.gz` is listed; synced to
+the card before it is named; an empty or damaged one listed for *Forget*
+only - ShelvesPi's 0-byte one from the power-cut test shows it; sizes under
+1 MB in KB); the Settings header wraps the address; **Add a backup** in
+*Settings → Restore* (ADR-0083 amended 2026-10-17: checked, added to the
+list, never restored by itself; tested on ShelvesPi with a copy of its own
+backup, answered "already there", and a junk file, refused - nothing
+added). After that release: blog article 05 mentions *Add a backup* and
+George re-pushes it.
 
-Suite 2,485 passed, 47 skipped (2026-10-16), run with the venv in
+**The blog** (George's WordPress, tag `sound`): eleven articles in
+`~/projects/gexis-blog/`, pushed as drafts by George (2026-10-15);
+`schedule_wp.py` schedules nine, daily at 18:00 from 2026-10-16 - whether he
+ran it is not recorded. The theme (`gcarstoiu/gexis-wp-theme` 1.0.3, pushed)
+mirrors FAQ, Install, Hardware, Manual and Release notes from `main`.
+
+Suite 2,493 passed, 47 skipped (2026-10-16), with the venv in
 `~/.local/share/gexis-venv` (never under `/tmp`: LESSONS 74).
 
-**Devices.** sofapi (Waveshare 10.1"; a test machine - its Lyrion queue may
-be lost, George 2026-10-12; an SMSL USB DAC on it), the bar (ShelvesPi,
-11.9") and guestpi (IQaudIO Pi-DAC PRO, 13.3") as read 2026-10-13:
-sofapi and ShelvesPi (the bar) run a `phase-13d` preview, core and UI
-`1.0.4+git3` (2026-10-16, after 1.0.4): headless hides the screen, port and
-rotation rows; no press colour on settings options and Lyrion's list rows;
-the players search keeps who answered (the phone's player switch was gone
-since 2026-10-15: an announcement for `bedroompi-2` never resolved).
-bedroompi did not answer on the network on 2026-10-16 evening; guestpi as read
-2026-10-13, core `0.10.2+git63`. **Cards flashed
-from now on have no passwordless sudo: provision test cards with
-`DEV_SUDO="yes"`** (ADR-0139).
+**Devices.** sofapi (Waveshare 10.1", SMSL USB DAC; a test machine), the bar
+(ShelvesPi, 11.9"), guestpi (IQaudIO Pi-DAC PRO, 13.3"), bedroompi (a
+separate card; off the network on 2026-10-16 evening). sofapi and ShelvesPi
+run `phase-13d` previews equal in content to 1.0.5; guestpi and bedroompi are
+offered 1.0.5 on Stable. **Cards flashed now have no passwordless sudo:
+provision test cards with `DEV_SUDO="yes"`** (ADR-0139).
 
 **Owed by George** (the shared to-do list has the detail)
 - On a card flashed from the 0.12.0 image: setup without a restore (g24),
   setup over a network cable (g26).
 - The screen on the bar's second HDMI port (g35).
-- The spectrum on sofapi's panel after the change (Finding 122): whether the
-  bars now look right.
-- On sofapi: the meters falling with the volume, and *Visualiser tweaks* →
-  *Needles follow the volume* and *Gain* (ADR-0146).
-- Then: 1.0.0 cut from this code as the first Stable release.
-- Done 2026-10-14: the fixes since 0.14.0 on sofapi (g46); Lyrion synced playback (7e/g09, passed); the bar's supply
-  (g12: the undervoltage was the USB extension cord, 0x0 plugged in
-  directly).
+- The spectrum on sofapi's panel after the change (Finding 122).
+- On sofapi: the meters falling with the volume, and *Needles follow the
+  volume* and *Gain* (ADR-0146).
 
 **Not run on a device yet:** the outline cut by the real mini strip (a
 stand-in bar only, headless); the headphone jack taking over from a
@@ -92,8 +80,7 @@ in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-10-15, after 1.0.2's PR (#70)** (/home 229 -> 242 GB free; start-of-session
-reading ~5,900 words with the memory index).
+2026-10-16, after 1.0.5's PR (#73)** (/home 216 -> 239 GB free).
 
 ## Phases
 

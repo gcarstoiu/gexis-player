@@ -6,8 +6,11 @@ made. Most of what is tested here is that.
 """
 from __future__ import annotations
 
+import gzip
+import os
 import tarfile
 import time
+from pathlib import Path
 
 import pytest
 
@@ -508,6 +511,20 @@ def test_made_is_the_time_in_the_name_or_the_newest_file(tmp_path):
 
 # -- ADR-0083 as amended 2026-10-08: a backup downloaded ------------------------
 
+def test_a_backup_saved_by_a_browser_as_tgz_gz_is_still_listed_and_read(tmp_path):
+    """Found 2026-10-16 on the bar: downloaded, saved with `.gz` added,
+    copied back into the share - and not in the Restore list."""
+    root, out = _real_device(tmp_path / "root", VALUES), tmp_path / "out"
+    name = backups.create("gexis", out, root)
+    stamp = time.mktime(time.strptime(name[-19:-4], "%Y%m%d-%H%M%S"))
+    saved = out / f"{name}.gz"
+    (out / name).rename(saved)
+    assert [a.name for a in backups.available(out)] == [saved.name]
+    assert backups.path_of(saved.name, out) == saved
+    # The time still read from the name, the setup's inspection unchanged.
+    assert backups.inspect(saved, 5)["made"] == stamp
+
+
 def test_a_download_is_one_of_ours_by_name(tmp_path):
     root, out = _device(tmp_path / "root"), tmp_path / "out"
     name = backups.create("gexis", out, root)
@@ -534,6 +551,9 @@ async def test_the_route_sends_it_as_a_file_to_save(tmp_path, monkeypatch):
         r = await client.get(f"/backups/{name}")
         assert r.status == 200
         assert r.headers["Content-Disposition"] == f'attachment; filename="{name}"'
+        # A plain file: as `application/gzip` browsers saved it as .tgz.gz
+        # (2026-10-16).
+        assert r.headers["Content-Type"] == "application/octet-stream"
         assert await r.read() == (out / name).read_bytes()
         assert (await client.get("/backups/..%2Fsettings.db")).status in (400, 404)
         assert (await client.get("/backups/gexis-gone-20260101-000000.tgz")).status == 404
@@ -636,7 +656,9 @@ def test_a_restore_that_fails_starts_the_hub_it_stopped(tmp_path, monkeypatch):
 
 def _archive(directory, name):
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / name).write_bytes(b"x")
+    # Gzip's own header, as an archive starts: a file that does not is
+    # listed as damaged (2026-10-16).
+    (directory / name).write_bytes(gzip.compress(b"x"))
     return name
 
 
@@ -1051,3 +1073,89 @@ def test_a_backup_cut_short_leaves_no_part_file_behind(tmp_path):
     assert fresh.exists() and theirs.exists()
     assert [p.name for p in out.iterdir() if p.name.endswith(".part")
             and p.name.startswith(".gexis-")] == [fresh.name]
+
+
+# -- the bar, 2026-10-14/16: a power cut during an update's backup ------------
+
+def test_an_empty_or_damaged_backup_is_listed_to_forget_never_to_restore(tmp_path):
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    good = backups.create("gexis", out, root)
+    (out / "gexis-gexis.before-update-20261014-081523.tgz").write_bytes(b"")
+    (out / "gexis-gexis-20261001-120000.tgz").write_bytes(b"not an archive")
+    items = {a.name: a.to_item() for a in backups.available(out)}
+    assert not items[good].get("broken")
+    empty = items["gexis-gexis.before-update-20261014-081523.tgz"]
+    assert empty["broken"] and backups.EMPTY in empty["meta"] and empty["state"] == "saved"
+    assert items["gexis-gexis-20261001-120000.tgz"]["broken"]
+
+
+def test_a_backup_is_on_the_card_before_it_has_its_name(tmp_path, monkeypatch):
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    events = []
+    real_fsync, real_replace = os.fsync, Path.replace
+    monkeypatch.setattr(backups.os, "fsync", lambda fd: (events.append("fsync"), real_fsync(fd))[1])
+    monkeypatch.setattr(Path, "replace", lambda self, target: (events.append("rename"), real_replace(self, target))[1])
+    backups.create("gexis", out, root)
+    assert events[:2] == ["fsync", "rename"], events
+    assert events.count("fsync") >= 2, "and the folder after the rename"
+
+
+def test_a_small_backup_reads_in_kilobytes_not_as_nothing():
+    """A fresh player's backup is about 12 KB: it read "0.0 MB" beside one
+    that was really empty (the bar, 2026-10-16)."""
+    item = backups.Archive("gexis-bar-20261015-124739.tgz", 0.0, 12548).to_item()
+    assert item["meta"].endswith("· 12 KB")
+    assert backups.Archive("gexis-bar-20261011-160331.tgz", 0.0, 612394 * 4).to_item()["meta"].endswith("· 2.3 MB")
+
+
+# -- ADR-0083 as amended 2026-10-17: a backup uploaded in Settings -----------
+
+@pytest.mark.asyncio
+async def test_an_uploaded_backup_is_checked_and_added_to_the_list_never_restored(tmp_path, monkeypatch):
+    from aiohttp.test_utils import TestClient, TestServer
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+
+    made = tmp_path / "made"
+    name = backups.create("Kitchen", made, _real_device(tmp_path / "root", VALUES))
+    body = (made / name).read_bytes()
+    share = tmp_path / "share"
+    share.mkdir()
+    monkeypatch.setattr(backups, "DEFAULT_DIR", share)
+    monkeypatch.setattr(backups.upload_part, "__defaults__", (share,))
+    monkeypatch.setattr(backups.add_upload, "__defaults__", (share,))
+    restored = []
+    monkeypatch.setattr(backups, "restore", lambda *a, **k: restored.append(a))
+    async with TestClient(TestServer(StateServer(StateStore({})).make_app())) as client:
+        # As a browser saved it: `.gz` added. Kept as the .tgz it is.
+        r = await client.post(f"/backups?name={name}.gz", data=body)
+        assert r.status == 200, await r.text()
+        assert (await r.json()) == {"ok": True, "error": None, "name": name, "already": False}
+        assert (share / name).read_bytes() == body
+        # The same file again: said, nothing added.
+        again = await (await client.post(f"/backups?name={name}", data=body)).json()
+        assert again["already"] is True
+        # No usable name: named for its device and when it was made.
+        r = await client.post("/backups?name=my%20backup.tgz", data=body)
+        assert (await r.json())["already"] is True, "the same archive, under its own name"
+        # Not a backup: refused, in words, and nothing left behind.
+        bad = await client.post("/backups?name=photo.jpg", data=b"\xff\xd8 not an archive")
+        assert bad.status == 400 and "not a gexis backup" in (await bad.json())["error"]
+    assert sorted(p.name for p in share.iterdir()) == [name]
+    assert [a.name for a in backups.available(share)] == [name]
+    assert restored == [], "added to the list, never restored by itself"
+
+
+def test_an_upload_never_replaces_a_different_backup_of_the_same_name(tmp_path):
+    made, share = tmp_path / "made", tmp_path / "share"
+    name = backups.create("Kitchen", made, _real_device(tmp_path / "root", VALUES))
+    share.mkdir()
+    (share / name).write_bytes(gzip.compress(b"another backup"))
+    fd, part = backups.upload_part(share)
+    with os.fdopen(fd, "wb") as f:
+        f.write((made / name).read_bytes())
+    added = backups.add_upload(part, name, 5, share)
+    assert added["name"] != name and not added["already"]
+    assert (share / name).read_bytes() == gzip.compress(b"another backup")
+    assert (share / added["name"]).read_bytes() == (made / name).read_bytes()
+    assert not part.exists()

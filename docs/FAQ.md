@@ -713,8 +713,10 @@ changed in that review, so one player's backup can start another. With a new
 name, the review offers *A second player*: on, the first player keeps its
 Beszel connection (the hub's address and keys too), Plexamp's claim, Spotify
 sign-in and Bluetooth pairings, so the two never share them. A backup from an older version works. A
-backup can also be restored later: copy it into the Backups share and choose
-it under *Settings → System → Restore*. Network share passwords are not kept
+backup can also be restored later: in *Settings → System → Restore* on a
+phone or computer, *Add a backup* puts it in the list (or copy it into the
+Backups share), then choose it there. A name ending `.tgz.gz`, as some
+browsers save a download, works too. Network share passwords are not kept
 in backups, so enter them again.
 
 **Do the backups fill the card?**
