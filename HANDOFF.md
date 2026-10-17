@@ -10,32 +10,24 @@ and `phase-13b` is merged into it after each docs change. A release is built
 from a worktree made at its tag, then removed. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.0.5, on Stable** (2026-10-16; Stable serial 3, Testing
-serial 47; image `image/deploy/2026-10-16-gexis-player-v1.0.5.img`, 123
-checks, the public download byte for byte the checked image). It carries
-1.0.3 and 1.0.4 (Testing only). PR #73 merged by George; post-merge steps and
-the routine clean-up done. On `phase-13d` since the tag: the package cache
-fix (833790d7) - a partial `packaging/build.sh` had emptied the skin-pack
-cache, so 1.0.4's and 1.0.5's images took over an hour each.
+**Current release: 1.0.6, on Stable** (2026-10-17; Stable serial 4, Testing
+serial 48, signatures verified through the API and the public URL; image
+`image/deploy/2026-10-17-gexis-player-v1.0.6.img`, 123 checks, the public
+download byte for byte the checked image; built in 16 minutes, the skin
+packs reused): *Add a backup* in Settings → Restore (ADR-0083 amended
+2026-10-17), the backup fixes, the Settings header wrap. **PR #74
+(`release-1.0.6`, README names 1.0.6) is open for George to merge**; then the
+post-merge steps (the `gexis-player-rel-1.0.6` worktree included) and the
+routine clean-up.
 
 **Release build output lives in `~/.local/share/gexis-release-out`**: in each
 release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
 (excluded in `.git/info/exclude`). `reuse.py` reuses a published file only
 against a local copy, so losing that folder means re-uploading every OS file.
 
-**1.0.6 is on Testing only** (2026-10-17; tag `v1.0.6`, Testing serial 48,
-signature verified both ways; image
-`image/deploy/2026-10-17-gexis-player-v1.0.6.img`, 123 checks, 16 minutes
-with all five skin packs reused from the cache): *Add a backup* in
-Settings → Restore (ADR-0083 amended 2026-10-17), the backup fixes (names,
-synced before named, empty or damaged ones for *Forget* only, KB sizes),
-the Settings header wrap. **Not promoted: George's call.** PR #74
-(`release-1.0.6`) open; README still names 1.0.5. The release worktree
-`gexis-player-rel-1.0.6` is still there (promote runs from it). After the
-release: blog article 05 mentions *Add a backup* and George re-pushes it.
-
 **The blog** (George's WordPress, tag `sound`): eleven articles in
-`~/projects/gexis-blog/`, pushed as drafts by George (2026-10-15);
+`~/projects/gexis-blog/`, pushed as drafts by George (2026-10-15; article 05
+now mentions *Add a backup*, bundle rebuilt 2026-10-17, for George to re-push);
 `schedule_wp.py` schedules nine, daily at 18:00 from 2026-10-16 - whether he
 ran it is not recorded. The theme (`gcarstoiu/gexis-wp-theme` 1.0.3, pushed)
 mirrors FAQ, Install, Hardware, Manual and Release notes from `main`.
