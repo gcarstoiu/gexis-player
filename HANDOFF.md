@@ -19,17 +19,20 @@ packs reused): *Add a backup* in Settings → Restore (ADR-0083 amended
 George; post-merge steps and the routine clean-up done.
 
 **Phase 14 (`ph-first-use`) is built on its own branch, not merged**
-(2026-10-18; worktree `~/projects/gexis-player-14`, branch `ph-first-use`
-off `phase-13d`, pushed). From Claude Design's hand-off (George, with the
-decisions delegated): part 1 shortened, part 2 on the phone
-(`PersonalisePage.svelte`, `personalise.py`), the panel's *Make it yours*
-code, *Library on the screen* (`lms_library`, in ADR-0022), *Personalise* in
-Settings → System. ADR-0149 accepted on that branch, with the 21 decisions
-and their reasons. **sofapi runs it** (core, UI, player `1.0.6+git17`, part 2
-put off after a check). Waiting for George: his test of part 2 through
-Personalise, whether *Personalise* enters ADR-0022, and part 1 on a fresh
-card before a merge. sofapi's packages are newer than 1.0.6 and older than
-the next release cut from `phase-13d`.
+(worktree `~/projects/gexis-player-14`, branch `ph-first-use` off
+`phase-13d`, pushed). **Reworked 2026-10-18 after George found it did not
+follow the designs**: first use (part 1 setup and part 2 *Make it yours*) is
+now one page, `FirstUsePage.svelte`, **generated** from Claude Design's
+`design/source/14-first-use` by `tools/design/gen_personalise.py`. The markup
+and styles are converted mechanically, the prototype's logic is kept
+verbatim, and 40 asserted replacements call the core. Change the design, then
+generate again; never restyle the `.svelte` by hand. Every screen was checked
+side by side with the prototype. ADR-0149's decisions were revised (25,
+including the two kept against the design: Output and the rename/second
+player on a restore, George 2026-10-08). **sofapi runs it** (UI and player
+`1.0.6+git22`, core `+git12`; part 2 opens from Settings → System →
+Personalise). Waiting for George: his test and the decisions, whether
+*Personalise* enters ADR-0022, and part 1 on a fresh card before a merge.
 
 **Release build output lives in `~/.local/share/gexis-release-out`**: in each
 release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
@@ -65,11 +68,9 @@ provision test cards with `DEV_SUDO="yes"`** (ADR-0139).
 stand-in bar only, headless); the headphone jack taking over from a
 switched-off HDMI device (ADR-0141 D5, fixed in 1.0.2).
 
-**Next: Phase 14, first use in two parts (`ph-first-use`, ADR-0149
-proposed)** - George settles its open points (the questions, answers and
-defaults), then Claude Design draws part 2 (10.1" panel, bars, phone) and the
-shorter part 1, then it is built. Still open from the release: Raspberry Pi
-Imager, the image file and *Use custom* (g14). **After it**, in order
+**Next: George's review of Phase 14 on sofapi** (above), then part 1 on a
+fresh card, then a PR for `ph-first-use`. Still open from the release:
+Raspberry Pi Imager, the image file and *Use custom* (g14). **After it**, in order
 (`docs/DEVELOPMENT.md`, "Phases after the first public release"; refer to them
 by ID): **15** MPD for real 5.1/7.1 (`ph-mpd`), **16** room correction with a
 USB microphone (`ph-room-correction`), **17** the player in Home Assistant
