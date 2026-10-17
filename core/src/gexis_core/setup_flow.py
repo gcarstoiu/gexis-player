@@ -106,6 +106,7 @@ class SetupFlow:
         sleep=asyncio.sleep,
         plugins=None,
         settling_path: Path = settling.PATH,
+        owed=None,
     ) -> None:
         self._network = network
         self._settings = settings
@@ -123,6 +124,8 @@ class SetupFlow:
         #: ships beyond the built-in sources, as `offered()` describes them.
         self._plugins = plugins or (lambda: [])
         self._settling_path = settling_path
+        #: ADR-0149: a new player is owed part 2 once part 1 has finished.
+        self._owed = owed or (lambda: None)
         self._task: asyncio.Task | None = None
 
     def offered(self) -> list[dict]:
@@ -335,6 +338,13 @@ class SetupFlow:
         self._path.unlink(missing_ok=True)
         library = await self._library(data)
         self._plugins_and_settling(data)
+        # **ADR-0149: part 2 next, on the phone** - what it plays and shows,
+        # asked from the home network. Not after a restore, whose backup
+        # answers it.
+        try:
+            self._owed()
+        except OSError as exc:
+            logger.warning("setup: cannot record that part 2 is owed: %s", exc)
         # ADR-0048: a rename takes effect at a restart, and the page's last
         # screen has already sent the phone to the new name.
         renaming = bool(data.get("name") and data["name"] != old_name and self._reboot is not None)

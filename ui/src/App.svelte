@@ -353,7 +353,12 @@
   // when the server is merely unreachable, and a library that vanished on a
   // Wi-Fi blip and grew back a few seconds later would be two different
   // products in one minute. A row somebody set is a stable fact.
-  const lmsOff = $derived($settingValues.lms_enabled === false);
+  //: **ADR-0149: Library on the screen off** (Phase 14; George, 2026-10-15:
+  //: "the lyrion client is up and running but there is no library
+  //: navigation on the screen"): the panel is the same two screens as with
+  //: the client off - the waiting home and Now Playing - while Lyrion's apps
+  //: and controllers still play to it. `lmsOff` stays the client itself.
+  const lmsOff = $derived($settingValues.lms_enabled === false || $settingValues.lms_library === false);
   const libraryOpen = $derived(!lmsOff && (!$active || libraryRequested));
   const waitingOpen = $derived(lmsOff && !$active);
   //: **ADR-0122: the library is kept while Now Playing is up**, mounted and

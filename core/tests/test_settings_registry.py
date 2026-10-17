@@ -176,6 +176,10 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         "meter_gain", "meter_follow",
         # ADR-0148 (George, 2026-10-14): the size of the screen's writing.
         "text_size",
+        # ADR-0149 (George, 2026-10-18, appended to ADR-0022's inventory on
+        # his confirmation): the library on the screen, and first use's
+        # part 2 asked again.
+        "lms_library", "personalise",
         # ADR-0055, 2026-09-23: the design has no output picker, because
         # the design did not know the device has four playback outputs and
         # that two of them cannot be turned down.
@@ -670,7 +674,8 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # information tile (ADR-0141 D2/D4, 2026-10-12). **120**: Gain
     # (ADR-0146, 2026-10-13). **121**: Needles follow the volume (ADR-0146
     # amended, the same day). **122**: Text size (ADR-0148, 2026-10-14).
-    assert len(rows) == 122
+    # **124**: Library on the screen and Personalise (ADR-0149, 2026-10-18).
+    assert len(rows) == 124
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
@@ -690,7 +695,7 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # 82 with Report this hardware (ADR-0126).
     # **81**: Software volume merged into Volume (ADR-0127). **80**: Pexels
     # removed.
-    assert len(rows) - len(kept) == 105  # 105: Text size (ADR-0148); 104: Needles follow the volume (ADR-0146 amended); 103: Gain (ADR-0146); 102: Screen port and its one-port tile (ADR-0141); 100: display standby (ADR-0135); 97: the idle switch and the home background (ADR-0133, 2026-10-11); 88: Weather icon motion (Finding 118); 87: Version hidden, it repeated Release; 88: the waiting screen's two rows (ADR-0133); 86: the own wallpapers (ADR-0133); 82: the factory reset (ADR-0132); 81: Cable (ADR-0123)
+    assert len(rows) - len(kept) == 107  # 107: Library on the screen and Personalise (ADR-0149); 105: Text size (ADR-0148); 104: Needles follow the volume (ADR-0146 amended); 103: Gain (ADR-0146); 102: Screen port and its one-port tile (ADR-0141); 100: display standby (ADR-0135); 97: the idle switch and the home background (ADR-0133, 2026-10-11); 88: Weather icon motion (Finding 118); 87: Version hidden, it repeated Release; 88: the waiting screen's two rows (ADR-0133); 86: the own wallpapers (ADR-0133); 82: the factory reset (ADR-0132); 81: Cable (ADR-0123)
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():

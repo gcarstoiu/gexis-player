@@ -31,6 +31,7 @@ class FakeSettings:
 def make(tmp_path, nm, settings=None, **kw):
     kw_servers = {"servers": kw.pop("servers", [])}
     offered = kw.pop("plugins", [])
+    owed = kw.pop("owed", None)
     net, clock = setup(tmp_path, nm, **kw)
     countries, reboots = [], []
 
@@ -50,6 +51,7 @@ def make(tmp_path, nm, settings=None, **kw):
         answers=tmp_path / "answers.json", marker=tmp_path / "setup-done",
         set_country=country, find_servers=find, sleep=clock.sleep,
         plugins=lambda: offered, settling_path=tmp_path / "settling.json",
+        owed=owed,
     )
     return flow, net, clock, countries, reboots
 
@@ -134,6 +136,22 @@ def test_a_wrong_password_keeps_every_answer_but_the_password_and_reopens_setup(
     assert net.status()["network"] == "open", "the setup network is back"
     assert net.status()["reason"] == "The password was not accepted." and net.status()["failed"] == "Home"
     assert not (tmp_path / "setup-done").exists() and reboots == []
+
+
+def test_a_new_player_is_owed_part_two_once_part_one_has_joined(tmp_path):
+    """ADR-0149: what it plays and shows is asked next, from the home
+    network - and not while the join has failed."""
+    owed = []
+    nm = FakeNM(devices=NOTHING, up_rc=4)
+    flow, net, *_ = make(tmp_path, nm, owed=lambda: owed.append(True))
+    flow.save({"ssid": "Home", "password": "wrongpass"})
+    finish(flow, net)
+    assert owed == [], "a failed join is not the end of part 1"
+    nm2 = FakeNM(devices=NOTHING)
+    flow, net, *_ = make(tmp_path / "ok", nm2, owed=lambda: owed.append(True))
+    flow.save({"ssid": "Home", "password": "hunter22"})
+    finish(flow, net)
+    assert owed == [True]
 
 
 def test_one_refused_setting_does_not_stop_setup(tmp_path):

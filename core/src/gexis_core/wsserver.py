@@ -44,7 +44,7 @@ from aiohttp import web
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core import memo, own_wallpapers, screen_apply
+from gexis_core import memo, own_wallpapers, screen_apply, settling
 from gexis_core.players import Players, status_line
 from gexis_core.wallpapers import SEARCH as PIXABAY_SEARCH
 from gexis_core import backups, bluetooth_devices, skin_packs, device_name, discovery, hardware_report, lyrion_scan, lyrion_shares, problem_report, skin_previews, skins, wifi
@@ -2152,6 +2152,56 @@ class StateServer:
         return web.json_response([{k: p.get(k) for k in ("id", "name", "summary", "notice", "from", "component")}
                                   for p in offered])
 
+    # -- ADR-0149: first use, part 2 ------------------------------------------
+
+    def _personalise_offered(self) -> list[dict]:
+        return self._setup_flow.offered() if self._setup_flow is not None else []
+
+    async def _handle_personalise(self, request: web.Request) -> web.Response:
+        """What the page needs beyond `/settings`: whether part 2 is owed, and
+        the plugins it can switch on, by their switches."""
+        from gexis_core import personalise
+        return web.json_response({
+            "state": personalise.state(),
+            "plugins": [{"row": p["row"], "name": p["name"], "component": p.get("component")}
+                        for p in self._personalise_offered() if p["row"] in personalise.PLUGIN_ROWS],
+        })
+
+    async def _handle_personalise_finish(self, request: web.Request) -> web.Response:
+        """**The answers, written in one go** (ADR-0149): `{"settings": {key:
+        value}}`, only keys part 2 may write; then what they install is
+        followed (ADR-0128) and part 2 is done."""
+        from gexis_core import personalise
+        if self._settings is None:
+            return web.json_response({"error": "settings are not wired up"}, status=503)
+        try:
+            body = await request.json()
+            values = personalise.checked(body.get("settings"))
+        except (ValueError, AttributeError) as exc:
+            return web.json_response({"error": str(exc)}, status=400)
+        result = personalise.apply(values, self._settings, self._personalise_offered(), settling.begin)
+        personalise.end(personalise.DONE)
+        self._store.set_personalise(None)
+        return web.json_response({"ok": True, **result})
+
+    async def _handle_personalise_later(self, request: web.Request) -> web.Response:
+        """*Do it later*: the defaults kept - and, as part 1 did before part
+        2 existed, a Lyrion server looked for once and used when exactly one
+        answers, so a player put off still finds its library."""
+        from gexis_core import personalise
+        if self._settings is not None:
+            try:
+                if self._settings.value("lms_enabled") and not self._settings.value("lms_server"):
+                    found = await discovery.find_servers()
+                    if len(found) == 1:
+                        self._settings.set("lms_server", found[0]["address"])
+                        logger.info("personalise: put off; the one Lyrion server found is used")
+            except Exception as exc:  # noqa: BLE001 - a courtesy, never a failure
+                logger.warning("personalise: Lyrion not looked for: %s", exc)
+        personalise.end(personalise.LATER)
+        self._store.set_personalise(None)
+        return web.json_response({"ok": True})
+
     async def _handle_settling_done(self, request: web.Request) -> web.Response:
         """ADR-0128: the owner's OK on a settling screen that names a
         download that did not finish."""
@@ -2742,6 +2792,9 @@ class StateServer:
         app.router.add_post("/setup/backup", self._handle_setup_backup)
         app.router.add_delete("/setup/backup", self._handle_setup_backup_forget)
         app.router.add_get("/setup/plugins", self._handle_setup_plugins)
+        app.router.add_get("/personalise", self._handle_personalise)
+        app.router.add_post("/personalise/finish", self._handle_personalise_finish)
+        app.router.add_post("/personalise/later", self._handle_personalise_later)
         app.router.add_post("/settling/done", self._handle_settling_done)
         app.router.add_post("/settling/hide", self._handle_settling_hide)
         # ADR-0101: the phone's idle toggle, and the panel saying what it shows.

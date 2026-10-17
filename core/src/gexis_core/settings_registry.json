@@ -139,6 +139,18 @@
         "surfaced": false
       },
       {
+        "key": "lms_library",
+        "type": "toggle",
+        "label": "Library on the screen",
+        "marks": "N",
+        "note": "Off: the screen shows what plays and the sources, with no library to browse. Lyrion's apps on your phone still play to the player.",
+        "default": true,
+        "onlyWhen": [
+          "lms_enabled",
+          true
+        ]
+      },
+      {
         "key": "lms_extended_nav",
         "type": "toggle",
         "label": "Extended navigation",
@@ -1685,6 +1697,15 @@
         "type": "group",
         "label": "Backup and reset",
         "accent": "#b0bcc4"
+      },
+      {
+        "key": "personalise",
+        "type": "action",
+        "label": "Personalise",
+        "marks": "N",
+        "note": "Asks again how you listen and what the screen shows, on your phone, with today's answers as the starting point. The player's screen shows a code to it.",
+        "confirm": "Start",
+        "default": null
       },
       {
         "key": "backup",

@@ -76,7 +76,7 @@ from gexis_core.lyrion_shares import Shares as LyrionShares
 from gexis_core.fanart import Fanart
 from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, Queue, TrackMetadata
-from gexis_core import connections, hardware_report, settings_migrations, settling, updates, wired
+from gexis_core import connections, hardware_report, personalise, settings_migrations, settling, updates, wired
 from gexis_core.standby import Schedule, Standby
 from gexis_core.settings import SettingsStore
 # ADR-0127's `output_mode` row and ADR-0124's remembered software level, kept
@@ -2368,6 +2368,14 @@ async def main() -> None:
     cable = wired.Cable(on_change=lambda _pending: state_store.bump_settings_revision())
     # ADR-0123 decision 2: the connected Wi-Fi network's address, the same way.
     wifi_address = wired.Cable(device="wlan0", on_change=lambda _pending: state_store.bump_settings_revision())
+    # **ADR-0149: first use's part 2**, owed by a new player once part 1
+    # has finished, or again from Settings -> System -> Personalise.
+    def _personalise_owed() -> None:
+        personalise.mark_pending()
+        state_store.set_personalise(personalise.PENDING)
+
+    state_store.set_personalise(personalise.PENDING if personalise.state() == personalise.PENDING else None)
+
     settings = Settings(
         settings_store,
         shown={"cable": cable.shown,
@@ -2500,6 +2508,12 @@ async def main() -> None:
                "text_size": None,
                # ADR-0118 B: read by the menus route and the panel's home.
                "lms_extended_nav": None,
+               # ADR-0149: read by the panel, which shows the waiting home in
+               # place of the library when it is off.
+               "lms_library": None,
+               # ADR-0149: part 2 owed again - the phone opens on it, the
+               # panel shows a code to it - until it is finished or put off.
+               "personalise": lambda _=None: _personalise_owed(),
                "fanart_key": None, "lms_server": None,
                # ADR-0059: read on every ask through `gate` and
                # `confidence_min`, so nothing has to happen on the write.
@@ -3898,7 +3912,8 @@ async def main() -> None:
 
     setup_network = SetupNetwork(on_change=_setup_changed)
     setup_ref["net"] = setup_network
-    setup_flow = SetupFlow(setup_network, settings, reboot=_reboot, plugins=_offered_plugins)
+    setup_flow = SetupFlow(setup_network, settings, reboot=_reboot, plugins=_offered_plugins,
+                           owed=_personalise_owed)
     asyncio.ensure_future(cable.follow())
     # ADR-0123 as amended (George, 2026-10-08): the cable wins over Wi-Fi.
     asyncio.ensure_future(wired.CableFirst().follow())
