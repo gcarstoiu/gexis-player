@@ -16,8 +16,7 @@
   import Settings from './screens/Settings.svelte';
   import MiniPlayer from './screens/MiniPlayer.svelte';
   import SetupScreen from './screens/SetupScreen.svelte';
-  import SetupPage from './screens/SetupPage.svelte';
-  import PersonalisePage from './screens/PersonalisePage.svelte';
+  import FirstUsePage from './screens/FirstUsePage.svelte';
   import { screen } from './lib/family.svelte.js';
   import UpdateScreen from './screens/UpdateScreen.svelte';
   import PanelPointer from './lib/PanelPointer.svelte';
@@ -701,9 +700,9 @@
 <svelte:window onpointerdowncapture={onPointerDown} />
 
 {#if surface === 'remote' && setupPage}
-  <SetupPage setup={$setup} />
+  <FirstUsePage mode="p1" setup={$setup} />
 {:else if surface === 'remote' && personalisePage}
-  <PersonalisePage onclose={() => (personaliseHeld = false)} />
+  <FirstUsePage mode="p2" onclose={() => (personaliseHeld = false)} />
 {:else if surface === 'remote'}
   <!-- ADR-0101: on a phone, Settings and the mini player under it. -->
   <div class="remote remote--mini"><Settings {openRow} onrowopened={() => (openRow = null)} /></div>

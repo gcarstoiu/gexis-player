@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,300..800&amp;family=IBM+Plex+Mono:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;padding:0;background:#0c1014;}
+  a{color:#7ed6bc;}a:hover{color:#a8e5d3;}
+  input::placeholder{color:rgba(233,238,242,0.35);}
+  @keyframes fuSpin{to{transform:rotate(360deg);}}
+  @keyframes fuNeedleA{0%{transform:rotate(-42deg);}30%{transform:rotate(6deg);}50%{transform:rotate(-14deg);}78%{transform:rotate(24deg);}100%{transform:rotate(-4deg);}}
+  @keyframes fuNeedleB{0%{transform:rotate(-30deg);}28%{transform:rotate(18deg);}58%{transform:rotate(-20deg);}84%{transform:rotate(12deg);}100%{transform:rotate(-38deg);}}
+  @keyframes fuBar{0%{transform:scaleY(0.3);}100%{transform:scaleY(1);}}
+  @keyframes fuRing{0%{transform:scale(0.82);opacity:0.55;}100%{transform:scale(1.75);opacity:0;}}
+  @keyframes fuCycle{0%,22%{opacity:1;}25%,97%{opacity:0;}100%{opacity:1;}}
+  @keyframes wxSpin{to{transform:rotate(360deg);}}
+  @keyframes wxDrift{0%,100%{transform:translateX(-0.23cqw);}50%{transform:translateX(0.23cqw);}}
+  @keyframes wxFall{0%{transform:translateY(-0.3cqw);opacity:0;}30%{opacity:1;}100%{transform:translateY(0.94cqw);opacity:0;}}
+  @keyframes wxPulse{0%,100%{opacity:0.55;}50%{opacity:1;}}
+  @keyframes fuPump{0%,100%{transform:scale(0.84);}50%{transform:scale(1);}}
+  @keyframes fuNod{0%,100%{transform:translateY(0) rotate(0deg);}50%{transform:translateY(3px) rotate(-5deg);}}
+  @keyframes fuFloat{0%{transform:translateY(0);opacity:0;}20%{opacity:1;}100%{transform:translateY(-44px);opacity:0;}}
+  @keyframes npRing{0%{transform:scale(0.82);opacity:0.55;}100%{transform:scale(1.75);opacity:0;}}
+</style>
+</helmet>
+<div style="min-height:100vh;box-sizing:border-box;background:#0c1014;color:#e9eef2;font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif;display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:center;gap:48px;padding:40px 28px 64px;">
+
+  <div style="width:300px;max-width:100%;flex-shrink:0;display:flex;flex-direction:column;gap:26px;">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <img src="gexis-mark.svg" alt="" width="36" height="36" style="width:36px;height:36px;display:block;flex-shrink:0;">
+      <div>
+        <div style="font-size:20px;font-weight:800;letter-spacing:-0.01em;">First-use setup</div>
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);margin-top:3px;">Prototype · parts 1 and 2</div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Flow</div>
+      <sc-for list="{{ flows }}" as="f" hint-placeholder-count="2">
+        <div onClick="{{ f.onClick }}" style="display:flex;flex-direction:column;gap:6px;padding:14px 16px;border-radius:14px;cursor:pointer;box-sizing:border-box;background:{{ f.bg }};border:1px solid {{ f.border }};">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="padding:3px 8px;border-radius:7px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;font-weight:700;background:{{ f.badgeBg }};color:{{ f.badgeInk }};">{{ f.id }}</span>
+            <span style="font-size:16px;font-weight:700;">{{ f.title }}</span>
+          </div>
+          <div style="font-size:13px;line-height:1.45;color:rgba(233,238,242,0.66);text-wrap:pretty;">{{ f.text }}</div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;">
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Start at</div>
+        <div style="display:flex;gap:3px;padding:3px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);">
+          <sc-for list="{{ startOpts }}" as="x" hint-placeholder-count="2">
+            <span onClick="{{ x.onClick }}" style="flex:1;text-align:center;padding:7px 4px;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;background:{{ x.bg }};color:{{ x.ink }};">{{ x.label }}</span>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Layout</div>
+        <div style="display:flex;gap:3px;padding:3px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);">
+          <sc-for list="{{ layoutOpts }}" as="x" hint-placeholder-count="2">
+            <span onClick="{{ x.onClick }}" style="flex:1;text-align:center;padding:7px 4px;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;background:{{ x.bg }};color:{{ x.ink }};">{{ x.label }}</span>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <sc-if value="{{ showListenPvOpts }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Listen picture · options</div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px;padding:3px;border-radius:18px;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);">
+          <sc-for list="{{ listenPvOpts }}" as="x" hint-placeholder-count="4">
+            <span onClick="{{ x.onClick }}" style="flex:1;text-align:center;padding:7px 6px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer;background:{{ x.bg }};color:{{ x.ink }};">{{ x.label }}</span>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ hasSims }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#e0a758;">Simulate</div>
+        <sc-for list="{{ sims }}" as="m" hint-placeholder-count="1">
+          <div onClick="{{ m.onClick }}" style="padding:10px 14px;border-radius:12px;border:1px dashed rgba(224,167,88,0.55);background:rgba(224,167,88,0.06);font-size:14px;font-weight:700;color:#e9eef2;cursor:pointer;" style-hover="background:rgba(224,167,88,0.14);">{{ m.label }}</div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <div style="display:flex;flex-direction:column;gap:2px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+        <span style="flex:1;font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Screens on this path</span>
+        <span onClick="{{ onRestart }}" style="padding:5px 12px;border-radius:999px;border:1px solid rgba(233,238,242,0.16);font-size:12px;font-weight:700;cursor:pointer;" style-hover="background:rgba(233,238,242,0.08);">Restart</span>
+      </div>
+      <sc-for list="{{ navGroups }}" as="g" hint-placeholder-count="2">
+        <div style="display:flex;flex-direction:column;gap:2px;margin-bottom:10px;">
+          <div style="font-size:12px;font-weight:700;color:rgba(233,238,242,0.5);padding:4px 10px;">{{ g.title }}</div>
+          <sc-for list="{{ g.items }}" as="n" hint-placeholder-count="6">
+            <div onClick="{{ n.onClick }}" style="display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:9px;cursor:pointer;background:{{ n.bg }};" style-hover="background:rgba(233,238,242,0.06);">
+              <span style="width:7px;height:7px;border-radius:50%;flex-shrink:0;display:block;background:{{ n.c }};"></span>
+              <span style="flex:1;min-width:0;font-size:14px;font-weight:{{ n.fw }};color:{{ n.ink }};">{{ n.label }}</span>
+              <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;color:rgba(233,238,242,0.4);">{{ n.code }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="flex:0 1 auto;max-width:100%;overflow-x:auto;display:flex;flex-direction:column;gap:14px;">
+    <div style="display:flex;gap:10px;align-items:baseline;padding:0 4px;">
+      <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:700;color:#e9eef2;">{{ code }}</span>
+      <span style="font-size:14px;color:rgba(233,238,242,0.62);">{{ navLabel }}</span>
+    </div>
+
+    <div style="position:relative;flex-shrink:0;overflow:hidden;background:#101a21;border:1px solid rgba(233,238,242,0.14);box-shadow:0 30px 60px rgba(0,0,0,0.45);box-sizing:border-box;display:flex;flex-direction:column;width:{{ fw }};height:{{ fh }};border-radius:{{ rad }};">
+      <div style="position:absolute;inset:0;background:#37505f;"></div>
+      <div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,rgba(20,33,42,0.72),rgba(13,21,28,0.96));"></div>
+
+      <div style="position:relative;flex-shrink:0;display:flex;flex-direction:column;padding:{{ headPad }};">
+        <div style="display:flex;align-items:center;gap:16px;min-width:0;">
+          <img src="gexis-mark.svg" alt="" width="34" height="34" style="width:34px;height:34px;flex-shrink:0;display:block;">
+          <div style="flex:1;min-width:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ crumb }}</div>
+        </div>
+        <div style="height:3px;border-radius:2px;background:rgba(233,238,242,0.1);margin-top:22px;overflow:hidden;display:{{ progDisplay }};">
+          <div style="height:100%;transition:width 300ms ease;width:{{ prog }};background:{{ accent }};"></div>
+        </div>
+      </div>
+
+      <div style="position:relative;flex:1;min-height:0;display:flex;padding:{{ bodyPad }};gap:{{ colGap }};">
+        <div style="width:calc(50% - 24px);flex-shrink:0;flex-direction:column;justify-content:center;gap:12px;display:{{ leftDisplay }};">
+          <sc-if value="{{ hasSidePv }}" hint-placeholder-val="{{ false }}">
+            <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">{{ sidePv.head }}</div>
+            <dc-import name="Panel Mini" kind="{{ sidePv.kind }}" marks="{{ sidePv.marks }}" time="{{ sidePv.time }}" place="{{ sidePv.place }}" player="{{ sidePv.player }}" weather="{{ sidePv.weather }}" bg="{{ sidePv.bg }}" wall-src="{{ sidePv.wallSrc }}" photo="{{ sidePv.photo }}" clock="{{ sidePv.clock }}" black="{{ sidePv.black }}" rpm="{{ sidePv.rpm }}" animate="{{ sidePv.animate }}" secs="{{ sidePv.secs }}" phone="{{ sidePv.phone }}" hint-size="100%,300px" style="width:100%;display:block;"></dc-import>
+          </sc-if>
+          <sc-if value="{{ noSidePv }}" hint-placeholder-val="{{ false }}">
+            <div style="aspect-ratio:16/10;border-radius:12px;border:2px dashed rgba(233,238,242,0.2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px;box-sizing:border-box;text-align:center;">
+              <div style="font-size:18px;font-weight:700;">No screen on this player</div>
+              <div style="font-size:14px;line-height:1.45;color:rgba(233,238,242,0.6);max-width:34ch;text-wrap:pretty;">Headless was chosen in part 1, so part 2 skips Browse and the three screen questions.</div>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+          <div ref="{{ scrollRef }}" style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;display:flex;flex-direction:column;gap:22px;padding:2px 0 12px;">
+            <div style="align-items:center;gap:11px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;flex-shrink:0;display:{{ eyebrowDisplay }};color:{{ accent }};">
+              <span style="width:9px;height:9px;border-radius:50%;flex-shrink:0;display:block;background:{{ accent }};"></span>
+              <span>{{ stepName }}</span>
+              <span style="flex:1;height:1px;background:rgba(233,238,242,0.1);display:block;"></span>
+            </div>
+            <div style="flex-shrink:0;">
+              <div style="font-weight:800;letter-spacing:-0.015em;line-height:1.15;text-wrap:pretty;font-size:{{ tSize }};">{{ title }}</div>
+              <div style="font-size:16px;line-height:1.5;color:rgba(233,238,242,0.66);margin-top:8px;text-wrap:pretty;display:{{ subDisplay }};">{{ sub }}</div>
+            </div>
+
+            <sc-if value="{{ hasInlinePv }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:10px;flex-shrink:0;">
+                <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">{{ pv.head }}</div>
+                <dc-import name="Panel Mini" kind="{{ pv.kind }}" marks="{{ pv.marks }}" time="{{ pv.time }}" place="{{ pv.place }}" player="{{ pv.player }}" weather="{{ pv.weather }}" bg="{{ pv.bg }}" wall-src="{{ pv.wallSrc }}" photo="{{ pv.photo }}" clock="{{ pv.clock }}" black="{{ pv.black }}" rpm="{{ pv.rpm }}" animate="{{ pv.animate }}" secs="{{ pv.secs }}" phone="{{ pv.phone }}" hint-size="100%,220px" style="width:100%;display:block;"></dc-import>
+              </div>
+            </sc-if>
+
+            <sc-for list="{{ blocks }}" as="b" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;flex-shrink:0;">
+
+                <sc-if value="{{ b.isList }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:6px;">
+                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);padding:4px 2px;display:{{ b.headDisplay }};">{{ b.head }}</div>
+                    <sc-for list="{{ b.rows }}" as="o" hint-placeholder-count="3">
+                      <div onClick="{{ o.onClick }}" style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;min-height:64px;padding:12px 16px;border-radius:14px;box-sizing:border-box;transition:background 150ms,border-color 150ms;cursor:{{ o.cursor }};background:{{ o.bg }};border:1px {{ o.bs }} {{ o.border }};">
+                        <span style="width:24px;height:24px;border-radius:50%;flex-shrink:0;box-sizing:border-box;align-items:center;justify-content:center;display:{{ o.radioDisplay }};border:2px solid {{ o.ring }};">
+                          <span style="width:11px;height:11px;border-radius:50%;background:#7ed6bc;display:{{ o.dotDisplay }};"></span>
+                        </span>
+                        <span style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.12);box-sizing:border-box;flex-shrink:0;align-items:center;justify-content:center;display:{{ o.iconDisplay }};">
+                          <sc-if value="{{ o.isLyr }}" hint-placeholder-val="{{ false }}"><img src="icon-lyrion.svg" alt="" style="display:block;width:28px;height:21px;"></sc-if>
+                          <sc-if value="{{ o.isSpo }}" hint-placeholder-val="{{ false }}"><img src="icon-spotify.png" alt="" style="display:block;width:22px;height:22px;"></sc-if>
+                          <sc-if value="{{ o.isBt }}" hint-placeholder-val="{{ false }}"><img src="icon-bluetooth.png" alt="" style="display:block;width:22px;height:22px;"></sc-if>
+                          <span style="width:22px;height:22px;border-radius:50%;border:2px solid rgba(233,238,242,0.7);box-sizing:border-box;align-items:center;justify-content:center;font-size:11px;font-weight:800;display:{{ o.letterDisplay }};">{{ o.letter }}</span>
+                        </span>
+                        <span style="flex:1;min-width:0;">
+                          <span style="display:block;font-size:17px;font-weight:600;text-wrap:pretty;color:{{ o.labelInk }};">{{ o.label }}</span>
+                          <span style="font-size:14px;line-height:1.4;color:rgba(233,238,242,0.6);margin-top:3px;text-wrap:pretty;display:{{ o.noteDisplay }};">{{ o.note }}</span>
+                          <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.04em;margin-top:3px;color:rgba(233,238,242,0.6);display:{{ o.metaDisplay }};">{{ o.meta }}</span>
+                          <span style="flex-wrap:wrap;gap:6px;margin-top:9px;display:{{ o.srcDisplay }};">
+                            <sc-for list="{{ o.srcs }}" as="sx" hint-placeholder-count="3">
+                              <span style="display:flex;align-items:center;gap:7px;height:30px;padding:0 11px 0 7px;border-radius:999px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.12);box-sizing:border-box;font-size:13px;font-weight:600;color:rgba(233,238,242,0.85);">
+                                <sc-if value="{{ sx.isLyr }}" hint-placeholder-val="{{ false }}"><img src="icon-lyrion.svg" alt="" style="display:block;width:20px;height:15px;"></sc-if>
+                                <sc-if value="{{ sx.isSpo }}" hint-placeholder-val="{{ false }}"><img src="icon-spotify.png" alt="" style="display:block;width:16px;height:16px;"></sc-if>
+                                <sc-if value="{{ sx.isBt }}" hint-placeholder-val="{{ false }}"><img src="icon-bluetooth.png" alt="" style="display:block;width:16px;height:16px;"></sc-if>
+                                <sc-if value="{{ sx.isPlex }}" hint-placeholder-val="{{ false }}"><span style="width:16px;height:16px;border-radius:50%;border:2px solid rgba(233,238,242,0.7);box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;">P</span></sc-if>
+                                <span>{{ sx.name }}</span>
+                              </span>
+                            </sc-for>
+                          </span>
+                        </span>
+                        <span style="order:9;flex-basis:100%;align-items:baseline;flex-wrap:wrap;column-gap:10px;row-gap:2px;padding-top:10px;border-top:1px solid rgba(233,238,242,0.1);display:{{ o.footDisplay }};">
+                          <span style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:rgba(233,238,242,0.75);"><span style="width:7px;height:7px;border-radius:50%;background:{{ o.footDot }};flex-shrink:0;"></span>{{ o.foot }}</span>
+                          <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;color:rgba(233,238,242,0.5);">{{ o.footMeta }}</span>
+                        </span>
+                        <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;padding:4px 8px;border-radius:6px;flex-shrink:0;display:{{ o.tagDisplay }};background:{{ o.tagBg }};color:{{ o.tagInk }};">{{ o.tag }}</span>
+                        <span style="align-items:flex-end;gap:3px;height:18px;flex-shrink:0;display:{{ o.barsDisplay }};">
+                          <span style="width:4px;height:6px;border-radius:1px;display:block;background:{{ o.b1 }};"></span>
+                          <span style="width:4px;height:10px;border-radius:1px;display:block;background:{{ o.b2 }};"></span>
+                          <span style="width:4px;height:14px;border-radius:1px;display:block;background:{{ o.b3 }};"></span>
+                          <span style="width:4px;height:18px;border-radius:1px;display:block;background:{{ o.b4 }};"></span>
+                        </span>
+                        <span style="width:58px;height:30px;border-radius:999px;flex-shrink:0;position:relative;box-sizing:border-box;transition:background 150ms;display:{{ o.togDisplay }};background:{{ o.togBg }};border:1px solid {{ o.togBorder }};">
+                          <span style="position:absolute;top:2px;width:24px;height:24px;border-radius:50%;display:block;transition:left 150ms;left:{{ o.knobLeft }};background:{{ o.knobBg }};"></span>
+                        </span>
+                        <span style="width:24px;height:24px;border-radius:7px;box-sizing:border-box;flex-shrink:0;align-items:center;justify-content:center;display:{{ o.chkDisplay }};background:{{ o.boxBg }};border:2px solid {{ o.ring }};">
+                          <span style="width:11px;height:6px;border-left:2.5px solid #0d151c;border-bottom:2.5px solid #0d151c;transform:rotate(-45deg);margin-top:-3px;display:{{ o.dotDisplay }};"></span>
+                        </span>
+                        <span style="width:11px;height:11px;border-right:2.5px solid rgba(233,238,242,0.42);border-top:2.5px solid rgba(233,238,242,0.42);transform:rotate(45deg);flex-shrink:0;margin-right:4px;display:{{ o.chevDisplay }};"></span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ b.isNote }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border-radius:16px;box-sizing:border-box;background:{{ b.bg }};border:1px solid {{ b.border }};">
+                    <span style="width:4px;align-self:stretch;border-radius:2px;flex-shrink:0;display:block;background:{{ b.bar }};"></span>
+                    <span style="flex:1;min-width:0;">
+                      <span style="font-size:16px;font-weight:600;margin-bottom:4px;display:{{ b.titleDisplay }};">{{ b.title }}</span>
+                      <span style="display:block;font-size:15px;line-height:1.45;color:rgba(233,238,242,0.7);text-wrap:pretty;">{{ b.text }}</span>
+                    </span>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ b.isField }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:8px;">
+                    <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">{{ b.label }}</span>
+                    <input type="{{ b.type }}" value="{{ b.value }}" placeholder="{{ b.ph }}" onChange="{{ b.onChange }}" readOnly="{{ b.ro }}" style="width:100%;height:56px;border-radius:14px;background:rgba(8,12,16,0.6);border:1px solid rgba(233,238,242,0.18);padding:0 18px;box-sizing:border-box;font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;color:#e9eef2;outline:none;opacity:{{ b.op }};cursor:{{ b.cur }};" style-focus="border-color:#7ed6bc;">
+                    <span style="font-size:14px;line-height:1.4;color:rgba(233,238,242,0.6);text-wrap:pretty;display:{{ b.hintDisplay }};">{{ b.hint }}</span>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ b.isStatus }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:12px;box-sizing:border-box;border-radius:14px;padding:12px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);">
+                  <div style="display:flex;align-items:center;gap:14px;">
+                    <div style="width:30px;height:30px;border-radius:50%;box-sizing:border-box;border:3px solid rgba(233,238,242,0.14);border-top-color:#7ed6bc;animation:fuSpin 900ms linear infinite;flex-shrink:0;display:{{ b.spinDisplay }};"></div>
+                    <span style="width:30px;height:30px;border-radius:50%;background:rgba(126,214,188,0.16);flex-shrink:0;align-items:center;justify-content:center;display:{{ b.doneDisplay }};"><span style="width:12px;height:7px;border-left:2.5px solid #7ed6bc;border-bottom:2.5px solid #7ed6bc;transform:rotate(-45deg);margin-top:-3px;display:block;"></span></span>
+                    <span style="width:30px;height:30px;border-radius:50%;border:2px dashed rgba(233,238,242,0.4);box-sizing:border-box;flex-shrink:0;display:{{ b.noneDisplay }};"></span>
+                    <span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;"><span style="font-size:16px;font-weight:700;text-wrap:pretty;">{{ b.text }}</span><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;color:rgba(233,238,242,0.6);display:{{ b.metaDisplay }};">{{ b.meta }}</span></span>
+                    <span onClick="{{ b.onAct }}" style="flex-shrink:0;padding:8px 14px;border-radius:999px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.16);font-size:13px;font-weight:700;white-space:nowrap;cursor:pointer;display:{{ b.actDisplay }};" style-hover="background:rgba(233,238,242,0.14);">{{ b.act }}</span>
+                  </div>
+                  <div style="flex-direction:column;gap:8px;padding-left:44px;display:{{ b.fieldDisplay }};">
+                    <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">{{ b.fLabel }}</span>
+                    <input type="text" value="{{ b.fValue }}" placeholder="{{ b.fPh }}" onChange="{{ b.fOnChange }}" style="width:100%;height:52px;border-radius:12px;background:rgba(8,12,16,0.6);border:1px solid rgba(233,238,242,0.18);padding:0 16px;box-sizing:border-box;font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;color:#e9eef2;outline:none;" style-focus="border-color:#7ed6bc;" />
+                    <span style="font-size:14px;line-height:1.4;color:rgba(233,238,242,0.6);text-wrap:pretty;">{{ b.fHint }}</span>
+                  </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ b.isRule }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:14px;height:1px;background:rgba(233,238,242,0.1);"></div>
+                </sc-if>
+
+                <sc-if value="{{ b.isHead }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:14px;padding-top:18px;border-top:1px solid rgba(233,238,242,0.1);font-size:19px;font-weight:800;color:#e9eef2;">{{ b.text }}</div>
+                </sc-if>
+
+                <sc-if value="{{ b.isP }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:16px;line-height:1.5;color:rgba(233,238,242,0.72);text-wrap:pretty;">{{ b.text }}</div>
+                </sc-if>
+
+                <sc-if value="{{ b.isBtn }}" hint-placeholder-val="{{ false }}">
+                  <div onClick="{{ b.onClick }}" style="align-self:flex-start;padding:12px 22px;border-radius:999px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.16);font-size:15px;font-weight:700;box-sizing:border-box;cursor:pointer;" style-hover="background:rgba(233,238,242,0.13);">{{ b.label }}</div>
+                </sc-if>
+
+                <sc-if value="{{ b.isPics }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:10px;">
+                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);display:{{ b.headDisplay }};">{{ b.head }}</div>
+                    <div style="display:grid;gap:10px;grid-template-columns:{{ b.cols }};">
+                      <sc-for list="{{ b.items }}" as="p" hint-placeholder-count="2">
+                        <div onClick="{{ p.onClick }}" style="position:relative;border-radius:16px;box-sizing:border-box;display:flex;cursor:pointer;padding:10px;transition:background 150ms,border-color 150ms;background:{{ p.bg }};border:1px solid {{ p.border }};flex-direction:{{ p.dir }};gap:{{ p.gap }};align-items:{{ p.ai }};">
+                          <div style="flex-shrink:0;width:{{ p.mw }};">
+                            <dc-import name="Panel Mini" kind="{{ p.kind }}" marks="{{ p.marks }}" wire="{{ p.wire }}" rpm="{{ p.rpm }}" hint-size="100%,90px" style="width:100%;display:block;"></dc-import>
+                          </div>
+                          <div style="flex:1;min-width:0;padding:0 4px 4px;padding-right:{{ p.lpr }};">
+                            <div style="font-size:{{ p.lfs }};font-weight:700;line-height:1.3;text-wrap:pretty;">{{ p.label }}</div>
+                            <div style="font-size:13px;line-height:1.4;color:rgba(233,238,242,0.6);margin-top:4px;text-wrap:pretty;display:{{ p.noteDisplay }};">{{ p.note }}</div>
+                            <div style="margin-top:8px;display:{{ p.tagDisplay }};"><span style="display:inline-block;font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;padding:4px 8px;border-radius:6px;background:{{ p.tagBg }};color:{{ p.tagInk }};">{{ p.tag }}</span></div>
+                          </div>
+                          <span style="position:absolute;top:16px;right:16px;width:22px;height:22px;border-radius:50%;box-sizing:border-box;background:#0d151c;display:flex;align-items:center;justify-content:center;border:2px solid {{ p.ring }};"><span style="width:10px;height:10px;border-radius:50%;background:#7ed6bc;display:{{ p.dot }};"></span></span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ b.isWhere }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:10px;">
+                    <sc-for list="{{ b.items }}" as="w" hint-placeholder-count="2">
+                      <div onClick="{{ w.onClick }}" style="padding:12px;border-radius:16px;box-sizing:border-box;display:flex;align-items:center;gap:14px;cursor:pointer;transition:background 150ms,border-color 150ms;background:{{ w.bg }};border:1px solid {{ w.border }};">
+                        <div style="width:128px;height:84px;flex-shrink:0;border-radius:10px;background:rgba(8,12,16,0.5);display:flex;align-items:center;justify-content:center;">
+                          <sc-if value="{{ w.isHere }}" hint-placeholder-val="{{ true }}">
+                            <div style="display:flex;flex-direction:column;align-items:center;">
+                              <div style="width:78px;height:49px;border-radius:6px;box-sizing:border-box;border:2px solid {{ w.wire }};background:#0d151b;box-shadow:0 6px 12px -6px rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;gap:7px;">
+                                <img src="icon-lyrion.svg" alt="" style="width:22px;height:17px;display:block;">
+                                <div style="display:flex;flex-direction:column;gap:3px;"><div style="width:22px;height:2px;border-radius:1px;background:rgba(233,238,242,0.45);"></div><div style="width:16px;height:2px;border-radius:1px;background:rgba(233,238,242,0.3);"></div><div style="width:19px;height:2px;border-radius:1px;background:rgba(233,238,242,0.3);"></div><div style="width:13px;height:2px;border-radius:1px;background:rgba(233,238,242,0.3);"></div></div>
+                              </div>
+                                                            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);margin-top:6px;">This player</span>
+                            </div>
+                          </sc-if>
+                          <sc-if value="{{ w.isFar }}" hint-placeholder-val="{{ false }}">
+                            <div style="display:flex;align-items:flex-end;gap:4px;">
+                              <div style="display:flex;flex-direction:column;align-items:center;">
+                                <div style="width:42px;height:28px;border-radius:5px;box-sizing:border-box;border:2px solid {{ w.wire }};background:#0d151b;display:flex;align-items:flex-end;justify-content:center;gap:2px;padding-bottom:5px;"><div style="width:3px;height:6px;background:#7ed6bc;border-radius:1px;"></div><div style="width:3px;height:11px;background:#7ed6bc;border-radius:1px;"></div><div style="width:3px;height:8px;background:#7ed6bc;border-radius:1px;"></div><div style="width:3px;height:13px;background:#7ed6bc;border-radius:1px;"></div></div>
+                                
+                                <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:9px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(233,238,242,0.6);margin-top:6px;">Player</span>
+                              </div>
+                              <div style="width:10px;border-top:2px dashed rgba(233,238,242,0.4);margin-bottom:35px;"></div>
+                              <div style="display:flex;flex-direction:column;align-items:center;">
+                                <div style="width:30px;height:44px;border-radius:5px;box-sizing:border-box;border:2px solid {{ w.wire }};background:#0d151b;display:flex;flex-direction:column;align-items:center;gap:3px;padding-top:5px;">
+                                  <img src="icon-lyrion.svg" alt="" style="width:16px;height:12px;display:block;margin-bottom:2px;">
+                                  <div style="width:20px;height:5px;border-radius:2px;background:rgba(233,238,242,0.12);display:flex;align-items:center;justify-content:flex-end;padding-right:2px;box-sizing:border-box;"><div style="width:3px;height:3px;border-radius:50%;background:#7ed6bc;"></div></div><div style="width:20px;height:5px;border-radius:2px;background:rgba(233,238,242,0.12);display:flex;align-items:center;justify-content:flex-end;padding-right:2px;box-sizing:border-box;"><div style="width:3px;height:3px;border-radius:50%;background:#7ed6bc;"></div></div><div style="width:20px;height:5px;border-radius:2px;background:rgba(233,238,242,0.12);display:flex;align-items:center;justify-content:flex-end;padding-right:2px;box-sizing:border-box;"><div style="width:3px;height:3px;border-radius:50%;background:#7ed6bc;"></div></div>
+                                </div>
+                                <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:9px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(233,238,242,0.6);margin-top:6px;white-space:nowrap;">PC · NAS</span>
+                              </div>
+                            </div>
+                          </sc-if>
+                        </div>
+                        <span style="width:20px;height:20px;border-radius:50%;flex-shrink:0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border:2px solid {{ w.ring }};"><span style="width:9px;height:9px;border-radius:50%;background:#7ed6bc;display:{{ w.dot }};"></span></span>
+                        <span style="font-size:15px;font-weight:700;line-height:1.25;">{{ w.label }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ b.isSplit }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:grid;grid-template-columns:minmax(0,1fr);border-radius:16px;overflow:hidden;border:1px solid rgba(233,238,242,0.1);">
+                    <div style="padding:14px;background:rgba(126,214,188,0.07);display:flex;flex-direction:column;gap:9px;">
+                      <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#7ed6bc;">{{ b.lhead }}</div>
+                      <sc-for list="{{ b.left }}" as="i" hint-placeholder-count="2">
+                        <div style="display:flex;gap:8px;align-items:flex-start;font-size:14px;line-height:1.35;">
+                          <span style="width:16px;height:16px;border-radius:50%;background:#7ed6bc;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:1px;"><span style="width:7px;height:4px;border-left:2px solid #0d151c;border-bottom:2px solid #0d151c;transform:rotate(-45deg);margin-top:-2px;display:block;"></span></span>
+                          <span>{{ i.t }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                    <div style="padding:14px;background:rgba(255,255,255,0.03);display:flex;flex-direction:column;gap:9px;border-top:1px solid rgba(233,238,242,0.1);">
+                      <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#e0a758;">{{ b.rhead }}</div>
+                      <sc-for list="{{ b.right }}" as="i" hint-placeholder-count="2">
+                        <div style="display:flex;gap:8px;align-items:flex-start;font-size:14px;line-height:1.35;">
+                          <span style="width:16px;height:16px;border-radius:50%;border:2px solid #e0a758;box-sizing:border-box;flex-shrink:0;display:block;margin-top:1px;"></span>
+                          <span>{{ i.t }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ b.isSeg }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:10px;">
+                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);display:{{ b.headDisplay }};">{{ b.head }}</div>
+                    <div style="display:flex;gap:4px;padding:4px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);">
+                      <sc-for list="{{ b.opts }}" as="x" hint-placeholder-count="2">
+                        <span onClick="{{ x.onClick }}" style="flex:1;text-align:center;padding:11px 8px;border-radius:999px;font-size:15px;font-weight:700;cursor:pointer;transition:background 150ms;background:{{ x.bg }};color:{{ x.ink }};">{{ x.label }}</span>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ b.isPick }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:10px;">
+                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);display:{{ b.headDisplay }};">{{ b.head }}<span style="display:{{ b.multiDisplay }};color:rgba(233,238,242,0.45);"> · pick any</span></div>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                      <sc-for list="{{ b.items }}" as="c" hint-placeholder-count="3">
+                        <span onClick="{{ c.onClick }}" style="display:flex;align-items:center;gap:9px;padding:10px 16px;border-radius:{{ c.radius }};font-size:15px;font-weight:700;box-sizing:border-box;cursor:pointer;transition:background 150ms;background:{{ c.bg }};color:{{ c.ink }};border:1px solid {{ c.border }};"><span style="display:{{ c.boxDisplay }};align-items:center;justify-content:center;width:18px;height:18px;border-radius:5px;box-sizing:border-box;flex-shrink:0;font-size:13px;font-weight:800;line-height:1;color:#0d151c;background:{{ c.boxBg }};border:1.5px solid {{ c.boxBorder }};">{{ c.tick }}</span>{{ c.label }}</span>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ b.isParty }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:relative;height:200px;border-radius:16px;overflow:hidden;background:rgba(8,12,16,0.5);border:1px solid rgba(233,238,242,0.08);">
+                    <div style="position:absolute;left:8%;right:8%;bottom:46px;height:2px;border-radius:1px;background:rgba(233,238,242,0.14);"></div>
+                    <div style="position:absolute;left:50%;bottom:48px;transform:translateX(-50%);display:flex;align-items:flex-end;gap:20px;">
+                      <div style="width:50px;height:104px;border-radius:8px;box-sizing:border-box;border:2px solid rgba(233,238,242,0.35);background:#0d151b;display:flex;flex-direction:column;align-items:center;gap:14px;padding-top:12px;"><div style="width:14px;height:14px;border-radius:50%;box-sizing:border-box;border:2px solid rgba(233,238,242,0.4);"></div><div style="position:relative;width:34px;height:34px;border-radius:50%;box-sizing:border-box;border:2px solid rgba(233,238,242,0.45);display:flex;align-items:center;justify-content:center;"><div style="width:18px;height:18px;border-radius:50%;background:rgba(233,238,242,0.28);animation:fuPump 470ms ease-in-out infinite;"></div><div style="position:absolute;inset:-2px;border-radius:50%;border:2px solid #7ed6bc;animation:fuRing 1.4s ease-out infinite;"></div></div></div>
+                      <div style="position:relative;">
+                        <span style="position:absolute;top:-6px;left:18%;font-size:18px;color:#7ed6bc;opacity:0;animation:fuFloat 2.6s ease-out infinite;">♪</span>
+                        <span style="position:absolute;top:-6px;left:72%;font-size:18px;color:#7ed6bc;opacity:0;animation:fuFloat 2.6s ease-out 1.3s infinite;">♫</span>
+                        <div style="position:absolute;top:-15px;right:-15px;z-index:2;width:34px;height:34px;border-radius:50%;background:#7ed6bc;color:#0d151c;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:800;line-height:1;box-shadow:0 0 0 4px #0d151b;">✓</div>
+                        <div style="width:132px;height:83px;border-radius:7px;box-sizing:border-box;border:2px solid #9fb4e8;background:#0d151b;display:flex;align-items:flex-end;justify-content:center;gap:5px;padding-bottom:14px;box-shadow:0 8px 16px -8px rgba(0,0,0,0.7);"><div style="width:6px;height:24px;border-radius:2px;background:#7ed6bc;transform-origin:bottom;animation:fuBar 420ms ease-in-out 0ms infinite alternate;"></div><div style="width:6px;height:38px;border-radius:2px;background:#7ed6bc;transform-origin:bottom;animation:fuBar 380ms ease-in-out 180ms infinite alternate;"></div><div style="width:6px;height:30px;border-radius:2px;background:#7ed6bc;transform-origin:bottom;animation:fuBar 460ms ease-in-out 90ms infinite alternate;"></div><div style="width:6px;height:46px;border-radius:2px;background:#7ed6bc;transform-origin:bottom;animation:fuBar 400ms ease-in-out 270ms infinite alternate;"></div><div style="width:6px;height:34px;border-radius:2px;background:#7ed6bc;transform-origin:bottom;animation:fuBar 440ms ease-in-out 60ms infinite alternate;"></div><div style="width:6px;height:40px;border-radius:2px;background:#7ed6bc;transform-origin:bottom;animation:fuBar 360ms ease-in-out 210ms infinite alternate;"></div><div style="width:6px;height:22px;border-radius:2px;background:#7ed6bc;transform-origin:bottom;animation:fuBar 480ms ease-in-out 120ms infinite alternate;"></div></div>
+                      </div>
+                      <div style="width:50px;height:104px;border-radius:8px;box-sizing:border-box;border:2px solid rgba(233,238,242,0.35);background:#0d151b;display:flex;flex-direction:column;align-items:center;gap:14px;padding-top:12px;"><div style="width:14px;height:14px;border-radius:50%;box-sizing:border-box;border:2px solid rgba(233,238,242,0.4);"></div><div style="position:relative;width:34px;height:34px;border-radius:50%;box-sizing:border-box;border:2px solid rgba(233,238,242,0.45);display:flex;align-items:center;justify-content:center;"><div style="width:18px;height:18px;border-radius:50%;background:rgba(233,238,242,0.28);animation:fuPump 470ms ease-in-out infinite;"></div><div style="position:absolute;inset:-2px;border-radius:50%;border:2px solid #7ed6bc;animation:fuRing 1.4s ease-out infinite;"></div></div></div>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ b.isCode }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:24px 16px;border-radius:14px;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);box-sizing:border-box;text-align:center;">
+                    <span style="font-size:16px;font-weight:700;text-wrap:pretty;">{{ b.label }}</span>
+                    <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:40px;font-weight:600;letter-spacing:0.12em;color:#e9eef2;">{{ b.code }}</span>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                      <div style="width:18px;height:18px;border-radius:50%;box-sizing:border-box;border:2px solid rgba(233,238,242,0.14);border-top-color:#7ed6bc;animation:fuSpin 900ms linear infinite;flex-shrink:0;"></div>
+                      <span style="font-size:14px;line-height:1.4;color:rgba(233,238,242,0.6);text-wrap:pretty;">{{ b.text }}</span>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ b.isNum }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:12px;">
+                    <sc-for list="{{ b.items }}" as="n" hint-placeholder-count="3">
+                      <div style="display:flex;align-items:center;gap:14px;">
+                        <span style="width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;box-sizing:border-box;background:{{ n.bg }};color:{{ n.ink }};border:2px solid {{ n.ring }};">{{ n.n }}</span>
+                        <span style="font-size:16px;line-height:1.35;font-weight:600;text-wrap:pretty;color:{{ n.tc }};">{{ n.t }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ b.isDev }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:6px;">
+                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);padding:4px 2px;">Trusted devices</div>
+                    <sc-for list="{{ b.items }}" as="it" hint-placeholder-count="1">
+                      <div style="display:flex;align-items:center;gap:16px;min-height:66px;padding:12px 18px;border-radius:14px;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);">
+                        <span style="flex:1;min-width:0;display:block;">
+                          <span style="display:block;font-size:17px;font-weight:600;color:#e9eef2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ it.name }}</span>
+                          <span style="display:block;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.04em;margin-top:4px;color:{{ it.metaInk }};">{{ it.meta }}</span>
+                        </span>
+                        <span onClick="{{ it.onForget }}" style="flex-shrink:0;height:44px;padding:0 18px;border-radius:12px;background:rgba(224,167,88,0.14);border:1px solid rgba(224,167,88,0.4);display:flex;align-items:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#e0a758;cursor:pointer;" style-hover="background:rgba(224,167,88,0.24);">Forget</span>
+                      </div>
+                    </sc-for>
+                    <div style="flex-direction:column;align-items:center;gap:14px;padding:22px 20px;display:{{ b.emptyDisplay }};">
+                      <span style="width:58px;height:58px;border-radius:50%;border:2px dashed rgba(233,238,242,0.28);display:block;"></span>
+                      <span style="font-size:16px;line-height:1.45;color:rgba(233,238,242,0.62);text-align:center;text-wrap:pretty;max-width:36ch;">{{ b.empty }}</span>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ b.isProg }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:14px;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);">
+                    <div style="display:flex;align-items:baseline;gap:12px;">
+                      <span style="flex:1;min-width:0;font-size:16px;font-weight:700;">{{ b.label }}</span>
+                      <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;flex-shrink:0;color:{{ b.ink }};">{{ b.meta }}</span>
+                    </div>
+                    <div style="height:6px;border-radius:3px;background:rgba(233,238,242,0.1);overflow:hidden;"><div style="height:100%;border-radius:3px;transition:width 900ms linear;background:{{ b.ink }};width:{{ b.pct }};"></div></div>
+                    <div style="align-items:center;gap:8px;padding-top:2px;display:{{ b.stDisplay }};">
+                      <span style="width:16px;height:16px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;line-height:1;background:{{ b.stBg }};color:#0d151c;border:1.5px solid {{ b.stBorder }};box-sizing:border-box;">{{ b.stTick }}</span>
+                      <span style="font-size:14px;color:rgba(233,238,242,0.8);">{{ b.st }}</span>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ b.isCast }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:10px;">
+                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">In the Spotify app, on your phone</div>
+                    <div style="position:relative;width:100%;height:250px;">
+                      <dc-import name="Phone Device List" device="{{ b.device }}" hint-size="100%,100%" style="width:100%;height:100%;"></dc-import>
+                    </div>
+                    <div style="font-size:15px;line-height:1.45;color:rgba(233,238,242,0.75);text-wrap:pretty;">{{ b.text }}</div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ b.isSum }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:10px;">
+                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);display:{{ b.headDisplay }};">{{ b.head }}</div>
+                    <div style="display:flex;flex-direction:column;gap:1px;border-radius:16px;overflow:hidden;border:1px solid rgba(233,238,242,0.1);">
+                      <sc-for list="{{ b.rows }}" as="r" hint-placeholder-count="4">
+                        <div style="display:flex;align-items:center;gap:12px;padding:11px 14px;min-height:34px;background:rgba(255,255,255,0.04);">
+                          <span style="flex-shrink:0;width:96px;font-size:14px;color:rgba(233,238,242,0.6);">{{ r.what }}</span>
+                          <span style="flex:1;min-width:0;font-size:15px;font-weight:600;text-wrap:pretty;overflow-wrap:anywhere;">{{ r.value }}</span>
+                          <span onClick="{{ r.onClick }}" style="flex-shrink:0;padding:6px 12px;border-radius:999px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.16);font-size:13px;font-weight:700;cursor:pointer;display:{{ r.actDisplay }};" style-hover="background:rgba(233,238,242,0.14);">Change</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ b.isClock }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;align-items:center;gap:16px;padding:20px;border-radius:16px;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);box-sizing:border-box;">
+                    <div style="flex:1;min-width:0;">
+                      <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">{{ b.label }}</div>
+                      <div style="font-size:22px;font-weight:700;margin-top:8px;">{{ b.value }}</div>
+                    </div>
+                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:28px;font-weight:600;">{{ b.time }}</div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ b.isAddr }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:16px 18px;border-radius:16px;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);box-sizing:border-box;">
+                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">{{ b.label }}</div>
+                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-weight:600;margin-top:8px;font-size:19px;word-break:break-all;">{{ b.value }}</div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ b.isIv }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:12px;">
+                    <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Standby times</span>
+                    <sc-for list="{{ b.items }}" as="iv" hint-placeholder-count="1">
+                      <div style="position:relative;display:flex;flex-direction:column;gap:12px;padding:14px 16px;border-radius:16px;background:rgba(255,255,255,0.04);border:1px solid rgba(233,238,242,0.1);box-sizing:border-box;">
+                        <div onClick="{{ iv.onRemove }}" style="position:absolute;top:8px;right:8px;width:44px;height:44px;display:grid;place-items:center;border-radius:50%;border:1px solid rgba(233,238,242,0.1);background:rgba(233,238,242,0.07);color:rgba(233,238,242,0.72);box-sizing:border-box;cursor:pointer;"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"></path></svg></div>
+                        <div style="display:flex;flex-direction:column;gap:8px;padding-right:56px;">
+                          <sc-for list="{{ iv.times }}" as="t" hint-placeholder-count="2">
+                            <div style="display:flex;align-items:center;gap:12px;">
+                              <span style="min-width:56px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">{{ t.label }}</span>
+                              <div onClick="{{ t.onTap }}" style="min-width:104px;min-height:48px;padding:0 16px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border-radius:12px;border:1px solid {{ t.border }};background:rgba(233,238,242,0.07);color:{{ t.ink }};font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer;">{{ t.value }}</div>
+                            </div>
+                          </sc-for>
+                        </div>
+                        <div style="flex-direction:column;gap:8px;display:{{ iv.pickDisplay }};">
+                          <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;">
+                            <sc-for list="{{ iv.hours }}" as="c" hint-placeholder-count="24">
+                              <div onClick="{{ c.onTap }}" style="min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:12px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.ink }};font-size:16px;font-weight:{{ c.weight }};font-variant-numeric:tabular-nums;box-sizing:border-box;cursor:pointer;">{{ c.label }}</div>
+                            </sc-for>
+                          </div>
+                          <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;">
+                            <sc-for list="{{ iv.quarters }}" as="c" hint-placeholder-count="4">
+                              <div onClick="{{ c.onTap }}" style="min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:12px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.ink }};font-size:16px;font-weight:{{ c.weight }};font-variant-numeric:tabular-nums;box-sizing:border-box;cursor:pointer;">{{ c.label }}</div>
+                            </sc-for>
+                          </div>
+                        </div>
+                        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                          <sc-for list="{{ iv.days }}" as="d" hint-placeholder-count="7">
+                            <div onClick="{{ d.onTap }}" style="min-width:50px;min-height:44px;padding:0 10px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border-radius:22px;border:1px solid {{ d.border }};background:{{ d.bg }};color:{{ d.ink }};font-size:15px;font-weight:600;cursor:pointer;">{{ d.label }}</div>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </sc-for>
+                    <span style="color:rgba(233,238,242,0.6);display:{{ b.noneDisplay }};">No standby times yet.</span>
+                    <div onClick="{{ b.onAdd }}" style="min-height:52px;display:flex;align-items:center;justify-content:center;border-radius:16px;border:1px dashed rgba(233,238,242,0.1);color:#e9eef2;font-size:16px;font-weight:600;box-sizing:border-box;cursor:pointer;opacity:{{ b.addOp }};">Add standby time</div>
+                  </div>
+                </sc-if>
+
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="align-items:center;gap:10px;flex-shrink:0;padding-top:14px;display:{{ foot.display }};">
+            <div onClick="{{ foot.onBack }}" style="padding:12px 20px;border-radius:999px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.16);font-size:15px;font-weight:700;box-sizing:border-box;flex-shrink:0;cursor:pointer;display:{{ foot.backDisplay }};" style-hover="background:rgba(233,238,242,0.13);">Back</div>
+            <div onClick="{{ foot.onAlt }}" style="padding:12px 20px;border-radius:999px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.16);font-size:15px;font-weight:700;box-sizing:border-box;flex-shrink:0;white-space:nowrap;cursor:pointer;display:{{ foot.altDisplay }};" style-hover="background:rgba(233,238,242,0.13);">{{ foot.alt }}</div>
+            <div onClick="{{ foot.onNext }}" style="flex:1;text-align:center;padding:17px 18px;border-radius:999px;box-sizing:border-box;font-size:17px;font-weight:800;color:#0d151c;white-space:nowrap;transition:background 200ms,opacity 200ms;background:{{ accent }};opacity:{{ foot.nextOp }};cursor:{{ foot.nextCursor }};">{{ foot.next }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const C = { music: '#b0bcc4', lyr: '#9fb4e8', fold: '#f2a48f', browse: '#8fd9a8', spo: '#7ed6bc', bt: '#d8c88f', scr: '#c8a2d8', idle: '#e8a0b4', stby: '#8fc4d8', ext: '#a8d68f', plex: '#e0a758', rev: '#7ed6bc' };
+const SEL = 'rgba(126,214,188,0.1)', SELB = 'rgba(126,214,188,0.45)', OFF = 'rgba(255,255,255,0.05)', OFFB = 'rgba(233,238,242,0.1)', RING = 'rgba(233,238,242,0.42)', MUTE = 'rgba(233,238,242,0.6)';
+const TAGS = { ok: ['rgba(126,214,188,0.14)', '#7ed6bc'], warn: ['rgba(224,167,88,0.14)', '#e0a758'], plain: ['rgba(233,238,242,0.08)', 'rgba(233,238,242,0.72)'] };
+const TONES = { info: ['#8fc4d8', OFF, OFFB], ok: ['#7ed6bc', OFF, OFFB], warn: ['#e0a758', 'rgba(224,167,88,0.08)', 'rgba(224,167,88,0.45)'] };
+const LETTER = { plex: 'P', viz: 'V', clk: 'C', stby: 'S', besz: 'B', lib: 'M', fold: 'F', browse: 'B', ext: '+' };
+const BTYPES = ['List', 'Note', 'Field', 'Status', 'P', 'Btn', 'Pics', 'Where', 'Split', 'Seg', 'Pick', 'Num', 'Code', 'Party', 'Dev', 'Prog', 'Cast', 'Sum', 'Clock', 'Addr', 'Iv', 'Head', 'Rule'];
+const noop = () => {};
+const SRCN = { lyr: 'Lyrion', spo: 'Spotify', bt: 'Bluetooth', plex: 'Plexamp' };
+const tagOf = tag => {
+  if (!tag) return { tagDisplay: 'none', tag: '', tagBg: 'transparent', tagInk: '#e9eef2' };
+  const [text, tone] = Array.isArray(tag) ? tag : [tag, 'plain'];
+  return { tagDisplay: 'block', tag: text, tagBg: TAGS[tone][0], tagInk: TAGS[tone][1] };
+};
+function row(o) {
+  const k = o.k, radio = k === 'radio', net = k === 'net', ghost = k === 'ghost', sel = (radio || net || k === 'chk') && o.on;
+  const img = ['lyr', 'spo', 'bt'].includes(o.icon), letter = LETTER[o.icon] || '';
+  const bar = n => n <= (o.lvl || 0) ? '#8fc4d8' : 'rgba(233,238,242,0.22)';
+  return Object.assign({
+    label: o.label, labelInk: ghost ? MUTE : '#e9eef2', note: o.note || '', noteDisplay: o.note ? 'block' : 'none', meta: o.meta || '', metaDisplay: o.meta ? 'block' : 'none',
+    onClick: o.fn || noop, cursor: o.fn ? 'pointer' : 'default',
+    bg: ghost ? 'transparent' : sel ? SEL : OFF, border: ghost ? 'rgba(233,238,242,0.3)' : sel ? SELB : OFFB, bs: ghost ? 'dashed' : 'solid',
+    radioDisplay: radio || net ? 'flex' : 'none', ring: sel ? '#7ed6bc' : RING, dotDisplay: sel ? 'block' : 'none',
+    iconDisplay: img || letter ? 'flex' : 'none', isLyr: o.icon === 'lyr', isSpo: o.icon === 'spo', isBt: o.icon === 'bt', letter, letterDisplay: letter && !img ? 'flex' : 'none',
+    barsDisplay: net ? 'flex' : 'none', b1: bar(1), b2: bar(2), b3: bar(3), b4: bar(4),
+    togDisplay: k === 'tog' ? 'block' : 'none', togBg: o.on ? '#7ed6bc' : 'rgba(233,238,242,0.07)', togBorder: o.on ? '#7ed6bc' : 'rgba(233,238,242,0.18)',
+    knobLeft: o.on ? '31px' : '3px', knobBg: o.on ? '#0d151c' : 'rgba(233,238,242,0.55)',
+    chkDisplay: k === 'chk' ? 'flex' : 'none', boxBg: sel ? '#7ed6bc' : 'transparent', chevDisplay: k === 'hub' ? 'block' : 'none',
+    srcs: (o.srcs || []).map(x => ({ isLyr: x === 'lyr', isSpo: x === 'spo', isBt: x === 'bt', isPlex: x === 'plex', name: SRCN[x] })), srcDisplay: o.srcs ? 'flex' : 'none',
+    foot: o.foot || '', footMeta: o.footMeta || '', footDisplay: o.foot ? 'flex' : 'none', footDot: o.footDot || '#7ed6bc'
+  }, tagOf(o.tag));
+}
+function block(b) {
+  const o = { head: b.head || '', headDisplay: b.head ? 'block' : 'none' };
+  BTYPES.forEach(t => { o['is' + t] = b.t === t; });
+  if (b.t === 'List') o.rows = b.rows.map(row);
+  if (b.t === 'Note') { const c = TONES[b.tone]; Object.assign(o, { bar: c[0], bg: c[1], border: c[2], title: b.title || '', titleDisplay: b.title ? 'block' : 'none', text: b.text }); }
+  if (b.t === 'Field') Object.assign(o, { label: b.label, value: b.value, onChange: b.fn || noop, ph: b.ph || '', type: b.type || 'text', hint: b.hint || '', hintDisplay: b.hint ? 'block' : 'none', ro: !!b.ro, op: b.ro ? '0.45' : '1', cur: b.ro ? 'not-allowed' : 'text' });
+  if (b.t === 'Code') Object.assign(o, { label: b.label, code: b.code, text: b.text });
+  if (b.t === 'Status') { const f = b.field; Object.assign(o, { act: b.act || '', onAct: b.actFn || noop, actDisplay: b.act ? 'block' : 'none', fieldDisplay: f ? 'flex' : 'none', fLabel: f ? f.label : '', fValue: f ? f.value : '', fPh: f ? f.ph || '' : '', fOnChange: f ? f.fn : noop, fHint: f ? f.hint || '' : '' }); }
+  if (b.t === 'Status') Object.assign(o, { text: b.text, meta: b.meta || '', metaDisplay: b.meta ? 'block' : 'none', spinDisplay: b.state === 'spin' ? 'block' : 'none', doneDisplay: b.state === 'ok' ? 'flex' : 'none', noneDisplay: b.state === 'none' ? 'block' : 'none' });
+  if (b.t === 'P' || b.t === 'Head') o.text = b.text;
+  if (b.t === 'Btn') Object.assign(o, { label: b.label, onClick: b.fn || noop });
+  if (b.t === 'Pics') {
+    const rows = b.layout === 'rows';
+    const g3 = b.layout === 'grid3';
+    o.cols = rows ? 'minmax(0,1fr)' : g3 ? 'repeat(3,minmax(0,1fr))' : 'repeat(2,minmax(0,1fr))';
+    o.items = b.items.map(p => Object.assign({
+      kind: p.kind, marks: p.marks || [], rpm: p.rpm || 33, label: p.label, note: p.note || '', noteDisplay: p.note ? 'block' : 'none', onClick: p.fn,
+      bg: p.on ? 'rgba(143,217,168,0.1)' : OFF, border: p.on ? 'rgba(143,217,168,0.5)' : OFFB, wire: p.on ? '#8fd9a8' : 'rgba(233,238,242,0.18)',
+      ring: p.on ? '#7ed6bc' : RING, dot: p.on ? 'block' : 'none',
+      lfs: g3 ? '13px' : '15px', dir: rows ? 'row' : 'column', mw: rows ? '46%' : '100%', gap: rows ? '14px' : '10px', ai: rows ? 'center' : 'stretch', lpr: rows ? '30px' : '4px'
+    }, tagOf(p.tag)));
+  }
+  if (b.t === 'Where') o.items = [['here', 'On this player'], ['pc', 'On a computer or NAS']].map(w => { const on = w[0] === b.sel, far = w[0] === 'pc';
+    return { label: w[1], onClick: () => b.fn(w[0]), bg: on ? SEL : OFF, border: on ? SELB : OFFB, ring: on ? '#7ed6bc' : RING, dot: on ? 'block' : 'none', wire: on ? '#9fb4e8' : 'rgba(233,238,242,0.4)', isHere: !far, isFar: far }; });
+  if (b.t === 'Split') Object.assign(o, { lhead: b.lhead, rhead: b.rhead, left: b.left.map(t => ({ t })), right: b.right.map(t => ({ t })) });
+  if (b.t === 'Seg') o.opts = b.opts.map((x, i) => ({ label: x, onClick: () => b.fn(i), bg: i === b.on ? b.accent : 'transparent', ink: i === b.on ? '#0d151c' : '#e9eef2' }));
+  if (b.t === 'Pick') { const multi = Array.isArray(b.sel); o.multiDisplay = multi ? 'inline' : 'none'; o.items = b.opts.map(x => { const on = multi ? b.sel.includes(x) : x === b.sel;
+    return multi ? { label: x, onClick: () => b.fn(x), radius: '10px', bg: on ? 'rgba(233,238,242,0.08)' : 'transparent', ink: '#e9eef2', border: on ? b.accent : 'rgba(233,238,242,0.22)', boxDisplay: 'flex', boxBg: on ? b.accent : 'transparent', boxBorder: on ? b.accent : 'rgba(233,238,242,0.45)', tick: on ? '✓' : '' }
+      : { label: x, onClick: () => b.fn(x), radius: '999px', bg: on ? b.accent : OFF, ink: on ? '#0d151c' : '#e9eef2', border: on ? b.accent : 'rgba(233,238,242,0.14)', boxDisplay: 'none', boxBg: 'transparent', boxBorder: 'transparent', tick: '' }; }); }
+  if (b.t === 'Num') o.items = b.items.map((x, i) => { const st = x[1]; return { n: st === 'done' ? '✓' : String(i + 1), t: x[0], bg: st === 'done' ? '#7ed6bc' : 'transparent', ring: st === 'done' ? '#7ed6bc' : st === 'now' ? '#d8c88f' : 'rgba(233,238,242,0.3)', ink: st === 'done' ? '#0d151c' : st === 'now' ? '#d8c88f' : MUTE, tc: st === 'next' ? MUTE : '#e9eef2' }; });
+  if (b.t === 'Dev') { o.items = b.items.map(d => ({ name: d.name, meta: d.meta, metaInk: /just now/.test(d.meta) ? '#7ed6bc' : MUTE, onForget: d.fn })); o.empty = b.empty; o.emptyDisplay = b.items.length ? 'none' : 'flex'; }
+  if (b.t === 'Prog') Object.assign(o, { label: b.label, meta: b.meta || (b.pct >= 100 ? 'Done' : Math.round(b.pct) + '%'), pct: b.pct + '%', ink: b.pct >= 100 ? '#7ed6bc' : C.plex,
+    st: b.st || '', stDisplay: b.st ? 'flex' : 'none', stTick: b.stOk ? '✓' : '', stBg: b.stOk ? '#7ed6bc' : 'transparent', stBorder: b.stOk ? '#7ed6bc' : 'rgba(233,238,242,0.45)' });
+  if (b.t === 'Cast') Object.assign(o, { device: b.device, text: b.text });
+  if (b.t === 'Sum') o.rows = b.rows.map(r => ({ what: r[0], value: r[1], onClick: r[2] || noop, actDisplay: r[2] ? 'block' : 'none' }));
+  if (b.t === 'Iv') Object.assign(o, { items: b.items, noneDisplay: b.noneDisplay, addOp: b.addOp, onAdd: b.onAdd });
+  if (b.t === 'Clock' || b.t === 'Addr') Object.assign(o, { label: b.label, value: b.value, time: b.time || '' });
+  return o;
+}
+const R = (label, note, on, fn, x) => Object.assign({ k: 'radio', label, note, on, fn }, x);
+const T = (label, note, on, fn, x) => Object.assign({ k: 'tog', label, note, on, fn }, x);
+const K = (label, note, on, fn) => ({ k: 'chk', label, note, on, fn });
+const HB = (label, meta, fn, x) => Object.assign({ k: 'hub', label, meta, fn }, x);
+const list = (rows, head) => ({ t: 'List', rows, head });
+const note = (tone, title, text) => ({ t: 'Note', tone, title, text });
+const field = (label, value, fn, x) => Object.assign({ t: 'Field', label, value, fn }, x);
+const status = (state, text, meta) => ({ t: 'Status', state, text, meta });
+const P = text => ({ t: 'P', text });
+const head = text => ({ t: 'Head', text });
+const btn = (label, fn) => ({ t: 'Btn', label, fn });
+const pics = (head, items, layout) => ({ t: 'Pics', head, items, layout });
+const seg = (head, opts, on, accent, fn) => ({ t: 'Seg', head, opts, on, accent, fn });
+const pick = (head, opts, sel, accent, fn) => ({ t: 'Pick', head, opts, sel, accent, fn });
+const num = items => ({ t: 'Num', items });
+const prog = (label, pct, meta, st, stOk) => ({ t: 'Prog', label, pct, meta, st, stOk });
+const sum = (rows, head) => ({ t: 'Sum', rows, head });
+
+const P1N = ['Network', 'Start', 'Name', 'Time', 'Output', 'Screen', 'Review'], P1B = ['Network', 'Start', 'Screen', 'Review'];
+const P1C = { Network: '#8fc4d8', Start: '#b0bcc4', Name: '#e8a0b4', Time: '#c8a2d8', Output: '#7ed6bc', Screen: '#8fd9a8', Review: '#f2a48f' };
+const P1AT = { p1net: 'Network', p1start: 'Start', p1backup: 'Start', p1name: 'Name', p1clock: 'Time', p1output: 'Output', p1screen: 'Screen', p1review: 'Review', p1restore: 'Review' };
+const P2M = { listen: ['Listen', C.music], mix: ['Listen', C.music], lyrion: ['Lyrion', C.lyr], folders: ['Folders', C.fold], plexamp: ['Plexamp', C.plex], browse: ['Browse', C.browse], spotify: ['Spotify', C.spo], bluetooth: ['Bluetooth', C.bt], visualiser: ['Visualiser', C.scr], idle: ['When idle', C.idle], wait: ['While it waits', C.idle], standby: ['Standby', C.stby], plexsign: ['Plex sign-in', C.plex], review: ['Review', C.rev] };
+const LABEL = { p1welcome: 'Welcome', p1net: 'Network', p1start: 'New player or backup', p1backup: 'Upload a backup', p1name: 'Name', p1clock: 'Clock', p1output: 'Output', p1screen: 'Screen', p1review: 'Check it over', p1join: 'Joining the network', p1restore: 'Check it over', p1restored: 'Restoring', listen: 'How will you listen?', mix: 'My own mix', lyrion: 'Where Lyrion runs', folders: 'Where your music is', plexamp: 'Plexamp', browse: 'Browse', spotify: 'Spotify', bluetooth: 'Bluetooth', visualiser: 'Visualiser', idle: 'When idle', wait: 'While it waits', standby: 'Standby', plexsign: 'Plex sign-in', review: 'Your setup', done: 'Getting ready', later: 'Kept the defaults' };
+const CODES = { p1welcome: '1.0', p1net: '1.1', p1start: '1.2', p1name: '1.3', p1clock: '1.4', p1output: '1.5', p1screen: '1.6', p1review: '1.7', p1join: '1.8', p1backup: '1.2b', p1restore: '1.7b', p1restored: '1.8b', listen: '5A0', mix: '4A1m', lyrion: '5A2', folders: '5A3', plexamp: 'X1', browse: '5A4', spotify: '5A5', bluetooth: '5A6', visualiser: '5A7', idle: '5A8', wait: '5A8w', standby: '5A9', plexsign: 'X2', review: '5A10', done: 'End', later: 'End' };
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0')), QUARTERS = ['00', '15', '30', '45'];
+const daysSaid = days => { const on = DAYS.filter(d => days.includes(d)); return on.length === 7 ? 'every day' : on.join() === 'Mon,Tue,Wed,Thu,Fri' ? 'Mon–Fri' : on.join() === 'Sat,Sun' ? 'weekends' : on.join(', '); };
+const ivSaid = ivs => !ivs.length ? 'None' : ivs.length > 1 ? ivs.length + ' times' : ivs[0].from + '–' + ivs[0].until + ' · ' + daysSaid(ivs[0].days);
+const KNAV = { ext: 'lib', simple: 'simple', off: 'now' };
+const NAV = [['ext', 'Extended', 'Full Lyrion navigation, including apps.'], ['simple', 'Simple', 'Library browse, artists, playlists and radio from Lyrion.'], ['off', 'Off', 'Only what’s playing.']];
+const SKINS = [['vu', 'VU meters'], ['viz', 'Spectrum'], ['vs', 'VU meters + spectrum'], ['turn', 'Turntables'], ['tape', 'Tapes'], ['all', 'All']];
+const ANIM = { turn: ['Animate turntables', 'The record turns and the tonearm follows the track.'], tape: ['Animate tapes', 'The reels turn.'], all: ['Animate turntables and tapes', 'Records and reels turn.'] };
+const PLACES = [['folder', 'Music folder', 'On the player, shared on Studio 5G.'], ['usb', 'USB drive', 'Plugged into the player.'], ['share', 'Network share', 'A folder on a NAS or a computer.']];
+const NETS = [['Studio 5G', 'Secured', 4], ['Studio', 'Secured', 4], ['Guest', 'Open', 2]];
+const OUTS = [['HiFiBerry DAC+ HD', ['Recommended', 'ok']], ['Headphones'], ['HDMI 0'], ['HDMI 1']];
+const SCRL = { panel: 'Waveshare 10.1″ (B)', other: 'Another screen', headless: 'Headless' };
+const BGS = ['Gexis wallpapers', 'Artist pictures', 'Black'], WBGS = ['Gexis wallpapers', 'Black'], STYLES = ['Calm', 'Colourful', 'Psychedelic'];
+const PHOTOS = [['dac', '1 DAC', 'https://images.unsplash.com/photo-1707820356995-4b439f50dc29?fm=jpg&q=70&w=1600&auto=format&fit=crop'], ['vu', '2 VU', 'https://images.unsplash.com/photo-1645030327860-bbba1dec8898?fm=jpg&q=70&w=1600&auto=format&fit=crop'], ['deck', '3 Deck', 'https://images.unsplash.com/photo-1624729946372-a655fdb2d8aa?fm=jpg&q=70&w=1600&auto=format&fit=crop'], ['driver', '4 Driver', 'https://images.unsplash.com/photo-1597183739841-5ca26ab0a604?fm=jpg&q=70&w=1600&auto=format&fit=crop'], ['amp', '5 Amp', 'https://images.unsplash.com/photo-1562146388-3b7b2aa615d8?fm=jpg&q=70&w=1600&auto=format&fit=crop']];
+const WALLS = { Calm: 'wallpapers/calm/c148381086.webp', Colourful: 'art/pd-kandinsky7.jpg', Psychedelic: 'art/pd-starry.jpg' };
+const PIXA = note('info', '', 'A free Pixabay key unlocks more wallpapers. Add it later in Settings → Display.');
+const PHONES = ['George’s iPhone', 'Anna’s Pixel 8', 'Kitchen iPad'];
+const FLOWS = [['A', 'Lyrion found', 'A Lyrion server is on the network and is found. Pick My music + streaming, and Lyrion and Folders drop out.'], ['B', 'Plex + streaming', 'No Lyrion on the network. Pick Plex + streaming. Plexamp downloads once you say so, and the Plex sign-in follows straight after.'], ['C', 'Lyrion not found', 'No Lyrion on the network. Pick My music + streaming. Lyrion installs on this player or points at another machine, then Folders.']];
+const slug = n => (n || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'gexis';
+const mmss = n => Math.floor(n / 60) + ':' + String(n % 60).padStart(2, '0');
+const uniq = a => a.filter((x, i) => a.indexOf(x) === i);
+function init(flow, startAt, wide) {
+  return { flow, startAt, wide, screen: startAt === 'p2' ? 'listen' : 'p1welcome', ret: null,
+    net: 'Studio 5G', pw: 'studio-5g-pass', start: 'new', uploaded: false, name: 'Living Room', fmt: 0, output: 'HiFiBerry DAC+ HD', scr: 'panel',
+    lyrState: 'idle', preset: null, presetTouched: false, mix: { lyr: true, plex: false, spo: true, bt: true },
+    lyrWhere: 'here', lyrAddrOpen: false, lyrAddr: '', places: { folder: true, usb: false, share: false }, shares: [], shareStep: null, shareSrv: null, shareUser: '', sharePw: '', shareAddr: '', shareAU: '', shareAP: '',
+    plexOn: false, plexPct: 0, claimOpened: false, claim: '', plexState: 'code', plexSkipped: false,
+    browse: 'ext', spotify: true, bt: true, btPhase: null, btLeft: 180, reqLeft: 30, trusted: [], everPaired: false,
+    vizOn: true, vizAfter: '10 min', skin: 'vu', animate: true, rpm: 0,
+    idleOn: true, bg: 'Gexis wallpapers', styles: ['Calm', 'Colourful'], wallStyle: 'Calm', listenPic: 'dac', clock: true, weather: false, loc: '',
+    waitClock: true, waitBg: 'Gexis wallpapers', standby: false, ivs: [{ from: '23:00', until: '07:00', days: DAYS.slice() }], ivPick: null,
+    skipped: {}, inst: 0 };
+}
+
+class Component extends DCLogic {
+  state = init('A', 'p1', false);
+  scrollRef = React.createRef();
+  componentDidMount() { this.iv = setInterval(() => this.tick(), 1000); this.enter(this.state.screen); }
+  componentWillUnmount() { clearInterval(this.iv); clearTimeout(this.t1); clearTimeout(this.t2); }
+  componentDidUpdate(pp, ps) { if (ps && ps.screen !== this.state.screen && this.scrollRef.current) this.scrollRef.current.scrollTop = 0; }
+
+  d(s) {
+    const lyr = s.preset === 'mine' || (s.preset === 'custom' && s.mix.lyr), plex = s.preset === 'plex' || (s.preset === 'custom' && s.mix.plex);
+    const spo = s.preset !== 'custom' || s.mix.spo, bt = s.preset !== 'custom' || s.mix.bt, headless = s.scr === 'headless';
+    return { lyr, plex, spo, bt, headless, wait: !lyr || s.browse === 'off', here: lyr && s.lyrState !== 'found' && s.lyrWhere === 'here',
+      marks: [lyr && 'lyr', plex && 'plex', spo && 'spo', bt && 'bt'].filter(Boolean) };
+  }
+  p1Path(s) { return s.start === 'new' ? ['p1welcome', 'p1net', 'p1start', 'p1name', 'p1clock', 'p1output', 'p1screen', 'p1review', 'p1join'] : ['p1welcome', 'p1net', 'p1start', 'p1backup', 'p1screen', 'p1restore', 'p1restored']; }
+  ivBlock(s) {
+    const A = '#7ed6bc', ON = { bg: 'rgba(126,214,188,0.16)', border: A, ink: A }, LINE = 'rgba(233,238,242,0.1)', FILL = 'rgba(233,238,242,0.07)';
+    const up = (i, f) => this.setState(st => ({ ivs: st.ivs.map((x, k) => k === i ? Object.assign({}, x, f(x)) : x) }));
+    const items = s.ivs.map((iv, i) => {
+      const pk = s.ivPick && s.ivPick.i === i ? s.ivPick.which : null, [hh, mm] = pk ? iv[pk].split(':') : [];
+      const setT = (part, v) => up(i, x => { const [a, b] = x[pk].split(':'); return { [pk]: part === 'h' ? v + ':' + b : a + ':' + v }; });
+      const cell = (label, sel, fn) => Object.assign({ label, onTap: fn, weight: sel ? 700 : 400 }, sel ? ON : { bg: FILL, border: LINE, ink: 'rgba(233,238,242,0.82)' });
+      return {
+        onRemove: () => this.setState(st => { const ivs = st.ivs.filter((_, k) => k !== i); return { ivPick: null, ivs, standby: ivs.length ? st.standby : false }; }),
+        times: [['from', 'From'], ['until', 'Until']].map(([w, label]) => ({ label, value: iv[w], border: pk === w ? A : LINE, ink: pk === w ? A : '#e9eef2', onTap: () => this.setState({ ivPick: pk === w ? null : { i, which: w } }) })),
+        pickDisplay: pk ? 'flex' : 'none',
+        hours: HOURS.map(x => cell(x, x === hh, () => setT('h', x))),
+        quarters: QUARTERS.map(x => cell(':' + x, x === mm, () => setT('m', x))),
+        days: DAYS.map(d => { const sel = iv.days.includes(d);
+          return Object.assign({ label: d, onTap: () => { if (sel && iv.days.length === 1) return; up(i, x => ({ days: sel ? x.days.filter(y => y !== d) : DAYS.filter(y => y === d || x.days.includes(y)) })); } },
+            sel ? ON : { bg: FILL, border: LINE, ink: 'rgba(233,238,242,0.72)' }); })
+      };
+    });
+    return { t: 'Iv', items, noneDisplay: items.length ? 'none' : 'block', addOp: items.length >= 6 ? 0.45 : 1,
+      onAdd: () => { if (items.length < 6) this.setState(st => ({ ivPick: null, ivs: st.ivs.concat([{ from: '22:00', until: '06:00', days: DAYS.slice() }]) })); } };
+  }
+  p2Path(s) {
+    const d = this.d(s), p = ['listen'];
+    if (s.preset === 'custom') p.push('mix');
+    if (d.lyr && s.lyrState !== 'found') { p.push('lyrion'); if (s.lyrWhere === 'here') p.push('folders'); }
+    if (d.lyr && !d.headless) p.push('browse');
+    if (d.plex) { p.push('plexamp'); if (!s.plexSkipped) p.push('plexsign'); }
+    if (d.spo) p.push('spotify');
+    if (d.bt) p.push('bluetooth');
+    if (!d.headless) p.push('visualiser', ...(d.wait ? ['wait'] : []), 'idle', 'standby');
+    return p;
+  }
+  path() { const s = this.state; return s.screen.startsWith('p1') ? this.p1Path(s) : this.p2Path(s); }
+
+  go(id, ret) { this.setState({ screen: id, ret: ret || null }, () => this.enter(id)); }
+  enter(id) {
+    const s = this.state;
+    if (id === 'listen' && s.lyrState === 'idle') this.setState({ lyrState: s.flow === 'A' ? 'found' : 'none' });
+    if (id === 'bluetooth' && !s.btPhase) this.setState({ btPhase: 'disc', btLeft: 180 });
+    if (id === 'p1join') { clearTimeout(this.t2); this.t2 = setTimeout(() => { if (this.state.screen === 'p1join') this.go('listen'); }, 4000); }
+    if (id === 'done') this.setState({ inst: 0 });
+  }
+  restart(over) {
+    clearTimeout(this.t1); clearTimeout(this.t2);
+    const s = this.state, n = Object.assign(init(s.flow, s.startAt, s.wide), { listenPic: s.listenPic }, over || {});
+    n.screen = n.startAt === 'p2' ? 'listen' : 'p1welcome';
+    this.setState(n, () => this.enter(this.state.screen));
+  }
+  advance(skipped) {
+    const s = this.state, d = this.d(s), u = { skipped: Object.assign({}, s.skipped, { [s.screen]: skipped }) };
+    this.setState(u);
+    if (s.ret) {
+      if (s.ret === 'review' && ['listen', 'mix', 'lyrion', 'plexamp'].includes(s.screen)) {
+        const p = this.p2Path(s), nx = p.slice(p.indexOf(s.screen) + 1).find(x => ['mix', 'lyrion', 'folders', 'browse', 'plexamp', 'plexsign'].includes(x));
+        if (nx) return this.go(nx, 'review');
+      }
+      return this.go(s.ret);
+    }
+    if (s.screen === 'review') return this.go('done');
+    if (['done', 'later', 'p1restored'].includes(s.screen)) return this.restart();
+    const p = this.path(), i = p.indexOf(s.screen);
+    if (i >= 0 && i < p.length - 1) this.go(p[i + 1]);
+    else if (i === p.length - 1 && !s.screen.startsWith('p1')) this.go('done');
+  }
+  next() { this.advance(false); }
+  skip() { this.advance(true); }
+  back() { const s = this.state; if (s.ret) return this.go(s.ret); const p = this.path(), i = p.indexOf(s.screen); if (i > 0) this.go(p[i - 1]); }
+  tick() {
+    const s = this.state, u = {};
+    if (s.plexOn && s.plexPct < 100) u.plexPct = Math.min(100, s.plexPct + 6);
+    if (s.btPhase === 'request') { if (s.reqLeft <= 1) u.btPhase = 'disc'; else u.reqLeft = s.reqLeft - 1; }
+    if (s.screen === 'done' && s.inst < 100) u.inst = Math.min(100, s.inst + 7);
+    if (Object.keys(u).length) this.setState(u);
+  }
+  phone(s) { return PHONES.find(p => !s.trusted.some(t => t.name === p)) || PHONES[0]; }
+  accept() { const s = this.state, ph = this.phone(s); this.setState({ btPhase: 'paired', everPaired: true, trusted: s.trusted.map(t => ({ name: t.name, meta: 'Paired today' })).concat([{ name: ph, meta: 'Connected just now' }]) }); }
+
+  sims(s) {
+    const L = [], add = (label, fn) => L.push({ label, onClick: fn });
+    if (s.screen === 'p1join') add('The player answers', () => this.go('listen'));
+    if (s.screen === 'bluetooth' && s.bt && s.btPhase === 'disc') add('A phone asks to pair', () => this.setState({ btPhase: 'request', reqLeft: 30 }));
+    if (s.screen === 'bluetooth' && s.btPhase === 'request') add('Let the request run out', () => this.setState({ btPhase: 'disc' }));
+    if ((s.screen === 'plexamp' || s.screen === 'plexsign') && s.plexOn && s.plexPct < 100) add('Finish the download', () => this.setState({ plexPct: 100 }));
+    if (s.screen === 'plexsign' && s.plexPct >= 100 && s.plexState === 'code') add('The claim code runs out', () => this.setState({ plexState: 'expired', claim: '' }));
+    if (s.screen === 'done' && s.inst < 100) add('Finish installing', () => this.setState({ inst: 100 }));
+    return L;
+  }
+
+  screenDef(s, d) {
+    const set = u => this.setState(u), flip = k => () => this.setState(st => ({ [k]: !st[k] }));
+    const nm = s.name.trim() || 'the player', sl = slug(s.name), time = s.fmt ? '9:04 pm' : '21:04';
+    const city = (s.loc.split(',')[0] || '').trim() || 'Berlin';
+    const pv = x => d.headless ? null : Object.assign({ head: nm + '’s screen', time, place: city, player: nm }, x);
+    const waitLook = { kind: 'wait', marks: d.marks, clock: s.waitClock, black: s.waitBg === 'Black' };
+    const idleLook = s.idleOn ? { kind: 'clock', clock: s.clock, weather: s.weather, black: s.bg === 'Black', bg: s.bg === 'Artist pictures' ? 'artist' : 'wall', wallSrc: WALLS[s.wallStyle] } : d.wait ? waitLook : { kind: KNAV[s.browse] };
+    const look = d.lyr ? { kind: KNAV[s.browse] } : waitLook;
+    const styles = pick('Wallpaper styles', STYLES, s.styles, C.idle, x => this.setState(st => {
+      const on = st.styles.includes(x);
+      if (on && st.styles.length === 1) return null;
+      const styles = on ? st.styles.filter(y => y !== x) : st.styles.concat([x]), i = STYLES.indexOf(x);
+      const ws = !on ? x : st.wallStyle !== x ? st.wallStyle : STYLES.slice(i + 1).concat(STYLES.slice(0, i)).find(y => styles.includes(y)) || x;
+      return { styles, wallStyle: ws };
+    }));
+    const SK = { alt: 'Skip' };
+    switch (s.screen) {
+      case 'p1welcome': return { hero: true, crumb: 'First-time setup', title: 'Set up gexis', sub: 'You are connected to the player’s own Wi-Fi. This part gets the player working; what it plays and shows comes after, from your home Wi-Fi.',
+        blocks: [note('info', 'About a minute', 'Network, name, time, output and screen. Every answer can be changed later in Settings.'), note('warn', 'Keep mobile data off', 'Until this part finishes. With it on, your phone may try to reach this page over mobile data, where the player cannot be found.')], foot: { next: 'Start' } };
+      case 'p1net': { const sec = (NETS.find(n => n[0] === s.net) || [])[1] === 'Secured';
+        return { title: 'Join your network', sub: 'The player has one radio, so it can host this page or use your network, never both.',
+          blocks: [list(NETS.map(n => ({ k: 'net', label: n[0], meta: n[1], lvl: n[2], on: s.net === n[0], fn: () => set({ net: n[0] }) }))), ...(sec ? [field('Password for ' + s.net, s.pw, e => set({ pw: e.target.value }), { type: 'password' })] : []), btn('Scan again', noop)], foot: { nextOff: sec && !s.pw } }; }
+      case 'p1start': return { title: 'New player or backup?', sub: 'A backup brings back everything the player had, so there is less to ask.',
+        blocks: [list([R('Set up a new player', 'Four more questions now; the rest from your home Wi-Fi.', s.start === 'new', () => set({ start: 'new' })), R('Restore a backup', 'Upload a backup file from this phone.', s.start === 'backup', () => set({ start: 'backup' }))])] };
+      case 'p1backup': return { title: 'Upload a backup', sub: 'A backup file saved from Settings → System → Back up now, on this phone or in its files.',
+        blocks: [btn(s.uploaded ? 'Choose another file' : 'Choose a file', () => set({ uploaded: true })), ...(s.uploaded ? [list([{ k: 'plain', label: 'Living Room · 2 Oct 2026, 21:04', note: 'Uploaded and checked. Made by gexis v0.3.0.', meta: '14 MB', tag: ['Ready', 'ok'] }])] : [])], foot: { nextOff: !s.uploaded } };
+      case 'p1name': return { title: 'Name the player', sub: 'One name for everything. Pick one you will recognise in a list of speakers.',
+        blocks: [field('Device name', s.name, e => set({ name: e.target.value }), { ph: 'Living Room', hint: 'Letters, numbers and hyphens become the address; the name keeps its capitals everywhere else.' }), sum([['Address', 'http://' + sl + '.local'], ['In speaker lists', nm]], 'Becomes')], foot: { nextOff: !s.name.trim() } };
+      case 'p1clock': return { title: 'Set the clock', sub: 'The idle screen is mostly a clock, so this is worth getting right.',
+        blocks: [{ t: 'Clock', label: 'Read from this phone', value: 'Berlin · Europe', time }, btn('Choose by hand', noop), seg('Clock format', ['24 h', '12 h'], s.fmt, P1C.Time, i => set({ fmt: i }))] };
+      case 'p1output': return { title: 'Choose the output', sub: 'What the player sends audio to.', blocks: [list(OUTS.map(o => R(o[0], '', s.output === o[0], () => set({ output: o[0] }), { tag: o[1] })))] };
+      case 'p1screen': return { title: 'Is this your screen?', sub: 'What the screen reports matches this model. It sets the layout and the visualiser skins.',
+        blocks: [list([R('Waveshare 10.1″ HDMI LCD (B)', '1280 × 800 · Standard layout', s.scr === 'panel', () => set({ scr: 'panel' }), { tag: ['Tested', 'ok'] }), R('Another screen', 'Pick the model from a list.', s.scr === 'other', () => set({ scr: 'other' })), R('Headless', 'No local screen. The display stays off and nothing is drawn.', s.scr === 'headless', () => set({ scr: 'headless' }))]),
+          ...(s.scr === 'headless' ? [note('info', 'Fewer questions later', 'With no screen, part 2 skips how to browse on it, the visualiser, the idle screen and standby.')] : [])] };
+      case 'p1review': { const ch = id => () => this.go(id, 'p1review');
+        return { title: 'Check it over', sub: 'Finishing moves the player to ' + s.net + '.', blocks: [sum([['Network', s.net, ch('p1net')], ['Name', nm + ' · ' + sl + '.local', ch('p1name')], ['Time', 'Europe/Berlin · ' + (s.fmt ? '12 h' : '24 h'), ch('p1clock')], ['Output', s.output, ch('p1output')], ['Screen', SCRL[s.scr], ch('p1screen')]]),
+          note('info', 'Then, on your home Wi-Fi', 'How you listen and what the screen shows. A few questions, each with a default.')], foot: { next: 'Finish and connect' } }; }
+      case 'p1join': return { hero: true, crumb: 'Almost done', title: nm + ' is joining ' + s.net,
+        blocks: [P('This page came from the player’s own Wi-Fi, so it stops here. Put this phone back on ' + s.net + ', then open:'), { t: 'Addr', label: 'Open in any browser', value: 'http://' + sl + '.local:8090' }, status('spin', 'Waiting for ' + nm + ' on ' + s.net), note('ok', '', 'When the player answers, this page carries on into making it yours. The player’s screen shows a code for it too.')], foot: { hide: true } };
+      case 'p1restore': { const ch = id => () => this.go(id, 'p1restore');
+        return { title: 'Check it over', sub: 'Everything else comes from the backup.', blocks: [sum([['Network', s.net, ch('p1net')], ['Screen', SCRL[s.scr], ch('p1screen')]]), sum([['Name', 'Living Room'], ['Time', 'Europe/Berlin · 24 h'], ['Output', 'HiFiBerry DAC+ HD'], ['Listens to', 'Lyrion · Spotify · Bluetooth'], ['Installed', 'Plexamp · Visualiser skins']], 'From the backup'),
+          note('info', 'Nothing more to ask', 'The player restores, joins ' + s.net + ' and downloads again what the backup had installed.')], foot: { next: 'Restore and connect' } }; }
+      case 'p1restored': return { hero: true, crumb: 'Almost done', title: 'Living Room is restoring', blocks: [status('spin', 'Restoring, then joining ' + s.net), P('Put this phone back on ' + s.net + '. The player opens at http://living-room.local:8090 when it is back.')], foot: { back: false, next: 'Done' } };
+
+      case 'listen': { const st = s.lyrState, found = st === 'found', pk = p => () => set({ preset: p, presetTouched: true });
+        const stat = null;
+        const lfoot = { back: false, alt: 'Do it later', altFn: () => this.go('later'), nextOff: !s.preset };
+          const mine = R('My music + streaming', '', s.preset === 'mine', pk('mine'), Object.assign({ srcs: ['lyr', 'spo', 'bt'] }, found ? { foot: 'Lyrion found on ' + s.net, footMeta: '192.0.2.10:9000' } : st === 'none' ? { foot: 'No Lyrion found on ' + s.net, footMeta: 'Set it up on the next screen', footDot: 'rgba(233,238,242,0.4)' } : {}));
+          const rest = [R('Plex + streaming', '', s.preset === 'plex', pk('plex'), { srcs: ['plex', 'spo', 'bt'] }),
+            R('Streaming only', '', s.preset === 'stream', pk('stream'), { srcs: ['spo', 'bt'] })];
+          const own = R('My own mix', 'Choose from any of these on the next screen.', s.preset === 'custom', pk('custom'), { srcs: ['lyr', 'plex', 'spo', 'bt'] });
+          const lpv = s.wide ? { kind: 'flow', head: '' } : null;
+          return { title: 'How will you listen?', sub: 'Pick the closest. Change anything after.', pv: lpv, foot: lfoot, blocks: [...(stat ? [stat] : []), list([mine, ...rest]), list([own], 'Or mix your own')] };
+      }
+      case 'mix': { const m = k => () => this.setState(st => ({ mix: Object.assign({}, st.mix, { [k]: !st.mix[k] }) }));
+        return { title: 'My own mix', blocks: [list([T('Lyrion', 'Browse your files on the screen.', s.mix.lyr, m('lyr'), { icon: 'lyr' }), T('Plexamp', 'Your Plex library, from its app.', s.mix.plex, m('plex'), { icon: 'plex' }), { k: 'ghost', label: 'Library service', note: 'The next one lands here.', tag: 'Next phase' }], 'Your own music'),
+          list([T('Spotify', '', s.mix.spo, m('spo'), { icon: 'spo' }), T('Bluetooth', '', s.mix.bt, m('bt'), { icon: 'bt' })], 'Streaming')] }; }
+      case 'lyrion': { const here = s.lyrWhere === 'here';
+        const nf = Object.assign(status('none', 'No Lyrion found on ' + s.net), s.lyrAddrOpen ? { field: { label: 'Server address', value: s.lyrAddr, fn: e => set({ lyrAddr: e.target.value }), ph: '192.0.2.31:9000', hint: nm + ' checks it before going on.' } } : { act: 'Add its address', actFn: () => set({ lyrAddrOpen: true }) });
+        return { title: 'Where should Lyrion run?', blocks: [nf, { t: 'Where', sel: s.lyrWhere, fn: w => set({ lyrWhere: w }) },
+          here ? { t: 'Split', lhead: nm + ' does', left: ['Installs Lyrion', 'Adds your folders', 'Runs the first scan'], rhead: 'Later, in Lyrion', right: ['Rescan after adding music', 'Everything else'] }
+            : { t: 'Split', lhead: nm + ' does', left: ['Finds it and plays from it'], rhead: 'You, on that machine', right: ['Install Lyrion', 'Add your music', 'Run the scans'] },
+          ...(here ? [] : [{ t: 'Addr', label: 'Get Lyrion at', value: 'lyrion.org' }])], foot: SK }; }
+      case 'folders': { const tg = k => () => this.setState(st => ({ places: Object.assign({}, st.places, { [k]: !st.places[k] }) })), extra = [];
+        if (s.places.share) { const ss = s.shareStep, srv = s.shareSrv, addShare = (name, where) => this.setState(st => ({ shares: st.shares.concat([{ name, where }]), shareStep: null, shareAddr: '', shareAU: '', shareAP: '' }));
+          const scan = () => { set({ shareStep: 'scan' }); clearTimeout(this.t3); this.t3 = setTimeout(() => { if (this.state.shareStep === 'scan') this.setState({ shareStep: 'list' }); }, 1800); };
+          if (s.shares.length && !ss) extra.push(list(s.shares.map(a => ({ k: 'plain', label: a.name, note: a.where, tag: ['Added', 'ok'] })), 'Network shares'));
+          if (!ss) extra.push(btn(s.shares.length ? 'Add another share' : 'Add a network share', scan));
+          else if (ss === 'scan') extra.push(status('spin', 'Looking for shares', 'Servers that announce themselves answer within a few seconds.'));
+          else if (ss === 'list') extra.push(list([['NAS', '192.0.2.24', true], ['Office-PC', '192.0.2.31', false]].map(v => HB(v[0], v[1], () => set({ shareStep: v[2] ? 'login' : 'browse', shareSrv: v[0] }), { icon: 'fold' })), 'Network shares'),
+            P('Not in the list? Some servers do not announce themselves - add the share by its address.'), btn('Add by address', () => set({ shareStep: 'addr' })), btn('Cancel', () => set({ shareStep: null })));
+          else if (ss === 'login') extra.push(note('info', 'Sign in to ' + srv, 'It shows its shares only to a user it knows. The same user and password are used to mount the one you choose.'),
+            field('User', s.shareUser, e => set({ shareUser: e.target.value }), { ph: 'george' }), field('Password', s.sharePw, e => set({ sharePw: e.target.value }), { type: 'password' }),
+            btn('Show shares', () => set({ shareStep: 'browse' })), btn('Back', () => set({ shareStep: 'list' })));
+          else if (ss === 'browse') extra.push(list(['Music', 'Archive'].map(n => HB(n, '//' + srv.toLowerCase() + '/' + n.toLowerCase(), () => addShare('//' + srv.toLowerCase() + '/' + n.toLowerCase(), 'On ' + srv), { icon: 'fold' })), 'Shares on ' + srv),
+            P('Tap one to add it.'), btn('Back', () => set({ shareStep: 'list' })));
+          else if (ss === 'addr') extra.push(note('info', 'Add a share', 'A folder on a NAS or a computer. SMB needs a user and password; NFS needs only the address.'),
+            field('Address', s.shareAddr, e => set({ shareAddr: e.target.value }), { ph: '//nas/music or nas:/music' }), field('User (SMB)', s.shareAU, e => set({ shareAU: e.target.value })), field('Password (SMB)', s.shareAP, e => set({ shareAP: e.target.value }), { type: 'password' }),
+            btn('Add', () => { if (s.shareAddr.trim()) addShare(s.shareAddr.trim(), 'Added by address'); }), btn('Back', () => set({ shareStep: 'list' })));
+        }
+        return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [list(PLACES.map(p => K(p[1], p[2], s.places[p[0]], tg(p[0]))), 'Lyrion reads'), ...extra, P('These become Lyrion’s music folders when it installs.')], foot: SK }; }
+      case 'plexamp': {
+        const sub = 'Your Plex library, played on ' + nm + '.';
+        if (s.plexOn) return { title: 'Plexamp', sub, blocks: [prog(s.plexPct >= 100 ? 'Plexamp is in' : 'Downloading Plexamp', s.plexPct)] };
+        return { title: 'Plexamp', sub, blocks: [list([{ k: 'plain', label: 'Plexamp 4.13.2', note: 'From Plex · 112 MB', icon: 'plex' }]), num([['Download Plexamp', 'next'], ['Sign in to Plex with a claim code', 'next']]), P('Skip, and add Plexamp later from Settings → Plugins.')],
+          foot: { alt: 'Skip', altFn: () => this.setState({ plexSkipped: true, plexState: 'later' }, () => this.skip()), next: 'Download', nextFn: () => this.setState({ plexOn: true, plexSkipped: false }, () => this.next()), keep: true } };
+      }
+      case 'browse': return { title: 'Browse on the screen', sub: 'A Lyrion app on your phone works with any of these.', pv: pv({ kind: KNAV[s.browse] }), blocks: [list(NAV.map(n => R(n[1], n[2], s.browse === n[0], () => set({ browse: n[0] }))))], foot: SK };
+      case 'spotify': return { title: 'Spotify', sub: 'Built in. ' + nm + ' appears in the Spotify app on your phone.', blocks: [list([T('Spotify Connect', '', s.spotify, flip('spotify'), { icon: 'spo' })]), ...(s.spotify ? [{ t: 'Cast', device: nm, text: 'Tap the devices icon, then ' + nm + '.' }] : [])], foot: SK };
+      case 'bluetooth': {
+        const ph = this.phone(s), sub = 'Any phone can play to ' + nm + ' over Bluetooth. Pair one now, or later from Settings.';
+        const en = list([T('Enabled', '', s.bt, () => this.setState(st => ({ bt: !st.bt, btPhase: !st.bt ? 'disc' : st.btPhase, btLeft: !st.bt ? 180 : st.btLeft })), { icon: 'bt' })]);
+        const devs = s.everPaired ? [{ t: 'Dev', items: s.trusted.map(t => ({ name: t.name, meta: t.meta, fn: () => this.setState(st => ({ trusted: st.trusted.filter(x => x.name !== t.name) })) })), empty: 'No phones paired yet.' }] : [];
+        if (!s.bt) return { title: 'Bluetooth', sub, blocks: [en, note('info', '', 'Phones can’t find ' + nm + '. Turn it on any time in Settings → Bluetooth.')], foot: SK };
+        if (s.btPhase === 'request') return { title: 'Bluetooth', sub, blocks: [{ t: 'Code', label: ph + ' wants to pair', code: '418 205', text: 'Check it matches your phone, then accept.' }],
+          foot: { alt: 'Decline', altFn: () => set({ btPhase: 'disc' }), next: 'Accept', nextFn: () => this.accept(), keep: true } };
+        if (s.btPhase === 'paired') { const last = s.trusted[s.trusted.length - 1];
+          return { title: 'Bluetooth', sub, blocks: [en, ...(last ? [status('ok', last.name + ' is paired')] : []), ...devs, btn('Pair another phone', () => set({ btPhase: 'disc', btLeft: 180 }))] }; }
+        return { title: 'Bluetooth', sub, blocks: [en, status('spin', 'Waiting for a phone', 'Tap ' + nm + ' in its Bluetooth list'), ...devs], foot: SK };
+      }
+      case 'visualiser': { const k = s.skin, a = ANIM[k], rpm = s.rpm ? 45 : 33;
+        return { title: 'While music plays', sub: 'What the screen shows with the music.', pv: pv(s.vizOn ? { kind: k, rpm, animate: s.animate } : { kind: d.lyr ? KNAV[s.browse] : 'now' }),
+          blocks: [list([T('Visualiser', 'Takes the screen while music plays.', s.vizOn, flip('vizOn'), { icon: 'viz' })]), ...(s.vizOn ? [
+            pick('Starts after', ['2 min', '10 min', '30 min'], s.vizAfter, C.scr, x => set({ vizAfter: x })),
+            pics('Skins', SKINS.map(x => ({ kind: x[0], label: x[1], on: k === x[0], rpm, fn: () => set({ skin: x[0] }) })), 'grid3'),
+            ...(a ? [list([T(a[0], a[1], s.animate, flip('animate'))])] : []),
+            ...((k === 'turn' || k === 'all') && s.animate ? [seg('Record speed', ['33 rpm', '45 rpm'], s.rpm, C.scr, i => set({ rpm: i }))] : []),
+            note('info', '', 'How each skin moves and reacts to the music is in Settings → Display → Visualiser.')] : [])], foot: SK }; }
+      case 'idle': { const gx = s.bg === 'Gexis wallpapers';
+        return { title: 'When nothing plays', sub: 'What the screen shows after a while with no music and no touch.', pv: pv(idleLook),
+          blocks: [list([T('Idle screen', 'After 5 min with no music.', s.idleOn, flip('idleOn'), { icon: 'clk' })]), ...(s.idleOn ? [
+            pick('Background', BGS, s.bg, C.idle, x => set({ bg: x })), ...(gx ? [styles, PIXA] : []),
+            list([T('Clock', '', s.clock, flip('clock')), T('Weather', '', s.weather, flip('weather'))]),
+            ...(s.weather ? [field('Weather location', s.loc, e => set({ loc: e.target.value }), { ph: 'e.g. Lisbon, Portugal' })] : [])] : [])], foot: Object.assign({}, SK, { nextOff: s.idleOn && s.weather && !s.loc.trim() }) }; }
+      case 'wait': return { title: 'While it waits', sub: 'The screen shows the sources over a picture until something plays.', pv: pv(waitLook),
+        blocks: [list([T('Clock', 'Time, date and the player’s name.', s.waitClock, flip('waitClock'), { icon: 'clk' })]), pick('Background', WBGS, s.waitBg, C.idle, x => set({ waitBg: x })), ...(s.waitBg === 'Gexis wallpapers' ? [styles, PIXA] : [])], foot: SK };
+      case 'standby': return { title: 'Off at night?', sub: 'The screen turns off at set hours when nothing plays.', pv: pv(s.standby ? { kind: 'off' } : idleLook),
+        blocks: [list([T('Night standby', 'The screen turns off.', s.standby, () => this.setState(st => ({ standby: !st.standby, ivPick: null, ivs: !st.standby && !st.ivs.length ? [{ from: '22:00', until: '06:00', days: DAYS.slice() }] : st.ivs })), { icon: 'stby' })]), ...(s.standby ? [this.ivBlock(s)] : [])], foot: SK };
+      case 'plexsign': {
+        const later = () => this.setState({ plexState: 'later' }, () => this.skip());
+        const done = s.plexPct >= 100, dl = prog(done ? 'Plexamp is installed' : 'Downloading Plexamp', s.plexPct), sub = 'Get a claim code from plex.tv while Plexamp downloads, then paste it here.';
+        const skipP = P('Or skip, and sign in later from Settings → Plugins → Plexamp.' + (done ? '' : ' The download carries on.'));
+        const open = btn('Open plex.tv/claim', () => set({ claimOpened: true, claim: s.claim || 'claim-q7HfK2xR9mWpL4tZ', plexState: 'code' }));
+        if (s.plexState === 'ok') return { title: 'Sign in to Plex', sub, blocks: [dl, open, note('info', '', 'Paste the claim code here within four minutes.'), field('Claim code', s.claim, noop, { ro: true }), status('ok', nm + ' is on your Plex account', 'Plexamp signed in'), P('Open Plexamp on your phone and pick ' + nm + ' as the player.')] };
+        if (!done) return { title: 'Sign in to Plex', sub, blocks: [dl, open, note('info', '', 'A claim code lasts four minutes. Paste it here once Plexamp is installed.'), field('Claim code', '', noop, { ph: 'Opens once Plexamp is installed', ro: true }), skipP], foot: { alt: 'Skip', altFn: later, next: 'Claim', nextOff: true, keep: true } };
+        const code = field('Claim code', s.claim, e => set({ claim: e.target.value }), { ph: 'claim-…' });
+        const blocks = s.plexState === 'expired' ? [dl, note('warn', 'That code has run out', 'Claim codes last four minutes. Get a new one and paste it straight away.'), open, code]
+          : [dl, open, note('info', '', 'Paste the claim code here within four minutes.'), code, skipP];
+        return { title: 'Sign in to Plex', sub, blocks, foot: { alt: 'Skip', altFn: later, next: 'Claim', nextFn: () => { if (s.claim.trim()) set({ plexState: 'ok' }); }, nextOff: !s.claim.trim(), keep: true } };
+      }
+      case 'review': {
+        const sk = id => s.skipped[id] ? ['Skipped', 'plain'] : null, op = id => () => this.go(id, 'review'), rows = [];
+        const music = s.preset === 'mine' ? (s.lyrState === 'found' ? 'Lyrion · found on ' + s.net : s.lyrWhere === 'here' ? 'Lyrion, on this player' : 'Lyrion, on another machine') : s.preset === 'stream' ? 'Streaming only' : s.preset === 'plex' ? 'Plexamp' : [d.lyr && 'Lyrion', d.plex && 'Plexamp'].filter(Boolean).join(' · ') || 'No library';
+        rows.push(HB('Music', music, op('listen'), { icon: d.lyr ? 'lyr' : d.plex ? 'plex' : 'lib' }));
+        if (d.here) rows.push(HB('Folders', PLACES.filter(p => s.places[p[0]]).map(p => p[1]).join(' · ') || 'None yet', op('folders'), { icon: 'fold', tag: sk('folders') }));
+        if (d.lyr && !d.headless) rows.push(HB('Browse', NAV.find(n => n[0] === s.browse)[1], op('browse'), { icon: 'browse', tag: sk('browse') }));
+        if (d.plex) { const px = !s.plexOn ? ['Not installed · later, from Settings', ['Skipped', 'plain']] : s.plexState === 'ok' ? ['Signed in', ['Signed in', 'ok']] : s.plexState === 'later' ? [(s.plexPct < 100 ? 'Downloading' : 'Installed') + ' · sign in later', ['Later', 'warn']] : ['Not signed in', null];
+          rows.push(HB('Plex', px[0], op(s.plexOn ? 'plexsign' : 'plexamp'), { icon: 'plex', tag: px[1] })); }
+        if (d.spo) rows.push(HB('Spotify', s.spotify ? 'On' : 'Off', op('spotify'), { icon: 'spo', tag: sk('spotify') }));
+        if (d.bt) rows.push(HB('Bluetooth', !s.bt ? 'Off' : s.trusted.length ? s.trusted.map(t => t.name).join(' · ') : 'On · no phone yet', op('bluetooth'), { icon: 'bt', tag: s.trusted.length && s.bt ? ['Paired', 'ok'] : sk('bluetooth') }));
+        if (!d.headless) {
+          rows.push(HB('Visualiser', s.vizOn ? SKINS.find(x => x[0] === s.skin)[1] : 'Off', op('visualiser'), { icon: 'viz', tag: sk('visualiser') }));
+          if (d.wait) rows.push(HB('While it waits', [s.waitBg, s.waitClock && 'Clock'].filter(Boolean).join(' · '), op('wait'), { icon: 'clk', tag: sk('wait') }));
+          rows.push(HB('When idle', s.idleOn ? [s.bg, s.clock && 'Clock', s.weather && 'Weather'].filter(Boolean).join(' · ') : 'Off', op('idle'), { icon: 'clk', tag: sk('idle') }));
+          rows.push(HB('Standby', s.standby ? ivSaid(s.ivs) : 'Off', op('standby'), { icon: 'stby', tag: sk('standby') }));
+        }
+        return { title: 'Your setup', sub: 'Tap a row to change it.', pv: pv(Object.assign({}, look, { head: nm + '’s screen' })), blocks: [list(rows), ...(d.here ? [P('Lyrion installs and scans your folders when you finish.')] : [])], foot: { next: 'Finish' } };
+      }
+      case 'done': { const i = s.inst, items = [];
+        if (d.here) { const ld = i >= 50;
+          items.push(head('Lyrion'), prog(ld ? 'Installed' : 'Installing', Math.min(100, i * 2), null, ld ? 'Folders added, scan started' : '', true));
+          if (ld) items.push(note('info', '', 'A large library can take hours to scan. Music shows up as Lyrion finds it.')); }
+        if (d.plex && s.plexOn) { const pd = s.plexPct >= 100, ok = s.plexState === 'ok';
+          items.push(head('Plexamp'), prog(pd ? 'Installed' : 'Downloading', s.plexPct, null, pd ? (ok ? 'Signed in to Plex' : 'Not signed in yet') : '', ok));
+          if (pd) items.push(note('info', '', ok ? 'Your Plex library plays from the Plexamp app.' : 'Sign in from Settings → Plexamp when you’re ready.')); }
+        if (!d.headless && s.vizOn) { const vp = Math.min(100, Math.round(i * 1.4));
+          items.push(head('Visualiser'), prog(vp >= 100 ? 'Installed' : 'Installing skins', vp, null, vp >= 100 ? 'Skins ready' : '', true));
+          if (vp >= 100) items.push(note('info', '', 'The visualiser starts after ' + s.vizAfter + ' of music.')); }
+        return { hero: true, crumb: 'Make it yours', title: nm + ' is ready', blocks: [{ t: 'Party' }, ...items, { t: 'Rule' }, note('ok', '', 'Everything you set up here can be run again or changed in Settings → System → Personalise.')], foot: { back: false, next: 'Close' } }; }
+      case 'later': return { hero: true, crumb: 'Make it yours', title: 'Kept the defaults', blocks: [P('Spotify and Bluetooth are on, and nothing else is installed.'), note('ok', '', 'All of it is in Settings → System → Personalise.')], foot: { back: false, next: 'Close' } };
+    }
+    return { title: '', blocks: [] };
+  }
+
+  renderVals() {
+    const s = this.state, d = this.d(s), sc = this.screenDef(s, d), p1 = s.screen.startsWith('p1'), W = s.wide;
+    let rail = null, at = -1, accent = '#7ed6bc', stepName = '';
+    if (p1 && P1AT[s.screen]) { rail = s.start === 'new' ? P1N : P1B; stepName = P1AT[s.screen]; at = rail.indexOf(stepName); accent = P1C[stepName]; }
+    else if (P2M[s.screen]) { rail = uniq(this.p2Path(s).map(x => P2M[x][0])); stepName = P2M[s.screen][0]; at = rail.indexOf(stepName); accent = P2M[s.screen][1]; }
+    const crumb = sc.crumb || (s.ret === 'review' ? 'Review · ' + stepName : s.ret ? 'Check it over · ' + stepName : rail && at >= 0 ? 'Step ' + (at + 1) + ' of ' + rail.length : 'Make it yours');
+    const f = sc.foot || {}, ret = !!s.ret, pathIdx = this.path().indexOf(s.screen);
+    const foot = {
+      display: f.hide ? 'none' : 'flex', onBack: () => this.back(),
+      backDisplay: ret || (f.back !== false && pathIdx > 0) ? 'block' : 'none',
+      alt: f.alt || '', altDisplay: f.alt && (!ret || f.keep) ? 'block' : 'none', onAlt: f.altFn || (() => this.skip()),
+      next: ret && !f.keep ? 'Save' : f.next || (!p1 && !ret && pathIdx >= 0 && pathIdx === this.path().length - 1 ? 'Finish' : 'Next'), nextOp: f.nextOff ? 0.4 : 1, nextCursor: f.nextOff ? 'default' : 'pointer',
+      onNext: f.nextOff ? noop : f.nextFn || (() => this.next())
+    };
+    const pv = sc.pv || null;
+    const looks = d.lyr ? { kind: KNAV[s.browse] } : { kind: 'wait', marks: d.marks, clock: s.waitClock, black: s.waitBg === 'Black' };
+    const sidePv = pv || (p1 ? { kind: 'setup', head: 'The player’s screen' } : d.headless ? null : Object.assign({ head: (s.name.trim() || 'The player') + '’s screen', time: s.fmt ? '9:04 pm' : '21:04', player: s.name }, looks));
+    const nav = id => {
+      const on = id === s.screen, c = P1AT[id] ? P1C[P1AT[id]] : P2M[id] ? P2M[id][1] : '#7ed6bc';
+      return { label: LABEL[id], code: CODES[id] || '', c, onClick: () => this.go(id), bg: on ? 'rgba(233,238,242,0.09)' : 'transparent', ink: on ? '#e9eef2' : 'rgba(233,238,242,0.66)', fw: on ? 700 : 500 };
+    };
+    const p2 = s.start === 'new' ? this.p2Path(s).concat(['done']) : [];
+    let code = CODES[s.screen] || '';
+    if (s.screen === 'listen' && s.lyrState === 'found') code = '5A1';
+    if (s.screen === 'bluetooth') code = { request: 'P2', paired: 'P3', timeout: 'P4' }[s.btPhase] || '5A6';
+    if (s.screen === 'visualiser') code = { turn: '5A7t', tape: '5A7c' }[s.skin] || '5A7';
+    if (s.screen === 'plexsign') code = s.plexPct < 100 ? 'X2–' : s.plexState === 'ok' ? 'X4' : s.plexState === 'expired' ? 'X3' : 'X2';
+    const sims = this.sims(s);
+    const optOf = (opts, cur, fn) => opts.map(o => ({ label: o[1], onClick: () => fn(o[0]), bg: cur === o[0] ? '#e9eef2' : 'transparent', ink: cur === o[0] ? '#0d151c' : '#e9eef2' }));
+    return {
+      flows: FLOWS.map(x => { const on = s.flow === x[0]; return { id: x[0], title: x[1], text: x[2], onClick: () => this.restart({ flow: x[0] }), bg: on ? 'rgba(242,164,143,0.08)' : OFF, border: on ? 'rgba(242,164,143,0.55)' : OFFB, badgeBg: on ? '#f2a48f' : 'rgba(233,238,242,0.1)', badgeInk: on ? '#0d151c' : '#e9eef2' }; }),
+      startOpts: optOf([['p1', 'Part 1'], ['p2', 'Part 2']], s.startAt, v => this.restart({ startAt: v })),
+      layoutOpts: optOf([[false, 'Phone'], [true, 'Wide']], s.wide, v => this.setState({ wide: v })),
+      listenPvOpts: optOf(PHOTOS.map(x => [x[0], x[1]]), s.listenPic, v => this.setState({ listenPic: v })),
+      showListenPvOpts: false,
+      sims, hasSims: sims.length > 0, onRestart: () => this.restart(),
+      navGroups: [{ title: 'Part 1 · over gexis-setup', items: this.p1Path(s).map(nav) }].concat(p2.length ? [{ title: 'Part 2 · on ' + s.net, items: p2.map(nav) }] : []),
+      code, navLabel: LABEL[s.screen] || '',
+      fw: W ? '1100px' : '390px', fh: W ? '700px' : '844px', rad: W ? '22px' : '40px', headPad: W ? '30px 36px 0' : '28px 20px 0', bodyPad: W ? '24px 36px 28px' : '24px 20px 22px', colGap: W ? '48px' : '0px', leftDisplay: W ? 'flex' : 'none',
+      crumb, accent, prog: rail && at >= 0 ? Math.round((at + 0.65) / rail.length * 100) + '%' : '0%', progDisplay: rail && at >= 0 ? 'block' : 'none',
+      eyebrowDisplay: stepName ? 'flex' : 'none', stepName, title: sc.title, tSize: sc.hero ? '30px' : '26px', sub: sc.sub || '', subDisplay: sc.sub ? 'block' : 'none',
+      pv: pv || {}, hasInlinePv: !W && !!pv, sidePv: sidePv || {}, hasSidePv: W && !!sidePv, noSidePv: W && !sidePv,
+      blocks: (sc.blocks || []).map(block), foot, scrollRef: this.scrollRef
+    };
+  }
+}
+</script>
+</body>
+</html>

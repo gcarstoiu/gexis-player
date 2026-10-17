@@ -1,0 +1,457 @@
+<script>
+  import { onMount } from 'svelte';
+  import mark from '../assets/gexis-mark.svg';
+  import lyrionIcon from '../assets/icon-lyrion.svg';
+  import spotifyIcon from '../assets/icon-spotify.png';
+  import btIcon from '../assets/icon-bluetooth.png';
+  import calmWall from '../assets/personalise/calm.webp';
+  import colourfulWall from '../assets/personalise/colourful.webp';
+  import psychedelicWall from '../assets/personalise/psychedelic.webp';
+  import PanelMini from './personalise/PanelMini.svelte';
+  import PhoneDeviceList from './personalise/PhoneDeviceList.svelte';
+  import { loadSettings, settingValues, settingsDevice, listItems, listAction, writeSetting } from '../lib/settings.js';
+  import { pairing, components, settling, answerPairing, personaliseLater } from '../lib/state.js';
+
+  //: `mode`: 'p1' (setup, over the setup network or the cable) or 'p2' (make it
+  //: yours, from the home network). `setup`: `/state`'s setup, in part 1.
+  let { mode = 'p2', setup = null, onclose } = $props();
+
+  //: The prototype's runtime (`support.js`) gives its Component React's
+  //: setState; this is that, over Svelte state, so the design's logic below
+  //: runs as written.
+  class DCLogic {
+    setState(u, cb) {
+      const next = typeof u === 'function' ? u(this.state) : u;
+      if (next) Object.assign(this.state, next);
+      if (cb) cb();
+    }
+  }
+
+  // ===== The design's logic, from Setup Prototype.dc.html =====
+/*PROTO*/
+  // ===== The player =====
+
+  //: Part 2's own state, with what the prototype simulated filled in by
+  //: the player: its name, clock, network, the Lyrion search, Plexamp's
+  //: download, a phone asking to pair, the network shares, the downloads.
+  let st = $state(Object.assign(init('A', mode === 'p1' ? 'p1' : 'p2', false), {
+    first: true, town: '', net: 'your network', lyrMeta: '', lyrServer: null, pairDevice: '', pairCode: '',
+    shareServers: [], shareFound: [], shareSrvItem: null, shareError: null, finishError: null, finished: null,
+    plugins: [], tick: 0, ready: false,
+    // Part 1's own.
+    nets: [], scan: 'scanning', other: false, otherName: '', hasPw: false, joinError: null, overLan: false,
+    backup: null, backupMade: '', uploading: null, uploadError: null, tz: null, tzMode: 'auto', tzRegion: null, zones: [],
+    outputs: [], outNotes: {}, recommended: null, screenInfo: null, scMaker: null, scPick: null, keepQ: false, problem: null, offered: []
+  }));
+  const comp = new Component();
+  comp.state = st;
+  let refs = $state({});
+
+  const pctOf = (item) => !item ? 0 : item.state === 'done' ? 100
+    : item.total ? Math.min(99, Math.round(((item.received ?? 0) / item.total) * 100))
+      : item.share != null ? Math.min(99, Math.round(item.share * 100)) : 2;
+
+  //: What the design's logic calls on the player.
+  const live = {
+    time(fmt) {
+      st.tick;
+      const d = new Date(), h = d.getHours(), m = String(d.getMinutes()).padStart(2, '0');
+      return fmt ? `${h % 12 || 12}:${m} ${h < 12 ? 'am' : 'pm'}` : `${String(h).padStart(2, '0')}:${m}`;
+    },
+    component(row, fallback) { return st.plugins.find((p) => p.row === row)?.component ?? fallback; },
+    pct(id) {
+      const item = $settling?.items?.find((i) => i.id === id);
+      if (item) return pctOf(item);
+      // Not followed: nothing to download (already in), or settled and gone.
+      return st.finished ? 100 : 0;
+    },
+    failed() { return !!$settling?.items?.some((i) => i.state === 'failed'); },
+    async finish() {
+      st.finishError = null;
+      try {
+        const r = await fetch('/personalise/finish', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ settings: answersAsSettings(st) })
+        });
+        const body = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(body.error ?? `HTTP ${r.status}`);
+        st.finished = body;
+      } catch (err) {
+        console.warn('personalise: finish failed:', err?.message);
+        st.finishError = "The player didn't take the answers. Check this phone is on the player's network, then try again.";
+      }
+    },
+    later() { personaliseLater().catch(() => {}); },
+    async trusted() {
+      const got = await listItems('bt_trusted');
+      st.trusted = (got.items ?? []).map((i) => ({ name: i.name, meta: i.meta || 'Paired', address: i.address }));
+      st.everPaired = st.trusted.length > 0;
+    },
+    async forget(t) {
+      await listAction('bt_trusted', { name: t.address ?? t.name, action: 'forget' });
+      live.trusted();
+    },
+    answer(accept) {
+      answerPairing(accept).catch(() => {});
+      if (!accept) st.btPhase = 'disc';
+    },
+    async loadShares() {
+      const got = await listItems('lyrion-server.shares');
+      const items = got.items ?? [];
+      st.shares = items.filter((i) => !i.server).map((i) => ({ name: i.name, where: i.meta || '' }));
+      st.shareServers = items.filter((i) => i.server);
+    },
+    async scanShares() {
+      st.shareStep = 'scan';
+      st.shareError = null;
+      await live.loadShares();
+      if (st.shareStep === 'scan') st.shareStep = 'list';
+    },
+    async showShares(item, user = null, password = null) {
+      st.shareError = null;
+      st.shareSrv = item.name;
+      st.shareSrvItem = item;
+      const r = await listAction('lyrion-server.shares', { name: item.name, action: 'browse', server: item.server, user, password });
+      if (r.login) {
+        st.shareStep = 'login';
+        if (user) st.shareError = 'That user or password was not accepted.';
+        return;
+      }
+      if (!r.ok) {
+        st.shareError = r.error ?? 'Could not read its shares.';
+        return;
+      }
+      st.shareFound = r.items ?? [];
+      st.shareStep = 'browse';
+    },
+    async addShare(address, user, password) {
+      st.shareError = null;
+      const r = await listAction('lyrion-server.shares', { name: address, action: 'add', user: user ?? (address.startsWith('//') ? 'guest' : null), password: password ?? null });
+      if (!r.ok) {
+        st.shareError = r.error ?? 'Could not add it. Check the address and try again.';
+        return;
+      }
+      Object.assign(st, { shareStep: null, shareAddr: '', shareAU: '', shareAP: '', shareUser: '', sharePw: '' });
+      live.loadShares();
+    },
+    async downloadPlex() {
+      const r = await writeSetting('plexamp.enabled', true);
+      if (!r.ok) st.plexOn = false;
+    },
+    async claim(code) {
+      const r = await writeSetting('plexamp.claim_token', code);
+      if (r.ok) st.plexState = 'ok';
+      else Object.assign(st, { plexState: 'expired', claim: '' });
+    },
+
+    // ----- Part 1 -----------------------------------------------------------
+    async rescan() {
+      st.scan = 'scanning';
+      try { st.nets = (await json('/setup/networks')).items ?? []; } catch { st.nets = []; }
+      st.scan = 'done';
+    },
+    async loadScreens() {
+      try { st.screenInfo = await json('/setup/screen'); } catch { st.screenInfo = { suggested: null, models: [], failed: true }; }
+    },
+    timeIn(zone, fmt) {
+      st.tick;
+      try {
+        return new Intl.DateTimeFormat('en-GB', { hour: fmt ? 'numeric' : '2-digit', minute: '2-digit', hour12: !!fmt, timeZone: zone || undefined }).format(new Date()).replace(/\s?([AP]M)$/i, (m, x) => ' ' + x.toLowerCase());
+      } catch { return '--:--'; }
+    },
+    regions() { return [...new Set(st.zones.map((z) => (z.includes('/') ? z.split('/')[0] : z)))]; },
+    cities(region) { return st.zones.filter((z) => (z.includes('/') ? z.split('/')[0] : z) === region); },
+    noBoard() {
+      const own = ['Headphones (3.5 mm)', 'HDMI 1', 'HDMI 2'];
+      return st.outputs.length > 0 && st.outputs.every((o) => own.includes(o.split(' — ')[0]));
+    },
+    short(m) { return m.model.replace(/\s*\(\d+x\d+\)\s*$/, '') || m.model; },
+    labelOf(label) {
+      const m = (st.screenInfo?.models ?? []).find((x) => x.label === label) ?? (st.screenInfo?.suggested?.label === label ? st.screenInfo.suggested : null);
+      return m ? `${m.maker} ${live.short(m)} · ${m.width} × ${m.height}` : label ? String(label).replace('/', ' ') : 'Not chosen';
+    },
+    makers() {
+      const all = st.screenInfo?.models ?? [];
+      return [...new Set(all.map((m) => m.maker))].map((name) => ({ name, n: all.filter((m) => m.maker === name).length }));
+    },
+    models(maker) { return (st.screenInfo?.models ?? []).filter((m) => m.maker === maker); },
+    asksKeep(label) {
+      const m = (st.screenInfo?.models ?? []).find((x) => x.label === label) ?? st.screenInfo?.suggested;
+      return !!m && !(st.screenInfo?.unchanged ?? []).includes(m.id);
+    },
+    pluginName(id) { return st.offered.find((p) => p.id === id)?.name ?? id; },
+    pickBackup() {
+      const input = Object.assign(document.createElement('input'), { type: 'file' });
+      input.onchange = () => input.files?.[0] && live.upload(input.files[0]);
+      input.click();
+    },
+    upload(file) {
+      st.uploadError = null;
+      st.uploading = 0;
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `/setup/backup?name=${encodeURIComponent(file.name)}`);
+      xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+      xhr.upload.onprogress = (e) => { if (e.lengthComputable) st.uploading = e.loaded / e.total; };
+      xhr.onload = () => {
+        let body = {};
+        try { body = JSON.parse(xhr.responseText); } catch { /* not JSON */ }
+        st.uploading = null;
+        if (xhr.status >= 200 && xhr.status < 300) setBackup(body.backup ?? null);
+        else st.uploadError = body.error ?? 'The file did not reach the player. Try again.';
+      };
+      xhr.onerror = () => {
+        st.uploading = null;
+        st.uploadError = "The file did not reach the player. Your phone may have dropped off the player's Wi-Fi for a moment.";
+      };
+      xhr.send(file);
+    },
+    //: One step's answers, as the old page sent them: the core takes a
+    //: network sent again as a new try and drops the last join's error.
+    answers(s, id) {
+      switch (id) {
+        case 'p1net': {
+          const chosen = s.nets.find((n) => n.name === s.net), sec = s.other ? true : chosen ? chosen.secured : false;
+          const a = { ssid: s.net || null, hidden: !!s.other };
+          if (s.pw) a.password = s.pw;
+          else if (s.net && !sec) a.password = null;
+          return a;
+        }
+        case 'p1start': return { start: s.start === 'backup' ? 'restore' : 'new' };
+        case 'p1name': return { name: s.name.trim() };
+        case 'p1clock': return { timezone: s.tz, clock: s.fmt ? '12 h' : '24 h' };
+        case 'p1output': return { output: s.output };
+        case 'p1screen': return s.scr === 'headless' ? { headless: true } : s.scPick ? { headless: false, screen: s.scPick } : {};
+        default: return {};
+      }
+    },
+    //: Each step saved on the player as it is left (ADR-0104 §4: a page that
+    //: drops resumes where it was), with the step it goes to.
+    save(s, to) {
+      const a = { ...live.answers(s, s.screen), step: to };
+      json('/setup/answers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(a) })
+        .then((saved) => { st.hasPw = !!saved.has_password; if (s.screen === 'p1net') { st.pw = ''; st.joinError = saved.error ?? null; } })
+        .catch((err) => { st.problem = err.message; });
+    },
+    //: The design's Done on Restoring: the player's address, where it opens
+    //: once it is back.
+    close() {
+      if (mode === 'p1') { window.location.href = home(); return; }
+      onclose?.();
+    },
+    async finish1(id) {
+      st.problem = null;
+      try {
+        const told = await json('/setup/finish', { method: 'POST' });
+        st.keepQ = !!told?.keep_question;
+        waitForHome();
+      } catch (err) {
+        st.problem = err.message;
+        comp.go(id === 'p1restored' ? 'p1restore' : 'p1review');
+      }
+    }
+  };
+
+  async function json(url, opts) {
+    const r = await fetch(url, opts);
+    const body = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(body.error || `${url}: ${r.status}`);
+    return body;
+  }
+  function setBackup(b) {
+    st.backup = b;
+    st.backupMade = b?.made ? new Date(b.made * 1000).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+  }
+  //: **The page carries on into part 2** (the design's p1join): once this page's
+  //: own player has gone from the setup network, it asks the player's new
+  //: address until it answers, and opens it there - where part 2 is owed.
+  function home() {
+    const name = st.start === 'backup' ? st.backup?.settings?.device_name ?? st.name : st.name;
+    return `http://${slug(name) || 'gexis'}.local:8090`;
+  }
+  function waitForHome() {
+    const target = home();
+    let gone = false;
+    const timer = setInterval(async () => {
+      if (!gone) {
+        try { await fetch('/setup/status', { cache: 'no-store' }); } catch { gone = true; }
+        return;
+      }
+      try {
+        await fetch(`${target}/surface`, { mode: 'no-cors', cache: 'no-store' });
+        clearInterval(timer);
+        window.location.href = `${target}/`;
+      } catch { /* not there yet */ }
+    }, 4000);
+  }
+
+  //: Part 1's start: the answers kept on the player (a page that dropped, or
+  //: a failed join), the networks, the screen, the outputs, the time zones.
+  async function loadPart1() {
+    let saved = {}, rows = {};
+    try { saved = await json('/setup/answers'); } catch { /* a fresh start */ }
+    try {
+      const walk = (o) => {
+        if (Array.isArray(o)) o.forEach(walk);
+        else if (o && typeof o === 'object') { if (o.key && o.type) rows[o.key] = o; Object.values(o).forEach(walk); }
+      };
+      walk(await json('/settings'));
+    } catch { /* defaults */ }
+    await live.loadScreens();
+    try { st.offered = await json('/setup/plugins'); } catch { st.offered = []; }
+    const zones = rows.timezone?.options ?? [];
+    let phoneTz = null;
+    try { phoneTz = Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch { /* none */ }
+    let tz = saved.timezone ?? (setup?.needed ? phoneTz : rows.timezone?.value) ?? phoneTz;
+    if (tz && zones.length && !zones.includes(tz)) tz = null;
+    const outputs = rows.output_device?.options ?? [];
+    const sug = st.screenInfo?.suggested;
+    const scPick = saved.headless ? null : saved.screen ?? (setup?.needed ? null : rows.screen?.value ?? null) ?? sug?.label ?? null;
+    Object.assign(st, {
+      overLan: setup?.network === 'online',
+      name: saved.name ?? rows.device_name?.value ?? 'gexis', zones, tz, tzMode: tz ? 'auto' : 'hand',
+      fmt: (saved.clock ?? rows.clock_format?.value ?? '24 h') === '12 h' ? 1 : 0,
+      outputs, outNotes: rows.output_device?.optionNotes ?? {}, recommended: rows.output_device?.value ?? outputs[0] ?? null,
+      output: saved.output ?? rows.output_device?.value ?? outputs[0] ?? null,
+      scr: saved.headless ? 'headless' : scPick && sug && scPick === sug.label ? 'panel' : scPick ? 'other' : sug ? 'panel' : 'other',
+      scPick, scMaker: null,
+      start: saved.start === 'restore' ? 'backup' : 'new',
+      net: saved.ssid ?? '', other: !!saved.hidden, otherName: saved.hidden ? saved.ssid ?? '' : '', pw: '',
+      hasPw: !!saved.has_password, joinError: saved.error ?? null
+    });
+    if (saved.backup) setBackup(saved.backup);
+    const p1 = ['p1welcome', 'p1net', 'p1start', 'p1backup', 'p1name', 'p1clock', 'p1output', 'p1screen', 'p1review', 'p1restore'];
+    st.screen = st.joinError ? 'p1net' : p1.includes(saved.step) ? saved.step : 'p1welcome';
+    st.ready = true;
+    live.rescan();
+  }
+
+  //: **The answers as settings** (ADR-0149): only what part 2 asked, and
+  //: plugins only ever switched on - a preset that leaves one out must not
+  //: uninstall what the player has (decided 2026-10-18).
+  function answersAsSettings(s) {
+    const d = comp.d(s);
+    const o = { spotify_enabled: d.spo && s.spotify, bt_enabled: d.bt && s.bt, lms_enabled: d.lyr };
+    if (d.lyr) {
+      if (s.lyrState === 'found' && s.lyrServer) o.lms_server = s.lyrServer;
+      else if (s.lyrAddrOpen && s.lyrAddr.trim()) o.lms_server = s.lyrAddr.trim();
+      else if (d.here && $settingsDevice.address) o.lms_server = `${$settingsDevice.address}:9000`;
+      if (!d.headless) {
+        o.lms_extended_nav = s.browse === 'ext';
+        o.lms_library = s.browse !== 'off';
+      }
+    }
+    if (d.here) o['lyrion-server.enabled'] = true;
+    if (d.plex && s.plexOn) o['plexamp.enabled'] = true;
+    if (!d.headless) {
+      const loc = s.loc.trim();
+      Object.assign(o, {
+        visualiser_skins: s.vizOn, viz_timeout: parseInt(s.vizAfter, 10), skin_corpus: SKINS.find((x) => x[0] === s.skin)[1],
+        skin_motion: s.animate, record_speed: s.rpm ? '45 rpm' : '33 rpm',
+        waiting_clock: s.waitClock, waiting_background: s.waitBg, waiting_wallpaper_styles: [...s.styles],
+        idle_enabled: s.idleOn, idle_background: s.bg, wallpaper_styles: [...s.styles], idle_clock: s.clock,
+        idle_weather: s.weather && !!loc, standby_schedule: s.standby && s.ivs.length > 0,
+        standby_times: s.ivs.map((iv) => ({ from: iv.from, until: iv.until, days: [...iv.days] }))
+      });
+      if (loc) o.weather_location = loc;
+    }
+    return o;
+  }
+
+  //: **Asked again from Settings, the page starts from what the player has**;
+  //: a new player starts from the design's own defaults (`init`).
+  function fromSettings(v) {
+    const after = [2, 10, 30].reduce((a, b) => (Math.abs(b - (Number(v.viz_timeout) || 10)) < Math.abs(a - (Number(v.viz_timeout) || 10)) ? b : a));
+    const styles = (Array.isArray(v.wallpaper_styles) ? v.wallpaper_styles : []).filter((x) => STYLES.includes(x));
+    Object.assign(st, {
+      browse: v.lms_library === false ? 'off' : v.lms_extended_nav ? 'ext' : 'simple',
+      spotify: v.spotify_enabled !== false, bt: v.bt_enabled !== false,
+      vizOn: v.visualiser_skins === true, vizAfter: `${after} min`,
+      skin: (SKINS.find((x) => x[1] === v.skin_corpus) ?? SKINS[0])[0], animate: v.skin_motion !== false, rpm: v.record_speed === '45 rpm' ? 1 : 0,
+      waitClock: v.waiting_clock !== false, waitBg: v.waiting_background === 'Black' ? 'Black' : 'Gexis wallpapers',
+      styles: styles.length ? styles : ['Calm'], wallStyle: styles[0] ?? 'Calm',
+      idleOn: v.idle_enabled === true, bg: BGS.includes(v.idle_background) ? v.idle_background : 'Gexis wallpapers',
+      clock: v.idle_clock !== false, weather: v.idle_weather === true && !!v.weather_location,
+      standby: v.standby_schedule === true
+    });
+    if (Array.isArray(v.standby_times) && v.standby_times.length) st.ivs = v.standby_times.map((iv) => ({ ...iv, days: [...iv.days] }));
+  }
+
+  let seeded = false;
+  $effect(() => {
+    const v = $settingValues;
+    if (mode !== 'p2' || seeded || !st.ready || !Object.keys(v).length) return;
+    seeded = true;
+    Object.assign(st, {
+      name: $settingsDevice.name || v.device_name || 'gexis', fmt: v.clock_format === '12 h' ? 1 : 0,
+      scr: v.headless === true ? 'headless' : 'panel', loc: v.weather_location ?? '',
+      net: typeof v.wifi === 'string' && v.wifi ? v.wifi : 'your network',
+      town: String(v.timezone ?? '').split('/').pop().replace(/_/g, ' '),
+      plexOn: v['plexamp.enabled'] === true, plexPct: v['plexamp.enabled'] === true ? 100 : 0
+    });
+    if (!st.first) fromSettings(v);
+  });
+  $effect(() => { if ($settingsDevice.name) st.name = $settingsDevice.name; });
+
+  // Plexamp's download, live (ADR-0100).
+  $effect(() => {
+    const c = $components?.plexamp;
+    if (!st.plexOn || !c) return;
+    st.plexPct = c.state === 'installed' ? 100 : Math.max(st.plexPct, pctOf({ ...c, state: c.state === 'installed' ? 'done' : c.state }));
+  });
+  // A phone asking to pair, answered on this page (ADR-0045).
+  $effect(() => {
+    const p = $pairing;
+    if (p?.state === 'asking') {
+      const c = String(p.code ?? '');
+      Object.assign(st, { btPhase: 'request', pairDevice: p.device ?? 'A phone', pairCode: c.length === 6 ? `${c.slice(0, 3)} ${c.slice(3)}` : c });
+    } else if (p?.state === 'accepted' && st.btPhase === 'request') {
+      st.btPhase = 'paired';
+      setTimeout(() => live.trusted(), 1200);
+    } else if (!p && st.btPhase === 'request') {
+      st.btPhase = 'disc';
+    }
+  });
+  // The prototype's scroll to the top on a new screen.
+  $effect(() => {
+    st.screen;
+    if (refs.scrollRef) refs.scrollRef.scrollTop = 0;
+  });
+
+  onMount(() => {
+    loadSettings();
+    const wide = () => (st.wide = window.innerWidth >= 900);
+    wide();
+    window.addEventListener('resize', wide);
+    const clock = setInterval(() => (st.tick += 1), 20000);
+    if (mode === 'p1') {
+      loadPart1();
+      //: The page says it is still open (ADR-0104): the player keeps its
+      //: setup network while it is in use.
+      const here = setInterval(() => { if (document.visibilityState === 'visible') fetch('/setup/status').catch(() => {}); }, 60000);
+      return () => { window.removeEventListener('resize', wide); clearInterval(clock); clearInterval(here); };
+    }
+    (async () => {
+      try {
+        const r = await fetch('/personalise');
+        if (r.ok) {
+          const got = await r.json();
+          st.first = got.first !== false;
+          st.plugins = got.plugins ?? [];
+        }
+      } catch { /* a first run is assumed */ }
+      st.ready = true;
+      const found = ((await listItems('lms_server')).items ?? []).filter((i) => !String(i.meta ?? '').startsWith('This player'));
+      const server = found.find((i) => i.state === 'current') ?? found[0];
+      if (server) {
+        const address = server.address ?? server.name;
+        Object.assign(st, { lyrState: 'found', lyrServer: address, lyrMeta: server.name !== address ? `${server.name} · ${address}` : address });
+      } else st.lyrState = 'none';
+    })();
+    return () => {
+      window.removeEventListener('resize', wide);
+      clearInterval(clock);
+    };
+  });
+
+  const V = $derived(comp.renderVals());
+</script>
