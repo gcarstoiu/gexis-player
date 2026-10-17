@@ -115,7 +115,7 @@ If the request fails, the app assumes `panel`.
 flowchart TD
   A[App.svelte mounts] --> B{"GET /surface"}
   B -- remote --> C{setup page needed?}
-  C -- yes --> D[SetupPage<br/>first-time setup on the phone]
+  C -- yes --> D[FirstUsePage<br/>first-time setup on the phone]
   C -- no --> E[Settings<br/>+ MiniPlayer pinned below<br/>+ NewScreen question if asked]
   B -- panel --> F[The panel: every screen,<br/>fixed logical layout]
 ```
@@ -127,7 +127,7 @@ flowchart TD
   attention and take the visualiser down (ADR-0036).
 - **Remote (phone)**: Settings, which is the only responsive screen
   (ADR-0032), plus the mini player (ADR-0101). During setup it shows
-  `SetupPage` instead (ADR-0104). The first-boot flow is covered in
+  `FirstUsePage` instead (ADR-0104, ADR-0149). The first-boot flow is covered in
   `setup-and-network.md`.
 
 ---
@@ -210,7 +210,7 @@ Component tree, as `App.svelte` mounts it:
 ```mermaid
 flowchart TD
   App[App.svelte]
-  App -->|remote| Rem["Settings + MiniPlayer<br/>(or SetupPage)"]
+  App -->|remote| Rem["Settings + MiniPlayer<br/>(or FirstUsePage)"]
   App -->|panel| Pan[".panel"]
   Pan --> PB[PanelBackground]
   Pan --> St[Settings embedded]
@@ -585,7 +585,7 @@ flowchart LR
 | `HandoffScreen` | `$handoff` set | From → to, minimum length a setting (ADR-0094) |
 | `PairingFrame` | `$pairing` set | Bluetooth first-pair confirmation. The agent dismisses it, not the frame's own countdown (ADR-0045) |
 | `SetupScreen` (panel) | setup network up, or the device needs setup | Shows QR codes and the way in. Takes no input. Readable from 2 m (ADR-0104 §5). The password comes from loopback-only `/setup/status`, never from `/state` |
-| `SetupPage` (phone) | the device needs setup | The first-time setup flow; answers are saved step by step to the core |
+| `FirstUsePage` (phone) | the device needs setup (`mode="p1"`), or part 2 is owed (`mode="p2"`) | First use, generated from the design files by `tools/design/gen_personalise.py`: setup, its answers saved step by step to the core; then Make it yours |
 | `NewScreen` / `KeepScreen` | a different screen is attached / a new screen awaits confirmation | Keep is answered on the panel for a fingerprinted touch panel; another listed panel shows its buttons (`panel_buttons`) and the phone's `PhoneKeepScreen` answers too, and a TV or an unlisted screen is answered on the phone alone (`phone`; ADR-0147 D3 as amended by Finding 125). A countdown reverts (ADR-0109 decision 5). The countdown starts when the question is drawn: two frames after it appears the panel posts `/screen/shown` (repeated every 3 s until the core's `deadline` arrives); before that, `NEVER_DRAWN_S` (120 s from the core's start) still reverts |
 | `TestPattern` (panel) | `screen_check` showing | The hardware feedback's test pattern; the panel's four corner taps go back to the core. Mounted over everything but *Keep this screen?* and the update lock (ADR-0126) |
 | `UpdateModal` (Settings) | the user checks for an update | One modal, from the check to the outcome (ADR-0110 §3). It notes the status when it asks and takes any change from it as the answer, not a comparison of the player's clock with the phone's |

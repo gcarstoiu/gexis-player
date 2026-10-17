@@ -711,8 +711,8 @@ beside each backup, or copy it from the share. After flashing, setup offers *Res
 Wi-Fi: choose the file on the phone, choose the output and the screen this
 player has, check what the backup brings, and the player restarts with
 everything back. Sources and plugins come back on or off as they were when the
-backup was made. Anything else setup asks (the name, for instance) can be
-changed in that review, so one player's backup can start another. With a new
+backup was made. The name can be changed in that review (*Check it over*),
+so one player's backup can start another. With a new
 name, the review offers *A second player*: on, the first player keeps its
 Beszel connection (the hub's address and keys too), Plexamp's claim, Spotify
 sign-in and Bluetooth pairings, so the two never share them. A backup from an older version works. A

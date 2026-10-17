@@ -12,7 +12,7 @@ step), ADR-0111 (the Visualiser step), ADR-0083 (backup and restore),
 ADR-0132 (reset to factory settings).
 
 Code: `core/src/gexis_core/setup_network.py`, `setup_flow.py`, `wifi.py`,
-`device_name.py`, `discovery.py`, `factory_reset.py`; UI `ui/src/screens/SetupPage.svelte` (phone)
+`device_name.py`, `discovery.py`, `factory_reset.py`; UI `ui/src/screens/FirstUsePage.svelte` (phone; generated, below)
 and `SetupScreen.svelte` (panel); image `image/stage-gexis/01-firstboot/`.
 
 ---
@@ -208,7 +208,7 @@ ago (`_phone_since`, cleared when a retry finds none, and with the page's
 last use each time the setup network is held again - Finding 125 #19 - so a
 phone left from an earlier opening does not use up a new phone's grace), so
 a phone that has just joined is not left behind. The page's live status comes over the state
-socket, which does not count, so `SetupPage.svelte` asks `/setup/status` once
+socket, which does not count, so `FirstUsePage.svelte` asks `/setup/status` once
 a minute while it is in front. A phone that joined by itself and never opened
 the page no longer holds a configured player off its Wi-Fi for ever. A failed hotspot start is retried
 every 15 s instead. Every 15 s it also looks for a cable with an address,
@@ -225,19 +225,30 @@ atomically and 0600 from the first byte (it holds the Wi-Fi password). A page
 that reloads resumes from it; the password is never handed back, only
 `has_password`.
 
-The phone's steps (`SetupPage.svelte`): Network, Start (ADR-0131: a new
-player or a backup), Name, Time (zone and 12/24 h), Output, Music, Screen,
-Visualiser (skipped for headless or for screens no skin pack fits), Plugins
-(ADR-0128; every plugin the release ships beyond the built-in sources, from
-`GET /setup/plugins`; skipped when there are none), Review. Restoring asks
-Output and Screen, which are this player's hardware (`ASKED`), and skips the
-rest from Name to Plugins: the backup answers them, and Review shows it.
+The phone's steps (`FirstUsePage.svelte`, `mode="p1"`): Network, Start
+(ADR-0131: a new player or a backup), Name, Time (zone and 12/24 h), Output,
+Screen, Check it over. What the player plays and shows is not asked here:
+it is part 2's (ADR-0149, below), so setup records no `lms_mode` and leaves
+Lyrion as it is. Restoring asks Network, Start, the upload, Output and Screen
+(this player's hardware, never the backup's), then Check it over, where the
+name can be changed too (and, renamed, *A second player*); the rest is the
+backup's. Each step is saved as it is left, with the step it goes to, so a
+page that drops resumes there.
+
+**The page is generated from the design** (ADR-0149):
+`tools/design/gen_personalise.py` converts Claude Design's
+`design/source/14-first-use/Setup Prototype.dc.html` - its markup and inline
+styles mechanically (`dc2svelte.py`), its logic verbatim - and applies a
+list of asserted replacements where the prototype simulates the player
+(`personalise-part1.js.txt` holds part 1's screens on real data;
+`personalise-adapter.svelte.txt` the calls to the core). Change the design
+and generate again rather than editing the `.svelte`.
 
 ```mermaid
 sequenceDiagram
   autonumber
   participant P as Panel (SetupScreen)
-  participant Ph as Phone (SetupPage)
+  participant Ph as Phone (FirstUsePage)
   participant C as gexis-core
   participant NM as NetworkManager
 
@@ -292,8 +303,9 @@ sequenceDiagram
    way in, or when nothing else is online: a failed join during setup over the
    cable stays on the cable.
 4. On success: write `setup-done`, delete the answers, then **Lyrion**. Over the
-   setup network there is nothing to discover, so the Music step's *Find* mode
-   runs after the join: `discovery.find_servers()` broadcasts Lyrion's UDP
+   setup network there is nothing to discover, so a *Find* mode (from an
+   answers file of an earlier release; part 1 no longer asks it) runs after
+   the join: `discovery.find_servers()` broadcasts Lyrion's UDP
    discovery datagram on port 3483 and takes each reply's source address.
    Each is named by `discovery.label()`: the machine's mDNS host name
    (`avahi-resolve -a`, 2 s, all at once), else Lyrion's library name unless
@@ -327,10 +339,10 @@ sequenceDiagram
 2. **Output and Screen** are asked as a new player's are, opening on what
    this player detects, never on the backup's: a backup from another player
    names that player's DAC and screen.
-3. **The review** is the new player's Review, with *Change* on each answer:
-   the page fills the other steps from the backup (`fromBackup`), and a step
-   continued from is saved as a setup answer. `_restore_values()` lays those
-   answers over the backup's settings.
+3. **The review** (*Check it over*) has *Change* on Network, Name, Output
+   and Screen; the rest is listed as the backup's. The name opens on the
+   backup's; a new one adds *A second player* (`second_player`).
+   `_restore_values()` lays the setup answers over the backup's settings.
 4. **Finishing**:
    - the Wi-Fi country from the time zone, then the join (a failed join keeps
      the backup and returns to Network);
@@ -510,7 +522,7 @@ All under the core's HTTP server on port 8090 (`wsserver.py`):
 
 Every route but `/setup/status` answers 409 once setup is over (`_setup_closed`):
 a configured device has Settings for all of this. On a phone, `App.svelte`
-renders `SetupPage` in place of Settings while setup is needed or the setup
+renders `FirstUsePage` (`mode="p1"`) in place of Settings while setup is needed or the setup
 network is up (`open` or `failed`), and holds it once shown so a join cannot
 swap it for Settings under the phone. `joining` keeps a page already shown
 but never opens one: a page reconnecting as the player rejoins its own Wi-Fi
@@ -666,7 +678,7 @@ the `personalise` action in Settings → System marks it owed again with
 `first: false`. `/state` carries `personalise: "pending"` while it is owed.
 
 **The phone** (`App.svelte`): while it is owed, the phone page shows
-`PersonalisePage.svelte` in place of Settings, held until its Close. The
+`FirstUsePage.svelte` (`mode="p2"`) in place of Settings, held until its Close. The
 page reads `/settings`, `GET /personalise` (whether this is a first run, and
 the plugins it may switch on), the Lyrion servers found
 (`/settings/lms_server/items`), and follows `/state` for Plexamp's download,
