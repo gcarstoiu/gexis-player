@@ -130,7 +130,7 @@ const num = items => ({ t: 'Num', items });
 const prog = (label, pct, meta, st, stOk) => ({ t: 'Prog', label, pct, meta, st, stOk });
 const sum = (rows, head) => ({ t: 'Sum', rows, head });
 
-const P1N = ['Network', 'Start', 'Name', 'Time', 'Output', 'Screen', 'Review'], P1B = ['Network', 'Start', 'Screen', 'Review'];
+const P1N = ['Network', 'Start', 'Name', 'Time', 'Output', 'Screen', 'Review'], P1B = ['Network', 'Start', 'Output', 'Screen', 'Review'];
 const P1C = { Network: '#8fc4d8', Start: '#b0bcc4', Name: '#e8a0b4', Time: '#c8a2d8', Output: '#7ed6bc', Screen: '#8fd9a8', Review: '#f2a48f' };
 const P1AT = { p1net: 'Network', p1start: 'Start', p1backup: 'Start', p1name: 'Name', p1clock: 'Time', p1output: 'Output', p1screen: 'Screen', p1review: 'Review', p1restore: 'Review' };
 const P2M = { listen: ['Listen', C.music], mix: ['Listen', C.music], lyrion: ['Lyrion', C.lyr], folders: ['Folders', C.fold], plexamp: ['Plexamp', C.plex], browse: ['Browse', C.browse], spotify: ['Spotify', C.spo], bluetooth: ['Bluetooth', C.bt], visualiser: ['Visualiser', C.scr], idle: ['When idle', C.idle], wait: ['While it waits', C.idle], standby: ['Standby', C.stby], plexsign: ['Plex sign-in', C.plex], review: ['Review', C.rev] };
@@ -177,7 +177,7 @@ class Component extends DCLogic {
     return { lyr, plex, spo, bt, headless, wait: !lyr || s.browse === 'off', here: lyr && s.lyrState !== 'found' && s.lyrWhere === 'here',
       marks: [lyr && 'lyr', plex && 'plex', spo && 'spo', bt && 'bt'].filter(Boolean) };
   }
-  p1Path(s) { return s.start === 'new' ? ['p1welcome', 'p1net', 'p1start', 'p1name', 'p1clock', 'p1output', 'p1screen', 'p1review', 'p1join'] : ['p1welcome', 'p1net', 'p1start', 'p1backup', 'p1screen', 'p1restore', 'p1restored']; }
+  p1Path(s) { return s.start === 'new' ? ['p1welcome', 'p1net', 'p1start', 'p1name', 'p1clock', 'p1output', 'p1screen', 'p1review', 'p1join'] : ['p1welcome', 'p1net', 'p1start', 'p1backup', 'p1output', 'p1screen', 'p1restore', 'p1restored']; }
   ivBlock(s) {
     const A = '#7ed6bc', ON = { bg: 'rgba(126,214,188,0.16)', border: A, ink: A }, LINE = 'rgba(233,238,242,0.1)', FILL = 'rgba(233,238,242,0.07)';
     const up = (i, f) => this.setState(st => ({ ivs: st.ivs.map((x, k) => k === i ? Object.assign({}, x, f(x)) : x) }));
@@ -338,7 +338,7 @@ class Component extends DCLogic {
       case 'p1restore': { const ch = id => () => this.go(id, 'p1restore'), b = (s.backup && s.backup.settings) || {}, en = (s.backup && s.backup.enabled) || [];
         const listens = [b.lms_enabled !== false && 'Lyrion', b.spotify_enabled !== false && 'Spotify', b.bt_enabled !== false && 'Bluetooth'].filter(Boolean).join(' · ') || 'Nothing';
         const installed = [...en.map(live.pluginName), b.visualiser_skins ? 'Visualiser skins' : null].filter(Boolean).join(' · ') || 'Nothing';
-        return { title: 'Check it over', sub: 'Everything else comes from the backup.', blocks: [sum([['Network', s.net || 'Cable only', ch('p1net')], ['Screen', s.scr === 'headless' ? 'Headless' : live.labelOf(s.scPick), ch('p1screen')]]), sum([['Name', b.device_name || '—'], ['Time', (b.timezone || '—') + ' · ' + (b.clock_format || '24 h')], ['Output', b.output_device || '—'], ['Listens to', listens], ['Installed', installed]], 'From the backup'),
+        return { title: 'Check it over', sub: 'Everything else comes from the backup.', blocks: [sum([['Network', s.net || 'Cable only', ch('p1net')], ['Output', s.output || 'Not set', ch('p1output')], ['Screen', s.scr === 'headless' ? 'Headless' : live.labelOf(s.scPick), ch('p1screen')]]), sum([['Name', b.device_name || '—'], ['Time', (b.timezone || '—') + ' · ' + (b.clock_format || '24 h')], ['Listens to', listens], ['Installed', installed]], 'From the backup'),
           note('info', 'Nothing more to ask', 'The player restores, joins ' + (s.net || 'your network') + ' and downloads again what the backup had installed.'), ...(s.problem ? [note('warn', '', s.problem)] : [])], foot: { next: 'Restore and connect' } }; }
       case 'p1restored': { const bn = (s.backup && s.backup.settings && s.backup.settings.device_name) || nm, bs = slug(bn) || 'gexis';
         return { hero: true, crumb: 'Almost done', title: bn + ' is restoring', blocks: [status('spin', 'Restoring, then joining ' + (s.net || 'your network')), P('Put this phone back on ' + (s.net || 'your network') + '. The player opens at http://' + bs + '.local:8090 when it is back.'),

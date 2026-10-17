@@ -129,6 +129,14 @@ rep("sl = slug(s.name), time = live.time(s.fmt);", "sl = slug(s.name) || 'gexis'
 a = js.index("      case 'p1welcome':"); b = js.index("\n      case 'listen':")
 js = js[:a] + (HERE / "personalise-part1.js.txt").read_text().rstrip("\n") + "\n" + js[b:]
 R.append("part 1's cases (personalise-part1.js.txt)")
+# **A restore asks the output too** (George, 2026-10-08: "leave the two as
+# mandatory steps next to WiFi"): the output, like the screen, is this
+# player's hardware, which a backup from another one does not know - a 0.9.5
+# restore put guestpi's DAC on a player with another one. The design's own
+# Output screen, between the backup and the screen.
+rep("['p1welcome', 'p1net', 'p1start', 'p1backup', 'p1screen', 'p1restore', 'p1restored']",
+    "['p1welcome', 'p1net', 'p1start', 'p1backup', 'p1output', 'p1screen', 'p1restore', 'p1restored']")
+rep("P1B = ['Network', 'Start', 'Screen', 'Review'];", "P1B = ['Network', 'Start', 'Output', 'Screen', 'Review'];")
 # Finishing part 1 is the player's: the answers, then /setup/finish; the
 # page then waits for the player at its new address (live.finish1).
 rep("    if (id === 'p1join') { clearTimeout(this.t2); this.t2 = setTimeout(() => { if (this.state.screen === 'p1join') this.go('listen'); }, 4000); }",
@@ -217,4 +225,4 @@ dl = (D / "Phone Device List.dc.html").read_text()
   const V = $derived({ device });
 </script>
 """ + convert(dl[dl.index('<x-dc>') + 6: dl.index('</x-dc>')]))
-print("generated PersonalisePage, PanelMini, PhoneDeviceList")
+print("generated FirstUsePage, PanelMini, PhoneDeviceList")
