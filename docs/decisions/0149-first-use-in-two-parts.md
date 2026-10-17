@@ -166,20 +166,30 @@ to Claude, and each choice is recorded here with its reason.
    existed; a player put off should still find its library.
 
 **Part 1**
-8. **Music, Visualiser and Plugins are skipped for a new player, kept for a
-   restore.** The design's restore review lets only Network and Screen be
-   changed; George decided on 2026-10-08 that a restore's review changes
-   everything setup asks (a backup made into a second player), and that
-   stands.
-9. **The last page points to the address; it does not carry on by itself.**
-   A page served over the setup network cannot reach the player on the home
-   network, so the design's *"this page carries on"* became *"That address
-   carries on into making it yours"*, with the panel's code as the other way
-   in.
-10. The welcome, the Start step, Headless and the review take the design's
-    words (*About a minute*; *Four more questions now*; *Fewer questions
-    later*; *Then, on your home Wi-Fi*).
-
+8. **Part 1 is the design's**: Network, Start, Name, Time, Output, Screen,
+   *Check it over*. A restore asks Network, Start, the upload, **Output** and
+   Screen, then *Check it over*. The design's restore path has no Output
+   step: it is kept (the design's own Output screen) because George decided
+   on 2026-10-08 that the output and the screen are asked on a restore - a
+   0.9.5 restore put guestpi's DAC on a player with another one.
+9. **A restore's review changes Network, Name, Output and Screen**; the time
+   zone and the sources are listed as the backup's, as designed. The design
+   lists the name as the backup's too. *Change* is kept on it, with the
+   design's tick row *A second player* once it is changed, because ADR-0131
+   as amended (George, 2026-10-08) and the FAQ and manual offer a backup made
+   into a second player. Changing a restore's time zone or sources in setup,
+   which the old review allowed, is gone: Settings does it after.
+10. **The last page carries on by itself**, as the design says: once the
+    setup network has gone (over a cable, after 15 s), the page asks
+    `http://<name>.local:8090` every 4 s and opens it when it answers, where
+    part 2 is owed. The address stays on the page for a phone whose browser
+    does not find `.local` names. *Restoring*'s *Done* opens the same address.
+11. **What the design does not draw is said in its own blocks**: a join that
+    failed, a hidden network (*Other network*), setup over the cable, the
+    upload's progress and refusals, choosing a zone by hand, a DAC board not
+    listed, a list of screens that did not arrive, and Headless's
+    setup-network note. Each is a `note`, `status`, `field` or list row, as
+    the design draws them elsewhere.
 **The questions**
 11. **Lyrion found**: the server in use if it answers, else the first found;
     shown by its name (Phase 13's host names). Several are not listed here:
@@ -187,9 +197,10 @@ to Claude, and each choice is recorded here with its reason.
 12. **Lyrion on this player** sets `lms_server` to the player's own address
     and port 9000, as Settings' list offers it, and switches the Lyrion
     Server on. **Skip** on that step installs nothing.
-13. **Folders**: the Music folder and USB disks are shown as *Always*. They
-    are always offered to Lyrion (ADR-0115), and a switch for them would
-    change nothing. Network shares use Settings' scan, sign-in and add.
+13. **Folders**: the Music folder and USB drive are drawn ticked and do not
+    untick. They are always offered to Lyrion (ADR-0115), and a switch for
+    them would change nothing. Network shares use Settings' scan, sign-in and
+    add.
 14. **Browse**: Extended = Extended navigation on; Simple = off; Off =
     Library on the screen off.
 15. **Wallpaper styles are one answer for both screens** (the design has
@@ -205,15 +216,30 @@ to Claude, and each choice is recorded here with its reason.
 19. The *Library service* row stays as drawn, marked *Next phase* (MPD,
     `ph-mpd`).
 
-**The look**
-20. **The panel preview is drawn simply** (`PanelPreview.svelte`): the
-    library, Now Playing, the waiting home, the idle clock, standby and the
-    skins, in miniature, not the design's `Panel Mini` in full detail. The
-    wallpaper previews are the player's own Calm wallpaper and the design's
-    public-domain stand-ins (Kandinsky, *The Starry Night*), small copies.
-21. **Phone layout only.** The design's wide (tablet) layout, with the
-    preview in a left column and the animated *How will you listen?*, is
-    not built; the phone column centres on a wider screen.
+**The look** (revised 2026-10-18, after George: *"Check properly and let's do
+it as it should be"*)
+20. **The page is generated from the design files, not drawn after them.**
+    `tools/design/gen_personalise.py` converts `Setup Prototype.dc.html`'s
+    phone frame - markup, inline styles, keyframes - mechanically
+    (`dc2svelte.py`), and keeps the prototype's script verbatim: its screens,
+    paths, copy, Back and Next, animations and thumbnails. Where the
+    prototype simulates the player, an asserted replacement calls the core
+    instead (40 of them, each commented in the generator). `Panel Mini` and
+    `Phone Device List` are generated the same way. *Why:* the first build
+    redrew the screens by hand and drifted - animations, the Simple and
+    Extended thumbnails, a review screen part 2 does not have. A generated
+    page cannot drift without the generator saying so. The design files are
+    kept in `design/source/14-first-use`.
+21. **Part 2 has no review screen**: the design's path ends at *Getting
+    ready*. Finish writes the answers there.
+22. **The wide layout is the design's**: the preview in a left column and
+    the animated *How will you listen?*, from 900 px wide.
+23. **The design's font name is the player's**: *Nunito Sans* is the
+    player's `Nunito Sans Variable`, listed first, so the same face draws.
+24. **What is not the design's frame**: the mock-up phone's border, shadow
+    and fixed 390 × 844 size; the page is the phone.
+25. Checked side by side against the prototype at 390 × 844 and 1100 × 700,
+    every part 1 and part 2 screen, with the player's real data.
 
 **Not settled here (George)**
 - **Personalise** as a row in Settings → System is built (the design names

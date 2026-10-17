@@ -765,7 +765,10 @@ class Component extends DCLogic {
   }
   function waitForHome() {
     const target = home();
+    //: Over the cable the page's own address keeps answering: the player
+    //: is given the time its restart takes, then asked at its new address.
     let gone = false;
+    if (st.overLan) setTimeout(() => (gone = true), 15000);
     const timer = setInterval(async () => {
       if (!gone) {
         try { await fetch('/setup/status', { cache: 'no-store' }); } catch { gone = true; }
