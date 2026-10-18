@@ -1283,6 +1283,11 @@
   let shareFolder = $state(null);
   //: ADR-0115 decision 23: the USB drive and folder open in the sheet.
   let usbBrowse = $state(null);
+  //: A switch whose *on* is unavailable, while it is off: greyed and not
+  //: tappable, its reason under it (George, 2026-10-19: USB drives with no
+  //: drive plugged in).
+  const toggleBlocked = (r) => r.type === 'toggle' && !r.value && !!r.unavailable?.true;
+
   //: **Tick several** (George, 2026-10-18): folders ticked on a drive or a
   //: share, at any level, kept while browsing, added with one button.
   let picks = $state([]);
@@ -2090,10 +2095,10 @@
                   class="row"
                   class:row--add={r.kind === 'share'}
                   class:row--danger={r.danger}
-                  class:row--readonly={r.type === 'readonly'}
+                  class:row--readonly={r.type === 'readonly' || toggleBlocked(r)}
                   class:row--dl={!!r.component}
                   type="button"
-                  disabled={r.type === 'readonly' && !r.uploaded}
+                  disabled={(r.type === 'readonly' && !r.uploaded) || toggleBlocked(r)}
                   data-unwired={r.wired ? undefined : 'settings'}
                   onclick={() => tap(r)}
                 >
@@ -2105,7 +2110,8 @@
                       </span>
                       <!-- A plugin's version, and the program it runs (George, 2026-10-12). -->
                       {#if r.version}<span class="row__note row__version">{r.version}</span>{/if}
-                      {#if r.kind === 'share'}<span class="row__note">Find a share on your network, or add one by its address.</span>
+                      {#if toggleBlocked(r)}<span class="row__note">{r.unavailable.true}.</span>
+                      {:else if r.kind === 'share'}<span class="row__note">Find a share on your network, or add one by its address.</span>
                       {:else if r.note && !opensItsOwn(r)}<span class="row__note"><NoteText text={r.note} links={false} /></span>{/if}
                       <!-- A row that opens its own sheet keeps its note for the
                            sheet; `summary` is the one line it shows on the tile
@@ -4342,6 +4348,10 @@
      tile that adds one, dashed as Upload a plugin is. */
   .row--static {
     cursor: default;
+  }
+  /* George, 2026-10-19: room between the tile's name and its first share. */
+  .row--static .shares {
+    margin-top: 14px;
   }
   .row--add {
     border-style: dashed;

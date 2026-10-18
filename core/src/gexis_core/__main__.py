@@ -3403,6 +3403,14 @@ async def main() -> None:
                 pass
             lyrion_wake.clear()
             on = settings.value("lyrion-server.enabled") is True
+            # George, 2026-10-19: USB drives cannot be switched on while no
+            # drive is plugged in (switched on already, it stays: its folders
+            # are kept 7 days). Woken when a drive comes: the next pass.
+            try:
+                plugged = await asyncio.to_thread(lyrion_usb.plugged)
+                settings.restrict("lyrion-server.usb", {} if plugged else {True: "No USB drive plugged in"})
+            except Exception:  # noqa: BLE001 - a row left as it was is no reason to stop the loop
+                logger.debug("lyrion: usb switch not checked", exc_info=True)
             if not on and lyrion_stage.CURRENT:
                 lyrion_stage.CURRENT.clear()
                 try:
