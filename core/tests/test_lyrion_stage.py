@@ -14,9 +14,12 @@ def test_starting_then_add_ons_then_waiting_none_of_them_done():
 
 
 def test_reading_counts_the_files_and_lets_the_player_be_used():
-    got = stage(True, True, {"rescan": 1, "progressdone": "1234", "progresstotal": "5000"}, True)
+    got = stage(True, True, {"rescan": 1, "progressdone": "1234", "progresstotal": "5000",
+                             "progressname": "/mnt/gexis-shares/x|audio_new"}, True)
     assert got["phase"] == "scanning" and got["done"] and abs(got["share"] - 0.2468) < 1e-6
-    assert got["line"].startswith("1,234 of 5,000 files so far.")
+    assert got["line"].startswith("1,234 of 5,000 new files read so far.")
+    art = stage(True, True, {"rescan": 1, "progressdone": 37, "progresstotal": 46, "progressname": "precacheArtwork"}, True)
+    assert art["line"].startswith("37 of 46 albums' artwork so far."), "measured on sofapi: not files"
     assert stage(True, True, {"rescan": 1}, True)["share"] is None
 
 
