@@ -532,7 +532,7 @@ pieces in code:
   added, `?fresh=1` scans again. The row's `folders` action lists an SMB
   share's folders, or a folder's, with `smbclient -c 'cd "<path>"; ls'`
   (a path with `;`, `"` or `..` is refused); an NFS export is not listed.
-  A share added at a folder (`//Tower.local/Music/Clean`) is mounted there.
+  A share added at a folder (`//nas.local/Music/Jazz`) is mounted there.
 - **The Lyrion Server's music folders** (`lyrion_folders.py`, ADR-0115
   decisions 16-24): every 20 s while the server is on, and at once when a
   location changes, the core reads Lyrion's `mediadirs` and writes it back

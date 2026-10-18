@@ -97,12 +97,12 @@ def test_a_share_folder_is_listed_with_smbclient_and_never_as_commands():
         calls.append(args)
         return subprocess.CompletedProcess(args, 0, stdout=(
             "  .                                   D        0  Tue Sep  8 15:19:30 2026\n"
-            "  2 Unlimited                         D        0  Thu Jan  2 20:50:14 2025\n"
+            "  Blues                               D        0  Thu Jan  2 20:50:14 2025\n"
             "  cover.jpg                           A    12345  Thu Jan  2 20:50:14 2025\n"), stderr="")
 
-    assert sc.folders("//Tower.local/Music/Clean", run=run) == ["2 Unlimited"]
-    assert calls[-1][:3] == ["smbclient", "//Tower.local/Music", "-N"]
-    assert calls[-1][-1] == 'cd "Clean"; ls'
-    for bad in ('//Tower.local/Music/a"; rm x', "//Tower.local/Music/a;ls", "//Tower.local/Music/../x", "nas:/music"):
+    assert sc.folders("//nas.local/Music/Jazz", run=run) == ["Blues"]
+    assert calls[-1][:3] == ["smbclient", "//nas.local/Music", "-N"]
+    assert calls[-1][-1] == 'cd "Jazz"; ls'
+    for bad in ('//nas.local/Music/a"; rm x', "//nas.local/Music/a;ls", "//nas.local/Music/../x", "nas:/music"):
         with pytest.raises(ValueError):
             sc.folders(bad, run=run)

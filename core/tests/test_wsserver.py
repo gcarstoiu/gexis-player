@@ -981,7 +981,7 @@ async def test_a_share_opens_into_its_folders_and_the_scan_is_kept_a_minute(tmp_
                                   is_mount=lambda p: False)
     scans, listed = [], []
     monkeypatch.setattr(lyrion_scan, "servers", lambda own: scans.append(1) or [
-        lyrion_scan.Server(name="Tower", host="Tower.local", kind="smb")])
+        lyrion_scan.Server(name="nas", host="nas.local", kind="smb")])
     monkeypatch.setattr(lyrion_scan, "folders", lambda address, user=None, password=None:
                         listed.append((address, user)) or ["Jazz", "Rock"])
     server = StateServer(StateStore({}), settings=settings, lyrion_shares=shares)
@@ -994,15 +994,15 @@ async def test_a_share_opens_into_its_folders_and_the_scan_is_kept_a_minute(tmp_
         assert len(scans) == 2
         assert (await (await client.get(url + "?saved=1")).json())["items"] == [] and len(scans) == 2
 
-        top = await (await client.post(url, json={"name": "//Tower.local/Music", "action": "folders",
-                                                   "user": "george", "password": "pw"})).json()
+        top = await (await client.post(url, json={"name": "//nas.local/Music", "action": "folders",
+                                                   "user": "me", "password": "pw"})).json()
         assert [i["name"] for i in top["items"]] == ["Jazz", "Rock"]
-        assert top["items"][0]["address"] == "//Tower.local/Music/Jazz" and top["items"][0]["open"]
-        assert [c["name"] for c in top["crumbs"]] == ["Tower", "Music"]
-        assert listed[-1] == ("//Tower.local/Music", "george")
+        assert top["items"][0]["address"] == "//nas.local/Music/Jazz" and top["items"][0]["open"]
+        assert [c["name"] for c in top["crumbs"]] == ["nas", "Music"]
+        assert listed[-1] == ("//nas.local/Music", "me")
 
-        jazz = await (await client.post(url, json={"name": "//Tower.local/Music/Jazz", "action": "folders"})).json()
-        assert [c.get("address") for c in jazz["crumbs"]] == [None, "//Tower.local/Music", "//Tower.local/Music/Jazz"]
+        jazz = await (await client.post(url, json={"name": "//nas.local/Music/Jazz", "action": "folders"})).json()
+        assert [c.get("address") for c in jazz["crumbs"]] == [None, "//nas.local/Music", "//nas.local/Music/Jazz"]
 
         nfs = await (await client.post(url, json={"name": "nas:/volume1/music", "action": "folders"})).json()
         assert nfs["items"] == [] and nfs["crumbs"][-1]["address"] == "nas:/volume1/music"

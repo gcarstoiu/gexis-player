@@ -242,7 +242,7 @@ setting" and the Music folder's always being offered.
     be forgotten in first use** (George, 2026-10-18, on sofapi: no way to
     remove one, "slow", and it "stops only at level 1"). An SMB share is
     browsed at any depth, as a USB drive is, and a folder inside it can be
-    added as the share (`//Tower.local/Music/Clean`); an NFS export is added
+    added as the share (`//nas.local/Music/Jazz`); an NFS export is added
     whole, since listing it would mean mounting it. First use's added shares
     carry *Forget*. The scan for servers browses both kinds at once and is
     reused for a minute (measured on sofapi: 2 s for every list before,
