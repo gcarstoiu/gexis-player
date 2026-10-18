@@ -114,6 +114,13 @@ as it was. Checked through the part 2 proxy against a local test drive
 (`USBFAKE`, `SETON` in scratchpad `p2proxy.py`), phone and panel; never with
 a real drive, and sofapi's server is off - to-do g56 is George's try.
 
+**The backup review** (on `ph-first-use`, core and UI `+git105` on sofapi;
+ADR-0131 amended 2026-10-18): the upload step's tile holds the file's name;
+below it every setting the backup stores and what else it carries, a ticked
+line each, by Settings section (`restore_review.py`, `inspect`'s
+`sections`). Checked with George's own sofapi backup through `p1mock.py`
+(`REALBK`, `PLUGDIR`). That backup has *Library on the screen* off.
+
 **Release build output lives in `~/.local/share/gexis-release-out`**: in each
 release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
 (excluded in `.git/info/exclude`). `reuse.py` reuses a published file only
