@@ -590,6 +590,13 @@ setting Lyrion's own *Database Memory Config* to *Normal* (on Lyrion's
 Performance page) roughly doubles how many files fit. A player with 1 GB is
 not offered the server.
 
+**Copying music to the player's Music folder stopped working.**
+The card is probably nearly full. Below 4 GB free, the Music share takes no
+new files, so the player's own services - Lyrion's library, Spotify,
+Plexamp, the screen - never run out of room; the Music folder's row says so.
+It takes files again once more than 4.5 GB is free: delete something from
+the Music folder, or keep the music on a USB drive or a network share.
+
 **A USB disk or NAS was off for a while. Is the library lost?**
 No. A NAS that is off when the player starts no longer makes the server wipe
 its library, and the folders of an unplugged USB drive stay in the server's

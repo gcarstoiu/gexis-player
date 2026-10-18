@@ -47,7 +47,7 @@ from dbus_next.aio import MessageBus
 from gexis_core import memo, own_wallpapers, screen_apply, settling
 from gexis_core.players import Players, status_line
 from gexis_core.wallpapers import SEARCH as PIXABAY_SEARCH
-from gexis_core import backups, bluetooth_devices, skin_packs, device_name, discovery, hardware_report, lyrion_folders, lyrion_scan, lyrion_shares, lyrion_usb, problem_report, skin_previews, skins, wifi
+from gexis_core import backups, bluetooth_devices, skin_packs, device_name, discovery, hardware_report, lyrion_folders, music_floor, lyrion_scan, lyrion_shares, lyrion_usb, problem_report, skin_previews, skins, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
 from gexis_core.artistinfo import PHOTO_BACKGROUND, PHOTO_LARGE, PHOTO_THUMB
 from gexis_core.artwork_sweep import ARTIST_NAMESPACE, remembered
@@ -2086,7 +2086,8 @@ class StateServer:
         """The Music folder's free and total space, for part 2's *Where is
         your music?* (George, 2026-10-18). Read only."""
         space = await asyncio.to_thread(lyrion_folders.music_space)
-        return web.json_response(space or {"free": None, "total": None, "text": None})
+        closed = await asyncio.to_thread(music_floor.is_closed)
+        return web.json_response({**(space or {"free": None, "total": None, "text": None}), "closed": closed})
 
     async def _handle_setup_backup(self, request: web.Request) -> web.Response:
         """**ADR-0131: a backup, uploaded from the phone in setup.** The body
@@ -2434,6 +2435,10 @@ class StateServer:
                     space = await asyncio.to_thread(lyrion_folders.music_space)
                     if space:
                         row["note"] = f"{row.get('note') or ''} {space['text']}.".strip()
+                    # ADR-0115 decision 27: closed below 4 GB free.
+                    if await asyncio.to_thread(music_floor.is_closed):
+                        row["note"] += (" The card is nearly full: the Music share takes no new files"
+                                        " until 4.5 GB is free.")
                     continue
                 if row["type"] != "list":
                     continue

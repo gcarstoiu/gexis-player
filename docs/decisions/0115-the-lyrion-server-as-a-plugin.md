@@ -261,6 +261,24 @@ setting" and the Music folder's always being offered.
     already added is refused, and a wider one replaces those it holds, as
     for USB folders.
 
+27. **The Music share stops at 4 GB free** (George, 2026-10-18: *"4 GB
+    fixed in code"*). The share writes as `squeezeboxserver`, so it cannot
+    reach the filesystem's own reserve (about 4 %, 2.5 GB on sofapi, root
+    only), but Lyrion's database and artwork, Spotify, Plexamp and the
+    screen's browser cannot either: a card filled from the share would stop
+    them. The core checks the Music folder's free space every minute; below
+    **4 GB** it writes `read only = yes` to `/run/gexis/music-share.conf`,
+    which the share includes last, and reloads Samba; above **4.5 GB** it
+    empties the file again (the gap keeps it from flapping at the line). The
+    Music folder's row says so while it holds. The figure, from what the
+    player itself writes (measured 2026-10-18): Lyrion's library on George's
+    tens of thousands of files, 151 MB of database and 670 MB of artwork
+    (Finding 109), which grows with the library; an update staged, 476 MB on
+    sofapi; the largest skin pack, 484 MB packed and more unpacked - about
+    2.5 GB at most today, and 4 GB leaves room for a larger library. Fixed
+    in code: ADR-0022 [H]. Lyrion's own playlist saves into the Music
+    folder do not go through the share and are not stopped.
+
 ## Not settled here
 
 - The memory and CPU measured during a scan of George's library, and the

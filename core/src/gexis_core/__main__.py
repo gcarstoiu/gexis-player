@@ -71,7 +71,7 @@ from gexis_core.peppy import (
     set_meter_skins,
     set_meter_smoothing,
 )
-from gexis_core import factory_reset, lyrion_addons, lyrion_folders, lyrion_memory
+from gexis_core import factory_reset, lyrion_addons, lyrion_folders, lyrion_memory, music_floor
 from gexis_core.lyrion_shares import Shares as LyrionShares
 from gexis_core.lyrion_usb import UsbFolders
 from gexis_core.fanart import Fanart
@@ -383,6 +383,8 @@ SETUP_KEEP_S = 120.0
 #: How often the Lyrion server's music folders are compared with what is
 #: mounted (ADR-0115): a USB disk plugged in appears within this.
 LYRION_FOLDERS_S = 20.0
+#: ADR-0115 decision 27: how often the Music share's floor is checked.
+MUSIC_FLOOR_S = 60.0
 #: ADR-0115: Lyrion's add-ons - restarted after this, to load what it
 #: downloaded; asked again after this, if they are still missing.
 LYRION_ADDONS_RESTART_S = 90.0
@@ -3432,6 +3434,26 @@ async def main() -> None:
                     logger.debug("lyrion: checkVersion not set (%r)", exc)
 
     asyncio.ensure_future(_lyrion_folders_loop())
+
+    async def _music_floor_loop() -> None:
+        """ADR-0115 decision 27: the Music share closes below 4 GB free and
+        opens above 4.5 GB, checked every minute."""
+        was = music_floor.is_closed()
+        while True:
+            try:
+                space = await asyncio.to_thread(lyrion_folders.music_space)
+                if space is not None:
+                    now = music_floor.closed(space["free"], was)
+                    if await asyncio.to_thread(music_floor.apply, now):
+                        logger.warning("music floor: the Music share is %s (%s)",
+                                       "closed, the card nearly full" if now else "open again", space["text"])
+                        state_store.bump_settings_revision()
+                    was = now
+            except Exception:  # noqa: BLE001 - a check that dies would leave the share as it was
+                logger.exception("music floor: check failed")
+            await asyncio.sleep(MUSIC_FLOOR_S)
+
+    asyncio.ensure_future(_music_floor_loop())
     # ADR-0040 §1: LMS's own plugin first where it answers, the key-free
     # providers behind it and for the renderers that have no LMS ids.
     http = Http()

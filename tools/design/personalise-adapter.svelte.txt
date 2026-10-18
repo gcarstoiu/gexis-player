@@ -184,7 +184,8 @@
     //: George, 2026-10-18: the Music folder's free and total space.
     async loadSpace() {
       const got = await json('/storage/music').catch(() => ({}));
-      st.musicSpace = got.text ?? null;
+      //: ADR-0115 decision 27: closed below 4 GB free.
+      st.musicSpace = got.text ? got.text + (got.closed ? '. The card is nearly full: the Music share takes no new files' : '') : null;
     },
     async loadUsb() {
       const got = await listItems('lyrion-server.usb_folders');

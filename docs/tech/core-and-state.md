@@ -544,6 +544,14 @@ pieces in code:
   everything, so a saved share stays in the list while unmounted, and a USB
   folder for 7 days after its drive was last seen
   (`/var/lib/gexis/lyrion-usb-seen.json`).
+- **The Music share's floor** (`music_floor.py`, ADR-0115 decision 27):
+  every minute the core reads the Music folder's free space; below 4 GB
+  it writes `read only = yes` to `/run/gexis/music-share.conf`, which
+  `gexis-music.conf` includes last in the share, and runs `smbcontrol smbd
+  reload-config`; above 4.5 GB it empties the file. A missing or empty
+  file is an open share. The share writes as `squeezeboxserver`, which
+  cannot use the filesystem's root-only reserve; this keeps the room the
+  player's own non-root services need.
 - **The USB folders** (`lyrion_usb.py`, the `lyrion-server.usb_folders`
   list row): one entry per folder, `{drive, folder, label}`, the drive being
   its filesystem UUID - where the udev rule mounts it, read-only, at
