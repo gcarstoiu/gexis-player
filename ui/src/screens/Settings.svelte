@@ -2605,7 +2605,8 @@
       {:else if sheet.type === 'list'}
         {#if items.length}
           <div class="items" data-noscrollbar>
-            {#each items as item (item.address ?? item.name)}
+            <!-- A USB folder by where it is: two folders can share a name. -->
+            {#each items as item (item.address ?? (item.drive != null ? `${item.drive}:${item.folder ?? ''}:${item.add ? '+' : item.up ? '^' : ''}${item.name}` : item.name))}
               {@const joined = item.state === 'connected' || item.state === 'current'}
               <!-- Only the network in use takes no tap: there is nothing to
                    join. The server in use still does - tapping the one you

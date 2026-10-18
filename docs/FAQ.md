@@ -548,10 +548,29 @@ player never switches to it by itself: choose it in *Settings → Sources →
 Lyrion Client → Server*.
 
 **Where can the player's Lyrion server find music?**
-The player's own Music folder (shared on the network), USB disks, and
-network shares (SMB or NFS). Under *Network shares*, a scan lists the servers
-on the network by their names, once each, and then their shares, with a login where needed; a share
-that does not announce itself can be added with *Add by address*.
+Wherever you choose, and nowhere until you do: the player's own Music folder
+(shared on the network), folders on USB drives, and network shares (SMB or
+NFS). Each is a switch or a list under *Settings → Sources → Lyrion Server*,
+and first use asks on *Where is your music?*, with nothing chosen
+beforehand. Under *Network shares*, a scan lists the servers on the network
+by their names, once each, and then their shares, with a login where
+needed; a share that does not announce itself can be added with *Add by
+address*.
+
+**Can Lyrion read only some folders of a USB drive?**
+Yes. With *USB drives* on, open *USB folders*: each drive plugged in is
+listed, and opening one shows its folders, at any depth. *Add the whole
+drive* is first at its top, and *Add* followed by a folder's name inside
+it. A drive plugged in for the first time is not added by itself: it waits
+under *USB folders* as *Not added yet* until its folders are chosen.
+
+**Why does Lyrion rescan everything when I take a folder away?**
+That is how Lyrion answers a folder taken out of its list: it clears the
+library and scans every folder again, which for a large library takes
+hours. So switching off the Music folder or USB drives, removing a USB
+folder, narrowing a whole drive to some of its folders, or forgetting a
+share all start a full rescan; their notes say so. Adding a folder scans
+only that folder.
 
 **How long does the first scan take?**
 On a 4 GB Pi over Wi-Fi, a library of tens of thousands of files took a
@@ -567,12 +586,12 @@ not offered the server.
 
 **A USB disk or NAS was off for a while. Is the library lost?**
 No. A NAS that is off when the player starts no longer makes the server wipe
-its library, and an unplugged USB disk stays in the server's list for 7
-days.
+its library, and the folders of an unplugged USB drive stay in the server's
+list for 7 days.
 
 **What does Remove do for the Lyrion server?**
-It deletes the server's library, its settings, its add-ons and its network
-shares with their logins. The Music folder and its playlists stay. Switching
+It deletes the server's library, its settings (the USB folders chosen
+among them), its add-ons and its network shares with their logins. The Music folder and its playlists stay. Switching
 it on again downloads it and starts a new library.
 
 **How do I see Lyrion's own menus and apps on the screen?**

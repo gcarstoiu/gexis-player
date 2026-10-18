@@ -158,8 +158,9 @@ export async function listAction(key, body) {
   // `items` and `login` for a list that browses inside an item (ADR-0115's
   // network shares: a server's shares, or the login it wants first).
   // `notice` for a join while the cable is in (ADR-0123 as amended).
+  // `title` for a USB drive's folder open in the sheet (ADR-0115 decision 23).
   return { ok: !!answer.ok, error: answer.error ?? null, items: answer.items ?? null, login: !!answer.login,
-           notice: answer.notice ?? null };
+           notice: answer.notice ?? null, title: answer.title ?? null };
 }
 
 /** An `action` row. Nothing called this before `reboot` was wired: `power`

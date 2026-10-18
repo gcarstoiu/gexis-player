@@ -391,9 +391,21 @@ Changes take effect at once unless the row says otherwise.
 
 Plugins add their own rows here once switched on: **Plexamp** (claim the
 player into your Plex account) and the **Lyrion Server** (a music server on
-the player itself, with its music folders and network shares). A network
-share whose server does not answer reads *Not mounted: the server did not
-answer*; the other shares are still mounted.
+the player itself). The Lyrion Server reads only the music locations
+switched on, none at first:
+
+| Setting | What it does |
+|---|---|
+| Lyrion Server: Music folder | The player's own Music folder, shared on the network as *Music*. |
+| Lyrion Server: USB drives | Folders on USB drives plugged into the player. |
+| Lyrion Server: USB folders | Shown with *USB drives* on. Each drive plugged in, opened to choose its folders at any depth, or *Add the whole drive*. A drive not chosen yet reads *Not added yet*; the folders of an unplugged drive are kept for 7 days. |
+| Lyrion Server: Network shares | Folders on a NAS or a computer (SMB or NFS), found by a scan or added by address. |
+
+Taking a location away later - a switch turned off, a USB folder removed, a
+share forgotten - makes Lyrion clear its library and scan everything again,
+which for a large library takes hours. A network share whose server does not
+answer reads *Not mounted: the server did not answer*; the other shares are
+still mounted.
 
 ### Handoff — *Who gets the player*
 

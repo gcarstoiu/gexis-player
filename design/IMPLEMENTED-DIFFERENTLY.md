@@ -382,3 +382,15 @@ with the simple or extended navigation, but without the back bar. Just the
 icons pulsating directly on the wallpaper background"* - the library's
 waiting footer (`WaitingServices`), its marks, rings, names and states,
 without its plate.
+
+## First use's *Where is your music?*: nothing ticked, and USB folders (2026-10-18)
+
+The design (`14-first-use`) draws the three locations as switches with the
+Music folder ticked. George: *"every the user selects we do in lyrion.
+Nothing should be preselected"*, so all three start off, and with none on
+the line under them says Lyrion starts with no music (ADR-0115 decisions
+20-22). With *USB drive* on, the drives plugged in are listed under the
+switches and each opens to its folders, *Add the whole drive* or *Add
+<folder>* first, *Back up* inside a folder (decision 23; George: *"What we
+need to add though is a folder selection from USB"*) - not in the design.
+The same browsing is in Settings → Sources → Lyrion Server → *USB folders*.

@@ -193,7 +193,7 @@ something the panel is not showing).
 | Radio | `GET /radio?handle=…`, `POST /radio/play` | Panel (ADR-0030) |
 | Lyrion menus | `GET /menus`, `/menus/browse`, `/menus/letters`; `POST /menus/act`, `/menus/search` | Panel, when Extended navigation is on (ADR-0118) |
 | Enrichment | `GET /enrichment` | Panel, phone |
-| Settings | `GET /settings`; `PUT /settings/{key}` (write a value); `POST /settings/{key}` (run an action); `GET`/`POST /settings/{key}/items` (list rows: Wi-Fi, trusted devices, backups, `lyrion-server.shares`, `lms_server`); `GET /network/wifi` (the connected network's signal, speed, band, channel and address, no rescan - ADR-0123); `GET /notices/{name}` (Legal, Credits) | Both (ADR-0035) |
+| Settings | `GET /settings`; `PUT /settings/{key}` (write a value); `POST /settings/{key}` (run an action); `GET`/`POST /settings/{key}/items` (list rows: Wi-Fi, trusted devices, backups, `lyrion-server.shares`, `lyrion-server.usb_folders`, `lms_server`); `GET /network/wifi` (the connected network's signal, speed, band, channel and address, no rescan - ADR-0123); `GET /notices/{name}` (Legal, Credits) | Both (ADR-0035) |
 | Skins and plugins | `GET /skins`, `/skins/{name}/preview`, `/plugins/{id}/mark`; `POST /plugins/upload`, `/plugins/{id}/uninstall` | Settings (ADR-0050, ADR-0106) |
 | Bluetooth | `POST /bluetooth/pairing/{answer}` | Panel (ADR-0045) |
 | Hardware report | `GET /hardware-report` (the board by EEPROM, driver, overlays, controls, formats and rates; the screen's EDID and touch controller - no serials), `POST /hardware-report/tones` (a 1 kHz tone at -20 dBFS at 44.1, 96 and 192 kHz through `output`, and the rate and format the card ran at; `409` while any card plays), `GET /hardware-report/prompt` and `POST /hardware-report/prompt/dismiss` (the System page's one line, a week after a board or screen that is not Tested was first seen, per piece of hardware; kept in the internal `_hardware_prompt` key; a prepared report dismisses it too), `POST /hardware-report/screen` (`{"show"}`: the test pattern on the panel, through `screen_check` in `/state`; taken down after 120 s) and `POST /hardware-report/screen/result` (the panel's four corner taps in screen pixels, measured against 6 % of the diagonal), `POST /hardware-report/issue` (`{"answers", "notes", "tones"}` -> the pre-filled GitHub *Hardware feedback* form's address; its answers are text fields, which GitHub fills from a link and dropdowns are not; the result is kept in `_hardware_feedback` with the sound card and screen it was made on), `GET /hardware-report/kept` (that one, or `null` - dropped once the board or screen in use is another) and `POST /hardware-report/kept/clear` (*Start over*), `GET /hardware-report/file` (that feedback as a text file, for e-mail - ADR-0138) - `hardware_report.py`; the *Reported* state from `hardware_reports.json` (`hardware_reports.py`), which only `tools/hardware-reports.py` writes, from the issues labelled `accepted`, along with HARDWARE.md's table | Settings on a phone or computer (ADR-0126) |
@@ -527,6 +527,28 @@ pieces in code:
   (`mount` runs as root and would read it as an option). Mounting and the
   "is it mounted" checks run in a worker thread, never on the event loop: on
   a NAS that is off, a check waits out the NFS timeout.
+- **The Lyrion Server's music folders** (`lyrion_folders.py`, ADR-0115
+  decisions 16-24): every 20 s while the server is on, and at once when a
+  location changes, the core reads Lyrion's `mediadirs` and writes it back
+  only if it differs. It adds the Music folder while
+  `lyrion-server.music_folder` is on, the chosen USB folders while
+  `lyrion-server.usb` is on, and the mounted shares; it takes out only the
+  folders it manages, leaving any the user added on Lyrion's own page.
+  Lyrion answers a folder taken out by clearing its library and scanning
+  everything, so a saved share stays in the list while unmounted, and a USB
+  folder for 7 days after its drive was last seen
+  (`/var/lib/gexis/lyrion-usb-seen.json`).
+- **The USB folders** (`lyrion_usb.py`, the `lyrion-server.usb_folders`
+  list row): one entry per folder, `{drive, folder, label}`, the drive being
+  its filesystem UUID - where the udev rule mounts it, read-only, at
+  `/media/gexis-usb/<UUID>` - and the label read from `/dev/disk/by-label`.
+  The row's `browse` action lists a plugged-in drive's folders (never
+  leaving the drive, skipping hidden and system folders); `add` refuses a
+  folder an existing choice already holds and replaces the choices inside a
+  wider one. A drive plugged in for the first time is not added. Settings
+  migration 12 gives a player already running the server both switches on
+  and every drive seen in the last 7 days whole, so an update changes
+  nothing in Lyrion's list.
 
 ```mermaid
 sequenceDiagram
