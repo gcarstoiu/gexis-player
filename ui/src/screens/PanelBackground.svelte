@@ -12,15 +12,16 @@
 
   **With no artwork, one Calm wallpaper bleeds instead** (George,
   2026-10-18: "Just 1 from calm types"), so the library with nothing
-  playing is not plain grey. The glacier lake: blurred, a deep blue that
-  keeps white type readable; the sunsets turn bright orange. It is the
+  playing is not plain grey. The sunset over still water: blurred, blue
+  with an orange and violet glow (George chose it over the darker glacier
+  lake, wanting something more colourful). It is the
   player's own (gexis-wallpapers, CC0), so no credit line is owed, and the
   same promoted layer draws it, at no new cost (Finding 061).
 -->
 <script>
   let { artwork = null } = $props();
 
-  const RESTING = '/idle/wallpaper/own/calm/c148381086.webp';
+  const RESTING = '/idle/wallpaper/own/calm/c105649975.webp';
 
   // A failed URL falls back to the resting picture, and that to the weave
   // alone.
