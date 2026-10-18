@@ -184,7 +184,9 @@ not set the level; one opened from the panel is unaffected.
 ## 5. The panel's layer stack
 
 Exactly one screen is drawn at a time, over one shared backdrop
-(`PanelBackground.svelte`: the design's weave plus the blurred artwork).
+(`PanelBackground.svelte`: the design's weave plus the blurred artwork; with
+no artwork, one of the player's own Calm wallpapers, blurred the same way, so
+the library with nothing playing is not plain grey).
 Screens are transparent, and changing screen has no animation. The overlays
 sit above the screen in a fixed z-order:
 
