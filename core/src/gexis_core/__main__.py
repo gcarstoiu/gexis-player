@@ -2393,7 +2393,7 @@ async def main() -> None:
         async def _put_off_at_start() -> None:
             await asyncio.sleep(30)
             if personalise.state() == personalise.PENDING and personalise.at_start() is False:
-                await personalise.put_off(settings, discovery.find_servers)
+                await personalise.put_off(settings, lyrion_known.current)
         asyncio.ensure_future(_put_off_at_start())
 
     settings = Settings(
@@ -3936,8 +3936,12 @@ async def main() -> None:
     asyncio.ensure_future(cable.follow())
     # ADR-0123 as amended (George, 2026-10-08): the cable wins over Wi-Fi.
     asyncio.ensure_future(wired.CableFirst().follow())
+    # The Lyrion servers on the network, searched for in the background so
+    # a page asking is answered at once (George, 2026-10-18).
+    lyrion_known = discovery.Known()
     state_server = StateServer(
         state_store,
+        lyrion_known=lyrion_known,
         cable=cable,
         wifi_address=wifi_address,
         host=config.state_host,
@@ -4288,6 +4292,7 @@ async def main() -> None:
         # process, beside the one the browser uses.
         plugin_server.run(),
         state_server.run(),
+        lyrion_known.run(),
     )
 
 

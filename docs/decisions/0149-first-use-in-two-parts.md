@@ -266,6 +266,20 @@ it as it should be"*)
     chosen, not when the switch runs, so a volume type written right after
     the output is judged against it.
 
+28. **Getting ready shows the opening animation** (George: *"take the
+    animation we have at the begining of the flow on wide and replace the
+    current one, adding the status icon next to the panel"*): `PanelMini`'s
+    `flow`, cycling through only the sources chosen, 3 s each; the badge on
+    the panel's corner is the design's check when done and the design's own
+    spinner ring while anything installs (an amber ! if something failed).
+    The title follows the badge - *Getting Living Room ready*, then *Living
+    Room is ready* - rather than one title for both, so it is never ahead of
+    what the page shows.
+29. **The Lyrion servers are known before part 2 asks** (George: *"the panel
+    should already know if there is a lyrion server on the network"*): the
+    core searches in the background (`discovery.Known`, every 2 min, every
+    30 s while none answers) and answers from the last search.
+
 **Settled by George afterwards (2026-10-18)**
 - **Personalise** is in ADR-0022's inventory (*"Yes it goes in the list"*).
 - Part 1 is tested by George on sofapi after *Reset to factory settings*

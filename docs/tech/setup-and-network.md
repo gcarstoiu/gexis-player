@@ -315,6 +315,16 @@ sequenceDiagram
    it is the default, else the address; the setting always stores the
    address. Exactly one server is used; several are named and left to Settings; *Off*
    sets `lms_enabled` false.
+
+   **Kept, not searched for on each ask** (George, 2026-10-18): one search
+   costs 2.5 s of listening and up to 2 s for names, and Settings' server
+   list and part 2's first screen used to wait that long every time.
+   `discovery.Known` searches at the core's start, then every 2 min (every
+   30 s while none answers, as at a boot before the network is up), one
+   search at a time; `/settings/lms_server/items` and *Do it later* answer
+   from the last search, waiting only for the first. A server switched off
+   stays listed until the next search. Setup's own search after the join
+   stays a fresh one: the network has just changed.
 5. The panel shows the result for 10 s, then the device **reboots** if any
    screen was chosen in setup, or if the name differs from the old one (both
    apply at a restart; the Screen step's restart is where *Keep this screen?*
@@ -691,12 +701,18 @@ defaults kept, one Lyrion server found used).
 `FirstUsePage.svelte` (`mode="p2"`) in place of Settings, held until its Close. The
 page reads `/settings`, `GET /personalise` (whether this is a first run, and
 the plugins it may switch on), the Lyrion servers found
-(`/settings/lms_server/items`), and follows `/state` for Plexamp's download,
+(`/settings/lms_server/items`, at once from `discovery.Known`), and follows `/state` for Plexamp's download,
 a pairing request and the settling. Its questions, in order: how you listen
 (and Lyrion, its folders, Plexamp, Browse), Spotify, Bluetooth, then, with a
 screen, Touchpad (`phone_touchpad`, George 2026-10-18; its preview is the
 library with the pointer moving and tapping, `PanelMini`'s `pointer`), the
-visualiser, the waiting and idle screens, standby.
+visualiser, the waiting and idle screens, standby. Its last screen,
+*Getting ready*, shows `PanelMini`'s `flow` cycling through the sources
+chosen (`marks`), with a badge on the panel (`status`): the check when every
+download is in, a turning ring while one is still going, an amber ! when one
+failed; the title follows (*Getting … ready*, *… is ready*, *… is nearly
+ready*). A download Finish answered as `waiting` counts as in progress until
+the settling record has listed it, or 30 s have passed.
 
 **The panel**: while it is owed and the player has a screen, `SetupScreen`
 shows the step *Make it yours on your phone*, a QR code to

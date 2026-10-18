@@ -167,6 +167,7 @@ class StateServer:
         own=None,
         skins_at: Callable[[], tuple[Path, str] | None] | None = None,
         ui_dir: Path | None = None,
+        lyrion_known: "discovery.Known | None" = None,
     ) -> None:
         """`activate(renderer_id) -> bool` and `set_volume(percent) -> bool`
         are injected by `__main__.py` (ADR-0028's command surface). Both are
@@ -180,6 +181,9 @@ class StateServer:
         which is every deployment before Phase 4b, and any development run
         where only the core is installed.
         """
+        #: The Lyrion servers the core keeps (discovery.Known); without it,
+        #: each ask searches.
+        self._lyrion_found = lyrion_known.current if lyrion_known is not None else (lambda: discovery.find_servers())
         self._store = store
         #: ADR-0059's sweep leaves fanart URLs here. Not `_store`,
         #: which is the *state* store - two different things that
@@ -2201,7 +2205,7 @@ class StateServer:
     async def _handle_personalise_later(self, request: web.Request) -> web.Response:
         """*Do it later* (`personalise.put_off`)."""
         from gexis_core import personalise
-        await personalise.put_off(self._settings, lambda: discovery.find_servers())
+        await personalise.put_off(self._settings, self._lyrion_found)
         self._store.set_personalise(None)
         return web.json_response({"ok": True})
 
@@ -2612,7 +2616,7 @@ class StateServer:
             items.append({"name": device_name.hostname() or own, "address": own,
                           "meta": f"This player's own server · {own}", "bars": None,
                           "state": "current" if own == current else "found"})
-        for server in await discovery.find_servers():
+        for server in await self._lyrion_found():
             if own and server["address"] == own:
                 continue
             name = discovery.label(server)
