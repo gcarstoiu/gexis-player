@@ -317,23 +317,28 @@
   .tile.is-lead .mark {
     background: rgba(126, 214, 188, 0.1);
   }
+  /* A long name takes a second line, centred, rather than being cut. */
   .tile__name {
     max-width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 7px;
     font-size: 18px;
     font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
     color: var(--ink);
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
     overflow: hidden;
-    text-overflow: ellipsis;
   }
   /* Ready: only a source that can be played is drawn here at all. */
   .tile__dot {
+    display: inline-block;
     width: 8px;
     height: 8px;
-    flex-shrink: 0;
+    margin-right: 7px;
+    vertical-align: 0.15em;
     border-radius: 50%;
     background: var(--accent-lms);
   }
