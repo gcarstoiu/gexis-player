@@ -36,12 +36,17 @@ def stage(answering: bool, addons_done: bool, status: dict | None, has_locations
                 "line": ("Lyrion fetches Material Skin, Music & Artist Information and Radio Now Playing, "
                          "then restarts once: about 3 minutes before it reads your music.")}
     if status.get("rescan"):
+        # Lyrion names its step itself, readably ("Scanning new music files",
+        # "Discovering files/directories", "Building full text index" -
+        # measured on sofapi, 2026-10-18); its count is that step's, and a
+        # step with no total gives none.
+        step = str(status.get("progressname") or "").strip()
         done, total = _int(status.get("progressdone")), _int(status.get("progresstotal"))
-        unit = counted(str(status.get("progressname") or ""))
-        line = (f"{done:,} of {total:,} {unit} so far. " if done is not None and total else "") + \
+        counted = done is not None and bool(total)
+        line = (f"{step}: {done:,} of {total:,}. " if step and counted else f"{step}. " if step else "") + \
             "Music shows up as Lyrion finds it; a large library takes hours. The player is ready to use meanwhile."
         return {"phase": "scanning", "label": "Reading your music", "done": True, "line": line,
-                "share": min(0.99, done / total) if done is not None and total else None}
+                "share": min(0.99, done / total) if counted else None}
     songs = _int(status.get("info total songs"))
     if songs:
         albums = _int(status.get("info total albums"))
@@ -52,26 +57,6 @@ def stage(answering: bool, addons_done: bool, status: dict | None, has_locations
                 "line": "Lyrion starts reading your folders in a moment."}
     return {"phase": "ready", "label": "Ready, no music yet", "share": 1.0, "done": True,
             "line": "Add where your music is in Settings → Sources → Lyrion Server."}
-
-
-def counted(progressname: str) -> str:
-    """What a scan step counts, by Lyrion's own name for it (its code:
-    `<folder>|discovering_files`, `<folder>|audio_new`, `..._changed`,
-    `..._deleted`, `precacheArtwork`, `updateStandaloneArtwork`). Measured on
-    sofapi, 2026-10-18: after a restart Lyrion pre-loads its albums' artwork,
-    46 of them - counted as files, it read "37 of 46 files" over 760 songs."""
-    step = progressname.rsplit("|", 1)[-1].lower()
-    if "artwork" in step:
-        return "albums' artwork"
-    if step.startswith("discovering"):
-        return "files found"
-    if step.endswith("_new"):
-        return "new files read"
-    if step.endswith("_changed"):
-        return "changed files read"
-    if step.endswith("_deleted"):
-        return "removed files checked"
-    return "steps"
 
 
 def _int(value) -> int | None:

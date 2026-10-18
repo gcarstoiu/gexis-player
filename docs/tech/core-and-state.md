@@ -548,7 +548,8 @@ pieces in code:
   decision 28): the Lyrion loop reads `serverstatus` (every 5 s while not
   ready, every 20 s after) and works out Starting, Adding its add-ons
   (until `lyrion-addons.done`), About to read your music, Reading your music
-  (`rescan`, `progressdone`/`progresstotal`) or Ready (`info total songs`).
+  (`rescan`, with Lyrion's own `progressname` and its count) or Ready (`info
+  total songs`).
   It goes out as `components.lyrion.after` while the package is installed;
   in Settings as the Lyrion Server heading's indicator and the read-only
   `lyrion-server.library` row (`progress`, or `busy` with no count).
