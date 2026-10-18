@@ -137,7 +137,7 @@ been written properly. **0098 has no record either.**
 | [0114](0114-the-beszel-hub-as-a-plugin.md) | The Beszel hub as a plugin | Accepted 2026-10-02: `gexis-beszel-hub`, off until switched on, port 8095; no other settings |
 | [0115](0115-the-lyrion-server-as-a-plugin.md) | The Lyrion server as a plugin | Accepted 2026-10-02 (amended 2026-10-03): upstream 9.1.1, off, lowest priority; never switched to by itself |
 | [0116](0116-change-logs-in-settings.md) | Change logs in Settings | Accepted 2026-10-03: the last 10 releases' notes in Settings; older in `CHANGELOG.md` |
-| [0117](0117-dacs-beyond-the-two-on-the-bench.md) | DACs beyond the two on the bench | Accepted 2026-10-04: the card reports its own scale and name; Tested, Known, Detected; DSD postponed |
+| [0117](0117-dacs-beyond-the-two-on-the-bench.md) | DACs beyond the two on the bench | Accepted 2026-10-04: the card reports its own scale and name; Tested, Known, Detected; DSD postponed. **Amended 2026-10-18**: the lists show Tested or nothing |
 | [0118](0118-lyrion-s-own-menus.md) | Lyrion's own menus, plugins included | Accepted 2026-10-05: Lyrion's menus as home tiles, behind *Extended navigation*, off by default; player settings left out |
 | [0119](0119-plexamp-is-claimed-from-settings.md) | Plexamp is claimed from Settings, and says when it is | Accepted 2026-10-05: claimed by `PLEXAMP_CLAIM_TOKEN`; the row reads *Claimed* with *Claim again* |
 | [0120](0120-backgrounds-cropped-by-what-they-show.md) | Backgrounds cropped by what they show; Pexels and TheAudioDB | Accepted 2026-10-05 (**Pexels removed 2026-10-07**): cropped around detected subjects on the player (YOLOX-S) |
@@ -146,7 +146,7 @@ been written properly. **0098 has no record either.**
 | [0123](0123-the-network-in-settings-cable-and-wi-fi.md) | The network in Settings: cable and Wi-Fi | Accepted 2026-10-07: a Cable row; a manual address kept only once confirmed within 60 s |
 | [0124](0124-software-volume.md) | Software volume, the owner's choice | Accepted 2026-10-07: off by default, after the meter tap, not bit-perfect below 100 %. Row merged by 0127 |
 | [0125](0125-a-problem-report-users-can-download.md) | A problem report users can download, with the personal parts taken out | Accepted 2026-10-07: one zip, personal parts tokenised on the device, read before sending. Sending revised by 0138 |
-| [0126](0126-hardware-reports-from-users.md) | Hardware reports from users | Accepted 2026-10-07: a guided check to a pre-filled GitHub issue; a Reported state, merged by reviewed commit |
+| [0126](0126-hardware-reports-from-users.md) | Hardware reports from users | Accepted 2026-10-07: a guided check to a pre-filled GitHub issue; a Reported state, merged by reviewed commit. **Amended 2026-10-18**: lists show Tested (here or reported working) or nothing, a problem as a line |
 | [0127](0127-one-volume-row.md) | One Volume row: Hardware, Software or Fixed | Accepted 2026-10-07: default Hardware, Software where there is no control; a migration carries old choices |
 | [0128](0128-setup-installs-plugins-and-settles.md) | First setup installs the plugins and waits until the player has settled | Accepted 2026-10-07: a Plugins step before Review; an unskippable settling screen |
 | [0129](0129-a-service-says-whether-it-is-connected.md) | A service says whether it is connected | Accepted 2026-10-08: read from the unit user's connections, not its log; `"connection": true`; Beszel first |

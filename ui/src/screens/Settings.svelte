@@ -2395,9 +2395,12 @@
               <span class="radio"><span></span></span>
               <span class="option__label">{placeLabel(option)}</span>
               {#if sheet.optionTags?.[option]}
-                <!-- ADR-0109 decision 1: every model says whether it was tested. -->
+                <!-- George, 2026-10-18: Tested beside a model tested here or
+                     reported working by owners; nothing beside the rest. -->
                 <span class="option__tag" class:option__tag--tested={sheet.optionTags[option] === 'Tested'}>{sheet.optionTags[option]}</span>
               {/if}
+              <!-- A problem owners reported: a line under it, not a word. -->
+              {#if sheet.optionProblems?.[option]}<span class="option__why">{sheet.optionProblems[option]}</span>{/if}
             </button>
           {/each}
         </div>
@@ -2496,6 +2499,12 @@
               {:else}
                 <span class="option__label">{p.label}</span>
               {/if}
+              <!-- The outputs carry the same Tested tag and problem line as
+                   the screens and boards (George, 2026-10-18). -->
+              {#if sheet.optionTags?.[option]}
+                <span class="option__tag" class:option__tag--tested={sheet.optionTags[option] === 'Tested'}>{sheet.optionTags[option]}</span>
+              {/if}
+              {#if sheet.optionProblems?.[option]}<span class="option__why">{sheet.optionProblems[option]}</span>{/if}
               <!-- Why it cannot be chosen: a line of its own across the whole
                    tile, in amber and not dimmed with the rest (George,
                    2026-10-12, Hardware on a USB DAC - beside the note it

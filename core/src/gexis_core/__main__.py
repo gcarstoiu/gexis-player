@@ -76,7 +76,7 @@ from gexis_core.lyrion_shares import Shares as LyrionShares
 from gexis_core.fanart import Fanart
 from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, Queue, TrackMetadata
-from gexis_core import connections, hardware_report, settings_migrations, settling, updates, wired
+from gexis_core import connections, hardware_report, hardware_reports, settings_migrations, settling, updates, wired
 from gexis_core.standby import Schedule, Standby
 from gexis_core.settings import SettingsStore
 # ADR-0127's `output_mode` row and ADR-0124's remembered software level, kept
@@ -437,7 +437,7 @@ def screen_question(state: dict, now: float | None = None) -> dict | None:
                          == (current.get("connector") or screen_apply.CONNECTOR))
     return {
         "model": f"{model.maker} {model.model}" if model else current["screen"],
-        "untested": bool(model and not model.tested),
+        "untested": bool(model and not hardware_reports.shown_tested(model.tested, hardware_reports.screen(model.label))),
         "previous": (f"{before.maker} {before.model}" if before else None),
         "rotation_only": rotation_only,
         # Who may answer (Finding 125, 2026-10-14). `panel_buttons`: the
@@ -2470,6 +2470,11 @@ async def main() -> None:
                       # each port beside its choice in the picker).
                       "screen_port": lambda: {_port_label(p.connector): _port_line(p.connector)
                                               for p in screen_detect.ports()}},
+        # *Tested* beside an output tested here or reported working, and a
+        # reported problem under it - as the screens and boards show them
+        # (George, 2026-10-18).
+        option_tags={"output_device": lambda: {o.option: "Tested" for o in outputs.discover() if o.shown_tested}},
+        option_problems={"output_device": lambda: {o.option: o.problem for o in outputs.discover() if o.problem}},
         # The Release row's note: what the waiting or just-installed release
         # says changed (2026-10-01, George).
         notes={"software_update": updates.whats_new,

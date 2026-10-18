@@ -889,7 +889,7 @@
                     <span class="sc-size">{sizeOf(suggested)} · {familyOf(suggested)} layout</span>
                     <span class="sc-why">Suggested from what the screen and its touch controller report</span>
                   </span>
-                  <span class="tag" class:untested={!suggested.tested}>{suggested.tested ? 'Tested' : 'Untested'}</span>
+                  {#if suggested.tested}<span class="tag">Tested</span>{/if}
                 </div>
                 <div class="sc-pair">
                   <button class="sc-btn" class:on={scConfirmed && !headless} onclick={() => { scPick = null; scConfirmed = true; headless = false; }}>This is right</button>
@@ -922,7 +922,7 @@
                     <button class="net" class:sel={on} onclick={() => pickScreen(m)}>
                       <span class="radio" class:on><span></span></span>
                       <span class="grow"><span class="nm wrap">{makers ? `${m.maker} ${shortOf(m)}` : shortOf(m)}</span><span class="meta">{sizeOf(m)} · {familyOf(m)}</span></span>
-                      <span class="tag" class:untested={!m.tested}>{m.tested ? 'Tested' : 'Untested'}</span>
+                      {#if m.tested}<span class="tag">Tested</span>{/if}
                     </button>
                     {#if on && pickNote}
                       <div class="warn"><span class="bang">!</span><span>{pickNote}</span></div>
@@ -1283,7 +1283,6 @@
     background: rgba(126, 214, 188, 0.14); color: #7ed6bc;
   }
   .sc-rec .tag { align-self: flex-start; }
-  .tag.untested { background: rgba(224, 167, 88, 0.14); color: #e0a758; }
   .sc-pair { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sc-btn {
     all: unset; box-sizing: border-box; cursor: pointer; padding: 15px 18px; border-radius: 999px; text-align: center;

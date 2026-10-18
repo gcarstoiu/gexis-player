@@ -148,3 +148,10 @@ driver and makes the same card, `IQaudIODAC`, so it is recognised by its EEPROM
 (`Pi-DAC PRO`) through a row of ours beside Volumio's list. Acceptance items 1
 and 4 measured for Lyrion, Spotify and Bluetooth; Plexamp not. George: *"let's
 move it to tested"* - it is **Tested**. The DAC+ itself stays *Known*.
+
+## Amended 2026-10-18: two states on the screen
+
+What the lists show of the three states of decision 2 is now *Tested* (here, or reported working by
+owners) or nothing, with a reported problem as a line under the model
+(George: *"Make it for both sound and display"*). The states underneath are
+unchanged. See ADR-0126's amendment of the same day.

@@ -187,3 +187,29 @@ which plugin 0.4.7 fixes) and the whole feature was reviewed. Changed:
 
 **The form on `main` still has dropdowns**, which GitHub never fills from a
 link; the text fields reach users when the release carrying them is merged.
+
+## Amended 2026-10-18: two states on the screen (George)
+
+George, reviewing how screens and sound cards are marked: *"Let's also
+simplify a bit the way we display tested, found etc displays"*, then, of the
+proposal - two states, problems as a line, one style - *"I like the
+simplification you suggest. Make it for both sound and display"*.
+
+- **What any list shows is *Tested*, or nothing.** *Tested* beside a model
+  played and measured here, **or reported working by owners** (at least one
+  accepted report that it works, none against): `hardware_reports.shown_tested`.
+  This reverses this record's *"Tested is never given by a report"* for what
+  the lists show; the states underneath are unchanged.
+- **A reported problem is a line under the model** (`hardware_reports.problem`,
+  *"An owner reported a problem: <issue>"*), not a word beside it.
+- **One style everywhere**: a tag beside the name - in *Attached screen*,
+  *Sound card board* and *Output* alike. An output's name no longer carries its
+  state after a dash ("SMSL USB DAC — Detected" is "SMSL USB DAC"); a choice
+  stored the old way is rewritten once (settings migration 10) and still
+  resolves before that.
+- *Keep this screen?*'s untested line, setup's Screen step and the table in
+  `docs/HARDWARE.md` follow the same rule. The *Hardware feedback* offer still
+  follows what was tested here: more reports are still wanted.
+- Underneath, the four states stay: *Tested*, *Reported*, *Reported with
+  problems*, *Known* / *Untested* / *Detected* - in the hardware report, the
+  logs and `hardware_reports.json`.

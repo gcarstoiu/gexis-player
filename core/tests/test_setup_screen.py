@@ -75,7 +75,7 @@ def test_the_screen_step_s_three_states():
     assert none["suggested"] is None and not none["seen"]["connected"]
     models = none["models"]
     assert len(models) == len(screens.all_screens()) == 106
-    assert set(models[0]) == {"id", "label", "maker", "model", "width", "height", "family", "tested", "skins", "skin_count"}
+    assert set(models[0]) == {"id", "label", "maker", "model", "width", "height", "family", "tested", "problem", "skins", "skin_count"}
     assert sum(m["tested"] for m in models) == 4
 
 
@@ -211,7 +211,7 @@ def test_a_screen_from_its_own_mode_is_one_setup_and_settings_can_name(tmp_path,
     monkeypatch.setattr(screen_apply, "STATE", state)
     label = "Other screen/1920 × 1080"
     assert label in settings_registry._screens()
-    assert settings_registry._screen_tags()[label] == "Untested"
+    assert label not in settings_registry._screen_tags(), "nothing beside an untested model (2026-10-18)"
     asked = []
     monkeypatch.setattr(screen_apply, "would_ask", lambda applied, **kw: asked.append(applied) or True)
     flow, net, *_ = make(tmp_path, FakeNM(devices=NOTHING))

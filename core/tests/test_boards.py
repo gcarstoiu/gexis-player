@@ -78,6 +78,9 @@ def test_an_output_is_offered_with_its_state_and_found_by_its_old_name():
     dac = Output(card="sndrpihifiberry", label="HiFiBerry DAC2 HD", control="DAC",
                  state="Tested", aka="HiFiBerry DAC+ HD")
     jack = Output(card="Headphones", label="Headphones (3.5 mm)", control="PCM")
-    assert dac.option == "HiFiBerry DAC2 HD — Tested" and jack.option == "Headphones (3.5 mm)"
+    # George, 2026-10-18: the name alone, Tested a tag beside it; the old
+    # stored form still finds it.
+    assert dac.option == "HiFiBerry DAC2 HD" and jack.option == "Headphones (3.5 mm)"
+    assert dac.shown_tested and not jack.shown_tested
     for stored in ("HiFiBerry DAC+ HD", "HiFiBerry DAC2 HD — Tested", "HiFiBerry DAC2 HD"):
         assert resolve(stored, [jack, dac], current="Headphones") is dac
