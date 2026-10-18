@@ -731,18 +731,6 @@
         ]
       },
       {
-        "key": "waiting_hint",
-        "type": "toggle",
-        "label": "Hint on the waiting screen",
-        "marks": "N",
-        "note": "One line above the sources: Start music from your phone.",
-        "default": true,
-        "onlyWhen": [
-          "lms_enabled",
-          false
-        ]
-      },
-      {
         "key": "waiting_background",
         "type": "choice",
         "label": "Background",

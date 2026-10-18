@@ -12,9 +12,9 @@
     smaller than the idle screen's (*Clock on the waiting screen*).
   - **Each waiting source pulses at the foot** - the marks, names and
     states of the library's waiting footer (`WaitingServices`), straight on
-    the picture without its plate (George, 2026-10-18) - and one line above
-    them is the only other text (*Hint on the waiting screen*). On a bar, the
-    clock is a column on the left and the marks stand beside it, with no hint.
+    the picture without its plate (George, 2026-10-18); no other text (its
+    hint line went the same day). On a bar, the clock is a column on the left
+    and the marks stand beside it.
   - **Settings stays the button in the corner** (ADR-0079), and a screen
     with every source switched off says so.
 
@@ -45,7 +45,6 @@
 
   const bar = $derived(screen.family === 'bar');
   const wantsClock = $derived(settings.waiting_clock !== false);
-  const wantsHint = $derived(settings.waiting_hint !== false && !bar);
   const twelve = $derived(settings.clock_format === '12 h');
   const name = $derived($settingsDevice.name || '');
 
@@ -112,7 +111,6 @@
     </div>
   {:else}
     <div class="foot">
-      {#if wantsHint}<div class="hint">Start music from your phone</div>{/if}
       <!-- The marks the library's footer shows, pulsing straight on the
            picture (George, 2026-10-18). -->
       <WaitingServices {availability} bare />
@@ -256,13 +254,6 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
-  }
-  .hint {
-    /* Room for the marks' rings, which pulse to 1.75 times their size. */
-    margin-bottom: 26px;
-    font-size: 19px;
-    color: var(--ink-strong);
-    text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45);
   }
   .credit {
     position: absolute;

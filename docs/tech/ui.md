@@ -352,8 +352,7 @@ scale factor) was tried first and set aside: the layouts are drawn for a
 
 `WaitingHome.svelte` (ADR-0079, drawn as ADR-0133) is the panel's root while
 `lms_enabled` is off and nothing is active: `Backdrop` behind a veil, the
-clock, date and device name top left (`waiting_clock`), the line *Start
-music from your phone* (`waiting_hint`, never on a bar), and a tile per
+clock, date and device name top left (`waiting_clock`), and a tile per
 renderer in `$sources` that `availability` marks waiting - drawn by
 `WaitingServices`, the library's waiting footer, in its `bare` form: the
 pulsing marks with their names and states straight on the picture, no plate
