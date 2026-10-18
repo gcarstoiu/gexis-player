@@ -466,8 +466,9 @@ On first start with no network, the player opens its own Wi-Fi, called
 *gexis-setup*. The screen shows two QR codes: one to join that network, one
 to open the setup page. The phone then walks through Wi-Fi, then asks
 whether this is a new player or a backup to restore. A new player goes on to
-a name, the clock, the output and the screen. Then, from your home Wi-Fi, the
-same page asks how you listen (Lyrion, Plex or streaming), what the screen
+a name, the clock, the output and its volume type, and the screen. Then, from
+your home Wi-Fi, the same page asks how you listen (Lyrion, Plex or
+streaming), whether the phone's touchpad works the screen, what the screen
 shows while music plays, while it waits and at night, and installs what that
 needs; *Do it later* keeps the defaults, as does leaving it until the
 player's next restart, and *Settings → System → Personalise* asks it all
@@ -709,7 +710,7 @@ pictures, the paired devices and the player's configuration into the
 player's Backups share on the network. Copy the backup off the player before
 flashing: on a phone or computer, *Settings → System → Restore* has *Download*
 beside each backup, or copy it from the share. After flashing, setup offers *Restore a backup* right after the
-Wi-Fi: choose the file on the phone, choose the output and the screen this
+Wi-Fi: choose the file on the phone, choose the output (with its volume type) and the screen this
 player has, check what the backup brings, and the player restarts with
 everything back. Sources and plugins come back on or off as they were when the
 backup was made. The name can be changed in that review (*Check it over*),

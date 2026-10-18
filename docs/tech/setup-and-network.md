@@ -226,8 +226,11 @@ that reloads resumes from it; the password is never handed back, only
 `has_password`.
 
 The phone's steps (`FirstUsePage.svelte`, `mode="p1"`): Network, Start
-(ADR-0131: a new player or a backup), Name, Time (zone and 12/24 h), Output,
-Screen, Check it over. What the player plays and shows is not asked here:
+(ADR-0131: a new player or a backup), Name, Time (zone and 12/24 h), Output
+(with the volume type under it, George 2026-10-18: Hardware offered only on
+an output with a control of its own, from `GET /setup/outputs`; the answer
+`volume` becomes `output_mode`, written after `output_device`), Screen, Check
+it over. What the player plays and shows is not asked here:
 it is part 2's (ADR-0149, below), so setup records no `lms_mode` and leaves
 Lyrion as it is. Restoring asks Network, Start, the upload, Output and Screen
 (this player's hardware, never the backup's), then Check it over, where the
@@ -517,6 +520,7 @@ All under the core's HTTP server on port 8090 (`wsserver.py`):
 | `GET /setup/screen` | the Screen step: what the screen reports, the suggested model, all models |
 | `POST /setup/finish` | start applying; answers `202` with `{"finishing": true, "keep_question": ...}` |
 | `GET /setup/plugins` | ADR-0128: the plugins the Plugins step offers - `id`, `name`, `summary`, `notice`, `from`, `component` |
+| `GET /setup/outputs` | The Output step's volume choice: each output (`option`, as Settings lists it) and whether it has a volume control of its own (`hardware`) |
 | `POST /setup/backup` | ADR-0131: a backup as the request body (`?name=` its file name); answers the setup answers with the review, or 400 with the reason |
 | `DELETE /setup/backup` | ADR-0131: forget the uploaded backup |
 
@@ -688,7 +692,11 @@ defaults kept, one Lyrion server found used).
 page reads `/settings`, `GET /personalise` (whether this is a first run, and
 the plugins it may switch on), the Lyrion servers found
 (`/settings/lms_server/items`), and follows `/state` for Plexamp's download,
-a pairing request and the settling.
+a pairing request and the settling. Its questions, in order: how you listen
+(and Lyrion, its folders, Plexamp, Browse), Spotify, Bluetooth, then, with a
+screen, Touchpad (`phone_touchpad`, George 2026-10-18; its preview is the
+library with the pointer moving and tapping, `PanelMini`'s `pointer`), the
+visualiser, the waiting and idle screens, standby.
 
 **The panel**: while it is owed and the player has a screen, `SetupScreen`
 shows the step *Make it yours on your phone*, a QR code to

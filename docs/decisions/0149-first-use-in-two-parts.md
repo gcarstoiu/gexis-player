@@ -248,6 +248,24 @@ it as it should be"*)
 25. Checked side by side against the prototype at 390 × 844 and 1100 × 700,
     every part 1 and part 2 screen, with the player's real data.
 
+**Added at George's request (2026-10-18)**
+26. **A Touchpad step in part 2, before the visualiser** (*"just a note ...
+    saying where more settings around the touchpad are and what these
+    settings are"*): one switch, *Phone touchpad*, and one info note naming
+    *Display → Touchpad* with Pointer speed and Pointer style; no new
+    setting. Skipped without a screen. Its header is the panel preview (the
+    library) with the player's teal pointer gliding and tapping, drawn with
+    the design's tap ring; switched off, no pointer. Its colour is the one
+    in the design's palette no step used (`#a8d68f`).
+27. **The Output step asks the volume type** (Hardware, Software, Fixed),
+    as Settings' Volume row offers it for the output chosen: Hardware is
+    drawn as unavailable, with Settings' reason, on an output with no
+    control of its own, and choosing such an output moves Hardware to
+    Software. On a restore too, since the volume type follows this player's
+    output. The Volume row's limits now change the moment an output is
+    chosen, not when the switch runs, so a volume type written right after
+    the output is judged against it.
+
 **Settled by George afterwards (2026-10-18)**
 - **Personalise** is in ADR-0022's inventory (*"Yes it goes in the list"*).
 - Part 1 is tested by George on sofapi after *Reset to factory settings*

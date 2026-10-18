@@ -65,7 +65,8 @@ instead, at the address the screen shows, or
 
 The phone may say the setup Wi-Fi has no internet. That is expected: stay
 connected. The page then walks you through what the player needs to run -
-your Wi-Fi, a name, the clock, the sound output and the screen - or
+your Wi-Fi, a name, the clock, the sound output and how its volume is set,
+and the screen - or
 restores a backup of an earlier player.
 
 When you finish, the player joins your Wi-Fi, restarting if its name or
@@ -75,8 +76,9 @@ the page gives (the player's screen shows a code for it too).
 ## 5. Make it yours
 
 From your home Wi-Fi, the same page asks how you listen - your own music
-with Lyrion, Plex, or streaming only - and what the screen shows while music
-plays, while it waits and at night. Each question has a default; *Do it
+with Lyrion, Plex, or streaming only - whether the phone's touchpad works the
+screen, and what the screen shows while music plays, while it waits and at
+night. Each question has a default; *Do it
 later* keeps them all. Lyrion, Plexamp and the visualiser's skins then
 download, and the page and the player's screen show each one arriving.
 Everything here can be changed later, or asked again from *Settings → System
