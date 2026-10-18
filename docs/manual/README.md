@@ -51,7 +51,7 @@ strip at the bottom. The row of cards scrolls sideways.*
 **With the Lyrion client switched off** there is no library, and the
 panel's home is the **waiting screen**: the clock, the date and the player's
 name over the same picture as the idle screen, and a tile for each source
-waiting to be played to - its state under its name. Start music from a phone
+waiting to be played to - its mark, its name under it, and a dot: ready. Start music from a phone
 and the panel moves to Now Playing. Settings is the button in the top right
 corner.
 
