@@ -421,7 +421,7 @@ answer*; the other shares are still mounted.
 | Volume: Volume drawer auto-hide | How long the drawer stays when a change from elsewhere opened it. |
 | Photo service and location: Pixabay API key, Location | Shared by both screens below. The key is for online wallpapers (Pixabay, free). The location is for the weather and for the wallpapers' seasons and holidays; until one is set, the country comes from the time zone. |
 | Home screen: Home screen list, Items in the strip | With the Lyrion client on: what the row under Home's cards shows, and how many. |
-| Home screen: Clock on the waiting screen, Hint on the waiting screen | With the Lyrion client off: the time, date and name in the top left, and the line *Start music from your phone* above the sources. |
+| Home screen: Clock on the waiting screen | With the Lyrion client off: the time, date and name in the top left. |
 | Home screen: Background and the rows after it | With the Lyrion client off: the waiting screen's own picture, set apart from the idle screen's, with the same rows as below (no artist pictures). |
 | Idle screen | On or off. Off (the default on a new player), the panel stays on what it shows and the rows below are hidden. |
 | Idle screen: Screen, Timeout | The built-in clock-and-weather screen, or an external page; and after how long, with nothing playing and nobody touching the panel. |

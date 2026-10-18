@@ -266,3 +266,15 @@ whose tags carry no astronomy word:
 inside it is read as AND and narrows the answer, so the words are single.
 *universe* is left out: it matched the cosmos flower. Calm is unchanged.
 Not measured: later pages, and how the answer moves from day to day.
+
+## Amended 2026-10-18: the sources pulse on the picture, and no hint line
+
+George, with five sources on the 10.1" cutting the tiles' names: *"let's just
+reuse what we have on the waiting screen with the simple or extended
+navigation, but without the back bar. Just the icons pulsating directly on
+the wallpaper background"*. The tiles are gone; the waiting screen draws the
+library's waiting footer (`WaitingServices`) without its plate. Then, of the
+line *Start music from your phone*: *"Let's remove it together also with its
+setting"* - the line and *Hint on the waiting screen* are gone (settings
+migration 11 drops the stored value).
+

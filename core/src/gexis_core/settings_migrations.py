@@ -146,6 +146,9 @@ MIGRATIONS: tuple[Migration, ...] = (
     # loses the word, so the list shows it chosen.
     convert("output_device", lambda v: _without_state(v) if isinstance(v, str) else v,
             "output_device: the name alone, without Tested / Known / Detected / Reported"),
+    # George, 2026-10-18: the waiting screen's line "Start music from your
+    # phone" is gone, and its switch with it.
+    drop("waiting_hint", "waiting_hint: the waiting screen has no hint line"),
 )
 
 

@@ -289,6 +289,35 @@ body = pm[pm.index('</helmet>') + 9: pm.index('</x-dc>')]
 pm_imports = {'artist-photo.webp': 'artistPhoto', 'gexis-mark.svg': 'mark', 'icon-bluetooth.png': 'btIcon', 'icon-lyrion.svg': 'lyrionIcon',
               'icon-spotify.png': 'spotifyIcon', 'wallpapers/calm/c148381086.webp': 'calm'}
 pm_markup = convert(body, pm_imports)
+# **Today's date, not the design's sample** (Thursday 15 October): the
+# clock beside it is the player's own.
+n = pm_markup.count('>Thursday 15 October<')
+assert n >= 1
+pm_markup = pm_markup.replace('>Thursday 15 October<', '>{today()}<')
+assert pm_markup.count('>Thursday · 15 October<') == 1
+pm_markup = pm_markup.replace('>Thursday · 15 October<', ">{today(' · ')}<")
+pm_extra_today = """
+  function today(sep = ' ') {
+    const d = new Date();
+    return d.toLocaleDateString('en-GB', { weekday: 'long' }) + sep + d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+  }
+"""
+
+# **The waiting screen as the panel now draws it** (George, 2026-10-18): the
+# sources are the library's pulsing marks straight on the picture - no
+# tiles, no plate - and the line "Start music from your phone" is gone.
+for a2, b2 in (
+    ('<div style="font-size:1.4844cqw;color:rgba(233,238,242,0.88);text-shadow:0 1px 12px rgba(0,0,0,0.45);">Start music from your phone</div>\n', ''),
+    ('grid-template-columns:repeat({V.wCols}, minmax(0,1fr));gap:1.25cqw;', 'grid-template-columns:repeat({V.wCols}, minmax(0,1fr));gap:1.25cqw;justify-items:center;'),
+    ('<div style="height:10.3125cqw;box-sizing:border-box;border-radius:1.875cqw;padding:0 1.7188cqw;display:flex;align-items:center;gap:1.4063cqw;min-width:0;background:rgba(16,26,33,0.72);border:1px solid {m.border};">',
+     '<div style="display:flex;flex-direction:column;align-items:center;gap:0.9375cqw;min-width:0;max-width:100%;">'),
+    ('<div style="width:5.625cqw;height:5.625cqw;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:{m.markBg};">',
+     '<div style="position:relative;width:5.625cqw;height:5.625cqw;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:{m.markBg};"><span style="position:absolute;inset:-0.47cqw;border-radius:50%;border:0.16cqw solid {m.border};animation:npRing 2800ms ease-out infinite;"></span>'),
+    ('<div style="flex:1;min-width:0;">', '<div style="min-width:0;max-width:100%;text-align:center;text-shadow:0 1px 8px rgba(0,0,0,0.6);">'),
+):
+    assert pm_markup.count(a2) == 1, a2[:60]
+    pm_markup = pm_markup.replace(a2, b2)
+
 # **The flow shows the sources chosen** (Getting ready): each source's turn
 # is its own cycle - Lyrion, Plexamp, Spotify, Bluetooth, 3 s each over 12 s
 # - and with `marks` only the chosen ones take turns, 3 s each still.
@@ -308,7 +337,7 @@ helmet += """
   @keyframes fuCycle2{0%,44%{opacity:1;}50%,94%{opacity:0;}100%{opacity:1;}}
   @keyframes fuCycle3{0%,29.3%{opacity:1;}33.3%,96%{opacity:0;}100%{opacity:1;}}
 """
-logic_extra = """
+logic_extra = pm_extra_today + """
   // The flow's sources: all four in turn (How will you listen?), or the
   // ones chosen (Getting ready), 3 s each.
   const FLOW = ['lyr', 'plex', 'spo', 'bt'], FLOW_DELAY = { lyr: '0s', plex: '-9s', spo: '-6s', bt: '-3s' };

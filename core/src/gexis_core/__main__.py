@@ -2568,7 +2568,7 @@ async def main() -> None:
                # ADR-0133: read when the next picture is chosen.
                "wallpaper_styles": None, "wallpaper_time_of_day": None,
                "wallpaper_seasons": None, "wallpaper_holidays": None,
-               "waiting_clock": None, "waiting_hint": None,
+               "waiting_clock": None,
                "idle_icons": None,
                # Finding 118: read by the idle screen as it draws the icons.
                "idle_icon_motion": None,

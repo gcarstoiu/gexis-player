@@ -21,6 +21,11 @@ const cap = k => 'k' + k[0].toUpperCase() + k.slice(1);
 const FC = [['Fri', 'part', '18°', '9°'], ['Sat', 'sun', '21°', '11°'], ['Sun', 'rain', '16°', '10°']];
 const cond = c => ({ sunDisplay: c === 'sun' || c === 'part' ? 'block' : 'none', cloudDisplay: c === 'part' || c === 'cloud' || c === 'rain' ? 'block' : 'none', rainDisplay: c === 'rain' ? 'block' : 'none' });
 
+  function today(sep = ' ') {
+    const d = new Date();
+    return d.toLocaleDateString('en-GB', { weekday: 'long' }) + sep + d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+  }
+
   // The flow's sources: all four in turn (How will you listen?), or the
   // ones chosen (Getting ready), 3 s each.
   const FLOW = ['lyr', 'plex', 'spo', 'bt'], FLOW_DELAY = { lyr: '0s', plex: '-9s', spo: '-6s', bt: '-3s' };
@@ -103,7 +108,7 @@ const cond = c => ({ sunDisplay: c === 'sun' || c === 'part' ? 'block' : 'none',
       <div style="position:absolute;top:2.0313cqw;right:2.0313cqw;z-index:2;width:5cqw;height:5cqw;border-radius:1.4063cqw;border:1px solid rgba(233,238,242,0.14);background:rgba(16,26,33,0.6);box-sizing:border-box;display:flex;align-items:center;justify-content:center;"><span style="position:relative;width:2.0313cqw;height:1.4063cqw;display:block;"><span style="position:absolute;left:0;top:0.3125cqw;width:2.0313cqw;height:0.1563cqw;border-radius:1px;background:#e9eef2;opacity:0.55;display:block;"></span><span style="position:absolute;top:0.1172cqw;left:0.4688cqw;width:0.5469cqw;height:0.5469cqw;border-radius:50%;background:#e9eef2;display:block;"></span><span style="position:absolute;left:0;top:0.9375cqw;width:2.0313cqw;height:0.1563cqw;border-radius:1px;background:#e9eef2;opacity:0.55;display:block;"></span><span style="position:absolute;top:0.7422cqw;left:1.1719cqw;width:0.5469cqw;height:0.5469cqw;border-radius:50%;background:#e9eef2;display:block;"></span></span></div>
       <div style="position:absolute;left:4.375cqw;top:3.5938cqw;z-index:1;color:#e9eef2;text-shadow:0 1px 14px rgba(0,0,0,0.35);display:{V.clockDisplay};">
         <div style="font-size:9.375cqw;font-weight:300;line-height:1;letter-spacing:-0.03em;font-variant-numeric:tabular-nums;">{V.time}</div>
-        <div style="margin-top:0.7813cqw;font-size:2.0313cqw;font-weight:600;color:rgba(233,238,242,0.88);">Thursday 15 October</div>
+        <div style="margin-top:0.7813cqw;font-size:2.0313cqw;font-weight:600;color:rgba(233,238,242,0.88);">{today()}</div>
         <div style="margin-top:1.0938cqw;font-family:'IBM Plex Mono','Courier New',monospace;font-size:1.0938cqw;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.88);">{V.player}</div>
       </div>
       {#if V.wNone}
@@ -114,17 +119,16 @@ const cond = c => ({ sunDisplay: c === 'sun' || c === 'part' ? 'block' : 'none',
       {/if}
       {#if V.wServices}
         <div style="position:absolute;left:4.375cqw;right:4.375cqw;bottom:4.0625cqw;z-index:1;display:flex;flex-direction:column;gap:1.25cqw;">
-          <div style="font-size:1.4844cqw;color:rgba(233,238,242,0.88);text-shadow:0 1px 12px rgba(0,0,0,0.45);">Start music from your phone</div>
-          <div style="display:grid;grid-template-columns:repeat({V.wCols}, minmax(0,1fr));gap:1.25cqw;">
+                    <div style="display:grid;grid-template-columns:repeat({V.wCols}, minmax(0,1fr));gap:1.25cqw;justify-items:center;">
             {#each V.wTiles as m}
-              <div style="height:10.3125cqw;box-sizing:border-box;border-radius:1.875cqw;padding:0 1.7188cqw;display:flex;align-items:center;gap:1.4063cqw;min-width:0;background:rgba(16,26,33,0.72);border:1px solid {m.border};">
-                <div style="width:5.625cqw;height:5.625cqw;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:{m.markBg};">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:0.9375cqw;min-width:0;max-width:100%;">
+                <div style="position:relative;width:5.625cqw;height:5.625cqw;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:{m.markBg};"><span style="position:absolute;inset:-0.47cqw;border-radius:50%;border:0.16cqw solid {m.border};animation:npRing 2800ms ease-out infinite;"></span>
                   {#if m.isLyr}<img src={lyrionIcon} alt="" style="display:block;width:3.9844cqw;height:2.9688cqw;" />{/if}
                   {#if m.isSpo}<img src={spotifyIcon} alt="" style="display:block;width:2.9688cqw;height:2.9688cqw;opacity:0.8;" />{/if}
                   {#if m.isBt}<img src={btIcon} alt="" style="display:block;width:2.9688cqw;height:2.9688cqw;opacity:0.8;" />{/if}
                   {#if m.isPlex}<span style="font-size:2.6cqw;font-weight:800;color:rgba(233,238,242,0.8);line-height:1;">P</span>{/if}
                 </div>
-                <div style="flex:1;min-width:0;">
+                <div style="min-width:0;max-width:100%;text-align:center;text-shadow:0 1px 8px rgba(0,0,0,0.6);">
                   <div style="font-size:1.9531cqw;font-weight:700;color:#e9eef2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{m.name}</div>
                   <div style="margin-top:0.625cqw;font-family:'IBM Plex Mono','Courier New',monospace;font-size:0.9375cqw;letter-spacing:0.2em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{m.statusInk};">{m.status}</div>
                 </div>
@@ -147,7 +151,7 @@ const cond = c => ({ sunDisplay: c === 'sun' || c === 'part' ? 'block' : 'none',
         <span style="font-size:4.5313cqw;line-height:1;color:#7ed6bc;paint-order:stroke fill;-webkit-text-stroke:{V.stroke};text-shadow:0 0.1563cqw 0.7813cqw rgba(7,11,15,0.55);">{V.ss}</span>
         <span style="font-size:4.5313cqw;line-height:1;color:#7ed6bc;paint-order:stroke fill;-webkit-text-stroke:{V.stroke};text-shadow:0 0.1563cqw 0.7813cqw rgba(7,11,15,0.55);display:{V.ampmDisplay};">{V.ampm}</span>
       </div>
-      <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:2.0313cqw;letter-spacing:0.2em;text-transform:uppercase;color:#e9eef2;white-space:nowrap;paint-order:stroke fill;-webkit-text-stroke:{V.stroke};text-shadow:0 0.1563cqw 0.7813cqw rgba(7,11,15,0.55);display:{V.clockDisplay};">Thursday · 15 October</div>
+      <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:2.0313cqw;letter-spacing:0.2em;text-transform:uppercase;color:#e9eef2;white-space:nowrap;paint-order:stroke fill;-webkit-text-stroke:{V.stroke};text-shadow:0 0.1563cqw 0.7813cqw rgba(7,11,15,0.55);display:{V.clockDisplay};">{today(' · ')}</div>
       
       
     </div>

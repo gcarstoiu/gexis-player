@@ -331,7 +331,7 @@ in Display:
 | Seasons | [N] | The season's pictures, by hemisphere from the time zone; default on |
 | Holidays | [N] | New Year, Christmas and Easter (Western or Orthodox) for the player's country, from the time zone and then the weather location; default on. On a holiday's days its pictures replace the styles (George: *"They replace them. For the time being if option is selected."*). **From 2026-10-11 it governs *Wallpapers online* too**, replacing the topics (George: *"holidays are a toggle that supersede the choice of wallpaper"*); `onlyWhen` names both backgrounds |
 | Clock on the waiting screen | [N] | Time, date and the player's name, top left; follows *Clock format*; default on |
-| Hint on the waiting screen | [N] | *Start music from your phone* above the source tiles; default on |
+| Hint on the waiting screen | [N] | *Start music from your phone* above the source tiles; default on. **Removed 2026-10-18** with the line itself (George: *"Let's remove it together also with its setting"*); settings migration 11 drops the stored value |
 | The home screen's background: Background, Wallpaper topics, Wallpaper styles, Follow the time of day, Seasons, Holidays, Background brightness, Change the picture every | [N] | **Appended 2026-10-11, confirmed by George** (ADR-0133 amended, second): the waiting screen's own, `waiting_*`, under *Home screen*, with the Lyrion client off; the idle screen's rows unchanged. **Fresh defaults** (George), not a copy; no *Artist pictures* |
 | Section headings: Touchpad, Volume, Photo service and location | — | Not settings: Display's sections from 2026-10-11 (George). *Photo service and location* holds the Pixabay key and the location, shared by both screens |
 
