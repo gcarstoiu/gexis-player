@@ -130,6 +130,16 @@ its space. Not yet tried: a share added at a sub-folder actually mounting
 (sofapi's server is off). Test fronts: scratchpad `fakeshares.py` (a
 stand-in Tower on 8199) behind `p2proxy.py` with `SHAREUP`.
 
+**Tick several** (on `ph-first-use`, `+git109` on sofapi; ADR-0115 decision
+26, George 2026-10-18): drives, shares and folders carry tick boxes, rows
+open, the path (`crumbs`) goes back up, one *Add N folders*; part 2 and
+Settings. Real Tower on sofapi: `Music/Clean` lists 499 folders.
+**Owed to George: the Music share's floor** - proposed 4 GB, hardcoded
+(ADR-0022 [H] once he confirms), the share read-only below it; figures:
+Lyrion's library on his 10^4-file library 151 MB + artwork 670 MB (Finding
+109), sofapi's update staging 476 MB, the largest skin pack 484 MB packed,
+the filesystem's own root reserve 2.5 GB (not usable by the share).
+
 **Release build output lives in `~/.local/share/gexis-release-out`**: in each
 release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
 (excluded in `.git/info/exclude`). `reuse.py` reuses a published file only
