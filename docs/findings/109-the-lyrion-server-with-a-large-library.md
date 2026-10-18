@@ -9,7 +9,7 @@ compare with a Lyrion server on other hardware?
 **Scope.** `gexis`: Raspberry Pi 4 Model B rev 1.5, 4 GB (3,795 MB usable),
 on **Wi-Fi**, Gexis Player 0.8.4 with core previews, Lyrion 9.1.1 run at the
 lowest CPU and I/O priority (ADR-0115). The library: George's NAS share
-`//Tower.local/Music` over SMB, mounted read-only, **tens of thousands of files** (tens of thousands of songs, thousands of albums, thousands of artists once scanned). Sampled every 15 s: the
+`//Mediabox.local/Music` over SMB, mounted read-only, **tens of thousands of files** (tens of thousands of songs, thousands of albums, thousands of artists once scanned). Sampled every 15 s: the
 unit's cgroup memory (own memory - `anon` - and file cache apart), each
 Lyrion process's RSS, CPU time, load, temperature, Lyrion's scan progress.
 Speeds: `lyrion_bench.py` (scratch) - eight requests, each ten times after

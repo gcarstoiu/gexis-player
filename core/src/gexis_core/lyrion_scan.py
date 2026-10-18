@@ -5,8 +5,8 @@ available shares in the network?"*, then *"A"*).
 
 Two steps, as a person would take them: the servers that announce
 themselves on the network (mDNS: `_smb._tcp`, `_nfs._tcp`), then one
-server's shares - which a NAS often lists only after a login (George's Ark
-refuses a guest; his Nuc does not), so that step can come back asking for
+server's shares - which a NAS often lists only after a login (a NAS here (Storebox)
+refuses a guest; a mini PC (Minibox) does not), so that step can come back asking for
 one. A server that does not announce itself (many Windows PCs) is still
 added by typing its address.
 """
@@ -57,7 +57,7 @@ def parse_browse(output: str, own: set[str] = frozenset()) -> list[Server]:
         kind = "smb" if service == "_smb._tcp" else "nfs" if service == "_nfs._tcp" else None
         if kind is None or host in own or address in own or name in own:
             continue
-        # By its announced name (Tower.local), which survives a new DHCP
+        # By its announced name (Mediabox.local), which survives a new DHCP
         # address; the player resolves .local names through mDNS.
         host = host or address
         label = host.removesuffix(".local") if host != address else name

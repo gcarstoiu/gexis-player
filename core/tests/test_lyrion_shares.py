@@ -125,17 +125,17 @@ def test_the_store_is_only_touched_on_the_thread_that_opened_it(tmp_path):
 
 def test_a_share_reads_as_its_name_on_its_server():
     """George, 2026-10-03: the row read "just code"."""
-    assert ls.label("//Tower.local/Music") == ("Music", "Tower")
+    assert ls.label("//Mediabox.local/Music") == ("Music", "Mediabox")
     assert ls.label("//nas/media/Music/") == ("Music", "nas")
     assert ls.label("nas.local:/volume1/music") == ("music", "nas")
 
 
 def test_a_row_names_the_share_and_keeps_its_address_for_forget(tmp_path):
     s, _, _ = shares(tmp_path)
-    s.add("//Tower.local/Music", "guest", None)
+    s.add("//Mediabox.local/Music", "guest", None)
     [item] = s.items()
-    assert item["name"] == "Music" and item["address"] == "//Tower.local/Music"
-    assert item["meta"].startswith("On Tower · ")
+    assert item["name"] == "Music" and item["address"] == "//Mediabox.local/Music"
+    assert item["meta"].startswith("On Mediabox · ")
     assert "password" not in item and "user" not in item, "a user only where it is asked for again"
 
 

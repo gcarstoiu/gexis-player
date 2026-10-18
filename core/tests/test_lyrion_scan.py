@@ -30,7 +30,7 @@ def test_a_server_s_disk_shares_and_not_its_hidden_or_printer_ones():
 
 
 def test_a_nas_that_refuses_a_guest_asks_for_a_login_and_the_password_stays_off_the_command_line():
-    """George's Ark refuses a guest list; his Nuc does not."""
+    """A NAS (Storebox) refuses a guest list; a mini PC (Minibox) does not."""
     calls = []
 
     def run(command, **kw):

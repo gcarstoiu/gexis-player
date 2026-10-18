@@ -840,13 +840,13 @@ async def test_a_share_browse_that_fails_says_so(tmp_path, monkeypatch):
     server = StateServer(StateStore({}), settings=settings, lyrion_shares=shares)
     url = "/settings/lyrion-server.shares/items"
     async with TestClient(TestServer(server.make_app())) as client:
-        r = await client.post(url, json={"name": "Tower", "action": "browse", "server": "abc"})
+        r = await client.post(url, json={"name": "Mediabox", "action": "browse", "server": "abc"})
         assert r.status == 200
         answer = await r.json()
-        assert answer["ok"] is False and "Tower" in answer["error"]
-        assert asked[0].host == "Tower", "a server that is not an object is the name's"
+        assert answer["ok"] is False and "Mediabox" in answer["error"]
+        assert asked[0].host == "Mediabox", "a server that is not an object is the name's"
         monkeypatch.setattr(lyrion_scan, "shares", lambda *a, **k: (_ for _ in ()).throw(FileNotFoundError("smbclient")))
-        r = await client.post(url, json={"name": "Tower", "action": "browse"})
+        r = await client.post(url, json={"name": "Mediabox", "action": "browse"})
         assert r.status == 200 and (await r.json())["ok"] is False
 
 

@@ -319,7 +319,7 @@ def _bt_store():
     return StateStore(_caps("bluetooth", "lms"))
 
 
-BT_TRACK = TrackMetadata(artist="Sting", album="57th & 9th", title="I Can't Stop Thinking About You")
+BT_TRACK = TrackMetadata(artist="Artist C", album="Album C", title="Track D")
 
 
 def test_a_found_cover_fills_the_hole_a_renderer_left():
@@ -357,7 +357,7 @@ def test_a_found_cover_does_not_outlive_its_track():
     store.set_metadata("bluetooth", BT_TRACK)
     store.set_found_artwork("bluetooth", BT_TRACK, "http://caa/found.jpg")
 
-    store.set_metadata("bluetooth", TrackMetadata(artist="Sting", album="Nothing Like the Sun", title="Englishman in New York"))
+    store.set_metadata("bluetooth", TrackMetadata(artist="Artist C", album="Album D", title="Track E"))
     assert store.state.metadata.artwork is None
 
 

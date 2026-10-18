@@ -32,7 +32,7 @@ does not exist:
 
 | artist_id | `image_200x200_o.png` |
 |---|---|
-| 7452 (2 Unlimited) | 93,939 b |
+| 7452 (Artist A) | 93,939 b |
 | 12316 (Rod Stewart) | 62,997 b |
 | 999999 (no such artist) | 6,944 b — the plugin's own placeholder |
 
@@ -40,7 +40,7 @@ does not exist:
 
 ```
 ["musicartistinfo","biography",0,1,"artist_id:7452"]
-  -> {"artist_id":"7452","biography":"2 Unlimited are a Belgian-Dutch dance
+  -> {"artist_id":"7452","biography":"Artist A are a dance
       music act, founded by Belgian producers/songwriters ..."}
 ```
 
