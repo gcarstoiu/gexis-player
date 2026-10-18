@@ -76,7 +76,7 @@ function row(o) {
 function block(b) {
   const o = { head: b.head || '', headDisplay: b.head ? 'block' : 'none' };
   BTYPES.forEach(t => { o['is' + t] = b.t === t; });
-  if (b.t === 'List') o.rows = b.rows.map(row);
+  if (b.t === 'List') { o.rows = b.rows.map(row); o.scrollStyle = b.rows.length > 6 ? 'max-height:430px;overflow-y:auto;overscroll-behavior:contain;padding-right:4px;' : ''; }
   if (b.t === 'Note') { const c = TONES[b.tone]; Object.assign(o, { bar: c[0], bg: c[1], border: c[2], title: b.title || '', titleDisplay: b.title ? 'block' : 'none', text: b.text }); }
   if (b.t === 'Field') Object.assign(o, { label: b.label, value: b.value, onChange: b.fn || noop, ph: b.ph || '', type: b.type || 'text', hint: b.hint || '', hintDisplay: b.hint ? 'block' : 'none', ro: !!b.ro, op: b.ro ? '0.45' : '1', cur: b.ro ? 'not-allowed' : 'text' });
   if (b.t === 'Code') Object.assign(o, { label: b.label, code: b.code, text: b.text });
@@ -1255,7 +1255,7 @@ class Component extends DCLogic {
                 {#if b.isList}
                   <div style="display:flex;flex-direction:column;gap:6px;">
                     <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);padding:4px 2px;display:{b.headDisplay};">{b.head}</div>
-                    {#each b.rows as o}
+                    <div style="display:flex;flex-direction:column;gap:6px;{b.scrollStyle}">{#each b.rows as o}
                       <div onclick={o.onClick} style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;min-height:64px;padding:12px 16px;border-radius:14px;box-sizing:border-box;transition:background 150ms,border-color 150ms;cursor:{o.cursor};background:{o.bg};border:1px {o.bs} {o.border};">
                         <span style="width:24px;height:24px;border-radius:50%;flex-shrink:0;box-sizing:border-box;align-items:center;justify-content:center;display:{o.radioDisplay};border:2px solid {o.ring};">
                           <span style="width:11px;height:11px;border-radius:50%;background:#7ed6bc;display:{o.dotDisplay};"></span>
@@ -1301,7 +1301,7 @@ class Component extends DCLogic {
                         </span></span>
                         <span style="width:11px;height:11px;border-right:2.5px solid rgba(233,238,242,0.42);border-top:2.5px solid rgba(233,238,242,0.42);transform:rotate(45deg);flex-shrink:0;margin-right:4px;display:{o.chevDisplay};"></span>
                       </div>
-                    {/each}
+                    {/each}</div>
                   </div>
                 {/if}
 

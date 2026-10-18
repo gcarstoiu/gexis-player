@@ -57,6 +57,22 @@ j = markup.index("</span>", markup.index("</span>", i) + 7) + 7
 inner = markup[i:j].replace("display:{o.chkDisplay};", "display:flex;")
 markup = (markup[:i] + '<span onclick={(e) => { if (o.onTick) { e.stopPropagation(); o.onTick(); } }} style="display:{o.chkDisplay};padding:12px;margin:-12px;flex-shrink:0;">'
           + inner + "</span>" + markup[j:])
+# A long list of folders scrolls inside itself, about six rows high, so the
+# Add button under it stays in reach (George, 2026-10-18: 499 folders meant
+# scrolling "an apparently endless screen" to it). The rows' own wrapper.
+li = markup.index("{#if b.isList}")
+ea = markup.index("{#each b.rows as o}", li)
+depth, k = 0, ea
+while True:  # the {/each} that closes this one, past any inside the row
+    nxt_open, nxt_close = markup.find("{#each", k + 1), markup.find("{/each}", k + 1)
+    if nxt_open != -1 and nxt_open < nxt_close:
+        depth, k = depth + 1, nxt_open
+    elif depth:
+        depth, k = depth - 1, nxt_close
+    else:
+        ee = nxt_close + len("{/each}")
+        break
+markup = markup[:ea] + '<div style="display:flex;flex-direction:column;gap:6px;{b.scrollStyle}">' + markup[ea:ee] + "</div>" + markup[ee:]
 # A subgroup heading, as Settings draws one (`.subhead`: a dot, the name in
 # mono capitals in its colour, a rule to the edge) - George, 2026-10-18:
 # the groups of Where is your music? named "like the Settings subgroups".
@@ -104,6 +120,7 @@ rep("onClick: o.fn || noop, cursor: o.fn ? 'pointer' : 'default',", "onClick: o.
 rep("chkDisplay: k === 'chk' ? 'flex' : 'none',", "chkDisplay: k === 'chk' || k === 'pick' ? 'flex' : 'none',")
 rep("chevDisplay: k === 'hub' ? 'block' : 'none'", "chevDisplay: k === 'hub' || (k === 'pick' && o.fn) ? 'block' : 'none'")
 rep("const BTYPES = ['List',", "const BTYPES = ['Sub', 'List',")
+rep("  if (b.t === 'List') o.rows = b.rows.map(row);", "  if (b.t === 'List') { o.rows = b.rows.map(row); o.scrollStyle = b.rows.length > 6 ? 'max-height:430px;overflow-y:auto;overscroll-behavior:contain;padding-right:4px;' : ''; }")
 rep("  if (b.t === 'P' || b.t === 'Head') o.text = b.text;", "  if (b.t === 'P' || b.t === 'Head') o.text = b.text;\n  if (b.t === 'Sub') { o.text = b.text; o.accent = b.accent; }")
 rep("  if (b.t === 'Dev') { o.items = ", "  if (b.t === 'Dev') { o.head = b.head || 'Trusted devices'; o.items = ")
 rep("    if (id === 'done') this.setState({ inst: 0 });", "    if (id === 'done') live.finish();\n    if (id === 'later') live.later();\n    if (id === 'bluetooth') live.trusted();\n    if (id === 'folders') { live.loadShares(); live.loadUsb(); live.loadSpace(); }")
