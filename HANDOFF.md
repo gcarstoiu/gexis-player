@@ -29,9 +29,12 @@ verbatim, and 40 asserted replacements call the core. Change the design, then
 generate again; never restyle the `.svelte` by hand. Every screen was checked
 side by side with the prototype. ADR-0149's decisions were revised (25,
 including the two kept against the design: Output and the rename/second
-player on a restore, George 2026-10-08). **sofapi runs it** (UI and player
-`1.0.6+git22`, core `+git12`; part 2 opens from Settings → System →
-Personalise). *Personalise* is in ADR-0022 (George, 2026-10-18). Waiting
+player on a restore, George 2026-10-08). **sofapi runs it** (core and player
+`1.0.6+git28`, UI `+git22`; part 2 opens from Settings → System →
+Personalise). Since George's notes of 2026-10-18: part 2 is owed only until
+the first boot after setup (`personalise.at_start`), a restore is pinned by
+a test never to owe it, and the visualiser tweaks show only what the skin
+type draws (on `phase-13d`, merged into `ph-first-use`). *Personalise* is in ADR-0022 (George, 2026-10-18). Waiting
 for George: his test of part 2, then part 1 on sofapi after *Reset to
 factory settings* (his choice, instead of a fresh card), then the PR.
 
