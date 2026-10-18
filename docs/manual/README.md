@@ -432,7 +432,7 @@ answer*; the other shares are still mounted.
 | Idle screen: Weather icon motion | *Animated* or *Static*. Animated icons use about half of one of the Pi's four processor cores while the idle screen is up; Static uses almost none. |
 | Visualiser: Timeout, Stop when nothing is playing | When the visualiser takes the screen while music plays, and when it gives it back. |
 | Visualiser: Skin type, Rotate skin per track, Skin | Which skins it uses; tap a skin to preview it, then *Use this skin*. |
-| Visualiser tweaks | How the bars and needles move, how far the needles follow the volume, how high they read (*Gain*), and whether turntables and tapes turn. |
+| Visualiser tweaks | How the bars and needles move, how far the needles follow the volume, how high they read (*Gain*), and whether turntables and tapes turn. Only what the chosen *Skin type* draws is listed: the spectrum's smoothing for skins with a spectrum, the needles' rows for skins with meters, the turntables' and tapes' animation for those (and Fanart, mostly turntables), and the record speed for turntables. *All* lists everything. |
 
 ### Enrichment — *Lyrics and artist info*
 
