@@ -376,7 +376,7 @@
         "type": "action",
         "label": "Personalise",
         "marks": "N",
-        "summary": "A short guided setup of how you listen and what the screen shows.",
+        "summary": "A basic guided setup of how you listen and what the screen shows.",
         "note": "Asks again how you listen and what the screen shows, on your phone, with today's answers as the starting point. The player's screen shows a code to it.",
         "confirm": "Start",
         "default": null
