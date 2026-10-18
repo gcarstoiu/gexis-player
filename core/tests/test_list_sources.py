@@ -426,9 +426,18 @@ async def test_joining_and_forgetting_go_through_the_item_route(tmp_path, monkey
     monkeypatch.setattr(wifi, "available", lambda: True)
     monkeypatch.setattr(wifi, "join", join)
     monkeypatch.setattr(wifi, "forget", forget)
+    # The cable is the test's, never the machine's: GitHub's runners have
+    # one plugged in, and the answer then carries the cable's notice.
+    from gexis_core import wired
+    cable = {"in": False}
+    monkeypatch.setattr(wired, "has_port", lambda *a, **k: True)
+    monkeypatch.setattr(wired, "link", lambda *a, **k: (cable["in"], None))
     async with client_for(tmp_path) as client:
         ok = await client.post("/settings/wifi/items", json={"name": "Studio", "password": "p"})
         assert await ok.json() == {"ok": True, "error": None}
+        cable["in"] = True
+        ok = await client.post("/settings/wifi/items", json={"name": "Studio", "password": "p"})
+        assert await ok.json() == {"ok": True, "error": None, "notice": wired.CABLE_IN_USE}
         # A refusal is a 200 with a reason: the sheet shows it and offers to
         # try again, which a 4xx would turn into "something went wrong".
         bad = await client.post(
@@ -444,7 +453,7 @@ async def test_joining_and_forgetting_go_through_the_item_route(tmp_path, monkey
         assert (
             await client.post("/settings/lms_server/items", json={"name": "1.2.3.4:9000"})
         ).status == 405
-    assert calls == [("join", "Studio", "p"), ("forget", "Studio")]
+    assert calls == [("join", "Studio", "p"), ("join", "Studio", "p"), ("forget", "Studio")]
 
 
 @pytest.mark.asyncio

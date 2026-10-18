@@ -20,6 +20,13 @@ dependencies = [
 test = [
     "pytest==8.3.4",
     "pytest-asyncio==0.25.2",
+    # What the image's own tools are tested with: the skin packs and
+    # letterboxing (Pillow), the visualiser's renderers (pygame), the photo
+    # placement (numpy, OpenCV). Without them those tests skip.
+    "pillow==12.3.0",
+    "pygame==2.6.1",
+    "numpy==2.5.4",
+    "opencv-python-headless==5.0.0.93",
 ]
 
 [tool.hatch.build.targets.wheel]
