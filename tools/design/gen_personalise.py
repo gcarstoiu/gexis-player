@@ -57,7 +57,8 @@ j = markup.index("</span>", markup.index("</span>", i) + 7) + 7
 inner = markup[i:j].replace("display:{o.chkDisplay};", "display:flex;")
 markup = (markup[:i] + '<span onclick={(e) => { if (o.onTick) { e.stopPropagation(); o.onTick(); } }} style="display:{o.chkDisplay};padding:12px;margin:-12px;flex-shrink:0;">'
           + inner + "</span>" + markup[j:])
-# A long list of folders scrolls inside itself, about six rows high, so the
+# A long list of folders scrolls inside itself, about four rows high (at
+# most 40 % of the screen: on a Pixel 10 six rows hid the buttons), so the
 # Add button under it stays in reach (George, 2026-10-18: 499 folders meant
 # scrolling "an apparently endless screen" to it). The rows' own wrapper.
 li = markup.index("{#if b.isList}")
@@ -120,7 +121,7 @@ rep("onClick: o.fn || noop, cursor: o.fn ? 'pointer' : 'default',", "onClick: o.
 rep("chkDisplay: k === 'chk' ? 'flex' : 'none',", "chkDisplay: k === 'chk' || k === 'pick' ? 'flex' : 'none',")
 rep("chevDisplay: k === 'hub' ? 'block' : 'none'", "chevDisplay: k === 'hub' || (k === 'pick' && o.fn) ? 'block' : 'none'")
 rep("const BTYPES = ['List',", "const BTYPES = ['Sub', 'List',")
-rep("  if (b.t === 'List') o.rows = b.rows.map(row);", "  if (b.t === 'List') { o.rows = b.rows.map(row); o.scrollStyle = b.rows.length > 6 ? 'max-height:430px;overflow-y:auto;overscroll-behavior:contain;padding-right:4px;' : ''; }")
+rep("  if (b.t === 'List') o.rows = b.rows.map(row);", "  if (b.t === 'List') { o.rows = b.rows.map(row); o.scrollStyle = b.rows.length > 6 ? 'max-height:min(290px, 40vh);overflow-y:auto;overscroll-behavior:contain;padding-right:4px;' : ''; }")
 rep("  if (b.t === 'P' || b.t === 'Head') o.text = b.text;", "  if (b.t === 'P' || b.t === 'Head') o.text = b.text;\n  if (b.t === 'Sub') { o.text = b.text; o.accent = b.accent; }")
 rep("  if (b.t === 'Dev') { o.items = ", "  if (b.t === 'Dev') { o.head = b.head || 'Trusted devices'; o.items = ")
 rep("    if (id === 'done') this.setState({ inst: 0 });", "    if (id === 'done') live.finish();\n    if (id === 'later') live.later();\n    if (id === 'bluetooth') live.trusted();\n    if (id === 'folders') { live.loadShares(); live.loadUsb(); live.loadSpace(); }")

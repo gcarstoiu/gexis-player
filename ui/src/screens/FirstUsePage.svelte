@@ -76,7 +76,7 @@ function row(o) {
 function block(b) {
   const o = { head: b.head || '', headDisplay: b.head ? 'block' : 'none' };
   BTYPES.forEach(t => { o['is' + t] = b.t === t; });
-  if (b.t === 'List') { o.rows = b.rows.map(row); o.scrollStyle = b.rows.length > 6 ? 'max-height:430px;overflow-y:auto;overscroll-behavior:contain;padding-right:4px;' : ''; }
+  if (b.t === 'List') { o.rows = b.rows.map(row); o.scrollStyle = b.rows.length > 6 ? 'max-height:min(290px, 40vh);overflow-y:auto;overscroll-behavior:contain;padding-right:4px;' : ''; }
   if (b.t === 'Note') { const c = TONES[b.tone]; Object.assign(o, { bar: c[0], bg: c[1], border: c[2], title: b.title || '', titleDisplay: b.title ? 'block' : 'none', text: b.text }); }
   if (b.t === 'Field') Object.assign(o, { label: b.label, value: b.value, onChange: b.fn || noop, ph: b.ph || '', type: b.type || 'text', hint: b.hint || '', hintDisplay: b.hint ? 'block' : 'none', ro: !!b.ro, op: b.ro ? '0.45' : '1', cur: b.ro ? 'not-allowed' : 'text' });
   if (b.t === 'Code') Object.assign(o, { label: b.label, code: b.code, text: b.text });
