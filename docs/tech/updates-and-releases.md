@@ -151,12 +151,12 @@ list. `packaging/release/build.sh <image.img>` refuses to run if the image's
 1. **Notes** into `core/src/gexis_core/release_notes.json` (New / Fixed / Good
    to know, impersonal, no restart promises), approved by George; then
    `python -m gexis_core.changelog ../CHANGELOG.md` from `core/`. Commit
-   "Release notes: X (approved by George)" on `phase-13d` and tag `vX`.
+   "Release notes: X (approved by George)" on `next` (the release branch) and tag `vX`.
 2. **Image**: a worktree at the tag, `git submodule update --init`, `make
    image` (about 15 min); move the image to the main checkout's
    `image/deploy/`; `image/verify-image.sh <that image>` **run from the
    release worktree** must pass every check - it compares the image with the
-   sources beside the script, and the main checkout (`phase-13b`) does not
+   sources beside the script, and the main checkout (`docs`) does not
    carry the release's code (0.11.0: five false failures from there).
 3. **Release**: `packaging/release/build.sh <image>`, then
    `packaging/release/publish.sh rX --channel testing`; read the channel file

@@ -21,8 +21,8 @@ Look before deleting; delete only what is listed here as safe.
 
 | What | Keep | Remove |
 |---|---|---|
-| Worktrees (`git worktree list`) | the main checkout, `-13d`, any whose branch is not yet in `origin/main` or has uncommitted or unpushed work | every other: `rm -rf` then `git worktree prune` (the pi-gen submodule refuses `worktree remove`) |
-| Local branches | `main`, `phase-13b`, `phase-13d`, any not contained in `origin/main` | merged ones (`git merge-base --is-ancestor <b> origin/main`); remote branches are never touched |
+| Worktrees (`git worktree list`) | the main checkout, `-next`, any whose branch is not yet in `origin/main` or has uncommitted or unpushed work | every other: `rm -rf` then `git worktree prune` (the pi-gen submodule refuses `worktree remove`) |
+| Local branches | `main`, `docs`, `next`, any not contained in `origin/main` | merged ones (`git merge-base --is-ancestor <b> origin/main`); remote branches are never touched |
 | `image/deploy/` | the newest released image and its `.info` | older images (each is rebuilt from its tag) and stray `build*.log` |
 | `packaging/out/` (both checkouts) | nothing needed | every `.deb` (rebuilt by the next build) |
 | `~/.local/share/gexis-release-out` | **all of it**: the local copies `reuse.py` compares published files against (2026-10-16) | nothing; without it a release re-uploads every OS file |
