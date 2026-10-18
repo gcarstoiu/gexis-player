@@ -84,6 +84,20 @@ the panel, BlueZ's "Not Provided" is no title. *Personalise* is in ADR-0022 (Geo
 for George: his test of part 2, then part 1 on sofapi after *Reset to
 factory settings* (his choice, instead of a fresh card), then the PR.
 
+**The visualiser on the panel** (on `next`, merged into `ph-first-use`;
+installed on sofapi as `gexis-system 1.0.6+git57`; George, 2026-10-18: a
+shifted visualiser opened from the phone). labwc placed a meter window
+restarted after a skin change offset from the corner; `labwc-rc.xml` now
+maximises every window, and `gexis-kiosk-start` adds `MoveToOutput` to that
+rule (ADR-0109 amended). Found on the way: a `gexis-system` upgrade reset
+PeppyMeter's config to the image's skin path, and the meter refused to start
+(a show answered 409) until the core's next skins pass, up to 5 min; preinst
+and postinst now keep the five keys the core writes (ADR-0107 amended). On
+sofapi after both: the config survived the upgrade, restart + show drew the
+meter at 0,0 over the whole 1280×800 panel after ~1.5 s of black, and hide
+brought the home screen back. The turntable is the first skin of the
+`1280x720_g5_451_ms` corpus, centred with 40 px bands at 1280×800.
+
 **Release build output lives in `~/.local/share/gexis-release-out`**: in each
 release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
 (excluded in `.git/info/exclude`). `reuse.py` reuses a published file only
@@ -96,7 +110,7 @@ now mentions *Add a backup*, bundle rebuilt 2026-10-17, for George to re-push);
 ran it is not recorded. The theme (`gcarstoiu/gexis-wp-theme` 1.0.3, pushed)
 mirrors FAQ, Install, Hardware, Manual and Release notes from `main`.
 
-Suite 2,493 passed, 47 skipped (2026-10-16), with the venv in
+Suite 2,506 passed, 47 skipped (2026-10-18, on `next`), with the venv in
 `~/.local/share/gexis-venv` (never under `/tmp`: LESSONS 74).
 
 **Devices.** sofapi (Waveshare 10.1", SMSL USB DAC; a test machine), the bar
