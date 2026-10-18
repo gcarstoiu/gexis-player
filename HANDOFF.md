@@ -98,6 +98,22 @@ meter at 0,0 over the whole 1280×800 panel after ~1.5 s of black, and hide
 brought the home screen back. The turntable is the first skin of the
 `1280x720_g5_451_ms` corpus, centred with 40 px bands at 1280×800.
 
+**The library's background with nothing playing** (on `next`, merged into
+`ph-first-use`; George: "Just 1 from calm types", then "more colorful + take
+c105649975.webp"): `PanelBackground` bleeds `calm/c105649975.webp` where
+there is no artwork; no setting.
+
+**Lyrion's music locations, chosen** (on `ph-first-use` only; core
+`+git103`, UI `+git104` on sofapi; ADR-0115 decisions 20-24, ADR-0022 three
+rows, George 2026-10-18): Music folder and USB drives are switches, off on a
+new player; `lyrion-server.usb_folders` holds folders chosen per USB drive
+(`lyrion_usb.py`, browsed in Settings and in part 2); a new drive is not
+added (George: "1b"); removal causes Lyrion's full rescan, and each note
+says so. Settings migration 12 keeps a player already running the server
+as it was. Checked through the part 2 proxy against a local test drive
+(`USBFAKE`, `SETON` in scratchpad `p2proxy.py`), phone and panel; never with
+a real drive, and sofapi's server is off - to-do g56 is George's try.
+
 **Release build output lives in `~/.local/share/gexis-release-out`**: in each
 release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
 (excluded in `.git/info/exclude`). `reuse.py` reuses a published file only
@@ -110,7 +126,7 @@ now mentions *Add a backup*, bundle rebuilt 2026-10-17, for George to re-push);
 ran it is not recorded. The theme (`gcarstoiu/gexis-wp-theme` 1.0.3, pushed)
 mirrors FAQ, Install, Hardware, Manual and Release notes from `main`.
 
-Suite 2,506 passed, 47 skipped (2026-10-18, on `next`), with the venv in
+Suite 2,535 passed, 47 skipped (2026-10-18, on `ph-first-use`), with the venv in
 `~/.local/share/gexis-venv` (never under `/tmp`: LESSONS 74).
 
 **Devices.** sofapi (Waveshare 10.1", SMSL USB DAC; a test machine), the bar
