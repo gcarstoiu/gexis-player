@@ -46,7 +46,7 @@ verbatim, and 40 asserted replacements call the core. Change the design, then
 generate again; never restyle the `.svelte` by hand. Every screen was checked
 side by side with the prototype. ADR-0149's decisions were revised (25,
 including the two kept against the design: Output and the rename/second
-player on a restore, George 2026-10-08). **sofapi runs it** (core `1.0.6+git58`, UI `+git65`, player `+git67`; part 2 opens from Settings → System →
+player on a restore, George 2026-10-08). **sofapi runs it** (core `1.0.6+git58`, UI `+git71`, player `+git73`; part 2 opens from Settings → System →
 Personalise). Added 2026-10-18 at George's request: a Touchpad step in
 part 2 (before the visualiser; preview with the pointer moving) and the
 volume type under part 1's Output (`GET /setup/outputs`; ADR-0149 26-27). Then: Getting ready shows the
@@ -64,9 +64,9 @@ under the model; an output's name no longer carries its state (settings
 migration 10 rewrote sofapi's stored output). ADR-0126, 0117 and 0109
 amended; HARDWARE.md's table regenerated.
 
-**The waiting screen's tiles** (on `next`, 2026-10-18; George chose option 2,
-"generic"): every screen, each source a mark with its name under it and a
-teal dot for ready, 168 px wide; manual pictures retaken through the demo
+**The waiting screen's sources** (on `next`, 2026-10-18; George: reuse the
+library's waiting footer without its bar): `WaitingServices` in a `bare`
+form, the pulsing marks straight on the picture; manual pictures retaken through the demo
 front (scratchpad `holddemo.py`, ports 8097/8098, `lmsoff.flag`,
 `DEMO_NAME`). Plexamp is one screen in part 2, its sign-in read from the
 plugin (ADR-0149 32-34). Should list: DSI screens, weather on the waiting
