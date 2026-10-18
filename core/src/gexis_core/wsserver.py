@@ -2200,12 +2200,32 @@ class StateServer:
         result = personalise.apply(values, self._settings, self._personalise_offered(), settling.begin)
         personalise.end(personalise.DONE)
         self._store.set_personalise(None)
+        if "lms_server" in result["written"]:
+            asyncio.ensure_future(self._restart_when_settled())
         return web.json_response({"ok": True, **result})
+
+    async def _restart_when_settled(self, every_s: float = 3.0, give_up_s: float = 3600.0) -> None:
+        """**A Lyrion server set by part 2 is used from the core's next start**
+        (the rule Settings follows, `_chosen_server`): George, 2026-10-18 -
+        after part 2 the library's tiles had nothing behind them. The core
+        restarts, but only once the downloads part 2 began are in: the skins
+        install as the core's own child and would be cut off. Settled is the
+        settling record gone, or its phase ready or failed."""
+        waited = 0.0
+        while waited < give_up_s:
+            view = self._store.state.settling
+            if settling.read() is None or (view or {}).get("phase") in ("ready", "failed"):
+                break
+            await asyncio.sleep(every_s)
+            waited += every_s
+        await asyncio.sleep(2.0)
+        logger.info("personalise: restarting the core to use the Lyrion server part 2 chose")
+        await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-core")
 
     async def _handle_personalise_later(self, request: web.Request) -> web.Response:
         """*Do it later* (`personalise.put_off`)."""
         from gexis_core import personalise
-        await personalise.put_off(self._settings, self._lyrion_found)
+        personalise.put_off(self._settings, personalise.first())
         self._store.set_personalise(None)
         return web.json_response({"ok": True})
 

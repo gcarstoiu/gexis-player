@@ -193,6 +193,10 @@ rep("""  if (b.t === 'Code') Object.assign(o, { label: b.label, code: b.code, te
 # settings from Personalisation are display related, let's move the setting
 # to Display category").
 rep("Settings → System → Personalise", "Settings → Display → Personalise", n=2)
+# **Picking the minutes closes the time picker** (George, 2026-10-18: the
+# choice should be seen before going on): the time shows in its button.
+rep("quarters: QUARTERS.map(x => cell(':' + x, x === mm, () => setT('m', x))),",
+    "quarters: QUARTERS.map(x => cell(':' + x, x === mm, () => { setT('m', x); this.setState({ ivPick: null }); })),")
 # The frame: the page's own size (the prototype draws it inside a phone or a
 # tablet at fixed sizes).
 rep("fw: W ? '1100px' : '390px', fh: W ? '700px' : '844px', rad: W ? '22px' : '40px',", "fw: '100%', fh: '100%', rad: '0px',")

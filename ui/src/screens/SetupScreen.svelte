@@ -122,8 +122,11 @@
     return { d, extent: size + 8 };
   }
   const joinQr = $derived(joinText ? qrPath(joinText) : null);
-  const pageQr = $derived(personalise ? qrPath(personalise) : setup?.address ? qrPath(setup.address) : null);
-  const pageAt = $derived(personalise ?? setup?.address);
+  //: `personalise` is the address, or `true` while it has not arrived: the
+  //: step shows at once and its code fills in.
+  const personaliseUrl = $derived(typeof personalise === 'string' ? personalise : null);
+  const pageQr = $derived(personalise ? (personaliseUrl ? qrPath(personaliseUrl) : null) : setup?.address ? qrPath(setup.address) : null);
+  const pageAt = $derived(personalise ? (personaliseUrl ?? '…') : setup?.address);
   //: As a person types it: a phone's browser takes `10.42.0.1:8090` as is.
   const shown = (url) => String(url ?? '').replace(/^https?:\/\//, '').replace(/\/$/, '');
 

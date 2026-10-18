@@ -313,6 +313,28 @@ it as it should be"*)
     until then the design's sample values (its name, its network) could
     show.
 
+**After George's full run on sofapi (2026-10-18)**
+35. **Part 2's panel screen comes first after setup's restart**: it shows as
+    soon as part 2 is owed, its code filling in when the player's address
+    arrives - the player's own screens no longer show first.
+36. **Do it later, on a new player, is Spotify and Bluetooth** (George: the
+    panel should show *"the waiting screen with the default sources (Spotify
+    and Bluetooth) with the calm backgrounds"*): the Lyrion client goes off,
+    no server is looked for. This replaces decision 7. Asked again from
+    Settings, *Do it later* changes nothing.
+37. **A Lyrion server part 2 sets is used at once** (George: after *My own
+    mix*, a home screen *"without any functional tiles"*): a server is read at
+    the core's start, so the core restarts once part 2's downloads are in.
+38. **Picking the minutes closes the time picker**, so the time chosen shows
+    before going on.
+39. **Recommended is the best real output** (George: *"HDMI 1 ... makes no
+    sense since those would be the embedded speakers of the display"*): a
+    tested DAC, else any other DAC, never the Pi's HDMI or headphone jack; on
+    a new player it is also chosen by default. The design marks the DAC; the
+    first port marked the output already set.
+40. **Headless is a list of its own**, under *No screen* (George: *"a
+    completely different option"*).
+
 **Settled by George afterwards (2026-10-18)**
 - **Personalise** is in ADR-0022's inventory (*"Yes it goes in the list"*).
 - Part 1 is tested by George on sofapi after *Reset to factory settings*

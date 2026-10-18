@@ -470,8 +470,8 @@ a name, the clock, the output and its volume type, and the screen. Then, from
 your home Wi-Fi, the same page asks how you listen (Lyrion, Plex or
 streaming), whether the phone's touchpad works the screen, what the screen
 shows while music plays, while it waits and at night, and installs what that
-needs; *Do it later* keeps the defaults, as does leaving it until the
-player's next restart, and *Settings → Display → Personalise* asks it all
+needs; *Do it later* leaves Spotify and Bluetooth on and nothing else, as
+does leaving it until the player's next restart, and *Settings → Display → Personalise* asks it all
 again. A backup asks only
 for this player's output and screen and answers the rest, and the phone shows
 what it brings before the player restarts. Step by step, from flashing the

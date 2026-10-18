@@ -111,19 +111,21 @@ def at_start(path: Path = PATH, boot: str | None = None) -> bool | None:
     return False
 
 
-async def put_off(settings, find_servers) -> None:
-    """*Do it later*: the defaults kept - and, as part 1 did before part 2
-    existed, a Lyrion server looked for once and used when exactly one
-    answers, so a player put off still finds its library."""
-    if settings is not None:
+def put_off(settings, first: bool) -> None:
+    """*Do it later*. **A new player put off plays what needs nothing set up**
+    (George, 2026-10-18: skipped on a fresh install, the panel showed the
+    library's tiles with nothing behind them; it should be the waiting screen
+    with Spotify and Bluetooth): the Lyrion client goes off, as part 2's own
+    page says - "Spotify and Bluetooth are on, and nothing else is installed".
+    Asked again from Settings and put off, nothing changes ("Nothing was
+    changed")."""
+    if first and settings is not None:
         try:
-            if settings.value("lms_enabled") and not settings.value("lms_server"):
-                found = await find_servers()
-                if len(found) == 1:
-                    settings.set("lms_server", found[0]["address"])
-                    logger.info("personalise: put off; the one Lyrion server found is used")
-        except Exception as exc:  # noqa: BLE001 - a courtesy, never a failure
-            logger.warning("personalise: Lyrion not looked for: %s", exc)
+            if settings.value("lms_enabled"):
+                settings.set("lms_enabled", False)
+                logger.info("personalise: put off on a new player; the Lyrion client is off")
+        except Exception as exc:  # noqa: BLE001 - putting off must still end it
+            logger.warning("personalise: Lyrion client not switched off: %s", exc)
     end(LATER)
 
 
@@ -153,14 +155,15 @@ def apply(values: dict, settings, offered: list[dict], begin: Callable[[list[dic
     downloads** (ADR-0128). Each setting goes through `Settings.set`, so it
     does what it does from Settings; one that refuses is reported and the
     rest go on - as setup does - and is named in the result. Returns
-    `{"failed": [keys], "waiting": [component ids]}`."""
+    `{"failed": [keys], "waiting": [component ids], "written": [keys]}`."""
     values = checked(values)
-    failed = []
+    failed, written = [], []
 
     def put(key: str, value) -> None:
         try:
             if settings.value(key) != value:
                 settings.set(key, value)
+                written.append(key)
         except Exception as exc:  # noqa: BLE001 - one refusal must not stop the rest
             logger.warning("personalise: %s not set: %s", key, exc)
             failed.append(key)
@@ -185,4 +188,4 @@ def apply(values: dict, settings, offered: list[dict], begin: Callable[[list[dic
         logger.warning("personalise: cannot record what to wait for: %s", exc)
     logger.info("personalise: %d setting(s) written%s; waiting for %s", len(values) - len(failed),
                 f", {len(failed)} refused" if failed else "", ", ".join(w["name"] for w in wait) or "nothing")
-    return {"failed": failed, "waiting": [w["id"] for w in wait]}
+    return {"failed": failed, "waiting": [w["id"] for w in wait], "written": written}

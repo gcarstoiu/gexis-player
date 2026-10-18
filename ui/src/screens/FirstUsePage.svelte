@@ -191,7 +191,7 @@ class Component extends DCLogic {
         times: [['from', 'From'], ['until', 'Until']].map(([w, label]) => ({ label, value: iv[w], border: pk === w ? A : LINE, ink: pk === w ? A : '#e9eef2', onTap: () => this.setState({ ivPick: pk === w ? null : { i, which: w } }) })),
         pickDisplay: pk ? 'flex' : 'none',
         hours: HOURS.map(x => cell(x, x === hh, () => setT('h', x))),
-        quarters: QUARTERS.map(x => cell(':' + x, x === mm, () => setT('m', x))),
+        quarters: QUARTERS.map(x => cell(':' + x, x === mm, () => { setT('m', x); this.setState({ ivPick: null }); })),
         days: DAYS.map(d => { const sel = iv.days.includes(d);
           return Object.assign({ label: d, onTap: () => { if (sel && iv.days.length === 1) return; up(i, x => ({ days: sel ? x.days.filter(y => y !== d) : DAYS.filter(y => y === d || x.days.includes(y)) })); } },
             sel ? ON : { bg: FILL, border: LINE, ink: 'rgba(233,238,242,0.72)' }); })
@@ -322,9 +322,11 @@ class Component extends DCLogic {
       case 'p1screen': { const info = s.screenInfo || {}, sug = info.suggested, rows = [], blocks = [];
         if (sug) rows.push(R(sug.maker + ' ' + live.short(sug), sug.width + ' × ' + sug.height + ' · ' + (sug.family === 'bar' ? 'Bar' : 'Standard') + ' layout', s.scr === 'panel', () => set({ scr: 'panel', scPick: sug.label }), { tag: sug.tested ? ['Tested', 'ok'] : null }));
         rows.push(R('Another screen', s.scr === 'other' && s.scPick ? live.labelOf(s.scPick) : 'Pick the model from a list.', s.scr === 'other', () => set({ scr: 'other', scPick: null })));
-        rows.push(R('Headless', 'No local screen. The display stays off and nothing is drawn.', s.scr === 'headless', () => set({ scr: 'headless' })));
         if (info.failed) blocks.push(note('warn', 'The list of screens did not arrive', 'Your phone may have dropped off the setup Wi-Fi for a moment.'), btn('Try again', () => live.loadScreens()));
         blocks.push(list(rows));
+        //: **Headless apart from the screens** (George, 2026-10-18: "a
+        //: completely different option").
+        blocks.push(list([R('Headless', 'No local screen. The display stays off and nothing is drawn.', s.scr === 'headless', () => set({ scr: 'headless' }))], 'No screen'));
         if (s.scr === 'other' && !s.scMaker) blocks.push(list(live.makers().map(m => HB(m.name, m.n + (m.n === 1 ? ' model' : ' models'), () => set({ scMaker: m.name }))), 'Makers'));
         else if (s.scr === 'other') blocks.push(list(live.models(s.scMaker).map(m => R(live.short(m), m.width + ' × ' + m.height + ' · ' + (m.family === 'bar' ? 'Bar' : 'Standard') + ' layout' + (m.problem ? ' · ' + m.problem : ''), s.scPick === m.label, () => set({ scPick: m.label }), { tag: m.tested ? ['Tested', 'ok'] : null })), s.scMaker), btn('Another maker', () => set({ scMaker: null })));
         if (s.scr === 'headless') blocks.push(note('info', 'Fewer questions later', 'With no screen, part 2 skips how to browse on it, the visualiser, the idle screen and standby.'),
@@ -813,6 +815,15 @@ class Component extends DCLogic {
     if (!r.ok) throw new Error(body.error || `${url}: ${r.status}`);
     return body;
   }
+  //: **What the Output step recommends** (George, 2026-10-18: HDMI 1 was
+  //: recommended - the screen's own speakers, "the worse option"): a tested
+  //: DAC, else any other DAC - a board or a USB one - and never the Pi's own
+  //: HDMI ports or headphone jack. None of those, no recommendation.
+  function bestOutput(outputs, tags) {
+    const own = (o) => /^(HDMI \d|Headphones)/.test(o);
+    const dacs = outputs.filter((o) => !own(o));
+    return dacs.find((o) => tags[o] === 'Tested') ?? dacs[0] ?? null;
+  }
   function setBackup(b) {
     st.backup = b;
     //: A restore opens on the backup's name; a name typed in setup wins.
@@ -874,8 +885,8 @@ class Component extends DCLogic {
       outputs, outNotes: rows.output_device?.optionNotes ?? {},
       //: *Tested* beside an output, and a problem owners reported under it
       //: (2026-10-18: one way to mark them, as in Settings).
-      outTags: rows.output_device?.optionTags ?? {}, outProblems: rows.output_device?.optionProblems ?? {}, recommended: rows.output_device?.value ?? outputs[0] ?? null,
-      output: saved.output ?? rows.output_device?.value ?? outputs[0] ?? null,
+      outTags: rows.output_device?.optionTags ?? {}, outProblems: rows.output_device?.optionProblems ?? {}, recommended: bestOutput(outputs, rows.output_device?.optionTags ?? {}),
+      output: saved.output ?? (setup?.needed ? bestOutput(outputs, rows.output_device?.optionTags ?? {}) : null) ?? rows.output_device?.value ?? outputs[0] ?? null,
       volume: saved.volume ?? rows.output_mode?.value ?? 'Hardware',
       //: Settings' notes, without the sentence it adds about the output in
       //: use now: in setup the output is still being chosen.

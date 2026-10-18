@@ -882,9 +882,12 @@
        everything but Keep this screen and the update lock. -->
   {#if $settling && !$settling.hidden && !$screenConfirm && !updateLock && !setupShown}
     <SettlingScreen settling={$settling} ondone={() => settlingDone().catch(() => {})} onhide={() => settlingHide().catch(() => {})} />
-  {:else if $personalise === 'pending' && personaliseAt && $settingValues.headless !== true && !$screenConfirm && !updateLock && !setupShown}
-    <!-- ADR-0149: part 2 is owed; the panel shows the way to it. -->
-    <SetupScreen setup={$setup} personalise={personaliseAt} onlater={() => personaliseLater().catch(() => {})} />
+  {:else if $personalise === 'pending' && $settingValues.headless !== true && !$screenConfirm && !updateLock && !setupShown}
+    <!-- ADR-0149: part 2 is owed; the panel shows the way to it - **at
+         once**, before the player's address has arrived (George, 2026-10-18:
+         after setup's restart the player's own screens showed first). The
+         code fills in when the address does. -->
+    <SetupScreen setup={$setup} personalise={personaliseAt ?? true} onlater={() => personaliseLater().catch(() => {})} />
   {/if}
   {#if !setupShown}
     <CableKeep />

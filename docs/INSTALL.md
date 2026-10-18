@@ -79,11 +79,12 @@ From your home Wi-Fi, the same page asks how you listen - your own music
 with Lyrion, Plex, or streaming only - whether the phone's touchpad works the
 screen, and what the screen shows while music plays, while it waits and at
 night. Each question has a default; *Do it
-later* keeps them all. Lyrion, Plexamp and the visualiser's skins then
-download, and the page and the player's screen show each one arriving.
+later* leaves Spotify and Bluetooth on and nothing else, and the screen
+waits for music over the player's own pictures. Lyrion, Plexamp and the
+visualiser's skins then download, and the page and the player's screen show each one arriving.
 Everything here can be changed later, or asked again from *Settings → Display
 → Personalise*. It is offered until the player's first restart after setup;
-left unanswered, the defaults stay. A restored player skips this: its backup
+left unanswered, it is as if *Do it later* was chosen. A restored player skips this: its backup
 already answers it.
 
 ## Afterwards

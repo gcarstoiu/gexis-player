@@ -36,9 +36,11 @@
       case 'p1screen': { const info = s.screenInfo || {}, sug = info.suggested, rows = [], blocks = [];
         if (sug) rows.push(R(sug.maker + ' ' + live.short(sug), sug.width + ' × ' + sug.height + ' · ' + (sug.family === 'bar' ? 'Bar' : 'Standard') + ' layout', s.scr === 'panel', () => set({ scr: 'panel', scPick: sug.label }), { tag: sug.tested ? ['Tested', 'ok'] : null }));
         rows.push(R('Another screen', s.scr === 'other' && s.scPick ? live.labelOf(s.scPick) : 'Pick the model from a list.', s.scr === 'other', () => set({ scr: 'other', scPick: null })));
-        rows.push(R('Headless', 'No local screen. The display stays off and nothing is drawn.', s.scr === 'headless', () => set({ scr: 'headless' })));
         if (info.failed) blocks.push(note('warn', 'The list of screens did not arrive', 'Your phone may have dropped off the setup Wi-Fi for a moment.'), btn('Try again', () => live.loadScreens()));
         blocks.push(list(rows));
+        //: **Headless apart from the screens** (George, 2026-10-18: "a
+        //: completely different option").
+        blocks.push(list([R('Headless', 'No local screen. The display stays off and nothing is drawn.', s.scr === 'headless', () => set({ scr: 'headless' }))], 'No screen'));
         if (s.scr === 'other' && !s.scMaker) blocks.push(list(live.makers().map(m => HB(m.name, m.n + (m.n === 1 ? ' model' : ' models'), () => set({ scMaker: m.name }))), 'Makers'));
         else if (s.scr === 'other') blocks.push(list(live.models(s.scMaker).map(m => R(live.short(m), m.width + ' × ' + m.height + ' · ' + (m.family === 'bar' ? 'Bar' : 'Standard') + ' layout' + (m.problem ? ' · ' + m.problem : ''), s.scPick === m.label, () => set({ scPick: m.label }), { tag: m.tested ? ['Tested', 'ok'] : null })), s.scMaker), btn('Another maker', () => set({ scMaker: null })));
         if (s.scr === 'headless') blocks.push(note('info', 'Fewer questions later', 'With no screen, part 2 skips how to browse on it, the visualiser, the idle screen and standby.'),

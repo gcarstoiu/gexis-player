@@ -321,7 +321,7 @@ sequenceDiagram
    list and part 2's first screen used to wait that long every time.
    `discovery.Known` searches at the core's start, then every 2 min (every
    30 s while none answers, as at a boot before the network is up), one
-   search at a time; `/settings/lms_server/items` and *Do it later* answer
+   search at a time; `/settings/lms_server/items` answers
    from the last search, waiting only for the first. A server switched off
    stays listed until the next search. Setup's own search after the join
    stays a fresh one: the network has just changed.
@@ -694,8 +694,7 @@ Each record keeps the boot it was owed in (`/proc/sys/kernel/random/boot_id`);
 at the core's start `personalise.at_start` keeps a new player's owed part 2
 through the boot setup ran in and the next one (noting it as `shown`), and
 one opened from Settings for its own boot only. Past that, the core puts it
-off 30 s after starting (`personalise.put_off`, *Do it later*'s own: the
-defaults kept, one Lyrion server found used).
+off 30 s after starting (`personalise.put_off`, *Do it later*'s own).
 
 **The phone** (`App.svelte`): while it is owed, the phone page shows
 `FirstUsePage.svelte` (`mode="p2"`) in place of Settings, held until its Close. The
@@ -741,8 +740,15 @@ key is outside `KEYS` and `PLUGIN_ROWS`. `personalise.apply` writes the
 settings through `Settings.set` (a refusal is logged, named in the answer,
 and the rest go on), then the plugin switches. The page only ever sends them
 on. Then `settling.begin` follows the skins and each plugin's download.
-`/personalise/later` keeps the defaults and, with the Lyrion client on and no
-server, uses the one server found, as part 1 did before part 2.
+`/personalise/later` on a new player (`first`) switches the Lyrion client
+off, so the panel waits with Spotify and Bluetooth (George, 2026-10-18: a
+fresh player put off showed the library's tiles with nothing behind them);
+asked again from Settings it changes nothing. **A server part 2 sets is used
+from the core's next start**, as one picked in Settings is
+(`_chosen_server`): when `lms_server` is among what `apply` wrote, the core
+restarts once the downloads it began are in (`_restart_when_settled`: the
+settling record gone, or its phase ready or failed) - the skins install as
+the core's own child and an earlier restart would cut them off.
 
 **Library on the screen** (`lms_library`): off, `App.svelte` treats the
 library as absent (`lmsOff`), so the panel's home is `WaitingHome`; the

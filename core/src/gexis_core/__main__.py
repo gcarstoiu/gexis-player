@@ -2401,12 +2401,11 @@ async def main() -> None:
     state_store.set_personalise(personalise.PENDING if owed_at_start else None)
     if owed_at_start is False:
         # Owed in an earlier boot and not answered: put off, as *Do it later*
-        # does - after the network has had time to come up for the Lyrion
-        # search.
+        # does, once `settings` exists.
         async def _put_off_at_start() -> None:
-            await asyncio.sleep(30)
+            await asyncio.sleep(5)
             if personalise.state() == personalise.PENDING and personalise.at_start() is False:
-                await personalise.put_off(settings, lyrion_known.current)
+                personalise.put_off(settings, personalise.first())
         asyncio.ensure_future(_put_off_at_start())
 
     settings = Settings(

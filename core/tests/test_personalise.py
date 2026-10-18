@@ -65,7 +65,8 @@ def test_answers_are_written_then_the_plugins_switched_on_then_the_downloads_fol
     assert settings.order == ["lms_library", "visualiser_skins", "skin_corpus",
                               "lyrion-server.enabled", "plexamp.enabled"]
     assert [w["id"] for w in begun] == ["skins", "lyrion-server", "plexamp"]
-    assert result == {"failed": [], "waiting": ["skins", "lyrion-server", "plexamp"]}
+    assert result == {"failed": [], "waiting": ["skins", "lyrion-server", "plexamp"],
+                      "written": ["lms_library", "visualiser_skins", "skin_corpus", "lyrion-server.enabled", "plexamp.enabled"]}
 
 
 def test_one_refusal_is_named_and_the_rest_still_written():
@@ -108,11 +109,11 @@ async def test_the_routes_finish_and_put_off_part_two(tmp_path, monkeypatch):
         assert (await r.json())["waiting"] == ["skins"]
         assert settings.values["spotify_enabled"] is False
         assert personalise.state() == personalise.DONE and store.state.personalise is None
-        # Put off, from Settings' Personalise: the one server found is used,
-        # as part 1 used it before part 2 existed.
+        # Put off on a new player (George, 2026-10-18): the Lyrion client goes
+        # off, so the panel waits with Spotify and Bluetooth.
         personalise.mark_pending()
         assert (await client.post("/personalise/later")).status == 200
-        assert settings.values["lms_server"] == "192.0.2.10:9000"
+        assert settings.values["lms_enabled"] is False and "lms_server" not in settings.values
         assert personalise.state() == personalise.LATER
     assert [b["id"] for b in begun] == ["skins"]
 
@@ -134,14 +135,44 @@ def test_owed_only_until_the_first_boot_after_setup(tmp_path):
     assert personalise.at_start(path, boot="b3") is None
 
 
-@pytest.mark.asyncio
-async def test_put_off_uses_the_one_lyrion_server_found(tmp_path, monkeypatch):
+def test_put_off_on_a_new_player_leaves_spotify_and_bluetooth(tmp_path, monkeypatch):
+    """George, 2026-10-18: skipped on a fresh install, the panel showed the
+    library's tiles with nothing behind them. Put off on a new player, the
+    Lyrion client goes off; asked again from Settings, nothing changes."""
     monkeypatch.setattr(personalise.end, "__defaults__", (tmp_path / "personalise.json",))
-    settings = FakeSettings({"lms_enabled": True})
-
-    async def two():
-        return [{"address": "192.0.2.10:9000"}, {"address": "192.0.2.11:9000"}]
-
-    await personalise.put_off(settings, two)
-    assert "lms_server" not in settings.values, "several are left to Settings"
+    settings = FakeSettings({"lms_enabled": True, "spotify_enabled": True})
+    personalise.put_off(settings, first=True)
+    assert settings.values["lms_enabled"] is False and settings.values["spotify_enabled"] is True
+    again = FakeSettings({"lms_enabled": True})
+    personalise.put_off(again, first=False)
+    assert again.order == [], "asked again and put off, nothing is written"
     assert personalise.state(tmp_path / "personalise.json") == personalise.LATER
+
+
+@pytest.mark.asyncio
+async def test_a_server_part_two_sets_restarts_the_core_once_settled(tmp_path, monkeypatch):
+    """George, 2026-10-18: after part 2 chose a Lyrion server, the library's
+    tiles had nothing behind them - a server is used from the core's next
+    start. The core restarts, but not before the downloads are in."""
+    import asyncio
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+
+    store = StateStore({})
+    server = StateServer(store, settings=FakeSettings({"lms_enabled": True}))
+    ran = []
+
+    async def fake_exec(*args, **_k):
+        ran.append(args)
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
+    record = {"items": [{"id": "skins"}]}
+    monkeypatch.setattr(settling, "read", lambda *a, **k: record)
+    store.set_settling({"phase": "settling", "items": []})
+    task = asyncio.ensure_future(server._restart_when_settled(every_s=0.01))
+    await asyncio.sleep(0.1)
+    assert ran == [], "not while the skins are still coming"
+    store.set_settling({"phase": "ready", "items": []})
+    monkeypatch.setattr(asyncio, "sleep", (lambda real: (lambda s: real(0)))(asyncio.sleep))
+    await asyncio.wait_for(task, 2)
+    assert ran == [("systemctl", "restart", "gexis-core")]
