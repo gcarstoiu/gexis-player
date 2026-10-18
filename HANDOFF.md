@@ -54,11 +54,13 @@ manual pictures). **Not tried on a device:** a USB drive's folders, and a
 share added at a sub-folder mounting (sofapi's Lyrion server is off; to-do
 g56). The day's narrative: `docs/HANDOFF-ARCHIVE.md`, 2026-10-18.
 
-**Owed to George: the Music share's floor** - proposed 4 GB, hardcoded
-(ADR-0022 [H] once he confirms), the share read-only below it; figures:
-Lyrion's library on his 10^4-file library 151 MB + artwork 670 MB (Finding
-109), sofapi's update staging 476 MB, the largest skin pack 484 MB packed,
-the filesystem's own root reserve 2.5 GB (not usable by the share).
+**The Music share's floor** (built 2026-10-18 on `ph-first-use`, `+git129`
+on sofapi; ADR-0115 decision 27, ADR-0022 [H]; George: "4 GB fixed in
+code"): below 4 GB free the share includes `read only = yes`
+(`/run/gexis/music-share.conf`), above 4.5 GB it opens. Tried on sofapi by
+closing it with `music_floor.apply`: a guest copy was refused, then went in
+once open; never with a card actually full. *Where is your music?* groups
+each source with its own actions (George, the same evening).
 
 **Release build output lives in `~/.local/share/gexis-release-out`**: in each
 release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
