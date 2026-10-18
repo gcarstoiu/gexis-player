@@ -111,14 +111,38 @@
     //: unclear to me what was happening and what comes next. Ordered
     //: checklist with status might be more transparent"): the download, its
     //: start, its add-ons, reading the music, ready - done, now or next.
+    lyrionAt(id) {
+      const c = $components?.[id] ?? {}, a = c.after;
+      return c.state !== 'installed' ? 0 : ({ starting: 1, addons: 2, waiting: 3, scanning: 3, ready: 4 }[a?.phase] ?? 1);
+    },
+    //: The current step's bar: a real share where there is one (download,
+    //: add-ons in, reading), otherwise the time spent against the usual
+    //: one - never full until the step is done.
+    lyrionNow(id) {
+      const c = $components?.[id] ?? {}, a = c.after, g = live.stage(id), at = live.lyrionAt(id);
+      if (stepAt.at !== at) Object.assign(stepAt, { at, since: Date.now() });
+      const secs = Math.max(0, Math.round(((st.nowMs || Date.now()) - stepAt.since) / 1000));
+      const clock = (n) => `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`;
+      const usual = { 1: 30, 2: 180, 3: 20 }[at];
+      const timed = usual ? Math.min(90, Math.round((secs / usual) * 90)) : 0;
+      if (at === 0) return { label: 'Downloading Lyrion', pct: g.pct, meta: `${g.pct} %` };
+      if (at === 2) {
+        const done = (a?.addons ?? []).filter((x) => x.in).length;
+        return { label: 'Adding its add-ons', pct: Math.max(timed, Math.round((done / 3) * 100)), meta: `${clock(secs)} of about 3:00` };
+      }
+      if (at === 3 && a?.share != null) return { label: 'Reading your music', pct: Math.round(a.share * 100), meta: `${Math.round(a.share * 100)} %` };
+      if (at === 4) return null;
+      return { label: at === 1 ? 'Starting Lyrion' : 'About to read your music', pct: timed, meta: clock(secs) };
+    },
     lyrionSteps(id) {
       const c = $components?.[id] ?? {}, a = c.after, g = live.stage(id);
-      const at = c.state !== 'installed' ? 0 : ({ starting: 1, addons: 2, waiting: 3, scanning: 3, ready: 4 }[a?.phase] ?? 1);
+      const at = live.lyrionAt(id);
       const pct = a?.share != null ? ` · ${Math.round(a.share * 100)} %` : '';
+      const adds = (a?.addons ?? []).map((x) => x.name + (x.in ? ' ✓' : at > 2 ? ' (being retried)' : '')).join(', ');
       const texts = [
         c.state === 'failed' ? 'Download Lyrion · did not finish' : at === 0 && g.pct ? `Download Lyrion · ${g.pct} %` : 'Download Lyrion',
         'Start Lyrion',
-        'Add Material Skin, Music & Artist Information and Radio Now Playing · one restart, about 3 minutes',
+        adds ? `Add ${adds} · one restart, about 3 minutes` : 'Add Material Skin, Music & Artist Information and Radio Now Playing · one restart, about 3 minutes',
         at === 3 && a?.phase === 'scanning' ? `Read your music${pct}` : 'Read your music',
         at === 4 ? `Ready · ${a?.line ?? ''}` : 'Ready to browse',
       ];
@@ -464,6 +488,8 @@
     const dacs = outputs.filter((o) => !own(o));
     return dacs.find((o) => tags[o] === 'Tested') ?? dacs[0] ?? null;
   }
+  //: When the Lyrion checklist's current step began (its timer).
+  const stepAt = { at: -1, since: Date.now() };
   function setBackup(b) {
     st.backup = b;
     //: A restore opens on the backup's name; a name typed in setup wins.
@@ -654,6 +680,9 @@
     wide();
     window.addEventListener('resize', wide);
     const clock = setInterval(() => (st.tick += 1), 20000);
+    //: Getting ready's current step counts its seconds (George, 2026-10-19:
+    //: steps with no progress felt stuck); only on that screen.
+    const seconds = setInterval(() => { if (st.screen === 'done') st.nowMs = Date.now(); }, 1000);
     //: Never held blank for long: whatever has arrived after 3 s is shown.
     setTimeout(() => (st.shown = true), 3000);
     //: Plexamp's sign-in, asked at the start and every 4 s on its step.
@@ -663,7 +692,7 @@
       //: The page says it is still open (ADR-0104): the player keeps its
       //: setup network while it is in use.
       const here = setInterval(() => { if (document.visibilityState === 'visible') fetch('/setup/status').catch(() => {}); }, 60000);
-      return () => { window.removeEventListener('resize', wide); clearInterval(clock); clearInterval(here); clearInterval(plexWatch); };
+      return () => { window.removeEventListener('resize', wide); clearInterval(seconds); clearInterval(clock); clearInterval(here); clearInterval(plexWatch); };
     }
     plexClaimCheck();
     (async () => {
@@ -686,6 +715,7 @@
     return () => {
       window.removeEventListener('resize', wide);
       clearInterval(clock);
+      clearInterval(seconds);
       clearInterval(plexWatch);
     };
   });

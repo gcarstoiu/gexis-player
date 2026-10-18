@@ -40,3 +40,16 @@ def test_only_a_first_read_is_first():
     assert stage(True, True, {"rescan": 1, "info total songs": 760}, True)["first"] is False
     assert stage(False, True, None, True)["first"] is False
     assert stage(True, True, {"info total songs": 760}, True)["first"] is False
+
+
+def test_one_add_on_that_will_not_install_does_not_hold_the_rest_back():
+    """sofapi, 2026-10-19: Radio Now Playing's download failed Lyrion's
+    check ("digest does not match"); the checklist stayed on step 3."""
+    addons = {"MaterialSkin": True, "MusicArtistInfo": True, "RadioNowPlaying": False}
+    got = stage(True, addons, {"rescan": 1, "info total songs": 0, "progressname": "Scanning new music files",
+                               "progressdone": 5, "progresstotal": 50}, True)
+    assert got["phase"] == "scanning"
+    assert [a["in"] for a in got["addons"]] == [True, True, False]
+    assert got["addons"][2]["name"] == "Radio Now Playing"
+    waiting = stage(True, {"MaterialSkin": False, "MusicArtistInfo": True, "RadioNowPlaying": True}, {}, True)
+    assert waiting["phase"] == "addons", "Material Skin is the one a person sees"

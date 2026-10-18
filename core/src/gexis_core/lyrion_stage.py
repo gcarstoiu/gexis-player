@@ -17,19 +17,29 @@ it read into the words.
 """
 from __future__ import annotations
 
+from gexis_core.lyrion_addons import NAMES, WANTED
+
 #: The stage last worked out, for the server's row in Settings (read on the
 #: loop's thread, written by the core's Lyrion loop).
 CURRENT: dict = {}
 
 
-def stage(answering: bool, addons_done: bool, status: dict | None, has_locations: bool) -> dict:
+def stage(answering: bool, addons, status: dict | None, has_locations: bool) -> dict:
     """`{"phase", "label", "line", "share", "done", "first"}`: `done` is true
     once Lyrion is reading the music or has read it - the player is usable
     then, however long a large library takes. `first`: the library has never
     been read yet - Lyrion keeps the old one through a rescan (Finding 127),
     so only a first read leaves it empty, and the panel says so in large
     (George, 2026-10-18, option A)."""
+    # `addons`: each add-on's folder present, by Lyrion's name, or a bool
+    # for all of them. The step counts as done once Material Skin - the one a
+    # person sees - is in; one whose download fails (Radio Now Playing's did,
+    # sofapi 2026-10-19) is asked again without holding the rest back.
+    if isinstance(addons, bool):
+        addons = {name: addons for name in WANTED}
+    addons_done = bool(addons.get("MaterialSkin")) or all(addons.values())
     got = _stage(answering, addons_done, status or {}, has_locations)
+    got["addons"] = [{"name": NAMES.get(name, name), "in": bool(addons.get(name))} for name in WANTED]
     songs = _int((status or {}).get("info total songs"))
     if got["phase"] in ("starting", "addons"):
         got["first"] = not addons_done
@@ -48,7 +58,7 @@ def _stage(answering: bool, addons_done: bool, status: dict, has_locations: bool
     if not addons_done:
         return {"phase": "addons", "label": "Adding its add-ons", "share": None, "done": False,
                 "line": ("Lyrion fetches Material Skin, Music & Artist Information and Radio Now Playing, "
-                         "then restarts once: about 3 minutes before it reads your music.")}
+                         "then restarts once: about 3 minutes.")}
     if status.get("rescan"):
         # Lyrion names its step itself, readably ("Scanning new music files",
         # "Discovering files/directories", "Building full text index" -

@@ -3364,11 +3364,19 @@ async def main() -> None:
         its folder - and only then is Material made the skin."""
         if LYRION_ADDONS_DONE.exists():
             return
-        if all((LYRION_PLUGINS / name).is_dir() for name in lyrion_addons.WANTED):
+        have = {name: (LYRION_PLUGINS / name).is_dir() for name in lyrion_addons.WANTED}
+        # **Material as soon as it is in** (sofapi, 2026-10-19): Radio Now
+        # Playing's download failed Lyrion's own check ("digest does not
+        # match"), and waiting for all three left the server without its
+        # skin and the checklist on step 3. The others are asked again.
+        if have["MaterialSkin"] and not lyrion_asked.get("skin"):
             await _lyrion_rpc(["pref", "skin", "material"])
+            lyrion_asked["skin"] = True
+            logger.info("lyrion: Material Skin is in; it is the skin")
+        if all(have.values()):
             LYRION_ADDONS_DONE.parent.mkdir(parents=True, exist_ok=True)
             LYRION_ADDONS_DONE.touch()
-            logger.info("lyrion: add-ons installed (%s); Material is the skin", ", ".join(lyrion_addons.WANTED))
+            logger.info("lyrion: add-ons installed (%s)", ", ".join(lyrion_addons.WANTED))
             state_store.bump_settings_revision()  # its switch stops saying "Setting up"
             return
         now = time.monotonic()
@@ -3389,18 +3397,56 @@ async def main() -> None:
             logger.info("lyrion: restarting it to install its add-ons")
             await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-lyrion.service")
 
+    def _set_lyrion_stage(status) -> None:
+        """ADR-0115 decision 28: the stage from what `serverstatus` answered
+        (None: no answer), published when it changes."""
+        located = (settings.value("lyrion-server.music_folder") is True or bool(lyrion_shares.points())
+                   or (settings.value("lyrion-server.usb") is True and bool(lyrion_usb.all())))
+        addons = ({name: True for name in lyrion_addons.WANTED} if LYRION_ADDONS_DONE.exists()
+                  else {name: (LYRION_PLUGINS / name).is_dir() for name in lyrion_addons.WANTED})
+        now_stage = lyrion_stage.stage(status is not None, addons, status, located)
+        # **A slow answer is not a new start** (George, 2026-10-19: the
+        # checklist went back and forth between steps 2 and 3): once
+        # Lyrion has answered, a missed answer - its add-ons' restart, a
+        # scan starting - keeps the step it is on.
+        if status is None and lyrion_stage.CURRENT.get("phase") not in (None, "starting"):
+            now_stage = dict(lyrion_stage.CURRENT)
+        if now_stage != lyrion_stage.CURRENT:
+            if now_stage["phase"] != lyrion_stage.CURRENT.get("phase"):
+                logger.info("lyrion: %s", now_stage["label"].lower())
+            lyrion_stage.CURRENT.clear()
+            lyrion_stage.CURRENT.update(now_stage)
+            # The Lyrion Server heading in Settings: working, then Ready.
+            try:
+                if now_stage["phase"] == "ready":
+                    settings.indicate("lyrion-server.enabled", "ok", now_stage["label"])
+                elif now_stage["phase"] == "scanning" and now_stage.get("share") is not None:
+                    settings.indicate("lyrion-server.enabled", "wait", f"Reading {round(now_stage['share'] * 100)} %")
+                else:
+                    settings.indicate("lyrion-server.enabled", "wait", now_stage["label"])
+            except Exception:  # noqa: BLE001 - a heading that cannot say it is no reason to stop
+                logger.debug("lyrion: indicator not set", exc_info=True)
+            _publish_components()
+            state_store.bump_settings_revision()
+
     async def _lyrion_folders_loop() -> None:
         """Shares mounted while the server is on and unmounted while it is
         off; then its folders brought up to date. Woken early when a share
         is added or forgotten."""
+        first_pass = True
         while True:
             # ADR-0115 decision 28: every few seconds while Lyrion is still
-            # getting ready, so the page follows it closely.
-            settled = lyrion_stage.CURRENT.get("phase") in (None, "ready")
-            try:
-                await asyncio.wait_for(lyrion_wake.wait(), LYRION_FOLDERS_S if settled else LYRION_STAGE_S)
-            except asyncio.TimeoutError:
-                pass
+            # getting ready, so the page follows it closely - and the first
+            # pass at once (George, 2026-10-19: after part 2's core restart
+            # the stage came 27 s late, and the panel showed the plain
+            # waiting screen meanwhile).
+            settled = lyrion_stage.CURRENT.get("phase") == "ready"
+            if not first_pass:
+                try:
+                    await asyncio.wait_for(lyrion_wake.wait(), LYRION_FOLDERS_S if settled else LYRION_STAGE_S)
+                except asyncio.TimeoutError:
+                    pass
+            first_pass = False
             lyrion_wake.clear()
             on = settings.value("lyrion-server.enabled") is True
             # George, 2026-10-19: USB drives cannot be switched on while no
@@ -3411,6 +3457,14 @@ async def main() -> None:
                 settings.restrict("lyrion-server.usb", {} if plugged else {True: "No USB drive plugged in"})
             except Exception:  # noqa: BLE001 - a row left as it was is no reason to stop the loop
                 logger.debug("lyrion: usb switch not checked", exc_info=True)
+            if on:
+                # The stage first, before the shares are mounted and the
+                # folders synced - those take seconds on a first pass.
+                try:
+                    early = await _lyrion_rpc(["serverstatus", 0, 0])
+                except Exception:  # noqa: BLE001 - not answering yet is a stage too
+                    early = None
+                _set_lyrion_stage(early)
             if not on and lyrion_stage.CURRENT:
                 lyrion_stage.CURRENT.clear()
                 try:
@@ -3453,26 +3507,7 @@ async def main() -> None:
                 logger.debug("lyrion: scan state not read (%r)", exc)
             # ADR-0115 decision 28: what Lyrion is doing, for Getting ready
             # and the server's row.
-            located = (settings.value("lyrion-server.music_folder") is True or bool(lyrion_shares.points())
-                       or (settings.value("lyrion-server.usb") is True and bool(lyrion_usb.all())))
-            now_stage = lyrion_stage.stage(status is not None, LYRION_ADDONS_DONE.exists(), status, located)
-            if now_stage != lyrion_stage.CURRENT:
-                if now_stage["phase"] != lyrion_stage.CURRENT.get("phase"):
-                    logger.info("lyrion: %s", now_stage["label"].lower())
-                lyrion_stage.CURRENT.clear()
-                lyrion_stage.CURRENT.update(now_stage)
-                # The Lyrion Server heading in Settings: working, then Ready.
-                try:
-                    if now_stage["phase"] == "ready":
-                        settings.indicate("lyrion-server.enabled", "ok", now_stage["label"])
-                    elif now_stage["phase"] == "scanning" and now_stage.get("share") is not None:
-                        settings.indicate("lyrion-server.enabled", "wait", f"Reading {round(now_stage['share'] * 100)} %")
-                    else:
-                        settings.indicate("lyrion-server.enabled", "wait", now_stage["label"])
-                except Exception:  # noqa: BLE001 - a heading that cannot say it is no reason to stop
-                    logger.debug("lyrion: indicator not set", exc_info=True)
-                _publish_components()
-                state_store.bump_settings_revision()
+            _set_lyrion_stage(status)
             if not lyrion_asked.get("versions_off"):
                 # ADR-0100, amended 2026-10-03: we choose its version, so its
                 # page does not offer others - set on servers made before the

@@ -330,7 +330,9 @@ js = js[:a] + """      case 'done': { const items = [], got = [];
           if (g.done && after && !g.after) items.push(note('info', '', after)); };
         if (d.here) { const lid = live.component('lyrion-server.enabled', 'lyrion'), lg = live.stage(lid); got.push(lg);
           items.push({ t: 'Sub', text: 'Lyrion', accent: C.lyr }, { t: 'Num', items: live.lyrionSteps(lid) });
-          if (lg.after && lg.line && !lg.ok) items.push(P(lg.line)); }
+          const now = live.lyrionNow(lid);
+          if (now) items.push(prog(now.label, now.pct, now.meta, lg.after && lg.line && !lg.ok ? lg.line : '', false));
+          else if (lg.after && lg.line && !lg.ok) items.push(P(lg.line)); }
         if (d.plex && s.plexOn) { const ok = s.plexState === 'ok';
           show('Plexamp', C.plex, live.component('plexamp.enabled', 'plexamp'), ok ? 'Signed in to Plex' : 'Not signed in yet', ok, ok ? 'Your Plex library plays from the Plexamp app.' : 'Sign in from Settings → Plexamp when you’re ready.'); }
         if (!d.headless && s.vizOn) show('Visualiser', C.scr, 'skins', 'Skins ready', true, 'The visualiser starts after ' + s.vizAfter + ' of music.');

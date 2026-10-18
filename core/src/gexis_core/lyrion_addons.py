@@ -19,6 +19,9 @@ logger = logging.getLogger(__name__)
 
 #: Lyrion's own names for them (the checkboxes' `name`).
 WANTED = ("MaterialSkin", "MusicArtistInfo", "RadioNowPlaying")
+#: As a person reads them (ADR-0115 decision 28).
+NAMES = {"MaterialSkin": "Material Skin", "MusicArtistInfo": "Music & Artist Information",
+         "RadioNowPlaying": "Radio Now Playing"}
 PAGE = "/settings/server/plugins.html"
 
 

@@ -299,6 +299,21 @@ setting" and the Music folder's always being offered.
     Lyrion reads, the player counts as ready, since a large library takes
     hours.
 
+    **After George's run of 2026-10-19:** Getting ready shows the five steps
+    as a numbered checklist (done, now, next), and under it a bar for the
+    step under way - a real share for the download, the add-ons in and the
+    reading, and elsewhere the time spent against the usual one, never full
+    until the step is done. The add-ons are asked for together and loaded
+    by one restart; **one that will not install no longer holds the rest
+    back** (Radio Now Playing's download failed Lyrion's own check -
+    "digest does not match" - and installed on the retry 10 minutes later):
+    Material Skin becomes the skin as soon as it is in, the step counts as
+    done with Material in, and each add-on is ticked as it arrives. Once
+    Lyrion has answered, a missed answer keeps the step it is on (the
+    checklist went back and forth between steps 2 and 3). The core's Lyrion
+    pass runs at once after a start and works out the stage before mounting
+    shares (it came 27 s late after part 2's core restart, and the panel
+    showed the plain waiting screen meanwhile).
 29. **A new player's first read keeps the waiting screen** (George,
     2026-10-18, option A of three, approved on a screenshot: *"make sure it
     is visible enough and not a small text"*). Lyrion keeps the library it

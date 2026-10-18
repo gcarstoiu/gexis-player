@@ -376,7 +376,9 @@
     const c = $components?.lyrion;
     // Its download is the first read's first step, when the player's own
     // server is switched on.
-    if ($settingValues['lyrion-server.enabled'] === true && ['preparing', 'downloading', 'retrying', 'verifying', 'installing'].includes(c?.state)) {
+    const known = Object.keys($components ?? {}).length > 0;
+    if ($settingValues['lyrion-server.enabled'] === true && known
+        && (!c || ['absent', 'preparing', 'downloading', 'retrying', 'verifying', 'installing'].includes(c.state))) {
       return { phase: 'downloading', label: 'Downloading Lyrion', share: c.total ? (c.received ?? 0) / c.total : c.share ?? null, line: '', first: true };
     }
     const after = c?.after;
