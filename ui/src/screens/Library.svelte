@@ -304,7 +304,7 @@
 
   //: **Fanart first, then LMS's own plugin** (George, 2026-09-18). The data
   //: already preferred fanart; the page was still reading only the plugin's
-  //: photo store, so an artist the plugin has nothing for - 2Pac - showed
+  //: photo store, so an artist the plugin has nothing for - one rap artist - showed
   //: initials next to a picture the daemon had already found.
   const artistPicture = $derived(
     artistInfo.found?.artist_image ?? photos[`${artist?.id}@600`] ?? null,
@@ -314,7 +314,7 @@
   //: sources give; rendered as one string the browser collapses all of it
   //: into a single blob (George, 2026-09-18).
   //: LMS's plugin hands back the whole article for some artists - 56,573
-  //: characters for 2Pac. Opened in full that is a few hundred paragraphs
+  //: characters for that artist. Opened in full that is a few hundred paragraphs
   //: of DOM on a panel that already drops frames (Finding 034), and nobody
   //: reads an encyclopaedia on a hi-fi. The opening is what is shown.
   const BIO_PARAGRAPHS = 12;

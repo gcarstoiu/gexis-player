@@ -186,8 +186,8 @@ class Known:
 
 
 async def host_name(ip: str, timeout_s: float = RESOLVE_S) -> str:
-    """The name the machine at `ip` announces over mDNS (`Nuc.local` gives
-    `Nuc`), or "" when it announces none or the tool is missing. Never
+    """The name the machine at `ip` announces over mDNS (`Minibox.local` gives
+    `Minibox`), or "" when it announces none or the tool is missing. Never
     raises: the address still names the server."""
     try:
         proc = await asyncio.create_subprocess_exec(

@@ -1648,8 +1648,8 @@ ADRs were updated.
      [Finding 073](findings/073-the-cover-that-never-reached-the-meter.md)).
    - **Few album covers were found.** George's diagnosis — modifiers in the
      album name — was right and was the smaller half: the query was also
-     being *folded*, and `releasegroup:"57th & 9th"` scores 100 where
-     `"57th 9th"` returns nothing. **31.2 % of his thousands of albums** carry a
+     being *folded*, and `releasegroup:"<a title with &>"` scores 100 where
+     `"<the same title, folded>"` returns nothing. **31.2 % of his thousands of albums** carry a
      character folding removes, against 11.1 % carrying a modifier. Measured
      old against new on 40 albums: **27 found → 32, none lost**
      ([ADR-0080](decisions/0080-a-cover-is-matched-on-a-title-both-catalogues-agree-on.md),

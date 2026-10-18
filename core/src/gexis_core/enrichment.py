@@ -118,8 +118,8 @@ class Outcome(str, Enum):
 
 #: Apostrophes are *deleted*, not turned into spaces like other punctuation.
 #: The curly one is dropped by the ASCII fold below and the straight one is
-#: not, so treating them like other punctuation splits "School's Out" from
-#: "School’s Out" into "school s out" and "schools out" - the two
+#: not, so treating them like other punctuation splits "Night's Out" from
+#: "Night’s Out" into "night s out" and "nights out" - the two
 #: spellings Finding 036 saw for the same album, in George's tags and in
 #: MusicBrainz's reply.
 _APOSTROPHES = str.maketrans("", "", "'‘’ʼ´`")
@@ -136,9 +136,9 @@ def fold(text: str | None) -> str:
 
 
 #: Everything an edition adds to a title. LMS shows what the tagger wrote -
-#: `12 x 5 (2006, Japan Mini LP)`, `[1997] MTV Unplugged [EP]`,
-#: `57th & 9th (Deluxe Edition)` - and MusicBrainz's release group is called
-#: `12 X 5`, `MTV Unplugged`, `57th & 9th`. Comparing them as they stand
+#: `Album 2 (2006, Japan Mini LP)`, `[1997] Album 4 [EP]`,
+#: `4th & Main (Deluxe Edition)` - and MusicBrainz's release group is called
+#: `Album 2`, `Album 4`, `4th & Main`. Comparing them as they stand
 #: matched nothing for **43% of George's albums** (measured 2026-09-24), and
 #: that was the matcher falling short rather than fanart having no cover.
 _BRACKETS = re.compile(r"[\(\[\{][^\)\]\}]*[\)\]\}]")
@@ -152,7 +152,7 @@ _EDITION = re.compile(
 
 
 #: The same edition phrase, matched in a title that has *not* been folded -
-#: with whatever separator announces it, so `A Boy from Tupelo - CD 1` loses
+#: with whatever separator announces it, so `Album 6 - CD 1` loses
 #: the dash along with the disc.
 _EDITION_RAW = re.compile(
     r"\s*[\-\u2013\u2014:,;]?\s*\b(deluxe|expanded|remaster(ed)?|anniversary|edition|"
@@ -168,8 +168,8 @@ def trim_title(title: str) -> str:
     For asking a catalogue rather than for comparing two of them. Folding is
     right for a cache key and wrong for a query: MusicBrainz indexes the
     title's own characters, so a quoted phrase built from a folded title
-    misses every album whose name carries one - `57th & 9th` folds to
-    `57th 9th` and matches nothing, and `100 Jahre Strauss` loses the `ss`
+    misses every album whose name carries one - `4th & Main` folds to
+    `4th main` and matches nothing, and a German title loses the `ss`
     entirely. Measured on George's library: **31.2% of thousands of albums**.
 
     **Never empty**, for the same reason `match_title` is not.

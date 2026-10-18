@@ -157,8 +157,8 @@ enrichment.
 | with artwork LMS can serve | **96.6 %** |
 | **without any** | **3.4 %** |
 
-The missing ones are mostly editions and live bootlegs — *"12 x 5 (2006,
-Japan Mini LP)"*, *"2001-09-28: Higher Ground, Winooski, VT, USA"*.
+The missing ones are mostly editions and live bootlegs — a Japanese mini-LP
+reissue, a concert recording titled with its date, venue and town.
 
 `providers.CoverArtProvider` already covers this: it searches MusicBrainz
 for a **release group** and asks the Cover Art Archive. That is a *second*
@@ -262,9 +262,9 @@ mixed.
 **Covers, first run:** 46 % of the albums got one, 11 % were
 asked about and fanart had none, and **43 % never matched a release
 group at all**. That last number was the matcher, not fanart: LMS shows what
-the tagger wrote — `12 x 5 (2006, Japan Mini LP)`, `[1997] MTV Unplugged
-[EP]`, `57th & 9th (Deluxe Edition)` — where MusicBrainz's release group is
-`12 X 5`, `MTV Unplugged`, `57th & 9th`.
+the tagger wrote — `Album 2 (2006, Japan Mini LP)`, `[1997] Album 4
+[EP]`, `4th & Main (Deluxe Edition)` — where MusicBrainz's release group is
+`Album 2`, `Album 4`, `4th & Main`.
 
 **Covers, after stripping brackets and edition phrases for the comparison:**
 

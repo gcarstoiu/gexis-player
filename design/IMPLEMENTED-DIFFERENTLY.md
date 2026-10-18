@@ -93,7 +93,7 @@ wrong in both directions - it hid the text on a short biography and the
 discography on a long one. Biographies arrive as plain text with paragraph
 breaks and no markup; the panel renders paragraphs and shows the first
 twelve, because LMS returns whole encyclopaedia articles for some artists
-(56,573 characters for 2Pac).
+(56,573 characters for one artist).
 
 **[S] "Popular" is absent without a ListenBrainz token.** The endpoint began
 demanding one mid-phase. With a token it lists only tracks **on this device**,

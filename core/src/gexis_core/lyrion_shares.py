@@ -67,7 +67,7 @@ def slug(address: str) -> str:
 
 def label(address: str) -> tuple[str, str]:
     """(the share's own name, its server's) as a person says them: "Music"
-    and "Tower" for `//Tower.local/Music`, "music" and "nas" for
+    and "Mediabox" for `//Mediabox.local/Music`, "music" and "nas" for
     `nas.local:/volume1/music` (George, 2026-10-03: the row read "just
     code")."""
     if address.startswith("//"):

@@ -844,9 +844,9 @@ class CoverArtProvider:
         # **Asked with the title's own characters, not the folded one**
         # (ADR-0080 as amended 2026-09-25, on the device). Folding is right
         # for a cache key and wrong for a query: this is a quoted phrase
-        # against an index that holds the real title, so `57th & 9th` folded
-        # to `57th 9th` matched *nothing* - measured against MusicBrainz -
-        # and `100 Jahre Strauss` lost its `ss` altogether. 31.2% of George's
+        # against an index that holds the real title, so a title with `&`
+        # folded without it matched *nothing* - measured against MusicBrainz -
+        # and a German title lost its `ss` altogether. 31.2% of George's
         # albums carry a character folding removes.
         artist = key.raw_artist or key.artist
         album = key.raw_album or key.album

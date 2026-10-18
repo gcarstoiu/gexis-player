@@ -44,7 +44,7 @@ through the flat commands.**
 | strip | the call | verified |
 |---|---|---|
 | **New music** | `albums sort:new` | already built |
-| **Most played artists** | `browselibrary items … mode:artists sort:popular role_id:ALBUMARTIST` | **52 artists, 2Pac first** |
+| **Most played artists** | `browselibrary items … mode:artists sort:popular role_id:ALBUMARTIST` | **52 artists** |
 | **Recently played artists** | the same with `sort:recentlyplayed` | **52 artists, Gary Moore first** |
 
 **Neither needs a plugin.** Material Skin's `browsemodes` is where they were

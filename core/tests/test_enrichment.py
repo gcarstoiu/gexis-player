@@ -79,17 +79,17 @@ KEY = TrackKey.of(TrackMetadata(title="Let There Be Rock", artist="AC/DC",
 def test_the_key_is_what_a_track_is_not_what_lms_calls_it():
     """A full rescan renumbers every LMS id (Finding 029), and the same track
     over Bluetooth has no id at all."""
-    key = TrackKey.of(TrackMetadata(title="Ghetto Gospel", artist="2Pac",
-                                    album="Loyal to the Game", duration=239.7))
+    key = TrackKey.of(TrackMetadata(title="Track B", artist="Artist B",
+                                    album="Album B", duration=239.7))
 
-    assert key == TrackKey("2pac", "loyal to the game", "ghetto gospel", 239)
+    assert key == TrackKey("artist b", "album b", "track b", 239)
 
 
 def test_punctuation_and_case_do_not_split_the_cache():
-    """"School's Out" against "School’s Out" - the curly apostrophe
+    """"Night's Out" against "Night’s Out" - the curly apostrophe
     MusicBrainz returned in Finding 036."""
-    ours = TrackKey.of(TrackMetadata(title="School's Out", artist="Alice Cooper"))
-    theirs = TrackKey.of(TrackMetadata(title="School’s Out", artist="ALICE COOPER"))
+    ours = TrackKey.of(TrackMetadata(title="Night's Out", artist="Artist D"))
+    theirs = TrackKey.of(TrackMetadata(title="Night’s Out", artist="ARTIST D"))
 
     assert ours == theirs
 

@@ -121,7 +121,7 @@ So the same code path was run off-screen against the **real** skin file and the
 ```
   skin section: 01G5_Accuphase
   badge box: 610,550 50,50
-  now playing: 2 Unlimited - Get Ready for This (orchestral mix) | file: plexamp
+  now playing: Artist A - Track A (orchestral mix) | file: plexamp
   badge rect: <rect(610, 550, 50, 50)>
 ```
 

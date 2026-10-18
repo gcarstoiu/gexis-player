@@ -390,7 +390,7 @@ def test_a_found_server_is_named_by_its_host_then_its_own_name_then_its_address(
     """George, 2026-10-16: host names rather than addresses. Lyrion's default
     library name tells servers apart no better than nothing."""
     base = {"address": "1.2.3.4:9000", "version": "9.1.1", "uuid": ""}
-    assert discovery.label({**base, "name": "Lyrion Music Server", "host": "Nuc"}) == "Nuc"
+    assert discovery.label({**base, "name": "Lyrion Music Server", "host": "Minibox"}) == "Minibox"
     assert discovery.label({**base, "name": "Kitchen library", "host": ""}) == "Kitchen library"
     assert discovery.label({**base, "name": "Lyrion Music Server (Docker)", "host": ""}) == "1.2.3.4:9000"
     assert discovery.label({**base, "name": ""}) == "1.2.3.4:9000"
@@ -399,11 +399,11 @@ def test_a_found_server_is_named_by_its_host_then_its_own_name_then_its_address(
 @pytest.mark.asyncio
 async def test_a_host_name_comes_from_mdns_and_its_absence_is_no_error(tmp_path, monkeypatch):
     tool = tmp_path / "avahi-resolve"
-    tool.write_text('#!/bin/sh\n[ "$2" = 10.0.0.1 ] && printf "10.0.0.1\\tNuc.local\\n"\n'
+    tool.write_text('#!/bin/sh\n[ "$2" = 10.0.0.1 ] && printf "10.0.0.1\\tMinibox.local\\n"\n'
                     '[ "$2" = 10.0.0.2 ] && sleep 5\nexit 0\n')
     tool.chmod(0o755)
     monkeypatch.setenv("PATH", f"{tmp_path}:{os.environ['PATH']}")
-    assert await discovery.host_name("10.0.0.1") == "Nuc"
+    assert await discovery.host_name("10.0.0.1") == "Minibox"
     assert await discovery.host_name("10.0.0.3") == ""
     # A machine that never answers costs the timeout, not the sheet.
     assert await discovery.host_name("10.0.0.2", timeout_s=0.2) == ""
@@ -538,14 +538,14 @@ async def test_the_lyrion_shares_row_names_its_shares_and_never_sends_their_logi
     settings = Settings(store, registry=registry, wired={"lyrion-server.shares": None})
     shares = lyrion_shares.Shares(store, root=tmp_path / "mnt", credentials=tmp_path / "cred",
                                   is_mount=lambda p: False)
-    shares.add("//Tower.local/Music", "me", "s3cret")
+    shares.add("//Mediabox.local/Music", "me", "s3cret")
     server = StateServer(StateStore({}), settings=settings, lyrion_shares=shares)
     async with TestClient(TestServer(server.make_app())) as client:
         response = await client.get("/settings")
         text = await response.text()
         row = _row(await response.json(), "lyrion-server.shares")
     assert row["value"] is None
-    assert [(i["name"], i["address"]) for i in row["items"]] == [("Music", "//Tower.local/Music")]
+    assert [(i["name"], i["address"]) for i in row["items"]] == [("Music", "//Mediabox.local/Music")]
     assert "s3cret" not in text
 
 

@@ -21,22 +21,22 @@ not reach, not how many covers exist behind it.
 | **the reduction changes the query** | **506** | **11.1 %** |
 | fold to nothing at all (`+`, `÷`, `=`) | 3 | 0.07 % |
 
-A sample of what changes:
+A sample of what changes (made-up titles, of the same shapes as the library's):
 
 ```
-'11 (Deluxe Edition)'                    -> '11'
-'12 x 5 (2006, Japan Mini LP)'           -> '12 x 5'
-'13 Voices (Japanese Deluxe Edition)'    -> '13 voices'
-'[1997] MTV Unplugged [EP]'              -> 'mtv unplugged'
-'21 Reasons (feat. Ella Henderson)'      -> '21 reasons'
-'44/876 (Deluxe)'                        -> '44 876'
-'57th & 9th (Deluxe Edition)'            -> '57th 9th'
-'A Boy from Tupelo - CD 1'               -> 'a boy from tupelo'
-'18 Til I Die (Live At The Royal Albert Hall 2024) - CD 2' -> '18 til i die'
+'Album 1 (Deluxe Edition)'               -> 'album 1'
+'Album 2 (2006, Japan Mini LP)'          -> 'album 2'
+'Album 3 (Japanese Deluxe Edition)'      -> 'album 3'
+'[1997] Album 4 [EP]'                    -> 'album 4'
+'Album 5 (feat. Artist X)'               -> 'album 5'
+'12/34 (Deluxe)'                         -> '12 34'
+'4th & Main (Deluxe Edition)'            -> '4th main'
+'Album 6 - CD 1'                         -> 'album 6'
+'Album 7 (Live At A Hall 2024) - CD 2'   -> 'album 7'
 ```
 
 **Folding was never going to reach these.** `fold` removes punctuation, so
-`57th & 9th (Deluxe Edition)` became `57th 9th deluxe edition` — the brackets
+`4th & Main (Deluxe Edition)` became `4th main deluxe edition` — the brackets
 went and every modifier word stayed, and that is what was sent to MusicBrainz
 as a quoted phrase.
 
@@ -58,7 +58,7 @@ only if the release group's own title reduces to the same string, which
 `50th Anniversary Collector's Edition` would.
 
 **149 reduced keys are shared by more than one album title**, almost all of
-them discs of one release (`A Boy from Tupelo - CD 1/2/3`), case variants, or
+them discs of one release (`Album 6 - CD 1/2/3`), case variants, or
 an edition beside its plain issue. Those collide onto the same cover, which is
 the right cover.
 
@@ -71,9 +71,9 @@ cannot split. The index holds the title's own characters. Asked directly:
 
 | query | result |
 |---|---|
-| `artist:"Sting" AND releasegroup:"57th & 9th"` | **100**, exact |
-| `artist:"sting" AND releasegroup:"57th 9th"` | **nothing** |
-| `artist:"sting" AND releasegroup:(57th 9th)` | 100 (unquoted, so not a phrase) |
+| `artist:"<artist>" AND releasegroup:"<a title with &>"` | **100**, exact |
+| `artist:"<artist>" AND releasegroup:"<the same title, folded>"` | **nothing** |
+| `artist:"<artist>" AND releasegroup:(<the same title, folded>)` | 100 (unquoted, so not a phrase) |
 
 Folding removes the `&` and the phrase then matches nothing. And folding is
 ASCII-only, so it does worse than remove punctuation:
