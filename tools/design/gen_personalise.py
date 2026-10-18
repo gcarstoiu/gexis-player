@@ -48,6 +48,10 @@ i = markup.index(right)
 j = markup.index("{/each}", i)
 j = markup.index("</div>", j) + len("</div>")
 markup = markup[:i] + "{#if b.right.length}" + markup[i:j] + "{/if}" + markup[j:]
+# The Dev block's heading is the block's own (George, 2026-10-18: added
+# shares get the Forget paired phones have), "Trusted devices" by default.
+assert markup.count(">Trusted devices<") == 1
+markup = markup.replace(">Trusted devices<", ">{b.head}<")
 js = src[src.index('data-dc-script>') + len('data-dc-script>'):src.rindex('</script>')]
 R = []
 def rep(a, b, n=1):
@@ -69,6 +73,9 @@ rep("  componentDidUpdate(pp, ps) { if (ps && ps.screen !== this.state.screen &&
 # The Lyrion search is real and has run; Getting ready writes the answers;
 # Kept the defaults puts part 2 off on the player.
 rep("    if (id === 'listen' && s.lyrState === 'idle') this.setState({ lyrState: s.flow === 'A' ? 'found' : 'none' });\n", "")
+rep("""          if (s.shares.length && !ss) extra.push(list(s.shares.map(a => ({ k: 'plain', label: a.name, note: a.where, tag: ['Added', 'ok'] })), 'Network shares'));""",
+    """          if (s.shares.length && !ss) extra.push({ t: 'Dev', head: 'Network shares', items: s.shares.map(a => ({ name: a.name, meta: a.where, fn: () => live.forgetShare(a.address) })), empty: '' });""")
+rep("  if (b.t === 'Dev') { o.items = ", "  if (b.t === 'Dev') { o.head = b.head || 'Trusted devices'; o.items = ")
 rep("    if (id === 'done') this.setState({ inst: 0 });", "    if (id === 'done') live.finish();\n    if (id === 'later') live.later();\n    if (id === 'bluetooth') live.trusted();\n    if (id === 'folders') { live.loadShares(); live.loadUsb(); }")
 # Close leaves the page.
 rep("    if (['done', 'later', 'p1restored'].includes(s.screen)) return this.restart();", "    if (['done', 'later', 'p1restored'].includes(s.screen)) return live.close();")
@@ -113,7 +120,12 @@ rep("""          else if (ss === 'list') extra.push(list([['NAS', '192.0.2.24', 
 rep("""            btn('Show shares', () => set({ shareStep: 'browse' })), btn('Back', () => set({ shareStep: 'list' })));""",
     """            btn('Show shares', () => live.showShares(s.shareSrvItem, s.shareUser.trim(), s.sharePw)), btn('Back', () => set({ shareStep: 'list' })));""")
 rep("""          else if (ss === 'browse') extra.push(list(['Music', 'Archive'].map(n => HB(n, '//' + srv.toLowerCase() + '/' + n.toLowerCase(), () => addShare('//' + srv.toLowerCase() + '/' + n.toLowerCase(), 'On ' + srv), { icon: 'fold' })), 'Shares on ' + srv),""",
-    """          else if (ss === 'browse') extra.push(list(s.shareFound.map(f => HB(f.name, f.address, () => addShare(f.address, s.shareUser.trim() || null, s.sharePw || null), { icon: 'fold' })), 'Shares on ' + srv),""")
+    """          else if (ss === 'folder') { const o = s.shareFolder;
+            extra.push(list(o.items.map(i => HB(i.name, i.meta, () => i.add ? addShare(i.address, s.shareUser.trim() || null, s.sharePw || null) : live.openShareFolder(i.address), { icon: 'fold' })), o.title),
+              P('Open a folder, or add the one shown first. Lyrion reads everything inside it.'), btn('Back to the shares', () => set({ shareStep: 'browse' }))); }
+          else if (ss === 'browse') extra.push(list(s.shareFound.map(f => HB(f.name, f.address, () => f.address.startsWith('//') ? live.openShareFolder(f.address) : addShare(f.address, s.shareUser.trim() || null, s.sharePw || null), { icon: 'fold' })), 'Shares on ' + srv),""")
+# George, 2026-10-18: an SMB share opens into its folders, at any depth.
+rep("P('Tap one to add it.'), btn('Back', () => set({ shareStep: 'list' })));", "P('Tap one to see its folders.'), btn('Back', () => set({ shareStep: 'list' })));")
 rep("""            btn('Add', () => { if (s.shareAddr.trim()) addShare(s.shareAddr.trim(), 'Added by address'); }), btn('Back', () => set({ shareStep: 'list' })));
         }""", """            btn('Add', () => { if (s.shareAddr.trim()) addShare(s.shareAddr.trim(), s.shareAU.trim() || null, s.shareAP || null); }), btn('Back', () => set({ shareStep: 'list' })));
           if (s.shareError) extra.push(note('warn', '', s.shareError));

@@ -37,7 +37,7 @@
   let st = $state(Object.assign(init('A', mode === 'p1' ? 'p1' : 'p2', false), {
     first: true, nameSaved: false, second: true, touchpad: true, plexClaimed: false, plexError: null,
     volume: 'Hardware', volHw: {}, volNotes: {}, outTags: {}, outProblems: {}, town: '', net: 'your network', lyrMeta: '', lyrServer: null, pairDevice: '', pairCode: '',
-    shareServers: [], shareFound: [], shareSrvItem: null, shareError: null, finishError: null, finished: null,
+    shareServers: [], shareFound: [], shareFolder: null, shareSrvItem: null, shareError: null, finishError: null, finished: null,
     plugins: [], tick: 0, ready: false,
     //: **Drawn once the player's own values are in** (found 2026-10-18: the
     //: design's sample name and network showed until /settings arrived).
@@ -153,17 +153,42 @@
       st.usbOpen = null;
       live.loadUsb();
     },
+    //: The shares added, without a scan for servers (2026-10-18: every add
+    //: waited two seconds for one).
     async loadShares() {
-      const got = await listItems('lyrion-server.shares');
-      const items = got.items ?? [];
-      st.shares = items.filter((i) => !i.server).map((i) => ({ name: i.name, where: i.meta || '' }));
-      st.shareServers = items.filter((i) => i.server);
+      const got = await json('/settings/lyrion-server.shares/items?saved=1').catch(() => ({}));
+      st.shares = (got.items ?? []).filter((i) => !i.server).map((i) => ({ name: i.name, where: i.meta || '', address: i.address }));
     },
     async scanShares() {
       st.shareStep = 'scan';
       st.shareError = null;
-      await live.loadShares();
+      const got = await listItems('lyrion-server.shares');
+      const items = got.items ?? [];
+      st.shares = items.filter((i) => !i.server).map((i) => ({ name: i.name, where: i.meta || '', address: i.address }));
+      st.shareServers = items.filter((i) => i.server);
       if (st.shareStep === 'scan') st.shareStep = 'list';
+    },
+    //: George, 2026-10-18: a share added by mistake is forgotten here, as in
+    //: Settings; and a share opens into its folders, at any depth.
+    async forgetShare(address) {
+      st.shareError = null;
+      const r = await listAction('lyrion-server.shares', { name: address, action: 'forget' });
+      if (!r.ok) st.shareError = r.error ?? 'Could not forget it. Try again.';
+      live.loadShares();
+    },
+    async openShareFolder(address) {
+      st.shareError = null;
+      const r = await listAction('lyrion-server.shares', { name: address, action: 'folders', user: st.shareUser.trim() || null, password: st.sharePw || null });
+      if (r.login) {
+        st.shareStep = 'login';
+        return;
+      }
+      if (!r.ok) {
+        st.shareError = r.error ?? 'Could not read its folders.';
+        return;
+      }
+      st.shareFolder = { address, title: r.title ?? address, items: r.items ?? [] };
+      st.shareStep = 'folder';
     },
     async showShares(item, user = null, password = null) {
       st.shareError = null;

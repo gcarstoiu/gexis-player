@@ -104,7 +104,7 @@ function block(b) {
     return multi ? { label: x, onClick: () => b.fn(x), radius: '10px', bg: on ? 'rgba(233,238,242,0.08)' : 'transparent', ink: '#e9eef2', border: on ? b.accent : 'rgba(233,238,242,0.22)', boxDisplay: 'flex', boxBg: on ? b.accent : 'transparent', boxBorder: on ? b.accent : 'rgba(233,238,242,0.45)', tick: on ? '✓' : '' }
       : { label: x, onClick: () => b.fn(x), radius: '999px', bg: on ? b.accent : OFF, ink: on ? '#0d151c' : '#e9eef2', border: on ? b.accent : 'rgba(233,238,242,0.14)', boxDisplay: 'none', boxBg: 'transparent', boxBorder: 'transparent', tick: '' }; }); }
   if (b.t === 'Num') o.items = b.items.map((x, i) => { const st = x[1]; return { n: st === 'done' ? '✓' : String(i + 1), t: x[0], bg: st === 'done' ? '#7ed6bc' : 'transparent', ring: st === 'done' ? '#7ed6bc' : st === 'now' ? '#d8c88f' : 'rgba(233,238,242,0.3)', ink: st === 'done' ? '#0d151c' : st === 'now' ? '#d8c88f' : MUTE, tc: st === 'next' ? MUTE : '#e9eef2' }; });
-  if (b.t === 'Dev') { o.items = b.items.map(d => ({ name: d.name, meta: d.meta, metaInk: /just now/.test(d.meta) ? '#7ed6bc' : MUTE, onForget: d.fn })); o.empty = b.empty; o.emptyDisplay = b.items.length ? 'none' : 'flex'; }
+  if (b.t === 'Dev') { o.head = b.head || 'Trusted devices'; o.items = b.items.map(d => ({ name: d.name, meta: d.meta, metaInk: /just now/.test(d.meta) ? '#7ed6bc' : MUTE, onForget: d.fn })); o.empty = b.empty; o.emptyDisplay = b.items.length ? 'none' : 'flex'; }
   if (b.t === 'Prog') Object.assign(o, { label: b.label, meta: b.meta || (b.pct >= 100 ? 'Done' : Math.round(b.pct) + '%'), pct: b.pct + '%', ink: b.pct >= 100 ? '#7ed6bc' : C.plex,
     st: b.st || '', stDisplay: b.st ? 'flex' : 'none', stTick: b.stOk ? '✓' : '', stBg: b.stOk ? '#7ed6bc' : 'transparent', stBorder: b.stOk ? '#7ed6bc' : 'rgba(233,238,242,0.45)' });
   if (b.t === 'Cast') Object.assign(o, { device: b.device, text: b.text });
@@ -390,7 +390,7 @@ class Component extends DCLogic {
         }
         if (s.places.share) { const ss = s.shareStep, srv = s.shareSrv, addShare = (address, user, password) => live.addShare(address, user, password);
           const scan = () => live.scanShares();
-          if (s.shares.length && !ss) extra.push(list(s.shares.map(a => ({ k: 'plain', label: a.name, note: a.where, tag: ['Added', 'ok'] })), 'Network shares'));
+          if (s.shares.length && !ss) extra.push({ t: 'Dev', head: 'Network shares', items: s.shares.map(a => ({ name: a.name, meta: a.where, fn: () => live.forgetShare(a.address) })), empty: '' });
           if (!ss) extra.push(btn(s.shares.length ? 'Add another share' : 'Add a network share', scan));
           else if (ss === 'scan') extra.push(status('spin', 'Looking for shares', 'Servers that announce themselves answer within a few seconds.'));
           else if (ss === 'list') extra.push(list(s.shareServers.map(v => HB(v.name, v.server?.host || '', () => live.showShares(v), { icon: 'fold' })), 'Network shares'),
@@ -398,8 +398,11 @@ class Component extends DCLogic {
           else if (ss === 'login') extra.push(note('info', 'Sign in to ' + srv, 'It shows its shares only to a user it knows. The same user and password are used to mount the one you choose.'),
             field('User', s.shareUser, e => set({ shareUser: e.target.value }), { ph: 'george' }), field('Password', s.sharePw, e => set({ sharePw: e.target.value }), { type: 'password' }),
             btn('Show shares', () => live.showShares(s.shareSrvItem, s.shareUser.trim(), s.sharePw)), btn('Back', () => set({ shareStep: 'list' })));
-          else if (ss === 'browse') extra.push(list(s.shareFound.map(f => HB(f.name, f.address, () => addShare(f.address, s.shareUser.trim() || null, s.sharePw || null), { icon: 'fold' })), 'Shares on ' + srv),
-            P('Tap one to add it.'), btn('Back', () => set({ shareStep: 'list' })));
+          else if (ss === 'folder') { const o = s.shareFolder;
+            extra.push(list(o.items.map(i => HB(i.name, i.meta, () => i.add ? addShare(i.address, s.shareUser.trim() || null, s.sharePw || null) : live.openShareFolder(i.address), { icon: 'fold' })), o.title),
+              P('Open a folder, or add the one shown first. Lyrion reads everything inside it.'), btn('Back to the shares', () => set({ shareStep: 'browse' }))); }
+          else if (ss === 'browse') extra.push(list(s.shareFound.map(f => HB(f.name, f.address, () => f.address.startsWith('//') ? live.openShareFolder(f.address) : addShare(f.address, s.shareUser.trim() || null, s.sharePw || null), { icon: 'fold' })), 'Shares on ' + srv),
+            P('Tap one to see its folders.'), btn('Back', () => set({ shareStep: 'list' })));
           else if (ss === 'addr') extra.push(note('info', 'Add a share', 'A folder on a NAS or a computer. SMB needs a user and password; NFS needs only the address.'),
             field('Address', s.shareAddr, e => set({ shareAddr: e.target.value }), { ph: '//nas/music or nas:/music' }), field('User (SMB)', s.shareAU, e => set({ shareAU: e.target.value })), field('Password (SMB)', s.shareAP, e => set({ shareAP: e.target.value }), { type: 'password' }),
             btn('Add', () => { if (s.shareAddr.trim()) addShare(s.shareAddr.trim(), s.shareAU.trim() || null, s.shareAP || null); }), btn('Back', () => set({ shareStep: 'list' })));
@@ -550,7 +553,7 @@ class Component extends DCLogic {
   let st = $state(Object.assign(init('A', mode === 'p1' ? 'p1' : 'p2', false), {
     first: true, nameSaved: false, second: true, touchpad: true, plexClaimed: false, plexError: null,
     volume: 'Hardware', volHw: {}, volNotes: {}, outTags: {}, outProblems: {}, town: '', net: 'your network', lyrMeta: '', lyrServer: null, pairDevice: '', pairCode: '',
-    shareServers: [], shareFound: [], shareSrvItem: null, shareError: null, finishError: null, finished: null,
+    shareServers: [], shareFound: [], shareFolder: null, shareSrvItem: null, shareError: null, finishError: null, finished: null,
     plugins: [], tick: 0, ready: false,
     //: **Drawn once the player's own values are in** (found 2026-10-18: the
     //: design's sample name and network showed until /settings arrived).
@@ -666,17 +669,42 @@ class Component extends DCLogic {
       st.usbOpen = null;
       live.loadUsb();
     },
+    //: The shares added, without a scan for servers (2026-10-18: every add
+    //: waited two seconds for one).
     async loadShares() {
-      const got = await listItems('lyrion-server.shares');
-      const items = got.items ?? [];
-      st.shares = items.filter((i) => !i.server).map((i) => ({ name: i.name, where: i.meta || '' }));
-      st.shareServers = items.filter((i) => i.server);
+      const got = await json('/settings/lyrion-server.shares/items?saved=1').catch(() => ({}));
+      st.shares = (got.items ?? []).filter((i) => !i.server).map((i) => ({ name: i.name, where: i.meta || '', address: i.address }));
     },
     async scanShares() {
       st.shareStep = 'scan';
       st.shareError = null;
-      await live.loadShares();
+      const got = await listItems('lyrion-server.shares');
+      const items = got.items ?? [];
+      st.shares = items.filter((i) => !i.server).map((i) => ({ name: i.name, where: i.meta || '', address: i.address }));
+      st.shareServers = items.filter((i) => i.server);
       if (st.shareStep === 'scan') st.shareStep = 'list';
+    },
+    //: George, 2026-10-18: a share added by mistake is forgotten here, as in
+    //: Settings; and a share opens into its folders, at any depth.
+    async forgetShare(address) {
+      st.shareError = null;
+      const r = await listAction('lyrion-server.shares', { name: address, action: 'forget' });
+      if (!r.ok) st.shareError = r.error ?? 'Could not forget it. Try again.';
+      live.loadShares();
+    },
+    async openShareFolder(address) {
+      st.shareError = null;
+      const r = await listAction('lyrion-server.shares', { name: address, action: 'folders', user: st.shareUser.trim() || null, password: st.sharePw || null });
+      if (r.login) {
+        st.shareStep = 'login';
+        return;
+      }
+      if (!r.ok) {
+        st.shareError = r.error ?? 'Could not read its folders.';
+        return;
+      }
+      st.shareFolder = { address, title: r.title ?? address, items: r.items ?? [] };
+      st.shareStep = 'folder';
     },
     async showShares(item, user = null, password = null) {
       st.shareError = null;
@@ -1388,7 +1416,7 @@ class Component extends DCLogic {
 
                 {#if b.isDev}
                   <div style="display:flex;flex-direction:column;gap:6px;">
-                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);padding:4px 2px;">Trusted devices</div>
+                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);padding:4px 2px;">{b.head}</div>
                     {#each b.items as it}
                       <div style="display:flex;align-items:center;gap:16px;min-height:66px;padding:12px 18px;border-radius:14px;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);">
                         <span style="flex:1;min-width:0;display:block;">

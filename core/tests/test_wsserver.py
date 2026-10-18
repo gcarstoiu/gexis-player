@@ -963,3 +963,46 @@ async def test_usb_folders_are_browsed_added_and_removed(tmp_path):
 
         gone = await (await client.post(url, json={"name": "AAAA/Music", "action": "forget"})).json()
         assert gone["ok"] and usb.all() == []
+
+
+@pytest.mark.asyncio
+async def test_a_share_opens_into_its_folders_and_the_scan_is_kept_a_minute(tmp_path, monkeypatch):
+    """George, 2026-10-18: browsing a share "stops only at level 1", and every
+    list of shares waited two seconds for a scan."""
+    from gexis_core import lyrion_scan, lyrion_shares
+    from gexis_core.settings import SettingsStore
+    from gexis_core.settings_registry import Settings
+
+    registry = [{"id": "g", "label": "G", "rows": [
+        {"key": "lyrion-server.shares", "type": "list", "kind": "share", "discover": True}]}]
+    store = SettingsStore(tmp_path / "s.db")
+    settings = Settings(store, registry=registry, wired={"lyrion-server.shares": None})
+    shares = lyrion_shares.Shares(store, root=tmp_path / "mnt", credentials=tmp_path / "cred",
+                                  is_mount=lambda p: False)
+    scans, listed = [], []
+    monkeypatch.setattr(lyrion_scan, "servers", lambda own: scans.append(1) or [
+        lyrion_scan.Server(name="Tower", host="Tower.local", kind="smb")])
+    monkeypatch.setattr(lyrion_scan, "folders", lambda address, user=None, password=None:
+                        listed.append((address, user)) or ["Jazz", "Rock"])
+    server = StateServer(StateStore({}), settings=settings, lyrion_shares=shares)
+    url = "/settings/lyrion-server.shares/items"
+    async with TestClient(TestServer(server.make_app())) as client:
+        await client.get(url)
+        await client.get(url)
+        assert len(scans) == 1, "a second list within the minute reuses the scan"
+        await client.get(url + "?fresh=1")
+        assert len(scans) == 2
+        assert (await (await client.get(url + "?saved=1")).json())["items"] == [] and len(scans) == 2
+
+        top = await (await client.post(url, json={"name": "//Tower.local/Music", "action": "folders",
+                                                   "user": "george", "password": "pw"})).json()
+        assert [i["name"] for i in top["items"]] == ["Add Music", "Jazz", "Rock"]
+        assert top["items"][1]["address"] == "//Tower.local/Music/Jazz" and top["items"][1]["open"]
+        assert listed[-1] == ("//Tower.local/Music", "george")
+
+        jazz = await (await client.post(url, json={"name": "//Tower.local/Music/Jazz", "action": "folders"})).json()
+        assert [i["name"] for i in jazz["items"]][:2] == ["Add Jazz", "Back up"]
+        assert jazz["items"][1]["address"] == "//Tower.local/Music"
+
+        nfs = await (await client.post(url, json={"name": "nas:/volume1/music", "action": "folders"})).json()
+        assert [i["name"] for i in nfs["items"]] == ["Add music"]

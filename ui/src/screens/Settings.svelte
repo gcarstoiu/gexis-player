@@ -520,8 +520,11 @@
         wired: true,
       };
     }
+    if (shareFolder) {
+      return { ...row, label: shareFolder.title, note: 'Open a folder, or add the one shown first. Lyrion reads everything inside it.', discover: false, manual: null, hint: null };
+    }
     if (shareBrowse) {
-      return { ...row, label: `Shares on ${shareBrowse.server.name}`, note: 'Tap one to add it.', discover: false, manual: null, hint: null };
+      return { ...row, label: `Shares on ${shareBrowse.server.name}`, note: 'Tap one to see its folders.', discover: false, manual: null, hint: null };
     }
     if (usbBrowse) {
       return { ...row, label: usbBrowse.title, note: 'Open a folder, or add the one shown first. Lyrion reads everything inside it.', discover: false, manual: null, hint: null };
@@ -1175,6 +1178,7 @@
     sheetKey = row.key;
     manual = false;
     shareBrowse = null;
+    shareFolder = null;
     usbBrowse = null;
     shareLogin = null;
     choicePending = null;
@@ -1274,6 +1278,8 @@
   //: ADR-0115's scan: the server whose shares are shown (with the login
   //: that showed them), and the server waiting for a login first.
   let shareBrowse = $state(null);
+  //: George, 2026-10-18: the share folder open in the sheet, at any depth.
+  let shareFolder = $state(null);
   //: ADR-0115 decision 23: the USB drive and folder open in the sheet.
   let usbBrowse = $state(null);
   let shareLogin = $state(null);
@@ -1314,6 +1320,21 @@
     });
   }
 
+  async function browseShareFolder(address) {
+    searching = true;
+    listError = null;
+    const { user, password } = shareBrowse ?? {};
+    await command({ name: address, action: 'folders', user: user ?? null, password: password ?? null }, (answer) => {
+      searching = false;
+      if (!answer.ok) {
+        flash(plainly(answer.error, 'Could not read its folders. Try again.'));
+        return;
+      }
+      shareFolder = { address, title: answer.title ?? address };
+      items = answer.items ?? [];
+    });
+  }
+
   function enterManual() {
     share = { address: '', user: '', password: '' };
     manual = true;
@@ -1349,7 +1370,11 @@
       return;
     }
     if (row.kind === 'share') {
-      if (item.share && shareBrowse) {
+      // George, 2026-10-18: an SMB share opens into its folders; the first
+      // item adds what is open, Back up goes one level up.
+      if (item.share && shareBrowse && !item.add && (item.open || item.up || (item.address ?? '').startsWith('//'))) {
+        browseShareFolder(item.address ?? item.name);
+      } else if (item.share && shareBrowse) {
         const key = sheetKey;
         const { user, password } = shareBrowse;
         const address = item.address ?? item.name;
@@ -1358,8 +1383,9 @@
             flash(plainly(answer.error, 'Could not add it. Check the address and try again.'));
             return;
           }
-          flash(`${item.name} added`);
+          flash(`${item.add ? item.name.replace(/^Add /, '') : item.name} added`);
           shareBrowse = null;
+          shareFolder = null;
           openList(key);
         });
       } else if (item.server) {
@@ -1682,8 +1708,15 @@
       return;
     }
     // ADR-0115's scan: from a server's shares or its login, back to the list.
+    // Out of a share's folders, back to the server's shares.
+    if (shareFolder && shareBrowse) {
+      shareFolder = null;
+      browseShares(shareBrowse.server, shareBrowse.user, shareBrowse.password);
+      return;
+    }
     if (shareBrowse || shareLogin) {
       const key = sheetKey;
+      shareFolder = null;
       shareBrowse = null;
       shareLogin = null;
       openList(key);

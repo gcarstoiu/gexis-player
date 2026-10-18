@@ -247,6 +247,8 @@ class StateServer:
         self._lyrion_shares_changed = lyrion_shares_changed
         #: ADR-0115 decision 23: the folders Lyrion reads from USB drives.
         self._lyrion_usb = lyrion_usb
+        #: The servers the last share scan found, and when (`SHARE_SERVERS_S`).
+        self._share_servers: tuple[float, list] | None = None
         #: ADR-0115 decision 2: this device's own Lyrion server, offered among
         #: the servers while it is on - never chosen for the user.
         self._own_server = own_server
@@ -2637,6 +2639,8 @@ class StateServer:
 
     #: Where a `list` row's items come from - ADR-0044 §1's first open
     #: question, now answered for all three.
+    #: How long a scan for share servers is reused (2026-10-18).
+    SHARE_SERVERS_S = 60.0
     LIST_SOURCES = ("wifi", "lms_server", "bt_trusted", "restore", "lyrion-server.shares",
                     "lyrion-server.usb_folders")
 
@@ -2673,10 +2677,23 @@ class StateServer:
             if self._lyrion_shares is None:
                 return web.json_response({"items": []})
             saved = await self._share_items()
+            # `?saved=1`: the shares added, without looking for servers - what
+            # a page re-reads after an add or a Forget (sofapi, 2026-10-18:
+            # every add waited for a two-second scan).
+            if request.query.get("saved") == "1":
+                return web.json_response({"items": saved})
             # ADR-0115's scan: the servers announcing themselves, after the
-            # shares already added; this device's own left out.
+            # shares already added; this device's own left out. **Kept for a
+            # minute**: the sheet and the page list them again and again
+            # while shares are added; `?fresh=1` looks again now.
             own = {device_name.hostname(), f"{device_name.hostname()}.local", device_name.address() or ""}
-            found = await asyncio.to_thread(lyrion_scan.servers, own)
+            now = time.monotonic()
+            cached = self._share_servers
+            if cached is not None and now - cached[0] < self.SHARE_SERVERS_S and request.query.get("fresh") != "1":
+                found = cached[1]
+            else:
+                found = await asyncio.to_thread(lyrion_scan.servers, own)
+                self._share_servers = (time.monotonic(), found)
             for server in found:
                 saved.append({"name": server.name, "bars": None, "state": "found",
                               "meta": f"{server.kind.upper()} · {server.host} · tap to see its shares",
@@ -2760,6 +2777,35 @@ class StateServer:
                         {"name": lyrion_shares.label(s["address"])[0], "meta": s["comment"] or None,
                          "bars": None, "state": "found", "share": True, "address": s["address"]}
                         for s in found]})
+                if action == "folders":
+                    # George, 2026-10-18: a share opens into its folders, at
+                    # any depth, as a USB drive does. SMB only: listing an
+                    # NFS export would mean mounting it.
+                    address = name.rstrip("/")
+                    shown, server = lyrion_shares.label(address)
+                    items = [{"name": f"Add {shown}", "meta": f"On {server} · {address}", "bars": None,
+                              "state": "found", "share": True, "add": True, "address": address}]
+                    if address.startswith("//"):
+                        host_share = "/".join(address.split("/")[:4])
+                        if address != host_share:
+                            items.append({"name": "Back up", "meta": address.rsplit("/", 1)[0], "bars": None,
+                                          "state": "found", "share": True, "up": True,
+                                          "address": address.rsplit("/", 1)[0]})
+                        try:
+                            found = await asyncio.to_thread(lyrion_scan.folders, address, body.get("user") or None,
+                                                            body.get("password") or None)
+                        except lyrion_scan.NeedsLogin:
+                            return web.json_response({"ok": False, "login": True,
+                                                      "error": f"{server} needs a user and password to show its folders"})
+                        except lyrion_scan.NoAnswer:
+                            return web.json_response({"ok": False, "error": f"{server} did not answer. Is it switched on?"})
+                        except subprocess.TimeoutExpired:
+                            return web.json_response({"ok": False, "error": f"{server} did not answer. Is it switched on?"})
+                        items += [{"name": f, "meta": "Tap to open", "bars": None, "state": "found", "share": True,
+                                   "open": True, "address": f"{address}/{f}"} for f in found]
+                    return web.json_response({"ok": True, "error": None, "items": items,
+                                              "title": f"{server} / {address.split('/', 3)[-1]}"
+                                              if address.startswith("//") else f"{server} / {shown}"})
                 if action == "add":
                     self._lyrion_shares.add(name, body.get("user"), body.get("password"))
                 elif action == "forget":
