@@ -55,6 +55,9 @@
     : item.total ? Math.min(99, Math.round(((item.received ?? 0) / item.total) * 100))
       : item.share != null ? Math.min(99, Math.round(item.share * 100)) : 2;
 
+  //: The design's password fields: shown or hidden, all at once.
+  let pwShown = $state(false);
+
   //: A download that has not begun a minute after Finish says so.
   let stalled = $state(false);
 

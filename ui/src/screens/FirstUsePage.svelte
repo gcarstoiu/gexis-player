@@ -551,6 +551,9 @@ class Component extends DCLogic {
     : item.total ? Math.min(99, Math.round(((item.received ?? 0) / item.total) * 100))
       : item.share != null ? Math.min(99, Math.round(item.share * 100)) : 2;
 
+  //: The design's password fields: shown or hidden, all at once.
+  let pwShown = $state(false);
+
   //: A download that has not begun a minute after Finish says so.
   let stalled = $state(false);
 
@@ -1166,7 +1169,7 @@ class Component extends DCLogic {
                 {#if b.isField}
                   <div style="display:flex;flex-direction:column;gap:8px;">
                     <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">{b.label}</span>
-                    <input type={b.type} value={b.value} placeholder={b.ph} oninput={b.onChange} readonly={b.ro} style="width:100%;height:56px;border-radius:14px;background:rgba(8,12,16,0.6);border:1px solid rgba(233,238,242,0.18);padding:0 18px;box-sizing:border-box;font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;color:#e9eef2;outline:none;opacity:{b.op};cursor:{b.cur};" />
+                    <div style="position:relative;"><input type={b.type === 'password' && pwShown ? 'text' : b.type} value={b.value} placeholder={b.ph} oninput={b.onChange} readonly={b.ro} style="width:100%;height:56px;border-radius:14px;background:rgba(8,12,16,0.6);border:1px solid rgba(233,238,242,0.18);padding:0 {b.type === 'password' ? '60px' : '18px'} 0 18px;box-sizing:border-box;font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;color:#e9eef2;outline:none;opacity:{b.op};cursor:{b.cur};" />{#if b.type === 'password'}<button type="button" aria-label={pwShown ? 'Hide the password' : 'Show the password'} aria-pressed={pwShown} onclick={() => (pwShown = !pwShown)} style="position:absolute;right:6px;top:5px;width:46px;height:46px;border:0;border-radius:12px;background:transparent;color:rgba(233,238,242,0.7);display:grid;place-items:center;cursor:pointer;"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" />{#if pwShown}<path d="M4 4l16 16" />{/if}</svg></button>{/if}</div>
                     <span style="font-size:14px;line-height:1.4;color:rgba(233,238,242,0.6);text-wrap:pretty;display:{b.hintDisplay};">{b.hint}</span>
                   </div>
                 {/if}

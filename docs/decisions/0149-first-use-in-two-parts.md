@@ -335,6 +335,11 @@ it as it should be"*)
 40. **Headless is a list of its own**, under *No screen* (George: *"a
     completely different option"*).
 
+41. **Every password field can be shown** (George: *"Had to rewrite the
+    password multiple times because i was afraid I misspelled"*): the design's
+    field gets an eye on its right - the Wi-Fi step and the share sign-ins -
+    as Settings' password fields do.
+
 **Settled by George afterwards (2026-10-18)**
 - **Personalise** is in ADR-0022's inventory (*"Yes it goes in the list"*).
 - Part 1 is tested by George on sofapi after *Reset to factory settings*

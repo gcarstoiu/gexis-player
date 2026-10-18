@@ -25,6 +25,16 @@ i = markup.index("{#if b.isParty}")
 j = markup.index("{/if}", i)
 assert "{#if" not in markup[i + 15:j], "the Party block has no conditions inside"
 markup = markup[:i] + "{#if b.isParty}\n                  <PanelMini kind=\"flow\" marks={b.marks} status={b.status} />\n                " + markup[j:]
+# **A password can be shown while it is typed** (George, 2026-10-18: "Had to
+# rewrite the password multiple times because i was afraid I misspelled"):
+# the design's field gets an eye on its right when it holds a password.
+a2 = """<input type={b.type} value={b.value} placeholder={b.ph} oninput={b.onChange} readonly={b.ro} style="width:100%;height:56px;border-radius:14px;background:rgba(8,12,16,0.6);border:1px solid rgba(233,238,242,0.18);padding:0 18px;"""
+assert markup.count(a2) == 1, "the field's input"
+i = markup.index(a2)
+j = markup.index("/>", i) + 2
+inp = markup[i:j].replace("<input type={b.type}", "<input type={b.type === 'password' && pwShown ? 'text' : b.type}").replace(
+    "padding:0 18px;", "padding:0 {b.type === 'password' ? '60px' : '18px'} 0 18px;")
+markup = markup[:i] + """<div style="position:relative;">""" + inp + """{#if b.type === 'password'}<button type="button" aria-label={pwShown ? 'Hide the password' : 'Show the password'} aria-pressed={pwShown} onclick={() => (pwShown = !pwShown)} style="position:absolute;right:6px;top:5px;width:46px;height:46px;border:0;border-radius:12px;background:transparent;color:rgba(233,238,242,0.7);display:grid;place-items:center;cursor:pointer;"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" />{#if pwShown}<path d="M4 4l16 16" />{/if}</svg></button>{/if}</div>""" + markup[j:]
 # The previews carry the Touchpad step's pointer (PanelMini's `pointer`).
 for which in ("V.pv", "V.sidePv"):
     tag = f"phone={{{which}.phone}} />"
