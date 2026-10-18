@@ -779,7 +779,25 @@
     toastTimer = setTimeout(() => (toast = null), ms);
   }
 
+  //: **A switch moves when it is tapped** (George, 2026-10-19: "the
+  //: toggles are a bit slow to activate or deactivate"). It waited for the
+  //: save and then for the whole list read again - two round trips over the
+  //: phone's Wi-Fi. Now the switch shows the new state at once, and goes back,
+  //: with the reason, only if the save is refused.
+  let flipped = $state({});
+  const toggleOn = (r) => (r.key in flipped ? flipped[r.key] : !!r.value);
+  $effect(() => {
+    for (const key of Object.keys(flipped)) {
+      const row = rowOf(key);
+      if (row && !!row.value === flipped[key]) delete flipped[key];
+    }
+  });
+
   async function write(row, value) {
+    if (row.type === 'toggle') {
+      flipped[row.key] = !!value;
+      setTimeout(() => delete flipped[row.key], 8000);
+    }
     saving = true;
     clearTimeout(busyTimer);
     busyTimer = setTimeout(() => (busy = true), SHOW_SAVING_MS);
@@ -787,6 +805,7 @@
       const result = await writeSetting(row.key, value);
       // A 409 is a choice the hardware has taken away (its reason is on the
       // row already, in words) or a row this release does not apply.
+      if (!result.ok && row.type === 'toggle') delete flipped[row.key];
       if (result.status === 409) flash(row.unavailable?.[value] ?? plainly(result.error, `${row.label} cannot be changed yet`));
       // A value not in the row's form says what the form is (`invalid`).
       else if (result.status === 400 && row.invalid) flash(row.invalid, 4500);
@@ -955,7 +974,7 @@
     // notice before a plugin's software is downloaded. Off
     // never asks.
     else if (row.type === 'toggle' && row.warn && !row.value) openSheet(row);
-    else if (row.type === 'toggle') write(row, !row.value);
+    else if (row.type === 'toggle') write(row, !toggleOn(row));
     // 84 visual things cannot be chosen from a 560px list, so a `picker` row
     // opens full screen instead of a sheet (ADR-0044 §5).
     else if (row.picker) {
@@ -1286,7 +1305,7 @@
   //: A switch whose *on* is unavailable, while it is off: greyed and not
   //: tappable, its reason under it (George, 2026-10-19: USB drives with no
   //: drive plugged in).
-  const toggleBlocked = (r) => r.type === 'toggle' && !r.value && !!r.unavailable?.true;
+  const toggleBlocked = (r) => r.type === 'toggle' && !toggleOn(r) && !!r.unavailable?.true;
 
   //: **Tick several** (George, 2026-10-18): folders ticked on a drive or a
   //: share, at any level, kept while browsing, added with one button.
@@ -2221,7 +2240,7 @@
                       </span>
                     {/if}
                     {#if r.type === 'toggle'}
-                      <span class="toggle" class:is-on={!!r.value}><span></span></span>
+                      <span class="toggle" class:is-on={toggleOn(r)}><span></span></span>
                     {:else if r.type !== 'readonly'}
                       <span class="chev"></span>
                     {/if}
