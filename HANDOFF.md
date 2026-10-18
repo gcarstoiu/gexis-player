@@ -4,9 +4,13 @@ Last updated: 2026-10-18 (on R2D2).
 
 ## Start here
 
-Branches: **`phase-13b`** in the main checkout holds the documents and shared
-work; **`phase-13d`** in `~/projects/gexis-player-13d` is the release branch,
-and `phase-13b` is merged into it after each docs change. A release is built
+Branches (renamed 2026-10-18, George: Phase 13d was over and the names read
+as open phases): **`docs`** in the main checkout holds the documents and
+shared work (was `phase-13b`); **`next`** in `~/projects/gexis-player-next` is
+the release branch, what the next release is built from (was `phase-13d`),
+and `docs` is merged into it after each docs change. A phase's work has its
+own branch (`ph-first-use`) and is merged into `next` once George's tests
+pass. A release is built
 from a worktree made at its tag, then removed. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
@@ -20,7 +24,7 @@ George; post-merge steps and the routine clean-up done.
 
 **Phase 14 (`ph-first-use`) is built on its own branch, not merged**
 (worktree `~/projects/gexis-player-14`, branch `ph-first-use` off
-`phase-13d`, pushed). **Reworked 2026-10-18 after George found it did not
+`next` (then `phase-13d`), pushed). **Reworked 2026-10-18 after George found it did not
 follow the designs**: first use (part 1 setup and part 2 *Make it yours*) is
 now one page, `FirstUsePage.svelte`, **generated** from Claude Design's
 `design/source/14-first-use` by `tools/design/gen_personalise.py`. The markup
@@ -34,7 +38,7 @@ player on a restore, George 2026-10-08). **sofapi runs it** (core and player
 Personalise). Since George's notes of 2026-10-18: part 2 is owed only until
 the first boot after setup (`personalise.at_start`), a restore is pinned by
 a test never to owe it, and the visualiser tweaks show only what the skin
-type draws (on `phase-13d`, merged into `ph-first-use`). *Personalise* is in ADR-0022 (George, 2026-10-18). Waiting
+type draws (on `next`, merged into `ph-first-use`). *Personalise* is in ADR-0022 (George, 2026-10-18). Waiting
 for George: his test of part 2, then part 1 on sofapi after *Reset to
 factory settings* (his choice, instead of a fresh card), then the PR.
 
@@ -56,7 +60,7 @@ Suite 2,493 passed, 47 skipped (2026-10-16), with the venv in
 **Devices.** sofapi (Waveshare 10.1", SMSL USB DAC; a test machine), the bar
 (ShelvesPi, 11.9"), guestpi (IQaudIO Pi-DAC PRO, 13.3"), bedroompi (a
 separate card; off the network on 2026-10-16 evening). sofapi and ShelvesPi
-run `phase-13d` previews equal in content to 1.0.5; guestpi and bedroompi are
+run previews from the release branch (equal in content to 1.0.5); guestpi and bedroompi are
 offered 1.0.5 on Stable. **Cards flashed now have no passwordless sudo:
 provision test cards with `DEV_SUDO="yes"`** (ADR-0139).
 
@@ -134,7 +138,7 @@ The full list, with how each was found, is in the archive (2026-10-12 block).
   device back with `apt-get install --allow-downgrades`, dry run first.
 
 **Releasing**
-- **Run `verify-image.sh` from the release worktree**: from `phase-13b` it
+- **Run `verify-image.sh` from the release worktree**: from the main checkout it
   compares against code the release does not carry (0.11.0: five false fails).
 - **GitHub caches `channels/<name>` for minutes after a publish**: verify the
   new file with `gh release download channels`, not the public URL.
