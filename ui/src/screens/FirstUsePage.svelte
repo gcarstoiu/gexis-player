@@ -76,7 +76,7 @@ function row(o) {
 function block(b) {
   const o = { head: b.head || '', headDisplay: b.head ? 'block' : 'none' };
   BTYPES.forEach(t => { o['is' + t] = b.t === t; });
-  if (b.t === 'List') { o.rows = b.rows.map(row); o.scrollStyle = b.rows.length > 6 ? 'max-height:min(290px, 40vh);overflow-y:auto;overscroll-behavior:contain;padding-right:4px;' : ''; }
+  if (b.t === 'List') { o.rows = b.rows.map(row); o.scrollStyle = b.fixed ? 'height:min(290px, 40vh);overflow-y:auto;overscroll-behavior:contain;padding-right:4px;' : b.rows.length > 6 ? 'max-height:min(290px, 40vh);overflow-y:auto;overscroll-behavior:contain;padding-right:4px;' : ''; }
   if (b.t === 'Note') { const c = TONES[b.tone]; Object.assign(o, { bar: c[0], bg: c[1], border: c[2], title: b.title || '', titleDisplay: b.title ? 'block' : 'none', text: b.text }); }
   if (b.t === 'Field') Object.assign(o, { label: b.label, value: b.value, onChange: b.fn || noop, ph: b.ph || '', type: b.type || 'text', hint: b.hint || '', hintDisplay: b.hint ? 'block' : 'none', ro: !!b.ro, op: b.ro ? '0.45' : '1', cur: b.ro ? 'not-allowed' : 'text' });
   if (b.t === 'Code') Object.assign(o, { label: b.label, code: b.code, text: b.text });
@@ -382,6 +382,9 @@ class Component extends DCLogic {
           ...(here ? [] : [{ t: 'Addr', label: 'Get Lyrion at', value: 'lyrion.org' }])], foot: SK }; }
       case 'folders': { const tg = k => () => { this.setState(st => ({ places: Object.assign({}, st.places, { [k]: !st.places[k] }) })); if (k === 'usb') live.loadUsb(); }, extra = [], usbBlocks = [];
         const sub = text => ({ t: 'Sub', text, accent: C.fold });
+        // George, 2026-10-18: browsing keeps one fixed height at every level,
+        // so the page does not jump as a folder opens.
+        const fixedList = (rows, head) => Object.assign(list(rows, head), { fixed: true });
         const placeRow = p => p[0] === 'usb' && !s.usbDrives.length ? { k: 'ghost', label: p[1], note: 'No USB drive plugged in.' }
           : K(p[1], p[0] === 'folder' && s.musicSpace ? p[2] + ' ' + s.musicSpace + '.' : p[2], s.places[p[0]], tg(p[0]));
         // George, 2026-10-18: with no drive plugged in, USB cannot be chosen
@@ -392,9 +395,9 @@ class Component extends DCLogic {
         // one button adds what is ticked.
         else if (s.places.usb) { const o = s.usbOpen, n = live.picked('usb').length;
           if (o) usbBlocks.push(live.crumbs(o.crumbs, c => c.top ? set({ usbOpen: null }) : live.openUsb(c.drive, c.folder)),
-            list(o.items.map(i => live.pickRow('usb', i, () => live.openUsb(i.drive, i.folder))), ''),
+            fixedList(o.items.map(i => live.pickRow('usb', i, () => live.openUsb(i.drive, i.folder))), ''),
             ...(o.items.length ? [] : [P('No folders inside.')]));
-          else usbBlocks.push(list(s.usbDrives.map(d => live.pickRow('usb', { name: d.name, meta: d.meta, drive: d.drive, folder: '' }, () => live.openUsb(d.drive, ''))), 'Plugged in'),
+          else usbBlocks.push(fixedList(s.usbDrives.map(d => live.pickRow('usb', { name: d.name, meta: d.meta, drive: d.drive, folder: '' }, () => live.openUsb(d.drive, ''))), 'Plugged in'),
             P('Tick a drive to add all of it, or open it to tick folders inside.'));
           if (n) usbBlocks.push(btn('Add ' + n + (n === 1 ? ' folder' : ' folders'), () => live.addPicked('usb')));
           if (s.usbError) usbBlocks.push(note('warn', '', s.usbError));
@@ -404,18 +407,18 @@ class Component extends DCLogic {
           if (s.shares.length && !ss) extra.push({ t: 'Dev', head: 'Added', items: s.shares.map(a => ({ name: a.name, meta: a.where, fn: () => live.forgetShare(a.address) })), empty: '' });
           if (!ss) extra.push(btn(s.shares.length ? 'Add another share' : 'Add a network share', scan));
           else if (ss === 'scan') extra.push(status('spin', 'Looking for shares', 'Servers that announce themselves answer within a few seconds.'));
-          else if (ss === 'list') extra.push(list(s.shareServers.map(v => HB(v.name, v.server?.host || '', () => live.showShares(v), { icon: 'fold' })), 'On your network'),
+          else if (ss === 'list') extra.push(fixedList(s.shareServers.map(v => HB(v.name, v.server?.host || '', () => live.showShares(v), { icon: 'fold' })), 'On your network'),
             P('Not in the list? Some servers do not announce themselves - add the share by its address.'), btn('Add by address', () => set({ shareStep: 'addr' })), btn('Cancel', () => set({ shareStep: null })));
           else if (ss === 'login') extra.push(note('info', 'Sign in to ' + srv, 'It shows its shares only to a user it knows. The same user and password are used to mount the one you choose.'),
             field('User', s.shareUser, e => set({ shareUser: e.target.value }), { ph: 'george' }), field('Password', s.sharePw, e => set({ sharePw: e.target.value }), { type: 'password' }),
             btn('Show shares', () => live.showShares(s.shareSrvItem, s.shareUser.trim(), s.sharePw)), btn('Back', () => set({ shareStep: 'list' })));
           else if (ss === 'folder') { const o = s.shareFolder, n = live.picked('share').length;
             extra.push(live.crumbs(o.crumbs, c => c.server ? set({ shareStep: 'browse' }) : live.openShareFolder(c.address)),
-              list(o.items.map(i => live.pickRow('share', i, () => live.openShareFolder(i.address))), ''),
+              fixedList(o.items.map(i => live.pickRow('share', i, () => live.openShareFolder(i.address))), ''),
               ...(o.items.length ? [] : [P('No folders inside.')]),
               ...(n ? [btn('Add ' + n + (n === 1 ? ' folder' : ' folders'), () => live.addPicked('share'))] : []),
               btn('Back to the shares', () => set({ shareStep: 'browse' }))); }
-          else if (ss === 'browse') extra.push(list(s.shareFound.map(f => live.pickRow('share', { name: f.name, meta: f.address, address: f.address }, f.address.startsWith('//') ? () => live.openShareFolder(f.address) : null)), 'Shares on ' + srv),
+          else if (ss === 'browse') extra.push(fixedList(s.shareFound.map(f => live.pickRow('share', { name: f.name, meta: f.address, address: f.address }, f.address.startsWith('//') ? () => live.openShareFolder(f.address) : null)), 'Shares on ' + srv),
             ...(live.picked('share').length ? [btn('Add ' + live.picked('share').length + (live.picked('share').length === 1 ? ' folder' : ' folders'), () => live.addPicked('share'))] : []),
             P('Tick a share to add all of it, or open it to tick folders inside.'), btn('Back', () => set({ shareStep: 'list' })));
           else if (ss === 'addr') extra.push(note('info', 'Add a share', 'A folder on a NAS or a computer. SMB needs a user and password; NFS needs only the address.'),
@@ -500,9 +503,9 @@ class Component extends DCLogic {
         const show = (name, accent, id, doneLine, doneOk, after) => { const g = live.stage(id); got.push(g);
           items.push({ t: 'Sub', text: name, accent }, prog(g.label, g.pct, g.meta, g.after ? g.line : g.done ? doneLine : g.line, g.after ? !!g.ok : g.done ? doneOk : false));
           if (g.done && after && !g.after) items.push(note('info', '', after)); };
-        if (d.here) { const any = s.places.folder || s.places.usb || s.places.share;
-          show('Lyrion', C.lyr, live.component('lyrion-server.enabled', 'lyrion'), any ? 'Folders added, scan started' : 'Installed, no music yet', true,
-            any ? 'A large library can take hours to scan. Music shows up as Lyrion finds it.' : 'Add where your music is in Settings → Library → Lyrion Server.'); }
+        if (d.here) { const lid = live.component('lyrion-server.enabled', 'lyrion'), lg = live.stage(lid); got.push(lg);
+          items.push({ t: 'Sub', text: 'Lyrion', accent: C.lyr }, { t: 'Num', items: live.lyrionSteps(lid) });
+          if (lg.after && lg.line && !lg.ok) items.push(P(lg.line)); }
         if (d.plex && s.plexOn) { const ok = s.plexClaimed;
           show('Plexamp', C.plex, live.component('plexamp.enabled', 'plexamp'), ok ? 'Signed in to Plex' : 'Not signed in yet', ok, ok ? 'Your Plex library plays from the Plexamp app.' : 'Sign in from Settings → Plexamp when you’re ready.'); }
         if (!d.headless && s.vizOn) show('Visualiser', C.scr, 'skins', 'Skins ready', true, 'The visualiser starts after ' + s.vizAfter + ' of music.');
@@ -640,6 +643,23 @@ class Component extends DCLogic {
         default: return { pct: 0, label: st.finished ? 'Starting the download' : 'Saving your answers', meta: '…',
           line: stalled ? 'Still waiting to start. The player tries again every few minutes.' : '' };
       }
+    },
+    //: **Lyrion as an ordered checklist** (George, 2026-10-18: "it was still
+    //: unclear to me what was happening and what comes next. Ordered
+    //: checklist with status might be more transparent"): the download, its
+    //: start, its add-ons, reading the music, ready - done, now or next.
+    lyrionSteps(id) {
+      const c = $components?.[id] ?? {}, a = c.after, g = live.stage(id);
+      const at = c.state !== 'installed' ? 0 : ({ starting: 1, addons: 2, waiting: 3, scanning: 3, ready: 4 }[a?.phase] ?? 1);
+      const pct = a?.share != null ? ` · ${Math.round(a.share * 100)} %` : '';
+      const texts = [
+        c.state === 'failed' ? 'Download Lyrion · did not finish' : at === 0 && g.pct ? `Download Lyrion · ${g.pct} %` : 'Download Lyrion',
+        'Start Lyrion',
+        'Add Material Skin, Music & Artist Information and Radio Now Playing · one restart, about 3 minutes',
+        at === 3 && a?.phase === 'scanning' ? `Read your music${pct}` : 'Read your music',
+        at === 4 ? `Ready · ${a?.line ?? ''}` : 'Ready to browse',
+      ];
+      return texts.map((t, i) => [t, i < at || (i === 4 && at === 4) ? 'done' : i === at ? 'now' : 'next']);
     },
     failed() { return !!$settling?.items?.some((i) => i.state === 'failed'); },
     async finish() {

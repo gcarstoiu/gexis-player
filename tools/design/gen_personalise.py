@@ -121,7 +121,7 @@ rep("onClick: o.fn || noop, cursor: o.fn ? 'pointer' : 'default',", "onClick: o.
 rep("chkDisplay: k === 'chk' ? 'flex' : 'none',", "chkDisplay: k === 'chk' || k === 'pick' ? 'flex' : 'none',")
 rep("chevDisplay: k === 'hub' ? 'block' : 'none'", "chevDisplay: k === 'hub' || (k === 'pick' && o.fn) ? 'block' : 'none'")
 rep("const BTYPES = ['List',", "const BTYPES = ['Sub', 'List',")
-rep("  if (b.t === 'List') o.rows = b.rows.map(row);", "  if (b.t === 'List') { o.rows = b.rows.map(row); o.scrollStyle = b.rows.length > 6 ? 'max-height:min(290px, 40vh);overflow-y:auto;overscroll-behavior:contain;padding-right:4px;' : ''; }")
+rep("  if (b.t === 'List') o.rows = b.rows.map(row);", "  if (b.t === 'List') { o.rows = b.rows.map(row); o.scrollStyle = b.fixed ? 'height:min(290px, 40vh);overflow-y:auto;overscroll-behavior:contain;padding-right:4px;' : b.rows.length > 6 ? 'max-height:min(290px, 40vh);overflow-y:auto;overscroll-behavior:contain;padding-right:4px;' : ''; }")
 rep("  if (b.t === 'P' || b.t === 'Head') o.text = b.text;", "  if (b.t === 'P' || b.t === 'Head') o.text = b.text;\n  if (b.t === 'Sub') { o.text = b.text; o.accent = b.accent; }")
 rep("  if (b.t === 'Dev') { o.items = ", "  if (b.t === 'Dev') { o.head = b.head || 'Trusted devices'; o.items = ")
 rep("    if (id === 'done') this.setState({ inst: 0 });", "    if (id === 'done') live.finish();\n    if (id === 'later') live.later();\n    if (id === 'bluetooth') live.trusted();\n    if (id === 'folders') { live.loadShares(); live.loadUsb(); live.loadSpace(); }")
@@ -156,6 +156,9 @@ rep("places: { folder: true, usb: false, share: false }", "places: { folder: fal
 rep("""      case 'folders': { const tg = k => () => this.setState(st => ({ places: Object.assign({}, st.places, { [k]: !st.places[k] }) })), extra = [];""",
     """      case 'folders': { const tg = k => () => { this.setState(st => ({ places: Object.assign({}, st.places, { [k]: !st.places[k] }) })); if (k === 'usb') live.loadUsb(); }, extra = [], usbBlocks = [];
         const sub = text => ({ t: 'Sub', text, accent: C.fold });
+        // George, 2026-10-18: browsing keeps one fixed height at every level,
+        // so the page does not jump as a folder opens.
+        const fixedList = (rows, head) => Object.assign(list(rows, head), { fixed: true });
         const placeRow = p => p[0] === 'usb' && !s.usbDrives.length ? { k: 'ghost', label: p[1], note: 'No USB drive plugged in.' }
           : K(p[1], p[0] === 'folder' && s.musicSpace ? p[2] + ' ' + s.musicSpace + '.' : p[2], s.places[p[0]], tg(p[0]));
         // George, 2026-10-18: with no drive plugged in, USB cannot be chosen
@@ -166,9 +169,9 @@ rep("""      case 'folders': { const tg = k => () => this.setState(st => ({ plac
         // one button adds what is ticked.
         else if (s.places.usb) { const o = s.usbOpen, n = live.picked('usb').length;
           if (o) usbBlocks.push(live.crumbs(o.crumbs, c => c.top ? set({ usbOpen: null }) : live.openUsb(c.drive, c.folder)),
-            list(o.items.map(i => live.pickRow('usb', i, () => live.openUsb(i.drive, i.folder))), ''),
+            fixedList(o.items.map(i => live.pickRow('usb', i, () => live.openUsb(i.drive, i.folder))), ''),
             ...(o.items.length ? [] : [P('No folders inside.')]));
-          else usbBlocks.push(list(s.usbDrives.map(d => live.pickRow('usb', { name: d.name, meta: d.meta, drive: d.drive, folder: '' }, () => live.openUsb(d.drive, ''))), 'Plugged in'),
+          else usbBlocks.push(fixedList(s.usbDrives.map(d => live.pickRow('usb', { name: d.name, meta: d.meta, drive: d.drive, folder: '' }, () => live.openUsb(d.drive, ''))), 'Plugged in'),
             P('Tick a drive to add all of it, or open it to tick folders inside.'));
           if (n) usbBlocks.push(btn('Add ' + n + (n === 1 ? ' folder' : ' folders'), () => live.addPicked('usb')));
           if (s.usbError) usbBlocks.push(note('warn', '', s.usbError));
@@ -178,17 +181,17 @@ rep("""        if (s.places.share) { const ss = s.shareStep, srv = s.shareSrv, a
     """        if (s.places.share) { const ss = s.shareStep, srv = s.shareSrv, addShare = (address, user, password) => live.addShare(address, user, password);
           const scan = () => live.scanShares();""")
 rep("""          else if (ss === 'list') extra.push(list([['NAS', '192.0.2.24', true], ['Office-PC', '192.0.2.31', false]].map(v => HB(v[0], v[1], () => set({ shareStep: v[2] ? 'login' : 'browse', shareSrv: v[0] }), { icon: 'fold' })), 'Network shares'),""",
-    """          else if (ss === 'list') extra.push(list(s.shareServers.map(v => HB(v.name, v.server?.host || '', () => live.showShares(v), { icon: 'fold' })), 'On your network'),""")
+    """          else if (ss === 'list') extra.push(fixedList(s.shareServers.map(v => HB(v.name, v.server?.host || '', () => live.showShares(v), { icon: 'fold' })), 'On your network'),""")
 rep("""            btn('Show shares', () => set({ shareStep: 'browse' })), btn('Back', () => set({ shareStep: 'list' })));""",
     """            btn('Show shares', () => live.showShares(s.shareSrvItem, s.shareUser.trim(), s.sharePw)), btn('Back', () => set({ shareStep: 'list' })));""")
 rep("""          else if (ss === 'browse') extra.push(list(['Music', 'Archive'].map(n => HB(n, '//' + srv.toLowerCase() + '/' + n.toLowerCase(), () => addShare('//' + srv.toLowerCase() + '/' + n.toLowerCase(), 'On ' + srv), { icon: 'fold' })), 'Shares on ' + srv),""",
     """          else if (ss === 'folder') { const o = s.shareFolder, n = live.picked('share').length;
             extra.push(live.crumbs(o.crumbs, c => c.server ? set({ shareStep: 'browse' }) : live.openShareFolder(c.address)),
-              list(o.items.map(i => live.pickRow('share', i, () => live.openShareFolder(i.address))), ''),
+              fixedList(o.items.map(i => live.pickRow('share', i, () => live.openShareFolder(i.address))), ''),
               ...(o.items.length ? [] : [P('No folders inside.')]),
               ...(n ? [btn('Add ' + n + (n === 1 ? ' folder' : ' folders'), () => live.addPicked('share'))] : []),
               btn('Back to the shares', () => set({ shareStep: 'browse' }))); }
-          else if (ss === 'browse') extra.push(list(s.shareFound.map(f => live.pickRow('share', { name: f.name, meta: f.address, address: f.address }, f.address.startsWith('//') ? () => live.openShareFolder(f.address) : null)), 'Shares on ' + srv),
+          else if (ss === 'browse') extra.push(fixedList(s.shareFound.map(f => live.pickRow('share', { name: f.name, meta: f.address, address: f.address }, f.address.startsWith('//') ? () => live.openShareFolder(f.address) : null)), 'Shares on ' + srv),
             ...(live.picked('share').length ? [btn('Add ' + live.picked('share').length + (live.picked('share').length === 1 ? ' folder' : ' folders'), () => live.addPicked('share'))] : []),""")
 # George, 2026-10-18: an SMB share opens into its folders, at any depth.
 rep("P('Tap one to add it.'), btn('Back', () => set({ shareStep: 'list' })));", "P('Tick a share to add all of it, or open it to tick folders inside.'), btn('Back', () => set({ shareStep: 'list' })));")
@@ -325,9 +328,9 @@ js = js[:a] + """      case 'done': { const items = [], got = [];
         const show = (name, accent, id, doneLine, doneOk, after) => { const g = live.stage(id); got.push(g);
           items.push({ t: 'Sub', text: name, accent }, prog(g.label, g.pct, g.meta, g.after ? g.line : g.done ? doneLine : g.line, g.after ? !!g.ok : g.done ? doneOk : false));
           if (g.done && after && !g.after) items.push(note('info', '', after)); };
-        if (d.here) { const any = s.places.folder || s.places.usb || s.places.share;
-          show('Lyrion', C.lyr, live.component('lyrion-server.enabled', 'lyrion'), any ? 'Folders added, scan started' : 'Installed, no music yet', true,
-            any ? 'A large library can take hours to scan. Music shows up as Lyrion finds it.' : 'Add where your music is in Settings → Library → Lyrion Server.'); }
+        if (d.here) { const lid = live.component('lyrion-server.enabled', 'lyrion'), lg = live.stage(lid); got.push(lg);
+          items.push({ t: 'Sub', text: 'Lyrion', accent: C.lyr }, { t: 'Num', items: live.lyrionSteps(lid) });
+          if (lg.after && lg.line && !lg.ok) items.push(P(lg.line)); }
         if (d.plex && s.plexOn) { const ok = s.plexState === 'ok';
           show('Plexamp', C.plex, live.component('plexamp.enabled', 'plexamp'), ok ? 'Signed in to Plex' : 'Not signed in yet', ok, ok ? 'Your Plex library plays from the Plexamp app.' : 'Sign in from Settings → Plexamp when you’re ready.'); }
         if (!d.headless && s.vizOn) show('Visualiser', C.scr, 'skins', 'Skins ready', true, 'The visualiser starts after ' + s.vizAfter + ' of music.');

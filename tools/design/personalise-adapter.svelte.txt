@@ -107,6 +107,23 @@
           line: stalled ? 'Still waiting to start. The player tries again every few minutes.' : '' };
       }
     },
+    //: **Lyrion as an ordered checklist** (George, 2026-10-18: "it was still
+    //: unclear to me what was happening and what comes next. Ordered
+    //: checklist with status might be more transparent"): the download, its
+    //: start, its add-ons, reading the music, ready - done, now or next.
+    lyrionSteps(id) {
+      const c = $components?.[id] ?? {}, a = c.after, g = live.stage(id);
+      const at = c.state !== 'installed' ? 0 : ({ starting: 1, addons: 2, waiting: 3, scanning: 3, ready: 4 }[a?.phase] ?? 1);
+      const pct = a?.share != null ? ` · ${Math.round(a.share * 100)} %` : '';
+      const texts = [
+        c.state === 'failed' ? 'Download Lyrion · did not finish' : at === 0 && g.pct ? `Download Lyrion · ${g.pct} %` : 'Download Lyrion',
+        'Start Lyrion',
+        'Add Material Skin, Music & Artist Information and Radio Now Playing · one restart, about 3 minutes',
+        at === 3 && a?.phase === 'scanning' ? `Read your music${pct}` : 'Read your music',
+        at === 4 ? `Ready · ${a?.line ?? ''}` : 'Ready to browse',
+      ];
+      return texts.map((t, i) => [t, i < at || (i === 4 && at === 4) ? 'done' : i === at ? 'now' : 'next']);
+    },
     failed() { return !!$settling?.items?.some((i) => i.state === 'failed'); },
     async finish() {
       st.finishError = null;
