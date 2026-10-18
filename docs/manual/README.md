@@ -403,7 +403,7 @@ switched on, none at first:
 | Lyrion Server: More for your library | Where everything else about the library is: a link to the server's own page, and to three apps that control it - Squeezer (Android), Lyrion (Android, F-Droid) and LyrPlay (iPhone). The links show on a phone, not on the panel. |
 | Lyrion Server: Library | Read only: what the server is doing - starting, adding its add-ons, reading your music with a progress bar - and once ready, how many songs and albums it holds. The section's heading says the same in a word. |
 | Lyrion Server: Music folder | The player's own Music folder, shared on the network as *Music*. Its note says how much room is free and how much there is in all. Below 4 GB free the Music share takes no new files, and the note says so, until more than 4.5 GB is free. |
-| Lyrion Server: USB drives | Folders on USB drives plugged into the player. |
+| Lyrion Server: USB drives | Folders on USB drives plugged into the player. It cannot be switched on while no drive is plugged in, and says so; switched on already, it stays on. |
 | Lyrion Server: USB folders | Shown with *USB drives* on. Each drive plugged in: tick it to add all of it, or open it and tick folders at any depth, then *Add*. A drive not chosen yet reads *Not added yet*; the folders of an unplugged drive are kept for 7 days. |
 | Lyrion Server: Network shares | The shares added, each with its *Forget*. |
 | Lyrion Server: Add share | Folders on a NAS or a computer (SMB or NFS): a scan lists the servers on the network, or add one by its address. Tick a share, or open an SMB share and tick folders at any depth, then *Add*. Shares already added are not listed again. |
