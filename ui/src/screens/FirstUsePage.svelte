@@ -392,17 +392,17 @@ class Component extends DCLogic {
           if (o) usbBlocks.push(live.crumbs(o.crumbs, c => c.top ? set({ usbOpen: null }) : live.openUsb(c.drive, c.folder)),
             list(o.items.map(i => live.pickRow('usb', i, () => live.openUsb(i.drive, i.folder))), ''),
             ...(o.items.length ? [] : [P('No folders inside.')]));
-          else usbBlocks.push(list(s.usbDrives.map(d => live.pickRow('usb', { name: d.name, meta: d.meta, drive: d.drive, folder: '' }, () => live.openUsb(d.drive, ''))), 'USB drives'),
+          else usbBlocks.push(list(s.usbDrives.map(d => live.pickRow('usb', { name: d.name, meta: d.meta, drive: d.drive, folder: '' }, () => live.openUsb(d.drive, ''))), 'Plugged in'),
             P('Tick a drive to add all of it, or open it to tick folders inside.'));
           if (n) usbBlocks.push(btn('Add ' + n + (n === 1 ? ' folder' : ' folders'), () => live.addPicked('usb')));
           if (s.usbError) usbBlocks.push(note('warn', '', s.usbError));
         }
         if (s.places.share) { const ss = s.shareStep, srv = s.shareSrv, addShare = (address, user, password) => live.addShare(address, user, password);
           const scan = () => live.scanShares();
-          if (s.shares.length && !ss) extra.push({ t: 'Dev', head: 'Network shares', items: s.shares.map(a => ({ name: a.name, meta: a.where, fn: () => live.forgetShare(a.address) })), empty: '' });
+          if (s.shares.length && !ss) extra.push({ t: 'Dev', head: 'Added', items: s.shares.map(a => ({ name: a.name, meta: a.where, fn: () => live.forgetShare(a.address) })), empty: '' });
           if (!ss) extra.push(btn(s.shares.length ? 'Add another share' : 'Add a network share', scan));
           else if (ss === 'scan') extra.push(status('spin', 'Looking for shares', 'Servers that announce themselves answer within a few seconds.'));
-          else if (ss === 'list') extra.push(list(s.shareServers.map(v => HB(v.name, v.server?.host || '', () => live.showShares(v), { icon: 'fold' })), 'Network shares'),
+          else if (ss === 'list') extra.push(list(s.shareServers.map(v => HB(v.name, v.server?.host || '', () => live.showShares(v), { icon: 'fold' })), 'On your network'),
             P('Not in the list? Some servers do not announce themselves - add the share by its address.'), btn('Add by address', () => set({ shareStep: 'addr' })), btn('Cancel', () => set({ shareStep: null })));
           else if (ss === 'login') extra.push(note('info', 'Sign in to ' + srv, 'It shows its shares only to a user it knows. The same user and password are used to mount the one you choose.'),
             field('User', s.shareUser, e => set({ shareUser: e.target.value }), { ph: 'george' }), field('Password', s.sharePw, e => set({ sharePw: e.target.value }), { type: 'password' }),
@@ -421,7 +421,7 @@ class Component extends DCLogic {
             btn('Add', () => { if (s.shareAddr.trim()) addShare(s.shareAddr.trim(), s.shareAU.trim() || null, s.shareAP || null); }), btn('Back', () => set({ shareStep: 'list' })));
           if (s.shareError) extra.push(note('warn', '', s.shareError));
         }
-        return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [list([placeRow(PLACES[0])], 'Lyrion reads'), { t: 'Rule' }, list([placeRow(PLACES[1])], ''), ...usbBlocks, { t: 'Rule' }, list([placeRow(PLACES[2])], ''), ...extra, { t: 'Rule' }, (s.places.folder || s.places.usb || s.places.share) ? P('These become Lyrion’s music folders when it installs.') : note('info', 'Nothing chosen yet', 'Lyrion then starts with no music. Locations can be added later in Settings → Sources → Lyrion Server.')], foot: SK }; }
+        return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [list([placeRow(PLACES[0])], 'Music folder'), { t: 'Rule' }, list([placeRow(PLACES[1])], 'USB drives'), ...usbBlocks, { t: 'Rule' }, list([placeRow(PLACES[2])], 'Network shares'), ...extra, { t: 'Rule' }, (s.places.folder || s.places.usb || s.places.share) ? P('These become Lyrion’s music folders when it installs.') : note('info', 'Nothing chosen yet', 'Lyrion then starts with no music. Locations can be added later in Settings → Sources → Lyrion Server.')], foot: SK }; }
       case 'plexamp': {
         const sub = 'Your Plex library, played on ' + nm + '.';
         const g = live.stage(live.component('plexamp.enabled', 'plexamp')), inst = g.done;

@@ -83,7 +83,7 @@ rep("  componentDidUpdate(pp, ps) { if (ps && ps.screen !== this.state.screen &&
 # Kept the defaults puts part 2 off on the player.
 rep("    if (id === 'listen' && s.lyrState === 'idle') this.setState({ lyrState: s.flow === 'A' ? 'found' : 'none' });\n", "")
 rep("""          if (s.shares.length && !ss) extra.push(list(s.shares.map(a => ({ k: 'plain', label: a.name, note: a.where, tag: ['Added', 'ok'] })), 'Network shares'));""",
-    """          if (s.shares.length && !ss) extra.push({ t: 'Dev', head: 'Network shares', items: s.shares.map(a => ({ name: a.name, meta: a.where, fn: () => live.forgetShare(a.address) })), empty: '' });""")
+    """          if (s.shares.length && !ss) extra.push({ t: 'Dev', head: 'Added', items: s.shares.map(a => ({ name: a.name, meta: a.where, fn: () => live.forgetShare(a.address) })), empty: '' });""")
 # A row that both opens (the row) and ticks (its box): folders on shares
 # and drives (George, 2026-10-18, "Tick several").
 rep("sel = (radio || net || k === 'chk') && o.on;", "sel = (radio || net || k === 'chk' || k === 'pick') && o.on;")
@@ -111,12 +111,14 @@ rep("found ? { foot: 'Lyrion found on ' + s.net, footMeta: '192.0.2.10:9000' }",
     "found ? { foot: 'Lyrion found on ' + s.net, footMeta: s.lyrMeta }")
 # Folders (ADR-0115 decisions 20-23, George 2026-10-18): the three switches,
 # each followed by its own actions with a rule between the sources (George:
-# "Look again" for USB must not sit under the network share);
+# "Look again" for USB must not sit under the network share), each group
+# headed as its row is named in Settings -> Lyrion Server (George: "a name
+# similar to what we have in settings for subgroups");
 # as designed, none on ("Nothing should be preselected"), and with USB drives
 # on, the drives plugged in, each browsed for the folders Lyrion reads. With
 # nothing chosen the line under the list says Lyrion starts empty.
 rep("return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [list(PLACES.map(p => K(p[1], p[2], s.places[p[0]], tg(p[0]))), 'Lyrion reads'), ...extra, P('These become Lyrion’s music folders when it installs.')]",
-    "return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [list([placeRow(PLACES[0])], 'Lyrion reads'), { t: 'Rule' }, list([placeRow(PLACES[1])], ''), ...usbBlocks, { t: 'Rule' }, list([placeRow(PLACES[2])], ''), ...extra, { t: 'Rule' }, (s.places.folder || s.places.usb || s.places.share) ? P('These become Lyrion’s music folders when it installs.') : note('info', 'Nothing chosen yet', 'Lyrion then starts with no music. Locations can be added later in Settings → Sources → Lyrion Server.')]")
+    "return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [list([placeRow(PLACES[0])], 'Music folder'), { t: 'Rule' }, list([placeRow(PLACES[1])], 'USB drives'), ...usbBlocks, { t: 'Rule' }, list([placeRow(PLACES[2])], 'Network shares'), ...extra, { t: 'Rule' }, (s.places.folder || s.places.usb || s.places.share) ? P('These become Lyrion’s music folders when it installs.') : note('info', 'Nothing chosen yet', 'Lyrion then starts with no music. Locations can be added later in Settings → Sources → Lyrion Server.')]")
 rep("places: { folder: true, usb: false, share: false }", "places: { folder: false, usb: false, share: false }, usbDrives: [], usbOpen: null, usbError: null")
 rep("""      case 'folders': { const tg = k => () => this.setState(st => ({ places: Object.assign({}, st.places, { [k]: !st.places[k] }) })), extra = [];""",
     """      case 'folders': { const tg = k => () => { this.setState(st => ({ places: Object.assign({}, st.places, { [k]: !st.places[k] }) })); if (k === 'usb') live.loadUsb(); }, extra = [], usbBlocks = [];
@@ -132,7 +134,7 @@ rep("""      case 'folders': { const tg = k => () => this.setState(st => ({ plac
           if (o) usbBlocks.push(live.crumbs(o.crumbs, c => c.top ? set({ usbOpen: null }) : live.openUsb(c.drive, c.folder)),
             list(o.items.map(i => live.pickRow('usb', i, () => live.openUsb(i.drive, i.folder))), ''),
             ...(o.items.length ? [] : [P('No folders inside.')]));
-          else usbBlocks.push(list(s.usbDrives.map(d => live.pickRow('usb', { name: d.name, meta: d.meta, drive: d.drive, folder: '' }, () => live.openUsb(d.drive, ''))), 'USB drives'),
+          else usbBlocks.push(list(s.usbDrives.map(d => live.pickRow('usb', { name: d.name, meta: d.meta, drive: d.drive, folder: '' }, () => live.openUsb(d.drive, ''))), 'Plugged in'),
             P('Tick a drive to add all of it, or open it to tick folders inside.'));
           if (n) usbBlocks.push(btn('Add ' + n + (n === 1 ? ' folder' : ' folders'), () => live.addPicked('usb')));
           if (s.usbError) usbBlocks.push(note('warn', '', s.usbError));
@@ -142,7 +144,7 @@ rep("""        if (s.places.share) { const ss = s.shareStep, srv = s.shareSrv, a
     """        if (s.places.share) { const ss = s.shareStep, srv = s.shareSrv, addShare = (address, user, password) => live.addShare(address, user, password);
           const scan = () => live.scanShares();""")
 rep("""          else if (ss === 'list') extra.push(list([['NAS', '192.0.2.24', true], ['Office-PC', '192.0.2.31', false]].map(v => HB(v[0], v[1], () => set({ shareStep: v[2] ? 'login' : 'browse', shareSrv: v[0] }), { icon: 'fold' })), 'Network shares'),""",
-    """          else if (ss === 'list') extra.push(list(s.shareServers.map(v => HB(v.name, v.server?.host || '', () => live.showShares(v), { icon: 'fold' })), 'Network shares'),""")
+    """          else if (ss === 'list') extra.push(list(s.shareServers.map(v => HB(v.name, v.server?.host || '', () => live.showShares(v), { icon: 'fold' })), 'On your network'),""")
 rep("""            btn('Show shares', () => set({ shareStep: 'browse' })), btn('Back', () => set({ shareStep: 'list' })));""",
     """            btn('Show shares', () => live.showShares(s.shareSrvItem, s.shareUser.trim(), s.sharePw)), btn('Back', () => set({ shareStep: 'list' })));""")
 rep("""          else if (ss === 'browse') extra.push(list(['Music', 'Archive'].map(n => HB(n, '//' + srv.toLowerCase() + '/' + n.toLowerCase(), () => addShare('//' + srv.toLowerCase() + '/' + n.toLowerCase(), 'On ' + srv), { icon: 'fold' })), 'Shares on ' + srv),""",
