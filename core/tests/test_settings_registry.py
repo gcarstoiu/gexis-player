@@ -1498,8 +1498,10 @@ def test_headless_hides_every_setting_that_needs_a_screen(store):
     all of Enrichment are hidden - by their headings' and group's conditions,
     on top of each row's own (`home_strip` keeps Lyrion Client's)."""
     settings = Settings(store, registry=load_registry(), wired={"headless": lambda v: None,
-                                                                "idle_enabled": None})
+                                                                "idle_enabled": None, "skin_corpus": None})
     settings.set("idle_enabled", True)
+    # Every tweak shows for All (each skin type's own are below).
+    settings.set("skin_corpus", "All")
     def shown():
         return {r["key"] for g in settings.to_json() for r in g["rows"]
                 if r.get("key") and r["visible"]}
@@ -1520,6 +1522,31 @@ def test_headless_hides_every_setting_that_needs_a_screen(store):
     assert not {"screen", "screen_port", "screen_port_info", "rotation"} & shown()
     enrich = next(g for g in settings.to_json() if g["id"] == "enrich")
     assert not any(r["visible"] for r in enrich["rows"] if r.get("key"))
+
+
+def test_the_visualiser_tweaks_follow_the_skin_type(store):
+    """George, 2026-10-18: "hide the ones that do not correspond to the skin
+    type". Measured on sofapi's 1280x800 pack: spectrum only in Spectrum and
+    VU meters + spectrum; needles or bars in every type but Spectrum; a
+    record in Turntables and most of Fanart, reels in Tapes."""
+    settings = Settings(store, registry=load_registry(), wired={"skin_corpus": None})
+    tweaks = {"spectrum_smoothing", "meter_fall", "meter_smoothing", "meter_follow", "meter_gain",
+              "skin_motion", "record_speed", "rotation_mode"}
+
+    def shown(corpus):
+        settings.set("skin_corpus", corpus)
+        return {r["key"] for g in settings.to_json() for r in g["rows"]
+                if r.get("key") in tweaks and r["visible"]}
+
+    both = {"meter_follow", "meter_gain"}
+    needles = {"meter_fall", "meter_smoothing"}
+    assert shown("VU meters") == both | needles
+    assert shown("Spectrum") == both | {"spectrum_smoothing"}
+    assert shown("VU meters + spectrum") == both | needles | {"spectrum_smoothing"}
+    assert shown("Turntables") == both | needles | {"skin_motion", "record_speed", "rotation_mode"}
+    assert shown("Tapes") == both | needles | {"skin_motion", "rotation_mode"}, "a tape's reels keep their own speed"
+    assert shown("Fanart") == both | needles | {"skin_motion", "record_speed", "rotation_mode"}
+    assert shown("All") == tweaks
 
 
 async def test_saving_the_device_name_from_settings_restarts_the_device(store):
