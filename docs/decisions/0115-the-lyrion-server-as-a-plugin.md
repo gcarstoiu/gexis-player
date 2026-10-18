@@ -238,6 +238,17 @@ setting" and the Music folder's always being offered.
     whole drive to some of its folders takes a folder out of Lyrion's list,
     and Lyrion wipes the library and scans it all again. Each such row says
     so in its note.
+25. **A network share opens into its folders, and one added by mistake can
+    be forgotten in first use** (George, 2026-10-18, on sofapi: no way to
+    remove one, "slow", and it "stops only at level 1"). An SMB share is
+    browsed at any depth, as a USB drive is, and a folder inside it can be
+    added as the share (`//Tower.local/Music/Clean`); an NFS export is added
+    whole, since listing it would mean mounting it. First use's added shares
+    carry *Forget*. The scan for servers browses both kinds at once and is
+    reused for a minute (measured on sofapi: 2 s for every list before,
+    1.1 s for the first now and 52 ms after). With no USB drive plugged in,
+    first use shows *USB drive* greyed out, with *Look again*; the Music
+    folder's row shows its free and total space (George, the same evening).
 
 ## Not settled here
 

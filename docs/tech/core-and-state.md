@@ -526,7 +526,13 @@ pieces in code:
   longer stops the shares after it. An NFS address may not begin with `-`
   (`mount` runs as root and would read it as an option). Mounting and the
   "is it mounted" checks run in a worker thread, never on the event loop: on
-  a NAS that is off, a check waits out the NFS timeout.
+  a NAS that is off, a check waits out the NFS timeout. The scan for
+  servers (`lyrion_scan.servers`) browses SMB and NFS at once, about a
+  second, and is reused for a minute; `?saved=1` reads only the shares
+  added, `?fresh=1` scans again. The row's `folders` action lists an SMB
+  share's folders, or a folder's, with `smbclient -c 'cd "<path>"; ls'`
+  (a path with `;`, `"` or `..` is refused); an NFS export is not listed.
+  A share added at a folder (`//Tower.local/Music/Clean`) is mounted there.
 - **The Lyrion Server's music folders** (`lyrion_folders.py`, ADR-0115
   decisions 16-24): every 20 s while the server is on, and at once when a
   location changes, the core reads Lyrion's `mediadirs` and writes it back

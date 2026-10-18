@@ -555,8 +555,11 @@ NFS). Each is a switch or a list under *Settings → Sources → Lyrion Server*,
 and first use asks on *Where is your music?*, with nothing chosen
 beforehand. Under *Network shares*, a scan lists the servers on the network
 by their names, once each, and then their shares, with a login where
-needed; a share that does not announce itself can be added with *Add by
-address*.
+needed. An SMB share opens into its folders, as deep as you like, so Lyrion
+can read just one of them; an NFS export is added whole. A share that does
+not announce itself can be added with *Add by address*, and one added by
+mistake is taken away with its *Forget*. The Music folder's row shows how
+much room is free on the player.
 
 **Can Lyrion read only some folders of a USB drive?**
 Yes. With *USB drives* on, open *USB folders*: each drive plugged in is
