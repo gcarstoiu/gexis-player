@@ -46,7 +46,7 @@ verbatim, and 40 asserted replacements call the core. Change the design, then
 generate again; never restyle the `.svelte` by hand. Every screen was checked
 side by side with the prototype. ADR-0149's decisions were revised (25,
 including the two kept against the design: Output and the rename/second
-player on a restore, George 2026-10-08). **sofapi runs it** (core, UI and player `1.0.6+git77`; part 2 opens from Settings → System →
+player on a restore, George 2026-10-08). **sofapi runs it** (core `1.0.6+git87`, UI and player `+git88`; part 2 opens from Settings → System →
 Personalise). Added 2026-10-18 at George's request: a Touchpad step in
 part 2 (before the visualiser; preview with the pointer moving) and the
 volume type under part 1's Output (`GET /setup/outputs`; ADR-0149 26-27). Then: Getting ready shows the
@@ -74,7 +74,13 @@ plugin (ADR-0149 32-34). Should list: DSI screens, weather on the waiting
 screen. Since George's notes of 2026-10-18: part 2 is owed only until
 the first boot after setup (`personalise.at_start`), a restore is pinned by
 a test never to owe it, and the visualiser tweaks show only what the skin
-type draws (on `next`, merged into `ph-first-use`). *Personalise* is in ADR-0022 (George, 2026-10-18). Waiting
+type draws (on `next`, merged into `ph-first-use`). After George's full run
+on a fresh card (2026-10-18): part 2's panel screen first, *Do it later* =
+Spotify and Bluetooth, the core restarts once settled when part 2 sets a
+Lyrion server, the output recommendation, Headless apart, the standby picker
+(ADR-0149 35-41); on `next`: the setup password is `gexis-setup` always, a
+show-password eye, plain HTTP stays and is explained, no text selection on
+the panel, BlueZ's "Not Provided" is no title. *Personalise* is in ADR-0022 (George, 2026-10-18). Waiting
 for George: his test of part 2, then part 1 on sofapi after *Reset to
 factory settings* (his choice, instead of a fresh card), then the PR.
 
