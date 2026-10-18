@@ -676,6 +676,12 @@ fails, so a failure is still shown and answered with OK.
 `SetupFlow` marks a new player owed once part 1 has joined (not a restore);
 the `personalise` action in Settings → System marks it owed again with
 `first: false`. `/state` carries `personalise: "pending"` while it is owed.
+Each record keeps the boot it was owed in (`/proc/sys/kernel/random/boot_id`);
+at the core's start `personalise.at_start` keeps a new player's owed part 2
+through the boot setup ran in and the next one (noting it as `shown`), and
+one opened from Settings for its own boot only. Past that, the core puts it
+off 30 s after starting (`personalise.put_off`, *Do it later*'s own: the
+defaults kept, one Lyrion server found used).
 
 **The phone** (`App.svelte`): while it is owed, the phone page shows
 `FirstUsePage.svelte` (`mode="p2"`) in place of Settings, held until its Close. The

@@ -12,8 +12,13 @@ followed by ADR-0128's settling, on the panel and on the phone.
 part 2 once part 1 has finished (not a restored one, whose backup answers it,
 and not one updated from an earlier release). While it is owed, the phone's
 page opens on it and the panel shows a code to it. *Do it later* and
-*Finish* both end it; Settings -> System -> Personalise opens it again at
-any time without making it owed.
+*Finish* both end it; Settings -> System -> Personalise opens it again.
+
+**Only until the first boot after setup** (George, 2026-10-18: *"automatic
+trigger of personalise flow should only be triggered on the first boot after
+setup has ran"*): owed part 2 lasts through the boot setup ran in and the
+next one, then is put off, as *Do it later* would. Opened from Settings, it
+lasts the boot it was opened in. `at_start` decides, from the kernel's boot id.
 """
 from __future__ import annotations
 
@@ -27,6 +32,7 @@ from typing import Any, Callable
 logger = logging.getLogger("gexis_core.personalise")
 
 PATH = Path("/var/lib/gexis/personalise.json")
+BOOT_ID = Path("/proc/sys/kernel/random/boot_id")
 PENDING, DONE, LATER = "pending", "done", "later"
 
 #: **What part 2 may write, and nothing else**: the page sends settings by
@@ -68,12 +74,56 @@ def state(path: Path = PATH) -> str | None:
     return value if value in (PENDING, DONE, LATER) else None
 
 
-def mark_pending(path: Path = PATH, first: bool = True) -> None:
+def boot_id(path: Path = BOOT_ID) -> str | None:
+    try:
+        return path.read_text().strip() or None
+    except OSError:
+        return None
+
+
+def mark_pending(path: Path = PATH, first: bool = True, boot: str | None = None) -> None:
     """Owed: `first` when part 1 of a new player has just finished - the page
     then starts from part 2's own defaults - else asked again from Settings,
-    starting from what the player has now."""
-    _write({"state": PENDING, "first": first, "since": time.time()}, path)
+    starting from what the player has now. `boot` is the boot it was owed in."""
+    _write({"state": PENDING, "first": first, "since": time.time(), "boot": boot or boot_id()}, path)
     logger.info("personalise: owed (%s)", "a new player" if first else "asked again from Settings")
+
+
+def at_start(path: Path = PATH, boot: str | None = None) -> bool | None:
+    """At the core's start: True while part 2 is still owed, False when it was
+    owed and its time is over (the caller puts it off), None when it is not
+    owed. A restart of the core within one boot changes nothing."""
+    record = read(path)
+    if record.get("state") != PENDING:
+        return None
+    now = boot or boot_id()
+    made = record.get("boot")
+    if now is None or made == now:
+        return True
+    # A new player's first boot after setup: kept, and that boot noted.
+    if record.get("first") and record.get("shown", now) == now:
+        if "shown" not in record:
+            record["shown"] = now
+            _write(record, path)
+        return True
+    logger.info("personalise: owed in an earlier boot; put off")
+    return False
+
+
+async def put_off(settings, find_servers) -> None:
+    """*Do it later*: the defaults kept - and, as part 1 did before part 2
+    existed, a Lyrion server looked for once and used when exactly one
+    answers, so a player put off still finds its library."""
+    if settings is not None:
+        try:
+            if settings.value("lms_enabled") and not settings.value("lms_server"):
+                found = await find_servers()
+                if len(found) == 1:
+                    settings.set("lms_server", found[0]["address"])
+                    logger.info("personalise: put off; the one Lyrion server found is used")
+        except Exception as exc:  # noqa: BLE001 - a courtesy, never a failure
+            logger.warning("personalise: Lyrion not looked for: %s", exc)
+    end(LATER)
 
 
 def first(path: Path = PATH) -> bool:

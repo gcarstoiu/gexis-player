@@ -2186,20 +2186,9 @@ class StateServer:
         return web.json_response({"ok": True, **result})
 
     async def _handle_personalise_later(self, request: web.Request) -> web.Response:
-        """*Do it later*: the defaults kept - and, as part 1 did before part
-        2 existed, a Lyrion server looked for once and used when exactly one
-        answers, so a player put off still finds its library."""
+        """*Do it later* (`personalise.put_off`)."""
         from gexis_core import personalise
-        if self._settings is not None:
-            try:
-                if self._settings.value("lms_enabled") and not self._settings.value("lms_server"):
-                    found = await discovery.find_servers()
-                    if len(found) == 1:
-                        self._settings.set("lms_server", found[0]["address"])
-                        logger.info("personalise: put off; the one Lyrion server found is used")
-            except Exception as exc:  # noqa: BLE001 - a courtesy, never a failure
-                logger.warning("personalise: Lyrion not looked for: %s", exc)
-        personalise.end(personalise.LATER)
+        await personalise.put_off(self._settings, lambda: discovery.find_servers())
         self._store.set_personalise(None)
         return web.json_response({"ok": True})
 

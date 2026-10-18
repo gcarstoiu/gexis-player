@@ -469,8 +469,9 @@ whether this is a new player or a backup to restore. A new player goes on to
 a name, the clock, the output and the screen. Then, from your home Wi-Fi, the
 same page asks how you listen (Lyrion, Plex or streaming), what the screen
 shows while music plays, while it waits and at night, and installs what that
-needs; *Do it later* keeps the defaults, and *Settings → System →
-Personalise* asks it all again. A backup asks only
+needs; *Do it later* keeps the defaults, as does leaving it until the
+player's next restart, and *Settings → System → Personalise* asks it all
+again. A backup asks only
 for this player's output and screen and answers the rest, and the phone shows
 what it brings before the player restarts. Step by step, from flashing the
 card: the [installation guide](INSTALL.md). Once the player is on your

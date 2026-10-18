@@ -113,3 +113,33 @@ async def test_the_routes_finish_and_put_off_part_two(tmp_path, monkeypatch):
         assert settings.values["lms_server"] == "192.0.2.10:9000"
         assert personalise.state() == personalise.LATER
     assert [b["id"] for b in begun] == ["skins"]
+
+
+def test_owed_only_until_the_first_boot_after_setup(tmp_path):
+    """George, 2026-10-18: the automatic part 2 only on the first boot after
+    setup; unanswered by then, it is put off."""
+    path = tmp_path / "personalise.json"
+    personalise.mark_pending(path, boot="setup")
+    assert personalise.at_start(path, boot="setup") is True, "a core restart in setup's own boot"
+    assert personalise.at_start(path, boot="next") is True, "the first boot after setup"
+    assert personalise.at_start(path, boot="next") is True, "a core restart in that boot"
+    assert personalise.at_start(path, boot="later") is False, "any boot after it"
+    # Opened from Settings: the boot it was opened in, no more.
+    personalise.mark_pending(path, first=False, boot="b1")
+    assert personalise.at_start(path, boot="b1") is True
+    assert personalise.at_start(path, boot="b2") is False
+    personalise.end(personalise.DONE, path)
+    assert personalise.at_start(path, boot="b3") is None
+
+
+@pytest.mark.asyncio
+async def test_put_off_uses_the_one_lyrion_server_found(tmp_path, monkeypatch):
+    monkeypatch.setattr(personalise.end, "__defaults__", (tmp_path / "personalise.json",))
+    settings = FakeSettings({"lms_enabled": True})
+
+    async def two():
+        return [{"address": "192.0.2.10:9000"}, {"address": "192.0.2.11:9000"}]
+
+    await personalise.put_off(settings, two)
+    assert "lms_server" not in settings.values, "several are left to Settings"
+    assert personalise.state(tmp_path / "personalise.json") == personalise.LATER

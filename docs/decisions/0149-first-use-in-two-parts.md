@@ -89,9 +89,15 @@ gains *Music on this player or a share* (MPD); until then it is Lyrion's.
 ### Who sees it
 
 - **A new player** - part 2 follows part 1 on the phone; the panel shows its
-  QR code until it is done or put off.
+  QR code until it is done or put off. **Only until the first boot after
+  setup** (George, 2026-10-18: *"automatic trigger of personalise flow should
+  only be triggered on the first boot after setup has ran"*): unanswered by
+  any later boot, it is put off as *Do it later* would (`personalise.at_start`,
+  from the kernel's boot id). Opened from Settings, it lasts the boot it was
+  opened in.
 - **Without a screen** - questions 1 and 4 are not asked.
-- **A restored player** - not offered; Settings has Personalise.
+- **A restored player** - not offered; Settings has Personalise. (George,
+  2026-10-18: *"the user already brought back all the settings he wanted"*.)
 - **A player already set up** (an update) - not offered; Settings has
   Personalise.
 - **After a factory reset** - both parts, as a new player.

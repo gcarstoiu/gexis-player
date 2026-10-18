@@ -498,6 +498,17 @@ def test_lyrion_found_after_the_join_is_written_into_the_restored_settings(tmp_p
     assert _restored(tmp_path, "lms_server") == "10.0.0.5:9000" and _restored(tmp_path, "lms_enabled") is True
 
 
+def test_a_restore_is_never_owed_part_two(tmp_path):
+    """George, 2026-10-18: the backup brought back what the owner wanted;
+    Personalise in Settings is still there."""
+    owed = []
+    flow, net, _, _, upload, _ = _with_backup(tmp_path, FakeNM(devices=NOTHING), owed=lambda: owed.append(True))
+    flow.take_backup(upload)
+    flow.save({"ssid": "Home", "password": "hunter22"})
+    asyncio.run(_finish_told(flow, net))
+    assert (tmp_path / "setup-done").exists() and owed == []
+
+
 def test_a_backup_given_another_name_leaves_the_first_player_s_identities_behind(tmp_path):
     """George, 2026-10-08: "Setup could offer to leave these behind when the
     name is changed" - "yes". The Beszel fingerprint, Plexamp's claim, the

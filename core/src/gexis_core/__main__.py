@@ -76,7 +76,7 @@ from gexis_core.lyrion_shares import Shares as LyrionShares
 from gexis_core.fanart import Fanart
 from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, Queue, TrackMetadata
-from gexis_core import connections, hardware_report, personalise, settings_migrations, settling, updates, wired
+from gexis_core import connections, discovery, hardware_report, personalise, settings_migrations, settling, updates, wired
 from gexis_core.standby import Schedule, Standby
 from gexis_core.settings import SettingsStore
 # ADR-0127's `output_mode` row and ADR-0124's remembered software level, kept
@@ -2374,7 +2374,17 @@ async def main() -> None:
         personalise.mark_pending(first=first)
         state_store.set_personalise(personalise.PENDING)
 
-    state_store.set_personalise(personalise.PENDING if personalise.state() == personalise.PENDING else None)
+    owed_at_start = personalise.at_start()
+    state_store.set_personalise(personalise.PENDING if owed_at_start else None)
+    if owed_at_start is False:
+        # Owed in an earlier boot and not answered: put off, as *Do it later*
+        # does - after the network has had time to come up for the Lyrion
+        # search.
+        async def _put_off_at_start() -> None:
+            await asyncio.sleep(30)
+            if personalise.state() == personalise.PENDING and personalise.at_start() is False:
+                await personalise.put_off(settings, discovery.find_servers)
+        asyncio.ensure_future(_put_off_at_start())
 
     settings = Settings(
         settings_store,

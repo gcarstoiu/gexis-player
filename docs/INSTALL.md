@@ -80,7 +80,9 @@ plays, while it waits and at night. Each question has a default; *Do it
 later* keeps them all. Lyrion, Plexamp and the visualiser's skins then
 download, and the page and the player's screen show each one arriving.
 Everything here can be changed later, or asked again from *Settings → System
-→ Personalise*. A restored player skips this: its backup already answers it.
+→ Personalise*. It is offered until the player's first restart after setup;
+left unanswered, the defaults stay. A restored player skips this: its backup
+already answers it.
 
 ## Afterwards
 
