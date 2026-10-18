@@ -86,7 +86,17 @@
         : c.share != null ? Math.min(99, Math.round(c.share * 100)) : 0;
       const mb = (n) => Math.round(n / 1e6);
       switch (c.state) {
-        case 'installed': return { done: true, pct: 100, label: 'Installed', meta: 'Done' };
+        case 'installed': {
+          // ADR-0115 decision 28: after its download, what the software is
+          // doing - for Lyrion, starting, its add-ons, reading the music -
+          // and Done only once it is (George, 2026-10-18).
+          const a = c.after;
+          if (!a) return { done: true, pct: 100, label: 'Installed', meta: 'Done' };
+          const step = { starting: 15, addons: 40, waiting: 70, scanning: 75, ready: 100 }[a.phase] ?? 50;
+          const pctA = a.phase === 'scanning' && a.share != null ? 75 + Math.round(a.share * 24) : step;
+          const metaA = a.phase === 'ready' ? 'Done' : a.phase === 'scanning' ? (a.share != null ? `${Math.round(a.share * 100)} %` : 'Reading') : 'Working';
+          return { done: !!a.done, after: true, ok: a.phase === 'ready', pct: pctA, label: a.label, meta: metaA, line: a.line };
+        }
         case 'failed': return { failed: true, pct: 0, label: 'Did not finish', meta: 'Failed', line: c.error || 'Try it again from Settings → Plugins.' };
         case 'preparing': return { pct: 0, label: 'Preparing the download', meta: 'Starting', line: '' };
         case 'downloading': return { pct, label: 'Downloading', meta: null, line: c.total ? `${mb(c.received ?? 0)} of ${mb(c.total)} MB` : '' };

@@ -319,15 +319,18 @@ b = js.index("        const state = ", a)
 b = js.index("\n", b) + 1
 js = js[:a] + """      case 'done': { const items = [], got = [];
         if (s.finishError) items.push(note('warn', 'Not saved yet', s.finishError));
-        const show = (name, id, doneLine, doneOk, after) => { const g = live.stage(id); got.push(g);
-          items.push(head(name), prog(g.label, g.pct, g.meta, g.done ? doneLine : g.line, g.done ? doneOk : false));
-          if (g.done && after) items.push(note('info', '', after)); };
+        // George, 2026-10-18: each item headed as the folders step's groups
+        // are (Settings' subgroups), in its source's colour; and a line that
+        // follows what the software does after its download (g.after).
+        const show = (name, accent, id, doneLine, doneOk, after) => { const g = live.stage(id); got.push(g);
+          items.push({ t: 'Sub', text: name, accent }, prog(g.label, g.pct, g.meta, g.after ? g.line : g.done ? doneLine : g.line, g.after ? !!g.ok : g.done ? doneOk : false));
+          if (g.done && after && !g.after) items.push(note('info', '', after)); };
         if (d.here) { const any = s.places.folder || s.places.usb || s.places.share;
-          show('Lyrion', live.component('lyrion-server.enabled', 'lyrion'), any ? 'Folders added, scan started' : 'Installed, no music yet', true,
+          show('Lyrion', C.lyr, live.component('lyrion-server.enabled', 'lyrion'), any ? 'Folders added, scan started' : 'Installed, no music yet', true,
             any ? 'A large library can take hours to scan. Music shows up as Lyrion finds it.' : 'Add where your music is in Settings → Sources → Lyrion Server.'); }
         if (d.plex && s.plexOn) { const ok = s.plexState === 'ok';
-          show('Plexamp', live.component('plexamp.enabled', 'plexamp'), ok ? 'Signed in to Plex' : 'Not signed in yet', ok, ok ? 'Your Plex library plays from the Plexamp app.' : 'Sign in from Settings → Plexamp when you’re ready.'); }
-        if (!d.headless && s.vizOn) show('Visualiser', 'skins', 'Skins ready', true, 'The visualiser starts after ' + s.vizAfter + ' of music.');
+          show('Plexamp', C.plex, live.component('plexamp.enabled', 'plexamp'), ok ? 'Signed in to Plex' : 'Not signed in yet', ok, ok ? 'Your Plex library plays from the Plexamp app.' : 'Sign in from Settings → Plexamp when you’re ready.'); }
+        if (!d.headless && s.vizOn) show('Visualiser', C.scr, 'skins', 'Skins ready', true, 'The visualiser starts after ' + s.vizAfter + ' of music.');
         const failedAny = got.some(g => g.failed);
         if (failedAny) items.push(note('warn', 'Something did not finish', 'Try it again from Settings → Plugins. Everything else is set.'));
         const waiting = !s.finished || got.some(g => !g.done && !g.failed);

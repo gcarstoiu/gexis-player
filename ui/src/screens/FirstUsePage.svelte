@@ -494,15 +494,18 @@ class Component extends DCLogic {
       }
       case 'done': { const items = [], got = [];
         if (s.finishError) items.push(note('warn', 'Not saved yet', s.finishError));
-        const show = (name, id, doneLine, doneOk, after) => { const g = live.stage(id); got.push(g);
-          items.push(head(name), prog(g.label, g.pct, g.meta, g.done ? doneLine : g.line, g.done ? doneOk : false));
-          if (g.done && after) items.push(note('info', '', after)); };
+        // George, 2026-10-18: each item headed as the folders step's groups
+        // are (Settings' subgroups), in its source's colour; and a line that
+        // follows what the software does after its download (g.after).
+        const show = (name, accent, id, doneLine, doneOk, after) => { const g = live.stage(id); got.push(g);
+          items.push({ t: 'Sub', text: name, accent }, prog(g.label, g.pct, g.meta, g.after ? g.line : g.done ? doneLine : g.line, g.after ? !!g.ok : g.done ? doneOk : false));
+          if (g.done && after && !g.after) items.push(note('info', '', after)); };
         if (d.here) { const any = s.places.folder || s.places.usb || s.places.share;
-          show('Lyrion', live.component('lyrion-server.enabled', 'lyrion'), any ? 'Folders added, scan started' : 'Installed, no music yet', true,
+          show('Lyrion', C.lyr, live.component('lyrion-server.enabled', 'lyrion'), any ? 'Folders added, scan started' : 'Installed, no music yet', true,
             any ? 'A large library can take hours to scan. Music shows up as Lyrion finds it.' : 'Add where your music is in Settings → Sources → Lyrion Server.'); }
         if (d.plex && s.plexOn) { const ok = s.plexClaimed;
-          show('Plexamp', live.component('plexamp.enabled', 'plexamp'), ok ? 'Signed in to Plex' : 'Not signed in yet', ok, ok ? 'Your Plex library plays from the Plexamp app.' : 'Sign in from Settings → Plexamp when you’re ready.'); }
-        if (!d.headless && s.vizOn) show('Visualiser', 'skins', 'Skins ready', true, 'The visualiser starts after ' + s.vizAfter + ' of music.');
+          show('Plexamp', C.plex, live.component('plexamp.enabled', 'plexamp'), ok ? 'Signed in to Plex' : 'Not signed in yet', ok, ok ? 'Your Plex library plays from the Plexamp app.' : 'Sign in from Settings → Plexamp when you’re ready.'); }
+        if (!d.headless && s.vizOn) show('Visualiser', C.scr, 'skins', 'Skins ready', true, 'The visualiser starts after ' + s.vizAfter + ' of music.');
         const failedAny = got.some(g => g.failed);
         if (failedAny) items.push(note('warn', 'Something did not finish', 'Try it again from Settings → Plugins. Everything else is set.'));
         const waiting = !s.finished || got.some(g => !g.done && !g.failed);
@@ -617,7 +620,17 @@ class Component extends DCLogic {
         : c.share != null ? Math.min(99, Math.round(c.share * 100)) : 0;
       const mb = (n) => Math.round(n / 1e6);
       switch (c.state) {
-        case 'installed': return { done: true, pct: 100, label: 'Installed', meta: 'Done' };
+        case 'installed': {
+          // ADR-0115 decision 28: after its download, what the software is
+          // doing - for Lyrion, starting, its add-ons, reading the music -
+          // and Done only once it is (George, 2026-10-18).
+          const a = c.after;
+          if (!a) return { done: true, pct: 100, label: 'Installed', meta: 'Done' };
+          const step = { starting: 15, addons: 40, waiting: 70, scanning: 75, ready: 100 }[a.phase] ?? 50;
+          const pctA = a.phase === 'scanning' && a.share != null ? 75 + Math.round(a.share * 24) : step;
+          const metaA = a.phase === 'ready' ? 'Done' : a.phase === 'scanning' ? (a.share != null ? `${Math.round(a.share * 100)} %` : 'Reading') : 'Working';
+          return { done: !!a.done, after: true, ok: a.phase === 'ready', pct: pctA, label: a.label, meta: metaA, line: a.line };
+        }
         case 'failed': return { failed: true, pct: 0, label: 'Did not finish', meta: 'Failed', line: c.error || 'Try it again from Settings → Plugins.' };
         case 'preparing': return { pct: 0, label: 'Preparing the download', meta: 'Starting', line: '' };
         case 'downloading': return { pct, label: 'Downloading', meta: null, line: c.total ? `${mb(c.received ?? 0)} of ${mb(c.total)} MB` : '' };

@@ -71,7 +71,7 @@ from gexis_core.peppy import (
     set_meter_skins,
     set_meter_smoothing,
 )
-from gexis_core import factory_reset, lyrion_addons, lyrion_folders, lyrion_memory, music_floor
+from gexis_core import factory_reset, lyrion_addons, lyrion_folders, lyrion_memory, lyrion_stage, music_floor
 from gexis_core.lyrion_shares import Shares as LyrionShares
 from gexis_core.lyrion_usb import UsbFolders
 from gexis_core.fanart import Fanart
@@ -383,6 +383,8 @@ SETUP_KEEP_S = 120.0
 #: How often the Lyrion server's music folders are compared with what is
 #: mounted (ADR-0115): a USB disk plugged in appears within this.
 LYRION_FOLDERS_S = 20.0
+#: ADR-0115 decision 28: how often the loop looks while Lyrion gets ready.
+LYRION_STAGE_S = 5.0
 #: ADR-0115 decision 27: how often the Music share's floor is checked.
 MUSIC_FLOOR_S = 60.0
 #: ADR-0115: Lyrion's add-ons - restarted after this, to load what it
@@ -415,6 +417,9 @@ def _lyrion_note(on: bool) -> str | None:
         return small
     if not on:
         return None
+    stage = lyrion_stage.CURRENT
+    if stage.get("phase") in ("starting", "addons", "waiting", "scanning"):
+        return lyrion_memory.stopped_note() or f"{stage['label']}: {stage['line']}"
     return lyrion_memory.stopped_note() or _lyrion_setup_note()
 
 
@@ -1932,6 +1937,10 @@ async def main() -> None:
     def _all_components() -> dict:
         status = components.all_status()
         status["skins"] = skins_status()
+        # ADR-0115 decision 28: after its download, what Lyrion is doing.
+        stage = dict(lyrion_stage.CURRENT)
+        if stage and status.get("lyrion", {}).get("state") == "installed":
+            status["lyrion"] = {**status["lyrion"], "after": stage}
         return status
 
     def _publish_components() -> None:
@@ -3385,12 +3394,18 @@ async def main() -> None:
         off; then its folders brought up to date. Woken early when a share
         is added or forgotten."""
         while True:
+            # ADR-0115 decision 28: every few seconds while Lyrion is still
+            # getting ready, so the page follows it closely.
+            settled = lyrion_stage.CURRENT.get("phase") in (None, "ready")
             try:
-                await asyncio.wait_for(lyrion_wake.wait(), LYRION_FOLDERS_S)
+                await asyncio.wait_for(lyrion_wake.wait(), LYRION_FOLDERS_S if settled else LYRION_STAGE_S)
             except asyncio.TimeoutError:
                 pass
             lyrion_wake.clear()
             on = settings.value("lyrion-server.enabled") is True
+            if not on and lyrion_stage.CURRENT:
+                lyrion_stage.CURRENT.clear()
+                _publish_components()
             try:
                 if on:
                     await asyncio.to_thread(lyrion_shares.mount_all, lyrion_shares.all())
@@ -3413,6 +3428,7 @@ async def main() -> None:
                 await _lyrion_addons()
             except Exception as exc:  # no internet yet, or the server is busy
                 logger.debug("lyrion: add-ons not checked (%r)", exc)
+            status = None
             try:
                 # ADR-0115 decision 18: a scan stopped for memory is said on
                 # the server's row until one finishes without a stop.
@@ -3423,6 +3439,18 @@ async def main() -> None:
                     state_store.bump_settings_revision()
             except Exception as exc:  # starting: next time
                 logger.debug("lyrion: scan state not read (%r)", exc)
+            # ADR-0115 decision 28: what Lyrion is doing, for Getting ready
+            # and the server's row.
+            located = (settings.value("lyrion-server.music_folder") is True or bool(lyrion_shares.points())
+                       or (settings.value("lyrion-server.usb") is True and bool(lyrion_usb.all())))
+            now_stage = lyrion_stage.stage(status is not None, LYRION_ADDONS_DONE.exists(), status, located)
+            if now_stage != lyrion_stage.CURRENT:
+                if now_stage["phase"] != lyrion_stage.CURRENT.get("phase"):
+                    logger.info("lyrion: %s", now_stage["label"].lower())
+                lyrion_stage.CURRENT.clear()
+                lyrion_stage.CURRENT.update(now_stage)
+                _publish_components()
+                state_store.bump_settings_revision()
             if not lyrion_asked.get("versions_off"):
                 # ADR-0100, amended 2026-10-03: we choose its version, so its
                 # page does not offer others - set on servers made before the

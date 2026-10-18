@@ -279,6 +279,22 @@ setting" and the Music folder's always being offered.
     in code: ADR-0022 [H]. Lyrion's own playlist saves into the Music
     folder do not go through the share and are not stopped.
 
+28. **What Lyrion does after its download is said, step by step**
+    (George, 2026-10-18: *"it should be transparent to the user that it will
+    take some time before any library scan is even started"*; *Done* over a
+    line saying it was still installing was misleading). Measured on sofapi
+    that evening: part 2 finished at 21:47:06, Lyrion was downloaded and
+    started at 21:47:43, its add-ons were asked for at 21:48:19 and loaded by
+    a restart at 21:49:59, and the scan of the shares began at 21:50:08 -
+    three minutes in which the page said *Done*, and the first 2 1/2 without
+    Material Skin. The core now works out the stage every 5 s while it lasts
+    (`lyrion_stage.py`: Starting, Adding Material Skin, About to read your
+    music, Reading your music with its files so far, Ready with its songs and
+    albums) and sends it with the download's status; Getting ready and the
+    server's row in Settings say it. *Done* is said only at Ready; once
+    Lyrion reads, the player counts as ready, since a large library takes
+    hours.
+
 ## Not settled here
 
 - The memory and CPU measured during a scan of George's library, and the

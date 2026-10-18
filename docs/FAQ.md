@@ -578,6 +578,12 @@ folder, narrowing a whole drive to some of its folders, or forgetting a
 share all start a full rescan; their notes say so. Adding a folder scans
 only that folder.
 
+**Why does the player's own Lyrion server take a few minutes before it reads my music?**
+After its download, Lyrion starts, fetches its add-ons (Material Skin among
+them) and restarts once to load them: about three minutes on a Pi 4 before
+it begins reading. Getting ready, and the server's row in *Settings →
+Sources*, say which step it is on, then how many files it has read.
+
 **How long does the first scan take?**
 On a 4 GB Pi over Wi-Fi, a library of tens of thousands of files took a
 couple of hours, and a rescan with nothing changed under half an hour. The first scan

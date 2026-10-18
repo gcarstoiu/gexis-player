@@ -544,6 +544,13 @@ pieces in code:
   everything, so a saved share stays in the list while unmounted, and a USB
   folder for 7 days after its drive was last seen
   (`/var/lib/gexis/lyrion-usb-seen.json`).
+- **Lyrion's stage after its download** (`lyrion_stage.py`, ADR-0115
+  decision 28): the Lyrion loop reads `serverstatus` (every 5 s while not
+  ready, every 20 s after) and works out Starting, Adding Material Skin
+  (until `lyrion-addons.done`), About to read your music, Reading your music
+  (`rescan`, `progressdone`/`progresstotal`) or Ready (`info total songs`).
+  It goes out as `components.lyrion.after` while the package is installed,
+  and as the server's row note in Settings.
 - **The Music share's floor** (`music_floor.py`, ADR-0115 decision 27):
   every minute the core reads the Music folder's free space; below 4 GB
   it writes `read only = yes` to `/run/gexis/music-share.conf`, which
