@@ -11,7 +11,12 @@ the release branch, what the next release is built from (was `phase-13d`),
 and `docs` is merged into it after each docs change. A phase's work has its
 own branch (`ph-first-use`) and is merged into `next` once George's tests
 pass. A release is built
-from a worktree made at its tag, then removed. History: `docs/HANDOFF-ARCHIVE.md`
+from a worktree made at its tag, then removed.
+
+**The public roadmap is the GitHub wiki's *Roadmap* page** (2026-10-18; its own
+repository, `gexis-player.wiki.git`): Now, Next (the next two phases), Later,
+and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
+phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
 **Current release: 1.0.6, on Stable** (2026-10-17; Stable serial 4, Testing
