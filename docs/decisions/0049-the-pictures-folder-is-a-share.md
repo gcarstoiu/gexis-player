@@ -125,7 +125,7 @@ there** — which is what keeps this decision cheap to reverse.
 
 **George, 2026-10-16:** *"The names of the panels are not showing up in a
 samba network search"*, with a phone file manager's *Local Network* list as
-evidence: the NAS (Ark) and the Unraid server (Tower) by name, every player
+evidence: the NAS and the Unraid server by name, every player
 by its address. That app names what it finds by NetBIOS, which the players
 did not answer: §4 kept `nmbd` masked. Asked to choose between turning it on
 and leaving it off, George chose *"Turn it on"*.

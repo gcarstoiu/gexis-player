@@ -204,9 +204,9 @@ async def test_a_call_that_did_not_reach_the_plugin_is_not_remembered_as_no_phot
 
 @pytest.mark.asyncio
 async def test_a_biography_comes_back_as_text():
-    lms = FakeLms(biographies={7452: "  2 Unlimited are a Belgian-Dutch dance act.  "})
+    lms = FakeLms(biographies={7452: "  Artist A are a dance act.  "})
 
-    assert await _info(lms).biography(7452) == "2 Unlimited are a Belgian-Dutch dance act."
+    assert await _info(lms).biography(7452) == "Artist A are a dance act."
 
 
 @pytest.mark.asyncio

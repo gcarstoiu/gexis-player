@@ -87,7 +87,7 @@ endorsing it:
 | artist | fanart | LMS's plugin (warm) | fanart's image |
 |---|---|---|---|
 | Rod Stewart | 614 ms | 18 ms | 705 KB |
-| 2 Unlimited | 169 ms | 9 ms | 247 KB |
+| Artist A | 169 ms | 9 ms | 247 KB |
 | Gary Moore | 1,065 ms | 12 ms | 353 KB |
 | Red Hot Chili Peppers | 721 ms | 13 ms | 246 KB |
 | Andreas Bourani | 751 ms | 14 ms | 826 KB |
