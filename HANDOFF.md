@@ -60,7 +60,13 @@ code"): below 4 GB free the share includes `read only = yes`
 (`/run/gexis/music-share.conf`), above 4.5 GB it opens. Tried on sofapi by
 closing it with `music_floor.apply`: a guest copy was refused, then went in
 once open; never with a card actually full. *Where is your music?* groups
-each source with its own actions (George, the same evening).
+each source with its own actions (George, the same evening). Lyrion's
+first minutes are now said step by step (ADR-0115 decision 28,
+`lyrion_stage.py`): Getting ready and Settings → Sources → Lyrion Server
+(heading indicator, read-only *Library* row with a bar, kept after Ready);
+sofapi `+git139` reads *Ready, 760 songs on 47 albums*. **Seen 2026-10-18,
+not yet looked into:** sofapi's new Lyrion server lists ShelvesPi and
+GuestPi as its players.
 
 **Release build output lives in `~/.local/share/gexis-release-out`**: in each
 release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
