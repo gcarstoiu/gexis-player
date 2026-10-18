@@ -163,7 +163,12 @@ list. `packaging/release/build.sh <image.img>` refuses to run if the image's
    back from GitHub and verify it with the release key (serial, release).
 4. **PR**: push the tag and a `release-X` branch at the tagged commit; open
    one PR into `main` with the approved notes and what was checked. **George
-   merges it**, never Claude.
+   merges it**, never Claude. `main`'s ruleset (2026-10-18) takes changes only
+   through a pull request, never a force-push, and only once both checks of
+   `.github/workflows/tests.yml` pass: *Core tests* (Python 3.13, the
+   player's) and *UI build*. They run on every push to any branch, so a
+   release branch shows its result before the PR is opened. GitHub deletes
+   the PR's branch when it is merged.
 5. **After the merge**: merge `origin/main` into `docs` and `next`, delete
    `release-X` **on GitHub and locally** (`git push origin --delete
    release-X`; seven release branches were left on GitHub until 2026-10-18),

@@ -18,8 +18,8 @@ dependencies = [
 
 [project.optional-dependencies]
 test = [
-    "pytest==8.3.4",
-    "pytest-asyncio==0.25.2",
+    "pytest==9.0.3",
+    "pytest-asyncio==1.4.0",
     # What the image's own tools are tested with: the skin packs and
     # letterboxing (Pillow), the visualiser's renderers (pygame), the photo
     # placement (numpy, OpenCV). Without them those tests skip.

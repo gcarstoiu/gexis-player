@@ -13,6 +13,14 @@ own branch (`ph-first-use`) and is merged into `next` once George's tests
 pass. A release is built
 from a worktree made at its tag, then removed.
 
+**GitHub checks every push** (2026-10-18): `.github/workflows/tests.yml` runs
+*Core tests* (Python 3.13) and *UI build*; `main`'s ruleset requires both and
+a pull request; merged branches are deleted by GitHub; Dependabot alerts are
+on (security alerts only, no version-bump PRs). On GitHub the visualiser's
+tests run too (pygame's fonts work on 3.13): 2546 pass, against 2500 here.
+*Releases built on GitHub* is a Should on the Roadmap (signing stays local;
+a trial build first, for the disk).
+
 **The public roadmap is the GitHub wiki's *Roadmap* page** (2026-10-18; its own
 repository, `gexis-player.wiki.git`): Now, Next (the next two phases), Later,
 and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
