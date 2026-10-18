@@ -2128,7 +2128,7 @@
                            "Claimed"), in place of the value - a spent claim
                            token's dots say nothing. -->
                       <span class="row__value row__value--done"><span class="row__tick" aria-hidden="true">✓</span> {r.status.text}</span>
-                    {:else if r.type !== 'toggle' && shown(r)}
+                    {:else if r.type !== 'toggle' && !(r.type === 'readonly' && r.links?.length && r.value == null) && shown(r)}
                       <span class="row__value" class:is-pending={pending(r)}>{shown(r)}</span>
                     {/if}
                     {#if (r.kind === 'share' || r.kind === 'usb-folder') && r.items?.length}
