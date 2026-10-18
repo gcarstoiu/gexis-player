@@ -189,9 +189,37 @@ rep("""        if (live.failed()) items.push(note('warn', 'Something did not fin
 rep("""  if (b.t === 'Code') Object.assign(o, { label: b.label, code: b.code, text: b.text });""",
     """  if (b.t === 'Code') Object.assign(o, { label: b.label, code: b.code, text: b.text });
   if (b.t === 'Party') Object.assign(o, { marks: b.marks, status: b.status });""")
+# **Personalise lives in Display** (George, 2026-10-18: "since most of the
+# settings from Personalisation are display related, let's move the setting
+# to Display category").
+rep("Settings → System → Personalise", "Settings → Display → Personalise", n=2)
 # The frame: the page's own size (the prototype draws it inside a phone or a
 # tablet at fixed sizes).
 rep("fw: W ? '1100px' : '390px', fh: W ? '700px' : '844px', rad: W ? '22px' : '40px',", "fw: '100%', fh: '100%', rad: '0px',")
+# **Getting ready says what each download is doing** (George, 2026-10-18:
+# "Even if a download is at 100% but there is an install coming after then
+# this should be transparent to the user. Same with starting a download"):
+# each item's line, bar and right-hand word from the player's live status
+# (live.stage) - starting, preparing, downloading with its MB, retrying,
+# checking, installing, installed, did not finish.
+a = js.index("      case 'done': { const items = [];")
+b = js.index("        const state = ", a)
+b = js.index("\n", b) + 1
+js = js[:a] + """      case 'done': { const items = [], got = [];
+        if (s.finishError) items.push(note('warn', 'Not saved yet', s.finishError));
+        const show = (name, id, doneLine, doneOk, after) => { const g = live.stage(id); got.push(g);
+          items.push(head(name), prog(g.label, g.pct, g.meta, g.done ? doneLine : g.line, g.done ? doneOk : false));
+          if (g.done && after) items.push(note('info', '', after)); };
+        if (d.here) show('Lyrion', live.component('lyrion-server.enabled', 'lyrion'), 'Folders added, scan started', true, 'A large library can take hours to scan. Music shows up as Lyrion finds it.');
+        if (d.plex && s.plexOn) { const ok = s.plexState === 'ok';
+          show('Plexamp', live.component('plexamp.enabled', 'plexamp'), ok ? 'Signed in to Plex' : 'Not signed in yet', ok, ok ? 'Your Plex library plays from the Plexamp app.' : 'Sign in from Settings → Plexamp when you’re ready.'); }
+        if (!d.headless && s.vizOn) show('Visualiser', 'skins', 'Skins ready', true, 'The visualiser starts after ' + s.vizAfter + ' of music.');
+        const failedAny = got.some(g => g.failed);
+        if (failedAny) items.push(note('warn', 'Something did not finish', 'Try it again from Settings → Plugins. Everything else is set.'));
+        const waiting = !s.finished || got.some(g => !g.done && !g.failed);
+        const state = s.finishError ? 'busy' : failedAny ? 'warn' : waiting ? 'busy' : 'done';
+""" + js[b:]
+R.append("Getting ready's lines from live.stage")
 out_js = js
 script = (HERE / "personalise-adapter.svelte.txt").read_text().replace("/*PROTO*/", out_js)
 page = f"""<!-- SPDX-License-Identifier: GPL-3.0-or-later -->

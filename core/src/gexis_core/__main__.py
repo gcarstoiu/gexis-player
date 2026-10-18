@@ -2096,7 +2096,7 @@ async def main() -> None:
     # network yet, during setup) is tried again every few minutes.
     SKINS_RETRY_S = 300.0
     UPDATER = "/usr/lib/gexis/gexis-update"
-    skins_state = {"busy": False, "task": None, "waited": False}
+    skins_state = {"busy": False, "task": None, "waited": False, "starting": False}
     #: The setup network, once it exists (it is made further down): while
     #: the player still needs setup, the pack waits (below).
     setup_ref: dict = {"net": None}
@@ -2107,7 +2107,15 @@ async def main() -> None:
         state_store.set_meters(bool(meters_chain["ok"]) and bool(skin_packs.installed()))
 
     def skins_status() -> dict:
-        return skin_packs.status()
+        """The pack's line - and **preparing from the moment its install is
+        asked for** (George, 2026-10-18: "if something is happening for long
+        in the background then what is being done should be transparent"):
+        until the updater reports its download, the status file says nothing
+        is happening."""
+        status = skin_packs.status()
+        if skins_state["starting"] and status.get("state") not in ("downloading", "installing", "failed"):
+            return {**status, "state": "preparing"}
+        return status
 
     async def _run_updater(*args: str) -> int:
         proc = await asyncio.create_subprocess_exec(UPDATER, *args)
@@ -2136,8 +2144,13 @@ async def main() -> None:
                 want, extra = skin_packs.plan(skin_packs.screen_size(), have)
                 if want is not None:
                     logger.info("skins: installing %s", skin_packs.package(want))
-                    if await _run_updater("pack-install", skin_packs.package(want)) != 0:
-                        return
+                    skins_state["starting"] = True
+                    _publish_components()
+                    try:
+                        if await _run_updater("pack-install", skin_packs.package(want)) != 0:
+                            return
+                    finally:
+                        skins_state["starting"] = False
                     have = await asyncio.to_thread(skin_packs.installed)
                     # Onto the new pack before the old one goes from under it.
                     await _configure_visualiser(installed=True)
@@ -2379,7 +2392,7 @@ async def main() -> None:
     # ADR-0123 decision 2: the connected Wi-Fi network's address, the same way.
     wifi_address = wired.Cable(device="wlan0", on_change=lambda _pending: state_store.bump_settings_revision())
     # **ADR-0149: first use's part 2**, owed by a new player once part 1
-    # has finished, or again from Settings -> System -> Personalise.
+    # has finished, or again from Settings -> Display -> Personalise.
     def _personalise_owed(first: bool = True) -> None:
         personalise.mark_pending(first=first)
         state_store.set_personalise(personalise.PENDING)

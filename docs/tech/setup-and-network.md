@@ -711,8 +711,16 @@ visualiser, the waiting and idle screens, standby. Its last screen,
 chosen (`marks`), with a badge on the panel (`status`): the check when every
 download is in, a turning ring while one is still going, an amber ! when one
 failed; the title follows (*Getting … ready*, *… is ready*, *… is nearly
-ready*). A download Finish answered as `waiting` counts as in progress until
-the settling record has listed it, or 30 s have passed.
+ready*). Each download's line, bar and right-hand word come from its live
+status in `/state`'s `components`, the same one Settings reads (`live.stage`,
+George 2026-10-18: *"if something is happening for long in the background
+then what is being done should be transparent"*): *Starting the download*
+(after a minute, *Still waiting to start*), *Preparing*, *Downloading* with
+its MB, *Retrying*, *Checking*, *Installing* (*Downloaded* on the right),
+*Installed*, *Did not finish*. A pack already installed is done at once. The
+core reports the skins as `preparing` from the moment their install is asked
+for (`skins_status`), until the updater reports its download; the panel's
+settling screen uses the same words.
 
 **The panel**: while it is owed and the player has a screen, `SetupScreen`
 shows the step *Make it yours on your phone*, a QR code to

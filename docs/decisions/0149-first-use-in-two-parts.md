@@ -109,7 +109,9 @@ Proposed, not appended until George confirms:
 - **[N] Library on the screen** - on / off; on by default, off from question
   1's second answer. Display (or Sources), beside the Lyrion client row,
   which it needs.
-- *Personalise* is an action row in System, like *Reset to factory settings*;
+- *Personalise* is an action row in System, like *Reset to factory settings*
+  (**moved to Display 2026-10-18**, George: *"most of the settings from
+  Personalisation are display related"*);
   whether part 2 was finished or put off is state, not a setting. **Appended
   to ADR-0022 2026-10-18 on George's confirmation.**
 
@@ -279,6 +281,21 @@ it as it should be"*)
     should already know if there is a lyrion server on the network"*): the
     core searches in the background (`discovery.Known`, every 2 min, every
     30 s while none answers) and answers from the last search.
+
+30. **Every stage of a download is said** (George, testing part 2 on
+    sofapi: *"Even if a download is at 100% but there is an install coming
+    after then this should be transparent to the user. Same with starting a
+    download"*): Getting ready reads each download's live status, the one
+    Settings reads, and names its stage - starting, preparing, downloading
+    with its MB, retrying, checking, installing, installed, did not finish.
+    This replaces decision 28's wait for the settling record, which held a
+    pack already installed at 0 % for 30 s (*"download of Vis skins was slow
+    to start"* on sofapi, where the 1280 x 800 pack was already in). The
+    panel's settling screen names the same stages, and the core reports the
+    skins as preparing from the moment their install is asked for.
+31. **Personalise sits at the top of Display** (George: *"since most of the
+    settings from Personalisation are display related, let's move the
+    setting to Display category"*); ADR-0022 says so.
 
 **Settled by George afterwards (2026-10-18)**
 - **Personalise** is in ADR-0022's inventory (*"Yes it goes in the list"*).

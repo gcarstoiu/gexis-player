@@ -2927,7 +2927,7 @@ screen).
 **Built 2026-10-18 on the branch `ph-first-use`** (not merged) from Claude
 Design's hand-off; ADR-0149 accepted, with the decisions taken while building
 recorded in it (George delegated them). On SofaPi for George to test part 2
-through Settings → System → Personalise. Not yet run: part 1 on a freshly
+through Settings → Display → Personalise. Not yet run: part 1 on a freshly
 flashed card, and the wide (tablet) layout, which is not built.
 
 **Acceptance (draft):**
@@ -2937,7 +2937,7 @@ flashed card, and the wide (tablet) layout, which is not built.
    cable.
 2. Once on the home network, part 2 follows part 1 on the phone, and the
    panel shows a QR code to it; *Later* leaves with the defaults, and
-   *Settings → System → Personalise* runs it again.
+   *Settings → Display → Personalise* runs it again.
 3. *Only what is playing* keeps the Lyrion client running with no library
    navigation on the screen (its apps still play to the player);
    *I don't use Lyrion* turns the client off; a Lyrion server is found on

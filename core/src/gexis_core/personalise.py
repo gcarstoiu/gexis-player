@@ -12,7 +12,7 @@ followed by ADR-0128's settling, on the panel and on the phone.
 part 2 once part 1 has finished (not a restored one, whose backup answers it,
 and not one updated from an earlier release). While it is owed, the phone's
 page opens on it and the panel shows a code to it. *Do it later* and
-*Finish* both end it; Settings -> System -> Personalise opens it again.
+*Finish* both end it; Settings -> Display -> Personalise opens it again.
 
 **Only until the first boot after setup** (George, 2026-10-18: *"automatic
 trigger of personalise flow should only be triggered on the first boot after

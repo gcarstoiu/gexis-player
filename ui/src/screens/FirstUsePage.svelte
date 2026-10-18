@@ -24,7 +24,6 @@
   import PhoneDeviceList from './personalise/PhoneDeviceList.svelte';
   import { loadSettings, settingValues, settingsDevice, listItems, listAction, writeSetting } from '../lib/settings.js';
   import { pairing, components, settling, answerPairing, personaliseLater } from '../lib/state.js';
-  import { SvelteSet } from 'svelte/reactivity';
 
   //: `mode`: 'p1' (setup, over the setup network or the cable) or 'p2' (make it
   //: yours, from the home network). `setup`: `/state`'s setup, in part 1.
@@ -459,22 +458,21 @@ class Component extends DCLogic {
         }
         return { title: 'Your setup', sub: 'Tap a row to change it.', pv: pv(Object.assign({}, look, { head: nm + '’s screen' })), blocks: [list(rows), ...(d.here ? [P('Lyrion installs and scans your folders when you finish.')] : [])], foot: { next: 'Finish' } };
       }
-      case 'done': { const items = [];
+      case 'done': { const items = [], got = [];
         if (s.finishError) items.push(note('warn', 'Not saved yet', s.finishError));
-        if (d.here) { const lp = live.pct(live.component('lyrion-server.enabled', 'lyrion')), ld = lp >= 100;
-          items.push(head('Lyrion'), prog(ld ? 'Installed' : 'Installing', lp, null, ld ? 'Folders added, scan started' : '', true));
-          if (ld) items.push(note('info', '', 'A large library can take hours to scan. Music shows up as Lyrion finds it.')); }
-        if (d.plex && s.plexOn) { const pd = s.plexPct >= 100, ok = s.plexState === 'ok';
-          items.push(head('Plexamp'), prog(pd ? 'Installed' : 'Downloading', s.plexPct, null, pd ? (ok ? 'Signed in to Plex' : 'Not signed in yet') : '', ok));
-          if (pd) items.push(note('info', '', ok ? 'Your Plex library plays from the Plexamp app.' : 'Sign in from Settings → Plexamp when you’re ready.')); }
-        if (!d.headless && s.vizOn) { const vp = live.pct('skins');
-          items.push(head('Visualiser'), prog(vp >= 100 ? 'Installed' : 'Installing skins', vp, null, vp >= 100 ? 'Skins ready' : '', true));
-          if (vp >= 100) items.push(note('info', '', 'The visualiser starts after ' + s.vizAfter + ' of music.')); }
-        if (live.failed()) items.push(note('warn', 'Something did not finish', 'Try it again from Settings → Plugins. Everything else is set.'));
-        const waiting = !s.finished || (d.here && live.pct(live.component('lyrion-server.enabled', 'lyrion')) < 100) || (d.plex && s.plexOn && s.plexPct < 100) || (!d.headless && s.vizOn && live.pct('skins') < 100);
-        const state = s.finishError ? 'busy' : live.failed() ? 'warn' : waiting ? 'busy' : 'done';
-        return { hero: true, crumb: 'Make it yours', title: state === 'done' ? nm + ' is ready' : state === 'warn' ? nm + ' is nearly ready' : 'Getting ' + nm + ' ready', blocks: [{ t: 'Party', marks: d.marks, status: state }, ...items, { t: 'Rule' }, note('ok', '', 'Everything you set up here can be run again or changed in Settings → System → Personalise.')], foot: s.finishError ? { back: false, next: 'Try again', nextFn: () => live.finish() } : { back: false, next: 'Close' } }; }
-      case 'later': return { hero: true, crumb: 'Make it yours', title: 'Kept the defaults', blocks: [P(s.first ? 'Spotify and Bluetooth are on, and nothing else is installed.' : 'Nothing was changed.'), note('ok', '', 'All of it is in Settings → System → Personalise.')], foot: { back: false, next: 'Close' } };
+        const show = (name, id, doneLine, doneOk, after) => { const g = live.stage(id); got.push(g);
+          items.push(head(name), prog(g.label, g.pct, g.meta, g.done ? doneLine : g.line, g.done ? doneOk : false));
+          if (g.done && after) items.push(note('info', '', after)); };
+        if (d.here) show('Lyrion', live.component('lyrion-server.enabled', 'lyrion'), 'Folders added, scan started', true, 'A large library can take hours to scan. Music shows up as Lyrion finds it.');
+        if (d.plex && s.plexOn) { const ok = s.plexState === 'ok';
+          show('Plexamp', live.component('plexamp.enabled', 'plexamp'), ok ? 'Signed in to Plex' : 'Not signed in yet', ok, ok ? 'Your Plex library plays from the Plexamp app.' : 'Sign in from Settings → Plexamp when you’re ready.'); }
+        if (!d.headless && s.vizOn) show('Visualiser', 'skins', 'Skins ready', true, 'The visualiser starts after ' + s.vizAfter + ' of music.');
+        const failedAny = got.some(g => g.failed);
+        if (failedAny) items.push(note('warn', 'Something did not finish', 'Try it again from Settings → Plugins. Everything else is set.'));
+        const waiting = !s.finished || got.some(g => !g.done && !g.failed);
+        const state = s.finishError ? 'busy' : failedAny ? 'warn' : waiting ? 'busy' : 'done';
+        return { hero: true, crumb: 'Make it yours', title: state === 'done' ? nm + ' is ready' : state === 'warn' ? nm + ' is nearly ready' : 'Getting ' + nm + ' ready', blocks: [{ t: 'Party', marks: d.marks, status: state }, ...items, { t: 'Rule' }, note('ok', '', 'Everything you set up here can be run again or changed in Settings → Display → Personalise.')], foot: s.finishError ? { back: false, next: 'Try again', nextFn: () => live.finish() } : { back: false, next: 'Close' } }; }
+      case 'later': return { hero: true, crumb: 'Make it yours', title: 'Kept the defaults', blocks: [P(s.first ? 'Spotify and Bluetooth are on, and nothing else is installed.' : 'Nothing was changed.'), note('ok', '', 'All of it is in Settings → Display → Personalise.')], foot: { back: false, next: 'Close' } };
     }
     return { title: '', blocks: [] };
   }
@@ -549,12 +547,8 @@ class Component extends DCLogic {
     : item.total ? Math.min(99, Math.round(((item.received ?? 0) / item.total) * 100))
       : item.share != null ? Math.min(99, Math.round(item.share * 100)) : 2;
 
-  //: The downloads the settling record has listed since Finish.
-  const seenIds = new SvelteSet();
-  let waitedOut = $state(false);
-  $effect(() => {
-    for (const i of $settling?.items ?? []) if (!seenIds.has(i.id)) seenIds.add(i.id);
-  });
+  //: A download that has not begun a minute after Finish says so.
+  let stalled = $state(false);
 
   //: What the design's logic calls on the player.
   const live = {
@@ -567,15 +561,30 @@ class Component extends DCLogic {
     pct(id) {
       const item = $settling?.items?.find((i) => i.id === id);
       if (item) return pctOf(item);
-      //: **Waiting until the player has listed it**: Finish answers with
-      //: what it will follow, and the settling record that lists it comes
-      //: a moment later over the state socket. Not yet listed is not yet
-      //: done - else the page says ready, then busy. Seen and gone is done;
-      //: never listed within 30 s counts as done too, so a lost update
-      //: cannot hold the page.
-      if (st.finished?.waiting?.includes(id) && !seenIds.has(id) && !waitedOut) return 0;
       // Not followed: nothing to download (already in), or settled and gone.
       return st.finished ? 100 : 0;
+    },
+    //: **What a download is doing, in words** (George, 2026-10-18: "if
+    //: something is happening for long in the background then what is
+    //: being done should be transparent"): from the player's live status of
+    //: each component, the same one Settings reads - so a pack already in
+    //: is done at once, and a download at 100 % that is installing says so.
+    stage(id) {
+      const c = $components?.[id] ?? {};
+      const pct = c.total ? Math.min(99, Math.round(((c.received ?? 0) / c.total) * 100))
+        : c.share != null ? Math.min(99, Math.round(c.share * 100)) : 0;
+      const mb = (n) => Math.round(n / 1e6);
+      switch (c.state) {
+        case 'installed': return { done: true, pct: 100, label: 'Installed', meta: 'Done' };
+        case 'failed': return { failed: true, pct: 0, label: 'Did not finish', meta: 'Failed', line: c.error || 'Try it again from Settings → Plugins.' };
+        case 'preparing': return { pct: 0, label: 'Preparing the download', meta: 'Starting', line: '' };
+        case 'downloading': return { pct, label: 'Downloading', meta: null, line: c.total ? `${mb(c.received ?? 0)} of ${mb(c.total)} MB` : '' };
+        case 'retrying': return { pct, label: 'Downloading', meta: 'Retrying', line: 'The connection dropped; trying again.' };
+        case 'verifying': return { pct: 100, label: 'Checking the download', meta: 'Downloaded', line: '' };
+        case 'installing': return { pct: 100, label: 'Installing', meta: 'Downloaded', line: 'Installing can take a few minutes.' };
+        default: return { pct: 0, label: st.finished ? 'Starting the download' : 'Saving your answers', meta: '…',
+          line: stalled ? 'Still waiting to start. The player tries again every few minutes.' : '' };
+      }
     },
     failed() { return !!$settling?.items?.some((i) => i.state === 'failed'); },
     async finish() {
@@ -588,7 +597,7 @@ class Component extends DCLogic {
         const body = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(body.error ?? `HTTP ${r.status}`);
         st.finished = body;
-        setTimeout(() => (waitedOut = true), 30000);
+        setTimeout(() => (stalled = true), 60000);
       } catch (err) {
         console.warn('personalise: finish failed:', err?.message);
         st.finishError = "The player didn't take the answers. Check this phone is on the player's network, then try again.";

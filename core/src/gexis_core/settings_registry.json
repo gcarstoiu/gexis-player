@@ -372,6 +372,15 @@
     "accent": "#c8a2d8",
     "rows": [
       {
+        "key": "personalise",
+        "type": "action",
+        "label": "Personalise",
+        "marks": "N",
+        "note": "Asks again how you listen and what the screen shows, on your phone, with today's answers as the starting point. The player's screen shows a code to it.",
+        "confirm": "Start",
+        "default": null
+      },
+      {
         "type": "group",
         "label": "Panel",
         "accent": "#c8a2d8"
@@ -1759,15 +1768,6 @@
         "type": "group",
         "label": "Backup and reset",
         "accent": "#b0bcc4"
-      },
-      {
-        "key": "personalise",
-        "type": "action",
-        "label": "Personalise",
-        "marks": "N",
-        "note": "Asks again how you listen and what the screen shows, on your phone, with today's answers as the starting point. The player's screen shows a code to it.",
-        "confirm": "Start",
-        "default": null
       },
       {
         "key": "backup",
