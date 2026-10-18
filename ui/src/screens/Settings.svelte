@@ -1924,6 +1924,10 @@
                       <!-- A plugin's version, and the program it runs (George, 2026-10-12). -->
                       {#if r.version}<span class="row__note row__version">{r.version}</span>{/if}
                       {#if r.note && !opensItsOwn(r)}<span class="row__note"><NoteText text={r.note} links={false} /></span>{/if}
+                      <!-- A row that opens its own sheet keeps its note for the
+                           sheet; `summary` is the one line it shows on the tile
+                           (George, 2026-10-18: Personalise). -->
+                      {#if r.summary && opensItsOwn(r)}<span class="row__note">{r.summary}</span>{/if}
                       {#if r.status?.error}<span class="row__note row__note--failed">{r.status.error}</span>{/if}
                       {#if r.status?.text && r.again}
                         <!-- ADR-0119: a row its plugin reports done offers to do it

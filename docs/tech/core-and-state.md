@@ -272,7 +272,9 @@ fields. Types: `toggle`, `choice`, `number`, `text`, `multi`, `intervals` (setta
 `readonly`, `action`, `group` (a sub-heading), `list` (items from discovery,
 such as Wi-Fi networks) and `document` (Legal, Credits). ADR-0044 added the
 row mechanics `list`, `warn`, `onlyWhen`, `optionsFrom`, `picker` and
-`surfaced`. A choice's options can carry `optionTags` (a word beside an
+`surfaced`. A row that opens its own sheet shows its `note` there, not on the
+tile; `summary` is the one line it shows on the tile instead (2026-10-18,
+*Personalise*). A choice's options can carry `optionTags` (a word beside an
 option: only *Tested* since 2026-10-18, for a model tested here or reported
 working by owners, `hardware_reports.shown_tested`) and `optionProblems` (a
 line under an option owners reported a problem with). The screens and boards
