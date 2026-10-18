@@ -183,3 +183,20 @@ Phase 13b, not here.
   no release is installed), and `packages.txt` is still written once, at
   image build (`image/stage-gexis/09-legal/01-run-chroot.sh`), not after
   every install.
+
+## Amended 2026-10-18: PeppyMeter's config keeps the device's keys
+
+`gexis-system` ships `/opt/gexis-peppy/peppymeter/config.txt` whole, and the
+core writes five of its keys: `base.folder`, `meter.folder`, `screen.width`,
+`screen.height` (the pack and screen it draws, ADR-0111) and
+`smooth.buffer.size`. An upgrade put the image's defaults back. On sofapi the
+visualiser then found no skin (`/opt/gexis-peppy/skins/gelo5`, which a
+packaged device does not have) and refused to start until the core's next
+skins pass, up to five minutes later; a show from the phone in that window
+answered 409.
+
+The package's preinst now copies the device's file to
+`/var/lib/gexis/peppy-meter.kept`, and postinst puts those five keys back
+into the new file, so keys a new version adds still arrive.
+`core/tests/test_meter_config_upgrade.py` runs that postinst block and checks
+that its list covers every key the core writes.

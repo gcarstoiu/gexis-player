@@ -514,7 +514,7 @@ screen, so in practice setup always used it already.
 ## Amended 2026-10-18: every window fills its screen
 
 A visualiser opened from the phone on a freshly installed panel was drawn
-partly off the screen. On the device (sofapi, 1280×720 panel): the meter
+partly off the screen. On the device (sofapi, 1280×800 panel on HDMI-A-1): the meter
 window is restarted hidden when its skin changes, and when it was then
 raised, labwc had placed it offset from the corner, where it stayed. A
 `MoveTo 0,0` rule fixed it, but uses layout coordinates, which are wrong for a
