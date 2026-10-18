@@ -10,20 +10,19 @@
     wallpapers by default.
   - **The clock, the date and the player's name** sit in the top left,
     smaller than the idle screen's (*Clock on the waiting screen*).
-  - **Each waiting source is a tile** along the foot - its mark, its name,
-    its state - and one line above them is the only other text (*Hint on the
-    waiting screen*). On a bar, the clock is a column on the left and the
-    tiles stand beside it, with no hint.
+  - **Each waiting source pulses at the foot** - the marks, names and
+    states of the library's waiting footer (`WaitingServices`), straight on
+    the picture without its plate (George, 2026-10-18) - and one line above
+    them is the only other text (*Hint on the waiting screen*). On a bar, the
+    clock is a column on the left and the marks stand beside it, with no hint.
   - **Settings stays the button in the corner** (ADR-0079), and a screen
     with every source switched off says so.
 
-  The tiles are a translucent plate, not frosted glass as the mock-up drew
-  them: ADR-0041 bans live backdrop blur on the Pi 4 (24.5 ms a frame).
 -->
 <script>
   import { onMount } from 'svelte';
   import Backdrop from './Backdrop.svelte';
-  import SourceMark from '../lib/SourceMark.svelte';
+  import WaitingServices from './WaitingServices.svelte';
   import { pressing } from '../lib/press.svelte.js';
   import { sources } from '../lib/state.js';
   import { settingsDevice } from '../lib/settings.js';
@@ -114,26 +113,9 @@
   {:else}
     <div class="foot">
       {#if wantsHint}<div class="hint">Start music from your phone</div>{/if}
-      <div class="tiles" style:--count={waiting.length}>
-        {#each waiting as s (s.id)}
-          <!-- **The mark, its name under it, a dot for ready** (George,
-               2026-10-18, five sources on the 10.1": names and status lines
-               cut to "Blue…", "Starts …"; "make it generic and go with 2").
-               The manifest's status line is said to a screen reader. -->
-          <div class="tile" class:is-lead={s.id === 'lms'} title={s.status} aria-label="{s.name}: {s.status}">
-            <div class="mark">
-              <SourceMark
-                source={s.id}
-                mark={s.mark}
-                size={bar ? 30 : 38}
-                color={s.id === 'lms' ? 'var(--accent-lms)' : 'var(--ink)'}
-                opacity={s.id === 'lms' ? 1 : 0.8}
-              />
-            </div>
-            <div class="tile__name"><span class="tile__dot" aria-hidden="true"></span>{s.name}</div>
-          </div>
-        {/each}
-      </div>
+      <!-- The marks the library's footer shows, pulsing straight on the
+           picture (George, 2026-10-18). -->
+      <WaitingServices {availability} bare />
     </div>
   {/if}
 
@@ -276,73 +258,12 @@
     gap: 16px;
   }
   .hint {
+    /* Room for the marks' rings, which pulse to 1.75 times their size. */
+    margin-bottom: 26px;
     font-size: 19px;
     color: var(--ink-strong);
     text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45);
   }
-  /* Each tile its own width, not a share of the screen's: six fit on the
-     10.1" with room to spare, and two do not stretch into banners. */
-  .tiles {
-    display: grid;
-    grid-template-columns: repeat(var(--count), minmax(0, 168px));
-    justify-content: start;
-    gap: 16px;
-  }
-  .tile {
-    height: 132px;
-    box-sizing: border-box;
-    border-radius: var(--r-card);
-    padding: 0 12px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    min-width: 0;
-    background: rgba(16, 26, 33, 0.72);
-    border: 1px solid rgba(233, 238, 242, 0.14);
-  }
-  .tile.is-lead {
-    border-color: rgba(126, 214, 188, 0.5);
-  }
-  .mark {
-    width: 64px;
-    height: 64px;
-    flex-shrink: 0;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    background: rgba(233, 238, 242, 0.08);
-  }
-  .tile.is-lead .mark {
-    background: rgba(126, 214, 188, 0.1);
-  }
-  /* A long name takes a second line, centred, rather than being cut. */
-  .tile__name {
-    max-width: 100%;
-    font-size: 18px;
-    font-weight: 700;
-    line-height: 1.2;
-    text-align: center;
-    color: var(--ink);
-    overflow-wrap: anywhere;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    overflow: hidden;
-  }
-  /* Ready: only a source that can be played is drawn here at all. */
-  .tile__dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    margin-right: 7px;
-    vertical-align: 0.15em;
-    border-radius: 50%;
-    background: var(--accent-lms);
-  }
-
   .credit {
     position: absolute;
     right: 56px;
@@ -404,18 +325,6 @@
     top: 50%;
     bottom: auto;
     transform: translateY(-50%);
-  }
-  .waithome--bar .tile {
-    height: 170px;
-    gap: 14px;
-    border-radius: 20px;
-  }
-  .waithome--bar .mark {
-    width: 56px;
-    height: 56px;
-  }
-  .waithome--bar .tile__name {
-    font-size: 19px;
   }
   .waithome--bar .credit {
     right: 116px;
