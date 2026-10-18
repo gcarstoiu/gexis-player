@@ -484,9 +484,15 @@ go on, Settings shows how far they are, and music may be slow to start until
 they finish. A download that does not finish brings the screen back, named,
 with *Settings → Plugins* as the place to try it again.
 
+**Why does my browser say the player's page is not secure?**
+The page is plain HTTP, not HTTPS, as the pages of most devices on a home
+network are: a certificate a browser trusts needs a public name, and the
+player has a name only on your network. Chrome and Firefox increasingly warn
+about every HTTP page; choose *Continue to site*. What you send stays on
+your home network, between your phone and the player.
+
 **What is the setup network's password, and why does the phone say it has no internet?**
-The password is shown on the screen; a player without a screen uses
-`gexis-setup`. The phone's warning about no internet is expected: stay
+It is `gexis-setup` on every player, and the screen shows it too. The phone's warning about no internet is expected: stay
 connected, as the setup page is served by the player itself.
 
 **My phone sees gexis-setup but cannot join it, or keeps dropping off it.**
@@ -506,10 +512,7 @@ The screen shows the channel and counts down to the next; keep the phone
 trying, and it finds the network again on the new channel by itself. It also
 helps to:
 - stand near the player while joining;
-- turn off mobile data on the phone;
-- forget a *gexis-setup* the phone saved from another player: each player
-  with a screen has its own password, and a phone may keep trying the old
-  one.
+- turn off mobile data on the phone.
 
 If it still will not join, plug a network cable into the player: setup then
 runs over your home network instead, at the address the screen shows.

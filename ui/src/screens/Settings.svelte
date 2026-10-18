@@ -484,6 +484,15 @@
   }
   const picker = $derived(pickerKey ? rowOf(pickerKey) : null);
 
+  //: **A password can be shown while it is typed** (George, 2026-10-18: "Had
+  //: to rewrite the password multiple times because i was afraid I
+  //: misspelled"). Hidden again for each sheet.
+  let pwShown = $state(false);
+  $effect(() => {
+    sheet;
+    untrack(() => (pwShown = false));
+  });
+
   // ADR-0044 §3 and §6: the API publishes every row and says of each whether
   // it belongs on the screen - `surfaced: false` permanently, `onlyWhen`
   // conditionally, and the second is transitive. The rule lives in the
@@ -1655,6 +1664,12 @@
   }
 </script>
 
+{#snippet eye()}
+  <button class="pw__eye" type="button" aria-label={pwShown ? 'Hide the password' : 'Show the password'} aria-pressed={pwShown} onclick={() => (pwShown = !pwShown)}>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" />{#if pwShown}<path d="M4 4l16 16" />{/if}</svg>
+  </button>
+{/snippet}
+
 <div class="settings" class:is-embedded={embedded} bind:clientWidth={width}>
   {#if !embedded}
     <div class="weave"></div>
@@ -2700,8 +2715,11 @@
       {:else if sheet.type === 'share-login'}
         <input class="field" type="text" placeholder="User" bind:value={shareCreds.user}
           autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="User" />
-        <input class="field" type="password" placeholder="Password" bind:value={shareCreds.password}
-          autocomplete="off" aria-label="Password" />
+        <span class="pw">
+          <input class="field" type={pwShown ? 'text' : 'password'} placeholder="Password" bind:value={shareCreds.password}
+            autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Password" />
+          {@render eye()}
+        </span>
       {:else if sheet.type === 'share'}
         <!-- ADR-0115: SMB as //nas/music with a user and a password; NFS as
              nas:/music, with neither. -->
@@ -2709,22 +2727,28 @@
           autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Share address" />
         <input class="field" type="text" placeholder="User (SMB)" bind:value={share.user}
           autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="User" />
-        <input class="field" type="password" placeholder="Password (SMB)" bind:value={share.password}
-          autocomplete="off" aria-label="Password" />
+        <span class="pw">
+          <input class="field" type={pwShown ? 'text' : 'password'} placeholder="Password (SMB)" bind:value={share.password}
+            autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Password" />
+          {@render eye()}
+        </span>
       {:else if sheet.wired && sheet.type === 'text'}
         <!-- The panel and the phone take the same input; a panel without a
              keyboard attached reads every setting and changes every one that
              is not text (ADR-0044). -->
-        <input
-          class="field"
-          type={sheet.secret ? 'password' : 'text'}
-          placeholder={sheet.placeholder ?? ''}
-          bind:value={draft}
-          autocomplete="off"
-          autocapitalize="off"
-          spellcheck="false"
-          aria-label={sheet.label}
-        />
+        <span class="pw">
+          <input
+            class="field"
+            type={sheet.secret && !pwShown ? 'password' : 'text'}
+            placeholder={sheet.placeholder ?? ''}
+            bind:value={draft}
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            aria-label={sheet.label}
+          />
+          {#if sheet.secret}{@render eye()}{/if}
+        </span>
       {:else if sheet.type === 'readonly' || sheet.type === 'text' || sheet.type === 'number'}
         <div class="sheet__value">{shown(sheet)}</div>
       {/if}
@@ -4556,6 +4580,38 @@
   }
   .field:focus {
     border-color: var(--accent-lms);
+  }
+  .pw {
+    position: relative;
+    display: block;
+    flex-shrink: 0;
+    width: 100%;
+  }
+  .pw .field {
+    padding-right: 64px;
+  }
+  .pw__eye {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 46px;
+    height: 46px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--ink-quiet);
+    display: grid;
+    place-items: center;
+  }
+  .pw__eye svg {
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 
   .sheet__actions {
