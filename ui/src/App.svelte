@@ -360,17 +360,29 @@
   //: the client off - the waiting home and Now Playing - while Lyrion's apps
   //: and controllers still play to it. `lmsOff` stays the client itself.
   const lmsOff = $derived($settingValues.lms_enabled === false || $settingValues.lms_library === false);
-  const libraryOpen = $derived(!lmsOff && (!$active || libraryRequested));
+  //: **A source with nothing to show is no source** (George, 2026-10-18:
+  //: "Displaying an empty now playing serves no purpose"; the Lyrion
+  //: client became the source when its server came up, with no track). Now
+  //: Playing opens on a track; until then the home stays - the library, or
+  //: the waiting screen with the client off.
+  const idleSource = $derived(!!$active && !playing && !$metadata?.title);
+  const libraryOpen = $derived(!lmsOff && (!$active || libraryRequested || idleSource));
   //: **A new player's first read of its library** (George, 2026-10-18,
   //: option A): Lyrion keeps no library until it has read one (Finding
   //: 127), so the library home would be empty - and Extended navigation's
   //: menus with it. The waiting screen stays, saying in large what Lyrion is
   //: doing, unless something plays.
   const lyrionFirst = $derived.by(() => {
-    const after = $components?.lyrion?.after;
+    const c = $components?.lyrion;
+    // Its download is the first read's first step, when the player's own
+    // server is switched on.
+    if ($settingValues['lyrion-server.enabled'] === true && ['preparing', 'downloading', 'retrying', 'verifying', 'installing'].includes(c?.state)) {
+      return { phase: 'downloading', label: 'Downloading Lyrion', share: c.total ? (c.received ?? 0) / c.total : c.share ?? null, line: '', first: true };
+    }
+    const after = c?.after;
     return after?.first && after.phase !== 'ready' ? after : null;
   });
-  const waitingOpen = $derived((lmsOff && !$active) || (!!lyrionFirst && !playing));
+  const waitingOpen = $derived((lmsOff && (!$active || idleSource)) || (!!lyrionFirst && !playing));
   //: **ADR-0122: the library is kept while Now Playing is up**, mounted and
   //: hidden, so Minimise shows it as it was left - path, levels, scroll.
   //: Home remounts it at its root (`libraryHome`), as the phone's Home does.

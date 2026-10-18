@@ -137,7 +137,9 @@
     border-top: 0;
     background: transparent;
     padding: 0;
-    justify-content: flex-start;
+    /* Centred, however many: two or three marks sat at the left (George,
+       2026-10-18). */
+    justify-content: center;
   }
   .is-bare .name,
   .is-bare .status {

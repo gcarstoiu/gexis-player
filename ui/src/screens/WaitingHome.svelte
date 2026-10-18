@@ -132,7 +132,9 @@
     <div class="foot">
       <!-- The marks the library's footer shows, pulsing straight on the
            picture (George, 2026-10-18). -->
-      <WaitingServices {availability} bare />
+      <!-- During a first read Lyrion cannot play yet: the marks are the
+           sources that can, centred (George, 2026-10-18). -->
+      <WaitingServices availability={reading ? { ...availability, lms: false } : availability} bare />
     </div>
   {/if}
 

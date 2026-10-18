@@ -571,9 +571,13 @@ flowchart LR
   written at each start adds `MoveToOutput` to the same rule, so the window
   lands on the panel's port before it is maximised (2026-10-18).
 - **A first read of the library keeps the waiting screen** (ADR-0115
-  decision 29): `App.svelte` opens `WaitingHome` while
-  `components.lyrion.after.first` holds and nothing plays, and hands it the
-  stage as `reading` - a large block between the clock and the sources.
+  decision 29): `App.svelte` opens `WaitingHome` while Lyrion is
+  downloading or `components.lyrion.after.first` holds, and nothing plays,
+  and hands it the stage as `reading` - a large block between the clock and
+  the sources, Lyrion's mark left out of them.
+- **A source with nothing to show is no source** (`idleSource`): a current
+  source that is not playing and has no title opens the home - the library,
+  or the waiting screen with the client off - never an empty Now Playing.
 - **The Peppy screen is not part of this app** (ADR-0014, ADR-0026).
   PeppyMeter is a separate native window under the same compositor. The UI
   only asks for it (`POST /peppy/show`, `/peppy/hide`). `core/.../peppy.py`

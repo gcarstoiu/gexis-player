@@ -310,6 +310,14 @@ setting" and the Music folder's always being offered.
     and the sources: *Lyrion is reading your music* (or *getting ready*), a
     thick bar with its percentage, why the library is not there yet, and
     Lyrion's own step. A rescan of a library that exists does not show it.
+    After George's full run the same evening: Lyrion's download counts as
+    the first read's first step; its mark leaves the sources at the foot
+    while it cannot play, the others centred; and **a source with nothing
+    to show is no source** - the Lyrion client became the current source
+    when its server came up, with no track, and the panel opened an empty
+    Now Playing. Now Playing opens on a track; until then the home stays,
+    so the scan's end leaves the library home, and Lyrion plays only when
+    someone starts it.
 
 ## Not settled here
 
