@@ -6,6 +6,37 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.1.0 — 19 October 2026
+
+### New
+
+- First use comes in two parts. Setup, on a phone, asks only what the player needs to run: the network, a name, the time, the output with its volume type, and the screen. Then, once the player is on the home network, a second part makes it its owner's: how music is listened to, the phone as a touchpad, the visualiser, the waiting and idle screens and standby. It can be put off and done later from Settings → Display → Personalise.
+- The Lyrion server on the player reads only the music locations chosen, none at first: its Music folder, folders on USB drives and network shares, ticked at any depth, several at once.
+- A Library category in Settings holds the Lyrion server: what it is doing - starting, adding its add-ons, reading the music with its progress - how many songs and albums it holds, and links to its own page and to the Squeezer, Lyrion and LyrPlay apps.
+- While a new player reads its library for the first time, the panel says so in large on the waiting screen; the other sources play meanwhile.
+- Getting ready, at the end of setup, follows every download and install as it happens, and the Lyrion server's first start as a numbered checklist with its progress.
+- Restoring a backup in setup lists everything it brings back, grouped by Settings section.
+- The Music share stops taking new files while less than 4 GB is free on the card, so the player keeps room for itself; the Music folder's row shows the free space.
+- Screens and sound cards are marked Tested when they have been, and otherwise not marked.
+- The waiting screen shows each source as a mark with its name, pulsing on the picture.
+- With nothing playing, the library has a colourful picture behind it instead of plain grey.
+- The setup network's password is always gexis-setup, and password fields can show what is typed.
+
+### Fixed
+
+- The visualiser opened from the phone fills the screen; it was sometimes drawn shifted.
+- An update no longer resets the visualiser's choice of skins.
+- The panel no longer opens an empty Now Playing, and the Lyrion player no longer takes over by itself when its server starts with nothing to play.
+- Settings' switches move as soon as they are tapped.
+- The panel no longer selects text or opens a menu on a long press.
+- A Bluetooth device's "Not Provided" is no longer shown as a title.
+- The sources on the waiting screen are centred, however many are on.
+
+### Good to know
+
+- A player that already runs the Lyrion server keeps reading its Music folder and USB disks as before.
+- Taking a location away from the Lyrion server makes it read the whole library again, which for a large library takes hours; the settings say so.
+
 ## 1.0.6 — 17 October 2026
 
 ### New
