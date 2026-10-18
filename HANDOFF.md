@@ -121,6 +121,15 @@ line each, by Settings section (`restore_review.py`, `inspect`'s
 `sections`). Checked with George's own sofapi backup through `p1mock.py`
 (`REALBK`, `PLUGDIR`). That backup has *Library on the screen* off.
 
+**Shares in part 2** (on `ph-first-use`, core and UI `+git107` on sofapi;
+ADR-0115 decision 25, George 2026-10-18): added shares carry *Forget*; an SMB
+share opens into its folders at any depth (`lyrion_scan.folders`); the
+server scan runs SMB and NFS at once and is reused a minute (sofapi: 2 s ->
+1.1 s, then 52 ms); USB is a ghost row with no drive; the Music folder shows
+its space. Not yet tried: a share added at a sub-folder actually mounting
+(sofapi's server is off). Test fronts: scratchpad `fakeshares.py` (a
+stand-in Tower on 8199) behind `p2proxy.py` with `SHAREUP`.
+
 **Release build output lives in `~/.local/share/gexis-release-out`**: in each
 release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
 (excluded in `.git/info/exclude`). `reuse.py` reuses a published file only
