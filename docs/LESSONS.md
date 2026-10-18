@@ -369,6 +369,11 @@ them skipped themselves, and one that does not failed - "47 skipped" became
 "55 skipped". Keep the venv out of `/tmp`, and treat a change in the skip
 count as a failure to explain.
 
+**75. A commit chained after the tests** (2026-10-18, on `next`). The
+commit ran in the same command as the suite, after it, so it went through
+with a test failing (68c9ee85; fixed in fc18315c). Run the tests, read the
+result, then commit in a call of its own.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target, the check quietly
