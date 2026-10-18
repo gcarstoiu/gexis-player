@@ -930,6 +930,19 @@
   :global(html.on-panel *) {
     cursor: none !important;
   }
+  /* **Nothing on the panel is text to select** (George, 2026-10-18: a long
+     touch on the setup network's name offered Copy). Fields a person types
+     into keep it. */
+  :global(html.on-panel) {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  :global(html.on-panel input),
+  :global(html.on-panel textarea) {
+    user-select: text;
+    -webkit-user-select: text;
+  }
 
   :global(body) {
     margin: 0;
