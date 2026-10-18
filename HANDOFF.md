@@ -74,7 +74,14 @@ first scan leaves the home empty until it ends. **Option A built** (approved
 on a screenshot; ADR-0115 decision 29, `+git146` on sofapi): a first read
 of the library keeps the waiting screen with a large *Lyrion is reading
 your music* block (`lyrion_stage` `first`); not yet seen on a real first
-read - sofapi's library is read (`first: False`, no block).
+read - sofapi's library is read (`first: False`, no block). **George's full run, 2026-10-19 00:00
+(`+git155` on sofapi):** browsing at one fixed height; Lyrion as a numbered
+checklist in Getting ready; no empty Now Playing (`idleSource`); the
+download counts as the first read; the waiting marks centred, Lyrion left
+out during a first read; a Lyrion player on with an empty playlist at
+startup is switched off, not taken (ADR-0027 amended - checked on sofapi:
+the panel opens the library home, nothing current); Settings' shares on
+their own tile, *Add share*, and the search without added shares.
 
 **Release build output lives in `~/.local/share/gexis-release-out`**: in each
 release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
