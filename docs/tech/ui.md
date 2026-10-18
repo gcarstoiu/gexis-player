@@ -562,7 +562,12 @@ flowchart LR
   `--overscroll-history-navigation=0`.
 - `labwc-rc.xml` is deliberately almost empty: no decorations, no
   keybindings, and touch mapped to HDMI-A-1; the copy written at each start
-  names the screen's actual port (ADR-0109, amended 2026-10-12).
+  names the screen's actual port (ADR-0109, amended 2026-10-12). One window
+  rule maximises every window. Without it, labwc places a window that opens
+  after Chromium (the visualiser, restarted when its skin changes) offset
+  from the corner, and the meter is drawn partly off the screen. The copy
+  written at each start adds `MoveToOutput` to the same rule, so the window
+  lands on the panel's port before it is maximised (2026-10-18).
 - **The Peppy screen is not part of this app** (ADR-0014, ADR-0026).
   PeppyMeter is a separate native window under the same compositor. The UI
   only asks for it (`POST /peppy/show`, `/peppy/hide`). `core/.../peppy.py`

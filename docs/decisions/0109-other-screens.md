@@ -510,3 +510,18 @@ without displays?"* - then *"Let's just use gexis-setup for all cases"*.
 Decision 5's first point no longer applies: the setup network's password is
 `gexis-setup` on every player. A freshly flashed card never has a confirmed
 screen, so in practice setup always used it already.
+
+## Amended 2026-10-18: every window fills its screen
+
+A visualiser opened from the phone on a freshly installed panel was drawn
+partly off the screen. On the device (sofapi, 1280×720 panel): the meter
+window is restarted hidden when its skin changes, and when it was then
+raised, labwc had placed it offset from the corner, where it stayed. A
+`MoveTo 0,0` rule fixed it, but uses layout coordinates, which are wrong for a
+panel on HDMI-A-2. A `Maximize` rule fixed it on either port.
+
+`labwc-rc.xml` now carries one window rule for every window, `Maximize`.
+`gexis-kiosk-start` adds `MoveToOutput` with the panel's port to that same
+rule, ahead of `Maximize`, instead of writing a rule of its own. The meter
+shows black for about three seconds while it loads after a skin change; that
+was judged acceptable and is not gated.

@@ -29,4 +29,16 @@
        that copy. **Unverified until a bar is turned on the hardware**
        (ADR-0109, Unverified). -->
   <touch mapToOutput="HDMI-A-1"/>
+  <!-- **Every window fills the screen it opens on** (sofapi, 2026-10-18): a
+       window opened while the panel's was already up - the visualiser,
+       started again on a phone's request - was placed by labwc at an offset,
+       half off the screen. Maximize puts it at the screen's corner at the
+       screen's size, whichever port the screen is on (MoveTo 0,0 would not:
+       its coordinates are the whole layout's). gexis-kiosk-start adds the
+       move to the screen's output before it, on the copy it writes. -->
+  <windowRules>
+    <windowRule identifier="*">
+      <action name="Maximize"/>
+    </windowRule>
+  </windowRules>
 </labwc_config>

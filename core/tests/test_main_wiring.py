@@ -370,3 +370,13 @@ def test_the_stand_in_watcher_switches_under_the_lock_from_what_a_switch_recorde
     held = watch.index("async with volume_change")
     assert watch.count("standin_due(") == 2 and watch.rindex("standin_due(") > held
     assert held < watch.index("await _switch_output()")
+
+
+def test_a_visualiser_not_running_with_skins_installed_is_started():
+    """sofapi, 2026-10-18: a held restart of the visualiser, lost when the
+    core restarted, left the phone's visualiser button with no window."""
+    up = _closure("_visualiser_running")
+    assert "skin_packs.installed" in up and "is-active" in up
+    assert up.index("visualiser_held['settling']") < up.index("await _restart_visualiser()"), \
+        "held while the settling screen is up, as the restart itself is"
+    assert "asyncio.ensure_future(_visualiser_running())" in MAIN.read_text()

@@ -3738,6 +3738,28 @@ async def main() -> None:
     asyncio.ensure_future(_skins_loop())
     asyncio.ensure_future(_previews_ahead())
 
+    async def _visualiser_running() -> None:
+        """**Skins installed and no visualiser running is put right at start**
+        (sofapi, 2026-10-18). The visualiser ends at a first boot with no
+        pack yet; the restart owed once the pack is in is held while the
+        settling screen is up, in this process only - and a core restart
+        before then (part 2 setting a Lyrion server restarts it) lost it, so
+        the phone's visualiser button found no window."""
+        await asyncio.sleep(15)
+        if settings.value("headless") is True or not await asyncio.to_thread(skin_packs.installed):
+            return
+        proc = await asyncio.create_subprocess_exec("systemctl", "is-active", "--quiet", "gexis-peppy.service")
+        if await proc.wait() == 0:
+            return
+        if visualiser_held["settling"]:
+            visualiser_held["restart"] = True
+            logger.info("peppy: not running with skins installed; started once the settling screen is gone")
+            return
+        logger.info("peppy: not running with skins installed; starting it")
+        await _restart_visualiser()
+
+    asyncio.ensure_future(_visualiser_running())
+
     # **ADR-0109 decision 5: Keep this screen?** A screen chosen before this
     # start waits for a touch on the panel. The countdown starts at the
     # panel's first frame; a panel that never draws goes back by itself.
