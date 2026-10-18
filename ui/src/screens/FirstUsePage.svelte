@@ -316,7 +316,7 @@ class Component extends DCLogic {
         blocks.push(seg('Clock format', ['24 h', '12 h'], s.fmt, P1C.Time, i => set({ fmt: i })));
         return { title: 'Set the clock', sub: 'The idle screen is mostly a clock, so this is worth getting right.', blocks, foot: { nextOff: !s.tz } }; }
       case 'p1output': { const hw = live.hasHw(s.output), short = (s.output || 'This output').split(' — ')[0];
-        return { title: 'Choose the output', sub: 'What the player sends audio to, and how its volume is set.', blocks: [list(s.outputs.map(o => R(o, s.outNotes[o] || '', s.output === o, () => live.pickOutput(o), { tag: o === s.recommended ? ['Recommended', 'ok'] : null }))),
+        return { title: 'Choose the output', sub: 'What the player sends audio to, and how its volume is set.', blocks: [list(s.outputs.map(o => R(o, [s.outNotes[o], s.outProblems[o]].filter(Boolean).join(' · '), s.output === o, () => live.pickOutput(o), { tag: o === s.recommended ? ['Recommended', 'ok'] : s.outTags[o] === 'Tested' ? ['Tested', 'ok'] : null }))),
         ...(live.noBoard() ? [note('info', 'A DAC board not in the list?', 'A board without its own identity shows up once it is chosen in Settings → Audio → Sound card board, after setup.')] : []),
         ...(s.output ? [list(['Hardware', 'Software', 'Fixed'].map(v => v === 'Hardware' && !hw ? { k: 'ghost', label: v, note: short + ' has no volume control of its own.' } : R(v, s.volNotes[v] || '', s.volume === v, () => set({ volume: v }))), 'Volume')] : []),
         ...(s.output && s.volume === 'Fixed' ? [note('warn', 'Fixed volume', 'Full level from the moment setup finishes, and the panel cannot lower it. Turn your amplifier down first.')] : [])], foot: { nextOff: !s.output || !s.volume } }; }
@@ -327,7 +327,7 @@ class Component extends DCLogic {
         if (info.failed) blocks.push(note('warn', 'The list of screens did not arrive', 'Your phone may have dropped off the setup Wi-Fi for a moment.'), btn('Try again', () => live.loadScreens()));
         blocks.push(list(rows));
         if (s.scr === 'other' && !s.scMaker) blocks.push(list(live.makers().map(m => HB(m.name, m.n + (m.n === 1 ? ' model' : ' models'), () => set({ scMaker: m.name }))), 'Makers'));
-        else if (s.scr === 'other') blocks.push(list(live.models(s.scMaker).map(m => R(live.short(m), m.width + ' × ' + m.height + ' · ' + (m.family === 'bar' ? 'Bar' : 'Standard') + ' layout', s.scPick === m.label, () => set({ scPick: m.label }), { tag: m.tested ? ['Tested', 'ok'] : null })), s.scMaker), btn('Another maker', () => set({ scMaker: null })));
+        else if (s.scr === 'other') blocks.push(list(live.models(s.scMaker).map(m => R(live.short(m), m.width + ' × ' + m.height + ' · ' + (m.family === 'bar' ? 'Bar' : 'Standard') + ' layout' + (m.problem ? ' · ' + m.problem : ''), s.scPick === m.label, () => set({ scPick: m.label }), { tag: m.tested ? ['Tested', 'ok'] : null })), s.scMaker), btn('Another maker', () => set({ scMaker: null })));
         if (s.scr === 'headless') blocks.push(note('info', 'Fewer questions later', 'With no screen, part 2 skips how to browse on it, the visualiser, the idle screen and standby.'),
           note('warn', 'Without a screen', 'The setup network always uses the password gexis-setup. If the player starts and cannot reach your Wi-Fi, it opens that network again: join it from your phone, then open 10.42.0.1:8090.'));
         else if (s.scPick && live.asksKeep(s.scPick)) blocks.push(note('info', 'Then, on the player’s screen', 'When setup finishes the player restarts on this screen and asks Keep this screen?. If nobody answers Keep within two minutes, it goes back.'));
@@ -533,7 +533,7 @@ class Component extends DCLogic {
   //: download, a phone asking to pair, the network shares, the downloads.
   let st = $state(Object.assign(init('A', mode === 'p1' ? 'p1' : 'p2', false), {
     first: true, nameSaved: false, second: true, touchpad: true,
-    volume: 'Hardware', volHw: {}, volNotes: {}, town: '', net: 'your network', lyrMeta: '', lyrServer: null, pairDevice: '', pairCode: '',
+    volume: 'Hardware', volHw: {}, volNotes: {}, outTags: {}, outProblems: {}, town: '', net: 'your network', lyrMeta: '', lyrServer: null, pairDevice: '', pairCode: '',
     shareServers: [], shareFound: [], shareSrvItem: null, shareError: null, finishError: null, finished: null,
     plugins: [], tick: 0, ready: false,
     // Part 1's own.
@@ -842,7 +842,10 @@ class Component extends DCLogic {
       overLan: setup?.network === 'online',
       name: saved.name ?? rows.device_name?.value ?? 'gexis', zones, tz, tzMode: tz ? 'auto' : 'hand',
       fmt: (saved.clock ?? rows.clock_format?.value ?? '24 h') === '12 h' ? 1 : 0,
-      outputs, outNotes: rows.output_device?.optionNotes ?? {}, recommended: rows.output_device?.value ?? outputs[0] ?? null,
+      outputs, outNotes: rows.output_device?.optionNotes ?? {},
+      //: *Tested* beside an output, and a problem owners reported under it
+      //: (2026-10-18: one way to mark them, as in Settings).
+      outTags: rows.output_device?.optionTags ?? {}, outProblems: rows.output_device?.optionProblems ?? {}, recommended: rows.output_device?.value ?? outputs[0] ?? null,
       output: saved.output ?? rows.output_device?.value ?? outputs[0] ?? null,
       volume: saved.volume ?? rows.output_mode?.value ?? 'Hardware',
       //: Settings' notes, without the sentence it adds about the output in

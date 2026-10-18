@@ -494,3 +494,10 @@ screen while the question is up, and drawing it wakes a dark screen (#17).
 Decision 5's *a touch proves both the picture and the touch input* now holds
 for the fingerprinted panels only; on any other screen an answer from the
 phone proves the picture alone.
+
+## Amended 2026-10-18: two states on the screen
+
+What the lists show of the Tested / Untested marks of decision 1 is now *Tested* (here, or reported working by
+owners) or nothing, with a reported problem as a line under the model
+(George: *"Make it for both sound and display"*). The states underneath are
+unchanged. See ADR-0126's amendment of the same day.

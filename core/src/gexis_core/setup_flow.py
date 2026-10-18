@@ -22,7 +22,7 @@ import logging
 import os
 from pathlib import Path
 
-from gexis_core import backups, device_name, discovery, screen_apply, screen_detect, screens, settling, \
+from gexis_core import backups, device_name, discovery, hardware_reports, screen_apply, screen_detect, screens, settling, \
     settings_migrations, setup_network, skin_packs
 
 logger = logging.getLogger(__name__)
@@ -582,7 +582,10 @@ def _screen_json(screen: screens.Screen) -> dict:
         "width": screen.width,
         "height": screen.height,
         "family": screen.family,
-        "tested": screen.tested,
+        #: *Tested* as the lists show it: here, or reported working by owners
+        #: (2026-10-18). Recognition still suggests only ours (`suggest`).
+        "tested": hardware_reports.shown_tested(screen.tested, hardware_reports.screen(screen.label)),
+        "problem": hardware_reports.problem(hardware_reports.screen(screen.label)),
         #: ADR-0111: the skin pack this screen gets, which the Visualiser
         #: step names ("1280x800"), or None if no pack fits it.
         "skins": _pack_name(screen.width, screen.height),

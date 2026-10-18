@@ -198,8 +198,8 @@ is planned.
 HDMI screens only. Tested on the hardware: a 10.1″ 1280 × 800 (the reference
 screen), a 13.3″ at 1920 × 1080, and the 1280 × 400 and 1480 × 320 bars.
 Others under *Change* on *Settings → Display → Attached screen* are listed but untested;
-those tested are marked *Tested*, those owners have reported working
-*Reported*. DSI and DPI screens are not supported. The screen can be on
+those tested, or reported working by owners, are marked *Tested*, and a
+problem an owner reported shows as a line under the model. DSI and DPI screens are not supported. The screen can be on
 either of the Pi's HDMI ports; a bar screen moved from one port to the other
 is set up again at the next start and asks *Keep this screen?*. With
 something connected to both ports (a screen on one, a sound bar on the
@@ -780,8 +780,8 @@ offers the same two ways as the problem report: *On GitHub* opens the feedback
 there, and *Create* on GitHub sends it; *By e-mail* downloads it as a text file. The
 player keeps it: the *Hardware feedback* row then shows *Send again* and
 *Start over*, until the sound card or screen is changed, when it is
-forgotten. Once feedback is accepted, the next release marks that card or screen *Reported* in the player
-and in the project's hardware list.
+forgotten. Once feedback that it works is accepted, the next release marks that card or screen *Tested* in the player
+and in the project's hardware list; a reported problem shows as a line under it.
 
 **Something is wrong. How do I report it?**
 Open *Settings → System → Problem report* on a phone or computer on the same
@@ -825,12 +825,11 @@ last start. A power cut during an install or update is repaired by the
 player itself the next time it installs anything.
 
 **Which DACs work?**
-Each output in *Settings → Audio → Output* shows *Tested*, *Reported*,
-*Known* or *Detected*. The HiFiBerry DAC2 HD and the IQaudIO Pi-DAC PRO are
-tested; a board owners have reported working is *Reported* (*Reported with
-problems* if a report says otherwise); the other boards on the player's list
-are known but untested; a class-compliant USB DAC is detected by itself
-and shown by its maker, with a line under it saying what it reports it can
+In *Settings → Audio → Output*, *Tested* beside an output means it was
+played and measured on the project's hardware (the HiFiBerry DAC2 HD and the
+IQaudIO Pi-DAC PRO) or owners reported it working; a problem an owner
+reported shows as a line under it, and the rest carry no mark. A
+class-compliant USB DAC is found by itself and shown by its maker, with a line under it saying what it reports it can
 take - its USB generation, its highest rate and sample size, and native DSD
 (tried with an SMSL; most USB DACs have no volume
 control of their own, so their volume is Software or Fixed). A board that is not found by itself can be

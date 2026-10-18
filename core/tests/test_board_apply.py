@@ -13,7 +13,8 @@ disable_splash=1
 def test_the_options_start_with_found_by_itself_and_are_tagged():
     opts = ba.options()
     assert opts[0] == "Found by itself" and "IQaudIO/DAC Plus" in opts
-    assert ba.tags()["HiFiBerry/DAC2 HD"] == "Tested" and ba.tags()["IQaudIO/DAC Plus"] == "Known"
+    # George, 2026-10-18: Tested, or nothing beside it.
+    assert ba.tags()["HiFiBerry/DAC2 HD"] == "Tested" and "IQaudIO/DAC Plus" not in ba.tags()
     assert all(ba.by_label(o) for o in opts[1:])
 
 

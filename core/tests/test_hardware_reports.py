@@ -84,20 +84,27 @@ def test_a_reported_board_shows_reported_and_tested_stays_ours(monkeypatch):
     monkeypatch.setattr(hardware_reports, "_load", lambda: data)
     assert boards.identify("sndrpihifiberry", chosen="hifiberry-dacpluspro")[1] == "Reported"
     assert boards.identify("IQaudIODAC", product="Pi-DAC PRO")[1] == "Tested", "a report never takes Tested away"
+    # George, 2026-10-18: the lists show two states - reported working is
+    # Tested beside it; a reported problem is a line under it, no tag.
     tags = board_apply.tags()
-    assert tags[board_apply.label(boards.by_id("hifiberry-dacpluspro"))] == "Reported"
+    assert tags[board_apply.label(boards.by_id("hifiberry-dacpluspro"))] == "Tested"
+    assert board_apply.problems() == {board_apply.label(boards.by_id("iqaudio-pi-dac-pro")): "An owner reported a problem: x"}
     assert hardware_reports.sentence(data["boards"]["hifiberry-dacpluspro"]) == \
         "Reported to work by 2 owners (0.9.4)."
     assert hardware_reports.sentence(data["screens"][SCREEN]) == "Reported to work by 1 owner (0.9.4)."
     from gexis_core.settings_registry import _screen_tags
-    assert _screen_tags()[SCREEN] == "Reported"
+    assert _screen_tags()[SCREEN] == "Tested"
+    assert hardware_reports.problem(data["boards"]["iqaudio-pi-dac-pro"]) == "An owner reported a problem: x"
+    assert hardware_reports.problem(data["boards"]["hifiberry-dacpluspro"]) is None
 
 
 def test_the_table_lists_every_board_and_screen(tool):
     text = tool.table({"boards": {"hifiberry-dacpluspro": {"works": 2, "problems": 0}}, "screens": {}})
     assert text.startswith(tool.BEGIN) and text.endswith(tool.END)
-    assert "| HiFiBerry DAC+ Pro | Reported | 2 works |" in text
+    # George, 2026-10-18: two states - Tested (here, or reported working) or blank.
+    assert "| HiFiBerry DAC+ Pro | Tested | 2 works |" in text
     assert "| IQaudIO Pi-DAC PRO | Tested |  |" in text
+    assert "| Allo BOSS |  |  |" in text
     assert text.count("\n| ") >= len(boards.all_boards()), "every board, reported or not"
 
 

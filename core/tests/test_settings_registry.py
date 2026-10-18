@@ -1799,10 +1799,15 @@ def test_option_notes_from_the_hardware_go_over_the_registrys(store):
         {"key": "output_device", "label": "Output", "type": "choice", "optionsFrom": "output_device",
          "default": None, "optionNotes": {"HDMI 1": "kept"}}]}]
     settings = Settings(store, registry=registry,
-                        options={"output_device": lambda: ["HDMI 1", "SMSL USB DAC — Detected"]},
-                        option_notes={"output_device": lambda: {"SMSL USB DAC — Detected": "USB 2.0"}})
+                        options={"output_device": lambda: ["HDMI 1", "SMSL USB DAC"]},
+                        option_notes={"output_device": lambda: {"SMSL USB DAC": "USB 2.0"}},
+                        option_tags={"output_device": lambda: {"SMSL USB DAC": "Tested"}},
+                        option_problems={"output_device": lambda: {"SMSL USB DAC": "An owner reported a problem."}})
     [row] = settings.to_json()[0]["rows"]
-    assert row["optionNotes"] == {"HDMI 1": "kept", "SMSL USB DAC — Detected": "USB 2.0"}
+    assert row["optionNotes"] == {"HDMI 1": "kept", "SMSL USB DAC": "USB 2.0"}
+    # George, 2026-10-18: Tested beside it, a reported problem under it.
+    assert row["optionTags"] == {"SMSL USB DAC": "Tested"}
+    assert row["optionProblems"] == {"SMSL USB DAC": "An owner reported a problem."}
 
 
 def test_a_plugins_switch_carries_its_version_line():

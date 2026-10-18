@@ -81,6 +81,19 @@ def convert(key: str, change: Callable[[Any], Any], note: str) -> Migration:
     return Migration(note=note, run=run)
 
 
+#: The words an output's name carried after its dash until 2026-10-18.
+_STATES = ("Reported with problems", "Reported", "Tested", "Known", "Detected")
+
+
+def _without_state(value: str) -> str:
+    for word in _STATES:
+        if value.endswith(" — " + word):
+            return value[: -len(" — " + word)]
+        if " — " + word + " — " in value:  # unplugged, after the state
+            return value.replace(" — " + word, "", 1)
+    return value
+
+
 def _one_volume_row(store) -> None:
     mode, software = store.get("output_mode"), store.get("software_volume")
     if mode == "Fixed":
@@ -128,6 +141,11 @@ MIGRATIONS: tuple[Migration, ...] = (
     Migration(note="idle_enabled: an existing player keeps its idle screen on",
               run=lambda store: store.get("idle_enabled") is None and store.set("idle_enabled", True),
               existing_only=True),
+    # George, 2026-10-18: an output is listed by its name alone, *Tested*
+    # being a tag beside it. A choice stored as "SMSL USB DAC — Detected"
+    # loses the word, so the list shows it chosen.
+    convert("output_device", lambda v: _without_state(v) if isinstance(v, str) else v,
+            "output_device: the name alone, without Tested / Known / Detected / Reported"),
 )
 
 

@@ -314,10 +314,22 @@ class Output:
     #: (`usb_details`); None for every other card.
     details: str | None = field(default=None, compare=False)
 
+    #: A reported problem with this board, said under it (hardware_reports).
+    problem: str | None = field(default=None, compare=False)
+
     @property
     def option(self) -> str:
-        shown = f"{self.label}{SEP}{self.state}" if self.state else self.label
-        return shown if self.connected else shown + UNPLUGGED
+        """**The name alone** (2026-10-18; was "name - state"): whether it is
+        tested is a tag beside it (`shown_tested`), as in every other list.
+        A choice stored with the old word still resolves - `resolve` reads
+        up to the dash - and is rewritten once (settings migration 10)."""
+        return self.label if self.connected else self.label + UNPLUGGED
+
+    @property
+    def shown_tested(self) -> bool:
+        """*Tested* beside it: tested here, or reported working by owners."""
+        from gexis_core import hardware_reports
+        return self.state in ("Tested", hardware_reports.REPORTED)
 
 
 #: ADR-0124: the software stage's control, on the output's own card, and its
@@ -613,6 +625,9 @@ def _discover(chosen_board: str | None, product) -> list[Output]:
             continue
         label = LABELS.get(card) or re.split(r" HiFi | hifi", description.strip())[0].strip() or card
         board, state = boards.identify(card, chosen=chosen_board, product=product)
+        from gexis_core import hardware_reports
+        problem = None if card in BUILT_IN_CARDS else hardware_reports.problem(
+            hardware_reports.board(board.id if board else card))
         control, scale = playback_control(card)
         named = board.name if board else (None if card in BUILT_IN_CARDS else usb_name(card))
         found.append(
@@ -625,6 +640,7 @@ def _discover(chosen_board: str | None, product) -> list[Output]:
                 state=state,
                 aka=label if named else None,
                 details=None if card in BUILT_IN_CARDS else usb_details(card),
+                problem=problem,
             )
         )
     return found

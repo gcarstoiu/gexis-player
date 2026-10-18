@@ -272,7 +272,13 @@ fields. Types: `toggle`, `choice`, `number`, `text`, `multi`, `intervals` (setta
 `readonly`, `action`, `group` (a sub-heading), `list` (items from discovery,
 such as Wi-Fi networks) and `document` (Legal, Credits). ADR-0044 added the
 row mechanics `list`, `warn`, `onlyWhen`, `optionsFrom`, `picker` and
-`surfaced`.
+`surfaced`. A choice's options can carry `optionTags` (a word beside an
+option: only *Tested* since 2026-10-18, for a model tested here or reported
+working by owners, `hardware_reports.shown_tested`) and `optionProblems` (a
+line under an option owners reported a problem with). The screens and boards
+lists get both from the registry (`OPTION_TAGS`, `OPTION_PROBLEMS`); the
+outputs, a daemon's own list, from `option_tags` and `option_problems`
+injected by `__main__.py`.
 
 `settings_registry.py:Settings` wraps the store and the registry (ADR-0035):
 

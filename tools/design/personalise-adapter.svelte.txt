@@ -37,7 +37,7 @@
   //: download, a phone asking to pair, the network shares, the downloads.
   let st = $state(Object.assign(init('A', mode === 'p1' ? 'p1' : 'p2', false), {
     first: true, nameSaved: false, second: true, touchpad: true,
-    volume: 'Hardware', volHw: {}, volNotes: {}, town: '', net: 'your network', lyrMeta: '', lyrServer: null, pairDevice: '', pairCode: '',
+    volume: 'Hardware', volHw: {}, volNotes: {}, outTags: {}, outProblems: {}, town: '', net: 'your network', lyrMeta: '', lyrServer: null, pairDevice: '', pairCode: '',
     shareServers: [], shareFound: [], shareSrvItem: null, shareError: null, finishError: null, finished: null,
     plugins: [], tick: 0, ready: false,
     // Part 1's own.
@@ -346,7 +346,10 @@
       overLan: setup?.network === 'online',
       name: saved.name ?? rows.device_name?.value ?? 'gexis', zones, tz, tzMode: tz ? 'auto' : 'hand',
       fmt: (saved.clock ?? rows.clock_format?.value ?? '24 h') === '12 h' ? 1 : 0,
-      outputs, outNotes: rows.output_device?.optionNotes ?? {}, recommended: rows.output_device?.value ?? outputs[0] ?? null,
+      outputs, outNotes: rows.output_device?.optionNotes ?? {},
+      //: *Tested* beside an output, and a problem owners reported under it
+      //: (2026-10-18: one way to mark them, as in Settings).
+      outTags: rows.output_device?.optionTags ?? {}, outProblems: rows.output_device?.optionProblems ?? {}, recommended: rows.output_device?.value ?? outputs[0] ?? null,
       output: saved.output ?? rows.output_device?.value ?? outputs[0] ?? null,
       volume: saved.volume ?? rows.output_mode?.value ?? 'Hardware',
       //: Settings' notes, without the sentence it adds about the output in

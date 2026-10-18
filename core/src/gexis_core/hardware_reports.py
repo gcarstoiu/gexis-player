@@ -11,6 +11,14 @@ a board or screen that is not *Tested*, with at least one accepted report
 that it works and none against. One against makes it *Reported with
 problems*, with the issue linked. *Tested* is never given by a report - it
 stays ours alone, played and measured here.
+
+**Amended 2026-10-18 (George: "I like the simplification ... Make it for
+both sound and display"): what the screens show is two states.** *Tested*
+beside a model we tested or owners reported working (`shown_tested`), and
+nothing beside the rest; a reported problem is a line under the model
+(`problem`), not a word beside it. The four states stay underneath - in the
+hardware report, in the logs - but no list shows *Known*, *Detected*,
+*Untested* or *Reported* any more.
 """
 from __future__ import annotations
 
@@ -50,6 +58,19 @@ def state(entry: dict | None) -> str | None:
     if entry.get("works"):
         return REPORTED
     return None
+
+
+def shown_tested(own: bool, entry: dict | None) -> bool:
+    """*Tested* on the screen: tested here, or reported to work by owners."""
+    return bool(own) or state(entry) == REPORTED
+
+
+def problem(entry: dict | None) -> str | None:
+    """The line under a model owners reported a problem with, or None."""
+    if state(entry) != REPORTED_WITH_PROBLEMS:
+        return None
+    issues = entry.get("problem_issues") or entry.get("issues") or []
+    return "An owner reported a problem" + (f": {issues[0]}" if issues else ".")
 
 
 def sentence(entry: dict | None) -> str | None:
