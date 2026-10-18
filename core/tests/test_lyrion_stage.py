@@ -30,3 +30,13 @@ def test_ready_says_what_is_in_the_library_or_that_nothing_is():
         "760 songs on 47 albums in the library."
     empty = stage(True, True, {"info total songs": 0}, False)
     assert empty["phase"] == "ready" and "Settings" in empty["line"]
+
+
+def test_only_a_first_read_is_first():
+    """Finding 127: a rescan keeps the old library, so it is not a first read;
+    a reboot's Starting, with the add-ons in, is not either."""
+    assert stage(True, False, {}, True)["first"] is True
+    assert stage(True, True, {"rescan": 1, "info total songs": 0}, True)["first"] is True
+    assert stage(True, True, {"rescan": 1, "info total songs": 760}, True)["first"] is False
+    assert stage(False, True, None, True)["first"] is False
+    assert stage(True, True, {"info total songs": 760}, True)["first"] is False

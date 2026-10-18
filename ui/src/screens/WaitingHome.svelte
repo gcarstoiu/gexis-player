@@ -28,7 +28,12 @@
   import { settingsDevice } from '../lib/settings.js';
   import { screen } from '../lib/family.svelte.js';
 
-  let { availability = {}, onsettings, settings = {} } = $props();
+  // `reading`: the Lyrion server's stage while a new player's library is
+  // still being read (George, 2026-10-18, option A: the waiting screen stays
+  // until the first scan is done, and says so plainly enough to read from
+  // across the room).
+  let { availability = {}, onsettings, settings = {}, reading = null } = $props();
+  const readingShare = $derived(reading?.share ?? null);
 
   const press = pressing();
   let picture = $state(null);
@@ -104,6 +109,20 @@
     </div>
   {/if}
 
+  {#if reading}
+    <div class="reading">
+      <div class="reading__head">{reading.phase === 'scanning' ? 'Lyrion is reading your music' : 'Lyrion is getting ready'}</div>
+      <div class="reading__meter">
+        <span class="reading__bar" class:reading__bar--busy={readingShare == null}>
+          <span style:width={`${Math.round((readingShare ?? 0) * 100)}%`}></span>
+        </span>
+        {#if readingShare != null}<span class="reading__pct">{Math.round(readingShare * 100)} %</span>{/if}
+      </div>
+      <div class="reading__line">Your library appears here once Lyrion has read it all. The other sources play meanwhile.</div>
+      <div class="reading__step">{reading.phase === 'scanning' ? reading.line.split('. Music shows up')[0] : reading.label}</div>
+    </div>
+  {/if}
+
   {#if none}
     <div class="none">
       <div class="none__head">No sources</div>
@@ -121,6 +140,71 @@
 </div>
 
 <style>
+  .reading {
+    position: absolute;
+    left: 50%;
+    top: 52%;
+    transform: translate(-50%, -50%);
+    width: min(860px, calc(100% - 96px));
+    padding: 26px 40px 28px;
+    border-radius: 26px;
+    background: rgba(10, 16, 22, 0.72);
+    border: 1px solid rgba(233, 238, 242, 0.12);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    color: #e9eef2;
+  }
+  .reading__head {
+    font-size: 46px;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+  }
+  .reading__meter {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+  }
+  .reading__bar {
+    flex: 1;
+    height: 16px;
+    border-radius: 999px;
+    background: rgba(233, 238, 242, 0.14);
+    overflow: hidden;
+  }
+  .reading__bar > span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: #9fb4e8;
+  }
+  .reading__bar--busy > span {
+    width: 30% !important;
+    animation: readingBusy 1600ms ease-in-out infinite;
+  }
+  @keyframes readingBusy {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(340%); }
+  }
+  .reading__pct {
+    font-size: 40px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    min-width: 3.4ch;
+    text-align: right;
+  }
+  .reading__line {
+    font-size: 26px;
+    line-height: 1.35;
+    color: rgba(233, 238, 242, 0.88);
+  }
+  .reading__step {
+    font-family: var(--font-mono);
+    font-size: 18px;
+    letter-spacing: 0.04em;
+    color: rgba(233, 238, 242, 0.6);
+  }
   .waithome {
     position: absolute;
     inset: 0;

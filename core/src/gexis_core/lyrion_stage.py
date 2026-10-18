@@ -23,10 +23,24 @@ CURRENT: dict = {}
 
 
 def stage(answering: bool, addons_done: bool, status: dict | None, has_locations: bool) -> dict:
-    """`{"phase", "label", "line", "share", "done"}`: `done` is true once
-    Lyrion is reading the music or has read it - the player is usable then,
-    however long a large library takes."""
-    status = status or {}
+    """`{"phase", "label", "line", "share", "done", "first"}`: `done` is true
+    once Lyrion is reading the music or has read it - the player is usable
+    then, however long a large library takes. `first`: the library has never
+    been read yet - Lyrion keeps the old one through a rescan (Finding 127),
+    so only a first read leaves it empty, and the panel says so in large
+    (George, 2026-10-18, option A)."""
+    got = _stage(answering, addons_done, status or {}, has_locations)
+    songs = _int((status or {}).get("info total songs"))
+    if got["phase"] in ("starting", "addons"):
+        got["first"] = not addons_done
+    elif got["phase"] in ("waiting", "scanning"):
+        got["first"] = not songs
+    else:
+        got["first"] = False
+    return got
+
+
+def _stage(answering: bool, addons_done: bool, status: dict, has_locations: bool) -> dict:
     if not answering:
         return {"phase": "starting", "label": "Starting", "share": None, "done": False,
                 "line": "Lyrion's first start. Its add-ons come next, then it reads your music." if not addons_done

@@ -299,6 +299,18 @@ setting" and the Music folder's always being offered.
     Lyrion reads, the player counts as ready, since a large library takes
     hours.
 
+29. **A new player's first read keeps the waiting screen** (George,
+    2026-10-18, option A of three, approved on a screenshot: *"make sure it
+    is visible enough and not a small text"*). Lyrion keeps the library it
+    had through a scan and swaps in the new one at the end (Finding 127), so
+    until a first read ends the library home would be empty, Extended
+    navigation's menus with it. While the stage is a first one (`first`:
+    the add-ons not yet in, or no songs read), the panel shows the waiting
+    screen, unless something plays, with a large block between the clock
+    and the sources: *Lyrion is reading your music* (or *getting ready*), a
+    thick bar with its percentage, why the library is not there yet, and
+    Lyrion's own step. A rescan of a library that exists does not show it.
+
 ## Not settled here
 
 - The memory and CPU measured during a scan of George's library, and the

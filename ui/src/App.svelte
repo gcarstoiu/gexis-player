@@ -32,6 +32,7 @@
   import { loadSettings, settingValues, settingsDevice } from './lib/settings.js';
   import { loadLibraryRoot } from './lib/library.js';
   import { reportTouch, showPeppy, reportPainted, reportShown } from './lib/state.js';
+  import { components } from './lib/state.js';
   import { lyricsAsk, lyricsShown } from './lib/panelView.js';
 
   //: The browser tab says which player it is (George, 2026-10-10: with
@@ -360,7 +361,16 @@
   //: and controllers still play to it. `lmsOff` stays the client itself.
   const lmsOff = $derived($settingValues.lms_enabled === false || $settingValues.lms_library === false);
   const libraryOpen = $derived(!lmsOff && (!$active || libraryRequested));
-  const waitingOpen = $derived(lmsOff && !$active);
+  //: **A new player's first read of its library** (George, 2026-10-18,
+  //: option A): Lyrion keeps no library until it has read one (Finding
+  //: 127), so the library home would be empty - and Extended navigation's
+  //: menus with it. The waiting screen stays, saying in large what Lyrion is
+  //: doing, unless something plays.
+  const lyrionFirst = $derived.by(() => {
+    const after = $components?.lyrion?.after;
+    return after?.first && after.phase !== 'ready' ? after : null;
+  });
+  const waitingOpen = $derived((lmsOff && !$active) || (!!lyrionFirst && !playing));
   //: **ADR-0122: the library is kept while Now Playing is up**, mounted and
   //: hidden, so Minimise shows it as it was left - path, levels, scroll.
   //: Home remounts it at its root (`libraryHome`), as the phone's Home does.
@@ -748,7 +758,7 @@
     </div>
   {:else if waitingOpen}
     <div class="screen-layer">
-      <WaitingHome availability={$availability} onsettings={openSettings} settings={$settingValues} />
+      <WaitingHome availability={$availability} onsettings={openSettings} settings={$settingValues} reading={lyrionFirst} />
     </div>
   {:else if libraryOpen}
     <!-- The library's layer, below: kept mounted (ADR-0122). -->

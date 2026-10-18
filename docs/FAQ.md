@@ -590,6 +590,12 @@ Squeezer (Android, Google Play), Lyrion (Android, F-Droid) and LyrPlay
 (iPhone, App Store), and to the server's own page, where everything else
 about the library is set.
 
+**The panel says "Lyrion is reading your music" instead of showing my library.**
+That is a new player's first read: Lyrion shows a library only once it has
+read it all, so until then the panel keeps the waiting screen and says how
+far it is. Spotify, Bluetooth and the other sources play meanwhile. Later
+scans keep the library you have on screen while they run.
+
 **How long does the first scan take?**
 On a 4 GB Pi over Wi-Fi, a library of tens of thousands of files took a
 couple of hours, and a rescan with nothing changed under half an hour. The first scan
