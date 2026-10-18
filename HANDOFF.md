@@ -31,8 +31,9 @@ side by side with the prototype. ADR-0149's decisions were revised (25,
 including the two kept against the design: Output and the rename/second
 player on a restore, George 2026-10-08). **sofapi runs it** (UI and player
 `1.0.6+git22`, core `+git12`; part 2 opens from Settings → System →
-Personalise). Waiting for George: his test and the decisions, whether
-*Personalise* enters ADR-0022, and part 1 on a fresh card before a merge.
+Personalise). *Personalise* is in ADR-0022 (George, 2026-10-18). Waiting
+for George: his test of part 2, then part 1 on sofapi after *Reset to
+factory settings* (his choice, instead of a fresh card), then the PR.
 
 **Release build output lives in `~/.local/share/gexis-release-out`**: in each
 release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
@@ -68,8 +69,8 @@ provision test cards with `DEV_SUDO="yes"`** (ADR-0139).
 stand-in bar only, headless); the headphone jack taking over from a
 switched-off HDMI device (ADR-0141 D5, fixed in 1.0.2).
 
-**Next: George's review of Phase 14 on sofapi** (above), then part 1 on a
-fresh card, then a PR for `ph-first-use`. Still open from the release:
+**Next: George's test of Phase 14 on sofapi** (above): part 2, then part 1
+after a factory reset, then a PR for `ph-first-use`. Still open from the release:
 Raspberry Pi Imager, the image file and *Use custom* (g14). **After it**, in order
 (`docs/DEVELOPMENT.md`, "Phases after the first public release"; refer to them
 by ID): **15** MPD for real 5.1/7.1 (`ph-mpd`), **16** room correction with a
