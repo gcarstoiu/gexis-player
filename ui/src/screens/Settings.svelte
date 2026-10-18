@@ -523,6 +523,9 @@
     if (shareBrowse) {
       return { ...row, label: `Shares on ${shareBrowse.server.name}`, note: 'Tap one to add it.', discover: false, manual: null, hint: null };
     }
+    if (usbBrowse) {
+      return { ...row, label: usbBrowse.title, note: 'Open a folder, or add the one shown first. Lyrion reads everything inside it.', discover: false, manual: null, hint: null };
+    }
     if (joinItem) {
       return {
         ...row,
@@ -852,6 +855,8 @@
       // ADR-0115: the shares are drawn on the row itself, each with its
       // Forget (George, 2026-10-03: the stored list "look[ed] like just code").
       if (row.kind === 'share') return (row.items ?? []).length ? '' : 'None added';
+      // ADR-0115 decision 23: the same, for the folders chosen on USB drives.
+      if (row.kind === 'usb-folder') return (row.items ?? []).length ? '' : 'None added';
       if (v) return String(v);
       // The items are on the row because the daemon seeds a list that does
       // not have to go looking (ADR-0044 §1, amended). A row counting only
@@ -1170,6 +1175,7 @@
     sheetKey = row.key;
     manual = false;
     shareBrowse = null;
+    usbBrowse = null;
     shareLogin = null;
     choicePending = null;
     joinItem = null;
@@ -1259,7 +1265,8 @@
   //: ADR-0115: Forget on the row itself, without opening the sheet.
   async function forgetShare(row, item) {
     const answer = await listAction(row.key, { name: item.address ?? item.name, action: 'forget' });
-    flash(answer.ok ? `${item.name} forgotten` : plainly(answer.error, 'Could not forget it. Try again.'));
+    const done = row.kind === 'usb-folder' ? 'removed' : 'forgotten';
+    flash(answer.ok ? `${item.name} ${done}` : plainly(answer.error, `Could not ${row.kind === 'usb-folder' ? 'remove' : 'forget'} it. Try again.`));
   }
 
   //: ADR-0115: the share being added.
@@ -1267,6 +1274,8 @@
   //: ADR-0115's scan: the server whose shares are shown (with the login
   //: that showed them), and the server waiting for a login first.
   let shareBrowse = $state(null);
+  //: ADR-0115 decision 23: the USB drive and folder open in the sheet.
+  let usbBrowse = $state(null);
   let shareLogin = $state(null);
   let shareCreds = $state({ user: '', password: '' });
 
@@ -1291,6 +1300,20 @@
     });
   }
 
+  async function browseUsb(drive, folder) {
+    searching = true;
+    listError = null;
+    await command({ name: drive, action: 'browse', folder }, (answer) => {
+      searching = false;
+      if (!answer.ok) {
+        flash(plainly(answer.error, 'Could not read the drive. Is it still plugged in?'));
+        return;
+      }
+      usbBrowse = { drive, folder, title: answer.title ?? 'USB drive' };
+      items = answer.items ?? [];
+    });
+  }
+
   function enterManual() {
     share = { address: '', user: '', password: '' };
     manual = true;
@@ -1305,6 +1328,26 @@
     // and `kind` is what tells them apart (ADR-0044 §1).
     // ADR-0115: a found server shows its shares; a share on it is added with
     // the login that showed it; a share already added says how it is.
+    // ADR-0115 decision 23: a drive opens at its top, a folder opens, Back
+    // up goes one level up, and the first item adds what is open.
+    if (row.kind === 'usb-folder') {
+      if (!item.drive) return;
+      if (item.add) {
+        const key = sheetKey;
+        await command({ name: item.drive, action: 'add', folder: item.folder ?? '' }, (answer) => {
+          if (!answer.ok) {
+            flash(plainly(answer.error, 'Could not add it. Try again.'));
+            return;
+          }
+          flash(`${item.folder ? item.folder.split('/').pop() : 'The whole drive'} added`);
+          usbBrowse = null;
+          openList(key);
+        });
+      } else {
+        browseUsb(item.drive, item.folder ?? '');
+      }
+      return;
+    }
     if (row.kind === 'share') {
       if (item.share && shareBrowse) {
         const key = sheetKey;
@@ -1643,6 +1686,13 @@
       const key = sheetKey;
       shareBrowse = null;
       shareLogin = null;
+      openList(key);
+      return;
+    }
+    // ADR-0115 decision 23: out of a drive's folders, back to the drives.
+    if (usbBrowse) {
+      const key = sheetKey;
+      usbBrowse = null;
       openList(key);
       return;
     }
@@ -1998,24 +2048,28 @@
                     {:else if r.type !== 'toggle' && shown(r)}
                       <span class="row__value" class:is-pending={pending(r)}>{shown(r)}</span>
                     {/if}
-                    {#if r.kind === 'share' && r.items?.length}
+                    {#if (r.kind === 'share' || r.kind === 'usb-folder') && r.items?.length}
                       <!-- ADR-0115: each share by its name, with its Forget
                            (George, 2026-10-03). Spans, not buttons: the row
                            is the button that opens the sheet. -->
                       <span class="shares">
-                        {#each r.items as s (s.address ?? s.name)}
+                        {#each r.items as s (s.address ?? s.drive ?? s.name)}
                           <span class="shares__one">
                             <span class="shares__text">
                               <span class="shares__name">{s.name}</span>
                               {#if s.meta}<span class="item__meta">{s.meta}</span>{/if}
                             </span>
+                            {#if s.address}
+                            <!-- A USB drive not added yet has nothing to
+                                 remove: tapping the row chooses its folders. -->
                             <span
                               class="forget"
                               role="button"
                               tabindex="0"
                               onclick={(e) => { e.stopPropagation(); forgetShare(r, s); }}
                               onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); forgetShare(r, s); } }}
-                            >Forget</span>
+                            >{r.kind === 'usb-folder' ? 'Remove' : 'Forget'}</span>
+                            {/if}
                           </span>
                         {/each}
                       </span>

@@ -912,3 +912,54 @@ async def test_the_updaters_backup_is_named_as_its_own_and_pruned(tmp_path, monk
         assert state.state.settings_revision == 1, "the Restore list is told"
         r = await client.post("/settings/backup")
         assert r.status == 200 and hand == [1]
+
+
+@pytest.mark.asyncio
+async def test_usb_folders_are_browsed_added_and_removed(tmp_path):
+    """ADR-0115 decision 23: the sheet lists the drives plugged in; a drive
+    opens at its top with *Add the whole drive* first, a folder opens one
+    level down with *Back up*; a folder added shows on the row with its
+    Remove, and a drive with nothing chosen shows as *Not added yet*."""
+    from gexis_core import lyrion_usb
+    from gexis_core.settings import SettingsStore
+    from gexis_core.settings_registry import Settings
+
+    registry = [{"id": "g", "label": "G", "rows": [
+        {"key": "lyrion-server.usb_folders", "type": "list", "kind": "usb-folder"}]}]
+    store = SettingsStore(tmp_path / "s.db")
+    settings = Settings(store, registry=registry, wired={"lyrion-server.usb_folders": None})
+    root = tmp_path / "usb"
+    (root / "AAAA" / "Music" / "Jazz").mkdir(parents=True)
+    usb = lyrion_usb.UsbFolders(store, root=root, is_mount=lambda p: p.endswith("AAAA"),
+                                by_uuid=tmp_path / "none", by_label=tmp_path / "none")
+    woken = []
+    server = StateServer(StateStore({}), settings=settings, lyrion_usb=usb,
+                         lyrion_shares_changed=lambda: woken.append(1))
+    url = "/settings/lyrion-server.usb_folders/items"
+    async with TestClient(TestServer(server.make_app())) as client:
+        drives = (await (await client.get(url)).json())["items"]
+        assert [d["drive"] for d in drives] == ["AAAA"] and drives[0]["meta"].startswith("Not added yet")
+
+        top = await (await client.post(url, json={"name": "AAAA", "action": "browse", "folder": ""})).json()
+        assert top["ok"] and top["items"][0]["name"] == "Add the whole drive"
+        assert [i["name"] for i in top["items"][1:]] == ["Music"] and top["items"][1]["open"]
+
+        music = await (await client.post(url, json={"name": "AAAA", "action": "browse", "folder": "Music"})).json()
+        assert [i["name"] for i in music["items"]] == ["Add Music", "Back up", "Jazz"]
+        assert music["items"][1]["folder"] == ""
+
+        out = await (await client.post(url, json={"name": "AAAA", "action": "browse", "folder": "../.."})).json()
+        assert out["ok"] is False
+
+        added = await (await client.post(url, json={"name": "AAAA", "action": "add", "folder": "Music"})).json()
+        assert added["ok"] and woken
+
+        rows = (await (await client.get("/settings")).json())
+        row = next(r for g in rows["groups"] for r in g["rows"] if r["key"] == "lyrion-server.usb_folders")
+        assert [(i["name"], i["address"]) for i in row["items"]] == [("Music", "AAAA/Music")]
+
+        again = await (await client.post(url, json={"name": "AAAA", "action": "add", "folder": "Music/Jazz"})).json()
+        assert again["ok"] is False and "Music" in again["error"]
+
+        gone = await (await client.post(url, json={"name": "AAAA/Music", "action": "forget"})).json()
+        assert gone["ok"] and usb.all() == []

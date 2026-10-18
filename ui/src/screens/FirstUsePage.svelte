@@ -161,7 +161,7 @@ function init(flow, startAt, wide) {
   return { flow, startAt, wide, screen: startAt === 'p2' ? 'listen' : 'p1welcome', ret: null,
     net: 'Studio 5G', pw: 'studio-5g-pass', start: 'new', uploaded: false, name: 'Living Room', fmt: 0, output: 'HiFiBerry DAC+ HD', scr: 'panel',
     lyrState: 'idle', preset: null, presetTouched: false, mix: { lyr: true, plex: false, spo: true, bt: true },
-    lyrWhere: 'here', lyrAddrOpen: false, lyrAddr: '', places: { folder: true, usb: false, share: false }, shares: [], shareStep: null, shareSrv: null, shareUser: '', sharePw: '', shareAddr: '', shareAU: '', shareAP: '',
+    lyrWhere: 'here', lyrAddrOpen: false, lyrAddr: '', places: { folder: false, usb: false, share: false }, usbDrives: [], usbOpen: null, usbError: null, shares: [], shareStep: null, shareSrv: null, shareUser: '', sharePw: '', shareAddr: '', shareAU: '', shareAP: '',
     plexOn: false, plexPct: 0, claimOpened: false, claim: '', plexState: 'code', plexSkipped: false,
     browse: 'ext', spotify: true, bt: true, btPhase: null, btLeft: 180, reqLeft: 30, trusted: [], everPaired: false,
     vizOn: true, vizAfter: '10 min', skin: 'vu', animate: true, rpm: 0,
@@ -221,7 +221,7 @@ class Component extends DCLogic {
     if (id === 'done') live.finish();
     if (id === 'later') live.later();
     if (id === 'bluetooth') live.trusted();
-    if (id === 'folders') live.loadShares();
+    if (id === 'folders') { live.loadShares(); live.loadUsb(); }
   }
   restart(over) {
     clearTimeout(this.t1); clearTimeout(this.t2);
@@ -372,7 +372,15 @@ class Component extends DCLogic {
           here ? { t: 'Split', lhead: nm + ' does', left: ['Installs Lyrion', 'Adds your folders', 'Runs the first scan'], rhead: 'Later, in Lyrion', right: ['Rescan after adding music', 'Everything else'] }
             : { t: 'Split', lhead: nm + ' does', left: ['Finds it and plays from it'], rhead: 'You, on that machine', right: ['Install Lyrion', 'Add your music', 'Run the scans'] },
           ...(here ? [] : [{ t: 'Addr', label: 'Get Lyrion at', value: 'lyrion.org' }])], foot: SK }; }
-      case 'folders': { const tg = k => () => this.setState(st => ({ places: Object.assign({}, st.places, { [k]: !st.places[k] }) })), extra = [];
+      case 'folders': { const tg = k => () => { this.setState(st => ({ places: Object.assign({}, st.places, { [k]: !st.places[k] }) })); if (k === 'usb') live.loadUsb(); }, extra = [], usbBlocks = [];
+        if (s.places.usb) { const o = s.usbOpen;
+          if (o) usbBlocks.push(list(o.items.map(i => HB(i.name, i.meta, () => i.add ? live.addUsb(i) : live.openUsb(i.drive, i.folder), { icon: 'fold' })), o.title),
+            btn('Back to the drives', () => set({ usbOpen: null })));
+          else if (s.usbDrives.length) usbBlocks.push(list(s.usbDrives.map(d => HB(d.name, d.meta, () => live.openUsb(d.drive, ''), { icon: 'fold' })), 'USB drives'),
+            P('Open a drive to choose the folders Lyrion reads - or all of it.'));
+          else usbBlocks.push(P('No USB drive plugged in. Plug one into the player, then look again.'), btn('Look again', () => live.loadUsb()));
+          if (s.usbError) usbBlocks.push(note('warn', '', s.usbError));
+        }
         if (s.places.share) { const ss = s.shareStep, srv = s.shareSrv, addShare = (address, user, password) => live.addShare(address, user, password);
           const scan = () => live.scanShares();
           if (s.shares.length && !ss) extra.push(list(s.shares.map(a => ({ k: 'plain', label: a.name, note: a.where, tag: ['Added', 'ok'] })), 'Network shares'));
@@ -390,7 +398,7 @@ class Component extends DCLogic {
             btn('Add', () => { if (s.shareAddr.trim()) addShare(s.shareAddr.trim(), s.shareAU.trim() || null, s.shareAP || null); }), btn('Back', () => set({ shareStep: 'list' })));
           if (s.shareError) extra.push(note('warn', '', s.shareError));
         }
-        return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [list(PLACES.map(p => K(p[1], p[2], p[0] === 'share' ? s.places.share : true, p[0] === 'share' ? tg(p[0]) : undefined)), 'Lyrion reads'), ...extra, P('These become Lyrion’s music folders when it installs.')], foot: SK }; }
+        return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [list(PLACES.map(p => K(p[1], p[2], s.places[p[0]], tg(p[0]))), 'Lyrion reads'), ...usbBlocks, ...extra, (s.places.folder || s.places.usb || s.places.share) ? P('These become Lyrion’s music folders when it installs.') : note('info', 'Nothing chosen yet', 'Lyrion then starts with no music. Locations can be added later in Settings → Sources → Lyrion Server.')], foot: SK }; }
       case 'plexamp': {
         const sub = 'Your Plex library, played on ' + nm + '.';
         const g = live.stage(live.component('plexamp.enabled', 'plexamp')), inst = g.done;
@@ -464,7 +472,9 @@ class Component extends DCLogic {
         const show = (name, id, doneLine, doneOk, after) => { const g = live.stage(id); got.push(g);
           items.push(head(name), prog(g.label, g.pct, g.meta, g.done ? doneLine : g.line, g.done ? doneOk : false));
           if (g.done && after) items.push(note('info', '', after)); };
-        if (d.here) show('Lyrion', live.component('lyrion-server.enabled', 'lyrion'), 'Folders added, scan started', true, 'A large library can take hours to scan. Music shows up as Lyrion finds it.');
+        if (d.here) { const any = s.places.folder || s.places.usb || s.places.share;
+          show('Lyrion', live.component('lyrion-server.enabled', 'lyrion'), any ? 'Folders added, scan started' : 'Installed, no music yet', true,
+            any ? 'A large library can take hours to scan. Music shows up as Lyrion finds it.' : 'Add where your music is in Settings → Sources → Lyrion Server.'); }
         if (d.plex && s.plexOn) { const ok = s.plexClaimed;
           show('Plexamp', live.component('plexamp.enabled', 'plexamp'), ok ? 'Signed in to Plex' : 'Not signed in yet', ok, ok ? 'Your Plex library plays from the Plexamp app.' : 'Sign in from Settings → Plexamp when you’re ready.'); }
         if (!d.headless && s.vizOn) show('Visualiser', 'skins', 'Skins ready', true, 'The visualiser starts after ' + s.vizAfter + ' of music.');
@@ -623,6 +633,31 @@ class Component extends DCLogic {
     answer(accept) {
       answerPairing(accept).catch(() => {});
       if (!accept) st.btPhase = 'disc';
+    },
+    //: ADR-0115 decision 23: the USB drives plugged in, each opened for its
+    //: folders; what is added goes to Lyrion's list as it is chosen.
+    async loadUsb() {
+      const got = await listItems('lyrion-server.usb_folders');
+      st.usbDrives = got.items ?? [];
+    },
+    async openUsb(drive, folder) {
+      st.usbError = null;
+      const r = await listAction('lyrion-server.usb_folders', { name: drive, action: 'browse', folder });
+      if (!r.ok) {
+        st.usbError = r.error ?? 'Could not read the drive. Is it still plugged in?';
+        return;
+      }
+      st.usbOpen = { drive, folder, title: r.title ?? 'USB drive', items: r.items ?? [] };
+    },
+    async addUsb(item) {
+      st.usbError = null;
+      const r = await listAction('lyrion-server.usb_folders', { name: item.drive, action: 'add', folder: item.folder ?? '' });
+      if (!r.ok) {
+        st.usbError = r.error ?? 'Could not add it. Try again.';
+        return;
+      }
+      st.usbOpen = null;
+      live.loadUsb();
     },
     async loadShares() {
       const got = await listItems('lyrion-server.shares');
@@ -926,7 +961,13 @@ class Component extends DCLogic {
         o.lms_library = s.browse !== 'off';
       }
     }
-    if (d.here) o['lyrion-server.enabled'] = true;
+    if (d.here) {
+      // ADR-0115 decision 20: only what was chosen; the USB folders and the
+      // shares are already stored, added as they were chosen.
+      o['lyrion-server.music_folder'] = !!s.places.folder;
+      o['lyrion-server.usb'] = !!s.places.usb;
+      o['lyrion-server.enabled'] = true;
+    }
     if (d.plex && s.plexOn) o['plexamp.enabled'] = true;
     if (!d.headless) {
       const loc = s.loc.trim();

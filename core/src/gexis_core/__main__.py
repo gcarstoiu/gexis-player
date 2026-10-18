@@ -73,6 +73,7 @@ from gexis_core.peppy import (
 )
 from gexis_core import factory_reset, lyrion_addons, lyrion_folders, lyrion_memory
 from gexis_core.lyrion_shares import Shares as LyrionShares
+from gexis_core.lyrion_usb import UsbFolders
 from gexis_core.fanart import Fanart
 from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, Queue, TrackMetadata
@@ -1827,6 +1828,10 @@ async def main() -> None:
         """
         plugin_id, _, own = key.partition(".")
         plugin = next((p for p in installed_plugins if p.id == plugin_id), None)
+        if plugin_id == "lyrion-server":
+            # ADR-0115 decision 20: a location switched on or off reaches
+            # Lyrion's list now, not at the loop's next pass.
+            lyrion_wake.set()
         if plugin is not None and _plugin_env(plugin):
             # Environment is read once at exec, so a changed value means a
             # restart - of a unit that is *enabled*, whatever state its process
@@ -1989,6 +1994,8 @@ async def main() -> None:
         # of the list here, on the store's own thread; unmounted, with their
         # logins, in the worker below.
         forgotten = lyrion_shares.forget_all() if plugin.id == "lyrion-server" else []
+        if plugin.id == "lyrion-server":
+            lyrion_usb.forget_all()
 
         def go() -> None:
             subprocess.run(["systemctl", "stop", plugin.unit, fetch], check=False, capture_output=True)
@@ -2723,7 +2730,7 @@ async def main() -> None:
         # made the panel mark two working rows `data-unwired`. `lms_server`
         # is a list too and is already in `wired` above, because something
         # also reads its value.
-        lists={"wifi", "bt_trusted", "lyrion-server.shares"},
+        lists={"wifi", "bt_trusted", "lyrion-server.shares", "lyrion-server.usb_folders"},
         on_change=state_store.bump_settings_revision,
     )
     # ADR-0115 decision 18: a 1 GB player is not offered the Lyrion server.
@@ -3316,6 +3323,8 @@ async def main() -> None:
     # ADR-0115: the Lyrion server's music folders - the Music folder, USB
     # disks, network shares - kept in its own list while it is switched on.
     lyrion_shares = LyrionShares(settings_store)
+    # ADR-0115 decision 23: what Lyrion reads from each USB drive.
+    lyrion_usb = UsbFolders(settings_store)
     try:
         lyrion_shares.migrate()  # ADR-0115 decision 15: passwords out of the store
     except Exception:  # noqa: BLE001 - the shares still mount from what is there
@@ -3390,7 +3399,12 @@ async def main() -> None:
             if not on:
                 continue
             try:
-                await lyrion_folders.sync(_lyrion_rpc, saved=lyrion_shares.points())
+                # ADR-0115 decisions 20 and 23: the locations switched on.
+                usb_chosen = (lyrion_usb.paths(lyrion_usb.all())
+                              if settings.value("lyrion-server.usb") is True else [])
+                await lyrion_folders.sync(_lyrion_rpc, saved=lyrion_shares.points(),
+                                          music_on=settings.value("lyrion-server.music_folder") is True,
+                                          usb_chosen=usb_chosen)
             except Exception as exc:  # starting, stopped, scanning: next time
                 logger.debug("lyrion: folders not synced (%r)", exc)
             try:
@@ -4016,6 +4030,7 @@ async def main() -> None:
         # the first picture, not at start.
         placer=placement.Placer(),
         lyrion_shares=lyrion_shares,
+        lyrion_usb=lyrion_usb,
         lyrion_shares_changed=lambda: lyrion_wake.set(),
         own_server=lambda: (f"{device_name.address()}:9000"
                             if settings.value("lyrion-server.enabled") is True and device_name.address() else None),

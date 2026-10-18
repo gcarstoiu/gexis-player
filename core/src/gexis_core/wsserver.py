@@ -47,7 +47,7 @@ from dbus_next.aio import MessageBus
 from gexis_core import memo, own_wallpapers, screen_apply, settling
 from gexis_core.players import Players, status_line
 from gexis_core.wallpapers import SEARCH as PIXABAY_SEARCH
-from gexis_core import backups, bluetooth_devices, skin_packs, device_name, discovery, hardware_report, lyrion_scan, lyrion_shares, problem_report, skin_previews, skins, wifi
+from gexis_core import backups, bluetooth_devices, skin_packs, device_name, discovery, hardware_report, lyrion_scan, lyrion_shares, lyrion_usb, problem_report, skin_previews, skins, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
 from gexis_core.artistinfo import PHOTO_BACKGROUND, PHOTO_LARGE, PHOTO_THUMB
 from gexis_core.artwork_sweep import ARTIST_NAMESPACE, remembered
@@ -145,6 +145,7 @@ class StateServer:
         restart_device=None,
         placer=None,
         lyrion_shares=None,
+        lyrion_usb=None,
         lyrion_shares_changed=None,
         own_server=None,
         plugins=(),
@@ -244,6 +245,8 @@ class StateServer:
         #: ADR-0115: the Lyrion server's network shares.
         self._lyrion_shares = lyrion_shares
         self._lyrion_shares_changed = lyrion_shares_changed
+        #: ADR-0115 decision 23: the folders Lyrion reads from USB drives.
+        self._lyrion_usb = lyrion_usb
         #: ADR-0115 decision 2: this device's own Lyrion server, offered among
         #: the servers while it is on - never chosen for the user.
         self._own_server = own_server
@@ -2431,6 +2434,12 @@ class StateServer:
                     row["value"] = None
                     row["items"] = await self._share_items() if self._lyrion_shares else []
                     continue
+                if key == "lyrion-server.usb_folders":
+                    # ADR-0115 decision 23: each folder chosen, with its
+                    # Remove, and each drive plugged in with nothing chosen.
+                    row["value"] = None
+                    row["items"] = await self._usb_items(sheet=False) if self._lyrion_usb else []
+                    continue
                 source = self.SEEDED_LISTS.get(key)
                 if source is None:
                     continue
@@ -2439,6 +2448,57 @@ class StateServer:
                 # so an unavailable BlueZ reads as the row's own empty state
                 # rather than failing the whole settings payload.
                 row["items"] = await self._bluetooth(getattr(module, name))
+
+    async def _usb_items(self, sheet: bool) -> list[dict]:
+        """The USB folders' rows (`sheet=False`) or the drives to browse.
+        The store on this thread; the drives, which read the disk, in a
+        worker."""
+        usb = self._lyrion_usb
+        chosen = usb.all()
+
+        def look() -> tuple[list[str], dict]:
+            plugged = usb.plugged()
+            return plugged, {d: usb.label_of(d) for d in {*plugged, *(e["drive"] for e in chosen)}}
+        plugged, labels = await asyncio.to_thread(look)
+        return (usb.sheet_items if sheet else usb.items)(chosen, plugged, labels)
+
+    async def _usb_action(self, body: dict, name: str, action: str) -> web.Response:
+        """ADR-0115 decision 23: browse a drive's folders, add one, remove
+        one. `name` is the drive (browse, add) or the item's address
+        (forget)."""
+        usb = self._lyrion_usb
+        if usb is None:
+            return web.json_response({"ok": False, "error": "USB folders are not wired up"})
+        folder = str(body.get("folder") or "")
+        try:
+            if action == "browse":
+                found = await asyncio.to_thread(usb.browse, name, folder)
+                label = usb.name_of(name, await asyncio.to_thread(usb.label_of, name))
+                clean = lyrion_usb.clean(folder)
+                items = [{"name": f"Add {clean.rsplit('/', 1)[-1]}" if clean else "Add the whole drive",
+                          "meta": f"{label} · {clean}" if clean else f"Everything on {label}",
+                          "bars": None, "state": "found", "add": True, "drive": name, "folder": clean}]
+                if clean:
+                    up = clean.rpartition("/")[0]
+                    items.append({"name": "Back up", "meta": up or label, "bars": None, "state": "found",
+                                  "up": True, "drive": name, "folder": up})
+                items += [{"name": f["name"], "meta": "Has folders inside - tap to open" if f["deeper"] else "Tap to open",
+                           "bars": None, "state": "found", "open": True, "drive": name, "folder": f["folder"]}
+                          for f in found]
+                return web.json_response({"ok": True, "error": None, "items": items,
+                                          "title": f"{label} / {clean}" if clean else label})
+            if action == "add":
+                label = await asyncio.to_thread(usb.label_of, name)
+                usb.add(name, folder, label)
+            elif action == "forget":
+                usb.remove(name)
+            else:
+                return web.json_response({"error": f"unknown action {action}"}, status=400)
+        except ValueError as exc:
+            return web.json_response({"ok": False, "error": f"Needs {exc}"})
+        if self._lyrion_shares_changed is not None:
+            self._lyrion_shares_changed()
+        return web.json_response({"ok": True, "error": None})
 
     async def _share_items(self) -> list[dict]:
         """The Lyrion shares' rows. The list is read on this thread - the
@@ -2577,7 +2637,8 @@ class StateServer:
 
     #: Where a `list` row's items come from - ADR-0044 §1's first open
     #: question, now answered for all three.
-    LIST_SOURCES = ("wifi", "lms_server", "bt_trusted", "restore", "lyrion-server.shares")
+    LIST_SOURCES = ("wifi", "lms_server", "bt_trusted", "restore", "lyrion-server.shares",
+                    "lyrion-server.usb_folders")
 
     async def _list_row(self, request: web.Request):
         """The `list` row named in the path, or a response explaining why
@@ -2606,6 +2667,8 @@ class StateServer:
             return web.json_response({"items": await wifi.scan()})
         if key == "bt_trusted":
             return web.json_response({"items": await self._bluetooth(bluetooth_devices.known)})
+        if key == "lyrion-server.usb_folders":
+            return web.json_response({"items": await self._usb_items(sheet=True) if self._lyrion_usb else []})
         if key == "lyrion-server.shares":
             if self._lyrion_shares is None:
                 return web.json_response({"items": []})
@@ -2663,6 +2726,8 @@ class StateServer:
             action = body.get("action", "join")
         except (ValueError, KeyError, TypeError):
             return web.json_response({"error": 'body must be {"name": ..., "action": ...}'}, status=400)
+        if key == "lyrion-server.usb_folders":
+            return await self._usb_action(body, name, action)
         if key == "lyrion-server.shares":
             # ADR-0115: added, or forgotten; the mount follows in the core's
             # loop while the server is on.

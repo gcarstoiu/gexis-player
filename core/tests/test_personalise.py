@@ -176,3 +176,13 @@ async def test_a_server_part_two_sets_restarts_the_core_once_settled(tmp_path, m
     monkeypatch.setattr(asyncio, "sleep", (lambda real: (lambda s: real(0)))(asyncio.sleep))
     await asyncio.wait_for(task, 2)
     assert ran == [("systemctl", "restart", "gexis-core")]
+
+
+def test_the_music_locations_go_in_before_the_server_is_switched_on():
+    """ADR-0115 decision 20: the Lyrion server starts reading only what was
+    chosen on *Where is your music?* - nothing preselected."""
+    settings = FakeSettings()
+    personalise.apply({"lyrion-server.enabled": True, "lyrion-server.music_folder": False,
+                       "lyrion-server.usb": True}, settings, OFFERED, lambda wait: None)
+    assert settings.order == ["lyrion-server.music_folder", "lyrion-server.usb", "lyrion-server.enabled"]
+    assert settings.values["lyrion-server.music_folder"] is False

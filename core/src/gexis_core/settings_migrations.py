@@ -105,6 +105,26 @@ def _one_volume_row(store) -> None:
     store.delete("software_volume")
 
 
+def _lyrion_keeps_its_folders(store, seen: Path | None = None) -> None:
+    if store.get("lyrion-server.enabled") is not True:
+        return
+    from gexis_core import lyrion_folders, lyrion_usb
+
+    if store.get(lyrion_usb.MUSIC_KEY) is None:
+        store.set(lyrion_usb.MUSIC_KEY, True)
+    if store.get(lyrion_usb.SWITCH_KEY) is None:
+        store.set(lyrion_usb.SWITCH_KEY, True)
+    if store.get(lyrion_usb.KEY) is None:
+        try:
+            recent = json.loads((seen or lyrion_folders.USB_SEEN).read_text())
+        except (OSError, ValueError):
+            recent = {}
+        root = str(lyrion_folders.USB) + "/"
+        drives = sorted(f[len(root):] for f in (recent if isinstance(recent, dict) else {})
+                        if f.startswith(root) and "/" not in f[len(root):])
+        store.set(lyrion_usb.KEY, json.dumps([{"drive": d, "folder": "", "label": None} for d in drives]))
+
+
 #: In the order they shipped. Append only.
 MIGRATIONS: tuple[Migration, ...] = (
     # George, on the Settings copy review (2026-10-05): the forecast's
@@ -149,6 +169,12 @@ MIGRATIONS: tuple[Migration, ...] = (
     # George, 2026-10-18: the waiting screen's line "Start music from your
     # phone" is gone, and its switch with it.
     drop("waiting_hint", "waiting_hint: the waiting screen has no hint line"),
+    # ADR-0115 decisions 20-21 (George, 2026-10-18): the Music folder and USB
+    # drives are switches, off on a new player. A player whose Lyrion server
+    # is on keeps reading both, every USB disk seen in the last 7 days whole
+    # - or the update would take folders out, and Lyrion rescan everything.
+    Migration(note="lyrion-server: a server already on keeps its Music folder and USB disks",
+              run=lambda store: _lyrion_keeps_its_folders(store), existing_only=True),
 )
 
 

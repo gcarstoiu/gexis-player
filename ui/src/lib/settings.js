@@ -123,11 +123,11 @@ const reach = (url, options, ms) => ask(url, options, ms).catch(() => null);
 
 //: The lists that go looking for longer than an ordinary request: a Wi-Fi
 //: scan, and the network shares' search for servers.
-const LONG_LISTS = new Set(['wifi', 'lyrion-server.shares']);
+const LONG_LISTS = new Set(['wifi', 'lyrion-server.shares', 'lyrion-server.usb_folders']);
 //: The per-item commands that take long: a join (Wi-Fi), a restore (also
 //: `join`, on the backups list), and anything on the shares - a browse, or
 //: a forget that unmounts (30 s allowed).
-const longAction = (key, body) => body?.action === 'join' || key === 'lyrion-server.shares';
+const longAction = (key, body) => body?.action === 'join' || key === 'lyrion-server.shares' || key === 'lyrion-server.usb_folders';
 //: Action rows that are slow: making a backup.
 const LONG_ACTIONS = new Set(['backup']);
 

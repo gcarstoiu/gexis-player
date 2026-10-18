@@ -94,3 +94,61 @@ def test_the_usb_record_is_written_whole_and_only_when_it_changes(tmp_path, monk
     lf.usb_recent([disk], seen, now=1000 + 3600)    # plugged in again an hour on
     assert len(writes) == 2
     assert lf.usb_recent([], seen, now=1000 + 3600 + 6 * 86400) == [disk]
+
+
+def test_the_music_folder_switched_off_leaves_and_the_users_own_inside_it_stays():
+    """ADR-0115 decision 20: the Music folder is a switch; a folder the user
+    added on Lyrion's page, even inside it, is theirs."""
+    mine = "/var/lib/gexis-music/Jazz"
+    assert lf.wanted(["/var/lib/gexis-music", mine], [], music_on=False) == [mine]
+    assert lf.wanted([mine], [], music_on=True) == [mine, "/var/lib/gexis-music"]
+
+
+def test_the_music_folder_switched_on_keeps_its_place():
+    """No write every 20 s: an unchanged list is the same list, in order."""
+    current = ["/srv/elsewhere", "/var/lib/gexis-music"]
+    assert lf.wanted(current, [], music_on=True) == current
+
+
+def _rpc(prefs):
+    async def rpc(command):
+        if command[:3] == ["pref", "mediadirs", "?"]:
+            return {"_p2": prefs["mediadirs"]}
+        if command[:2] == ["pref", "mediadirs"]:
+            prefs["mediadirs"] = command[2]
+        return {}
+    return rpc
+
+
+def test_only_the_chosen_usb_folders_are_offered(monkeypatch, tmp_path):
+    """ADR-0115 decision 23: a folder chosen on a drive, not the drive; a
+    drive with nothing chosen is not added (George: "1b")."""
+    usb = tmp_path / "usb"
+    (usb / "AAAA" / "Music" / "Jazz").mkdir(parents=True)
+    (usb / "BBBB").mkdir(parents=True)
+    monkeypatch.setattr(lf, "MANAGED", (usb, tmp_path / "shares"))
+    monkeypatch.setattr(lf, "USB", usb)
+    prefs = {"mediadirs": []}
+    chosen = [str(usb / "AAAA" / "Music")]
+    assert asyncio.run(lf.sync(_rpc(prefs), is_mount=lambda p: p.endswith(("AAAA", "BBBB")),
+                               usb_seen=tmp_path / "seen.json", music_on=False, usb_chosen=chosen)) is True
+    assert prefs["mediadirs"] == [str(usb / "AAAA" / "Music")]
+
+
+def test_a_chosen_folder_stays_for_7_days_after_its_drive_is_unplugged(monkeypatch, tmp_path):
+    """Decision 17 holds for a chosen folder as for a whole drive."""
+    usb = tmp_path / "usb"
+    (usb / "AAAA" / "Music").mkdir(parents=True)
+    monkeypatch.setattr(lf, "MANAGED", (usb, tmp_path / "shares"))
+    monkeypatch.setattr(lf, "USB", usb)
+    seen = tmp_path / "seen.json"
+    chosen = [str(usb / "AAAA" / "Music")]
+    prefs = {"mediadirs": []}
+    asyncio.run(lf.sync(_rpc(prefs), is_mount=lambda p: True, usb_seen=seen, music_on=False, usb_chosen=chosen))
+    assert prefs["mediadirs"] == chosen
+    # Unplugged: no longer mounted, seen moments ago.
+    asyncio.run(lf.sync(_rpc(prefs), is_mount=lambda p: False, usb_seen=seen, music_on=False, usb_chosen=chosen))
+    assert prefs["mediadirs"] == chosen
+    # Removed from the choice: out.
+    asyncio.run(lf.sync(_rpc(prefs), is_mount=lambda p: False, usb_seen=seen, music_on=False, usb_chosen=[]))
+    assert prefs["mediadirs"] == []

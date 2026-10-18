@@ -61,7 +61,7 @@ rep("  componentDidUpdate(pp, ps) { if (ps && ps.screen !== this.state.screen &&
 # The Lyrion search is real and has run; Getting ready writes the answers;
 # Kept the defaults puts part 2 off on the player.
 rep("    if (id === 'listen' && s.lyrState === 'idle') this.setState({ lyrState: s.flow === 'A' ? 'found' : 'none' });\n", "")
-rep("    if (id === 'done') this.setState({ inst: 0 });", "    if (id === 'done') live.finish();\n    if (id === 'later') live.later();\n    if (id === 'bluetooth') live.trusted();\n    if (id === 'folders') live.loadShares();")
+rep("    if (id === 'done') this.setState({ inst: 0 });", "    if (id === 'done') live.finish();\n    if (id === 'later') live.later();\n    if (id === 'bluetooth') live.trusted();\n    if (id === 'folders') { live.loadShares(); live.loadUsb(); }")
 # Close leaves the page.
 rep("    if (['done', 'later', 'p1restored'].includes(s.screen)) return this.restart();", "    if (['done', 'later', 'p1restored'].includes(s.screen)) return live.close();")
 # No simulation clock: Plexamp's download and the pairing come from the player.
@@ -79,11 +79,23 @@ rep("""    const nm = s.name.trim() || 'the player', sl = slug(s.name), time = s
 # Listen: the server the search found, by its name and address.
 rep("found ? { foot: 'Lyrion found on ' + s.net, footMeta: '192.0.2.10:9000' }",
     "found ? { foot: 'Lyrion found on ' + s.net, footMeta: s.lyrMeta }")
-# Folders: the Music folder and USB disks are always offered to Lyrion
-# (ADR-0115): drawn ticked, as designed, and not a switch that would change
-# nothing. Network shares: the player's own search, sign-in and add.
-rep("return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [list(PLACES.map(p => K(p[1], p[2], s.places[p[0]], tg(p[0]))), 'Lyrion reads')",
-    "return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [list(PLACES.map(p => K(p[1], p[2], p[0] === 'share' ? s.places.share : true, p[0] === 'share' ? tg(p[0]) : undefined)), 'Lyrion reads')")
+# Folders (ADR-0115 decisions 20-23, George 2026-10-18): the three switches
+# as designed, none on ("Nothing should be preselected"), and with USB drives
+# on, the drives plugged in, each browsed for the folders Lyrion reads. With
+# nothing chosen the line under the list says Lyrion starts empty.
+rep("return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [list(PLACES.map(p => K(p[1], p[2], s.places[p[0]], tg(p[0]))), 'Lyrion reads'), ...extra, P('These become Lyrion’s music folders when it installs.')]",
+    "return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [list(PLACES.map(p => K(p[1], p[2], s.places[p[0]], tg(p[0]))), 'Lyrion reads'), ...usbBlocks, ...extra, (s.places.folder || s.places.usb || s.places.share) ? P('These become Lyrion’s music folders when it installs.') : note('info', 'Nothing chosen yet', 'Lyrion then starts with no music. Locations can be added later in Settings → Sources → Lyrion Server.')]")
+rep("places: { folder: true, usb: false, share: false }", "places: { folder: false, usb: false, share: false }, usbDrives: [], usbOpen: null, usbError: null")
+rep("""      case 'folders': { const tg = k => () => this.setState(st => ({ places: Object.assign({}, st.places, { [k]: !st.places[k] }) })), extra = [];""",
+    """      case 'folders': { const tg = k => () => { this.setState(st => ({ places: Object.assign({}, st.places, { [k]: !st.places[k] }) })); if (k === 'usb') live.loadUsb(); }, extra = [], usbBlocks = [];
+        if (s.places.usb) { const o = s.usbOpen;
+          if (o) usbBlocks.push(list(o.items.map(i => HB(i.name, i.meta, () => i.add ? live.addUsb(i) : live.openUsb(i.drive, i.folder), { icon: 'fold' })), o.title),
+            btn('Back to the drives', () => set({ usbOpen: null })));
+          else if (s.usbDrives.length) usbBlocks.push(list(s.usbDrives.map(d => HB(d.name, d.meta, () => live.openUsb(d.drive, ''), { icon: 'fold' })), 'USB drives'),
+            P('Open a drive to choose the folders Lyrion reads - or all of it.'));
+          else usbBlocks.push(P('No USB drive plugged in. Plug one into the player, then look again.'), btn('Look again', () => live.loadUsb()));
+          if (s.usbError) usbBlocks.push(note('warn', '', s.usbError));
+        }""")
 rep("""        if (s.places.share) { const ss = s.shareStep, srv = s.shareSrv, addShare = (name, where) => this.setState(st => ({ shares: st.shares.concat([{ name, where }]), shareStep: null, shareAddr: '', shareAU: '', shareAP: '' }));
           const scan = () => { set({ shareStep: 'scan' }); clearTimeout(this.t3); this.t3 = setTimeout(() => { if (this.state.shareStep === 'scan') this.setState({ shareStep: 'list' }); }, 1800); };""",
     """        if (s.places.share) { const ss = s.shareStep, srv = s.shareSrv, addShare = (address, user, password) => live.addShare(address, user, password);
@@ -224,7 +236,9 @@ js = js[:a] + """      case 'done': { const items = [], got = [];
         const show = (name, id, doneLine, doneOk, after) => { const g = live.stage(id); got.push(g);
           items.push(head(name), prog(g.label, g.pct, g.meta, g.done ? doneLine : g.line, g.done ? doneOk : false));
           if (g.done && after) items.push(note('info', '', after)); };
-        if (d.here) show('Lyrion', live.component('lyrion-server.enabled', 'lyrion'), 'Folders added, scan started', true, 'A large library can take hours to scan. Music shows up as Lyrion finds it.');
+        if (d.here) { const any = s.places.folder || s.places.usb || s.places.share;
+          show('Lyrion', live.component('lyrion-server.enabled', 'lyrion'), any ? 'Folders added, scan started' : 'Installed, no music yet', true,
+            any ? 'A large library can take hours to scan. Music shows up as Lyrion finds it.' : 'Add where your music is in Settings → Sources → Lyrion Server.'); }
         if (d.plex && s.plexOn) { const ok = s.plexState === 'ok';
           show('Plexamp', live.component('plexamp.enabled', 'plexamp'), ok ? 'Signed in to Plex' : 'Not signed in yet', ok, ok ? 'Your Plex library plays from the Plexamp app.' : 'Sign in from Settings → Plexamp when you’re ready.'); }
         if (!d.headless && s.vizOn) show('Visualiser', 'skins', 'Skins ready', true, 'The visualiser starts after ' + s.vizAfter + ' of music.');

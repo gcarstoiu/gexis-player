@@ -51,6 +51,10 @@ KEYS = (
 )
 #: The plugins part 2 can switch on, by their switch: each downloads.
 PLUGIN_ROWS = ("lyrion-server.enabled", "plexamp.enabled")
+#: ADR-0115 decision 20: where the Lyrion server on this player reads music,
+#: written before its switch so it starts with them. The USB folders
+#: themselves are added on *Where is your music?* as they are chosen.
+LOCATION_ROWS = ("lyrion-server.music_folder", "lyrion-server.usb")
 
 
 def _write(record: dict, path: Path) -> None:
@@ -144,7 +148,7 @@ def checked(values: Any) -> dict:
     about what it is, and half of its answers are worse than none."""
     if not isinstance(values, dict):
         raise ValueError("settings must be an object")
-    unknown = sorted(k for k in values if k not in KEYS and k not in PLUGIN_ROWS)
+    unknown = sorted(k for k in values if k not in KEYS and k not in PLUGIN_ROWS and k not in LOCATION_ROWS)
     if unknown:
         raise ValueError(f"not part 2's to set: {', '.join(unknown)}")
     return values
@@ -171,6 +175,9 @@ def apply(values: dict, settings, offered: list[dict], begin: Callable[[list[dic
     for key in KEYS:
         if key in values:
             put(key, values[key])
+    for key in LOCATION_ROWS:
+        if key in values:
+            put(key, bool(values[key]))
     by_row = {p["row"]: p for p in offered}
     wait = []
     for row in PLUGIN_ROWS:

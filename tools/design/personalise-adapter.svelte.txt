@@ -128,6 +128,31 @@
       answerPairing(accept).catch(() => {});
       if (!accept) st.btPhase = 'disc';
     },
+    //: ADR-0115 decision 23: the USB drives plugged in, each opened for its
+    //: folders; what is added goes to Lyrion's list as it is chosen.
+    async loadUsb() {
+      const got = await listItems('lyrion-server.usb_folders');
+      st.usbDrives = got.items ?? [];
+    },
+    async openUsb(drive, folder) {
+      st.usbError = null;
+      const r = await listAction('lyrion-server.usb_folders', { name: drive, action: 'browse', folder });
+      if (!r.ok) {
+        st.usbError = r.error ?? 'Could not read the drive. Is it still plugged in?';
+        return;
+      }
+      st.usbOpen = { drive, folder, title: r.title ?? 'USB drive', items: r.items ?? [] };
+    },
+    async addUsb(item) {
+      st.usbError = null;
+      const r = await listAction('lyrion-server.usb_folders', { name: item.drive, action: 'add', folder: item.folder ?? '' });
+      if (!r.ok) {
+        st.usbError = r.error ?? 'Could not add it. Try again.';
+        return;
+      }
+      st.usbOpen = null;
+      live.loadUsb();
+    },
     async loadShares() {
       const got = await listItems('lyrion-server.shares');
       const items = got.items ?? [];
@@ -430,7 +455,13 @@
         o.lms_library = s.browse !== 'off';
       }
     }
-    if (d.here) o['lyrion-server.enabled'] = true;
+    if (d.here) {
+      // ADR-0115 decision 20: only what was chosen; the USB folders and the
+      // shares are already stored, added as they were chosen.
+      o['lyrion-server.music_folder'] = !!s.places.folder;
+      o['lyrion-server.usb'] = !!s.places.usb;
+      o['lyrion-server.enabled'] = true;
+    }
     if (d.plex && s.plexOn) o['plexamp.enabled'] = true;
     if (!d.headless) {
       const loc = s.loc.trim();

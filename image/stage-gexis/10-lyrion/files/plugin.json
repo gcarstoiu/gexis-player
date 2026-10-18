@@ -1,12 +1,42 @@
 {
   "id": "lyrion-server",
   "name": "Lyrion Server",
-  "summary": "Your own music library on the player itself, from a USB disk, a network share or its Music folder.",
+  "summary": "Your own music library on the player itself, from its Music folder, a USB drive or a network share.",
   "kind": "service",
   "area": "sources",
   "unit": "gexis-lyrion.service",
   "port": 9000,
   "settings": [
+    {
+      "key": "music_folder",
+      "type": "toggle",
+      "label": "Music folder",
+      "marks": "N",
+      "default": false,
+      "note": "The player's own Music folder, shared on your network as Music. Switching it off later makes Lyrion rescan your whole library."
+    },
+    {
+      "key": "usb",
+      "type": "toggle",
+      "label": "USB drives",
+      "marks": "N",
+      "default": false,
+      "note": "Folders on USB drives plugged into the player. Switching it off later makes Lyrion rescan your whole library."
+    },
+    {
+      "key": "usb_folders",
+      "type": "list",
+      "label": "USB folders",
+      "marks": "N",
+      "default": null,
+      "kind": "usb-folder",
+      "onlyWhen": [
+        "usb",
+        true
+      ],
+      "note": "What Lyrion reads from each USB drive: the whole drive or folders you choose. Removing one later makes Lyrion rescan your whole library.",
+      "empty": "No USB drive plugged in. Plug one into the player, then choose its folders here."
+    },
     {
       "key": "shares",
       "type": "list",
@@ -17,7 +47,7 @@
       "manual": "Add by address",
       "hint": "Not in the list? Some servers do not announce themselves - add the share by its address.",
       "note": "Music folders on a NAS or a computer, mounted read-only and offered to the server.",
-      "empty": "No shares found or added. The Music folder and any USB disk are offered already; a share that does not announce itself can be added by its address.",
+      "empty": "No shares found or added. A share that does not announce itself can be added by its address.",
       "discover": true
     }
   ],

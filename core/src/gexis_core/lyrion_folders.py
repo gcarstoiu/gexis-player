@@ -101,25 +101,38 @@ def mounted(root: Path, is_mount: Callable[[str], bool] = os.path.ismount) -> li
 
 
 def wanted(current: list[str], present: list[str], music: Path = MUSIC,
-           managed: tuple[Path, ...] = MANAGED, saved: list[str] = ()) -> list[str]:
-    """`current` with the Music folder and the mounted folders in, the managed
-    folders that are gone out - except a saved share's, mounted or not - and
-    the user's own untouched, in their order."""
-    def ours(path: str) -> bool:
-        return any(path == str(m) or path.startswith(str(m) + "/") for m in managed)
+           managed: tuple[Path, ...] | None = None, saved: list[str] = (), music_on: bool = True) -> list[str]:
+    """`current` with the Music folder (while it is switched on) and the
+    present folders in, the managed folders that are gone out - except a
+    saved one's, present or not - and the user's own untouched, in their
+    order. The Music folder is managed only while it is switched off
+    (ADR-0115 decision 20): then it goes, and a folder of the user's inside
+    it stays."""
+    managed = MANAGED if managed is None else managed
 
+    def ours(path: str) -> bool:
+        return (any(path == str(m) or path.startswith(str(m) + "/") for m in managed)
+                or (not music_on and path == str(music)))
+
+    present = [str(music), *present] if music_on else list(present)
     kept = [p for p in current if not ours(p) or p in present or p in saved]
-    for path in [str(music), *present]:
+    for path in present:
         if path not in kept:
             kept.append(path)
     return kept
 
 
 async def sync(rpc: Callable[[list], Awaitable[dict]], is_mount=os.path.ismount,
-               saved: list[str] = (), usb_seen: Path = USB_SEEN) -> bool:
+               saved: list[str] = (), usb_seen: Path = USB_SEEN, music_on: bool = True,
+               usb_chosen: list[str] | None = None) -> bool:
     """Bring the server's folders up to date; True if they changed - Lyrion
     then scans what the change needs. A server that does not answer changes
-    nothing."""
+    nothing.
+
+    `usb_chosen`: the USB folders chosen (ADR-0115 decision 23), as paths;
+    `None` is every drive mounted, whole, as before the choice existed. A
+    chosen folder is present while its drive is mounted and the folder is
+    there, and kept for 7 days after its drive was last seen (decision 17)."""
     result = await rpc(["pref", "mediadirs", "?"])
     current = result.get("_p2") or []
     if isinstance(current, str):
@@ -127,10 +140,20 @@ async def sync(rpc: Callable[[list], Awaitable[dict]], is_mount=os.path.ismount,
     # Off the loop: a mount point on a server that is switched off can hold
     # `ismount` for seconds, every 20 s (review, 2026-10-12).
     def look() -> tuple[list[str], list[str]]:
-        present = [d for root in MANAGED for d in mounted(root, is_mount)]
-        return present, [*saved, *usb_recent(present, usb_seen)]
+        usb, shares_root = MANAGED
+        drives = mounted(usb, is_mount)
+        recent = usb_recent(drives, usb_seen)
+        if usb_chosen is None:
+            usb_present, usb_keep = drives, recent
+        else:
+            def drive_of(path: str) -> str:
+                return str(usb / Path(path).relative_to(usb).parts[0])
+            usb_present = [p for p in usb_chosen if drive_of(p) in drives and os.path.isdir(p)]
+            usb_keep = [p for p in usb_chosen if drive_of(p) in recent]
+        shares = mounted(shares_root, is_mount)
+        return [*usb_present, *shares], [*saved, *usb_keep]
     present, keep = await asyncio.to_thread(look)
-    want = wanted(list(current), present, saved=keep)
+    want = wanted(list(current), present, saved=keep, music_on=music_on)
     if want == list(current):
         return False
     await rpc(["pref", "mediadirs", want])

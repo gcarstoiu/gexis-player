@@ -199,6 +199,46 @@ cache is counted.
     still have the library scanning"* - so a scan stopped for memory on High
     says how many files Normal would fit.
 
+### Settled 2026-10-18 (George), for first use's *Where is your music?*
+
+Until now the Music folder and every USB disk were always offered to Lyrion
+(decisions 3 and 9), and first use showed them as fixed rows. George: *"every
+the user selects we do in lyrion. Nothing should be preselected"*, and *"What
+we need to add though is a folder selection from USB."* This replaces
+decision 3's "a USB disk ... offered to the server when plugged in, with no
+setting" and the Music folder's always being offered.
+
+20. **The Music folder and USB drives are switches, off on a new player.**
+    `lyrion-server.music_folder` and `lyrion-server.usb`, beside *Network
+    shares* under the Lyrion Server. First use's *Where is your music?* shows
+    all three as switches, none on, and writes what is chosen. The Music
+    folder is still shared on the network, and playlists are still saved in
+    its Playlists folder (decision 10), whichever way the switch is set.
+21. **A player that already runs Lyrion keeps both on** (George agreed to the
+    recommendation): a settings migration, for players already set up, turns
+    both on where the server is on, and gives every USB disk seen in the
+    last 7 days its whole drive. Without it, the update would take folders
+    out of Lyrion's list, and Lyrion would wipe the library and scan it all
+    again (decision 16) - about two hours on George's.
+22. **Continue with nothing chosen is allowed** (George agreed): the screen
+    says that Lyrion starts with no music, and that locations can be added
+    in Settings → Sources → Lyrion Server.
+23. **Folders on a USB drive** (George, 2026-10-18). With *USB drives* on,
+    `lyrion-server.usb_folders` lists what Lyrion reads from each drive: the
+    whole drive or chosen folders, at any depth. A drive is known by its
+    filesystem's UUID, which is where it is mounted
+    (`/media/gexis-usb/<UUID>`), with its label kept for the row while it is
+    unplugged. The phone and the panel browse a drive's folders, read-only,
+    folders only; *Add this folder* adds the one open, or the whole drive at
+    its top. **A drive plugged in for the first time is not added** (*"1b"*):
+    it shows under the row as *Not added yet* until folders are chosen.
+    Decision 17's 7 days hold for a chosen folder as for a whole drive.
+24. **Taking a location out later rescans everything** (*"Yes"*): switching
+    the Music folder or USB drives off, removing a USB folder, or narrowing a
+    whole drive to some of its folders takes a folder out of Lyrion's list,
+    and Lyrion wipes the library and scans it all again. Each such row says
+    so in its note.
+
 ## Not settled here
 
 - The memory and CPU measured during a scan of George's library, and the
