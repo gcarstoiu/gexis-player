@@ -70,11 +70,11 @@ GuestPi as its players. **Library category** (ADR-0150, `+git144` on sofapi): th
 server's rows under Settings → Library, `area: library` on the Plugins page,
 *More for your library* links (Squeezer, Lyrion F-Droid, LyrPlay; not
 iPeng). **Finding 127:** Lyrion keeps its old library through a rescan, so a
-first scan leaves the home empty until it ends. **Waiting on George:** the
-screenshot of option A (the waiting screen during a first scan, a large
-*Lyrion is reading your music* block); the block is in
-`ui/src/screens/WaitingHome.svelte`, uncommitted on `ph-first-use`, and App
-does not show it yet.
+first scan leaves the home empty until it ends. **Option A built** (approved
+on a screenshot; ADR-0115 decision 29, `+git146` on sofapi): a first read
+of the library keeps the waiting screen with a large *Lyrion is reading
+your music* block (`lyrion_stage` `first`); not yet seen on a real first
+read - sofapi's library is read (`first: False`, no block).
 
 **Release build output lives in `~/.local/share/gexis-release-out`**: in each
 release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
