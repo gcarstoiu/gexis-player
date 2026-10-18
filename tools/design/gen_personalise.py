@@ -109,15 +109,19 @@ rep("""    const nm = s.name.trim() || 'the player', sl = slug(s.name), time = s
 # Listen: the server the search found, by its name and address.
 rep("found ? { foot: 'Lyrion found on ' + s.net, footMeta: '192.0.2.10:9000' }",
     "found ? { foot: 'Lyrion found on ' + s.net, footMeta: s.lyrMeta }")
-# Folders (ADR-0115 decisions 20-23, George 2026-10-18): the three switches
+# Folders (ADR-0115 decisions 20-23, George 2026-10-18): the three switches,
+# each followed by its own actions with a rule between the sources (George:
+# "Look again" for USB must not sit under the network share);
 # as designed, none on ("Nothing should be preselected"), and with USB drives
 # on, the drives plugged in, each browsed for the folders Lyrion reads. With
 # nothing chosen the line under the list says Lyrion starts empty.
 rep("return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [list(PLACES.map(p => K(p[1], p[2], s.places[p[0]], tg(p[0]))), 'Lyrion reads'), ...extra, P('These become Lyrion’s music folders when it installs.')]",
-    "return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [list(PLACES.map(p => p[0] === 'usb' && !s.usbDrives.length ? { k: 'ghost', label: p[1], note: 'No USB drive plugged in.' } : K(p[1], p[0] === 'folder' && s.musicSpace ? p[2] + ' ' + s.musicSpace + '.' : p[2], s.places[p[0]], tg(p[0]))), 'Lyrion reads'), ...usbBlocks, ...extra, (s.places.folder || s.places.usb || s.places.share) ? P('These become Lyrion’s music folders when it installs.') : note('info', 'Nothing chosen yet', 'Lyrion then starts with no music. Locations can be added later in Settings → Sources → Lyrion Server.')]")
+    "return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [list([placeRow(PLACES[0])], 'Lyrion reads'), { t: 'Rule' }, list([placeRow(PLACES[1])], ''), ...usbBlocks, { t: 'Rule' }, list([placeRow(PLACES[2])], ''), ...extra, { t: 'Rule' }, (s.places.folder || s.places.usb || s.places.share) ? P('These become Lyrion’s music folders when it installs.') : note('info', 'Nothing chosen yet', 'Lyrion then starts with no music. Locations can be added later in Settings → Sources → Lyrion Server.')]")
 rep("places: { folder: true, usb: false, share: false }", "places: { folder: false, usb: false, share: false }, usbDrives: [], usbOpen: null, usbError: null")
 rep("""      case 'folders': { const tg = k => () => this.setState(st => ({ places: Object.assign({}, st.places, { [k]: !st.places[k] }) })), extra = [];""",
     """      case 'folders': { const tg = k => () => { this.setState(st => ({ places: Object.assign({}, st.places, { [k]: !st.places[k] }) })); if (k === 'usb') live.loadUsb(); }, extra = [], usbBlocks = [];
+        const placeRow = p => p[0] === 'usb' && !s.usbDrives.length ? { k: 'ghost', label: p[1], note: 'No USB drive plugged in.' }
+          : K(p[1], p[0] === 'folder' && s.musicSpace ? p[2] + ' ' + s.musicSpace + '.' : p[2], s.places[p[0]], tg(p[0]));
         // George, 2026-10-18: with no drive plugged in, USB cannot be chosen
         // (the design's ghost row) until one is, and Look again finds it.
         if (!s.usbDrives.length) usbBlocks.push(btn('Look again for a USB drive', () => live.loadUsb()));
