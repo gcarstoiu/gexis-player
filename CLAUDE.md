@@ -35,6 +35,13 @@ Claude handles implementation, tooling, tests, commits.
   stays. The mapping from sessions to commits lives in
   `docs/SESSIONS.local.md`, which is not committed.
 
+- **Branches stay clean** (George, 2026-10-18). The standing branches are
+  `main`, `docs` (documents, the main checkout) and `next` (the release
+  branch, `~/projects/gexis-player-next`); a phase or a release gets its own
+  branch for as long as it is open. Once a branch is merged into `main` it
+  is deleted, on GitHub and locally, as part of the post-merge steps; never
+  rename a standing branch after a phase. `docs/ROUTINE-CLEANUP.md` checks
+  it each run.
 - Every architectural decision becomes a numbered ADR before implementation.
 - Findings state their scope: what was tested, under what conditions, what was not.
 - Do not characterise size, difficulty or risk without naming the evidence.
