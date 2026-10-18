@@ -116,7 +116,11 @@
       {#if wantsHint}<div class="hint">Start music from your phone</div>{/if}
       <div class="tiles" style:--count={waiting.length}>
         {#each waiting as s (s.id)}
-          <div class="tile" class:is-lead={s.id === 'lms'}>
+          <!-- **The mark, its name under it, a dot for ready** (George,
+               2026-10-18, five sources on the 10.1": names and status lines
+               cut to "Blue…", "Starts …"; "make it generic and go with 2").
+               The manifest's status line is said to a screen reader. -->
+          <div class="tile" class:is-lead={s.id === 'lms'} title={s.status} aria-label="{s.name}: {s.status}">
             <div class="mark">
               <SourceMark
                 source={s.id}
@@ -126,10 +130,7 @@
                 opacity={s.id === 'lms' ? 1 : 0.8}
               />
             </div>
-            <div class="tile__text">
-              <div class="tile__name">{s.name}</div>
-              <div class="tile__status">{s.status}</div>
-            </div>
+            <div class="tile__name"><span class="tile__dot" aria-hidden="true"></span>{s.name}</div>
           </div>
         {/each}
       </div>
@@ -279,19 +280,24 @@
     color: var(--ink-strong);
     text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45);
   }
+  /* Each tile its own width, not a share of the screen's: six fit on the
+     10.1" with room to spare, and two do not stretch into banners. */
   .tiles {
     display: grid;
-    grid-template-columns: repeat(var(--count), minmax(0, 1fr));
+    grid-template-columns: repeat(var(--count), minmax(0, 168px));
+    justify-content: start;
     gap: 16px;
   }
   .tile {
     height: 132px;
     box-sizing: border-box;
     border-radius: var(--r-card);
-    padding: 0 22px;
+    padding: 0 12px;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 18px;
+    justify-content: center;
+    gap: 12px;
     min-width: 0;
     background: rgba(16, 26, 33, 0.72);
     border: 1px solid rgba(233, 238, 242, 0.14);
@@ -300,8 +306,8 @@
     border-color: rgba(126, 214, 188, 0.5);
   }
   .mark {
-    width: 72px;
-    height: 72px;
+    width: 64px;
+    height: 64px;
     flex-shrink: 0;
     border-radius: 50%;
     display: grid;
@@ -311,30 +317,25 @@
   .tile.is-lead .mark {
     background: rgba(126, 214, 188, 0.1);
   }
-  .tile__text {
-    min-width: 0;
-  }
   .tile__name {
-    font-size: 25px;
+    max-width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 18px;
     font-weight: 700;
     color: var(--ink);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .tile__status {
-    margin-top: 8px;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    letter-spacing: var(--track-label);
-    text-transform: uppercase;
-    color: var(--ink-quiet);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .tile.is-lead .tile__status {
-    color: var(--accent-lms);
+  /* Ready: only a source that can be played is drawn here at all. */
+  .tile__dot {
+    width: 8px;
+    height: 8px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--accent-lms);
   }
 
   .credit {
@@ -401,11 +402,7 @@
   }
   .waithome--bar .tile {
     height: 170px;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: center;
-    gap: 12px;
-    padding: 0 18px;
+    gap: 14px;
     border-radius: 20px;
   }
   .waithome--bar .mark {
@@ -413,7 +410,7 @@
     height: 56px;
   }
   .waithome--bar .tile__name {
-    font-size: 21px;
+    font-size: 19px;
   }
   .waithome--bar .credit {
     right: 116px;
