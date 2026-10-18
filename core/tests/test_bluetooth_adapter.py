@@ -59,6 +59,18 @@ def test_seed_metadata_reports_title_artist_album_and_position():
     ]
 
 
+def test_bluez_placeholder_text_is_no_title():
+    """George's panel, 2026-10-18: a phone that sent nothing showed *Not
+    Provided* as the track."""
+    adapter = BluetoothAdapter()
+    received = []
+    adapter.on_metadata_change(received.append)
+    adapter._seed_metadata({"Track": Variant("a{sv}", {
+        "Title": Variant("s", "Not Provided"), "Artist": Variant("s", " "), "Album": Variant("s", "Album")})})
+    got = received[-1]
+    assert got.title is None and got.artist is None and got.album == "Album"
+
+
 def test_seed_metadata_never_reports_artwork_or_sample_rate():
     """ADR-0014: Bluetooth supplies no artwork - MediaPlayer1's Track dict
     has no such field at all, not merely omitted here."""
