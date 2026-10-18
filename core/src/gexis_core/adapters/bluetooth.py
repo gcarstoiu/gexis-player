@@ -61,6 +61,20 @@ _DEVICE_PATH = re.compile(r"/org/bluez/[^/]+/dev_[^/]+")
 UNIT_NAME = "bluealsa-aplay.service"
 
 
+#: **BlueZ's word for nothing** (George's panel, 2026-10-18: a phone that
+#: sent no track showed *Not Provided* as the title). AVRCP fields a phone
+#: leaves empty arrive as this text.
+_NOT_GIVEN = frozenset({"", "not provided", "unknown"})
+
+
+def _given(value):
+    """The field, or None when it is BlueZ's placeholder."""
+    if value is None:
+        return None
+    text = str(value).strip()
+    return None if text.lower() in _NOT_GIVEN else text
+
+
 def _ms_to_s(value) -> float | None:
     return value / 1000.0 if isinstance(value, (int, float)) else None
 
@@ -181,9 +195,9 @@ class BluetoothAdapter(Adapter):
             return
         self._on_metadata(
             TrackMetadata(
-                title=self._last_track.get("Title"),
-                artist=self._last_track.get("Artist"),
-                album=self._last_track.get("Album"),
+                title=_given(self._last_track.get("Title")),
+                artist=_given(self._last_track.get("Artist")),
+                album=_given(self._last_track.get("Album")),
                 # No artwork or sample rate over AVRCP - MediaPlayer1's
                 # Track dict (doc/org.bluez.MediaPlayer.rst) has no such
                 # fields, matching ADR-0014's "Bluetooth supplies no
