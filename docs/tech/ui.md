@@ -354,11 +354,11 @@ scale factor) was tried first and set aside: the layouts are drawn for a
 `lms_enabled` is off and nothing is active: `Backdrop` behind a veil, the
 clock, date and device name top left (`waiting_clock`), the line *Start
 music from your phone* (`waiting_hint`, never on a bar), and a tile per
-renderer in `$sources` that `availability` marks waiting - `SourceMark`
-with its manifest name under it and a dot for ready, 168 px wide on every
-screen (George, 2026-10-18: five sources cut the names and status lines); a
-long name takes a second line, and the manifest's status line is the tile's
-title and accessible label. The picture's credit sits at the foot. With
+renderer in `$sources` that `availability` marks waiting - drawn by
+`WaitingServices`, the library's waiting footer, in its `bare` form: the
+pulsing marks with their names and states straight on the picture, no plate
+(George, 2026-10-18: tiles cut the names with five sources). From four
+sources the columns narrow to fit, on the panel and on a bar. The picture's credit sits at the foot. With
 every source off it says so, and the Settings button stays in the corner.
 Tiles are a translucent plate: ADR-0041 bans live backdrop blur.
 
