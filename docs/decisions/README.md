@@ -43,7 +43,7 @@ been written properly. **0098 has no record either.**
 | [0019](0019-peppy-screen-lifecycle.md) | Peppy screen: entry, exit and lifecycle | Accepted 2026-09-04 |
 | [0020](0020-library-browse-tree.md) | Library browse as a normalised tree | Accepted 2026-09-04; **partly superseded by [0030](0030-library-typed-radio-slimbrowse.md)**; cross-cutting table amended by 0029 |
 | [0021](0021-deployment-flashable-image.md) | Deployment as a flashable image | Accepted 2026-09-04; distribution channel deferred |
-| [0022](0022-settings.md) | Settings | Accepted 2026-09-04; remote-only text entry **superseded by [0029](0029-text-entry-on-every-surface.md)**; first-boot blocker answered by 0031 |
+| [0022](0022-settings.md) | Settings | Accepted 2026-09-04; remote-only text entry **superseded by [0029](0029-text-entry-on-every-surface.md)**; first-boot blocker answered by 0031; rows appended as confirmed (latest 2026-10-18) |
 | [0023](0023-svelte-ui.md) | The UI is Svelte | Accepted 2026-09-04 |
 | [0024](0024-bluetooth-pairing-no-pin.md) | Bluetooth pairing: no PIN, for this installation | Accepted 2026-09-06; **reversed by [0045](0045-bluetooth-pairing-confirmation.md)** |
 | [0025](0025-project-licence-gplv3.md) | gexis-player is licensed GPL v3 | Accepted 2026-09-08 |
@@ -135,7 +135,7 @@ been written properly. **0098 has no record either.**
 | [0112](0112-the-visualisers-fanart-frame-shows-the-artists-photos.md) | The visualiser's fanart frame shows the artist's photos | Accepted 2026-10-02: LMS `artistphotos` cached ahead; a 20 s crossfading slideshow |
 | [0113](0113-a-skin-packs-tables-ship-apart-from-its-pictures.md) | A skin pack's tables ship apart from its pictures | Accepted 2026-10-02; **not yet built** (2026-10-07). Amends 0111 |
 | [0114](0114-the-beszel-hub-as-a-plugin.md) | The Beszel hub as a plugin | Accepted 2026-10-02: `gexis-beszel-hub`, off until switched on, port 8095; no other settings |
-| [0115](0115-the-lyrion-server-as-a-plugin.md) | The Lyrion server as a plugin | Accepted 2026-10-02 (amended 2026-10-03): upstream 9.1.1, off, lowest priority; never switched to by itself |
+| [0115](0115-the-lyrion-server-as-a-plugin.md) | The Lyrion server as a plugin | Accepted 2026-10-02 (amended 2026-10-03; 2026-10-18: locations chosen, folders ticked): upstream 9.1.1, off, lowest priority; never switched to by itself |
 | [0116](0116-change-logs-in-settings.md) | Change logs in Settings | Accepted 2026-10-03: the last 10 releases' notes in Settings; older in `CHANGELOG.md` |
 | [0117](0117-dacs-beyond-the-two-on-the-bench.md) | DACs beyond the two on the bench | Accepted 2026-10-04: the card reports its own scale and name; Tested, Known, Detected; DSD postponed. **Amended 2026-10-18**: the lists show Tested or nothing |
 | [0118](0118-lyrion-s-own-menus.md) | Lyrion's own menus, plugins included | Accepted 2026-10-05: Lyrion's menus as home tiles, behind *Extended navigation*, off by default; player settings left out |
@@ -151,7 +151,7 @@ been written properly. **0098 has no record either.**
 | [0128](0128-setup-installs-plugins-and-settles.md) | First setup installs the plugins and waits until the player has settled | Accepted 2026-10-07: a Plugins step before Review; an unskippable settling screen |
 | [0129](0129-a-service-says-whether-it-is-connected.md) | A service says whether it is connected | Accepted 2026-10-08: read from the unit user's connections, not its log; `"connection": true`; Beszel first |
 | [0130](0130-the-spectrum-covers-what-is-heard.md) | The spectrum covers what is heard: 50 Hz to 16 kHz at every rate | Accepted 2026-10-08: log-spaced bands, rate-sized FFT; amended 2026-10-13: a band's level is its energy, no lift |
-| [0131](0131-setup-can-restore-a-backup.md) | Setup can restore a backup | Accepted 2026-10-08 (amended 2026-10-08): after Network, New player or Restore; every answer changeable |
+| [0131](0131-setup-can-restore-a-backup.md) | Setup can restore a backup | Accepted 2026-10-08 (amended 2026-10-08; 2026-10-18: the review by section): after Network, New player or Restore; every answer changeable |
 | [0132](0132-reset-to-factory-settings.md) | Reset to factory settings | Accepted 2026-10-09: in System; wiped at next boot to a fresh card, backups and music included |
 | [0133](0133-the-waiting-screen-and-the-players-own-wallpapers.md) | The waiting screen, and the player's own wallpapers | Accepted 2026-10-10 (amended 2026-10-11): built-in Gexis wallpapers; with LMS off, a waiting screen of clock and source tiles |
 | [0134](0134-the-panel-says-when-the-player-has-no-network.md) | A network lost after boot opens the setup network | Accepted 2026-10-11: after two minutes without a network; the strip withdrawn |
