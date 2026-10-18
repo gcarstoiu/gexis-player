@@ -47,7 +47,7 @@ from dbus_next.aio import MessageBus
 from gexis_core import memo, own_wallpapers, screen_apply, settling
 from gexis_core.players import Players, status_line
 from gexis_core.wallpapers import SEARCH as PIXABAY_SEARCH
-from gexis_core import backups, bluetooth_devices, skin_packs, device_name, discovery, hardware_report, lyrion_scan, lyrion_shares, lyrion_usb, problem_report, skin_previews, skins, wifi
+from gexis_core import backups, bluetooth_devices, skin_packs, device_name, discovery, hardware_report, lyrion_folders, lyrion_scan, lyrion_shares, lyrion_usb, problem_report, skin_previews, skins, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
 from gexis_core.artistinfo import PHOTO_BACKGROUND, PHOTO_LARGE, PHOTO_THUMB
 from gexis_core.artwork_sweep import ARTIST_NAMESPACE, remembered
@@ -2082,6 +2082,12 @@ class StateServer:
         except ValueError as exc:
             return self._setup_error(str(exc), 400)
 
+    async def _handle_music_space(self, request: web.Request) -> web.Response:
+        """The Music folder's free and total space, for part 2's *Where is
+        your music?* (George, 2026-10-18). Read only."""
+        space = await asyncio.to_thread(lyrion_folders.music_space)
+        return web.json_response(space or {"free": None, "total": None, "text": None})
+
     async def _handle_setup_backup(self, request: web.Request) -> web.Response:
         """**ADR-0131: a backup, uploaded from the phone in setup.** The body
         is the file, streamed to disk under its own cap (a backup can be far
@@ -2423,6 +2429,12 @@ class StateServer:
         for group in groups:
             for row in group["rows"]:
                 key = row.get("key")
+                if key == "lyrion-server.music_folder":
+                    # George, 2026-10-18: the Music folder's free and total space.
+                    space = await asyncio.to_thread(lyrion_folders.music_space)
+                    if space:
+                        row["note"] = f"{row.get('note') or ''} {space['text']}.".strip()
+                    continue
                 if row["type"] != "list":
                     continue
                 if key == "restore":
@@ -2927,6 +2939,7 @@ class StateServer:
         app.router.add_get("/setup/networks", self._handle_setup_networks)
         app.router.add_get("/setup/screen", self._handle_setup_screen)
         app.router.add_post("/setup/finish", self._handle_setup_finish)
+        app.router.add_get("/storage/music", self._handle_music_space)
         app.router.add_post("/setup/backup", self._handle_setup_backup)
         app.router.add_delete("/setup/backup", self._handle_setup_backup_forget)
         app.router.add_get("/setup/plugins", self._handle_setup_plugins)

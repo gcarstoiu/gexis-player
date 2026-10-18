@@ -221,7 +221,7 @@ class Component extends DCLogic {
     if (id === 'done') live.finish();
     if (id === 'later') live.later();
     if (id === 'bluetooth') live.trusted();
-    if (id === 'folders') { live.loadShares(); live.loadUsb(); }
+    if (id === 'folders') { live.loadShares(); live.loadUsb(); live.loadSpace(); }
   }
   restart(over) {
     clearTimeout(this.t1); clearTimeout(this.t2);
@@ -380,12 +380,14 @@ class Component extends DCLogic {
             : { t: 'Split', lhead: nm + ' does', left: ['Finds it and plays from it'], rhead: 'You, on that machine', right: ['Install Lyrion', 'Add your music', 'Run the scans'] },
           ...(here ? [] : [{ t: 'Addr', label: 'Get Lyrion at', value: 'lyrion.org' }])], foot: SK }; }
       case 'folders': { const tg = k => () => { this.setState(st => ({ places: Object.assign({}, st.places, { [k]: !st.places[k] }) })); if (k === 'usb') live.loadUsb(); }, extra = [], usbBlocks = [];
-        if (s.places.usb) { const o = s.usbOpen;
+        // George, 2026-10-18: with no drive plugged in, USB cannot be chosen
+        // (the design's ghost row) until one is, and Look again finds it.
+        if (!s.usbDrives.length) usbBlocks.push(btn('Look again for a USB drive', () => live.loadUsb()));
+        else if (s.places.usb) { const o = s.usbOpen;
           if (o) usbBlocks.push(list(o.items.map(i => HB(i.name, i.meta, () => i.add ? live.addUsb(i) : live.openUsb(i.drive, i.folder), { icon: 'fold' })), o.title),
             btn('Back to the drives', () => set({ usbOpen: null })));
           else if (s.usbDrives.length) usbBlocks.push(list(s.usbDrives.map(d => HB(d.name, d.meta, () => live.openUsb(d.drive, ''), { icon: 'fold' })), 'USB drives'),
             P('Open a drive to choose the folders Lyrion reads - or all of it.'));
-          else usbBlocks.push(P('No USB drive plugged in. Plug one into the player, then look again.'), btn('Look again', () => live.loadUsb()));
           if (s.usbError) usbBlocks.push(note('warn', '', s.usbError));
         }
         if (s.places.share) { const ss = s.shareStep, srv = s.shareSrv, addShare = (address, user, password) => live.addShare(address, user, password);
@@ -408,7 +410,7 @@ class Component extends DCLogic {
             btn('Add', () => { if (s.shareAddr.trim()) addShare(s.shareAddr.trim(), s.shareAU.trim() || null, s.shareAP || null); }), btn('Back', () => set({ shareStep: 'list' })));
           if (s.shareError) extra.push(note('warn', '', s.shareError));
         }
-        return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [list(PLACES.map(p => K(p[1], p[2], s.places[p[0]], tg(p[0]))), 'Lyrion reads'), ...usbBlocks, ...extra, (s.places.folder || s.places.usb || s.places.share) ? P('These become Lyrion’s music folders when it installs.') : note('info', 'Nothing chosen yet', 'Lyrion then starts with no music. Locations can be added later in Settings → Sources → Lyrion Server.')], foot: SK }; }
+        return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [list(PLACES.map(p => p[0] === 'usb' && !s.usbDrives.length ? { k: 'ghost', label: p[1], note: 'No USB drive plugged in.' } : K(p[1], p[0] === 'folder' && s.musicSpace ? p[2] + ' ' + s.musicSpace + '.' : p[2], s.places[p[0]], tg(p[0]))), 'Lyrion reads'), ...usbBlocks, ...extra, (s.places.folder || s.places.usb || s.places.share) ? P('These become Lyrion’s music folders when it installs.') : note('info', 'Nothing chosen yet', 'Lyrion then starts with no music. Locations can be added later in Settings → Sources → Lyrion Server.')], foot: SK }; }
       case 'plexamp': {
         const sub = 'Your Plex library, played on ' + nm + '.';
         const g = live.stage(live.component('plexamp.enabled', 'plexamp')), inst = g.done;
@@ -553,7 +555,7 @@ class Component extends DCLogic {
   let st = $state(Object.assign(init('A', mode === 'p1' ? 'p1' : 'p2', false), {
     first: true, nameSaved: false, second: true, touchpad: true, plexClaimed: false, plexError: null,
     volume: 'Hardware', volHw: {}, volNotes: {}, outTags: {}, outProblems: {}, town: '', net: 'your network', lyrMeta: '', lyrServer: null, pairDevice: '', pairCode: '',
-    shareServers: [], shareFound: [], shareFolder: null, shareSrvItem: null, shareError: null, finishError: null, finished: null,
+    shareServers: [], shareFound: [], shareFolder: null, musicSpace: null, shareSrvItem: null, shareError: null, finishError: null, finished: null,
     plugins: [], tick: 0, ready: false,
     //: **Drawn once the player's own values are in** (found 2026-10-18: the
     //: design's sample name and network showed until /settings arrived).
@@ -646,6 +648,11 @@ class Component extends DCLogic {
     },
     //: ADR-0115 decision 23: the USB drives plugged in, each opened for its
     //: folders; what is added goes to Lyrion's list as it is chosen.
+    //: George, 2026-10-18: the Music folder's free and total space.
+    async loadSpace() {
+      const got = await json('/storage/music').catch(() => ({}));
+      st.musicSpace = got.text ?? null;
+    },
     async loadUsb() {
       const got = await listItems('lyrion-server.usb_folders');
       st.usbDrives = got.items ?? [];

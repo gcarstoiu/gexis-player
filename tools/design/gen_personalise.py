@@ -76,7 +76,7 @@ rep("    if (id === 'listen' && s.lyrState === 'idle') this.setState({ lyrState:
 rep("""          if (s.shares.length && !ss) extra.push(list(s.shares.map(a => ({ k: 'plain', label: a.name, note: a.where, tag: ['Added', 'ok'] })), 'Network shares'));""",
     """          if (s.shares.length && !ss) extra.push({ t: 'Dev', head: 'Network shares', items: s.shares.map(a => ({ name: a.name, meta: a.where, fn: () => live.forgetShare(a.address) })), empty: '' });""")
 rep("  if (b.t === 'Dev') { o.items = ", "  if (b.t === 'Dev') { o.head = b.head || 'Trusted devices'; o.items = ")
-rep("    if (id === 'done') this.setState({ inst: 0 });", "    if (id === 'done') live.finish();\n    if (id === 'later') live.later();\n    if (id === 'bluetooth') live.trusted();\n    if (id === 'folders') { live.loadShares(); live.loadUsb(); }")
+rep("    if (id === 'done') this.setState({ inst: 0 });", "    if (id === 'done') live.finish();\n    if (id === 'later') live.later();\n    if (id === 'bluetooth') live.trusted();\n    if (id === 'folders') { live.loadShares(); live.loadUsb(); live.loadSpace(); }")
 # Close leaves the page.
 rep("    if (['done', 'later', 'p1restored'].includes(s.screen)) return this.restart();", "    if (['done', 'later', 'p1restored'].includes(s.screen)) return live.close();")
 # No simulation clock: Plexamp's download and the pairing come from the player.
@@ -99,16 +99,18 @@ rep("found ? { foot: 'Lyrion found on ' + s.net, footMeta: '192.0.2.10:9000' }",
 # on, the drives plugged in, each browsed for the folders Lyrion reads. With
 # nothing chosen the line under the list says Lyrion starts empty.
 rep("return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [list(PLACES.map(p => K(p[1], p[2], s.places[p[0]], tg(p[0]))), 'Lyrion reads'), ...extra, P('These become Lyrion’s music folders when it installs.')]",
-    "return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [list(PLACES.map(p => K(p[1], p[2], s.places[p[0]], tg(p[0]))), 'Lyrion reads'), ...usbBlocks, ...extra, (s.places.folder || s.places.usb || s.places.share) ? P('These become Lyrion’s music folders when it installs.') : note('info', 'Nothing chosen yet', 'Lyrion then starts with no music. Locations can be added later in Settings → Sources → Lyrion Server.')]")
+    "return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [list(PLACES.map(p => p[0] === 'usb' && !s.usbDrives.length ? { k: 'ghost', label: p[1], note: 'No USB drive plugged in.' } : K(p[1], p[0] === 'folder' && s.musicSpace ? p[2] + ' ' + s.musicSpace + '.' : p[2], s.places[p[0]], tg(p[0]))), 'Lyrion reads'), ...usbBlocks, ...extra, (s.places.folder || s.places.usb || s.places.share) ? P('These become Lyrion’s music folders when it installs.') : note('info', 'Nothing chosen yet', 'Lyrion then starts with no music. Locations can be added later in Settings → Sources → Lyrion Server.')]")
 rep("places: { folder: true, usb: false, share: false }", "places: { folder: false, usb: false, share: false }, usbDrives: [], usbOpen: null, usbError: null")
 rep("""      case 'folders': { const tg = k => () => this.setState(st => ({ places: Object.assign({}, st.places, { [k]: !st.places[k] }) })), extra = [];""",
     """      case 'folders': { const tg = k => () => { this.setState(st => ({ places: Object.assign({}, st.places, { [k]: !st.places[k] }) })); if (k === 'usb') live.loadUsb(); }, extra = [], usbBlocks = [];
-        if (s.places.usb) { const o = s.usbOpen;
+        // George, 2026-10-18: with no drive plugged in, USB cannot be chosen
+        // (the design's ghost row) until one is, and Look again finds it.
+        if (!s.usbDrives.length) usbBlocks.push(btn('Look again for a USB drive', () => live.loadUsb()));
+        else if (s.places.usb) { const o = s.usbOpen;
           if (o) usbBlocks.push(list(o.items.map(i => HB(i.name, i.meta, () => i.add ? live.addUsb(i) : live.openUsb(i.drive, i.folder), { icon: 'fold' })), o.title),
             btn('Back to the drives', () => set({ usbOpen: null })));
           else if (s.usbDrives.length) usbBlocks.push(list(s.usbDrives.map(d => HB(d.name, d.meta, () => live.openUsb(d.drive, ''), { icon: 'fold' })), 'USB drives'),
             P('Open a drive to choose the folders Lyrion reads - or all of it.'));
-          else usbBlocks.push(P('No USB drive plugged in. Plug one into the player, then look again.'), btn('Look again', () => live.loadUsb()));
           if (s.usbError) usbBlocks.push(note('warn', '', s.usbError));
         }""")
 rep("""        if (s.places.share) { const ss = s.shareStep, srv = s.shareSrv, addShare = (name, where) => this.setState(st => ({ shares: st.shares.concat([{ name, where }]), shareStep: null, shareAddr: '', shareAU: '', shareAP: '' }));

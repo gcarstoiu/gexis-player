@@ -37,7 +37,7 @@
   let st = $state(Object.assign(init('A', mode === 'p1' ? 'p1' : 'p2', false), {
     first: true, nameSaved: false, second: true, touchpad: true, plexClaimed: false, plexError: null,
     volume: 'Hardware', volHw: {}, volNotes: {}, outTags: {}, outProblems: {}, town: '', net: 'your network', lyrMeta: '', lyrServer: null, pairDevice: '', pairCode: '',
-    shareServers: [], shareFound: [], shareFolder: null, shareSrvItem: null, shareError: null, finishError: null, finished: null,
+    shareServers: [], shareFound: [], shareFolder: null, musicSpace: null, shareSrvItem: null, shareError: null, finishError: null, finished: null,
     plugins: [], tick: 0, ready: false,
     //: **Drawn once the player's own values are in** (found 2026-10-18: the
     //: design's sample name and network showed until /settings arrived).
@@ -130,6 +130,11 @@
     },
     //: ADR-0115 decision 23: the USB drives plugged in, each opened for its
     //: folders; what is added goes to Lyrion's list as it is chosen.
+    //: George, 2026-10-18: the Music folder's free and total space.
+    async loadSpace() {
+      const got = await json('/storage/music').catch(() => ({}));
+      st.musicSpace = got.text ?? null;
+    },
     async loadUsb() {
       const got = await listItems('lyrion-server.usb_folders');
       st.usbDrives = got.items ?? [];

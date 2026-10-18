@@ -1006,3 +1006,21 @@ async def test_a_share_opens_into_its_folders_and_the_scan_is_kept_a_minute(tmp_
 
         nfs = await (await client.post(url, json={"name": "nas:/volume1/music", "action": "folders"})).json()
         assert [i["name"] for i in nfs["items"]] == ["Add music"]
+
+
+@pytest.mark.asyncio
+async def test_the_music_folders_space_is_on_its_row_and_its_route(tmp_path, monkeypatch):
+    from gexis_core import lyrion_folders
+    from gexis_core.settings import SettingsStore
+    from gexis_core.settings_registry import Settings
+
+    monkeypatch.setattr(lyrion_folders, "music_space",
+                        lambda music=None: {"free": 1, "total": 2, "text": "51.2 GB free of 58.0 GB"})
+    registry = [{"id": "g", "label": "G", "rows": [
+        {"key": "lyrion-server.music_folder", "type": "toggle", "label": "Music folder", "note": "The player's own."}]}]
+    settings = Settings(SettingsStore(tmp_path / "s.db"), registry=registry, wired={"lyrion-server.music_folder": None})
+    server = StateServer(StateStore({}), settings=settings)
+    async with TestClient(TestServer(server.make_app())) as client:
+        rows = (await (await client.get("/settings")).json())["groups"][0]["rows"]
+        assert rows[0]["note"] == "The player's own. 51.2 GB free of 58.0 GB."
+        assert (await (await client.get("/storage/music")).json())["text"] == "51.2 GB free of 58.0 GB"

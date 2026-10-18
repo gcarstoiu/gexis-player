@@ -52,6 +52,29 @@ USB_KEEP_S = 7 * 24 * 3600
 USB_SEEN_EVERY_S = 3600
 
 
+def size_text(n: int) -> str:
+    """Bytes as a phone shows them: decimal units, one decimal under 100."""
+    for unit, size in (("TB", 10**12), ("GB", 10**9), ("MB", 10**6)):
+        if n >= size:
+            value = n / size
+            return f"{value:.1f} {unit}" if value < 100 else f"{value:.0f} {unit}"
+    return f"{n} bytes"
+
+
+def music_space(music: Path = MUSIC) -> dict | None:
+    """**The Music folder's room** (George, 2026-10-18: "For music folder
+    display total available and free space"): the file system it is on,
+    free and total, in bytes and as text. None when it cannot be read."""
+    import shutil
+
+    try:
+        usage = shutil.disk_usage(music if music.exists() else music.parent)
+    except OSError:
+        return None
+    return {"free": usage.free, "total": usage.total,
+            "text": f"{size_text(usage.free)} free of {size_text(usage.total)}"}
+
+
 def usb_recent(mounted_now: list[str], path: Path = USB_SEEN, now: float | None = None,
                keep_s: float = USB_KEEP_S) -> list[str]:
     """The USB folders seen mounted in the last 7 days, mounted now or not;

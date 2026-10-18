@@ -152,3 +152,13 @@ def test_a_chosen_folder_stays_for_7_days_after_its_drive_is_unplugged(monkeypat
     # Removed from the choice: out.
     asyncio.run(lf.sync(_rpc(prefs), is_mount=lambda p: False, usb_seen=seen, music_on=False, usb_chosen=[]))
     assert prefs["mediadirs"] == []
+
+
+def test_the_music_folders_space_reads_as_a_phone_shows_it(tmp_path):
+    """George, 2026-10-18: "For music folder display total available and
+    free space"."""
+    assert lf.size_text(51_234_000_000) == "51.2 GB"
+    assert lf.size_text(256_000_000_000) == "256 GB"
+    assert lf.size_text(1_500_000_000_000) == "1.5 TB"
+    space = lf.music_space(tmp_path / "Music")
+    assert space["free"] <= space["total"] and space["text"].count(" free of ") == 1
