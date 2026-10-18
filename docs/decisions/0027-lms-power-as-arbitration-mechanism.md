@@ -293,3 +293,22 @@ power-off to the player being listened to.
   supervisor's two seconds) that finds LMS has acquired since it began
   neither sends its power-off nor leaves one owed
   (`LmsAdapter._acquisitions`).
+
+## Amended 2026-10-18: on with nothing to play is not taken
+
+George, after a full run of first use: *"Lyrion client shouldn't just take
+over by itself once the indexing is done. It should go to whatever the user
+selected (extended, simple or no navigation) but with no source connected."*
+A player meeting the player's own new Lyrion server comes up powered on with
+an empty playlist; the adapter read *on at startup* as an acquisition (above),
+Lyrion became the current source with nothing to play, and the panel opened an
+empty Now Playing (sofapi, 23:37:17: "player already powered on at startup
+(acquisition)").
+
+Now a player on at startup whose playlist is empty (`playlist_tracks` 0) and
+which is not playing is switched off in Lyrion and released, not taken. A
+player on with something loaded - a paused album before a restart - is taken
+as before, and a missing count is read as before. A power-on or a play after
+that is the listener's choice and takes the device as always. The panel's
+side: a current source with no track opens the home, not Now Playing
+(ADR-0115 decision 29 as amended).

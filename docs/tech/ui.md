@@ -575,7 +575,8 @@ flowchart LR
   downloading or `components.lyrion.after.first` holds, and nothing plays,
   and hands it the stage as `reading` - a large block between the clock and
   the sources, Lyrion's mark left out of them.
-- **A source with nothing to show is no source** (`idleSource`): a current
+- **A source with nothing to show is no source** (`idleSource`; the core
+  side is ADR-0027 as amended 2026-10-18): a current
   source that is not playing and has no title opens the home - the library,
   or the waiting screen with the client off - never an empty Now Playing.
 - **The Peppy screen is not part of this app** (ADR-0014, ADR-0026).
