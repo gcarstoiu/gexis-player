@@ -2142,6 +2142,19 @@ class StateServer:
             turn = 0
         return web.json_response(await asyncio.to_thread(setup_flow.screen_choices, report, turn))
 
+    async def _handle_setup_outputs(self, request: web.Request) -> web.Response:
+        """**The Volume choice under the Output step** (George, 2026-10-18):
+        each output as Settings lists it, and whether it has a volume
+        control of its own - without one, Hardware cannot be had, as in
+        Settings (ADR-0127 §2)."""
+        closed = self._setup_closed()
+        if closed is not None:
+            return closed
+        from gexis_core import outputs
+
+        found = await asyncio.to_thread(outputs.discover)
+        return web.json_response([{"option": o.option, "hardware": o.control is not None} for o in found])
+
     async def _handle_setup_plugins(self, request: web.Request) -> web.Response:
         """ADR-0128: the Plugins step - every plugin the release ships, with
         what it is, where it downloads from, and its notice."""
@@ -2782,6 +2795,7 @@ class StateServer:
         app.router.add_post("/setup/backup", self._handle_setup_backup)
         app.router.add_delete("/setup/backup", self._handle_setup_backup_forget)
         app.router.add_get("/setup/plugins", self._handle_setup_plugins)
+        app.router.add_get("/setup/outputs", self._handle_setup_outputs)
         app.router.add_get("/personalise", self._handle_personalise)
         app.router.add_post("/personalise/finish", self._handle_personalise_finish)
         app.router.add_post("/personalise/later", self._handle_personalise_later)

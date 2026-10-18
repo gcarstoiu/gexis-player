@@ -35,7 +35,8 @@
   //: the player: its name, clock, network, the Lyrion search, Plexamp's
   //: download, a phone asking to pair, the network shares, the downloads.
   let st = $state(Object.assign(init('A', mode === 'p1' ? 'p1' : 'p2', false), {
-    first: true, nameSaved: false, second: true, town: '', net: 'your network', lyrMeta: '', lyrServer: null, pairDevice: '', pairCode: '',
+    first: true, nameSaved: false, second: true, touchpad: true,
+    volume: 'Hardware', volHw: {}, volNotes: {}, town: '', net: 'your network', lyrMeta: '', lyrServer: null, pairDevice: '', pairCode: '',
     shareServers: [], shareFound: [], shareSrvItem: null, shareError: null, finishError: null, finished: null,
     plugins: [], tick: 0, ready: false,
     // Part 1's own.
@@ -179,6 +180,14 @@
       const m = (st.screenInfo?.models ?? []).find((x) => x.label === label) ?? st.screenInfo?.suggested;
       return !!m && !(st.screenInfo?.unchanged ?? []).includes(m.id);
     },
+    //: Whether an output has a volume control of its own: without one,
+    //: Hardware cannot be had (ADR-0127 §2). Unknown counts as having one.
+    hasHw(option) { return st.volHw[option] !== false; },
+    //: The output chosen, and a volume type it can take.
+    pickOutput(option) {
+      st.output = option;
+      if (st.volume === 'Hardware' && !live.hasHw(option)) st.volume = 'Software';
+    },
     pluginName(id) { return st.offered.find((p) => p.id === id)?.name ?? id; },
     pickBackup() {
       const input = Object.assign(document.createElement('input'), { type: 'file' });
@@ -219,7 +228,7 @@
         case 'p1start': return { start: s.start === 'backup' ? 'restore' : 'new' };
         case 'p1name': st.nameSaved = true; return { name: s.name.trim() };
         case 'p1clock': return { timezone: s.tz, clock: s.fmt ? '12 h' : '24 h' };
-        case 'p1output': return { output: s.output };
+        case 'p1output': return { output: s.output, volume: s.volume };
         case 'p1screen': return s.scr === 'headless' ? { headless: true } : s.scPick ? { headless: false, screen: s.scPick } : {};
         default: return {};
       }
@@ -314,6 +323,7 @@
     let tz = saved.timezone ?? (setup?.needed ? phoneTz : rows.timezone?.value) ?? phoneTz;
     if (tz && zones.length && !zones.includes(tz)) tz = null;
     const outputs = rows.output_device?.options ?? [];
+    try { for (const o of await json('/setup/outputs')) st.volHw[o.option] = o.hardware; } catch { /* all offered */ }
     const sug = st.screenInfo?.suggested;
     const scPick = saved.headless ? null : saved.screen ?? (setup?.needed ? null : rows.screen?.value ?? null) ?? sug?.label ?? null;
     Object.assign(st, {
@@ -322,6 +332,11 @@
       fmt: (saved.clock ?? rows.clock_format?.value ?? '24 h') === '12 h' ? 1 : 0,
       outputs, outNotes: rows.output_device?.optionNotes ?? {}, recommended: rows.output_device?.value ?? outputs[0] ?? null,
       output: saved.output ?? rows.output_device?.value ?? outputs[0] ?? null,
+      volume: saved.volume ?? rows.output_mode?.value ?? 'Hardware',
+      //: Settings' notes, without the sentence it adds about the output in
+      //: use now: in setup the output is still being chosen.
+      volNotes: Object.fromEntries(Object.entries(rows.output_mode?.optionNotes ?? {})
+        .map(([k, v]) => [k, String(v).replace(/\s*DSD files play natively on [^.]*\./, '')])),
       scr: saved.headless ? 'headless' : scPick && sug && scPick === sug.label ? 'panel' : scPick ? 'other' : sug ? 'panel' : 'other',
       scPick, scMaker: null,
       start: saved.start === 'restore' ? 'backup' : 'new',
@@ -330,6 +345,7 @@
       nameSaved: saved.name != null, second: saved.second_player ?? true
     });
     if (saved.backup) setBackup(saved.backup);
+    if (st.volume === 'Hardware' && !live.hasHw(st.output)) st.volume = 'Software';
     const p1 = ['p1welcome', 'p1net', 'p1start', 'p1backup', 'p1name', 'p1clock', 'p1output', 'p1screen', 'p1review', 'p1restore'];
     st.screen = st.joinError ? 'p1net' : p1.includes(saved.step) ? saved.step : 'p1welcome';
     st.ready = true;
@@ -364,6 +380,7 @@
         standby_times: s.ivs.map((iv) => ({ from: iv.from, until: iv.until, days: [...iv.days] }))
       });
       if (loc) o.weather_location = loc;
+      o.phone_touchpad = s.touchpad;
     }
     return o;
   }
@@ -382,7 +399,7 @@
       styles: styles.length ? styles : ['Calm'], wallStyle: styles[0] ?? 'Calm',
       idleOn: v.idle_enabled === true, bg: BGS.includes(v.idle_background) ? v.idle_background : 'Gexis wallpapers',
       clock: v.idle_clock !== false, weather: v.idle_weather === true && !!v.weather_location,
-      standby: v.standby_schedule === true
+      standby: v.standby_schedule === true, touchpad: v.phone_touchpad !== false
     });
     if (Array.isArray(v.standby_times) && v.standby_times.length) st.ivs = v.standby_times.map((iv) => ({ ...iv, days: [...iv.days] }));
   }

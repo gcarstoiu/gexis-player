@@ -46,6 +46,9 @@ SETTINGS = {
     "timezone": "timezone",
     "clock": "clock_format",
     "output": "output_device",
+    #: George, 2026-10-18: the volume type, asked under the output it
+    #: depends on. After it, so the output's own limits are in force.
+    "volume": "output_mode",
     "lms": "lms_server",
     "spotify": "spotify_enabled",
     "bluetooth": "bt_enabled",
@@ -62,6 +65,8 @@ TEXT = ("ssid", "password", "name", "timezone", "clock", "output", "lms", "scree
 #: step asks: find it once on the network, this address, or not at all.
 LMS_MODES = ("find", "address", "off")
 FLAGS = ("hidden", "spotify", "bluetooth", "headless", "visualiser", "second_player")
+#: The Volume row's options (ADR-0127).
+VOLUMES = ("Hardware", "Software", "Fixed")
 
 
 
@@ -171,6 +176,10 @@ class SetupFlow:
             elif key in FLAGS:
                 if not isinstance(value, bool):
                     raise ValueError(f"{key} must be true or false")
+                data[key] = value
+            elif key == "volume":
+                if value is not None and value not in VOLUMES:
+                    raise ValueError(f"volume must be one of {', '.join(VOLUMES)}")
                 data[key] = value
             elif key == "lms_mode":
                 if value is not None and value not in LMS_MODES:

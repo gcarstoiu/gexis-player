@@ -373,6 +373,14 @@ const cond = c => ({ sunDisplay: c === 'sun' || c === 'part' ? 'block' : 'none',
   {#if V.kCustom}
     <div style="position:absolute;inset:12%;border:2px dashed rgba(233,238,242,0.28);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12cqw;font-weight:300;color:rgba(233,238,242,0.55);">+</div>
   {/if}
+  {#if p.pointer}
+    <div style="position:absolute;inset:0;z-index:30;pointer-events:none;">
+      <span style="position:absolute;width:4.6cqw;height:4.6cqw;margin:-2.3cqw 0 0 -2.3cqw;animation:tpMove 6.4s cubic-bezier(0.45,0,0.25,1) infinite;">
+        <span style="position:absolute;inset:0;border-radius:999px;border:0.55cqw solid #7ed6bc;box-sizing:border-box;opacity:0;animation:tpRing 6.4s ease-out infinite;"></span>
+        <span style="position:absolute;inset:0;border-radius:999px;background:#7ed6bc;border:0.45cqw solid #0c1014;box-sizing:border-box;animation:tpPress 6.4s ease-out infinite;"></span>
+      </span>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -392,6 +400,10 @@ const cond = c => ({ sunDisplay: c === 'sun' || c === 'part' ? 'block' : 'none',
   @keyframes pmRiseB{0%{transform:translate(0,0) scale(0.6);opacity:0;}12%{opacity:1;}50%{transform:translate(3cqw,-12cqw) scale(1);}85%{opacity:1;}100%{transform:translate(0,-24cqw) scale(0.7);opacity:0;}}
   @keyframes pmPump{0%,100%{transform:scale(0.86);}50%{transform:scale(1.06);}}
   @keyframes fuCycle{0%,22%{opacity:1;}25%,97%{opacity:0;}100%{opacity:1;}}
+
+  @keyframes tpMove{0%{left:74%;top:84%;}20%,32%{left:32.8%;top:27%;}50%,62%{left:67.2%;top:27%;}80%,90%{left:40%;top:82%;}100%{left:74%;top:84%;}}
+  @keyframes tpPress{0%,21%,27%,51%,57%,81%,87%,100%{transform:scale(1);}24%,54%,84%{transform:scale(0.7);}}
+  @keyframes tpRing{0%,23%{transform:scale(0.8);opacity:0;}24%{opacity:0.95;}36%{transform:scale(2.6);opacity:0;}53%{transform:scale(0.8);opacity:0;}54%{opacity:0.95;}66%{transform:scale(2.6);opacity:0;}83%{transform:scale(0.8);opacity:0;}84%{opacity:0.95;}96%{transform:scale(2.6);opacity:0;}100%{opacity:0;}}
 
   }
 </style>

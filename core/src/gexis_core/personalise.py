@@ -42,6 +42,7 @@ PENDING, DONE, LATER = "pending", "done", "later"
 KEYS = (
     "lms_enabled", "lms_server", "lms_extended_nav", "lms_library",
     "spotify_enabled", "bt_enabled",
+    "phone_touchpad",
     "visualiser_skins", "viz_timeout", "skin_corpus", "skin_motion", "record_speed",
     "waiting_clock", "waiting_background", "waiting_wallpaper_styles",
     "idle_enabled", "idle_background", "wallpaper_styles", "idle_clock", "idle_weather",

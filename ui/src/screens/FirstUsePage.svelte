@@ -133,9 +133,9 @@ const sum = (rows, head) => ({ t: 'Sum', rows, head });
 const P1N = ['Network', 'Start', 'Name', 'Time', 'Output', 'Screen', 'Review'], P1B = ['Network', 'Start', 'Output', 'Screen', 'Review'];
 const P1C = { Network: '#8fc4d8', Start: '#b0bcc4', Name: '#e8a0b4', Time: '#c8a2d8', Output: '#7ed6bc', Screen: '#8fd9a8', Review: '#f2a48f' };
 const P1AT = { p1net: 'Network', p1start: 'Start', p1backup: 'Start', p1name: 'Name', p1clock: 'Time', p1output: 'Output', p1screen: 'Screen', p1review: 'Review', p1restore: 'Review' };
-const P2M = { listen: ['Listen', C.music], mix: ['Listen', C.music], lyrion: ['Lyrion', C.lyr], folders: ['Folders', C.fold], plexamp: ['Plexamp', C.plex], browse: ['Browse', C.browse], spotify: ['Spotify', C.spo], bluetooth: ['Bluetooth', C.bt], visualiser: ['Visualiser', C.scr], idle: ['When idle', C.idle], wait: ['While it waits', C.idle], standby: ['Standby', C.stby], plexsign: ['Plex sign-in', C.plex], review: ['Review', C.rev] };
-const LABEL = { p1welcome: 'Welcome', p1net: 'Network', p1start: 'New player or backup', p1backup: 'Upload a backup', p1name: 'Name', p1clock: 'Clock', p1output: 'Output', p1screen: 'Screen', p1review: 'Check it over', p1join: 'Joining the network', p1restore: 'Check it over', p1restored: 'Restoring', listen: 'How will you listen?', mix: 'My own mix', lyrion: 'Where Lyrion runs', folders: 'Where your music is', plexamp: 'Plexamp', browse: 'Browse', spotify: 'Spotify', bluetooth: 'Bluetooth', visualiser: 'Visualiser', idle: 'When idle', wait: 'While it waits', standby: 'Standby', plexsign: 'Plex sign-in', review: 'Your setup', done: 'Getting ready', later: 'Kept the defaults' };
-const CODES = { p1welcome: '1.0', p1net: '1.1', p1start: '1.2', p1name: '1.3', p1clock: '1.4', p1output: '1.5', p1screen: '1.6', p1review: '1.7', p1join: '1.8', p1backup: '1.2b', p1restore: '1.7b', p1restored: '1.8b', listen: '5A0', mix: '4A1m', lyrion: '5A2', folders: '5A3', plexamp: 'X1', browse: '5A4', spotify: '5A5', bluetooth: '5A6', visualiser: '5A7', idle: '5A8', wait: '5A8w', standby: '5A9', plexsign: 'X2', review: '5A10', done: 'End', later: 'End' };
+const P2M = { listen: ['Listen', C.music], mix: ['Listen', C.music], lyrion: ['Lyrion', C.lyr], folders: ['Folders', C.fold], plexamp: ['Plexamp', C.plex], browse: ['Browse', C.browse], spotify: ['Spotify', C.spo], bluetooth: ['Bluetooth', C.bt], touchpad: ['Touchpad', C.ext], visualiser: ['Visualiser', C.scr], idle: ['When idle', C.idle], wait: ['While it waits', C.idle], standby: ['Standby', C.stby], plexsign: ['Plex sign-in', C.plex], review: ['Review', C.rev] };
+const LABEL = { p1welcome: 'Welcome', p1net: 'Network', p1start: 'New player or backup', p1backup: 'Upload a backup', p1name: 'Name', p1clock: 'Clock', p1output: 'Output', p1screen: 'Screen', p1review: 'Check it over', p1join: 'Joining the network', p1restore: 'Check it over', p1restored: 'Restoring', listen: 'How will you listen?', mix: 'My own mix', lyrion: 'Where Lyrion runs', folders: 'Where your music is', plexamp: 'Plexamp', browse: 'Browse', spotify: 'Spotify', bluetooth: 'Bluetooth', touchpad: 'Touchpad', visualiser: 'Visualiser', idle: 'When idle', wait: 'While it waits', standby: 'Standby', plexsign: 'Plex sign-in', review: 'Your setup', done: 'Getting ready', later: 'Kept the defaults' };
+const CODES = { p1welcome: '1.0', p1net: '1.1', p1start: '1.2', p1name: '1.3', p1clock: '1.4', p1output: '1.5', p1screen: '1.6', p1review: '1.7', p1join: '1.8', p1backup: '1.2b', p1restore: '1.7b', p1restored: '1.8b', listen: '5A0', mix: '4A1m', lyrion: '5A2', folders: '5A3', plexamp: 'X1', browse: '5A4', spotify: '5A5', bluetooth: '5A6', touchpad: '5A6t', visualiser: '5A7', idle: '5A8', wait: '5A8w', standby: '5A9', plexsign: 'X2', review: '5A10', done: 'End', later: 'End' };
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0')), QUARTERS = ['00', '15', '30', '45'];
 const daysSaid = days => { const on = DAYS.filter(d => days.includes(d)); return on.length === 7 ? 'every day' : on.join() === 'Mon,Tue,Wed,Thu,Fri' ? 'Mon–Fri' : on.join() === 'Sat,Sun' ? 'weekends' : on.join(', '); };
 const ivSaid = ivs => !ivs.length ? 'None' : ivs.length > 1 ? ivs.length + ' times' : ivs[0].from + '–' + ivs[0].until + ' · ' + daysSaid(ivs[0].days);
@@ -207,7 +207,7 @@ class Component extends DCLogic {
     if (d.plex) { p.push('plexamp'); if (!s.plexSkipped) p.push('plexsign'); }
     if (d.spo) p.push('spotify');
     if (d.bt) p.push('bluetooth');
-    if (!d.headless) p.push('visualiser', ...(d.wait ? ['wait'] : []), 'idle', 'standby');
+    if (!d.headless) p.push('touchpad', 'visualiser', ...(d.wait ? ['wait'] : []), 'idle', 'standby');
     return p;
   }
   path() { const s = this.state; return s.screen.startsWith('p1') ? this.p1Path(s) : this.p2Path(s); }
@@ -313,8 +313,11 @@ class Component extends DCLogic {
         else blocks.push(list(live.cities(s.tzRegion).map(c => R(c.split('/').slice(1).join(' / ').replace(/_/g, ' ') || c, '', s.tz === c, () => set({ tz: c }))), s.tzRegion), btn('Another region', () => set({ tzRegion: null })));
         blocks.push(seg('Clock format', ['24 h', '12 h'], s.fmt, P1C.Time, i => set({ fmt: i })));
         return { title: 'Set the clock', sub: 'The idle screen is mostly a clock, so this is worth getting right.', blocks, foot: { nextOff: !s.tz } }; }
-      case 'p1output': return { title: 'Choose the output', sub: 'What the player sends audio to.', blocks: [list(s.outputs.map(o => R(o, s.outNotes[o] || '', s.output === o, () => set({ output: o }), { tag: o === s.recommended ? ['Recommended', 'ok'] : null }))),
-        ...(live.noBoard() ? [note('info', 'A DAC board not in the list?', 'A board without its own identity shows up once it is chosen in Settings → Audio → Sound card board, after setup.')] : [])], foot: { nextOff: !s.output } };
+      case 'p1output': { const hw = live.hasHw(s.output), short = (s.output || 'This output').split(' — ')[0];
+        return { title: 'Choose the output', sub: 'What the player sends audio to, and how its volume is set.', blocks: [list(s.outputs.map(o => R(o, s.outNotes[o] || '', s.output === o, () => live.pickOutput(o), { tag: o === s.recommended ? ['Recommended', 'ok'] : null }))),
+        ...(live.noBoard() ? [note('info', 'A DAC board not in the list?', 'A board without its own identity shows up once it is chosen in Settings → Audio → Sound card board, after setup.')] : []),
+        ...(s.output ? [list(['Hardware', 'Software', 'Fixed'].map(v => v === 'Hardware' && !hw ? { k: 'ghost', label: v, note: short + ' has no volume control of its own.' } : R(v, s.volNotes[v] || '', s.volume === v, () => set({ volume: v }))), 'Volume')] : []),
+        ...(s.output && s.volume === 'Fixed' ? [note('warn', 'Fixed volume', 'Full level from the moment setup finishes, and the panel cannot lower it. Turn your amplifier down first.')] : [])], foot: { nextOff: !s.output || !s.volume } }; }
       case 'p1screen': { const info = s.screenInfo || {}, sug = info.suggested, rows = [], blocks = [];
         if (sug) rows.push(R(sug.maker + ' ' + live.short(sug), sug.width + ' × ' + sug.height + ' · ' + (sug.family === 'bar' ? 'Bar' : 'Standard') + ' layout', s.scr === 'panel', () => set({ scr: 'panel', scPick: sug.label }), { tag: sug.tested ? ['Tested', 'ok'] : null }));
         rows.push(R('Another screen', s.scr === 'other' && s.scPick ? live.labelOf(s.scPick) : 'Pick the model from a list.', s.scr === 'other', () => set({ scr: 'other', scPick: null })));
@@ -328,7 +331,7 @@ class Component extends DCLogic {
         else if (s.scPick && live.asksKeep(s.scPick)) blocks.push(note('info', 'Then, on the player’s screen', 'When setup finishes the player restarts on this screen and asks Keep this screen?. If nobody answers Keep within two minutes, it goes back.'));
         return { title: 'Is this your screen?', sub: sug ? 'What the screen reports matches this model. It sets the layout and the visualiser skins.' : 'Choose the model, or Headless. It sets the layout and the visualiser skins.', blocks, foot: { nextOff: !(s.scr === 'headless' || s.scPick) } }; }
       case 'p1review': { const ch = id => () => this.go(id, 'p1review');
-        return { title: 'Check it over', sub: s.net ? 'Finishing moves the player to ' + s.net + '.' : 'Finishing writes all of this to the player.', blocks: [sum([['Network', s.net || 'Cable only', ch('p1net')], ['Name', nm + ' · ' + sl + '.local', ch('p1name')], ['Time', (s.tz || 'Not set') + ' · ' + (s.fmt ? '12 h' : '24 h'), ch('p1clock')], ['Output', s.output || 'Not set', ch('p1output')], ['Screen', s.scr === 'headless' ? 'Headless' : live.labelOf(s.scPick), ch('p1screen')]]),
+        return { title: 'Check it over', sub: s.net ? 'Finishing moves the player to ' + s.net + '.' : 'Finishing writes all of this to the player.', blocks: [sum([['Network', s.net || 'Cable only', ch('p1net')], ['Name', nm + ' · ' + sl + '.local', ch('p1name')], ['Time', (s.tz || 'Not set') + ' · ' + (s.fmt ? '12 h' : '24 h'), ch('p1clock')], ['Output', s.output ? s.output + ' · ' + s.volume + ' volume' : 'Not set', ch('p1output')], ['Screen', s.scr === 'headless' ? 'Headless' : live.labelOf(s.scPick), ch('p1screen')]]),
           note('info', 'Then, on your home Wi-Fi', 'How you listen and what the screen shows. A few questions, each with a default.'), ...(s.problem ? [note('warn', '', s.problem)] : [])], foot: { next: 'Finish and connect' } }; }
       case 'p1join': return { hero: true, crumb: 'Almost done', title: s.net ? nm + ' is joining ' + s.net : nm + ' is set up',
         blocks: [P(s.net ? 'This page came from the player’s own Wi-Fi, so it stops here. Put this phone back on ' + s.net + ', then open:' : 'Open the player at its address:'), { t: 'Addr', label: 'Open in any browser', value: 'http://' + sl + '.local:8090' }, status('spin', 'Waiting for ' + nm + (s.net ? ' on ' + s.net : '')),
@@ -339,7 +342,7 @@ class Component extends DCLogic {
         const listens = [b.lms_enabled !== false && 'Lyrion', b.spotify_enabled !== false && 'Spotify', b.bt_enabled !== false && 'Bluetooth'].filter(Boolean).join(' · ') || 'Nothing';
         const installed = [...en.map(live.pluginName), b.visualiser_skins ? 'Visualiser skins' : null].filter(Boolean).join(' · ') || 'Nothing';
         const renamed = !!b.device_name && s.name.trim() !== b.device_name.trim(), left = (s.backup && s.backup.identities) || [];
-        return { title: 'Check it over', sub: 'Everything else comes from the backup.', blocks: [sum([['Network', s.net || 'Cable only', ch('p1net')], ['Name', nm + ' · ' + sl + '.local', ch('p1name')], ['Output', s.output || 'Not set', ch('p1output')], ['Screen', s.scr === 'headless' ? 'Headless' : live.labelOf(s.scPick), ch('p1screen')]]),
+        return { title: 'Check it over', sub: 'Everything else comes from the backup.', blocks: [sum([['Network', s.net || 'Cable only', ch('p1net')], ['Name', nm + ' · ' + sl + '.local', ch('p1name')], ['Output', s.output ? s.output + ' · ' + s.volume + ' volume' : 'Not set', ch('p1output')], ['Screen', s.scr === 'headless' ? 'Headless' : live.labelOf(s.scPick), ch('p1screen')]]),
           ...(renamed ? [list([K('A second player', left.length ? 'The player the backup came from keeps its own ' + left.join(', ') + '; this one starts without them.' : 'The player the backup came from keeps what is its own.', s.second, () => live.second(!s.second))])] : []),
           sum([['Time', (b.timezone || '—') + ' · ' + (b.clock_format || '24 h')], ['Listens to', listens], ['Installed', installed]], 'From the backup'),
           note('info', 'Nothing more to ask', 'The player restores, joins ' + (s.net || 'your network') + ' and downloads again what the backup had installed.'), ...(s.problem ? [note('warn', '', s.problem)] : [])], foot: { next: 'Restore and connect' } }; }
@@ -404,6 +407,8 @@ class Component extends DCLogic {
           return { title: 'Bluetooth', sub, blocks: [en, ...(last ? [status('ok', last.name + ' is paired')] : []), ...devs, btn('Pair another phone', () => set({ btPhase: 'disc', btLeft: 180 }))] }; }
         return { title: 'Bluetooth', sub, blocks: [en, status('spin', 'Waiting for a phone', 'Tap ' + nm + ' in its Bluetooth list'), ...devs], foot: SK };
       }
+      case 'touchpad': return { title: 'Touchpad on your phone', sub: 'In the phone’s volume sheet: move a pointer on ' + nm + '’s screen, tap, type, scroll with two fingers and pinch to zoom.', pv: pv({ kind: 'lib', pointer: s.touchpad }),
+        blocks: [list([T('Phone touchpad', '', s.touchpad, flip('touchpad'))]), note('info', 'More in Settings', s.touchpad ? 'Display → Touchpad: Pointer speed, how far the pointer moves for a finger’s movement, and Pointer style, a dot or an arrow.' : 'Display → Touchpad turns it on again, with its pointer speed and style.')], foot: SK };
       case 'visualiser': { const k = s.skin, a = ANIM[k], rpm = s.rpm ? 45 : 33;
         return { title: 'While music plays', sub: 'What the screen shows with the music.', pv: pv(s.vizOn ? { kind: k, rpm, animate: s.animate } : { kind: d.lyr ? KNAV[s.browse] : 'now' }),
           blocks: [list([T('Visualiser', 'Takes the screen while music plays.', s.vizOn, flip('vizOn'), { icon: 'viz' })]), ...(s.vizOn ? [
@@ -523,7 +528,8 @@ class Component extends DCLogic {
   //: the player: its name, clock, network, the Lyrion search, Plexamp's
   //: download, a phone asking to pair, the network shares, the downloads.
   let st = $state(Object.assign(init('A', mode === 'p1' ? 'p1' : 'p2', false), {
-    first: true, nameSaved: false, second: true, town: '', net: 'your network', lyrMeta: '', lyrServer: null, pairDevice: '', pairCode: '',
+    first: true, nameSaved: false, second: true, touchpad: true,
+    volume: 'Hardware', volHw: {}, volNotes: {}, town: '', net: 'your network', lyrMeta: '', lyrServer: null, pairDevice: '', pairCode: '',
     shareServers: [], shareFound: [], shareSrvItem: null, shareError: null, finishError: null, finished: null,
     plugins: [], tick: 0, ready: false,
     // Part 1's own.
@@ -667,6 +673,14 @@ class Component extends DCLogic {
       const m = (st.screenInfo?.models ?? []).find((x) => x.label === label) ?? st.screenInfo?.suggested;
       return !!m && !(st.screenInfo?.unchanged ?? []).includes(m.id);
     },
+    //: Whether an output has a volume control of its own: without one,
+    //: Hardware cannot be had (ADR-0127 §2). Unknown counts as having one.
+    hasHw(option) { return st.volHw[option] !== false; },
+    //: The output chosen, and a volume type it can take.
+    pickOutput(option) {
+      st.output = option;
+      if (st.volume === 'Hardware' && !live.hasHw(option)) st.volume = 'Software';
+    },
     pluginName(id) { return st.offered.find((p) => p.id === id)?.name ?? id; },
     pickBackup() {
       const input = Object.assign(document.createElement('input'), { type: 'file' });
@@ -707,7 +721,7 @@ class Component extends DCLogic {
         case 'p1start': return { start: s.start === 'backup' ? 'restore' : 'new' };
         case 'p1name': st.nameSaved = true; return { name: s.name.trim() };
         case 'p1clock': return { timezone: s.tz, clock: s.fmt ? '12 h' : '24 h' };
-        case 'p1output': return { output: s.output };
+        case 'p1output': return { output: s.output, volume: s.volume };
         case 'p1screen': return s.scr === 'headless' ? { headless: true } : s.scPick ? { headless: false, screen: s.scPick } : {};
         default: return {};
       }
@@ -802,6 +816,7 @@ class Component extends DCLogic {
     let tz = saved.timezone ?? (setup?.needed ? phoneTz : rows.timezone?.value) ?? phoneTz;
     if (tz && zones.length && !zones.includes(tz)) tz = null;
     const outputs = rows.output_device?.options ?? [];
+    try { for (const o of await json('/setup/outputs')) st.volHw[o.option] = o.hardware; } catch { /* all offered */ }
     const sug = st.screenInfo?.suggested;
     const scPick = saved.headless ? null : saved.screen ?? (setup?.needed ? null : rows.screen?.value ?? null) ?? sug?.label ?? null;
     Object.assign(st, {
@@ -810,6 +825,11 @@ class Component extends DCLogic {
       fmt: (saved.clock ?? rows.clock_format?.value ?? '24 h') === '12 h' ? 1 : 0,
       outputs, outNotes: rows.output_device?.optionNotes ?? {}, recommended: rows.output_device?.value ?? outputs[0] ?? null,
       output: saved.output ?? rows.output_device?.value ?? outputs[0] ?? null,
+      volume: saved.volume ?? rows.output_mode?.value ?? 'Hardware',
+      //: Settings' notes, without the sentence it adds about the output in
+      //: use now: in setup the output is still being chosen.
+      volNotes: Object.fromEntries(Object.entries(rows.output_mode?.optionNotes ?? {})
+        .map(([k, v]) => [k, String(v).replace(/\s*DSD files play natively on [^.]*\./, '')])),
       scr: saved.headless ? 'headless' : scPick && sug && scPick === sug.label ? 'panel' : scPick ? 'other' : sug ? 'panel' : 'other',
       scPick, scMaker: null,
       start: saved.start === 'restore' ? 'backup' : 'new',
@@ -818,6 +838,7 @@ class Component extends DCLogic {
       nameSaved: saved.name != null, second: saved.second_player ?? true
     });
     if (saved.backup) setBackup(saved.backup);
+    if (st.volume === 'Hardware' && !live.hasHw(st.output)) st.volume = 'Software';
     const p1 = ['p1welcome', 'p1net', 'p1start', 'p1backup', 'p1name', 'p1clock', 'p1output', 'p1screen', 'p1review', 'p1restore'];
     st.screen = st.joinError ? 'p1net' : p1.includes(saved.step) ? saved.step : 'p1welcome';
     st.ready = true;
@@ -852,6 +873,7 @@ class Component extends DCLogic {
         standby_times: s.ivs.map((iv) => ({ from: iv.from, until: iv.until, days: [...iv.days] }))
       });
       if (loc) o.weather_location = loc;
+      o.phone_touchpad = s.touchpad;
     }
     return o;
   }
@@ -870,7 +892,7 @@ class Component extends DCLogic {
       styles: styles.length ? styles : ['Calm'], wallStyle: styles[0] ?? 'Calm',
       idleOn: v.idle_enabled === true, bg: BGS.includes(v.idle_background) ? v.idle_background : 'Gexis wallpapers',
       clock: v.idle_clock !== false, weather: v.idle_weather === true && !!v.weather_location,
-      standby: v.standby_schedule === true
+      standby: v.standby_schedule === true, touchpad: v.phone_touchpad !== false
     });
     if (Array.isArray(v.standby_times) && v.standby_times.length) st.ivs = v.standby_times.map((iv) => ({ ...iv, days: [...iv.days] }));
   }
@@ -975,7 +997,7 @@ class Component extends DCLogic {
         <div style="width:calc(50% - 24px);flex-shrink:0;flex-direction:column;justify-content:center;gap:12px;display:{V.leftDisplay};">
           {#if V.hasSidePv}
             <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">{V.sidePv.head}</div>
-            <PanelMini kind={V.sidePv.kind} marks={V.sidePv.marks} time={V.sidePv.time} place={V.sidePv.place} player={V.sidePv.player} weather={V.sidePv.weather} bg={V.sidePv.bg} wallSrc={V.sidePv.wallSrc} photo={V.sidePv.photo} clock={V.sidePv.clock} black={V.sidePv.black} rpm={V.sidePv.rpm} animate={V.sidePv.animate} secs={V.sidePv.secs} phone={V.sidePv.phone} />
+            <PanelMini kind={V.sidePv.kind} marks={V.sidePv.marks} time={V.sidePv.time} place={V.sidePv.place} player={V.sidePv.player} weather={V.sidePv.weather} bg={V.sidePv.bg} wallSrc={V.sidePv.wallSrc} photo={V.sidePv.photo} clock={V.sidePv.clock} black={V.sidePv.black} rpm={V.sidePv.rpm} animate={V.sidePv.animate} secs={V.sidePv.secs} phone={V.sidePv.phone} pointer={V.sidePv.pointer} />
           {/if}
           {#if V.noSidePv}
             <div style="aspect-ratio:16/10;border-radius:12px;border:2px dashed rgba(233,238,242,0.2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px;box-sizing:border-box;text-align:center;">
@@ -1000,7 +1022,7 @@ class Component extends DCLogic {
             {#if V.hasInlinePv}
               <div style="display:flex;flex-direction:column;gap:10px;flex-shrink:0;">
                 <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">{V.pv.head}</div>
-                <PanelMini kind={V.pv.kind} marks={V.pv.marks} time={V.pv.time} place={V.pv.place} player={V.pv.player} weather={V.pv.weather} bg={V.pv.bg} wallSrc={V.pv.wallSrc} photo={V.pv.photo} clock={V.pv.clock} black={V.pv.black} rpm={V.pv.rpm} animate={V.pv.animate} secs={V.pv.secs} phone={V.pv.phone} />
+                <PanelMini kind={V.pv.kind} marks={V.pv.marks} time={V.pv.time} place={V.pv.place} player={V.pv.player} weather={V.pv.weather} bg={V.pv.bg} wallSrc={V.pv.wallSrc} photo={V.pv.photo} clock={V.pv.clock} black={V.pv.black} rpm={V.pv.rpm} animate={V.pv.animate} secs={V.pv.secs} phone={V.pv.phone} pointer={V.pv.pointer} />
               </div>
             {/if}
 

@@ -47,6 +47,8 @@ def test_only_part_twos_settings_are_written_and_one_more_refuses_them_all():
         personalise.checked({"spotify_enabled": True, "device_name": "x"})
     with pytest.raises(ValueError):
         personalise.checked(["spotify_enabled"])
+    # George, 2026-10-18: the touchpad is part 2's too.
+    assert personalise.checked({"phone_touchpad": False}) == {"phone_touchpad": False}
     # A plugin part 2 does not offer is not part 2's to switch on.
     with pytest.raises(ValueError, match="beszel.enabled"):
         personalise.checked({"beszel.enabled": True})

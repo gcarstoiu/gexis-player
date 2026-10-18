@@ -221,7 +221,9 @@ def test_a_change_of_output_stops_the_source_playing_first():
     assert switch.index("supervisor.stop_active()") < switch.index("'systemctl', 'stop'")
     change = _closure("_change_output")
     assert change.index("async with volume_change") < change.index("await _switch_output()")
-    assert re.search(r'"output_device": lambda _value=None: asyncio\.ensure_future\(\s*_change_output\(\)',
+    # George, 2026-10-18: the Volume row's limits follow the chosen output at
+    # once, before the switch - setup writes the volume type right after it.
+    assert re.search(r'"output_device": lambda _value=None: \(\s*_restrict_for_chosen_output\(\), asyncio\.ensure_future\(_change_output\(\)\)\)\[1\]',
                      MAIN.read_text())
 
 

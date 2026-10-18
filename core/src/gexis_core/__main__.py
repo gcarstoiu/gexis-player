@@ -1173,6 +1173,16 @@ async def main() -> None:
         else:
             settings.restrict("output_mode", {})
 
+    def _restrict_for_chosen_output() -> None:
+        """**The Volume row's limits follow the output at once**, before the
+        switch itself runs: setup writes the volume type straight after the
+        output (George, 2026-10-18), and it must be judged against the
+        output chosen, not the one before it."""
+        try:
+            _restrict_output_mode(outputs.in_force(settings.value("output_device"))[0])
+        except Exception as exc:  # noqa: BLE001 - the switch restricts it again
+            logger.warning("output: volume limits not updated yet: %s", exc)
+
     async def _switch_output() -> None:
         """Put the chosen output into `output.conf` and reopen everything.
 
@@ -2608,9 +2618,8 @@ async def main() -> None:
                # ADR-0055: rewrites output.conf, then restarts everything
                # that holds a PCM - including this daemon, which is how the
                # new card's control name gets picked up.
-               "output_device": lambda _value=None: asyncio.ensure_future(
-                   _change_output()
-               ),
+               "output_device": lambda _value=None: (
+                   _restrict_for_chosen_output(), asyncio.ensure_future(_change_output()))[1],
                # Readonly: nothing to do on a write, and the value is the
                # live one below rather than the registry's literal.
                "volume_managed": None,

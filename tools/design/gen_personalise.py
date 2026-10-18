@@ -19,6 +19,11 @@ markup = convert(frame, imports)
 # The prototype draws a phone; the page IS the phone: the frame's own
 # border and shadow are the mock-up's, not the design's.
 markup = markup.replace('border:1px solid rgba(233,238,242,0.14);box-shadow:0 30px 60px rgba(0,0,0,0.45);', '', 1)
+# The previews carry the Touchpad step's pointer (PanelMini's `pointer`).
+for which in ("V.pv", "V.sidePv"):
+    tag = f"phone={{{which}.phone}} />"
+    assert markup.count(tag) == 1, tag
+    markup = markup.replace(tag, f"phone={{{which}.phone}} pointer={{{which}.pointer}} />")
 js = src[src.index('data-dc-script>') + len('data-dc-script>'):src.rindex('</script>')]
 R = []
 def rep(a, b, n=1):
@@ -145,6 +150,21 @@ rep("    if (id === 'p1join') { clearTimeout(this.t2); this.t2 = setTimeout(() =
 rep("    const s = this.state, d = this.d(s), u = { skipped: Object.assign({}, s.skipped, { [s.screen]: skipped }) };\n    this.setState(u);",
     "    const s = this.state, d = this.d(s), u = { skipped: Object.assign({}, s.skipped, { [s.screen]: skipped }) };\n    this.setState(u);\n"
     "    if (['p1net', 'p1start', 'p1backup', 'p1name', 'p1clock', 'p1output', 'p1screen'].includes(s.screen)) { const p = this.p1Path(s); live.save(s, s.ret || p[p.indexOf(s.screen) + 1] || s.screen); }")
+# **Touchpad, before the visualiser** (George, 2026-10-18: "the touchpad
+# enable or disable. No additional settings added, just a note ... saying
+# where more settings around the touchpad are and what these settings are").
+# Built from the design's own parts: the toggle row (T) of the Spotify step,
+# an info note, and the panel preview - the library with the player's
+# teal pointer gliding and tapping (PanelMini's `pointer`, below). Its colour
+# is the one in the design's palette (C.ext) no step used.
+rep("    if (!d.headless) p.push('visualiser', ...(d.wait ? ['wait'] : []), 'idle', 'standby');",
+    "    if (!d.headless) p.push('touchpad', 'visualiser', ...(d.wait ? ['wait'] : []), 'idle', 'standby');")
+rep("bluetooth: ['Bluetooth', C.bt], visualiser:", "bluetooth: ['Bluetooth', C.bt], touchpad: ['Touchpad', C.ext], visualiser:")
+rep("bluetooth: 'Bluetooth', visualiser:", "bluetooth: 'Bluetooth', touchpad: 'Touchpad', visualiser:")
+rep("bluetooth: '5A6', visualiser:", "bluetooth: '5A6', touchpad: '5A6t', visualiser:")
+rep("      case 'visualiser': { const k = s.skin,", """      case 'touchpad': return { title: 'Touchpad on your phone', sub: 'In the phone’s volume sheet: move a pointer on ' + nm + '’s screen, tap, type, scroll with two fingers and pinch to zoom.', pv: pv({ kind: 'lib', pointer: s.touchpad }),
+        blocks: [list([T('Phone touchpad', '', s.touchpad, flip('touchpad'))]), note('info', 'More in Settings', s.touchpad ? 'Display → Touchpad: Pointer speed, how far the pointer moves for a finger’s movement, and Pointer style, a dot or an arrow.' : 'Display → Touchpad turns it on again, with its pointer speed and style.')], foot: SK };
+      case 'visualiser': { const k = s.skin,""")
 # The frame: the page's own size (the prototype draws it inside a phone or a
 # tablet at fixed sizes).
 rep("fw: W ? '1100px' : '390px', fh: W ? '700px' : '844px', rad: W ? '22px' : '40px',", "fw: '100%', fh: '100%', rad: '0px',")
@@ -180,6 +200,26 @@ body = pm[pm.index('</helmet>') + 9: pm.index('</x-dc>')]
 pm_imports = {'artist-photo.webp': 'artistPhoto', 'gexis-mark.svg': 'mark', 'icon-bluetooth.png': 'btIcon', 'icon-lyrion.svg': 'lyrionIcon',
               'icon-spotify.png': 'spotifyIcon', 'wallpapers/calm/c148381086.webp': 'calm'}
 pm_markup = convert(body, pm_imports)
+# **The phone's pointer, on the panel** (the Touchpad step's preview): the
+# player's own dot (PanelPointer's: teal, a dark rim) glides over the
+# library's tiles and taps - it shrinks as the real one does on a press -
+# with the tap ring the design draws for a tap (fuRing's rise and fade).
+# Positions are the library's (kLib): 12 % / 9 % inset, five tiles a row.
+end = pm_markup.rstrip().rindex("</div>")
+pm_markup = pm_markup[:end] + """  {#if p.pointer}
+    <div style="position:absolute;inset:0;z-index:30;pointer-events:none;">
+      <span style="position:absolute;width:4.6cqw;height:4.6cqw;margin:-2.3cqw 0 0 -2.3cqw;animation:tpMove 6.4s cubic-bezier(0.45,0,0.25,1) infinite;">
+        <span style="position:absolute;inset:0;border-radius:999px;border:0.55cqw solid #7ed6bc;box-sizing:border-box;opacity:0;animation:tpRing 6.4s ease-out infinite;"></span>
+        <span style="position:absolute;inset:0;border-radius:999px;background:#7ed6bc;border:0.45cqw solid #0c1014;box-sizing:border-box;animation:tpPress 6.4s ease-out infinite;"></span>
+      </span>
+    </div>
+  {/if}
+""" + pm_markup[end:]
+helmet += """
+  @keyframes tpMove{0%{left:74%;top:84%;}20%,32%{left:32.8%;top:27%;}50%,62%{left:67.2%;top:27%;}80%,90%{left:40%;top:82%;}100%{left:74%;top:84%;}}
+  @keyframes tpPress{0%,21%,27%,51%,57%,81%,87%,100%{transform:scale(1);}24%,54%,84%{transform:scale(0.7);}}
+  @keyframes tpRing{0%,23%{transform:scale(0.8);opacity:0;}24%{opacity:0.95;}36%{transform:scale(2.6);opacity:0;}53%{transform:scale(0.8);opacity:0;}54%{opacity:0.95;}66%{transform:scale(2.6);opacity:0;}83%{transform:scale(0.8);opacity:0;}84%{opacity:0.95;}96%{transform:scale(2.6);opacity:0;}100%{opacity:0;}}
+"""
 logic = pm[pm.index('const KINDS'): pm.index('class Component')]
 cls = pm[pm.index('class Component extends DCLogic {') + len('class Component extends DCLogic {'): pm.rindex('}', 0, pm.index('</script>', pm.index('class Component')))]
 for a, b in (('  idle(p) {', '  function idle(p) {'), ('  waitHome(p) {', '  function waitHome(p) {'), ('  renderVals() {', '  function renderVals(p) {'),

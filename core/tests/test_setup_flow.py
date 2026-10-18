@@ -162,6 +162,19 @@ def test_one_refused_setting_does_not_stop_setup(tmp_path):
     assert (tmp_path / "setup-done").exists()
 
 
+def test_the_volume_type_is_written_after_the_output_it_depends_on(tmp_path):
+    """George, 2026-10-18: the Output step asks the volume type too."""
+    settings = FakeSettings()
+    flow, net, *_ = make(tmp_path, FakeNM(devices=NOTHING), settings)
+    with pytest.raises(ValueError, match="volume"):
+        flow.save({"volume": "Loud"})
+    flow.save({"ssid": "Home", "password": "hunter22", "volume": "Software", "output": "HDMI 1"})
+    finish(flow, net)
+    keys = [k for k, _ in settings.sets]
+    assert ("output_mode", "Software") in settings.sets
+    assert keys.index("output_device") < keys.index("output_mode")
+
+
 def test_without_a_network_there_is_nothing_to_finish(tmp_path):
     flow, net, *_ = make(tmp_path, FakeNM(devices=NOTHING))
     net._state = "open"
