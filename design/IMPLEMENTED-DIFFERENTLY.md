@@ -371,3 +371,14 @@ steps follow what the device sees:
 - **Review → Change → Continue returns to Review** for every step.
 - **Finish** shows *"<name> is joining your network"*, the address
   `http://<name>.local:8090`, and what happens if the password is wrong.
+
+## The waiting screen's tiles: a mark, a name, a dot (2026-10-18)
+
+The design draws each waiting source as a wide tile, the mark on the left
+and the name and status line beside it, sharing the screen's width. With
+five sources on the 10.1" the names and status lines were cut ("Blue…",
+"Starts …"). George: *"Let's make it generic and go with 2"* - on every
+screen, each tile is the mark with the name under it and a teal dot for
+ready, 168 px wide; the status line is the tile's title and label. A dot is
+all a state can be here: only sources that can be played are drawn.
+
