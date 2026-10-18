@@ -24,6 +24,7 @@
   import PhoneDeviceList from './personalise/PhoneDeviceList.svelte';
   import { loadSettings, settingValues, settingsDevice, listItems, listAction, writeSetting } from '../lib/settings.js';
   import { pairing, components, settling, answerPairing, personaliseLater } from '../lib/state.js';
+  import { SvelteSet } from 'svelte/reactivity';
 
   //: `mode`: 'p1' (setup, over the setup network or the cable) or 'p2' (make it
   //: yours, from the home network). `setup`: `/state`'s setup, in part 1.
@@ -80,6 +81,7 @@ function block(b) {
   if (b.t === 'Note') { const c = TONES[b.tone]; Object.assign(o, { bar: c[0], bg: c[1], border: c[2], title: b.title || '', titleDisplay: b.title ? 'block' : 'none', text: b.text }); }
   if (b.t === 'Field') Object.assign(o, { label: b.label, value: b.value, onChange: b.fn || noop, ph: b.ph || '', type: b.type || 'text', hint: b.hint || '', hintDisplay: b.hint ? 'block' : 'none', ro: !!b.ro, op: b.ro ? '0.45' : '1', cur: b.ro ? 'not-allowed' : 'text' });
   if (b.t === 'Code') Object.assign(o, { label: b.label, code: b.code, text: b.text });
+  if (b.t === 'Party') Object.assign(o, { marks: b.marks, status: b.status });
   if (b.t === 'Status') { const f = b.field; Object.assign(o, { act: b.act || '', onAct: b.actFn || noop, actDisplay: b.act ? 'block' : 'none', fieldDisplay: f ? 'flex' : 'none', fLabel: f ? f.label : '', fValue: f ? f.value : '', fPh: f ? f.ph || '' : '', fOnChange: f ? f.fn : noop, fHint: f ? f.hint || '' : '' }); }
   if (b.t === 'Status') Object.assign(o, { text: b.text, meta: b.meta || '', metaDisplay: b.meta ? 'block' : 'none', spinDisplay: b.state === 'spin' ? 'block' : 'none', doneDisplay: b.state === 'ok' ? 'flex' : 'none', noneDisplay: b.state === 'none' ? 'block' : 'none' });
   if (b.t === 'P' || b.t === 'Head') o.text = b.text;
@@ -469,7 +471,9 @@ class Component extends DCLogic {
           items.push(head('Visualiser'), prog(vp >= 100 ? 'Installed' : 'Installing skins', vp, null, vp >= 100 ? 'Skins ready' : '', true));
           if (vp >= 100) items.push(note('info', '', 'The visualiser starts after ' + s.vizAfter + ' of music.')); }
         if (live.failed()) items.push(note('warn', 'Something did not finish', 'Try it again from Settings → Plugins. Everything else is set.'));
-        return { hero: true, crumb: 'Make it yours', title: nm + ' is ready', blocks: [{ t: 'Party' }, ...items, { t: 'Rule' }, note('ok', '', 'Everything you set up here can be run again or changed in Settings → System → Personalise.')], foot: s.finishError ? { back: false, next: 'Try again', nextFn: () => live.finish() } : { back: false, next: 'Close' } }; }
+        const waiting = !s.finished || (d.here && live.pct(live.component('lyrion-server.enabled', 'lyrion')) < 100) || (d.plex && s.plexOn && s.plexPct < 100) || (!d.headless && s.vizOn && live.pct('skins') < 100);
+        const state = s.finishError ? 'busy' : live.failed() ? 'warn' : waiting ? 'busy' : 'done';
+        return { hero: true, crumb: 'Make it yours', title: state === 'done' ? nm + ' is ready' : state === 'warn' ? nm + ' is nearly ready' : 'Getting ' + nm + ' ready', blocks: [{ t: 'Party', marks: d.marks, status: state }, ...items, { t: 'Rule' }, note('ok', '', 'Everything you set up here can be run again or changed in Settings → System → Personalise.')], foot: s.finishError ? { back: false, next: 'Try again', nextFn: () => live.finish() } : { back: false, next: 'Close' } }; }
       case 'later': return { hero: true, crumb: 'Make it yours', title: 'Kept the defaults', blocks: [P(s.first ? 'Spotify and Bluetooth are on, and nothing else is installed.' : 'Nothing was changed.'), note('ok', '', 'All of it is in Settings → System → Personalise.')], foot: { back: false, next: 'Close' } };
     }
     return { title: '', blocks: [] };
@@ -545,6 +549,13 @@ class Component extends DCLogic {
     : item.total ? Math.min(99, Math.round(((item.received ?? 0) / item.total) * 100))
       : item.share != null ? Math.min(99, Math.round(item.share * 100)) : 2;
 
+  //: The downloads the settling record has listed since Finish.
+  const seenIds = new SvelteSet();
+  let waitedOut = $state(false);
+  $effect(() => {
+    for (const i of $settling?.items ?? []) if (!seenIds.has(i.id)) seenIds.add(i.id);
+  });
+
   //: What the design's logic calls on the player.
   const live = {
     time(fmt) {
@@ -556,6 +567,13 @@ class Component extends DCLogic {
     pct(id) {
       const item = $settling?.items?.find((i) => i.id === id);
       if (item) return pctOf(item);
+      //: **Waiting until the player has listed it**: Finish answers with
+      //: what it will follow, and the settling record that lists it comes
+      //: a moment later over the state socket. Not yet listed is not yet
+      //: done - else the page says ready, then busy. Seen and gone is done;
+      //: never listed within 30 s counts as done too, so a lost update
+      //: cannot hold the page.
+      if (st.finished?.waiting?.includes(id) && !seenIds.has(id) && !waitedOut) return 0;
       // Not followed: nothing to download (already in), or settled and gone.
       return st.finished ? 100 : 0;
     },
@@ -570,6 +588,7 @@ class Component extends DCLogic {
         const body = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(body.error ?? `HTTP ${r.status}`);
         st.finished = body;
+        setTimeout(() => (waitedOut = true), 30000);
       } catch (err) {
         console.warn('personalise: finish failed:', err?.message);
         st.finishError = "The player didn't take the answers. Check this phone is on the player's network, then try again.";
@@ -1239,19 +1258,7 @@ class Component extends DCLogic {
                 {/if}
 
                 {#if b.isParty}
-                  <div style="position:relative;height:200px;border-radius:16px;overflow:hidden;background:rgba(8,12,16,0.5);border:1px solid rgba(233,238,242,0.08);">
-                    <div style="position:absolute;left:8%;right:8%;bottom:46px;height:2px;border-radius:1px;background:rgba(233,238,242,0.14);"></div>
-                    <div style="position:absolute;left:50%;bottom:48px;transform:translateX(-50%);display:flex;align-items:flex-end;gap:20px;">
-                      <div style="width:50px;height:104px;border-radius:8px;box-sizing:border-box;border:2px solid rgba(233,238,242,0.35);background:#0d151b;display:flex;flex-direction:column;align-items:center;gap:14px;padding-top:12px;"><div style="width:14px;height:14px;border-radius:50%;box-sizing:border-box;border:2px solid rgba(233,238,242,0.4);"></div><div style="position:relative;width:34px;height:34px;border-radius:50%;box-sizing:border-box;border:2px solid rgba(233,238,242,0.45);display:flex;align-items:center;justify-content:center;"><div style="width:18px;height:18px;border-radius:50%;background:rgba(233,238,242,0.28);animation:fuPump 470ms ease-in-out infinite;"></div><div style="position:absolute;inset:-2px;border-radius:50%;border:2px solid #7ed6bc;animation:fuRing 1.4s ease-out infinite;"></div></div></div>
-                      <div style="position:relative;">
-                        <span style="position:absolute;top:-6px;left:18%;font-size:18px;color:#7ed6bc;opacity:0;animation:fuFloat 2.6s ease-out infinite;">♪</span>
-                        <span style="position:absolute;top:-6px;left:72%;font-size:18px;color:#7ed6bc;opacity:0;animation:fuFloat 2.6s ease-out 1.3s infinite;">♫</span>
-                        <div style="position:absolute;top:-15px;right:-15px;z-index:2;width:34px;height:34px;border-radius:50%;background:#7ed6bc;color:#0d151c;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:800;line-height:1;box-shadow:0 0 0 4px #0d151b;">✓</div>
-                        <div style="width:132px;height:83px;border-radius:7px;box-sizing:border-box;border:2px solid #9fb4e8;background:#0d151b;display:flex;align-items:flex-end;justify-content:center;gap:5px;padding-bottom:14px;box-shadow:0 8px 16px -8px rgba(0,0,0,0.7);"><div style="width:6px;height:24px;border-radius:2px;background:#7ed6bc;transform-origin:bottom;animation:fuBar 420ms ease-in-out 0ms infinite alternate;"></div><div style="width:6px;height:38px;border-radius:2px;background:#7ed6bc;transform-origin:bottom;animation:fuBar 380ms ease-in-out 180ms infinite alternate;"></div><div style="width:6px;height:30px;border-radius:2px;background:#7ed6bc;transform-origin:bottom;animation:fuBar 460ms ease-in-out 90ms infinite alternate;"></div><div style="width:6px;height:46px;border-radius:2px;background:#7ed6bc;transform-origin:bottom;animation:fuBar 400ms ease-in-out 270ms infinite alternate;"></div><div style="width:6px;height:34px;border-radius:2px;background:#7ed6bc;transform-origin:bottom;animation:fuBar 440ms ease-in-out 60ms infinite alternate;"></div><div style="width:6px;height:40px;border-radius:2px;background:#7ed6bc;transform-origin:bottom;animation:fuBar 360ms ease-in-out 210ms infinite alternate;"></div><div style="width:6px;height:22px;border-radius:2px;background:#7ed6bc;transform-origin:bottom;animation:fuBar 480ms ease-in-out 120ms infinite alternate;"></div></div>
-                      </div>
-                      <div style="width:50px;height:104px;border-radius:8px;box-sizing:border-box;border:2px solid rgba(233,238,242,0.35);background:#0d151b;display:flex;flex-direction:column;align-items:center;gap:14px;padding-top:12px;"><div style="width:14px;height:14px;border-radius:50%;box-sizing:border-box;border:2px solid rgba(233,238,242,0.4);"></div><div style="position:relative;width:34px;height:34px;border-radius:50%;box-sizing:border-box;border:2px solid rgba(233,238,242,0.45);display:flex;align-items:center;justify-content:center;"><div style="width:18px;height:18px;border-radius:50%;background:rgba(233,238,242,0.28);animation:fuPump 470ms ease-in-out infinite;"></div><div style="position:absolute;inset:-2px;border-radius:50%;border:2px solid #7ed6bc;animation:fuRing 1.4s ease-out infinite;"></div></div></div>
-                    </div>
-                  </div>
+                  <PanelMini kind="flow" marks={b.marks} status={b.status} />
                 {/if}
 
                 {#if b.isCode}

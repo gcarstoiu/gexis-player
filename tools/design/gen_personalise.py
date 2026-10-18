@@ -19,6 +19,12 @@ markup = convert(frame, imports)
 # The prototype draws a phone; the page IS the phone: the frame's own
 # border and shadow are the mock-up's, not the design's.
 markup = markup.replace('border:1px solid rgba(233,238,242,0.14);box-shadow:0 30px 60px rgba(0,0,0,0.45);', '', 1)
+# Getting ready's scene is PanelMini's flow (above, in the script's
+# replacements): the Party block's drawing gives way to it.
+i = markup.index("{#if b.isParty}")
+j = markup.index("{/if}", i)
+assert "{#if" not in markup[i + 15:j], "the Party block has no conditions inside"
+markup = markup[:i] + "{#if b.isParty}\n                  <PanelMini kind=\"flow\" marks={b.marks} status={b.status} />\n                " + markup[j:]
 # The previews carry the Touchpad step's pointer (PanelMini's `pointer`).
 for which in ("V.pv", "V.sidePv"):
     tag = f"phone={{{which}.phone}} />"
@@ -165,6 +171,24 @@ rep("bluetooth: '5A6', visualiser:", "bluetooth: '5A6', touchpad: '5A6t', visual
 rep("      case 'visualiser': { const k = s.skin,", """      case 'touchpad': return { title: 'Touchpad on your phone', sub: 'In the phone’s volume sheet: move a pointer on ' + nm + '’s screen, tap, type, scroll with two fingers and pinch to zoom.', pv: pv({ kind: 'lib', pointer: s.touchpad }),
         blocks: [list([T('Phone touchpad', '', s.touchpad, flip('touchpad'))]), note('info', 'More in Settings', s.touchpad ? 'Display → Touchpad: Pointer speed, how far the pointer moves for a finger’s movement, and Pointer style, a dot or an arrow.' : 'Display → Touchpad turns it on again, with its pointer speed and style.')], foot: SK };
       case 'visualiser': { const k = s.skin,""")
+# **Getting ready: the opening animation, and where things stand** (George,
+# 2026-10-18: "take the animation we have at the beginning of the flow on
+# wide and replace the current one, adding the status icon next to the
+# panel"; "the sources from the animation should match the selection").
+# The Party scene gives way to PanelMini's `flow` - the wide layout's
+# *How will you listen?* - cycling through the sources chosen, with a
+# badge on the panel's corner: the design's check once everything is in,
+# a turning ring while anything downloads or installs, an amber ! when
+# something did not finish. The title says the same.
+rep("""        if (live.failed()) items.push(note('warn', 'Something did not finish', 'Try it again from Settings → Plugins. Everything else is set.'));
+        return { hero: true, crumb: 'Make it yours', title: nm + ' is ready', blocks: [{ t: 'Party' },""",
+    """        if (live.failed()) items.push(note('warn', 'Something did not finish', 'Try it again from Settings → Plugins. Everything else is set.'));
+        const waiting = !s.finished || (d.here && live.pct(live.component('lyrion-server.enabled', 'lyrion')) < 100) || (d.plex && s.plexOn && s.plexPct < 100) || (!d.headless && s.vizOn && live.pct('skins') < 100);
+        const state = s.finishError ? 'busy' : live.failed() ? 'warn' : waiting ? 'busy' : 'done';
+        return { hero: true, crumb: 'Make it yours', title: state === 'done' ? nm + ' is ready' : state === 'warn' ? nm + ' is nearly ready' : 'Getting ' + nm + ' ready', blocks: [{ t: 'Party', marks: d.marks, status: state },""")
+rep("""  if (b.t === 'Code') Object.assign(o, { label: b.label, code: b.code, text: b.text });""",
+    """  if (b.t === 'Code') Object.assign(o, { label: b.label, code: b.code, text: b.text });
+  if (b.t === 'Party') Object.assign(o, { marks: b.marks, status: b.status });""")
 # The frame: the page's own size (the prototype draws it inside a phone or a
 # tablet at fixed sizes).
 rep("fw: W ? '1100px' : '390px', fh: W ? '700px' : '844px', rad: W ? '22px' : '40px',", "fw: '100%', fh: '100%', rad: '0px',")
@@ -200,6 +224,38 @@ body = pm[pm.index('</helmet>') + 9: pm.index('</x-dc>')]
 pm_imports = {'artist-photo.webp': 'artistPhoto', 'gexis-mark.svg': 'mark', 'icon-bluetooth.png': 'btIcon', 'icon-lyrion.svg': 'lyrionIcon',
               'icon-spotify.png': 'spotifyIcon', 'wallpapers/calm/c148381086.webp': 'calm'}
 pm_markup = convert(body, pm_imports)
+# **The flow shows the sources chosen** (Getting ready): each source's turn
+# is its own cycle - Lyrion, Plexamp, Spotify, Bluetooth, 3 s each over 12 s
+# - and with `marks` only the chosen ones take turns, 3 s each still.
+for src, delay in (("lyr", "0s"), ("plex", "-9s"), ("spo", "-6s"), ("bt", "-3s")):
+    a2 = f"animation:fuCycle 12s linear {delay} infinite;"
+    assert pm_markup.count(a2) == 1, a2
+    pm_markup = pm_markup.replace(a2, f"animation:{{flowAnim('{src}')}};display:{{flowShow('{src}')}};")
+end2 = pm_markup.rstrip().rindex("</div>")
+pm_markup = pm_markup[:end2] + """  {#if p.kind === 'flow' && p.status}
+    <div style="position:absolute;left:61.4cqw;top:2.9cqw;z-index:4;width:8.2cqw;height:8.2cqw;border-radius:50%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:4.6cqw;font-weight:800;line-height:1;box-shadow:0 0 0 1cqw #0d151b;background:{p.status === 'done' ? '#7ed6bc' : p.status === 'warn' ? '#e0a758' : '#0d151b'};color:#0d151c;border:{p.status === 'busy' ? '0.3cqw solid rgba(126,214,188,0.55)' : 'none'};">
+      {#if p.status === 'done'}✓{:else if p.status === 'warn'}!{:else}<span style="width:5cqw;height:5cqw;border-radius:50%;border:0.75cqw solid rgba(233,238,242,0.16);border-top-color:#7ed6bc;box-sizing:border-box;display:block;animation:fuSpin 0.9s linear infinite;"></span>{/if}
+    </div>
+  {/if}
+""" + pm_markup[end2:]
+helmet += """
+  @keyframes fuCycle1{0%,100%{opacity:1;}}
+  @keyframes fuCycle2{0%,44%{opacity:1;}50%,94%{opacity:0;}100%{opacity:1;}}
+  @keyframes fuCycle3{0%,29.3%{opacity:1;}33.3%,96%{opacity:0;}100%{opacity:1;}}
+"""
+logic_extra = """
+  // The flow's sources: all four in turn (How will you listen?), or the
+  // ones chosen (Getting ready), 3 s each.
+  const FLOW = ['lyr', 'plex', 'spo', 'bt'], FLOW_DELAY = { lyr: '0s', plex: '-9s', spo: '-6s', bt: '-3s' };
+  function flowShow(src) { return !p.marks || p.marks.includes(src) ? 'block' : 'none'; }
+  function flowAnim(src) {
+    if (!p.marks) return `fuCycle 12s linear ${FLOW_DELAY[src]} infinite`;
+    const chosen = FLOW.filter((x) => p.marks.includes(x)), n = chosen.length, k = chosen.indexOf(src);
+    if (k < 0) return 'none';
+    const name = n >= 4 ? 'fuCycle' : `fuCycle${n}`;
+    return `${name} ${3 * n}s linear ${k === 0 ? 0 : 3 * k - 3 * n}s infinite`;
+  }
+"""
 # **The phone's pointer, on the panel** (the Touchpad step's preview): the
 # player's own dot (PanelPointer's: teal, a dark rim) glides over the
 # library's tiles and taps - it shrinks as the real one does on a press -
@@ -244,7 +300,7 @@ for a, b in (('  idle(p) {', '  function idle(p) {'), ('  waitHome(p) {', '  fun
 
   let p = $props();
 
-{logic}
+{logic}{logic_extra}
 {cls}
   const V = $derived(renderVals(p));
 </script>

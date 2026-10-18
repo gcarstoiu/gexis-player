@@ -11,6 +11,7 @@
   import PhoneDeviceList from './personalise/PhoneDeviceList.svelte';
   import { loadSettings, settingValues, settingsDevice, listItems, listAction, writeSetting } from '../lib/settings.js';
   import { pairing, components, settling, answerPairing, personaliseLater } from '../lib/state.js';
+  import { SvelteSet } from 'svelte/reactivity';
 
   //: `mode`: 'p1' (setup, over the setup network or the cable) or 'p2' (make it
   //: yours, from the home network). `setup`: `/state`'s setup, in part 1.
@@ -52,6 +53,13 @@
     : item.total ? Math.min(99, Math.round(((item.received ?? 0) / item.total) * 100))
       : item.share != null ? Math.min(99, Math.round(item.share * 100)) : 2;
 
+  //: The downloads the settling record has listed since Finish.
+  const seenIds = new SvelteSet();
+  let waitedOut = $state(false);
+  $effect(() => {
+    for (const i of $settling?.items ?? []) if (!seenIds.has(i.id)) seenIds.add(i.id);
+  });
+
   //: What the design's logic calls on the player.
   const live = {
     time(fmt) {
@@ -63,6 +71,13 @@
     pct(id) {
       const item = $settling?.items?.find((i) => i.id === id);
       if (item) return pctOf(item);
+      //: **Waiting until the player has listed it**: Finish answers with
+      //: what it will follow, and the settling record that lists it comes
+      //: a moment later over the state socket. Not yet listed is not yet
+      //: done - else the page says ready, then busy. Seen and gone is done;
+      //: never listed within 30 s counts as done too, so a lost update
+      //: cannot hold the page.
+      if (st.finished?.waiting?.includes(id) && !seenIds.has(id) && !waitedOut) return 0;
       // Not followed: nothing to download (already in), or settled and gone.
       return st.finished ? 100 : 0;
     },
@@ -77,6 +92,7 @@
         const body = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(body.error ?? `HTTP ${r.status}`);
         st.finished = body;
+        setTimeout(() => (waitedOut = true), 30000);
       } catch (err) {
         console.warn('personalise: finish failed:', err?.message);
         st.finishError = "The player didn't take the answers. Check this phone is on the player's network, then try again.";
