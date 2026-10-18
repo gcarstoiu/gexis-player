@@ -390,12 +390,17 @@ Changes take effect at once unless the row says otherwise.
 | Bluetooth: Auto-trust on pair | Remembers a device once paired, so it reconnects by itself. |
 
 Plugins add their own rows here once switched on: **Plexamp** (claim the
-player into your Plex account) and the **Lyrion Server** (a music server on
-the player itself). The Lyrion Server reads only the music locations
+player into your Plex account).
+
+### Library — *Your own music, and where it is read from*
+
+The **Lyrion Server** (a music server on the player itself) has its rows
+here once switched on; MPD will join it. It reads only the music locations
 switched on, none at first:
 
 | Setting | What it does |
 |---|---|
+| Lyrion Server: More for your library | Where everything else about the library is: a link to the server's own page, and to three apps that control it - Squeezer (Android), Lyrion (Android, F-Droid) and LyrPlay (iPhone). The links show on a phone, not on the panel. |
 | Lyrion Server: Library | Read only: what the server is doing - starting, adding its add-ons, reading your music with a progress bar - and once ready, how many songs and albums it holds. The section's heading says the same in a word. |
 | Lyrion Server: Music folder | The player's own Music folder, shared on the network as *Music*. Its note says how much room is free and how much there is in all. Below 4 GB free the Music share takes no new files, and the note says so, until more than 4.5 GB is free. |
 | Lyrion Server: USB drives | Folders on USB drives plugged into the player. |

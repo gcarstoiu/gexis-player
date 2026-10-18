@@ -151,7 +151,7 @@ rep("found ? { foot: 'Lyrion found on ' + s.net, footMeta: '192.0.2.10:9000' }",
 # on, the drives plugged in, each browsed for the folders Lyrion reads. With
 # nothing chosen the line under the list says Lyrion starts empty.
 rep("return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [list(PLACES.map(p => K(p[1], p[2], s.places[p[0]], tg(p[0]))), 'Lyrion reads'), ...extra, P('These become Lyrion’s music folders when it installs.')]",
-    "return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [sub('Music folder'), list([placeRow(PLACES[0])], ''), sub('USB drives'), list([placeRow(PLACES[1])], ''), ...usbBlocks, sub('Network shares'), list([placeRow(PLACES[2])], ''), ...extra, { t: 'Rule' }, (s.places.folder || s.places.usb || s.places.share) ? P('These become Lyrion’s music folders when it installs.') : note('info', 'Nothing chosen yet', 'Lyrion then starts with no music. Locations can be added later in Settings → Sources → Lyrion Server.')]")
+    "return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [sub('Music folder'), list([placeRow(PLACES[0])], ''), sub('USB drives'), list([placeRow(PLACES[1])], ''), ...usbBlocks, sub('Network shares'), list([placeRow(PLACES[2])], ''), ...extra, { t: 'Rule' }, (s.places.folder || s.places.usb || s.places.share) ? P('These become Lyrion’s music folders when it installs.') : note('info', 'Nothing chosen yet', 'Lyrion then starts with no music. Locations can be added later in Settings → Library → Lyrion Server.')]")
 rep("places: { folder: true, usb: false, share: false }", "places: { folder: false, usb: false, share: false }, usbDrives: [], usbOpen: null, usbError: null")
 rep("""      case 'folders': { const tg = k => () => this.setState(st => ({ places: Object.assign({}, st.places, { [k]: !st.places[k] }) })), extra = [];""",
     """      case 'folders': { const tg = k => () => { this.setState(st => ({ places: Object.assign({}, st.places, { [k]: !st.places[k] }) })); if (k === 'usb') live.loadUsb(); }, extra = [], usbBlocks = [];
@@ -327,7 +327,7 @@ js = js[:a] + """      case 'done': { const items = [], got = [];
           if (g.done && after && !g.after) items.push(note('info', '', after)); };
         if (d.here) { const any = s.places.folder || s.places.usb || s.places.share;
           show('Lyrion', C.lyr, live.component('lyrion-server.enabled', 'lyrion'), any ? 'Folders added, scan started' : 'Installed, no music yet', true,
-            any ? 'A large library can take hours to scan. Music shows up as Lyrion finds it.' : 'Add where your music is in Settings → Sources → Lyrion Server.'); }
+            any ? 'A large library can take hours to scan. Music shows up as Lyrion finds it.' : 'Add where your music is in Settings → Library → Lyrion Server.'); }
         if (d.plex && s.plexOn) { const ok = s.plexState === 'ok';
           show('Plexamp', C.plex, live.component('plexamp.enabled', 'plexamp'), ok ? 'Signed in to Plex' : 'Not signed in yet', ok, ok ? 'Your Plex library plays from the Plexamp app.' : 'Sign in from Settings → Plexamp when you’re ready.'); }
         if (!d.headless && s.vizOn) show('Visualiser', C.scr, 'skins', 'Skins ready', true, 'The visualiser starts after ' + s.vizAfter + ' of music.');

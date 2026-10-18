@@ -423,7 +423,7 @@ class Component extends DCLogic {
             btn('Add', () => { if (s.shareAddr.trim()) addShare(s.shareAddr.trim(), s.shareAU.trim() || null, s.shareAP || null); }), btn('Back', () => set({ shareStep: 'list' })));
           if (s.shareError) extra.push(note('warn', '', s.shareError));
         }
-        return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [sub('Music folder'), list([placeRow(PLACES[0])], ''), sub('USB drives'), list([placeRow(PLACES[1])], ''), ...usbBlocks, sub('Network shares'), list([placeRow(PLACES[2])], ''), ...extra, { t: 'Rule' }, (s.places.folder || s.places.usb || s.places.share) ? P('These become Lyrion’s music folders when it installs.') : note('info', 'Nothing chosen yet', 'Lyrion then starts with no music. Locations can be added later in Settings → Sources → Lyrion Server.')], foot: SK }; }
+        return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [sub('Music folder'), list([placeRow(PLACES[0])], ''), sub('USB drives'), list([placeRow(PLACES[1])], ''), ...usbBlocks, sub('Network shares'), list([placeRow(PLACES[2])], ''), ...extra, { t: 'Rule' }, (s.places.folder || s.places.usb || s.places.share) ? P('These become Lyrion’s music folders when it installs.') : note('info', 'Nothing chosen yet', 'Lyrion then starts with no music. Locations can be added later in Settings → Library → Lyrion Server.')], foot: SK }; }
       case 'plexamp': {
         const sub = 'Your Plex library, played on ' + nm + '.';
         const g = live.stage(live.component('plexamp.enabled', 'plexamp')), inst = g.done;
@@ -502,7 +502,7 @@ class Component extends DCLogic {
           if (g.done && after && !g.after) items.push(note('info', '', after)); };
         if (d.here) { const any = s.places.folder || s.places.usb || s.places.share;
           show('Lyrion', C.lyr, live.component('lyrion-server.enabled', 'lyrion'), any ? 'Folders added, scan started' : 'Installed, no music yet', true,
-            any ? 'A large library can take hours to scan. Music shows up as Lyrion finds it.' : 'Add where your music is in Settings → Sources → Lyrion Server.'); }
+            any ? 'A large library can take hours to scan. Music shows up as Lyrion finds it.' : 'Add where your music is in Settings → Library → Lyrion Server.'); }
         if (d.plex && s.plexOn) { const ok = s.plexClaimed;
           show('Plexamp', C.plex, live.component('plexamp.enabled', 'plexamp'), ok ? 'Signed in to Plex' : 'Not signed in yet', ok, ok ? 'Your Plex library plays from the Plexamp app.' : 'Sign in from Settings → Plexamp when you’re ready.'); }
         if (!d.headless && s.vizOn) show('Visualiser', C.scr, 'skins', 'Skins ready', true, 'The visualiser starts after ' + s.vizAfter + ' of music.');

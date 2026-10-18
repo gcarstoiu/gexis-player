@@ -2430,6 +2430,13 @@ class StateServer:
         for group in groups:
             for row in group["rows"]:
                 key = row.get("key")
+                if key == "lyrion-server.more":
+                    # ADR-0150: the server's own page first, by this player's
+                    # name; the apps' links come from the manifest.
+                    host = device_name.hostname() or "gexis"
+                    row["links"] = [{"label": "Lyrion's own page", "url": f"http://{host}.local:9000"},
+                                    *(row.get("links") or [])]
+                    continue
                 if key == "lyrion-server.library":
                     # ADR-0115 decision 28 (George, 2026-10-18): the stage, its
                     # line and, while Lyrion reads, how far - kept after Ready.

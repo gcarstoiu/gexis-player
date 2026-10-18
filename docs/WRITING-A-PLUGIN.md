@@ -54,7 +54,7 @@ brings one is refused.
 | `kind` | yes | `renderer` or `service` |
 | `version` | yes | Letters, digits and `. + ~ -`, up to 40 characters, starting with a letter or digit. Uploading a different version updates the plugin; the same version again is refused. Shown on your plugin's switch in Settings → Plugins |
 | `run` | yes | The command to start, **relative to the package**. An **aarch64** program (the Pi 4 on a 64-bit system) or a script with a `#!` line |
-| `area` | no | The Settings page your plugin belongs on: `audio`, `sources`, `handoff`, `display`, `enrichment`, `device` or `system`. Absent: `sources` for a renderer, `system` for a service. It places your plugin; it does not change what it may do |
+| `area` | no | The Settings page your plugin belongs on: `audio`, `sources`, `library` (a music library, as the Lyrion server), `handoff`, `display`, `enrichment`, `device` or `system`. Absent: `sources` for a renderer, `system` for a service. It places your plugin; it does not change what it may do |
 | `label` | no | A renderer's status line for the moOde-compatible metadata file (`"Radio Foo Active"` style) |
 | `accent` | no | A CSS colour for the panel's accent when your renderer plays |
 | `status` | no | The waiting screen's second line under your mark (`"Ready"`, `"Pairable"`) |

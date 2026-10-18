@@ -3,7 +3,7 @@
   "name": "Lyrion Server",
   "summary": "Your own music library on the player itself, from its Music folder, a USB drive or a network share.",
   "kind": "service",
-  "area": "sources",
+  "area": "library",
   "unit": "gexis-lyrion.service",
   "port": 9000,
   "settings": [
@@ -14,6 +14,28 @@
       "marks": "N",
       "default": null,
       "note": "What Lyrion is doing with your music, and what it holds."
+    },
+    {
+      "key": "more",
+      "type": "readonly",
+      "label": "More for your library",
+      "marks": "N",
+      "default": null,
+      "note": "Everything else about the library is on the Lyrion server's own page. Lyrion can also be controlled from an app.",
+      "links": [
+        {
+          "label": "Squeezer · Android",
+          "url": "https://play.google.com/store/apps/details?id=uk.org.ngo.squeezer"
+        },
+        {
+          "label": "Lyrion · Android (F-Droid)",
+          "url": "https://f-droid.org/packages/com.craigd.lmsmaterial.app/"
+        },
+        {
+          "label": "LyrPlay · iPhone",
+          "url": "https://apps.apple.com/app/lyrplay/id6746776736"
+        }
+      ]
     },
     {
       "key": "music_folder",

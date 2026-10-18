@@ -541,8 +541,8 @@ server elsewhere on the network, or run one itself. Spotify, Bluetooth and
 Plexamp work without one.
 
 **How do I run the Lyrion server on the player itself?**
-Switch on *Lyrion Server* on the Plugins page; its rows are at the top of
-*Settings → Sources*. It needs internet the first time, as it is downloaded,
+Switch on *Lyrion Server* on the Plugins page (under *Library*); its rows
+are in *Settings → Library*. It needs internet the first time, as it is downloaded,
 and takes about 3 minutes to set up. Its own pages (Material Skin) are then
 at `http://gexis.local:9000`, with the player's name in place of *gexis*. The
 player never switches to it by itself: choose it in *Settings → Sources →
@@ -551,7 +551,7 @@ Lyrion Client → Server*.
 **Where can the player's Lyrion server find music?**
 Wherever you choose, and nowhere until you do: the player's own Music folder
 (shared on the network), folders on USB drives, and network shares (SMB or
-NFS). Each is a switch or a list under *Settings → Sources → Lyrion Server*,
+NFS). Each is a switch or a list under *Settings → Library → Lyrion Server*,
 and first use asks on *Where is your music?*, with nothing chosen
 beforehand. Under *Network shares*, a scan lists the servers on the network
 by their names, once each, and then their shares, with a login where
@@ -581,8 +581,14 @@ only that folder.
 **Why does the player's own Lyrion server take a few minutes before it reads my music?**
 After its download, Lyrion starts, fetches its add-ons (Material Skin among
 them) and restarts once to load them: about three minutes on a Pi 4 before
-it begins reading. Getting ready, and the server's row in *Settings →
-Sources*, say which step it is on, then how many files it has read.
+it begins reading. Getting ready, and the *Library* row in *Settings →
+Library*, say which step it is on, then how far it has read.
+
+**Which apps control the player's Lyrion server?**
+*Settings → Library → More for your library* links to three, on a phone:
+Squeezer (Android, Google Play), Lyrion (Android, F-Droid) and LyrPlay
+(iPhone, App Store), and to the server's own page, where everything else
+about the library is set.
 
 **How long does the first scan take?**
 On a 4 GB Pi over Wi-Fi, a library of tens of thousands of files took a

@@ -260,3 +260,4 @@ selection criteria. Protect the audio path with priority, not by doing less.
   PipeWire back.
 - Claims sourced from measurement cite the finding in `docs/findings/`.
   Unverified claims are marked as such inline.
+| [0150](0150-a-library-category.md) | A Library category | **Accepted** 2026-10-18 (George). Settings gains a Library category after Sources; the Lyrion Server's rows move there (MPD's will join); a plugin may declare `"area": "library"` and is then listed under *Library* on the Plugins page; a read-only row links to Lyrion's own page and to Squeezer, Lyrion and LyrPlay; rows may carry links |

@@ -56,7 +56,7 @@ def stage(answering: bool, addons_done: bool, status: dict | None, has_locations
         return {"phase": "waiting", "label": "About to read your music", "share": None, "done": False,
                 "line": "Lyrion starts reading your folders in a moment."}
     return {"phase": "ready", "label": "Ready, no music yet", "share": 1.0, "done": True,
-            "line": "Add where your music is in Settings → Sources → Lyrion Server."}
+            "line": "Add where your music is in Settings → Library → Lyrion Server."}
 
 
 def _int(value) -> int | None:

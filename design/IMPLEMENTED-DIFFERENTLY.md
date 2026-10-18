@@ -393,7 +393,7 @@ the line under them says Lyrion starts with no music (ADR-0115 decisions
 switches and each opens to its folders, *Add the whole drive* or *Add
 <folder>* first, *Back up* inside a folder (decision 23; George: *"What we
 need to add though is a folder selection from USB"*) - not in the design.
-The same browsing is in Settings → Sources → Lyrion Server → *USB folders*.
+The same browsing is in Settings → Library → Lyrion Server → *USB folders*.
 
 ## First use's *Upload a backup*: the file's name, then what it restores (2026-10-18)
 

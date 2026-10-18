@@ -2163,6 +2163,15 @@
                         <span style:width={`${Math.round((downloadShare(c) ?? 0) * 100)}%`}></span>
                       </span>
                     {/if}
+                    {#if r.links?.length && !onPanel()}
+                      <!-- ADR-0150: where the rest is - on the phone only; on
+                           the panel a store or another page leads nowhere. -->
+                      <span class="links">
+                        {#each r.links as l (l.url)}
+                          <a class="links__one" href={l.url} target="_blank" rel="noopener" onclick={(e) => e.stopPropagation()}>{l.label} ↗</a>
+                        {/each}
+                      </span>
+                    {/if}
                     {#if r.progress != null || r.busy}
                       <!-- ADR-0115 decision 28: how far Lyrion has read, or
                            that it is working with no count to give. -->
@@ -4293,6 +4302,23 @@
   .shares__name {
     font-size: 17px;
     overflow-wrap: anywhere;
+  }
+  /* ADR-0150: a row's links, as small buttons under its note. */
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+    width: 100%;
+  }
+  .links__one {
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(233, 238, 242, 0.16);
+    background: rgba(233, 238, 242, 0.05);
+    color: inherit;
+    font-size: 14px;
+    text-decoration: none;
   }
   /* Tick several (George, 2026-10-18): the box on a folder, the path above
      the list, and the button under it. */

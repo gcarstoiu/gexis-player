@@ -279,6 +279,13 @@
     ]
   },
   {
+    "id": "library",
+    "label": "Library",
+    "subtitle": "Your own music, and where it is read from",
+    "accent": "#f2a48f",
+    "rows": []
+  },
+  {
     "id": "handoff",
     "label": "Handoff",
     "subtitle": "Who gets the player",
