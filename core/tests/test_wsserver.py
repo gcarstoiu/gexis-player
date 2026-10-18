@@ -901,7 +901,9 @@ async def test_the_updaters_backup_is_named_as_its_own_and_pruned(tmp_path, monk
         r = await client.post("/settings/backup?before=update")
         assert r.status == 200
         for _ in range(500):  # 5 s: the prune runs in the background, and a loaded suite was slower than 1 s
-            if pruned:
+            # Both: the Restore list is told after the prune, and GitHub's
+            # runner once read it between the two (2026-10-18).
+            if pruned and state.state.settings_revision == 1:
                 break
             await asyncio.sleep(0.01)
         assert made == [("Den", True)]
