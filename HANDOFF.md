@@ -66,7 +66,15 @@ first minutes are now said step by step (ADR-0115 decision 28,
 (heading indicator, read-only *Library* row with a bar, kept after Ready);
 sofapi `+git139` reads *Ready, 760 songs on 47 albums*. **Seen 2026-10-18,
 not yet looked into:** sofapi's new Lyrion server lists ShelvesPi and
-GuestPi as its players.
+GuestPi as its players. **Library category** (ADR-0150, `+git144` on sofapi): the Lyrion
+server's rows under Settings → Library, `area: library` on the Plugins page,
+*More for your library* links (Squeezer, Lyrion F-Droid, LyrPlay; not
+iPeng). **Finding 127:** Lyrion keeps its old library through a rescan, so a
+first scan leaves the home empty until it ends. **Option A built** (approved
+on a screenshot; ADR-0115 decision 29, `+git146` on sofapi): a first read
+of the library keeps the waiting screen with a large *Lyrion is reading
+your music* block (`lyrion_stage` `first`); not yet seen on a real first
+read - sofapi's library is read (`first: False`, no block).
 
 **Release build output lives in `~/.local/share/gexis-release-out`**: in each
 release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
