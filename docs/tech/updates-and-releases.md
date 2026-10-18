@@ -164,8 +164,10 @@ list. `packaging/release/build.sh <image.img>` refuses to run if the image's
 4. **PR**: push the tag and a `release-X` branch at the tagged commit; open
    one PR into `main` with the approved notes and what was checked. **George
    merges it**, never Claude.
-5. **After the merge**: merge `origin/main` into both working branches,
-   delete `release-X`, remove the release worktree, then the routine clean-up
+5. **After the merge**: merge `origin/main` into `docs` and `next`, delete
+   `release-X` **on GitHub and locally** (`git push origin --delete
+   release-X`; seven release branches were left on GitHub until 2026-10-18),
+   remove the release worktree, then the routine clean-up
    (`docs/ROUTINE-CLEANUP.md`).
 6. **Promotion to Stable** (when George says): `publish.sh --promote rX`
    attaches `gexis-player.img.xz` with its checksum and signature, points
