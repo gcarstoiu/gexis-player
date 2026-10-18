@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-18 (on R2D2).
+Last updated: 2026-10-19 (on R2D2).
 
 ## Start here
 
@@ -27,61 +27,24 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.0.6, on Stable** (2026-10-17; Stable serial 4, Testing
-serial 48, signatures verified through the API and the public URL; image
-`image/deploy/2026-10-17-gexis-player-v1.0.6.img`, 123 checks, the public
-download byte for byte the checked image; built in 16 minutes, the skin
-packs reused): *Add a backup* in Settings → Restore (ADR-0083 amended
-2026-10-17), the backup fixes, the Settings header wrap. PR #74 merged by
-George; post-merge steps and the routine clean-up done.
-
-**Phase 14 (`ph-first-use`) is built, not merged** (worktree
-`~/projects/gexis-player-14`). First use - part 1 setup and part 2 *Make it
-yours* - is one page generated from Claude Design's
-`design/source/14-first-use` by `tools/design/gen_personalise.py`: change the
-design or the generator's asserted replacements, never the `.svelte` by
-hand. Decisions: ADR-0149 1-41; ADR-0115 20-26 (Lyrion's music locations,
-none preselected; USB and share folders ticked at any depth; *Forget* in
-part 2); ADR-0131 amended (the backup review by Settings section). sofapi
-runs core, UI and player `+git109`. Done on `next` and merged into it:
-*Tested* or nothing, the waiting screen's pulsing marks, the visualiser's
-window rule and PeppyMeter's keys kept across upgrades, the library's Calm
-background. Test fronts in the scratchpad: `p2proxy.py` (part 2 on 8197/8198
-against sofapi, writes held; `NOLYR`, `SETON`, `USBFAKE`, `SHAREUP`),
-`fakeshares.py` (a stand-in NAS on 8199), `p1mock.py` (part 1 on 8196;
-`REALBK`, `PLUGDIR`), `holddemo.py` with `pd/` (the demo library for
-manual pictures). **Not tried on a device:** a USB drive's folders, and a
-share added at a sub-folder mounting (sofapi's Lyrion server is off; to-do
-g56). The day's narrative: `docs/HANDOFF-ARCHIVE.md`, 2026-10-18.
-
-**The Music share's floor** (built 2026-10-18 on `ph-first-use`, `+git129`
-on sofapi; ADR-0115 decision 27, ADR-0022 [H]; George: "4 GB fixed in
-code"): below 4 GB free the share includes `read only = yes`
-(`/run/gexis/music-share.conf`), above 4.5 GB it opens. Tried on sofapi by
-closing it with `music_floor.apply`: a guest copy was refused, then went in
-once open; never with a card actually full. *Where is your music?* groups
-each source with its own actions (George, the same evening). Lyrion's
-first minutes are now said step by step (ADR-0115 decision 28,
-`lyrion_stage.py`): Getting ready and Settings → Sources → Lyrion Server
-(heading indicator, read-only *Library* row with a bar, kept after Ready);
-sofapi `+git139` reads *Ready, 760 songs on 47 albums*. **Seen 2026-10-18,
-not yet looked into:** sofapi's new Lyrion server lists ShelvesPi and
-GuestPi as its players. **Library category** (ADR-0150, `+git144` on sofapi): the Lyrion
-server's rows under Settings → Library, `area: library` on the Plugins page,
-*More for your library* links (Squeezer, Lyrion F-Droid, LyrPlay; not
-iPeng). **Finding 127:** Lyrion keeps its old library through a rescan, so a
-first scan leaves the home empty until it ends. **Option A built** (approved
-on a screenshot; ADR-0115 decision 29, `+git146` on sofapi): a first read
-of the library keeps the waiting screen with a large *Lyrion is reading
-your music* block (`lyrion_stage` `first`); not yet seen on a real first
-read - sofapi's library is read (`first: False`, no block). **George's full run, 2026-10-19 00:00
-(`+git155` on sofapi):** browsing at one fixed height; Lyrion as a numbered
-checklist in Getting ready; no empty Now Playing (`idleSource`); the
-download counts as the first read; the waiting marks centred, Lyrion left
-out during a first read; a Lyrion player on with an empty playlist at
-startup is switched off, not taken (ADR-0027 amended - checked on sofapi:
-the panel opens the library home, nothing current); Settings' shares on
-their own tile, *Add share*, and the search without added shares.
+**Current release: 1.1.0, on Testing** (2026-10-19; Testing serial 49, read
+back with `gh release download channels`; Stable still 1.0.6, serial 4).
+Image `image/deploy/2026-10-18-gexis-player-v1.1.0.img`, 123 checks; parts
+`ours-6edee123e59c`, `skins-9c8185729dfd` (reused), `rpi-32fa9ea6c3e4`,
+`debian-e13da7eb04f4` (the OS packages changed since 1.0.6). Notes
+pre-approved by George. It carries Phase 14, first use in two parts
+(`ph-first-use`, merged into `next`), and every finding of George's full run
+of 18-19 October. **PR #75** (`release-1.1.0` into `main`) is open for
+George to merge; promotion to Stable is his call, and the README names the
+release then. After the merge: the post-merge steps, then remove the release
+worktree `~/projects/gexis-player-rel-1.1.0` (`git submodule deinit -f
+--all`, then `git worktree remove --force`) and the merged branches
+`ph-first-use` and `release-1.1.0`. sofapi runs the preview `+git162`.
+**Not tried on a device:** a USB drive's folders, a share added at a
+sub-folder, and the *Lyrion is reading your music* block on a real first
+read. **Seen 2026-10-18, not yet looked into:** sofapi's new Lyrion server
+lists ShelvesPi and GuestPi as its players. Phase 14's narrative:
+`docs/HANDOFF-ARCHIVE.md`, 2026-10-19.
 
 **Release build output lives in `~/.local/share/gexis-release-out`**: in each
 release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
