@@ -46,11 +46,14 @@ verbatim, and 40 asserted replacements call the core. Change the design, then
 generate again; never restyle the `.svelte` by hand. Every screen was checked
 side by side with the prototype. ADR-0149's decisions were revised (25,
 including the two kept against the design: Output and the rename/second
-player on a restore, George 2026-10-08). **sofapi runs it** (core and UI
-`1.0.6+git46`, player `+git47`; part 2 opens from Settings → System →
+player on a restore, George 2026-10-08). **sofapi runs it** (core and player
+`1.0.6+git49`, UI `+git48`; part 2 opens from Settings → System →
 Personalise). Added 2026-10-18 at George's request: a Touchpad step in
 part 2 (before the visualiser; preview with the pointer moving) and the
-volume type under part 1's Output (`GET /setup/outputs`; ADR-0149 26-27). Since George's notes of 2026-10-18: part 2 is owed only until
+volume type under part 1's Output (`GET /setup/outputs`; ADR-0149 26-27). Then: Getting ready shows the
+opening flow animation with the chosen sources and a status badge, and the
+core keeps the Lyrion servers found (`discovery.Known`; the list answered in
+3 ms on sofapi, was 2.8 s; ADR-0149 28-29). Since George's notes of 2026-10-18: part 2 is owed only until
 the first boot after setup (`personalise.at_start`), a restore is pinned by
 a test never to owe it, and the visualiser tweaks show only what the skin
 type draws (on `next`, merged into `ph-first-use`). *Personalise* is in ADR-0022 (George, 2026-10-18). Waiting
