@@ -297,6 +297,22 @@ it as it should be"*)
     settings from Personalisation are display related, let's move the
     setting to Display category"*); ADR-0022 says so.
 
+32. **Plexamp is one screen** (George: *"basically everything happens in
+    one screen not two"*): the design's *Plexamp* and *Sign in to Plex*
+    become one step - the download's stage at the top, the claim code under
+    it.
+33. **Signed in to Plex is asked, not assumed** (George: *"verify if
+    Plexamp is claimed unimportant if that happened during the setup flow or
+    it was done in the past"*): the page reads the plugin's status on the
+    Claim token row, which reads Plexamp's own token. Already claimed, the
+    step says *<name> is on your Plex account* and asks nothing; a code
+    pasted shows *Signing in to Plex* until Plexamp has signed in, or says
+    why it did not. Before, a code accepted by the setting counted as
+    signed in.
+34. **The page is drawn once the player's values are in** (at most 3 s):
+    until then the design's sample values (its name, its network) could
+    show.
+
 **Settled by George afterwards (2026-10-18)**
 - **Personalise** is in ADR-0022's inventory (*"Yes it goes in the list"*).
 - Part 1 is tested by George on sofapi after *Reset to factory settings*

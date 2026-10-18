@@ -220,6 +220,41 @@ js = js[:a] + """      case 'done': { const items = [], got = [];
         const state = s.finishError ? 'busy' : failedAny ? 'warn' : waiting ? 'busy' : 'done';
 """ + js[b:]
 R.append("Getting ready's lines from live.stage")
+# **Plexamp is one screen** (George, 2026-10-18: "basically everything
+# happens in one screen not two"): the download and the sign-in together,
+# the download's stage at the top (live.stage), the claim code under it. And
+# **signed in is asked, not assumed** ("verify if Plexamp is claimed
+# unimportant if that happened during the setup flow or it was done in the
+# past"): already claimed, the step says so and asks for nothing; a code
+# pasted waits for Plexamp to sign in (plexState 'checking').
+a = js.index("      case 'plexamp': {")
+b = js.index("      case 'browse':", a)
+js = js[:a] + """      case 'plexamp': {
+        const sub = 'Your Plex library, played on ' + nm + '.';
+        const g = live.stage(live.component('plexamp.enabled', 'plexamp')), inst = g.done;
+        const dl = prog(inst ? 'Plexamp is installed' : g.label, g.pct, g.meta, inst ? '' : g.line);
+        if (s.plexClaimed) return { title: 'Plexamp', sub, blocks: [dl, status('ok', nm + ' is on your Plex account', 'Signed in to Plex'), P('Open Plexamp on your phone and pick ' + nm + ' as the player.')] };
+        if (!s.plexOn && !inst) return { title: 'Plexamp', sub, blocks: [list([{ k: 'plain', label: 'Plexamp', note: 'From Plex', icon: 'plex' }]), num([['Download Plexamp', 'next'], ['Sign in to Plex with a claim code', 'next']]), P('Skip, and add Plexamp later from Settings → Plugins.')],
+          foot: { alt: 'Skip', altFn: () => this.setState({ plexSkipped: true, plexState: 'later' }, () => this.skip()), next: 'Download', nextFn: () => this.setState({ plexOn: true, plexSkipped: false }, () => live.downloadPlex()), keep: true } };
+        const later = () => this.setState({ plexState: 'later' }, () => this.skip());
+        const skipP = P('Or skip, and sign in later from Settings → Plugins → Plexamp.' + (inst ? '' : ' The download carries on.'));
+        const open = btn('Open plex.tv/claim', () => { window.open('https://plex.tv/claim', '_blank', 'noopener'); set({ claimOpened: true, plexState: s.plexState === 'expired' ? 'code' : s.plexState }); });
+        if (s.plexState === 'checking') return { title: 'Plexamp', sub, blocks: [dl, status('spin', 'Signing in to Plex', 'A few seconds')], foot: { alt: 'Skip', altFn: later, next: 'Next', nextOff: true, keep: true } };
+        if (!inst) return { title: 'Plexamp', sub, blocks: [dl, open, note('info', '', 'A claim code lasts four minutes. Paste it here once Plexamp is installed.'), field('Claim code', '', noop, { ph: 'Opens once Plexamp is installed', ro: true }), skipP], foot: { alt: 'Skip', altFn: later, next: 'Claim', nextOff: true, keep: true } };
+        const code = field('Claim code', s.claim, e => set({ claim: e.target.value }), { ph: 'claim-…' });
+        const blocks = s.plexState === 'expired' ? [dl, note('warn', s.plexError ? 'The claim did not work' : 'That code has run out', s.plexError || 'Claim codes last four minutes. Get a new one and paste it straight away.'), open, code]
+          : [dl, open, note('info', '', 'Get a claim code from plex.tv, then paste it here within four minutes.'), code, skipP];
+        return { title: 'Plexamp', sub, blocks, foot: { alt: 'Skip', altFn: later, next: 'Claim', nextFn: () => { if (s.claim.trim()) live.claim(s.claim.trim()); }, nextOff: !s.claim.trim(), keep: true } };
+      }
+""" + js[b:]
+a = js.index("      case 'plexsign': {")
+b = js.index("      case 'review': {", a)
+js = js[:a] + js[b:]
+assert js.count("if (d.plex) { p.push('plexamp'); if (!s.plexSkipped) p.push('plexsign'); }") == 1
+js = js.replace("if (d.plex) { p.push('plexamp'); if (!s.plexSkipped) p.push('plexsign'); }", "if (d.plex) p.push('plexamp');")
+assert js.count("const ok = s.plexState === 'ok';") == 1
+js = js.replace("const ok = s.plexState === 'ok';", "const ok = s.plexClaimed;")
+R.append("Plexamp on one screen, signed in asked of the plugin")
 out_js = js
 script = (HERE / "personalise-adapter.svelte.txt").read_text().replace("/*PROTO*/", out_js)
 page = f"""<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
@@ -238,7 +273,9 @@ page = f"""<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 {script}
 
 <div style="position:fixed;inset:0;height:100dvh;background:#0c1014;color:#e9eef2;font-family:'Nunito Sans Variable','Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif;">
+{{#if st.shown}}
 {markup}
+{{/if}}
 </div>
 """
 (UI / "FirstUsePage.svelte").write_text(page)

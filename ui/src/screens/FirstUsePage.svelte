@@ -205,7 +205,7 @@ class Component extends DCLogic {
     if (s.preset === 'custom') p.push('mix');
     if (d.lyr && s.lyrState !== 'found') { p.push('lyrion'); if (s.lyrWhere === 'here') p.push('folders'); }
     if (d.lyr && !d.headless) p.push('browse');
-    if (d.plex) { p.push('plexamp'); if (!s.plexSkipped) p.push('plexsign'); }
+    if (d.plex) p.push('plexamp');
     if (d.spo) p.push('spotify');
     if (d.bt) p.push('bluetooth');
     if (!d.headless) p.push('touchpad', 'visualiser', ...(d.wait ? ['wait'] : []), 'idle', 'standby');
@@ -391,9 +391,20 @@ class Component extends DCLogic {
         return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [list(PLACES.map(p => K(p[1], p[2], p[0] === 'share' ? s.places.share : true, p[0] === 'share' ? tg(p[0]) : undefined)), 'Lyrion reads'), ...extra, P('These become Lyrion’s music folders when it installs.')], foot: SK }; }
       case 'plexamp': {
         const sub = 'Your Plex library, played on ' + nm + '.';
-        if (s.plexOn) return { title: 'Plexamp', sub, blocks: [prog(s.plexPct >= 100 ? 'Plexamp is in' : 'Downloading Plexamp', s.plexPct)] };
-        return { title: 'Plexamp', sub, blocks: [list([{ k: 'plain', label: 'Plexamp', note: 'From Plex', icon: 'plex' }]), num([['Download Plexamp', 'next'], ['Sign in to Plex with a claim code', 'next']]), P('Skip, and add Plexamp later from Settings → Plugins.')],
-          foot: { alt: 'Skip', altFn: () => this.setState({ plexSkipped: true, plexState: 'later' }, () => this.skip()), next: 'Download', nextFn: () => this.setState({ plexOn: true, plexSkipped: false }, () => { live.downloadPlex(); this.next(); }), keep: true } };
+        const g = live.stage(live.component('plexamp.enabled', 'plexamp')), inst = g.done;
+        const dl = prog(inst ? 'Plexamp is installed' : g.label, g.pct, g.meta, inst ? '' : g.line);
+        if (s.plexClaimed) return { title: 'Plexamp', sub, blocks: [dl, status('ok', nm + ' is on your Plex account', 'Signed in to Plex'), P('Open Plexamp on your phone and pick ' + nm + ' as the player.')] };
+        if (!s.plexOn && !inst) return { title: 'Plexamp', sub, blocks: [list([{ k: 'plain', label: 'Plexamp', note: 'From Plex', icon: 'plex' }]), num([['Download Plexamp', 'next'], ['Sign in to Plex with a claim code', 'next']]), P('Skip, and add Plexamp later from Settings → Plugins.')],
+          foot: { alt: 'Skip', altFn: () => this.setState({ plexSkipped: true, plexState: 'later' }, () => this.skip()), next: 'Download', nextFn: () => this.setState({ plexOn: true, plexSkipped: false }, () => live.downloadPlex()), keep: true } };
+        const later = () => this.setState({ plexState: 'later' }, () => this.skip());
+        const skipP = P('Or skip, and sign in later from Settings → Plugins → Plexamp.' + (inst ? '' : ' The download carries on.'));
+        const open = btn('Open plex.tv/claim', () => { window.open('https://plex.tv/claim', '_blank', 'noopener'); set({ claimOpened: true, plexState: s.plexState === 'expired' ? 'code' : s.plexState }); });
+        if (s.plexState === 'checking') return { title: 'Plexamp', sub, blocks: [dl, status('spin', 'Signing in to Plex', 'A few seconds')], foot: { alt: 'Skip', altFn: later, next: 'Next', nextOff: true, keep: true } };
+        if (!inst) return { title: 'Plexamp', sub, blocks: [dl, open, note('info', '', 'A claim code lasts four minutes. Paste it here once Plexamp is installed.'), field('Claim code', '', noop, { ph: 'Opens once Plexamp is installed', ro: true }), skipP], foot: { alt: 'Skip', altFn: later, next: 'Claim', nextOff: true, keep: true } };
+        const code = field('Claim code', s.claim, e => set({ claim: e.target.value }), { ph: 'claim-…' });
+        const blocks = s.plexState === 'expired' ? [dl, note('warn', s.plexError ? 'The claim did not work' : 'That code has run out', s.plexError || 'Claim codes last four minutes. Get a new one and paste it straight away.'), open, code]
+          : [dl, open, note('info', '', 'Get a claim code from plex.tv, then paste it here within four minutes.'), code, skipP];
+        return { title: 'Plexamp', sub, blocks, foot: { alt: 'Skip', altFn: later, next: 'Claim', nextFn: () => { if (s.claim.trim()) live.claim(s.claim.trim()); }, nextOff: !s.claim.trim(), keep: true } };
       }
       case 'browse': return { title: 'Browse on the screen', sub: 'A Lyrion app on your phone works with any of these.', pv: pv({ kind: KNAV[s.browse] }), blocks: [list(NAV.map(n => R(n[1], n[2], s.browse === n[0], () => set({ browse: n[0] }))))], foot: SK };
       case 'spotify': return { title: 'Spotify', sub: 'Built in. ' + nm + ' appears in the Spotify app on your phone.', blocks: [list([T('Spotify Connect', '', s.spotify, flip('spotify'), { icon: 'spo' })]), ...(s.spotify ? [{ t: 'Cast', device: nm, text: 'Tap the devices icon, then ' + nm + '.' }] : [])], foot: SK };
@@ -428,18 +439,6 @@ class Component extends DCLogic {
         blocks: [list([T('Clock', 'Time, date and the player’s name.', s.waitClock, flip('waitClock'), { icon: 'clk' })]), pick('Background', WBGS, s.waitBg, C.idle, x => set({ waitBg: x })), ...(s.waitBg === 'Gexis wallpapers' ? [styles, PIXA] : [])], foot: SK };
       case 'standby': return { title: 'Off at night?', sub: 'The screen turns off at set hours when nothing plays.', pv: pv(s.standby ? { kind: 'off' } : idleLook),
         blocks: [list([T('Night standby', 'The screen turns off.', s.standby, () => this.setState(st => ({ standby: !st.standby, ivPick: null, ivs: !st.standby && !st.ivs.length ? [{ from: '22:00', until: '06:00', days: DAYS.slice() }] : st.ivs })), { icon: 'stby' })]), ...(s.standby ? [this.ivBlock(s)] : [])], foot: SK };
-      case 'plexsign': {
-        const later = () => this.setState({ plexState: 'later' }, () => this.skip());
-        const done = s.plexPct >= 100, dl = prog(done ? 'Plexamp is installed' : 'Downloading Plexamp', s.plexPct), sub = 'Get a claim code from plex.tv while Plexamp downloads, then paste it here.';
-        const skipP = P('Or skip, and sign in later from Settings → Plugins → Plexamp.' + (done ? '' : ' The download carries on.'));
-        const open = btn('Open plex.tv/claim', () => { window.open('https://plex.tv/claim', '_blank', 'noopener'); set({ claimOpened: true, plexState: s.plexState === 'expired' ? 'code' : s.plexState }); });
-        if (s.plexState === 'ok') return { title: 'Sign in to Plex', sub, blocks: [dl, open, note('info', '', 'Paste the claim code here within four minutes.'), field('Claim code', s.claim, noop, { ro: true }), status('ok', nm + ' is on your Plex account', 'Plexamp signed in'), P('Open Plexamp on your phone and pick ' + nm + ' as the player.')] };
-        if (!done) return { title: 'Sign in to Plex', sub, blocks: [dl, open, note('info', '', 'A claim code lasts four minutes. Paste it here once Plexamp is installed.'), field('Claim code', '', noop, { ph: 'Opens once Plexamp is installed', ro: true }), skipP], foot: { alt: 'Skip', altFn: later, next: 'Claim', nextOff: true, keep: true } };
-        const code = field('Claim code', s.claim, e => set({ claim: e.target.value }), { ph: 'claim-…' });
-        const blocks = s.plexState === 'expired' ? [dl, note('warn', 'That code has run out', 'Claim codes last four minutes. Get a new one and paste it straight away.'), open, code]
-          : [dl, open, note('info', '', 'Paste the claim code here within four minutes.'), code, skipP];
-        return { title: 'Sign in to Plex', sub, blocks, foot: { alt: 'Skip', altFn: later, next: 'Claim', nextFn: () => { if (s.claim.trim()) live.claim(s.claim.trim()); }, nextOff: !s.claim.trim(), keep: true } };
-      }
       case 'review': {
         const sk = id => s.skipped[id] ? ['Skipped', 'plain'] : null, op = id => () => this.go(id, 'review'), rows = [];
         const music = s.preset === 'mine' ? (s.lyrState === 'found' ? 'Lyrion · found on ' + s.net : s.lyrWhere === 'here' ? 'Lyrion, on this player' : 'Lyrion, on another machine') : s.preset === 'stream' ? 'Streaming only' : s.preset === 'plex' ? 'Plexamp' : [d.lyr && 'Lyrion', d.plex && 'Plexamp'].filter(Boolean).join(' · ') || 'No library';
@@ -464,7 +463,7 @@ class Component extends DCLogic {
           items.push(head(name), prog(g.label, g.pct, g.meta, g.done ? doneLine : g.line, g.done ? doneOk : false));
           if (g.done && after) items.push(note('info', '', after)); };
         if (d.here) show('Lyrion', live.component('lyrion-server.enabled', 'lyrion'), 'Folders added, scan started', true, 'A large library can take hours to scan. Music shows up as Lyrion finds it.');
-        if (d.plex && s.plexOn) { const ok = s.plexState === 'ok';
+        if (d.plex && s.plexOn) { const ok = s.plexClaimed;
           show('Plexamp', live.component('plexamp.enabled', 'plexamp'), ok ? 'Signed in to Plex' : 'Not signed in yet', ok, ok ? 'Your Plex library plays from the Plexamp app.' : 'Sign in from Settings → Plexamp when you’re ready.'); }
         if (!d.headless && s.vizOn) show('Visualiser', 'skins', 'Skins ready', true, 'The visualiser starts after ' + s.vizAfter + ' of music.');
         const failedAny = got.some(g => g.failed);
@@ -530,10 +529,13 @@ class Component extends DCLogic {
   //: the player: its name, clock, network, the Lyrion search, Plexamp's
   //: download, a phone asking to pair, the network shares, the downloads.
   let st = $state(Object.assign(init('A', mode === 'p1' ? 'p1' : 'p2', false), {
-    first: true, nameSaved: false, second: true, touchpad: true,
+    first: true, nameSaved: false, second: true, touchpad: true, plexClaimed: false, plexError: null,
     volume: 'Hardware', volHw: {}, volNotes: {}, outTags: {}, outProblems: {}, town: '', net: 'your network', lyrMeta: '', lyrServer: null, pairDevice: '', pairCode: '',
     shareServers: [], shareFound: [], shareSrvItem: null, shareError: null, finishError: null, finished: null,
     plugins: [], tick: 0, ready: false,
+    //: **Drawn once the player's own values are in** (found 2026-10-18: the
+    //: design's sample name and network showed until /settings arrived).
+    shown: false,
     // Part 1's own.
     nets: [], scan: 'scanning', other: false, otherName: '', hasPw: false, joinError: null, overLan: false,
     backup: null, backupMade: '', uploading: null, uploadError: null, tz: null, tzMode: 'auto', tzRegion: null, zones: [],
@@ -660,9 +662,11 @@ class Component extends DCLogic {
       const r = await writeSetting('plexamp.enabled', true);
       if (!r.ok) st.plexOn = false;
     },
+    //: The code goes to Plexamp; whether it held is Plexamp's to say, read
+    //: back through the plugin (plexClaimCheck) - not the write's answer.
     async claim(code) {
       const r = await writeSetting('plexamp.claim_token', code);
-      if (r.ok) st.plexState = 'ok';
+      if (r.ok) { st.plexState = 'checking'; plexClaimCheck(); }
       else Object.assign(st, { plexState: 'expired', claim: '' });
     },
 
@@ -787,6 +791,22 @@ class Component extends DCLogic {
     }
   };
 
+  //: **Whether Plexamp is signed in, asked of the plugin** (George,
+  //: 2026-10-18: "verify if Plexamp is claimed unimportant if that happened
+  //: during the setup flow or it was done in the past"). The plugin reads
+  //: Plexamp's own token and reports it on the Claim token row: done is
+  //: Claimed, failed says why.
+  async function plexClaimCheck() {
+    try {
+      const body = await json('/settings');
+      const row = (body.groups ?? []).flatMap((g) => g.rows ?? []).find((r) => r.key === 'plexamp.claim_token');
+      const state = row?.status?.state;
+      st.plexClaimed = state === 'done';
+      if (st.plexClaimed && st.plexState !== 'later') st.plexState = 'ok';
+      else if (state === 'failed' && st.plexState === 'checking') Object.assign(st, { plexState: 'expired', claim: '', plexError: row.status.error });
+    } catch { /* asked again in a moment */ }
+  }
+
   async function json(url, opts) {
     const r = await fetch(url, opts);
     const body = await r.json().catch(() => ({}));
@@ -873,6 +893,7 @@ class Component extends DCLogic {
     const p1 = ['p1welcome', 'p1net', 'p1start', 'p1backup', 'p1name', 'p1clock', 'p1output', 'p1screen', 'p1review', 'p1restore'];
     st.screen = st.joinError ? 'p1net' : p1.includes(saved.step) ? saved.step : 'p1welcome';
     st.ready = true;
+    st.shown = true;
     live.rescan();
   }
 
@@ -941,6 +962,7 @@ class Component extends DCLogic {
       plexOn: v['plexamp.enabled'] === true, plexPct: v['plexamp.enabled'] === true ? 100 : 0
     });
     if (!st.first) fromSettings(v);
+    st.shown = true;
   });
   $effect(() => { if ($settingsDevice.name) st.name = $settingsDevice.name; });
 
@@ -975,13 +997,18 @@ class Component extends DCLogic {
     wide();
     window.addEventListener('resize', wide);
     const clock = setInterval(() => (st.tick += 1), 20000);
+    //: Never held blank for long: whatever has arrived after 3 s is shown.
+    setTimeout(() => (st.shown = true), 3000);
+    //: Plexamp's sign-in, asked at the start and every 4 s on its step.
+    const plexWatch = setInterval(() => { if (st.screen === 'plexamp' || st.plexState === 'checking') plexClaimCheck(); }, 4000);
     if (mode === 'p1') {
       loadPart1();
       //: The page says it is still open (ADR-0104): the player keeps its
       //: setup network while it is in use.
       const here = setInterval(() => { if (document.visibilityState === 'visible') fetch('/setup/status').catch(() => {}); }, 60000);
-      return () => { window.removeEventListener('resize', wide); clearInterval(clock); clearInterval(here); };
+      return () => { window.removeEventListener('resize', wide); clearInterval(clock); clearInterval(here); clearInterval(plexWatch); };
     }
+    plexClaimCheck();
     (async () => {
       try {
         const r = await fetch('/personalise');
@@ -1002,6 +1029,7 @@ class Component extends DCLogic {
     return () => {
       window.removeEventListener('resize', wide);
       clearInterval(clock);
+      clearInterval(plexWatch);
     };
   });
 
@@ -1010,6 +1038,7 @@ class Component extends DCLogic {
 
 
 <div style="position:fixed;inset:0;height:100dvh;background:#0c1014;color:#e9eef2;font-family:'Nunito Sans Variable','Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif;">
+{#if st.shown}
     <div style="position:relative;flex-shrink:0;overflow:hidden;background:#101a21;box-sizing:border-box;display:flex;flex-direction:column;width:{V.fw};height:{V.fh};border-radius:{V.rad};">
       <div style="position:absolute;inset:0;background:#37505f;"></div>
       <div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,rgba(20,33,42,0.72),rgba(13,21,28,0.96));"></div>
@@ -1420,4 +1449,5 @@ class Component extends DCLogic {
         </div>
       </div>
     </div>
+{/if}
 </div>

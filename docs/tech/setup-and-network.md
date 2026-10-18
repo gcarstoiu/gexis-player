@@ -706,8 +706,13 @@ a pairing request and the settling. Its questions, in order: how you listen
 (and Lyrion, its folders, Plexamp, Browse), Spotify, Bluetooth, then, with a
 screen, Touchpad (`phone_touchpad`, George 2026-10-18; its preview is the
 library with the pointer moving and tapping, `PanelMini`'s `pointer`), the
-visualiser, the waiting and idle screens, standby. Its last screen,
-*Getting ready*, shows `PanelMini`'s `flow` cycling through the sources
+visualiser, the waiting and idle screens, standby. Plexamp is one step: its
+download's stage, then the claim code; whether Plexamp is signed in comes
+from the plugin's status on `plexamp.claim_token` (Plexamp's own token),
+asked at the start and every 4 s on that step, so a player claimed long ago
+is shown as signed in and a pasted code is followed until Plexamp signs in.
+The page is drawn once `/settings` has seeded it (at most 3 s). Its last
+screen, *Getting ready*, shows `PanelMini`'s `flow` cycling through the sources
 chosen (`marks`), with a badge on the panel (`status`): the check when every
 download is in, a turning ring while one is still going, an amber ! when one
 failed; the title follows (*Getting … ready*, *… is ready*, *… is nearly
