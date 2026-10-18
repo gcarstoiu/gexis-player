@@ -303,7 +303,14 @@ class Component extends DCLogic {
       case 'p1backup': { const b = s.backup, blocks = [btn(b ? 'Choose another file' : 'Choose a file', () => live.pickBackup())];
         if (s.uploading !== null) blocks.push(status('spin', 'Uploading and checking', Math.round(s.uploading * 100) + '%'));
         if (s.uploadError) blocks.push(note('warn', '', s.uploadError));
-        if (b && s.uploading === null) blocks.push(list([{ k: 'plain', label: (b.settings?.device_name || b.name || 'A gexis backup') + (s.backupMade ? ' · ' + s.backupMade : ''), note: 'Uploaded and checked.' + (b.newer ? ' Made by a newer version of gexis: settings this version does not know wait until it is updated.' : ''), meta: (b.brings || []).join(' · ') || 'Settings only', tag: ['Ready', 'ok'] }]));
+        // George, 2026-10-18: the file's name alone in the tile, and below it
+        // what it restores, a ticked line each, by the section of Settings
+        // the setting is in (ADR-0131 amended).
+        if (b && s.uploading === null) {
+          blocks.push(list([{ k: 'plain', label: b.file || 'gexis backup', tag: ['Ready', 'ok'] }]));
+          if (b.newer) blocks.push(note('info', '', 'Made by a newer version of gexis: settings this version does not know wait until it is updated.'));
+          for (const sec of b.sections || []) blocks.push({ t: 'Split', lhead: sec.label, left: sec.items, rhead: '', right: [] });
+        }
         return { title: 'Upload a backup', sub: 'A backup file saved from Settings → System → Back up now, on this phone or in its files.', blocks, foot: { nextOff: !b || s.uploading !== null } }; }
       case 'p1name': return { title: 'Name the player', sub: 'One name for everything. Pick one you will recognise in a list of speakers.',
         blocks: [field('Device name', s.name, e => set({ name: e.target.value }), { ph: 'Living Room', hint: 'Letters, numbers and hyphens become the address; the name keeps its capitals everywhere else.' }), sum([['Address', 'http://' + sl + '.local'], ['In speaker lists', nm]], 'Becomes')], foot: { nextOff: slug(s.name).length < 2 } };
@@ -1319,7 +1326,7 @@ class Component extends DCLogic {
                         </div>
                       {/each}
                     </div>
-                    <div style="padding:14px;background:rgba(255,255,255,0.03);display:flex;flex-direction:column;gap:9px;border-top:1px solid rgba(233,238,242,0.1);">
+                    {#if b.right.length}<div style="padding:14px;background:rgba(255,255,255,0.03);display:flex;flex-direction:column;gap:9px;border-top:1px solid rgba(233,238,242,0.1);">
                       <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#e0a758;">{b.rhead}</div>
                       {#each b.right as i}
                         <div style="display:flex;gap:8px;align-items:flex-start;font-size:14px;line-height:1.35;">
@@ -1327,7 +1334,7 @@ class Component extends DCLogic {
                           <span>{i.t}</span>
                         </div>
                       {/each}
-                    </div>
+                    </div>{/if}
                   </div>
                 {/if}
 

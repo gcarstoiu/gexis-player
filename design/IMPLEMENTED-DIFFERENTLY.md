@@ -394,3 +394,13 @@ switches and each opens to its folders, *Add the whole drive* or *Add
 <folder>* first, *Back up* inside a folder (decision 23; George: *"What we
 need to add though is a folder selection from USB"*) - not in the design.
 The same browsing is in Settings → Sources → Lyrion Server → *USB folders*.
+
+## First use's *Upload a backup*: the file's name, then what it restores (2026-10-18)
+
+The design's tile names the backup's player and date, with what it brings
+as one line under it. George: *"Each item should be on its own line with a
+checkmark grouped by the section the setting is in. Just the filename stays
+in the tile."* The tile holds the file's name and *Ready*; below it, one
+block per Settings section in the design's own ticked list - the left
+column of its *Split* block, drawn without the right column when that is
+empty (ADR-0131 amended 2026-10-18).

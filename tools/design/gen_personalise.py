@@ -40,6 +40,14 @@ for which in ("V.pv", "V.sidePv"):
     tag = f"phone={{{which}.phone}} />"
     assert markup.count(tag) == 1, tag
     markup = markup.replace(tag, f"phone={{{which}.phone}} pointer={{{which}.pointer}} />")
+# A Split with nothing on its right (a backup's sections, ADR-0131 amended
+# 2026-10-18) is the left column alone: the design's ticked list.
+right = '<div style="padding:14px;background:rgba(255,255,255,0.03);display:flex;flex-direction:column;gap:9px;border-top:1px solid rgba(233,238,242,0.1);">'
+assert markup.count(right) == 1, "Split's right column"
+i = markup.index(right)
+j = markup.index("{/each}", i)
+j = markup.index("</div>", j) + len("</div>")
+markup = markup[:i] + "{#if b.right.length}" + markup[i:j] + "{/if}" + markup[j:]
 js = src[src.index('data-dc-script>') + len('data-dc-script>'):src.rindex('</script>')]
 R = []
 def rep(a, b, n=1):

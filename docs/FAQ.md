@@ -474,7 +474,8 @@ needs; *Do it later* leaves Spotify and Bluetooth on and nothing else, as
 does leaving it until the player's next restart, and *Settings → Display → Personalise* asks it all
 again. A backup asks only
 for this player's output and screen and answers the rest, and the phone shows
-what it brings before the player restarts. Step by step, from flashing the
+what it restores - every setting, a line each, under its Settings section -
+before the player restarts. Step by step, from flashing the
 card: the [installation guide](INSTALL.md). Once the player is on your
 network it shows what it is downloading and installing, each with its
 progress (a skin pack's install says *Installing*: minutes, with nothing to

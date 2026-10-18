@@ -17,7 +17,14 @@
       case 'p1backup': { const b = s.backup, blocks = [btn(b ? 'Choose another file' : 'Choose a file', () => live.pickBackup())];
         if (s.uploading !== null) blocks.push(status('spin', 'Uploading and checking', Math.round(s.uploading * 100) + '%'));
         if (s.uploadError) blocks.push(note('warn', '', s.uploadError));
-        if (b && s.uploading === null) blocks.push(list([{ k: 'plain', label: (b.settings?.device_name || b.name || 'A gexis backup') + (s.backupMade ? ' · ' + s.backupMade : ''), note: 'Uploaded and checked.' + (b.newer ? ' Made by a newer version of gexis: settings this version does not know wait until it is updated.' : ''), meta: (b.brings || []).join(' · ') || 'Settings only', tag: ['Ready', 'ok'] }]));
+        // George, 2026-10-18: the file's name alone in the tile, and below it
+        // what it restores, a ticked line each, by the section of Settings
+        // the setting is in (ADR-0131 amended).
+        if (b && s.uploading === null) {
+          blocks.push(list([{ k: 'plain', label: b.file || 'gexis backup', tag: ['Ready', 'ok'] }]));
+          if (b.newer) blocks.push(note('info', '', 'Made by a newer version of gexis: settings this version does not know wait until it is updated.'));
+          for (const sec of b.sections || []) blocks.push({ t: 'Split', lhead: sec.label, left: sec.items, rhead: '', right: [] });
+        }
         return { title: 'Upload a backup', sub: 'A backup file saved from Settings → System → Back up now, on this phone or in its files.', blocks, foot: { nextOff: !b || s.uploading !== null } }; }
       case 'p1name': return { title: 'Name the player', sub: 'One name for everything. Pick one you will recognise in a list of speakers.',
         blocks: [field('Device name', s.name, e => set({ name: e.target.value }), { ph: 'Living Room', hint: 'Letters, numbers and hyphens become the address; the name keeps its capitals everywhere else.' }), sum([['Address', 'http://' + sl + '.local'], ['In speaker lists', nm]], 'Becomes')], foot: { nextOff: slug(s.name).length < 2 } };

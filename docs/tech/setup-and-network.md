@@ -344,7 +344,14 @@ sequenceDiagram
      check a restore from Settings makes);
    - it returns the backup's main settings (`backups.APPLIED`), the plugins
      it has on, what else it carries, when it was made (from its name), and
-     whether a newer release made it (more migrations than this one knows).
+     whether a newer release made it (more migrations than this one knows);
+   - and `sections` (`restore_review.py`, ADR-0131 amended 2026-10-18):
+     every setting the backup stores, by its row's label and subgroup, in
+     the Settings section it is in and in Settings' order, with what it
+     carries besides settings in the section that owns it. Rows nobody sees
+     (internal keys, rows never surfaced, actions) are left out. The upload
+     step shows the file's name in its tile and these sections below it, a
+     ticked line each.
 
    The file is kept as `setup-backup.tgz` (0600), and the review is saved in
    the answers as `backup`, with `start: "restore"`. `DELETE /setup/backup`
