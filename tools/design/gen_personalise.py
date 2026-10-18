@@ -57,6 +57,19 @@ j = markup.index("</span>", markup.index("</span>", i) + 7) + 7
 inner = markup[i:j].replace("display:{o.chkDisplay};", "display:flex;")
 markup = (markup[:i] + '<span onclick={(e) => { if (o.onTick) { e.stopPropagation(); o.onTick(); } }} style="display:{o.chkDisplay};padding:12px;margin:-12px;flex-shrink:0;">'
           + inner + "</span>" + markup[j:])
+# A subgroup heading, as Settings draws one (`.subhead`: a dot, the name in
+# mono capitals in its colour, a rule to the edge) - George, 2026-10-18:
+# the groups of Where is your music? named "like the Settings subgroups".
+rule_at = markup.index("{#if b.isRule}")
+markup = markup[:rule_at] + ("""{#if b.isSub}
+                  <div style="display:flex;align-items:center;gap:14px;padding:22px 2px 8px;">
+                    <span style="width:9px;height:9px;border-radius:50%;flex-shrink:0;background:{b.accent};"></span>
+                    <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;flex-shrink:0;color:{b.accent};">{b.text}</span>
+                    <span style="flex:1;height:1px;background:rgba(233,238,242,0.1);"></span>
+                  </div>
+                {/if}
+
+                """) + markup[rule_at:]
 # The Dev block's heading is the block's own (George, 2026-10-18: added
 # shares get the Forget paired phones have), "Trusted devices" by default.
 assert markup.count(">Trusted devices<") == 1
@@ -90,6 +103,8 @@ rep("sel = (radio || net || k === 'chk') && o.on;", "sel = (radio || net || k ==
 rep("onClick: o.fn || noop, cursor: o.fn ? 'pointer' : 'default',", "onClick: o.fn || (k === 'pick' ? o.tick : null) || noop, onTick: k === 'pick' && o.fn ? o.tick : null, cursor: o.fn || o.tick ? 'pointer' : 'default',")
 rep("chkDisplay: k === 'chk' ? 'flex' : 'none',", "chkDisplay: k === 'chk' || k === 'pick' ? 'flex' : 'none',")
 rep("chevDisplay: k === 'hub' ? 'block' : 'none'", "chevDisplay: k === 'hub' || (k === 'pick' && o.fn) ? 'block' : 'none'")
+rep("const BTYPES = ['List',", "const BTYPES = ['Sub', 'List',")
+rep("  if (b.t === 'P' || b.t === 'Head') o.text = b.text;", "  if (b.t === 'P' || b.t === 'Head') o.text = b.text;\n  if (b.t === 'Sub') { o.text = b.text; o.accent = b.accent; }")
 rep("  if (b.t === 'Dev') { o.items = ", "  if (b.t === 'Dev') { o.head = b.head || 'Trusted devices'; o.items = ")
 rep("    if (id === 'done') this.setState({ inst: 0 });", "    if (id === 'done') live.finish();\n    if (id === 'later') live.later();\n    if (id === 'bluetooth') live.trusted();\n    if (id === 'folders') { live.loadShares(); live.loadUsb(); live.loadSpace(); }")
 # Close leaves the page.
@@ -118,10 +133,11 @@ rep("found ? { foot: 'Lyrion found on ' + s.net, footMeta: '192.0.2.10:9000' }",
 # on, the drives plugged in, each browsed for the folders Lyrion reads. With
 # nothing chosen the line under the list says Lyrion starts empty.
 rep("return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [list(PLACES.map(p => K(p[1], p[2], s.places[p[0]], tg(p[0]))), 'Lyrion reads'), ...extra, P('These become Lyrion’s music folders when it installs.')]",
-    "return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [list([placeRow(PLACES[0])], 'Music folder'), { t: 'Rule' }, list([placeRow(PLACES[1])], 'USB drives'), ...usbBlocks, { t: 'Rule' }, list([placeRow(PLACES[2])], 'Network shares'), ...extra, { t: 'Rule' }, (s.places.folder || s.places.usb || s.places.share) ? P('These become Lyrion’s music folders when it installs.') : note('info', 'Nothing chosen yet', 'Lyrion then starts with no music. Locations can be added later in Settings → Sources → Lyrion Server.')]")
+    "return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [sub('Music folder'), list([placeRow(PLACES[0])], ''), sub('USB drives'), list([placeRow(PLACES[1])], ''), ...usbBlocks, sub('Network shares'), list([placeRow(PLACES[2])], ''), ...extra, { t: 'Rule' }, (s.places.folder || s.places.usb || s.places.share) ? P('These become Lyrion’s music folders when it installs.') : note('info', 'Nothing chosen yet', 'Lyrion then starts with no music. Locations can be added later in Settings → Sources → Lyrion Server.')]")
 rep("places: { folder: true, usb: false, share: false }", "places: { folder: false, usb: false, share: false }, usbDrives: [], usbOpen: null, usbError: null")
 rep("""      case 'folders': { const tg = k => () => this.setState(st => ({ places: Object.assign({}, st.places, { [k]: !st.places[k] }) })), extra = [];""",
     """      case 'folders': { const tg = k => () => { this.setState(st => ({ places: Object.assign({}, st.places, { [k]: !st.places[k] }) })); if (k === 'usb') live.loadUsb(); }, extra = [], usbBlocks = [];
+        const sub = text => ({ t: 'Sub', text, accent: C.fold });
         const placeRow = p => p[0] === 'usb' && !s.usbDrives.length ? { k: 'ghost', label: p[1], note: 'No USB drive plugged in.' }
           : K(p[1], p[0] === 'folder' && s.musicSpace ? p[2] + ' ' + s.musicSpace + '.' : p[2], s.places[p[0]], tg(p[0]));
         // George, 2026-10-18: with no drive plugged in, USB cannot be chosen

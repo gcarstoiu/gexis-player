@@ -47,7 +47,7 @@ const SEL = 'rgba(126,214,188,0.1)', SELB = 'rgba(126,214,188,0.45)', OFF = 'rgb
 const TAGS = { ok: ['rgba(126,214,188,0.14)', '#7ed6bc'], warn: ['rgba(224,167,88,0.14)', '#e0a758'], plain: ['rgba(233,238,242,0.08)', 'rgba(233,238,242,0.72)'] };
 const TONES = { info: ['#8fc4d8', OFF, OFFB], ok: ['#7ed6bc', OFF, OFFB], warn: ['#e0a758', 'rgba(224,167,88,0.08)', 'rgba(224,167,88,0.45)'] };
 const LETTER = { plex: 'P', viz: 'V', clk: 'C', stby: 'S', besz: 'B', lib: 'M', fold: 'F', browse: 'B', ext: '+' };
-const BTYPES = ['List', 'Note', 'Field', 'Status', 'P', 'Btn', 'Pics', 'Where', 'Split', 'Seg', 'Pick', 'Num', 'Code', 'Party', 'Dev', 'Prog', 'Cast', 'Sum', 'Clock', 'Addr', 'Iv', 'Head', 'Rule'];
+const BTYPES = ['Sub', 'List', 'Note', 'Field', 'Status', 'P', 'Btn', 'Pics', 'Where', 'Split', 'Seg', 'Pick', 'Num', 'Code', 'Party', 'Dev', 'Prog', 'Cast', 'Sum', 'Clock', 'Addr', 'Iv', 'Head', 'Rule'];
 const noop = () => {};
 const SRCN = { lyr: 'Lyrion', spo: 'Spotify', bt: 'Bluetooth', plex: 'Plexamp' };
 const tagOf = tag => {
@@ -84,6 +84,7 @@ function block(b) {
   if (b.t === 'Status') { const f = b.field; Object.assign(o, { act: b.act || '', onAct: b.actFn || noop, actDisplay: b.act ? 'block' : 'none', fieldDisplay: f ? 'flex' : 'none', fLabel: f ? f.label : '', fValue: f ? f.value : '', fPh: f ? f.ph || '' : '', fOnChange: f ? f.fn : noop, fHint: f ? f.hint || '' : '' }); }
   if (b.t === 'Status') Object.assign(o, { text: b.text, meta: b.meta || '', metaDisplay: b.meta ? 'block' : 'none', spinDisplay: b.state === 'spin' ? 'block' : 'none', doneDisplay: b.state === 'ok' ? 'flex' : 'none', noneDisplay: b.state === 'none' ? 'block' : 'none' });
   if (b.t === 'P' || b.t === 'Head') o.text = b.text;
+  if (b.t === 'Sub') { o.text = b.text; o.accent = b.accent; }
   if (b.t === 'Btn') Object.assign(o, { label: b.label, onClick: b.fn || noop });
   if (b.t === 'Pics') {
     const rows = b.layout === 'rows';
@@ -380,6 +381,7 @@ class Component extends DCLogic {
             : { t: 'Split', lhead: nm + ' does', left: ['Finds it and plays from it'], rhead: 'You, on that machine', right: ['Install Lyrion', 'Add your music', 'Run the scans'] },
           ...(here ? [] : [{ t: 'Addr', label: 'Get Lyrion at', value: 'lyrion.org' }])], foot: SK }; }
       case 'folders': { const tg = k => () => { this.setState(st => ({ places: Object.assign({}, st.places, { [k]: !st.places[k] }) })); if (k === 'usb') live.loadUsb(); }, extra = [], usbBlocks = [];
+        const sub = text => ({ t: 'Sub', text, accent: C.fold });
         const placeRow = p => p[0] === 'usb' && !s.usbDrives.length ? { k: 'ghost', label: p[1], note: 'No USB drive plugged in.' }
           : K(p[1], p[0] === 'folder' && s.musicSpace ? p[2] + ' ' + s.musicSpace + '.' : p[2], s.places[p[0]], tg(p[0]));
         // George, 2026-10-18: with no drive plugged in, USB cannot be chosen
@@ -421,7 +423,7 @@ class Component extends DCLogic {
             btn('Add', () => { if (s.shareAddr.trim()) addShare(s.shareAddr.trim(), s.shareAU.trim() || null, s.shareAP || null); }), btn('Back', () => set({ shareStep: 'list' })));
           if (s.shareError) extra.push(note('warn', '', s.shareError));
         }
-        return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [list([placeRow(PLACES[0])], 'Music folder'), { t: 'Rule' }, list([placeRow(PLACES[1])], 'USB drives'), ...usbBlocks, { t: 'Rule' }, list([placeRow(PLACES[2])], 'Network shares'), ...extra, { t: 'Rule' }, (s.places.folder || s.places.usb || s.places.share) ? P('These become Lyrion’s music folders when it installs.') : note('info', 'Nothing chosen yet', 'Lyrion then starts with no music. Locations can be added later in Settings → Sources → Lyrion Server.')], foot: SK }; }
+        return { title: 'Where is your music?', sub: 'Pick all that apply.', blocks: [sub('Music folder'), list([placeRow(PLACES[0])], ''), sub('USB drives'), list([placeRow(PLACES[1])], ''), ...usbBlocks, sub('Network shares'), list([placeRow(PLACES[2])], ''), ...extra, { t: 'Rule' }, (s.places.folder || s.places.usb || s.places.share) ? P('These become Lyrion’s music folders when it installs.') : note('info', 'Nothing chosen yet', 'Lyrion then starts with no music. Locations can be added later in Settings → Sources → Lyrion Server.')], foot: SK }; }
       case 'plexamp': {
         const sub = 'Your Plex library, played on ' + nm + '.';
         const g = live.stage(live.component('plexamp.enabled', 'plexamp')), inst = g.done;
@@ -1335,6 +1337,14 @@ class Component extends DCLogic {
                     <input type="text" value={b.fValue} placeholder={b.fPh} oninput={b.fOnChange} style="width:100%;height:52px;border-radius:12px;background:rgba(8,12,16,0.6);border:1px solid rgba(233,238,242,0.18);padding:0 16px;box-sizing:border-box;font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;color:#e9eef2;outline:none;" />
                     <span style="font-size:14px;line-height:1.4;color:rgba(233,238,242,0.6);text-wrap:pretty;">{b.fHint}</span>
                   </div>
+                  </div>
+                {/if}
+
+                {#if b.isSub}
+                  <div style="display:flex;align-items:center;gap:14px;padding:22px 2px 8px;">
+                    <span style="width:9px;height:9px;border-radius:50%;flex-shrink:0;background:{b.accent};"></span>
+                    <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;flex-shrink:0;color:{b.accent};">{b.text}</span>
+                    <span style="flex:1;height:1px;background:rgba(233,238,242,0.1);"></span>
                   </div>
                 {/if}
 
