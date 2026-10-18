@@ -104,7 +104,8 @@ Proposed, not appended until George confirms:
   1's second answer. Display (or Sources), beside the Lyrion client row,
   which it needs.
 - *Personalise* is an action row in System, like *Reset to factory settings*;
-  whether part 2 was finished or put off is state, not a setting.
+  whether part 2 was finished or put off is state, not a setting. **Appended
+  to ADR-0022 2026-10-18 on George's confirmation.**
 
 ## Open (George)
 
@@ -241,8 +242,8 @@ it as it should be"*)
 25. Checked side by side against the prototype at 390 × 844 and 1100 × 700,
     every part 1 and part 2 screen, with the player's real data.
 
-**Not settled here (George)**
-- **Personalise** as a row in Settings → System is built (the design names
-  it); its entry in ADR-0022's inventory waits for George's confirmation.
-- Part 1 has not been walked on a freshly flashed card (George chose part 2
-  only on SofaPi).
+**Settled by George afterwards (2026-10-18)**
+- **Personalise** is in ADR-0022's inventory (*"Yes it goes in the list"*).
+- Part 1 is tested by George on sofapi after *Reset to factory settings*
+  (*"I will do it manually on sofapi after a restore to factory settings"*),
+  before the branch is merged.
