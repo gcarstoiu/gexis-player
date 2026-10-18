@@ -46,6 +46,19 @@ def kind(address: str) -> str | None:
     return None
 
 
+def holds(outer: str, inner: str) -> bool:
+    """Whether share `outer` holds `inner` (a folder inside it, or itself);
+    the server's name is compared without case, as SMB and DNS do."""
+    def norm(a: str) -> str:
+        if a.startswith("//"):
+            host, _, rest = a[2:].partition("/")
+            return f"//{host.lower()}/{rest.rstrip('/')}"
+        host, _, rest = a.partition(":")
+        return f"{host.lower()}:{rest.rstrip('/')}"
+    o, i = norm(outer), norm(inner)
+    return i == o or i.startswith(o + "/")
+
+
 def slug(address: str) -> str:
     """The mount point's name: readable, and unique by a short hash."""
     readable = re.sub(r"[^A-Za-z0-9]+", "-", address).strip("-")[:40] or "share"
@@ -110,9 +123,16 @@ class Shares:
             raise ValueError("an address like //nas/music (SMB) or nas:/music (NFS)")
         if which == "smb" and not user:
             raise ValueError("an SMB share needs a user")
+        # George, 2026-10-18: a share is added at a folder too. One already
+        # added that holds it is enough (Lyrion would read it twice); one it
+        # holds goes, as with USB folders.
+        address = address.rstrip("/")
+        for share in self.all():
+            if share["address"] != address and holds(share["address"], address):
+                raise ValueError(f"nothing more: it is in {label(share['address'])[0]}, which Lyrion reads already")
         if which == "smb":
             self._write_login(address, user, password)
-        shares = [s for s in self.all() if s["address"] != address]
+        shares = [s for s in self.all() if s["address"] != address and not holds(address, s["address"])]
         shares.append({"address": address, "user": user if which == "smb" else None})
         self._save(shares)
         # Mounted again with the new login, not left on the old one.

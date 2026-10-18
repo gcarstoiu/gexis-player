@@ -160,7 +160,7 @@ export async function listAction(key, body) {
   // `notice` for a join while the cable is in (ADR-0123 as amended).
   // `title` for a USB drive's folder open in the sheet (ADR-0115 decision 23).
   return { ok: !!answer.ok, error: answer.error ?? null, items: answer.items ?? null, login: !!answer.login,
-           notice: answer.notice ?? null, title: answer.title ?? null };
+           notice: answer.notice ?? null, title: answer.title ?? null, crumbs: answer.crumbs ?? null };
 }
 
 /** An `action` row. Nothing called this before `reboot` was wired: `power`

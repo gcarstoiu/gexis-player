@@ -2489,17 +2489,16 @@ class StateServer:
                 found = await asyncio.to_thread(usb.browse, name, folder)
                 label = usb.name_of(name, await asyncio.to_thread(usb.label_of, name))
                 clean = lyrion_usb.clean(folder)
-                items = [{"name": f"Add {clean.rsplit('/', 1)[-1]}" if clean else "Add the whole drive",
-                          "meta": f"{label} · {clean}" if clean else f"Everything on {label}",
-                          "bars": None, "state": "found", "add": True, "drive": name, "folder": clean}]
-                if clean:
-                    up = clean.rpartition("/")[0]
-                    items.append({"name": "Back up", "meta": up or label, "bars": None, "state": "found",
-                                  "up": True, "drive": name, "folder": up})
-                items += [{"name": f["name"], "meta": "Has folders inside - tap to open" if f["deeper"] else "Tap to open",
-                           "bars": None, "state": "found", "open": True, "drive": name, "folder": f["folder"]}
-                          for f in found]
-                return web.json_response({"ok": True, "error": None, "items": items,
+                # George, 2026-10-18 ("Tick several"): folders only, each
+                # ticked or opened by the page; the path above them, a
+                # step each, is how it goes back up.
+                items = [{"name": f["name"], "meta": "Has folders inside" if f["deeper"] else "",
+                          "bars": None, "state": "found", "open": True, "drive": name, "folder": f["folder"]}
+                         for f in found]
+                parts = clean.split("/") if clean else []
+                crumbs = [{"name": label, "drive": name, "folder": ""}] + [
+                    {"name": part, "drive": name, "folder": "/".join(parts[:i + 1])} for i, part in enumerate(parts)]
+                return web.json_response({"ok": True, "error": None, "items": items, "crumbs": crumbs,
                                           "title": f"{label} / {clean}" if clean else label})
             if action == "add":
                 label = await asyncio.to_thread(usb.label_of, name)
@@ -2795,29 +2794,26 @@ class StateServer:
                     # NFS export would mean mounting it.
                     address = name.rstrip("/")
                     shown, server = lyrion_shares.label(address)
-                    items = [{"name": f"Add {shown}", "meta": f"On {server} · {address}", "bars": None,
-                              "state": "found", "share": True, "add": True, "address": address}]
+                    items, crumbs = [], [{"name": server, "server": True}]
                     if address.startswith("//"):
-                        host_share = "/".join(address.split("/")[:4])
-                        if address != host_share:
-                            items.append({"name": "Back up", "meta": address.rsplit("/", 1)[0], "bars": None,
-                                          "state": "found", "share": True, "up": True,
-                                          "address": address.rsplit("/", 1)[0]})
+                        host, share, *path = address[2:].split("/")
+                        crumbs += [{"name": share, "address": f"//{host}/{share}"}] + [
+                            {"name": part, "address": f"//{host}/{share}/" + "/".join(path[:i + 1])}
+                            for i, part in enumerate(path)]
                         try:
                             found = await asyncio.to_thread(lyrion_scan.folders, address, body.get("user") or None,
                                                             body.get("password") or None)
                         except lyrion_scan.NeedsLogin:
                             return web.json_response({"ok": False, "login": True,
                                                       "error": f"{server} needs a user and password to show its folders"})
-                        except lyrion_scan.NoAnswer:
+                        except (lyrion_scan.NoAnswer, subprocess.TimeoutExpired):
                             return web.json_response({"ok": False, "error": f"{server} did not answer. Is it switched on?"})
-                        except subprocess.TimeoutExpired:
-                            return web.json_response({"ok": False, "error": f"{server} did not answer. Is it switched on?"})
-                        items += [{"name": f, "meta": "Tap to open", "bars": None, "state": "found", "share": True,
-                                   "open": True, "address": f"{address}/{f}"} for f in found]
-                    return web.json_response({"ok": True, "error": None, "items": items,
-                                              "title": f"{server} / {address.split('/', 3)[-1]}"
-                                              if address.startswith("//") else f"{server} / {shown}"})
+                        items = [{"name": f, "meta": "", "bars": None, "state": "found", "share": True,
+                                  "open": True, "address": f"{address}/{f}"} for f in found]
+                    else:
+                        crumbs.append({"name": shown, "address": address})
+                    return web.json_response({"ok": True, "error": None, "items": items, "crumbs": crumbs,
+                                              "title": " / ".join(c["name"] for c in crumbs)})
                 if action == "add":
                     self._lyrion_shares.add(name, body.get("user"), body.get("password"))
                 elif action == "forget":

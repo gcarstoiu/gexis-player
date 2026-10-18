@@ -398,8 +398,8 @@ switched on, none at first:
 |---|---|
 | Lyrion Server: Music folder | The player's own Music folder, shared on the network as *Music*. Its note says how much room is free and how much there is in all. |
 | Lyrion Server: USB drives | Folders on USB drives plugged into the player. |
-| Lyrion Server: USB folders | Shown with *USB drives* on. Each drive plugged in, opened to choose its folders at any depth, or *Add the whole drive*. A drive not chosen yet reads *Not added yet*; the folders of an unplugged drive are kept for 7 days. |
-| Lyrion Server: Network shares | Folders on a NAS or a computer (SMB or NFS), found by a scan or added by address. An SMB share opens into its folders, at any depth; each one added has its *Forget*. |
+| Lyrion Server: USB folders | Shown with *USB drives* on. Each drive plugged in: tick it to add all of it, or open it and tick folders at any depth, then *Add*. A drive not chosen yet reads *Not added yet*; the folders of an unplugged drive are kept for 7 days. |
+| Lyrion Server: Network shares | Folders on a NAS or a computer (SMB or NFS), found by a scan or added by address. Tick a share, or open an SMB share and tick folders at any depth, then *Add*; each one added has its *Forget*. |
 
 Taking a location away later - a switch turned off, a USB folder removed, a
 share forgotten - makes Lyrion clear its library and scan everything again,

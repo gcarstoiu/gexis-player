@@ -48,6 +48,15 @@ i = markup.index(right)
 j = markup.index("{/each}", i)
 j = markup.index("</div>", j) + len("</div>")
 markup = markup[:i] + "{#if b.right.length}" + markup[i:j] + "{/if}" + markup[j:]
+# The tick box is a tap target of its own when the row opens something
+# else (`onTick`), 48 px square around the 24 px box.
+box = '<span style="width:24px;height:24px;border-radius:7px;box-sizing:border-box;flex-shrink:0;align-items:center;justify-content:center;display:{o.chkDisplay};background:{o.boxBg};border:2px solid {o.ring};">'
+assert markup.count(box) == 1, "the tick box"
+i = markup.index(box)
+j = markup.index("</span>", markup.index("</span>", i) + 7) + 7
+inner = markup[i:j].replace("display:{o.chkDisplay};", "display:flex;")
+markup = (markup[:i] + '<span onclick={(e) => { if (o.onTick) { e.stopPropagation(); o.onTick(); } }} style="display:{o.chkDisplay};padding:12px;margin:-12px;flex-shrink:0;">'
+          + inner + "</span>" + markup[j:])
 # The Dev block's heading is the block's own (George, 2026-10-18: added
 # shares get the Forget paired phones have), "Trusted devices" by default.
 assert markup.count(">Trusted devices<") == 1
@@ -75,6 +84,12 @@ rep("  componentDidUpdate(pp, ps) { if (ps && ps.screen !== this.state.screen &&
 rep("    if (id === 'listen' && s.lyrState === 'idle') this.setState({ lyrState: s.flow === 'A' ? 'found' : 'none' });\n", "")
 rep("""          if (s.shares.length && !ss) extra.push(list(s.shares.map(a => ({ k: 'plain', label: a.name, note: a.where, tag: ['Added', 'ok'] })), 'Network shares'));""",
     """          if (s.shares.length && !ss) extra.push({ t: 'Dev', head: 'Network shares', items: s.shares.map(a => ({ name: a.name, meta: a.where, fn: () => live.forgetShare(a.address) })), empty: '' });""")
+# A row that both opens (the row) and ticks (its box): folders on shares
+# and drives (George, 2026-10-18, "Tick several").
+rep("sel = (radio || net || k === 'chk') && o.on;", "sel = (radio || net || k === 'chk' || k === 'pick') && o.on;")
+rep("onClick: o.fn || noop, cursor: o.fn ? 'pointer' : 'default',", "onClick: o.fn || (k === 'pick' ? o.tick : null) || noop, onTick: k === 'pick' && o.fn ? o.tick : null, cursor: o.fn || o.tick ? 'pointer' : 'default',")
+rep("chkDisplay: k === 'chk' ? 'flex' : 'none',", "chkDisplay: k === 'chk' || k === 'pick' ? 'flex' : 'none',")
+rep("chevDisplay: k === 'hub' ? 'block' : 'none'", "chevDisplay: k === 'hub' || (k === 'pick' && o.fn) ? 'block' : 'none'")
 rep("  if (b.t === 'Dev') { o.items = ", "  if (b.t === 'Dev') { o.head = b.head || 'Trusted devices'; o.items = ")
 rep("    if (id === 'done') this.setState({ inst: 0 });", "    if (id === 'done') live.finish();\n    if (id === 'later') live.later();\n    if (id === 'bluetooth') live.trusted();\n    if (id === 'folders') { live.loadShares(); live.loadUsb(); live.loadSpace(); }")
 # Close leaves the page.
@@ -106,11 +121,16 @@ rep("""      case 'folders': { const tg = k => () => this.setState(st => ({ plac
         // George, 2026-10-18: with no drive plugged in, USB cannot be chosen
         // (the design's ghost row) until one is, and Look again finds it.
         if (!s.usbDrives.length) usbBlocks.push(btn('Look again for a USB drive', () => live.loadUsb()));
-        else if (s.places.usb) { const o = s.usbOpen;
-          if (o) usbBlocks.push(list(o.items.map(i => HB(i.name, i.meta, () => i.add ? live.addUsb(i) : live.openUsb(i.drive, i.folder), { icon: 'fold' })), o.title),
-            btn('Back to the drives', () => set({ usbOpen: null })));
-          else if (s.usbDrives.length) usbBlocks.push(list(s.usbDrives.map(d => HB(d.name, d.meta, () => live.openUsb(d.drive, ''), { icon: 'fold' })), 'USB drives'),
-            P('Open a drive to choose the folders Lyrion reads - or all of it.'));
+        // George, 2026-10-18 ("Tick several"): a box on each drive and
+        // folder ticks it, the row opens it; the path above goes back up;
+        // one button adds what is ticked.
+        else if (s.places.usb) { const o = s.usbOpen, n = live.picked('usb').length;
+          if (o) usbBlocks.push(live.crumbs(o.crumbs, c => c.top ? set({ usbOpen: null }) : live.openUsb(c.drive, c.folder)),
+            list(o.items.map(i => live.pickRow('usb', i, () => live.openUsb(i.drive, i.folder))), ''),
+            ...(o.items.length ? [] : [P('No folders inside.')]));
+          else usbBlocks.push(list(s.usbDrives.map(d => live.pickRow('usb', { name: d.name, meta: d.meta, drive: d.drive, folder: '' }, () => live.openUsb(d.drive, ''))), 'USB drives'),
+            P('Tick a drive to add all of it, or open it to tick folders inside.'));
+          if (n) usbBlocks.push(btn('Add ' + n + (n === 1 ? ' folder' : ' folders'), () => live.addPicked('usb')));
           if (s.usbError) usbBlocks.push(note('warn', '', s.usbError));
         }""")
 rep("""        if (s.places.share) { const ss = s.shareStep, srv = s.shareSrv, addShare = (name, where) => this.setState(st => ({ shares: st.shares.concat([{ name, where }]), shareStep: null, shareAddr: '', shareAU: '', shareAP: '' }));
@@ -122,12 +142,16 @@ rep("""          else if (ss === 'list') extra.push(list([['NAS', '192.0.2.24', 
 rep("""            btn('Show shares', () => set({ shareStep: 'browse' })), btn('Back', () => set({ shareStep: 'list' })));""",
     """            btn('Show shares', () => live.showShares(s.shareSrvItem, s.shareUser.trim(), s.sharePw)), btn('Back', () => set({ shareStep: 'list' })));""")
 rep("""          else if (ss === 'browse') extra.push(list(['Music', 'Archive'].map(n => HB(n, '//' + srv.toLowerCase() + '/' + n.toLowerCase(), () => addShare('//' + srv.toLowerCase() + '/' + n.toLowerCase(), 'On ' + srv), { icon: 'fold' })), 'Shares on ' + srv),""",
-    """          else if (ss === 'folder') { const o = s.shareFolder;
-            extra.push(list(o.items.map(i => HB(i.name, i.meta, () => i.add ? addShare(i.address, s.shareUser.trim() || null, s.sharePw || null) : live.openShareFolder(i.address), { icon: 'fold' })), o.title),
-              P('Open a folder, or add the one shown first. Lyrion reads everything inside it.'), btn('Back to the shares', () => set({ shareStep: 'browse' }))); }
-          else if (ss === 'browse') extra.push(list(s.shareFound.map(f => HB(f.name, f.address, () => f.address.startsWith('//') ? live.openShareFolder(f.address) : addShare(f.address, s.shareUser.trim() || null, s.sharePw || null), { icon: 'fold' })), 'Shares on ' + srv),""")
+    """          else if (ss === 'folder') { const o = s.shareFolder, n = live.picked('share').length;
+            extra.push(live.crumbs(o.crumbs, c => c.server ? set({ shareStep: 'browse' }) : live.openShareFolder(c.address)),
+              list(o.items.map(i => live.pickRow('share', i, () => live.openShareFolder(i.address))), ''),
+              ...(o.items.length ? [] : [P('No folders inside.')]),
+              ...(n ? [btn('Add ' + n + (n === 1 ? ' folder' : ' folders'), () => live.addPicked('share'))] : []),
+              btn('Back to the shares', () => set({ shareStep: 'browse' }))); }
+          else if (ss === 'browse') extra.push(list(s.shareFound.map(f => live.pickRow('share', { name: f.name, meta: f.address, address: f.address }, f.address.startsWith('//') ? () => live.openShareFolder(f.address) : null)), 'Shares on ' + srv),
+            ...(live.picked('share').length ? [btn('Add ' + live.picked('share').length + (live.picked('share').length === 1 ? ' folder' : ' folders'), () => live.addPicked('share'))] : []),""")
 # George, 2026-10-18: an SMB share opens into its folders, at any depth.
-rep("P('Tap one to add it.'), btn('Back', () => set({ shareStep: 'list' })));", "P('Tap one to see its folders.'), btn('Back', () => set({ shareStep: 'list' })));")
+rep("P('Tap one to add it.'), btn('Back', () => set({ shareStep: 'list' })));", "P('Tick a share to add all of it, or open it to tick folders inside.'), btn('Back', () => set({ shareStep: 'list' })));")
 rep("""            btn('Add', () => { if (s.shareAddr.trim()) addShare(s.shareAddr.trim(), 'Added by address'); }), btn('Back', () => set({ shareStep: 'list' })));
         }""", """            btn('Add', () => { if (s.shareAddr.trim()) addShare(s.shareAddr.trim(), s.shareAU.trim() || null, s.shareAP || null); }), btn('Back', () => set({ shareStep: 'list' })));
           if (s.shareError) extra.push(note('warn', '', s.shareError));

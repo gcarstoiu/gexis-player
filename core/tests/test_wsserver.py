@@ -941,12 +941,12 @@ async def test_usb_folders_are_browsed_added_and_removed(tmp_path):
         assert [d["drive"] for d in drives] == ["AAAA"] and drives[0]["meta"].startswith("Not added yet")
 
         top = await (await client.post(url, json={"name": "AAAA", "action": "browse", "folder": ""})).json()
-        assert top["ok"] and top["items"][0]["name"] == "Add the whole drive"
-        assert [i["name"] for i in top["items"][1:]] == ["Music"] and top["items"][1]["open"]
+        assert top["ok"] and [i["name"] for i in top["items"]] == ["Music"] and top["items"][0]["open"]
+        assert [c["folder"] for c in top["crumbs"]] == [""]
 
         music = await (await client.post(url, json={"name": "AAAA", "action": "browse", "folder": "Music"})).json()
-        assert [i["name"] for i in music["items"]] == ["Add Music", "Back up", "Jazz"]
-        assert music["items"][1]["folder"] == ""
+        assert [i["name"] for i in music["items"]] == ["Jazz"]
+        assert [(c["name"], c["folder"]) for c in music["crumbs"]][1:] == [("Music", "Music")]
 
         out = await (await client.post(url, json={"name": "AAAA", "action": "browse", "folder": "../.."})).json()
         assert out["ok"] is False
@@ -996,16 +996,16 @@ async def test_a_share_opens_into_its_folders_and_the_scan_is_kept_a_minute(tmp_
 
         top = await (await client.post(url, json={"name": "//Tower.local/Music", "action": "folders",
                                                    "user": "george", "password": "pw"})).json()
-        assert [i["name"] for i in top["items"]] == ["Add Music", "Jazz", "Rock"]
-        assert top["items"][1]["address"] == "//Tower.local/Music/Jazz" and top["items"][1]["open"]
+        assert [i["name"] for i in top["items"]] == ["Jazz", "Rock"]
+        assert top["items"][0]["address"] == "//Tower.local/Music/Jazz" and top["items"][0]["open"]
+        assert [c["name"] for c in top["crumbs"]] == ["Tower", "Music"]
         assert listed[-1] == ("//Tower.local/Music", "george")
 
         jazz = await (await client.post(url, json={"name": "//Tower.local/Music/Jazz", "action": "folders"})).json()
-        assert [i["name"] for i in jazz["items"]][:2] == ["Add Jazz", "Back up"]
-        assert jazz["items"][1]["address"] == "//Tower.local/Music"
+        assert [c.get("address") for c in jazz["crumbs"]] == [None, "//Tower.local/Music", "//Tower.local/Music/Jazz"]
 
         nfs = await (await client.post(url, json={"name": "nas:/volume1/music", "action": "folders"})).json()
-        assert [i["name"] for i in nfs["items"]] == ["Add music"]
+        assert nfs["items"] == [] and nfs["crumbs"][-1]["address"] == "nas:/volume1/music"
 
 
 @pytest.mark.asyncio

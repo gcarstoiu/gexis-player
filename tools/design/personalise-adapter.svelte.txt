@@ -37,7 +37,7 @@
   let st = $state(Object.assign(init('A', mode === 'p1' ? 'p1' : 'p2', false), {
     first: true, nameSaved: false, second: true, touchpad: true, plexClaimed: false, plexError: null,
     volume: 'Hardware', volHw: {}, volNotes: {}, outTags: {}, outProblems: {}, town: '', net: 'your network', lyrMeta: '', lyrServer: null, pairDevice: '', pairCode: '',
-    shareServers: [], shareFound: [], shareFolder: null, musicSpace: null, shareSrvItem: null, shareError: null, finishError: null, finished: null,
+    shareServers: [], shareFound: [], shareFolder: null, musicSpace: null, picks: { usb: [], share: [] }, shareSrvItem: null, shareError: null, finishError: null, finished: null,
     plugins: [], tick: 0, ready: false,
     //: **Drawn once the player's own values are in** (found 2026-10-18: the
     //: design's sample name and network showed until /settings arrived).
@@ -130,6 +130,57 @@
     },
     //: ADR-0115 decision 23: the USB drives plugged in, each opened for its
     //: folders; what is added goes to Lyrion's list as it is chosen.
+    //: **Tick several** (George, 2026-10-18): folders ticked on drives and
+    //: shares, at any level, kept while browsing, added with one button.
+    //: A ticked folder covers those inside it: they show ticked, "In ...",
+    //: and ticking a wider one drops the narrower ones.
+    picked(kind) { return st.picks[kind]; },
+    pickRow(kind, item, open) {
+      const key = kind === 'usb' ? `${item.drive}/${item.folder}` : item.address;
+      const holds = (p) => kind === 'usb'
+        ? p.drive === item.drive && (p.folder === '' || item.folder.startsWith(p.folder + '/'))
+        : item.address.toLowerCase().startsWith(p.key.toLowerCase() + '/');
+      const covering = st.picks[kind].find((p) => p.key !== key && holds(p));
+      const on = !!covering || st.picks[kind].some((p) => p.key === key);
+      return { k: 'pick', label: item.name, note: covering ? 'In ' + covering.name : item.meta || '', on, fn: open,
+               tick: covering ? null : () => live.togglePick(kind, { ...item, key }) };
+    },
+    togglePick(kind, item) {
+      const list = st.picks[kind];
+      if (list.some((p) => p.key === item.key)) {
+        st.picks[kind] = list.filter((p) => p.key !== item.key);
+        return;
+      }
+      const inside = (p) => kind === 'usb'
+        ? p.drive === item.drive && (item.folder === '' || p.folder.startsWith(item.folder + '/'))
+        : p.key.toLowerCase().startsWith(item.key.toLowerCase() + '/');
+      st.picks[kind] = [...list.filter((p) => !inside(p)), item];
+    },
+    crumbs(list, go) {
+      const names = list.map((c) => c.name);
+      return { t: 'Pick', opts: names, sel: names[names.length - 1], fn: (x) => go(list[names.lastIndexOf(x)]), accent: C.fold };
+    },
+    async addPicked(kind) {
+      const picks = [...st.picks[kind]];
+      for (const p of picks) {
+        const body = kind === 'usb'
+          ? { name: p.drive, action: 'add', folder: p.folder }
+          : { name: p.address, action: 'add', user: st.shareUser.trim() || (p.address.startsWith('//') ? 'guest' : null), password: st.sharePw || null };
+        const r = await listAction(kind === 'usb' ? 'lyrion-server.usb_folders' : 'lyrion-server.shares', body);
+        if (!r.ok) {
+          st[kind === 'usb' ? 'usbError' : 'shareError'] = `${p.name}: ` + (r.error ?? 'could not be added.');
+          return;
+        }
+        st.picks[kind] = st.picks[kind].filter((x) => x.key !== p.key);
+      }
+      if (kind === 'usb') {
+        st.usbOpen = null;
+        live.loadUsb();
+      } else {
+        Object.assign(st, { shareStep: null, shareUser: '', sharePw: '' });
+        live.loadShares();
+      }
+    },
     //: George, 2026-10-18: the Music folder's free and total space.
     async loadSpace() {
       const got = await json('/storage/music').catch(() => ({}));
@@ -146,7 +197,8 @@
         st.usbError = r.error ?? 'Could not read the drive. Is it still plugged in?';
         return;
       }
-      st.usbOpen = { drive, folder, title: r.title ?? 'USB drive', items: r.items ?? [] };
+      st.usbOpen = { drive, folder, title: r.title ?? 'USB drive', items: r.items ?? [],
+                     crumbs: [{ name: 'Drives', top: true }, ...(r.crumbs ?? [])] };
     },
     async addUsb(item) {
       st.usbError = null;
@@ -192,7 +244,7 @@
         st.shareError = r.error ?? 'Could not read its folders.';
         return;
       }
-      st.shareFolder = { address, title: r.title ?? address, items: r.items ?? [] };
+      st.shareFolder = { address, title: r.title ?? address, items: r.items ?? [], crumbs: r.crumbs ?? [] };
       st.shareStep = 'folder';
     },
     async showShares(item, user = null, password = null) {

@@ -56,19 +56,19 @@ const tagOf = tag => {
   return { tagDisplay: 'block', tag: text, tagBg: TAGS[tone][0], tagInk: TAGS[tone][1] };
 };
 function row(o) {
-  const k = o.k, radio = k === 'radio', net = k === 'net', ghost = k === 'ghost', sel = (radio || net || k === 'chk') && o.on;
+  const k = o.k, radio = k === 'radio', net = k === 'net', ghost = k === 'ghost', sel = (radio || net || k === 'chk' || k === 'pick') && o.on;
   const img = ['lyr', 'spo', 'bt'].includes(o.icon), letter = LETTER[o.icon] || '';
   const bar = n => n <= (o.lvl || 0) ? '#8fc4d8' : 'rgba(233,238,242,0.22)';
   return Object.assign({
     label: o.label, labelInk: ghost ? MUTE : '#e9eef2', note: o.note || '', noteDisplay: o.note ? 'block' : 'none', meta: o.meta || '', metaDisplay: o.meta ? 'block' : 'none',
-    onClick: o.fn || noop, cursor: o.fn ? 'pointer' : 'default',
+    onClick: o.fn || (k === 'pick' ? o.tick : null) || noop, onTick: k === 'pick' && o.fn ? o.tick : null, cursor: o.fn || o.tick ? 'pointer' : 'default',
     bg: ghost ? 'transparent' : sel ? SEL : OFF, border: ghost ? 'rgba(233,238,242,0.3)' : sel ? SELB : OFFB, bs: ghost ? 'dashed' : 'solid',
     radioDisplay: radio || net ? 'flex' : 'none', ring: sel ? '#7ed6bc' : RING, dotDisplay: sel ? 'block' : 'none',
     iconDisplay: img || letter ? 'flex' : 'none', isLyr: o.icon === 'lyr', isSpo: o.icon === 'spo', isBt: o.icon === 'bt', letter, letterDisplay: letter && !img ? 'flex' : 'none',
     barsDisplay: net ? 'flex' : 'none', b1: bar(1), b2: bar(2), b3: bar(3), b4: bar(4),
     togDisplay: k === 'tog' ? 'block' : 'none', togBg: o.on ? '#7ed6bc' : 'rgba(233,238,242,0.07)', togBorder: o.on ? '#7ed6bc' : 'rgba(233,238,242,0.18)',
     knobLeft: o.on ? '31px' : '3px', knobBg: o.on ? '#0d151c' : 'rgba(233,238,242,0.55)',
-    chkDisplay: k === 'chk' ? 'flex' : 'none', boxBg: sel ? '#7ed6bc' : 'transparent', chevDisplay: k === 'hub' ? 'block' : 'none',
+    chkDisplay: k === 'chk' || k === 'pick' ? 'flex' : 'none', boxBg: sel ? '#7ed6bc' : 'transparent', chevDisplay: k === 'hub' || (k === 'pick' && o.fn) ? 'block' : 'none',
     srcs: (o.srcs || []).map(x => ({ isLyr: x === 'lyr', isSpo: x === 'spo', isBt: x === 'bt', isPlex: x === 'plex', name: SRCN[x] })), srcDisplay: o.srcs ? 'flex' : 'none',
     foot: o.foot || '', footMeta: o.footMeta || '', footDisplay: o.foot ? 'flex' : 'none', footDot: o.footDot || '#7ed6bc'
   }, tagOf(o.tag));
@@ -383,11 +383,16 @@ class Component extends DCLogic {
         // George, 2026-10-18: with no drive plugged in, USB cannot be chosen
         // (the design's ghost row) until one is, and Look again finds it.
         if (!s.usbDrives.length) usbBlocks.push(btn('Look again for a USB drive', () => live.loadUsb()));
-        else if (s.places.usb) { const o = s.usbOpen;
-          if (o) usbBlocks.push(list(o.items.map(i => HB(i.name, i.meta, () => i.add ? live.addUsb(i) : live.openUsb(i.drive, i.folder), { icon: 'fold' })), o.title),
-            btn('Back to the drives', () => set({ usbOpen: null })));
-          else if (s.usbDrives.length) usbBlocks.push(list(s.usbDrives.map(d => HB(d.name, d.meta, () => live.openUsb(d.drive, ''), { icon: 'fold' })), 'USB drives'),
-            P('Open a drive to choose the folders Lyrion reads - or all of it.'));
+        // George, 2026-10-18 ("Tick several"): a box on each drive and
+        // folder ticks it, the row opens it; the path above goes back up;
+        // one button adds what is ticked.
+        else if (s.places.usb) { const o = s.usbOpen, n = live.picked('usb').length;
+          if (o) usbBlocks.push(live.crumbs(o.crumbs, c => c.top ? set({ usbOpen: null }) : live.openUsb(c.drive, c.folder)),
+            list(o.items.map(i => live.pickRow('usb', i, () => live.openUsb(i.drive, i.folder))), ''),
+            ...(o.items.length ? [] : [P('No folders inside.')]));
+          else usbBlocks.push(list(s.usbDrives.map(d => live.pickRow('usb', { name: d.name, meta: d.meta, drive: d.drive, folder: '' }, () => live.openUsb(d.drive, ''))), 'USB drives'),
+            P('Tick a drive to add all of it, or open it to tick folders inside.'));
+          if (n) usbBlocks.push(btn('Add ' + n + (n === 1 ? ' folder' : ' folders'), () => live.addPicked('usb')));
           if (s.usbError) usbBlocks.push(note('warn', '', s.usbError));
         }
         if (s.places.share) { const ss = s.shareStep, srv = s.shareSrv, addShare = (address, user, password) => live.addShare(address, user, password);
@@ -400,11 +405,15 @@ class Component extends DCLogic {
           else if (ss === 'login') extra.push(note('info', 'Sign in to ' + srv, 'It shows its shares only to a user it knows. The same user and password are used to mount the one you choose.'),
             field('User', s.shareUser, e => set({ shareUser: e.target.value }), { ph: 'george' }), field('Password', s.sharePw, e => set({ sharePw: e.target.value }), { type: 'password' }),
             btn('Show shares', () => live.showShares(s.shareSrvItem, s.shareUser.trim(), s.sharePw)), btn('Back', () => set({ shareStep: 'list' })));
-          else if (ss === 'folder') { const o = s.shareFolder;
-            extra.push(list(o.items.map(i => HB(i.name, i.meta, () => i.add ? addShare(i.address, s.shareUser.trim() || null, s.sharePw || null) : live.openShareFolder(i.address), { icon: 'fold' })), o.title),
-              P('Open a folder, or add the one shown first. Lyrion reads everything inside it.'), btn('Back to the shares', () => set({ shareStep: 'browse' }))); }
-          else if (ss === 'browse') extra.push(list(s.shareFound.map(f => HB(f.name, f.address, () => f.address.startsWith('//') ? live.openShareFolder(f.address) : addShare(f.address, s.shareUser.trim() || null, s.sharePw || null), { icon: 'fold' })), 'Shares on ' + srv),
-            P('Tap one to see its folders.'), btn('Back', () => set({ shareStep: 'list' })));
+          else if (ss === 'folder') { const o = s.shareFolder, n = live.picked('share').length;
+            extra.push(live.crumbs(o.crumbs, c => c.server ? set({ shareStep: 'browse' }) : live.openShareFolder(c.address)),
+              list(o.items.map(i => live.pickRow('share', i, () => live.openShareFolder(i.address))), ''),
+              ...(o.items.length ? [] : [P('No folders inside.')]),
+              ...(n ? [btn('Add ' + n + (n === 1 ? ' folder' : ' folders'), () => live.addPicked('share'))] : []),
+              btn('Back to the shares', () => set({ shareStep: 'browse' }))); }
+          else if (ss === 'browse') extra.push(list(s.shareFound.map(f => live.pickRow('share', { name: f.name, meta: f.address, address: f.address }, f.address.startsWith('//') ? () => live.openShareFolder(f.address) : null)), 'Shares on ' + srv),
+            ...(live.picked('share').length ? [btn('Add ' + live.picked('share').length + (live.picked('share').length === 1 ? ' folder' : ' folders'), () => live.addPicked('share'))] : []),
+            P('Tick a share to add all of it, or open it to tick folders inside.'), btn('Back', () => set({ shareStep: 'list' })));
           else if (ss === 'addr') extra.push(note('info', 'Add a share', 'A folder on a NAS or a computer. SMB needs a user and password; NFS needs only the address.'),
             field('Address', s.shareAddr, e => set({ shareAddr: e.target.value }), { ph: '//nas/music or nas:/music' }), field('User (SMB)', s.shareAU, e => set({ shareAU: e.target.value })), field('Password (SMB)', s.shareAP, e => set({ shareAP: e.target.value }), { type: 'password' }),
             btn('Add', () => { if (s.shareAddr.trim()) addShare(s.shareAddr.trim(), s.shareAU.trim() || null, s.shareAP || null); }), btn('Back', () => set({ shareStep: 'list' })));
@@ -555,7 +564,7 @@ class Component extends DCLogic {
   let st = $state(Object.assign(init('A', mode === 'p1' ? 'p1' : 'p2', false), {
     first: true, nameSaved: false, second: true, touchpad: true, plexClaimed: false, plexError: null,
     volume: 'Hardware', volHw: {}, volNotes: {}, outTags: {}, outProblems: {}, town: '', net: 'your network', lyrMeta: '', lyrServer: null, pairDevice: '', pairCode: '',
-    shareServers: [], shareFound: [], shareFolder: null, musicSpace: null, shareSrvItem: null, shareError: null, finishError: null, finished: null,
+    shareServers: [], shareFound: [], shareFolder: null, musicSpace: null, picks: { usb: [], share: [] }, shareSrvItem: null, shareError: null, finishError: null, finished: null,
     plugins: [], tick: 0, ready: false,
     //: **Drawn once the player's own values are in** (found 2026-10-18: the
     //: design's sample name and network showed until /settings arrived).
@@ -648,6 +657,57 @@ class Component extends DCLogic {
     },
     //: ADR-0115 decision 23: the USB drives plugged in, each opened for its
     //: folders; what is added goes to Lyrion's list as it is chosen.
+    //: **Tick several** (George, 2026-10-18): folders ticked on drives and
+    //: shares, at any level, kept while browsing, added with one button.
+    //: A ticked folder covers those inside it: they show ticked, "In ...",
+    //: and ticking a wider one drops the narrower ones.
+    picked(kind) { return st.picks[kind]; },
+    pickRow(kind, item, open) {
+      const key = kind === 'usb' ? `${item.drive}/${item.folder}` : item.address;
+      const holds = (p) => kind === 'usb'
+        ? p.drive === item.drive && (p.folder === '' || item.folder.startsWith(p.folder + '/'))
+        : item.address.toLowerCase().startsWith(p.key.toLowerCase() + '/');
+      const covering = st.picks[kind].find((p) => p.key !== key && holds(p));
+      const on = !!covering || st.picks[kind].some((p) => p.key === key);
+      return { k: 'pick', label: item.name, note: covering ? 'In ' + covering.name : item.meta || '', on, fn: open,
+               tick: covering ? null : () => live.togglePick(kind, { ...item, key }) };
+    },
+    togglePick(kind, item) {
+      const list = st.picks[kind];
+      if (list.some((p) => p.key === item.key)) {
+        st.picks[kind] = list.filter((p) => p.key !== item.key);
+        return;
+      }
+      const inside = (p) => kind === 'usb'
+        ? p.drive === item.drive && (item.folder === '' || p.folder.startsWith(item.folder + '/'))
+        : p.key.toLowerCase().startsWith(item.key.toLowerCase() + '/');
+      st.picks[kind] = [...list.filter((p) => !inside(p)), item];
+    },
+    crumbs(list, go) {
+      const names = list.map((c) => c.name);
+      return { t: 'Pick', opts: names, sel: names[names.length - 1], fn: (x) => go(list[names.lastIndexOf(x)]), accent: C.fold };
+    },
+    async addPicked(kind) {
+      const picks = [...st.picks[kind]];
+      for (const p of picks) {
+        const body = kind === 'usb'
+          ? { name: p.drive, action: 'add', folder: p.folder }
+          : { name: p.address, action: 'add', user: st.shareUser.trim() || (p.address.startsWith('//') ? 'guest' : null), password: st.sharePw || null };
+        const r = await listAction(kind === 'usb' ? 'lyrion-server.usb_folders' : 'lyrion-server.shares', body);
+        if (!r.ok) {
+          st[kind === 'usb' ? 'usbError' : 'shareError'] = `${p.name}: ` + (r.error ?? 'could not be added.');
+          return;
+        }
+        st.picks[kind] = st.picks[kind].filter((x) => x.key !== p.key);
+      }
+      if (kind === 'usb') {
+        st.usbOpen = null;
+        live.loadUsb();
+      } else {
+        Object.assign(st, { shareStep: null, shareUser: '', sharePw: '' });
+        live.loadShares();
+      }
+    },
     //: George, 2026-10-18: the Music folder's free and total space.
     async loadSpace() {
       const got = await json('/storage/music').catch(() => ({}));
@@ -664,7 +724,8 @@ class Component extends DCLogic {
         st.usbError = r.error ?? 'Could not read the drive. Is it still plugged in?';
         return;
       }
-      st.usbOpen = { drive, folder, title: r.title ?? 'USB drive', items: r.items ?? [] };
+      st.usbOpen = { drive, folder, title: r.title ?? 'USB drive', items: r.items ?? [],
+                     crumbs: [{ name: 'Drives', top: true }, ...(r.crumbs ?? [])] };
     },
     async addUsb(item) {
       st.usbError = null;
@@ -710,7 +771,7 @@ class Component extends DCLogic {
         st.shareError = r.error ?? 'Could not read its folders.';
         return;
       }
-      st.shareFolder = { address, title: r.title ?? address, items: r.items ?? [] };
+      st.shareFolder = { address, title: r.title ?? address, items: r.items ?? [], crumbs: r.crumbs ?? [] };
       st.shareStep = 'folder';
     },
     async showShares(item, user = null, password = null) {
@@ -1230,9 +1291,9 @@ class Component extends DCLogic {
                         <span style="width:58px;height:30px;border-radius:999px;flex-shrink:0;position:relative;box-sizing:border-box;transition:background 150ms;display:{o.togDisplay};background:{o.togBg};border:1px solid {o.togBorder};">
                           <span style="position:absolute;top:2px;width:24px;height:24px;border-radius:50%;display:block;transition:left 150ms;left:{o.knobLeft};background:{o.knobBg};"></span>
                         </span>
-                        <span style="width:24px;height:24px;border-radius:7px;box-sizing:border-box;flex-shrink:0;align-items:center;justify-content:center;display:{o.chkDisplay};background:{o.boxBg};border:2px solid {o.ring};">
+                        <span onclick={(e) => { if (o.onTick) { e.stopPropagation(); o.onTick(); } }} style="display:{o.chkDisplay};padding:12px;margin:-12px;flex-shrink:0;"><span style="width:24px;height:24px;border-radius:7px;box-sizing:border-box;flex-shrink:0;align-items:center;justify-content:center;display:flex;background:{o.boxBg};border:2px solid {o.ring};">
                           <span style="width:11px;height:6px;border-left:2.5px solid #0d151c;border-bottom:2.5px solid #0d151c;transform:rotate(-45deg);margin-top:-3px;display:{o.dotDisplay};"></span>
-                        </span>
+                        </span></span>
                         <span style="width:11px;height:11px;border-right:2.5px solid rgba(233,238,242,0.42);border-top:2.5px solid rgba(233,238,242,0.42);transform:rotate(45deg);flex-shrink:0;margin-right:4px;display:{o.chevDisplay};"></span>
                       </div>
                     {/each}

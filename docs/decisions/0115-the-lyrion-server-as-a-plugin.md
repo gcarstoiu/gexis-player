@@ -250,6 +250,17 @@ setting" and the Music folder's always being offered.
     first use shows *USB drive* greyed out, with *Look again*; the Music
     folder's row shows its free and total space (George, the same evening).
 
+26. **Folders are ticked, not added one at a time** (George, 2026-10-18,
+    choosing *"Tick several"* of three: a *Use this folder* button at the
+    foot, or *Add* on each row). On drives and shares alike, in first use
+    and in Settings: each drive, share and folder has a tick box, and
+    tapping the row opens it; the path above the list, a step each, goes
+    back up; one button adds everything ticked. A folder inside a ticked
+    one shows ticked, "In <folder>". This replaces decision 23's *Add the
+    whole drive* / *Add <folder>* and *Back up* items. A share inside one
+    already added is refused, and a wider one replaces those it holds, as
+    for USB folders.
+
 ## Not settled here
 
 - The memory and CPU measured during a scan of George's library, and the

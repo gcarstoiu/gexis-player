@@ -224,3 +224,26 @@ def test_an_address_is_never_read_as_one_of_mount_s_options(tmp_path):
     s.mount_all(s.all())
     for mount in (c for c in calls if c[0] == "mount"):
         assert mount[-3] == "--" and mount[-2] in ("nas:/music", "//nas/a")
+
+
+def test_a_share_inside_one_added_is_refused_and_a_wider_one_replaces_those_inside(tmp_path):
+    """George, 2026-10-18: folders inside shares are ticked and added; Lyrion
+    must not read the same files twice."""
+    import pytest
+
+    store = {}
+
+    class Store:
+        def get(self, key, default=None):
+            return store.get(key, default)
+
+        def set(self, key, value):
+            store[key] = value
+
+    shares = ls.Shares(Store(), root=tmp_path / "mnt", credentials=tmp_path / "cred", is_mount=lambda p: False)
+    shares.add("nas:/music/jazz", None, None)
+    shares.add("nas:/music/rock", None, None)
+    with pytest.raises(ValueError):
+        shares.add("nas:/music/jazz/miles", None, None)
+    shares.add("NAS:/music", None, None)
+    assert [s["address"] for s in shares.all()] == ["NAS:/music"]

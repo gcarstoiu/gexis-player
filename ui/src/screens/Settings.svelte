@@ -521,13 +521,13 @@
       };
     }
     if (shareFolder) {
-      return { ...row, label: shareFolder.title, note: 'Open a folder, or add the one shown first. Lyrion reads everything inside it.', discover: false, manual: null, hint: null };
+      return { ...row, label: shareFolder.title, note: 'Tick the folders Lyrion reads, at any level; tap a folder to open it.', discover: false, manual: null, hint: null };
     }
     if (shareBrowse) {
-      return { ...row, label: `Shares on ${shareBrowse.server.name}`, note: 'Tap one to see its folders.', discover: false, manual: null, hint: null };
+      return { ...row, label: `Shares on ${shareBrowse.server.name}`, note: 'Tick a share to add all of it, or tap it to see its folders.', discover: false, manual: null, hint: null };
     }
     if (usbBrowse) {
-      return { ...row, label: usbBrowse.title, note: 'Open a folder, or add the one shown first. Lyrion reads everything inside it.', discover: false, manual: null, hint: null };
+      return { ...row, label: usbBrowse.title, note: 'Tick the folders Lyrion reads, at any level; tap a folder to open it.', discover: false, manual: null, hint: null };
     }
     if (joinItem) {
       return {
@@ -1180,6 +1180,7 @@
     shareBrowse = null;
     shareFolder = null;
     usbBrowse = null;
+    picks = [];
     shareLogin = null;
     choicePending = null;
     joinItem = null;
@@ -1282,6 +1283,78 @@
   let shareFolder = $state(null);
   //: ADR-0115 decision 23: the USB drive and folder open in the sheet.
   let usbBrowse = $state(null);
+  //: **Tick several** (George, 2026-10-18): folders ticked on a drive or a
+  //: share, at any level, kept while browsing, added with one button.
+  let picks = $state([]);
+
+  function tickable(item) {
+    if (sheet?.kind === 'usb-folder') return !!item.drive;
+    if (sheet?.kind === 'share') return !!item.share && !!item.address && !item.server;
+    return false;
+  }
+  function pickOf(item) {
+    return sheet?.kind === 'usb-folder'
+      ? { key: `${item.drive}/${item.folder ?? ''}`, drive: item.drive, folder: item.folder ?? '', name: item.name }
+      : { key: item.address, address: item.address, name: item.name };
+  }
+  //: A ticked folder covers the folders inside it.
+  function inside(outer, inner) {
+    return sheet?.kind === 'usb-folder'
+      ? outer.drive === inner.drive && (outer.folder === '' || inner.folder.startsWith(outer.folder + '/'))
+      : inner.key.toLowerCase().startsWith(outer.key.toLowerCase() + '/');
+  }
+  function coveredBy(item) {
+    const p = pickOf(item);
+    return picks.find((x) => x.key !== p.key && inside(x, p)) ?? null;
+  }
+  function isPicked(item) {
+    const p = pickOf(item);
+    return !!coveredBy(item) || picks.some((x) => x.key === p.key);
+  }
+  function togglePick(item) {
+    if (coveredBy(item)) return;
+    const p = pickOf(item);
+    if (picks.some((x) => x.key === p.key)) {
+      picks = picks.filter((x) => x.key !== p.key);
+      return;
+    }
+    picks = [...picks.filter((x) => !inside(p, x)), p];
+  }
+  async function addPicked() {
+    const key = sheetKey;
+    const usb = sheet?.kind === 'usb-folder';
+    const { user, password } = shareBrowse ?? {};
+    let added = 0;
+    for (const p of [...picks]) {
+      const body = usb ? { name: p.drive, action: 'add', folder: p.folder }
+        : { name: p.address, action: 'add', user: user ?? (p.address.startsWith('//') ? 'guest' : null), password: password ?? null };
+      const answer = await listAction(key, body);
+      if (!answer.ok) {
+        flash(`${p.name}: ${plainly(answer.error, 'could not be added.')}`);
+        break;
+      }
+      picks = picks.filter((x) => x.key !== p.key);
+      added += 1;
+    }
+    if (added) flash(added === 1 ? 'One folder added' : `${added} folders added`);
+    if (!picks.length && sheetKey === key) {
+      usbBrowse = null;
+      shareFolder = null;
+      shareBrowse = null;
+      openList(key);
+    }
+  }
+  function goCrumb(c) {
+    if (sheet?.kind === 'usb-folder') {
+      if (c.top) {
+        usbBrowse = null;
+        openList(sheetKey);
+      } else browseUsb(c.drive, c.folder);
+    } else if (c.server) {
+      shareFolder = null;
+      browseShares(shareBrowse.server, shareBrowse.user, shareBrowse.password);
+    } else browseShareFolder(c.address);
+  }
   let shareLogin = $state(null);
   let shareCreds = $state({ user: '', password: '' });
 
@@ -1315,7 +1388,8 @@
         flash(plainly(answer.error, 'Could not read the drive. Is it still plugged in?'));
         return;
       }
-      usbBrowse = { drive, folder, title: answer.title ?? 'USB drive' };
+      usbBrowse = { drive, folder, title: answer.title ?? 'USB drive',
+                    crumbs: [{ name: 'Drives', top: true }, ...(answer.crumbs ?? [])] };
       items = answer.items ?? [];
     });
   }
@@ -1330,7 +1404,7 @@
         flash(plainly(answer.error, 'Could not read its folders. Try again.'));
         return;
       }
-      shareFolder = { address, title: answer.title ?? address };
+      shareFolder = { address, title: answer.title ?? address, crumbs: answer.crumbs ?? [] };
       items = answer.items ?? [];
     });
   }
@@ -1352,21 +1426,8 @@
     // ADR-0115 decision 23: a drive opens at its top, a folder opens, Back
     // up goes one level up, and the first item adds what is open.
     if (row.kind === 'usb-folder') {
-      if (!item.drive) return;
-      if (item.add) {
-        const key = sheetKey;
-        await command({ name: item.drive, action: 'add', folder: item.folder ?? '' }, (answer) => {
-          if (!answer.ok) {
-            flash(plainly(answer.error, 'Could not add it. Try again.'));
-            return;
-          }
-          flash(`${item.folder ? item.folder.split('/').pop() : 'The whole drive'} added`);
-          usbBrowse = null;
-          openList(key);
-        });
-      } else {
-        browseUsb(item.drive, item.folder ?? '');
-      }
+      // Tick several (George, 2026-10-18): the row opens; its box ticks.
+      if (item.drive) browseUsb(item.drive, item.folder ?? '');
       return;
     }
     if (row.kind === 'share') {
@@ -1375,19 +1436,8 @@
       if (item.share && shareBrowse && !item.add && (item.open || item.up || (item.address ?? '').startsWith('//'))) {
         browseShareFolder(item.address ?? item.name);
       } else if (item.share && shareBrowse) {
-        const key = sheetKey;
-        const { user, password } = shareBrowse;
-        const address = item.address ?? item.name;
-        await command({ name: address, action: 'add', user: user ?? (address.startsWith('//') ? 'guest' : null), password }, (answer) => {
-          if (!answer.ok) {
-            flash(plainly(answer.error, 'Could not add it. Check the address and try again.'));
-            return;
-          }
-          flash(`${item.add ? item.name.replace(/^Add /, '') : item.name} added`);
-          shareBrowse = null;
-          shareFolder = null;
-          openList(key);
-        });
+        // An NFS export is not opened: tapping it ticks it.
+        togglePick(item);
       } else if (item.server) {
         browseShares(item);
       } else if (item.login) {
@@ -2636,6 +2686,16 @@
           </div>
         </div>
       {:else if sheet.type === 'list'}
+        {@const crumbs = usbBrowse?.crumbs ?? shareFolder?.crumbs ?? null}
+        {#if crumbs?.length}
+          <!-- The path, a step each: how a folder goes back up (George,
+               2026-10-18, "Tick several"). -->
+          <div class="crumbs">
+            {#each crumbs as c, i (i)}
+              <button type="button" class="crumb" class:is-here={i === crumbs.length - 1} onclick={() => goCrumb(c)}>{c.name}</button>
+            {/each}
+          </div>
+        {/if}
         {#if items.length}
           <div class="items" data-noscrollbar>
             <!-- A USB folder by where it is: two folders can share a name. -->
@@ -2668,8 +2728,24 @@
                   <span class="item__title">
                     <span class="item__name">{item.name}</span>
                   </span>
-                  {#if item.meta}<span class="item__meta" class:is-joined={joined}>{keepUnit(item.state === 'connected' && netOpen && netLive?.name === item.name && netLive.speed ? `Connected · ${netLive.speed}` : item.meta)}</span>{/if}
+                  {#if tickable(item) && coveredBy(item)}<span class="item__meta">In {coveredBy(item).name}</span>
+                  {:else if item.meta}<span class="item__meta" class:is-joined={joined}>{keepUnit(item.state === 'connected' && netOpen && netLive?.name === item.name && netLive.speed ? `Connected · ${netLive.speed}` : item.meta)}</span>{/if}
                 </span>
+                {#if tickable(item)}
+                  <!-- Tick several (George, 2026-10-18): the box ticks, the
+                       row opens. -->
+                  <span
+                    class="pick"
+                    class:is-on={isPicked(item)}
+                    class:is-covered={!!coveredBy(item)}
+                    role="checkbox"
+                    tabindex="0"
+                    aria-checked={isPicked(item)}
+                    aria-label={`Tick ${item.name}`}
+                    onclick={(e) => { e.stopPropagation(); togglePick(item); }}
+                    onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); togglePick(item); } }}
+                  ><span></span></span>
+                {/if}
                 <!-- The lock alone, at the end of the line before its action,
                      leaves the name its room (George, 2026-10-07): closed
                      where a password is still needed, open where one was
@@ -2732,8 +2808,13 @@
         {:else}
           <div class="empty">
             <span class="empty__ring"></span>
-            <span class="empty__text">{listError ?? sheet.empty ?? 'Nothing here yet.'}</span>
+            <span class="empty__text">{listError ?? (crumbs?.length ? 'No folders inside.' : sheet.empty ?? 'Nothing here yet.')}</span>
           </div>
+        {/if}
+        {#if picks.length}
+          <button type="button" class="btn btn--confirm pick-add" onclick={addPicked}>
+            Add {picks.length} {picks.length === 1 ? 'folder' : 'folders'}
+          </button>
         {/if}
       {/if}
 
@@ -4205,6 +4286,79 @@
   .shares__name {
     font-size: 17px;
     overflow-wrap: anywhere;
+  }
+  /* Tick several (George, 2026-10-18): the box on a folder, the path above
+     the list, and the button under it. */
+  .pick {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    margin: -12px 0;
+    padding: 12px;
+    box-sizing: content-box;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    background-clip: content-box;
+    border-radius: 7px;
+    outline: none;
+  }
+  .pick::before {
+    content: '';
+    grid-area: 1 / 1;
+    width: 24px;
+    height: 24px;
+    box-sizing: border-box;
+    border-radius: 7px;
+    border: 2px solid rgba(233, 238, 242, 0.42);
+  }
+  .pick > span {
+    grid-area: 1 / 1;
+    width: 11px;
+    height: 6px;
+    margin-top: -3px;
+    border-left: 2.5px solid #0d151c;
+    border-bottom: 2.5px solid #0d151c;
+    transform: rotate(-45deg);
+    display: none;
+  }
+  .pick.is-on::before {
+    background: var(--accent, #7ed6bc);
+    border-color: var(--accent, #7ed6bc);
+  }
+  .pick.is-on > span {
+    display: block;
+  }
+  .pick.is-covered {
+    opacity: 0.55;
+    cursor: default;
+  }
+  .crumbs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .crumb {
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(233, 238, 242, 0.14);
+    background: rgba(233, 238, 242, 0.05);
+    color: inherit;
+    font: inherit;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  .crumb.is-here {
+    background: rgba(233, 238, 242, 0.14);
+    border-color: rgba(233, 238, 242, 0.3);
+    font-weight: 700;
+  }
+  .pick-add {
+    width: 100%;
+    min-height: 52px;
+    flex-shrink: 0;
+    margin-top: 12px;
   }
   .forget {
     flex-shrink: 0;

@@ -555,17 +555,19 @@ NFS). Each is a switch or a list under *Settings → Sources → Lyrion Server*,
 and first use asks on *Where is your music?*, with nothing chosen
 beforehand. Under *Network shares*, a scan lists the servers on the network
 by their names, once each, and then their shares, with a login where
-needed. An SMB share opens into its folders, as deep as you like, so Lyrion
-can read just one of them; an NFS export is added whole. A share that does
+needed. Shares and their folders are ticked, as USB folders are: an SMB
+share opens into its folders, as deep as you like, so Lyrion can read just
+some of them; an NFS export is ticked whole. A share that does
 not announce itself can be added with *Add by address*, and one added by
 mistake is taken away with its *Forget*. The Music folder's row shows how
 much room is free on the player.
 
 **Can Lyrion read only some folders of a USB drive?**
 Yes. With *USB drives* on, open *USB folders*: each drive plugged in is
-listed, and opening one shows its folders, at any depth. *Add the whole
-drive* is first at its top, and *Add* followed by a folder's name inside
-it. A drive plugged in for the first time is not added by itself: it waits
+listed. Tick a drive to add all of it, or open it and tick folders inside,
+at any depth and on several levels; the path above the list goes back up,
+and *Add* adds everything ticked at once. A folder inside one already
+ticked shows ticked too. A drive plugged in for the first time is not added by itself: it waits
 under *USB folders* as *Not added yet* until its folders are chosen.
 
 **Why does Lyrion rescan everything when I take a folder away?**
