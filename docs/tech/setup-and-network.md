@@ -176,11 +176,11 @@ open; the panel's join step counts down (*"Can't join? Channel 6 changes in
 1:42"*). A failed `connection up` is handled as a failed start: the network
 reopens from the quiet channel.
 
-**The password**: with a panel attached (an `HDMI-A-*` connector reporting
-`connected`) *and* a screen already confirmed on it (ADR-0109 decision 5), eight
-characters from an alphabet without `0 o 1 l`, made once and kept in
-`/var/lib/gexis/setup-password` (0600) so it survives reboots. Otherwise a
-fixed, documented password, since nothing can show a made-up one.
+**The password** is `gexis-setup` on every player, with a panel or without
+(`setup_network.PASSWORD`; George, 2026-10-18). Until then a player whose
+screen had been confirmed made one up and showed it on the panel (ADR-0109
+decision 5); a freshly flashed card never had a confirmed screen, so setup
+always used the fixed one anyway.
 
 **No captive portal** (ADR-0031 amendment 2). The panel shows two QR codes in
 sequence: one that joins the network, then one for the page,
@@ -418,8 +418,8 @@ amended 2026-10-07): `gexis-screen-check` runs before the kiosk during setup
 too and applies the recognised model, the one listed bar of its mode
 (restarting first for a bar's kernel mode), or the screen's own mode, scale
 only. The choice is **provisional** in `screen.json`: no Keep is asked, and
-`screen_apply.confirmed()` stays false, so the setup network keeps the fixed
-password. The Screen step confirms it, or replaces it and asks Keep.
+`screen_apply.confirmed()` stays false. The Screen step confirms it, or
+replaces it and asks Keep.
 
 **The port is part of what is applied** (ADR-0109 amended 2026-10-12):
 `screen.json` keeps the HDMI connector the screen was seen on

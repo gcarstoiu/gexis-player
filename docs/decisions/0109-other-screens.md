@@ -501,3 +501,12 @@ What the lists show of the Tested / Untested marks of decision 1 is now *Tested*
 owners) or nothing, with a reported problem as a line under the model
 (George: *"Make it for both sound and display"*). The states underneath are
 unchanged. See ADR-0126's amendment of the same day.
+
+## Amended 2026-10-18: the setup network's password is always gexis-setup
+
+George, after a full setup on a fresh card: *"Why don't we generate passwords
+anymore for the WiFi hotspot but use the generic one meant for devices
+without displays?"* - then *"Let's just use gexis-setup for all cases"*.
+Decision 5's first point no longer applies: the setup network's password is
+`gexis-setup` on every player. A freshly flashed card never has a confirmed
+screen, so in practice setup always used it already.
