@@ -2728,11 +2728,12 @@ class StateServer:
             else:
                 found = await asyncio.to_thread(lyrion_scan.servers, own)
                 self._share_servers = (time.monotonic(), found)
-            for server in found:
-                saved.append({"name": server.name, "bars": None, "state": "found",
-                              "meta": f"{server.kind.upper()} · {server.host} · tap to see its shares",
-                              "server": {"host": server.host, "kind": server.kind}})
-            return web.json_response({"items": saved})
+            # George, 2026-10-18: the search shows what can be added, not
+            # what is: the shares added are on their own tile.
+            servers = [{"name": server.name, "bars": None, "state": "found",
+                        "meta": f"{server.kind.upper()} · {server.host} · tap to see its shares",
+                        "server": {"host": server.host, "kind": server.kind}} for server in found]
+            return web.json_response({"items": servers})
         if key == "restore":
             # ADR-0083. Read from the share every time: somebody may have
             # copied one in from another machine since the sheet last opened,
@@ -2807,10 +2808,13 @@ class StateServer:
                     except (subprocess.SubprocessError, OSError) as exc:
                         logger.warning("lyrion: %s's shares not listed: %s", name, exc)
                         return web.json_response({"ok": False, "error": f"{name}'s shares could not be listed."})
+                    # Shares already added are not offered again (George,
+                    # 2026-10-18): they took up the list for nothing.
+                    added = {a["address"].lower() for a in self._lyrion_shares.all()}
                     return web.json_response({"ok": True, "error": None, "items": [
                         {"name": lyrion_shares.label(s["address"])[0], "meta": s["comment"] or None,
                          "bars": None, "state": "found", "share": True, "address": s["address"]}
-                        for s in found]})
+                        for s in found if s["address"].lower() not in added]})
                 if action == "folders":
                     # George, 2026-10-18: a share opens into its folders, at
                     # any depth, as a USB drive does. SMB only: listing an

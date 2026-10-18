@@ -554,7 +554,8 @@ Wherever you choose, and nowhere until you do: the player's own Music folder
 NFS). Each is a switch or a list under *Settings → Library → Lyrion Server*,
 and first use asks on *Where is your music?*, with nothing chosen
 beforehand. Under *Network shares*, a scan lists the servers on the network
-by their names, once each, and then their shares, with a login where
+by their names, once each (under *Add share*), and then their shares - not
+the ones already added, which have a tile of their own - with a login where
 needed. Shares and their folders are ticked, as USB folders are: an SMB
 share opens into its folders, as deep as you like, so Lyrion can read just
 some of them; an NFS export is ticked whole. A share that does

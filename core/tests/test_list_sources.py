@@ -576,7 +576,7 @@ async def test_a_share_s_mount_is_checked_off_the_event_loop(tmp_path, monkeypat
     server = StateServer(StateStore({}), settings=settings, lyrion_shares=shares)
     async with TestClient(TestServer(server.make_app())) as client:
         row = _row(await (await client.get("/settings")).json(), "lyrion-server.shares")
-        items = (await (await client.get("/settings/lyrion-server.shares/items")).json())["items"]
+        items = (await (await client.get("/settings/lyrion-server.shares/items?saved=1")).json())["items"]
     assert row["items"][0]["meta"] == "On nas · Mounted, read-only"
     assert items[0]["meta"] == "On nas · Mounted, read-only"
     assert len(checked_on) == 2 and threading.main_thread() not in checked_on

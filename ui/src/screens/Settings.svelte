@@ -857,7 +857,7 @@
       // disagree.
       // ADR-0115: the shares are drawn on the row itself, each with its
       // Forget (George, 2026-10-03: the stored list "look[ed] like just code").
-      if (row.kind === 'share') return (row.items ?? []).length ? '' : 'None added';
+      if (row.kind === 'share') return '';
       // ADR-0115 decision 23: the same, for the folders chosen on USB drives.
       if (row.kind === 'usb-folder') return (row.items ?? []).length ? '' : 'None added';
       if (v) return String(v);
@@ -2053,8 +2053,42 @@
                      only repeats the value already on the row. `disabled`
                      rather than a different element, so the row keeps its
                      layout and its 44px height. -->
+                {#if r.kind === 'share'}
+                  <!-- George, 2026-10-18: the shares added in a tile of
+                       their own, each with its Forget; adding is the tile
+                       under it, which says so. -->
+                  <div class="row row--readonly row--static">
+                    <span class="row__body">
+                      <span class="row__text">
+                        <span class="row__label"><span class="row__name">{r.label}</span></span>
+                        {#if r.items?.length}
+                          <span class="shares">
+                            {#each r.items as s (s.address ?? s.name)}
+                              <span class="shares__one">
+                                <span class="shares__text">
+                                  <span class="shares__name">{s.name}</span>
+                                  {#if s.meta}<span class="item__meta">{s.meta}</span>{/if}
+                                </span>
+                                <span
+                                  class="forget"
+                                  role="button"
+                                  tabindex="0"
+                                  onclick={(e) => { e.stopPropagation(); forgetShare(r, s); }}
+                                  onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); forgetShare(r, s); } }}
+                                >Forget</span>
+                              </span>
+                            {/each}
+                          </span>
+                        {:else}
+                          <span class="row__note">None added yet.</span>
+                        {/if}
+                      </span>
+                    </span>
+                  </div>
+                {/if}
                 <button
                   class="row"
+                  class:row--add={r.kind === 'share'}
                   class:row--danger={r.danger}
                   class:row--readonly={r.type === 'readonly'}
                   class:row--dl={!!r.component}
@@ -2066,12 +2100,13 @@
                   <span class="row__body">
                     <span class="row__text">
                       <span class="row__label">
-                        <span class="row__name">{r.label}</span>
+                        <span class="row__name">{r.kind === 'share' ? 'Add share' : r.label}</span>
                         {#if pending(r)}<span class="dot dot--sm"></span>{/if}
                       </span>
                       <!-- A plugin's version, and the program it runs (George, 2026-10-12). -->
                       {#if r.version}<span class="row__note row__version">{r.version}</span>{/if}
-                      {#if r.note && !opensItsOwn(r)}<span class="row__note"><NoteText text={r.note} links={false} /></span>{/if}
+                      {#if r.kind === 'share'}<span class="row__note">Find a share on your network, or add one by its address.</span>
+                      {:else if r.note && !opensItsOwn(r)}<span class="row__note"><NoteText text={r.note} links={false} /></span>{/if}
                       <!-- A row that opens its own sheet keeps its note for the
                            sheet; `summary` is the one line it shows on the tile
                            (George, 2026-10-18: Personalise). -->
@@ -2131,7 +2166,7 @@
                     {:else if r.type !== 'toggle' && !(r.type === 'readonly' && r.links?.length && r.value == null) && shown(r)}
                       <span class="row__value" class:is-pending={pending(r)}>{shown(r)}</span>
                     {/if}
-                    {#if (r.kind === 'share' || r.kind === 'usb-folder') && r.items?.length}
+                    {#if r.kind === 'usb-folder' && r.items?.length}
                       <!-- ADR-0115: each share by its name, with its Forget
                            (George, 2026-10-03). Spans, not buttons: the row
                            is the button that opens the sheet. -->
@@ -4302,6 +4337,14 @@
   .shares__name {
     font-size: 17px;
     overflow-wrap: anywhere;
+  }
+  /* George, 2026-10-18: the shares added, a tile that takes no tap; and the
+     tile that adds one, dashed as Upload a plugin is. */
+  .row--static {
+    cursor: default;
+  }
+  .row--add {
+    border-style: dashed;
   }
   /* ADR-0150: a row's links, as small buttons under its note. */
   .links {

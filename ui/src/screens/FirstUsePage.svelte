@@ -785,9 +785,7 @@ class Component extends DCLogic {
       st.shareStep = 'scan';
       st.shareError = null;
       const got = await listItems('lyrion-server.shares');
-      const items = got.items ?? [];
-      st.shares = items.filter((i) => !i.server).map((i) => ({ name: i.name, where: i.meta || '', address: i.address }));
-      st.shareServers = items.filter((i) => i.server);
+      st.shareServers = (got.items ?? []).filter((i) => i.server);
       if (st.shareStep === 'scan') st.shareStep = 'list';
     },
     //: George, 2026-10-18: a share added by mistake is forgotten here, as in

@@ -1024,3 +1024,31 @@ async def test_the_music_folders_space_is_on_its_row_and_its_route(tmp_path, mon
         rows = (await (await client.get("/settings")).json())["groups"][0]["rows"]
         assert rows[0]["note"] == "The player's own. 51.2 GB free of 58.0 GB."
         assert (await (await client.get("/storage/music")).json())["text"] == "51.2 GB free of 58.0 GB"
+
+
+@pytest.mark.asyncio
+async def test_the_share_search_offers_only_what_is_not_added(tmp_path, monkeypatch):
+    """George, 2026-10-18: shares already added are on their own tile and not
+    shown again in the search - neither the list nor a server's shares."""
+    from gexis_core import lyrion_scan, lyrion_shares
+    from gexis_core.settings import SettingsStore
+    from gexis_core.settings_registry import Settings
+
+    registry = [{"id": "g", "label": "G", "rows": [
+        {"key": "lyrion-server.shares", "type": "list", "kind": "share", "discover": True}]}]
+    store = SettingsStore(tmp_path / "s.db")
+    settings = Settings(store, registry=registry, wired={"lyrion-server.shares": None})
+    shares = lyrion_shares.Shares(store, root=tmp_path / "mnt", credentials=tmp_path / "cred",
+                                  is_mount=lambda p: False)
+    shares.add("nas:/music", None, None)
+    monkeypatch.setattr(lyrion_scan, "servers", lambda own: [lyrion_scan.Server(name="nas", host="nas", kind="nfs")])
+    monkeypatch.setattr(lyrion_scan, "shares", lambda server, user=None, password=None: [
+        {"address": "nas:/music", "comment": ""}, {"address": "nas:/films", "comment": ""}])
+    server = StateServer(StateStore({}), settings=settings, lyrion_shares=shares)
+    url = "/settings/lyrion-server.shares/items"
+    async with TestClient(TestServer(server.make_app())) as client:
+        found = (await (await client.get(url)).json())["items"]
+        assert [i["name"] for i in found] == ["nas"] and all(i.get("server") for i in found)
+        browsed = await (await client.post(url, json={"name": "nas", "action": "browse",
+                                                       "server": {"host": "nas", "kind": "nfs"}})).json()
+        assert [i["address"] for i in browsed["items"]] == ["nas:/films"]
