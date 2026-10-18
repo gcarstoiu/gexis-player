@@ -35,105 +35,25 @@ packs reused): *Add a backup* in Settings → Restore (ADR-0083 amended
 2026-10-17), the backup fixes, the Settings header wrap. PR #74 merged by
 George; post-merge steps and the routine clean-up done.
 
-**Phase 14 (`ph-first-use`) is built on its own branch, not merged**
-(worktree `~/projects/gexis-player-14`, branch `ph-first-use` off
-`next` (then `phase-13d`), pushed). **Reworked 2026-10-18 after George found it did not
-follow the designs**: first use (part 1 setup and part 2 *Make it yours*) is
-now one page, `FirstUsePage.svelte`, **generated** from Claude Design's
-`design/source/14-first-use` by `tools/design/gen_personalise.py`. The markup
-and styles are converted mechanically, the prototype's logic is kept
-verbatim, and 40 asserted replacements call the core. Change the design, then
-generate again; never restyle the `.svelte` by hand. Every screen was checked
-side by side with the prototype. ADR-0149's decisions were revised (25,
-including the two kept against the design: Output and the rename/second
-player on a restore, George 2026-10-08). **sofapi runs it** (core `1.0.6+git87`, UI and player `+git88`; part 2 opens from Settings → System →
-Personalise). Added 2026-10-18 at George's request: a Touchpad step in
-part 2 (before the visualiser; preview with the pointer moving) and the
-volume type under part 1's Output (`GET /setup/outputs`; ADR-0149 26-27). Then: Getting ready shows the
-opening flow animation with the chosen sources and a status badge, and the
-core keeps the Lyrion servers found (`discovery.Known`; the list answered in
-3 ms on sofapi, was 2.8 s; ADR-0149 28-29). After George's part 2 test: Getting
-ready names every stage of a download from the live component status (the
-pack already in on sofapi had sat at 0 % for 30 s), and *Personalise* is at
-the top of Display (ADR-0149 30-31).
+**Phase 14 (`ph-first-use`) is built, not merged** (worktree
+`~/projects/gexis-player-14`). First use - part 1 setup and part 2 *Make it
+yours* - is one page generated from Claude Design's
+`design/source/14-first-use` by `tools/design/gen_personalise.py`: change the
+design or the generator's asserted replacements, never the `.svelte` by
+hand. Decisions: ADR-0149 1-41; ADR-0115 20-26 (Lyrion's music locations,
+none preselected; USB and share folders ticked at any depth; *Forget* in
+part 2); ADR-0131 amended (the backup review by Settings section). sofapi
+runs core, UI and player `+git109`. Done on `next` and merged into it:
+*Tested* or nothing, the waiting screen's pulsing marks, the visualiser's
+window rule and PeppyMeter's keys kept across upgrades, the library's Calm
+background. Test fronts in the scratchpad: `p2proxy.py` (part 2 on 8197/8198
+against sofapi, writes held; `NOLYR`, `SETON`, `USBFAKE`, `SHAREUP`),
+`fakeshares.py` (a stand-in NAS on 8199), `p1mock.py` (part 1 on 8196;
+`REALBK`, `PLUGDIR`), `holddemo.py` with `pd/` (the demo library for
+manual pictures). **Not tried on a device:** a USB drive's folders, and a
+share added at a sub-folder mounting (sofapi's Lyrion server is off; to-do
+g56). The day's narrative: `docs/HANDOFF-ARCHIVE.md`, 2026-10-18.
 
-**Tested, or nothing** (on `next`, merged into `ph-first-use`; George,
-2026-10-18): every list of screens, boards and outputs shows *Tested* (here,
-or reported working by owners) or no mark; a reported problem is a line
-under the model; an output's name no longer carries its state (settings
-migration 10 rewrote sofapi's stored output). ADR-0126, 0117 and 0109
-amended; HARDWARE.md's table regenerated.
-
-**The waiting screen's sources** (on `next`, 2026-10-18; George: reuse the
-library's waiting footer without its bar): `WaitingServices` in a `bare`
-form, the pulsing marks straight on the picture, and no hint line or
-*Hint on the waiting screen* setting (migration 11); manual pictures retaken through the demo
-front (scratchpad `holddemo.py`, ports 8097/8098, `lmsoff.flag`,
-`DEMO_NAME`). Plexamp is one screen in part 2, its sign-in read from the
-plugin (ADR-0149 32-34). Should list: DSI screens, weather on the waiting
-screen. Since George's notes of 2026-10-18: part 2 is owed only until
-the first boot after setup (`personalise.at_start`), a restore is pinned by
-a test never to owe it, and the visualiser tweaks show only what the skin
-type draws (on `next`, merged into `ph-first-use`). After George's full run
-on a fresh card (2026-10-18): part 2's panel screen first, *Do it later* =
-Spotify and Bluetooth, the core restarts once settled when part 2 sets a
-Lyrion server, the output recommendation, Headless apart, the standby picker
-(ADR-0149 35-41); on `next`: the setup password is `gexis-setup` always, a
-show-password eye, plain HTTP stays and is explained, no text selection on
-the panel, BlueZ's "Not Provided" is no title. *Personalise* is in ADR-0022 (George, 2026-10-18). Waiting
-for George: his test of part 2, then part 1 on sofapi after *Reset to
-factory settings* (his choice, instead of a fresh card), then the PR.
-
-**The visualiser on the panel** (on `next`, merged into `ph-first-use`;
-installed on sofapi as `gexis-system 1.0.6+git57`; George, 2026-10-18: a
-shifted visualiser opened from the phone). labwc placed a meter window
-restarted after a skin change offset from the corner; `labwc-rc.xml` now
-maximises every window, and `gexis-kiosk-start` adds `MoveToOutput` to that
-rule (ADR-0109 amended). Found on the way: a `gexis-system` upgrade reset
-PeppyMeter's config to the image's skin path, and the meter refused to start
-(a show answered 409) until the core's next skins pass, up to 5 min; preinst
-and postinst now keep the five keys the core writes (ADR-0107 amended). On
-sofapi after both: the config survived the upgrade, restart + show drew the
-meter at 0,0 over the whole 1280×800 panel after ~1.5 s of black, and hide
-brought the home screen back. The turntable is the first skin of the
-`1280x720_g5_451_ms` corpus, centred with 40 px bands at 1280×800.
-
-**The library's background with nothing playing** (on `next`, merged into
-`ph-first-use`; George: "Just 1 from calm types", then "more colorful + take
-c105649975.webp"): `PanelBackground` bleeds `calm/c105649975.webp` where
-there is no artwork; no setting.
-
-**Lyrion's music locations, chosen** (on `ph-first-use` only; core
-`+git103`, UI `+git104` on sofapi; ADR-0115 decisions 20-24, ADR-0022 three
-rows, George 2026-10-18): Music folder and USB drives are switches, off on a
-new player; `lyrion-server.usb_folders` holds folders chosen per USB drive
-(`lyrion_usb.py`, browsed in Settings and in part 2); a new drive is not
-added (George: "1b"); removal causes Lyrion's full rescan, and each note
-says so. Settings migration 12 keeps a player already running the server
-as it was. Checked through the part 2 proxy against a local test drive
-(`USBFAKE`, `SETON` in scratchpad `p2proxy.py`), phone and panel; never with
-a real drive, and sofapi's server is off - to-do g56 is George's try.
-
-**The backup review** (on `ph-first-use`, core and UI `+git105` on sofapi;
-ADR-0131 amended 2026-10-18): the upload step's tile holds the file's name;
-below it every setting the backup stores and what else it carries, a ticked
-line each, by Settings section (`restore_review.py`, `inspect`'s
-`sections`). Checked with George's own sofapi backup through `p1mock.py`
-(`REALBK`, `PLUGDIR`). That backup has *Library on the screen* off.
-
-**Shares in part 2** (on `ph-first-use`, core and UI `+git107` on sofapi;
-ADR-0115 decision 25, George 2026-10-18): added shares carry *Forget*; an SMB
-share opens into its folders at any depth (`lyrion_scan.folders`); the
-server scan runs SMB and NFS at once and is reused a minute (sofapi: 2 s ->
-1.1 s, then 52 ms); USB is a ghost row with no drive; the Music folder shows
-its space. Not yet tried: a share added at a sub-folder actually mounting
-(sofapi's server is off). Test fronts: scratchpad `fakeshares.py` (a
-stand-in Tower on 8199) behind `p2proxy.py` with `SHAREUP`.
-
-**Tick several** (on `ph-first-use`, `+git109` on sofapi; ADR-0115 decision
-26, George 2026-10-18): drives, shares and folders carry tick boxes, rows
-open, the path (`crumbs`) goes back up, one *Add N folders*; part 2 and
-Settings. Real Tower on sofapi: `Music/Clean` lists 499 folders.
 **Owed to George: the Music share's floor** - proposed 4 GB, hardcoded
 (ADR-0022 [H] once he confirms), the share read-only below it; figures:
 Lyrion's library on his 10^4-file library 151 MB + artwork 670 MB (Finding
@@ -152,7 +72,7 @@ now mentions *Add a backup*, bundle rebuilt 2026-10-17, for George to re-push);
 ran it is not recorded. The theme (`gcarstoiu/gexis-wp-theme` 1.0.3, pushed)
 mirrors FAQ, Install, Hardware, Manual and Release notes from `main`.
 
-Suite 2,535 passed, 47 skipped (2026-10-18, on `ph-first-use`), with the venv in
+Suite 2,544 passed, 47 skipped (2026-10-18, on `ph-first-use`), with the venv in
 `~/.local/share/gexis-venv` (never under `/tmp`: LESSONS 74).
 
 **Devices.** sofapi (Waveshare 10.1", SMSL USB DAC; a test machine), the bar
@@ -189,7 +109,8 @@ in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-10-17, after 1.0.6's PR (#74)** (/home 225 -> 238 GB free).
+2026-10-18, weekly** (/home 242 GB free before and after; HANDOFF 2,590 ->
+1,737 words).
 
 ## Phases
 
