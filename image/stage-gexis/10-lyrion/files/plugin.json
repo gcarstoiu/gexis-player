@@ -8,6 +8,14 @@
   "port": 9000,
   "settings": [
     {
+      "key": "library",
+      "type": "readonly",
+      "label": "Library",
+      "marks": "N",
+      "default": null,
+      "note": "What Lyrion is doing with your music, and what it holds."
+    },
+    {
       "key": "music_folder",
       "type": "toggle",
       "label": "Music folder",

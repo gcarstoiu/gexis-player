@@ -2163,6 +2163,13 @@
                         <span style:width={`${Math.round((downloadShare(c) ?? 0) * 100)}%`}></span>
                       </span>
                     {/if}
+                    {#if r.progress != null || r.busy}
+                      <!-- ADR-0115 decision 28: how far Lyrion has read, or
+                           that it is working with no count to give. -->
+                      <span class="dl__bar" class:dl__bar--busy={r.progress == null}>
+                        <span style:width={`${Math.round((r.progress ?? 0) * 100)}%`}></span>
+                      </span>
+                    {/if}
                     {#if r.type === 'toggle'}
                       <span class="toggle" class:is-on={!!r.value}><span></span></span>
                     {:else if r.type !== 'readonly'}

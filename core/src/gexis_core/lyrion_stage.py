@@ -29,10 +29,12 @@ def stage(answering: bool, addons_done: bool, status: dict | None, has_locations
     status = status or {}
     if not answering:
         return {"phase": "starting", "label": "Starting", "share": None, "done": False,
-                "line": "Lyrion's first start. Its add-ons come next, then it reads your music."}
+                "line": "Lyrion's first start. Its add-ons come next, then it reads your music." if not addons_done
+                else "Lyrion is starting; it answers in a few seconds."}
     if not addons_done:
-        return {"phase": "addons", "label": "Adding Material Skin", "share": None, "done": False,
-                "line": "Lyrion fetches its add-ons and restarts once: about 3 minutes before it reads your music."}
+        return {"phase": "addons", "label": "Adding its add-ons", "share": None, "done": False,
+                "line": ("Lyrion fetches Material Skin, Music & Artist Information and Radio Now Playing, "
+                         "then restarts once: about 3 minutes before it reads your music.")}
     if status.get("rescan"):
         done, total = _int(status.get("progressdone")), _int(status.get("progresstotal"))
         line = (f"{done:,} of {total:,} files so far. " if done is not None and total else "") + \

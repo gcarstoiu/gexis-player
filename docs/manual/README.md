@@ -396,6 +396,7 @@ switched on, none at first:
 
 | Setting | What it does |
 |---|---|
+| Lyrion Server: Library | Read only: what the server is doing - starting, adding its add-ons, reading your music with a progress bar - and once ready, how many songs and albums it holds. The section's heading says the same in a word. |
 | Lyrion Server: Music folder | The player's own Music folder, shared on the network as *Music*. Its note says how much room is free and how much there is in all. Below 4 GB free the Music share takes no new files, and the note says so, until more than 4.5 GB is free. |
 | Lyrion Server: USB drives | Folders on USB drives plugged into the player. |
 | Lyrion Server: USB folders | Shown with *USB drives* on. Each drive plugged in: tick it to add all of it, or open it and tick folders at any depth, then *Add*. A drive not chosen yet reads *Not added yet*; the folders of an unplugged drive are kept for 7 days. |

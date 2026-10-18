@@ -47,7 +47,7 @@ from dbus_next.aio import MessageBus
 from gexis_core import memo, own_wallpapers, screen_apply, settling
 from gexis_core.players import Players, status_line
 from gexis_core.wallpapers import SEARCH as PIXABAY_SEARCH
-from gexis_core import backups, bluetooth_devices, skin_packs, device_name, discovery, hardware_report, lyrion_folders, music_floor, lyrion_scan, lyrion_shares, lyrion_usb, problem_report, skin_previews, skins, wifi
+from gexis_core import backups, bluetooth_devices, skin_packs, device_name, discovery, hardware_report, lyrion_folders, lyrion_stage, music_floor, lyrion_scan, lyrion_shares, lyrion_usb, problem_report, skin_previews, skins, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
 from gexis_core.artistinfo import PHOTO_BACKGROUND, PHOTO_LARGE, PHOTO_THUMB
 from gexis_core.artwork_sweep import ARTIST_NAMESPACE, remembered
@@ -2430,6 +2430,17 @@ class StateServer:
         for group in groups:
             for row in group["rows"]:
                 key = row.get("key")
+                if key == "lyrion-server.library":
+                    # ADR-0115 decision 28 (George, 2026-10-18): the stage, its
+                    # line and, while Lyrion reads, how far - kept after Ready.
+                    stage = dict(lyrion_stage.CURRENT)
+                    if stage:
+                        row["value"] = stage["label"]
+                        row["note"] = stage["line"]
+                        row["progress"] = stage.get("share") if stage["phase"] == "scanning" else None
+                        row["busy"] = stage["phase"] in ("starting", "addons", "waiting") or (
+                            stage["phase"] == "scanning" and stage.get("share") is None)
+                    continue
                 if key == "lyrion-server.music_folder":
                     # George, 2026-10-18: the Music folder's free and total space.
                     space = await asyncio.to_thread(lyrion_folders.music_space)

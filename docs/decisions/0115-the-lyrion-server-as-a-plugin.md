@@ -288,10 +288,14 @@ setting" and the Music folder's always being offered.
     a restart at 21:49:59, and the scan of the shares began at 21:50:08 -
     three minutes in which the page said *Done*, and the first 2 1/2 without
     Material Skin. The core now works out the stage every 5 s while it lasts
-    (`lyrion_stage.py`: Starting, Adding Material Skin, About to read your
-    music, Reading your music with its files so far, Ready with its songs and
-    albums) and sends it with the download's status; Getting ready and the
-    server's row in Settings say it. *Done* is said only at Ready; once
+    (`lyrion_stage.py`: Starting, Adding its add-ons - Material Skin, Music
+    & Artist Information, Radio Now Playing -, About to read your music,
+    Reading your music with its files so far, Ready with its songs and
+    albums) and sends it with the download's status. Getting ready says it;
+    in Settings the Lyrion Server section has it too (George: "since large
+    libraries can take hours, we need to display the progress and done
+    status in settings"), on its heading and in a read-only *Library* row
+    at its top with a progress bar, kept after Ready. *Done* is said only at Ready; once
     Lyrion reads, the player counts as ready, since a large library takes
     hours.
 

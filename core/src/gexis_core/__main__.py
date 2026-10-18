@@ -3405,6 +3405,10 @@ async def main() -> None:
             on = settings.value("lyrion-server.enabled") is True
             if not on and lyrion_stage.CURRENT:
                 lyrion_stage.CURRENT.clear()
+                try:
+                    settings.indicate("lyrion-server.enabled", None)
+                except Exception:  # noqa: BLE001
+                    pass
                 _publish_components()
             try:
                 if on:
@@ -3449,6 +3453,16 @@ async def main() -> None:
                     logger.info("lyrion: %s", now_stage["label"].lower())
                 lyrion_stage.CURRENT.clear()
                 lyrion_stage.CURRENT.update(now_stage)
+                # The Lyrion Server heading in Settings: working, then Ready.
+                try:
+                    if now_stage["phase"] == "ready":
+                        settings.indicate("lyrion-server.enabled", "ok", now_stage["label"])
+                    elif now_stage["phase"] == "scanning" and now_stage.get("share") is not None:
+                        settings.indicate("lyrion-server.enabled", "wait", f"Reading {round(now_stage['share'] * 100)} %")
+                    else:
+                        settings.indicate("lyrion-server.enabled", "wait", now_stage["label"])
+                except Exception:  # noqa: BLE001 - a heading that cannot say it is no reason to stop
+                    logger.debug("lyrion: indicator not set", exc_info=True)
                 _publish_components()
                 state_store.bump_settings_revision()
             if not lyrion_asked.get("versions_off"):

@@ -546,11 +546,12 @@ pieces in code:
   (`/var/lib/gexis/lyrion-usb-seen.json`).
 - **Lyrion's stage after its download** (`lyrion_stage.py`, ADR-0115
   decision 28): the Lyrion loop reads `serverstatus` (every 5 s while not
-  ready, every 20 s after) and works out Starting, Adding Material Skin
+  ready, every 20 s after) and works out Starting, Adding its add-ons
   (until `lyrion-addons.done`), About to read your music, Reading your music
   (`rescan`, `progressdone`/`progresstotal`) or Ready (`info total songs`).
-  It goes out as `components.lyrion.after` while the package is installed,
-  and as the server's row note in Settings.
+  It goes out as `components.lyrion.after` while the package is installed;
+  in Settings as the Lyrion Server heading's indicator and the read-only
+  `lyrion-server.library` row (`progress`, or `busy` with no count).
 - **The Music share's floor** (`music_floor.py`, ADR-0115 decision 27):
   every minute the core reads the Music folder's free space; below 4 GB
   it writes `read only = yes` to `/run/gexis/music-share.conf`, which
