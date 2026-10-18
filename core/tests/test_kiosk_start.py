@@ -41,12 +41,16 @@ def test_touch_is_tied_to_the_port_screen_env_names(tmp_path):
     rc = _write(tmp_path, "HDMI-A-2", connected=("HDMI-A-1", "HDMI-A-2"))
     assert '<touch mapToOutput="HDMI-A-2"/>' in rc and "HDMI-A-1\"" not in rc
     assert '<action name="MoveToOutput" output="HDMI-A-2"/>' in rc, "the window on the screen, not on HDMI-A-1"
+    # sofapi, 2026-10-18: to the screen's output, then filling it - one rule.
+    assert rc.count("<windowRule ") == 1
+    assert rc.index('output="HDMI-A-2"/>') < rc.index('<action name="Maximize"/>')
     assert rc.rstrip().endswith("</labwc_config>")
 
 
 def test_on_the_first_port_the_installed_configuration_is_used_as_it_is(tmp_path):
     rc = _write(tmp_path, "HDMI-A-1", connected=("HDMI-A-1",))
     assert rc == (FILES / "labwc-rc.xml").read_text()
+    assert '<action name="Maximize"/>' in rc, "every window fills its screen (sofapi, 2026-10-18)"
 
 
 def test_with_no_screen_chosen_the_connected_port_is_used(tmp_path):
