@@ -45,7 +45,8 @@ Every operation carries `x-gexis-stability`:
   the panel's signals, the problem and hardware reports. Free to change
   between releases.
 
-The marking is a proposal until George confirms it (ADR-0152, *Open*).
+A *stable* route changes only with notice in the release notes, and keeps
+working for a release after (ADR-0152, decision 8).
 
 ## The live state: `GET /state`
 

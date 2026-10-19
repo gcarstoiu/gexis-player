@@ -2,7 +2,8 @@
 
 **Status:** **Accepted** — 2026-10-19, George, for Phase 15 (`ph-api`):
 shown in both places, *"Allowed for all"* to be tried, a setting *"next to
-the debug logs one"*. One point open: what the API promises to keep (below).
+the debug logs one"*; the stable and internal marks confirmed the same day
+(*"Confirmed."*).
 
 ## Context
 
@@ -52,14 +53,16 @@ a Must on the Roadmap; George put it before room correction (2026-10-19).
    from the player's own files - the player cannot count on the internet -
    and named in Credits (ADR-0099) with its licence (Apache 2.0).
 
-## Open (George)
-
-- **What the API promises.** Some routes are the panel's own plumbing
-  (`/panel/painted`, `/touch`, the setup network's), others are what an
-  integration needs (state, transport, volume, settings, library).
-  Proposed: every route documented; those an integration may rely on
-  marked *stable* - changed only with notice in the release notes and kept
-  working for a release - and the rest marked *internal*, free to change.
+8. **What the API promises** (proposed, then confirmed by George,
+   2026-10-19): every route is documented; those an integration may rely on
+   are marked *stable* - changed only with notice in the release notes, and
+   kept working for a release - and the rest *internal*, free to change.
+   32 stable (state, sources, transport, volume, players, Bluetooth pairing,
+   library browsing and playing, radio, settings, backups, plugin upload and
+   removal, the network's state, the panel's page, idle and standby, the
+   visualiser) and 58 internal (setup and first use, the panel's own
+   signals, the reports, Lyrion's menu tree, enrichment, the idle screen's
+   pictures and weather, network changes).
 
 ## Consequences
 
