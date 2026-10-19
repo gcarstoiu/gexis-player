@@ -171,7 +171,8 @@ been written properly. **0098 has no record either.**
 | [0148](0148-text-size.md) | Text size | Accepted 2026-10-14: 90-130 % on the player's screen; Home's tiles grow; a zoom set aside |
 | [0149](0149-first-use-in-two-parts.md) | First use in two parts: set up, then make it yours | Accepted 2026-10-18; amended 2026-10-19: skins at their step, Lyrion followed on the panel (42-45) |
 | [0150](0150-a-library-category.md) | A Library category | Accepted 2026-10-18: Lyrion Server's rows under Library; plugins may declare `area: library`; app links |
-| [0151](0151-mpd-on-the-player.md) | MPD on the player | Proposed 2026-10-19: own library and satellite; one library on the panel; HDMI multichannel |
+| [0151](0151-mpd-on-the-player.md) | MPD on the player | Parked 2026-10-19: small benefit, real risk (Finding 128); MPD back among the ideas |
+| [0152](0152-a-documented-public-api.md) | A documented public API | Accepted 2026-10-19: OpenAPI file with a drift test; shown on GitHub and the player, behind *API explorer* |
 
 ## Cross-cutting rules
 
