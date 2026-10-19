@@ -782,6 +782,13 @@ visualiser's restart for a new pack is held, as under the settling screen
 (decision 44): `App.svelte` waits for `playback`, so between `/surface`
 and the state socket it shows nothing rather than its own screens.
 
+**The Lyrion server is chosen from every one found** (ADR-0149 decision 46):
+the page reads `/settings/lms_server/items` once and keeps every server but
+the player's own (`lyrFound`); *Which Lyrion server?* lists them with the
+saved one chosen (`lyrWhere: there`), or *Install Lyrion on* the player when
+its own server is current (`here`), or an address (`addr`). Finish writes
+`lms_server` from that choice.
+
 **Library on the screen** (`lms_library`): off, `App.svelte` treats the
 library as absent (`lmsOff`), so the panel's home is `WaitingHome`; the
 Lyrion client keeps running. **Settings shows it and `lms_extended_nav` as

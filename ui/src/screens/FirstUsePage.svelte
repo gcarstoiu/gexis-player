@@ -176,7 +176,7 @@ class Component extends DCLogic {
   d(s) {
     const lyr = s.preset === 'mine' || (s.preset === 'custom' && s.mix.lyr), plex = s.preset === 'plex' || (s.preset === 'custom' && s.mix.plex);
     const spo = s.preset !== 'custom' || s.mix.spo, bt = s.preset !== 'custom' || s.mix.bt, headless = s.scr === 'headless';
-    return { lyr, plex, spo, bt, headless, wait: !lyr || s.browse === 'off', here: lyr && s.lyrState !== 'found' && s.lyrWhere === 'here',
+    return { lyr, plex, spo, bt, headless, wait: !lyr || s.browse === 'off', here: lyr && s.lyrWhere === 'here',
       marks: [lyr && 'lyr', plex && 'plex', spo && 'spo', bt && 'bt'].filter(Boolean) };
   }
   p1Path(s) { return s.start === 'new' ? ['p1welcome', 'p1net', 'p1start', 'p1name', 'p1clock', 'p1output', 'p1screen', 'p1review', 'p1join'] : ['p1welcome', 'p1net', 'p1start', 'p1backup', 'p1output', 'p1screen', 'p1restore', 'p1restored']; }
@@ -204,7 +204,7 @@ class Component extends DCLogic {
   p2Path(s) {
     const d = this.d(s), p = ['listen'];
     if (s.preset === 'custom') p.push('mix');
-    if (d.lyr && s.lyrState !== 'found') { p.push('lyrion'); if (s.lyrWhere === 'here') p.push('folders'); }
+    if (d.lyr) { p.push('lyrion'); if (s.lyrWhere === 'here') p.push('folders'); }
     if (d.lyr && !d.headless) p.push('browse');
     if (d.plex) p.push('plexamp');
     if (d.spo) p.push('spotify');
@@ -375,6 +375,16 @@ class Component extends DCLogic {
         return { title: 'My own mix', blocks: [list([T('Lyrion', 'Browse your files on the screen.', s.mix.lyr, m('lyr'), { icon: 'lyr' }), T('Plexamp', 'Your Plex library, from its app.', s.mix.plex, m('plex'), { icon: 'plex' }), { k: 'ghost', label: 'Library service', note: 'The next one lands here.', tag: 'Next phase' }], 'Your own music'),
           list([T('Spotify', '', s.mix.spo, m('spo'), { icon: 'spo' }), T('Bluetooth', '', s.mix.bt, m('bt'), { icon: 'bt' })], 'Streaming')] }; }
       case 'lyrion': { const here = s.lyrWhere === 'here';
+        if (s.lyrState === 'found') {
+          const pick = (w, a) => () => set({ lyrWhere: w, lyrServer: a === undefined ? s.lyrServer : a });
+          const rows = (s.lyrFound || []).map(f => R(f.name, f.meta, s.lyrWhere === 'there' && s.lyrServer === f.address, pick('there', f.address), { icon: 'lyr' }));
+          const typed = s.lyrWhere === 'addr' ? [field('Server address', s.lyrAddr, e => set({ lyrAddr: e.target.value }), { ph: '192.0.2.31:9000', hint: nm + ' checks it before going on.' })] : [];
+          const split = here ? { t: 'Split', lhead: nm + ' does', left: ['Installs Lyrion', 'Adds your folders', 'Runs the first scan'], rhead: 'Later, in Lyrion', right: ['Rescan after adding music', 'Everything else'] }
+            : { t: 'Split', lhead: nm + ' does', left: ['Plays from the server you choose'], rhead: 'On that machine', right: ['Its music', 'Its scans'] };
+          return { title: 'Which Lyrion server?', sub: rows.length > 1 ? rows.length + ' found on ' + s.net : 'Found on ' + s.net,
+            blocks: [list(rows, 'On ' + s.net), list([R('Install Lyrion on ' + nm, 'Its music on this player, a USB drive or a share', here, pick('here')), R('Another server, by its address', '', s.lyrWhere === 'addr', pick('addr'))], 'Or'), ...typed, split],
+            foot: Object.assign({}, SK, { nextOff: s.lyrWhere === 'addr' && !s.lyrAddr.trim() }) };
+        }
         const nf = Object.assign(status('none', 'No Lyrion found on ' + s.net), s.lyrAddrOpen ? { field: { label: 'Server address', value: s.lyrAddr, fn: e => set({ lyrAddr: e.target.value }), ph: '192.0.2.31:9000', hint: nm + ' checks it before going on.' } } : { act: 'Add its address', actFn: () => set({ lyrAddrOpen: true }) });
         return { title: 'Where should Lyrion run?', blocks: [nf, { t: 'Where', sel: s.lyrWhere, fn: w => set({ lyrWhere: w }) },
           here ? { t: 'Split', lhead: nm + ' does', left: ['Installs Lyrion', 'Adds your folders', 'Runs the first scan'], rhead: 'Later, in Lyrion', right: ['Rescan after adding music', 'Everything else'] }
@@ -479,7 +489,7 @@ class Component extends DCLogic {
         blocks: [list([T('Night standby', 'The screen turns off.', s.standby, () => this.setState(st => ({ standby: !st.standby, ivPick: null, ivs: !st.standby && !st.ivs.length ? [{ from: '22:00', until: '06:00', days: DAYS.slice() }] : st.ivs })), { icon: 'stby' })]), ...(s.standby ? [this.ivBlock(s)] : [])], foot: SK };
       case 'review': {
         const sk = id => s.skipped[id] ? ['Skipped', 'plain'] : null, op = id => () => this.go(id, 'review'), rows = [];
-        const music = s.preset === 'mine' ? (s.lyrState === 'found' ? 'Lyrion · found on ' + s.net : s.lyrWhere === 'here' ? 'Lyrion, on this player' : 'Lyrion, on another machine') : s.preset === 'stream' ? 'Streaming only' : s.preset === 'plex' ? 'Plexamp' : [d.lyr && 'Lyrion', d.plex && 'Plexamp'].filter(Boolean).join(' · ') || 'No library';
+        const music = s.preset === 'mine' ? (s.lyrWhere === 'here' ? 'Lyrion, on this player' : s.lyrState === 'found' && s.lyrWhere === 'there' ? 'Lyrion · ' + ((s.lyrFound || []).find(f => f.address === s.lyrServer) || { name: s.lyrServer }).name : 'Lyrion, on another machine') : s.preset === 'stream' ? 'Streaming only' : s.preset === 'plex' ? 'Plexamp' : [d.lyr && 'Lyrion', d.plex && 'Plexamp'].filter(Boolean).join(' · ') || 'No library';
         rows.push(HB('Music', music, op('listen'), { icon: d.lyr ? 'lyr' : d.plex ? 'plex' : 'lib' }));
         if (d.here) rows.push(HB('Folders', PLACES.filter(p => s.places[p[0]]).map(p => p[1]).join(' · ') || 'None yet', op('folders'), { icon: 'fold', tag: sk('folders') }));
         if (d.lyr && !d.headless) rows.push(HB('Browse', NAV.find(n => n[0] === s.browse)[1], op('browse'), { icon: 'browse', tag: sk('browse') }));
@@ -1140,8 +1150,8 @@ class Component extends DCLogic {
     const d = comp.d(s);
     const o = { spotify_enabled: d.spo && s.spotify, bt_enabled: d.bt && s.bt, lms_enabled: d.lyr };
     if (d.lyr) {
-      if (s.lyrState === 'found' && s.lyrServer) o.lms_server = s.lyrServer;
-      else if (s.lyrAddrOpen && s.lyrAddr.trim()) o.lms_server = s.lyrAddr.trim();
+      if (s.lyrState === 'found' && s.lyrWhere === 'there' && s.lyrServer) o.lms_server = s.lyrServer;
+      else if ((s.lyrWhere === 'addr' || s.lyrAddrOpen) && s.lyrAddr.trim()) o.lms_server = s.lyrAddr.trim();
       else if (d.here && $settingsDevice.address) o.lms_server = `${$settingsDevice.address}:9000`;
       if (!d.headless) {
         o.lms_extended_nav = s.browse === 'ext';
@@ -1269,11 +1279,19 @@ class Component extends DCLogic {
         }
       } catch { /* a first run is assumed */ }
       st.ready = true;
-      const found = ((await listItems('lms_server')).items ?? []).filter((i) => !String(i.meta ?? '').startsWith('This player'));
+      const listed = (await listItems('lms_server')).items ?? [];
+      const found = listed.filter((i) => !String(i.meta ?? '').startsWith('This player'));
+      // The player's own server in use: "Install Lyrion on this player" is
+      // the one chosen, not a found one.
+      const ownInUse = listed.some((i) => String(i.meta ?? '').startsWith('This player') && i.state === 'current');
       const server = found.find((i) => i.state === 'current') ?? found[0];
       if (server) {
+        // Every server found, to choose from on the Lyrion step; the saved
+        // one chosen (George, 2026-10-19).
         const address = server.address ?? server.name;
-        Object.assign(st, { lyrState: 'found', lyrServer: address, lyrMeta: server.name !== address ? `${server.name} · ${address}` : address });
+        const lyrFound = found.map((i) => ({ address: i.address ?? i.name, name: i.name, meta: i.meta ?? '' }));
+        Object.assign(st, { lyrState: 'found', lyrServer: address, lyrWhere: ownInUse ? 'here' : 'there', lyrFound,
+          lyrMeta: found.length > 1 ? `${found.length} servers` : server.name !== address ? `${server.name} · ${address}` : address });
       } else st.lyrState = 'none';
     })();
     return () => {
