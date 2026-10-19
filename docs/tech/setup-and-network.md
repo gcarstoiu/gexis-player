@@ -741,12 +741,22 @@ come first. *Not now* posts `/personalise/later`.
 **Writing.** Nothing is written step by step except what must act at once:
 Plexamp's switch (its download) and claim token, a pairing answered
 (`/bluetooth/pairing/{accept,reject}`), a share added
-(`lyrion-server.shares`). Finish posts `/personalise/finish` with
+(`lyrion-server.shares`), and `visualiser_skins` when the visualiser step
+shows with the visualiser on (ADR-0149 decision 42: `live.downloadSkins`,
+once; the step shows `live.stage('skins')`). Finish posts `/personalise/finish` with
 `{"settings": {...}}`. `personalise.checked` refuses the request whole if any
 key is outside `KEYS` and `PLUGIN_ROWS`. `personalise.apply` writes the
 settings through `Settings.set` (a refusal is logged, named in the answer,
 and the rest go on), then the plugin switches. The page only ever sends them
-on. Then `settling.begin` follows the skins and each plugin's download.
+on. Then `settling.begin` follows what is not in yet: `apply` is given
+`/state`'s `components` and leaves out each item already installed - on most
+players the skins and Plexamp, which started at their steps. The Lyrion
+Server's item carries `follow` (decision 43): `settling.view` keeps it busy
+past its download, `step: "after"` with Lyrion's `phase`, `label`, `line`
+and, while it reads, `share`, and gives it `steps` - `lyrion_steps`, the
+five the phone's checklist shows - until `lyrion_stage` says `ready`.
+`SettlingScreen.svelte` draws them as a numbered list with Lyrion's line
+under the bar.
 `/personalise/later` on a new player (`first`) switches the Lyrion client
 off, so the panel waits with Spotify and Bluetooth (George, 2026-10-18: a
 fresh player put off showed the library's tiles with nothing behind them);
@@ -754,8 +764,14 @@ asked again from Settings it changes nothing. **A server part 2 sets is used
 from the core's next start**, as one picked in Settings is
 (`_chosen_server`): when `lms_server` is among what `apply` wrote, the core
 restarts once the downloads it began are in (`_restart_when_settled`: the
-settling record gone, or its phase ready or failed) - the skins install as
-the core's own child and an earlier restart would cut them off.
+settling record gone, or `settling.downloads_in` - every item done or failed,
+or only following Lyrion after its download) - the skins install as the
+core's own child and an earlier restart would cut them off; Lyrion's read,
+hours on a large library, is not waited for. While part 2 is owed the
+visualiser's restart for a new pack is held, as under the settling screen
+(`visualiser_held`). **The panel is drawn once the first state is in**
+(decision 44): `App.svelte` waits for `playback`, so between `/surface`
+and the state socket it shows nothing rather than its own screens.
 
 **Library on the screen** (`lms_library`): off, `App.svelte` treats the
 library as absent (`lmsOff`), so the panel's home is `WaitingHome`; the

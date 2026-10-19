@@ -109,7 +109,12 @@ flowchart LR
 The same `index.html` is served to everyone. On mount, `App.svelte` asks
 `GET /surface`. The core answers `panel` when the request comes from loopback
 (the kiosk loads `http://127.0.0.1:8090/`) and `remote` for anything else.
-If the request fails, the app assumes `panel`.
+If the request fails it is asked again, backing off to every 5 s, and nothing
+is drawn meanwhile: a phone taken for a panel would draw at panel size and
+report its taps as the panel's (code review, 2026-10-12). **The panel then
+waits for the core's first state** on the socket before drawing (ADR-0149
+decision 44): until then it does not know whether part 2 or setup is owed,
+and drew its own screens for a moment before *Make it yours*.
 
 ```mermaid
 flowchart TD

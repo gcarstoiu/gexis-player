@@ -169,7 +169,7 @@ been written properly. **0098 has no record either.**
 | [0146](0146-the-meters-follow-the-volume-again-with-a-gain.md) | The meters follow the volume visibly, with a gain of their own | Accepted 2026-10-13: bars the whole cut, needles half, Fixed unchanged; published at every start; a Gain row −10..+20 dB; the needles' share a row (Half the drop / Like a real amplifier) |
 | [0147](0147-a-tv-as-the-screen.md) | A TV as the screen, by choosing its port | Accepted 2026-10-13: the Screen port choice wins; 1080p at most; Keep from the phone; the panel's touch off. Amended 2026-10-14 (Finding 125): a listed panel shows its own Keep, and the phone answers too unless its touch is fingerprinted |
 | [0148](0148-text-size.md) | Text size | Accepted 2026-10-14: 90-130 % on the player's screen; Home's tiles grow; a zoom set aside |
-| [0149](0149-first-use-in-two-parts.md) | First use in two parts: set up, then make it yours | Accepted 2026-10-18: built on `ph-first-use` from Claude Design's hand-off; Claude's decisions recorded in it |
+| [0149](0149-first-use-in-two-parts.md) | First use in two parts: set up, then make it yours | Accepted 2026-10-18; amended 2026-10-19: skins at their step, Lyrion followed on the panel (42-44) |
 | [0150](0150-a-library-category.md) | A Library category | Accepted 2026-10-18: Lyrion Server's rows under Library; plugins may declare `area: library`; app links |
 
 ## Cross-cutting rules

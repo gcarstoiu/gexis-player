@@ -340,6 +340,37 @@ it as it should be"*)
     field gets an eye on its right - the Wi-Fi step and the share sign-ins -
     as Settings' password fields do.
 
+**After George's test of 1.1.0 on sofapi (2026-10-19)**
+42. **The visualiser's skins download at the visualiser step** (George:
+    *"Download the visualiser skins during the setup flow similar to
+    plexamp"*, so it is clear that setup goes on while they download; asked
+    when, *"At the visualiser step"*). The step, shown with the visualiser
+    on, switches `visualiser_skins` on once - the one write besides decision
+    2's three - and shows the download's stage under the switch with *The
+    download carries on while you continue*. Finish waits only for what is
+    not in yet, so on most players only Lyrion is left for Getting ready. A
+    No at Finish removes the pack, as switching it off in Settings does; put
+    off with *Do it later* after the step, the pack stays with the
+    visualiser on. The visualiser's restart for a new pack is held while part
+    2 is owed, as it is under the settling screen, so it does not open over
+    *Make it yours*.
+43. **The panel's Getting ready follows Lyrion through its steps** (George:
+    the plate *"was showing something getting ready and then the next minute
+    the library was there in full"*; asked how far, *"Through the read"*):
+    the settling record marks the Lyrion server `follow`, and its item stays
+    busy past the download - starting, adding its add-ons, reading the music
+    with Lyrion's own line and how far it has read - as the phone's numbered
+    checklist, until Lyrion has read the music. A large library takes hours:
+    *Use the player now* puts the plate away, and the waiting screen's
+    *Lyrion is reading your music* (ADR-0115 decision 29) carries on.
+    Decision 37's restart waits for the downloads only, never for the read.
+44. **The panel draws nothing until the core's first state is in** (George:
+    *"Before the make it yours screen on panel is shown there is a blink of a
+    second where the player is shown"*). Decision 35 put *Make it yours*
+    first, but the panel learns that it is a panel (`/surface`) before it
+    learns that part 2 is owed (the state socket), and drew its own screens
+    in between.
+
 **Settled by George afterwards (2026-10-18)**
 - **Personalise** is in ADR-0022's inventory (*"Yes it goes in the list"*).
 - Part 1 is tested by George on sofapi after *Reset to factory settings*
