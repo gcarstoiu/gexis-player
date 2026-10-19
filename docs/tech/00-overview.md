@@ -12,6 +12,7 @@ This page is the map. Each area has its own page:
 |---|---|
 | [audio-path.md](audio-path.md) | Renderers, the `output` device, volume, arbitration, the meter path |
 | [core-and-state.md](core-and-state.md) | `gexis-core`: state, the `/state` socket, HTTP routes, settings, enrichment, menus, plugins |
+| [api.md](api.md) | The public API for integrators: where it is, stable and internal routes, the two WebSockets, its OpenAPI description (ADR-0152) |
 | [ui.md](ui.md) | The Svelte page: panel and phone surfaces, screen families, the touchpad relay |
 | [updates-and-releases.md](updates-and-releases.md) | Packages, release build, signing, the updater, the image build |
 | [setup-and-network.md](setup-and-network.md) | First boot, the setup access point, the device name |

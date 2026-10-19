@@ -2924,11 +2924,16 @@ once the player is on the home network (the panel shows a QR code to it),
 asks how it will be used and ends in the downloads (ADR-0128's settling
 screen).
 
-**Built 2026-10-18 on the branch `ph-first-use`** (not merged) from Claude
-Design's hand-off; ADR-0149 accepted, with the decisions taken while building
-recorded in it (George delegated them). On SofaPi for George to test part 2
-through Settings → Display → Personalise. Not yet run: part 1 on a freshly
-flashed card, and the wide (tablet) layout, which is not built.
+**Closed 2026-10-19** (George: *"You can make the change"*, moving it to
+Done): released in 1.1.0 (Testing) and 1.1.1 (Stable, with the fixes from
+his four tests on sofapi; ADR-0149 decisions 42-45). Built from Claude
+Design's hand-off on `ph-first-use`; ADR-0149 holds every decision. Against
+the acceptance below: 1-4 were run by George on sofapi, part 1 after *Reset to
+factory settings*, not on a freshly flashed card; 5 is checked in code and on
+the stand-in, not on a headless player; 6 was compared with the design on a
+phone, the 10.1" panel and, on renders only, the 1280x400 and 1480x320 bars.
+Not built: the wide (tablet) layout of the phone page. Not run on a device:
+a USB drive's folders in *Where is your music?*.
 
 **Acceptance (draft):**
 
@@ -2950,45 +2955,30 @@ flashed card, and the wide (tablet) layout, which is not built.
 6. Every new screen matches Claude Design's picture: part 2 on a phone; the
    QR and download screens on the 10.1" panel and the 11.9" and 7.9" bars.
 
-### Phase 15 — MPD: real multichannel
+### Phase 15 — A documented public API
 
-**ID:** `ph-mpd` · numbered 14 on 2026-10-13 (was 17), 15 from 2026-10-15.
+**ID:** `ph-api` · **In progress from 2026-10-19.** Was the Roadmap's Must
+idea *Documented public API*; George put it before room correction
+(2026-10-19), in the place MPD left (parked, below).
 
-**Added 2026-10-13** (George: *"have another phase for mpd right after"* the
-first public release, after Finding 121 showed Lyrion delivers two channels
-and ADR-0145 folded multichannel down to stereo meanwhile). MPD decodes and
-plays up to 8 channels, in ALSA's channel order, and DSD natively, as DoP or
-converted per channel (read in its source, 2026-10-12). It plays on the
-machine it runs on - clients only control it - so it would run on the player:
-on its own library, or as a *satellite* of a central MPD that holds the
-database (`database { plugin "proxy" }`, the music on a share).
-
-**An ADR before anything is built**, to understand the ramifications first
-(George: *"we would need to understand the ramifications"*). It must settle:
-- MPD on the player alone, or a satellite of a central library - and what
-  that means beside Lyrion's own library;
-- how it is controlled (upmpdcli as a UPnP/OpenHome renderer and its apps,
-  MPD clients, the panel) and whether it is a source in the arbitration like
-  the others;
-- the chain at 6-8 channels: the meter, the software volume stage and HDMI's
-  conversion layer have only carried two;
-- DSD: native to a DAC that takes it, PCM over HDMI (the Pi sends no one-bit
-  audio);
-- **where MPD is chosen at first use.** Setup's reordering and split
-  (George, 2026-10-13: *"Phase 14 also comes with a reordering and splitting
-  of the setup process to accommodate this new source"*) became its own phase
-  first, Phase 14 (`ph-first-use`, George 2026-10-15); MPD adds *Music on this
-  player or a share* to its question *Where is your music?* (ADR-0149).
+The core's API - 92 HTTP routes and the live state over WebSockets - written
+up as one OpenAPI 3.1 file, kept honest by a test, and shown on GitHub and on
+the player, where every route can be tried. **ADR-0152**, accepted; one point
+open with George: which routes are promised to stay (*stable*) and which may
+change (*internal*).
 
 **Acceptance (draft):**
 
-1. A 5.1 and a 7.1 file reach an AV receiver over HDMI as 6 and 8 channels,
-   each channel where its name says, measured as Finding 121 measured two.
-2. A multichannel DSD file reaches the receiver as multichannel PCM, and a
-   stereo DSD file a DSD DAC natively.
-3. Volume, arbitration and now playing behave as for the other sources.
-4. First-time setup takes in MPD in its new order, and a player set up without
-   it is unchanged.
+1. Every route the core registers is in the OpenAPI file with what it takes,
+   what it answers and its errors, and a test fails when the two differ.
+2. The live state's messages are described as JSON Schema, and the WebSocket
+   channels in the technical guide.
+3. With *API explorer* on (System, after Debug logs, off by default), the
+   player shows its API at `/api` and every route can be tried against it;
+   off, `/api` is not served.
+4. A static page on GitHub shows the same file for each release.
+5. Swagger UI's files ship with the player and are named in Credits with
+   their licence.
 
 ### Phase 16 — Room correction with a USB microphone
 
@@ -3228,6 +3218,57 @@ decided here.
    recorded in ADR-0118 first.
 3. Whether *Extended navigation* stays an option or becomes the default is
    his decision, recorded in ADR-0022's inventory.
+
+
+### Parked
+
+Phases taken out of the order. Each keeps its ID and its record; picked up
+again, it takes the next free number.
+
+**MPD: real multichannel** (`ph-mpd`, was Phase 15) - **parked 2026-10-19**
+(George: *"Park it. Really too much risk for a small benefit."*). Findings
+121 and 128 measured it; ADR-0151 says why it was parked. As it stood:
+
+#### MPD: real multichannel (as planned before parking)
+
+**ID:** `ph-mpd` · numbered 14 on 2026-10-13 (was 17), 15 from 2026-10-15.
+**In progress from 2026-10-19**: its ADR first.
+
+**Added 2026-10-13** (George: *"have another phase for mpd right after"* the
+first public release, after Finding 121 showed Lyrion delivers two channels
+and ADR-0145 folded multichannel down to stereo meanwhile). MPD decodes and
+plays up to 8 channels, in ALSA's channel order, and DSD natively, as DoP or
+converted per channel (read in its source, 2026-10-12). It plays on the
+machine it runs on - clients only control it - so it would run on the player:
+on its own library, or as a *satellite* of a central MPD that holds the
+database (`database { plugin "proxy" }`, the music on a share).
+
+**An ADR before anything is built**, to understand the ramifications first
+(George: *"we would need to understand the ramifications"*). It must settle:
+- MPD on the player alone, or a satellite of a central library - and what
+  that means beside Lyrion's own library;
+- how it is controlled (upmpdcli as a UPnP/OpenHome renderer and its apps,
+  MPD clients, the panel) and whether it is a source in the arbitration like
+  the others;
+- the chain at 6-8 channels: the meter, the software volume stage and HDMI's
+  conversion layer have only carried two;
+- DSD: native to a DAC that takes it, PCM over HDMI (the Pi sends no one-bit
+  audio);
+- **where MPD is chosen at first use.** Setup's reordering and split
+  (George, 2026-10-13: *"Phase 14 also comes with a reordering and splitting
+  of the setup process to accommodate this new source"*) became its own phase
+  first, Phase 14 (`ph-first-use`, George 2026-10-15); MPD adds *Music on this
+  player or a share* to its question *Where is your music?* (ADR-0149).
+
+**Acceptance (draft):**
+
+1. A 5.1 and a 7.1 file reach an AV receiver over HDMI as 6 and 8 channels,
+   each channel where its name says, measured as Finding 121 measured two.
+2. A multichannel DSD file reaches the receiver as multichannel PCM, and a
+   stereo DSD file a DSD DAC natively.
+3. Volume, arbitration and now playing behave as for the other sources.
+4. First-time setup takes in MPD in its new order, and a player set up without
+   it is unchanged.
 
 
 ## Test tiers

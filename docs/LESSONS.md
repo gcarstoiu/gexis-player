@@ -374,6 +374,20 @@ commit ran in the same command as the suite, after it, so it went through
 with a test failing (68c9ee85; fixed in fc18315c). Run the tests, read the
 result, then commit in a call of its own.
 
+**76. A channel count that hid silent channels** (2026-10-19, Finding 128).
+The HDMI port opened at 6 channels for a 5.1 file through Lyrion's bridge,
+and the finding said the channels arrived; by ear only front left and right
+sounded - the bridge re-encoded six channels, four silent. A format or
+channel count shows the stream's shape, not its content: check what is in
+each channel (a capture, a per-channel signal, an ear) before saying it
+arrives.
+
+**77. A core that was active, and old** (2026-10-19, a preview on sofapi).
+`apt install` of a preview's `gexis-core` does not restart it (the updater
+does); `systemctl is-active` said active of the old process, and the new
+setting was missing. After a preview install, restart what changed and check
+its start time is after the install.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target, the check quietly

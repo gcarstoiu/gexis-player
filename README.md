@@ -43,7 +43,7 @@ Spotify Premium, and Plexamp a Plex account, on Plex's terms.
 
 ## 💾 Download and install
 
-**Gexis Player 1.1.1** is the current release. You need a Raspberry Pi 4 and a
+**Gexis Player 1.2.0** is the current release. You need a Raspberry Pi 4 and a
 microSD card of 32 GB or more. A DAC gives the best sound (the
 [hardware list](docs/HARDWARE.md) says which are tested), but the Pi's own
 HDMI (to a sound bar or AV receiver) or headphone jack works too; an HDMI
@@ -183,6 +183,7 @@ or removed from Settings, with its progress shown in the switch itself.
 | 🔗 **Network** | Wi-Fi or cable, and the cable wins while it is plugged in · a fixed address on either, kept only once it is shown to work |
 | 📱 **Settings anywhere** | The full settings on the panel and on any phone or computer on your network, with a mini player on the phone |
 | 🖐️ **Phone as a touchpad** | Drive the panel from across the room: one finger moves a pointer, a tap presses, two fingers scroll, a pinch zooms, and a text field on the panel brings up the phone's keyboard · no app to install |
+| 🧩 **Open API** | Everything the screen and phone page do, over HTTP and a live WebSocket, described as OpenAPI · *API explorer* shows and tries it on the player itself |
 | 🩺 **When something is wrong** | A problem report in one download, with addresses, names, keys and what you play taken out first · hardware feedback that tests your screen's touch and your DAC's rates |
 
 ## ⚖️ Limitations and trade-offs

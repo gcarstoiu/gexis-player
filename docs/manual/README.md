@@ -190,7 +190,7 @@ and **Add**, twice to play it.
 
 ## 4. Lyrion's own menus (Extended navigation)
 
-Switch on **Settings → Sources → Lyrion Client → Extended navigation** and
+Choose **Extended** in **Settings → Sources → Lyrion Client → Navigation** and
 Home gains **My Music**, **Favourites** and **Apps**: everything your Lyrion
 server offers, including the apps it has installed.
 
@@ -354,7 +354,7 @@ played on the right.
 ## 9. Settings
 
 Settings is reached from the **Settings** card on Home, or on the phone
-page. It is grouped into seven areas, listed down the left-hand side on the
+page. It is grouped into eight areas, listed down the left-hand side on the
 panel.
 
 ![Settings](images/panel-settings.webp)
@@ -363,43 +363,14 @@ Tap a row to change it. A row that only applies in some cases (for example,
 Spotify's *Starting volume* while Spotify is off) is hidden until it does.
 Changes take effect at once unless the row says otherwise.
 
-### Audio — *Level and output*
-
-| Setting | What it does |
-| --- | --- |
-| Output | Where the sound goes. If the chosen output is an HDMI port and its device disappears (a receiver switched off), the headphone jack plays until it is back, on its own volume rather than Fixed, and the row says so; the player returns to HDMI by itself. A USB DAC is shown by its maker, with a line saying what it reports it can take (for example *USB 2.0 · up to 768 kHz / 32-bit · native DSD*). An HDMI port shows what is on it - the screen by its model, a TV or receiver by its own name - and the sound it takes (for example *LG TV · up to 192 kHz / 24-bit*), or *takes no sound* for a display without any. Over HDMI the sound is not bit-perfect; HDMI has no volume control of its own, so its volume is Software or Fixed, and the visualiser moves only on Software. A change of output while music plays stops playback; start it again when ready. |
-| Sound card board | Most boards and every USB DAC are found by themselves. A board that is not (it does not show under Output) can be chosen here. *Tested* beside a board means played and measured by the project, or reported working by owners; a problem an owner reported shows as a line under it; other boards carry no mark. The same goes for *Output* and for the screens under *Attached screen*. |
-| Volume | How the level is set. *Hardware* (default): by the sound card's own volume control, bit-perfect at every level. *Software*: by the player recalculating the sound, on any output; not bit-perfect below 100 %. *Fixed*: always full level, for an amplifier that sets the volume itself; it asks first. Any change of volume type stops playback while the sources reconnect on it. On a DAC that takes DSD natively (some USB DACs), *Fixed* also plays DSD files from Lyrion as DSD, unconverted, and the Fixed choice says so; otherwise DSD files are converted to PCM. A DSD file of more than two channels is always converted, and folded down to stereo. The visualiser stays still during DSD. On an output with no volume control of its own, such as HDMI, Hardware is greyed out and Software is used in its place. The level carries across between Hardware and Software. |
-| Maximum volume | The loudest the player will go, on any input. At 80, 100 % on every control means that level. Hidden with Volume on *Fixed*. |
-| Volume curve | How the slider's travel maps to loudness. *Cubic* (half travel is −15.5 dB) is the usual shape; *Linear* puts half travel at −30 dB. |
-
-### Sources — *Renderers and services*
-
-| Setting | What it does |
-| --- | --- |
-| Lyrion Client: Enabled | Plays your Lyrion server's music. |
-| Lyrion Client: Server | Which Lyrion server. Servers announce themselves on the network, each shown by its machine's name, else the library name set in Lyrion, else its address; typing an address is the fallback. |
-| Lyrion Client: Library on the screen | Off, the screen shows only what is playing and the sources, with no library to browse; Lyrion's apps on your phone still play to the player. On by default. |
-| Lyrion Client: Extended navigation | Lyrion's own menus on Home: My Music, Favourites, Apps (section 4). |
-| Spotify Connect: Enabled | The player appears as a Spotify Connect device. |
-| Spotify Connect: Starting volume | The loudest Spotify starts at when it takes over. Hidden with Volume on *Fixed*. |
-| Bluetooth: Enabled | The player accepts Bluetooth audio. |
-| Bluetooth: Pairing | *Confirmation required* shows a six-digit code on the panel to accept; *PIN-free* pairs anything in range. |
-| Bluetooth: Discoverable | Whether phones can find the player: *Always* (the default), *3 min after boot* or *Off*. With *Pairing* on *Confirmation required*, a new phone still has to be accepted on the screen. |
-| Bluetooth: Trusted devices | Remembered devices; forget one here. |
-| Bluetooth: Auto-trust on pair | Remembers a device once paired, so it reconnects by itself. |
-
-Plugins add their own rows here once switched on: **Plexamp** (claim the
-player into your Plex account).
-
 ### Library — *Your own music, and where it is read from*
 
-The **Lyrion Server** (a music server on the player itself) has its rows
-here once switched on; MPD will join it. It reads only the music locations
-switched on, none at first:
+The **Lyrion Server** (a music server on the player itself) is switched
+and set here. It reads only the music locations switched on, none at first:
 
 | Setting | What it does |
 |---|---|
+| Lyrion Server: On | The server's own switch, also on the Plugins page. Off, it stops and its other rows are hidden; its library, folders and shares are kept for when it is on again. Its download, version and *Remove* are on the Plugins page only. |
 | Lyrion Server: More for your library | Where everything else about the library is: a link to the server's own page, and to three apps that control it - Squeezer (Android), Lyrion (Android, F-Droid) and LyrPlay (iPhone). The links show on a phone, not on the panel. |
 | Lyrion Server: Library | Read only: what the server is doing - starting, adding its add-ons, reading your music with a progress bar - and once ready, how many songs and albums it holds. The section's heading says the same in a word. |
 | Lyrion Server: Music folder | The player's own Music folder, shared on the network as *Music*. Its note says how much room is free and how much there is in all. Below 4 GB free the Music share takes no new files, and the note says so, until more than 4.5 GB is free. |
@@ -414,6 +385,24 @@ which for a large library takes hours. A network share whose server does not
 answer reads *Not mounted: the server did not answer*; the other shares are
 still mounted.
 
+### Sources — *Renderers and services*
+
+| Setting | What it does |
+| --- | --- |
+| Lyrion Client: Enabled | Plays your Lyrion server's music. |
+| Lyrion Client: Server | Which Lyrion server. Servers announce themselves on the network, each shown by its machine's name, else the library name set in Lyrion, else its address; typing an address is the fallback. |
+| Lyrion Client: Navigation | How you move around your library on the screen, one choice: **Simple** - the home tiles, albums, artists, playlists and radio; **Extended** - Lyrion's own menus as well: My Music, Favourites, Apps (section 4); **Off** - only what is playing and the sources, with no library to browse; Lyrion's apps on your phone still play to the player. |
+| Spotify Connect: Enabled | The player appears as a Spotify Connect device. |
+| Spotify Connect: Starting volume | The loudest Spotify starts at when it takes over. Hidden with Volume on *Fixed*. |
+| Bluetooth: Enabled | The player accepts Bluetooth audio. |
+| Bluetooth: Pairing | *Confirmation required* shows a six-digit code on the panel to accept; *PIN-free* pairs anything in range. |
+| Bluetooth: Discoverable | Whether phones can find the player: *Always* (the default), *3 min after boot* or *Off*. With *Pairing* on *Confirmation required*, a new phone still has to be accepted on the screen. |
+| Bluetooth: Trusted devices | Remembered devices; forget one here. |
+| Bluetooth: Auto-trust on pair | Remembers a device once paired, so it reconnects by itself. |
+
+Plugins add their own rows here once switched on: **Plexamp** (claim the
+player into your Plex account).
+
 ### Handoff — *Who gets the player*
 
 | Setting | What it does |
@@ -422,6 +411,16 @@ still mounted.
 | Reclaim Lyrion when a session ends | Off by default. On, when Spotify, Bluetooth or Plexamp stops, Lyrion takes the player back; a phone that locks can end a Spotify session and switch the player to Lyrion without warning. |
 | Show transition screen | The short animation when one source takes over from another. |
 | Transition screen length | How long it stays up. |
+
+### Audio — *Level and output*
+
+| Setting | What it does |
+| --- | --- |
+| Output | Where the sound goes. If the chosen output is an HDMI port and its device disappears (a receiver switched off), the headphone jack plays until it is back, on its own volume rather than Fixed, and the row says so; the player returns to HDMI by itself. A USB DAC is shown by its maker, with a line saying what it reports it can take (for example *USB 2.0 · up to 768 kHz / 32-bit · native DSD*). An HDMI port shows what is on it - the screen by its model, a TV or receiver by its own name - and the sound it takes (for example *LG TV · up to 192 kHz / 24-bit*), or *takes no sound* for a display without any. Over HDMI the sound is not bit-perfect; HDMI has no volume control of its own, so its volume is Software or Fixed, and the visualiser moves only on Software. A change of output while music plays stops playback; start it again when ready. |
+| Sound card board | Most boards and every USB DAC are found by themselves. A board that is not (it does not show under Output) can be chosen here. *Tested* beside a board means played and measured by the project, or reported working by owners; a problem an owner reported shows as a line under it; other boards carry no mark. The same goes for *Output* and for the screens under *Attached screen*. |
+| Volume | How the level is set. *Hardware* (default): by the sound card's own volume control, bit-perfect at every level. *Software*: by the player recalculating the sound, on any output; not bit-perfect below 100 %. *Fixed*: always full level, for an amplifier that sets the volume itself; it asks first. Any change of volume type stops playback while the sources reconnect on it. On a DAC that takes DSD natively (some USB DACs), *Fixed* also plays DSD files from Lyrion as DSD, unconverted, and the Fixed choice says so; otherwise DSD files are converted to PCM. A DSD file of more than two channels is always converted, and folded down to stereo. The visualiser stays still during DSD. On an output with no volume control of its own, such as HDMI, Hardware is greyed out and Software is used in its place. The level carries across between Hardware and Software. |
+| Maximum volume | The loudest the player will go, on any input. At 80, 100 % on every control means that level. Hidden with Volume on *Fixed*. |
+| Volume curve | How the slider's travel maps to loudness. *Cubic* (half travel is −15.5 dB) is the usual shape; *Linear* puts half travel at −30 dB. |
 
 ### Display — *Screen and idle*
 
@@ -524,6 +523,7 @@ Everything about the player itself, under seven headings.
 | Problem report | On a phone or computer, three steps. What happened: in your own words, and how often. Preparing: the player gathers its logs, versions, hardware and settings, ticking each line of a checklist as it goes - including what it took out: addresses, names, networks, shares, keys and what you play. Send: *On GitHub* opens the report there filled in with what happened and the log's last errors (needs a GitHub account; the full file can be dragged onto it too), or *By e-mail* downloads the file to send to the address shown. Nothing leaves the player until you send it; read the file first. The prepared report stays on the player for an hour. On the screen it says where to open it instead. |
 | Hardware feedback | On a phone or computer, three steps. The screen: a test pattern on the player's screen, with four circles to tap on a touch screen, which measures where the touches land, and two questions. The sound: a short test tone at 44.1, 96 and 192 kHz played at the current volume (not while a source holds the sound card, even paused: stop it first), and three questions. *Did the music sound right?* must be answered: GitHub needs it. Anything else: your own notes, if any, and what the player adds for you, to read before it goes. Without a screen, or with Headless on, it starts at the sound and has two steps. Then the same Send step as the problem report: *On GitHub* opens the feedback there, filled in with what the player reads of them (never a serial number or anything about you) - *Create* on GitHub sends it - or *By e-mail* downloads it as a text file to send to the address shown. The player keeps the last one: the row shows when it was made, with *Send again* and *Start over*, until the sound card or screen changes. It helps others see what works before buying. A week after a sound card or screen that is not Tested is first used, a line at the top of System offers it once; × puts it away for good. |
 | Debug logs | Keeps the logs across restarts, for tracking down a problem. |
+| API explorer | For building apps and home automation: shows the player's API at its address followed by `/api`, where every route is described and can be tried against this player - restart and reset included. Off by default. |
 
 **About**
 

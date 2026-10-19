@@ -44,7 +44,7 @@ from aiohttp import web
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core import memo, own_wallpapers, screen_apply, settling
+from gexis_core import memo, own_wallpapers, screen_apply, settling, updates
 from gexis_core.players import Players, status_line
 from gexis_core.wallpapers import SEARCH as PIXABAY_SEARCH
 from gexis_core import backups, bluetooth_devices, skin_packs, device_name, discovery, hardware_report, lyrion_folders, lyrion_stage, music_floor, lyrion_scan, lyrion_shares, lyrion_usb, problem_report, skin_previews, skins, wifi
@@ -89,6 +89,14 @@ logger = logging.getLogger("gexis_core.wsserver")
 
 #: ADR-0102 (a test): the web-app manifest and its icons, at the site root
 #: where browsers look for them, with the types they expect.
+#: ADR-0152: the API's description and Swagger UI's files, shipped with the core.
+API_DIR = Path(__file__).with_name("api")
+API_ASSETS = {
+    "swagger-ui-bundle.js": "text/javascript",
+    "swagger-ui.css": "text/css",
+    "start.js": "text/javascript",
+    "favicon-32x32.png": "image/png",
+}
 APP_FILES = {
     "manifest.webmanifest": "application/manifest+json",
     "app-icon.svg": "image/svg+xml",
@@ -438,7 +446,10 @@ class StateServer:
         state = self._store.state
         if state.active is None:
             return web.json_response({"error": "nothing is active"}, status=409)
-        if command not in state.capabilities[state.active].controls:
+        # A source with no capabilities declared declares nothing (found
+        # writing ADR-0152's description: indexing it was a plain 500).
+        caps = state.capabilities.get(state.active)
+        if caps is None or command not in caps.controls:
             return web.json_response(
                 {"error": f"{state.active} does not declare {command}"}, status=409
             )
@@ -892,15 +903,19 @@ class StateServer:
         if self._skins_at is None:
             return web.json_response({"error": "skins are not wired up"}, status=503)
         chosen = str(self._setting_or_none("skin_corpus") or skins.ALL)
-        wanted = skins.CORPUS.get(chosen) or skins.CORPUS[skins.ALL]
+        every = [skin for skin, _ in self._skins()]
+        # The visualiser's own choice (`skins.in_corpus`): Fanart is a skin's
+        # option, not its kind - by kind, every skin read as outside it
+        # (found writing ADR-0152's description).
+        chosen_names = {skin.name for skin in skins.in_corpus(every, chosen)}
         items = [
             {
                 "name": skin.name,
                 "kind": skin.kind,
-                "in_corpus": skin.kind in wanted,
+                "in_corpus": skin.name in chosen_names,
                 "preview": f"/skins/{quote(skin.name)}/preview",
             }
-            for skin, _ in self._skins()
+            for skin in every
         ]
         return web.json_response({"skins": items, "corpus": chosen})
 
@@ -3032,6 +3047,11 @@ class StateServer:
         app.router.add_get("/library/{what}", self._handle_library)
         app.router.add_get("/library/{what}/{id}", self._handle_library)
         app.router.add_get("/library/{what}/{id}/{sub}", self._handle_library)
+        # ADR-0152: the API's own page, while API explorer is on.
+        app.router.add_get("/api", self._handle_api_page)
+        app.router.add_get("/api/", self._handle_api_page)
+        app.router.add_get("/api/openapi.json", self._handle_api_description)
+        app.router.add_get("/api/swagger-ui/{file}", self._handle_api_asset)
         # The UI is registered *after* the API, so nothing it serves can
         # shadow `/state` or a command route - aiohttp resolves in
         # registration order. Two routes only, which is why vite is
@@ -3046,6 +3066,41 @@ class StateServer:
             for name in APP_FILES:
                 app.router.add_get(f"/{name}", self._handle_app_file)
         return app
+
+    # --- ADR-0152: the API, described and tried -------------------------
+
+    def _api_shown(self) -> bool:
+        """*API explorer* (System, after Debug logs), read at each request;
+        off, the page and its files are not there - the API itself is the
+        same either way."""
+        return self._setting_or_none("api_explorer") is True
+
+    async def _handle_api_page(self, request: web.Request) -> web.StreamResponse:
+        if not self._api_shown():
+            return web.json_response({"error": "the API explorer is off (Settings -> System)"}, status=404)
+        if request.path == "/api":
+            # The page's links are relative to /api/.
+            raise web.HTTPFound("/api/")
+        return web.FileResponse(API_DIR / "index.html", headers={"Cache-Control": "no-cache"})
+
+    async def _handle_api_description(self, request: web.Request) -> web.Response:
+        """The file as it ships, naming the release this player runs."""
+        if not self._api_shown():
+            return web.json_response({"error": "the API explorer is off (Settings -> System)"}, status=404)
+        spec = json.loads(await asyncio.to_thread((API_DIR / "openapi.json").read_text))
+        release = await asyncio.to_thread(updates.installed_release)
+        if release:
+            spec["info"]["version"] = release
+        return web.json_response(spec, headers={"Cache-Control": "no-cache"})
+
+    async def _handle_api_asset(self, request: web.Request) -> web.StreamResponse:
+        """Swagger UI's files, by name from its own folder only."""
+        if not self._api_shown():
+            return web.json_response({"error": "the API explorer is off (Settings -> System)"}, status=404)
+        name = request.match_info["file"]
+        if name not in API_ASSETS:
+            return web.json_response({"error": "no such file"}, status=404)
+        return web.FileResponse(API_DIR / "swagger-ui" / name, headers={"Content-Type": API_ASSETS[name]})
 
     async def _handle_app_file(self, request: web.Request) -> web.FileResponse:
         name = request.path.lstrip("/")

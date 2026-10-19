@@ -27,48 +27,47 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.1.0, on Testing** (2026-10-19; Testing serial 49, read
-back with `gh release download channels`; Stable still 1.0.6, serial 4).
-Image `image/deploy/2026-10-18-gexis-player-v1.1.0.img`, 123 checks; parts
-`ours-6edee123e59c`, `skins-9c8185729dfd` (reused), `rpi-32fa9ea6c3e4`,
-`debian-e13da7eb04f4` (the OS packages changed since 1.0.6). Notes
-pre-approved by George. It carries Phase 14, first use in two parts
-(`ph-first-use`, merged into `next`), and every finding of George's full run
-of 18-19 October. **PR #75** merged by George (2026-10-19); the post-merge steps and the
-routine clean-up are done (worktrees `-14` and `-rel-1.1.0` and the branches
-`ph-first-use` and `release-1.1.0` gone). **Not promoted: George tests the
-final parts first.** The 1.1.0 image is in the main checkout's
-`image/deploy/`, and `r1.1.0/image.txt` in the release output was repointed
-there (the build had recorded the worktree's path); 1.0.6's image stays
-until 1.1.0 is on Stable. sofapi runs the preview `+git162`.
-**Not tried on a device:** a USB drive's folders, a share added at a
-sub-folder, and the *Lyrion is reading your music* block on a real first
-read. **Seen 2026-10-18, not yet looked into:** sofapi's new Lyrion server
-lists ShelvesPi and GuestPi as its players. Phase 14's narrative:
-`docs/HANDOFF-ARCHIVE.md`, 2026-10-19.
-
-**George's findings on 1.1.0 (2026-10-19), on `fix-first-use`** (worktree
-`~/projects/gexis-player-fix`, from `next`; pushed, not merged): the panel
-drawn once the core's first state is in; the visualiser switch at part 2's
-step starts off and turning it on starts the skins; Lyrion's five numbered
-steps on the waiting screen's plate (panel beside the clock, bars one row),
-the settling dialog only for other downloads (`modal`); *More for your
-library*'s links on their own line on a laptop; then, from George's
-second test, the Lyrion plate smaller and centred (*Step n of 5*, the step
-as its title; approved on renders), ticked shares and USB folders added at
-Finish (they were dropped by *Next* - his shares never reached Lyrion),
-and Material Skin counted in only once Lyrion serves `/material/`.
-Then, from his third test: a new server's folders wait for its add-ons
-(it had read the music during step 3), a first read held to its end, the
-panel plate wider. ADR-0149 decisions 42-45, ADR-0115 decision 28 amended.
-sofapi runs core, UI and player `+git16` since about 11:45. *H@l* is sofapi's own
-Lyrion server, seen while sofapi was `raspberrypi` - not a second machine.
-Owed: George's test, then 1.1.1.
+**Current release: 1.1.1, on Stable** (2026-10-19; Stable serial 5,
+Testing serial 50, both signatures good from the release key, read back
+from GitHub; the public `gexis-player.img.xz` decompresses to the checked
+image). Image `image/deploy/2026-10-19-gexis-player-v1.1.1.img`, 123
+checks; parts `ours-9deec7268284`, `skins-9c8185729dfd` (reused),
+`rpi-7325dbec7a52`, `debian-5d5dc927ef03`. It carries Phase 14 (1.1.0) and
+the fixes from George's four tests of it on sofapi (ADR-0149 decisions
+42-45, ADR-0115 decision 28 amended). **PR #76** (`release-1.1.1` into
+`main`, with the README naming 1.1.1) is open for George to merge. After the
+merge: the post-merge steps, removing the release worktree
+`~/projects/gexis-player-rel-1.1.1`, the fix worktree
+`~/projects/gexis-player-fix` and the branches `fix-first-use` and
+`release-1.1.1`, then the routine clean-up (1.0.6's image can go then).
+sofapi runs the preview `+git16`, the same code as 1.1.1. **Not tried on a
+device:** a USB drive's folders; a new server's folders held for its
+add-ons, and the plate through a whole first read (George's next reset).
 
 **Release build output lives in `~/.local/share/gexis-release-out`**: in each
 release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
 (excluded in `.git/info/exclude`). `reuse.py` reuses a published file only
 against a local copy, so losing that folder means re-uploading every OS file.
+
+**Phase 15 is now the public API (`ph-api`, ADR-0152)**; MPD, planned as
+Phase 15 first, was parked the same day after measuring it on sofapi
+(Finding 128, ADR-0151: George, *"Really too much risk for a small
+benefit"*). On the branch `ph-api` (worktree `~/projects/gexis-player-api`,
+pushed, CI green, not merged): `core/src/gexis_core/api/openapi.json`
+(all 90 API routes; drafted group by group, merged, validated with
+openapi-spec-validator), `core/tests/test_openapi.py` (the drift test), the
+setting *API explorer* (`api_explorer`, System after Debug logs, off; ADR-0022
+[N]), `/api` with Swagger UI 5.33.3 shipped in the core (every route tryable),
+`.github/workflows/api-docs.yml` (the static page at each release tag;
+**GitHub Pages must be switched on before the first such release**), three
+faults fixed (radio's 502, a transport KeyError, `/skins` and Fanart), and the
+docs (`docs/tech/api.md`, manual, FAQ, README). sofapi runs core
+`1.1.1+git21` (restarted by hand: LESSONS 77), the explorer off. **Open with
+George:** the stable/internal marks (32 stable, 58 internal proposed).
+**Three Phase 14 articles** (13-15: setup in two parts,
+where your music is, a music server's first minutes) are drafts 186, 190 and
+191 in the local WordPress copy for George to read; `import_wp.py` now takes
+article numbers, and `bundle.json` is refreshed for `push_wp.py`.
 
 **The blog** (George's WordPress, tag `sound`): eleven articles in
 `~/projects/gexis-blog/`, pushed as drafts by George (2026-10-15; article 05

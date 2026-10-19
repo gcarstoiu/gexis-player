@@ -1472,3 +1472,30 @@ the local check had been run and not read, which is the failure: a result
 that exists is not a result that was looked at. **Rule:** run the tests,
 read the result, then commit in a call of its own.
 
+**76. A channel count that hid three silent pairs** (2026-10-19, Phase 15,
+Finding 128). Testing whether Lyrion's UPnP/DLNA bridge could carry 5.1 to
+MPD, each file was judged by what the HDMI port was opened at
+(`/proc/asound/vc4hdmi1/pcm0p/sub0/hw_params`): 6 channels for 5.1, 8 for
+7.1. The finding wrote "the bridge keeps the channels". George then listened
+with spoken test files: only front left and right made a sound, while the
+receiver showed 3/2.1 - it had received six channels. In its default mode
+the bridge decodes with a Squeezelite-based decoder, keeps two channels, and
+re-encodes six, four of them silent. The count was true and measured the
+container, not the content. Listening also found what no count could: the
+centre and LFE channels arrive swapped at the Pi's HDMI port. **Rule:** a
+format, channel count or rate shows the stream's shape, not what is in it;
+check the content - a capture, a signal per channel, or an ear - before
+saying a channel arrives.
+
+**77. A core that was active, and old** (2026-10-19, Phase 15 preview on
+sofapi). The packages with the API's setting were installed with `apt` over
+SSH, as every preview is, and the check that followed read `systemctl
+is-active gexis-core`: *active*. But the setting was missing from
+`/settings`. The core had started at 15:47:32 and its files were replaced at
+15:52:16: a plain `apt install` of `gexis-core` does not restart it - the
+updater does (`try-restart` of changed units), apt does not - so the old
+code went on running from memory. "Active" was true of the old process. The
+UI looked current because its files are read from disk on each request.
+**Rule:** after installing a preview, restart what changed and compare the
+service's start time with the install's before checking anything.
+

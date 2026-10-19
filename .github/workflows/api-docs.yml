@@ -1,0 +1,63 @@
+# ADR-0152: the API's description as a static page on GitHub Pages, for
+# reading without a player. Built at each release tag from the file the
+# release ships. It cannot try routes - a public HTTPS page may not call a
+# player's plain HTTP on a home network - so trying is switched off here;
+# the player's own page (API explorer) tries them.
+name: API description
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assemble the page
+        run: |
+          set -eu
+          api=core/src/gexis_core/api
+          mkdir -p site/swagger-ui
+          cp "$api/index.html" site/index.html
+          cp "$api/swagger-ui/swagger-ui-bundle.js" "$api/swagger-ui/swagger-ui.css" \
+             "$api/swagger-ui/favicon-32x32.png" "$api/swagger-ui/LICENSE" \
+             "$api/swagger-ui/NOTICE" "$api/swagger-ui/swagger-ui-bundle.js.LICENSE.txt" site/swagger-ui/
+          # The release's own number, and no "this player" server on GitHub.
+          version="${GITHUB_REF_NAME#v}"
+          python3 - "$api/openapi.json" site/openapi.json "$version" <<'EOF'
+          import json, sys
+          src, dst, version = sys.argv[1:]
+          spec = json.load(open(src))
+          if version[:1].isdigit():  # a release tag; a manual run keeps the file's
+              spec["info"]["version"] = version
+          spec["servers"] = [s for s in spec["servers"] if s["url"] != "/"]
+          json.dump(spec, open(dst, "w"), ensure_ascii=False, indent=2)
+          EOF
+          # Reading only: no Try it out, no Execute.
+          sed 's/tryItOutEnabled: true,/tryItOutEnabled: false,\n  supportedSubmitMethods: [],/' \
+            "$api/swagger-ui/start.js" > site/swagger-ui/start.js
+          grep -q 'supportedSubmitMethods: \[\]' site/swagger-ui/start.js
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

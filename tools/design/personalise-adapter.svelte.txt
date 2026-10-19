@@ -601,8 +601,8 @@
     const d = comp.d(s);
     const o = { spotify_enabled: d.spo && s.spotify, bt_enabled: d.bt && s.bt, lms_enabled: d.lyr };
     if (d.lyr) {
-      if (s.lyrState === 'found' && s.lyrServer) o.lms_server = s.lyrServer;
-      else if (s.lyrAddrOpen && s.lyrAddr.trim()) o.lms_server = s.lyrAddr.trim();
+      if (s.lyrState === 'found' && s.lyrWhere === 'there' && s.lyrServer) o.lms_server = s.lyrServer;
+      else if ((s.lyrWhere === 'addr' || s.lyrAddrOpen) && s.lyrAddr.trim()) o.lms_server = s.lyrAddr.trim();
       else if (d.here && $settingsDevice.address) o.lms_server = `${$settingsDevice.address}:9000`;
       if (!d.headless) {
         o.lms_extended_nav = s.browse === 'ext';
@@ -730,11 +730,19 @@
         }
       } catch { /* a first run is assumed */ }
       st.ready = true;
-      const found = ((await listItems('lms_server')).items ?? []).filter((i) => !String(i.meta ?? '').startsWith('This player'));
+      const listed = (await listItems('lms_server')).items ?? [];
+      const found = listed.filter((i) => !String(i.meta ?? '').startsWith('This player'));
+      // The player's own server in use: "Install Lyrion on this player" is
+      // the one chosen, not a found one.
+      const ownInUse = listed.some((i) => String(i.meta ?? '').startsWith('This player') && i.state === 'current');
       const server = found.find((i) => i.state === 'current') ?? found[0];
       if (server) {
+        // Every server found, to choose from on the Lyrion step; the saved
+        // one chosen (George, 2026-10-19).
         const address = server.address ?? server.name;
-        Object.assign(st, { lyrState: 'found', lyrServer: address, lyrMeta: server.name !== address ? `${server.name} · ${address}` : address });
+        const lyrFound = found.map((i) => ({ address: i.address ?? i.name, name: i.name, meta: i.meta ?? '' }));
+        Object.assign(st, { lyrState: 'found', lyrServer: address, lyrWhere: ownInUse ? 'here' : 'there', lyrFound,
+          lyrMeta: found.length > 1 ? `${found.length} servers` : server.name !== address ? `${server.name} · ${address}` : address });
       } else st.lyrState = 'none';
     })();
     return () => {

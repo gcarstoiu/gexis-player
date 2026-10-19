@@ -317,7 +317,8 @@ drawn per kind:
   standing in for the groups not on screen.
 - **Radio** uses the core's SlimBrowse walker (ADR-0030, ADR-0038 §5).
 - **Lyrion's own menus** (My Music, Favourites, Apps) are added by the
-  *Extended navigation* setting (`lms_extended_nav`, default off; ADR-0118).
+  *Extended navigation* setting (`lms_extended_nav`, default off; ADR-0118),
+  chosen as *Navigation → Extended* (`library_navigation`, below).
   `LyrionLevel.svelte` draws one level. "What an entry opens decides its
   shape": branches become tinted-disc tiles, albums and playlists a cover
   grid, and tracks and stations leaf rows. A leaf row reveals Play / Play

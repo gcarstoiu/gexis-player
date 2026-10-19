@@ -7225,3 +7225,43 @@ out during a first read; a Lyrion player on with an empty playlist at
 startup is switched off, not taken (ADR-0027 amended - checked on sofapi:
 the panel opens the library home, nothing current); Settings' shares on
 their own tile, *Add share*, and the search without added shares.
+
+## 2026-10-19: 1.1.0 on Testing, and George's findings on it (moved from HANDOFF verbatim when 1.1.1 was released)
+
+**Current release: 1.1.0, on Testing** (2026-10-19; Testing serial 49, read
+back with `gh release download channels`; Stable still 1.0.6, serial 4).
+Image `image/deploy/2026-10-18-gexis-player-v1.1.0.img`, 123 checks; parts
+`ours-6edee123e59c`, `skins-9c8185729dfd` (reused), `rpi-32fa9ea6c3e4`,
+`debian-e13da7eb04f4` (the OS packages changed since 1.0.6). Notes
+pre-approved by George. It carries Phase 14, first use in two parts
+(`ph-first-use`, merged into `next`), and every finding of George's full run
+of 18-19 October. **PR #75** merged by George (2026-10-19); the post-merge steps and the
+routine clean-up are done (worktrees `-14` and `-rel-1.1.0` and the branches
+`ph-first-use` and `release-1.1.0` gone). **Not promoted: George tests the
+final parts first.** The 1.1.0 image is in the main checkout's
+`image/deploy/`, and `r1.1.0/image.txt` in the release output was repointed
+there (the build had recorded the worktree's path); 1.0.6's image stays
+until 1.1.0 is on Stable. sofapi runs the preview `+git162`.
+**Not tried on a device:** a USB drive's folders, a share added at a
+sub-folder, and the *Lyrion is reading your music* block on a real first
+read. **Seen 2026-10-18, not yet looked into:** sofapi's new Lyrion server
+lists ShelvesPi and GuestPi as its players. Phase 14's narrative:
+`docs/HANDOFF-ARCHIVE.md`, 2026-10-19.
+
+**George's findings on 1.1.0 (2026-10-19), on `fix-first-use`** (worktree
+`~/projects/gexis-player-fix`, from `next`; pushed, not merged): the panel
+drawn once the core's first state is in; the visualiser switch at part 2's
+step starts off and turning it on starts the skins; Lyrion's five numbered
+steps on the waiting screen's plate (panel beside the clock, bars one row),
+the settling dialog only for other downloads (`modal`); *More for your
+library*'s links on their own line on a laptop; then, from George's
+second test, the Lyrion plate smaller and centred (*Step n of 5*, the step
+as its title; approved on renders), ticked shares and USB folders added at
+Finish (they were dropped by *Next* - his shares never reached Lyrion),
+and Material Skin counted in only once Lyrion serves `/material/`.
+Then, from his third test: a new server's folders wait for its add-ons
+(it had read the music during step 3), a first read held to its end, the
+panel plate wider. ADR-0149 decisions 42-45, ADR-0115 decision 28 amended.
+sofapi runs core, UI and player `+git16` since about 11:45. *H@l* is sofapi's own
+Lyrion server, seen while sofapi was `raspberrypi` - not a second machine.
+Owed: George's test, then 1.1.1.
