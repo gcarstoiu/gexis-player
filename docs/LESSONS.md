@@ -388,6 +388,14 @@ does); `systemctl is-active` said active of the old process, and the new
 setting was missing. After a preview install, restart what changed and check
 its start time is after the install.
 
+**78. A remedy expected, not measured** (2026-10-19, Finding 129). Finding
+118 measured the idle screen at 4-6 % with its icons paused by hand, and
+*Weather icon motion: Static* was built on that - "expected at the paused
+figure, not yet measured with the setting itself". Measured nine days later
+it was 45-58 %: the setting paused the icons, and other animations under the
+idle screen ran on. A remedy is measured through the switch users will use,
+not through the test that motivated it.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target, the check quietly
