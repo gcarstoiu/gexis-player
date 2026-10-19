@@ -67,3 +67,6 @@ a Must on the Roadmap; George put it before room correction (2026-10-19).
   fails.
 - The image carries Swagger UI's files (a few MB, to be measured).
 - Home Assistant (Phase 17) is built against the documented API.
+- The static page is `.github/workflows/api-docs.yml`, built at each release
+  tag; GitHub Pages is switched on for it before the first release that
+  carries it.

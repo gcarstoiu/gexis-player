@@ -407,6 +407,16 @@ try again; the change may have been made, so look before repeating it.
 
 ---
 
+**Can my own app or home automation control the player?**
+Yes. Everything the screen and the phone page do goes through the player's
+HTTP API at `http://<player>.local:8090`, with the player's name in place of
+`<player>`. Switch on *Settings → System → API explorer* and open
+`/api` on that address: every route is described there and can be tried
+against the player, so be careful with restart and reset. Routes marked
+*stable* are the ones meant for integrations; *internal* ones are the
+player's own and may change. Anyone on the home network can use the API, as
+they can the settings: there is no login.
+
 ## Network and Wi-Fi
 
 **How do I change the Wi-Fi network?**

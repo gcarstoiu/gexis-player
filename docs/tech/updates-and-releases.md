@@ -162,6 +162,12 @@ list. `packaging/release/build.sh <image.img>` refuses to run if the image's
 3. **Release**: `packaging/release/build.sh <image>`, then
    `packaging/release/publish.sh rX --channel testing`; read the channel file
    back from GitHub and verify it with the release key (serial, release).
+3a. **The API's page on GitHub** (ADR-0152) is built by
+   `.github/workflows/api-docs.yml` when the tag `vX` is pushed, from the
+   `openapi.json` the release ships, with the release's number and trying
+   switched off. Before the first one, GitHub Pages is switched on for the
+   repository with *GitHub Actions* as its source (Settings → Pages, or
+   `gh api -X POST repos/<owner>/<repo>/pages -f build_type=workflow`).
 4. **PR**: push the tag and a `release-X` branch at the tagged commit; open
    one PR into `main` with the approved notes and what was checked. **George
    merges it**, never Claude. `main`'s ruleset (2026-10-18) takes changes only
