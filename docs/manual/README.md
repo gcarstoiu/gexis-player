@@ -399,6 +399,7 @@ switched on, none at first:
 
 | Setting | What it does |
 |---|---|
+| Lyrion Server: On | The server's own switch, also on the Plugins page. Off, it stops and its other rows are hidden; its library, folders and shares are kept for when it is on again. Removing it is in Plugins. |
 | Lyrion Server: More for your library | Where everything else about the library is: a link to the server's own page, and to three apps that control it - Squeezer (Android), Lyrion (Android, F-Droid) and LyrPlay (iPhone). The links show on a phone, not on the panel. |
 | Lyrion Server: Library | Read only: what the server is doing - starting, adding its add-ons, reading your music with a progress bar - and once ready, how many songs and albums it holds. The section's heading says the same in a word. |
 | Lyrion Server: Music folder | The player's own Music folder, shared on the network as *Music*. Its note says how much room is free and how much there is in all. Below 4 GB free the Music share takes no new files, and the note says so, until more than 4.5 GB is free. |
