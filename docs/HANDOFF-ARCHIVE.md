@@ -7167,3 +7167,61 @@ stand-in NAS on 8199) behind `p2proxy.py` with `SHAREUP`.
 26, George 2026-10-18): drives, shares and folders carry tick boxes, rows
 open, the path (`crumbs`) goes back up, one *Add N folders*; part 2 and
 Settings. On sofapi, one real folder on George's NAS lists 499 folders.
+
+## 2026-10-19: Phase 14 and 1.0.6 (moved from HANDOFF verbatim when 1.1.0 went to Testing)
+
+**Current release: 1.0.6, on Stable** (2026-10-17; Stable serial 4, Testing
+serial 48, signatures verified through the API and the public URL; image
+`image/deploy/2026-10-17-gexis-player-v1.0.6.img`, 123 checks, the public
+download byte for byte the checked image; built in 16 minutes, the skin
+packs reused): *Add a backup* in Settings → Restore (ADR-0083 amended
+2026-10-17), the backup fixes, the Settings header wrap. PR #74 merged by
+George; post-merge steps and the routine clean-up done.
+
+**Phase 14 (`ph-first-use`) is built, not merged** (worktree
+`~/projects/gexis-player-14`). First use - part 1 setup and part 2 *Make it
+yours* - is one page generated from Claude Design's
+`design/source/14-first-use` by `tools/design/gen_personalise.py`: change the
+design or the generator's asserted replacements, never the `.svelte` by
+hand. Decisions: ADR-0149 1-41; ADR-0115 20-26 (Lyrion's music locations,
+none preselected; USB and share folders ticked at any depth; *Forget* in
+part 2); ADR-0131 amended (the backup review by Settings section). sofapi
+runs core, UI and player `+git109`. Done on `next` and merged into it:
+*Tested* or nothing, the waiting screen's pulsing marks, the visualiser's
+window rule and PeppyMeter's keys kept across upgrades, the library's Calm
+background. Test fronts in the scratchpad: `p2proxy.py` (part 2 on 8197/8198
+against sofapi, writes held; `NOLYR`, `SETON`, `USBFAKE`, `SHAREUP`),
+`fakeshares.py` (a stand-in NAS on 8199), `p1mock.py` (part 1 on 8196;
+`REALBK`, `PLUGDIR`), `holddemo.py` with `pd/` (the demo library for
+manual pictures). **Not tried on a device:** a USB drive's folders, and a
+share added at a sub-folder mounting (sofapi's Lyrion server is off; to-do
+g56). The day's narrative: `docs/HANDOFF-ARCHIVE.md`, 2026-10-18.
+
+**The Music share's floor** (built 2026-10-18 on `ph-first-use`, `+git129`
+on sofapi; ADR-0115 decision 27, ADR-0022 [H]; George: "4 GB fixed in
+code"): below 4 GB free the share includes `read only = yes`
+(`/run/gexis/music-share.conf`), above 4.5 GB it opens. Tried on sofapi by
+closing it with `music_floor.apply`: a guest copy was refused, then went in
+once open; never with a card actually full. *Where is your music?* groups
+each source with its own actions (George, the same evening). Lyrion's
+first minutes are now said step by step (ADR-0115 decision 28,
+`lyrion_stage.py`): Getting ready and Settings → Sources → Lyrion Server
+(heading indicator, read-only *Library* row with a bar, kept after Ready);
+sofapi `+git139` reads *Ready, 760 songs on 47 albums*. **Seen 2026-10-18,
+not yet looked into:** sofapi's new Lyrion server lists ShelvesPi and
+GuestPi as its players. **Library category** (ADR-0150, `+git144` on sofapi): the Lyrion
+server's rows under Settings → Library, `area: library` on the Plugins page,
+*More for your library* links (Squeezer, Lyrion F-Droid, LyrPlay; not
+iPeng). **Finding 127:** Lyrion keeps its old library through a rescan, so a
+first scan leaves the home empty until it ends. **Option A built** (approved
+on a screenshot; ADR-0115 decision 29, `+git146` on sofapi): a first read
+of the library keeps the waiting screen with a large *Lyrion is reading
+your music* block (`lyrion_stage` `first`); not yet seen on a real first
+read - sofapi's library is read (`first: False`, no block). **George's full run, 2026-10-19 00:00
+(`+git155` on sofapi):** browsing at one fixed height; Lyrion as a numbered
+checklist in Getting ready; no empty Now Playing (`idleSource`); the
+download counts as the first read; the waiting marks centred, Lyrion left
+out during a first read; a Lyrion player on with an empty playlist at
+startup is switched off, not taken (ADR-0027 amended - checked on sofapi:
+the panel opens the library home, nothing current); Settings' shares on
+their own tile, *Add share*, and the search without added shares.

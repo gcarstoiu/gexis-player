@@ -23,6 +23,10 @@
   function mb(bytes) {
     return bytes == null ? null : Math.round(bytes / 1e6);
   }
+  //: **Lyrion's steps are the waiting screen's** (ADR-0149 decision 43 as
+  //: amended; George, 2026-10-19: "in the plate not the modal"): here only
+  //: if its download did not finish.
+  const items = $derived(settling.items.filter((i) => !i.steps || i.state === 'failed'));
   function line(item) {
     if (item.state === 'done') return 'Done';
     if (item.state === 'failed') return item.error ? `Did not finish: ${item.error}` : 'Did not finish';
@@ -66,7 +70,7 @@
       {/if}
     </div>
     <div class="items">
-      {#each settling.items as item (item.id)}
+      {#each items as item (item.id)}
         <div class="item" class:is-done={item.state === 'done'} class:is-failed={item.state === 'failed'}>
           <div class="item__head">
             <span class="item__name">{item.name}</span>
