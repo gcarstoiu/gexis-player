@@ -27,13 +27,19 @@
     if (item.state === 'done') return 'Done';
     if (item.state === 'failed') return item.error ? `Did not finish: ${item.error}` : 'Did not finish';
     if (item.state === 'waiting') return 'Waiting to start…';
+    // **Each step in words** (George, 2026-10-18: what happens in the
+    // background should be transparent), as the phone's Getting ready and
+    // Settings say them.
+    if (item.step === 'preparing') return 'Starting the download…';
+    if (item.step === 'verifying') return 'Checking the download…';
     // The download is in and the package is being put in place - minutes for
     // a skin pack, with nothing to count (2026-10-11).
-    if (item.step === 'installing' || item.step === 'verifying') return 'Installing…';
+    if (item.step === 'installing') return 'Downloaded · installing…';
     const got = mb(item.received), all = mb(item.total);
-    if (got != null && all) return `${got} of ${all} MB`;
-    // A skin pack says how far it is as a share, not in bytes.
-    return item.share != null ? `${Math.round(item.share * 100)} %` : 'Downloading…';
+    const far = got != null && all ? `${got} of ${all} MB`
+      // A skin pack says how far it is as a share, not in bytes.
+      : item.share != null ? `${Math.round(item.share * 100)} %` : 'Downloading…';
+    return item.step === 'retrying' ? `Retrying · ${far}` : far;
   }
   function share(item) {
     if (item.state === 'done') return 1;
@@ -67,7 +73,7 @@
             <span class="item__state">{line(item)}</span>
           </div>
           {#if item.state === 'busy' || item.state === 'waiting' || item.state === 'done'}
-            <div class="bar" class:bar--waiting={item.state === 'waiting' || item.step === 'installing' || item.step === 'verifying' || (item.state === 'busy' && !item.total && item.share == null)}>
+            <div class="bar" class:bar--waiting={item.state === 'waiting' || item.step === 'preparing' || item.step === 'installing' || item.step === 'verifying' || (item.state === 'busy' && !item.total && item.share == null)}>
               <span style:width="{Math.round(share(item) * 100)}%"></span>
             </div>
           {/if}

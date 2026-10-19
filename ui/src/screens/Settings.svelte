@@ -484,6 +484,15 @@
   }
   const picker = $derived(pickerKey ? rowOf(pickerKey) : null);
 
+  //: **A password can be shown while it is typed** (George, 2026-10-18: "Had
+  //: to rewrite the password multiple times because i was afraid I
+  //: misspelled"). Hidden again for each sheet.
+  let pwShown = $state(false);
+  $effect(() => {
+    sheet;
+    untrack(() => (pwShown = false));
+  });
+
   // ADR-0044 §3 and §6: the API publishes every row and says of each whether
   // it belongs on the screen - `surfaced: false` permanently, `onlyWhen`
   // conditionally, and the second is transitive. The rule lives in the
@@ -511,8 +520,14 @@
         wired: true,
       };
     }
+    if (shareFolder) {
+      return { ...row, label: shareFolder.title, note: 'Tick the folders Lyrion reads, at any level; tap a folder to open it.', discover: false, manual: null, hint: null };
+    }
     if (shareBrowse) {
-      return { ...row, label: `Shares on ${shareBrowse.server.name}`, note: 'Tap one to add it.', discover: false, manual: null, hint: null };
+      return { ...row, label: `Shares on ${shareBrowse.server.name}`, note: 'Tick a share to add all of it, or tap it to see its folders.', discover: false, manual: null, hint: null };
+    }
+    if (usbBrowse) {
+      return { ...row, label: usbBrowse.title, note: 'Tick the folders Lyrion reads, at any level; tap a folder to open it.', discover: false, manual: null, hint: null };
     }
     if (joinItem) {
       return {
@@ -764,7 +779,25 @@
     toastTimer = setTimeout(() => (toast = null), ms);
   }
 
+  //: **A switch moves when it is tapped** (George, 2026-10-19: "the
+  //: toggles are a bit slow to activate or deactivate"). It waited for the
+  //: save and then for the whole list read again - two round trips over the
+  //: phone's Wi-Fi. Now the switch shows the new state at once, and goes back,
+  //: with the reason, only if the save is refused.
+  let flipped = $state({});
+  const toggleOn = (r) => (r.key in flipped ? flipped[r.key] : !!r.value);
+  $effect(() => {
+    for (const key of Object.keys(flipped)) {
+      const row = rowOf(key);
+      if (row && !!row.value === flipped[key]) delete flipped[key];
+    }
+  });
+
   async function write(row, value) {
+    if (row.type === 'toggle') {
+      flipped[row.key] = !!value;
+      setTimeout(() => delete flipped[row.key], 8000);
+    }
     saving = true;
     clearTimeout(busyTimer);
     busyTimer = setTimeout(() => (busy = true), SHOW_SAVING_MS);
@@ -772,6 +805,7 @@
       const result = await writeSetting(row.key, value);
       // A 409 is a choice the hardware has taken away (its reason is on the
       // row already, in words) or a row this release does not apply.
+      if (!result.ok && row.type === 'toggle') delete flipped[row.key];
       if (result.status === 409) flash(row.unavailable?.[value] ?? plainly(result.error, `${row.label} cannot be changed yet`));
       // A value not in the row's form says what the form is (`invalid`).
       else if (result.status === 400 && row.invalid) flash(row.invalid, 4500);
@@ -842,7 +876,9 @@
       // disagree.
       // ADR-0115: the shares are drawn on the row itself, each with its
       // Forget (George, 2026-10-03: the stored list "look[ed] like just code").
-      if (row.kind === 'share') return (row.items ?? []).length ? '' : 'None added';
+      if (row.kind === 'share') return '';
+      // ADR-0115 decision 23: the same, for the folders chosen on USB drives.
+      if (row.kind === 'usb-folder') return (row.items ?? []).length ? '' : 'None added';
       if (v) return String(v);
       // The items are on the row because the daemon seeds a list that does
       // not have to go looking (ADR-0044 §1, amended). A row counting only
@@ -938,7 +974,7 @@
     // notice before a plugin's software is downloaded. Off
     // never asks.
     else if (row.type === 'toggle' && row.warn && !row.value) openSheet(row);
-    else if (row.type === 'toggle') write(row, !row.value);
+    else if (row.type === 'toggle') write(row, !toggleOn(row));
     // 84 visual things cannot be chosen from a 560px list, so a `picker` row
     // opens full screen instead of a sheet (ADR-0044 §5).
     else if (row.picker) {
@@ -1161,6 +1197,9 @@
     sheetKey = row.key;
     manual = false;
     shareBrowse = null;
+    shareFolder = null;
+    usbBrowse = null;
+    picks = [];
     shareLogin = null;
     choicePending = null;
     joinItem = null;
@@ -1250,7 +1289,8 @@
   //: ADR-0115: Forget on the row itself, without opening the sheet.
   async function forgetShare(row, item) {
     const answer = await listAction(row.key, { name: item.address ?? item.name, action: 'forget' });
-    flash(answer.ok ? `${item.name} forgotten` : plainly(answer.error, 'Could not forget it. Try again.'));
+    const done = row.kind === 'usb-folder' ? 'removed' : 'forgotten';
+    flash(answer.ok ? `${item.name} ${done}` : plainly(answer.error, `Could not ${row.kind === 'usb-folder' ? 'remove' : 'forget'} it. Try again.`));
   }
 
   //: ADR-0115: the share being added.
@@ -1258,6 +1298,87 @@
   //: ADR-0115's scan: the server whose shares are shown (with the login
   //: that showed them), and the server waiting for a login first.
   let shareBrowse = $state(null);
+  //: George, 2026-10-18: the share folder open in the sheet, at any depth.
+  let shareFolder = $state(null);
+  //: ADR-0115 decision 23: the USB drive and folder open in the sheet.
+  let usbBrowse = $state(null);
+  //: A switch whose *on* is unavailable, while it is off: greyed and not
+  //: tappable, its reason under it (George, 2026-10-19: USB drives with no
+  //: drive plugged in).
+  const toggleBlocked = (r) => r.type === 'toggle' && !toggleOn(r) && !!r.unavailable?.true;
+
+  //: **Tick several** (George, 2026-10-18): folders ticked on a drive or a
+  //: share, at any level, kept while browsing, added with one button.
+  let picks = $state([]);
+
+  function tickable(item) {
+    if (sheet?.kind === 'usb-folder') return !!item.drive;
+    if (sheet?.kind === 'share') return !!item.share && !!item.address && !item.server;
+    return false;
+  }
+  function pickOf(item) {
+    return sheet?.kind === 'usb-folder'
+      ? { key: `${item.drive}/${item.folder ?? ''}`, drive: item.drive, folder: item.folder ?? '', name: item.name }
+      : { key: item.address, address: item.address, name: item.name };
+  }
+  //: A ticked folder covers the folders inside it.
+  function inside(outer, inner) {
+    return sheet?.kind === 'usb-folder'
+      ? outer.drive === inner.drive && (outer.folder === '' || inner.folder.startsWith(outer.folder + '/'))
+      : inner.key.toLowerCase().startsWith(outer.key.toLowerCase() + '/');
+  }
+  function coveredBy(item) {
+    const p = pickOf(item);
+    return picks.find((x) => x.key !== p.key && inside(x, p)) ?? null;
+  }
+  function isPicked(item) {
+    const p = pickOf(item);
+    return !!coveredBy(item) || picks.some((x) => x.key === p.key);
+  }
+  function togglePick(item) {
+    if (coveredBy(item)) return;
+    const p = pickOf(item);
+    if (picks.some((x) => x.key === p.key)) {
+      picks = picks.filter((x) => x.key !== p.key);
+      return;
+    }
+    picks = [...picks.filter((x) => !inside(p, x)), p];
+  }
+  async function addPicked() {
+    const key = sheetKey;
+    const usb = sheet?.kind === 'usb-folder';
+    const { user, password } = shareBrowse ?? {};
+    let added = 0;
+    for (const p of [...picks]) {
+      const body = usb ? { name: p.drive, action: 'add', folder: p.folder }
+        : { name: p.address, action: 'add', user: user ?? (p.address.startsWith('//') ? 'guest' : null), password: password ?? null };
+      const answer = await listAction(key, body);
+      if (!answer.ok) {
+        flash(`${p.name}: ${plainly(answer.error, 'could not be added.')}`);
+        break;
+      }
+      picks = picks.filter((x) => x.key !== p.key);
+      added += 1;
+    }
+    if (added) flash(added === 1 ? 'One folder added' : `${added} folders added`);
+    if (!picks.length && sheetKey === key) {
+      usbBrowse = null;
+      shareFolder = null;
+      shareBrowse = null;
+      openList(key);
+    }
+  }
+  function goCrumb(c) {
+    if (sheet?.kind === 'usb-folder') {
+      if (c.top) {
+        usbBrowse = null;
+        openList(sheetKey);
+      } else browseUsb(c.drive, c.folder);
+    } else if (c.server) {
+      shareFolder = null;
+      browseShares(shareBrowse.server, shareBrowse.user, shareBrowse.password);
+    } else browseShareFolder(c.address);
+  }
   let shareLogin = $state(null);
   let shareCreds = $state({ user: '', password: '' });
 
@@ -1282,6 +1403,36 @@
     });
   }
 
+  async function browseUsb(drive, folder) {
+    searching = true;
+    listError = null;
+    await command({ name: drive, action: 'browse', folder }, (answer) => {
+      searching = false;
+      if (!answer.ok) {
+        flash(plainly(answer.error, 'Could not read the drive. Is it still plugged in?'));
+        return;
+      }
+      usbBrowse = { drive, folder, title: answer.title ?? 'USB drive',
+                    crumbs: [{ name: 'Drives', top: true }, ...(answer.crumbs ?? [])] };
+      items = answer.items ?? [];
+    });
+  }
+
+  async function browseShareFolder(address) {
+    searching = true;
+    listError = null;
+    const { user, password } = shareBrowse ?? {};
+    await command({ name: address, action: 'folders', user: user ?? null, password: password ?? null }, (answer) => {
+      searching = false;
+      if (!answer.ok) {
+        flash(plainly(answer.error, 'Could not read its folders. Try again.'));
+        return;
+      }
+      shareFolder = { address, title: answer.title ?? address, crumbs: answer.crumbs ?? [] };
+      items = answer.items ?? [];
+    });
+  }
+
   function enterManual() {
     share = { address: '', user: '', password: '' };
     manual = true;
@@ -1296,20 +1447,21 @@
     // and `kind` is what tells them apart (ADR-0044 §1).
     // ADR-0115: a found server shows its shares; a share on it is added with
     // the login that showed it; a share already added says how it is.
+    // ADR-0115 decision 23: a drive opens at its top, a folder opens, Back
+    // up goes one level up, and the first item adds what is open.
+    if (row.kind === 'usb-folder') {
+      // Tick several (George, 2026-10-18): the row opens; its box ticks.
+      if (item.drive) browseUsb(item.drive, item.folder ?? '');
+      return;
+    }
     if (row.kind === 'share') {
-      if (item.share && shareBrowse) {
-        const key = sheetKey;
-        const { user, password } = shareBrowse;
-        const address = item.address ?? item.name;
-        await command({ name: address, action: 'add', user: user ?? (address.startsWith('//') ? 'guest' : null), password }, (answer) => {
-          if (!answer.ok) {
-            flash(plainly(answer.error, 'Could not add it. Check the address and try again.'));
-            return;
-          }
-          flash(`${item.name} added`);
-          shareBrowse = null;
-          openList(key);
-        });
+      // George, 2026-10-18: an SMB share opens into its folders; the first
+      // item adds what is open, Back up goes one level up.
+      if (item.share && shareBrowse && !item.add && (item.open || item.up || (item.address ?? '').startsWith('//'))) {
+        browseShareFolder(item.address ?? item.name);
+      } else if (item.share && shareBrowse) {
+        // An NFS export is not opened: tapping it ticks it.
+        togglePick(item);
       } else if (item.server) {
         browseShares(item);
       } else if (item.login) {
@@ -1630,10 +1782,24 @@
       return;
     }
     // ADR-0115's scan: from a server's shares or its login, back to the list.
+    // Out of a share's folders, back to the server's shares.
+    if (shareFolder && shareBrowse) {
+      shareFolder = null;
+      browseShares(shareBrowse.server, shareBrowse.user, shareBrowse.password);
+      return;
+    }
     if (shareBrowse || shareLogin) {
       const key = sheetKey;
+      shareFolder = null;
       shareBrowse = null;
       shareLogin = null;
+      openList(key);
+      return;
+    }
+    // ADR-0115 decision 23: out of a drive's folders, back to the drives.
+    if (usbBrowse) {
+      const key = sheetKey;
+      usbBrowse = null;
       openList(key);
       return;
     }
@@ -1654,6 +1820,12 @@
     onback?.();
   }
 </script>
+
+{#snippet eye()}
+  <button class="pw__eye" type="button" aria-label={pwShown ? 'Hide the password' : 'Show the password'} aria-pressed={pwShown} onclick={() => (pwShown = !pwShown)}>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" />{#if pwShown}<path d="M4 4l16 16" />{/if}</svg>
+  </button>
+{/snippet}
 
 <div class="settings" class:is-embedded={embedded} bind:clientWidth={width}>
   {#if !embedded}
@@ -1905,25 +2077,65 @@
                      only repeats the value already on the row. `disabled`
                      rather than a different element, so the row keeps its
                      layout and its 44px height. -->
+                {#if r.kind === 'share'}
+                  <!-- George, 2026-10-18: the shares added in a tile of
+                       their own, each with its Forget; adding is the tile
+                       under it, which says so. -->
+                  <div class="row row--readonly row--static">
+                    <span class="row__body">
+                      <span class="row__text">
+                        <span class="row__label"><span class="row__name">{r.label}</span></span>
+                        {#if r.items?.length}
+                          <span class="shares">
+                            {#each r.items as s (s.address ?? s.name)}
+                              <span class="shares__one">
+                                <span class="shares__text">
+                                  <span class="shares__name">{s.name}</span>
+                                  {#if s.meta}<span class="item__meta">{s.meta}</span>{/if}
+                                </span>
+                                <span
+                                  class="forget"
+                                  role="button"
+                                  tabindex="0"
+                                  onclick={(e) => { e.stopPropagation(); forgetShare(r, s); }}
+                                  onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); forgetShare(r, s); } }}
+                                >Forget</span>
+                              </span>
+                            {/each}
+                          </span>
+                        {:else}
+                          <span class="row__note">None added yet.</span>
+                        {/if}
+                      </span>
+                    </span>
+                  </div>
+                {/if}
                 <button
                   class="row"
+                  class:row--add={r.kind === 'share'}
                   class:row--danger={r.danger}
-                  class:row--readonly={r.type === 'readonly'}
+                  class:row--readonly={r.type === 'readonly' || toggleBlocked(r)}
                   class:row--dl={!!r.component}
                   type="button"
-                  disabled={r.type === 'readonly' && !r.uploaded}
+                  disabled={(r.type === 'readonly' && !r.uploaded) || toggleBlocked(r)}
                   data-unwired={r.wired ? undefined : 'settings'}
                   onclick={() => tap(r)}
                 >
                   <span class="row__body">
                     <span class="row__text">
                       <span class="row__label">
-                        <span class="row__name">{r.label}</span>
+                        <span class="row__name">{r.kind === 'share' ? 'Add share' : r.label}</span>
                         {#if pending(r)}<span class="dot dot--sm"></span>{/if}
                       </span>
                       <!-- A plugin's version, and the program it runs (George, 2026-10-12). -->
                       {#if r.version}<span class="row__note row__version">{r.version}</span>{/if}
-                      {#if r.note && !opensItsOwn(r)}<span class="row__note"><NoteText text={r.note} links={false} /></span>{/if}
+                      {#if toggleBlocked(r)}<span class="row__note">{r.unavailable.true}.</span>
+                      {:else if r.kind === 'share'}<span class="row__note">Find a share on your network, or add one by its address.</span>
+                      {:else if r.note && !opensItsOwn(r)}<span class="row__note"><NoteText text={r.note} links={false} /></span>{/if}
+                      <!-- A row that opens its own sheet keeps its note for the
+                           sheet; `summary` is the one line it shows on the tile
+                           (George, 2026-10-18: Personalise). -->
+                      {#if r.summary && opensItsOwn(r)}<span class="row__note">{r.summary}</span>{/if}
                       {#if r.status?.error}<span class="row__note row__note--failed">{r.status.error}</span>{/if}
                       {#if r.status?.text && r.again}
                         <!-- ADR-0119: a row its plugin reports done offers to do it
@@ -1976,27 +2188,31 @@
                            "Claimed"), in place of the value - a spent claim
                            token's dots say nothing. -->
                       <span class="row__value row__value--done"><span class="row__tick" aria-hidden="true">✓</span> {r.status.text}</span>
-                    {:else if r.type !== 'toggle' && shown(r)}
+                    {:else if r.type !== 'toggle' && !(r.type === 'readonly' && r.links?.length && r.value == null) && shown(r)}
                       <span class="row__value" class:is-pending={pending(r)}>{shown(r)}</span>
                     {/if}
-                    {#if r.kind === 'share' && r.items?.length}
+                    {#if r.kind === 'usb-folder' && r.items?.length}
                       <!-- ADR-0115: each share by its name, with its Forget
                            (George, 2026-10-03). Spans, not buttons: the row
                            is the button that opens the sheet. -->
                       <span class="shares">
-                        {#each r.items as s (s.address ?? s.name)}
+                        {#each r.items as s (s.address ?? s.drive ?? s.name)}
                           <span class="shares__one">
                             <span class="shares__text">
                               <span class="shares__name">{s.name}</span>
                               {#if s.meta}<span class="item__meta">{s.meta}</span>{/if}
                             </span>
+                            {#if s.address}
+                            <!-- A USB drive not added yet has nothing to
+                                 remove: tapping the row chooses its folders. -->
                             <span
                               class="forget"
                               role="button"
                               tabindex="0"
                               onclick={(e) => { e.stopPropagation(); forgetShare(r, s); }}
                               onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); forgetShare(r, s); } }}
-                            >Forget</span>
+                            >{r.kind === 'usb-folder' ? 'Remove' : 'Forget'}</span>
+                            {/if}
                           </span>
                         {/each}
                       </span>
@@ -2007,8 +2223,24 @@
                         <span style:width={`${Math.round((downloadShare(c) ?? 0) * 100)}%`}></span>
                       </span>
                     {/if}
+                    {#if r.links?.length && !onPanel()}
+                      <!-- ADR-0150: where the rest is - on the phone only; on
+                           the panel a store or another page leads nowhere. -->
+                      <span class="links">
+                        {#each r.links as l (l.url)}
+                          <a class="links__one" href={l.url} target="_blank" rel="noopener" onclick={(e) => e.stopPropagation()}>{l.label} ↗</a>
+                        {/each}
+                      </span>
+                    {/if}
+                    {#if r.progress != null || r.busy}
+                      <!-- ADR-0115 decision 28: how far Lyrion has read, or
+                           that it is working with no count to give. -->
+                      <span class="dl__bar" class:dl__bar--busy={r.progress == null}>
+                        <span style:width={`${Math.round((r.progress ?? 0) * 100)}%`}></span>
+                      </span>
+                    {/if}
                     {#if r.type === 'toggle'}
-                      <span class="toggle" class:is-on={!!r.value}><span></span></span>
+                      <span class="toggle" class:is-on={toggleOn(r)}><span></span></span>
                     {:else if r.type !== 'readonly'}
                       <span class="chev"></span>
                     {/if}
@@ -2395,9 +2627,12 @@
               <span class="radio"><span></span></span>
               <span class="option__label">{placeLabel(option)}</span>
               {#if sheet.optionTags?.[option]}
-                <!-- ADR-0109 decision 1: every model says whether it was tested. -->
+                <!-- George, 2026-10-18: Tested beside a model tested here or
+                     reported working by owners; nothing beside the rest. -->
                 <span class="option__tag" class:option__tag--tested={sheet.optionTags[option] === 'Tested'}>{sheet.optionTags[option]}</span>
               {/if}
+              <!-- A problem owners reported: a line under it, not a word. -->
+              {#if sheet.optionProblems?.[option]}<span class="option__why">{sheet.optionProblems[option]}</span>{/if}
             </button>
           {/each}
         </div>
@@ -2496,6 +2731,12 @@
               {:else}
                 <span class="option__label">{p.label}</span>
               {/if}
+              <!-- The outputs carry the same Tested tag and problem line as
+                   the screens and boards (George, 2026-10-18). -->
+              {#if sheet.optionTags?.[option]}
+                <span class="option__tag" class:option__tag--tested={sheet.optionTags[option] === 'Tested'}>{sheet.optionTags[option]}</span>
+              {/if}
+              {#if sheet.optionProblems?.[option]}<span class="option__why">{sheet.optionProblems[option]}</span>{/if}
               <!-- Why it cannot be chosen: a line of its own across the whole
                    tile, in amber and not dimmed with the rest (George,
                    2026-10-12, Hardware on a USB DAC - beside the note it
@@ -2521,9 +2762,20 @@
           </div>
         </div>
       {:else if sheet.type === 'list'}
+        {@const crumbs = usbBrowse?.crumbs ?? shareFolder?.crumbs ?? null}
+        {#if crumbs?.length}
+          <!-- The path, a step each: how a folder goes back up (George,
+               2026-10-18, "Tick several"). -->
+          <div class="crumbs">
+            {#each crumbs as c, i (i)}
+              <button type="button" class="crumb" class:is-here={i === crumbs.length - 1} onclick={() => goCrumb(c)}>{c.name}</button>
+            {/each}
+          </div>
+        {/if}
         {#if items.length}
           <div class="items" data-noscrollbar>
-            {#each items as item (item.address ?? item.name)}
+            <!-- A USB folder by where it is: two folders can share a name. -->
+            {#each items as item (item.address ?? (item.drive != null ? `${item.drive}:${item.folder ?? ''}:${item.add ? '+' : item.up ? '^' : ''}${item.name}` : item.name))}
               {@const joined = item.state === 'connected' || item.state === 'current'}
               <!-- Only the network in use takes no tap: there is nothing to
                    join. The server in use still does - tapping the one you
@@ -2552,8 +2804,24 @@
                   <span class="item__title">
                     <span class="item__name">{item.name}</span>
                   </span>
-                  {#if item.meta}<span class="item__meta" class:is-joined={joined}>{keepUnit(item.state === 'connected' && netOpen && netLive?.name === item.name && netLive.speed ? `Connected · ${netLive.speed}` : item.meta)}</span>{/if}
+                  {#if tickable(item) && coveredBy(item)}<span class="item__meta">In {coveredBy(item).name}</span>
+                  {:else if item.meta}<span class="item__meta" class:is-joined={joined}>{keepUnit(item.state === 'connected' && netOpen && netLive?.name === item.name && netLive.speed ? `Connected · ${netLive.speed}` : item.meta)}</span>{/if}
                 </span>
+                {#if tickable(item)}
+                  <!-- Tick several (George, 2026-10-18): the box ticks, the
+                       row opens. -->
+                  <span
+                    class="pick"
+                    class:is-on={isPicked(item)}
+                    class:is-covered={!!coveredBy(item)}
+                    role="checkbox"
+                    tabindex="0"
+                    aria-checked={isPicked(item)}
+                    aria-label={`Tick ${item.name}`}
+                    onclick={(e) => { e.stopPropagation(); togglePick(item); }}
+                    onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); togglePick(item); } }}
+                  ><span></span></span>
+                {/if}
                 <!-- The lock alone, at the end of the line before its action,
                      leaves the name its room (George, 2026-10-07): closed
                      where a password is still needed, open where one was
@@ -2616,8 +2884,13 @@
         {:else}
           <div class="empty">
             <span class="empty__ring"></span>
-            <span class="empty__text">{listError ?? sheet.empty ?? 'Nothing here yet.'}</span>
+            <span class="empty__text">{listError ?? (crumbs?.length ? 'No folders inside.' : sheet.empty ?? 'Nothing here yet.')}</span>
           </div>
+        {/if}
+        {#if picks.length}
+          <button type="button" class="btn btn--confirm pick-add" onclick={addPicked}>
+            Add {picks.length} {picks.length === 1 ? 'folder' : 'folders'}
+          </button>
         {/if}
       {/if}
 
@@ -2687,8 +2960,11 @@
       {:else if sheet.type === 'share-login'}
         <input class="field" type="text" placeholder="User" bind:value={shareCreds.user}
           autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="User" />
-        <input class="field" type="password" placeholder="Password" bind:value={shareCreds.password}
-          autocomplete="off" aria-label="Password" />
+        <span class="pw">
+          <input class="field" type={pwShown ? 'text' : 'password'} placeholder="Password" bind:value={shareCreds.password}
+            autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Password" />
+          {@render eye()}
+        </span>
       {:else if sheet.type === 'share'}
         <!-- ADR-0115: SMB as //nas/music with a user and a password; NFS as
              nas:/music, with neither. -->
@@ -2696,22 +2972,28 @@
           autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Share address" />
         <input class="field" type="text" placeholder="User (SMB)" bind:value={share.user}
           autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="User" />
-        <input class="field" type="password" placeholder="Password (SMB)" bind:value={share.password}
-          autocomplete="off" aria-label="Password" />
+        <span class="pw">
+          <input class="field" type={pwShown ? 'text' : 'password'} placeholder="Password (SMB)" bind:value={share.password}
+            autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Password" />
+          {@render eye()}
+        </span>
       {:else if sheet.wired && sheet.type === 'text'}
         <!-- The panel and the phone take the same input; a panel without a
              keyboard attached reads every setting and changes every one that
              is not text (ADR-0044). -->
-        <input
-          class="field"
-          type={sheet.secret ? 'password' : 'text'}
-          placeholder={sheet.placeholder ?? ''}
-          bind:value={draft}
-          autocomplete="off"
-          autocapitalize="off"
-          spellcheck="false"
-          aria-label={sheet.label}
-        />
+        <span class="pw">
+          <input
+            class="field"
+            type={sheet.secret && !pwShown ? 'password' : 'text'}
+            placeholder={sheet.placeholder ?? ''}
+            bind:value={draft}
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            aria-label={sheet.label}
+          />
+          {#if sheet.secret}{@render eye()}{/if}
+        </span>
       {:else if sheet.type === 'readonly' || sheet.type === 'text' || sheet.type === 'number'}
         <div class="sheet__value">{shown(sheet)}</div>
       {/if}
@@ -4081,6 +4363,108 @@
     font-size: 17px;
     overflow-wrap: anywhere;
   }
+  /* George, 2026-10-18: the shares added, a tile that takes no tap; and the
+     tile that adds one, dashed as Upload a plugin is. */
+  .row--static {
+    cursor: default;
+  }
+  /* George, 2026-10-19: room between the tile's name and its first share. */
+  .row--static .shares {
+    margin-top: 14px;
+  }
+  .row--add {
+    border-style: dashed;
+  }
+  /* ADR-0150: a row's links, as small buttons under its note. */
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+    width: 100%;
+  }
+  .links__one {
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(233, 238, 242, 0.16);
+    background: rgba(233, 238, 242, 0.05);
+    color: inherit;
+    font-size: 14px;
+    text-decoration: none;
+  }
+  /* Tick several (George, 2026-10-18): the box on a folder, the path above
+     the list, and the button under it. */
+  .pick {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    margin: -12px 0;
+    padding: 12px;
+    box-sizing: content-box;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    background-clip: content-box;
+    border-radius: 7px;
+    outline: none;
+  }
+  .pick::before {
+    content: '';
+    grid-area: 1 / 1;
+    width: 24px;
+    height: 24px;
+    box-sizing: border-box;
+    border-radius: 7px;
+    border: 2px solid rgba(233, 238, 242, 0.42);
+  }
+  .pick > span {
+    grid-area: 1 / 1;
+    width: 11px;
+    height: 6px;
+    margin-top: -3px;
+    border-left: 2.5px solid #0d151c;
+    border-bottom: 2.5px solid #0d151c;
+    transform: rotate(-45deg);
+    display: none;
+  }
+  .pick.is-on::before {
+    background: var(--accent, #7ed6bc);
+    border-color: var(--accent, #7ed6bc);
+  }
+  .pick.is-on > span {
+    display: block;
+  }
+  .pick.is-covered {
+    opacity: 0.55;
+    cursor: default;
+  }
+  .crumbs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .crumb {
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(233, 238, 242, 0.14);
+    background: rgba(233, 238, 242, 0.05);
+    color: inherit;
+    font: inherit;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  .crumb.is-here {
+    background: rgba(233, 238, 242, 0.14);
+    border-color: rgba(233, 238, 242, 0.3);
+    font-weight: 700;
+  }
+  .pick-add {
+    width: 100%;
+    min-height: 52px;
+    flex-shrink: 0;
+    margin-top: 12px;
+  }
   .forget {
     flex-shrink: 0;
     display: inline-flex;
@@ -4543,6 +4927,38 @@
   }
   .field:focus {
     border-color: var(--accent-lms);
+  }
+  .pw {
+    position: relative;
+    display: block;
+    flex-shrink: 0;
+    width: 100%;
+  }
+  .pw .field {
+    padding-right: 64px;
+  }
+  .pw__eye {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 46px;
+    height: 46px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--ink-quiet);
+    display: grid;
+    place-items: center;
+  }
+  .pw__eye svg {
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 
   .sheet__actions {

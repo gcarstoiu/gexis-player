@@ -34,7 +34,10 @@
   import { screen } from '../lib/family.svelte.js';
   import { fitText } from '../lib/fit.js';
 
-  let { setup } = $props();
+  //: `personalise`: ADR-0149's part 2, owed - the address the phone opens it
+  //: at; `onlater` puts it off from the panel itself, so a player nobody
+  //: scans for is never left showing a code.
+  let { setup, personalise = null, onlater = null } = $props();
 
   //: How long "Phone connected" stays before the next step.
   const JOINED_MS = 2500;
@@ -90,6 +93,7 @@
 
   const step = $derived.by(() => {
     tick;
+    if (personalise) return 'personalise';
     if (setup?.network === 'done') return 'done';
     if (setup?.network === 'joining') return 'joining';
     if (setup?.network === 'failed') return 'failed-start';
@@ -118,11 +122,15 @@
     return { d, extent: size + 8 };
   }
   const joinQr = $derived(joinText ? qrPath(joinText) : null);
-  const pageQr = $derived(setup?.address ? qrPath(setup.address) : null);
+  //: `personalise` is the address, or `true` while it has not arrived: the
+  //: step shows at once and its code fills in.
+  const personaliseUrl = $derived(typeof personalise === 'string' ? personalise : null);
+  const pageQr = $derived(personalise ? (personaliseUrl ? qrPath(personaliseUrl) : null) : setup?.address ? qrPath(setup.address) : null);
+  const pageAt = $derived(personalise ? (personaliseUrl ?? '…') : setup?.address);
   //: As a person types it: a phone's browser takes `10.42.0.1:8090` as is.
   const shown = (url) => String(url ?? '').replace(/^https?:\/\//, '').replace(/\/$/, '');
 
-  const crumb = $derived(setup?.needed ? 'First-time setup' : 'Setup network');
+  const crumb = $derived(personalise ? 'Make it yours' : setup?.needed ? 'First-time setup' : 'Setup network');
 
   //: ADR-0109, Bar family (design `Bar Panels` s-new, s-lost, s-fail,
   //: s-joining; round 2 `Bar States` s-*): the same steps as strips. One QR
@@ -225,13 +233,13 @@
     {#if open}<span class="crumb bs__crumb">Over {setup.ssid}</span>{/if}
   </header>
 
-  {#if step === 'join' || step === 'page' || step === 'lan'}
+  {#if step === 'join' || step === 'page' || step === 'lan' || step === 'personalise'}
     <div class="bs__stage">
       <div class="bs__qr">
         {#if step === 'join'}
           {@render qr(joinQr, `QR code to join ${setup?.ssid ?? ''}`)}
         {:else}
-          {@render qr(pageQr, `QR code to open ${setup?.address ?? ''}`)}
+          {@render qr(pageQr, `QR code to open ${pageAt ?? ''}`)}
         {/if}
       </div>
       <dl class="bs__facts">
@@ -239,7 +247,7 @@
           <dt>Network</dt><dd use:fitText={{ sizes: valueSizes, key: setup?.ssid, nowrapBreak: true }}>{setup?.ssid}</dd>
           <dt>Password</dt><dd use:fitText={{ sizes: valueSizes, key: password, nowrapBreak: true }}>{password ?? '…'}</dd>
         {:else}
-          <dt>Or type</dt><dd use:fitText={{ sizes: valueSizes, key: setup?.address, nowrapBreak: true }}>{shown(setup?.address)}</dd>
+          <dt>Or type</dt><dd use:fitText={{ sizes: valueSizes, key: pageAt, nowrapBreak: true }}>{shown(pageAt)}</dd>
           {#if step === 'page'}
             <dt>Your phone may say</dt><dd class="bs__small">“No internet”. Stay connected.</dd>
           {/if}
@@ -255,6 +263,10 @@
         {:else if step === 'join'}
           <h1>{setup?.needed ? 'Set up gexis' : 'gexis can’t reach its Wi-Fi'}</h1>
           <p>Scan to join{#if setup?.address}, then open <span class="bs__addr">{shown(setup.address)}</span>{/if}</p>
+        {:else if step === 'personalise'}
+          <h1>Make it yours on your phone</h1>
+          <p>How you listen and what this screen shows. Scan with a phone on your home Wi-Fi.</p>
+          {#if onlater}<button class="later" type="button" onclick={onlater}>Not now</button>{/if}
         {:else if step === 'page'}
           <h1>Now open the setup page</h1>
           <p>Scan with the same phone</p>
@@ -263,7 +275,7 @@
           <p>Scan with a phone on the same network as this player</p>
         {/if}
         {#if step === 'join' && rotateLine}<p class="bs__rotate">{rotateLine}</p>{/if}
-        {#if step !== 'lan'}{@render barMobileData()}{/if}
+        {#if step !== 'lan' && step !== 'personalise'}{@render barMobileData()}{/if}
       </div>
     </div>
   {:else if step === 'joined'}
@@ -386,6 +398,15 @@
         {@render qr(pageQr, `QR code to open ${setup?.address ?? ''}`)}
         <dl><dt>Or type</dt><dd class="nowrap">{shown(setup?.address)}</dd></dl>
       </div>
+    {:else if step === 'personalise'}
+      <!-- ADR-0149: part 2 runs on the phone; the panel shows the way to it. -->
+      <h1>Make it yours on your phone</h1>
+      <p class="lead">How you listen and what this screen shows. Scan with a phone on your home Wi-Fi.</p>
+      <div class="pair">
+        {@render qr(pageQr, `QR code to open ${pageAt ?? ''}`)}
+        <dl><dt>Or type</dt><dd class="nowrap">{shown(pageAt)}</dd></dl>
+      </div>
+      {#if onlater}<button class="later" type="button" onclick={onlater}>Not now</button>{/if}
     {:else if step === 'failed-start'}
       <div class="big-icon big-icon--warn">{@render warnIcon(110)}</div>
       <h1>The setup network did not start</h1>
@@ -482,6 +503,26 @@
     max-width: 60ch;
   }
 
+  /* ADR-0149: the panel's one way out of part 2's code - the defaults kept. */
+  .later {
+    align-self: center;
+    margin-top: 22px;
+    min-height: 56px;
+    padding: 0 30px;
+    border-radius: 999px;
+    border: 1px solid rgba(233, 238, 242, 0.22);
+    background: rgba(233, 238, 242, 0.06);
+    color: var(--ink);
+    font: inherit;
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .setup--bar .later {
+    align-self: flex-start;
+    margin-top: 14px;
+    min-height: 48px;
+    font-size: 18px;
+  }
   .pair {
     display: flex;
     align-items: center;

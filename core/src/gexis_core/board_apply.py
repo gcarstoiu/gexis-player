@@ -48,10 +48,22 @@ def options() -> tuple[str, ...]:
 
 
 def tags() -> dict[str, str]:
+    """*Tested* beside a board tested here or reported working; nothing
+    beside the rest (hardware_reports, amended 2026-10-18)."""
     from gexis_core import hardware_reports
-    return {label(b): "Tested" if b.tested else
-            (hardware_reports.state(hardware_reports.board(b.id)) or "Known")
-            for b in boards.all_boards() if b.offered}
+    return {label(b): "Tested" for b in boards.all_boards()
+            if b.offered and hardware_reports.shown_tested(b.tested, hardware_reports.board(b.id))}
+
+
+def problems() -> dict[str, str]:
+    """The line under a board owners reported a problem with."""
+    from gexis_core import hardware_reports
+    out = {}
+    for b in boards.all_boards():
+        line = hardware_reports.problem(hardware_reports.board(b.id)) if b.offered else None
+        if line:
+            out[label(b)] = line
+    return out
 
 
 def block_for(board: boards.Board | None) -> str:

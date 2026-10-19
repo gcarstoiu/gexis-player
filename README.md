@@ -110,8 +110,11 @@ reels turn as the music plays.
 
 On first boot the player opens its own Wi-Fi, the panel shows two QR codes,
 and your phone walks you through the rest: your Wi-Fi, a name, the time, the
-output, your music and the screen. The screen and the DAC are recognised where
-they can be, so most answers are already filled in. After that, updates arrive
+output and the screen. The screen and the DAC are recognised where they can
+be, so most answers are already filled in. Then, from your home Wi-Fi, a few
+questions make it yours: how you listen (Lyrion, Plex or streaming) and what
+the screen shows while music plays, while it waits and at night, each with a
+default and all of them asked again from Settings any time. After that, updates arrive
 over the network, every setting is on your phone as well as the panel, your
 phone doubles as a touchpad for the screen, and a backup brings it all back on
 a new card, during setup, straight from your phone. No keyboard, no terminal,
@@ -174,7 +177,7 @@ or removed from Settings, with its progress shown in the switch itself.
 | 🖼️ **Now playing** | Artwork · synced or plain lyrics · artist information and photos · the Lyrion queue |
 | 📈 **Visualiser** | Up to 287 skins, depending on the screen · VU meters, spectrum, turntables and tape decks · progress, time, volume and play-state in each skin's own style · skins that rotate per track |
 | 🖥️ **Screens** | HDMI touchscreens from 7" to 13.3", including 7.9" and 11.9" bar displays, recognised and laid out for their shape · or Headless, with no screen at all |
-| 🧭 **Setup** | Over the player's own Wi-Fi (WPA2, password on the panel) or your network on a cable · a wrong password brings setup back with the reason · a player that starts without its Wi-Fi offers setup again after 90 seconds |
+| 🧭 **Setup** | Over the player's own Wi-Fi (WPA2, password on the panel) or your network on a cable · only what the player needs to run, then *make it yours* from your home Wi-Fi · a wrong password brings setup back with the reason · a player that starts without its Wi-Fi offers setup again after 90 seconds |
 | 💾 **Backup & restore** | Settings, pairings and source logins in one archive, on a network share or downloaded to your phone · restored during setup, which asks for this player's output and screen and lets you change the rest · one player's backup can start a second one, leaving the first one's sign-ins behind · a factory reset starts the player over without re-flashing |
 | ⬆️ **Updates** | Over the network, with release notes · *Testing* gets each release first, *Stable* once it has been tried |
 | 🔗 **Network** | Wi-Fi or cable, and the cable wins while it is plugged in · a fixed address on either, kept only once it is shown to work |

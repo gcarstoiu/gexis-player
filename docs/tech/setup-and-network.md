@@ -12,7 +12,7 @@ step), ADR-0111 (the Visualiser step), ADR-0083 (backup and restore),
 ADR-0132 (reset to factory settings).
 
 Code: `core/src/gexis_core/setup_network.py`, `setup_flow.py`, `wifi.py`,
-`device_name.py`, `discovery.py`, `factory_reset.py`; UI `ui/src/screens/SetupPage.svelte` (phone)
+`device_name.py`, `discovery.py`, `factory_reset.py`; UI `ui/src/screens/FirstUsePage.svelte` (phone; generated, below)
 and `SetupScreen.svelte` (panel); image `image/stage-gexis/01-firstboot/`.
 
 ---
@@ -176,11 +176,11 @@ open; the panel's join step counts down (*"Can't join? Channel 6 changes in
 1:42"*). A failed `connection up` is handled as a failed start: the network
 reopens from the quiet channel.
 
-**The password**: with a panel attached (an `HDMI-A-*` connector reporting
-`connected`) *and* a screen already confirmed on it (ADR-0109 decision 5), eight
-characters from an alphabet without `0 o 1 l`, made once and kept in
-`/var/lib/gexis/setup-password` (0600) so it survives reboots. Otherwise a
-fixed, documented password, since nothing can show a made-up one.
+**The password** is `gexis-setup` on every player, with a panel or without
+(`setup_network.PASSWORD`; George, 2026-10-18). Until then a player whose
+screen had been confirmed made one up and showed it on the panel (ADR-0109
+decision 5); a freshly flashed card never had a confirmed screen, so setup
+always used the fixed one anyway.
 
 **No captive portal** (ADR-0031 amendment 2). The panel shows two QR codes in
 sequence: one that joins the network, then one for the page,
@@ -208,7 +208,7 @@ ago (`_phone_since`, cleared when a retry finds none, and with the page's
 last use each time the setup network is held again - Finding 125 #19 - so a
 phone left from an earlier opening does not use up a new phone's grace), so
 a phone that has just joined is not left behind. The page's live status comes over the state
-socket, which does not count, so `SetupPage.svelte` asks `/setup/status` once
+socket, which does not count, so `FirstUsePage.svelte` asks `/setup/status` once
 a minute while it is in front. A phone that joined by itself and never opened
 the page no longer holds a configured player off its Wi-Fi for ever. A failed hotspot start is retried
 every 15 s instead. Every 15 s it also looks for a cable with an address,
@@ -225,19 +225,33 @@ atomically and 0600 from the first byte (it holds the Wi-Fi password). A page
 that reloads resumes from it; the password is never handed back, only
 `has_password`.
 
-The phone's steps (`SetupPage.svelte`): Network, Start (ADR-0131: a new
-player or a backup), Name, Time (zone and 12/24 h), Output, Music, Screen,
-Visualiser (skipped for headless or for screens no skin pack fits), Plugins
-(ADR-0128; every plugin the release ships beyond the built-in sources, from
-`GET /setup/plugins`; skipped when there are none), Review. Restoring asks
-Output and Screen, which are this player's hardware (`ASKED`), and skips the
-rest from Name to Plugins: the backup answers them, and Review shows it.
+The phone's steps (`FirstUsePage.svelte`, `mode="p1"`): Network, Start
+(ADR-0131: a new player or a backup), Name, Time (zone and 12/24 h), Output
+(with the volume type under it, George 2026-10-18: Hardware offered only on
+an output with a control of its own, from `GET /setup/outputs`; the answer
+`volume` becomes `output_mode`, written after `output_device`), Screen, Check
+it over. What the player plays and shows is not asked here:
+it is part 2's (ADR-0149, below), so setup records no `lms_mode` and leaves
+Lyrion as it is. Restoring asks Network, Start, the upload, Output and Screen
+(this player's hardware, never the backup's), then Check it over, where the
+name can be changed too (and, renamed, *A second player*); the rest is the
+backup's. Each step is saved as it is left, with the step it goes to, so a
+page that drops resumes there.
+
+**The page is generated from the design** (ADR-0149):
+`tools/design/gen_personalise.py` converts Claude Design's
+`design/source/14-first-use/Setup Prototype.dc.html` - its markup and inline
+styles mechanically (`dc2svelte.py`), its logic verbatim - and applies a
+list of asserted replacements where the prototype simulates the player
+(`personalise-part1.js.txt` holds part 1's screens on real data;
+`personalise-adapter.svelte.txt` the calls to the core). Change the design
+and generate again rather than editing the `.svelte`.
 
 ```mermaid
 sequenceDiagram
   autonumber
   participant P as Panel (SetupScreen)
-  participant Ph as Phone (SetupPage)
+  participant Ph as Phone (FirstUsePage)
   participant C as gexis-core
   participant NM as NetworkManager
 
@@ -292,14 +306,25 @@ sequenceDiagram
    way in, or when nothing else is online: a failed join during setup over the
    cable stays on the cable.
 4. On success: write `setup-done`, delete the answers, then **Lyrion**. Over the
-   setup network there is nothing to discover, so the Music step's *Find* mode
-   runs after the join: `discovery.find_servers()` broadcasts Lyrion's UDP
+   setup network there is nothing to discover, so a *Find* mode (from an
+   answers file of an earlier release; part 1 no longer asks it) runs after
+   the join: `discovery.find_servers()` broadcasts Lyrion's UDP
    discovery datagram on port 3483 and takes each reply's source address.
    Each is named by `discovery.label()`: the machine's mDNS host name
    (`avahi-resolve -a`, 2 s, all at once), else Lyrion's library name unless
    it is the default, else the address; the setting always stores the
    address. Exactly one server is used; several are named and left to Settings; *Off*
    sets `lms_enabled` false.
+
+   **Kept, not searched for on each ask** (George, 2026-10-18): one search
+   costs 2.5 s of listening and up to 2 s for names, and Settings' server
+   list and part 2's first screen used to wait that long every time.
+   `discovery.Known` searches at the core's start, then every 2 min (every
+   30 s while none answers, as at a boot before the network is up), one
+   search at a time; `/settings/lms_server/items` answers
+   from the last search, waiting only for the first. A server switched off
+   stays listed until the next search. Setup's own search after the join
+   stays a fresh one: the network has just changed.
 5. The panel shows the result for 10 s, then the device **reboots** if any
    screen was chosen in setup, or if the name differs from the old one (both
    apply at a restart; the Screen step's restart is where *Keep this screen?*
@@ -319,7 +344,14 @@ sequenceDiagram
      check a restore from Settings makes);
    - it returns the backup's main settings (`backups.APPLIED`), the plugins
      it has on, what else it carries, when it was made (from its name), and
-     whether a newer release made it (more migrations than this one knows).
+     whether a newer release made it (more migrations than this one knows);
+   - and `sections` (`restore_review.py`, ADR-0131 amended 2026-10-18):
+     every setting the backup stores, by its row's label and subgroup, in
+     the Settings section it is in and in Settings' order, with what it
+     carries besides settings in the section that owns it. Rows nobody sees
+     (internal keys, rows never surfaced, actions) are left out. The upload
+     step shows the file's name in its tile and these sections below it, a
+     ticked line each.
 
    The file is kept as `setup-backup.tgz` (0600), and the review is saved in
    the answers as `backup`, with `start: "restore"`. `DELETE /setup/backup`
@@ -327,10 +359,10 @@ sequenceDiagram
 2. **Output and Screen** are asked as a new player's are, opening on what
    this player detects, never on the backup's: a backup from another player
    names that player's DAC and screen.
-3. **The review** is the new player's Review, with *Change* on each answer:
-   the page fills the other steps from the backup (`fromBackup`), and a step
-   continued from is saved as a setup answer. `_restore_values()` lays those
-   answers over the backup's settings.
+3. **The review** (*Check it over*) has *Change* on Network, Name, Output
+   and Screen; the rest is listed as the backup's. The name opens on the
+   backup's; a new one adds *A second player* (`second_player`).
+   `_restore_values()` lays the setup answers over the backup's settings.
 4. **Finishing**:
    - the Wi-Fi country from the time zone, then the join (a failed join keeps
      the backup and returns to Network);
@@ -418,8 +450,8 @@ amended 2026-10-07): `gexis-screen-check` runs before the kiosk during setup
 too and applies the recognised model, the one listed bar of its mode
 (restarting first for a bar's kernel mode), or the screen's own mode, scale
 only. The choice is **provisional** in `screen.json`: no Keep is asked, and
-`screen_apply.confirmed()` stays false, so the setup network keeps the fixed
-password. The Screen step confirms it, or replaces it and asks Keep.
+`screen_apply.confirmed()` stays false. The Screen step confirms it, or
+replaces it and asks Keep.
 
 **The port is part of what is applied** (ADR-0109 amended 2026-10-12):
 `screen.json` keeps the HDMI connector the screen was seen on
@@ -505,12 +537,13 @@ All under the core's HTTP server on port 8090 (`wsserver.py`):
 | `GET /setup/screen` | the Screen step: what the screen reports, the suggested model, all models |
 | `POST /setup/finish` | start applying; answers `202` with `{"finishing": true, "keep_question": ...}` |
 | `GET /setup/plugins` | ADR-0128: the plugins the Plugins step offers - `id`, `name`, `summary`, `notice`, `from`, `component` |
+| `GET /setup/outputs` | The Output step's volume choice: each output (`option`, as Settings lists it) and whether it has a volume control of its own (`hardware`) |
 | `POST /setup/backup` | ADR-0131: a backup as the request body (`?name=` its file name); answers the setup answers with the review, or 400 with the reason |
 | `DELETE /setup/backup` | ADR-0131: forget the uploaded backup |
 
 Every route but `/setup/status` answers 409 once setup is over (`_setup_closed`):
 a configured device has Settings for all of this. On a phone, `App.svelte`
-renders `SetupPage` in place of Settings while setup is needed or the setup
+renders `FirstUsePage` (`mode="p1"`) in place of Settings while setup is needed or the setup
 network is up (`open` or `failed`), and holds it once shown so a join cannot
 swap it for Settings under the phone. `joining` keeps a page already shown
 but never opens one: a page reconnecting as the player rejoins its own Wi-Fi
@@ -656,6 +689,77 @@ lock; a phone draws it too. *Use the player now* (`POST /settling/hide`,
 ADR-0128 amended 2026-10-10) sets `hidden` in the file: both surfaces drop the
 screen while the downloads go on, and `view()` clears `hidden` when anything
 fails, so a failure is still shown and answered with OK.
+
+## First use, part 2: make it yours (ADR-0149)
+
+**Owed, done or put off.** `personalise.py` keeps one record,
+`/var/lib/gexis/personalise.json` (`pending`, `done`, `later`, and `first`).
+`SetupFlow` marks a new player owed once part 1 has joined (not a restore);
+the `personalise` action in Settings → System marks it owed again with
+`first: false`. `/state` carries `personalise: "pending"` while it is owed.
+Each record keeps the boot it was owed in (`/proc/sys/kernel/random/boot_id`);
+at the core's start `personalise.at_start` keeps a new player's owed part 2
+through the boot setup ran in and the next one (noting it as `shown`), and
+one opened from Settings for its own boot only. Past that, the core puts it
+off 30 s after starting (`personalise.put_off`, *Do it later*'s own).
+
+**The phone** (`App.svelte`): while it is owed, the phone page shows
+`FirstUsePage.svelte` (`mode="p2"`) in place of Settings, held until its Close. The
+page reads `/settings`, `GET /personalise` (whether this is a first run, and
+the plugins it may switch on), the Lyrion servers found
+(`/settings/lms_server/items`, at once from `discovery.Known`), and follows `/state` for Plexamp's download,
+a pairing request and the settling. Its questions, in order: how you listen
+(and Lyrion, its folders, Plexamp, Browse), Spotify, Bluetooth, then, with a
+screen, Touchpad (`phone_touchpad`, George 2026-10-18; its preview is the
+library with the pointer moving and tapping, `PanelMini`'s `pointer`), the
+visualiser, the waiting and idle screens, standby. Plexamp is one step: its
+download's stage, then the claim code; whether Plexamp is signed in comes
+from the plugin's status on `plexamp.claim_token` (Plexamp's own token),
+asked at the start and every 4 s on that step, so a player claimed long ago
+is shown as signed in and a pasted code is followed until Plexamp signs in.
+The page is drawn once `/settings` has seeded it (at most 3 s). Its last
+screen, *Getting ready*, shows `PanelMini`'s `flow` cycling through the sources
+chosen (`marks`), with a badge on the panel (`status`): the check when every
+download is in, a turning ring while one is still going, an amber ! when one
+failed; the title follows (*Getting … ready*, *… is ready*, *… is nearly
+ready*). Each download's line, bar and right-hand word come from its live
+status in `/state`'s `components`, the same one Settings reads (`live.stage`,
+George 2026-10-18: *"if something is happening for long in the background
+then what is being done should be transparent"*): *Starting the download*
+(after a minute, *Still waiting to start*), *Preparing*, *Downloading* with
+its MB, *Retrying*, *Checking*, *Installing* (*Downloaded* on the right),
+*Installed*, *Did not finish*. A pack already installed is done at once. The
+core reports the skins as `preparing` from the moment their install is asked
+for (`skins_status`), until the updater reports its download; the panel's
+settling screen uses the same words.
+
+**The panel**: while it is owed and the player has a screen, `SetupScreen`
+shows the step *Make it yours on your phone*, a QR code to
+`http://<host>.local:8090`; settling, Keep this screen and the update lock
+come first. *Not now* posts `/personalise/later`.
+
+**Writing.** Nothing is written step by step except what must act at once:
+Plexamp's switch (its download) and claim token, a pairing answered
+(`/bluetooth/pairing/{accept,reject}`), a share added
+(`lyrion-server.shares`). Finish posts `/personalise/finish` with
+`{"settings": {...}}`. `personalise.checked` refuses the request whole if any
+key is outside `KEYS` and `PLUGIN_ROWS`. `personalise.apply` writes the
+settings through `Settings.set` (a refusal is logged, named in the answer,
+and the rest go on), then the plugin switches. The page only ever sends them
+on. Then `settling.begin` follows the skins and each plugin's download.
+`/personalise/later` on a new player (`first`) switches the Lyrion client
+off, so the panel waits with Spotify and Bluetooth (George, 2026-10-18: a
+fresh player put off showed the library's tiles with nothing behind them);
+asked again from Settings it changes nothing. **A server part 2 sets is used
+from the core's next start**, as one picked in Settings is
+(`_chosen_server`): when `lms_server` is among what `apply` wrote, the core
+restarts once the downloads it began are in (`_restart_when_settled`: the
+settling record gone, or its phase ready or failed) - the skins install as
+the core's own child and an earlier restart would cut them off.
+
+**Library on the screen** (`lms_library`): off, `App.svelte` treats the
+library as absent (`lmsOff`), so the panel's home is `WaitingHome`; the
+Lyrion client keeps running.
 
 ## Reset to factory settings (ADR-0132)
 

@@ -16,7 +16,11 @@
   // ring delays, same order - scaled, not stretched (George: *"not the entire
   // height and width of the screen"*), so the cluster grows and the screen
   // keeps its air.
-  let { availability = {}, full = false } = $props();
+  //: **`bare`: the same marks straight on a picture** (George, 2026-10-18:
+  //: the waiting screen reuses this footer "without the back bar. Just the
+  //: icons pulsating directly on the wallpaper background") - no plate, no
+  //: border, the names shadowed so they hold on a bright picture.
+  let { availability = {}, full = false, bare = false } = $props();
 
   // Order, colours, labels, sizes and ring delays are the design's.
   //
@@ -60,11 +64,11 @@
   //: Four or more renderers (plugins add them) shrink their columns to fit -
   //: on a bar (round 2), and on the panel's full-screen waiting home, where
   //: four 310 px columns ran off both edges at 1280 (found 2026-10-01).
-  const many = $derived((bar || full) && shown.length >= 4);
+  const many = $derived((bar || full || bare) && shown.length >= 4);
   const BAR_MARK = { spotify: 56, bluetooth: 62 };
 </script>
 
-<div class="waiting" class:is-full={full} class:is-bar={bar} class:is-many={many} class:is-wide={screen.width > 1500}>
+<div class="waiting" class:is-full={full} class:is-bar={bar} class:is-many={many} class:is-bare={bare} class:is-wide={screen.width > 1500}>
   <div class="row">
     {#each shown as s (s.id)}
       <div class="service" class:is-lead={s.lead}>
@@ -127,6 +131,19 @@
     border-top: 0;
     background: transparent;
     padding: 0 48px;
+  }
+  .waiting.is-bare {
+    height: auto;
+    border-top: 0;
+    background: transparent;
+    padding: 0;
+    /* Centred, however many: two or three marks sat at the left (George,
+       2026-10-18). */
+    justify-content: center;
+  }
+  .is-bare .name,
+  .is-bare .status {
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.6);
   }
   .row {
     display: flex;

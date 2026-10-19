@@ -125,17 +125,17 @@ def test_the_store_is_only_touched_on_the_thread_that_opened_it(tmp_path):
 
 def test_a_share_reads_as_its_name_on_its_server():
     """George, 2026-10-03: the row read "just code"."""
-    assert ls.label("//Tower.local/Music") == ("Music", "Tower")
+    assert ls.label("//Mediabox.local/Music") == ("Music", "Mediabox")
     assert ls.label("//nas/media/Music/") == ("Music", "nas")
     assert ls.label("nas.local:/volume1/music") == ("music", "nas")
 
 
 def test_a_row_names_the_share_and_keeps_its_address_for_forget(tmp_path):
     s, _, _ = shares(tmp_path)
-    s.add("//Tower.local/Music", "guest", None)
+    s.add("//Mediabox.local/Music", "guest", None)
     [item] = s.items()
-    assert item["name"] == "Music" and item["address"] == "//Tower.local/Music"
-    assert item["meta"].startswith("On Tower · ")
+    assert item["name"] == "Music" and item["address"] == "//Mediabox.local/Music"
+    assert item["meta"].startswith("On Mediabox · ")
     assert "password" not in item and "user" not in item, "a user only where it is asked for again"
 
 
@@ -224,3 +224,26 @@ def test_an_address_is_never_read_as_one_of_mount_s_options(tmp_path):
     s.mount_all(s.all())
     for mount in (c for c in calls if c[0] == "mount"):
         assert mount[-3] == "--" and mount[-2] in ("nas:/music", "//nas/a")
+
+
+def test_a_share_inside_one_added_is_refused_and_a_wider_one_replaces_those_inside(tmp_path):
+    """George, 2026-10-18: folders inside shares are ticked and added; Lyrion
+    must not read the same files twice."""
+    import pytest
+
+    store = {}
+
+    class Store:
+        def get(self, key, default=None):
+            return store.get(key, default)
+
+        def set(self, key, value):
+            store[key] = value
+
+    shares = ls.Shares(Store(), root=tmp_path / "mnt", credentials=tmp_path / "cred", is_mount=lambda p: False)
+    shares.add("nas:/music/jazz", None, None)
+    shares.add("nas:/music/rock", None, None)
+    with pytest.raises(ValueError):
+        shares.add("nas:/music/jazz/miles", None, None)
+    shares.add("NAS:/music", None, None)
+    assert [s["address"] for s in shares.all()] == ["NAS:/music"]

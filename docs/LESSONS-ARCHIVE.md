@@ -1459,3 +1459,16 @@ criterion 3's root-access amendment, the provisioning `.gitignore`
 defect). Those were correct checks against the right target, of a
 spec that didn't ask the right question. This page is about the check
 itself measuring the wrong thing. Related, worth keeping distinct.
+
+**75. A commit chained after the tests** (2026-10-18, on `next`, Phase 14
+work). Wiring `_visualiser_running` into `__main__`, the suite and the commit
+were sent as one shell command, the commit after the test run. The command
+went on to the commit whatever the suite answered, and one test had failed:
+its assertion compared source text with double quotes, which `ast.unparse`
+prints as single quotes. The failing test was committed as 68c9ee85 and
+pushed; the next look at the output found it, and fc18315c fixed the test.
+Nothing reached a release, and CI on GitHub would have shown it red - but
+the local check had been run and not read, which is the failure: a result
+that exists is not a result that was looked at. **Rule:** run the tests,
+read the result, then commit in a call of its own.
+

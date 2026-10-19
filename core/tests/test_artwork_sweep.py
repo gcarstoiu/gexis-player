@@ -258,9 +258,9 @@ class TestMatchingTwoCatalogues:
     shows what the tagger wrote and MusicBrainz shows its own title."""
 
     @pytest.mark.parametrize("theirs, ours", [
-        ("12 X 5", "12 x 5 (2006, Japan Mini LP)"),
-        ("MTV Unplugged", "[1997] MTV Unplugged [EP]"),
-        ("57th & 9th", "57th & 9th (Deluxe Edition)"),
+        ("Album 2", "Album 2 (2006, Japan Mini LP)"),
+        ("Album 4", "[1997] Album 4 [EP]"),
+        ("4th & Main", "4th & Main (Deluxe Edition)"),
         ("Abbey Road", "Abbey Road (Remastered)"),
         ("Nevermind", "Nevermind - Deluxe Edition"),
         ("OK Computer", "OK Computer"),

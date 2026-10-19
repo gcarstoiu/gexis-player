@@ -19,15 +19,15 @@ He is right, and **this project has already solved it once**. The artwork
 sweep matches LMS's album titles against fanart's release groups, and
 comparing them as they stand **matched nothing for 43 % of his albums**
 (measured 2026-09-24, Finding 054 §9): LMS shows what the tagger wrote —
-`12 x 5 (2006, Japan Mini LP)`, `[1997] MTV Unplugged [EP]`,
-`57th & 9th (Deluxe Edition)` — where the catalogue says `12 X 5`,
-`MTV Unplugged`, `57th & 9th`. `artwork_sweep.match_title` strips the brackets
+`Album 2 (2006, Japan Mini LP)`, `[1997] Album 4 [EP]`,
+`4th & Main (Deluxe Edition)` — where the catalogue says `Album 2`,
+`Album 4`, `4th & Main`. `artwork_sweep.match_title` strips the brackets
 and the trailing edition phrase and fixed it.
 
 **`CoverArtProvider` never got it.** It asks MusicBrainz for
 `releasegroup:"<album>"` with the album *folded* — and folding only removes
-punctuation, so `57th & 9th (Deluxe Edition)` becomes
-`57th 9th deluxe edition` and the modifier words are still in the query. That
+punctuation, so `4th & Main (Deluxe Edition)` becomes
+`4th main deluxe edition` and the modifier words are still in the query. That
 is the enrichment path, which is the one that matters for Bluetooth and
 Spotify, where the renderer supplies no cover at all.
 
@@ -101,8 +101,8 @@ against MusicBrainz directly:
 
 | query | result |
 |---|---|
-| `artist:"Sting" AND releasegroup:"57th & 9th"` | **100**, exact |
-| `artist:"sting" AND releasegroup:"57th 9th"` | **nothing** |
+| `artist:"<artist>" AND releasegroup:"<a title with &>"` | **100**, exact |
+| `artist:"<artist>" AND releasegroup:"<the same title, folded>"` | **nothing** |
 
 Folding removes the `&`, and the phrase then matches nothing at all. Worse,
 folding is ASCII-only: `100 Jahre Strauß` becomes `100 jahre strau` — the `ß`
@@ -119,8 +119,8 @@ asks carry the title's own characters.**
   `ac dc` for the same reason and at the same cost.
 - The first ask uses the raw album and the raw artist.
 - The second uses **`trim_title`**, a new sibling of `match_title` that strips
-  the brackets and the edition phrase **without folding**, so `57th & 9th
-  (Deluxe Edition)` becomes `57th & 9th` and keeps the ampersand that makes it
+  the brackets and the edition phrase **without folding**, so `4th & Main
+  (Deluxe Edition)` becomes `4th & Main` and keeps the ampersand that makes it
   findable.
 - `match_title` keeps its job unchanged: comparing two catalogues, where
   folding is right because both sides get it. It is what verifies the second

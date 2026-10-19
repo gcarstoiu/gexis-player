@@ -39,7 +39,7 @@ KINDS = ("renderer", "service")
 #: to the registry's id for it. Optional in a manifest; absent, the kind
 #: decides, as it always did - a renderer in Sources, a service in System.
 AREAS = {
-    "audio": "audio", "sources": "sources", "handoff": "handoff",
+    "audio": "audio", "sources": "sources", "library": "library", "handoff": "handoff",
     "display": "display", "enrichment": "enrich", "device": "device", "system": "system",
 }
 

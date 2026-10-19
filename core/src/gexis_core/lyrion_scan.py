@@ -5,14 +5,15 @@ available shares in the network?"*, then *"A"*).
 
 Two steps, as a person would take them: the servers that announce
 themselves on the network (mDNS: `_smb._tcp`, `_nfs._tcp`), then one
-server's shares - which a NAS often lists only after a login (George's Ark
-refuses a guest; his Nuc does not), so that step can come back asking for
+server's shares - which a NAS often lists only after a login (a NAS here (Storebox)
+refuses a guest; a mini PC (Minibox) does not), so that step can come back asking for
 one. A server that does not announce itself (many Windows PCs) is still
 added by typing its address.
 """
 from __future__ import annotations
 
 import logging
+import re
 import subprocess
 import tempfile
 from dataclasses import dataclass
@@ -57,7 +58,7 @@ def parse_browse(output: str, own: set[str] = frozenset()) -> list[Server]:
         kind = "smb" if service == "_smb._tcp" else "nfs" if service == "_nfs._tcp" else None
         if kind is None or host in own or address in own or name in own:
             continue
-        # By its announced name (Tower.local), which survives a new DHCP
+        # By its announced name (Mediabox.local), which survives a new DHCP
         # address; the player resolves .local names through mDNS.
         host = host or address
         label = host.removesuffix(".local") if host != address else name
@@ -66,15 +67,21 @@ def parse_browse(output: str, own: set[str] = frozenset()) -> list[Server]:
 
 
 def servers(own: set[str], run=subprocess.run) -> list[Server]:
-    found = []
-    for service in ("_smb._tcp", "_nfs._tcp"):
+    """Both kinds browsed **at once**: each takes about a second, and one
+    after the other made every list of shares wait two (sofapi, 2026-10-18)."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    def browse(service: str) -> list[Server]:
         try:
             result = run(["avahi-browse", "-rtpk", service], capture_output=True, text=True,
                          timeout=TIMEOUT_S, check=False)
         except (OSError, subprocess.SubprocessError) as exc:  # the other kind is still worth listing
             logger.info("lyrion_scan: %s browse did not finish (%s)", service, exc)
-            continue
-        found += parse_browse(result.stdout or "", own)
+            return []
+        return parse_browse(result.stdout or "", own)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        found = [server for part in pool.map(browse, ("_smb._tcp", "_nfs._tcp")) for server in part]
     return sorted(set(found), key=lambda s: (s.name.lower(), s.kind))
 
 
@@ -131,3 +138,57 @@ def _shares(server: Server, user: str | None, password: str | None, run) -> list
     if "NT_STATUS_LOGON_FAILURE" in text or "NT_STATUS_ACCESS_DENIED" in text:
         raise NeedsLogin(server.name)
     return parse_smb_shares(result.stdout or "", server.host)
+
+
+#: `smbclient ... -c ls`: a name, its attributes (D for a folder), a size,
+#: then the date. The name may hold spaces; the columns after it do not.
+_LS = re.compile(r"^  (?P<name>.+?)\s+(?P<attrs>[A-Z]*)\s+\d+\s+\w{3} \w{3}\s+\d+ [\d:]+ \d{4}$")
+#: What may not be in a folder's path: smbclient's own command separator and
+#: quote. A folder named with one is not offered.
+_UNSAFE = re.compile(r'[;"\\]')
+
+
+def parse_smb_ls(output: str) -> list[str]:
+    """The folders in an `ls`, without `.`, `..`, hidden or system ones."""
+    out = []
+    for line in output.splitlines():
+        m = _LS.match(line)
+        if not m or "D" not in m.group("attrs"):
+            continue
+        name = m.group("name")
+        if name in (".", "..") or name.startswith(".") or name.endswith("$") or "H" in m.group("attrs") \
+                or "S" in m.group("attrs") or _UNSAFE.search(name):
+            continue
+        out.append(name)
+    return sorted(out, key=str.casefold)
+
+
+def folders(address: str, user: str | None = None, password: str | None = None,
+            run=subprocess.run) -> list[str]:
+    """**The folders inside an SMB share, or a folder of one** (George,
+    2026-10-18: browsing "stops only at level 1"): `//host/share[/path]`.
+    Raises NeedsLogin, NoAnswer, or ValueError for an address it cannot
+    list (NFS, or a path smbclient would read as commands)."""
+    if not address.startswith("//"):
+        raise ValueError("an SMB share to list its folders")
+    host, _, rest = address[2:].partition("/")
+    share, _, path = rest.partition("/")
+    if not host or not share or _UNSAFE.search(path) or ".." in path.split("/"):
+        raise ValueError("a folder inside a share")
+    command = f'cd "{path}"; ls' if path else "ls"
+    try:
+        with tempfile.NamedTemporaryFile("w", prefix="gexis-smb-", delete=True) as auth:
+            if user:
+                auth.write(f"username={user}\npassword={password or ''}\n")
+                auth.flush()
+                login = ["-A", auth.name]
+            else:
+                login = ["-N"]
+            result = run(["smbclient", f"//{host}/{share}", *login, "-c", command],
+                         capture_output=True, text=True, timeout=TIMEOUT_S, check=False)
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise NoAnswer(f"{host.removesuffix('.local')} to answer") from exc
+    text = (result.stdout or "") + (result.stderr or "")
+    if "NT_STATUS_LOGON_FAILURE" in text or "NT_STATUS_ACCESS_DENIED" in text:
+        raise NeedsLogin(host)
+    return parse_smb_ls(result.stdout or "")

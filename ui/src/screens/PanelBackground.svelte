@@ -9,20 +9,30 @@
   smooth, and neither sizing the artwork nor the CPU governor visibly helped.
   Screens now draw only their own veil and content over this, which is why
   exactly one of them is mounted at a time (App.svelte).
+
+  **With no artwork, one Calm wallpaper bleeds instead** (George,
+  2026-10-18: "Just 1 from calm types"), so the library with nothing
+  playing is not plain grey. The sunset over still water: blurred, blue
+  with an orange and violet glow (George chose it over the darker glacier
+  lake, wanting something more colourful). It is the
+  player's own (gexis-wallpapers, CC0), so no credit line is owed, and the
+  same promoted layer draws it, at no new cost (Finding 061).
 -->
 <script>
   let { artwork = null } = $props();
 
-  // A failed URL falls back to the weave alone, as the screens do for their
-  // own artwork.
-  let failed = $state(null);
-  const src = $derived(artwork && artwork !== failed ? artwork : null);
+  const RESTING = '/idle/wallpaper/own/calm/c105649975.webp';
+
+  // A failed URL falls back to the resting picture, and that to the weave
+  // alone.
+  let failed = $state(new Set());
+  const src = $derived([artwork, RESTING].find((url) => url && !failed.has(url)) ?? null);
 </script>
 
 <div class="bg" aria-hidden="true">
   <div class="weave"></div>
   {#if src}
-    <img class="bleed" {src} alt="" onerror={() => (failed = artwork)} />
+    <img class="bleed" {src} alt="" onerror={() => (failed = new Set([...failed, src]))} />
   {/if}
 </div>
 

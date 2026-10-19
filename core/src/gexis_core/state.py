@@ -72,6 +72,7 @@ class StateStore:
         self._screen_new: dict | None = None
         self._screen_check: dict | None = None
         self._settling: dict | None = None
+        self._personalise: str | None = None
         self._resetting = False
         #: **ADR-0081: the cover the daemon found for a renderer that sent
         #: none.** `renderer_id -> (track, url)`, applied in `state` below
@@ -128,6 +129,7 @@ class StateStore:
             screen_new=dict(self._screen_new) if self._screen_new else None,
             screen_check=dict(self._screen_check) if self._screen_check else None,
             settling=dict(self._settling) if self._settling else None,
+            personalise=self._personalise,
             resetting=self._resetting,
         )
 
@@ -408,6 +410,13 @@ class StateStore:
         if settling == self._settling:
             return
         self._settling = dict(settling) if settling is not None else None
+        self._notify()
+
+    def set_personalise(self, value: str | None) -> None:
+        """ADR-0149: `pending` while part 2 is owed, else None."""
+        if value == self._personalise:
+            return
+        self._personalise = value
         self._notify()
 
     def set_resetting(self) -> None:

@@ -15,7 +15,7 @@ device are told. **The panel itself was not watched.**
 
 ```
 file=plexamp
-artist=2 Unlimited
+artist=Artist A
 album=Get Ready
 title=Get Ready for This (orchestral mix)
 coverurl=http://192.0.2.191:32400/library/metadata/91794/thumb/…?X-Plex-Token=…

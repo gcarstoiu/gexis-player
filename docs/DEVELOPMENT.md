@@ -1648,8 +1648,8 @@ ADRs were updated.
      [Finding 073](findings/073-the-cover-that-never-reached-the-meter.md)).
    - **Few album covers were found.** George's diagnosis — modifiers in the
      album name — was right and was the smaller half: the query was also
-     being *folded*, and `releasegroup:"57th & 9th"` scores 100 where
-     `"57th 9th"` returns nothing. **31.2 % of his thousands of albums** carry a
+     being *folded*, and `releasegroup:"<a title with &>"` scores 100 where
+     `"<the same title, folded>"` returns nothing. **31.2 % of his thousands of albums** carry a
      character folding removes, against 11.1 % carrying a modifier. Measured
      old against new on 40 albums: **27 found → 32, none lost**
      ([ADR-0080](decisions/0080-a-cover-is-matched-on-a-title-both-catalogues-agree-on.md),
@@ -2924,9 +2924,11 @@ once the player is on the home network (the panel shows a QR code to it),
 asks how it will be used and ends in the downloads (ADR-0128's settling
 screen).
 
-**Before building:** George settles ADR-0149's open points (the questions,
-their answers and defaults); then Claude Design draws part 2 for the 10.1"
-panel, the bars and the phone, and the shorter part 1.
+**Built 2026-10-18 on the branch `ph-first-use`** (not merged) from Claude
+Design's hand-off; ADR-0149 accepted, with the decisions taken while building
+recorded in it (George delegated them). On SofaPi for George to test part 2
+through Settings → Display → Personalise. Not yet run: part 1 on a freshly
+flashed card, and the wide (tablet) layout, which is not built.
 
 **Acceptance (draft):**
 
@@ -2935,7 +2937,7 @@ panel, the bars and the phone, and the shorter part 1.
    cable.
 2. Once on the home network, part 2 follows part 1 on the phone, and the
    panel shows a QR code to it; *Later* leaves with the defaults, and
-   *Settings → System → Personalise* runs it again.
+   *Settings → Display → Personalise* runs it again.
 3. *Only what is playing* keeps the Lyrion client running with no library
    navigation on the screen (its apps still play to the player);
    *I don't use Lyrion* turns the client off; a Lyrion server is found on

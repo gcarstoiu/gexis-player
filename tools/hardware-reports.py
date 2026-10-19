@@ -10,7 +10,9 @@ Reads the GitHub *Hardware feedback* issues labelled `accepted`, and writes
   Gexis version reported and the issues; the player's *Reported* state and
   the rows' sentences come from it (`hardware_reports.py`);
 - the table between the markers in `docs/HARDWARE.md`: every board and screen
-  the player lists, its state, and the number of reports.
+  the player lists, *Tested* beside those tested here or reported working
+  (George, 2026-10-18: two states, as on the player), and the number of
+  reports.
 
 Nothing is committed: the change is read, reviewed and committed like any
 other, and reaches devices with the next release. A report alone never
@@ -166,16 +168,17 @@ def table(data: dict) -> str:
             parts.append(f"{entry['problems']} with problems")
         return ", ".join(parts)
 
-    lines = [BEGIN, "", "| Sound card | State | Reports |", "|---|---|---|"]
+    def state(own, entry):
+        return "Tested" if hardware_reports.shown_tested(own, entry) else ""
+
+    lines = [BEGIN, "", "| Sound card | Tested | Reports |", "|---|---|---|"]
     for board in sorted(boards.all_boards(), key=lambda b: b.name.lower()):
         entry = data["boards"].get(board.id)
-        state = "Tested" if board.tested else hardware_reports.state(entry) or "Known"
-        lines.append(f"| {board.name} | {state} | {count(entry)} |")
-    lines += ["", "| Screen | State | Reports |", "|---|---|---|"]
+        lines.append(f"| {board.name} | {state(board.tested, entry)} | {count(entry)} |")
+    lines += ["", "| Screen | Tested | Reports |", "|---|---|---|"]
     for model in sorted(screens.all_screens(), key=lambda s: s.label.lower()):
         entry = data["screens"].get(model.label)
-        state = "Tested" if model.tested else hardware_reports.state(entry) or "Untested"
-        lines.append(f"| {model.maker} {model.model} | {state} | {count(entry)} |")
+        lines.append(f"| {model.maker} {model.model} | {state(model.tested, entry)} | {count(entry)} |")
     lines += ["", END]
     return "\n".join(lines)
 

@@ -87,8 +87,11 @@ write_labwc_config() {
 		[ "$(cat "${status}" 2>/dev/null)" = connected ] && others=$((others + 1))
 	done
 	if [ "${connector}" != HDMI-A-1 ] || [ "${others}" -gt 1 ]; then
-		sed -i "s|</labwc_config>|  <windowRules>\n    <windowRule identifier=\"*\">\n      <action name=\"MoveToOutput\" output=\"${connector}\"/>\n    </windowRule>\n  </windowRules>\n</labwc_config>|" \
+		# Into the installed rule, before its Maximize: to the screen's
+		# output first, then filling it.
+		sed -i "s|<windowRule identifier=\"\*\">|<windowRule identifier=\"*\">\n      <action name=\"MoveToOutput\" output=\"${connector}\"/>|" \
 			"${dir}/rc.xml" || return 1
+		grep -q "MoveToOutput\" output=\"${connector}\"" "${dir}/rc.xml" || return 1
 	fi
 	grep -q "mapToOutput=\"${connector}\"" "${dir}/rc.xml" || return 1
 	echo "gexis-kiosk: touch and the window on ${connector}" >&2

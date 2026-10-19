@@ -43,7 +43,7 @@ been written properly. **0098 has no record either.**
 | [0019](0019-peppy-screen-lifecycle.md) | Peppy screen: entry, exit and lifecycle | Accepted 2026-09-04 |
 | [0020](0020-library-browse-tree.md) | Library browse as a normalised tree | Accepted 2026-09-04; **partly superseded by [0030](0030-library-typed-radio-slimbrowse.md)**; cross-cutting table amended by 0029 |
 | [0021](0021-deployment-flashable-image.md) | Deployment as a flashable image | Accepted 2026-09-04; distribution channel deferred |
-| [0022](0022-settings.md) | Settings | Accepted 2026-09-04; remote-only text entry **superseded by [0029](0029-text-entry-on-every-surface.md)**; first-boot blocker answered by 0031 |
+| [0022](0022-settings.md) | Settings | Accepted 2026-09-04; remote-only text entry **superseded by [0029](0029-text-entry-on-every-surface.md)**; first-boot blocker answered by 0031; rows appended as confirmed (latest 2026-10-18) |
 | [0023](0023-svelte-ui.md) | The UI is Svelte | Accepted 2026-09-04 |
 | [0024](0024-bluetooth-pairing-no-pin.md) | Bluetooth pairing: no PIN, for this installation | Accepted 2026-09-06; **reversed by [0045](0045-bluetooth-pairing-confirmation.md)** |
 | [0025](0025-project-licence-gplv3.md) | gexis-player is licensed GPL v3 | Accepted 2026-09-08 |
@@ -127,17 +127,17 @@ been written properly. **0098 has no record either.**
 | [0104](0104-how-the-device-knows-it-needs-setup.md) | How the device knows it needs setup, and what it does about it | Accepted 2026-09-28 (amended 2026-10-07): no saved Wi-Fi and no `setup-done`; at once if new, 90 s at boot otherwise |
 | [0105](0105-updates-over-the-network.md) | Updates over the network | Accepted 2026-09-29: Debian packages, a signed repository, backup and health check, rollback; Manual by default |
 | [0106](0106-plugins-you-install-and-update.md) | Plugins you install and update | Accepted 2026-09-29: ours update with the release; uploaded `.tar.gz` plugins run confined; upload notice wording owed |
-| [0107](0107-our-parts-as-debian-packages.md) | Our parts as Debian packages | Accepted 2026-09-30: one package per component, Debian's paths, no LMS address shipped |
+| [0107](0107-our-parts-as-debian-packages.md) | Our parts as Debian packages | Accepted 2026-09-30 (amended 2026-10-18: PeppyMeter's own keys kept across upgrades): one package per component, Debian's paths, no LMS address shipped |
 | [0108](0108-how-a-release-is-published-and-found.md) | How a release is published and found | Accepted 2026-09-30 (amended 2026-10-07): apt repositories on GitHub Releases; signed channel files whose serial never goes down |
-| [0109](0109-other-screens.md) | Other screens: two families, a known list, and the skins per size | Accepted 2026-09-30, amended the same day: two families by scale factor; 197 models; skin sets become plugins |
+| [0109](0109-other-screens.md) | Other screens: two families, a known list, and the skins per size | Accepted 2026-09-30, amended the same day and 2026-10-18 (every window maximised): two families by scale factor; 197 models; skin sets become plugins |
 | [0110](0110-the-update-experience.md) | The update experience: release numbers, one modal, playback stops on consent, the panel locked | Accepted 2026-10-01: `x.y.z` releases; night runs 03:00–04:00 when idle. Amends 0105, 0022 |
 | [0111](0111-skin-sets-follow-the-screen.md) | Skin sets follow the screen: one pack, chosen by the screen, with consent | Accepted 2026-10-01: one `gexis-skins-<W>x<H>` pack, installed after consent; none in the image. Amends 0109, 0022 |
 | [0112](0112-the-visualisers-fanart-frame-shows-the-artists-photos.md) | The visualiser's fanart frame shows the artist's photos | Accepted 2026-10-02: LMS `artistphotos` cached ahead; a 20 s crossfading slideshow |
 | [0113](0113-a-skin-packs-tables-ship-apart-from-its-pictures.md) | A skin pack's tables ship apart from its pictures | Accepted 2026-10-02; **not yet built** (2026-10-07). Amends 0111 |
 | [0114](0114-the-beszel-hub-as-a-plugin.md) | The Beszel hub as a plugin | Accepted 2026-10-02: `gexis-beszel-hub`, off until switched on, port 8095; no other settings |
-| [0115](0115-the-lyrion-server-as-a-plugin.md) | The Lyrion server as a plugin | Accepted 2026-10-02 (amended 2026-10-03): upstream 9.1.1, off, lowest priority; never switched to by itself |
+| [0115](0115-the-lyrion-server-as-a-plugin.md) | The Lyrion server as a plugin | Accepted 2026-10-02 (amended 2026-10-03; 2026-10-18: locations chosen, folders ticked): upstream 9.1.1, off, lowest priority; never switched to by itself |
 | [0116](0116-change-logs-in-settings.md) | Change logs in Settings | Accepted 2026-10-03: the last 10 releases' notes in Settings; older in `CHANGELOG.md` |
-| [0117](0117-dacs-beyond-the-two-on-the-bench.md) | DACs beyond the two on the bench | Accepted 2026-10-04: the card reports its own scale and name; Tested, Known, Detected; DSD postponed |
+| [0117](0117-dacs-beyond-the-two-on-the-bench.md) | DACs beyond the two on the bench | Accepted 2026-10-04: the card reports its own scale and name; Tested, Known, Detected; DSD postponed. **Amended 2026-10-18**: the lists show Tested or nothing |
 | [0118](0118-lyrion-s-own-menus.md) | Lyrion's own menus, plugins included | Accepted 2026-10-05: Lyrion's menus as home tiles, behind *Extended navigation*, off by default; player settings left out |
 | [0119](0119-plexamp-is-claimed-from-settings.md) | Plexamp is claimed from Settings, and says when it is | Accepted 2026-10-05: claimed by `PLEXAMP_CLAIM_TOKEN`; the row reads *Claimed* with *Claim again* |
 | [0120](0120-backgrounds-cropped-by-what-they-show.md) | Backgrounds cropped by what they show; Pexels and TheAudioDB | Accepted 2026-10-05 (**Pexels removed 2026-10-07**): cropped around detected subjects on the player (YOLOX-S) |
@@ -146,12 +146,12 @@ been written properly. **0098 has no record either.**
 | [0123](0123-the-network-in-settings-cable-and-wi-fi.md) | The network in Settings: cable and Wi-Fi | Accepted 2026-10-07: a Cable row; a manual address kept only once confirmed within 60 s |
 | [0124](0124-software-volume.md) | Software volume, the owner's choice | Accepted 2026-10-07: off by default, after the meter tap, not bit-perfect below 100 %. Row merged by 0127 |
 | [0125](0125-a-problem-report-users-can-download.md) | A problem report users can download, with the personal parts taken out | Accepted 2026-10-07: one zip, personal parts tokenised on the device, read before sending. Sending revised by 0138 |
-| [0126](0126-hardware-reports-from-users.md) | Hardware reports from users | Accepted 2026-10-07: a guided check to a pre-filled GitHub issue; a Reported state, merged by reviewed commit |
+| [0126](0126-hardware-reports-from-users.md) | Hardware reports from users | Accepted 2026-10-07: a guided check to a pre-filled GitHub issue; a Reported state, merged by reviewed commit. **Amended 2026-10-18**: lists show Tested (here or reported working) or nothing, a problem as a line |
 | [0127](0127-one-volume-row.md) | One Volume row: Hardware, Software or Fixed | Accepted 2026-10-07: default Hardware, Software where there is no control; a migration carries old choices |
 | [0128](0128-setup-installs-plugins-and-settles.md) | First setup installs the plugins and waits until the player has settled | Accepted 2026-10-07: a Plugins step before Review; an unskippable settling screen |
 | [0129](0129-a-service-says-whether-it-is-connected.md) | A service says whether it is connected | Accepted 2026-10-08: read from the unit user's connections, not its log; `"connection": true`; Beszel first |
 | [0130](0130-the-spectrum-covers-what-is-heard.md) | The spectrum covers what is heard: 50 Hz to 16 kHz at every rate | Accepted 2026-10-08: log-spaced bands, rate-sized FFT; amended 2026-10-13: a band's level is its energy, no lift |
-| [0131](0131-setup-can-restore-a-backup.md) | Setup can restore a backup | Accepted 2026-10-08 (amended 2026-10-08): after Network, New player or Restore; every answer changeable |
+| [0131](0131-setup-can-restore-a-backup.md) | Setup can restore a backup | Accepted 2026-10-08 (amended 2026-10-08; 2026-10-18: the review by section): after Network, New player or Restore; every answer changeable |
 | [0132](0132-reset-to-factory-settings.md) | Reset to factory settings | Accepted 2026-10-09: in System; wiped at next boot to a fresh card, backups and music included |
 | [0133](0133-the-waiting-screen-and-the-players-own-wallpapers.md) | The waiting screen, and the player's own wallpapers | Accepted 2026-10-10 (amended 2026-10-11): built-in Gexis wallpapers; with LMS off, a waiting screen of clock and source tiles |
 | [0134](0134-the-panel-says-when-the-player-has-no-network.md) | A network lost after boot opens the setup network | Accepted 2026-10-11: after two minutes without a network; the strip withdrawn |
@@ -169,7 +169,8 @@ been written properly. **0098 has no record either.**
 | [0146](0146-the-meters-follow-the-volume-again-with-a-gain.md) | The meters follow the volume visibly, with a gain of their own | Accepted 2026-10-13: bars the whole cut, needles half, Fixed unchanged; published at every start; a Gain row −10..+20 dB; the needles' share a row (Half the drop / Like a real amplifier) |
 | [0147](0147-a-tv-as-the-screen.md) | A TV as the screen, by choosing its port | Accepted 2026-10-13: the Screen port choice wins; 1080p at most; Keep from the phone; the panel's touch off. Amended 2026-10-14 (Finding 125): a listed panel shows its own Keep, and the phone answers too unless its touch is fingerprinted |
 | [0148](0148-text-size.md) | Text size | Accepted 2026-10-14: 90-130 % on the player's screen; Home's tiles grow; a zoom set aside |
-| [0149](0149-first-use-in-two-parts.md) | First use in two parts: set up, then make it yours | **Proposed** 2026-10-15: part 1 only what the player needs; part 2 on the phone, question-led, ending in the downloads |
+| [0149](0149-first-use-in-two-parts.md) | First use in two parts: set up, then make it yours | Accepted 2026-10-18: built on `ph-first-use` from Claude Design's hand-off; Claude's decisions recorded in it |
+| [0150](0150-a-library-category.md) | A Library category | Accepted 2026-10-18: Lyrion Server's rows under Library; plugins may declare `area: library`; app links |
 
 ## Cross-cutting rules
 

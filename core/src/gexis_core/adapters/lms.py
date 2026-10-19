@@ -889,8 +889,24 @@ class LmsAdapter(Adapter):
             # race ADR-0027 exists to win. The old base-slot model dodged
             # this by assuming LMS was current at all times; with the base
             # slot gone the startup state has to be read, not assumed.
+            empty = _as_int(result.get("playlist_tracks")) == 0 and result.get("mode") != "play"
             if last_power and self._power_off_owed:
                 await self._pay_power_off(session)
+            elif last_power and empty:
+                # **On with nothing to play is not taken** (George,
+                # 2026-10-18: "Lyrion client shouldn't just take over by
+                # itself"). A player that first meets a new Lyrion server -
+                # the player's own, installed by part 2 - comes up on with
+                # an empty playlist, and the panel opened an empty Now
+                # Playing. It is switched off in Lyrion instead, as nobody
+                # chose it; a power-on or a play from then is the listener's.
+                logger.info("lms: player on at startup with nothing to play - switched off, not taken")
+                try:
+                    await self._rpc(session, self._player_id, ["power", "0"])
+                except Exception as exc:  # noqa: BLE001 - not taking it is what matters
+                    logger.info("lms: could not switch the idle player off (%s)", exc)
+                last_power = 0
+                on_release()
             elif last_power:
                 logger.info("lms: player already powered on at startup (acquisition)")
                 on_acquire()

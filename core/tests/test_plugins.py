@@ -352,9 +352,10 @@ def test_a_plugin_with_a_page_of_its_own_names_its_port():
     assert plugins.parse({**shipped, "port": 70000}).port is None
 
 
-def test_the_lyrion_server_heads_sources_with_the_client_beneath():
-    """George, 2026-10-03: "move Lyrion Server to the top, with the current
-    LMS renamed Lyrion Client right underneath"."""
+def test_the_lyrion_server_is_in_the_library_and_listed_there_on_the_plugins_page():
+    """ADR-0150 (George, 2026-10-18): a Library category; the Lyrion server's
+    rows there, and on the Plugins page under *Library*, as Beszel is under
+    System. Sources begins with the Lyrion Client (George, 2026-10-03)."""
     import json
     from pathlib import Path
 
@@ -365,8 +366,15 @@ def test_the_lyrion_server_heads_sources_with_the_client_beneath():
     server = plugins.parse(shipped, built_in=True)
     groups = Settings.with_plugins(load_registry(), [server])
     sources = next(g for g in groups if g["id"] == "sources")
-    headings = [r["label"] for r in sources["rows"] if r["type"] == "group"]
-    assert headings[:2] == ["Lyrion Server", "Lyrion Client"]
+    assert [r["label"] for r in sources["rows"] if r["type"] == "group"][0] == "Lyrion Client"
+    library = next(g for g in groups if g["id"] == "library")
+    keys = [r.get("key") for r in library["rows"] if r["type"] != "group"]
+    assert keys[:3] == ["lyrion-server.library", "lyrion-server.more", "lyrion-server.music_folder"]
+    more = next(r for r in library["rows"] if r.get("key") == "lyrion-server.more")
+    assert [l["label"].split(" ·")[0] for l in more["links"]] == ["Squeezer", "Lyrion", "LyrPlay"]
+    page = next(g for g in groups if g["id"] == "plugins")
+    labels = [r.get("label") for r in page["rows"]]
+    assert "Library" in labels and labels[labels.index("Library") + 1] == "Lyrion Server"
 
 
 def test_only_a_service_can_ask_for_its_connection_shown():

@@ -47,7 +47,7 @@ one layer down.
 
 ## After
 
-Synthetic Bluetooth track, *Sting / 57th & 9th (Deluxe Edition) / Petrol Head*:
+Synthetic Bluetooth track, *Artist C / Album C (Deluxe Edition) / Track F*:
 
 ```
 +10s  artwork: http://coverartarchive.org/release/116c4bbb-…/31140729592-500.jpg

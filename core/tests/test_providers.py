@@ -295,7 +295,7 @@ async def test_a_track_with_no_album_id_asks_the_library_nothing():
 # --- lyrics ----------------------------------------------------------------
 
 
-GET_HIT = {"trackName": "All Out", "artistName": "2Pac", "instrumental": False,
+GET_HIT = {"trackName": "Track C", "artistName": "Artist B", "instrumental": False,
            "plainLyrics": "Line one\nLine two",
            "syncedLyrics": "[00:12.00] Line one\n[00:18.50] Line two"}
 
@@ -323,11 +323,11 @@ async def test_without_a_duration_only_an_exact_match_is_used():
     from gexis_core.enrichment import TrackKey
     from gexis_core.providers import LrclibLyrics
 
-    no_duration = TrackKey.of(TrackMetadata(title="All Out", artist="2Pac"))
+    no_duration = TrackKey.of(TrackMetadata(title="Track C", artist="Artist B"))
     http = FakeHttp({"lrclib.net/api/search": [
-        {"trackName": "All Out (Live)", "artistName": "2Pac", "plainLyrics": "wrong"},
-        {"trackName": "All Out", "artistName": "Somebody Else", "plainLyrics": "wrong"},
-        {"trackName": "All Out", "artistName": "2Pac", "plainLyrics": "right",
+        {"trackName": "Track C (Live)", "artistName": "Artist B", "plainLyrics": "wrong"},
+        {"trackName": "Track C", "artistName": "Somebody Else", "plainLyrics": "wrong"},
+        {"trackName": "Track C", "artistName": "Artist B", "plainLyrics": "right",
          "syncedLyrics": "[00:10.00] right"},
     ]})
 
@@ -342,9 +342,9 @@ async def test_no_exact_match_shows_nothing_rather_than_the_first_hit():
     from gexis_core.enrichment import TrackKey
     from gexis_core.providers import LrclibLyrics
 
-    no_duration = TrackKey.of(TrackMetadata(title="All Out", artist="2Pac"))
+    no_duration = TrackKey.of(TrackMetadata(title="Track C", artist="Artist B"))
     http = FakeHttp({"lrclib.net/api/search": [
-        {"trackName": "All Out (Live)", "artistName": "2Pac", "plainLyrics": "wrong"},
+        {"trackName": "Track C (Live)", "artistName": "Artist B", "plainLyrics": "wrong"},
     ]})
 
     assert (await LrclibLyrics(http).fetch(no_duration)).outcome is Outcome.MISSING
@@ -355,10 +355,10 @@ async def test_a_synced_hit_wins_over_an_earlier_plain_one():
     from gexis_core.enrichment import TrackKey
     from gexis_core.providers import LrclibLyrics
 
-    no_duration = TrackKey.of(TrackMetadata(title="All Out", artist="2Pac"))
+    no_duration = TrackKey.of(TrackMetadata(title="Track C", artist="Artist B"))
     http = FakeHttp({"lrclib.net/api/search": [
-        {"trackName": "All Out", "artistName": "2Pac", "plainLyrics": "plain only"},
-        {"trackName": "All Out", "artistName": "2Pac", "plainLyrics": "both",
+        {"trackName": "Track C", "artistName": "Artist B", "plainLyrics": "plain only"},
+        {"trackName": "Track C", "artistName": "Artist B", "plainLyrics": "both",
          "syncedLyrics": "[00:01.00] both"},
     ]})
 
@@ -1141,21 +1141,21 @@ class SearchingHttp:
 
 
 def _key(album):
-    return TrackKey.of(TrackMetadata(title="Song", artist="Sting", album=album))
+    return TrackKey.of(TrackMetadata(title="Song", artist="Artist C", album=album))
 
 
 @pytest.mark.asyncio
 async def test_the_query_carries_the_titles_own_characters():
     """**The bug that was costing the most** (measured against MusicBrainz,
     2026-09-25). The album went into a quoted phrase *folded*, and the index
-    holds the real title: `releasegroup:"57th & 9th"` scores 100 and
-    `releasegroup:"57th 9th"` returns nothing at all. 31.2% of George's thousands of albums carry a character folding removes."""
-    http = SearchingHttp({"57th & 9th": [{"id": "rg", "title": "57th & 9th", "score": 100}]})
+    holds the real title: `releasegroup:"<a title with &>"` scores 100 and
+    the same title folded returns nothing at all (measured). 31.2% of George's thousands of albums carry a character folding removes."""
+    http = SearchingHttp({"4th & Main": [{"id": "rg", "title": "4th & Main", "score": 100}]})
 
-    answer = await CoverArtProvider(http).fetch(_key("57th & 9th"))
+    answer = await CoverArtProvider(http).fetch(_key("4th & Main"))
 
     assert answer.outcome is Outcome.FOUND
-    assert http.albums == ["57th & 9th"]
+    assert http.albums == ["4th & Main"]
 
 
 @pytest.mark.asyncio
@@ -1186,15 +1186,15 @@ async def test_the_title_as_it_is_is_asked_first_and_nothing_else_is():
 async def test_a_tagged_edition_is_found_by_the_trimmed_title():
     """George, 2026-09-25: *"the album name contains modifiers that could be
     excluded."* LMS shows what the tagger wrote; MusicBrainz calls it
-    `57th & 9th`. The trim keeps the ampersand, which is the whole point."""
-    http = SearchingHttp({"57th & 9th": [{"id": "rg", "title": "57th & 9th", "score": 88}]})
+    `4th & Main`. The trim keeps the ampersand, which is the whole point."""
+    http = SearchingHttp({"4th & Main": [{"id": "rg", "title": "4th & Main", "score": 88}]})
 
-    answer = await CoverArtProvider(http).fetch(_key("57th & 9th (Deluxe Edition)"))
+    answer = await CoverArtProvider(http).fetch(_key("4th & Main (Deluxe Edition)"))
 
     assert answer.outcome is Outcome.FOUND
     assert answer.enrichment.album_art == "http://caa/front-500.jpg"
     # Exactly once each, in that order.
-    assert http.albums == ["57th & 9th (Deluxe Edition)", "57th & 9th"]
+    assert http.albums == ["4th & Main (Deluxe Edition)", "4th & Main"]
 
 
 @pytest.mark.asyncio
@@ -1203,9 +1203,9 @@ async def test_the_trimmed_answer_is_checked_against_the_title_we_asked_about():
     match on a release group whose title merely contains the words. A wrong
     cover on a screen nobody can correct is worse than the pending glyph
     (ADR-0012)."""
-    http = SearchingHttp({"MTV Unplugged": [{"id": "rg", "title": "MTV Unplugged in New York", "score": 100}]})
+    http = SearchingHttp({"Album 4": [{"id": "rg", "title": "Album 4 in Concert", "score": 100}]})
 
-    answer = await CoverArtProvider(http).fetch(_key("[1997] MTV Unplugged [EP]"))
+    answer = await CoverArtProvider(http).fetch(_key("[1997] Album 4 [EP]"))
 
     assert answer.outcome is Outcome.MISSING
     assert answer.confidence == 100  # scored well, and still refused

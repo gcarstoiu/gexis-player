@@ -64,7 +64,7 @@ PUBLISH_EVERY_S = 3.0
 #:
 #: **No logos.** `musiclogo`, `hdmusiclogo` and `musicbanner` are wide
 #: wordmarks, and a square centre-crop cuts them to unreadable fragments -
-#: `TRIN` for 4 Strings, `BOU` for La Bouche. Fitted whole they read
+#: four or five letters of a band's name. Fitted whole they read
 #: perfectly and sit small and letterboxed among full-bleed faces, which is
 #: a different grid. George, 2026-09-24: *"only with the backgrounds, no
 #: logos."* Measured: of 25 artists with no portrait, ~12% have a

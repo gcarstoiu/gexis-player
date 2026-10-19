@@ -390,7 +390,7 @@ def test_a_found_server_is_named_by_its_host_then_its_own_name_then_its_address(
     """George, 2026-10-16: host names rather than addresses. Lyrion's default
     library name tells servers apart no better than nothing."""
     base = {"address": "1.2.3.4:9000", "version": "9.1.1", "uuid": ""}
-    assert discovery.label({**base, "name": "Lyrion Music Server", "host": "Nuc"}) == "Nuc"
+    assert discovery.label({**base, "name": "Lyrion Music Server", "host": "Minibox"}) == "Minibox"
     assert discovery.label({**base, "name": "Kitchen library", "host": ""}) == "Kitchen library"
     assert discovery.label({**base, "name": "Lyrion Music Server (Docker)", "host": ""}) == "1.2.3.4:9000"
     assert discovery.label({**base, "name": ""}) == "1.2.3.4:9000"
@@ -399,11 +399,11 @@ def test_a_found_server_is_named_by_its_host_then_its_own_name_then_its_address(
 @pytest.mark.asyncio
 async def test_a_host_name_comes_from_mdns_and_its_absence_is_no_error(tmp_path, monkeypatch):
     tool = tmp_path / "avahi-resolve"
-    tool.write_text('#!/bin/sh\n[ "$2" = 10.0.0.1 ] && printf "10.0.0.1\\tNuc.local\\n"\n'
+    tool.write_text('#!/bin/sh\n[ "$2" = 10.0.0.1 ] && printf "10.0.0.1\\tMinibox.local\\n"\n'
                     '[ "$2" = 10.0.0.2 ] && sleep 5\nexit 0\n')
     tool.chmod(0o755)
     monkeypatch.setenv("PATH", f"{tmp_path}:{os.environ['PATH']}")
-    assert await discovery.host_name("10.0.0.1") == "Nuc"
+    assert await discovery.host_name("10.0.0.1") == "Minibox"
     assert await discovery.host_name("10.0.0.3") == ""
     # A machine that never answers costs the timeout, not the sheet.
     assert await discovery.host_name("10.0.0.2", timeout_s=0.2) == ""
@@ -426,9 +426,18 @@ async def test_joining_and_forgetting_go_through_the_item_route(tmp_path, monkey
     monkeypatch.setattr(wifi, "available", lambda: True)
     monkeypatch.setattr(wifi, "join", join)
     monkeypatch.setattr(wifi, "forget", forget)
+    # The cable is the test's, never the machine's: GitHub's runners have
+    # one plugged in, and the answer then carries the cable's notice.
+    from gexis_core import wired
+    cable = {"in": False}
+    monkeypatch.setattr(wired, "has_port", lambda *a, **k: True)
+    monkeypatch.setattr(wired, "link", lambda *a, **k: (cable["in"], None))
     async with client_for(tmp_path) as client:
         ok = await client.post("/settings/wifi/items", json={"name": "Studio", "password": "p"})
         assert await ok.json() == {"ok": True, "error": None}
+        cable["in"] = True
+        ok = await client.post("/settings/wifi/items", json={"name": "Studio", "password": "p"})
+        assert await ok.json() == {"ok": True, "error": None, "notice": wired.CABLE_IN_USE}
         # A refusal is a 200 with a reason: the sheet shows it and offers to
         # try again, which a 4xx would turn into "something went wrong".
         bad = await client.post(
@@ -444,7 +453,7 @@ async def test_joining_and_forgetting_go_through_the_item_route(tmp_path, monkey
         assert (
             await client.post("/settings/lms_server/items", json={"name": "1.2.3.4:9000"})
         ).status == 405
-    assert calls == [("join", "Studio", "p"), ("forget", "Studio")]
+    assert calls == [("join", "Studio", "p"), ("join", "Studio", "p"), ("forget", "Studio")]
 
 
 @pytest.mark.asyncio
@@ -529,14 +538,14 @@ async def test_the_lyrion_shares_row_names_its_shares_and_never_sends_their_logi
     settings = Settings(store, registry=registry, wired={"lyrion-server.shares": None})
     shares = lyrion_shares.Shares(store, root=tmp_path / "mnt", credentials=tmp_path / "cred",
                                   is_mount=lambda p: False)
-    shares.add("//Tower.local/Music", "me", "s3cret")
+    shares.add("//Mediabox.local/Music", "me", "s3cret")
     server = StateServer(StateStore({}), settings=settings, lyrion_shares=shares)
     async with TestClient(TestServer(server.make_app())) as client:
         response = await client.get("/settings")
         text = await response.text()
         row = _row(await response.json(), "lyrion-server.shares")
     assert row["value"] is None
-    assert [(i["name"], i["address"]) for i in row["items"]] == [("Music", "//Tower.local/Music")]
+    assert [(i["name"], i["address"]) for i in row["items"]] == [("Music", "//Mediabox.local/Music")]
     assert "s3cret" not in text
 
 
@@ -567,7 +576,39 @@ async def test_a_share_s_mount_is_checked_off_the_event_loop(tmp_path, monkeypat
     server = StateServer(StateStore({}), settings=settings, lyrion_shares=shares)
     async with TestClient(TestServer(server.make_app())) as client:
         row = _row(await (await client.get("/settings")).json(), "lyrion-server.shares")
-        items = (await (await client.get("/settings/lyrion-server.shares/items")).json())["items"]
+        items = (await (await client.get("/settings/lyrion-server.shares/items?saved=1")).json())["items"]
     assert row["items"][0]["meta"] == "On nas · Mounted, read-only"
     assert items[0]["meta"] == "On nas · Mounted, read-only"
     assert len(checked_on) == 2 and threading.main_thread() not in checked_on
+
+
+@pytest.mark.asyncio
+async def test_the_lyrion_servers_are_known_before_anyone_asks():
+    """George, 2026-10-18: "the panel should already know if there is a
+    lyrion server on the network". One search at a time; a page is answered
+    from the last one; the searches go on, faster while none answers."""
+    calls, gate = [], asyncio.Event()
+
+    async def find():
+        calls.append(1)
+        await gate.wait()
+        return [{"address": "192.0.2.10:9000", "name": "", "version": "9.1", "uuid": "", "host": "nas"}][: max(0, len(calls) - 2)]
+
+    waits = []
+
+    async def sleep(s):
+        waits.append(s)
+        if len(waits) >= 2:
+            raise asyncio.CancelledError
+
+    known = discovery.Known(find=find, sleep=sleep)
+    first = asyncio.ensure_future(known.current())
+    second = asyncio.ensure_future(known.current())
+    await asyncio.sleep(0)
+    gate.set()
+    assert await first == [] and await second == [] and calls == [1], "both waited for the one search"
+    assert await known.current() == [] and calls == [1], "answered from what it knows"
+    with pytest.raises(asyncio.CancelledError):
+        await known.run()
+    assert waits == [discovery.EMPTY_EVERY_S, discovery.EVERY_S], "sooner while none answers"
+    assert (await known.current())[0]["host"] == "nas"

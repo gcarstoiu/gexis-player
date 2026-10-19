@@ -69,7 +69,7 @@ builds the UI first (`npm ci && npm run build`) and then all packages.
 | `gexis-core` | the core in its own venv at `/opt/gexis-core/venv`, its units, built-in plugin manifests, **the updater** (`/usr/lib/gexis/gexis-update`) and its four units (`gexis-update-check.service`, `gexis-update-check.timer`, `gexis-update-checknow.service`, `gexis-update-install.service`), the release key |
 | `gexis-ui` | the built Svelte pages |
 | `gexis-wallpapers` | the player's own pictures (`wallpapers/` in the repository) at `/usr/share/gexis/wallpapers/<set>/`, with `credits.json` - every picture's author, licence and source, which the screens draw from (ADR-0133). The build refuses a picture without a credit |
-| `gexis-system` | our units, ALSA files, kiosk, splash, Samba/Avahi files, the Peppy driver - built from `image/stage-gexis/*/files` |
+| `gexis-system` | our units, ALSA files, kiosk, splash, Samba/Avahi files, the Peppy driver - built from `image/stage-gexis/*/files`. Files the player rewrites are placed once. PeppyMeter's config comes with each version, but its preinst keeps the device's copy and postinst puts back the five keys the core writes (the pack, the screen size, the needle's smoothing), so an upgrade never resets the visualiser (ADR-0107 amended 2026-10-18) |
 | `gexis-peppyalsa`, `gexis-peppy-engines` | the meter tap library; PeppyMeter/PeppySpectrum |
 | `gexis-go-librespot`, `gexis-beszel-agent` | upstream binaries, as built upstream (ADR-0093) |
 | `gexis-squeezelite` | Lyrion's player: the commit Debian trixie packages, built with Debian's options and our patch that folds multichannel files down to stereo (ADR-0145); `Provides`/`Conflicts`/`Replaces: squeezelite`, Debian's package, which a device updated from an earlier release has removed |
@@ -151,21 +151,28 @@ list. `packaging/release/build.sh <image.img>` refuses to run if the image's
 1. **Notes** into `core/src/gexis_core/release_notes.json` (New / Fixed / Good
    to know, impersonal, no restart promises), approved by George; then
    `python -m gexis_core.changelog ../CHANGELOG.md` from `core/`. Commit
-   "Release notes: X (approved by George)" on `phase-13d` and tag `vX`.
+   "Release notes: X (approved by George)" on `next` (the release branch) and tag `vX`.
 2. **Image**: a worktree at the tag, `git submodule update --init`, `make
    image` (about 15 min); move the image to the main checkout's
    `image/deploy/`; `image/verify-image.sh <that image>` **run from the
    release worktree** must pass every check - it compares the image with the
-   sources beside the script, and the main checkout (`phase-13b`) does not
+   sources beside the script, and the main checkout (`docs`) does not
    carry the release's code (0.11.0: five false failures from there).
 3. **Release**: `packaging/release/build.sh <image>`, then
    `packaging/release/publish.sh rX --channel testing`; read the channel file
    back from GitHub and verify it with the release key (serial, release).
 4. **PR**: push the tag and a `release-X` branch at the tagged commit; open
    one PR into `main` with the approved notes and what was checked. **George
-   merges it**, never Claude.
-5. **After the merge**: merge `origin/main` into both working branches,
-   delete `release-X`, remove the release worktree, then the routine clean-up
+   merges it**, never Claude. `main`'s ruleset (2026-10-18) takes changes only
+   through a pull request, never a force-push, and only once both checks of
+   `.github/workflows/tests.yml` pass: *Core tests* (Python 3.13, the
+   player's) and *UI build*. They run on every push to any branch, so a
+   release branch shows its result before the PR is opened. GitHub deletes
+   the PR's branch when it is merged.
+5. **After the merge**: merge `origin/main` into `docs` and `next`, delete
+   `release-X` **on GitHub and locally** (`git push origin --delete
+   release-X`; seven release branches were left on GitHub until 2026-10-18),
+   remove the release worktree, then the routine clean-up
    (`docs/ROUTINE-CLEANUP.md`).
 6. **Promotion to Stable** (when George says): `publish.sh --promote rX`
    attaches `gexis-player.img.xz` with its checksum and signature, points

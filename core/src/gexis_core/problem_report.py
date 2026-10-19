@@ -432,7 +432,7 @@ def learn(scrubber: Scrubber, rows: Iterable[dict], get: Callable[[str], object]
         scrubber.know(address, "share")
         for part in re.split(r"[/:]+", address):
             scrubber.know(part, "share")
-            for word in re.split(r"[.\-_ ]+", part):     # "Tower.local" -> "Tower"
+            for word in re.split(r"[.\-_ ]+", part):     # "Mediabox.local" -> "Mediabox"
                 scrubber.know(word, "share")
         scrubber.know(share.get("user"), "user")
     try:

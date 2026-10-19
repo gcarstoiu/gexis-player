@@ -198,8 +198,8 @@ is planned.
 HDMI screens only. Tested on the hardware: a 10.1″ 1280 × 800 (the reference
 screen), a 13.3″ at 1920 × 1080, and the 1280 × 400 and 1480 × 320 bars.
 Others under *Change* on *Settings → Display → Attached screen* are listed but untested;
-those tested are marked *Tested*, those owners have reported working
-*Reported*. DSI and DPI screens are not supported. The screen can be on
+those tested, or reported working by owners, are marked *Tested*, and a
+problem an owner reported shows as a line under the model. DSI and DPI screens are not supported. The screen can be on
 either of the Pi's HDMI ports; a bar screen moved from one port to the other
 is set up again at the next start and asks *Keep this screen?*. With
 something connected to both ports (a screen on one, a sound bar on the
@@ -466,10 +466,16 @@ On first start with no network, the player opens its own Wi-Fi, called
 *gexis-setup*. The screen shows two QR codes: one to join that network, one
 to open the setup page. The phone then walks through Wi-Fi, then asks
 whether this is a new player or a backup to restore. A new player goes on to
-a name, the clock, the output, the music, the screen, the visualiser and the
-plugins to install (Plexamp, the Lyrion Server, Beszel); a backup asks only
+a name, the clock, the output and its volume type, and the screen. Then, from
+your home Wi-Fi, the same page asks how you listen (Lyrion, Plex or
+streaming), whether the phone's touchpad works the screen, what the screen
+shows while music plays, while it waits and at night, and installs what that
+needs; *Do it later* leaves Spotify and Bluetooth on and nothing else, as
+does leaving it until the player's next restart, and *Settings → Display → Personalise* asks it all
+again. A backup asks only
 for this player's output and screen and answers the rest, and the phone shows
-what it brings before the player restarts. Step by step, from flashing the
+what it restores - every setting, a line each, under its Settings section -
+before the player restarts. Step by step, from flashing the
 card: the [installation guide](INSTALL.md). Once the player is on your
 network it shows what it is downloading and installing, each with its
 progress (a skin pack's install says *Installing*: minutes, with nothing to
@@ -479,9 +485,15 @@ go on, Settings shows how far they are, and music may be slow to start until
 they finish. A download that does not finish brings the screen back, named,
 with *Settings → Plugins* as the place to try it again.
 
+**Why does my browser say the player's page is not secure?**
+The page is plain HTTP, not HTTPS, as the pages of most devices on a home
+network are: a certificate a browser trusts needs a public name, and the
+player has a name only on your network. Chrome and Firefox increasingly warn
+about every HTTP page; choose *Continue to site*. What you send stays on
+your home network, between your phone and the player.
+
 **What is the setup network's password, and why does the phone say it has no internet?**
-The password is shown on the screen; a player without a screen uses
-`gexis-setup`. The phone's warning about no internet is expected: stay
+It is `gexis-setup` on every player, and the screen shows it too. The phone's warning about no internet is expected: stay
 connected, as the setup page is served by the player itself.
 
 **My phone sees gexis-setup but cannot join it, or keeps dropping off it.**
@@ -501,10 +513,7 @@ The screen shows the channel and counts down to the next; keep the phone
 trying, and it finds the network again on the new channel by itself. It also
 helps to:
 - stand near the player while joining;
-- turn off mobile data on the phone;
-- forget a *gexis-setup* the phone saved from another player: each player
-  with a screen has its own password, and a phone may keep trying the old
-  one.
+- turn off mobile data on the phone.
 
 If it still will not join, plug a network cable into the player: setup then
 runs over your home network instead, at the address the screen shows.
@@ -532,18 +541,61 @@ server elsewhere on the network, or run one itself. Spotify, Bluetooth and
 Plexamp work without one.
 
 **How do I run the Lyrion server on the player itself?**
-Switch on *Lyrion Server* on the Plugins page; its rows are at the top of
-*Settings → Sources*. It needs internet the first time, as it is downloaded,
+Switch on *Lyrion Server* on the Plugins page (under *Library*); its rows
+are in *Settings → Library*. It needs internet the first time, as it is downloaded,
 and takes about 3 minutes to set up. Its own pages (Material Skin) are then
 at `http://gexis.local:9000`, with the player's name in place of *gexis*. The
 player never switches to it by itself: choose it in *Settings → Sources →
 Lyrion Client → Server*.
 
 **Where can the player's Lyrion server find music?**
-The player's own Music folder (shared on the network), USB disks, and
-network shares (SMB or NFS). Under *Network shares*, a scan lists the servers
-on the network by their names, once each, and then their shares, with a login where needed; a share
-that does not announce itself can be added with *Add by address*.
+Wherever you choose, and nowhere until you do: the player's own Music folder
+(shared on the network), folders on USB drives, and network shares (SMB or
+NFS). Each is a switch or a list under *Settings → Library → Lyrion Server*,
+and first use asks on *Where is your music?*, with nothing chosen
+beforehand. Under *Network shares*, a scan lists the servers on the network
+by their names, once each (under *Add share*), and then their shares - not
+the ones already added, which have a tile of their own - with a login where
+needed. Shares and their folders are ticked, as USB folders are: an SMB
+share opens into its folders, as deep as you like, so Lyrion can read just
+some of them; an NFS export is ticked whole. A share that does
+not announce itself can be added with *Add by address*, and one added by
+mistake is taken away with its *Forget*. The Music folder's row shows how
+much room is free on the player.
+
+**Can Lyrion read only some folders of a USB drive?**
+Yes. With *USB drives* on, open *USB folders*: each drive plugged in is
+listed. Tick a drive to add all of it, or open it and tick folders inside,
+at any depth and on several levels; the path above the list goes back up,
+and *Add* adds everything ticked at once. A folder inside one already
+ticked shows ticked too. A drive plugged in for the first time is not added by itself: it waits
+under *USB folders* as *Not added yet* until its folders are chosen.
+
+**Why does Lyrion rescan everything when I take a folder away?**
+That is how Lyrion answers a folder taken out of its list: it clears the
+library and scans every folder again, which for a large library takes
+hours. So switching off the Music folder or USB drives, removing a USB
+folder, narrowing a whole drive to some of its folders, or forgetting a
+share all start a full rescan; their notes say so. Adding a folder scans
+only that folder.
+
+**Why does the player's own Lyrion server take a few minutes before it reads my music?**
+After its download, Lyrion starts, fetches its add-ons (Material Skin among
+them) and restarts once to load them: about three minutes on a Pi 4 before
+it begins reading. Getting ready, and the *Library* row in *Settings →
+Library*, say which step it is on, then how far it has read.
+
+**Which apps control the player's Lyrion server?**
+*Settings → Library → More for your library* links to three, on a phone:
+Squeezer (Android, Google Play), Lyrion (Android, F-Droid) and LyrPlay
+(iPhone, App Store), and to the server's own page, where everything else
+about the library is set.
+
+**The panel says "Lyrion is reading your music" instead of showing my library.**
+That is a new player's first read: Lyrion shows a library only once it has
+read it all, so until then the panel keeps the waiting screen and says how
+far it is. Spotify, Bluetooth and the other sources play meanwhile. Later
+scans keep the library you have on screen while they run.
 
 **How long does the first scan take?**
 On a 4 GB Pi over Wi-Fi, a library of tens of thousands of files took a
@@ -557,14 +609,21 @@ setting Lyrion's own *Database Memory Config* to *Normal* (on Lyrion's
 Performance page) roughly doubles how many files fit. A player with 1 GB is
 not offered the server.
 
+**Copying music to the player's Music folder stopped working.**
+The card is probably nearly full. Below 4 GB free, the Music share takes no
+new files, so the player's own services - Lyrion's library, Spotify,
+Plexamp, the screen - never run out of room; the Music folder's row says so.
+It takes files again once more than 4.5 GB is free: delete something from
+the Music folder, or keep the music on a USB drive or a network share.
+
 **A USB disk or NAS was off for a while. Is the library lost?**
 No. A NAS that is off when the player starts no longer makes the server wipe
-its library, and an unplugged USB disk stays in the server's list for 7
-days.
+its library, and the folders of an unplugged USB drive stay in the server's
+list for 7 days.
 
 **What does Remove do for the Lyrion server?**
-It deletes the server's library, its settings, its add-ons and its network
-shares with their logins. The Music folder and its playlists stay. Switching
+It deletes the server's library, its settings (the USB folders chosen
+among them), its add-ons and its network shares with their logins. The Music folder and its playlists stay. Switching
 it on again downloads it and starts a new library.
 
 **How do I see Lyrion's own menus and apps on the screen?**
@@ -705,11 +764,11 @@ pictures, the paired devices and the player's configuration into the
 player's Backups share on the network. Copy the backup off the player before
 flashing: on a phone or computer, *Settings → System → Restore* has *Download*
 beside each backup, or copy it from the share. After flashing, setup offers *Restore a backup* right after the
-Wi-Fi: choose the file on the phone, choose the output and the screen this
+Wi-Fi: choose the file on the phone, choose the output (with its volume type) and the screen this
 player has, check what the backup brings, and the player restarts with
 everything back. Sources and plugins come back on or off as they were when the
-backup was made. Anything else setup asks (the name, for instance) can be
-changed in that review, so one player's backup can start another. With a new
+backup was made. The name can be changed in that review (*Check it over*),
+so one player's backup can start another. With a new
 name, the review offers *A second player*: on, the first player keeps its
 Beszel connection (the hub's address and keys too), Plexamp's claim, Spotify
 sign-in and Bluetooth pairings, so the two never share them. A backup from an older version works. A
@@ -775,8 +834,8 @@ offers the same two ways as the problem report: *On GitHub* opens the feedback
 there, and *Create* on GitHub sends it; *By e-mail* downloads it as a text file. The
 player keeps it: the *Hardware feedback* row then shows *Send again* and
 *Start over*, until the sound card or screen is changed, when it is
-forgotten. Once feedback is accepted, the next release marks that card or screen *Reported* in the player
-and in the project's hardware list.
+forgotten. Once feedback that it works is accepted, the next release marks that card or screen *Tested* in the player
+and in the project's hardware list; a reported problem shows as a line under it.
 
 **Something is wrong. How do I report it?**
 Open *Settings → System → Problem report* on a phone or computer on the same
@@ -820,12 +879,11 @@ last start. A power cut during an install or update is repaired by the
 player itself the next time it installs anything.
 
 **Which DACs work?**
-Each output in *Settings → Audio → Output* shows *Tested*, *Reported*,
-*Known* or *Detected*. The HiFiBerry DAC2 HD and the IQaudIO Pi-DAC PRO are
-tested; a board owners have reported working is *Reported* (*Reported with
-problems* if a report says otherwise); the other boards on the player's list
-are known but untested; a class-compliant USB DAC is detected by itself
-and shown by its maker, with a line under it saying what it reports it can
+In *Settings → Audio → Output*, *Tested* beside an output means it was
+played and measured on the project's hardware (the HiFiBerry DAC2 HD and the
+IQaudIO Pi-DAC PRO) or owners reported it working; a problem an owner
+reported shows as a line under it, and the rest carry no mark. A
+class-compliant USB DAC is found by itself and shown by its maker, with a line under it saying what it reports it can
 take - its USB generation, its highest rate and sample size, and native DSD
 (tried with an SMSL; most USB DACs have no volume
 control of their own, so their volume is Software or Fixed). A board that is not found by itself can be

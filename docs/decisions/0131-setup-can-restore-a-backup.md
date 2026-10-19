@@ -185,3 +185,20 @@ restore happens."* Two faults, both fixed:
   backup stores it on, as before; LMS, Spotify and Bluetooth, now out of the
   Plugins step, come back as the backup's own settings say.
 
+
+## Amended 2026-10-18: what a backup restores, a line each
+
+George, after restoring sofapi: *"Each item should be on its own line with a
+checkmark grouped by the section the setting is in. Just the filename stays
+in the tile."* The upload step's tile now holds the file's name and *Ready*
+only; a backup made by a newer release says so in a note under it. Below
+it, one ticked list per Settings section (Audio, Sources, Handoff, Display,
+Enrichment, Plugins, System), in Settings' order: every setting the backup
+stores, by its label and subgroup (*Idle screen · Background*), then what it
+carries besides settings in the section that owns it - paired Bluetooth
+devices, the Spotify sign-in, Plexamp's claim, Lyrion's settings and
+playlists under Sources; artist and album information under Enrichment;
+Beszel's and uploaded plugins' data under Plugins. A plugin switched on is
+listed under Plugins. Rows nobody sees are left out. The core sends it with
+the check (`sections`, `restore_review.py`); values are not shown, so a key
+or a token appears by its name only.

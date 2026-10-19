@@ -109,6 +109,21 @@ set -e
 [ "$1" = configure ] || exit 0
 DEF=/usr/share/gexis/defaults
 
+# PeppyMeter's config comes with each version, but five of its keys are the
+# device's: the core writes the pack and screen it draws (ADR-0111) and the
+# needle's smoothing. preinst kept them; they go back into the new file. A
+# visualiser upgraded without this drew nothing until the core's next skins
+# pass, up to five minutes later (sofapi, 2026-10-18).
+METER=/opt/gexis-peppy/peppymeter/config.txt
+KEPT=/var/lib/gexis/peppy-meter.kept
+if [ -f "$KEPT" ] && [ -f "$METER" ]; then
+	for key in base.folder meter.folder screen.width screen.height smooth.buffer.size; do
+		line=$(grep -m1 "^${key} = " "$KEPT") || continue
+		sed -i "s|^${key} = .*|${line}|" "$METER"
+	done
+fi
+rm -f "$KEPT"
+
 # Placed once: the player rewrites each of these.
 place() {  # default destination mode owner
 	[ -e "$2" ] && return 0
@@ -201,6 +216,18 @@ if command -v plymouth-set-default-theme >/dev/null; then
 fi
 POSTINST
 chmod 755 "$STAGE/DEBIAN/postinst"
+
+# Before the new files land: the device's PeppyMeter config, for postinst.
+cat > "$STAGE/DEBIAN/preinst" <<'PREINST'
+#!/bin/sh
+set -e
+METER=/opt/gexis-peppy/peppymeter/config.txt
+if [ -f "$METER" ]; then
+	install -d /var/lib/gexis
+	cp "$METER" /var/lib/gexis/peppy-meter.kept
+fi
+PREINST
+chmod 755 "$STAGE/DEBIAN/preinst"
 
 cat > "$STAGE/DEBIAN/control" <<CTL
 Package: gexis-system

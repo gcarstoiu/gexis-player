@@ -1,53 +1,107 @@
 # Handoff
 
-Last updated: 2026-10-17 (on R2D2).
+Last updated: 2026-10-18 (on R2D2).
 
 ## Start here
 
-Branches: **`phase-13b`** in the main checkout holds the documents and shared
-work; **`phase-13d`** in `~/projects/gexis-player-13d` is the release branch,
-and `phase-13b` is merged into it after each docs change. A release is built
-from a worktree made at its tag, then removed. History: `docs/HANDOFF-ARCHIVE.md`
+Branches (renamed 2026-10-18, George: Phase 13d was over and the names read
+as open phases): **`docs`** in the main checkout holds the documents and
+shared work (was `phase-13b`); **`next`** in `~/projects/gexis-player-next` is
+the release branch, what the next release is built from (was `phase-13d`),
+and `docs` is merged into it after each docs change. A phase's work has its
+own branch (`ph-first-use`) and is merged into `next` once George's tests
+pass. A release is built
+from a worktree made at its tag, then removed.
+
+**GitHub checks every push** (2026-10-18): `.github/workflows/tests.yml` runs
+*Core tests* (Python 3.13) and *UI build*; `main`'s ruleset requires both and
+a pull request; merged branches are deleted by GitHub; Dependabot alerts are
+on (security alerts only, no version-bump PRs). On GitHub the visualiser's
+tests run too (pygame's fonts work on 3.13): 2546 pass, against 2500 here.
+*Releases built on GitHub* is a Should on the Roadmap (signing stays local;
+a trial build first, for the disk).
+
+**The public roadmap is the GitHub wiki's *Roadmap* page** (2026-10-18; its own
+repository, `gexis-player.wiki.git`): Now, Next (the next two phases), Later,
+and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
+phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.0.5, on Stable** (2026-10-16; Stable serial 3, Testing
-serial 47; image `image/deploy/2026-10-16-gexis-player-v1.0.5.img`, 123
-checks, the public download byte for byte the checked image). It carries
-1.0.3 and 1.0.4 (Testing only). PR #73 merged by George; post-merge steps and
-the routine clean-up done. On `phase-13d` since the tag: the package cache
-fix (833790d7) - a partial `packaging/build.sh` had emptied the skin-pack
-cache, so 1.0.4's and 1.0.5's images took over an hour each.
+**Current release: 1.0.6, on Stable** (2026-10-17; Stable serial 4, Testing
+serial 48, signatures verified through the API and the public URL; image
+`image/deploy/2026-10-17-gexis-player-v1.0.6.img`, 123 checks, the public
+download byte for byte the checked image; built in 16 minutes, the skin
+packs reused): *Add a backup* in Settings → Restore (ADR-0083 amended
+2026-10-17), the backup fixes, the Settings header wrap. PR #74 merged by
+George; post-merge steps and the routine clean-up done.
+
+**Phase 14 (`ph-first-use`) is built, not merged** (worktree
+`~/projects/gexis-player-14`). First use - part 1 setup and part 2 *Make it
+yours* - is one page generated from Claude Design's
+`design/source/14-first-use` by `tools/design/gen_personalise.py`: change the
+design or the generator's asserted replacements, never the `.svelte` by
+hand. Decisions: ADR-0149 1-41; ADR-0115 20-26 (Lyrion's music locations,
+none preselected; USB and share folders ticked at any depth; *Forget* in
+part 2); ADR-0131 amended (the backup review by Settings section). sofapi
+runs core, UI and player `+git109`. Done on `next` and merged into it:
+*Tested* or nothing, the waiting screen's pulsing marks, the visualiser's
+window rule and PeppyMeter's keys kept across upgrades, the library's Calm
+background. Test fronts in the scratchpad: `p2proxy.py` (part 2 on 8197/8198
+against sofapi, writes held; `NOLYR`, `SETON`, `USBFAKE`, `SHAREUP`),
+`fakeshares.py` (a stand-in NAS on 8199), `p1mock.py` (part 1 on 8196;
+`REALBK`, `PLUGDIR`), `holddemo.py` with `pd/` (the demo library for
+manual pictures). **Not tried on a device:** a USB drive's folders, and a
+share added at a sub-folder mounting (sofapi's Lyrion server is off; to-do
+g56). The day's narrative: `docs/HANDOFF-ARCHIVE.md`, 2026-10-18.
+
+**The Music share's floor** (built 2026-10-18 on `ph-first-use`, `+git129`
+on sofapi; ADR-0115 decision 27, ADR-0022 [H]; George: "4 GB fixed in
+code"): below 4 GB free the share includes `read only = yes`
+(`/run/gexis/music-share.conf`), above 4.5 GB it opens. Tried on sofapi by
+closing it with `music_floor.apply`: a guest copy was refused, then went in
+once open; never with a card actually full. *Where is your music?* groups
+each source with its own actions (George, the same evening). Lyrion's
+first minutes are now said step by step (ADR-0115 decision 28,
+`lyrion_stage.py`): Getting ready and Settings → Sources → Lyrion Server
+(heading indicator, read-only *Library* row with a bar, kept after Ready);
+sofapi `+git139` reads *Ready, 760 songs on 47 albums*. **Seen 2026-10-18,
+not yet looked into:** sofapi's new Lyrion server lists ShelvesPi and
+GuestPi as its players. **Library category** (ADR-0150, `+git144` on sofapi): the Lyrion
+server's rows under Settings → Library, `area: library` on the Plugins page,
+*More for your library* links (Squeezer, Lyrion F-Droid, LyrPlay; not
+iPeng). **Finding 127:** Lyrion keeps its old library through a rescan, so a
+first scan leaves the home empty until it ends. **Option A built** (approved
+on a screenshot; ADR-0115 decision 29, `+git146` on sofapi): a first read
+of the library keeps the waiting screen with a large *Lyrion is reading
+your music* block (`lyrion_stage` `first`); not yet seen on a real first
+read - sofapi's library is read (`first: False`, no block). **George's full run, 2026-10-19 00:00
+(`+git155` on sofapi):** browsing at one fixed height; Lyrion as a numbered
+checklist in Getting ready; no empty Now Playing (`idleSource`); the
+download counts as the first read; the waiting marks centred, Lyrion left
+out during a first read; a Lyrion player on with an empty playlist at
+startup is switched off, not taken (ADR-0027 amended - checked on sofapi:
+the panel opens the library home, nothing current); Settings' shares on
+their own tile, *Add share*, and the search without added shares.
 
 **Release build output lives in `~/.local/share/gexis-release-out`**: in each
 release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
 (excluded in `.git/info/exclude`). `reuse.py` reuses a published file only
 against a local copy, so losing that folder means re-uploading every OS file.
 
-**On `phase-13d` since 1.0.5, previewed on sofapi and ShelvesPi
-(`1.0.5+git19`-`git22`), for the next release:** the package cache fix;
-backups (a download keeps its `.tgz` name and `.tgz.gz` is listed; synced to
-the card before it is named; an empty or damaged one listed for *Forget*
-only - ShelvesPi's 0-byte one from the power-cut test shows it; sizes under
-1 MB in KB); the Settings header wraps the address; **Add a backup** in
-*Settings → Restore* (ADR-0083 amended 2026-10-17: checked, added to the
-list, never restored by itself; tested on ShelvesPi with a copy of its own
-backup, answered "already there", and a junk file, refused - nothing
-added). After that release: blog article 05 mentions *Add a backup* and
-George re-pushes it.
-
 **The blog** (George's WordPress, tag `sound`): eleven articles in
-`~/projects/gexis-blog/`, pushed as drafts by George (2026-10-15);
+`~/projects/gexis-blog/`, pushed as drafts by George (2026-10-15; article 05
+now mentions *Add a backup*, bundle rebuilt 2026-10-17, for George to re-push);
 `schedule_wp.py` schedules nine, daily at 18:00 from 2026-10-16 - whether he
 ran it is not recorded. The theme (`gcarstoiu/gexis-wp-theme` 1.0.3, pushed)
 mirrors FAQ, Install, Hardware, Manual and Release notes from `main`.
 
-Suite 2,493 passed, 47 skipped (2026-10-16), with the venv in
+Suite 2,544 passed, 47 skipped (2026-10-18, on `ph-first-use`), with the venv in
 `~/.local/share/gexis-venv` (never under `/tmp`: LESSONS 74).
 
 **Devices.** sofapi (Waveshare 10.1", SMSL USB DAC; a test machine), the bar
 (ShelvesPi, 11.9"), guestpi (IQaudIO Pi-DAC PRO, 13.3"), bedroompi (a
 separate card; off the network on 2026-10-16 evening). sofapi and ShelvesPi
-run `phase-13d` previews equal in content to 1.0.5; guestpi and bedroompi are
+run previews from the release branch (equal in content to 1.0.5); guestpi and bedroompi are
 offered 1.0.5 on Stable. **Cards flashed now have no passwordless sudo:
 provision test cards with `DEV_SUDO="yes"`** (ADR-0139).
 
@@ -63,11 +117,9 @@ provision test cards with `DEV_SUDO="yes"`** (ADR-0139).
 stand-in bar only, headless); the headphone jack taking over from a
 switched-off HDMI device (ADR-0141 D5, fixed in 1.0.2).
 
-**Next: Phase 14, first use in two parts (`ph-first-use`, ADR-0149
-proposed)** - George settles its open points (the questions, answers and
-defaults), then Claude Design draws part 2 (10.1" panel, bars, phone) and the
-shorter part 1, then it is built. Still open from the release: Raspberry Pi
-Imager, the image file and *Use custom* (g14). **After it**, in order
+**Next: George's test of Phase 14 on sofapi** (above): part 2, then part 1
+after a factory reset, then a PR for `ph-first-use`. Still open from the release:
+Raspberry Pi Imager, the image file and *Use custom* (g14). **After it**, in order
 (`docs/DEVELOPMENT.md`, "Phases after the first public release"; refer to them
 by ID): **15** MPD for real 5.1/7.1 (`ph-mpd`), **16** room correction with a
 USB microphone (`ph-room-correction`), **17** the player in Home Assistant
@@ -80,7 +132,8 @@ in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-10-16, after 1.0.5's PR (#73)** (/home 216 -> 239 GB free).
+2026-10-18, weekly** (/home 242 GB free before and after; HANDOFF 2,590 ->
+1,737 words).
 
 ## Phases
 
@@ -127,7 +180,7 @@ The full list, with how each was found, is in the archive (2026-10-12 block).
   device back with `apt-get install --allow-downgrades`, dry run first.
 
 **Releasing**
-- **Run `verify-image.sh` from the release worktree**: from `phase-13b` it
+- **Run `verify-image.sh` from the release worktree**: from the main checkout it
   compares against code the release does not carry (0.11.0: five false fails).
 - **GitHub caches `channels/<name>` for minutes after a publish**: verify the
   new file with `gh release download channels`, not the public URL.

@@ -96,7 +96,7 @@ Four real tracks, `/api/get` with artist, track, album and duration:
 | track | synced | plain |
 |---|---|---|
 | Morcheeba — Almost Done | yes | yes |
-| 2Pac — All Out | yes | yes |
+| Artist B — Track C | yes | yes |
 | Jimi Hendrix — 51st Anniversary | yes | yes |
 | John Williams — A New Home (soundtrack) | no | no |
 

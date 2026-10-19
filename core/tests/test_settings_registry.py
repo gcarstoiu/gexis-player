@@ -176,6 +176,10 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         "meter_gain", "meter_follow",
         # ADR-0148 (George, 2026-10-14): the size of the screen's writing.
         "text_size",
+        # ADR-0149 (George, 2026-10-18, appended to ADR-0022's inventory on
+        # his confirmation): the library on the screen, and first use's
+        # part 2 asked again.
+        "lms_library", "personalise",
         # ADR-0055, 2026-09-23: the design has no output picker, because
         # the design did not know the device has four playback outputs and
         # that two of them cannot be turned down.
@@ -185,7 +189,7 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         # ADR-0133, 2026-10-10: the player's own wallpapers, which the design
         # predates - styles, time of day, seasons, holidays.
         "wallpaper_styles", "wallpaper_time_of_day", "wallpaper_seasons", "wallpaper_holidays",
-        "waiting_clock", "waiting_hint",
+        "waiting_clock",
         # Finding 118: the weather icons' animations hold half a core; the
         # owner chooses (George, 2026-10-11).
         "idle_icon_motion",
@@ -670,7 +674,9 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # information tile (ADR-0141 D2/D4, 2026-10-12). **120**: Gain
     # (ADR-0146, 2026-10-13). **121**: Needles follow the volume (ADR-0146
     # amended, the same day). **122**: Text size (ADR-0148, 2026-10-14).
-    assert len(rows) == 122
+    # **124**: Library on the screen and Personalise (ADR-0149, 2026-10-18).
+    # **123**: the waiting screen's hint line removed (George, 2026-10-18).
+    assert len(rows) == 123
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
@@ -690,7 +696,7 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # 82 with Report this hardware (ADR-0126).
     # **81**: Software volume merged into Volume (ADR-0127). **80**: Pexels
     # removed.
-    assert len(rows) - len(kept) == 105  # 105: Text size (ADR-0148); 104: Needles follow the volume (ADR-0146 amended); 103: Gain (ADR-0146); 102: Screen port and its one-port tile (ADR-0141); 100: display standby (ADR-0135); 97: the idle switch and the home background (ADR-0133, 2026-10-11); 88: Weather icon motion (Finding 118); 87: Version hidden, it repeated Release; 88: the waiting screen's two rows (ADR-0133); 86: the own wallpapers (ADR-0133); 82: the factory reset (ADR-0132); 81: Cable (ADR-0123)
+    assert len(rows) - len(kept) == 106  # 106: the waiting screen's hint removed (2026-10-18); 107: Library on the screen and Personalise (ADR-0149); 105: Text size (ADR-0148); 104: Needles follow the volume (ADR-0146 amended); 103: Gain (ADR-0146); 102: Screen port and its one-port tile (ADR-0141); 100: display standby (ADR-0135); 97: the idle switch and the home background (ADR-0133, 2026-10-11); 88: Weather icon motion (Finding 118); 87: Version hidden, it repeated Release; 88: the waiting screen's two rows (ADR-0133); 86: the own wallpapers (ADR-0133); 82: the factory reset (ADR-0132); 81: Cable (ADR-0123)
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():
@@ -1498,8 +1504,10 @@ def test_headless_hides_every_setting_that_needs_a_screen(store):
     all of Enrichment are hidden - by their headings' and group's conditions,
     on top of each row's own (`home_strip` keeps Lyrion Client's)."""
     settings = Settings(store, registry=load_registry(), wired={"headless": lambda v: None,
-                                                                "idle_enabled": None})
+                                                                "idle_enabled": None, "skin_corpus": None})
     settings.set("idle_enabled", True)
+    # Every tweak shows for All (each skin type's own are below).
+    settings.set("skin_corpus", "All")
     def shown():
         return {r["key"] for g in settings.to_json() for r in g["rows"]
                 if r.get("key") and r["visible"]}
@@ -1520,6 +1528,31 @@ def test_headless_hides_every_setting_that_needs_a_screen(store):
     assert not {"screen", "screen_port", "screen_port_info", "rotation"} & shown()
     enrich = next(g for g in settings.to_json() if g["id"] == "enrich")
     assert not any(r["visible"] for r in enrich["rows"] if r.get("key"))
+
+
+def test_the_visualiser_tweaks_follow_the_skin_type(store):
+    """George, 2026-10-18: "hide the ones that do not correspond to the skin
+    type". Measured on sofapi's 1280x800 pack: spectrum only in Spectrum and
+    VU meters + spectrum; needles or bars in every type but Spectrum; a
+    record in Turntables and most of Fanart, reels in Tapes."""
+    settings = Settings(store, registry=load_registry(), wired={"skin_corpus": None})
+    tweaks = {"spectrum_smoothing", "meter_fall", "meter_smoothing", "meter_follow", "meter_gain",
+              "skin_motion", "record_speed", "rotation_mode"}
+
+    def shown(corpus):
+        settings.set("skin_corpus", corpus)
+        return {r["key"] for g in settings.to_json() for r in g["rows"]
+                if r.get("key") in tweaks and r["visible"]}
+
+    both = {"meter_follow", "meter_gain"}
+    needles = {"meter_fall", "meter_smoothing"}
+    assert shown("VU meters") == both | needles
+    assert shown("Spectrum") == both | {"spectrum_smoothing"}
+    assert shown("VU meters + spectrum") == both | needles | {"spectrum_smoothing"}
+    assert shown("Turntables") == both | needles | {"skin_motion", "record_speed", "rotation_mode"}
+    assert shown("Tapes") == both | needles | {"skin_motion", "rotation_mode"}, "a tape's reels keep their own speed"
+    assert shown("Fanart") == both | needles | {"skin_motion", "record_speed", "rotation_mode"}
+    assert shown("All") == tweaks
 
 
 async def test_saving_the_device_name_from_settings_restarts_the_device(store):
@@ -1767,10 +1800,15 @@ def test_option_notes_from_the_hardware_go_over_the_registrys(store):
         {"key": "output_device", "label": "Output", "type": "choice", "optionsFrom": "output_device",
          "default": None, "optionNotes": {"HDMI 1": "kept"}}]}]
     settings = Settings(store, registry=registry,
-                        options={"output_device": lambda: ["HDMI 1", "SMSL USB DAC — Detected"]},
-                        option_notes={"output_device": lambda: {"SMSL USB DAC — Detected": "USB 2.0"}})
+                        options={"output_device": lambda: ["HDMI 1", "SMSL USB DAC"]},
+                        option_notes={"output_device": lambda: {"SMSL USB DAC": "USB 2.0"}},
+                        option_tags={"output_device": lambda: {"SMSL USB DAC": "Tested"}},
+                        option_problems={"output_device": lambda: {"SMSL USB DAC": "An owner reported a problem."}})
     [row] = settings.to_json()[0]["rows"]
-    assert row["optionNotes"] == {"HDMI 1": "kept", "SMSL USB DAC — Detected": "USB 2.0"}
+    assert row["optionNotes"] == {"HDMI 1": "kept", "SMSL USB DAC": "USB 2.0"}
+    # George, 2026-10-18: Tested beside it, a reported problem under it.
+    assert row["optionTags"] == {"SMSL USB DAC": "Tested"}
+    assert row["optionProblems"] == {"SMSL USB DAC": "An owner reported a problem."}
 
 
 def test_a_plugins_switch_carries_its_version_line():

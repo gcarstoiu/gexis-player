@@ -71,12 +71,13 @@ from gexis_core.peppy import (
     set_meter_skins,
     set_meter_smoothing,
 )
-from gexis_core import factory_reset, lyrion_addons, lyrion_folders, lyrion_memory
+from gexis_core import factory_reset, lyrion_addons, lyrion_folders, lyrion_memory, lyrion_stage, music_floor
 from gexis_core.lyrion_shares import Shares as LyrionShares
+from gexis_core.lyrion_usb import UsbFolders
 from gexis_core.fanart import Fanart
 from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, Queue, TrackMetadata
-from gexis_core import connections, hardware_report, settings_migrations, settling, updates, wired
+from gexis_core import connections, discovery, hardware_report, hardware_reports, personalise, settings_migrations, settling, updates, wired
 from gexis_core.standby import Schedule, Standby
 from gexis_core.settings import SettingsStore
 # ADR-0127's `output_mode` row and ADR-0124's remembered software level, kept
@@ -382,6 +383,10 @@ SETUP_KEEP_S = 120.0
 #: How often the Lyrion server's music folders are compared with what is
 #: mounted (ADR-0115): a USB disk plugged in appears within this.
 LYRION_FOLDERS_S = 20.0
+#: ADR-0115 decision 28: how often the loop looks while Lyrion gets ready.
+LYRION_STAGE_S = 5.0
+#: ADR-0115 decision 27: how often the Music share's floor is checked.
+MUSIC_FLOOR_S = 60.0
 #: ADR-0115: Lyrion's add-ons - restarted after this, to load what it
 #: downloaded; asked again after this, if they are still missing.
 LYRION_ADDONS_RESTART_S = 90.0
@@ -412,6 +417,9 @@ def _lyrion_note(on: bool) -> str | None:
         return small
     if not on:
         return None
+    stage = lyrion_stage.CURRENT
+    if stage.get("phase") in ("starting", "addons", "waiting", "scanning"):
+        return lyrion_memory.stopped_note() or f"{stage['label']}: {stage['line']}"
     return lyrion_memory.stopped_note() or _lyrion_setup_note()
 
 
@@ -437,7 +445,7 @@ def screen_question(state: dict, now: float | None = None) -> dict | None:
                          == (current.get("connector") or screen_apply.CONNECTOR))
     return {
         "model": f"{model.maker} {model.model}" if model else current["screen"],
-        "untested": bool(model and not model.tested),
+        "untested": bool(model and not hardware_reports.shown_tested(model.tested, hardware_reports.screen(model.label))),
         "previous": (f"{before.maker} {before.model}" if before else None),
         "rotation_only": rotation_only,
         # Who may answer (Finding 125, 2026-10-14). `panel_buttons`: the
@@ -1173,6 +1181,16 @@ async def main() -> None:
         else:
             settings.restrict("output_mode", {})
 
+    def _restrict_for_chosen_output() -> None:
+        """**The Volume row's limits follow the output at once**, before the
+        switch itself runs: setup writes the volume type straight after the
+        output (George, 2026-10-18), and it must be judged against the
+        output chosen, not the one before it."""
+        try:
+            _restrict_output_mode(outputs.in_force(settings.value("output_device"))[0])
+        except Exception as exc:  # noqa: BLE001 - the switch restricts it again
+            logger.warning("output: volume limits not updated yet: %s", exc)
+
     async def _switch_output() -> None:
         """Put the chosen output into `output.conf` and reopen everything.
 
@@ -1817,6 +1835,10 @@ async def main() -> None:
         """
         plugin_id, _, own = key.partition(".")
         plugin = next((p for p in installed_plugins if p.id == plugin_id), None)
+        if plugin_id == "lyrion-server":
+            # ADR-0115 decision 20: a location switched on or off reaches
+            # Lyrion's list now, not at the loop's next pass.
+            lyrion_wake.set()
         if plugin is not None and _plugin_env(plugin):
             # Environment is read once at exec, so a changed value means a
             # restart - of a unit that is *enabled*, whatever state its process
@@ -1915,6 +1937,10 @@ async def main() -> None:
     def _all_components() -> dict:
         status = components.all_status()
         status["skins"] = skins_status()
+        # ADR-0115 decision 28: after its download, what Lyrion is doing.
+        stage = dict(lyrion_stage.CURRENT)
+        if stage and status.get("lyrion", {}).get("state") == "installed":
+            status["lyrion"] = {**status["lyrion"], "after": stage}
         return status
 
     def _publish_components() -> None:
@@ -1979,6 +2005,8 @@ async def main() -> None:
         # of the list here, on the store's own thread; unmounted, with their
         # logins, in the worker below.
         forgotten = lyrion_shares.forget_all() if plugin.id == "lyrion-server" else []
+        if plugin.id == "lyrion-server":
+            lyrion_usb.forget_all()
 
         def go() -> None:
             subprocess.run(["systemctl", "stop", plugin.unit, fetch], check=False, capture_output=True)
@@ -2086,7 +2114,7 @@ async def main() -> None:
     # network yet, during setup) is tried again every few minutes.
     SKINS_RETRY_S = 300.0
     UPDATER = "/usr/lib/gexis/gexis-update"
-    skins_state = {"busy": False, "task": None, "waited": False}
+    skins_state = {"busy": False, "task": None, "waited": False, "starting": False}
     #: The setup network, once it exists (it is made further down): while
     #: the player still needs setup, the pack waits (below).
     setup_ref: dict = {"net": None}
@@ -2097,7 +2125,15 @@ async def main() -> None:
         state_store.set_meters(bool(meters_chain["ok"]) and bool(skin_packs.installed()))
 
     def skins_status() -> dict:
-        return skin_packs.status()
+        """The pack's line - and **preparing from the moment its install is
+        asked for** (George, 2026-10-18: "if something is happening for long
+        in the background then what is being done should be transparent"):
+        until the updater reports its download, the status file says nothing
+        is happening."""
+        status = skin_packs.status()
+        if skins_state["starting"] and status.get("state") not in ("downloading", "installing", "failed"):
+            return {**status, "state": "preparing"}
+        return status
 
     async def _run_updater(*args: str) -> int:
         proc = await asyncio.create_subprocess_exec(UPDATER, *args)
@@ -2126,8 +2162,13 @@ async def main() -> None:
                 want, extra = skin_packs.plan(skin_packs.screen_size(), have)
                 if want is not None:
                     logger.info("skins: installing %s", skin_packs.package(want))
-                    if await _run_updater("pack-install", skin_packs.package(want)) != 0:
-                        return
+                    skins_state["starting"] = True
+                    _publish_components()
+                    try:
+                        if await _run_updater("pack-install", skin_packs.package(want)) != 0:
+                            return
+                    finally:
+                        skins_state["starting"] = False
                     have = await asyncio.to_thread(skin_packs.installed)
                     # Onto the new pack before the old one goes from under it.
                     await _configure_visualiser(installed=True)
@@ -2368,6 +2409,23 @@ async def main() -> None:
     cable = wired.Cable(on_change=lambda _pending: state_store.bump_settings_revision())
     # ADR-0123 decision 2: the connected Wi-Fi network's address, the same way.
     wifi_address = wired.Cable(device="wlan0", on_change=lambda _pending: state_store.bump_settings_revision())
+    # **ADR-0149: first use's part 2**, owed by a new player once part 1
+    # has finished, or again from Settings -> Display -> Personalise.
+    def _personalise_owed(first: bool = True) -> None:
+        personalise.mark_pending(first=first)
+        state_store.set_personalise(personalise.PENDING)
+
+    owed_at_start = personalise.at_start()
+    state_store.set_personalise(personalise.PENDING if owed_at_start else None)
+    if owed_at_start is False:
+        # Owed in an earlier boot and not answered: put off, as *Do it later*
+        # does, once `settings` exists.
+        async def _put_off_at_start() -> None:
+            await asyncio.sleep(5)
+            if personalise.state() == personalise.PENDING and personalise.at_start() is False:
+                personalise.put_off(settings, personalise.first())
+        asyncio.ensure_future(_put_off_at_start())
+
     settings = Settings(
         settings_store,
         shown={"cable": cable.shown,
@@ -2470,6 +2528,11 @@ async def main() -> None:
                       # each port beside its choice in the picker).
                       "screen_port": lambda: {_port_label(p.connector): _port_line(p.connector)
                                               for p in screen_detect.ports()}},
+        # *Tested* beside an output tested here or reported working, and a
+        # reported problem under it - as the screens and boards show them
+        # (George, 2026-10-18).
+        option_tags={"output_device": lambda: {o.option: "Tested" for o in outputs.discover() if o.shown_tested}},
+        option_problems={"output_device": lambda: {o.option: o.problem for o in outputs.discover() if o.problem}},
         # The Release row's note: what the waiting or just-installed release
         # says changed (2026-10-01, George).
         notes={"software_update": updates.whats_new,
@@ -2500,6 +2563,12 @@ async def main() -> None:
                "text_size": None,
                # ADR-0118 B: read by the menus route and the panel's home.
                "lms_extended_nav": None,
+               # ADR-0149: read by the panel, which shows the waiting home in
+               # place of the library when it is off.
+               "lms_library": None,
+               # ADR-0149: part 2 owed again - the phone opens on it, the
+               # panel shows a code to it - until it is finished or put off.
+               "personalise": lambda _=None: _personalise_owed(first=False),
                "fanart_key": None, "lms_server": None,
                # ADR-0059: read on every ask through `gate` and
                # `confidence_min`, so nothing has to happen on the write.
@@ -2516,7 +2585,7 @@ async def main() -> None:
                # ADR-0133: read when the next picture is chosen.
                "wallpaper_styles": None, "wallpaper_time_of_day": None,
                "wallpaper_seasons": None, "wallpaper_holidays": None,
-               "waiting_clock": None, "waiting_hint": None,
+               "waiting_clock": None,
                "idle_icons": None,
                # Finding 118: read by the idle screen as it draws the icons.
                "idle_icon_motion": None,
@@ -2584,9 +2653,8 @@ async def main() -> None:
                # ADR-0055: rewrites output.conf, then restarts everything
                # that holds a PCM - including this daemon, which is how the
                # new card's control name gets picked up.
-               "output_device": lambda _value=None: asyncio.ensure_future(
-                   _change_output()
-               ),
+               "output_device": lambda _value=None: (
+                   _restrict_for_chosen_output(), asyncio.ensure_future(_change_output()))[1],
                # Readonly: nothing to do on a write, and the value is the
                # live one below rather than the registry's literal.
                "volume_managed": None,
@@ -2673,7 +2741,7 @@ async def main() -> None:
         # made the panel mark two working rows `data-unwired`. `lms_server`
         # is a list too and is already in `wired` above, because something
         # also reads its value.
-        lists={"wifi", "bt_trusted", "lyrion-server.shares"},
+        lists={"wifi", "bt_trusted", "lyrion-server.shares", "lyrion-server.usb_folders"},
         on_change=state_store.bump_settings_revision,
     )
     # ADR-0115 decision 18: a 1 GB player is not offered the Lyrion server.
@@ -3266,6 +3334,8 @@ async def main() -> None:
     # ADR-0115: the Lyrion server's music folders - the Music folder, USB
     # disks, network shares - kept in its own list while it is switched on.
     lyrion_shares = LyrionShares(settings_store)
+    # ADR-0115 decision 23: what Lyrion reads from each USB drive.
+    lyrion_usb = UsbFolders(settings_store)
     try:
         lyrion_shares.migrate()  # ADR-0115 decision 15: passwords out of the store
     except Exception:  # noqa: BLE001 - the shares still mount from what is there
@@ -3294,11 +3364,19 @@ async def main() -> None:
         its folder - and only then is Material made the skin."""
         if LYRION_ADDONS_DONE.exists():
             return
-        if all((LYRION_PLUGINS / name).is_dir() for name in lyrion_addons.WANTED):
+        have = {name: (LYRION_PLUGINS / name).is_dir() for name in lyrion_addons.WANTED}
+        # **Material as soon as it is in** (sofapi, 2026-10-19): Radio Now
+        # Playing's download failed Lyrion's own check ("digest does not
+        # match"), and waiting for all three left the server without its
+        # skin and the checklist on step 3. The others are asked again.
+        if have["MaterialSkin"] and not lyrion_asked.get("skin"):
             await _lyrion_rpc(["pref", "skin", "material"])
+            lyrion_asked["skin"] = True
+            logger.info("lyrion: Material Skin is in; it is the skin")
+        if all(have.values()):
             LYRION_ADDONS_DONE.parent.mkdir(parents=True, exist_ok=True)
             LYRION_ADDONS_DONE.touch()
-            logger.info("lyrion: add-ons installed (%s); Material is the skin", ", ".join(lyrion_addons.WANTED))
+            logger.info("lyrion: add-ons installed (%s)", ", ".join(lyrion_addons.WANTED))
             state_store.bump_settings_revision()  # its switch stops saying "Setting up"
             return
         now = time.monotonic()
@@ -3319,17 +3397,81 @@ async def main() -> None:
             logger.info("lyrion: restarting it to install its add-ons")
             await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-lyrion.service")
 
+    def _set_lyrion_stage(status) -> None:
+        """ADR-0115 decision 28: the stage from what `serverstatus` answered
+        (None: no answer), published when it changes."""
+        located = (settings.value("lyrion-server.music_folder") is True or bool(lyrion_shares.points())
+                   or (settings.value("lyrion-server.usb") is True and bool(lyrion_usb.all())))
+        addons = ({name: True for name in lyrion_addons.WANTED} if LYRION_ADDONS_DONE.exists()
+                  else {name: (LYRION_PLUGINS / name).is_dir() for name in lyrion_addons.WANTED})
+        now_stage = lyrion_stage.stage(status is not None, addons, status, located)
+        # **A slow answer is not a new start** (George, 2026-10-19: the
+        # checklist went back and forth between steps 2 and 3): once
+        # Lyrion has answered, a missed answer - its add-ons' restart, a
+        # scan starting - keeps the step it is on.
+        if status is None and lyrion_stage.CURRENT.get("phase") not in (None, "starting"):
+            now_stage = dict(lyrion_stage.CURRENT)
+        if now_stage != lyrion_stage.CURRENT:
+            if now_stage["phase"] != lyrion_stage.CURRENT.get("phase"):
+                logger.info("lyrion: %s", now_stage["label"].lower())
+            lyrion_stage.CURRENT.clear()
+            lyrion_stage.CURRENT.update(now_stage)
+            # The Lyrion Server heading in Settings: working, then Ready.
+            try:
+                if now_stage["phase"] == "ready":
+                    settings.indicate("lyrion-server.enabled", "ok", now_stage["label"])
+                elif now_stage["phase"] == "scanning" and now_stage.get("share") is not None:
+                    settings.indicate("lyrion-server.enabled", "wait", f"Reading {round(now_stage['share'] * 100)} %")
+                else:
+                    settings.indicate("lyrion-server.enabled", "wait", now_stage["label"])
+            except Exception:  # noqa: BLE001 - a heading that cannot say it is no reason to stop
+                logger.debug("lyrion: indicator not set", exc_info=True)
+            _publish_components()
+            state_store.bump_settings_revision()
+
     async def _lyrion_folders_loop() -> None:
         """Shares mounted while the server is on and unmounted while it is
         off; then its folders brought up to date. Woken early when a share
         is added or forgotten."""
+        first_pass = True
         while True:
-            try:
-                await asyncio.wait_for(lyrion_wake.wait(), LYRION_FOLDERS_S)
-            except asyncio.TimeoutError:
-                pass
+            # ADR-0115 decision 28: every few seconds while Lyrion is still
+            # getting ready, so the page follows it closely - and the first
+            # pass at once (George, 2026-10-19: after part 2's core restart
+            # the stage came 27 s late, and the panel showed the plain
+            # waiting screen meanwhile).
+            settled = lyrion_stage.CURRENT.get("phase") == "ready"
+            if not first_pass:
+                try:
+                    await asyncio.wait_for(lyrion_wake.wait(), LYRION_FOLDERS_S if settled else LYRION_STAGE_S)
+                except asyncio.TimeoutError:
+                    pass
+            first_pass = False
             lyrion_wake.clear()
             on = settings.value("lyrion-server.enabled") is True
+            # George, 2026-10-19: USB drives cannot be switched on while no
+            # drive is plugged in (switched on already, it stays: its folders
+            # are kept 7 days). Woken when a drive comes: the next pass.
+            try:
+                plugged = await asyncio.to_thread(lyrion_usb.plugged)
+                settings.restrict("lyrion-server.usb", {} if plugged else {True: "No USB drive plugged in"})
+            except Exception:  # noqa: BLE001 - a row left as it was is no reason to stop the loop
+                logger.debug("lyrion: usb switch not checked", exc_info=True)
+            if on:
+                # The stage first, before the shares are mounted and the
+                # folders synced - those take seconds on a first pass.
+                try:
+                    early = await _lyrion_rpc(["serverstatus", 0, 0])
+                except Exception:  # noqa: BLE001 - not answering yet is a stage too
+                    early = None
+                _set_lyrion_stage(early)
+            if not on and lyrion_stage.CURRENT:
+                lyrion_stage.CURRENT.clear()
+                try:
+                    settings.indicate("lyrion-server.enabled", None)
+                except Exception:  # noqa: BLE001
+                    pass
+                _publish_components()
             try:
                 if on:
                     await asyncio.to_thread(lyrion_shares.mount_all, lyrion_shares.all())
@@ -3340,13 +3482,19 @@ async def main() -> None:
             if not on:
                 continue
             try:
-                await lyrion_folders.sync(_lyrion_rpc, saved=lyrion_shares.points())
+                # ADR-0115 decisions 20 and 23: the locations switched on.
+                usb_chosen = (lyrion_usb.paths(lyrion_usb.all())
+                              if settings.value("lyrion-server.usb") is True else [])
+                await lyrion_folders.sync(_lyrion_rpc, saved=lyrion_shares.points(),
+                                          music_on=settings.value("lyrion-server.music_folder") is True,
+                                          usb_chosen=usb_chosen)
             except Exception as exc:  # starting, stopped, scanning: next time
                 logger.debug("lyrion: folders not synced (%r)", exc)
             try:
                 await _lyrion_addons()
             except Exception as exc:  # no internet yet, or the server is busy
                 logger.debug("lyrion: add-ons not checked (%r)", exc)
+            status = None
             try:
                 # ADR-0115 decision 18: a scan stopped for memory is said on
                 # the server's row until one finishes without a stop.
@@ -3357,6 +3505,9 @@ async def main() -> None:
                     state_store.bump_settings_revision()
             except Exception as exc:  # starting: next time
                 logger.debug("lyrion: scan state not read (%r)", exc)
+            # ADR-0115 decision 28: what Lyrion is doing, for Getting ready
+            # and the server's row.
+            _set_lyrion_stage(status)
             if not lyrion_asked.get("versions_off"):
                 # ADR-0100, amended 2026-10-03: we choose its version, so its
                 # page does not offer others - set on servers made before the
@@ -3368,6 +3519,26 @@ async def main() -> None:
                     logger.debug("lyrion: checkVersion not set (%r)", exc)
 
     asyncio.ensure_future(_lyrion_folders_loop())
+
+    async def _music_floor_loop() -> None:
+        """ADR-0115 decision 27: the Music share closes below 4 GB free and
+        opens above 4.5 GB, checked every minute."""
+        was = music_floor.is_closed()
+        while True:
+            try:
+                space = await asyncio.to_thread(lyrion_folders.music_space)
+                if space is not None:
+                    now = music_floor.closed(space["free"], was)
+                    if await asyncio.to_thread(music_floor.apply, now):
+                        logger.warning("music floor: the Music share is %s (%s)",
+                                       "closed, the card nearly full" if now else "open again", space["text"])
+                        state_store.bump_settings_revision()
+                    was = now
+            except Exception:  # noqa: BLE001 - a check that dies would leave the share as it was
+                logger.exception("music floor: check failed")
+            await asyncio.sleep(MUSIC_FLOOR_S)
+
+    asyncio.ensure_future(_music_floor_loop())
     # ADR-0040 §1: LMS's own plugin first where it answers, the key-free
     # providers behind it and for the renderers that have no LMS ids.
     http = Http()
@@ -3688,6 +3859,28 @@ async def main() -> None:
     asyncio.ensure_future(_skins_loop())
     asyncio.ensure_future(_previews_ahead())
 
+    async def _visualiser_running() -> None:
+        """**Skins installed and no visualiser running is put right at start**
+        (sofapi, 2026-10-18). The visualiser ends at a first boot with no
+        pack yet; the restart owed once the pack is in is held while the
+        settling screen is up, in this process only - and a core restart
+        before then (part 2 setting a Lyrion server restarts it) lost it, so
+        the phone's visualiser button found no window."""
+        await asyncio.sleep(15)
+        if settings.value("headless") is True or not await asyncio.to_thread(skin_packs.installed):
+            return
+        proc = await asyncio.create_subprocess_exec("systemctl", "is-active", "--quiet", "gexis-peppy.service")
+        if await proc.wait() == 0:
+            return
+        if visualiser_held["settling"]:
+            visualiser_held["restart"] = True
+            logger.info("peppy: not running with skins installed; started once the settling screen is gone")
+            return
+        logger.info("peppy: not running with skins installed; starting it")
+        await _restart_visualiser()
+
+    asyncio.ensure_future(_visualiser_running())
+
     # **ADR-0109 decision 5: Keep this screen?** A screen chosen before this
     # start waits for a touch on the panel. The countdown starts at the
     # panel's first frame; a panel that never draws goes back by itself.
@@ -3898,12 +4091,17 @@ async def main() -> None:
 
     setup_network = SetupNetwork(on_change=_setup_changed)
     setup_ref["net"] = setup_network
-    setup_flow = SetupFlow(setup_network, settings, reboot=_reboot, plugins=_offered_plugins)
+    setup_flow = SetupFlow(setup_network, settings, reboot=_reboot, plugins=_offered_plugins,
+                           owed=_personalise_owed)
     asyncio.ensure_future(cable.follow())
     # ADR-0123 as amended (George, 2026-10-08): the cable wins over Wi-Fi.
     asyncio.ensure_future(wired.CableFirst().follow())
+    # The Lyrion servers on the network, searched for in the background so
+    # a page asking is answered at once (George, 2026-10-18).
+    lyrion_known = discovery.Known()
     state_server = StateServer(
         state_store,
+        lyrion_known=lyrion_known,
         cable=cable,
         wifi_address=wifi_address,
         host=config.state_host,
@@ -3939,6 +4137,7 @@ async def main() -> None:
         # the first picture, not at start.
         placer=placement.Placer(),
         lyrion_shares=lyrion_shares,
+        lyrion_usb=lyrion_usb,
         lyrion_shares_changed=lambda: lyrion_wake.set(),
         own_server=lambda: (f"{device_name.address()}:9000"
                             if settings.value("lyrion-server.enabled") is True and device_name.address() else None),
@@ -4254,6 +4453,7 @@ async def main() -> None:
         # process, beside the one the browser uses.
         plugin_server.run(),
         state_server.run(),
+        lyrion_known.run(),
     )
 
 

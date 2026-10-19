@@ -147,3 +147,14 @@ def test_an_existing_player_keeps_its_idle_screen_and_a_new_one_starts_without(t
     default = next(r["default"] for g in json.loads(REGISTRY.read_text()) for r in g["rows"]
                    if r.get("key") == "idle_enabled")
     assert default is False
+
+
+def test_an_output_stored_with_its_state_word_keeps_the_name_alone():
+    """George, 2026-10-18: an output is listed by its name, Tested a tag."""
+    from gexis_core.settings_migrations import _without_state
+    assert _without_state("SMSL USB DAC — Detected") == "SMSL USB DAC"
+    assert _without_state("HiFiBerry DAC2 HD — Tested") == "HiFiBerry DAC2 HD"
+    assert _without_state("IQaudIO DAC — Reported with problems") == "IQaudIO DAC"
+    assert _without_state("HDMI 1 — nothing connected") == "HDMI 1 — nothing connected"
+    assert _without_state("SMSL USB DAC — Detected — nothing connected") == "SMSL USB DAC — nothing connected"
+    assert _without_state("Headphones (3.5 mm)") == "Headphones (3.5 mm)"

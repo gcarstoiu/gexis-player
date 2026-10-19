@@ -1,0 +1,75 @@
+      case 'p1welcome': return { hero: true, crumb: 'First-time setup', title: 'Set up gexis', sub: s.overLan ? 'This page talks only to the player, over your network. This part gets the player working; what it plays and shows comes after.' : 'You are connected to the player’s own Wi-Fi. This part gets the player working; what it plays and shows comes after, from your home Wi-Fi.',
+        blocks: [note('info', 'About a minute', 'Network, name, time, output and screen. Every answer can be changed later in Settings.'), ...(s.overLan ? [] : [note('warn', 'Keep mobile data off', 'Until this part finishes. With it on, your phone may try to reach this page over mobile data, where the player cannot be found.')])], foot: { next: 'Start' } };
+      case 'p1net': { const chosen = s.nets.find(n => n.name === s.net), sec = s.other ? true : chosen ? chosen.secured : false, blocks = [];
+        if (s.joinError) blocks.push(note('warn', 'Could not join ' + s.joinError.ssid, (s.joinError.reason || '') + ' Type the password again.'));
+        if (s.overLan) blocks.push(note('info', 'Connected by cable', 'The player is on your network already. Choose a Wi-Fi network as well, or go on without one.'));
+        if (s.scan === 'scanning' && !s.nets.length) blocks.push(status('spin', 'Looking for networks'));
+        else if (!s.nets.length) blocks.push(note('info', 'No networks found', 'Move the player closer to your router and tap Scan again, or choose Other network to type one in.'));
+        blocks.push(list([...s.nets.map(n => ({ k: 'net', label: n.name, meta: n.secured ? 'Secured' : 'Open', lvl: n.bars, on: !s.other && s.net === n.name, fn: () => set({ net: n.name, other: false, pw: '', hasPw: false }) })),
+          { k: 'net', label: 'Other network', meta: 'Hidden, typed by its name', lvl: 0, on: s.other, fn: () => set({ other: true, net: s.otherName, pw: '' }) }]));
+        if (s.other) blocks.push(field('Network name', s.otherName, e => set({ otherName: e.target.value, net: e.target.value })));
+        if ((chosen || s.other) && sec) blocks.push(field('Password for ' + (s.net || 'the network'), s.pw, e => set({ pw: e.target.value }), { type: 'password', hint: s.hasPw && !s.pw ? 'Kept from before. Type it again to change it.' : '' }));
+        blocks.push(btn('Scan again', () => live.rescan()));
+        const ok = s.overLan && !s.net ? true : !!s.net && (!sec || s.pw.length >= 8 || (s.hasPw && !s.pw));
+        return { title: 'Join your network', sub: 'The player has one radio, so it can host this page or use your network, never both.', blocks, foot: { nextOff: !ok } }; }
+      case 'p1start': return { title: 'New player or backup?', sub: 'A backup brings back everything the player had, so there is less to ask.',
+        blocks: [list([R('Set up a new player', 'Four more questions now; the rest from your home Wi-Fi.', s.start === 'new', () => set({ start: 'new' })), R('Restore a backup', 'Upload a backup file from this phone.', s.start === 'backup', () => set({ start: 'backup' }))])] };
+      case 'p1backup': { const b = s.backup, blocks = [btn(b ? 'Choose another file' : 'Choose a file', () => live.pickBackup())];
+        if (s.uploading !== null) blocks.push(status('spin', 'Uploading and checking', Math.round(s.uploading * 100) + '%'));
+        if (s.uploadError) blocks.push(note('warn', '', s.uploadError));
+        // George, 2026-10-18: the file's name alone in the tile, and below it
+        // what it restores, a ticked line each, by the section of Settings
+        // the setting is in (ADR-0131 amended).
+        if (b && s.uploading === null) {
+          blocks.push(list([{ k: 'plain', label: b.file || 'gexis backup', tag: ['Ready', 'ok'] }]));
+          if (b.newer) blocks.push(note('info', '', 'Made by a newer version of gexis: settings this version does not know wait until it is updated.'));
+          for (const sec of b.sections || []) blocks.push({ t: 'Split', lhead: sec.label, left: sec.items, rhead: '', right: [] });
+        }
+        return { title: 'Upload a backup', sub: 'A backup file saved from Settings → System → Back up now, on this phone or in its files.', blocks, foot: { nextOff: !b || s.uploading !== null } }; }
+      case 'p1name': return { title: 'Name the player', sub: 'One name for everything. Pick one you will recognise in a list of speakers.',
+        blocks: [field('Device name', s.name, e => set({ name: e.target.value }), { ph: 'Living Room', hint: 'Letters, numbers and hyphens become the address; the name keeps its capitals everywhere else.' }), sum([['Address', 'http://' + sl + '.local'], ['In speaker lists', nm]], 'Becomes')], foot: { nextOff: slug(s.name).length < 2 } };
+      case 'p1clock': { const z = s.tz, region = z && z.includes('/') ? z.split('/')[0] : '', place = z ? z.split('/').pop().replace(/_/g, ' ') + (region ? ' · ' + region : '') : 'Not detected', blocks = [];
+        blocks.push({ t: 'Clock', label: s.tzMode === 'hand' ? 'Chosen by hand' : 'Read from this phone', value: place, time: live.timeIn(z, s.fmt) });
+        if (s.tzMode !== 'hand') blocks.push(btn('Choose by hand', () => set({ tzMode: 'hand', tzRegion: region || null })));
+        else if (!s.tzRegion) blocks.push(list(live.regions().map(r => HB(r, '', () => set({ tzRegion: r }))), 'Region'));
+        else blocks.push(list(live.cities(s.tzRegion).map(c => R(c.split('/').slice(1).join(' / ').replace(/_/g, ' ') || c, '', s.tz === c, () => set({ tz: c }))), s.tzRegion), btn('Another region', () => set({ tzRegion: null })));
+        blocks.push(seg('Clock format', ['24 h', '12 h'], s.fmt, P1C.Time, i => set({ fmt: i })));
+        return { title: 'Set the clock', sub: 'The idle screen is mostly a clock, so this is worth getting right.', blocks, foot: { nextOff: !s.tz } }; }
+      case 'p1output': { const hw = live.hasHw(s.output), short = (s.output || 'This output').split(' — ')[0];
+        return { title: 'Choose the output', sub: 'What the player sends audio to, and how its volume is set.', blocks: [list(s.outputs.map(o => R(o, [s.outNotes[o], s.outProblems[o]].filter(Boolean).join(' · '), s.output === o, () => live.pickOutput(o), { tag: o === s.recommended ? ['Recommended', 'ok'] : s.outTags[o] === 'Tested' ? ['Tested', 'ok'] : null }))),
+        ...(live.noBoard() ? [note('info', 'A DAC board not in the list?', 'A board without its own identity shows up once it is chosen in Settings → Audio → Sound card board, after setup.')] : []),
+        ...(s.output ? [list(['Hardware', 'Software', 'Fixed'].map(v => v === 'Hardware' && !hw ? { k: 'ghost', label: v, note: short + ' has no volume control of its own.' } : R(v, s.volNotes[v] || '', s.volume === v, () => set({ volume: v }))), 'Volume')] : []),
+        ...(s.output && s.volume === 'Fixed' ? [note('warn', 'Fixed volume', 'Full level from the moment setup finishes, and the panel cannot lower it. Turn your amplifier down first.')] : [])], foot: { nextOff: !s.output || !s.volume } }; }
+      case 'p1screen': { const info = s.screenInfo || {}, sug = info.suggested, rows = [], blocks = [];
+        if (sug) rows.push(R(sug.maker + ' ' + live.short(sug), sug.width + ' × ' + sug.height + ' · ' + (sug.family === 'bar' ? 'Bar' : 'Standard') + ' layout', s.scr === 'panel', () => set({ scr: 'panel', scPick: sug.label }), { tag: sug.tested ? ['Tested', 'ok'] : null }));
+        rows.push(R('Another screen', s.scr === 'other' && s.scPick ? live.labelOf(s.scPick) : 'Pick the model from a list.', s.scr === 'other', () => set({ scr: 'other', scPick: null })));
+        if (info.failed) blocks.push(note('warn', 'The list of screens did not arrive', 'Your phone may have dropped off the setup Wi-Fi for a moment.'), btn('Try again', () => live.loadScreens()));
+        blocks.push(list(rows));
+        //: **Headless apart from the screens** (George, 2026-10-18: "a
+        //: completely different option").
+        blocks.push(list([R('Headless', 'No local screen. The display stays off and nothing is drawn.', s.scr === 'headless', () => set({ scr: 'headless' }))], 'No screen'));
+        if (s.scr === 'other' && !s.scMaker) blocks.push(list(live.makers().map(m => HB(m.name, m.n + (m.n === 1 ? ' model' : ' models'), () => set({ scMaker: m.name }))), 'Makers'));
+        else if (s.scr === 'other') blocks.push(list(live.models(s.scMaker).map(m => R(live.short(m), m.width + ' × ' + m.height + ' · ' + (m.family === 'bar' ? 'Bar' : 'Standard') + ' layout' + (m.problem ? ' · ' + m.problem : ''), s.scPick === m.label, () => set({ scPick: m.label }), { tag: m.tested ? ['Tested', 'ok'] : null })), s.scMaker), btn('Another maker', () => set({ scMaker: null })));
+        if (s.scr === 'headless') blocks.push(note('info', 'Fewer questions later', 'With no screen, part 2 skips how to browse on it, the visualiser, the idle screen and standby.'),
+          note('warn', 'Without a screen', 'The setup network always uses the password gexis-setup. If the player starts and cannot reach your Wi-Fi, it opens that network again: join it from your phone, then open 10.42.0.1:8090.'));
+        else if (s.scPick && live.asksKeep(s.scPick)) blocks.push(note('info', 'Then, on the player’s screen', 'When setup finishes the player restarts on this screen and asks Keep this screen?. If nobody answers Keep within two minutes, it goes back.'));
+        return { title: 'Is this your screen?', sub: sug ? 'What the screen reports matches this model. It sets the layout and the visualiser skins.' : 'Choose the model, or Headless. It sets the layout and the visualiser skins.', blocks, foot: { nextOff: !(s.scr === 'headless' || s.scPick) } }; }
+      case 'p1review': { const ch = id => () => this.go(id, 'p1review');
+        return { title: 'Check it over', sub: s.net ? 'Finishing moves the player to ' + s.net + '.' : 'Finishing writes all of this to the player.', blocks: [sum([['Network', s.net || 'Cable only', ch('p1net')], ['Name', nm + ' · ' + sl + '.local', ch('p1name')], ['Time', (s.tz || 'Not set') + ' · ' + (s.fmt ? '12 h' : '24 h'), ch('p1clock')], ['Output', s.output ? s.output + ' · ' + s.volume + ' volume' : 'Not set', ch('p1output')], ['Screen', s.scr === 'headless' ? 'Headless' : live.labelOf(s.scPick), ch('p1screen')]]),
+          note('info', 'Then, on your home Wi-Fi', 'How you listen and what the screen shows. A few questions, each with a default.'), ...(s.problem ? [note('warn', '', s.problem)] : [])], foot: { next: 'Finish and connect' } }; }
+      case 'p1join': return { hero: true, crumb: 'Almost done', title: s.net ? nm + ' is joining ' + s.net : nm + ' is set up',
+        blocks: [P(s.net ? 'This page came from the player’s own Wi-Fi, so it stops here. Put this phone back on ' + s.net + ', then open:' : 'Open the player at its address:'), { t: 'Addr', label: 'Open in any browser', value: 'http://' + sl + '.local:8090' }, status('spin', 'Waiting for ' + nm + (s.net ? ' on ' + s.net : '')),
+          ...(s.keepQ ? [note('warn', 'Then go to the player’s screen', 'It restarts on the screen you chose and asks whether to keep it. Tap Keep on the screen within two minutes, or it goes back to how it was.')] : []),
+          ...(s.scr === 'headless' ? [note('warn', 'Write the address down', 'Nothing is drawn on the device, so this address is the only way in.')] : []),
+          note('ok', '', 'When the player answers, this page carries on into making it yours.' + (s.scr === 'headless' ? '' : ' The player’s screen shows a code for it too.'))], foot: { hide: true } };
+      case 'p1restore': { const ch = id => () => this.go(id, 'p1restore'), b = (s.backup && s.backup.settings) || {}, en = (s.backup && s.backup.enabled) || [];
+        const listens = [b.lms_enabled !== false && 'Lyrion', b.spotify_enabled !== false && 'Spotify', b.bt_enabled !== false && 'Bluetooth'].filter(Boolean).join(' · ') || 'Nothing';
+        const installed = [...en.map(live.pluginName), b.visualiser_skins ? 'Visualiser skins' : null].filter(Boolean).join(' · ') || 'Nothing';
+        const renamed = !!b.device_name && s.name.trim() !== b.device_name.trim(), left = (s.backup && s.backup.identities) || [];
+        return { title: 'Check it over', sub: 'Everything else comes from the backup.', blocks: [sum([['Network', s.net || 'Cable only', ch('p1net')], ['Name', nm + ' · ' + sl + '.local', ch('p1name')], ['Output', s.output ? s.output + ' · ' + s.volume + ' volume' : 'Not set', ch('p1output')], ['Screen', s.scr === 'headless' ? 'Headless' : live.labelOf(s.scPick), ch('p1screen')]]),
+          ...(renamed ? [list([K('A second player', left.length ? 'The player the backup came from keeps its own ' + left.join(', ') + '; this one starts without them.' : 'The player the backup came from keeps what is its own.', s.second, () => live.second(!s.second))])] : []),
+          sum([['Time', (b.timezone || '—') + ' · ' + (b.clock_format || '24 h')], ['Listens to', listens], ['Installed', installed]], 'From the backup'),
+          note('info', 'Nothing more to ask', 'The player restores, joins ' + (s.net || 'your network') + ' and downloads again what the backup had installed.'), ...(s.problem ? [note('warn', '', s.problem)] : [])], foot: { next: 'Restore and connect' } }; }
+      case 'p1restored': { const bn = nm, bs = sl;
+        return { hero: true, crumb: 'Almost done', title: bn + ' is restoring', blocks: [status('spin', 'Restoring, then joining ' + (s.net || 'your network')), P('Put this phone back on ' + (s.net || 'your network') + '. The player opens at http://' + bs + '.local:8090 when it is back.'),
+          ...(s.keepQ ? [note('warn', 'Then go to the player’s screen', 'It restarts on the screen you chose and asks whether to keep it. Tap Keep on the screen within two minutes, or it goes back to how it was.')] : [])], foot: { back: false, next: 'Done' } }; }

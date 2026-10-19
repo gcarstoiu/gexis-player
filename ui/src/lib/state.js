@@ -155,6 +155,9 @@ export const answerNewScreen = (answer) => post(`/screen-new/${answer}`);
 export const screenCheck = derived(playback, ($s) => $s?.screen_check ?? null);
 export const showScreenCheck = (show) => post('/hardware-report/screen', { show });
 export const sendScreenCheck = (result) => post('/hardware-report/screen/result', result);
+//: ADR-0149: first use's part 2 - `pending` while it is owed, else null.
+export const personalise = derived(playback, ($s) => $s?.personalise ?? null);
+export const personaliseLater = () => post('/personalise/later');
 //: ADR-0128: the first start after setup, until it has settled.
 export const settling = derived(playback, ($s) => $s?.settling ?? null);
 export const settlingDone = () => post('/settling/done');

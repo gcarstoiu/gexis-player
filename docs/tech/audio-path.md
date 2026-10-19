@@ -518,6 +518,9 @@ HDMI accepts only IEC958 subframes, so no renderer can open it raw and a
 `plug` converts: conversion is allowed only where bit-perfect is already
 impossible. HDMI has no control of its own, so Hardware is greyed there and
 Software takes its place (ADR-0127); Fixed is only ever the user's choice.
+The greying follows the output the moment it is chosen
+(`_restrict_for_chosen_output`, in `output_device`'s callback), before the
+switch itself runs: setup writes the volume type straight after the output.
 With the softvol between them the meter works on HDMI (ADR-0055 §6 as
 amended, Finding 116). A meter straight over a plug crashes the renderers, so
 HDMI on Fixed has no meter and no visualiser levels.

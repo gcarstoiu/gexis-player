@@ -115,16 +115,25 @@ def _screen_in_use() -> str | None:
 
 
 def _screen_tags() -> dict[str, str]:
-    """ADR-0109 decision 1: each model marked Tested or Untested."""
+    """*Tested* beside a model tested here or reported working; nothing
+    beside the rest (ADR-0109 decision 1, as hardware_reports amends it
+    2026-10-18)."""
     from . import screens
     from . import hardware_reports
-    tags = {s.label: "Tested" if s.tested else
-            (hardware_reports.state(hardware_reports.screen(s.label)) or "Untested")
-            for s in screens.all_screens()}
-    in_use = _screen_in_use()
-    if in_use and in_use not in tags:
-        tags[in_use] = "Untested"
-    return tags
+    return {s.label: "Tested" for s in screens.all_screens()
+            if hardware_reports.shown_tested(s.tested, hardware_reports.screen(s.label))}
+
+
+def _screen_problems() -> dict[str, str]:
+    """The line under a model owners reported a problem with."""
+    from . import screens
+    from . import hardware_reports
+    out = {}
+    for s in screens.all_screens():
+        line = hardware_reports.problem(hardware_reports.screen(s.label))
+        if line:
+            out[s.label] = line
+    return out
 
 
 def _boards() -> tuple[str, ...]:
@@ -134,9 +143,14 @@ def _boards() -> tuple[str, ...]:
 
 
 def _board_tags() -> dict[str, str]:
-    """ADR-0117 decision 2: Tested or Known on every board offered."""
+    """ADR-0117 decision 2, amended 2026-10-18: Tested, or nothing."""
     from . import board_apply
     return board_apply.tags()
+
+
+def _board_problems() -> dict[str, str]:
+    from . import board_apply
+    return board_apply.problems()
 
 
 OPTION_RESOLVERS = {"timezones": _timezones, "skin_corpus": tuple, "output_device": tuple,
@@ -145,9 +159,11 @@ OPTION_RESOLVERS = {"timezones": _timezones, "skin_corpus": tuple, "output_devic
 #: for them, and the daemon's own are injected into `Settings`.
 INJECTED_ONLY = {"skin_corpus", "output_device"}
 
-#: A word beside an option in the picker, by source (round 2's Attached
-#: screen: *Tested* / *Untested* on every model).
+#: A word beside an option in the picker, by source: *Tested*, or nothing
+#: (2026-10-18; was Tested / Untested / Known / Reported).
 OPTION_TAGS = {"screens": _screen_tags, "boards": _board_tags}
+#: A line under an option owners reported a problem with, by source.
+OPTION_PROBLEMS = {"screens": _screen_problems, "boards": _board_problems}
 
 logger = logging.getLogger("gexis_core.settings_registry")
 
@@ -705,6 +721,8 @@ class Settings:
         restrictions: dict[str, Callable[[], dict]] | None = None,
         shown: dict[str, Callable[[], bool]] | None = None,
         option_notes: dict[str, Callable[[], dict]] | None = None,
+        option_tags: dict[str, Callable[[], dict]] | None = None,
+        option_problems: dict[str, Callable[[], dict]] | None = None,
     ) -> None:
         self._store = store
         #: key -> whether the row is there at all, for a row that follows the
@@ -762,9 +780,12 @@ class Settings:
         #: registry's own `optionNotes` - for options the hardware names (a
         #: USB DAC's details, George, 2026-10-12).
         self._option_notes = option_notes or {}
+        self._option_tags = option_tags or {}
+        self._option_problems = option_problems or {}
         self._seed = load_seed(self._rows, seed_path)
         unknown = (set(self._defaults) | set(self._wired) | self._lists | set(self._notes)
-                   | set(self._restrictions) | set(self._shown) | set(self._option_notes)) - set(self._rows)
+                   | set(self._restrictions) | set(self._shown) | set(self._option_notes)
+                   | set(self._option_tags) | set(self._option_problems)) - set(self._rows)
         if unknown:
             raise ValueError(f"not in the registry: {sorted(unknown)}")
         not_lists = {k for k in self._lists if self._rows[k]["type"] != "list"}
@@ -945,12 +966,20 @@ class Settings:
                     public["options"] = list(self._options.get(source, tuple)())
                     if source in OPTION_TAGS:
                         public["optionTags"] = OPTION_TAGS[source]()
+                    if source in OPTION_PROBLEMS:
+                        public["optionProblems"] = OPTION_PROBLEMS[source]()
                     if source in self._labels:
                         public["optionLabels"] = self._labels[source]()
                 # The value already worked out for `visible`: a row's
                 # default can be a system read, and every one was being made
                 # twice per request (2026-10-05).
                 public["value"] = values[row["key"]]
+                # Injected for a daemon's own list (the outputs): the same
+                # *Tested* tags and problem lines as the static lists.
+                if row["key"] in self._option_tags:
+                    public["optionTags"] = self._option_tags[row["key"]]()
+                if row["key"] in self._option_problems:
+                    public["optionProblems"] = self._option_problems[row["key"]]()
                 if row["key"] in self._option_notes:
                     extra = self._option_notes[row["key"]]()
                     if extra:

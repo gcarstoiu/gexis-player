@@ -199,6 +199,141 @@ cache is counted.
     still have the library scanning"* - so a scan stopped for memory on High
     says how many files Normal would fit.
 
+### Settled 2026-10-18 (George), for first use's *Where is your music?*
+
+Until now the Music folder and every USB disk were always offered to Lyrion
+(decisions 3 and 9), and first use showed them as fixed rows. George: *"every
+the user selects we do in lyrion. Nothing should be preselected"*, and *"What
+we need to add though is a folder selection from USB."* This replaces
+decision 3's "a USB disk ... offered to the server when plugged in, with no
+setting" and the Music folder's always being offered.
+
+20. **The Music folder and USB drives are switches, off on a new player.**
+    `lyrion-server.music_folder` and `lyrion-server.usb`, beside *Network
+    shares* under the Lyrion Server. First use's *Where is your music?* shows
+    all three as switches, none on, and writes what is chosen. The Music
+    folder is still shared on the network, and playlists are still saved in
+    its Playlists folder (decision 10), whichever way the switch is set.
+21. **A player that already runs Lyrion keeps both on** (George agreed to the
+    recommendation): a settings migration, for players already set up, turns
+    both on where the server is on, and gives every USB disk seen in the
+    last 7 days its whole drive. Without it, the update would take folders
+    out of Lyrion's list, and Lyrion would wipe the library and scan it all
+    again (decision 16) - about two hours on George's.
+22. **Continue with nothing chosen is allowed** (George agreed): the screen
+    says that Lyrion starts with no music, and that locations can be added
+    in Settings → Sources → Lyrion Server.
+23. **Folders on a USB drive** (George, 2026-10-18). With *USB drives* on,
+    `lyrion-server.usb_folders` lists what Lyrion reads from each drive: the
+    whole drive or chosen folders, at any depth. A drive is known by its
+    filesystem's UUID, which is where it is mounted
+    (`/media/gexis-usb/<UUID>`), with its label kept for the row while it is
+    unplugged. The phone and the panel browse a drive's folders, read-only,
+    folders only; *Add this folder* adds the one open, or the whole drive at
+    its top. **A drive plugged in for the first time is not added** (*"1b"*):
+    it shows under the row as *Not added yet* until folders are chosen.
+    Decision 17's 7 days hold for a chosen folder as for a whole drive.
+24. **Taking a location out later rescans everything** (*"Yes"*): switching
+    the Music folder or USB drives off, removing a USB folder, or narrowing a
+    whole drive to some of its folders takes a folder out of Lyrion's list,
+    and Lyrion wipes the library and scans it all again. Each such row says
+    so in its note.
+25. **A network share opens into its folders, and one added by mistake can
+    be forgotten in first use** (George, 2026-10-18, on sofapi: no way to
+    remove one, "slow", and it "stops only at level 1"). An SMB share is
+    browsed at any depth, as a USB drive is, and a folder inside it can be
+    added as the share (`//nas.local/Music/Jazz`); an NFS export is added
+    whole, since listing it would mean mounting it. First use's added shares
+    carry *Forget*. The scan for servers browses both kinds at once and is
+    reused for a minute (measured on sofapi: 2 s for every list before,
+    1.1 s for the first now and 52 ms after). With no USB drive plugged in,
+    first use shows *USB drive* greyed out, with *Look again*; the Music
+    folder's row shows its free and total space (George, the same evening).
+
+26. **Folders are ticked, not added one at a time** (George, 2026-10-18,
+    choosing *"Tick several"* of three: a *Use this folder* button at the
+    foot, or *Add* on each row). On drives and shares alike, in first use
+    and in Settings: each drive, share and folder has a tick box, and
+    tapping the row opens it; the path above the list, a step each, goes
+    back up; one button adds everything ticked. A folder inside a ticked
+    one shows ticked, "In <folder>". This replaces decision 23's *Add the
+    whole drive* / *Add <folder>* and *Back up* items. A share inside one
+    already added is refused, and a wider one replaces those it holds, as
+    for USB folders.
+
+27. **The Music share stops at 4 GB free** (George, 2026-10-18: *"4 GB
+    fixed in code"*). The share writes as `squeezeboxserver`, so it cannot
+    reach the filesystem's own reserve (about 4 %, 2.5 GB on sofapi, root
+    only), but Lyrion's database and artwork, Spotify, Plexamp and the
+    screen's browser cannot either: a card filled from the share would stop
+    them. The core checks the Music folder's free space every minute; below
+    **4 GB** it writes `read only = yes` to `/run/gexis/music-share.conf`,
+    which the share includes last, and reloads Samba; above **4.5 GB** it
+    empties the file again (the gap keeps it from flapping at the line). The
+    Music folder's row says so while it holds. The figure, from what the
+    player itself writes (measured 2026-10-18): Lyrion's library on George's
+    tens of thousands of files, 151 MB of database and 670 MB of artwork
+    (Finding 109), which grows with the library; an update staged, 476 MB on
+    sofapi; the largest skin pack, 484 MB packed and more unpacked - about
+    2.5 GB at most today, and 4 GB leaves room for a larger library. Fixed
+    in code: ADR-0022 [H]. Lyrion's own playlist saves into the Music
+    folder do not go through the share and are not stopped.
+
+28. **What Lyrion does after its download is said, step by step**
+    (George, 2026-10-18: *"it should be transparent to the user that it will
+    take some time before any library scan is even started"*; *Done* over a
+    line saying it was still installing was misleading). Measured on sofapi
+    that evening: part 2 finished at 21:47:06, Lyrion was downloaded and
+    started at 21:47:43, its add-ons were asked for at 21:48:19 and loaded by
+    a restart at 21:49:59, and the scan of the shares began at 21:50:08 -
+    three minutes in which the page said *Done*, and the first 2 1/2 without
+    Material Skin. The core now works out the stage every 5 s while it lasts
+    (`lyrion_stage.py`: Starting, Adding its add-ons - Material Skin, Music
+    & Artist Information, Radio Now Playing -, About to read your music,
+    Reading your music with its files so far, Ready with its songs and
+    albums) and sends it with the download's status. Getting ready says it;
+    in Settings the Lyrion Server section has it too (George: "since large
+    libraries can take hours, we need to display the progress and done
+    status in settings"), on its heading and in a read-only *Library* row
+    at its top with a progress bar, kept after Ready. *Done* is said only at Ready; once
+    Lyrion reads, the player counts as ready, since a large library takes
+    hours.
+
+    **After George's run of 2026-10-19:** Getting ready shows the five steps
+    as a numbered checklist (done, now, next), and under it a bar for the
+    step under way - a real share for the download, the add-ons in and the
+    reading, and elsewhere the time spent against the usual one, never full
+    until the step is done. The add-ons are asked for together and loaded
+    by one restart; **one that will not install no longer holds the rest
+    back** (Radio Now Playing's download failed Lyrion's own check -
+    "digest does not match" - and installed on the retry 10 minutes later):
+    Material Skin becomes the skin as soon as it is in, the step counts as
+    done with Material in, and each add-on is ticked as it arrives. Once
+    Lyrion has answered, a missed answer keeps the step it is on (the
+    checklist went back and forth between steps 2 and 3). The core's Lyrion
+    pass runs at once after a start and works out the stage before mounting
+    shares (it came 27 s late after part 2's core restart, and the panel
+    showed the plain waiting screen meanwhile).
+29. **A new player's first read keeps the waiting screen** (George,
+    2026-10-18, option A of three, approved on a screenshot: *"make sure it
+    is visible enough and not a small text"*). Lyrion keeps the library it
+    had through a scan and swaps in the new one at the end (Finding 127), so
+    until a first read ends the library home would be empty, Extended
+    navigation's menus with it. While the stage is a first one (`first`:
+    the add-ons not yet in, or no songs read), the panel shows the waiting
+    screen, unless something plays, with a large block between the clock
+    and the sources: *Lyrion is reading your music* (or *getting ready*), a
+    thick bar with its percentage, why the library is not there yet, and
+    Lyrion's own step. A rescan of a library that exists does not show it.
+    After George's full run the same evening: Lyrion's download counts as
+    the first read's first step; its mark leaves the sources at the foot
+    while it cannot play, the others centred; and **a source with nothing
+    to show is no source** - the Lyrion client became the current source
+    when its server came up, with no track, and the panel opened an empty
+    Now Playing. Now Playing opens on a track; until then the home stays,
+    so the scan's end leaves the library home, and Lyrion plays only when
+    someone starts it.
+
 ## Not settled here
 
 - The memory and CPU measured during a scan of George's library, and the

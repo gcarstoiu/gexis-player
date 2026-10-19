@@ -1132,6 +1132,44 @@ async def test_a_player_powered_off_while_the_connection_was_down_is_released(mo
 
 
 @pytest.mark.asyncio
+async def test_a_player_on_with_nothing_to_play_is_switched_off_not_taken(monkeypatch):
+    """George, 2026-10-18: "Lyrion client shouldn't just take over by itself".
+    A player meeting the player's own new Lyrion server comes up on, its
+    playlist empty; that is nobody's choice."""
+    adapter, rpc = _adapter(monkeypatch, mode="stop")
+    plain = FakeRpc.__call__
+
+    async def empty(self, session, player, command):
+        answer = await plain(self, session, player, command)
+        if command[0] == "status":
+            answer["result"]["playlist_tracks"] = 0
+        return answer
+
+    monkeypatch.setattr(FakeRpc, "__call__", empty)
+    acquired, released = await _watch_once(monkeypatch, adapter)
+    assert acquired == [] and released == [1]
+    assert ["power", "0"] in rpc.commands
+
+
+@pytest.mark.asyncio
+async def test_a_player_on_with_a_paused_album_is_still_taken(monkeypatch):
+    """Only an empty one is left: a paused album before a restart is the
+    listener's, as before."""
+    adapter, rpc = _adapter(monkeypatch, mode="pause")
+    plain = FakeRpc.__call__
+
+    async def loaded(self, session, player, command):
+        answer = await plain(self, session, player, command)
+        if command[0] == "status":
+            answer["result"]["playlist_tracks"] = 12
+        return answer
+
+    monkeypatch.setattr(FakeRpc, "__call__", loaded)
+    acquired, released = await _watch_once(monkeypatch, adapter)
+    assert acquired == [1] and ["power", "0"] not in rpc.commands
+
+
+@pytest.mark.asyncio
 async def test_a_player_on_at_connection_is_still_an_acquisition(monkeypatch):
     adapter, rpc = _adapter(monkeypatch, mode="play")
 

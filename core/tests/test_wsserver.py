@@ -840,13 +840,13 @@ async def test_a_share_browse_that_fails_says_so(tmp_path, monkeypatch):
     server = StateServer(StateStore({}), settings=settings, lyrion_shares=shares)
     url = "/settings/lyrion-server.shares/items"
     async with TestClient(TestServer(server.make_app())) as client:
-        r = await client.post(url, json={"name": "Tower", "action": "browse", "server": "abc"})
+        r = await client.post(url, json={"name": "Mediabox", "action": "browse", "server": "abc"})
         assert r.status == 200
         answer = await r.json()
-        assert answer["ok"] is False and "Tower" in answer["error"]
-        assert asked[0].host == "Tower", "a server that is not an object is the name's"
+        assert answer["ok"] is False and "Mediabox" in answer["error"]
+        assert asked[0].host == "Mediabox", "a server that is not an object is the name's"
         monkeypatch.setattr(lyrion_scan, "shares", lambda *a, **k: (_ for _ in ()).throw(FileNotFoundError("smbclient")))
-        r = await client.post(url, json={"name": "Tower", "action": "browse"})
+        r = await client.post(url, json={"name": "Mediabox", "action": "browse"})
         assert r.status == 200 and (await r.json())["ok"] is False
 
 
@@ -901,7 +901,9 @@ async def test_the_updaters_backup_is_named_as_its_own_and_pruned(tmp_path, monk
         r = await client.post("/settings/backup?before=update")
         assert r.status == 200
         for _ in range(500):  # 5 s: the prune runs in the background, and a loaded suite was slower than 1 s
-            if pruned:
+            # Both: the Restore list is told after the prune, and GitHub's
+            # runner once read it between the two (2026-10-18).
+            if pruned and state.state.settings_revision == 1:
                 break
             await asyncio.sleep(0.01)
         assert made == [("Den", True)]
@@ -910,3 +912,143 @@ async def test_the_updaters_backup_is_named_as_its_own_and_pruned(tmp_path, monk
         assert state.state.settings_revision == 1, "the Restore list is told"
         r = await client.post("/settings/backup")
         assert r.status == 200 and hand == [1]
+
+
+@pytest.mark.asyncio
+async def test_usb_folders_are_browsed_added_and_removed(tmp_path):
+    """ADR-0115 decision 23: the sheet lists the drives plugged in; a drive
+    opens at its top with *Add the whole drive* first, a folder opens one
+    level down with *Back up*; a folder added shows on the row with its
+    Remove, and a drive with nothing chosen shows as *Not added yet*."""
+    from gexis_core import lyrion_usb
+    from gexis_core.settings import SettingsStore
+    from gexis_core.settings_registry import Settings
+
+    registry = [{"id": "g", "label": "G", "rows": [
+        {"key": "lyrion-server.usb_folders", "type": "list", "kind": "usb-folder"}]}]
+    store = SettingsStore(tmp_path / "s.db")
+    settings = Settings(store, registry=registry, wired={"lyrion-server.usb_folders": None})
+    root = tmp_path / "usb"
+    (root / "AAAA" / "Music" / "Jazz").mkdir(parents=True)
+    usb = lyrion_usb.UsbFolders(store, root=root, is_mount=lambda p: p.endswith("AAAA"),
+                                by_uuid=tmp_path / "none", by_label=tmp_path / "none")
+    woken = []
+    server = StateServer(StateStore({}), settings=settings, lyrion_usb=usb,
+                         lyrion_shares_changed=lambda: woken.append(1))
+    url = "/settings/lyrion-server.usb_folders/items"
+    async with TestClient(TestServer(server.make_app())) as client:
+        drives = (await (await client.get(url)).json())["items"]
+        assert [d["drive"] for d in drives] == ["AAAA"] and drives[0]["meta"].startswith("Not added yet")
+
+        top = await (await client.post(url, json={"name": "AAAA", "action": "browse", "folder": ""})).json()
+        assert top["ok"] and [i["name"] for i in top["items"]] == ["Music"] and top["items"][0]["open"]
+        assert [c["folder"] for c in top["crumbs"]] == [""]
+
+        music = await (await client.post(url, json={"name": "AAAA", "action": "browse", "folder": "Music"})).json()
+        assert [i["name"] for i in music["items"]] == ["Jazz"]
+        assert [(c["name"], c["folder"]) for c in music["crumbs"]][1:] == [("Music", "Music")]
+
+        out = await (await client.post(url, json={"name": "AAAA", "action": "browse", "folder": "../.."})).json()
+        assert out["ok"] is False
+
+        added = await (await client.post(url, json={"name": "AAAA", "action": "add", "folder": "Music"})).json()
+        assert added["ok"] and woken
+
+        rows = (await (await client.get("/settings")).json())
+        row = next(r for g in rows["groups"] for r in g["rows"] if r["key"] == "lyrion-server.usb_folders")
+        assert [(i["name"], i["address"]) for i in row["items"]] == [("Music", "AAAA/Music")]
+
+        again = await (await client.post(url, json={"name": "AAAA", "action": "add", "folder": "Music/Jazz"})).json()
+        assert again["ok"] is False and "Music" in again["error"]
+
+        gone = await (await client.post(url, json={"name": "AAAA/Music", "action": "forget"})).json()
+        assert gone["ok"] and usb.all() == []
+
+
+@pytest.mark.asyncio
+async def test_a_share_opens_into_its_folders_and_the_scan_is_kept_a_minute(tmp_path, monkeypatch):
+    """George, 2026-10-18: browsing a share "stops only at level 1", and every
+    list of shares waited two seconds for a scan."""
+    from gexis_core import lyrion_scan, lyrion_shares
+    from gexis_core.settings import SettingsStore
+    from gexis_core.settings_registry import Settings
+
+    registry = [{"id": "g", "label": "G", "rows": [
+        {"key": "lyrion-server.shares", "type": "list", "kind": "share", "discover": True}]}]
+    store = SettingsStore(tmp_path / "s.db")
+    settings = Settings(store, registry=registry, wired={"lyrion-server.shares": None})
+    shares = lyrion_shares.Shares(store, root=tmp_path / "mnt", credentials=tmp_path / "cred",
+                                  is_mount=lambda p: False)
+    scans, listed = [], []
+    monkeypatch.setattr(lyrion_scan, "servers", lambda own: scans.append(1) or [
+        lyrion_scan.Server(name="nas", host="nas.local", kind="smb")])
+    monkeypatch.setattr(lyrion_scan, "folders", lambda address, user=None, password=None:
+                        listed.append((address, user)) or ["Jazz", "Rock"])
+    server = StateServer(StateStore({}), settings=settings, lyrion_shares=shares)
+    url = "/settings/lyrion-server.shares/items"
+    async with TestClient(TestServer(server.make_app())) as client:
+        await client.get(url)
+        await client.get(url)
+        assert len(scans) == 1, "a second list within the minute reuses the scan"
+        await client.get(url + "?fresh=1")
+        assert len(scans) == 2
+        assert (await (await client.get(url + "?saved=1")).json())["items"] == [] and len(scans) == 2
+
+        top = await (await client.post(url, json={"name": "//nas.local/Music", "action": "folders",
+                                                   "user": "me", "password": "pw"})).json()
+        assert [i["name"] for i in top["items"]] == ["Jazz", "Rock"]
+        assert top["items"][0]["address"] == "//nas.local/Music/Jazz" and top["items"][0]["open"]
+        assert [c["name"] for c in top["crumbs"]] == ["nas", "Music"]
+        assert listed[-1] == ("//nas.local/Music", "me")
+
+        jazz = await (await client.post(url, json={"name": "//nas.local/Music/Jazz", "action": "folders"})).json()
+        assert [c.get("address") for c in jazz["crumbs"]] == [None, "//nas.local/Music", "//nas.local/Music/Jazz"]
+
+        nfs = await (await client.post(url, json={"name": "nas:/volume1/music", "action": "folders"})).json()
+        assert nfs["items"] == [] and nfs["crumbs"][-1]["address"] == "nas:/volume1/music"
+
+
+@pytest.mark.asyncio
+async def test_the_music_folders_space_is_on_its_row_and_its_route(tmp_path, monkeypatch):
+    from gexis_core import lyrion_folders
+    from gexis_core.settings import SettingsStore
+    from gexis_core.settings_registry import Settings
+
+    monkeypatch.setattr(lyrion_folders, "music_space",
+                        lambda music=None: {"free": 1, "total": 2, "text": "51.2 GB free of 58.0 GB"})
+    registry = [{"id": "g", "label": "G", "rows": [
+        {"key": "lyrion-server.music_folder", "type": "toggle", "label": "Music folder", "note": "The player's own."}]}]
+    settings = Settings(SettingsStore(tmp_path / "s.db"), registry=registry, wired={"lyrion-server.music_folder": None})
+    server = StateServer(StateStore({}), settings=settings)
+    async with TestClient(TestServer(server.make_app())) as client:
+        rows = (await (await client.get("/settings")).json())["groups"][0]["rows"]
+        assert rows[0]["note"] == "The player's own. 51.2 GB free of 58.0 GB."
+        assert (await (await client.get("/storage/music")).json())["text"] == "51.2 GB free of 58.0 GB"
+
+
+@pytest.mark.asyncio
+async def test_the_share_search_offers_only_what_is_not_added(tmp_path, monkeypatch):
+    """George, 2026-10-18: shares already added are on their own tile and not
+    shown again in the search - neither the list nor a server's shares."""
+    from gexis_core import lyrion_scan, lyrion_shares
+    from gexis_core.settings import SettingsStore
+    from gexis_core.settings_registry import Settings
+
+    registry = [{"id": "g", "label": "G", "rows": [
+        {"key": "lyrion-server.shares", "type": "list", "kind": "share", "discover": True}]}]
+    store = SettingsStore(tmp_path / "s.db")
+    settings = Settings(store, registry=registry, wired={"lyrion-server.shares": None})
+    shares = lyrion_shares.Shares(store, root=tmp_path / "mnt", credentials=tmp_path / "cred",
+                                  is_mount=lambda p: False)
+    shares.add("nas:/music", None, None)
+    monkeypatch.setattr(lyrion_scan, "servers", lambda own: [lyrion_scan.Server(name="nas", host="nas", kind="nfs")])
+    monkeypatch.setattr(lyrion_scan, "shares", lambda server, user=None, password=None: [
+        {"address": "nas:/music", "comment": ""}, {"address": "nas:/films", "comment": ""}])
+    server = StateServer(StateStore({}), settings=settings, lyrion_shares=shares)
+    url = "/settings/lyrion-server.shares/items"
+    async with TestClient(TestServer(server.make_app())) as client:
+        found = (await (await client.get(url)).json())["items"]
+        assert [i["name"] for i in found] == ["nas"] and all(i.get("server") for i in found)
+        browsed = await (await client.post(url, json={"name": "nas", "action": "browse",
+                                                       "server": {"host": "nas", "kind": "nfs"}})).json()
+        assert [i["address"] for i in browsed["items"]] == ["nas:/films"]
