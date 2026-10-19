@@ -105,6 +105,16 @@
   }
 
 
+  // **What the idle screen covers stops moving** (2026-10-19). Any running
+  // animation keeps the Pi's browser compositing every frame (Finding 118),
+  // and the screens underneath kept theirs - the waiting screen's rings went
+  // on pulsing out of sight, so *Weather icon motion: Static* still cost
+  // half a core. Paused while this screen is up; they resume when it goes.
+  onMount(() => {
+    document.documentElement.classList.add('idle-up');
+    return () => document.documentElement.classList.remove('idle-up');
+  });
+
   onMount(() => {
     fetch('/idle')
       .then((r) => (r.ok ? r.json() : null))
@@ -176,7 +186,12 @@
   // moon, by this screen's clock (`now` ticks every second); the forecast
   // days keep their sun.
   const night = $derived(isNight(weather?.sun, now.getTime()));
-  const phase = $derived(moonPhase(now.getTime()));
+  // Once a minute, not with the clock's every second: an icon drawn from the
+  // phase is rebuilt whenever it changes, and the Photographic and
+  // Atmospheric sets' lighting filters cost a lot to redraw (measured on
+  // sofapi, 2026-10-19: 45 % of a core with every icon still).
+  const minute = $derived(Math.floor(now.getTime() / 60000));
+  const phase = $derived(moonPhase(minute * 60000));
   const south = $derived(weather?.south === true);
   const drawsWeather = $derived(
     wantsWeather && weather && !weather.off && !weather.error && weather.now
@@ -458,6 +473,9 @@
 </div>
 
 <style>
+  :global(html.idle-up body *:not(.idle):not(.idle *)) {
+    animation-play-state: paused !important;
+  }
   .idle {
     position: fixed;
     top: 0;
