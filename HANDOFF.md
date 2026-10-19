@@ -27,53 +27,38 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.1.1, on Stable** (2026-10-19; Stable serial 5,
-Testing serial 50, both signatures good from the release key, read back
+**Current release: 1.2.0, on Stable** (2026-10-19; Stable serial 6,
+Testing serial 51, both signatures good from the release key, read back
 from GitHub; the public `gexis-player.img.xz` decompresses to the checked
-image). Image `image/deploy/2026-10-19-gexis-player-v1.1.1.img`, 123
-checks; parts `ours-9deec7268284`, `skins-9c8185729dfd` (reused),
-`rpi-7325dbec7a52`, `debian-5d5dc927ef03`. It carries Phase 14 (1.1.0) and
-the fixes from George's four tests of it on sofapi (ADR-0149 decisions
-42-45, ADR-0115 decision 28 amended). **PR #76** was merged by George; post-merge steps and clean-up done. **Not tried on a
-device:** a USB drive's folders; a new server's folders held for its
-add-ons, and the plate through a whole first read (George's next reset).
+image). Image `image/deploy/2026-10-19-gexis-player-v1.2.0.img`, 123
+checks; parts `ours-c246c9c094c6`, `skins-9c8185729dfd` (reused),
+`rpi-7325dbec7a52`, `debian-5d5dc927ef03`. It carries Phase 15, the public
+API (`ph-api`, merged into `next`), and George's fixes from testing it on
+sofapi. **GitHub Pages is on** (source GitHub Actions; the `github-pages`
+environment lets `main` and `v*` tags deploy), so `api-docs.yml` publishes
+the API description from each release tag. **PR #77** (`release-1.2.0` into
+`main`) is open for George to merge. After the merge: the post-merge steps,
+removing the release worktree `~/projects/gexis-player-rel-1.2.0`, the
+worktree `~/projects/gexis-player-api` and the branches `ph-api` and
+`release-1.2.0`, closing Phase 15 in DEVELOPMENT and the phases doc, pushing
+the wiki Roadmap prepared in the scratch clone (Now 16 optical, Next 17 DSI
+and 18 room correction; **George has not seen it yet**), then the routine
+clean-up (1.1.1's image can go then). sofapi runs the preview `+git33`,
+equal in content to 1.2.0.
 
 **Release build output lives in `~/.local/share/gexis-release-out`**: in each
 release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
 (excluded in `.git/info/exclude`). `reuse.py` reuses a published file only
 against a local copy, so losing that folder means re-uploading every OS file.
 
-**Phase 15 is now the public API (`ph-api`, ADR-0152)**; MPD, planned as
-Phase 15 first, was parked the same day after measuring it on sofapi
-(Finding 128, ADR-0151: George, *"Really too much risk for a small
-benefit"*). On the branch `ph-api` (worktree `~/projects/gexis-player-api`,
-pushed, CI green, not merged): `core/src/gexis_core/api/openapi.json`
-(all 90 API routes; drafted group by group, merged, validated with
-openapi-spec-validator), `core/tests/test_openapi.py` (the drift test), the
-setting *API explorer* (`api_explorer`, System after Debug logs, off; ADR-0022
-[N]), `/api` with Swagger UI 5.33.3 shipped in the core (every route tryable),
-`.github/workflows/api-docs.yml` (the static page at each release tag;
-**GitHub Pages must be switched on before the first such release**), three
-faults fixed (radio's 502, a transport KeyError, `/skins` and Fanart), and the
-docs (`docs/tech/api.md`, manual, FAQ, README). George's four fixes from testing it (2026-10-19) are on the branch too:
-the Library's own *Lyrion Server: On* switch (a mirror row of the plugin's
-switch), the Calm fallback picture behind the waiting screen (retried every
-30 s; black stays black), *Navigation* as one choice Simple / Extended / Off
-(`library_navigation`, the two old switches hidden with `shownAs`), and part 2
-listing every server found even with one saved (ADR-0149 decision 46). The
-stability marks are confirmed (ADR-0152 decision 8). From George's next
-look (same day): the Library switch is only the switch (its download line,
-version and Remove stay in Plugins; the line changing made the row jump),
-its note and heading hold still, a switched-off service's heading carries
-no reading, and Settings runs Library, Sources, Handoff, Audio, Display,
-Enrichment, Plugins, System (manual reordered, its two Settings
-screenshots retaken from the demo). sofapi runs core, ui and player
-`1.1.1+git33`, core restarted by hand (LESSONS 77). **Waiting on George:** his test of the four fixes, and whether
-he switched *API explorer* on (it reads on; it was off after my test). Then
-`ph-api` into `next`, GitHub Pages on, the release.
-**Three Phase 14 articles** (13-15: setup in two parts,
-where your music is, a music server's first minutes) are drafts 186, 190 and
-191 in the local WordPress copy for George to read; `import_wp.py` now takes
+**Next: Phase 16, optical through a USB adapter** (`ph-optical`; George has
+an adapter), then **Phase 17, DSI screens** (`ph-dsi`, new 2026-10-19;
+George names his screen when it starts). Both start with an ADR.
+
+**Five articles** (13-15 for Phase 14; 16, the API, and 17, the small
+things, for Phase 15) are drafts 186, 190, 191, 196 and 201 in the local
+WordPress copy; `schedule_wp.py` now schedules them 25-29 October after the
+first nine, once George has pushed them; `import_wp.py` now takes
 article numbers, and `bundle.json` is refreshed for `push_wp.py`.
 
 **The blog** (George's WordPress, tag `sound`): eleven articles in
