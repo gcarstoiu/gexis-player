@@ -131,7 +131,7 @@ background that is a picture — which is the negated form
 | Weather on the idle screen | [N] | ADR-0047 §2. **Open-Meteo**, key-free, so this toggle alone gates the four rows below — the drop's `weather_key` is removed rather than kept as a row that stores nothing |
 | Weather location | [N] | Typed as a place, geocoded once through Open-Meteo's key-free geocoder, stored as coordinates |
 | Weather icon motion | [N] | **Appended 2026-10-11, confirmed by George**: *Animated* (the design's, the default) or *Static*. Any one running animation keeps the Pi 4's browser drawing every frame, about half a core, and Static stops them all ([Finding 118](../findings/118-the-hidden-library-over-an-hour.md)); a short note in the sheet says so. `onlyWhen: ['idle_weather', true]` |
-| Forecast days, show min and max, weather icons | [N] | ADR-0047 §2, all three `onlyWhen: ['idle_weather', true]` **`idle_forecast`'s second option is *Today only*, 2026-10-05** (George: today's weather shows in both layouts), was *None*; the first settings migration moves a stored *None* (ADR-0105 §5). |
+| Forecast days, show min and max, weather icons | [N] | ADR-0047 §2, all three `onlyWhen: ['idle_weather', true]` **`idle_forecast`'s second option is *Today only*, 2026-10-05** (George: today's weather shows in both layouts), was *None*; the first settings migration moves a stored *None* (ADR-0105 §5). **Weather icons gains four options, appended 2026-10-19, confirmed by George** (*"Yes. Agreed"*; [ADR-0154](0154-four-more-weather-icon-sets.md)): Solid, Duotone, Neon, Modern, Futuristic, Photographic, Atmospheric, in that order; the default stays Solid. |
 
 ### Renderers and sources
 
