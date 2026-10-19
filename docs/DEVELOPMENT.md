@@ -3025,7 +3025,9 @@ receiver, a sound bar or a TV.
   Display (800 x 480) and Touch Display 2 (720 x 1280, portrait) as
   candidates. A DSI screen has no EDID: how the player knows which one is
   attached (the firmware's own detection or a device-tree overlay) without
-  anyone editing the card.
+  anyone editing the card. 67 of the 181 models in the player's screen list
+  are DSI (the Roadmap's idea, 2026-10-18), each with its own overlay; this
+  phase brings in the ones tested.
 - **Orientation and size**: a panel that is portrait natively, turned to
   landscape; which of the UI's layouts (standard, bars) each size takes.
 - **Touch**: the screen's own touch controller, following the rotation.
