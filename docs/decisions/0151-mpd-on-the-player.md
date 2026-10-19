@@ -41,8 +41,10 @@ library or as a satellite of a central MPD that holds the database
 George asked for a smaller phase (*"It's too much work and the benefit is
 questionable"*). Idea 2 was tested: Lyrion's library and apps playing to MPD
 through Lyrion's *UPnP/DLNA bridge* and upmpdcli. 5.1 and 7.1 FLAC and a 5.1
-WAV reached the receiver as 6 and 8 channels; DSD did not play through the
-bridge. MPD alone carried every format, DSD included.
+WAV reached the receiver as 6 and 8 channels, and 5.1 DSD as 6. It needs the
+bridge in pass-through mode with DSD among its formats (by default it keeps
+two channels and refuses DSD), and the centre and LFE channels swapped before
+the HDMI port - checked by ear on a 5.1 system.
 
 ## Open
 

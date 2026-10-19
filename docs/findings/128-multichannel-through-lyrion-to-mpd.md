@@ -5,9 +5,12 @@ be smaller - Lyrion's library and apps playing to MPD on the player, which
 carries more than two channels, instead of MPD as a second library?
 (ADR-0151, idea 2.)
 
-**Answer:** yes for PCM. Through Lyrion's *UPnP/DLNA bridge* plugin and
-upmpdcli, a 5.1 and a 7.1 file reached the receiver as 6 and 8 channels. DSD
-did not play through the bridge.
+**Answer:** yes, with two settings and one fix. Through Lyrion's *UPnP/DLNA
+bridge* plugin and upmpdcli, 5.1, 7.1 and 5.1 DSD reached the receiver as 6
+and 8 channels - but only with the bridge passing files through untouched
+(its default decodes them, and keeps two channels), DSD added to its formats,
+and the centre and LFE channels swapped back before the HDMI port (addendum
+below, checked by ear).
 
 ## Scope
 
@@ -74,3 +77,37 @@ did not play through the bridge.
   logged *No mixer* on every track.
 - MPD alone does everything ADR-0151 asked of it on HDMI, DSD included
   (as PCM, at the card's 192 kHz).
+
+## Addendum, the same afternoon: by ear, and DSD
+
+George at the receiver (a 5.1 speaker system, the receiver on *Direct*);
+everything installed again for it and removed after (57 packages with
+`espeak-ng`, used only to make spoken test files; Lyrion's plugin list and
+the bridge's settings file put back). Spoken files: each channel says its
+name in turn, 3 s apart, -12 dB.
+
+| What | Heard |
+|---|---|
+| 5.1 through Lyrion, the bridge in its default mode (`auto`) | front left and right only. The receiver showed **3/2.1** (5.1 received): the bridge decodes with a Squeezelite-based decoder, which keeps channels 0 and 1 (Finding 121), and re-encodes six channels with four silent |
+| `speaker-test -c 6` straight to HDMI 2, through `hdmi:` and through `plughw:` | every channel from its own speaker, both ways; the first call (front left) missed while the receiver locked on |
+| 5.1 through Lyrion, the bridge set to pass files through (`<mode>thru</mode>`) | fronts and rears right; the centre voice quiet and distorted |
+| A voice in the file's LFE channel alone, through MPD | clearly from the **centre** speaker |
+
+- **Centre and LFE are swapped.** A file's 5.1 is front left, front right,
+  centre, LFE, rear left, rear right; the Pi's HDMI port is opened with the
+  map `FL,FR,LFE,FC,RL,RR` (`Playback Channel Map`, read while playing).
+  MPD sent the file's order, so the centre went to the subwoofer and the LFE
+  to the centre speaker. `speaker-test` reads the map and was right. A real
+  setup swaps channels 3 and 4 (counting from 1) before the port; 7.1 the
+  same, not checked by ear (the system is 5.1).
+- **DSD passes once the bridge is told it can**: `dsf,dff` added to the
+  bridge's `<codecs>`, and `thru` mode. With the formats added but the mode
+  left at `auto`, Lyrion sent the file and the bridge's decoder refused it
+  (*"Decoder does not support file format"*). With both, MPD received the
+  file untouched (`bridge-1.dsf`), decoded `dsd64:6`, and the card opened at
+  6 channels, 192 kHz.
+- In `auto` mode the bridge also caps rates at 96 kHz (`<sample_rate>`);
+  in `thru` mode nothing is decoded or resampled on the way - not measured
+  with a file above 96 kHz.
+- **Volume:** MPD with a software mixer at 100 % plays the file unchanged;
+  Lyrion's volume through the bridge was not exercised.
