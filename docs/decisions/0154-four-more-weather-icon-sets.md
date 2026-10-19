@@ -55,5 +55,9 @@ night, with the moon in its phase (ADR-0153).
   where the first three are DOM shapes.
 - The image carries two small photographs (about 14 KB together at the
   previews' size).
-- Not decided here: whether *Weather icon motion* Static is the default for
-  the heavier sets - that waits for the measurement.
+- **Measured 2026-10-19 (Finding 129):** Photographic animated costs what
+  Solid does (54 % against 55 % of a core), and with *Static* 4.4 %; the
+  fallback in decision 5 is not needed. The measurement also found, and the
+  same branch fixed, two causes of a Static idle screen still costing half a
+  core: animations under it, and the moon's phase rebuilding icons each
+  second.
