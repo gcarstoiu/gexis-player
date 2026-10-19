@@ -391,6 +391,8 @@ MUSIC_FLOOR_S = 60.0
 #: downloaded; asked again after this, if they are still missing.
 LYRION_ADDONS_RESTART_S = 90.0
 LYRION_ADDONS_RETRY_S = 600.0
+#: How long a new server's folders wait for its add-ons (below) at most.
+LYRION_FOLDERS_HOLD_S = 600.0
 LYRION_ADDONS_DONE = Path("/var/lib/gexis/lyrion-addons.done")
 #: Where Lyrion puts an add-on it installed (seen on George's player).
 LYRION_PLUGINS = Path("/var/lib/squeezeboxserver/cache/InstalledPlugins/Plugins")
@@ -3438,6 +3440,12 @@ async def main() -> None:
         # scan starting - keeps the step it is on.
         if status is None and lyrion_stage.CURRENT.get("phase") not in (None, "starting"):
             now_stage = dict(lyrion_stage.CURRENT)
+        # **A first read stays one until it ends** (George, 2026-10-19: the
+        # panel went from the add-ons to the library): Lyrion counts songs
+        # as it finds them, so "no songs yet" ended the first read with its
+        # first song, and the plate with it.
+        if lyrion_stage.CURRENT.get("first") and now_stage["phase"] in ("waiting", "scanning"):
+            now_stage["first"] = True
         if now_stage != lyrion_stage.CURRENT:
             if now_stage["phase"] != lyrion_stage.CURRENT.get("phase"):
                 logger.info("lyrion: %s", now_stage["label"].lower())
@@ -3508,6 +3516,25 @@ async def main() -> None:
                 logger.exception("lyrion: shares")
             if not on:
                 continue
+            # **A new server reads its music after its add-ons** (George,
+            # 2026-10-19: the plate went from the add-ons straight to done):
+            # given its folders at once, it read them while it was still
+            # adding its add-ons - step 3 on the plate - and again after the
+            # restart that loads them. Its folders wait for Material, at most
+            # LYRION_FOLDERS_HOLD_S from the first pass that held them (no
+            # internet, say), so the steps run in their order.
+            held_since = lyrion_asked.setdefault("held_since", time.monotonic())
+            if not (LYRION_ADDONS_DONE.exists() or lyrion_asked.get("served")
+                    or time.monotonic() - held_since > LYRION_FOLDERS_HOLD_S):
+                try:
+                    await _lyrion_addons()
+                except Exception as exc:  # no internet yet, or the server is busy
+                    logger.debug("lyrion: add-ons not checked (%r)", exc)
+                if not (LYRION_ADDONS_DONE.exists() or lyrion_asked.get("served")):
+                    if not lyrion_asked.get("held"):
+                        lyrion_asked["held"] = True
+                        logger.info("lyrion: its folders wait for its add-ons")
+                    continue
             try:
                 # ADR-0115 decisions 20 and 23: the locations switched on.
                 usb_chosen = (lyrion_usb.paths(lyrion_usb.all())

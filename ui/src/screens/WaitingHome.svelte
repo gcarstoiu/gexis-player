@@ -37,7 +37,8 @@
   //: ADR-0149 decision 43 as amended (George, 2026-10-19: Lyrion's steps
   //: "in the plate not the modal", on the bars too; then a smaller plate,
   //: centred - "just say something like step 1 of 7", and the current step
-  //: in the title, "the most visible").
+  //: in the title, "the most visible"; then wider on a panel, so it is
+  //: lower and the clock is not squeezed).
   const TITLES = ['Downloading Lyrion', 'Starting Lyrion', "Adding Lyrion's add-ons", 'Reading your music', 'Lyrion is ready'];
   const stepAt = $derived.by(() => {
     const steps = reading?.steps;
@@ -164,9 +165,9 @@
   .reading {
     position: absolute;
     left: 50%;
-    top: 50%;
+    top: 54%;
     transform: translate(-50%, -50%);
-    width: min(680px, calc(100% - 96px));
+    width: min(940px, calc(100% - 96px));
     padding: 22px 32px 24px;
     border-radius: 26px;
     background: rgba(10, 16, 22, 0.72);

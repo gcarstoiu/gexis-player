@@ -378,7 +378,12 @@ it as it should be"*)
     add-ons*, *Reading your music*), the step's bar and Lyrion's own detail
     under it; on a bar the plate and smaller source marks are centred
     together beside the clock. The first build listed all five steps on a
-    plate beside the clock.
+    plate beside the clock. On a panel it is then made wider and set a
+    little lower (George: *"make the plate wider ... and the clock doesn't
+    feel squeezed in on the left"*), so its lines do not wrap and it keeps
+    clear of the date. **A first read stays one until it ends**: Lyrion
+    counts songs as it finds them, and "no songs yet" had ended the plate
+    with the first song found.
     The core gives the Lyrion component its `steps` (`settling.lyrion_steps`).
     The settling dialog is for the other downloads: the record still marks
     the Lyrion server `follow`, so decision 37's restart waits for the

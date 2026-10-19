@@ -756,7 +756,11 @@ players the skins and Plexamp, which started at their steps. The Lyrion
 Server's item carries `follow` (decision 43): `settling.view` keeps it busy
 past its download, `step: "after"` with Lyrion's `phase`, `label`, `line`
 and, while it reads, `share`, and gives it `steps` - `lyrion_steps`, the
-five the phone's checklist shows - until `lyrion_stage` says `ready`. The
+five the phone's checklist shows - until `lyrion_stage` says `ready`. A new
+server's folders wait for its add-ons (`_lyrion_folders_loop`, at most
+`LYRION_FOLDERS_HOLD_S`), so it reads once, after them; and a first read keeps
+`first` until it ends (`_set_lyrion_stage`), though songs count up as it
+goes. The
 view's `modal` is false while Lyrion is all it holds: the panel's steps are
 on the waiting screen's plate (`WaitingHome`'s `reading`, from
 `components.lyrion.steps`, which `_all_components` adds: *Lyrion · Step n of
