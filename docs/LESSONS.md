@@ -382,6 +382,12 @@ channel count shows the stream's shape, not its content: check what is in
 each channel (a capture, a per-channel signal, an ear) before saying it
 arrives.
 
+**77. A core that was active, and old** (2026-10-19, a preview on sofapi).
+`apt install` of a preview's `gexis-core` does not restart it (the updater
+does); `systemctl is-active` said active of the old process, and the new
+setting was missing. After a preview install, restart what changed and check
+its start time is after the install.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target, the check quietly

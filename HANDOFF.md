@@ -49,10 +49,22 @@ release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
 (excluded in `.git/info/exclude`). `reuse.py` reuses a published file only
 against a local copy, so losing that folder means re-uploading every OS file.
 
-**Phase 14 closed, Phase 15 (`ph-mpd`) started 2026-10-19** (George: *"You
-can make the change"*): DEVELOPMENT.md, the wiki Roadmap, the phases doc and
-the to-do list say so. Its ADR comes first; the open decisions were put to
-George the same day. **Three Phase 14 articles** (13-15: setup in two parts,
+**Phase 15 is now the public API (`ph-api`, ADR-0152)**; MPD, planned as
+Phase 15 first, was parked the same day after measuring it on sofapi
+(Finding 128, ADR-0151: George, *"Really too much risk for a small
+benefit"*). On the branch `ph-api` (worktree `~/projects/gexis-player-api`,
+pushed, CI green, not merged): `core/src/gexis_core/api/openapi.json`
+(all 90 API routes; drafted group by group, merged, validated with
+openapi-spec-validator), `core/tests/test_openapi.py` (the drift test), the
+setting *API explorer* (`api_explorer`, System after Debug logs, off; ADR-0022
+[N]), `/api` with Swagger UI 5.33.3 shipped in the core (every route tryable),
+`.github/workflows/api-docs.yml` (the static page at each release tag;
+**GitHub Pages must be switched on before the first such release**), three
+faults fixed (radio's 502, a transport KeyError, `/skins` and Fanart), and the
+docs (`docs/tech/api.md`, manual, FAQ, README). sofapi runs core
+`1.1.1+git21` (restarted by hand: LESSONS 77), the explorer off. **Open with
+George:** the stable/internal marks (32 stable, 58 internal proposed).
+**Three Phase 14 articles** (13-15: setup in two parts,
 where your music is, a music server's first minutes) are drafts 186, 190 and
 191 in the local WordPress copy for George to read; `import_wp.py` now takes
 article numbers, and `bundle.json` is refreshed for `push_wp.py`.

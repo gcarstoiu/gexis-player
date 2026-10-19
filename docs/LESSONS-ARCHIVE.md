@@ -1487,3 +1487,15 @@ format, channel count or rate shows the stream's shape, not what is in it;
 check the content - a capture, a signal per channel, or an ear - before
 saying a channel arrives.
 
+**77. A core that was active, and old** (2026-10-19, Phase 15 preview on
+sofapi). The packages with the API's setting were installed with `apt` over
+SSH, as every preview is, and the check that followed read `systemctl
+is-active gexis-core`: *active*. But the setting was missing from
+`/settings`. The core had started at 15:47:32 and its files were replaced at
+15:52:16: a plain `apt install` of `gexis-core` does not restart it - the
+updater does (`try-restart` of changed units), apt does not - so the old
+code went on running from memory. "Active" was true of the old process. The
+UI looked current because its files are read from disk on each request.
+**Rule:** after installing a preview, restart what changed and compare the
+service's start time with the install's before checking anything.
+
