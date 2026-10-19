@@ -3367,7 +3367,7 @@ async def main() -> None:
         its folder - and only then is Material made the skin."""
         if LYRION_ADDONS_DONE.exists():
             return
-        have = {name: (LYRION_PLUGINS / name).is_dir() for name in lyrion_addons.WANTED}
+        have = await _lyrion_addons_in()
         # **Material as soon as it is in** (sofapi, 2026-10-19): Radio Now
         # Playing's download failed Lyrion's own check ("digest does not
         # match"), and waiting for all three left the server without its
@@ -3400,6 +3400,27 @@ async def main() -> None:
             logger.info("lyrion: restarting it to install its add-ons")
             await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-lyrion.service")
 
+    async def _material_served() -> bool:
+        """**Material is in once Lyrion serves it** (George, 2026-10-19: the
+        server's page still showed the old design after the step said done).
+        Its folder is there seconds before Lyrion, restarting to load it,
+        answers - 17 s on sofapi; `/material/` is Material's own page, a 404
+        until it is loaded."""
+        try:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
+                async with session.get("http://127.0.0.1:9000/material/") as r:
+                    return r.status == 200
+        except (aiohttp.ClientError, asyncio.TimeoutError):
+            return False
+
+    async def _lyrion_addons_in() -> dict:
+        """Each add-on in its folder - Material only once it is served too."""
+        have = {name: (LYRION_PLUGINS / name).is_dir() for name in lyrion_addons.WANTED}
+        if have["MaterialSkin"] and not lyrion_asked.get("served"):
+            lyrion_asked["served"] = await _material_served()
+        have["MaterialSkin"] = have["MaterialSkin"] and bool(lyrion_asked.get("served"))
+        return have
+
     def _set_lyrion_stage(status) -> None:
         """ADR-0115 decision 28: the stage from what `serverstatus` answered
         (None: no answer), published when it changes."""
@@ -3407,6 +3428,9 @@ async def main() -> None:
                    or (settings.value("lyrion-server.usb") is True and bool(lyrion_usb.all())))
         addons = ({name: True for name in lyrion_addons.WANTED} if LYRION_ADDONS_DONE.exists()
                   else {name: (LYRION_PLUGINS / name).is_dir() for name in lyrion_addons.WANTED})
+        if not LYRION_ADDONS_DONE.exists():
+            # Material only once Lyrion serves it (`_lyrion_addons_in`).
+            addons["MaterialSkin"] = addons["MaterialSkin"] and bool(lyrion_asked.get("served"))
         now_stage = lyrion_stage.stage(status is not None, addons, status, located)
         # **A slow answer is not a new start** (George, 2026-10-19: the
         # checklist went back and forth between steps 2 and 3): once

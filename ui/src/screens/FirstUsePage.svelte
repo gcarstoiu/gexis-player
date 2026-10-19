@@ -690,6 +690,18 @@ class Component extends DCLogic {
     failed() { return !!$settling?.items?.some((i) => i.state === 'failed'); },
     async finish() {
       st.finishError = null;
+      // **What was ticked is added, even without its Add button** (George,
+      // 2026-10-19: network shares ticked, and nothing in Lyrion - the ticks
+      // were left behind when the step was left by Next).
+      const d = comp.d(st);
+      for (const [kind, place] of [['usb', 'usb'], ['share', 'share']]) {
+        if (!d.here || !st.places[place] || !st.picks[kind].length) continue;
+        await live.addPicked(kind);
+        if (st.picks[kind].length) {
+          st.finishError = (kind === 'usb' ? st.usbError : st.shareError) ?? 'A folder could not be added.';
+          return;
+        }
+      }
       try {
         const r = await fetch('/personalise/finish', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
