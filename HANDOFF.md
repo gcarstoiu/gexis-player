@@ -34,12 +34,13 @@ Image `image/deploy/2026-10-18-gexis-player-v1.1.0.img`, 123 checks; parts
 `debian-e13da7eb04f4` (the OS packages changed since 1.0.6). Notes
 pre-approved by George. It carries Phase 14, first use in two parts
 (`ph-first-use`, merged into `next`), and every finding of George's full run
-of 18-19 October. **PR #75** (`release-1.1.0` into `main`) is open for
-George to merge; promotion to Stable is his call, and the README names the
-release then. After the merge: the post-merge steps, then remove the release
-worktree `~/projects/gexis-player-rel-1.1.0` (`git submodule deinit -f
---all`, then `git worktree remove --force`) and the merged branches
-`ph-first-use` and `release-1.1.0`. sofapi runs the preview `+git162`.
+of 18-19 October. **PR #75** merged by George (2026-10-19); the post-merge steps and the
+routine clean-up are done (worktrees `-14` and `-rel-1.1.0` and the branches
+`ph-first-use` and `release-1.1.0` gone). **Not promoted: George tests the
+final parts first.** The 1.1.0 image is in the main checkout's
+`image/deploy/`, and `r1.1.0/image.txt` in the release output was repointed
+there (the build had recorded the worktree's path); 1.0.6's image stays
+until 1.1.0 is on Stable. sofapi runs the preview `+git162`.
 **Not tried on a device:** a USB drive's folders, a share added at a
 sub-folder, and the *Lyrion is reading your music* block on a real first
 read. **Seen 2026-10-18, not yet looked into:** sofapi's new Lyrion server
