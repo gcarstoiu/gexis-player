@@ -438,7 +438,10 @@ class StateServer:
         state = self._store.state
         if state.active is None:
             return web.json_response({"error": "nothing is active"}, status=409)
-        if command not in state.capabilities[state.active].controls:
+        # A source with no capabilities declared declares nothing (found
+        # writing ADR-0152's description: indexing it was a plain 500).
+        caps = state.capabilities.get(state.active)
+        if caps is None or command not in caps.controls:
             return web.json_response(
                 {"error": f"{state.active} does not declare {command}"}, status=409
             )
@@ -892,15 +895,19 @@ class StateServer:
         if self._skins_at is None:
             return web.json_response({"error": "skins are not wired up"}, status=503)
         chosen = str(self._setting_or_none("skin_corpus") or skins.ALL)
-        wanted = skins.CORPUS.get(chosen) or skins.CORPUS[skins.ALL]
+        every = [skin for skin, _ in self._skins()]
+        # The visualiser's own choice (`skins.in_corpus`): Fanart is a skin's
+        # option, not its kind - by kind, every skin read as outside it
+        # (found writing ADR-0152's description).
+        chosen_names = {skin.name for skin in skins.in_corpus(every, chosen)}
         items = [
             {
                 "name": skin.name,
                 "kind": skin.kind,
-                "in_corpus": skin.kind in wanted,
+                "in_corpus": skin.name in chosen_names,
                 "preview": f"/skins/{quote(skin.name)}/preview",
             }
-            for skin, _ in self._skins()
+            for skin in every
         ]
         return web.json_response({"skins": items, "corpus": chosen})
 
