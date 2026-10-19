@@ -256,3 +256,21 @@ async def test_an_unknown_handle_on_the_route_is_404():
         assert (await client.get("/radio?at=nope")).status == 404
         assert (await client.post("/radio/play", json={"handle": "nope"})).status == 404
         assert (await client.post("/radio/play", json={})).status == 400
+
+
+@pytest.mark.asyncio
+async def test_lyrion_not_answering_is_said_as_radio_unavailable():
+    """The routes answer RadioUnavailable with 502; before, nothing raised it
+    and Lyrion down was a plain 500 (found writing ADR-0152's description)."""
+    from gexis_core.radio import RadioUnavailable
+
+    lms = FakeLms()
+    browser, stations = await _station(lms)
+
+    async def down(command, player=""):
+        raise ConnectionError("Lyrion did not answer")
+    browser._rpc = down
+    with pytest.raises(RadioUnavailable, match="did not answer"):
+        await browser.browse()
+    with pytest.raises(RadioUnavailable):
+        await browser.play(stations[0]["handle"])

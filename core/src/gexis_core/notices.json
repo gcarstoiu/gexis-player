@@ -556,6 +556,18 @@
       ]
     },
     {
+      "name": "Swagger UI",
+      "group": "core",
+      "role": "Shows the player's API on its own page, when API explorer is on.",
+      "author": "SmartBear Software and the Swagger UI contributors",
+      "licence": "Apache-2.0; bundling React and other libraries (MIT) and DOMPurify (Apache-2.0 or MPL-2.0), listed in its swagger-ui-bundle.js.LICENSE.txt",
+      "url": "https://github.com/swagger-api/swagger-ui",
+      "arrives": "Bundled with the player's core (swagger-ui-dist 5.33.3)",
+      "packages": [
+        "swagger-ui-dist"
+      ]
+    },
+    {
       "name": "dbus-next",
       "group": "core",
       "role": "Talks to Bluetooth.",

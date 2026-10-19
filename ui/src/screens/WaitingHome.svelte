@@ -49,7 +49,10 @@
   //: Under the bar, what this step is doing in Lyrion's own words.
   const detail = $derived.by(() => {
     if (!reading) return '';
-    if (reading.phase === 'scanning') return reading.line.split('. Music shows up')[0];
+    // Lyrion's step and count, without the sentence the core adds after it
+    // - and nothing when Lyrion has not named its step yet (George's photo,
+    // 2026-10-19: the plate showed only that sentence).
+    if (reading.phase === 'scanning') return reading.line.split('Music shows up')[0].replace(/[.\s]+$/, '');
     if (stepAt?.n === 2) return reading.steps[2][0].replace(/^Add /, '');
     return reading.phase === 'downloading' ? '' : reading.line || '';
   });

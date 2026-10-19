@@ -402,6 +402,17 @@ it as it should be"*)
     ticked before it writes the answers, and stops with the reason if one
     cannot be added.
 
+46. **Every Lyrion server found is offered** (George, 2026-10-19: *"Lyrion
+    discovery should work also when a server is already saved. This can
+    allow the user to switch between servers without inputting the IP
+    address manually"*; this table's own *"a server found on the network
+    (each listed)"*). A found server used to skip *Where should Lyrion
+    run?* and take the saved one or the first. The step now always follows
+    *My music*: with servers found it is *Which Lyrion server?*, each one
+    listed - the saved one chosen, or *Install Lyrion on* this player when
+    the player's own server is the one in use - with this player and an
+    address to type as the other answers; with none found, as before.
+
 **Settled by George afterwards (2026-10-18)**
 - **Personalise** is in ADR-0022's inventory (*"Yes it goes in the list"*).
 - Part 1 is tested by George on sofapi after *Reset to factory settings*

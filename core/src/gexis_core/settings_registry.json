@@ -1,102 +1,10 @@
 [
   {
-    "id": "audio",
-    "label": "Audio",
-    "subtitle": "Level and output",
-    "accent": "#7ed6bc",
-    "rows": [
-      {
-        "key": "output_device",
-        "type": "choice",
-        "label": "Output",
-        "marks": "R",
-        "note": "Where the sound goes. Over HDMI the sound is not bit-perfect; HDMI has no volume control of its own, so its volume is Software or Fixed, and the visualiser moves only on Software.",
-        "optionsFrom": "output_device",
-        "default": null,
-        "warn": "Playback stops for the change; start it again when ready."
-      },
-      {
-        "key": "sound_card_board",
-        "type": "choice",
-        "label": "Sound card board",
-        "marks": "N",
-        "note": "Most boards and every USB DAC are found by themselves. A board that is not - it does not show under Output - can be chosen here.",
-        "warn": "Choosing a board restarts the player with it. If no sound card appears after the restart, the player goes back to what it had and restarts again.",
-        "options": [],
-        "default": "Found by itself",
-        "optionsFrom": "boards",
-        "grouped": true
-      },
-      {
-        "key": "output_mode",
-        "type": "choice",
-        "label": "Volume",
-        "marks": "R",
-        "note": null,
-        "options": [
-          "Hardware",
-          "Software",
-          "Fixed"
-        ],
-        "default": "Hardware",
-        "warn": {
-          "Fixed": "Full level, and the panel can no longer lower it. Turn your amplifier down before confirming."
-        },
-        "optionNotes": {
-          "Hardware": "The sound card's own control. Bit-perfect.",
-          "Software": "Set by the player, for HDMI and similar. Not bit-perfect below 100 %.",
-          "Fixed": "Always full level, for an amplifier that sets the volume."
-        }
-      },
-      {
-        "key": "max_ceiling",
-        "type": "number",
-        "label": "Maximum volume",
-        "marks": "R",
-        "note": "The loudest the player will go, on any input. Set it to 80 and the player is never louder than the slider at 80 — and 100% on the panel, in Lyrion and on a connected phone all mean that level, so no control shows a number louder than what comes out.",
-        "min": 10,
-        "max": 100,
-        "unit": "%",
-        "default": 100,
-        "onlyWhen": [
-          "output_mode",
-          {
-            "not": "Fixed"
-          }
-        ]
-      },
-      {
-        "key": "volume_managed",
-        "type": "readonly",
-        "label": "Volume-managed renderers",
-        "marks": "R",
-        "note": "Bluetooth excluded pending Finding 006.",
-        "default": "LMS, Spotify",
-        "surfaced": false
-      },
-      {
-        "key": "travel_curve",
-        "type": "choice",
-        "label": "Volume curve",
-        "marks": "R",
-        "note": null,
-        "options": [
-          "Cubic",
-          "Linear (dB)"
-        ],
-        "default": "Cubic",
-        "onlyWhen": [
-          "output_mode",
-          {
-            "not": "Fixed"
-          }
-        ],
-        "optionNotes": {
-          "Cubic": "Half travel is −15.5 dB, like most volume controls.",
-          "Linear (dB)": "Even decibels: half travel is −30 dB."
-        }
-      }
-    ]
+    "id": "library",
+    "label": "Library",
+    "subtitle": "Your own music, and where it is read from",
+    "accent": "#f2a48f",
+    "rows": []
   },
   {
     "id": "sources",
@@ -139,6 +47,28 @@
         "surfaced": false
       },
       {
+        "key": "library_navigation",
+        "type": "choice",
+        "label": "Navigation",
+        "marks": "N",
+        "note": null,
+        "options": [
+          "Simple",
+          "Extended",
+          "Off"
+        ],
+        "optionNotes": {
+          "Simple": "Your library: the home tiles, albums, artists, playlists and radio.",
+          "Extended": "Lyrion's own menus too: My Music, Favourites, Apps and more.",
+          "Off": "Only what plays. Lyrion's apps on your phone still play here."
+        },
+        "default": null,
+        "onlyWhen": [
+          "lms_enabled",
+          true
+        ]
+      },
+      {
         "key": "lms_library",
         "type": "toggle",
         "label": "Library on the screen",
@@ -148,7 +78,9 @@
         "onlyWhen": [
           "lms_enabled",
           true
-        ]
+        ],
+        "surfaced": false,
+        "shownAs": "library_navigation"
       },
       {
         "key": "lms_extended_nav",
@@ -160,7 +92,9 @@
         "onlyWhen": [
           "lms_enabled",
           true
-        ]
+        ],
+        "surfaced": false,
+        "shownAs": "library_navigation"
       },
       {
         "key": "plugins",
@@ -279,13 +213,6 @@
     ]
   },
   {
-    "id": "library",
-    "label": "Library",
-    "subtitle": "Your own music, and where it is read from",
-    "accent": "#f2a48f",
-    "rows": []
-  },
-  {
     "id": "handoff",
     "label": "Handoff",
     "subtitle": "Who gets the player",
@@ -369,6 +296,105 @@
           "show_transition",
           true
         ]
+      }
+    ]
+  },
+  {
+    "id": "audio",
+    "label": "Audio",
+    "subtitle": "Level and output",
+    "accent": "#7ed6bc",
+    "rows": [
+      {
+        "key": "output_device",
+        "type": "choice",
+        "label": "Output",
+        "marks": "R",
+        "note": "Where the sound goes. Over HDMI the sound is not bit-perfect; HDMI has no volume control of its own, so its volume is Software or Fixed, and the visualiser moves only on Software.",
+        "optionsFrom": "output_device",
+        "default": null,
+        "warn": "Playback stops for the change; start it again when ready."
+      },
+      {
+        "key": "sound_card_board",
+        "type": "choice",
+        "label": "Sound card board",
+        "marks": "N",
+        "note": "Most boards and every USB DAC are found by themselves. A board that is not - it does not show under Output - can be chosen here.",
+        "warn": "Choosing a board restarts the player with it. If no sound card appears after the restart, the player goes back to what it had and restarts again.",
+        "options": [],
+        "default": "Found by itself",
+        "optionsFrom": "boards",
+        "grouped": true
+      },
+      {
+        "key": "output_mode",
+        "type": "choice",
+        "label": "Volume",
+        "marks": "R",
+        "note": null,
+        "options": [
+          "Hardware",
+          "Software",
+          "Fixed"
+        ],
+        "default": "Hardware",
+        "warn": {
+          "Fixed": "Full level, and the panel can no longer lower it. Turn your amplifier down before confirming."
+        },
+        "optionNotes": {
+          "Hardware": "The sound card's own control. Bit-perfect.",
+          "Software": "Set by the player, for HDMI and similar. Not bit-perfect below 100 %.",
+          "Fixed": "Always full level, for an amplifier that sets the volume."
+        }
+      },
+      {
+        "key": "max_ceiling",
+        "type": "number",
+        "label": "Maximum volume",
+        "marks": "R",
+        "note": "The loudest the player will go, on any input. Set it to 80 and the player is never louder than the slider at 80 — and 100% on the panel, in Lyrion and on a connected phone all mean that level, so no control shows a number louder than what comes out.",
+        "min": 10,
+        "max": 100,
+        "unit": "%",
+        "default": 100,
+        "onlyWhen": [
+          "output_mode",
+          {
+            "not": "Fixed"
+          }
+        ]
+      },
+      {
+        "key": "volume_managed",
+        "type": "readonly",
+        "label": "Volume-managed renderers",
+        "marks": "R",
+        "note": "Bluetooth excluded pending Finding 006.",
+        "default": "LMS, Spotify",
+        "surfaced": false
+      },
+      {
+        "key": "travel_curve",
+        "type": "choice",
+        "label": "Volume curve",
+        "marks": "R",
+        "note": null,
+        "options": [
+          "Cubic",
+          "Linear (dB)"
+        ],
+        "default": "Cubic",
+        "onlyWhen": [
+          "output_mode",
+          {
+            "not": "Fixed"
+          }
+        ],
+        "optionNotes": {
+          "Cubic": "Half travel is −15.5 dB, like most volume controls.",
+          "Linear (dB)": "Even decibels: half travel is −30 dB."
+        }
       }
     ]
   },
@@ -1824,6 +1850,14 @@
         "label": "Debug logs",
         "marks": "R",
         "note": "Keeps the device's logs on the card across restarts, up to 100 MB, for tracking down a problem. Off, they are kept in memory and lost at a restart, and switching off deletes the ones kept. On by default on the Testing channel.",
+        "default": false
+      },
+      {
+        "key": "api_explorer",
+        "type": "toggle",
+        "label": "API explorer",
+        "marks": "N",
+        "note": "Shows this player's API at its address followed by /api, for building apps and integrations. Every route can be tried there against this player, restart and reset included.",
         "default": false
       },
       {

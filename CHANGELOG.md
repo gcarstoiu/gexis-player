@@ -6,6 +6,26 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.2.0 — 19 October 2026
+
+### New
+
+- The player's API is documented. Everything its screen and phone page do goes through one HTTP API, now described in full as an OpenAPI file. With Settings → System → API explorer switched on, the player shows it at http://<player>.local:8090/api, where every call can be read and tried. A read-only copy for each release is on GitHub.
+- Settings → Library has the Lyrion server's own On switch. Off, the server stops; its library, folders and shares are kept for when it is on again.
+- Settings → Sources → Lyrion Client → Navigation is one choice, Simple, Extended or Off, in place of two switches.
+- When first use's second part is run again, it lists every Lyrion server found on the network, even with one already chosen, so moving to another server needs no address.
+
+### Fixed
+
+- The waiting and idle screens show a calm picture while their first picture cannot be loaded, for example just after an update, instead of plain grey. A real picture follows as soon as one loads; a black background stays black.
+- While the Lyrion server gets ready, the waiting screen's step no longer shows a general sentence before the server names what it is doing.
+- Apps calling the player get a clear error, instead of a general fault, when Lyrion's radio is not answering or a control is sent to a source that cannot take it.
+
+### Good to know
+
+- Settings lists its categories as Library, Sources, Handoff, Audio, Display, Enrichment, Plugins, System.
+- API explorer is off by default. While it is on, anyone on the home network can try every call from that page, restart and factory reset included. The API itself is open to the home network either way, as the settings are.
+
 ## 1.1.1 — 19 October 2026
 
 ### New

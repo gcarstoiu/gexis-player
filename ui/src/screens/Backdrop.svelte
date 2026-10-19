@@ -65,6 +65,29 @@
   // the top of this range where the picture is brightest.
   const brightness = $derived(Math.max(20, Math.min(100, Number((home ? settings.waiting_background_brightness : settings.background_brightness) ?? 62))) / 100);
 
+  //: **Never the bare grey** (George, 2026-10-19: "Waiting screen should
+  //: never be this bland gray ... Fallback picture; take something from the
+  //: calm batch"): with no picture yet - the core restarting after an
+  //: install, no network, a set that answered nothing - one of the player's
+  //: own Calm pictures, the one the library rests on, until a real one loads.
+  const FALLBACK = { url: '/idle/wallpaper/own/calm/c105649975.webp', by: null, credit: 'CC0', error: null };
+  //: Asked again this often while only the fallback shows, rather than at
+  //: the background's own pace (15 min by default).
+  const RETRY_MS = 30 * 1000;
+  let real = false;
+
+  function rest() {
+    if (shown) return;
+    const image = new Image();
+    image.onload = () => {
+      if (shown) return;
+      picture = FALLBACK;
+      shown = FALLBACK.url;
+      ratio = image.naturalHeight ? image.naturalWidth / image.naturalHeight : null;
+    };
+    image.src = FALLBACK.url;
+  }
+
   // **Loaded before it is shown.** Swapping the source on a visible picture
   // paints the gap; this holds the new one until the browser has it.
   async function loadPicture() {
@@ -78,16 +101,21 @@
       answer = null;
     }
     if (!answer?.url) {
-      picture = answer ?? null;
+      if (shown) picture = answer ?? null;
+      else rest();
       return;
     }
     const image = new Image();
     image.onload = () => {
       picture = answer;
       shown = answer.url;
+      real = true;
       ratio = image.naturalHeight ? image.naturalWidth / image.naturalHeight : null;
     };
-    image.onerror = () => (picture = { error: 'That picture could not be loaded.' });
+    image.onerror = () => {
+      if (shown) picture = { error: 'That picture could not be loaded.' };
+      else rest();
+    };
     image.src = answer.url;
   }
 
@@ -95,7 +123,8 @@
     loadPicture();
     const every = Math.max(1, Number((home ? settings.waiting_background_interval : settings.background_interval) ?? 15)) * 60 * 1000;
     const pictures = setInterval(loadPicture, every);
-    return () => clearInterval(pictures);
+    const retry = setInterval(() => { if (!real) loadPicture(); }, RETRY_MS);
+    return () => { clearInterval(pictures); clearInterval(retry); };
   });
 </script>
 
