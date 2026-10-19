@@ -22,6 +22,7 @@ to remember.
 from __future__ import annotations
 
 import asyncio
+import datetime
 import logging
 import time
 
@@ -106,6 +107,19 @@ def _clock(iso: str | None) -> str | None:
     if not iso or "T" not in str(iso):
         return None
     return str(iso).split("T", 1)[1][:5]
+
+
+def _moment(iso: str | None, offset_s) -> int | None:
+    """`2026-09-22T06:52` in a place `offset_s` seconds ahead of UTC -> the
+    moment, as seconds since 1970 (ADR-0153). The screen compares it with its
+    own clock to know whether it is night, whatever its own time zone."""
+    if not iso or "T" not in str(iso) or not isinstance(offset_s, (int, float)):
+        return None
+    try:
+        local = datetime.datetime.fromisoformat(str(iso)).replace(tzinfo=datetime.timezone.utc)
+    except ValueError:
+        return None
+    return int(local.timestamp() - offset_s)
 
 
 class Weather:
@@ -247,7 +261,12 @@ class Weather:
                 "sun": {
                     "rise": _clock((daily.get("sunrise") or [None])[0]),
                     "sets": _clock((daily.get("sunset") or [None])[0]),
+                    # ADR-0153: the same two as moments, for the moon at night.
+                    "rise_at": _moment((daily.get("sunrise") or [None])[0], body.get("utc_offset_seconds")),
+                    "sets_at": _moment((daily.get("sunset") or [None])[0], body.get("utc_offset_seconds")),
                 },
+                #: Which side of the moon is lit (ADR-0153).
+                "south": found["latitude"] < 0,
                 "days": [
                     {
                         "date": times[i],

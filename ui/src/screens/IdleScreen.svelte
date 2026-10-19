@@ -31,6 +31,7 @@
   import { onMount, tick } from 'svelte';
   import { fade } from 'svelte/transition';
   import WeatherIcon from './WeatherIcon.svelte';
+  import { isNight, moonPhase } from '../lib/moon.js';
   import Backdrop from './Backdrop.svelte';
   import { screen } from '../lib/family.svelte.js';
 
@@ -171,6 +172,12 @@
   const forecastDays = $derived(threeDays ? (weather?.days ?? []).slice(0, 3) : []);
   //: Today's high and low ride with the current conditions in both layouts.
   const today = $derived((weather?.days ?? [])[0] ?? null);
+  // ADR-0153: between sunset and sunrise the current conditions show the
+  // moon, by this screen's clock (`now` ticks every second); the forecast
+  // days keep their sun.
+  const night = $derived(isNight(weather?.sun, now.getTime()));
+  const phase = $derived(moonPhase(now.getTime()));
+  const south = $derived(weather?.south === true);
   const drawsWeather = $derived(
     wantsWeather && weather && !weather.off && !weather.error && weather.now
   );
@@ -308,7 +315,7 @@
             {#if drawsWeather}
               {#if wantsClock}<span class="bi__divider"></span>{/if}
               <div class="bi__today ink" style:--k={todayScale}>
-                <WeatherIcon condition={weather.now.condition} set={iconSet} {still} size={100} />
+                <WeatherIcon condition={weather.now.condition} set={iconSet} {still} {night} {phase} {south} size={100} />
                 <div class="bi__todaytext">
                   <div class="bi__line">
                     <span class="bi__temp">{degrees(weather.now.temperature)}</span>
@@ -368,7 +375,7 @@
         {#if !threeDays && drawsWeather}
           {#if wantsClock}<div class="rule"></div>{/if}
           <div class="now now--big ink">
-            <WeatherIcon condition={weather.now.condition} set={iconSet} {still} size={150} />
+            <WeatherIcon condition={weather.now.condition} set={iconSet} {still} {night} {phase} {south} size={150} />
             <div class="now__text">
               <div class="now__line">
                 <span class="now__temp">{degrees(weather.now.temperature)}</span>
@@ -393,7 +400,7 @@
     {:else if threeDays && drawsWeather}
       <div class="band">
         <div class="now ink">
-          <WeatherIcon condition={weather.now.condition} set={iconSet} {still} size={132} />
+          <WeatherIcon condition={weather.now.condition} set={iconSet} {still} {night} {phase} {south} size={132} />
           <div class="now__text">
             <div class="now__line">
               <span class="now__temp">{degrees(weather.now.temperature)}</span>

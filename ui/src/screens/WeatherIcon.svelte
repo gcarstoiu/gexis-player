@@ -27,7 +27,12 @@
   be worse than extending this one.
 -->
 <script>
-  let { condition = 'unknown', set = 'Solid', size = 80, still = false } = $props();
+  import { litPath, moonLit } from '../lib/moon.js';
+
+  // `night`, `phase` and `south` only for the current conditions (ADR-0153):
+  // between sunset and sunrise the sun becomes the moon, lit as tonight's is.
+  let { condition = 'unknown', set = 'Solid', size = 80, still = false, night = false, phase = 0, south = false } = $props();
+  const uid = $props.id();
 
   // Which primitives each condition is made of. The design's own `cond()`
   // maps sun/part/cloud/rain; the rest extend it.
@@ -59,6 +64,17 @@
   // The rain bars sit at these three fractions across the box; a light
   // shower drops the middle one rather than shrinking them all.
   const wet = $derived(parts.rain === 'light' ? [0.22, 0.74] : [0.22, 0.48, 0.74]);
+
+  // The moon, in the 100x100 box of its SVG: as big as the sun, or smaller
+  // and up to the left beside a cloud, where the sun sits.
+  const moon = $derived(night && parts.sun);
+  const r = $derived(parts.cloud ? 22 : 27);
+  const shift = $derived(parts.cloud ? -9 : 0);
+  const showsLit = $derived(moonLit(phase) >= 0.02);
+  const lit = $derived(litPath(phase, r));
+  // Waxing is lit on the right seen from the north; waning, or south of the
+  // equator, the other side - both together, the right again.
+  const mirrored = $derived((phase >= 0.5) !== south);
 </script>
 
 <span
@@ -68,9 +84,34 @@
   style:height={`${size}px`}
   style:--s={`${size}px`}
   role="img"
-  aria-label={condition.replace(/-/g, ' ')}
+  aria-label={(moon ? 'night, ' : '') + condition.replace(/-/g, ' ')}
 >
-  {#if parts.sun}
+  {#if moon}
+    <span class="moon">
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <g transform="translate({shift} {shift})">
+          <circle class="moon__shadow" cx="54" cy="54" r={r} />
+          <circle class="moon__dark" cx="50" cy="50" r={r} />
+          {#if showsLit}
+            <g transform={mirrored ? 'translate(100 0) scale(-1 1)' : undefined}>
+              <path class="moon__lit" d={lit} />
+              <clipPath id="{uid}-lit"><path d={lit} /></clipPath>
+              <g class="moon__maria" clip-path="url(#{uid}-lit)">
+                <circle cx={50 + r * 0.35} cy={50 - r * 0.3} r={r * 0.16} />
+                <circle cx={50 + r * 0.1} cy={50 + r * 0.38} r={r * 0.11} />
+                <circle cx={50 - r * 0.42} cy={50 + r * 0.05} r={r * 0.13} />
+                <circle cx={50 - r * 0.05} cy={50 - r * 0.05} r={r * 0.07} />
+              </g>
+            </g>
+          {/if}
+        </g>
+      </svg>
+    </span>
+    {#if !parts.cloud}
+      <span class="star" style:left={px(0.78)} style:top={px(0.14)} style:width={px(0.05)} style:height={px(0.05)}></span>
+      <span class="star" style:left={px(0.12)} style:top={px(0.74)} style:width={px(0.035)} style:height={px(0.035)} style:animation-delay="1.4s"></span>
+    {/if}
+  {:else if parts.sun}
     <span class="sun">
       <span class="sun__rays">
         <span></span><span></span><span></span><span></span>
@@ -299,7 +340,58 @@
     animation: wxPulse 2.4s ease-in-out infinite;
   }
 
+  /* ---- the moon (ADR-0153): Solid C, Duotone A, Neon B ---------------- */
+  .moon {
+    inset: 0;
+  }
+  .moon svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+  .star {
+    border-radius: 50%;
+    animation: wxPulse 3.2s ease-in-out infinite;
+  }
+  /* Solid: a pale flat disc, its dark part faint, a few darker maria. */
+  .moon__shadow {
+    display: none;
+  }
+  .moon__dark {
+    fill: rgba(238, 243, 247, 0.13);
+  }
+  .moon__lit {
+    fill: #f1ead2;
+    filter: drop-shadow(0 0 calc(var(--s) * 0.08) rgba(241, 234, 210, 0.45));
+  }
+  .moon__maria {
+    fill: rgba(170, 160, 130, 0.35);
+  }
+  .star {
+    background: #f1ead2;
+  }
+
   /* ---- duotone: a shadow shape behind every light one ------------------ */
+  .wx--duotone .moon__shadow {
+    display: block;
+    fill: #5d6880;
+  }
+  .wx--duotone .moon__dark {
+    fill: #2f3747;
+  }
+  .wx--duotone .moon__lit {
+    fill: #f6efcf;
+    filter: none;
+    animation: wxPulse 4s ease-in-out infinite;
+  }
+  .wx--duotone .moon__maria {
+    display: none;
+  }
+  .wx--duotone .star {
+    background: #cfd8e8;
+  }
   .wx--duotone .sun__rays {
     display: none;
   }
@@ -405,6 +497,26 @@
   .wx--neon .fog {
     background: #7fe4ff;
     box-shadow: 0 0 calc(var(--s) * 0.08) rgba(127, 228, 255, 0.8);
+  }
+  .wx--neon .moon__dark {
+    fill: none;
+    stroke: rgba(159, 230, 255, 0.25);
+    stroke-width: 2.6;
+  }
+  .wx--neon .moon__lit {
+    fill: rgba(159, 230, 255, 0.07);
+    stroke: #9fe6ff;
+    stroke-width: 4.8;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 0 calc(var(--s) * 0.07) rgba(159, 230, 255, 0.9));
+    animation: wxPulse 2.8s ease-in-out infinite;
+  }
+  .wx--neon .moon__maria {
+    display: none;
+  }
+  .wx--neon .star {
+    background: #ffd766;
+    box-shadow: 0 0 calc(var(--s) * 0.06) rgba(255, 215, 102, 0.9);
   }
   .wx--neon .bolt {
     background: #ffd766;

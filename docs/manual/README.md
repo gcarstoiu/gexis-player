@@ -245,6 +245,9 @@ app was last time, so a takeover never starts at full volume.
 After a while with nothing touched, the panel shows the **idle screen**: a
 clock, the weather and a changing background picture. A touch brings back
 what was there. *Settings → Display* sets when it appears and what it shows.
+Between sunset and sunrise, the current weather shows the **moon** where it
+would show the sun, lit as it is tonight where the player is; the forecast
+days keep their sun.
 
 The **visualiser** shows a VU meter or spectrum from a collection of skins,
 drawn from the music as it plays. Open it with the visualiser button on Now
