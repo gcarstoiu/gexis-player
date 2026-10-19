@@ -594,9 +594,9 @@ about the library is set.
 
 **The panel says "Lyrion is reading your music" instead of showing my library.**
 That is a new player's first read: Lyrion shows a library only once it has
-read it all, so until then the panel keeps the waiting screen and shows
-Lyrion's steps - its download, start, add-ons, the read with how far it has
-got, ready - with the one it is on lit. Spotify, Bluetooth and the other sources play meanwhile. Later
+read it all, so until then the panel keeps the waiting screen and says which
+of Lyrion's five steps it is on - its download, start, add-ons, the read with
+how far it has got, ready. Spotify, Bluetooth and the other sources play meanwhile. Later
 scans keep the library you have on screen while they run.
 
 **How long does the first scan take?**

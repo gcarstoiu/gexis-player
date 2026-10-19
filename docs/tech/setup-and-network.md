@@ -748,7 +748,9 @@ switched on at its step - it starts off (ADR-0149 decision 42:
 key is outside `KEYS` and `PLUGIN_ROWS`. `personalise.apply` writes the
 settings through `Settings.set` (a refusal is logged, named in the answer,
 and the rest go on), then the plugin switches. The page only ever sends them
-on. Then `settling.begin` follows what is not in yet: `apply` is given
+on - after adding any USB folder or share still ticked on *Where is your
+music?* (decision 45; `live.addPicked`). Then `settling.begin` follows what is
+not in yet: `apply` is given
 `/state`'s `components` and leaves out each item already installed - on most
 players the skins and Plexamp, which started at their steps. The Lyrion
 Server's item carries `follow` (decision 43): `settling.view` keeps it busy
@@ -757,7 +759,8 @@ and, while it reads, `share`, and gives it `steps` - `lyrion_steps`, the
 five the phone's checklist shows - until `lyrion_stage` says `ready`. The
 view's `modal` is false while Lyrion is all it holds: the panel's steps are
 on the waiting screen's plate (`WaitingHome`'s `reading`, from
-`components.lyrion.steps`, which `_all_components` adds), and
+`components.lyrion.steps`, which `_all_components` adds: *Lyrion · Step n of
+5*, the step as its title, its bar and detail), and
 `SettlingScreen.svelte` leaves out a followed item unless it failed.
 `/personalise/later` on a new player (`first`) switches the Lyrion client
 off, so the panel waits with Spotify and Bluetooth (George, 2026-10-18: a

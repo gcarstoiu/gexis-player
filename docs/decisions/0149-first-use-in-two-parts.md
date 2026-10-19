@@ -367,10 +367,18 @@ it as it should be"*)
     settling dialog, *"The steps for lyrion in the panel should be in the
     plate not the modal. Make sure this works in the bars too"*). The
     waiting screen's *Lyrion is getting ready* / *is reading your music*
-    (ADR-0115 decision 29) shows the phone's five numbered steps - the
-    download, its start, its add-ons, reading the music, ready - with the
-    current step's bar and Lyrion's own line, beside the clock; on a bar
-    the steps are one row in short and the source marks smaller under it.
+    (ADR-0115 decision 29) follows the phone's five steps - the download,
+    its start, its add-ons, reading the music, ready. **As George approved
+    it on renders** (*"Can we make the plate smaller so that it can be
+    centered on the screen? ... just say something like step 1 of 7. Also
+    in the title that is the most visible we should add the description of
+    the current step"*; then *"Design looks fine"*): a smaller plate,
+    centred, with *Lyrion · Step 3 of 5* above, the current step as its
+    title (*Downloading Lyrion*, *Starting Lyrion*, *Adding Lyrion's
+    add-ons*, *Reading your music*), the step's bar and Lyrion's own detail
+    under it; on a bar the plate and smaller source marks are centred
+    together beside the clock. The first build listed all five steps on a
+    plate beside the clock.
     The core gives the Lyrion component its `steps` (`settling.lyrion_steps`).
     The settling dialog is for the other downloads: the record still marks
     the Lyrion server `follow`, so decision 37's restart waits for the
@@ -382,6 +390,12 @@ it as it should be"*)
     first, but the panel learns that it is a panel (`/surface`) before it
     learns that part 2 is owed (the state socket), and drew its own screens
     in between.
+45. **What is ticked on *Where is your music?* is added at Finish** (George:
+    *"I selected network shares but nothing is there in lyrion"*): ticked
+    USB folders and shares wait for the *Add* button under their list, and
+    leaving the step by *Next* dropped them. Finish adds whatever is still
+    ticked before it writes the answers, and stops with the reason if one
+    cannot be added.
 
 **Settled by George afterwards (2026-10-18)**
 - **Personalise** is in ADR-0022's inventory (*"Yes it goes in the list"*).
