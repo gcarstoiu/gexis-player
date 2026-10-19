@@ -53,10 +53,15 @@ drawn once the core's first state is in; the visualiser switch at part 2's
 step starts off and turning it on starts the skins; Lyrion's five numbered
 steps on the waiting screen's plate (panel beside the clock, bars one row),
 the settling dialog only for other downloads (`modal`); *More for your
-library*'s links on their own line on a laptop. ADR-0149 decisions 42-44,
-42 and 43 amended after George's first test on sofapi. sofapi runs
-`+git12` (core, UI, player) since 09:06; George's first test (08:53) ran
-`+git10`. Owed: George's test of `+git12`, then 1.1.1.
+library*'s links on their own line on a laptop; then, from George's
+second test, the Lyrion plate smaller and centred (*Step n of 5*, the step
+as its title; approved on renders), ticked shares and USB folders added at
+Finish (they were dropped by *Next* - his shares never reached Lyrion),
+and Material Skin counted in only once Lyrion serves `/material/`.
+ADR-0149 decisions 42-45, ADR-0115 decision 28 amended. sofapi runs core
+and player `+git15`, UI `+git14` since about 11:00. *H@l* is sofapi's own
+Lyrion server, seen while sofapi was `raspberrypi` - not a second machine.
+Owed: George's test, then 1.1.1.
 
 **Release build output lives in `~/.local/share/gexis-release-out`**: in each
 release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
