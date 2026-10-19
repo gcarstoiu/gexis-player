@@ -34,13 +34,7 @@ image). Image `image/deploy/2026-10-19-gexis-player-v1.1.1.img`, 123
 checks; parts `ours-9deec7268284`, `skins-9c8185729dfd` (reused),
 `rpi-7325dbec7a52`, `debian-5d5dc927ef03`. It carries Phase 14 (1.1.0) and
 the fixes from George's four tests of it on sofapi (ADR-0149 decisions
-42-45, ADR-0115 decision 28 amended). **PR #76** (`release-1.1.1` into
-`main`, with the README naming 1.1.1) is open for George to merge. After the
-merge: the post-merge steps, removing the release worktree
-`~/projects/gexis-player-rel-1.1.1`, the fix worktree
-`~/projects/gexis-player-fix` and the branches `fix-first-use` and
-`release-1.1.1`, then the routine clean-up (1.0.6's image can go then).
-sofapi runs the preview `+git16`, the same code as 1.1.1. **Not tried on a
+42-45, ADR-0115 decision 28 amended). **PR #76** was merged by George; post-merge steps and clean-up done. **Not tried on a
 device:** a USB drive's folders; a new server's folders held for its
 add-ons, and the plate through a whole first read (George's next reset).
 
@@ -61,9 +55,17 @@ setting *API explorer* (`api_explorer`, System after Debug logs, off; ADR-0022
 `.github/workflows/api-docs.yml` (the static page at each release tag;
 **GitHub Pages must be switched on before the first such release**), three
 faults fixed (radio's 502, a transport KeyError, `/skins` and Fanart), and the
-docs (`docs/tech/api.md`, manual, FAQ, README). sofapi runs core
-`1.1.1+git21` (restarted by hand: LESSONS 77), the explorer off. **Open with
-George:** the stable/internal marks (32 stable, 58 internal proposed).
+docs (`docs/tech/api.md`, manual, FAQ, README). George's four fixes from testing it (2026-10-19) are on the branch too:
+the Library's own *Lyrion Server: On* switch (a mirror row of the plugin's
+switch), the Calm fallback picture behind the waiting screen (retried every
+30 s; black stays black), *Navigation* as one choice Simple / Extended / Off
+(`library_navigation`, the two old switches hidden with `shownAs`), and part 2
+listing every server found even with one saved (ADR-0149 decision 46). The
+stability marks are confirmed (ADR-0152 decision 8). sofapi runs core
+`1.1.1+git27`, ui `+git28`, player `+git29`, core restarted by hand
+(LESSONS 77). **Waiting on George:** his test of the four fixes, and whether
+he switched *API explorer* on (it reads on; it was off after my test). Then
+`ph-api` into `next`, GitHub Pages on, the release.
 **Three Phase 14 articles** (13-15: setup in two parts,
 where your music is, a music server's first minutes) are drafts 186, 190 and
 191 in the local WordPress copy for George to read; `import_wp.py` now takes
