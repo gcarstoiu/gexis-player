@@ -62,14 +62,13 @@ below, checked by ear).
 
 ## What it means
 
-- **The bridge keeps the channels.** It sends MPD every file as FLAC (the
-  WAV arrived as `bridge-3.flac`), lossless, so 24 bits and all channels
-  survive. A Lyrion library and Lyrion's apps could play multichannel
-  through MPD with no second library.
-- **DSD does not pass as the bridge comes.** Lyrion logged *"Couldn't create
-  command line for dsf playback"*: it has no conversion for DSF to the
-  bridged player, which, unlike our Squeezelite, does not take DSD. Whether a
-  bridge or transcoding setting fixes it is not tested.
+- ~~**The bridge keeps the channels.**~~ **Wrong, found by ear the same
+  afternoon (addendum):** the card opening at 6 and 8 channels showed the
+  stream's width, not what was in it. In its default mode the bridge sent six
+  channels with four of them silent. Only in pass-through mode do all
+  channels carry sound.
+- ~~**DSD does not pass as the bridge comes.**~~ It does not by default; with
+  DSD added to the bridge's formats and pass-through mode it does (addendum).
 - **The bridge also adopts every UPnP renderer on the network** - the
   receiver itself appeared as a Lyrion player, *Receiver* - so a real setup
   would limit it to the player's own MPD.
