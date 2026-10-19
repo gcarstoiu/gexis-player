@@ -502,7 +502,7 @@ class Screen:
     async def go_settings_display(self) -> None:
         """Settings, on the section that actually has a list to scroll."""
         await self.go_settings()
-        await self.tap_nth(SETTINGS_DISPLAY, 3, settle=0.6)   # Audio, Sources, Handoff, Display
+        await self.tap_nth(SETTINGS_DISPLAY, 4, settle=0.6)   # Library, Sources, Handoff, Audio, Display
         await self.must_be(SETTINGS_LIST, "the settings list")
 
     async def go_card(self, card: str, wait: str, where: str,

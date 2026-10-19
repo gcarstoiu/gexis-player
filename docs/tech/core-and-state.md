@@ -271,7 +271,8 @@ is described in `audio-path.md`.
 ### The registry
 
 `settings_registry.json` is the executable form of ADR-0022's inventory:
-seven groups (Audio, Sources, Handoff, Display, Enrichment, Plugins, System),
+eight groups (Library, Sources, Handoff, Audio, Display, Enrichment, Plugins, System;
+that order since 2026-10-19),
 each a list of rows. System took in Device on 2026-10-10 (George: *"it is
 confusing to have both"*), under the sub-headings This player, Network,
 Updates, Backup and reset, Help, About and Power; no key changed. A row has a `key`, a `type` and presentation

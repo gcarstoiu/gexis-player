@@ -354,7 +354,7 @@ played on the right.
 ## 9. Settings
 
 Settings is reached from the **Settings** card on Home, or on the phone
-page. It is grouped into seven areas, listed down the left-hand side on the
+page. It is grouped into eight areas, listed down the left-hand side on the
 panel.
 
 ![Settings](images/panel-settings.webp)
@@ -363,15 +363,27 @@ Tap a row to change it. A row that only applies in some cases (for example,
 Spotify's *Starting volume* while Spotify is off) is hidden until it does.
 Changes take effect at once unless the row says otherwise.
 
-### Audio — *Level and output*
+### Library — *Your own music, and where it is read from*
+
+The **Lyrion Server** (a music server on the player itself) is switched
+and set here. It reads only the music locations switched on, none at first:
 
 | Setting | What it does |
-| --- | --- |
-| Output | Where the sound goes. If the chosen output is an HDMI port and its device disappears (a receiver switched off), the headphone jack plays until it is back, on its own volume rather than Fixed, and the row says so; the player returns to HDMI by itself. A USB DAC is shown by its maker, with a line saying what it reports it can take (for example *USB 2.0 · up to 768 kHz / 32-bit · native DSD*). An HDMI port shows what is on it - the screen by its model, a TV or receiver by its own name - and the sound it takes (for example *LG TV · up to 192 kHz / 24-bit*), or *takes no sound* for a display without any. Over HDMI the sound is not bit-perfect; HDMI has no volume control of its own, so its volume is Software or Fixed, and the visualiser moves only on Software. A change of output while music plays stops playback; start it again when ready. |
-| Sound card board | Most boards and every USB DAC are found by themselves. A board that is not (it does not show under Output) can be chosen here. *Tested* beside a board means played and measured by the project, or reported working by owners; a problem an owner reported shows as a line under it; other boards carry no mark. The same goes for *Output* and for the screens under *Attached screen*. |
-| Volume | How the level is set. *Hardware* (default): by the sound card's own volume control, bit-perfect at every level. *Software*: by the player recalculating the sound, on any output; not bit-perfect below 100 %. *Fixed*: always full level, for an amplifier that sets the volume itself; it asks first. Any change of volume type stops playback while the sources reconnect on it. On a DAC that takes DSD natively (some USB DACs), *Fixed* also plays DSD files from Lyrion as DSD, unconverted, and the Fixed choice says so; otherwise DSD files are converted to PCM. A DSD file of more than two channels is always converted, and folded down to stereo. The visualiser stays still during DSD. On an output with no volume control of its own, such as HDMI, Hardware is greyed out and Software is used in its place. The level carries across between Hardware and Software. |
-| Maximum volume | The loudest the player will go, on any input. At 80, 100 % on every control means that level. Hidden with Volume on *Fixed*. |
-| Volume curve | How the slider's travel maps to loudness. *Cubic* (half travel is −15.5 dB) is the usual shape; *Linear* puts half travel at −30 dB. |
+|---|---|
+| Lyrion Server: On | The server's own switch, also on the Plugins page. Off, it stops and its other rows are hidden; its library, folders and shares are kept for when it is on again. Its download, version and *Remove* are on the Plugins page only. |
+| Lyrion Server: More for your library | Where everything else about the library is: a link to the server's own page, and to three apps that control it - Squeezer (Android), Lyrion (Android, F-Droid) and LyrPlay (iPhone). The links show on a phone, not on the panel. |
+| Lyrion Server: Library | Read only: what the server is doing - starting, adding its add-ons, reading your music with a progress bar - and once ready, how many songs and albums it holds. The section's heading says the same in a word. |
+| Lyrion Server: Music folder | The player's own Music folder, shared on the network as *Music*. Its note says how much room is free and how much there is in all. Below 4 GB free the Music share takes no new files, and the note says so, until more than 4.5 GB is free. |
+| Lyrion Server: USB drives | Folders on USB drives plugged into the player. It cannot be switched on while no drive is plugged in, and says so; switched on already, it stays on. |
+| Lyrion Server: USB folders | Shown with *USB drives* on. Each drive plugged in: tick it to add all of it, or open it and tick folders at any depth, then *Add*. A drive not chosen yet reads *Not added yet*; the folders of an unplugged drive are kept for 7 days. |
+| Lyrion Server: Network shares | The shares added, each with its *Forget*. |
+| Lyrion Server: Add share | Folders on a NAS or a computer (SMB or NFS): a scan lists the servers on the network, or add one by its address. Tick a share, or open an SMB share and tick folders at any depth, then *Add*. Shares already added are not listed again. |
+
+Taking a location away later - a switch turned off, a USB folder removed, a
+share forgotten - makes Lyrion clear its library and scan everything again,
+which for a large library takes hours. A network share whose server does not
+answer reads *Not mounted: the server did not answer*; the other shares are
+still mounted.
 
 ### Sources — *Renderers and services*
 
@@ -391,29 +403,6 @@ Changes take effect at once unless the row says otherwise.
 Plugins add their own rows here once switched on: **Plexamp** (claim the
 player into your Plex account).
 
-### Library — *Your own music, and where it is read from*
-
-The **Lyrion Server** (a music server on the player itself) has its rows
-here once switched on; MPD will join it. It reads only the music locations
-switched on, none at first:
-
-| Setting | What it does |
-|---|---|
-| Lyrion Server: On | The server's own switch, also on the Plugins page. Off, it stops and its other rows are hidden; its library, folders and shares are kept for when it is on again. Removing it is in Plugins. |
-| Lyrion Server: More for your library | Where everything else about the library is: a link to the server's own page, and to three apps that control it - Squeezer (Android), Lyrion (Android, F-Droid) and LyrPlay (iPhone). The links show on a phone, not on the panel. |
-| Lyrion Server: Library | Read only: what the server is doing - starting, adding its add-ons, reading your music with a progress bar - and once ready, how many songs and albums it holds. The section's heading says the same in a word. |
-| Lyrion Server: Music folder | The player's own Music folder, shared on the network as *Music*. Its note says how much room is free and how much there is in all. Below 4 GB free the Music share takes no new files, and the note says so, until more than 4.5 GB is free. |
-| Lyrion Server: USB drives | Folders on USB drives plugged into the player. It cannot be switched on while no drive is plugged in, and says so; switched on already, it stays on. |
-| Lyrion Server: USB folders | Shown with *USB drives* on. Each drive plugged in: tick it to add all of it, or open it and tick folders at any depth, then *Add*. A drive not chosen yet reads *Not added yet*; the folders of an unplugged drive are kept for 7 days. |
-| Lyrion Server: Network shares | The shares added, each with its *Forget*. |
-| Lyrion Server: Add share | Folders on a NAS or a computer (SMB or NFS): a scan lists the servers on the network, or add one by its address. Tick a share, or open an SMB share and tick folders at any depth, then *Add*. Shares already added are not listed again. |
-
-Taking a location away later - a switch turned off, a USB folder removed, a
-share forgotten - makes Lyrion clear its library and scan everything again,
-which for a large library takes hours. A network share whose server does not
-answer reads *Not mounted: the server did not answer*; the other shares are
-still mounted.
-
 ### Handoff — *Who gets the player*
 
 | Setting | What it does |
@@ -422,6 +411,16 @@ still mounted.
 | Reclaim Lyrion when a session ends | Off by default. On, when Spotify, Bluetooth or Plexamp stops, Lyrion takes the player back; a phone that locks can end a Spotify session and switch the player to Lyrion without warning. |
 | Show transition screen | The short animation when one source takes over from another. |
 | Transition screen length | How long it stays up. |
+
+### Audio — *Level and output*
+
+| Setting | What it does |
+| --- | --- |
+| Output | Where the sound goes. If the chosen output is an HDMI port and its device disappears (a receiver switched off), the headphone jack plays until it is back, on its own volume rather than Fixed, and the row says so; the player returns to HDMI by itself. A USB DAC is shown by its maker, with a line saying what it reports it can take (for example *USB 2.0 · up to 768 kHz / 32-bit · native DSD*). An HDMI port shows what is on it - the screen by its model, a TV or receiver by its own name - and the sound it takes (for example *LG TV · up to 192 kHz / 24-bit*), or *takes no sound* for a display without any. Over HDMI the sound is not bit-perfect; HDMI has no volume control of its own, so its volume is Software or Fixed, and the visualiser moves only on Software. A change of output while music plays stops playback; start it again when ready. |
+| Sound card board | Most boards and every USB DAC are found by themselves. A board that is not (it does not show under Output) can be chosen here. *Tested* beside a board means played and measured by the project, or reported working by owners; a problem an owner reported shows as a line under it; other boards carry no mark. The same goes for *Output* and for the screens under *Attached screen*. |
+| Volume | How the level is set. *Hardware* (default): by the sound card's own volume control, bit-perfect at every level. *Software*: by the player recalculating the sound, on any output; not bit-perfect below 100 %. *Fixed*: always full level, for an amplifier that sets the volume itself; it asks first. Any change of volume type stops playback while the sources reconnect on it. On a DAC that takes DSD natively (some USB DACs), *Fixed* also plays DSD files from Lyrion as DSD, unconverted, and the Fixed choice says so; otherwise DSD files are converted to PCM. A DSD file of more than two channels is always converted, and folded down to stereo. The visualiser stays still during DSD. On an output with no volume control of its own, such as HDMI, Hardware is greyed out and Software is used in its place. The level carries across between Hardware and Software. |
+| Maximum volume | The loudest the player will go, on any input. At 80, 100 % on every control means that level. Hidden with Volume on *Fixed*. |
+| Volume curve | How the slider's travel maps to loudness. *Cubic* (half travel is −15.5 dB) is the usual shape; *Linear* puts half travel at −30 dB. |
 
 ### Display — *Screen and idle*
 
