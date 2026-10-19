@@ -4,6 +4,15 @@
 
 # Gexis Player
 
+<p align="center">
+  <a href="https://github.com/gcarstoiu/gexis-player/actions/workflows/tests.yml"><img src="https://img.shields.io/github/actions/workflow/status/gcarstoiu/gexis-player/tests.yml?branch=main&label=tests&logo=github" alt="Tests"></a>
+  <a href="https://github.com/gcarstoiu/gexis-player/releases/latest"><img src="https://img.shields.io/github/v/release/gcarstoiu/gexis-player?label=release&color=orange" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/gcarstoiu/gexis-player?color=blue" alt="Licence: GPL-3.0"></a>
+  <a href="docs/HARDWARE.md"><img src="https://img.shields.io/badge/Raspberry%20Pi-4-c51a4a?logo=raspberrypi&logoColor=white" alt="Raspberry Pi 4"></a>
+  <a href="https://gcarstoiu.github.io/gexis-player/"><img src="https://img.shields.io/badge/API-OpenAPI%203.1-6ba539?logo=openapiinitiative&logoColor=white" alt="API: OpenAPI 3.1"></a>
+  <a href="https://www.paypal.com/donate/?business=g.carstoiu%40proton.me&currency_code=EUR"><img src="https://img.shields.io/badge/Donate-PayPal-00457C?logo=paypal&logoColor=white" alt="Donate with PayPal"></a>
+</p>
+
 **Your music lives in many places: Spotify, a server under your desk, Plex,
 the phone in your pocket. Gexis Player brings all of it to one place: a
 Raspberry Pi 4 with a good DAC and a touchscreen, next to your amplifier.**
