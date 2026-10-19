@@ -61,9 +61,14 @@ switch), the Calm fallback picture behind the waiting screen (retried every
 30 s; black stays black), *Navigation* as one choice Simple / Extended / Off
 (`library_navigation`, the two old switches hidden with `shownAs`), and part 2
 listing every server found even with one saved (ADR-0149 decision 46). The
-stability marks are confirmed (ADR-0152 decision 8). sofapi runs core
-`1.1.1+git27`, ui `+git28`, player `+git29`, core restarted by hand
-(LESSONS 77). **Waiting on George:** his test of the four fixes, and whether
+stability marks are confirmed (ADR-0152 decision 8). From George's next
+look (same day): the Library switch is only the switch (its download line,
+version and Remove stay in Plugins; the line changing made the row jump),
+its note and heading hold still, a switched-off service's heading carries
+no reading, and Settings runs Library, Sources, Handoff, Audio, Display,
+Enrichment, Plugins, System (manual reordered, its two Settings
+screenshots retaken from the demo). sofapi runs core, ui and player
+`1.1.1+git33`, core restarted by hand (LESSONS 77). **Waiting on George:** his test of the four fixes, and whether
 he switched *API explorer* on (it reads on; it was off after my test). Then
 `ph-api` into `next`, GitHub Pages on, the release.
 **Three Phase 14 articles** (13-15: setup in two parts,
