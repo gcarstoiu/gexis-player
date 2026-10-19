@@ -133,7 +133,14 @@ def view(record: dict | None, status: dict, now: float | None = None) -> dict | 
         items.append(entry)
     states = {i["state"] for i in items}
     phase = "settling" if states & {"waiting", "busy"} else ("failed" if "failed" in states else "ready")
-    return {"phase": phase, "items": items, "hidden": bool(record.get("hidden")) and phase != "failed"}
+    # **Lyrion's steps are the waiting screen's, not a dialog's** (ADR-0149
+    # decision 43 as amended; George, 2026-10-19: "The steps for lyrion in
+    # the panel should be in the plate not the modal"). The dialog is for
+    # the other downloads, and for Lyrion's only if it did not finish.
+    modal = any(not record_item.get("follow") or item["state"] == "failed"
+                for record_item, item in zip(record["items"], items))
+    return {"phase": phase, "items": items, "hidden": bool(record.get("hidden")) and phase != "failed",
+            "modal": modal}
 
 
 def downloads_in(view_: dict | None) -> bool:

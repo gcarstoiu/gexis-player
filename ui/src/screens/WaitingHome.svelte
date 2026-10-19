@@ -34,6 +34,10 @@
   // across the room).
   let { availability = {}, onsettings, settings = {}, reading = null } = $props();
   const readingShare = $derived(reading?.share ?? null);
+  //: ADR-0149 decision 43 as amended (George, 2026-10-19: Lyrion's steps
+  //: "in the plate not the modal", and on the bars too): the numbered
+  //: steps, in short on a bar's one row.
+  const SHORT = ['Download', 'Start', 'Add-ons', 'Read your music', 'Ready'];
 
   const press = pressing();
   let picture = $state(null);
@@ -84,7 +88,7 @@
   });
 </script>
 
-<div class="waithome" class:waithome--bar={bar} class:waithome--plain={!shown}>
+<div class="waithome" class:waithome--bar={bar} class:waithome--plain={!shown} class:waithome--reading={!!reading}>
   <Backdrop {settings} screen="home" bind:picture bind:shown />
   <div class="veil"></div>
 
@@ -112,14 +116,21 @@
   {#if reading}
     <div class="reading">
       <div class="reading__head">{reading.phase === 'scanning' ? 'Lyrion is reading your music' : 'Lyrion is getting ready'}</div>
+      {#if reading.steps}
+        <ol class="steps">
+          {#each reading.steps as [text, at], n (n)}
+            <li class="step step--{at}"><span class="step__n">{at === 'done' ? '✓' : n + 1}</span><span class="step__text">{bar ? SHORT[n] : text}</span></li>
+          {/each}
+        </ol>
+      {/if}
       <div class="reading__meter">
         <span class="reading__bar" class:reading__bar--busy={readingShare == null}>
           <span style:width={`${Math.round((readingShare ?? 0) * 100)}%`}></span>
         </span>
         {#if readingShare != null}<span class="reading__pct">{Math.round(readingShare * 100)} %</span>{/if}
       </div>
-      <div class="reading__line">Your library appears here once Lyrion has read it all. The other sources play meanwhile.</div>
       <div class="reading__step">{reading.phase === 'scanning' ? reading.line.split('. Music shows up')[0] : reading.label}</div>
+      {#if !bar}<div class="reading__line">Your library appears here once Lyrion has read it all. The other sources play meanwhile.</div>{/if}
     </div>
   {/if}
 
@@ -196,8 +207,66 @@
     min-width: 3.4ch;
     text-align: right;
   }
+  /* With the steps, the plate beside the clock (George, 2026-10-19), the
+     marks under it: centred it ran into the date and the marks. */
+  .waithome--reading:not(.waithome--bar) .reading {
+    left: 430px;
+    right: 110px;
+    top: 36px;
+    width: auto;
+    transform: none;
+    padding: 24px 32px 26px;
+    gap: 12px;
+  }
+  .waithome--reading:not(.waithome--bar) .reading__head {
+    font-size: 38px;
+  }
+  .steps {
+    list-style: none;
+    margin: 4px 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .step {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    font-size: 22px;
+    line-height: 1.3;
+    color: rgba(233, 238, 242, 0.7);
+  }
+  .step__n {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: inline-grid;
+    place-items: center;
+    font-family: var(--font-mono);
+    font-size: 15px;
+    border: 1px solid rgba(233, 238, 242, 0.3);
+    transform: translateY(-2px);
+  }
+  .step--done .step__n {
+    color: #9fb4e8;
+    border-color: rgba(159, 180, 232, 0.6);
+  }
+  .step--now {
+    color: #e9eef2;
+    font-weight: 700;
+  }
+  .step--now .step__n {
+    color: #0a1016;
+    background: #9fb4e8;
+    border-color: #9fb4e8;
+  }
+  .step--next {
+    opacity: 0.55;
+  }
   .reading__line {
-    font-size: 26px;
+    font-size: 20px;
     line-height: 1.35;
     color: rgba(233, 238, 242, 0.88);
   }
@@ -402,6 +471,58 @@
     top: 50%;
     bottom: auto;
     transform: translateY(-50%);
+  }
+  /* While Lyrion works, its plate takes the tiles' place beside the clock and
+     the marks go under it: the steps one row, in short. */
+  .waithome--bar .reading {
+    left: 410px;
+    right: 116px;
+    top: 14px;
+    width: auto;
+    transform: none;
+    padding: 12px 22px 14px;
+    gap: 7px;
+    border-radius: 18px;
+  }
+  .waithome--bar .reading__head {
+    font-size: 24px;
+  }
+  .waithome--bar .steps {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    margin: 0;
+  }
+  .waithome--bar .step {
+    font-size: 16px;
+    gap: 8px;
+  }
+  .waithome--bar .step__n {
+    width: 22px;
+    height: 22px;
+    font-size: 12px;
+    transform: none;
+  }
+  .waithome--bar .reading__meter {
+    gap: 14px;
+  }
+  .waithome--bar .reading__bar {
+    height: 10px;
+  }
+  .waithome--bar .reading__pct {
+    font-size: 22px;
+  }
+  .waithome--bar .reading__step {
+    font-size: 14px;
+  }
+  .waithome--bar.waithome--reading .foot {
+    top: auto;
+    bottom: 4px;
+    transform: scale(0.72);
+    transform-origin: 50% 100%;
+  }
+  .waithome--bar.waithome--reading .credit {
+    display: none;
   }
   .waithome--bar .credit {
     right: 116px;

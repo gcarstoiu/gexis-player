@@ -657,7 +657,8 @@
   });
   $effect(() => { if ($settingsDevice.name) st.name = $settingsDevice.name; });
 
-  // ADR-0149 decision 42: the visualiser step, answered Yes, starts the skins.
+  // ADR-0149 decision 42 as amended: the visualiser switched on - it starts
+  // off - is the answer that starts the skins.
   $effect(() => {
     if (st.screen === 'visualiser' && st.vizOn && st.scr !== 'headless') untrack(() => live.downloadSkins());
   });

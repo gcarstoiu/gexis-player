@@ -165,7 +165,7 @@ function init(flow, startAt, wide) {
     lyrWhere: 'here', lyrAddrOpen: false, lyrAddr: '', places: { folder: false, usb: false, share: false }, usbDrives: [], usbOpen: null, usbError: null, shares: [], shareStep: null, shareSrv: null, shareUser: '', sharePw: '', shareAddr: '', shareAU: '', shareAP: '',
     plexOn: false, plexPct: 0, claimOpened: false, claim: '', plexState: 'code', plexSkipped: false,
     browse: 'ext', spotify: true, bt: true, btPhase: null, btLeft: 180, reqLeft: 30, trusted: [], everPaired: false,
-    vizOn: true, vizAfter: '10 min', skin: 'vu', animate: true, rpm: 0,
+    vizOn: false, vizAfter: '10 min', skin: 'vu', animate: true, rpm: 0,
     idleOn: true, bg: 'Gexis wallpapers', styles: ['Calm', 'Colourful'], wallStyle: 'Calm', listenPic: 'dac', clock: true, weather: false, loc: '',
     waitClock: true, waitBg: 'Gexis wallpapers', standby: false, ivs: [{ from: '23:00', until: '07:00', days: DAYS.slice() }], ivPick: null,
     skipped: {}, inst: 0 };
@@ -1196,7 +1196,8 @@ class Component extends DCLogic {
   });
   $effect(() => { if ($settingsDevice.name) st.name = $settingsDevice.name; });
 
-  // ADR-0149 decision 42: the visualiser step, answered Yes, starts the skins.
+  // ADR-0149 decision 42 as amended: the visualiser switched on - it starts
+  // off - is the answer that starts the skins.
   $effect(() => {
     if (st.screen === 'visualiser' && st.vizOn && st.scr !== 'headless') untrack(() => live.downloadSkins());
   });

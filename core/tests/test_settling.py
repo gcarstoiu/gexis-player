@@ -127,3 +127,14 @@ def test_the_downloads_are_in_while_lyrion_still_reads():
     assert not settling.downloads_in(settling.view(rec, {"skins": {"state": "installing"}, "lyrion": reading}, now=1010.0))
     assert settling.downloads_in(settling.view(rec, {"skins": {"state": "installed"}, "lyrion": reading}, now=1010.0))
     assert settling.downloads_in(None)
+
+
+def test_lyrion_alone_needs_no_dialog_but_a_failed_one_does():
+    """George, 2026-10-19: Lyrion's steps belong on the waiting screen's
+    plate, not in the dialog; the dialog is for the other downloads."""
+    rec = {"started": 1000.0, "items": [{"id": "skins", "name": "Skins"}, *LYRION]}
+    reading = {"state": "installed", "after": {"phase": "scanning", "label": "Reading your music", "share": 0.1}}
+    assert settling.view(rec, {"skins": {"state": "downloading"}, "lyrion": reading}, now=1010.0)["modal"]
+    only = {"started": 1000.0, "items": LYRION}
+    assert not settling.view(only, {"lyrion": reading}, now=1010.0)["modal"]
+    assert settling.view(only, {"lyrion": {"state": "failed", "error": "no network"}}, now=1010.0)["modal"]

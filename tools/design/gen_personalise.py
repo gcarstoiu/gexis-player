@@ -203,6 +203,12 @@ rep("""            btn('Add', () => { if (s.shareAddr.trim()) addShare(s.shareAd
 rep("{ k: 'plain', label: 'Plexamp 4.13.2', note: 'From Plex · 112 MB', icon: 'plex' }", "{ k: 'plain', label: 'Plexamp', note: 'From Plex', icon: 'plex' }")
 rep("nextFn: () => this.setState({ plexOn: true, plexSkipped: false }, () => this.next()), keep: true } };",
     "nextFn: () => this.setState({ plexOn: true, plexSkipped: false }, () => { live.downloadPlex(); this.next(); }), keep: true } };")
+# **The visualiser starts off; switching it on is the choice that downloads
+# the skins** (George, 2026-10-19: "Skins should not download until a choice
+# is made by the user ... Either the toggle is off and then when it is
+# enabled the download starts"). Asked again from Settings, it shows what
+# the player has (fromSettings).
+rep("vizOn: true, vizAfter: '10 min'", "vizOn: false, vizAfter: '10 min'")
 # **The skins download at the visualiser step** (ADR-0149 decision 42;
 # George, 2026-10-19: "similar to plexamp", making it clear that setup goes
 # on while they download): the download's stage under the switch.

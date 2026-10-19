@@ -741,9 +741,9 @@ come first. *Not now* posts `/personalise/later`.
 **Writing.** Nothing is written step by step except what must act at once:
 Plexamp's switch (its download) and claim token, a pairing answered
 (`/bluetooth/pairing/{accept,reject}`), a share added
-(`lyrion-server.shares`), and `visualiser_skins` when the visualiser step
-shows with the visualiser on (ADR-0149 decision 42: `live.downloadSkins`,
-once; the step shows `live.stage('skins')`). Finish posts `/personalise/finish` with
+(`lyrion-server.shares`), and `visualiser_skins` once the visualiser is
+switched on at its step - it starts off (ADR-0149 decision 42:
+`live.downloadSkins`, once; the step shows `live.stage('skins')`). Finish posts `/personalise/finish` with
 `{"settings": {...}}`. `personalise.checked` refuses the request whole if any
 key is outside `KEYS` and `PLUGIN_ROWS`. `personalise.apply` writes the
 settings through `Settings.set` (a refusal is logged, named in the answer,
@@ -754,9 +754,11 @@ players the skins and Plexamp, which started at their steps. The Lyrion
 Server's item carries `follow` (decision 43): `settling.view` keeps it busy
 past its download, `step: "after"` with Lyrion's `phase`, `label`, `line`
 and, while it reads, `share`, and gives it `steps` - `lyrion_steps`, the
-five the phone's checklist shows - until `lyrion_stage` says `ready`.
-`SettlingScreen.svelte` draws them as a numbered list with Lyrion's line
-under the bar.
+five the phone's checklist shows - until `lyrion_stage` says `ready`. The
+view's `modal` is false while Lyrion is all it holds: the panel's steps are
+on the waiting screen's plate (`WaitingHome`'s `reading`, from
+`components.lyrion.steps`, which `_all_components` adds), and
+`SettlingScreen.svelte` leaves out a followed item unless it failed.
 `/personalise/later` on a new player (`first`) switches the Lyrion client
 off, so the panel waits with Spotify and Bluetooth (George, 2026-10-18: a
 fresh player put off showed the library's tiles with nothing behind them);

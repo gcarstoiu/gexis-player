@@ -1941,6 +1941,9 @@ async def main() -> None:
         stage = dict(lyrion_stage.CURRENT)
         if stage and status.get("lyrion", {}).get("state") == "installed":
             status["lyrion"] = {**status["lyrion"], "after": stage}
+        # ADR-0149 decision 43: the numbered steps the waiting screen shows.
+        if "lyrion" in status:
+            status["lyrion"] = {**status["lyrion"], "steps": settling.lyrion_steps(status["lyrion"])}
         return status
 
     def _publish_components() -> None:
@@ -3760,7 +3763,7 @@ async def main() -> None:
             # Held while the screen is up, not while it is put away - and
             # while part 2 is owed: the skins now land during it (ADR-0149
             # decision 42), under the panel's Make it yours.
-            visualiser_held["settling"] = (view is not None and not view["hidden"]) \
+            visualiser_held["settling"] = (view is not None and not view["hidden"] and view["modal"]) \
                 or state_store.state.personalise == personalise.PENDING
             if not visualiser_held["settling"] and visualiser_held["restart"]:
                 logger.info("peppy: the settling screen is gone; restarting the visualiser held for it")
