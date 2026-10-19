@@ -388,6 +388,32 @@ assert js.count("if (d.plex) { p.push('plexamp'); if (!s.plexSkipped) p.push('pl
 js = js.replace("if (d.plex) { p.push('plexamp'); if (!s.plexSkipped) p.push('plexsign'); }", "if (d.plex) p.push('plexamp');")
 assert js.count("const ok = s.plexState === 'ok';") == 1
 js = js.replace("const ok = s.plexState === 'ok';", "const ok = s.plexClaimed;")
+# **Every Lyrion server found, one to choose** (George, 2026-10-19: "Lyrion
+# discovery should work also when a server is already saved. This can allow
+# the user to switch between servers without inputting the IP address
+# manually"; ADR-0149's table: "a server found on the network (each
+# listed)"). A found server used to skip this step and take the saved or the
+# first one. The step now always follows My music: with servers found it
+# lists them - the saved one chosen - with this player and an address to
+# type; with none, as before.
+rep("here: lyr && s.lyrState !== 'found' && s.lyrWhere === 'here'", "here: lyr && s.lyrWhere === 'here'")
+rep("    if (d.lyr && s.lyrState !== 'found') { p.push('lyrion'); if (s.lyrWhere === 'here') p.push('folders'); }",
+    "    if (d.lyr) { p.push('lyrion'); if (s.lyrWhere === 'here') p.push('folders'); }")
+rep("      case 'lyrion': { const here = s.lyrWhere === 'here';\n",
+    """      case 'lyrion': { const here = s.lyrWhere === 'here';
+        if (s.lyrState === 'found') {
+          const pick = (w, a) => () => set({ lyrWhere: w, lyrServer: a === undefined ? s.lyrServer : a });
+          const rows = (s.lyrFound || []).map(f => R(f.name, f.meta, s.lyrWhere === 'there' && s.lyrServer === f.address, pick('there', f.address), { icon: 'lyr' }));
+          const typed = s.lyrWhere === 'addr' ? [field('Server address', s.lyrAddr, e => set({ lyrAddr: e.target.value }), { ph: '192.0.2.31:9000', hint: nm + ' checks it before going on.' })] : [];
+          const split = here ? { t: 'Split', lhead: nm + ' does', left: ['Installs Lyrion', 'Adds your folders', 'Runs the first scan'], rhead: 'Later, in Lyrion', right: ['Rescan after adding music', 'Everything else'] }
+            : { t: 'Split', lhead: nm + ' does', left: ['Plays from the server you choose'], rhead: 'On that machine', right: ['Its music', 'Its scans'] };
+          return { title: 'Which Lyrion server?', sub: rows.length > 1 ? rows.length + ' found on ' + s.net : 'Found on ' + s.net,
+            blocks: [list(rows, 'On ' + s.net), list([R('Install Lyrion on ' + nm, 'Its music on this player, a USB drive or a share', here, pick('here')), R('Another server, by its address', '', s.lyrWhere === 'addr', pick('addr'))], 'Or'), ...typed, split],
+            foot: Object.assign({}, SK, { nextOff: s.lyrWhere === 'addr' && !s.lyrAddr.trim() }) };
+        }
+""")
+rep("const music = s.preset === 'mine' ? (s.lyrState === 'found' ? 'Lyrion · found on ' + s.net : s.lyrWhere === 'here' ? 'Lyrion, on this player' : 'Lyrion, on another machine')",
+    "const music = s.preset === 'mine' ? (s.lyrWhere === 'here' ? 'Lyrion, on this player' : s.lyrState === 'found' && s.lyrWhere === 'there' ? 'Lyrion · ' + ((s.lyrFound || []).find(f => f.address === s.lyrServer) || { name: s.lyrServer }).name : 'Lyrion, on another machine')")
 R.append("Plexamp on one screen, signed in asked of the plugin")
 out_js = js
 script = (HERE / "personalise-adapter.svelte.txt").read_text().replace("/*PROTO*/", out_js)

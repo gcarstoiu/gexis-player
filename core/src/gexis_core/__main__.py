@@ -2420,6 +2420,21 @@ async def main() -> None:
         personalise.mark_pending(first=first)
         state_store.set_personalise(personalise.PENDING)
 
+    # **Navigation, one choice** (George, 2026-10-19: "Navigation, simple
+    # extended or off is a single choice in a modal. Not two separate
+    # toggles"): Simple, Extended or Off over `lms_library` and
+    # `lms_extended_nav`, which the panel, the menus route and part 2 keep
+    # reading and writing as they did.
+    def _navigation_now() -> str:
+        if settings.value("lms_library") is False:
+            return "Off"
+        return "Extended" if settings.value("lms_extended_nav") is True else "Simple"
+
+    def _set_navigation(value: str) -> None:
+        settings_store.delete("library_navigation")
+        settings.set("lms_library", value != "Off")
+        settings.set("lms_extended_nav", value == "Extended")
+
     owed_at_start = personalise.at_start()
     state_store.set_personalise(personalise.PENDING if owed_at_start else None)
     if owed_at_start is False:
@@ -2449,6 +2464,7 @@ async def main() -> None:
             "screen_port_info": lambda: next((f"{_port_label(p.connector)} · {_port_line(p.connector)}"
                                               for p in screen_detect.ports()), None),
             "lms_player": lambda: lms_player_name,
+            "library_navigation": lambda: _navigation_now(),
             "idle_url": lambda: config.idle_url or None,
             "device_name": device_name.hostname,
             "timezone": read_timezone,
@@ -2571,6 +2587,10 @@ async def main() -> None:
                # ADR-0149: read by the panel, which shows the waiting home in
                # place of the library when it is off.
                "lms_library": None,
+               # One choice for both (George, 2026-10-19): writes the two
+               # above and keeps no value of its own, so it is always read
+               # from them - part 2 writes them directly.
+               "library_navigation": lambda value: _set_navigation(value),
                # ADR-0149: part 2 owed again - the phone opens on it, the
                # panel shows a code to it - until it is finished or put off.
                "personalise": lambda _=None: _personalise_owed(first=False),
@@ -2641,6 +2661,8 @@ async def main() -> None:
                "debug_logs": lambda value: asyncio.ensure_future(
                    _apply_debug_logs(bool(value))
                ),
+               # ADR-0152: read by /api at each request.
+               "api_explorer": None,
                "show_transition": None, "handoff_duration": None,
                # ADR-0054 §5, amended 2026-09-28: read at each takeover that
                # hands a renderer its level.

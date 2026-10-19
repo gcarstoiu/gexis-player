@@ -172,6 +172,12 @@ something injected by `__main__.py`. The API is open to the LAN and
 unauthenticated by decision (ADR-0028); the walkers' handle model below exists
 partly because of that.
 
+**The full description is `core/src/gexis_core/api/openapi.json`** (ADR-0152):
+every route's parameters, bodies, answers and errors, and whether an
+integration may rely on it (`x-gexis-stability`). `tests/test_openapi.py`
+fails when it and the registered routes differ. The table below is the map;
+[api.md](api.md) is the overview for integrators.
+
 **Panel or phone?** The panel's kiosk always connects over loopback and a phone
 from the LAN, so `request.remote` is the discriminator (ADR-0035 §6). A few
 routes are loopback-only or behave differently by origin: `/surface`,
@@ -202,6 +208,7 @@ something the panel is not showing).
 | Problem report | `POST /report/prepare` (`{"what", "often"}`) starts it in the background; `GET /report/status` gives the seven steps of `problem_report.STEPS`, each `done` with what it found, then the file's name, size and contents; `GET /report/file` (the zip) and `GET /report/issue` (the GitHub form's address: what happened, how often, the version, what was taken out and the log's last errors, cleaned, under 7,500 characters) for an hour after; one at a time (`409`). The zip holds the journal, the updater's log, versions, hardware and settings, scrubbed on the device: known values are matched in any case (except the log's own level words, so a track called "Warning" does not take every `WARNING`); line-shape rules take out the geocoded town on weather lines and the artist names on the artwork sweep's lines; a query string's coordinates count as a place; the log is scrubbed in pieces of whole lines (`PIECE`), looked up word by word, so the core's event loop is not held up. `POST /report` still answers the zip in one request | Settings on a phone or computer (ADR-0125, ADR-0138) |
 | Screens | `POST /screen/{action}`, `/screen-new/{action}` | Panel (ADR-0109) |
 | Setup | `GET /setup/status`, `/setup/answers`, `/setup/networks`, `/setup/screen`, `/setup/plugins`; `POST /setup/answers`, `/setup/finish`, `/renderers/park`, `/settling/hide` (*Use the player now*), `/settling/done` (the OK on a settling screen that names a failed download, ADR-0128) | Setup page (ADR-0104) |
+| API page | `GET /api` (→ `/api/`), `/api/` (Swagger UI), `/api/openapi.json` (the description, with this player's release as its version), `/api/swagger-ui/{file}` (the page's own files, by name) - all `404` while *API explorer* is off | Browser (ADR-0152) |
 | UI files | `GET /`, `/assets/*`, a fixed list of web-app files | Browser |
 
 The UI routes are registered **after** the API so nothing in the bundle can
@@ -264,7 +271,8 @@ is described in `audio-path.md`.
 ### The registry
 
 `settings_registry.json` is the executable form of ADR-0022's inventory:
-seven groups (Audio, Sources, Handoff, Display, Enrichment, Plugins, System),
+eight groups (Library, Sources, Handoff, Audio, Display, Enrichment, Plugins, System;
+that order since 2026-10-19),
 each a list of rows. System took in Device on 2026-10-10 (George: *"it is
 confusing to have both"*), under the sub-headings This player, Network,
 Updates, Backup and reset, Help, About and Power; no key changed. A row has a `key`, a `type` and presentation

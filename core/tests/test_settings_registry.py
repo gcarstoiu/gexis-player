@@ -180,6 +180,12 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         # his confirmation): the library on the screen, and first use's
         # part 2 asked again.
         "lms_library", "personalise",
+        # ADR-0152 (George, 2026-10-19, appended to ADR-0022's inventory on
+        # his confirmation): the API's own page on the player.
+        "api_explorer",
+        # George, 2026-10-19: Simple, Extended or Off, one choice over
+        # lms_library and lms_extended_nav.
+        "library_navigation",
         # ADR-0055, 2026-09-23: the design has no output picker, because
         # the design did not know the device has four playback outputs and
         # that two of them cannot be turned down.
@@ -623,7 +629,7 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # run them, through the same action route.
     # 16 since ADR-0132 (2026-10-09): the factory reset is surfaced.
     # 17 since 2026-10-10: Version, which repeated Release (George: "Yes, you can remove").
-    assert len(kept) == 17, "ADR-0022's amendment: inventoried, not surfaced"
+    assert len(kept) == 19, "ADR-0022's amendment: inventoried, not surfaced (19: the two navigation switches under Navigation, 2026-10-19)"
     # Every one of them is still served by the API.
     assert all(r.get("key") for r in kept)
     # 54 at the start of 9d, plus the two rows the design has and the plan
@@ -676,7 +682,9 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # amended, the same day). **122**: Text size (ADR-0148, 2026-10-14).
     # **124**: Library on the screen and Personalise (ADR-0149, 2026-10-18).
     # **123**: the waiting screen's hint line removed (George, 2026-10-18).
-    assert len(rows) == 123
+    # **124**: API explorer (ADR-0152, 2026-10-19). **125**: Navigation, one
+    # choice over the two switches it hides (George, 2026-10-19).
+    assert len(rows) == 125
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
@@ -696,7 +704,7 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # 82 with Report this hardware (ADR-0126).
     # **81**: Software volume merged into Volume (ADR-0127). **80**: Pexels
     # removed.
-    assert len(rows) - len(kept) == 106  # 106: the waiting screen's hint removed (2026-10-18); 107: Library on the screen and Personalise (ADR-0149); 105: Text size (ADR-0148); 104: Needles follow the volume (ADR-0146 amended); 103: Gain (ADR-0146); 102: Screen port and its one-port tile (ADR-0141); 100: display standby (ADR-0135); 97: the idle switch and the home background (ADR-0133, 2026-10-11); 88: Weather icon motion (Finding 118); 87: Version hidden, it repeated Release; 88: the waiting screen's two rows (ADR-0133); 86: the own wallpapers (ADR-0133); 82: the factory reset (ADR-0132); 81: Cable (ADR-0123)
+    assert len(rows) - len(kept) == 106  # 106: Navigation shown, its two switches hidden; 107: API explorer (ADR-0152); 106: the waiting screen's hint removed (2026-10-18); 107: Library on the screen and Personalise (ADR-0149); 105: Text size (ADR-0148); 104: Needles follow the volume (ADR-0146 amended); 103: Gain (ADR-0146); 102: Screen port and its one-port tile (ADR-0141); 100: display standby (ADR-0135); 97: the idle switch and the home background (ADR-0133, 2026-10-11); 88: Weather icon motion (Finding 118); 87: Version hidden, it repeated Release; 88: the waiting screen's two rows (ADR-0133); 86: the own wallpapers (ADR-0133); 82: the factory reset (ADR-0132); 81: Cable (ADR-0123)
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():
@@ -1820,3 +1828,36 @@ def test_a_plugins_switch_carries_its_version_line():
     merged = Settings.with_plugins(load_registry(), [plexamp])
     [switch] = [r for g in merged for r in g["rows"] if r.get("key") == "plexamp.enabled"]
     assert switch["version"] == "Version 0.4.7"
+
+
+def test_navigation_is_one_choice_over_the_two_switches(tmp_path):
+    """George, 2026-10-19: "Navigation, simple extended or off is a single
+    choice in a modal. Not two separate toggles." The choice writes
+    lms_library and lms_extended_nav and keeps no value of its own, so it
+    follows them when part 2 writes them directly (wired as __main__ does)."""
+    store = SettingsStore(tmp_path / "s.db")
+    settings = None
+
+    def now():
+        if settings.value("lms_library") is False:
+            return "Off"
+        return "Extended" if settings.value("lms_extended_nav") is True else "Simple"
+
+    def choose(value):
+        store.delete("library_navigation")
+        settings.set("lms_library", value != "Off")
+        settings.set("lms_extended_nav", value == "Extended")
+
+    settings = Settings(store, registry=load_registry(), defaults={"library_navigation": now},
+                        wired={"library_navigation": choose, "lms_library": None, "lms_extended_nav": None})
+    row = settings.row("library_navigation")
+    assert row["type"] == "choice" and row["options"] == ["Simple", "Extended", "Off"]
+    assert settings.row("lms_library")["surfaced"] is False and settings.row("lms_extended_nav")["surfaced"] is False
+    assert settings.value("library_navigation") == "Simple"
+    for value, library, extended in (("Extended", True, True), ("Off", False, False), ("Simple", True, False)):
+        settings.set("library_navigation", value)
+        assert (settings.value("lms_library"), settings.value("lms_extended_nav")) == (library, extended)
+        assert store.get("library_navigation") is None, "no value of its own"
+        assert settings.value("library_navigation") == value
+    settings.set("lms_extended_nav", True)   # part 2, directly
+    assert settings.value("library_navigation") == "Extended"

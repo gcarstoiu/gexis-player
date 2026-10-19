@@ -130,7 +130,16 @@ class RadioBrowser:
             # back with a context-menu action instead of its play (measured
             # against the live tree, 2026-09-18).
             command += [f"{k}:{v}" for k, v in MENU_PARAM.items()]
-        return await self._rpc(command, self._player_id() or "")
+        return await self._call(command, self._player_id() or "")
+
+    async def _call(self, command: list, player: str) -> dict:
+        """The library's failures as `RadioUnavailable`, which the routes
+        answer with 502 (found writing ADR-0152's API description: nothing
+        raised it, so Lyrion down was a plain 500), as `menus._call` does."""
+        try:
+            return await self._rpc(command, player)
+        except Exception as exc:  # noqa: BLE001 - the library's own failures, worded
+            raise RadioUnavailable(str(exc)) from exc
 
     def _row(self, item: dict, base: dict) -> dict | None:
         """One item, or None if it is excluded."""
@@ -192,6 +201,6 @@ class RadioBrowser:
             command = ["playlist", "play" if action == "play" else "add", spec["url"]]
         else:
             command = list(spec["cmd"]) + [f"{k}:{v}" for k, v in spec["params"].items()]
-        await self._rpc(command, player)
+        await self._call(command, player)
         logger.info("radio: %s %s", action, spec.get("url") or spec["cmd"])
         return {"played": action == "play"}

@@ -36,6 +36,17 @@ def sections(values: dict, carried: Iterable[tuple[str, str]], registry: list[di
                 sub = row.get("label")
                 continue
             key = row.get("key")
+            shown_as = row.get("shownAs")
+            if shown_as and row.get("surfaced") is False and key in values:
+                # A row drawn as another (the two navigation switches, under
+                # Navigation): that one, once.
+                other = next((r for r in group["rows"] if r.get("key") == shown_as), None)
+                if other is not None:
+                    label = other.get("label") or shown_as
+                    line = f"{sub} · {label}" if sub and sub != label else label
+                    if line not in items[group["id"]]:
+                        items[group["id"]].append(line)
+                continue
             if (not key or key not in values or row.get("type") in SKIPPED_TYPES
                     or row.get("surfaced") is False):
                 continue

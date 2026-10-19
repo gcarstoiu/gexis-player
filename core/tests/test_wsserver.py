@@ -1052,3 +1052,48 @@ async def test_the_share_search_offers_only_what_is_not_added(tmp_path, monkeypa
         browsed = await (await client.post(url, json={"name": "nas", "action": "browse",
                                                        "server": {"host": "nas", "kind": "nfs"}})).json()
         assert [i["address"] for i in browsed["items"]] == ["nas:/films"]
+
+
+@pytest.mark.asyncio
+async def test_a_command_to_a_source_with_no_capabilities_is_refused_not_a_crash():
+    """Found writing ADR-0152's description: indexing a source missing from
+    `capabilities` was a plain 500."""
+    store = StateStore(_transport_caps("spotify"))
+    store.set_active("plexamp")
+    sent = []
+
+    async def transport(renderer_id, command, argument=None):
+        sent.append(command)
+        return True
+
+    server = StateServer(store, transport=transport)
+    async with TestClient(TestServer(server.make_app())) as client:
+        resp = await client.post("/transport/pause")
+        body = await resp.json()
+
+    assert resp.status == 409 and "does not declare" in body["error"]
+    assert sent == []
+
+
+@pytest.mark.asyncio
+async def test_the_skins_route_marks_the_fanart_corpus_as_the_visualiser_chooses_it():
+    """Found writing ADR-0152's description: Fanart is a skin's option, not
+    its kind, and `/skins` judged by kind - every skin read as outside it."""
+    from pathlib import Path
+
+    from gexis_core.skins import Skin
+
+    class OneSetting:
+        def value(self, key):
+            return "Fanart" if key == "skin_corpus" else None
+
+    server = StateServer(StateStore({}), settings=OneSetting(), skins_at=lambda: (Path("/nowhere"), "1280x800"))
+    photo = Skin("Photo", {"fanart.pos": "100,50", "meter.type": "circular"})
+    plain = Skin("Plain", {"meter.type": "circular"})
+    server._skins = lambda: [(photo, Path("/nowhere")), (plain, Path("/nowhere"))]
+    async with TestClient(TestServer(server.make_app())) as client:
+        resp = await client.get("/skins")
+        body = await resp.json()
+
+    assert resp.status == 200 and body["corpus"] == "Fanart"
+    assert {s["name"]: s["in_corpus"] for s in body["skins"]} == {"Photo": True, "Plain": False}

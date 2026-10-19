@@ -205,6 +205,10 @@ def check(groups: list[dict]) -> list[dict]:
             if kind == "group":
                 continue
             key = row["key"]
+            if row.get("mirror"):
+                # The same row shown a second time, elsewhere (a Library
+                # plugin's switch, below): one key, one value, checked once.
+                continue
             if key in seen:
                 raise ValueError(f"duplicate setting key {key!r}")
             seen.add(key)
@@ -675,6 +679,21 @@ class Settings:
                 # A heading over nothing. The panel drops one anyway; not
                 # publishing it is the same statement made once.
                 rows = []
+            elif area == "library" and switches and switches[0]["key"] == switch:
+                # **A library is switched where it is set** (George,
+                # 2026-10-19: "Toggle to turn off the lyrion server in the
+                # library"): its heading stays when it is off, with its own
+                # switch under it - the Plugins page's, mirrored, the same key
+                # and value - and every other row still only while it is on.
+                rows[0] = {k: v for k, v in rows[0].items() if k != "onlyWhen"}
+                # Only the switch: the download line, version and Remove stay
+                # on the Plugins row (George, 2026-10-19: the line changing
+                # while the server stopped made the row jump; "remove the
+                # remove button from the library").
+                plain = {k: v for k, v in switches[0].items() if k not in ("component", "version", "uploaded")}
+                rows.insert(1, {**plain, "mirror": True, "label": "On",
+                                "note": f"Off, {plugin.name} stops; its library, folders and shares are kept "
+                                        f"for when it is on again. Removing it is in Plugins."})
             try:
                 check([{"id": "check", "label": "check", "rows": switches + rows}])
             except (ValueError, KeyError) as exc:
@@ -734,7 +753,8 @@ class Settings:
         #: section names, ADR-0111: George's "Brand · Model" names).
         self._labels = labels or {}
         self._groups = registry if registry is not None else load_registry()
-        self._rows = {r["key"]: r for g in self._groups for r in g["rows"] if r["type"] != "group"}
+        self._rows = {r["key"]: r for g in self._groups for r in g["rows"]
+                      if r["type"] != "group" and not r.get("mirror")}
         self._defaults = defaults or {}
         self._wired = wired or {}
         #: **`list` rows that act through their own route** rather than
@@ -956,7 +976,11 @@ class Settings:
             for row in group["rows"]:
                 if row["type"] == "group":
                     heading = row.get("onlyWhen")
-                    if row.get("indicatorOf") in self._indicators:
+                    # Switched off, a service says nothing: the Library's
+                    # Lyrion heading stays when off, and kept its last
+                    # "Ready" (2026-10-19).
+                    if (row.get("indicatorOf") in self._indicators
+                            and self.value(row["indicatorOf"]) is not False):
                         row = {**row, "indicator": dict(self._indicators[row["indicatorOf"]])}
                     rows.append(row)
                     continue
@@ -984,7 +1008,10 @@ class Settings:
                     extra = self._option_notes[row["key"]]()
                     if extra:
                         public["optionNotes"] = {**(row.get("optionNotes") or {}), **extra}
-                if row["key"] in self._notes:
+                # A mirror keeps its own note: the switch's changing one (the
+                # server's stage) is said by the heading above it, and
+                # swapping it in moved everything below (2026-10-19).
+                if row["key"] in self._notes and not row.get("mirror"):
                     note = self._notes[row["key"]]()
                     if note:
                         public["note"] = note

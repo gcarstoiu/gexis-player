@@ -3487,6 +3487,9 @@
   .subhead__label {
     font-family: var(--font-mono);
     font-size: 13px;
+    /* The height of a reading's mark, so a heading does not move when its
+       reading comes or goes (the Library's Lyrion switch, 2026-10-19). */
+    line-height: 20px;
     letter-spacing: 0.2em;
     text-transform: uppercase;
     flex-shrink: 0;
