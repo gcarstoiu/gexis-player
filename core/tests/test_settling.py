@@ -77,3 +77,64 @@ def test_a_pack_being_installed_says_so_rather_than_100_percent():
     Installing."""
     v = settling.view(record(), {"skins": {"state": "installing", "share": 1.0}}, now=1010.0)
     assert v["items"][0]["state"] == "busy" and v["items"][0]["step"] == "installing"
+
+
+LYRION = [{"id": "lyrion", "name": "Lyrion Server", "follow": True}]
+
+
+def test_lyrion_is_followed_past_its_download_until_it_has_read_the_music():
+    """ADR-0149 decision 43 (George, 2026-10-19: the plate "was showing
+    something getting ready and then the next minute the library was there in
+    full"): installed is the first of Lyrion's steps, not the last."""
+    rec = {"started": 1000.0, "items": LYRION}
+    adding = {"lyrion": {"state": "installed", "after": {"phase": "addons", "label": "Adding its add-ons",
+                                                         "line": "Lyrion fetches ...", "addons": [
+                                                             {"name": "Material Skin", "in": True},
+                                                             {"name": "Radio Now Playing", "in": False}]}}}
+    view = settling.view(rec, adding, now=1010.0)
+    item = view["items"][0]
+    assert view["phase"] == "settling"
+    assert (item["state"], item["step"], item["label"]) == ("busy", "after", "Adding its add-ons")
+    assert [s[1] for s in item["steps"]] == ["done", "done", "now", "next", "next"]
+    assert item["steps"][2][0] == "Add Material Skin ✓, Radio Now Playing · one restart, about 3 minutes"
+
+    reading = {"lyrion": {"state": "installed", "after": {"phase": "scanning", "label": "Reading your music",
+                                                          "share": 0.42, "line": "..."}}}
+    item = settling.view(rec, reading, now=1010.0)["items"][0]
+    assert item["share"] == 0.42 and item["steps"][3] == ["Read your music · 42 %", "now"]
+
+    # Just installed, before the core has read Lyrion once: starting, not done.
+    item = settling.view(rec, {"lyrion": {"state": "installed"}}, now=1010.0)["items"][0]
+    assert (item["state"], item["label"]) == ("busy", "Starting")
+
+    read = {"lyrion": {"state": "installed", "after": {"phase": "ready", "label": "Ready",
+                                                       "line": "760 songs on 47 albums in the library."}}}
+    view = settling.view(rec, read, now=1010.0)
+    assert view["phase"] == "ready" and view["items"][0]["state"] == "done"
+    assert view["items"][0]["steps"][4] == ["Ready · 760 songs on 47 albums in the library.", "done"]
+
+
+def test_while_lyrion_downloads_its_steps_say_so():
+    steps = settling.lyrion_steps({"state": "downloading", "received": 30, "total": 120})
+    assert steps[0] == ["Download Lyrion · 25 %", "now"] and {s[1] for s in steps[1:]} == {"next"}
+    assert settling.lyrion_steps({"state": "failed"})[0][0] == "Download Lyrion · did not finish"
+
+
+def test_the_downloads_are_in_while_lyrion_still_reads():
+    """Decision 37's restart waits for the downloads, never for the read."""
+    rec = {"started": 1000.0, "items": [{"id": "skins", "name": "Skins"}, *LYRION]}
+    reading = {"state": "installed", "after": {"phase": "scanning", "label": "Reading your music", "share": 0.1}}
+    assert not settling.downloads_in(settling.view(rec, {"skins": {"state": "installing"}, "lyrion": reading}, now=1010.0))
+    assert settling.downloads_in(settling.view(rec, {"skins": {"state": "installed"}, "lyrion": reading}, now=1010.0))
+    assert settling.downloads_in(None)
+
+
+def test_lyrion_alone_needs_no_dialog_but_a_failed_one_does():
+    """George, 2026-10-19: Lyrion's steps belong on the waiting screen's
+    plate, not in the dialog; the dialog is for the other downloads."""
+    rec = {"started": 1000.0, "items": [{"id": "skins", "name": "Skins"}, *LYRION]}
+    reading = {"state": "installed", "after": {"phase": "scanning", "label": "Reading your music", "share": 0.1}}
+    assert settling.view(rec, {"skins": {"state": "downloading"}, "lyrion": reading}, now=1010.0)["modal"]
+    only = {"started": 1000.0, "items": LYRION}
+    assert not settling.view(only, {"lyrion": reading}, now=1010.0)["modal"]
+    assert settling.view(only, {"lyrion": {"state": "failed", "error": "no network"}}, now=1010.0)["modal"]

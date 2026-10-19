@@ -84,8 +84,12 @@ with Lyrion, Plex, or streaming only - whether the phone's touchpad works the
 screen, and what the screen shows while music plays, while it waits and at
 night. Each question has a default; *Do it
 later* leaves Spotify and Bluetooth on and nothing else, and the screen
-waits for music over the player's own pictures. Lyrion, Plexamp and the
-visualiser's skins then download, and the page and the player's screen show each one arriving.
+waits for music over the player's own pictures. Downloads carry on while you
+answer the rest: Plexamp starts at its own question; the skins start when you switch the
+visualiser on. The Lyrion Server downloads at the end; the page, and the
+player's screen while it waits, then follow it step by step - its start, its
+add-ons, reading your music - and a large library takes hours to read, so
+the other sources play meanwhile.
 Everything here can be changed later, or asked again from *Settings → Display
 → Personalise*. It is offered until the player's first restart after setup;
 left unanswered, it is as if *Do it later* was chosen. A restored player skips this: its backup

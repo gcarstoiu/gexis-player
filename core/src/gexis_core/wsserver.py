@@ -2209,7 +2209,8 @@ class StateServer:
             values = personalise.checked(body.get("settings"))
         except (ValueError, AttributeError) as exc:
             return web.json_response({"error": str(exc)}, status=400)
-        result = personalise.apply(values, self._settings, self._personalise_offered(), settling.begin)
+        result = personalise.apply(values, self._settings, self._personalise_offered(), settling.begin,
+                                   self._store.state.components)
         personalise.end(personalise.DONE)
         self._store.set_personalise(None)
         if "lms_server" in result["written"]:
@@ -2222,11 +2223,13 @@ class StateServer:
         after part 2 the library's tiles had nothing behind them. The core
         restarts, but only once the downloads part 2 began are in: the skins
         install as the core's own child and would be cut off. Settled is the
-        settling record gone, or its phase ready or failed."""
+        settling record gone, or every download in it done or failed - not
+        Lyrion's read of the music, which the plate follows too (ADR-0149
+        decision 43) and which takes hours on a large library."""
         waited = 0.0
         while waited < give_up_s:
             view = self._store.state.settling
-            if settling.read() is None or (view or {}).get("phase") in ("ready", "failed"):
+            if settling.read() is None or settling.downloads_in(view):
                 break
             await asyncio.sleep(every_s)
             waited += every_s

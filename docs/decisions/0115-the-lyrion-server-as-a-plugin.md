@@ -297,7 +297,18 @@ setting" and the Music folder's always being offered.
     status in settings"), on its heading and in a read-only *Library* row
     at its top with a progress bar, kept after Ready. *Done* is said only at Ready; once
     Lyrion reads, the player counts as ready, since a large library takes
-    hours.
+    hours. **Material Skin is in once Lyrion serves it** (amended
+    2026-10-19, George: the server's page *"initially I still saw the old
+    design"*): its folder is on disk seconds before Lyrion, restarting to
+    load it, answers - 7 s on sofapi - so the add-ons step and the skin
+    switch wait for `/material/` to answer 200. **A new server's folders
+    wait for its add-ons** (the same day, George: the plate went from the
+    add-ons straight to done): given at once, Lyrion read the music while
+    adding its add-ons and again after the restart that loads them, so the
+    read was never seen as its own step. The core now gives Lyrion its
+    folders once Material is served, or 10 minutes after it first held them
+    (`LYRION_FOLDERS_HOLD_S`) - no internet, say - and the steps run in their
+    order.
 
     **After George's run of 2026-10-19:** Getting ready shows the five steps
     as a numbered checklist (done, now, next), and under it a bar for the

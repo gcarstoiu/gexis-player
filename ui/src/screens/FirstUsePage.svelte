@@ -12,7 +12,7 @@
   the design, then generate again; do not restyle by hand.
 -->
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import mark from '../assets/gexis-mark.svg';
   import lyrionIcon from '../assets/icon-lyrion.svg';
   import spotifyIcon from '../assets/icon-spotify.png';
@@ -165,7 +165,7 @@ function init(flow, startAt, wide) {
     lyrWhere: 'here', lyrAddrOpen: false, lyrAddr: '', places: { folder: false, usb: false, share: false }, usbDrives: [], usbOpen: null, usbError: null, shares: [], shareStep: null, shareSrv: null, shareUser: '', sharePw: '', shareAddr: '', shareAU: '', shareAP: '',
     plexOn: false, plexPct: 0, claimOpened: false, claim: '', plexState: 'code', plexSkipped: false,
     browse: 'ext', spotify: true, bt: true, btPhase: null, btLeft: 180, reqLeft: 30, trusted: [], everPaired: false,
-    vizOn: true, vizAfter: '10 min', skin: 'vu', animate: true, rpm: 0,
+    vizOn: false, vizAfter: '10 min', skin: 'vu', animate: true, rpm: 0,
     idleOn: true, bg: 'Gexis wallpapers', styles: ['Calm', 'Colourful'], wallStyle: 'Calm', listenPic: 'dac', clock: true, weather: false, loc: '',
     waitClock: true, waitBg: 'Gexis wallpapers', standby: false, ivs: [{ from: '23:00', until: '07:00', days: DAYS.slice() }], ivPick: null,
     skipped: {}, inst: 0 };
@@ -461,7 +461,7 @@ class Component extends DCLogic {
         blocks: [list([T('Phone touchpad', '', s.touchpad, flip('touchpad'))]), note('info', 'More in Settings', s.touchpad ? 'Display → Touchpad: Pointer speed, how far the pointer moves for a finger’s movement, and Pointer style, a dot or an arrow.' : 'Display → Touchpad turns it on again, with its pointer speed and style.')], foot: SK };
       case 'visualiser': { const k = s.skin, a = ANIM[k], rpm = s.rpm ? 45 : 33;
         return { title: 'While music plays', sub: 'What the screen shows with the music.', pv: pv(s.vizOn ? { kind: k, rpm, animate: s.animate } : { kind: d.lyr ? KNAV[s.browse] : 'now' }),
-          blocks: [list([T('Visualiser', 'Takes the screen while music plays.', s.vizOn, flip('vizOn'), { icon: 'viz' })]), ...(s.vizOn ? [
+          blocks: [list([T('Visualiser', 'Takes the screen while music plays.', s.vizOn, flip('vizOn'), { icon: 'viz' })]), ...(s.vizOn ? [...(g => [prog(g.done ? 'Skins installed' : 'Skins · ' + g.label, g.pct, g.meta, g.done ? '' : g.line, g.done), ...(g.done ? [] : [P('The download carries on while you continue.')])])(live.stage('skins')),
             pick('Starts after', ['2 min', '10 min', '30 min'], s.vizAfter, C.scr, x => set({ vizAfter: x })),
             pics('Skins', SKINS.map(x => ({ kind: x[0], label: x[1], on: k === x[0], rpm, fn: () => set({ skin: x[0] }) })), 'grid3'),
             ...(a ? [list([T(a[0], a[1], s.animate, flip('animate'))])] : []),
@@ -574,7 +574,7 @@ class Component extends DCLogic {
   //: the player: its name, clock, network, the Lyrion search, Plexamp's
   //: download, a phone asking to pair, the network shares, the downloads.
   let st = $state(Object.assign(init('A', mode === 'p1' ? 'p1' : 'p2', false), {
-    first: true, nameSaved: false, second: true, touchpad: true, plexClaimed: false, plexError: null,
+    first: true, nameSaved: false, second: true, touchpad: true, plexClaimed: false, plexError: null, skinsAsked: false,
     volume: 'Hardware', volHw: {}, volNotes: {}, outTags: {}, outProblems: {}, town: '', net: 'your network', lyrMeta: '', lyrServer: null, pairDevice: '', pairCode: '',
     shareServers: [], shareFound: [], shareFolder: null, musicSpace: null, picks: { usb: [], share: [] }, shareSrvItem: null, shareError: null, finishError: null, finished: null,
     plugins: [], tick: 0, ready: false,
@@ -642,7 +642,7 @@ class Component extends DCLogic {
         case 'retrying': return { pct, label: 'Downloading', meta: 'Retrying', line: 'The connection dropped; trying again.' };
         case 'verifying': return { pct: 100, label: 'Checking the download', meta: 'Downloaded', line: '' };
         case 'installing': return { pct: 100, label: 'Installing', meta: 'Downloaded', line: 'Installing can take a few minutes.' };
-        default: return { pct: 0, label: st.finished ? 'Starting the download' : 'Saving your answers', meta: '…',
+        default: return { pct: 0, label: st.finished || (id === 'skins' && st.skinsAsked) || (id === 'plexamp' && st.plexOn) ? 'Starting the download' : 'Saving your answers', meta: '…',
           line: stalled ? 'Still waiting to start. The player tries again every few minutes.' : '' };
       }
     },
@@ -690,6 +690,18 @@ class Component extends DCLogic {
     failed() { return !!$settling?.items?.some((i) => i.state === 'failed'); },
     async finish() {
       st.finishError = null;
+      // **What was ticked is added, even without its Add button** (George,
+      // 2026-10-19: network shares ticked, and nothing in Lyrion - the ticks
+      // were left behind when the step was left by Next).
+      const d = comp.d(st);
+      for (const [kind, place] of [['usb', 'usb'], ['share', 'share']]) {
+        if (!d.here || !st.places[place] || !st.picks[kind].length) continue;
+        await live.addPicked(kind);
+        if (st.picks[kind].length) {
+          st.finishError = (kind === 'usb' ? st.usbError : st.shareError) ?? 'A folder could not be added.';
+          return;
+        }
+      }
       try {
         const r = await fetch('/personalise/finish', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -866,6 +878,14 @@ class Component extends DCLogic {
     async downloadPlex() {
       const r = await writeSetting('plexamp.enabled', true);
       if (!r.ok) st.plexOn = false;
+    },
+    //: **The skins download at the visualiser step** (ADR-0149 decision 42;
+    //: George, 2026-10-19: as Plexamp's does, so the owner sees it carry on
+    //: while part 2 goes on). Once: a No at Finish removes the pack.
+    async downloadSkins() {
+      if (st.skinsAsked) return;
+      st.skinsAsked = true;
+      await writeSetting('visualiser_skins', true);
     },
     //: The code goes to Plexamp; whether it held is Plexamp's to say, read
     //: back through the plugin (plexClaimCheck) - not the write's answer.
@@ -1188,6 +1208,11 @@ class Component extends DCLogic {
   });
   $effect(() => { if ($settingsDevice.name) st.name = $settingsDevice.name; });
 
+  // ADR-0149 decision 42 as amended: the visualiser switched on - it starts
+  // off - is the answer that starts the skins.
+  $effect(() => {
+    if (st.screen === 'visualiser' && st.vizOn && st.scr !== 'headless') untrack(() => live.downloadSkins());
+  });
   // Plexamp's download, live (ADR-0100).
   $effect(() => {
     const c = $components?.plexamp;

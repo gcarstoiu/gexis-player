@@ -93,8 +93,29 @@ def view(record: dict | None, status: dict, now: float | None = None) -> dict | 
         entry = {"id": item["id"], "name": item.get("name") or live.get("label") or item["id"],
                  "received": live.get("received"), "total": live.get("total"),
                  "share": live.get("share"), "error": None}
-        if state == "installed":
+        if item.get("follow"):
+            # **Lyrion followed through its own steps** (ADR-0149 decision
+            # 43; George, 2026-10-19: the plate "was showing something
+            # getting ready and then the next minute the library was there in
+            # full"): its download is the first of five, as the phone's
+            # Getting ready numbers them.
+            entry["steps"] = lyrion_steps(live)
+        after = live.get("after") if state == "installed" else None
+        if state == "installed" and item.get("follow") and (after or {}).get("phase") != "ready":
+            # Installed, and Lyrion starting, adding its add-ons or reading -
+            # or not yet read at all, a moment after its download.
+            after = after or {"phase": "starting", "label": "Starting"}
+            entry["state"] = "busy"
+            entry["step"] = "after"
+            entry["after"] = after.get("phase")
+            entry["label"] = after.get("label")
+            entry["line"] = after.get("line")
+            entry["share"] = after.get("share") if after.get("phase") == "scanning" else None
+            entry["received"] = entry["total"] = None
+        elif state == "installed":
             entry["state"] = "done"
+            if after:
+                entry["line"] = after.get("line")
         elif state == "failed":
             entry["state"] = "failed"
             entry["error"] = live.get("error")
@@ -112,4 +133,50 @@ def view(record: dict | None, status: dict, now: float | None = None) -> dict | 
         items.append(entry)
     states = {i["state"] for i in items}
     phase = "settling" if states & {"waiting", "busy"} else ("failed" if "failed" in states else "ready")
-    return {"phase": phase, "items": items, "hidden": bool(record.get("hidden")) and phase != "failed"}
+    # **Lyrion's steps are the waiting screen's, not a dialog's** (ADR-0149
+    # decision 43 as amended; George, 2026-10-19: "The steps for lyrion in
+    # the panel should be in the plate not the modal"). The dialog is for
+    # the other downloads, and for Lyrion's only if it did not finish.
+    modal = any(not record_item.get("follow") or item["state"] == "failed"
+                for record_item, item in zip(record["items"], items))
+    return {"phase": phase, "items": items, "hidden": bool(record.get("hidden")) and phase != "failed",
+            "modal": modal}
+
+
+def downloads_in(view_: dict | None) -> bool:
+    """Every download done or failed - what follows a download (Lyrion
+    reading the music, hours on a large library) not waited for. The core's
+    restart for a server part 2 chose waits for this (decision 37), never
+    for the read."""
+    if not view_:
+        return True
+    return all(i["state"] in ("done", "failed") or i.get("step") == "after" for i in view_["items"])
+
+
+#: What Lyrion adds after its first start, until it says which (lyrion_stage).
+ADDONS = "Material Skin, Music & Artist Information and Radio Now Playing"
+
+
+def lyrion_steps(live: dict) -> list[list[str]]:
+    """**Lyrion as an ordered checklist**, `[text, "done" | "now" | "next"]`
+    for each step - the download, its start, its add-ons, reading the music,
+    ready - in the words the phone's Getting ready uses (ADR-0115 decision
+    28, ADR-0149 decision 43)."""
+    state, after = live.get("state"), live.get("after") or {}
+    phase = after.get("phase")
+    at = 0 if state != "installed" else {"starting": 1, "addons": 2, "waiting": 3, "scanning": 3, "ready": 4}.get(phase, 1)
+    total, received, share = live.get("total"), live.get("received"), live.get("share")
+    pct = round(100 * received / total) if total and received is not None else round(100 * share) if share is not None else None
+    added = ", ".join(a["name"] + (" ✓" if a.get("in") else " (being retried)" if at > 2 else "")
+                      for a in after.get("addons") or [])
+    read = after.get("share") if phase == "scanning" else None
+    texts = [
+        "Download Lyrion · did not finish" if state == "failed"
+        else f"Download Lyrion · {pct} %" if at == 0 and pct else "Download Lyrion",
+        "Start Lyrion",
+        f"Add {added or ADDONS} · one restart, about 3 minutes",
+        f"Read your music · {round(read * 100)} %" if read is not None else "Read your music",
+        f"Ready · {after.get('line')}" if at == 4 and after.get("line") else "Ready to browse",
+    ]
+    return [[text, "done" if i < at or (i == 4 and at == 4) else "now" if i == at else "next"]
+            for i, text in enumerate(texts)]

@@ -154,12 +154,20 @@ def checked(values: Any) -> dict:
     return values
 
 
-def apply(values: dict, settings, offered: list[dict], begin: Callable[[list[dict]], None]) -> dict:
+def apply(values: dict, settings, offered: list[dict], begin: Callable[[list[dict]], None],
+          status: dict | None = None) -> dict:
     """**Write the answers, then switch on what downloads, then follow the
     downloads** (ADR-0128). Each setting goes through `Settings.set`, so it
     does what it does from Settings; one that refuses is reported and the
     rest go on - as setup does - and is named in the result. Returns
-    `{"failed": [keys], "waiting": [component ids], "written": [keys]}`."""
+    `{"failed": [keys], "waiting": [component ids], "written": [keys]}`.
+
+    `status`, each download's live state: **what is already in is not
+    waited for** (ADR-0149 decision 42; George, 2026-10-19: the skins and
+    Plexamp download during part 2, which "leaves only lyrion topics at the
+    end"). The Lyrion server is followed past its download, through its own
+    steps (`follow`, decision 43), unless it has already read the music."""
+    status = status or {}
     values = checked(values)
     failed, written = [], []
 
@@ -186,9 +194,13 @@ def apply(values: dict, settings, offered: list[dict], begin: Callable[[list[dic
         put(row, bool(values[row]))
         plugin = by_row.get(row)
         if values[row] and plugin and plugin.get("component") and row not in failed:
-            wait.append({"id": plugin["component"], "name": plugin["name"]})
+            item = {"id": plugin["component"], "name": plugin["name"]}
+            if row == "lyrion-server.enabled":
+                item["follow"] = True
+            wait.append(item)
     if values.get("visualiser_skins") and "visualiser_skins" not in failed:
         wait.insert(0, {"id": "skins", "name": "The visualiser's skins"})
+    wait = [w for w in wait if not _in(status.get(w["id"]) or {}, w.get("follow"))]
     try:
         begin(wait)
     except OSError as exc:
@@ -196,3 +208,11 @@ def apply(values: dict, settings, offered: list[dict], begin: Callable[[list[dic
     logger.info("personalise: %d setting(s) written%s; waiting for %s", len(values) - len(failed),
                 f", {len(failed)} refused" if failed else "", ", ".join(w["name"] for w in wait) or "nothing")
     return {"failed": failed, "waiting": [w["id"] for w in wait], "written": written}
+
+
+def _in(live: dict, follow: bool | None) -> bool:
+    """Installed - and, for a download followed past it, finished with that
+    too (Lyrion's library read)."""
+    if live.get("state") != "installed":
+        return False
+    return not follow or (live.get("after") or {}).get("phase") == "ready"

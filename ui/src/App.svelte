@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script>
   import { onMount, untrack } from 'svelte';
-  import { connect, active, metadata, volume, handoff, capabilities, available, availability, shuffle, repeat, queue, pairing, fixedOutput, panel, setup, personalise, personaliseLater } from './lib/state.js';
+  import { connect, playback, active, metadata, volume, handoff, capabilities, available, availability, shuffle, repeat, queue, pairing, fixedOutput, panel, setup, personalise, personaliseLater } from './lib/state.js';
   import NowPlaying from './screens/NowPlaying.svelte';
   import BarNowPlaying from './screens/bar/BarNowPlaying.svelte';
   import BarTray from './screens/bar/BarTray.svelte';
@@ -379,10 +379,11 @@
     const known = Object.keys($components ?? {}).length > 0;
     if ($settingValues['lyrion-server.enabled'] === true && known
         && (!c || ['absent', 'preparing', 'downloading', 'retrying', 'verifying', 'installing'].includes(c.state))) {
-      return { phase: 'downloading', label: 'Downloading Lyrion', share: c.total ? (c.received ?? 0) / c.total : c.share ?? null, line: '', first: true };
+      return { phase: 'downloading', label: 'Downloading Lyrion', share: c?.total ? (c.received ?? 0) / c.total : c?.share ?? null, line: '', first: true, steps: c?.steps ?? null };
     }
     const after = c?.after;
-    return after?.first && after.phase !== 'ready' ? after : null;
+    // ADR-0149 decision 43: the numbered steps on this block, not in a dialog.
+    return after?.first && after.phase !== 'ready' ? { ...after, steps: c.steps ?? null } : null;
   });
   const waitingOpen = $derived((lmsOff && (!$active || idleSource)) || (!!lyrionFirst && !playing));
   //: **ADR-0122: the library is kept while Now Playing is up**, mounted and
@@ -734,7 +735,7 @@
   {#if $screenNew}
     <NewScreen question={$screenNew} onanswer={answerNew} />
   {/if}
-  {#if $settling && !$settling.hidden}
+  {#if $settling && !$settling.hidden && $settling.modal !== false}
     <SettlingScreen settling={$settling} ondone={() => settlingDone().catch(() => {})} onhide={() => settlingHide().catch(() => {})} />
   {/if}
   <!-- ADR-0123: a new cable address waiting to be kept, on every page. -->
@@ -750,7 +751,11 @@
       onrevert={() => answerScreen('revert')}
     />
   {/if}
-{:else if surface === 'panel'}
+{:else if surface === 'panel' && $playback}
+<!-- **Drawn once the core's first state is in** (George, 2026-10-19: the
+     player showed for a second before *Make it yours*). `/surface` and the
+     state come by two roads; between them the panel knew it was a panel but
+     not that part 2 was owed, and drew its own screens. -->
 
 <div class="panel" class:panel--bar={screen.family === 'bar'} data-family={screen.family}>
   <!-- One backdrop for the whole panel, so a screen change does not build
@@ -904,7 +909,7 @@
 
   <!-- ADR-0128: the first start after setup, until it has settled - over
        everything but Keep this screen and the update lock. -->
-  {#if $settling && !$settling.hidden && !$screenConfirm && !updateLock && !setupShown}
+  {#if $settling && !$settling.hidden && $settling.modal !== false && !$screenConfirm && !updateLock && !setupShown}
     <SettlingScreen settling={$settling} ondone={() => settlingDone().catch(() => {})} onhide={() => settlingHide().catch(() => {})} />
   {:else if $personalise === 'pending' && $settingValues.headless !== true && !$screenConfirm && !updateLock && !setupShown}
     <!-- ADR-0149: part 2 is owed; the panel shows the way to it - **at
