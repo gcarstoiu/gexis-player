@@ -3404,7 +3404,7 @@ async def main() -> None:
         """**Material is in once Lyrion serves it** (George, 2026-10-19: the
         server's page still showed the old design after the step said done).
         Its folder is there seconds before Lyrion, restarting to load it,
-        answers - 17 s on sofapi; `/material/` is Material's own page, a 404
+        answers - 7 s on sofapi; `/material/` is Material's own page, a 404
         until it is loaded."""
         try:
             async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
