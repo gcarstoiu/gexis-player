@@ -139,6 +139,28 @@
         "surfaced": false
       },
       {
+        "key": "library_navigation",
+        "type": "choice",
+        "label": "Navigation",
+        "marks": "N",
+        "note": null,
+        "options": [
+          "Simple",
+          "Extended",
+          "Off"
+        ],
+        "optionNotes": {
+          "Simple": "Your library: the home tiles, albums, artists, playlists and radio.",
+          "Extended": "Lyrion's own menus too: My Music, Favourites, Apps and more.",
+          "Off": "Only what plays. Lyrion's apps on your phone still play here."
+        },
+        "default": null,
+        "onlyWhen": [
+          "lms_enabled",
+          true
+        ]
+      },
+      {
         "key": "lms_library",
         "type": "toggle",
         "label": "Library on the screen",
@@ -148,7 +170,9 @@
         "onlyWhen": [
           "lms_enabled",
           true
-        ]
+        ],
+        "surfaced": false,
+        "shownAs": "library_navigation"
       },
       {
         "key": "lms_extended_nav",
@@ -160,7 +184,9 @@
         "onlyWhen": [
           "lms_enabled",
           true
-        ]
+        ],
+        "surfaced": false,
+        "shownAs": "library_navigation"
       },
       {
         "key": "plugins",

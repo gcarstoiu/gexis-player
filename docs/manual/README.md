@@ -190,7 +190,7 @@ and **Add**, twice to play it.
 
 ## 4. Lyrion's own menus (Extended navigation)
 
-Switch on **Settings → Sources → Lyrion Client → Extended navigation** and
+Choose **Extended** in **Settings → Sources → Lyrion Client → Navigation** and
 Home gains **My Music**, **Favourites** and **Apps**: everything your Lyrion
 server offers, including the apps it has installed.
 
@@ -379,8 +379,7 @@ Changes take effect at once unless the row says otherwise.
 | --- | --- |
 | Lyrion Client: Enabled | Plays your Lyrion server's music. |
 | Lyrion Client: Server | Which Lyrion server. Servers announce themselves on the network, each shown by its machine's name, else the library name set in Lyrion, else its address; typing an address is the fallback. |
-| Lyrion Client: Library on the screen | Off, the screen shows only what is playing and the sources, with no library to browse; Lyrion's apps on your phone still play to the player. On by default. |
-| Lyrion Client: Extended navigation | Lyrion's own menus on Home: My Music, Favourites, Apps (section 4). |
+| Lyrion Client: Navigation | How you move around your library on the screen, one choice: **Simple** - the home tiles, albums, artists, playlists and radio; **Extended** - Lyrion's own menus as well: My Music, Favourites, Apps (section 4); **Off** - only what is playing and the sources, with no library to browse; Lyrion's apps on your phone still play to the player. |
 | Spotify Connect: Enabled | The player appears as a Spotify Connect device. |
 | Spotify Connect: Starting volume | The loudest Spotify starts at when it takes over. Hidden with Volume on *Fixed*. |
 | Bluetooth: Enabled | The player accepts Bluetooth audio. |

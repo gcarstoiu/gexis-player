@@ -639,7 +639,7 @@ among them), its add-ons and its network shares with their logins. The Music fol
 it on again downloads it and starts a new library.
 
 **How do I see Lyrion's own menus and apps on the screen?**
-Switch on *Settings → Sources → Lyrion Client → Extended navigation*. The
+Choose *Extended* in *Settings → Sources → Lyrion Client → Navigation*. The
 home screen then has My Music with every library view, Favourites, and Apps,
 including what Lyrion's apps add. It is off by default.
 

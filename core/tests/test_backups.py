@@ -1183,5 +1183,5 @@ def test_the_review_lists_what_a_backup_restores_by_section(tmp_path, monkeypatc
     seen = backups.inspect(archive, 12)
     by = {s["label"]: s["items"] for s in seen["sections"]}
     assert by["Audio"] == ["Output"]
-    assert "Lyrion Client · Library on the screen" in by["Sources"] and "Spotify sign-in" in by["Sources"]
+    assert "Lyrion Client · Navigation" in by["Sources"] and "Spotify sign-in" in by["Sources"]
     assert seen["brings"] == ["Spotify sign-in"]

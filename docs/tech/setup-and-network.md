@@ -784,7 +784,12 @@ and the state socket it shows nothing rather than its own screens.
 
 **Library on the screen** (`lms_library`): off, `App.svelte` treats the
 library as absent (`lmsOff`), so the panel's home is `WaitingHome`; the
-Lyrion client keeps running.
+Lyrion client keeps running. **Settings shows it and `lms_extended_nav` as
+one choice, *Navigation*** (`library_navigation`: Simple, Extended, Off;
+George, 2026-10-19): the two switches are kept and not drawn (`surfaced:
+false`, `shownAs`), the choice writes both (`_set_navigation`) and keeps no
+value of its own, so it is always read from them (`_navigation_now`) - part 2
+writes them directly - and a backup's review lists them as *Navigation*.
 
 ## Reset to factory settings (ADR-0132)
 
