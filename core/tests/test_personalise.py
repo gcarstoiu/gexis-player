@@ -186,3 +186,22 @@ def test_the_music_locations_go_in_before_the_server_is_switched_on():
                        "lyrion-server.usb": True}, settings, OFFERED, lambda wait: None)
     assert settings.order == ["lyrion-server.music_folder", "lyrion-server.usb", "lyrion-server.enabled"]
     assert settings.values["lyrion-server.music_folder"] is False
+
+
+def test_what_is_already_in_is_not_waited_for_and_lyrion_is_followed():
+    """ADR-0149 decisions 42 and 43 (George, 2026-10-19): the skins and
+    Plexamp download during part 2, which "leaves only lyrion topics at the
+    end" - and the Lyrion server is followed through its own steps."""
+    begun = []
+    status = {"skins": {"state": "installed"}, "plexamp": {"state": "downloading"}}
+    result = personalise.apply({"visualiser_skins": True, "plexamp.enabled": True, "lyrion-server.enabled": True},
+                               FakeSettings(), OFFERED, begun.extend, status)
+    assert begun == [{"id": "lyrion-server", "name": "Lyrion Server", "follow": True},
+                     {"id": "plexamp", "name": "Plexamp"}]
+    assert result["waiting"] == ["lyrion-server", "plexamp"]
+    # A server that has already read its music, asked again from Settings:
+    # nothing to follow.
+    begun.clear()
+    read = {"lyrion-server": {"state": "installed", "after": {"phase": "ready"}}}
+    personalise.apply({"lyrion-server.enabled": True}, FakeSettings(), OFFERED, begun.extend, read)
+    assert begun == []

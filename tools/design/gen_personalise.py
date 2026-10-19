@@ -203,6 +203,12 @@ rep("""            btn('Add', () => { if (s.shareAddr.trim()) addShare(s.shareAd
 rep("{ k: 'plain', label: 'Plexamp 4.13.2', note: 'From Plex · 112 MB', icon: 'plex' }", "{ k: 'plain', label: 'Plexamp', note: 'From Plex', icon: 'plex' }")
 rep("nextFn: () => this.setState({ plexOn: true, plexSkipped: false }, () => this.next()), keep: true } };",
     "nextFn: () => this.setState({ plexOn: true, plexSkipped: false }, () => { live.downloadPlex(); this.next(); }), keep: true } };")
+# **The skins download at the visualiser step** (ADR-0149 decision 42;
+# George, 2026-10-19: "similar to plexamp", making it clear that setup goes
+# on while they download): the download's stage under the switch.
+rep("blocks: [list([T('Visualiser', 'Takes the screen while music plays.', s.vizOn, flip('vizOn'), { icon: 'viz' })]), ...(s.vizOn ? [",
+    "blocks: [list([T('Visualiser', 'Takes the screen while music plays.', s.vizOn, flip('vizOn'), { icon: 'viz' })]), ...(s.vizOn ? [" +
+    "...(g => [prog(g.done ? 'Skins installed' : 'Skins · ' + g.label, g.pct, g.meta, g.done ? '' : g.line, g.done), ...(g.done ? [] : [P('The download carries on while you continue.')])])(live.stage('skins')),")
 # Bluetooth: the phone that asks, its code, and the player's own list.
 rep("        const ph = this.phone(s), sub = 'Any phone can play to ' + nm", "        const ph = s.pairDevice || 'A phone', sub = 'Any phone can play to ' + nm")
 rep("fn: () => this.setState(st => ({ trusted: st.trusted.filter(x => x.name !== t.name) })) })), empty: 'No phones paired yet.' }] : [];",

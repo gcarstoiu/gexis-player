@@ -3757,8 +3757,11 @@ async def main() -> None:
             else:
                 ready_since = None
             state_store.set_settling(view)
-            # Held while the screen is up, not while it is put away.
-            visualiser_held["settling"] = view is not None and not view["hidden"]
+            # Held while the screen is up, not while it is put away - and
+            # while part 2 is owed: the skins now land during it (ADR-0149
+            # decision 42), under the panel's Make it yours.
+            visualiser_held["settling"] = (view is not None and not view["hidden"]) \
+                or state_store.state.personalise == personalise.PENDING
             if not visualiser_held["settling"] and visualiser_held["restart"]:
                 logger.info("peppy: the settling screen is gone; restarting the visualiser held for it")
                 await _restart_visualiser()

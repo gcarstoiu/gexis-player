@@ -23,7 +23,11 @@
   function mb(bytes) {
     return bytes == null ? null : Math.round(bytes / 1e6);
   }
+  //: ADR-0149 decision 43: Lyrion after its download - starting, its
+  //: add-ons, reading the music - in its own words, with how far it has read.
+  const following = $derived(settling.items.some((i) => i.steps));
   function line(item) {
+    if (item.step === 'after') return item.share != null ? `${item.label} · ${Math.round(item.share * 100)} %` : item.label;
     if (item.state === 'done') return 'Done';
     if (item.state === 'failed') return item.error ? `Did not finish: ${item.error}` : 'Did not finish';
     if (item.state === 'waiting') return 'Waiting to start…';
@@ -61,8 +65,13 @@
       {:else if settling.phase === 'failed'}
         {names(failed)} did not finish. Try again any time in <b>Settings → Plugins</b>; everything else is ready.
       {:else}
-        Downloading and installing what you chose in setup - a few minutes. Until it is done, music may be slow to start.
-        You can use the player now: the downloads go on, and Settings shows how far they are.
+        {#if following}
+          Lyrion starts, adds its add-ons and reads your music - a large library takes hours. The other sources play meanwhile.
+          You can use the player now: Lyrion goes on, and Settings → Library shows how far it is.
+        {:else}
+          Downloading and installing what you chose in setup - a few minutes. Until it is done, music may be slow to start.
+          You can use the player now: the downloads go on, and Settings shows how far they are.
+        {/if}
       {/if}
     </div>
     <div class="items">
@@ -72,10 +81,24 @@
             <span class="item__name">{item.name}</span>
             <span class="item__state">{line(item)}</span>
           </div>
+          {#if item.steps}
+            <!-- The phone's numbered checklist, on the panel (George,
+                 2026-10-19: "Make sure the plate shows the steps"). -->
+            <ol class="steps">
+              {#each item.steps as [text, at], n (n)}
+                <li class="step step--{at}"><span class="step__n">{at === 'done' ? '✓' : n + 1}</span><span>{text}</span></li>
+              {/each}
+            </ol>
+          {/if}
           {#if item.state === 'busy' || item.state === 'waiting' || item.state === 'done'}
             <div class="bar" class:bar--waiting={item.state === 'waiting' || item.step === 'preparing' || item.step === 'installing' || item.step === 'verifying' || (item.state === 'busy' && !item.total && item.share == null)}>
               <span style:width="{Math.round(share(item) * 100)}%"></span>
             </div>
+          {/if}
+          {#if item.step === 'after' && item.line}
+            <!-- Lyrion's own words for its step: what it is reading, and how
+                 many of how many (ADR-0115 decision 28). -->
+            <div class="item__line">{item.line}</div>
           {/if}
         </div>
       {/each}
@@ -154,11 +177,60 @@
     color: var(--ink-dim, #9fb0bd);
     font-variant-numeric: tabular-nums;
   }
+  .item__line {
+    font-size: 15px;
+    line-height: 1.4;
+    color: var(--ink-dim, #9fb0bd);
+  }
   .item.is-done .item__state {
     color: #7ed6bc;
   }
   .item.is-failed .item__state {
     color: #e0a758;
+  }
+  .steps {
+    list-style: none;
+    margin: 2px 0 2px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .step {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    font-size: 16px;
+    line-height: 1.35;
+    color: var(--ink-dim, #9fb0bd);
+  }
+  .step__n {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: inline-grid;
+    place-items: center;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    border: 1px solid rgba(233, 238, 242, 0.22);
+    transform: translateY(-1px);
+  }
+  .step--done .step__n {
+    color: #7ed6bc;
+    border-color: rgba(126, 214, 188, 0.5);
+  }
+  .step--now {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .step--now .step__n {
+    color: #101a21;
+    background: #7ed6bc;
+    border-color: #7ed6bc;
+  }
+  .step--next {
+    opacity: 0.6;
   }
   .bar {
     height: 6px;

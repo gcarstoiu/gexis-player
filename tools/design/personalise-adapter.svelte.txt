@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import mark from '../assets/gexis-mark.svg';
   import lyrionIcon from '../assets/icon-lyrion.svg';
   import spotifyIcon from '../assets/icon-spotify.png';
@@ -35,7 +35,7 @@
   //: the player: its name, clock, network, the Lyrion search, Plexamp's
   //: download, a phone asking to pair, the network shares, the downloads.
   let st = $state(Object.assign(init('A', mode === 'p1' ? 'p1' : 'p2', false), {
-    first: true, nameSaved: false, second: true, touchpad: true, plexClaimed: false, plexError: null,
+    first: true, nameSaved: false, second: true, touchpad: true, plexClaimed: false, plexError: null, skinsAsked: false,
     volume: 'Hardware', volHw: {}, volNotes: {}, outTags: {}, outProblems: {}, town: '', net: 'your network', lyrMeta: '', lyrServer: null, pairDevice: '', pairCode: '',
     shareServers: [], shareFound: [], shareFolder: null, musicSpace: null, picks: { usb: [], share: [] }, shareSrvItem: null, shareError: null, finishError: null, finished: null,
     plugins: [], tick: 0, ready: false,
@@ -103,7 +103,7 @@
         case 'retrying': return { pct, label: 'Downloading', meta: 'Retrying', line: 'The connection dropped; trying again.' };
         case 'verifying': return { pct: 100, label: 'Checking the download', meta: 'Downloaded', line: '' };
         case 'installing': return { pct: 100, label: 'Installing', meta: 'Downloaded', line: 'Installing can take a few minutes.' };
-        default: return { pct: 0, label: st.finished ? 'Starting the download' : 'Saving your answers', meta: '…',
+        default: return { pct: 0, label: st.finished || (id === 'skins' && st.skinsAsked) || (id === 'plexamp' && st.plexOn) ? 'Starting the download' : 'Saving your answers', meta: '…',
           line: stalled ? 'Still waiting to start. The player tries again every few minutes.' : '' };
       }
     },
@@ -327,6 +327,14 @@
     async downloadPlex() {
       const r = await writeSetting('plexamp.enabled', true);
       if (!r.ok) st.plexOn = false;
+    },
+    //: **The skins download at the visualiser step** (ADR-0149 decision 42;
+    //: George, 2026-10-19: as Plexamp's does, so the owner sees it carry on
+    //: while part 2 goes on). Once: a No at Finish removes the pack.
+    async downloadSkins() {
+      if (st.skinsAsked) return;
+      st.skinsAsked = true;
+      await writeSetting('visualiser_skins', true);
     },
     //: The code goes to Plexamp; whether it held is Plexamp's to say, read
     //: back through the plugin (plexClaimCheck) - not the write's answer.
@@ -649,6 +657,10 @@
   });
   $effect(() => { if ($settingsDevice.name) st.name = $settingsDevice.name; });
 
+  // ADR-0149 decision 42: the visualiser step, answered Yes, starts the skins.
+  $effect(() => {
+    if (st.screen === 'visualiser' && st.vizOn && st.scr !== 'headless') untrack(() => live.downloadSkins());
+  });
   // Plexamp's download, live (ADR-0100).
   $effect(() => {
     const c = $components?.plexamp;
