@@ -2641,6 +2641,8 @@ async def main() -> None:
                "debug_logs": lambda value: asyncio.ensure_future(
                    _apply_debug_logs(bool(value))
                ),
+               # ADR-0152: read by /api at each request.
+               "api_explorer": None,
                "show_transition": None, "handoff_duration": None,
                # ADR-0054 §5, amended 2026-09-28: read at each takeover that
                # hands a renderer its level.

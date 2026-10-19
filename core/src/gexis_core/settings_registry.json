@@ -1827,6 +1827,14 @@
         "default": false
       },
       {
+        "key": "api_explorer",
+        "type": "toggle",
+        "label": "API explorer",
+        "marks": "N",
+        "note": "Shows this player's API at its address followed by /api, for building apps and integrations. Every route can be tried there against this player, restart and reset included.",
+        "default": false
+      },
+      {
         "key": "log_level",
         "type": "choice",
         "label": "Log level",
