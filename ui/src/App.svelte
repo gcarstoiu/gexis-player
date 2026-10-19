@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script>
   import { onMount, untrack } from 'svelte';
-  import { connect, active, metadata, volume, handoff, capabilities, available, availability, shuffle, repeat, queue, pairing, fixedOutput, panel, setup, personalise, personaliseLater } from './lib/state.js';
+  import { connect, playback, active, metadata, volume, handoff, capabilities, available, availability, shuffle, repeat, queue, pairing, fixedOutput, panel, setup, personalise, personaliseLater } from './lib/state.js';
   import NowPlaying from './screens/NowPlaying.svelte';
   import BarNowPlaying from './screens/bar/BarNowPlaying.svelte';
   import BarTray from './screens/bar/BarTray.svelte';
@@ -750,7 +750,11 @@
       onrevert={() => answerScreen('revert')}
     />
   {/if}
-{:else if surface === 'panel'}
+{:else if surface === 'panel' && $playback}
+<!-- **Drawn once the core's first state is in** (George, 2026-10-19: the
+     player showed for a second before *Make it yours*). `/surface` and the
+     state come by two roads; between them the panel knew it was a panel but
+     not that part 2 was owed, and drew its own screens. -->
 
 <div class="panel" class:panel--bar={screen.family === 'bar'} data-family={screen.family}>
   <!-- One backdrop for the whole panel, so a screen change does not build
