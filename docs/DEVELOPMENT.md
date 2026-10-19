@@ -2957,7 +2957,7 @@ a USB drive's folders in *Where is your music?*.
 
 ### Phase 15 — A documented public API
 
-**ID:** `ph-api` · **In progress from 2026-10-19.** Was the Roadmap's Must
+**ID:** `ph-api` · added 2026-10-19. Was the Roadmap's Must
 idea *Documented public API*; George put it before room correction
 (2026-10-19), in the place MPD left (parked, below).
 
@@ -2966,6 +2966,19 @@ up as one OpenAPI 3.1 file, kept honest by a test, and shown on GitHub and on
 the player, where every route can be tried. **ADR-0152**, accepted; one point
 open with George: which routes are promised to stay (*stable*) and which may
 change (*internal*).
+
+**Closed 2026-10-19** (George: *"the phase work we are about to close"*):
+released in 1.2.0, Testing and Stable the same day, PR #77. Against the
+acceptance below: 1 is `core/tests/test_openapi.py` (90 operations); 2 is the
+`State` schema and `docs/tech/api.md`; 3 was tried in a browser on sofapi,
+*Execute* included; 4 is live at gcarstoiu.github.io/gexis-player, built
+from the `v1.2.0` tag (version 1.2.0, the player's own server left out); 5
+is in Credits. The stability marks (32 stable, 58 internal) were confirmed
+by George. The phase also carried his fixes from testing it on sofapi
+(ADR-0149 decision 46, the Library's Lyrion switch, Navigation as one
+choice, the Calm fallback, Settings' new order). Not done: a client written
+against the file by someone else - Home Assistant (`ph-home-assistant`) will
+be the first.
 
 **Acceptance (draft):**
 
