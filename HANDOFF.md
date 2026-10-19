@@ -47,6 +47,18 @@ read. **Seen 2026-10-18, not yet looked into:** sofapi's new Lyrion server
 lists ShelvesPi and GuestPi as its players. Phase 14's narrative:
 `docs/HANDOFF-ARCHIVE.md`, 2026-10-19.
 
+**George's findings on 1.1.0 (2026-10-19), built on `fix-first-use`**
+(worktree `~/projects/gexis-player-fix`, from `next`; pushed, not merged):
+the panel drawn once the core's first state is in (no blink of the player
+before *Make it yours*); the skins downloading at part 2's visualiser step;
+the panel's Getting ready following Lyrion through its start, add-ons and
+read (George chose *through the read* and *at the visualiser step*);
+*More for your library*'s links on their own line on a laptop. ADR-0149
+decisions 42-44. Checked against a mock on shelvespi (writes held, scratchpad
+`f4/libmock.py`), never on a device: sofapi was offline all afternoon. Owed:
+a preview on sofapi (packages in the worktree's `packaging/out/`), George's
+test, then 1.1.1.
+
 **Release build output lives in `~/.local/share/gexis-release-out`**: in each
 release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
 (excluded in `.git/info/exclude`). `reuse.py` reuses a published file only
