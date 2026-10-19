@@ -1,8 +1,18 @@
 # ADR-0151 — MPD on the player
 
-**Status:** **Proposed** — 2026-10-19. Phase 15 (`ph-mpd`). Decisions
-recorded below as George takes them; open points at the end. Nothing is built
-until it is accepted.
+**Status:** **Parked** — 2026-10-19, George: *"Park it. Really too much risk
+for a small benefit."* Nothing was built. MPD is back among the ideas; this
+record keeps what was decided and measured (Findings 121 and 128) for when
+it is picked up. It was Phase 15 (`ph-mpd`); Phase 15 is now the public API
+(`ph-api`, ADR-0152).
+
+**Why parked:** multichannel files are a niche (classical surround downloads
+and SACDs; the multichannel that grows, Dolby Atmos streaming, plays only in
+the services' own certified apps and could not reach the player), and the
+measurements showed real costs - MPD folds 5.1 to mono for a stereo output,
+centre and LFE arrive swapped at the Pi's HDMI port, and Lyrion's idea of a
+bridged player's position lags the sound by about 2 s, a risk for
+multiroom, which George called important.
 
 ## Context
 
