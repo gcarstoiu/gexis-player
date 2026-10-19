@@ -479,8 +479,12 @@ def test_the_lyrion_server_is_switched_in_the_library_too(tmp_path):
     # and starts, and made the row jump) and Remove stay on the Plugins page.
     assert original.get("component") and not {"component", "version", "uploaded"} & set(mirror)
     assert not any(r["visible"] for r in library[2:] if r.get("key", "").startswith("lyrion-server."))
+    # Its heading stays, so it must not keep the reading from when it was on.
+    settings.indicate("lyrion-server.enabled", "ok", "Ready")
+    assert "indicator" not in published()[0][0]
 
     store.set("lyrion-server.enabled", True)
     library, original = published()
     assert library[1]["value"] is True and original["value"] is True
+    assert library[0]["indicator"] == {"tone": "ok", "text": "Ready"}
     assert next(r for r in library if r.get("key") == "lyrion-server.music_folder")["visible"]

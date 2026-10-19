@@ -976,7 +976,11 @@ class Settings:
             for row in group["rows"]:
                 if row["type"] == "group":
                     heading = row.get("onlyWhen")
-                    if row.get("indicatorOf") in self._indicators:
+                    # Switched off, a service says nothing: the Library's
+                    # Lyrion heading stays when off, and kept its last
+                    # "Ready" (2026-10-19).
+                    if (row.get("indicatorOf") in self._indicators
+                            and self.value(row["indicatorOf"]) is not False):
                         row = {**row, "indicator": dict(self._indicators[row["indicatorOf"]])}
                     rows.append(row)
                     continue
