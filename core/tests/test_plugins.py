@@ -460,7 +460,7 @@ def test_the_lyrion_server_is_switched_in_the_library_too(tmp_path):
     shipped = json.loads((Path(__file__).parents[2] / "image/stage-gexis/10-lyrion/files/plugin.json").read_text())
     server = plugins.parse(shipped, built_in=True)
     store = SettingsStore(tmp_path / "s.db")
-    settings = Settings(store, registry=Settings.with_plugins(load_registry(), [server]),
+    settings = Settings(store, registry=Settings.with_plugins(load_registry(), [server], {"lyrion-server": "lms"}),
                         wired={"lyrion-server.enabled": None})
     store.set("lyrion-server.enabled", False)
 
@@ -475,6 +475,9 @@ def test_the_lyrion_server_is_switched_in_the_library_too(tmp_path):
     assert heading["type"] == "group" and heading["label"] == "Lyrion Server" and "onlyWhen" not in heading
     assert mirror["key"] == "lyrion-server.enabled" and mirror["mirror"] and mirror["visible"]
     assert mirror["value"] is False and original["value"] is False
+    # Only the switch: its download line (which changes as the server stops
+    # and starts, and made the row jump) and Remove stay on the Plugins page.
+    assert original.get("component") and not {"component", "version", "uploaded"} & set(mirror)
     assert not any(r["visible"] for r in library[2:] if r.get("key", "").startswith("lyrion-server."))
 
     store.set("lyrion-server.enabled", True)

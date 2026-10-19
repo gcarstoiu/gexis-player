@@ -686,7 +686,12 @@ class Settings:
                 # switch under it - the Plugins page's, mirrored, the same key
                 # and value - and every other row still only while it is on.
                 rows[0] = {k: v for k, v in rows[0].items() if k != "onlyWhen"}
-                rows.insert(1, {**switches[0], "mirror": True, "label": "On",
+                # Only the switch: the download line, version and Remove stay
+                # on the Plugins row (George, 2026-10-19: the line changing
+                # while the server stopped made the row jump; "remove the
+                # remove button from the library").
+                plain = {k: v for k, v in switches[0].items() if k not in ("component", "version", "uploaded")}
+                rows.insert(1, {**plain, "mirror": True, "label": "On",
                                 "note": f"Off, {plugin.name} stops; its library, folders and shares are kept "
                                         f"for when it is on again. Removing it is in Plugins."})
             try:
