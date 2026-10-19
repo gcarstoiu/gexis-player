@@ -2924,11 +2924,16 @@ once the player is on the home network (the panel shows a QR code to it),
 asks how it will be used and ends in the downloads (ADR-0128's settling
 screen).
 
-**Built 2026-10-18 on the branch `ph-first-use`** (not merged) from Claude
-Design's hand-off; ADR-0149 accepted, with the decisions taken while building
-recorded in it (George delegated them). On SofaPi for George to test part 2
-through Settings → Display → Personalise. Not yet run: part 1 on a freshly
-flashed card, and the wide (tablet) layout, which is not built.
+**Closed 2026-10-19** (George: *"You can make the change"*, moving it to
+Done): released in 1.1.0 (Testing) and 1.1.1 (Stable, with the fixes from
+his four tests on sofapi; ADR-0149 decisions 42-45). Built from Claude
+Design's hand-off on `ph-first-use`; ADR-0149 holds every decision. Against
+the acceptance below: 1-4 were run by George on sofapi, part 1 after *Reset to
+factory settings*, not on a freshly flashed card; 5 is checked in code and on
+the stand-in, not on a headless player; 6 was compared with the design on a
+phone, the 10.1" panel and, on renders only, the 1280x400 and 1480x320 bars.
+Not built: the wide (tablet) layout of the phone page. Not run on a device:
+a USB drive's folders in *Where is your music?*.
 
 **Acceptance (draft):**
 
@@ -2953,6 +2958,7 @@ flashed card, and the wide (tablet) layout, which is not built.
 ### Phase 15 — MPD: real multichannel
 
 **ID:** `ph-mpd` · numbered 14 on 2026-10-13 (was 17), 15 from 2026-10-15.
+**In progress from 2026-10-19**: its ADR first.
 
 **Added 2026-10-13** (George: *"have another phase for mpd right after"* the
 first public release, after Finding 121 showed Lyrion delivers two channels
