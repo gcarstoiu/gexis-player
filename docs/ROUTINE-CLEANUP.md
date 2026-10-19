@@ -64,7 +64,9 @@ network's names, `claude.ai` links, session ids, paths into a session's
 scratchpad (`/tmp/claude-`), and real artists, albums or places from
 George's library. Replace with named placeholders or the documentation range
 (192.0.2.x); a test that needs a real file reads it from an environment
-variable and skips without it. History is not rewritten without George.
+variable and skips without it. History is not rewritten without George
+(2026-10-19: the home network's name in commits back to 2026-09-29 - George,
+*"Leave it"*; do not ask again for what is already in history).
 
 ## 4. The report
 
