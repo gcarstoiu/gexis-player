@@ -36,6 +36,14 @@ library or as a satellite of a central MPD that holds the database
 8. **Its own music locations**, separate from the Lyrion server's (George:
    *"separate just so as not to mix and complicate matters"*).
 
+## Measured since (Finding 128, 2026-10-19)
+
+George asked for a smaller phase (*"It's too much work and the benefit is
+questionable"*). Idea 2 was tested: Lyrion's library and apps playing to MPD
+through Lyrion's *UPnP/DLNA bridge* and upmpdcli. 5.1 and 7.1 FLAC and a 5.1
+WAV reached the receiver as 6 and 8 channels; DSD did not play through the
+bridge. MPD alone carried every format, DSD included.
+
 ## Open
 
 - How apps control MPD: MPD clients, UPnP/OpenHome through upmpdcli, or both;
