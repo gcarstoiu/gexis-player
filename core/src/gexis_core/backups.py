@@ -908,27 +908,30 @@ def inspect(path: Path, known_migrations: int, schema_key: str = "_settings_sche
         made = None
     if made is None:
         made = max((m.mtime for m in members), default=None)
-    brings = []
+    #: What it carries besides settings, each with the Settings section
+    #: that owns it (`restore_review`).
+    carried = []
     paired = sum(1 for n in names if _PAIRED.match(n))
     if paired:
-        brings.append(f"{paired} paired Bluetooth {'device' if paired == 1 else 'devices'}")
+        carried.append(("sources", f"{paired} paired Bluetooth {'device' if paired == 1 else 'devices'}"))
     if "var/lib/go-librespot/state.json" in names:
-        brings.append("Spotify sign-in")
+        carried.append(("sources", "Spotify sign-in"))
     if any(n.startswith("home/pi/.local/share/Plexamp/Settings/") for n in names):
-        brings.append("Plexamp's claim")
+        carried.append(("sources", "Plexamp's claim"))
     if any(n.startswith("var/lib/beszel-agent/") for n in names):
-        brings.append("Beszel connection")
+        carried.append(("plugins", "Beszel connection"))
     if any(n.startswith("var/lib/beszel-hub/") for n in names):
-        brings.append("Beszel hub history")
+        carried.append(("plugins", "Beszel hub history"))
     if any(n.startswith("var/lib/squeezeboxserver/prefs/") for n in names):
-        brings.append("Lyrion server settings")
+        carried.append(("sources", "Lyrion server settings"))
     playlists = sum(1 for n in names if n.startswith("var/lib/gexis-music/Playlists/") and n.endswith(".m3u"))
     if playlists:
-        brings.append(f"{playlists} {'playlist' if playlists == 1 else 'playlists'}")
+        carried.append(("sources", f"{playlists} {'playlist' if playlists == 1 else 'playlists'}"))
     if "var/lib/gexis-core/enrichment.db" in names:
-        brings.append("Artist and album information")
+        carried.append(("enrich", "Artist and album information"))
     if any(n.startswith("var/lib/private/gexis-uploaded/") for n in names):
-        brings.append("Uploaded plugins' data")
+        carried.append(("plugins", "Uploaded plugins' data"))
+    brings = [text for _, text in carried]
     held = [label for prefix, label in IDENTITIES
             if any(n == prefix or n.startswith(prefix + "/") for n in names)]
     return {
@@ -946,7 +949,23 @@ def inspect(path: Path, known_migrations: int, schema_key: str = "_settings_sche
         "enabled": sorted(k[:-len(".enabled")] for k, v in values.items()
                           if k.endswith(".enabled") and v is True),
         "brings": brings,
+        #: The same, and every setting, by Settings section (ADR-0131
+        #: amended 2026-10-18): what the review lists, a line each.
+        "sections": _sections(values, carried),
     }
+
+
+def _sections(values: dict, carried: list[tuple[str, str]]) -> list[dict]:
+    """`restore_review.sections` with this release's registry and the
+    plugins installed. A review that cannot be grouped is an empty list:
+    the backup is no less good for it."""
+    try:
+        from gexis_core import plugins, restore_review, settings_registry
+
+        return restore_review.sections(values, carried, settings_registry.load_registry(), plugins.installed())
+    except Exception:  # noqa: BLE001 - the check itself must not fail over its review
+        logger.exception("backups: the review could not be grouped")
+        return []
 
 
 def path_of(name: str, directory: Path = DEFAULT_DIR) -> Path:

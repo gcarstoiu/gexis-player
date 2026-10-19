@@ -50,8 +50,9 @@ strip at the bottom. The row of cards scrolls sideways.*
 
 **With the Lyrion client switched off** there is no library, and the
 panel's home is the **waiting screen**: the clock, the date and the player's
-name over the same picture as the idle screen, and a tile for each source
-waiting to be played to - its state under its name. Start music from a phone
+name over the same picture as the idle screen, and each source waiting to be
+played to pulsing at the foot - its mark, its name and its state, as under
+the library. Start music from a phone
 and the panel moves to Now Playing. Settings is the button in the top right
 corner.
 
@@ -367,7 +368,7 @@ Changes take effect at once unless the row says otherwise.
 | Setting | What it does |
 | --- | --- |
 | Output | Where the sound goes. If the chosen output is an HDMI port and its device disappears (a receiver switched off), the headphone jack plays until it is back, on its own volume rather than Fixed, and the row says so; the player returns to HDMI by itself. A USB DAC is shown by its maker, with a line saying what it reports it can take (for example *USB 2.0 · up to 768 kHz / 32-bit · native DSD*). An HDMI port shows what is on it - the screen by its model, a TV or receiver by its own name - and the sound it takes (for example *LG TV · up to 192 kHz / 24-bit*), or *takes no sound* for a display without any. Over HDMI the sound is not bit-perfect; HDMI has no volume control of its own, so its volume is Software or Fixed, and the visualiser moves only on Software. A change of output while music plays stops playback; start it again when ready. |
-| Sound card board | Most boards and every USB DAC are found by themselves. A board that is not (it does not show under Output) can be chosen here. Each board is marked *Tested* (played and measured by the project), *Reported* (owners reported it working; *Reported with problems* if one did not) or *Known*. |
+| Sound card board | Most boards and every USB DAC are found by themselves. A board that is not (it does not show under Output) can be chosen here. *Tested* beside a board means played and measured by the project, or reported working by owners; a problem an owner reported shows as a line under it; other boards carry no mark. The same goes for *Output* and for the screens under *Attached screen*. |
 | Volume | How the level is set. *Hardware* (default): by the sound card's own volume control, bit-perfect at every level. *Software*: by the player recalculating the sound, on any output; not bit-perfect below 100 %. *Fixed*: always full level, for an amplifier that sets the volume itself; it asks first. Any change of volume type stops playback while the sources reconnect on it. On a DAC that takes DSD natively (some USB DACs), *Fixed* also plays DSD files from Lyrion as DSD, unconverted, and the Fixed choice says so; otherwise DSD files are converted to PCM. A DSD file of more than two channels is always converted, and folded down to stereo. The visualiser stays still during DSD. On an output with no volume control of its own, such as HDMI, Hardware is greyed out and Software is used in its place. The level carries across between Hardware and Software. |
 | Maximum volume | The loudest the player will go, on any input. At 80, 100 % on every control means that level. Hidden with Volume on *Fixed*. |
 | Volume curve | How the slider's travel maps to loudness. *Cubic* (half travel is −15.5 dB) is the usual shape; *Linear* puts half travel at −30 dB. |
@@ -378,6 +379,7 @@ Changes take effect at once unless the row says otherwise.
 | --- | --- |
 | Lyrion Client: Enabled | Plays your Lyrion server's music. |
 | Lyrion Client: Server | Which Lyrion server. Servers announce themselves on the network, each shown by its machine's name, else the library name set in Lyrion, else its address; typing an address is the fallback. |
+| Lyrion Client: Library on the screen | Off, the screen shows only what is playing and the sources, with no library to browse; Lyrion's apps on your phone still play to the player. On by default. |
 | Lyrion Client: Extended navigation | Lyrion's own menus on Home: My Music, Favourites, Apps (section 4). |
 | Spotify Connect: Enabled | The player appears as a Spotify Connect device. |
 | Spotify Connect: Starting volume | The loudest Spotify starts at when it takes over. Hidden with Volume on *Fixed*. |
@@ -388,10 +390,29 @@ Changes take effect at once unless the row says otherwise.
 | Bluetooth: Auto-trust on pair | Remembers a device once paired, so it reconnects by itself. |
 
 Plugins add their own rows here once switched on: **Plexamp** (claim the
-player into your Plex account) and the **Lyrion Server** (a music server on
-the player itself, with its music folders and network shares). A network
-share whose server does not answer reads *Not mounted: the server did not
-answer*; the other shares are still mounted.
+player into your Plex account).
+
+### Library — *Your own music, and where it is read from*
+
+The **Lyrion Server** (a music server on the player itself) has its rows
+here once switched on; MPD will join it. It reads only the music locations
+switched on, none at first:
+
+| Setting | What it does |
+|---|---|
+| Lyrion Server: More for your library | Where everything else about the library is: a link to the server's own page, and to three apps that control it - Squeezer (Android), Lyrion (Android, F-Droid) and LyrPlay (iPhone). The links show on a phone, not on the panel. |
+| Lyrion Server: Library | Read only: what the server is doing - starting, adding its add-ons, reading your music with a progress bar - and once ready, how many songs and albums it holds. The section's heading says the same in a word. |
+| Lyrion Server: Music folder | The player's own Music folder, shared on the network as *Music*. Its note says how much room is free and how much there is in all. Below 4 GB free the Music share takes no new files, and the note says so, until more than 4.5 GB is free. |
+| Lyrion Server: USB drives | Folders on USB drives plugged into the player. It cannot be switched on while no drive is plugged in, and says so; switched on already, it stays on. |
+| Lyrion Server: USB folders | Shown with *USB drives* on. Each drive plugged in: tick it to add all of it, or open it and tick folders at any depth, then *Add*. A drive not chosen yet reads *Not added yet*; the folders of an unplugged drive are kept for 7 days. |
+| Lyrion Server: Network shares | The shares added, each with its *Forget*. |
+| Lyrion Server: Add share | Folders on a NAS or a computer (SMB or NFS): a scan lists the servers on the network, or add one by its address. Tick a share, or open an SMB share and tick folders at any depth, then *Add*. Shares already added are not listed again. |
+
+Taking a location away later - a switch turned off, a USB folder removed, a
+share forgotten - makes Lyrion clear its library and scan everything again,
+which for a large library takes hours. A network share whose server does not
+answer reads *Not mounted: the server did not answer*; the other shares are
+still mounted.
 
 ### Handoff — *Who gets the player*
 
@@ -406,6 +427,7 @@ answer*; the other shares are still mounted.
 
 | Setting | What it does |
 | --- | --- |
+| Personalise | Asks again, on your phone, how you listen, whether the phone's touchpad works the screen, and what the screen shows - the questions after first-time setup - starting from what the player has now. The player's screen shows a code to the page. |
 | Attached screen | The display in use, by its name (a TV by the name it gives). **Change** picks the screen's model from the list, by maker; it sets the layout, Standard or Bar, and which visualiser skins are offered. A screen not in the list is shown as *Other screen* with its size. |
 | Screen port | Which HDMI port the screen is on. The tile and its list show what is plugged into each port - the screen, another device by its name (a sound bar or receiver), *sound* when the sound goes to that port; a port with nothing connected is greyed. A change that alters the picture restarts the player and asks *Keep this screen?*. The port chosen stays the screen, even with a touch panel on the other port. **A TV can be the screen**: it runs at 1920 x 1080 (or the largest 16:9 size below it that it offers), and since it has no touch, *Keep this screen?* is answered on the phone page, as for any screen not in the list. A listed touch screen is answered on itself, and on the phone page too when the player cannot tell that its touch works. A touch panel left on the other port is switched off. A port that is not the screen shows black. If the TV crops the edges of the picture, set its picture size to *Just Scan* or *Original*. When the TV's port also carries the sound, display standby only blacks the picture, so the music goes on. On a board with one HDMI port, the row only says what is on it. |
 | Text size | How large the writing on the player's screen is: 90 % to 130 %, 100 % as it comes. The screen changes at once; Home's tiles grow with larger text. Pictures, buttons and the layout keep their size, so long titles are cut short sooner at large sizes. A phone keeps its own size. |
@@ -418,7 +440,7 @@ answer*; the other shares are still mounted.
 | Volume: Volume drawer auto-hide | How long the drawer stays when a change from elsewhere opened it. |
 | Photo service and location: Pixabay API key, Location | Shared by both screens below. The key is for online wallpapers (Pixabay, free). The location is for the weather and for the wallpapers' seasons and holidays; until one is set, the country comes from the time zone. |
 | Home screen: Home screen list, Items in the strip | With the Lyrion client on: what the row under Home's cards shows, and how many. |
-| Home screen: Clock on the waiting screen, Hint on the waiting screen | With the Lyrion client off: the time, date and name in the top left, and the line *Start music from your phone* above the sources. |
+| Home screen: Clock on the waiting screen | With the Lyrion client off: the time, date and name in the top left. |
 | Home screen: Background and the rows after it | With the Lyrion client off: the waiting screen's own picture, set apart from the idle screen's, with the same rows as below (no artist pictures). |
 | Idle screen | On or off. Off (the default on a new player), the panel stays on what it shows and the rows below are hidden. |
 | Idle screen: Screen, Timeout | The built-in clock-and-weather screen, or an external page; and after how long, with nothing playing and nobody touching the panel. |
@@ -431,7 +453,7 @@ answer*; the other shares are still mounted.
 | Idle screen: Weather icon motion | *Animated* or *Static*. Animated icons use about half of one of the Pi's four processor cores while the idle screen is up; Static uses almost none. |
 | Visualiser: Timeout, Stop when nothing is playing | When the visualiser takes the screen while music plays, and when it gives it back. |
 | Visualiser: Skin type, Rotate skin per track, Skin | Which skins it uses; tap a skin to preview it, then *Use this skin*. |
-| Visualiser tweaks | How the bars and needles move, how far the needles follow the volume, how high they read (*Gain*), and whether turntables and tapes turn. |
+| Visualiser tweaks | How the bars and needles move, how far the needles follow the volume, how high they read (*Gain*), and whether turntables and tapes turn. Only what the chosen *Skin type* draws is listed: the spectrum's smoothing for skins with a spectrum, the needles' rows for skins with meters, the turntables' and tapes' animation for those (and Fanart, mostly turntables), and the record speed for turntables. *All* lists everything. |
 
 ### Enrichment — *Lyrics and artist info*
 
@@ -492,7 +514,7 @@ Everything about the player itself, under seven headings.
 | Setting | What it does |
 | --- | --- |
 | Back up now | Saves the settings, the library's pictures, the paired devices and the device's configuration into the Backups share. |
-| Restore | Puts a backup from the Backups share back and restarts the device. On a phone or computer, *Download* beside a backup saves it there, and *Add a backup* puts one from there in the list (checked first; it is not restored until you choose it). A backup that is empty or damaged says so on its line and offers only *Forget*. A freshly flashed card can restore one during setup instead, straight from the phone: setup asks for this player's output and screen, and anything else it asks (the name, say) can be changed on the way. |
+| Restore | Puts a backup from the Backups share back and restarts the device. On a phone or computer, *Download* beside a backup saves it there, and *Add a backup* puts one from there in the list (checked first; it is not restored until you choose it). A backup that is empty or damaged says so on its line and offers only *Forget*. A freshly flashed card can restore one during setup instead, straight from the phone: setup asks for this player's output (with its volume type) and screen, and its *Check it over* lets you change the name too. |
 | Reset to factory settings | Puts the player back as on a freshly flashed card, then restarts into setup. Everything goes: every setting and the name, the settings and idle page chosen when the card was flashed, the Wi-Fi networks, paired devices and sign-ins, the skins and plugins, the Lyrion Server's library, the screen's browser data, and the backups kept on the player (the Backups share stays, empty). The music folder, its playlists and the Pictures share stay. Download a backup first under *Restore*. To confirm, hold *Hold to reset and restart* for 3 seconds, until its bar fills; letting go earlier cancels. The screen and every phone then say the player is resetting; a phone also says how to reach setup. The installed version stays. |
 
 **Help**

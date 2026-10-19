@@ -1,0 +1,724 @@
+<script>
+  import { onMount } from 'svelte';
+  import mark from '../assets/gexis-mark.svg';
+  import lyrionIcon from '../assets/icon-lyrion.svg';
+  import spotifyIcon from '../assets/icon-spotify.png';
+  import btIcon from '../assets/icon-bluetooth.png';
+  import calmWall from '../assets/personalise/calm.webp';
+  import colourfulWall from '../assets/personalise/colourful.webp';
+  import psychedelicWall from '../assets/personalise/psychedelic.webp';
+  import PanelMini from './personalise/PanelMini.svelte';
+  import PhoneDeviceList from './personalise/PhoneDeviceList.svelte';
+  import { loadSettings, settingValues, settingsDevice, listItems, listAction, writeSetting } from '../lib/settings.js';
+  import { pairing, components, settling, answerPairing, personaliseLater } from '../lib/state.js';
+
+  //: `mode`: 'p1' (setup, over the setup network or the cable) or 'p2' (make it
+  //: yours, from the home network). `setup`: `/state`'s setup, in part 1.
+  let { mode = 'p2', setup = null, onclose } = $props();
+
+  //: The prototype's runtime (`support.js`) gives its Component React's
+  //: setState; this is that, over Svelte state, so the design's logic below
+  //: runs as written.
+  class DCLogic {
+    setState(u, cb) {
+      const next = typeof u === 'function' ? u(this.state) : u;
+      if (next) Object.assign(this.state, next);
+      if (cb) cb();
+    }
+  }
+
+  // ===== The design's logic, from Setup Prototype.dc.html =====
+/*PROTO*/
+  // ===== The player =====
+
+  //: Part 2's own state, with what the prototype simulated filled in by
+  //: the player: its name, clock, network, the Lyrion search, Plexamp's
+  //: download, a phone asking to pair, the network shares, the downloads.
+  let st = $state(Object.assign(init('A', mode === 'p1' ? 'p1' : 'p2', false), {
+    first: true, nameSaved: false, second: true, touchpad: true, plexClaimed: false, plexError: null,
+    volume: 'Hardware', volHw: {}, volNotes: {}, outTags: {}, outProblems: {}, town: '', net: 'your network', lyrMeta: '', lyrServer: null, pairDevice: '', pairCode: '',
+    shareServers: [], shareFound: [], shareFolder: null, musicSpace: null, picks: { usb: [], share: [] }, shareSrvItem: null, shareError: null, finishError: null, finished: null,
+    plugins: [], tick: 0, ready: false,
+    //: **Drawn once the player's own values are in** (found 2026-10-18: the
+    //: design's sample name and network showed until /settings arrived).
+    shown: false,
+    // Part 1's own.
+    nets: [], scan: 'scanning', other: false, otherName: '', hasPw: false, joinError: null, overLan: false,
+    backup: null, backupMade: '', uploading: null, uploadError: null, tz: null, tzMode: 'auto', tzRegion: null, zones: [],
+    outputs: [], outNotes: {}, recommended: null, screenInfo: null, scMaker: null, scPick: null, keepQ: false, problem: null, offered: []
+  }));
+  const comp = new Component();
+  comp.state = st;
+  let refs = $state({});
+
+  const pctOf = (item) => !item ? 0 : item.state === 'done' ? 100
+    : item.total ? Math.min(99, Math.round(((item.received ?? 0) / item.total) * 100))
+      : item.share != null ? Math.min(99, Math.round(item.share * 100)) : 2;
+
+  //: The design's password fields: shown or hidden, all at once.
+  let pwShown = $state(false);
+
+  //: A download that has not begun a minute after Finish says so.
+  let stalled = $state(false);
+
+  //: What the design's logic calls on the player.
+  const live = {
+    time(fmt) {
+      st.tick;
+      const d = new Date(), h = d.getHours(), m = String(d.getMinutes()).padStart(2, '0');
+      return fmt ? `${h % 12 || 12}:${m} ${h < 12 ? 'am' : 'pm'}` : `${String(h).padStart(2, '0')}:${m}`;
+    },
+    component(row, fallback) { return st.plugins.find((p) => p.row === row)?.component ?? fallback; },
+    pct(id) {
+      const item = $settling?.items?.find((i) => i.id === id);
+      if (item) return pctOf(item);
+      // Not followed: nothing to download (already in), or settled and gone.
+      return st.finished ? 100 : 0;
+    },
+    //: **What a download is doing, in words** (George, 2026-10-18: "if
+    //: something is happening for long in the background then what is
+    //: being done should be transparent"): from the player's live status of
+    //: each component, the same one Settings reads - so a pack already in
+    //: is done at once, and a download at 100 % that is installing says so.
+    stage(id) {
+      const c = $components?.[id] ?? {};
+      const pct = c.total ? Math.min(99, Math.round(((c.received ?? 0) / c.total) * 100))
+        : c.share != null ? Math.min(99, Math.round(c.share * 100)) : 0;
+      const mb = (n) => Math.round(n / 1e6);
+      switch (c.state) {
+        case 'installed': {
+          // ADR-0115 decision 28: after its download, what the software is
+          // doing - for Lyrion, starting, its add-ons, reading the music -
+          // and Done only once it is (George, 2026-10-18).
+          const a = c.after;
+          if (!a) return { done: true, pct: 100, label: 'Installed', meta: 'Done' };
+          const step = { starting: 15, addons: 40, waiting: 70, scanning: 75, ready: 100 }[a.phase] ?? 50;
+          const pctA = a.phase === 'scanning' && a.share != null ? 75 + Math.round(a.share * 24) : step;
+          const metaA = a.phase === 'ready' ? 'Done' : a.phase === 'scanning' ? (a.share != null ? `${Math.round(a.share * 100)} %` : 'Reading') : 'Working';
+          return { done: !!a.done, after: true, ok: a.phase === 'ready', pct: pctA, label: a.label, meta: metaA, line: a.line };
+        }
+        case 'failed': return { failed: true, pct: 0, label: 'Did not finish', meta: 'Failed', line: c.error || 'Try it again from Settings → Plugins.' };
+        case 'preparing': return { pct: 0, label: 'Preparing the download', meta: 'Starting', line: '' };
+        case 'downloading': return { pct, label: 'Downloading', meta: null, line: c.total ? `${mb(c.received ?? 0)} of ${mb(c.total)} MB` : '' };
+        case 'retrying': return { pct, label: 'Downloading', meta: 'Retrying', line: 'The connection dropped; trying again.' };
+        case 'verifying': return { pct: 100, label: 'Checking the download', meta: 'Downloaded', line: '' };
+        case 'installing': return { pct: 100, label: 'Installing', meta: 'Downloaded', line: 'Installing can take a few minutes.' };
+        default: return { pct: 0, label: st.finished ? 'Starting the download' : 'Saving your answers', meta: '…',
+          line: stalled ? 'Still waiting to start. The player tries again every few minutes.' : '' };
+      }
+    },
+    //: **Lyrion as an ordered checklist** (George, 2026-10-18: "it was still
+    //: unclear to me what was happening and what comes next. Ordered
+    //: checklist with status might be more transparent"): the download, its
+    //: start, its add-ons, reading the music, ready - done, now or next.
+    lyrionAt(id) {
+      const c = $components?.[id] ?? {}, a = c.after;
+      return c.state !== 'installed' ? 0 : ({ starting: 1, addons: 2, waiting: 3, scanning: 3, ready: 4 }[a?.phase] ?? 1);
+    },
+    //: The current step's bar: a real share where there is one (download,
+    //: add-ons in, reading), otherwise the time spent against the usual
+    //: one - never full until the step is done.
+    lyrionNow(id) {
+      const c = $components?.[id] ?? {}, a = c.after, g = live.stage(id), at = live.lyrionAt(id);
+      if (stepAt.at !== at) Object.assign(stepAt, { at, since: Date.now() });
+      const secs = Math.max(0, Math.round(((st.nowMs || Date.now()) - stepAt.since) / 1000));
+      const clock = (n) => `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`;
+      const usual = { 1: 30, 2: 180, 3: 20 }[at];
+      const timed = usual ? Math.min(90, Math.round((secs / usual) * 90)) : 0;
+      if (at === 0) return { label: 'Downloading Lyrion', pct: g.pct, meta: `${g.pct} %` };
+      if (at === 2) {
+        const done = (a?.addons ?? []).filter((x) => x.in).length;
+        return { label: 'Adding its add-ons', pct: Math.max(timed, Math.round((done / 3) * 100)), meta: `${clock(secs)} of about 3:00` };
+      }
+      if (at === 3 && a?.share != null) return { label: 'Reading your music', pct: Math.round(a.share * 100), meta: `${Math.round(a.share * 100)} %` };
+      if (at === 4) return null;
+      return { label: at === 1 ? 'Starting Lyrion' : 'About to read your music', pct: timed, meta: clock(secs) };
+    },
+    lyrionSteps(id) {
+      const c = $components?.[id] ?? {}, a = c.after, g = live.stage(id);
+      const at = live.lyrionAt(id);
+      const pct = a?.share != null ? ` · ${Math.round(a.share * 100)} %` : '';
+      const adds = (a?.addons ?? []).map((x) => x.name + (x.in ? ' ✓' : at > 2 ? ' (being retried)' : '')).join(', ');
+      const texts = [
+        c.state === 'failed' ? 'Download Lyrion · did not finish' : at === 0 && g.pct ? `Download Lyrion · ${g.pct} %` : 'Download Lyrion',
+        'Start Lyrion',
+        adds ? `Add ${adds} · one restart, about 3 minutes` : 'Add Material Skin, Music & Artist Information and Radio Now Playing · one restart, about 3 minutes',
+        at === 3 && a?.phase === 'scanning' ? `Read your music${pct}` : 'Read your music',
+        at === 4 ? `Ready · ${a?.line ?? ''}` : 'Ready to browse',
+      ];
+      return texts.map((t, i) => [t, i < at || (i === 4 && at === 4) ? 'done' : i === at ? 'now' : 'next']);
+    },
+    failed() { return !!$settling?.items?.some((i) => i.state === 'failed'); },
+    async finish() {
+      st.finishError = null;
+      try {
+        const r = await fetch('/personalise/finish', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ settings: answersAsSettings(st) })
+        });
+        const body = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(body.error ?? `HTTP ${r.status}`);
+        st.finished = body;
+        setTimeout(() => (stalled = true), 60000);
+      } catch (err) {
+        console.warn('personalise: finish failed:', err?.message);
+        st.finishError = "The player didn't take the answers. Check this phone is on the player's network, then try again.";
+      }
+    },
+    later() { personaliseLater().catch(() => {}); },
+    async trusted() {
+      const got = await listItems('bt_trusted');
+      st.trusted = (got.items ?? []).map((i) => ({ name: i.name, meta: i.meta || 'Paired', address: i.address }));
+      st.everPaired = st.trusted.length > 0;
+    },
+    async forget(t) {
+      await listAction('bt_trusted', { name: t.address ?? t.name, action: 'forget' });
+      live.trusted();
+    },
+    answer(accept) {
+      answerPairing(accept).catch(() => {});
+      if (!accept) st.btPhase = 'disc';
+    },
+    //: ADR-0115 decision 23: the USB drives plugged in, each opened for its
+    //: folders; what is added goes to Lyrion's list as it is chosen.
+    //: **Tick several** (George, 2026-10-18): folders ticked on drives and
+    //: shares, at any level, kept while browsing, added with one button.
+    //: A ticked folder covers those inside it: they show ticked, "In ...",
+    //: and ticking a wider one drops the narrower ones.
+    picked(kind) { return st.picks[kind]; },
+    pickRow(kind, item, open) {
+      const key = kind === 'usb' ? `${item.drive}/${item.folder}` : item.address;
+      const holds = (p) => kind === 'usb'
+        ? p.drive === item.drive && (p.folder === '' || item.folder.startsWith(p.folder + '/'))
+        : item.address.toLowerCase().startsWith(p.key.toLowerCase() + '/');
+      const covering = st.picks[kind].find((p) => p.key !== key && holds(p));
+      const on = !!covering || st.picks[kind].some((p) => p.key === key);
+      return { k: 'pick', label: item.name, note: covering ? 'In ' + covering.name : item.meta || '', on, fn: open,
+               tick: covering ? null : () => live.togglePick(kind, { ...item, key }) };
+    },
+    togglePick(kind, item) {
+      const list = st.picks[kind];
+      if (list.some((p) => p.key === item.key)) {
+        st.picks[kind] = list.filter((p) => p.key !== item.key);
+        return;
+      }
+      const inside = (p) => kind === 'usb'
+        ? p.drive === item.drive && (item.folder === '' || p.folder.startsWith(item.folder + '/'))
+        : p.key.toLowerCase().startsWith(item.key.toLowerCase() + '/');
+      st.picks[kind] = [...list.filter((p) => !inside(p)), item];
+    },
+    crumbs(list, go) {
+      const names = list.map((c) => c.name);
+      return { t: 'Pick', opts: names, sel: names[names.length - 1], fn: (x) => go(list[names.lastIndexOf(x)]), accent: C.fold };
+    },
+    async addPicked(kind) {
+      const picks = [...st.picks[kind]];
+      for (const p of picks) {
+        const body = kind === 'usb'
+          ? { name: p.drive, action: 'add', folder: p.folder }
+          : { name: p.address, action: 'add', user: st.shareUser.trim() || (p.address.startsWith('//') ? 'guest' : null), password: st.sharePw || null };
+        const r = await listAction(kind === 'usb' ? 'lyrion-server.usb_folders' : 'lyrion-server.shares', body);
+        if (!r.ok) {
+          st[kind === 'usb' ? 'usbError' : 'shareError'] = `${p.name}: ` + (r.error ?? 'could not be added.');
+          return;
+        }
+        st.picks[kind] = st.picks[kind].filter((x) => x.key !== p.key);
+      }
+      if (kind === 'usb') {
+        st.usbOpen = null;
+        live.loadUsb();
+      } else {
+        Object.assign(st, { shareStep: null, shareUser: '', sharePw: '' });
+        live.loadShares();
+      }
+    },
+    //: George, 2026-10-18: the Music folder's free and total space.
+    async loadSpace() {
+      const got = await json('/storage/music').catch(() => ({}));
+      //: ADR-0115 decision 27: closed below 4 GB free.
+      st.musicSpace = got.text ? got.text + (got.closed ? '. The card is nearly full: the Music share takes no new files' : '') : null;
+    },
+    async loadUsb() {
+      const got = await listItems('lyrion-server.usb_folders');
+      st.usbDrives = got.items ?? [];
+    },
+    async openUsb(drive, folder) {
+      st.usbError = null;
+      const r = await listAction('lyrion-server.usb_folders', { name: drive, action: 'browse', folder });
+      if (!r.ok) {
+        st.usbError = r.error ?? 'Could not read the drive. Is it still plugged in?';
+        return;
+      }
+      st.usbOpen = { drive, folder, title: r.title ?? 'USB drive', items: r.items ?? [],
+                     crumbs: [{ name: 'Drives', top: true }, ...(r.crumbs ?? [])] };
+    },
+    async addUsb(item) {
+      st.usbError = null;
+      const r = await listAction('lyrion-server.usb_folders', { name: item.drive, action: 'add', folder: item.folder ?? '' });
+      if (!r.ok) {
+        st.usbError = r.error ?? 'Could not add it. Try again.';
+        return;
+      }
+      st.usbOpen = null;
+      live.loadUsb();
+    },
+    //: The shares added, without a scan for servers (2026-10-18: every add
+    //: waited two seconds for one).
+    async loadShares() {
+      const got = await json('/settings/lyrion-server.shares/items?saved=1').catch(() => ({}));
+      st.shares = (got.items ?? []).filter((i) => !i.server).map((i) => ({ name: i.name, where: i.meta || '', address: i.address }));
+    },
+    async scanShares() {
+      st.shareStep = 'scan';
+      st.shareError = null;
+      const got = await listItems('lyrion-server.shares');
+      st.shareServers = (got.items ?? []).filter((i) => i.server);
+      if (st.shareStep === 'scan') st.shareStep = 'list';
+    },
+    //: George, 2026-10-18: a share added by mistake is forgotten here, as in
+    //: Settings; and a share opens into its folders, at any depth.
+    async forgetShare(address) {
+      st.shareError = null;
+      const r = await listAction('lyrion-server.shares', { name: address, action: 'forget' });
+      if (!r.ok) st.shareError = r.error ?? 'Could not forget it. Try again.';
+      live.loadShares();
+    },
+    async openShareFolder(address) {
+      st.shareError = null;
+      const r = await listAction('lyrion-server.shares', { name: address, action: 'folders', user: st.shareUser.trim() || null, password: st.sharePw || null });
+      if (r.login) {
+        st.shareStep = 'login';
+        return;
+      }
+      if (!r.ok) {
+        st.shareError = r.error ?? 'Could not read its folders.';
+        return;
+      }
+      st.shareFolder = { address, title: r.title ?? address, items: r.items ?? [], crumbs: r.crumbs ?? [] };
+      st.shareStep = 'folder';
+    },
+    async showShares(item, user = null, password = null) {
+      st.shareError = null;
+      st.shareSrv = item.name;
+      st.shareSrvItem = item;
+      const r = await listAction('lyrion-server.shares', { name: item.name, action: 'browse', server: item.server, user, password });
+      if (r.login) {
+        st.shareStep = 'login';
+        if (user) st.shareError = 'That user or password was not accepted.';
+        return;
+      }
+      if (!r.ok) {
+        st.shareError = r.error ?? 'Could not read its shares.';
+        return;
+      }
+      st.shareFound = r.items ?? [];
+      st.shareStep = 'browse';
+    },
+    async addShare(address, user, password) {
+      st.shareError = null;
+      const r = await listAction('lyrion-server.shares', { name: address, action: 'add', user: user ?? (address.startsWith('//') ? 'guest' : null), password: password ?? null });
+      if (!r.ok) {
+        st.shareError = r.error ?? 'Could not add it. Check the address and try again.';
+        return;
+      }
+      Object.assign(st, { shareStep: null, shareAddr: '', shareAU: '', shareAP: '', shareUser: '', sharePw: '' });
+      live.loadShares();
+    },
+    async downloadPlex() {
+      const r = await writeSetting('plexamp.enabled', true);
+      if (!r.ok) st.plexOn = false;
+    },
+    //: The code goes to Plexamp; whether it held is Plexamp's to say, read
+    //: back through the plugin (plexClaimCheck) - not the write's answer.
+    async claim(code) {
+      const r = await writeSetting('plexamp.claim_token', code);
+      if (r.ok) { st.plexState = 'checking'; plexClaimCheck(); }
+      else Object.assign(st, { plexState: 'expired', claim: '' });
+    },
+
+    // ----- Part 1 -----------------------------------------------------------
+    async rescan() {
+      st.scan = 'scanning';
+      try { st.nets = (await json('/setup/networks')).items ?? []; } catch { st.nets = []; }
+      st.scan = 'done';
+    },
+    async loadScreens() {
+      try { st.screenInfo = await json('/setup/screen'); } catch { st.screenInfo = { suggested: null, models: [], failed: true }; }
+    },
+    timeIn(zone, fmt) {
+      st.tick;
+      try {
+        return new Intl.DateTimeFormat('en-GB', { hour: fmt ? 'numeric' : '2-digit', minute: '2-digit', hour12: !!fmt, timeZone: zone || undefined }).format(new Date()).replace(/\s?([AP]M)$/i, (m, x) => ' ' + x.toLowerCase());
+      } catch { return '--:--'; }
+    },
+    regions() { return [...new Set(st.zones.map((z) => (z.includes('/') ? z.split('/')[0] : z)))]; },
+    cities(region) { return st.zones.filter((z) => (z.includes('/') ? z.split('/')[0] : z) === region); },
+    noBoard() {
+      const own = ['Headphones (3.5 mm)', 'HDMI 1', 'HDMI 2'];
+      return st.outputs.length > 0 && st.outputs.every((o) => own.includes(o.split(' — ')[0]));
+    },
+    short(m) { return m.model.replace(/\s*\(\d+x\d+\)\s*$/, '') || m.model; },
+    labelOf(label) {
+      const m = (st.screenInfo?.models ?? []).find((x) => x.label === label) ?? (st.screenInfo?.suggested?.label === label ? st.screenInfo.suggested : null);
+      return m ? `${m.maker} ${live.short(m)} · ${m.width} × ${m.height}` : label ? String(label).replace('/', ' ') : 'Not chosen';
+    },
+    makers() {
+      const all = st.screenInfo?.models ?? [];
+      return [...new Set(all.map((m) => m.maker))].map((name) => ({ name, n: all.filter((m) => m.maker === name).length }));
+    },
+    models(maker) { return (st.screenInfo?.models ?? []).filter((m) => m.maker === maker); },
+    asksKeep(label) {
+      const m = (st.screenInfo?.models ?? []).find((x) => x.label === label) ?? st.screenInfo?.suggested;
+      return !!m && !(st.screenInfo?.unchanged ?? []).includes(m.id);
+    },
+    //: Whether an output has a volume control of its own: without one,
+    //: Hardware cannot be had (ADR-0127 §2). Unknown counts as having one.
+    hasHw(option) { return st.volHw[option] !== false; },
+    //: The output chosen, and a volume type it can take.
+    pickOutput(option) {
+      st.output = option;
+      if (st.volume === 'Hardware' && !live.hasHw(option)) st.volume = 'Software';
+    },
+    pluginName(id) { return st.offered.find((p) => p.id === id)?.name ?? id; },
+    pickBackup() {
+      const input = Object.assign(document.createElement('input'), { type: 'file' });
+      input.onchange = () => input.files?.[0] && live.upload(input.files[0]);
+      input.click();
+    },
+    upload(file) {
+      st.uploadError = null;
+      st.uploading = 0;
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `/setup/backup?name=${encodeURIComponent(file.name)}`);
+      xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+      xhr.upload.onprogress = (e) => { if (e.lengthComputable) st.uploading = e.loaded / e.total; };
+      xhr.onload = () => {
+        let body = {};
+        try { body = JSON.parse(xhr.responseText); } catch { /* not JSON */ }
+        st.uploading = null;
+        if (xhr.status >= 200 && xhr.status < 300) setBackup(body.backup ?? null);
+        else st.uploadError = body.error ?? 'The file did not reach the player. Try again.';
+      };
+      xhr.onerror = () => {
+        st.uploading = null;
+        st.uploadError = "The file did not reach the player. Your phone may have dropped off the player's Wi-Fi for a moment.";
+      };
+      xhr.send(file);
+    },
+    //: One step's answers, as the old page sent them: the core takes a
+    //: network sent again as a new try and drops the last join's error.
+    answers(s, id) {
+      switch (id) {
+        case 'p1net': {
+          const chosen = s.nets.find((n) => n.name === s.net), sec = s.other ? true : chosen ? chosen.secured : false;
+          const a = { ssid: s.net || null, hidden: !!s.other };
+          if (s.pw) a.password = s.pw;
+          else if (s.net && !sec) a.password = null;
+          return a;
+        }
+        case 'p1start': return { start: s.start === 'backup' ? 'restore' : 'new' };
+        case 'p1name': st.nameSaved = true; return { name: s.name.trim() };
+        case 'p1clock': return { timezone: s.tz, clock: s.fmt ? '12 h' : '24 h' };
+        case 'p1output': return { output: s.output, volume: s.volume };
+        case 'p1screen': return s.scr === 'headless' ? { headless: true } : s.scPick ? { headless: false, screen: s.scPick } : {};
+        default: return {};
+      }
+    },
+    //: Each step saved on the player as it is left (ADR-0104 §4: a page that
+    //: drops resumes where it was), with the step it goes to.
+    save(s, to) {
+      const a = { ...live.answers(s, s.screen), step: to };
+      json('/setup/answers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(a) })
+        .then((saved) => { st.hasPw = !!saved.has_password; if (s.screen === 'p1net') { st.pw = ''; st.joinError = saved.error ?? null; } })
+        .catch((err) => { st.problem = err.message; });
+    },
+    //: The design's Done on Restoring: the player's address, where it opens
+    //: once it is back.
+    close() {
+      if (mode === 'p1') { window.location.href = home(); return; }
+      onclose?.();
+    },
+    //: ADR-0131 as amended (George, 2026-10-08): a backup restored under
+    //: another name can start a second player.
+    second(on) {
+      st.second = on;
+      json('/setup/answers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ second_player: on }) }).catch(() => {});
+    },
+    async finish1(id) {
+      st.problem = null;
+      try {
+        const told = await json('/setup/finish', { method: 'POST' });
+        st.keepQ = !!told?.keep_question;
+        waitForHome();
+      } catch (err) {
+        st.problem = err.message;
+        comp.go(id === 'p1restored' ? 'p1restore' : 'p1review');
+      }
+    }
+  };
+
+  //: **Whether Plexamp is signed in, asked of the plugin** (George,
+  //: 2026-10-18: "verify if Plexamp is claimed unimportant if that happened
+  //: during the setup flow or it was done in the past"). The plugin reads
+  //: Plexamp's own token and reports it on the Claim token row: done is
+  //: Claimed, failed says why.
+  async function plexClaimCheck() {
+    try {
+      const body = await json('/settings');
+      const row = (body.groups ?? []).flatMap((g) => g.rows ?? []).find((r) => r.key === 'plexamp.claim_token');
+      const state = row?.status?.state;
+      st.plexClaimed = state === 'done';
+      if (st.plexClaimed && st.plexState !== 'later') st.plexState = 'ok';
+      else if (state === 'failed' && st.plexState === 'checking') Object.assign(st, { plexState: 'expired', claim: '', plexError: row.status.error });
+    } catch { /* asked again in a moment */ }
+  }
+
+  async function json(url, opts) {
+    const r = await fetch(url, opts);
+    const body = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(body.error || `${url}: ${r.status}`);
+    return body;
+  }
+  //: **What the Output step recommends** (George, 2026-10-18: HDMI 1 was
+  //: recommended - the screen's own speakers, "the worse option"): a tested
+  //: DAC, else any other DAC - a board or a USB one - and never the Pi's own
+  //: HDMI ports or headphone jack. None of those, no recommendation.
+  function bestOutput(outputs, tags) {
+    const own = (o) => /^(HDMI \d|Headphones)/.test(o);
+    const dacs = outputs.filter((o) => !own(o));
+    return dacs.find((o) => tags[o] === 'Tested') ?? dacs[0] ?? null;
+  }
+  //: When the Lyrion checklist's current step began (its timer).
+  const stepAt = { at: -1, since: Date.now() };
+  function setBackup(b) {
+    st.backup = b;
+    //: A restore opens on the backup's name; a name typed in setup wins.
+    if (b?.settings?.device_name && !st.nameSaved) st.name = b.settings.device_name;
+    st.backupMade = b?.made ? new Date(b.made * 1000).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+  }
+  //: **The page carries on into part 2** (the design's p1join): once this page's
+  //: own player has gone from the setup network, it asks the player's new
+  //: address until it answers, and opens it there - where part 2 is owed.
+  function home() {
+    return `http://${slug(st.name) || 'gexis'}.local:8090`;
+  }
+  function waitForHome() {
+    const target = home();
+    //: Over the cable the page's own address keeps answering: the player
+    //: is given the time its restart takes, then asked at its new address.
+    let gone = false;
+    if (st.overLan) setTimeout(() => (gone = true), 15000);
+    const timer = setInterval(async () => {
+      if (!gone) {
+        try { await fetch('/setup/status', { cache: 'no-store' }); } catch { gone = true; }
+        return;
+      }
+      try {
+        await fetch(`${target}/surface`, { mode: 'no-cors', cache: 'no-store' });
+        clearInterval(timer);
+        window.location.href = `${target}/`;
+      } catch { /* not there yet */ }
+    }, 4000);
+  }
+
+  //: Part 1's start: the answers kept on the player (a page that dropped, or
+  //: a failed join), the networks, the screen, the outputs, the time zones.
+  async function loadPart1() {
+    let saved = {}, rows = {};
+    try { saved = await json('/setup/answers'); } catch { /* a fresh start */ }
+    try {
+      const walk = (o) => {
+        if (Array.isArray(o)) o.forEach(walk);
+        else if (o && typeof o === 'object') { if (o.key && o.type) rows[o.key] = o; Object.values(o).forEach(walk); }
+      };
+      walk(await json('/settings'));
+    } catch { /* defaults */ }
+    await live.loadScreens();
+    try { st.offered = await json('/setup/plugins'); } catch { st.offered = []; }
+    const zones = rows.timezone?.options ?? [];
+    let phoneTz = null;
+    try { phoneTz = Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch { /* none */ }
+    let tz = saved.timezone ?? (setup?.needed ? phoneTz : rows.timezone?.value) ?? phoneTz;
+    if (tz && zones.length && !zones.includes(tz)) tz = null;
+    const outputs = rows.output_device?.options ?? [];
+    try { for (const o of await json('/setup/outputs')) st.volHw[o.option] = o.hardware; } catch { /* all offered */ }
+    const sug = st.screenInfo?.suggested;
+    const scPick = saved.headless ? null : saved.screen ?? (setup?.needed ? null : rows.screen?.value ?? null) ?? sug?.label ?? null;
+    Object.assign(st, {
+      overLan: setup?.network === 'online',
+      name: saved.name ?? rows.device_name?.value ?? 'gexis', zones, tz, tzMode: tz ? 'auto' : 'hand',
+      fmt: (saved.clock ?? rows.clock_format?.value ?? '24 h') === '12 h' ? 1 : 0,
+      outputs, outNotes: rows.output_device?.optionNotes ?? {},
+      //: *Tested* beside an output, and a problem owners reported under it
+      //: (2026-10-18: one way to mark them, as in Settings).
+      outTags: rows.output_device?.optionTags ?? {}, outProblems: rows.output_device?.optionProblems ?? {}, recommended: bestOutput(outputs, rows.output_device?.optionTags ?? {}),
+      output: saved.output ?? (setup?.needed ? bestOutput(outputs, rows.output_device?.optionTags ?? {}) : null) ?? rows.output_device?.value ?? outputs[0] ?? null,
+      volume: saved.volume ?? rows.output_mode?.value ?? 'Hardware',
+      //: Settings' notes, without the sentence it adds about the output in
+      //: use now: in setup the output is still being chosen.
+      volNotes: Object.fromEntries(Object.entries(rows.output_mode?.optionNotes ?? {})
+        .map(([k, v]) => [k, String(v).replace(/\s*DSD files play natively on [^.]*\./, '')])),
+      scr: saved.headless ? 'headless' : scPick && sug && scPick === sug.label ? 'panel' : scPick ? 'other' : sug ? 'panel' : 'other',
+      scPick, scMaker: null,
+      start: saved.start === 'restore' ? 'backup' : 'new',
+      net: saved.ssid ?? '', other: !!saved.hidden, otherName: saved.hidden ? saved.ssid ?? '' : '', pw: '',
+      hasPw: !!saved.has_password, joinError: saved.error ?? null,
+      nameSaved: saved.name != null, second: saved.second_player ?? true
+    });
+    if (saved.backup) setBackup(saved.backup);
+    if (st.volume === 'Hardware' && !live.hasHw(st.output)) st.volume = 'Software';
+    const p1 = ['p1welcome', 'p1net', 'p1start', 'p1backup', 'p1name', 'p1clock', 'p1output', 'p1screen', 'p1review', 'p1restore'];
+    st.screen = st.joinError ? 'p1net' : p1.includes(saved.step) ? saved.step : 'p1welcome';
+    st.ready = true;
+    st.shown = true;
+    live.rescan();
+  }
+
+  //: **The answers as settings** (ADR-0149): only what part 2 asked, and
+  //: plugins only ever switched on - a preset that leaves one out must not
+  //: uninstall what the player has (decided 2026-10-18).
+  function answersAsSettings(s) {
+    const d = comp.d(s);
+    const o = { spotify_enabled: d.spo && s.spotify, bt_enabled: d.bt && s.bt, lms_enabled: d.lyr };
+    if (d.lyr) {
+      if (s.lyrState === 'found' && s.lyrServer) o.lms_server = s.lyrServer;
+      else if (s.lyrAddrOpen && s.lyrAddr.trim()) o.lms_server = s.lyrAddr.trim();
+      else if (d.here && $settingsDevice.address) o.lms_server = `${$settingsDevice.address}:9000`;
+      if (!d.headless) {
+        o.lms_extended_nav = s.browse === 'ext';
+        o.lms_library = s.browse !== 'off';
+      }
+    }
+    if (d.here) {
+      // ADR-0115 decision 20: only what was chosen; the USB folders and the
+      // shares are already stored, added as they were chosen.
+      o['lyrion-server.music_folder'] = !!s.places.folder;
+      o['lyrion-server.usb'] = !!s.places.usb;
+      o['lyrion-server.enabled'] = true;
+    }
+    if (d.plex && s.plexOn) o['plexamp.enabled'] = true;
+    if (!d.headless) {
+      const loc = s.loc.trim();
+      Object.assign(o, {
+        visualiser_skins: s.vizOn, viz_timeout: parseInt(s.vizAfter, 10), skin_corpus: SKINS.find((x) => x[0] === s.skin)[1],
+        skin_motion: s.animate, record_speed: s.rpm ? '45 rpm' : '33 rpm',
+        waiting_clock: s.waitClock, waiting_background: s.waitBg, waiting_wallpaper_styles: [...s.styles],
+        idle_enabled: s.idleOn, idle_background: s.bg, wallpaper_styles: [...s.styles], idle_clock: s.clock,
+        idle_weather: s.weather && !!loc, standby_schedule: s.standby && s.ivs.length > 0,
+        standby_times: s.ivs.map((iv) => ({ from: iv.from, until: iv.until, days: [...iv.days] }))
+      });
+      if (loc) o.weather_location = loc;
+      o.phone_touchpad = s.touchpad;
+    }
+    return o;
+  }
+
+  //: **Asked again from Settings, the page starts from what the player has**;
+  //: a new player starts from the design's own defaults (`init`).
+  function fromSettings(v) {
+    const after = [2, 10, 30].reduce((a, b) => (Math.abs(b - (Number(v.viz_timeout) || 10)) < Math.abs(a - (Number(v.viz_timeout) || 10)) ? b : a));
+    const styles = (Array.isArray(v.wallpaper_styles) ? v.wallpaper_styles : []).filter((x) => STYLES.includes(x));
+    Object.assign(st, {
+      browse: v.lms_library === false ? 'off' : v.lms_extended_nav ? 'ext' : 'simple',
+      spotify: v.spotify_enabled !== false, bt: v.bt_enabled !== false,
+      vizOn: v.visualiser_skins === true, vizAfter: `${after} min`,
+      skin: (SKINS.find((x) => x[1] === v.skin_corpus) ?? SKINS[0])[0], animate: v.skin_motion !== false, rpm: v.record_speed === '45 rpm' ? 1 : 0,
+      waitClock: v.waiting_clock !== false, waitBg: v.waiting_background === 'Black' ? 'Black' : 'Gexis wallpapers',
+      styles: styles.length ? styles : ['Calm'], wallStyle: styles[0] ?? 'Calm',
+      idleOn: v.idle_enabled === true, bg: BGS.includes(v.idle_background) ? v.idle_background : 'Gexis wallpapers',
+      clock: v.idle_clock !== false, weather: v.idle_weather === true && !!v.weather_location,
+      standby: v.standby_schedule === true, touchpad: v.phone_touchpad !== false
+    });
+    if (Array.isArray(v.standby_times) && v.standby_times.length) st.ivs = v.standby_times.map((iv) => ({ ...iv, days: [...iv.days] }));
+  }
+
+  let seeded = false;
+  $effect(() => {
+    const v = $settingValues;
+    if (mode !== 'p2' || seeded || !st.ready || !Object.keys(v).length) return;
+    seeded = true;
+    Object.assign(st, {
+      name: $settingsDevice.name || v.device_name || 'gexis', fmt: v.clock_format === '12 h' ? 1 : 0,
+      scr: v.headless === true ? 'headless' : 'panel', loc: v.weather_location ?? '',
+      net: typeof v.wifi === 'string' && v.wifi ? v.wifi : 'your network',
+      town: String(v.timezone ?? '').split('/').pop().replace(/_/g, ' '),
+      plexOn: v['plexamp.enabled'] === true, plexPct: v['plexamp.enabled'] === true ? 100 : 0
+    });
+    if (!st.first) fromSettings(v);
+    st.shown = true;
+  });
+  $effect(() => { if ($settingsDevice.name) st.name = $settingsDevice.name; });
+
+  // Plexamp's download, live (ADR-0100).
+  $effect(() => {
+    const c = $components?.plexamp;
+    if (!st.plexOn || !c) return;
+    st.plexPct = c.state === 'installed' ? 100 : Math.max(st.plexPct, pctOf({ ...c, state: c.state === 'installed' ? 'done' : c.state }));
+  });
+  // A phone asking to pair, answered on this page (ADR-0045).
+  $effect(() => {
+    const p = $pairing;
+    if (p?.state === 'asking') {
+      const c = String(p.code ?? '');
+      Object.assign(st, { btPhase: 'request', pairDevice: p.device ?? 'A phone', pairCode: c.length === 6 ? `${c.slice(0, 3)} ${c.slice(3)}` : c });
+    } else if (p?.state === 'accepted' && st.btPhase === 'request') {
+      st.btPhase = 'paired';
+      setTimeout(() => live.trusted(), 1200);
+    } else if (!p && st.btPhase === 'request') {
+      st.btPhase = 'disc';
+    }
+  });
+  // The prototype's scroll to the top on a new screen.
+  $effect(() => {
+    st.screen;
+    if (refs.scrollRef) refs.scrollRef.scrollTop = 0;
+  });
+
+  onMount(() => {
+    loadSettings();
+    const wide = () => (st.wide = window.innerWidth >= 900);
+    wide();
+    window.addEventListener('resize', wide);
+    const clock = setInterval(() => (st.tick += 1), 20000);
+    //: Getting ready's current step counts its seconds (George, 2026-10-19:
+    //: steps with no progress felt stuck); only on that screen.
+    const seconds = setInterval(() => { if (st.screen === 'done') st.nowMs = Date.now(); }, 1000);
+    //: Never held blank for long: whatever has arrived after 3 s is shown.
+    setTimeout(() => (st.shown = true), 3000);
+    //: Plexamp's sign-in, asked at the start and every 4 s on its step.
+    const plexWatch = setInterval(() => { if (st.screen === 'plexamp' || st.plexState === 'checking') plexClaimCheck(); }, 4000);
+    if (mode === 'p1') {
+      loadPart1();
+      //: The page says it is still open (ADR-0104): the player keeps its
+      //: setup network while it is in use.
+      const here = setInterval(() => { if (document.visibilityState === 'visible') fetch('/setup/status').catch(() => {}); }, 60000);
+      return () => { window.removeEventListener('resize', wide); clearInterval(seconds); clearInterval(clock); clearInterval(here); clearInterval(plexWatch); };
+    }
+    plexClaimCheck();
+    (async () => {
+      try {
+        const r = await fetch('/personalise');
+        if (r.ok) {
+          const got = await r.json();
+          st.first = got.first !== false;
+          st.plugins = got.plugins ?? [];
+        }
+      } catch { /* a first run is assumed */ }
+      st.ready = true;
+      const found = ((await listItems('lms_server')).items ?? []).filter((i) => !String(i.meta ?? '').startsWith('This player'));
+      const server = found.find((i) => i.state === 'current') ?? found[0];
+      if (server) {
+        const address = server.address ?? server.name;
+        Object.assign(st, { lyrState: 'found', lyrServer: address, lyrMeta: server.name !== address ? `${server.name} · ${address}` : address });
+      } else st.lyrState = 'none';
+    })();
+    return () => {
+      window.removeEventListener('resize', wide);
+      clearInterval(clock);
+      clearInterval(seconds);
+      clearInterval(plexWatch);
+    };
+  });
+
+  const V = $derived(comp.renderVals());
+</script>

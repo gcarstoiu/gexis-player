@@ -44,10 +44,10 @@ from aiohttp import web
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core import memo, own_wallpapers, screen_apply
+from gexis_core import memo, own_wallpapers, screen_apply, settling
 from gexis_core.players import Players, status_line
 from gexis_core.wallpapers import SEARCH as PIXABAY_SEARCH
-from gexis_core import backups, bluetooth_devices, skin_packs, device_name, discovery, hardware_report, lyrion_scan, lyrion_shares, problem_report, skin_previews, skins, wifi
+from gexis_core import backups, bluetooth_devices, skin_packs, device_name, discovery, hardware_report, lyrion_folders, lyrion_stage, music_floor, lyrion_scan, lyrion_shares, lyrion_usb, problem_report, skin_previews, skins, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
 from gexis_core.artistinfo import PHOTO_BACKGROUND, PHOTO_LARGE, PHOTO_THUMB
 from gexis_core.artwork_sweep import ARTIST_NAMESPACE, remembered
@@ -145,6 +145,7 @@ class StateServer:
         restart_device=None,
         placer=None,
         lyrion_shares=None,
+        lyrion_usb=None,
         lyrion_shares_changed=None,
         own_server=None,
         plugins=(),
@@ -167,6 +168,7 @@ class StateServer:
         own=None,
         skins_at: Callable[[], tuple[Path, str] | None] | None = None,
         ui_dir: Path | None = None,
+        lyrion_known: "discovery.Known | None" = None,
     ) -> None:
         """`activate(renderer_id) -> bool` and `set_volume(percent) -> bool`
         are injected by `__main__.py` (ADR-0028's command surface). Both are
@@ -180,6 +182,9 @@ class StateServer:
         which is every deployment before Phase 4b, and any development run
         where only the core is installed.
         """
+        #: The Lyrion servers the core keeps (discovery.Known); without it,
+        #: each ask searches.
+        self._lyrion_found = lyrion_known.current if lyrion_known is not None else (lambda: discovery.find_servers())
         self._store = store
         #: ADR-0059's sweep leaves fanart URLs here. Not `_store`,
         #: which is the *state* store - two different things that
@@ -240,6 +245,10 @@ class StateServer:
         #: ADR-0115: the Lyrion server's network shares.
         self._lyrion_shares = lyrion_shares
         self._lyrion_shares_changed = lyrion_shares_changed
+        #: ADR-0115 decision 23: the folders Lyrion reads from USB drives.
+        self._lyrion_usb = lyrion_usb
+        #: The servers the last share scan found, and when (`SHARE_SERVERS_S`).
+        self._share_servers: tuple[float, list] | None = None
         #: ADR-0115 decision 2: this device's own Lyrion server, offered among
         #: the servers while it is on - never chosen for the user.
         self._own_server = own_server
@@ -2073,6 +2082,13 @@ class StateServer:
         except ValueError as exc:
             return self._setup_error(str(exc), 400)
 
+    async def _handle_music_space(self, request: web.Request) -> web.Response:
+        """The Music folder's free and total space, for part 2's *Where is
+        your music?* (George, 2026-10-18). Read only."""
+        space = await asyncio.to_thread(lyrion_folders.music_space)
+        closed = await asyncio.to_thread(music_floor.is_closed)
+        return web.json_response({**(space or {"free": None, "total": None, "text": None}), "closed": closed})
+
     async def _handle_setup_backup(self, request: web.Request) -> web.Response:
         """**ADR-0131: a backup, uploaded from the phone in setup.** The body
         is the file, streamed to disk under its own cap (a backup can be far
@@ -2142,6 +2158,19 @@ class StateServer:
             turn = 0
         return web.json_response(await asyncio.to_thread(setup_flow.screen_choices, report, turn))
 
+    async def _handle_setup_outputs(self, request: web.Request) -> web.Response:
+        """**The Volume choice under the Output step** (George, 2026-10-18):
+        each output as Settings lists it, and whether it has a volume
+        control of its own - without one, Hardware cannot be had, as in
+        Settings (ADR-0127 §2)."""
+        closed = self._setup_closed()
+        if closed is not None:
+            return closed
+        from gexis_core import outputs
+
+        found = await asyncio.to_thread(outputs.discover)
+        return web.json_response([{"option": o.option, "hardware": o.control is not None} for o in found])
+
     async def _handle_setup_plugins(self, request: web.Request) -> web.Response:
         """ADR-0128: the Plugins step - every plugin the release ships, with
         what it is, where it downloads from, and its notice."""
@@ -2151,6 +2180,66 @@ class StateServer:
         offered = self._setup_flow.offered()
         return web.json_response([{k: p.get(k) for k in ("id", "name", "summary", "notice", "from", "component")}
                                   for p in offered])
+
+    # -- ADR-0149: first use, part 2 ------------------------------------------
+
+    def _personalise_offered(self) -> list[dict]:
+        return self._setup_flow.offered() if self._setup_flow is not None else []
+
+    async def _handle_personalise(self, request: web.Request) -> web.Response:
+        """What the page needs beyond `/settings`: whether part 2 is owed, and
+        the plugins it can switch on, by their switches."""
+        from gexis_core import personalise
+        return web.json_response({
+            "state": personalise.state(),
+            "first": personalise.first(),
+            "plugins": [{"row": p["row"], "name": p["name"], "component": p.get("component")}
+                        for p in self._personalise_offered() if p["row"] in personalise.PLUGIN_ROWS],
+        })
+
+    async def _handle_personalise_finish(self, request: web.Request) -> web.Response:
+        """**The answers, written in one go** (ADR-0149): `{"settings": {key:
+        value}}`, only keys part 2 may write; then what they install is
+        followed (ADR-0128) and part 2 is done."""
+        from gexis_core import personalise
+        if self._settings is None:
+            return web.json_response({"error": "settings are not wired up"}, status=503)
+        try:
+            body = await request.json()
+            values = personalise.checked(body.get("settings"))
+        except (ValueError, AttributeError) as exc:
+            return web.json_response({"error": str(exc)}, status=400)
+        result = personalise.apply(values, self._settings, self._personalise_offered(), settling.begin)
+        personalise.end(personalise.DONE)
+        self._store.set_personalise(None)
+        if "lms_server" in result["written"]:
+            asyncio.ensure_future(self._restart_when_settled())
+        return web.json_response({"ok": True, **result})
+
+    async def _restart_when_settled(self, every_s: float = 3.0, give_up_s: float = 3600.0) -> None:
+        """**A Lyrion server set by part 2 is used from the core's next start**
+        (the rule Settings follows, `_chosen_server`): George, 2026-10-18 -
+        after part 2 the library's tiles had nothing behind them. The core
+        restarts, but only once the downloads part 2 began are in: the skins
+        install as the core's own child and would be cut off. Settled is the
+        settling record gone, or its phase ready or failed."""
+        waited = 0.0
+        while waited < give_up_s:
+            view = self._store.state.settling
+            if settling.read() is None or (view or {}).get("phase") in ("ready", "failed"):
+                break
+            await asyncio.sleep(every_s)
+            waited += every_s
+        await asyncio.sleep(2.0)
+        logger.info("personalise: restarting the core to use the Lyrion server part 2 chose")
+        await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-core")
+
+    async def _handle_personalise_later(self, request: web.Request) -> web.Response:
+        """*Do it later* (`personalise.put_off`)."""
+        from gexis_core import personalise
+        personalise.put_off(self._settings, personalise.first())
+        self._store.set_personalise(None)
+        return web.json_response({"ok": True})
 
     async def _handle_settling_done(self, request: web.Request) -> web.Response:
         """ADR-0128: the owner's OK on a settling screen that names a
@@ -2341,6 +2430,34 @@ class StateServer:
         for group in groups:
             for row in group["rows"]:
                 key = row.get("key")
+                if key == "lyrion-server.more":
+                    # ADR-0150: the server's own page first, by this player's
+                    # name; the apps' links come from the manifest.
+                    host = device_name.hostname() or "gexis"
+                    row["links"] = [{"label": "Lyrion's own page", "url": f"http://{host}.local:9000"},
+                                    *(row.get("links") or [])]
+                    continue
+                if key == "lyrion-server.library":
+                    # ADR-0115 decision 28 (George, 2026-10-18): the stage, its
+                    # line and, while Lyrion reads, how far - kept after Ready.
+                    stage = dict(lyrion_stage.CURRENT)
+                    if stage:
+                        row["value"] = stage["label"]
+                        row["note"] = stage["line"]
+                        row["progress"] = stage.get("share") if stage["phase"] == "scanning" else None
+                        row["busy"] = stage["phase"] in ("starting", "addons", "waiting") or (
+                            stage["phase"] == "scanning" and stage.get("share") is None)
+                    continue
+                if key == "lyrion-server.music_folder":
+                    # George, 2026-10-18: the Music folder's free and total space.
+                    space = await asyncio.to_thread(lyrion_folders.music_space)
+                    if space:
+                        row["note"] = f"{row.get('note') or ''} {space['text']}.".strip()
+                    # ADR-0115 decision 27: closed below 4 GB free.
+                    if await asyncio.to_thread(music_floor.is_closed):
+                        row["note"] += (" The card is nearly full: the Music share takes no new files"
+                                        " until 4.5 GB is free.")
+                    continue
                 if row["type"] != "list":
                     continue
                 if key == "restore":
@@ -2354,6 +2471,12 @@ class StateServer:
                     row["value"] = None
                     row["items"] = await self._share_items() if self._lyrion_shares else []
                     continue
+                if key == "lyrion-server.usb_folders":
+                    # ADR-0115 decision 23: each folder chosen, with its
+                    # Remove, and each drive plugged in with nothing chosen.
+                    row["value"] = None
+                    row["items"] = await self._usb_items(sheet=False) if self._lyrion_usb else []
+                    continue
                 source = self.SEEDED_LISTS.get(key)
                 if source is None:
                     continue
@@ -2362,6 +2485,56 @@ class StateServer:
                 # so an unavailable BlueZ reads as the row's own empty state
                 # rather than failing the whole settings payload.
                 row["items"] = await self._bluetooth(getattr(module, name))
+
+    async def _usb_items(self, sheet: bool) -> list[dict]:
+        """The USB folders' rows (`sheet=False`) or the drives to browse.
+        The store on this thread; the drives, which read the disk, in a
+        worker."""
+        usb = self._lyrion_usb
+        chosen = usb.all()
+
+        def look() -> tuple[list[str], dict]:
+            plugged = usb.plugged()
+            return plugged, {d: usb.label_of(d) for d in {*plugged, *(e["drive"] for e in chosen)}}
+        plugged, labels = await asyncio.to_thread(look)
+        return (usb.sheet_items if sheet else usb.items)(chosen, plugged, labels)
+
+    async def _usb_action(self, body: dict, name: str, action: str) -> web.Response:
+        """ADR-0115 decision 23: browse a drive's folders, add one, remove
+        one. `name` is the drive (browse, add) or the item's address
+        (forget)."""
+        usb = self._lyrion_usb
+        if usb is None:
+            return web.json_response({"ok": False, "error": "USB folders are not wired up"})
+        folder = str(body.get("folder") or "")
+        try:
+            if action == "browse":
+                found = await asyncio.to_thread(usb.browse, name, folder)
+                label = usb.name_of(name, await asyncio.to_thread(usb.label_of, name))
+                clean = lyrion_usb.clean(folder)
+                # George, 2026-10-18 ("Tick several"): folders only, each
+                # ticked or opened by the page; the path above them, a
+                # step each, is how it goes back up.
+                items = [{"name": f["name"], "meta": "Has folders inside" if f["deeper"] else "",
+                          "bars": None, "state": "found", "open": True, "drive": name, "folder": f["folder"]}
+                         for f in found]
+                parts = clean.split("/") if clean else []
+                crumbs = [{"name": label, "drive": name, "folder": ""}] + [
+                    {"name": part, "drive": name, "folder": "/".join(parts[:i + 1])} for i, part in enumerate(parts)]
+                return web.json_response({"ok": True, "error": None, "items": items, "crumbs": crumbs,
+                                          "title": f"{label} / {clean}" if clean else label})
+            if action == "add":
+                label = await asyncio.to_thread(usb.label_of, name)
+                usb.add(name, folder, label)
+            elif action == "forget":
+                usb.remove(name)
+            else:
+                return web.json_response({"error": f"unknown action {action}"}, status=400)
+        except ValueError as exc:
+            return web.json_response({"ok": False, "error": f"Needs {exc}"})
+        if self._lyrion_shares_changed is not None:
+            self._lyrion_shares_changed()
+        return web.json_response({"ok": True, "error": None})
 
     async def _share_items(self) -> list[dict]:
         """The Lyrion shares' rows. The list is read on this thread - the
@@ -2500,7 +2673,10 @@ class StateServer:
 
     #: Where a `list` row's items come from - ADR-0044 §1's first open
     #: question, now answered for all three.
-    LIST_SOURCES = ("wifi", "lms_server", "bt_trusted", "restore", "lyrion-server.shares")
+    #: How long a scan for share servers is reused (2026-10-18).
+    SHARE_SERVERS_S = 60.0
+    LIST_SOURCES = ("wifi", "lms_server", "bt_trusted", "restore", "lyrion-server.shares",
+                    "lyrion-server.usb_folders")
 
     async def _list_row(self, request: web.Request):
         """The `list` row named in the path, or a response explaining why
@@ -2529,19 +2705,35 @@ class StateServer:
             return web.json_response({"items": await wifi.scan()})
         if key == "bt_trusted":
             return web.json_response({"items": await self._bluetooth(bluetooth_devices.known)})
+        if key == "lyrion-server.usb_folders":
+            return web.json_response({"items": await self._usb_items(sheet=True) if self._lyrion_usb else []})
         if key == "lyrion-server.shares":
             if self._lyrion_shares is None:
                 return web.json_response({"items": []})
             saved = await self._share_items()
+            # `?saved=1`: the shares added, without looking for servers - what
+            # a page re-reads after an add or a Forget (sofapi, 2026-10-18:
+            # every add waited for a two-second scan).
+            if request.query.get("saved") == "1":
+                return web.json_response({"items": saved})
             # ADR-0115's scan: the servers announcing themselves, after the
-            # shares already added; this device's own left out.
+            # shares already added; this device's own left out. **Kept for a
+            # minute**: the sheet and the page list them again and again
+            # while shares are added; `?fresh=1` looks again now.
             own = {device_name.hostname(), f"{device_name.hostname()}.local", device_name.address() or ""}
-            found = await asyncio.to_thread(lyrion_scan.servers, own)
-            for server in found:
-                saved.append({"name": server.name, "bars": None, "state": "found",
-                              "meta": f"{server.kind.upper()} · {server.host} · tap to see its shares",
-                              "server": {"host": server.host, "kind": server.kind}})
-            return web.json_response({"items": saved})
+            now = time.monotonic()
+            cached = self._share_servers
+            if cached is not None and now - cached[0] < self.SHARE_SERVERS_S and request.query.get("fresh") != "1":
+                found = cached[1]
+            else:
+                found = await asyncio.to_thread(lyrion_scan.servers, own)
+                self._share_servers = (time.monotonic(), found)
+            # George, 2026-10-18: the search shows what can be added, not
+            # what is: the shares added are on their own tile.
+            servers = [{"name": server.name, "bars": None, "state": "found",
+                        "meta": f"{server.kind.upper()} · {server.host} · tap to see its shares",
+                        "server": {"host": server.host, "kind": server.kind}} for server in found]
+            return web.json_response({"items": servers})
         if key == "restore":
             # ADR-0083. Read from the share every time: somebody may have
             # copied one in from another machine since the sheet last opened,
@@ -2559,7 +2751,7 @@ class StateServer:
             items.append({"name": device_name.hostname() or own, "address": own,
                           "meta": f"This player's own server · {own}", "bars": None,
                           "state": "current" if own == current else "found"})
-        for server in await discovery.find_servers():
+        for server in await self._lyrion_found():
             if own and server["address"] == own:
                 continue
             name = discovery.label(server)
@@ -2586,6 +2778,8 @@ class StateServer:
             action = body.get("action", "join")
         except (ValueError, KeyError, TypeError):
             return web.json_response({"error": 'body must be {"name": ..., "action": ...}'}, status=400)
+        if key == "lyrion-server.usb_folders":
+            return await self._usb_action(body, name, action)
         if key == "lyrion-server.shares":
             # ADR-0115: added, or forgotten; the mount follows in the core's
             # loop while the server is on.
@@ -2614,10 +2808,39 @@ class StateServer:
                     except (subprocess.SubprocessError, OSError) as exc:
                         logger.warning("lyrion: %s's shares not listed: %s", name, exc)
                         return web.json_response({"ok": False, "error": f"{name}'s shares could not be listed."})
+                    # Shares already added are not offered again (George,
+                    # 2026-10-18): they took up the list for nothing.
+                    added = {a["address"].lower() for a in self._lyrion_shares.all()}
                     return web.json_response({"ok": True, "error": None, "items": [
                         {"name": lyrion_shares.label(s["address"])[0], "meta": s["comment"] or None,
                          "bars": None, "state": "found", "share": True, "address": s["address"]}
-                        for s in found]})
+                        for s in found if s["address"].lower() not in added]})
+                if action == "folders":
+                    # George, 2026-10-18: a share opens into its folders, at
+                    # any depth, as a USB drive does. SMB only: listing an
+                    # NFS export would mean mounting it.
+                    address = name.rstrip("/")
+                    shown, server = lyrion_shares.label(address)
+                    items, crumbs = [], [{"name": server, "server": True}]
+                    if address.startswith("//"):
+                        host, share, *path = address[2:].split("/")
+                        crumbs += [{"name": share, "address": f"//{host}/{share}"}] + [
+                            {"name": part, "address": f"//{host}/{share}/" + "/".join(path[:i + 1])}
+                            for i, part in enumerate(path)]
+                        try:
+                            found = await asyncio.to_thread(lyrion_scan.folders, address, body.get("user") or None,
+                                                            body.get("password") or None)
+                        except lyrion_scan.NeedsLogin:
+                            return web.json_response({"ok": False, "login": True,
+                                                      "error": f"{server} needs a user and password to show its folders"})
+                        except (lyrion_scan.NoAnswer, subprocess.TimeoutExpired):
+                            return web.json_response({"ok": False, "error": f"{server} did not answer. Is it switched on?"})
+                        items = [{"name": f, "meta": "", "bars": None, "state": "found", "share": True,
+                                  "open": True, "address": f"{address}/{f}"} for f in found]
+                    else:
+                        crumbs.append({"name": shown, "address": address})
+                    return web.json_response({"ok": True, "error": None, "items": items, "crumbs": crumbs,
+                                              "title": " / ".join(c["name"] for c in crumbs)})
                 if action == "add":
                     self._lyrion_shares.add(name, body.get("user"), body.get("password"))
                 elif action == "forget":
@@ -2739,9 +2962,14 @@ class StateServer:
         app.router.add_get("/setup/networks", self._handle_setup_networks)
         app.router.add_get("/setup/screen", self._handle_setup_screen)
         app.router.add_post("/setup/finish", self._handle_setup_finish)
+        app.router.add_get("/storage/music", self._handle_music_space)
         app.router.add_post("/setup/backup", self._handle_setup_backup)
         app.router.add_delete("/setup/backup", self._handle_setup_backup_forget)
         app.router.add_get("/setup/plugins", self._handle_setup_plugins)
+        app.router.add_get("/setup/outputs", self._handle_setup_outputs)
+        app.router.add_get("/personalise", self._handle_personalise)
+        app.router.add_post("/personalise/finish", self._handle_personalise_finish)
+        app.router.add_post("/personalise/later", self._handle_personalise_later)
         app.router.add_post("/settling/done", self._handle_settling_done)
         app.router.add_post("/settling/hide", self._handle_settling_hide)
         # ADR-0101: the phone's idle toggle, and the panel saying what it shows.

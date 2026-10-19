@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script>
   import { onMount, untrack } from 'svelte';
-  import { connect, active, metadata, volume, handoff, capabilities, available, availability, shuffle, repeat, queue, pairing, fixedOutput, panel, setup } from './lib/state.js';
+  import { connect, active, metadata, volume, handoff, capabilities, available, availability, shuffle, repeat, queue, pairing, fixedOutput, panel, setup, personalise, personaliseLater } from './lib/state.js';
   import NowPlaying from './screens/NowPlaying.svelte';
   import BarNowPlaying from './screens/bar/BarNowPlaying.svelte';
   import BarTray from './screens/bar/BarTray.svelte';
@@ -16,7 +16,7 @@
   import Settings from './screens/Settings.svelte';
   import MiniPlayer from './screens/MiniPlayer.svelte';
   import SetupScreen from './screens/SetupScreen.svelte';
-  import SetupPage from './screens/SetupPage.svelte';
+  import FirstUsePage from './screens/FirstUsePage.svelte';
   import { screen } from './lib/family.svelte.js';
   import UpdateScreen from './screens/UpdateScreen.svelte';
   import PanelPointer from './lib/PanelPointer.svelte';
@@ -32,6 +32,7 @@
   import { loadSettings, settingValues, settingsDevice } from './lib/settings.js';
   import { loadLibraryRoot } from './lib/library.js';
   import { reportTouch, showPeppy, reportPainted, reportShown } from './lib/state.js';
+  import { components } from './lib/state.js';
   import { lyricsAsk, lyricsShown } from './lib/panelView.js';
 
   //: The browser tab says which player it is (George, 2026-10-10: with
@@ -353,9 +354,37 @@
   // when the server is merely unreachable, and a library that vanished on a
   // Wi-Fi blip and grew back a few seconds later would be two different
   // products in one minute. A row somebody set is a stable fact.
-  const lmsOff = $derived($settingValues.lms_enabled === false);
-  const libraryOpen = $derived(!lmsOff && (!$active || libraryRequested));
-  const waitingOpen = $derived(lmsOff && !$active);
+  //: **ADR-0149: Library on the screen off** (Phase 14; George, 2026-10-15:
+  //: "the lyrion client is up and running but there is no library
+  //: navigation on the screen"): the panel is the same two screens as with
+  //: the client off - the waiting home and Now Playing - while Lyrion's apps
+  //: and controllers still play to it. `lmsOff` stays the client itself.
+  const lmsOff = $derived($settingValues.lms_enabled === false || $settingValues.lms_library === false);
+  //: **A source with nothing to show is no source** (George, 2026-10-18:
+  //: "Displaying an empty now playing serves no purpose"; the Lyrion
+  //: client became the source when its server came up, with no track). Now
+  //: Playing opens on a track; until then the home stays - the library, or
+  //: the waiting screen with the client off.
+  const idleSource = $derived(!!$active && !playing && !$metadata?.title);
+  const libraryOpen = $derived(!lmsOff && (!$active || libraryRequested || idleSource));
+  //: **A new player's first read of its library** (George, 2026-10-18,
+  //: option A): Lyrion keeps no library until it has read one (Finding
+  //: 127), so the library home would be empty - and Extended navigation's
+  //: menus with it. The waiting screen stays, saying in large what Lyrion is
+  //: doing, unless something plays.
+  const lyrionFirst = $derived.by(() => {
+    const c = $components?.lyrion;
+    // Its download is the first read's first step, when the player's own
+    // server is switched on.
+    const known = Object.keys($components ?? {}).length > 0;
+    if ($settingValues['lyrion-server.enabled'] === true && known
+        && (!c || ['absent', 'preparing', 'downloading', 'retrying', 'verifying', 'installing'].includes(c.state))) {
+      return { phase: 'downloading', label: 'Downloading Lyrion', share: c.total ? (c.received ?? 0) / c.total : c.share ?? null, line: '', first: true };
+    }
+    const after = c?.after;
+    return after?.first && after.phase !== 'ready' ? after : null;
+  });
+  const waitingOpen = $derived((lmsOff && (!$active || idleSource)) || (!!lyrionFirst && !playing));
   //: **ADR-0122: the library is kept while Now Playing is up**, mounted and
   //: hidden, so Minimise shows it as it was left - path, levels, scroll.
   //: Home remounts it at its root (`libraryHome`), as the phone's Home does.
@@ -466,6 +495,20 @@
   $effect(() => {
     if (setupPage && surface === 'remote') untrack(() => (setupPageHeld = true));
   });
+
+  //: **ADR-0149: first use's part 2 on the phone** while it is owed. Held
+  //: once shown, as setup's page is: finishing ends it on the player, and
+  //: the page has its own last screen (what is downloading) to show, until
+  //: its Close.
+  let personaliseHeld = $state(false);
+  const personalisePage = $derived(!setupPage && (personaliseHeld || $personalise === 'pending'));
+  $effect(() => {
+    if (personalisePage && surface === 'remote') untrack(() => (personaliseHeld = true));
+  });
+  //: ...and on the panel, the way to it: a code to the player's own page.
+  const personaliseAt = $derived(
+    $settingsDevice.hostname ? `http://${$settingsDevice.hostname}.local:8090` : $settingsDevice.address ? `http://${$settingsDevice.address}:8090` : null
+  );
 
   //: Setup ending is attention, like a touch: the panel comes back to its
   //: own screens and the idle timer starts from there.
@@ -681,7 +724,9 @@
 <svelte:window onpointerdowncapture={onPointerDown} />
 
 {#if surface === 'remote' && setupPage}
-  <SetupPage setup={$setup} />
+  <FirstUsePage mode="p1" setup={$setup} />
+{:else if surface === 'remote' && personalisePage}
+  <FirstUsePage mode="p2" onclose={() => (personaliseHeld = false)} />
 {:else if surface === 'remote'}
   <!-- ADR-0101: on a phone, Settings and the mini player under it. -->
   <div class="remote remote--mini"><Settings {openRow} onrowopened={() => (openRow = null)} /></div>
@@ -727,7 +772,7 @@
     </div>
   {:else if waitingOpen}
     <div class="screen-layer">
-      <WaitingHome availability={$availability} onsettings={openSettings} settings={$settingValues} />
+      <WaitingHome availability={$availability} onsettings={openSettings} settings={$settingValues} reading={lyrionFirst} />
     </div>
   {:else if libraryOpen}
     <!-- The library's layer, below: kept mounted (ADR-0122). -->
@@ -861,6 +906,12 @@
        everything but Keep this screen and the update lock. -->
   {#if $settling && !$settling.hidden && !$screenConfirm && !updateLock && !setupShown}
     <SettlingScreen settling={$settling} ondone={() => settlingDone().catch(() => {})} onhide={() => settlingHide().catch(() => {})} />
+  {:else if $personalise === 'pending' && $settingValues.headless !== true && !$screenConfirm && !updateLock && !setupShown}
+    <!-- ADR-0149: part 2 is owed; the panel shows the way to it - **at
+         once**, before the player's address has arrived (George, 2026-10-18:
+         after setup's restart the player's own screens showed first). The
+         code fills in when the address does. -->
+    <SetupScreen setup={$setup} personalise={personaliseAt ?? true} onlater={() => personaliseLater().catch(() => {})} />
   {/if}
   {#if !setupShown}
     <CableKeep />
@@ -929,6 +980,19 @@
   :global(html.on-panel),
   :global(html.on-panel *) {
     cursor: none !important;
+  }
+  /* **Nothing on the panel is text to select** (George, 2026-10-18: a long
+     touch on the setup network's name offered Copy). Fields a person types
+     into keep it. */
+  :global(html.on-panel) {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  :global(html.on-panel input),
+  :global(html.on-panel textarea) {
+    user-select: text;
+    -webkit-user-select: text;
   }
 
   :global(body) {

@@ -115,7 +115,7 @@ If the request fails, the app assumes `panel`.
 flowchart TD
   A[App.svelte mounts] --> B{"GET /surface"}
   B -- remote --> C{setup page needed?}
-  C -- yes --> D[SetupPage<br/>first-time setup on the phone]
+  C -- yes --> D[FirstUsePage<br/>first-time setup on the phone]
   C -- no --> E[Settings<br/>+ MiniPlayer pinned below<br/>+ NewScreen question if asked]
   B -- panel --> F[The panel: every screen,<br/>fixed logical layout]
 ```
@@ -127,7 +127,7 @@ flowchart TD
   attention and take the visualiser down (ADR-0036).
 - **Remote (phone)**: Settings, which is the only responsive screen
   (ADR-0032), plus the mini player (ADR-0101). During setup it shows
-  `SetupPage` instead (ADR-0104). The first-boot flow is covered in
+  `FirstUsePage` instead (ADR-0104, ADR-0149). The first-boot flow is covered in
   `setup-and-network.md`.
 
 ---
@@ -184,7 +184,9 @@ not set the level; one opened from the panel is unaffected.
 ## 5. The panel's layer stack
 
 Exactly one screen is drawn at a time, over one shared backdrop
-(`PanelBackground.svelte`: the design's weave plus the blurred artwork).
+(`PanelBackground.svelte`: the design's weave plus the blurred artwork; with
+no artwork, one of the player's own Calm wallpapers, blurred the same way, so
+the library with nothing playing is not plain grey).
 Screens are transparent, and changing screen has no animation. The overlays
 sit above the screen in a fixed z-order:
 
@@ -210,7 +212,7 @@ Component tree, as `App.svelte` mounts it:
 ```mermaid
 flowchart TD
   App[App.svelte]
-  App -->|remote| Rem["Settings + MiniPlayer<br/>(or SetupPage)"]
+  App -->|remote| Rem["Settings + MiniPlayer<br/>(or FirstUsePage)"]
   App -->|panel| Pan[".panel"]
   Pan --> PB[PanelBackground]
   Pan --> St[Settings embedded]
@@ -352,10 +354,12 @@ scale factor) was tried first and set aside: the layouts are drawn for a
 
 `WaitingHome.svelte` (ADR-0079, drawn as ADR-0133) is the panel's root while
 `lms_enabled` is off and nothing is active: `Backdrop` behind a veil, the
-clock, date and device name top left (`waiting_clock`), the line *Start
-music from your phone* (`waiting_hint`, never on a bar), and a tile per
-renderer in `$sources` that `availability` marks waiting - `SourceMark`,
-its manifest name and status. The picture's credit sits at the foot. With
+clock, date and device name top left (`waiting_clock`), and a tile per
+renderer in `$sources` that `availability` marks waiting - drawn by
+`WaitingServices`, the library's waiting footer, in its `bare` form: the
+pulsing marks with their names and states straight on the picture, no plate
+(George, 2026-10-18: tiles cut the names with five sources). From four
+sources the columns narrow to fit, on the panel and on a bar. The picture's credit sits at the foot. With
 every source off it says so, and the Settings button stays in the corner.
 Tiles are a translucent plate: ADR-0041 bans live backdrop blur.
 
@@ -560,7 +564,21 @@ flowchart LR
   `--overscroll-history-navigation=0`.
 - `labwc-rc.xml` is deliberately almost empty: no decorations, no
   keybindings, and touch mapped to HDMI-A-1; the copy written at each start
-  names the screen's actual port (ADR-0109, amended 2026-10-12).
+  names the screen's actual port (ADR-0109, amended 2026-10-12). One window
+  rule maximises every window. Without it, labwc places a window that opens
+  after Chromium (the visualiser, restarted when its skin changes) offset
+  from the corner, and the meter is drawn partly off the screen. The copy
+  written at each start adds `MoveToOutput` to the same rule, so the window
+  lands on the panel's port before it is maximised (2026-10-18).
+- **A first read of the library keeps the waiting screen** (ADR-0115
+  decision 29): `App.svelte` opens `WaitingHome` while Lyrion is
+  downloading or `components.lyrion.after.first` holds, and nothing plays,
+  and hands it the stage as `reading` - a large block between the clock and
+  the sources, Lyrion's mark left out of them.
+- **A source with nothing to show is no source** (`idleSource`; the core
+  side is ADR-0027 as amended 2026-10-18): a current
+  source that is not playing and has no title opens the home - the library,
+  or the waiting screen with the client off - never an empty Now Playing.
 - **The Peppy screen is not part of this app** (ADR-0014, ADR-0026).
   PeppyMeter is a separate native window under the same compositor. The UI
   only asks for it (`POST /peppy/show`, `/peppy/hide`). `core/.../peppy.py`
@@ -585,7 +603,7 @@ flowchart LR
 | `HandoffScreen` | `$handoff` set | From → to, minimum length a setting (ADR-0094) |
 | `PairingFrame` | `$pairing` set | Bluetooth first-pair confirmation. The agent dismisses it, not the frame's own countdown (ADR-0045) |
 | `SetupScreen` (panel) | setup network up, or the device needs setup | Shows QR codes and the way in. Takes no input. Readable from 2 m (ADR-0104 §5). The password comes from loopback-only `/setup/status`, never from `/state` |
-| `SetupPage` (phone) | the device needs setup | The first-time setup flow; answers are saved step by step to the core |
+| `FirstUsePage` (phone) | the device needs setup (`mode="p1"`), or part 2 is owed (`mode="p2"`) | First use, generated from the design files by `tools/design/gen_personalise.py`: setup, its answers saved step by step to the core; then Make it yours |
 | `NewScreen` / `KeepScreen` | a different screen is attached / a new screen awaits confirmation | Keep is answered on the panel for a fingerprinted touch panel; another listed panel shows its buttons (`panel_buttons`) and the phone's `PhoneKeepScreen` answers too, and a TV or an unlisted screen is answered on the phone alone (`phone`; ADR-0147 D3 as amended by Finding 125). A countdown reverts (ADR-0109 decision 5). The countdown starts when the question is drawn: two frames after it appears the panel posts `/screen/shown` (repeated every 3 s until the core's `deadline` arrives); before that, `NEVER_DRAWN_S` (120 s from the core's start) still reverts |
 | `TestPattern` (panel) | `screen_check` showing | The hardware feedback's test pattern; the panel's four corner taps go back to the core. Mounted over everything but *Keep this screen?* and the update lock (ADR-0126) |
 | `UpdateModal` (Settings) | the user checks for an update | One modal, from the check to the outcome (ADR-0110 §3). It notes the status when it asks and takes any change from it as the answer, not a comparison of the player's clock with the phone's |

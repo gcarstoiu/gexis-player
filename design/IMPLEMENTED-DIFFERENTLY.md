@@ -371,3 +371,36 @@ steps follow what the device sees:
 - **Review → Change → Continue returns to Review** for every step.
 - **Finish** shows *"<name> is joining your network"*, the address
   `http://<name>.local:8090`, and what happens if the password is wrong.
+
+## The waiting screen's sources: the library's pulsing marks (2026-10-18)
+
+The design draws each waiting source as a wide tile, the mark on the left
+and the name and status line beside it, sharing the screen's width. With
+five sources on the 10.1" the names and status lines were cut ("Blue…",
+"Starts …"). George: *"let's just reuse what we have on the waiting screen
+with the simple or extended navigation, but without the back bar. Just the
+icons pulsating directly on the wallpaper background"* - the library's
+waiting footer (`WaitingServices`), its marks, rings, names and states,
+without its plate.
+
+## First use's *Where is your music?*: nothing ticked, and USB folders (2026-10-18)
+
+The design (`14-first-use`) draws the three locations as switches with the
+Music folder ticked. George: *"every the user selects we do in lyrion.
+Nothing should be preselected"*, so all three start off, and with none on
+the line under them says Lyrion starts with no music (ADR-0115 decisions
+20-22). With *USB drive* on, the drives plugged in are listed under the
+switches and each opens to its folders, *Add the whole drive* or *Add
+<folder>* first, *Back up* inside a folder (decision 23; George: *"What we
+need to add though is a folder selection from USB"*) - not in the design.
+The same browsing is in Settings → Library → Lyrion Server → *USB folders*.
+
+## First use's *Upload a backup*: the file's name, then what it restores (2026-10-18)
+
+The design's tile names the backup's player and date, with what it brings
+as one line under it. George: *"Each item should be on its own line with a
+checkmark grouped by the section the setting is in. Just the filename stays
+in the tile."* The tile holds the file's name and *Ready*; below it, one
+block per Settings section in the design's own ticked list - the left
+column of its *Split* block, drawn without the right column when that is
+empty (ADR-0131 amended 2026-10-18).

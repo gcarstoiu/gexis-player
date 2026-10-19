@@ -198,3 +198,15 @@ holds the device when either is true:
 
 Otherwise the retry scans and rejoins a saved network in range, as it would
 with no phone on it.
+
+## Amended 2026-10-18: one password, and plain HTTP
+
+- **The setup network's password is `gexis-setup` on every player** (George:
+  *"Let's just use gexis-setup for all cases"*); the made-up one shown on a
+  panel is gone (ADR-0109 amended the same day).
+- **The setup page and the player's page stay plain HTTP** (George: *"Stay on
+  http"*), though Chrome and Firefox warn about it. The options weighed: a
+  self-signed certificate (a worse warning, on every phone); a certificate per
+  player under a public domain, as Plex does (a project-run service, and each
+  player's home address in public DNS). The install guide and FAQ say to
+  choose *Continue to site*, and why it is safe on a home network.

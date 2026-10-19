@@ -26,7 +26,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import secrets
 import time
 from pathlib import Path
 
@@ -39,18 +38,17 @@ SSID = "gexis-setup"
 #: The profile's name, which is also the network's. One name to look for when
 #: a crash leaves it behind.
 PROFILE = SSID
-#: A player without a panel: nothing can show a made-up password, so it is the
-#: network's own name, which WPA2's 8-63 characters allow (amendment 1).
-HEADLESS_PASSWORD = "gexis-setup"
-#: Read off a screen and typed on a phone: no `0 o 1 l`, no capitals.
-PASSWORD_ALPHABET = "abcdefghijkmnpqrstuvwxyz23456789"
-PASSWORD_LENGTH = 8
+#: **The setup network's password, always** (George, 2026-10-18: "Let's just
+#: use gexis-setup for all cases"): the network's own name, which WPA2's 8-63
+#: characters allow (amendment 1). Until then a player with a confirmed screen
+#: made one up and showed it on the panel (ADR-0109 decision 5); a freshly
+#: flashed card never had a confirmed screen, so it was the fixed one anyway.
+PASSWORD = "gexis-setup"
 #: NetworkManager's shared mode hands this address to the device.
 ADDRESS = "10.42.0.1"
 
 STATE_DIR = Path("/var/lib/gexis")
 DONE_MARKER = STATE_DIR / "setup-done"
-PASSWORD_FILE = STATE_DIR / "setup-password"
 TRIAL_FILE = Path("/run/gexis-setup-trial")
 DRM = Path("/sys/class/drm")
 IFACE = "wlan0"
@@ -257,37 +255,6 @@ def start_failure(ready: str, radio: str) -> str:
     return "Something stopped the player's Wi-Fi from starting."
 
 
-def _screen_kept() -> bool:
-    from . import screen_apply
-    return screen_apply.confirmed()
-
-
-def make_password() -> str:
-    return "".join(secrets.choice(PASSWORD_ALPHABET) for _ in range(PASSWORD_LENGTH))
-
-
-def password(panel: bool, path: Path = PASSWORD_FILE) -> str:
-    """With a panel, one made up once and kept, so the password on the screen
-    does not change under someone who read it before a restart. Without one,
-    the fixed password."""
-    if not panel:
-        return HEADLESS_PASSWORD
-    try:
-        kept = path.read_text().strip()
-        if len(kept) >= 8:
-            return kept
-    except OSError:
-        pass
-    made = make_password()
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(made + "\n")
-        path.chmod(0o600)
-    except OSError as exc:
-        logger.warning("setup: cannot keep the password (%s); it will change on restart", exc)
-    return made
-
-
 def read_trial(path: Path = TRIAL_FILE) -> float | None:
     """The retry for a trial, or None when there is no trial. A trial file
     without a `retry=` line keeps the real five minutes."""
@@ -359,7 +326,6 @@ class SetupNetwork:
         wall=time.time,
         sleep=asyncio.sleep,
         marker: Path = DONE_MARKER,
-        password_file: Path = PASSWORD_FILE,
         trial_file: Path = TRIAL_FILE,
         drm: Path = DRM,
         net_root: Path = Path("/sys/class/net"),
@@ -367,14 +333,12 @@ class SetupNetwork:
         on_change=None,
         unblock=None,
         ready=None,
-        screen_kept=None,
     ) -> None:
         self._nmcli = run or wifi._run
         #: **ADR-0109 decision 5: a screen is confirmed before setup trusts
         #: it.** Until one has been kept on the panel, the setup network uses
         #: the fixed password: a screen that is connected but dark would hide
         #: a made-up one.
-        self._screen_kept = screen_kept or _screen_kept
         self._count_stations = stations or self._stations
         #: Phones the panel counts as joined. A test that fakes the stations
         #: fakes these too.
@@ -386,7 +350,6 @@ class SetupNetwork:
         self._wall = wall
         self._sleep = sleep
         self._marker = marker
-        self._password_file = password_file
         self._trial_file = trial_file
         self._drm = drm
         self._net_root = net_root
@@ -601,7 +564,7 @@ class SetupNetwork:
         `autoconnect no` so the profile can never come up by itself at boot in
         place of the home Wi-Fi."""
         self._panel = panel_attached(self._drm)
-        self._password = password(self._panel and self._screen_kept(), self._password_file)
+        self._password = PASSWORD
         await self.delete_leftover()
         # **The radio may be off.** Raspberry Pi OS starts every radio blocked
         # (`rfkill.default_state=0`) and pi-gen ships NetworkManager with

@@ -31,6 +31,7 @@ class FakeSettings:
 def make(tmp_path, nm, settings=None, **kw):
     kw_servers = {"servers": kw.pop("servers", [])}
     offered = kw.pop("plugins", [])
+    owed = kw.pop("owed", None)
     net, clock = setup(tmp_path, nm, **kw)
     countries, reboots = [], []
 
@@ -50,6 +51,7 @@ def make(tmp_path, nm, settings=None, **kw):
         answers=tmp_path / "answers.json", marker=tmp_path / "setup-done",
         set_country=country, find_servers=find, sleep=clock.sleep,
         plugins=lambda: offered, settling_path=tmp_path / "settling.json",
+        owed=owed,
     )
     return flow, net, clock, countries, reboots
 
@@ -136,12 +138,41 @@ def test_a_wrong_password_keeps_every_answer_but_the_password_and_reopens_setup(
     assert not (tmp_path / "setup-done").exists() and reboots == []
 
 
+def test_a_new_player_is_owed_part_two_once_part_one_has_joined(tmp_path):
+    """ADR-0149: what it plays and shows is asked next, from the home
+    network - and not while the join has failed."""
+    owed = []
+    nm = FakeNM(devices=NOTHING, up_rc=4)
+    flow, net, *_ = make(tmp_path, nm, owed=lambda: owed.append(True))
+    flow.save({"ssid": "Home", "password": "wrongpass"})
+    finish(flow, net)
+    assert owed == [], "a failed join is not the end of part 1"
+    nm2 = FakeNM(devices=NOTHING)
+    flow, net, *_ = make(tmp_path / "ok", nm2, owed=lambda: owed.append(True))
+    flow.save({"ssid": "Home", "password": "hunter22"})
+    finish(flow, net)
+    assert owed == [True]
+
+
 def test_one_refused_setting_does_not_stop_setup(tmp_path):
     nm = FakeNM(devices=NOTHING)
     flow, net, *_ = make(tmp_path, nm)
     flow.save({"ssid": "Home", "password": "hunter22", "output": "Nowhere", "timezone": "Europe/Berlin"})
     finish(flow, net)
     assert (tmp_path / "setup-done").exists()
+
+
+def test_the_volume_type_is_written_after_the_output_it_depends_on(tmp_path):
+    """George, 2026-10-18: the Output step asks the volume type too."""
+    settings = FakeSettings()
+    flow, net, *_ = make(tmp_path, FakeNM(devices=NOTHING), settings)
+    with pytest.raises(ValueError, match="volume"):
+        flow.save({"volume": "Loud"})
+    flow.save({"ssid": "Home", "password": "hunter22", "volume": "Software", "output": "HDMI 1"})
+    finish(flow, net)
+    keys = [k for k, _ in settings.sets]
+    assert ("output_mode", "Software") in settings.sets
+    assert keys.index("output_device") < keys.index("output_mode")
 
 
 def test_without_a_network_there_is_nothing_to_finish(tmp_path):
@@ -478,6 +509,17 @@ def test_lyrion_found_after_the_join_is_written_into_the_restored_settings(tmp_p
     flow.save({"ssid": "Home", "password": "hunter22", "lms_mode": "find"})
     asyncio.run(_finish_told(flow, net))
     assert _restored(tmp_path, "lms_server") == "10.0.0.5:9000" and _restored(tmp_path, "lms_enabled") is True
+
+
+def test_a_restore_is_never_owed_part_two(tmp_path):
+    """George, 2026-10-18: the backup brought back what the owner wanted;
+    Personalise in Settings is still there."""
+    owed = []
+    flow, net, _, _, upload, _ = _with_backup(tmp_path, FakeNM(devices=NOTHING), owed=lambda: owed.append(True))
+    flow.take_backup(upload)
+    flow.save({"ssid": "Home", "password": "hunter22"})
+    asyncio.run(_finish_told(flow, net))
+    assert (tmp_path / "setup-done").exists() and owed == []
 
 
 def test_a_backup_given_another_name_leaves_the_first_player_s_identities_behind(tmp_path):

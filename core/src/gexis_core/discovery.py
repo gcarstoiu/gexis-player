@@ -134,6 +134,57 @@ async def find_servers(listen_s: float = LISTEN_S) -> list[dict[str, str]]:
     ]
 
 
+#: How often the servers are looked for again while one is known, and while
+#: none is: a player starting before its network is up finds none at first.
+EVERY_S = 120.0
+EMPTY_EVERY_S = 30.0
+
+
+class Known:
+    """**The Lyrion servers on the network, known before anyone asks**
+    (George, 2026-10-18: *"the panel should already know if there is a
+    lyrion server on the network"*). A search costs 2.5 s of listening and
+    up to 2 s for names, and every page that asked - Settings' list, first
+    use's part 2 - waited that long each time. The core searches at start
+    and then every two minutes (every 30 s while none answers), and a page
+    is answered at once from the last search; only before the first one has
+    ended does it wait for it. A server switched off stays listed until the
+    next search, at most two minutes - the setting is an address, and
+    choosing one that has gone says so when the client connects."""
+
+    def __init__(self, find=None, every_s: float = EVERY_S, empty_every_s: float = EMPTY_EVERY_S,
+                 sleep=asyncio.sleep) -> None:
+        self._find = find or find_servers
+        self._every = every_s
+        self._empty_every = empty_every_s
+        self._sleep = sleep
+        self.servers: list[dict[str, str]] | None = None
+        self._search: asyncio.Future | None = None
+
+    async def search(self) -> list[dict[str, str]]:
+        """A search now - or the one under way, never two at once."""
+        if self._search is None or self._search.done():
+            self._search = asyncio.ensure_future(self._find())
+        found = await asyncio.shield(self._search)
+        self.servers = found
+        return found
+
+    async def current(self) -> list[dict[str, str]]:
+        """What the last search found; the first search's answer before it."""
+        if self.servers is not None:
+            return self.servers
+        return await self.search()
+
+    async def run(self) -> None:
+        while True:
+            try:
+                found = await self.search()
+            except Exception as exc:  # noqa: BLE001 - find_servers never raises; belt and braces
+                logger.warning("discovery: background search failed: %s", exc)
+                found = []
+            await self._sleep(self._every if found else self._empty_every)
+
+
 async def host_name(ip: str, timeout_s: float = RESOLVE_S) -> str:
     """The name the machine at `ip` announces over mDNS (`Minibox.local` gives
     `Minibox`), or "" when it announces none or the tool is missing. Never

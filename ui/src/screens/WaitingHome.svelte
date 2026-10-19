@@ -10,26 +10,30 @@
     wallpapers by default.
   - **The clock, the date and the player's name** sit in the top left,
     smaller than the idle screen's (*Clock on the waiting screen*).
-  - **Each waiting source is a tile** along the foot - its mark, its name,
-    its state - and one line above them is the only other text (*Hint on the
-    waiting screen*). On a bar, the clock is a column on the left and the
-    tiles stand beside it, with no hint.
+  - **Each waiting source pulses at the foot** - the marks, names and
+    states of the library's waiting footer (`WaitingServices`), straight on
+    the picture without its plate (George, 2026-10-18); no other text (its
+    hint line went the same day). On a bar, the clock is a column on the left
+    and the marks stand beside it.
   - **Settings stays the button in the corner** (ADR-0079), and a screen
     with every source switched off says so.
 
-  The tiles are a translucent plate, not frosted glass as the mock-up drew
-  them: ADR-0041 bans live backdrop blur on the Pi 4 (24.5 ms a frame).
 -->
 <script>
   import { onMount } from 'svelte';
   import Backdrop from './Backdrop.svelte';
-  import SourceMark from '../lib/SourceMark.svelte';
+  import WaitingServices from './WaitingServices.svelte';
   import { pressing } from '../lib/press.svelte.js';
   import { sources } from '../lib/state.js';
   import { settingsDevice } from '../lib/settings.js';
   import { screen } from '../lib/family.svelte.js';
 
-  let { availability = {}, onsettings, settings = {} } = $props();
+  // `reading`: the Lyrion server's stage while a new player's library is
+  // still being read (George, 2026-10-18, option A: the waiting screen stays
+  // until the first scan is done, and says so plainly enough to read from
+  // across the room).
+  let { availability = {}, onsettings, settings = {}, reading = null } = $props();
+  const readingShare = $derived(reading?.share ?? null);
 
   const press = pressing();
   let picture = $state(null);
@@ -46,7 +50,6 @@
 
   const bar = $derived(screen.family === 'bar');
   const wantsClock = $derived(settings.waiting_clock !== false);
-  const wantsHint = $derived(settings.waiting_hint !== false && !bar);
   const twelve = $derived(settings.clock_format === '12 h');
   const name = $derived($settingsDevice.name || '');
 
@@ -106,6 +109,20 @@
     </div>
   {/if}
 
+  {#if reading}
+    <div class="reading">
+      <div class="reading__head">{reading.phase === 'scanning' ? 'Lyrion is reading your music' : 'Lyrion is getting ready'}</div>
+      <div class="reading__meter">
+        <span class="reading__bar" class:reading__bar--busy={readingShare == null}>
+          <span style:width={`${Math.round((readingShare ?? 0) * 100)}%`}></span>
+        </span>
+        {#if readingShare != null}<span class="reading__pct">{Math.round(readingShare * 100)} %</span>{/if}
+      </div>
+      <div class="reading__line">Your library appears here once Lyrion has read it all. The other sources play meanwhile.</div>
+      <div class="reading__step">{reading.phase === 'scanning' ? reading.line.split('. Music shows up')[0] : reading.label}</div>
+    </div>
+  {/if}
+
   {#if none}
     <div class="none">
       <div class="none__head">No sources</div>
@@ -113,26 +130,11 @@
     </div>
   {:else}
     <div class="foot">
-      {#if wantsHint}<div class="hint">Start music from your phone</div>{/if}
-      <div class="tiles" style:--count={waiting.length}>
-        {#each waiting as s (s.id)}
-          <div class="tile" class:is-lead={s.id === 'lms'}>
-            <div class="mark">
-              <SourceMark
-                source={s.id}
-                mark={s.mark}
-                size={bar ? 30 : 38}
-                color={s.id === 'lms' ? 'var(--accent-lms)' : 'var(--ink)'}
-                opacity={s.id === 'lms' ? 1 : 0.8}
-              />
-            </div>
-            <div class="tile__text">
-              <div class="tile__name">{s.name}</div>
-              <div class="tile__status">{s.status}</div>
-            </div>
-          </div>
-        {/each}
-      </div>
+      <!-- The marks the library's footer shows, pulsing straight on the
+           picture (George, 2026-10-18). -->
+      <!-- During a first read Lyrion cannot play yet: the marks are the
+           sources that can, centred (George, 2026-10-18). -->
+      <WaitingServices availability={reading ? { ...availability, lms: false } : availability} bare />
     </div>
   {/if}
 
@@ -140,6 +142,71 @@
 </div>
 
 <style>
+  .reading {
+    position: absolute;
+    left: 50%;
+    top: 52%;
+    transform: translate(-50%, -50%);
+    width: min(860px, calc(100% - 96px));
+    padding: 26px 40px 28px;
+    border-radius: 26px;
+    background: rgba(10, 16, 22, 0.72);
+    border: 1px solid rgba(233, 238, 242, 0.12);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    color: #e9eef2;
+  }
+  .reading__head {
+    font-size: 46px;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+  }
+  .reading__meter {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+  }
+  .reading__bar {
+    flex: 1;
+    height: 16px;
+    border-radius: 999px;
+    background: rgba(233, 238, 242, 0.14);
+    overflow: hidden;
+  }
+  .reading__bar > span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: #9fb4e8;
+  }
+  .reading__bar--busy > span {
+    width: 30% !important;
+    animation: readingBusy 1600ms ease-in-out infinite;
+  }
+  @keyframes readingBusy {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(340%); }
+  }
+  .reading__pct {
+    font-size: 40px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    min-width: 3.4ch;
+    text-align: right;
+  }
+  .reading__line {
+    font-size: 26px;
+    line-height: 1.35;
+    color: rgba(233, 238, 242, 0.88);
+  }
+  .reading__step {
+    font-family: var(--font-mono);
+    font-size: 18px;
+    letter-spacing: 0.04em;
+    color: rgba(233, 238, 242, 0.6);
+  }
   .waithome {
     position: absolute;
     inset: 0;
@@ -274,69 +341,6 @@
     flex-direction: column;
     gap: 16px;
   }
-  .hint {
-    font-size: 19px;
-    color: var(--ink-strong);
-    text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45);
-  }
-  .tiles {
-    display: grid;
-    grid-template-columns: repeat(var(--count), minmax(0, 1fr));
-    gap: 16px;
-  }
-  .tile {
-    height: 132px;
-    box-sizing: border-box;
-    border-radius: var(--r-card);
-    padding: 0 22px;
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    min-width: 0;
-    background: rgba(16, 26, 33, 0.72);
-    border: 1px solid rgba(233, 238, 242, 0.14);
-  }
-  .tile.is-lead {
-    border-color: rgba(126, 214, 188, 0.5);
-  }
-  .mark {
-    width: 72px;
-    height: 72px;
-    flex-shrink: 0;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    background: rgba(233, 238, 242, 0.08);
-  }
-  .tile.is-lead .mark {
-    background: rgba(126, 214, 188, 0.1);
-  }
-  .tile__text {
-    min-width: 0;
-  }
-  .tile__name {
-    font-size: 25px;
-    font-weight: 700;
-    color: var(--ink);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .tile__status {
-    margin-top: 8px;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    letter-spacing: var(--track-label);
-    text-transform: uppercase;
-    color: var(--ink-quiet);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .tile.is-lead .tile__status {
-    color: var(--accent-lms);
-  }
-
   .credit {
     position: absolute;
     right: 56px;
@@ -398,22 +402,6 @@
     top: 50%;
     bottom: auto;
     transform: translateY(-50%);
-  }
-  .waithome--bar .tile {
-    height: 170px;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: center;
-    gap: 12px;
-    padding: 0 18px;
-    border-radius: 20px;
-  }
-  .waithome--bar .mark {
-    width: 56px;
-    height: 56px;
-  }
-  .waithome--bar .tile__name {
-    font-size: 21px;
   }
   .waithome--bar .credit {
     right: 116px;

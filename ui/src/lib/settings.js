@@ -123,11 +123,11 @@ const reach = (url, options, ms) => ask(url, options, ms).catch(() => null);
 
 //: The lists that go looking for longer than an ordinary request: a Wi-Fi
 //: scan, and the network shares' search for servers.
-const LONG_LISTS = new Set(['wifi', 'lyrion-server.shares']);
+const LONG_LISTS = new Set(['wifi', 'lyrion-server.shares', 'lyrion-server.usb_folders']);
 //: The per-item commands that take long: a join (Wi-Fi), a restore (also
 //: `join`, on the backups list), and anything on the shares - a browse, or
 //: a forget that unmounts (30 s allowed).
-const longAction = (key, body) => body?.action === 'join' || key === 'lyrion-server.shares';
+const longAction = (key, body) => body?.action === 'join' || key === 'lyrion-server.shares' || key === 'lyrion-server.usb_folders';
 //: Action rows that are slow: making a backup.
 const LONG_ACTIONS = new Set(['backup']);
 
@@ -158,8 +158,9 @@ export async function listAction(key, body) {
   // `items` and `login` for a list that browses inside an item (ADR-0115's
   // network shares: a server's shares, or the login it wants first).
   // `notice` for a join while the cable is in (ADR-0123 as amended).
+  // `title` for a USB drive's folder open in the sheet (ADR-0115 decision 23).
   return { ok: !!answer.ok, error: answer.error ?? null, items: answer.items ?? null, login: !!answer.login,
-           notice: answer.notice ?? null };
+           notice: answer.notice ?? null, title: answer.title ?? null, crumbs: answer.crumbs ?? null };
 }
 
 /** An `action` row. Nothing called this before `reboot` was wired: `power`

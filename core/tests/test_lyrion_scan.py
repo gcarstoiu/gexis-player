@@ -86,3 +86,23 @@ def test_one_machine_announced_under_two_names_is_one_row_named_by_its_host():
 def test_a_server_with_no_host_name_keeps_its_announced_name():
     browse = "=;wlan0;IPv4;Shelf;_smb._tcp;local;;10.0.0.9;445;"
     assert sc.parse_browse(browse) == [sc.Server("Shelf", "10.0.0.9", "smb")]
+
+
+def test_a_share_folder_is_listed_with_smbclient_and_never_as_commands():
+    """George, 2026-10-18: deeper than a share's top. The path goes inside
+    smbclient's quotes; a `;` or `"` in it is refused, not run."""
+    calls = []
+
+    def run(args, **kw):
+        calls.append(args)
+        return subprocess.CompletedProcess(args, 0, stdout=(
+            "  .                                   D        0  Tue Sep  8 15:19:30 2026\n"
+            "  Blues                               D        0  Thu Jan  2 20:50:14 2025\n"
+            "  cover.jpg                           A    12345  Thu Jan  2 20:50:14 2025\n"), stderr="")
+
+    assert sc.folders("//nas.local/Music/Jazz", run=run) == ["Blues"]
+    assert calls[-1][:3] == ["smbclient", "//nas.local/Music", "-N"]
+    assert calls[-1][-1] == 'cd "Jazz"; ls'
+    for bad in ('//nas.local/Music/a"; rm x', "//nas.local/Music/a;ls", "//nas.local/Music/../x", "nas:/music"):
+        with pytest.raises(ValueError):
+            sc.folders(bad, run=run)

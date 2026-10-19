@@ -1159,3 +1159,29 @@ def test_an_upload_never_replaces_a_different_backup_of_the_same_name(tmp_path):
     assert (share / name).read_bytes() == gzip.compress(b"another backup")
     assert (share / added["name"]).read_bytes() == (made / name).read_bytes()
     assert not part.exists()
+
+
+def test_the_review_lists_what_a_backup_restores_by_section(tmp_path, monkeypatch):
+    """ADR-0131 amended 2026-10-18: `inspect` adds `sections`, every setting
+    and what else the backup carries, a line each, by Settings section."""
+    from gexis_core import plugins
+    from gexis_core.settings import SettingsStore
+
+    monkeypatch.setattr(plugins, "DEFAULT_DIR", tmp_path / "no-plugins")
+    root = tmp_path / "root"
+    db = root / backups.SETTINGS_DB
+    db.parent.mkdir(parents=True)
+    store = SettingsStore(db)
+    store.set("output_device", "DAC")
+    store.set("lms_library", False)
+    (root / "var/lib/go-librespot").mkdir(parents=True)
+    (root / "var/lib/go-librespot/state.json").write_text("{}")
+    archive = tmp_path / "gexis-den-20261018-152106.tgz"
+    with tarfile.open(archive, "w:gz") as tar:
+        tar.add(db, arcname=backups.SETTINGS_DB)
+        tar.add(root / "var/lib/go-librespot/state.json", arcname="var/lib/go-librespot/state.json")
+    seen = backups.inspect(archive, 12)
+    by = {s["label"]: s["items"] for s in seen["sections"]}
+    assert by["Audio"] == ["Output"]
+    assert "Lyrion Client · Library on the screen" in by["Sources"] and "Spotify sign-in" in by["Sources"]
+    assert seen["brings"] == ["Spotify sign-in"]

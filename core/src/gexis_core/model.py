@@ -293,6 +293,9 @@ class PlaybackState:
     #: ADR-0128: the first start after setup, until the downloads it chose
     #: have finished - `phase` and each item's state - or None.
     settling: dict | None = None
+    #: ADR-0149: first use's part 2 - `pending` while a new player is owed it
+    #: (the phone opens on it, the panel shows a code to it), else None.
+    personalise: str | None = None
     #: ADR-0132: a factory reset was confirmed; the device restarts into it.
     resetting: bool = False
 
@@ -341,5 +344,6 @@ class PlaybackState:
             "screen_new": dict(self.screen_new) if self.screen_new else None,
             "screen_check": dict(self.screen_check) if self.screen_check else None,
             "settling": dict(self.settling) if self.settling else None,
+            "personalise": self.personalise,
             "resetting": self.resetting,
         }
