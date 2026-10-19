@@ -84,3 +84,45 @@ def test_it_names_no_one_and_no_network(spec):
     for word in ("sofapi", "shelvespi", "guestpi", "bedroompi", "r2d2", "fritz.box", "qobuz"):
         assert word not in text, word
     assert not re.search(r"192\.168\.|\b10\.\d+\.\d+\.\d+|([0-9a-f]{2}:){5}[0-9a-f]{2}", text.replace("10.42.0.1", ""))
+
+
+class _Explorer:
+    def __init__(self, on):
+        self.on = on
+
+    def value(self, key):
+        return self.on if key == "api_explorer" else None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", ["/api", "/api/", "/api/openapi.json", "/api/swagger-ui/swagger-ui.css"])
+async def test_off_the_api_page_and_its_files_are_not_there(path):
+    from aiohttp.test_utils import TestClient, TestServer
+
+    server = StateServer(StateStore({}), settings=_Explorer(False))
+    async with TestClient(TestServer(server.make_app())) as client:
+        resp = await client.get(path, allow_redirects=False)
+    assert resp.status == 404
+
+
+@pytest.mark.asyncio
+async def test_on_the_page_its_description_and_its_files_are_served(monkeypatch):
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from gexis_core import updates
+
+    monkeypatch.setattr(updates, "installed_release", lambda: "9.9.9")
+    server = StateServer(StateStore({}), settings=_Explorer(True))
+    async with TestClient(TestServer(server.make_app())) as client:
+        bare = await client.get("/api", allow_redirects=False)
+        page = await client.get("/api/")
+        described = await client.get("/api/openapi.json")
+        css = await client.get("/api/swagger-ui/swagger-ui.css")
+        other = await client.get("/api/swagger-ui/README.md")
+        body = await described.json()
+        text = await page.text()
+    assert bare.status == 302 and bare.headers["Location"] == "/api/"
+    assert page.status == 200 and "swagger-ui/swagger-ui-bundle.js" in text
+    assert described.status == 200 and body["info"]["version"] == "9.9.9" and "/state" in body["paths"]
+    assert css.status == 200 and css.headers["Content-Type"].startswith("text/css")
+    assert other.status == 404, "only the page's own files, by name"
