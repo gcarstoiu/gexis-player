@@ -49,6 +49,14 @@ release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
 (excluded in `.git/info/exclude`). `reuse.py` reuses a published file only
 against a local copy, so losing that folder means re-uploading every OS file.
 
+**Phase 14 closed, Phase 15 (`ph-mpd`) started 2026-10-19** (George: *"You
+can make the change"*): DEVELOPMENT.md, the wiki Roadmap, the phases doc and
+the to-do list say so. Its ADR comes first; the open decisions were put to
+George the same day. **Three Phase 14 articles** (13-15: setup in two parts,
+where your music is, a music server's first minutes) are drafts 186, 190 and
+191 in the local WordPress copy for George to read; `import_wp.py` now takes
+article numbers, and `bundle.json` is refreshed for `push_wp.py`.
+
 **The blog** (George's WordPress, tag `sound`): eleven articles in
 `~/projects/gexis-blog/`, pushed as drafts by George (2026-10-15; article 05
 now mentions *Add a backup*, bundle rebuilt 2026-10-17, for George to re-push);
