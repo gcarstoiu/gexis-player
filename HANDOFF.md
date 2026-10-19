@@ -58,8 +58,10 @@ second test, the Lyrion plate smaller and centred (*Step n of 5*, the step
 as its title; approved on renders), ticked shares and USB folders added at
 Finish (they were dropped by *Next* - his shares never reached Lyrion),
 and Material Skin counted in only once Lyrion serves `/material/`.
-ADR-0149 decisions 42-45, ADR-0115 decision 28 amended. sofapi runs core
-and player `+git15`, UI `+git14` since about 11:00. *H@l* is sofapi's own
+Then, from his third test: a new server's folders wait for its add-ons
+(it had read the music during step 3), a first read held to its end, the
+panel plate wider. ADR-0149 decisions 42-45, ADR-0115 decision 28 amended.
+sofapi runs core, UI and player `+git16` since about 11:45. *H@l* is sofapi's own
 Lyrion server, seen while sofapi was `raspberrypi` - not a second machine.
 Owed: George's test, then 1.1.1.
 
