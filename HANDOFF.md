@@ -47,6 +47,12 @@ release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
 (excluded in `.git/info/exclude`). `reuse.py` reuses a published file only
 against a local copy, so losing that folder means re-uploading every OS file.
 
+**The moon at night** (ADR-0153, George 2026-10-19, designs Solid C,
+Duotone A, Neon B from previews): on branch `moon-night` (worktree
+`~/projects/gexis-player-moon`, pushed, not merged). sofapi runs it,
+`1.2.0+git18`, core restarted by hand; waiting for George's look, then into
+`next` for the next release.
+
 **Next: Phase 16, optical through a USB adapter** (`ph-optical`; George has
 an adapter), then **Phase 17, DSI screens** (`ph-dsi`, new 2026-10-19;
 George names his screen when it starts). Both start with an ADR.
@@ -68,7 +74,7 @@ with `PYTHONPATH=core/src` from a worktree, or the venv's installed core
 **Devices.** sofapi (Waveshare 10.1", SMSL USB DAC; a test machine), the bar
 (ShelvesPi, 11.9"), guestpi (IQaudIO Pi-DAC PRO, 13.3"), bedroompi (a
 separate card; off the network on 2026-10-16 evening). sofapi and ShelvesPi
-run previews (sofapi `+git33`, equal to 1.2.0; ShelvesPi's not checked
+run previews (sofapi `1.2.0+git18`, `moon-night`; ShelvesPi's not checked
 since 1.0.5); guestpi and bedroompi are offered Stable (1.2.0 from
 2026-10-19; not checked whether they took it). **Cards flashed now have no passwordless sudo:
 provision test cards with `DEV_SUDO="yes"`** (ADR-0139).

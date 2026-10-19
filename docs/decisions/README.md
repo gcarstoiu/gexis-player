@@ -174,6 +174,7 @@ been written properly. **0098 has no record either.**
 | [0151](0151-mpd-on-the-player.md) | MPD on the player | Parked 2026-10-19: small benefit, real risk (Finding 128); MPD back among the ideas |
 | [0152](0152-a-documented-public-api.md) | A documented public API | Accepted 2026-10-19: OpenAPI file with a drift test; shown on GitHub and the player, behind *API explorer* |
 | [0153](0153-the-moon-at-night.md) | The moon at night | Accepted 2026-10-19: current weather shows the moon in its real phase between sunset and sunrise |
+| [0154](0154-four-more-weather-icon-sets.md) | Four more weather icon sets | Accepted 2026-10-19: Modern, Futuristic, Photographic, Atmospheric join Solid, Duotone, Neon |
 
 ## Cross-cutting rules
 
