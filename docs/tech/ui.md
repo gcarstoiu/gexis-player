@@ -435,6 +435,15 @@ the lit part as an SVG path; the icon mirrors it for a waning moon and again
 when the core sends `south`. One design per icon set: Solid with maria and two
 stars, Duotone with a shadow disc behind, Neon as a cyan line on a faint ring.
 
+**Seven icon sets** (ADR-0047, ADR-0154). Solid, Duotone and Neon are the
+design's DOM shapes in `WeatherIcon.svelte`. Modern, Futuristic, Photographic
+and Atmospheric are SVG strings from `lib/weatherSets.js`, given to
+`WeatherIcon` through `{@html}`, each id made unique to its icon; their motion
+is global CSS under the icon's root, and *Weather icon motion* Static stills
+it as it stills the others. Photographic and Atmospheric light their clouds
+with an SVG lighting filter over fractal noise; Photographic's Sun and Moon
+are NASA photographs (`assets/weather/`, credited in Credits).
+
 ---
 
 ## 7. The phone page

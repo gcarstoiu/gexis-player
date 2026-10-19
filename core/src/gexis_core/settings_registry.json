@@ -1234,7 +1234,11 @@
         "options": [
           "Solid",
           "Duotone",
-          "Neon"
+          "Neon",
+          "Modern",
+          "Futuristic",
+          "Photographic",
+          "Atmospheric"
         ],
         "default": "Solid",
         "onlyWhen": [

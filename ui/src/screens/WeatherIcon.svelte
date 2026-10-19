@@ -28,6 +28,7 @@
 -->
 <script>
   import { litPath, moonLit } from '../lib/moon.js';
+  import { SVG_SETS, drawWeather } from '../lib/weatherSets.js';
 
   // `night`, `phase` and `south` only for the current conditions (ADR-0153):
   // between sunset and sunrise the sun becomes the moon, lit as tonight's is.
@@ -75,6 +76,16 @@
   // Waxing is lit on the right seen from the north; waning, or south of the
   // equator, the other side - both together, the right again.
   const mirrored = $derived((phase >= 0.5) !== south);
+
+  // ADR-0154: Modern, Futuristic, Photographic and Atmospheric are drawn as
+  // SVG by `weatherSets.js`; the ids inside are made unique to this icon.
+  const svgSet = $derived(Object.hasOwn(SVG_SETS, kind));
+  const svgMarkup = $derived.by(() => {
+    if (!svgSet) return '';
+    let n = 0;
+    const ctx = { id: (name) => `${uid}-${name}-${n++}`, phase, left: mirrored, night };
+    return `<svg class="wxs" viewBox="0 0 100 100" aria-hidden="true">${drawWeather(kind, condition, ctx)}</svg>`;
+  });
 </script>
 
 <span
@@ -86,7 +97,9 @@
   role="img"
   aria-label={(moon ? 'night, ' : '') + condition.replace(/-/g, ' ')}
 >
-  {#if moon}
+  {#if svgSet}
+    {@html svgMarkup}
+  {:else if moon}
     <span class="moon">
       <svg viewBox="0 0 100 100" aria-hidden="true">
         <g transform="translate({shift} {shift})">
@@ -121,6 +134,7 @@
     </span>
   {/if}
 
+  {#if !svgSet}
   {#if parts.cloud}
     <span class="cloud">
       <span class="cloud__shadow"></span>
@@ -151,6 +165,7 @@
   {#if parts.bolt}
     <span class="bolt"></span>
   {/if}
+  {/if}
 </span>
 
 <style>
@@ -162,6 +177,39 @@
   .wx--still * {
     animation: none !important;
   }
+
+  /* ADR-0154: the SVG sets' own motion. Their markup comes through {@html},
+     so these are global, under the icon's own root. */
+  .wx--still :global(*) {
+    animation: none !important;
+  }
+  .wx :global(svg.wxs) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+  .wx :global(.wxs-spin) { animation: wxSpin 24s linear infinite; transform-box: fill-box; transform-origin: center; }
+  .wx :global(.wxs-spin-r) { animation: wxSpin 16s linear infinite reverse; transform-box: fill-box; transform-origin: center; }
+  .wx :global(.wxs-turn) { animation: wxSpin 60s linear infinite; transform-box: fill-box; transform-origin: center; }
+  .wx :global(.wxs-drift) { animation: wxDrift 6s ease-in-out infinite; }
+  .wx :global(.wxs-fall) { animation: wxFall 1.2s linear infinite; }
+  .wx :global(.wxs-streak) { animation: wxStreak 1s linear infinite; }
+  .wx :global(.wxs-fall-slow) { animation: wxFallSlow 2.7s linear infinite; }
+  .wx :global(.wxs-pulse) { animation: wxPulse 3.6s ease-in-out infinite; }
+  .wx :global(.wxs-glow) { animation: wxGlow 4s ease-in-out infinite; }
+  .wx :global(.wxs-flash) { animation: wxFlash 3s steps(1) infinite; }
+  .wx :global(.wxs-strike) { animation: wxStrike 3.2s steps(1) infinite; }
+  .wx :global(.wxs-slide) { animation: wxSlide 5s linear infinite; }
+  .wx :global(.wxs-glitch) { animation: wxGlitch 4s steps(1) infinite; }
+  @keyframes wxStreak { 0% { transform: translate(1px, -6px); opacity: 0; } 20% { opacity: 1; } 100% { transform: translate(-3px, 16px); opacity: 0; } }
+  @keyframes wxFallSlow { 0% { transform: translate(0, -4px); opacity: 0; } 25% { opacity: 1; } 100% { transform: translate(3px, 13px); opacity: 0; } }
+  @keyframes wxGlow { 0%, 100% { opacity: 0.75; } 50% { opacity: 1; } }
+  @keyframes wxFlash { 0%, 78%, 86%, 100% { opacity: 0.25; } 80%, 90% { opacity: 1; } }
+  @keyframes wxStrike { 0%, 80%, 84%, 88%, 100% { opacity: 0; } 81%, 86% { opacity: 1; } }
+  @keyframes wxSlide { from { transform: translateX(-12px); } to { transform: translateX(12px); } }
+  @keyframes wxGlitch { 0%, 92%, 100% { transform: none; } 93% { transform: translateX(2px); } 95% { transform: translateX(-2px); } 97% { transform: translateX(1px); } }
 
   /* The design's four animations, verbatim. */
   @keyframes wxSpin {

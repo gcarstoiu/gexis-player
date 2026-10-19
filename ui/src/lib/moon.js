@@ -39,11 +39,13 @@ export function isNight(sun, ms) {
  * its centre, lit on the right (waxing, seen from the north). The caller
  * mirrors it for a waning moon, and again south of the equator.
  */
-export function litPath(phase, r) {
+export function litPath(phase, r, cx = 50, cy = 50, left = false) {
   const k = moonLit(phase);
   const rx = Math.abs(1 - 2 * k) * r;
-  const top = 50 - r, bottom = 50 + r;
+  const top = cy - r, bottom = cy + r;
   // A crescent's terminator bows towards the lit side; a gibbous one away.
-  const sweep = k > 0.5 ? 1 : 0;
-  return `M 50 ${top} A ${r} ${r} 0 0 1 50 ${bottom} A ${rx.toFixed(2)} ${r} 0 0 ${sweep} 50 ${top} Z`;
+  // `left` draws it lit on the left without mirroring what lies under it
+  // (the Photographic set's moon is a photograph, and must not be flipped).
+  const sweep = (k > 0.5) !== left ? 1 : 0;
+  return `M ${cx} ${top} A ${r} ${r} 0 0 ${left ? 0 : 1} ${cx} ${bottom} A ${rx.toFixed(2)} ${r} 0 0 ${sweep} ${cx} ${top} Z`;
 }

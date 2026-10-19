@@ -451,7 +451,7 @@ player into your Plex account).
 | Idle screen: Wallpaper styles, Follow the time of day | With Gexis wallpapers: the chosen styles (Calm, Colourful, Psychedelic), and the hour's pictures (dawn, day, dusk, night). |
 | Idle screen: Seasons, Holidays | *Seasons*, with Gexis wallpapers: the season's pictures join the styles, by hemisphere. *Holidays*, with Gexis wallpapers or online wallpapers: on New Year, and on Christmas and Easter where they are public holidays, only those days' pictures show; Easter follows the Western or Orthodox date by country. |
 | Idle screen: Background brightness, Change the picture every | How dark the picture is behind the text, and how often it changes. |
-| Idle screen: Clock, Clock format, Weather, Forecast, Weather icons | What the idle screen shows over the picture; forecasts come from Open-Meteo. |
+| Idle screen: Clock, Clock format, Weather, Forecast, Weather icons | What the idle screen shows over the picture; forecasts come from Open-Meteo. *Weather icons* draws them in one of seven styles: Solid, Duotone, Neon, Modern (frosted glass), Futuristic (a heads-up display), Photographic (the real Sun and Moon, from NASA photographs) and Atmospheric. |
 | Idle screen: Weather icon motion | *Animated* or *Static*. Animated icons use about half of one of the Pi's four processor cores while the idle screen is up; Static uses almost none. |
 | Visualiser: Timeout, Stop when nothing is playing | When the visualiser takes the screen while music plays, and when it gives it back. |
 | Visualiser: Skin type, Rotate skin per track, Skin | Which skins it uses; tap a skin to preview it, then *Use this skin*. |
