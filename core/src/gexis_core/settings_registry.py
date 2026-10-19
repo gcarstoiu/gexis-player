@@ -1008,7 +1008,10 @@ class Settings:
                     extra = self._option_notes[row["key"]]()
                     if extra:
                         public["optionNotes"] = {**(row.get("optionNotes") or {}), **extra}
-                if row["key"] in self._notes:
+                # A mirror keeps its own note: the switch's changing one (the
+                # server's stage) is said by the heading above it, and
+                # swapping it in moved everything below (2026-10-19).
+                if row["key"] in self._notes and not row.get("mirror"):
                     note = self._notes[row["key"]]()
                     if note:
                         public["note"] = note

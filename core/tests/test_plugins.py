@@ -461,7 +461,8 @@ def test_the_lyrion_server_is_switched_in_the_library_too(tmp_path):
     server = plugins.parse(shipped, built_in=True)
     store = SettingsStore(tmp_path / "s.db")
     settings = Settings(store, registry=Settings.with_plugins(load_registry(), [server], {"lyrion-server": "lms"}),
-                        wired={"lyrion-server.enabled": None})
+                        wired={"lyrion-server.enabled": None},
+                        notes={"lyrion-server.enabled": lambda: "Starting: Lyrion is starting."})
     store.set("lyrion-server.enabled", False)
 
     def published():
@@ -487,4 +488,6 @@ def test_the_lyrion_server_is_switched_in_the_library_too(tmp_path):
     library, original = published()
     assert library[1]["value"] is True and original["value"] is True
     assert library[0]["indicator"] == {"tone": "ok", "text": "Ready"}
+    # The server's stage changes the Plugins row's note, not the mirror's.
+    assert original["note"].startswith("Starting") and library[1]["note"].startswith("Off, Lyrion Server stops")
     assert next(r for r in library if r.get("key") == "lyrion-server.music_folder")["visible"]
