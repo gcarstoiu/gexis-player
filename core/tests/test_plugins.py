@@ -369,7 +369,8 @@ def test_the_lyrion_server_is_in_the_library_and_listed_there_on_the_plugins_pag
     assert [r["label"] for r in sources["rows"] if r["type"] == "group"][0] == "Lyrion Client"
     library = next(g for g in groups if g["id"] == "library")
     keys = [r.get("key") for r in library["rows"] if r["type"] != "group"]
-    assert keys[:3] == ["lyrion-server.library", "lyrion-server.more", "lyrion-server.music_folder"]
+    assert keys[:4] == ["lyrion-server.enabled", "lyrion-server.library", "lyrion-server.more",
+                        "lyrion-server.music_folder"]
     more = next(r for r in library["rows"] if r.get("key") == "lyrion-server.more")
     assert [l["label"].split(" ·")[0] for l in more["links"]] == ["Squeezer", "Lyrion", "LyrPlay"]
     page = next(g for g in groups if g["id"] == "plugins")
@@ -442,3 +443,41 @@ def test_the_version_line_never_repeats_what_the_download_line_says():
     assert replace(p, version="9.1.1", software="Lyrion Music Server 9.1.1").version_line() is None
     assert replace(p, version="0.21.0").version_line() == "Version 0.21.0"
     assert p.version_line() is None
+
+
+def test_the_lyrion_server_is_switched_in_the_library_too(tmp_path):
+    """George, 2026-10-19: "Toggle to turn off the lyrion server in the
+    library". Its heading stays when it is off, with the Plugins page's
+    switch mirrored under it - one key, one value - and its other rows only
+    while it is on."""
+    import json
+    from pathlib import Path
+
+    from gexis_core import plugins
+    from gexis_core.settings_registry import Settings, load_registry
+    from gexis_core.settings import SettingsStore
+
+    shipped = json.loads((Path(__file__).parents[2] / "image/stage-gexis/10-lyrion/files/plugin.json").read_text())
+    server = plugins.parse(shipped, built_in=True)
+    store = SettingsStore(tmp_path / "s.db")
+    settings = Settings(store, registry=Settings.with_plugins(load_registry(), [server]),
+                        wired={"lyrion-server.enabled": None})
+    store.set("lyrion-server.enabled", False)
+
+    def published():
+        groups = settings.to_json()
+        library = next(g for g in groups if g["id"] == "library")["rows"]
+        page = next(g for g in groups if g["id"] == "plugins")["rows"]
+        return library, next(r for r in page if r.get("key") == "lyrion-server.enabled")
+
+    library, original = published()
+    heading, mirror = library[0], library[1]
+    assert heading["type"] == "group" and heading["label"] == "Lyrion Server" and "onlyWhen" not in heading
+    assert mirror["key"] == "lyrion-server.enabled" and mirror["mirror"] and mirror["visible"]
+    assert mirror["value"] is False and original["value"] is False
+    assert not any(r["visible"] for r in library[2:] if r.get("key", "").startswith("lyrion-server."))
+
+    store.set("lyrion-server.enabled", True)
+    library, original = published()
+    assert library[1]["value"] is True and original["value"] is True
+    assert next(r for r in library if r.get("key") == "lyrion-server.music_folder")["visible"]
