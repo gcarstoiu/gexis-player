@@ -391,6 +391,8 @@ MUSIC_FLOOR_S = 60.0
 #: downloaded; asked again after this, if they are still missing.
 LYRION_ADDONS_RESTART_S = 90.0
 LYRION_ADDONS_RETRY_S = 600.0
+#: How long a new server's folders wait for its add-ons (below) at most.
+LYRION_FOLDERS_HOLD_S = 600.0
 LYRION_ADDONS_DONE = Path("/var/lib/gexis/lyrion-addons.done")
 #: Where Lyrion puts an add-on it installed (seen on George's player).
 LYRION_PLUGINS = Path("/var/lib/squeezeboxserver/cache/InstalledPlugins/Plugins")
@@ -1941,6 +1943,9 @@ async def main() -> None:
         stage = dict(lyrion_stage.CURRENT)
         if stage and status.get("lyrion", {}).get("state") == "installed":
             status["lyrion"] = {**status["lyrion"], "after": stage}
+        # ADR-0149 decision 43: the numbered steps the waiting screen shows.
+        if "lyrion" in status:
+            status["lyrion"] = {**status["lyrion"], "steps": settling.lyrion_steps(status["lyrion"])}
         return status
 
     def _publish_components() -> None:
@@ -3364,7 +3369,7 @@ async def main() -> None:
         its folder - and only then is Material made the skin."""
         if LYRION_ADDONS_DONE.exists():
             return
-        have = {name: (LYRION_PLUGINS / name).is_dir() for name in lyrion_addons.WANTED}
+        have = await _lyrion_addons_in()
         # **Material as soon as it is in** (sofapi, 2026-10-19): Radio Now
         # Playing's download failed Lyrion's own check ("digest does not
         # match"), and waiting for all three left the server without its
@@ -3397,6 +3402,27 @@ async def main() -> None:
             logger.info("lyrion: restarting it to install its add-ons")
             await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-lyrion.service")
 
+    async def _material_served() -> bool:
+        """**Material is in once Lyrion serves it** (George, 2026-10-19: the
+        server's page still showed the old design after the step said done).
+        Its folder is there seconds before Lyrion, restarting to load it,
+        answers - 7 s on sofapi; `/material/` is Material's own page, a 404
+        until it is loaded."""
+        try:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
+                async with session.get("http://127.0.0.1:9000/material/") as r:
+                    return r.status == 200
+        except (aiohttp.ClientError, asyncio.TimeoutError):
+            return False
+
+    async def _lyrion_addons_in() -> dict:
+        """Each add-on in its folder - Material only once it is served too."""
+        have = {name: (LYRION_PLUGINS / name).is_dir() for name in lyrion_addons.WANTED}
+        if have["MaterialSkin"] and not lyrion_asked.get("served"):
+            lyrion_asked["served"] = await _material_served()
+        have["MaterialSkin"] = have["MaterialSkin"] and bool(lyrion_asked.get("served"))
+        return have
+
     def _set_lyrion_stage(status) -> None:
         """ADR-0115 decision 28: the stage from what `serverstatus` answered
         (None: no answer), published when it changes."""
@@ -3404,6 +3430,9 @@ async def main() -> None:
                    or (settings.value("lyrion-server.usb") is True and bool(lyrion_usb.all())))
         addons = ({name: True for name in lyrion_addons.WANTED} if LYRION_ADDONS_DONE.exists()
                   else {name: (LYRION_PLUGINS / name).is_dir() for name in lyrion_addons.WANTED})
+        if not LYRION_ADDONS_DONE.exists():
+            # Material only once Lyrion serves it (`_lyrion_addons_in`).
+            addons["MaterialSkin"] = addons["MaterialSkin"] and bool(lyrion_asked.get("served"))
         now_stage = lyrion_stage.stage(status is not None, addons, status, located)
         # **A slow answer is not a new start** (George, 2026-10-19: the
         # checklist went back and forth between steps 2 and 3): once
@@ -3411,6 +3440,12 @@ async def main() -> None:
         # scan starting - keeps the step it is on.
         if status is None and lyrion_stage.CURRENT.get("phase") not in (None, "starting"):
             now_stage = dict(lyrion_stage.CURRENT)
+        # **A first read stays one until it ends** (George, 2026-10-19: the
+        # panel went from the add-ons to the library): Lyrion counts songs
+        # as it finds them, so "no songs yet" ended the first read with its
+        # first song, and the plate with it.
+        if lyrion_stage.CURRENT.get("first") and now_stage["phase"] in ("waiting", "scanning"):
+            now_stage["first"] = True
         if now_stage != lyrion_stage.CURRENT:
             if now_stage["phase"] != lyrion_stage.CURRENT.get("phase"):
                 logger.info("lyrion: %s", now_stage["label"].lower())
@@ -3481,6 +3516,25 @@ async def main() -> None:
                 logger.exception("lyrion: shares")
             if not on:
                 continue
+            # **A new server reads its music after its add-ons** (George,
+            # 2026-10-19: the plate went from the add-ons straight to done):
+            # given its folders at once, it read them while it was still
+            # adding its add-ons - step 3 on the plate - and again after the
+            # restart that loads them. Its folders wait for Material, at most
+            # LYRION_FOLDERS_HOLD_S from the first pass that held them (no
+            # internet, say), so the steps run in their order.
+            held_since = lyrion_asked.setdefault("held_since", time.monotonic())
+            if not (LYRION_ADDONS_DONE.exists() or lyrion_asked.get("served")
+                    or time.monotonic() - held_since > LYRION_FOLDERS_HOLD_S):
+                try:
+                    await _lyrion_addons()
+                except Exception as exc:  # no internet yet, or the server is busy
+                    logger.debug("lyrion: add-ons not checked (%r)", exc)
+                if not (LYRION_ADDONS_DONE.exists() or lyrion_asked.get("served")):
+                    if not lyrion_asked.get("held"):
+                        lyrion_asked["held"] = True
+                        logger.info("lyrion: its folders wait for its add-ons")
+                    continue
             try:
                 # ADR-0115 decisions 20 and 23: the locations switched on.
                 usb_chosen = (lyrion_usb.paths(lyrion_usb.all())
@@ -3757,8 +3811,11 @@ async def main() -> None:
             else:
                 ready_since = None
             state_store.set_settling(view)
-            # Held while the screen is up, not while it is put away.
-            visualiser_held["settling"] = view is not None and not view["hidden"]
+            # Held while the screen is up, not while it is put away - and
+            # while part 2 is owed: the skins now land during it (ADR-0149
+            # decision 42), under the panel's Make it yours.
+            visualiser_held["settling"] = (view is not None and not view["hidden"] and view["modal"]) \
+                or state_store.state.personalise == personalise.PENDING
             if not visualiser_held["settling"] and visualiser_held["restart"]:
                 logger.info("peppy: the settling screen is gone; restarting the visualiser held for it")
                 await _restart_visualiser()

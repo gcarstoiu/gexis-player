@@ -582,8 +582,9 @@ only that folder.
 **Why does the player's own Lyrion server take a few minutes before it reads my music?**
 After its download, Lyrion starts, fetches its add-ons (Material Skin among
 them) and restarts once to load them: about three minutes on a Pi 4 before
-it begins reading. Getting ready, and the *Library* row in *Settings →
-Library*, say which step it is on, then how far it has read.
+it begins reading. Getting ready on the phone, the player's waiting screen
+and the *Library* row in *Settings → Library* say which step it is on, then
+how far it has read.
 
 **Which apps control the player's Lyrion server?**
 *Settings → Library → More for your library* links to three, on a phone:
@@ -593,8 +594,9 @@ about the library is set.
 
 **The panel says "Lyrion is reading your music" instead of showing my library.**
 That is a new player's first read: Lyrion shows a library only once it has
-read it all, so until then the panel keeps the waiting screen and says how
-far it is. Spotify, Bluetooth and the other sources play meanwhile. Later
+read it all, so until then the panel keeps the waiting screen and says which
+of Lyrion's five steps it is on - its download, start, add-ons, the read with
+how far it has got, ready. Spotify, Bluetooth and the other sources play meanwhile. Later
 scans keep the library you have on screen while they run.
 
 **How long does the first scan take?**

@@ -340,6 +340,68 @@ it as it should be"*)
     field gets an eye on its right - the Wi-Fi step and the share sign-ins -
     as Settings' password fields do.
 
+**After George's test of 1.1.0 on sofapi (2026-10-19)**
+42. **The visualiser's skins download at the visualiser step** (George:
+    *"Download the visualiser skins during the setup flow similar to
+    plexamp"*, so it is clear that setup goes on while they download; asked
+    when, *"At the visualiser step"*). **The switch starts off, and turning
+    it on is the answer that starts the download** (amended the same day,
+    George: *"Skins should not download until a choice is made by the user.
+    If toggle is set by default to enable then the user is seeing something
+    happening without him actually taking any action"*; the first build
+    started them as the step showed with the design's default, on). Turned
+    on, the step switches `visualiser_skins` on once - the one write besides
+    decision 2's three - and shows the download's stage under the switch
+    with *The download carries on while you continue*. Turned off again, the
+    download is not stopped; Finish removes the pack. Finish waits only for what is
+    not in yet, so on most players only Lyrion is left for Getting ready. A
+    No at Finish removes the pack, as switching it off in Settings does; put
+    off with *Do it later* after the step, the pack stays with the
+    visualiser on. The visualiser's restart for a new pack is held while part
+    2 is owed, as it is under the settling screen, so it does not open over
+    *Make it yours*.
+43. **The panel follows Lyrion through its steps, on the waiting screen's
+    plate** (George: the plate *"was showing something getting ready and
+    then the next minute the library was there in full"*; asked how far,
+    *"Through the read"*; then, the first build having put them in the
+    settling dialog, *"The steps for lyrion in the panel should be in the
+    plate not the modal. Make sure this works in the bars too"*). The
+    waiting screen's *Lyrion is getting ready* / *is reading your music*
+    (ADR-0115 decision 29) follows the phone's five steps - the download,
+    its start, its add-ons, reading the music, ready. **As George approved
+    it on renders** (*"Can we make the plate smaller so that it can be
+    centered on the screen? ... just say something like step 1 of 7. Also
+    in the title that is the most visible we should add the description of
+    the current step"*; then *"Design looks fine"*): a smaller plate,
+    centred, with *Lyrion · Step 3 of 5* above, the current step as its
+    title (*Downloading Lyrion*, *Starting Lyrion*, *Adding Lyrion's
+    add-ons*, *Reading your music*), the step's bar and Lyrion's own detail
+    under it; on a bar the plate and smaller source marks are centred
+    together beside the clock. The first build listed all five steps on a
+    plate beside the clock. On a panel it is then made wider and set a
+    little lower (George: *"make the plate wider ... and the clock doesn't
+    feel squeezed in on the left"*), so its lines do not wrap and it keeps
+    clear of the date. **A first read stays one until it ends**: Lyrion
+    counts songs as it finds them, and "no songs yet" had ended the plate
+    with the first song found.
+    The core gives the Lyrion component its `steps` (`settling.lyrion_steps`).
+    The settling dialog is for the other downloads: the record still marks
+    the Lyrion server `follow`, so decision 37's restart waits for the
+    downloads only, never for the read, and the dialog (`modal`) shows only
+    while something other than Lyrion is in it, or Lyrion's download failed.
+44. **The panel draws nothing until the core's first state is in** (George:
+    *"Before the make it yours screen on panel is shown there is a blink of a
+    second where the player is shown"*). Decision 35 put *Make it yours*
+    first, but the panel learns that it is a panel (`/surface`) before it
+    learns that part 2 is owed (the state socket), and drew its own screens
+    in between.
+45. **What is ticked on *Where is your music?* is added at Finish** (George:
+    *"I selected network shares but nothing is there in lyrion"*): ticked
+    USB folders and shares wait for the *Add* button under their list, and
+    leaving the step by *Next* dropped them. Finish adds whatever is still
+    ticked before it writes the answers, and stops with the reason if one
+    cannot be added.
+
 **Settled by George afterwards (2026-10-18)**
 - **Personalise** is in ADR-0022's inventory (*"Yes it goes in the list"*).
 - Part 1 is tested by George on sofapi after *Reset to factory settings*

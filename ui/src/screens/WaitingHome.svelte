@@ -34,6 +34,25 @@
   // across the room).
   let { availability = {}, onsettings, settings = {}, reading = null } = $props();
   const readingShare = $derived(reading?.share ?? null);
+  //: ADR-0149 decision 43 as amended (George, 2026-10-19: Lyrion's steps
+  //: "in the plate not the modal", on the bars too; then a smaller plate,
+  //: centred - "just say something like step 1 of 7", and the current step
+  //: in the title, "the most visible"; then wider on a panel, so it is
+  //: lower and the clock is not squeezed).
+  const TITLES = ['Downloading Lyrion', 'Starting Lyrion', "Adding Lyrion's add-ons", 'Reading your music', 'Lyrion is ready'];
+  const stepAt = $derived.by(() => {
+    const steps = reading?.steps;
+    if (!steps?.length) return null;
+    const n = steps.findIndex(([, at]) => at === 'now');
+    return { n: n < 0 ? steps.length - 1 : n, of: steps.length };
+  });
+  //: Under the bar, what this step is doing in Lyrion's own words.
+  const detail = $derived.by(() => {
+    if (!reading) return '';
+    if (reading.phase === 'scanning') return reading.line.split('. Music shows up')[0];
+    if (stepAt?.n === 2) return reading.steps[2][0].replace(/^Add /, '');
+    return reading.phase === 'downloading' ? '' : reading.line || '';
+  });
 
   const press = pressing();
   let picture = $state(null);
@@ -84,7 +103,7 @@
   });
 </script>
 
-<div class="waithome" class:waithome--bar={bar} class:waithome--plain={!shown}>
+<div class="waithome" class:waithome--bar={bar} class:waithome--plain={!shown} class:waithome--reading={!!reading}>
   <Backdrop {settings} screen="home" bind:picture bind:shown />
   <div class="veil"></div>
 
@@ -111,15 +130,16 @@
 
   {#if reading}
     <div class="reading">
-      <div class="reading__head">{reading.phase === 'scanning' ? 'Lyrion is reading your music' : 'Lyrion is getting ready'}</div>
+      <div class="reading__kicker">{stepAt ? `Lyrion · Step ${stepAt.n + 1} of ${stepAt.of}` : 'Lyrion'}</div>
+      <div class="reading__head">{stepAt ? TITLES[stepAt.n] : reading.phase === 'scanning' ? 'Reading your music' : 'Lyrion is getting ready'}</div>
       <div class="reading__meter">
         <span class="reading__bar" class:reading__bar--busy={readingShare == null}>
           <span style:width={`${Math.round((readingShare ?? 0) * 100)}%`}></span>
         </span>
         {#if readingShare != null}<span class="reading__pct">{Math.round(readingShare * 100)} %</span>{/if}
       </div>
-      <div class="reading__line">Your library appears here once Lyrion has read it all. The other sources play meanwhile.</div>
-      <div class="reading__step">{reading.phase === 'scanning' ? reading.line.split('. Music shows up')[0] : reading.label}</div>
+      {#if detail}<div class="reading__step">{detail}</div>{/if}
+      {#if !bar}<div class="reading__line">Your library appears here once Lyrion has read it all. The other sources play meanwhile.</div>{/if}
     </div>
   {/if}
 
@@ -145,10 +165,10 @@
   .reading {
     position: absolute;
     left: 50%;
-    top: 52%;
+    top: 54%;
     transform: translate(-50%, -50%);
-    width: min(860px, calc(100% - 96px));
-    padding: 26px 40px 28px;
+    width: min(940px, calc(100% - 96px));
+    padding: 22px 32px 24px;
     border-radius: 26px;
     background: rgba(10, 16, 22, 0.72);
     border: 1px solid rgba(233, 238, 242, 0.12);
@@ -157,8 +177,18 @@
     gap: 14px;
     color: #e9eef2;
   }
+  .reading__kicker {
+    font-family: var(--font-mono);
+    font-size: 15px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #9fb4e8;
+  }
   .reading__head {
-    font-size: 46px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 40px;
     font-weight: 800;
     line-height: 1.1;
     letter-spacing: -0.01em;
@@ -197,7 +227,7 @@
     text-align: right;
   }
   .reading__line {
-    font-size: 26px;
+    font-size: 20px;
     line-height: 1.35;
     color: rgba(233, 238, 242, 0.88);
   }
@@ -402,6 +432,46 @@
     top: 50%;
     bottom: auto;
     transform: translateY(-50%);
+  }
+  /* While Lyrion works, its plate takes the tiles' place beside the clock and
+     the marks go under it: the steps one row, in short. */
+  /* The plate and the marks under it centred together in the bar's height. */
+  .waithome--bar .reading {
+    left: 410px;
+    right: 116px;
+    top: max(10px, calc(50% - 134px));
+    width: auto;
+    transform: none;
+    padding: 12px 22px 14px;
+    gap: 7px;
+    border-radius: 18px;
+  }
+  .waithome--bar .reading__head {
+    font-size: 28px;
+  }
+  .waithome--bar .reading__kicker {
+    font-size: 12px;
+  }
+  .waithome--bar .reading__meter {
+    gap: 14px;
+  }
+  .waithome--bar .reading__bar {
+    height: 10px;
+  }
+  .waithome--bar .reading__pct {
+    font-size: 22px;
+  }
+  .waithome--bar .reading__step {
+    font-size: 14px;
+  }
+  .waithome--bar.waithome--reading .foot {
+    top: calc(max(10px, calc(50% - 134px)) + 158px);
+    bottom: auto;
+    transform: scale(0.72);
+    transform-origin: 50% 0;
+  }
+  .waithome--bar.waithome--reading .credit {
+    display: none;
   }
   .waithome--bar .credit {
     right: 116px;

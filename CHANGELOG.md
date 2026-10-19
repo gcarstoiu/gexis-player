@@ -6,6 +6,25 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.1.1 — 19 October 2026
+
+### New
+
+- In first use, the visualiser starts off. Switching it on starts the download of its skins straight away, and the download carries on while the rest is answered.
+- While a new player's Lyrion server gets ready, the waiting screen shows the step it is on, Step 3 of 5 for example, from its download to reading the music, with its progress. This works on standard screens and on bars, and stays until the first read of the music has finished.
+
+### Fixed
+
+- Network shares and USB folders ticked in first use reach the Lyrion server even when the step is left without pressing its Add button.
+- The Lyrion server reads the music once, after its add-ons are in, instead of during their install and again afterwards.
+- The Lyrion server's own page shows the Material design as soon as its add-ons step is done.
+- The player's screen no longer shows the library for a moment before Make it yours.
+- In Settings → Library, the links to the Lyrion apps no longer squeeze the tile on a wide screen.
+
+### Good to know
+
+- After first use, the dialog on the player's screen lists only the downloads still running. The Lyrion server's steps are on the waiting screen.
+
 ## 1.1.0 — 19 October 2026
 
 ### New

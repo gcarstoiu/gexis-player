@@ -4375,13 +4375,19 @@
   .row--add {
     border-style: dashed;
   }
-  /* ADR-0150: a row's links, as small buttons under its note. */
+  /* ADR-0150: a row's links, as small buttons under its note - on a line of
+     their own at every width, as the shares are (George, 2026-10-19: on a
+     laptop they sat beside the note, squeezing both). */
+  .row__body:has(> .links) {
+    flex-wrap: wrap;
+  }
   .links {
+    order: 10;
+    flex-basis: 100%;
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     margin-top: 10px;
-    width: 100%;
   }
   .links__one {
     padding: 8px 12px;
