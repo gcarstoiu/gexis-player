@@ -2059,7 +2059,7 @@ registry advertises.
 > unit), `docs/PLUGIN-CONTRACT.md` at version 1, and Findings 075-080.
 
 **Themes left this phase on 2026-09-25** (George): *"Themes to be cut out and
-have its own phase at the end of the current list."* They are **Phase 18** (`ph-themes`), and
+have its own phase at the end of the current list."* They are **Phase 20** (`ph-themes`), and
 he restated it on the day the phase closed: *"I stated before that themes are
 out and have their own phase at the end of the list."*
 
@@ -2179,7 +2179,7 @@ the exercise.
    extends to it, whether it ships in the image or installs on demand, and
    what it costs in memory and CPU on a Pi 4 that is already frame-limited.
    None of that is settled by adding it to this list.
-4. ~~Theme engine.~~ **Moved to Phase 18** (`ph-themes`; numbered 14 until 2026-10-13, 16 until 2026-10-14, 17 until 2026-10-15), 2026-09-25.
+4. ~~Theme engine.~~ **Moved to Phase 20** (`ph-themes`; numbered 14 until 2026-10-13, 16 until 2026-10-14, 17 until 2026-10-15, 18 until 2026-10-19), 2026-09-25.
 
 ### What closing this means, and what it deliberately does not
 
@@ -2369,7 +2369,7 @@ the ALSA default.
 
 ### Phase 11a — The library answers for itself (moved)
 
-Now **Phase 20** (`ph-library`), with the open phases after the release.
+Now **Phase 21** (`ph-library`), with the open phases after the release.
 
 ### Phase 12 — Plugins that fetch their software on the device
 
@@ -2858,7 +2858,7 @@ per file on Pis other than 4 GB, and temperatures with a case (HARDWARE.md).
 
 ### Phase 13f — Lyrion's own menus, plugins included
 
-**Closed 2026-10-12 for the release; George's look moved to Phase 21** (`ph-lyrion-menus`)
+**Closed 2026-10-12 for the release; George's look moved to Phase 22** (`ph-lyrion-menus`)
 (George: *"create a separate phase for this at the end of the current phase
 list"*). It ships as built, behind *Extended navigation* (ADR-0118); the hidden
 library's hour was measured (Finding 118).
@@ -2980,9 +2980,76 @@ change (*internal*).
 5. Swagger UI's files ship with the player and are named in Credits with
    their licence.
 
-### Phase 16 — Room correction with a USB microphone
+### Phase 16 — A sound bar on optical, through a USB adapter
 
-**ID:** `ph-room-correction` · numbered 16 on 2026-10-15 (15 from 2026-10-14).
+**ID:** `ph-optical` · numbered 16 on 2026-10-19 (19 from 2026-10-15, 18 from 2026-10-14, 17 from 2026-10-13; was 14a).
+
+**Added 2026-10-11** (George: *"Add it as a phase after themes"*); **moved
+up to follow the API on 2026-10-19** (George: *"Next topic will be to support
+usb to optical as I just got my hands on an adapter"*). A
+class-compliant USB-to-TOSLINK adapter is a USB sound card: the player already
+lists it under *Output* as *Detected* (ADR-0117). What it lacks is a way to
+keep within what the sound bar takes: the player sends each track at its own
+rate, a 96 or 192 kHz file goes out at that rate, and many sound bars take only
+44.1 and 48 kHz over optical - silence, with the player believing all is well.
+
+**An ADR before anything is built.** It must settle:
+- **A maximum sample rate per output** (48 or 96 kHz, say): above it the
+  player converts down, so those tracks are no longer bit-perfect; 44.1 kHz
+  stays untouched. A setting, proposed for ADR-0022's inventory first.
+- **Volume**: Fixed (the sound bar's remote) or Software (the phone's
+  slider); an adapter without a volume control offers only those.
+
+**Acceptance (draft):**
+
+1. A USB-to-optical adapter plays to a sound bar over TOSLINK, chosen under
+   *Output*, on hardware George has to hand.
+2. A 24/96 and a 24/192 file play on a sound bar that takes only 48 kHz,
+   converted, with the maximum set.
+3. Tracks at or under the maximum stay bit-perfect, measured as Findings
+   002 and 003 measured the DAC.
+
+### Phase 17 — DSI screens
+
+**ID:** `ph-dsi` · added 2026-10-19.
+
+**Added 2026-10-19** (George: *"And then after this it will be dsi display
+support, fit similar reasons"* - as with the optical adapter, a screen to
+hand to test on). The player supports HDMI screens only today
+(`docs/HARDWARE.md`: *DSI and DPI screens: not supported*). A DSI screen
+plugs into the Pi's ribbon connector and leaves both HDMI ports free, for a
+receiver, a sound bar or a TV.
+
+**An ADR before anything is built.** It must settle:
+- **Which screens**: the one George has first; the Raspberry Pi Touch
+  Display (800 x 480) and Touch Display 2 (720 x 1280, portrait) as
+  candidates. A DSI screen has no EDID: how the player knows which one is
+  attached (the firmware's own detection or a device-tree overlay) without
+  anyone editing the card.
+- **Orientation and size**: a panel that is portrait natively, turned to
+  landscape; which of the UI's layouts (standard, bars) each size takes.
+- **Touch**: the screen's own touch controller, following the rotation.
+- **Brightness and standby**: a DSI panel's backlight can be set by the
+  player, unlike most HDMI screens - whether display standby and a
+  brightness setting use it (settings proposed for ADR-0022's inventory
+  first).
+- **Setup and Settings**: how *Screen* in setup and *Settings → Display*
+  list a DSI screen beside the HDMI ports (ADR-0109, ADR-0141, ADR-0147),
+  and which wins with an HDMI screen attached too.
+
+**Acceptance (draft):**
+
+1. The DSI screen George has shows the player and takes touch on a card
+   flashed from the image, with nothing edited by hand.
+2. With it attached, HDMI carries the sound to a receiver or sound bar, and
+   *Settings → Display* names both.
+3. Display standby turns its backlight off, and a touch or playback turns it
+   back on.
+4. `docs/HARDWARE.md` lists it as tested, saying what was and was not checked.
+
+### Phase 18 — Room correction with a USB microphone
+
+**ID:** `ph-room-correction` · numbered 18 on 2026-10-19 (16 from 2026-10-15, 15 from 2026-10-14).
 
 **Added 2026-10-14** (George: *"let's add another phase about room
 correction using usb microphone after phase 14"*). The player measures the
@@ -3029,9 +3096,9 @@ Pi, and the microphones (miniDSP UMIK-1 first).
 4. Every source plays through the correction with no audible gap or
    dropout, and the visualiser keeps working.
 
-### Phase 17 — The player in Home Assistant
+### Phase 19 — The player in Home Assistant
 
-**ID:** `ph-home-assistant` · numbered 17 on 2026-10-15 (16 from 2026-10-14, 15 from 2026-10-13; was 13g).
+**ID:** `ph-home-assistant` · numbered 19 on 2026-10-19 (17 from 2026-10-15, 16 from 2026-10-14, 15 from 2026-10-13; was 13g).
 
 **Added 2026-10-11** (George: *"Let's add the home assistant with the player
 as a plugin as a separate phase before themes"*, after choosing the player
@@ -3059,9 +3126,9 @@ and the screen's standby (ADR-0135).
 3. Nothing it does disturbs playback, measured as Phase 13e measured the
    Lyrion Server.
 
-### Phase 18 — Themes
+### Phase 20 — Themes
 
-**ID:** `ph-themes` · numbered 18 on 2026-10-15 (17 from 2026-10-14, 16 from 2026-10-13; was 14).
+**ID:** `ph-themes` · numbered 20 on 2026-10-19 (18 from 2026-10-15, 17 from 2026-10-14, 16 from 2026-10-13; was 14).
 
 **Cut out of Phase 10 on 2026-09-25** (George): *"Themes to be cut out and have
 its own phase at the end of the current list."* It was that phase's criterion
@@ -3090,36 +3157,9 @@ that is settled.
 4. **The visualiser is not themed by this.** PeppyMeter skins are ADR-0051's
    separate corpus with their own picker, and share no tokens with the panel.
 
-### Phase 19 — A sound bar on optical, through a USB adapter
+### Phase 21 — The library answers for itself
 
-**ID:** `ph-optical` · numbered 19 on 2026-10-15 (18 from 2026-10-14, 17 from 2026-10-13; was 14a).
-
-**Added 2026-10-11** (George: *"Add it as a phase after themes"*). A
-class-compliant USB-to-TOSLINK adapter is a USB sound card: the player already
-lists it under *Output* as *Detected* (ADR-0117). What it lacks is a way to
-keep within what the sound bar takes: the player sends each track at its own
-rate, a 96 or 192 kHz file goes out at that rate, and many sound bars take only
-44.1 and 48 kHz over optical - silence, with the player believing all is well.
-
-**An ADR before anything is built.** It must settle:
-- **A maximum sample rate per output** (48 or 96 kHz, say): above it the
-  player converts down, so those tracks are no longer bit-perfect; 44.1 kHz
-  stays untouched. A setting, proposed for ADR-0022's inventory first.
-- **Volume**: Fixed (the sound bar's remote) or Software (the phone's
-  slider); an adapter without a volume control offers only those.
-
-**Acceptance (draft):**
-
-1. A USB-to-optical adapter plays to a sound bar over TOSLINK, chosen under
-   *Output*, on hardware George has to hand.
-2. A 24/96 and a 24/192 file play on a sound bar that takes only 48 kHz,
-   converted, with the maximum set.
-3. Tracks at or under the maximum stay bit-perfect, measured as Findings
-   002 and 003 measured the DAC.
-
-### Phase 20 — The library answers for itself
-
-**ID:** `ph-library` · numbered 20 on 2026-10-15 (19 from 2026-10-14, 18 from 2026-10-13; was 11a).
+**ID:** `ph-library` · numbered 21 on 2026-10-19 (20 from 2026-10-15, 19 from 2026-10-14, 18 from 2026-10-13; was 11a).
 
 **Added 2026-09-25 (George):** *"Let's introduce another phase … which should tackle the question of how we can we leverage the plexamp/Plex
 server metadata that is available. Anything that can reduce the dependency on
@@ -3198,9 +3238,9 @@ consumes. **Popular tracks do remain ListenBrainz's**, 404 on that server.
 its own catalogue groupings (*Singles & EPs*, *Live Albums*, *Compilations*).
 All are there; none is asked for by anything today.
 
-### Phase 21 — Lyrion's own menus: the look
+### Phase 22 — Lyrion's own menus: the look
 
-**ID:** `ph-lyrion-menus` · numbered 21 on 2026-10-15 (20 from 2026-10-14, 19 from 2026-10-13; was 16).
+**ID:** `ph-lyrion-menus` · numbered 22 on 2026-10-19 (21 from 2026-10-15, 20 from 2026-10-14, 19 from 2026-10-13; was 16).
 
 **Added 2026-10-12** (George, taking it out of the first public release:
 *"create a separate phase for this at the end of the current phase list"*).
