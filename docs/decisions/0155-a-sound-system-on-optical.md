@@ -1,7 +1,8 @@
 # ADR-0155 — A DAC, receiver or sound bar on optical, through a USB adapter
 
-**Status:** **Proposed** — 2026-10-20, for Phase 16 (`ph-optical`), from
-Finding 130. Open with George: decisions 2, 4 and 5.
+**Status:** **Accepted** — 2026-10-20, George, for Phase 16 (`ph-optical`),
+from Finding 130: decision 2 (b), *"1b"*; decision 4 not built, *"Not yet.
+We can check later"*; decision 5 yes, *"Yes"*.
 
 ## Context
 
@@ -30,23 +31,22 @@ the bar would stay silent. Not seen yet - the SMSL takes every rate.
    only an 88.2 or 176.4 kHz track on a card without them is converted, and
    plays instead of staying silent. Plexamp already does this for itself.
    It needs no setting and changes nothing on the DACs that take every rate.
-2. **Converted to what** - *open with George*:
+2. **Converted to what** - **(b), George, 2026-10-20**:
    - **(a) 44.1 kHz** for both: Squeezelite's default with `E` (the same
      family, an exact 2:1 or 4:1);
    - **(b) the next rate up**, 96 or 192 kHz (its `X` flag), as Plexamp did.
-   Neither is measured here for sound; both are inaudible changes in
-   published listening tests at these rates. Proposed: **(b)**, so the two
-   sources treat a file alike.
+   Neither is measured here for sound. Chosen: **(b)**, so the two sources
+   treat a file alike. Squeezelite's `X` flag converts to the card's highest
+   rate (192 kHz on this adapter), not to the next one up; what the SMSL
+   shows for 88.2 and 176.4 kHz is checked on sofapi before it ships.
 3. **The adapter's volume: Fixed by default** when it is chosen, since optical
    feeds a device with its own volume (the SMSL here); Software stays
    available. Hardware is greyed, as on any card without a control.
 4. **A maximum rate per output** for a receiver that takes less than the card
-   offers (a sound bar at 48 kHz) - *open with George*: a setting, proposed
-   for ADR-0022's inventory, shown only for USB outputs; **or** not built
-   until a sound bar shows the need. Proposed: **not built yet** - nothing at
-   hand needs it, and the record says so.
+   offers (a sound bar at 48 kHz): **not built yet** (George, 2026-10-20) -
+   nothing at hand needs it; to be checked when a sound bar is tried.
 5. **The *Tested* mark** for this adapter (USB ID `0bda:4e27`) in *Output*,
-   as the HiFiBerry has - *open with George*. Proposed: **yes**, with
+   as the HiFiBerry has: **yes** (George, 2026-10-20), with
    `docs/HARDWARE.md` listing it as tested into a DAC, not into a sound bar.
 6. **The adapter's second device** (48 kHz only, likely encoded surround) is
    not used: the player sends stereo PCM.
