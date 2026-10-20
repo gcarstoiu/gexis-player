@@ -65,7 +65,11 @@ idle fix). Branches `idle-rearm`, `standby-power` (superseded) and
 at 500x300 after a reboot was Chromium restoring a stored window size at the
 new scale; the kiosk now forgets it at every start (three restarts checked,
 full-screen each). Both in `next` (branch `kiosk-placement`). sofapi runs
-`1.3.0+git16`.
+`1.3.0+git16`. **Open:** a third screen on sofapi (EDID DEL / "TLD1280",
+1024x600, no touch seen; model owed by George) came up at 800x480 on the
+first start after the boot that switched to it (Chromium stored 1004x580 in a
+1024x600 work area: not full-screen), then full-screen on two restarts in a
+row. A first start after a screen change may still miss full-screen.
 
 **Open:** Squeezelite joins whichever Lyrion server answers first after a
 restart (Finding 130 point 6); George's look at the moon before sunrise. sofapi
