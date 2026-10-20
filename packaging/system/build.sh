@@ -234,7 +234,7 @@ Package: gexis-system
 Version: $VERSION
 Architecture: all
 Maintainer: Gexis Player <noreply@github.com>
-Depends: gexis-core, gexis-peppy-engines, gexis-peppyalsa
+Depends: gexis-core, gexis-peppy-engines, gexis-peppyalsa, wlopm
 Section: sound
 Priority: optional
 Description: Gexis Player's system files

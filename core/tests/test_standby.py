@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
+
 from aiohttp.test_utils import TestClient, TestServer
 
 from gexis_core import standby as sb
@@ -322,3 +324,77 @@ def test_standby_turns_off_the_port_the_screen_is_on(tmp_path, monkeypatch):
     assert sb.output_command(False, {}, 1000, sb.seen_connector())[-2:] == ["HDMI-A-2", "--off"]
     monkeypatch.setattr(screen_detect, "seen", lambda *a, **k: screen_detect.Seen())
     assert sb.seen_connector() == "HDMI-A-1"
+
+
+# ── ADR-0135 as amended 2026-10-20: power down, keep the output; the real
+# screen at start ──────────────────────────────────────────────────────────
+
+
+def test_with_wlopm_the_display_is_powered_down_and_its_output_kept():
+    """The touchscreen is tied to the output (ADR-0109): switched off, a bar's
+    taps had nowhere to land (ShelvesPi, 2026-10-20). Powered down, they do."""
+    off = sb.output_command(False, {"GEXIS_SCREEN_CONNECTOR": "HDMI-A-1", "GEXIS_SCREEN_TRANSFORM": "90"}, 1000, power=True)
+    assert off[:4] == ["runuser", "-u", "pi", "--"] and off[-3:] == ["wlopm", "--off", "HDMI-A-1"]
+    on = sb.output_command(True, {"GEXIS_SCREEN_TRANSFORM": "90"}, 1000, power=True)
+    assert on[-3:] == ["wlopm", "--on", "HDMI-A-1"], "the output was never turned off, so nothing to re-turn"
+    assert "wlr-randr" not in on
+
+
+def test_lit_reads_either_tool():
+    assert sb.lit(True, "on") is True
+    assert sb.lit(False, None) is False, "switched off (the old standby, or before the update)"
+    assert sb.lit(True, "off") is False, "powered down"
+    assert sb.lit(None, None) is None
+    assert sb.lit(None, "on") is True and sb.lit(True, None) is True
+
+
+def _standby(calls, published):
+    async def switch(on):
+        calls.append(on)
+        return True
+    return sb.Standby(switch=switch, publish=lambda off, reason: published.append((off, reason)))
+
+
+@pytest.mark.asyncio
+async def test_dark_at_start_outside_a_standby_time_is_woken():
+    """The ShelvesPi case: asked off at 22:50, the update restarted the core at
+    03:45, and the screen stayed dark all day with the core calling it on."""
+    calls, published = [], []
+    s = _standby(calls, published)
+    await s.reconcile(False, inside_standby_time=False)
+    assert calls == [True] and not s.off and not s.may_be_dark
+
+
+@pytest.mark.asyncio
+async def test_dark_at_start_inside_a_standby_time_is_the_schedules_standby():
+    """Kept dark, but said: the phone offers to wake it, a touch wakes it, and
+    the schedule wakes it when the time ends."""
+    calls, published = [], []
+    s = _standby(calls, published)
+    await s.reconcile(False, inside_standby_time=True)
+    assert calls == [] and s.off and s.reason == "schedule" and published == [(True, "schedule")]
+    await s.wake("touch")
+    assert calls == [True] and not s.off and published[-1] == (False, None)
+
+
+@pytest.mark.asyncio
+async def test_lit_at_start_is_known_on_and_unknown_changes_nothing():
+    calls, published = [], []
+    s = _standby(calls, published)
+    await s.reconcile(True, inside_standby_time=True)
+    assert calls == [] and not s.off and not s.may_be_dark
+    s2 = _standby(calls, published)
+    await s2.reconcile(None, inside_standby_time=False)
+    assert calls == [] and s2.may_be_dark, "unread: a touch still switches it on, as before"
+
+
+def test_inside_now_follows_the_schedule_and_headless():
+    import datetime as dt
+    vals = {"standby_schedule": True, "headless": False,
+            "standby_times": [{"from": "22:30", "until": "07:00", "days": list(sb.DAYS)}]}
+    s = sb.Schedule(sb.Standby(), vals.get, lambda: False, now=lambda: dt.datetime(2026, 10, 20, 23, 0))
+    assert s.inside_now()
+    vals["headless"] = True
+    assert not s.inside_now()
+    vals["headless"], vals["standby_schedule"] = False, False
+    assert not s.inside_now()

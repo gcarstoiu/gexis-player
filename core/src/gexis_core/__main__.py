@@ -3184,6 +3184,13 @@ async def main() -> None:
 
     standby = Standby(publish=_standby_published)
     # ADR-0135: the owner's standby times. Their rows are read each tick.
+    async def _reconcile_standby() -> None:
+        from .standby import read_output
+        try:
+            await standby.reconcile(await read_output(), standby_schedule.inside_now())
+        except Exception:  # noqa: BLE001 - a screen check is no reason to stop
+            logger.exception("standby: could not read the screen at start")
+
     standby_schedule = Schedule(
         standby, lambda key: settings.value(key),
         lambda: state_store.state.metadata.transport == "playing",
@@ -4529,6 +4536,9 @@ async def main() -> None:
         setup_network.watch(),
         # ADR-0135: the screen off at the owner's standby times.
         standby_schedule.run(),
+        # ADR-0135 as amended 2026-10-20: the screen as it really is at start
+        # - a standby outlives a core restart; this core would call it on.
+        _reconcile_standby(),
         # ADR-0136: the other players on the network, kept warm for the phone.
         state_server.watch_players(),
         # ADR-0084: the socket plugins connect to. Served for the life of the
