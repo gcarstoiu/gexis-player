@@ -1499,3 +1499,20 @@ UI looked current because its files are read from disk on each request.
 **Rule:** after installing a preview, restart what changed and compare the
 service's start time with the install's before checking anything.
 
+**78. A remedy expected, not measured** (2026-10-19, measuring ADR-0154's
+Photographic set on sofapi). Finding 118 (2026-10-11) found the idle screen's
+half a core came from its weather icons: paused by a CSS rule injected into
+the running page, the browser fell to 4-6 %. George chose a setting from
+that, *Weather icon motion*, and the finding recorded Static as "expected at
+the paused figure above, 4-6 %, not yet measured with the setting itself".
+It stayed that way. Measuring the new icon sets, Static came out at 45 %
+(Photographic) and 58 % (Solid). The injected rule had paused every
+animation on the page; the setting paused only the icons' - and the waiting
+screen's rings, hidden under the idle screen, went on pulsing, which is all
+the browser needs to draw every frame. A new bug of the same day (the moon's
+phase rebuilding the SVG icons each second) added to it. With both fixed,
+Static measured 4.4-7.9 % (Finding 129).
+**Rule:** measure a remedy through the switch users will actually use, not
+through the test that showed it would help; until then it is a hypothesis,
+and the records say so.
+
