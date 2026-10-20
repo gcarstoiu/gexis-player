@@ -96,6 +96,16 @@ def test_the_hmtech_7_inch_is_recognised_by_what_it_reported_on_sofapi():
     assert not screen_detect.has_touch("hmtech-7-hdmi")
 
 
+def test_the_hmtech_10_1_inch_without_touch_is_recognised_as_such():
+    """2026-10-20, read on sofapi: EDID DEL / "TLD1280", 1024x600, no touch.
+    Named for our non-touch entry, not the list's touch model, so Keep goes to
+    the phone."""
+    seen = screen_detect.Seen(connected=True, connector="HDMI-A-1", edid_maker="DEL",
+                              edid_name="TLD1280", preferred=(1024, 600), usb=())
+    assert screen_detect.suggest(seen).id == "hmtech-10.1-hdmi-monitor"
+    assert not screen_detect.has_touch("hmtech-10.1-hdmi-monitor")
+
+
 def test_the_screen_already_on_shows_as_one_that_changes_nothing():
     """2026-10-11: setup warned *Keep this screen?* on the recognised bar,
     already applied for setup; the choices that change nothing say so."""

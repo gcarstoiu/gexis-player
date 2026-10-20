@@ -51,6 +51,9 @@ FINGERPRINTS: dict[str, Fingerprint] = {
     # model, as its maker lists it. "HDMI" is a generic name, so the maker
     # and the 800x480 carry the match with it.
     "hmtech-7-hdmi": Fingerprint(edid_maker="HCT", edid_name="HDMI"),
+    # George's HMTECH 10.1" on sofapi, read 2026-10-20: EDID "DEL" /
+    # "TLD1280" (a borrowed Dell code), preferred 1024x600, no touch.
+    "hmtech-10.1-hdmi-monitor": Fingerprint(edid_maker="DEL", edid_name="TLD1280"),
 }
 
 
