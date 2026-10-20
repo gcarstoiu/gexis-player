@@ -48,9 +48,18 @@ release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
 (excluded in `.git/info/exclude`). `reuse.py` reuses a published file only
 against a local copy, so losing that folder means re-uploading every OS file.
 
+**In `next`, for the next release** (2026-10-20): the idle countdown re-arms
+whenever the idle screen goes away (sofapi was off its idle screen 12:30-20:22
+after the visualiser took it down), and standby powers the display down with
+`wlopm` and reads the real screen at start (ADR-0135 amended: ShelvesPi's bar
+stayed dark all day - taps had no output to land on, and the update's restart
+forgot the standby). ShelvesPi runs `1.3.0+git9` (both fixes), sofapi
+`1.3.0+git6` (the idle fix). Branches `idle-rearm` and `standby-power` merged
+into `next`, to delete after the release.
+
 **Open:** Squeezelite joins whichever Lyrion server answers first after a
 restart (Finding 130 point 6); George's look at the moon before sunrise. sofapi
-runs the visualiser preview `1.2.0+git39`, equal to 1.3.0 but for the notes.
+and ShelvesPi run previews (above).
 
 **Next: Phase 17, DSI screens** (`ph-dsi`; George names his screen when it
 starts), next. Then, in order (`docs/DEVELOPMENT.md`;
