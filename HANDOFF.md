@@ -47,57 +47,23 @@ release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
 (excluded in `.git/info/exclude`). `reuse.py` reuses a published file only
 against a local copy, so losing that folder means re-uploading every OS file.
 
-**The moon at night** (ADR-0153; designs Solid C, Duotone A, Neon B) on
-branch `moon-night`, and **four more weather icon sets** (ADR-0154: Modern,
-Futuristic, Photographic with NASA's Sun and Moon, Atmospheric; ADR-0022's
-*Weather icons* gains them) on `weather-sets`, built on top of it (worktrees
-`~/projects/gexis-player-moon` and `-sets`, both pushed, neither merged).
-sofapi runs `weather-sets`, `1.2.0+git22`, core restarted by hand; its icons
-are still Solid. **Owed:** George's look at the moon (sofapi's screen sleeps
-22:30-07:00; it is night until 07:38), then measuring Photographic's lit
-clouds on sofapi's idle screen, animated and still (ADR-0154 decision 5),
-before both go into `next`.
+**In `next`, not yet released** (2026-10-20): the moon at night (ADR-0153),
+four more weather icon sets (ADR-0154), the idle screen really still with
+*Static* (Finding 129), aiohttp 3.14.4 (three Dependabot alerts; they close
+when it reaches `main`), and **Phase 16, optical** (ADR-0155, Finding 130):
+Squeezelite converts only rates the card lacks (`-R -u vEX`, 88.2/176.4 kHz to
+the card's highest), the Realtek adapter `0bda:4e27` marked Tested and Fixed by
+default. Heard on sofapi into the SMSL by George. sofapi runs
+`1.2.0+git33` (ph-optical), back on HDMI 2 with Software volume. **Owed by
+George:** a look at the moon before sunrise. **Open:** a visualiser agent on
+branch `viz-robust` (George's photos 2026-10-20: the UI showing through at the
+bottom, a white background, stepped meter edges; plus a skin-rendering test
+suite). **Separate:** Squeezelite joins whichever Lyrion server answers first
+after a restart (Finding 130 point 6).
 
-**Next: Phase 16, optical through a USB adapter** (`ph-optical`; George has
-an adapter), then **Phase 17, DSI screens** (`ph-dsi`, new 2026-10-19;
-George names his screen when it starts). Both start with an ADR.
-
-**The blog** (George's WordPress, tag `sound`): articles in
-`~/projects/gexis-blog/`. The first eleven were pushed as drafts by George
-(2026-10-15) and `schedule_wp.py` schedules nine daily at 18:00 from
-2026-10-16. Articles 13-17 (Phases 14 and 15) are drafts 186, 190, 191, 196
-and 201 in the local WordPress copy; `bundle.json` holds all of them for
-`push_wp.py`, and `schedule_wp.py` now runs them on 25-29 October. The theme
-(`gcarstoiu/gexis-wp-theme` 1.0.3) mirrors FAQ, Install, Hardware, Manual
-and Release notes from `main`.
-
-Suite 2,574 passed, 47 skipped (2026-10-19, on `next` at 1.2.0), with the
-venv in `~/.local/share/gexis-venv` (never under `/tmp`: LESSONS 74); run it
-with `PYTHONPATH=core/src` from a worktree, or the venv's installed core
-(`-next`'s) is the one tested.
-
-**Devices.** sofapi (Waveshare 10.1", SMSL USB DAC; a test machine), the bar
-(ShelvesPi, 11.9"), guestpi (IQaudIO Pi-DAC PRO, 13.3"), bedroompi (a
-separate card; off the network on 2026-10-16 evening). sofapi and ShelvesPi
-run previews (sofapi `1.2.0+git22`, `weather-sets`; ShelvesPi's not checked
-since 1.0.5); guestpi and bedroompi are offered Stable (1.2.0 from
-2026-10-19; not checked whether they took it). **Cards flashed now have no passwordless sudo:
-provision test cards with `DEV_SUDO="yes"`** (ADR-0139).
-
-**Owed by George** (the shared to-do list has the detail)
-- On a card flashed from the 0.12.0 image: setup without a restore (g24),
-  setup over a network cable (g26).
-- The screen on the bar's second HDMI port (g35).
-- The spectrum on sofapi's panel after the change (Finding 122).
-- On sofapi: the meters falling with the volume, and *Needles follow the
-  volume* and *Gain* (ADR-0146).
-
-**Not run on a device yet:** the outline cut by the real mini strip (a
-stand-in bar only, headless); the headphone jack taking over from a
-switched-off HDMI device (ADR-0141 D5, fixed in 1.0.2).
-
-**After optical and DSI**, in order (`docs/DEVELOPMENT.md`, "Phases after
-the first public release"; refer to them by ID): **18** room correction
+**Next: Phase 17, DSI screens** (`ph-dsi`; George names his screen when it
+starts), after Phase 16 is released. Then, in order (`docs/DEVELOPMENT.md`;
+refer to them by ID): **18** room correction
 (`ph-room-correction`), **19** Home Assistant (`ph-home-assistant`), **20**
 themes (`ph-themes`), **21** the library answers for itself (`ph-library`),
 **22** Lyrion's own menus' look (`ph-lyrion-menus`); MPD is parked
