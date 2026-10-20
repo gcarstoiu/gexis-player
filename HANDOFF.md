@@ -60,6 +60,15 @@ resyncing (switching takes 0.05 s) - George: "Keep it as is". ShelvesPi runs
 idle fix). Branches `idle-rearm`, `standby-power` (superseded) and
 `standby-touch` merged into `next`, to delete after the release.
 
+**Open, sofapi's new 7" (HMTECH, 800x480, EDID "HCT"/"HDMI"), 2026-10-20
+evening:** with the kiosk's `--force-device-scale-factor=0.625` Chromium draws
+the page at 500x300, centred, inside a full-screen window (measured with grim:
+not a start-up race, not the Sony's second output, not a missed full-screen;
+without the scale it fills but the layout is cut). ShelvesPi at 0.8 fills.
+No 800x480 screen had run on hardware before. Its touch does not show on USB
+at all (only the optical adapter). The list's "HMTECH 7" HDMI Monitor" is the
+non-touch model. **Not recorded as tested** until it works.
+
 **Open:** Squeezelite joins whichever Lyrion server answers first after a
 restart (Finding 130 point 6); George's look at the moon before sunrise. sofapi
 and ShelvesPi run previews (above).
