@@ -2,18 +2,19 @@
 """**Display standby** (ADR-0135): the panel's screen off, the player still
 playing.
 
-**Off is the display powered down, its output kept** (`wlopm`, ADR-0135 as
-amended 2026-10-20), in the kiosk's own labwc session - the core runs as
-root, the session as the kiosk's user. The touchscreen is tied to the
-output (`<touch mapToOutput>`, ADR-0109), and with the output switched off
-(`wlr-randr --off`, as before) a bar's taps had no output to land on: on
-ShelvesPi nothing woke it (2026-10-20). Powered down, the output stays and a
-tap reaches the page (measured on the bar, 2026-10-20). Without `wlopm` the
-output is switched off as before, and on gives it back the turn the kiosk
-set at start, which re-enabling an output does not keep on every compositor. Measured on the 10.1" (2026-10-11): the backlight goes dark,
+Off is the HDMI output off, in the kiosk's own labwc session - the core runs
+as root, the session as the kiosk's user - and on is the output back with the
+turn the kiosk gave it at start, which re-enabling an output does not keep on
+every compositor. **On is almost instant** (George, 2026-10-20: powering the
+display down instead, with `wlopm`, took about 3 s to come back - "too
+much"). Measured on the 10.1" (2026-10-11): the backlight goes dark,
 the screen shows its own "No signal" box for about 10 s some 30 s in, then
-stays dark; a touch still reaches the panel's page, which is how a touch
-wakes it.
+stays dark; a touch still reaches the panel's page there. **Not on a screen
+whose touch is mapped to its output** (`<touch mapToOutput>`, ADR-0109 - the
+bars): with the output off its taps land nowhere in the compositor
+(ShelvesPi, 2026-10-20). So while the screen is off, the core also listens to
+the touchscreens itself, in the kernel (`TouchWatch`), and any finger wakes
+it.
 
 `Standby` holds the state and is told what wakes it; it does not decide when
 to sleep. While it is on, the panel also draws black over everything, so a
@@ -24,7 +25,9 @@ from __future__ import annotations
 import asyncio
 import datetime
 import logging
+import os
 import pwd
+import struct
 import time
 from pathlib import Path
 from typing import Awaitable, Callable
@@ -36,8 +39,11 @@ KIOSK_USER = "pi"
 WAYLAND_DISPLAY = "wayland-0"
 DEFAULT_CONNECTOR = "HDMI-A-1"
 TIMEOUT_S = 10.0
-#: The display power tool (Debian `wlopm`, a gexis-system dependency).
-POWER_TOOL = Path("/usr/bin/wlopm")
+#: The kernel's input devices; BTN_TOUCH, which a touchscreen reports.
+INPUT_SYS = Path("/sys/class/input")
+EV_KEY, BTN_TOUCH = 1, 330
+#: struct input_event on a 64-bit kernel: two longs of time, type, code, value.
+EVENT = struct.Struct("qqHHi")
 
 
 def screen_env(path: Path = SCREEN_ENV) -> dict[str, str]:
@@ -68,17 +74,12 @@ def _session(uid: int) -> list[str]:
             f"XDG_RUNTIME_DIR=/run/user/{uid}"]
 
 
-def output_command(on: bool, env: dict[str, str], uid: int, fallback: str = DEFAULT_CONNECTOR,
-                   power: bool = False) -> list[str]:
-    """The command that turns the kiosk's screen on or off. With `power`
-    (`wlopm` installed) the display is powered down and up, its output kept,
-    so the touchscreen keeps its output; else `wlr-randr` switches the output
-    itself, and waking re-applies the turn the kiosk set. The output is the
-    one the core applied the screen on (screen.env); `fallback` when it names
+def output_command(on: bool, env: dict[str, str], uid: int, fallback: str = DEFAULT_CONNECTOR) -> list[str]:
+    """`wlr-randr` for the kiosk's output, run as the kiosk's user in its
+    session. Waking re-applies the turn the kiosk set. The output is the one
+    the core applied the screen on (screen.env); `fallback` when it names
     none."""
     connector = env.get("GEXIS_SCREEN_CONNECTOR") or fallback
-    if power:
-        return _session(uid) + ["wlopm", "--on" if on else "--off", connector]
     args = _session(uid) + ["wlr-randr", "--output", connector]
     if not on:
         return args + ["--off"]
@@ -113,7 +114,7 @@ async def switch_output(on: bool) -> bool:
         logger.info("standby: %s carries the sound; the picture goes black, the output stays on", connector)
         return True
     # The ports are looked at only when screen.env names none.
-    args = output_command(on, env, uid, connector, power=POWER_TOOL.exists())
+    args = output_command(on, env, uid, connector)
     try:
         proc = await asyncio.create_subprocess_exec(
             *args, stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE)
@@ -122,21 +123,16 @@ async def switch_output(on: bool) -> bool:
         logger.warning("standby: could not turn the screen %s: %s", "on" if on else "off", exc)
         return False
     if proc.returncode != 0:
-        logger.warning("standby: %s refused to turn the screen %s: %s", args[len(_session(uid))],
+        logger.warning("standby: wlr-randr refused to turn the screen %s: %s",
                        "on" if on else "off", (err or b"").decode(errors="replace").strip())
         return False
     return True
 
 
-def lit(enabled: bool | None, power: str | None) -> bool | None:
+def lit(enabled: bool | None) -> bool | None:
     """Whether the screen shows a picture, from `wlr-randr --json`'s
-    `enabled` and `wlopm`'s on/off: False when either says it is off, None
-    when neither could be read."""
-    if enabled is False or power == "off":
-        return False
-    if enabled is None and power is None:
-        return None
-    return True
+    `enabled`; None when it could not be read."""
+    return enabled
 
 
 async def read_output() -> bool | None:
@@ -168,14 +164,87 @@ async def read_output() -> bool | None:
                 enabled = bool(output.get("enabled"))
     except (ValueError, TypeError, AttributeError):
         enabled = None
-    power = None
-    if POWER_TOOL.exists():
-        text = await run(_session(uid) + ["wlopm"])
-        for line in (text or "").splitlines():
-            name, _, state = line.strip().partition(" ")
-            if name == connector and state in ("on", "off"):
-                power = state
-    return lit(enabled, power)
+    return lit(enabled)
+
+
+def touchscreens(root: Path = INPUT_SYS) -> list[Path]:
+    """The kernel's touchscreens: event devices that report BTN_TOUCH. The
+    `key` capability is hex words, the last the lowest bits."""
+    found = []
+    for dev in sorted(root.glob("event*")):
+        try:
+            words = (dev / "device" / "capabilities" / "key").read_text().split()
+        except OSError:
+            continue
+        bits = 0
+        for word in words:
+            bits = (bits << 64) | int(word, 16)
+        if bits >> BTN_TOUCH & 1:
+            found.append(Path("/dev/input") / dev.name)
+    return found
+
+
+def finger_downs(data: bytes) -> int:
+    """How many fingers came down in a read of `struct input_event`s."""
+    n = 0
+    for i in range(0, len(data) - EVENT.size + 1, EVENT.size):
+        _, _, typ, code, value = EVENT.unpack_from(data, i)
+        if typ == EV_KEY and code == BTN_TOUCH and value == 1:
+            n += 1
+    return n
+
+
+class TouchWatch:
+    """**A finger on a dark screen, seen in the kernel** (ADR-0135 as amended
+    2026-10-20). Reading an event device does not take it from the
+    compositor; it reads while the screen is off and stops when it wakes."""
+
+    def __init__(self, on_touch: Callable[[], None], devices: Callable[[], list[Path]] = touchscreens) -> None:
+        self._on_touch = on_touch
+        self._devices = devices
+        self._open: list[int] = []
+
+    def start(self) -> None:
+        if self._open:
+            return
+        loop = asyncio.get_running_loop()
+        for path in self._devices():
+            try:
+                fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
+            except OSError as exc:
+                logger.warning("standby: cannot read %s for a touch: %s", path, exc)
+                continue
+            loop.add_reader(fd, self._read, fd)
+            self._open.append(fd)
+        if self._open:
+            logger.info("standby: listening for a touch on %d touchscreen(s)", len(self._open))
+
+    def _read(self, fd: int) -> None:
+        try:
+            data = os.read(fd, EVENT.size * 64)
+        except BlockingIOError:
+            return
+        except OSError:
+            self._close(fd)
+            return
+        if finger_downs(data):
+            self._on_touch()
+
+    def _close(self, fd: int) -> None:
+        try:
+            asyncio.get_running_loop().remove_reader(fd)
+        except RuntimeError:
+            pass
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        if fd in self._open:
+            self._open.remove(fd)
+
+    def stop(self) -> None:
+        for fd in list(self._open):
+            self._close(fd)
 
 
 class Standby:
@@ -190,6 +259,8 @@ class Standby:
                  clock: Callable[[], float] = time.monotonic) -> None:
         self._switch = switch
         self._publish = publish or (lambda off, reason: None)
+        #: While off, the core listens to the touchscreens itself.
+        self.touch_watch = TouchWatch(lambda: asyncio.ensure_future(self.wake("touch")))
         self.off = False
         self.reason: str | None = None
         #: Whether the output was last switched on, as far as this process
@@ -223,6 +294,7 @@ class Standby:
             self._publish(True, reason)
             await self._switch(False)
             self._output_on = False
+            self.touch_watch.start()
             logger.info("standby: screen off (%s)", reason)
 
     async def reconcile(self, shown: bool | None, inside_standby_time: bool) -> None:
@@ -240,6 +312,7 @@ class Standby:
             async with self._lock:
                 self.off, self.reason, self._output_on = True, "schedule", False
                 self._publish(True, "schedule")
+                self.touch_watch.start()
             logger.info("standby: the screen was dark at start, inside a standby time; kept so")
         else:
             logger.info("standby: the screen was dark at start, outside a standby time; waking it")
@@ -254,6 +327,7 @@ class Standby:
                     self._output_on = True
                     logger.info("standby: screen on (%s; its state was unknown)", reason)
                 return
+            self.touch_watch.stop()
             self._output_on = True if await self._switch(True) else None
             self.off, self.reason = False, None
             self.used()
