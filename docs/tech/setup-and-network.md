@@ -520,12 +520,12 @@ it. A chosen port is not asked
 about at the start. With two screens connected, `gexis-splash-fb` makes the
 gap after plymouth black: fbdev is one buffer, sized for one of them.
 Display standby leaves an output carrying the sound on
-(`standby.carries_sound`). Otherwise it **powers the display down and keeps
-its output** (`wlopm --off`, ADR-0135 as amended 2026-10-20): the
-touchscreen is mapped to the output (`<touch mapToOutput>` in labwc's
-rc.xml), and a bar's taps did not arrive with the output switched off. At
-start the core reads the real screen (`standby.read_output`: `wlr-randr
---json` and `wlopm`) and `Standby.reconcile` keeps a dark screen inside a
+(`standby.carries_sound`). While the screen is off, the core reads the
+touchscreens itself in the kernel (`standby.TouchWatch`, ADR-0135 as amended
+2026-10-20): the touchscreen is mapped to the output (`<touch mapToOutput>`
+in labwc's rc.xml), and with the output off a bar's taps never reached the
+page. At start the core reads the real screen (`standby.read_output`,
+`wlr-randr --json`) and `Standby.reconcile` keeps a dark screen inside a
 standby time as the schedule's standby, or wakes it outside one - a standby
 outlives a core restart.
 
