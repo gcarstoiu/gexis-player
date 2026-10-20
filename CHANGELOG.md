@@ -6,6 +6,25 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.3.0 — 20 October 2026
+
+### New
+
+- Between sunset and sunrise, the idle screen's current weather shows the moon in tonight's phase, lit on the side it is lit where the player is.
+- Four more styles for Settings → Display → Weather icons: Modern, Futuristic, Photographic (the real Sun and Moon, from NASA photographs) and Atmospheric.
+- A USB-to-optical adapter, the Realtek "USB SPDIF Adapter", is marked Tested under Output and starts on Fixed volume, for a DAC or receiver that sets the level itself.
+- Through Lyrion, tracks at 88.2 or 176.4 kHz now play on a sound card that lacks those rates, converted to the card's highest rate. Before, they played silence. Every rate the card takes still goes out untouched.
+
+### Fixed
+
+- With Weather icon motion set to Static, the idle screen now stops moving entirely. Before, screens hidden behind it kept animating, and the setting saved almost no processor time.
+- The visualiser no longer comes back partly drawn after being hidden while tracks change: no more page showing through, white areas or stepped meter edges.
+- The player's web server is updated with three security fixes.
+
+### Good to know
+
+- A converted track is no longer bit-perfect, and plays about 1 dB quieter to leave room for the conversion.
+
 ## 1.2.0 — 19 October 2026
 
 ### New
