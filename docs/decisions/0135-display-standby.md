@@ -144,5 +144,14 @@ rejected the first way of doing the first (*"3 seconds is too much"*).
   as such - the phone offers to wake it, a touch wakes it (the watch runs),
   the schedule wakes it when the time ends. Dark outside one, it is woken.
   Lit, it is known to be on.
+- **Checked on ShelvesPi** (1.3.0+git11, 2026-10-20): standby asked as the
+  phone asks; one tap woke it ("listening for a touch on 1 touchscreen(s)",
+  then "screen on (touch)"). The picture took **about 3 s** to come back, as
+  it had with `wlopm` - and switching the output takes 0.05 s each way
+  (timed): **the 3 s is the bar's own screen locking onto the returning
+  signal**, paid by any standby that stops the signal. A "soft" standby
+  (signal kept, black cover only) would wake at once but leave the backlight
+  lit. **George, 2026-10-20: "Keep it as is"** - dark, one tap, about 3 s.
 - Not yet measured: the 10.1" with the watch (its taps reached the page
-  anyway); a USB touchscreen unplugged while the watch reads it.
+  anyway) and its time back; a USB touchscreen unplugged while the watch
+  reads it.
