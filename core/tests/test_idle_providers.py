@@ -9,6 +9,8 @@ stuck in one category.
 """
 from __future__ import annotations
 
+import datetime
+
 import json
 
 import pytest
@@ -37,6 +39,7 @@ GEOCODED = {
 }
 
 FORECAST = {
+    "utc_offset_seconds": 7200,
     "current_units": {"temperature_2m": "°C", "wind_speed_10m": "km/h"},
     "current": {
         "temperature_2m": 17.4,
@@ -110,7 +113,15 @@ async def test_a_place_becomes_a_forecast_the_screen_can_draw():
     }
     # Today's pair only, as HH:MM in the place's own timezone - sliced from
     # the provider's string rather than reparsed, so the day cannot shift.
-    assert answer["sun"] == {"rise": "06:52", "sets": "19:24"}
+    # ADR-0153: and as moments, for the screen's own clock - 06:52 in
+    # Hamburg on 21 September (UTC+2) is 04:52 UTC.
+    assert answer["sun"] == {
+        "rise": "06:52",
+        "sets": "19:24",
+        "rise_at": int(datetime.datetime(2026, 9, 21, 4, 52, tzinfo=datetime.timezone.utc).timestamp()),
+        "sets_at": int(datetime.datetime(2026, 9, 21, 17, 24, tzinfo=datetime.timezone.utc).timestamp()),
+    }
+    assert answer["south"] is False
     assert answer["wind_unit"] == "km/h"
     assert [d["condition"] for d in answer["days"]] == ["overcast", "rain", "clear"]
     assert answer["days"][0] == {
@@ -216,7 +227,17 @@ async def test_a_provider_that_omits_the_new_fields_is_not_a_failure():
     answer = await Weather(session).forecast("Hamburg", 1)
     assert answer["error"] is None
     assert answer["now"]["feels_like"] is None and answer["now"]["wind"] is None
-    assert answer["sun"] == {"rise": None, "sets": None}
+    assert answer["sun"] == {"rise": None, "sets": None, "rise_at": None, "sets_at": None}  # day: no moon (ADR-0153)
+
+
+async def test_south_of_the_equator_the_moon_is_lit_the_other_way():
+    """ADR-0153: the screen mirrors the moon for a place with a negative
+    latitude; the core says which it is."""
+    sydney = {"results": [{**GEOCODED["results"][0], "name": "Sydney", "country_code": "AU",
+                           "latitude": -33.87, "longitude": 151.21, "timezone": "Australia/Sydney"}]}
+    session = FakeSession(lambda url, params: (200, sydney) if "geocoding" in url else (200, FORECAST))
+    answer = await Weather(session).forecast("Sydney", 3)
+    assert answer["south"] is True
 
 
 def test_every_wmo_code_has_a_name_and_an_unknown_one_is_not_guessed():

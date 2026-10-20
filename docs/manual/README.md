@@ -245,6 +245,9 @@ app was last time, so a takeover never starts at full volume.
 After a while with nothing touched, the panel shows the **idle screen**: a
 clock, the weather and a changing background picture. A touch brings back
 what was there. *Settings → Display* sets when it appears and what it shows.
+Between sunset and sunrise, the current weather shows the **moon** where it
+would show the sun, lit as it is tonight where the player is; the forecast
+days keep their sun.
 
 The **visualiser** shows a VU meter or spectrum from a collection of skins,
 drawn from the music as it plays. Open it with the visualiser button on Now
@@ -448,7 +451,7 @@ player into your Plex account).
 | Idle screen: Wallpaper styles, Follow the time of day | With Gexis wallpapers: the chosen styles (Calm, Colourful, Psychedelic), and the hour's pictures (dawn, day, dusk, night). |
 | Idle screen: Seasons, Holidays | *Seasons*, with Gexis wallpapers: the season's pictures join the styles, by hemisphere. *Holidays*, with Gexis wallpapers or online wallpapers: on New Year, and on Christmas and Easter where they are public holidays, only those days' pictures show; Easter follows the Western or Orthodox date by country. |
 | Idle screen: Background brightness, Change the picture every | How dark the picture is behind the text, and how often it changes. |
-| Idle screen: Clock, Clock format, Weather, Forecast, Weather icons | What the idle screen shows over the picture; forecasts come from Open-Meteo. |
+| Idle screen: Clock, Clock format, Weather, Forecast, Weather icons | What the idle screen shows over the picture; forecasts come from Open-Meteo. *Weather icons* draws them in one of seven styles: Solid, Duotone, Neon, Modern (frosted glass), Futuristic (a heads-up display), Photographic (the real Sun and Moon, from NASA photographs) and Atmospheric. |
 | Idle screen: Weather icon motion | *Animated* or *Static*. Animated icons use about half of one of the Pi's four processor cores while the idle screen is up; Static uses almost none. |
 | Visualiser: Timeout, Stop when nothing is playing | When the visualiser takes the screen while music plays, and when it gives it back. |
 | Visualiser: Skin type, Rotate skin per track, Skin | Which skins it uses; tap a skin to preview it, then *Use this skin*. |
