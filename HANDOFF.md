@@ -27,42 +27,34 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.2.0, on Stable** (2026-10-19; Stable serial 6,
-Testing serial 51, both signatures good from the release key, read back
-from GitHub; the public `gexis-player.img.xz` decompresses to the checked
-image). Image `image/deploy/2026-10-19-gexis-player-v1.2.0.img`, 123
-checks; parts `ours-c246c9c094c6`, `skins-9c8185729dfd` (reused),
-`rpi-7325dbec7a52`, `debian-5d5dc927ef03`. It carries Phase 15, the public
-API (`ph-api`, merged into `next`), and George's fixes from testing it on
-sofapi. **GitHub Pages is on** (source GitHub Actions; the `github-pages`
-environment lets `main` and `v*` tags deploy), so `api-docs.yml` publishes
-the API description from each release tag. **PR #77** was merged by George the same day; post-merge steps and the
-clean-up are done; the wiki Roadmap is pushed (Now 16 optical, Next 17 DSI
-and 18 room correction). sofapi runs the preview `+git33`, equal in content
-to 1.2.0. **The README's badge bar** (tests, release, licence, Raspberry Pi
-4, API, PayPal) is on `docs` and `next`, for the next release PR.
+**Current release: 1.3.0, on Stable** (2026-10-20; Stable serial 7,
+Testing serial 52, both signatures good from the release key, read back from
+GitHub; the public `gexis-player.img.xz` decompresses to the checked image).
+Image `image/deploy/2026-10-20-gexis-player-v1.3.0.img`, 123 checks, and all
+978 skins through the new whole-pack check (`make check-skins`, run by `make
+image`); parts `ours-c886989caba4`, `skins-c272f4628d09` (new),
+`rpi-7325dbec7a52`, `debian-5d5dc927ef03`. It carries Phase 16 (optical,
+ADR-0155), the moon at night (ADR-0153), four more icon sets (ADR-0154), the
+Static fix (Finding 129), the visualiser repaint (Finding 131) and aiohttp
+3.14.4. **PR #79** (`release-1.3.0` into `main`) is open for George to merge.
+After the merge: the post-merge steps; remove the release worktree
+`~/projects/gexis-player-rel-1.3.0` and the worktrees `-moon`, `-sets`,
+`-optical`, `-viz` with their branches (`moon-night`, `weather-sets`,
+`ph-optical`, `viz-robust`); close Phase 16 in the phases doc and the wiki
+Roadmap (show George first); the routine clean-up (1.2.0's image can go).
+GitHub Pages builds the API page from the `v1.3.0` tag.
 
 **Release build output lives in `~/.local/share/gexis-release-out`**: in each
 release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
 (excluded in `.git/info/exclude`). `reuse.py` reuses a published file only
 against a local copy, so losing that folder means re-uploading every OS file.
 
-**In `next`, not yet released** (2026-10-20): the moon at night (ADR-0153),
-four more weather icon sets (ADR-0154), the idle screen really still with
-*Static* (Finding 129), aiohttp 3.14.4 (three Dependabot alerts; they close
-when it reaches `main`), and **Phase 16, optical** (ADR-0155, Finding 130):
-Squeezelite converts only rates the card lacks (`-R -u vEX`, 88.2/176.4 kHz to
-the card's highest), the Realtek adapter `0bda:4e27` marked Tested and Fixed by
-default. Heard on sofapi into the SMSL by George. sofapi runs
-`1.2.0+git33` (ph-optical), back on HDMI 2 with Software volume. **Owed by
-George:** a look at the moon before sunrise. **Open:** a visualiser agent on
-branch `viz-robust` (George's photos 2026-10-20: the UI showing through at the
-bottom, a white background, stepped meter edges; plus a skin-rendering test
-suite). **Separate:** Squeezelite joins whichever Lyrion server answers first
-after a restart (Finding 130 point 6).
+**Open:** Squeezelite joins whichever Lyrion server answers first after a
+restart (Finding 130 point 6); George's look at the moon before sunrise. sofapi
+runs the visualiser preview `1.2.0+git39`, equal to 1.3.0 but for the notes.
 
 **Next: Phase 17, DSI screens** (`ph-dsi`; George names his screen when it
-starts), after Phase 16 is released. Then, in order (`docs/DEVELOPMENT.md`;
+starts), next. Then, in order (`docs/DEVELOPMENT.md`;
 refer to them by ID): **18** room correction
 (`ph-room-correction`), **19** Home Assistant (`ph-home-assistant`), **20**
 themes (`ph-themes`), **21** the library answers for itself (`ph-library`),
