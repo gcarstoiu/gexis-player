@@ -19,7 +19,7 @@ GO_LIBRESPOT_VERSION := $(shell grep -oP 'GO_LIBRESPOT_VERSION="\K[^"]+' packagi
 # so a manifest can never claim a version it wasn't actually built from.
 IMAGE_VERSION := $(shell git describe --tags --match 'v[0-9]*' --always --dirty)
 
-.PHONY: image packages fresh-stage-gexis ui skins prune fetch-deploy clean provision
+.PHONY: check-skins image packages fresh-stage-gexis ui skins prune fetch-deploy clean provision
 
 # Builds via pi-gen's own build-docker.sh, unmodified. Our custom stage lives
 # outside the pinned pi-gen submodule and is bind-mounted in at build time
@@ -146,6 +146,12 @@ prune:
 skins:
 	python3 -c "import sys; sys.path.insert(0, 'core/src'); from gexis_core.skins import main; raise SystemExit(main(['skins']))"
 
+# Finding 131: every skin of every pack the image carries, drawn whole and
+# drawn again after a lost frame, through the driver and engine that ship
+# (packaging/skin-packs/check.sh; Docker, about a minute).
+check-skins:
+	packaging/skin-packs/check.sh
+
 # ADR-0107: our parts as Debian packages, built in the arm64 builder into
 # packaging/out/ (packaging/build.sh). The image installs these, so an image
 # and an update are the same bytes.
@@ -163,7 +169,7 @@ fresh-stage-gexis:
 		echo "stage-gexis will start from a fresh copy of stage 2"; \
 	fi
 
-image: packages skins prune fresh-stage-gexis
+image: packages skins check-skins prune fresh-stage-gexis
 	@rm -f image/pi-gen/stage2/EXPORT_IMAGE; \
 	mkdir -p "$(BUILD_CACHE_DIR)"; \
 	start=$$(date +%s); \

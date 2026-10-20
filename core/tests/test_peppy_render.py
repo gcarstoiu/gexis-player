@@ -720,3 +720,27 @@ def test_the_sample_rate_fits_its_own_width(screen, tmp_path):
         if width >= 70:
             assert layer.font("regular", size).size(text)[0] <= width, f"fits {width}"
     assert text == "96 kHz" and size == 12, "never below 60 %: past that it is cut short as any field is"
+
+
+def test_a_background_of_another_size_is_placed_as_the_engine_places_it(screen, tmp_path):
+    """Finding 131: the engine draws `screen.bgr` from the corner, unscaled,
+    and the driver starts every frame from black. The layer erases text back
+    to the same picture - a scaled copy put the 1920x1115 McIntosh Tube's
+    lower lines under titles where the screen showed the upper ones."""
+    w, h = screen.get_size()
+    tall = pygame.Surface((w, h + 35))
+    tall.fill((200, 10, 10))
+    tall.fill((10, 200, 10), pygame.Rect(0, h, w, 35))  # what the engine crops away
+    pygame.image.save(tall, str(tmp_path / "tall.png"))
+    short = pygame.Surface((w, h - 10))
+    short.fill((200, 10, 10))
+    pygame.image.save(short, str(tmp_path / "short.png"))
+    layer = MetadataLayer(screen, tmp_path)
+
+    layer.set_skin({**SKIN, "screen.bgr": "tall.png"})
+    assert layer.background.get_size() == (w, h)
+    assert layer.background.get_at((w // 2, h - 1))[:3] == (200, 10, 10), "cropped, not squeezed"
+
+    layer.set_skin({**SKIN, "screen.bgr": "short.png"})
+    assert layer.background.get_at((w // 2, h - 11))[:3] == (200, 10, 10)
+    assert layer.background.get_at((w // 2, h - 1))[:3] == (0, 0, 0), "the band the engine leaves is black"

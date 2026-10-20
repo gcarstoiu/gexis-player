@@ -620,6 +620,13 @@ flowchart LR
   lowers the meter once that raise is done (Finding 125 #14), instead of
   being lost with the meter left over the panel; a raise the user asked for
   is not lowered that way, since the tap that asked for it also sends a touch.
+  **The whole frame is painted again when the window comes back** (Finding
+  131): PeppyMeter paints a skin's full picture only when it starts, then only
+  the needles' boxes, so a window raised without its picture showed little
+  but the meter faces. The driver repaints everything from black - the meter
+  restarted, every layer set afresh - on any window event pygame reports
+  (logged as `peppy: window ...`) and 0.6 s and 2 s after the shown flag goes
+  up (`Repaints`, `Rotation.refresh`). Every skin change starts from black too.
 - **What it draws besides levels.** The core writes
   `/run/gexis/nowplaying.json` (`peppy_metadata.py`) for title, artist,
   artwork and times, and `/run/gexis/visualisation.json` (`skins.py`) for the
