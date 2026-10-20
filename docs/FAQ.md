@@ -898,7 +898,11 @@ reported shows as a line under it, and the rest carry no mark. A
 class-compliant USB DAC is found by itself and shown by its maker, with a line under it saying what it reports it can
 take - its USB generation, its highest rate and sample size, and native DSD
 (tried with an SMSL; most USB DACs have no volume
-control of their own, so their volume is Software or Fixed). A board that is not found by itself can be
+control of their own, so their volume is Software or Fixed). A USB-to-optical
+adapter works the same way: a Realtek *USB SPDIF Adapter* into a DAC's optical
+input is *Tested*, its volume *Fixed* to start with (the DAC sets the level).
+A track at a rate the card lacks - 88.2 or 176.4 kHz on that adapter - is
+converted to its highest rate, 192 kHz; not yet tried: a sound bar on optical. A board that is not found by itself can be
 chosen in *Settings → Audio → Sound card board*. The screen's HDMI audio
 can be chosen too; it is not bit-perfect, its volume is set in software
 (or fixed), and the visualiser moves with it only while the volume is in

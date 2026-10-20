@@ -995,6 +995,21 @@ def test_the_stored_choice_is_untouched_and_comes_back(store):
     assert settings.value("output_mode") == "Hardware"
 
 
+def test_a_greyed_choice_can_name_what_stands_in_for_it(store):
+    """ADR-0155 decision 3: on the tested optical adapter Fixed, not the next
+    option, stands in for Hardware; the store is still untouched."""
+    settings = Settings(store, wired={"output_mode": None})
+    settings.restrict("output_mode", {"Hardware": "no volume control here"}, instead="Fixed")
+    assert settings.value("output_mode") == "Fixed"
+    settings.set("output_mode", "Software")
+    assert settings.value("output_mode") == "Software", "an owner's own choice stands"
+    settings.restrict("output_mode", {"Hardware": "no volume control here"})
+    store.set("output_mode", "Hardware")
+    assert settings.value("output_mode") == "Software", "without instead, the next option as before"
+    settings.restrict("output_mode", {})
+    assert settings.value("output_mode") == "Hardware"
+
+
 def test_with_no_previous_choice_the_rows_own_default_answers(store):
     """*"If there is no previous selection default to variable."* - Hardware
     since ADR-0127."""
