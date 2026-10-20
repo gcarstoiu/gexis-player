@@ -78,10 +78,12 @@ and ShelvesPi run previews (above).
 
 **Next: Phase 17, DSI screens** (`ph-dsi`; George names his screen when it
 starts), next. Then, in order (`docs/DEVELOPMENT.md`;
-refer to them by ID): **18** room correction
-(`ph-room-correction`), **19** Home Assistant (`ph-home-assistant`), **20**
-themes (`ph-themes`), **21** the library answers for itself (`ph-library`),
-**22** Lyrion's own menus' look (`ph-lyrion-menus`); MPD is parked
+refer to them by ID): **18** room correction for the
+bass (`ph-room-correction`), **19** room correction for the full range
+(`ph-room-correction-full`; split 2026-10-20), **20** Home Assistant
+(`ph-home-assistant`), **21** themes (`ph-themes`), **22** the library
+answers for itself (`ph-library`), **23** Lyrion's own menus' look
+(`ph-lyrion-menus`); MPD is parked
 (`ph-mpd`, ADR-0151). Each ADR first. Still open from 1.0.0: Raspberry Pi
 Imager, the image file and *Use custom* (g14).
 

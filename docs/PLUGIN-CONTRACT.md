@@ -414,4 +414,4 @@ plugins: an uploaded plugin's user is made for each run.
   shape this expects, and the first plugin written outside the core is what
   established it.
 - **Anything about themes.** ADR-0016 lists them as plugins and a theme has no
-  process; Phase 20 (`ph-themes`) settles that before anything is built.
+  process; Phase 21 (`ph-themes`) settles that before anything is built.
