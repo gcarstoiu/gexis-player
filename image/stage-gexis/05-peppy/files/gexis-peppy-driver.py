@@ -88,6 +88,79 @@ class Shown:
                 self.value = True
         return self.value
 
+#: pygame's window events after which the window's picture may be gone. Read
+#: by name: an older pygame lacks some, and the stub in the tests has none.
+WINDOW_EVENT_NAMES = (
+    "WINDOWSHOWN", "WINDOWEXPOSED", "WINDOWRESTORED", "WINDOWMAXIMIZED",
+    "WINDOWSIZECHANGED", "WINDOWRESIZED", "VIDEOEXPOSE", "VIDEORESIZE",
+)
+
+
+class Repaints:
+    """**When to paint the whole frame again** (Finding 131).
+
+    The core writes `1` to the shown flag, waits `SHOW_SETTLE_S` (0.25 s) and
+    only then raises the window; the raise is when the compositor may hand it
+    a fresh buffer, and it can take up to the length of a `wlrctl` call. So a
+    flag going up asks for a repaint shortly after it, twice - and any window
+    event pygame reports asks for one at once. A repaint is due when one of
+    these times has passed; the loop asks only while the screen is shown.
+    """
+
+    AFTER_SHOWN_S = (0.6, 2.0)
+
+    def __init__(self, clock=time.monotonic) -> None:
+        self._clock = clock
+        self._due: list[float] = []
+        self.reason: str | None = None
+
+    def shown(self) -> None:
+        now = self._clock()
+        self._due = sorted(self._due + [now + delay for delay in self.AFTER_SHOWN_S])
+        self.reason = "shown"
+
+    def event(self, name: str) -> None:
+        self._due.append(self._clock())
+        self.reason = name
+
+    def due(self) -> bool:
+        now = self._clock()
+        passed = [t for t in self._due if t <= now]
+        if not passed:
+            return False
+        self._due = [t for t in self._due if t > now]
+        return True
+
+
+def watch_window_events(repaints: Repaints, log_every_s: float = 10.0) -> None:
+    """Window events, read where PeppyMeter reads its events: the read is
+    wrapped, as the touch reporter wraps it, and the loop sees the same events.
+    Each kind is logged at most every `log_every_s`, so the journal says which
+    events a device actually sends."""
+    import time as _time
+
+    codes = {getattr(pygame, n): n for n in WINDOW_EVENT_NAMES if getattr(pygame, n, None) is not None}
+    if not codes:
+        return
+    original_get = pygame.event.get
+    logged: dict[str, float] = {}
+
+    def get(*args, **kwargs):
+        events = original_get(*args, **kwargs)
+        for event in events:
+            name = codes.get(event.type)
+            if name is None:
+                continue
+            repaints.event(name)
+            now = _time.monotonic()
+            if now - logged.get(name, -log_every_s) >= log_every_s:
+                logged[name] = now
+                print(f"peppy: window {name.lower()}: the whole frame is painted again")
+        return events
+
+    pygame.event.get = get
+
+
 METERS, SPECTRUM, BOTH = "meters", "spectrum", "both"
 #: What moves (ADR-0096 as amended), as `gexis_core.skins` decides it.
 TURNTABLE, TAPE = "turntable", "tape"
@@ -737,10 +810,41 @@ class Rotation:
         if home is not None:
             self.peppy.util.meter_config[BASE_PATH] = str(home.parent)
         self.vumeter.meter = meter
+        self.current = name
+        self._paint_whole_frame(name, meter)
+        print(f"peppy: skin -> {name}")
+        self.prepare_next()
+
+    def refresh(self) -> bool:
+        """**The whole frame of the skin on screen, painted again** (Finding
+        131). PeppyMeter paints a skin's full picture once, when it starts;
+        from then on only the needles' boxes. A window that comes back
+        without its picture - the compositor's buffer replaced when the
+        minimised window is raised and maximised again - showed only what
+        was repainted afterwards: the meter faces as far as the needles had
+        swept, the text over its own boxes, and the page behind everywhere
+        else (sofapi, 2026-10-20). The same meter is restarted: nothing is
+        loaded from disk."""
+        meter = self.vumeter.meter
+        if self.current is None or meter is None:
+            return False
+        meter.stop()
+        self._paint_whole_frame(self.current, meter)
+        return True
+
+    def _paint_whole_frame(self, name: str, meter) -> None:
+        """Every layer of `name`'s skin, from black - what a skin start and a
+        refresh both draw. From black because a skin need not paint every
+        pixel (a meter background smaller than the screen, no `screen.bgr`):
+        what it leaves is black, never the skin before it or a lost buffer."""
+        window = pygame.display.get_surface()
+        if window is not None:
+            window.fill((0, 0, 0))
+        screen = self.peppy.util.PYGAME_SCREEN
+        if screen is not None and screen is not window:
+            screen.fill((0, 0, 0))
         meter.set_volume(self.vumeter.current_volume)
         meter.start()
-        self.current = name
-        print(f"peppy: skin -> {name}")
         skin = self.skins.get(name, {})
         self.spectrum.follow(skin, self.homes.get(name))
         if self.layer is not None:
@@ -751,7 +855,6 @@ class Rotation:
             self.fanart.attach(skin, meter, self.layer, self.motion,
                                self.peppy.util.PYGAME_SCREEN.get_size())
         pygame.display.update()
-        self.prepare_next()
 
 
 class SpectrumState:
@@ -1175,6 +1278,8 @@ def main() -> int:
     poll_every = max(1, int(peppy.util.meter_config[FRAME_RATE] / 10))
     frames = 0
     shown = Shown()
+    repaints = Repaints()
+    was_hidden = [not shown.check()]
 
     def per_frame() -> None:
         nonlocal track, frames, metadata
@@ -1183,8 +1288,19 @@ def main() -> int:
         # hold the loop back so PeppyMeter's needles are drawn less often too
         # (57 % of a core while music played, Finding 112).
         hidden = not shown.check()
+        if was_hidden[0] and not hidden:
+            repaints.shown()
+        was_hidden[0] = hidden
         if hidden:
             time.sleep(HIDDEN_FRAME_S)
+        elif repaints.due() and rotation.refresh():
+            # Finding 131: the window back without its picture. The text and
+            # art follow at this frame's poll: the layer was set afresh.
+            print(f"peppy: whole frame painted again ({repaints.reason})")
+            metadata = read_metadata()
+            dirty = layer.draw(metadata, paint=not motion.active)
+            if dirty:
+                pygame.display.update(motion.compose(dirty) if motion.active else dirty)
         if hidden or frames % poll_every == 0:
             # The same poll carries both files: which track is playing, and
             # what the panel last asked for (ADR-0051 §1).
@@ -1255,6 +1371,7 @@ def main() -> int:
 
     hold_the_last_frame(peppy.meter.data_source)
     report_touches_to_the_daemon()
+    watch_window_events(repaints)
     peppy.dependent = per_frame
     peppy.start_display_output()
     return 0

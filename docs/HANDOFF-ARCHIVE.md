@@ -7262,6 +7262,89 @@ and Material Skin counted in only once Lyrion serves `/material/`.
 Then, from his third test: a new server's folders wait for its add-ons
 (it had read the music during step 3), a first read held to its end, the
 panel plate wider. ADR-0149 decisions 42-45, ADR-0115 decision 28 amended.
-sofapi runs core, UI and player `+git16` since about 11:45. *H@l* is sofapi's own
+sofapi runs core, UI and player `+git16` since about 11:45. The server named after the home network is sofapi's own
 Lyrion server, seen while sofapi was `raspberrypi` - not a second machine.
 Owed: George's test, then 1.1.1.
+
+## 2026-10-19: 1.1.1 on Stable, Phase 15 on `ph-api` (moved from HANDOFF verbatim when 1.2.0 was released)
+
+**Current release: 1.1.1, on Stable** (2026-10-19; Stable serial 5,
+Testing serial 50, both signatures good from the release key, read back
+from GitHub; the public `gexis-player.img.xz` decompresses to the checked
+image). Image `image/deploy/2026-10-19-gexis-player-v1.1.1.img`, 123
+checks; parts `ours-9deec7268284`, `skins-9c8185729dfd` (reused),
+`rpi-7325dbec7a52`, `debian-5d5dc927ef03`. It carries Phase 14 (1.1.0) and
+the fixes from George's four tests of it on sofapi (ADR-0149 decisions
+42-45, ADR-0115 decision 28 amended). **PR #76** was merged by George; post-merge steps and clean-up done. **Not tried on a
+device:** a USB drive's folders; a new server's folders held for its
+add-ons, and the plate through a whole first read (George's next reset).
+
+**Phase 15 is now the public API (`ph-api`, ADR-0152)**; MPD, planned as
+Phase 15 first, was parked the same day after measuring it on sofapi
+(Finding 128, ADR-0151: George, *"Really too much risk for a small
+benefit"*). On the branch `ph-api` (worktree `~/projects/gexis-player-api`,
+pushed, CI green, not merged): `core/src/gexis_core/api/openapi.json`
+(all 90 API routes; drafted group by group, merged, validated with
+openapi-spec-validator), `core/tests/test_openapi.py` (the drift test), the
+setting *API explorer* (`api_explorer`, System after Debug logs, off; ADR-0022
+[N]), `/api` with Swagger UI 5.33.3 shipped in the core (every route tryable),
+`.github/workflows/api-docs.yml` (the static page at each release tag;
+**GitHub Pages must be switched on before the first such release**), three
+faults fixed (radio's 502, a transport KeyError, `/skins` and Fanart), and the
+docs (`docs/tech/api.md`, manual, FAQ, README). George's four fixes from testing it (2026-10-19) are on the branch too:
+the Library's own *Lyrion Server: On* switch (a mirror row of the plugin's
+switch), the Calm fallback picture behind the waiting screen (retried every
+30 s; black stays black), *Navigation* as one choice Simple / Extended / Off
+(`library_navigation`, the two old switches hidden with `shownAs`), and part 2
+listing every server found even with one saved (ADR-0149 decision 46). The
+stability marks are confirmed (ADR-0152 decision 8). From George's next
+look (same day): the Library switch is only the switch (its download line,
+version and Remove stay in Plugins; the line changing made the row jump),
+its note and heading hold still, a switched-off service's heading carries
+no reading, and Settings runs Library, Sources, Handoff, Audio, Display,
+Enrichment, Plugins, System (manual reordered, its two Settings
+screenshots retaken from the demo). sofapi runs core, ui and player
+`1.1.1+git33`, core restarted by hand (LESSONS 77). **Waiting on George:** his test of the four fixes, and whether
+he switched *API explorer* on (it reads on; it was off after my test). Then
+`ph-api` into `next`, GitHub Pages on, the release.
+**Three Phase 14 articles** (13-15: setup in two parts,
+where your music is, a music server's first minutes) are drafts 186, 190 and
+191 in the local WordPress copy for George to read; `import_wp.py` now takes
+article numbers, and `bundle.json` is refreshed for `push_wp.py`.
+
+## 2026-10-19: the blog, the suite, the next phases and the phase list as they stood before 1.2.0 (moved from HANDOFF verbatim at the clean-up after 1.2.0)
+
+**Five articles** (13-15 for Phase 14; 16, the API, and 17, the small
+things, for Phase 15) are drafts 186, 190, 191, 196 and 201 in the local
+WordPress copy; `schedule_wp.py` now schedules them 25-29 October after the
+first nine, once George has pushed them; `import_wp.py` now takes
+article numbers, and `bundle.json` is refreshed for `push_wp.py`.
+
+**The blog** (George's WordPress, tag `sound`): eleven articles in
+`~/projects/gexis-blog/`, pushed as drafts by George (2026-10-15; article 05
+now mentions *Add a backup*, bundle rebuilt 2026-10-17, for George to re-push);
+`schedule_wp.py` schedules nine, daily at 18:00 from 2026-10-16 - whether he
+ran it is not recorded. The theme (`gcarstoiu/gexis-wp-theme` 1.0.3, pushed)
+mirrors FAQ, Install, Hardware, Manual and Release notes from `main`.
+
+Suite 2,544 passed, 47 skipped (2026-10-18, on `ph-first-use`), with the venv in
+`~/.local/share/gexis-venv` (never under `/tmp`: LESSONS 74).
+
+**Next: George's test of Phase 14 on sofapi** (above): part 2, then part 1
+after a factory reset, then a PR for `ph-first-use`. Still open from the release:
+Raspberry Pi Imager, the image file and *Use custom* (g14). **After it**, in order
+(`docs/DEVELOPMENT.md`, "Phases after the first public release"; refer to them
+by ID): **15** MPD for real 5.1/7.1 (`ph-mpd`), **16** room correction with a
+USB microphone (`ph-room-correction`), **17** the player in Home Assistant
+(`ph-home-assistant`), **18** themes (`ph-themes`), **19** a sound bar on
+optical (`ph-optical`), **20** the library answers for itself (`ph-library`),
+**21** Lyrion's own menus' look (`ph-lyrion-menus`) - each ADR first.
+
+Closed: 0-12, 13, 13a, 13b, 13c, 13d (2026-10-12, Finding 114's addendum),
+13e, 13f (2026-10-12: shipped behind *Extended navigation*; its look is
+`ph-lyrion-menus`) (`docs/DEVELOPMENT.md` holds each phase's acceptance criteria; the archive
+holds the order as it was argued). **From 2026-10-13 phases are numbered
+consecutively without letters, each with a stable ID** (George); the open ones
+are 14-21. **Phase 14 is `ph-first-use`** (George, 2026-10-15): setup split into
+a device part and a personal part, before MPD (now 15); ADR-0149 proposed, its
+open points owed by George, then Claude Design.

@@ -14,7 +14,7 @@ WebSockets (`/state`, the touchpad's
 channel). It is open to the home network without a login (ADR-0028, as
 ADR-0022 accepted the trusted LAN). What it is is written down only in
 pieces: the technical guide's route tables, the decision records, the code.
-Anyone building on it - Home Assistant (Phase 17), an app, a control surface,
+Anyone building on it - Home Assistant (`ph-home-assistant`), an app, a control surface,
 a plugin author - has to read the code. The idea *Documented public API* was
 a Must on the Roadmap; George put it before room correction (2026-10-19).
 
@@ -69,7 +69,7 @@ a Must on the Roadmap; George put it before room correction (2026-10-19).
 - A change to a route changes the file in the same commit, or the test
   fails.
 - The image carries Swagger UI's files (a few MB, to be measured).
-- Home Assistant (Phase 17) is built against the documented API.
+- Home Assistant (`ph-home-assistant`) is built against the documented API.
 - The static page is `.github/workflows/api-docs.yml`, built at each release
   tag; GitHub Pages is switched on for it before the first release that
   carries it.

@@ -50,11 +50,13 @@ CARD_WAIT_S = 3.0
 def volume_mode(stored, output) -> str:
     """What is in force for `output` (ADR-0127 §2): the stored choice, except
     Hardware on an output with no control of its own, where Software takes
-    its place. The same answer `Settings.value` gives once the row is
-    restricted; this one is for start-up, before `Settings` exists."""
+    its place - or Fixed, on an output that feeds a device with its own
+    volume (ADR-0155 decision 3). The same answer `Settings.value` gives once
+    the row is restricted; this one is for start-up, before `Settings`
+    exists."""
     mode = stored if stored in (HARDWARE, SOFTWARE, FIXED) else HARDWARE
     if mode == HARDWARE and output is not None and output.control is None:
-        return SOFTWARE
+        return FIXED if getattr(output, "fixed_by_default", False) else SOFTWARE
     return mode
 
 

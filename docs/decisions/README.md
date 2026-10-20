@@ -173,6 +173,9 @@ been written properly. **0098 has no record either.**
 | [0150](0150-a-library-category.md) | A Library category | Accepted 2026-10-18: Lyrion Server's rows under Library; plugins may declare `area: library`; app links |
 | [0151](0151-mpd-on-the-player.md) | MPD on the player | Parked 2026-10-19: small benefit, real risk (Finding 128); MPD back among the ideas |
 | [0152](0152-a-documented-public-api.md) | A documented public API | Accepted 2026-10-19: OpenAPI file with a drift test; shown on GitHub and the player, behind *API explorer* |
+| [0153](0153-the-moon-at-night.md) | The moon at night | Accepted 2026-10-19: current weather shows the moon in its real phase between sunset and sunrise |
+| [0154](0154-four-more-weather-icon-sets.md) | Four more weather icon sets | Accepted 2026-10-19: Modern, Futuristic, Photographic, Atmospheric join Solid, Duotone, Neon |
+| [0155](0155-a-sound-system-on-optical.md) | A sound system on optical, through a USB adapter | Accepted 2026-10-20: Squeezelite converts only rates the card lacks, upward; adapter marked Tested |
 
 ## Cross-cutting rules
 

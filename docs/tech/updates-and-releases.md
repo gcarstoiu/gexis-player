@@ -99,7 +99,10 @@ removing the release. The updater checks it again after installing.
 
 ## 3. The image (ADR-0021, ADR-0042)
 
-`make image` = `packages` + `skins` (corpus validation) + `prune` +
+`make image` = `packages` + `skins` (corpus validation) + `check-skins` (every
+skin of every pack drawn whole, and again after a lost frame, headless with
+the shipped driver and engine - `packaging/skin-packs/check.sh`, Docker, about
+a minute; Finding 131) + `prune` +
 `fresh-stage-gexis`, then pi-gen's own `build-docker.sh`, unmodified, with
 `image/config` (stages 0-2 plus `stage-gexis`, no cloud-init, uncompressed
 output). The repository's `image/stage-gexis`, `packaging/out` and the download

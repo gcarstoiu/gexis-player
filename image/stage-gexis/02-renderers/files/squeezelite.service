@@ -55,8 +55,9 @@ EnvironmentFile=-/etc/gexis/device-name.env
 # after a failed open, which was Finding 091's gap after *play* on a
 # powered-off player. The mixer is named by -O, so no ctl.output_wait is needed.
 # ADR-0143: options the chosen output needs - for a DAC above 384 kHz, the
-# rates Lyrion can hand over unchanged. Written by gexis-core; empty for every
-# other DAC, which Squeezelite asks itself. Unbraced, so empty is no argument.
+# rates Lyrion can hand over unchanged - and ADR-0155's resampler for a rate
+# the card lacks (`-R -u vEX`; left out with native DSD). Written by
+# gexis-core; empty until it first writes. Unbraced, so empty is no argument.
 Environment=GEXIS_SQUEEZELITE_OPTIONS=
 EnvironmentFile=-/etc/gexis/squeezelite.env
 ExecStart=/usr/bin/squeezelite -o output_wait -O hw:gexislmsvol -V Master -C 1 -n ${GEXIS_DEVICE_NAME} $GEXIS_SQUEEZELITE_OPTIONS

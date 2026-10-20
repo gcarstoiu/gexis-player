@@ -515,6 +515,33 @@ def test_hardware_gives_way_to_software_where_a_card_has_no_control():
     assert volume_mode("Variable", dac) == "Hardware", "an unmigrated value"
 
 
+def test_the_tested_optical_adapter_is_fixed_in_hardwares_place():
+    """ADR-0155 decision 3: an output feeding a device with its own volume -
+    the tested USB-to-optical adapter - plays at full level unless its owner
+    chose Software; any other card with no control still gets Software."""
+    from gexis_core.__main__ import volume_mode
+
+    adapter = outputs.Output(label="Generic USB SPDIF Adapter", card="Adapter", control=None, usb_id="0bda:4e27")
+    other = outputs.Output(label="Some USB DAC", card="AUDIO", control=None, usb_id="1234:5678")
+    assert adapter.fixed_by_default and not other.fixed_by_default
+    assert volume_mode("Hardware", adapter) == "Fixed"
+    assert volume_mode(None, adapter) == "Fixed", "the row's default is Hardware"
+    assert volume_mode("Software", adapter) == "Software", "an owner's own choice stands"
+    assert volume_mode("Hardware", other) == "Software"
+
+
+def test_a_usb_card_says_its_id_and_the_tested_adapter_is_marked(monkeypatch, tmp_path):
+    """ADR-0155 decision 5: *Tested* by `vendor:product`, read from sysfs."""
+    _plugged_dac(tmp_path, monkeypatch, card="Adapter")
+    usb = tmp_path / "devices" / "usb1" / "1-1"
+    (usb / "idVendor").write_text("0bda\n")
+    (usb / "idProduct").write_text("4E27\n")
+    assert outputs.usb_id("Adapter") == "0bda:4e27"
+    assert outputs.usb_id("nothere") is None
+    assert "0bda:4e27" in outputs.TESTED_USB and "0bda:4e27" in outputs.FIXED_BY_DEFAULT_USB
+    assert outputs.Output(label="x", card="Adapter", control=None, state="Tested").shown_tested
+
+
 # --- A USB DAC by its maker (George, 2026-10-12) ------------------------------
 
 def _usb_card(tmp_path, number, manufacturer, product, usb=True):
@@ -681,7 +708,7 @@ def test_a_different_dac_under_the_same_card_id_is_asked_again(monkeypatch, tmp_
     _plugged_dac(tmp_path, monkeypatch, devnum=6)
     assert outputs.widens("AUDIO") is False, "nothing asked yet: what the old DAC took is gone"
     assert outputs.native_dsd("AUDIO") is None
-    assert outputs.squeezelite_options("AUDIO", dsd=True) == ""
+    assert outputs.squeezelite_options("AUDIO", dsd=True) == outputs.SQUEEZELITE_RESAMPLE, "no DSD: the resampler, as on any card"
     assert outputs.needs_plug("AUDIO") is False and outputs.widens("AUDIO") is False
 
 
@@ -723,14 +750,26 @@ def test_the_widened_chain_pads_to_32_bits_under_the_meter_and_the_card_reads_ba
 def test_squeezelite_is_told_rates_only_for_a_dac_beyond_384_khz(monkeypatch, tmp_path):
     _asked(monkeypatch, {"AUDIO": SMSL_DUMP, "sndrpihifiberry": HAT_DUMP})
     outputs.needs_plug("AUDIO"); outputs.needs_plug("sndrpihifiberry")
-    assert outputs.squeezelite_options("AUDIO") == "-r 44100,48000,88200,96000,176400,192000,352800,384000"
-    assert outputs.squeezelite_options("sndrpihifiberry") == ""
+    assert outputs.squeezelite_options("AUDIO") == "-r 44100,48000,88200,96000,176400,192000,352800,384000 " + outputs.SQUEEZELITE_RESAMPLE
+    assert outputs.squeezelite_options("sndrpihifiberry") == outputs.SQUEEZELITE_RESAMPLE
     env = tmp_path / "squeezelite.env"
     assert outputs.write_squeezelite_env("AUDIO", env) is True
     assert "GEXIS_SQUEEZELITE_OPTIONS=-r 44100," in env.read_text()
     assert outputs.write_squeezelite_env("AUDIO", env) is False
     outputs.write_squeezelite_env("sndrpihifiberry", env)
-    assert env.read_text().splitlines()[-1] == "GEXIS_SQUEEZELITE_OPTIONS="
+    assert env.read_text().splitlines()[-1] == "GEXIS_SQUEEZELITE_OPTIONS=" + outputs.SQUEEZELITE_RESAMPLE
+
+
+def test_squeezelite_converts_only_the_rates_a_card_lacks_upward(monkeypatch):
+    """ADR-0155 (Finding 130): a card without 88.2 or 176.4 kHz left Lyrion
+    silent on them. Squeezelite resamples only a rate the card lacks (`E`),
+    to the card's highest (`X`), in soxr's very high quality (`v`) - on
+    every card, since a card that takes the rate is never touched."""
+    _asked(monkeypatch, {"AUDIO": SMSL_DUMP, "sndrpihifiberry": HAT_DUMP})
+    outputs.needs_plug("AUDIO"); outputs.needs_plug("sndrpihifiberry")
+    assert outputs.SQUEEZELITE_RESAMPLE == "-R -u vEX"
+    for card in ("AUDIO", "sndrpihifiberry"):
+        assert outputs.squeezelite_options(card).split()[-3:] == ["-R", "-u", "vEX"]
 
 
 def test_the_squeezelite_unit_reads_the_options_unbraced():
@@ -758,8 +797,9 @@ def test_native_dsd_is_the_cards_own_format_and_only_with_the_volume_fixed(monke
     assert outputs.native_dsd("AUDIO") == "u32be"
     assert outputs.native_dsd("sndrpihifiberry") is None
     assert outputs.squeezelite_options("AUDIO", dsd=True).endswith(" -D :u32be")
+    assert "-R" not in outputs.squeezelite_options("AUDIO", dsd=True), "a resampler would turn DSD into PCM"
     assert "-D" not in outputs.squeezelite_options("AUDIO")
-    assert outputs.squeezelite_options("sndrpihifiberry", dsd=True) == "", "no DSD on a board that takes none"
+    assert outputs.squeezelite_options("sndrpihifiberry", dsd=True) == outputs.SQUEEZELITE_RESAMPLE, "no DSD on a board that takes none"
 
 
 def test_with_dsd_squeezelites_chain_skips_the_widening_and_the_others_keep_it():

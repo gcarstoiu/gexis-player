@@ -27,105 +27,63 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.1.1, on Stable** (2026-10-19; Stable serial 5,
-Testing serial 50, both signatures good from the release key, read back
+**Current release: 1.2.0, on Stable** (2026-10-19; Stable serial 6,
+Testing serial 51, both signatures good from the release key, read back
 from GitHub; the public `gexis-player.img.xz` decompresses to the checked
-image). Image `image/deploy/2026-10-19-gexis-player-v1.1.1.img`, 123
-checks; parts `ours-9deec7268284`, `skins-9c8185729dfd` (reused),
-`rpi-7325dbec7a52`, `debian-5d5dc927ef03`. It carries Phase 14 (1.1.0) and
-the fixes from George's four tests of it on sofapi (ADR-0149 decisions
-42-45, ADR-0115 decision 28 amended). **PR #76** (`release-1.1.1` into
-`main`, with the README naming 1.1.1) is open for George to merge. After the
-merge: the post-merge steps, removing the release worktree
-`~/projects/gexis-player-rel-1.1.1`, the fix worktree
-`~/projects/gexis-player-fix` and the branches `fix-first-use` and
-`release-1.1.1`, then the routine clean-up (1.0.6's image can go then).
-sofapi runs the preview `+git16`, the same code as 1.1.1. **Not tried on a
-device:** a USB drive's folders; a new server's folders held for its
-add-ons, and the plate through a whole first read (George's next reset).
+image). Image `image/deploy/2026-10-19-gexis-player-v1.2.0.img`, 123
+checks; parts `ours-c246c9c094c6`, `skins-9c8185729dfd` (reused),
+`rpi-7325dbec7a52`, `debian-5d5dc927ef03`. It carries Phase 15, the public
+API (`ph-api`, merged into `next`), and George's fixes from testing it on
+sofapi. **GitHub Pages is on** (source GitHub Actions; the `github-pages`
+environment lets `main` and `v*` tags deploy), so `api-docs.yml` publishes
+the API description from each release tag. **PR #77** was merged by George the same day; post-merge steps and the
+clean-up are done; the wiki Roadmap is pushed (Now 16 optical, Next 17 DSI
+and 18 room correction). sofapi runs the preview `+git33`, equal in content
+to 1.2.0. **The README's badge bar** (tests, release, licence, Raspberry Pi
+4, API, PayPal) is on `docs` and `next`, for the next release PR.
 
 **Release build output lives in `~/.local/share/gexis-release-out`**: in each
 release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
 (excluded in `.git/info/exclude`). `reuse.py` reuses a published file only
 against a local copy, so losing that folder means re-uploading every OS file.
 
-**Phase 15 is now the public API (`ph-api`, ADR-0152)**; MPD, planned as
-Phase 15 first, was parked the same day after measuring it on sofapi
-(Finding 128, ADR-0151: George, *"Really too much risk for a small
-benefit"*). On the branch `ph-api` (worktree `~/projects/gexis-player-api`,
-pushed, CI green, not merged): `core/src/gexis_core/api/openapi.json`
-(all 90 API routes; drafted group by group, merged, validated with
-openapi-spec-validator), `core/tests/test_openapi.py` (the drift test), the
-setting *API explorer* (`api_explorer`, System after Debug logs, off; ADR-0022
-[N]), `/api` with Swagger UI 5.33.3 shipped in the core (every route tryable),
-`.github/workflows/api-docs.yml` (the static page at each release tag;
-**GitHub Pages must be switched on before the first such release**), three
-faults fixed (radio's 502, a transport KeyError, `/skins` and Fanart), and the
-docs (`docs/tech/api.md`, manual, FAQ, README). sofapi runs core
-`1.1.1+git21` (restarted by hand: LESSONS 77), the explorer off. **Open with
-George:** the stable/internal marks (32 stable, 58 internal proposed).
-**Three Phase 14 articles** (13-15: setup in two parts,
-where your music is, a music server's first minutes) are drafts 186, 190 and
-191 in the local WordPress copy for George to read; `import_wp.py` now takes
-article numbers, and `bundle.json` is refreshed for `push_wp.py`.
+**In `next`, not yet released** (2026-10-20): the moon at night (ADR-0153),
+four more weather icon sets (ADR-0154), the idle screen really still with
+*Static* (Finding 129), aiohttp 3.14.4 (three Dependabot alerts; they close
+when it reaches `main`), and **Phase 16, optical** (ADR-0155, Finding 130):
+Squeezelite converts only rates the card lacks (`-R -u vEX`, 88.2/176.4 kHz to
+the card's highest), the Realtek adapter `0bda:4e27` marked Tested and Fixed by
+default. Heard on sofapi into the SMSL by George. sofapi runs
+`1.2.0+git33` (ph-optical), back on HDMI 2 with Software volume. **Owed by
+George:** a look at the moon before sunrise. **Open:** a visualiser agent on
+branch `viz-robust` (George's photos 2026-10-20: the UI showing through at the
+bottom, a white background, stepped meter edges; plus a skin-rendering test
+suite). **Separate:** Squeezelite joins whichever Lyrion server answers first
+after a restart (Finding 130 point 6).
 
-**The blog** (George's WordPress, tag `sound`): eleven articles in
-`~/projects/gexis-blog/`, pushed as drafts by George (2026-10-15; article 05
-now mentions *Add a backup*, bundle rebuilt 2026-10-17, for George to re-push);
-`schedule_wp.py` schedules nine, daily at 18:00 from 2026-10-16 - whether he
-ran it is not recorded. The theme (`gcarstoiu/gexis-wp-theme` 1.0.3, pushed)
-mirrors FAQ, Install, Hardware, Manual and Release notes from `main`.
-
-Suite 2,544 passed, 47 skipped (2026-10-18, on `ph-first-use`), with the venv in
-`~/.local/share/gexis-venv` (never under `/tmp`: LESSONS 74).
-
-**Devices.** sofapi (Waveshare 10.1", SMSL USB DAC; a test machine), the bar
-(ShelvesPi, 11.9"), guestpi (IQaudIO Pi-DAC PRO, 13.3"), bedroompi (a
-separate card; off the network on 2026-10-16 evening). sofapi and ShelvesPi
-run previews from the release branch (equal in content to 1.0.5); guestpi and bedroompi are
-offered 1.0.5 on Stable. **Cards flashed now have no passwordless sudo:
-provision test cards with `DEV_SUDO="yes"`** (ADR-0139).
-
-**Owed by George** (the shared to-do list has the detail)
-- On a card flashed from the 0.12.0 image: setup without a restore (g24),
-  setup over a network cable (g26).
-- The screen on the bar's second HDMI port (g35).
-- The spectrum on sofapi's panel after the change (Finding 122).
-- On sofapi: the meters falling with the volume, and *Needles follow the
-  volume* and *Gain* (ADR-0146).
-
-**Not run on a device yet:** the outline cut by the real mini strip (a
-stand-in bar only, headless); the headphone jack taking over from a
-switched-off HDMI device (ADR-0141 D5, fixed in 1.0.2).
-
-**Next: George's test of Phase 14 on sofapi** (above): part 2, then part 1
-after a factory reset, then a PR for `ph-first-use`. Still open from the release:
-Raspberry Pi Imager, the image file and *Use custom* (g14). **After it**, in order
-(`docs/DEVELOPMENT.md`, "Phases after the first public release"; refer to them
-by ID): **15** MPD for real 5.1/7.1 (`ph-mpd`), **16** room correction with a
-USB microphone (`ph-room-correction`), **17** the player in Home Assistant
-(`ph-home-assistant`), **18** themes (`ph-themes`), **19** a sound bar on
-optical (`ph-optical`), **20** the library answers for itself (`ph-library`),
-**21** Lyrion's own menus' look (`ph-lyrion-menus`) - each ADR first.
+**Next: Phase 17, DSI screens** (`ph-dsi`; George names his screen when it
+starts), after Phase 16 is released. Then, in order (`docs/DEVELOPMENT.md`;
+refer to them by ID): **18** room correction
+(`ph-room-correction`), **19** Home Assistant (`ph-home-assistant`), **20**
+themes (`ph-themes`), **21** the library answers for itself (`ph-library`),
+**22** Lyrion's own menus' look (`ph-lyrion-menus`); MPD is parked
+(`ph-mpd`, ADR-0151). Each ADR first. Still open from 1.0.0: Raspberry Pi
+Imager, the image file and *Use custom* (g14).
 
 The shared to-do list (an artifact with a `todos` collection; its address is
 in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-10-18, weekly** (/home 242 GB free before and after; HANDOFF 2,590 ->
-1,737 words).
+2026-10-19, after 1.2.0** (/home 228 -> 233 GB free; HANDOFF 1,684 ->
+1,567 words).
 
 ## Phases
 
-Closed: 0-12, 13, 13a, 13b, 13c, 13d (2026-10-12, Finding 114's addendum),
-13e, 13f (2026-10-12: shipped behind *Extended navigation*; its look is
-`ph-lyrion-menus`) (`docs/DEVELOPMENT.md` holds each phase's acceptance criteria; the archive
-holds the order as it was argued). **From 2026-10-13 phases are numbered
-consecutively without letters, each with a stable ID** (George); the open ones
-are 14-21. **Phase 14 is `ph-first-use`** (George, 2026-10-15): setup split into
-a device part and a personal part, before MPD (now 15); ADR-0149 proposed, its
-open points owed by George, then Claude Design.
+Closed: 0-15 (13 with letters a-f; Phase 15, the public API, on
+2026-10-19 with 1.2.0). Phases are numbered consecutively without letters,
+each with a stable ID (George, 2026-10-13); the open ones are 16-22, with
+MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
 
 ## Machines
 
