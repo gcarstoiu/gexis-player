@@ -183,6 +183,12 @@
       if (!untrack(() => askedIdle)) idle = false;
       return;
     }
+    // **The countdown restarts whenever the idle screen goes away**, whatever
+    // took it down (2026-10-20, sofapi: the visualiser's rule below dropped
+    // it at 12:30 and nothing restarted the timer; the panel stayed off its
+    // idle screen for eight hours). Reading `idle` makes this effect run
+    // again when it turns false; while it is up there is nothing to time.
+    if (idle) return;
     const id = setTimeout(() => (idle = true), IDLE_MS);
     return () => clearTimeout(id);
   });
