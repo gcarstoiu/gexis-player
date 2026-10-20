@@ -138,6 +138,12 @@ up on tap"*; approved both changes below (*"Ok with both. Go for it"*).
   schedule's standby, said as such - the phone offers to wake it, a touch
   wakes it, the schedule wakes it when the time ends. Dark outside one, it is
   woken. Lit, it is known to be on.
+- **Checked with the player's own standby** (ShelvesPi, 1.3.0+git9, 2026-10-20):
+  asked off as the phone asks, dark for two minutes, **one tap woke it** -
+  one finger-down in the kernel, one touch report, "screen on (touch)" in the
+  same second; the picture back about 3 s later (George). An earlier round
+  took two taps with only one reaching the kernel or the page - probably a
+  tap while the display was still powering down; not seen again.
 - Not yet measured: whether the 10.1" and the bar go fully dark powered down
   (rather than showing a lit backlight or a "No signal" box), and the HDMI
   sound case (the output carrying the sound stays on, as before - unchanged).
