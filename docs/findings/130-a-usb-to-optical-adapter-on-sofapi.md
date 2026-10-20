@@ -53,3 +53,21 @@ Phase 16's decision record: what the player does with a rate the card lacks
 (convert in its own chain, as Plexamp does for itself), the adapter's volume
 type, its *Tested* mark, its second device. The server Squeezelite joins is a
 separate matter.
+
+## After ADR-0155 (2026-10-20, 11:00)
+
+`gexis-core`, `-player` and `-system` `1.2.0+git33` from branch `ph-optical`
+on sofapi, the core restarted; Squeezelite ran `-R -u vEX`. The same tones
+through Lyrion, Software volume, into the SMSL, George listening:
+
+| Tone | The adapter ran at | Squeezelite's CPU |
+|---|---|---|
+| 44.1 kHz | 44.1 kHz, untouched | 1 % |
+| 88.2 kHz | **192 kHz**, converted | 2 % |
+| 176.4 kHz | **192 kHz**, converted | 1 % |
+| 96 kHz | 96 kHz, untouched | 2 % |
+
+All four played at the same pitch (George: *"Heard. All good"*). *Output*
+showed the adapter *Tested*. Not checked on the device: the Fixed default
+(sofapi has Software stored, which is kept); DSD.
+
