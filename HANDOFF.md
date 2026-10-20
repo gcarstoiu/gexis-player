@@ -36,12 +36,10 @@ image`); parts `ours-c886989caba4`, `skins-c272f4628d09` (new),
 `rpi-7325dbec7a52`, `debian-5d5dc927ef03`. It carries Phase 16 (optical,
 ADR-0155), the moon at night (ADR-0153), four more icon sets (ADR-0154), the
 Static fix (Finding 129), the visualiser repaint (Finding 131) and aiohttp
-3.14.4. **PR #79** (`release-1.3.0` into `main`) is open for George to merge.
-After the merge: the post-merge steps; remove the release worktree
-`~/projects/gexis-player-rel-1.3.0` and the worktrees `-moon`, `-sets`,
-`-optical`, `-viz` with their branches (`moon-night`, `weather-sets`,
-`ph-optical`, `viz-robust`); close Phase 16 in the phases doc and the wiki
-Roadmap (show George first); the routine clean-up (1.2.0's image can go).
+3.14.4. **PR #79** was merged by George; post-merge steps and the clean-up are done
+(the four feature branches and worktrees removed; the wiki Roadmap update is
+prepared but **not pushed - George has not answered**). The three aiohttp
+alerts close when Dependabot rescans `main` (it holds 3.14.4).
 GitHub Pages builds the API page from the `v1.3.0` tag.
 
 **Release build output lives in `~/.local/share/gexis-release-out`**: in each
@@ -67,8 +65,7 @@ in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-10-19, after 1.2.0** (/home 228 -> 233 GB free; HANDOFF 1,684 ->
-1,567 words).
+2026-10-20, after 1.3.0** (/home 226 -> 232 GB free).
 
 ## Phases
 
