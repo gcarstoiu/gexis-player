@@ -12,8 +12,8 @@ def test_every_model_is_listed_and_the_two_modes_are_not():
     listed = screens.all_screens()
     # 192 models, less the 11 square and round ones George left out, less
     # the DSI and DPI screens (HDMI only for now, 2026-10-01), and a case listed
-    # once as its panel (2026-10-03): 106.
-    assert len(listed) == 106
+    # once as its panel (2026-10-03): 106; and our own non-touch HMTECH 10.1" (2026-10-20): 107.
+    assert len(listed) == 107
     assert {s.interface for s in listed} == {"hdmi"}
     assert not {s.id for s in listed} & screens.NOT_MODELS
     assert len({s.label for s in listed}) == len(listed), "the picker's labels are unique"
@@ -42,11 +42,11 @@ def test_a_maker_never_contains_the_picker_s_separator():
     assert makers["Waveshare"] > 30 and "GeeekPi" in makers and "Generic" in makers
 
 
-def test_george_s_five_are_the_tested_ones():
+def test_george_s_six_are_the_tested_ones():
     """Decision 1: the four Waveshare HDMI screens George owns, and from
-    2026-10-20 the HMTECH 7" tried on sofapi."""
+    2026-10-20 the two HMTECHs tried on sofapi."""
     tested = {s.id for s in screens.all_screens() if s.tested}
-    assert tested == set(screens.TESTED) and len(tested) == 5
+    assert tested == set(screens.TESTED) and len(tested) == 6
     assert all(screens.by_id(i).interface == "hdmi" for i in tested)
     assert {screens.by_id(i).maker for i in tested} == {"Waveshare", "HMTECH"}
 
@@ -72,3 +72,11 @@ def test_a_screen_from_its_own_mode_is_found_by_its_name():
     found = screens.by_label("Other screen/1920 × 1080")
     assert found is not None and found.id == "other-1920x1080" and found.rotation == 0
     assert screens.by_label("Other screen/1920 x 1080") is None
+
+
+def test_our_own_entry_is_listed_beside_the_vendored_one():
+    """George's HMTECH 10.1" has no touch; the list's HMTECH 10.1" is the
+    touch model. Both are listed; only ours is tested."""
+    ours, theirs = screens.by_id("hmtech-10.1-hdmi-monitor"), screens.by_id("hmtech-10.1-hdmi")
+    assert ours.tested and not theirs.tested
+    assert (ours.width, ours.height) == (1024, 600) and ours.maker == "HMTECH"
