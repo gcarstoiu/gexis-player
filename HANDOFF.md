@@ -50,12 +50,15 @@ against a local copy, so losing that folder means re-uploading every OS file.
 
 **In `next`, for the next release** (2026-10-20): the idle countdown re-arms
 whenever the idle screen goes away (sofapi was off its idle screen 12:30-20:22
-after the visualiser took it down), and standby powers the display down with
-`wlopm` and reads the real screen at start (ADR-0135 amended: ShelvesPi's bar
-stayed dark all day - taps had no output to land on, and the update's restart
-forgot the standby). ShelvesPi runs `1.3.0+git9` (both fixes), sofapi
-`1.3.0+git6` (the idle fix). Branches `idle-rearm` and `standby-power` merged
-into `next`, to delete after the release.
+after the visualiser took it down), and standby wakes on a tap read from the kernel while the
+output is off, and reads the real screen at start (ADR-0135 amended:
+ShelvesPi's bar stayed dark all day - its taps had no output to land on, and
+the update's restart forgot the standby). Powering the display down with
+`wlopm` was tried and dropped (3 s back); the bar's ~3 s is its own screen
+resyncing (switching takes 0.05 s) - George: "Keep it as is". ShelvesPi runs
+`1.3.0+git11` (both fixes; `wlopm` removed again), sofapi `1.3.0+git6` (the
+idle fix). Branches `idle-rearm`, `standby-power` (superseded) and
+`standby-touch` merged into `next`, to delete after the release.
 
 **Open:** Squeezelite joins whichever Lyrion server answers first after a
 restart (Finding 130 point 6); George's look at the moon before sunrise. sofapi
