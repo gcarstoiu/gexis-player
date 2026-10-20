@@ -1176,9 +1176,12 @@ async def main() -> None:
         one that cannot be had says why.
         """
         if output is not None and output.control is None:
+            # ADR-0155 decision 3: Fixed in its place on an output feeding a
+            # device with its own volume (the tested optical adapter).
             settings.restrict(
                 "output_mode",
                 {HARDWARE: f"{output.label} has no volume control of its own."},
+                instead=FIXED if output.fixed_by_default else None,
             )
         else:
             settings.restrict("output_mode", {})

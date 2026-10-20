@@ -157,21 +157,31 @@ def native_dsd(card: str) -> str | None:
     return next((name for fmt, name in DSD_FORMATS if fmt in formats), None)
 
 
+#: **ADR-0155: Squeezelite converts only the rates the card cannot take**,
+#: upward to the card's highest rate. soxr's very high quality (`v`, 28-bit
+#: precision, for 24-bit sources); `E`, only when the card lacks the track's
+#: rate - every rate it takes still goes through untouched, bit-perfect; `X`,
+#: to the card's highest rate rather than down to its own family (George,
+#: 2026-10-20: *"1b"*, as Plexamp converts). Measured silence without it: a
+#: USB-to-optical adapter with no 88.2 or 176.4 kHz (Finding 130).
+SQUEEZELITE_RESAMPLE = "-R -u vEX"
+
+
 def squeezelite_options(card: str, dsd: bool = False) -> str:
-    """Squeezelite's extra options for this card: none for one that goes no
-    higher than Lyrion can hand over - it asks the card, as before - and a
-    list of rates up to `LYRION_MAX_RATE` for one that does. With `dsd`
-    (ADR-0144: the volume Fixed and the card taking DSD), `-D` in the card's
-    format: Lyrion then sends DSD files as DSD, and Squeezelite plays them
-    natively instead of converting them to PCM."""
+    """Squeezelite's extra options for this card: a list of rates up to
+    `LYRION_MAX_RATE` for one that goes higher than Lyrion can hand over
+    (ADR-0143; any other card Squeezelite asks itself), and the resampler for
+    a rate the card lacks (ADR-0155). With `dsd` (ADR-0144: the volume Fixed
+    and the card taking DSD), `-D` in the card's format instead of the
+    resampler: Lyrion then sends DSD files as DSD and Squeezelite plays them
+    natively, which a resampler in the path would turn into PCM."""
     options = []
     _current(card)
     low, high = _rates.get(card, (0, 0))
     if high > LYRION_MAX_RATE:
         options.append("-r " + ",".join(str(r) for r in SQUEEZELITE_RATES if r >= low))
     fmt = native_dsd(card) if dsd else None
-    if fmt:
-        options.append(f"-D :{fmt}")
+    options.append(f"-D :{fmt}" if fmt else SQUEEZELITE_RESAMPLE)
     return " ".join(options)
 
 
@@ -188,7 +198,7 @@ def write_squeezelite_env(card: str, path: Path = SQUEEZELITE_ENV, dsd: bool = F
     """`GEXIS_SQUEEZELITE_OPTIONS` for the unit; True if it changed. Read
     when Squeezelite starts, which the output switch does after this."""
     wanted = (
-        "# Written by gexis-core for the chosen output (ADR-0143). Do not edit.\n"
+        "# Written by gexis-core for the chosen output (ADR-0143, ADR-0155). Do not edit.\n"
         f"GEXIS_SQUEEZELITE_OPTIONS={squeezelite_options(card, dsd)}\n")
     try:
         if path.read_text() == wanted:
@@ -316,6 +326,16 @@ class Output:
 
     #: A reported problem with this board, said under it (hardware_reports).
     problem: str | None = field(default=None, compare=False)
+    #: `vendor:product` for a card on USB (ADR-0155); None for any other.
+    usb_id: str | None = field(default=None, compare=False)
+
+    @property
+    def fixed_by_default(self) -> bool:
+        """**Fixed in Hardware's place**, not Software (ADR-0155 decision 3):
+        an output that feeds a device with its own volume - a USB-to-optical
+        adapter into a DAC or receiver - plays at full level unless its owner
+        chose Software."""
+        return self.usb_id in FIXED_BY_DEFAULT_USB
 
     @property
     def option(self) -> str:
@@ -527,6 +547,29 @@ def _usb_device(card: str, sound: Path, proc: Path) -> tuple[Path, Path] | None:
     return device.parent, proc / number
 
 
+#: **USB cards tested here** (ADR-0117 decision 2, ADR-0155), by
+#: `vendor:product`: *Tested* beside them in Output, as a board on the list.
+#: The Realtek USB-to-optical adapter: 44.1, 48, 96 and 192 kHz into the
+#: SMSL's optical input, measured and heard (Finding 130).
+TESTED_USB: dict[str, str] = {"0bda:4e27": "Realtek USB SPDIF Adapter (USB to optical)"}
+
+#: ADR-0155 decision 3: the tested optical adapter only - a card is not known
+#: to feed a device with its own volume until it has been tried.
+FIXED_BY_DEFAULT_USB: frozenset[str] = frozenset({"0bda:4e27"})
+
+
+def usb_id(card: str, sound: Path | None = None, proc: Path | None = None) -> str | None:
+    """`vendor:product` of the USB device behind a card, as `lsusb` shows it;
+    None for a card not on USB."""
+    found = _usb_device(card, sound or SOUND, proc or PROC_ASOUND)
+    if found is None:
+        return None
+    try:
+        return ":".join((found[0] / name).read_text().strip().lower() for name in ("idVendor", "idProduct"))
+    except OSError:
+        return None
+
+
 #: sysfs `speed` (Mbit/s) as the USB generation people know it by.
 USB_SPEEDS = ((5000, "USB 3"), (480, "USB 2.0"), (0, "USB 1.1"))
 
@@ -630,6 +673,9 @@ def _discover(chosen_board: str | None, product) -> list[Output]:
             hardware_reports.board(board.id if board else card))
         control, scale = playback_control(card)
         named = board.name if board else (None if card in BUILT_IN_CARDS else usb_name(card))
+        on_usb = None if card in BUILT_IN_CARDS else usb_id(card)
+        if on_usb in TESTED_USB:
+            state = "Tested"
         found.append(
             Output(
                 card=card,
@@ -641,6 +687,7 @@ def _discover(chosen_board: str | None, product) -> list[Output]:
                 aka=label if named else None,
                 details=None if card in BUILT_IN_CARDS else usb_details(card),
                 problem=problem,
+                usb_id=on_usb,
             )
         )
     return found
