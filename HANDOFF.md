@@ -73,8 +73,7 @@ the first start after the boot that switched to it (Chromium stored 1004x580 in 
 1024x600 work area: not full-screen), then full-screen on two restarts in a
 row. A first start after a screen change may still miss full-screen.
 
-**Open:** Squeezelite joins whichever Lyrion server answers first after a
-restart (Finding 130 point 6); George's look at the moon before sunrise. sofapi
+**Not an issue** (George, 2026-10-20): Squeezelite joining whichever Lyrion server answers first after a restart (Finding 130 point 6). **Open:** George's look at the moon before sunrise. sofapi
 and ShelvesPi run previews (above).
 
 **Next: Phase 17, DSI screens** (`ph-dsi`; George names his screen when it

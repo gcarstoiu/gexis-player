@@ -46,6 +46,7 @@ with a USB-to-optical adapter before its decision record is written.
 6. **Aside:** after Squeezelite restarted (a change of volume type), it joined
    a different Lyrion server than before - sofapi's own instead of the one on
    the network. It has no server fixed and takes whichever answers first.
+   **Not an issue** (George, 2026-10-20: *"this is a non-issue"*).
 
 ## What follows
 
