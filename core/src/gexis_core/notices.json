@@ -568,6 +568,16 @@
       ]
     },
     {
+      "name": "Photographs of the Sun and the Moon",
+      "group": "ui",
+      "role": "The Sun and the Moon in the Photographic weather icons.",
+      "author": "NASA/GSFC/Arizona State University (the Moon, Lunar Reconnaissance Orbiter); NASA/SDO and the HMI science team (the Sun)",
+      "licence": "Public domain (works of NASA)",
+      "url": "https://commons.wikimedia.org/wiki/File:Moon_nearside_LRO_5000.jpg",
+      "arrives": "Bundled with the player's screens (two small pictures, made smaller)",
+      "packages": []
+    },
+    {
       "name": "dbus-next",
       "group": "core",
       "role": "Talks to Bluetooth.",

@@ -351,7 +351,15 @@ class MetadataLayer:
             logger.warning("render: no background %s: %s", path, exc)
             return
         if image.get_size() != self._screen.get_size():
-            image = pygame.transform.smoothscale(image, self._screen.get_size())
+            # Placed as the engine places it - from the corner, unscaled, on
+            # the black the driver starts every frame from (Finding 131) -
+            # not scaled: a 1920x1115 picture the engine crops, scaled here,
+            # erased text back to a picture that was not on the screen, and
+            # a 1480x310 one left a band the engine never paints.
+            canvas = pygame.Surface(self._screen.get_size())
+            canvas.fill((0, 0, 0))
+            canvas.blit(image, (0, 0))
+            image = canvas
         self._background = image
 
     def _slot_for(self, name: str | None) -> tuple[int, int, int, int] | None:

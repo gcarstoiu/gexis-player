@@ -426,6 +426,24 @@ drawn on screen because the data licences ask for them. Legibility comes
 from a contour on the glyphs, not from a plate behind them (ADR-0041 bans
 live backdrop blur).
 
+**The moon at night** (ADR-0153). Between today's sunrise and sunset, by the
+screen's own clock against `sun.rise_at` and `sun.sets_at` (moments the core
+sends), the current conditions' `WeatherIcon` draws the moon wherever it would
+draw a sun; the forecast days keep their sun. `lib/moon.js` gives the phase
+from the date (a mean synodic month from the new moon of 6 January 2000) and
+the lit part as an SVG path; the icon mirrors it for a waning moon and again
+when the core sends `south`. One design per icon set: Solid with maria and two
+stars, Duotone with a shadow disc behind, Neon as a cyan line on a faint ring.
+
+**Seven icon sets** (ADR-0047, ADR-0154). Solid, Duotone and Neon are the
+design's DOM shapes in `WeatherIcon.svelte`. Modern, Futuristic, Photographic
+and Atmospheric are SVG strings from `lib/weatherSets.js`, given to
+`WeatherIcon` through `{@html}`, each id made unique to its icon; their motion
+is global CSS under the icon's root, and *Weather icon motion* Static stills
+it as it stills the others. Photographic and Atmospheric light their clouds
+with an SVG lighting filter over fractal noise; Photographic's Sun and Moon
+are NASA photographs (`assets/weather/`, credited in Credits).
+
 ---
 
 ## 7. The phone page

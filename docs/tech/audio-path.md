@@ -448,6 +448,22 @@ because above 384 kHz Lyrion's PCM opened the card at 44.1 kHz; with the list,
 a 705.6/768 kHz stream is refused instead (Finding 120); Squeezelite's unit
 reads it unbraced, so the empty value of every other card adds no argument.
 
+**Squeezelite converts only the rates a card lacks** (ADR-0155, Finding
+130). `squeezelite_options` adds `SQUEEZELITE_RESAMPLE` (`-R -u vEX`) for
+every card: soxr at very high quality (`v`), only when the card lacks the
+track's rate (`E` - everything the card takes is untouched, bit-perfect), to
+the card's highest rate (`X`). Without it a USB-to-optical adapter with no
+88.2 or 176.4 kHz left Lyrion silent: Squeezelite could not open the card at
+those rates. With native DSD (`-D`, ADR-0144) the resampler is left out, as
+it would turn DSD into PCM. Plexamp converts such rates itself (measured).
+
+**A tested USB card is known by its USB id** (`usb_id`, `vendor:product`
+from sysfs; ADR-0155). `TESTED_USB` marks it *Tested* in Output, as a board
+on the list; `FIXED_BY_DEFAULT_USB` makes Fixed, not Software, stand in for
+Hardware on it - at start-up (`softvol_boot.volume_mode`) and in Settings
+(`restrict(..., instead=FIXED)`) - since it feeds a device with its own
+volume. An owner's own choice of Software or Fixed stands.
+
 **What a card takes is asked once per device** (Finding 125 #15,
 2026-10-14). `needs_plug` plays a second of zeroes to ask, so its answers -
 formats, lowest and highest rate - are kept by card id, with the device
@@ -604,6 +620,13 @@ flowchart LR
   lowers the meter once that raise is done (Finding 125 #14), instead of
   being lost with the meter left over the panel; a raise the user asked for
   is not lowered that way, since the tap that asked for it also sends a touch.
+  **The whole frame is painted again when the window comes back** (Finding
+  131): PeppyMeter paints a skin's full picture only when it starts, then only
+  the needles' boxes, so a window raised without its picture showed little
+  but the meter faces. The driver repaints everything from black - the meter
+  restarted, every layer set afresh - on any window event pygame reports
+  (logged as `peppy: window ...`) and 0.6 s and 2 s after the shown flag goes
+  up (`Repaints`, `Rotation.refresh`). Every skin change starts from black too.
 - **What it draws besides levels.** The core writes
   `/run/gexis/nowplaying.json` (`peppy_metadata.py`) for title, artist,
   artwork and times, and `/run/gexis/visualisation.json` (`skins.py`) for the

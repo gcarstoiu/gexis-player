@@ -400,3 +400,137 @@ def test_updates_and_a_skin_change_take_one_lock():
     lock = driver.serialise_updates(engine)
     engine.set_values()
     assert calls == [True] and not lock.locked()
+
+
+# ── a window back without its picture (Finding 131) ──────────────────────
+
+
+class _Surface:
+    def __init__(self, log, name):
+        self.log, self.name = log, name
+
+    def fill(self, colour):
+        self.log.append((self.name, "fill", tuple(colour)))
+
+    def get_size(self):
+        return (1280, 800)
+
+
+class _Meter:
+    def __init__(self, log):
+        self.log = log
+
+    def stop(self):
+        self.log.append(("meter", "stop"))
+
+    def start(self):
+        self.log.append(("meter", "start"))
+
+    def set_volume(self, volume):
+        self.log.append(("meter", "volume", volume))
+
+
+def _rotation_on_screen(monkeypatch, log):
+    """A rotation with one skin on screen, its engine and layers stand-ins
+    that log what they are asked to draw."""
+    window = _Surface(log, "window")
+    display = types.SimpleNamespace(get_surface=lambda: window, update=lambda *a: log.append(("display", "update")))
+    monkeypatch.setattr(driver.pygame, "display", display, raising=False)
+    meter = _Meter(log)
+    peppy = types.SimpleNamespace(
+        meter=types.SimpleNamespace(meter=meter, current_volume=70),
+        util=types.SimpleNamespace(PYGAME_SCREEN=window, meter_config={}),
+    )
+    spectrum = types.SimpleNamespace(follow=lambda skin, home=None: log.append(("spectrum", "follow")))
+    layer = types.SimpleNamespace(set_skin=lambda *a: log.append(("layer", "set_skin")), background=None)
+    rotation = driver.Rotation(peppy, {"01G5_Needle": {"screen.bgr": "x.jpg"}}, spectrum, layer)
+    rotation.current = "01G5_Needle"
+    return rotation
+
+
+def test_a_refresh_paints_the_whole_frame_again_from_black(monkeypatch):
+    """PeppyMeter paints a skin's full picture only when it starts; after
+    that, the needles' boxes. A window that lost its picture showed the meter
+    faces as far as the needles had swept and the page behind elsewhere
+    (George's photos, sofapi, 2026-10-20). A refresh restarts the meter on
+    black and sets every layer afresh, then presents the whole window."""
+    log = []
+    rotation = _rotation_on_screen(monkeypatch, log)
+    assert rotation.refresh() is True
+    assert log[:4] == [("meter", "stop"), ("window", "fill", (0, 0, 0)), ("meter", "volume", 70), ("meter", "start")]
+    assert ("spectrum", "follow") in log and ("layer", "set_skin") in log
+    assert log[-1] == ("display", "update"), "the whole window is presented, not a region"
+
+
+def test_nothing_on_screen_is_nothing_to_refresh(monkeypatch):
+    log = []
+    rotation = _rotation_on_screen(monkeypatch, log)
+    rotation.current = None
+    assert rotation.refresh() is False and log == []
+
+
+def test_a_skin_change_starts_from_black(monkeypatch):
+    """A skin need not paint every pixel; what it leaves is black, never the
+    skin before it."""
+    log = []
+    rotation = _rotation_on_screen(monkeypatch, log)
+    new = _Meter(log)
+    rotation.prepared = ("01G5_Needle", new)
+    monkeypatch.setattr(rotation, "prepare_next", lambda name=None: None)
+    # The engine's config module, which the switch imports: its two names.
+    monkeypatch.setitem(sys.modules, "configfileparser", types.SimpleNamespace(BASE_PATH="base.path", METER="meter"))
+    rotation.switch("01G5_Needle")
+    fill = log.index(("window", "fill", (0, 0, 0)))
+    assert fill < log.index(("meter", "start")) and log[-1] == ("display", "update")
+
+
+class _Clock:
+    def __init__(self):
+        self.now = 100.0
+
+    def __call__(self):
+        return self.now
+
+
+def test_a_window_shown_is_painted_again_after_the_raise_twice():
+    """The core raises the window 0.25 s after the flag goes up, and a
+    `wlrctl` call can take longer: a repaint shortly after, and once more."""
+    clock = _Clock()
+    repaints = driver.Repaints(clock)
+    repaints.shown()
+    assert not repaints.due(), "not before the raise"
+    clock.now += 0.6
+    assert repaints.due() and repaints.reason == "shown"
+    assert not repaints.due(), "once per time"
+    clock.now += 1.4
+    assert repaints.due()
+    clock.now += 60
+    assert not repaints.due(), "and no more"
+
+
+def test_a_window_event_asks_for_a_repaint_at_once():
+    clock = _Clock()
+    repaints = driver.Repaints(clock)
+    repaints.event("WINDOWEXPOSED")
+    assert repaints.due() and repaints.reason == "WINDOWEXPOSED"
+
+
+def test_window_events_are_read_where_the_engine_reads_its_events(monkeypatch, capsys):
+    """Wrapped like the touch reporter: the engine sees the same events, and
+    each window event asks for a repaint and is logged once in a while."""
+    exposed = 32770
+    batches = [[types.SimpleNamespace(type=exposed)], [types.SimpleNamespace(type=1)],
+               [types.SimpleNamespace(type=exposed)]]
+    event = types.SimpleNamespace(get=lambda *a, **k: batches.pop(0))
+    monkeypatch.setattr(driver.pygame, "event", event, raising=False)
+    monkeypatch.setattr(driver.pygame, "WINDOWEXPOSED", exposed, raising=False)
+    repaints = driver.Repaints(_Clock())
+    driver.watch_window_events(repaints)
+    seen = driver.pygame.event.get()
+    assert [e.type for e in seen] == [exposed], "the engine's events, unchanged"
+    assert repaints.due() and repaints.reason == "WINDOWEXPOSED"
+    driver.pygame.event.get()
+    assert not repaints.due(), "another kind of event asks for nothing"
+    driver.pygame.event.get()
+    assert repaints.due()
+    assert capsys.readouterr().out.count("window windowexposed") == 1, "logged once in a while, not per event"

@@ -1092,8 +1092,11 @@
                       },
                       "sun": {
                         "rise": "06:52",
-                        "sets": "18:41"
+                        "sets": "18:41",
+                        "rise_at": 1792410720,
+                        "sets_at": 1792453260
                       },
+                      "south": false,
                       "days": [
                         {
                           "date": "2026-10-19",
@@ -5633,7 +5636,7 @@
           },
           "sun": {
             "type": "object",
-            "description": "Today's sunrise and sunset, local time.",
+            "description": "Today's sunrise and sunset: local time, and as moments.",
             "properties": {
               "rise": {
                 "type": [
@@ -5648,8 +5651,26 @@
                   "null"
                 ],
                 "description": "Sunset as HH:MM."
+              },
+              "rise_at": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "description": "Sunrise as a moment, seconds since 1970 (UTC); the screen compares it with its own clock to draw the moon at night (ADR-0153)."
+              },
+              "sets_at": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "description": "Sunset as a moment, seconds since 1970 (UTC) (ADR-0153)."
               }
             }
+          },
+          "south": {
+            "type": "boolean",
+            "description": "The place is south of the equator, so the moon's lit side is mirrored (ADR-0153)."
           },
           "days": {
             "type": "array",

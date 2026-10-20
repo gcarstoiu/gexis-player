@@ -778,6 +778,7 @@ class Settings:
         #: Injected by the daemon, because only it knows what the sound
         #: card can do.
         self._unavailable: dict[str, dict[Any, str]] = {}
+        self._instead: dict[str, Any] = {}
         #: key -> a callable giving {option: why} as things are now - for a
         #: set that changes with what is installed (the skin types a screen
         #: has none of, 2026-10-05), read when needed rather than pushed.
@@ -828,9 +829,11 @@ class Settings:
         except KeyError:
             raise UnknownSetting(key) from None
 
-    def restrict(self, key: str, unavailable: dict[Any, str]) -> None:
+    def restrict(self, key: str, unavailable: dict[Any, str], instead: Any = None) -> None:
         """Grey out options the hardware cannot honour, or clear the set by
-        passing an empty one.
+        passing an empty one. `instead` is what is in force in place of a
+        greyed-out stored choice; without it, the first option still open
+        (ADR-0155: Fixed, not Software, on the tested optical adapter).
 
         **The stored value is never touched**, which is what makes handing
         the choice back free. George: *"When changing back to dac set the
@@ -843,6 +846,10 @@ class Settings:
             self._unavailable[key] = dict(unavailable)
         else:
             self._unavailable.pop(key, None)
+        if unavailable and instead is not None:
+            self._instead[key] = instead
+        else:
+            self._instead.pop(key, None)
 
     def report(self, key: str, state: str | None, text: str | None = None,
                error: str | None = None) -> bool:
@@ -914,6 +921,8 @@ class Settings:
             # choice is waiting for the hardware that can honour it.
             stored = self._value(key)
             if stored in blocked:
+                if self._instead.get(key) not in (None, *blocked):
+                    return self._instead[key]
                 for option in row.get("options") or ():
                     if option not in blocked:
                         return option
