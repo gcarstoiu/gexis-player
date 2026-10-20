@@ -42,11 +42,13 @@ def test_a_maker_never_contains_the_picker_s_separator():
     assert makers["Waveshare"] > 30 and "GeeekPi" in makers and "Generic" in makers
 
 
-def test_george_s_four_are_the_tested_ones():
-    """Decision 1: the four Waveshare HDMI screens George owns."""
+def test_george_s_five_are_the_tested_ones():
+    """Decision 1: the four Waveshare HDMI screens George owns, and from
+    2026-10-20 the HMTECH 7" tried on sofapi."""
     tested = {s.id for s in screens.all_screens() if s.tested}
-    assert tested == set(screens.TESTED) and len(tested) == 4
-    assert all(screens.by_id(i).maker == "Waveshare" and screens.by_id(i).interface == "hdmi" for i in tested)
+    assert tested == set(screens.TESTED) and len(tested) == 5
+    assert all(screens.by_id(i).interface == "hdmi" for i in tested)
+    assert {screens.by_id(i).maker for i in tested} == {"Waveshare", "HMTECH"}
 
 
 def test_a_case_is_listed_once_as_its_panel():

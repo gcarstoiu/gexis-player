@@ -32,6 +32,8 @@ TESTED: frozenset[str] = frozenset({
     "waveshare-13.3-hdmi-h",
     "waveshare-7.9-hdmi",
     "waveshare-11.9-hdmi",
+    # George, 2026-10-20 (sofapi): "Record it as tested" - the non-touch 7".
+    "hmtech-7-hdmi",
 })
 
 #: The aspect ratio from which a screen is a bar (lib/family.svelte.js: the

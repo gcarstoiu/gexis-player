@@ -76,7 +76,7 @@ def test_the_screen_step_s_three_states():
     models = none["models"]
     assert len(models) == len(screens.all_screens()) == 106
     assert set(models[0]) == {"id", "label", "maker", "model", "width", "height", "family", "tested", "problem", "skins", "skin_count"}
-    assert sum(m["tested"] for m in models) == 4
+    assert sum(m["tested"] for m in models) == 5  # four Waveshares and the HMTECH 7" (2026-10-20)
 
 
 class FakeSetup:
