@@ -5539,7 +5539,7 @@
           "Panel"
         ],
         "summary": "A real tap, text or key on the panel",
-        "description": "The panel asks for this when the phone's touchpad pointer is over a page from another site in a frame - the Home Assistant dashboard - which the panel's own made-up events cannot reach (ADR-0157). A tap becomes a touch from a virtual touchscreen at that fraction of the screen; text is typed by the compositor's virtual keyboard; Backspace, Enter and Tab are pressed on a virtual keyboard. Only the panel's own session receives them.",
+        "description": "The panel asks for this when the phone's touchpad pointer is over a page from another site in a frame - the Home Assistant dashboard - which the panel's own made-up events cannot reach (ADR-0157). A tap becomes a touch from a virtual touchscreen at that fraction of the screen; text and the keys Backspace, Enter and Tab become key presses from a virtual keyboard, each character the key (with Shift or AltGr) that makes it on the panel's keyboard layout. Only the panel's own session receives them.",
         "x-gexis-stability": "internal",
         "x-gexis-adr": [
           "ADR-0157"
@@ -5561,7 +5561,7 @@
         },
         "responses": {
           "200": {
-            "description": "Made; `done` false when the text could not be typed.",
+            "description": "Made; for text, `done` is false when a character is not on the panel's keyboard layout (it is left out, the rest typed).",
             "content": {
               "application/json": {
                 "schema": {

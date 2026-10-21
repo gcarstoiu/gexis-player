@@ -514,7 +514,11 @@
     const field = document.activeElement;
     if (!text || !takesText(field)) return;
     if (isRealInputFrame(field)) {
-      panelInput({ kind: 'text', text }).catch(() => {});
+      // A character the panel's keyboard layout lacks is left out; the
+      // phone says so rather than the field quietly missing it.
+      panelInput({ kind: 'text', text })
+        .then((r) => { if (r?.done === false) pad?.send({ t: 'untyped' }); })
+        .catch(() => pad?.send({ t: 'untyped' }));
       return;
     }
     if (field.isContentEditable) {
