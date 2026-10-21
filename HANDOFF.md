@@ -75,18 +75,14 @@ yet:**
   Home Assistant - the player changes nothing there, ADR-0156 decision 8).
   A throwaway Home Assistant runs on R2D2 (`docker rm -f gexis-test-ha` when
   done).
-- **Open: the visualiser crashes when its window is resized** (sofapi,
-  2026-10-21; SEGV in gexis-peppy also on 10-16, 10-19, 10-20 on both
-  players). Display standby turns the panel's output off (ADR-0135), labwc
-  moves windows to the other output (sofapi's TV, 640x480) and leaves them
-  there: the visualiser came back in a 640x480 box in the corner, and any
-  resize (that one, or a full screen asked for) ends in a crash - the driver
-  and engine draw into the surface the resize replaced. A crash also leaves
-  the core believing it is up (`panel.visualiser`), so its hide finds no
-  window. Two ways: the driver survives a resize (re-acquire the display
-  surface and re-point the engines), or standby powers the output down
-  without removing it (wlopm - dropped on 2026-10-20 for a 3 s wake that
-  turned out to be the bar's own; George's decision).
+- **Fixed, waiting for George's test: the visualiser crashed when its window
+  was resized** (SEGV on both players 10-16 to 10-21; sofapi's photo of a
+  640x480 box after standby). Branch `peppy-survive-resize`: the engines draw
+  on a canvas, the window is only copied to; a raise asks for full screen;
+  a hide with no window counts as hidden. Checked: sofapi six cases (show,
+  a forced resize, standby cycles) and ShelvesPi five, same process, no
+  crash, the whole skin each time; check-skins 978 clean. Cost: +3 % of a
+  core with nothing playing; not yet measured with music.
 - **Phone typing over the dashboard (ADR-0157 amended)**: key presses on the
   compositor's layout (US on the image); checked exact on sofapi with a
   stand-in login (`ph-ha-dashboard`, `phone-sheet`). Chromium's password
