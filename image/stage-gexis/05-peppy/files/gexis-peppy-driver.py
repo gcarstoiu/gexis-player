@@ -1059,7 +1059,14 @@ def draw_on_a_canvas(util, screen: tuple[int, int] | None) -> tuple[int, int]:
     only clips the copy. A pack smaller than the screen is centred on black
     as before (ADR-0111). Called right after `init_display`, before any
     meter or spectrum component takes the surface (component.py reads it
-    once). Returns the canvas's place in the window."""
+    once). Returns the canvas's place in the window.
+
+    **Presented once a frame** (Finding 134): the copy is made at once, but
+    the present - SDL's `update`, which costs about 1.75 ms of processor
+    for any rectangle on a Pi 4 and was 30-44 % of the driver's time - waits
+    for `present_the_frame`, called at the end of every frame. The meters,
+    the ticker, the turning parts and the spectrum each asked for one; the
+    window shows the same frame either way."""
     pack = util.PYGAME_SCREEN.get_size()
     offset = centring(pack, screen)
     if offset is not None:
@@ -1074,6 +1081,8 @@ def draw_on_a_canvas(util, screen: tuple[int, int] | None) -> tuple[int, int]:
     util.PYGAME_SCREEN = canvas
     real = pygame.display.update
     dx, dy = offset
+    pending: list[pygame.Rect] = []
+    whole = [False]
 
     def update(rects=None):
         window = pygame.display.get_surface()
@@ -1081,15 +1090,53 @@ def draw_on_a_canvas(util, screen: tuple[int, int] | None) -> tuple[int, int]:
             return None
         if rects is None:
             window.blit(canvas, offset)
-            return real()
-        shown = []
+            whole[0] = True
+            return None
         for rect in _rects(rects):
             window.blit(canvas, rect.move(dx, dy), rect)
-            shown.append(rect.move(dx, dy))
-        return real(shown) if shown else None
+            pending.append(rect.move(dx, dy))
+        return None
 
+    def present() -> None:
+        shown, everything = merge_rects(pending), whole[0]
+        pending.clear()
+        whole[0] = False
+        if pygame.display.get_surface() is None:
+            return
+        if everything:
+            real()
+        elif shown:
+            real(shown)
+
+    global present_the_frame
+    present_the_frame = present
     pygame.display.update = update
     return offset
+
+
+def present_the_frame() -> None:
+    """Replaced by `draw_on_a_canvas`; nothing to present before it."""
+
+
+def merge_rects(rects: list[pygame.Rect]) -> list[pygame.Rect]:
+    """Overlapping or touching rectangles as one: SDL's cost grows with every
+    rectangle it is given, and a turning record's box usually holds the
+    needles' and the arm's."""
+    out: list[pygame.Rect] = []
+    for rect in rects:
+        rect = pygame.Rect(rect)
+        if rect.width <= 0 or rect.height <= 0:
+            continue
+        merged = True
+        while merged:
+            merged = False
+            for i, other in enumerate(out):
+                if rect.inflate(2, 2).colliderect(other):
+                    rect = rect.union(out.pop(i))
+                    merged = True
+                    break
+        out.append(rect)
+    return out
 
 
 #: The window events that mean its size - and so its surface - changed.
@@ -1473,7 +1520,15 @@ def main() -> int:
     hold_the_last_frame(peppy.meter.data_source)
     report_touches_to_the_daemon()
     watch_window_events(repaints)
-    peppy.dependent = per_frame
+    def frame() -> None:
+        # PeppyMeter's loop calls this after drawing the meters: the end of
+        # the frame, where everything drawn in it is presented at once.
+        try:
+            per_frame()
+        finally:
+            present_the_frame()
+
+    peppy.dependent = frame
     peppy.start_display_output()
     return 0
 

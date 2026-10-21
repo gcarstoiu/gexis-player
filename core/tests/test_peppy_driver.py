@@ -616,8 +616,10 @@ def _display(monkeypatch, size):
     monkeypatch.setattr(driver, "pygame", pg)
     pg.display.init()
     window = pg.display.set_mode(size, pg.NOFRAME)
-    # The wrapper replaces pygame.display.update: give it back after.
+    # The wrapper replaces pygame.display.update and the frame's present:
+    # give them back after.
     monkeypatch.setattr(pg.display, "update", pg.display.update)
+    monkeypatch.setattr(driver, "present_the_frame", driver.present_the_frame)
     return pg, types.SimpleNamespace(PYGAME_SCREEN=window)
 
 
@@ -629,6 +631,40 @@ def test_the_engines_draw_on_a_canvas_and_an_update_copies_it_to_the_window(monk
     canvas.fill((200, 10, 10), pg.Rect(100, 100, 50, 50))
     pg.display.update(pg.Rect(100, 100, 50, 50))
     assert pg.display.get_surface().get_at((120, 120))[:3] == (200, 10, 10)
+
+
+def test_a_frame_is_presented_once_however_many_updates_asked(monkeypatch):
+    """Finding 134: SDL's present cost about 1.75 ms of processor for any
+    rectangle and was 30-44 % of the driver's time; the meters, the ticker,
+    the turning parts and the spectrum each asked for one a frame. The copy
+    to the window is still made at once."""
+    pg, util = _display(monkeypatch, (1280, 800))
+    presented = []
+    monkeypatch.setattr(pg.display, "update", lambda rects=None: presented.append(rects))
+    driver.draw_on_a_canvas(util, (1280, 800))
+    canvas = util.PYGAME_SCREEN
+    canvas.fill((200, 10, 10), pg.Rect(100, 100, 50, 50))
+    pg.display.update(pg.Rect(100, 100, 50, 50))
+    pg.display.update([pg.Rect(140, 120, 40, 40), None])
+    pg.display.update(pg.Rect(900, 600, 10, 10))
+    assert pg.display.get_surface().get_at((120, 120))[:3] == (200, 10, 10), "copied at once"
+    assert presented == [], "nothing presented before the frame ends"
+    driver.present_the_frame()
+    assert len(presented) == 1
+    assert sorted(map(tuple, presented[0])) == [(100, 100, 80, 60), (900, 600, 10, 10)]
+    driver.present_the_frame()
+    assert len(presented) == 1, "an empty frame presents nothing"
+    pg.display.update(pg.Rect(0, 0, 5, 5))
+    pg.display.update()
+    driver.present_the_frame()
+    assert presented[-1] is None, "a whole-window update presents the whole window"
+
+
+def test_rectangles_are_merged_only_where_they_meet(monkeypatch):
+    pg = pytest.importorskip("pygame")
+    monkeypatch.setattr(driver, "pygame", pg)
+    rects = [pg.Rect(0, 0, 10, 10), pg.Rect(10, 0, 10, 10), pg.Rect(50, 50, 5, 5), pg.Rect(0, 0, 0, 5)]
+    assert sorted(map(tuple, driver.merge_rects(rects))) == [(0, 0, 20, 10), (50, 50, 5, 5)]
 
 
 def test_a_smaller_pack_is_drawn_centred_through_the_canvas(monkeypatch):
