@@ -314,7 +314,11 @@ drawn per kind:
 - **Typed screens** (Artists grid, artist page, album, Browse, playlists)
   read `/library/...` (ADR-0038). Long lists build only what is on screen
   (ADR-0065, ADR-0067). The artist grid builds by letter group, with spacers
-  standing in for the groups not on screen.
+  standing in for the groups not on screen. On an album's tracks (the album
+  page and Browse's track pane, on the panel and the bar) a track's own
+  `artist` shows under its title when it is not the album's
+  (`trackArtist` in `lib/library.js`, compared through `foldedName`): a
+  guest on one track, every track of a compilation (George, 2026-10-21).
 - **Radio** uses the core's SlimBrowse walker (ADR-0030, ADR-0038 §5).
 - **Lyrion's own menus** (My Music, Favourites, Apps) are added by the
   *Extended navigation* setting (`lms_extended_nav`, default off; ADR-0118),

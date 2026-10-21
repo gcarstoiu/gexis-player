@@ -47,6 +47,7 @@
     radioPlay,
     libraryAction,
     loadPlaylists,
+    trackArtist,
   } from '../../lib/library.js';
   import { afterPaint, revealing } from '../../lib/chunks.svelte.js';
   import { screen } from '../../lib/family.svelte.js';
@@ -1115,7 +1116,11 @@
               {#each browseTracks as entry (entry.id)}
                 <div class="prow" class:is-on={isPlaying(entry) || revealed === `track-${entry.id}`} class:is-revealed={revealed === `track-${entry.id}`}>
                   <button class="prow__hit" type="button" onclick={() => toggle(`track-${entry.id}`)}>
-                    <span class="prow__label">{entry.title}</span>
+                    {#if trackArtist(entry, chosenAlbum)}
+                      <span class="prow__text"><span class="prow__label">{entry.title}</span><span class="prow__by">{trackArtist(entry, chosenAlbum)}</span></span>
+                    {:else}
+                      <span class="prow__label">{entry.title}</span>
+                    {/if}
                     {#if entry.duration && revealed !== `track-${entry.id}`}<span class="prow__meta">{mmss(entry.duration)}</span>{/if}
                   </button>
                   {#if revealed === `track-${entry.id}`}
@@ -1268,7 +1273,11 @@
               <div class="trow" class:is-on={isPlaying(track) || revealed === `albumtrack-${track.id}`} class:is-revealed={revealed === `albumtrack-${track.id}`}>
                 <button class="trow__hit" type="button" onclick={() => toggle(`albumtrack-${track.id}`)}>
                   <span class="trow__num">{track.tracknum ? String(track.tracknum).padStart(2, '0') : ''}</span>
-                  <span class="trow__title trow__title--19">{track.title ?? ''}</span>
+                  {#if trackArtist(track, album)}
+                    <span class="trow__text"><span class="trow__title trow__title--19">{track.title ?? ''}</span><span class="trow__artist">{trackArtist(track, album)}</span></span>
+                  {:else}
+                    <span class="trow__title trow__title--19">{track.title ?? ''}</span>
+                  {/if}
                   {#if revealed !== `albumtrack-${track.id}`}
                     <span class="trow__dur trow__dur--16">{track.duration ? mmss(track.duration) : ''}</span>
                   {/if}
@@ -1953,6 +1962,22 @@
     min-width: 0;
     font-size: 18px;
     font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* A track's own artist under its title, when it is not the album's. */
+  .prow__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .prow__text .prow__label { flex: none; }
+  .prow__by {
+    font-size: 13px;
+    color: rgba(233, 238, 242, 0.55);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

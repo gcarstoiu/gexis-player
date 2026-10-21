@@ -33,6 +33,7 @@
     browseRadio,
     radioPlay,
     libraryAction,
+    trackArtist,
   } from '../lib/library.js';
   import { afterPaint, revealing } from '../lib/chunks.svelte.js';
   import { settingValues } from '../lib/settings.js';
@@ -1797,7 +1798,11 @@
               <div class="row" class:is-revealed={revealed === `track-${entry.id}`}>
                 <button class="row__hit" type="button" onclick={() => (revealed = revealed === `track-${entry.id}` ? null : `track-${entry.id}`)}>
                   <span class="row__num">{entry.tracknum ?? ''}</span>
-                  <span class="row__label">{entry.title}</span>
+                  {#if trackArtist(entry, chosenAlbum)}
+                    <span class="row__two"><span class="row__label">{entry.title}</span><span class="row__by">{trackArtist(entry, chosenAlbum)}</span></span>
+                  {:else}
+                    <span class="row__label">{entry.title}</span>
+                  {/if}
                   {#if revealed !== `track-${entry.id}`}
                     <span class="row__meta">{entry.duration ? mmss(entry.duration) : ''}</span>
                   {/if}
@@ -2121,7 +2126,11 @@
               <div class="track" class:is-revealed={revealed === `albumtrack-${track.id}`}>
                 <button class="track__hit" type="button" onclick={() => (revealed = revealed === `albumtrack-${track.id}` ? null : `albumtrack-${track.id}`)}>
                   <span class="track__num">{track.tracknum ?? ''}</span>
-                  <span class="track__title">{track.title ?? ''}</span>
+                  {#if trackArtist(track, album)}
+                    <span class="track__two"><span class="track__title">{track.title ?? ''}</span><span class="track__by">{trackArtist(track, album)}</span></span>
+                  {:else}
+                    <span class="track__title">{track.title ?? ''}</span>
+                  {/if}
                   {#if revealed !== `albumtrack-${track.id}`}
                     <span class="track__time">{track.duration ? mmss(track.duration) : ''}</span>
                   {/if}
@@ -3046,6 +3055,27 @@
   .poprow.is-revealed {
     background: rgba(126, 214, 188, 0.16);
   }
+  /* A track's own artist under its title, when it is not the album's. */
+  .row__two,
+  .track__two {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .row__two .row__label,
+  .track__two .track__title { flex: none; }
+  .row__by,
+  .track__by {
+    font-size: 14px;
+    color: var(--ink-quiet);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+  }
+  .row__by { font-size: 13px; }
   .row.is-revealed .row__label,
   .track.is-revealed .track__title,
   .poprow.is-revealed .poprow__title {
