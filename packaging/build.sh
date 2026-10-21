@@ -24,9 +24,14 @@ inputs() {
 			image/stage-gexis/05-peppy/files/meter-background-check.awk ;;
 		# One version for all five: they are built from the same files, and
 		# a pack changes only when one of them does - not with each release.
+		# Not the whole-pack check (`make check-skins`): it reads the packs,
+		# it is not in them - a change to it gave all five a new version and
+		# every player 760 MB to fetch again (2026-10-21).
 		skins-*) echo skins packaging/skin-packs image/stage-gexis/fetch-cached.sh \
 			image/stage-gexis/05-peppy/files/letterbox.py image/stage-gexis/05-peppy/files/badge-slots.json \
-			core/src/gexis_core/skin_counts.json ;;
+			core/src/gexis_core/skin_counts.json \
+			':(exclude)packaging/skin-packs/frames.py' ':(exclude)packaging/skin-packs/check.sh' \
+			':(exclude)packaging/skin-packs/check.Dockerfile' ;;
 		# A third-party component whose package also carries files of ours:
 		# its version is upstream's plus the commit of those files, so a
 		# change of ours is a new version (2026-10-03: gexis-lyrion-server
@@ -47,6 +52,15 @@ version_for() {
 	# `git log -- .` simplifies away a merge whose tree equals one parent's,
 	# and v0.6.0, tagged on such a merge, built gexis-player 0.5.0+git21.
 	if [ "$paths" = "." ]; then commit=$(git rev-parse HEAD); fi
+	# **The skin packs' version never goes back** (2026-10-21). Their check
+	# is left out of their inputs (above), and the last commit that changed
+	# it alone - Finding 131's - had already given them the version players
+	# hold. Without this floor they would fall back to an older one.
+	case "$1" in skins-*)
+		if git merge-base --is-ancestor "$commit" 96b8a42565db73fb027c7a528c6323777370b3a7 2>/dev/null; then
+			commit=96b8a42565db73fb027c7a528c6323777370b3a7
+		fi ;;
+	esac
 	# **Seven characters of the commit, always** (found 2026-10-11): left to
 	# itself git lengthens the abbreviation as the repository grows, and at
 	# eight every package's version changed with nothing in it changed -
