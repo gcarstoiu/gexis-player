@@ -396,6 +396,13 @@ it was 45-58 %: the setting paused the icons, and other animations under the
 idle screen ran on. A remedy is measured through the switch users will use,
 not through the test that motivated it.
 
+**79. A way in that was never tried** (2026-10-21, ADR-0156). Signing in to
+Home Assistant "once, typing from the phone" went into the ADR, the manual,
+the FAQ and advice to George, reasoned from the phone being able to type into
+the panel. It cannot type into another site's frame: its input is simulated
+inside the player's own page. George found it at the login. A path offered
+to the user is tried end to end first; until then it is not offered.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target, the check quietly
