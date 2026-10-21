@@ -121,26 +121,13 @@ class PeppyScreen:
         except OSError as exc:
             logger.info("peppy: could not write %s (%s)", self._shown_path, exc)
 
-    def _raise(self) -> bool:
-        """**Full screen on the panel, then raised** (George's photo, sofapi,
-        2026-10-21: the visualiser in a 640 x 480 box in the panel's corner).
-        Display standby turns the panel's output off (ADR-0135), and labwc
-        moves every window to the output left - on a player with a TV on its
-        other port, the TV's size - and does not move them back when the
-        panel returns; a window already maximised stays as it is. Asking for
-        full screen puts it back over the output it is on, and changes
-        nothing for one that already fills it; a minimised window stays
-        minimised until the focus raises it (both checked on sofapi)."""
-        self._run("fullscreen")
-        return self._run("focus")
-
     def show(self) -> bool:
         """Blocks for the settle and a wlrctl call: on the event loop, use
         `show_async`."""
         self._tell(True)
         if self._settle_s:
             time.sleep(self._settle_s)
-        return self._shown(self._raise())
+        return self._shown(self._run("focus"))
 
     def hide(self) -> bool:
         """Blocks for a wlrctl call: on the event loop, use `hide_async`."""
@@ -157,7 +144,7 @@ class PeppyScreen:
             self._tell(True)
             if self._settle_s:
                 await asyncio.sleep(self._settle_s)
-            return self._shown(await asyncio.to_thread(self._raise))
+            return self._shown(await asyncio.to_thread(self._run, "focus"))
 
     async def hide_async(self) -> bool:
         async with self._turn:

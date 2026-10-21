@@ -653,7 +653,7 @@ async def test_a_touch_during_a_raise_lowers_it_after_not_before(tmp_path, monke
     controller.on_touch()
     await raising
     await asyncio.gather(*controller._lowering)
-    assert order == ["fullscreen", "focus", "minimize"] and not screen.visible
+    assert order == ["focus", "minimize"] and not screen.visible
 
 
 def _wlrctl_logged(monkeypatch):
@@ -697,7 +697,7 @@ async def test_a_touch_or_a_new_source_while_the_timer_s_raise_settles_still_low
             break
     await asyncio.gather(*controller._lowering)
     task.cancel()
-    assert order == ["minimize", "fullscreen", "focus", "minimize"] and not screen.visible
+    assert order == ["minimize", "focus", "minimize"] and not screen.visible
     assert (tmp_path / "shown").read_text() == "0"
 
 
@@ -717,7 +717,7 @@ async def test_a_touch_during_a_raise_the_user_asked_for_leaves_it_up(tmp_path, 
     controller.on_touch()
     await raising
     await asyncio.gather(*controller._lowering)
-    assert order == ["fullscreen", "focus"] and screen.visible
+    assert order == ["focus"] and screen.visible
     assert (tmp_path / "shown").read_text() == "1"
 
 
@@ -751,19 +751,3 @@ def test_peppymeter_s_config_is_replaced_whole_never_rewritten_in_place(tmp_path
         assert "[current]" in conf.read_text()
     finally:
         os.chmod(tmp_path, 0o700)
-
-
-def test_a_raise_asks_for_full_screen_first_so_a_window_moved_by_standby_comes_back(monkeypatch, tmp_path):
-    """George's photo, sofapi, 2026-10-21: after display standby the
-    visualiser came up in a 640 x 480 box - the TV's size - in the panel's
-    corner. labwc moves windows to the other output while the panel's is off
-    and leaves them there; full screen puts the window back over the panel."""
-    class Done:
-        returncode = 0
-        stderr = b""
-
-    calls = []
-    monkeypatch.setattr(subprocess, "run", lambda cmd, **kw: (calls.append(cmd[2:]), Done())[1])
-    screen = PeppyScreen(wlrctl="/usr/bin/wlrctl", shown_path=tmp_path / "shown", settle_s=0)
-    assert screen.show() is True
-    assert calls == [["fullscreen", "title:pygame window"], ["focus", "title:pygame window"]]
