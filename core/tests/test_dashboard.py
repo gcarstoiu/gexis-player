@@ -143,3 +143,27 @@ async def test_the_phone_input_over_a_frame_is_made_real_by_the_core():
         assert (await client.post("/panel/input", json={"kind": "text", "text": ""})).status == 400
         assert (await client.post("/panel/input", json={"kind": "move"})).status == 400
     assert made == [("tap", 0.5, 0.25), ("text", "pässwörd"), ("key", "Enter"), ("key", "F13")]
+
+
+def test_the_panel_layout_is_read_from_labwc_and_its_characters_found(tmp_path):
+    """ADR-0157: text is typed as key presses on the compositor's own layout.
+    `wlrctl keyboard type` typed ASCII only and lost characters (sofapi,
+    2026-10-21: "test.user@example.com" arrived as "test.usereaple.co")."""
+    import pytest
+
+    from gexis_core.panel_input import char_keys, compositor_layout
+
+    environ = tmp_path / "environ"
+    environ.write_bytes(b"HOME=/home/pi\0XKB_DEFAULT_LAYOUT=de\0XKB_DEFAULT_VARIANT=nodeadkeys\0")
+    assert compositor_layout(environ) == {"layout": "de", "variant": "nodeadkeys"}
+    assert compositor_layout(tmp_path / "gone") == {}
+
+    us = char_keys({"layout": "us"})
+    if not us:
+        pytest.skip("libxkbcommon or its layouts are not on this machine")
+    assert us["a"] == (30, False, False) and us["A"] == (30, True, False)
+    assert us["@"] == (3, True, False) and us["/"] == (53, False, False)
+    assert "£" not in us
+    de = char_keys({"layout": "de"})
+    assert de["z"] == (21, False, False), "the German layout swaps Y and Z"
+    assert de["@"] == (16, False, True), "AltGr+Q on a German keyboard"

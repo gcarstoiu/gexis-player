@@ -63,6 +63,8 @@
     pad = openTouchpad((message) => {
       if (message.t === 'over') overField = !!message.field;
       if (message.t === 'focus' && !message.field) stopTyping();
+      // ADR-0157: a character the player's keyboard layout cannot type.
+      if (message.t === 'untyped') say('Some characters could not be typed on the player');
     });
     return () => {
       pad?.close();
