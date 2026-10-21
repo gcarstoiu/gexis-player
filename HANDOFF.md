@@ -110,6 +110,14 @@ yet:**
   layers); a one-person project a month old. **Decision for George:** whether
   to take it further (an ADR first). LESSONS 80: the first results measured
   our needles at rest.
+- **Our visualiser made cheaper (George: *"Then let's do a first"*)** -
+  branch `peppy-cheaper` (from `peppy-survive-resize`), Finding 134: one
+  present a frame, the tonearm's turn kept, turning parts boxed by their
+  reach. ShelvesPi, same work: turntables and tapes 20-33 % cheaper, on
+  *Smooth* 28-46 %; needle and spectrum skins unchanged. In the ShelvesPi
+  preview (`preview-1021` at `1.3.1+git31`, with `peppy-refused-no-restart`),
+  not yet on sofapi. Left: the needle and spectrum skins (the present itself
+  and the vendored engines' drawing).
 - **Open, seen in that test:** sofapi's needles get no level on HDMI 2 - the
   peppyalsa scope's level read zero while the spectrum read small values (at
   Lyrion volume 5; not checked at a normal volume). And ours drew a black box
