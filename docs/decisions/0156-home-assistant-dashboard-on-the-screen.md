@@ -64,15 +64,24 @@ player's hands. Read from Home Assistant's documentation, not tried here.
    documented in the manual. A window of its own beside the kiosk was the
    alternative: no change in Home Assistant, but a second browser, window
    placement and focus to manage (as with the visualiser, Findings 125, 131).
-6. **Signing in is Home Assistant's**: either its *trusted networks* lets the
-   player in without a login, or the user signs in once - typing from the
-   phone, which already types into the panel - and the session is kept in the
-   kiosk's profile. Both documented; the player stores no Home Assistant
-   password or token.
+6. **Signing in is Home Assistant's**: its *trusted networks* lets the player
+   in without a login (George, 2026-10-21: *"Trusted networks"*), set up by the
+   user in Home Assistant; signing in once - typing from the phone, which
+   already types into the panel - with the session kept in the kiosk's
+   profile is the fallback. Both documented; the player stores no Home
+   Assistant password or token.
 7. **The idle page stays** (George: *"Why would we retire it?"*): it is a
    different thing - a page to look at while idle, set at flash time. When
    both are set, the dashboard wins during its scheduled times and the idle
    page shows outside them.
+
+8. **The player changes nothing in Home Assistant** (George, 2026-10-21: *"I
+   wouldn't start making changes to other services from our player. Lyrion is
+   the only one as it's part of the library and playing path. This dashboard
+   is not."*). The two changes it needs - `use_x_frame_options: false` and
+   trusted networks - are the user's to make in their own Home Assistant; the
+   manual says what and where, and the panel says which one is missing when
+   the dashboard cannot show.
 
 ## Settings (ADR-0022, appended 2026-10-21, confirmed by George)
 
