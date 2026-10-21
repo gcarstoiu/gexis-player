@@ -154,6 +154,28 @@ monospaced face, overlapping in places and nearly unreadable on the white
 PLX-500 - a configuration of the test, not measured further. Ours drew a black
 box over part of the spectrum on Marschal S+M (Open).
 
+### 8. Bit-perfect: both taps pass every format byte for byte
+
+Asked by George the same evening (*"How is it with bit prefect?"*). On
+ShelvesPi, 6 MB of random bytes played with `aplay` through each tap into a
+`file` sink, the file compared with what went in (`cmp`, the whole input), in
+plain writes and in mmap (`-M`, as squeezelite writes), with readers on our
+tap's FIFOs as the meter service is:
+
+| Format | Rates | glasstap | meter + peppyalsa (ours) |
+|---|---|---|---|
+| S16_LE | 44.1 kHz | exact | exact |
+| S24_3LE, S24_LE | 96 kHz | exact | exact |
+| S32_LE | 192, 384 kHz | exact | exact |
+| DoP (S32_LE, 0x05/0xFA markers) | 176.4 kHz | exact | exact |
+| DSD_U8, DSD_U16_LE, DSD_U32_LE, DSD_U32_BE | DSD64 to DSD256 | exact | exact |
+
+glasstap also stayed exact while its demand changed twice mid-stream (it
+starts a new ring each time), and removed its rings when the streams closed.
+**Not tested:** either tap in front of a real card, or inside squeezelite;
+the end of a stream (Findings 003/004 found the last frames differ with and
+without a tap, which a prefix comparison does not look at).
+
 ## What this says
 
 - **Glass is cheaper on everything measured here,** with its tap counted:
