@@ -334,7 +334,7 @@ The mini player has:
   nothing.
 
 Swipe the mini player up, or tap its arrow, for the **touchpad**, which
-opens between the row and the volume.
+opens between the track and the row.
 
 ### The touchpad
 

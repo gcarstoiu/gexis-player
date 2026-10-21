@@ -439,7 +439,8 @@
   <!-- **ADR-0101 as amended 2026-10-21 (George, mockup A2, frame 3)**: what
        is playing, with the panel's screen and play/pause beside it; the six
        views of the panel in one labelled row, the one it shows marked; the
-       touchpad, only when the sheet is open, between them and the volume. -->
+       touchpad, only when the sheet is open, between the track and the row
+       (George, 2026-10-21: "between the icon row and the now playing"). -->
   <div class="mini__head">
     <button class="mini__now" type="button" aria-expanded={open}
       onclick={() => { if (swallowTap) return; open = !open; }}>
@@ -477,6 +478,36 @@
       <span class="mini__chev" class:is-open={open}></span>
     </button>
   </div>
+
+  {#if touchpad}
+    <!-- ADR-0121: a touchpad for the panel, above the slider. -->
+    <div
+      class="mini__pad"
+      role="application"
+      aria-label="Touchpad for the player's screen"
+      onpointerdown={padDown}
+      onpointermove={padMove}
+      onpointerup={padUp}
+      onpointercancel={padCancel}
+      onmousedown={(event) => event.preventDefault()}
+    >
+      <span class="mini__pad-line mini__pad-line--y" aria-hidden="true"></span>
+      <span class="mini__pad-line mini__pad-line--x" aria-hidden="true"></span>
+      <span class="mini__pad-hint">{typing ? 'Typing on the player' : overField ? 'Tap to type' : 'Touchpad'}</span>
+    </div>
+    <input
+      class="mini__type"
+      bind:this={typeEl}
+      type="text"
+      autocomplete="off"
+      autocorrect="off"
+      spellcheck="false"
+      aria-label="Text for the player's screen"
+      oninput={typedInput}
+      onkeydown={typedKey}
+      onblur={() => (typing = false)}
+    />
+  {/if}
 
   <!-- One view at a time: the mark follows what the panel shows, the
        dashboard and the idle screen over the rest. Each keeps what its
@@ -525,36 +556,6 @@
       </button>
     {/if}
   </div>
-
-  {#if touchpad}
-    <!-- ADR-0121: a touchpad for the panel, above the slider. -->
-    <div
-      class="mini__pad"
-      role="application"
-      aria-label="Touchpad for the player's screen"
-      onpointerdown={padDown}
-      onpointermove={padMove}
-      onpointerup={padUp}
-      onpointercancel={padCancel}
-      onmousedown={(event) => event.preventDefault()}
-    >
-      <span class="mini__pad-line mini__pad-line--y" aria-hidden="true"></span>
-      <span class="mini__pad-line mini__pad-line--x" aria-hidden="true"></span>
-      <span class="mini__pad-hint">{typing ? 'Typing on the player' : overField ? 'Tap to type' : 'Touchpad'}</span>
-    </div>
-    <input
-      class="mini__type"
-      bind:this={typeEl}
-      type="text"
-      autocomplete="off"
-      autocorrect="off"
-      spellcheck="false"
-      aria-label="Text for the player's screen"
-      oninput={typedInput}
-      onkeydown={typedKey}
-      onblur={() => (typing = false)}
-    />
-  {/if}
 
   <div class="mini__row">
     {#if $fixedOutput}
