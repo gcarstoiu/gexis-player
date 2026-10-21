@@ -66,10 +66,12 @@ player's hands. Read from Home Assistant's documentation, not tried here.
    placement and focus to manage (as with the visualiser, Findings 125, 131).
 6. **Signing in is Home Assistant's**: its *trusted networks* lets the player
    in without a login (George, 2026-10-21: *"Trusted networks"*), set up by the
-   user in Home Assistant; signing in once - typing from the phone, which
-   already types into the panel - with the session kept in the kiosk's
-   profile is the fallback. Both documented; the player stores no Home
-   Assistant password or token.
+   user in Home Assistant; signing in once with a USB keyboard on the player,
+   the session kept in the kiosk's profile, is the fallback. **Not from the
+   phone** (found 2026-10-21, George: *"Keyboard is not popping up in the
+   login"*): the phone's touchpad and keyboard act inside the player's own
+   page (`PanelPointer`), and a frame from another site is closed to it. Both
+   documented; the player stores no Home Assistant password or token.
 7. **The idle page stays** (George: *"Why would we retire it?"*): it is a
    different thing - a page to look at while idle, set at flash time. When
    both are set, the dashboard wins during its scheduled times and the idle
