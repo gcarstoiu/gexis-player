@@ -320,16 +320,21 @@ the right of the *Settings* title: tap it for every player, each with what it is
 
 The mini player has:
 
-- the track playing;
-- a row of buttons for the panel: **Home**, **Now Playing** (lit while the
-  panel shows it; tap again to minimise), **Lyrics**, **Visualiser**, the
-  **Screen** button (the panel's screen off until a touch, music starting or
-  the button again wakes it; the player keeps playing, and some screens show
-  their own "No signal" for a few seconds first) and **Idle screen**
-  (not offered while the idle screen is switched off);
+- **the track playing**, with the **Screen** button beside it (the panel's
+  screen off until a touch, music starting or the button again wakes it; the
+  player keeps playing, and some screens show their own "No signal" for a
+  few seconds first) and **play/pause**;
+- **what the panel shows**, one labelled row: **Home**, **Playing** (tap
+  again to minimise it), **Lyrics**, **Meters** (the visualiser), **Room**
+  (the Home Assistant dashboard, once its address is set) and **Idle** (not
+  offered while the idle screen is switched off). The one the panel shows is
+  marked;
 - the volume slider. A tap sets the level where it lands and a sideways
   drag moves it; a swipe up or down that starts on the slider changes
   nothing.
+
+Swipe the mini player up, or tap its arrow, for the **touchpad**, which
+opens between the row and the volume.
 
 ### The touchpad
 
