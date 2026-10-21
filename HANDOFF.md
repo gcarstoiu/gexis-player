@@ -59,15 +59,15 @@ against a local copy, so losing that folder means re-uploading every OS file.
 **Not an issue** (George, 2026-10-20): Squeezelite joining whichever Lyrion server answers first after a restart (Finding 130 point 6). **Open:** George's look at the moon before sunrise. sofapi
 and ShelvesPi run previews of 1.3.1's fixes.
 
-**Next: Phase 17, DSI screens** (`ph-dsi`; George names his screen when it
-starts), next. Then, in order (`docs/DEVELOPMENT.md`;
-refer to them by ID): **18** room correction for the
-bass (`ph-room-correction`), **19** room correction for the full range
-(`ph-room-correction-full`; split 2026-10-20), **20** Home Assistant
-(`ph-home-assistant`), **21** themes (`ph-themes`), **22** the library
-answers for itself (`ph-library`), **23** Lyrion's own menus' look
-(`ph-lyrion-menus`); MPD is parked
-(`ph-mpd`, ADR-0151). Each ADR first. Still open from 1.0.0: Raspberry Pi
+**Next: Phase 18, a Home Assistant dashboard on the screen**
+(`ph-ha-dashboard`, ADR-0156, added 2026-10-21; George: *"let's build
+afterwards"*) - built ahead of Phase 17, DSI screens (`ph-dsi`), which waits
+for George to name his screen. Then, in order (`docs/DEVELOPMENT.md`; refer
+to them by ID): **19** room correction for the bass (`ph-room-correction`),
+**20** room correction for the full range (`ph-room-correction-full`), **21**
+Home Assistant (`ph-home-assistant`), **22** themes (`ph-themes`), **23** the
+library answers for itself (`ph-library`), **24** Lyrion's own menus' look
+(`ph-lyrion-menus`); MPD is parked (`ph-mpd`, ADR-0151). Each ADR first. Still open from 1.0.0: Raspberry Pi
 Imager, the image file and *Use custom* (g14).
 
 The shared to-do list (an artifact with a `todos` collection; its address is
@@ -81,7 +81,7 @@ every merged release PR, otherwise weekly on Sunday evening. **Last run:
 
 Closed: 0-16 (13 with letters a-f; Phase 15, the public API, on
 2026-10-19 with 1.2.0; Phase 16, optical, with 1.3.0). Phases are numbered consecutively without letters,
-each with a stable ID (George, 2026-10-13); the open ones are 17-23, with
+each with a stable ID (George, 2026-10-13); the open ones are 17-24, with
 MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
 
 ## Machines

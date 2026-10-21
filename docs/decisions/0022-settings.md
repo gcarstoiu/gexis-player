@@ -380,6 +380,16 @@ stretch to fit the text"*), [ADR-0148](0148-text-size.md):
 |---|---|---|
 | Text size (*Display → Panel*) | [N] | 90 to 130 % in 5 % steps, default 100 (`text_size`). Every font size on the player's own screen, not a phone's; Home's tiles grow with it above 100 %. Applies at once. A zoom of the whole screen was tried first and set aside: the layouts are drawn for one page size |
 
+### Appended 2026-10-21 — a Home Assistant dashboard
+
+Confirmed by George, 2026-10-21 (*"2. Yes"*), [ADR-0156](0156-home-assistant-dashboard-on-the-screen.md):
+
+| Setting | Mark | Notes |
+|---|---|---|
+| Dashboard address | [N] | The Home Assistant dashboard's URL for this player's room; empty by default, and with it empty nothing of the dashboard shows |
+| Dashboard instead of the idle screen | [N] | Off by default; on, during its times (the standby times' grid of hours, quarters and days) the dashboard stands where the idle screen would |
+| Dashboard button on the panel | [N] | On by default once an address is set: in the bar's tray, beside the visualiser elsewhere, and on the phone page |
+
 ## Settled by prior records
 
 - **Output mode switching is not instantaneous.** Confirmation dialogue, and the
