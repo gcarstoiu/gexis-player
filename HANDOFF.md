@@ -44,7 +44,7 @@ done. sofapi runs `1.3.0+git16`, ShelvesPi `1.3.0+git11` - previews of what
 alerts on `main` (2 high, 4 moderate), all `vite` (the UI's build tool, not
 on the player; fixed in 8.3.3), raised 20-21 Oct.
 
-**Open from 1.3.1:** the HMTECH 10.1" came up at 800x480 on the first start
+**Deferred until a bug report** (George, 2026-10-21; from 1.3.1): the HMTECH 10.1" came up at 800x480 on the first start
 after the boot that switched to it (Chromium stored 1004x580 in a 1024x600
 work area: not full-screen), then full-screen on two restarts in a row. A
 first start after a screen change may still miss full-screen. The 10.1" was
