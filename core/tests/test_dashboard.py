@@ -68,6 +68,7 @@ def test_its_times_ending_take_down_what_the_schedule_put_up_and_nothing_else():
 def test_the_panel_says_what_to_set_and_where():
     """Decision 8: the player changes nothing in Home Assistant, so it says
     what the user has to set there."""
+    assert "Send X-Frame-Options" in explain("refuses framing")
     assert "use_x_frame_options: false" in explain("refuses framing")
     assert "Settings" in explain("unconfigured")
     assert "404" in explain("http 404")

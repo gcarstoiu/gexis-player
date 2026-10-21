@@ -98,7 +98,7 @@ class DashboardSchedule:
 REASONS = {
     "unconfigured": "No dashboard address is set. Add it in Settings → Display → Home Assistant dashboard.",
     "unreachable": "The dashboard's address does not answer. Check it in Settings, and that Home Assistant is running.",
-    "refuses framing": "Home Assistant does not allow its pages to be shown inside another page. In Home Assistant's configuration, set use_x_frame_options: false under http, then restart Home Assistant.",
+    "refuses framing": "Home Assistant does not allow its pages to be shown inside another page. In Home Assistant, turn off Send X-Frame-Options (Settings → System → Network → HTTP server → More options), or set use_x_frame_options: false under http before version 2026.10.",
 }
 
 

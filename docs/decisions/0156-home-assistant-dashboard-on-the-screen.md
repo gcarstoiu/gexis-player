@@ -106,8 +106,12 @@ player's hands. Read from Home Assistant's documentation, not tried here.
 
 ## Unverified
 
-- That `use_x_frame_options: false` and *trusted networks* behave as their
-  documentation says on a current Home Assistant; to be tried against a real
-  one before the ADR's decision 5 is built on.
+- ~~That `use_x_frame_options: false` and *trusted networks* behave as their
+  documentation says on a current Home Assistant.~~ **Checked 2026-10-21**
+  ([Finding 132](../findings/132-home-assistant-framed-by-the-panel.md)) on
+  a throwaway 2026.10.2: both work, but from 2026.10 the framing setting is
+  set in Home Assistant's interface (*Send X-Frame-Options*) and confirmed
+  within five minutes - the YAML line is read once and then ignored.
 - How Chromium keeps a framed Home Assistant's sign-in (third-party storage
-  is partitioned by the top-level site): whether it survives a reboot.
+  is partitioned by the top-level site): whether it survives a reboot. Not
+  needed with trusted networks.

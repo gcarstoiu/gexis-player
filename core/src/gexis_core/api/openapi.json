@@ -5418,7 +5418,7 @@
           "Panel"
         ],
         "summary": "Whether the Home Assistant dashboard is up, and whether it can be shown",
-        "description": "The dashboard set in `dashboard_url` (ADR-0156), checked as the idle page is: unconfigured, unreachable within 5 seconds, an HTTP error status, or headers that forbid framing make it not embeddable, and `message` says what to set and where - in Home Assistant, framing is `use_x_frame_options: false` under `http`. The player changes nothing in Home Assistant. Asked by the panel each time it puts the dashboard up. Headers only: whether Home Assistant lets the player in without a login is not checked.",
+        "description": "The dashboard set in `dashboard_url` (ADR-0156), checked as the idle page is: unconfigured, unreachable within 5 seconds, an HTTP error status, or headers that forbid framing make it not embeddable, and `message` says what to set and where - in Home Assistant, framing is *Send X-Frame-Options* off (Settings → System → Network; `use_x_frame_options: false` under `http` before 2026.10, Finding 132). The player changes nothing in Home Assistant. Asked by the panel each time it puts the dashboard up. Headers only: whether Home Assistant lets the player in without a login is not checked.",
         "x-gexis-stability": "stable",
         "x-gexis-adr": [
           "ADR-0156"
@@ -5437,7 +5437,7 @@
                   "url": "http://homeassistant.local:8123/lovelace/0",
                   "embeddable": false,
                   "reason": "refuses framing",
-                  "message": "Home Assistant does not allow its pages to be shown inside another page. In Home Assistant's configuration, set use_x_frame_options: false under http, then restart Home Assistant."
+                  "message": "Home Assistant does not allow its pages to be shown inside another page. In Home Assistant, turn off Send X-Frame-Options (Settings → System → Network → HTTP server → More options), or set use_x_frame_options: false under http before version 2026.10."
                 }
               }
             }

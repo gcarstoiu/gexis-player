@@ -192,6 +192,7 @@ or removed from Settings, with its progress shown in the switch itself.
 | 🔗 **Network** | Wi-Fi or cable, and the cable wins while it is plugged in · a fixed address on either, kept only once it is shown to work |
 | 📱 **Settings anywhere** | The full settings on the panel and on any phone or computer on your network, with a mini player on the phone |
 | 🖐️ **Phone as a touchpad** | Drive the panel from across the room: one finger moves a pointer, a tap presses, two fingers scroll, a pinch zooms, and a text field on the panel brings up the phone's keyboard · no app to install |
+| 🏠 **Home Assistant dashboard** | Your room's Home Assistant dashboard on the screen, every control usable · up from a button, from Home Assistant itself, or in place of the idle screen at set times · the music plays on, and it stays until you dismiss it |
 | 🧩 **Open API** | Everything the screen and phone page do, over HTTP and a live WebSocket, described as OpenAPI · *API explorer* shows and tries it on the player itself |
 | 🩺 **When something is wrong** | A problem report in one download, with addresses, names, keys and what you play taken out first · hardware feedback that tests your screen's touch and your DAC's rates |
 
@@ -246,11 +247,10 @@ Rough, and subject to change:
   installed from Settings. A mini player on the phone. Animated skins with
   scrolling tickers and smooth rotation. A fixed address on cable or Wi-Fi.
   Problem reports and hardware feedback.
-- 🔜 **Next:** the first Stable release.
-- 🎨 **Later:** themes. With Plex switched on, your own Plex server fills in
+- 🔜 **Next:** a Home Assistant dashboard on the screen, DSI screens on the Pi's own display connector, and room correction for the bass with a USB microphone.
+- 🎨 **Later:** room correction for the full range, the player inside Home Assistant as a media player, themes. With Plex switched on, your own Plex server fills in
   the artist and album information other sources leave out.
-- 💭 **Maybe:** a visual equaliser, room correction with a phone as the
-  microphone, the DAC's own filter and polarity options.
+- 💭 **Maybe:** a visual equaliser, the DAC's own filter and polarity options.
 
 ## 📜 Legal
 
