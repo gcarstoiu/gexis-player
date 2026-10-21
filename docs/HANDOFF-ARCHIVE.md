@@ -7365,3 +7365,46 @@ clean-up are done; the wiki Roadmap is pushed (Now 16 optical, Next 17 DSI
 and 18 room correction). sofapi runs the preview `+git33`, equal in content
 to 1.2.0. **The README's badge bar** (tests, release, licence, Raspberry Pi
 4, API, PayPal) is on `docs` and `next`, for the next release PR.
+
+## 2026-10-20: 1.3.0 on Stable, and what `next` held for 1.3.1 (moved from HANDOFF verbatim at the clean-up after 1.3.1)
+
+**Current release: 1.3.0, on Stable** (2026-10-20; Stable serial 7,
+Testing serial 52, both signatures good from the release key, read back from
+GitHub; the public `gexis-player.img.xz` decompresses to the checked image).
+Image `image/deploy/2026-10-20-gexis-player-v1.3.0.img`, 123 checks, and all
+978 skins through the new whole-pack check (`make check-skins`, run by `make
+image`); parts `ours-c886989caba4`, `skins-c272f4628d09` (new),
+`rpi-7325dbec7a52`, `debian-5d5dc927ef03`. It carries Phase 16 (optical,
+ADR-0155), the moon at night (ADR-0153), four more icon sets (ADR-0154), the
+Static fix (Finding 129), the visualiser repaint (Finding 131) and aiohttp
+3.14.4. **PR #79** was merged by George; post-merge steps and the clean-up are done
+(the four feature branches and worktrees removed; the wiki Roadmap pushed
+with George's OK: Now 17 DSI, Next 18 room correction and 19 Home
+Assistant). The three aiohttp
+alerts close when Dependabot rescans `main` (it holds 3.14.4).
+GitHub Pages builds the API page from the `v1.3.0` tag.
+
+**In `next`, for the next release** (2026-10-20): the idle countdown re-arms
+whenever the idle screen goes away (sofapi was off its idle screen 12:30-20:22
+after the visualiser took it down), and standby wakes on a tap read from the kernel while the
+output is off, and reads the real screen at start (ADR-0135 amended:
+ShelvesPi's bar stayed dark all day - its taps had no output to land on, and
+the update's restart forgot the standby). Powering the display down with
+`wlopm` was tried and dropped (3 s back); the bar's ~3 s is its own screen
+resyncing (switching takes 0.05 s) - George: "Keep it as is". ShelvesPi runs
+`1.3.0+git11` (both fixes; `wlopm` removed again), sofapi `1.3.0+git6` (the
+idle fix). Branches `idle-rearm`, `standby-power` (superseded) and
+`standby-touch` merged into `next`, to delete after the release.
+
+**sofapi's HMTECH 7" (800x480, no touch) is tested** (2026-10-20, George:
+"Record it as tested"): recognised by its EDID (HCT / "HDMI"). The page drawn
+at 500x300 after a reboot was Chromium restoring a stored window size at the
+new scale; the kiosk now forgets it at every start (three restarts checked,
+full-screen each). Both in `next` (branch `kiosk-placement`). sofapi runs
+`1.3.0+git16`. **The HMTECH 10.1" without touch (EDID DEL / "TLD1280",
+1024x600) is tested too**, as our own entry (`screens.OUR_PRESETS`; the
+vendored list's HMTECH 10.1" is the touch model); in `next`, checked by its
+EDID in the tests, not again on the device. **Open:** it came up at 800x480 on
+the first start after the boot that switched to it (Chromium stored 1004x580 in a
+1024x600 work area: not full-screen), then full-screen on two restarts in a
+row. A first start after a screen change may still miss full-screen.

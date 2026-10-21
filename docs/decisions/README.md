@@ -155,7 +155,7 @@ been written properly. **0098 has no record either.**
 | [0132](0132-reset-to-factory-settings.md) | Reset to factory settings | Accepted 2026-10-09: in System; wiped at next boot to a fresh card, backups and music included |
 | [0133](0133-the-waiting-screen-and-the-players-own-wallpapers.md) | The waiting screen, and the player's own wallpapers | Accepted 2026-10-10 (amended 2026-10-11): built-in Gexis wallpapers; with LMS off, a waiting screen of clock and source tiles |
 | [0134](0134-the-panel-says-when-the-player-has-no-network.md) | A network lost after boot opens the setup network | Accepted 2026-10-11: after two minutes without a network; the strip withdrawn |
-| [0135](0135-display-standby.md) | Display standby: the screen off on demand and at night | Accepted 2026-10-11: HDMI off while playing; touch, music or phone wake it. Amends 0019 |
+| [0135](0135-display-standby.md) | Display standby: the screen off on demand and at night | Accepted 2026-10-11: HDMI off while playing; touch, music or phone wake it. Amends 0019; amended 2026-10-20 (kernel tap, real screen at start) |
 | [0136](0136-switching-between-players-on-the-phone.md) | Switching between players on the phone | Accepted 2026-10-11: players announce `_gexis._tcp`; the phone lists them and moves the tab |
 | [0137](0137-plugins-are-told-when-output-is-fixed.md) | Plugins are told when the output is Fixed | Accepted 2026-10-11: an `output` message within contract 1; Plexamp held at 100 |
 | [0138](0138-reports-in-steps-and-one-way-to-send.md) | Reports in steps, a visible checklist, and one way to send for both | Accepted 2026-10-11: three steps; one Send step: GitHub issue or a download to e-mail |
