@@ -1948,7 +1948,6 @@
     background: rgba(126, 214, 188, 0.14);
     color: var(--accent-lms);
   }
-  .prow__hit:active { background: rgba(233, 238, 242, 0.08); }
   .prow__label {
     flex: 1;
     min-width: 0;
@@ -2123,7 +2122,6 @@
     background: rgba(126, 214, 188, 0.14);
     color: var(--accent-lms);
   }
-  .trow__hit:active { background: rgba(233, 238, 242, 0.08); }
   .trow__num {
     width: 26px;
     flex-shrink: 0;

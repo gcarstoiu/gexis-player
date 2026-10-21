@@ -3471,7 +3471,6 @@
     align-items: center;
     gap: 14px;
   }
-  .poprow__hit:active { background: var(--ink-fill-press); border-radius: 10px; }
   .poprow__n {
     font-family: var(--font-mono);
     font-size: 13px;
