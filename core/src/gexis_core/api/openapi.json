@@ -5531,6 +5531,78 @@
           }
         }
       }
+    },
+    "/panel/input": {
+      "post": {
+        "operationId": "panel_input",
+        "tags": [
+          "Panel"
+        ],
+        "summary": "A real tap, text or key on the panel",
+        "description": "The panel asks for this when the phone's touchpad pointer is over a page from another site in a frame - the Home Assistant dashboard - which the panel's own made-up events cannot reach (ADR-0157). A tap becomes a touch from a virtual touchscreen at that fraction of the screen; text is typed by the compositor's virtual keyboard; Backspace, Enter and Tab are pressed on a virtual keyboard. Only the panel's own session receives them.",
+        "x-gexis-stability": "internal",
+        "x-gexis-adr": [
+          "ADR-0157"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PanelInput"
+              },
+              "example": {
+                "kind": "tap",
+                "x": 0.5,
+                "y": 0.42
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Made; `done` false when the text could not be typed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "done"
+                  ],
+                  "properties": {
+                    "done": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                "example": {
+                  "done": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Not a tap, text or key, or out of range: x and y outside 0-1, text empty or over 500 characters, a key other than Backspace, Enter or Tab.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Panel input is not wired up in this core, or the virtual devices could not be made.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -11056,6 +11128,50 @@
               "null"
             ],
             "description": "The sentence the panel shows for `reason`, saying what to set and where; null when it can be shown."
+          }
+        }
+      },
+      "PanelInput": {
+        "description": "One real input on the panel (ADR-0157).",
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "tap",
+              "text",
+              "key"
+            ]
+          },
+          "x": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "For a tap: the fraction of the screen's width."
+          },
+          "y": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "For a tap: the fraction of the screen's height."
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "For text: what to type."
+          },
+          "key": {
+            "type": "string",
+            "enum": [
+              "Backspace",
+              "Enter",
+              "Tab"
+            ],
+            "description": "For a key."
           }
         }
       }

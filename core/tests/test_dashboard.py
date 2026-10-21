@@ -109,3 +109,37 @@ def test_the_visualiser_does_not_come_up_over_the_dashboard():
     assert controller.request("show") is False
     dashboard.hide()
     assert controller.request("show") is True
+
+
+async def test_the_phone_input_over_a_frame_is_made_real_by_the_core():
+    """ADR-0157: the panel hands the phone's tap, text and keys over the
+    dashboard's frame to the core, which checks them before making them."""
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+
+    made = []
+
+    class FakeInput:
+        async def tap(self, x, y):
+            made.append(("tap", x, y))
+
+        async def type(self, text):
+            made.append(("text", text))
+            return True
+
+        async def key(self, name):
+            made.append(("key", name))
+            return name in ("Backspace", "Enter", "Tab")
+
+    server = StateServer(StateStore({}), panel_input=FakeInput())
+    async with TestClient(TestServer(server.make_app())) as client:
+        assert (await client.post("/panel/input", json={"kind": "tap", "x": 0.5, "y": 0.25})).status == 200
+        assert (await client.post("/panel/input", json={"kind": "text", "text": "pässwörd"})).status == 200
+        assert (await client.post("/panel/input", json={"kind": "key", "key": "Enter"})).status == 200
+        assert (await client.post("/panel/input", json={"kind": "tap", "x": 1.5, "y": 0})).status == 400
+        assert (await client.post("/panel/input", json={"kind": "key", "key": "F13"})).status == 400
+        assert (await client.post("/panel/input", json={"kind": "text", "text": ""})).status == 400
+        assert (await client.post("/panel/input", json={"kind": "move"})).status == 400
+    assert made == [("tap", 0.5, 0.25), ("text", "pässwörd"), ("key", "Enter"), ("key", "F13")]

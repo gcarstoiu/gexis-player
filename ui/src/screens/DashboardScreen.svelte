@@ -38,6 +38,7 @@
       class:is-loaded={loaded}
       src={check.url}
       title="Home Assistant dashboard"
+      data-real-input
       sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
       onload={() => (loaded = true)}
     ></iframe>

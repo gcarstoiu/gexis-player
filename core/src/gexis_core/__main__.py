@@ -79,6 +79,7 @@ from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, Queue, TrackMetadata
 from gexis_core import connections, discovery, hardware_report, hardware_reports, personalise, settings_migrations, settling, updates, wired
 from gexis_core.dashboard import Dashboard, DashboardSchedule, explain as explain_dashboard
+from gexis_core.panel_input import PanelInput
 from gexis_core.standby import Schedule, Standby
 from gexis_core.settings import SettingsStore
 # ADR-0127's `output_mode` row and ADR-0124's remembered software level, kept
@@ -3213,6 +3214,10 @@ async def main() -> None:
             asyncio.ensure_future(peppy_screen.hide_async())
 
     dashboard = Dashboard(publish=_dashboard_published)
+    # ADR-0157: the phone's taps and typing made real over a framed page,
+    # in the panel's session - the same one the visualiser's wlrctl reaches.
+    panel_input = PanelInput(runtime_dir=config.peppy_runtime_dir,
+                             wayland_display=config.peppy_wayland_display)
     state_store.set_panel(dashboard={"shown": False, "by": None}, dashboard_time=False)
     dashboard_schedule = DashboardSchedule(
         dashboard, lambda key: settings.value(key),
@@ -4233,6 +4238,7 @@ async def main() -> None:
         standby=standby,
         dashboard=dashboard,
         dashboard_page=dashboard_page,
+        panel_input=panel_input,
         # Phase 7 (ADR-0038): the same server, and the same player, the
         # renderer adapter talks to.
         library=library,

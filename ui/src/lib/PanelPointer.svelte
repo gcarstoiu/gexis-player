@@ -21,7 +21,8 @@
 <script>
   import { onDestroy } from 'svelte';
   import { settingValues } from './settings.js';
-  import { openTouchpad, takesText, fieldOf } from './touchpad.js';
+  import { openTouchpad, takesText, fieldOf, isRealInputFrame } from './touchpad.js';
+  import { panelInput } from './state.js';
   import { panel, reportTouch } from './state.js';
 
   const HIDE_MS = 5000;
@@ -482,6 +483,11 @@
   function tap() {
     const target = under();
     if (!target) return;
+    // ADR-0157: over a framed page, a real touch where the pointer is.
+    if (isRealInputFrame(target)) {
+      panelInput({ kind: 'tap', x: x / window.innerWidth, y: y / window.innerHeight }).catch(() => {});
+      return;
+    }
     const at = { bubbles: true, cancelable: true, composed: true, clientX: x, clientY: y, view: window };
     const pointer = { ...at, pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 1 };
     target.dispatchEvent(new PointerEvent('pointerdown', pointer));
@@ -507,6 +513,10 @@
   function insert(text) {
     const field = document.activeElement;
     if (!text || !takesText(field)) return;
+    if (isRealInputFrame(field)) {
+      panelInput({ kind: 'text', text }).catch(() => {});
+      return;
+    }
     if (field.isContentEditable) {
       document.execCommand('insertText', false, text);
       return;
@@ -520,6 +530,10 @@
   function key(name) {
     const field = document.activeElement;
     if (!takesText(field)) return;
+    if (isRealInputFrame(field)) {
+      if (['Backspace', 'Enter', 'Tab'].includes(name)) panelInput({ kind: 'key', key: name }).catch(() => {});
+      return;
+    }
     if (name === 'Backspace') {
       if (field.isContentEditable) {
         document.execCommand('delete');

@@ -213,6 +213,8 @@ export const requestStandby = (off) => post(`/panel/standby/${off ? 'on' : 'off'
 /** ADR-0156: the Home Assistant dashboard up or down. `by: 'schedule'` is the
  *  panel putting it up in place of the idle screen, which the schedule's end
  *  takes down again; anything else is a person's. */
+/** ADR-0157: a real tap, text or key on the panel, over a framed page. */
+export const panelInput = (input) => post('/panel/input', input);
 export const requestDashboard = (show, by) =>
   post(`/panel/dashboard/${show ? 'show' : 'hide'}${by === 'schedule' ? '?by=schedule' : ''}`);
 // `{ idle }`, `{ lyrics }` or both: what the panel shows (ADR-0101).
