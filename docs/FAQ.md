@@ -259,6 +259,13 @@ touch, music starting or the button again wakes it; the player keeps playing mea
 each with its own days. Woken during one, the screen goes dark again after
 *Back to standby after* (2 minutes unless changed) if nobody uses it.
 
+**After a tap, the screen takes a few seconds to come back from standby.**
+That is the screen, not the player. The player turns the picture back on
+within a fraction of a second of the tap, but some screens then need a few
+seconds to find the signal again before they show anything; the 11.9″ bar
+takes about three. One tap is enough - more taps during the wait do not
+make it faster. Screens that wake almost at once do so with the same player.
+
 **When does the idle screen appear?**
 Only with *Settings → Display → Idle screen* switched on - it is off on a new
 player, and the panel then stays on what it shows. On, it appears after
