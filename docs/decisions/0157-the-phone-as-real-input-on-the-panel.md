@@ -28,9 +28,20 @@ login"*; LESSONS 79), while a finger on the glass and a USB keyboard could.
    - **taps** - a virtual touchscreen through `/dev/uinput` at the screen's
      coordinates, as `tools/panel-touch.py` already does for measurements
      (Finding 032), so a tap lands exactly under the drawn pointer;
-   - **typing** - the compositor's virtual keyboard (`wlrctl keyboard type`,
-     already on the image for the visualiser), which types any character the
-     phone sends, layout or not; Backspace and Enter as keys.
+   - **typing** - key presses from a virtual keyboard (`/dev/uinput`), as a
+     USB keyboard makes them: each character is found as a key, with the
+     Shift or AltGr it needs, on the compositor's own layout (libxkbcommon,
+     with labwc's `XKB_DEFAULT_*`; none set on the image, so US). Backspace,
+     Enter and Tab are keys of the same keyboard. A character the layout
+     lacks (`£`, `ä` on US) is left out and the phone says so.
+     **Amended 2026-10-21, after George's test on sofapi:** the first build
+     typed with `wlrctl keyboard type`, which this record said types any
+     character. It types ASCII only (*"Only ascii strings are currently
+     supported"*), and, one call per character as the phone sends them, lost
+     characters - `test.user@example.com` arrived as `test.usereaple.co`;
+     the same text in one call typed nothing. Key presses, five runs of a
+     48-character mixed string one character at a time, plus a whole string
+     at once, Backspace and Enter: all exact.
    The core does both, on the panel's request (`POST /panel/input`), as the
    panel user; the phone's keyboard comes up when its pointer taps a field in
    the frame, as it does for the player's own fields.
@@ -38,13 +49,16 @@ login"*; LESSONS 79), while a finger on the glass and a USB keyboard could.
    nowhere else; whoever can use the phone page could already drive the panel.
 4. **No setting.** It is how the touchpad works over a frame.
 
-## Unverified
+## Checked on sofapi (2026-10-21)
 
-- That `wlrctl keyboard type` reaches a focused field inside a cross-site
-  frame in the kiosk's Chromium on labwc, and types every character
-  (accents, symbols) a phone keyboard sends.
-- That the panel can tell when the phone's tap lands on a text field inside
-  the frame - it cannot see inside it - so when to bring up the phone's
-  keyboard: likely a tap over the frame always offers it.
-- That a uinput touchscreen added at run time is mapped to the panel's output
-  as the real one is (labwc's `<touch mapToOutput>`).
+With a stand-in login page framed as the dashboard is:
+- a tap through the virtual touchscreen focuses the field under the
+  pointer (labwc maps the added device to the panel's output);
+- typing as above, exact;
+- the phone's keyboard comes up over the frame (`data-real-input`).
+
+## Still open
+
+- Characters outside the panel's layout cannot be typed; the phone says so.
+- Whether a sign-in kept in the frame survives a reboot (not needed with
+  trusted networks).
