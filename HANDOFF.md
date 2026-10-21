@@ -75,6 +75,23 @@ yet:**
   Home Assistant - the player changes nothing there, ADR-0156 decision 8).
   A throwaway Home Assistant runs on R2D2 (`docker rm -f gexis-test-ha` when
   done).
+- **Open: the visualiser crashes when its window is resized** (sofapi,
+  2026-10-21; SEGV in gexis-peppy also on 10-16, 10-19, 10-20 on both
+  players). Display standby turns the panel's output off (ADR-0135), labwc
+  moves windows to the other output (sofapi's TV, 640x480) and leaves them
+  there: the visualiser came back in a 640x480 box in the corner, and any
+  resize (that one, or a full screen asked for) ends in a crash - the driver
+  and engine draw into the surface the resize replaced. A crash also leaves
+  the core believing it is up (`panel.visualiser`), so its hide finds no
+  window. Two ways: the driver survives a resize (re-acquire the display
+  surface and re-point the engines), or standby powers the output down
+  without removing it (wlopm - dropped on 2026-10-20 for a 3 s wake that
+  turned out to be the bar's own; George's decision).
+- **Phone typing over the dashboard (ADR-0157 amended)**: key presses on the
+  compositor's layout (US on the image); checked exact on sofapi with a
+  stand-in login (`ph-ha-dashboard`, `phone-sheet`). Chromium's password
+  manager off by policy (gexis-system). Not yet tried by George with his
+  Home Assistant login.
 - **Open: the visualiser button on ShelvesPi refused several taps** (George,
   21 Oct morning: nothing happened). The page received the taps (`/touch`)
   but sent no `/peppy/show`; cause not found by reading. Next: reproduce with

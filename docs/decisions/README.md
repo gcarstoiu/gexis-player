@@ -177,6 +177,7 @@ been written properly. **0098 has no record either.**
 | [0154](0154-four-more-weather-icon-sets.md) | Four more weather icon sets | Accepted 2026-10-19: Modern, Futuristic, Photographic, Atmospheric join Solid, Duotone, Neon |
 | [0155](0155-a-sound-system-on-optical.md) | A sound system on optical, through a USB adapter | Accepted 2026-10-20: Squeezelite converts only rates the card lacks, upward; adapter marked Tested |
 | [0156](0156-home-assistant-dashboard-on-the-screen.md) | A Home Assistant dashboard on the screen | Accepted 2026-10-21: one per player, in the panel's page; button, API, schedule; edge tab dismisses |
+| [0157](0157-the-phone-as-real-input-on-the-panel.md) | The phone's touchpad and keyboard as real input on the panel | Accepted 2026-10-21: over a framed page, taps and typing as real input (uinput); amended the same day |
 
 ## Cross-cutting rules
 
