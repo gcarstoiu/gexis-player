@@ -93,6 +93,19 @@ yet:**
   but sent no `/peppy/show`; cause not found by reading. Next: reproduce with
   injected taps (`tools/panel-touch.py`) once George is off the bar. The bar's
   touch controller also dropped off USB at 07:56 and 08:15 (about 1 s each).
+  Seen once that evening (19:48:47): `wlrctl focus` found no window just after
+  `fullscreen` acted on it, and the core's restart showed it 2.4 s later; not
+  reproduced in ten tries (after skin changes, standby cycles, from maximised).
+- **Fixed on `peppy-refused-no-restart`, not yet previewed: a show refused for
+  standby restarted the visualiser** (ShelvesPi, 2026-10-21, reproduced): with
+  the only screen off the new driver could not open a display and stayed
+  gone. The core now restarts it only when a show was tried and found no
+  window. Core suite 2606 passed.
+- **Glass (foonerd) measured on ShelvesPi** (Finding 133): on a needle meter it
+  draws for about 3 points of a core less than ours, its default tap costs
+  about 4 more in the audio process, memory about 90 MB against 235. The
+  heavy skins were not compared fairly (no music through Lyrion, no player
+  state fed to Glass). No decision asked yet.
 
 **Next: Phase 18, a Home Assistant dashboard on the screen**
 (`ph-ha-dashboard`, ADR-0156, added 2026-10-21; George: *"let's build
