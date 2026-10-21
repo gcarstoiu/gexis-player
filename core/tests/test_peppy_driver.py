@@ -419,6 +419,7 @@ class _Surface:
 class _Meter:
     def __init__(self, log):
         self.log = log
+        self.components = []
 
     def stop(self):
         self.log.append(("meter", "stop"))
@@ -428,6 +429,9 @@ class _Meter:
 
     def set_volume(self, volume):
         self.log.append(("meter", "volume", volume))
+
+    def run(self):
+        self.log.append(("meter", "run"))
 
 
 def _rotation_on_screen(monkeypatch, log):
@@ -441,8 +445,15 @@ def _rotation_on_screen(monkeypatch, log):
         meter=types.SimpleNamespace(meter=meter, current_volume=70),
         util=types.SimpleNamespace(PYGAME_SCREEN=window, meter_config={}),
     )
-    spectrum = types.SimpleNamespace(follow=lambda skin, home=None: log.append(("spectrum", "follow")))
-    layer = types.SimpleNamespace(set_skin=lambda *a: log.append(("layer", "set_skin")), background=None)
+    spectrum = types.SimpleNamespace(
+        follow=lambda skin, home=None: log.append(("spectrum", "follow")),
+        redraw=lambda: log.append(("spectrum", "redraw")),
+    )
+    layer = types.SimpleNamespace(
+        set_skin=lambda *a: log.append(("layer", "set_skin")),
+        forget_drawn=lambda: log.append(("layer", "forget_drawn")),
+        background=None,
+    )
     rotation = driver.Rotation(peppy, {"01G5_Needle": {"screen.bgr": "x.jpg"}}, spectrum, layer)
     rotation.current = "01G5_Needle"
     return rotation
@@ -453,13 +464,56 @@ def test_a_refresh_paints_the_whole_frame_again_from_black(monkeypatch):
     that, the needles' boxes. A window that lost its picture showed the meter
     faces as far as the needles had swept and the page behind elsewhere
     (George's photos, sofapi, 2026-10-20). A refresh restarts the meter on
-    black and sets every layer afresh, then presents the whole window."""
+    black and runs its needles back to the music at once; the spectrum and
+    the text are drawn again over it."""
     log = []
     rotation = _rotation_on_screen(monkeypatch, log)
     assert rotation.refresh() is True
-    assert log[:4] == [("meter", "stop"), ("window", "fill", (0, 0, 0)), ("meter", "volume", 70), ("meter", "start")]
-    assert ("spectrum", "follow") in log and ("layer", "set_skin") in log
-    assert log[-1] == ("display", "update"), "the whole window is presented, not a region"
+    assert log == [
+        ("meter", "stop"),
+        ("window", "fill", (0, 0, 0)),
+        ("meter", "volume", 70),
+        ("meter", "start"),
+        ("meter", "run"),
+        ("spectrum", "redraw"),
+        ("layer", "forget_drawn"),
+    ]
+
+
+def test_a_refresh_shows_nothing_until_it_is_whole(monkeypatch):
+    """George, 2026-10-21: "some blinking/flickering in the first 3 seconds".
+    The refresh presented a frame without text or art, its needles at rest,
+    and chose the spectrum's section again - its bars back to nothing -
+    twice after every show. Now no frame of it reaches the screen; the
+    caller presents it once, with the text on it."""
+    log = []
+    rotation = _rotation_on_screen(monkeypatch, log)
+    rotation.refresh()
+    assert ("display", "update") not in log
+    assert ("spectrum", "follow") not in log and ("layer", "set_skin") not in log
+
+
+def test_a_refresh_restarts_the_meter_as_its_start_found_it(monkeypatch):
+    """A needle left where the music had it was drawn there by the restart
+    and wiped in another order than a fresh start's: a few pixels at the
+    bars' ends and the needles' edges differed (check-skins, 2026-10-21).
+    Each part is put back as the skin's start found it."""
+    log = []
+    rotation = _rotation_on_screen(monkeypatch, log)
+    meter = rotation.vumeter.meter
+    class Box(tuple):
+        def copy(self):
+            return Box(self)
+
+    needle = types.SimpleNamespace(content="at rest", bounding_box=Box((0, 0, 1, 1)),
+                                   content_x=10, content_y=20)
+    meter.components = [needle]
+    rotation._paint_whole_frame("01G5_Needle", meter)
+    needle.content, needle.bounding_box, needle.content_x = "at 40", Box((5, 5, 9, 9)), 99
+    seen = []
+    meter.start = lambda: seen.append((needle.content, tuple(needle.bounding_box), needle.content_x))
+    rotation.refresh()
+    assert seen == [("at rest", (0, 0, 1, 1), 10)]
 
 
 def test_nothing_on_screen_is_nothing_to_refresh(monkeypatch):

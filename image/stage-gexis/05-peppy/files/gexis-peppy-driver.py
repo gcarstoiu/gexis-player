@@ -625,6 +625,22 @@ def report_touches_to_the_daemon() -> None:
     pygame.event.get = get
 
 
+def component_state(component) -> tuple:
+    """What a meter's start reads from one of its parts and its animators
+    change: the picture and where it is drawn."""
+    box = component.bounding_box
+    return (component.content, box.copy() if hasattr(box, "copy") else box,
+            component.content_x, component.content_y)
+
+
+def restore_component(component, state: tuple) -> None:
+    content, box, x, y = state
+    component.content = content
+    component.bounding_box = box.copy() if hasattr(box, "copy") else box
+    component.content_x = x
+    component.content_y = y
+
+
 class Rotation:
     """Phase 5 criterion 5: a new skin per track, with the next one built
     before it is needed.
@@ -661,6 +677,8 @@ class Rotation:
         #: new skin after the text and motion layers (it is put into their
         #: backgrounds and the engine's).
         self.fanart = None
+        #: Each part of the meter on screen as its start found it (refresh).
+        self._as_built: list[tuple] = []
         self.unseen: list[str] = []
         self.current: str | None = None
         self.prepared: tuple[str, object] | None = None
@@ -823,13 +841,39 @@ class Rotation:
         minimised window is raised and maximised again - showed only what
         was repainted afterwards: the meter faces as far as the needles had
         swept, the text over its own boxes, and the page behind everywhere
-        else (sofapi, 2026-10-20). The same meter is restarted: nothing is
-        loaded from disk."""
+        else (sofapi, 2026-10-20).
+
+        **Painted out of sight, shown once** (George, 2026-10-21: "some
+        blinking/flickering in the first 3 seconds"). The repaint used to
+        present a frame without its text and art, with the needles set back
+        to rest and the spectrum's bars started again from nothing - twice,
+        0.6 s and 2 s after every show. Now the meter is restarted in the
+        window's memory and its needles run one frame at once, back where
+        the music has them; the spectrum's bars are drawn where they stand,
+        its section not chosen again; and nothing reaches the screen here:
+        the caller draws the text and art over it and presents the whole
+        window once."""
         meter = self.vumeter.meter
         if self.current is None or meter is None:
             return False
         meter.stop()
-        self._paint_whole_frame(self.current, meter)
+        window = pygame.display.get_surface()
+        if window is not None:
+            window.fill((0, 0, 0))
+        screen = self.peppy.util.PYGAME_SCREEN
+        if screen is not None and screen is not window:
+            screen.fill((0, 0, 0))
+        # As the skin was when it first started: a part left where the
+        # needles last had it is drawn there by the start, and wiped in
+        # another order than a fresh start's (check-skins, 2026-10-21).
+        for component, state in self._as_built:
+            restore_component(component, state)
+        meter.set_volume(self.vumeter.current_volume)
+        meter.start()
+        meter.run()
+        self.spectrum.redraw()
+        if self.layer is not None:
+            self.layer.forget_drawn()
         return True
 
     def _paint_whole_frame(self, name: str, meter) -> None:
@@ -843,6 +887,7 @@ class Rotation:
         screen = self.peppy.util.PYGAME_SCREEN
         if screen is not None and screen is not window:
             screen.fill((0, 0, 0))
+        self._as_built = [(c, component_state(c)) for c in meter.components if c is not None]
         meter.set_volume(self.vumeter.current_volume)
         meter.start()
         skin = self.skins.get(name, {})
@@ -870,6 +915,15 @@ class SpectrumState:
         self.spectrum = None
         self.util = None
         self.active = False
+
+    def redraw(self) -> None:
+        """The bars where they stand, over the spectrum's own background -
+        no new section, no reset of the heights (Rotation.refresh)."""
+        if not self.active or self.spectrum is None:
+            return
+        lock = getattr(self.spectrum, "gexis_lock", None) or threading.Lock()
+        with lock:
+            self.spectrum.draw()
 
     def follow(self, skin: dict[str, str], home: Path | None = None) -> None:
         wanted = spectrum_for(skin)
@@ -1295,12 +1349,14 @@ def main() -> int:
             time.sleep(HIDDEN_FRAME_S)
         elif repaints.due() and rotation.refresh():
             # Finding 131: the window back without its picture. The text and
-            # art follow at this frame's poll: the layer was set afresh.
+            # art go back over it here: the layer has forgotten them.
             print(f"peppy: whole frame painted again ({repaints.reason})")
             metadata = read_metadata()
             dirty = layer.draw(metadata, paint=not motion.active)
-            if dirty:
-                pygame.display.update(motion.compose(dirty) if motion.active else dirty)
+            if dirty and motion.active:
+                motion.compose(dirty)
+            # One whole frame, the text and art already on it.
+            pygame.display.update()
         if hidden or frames % poll_every == 0:
             # The same poll carries both files: which track is playing, and
             # what the panel last asked for (ADR-0051 §1).

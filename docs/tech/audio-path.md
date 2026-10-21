@@ -623,10 +623,15 @@ flowchart LR
   **The whole frame is painted again when the window comes back** (Finding
   131): PeppyMeter paints a skin's full picture only when it starts, then only
   the needles' boxes, so a window raised without its picture showed little
-  but the meter faces. The driver repaints everything from black - the meter
-  restarted, every layer set afresh - on any window event pygame reports
-  (logged as `peppy: window ...`) and 0.6 s and 2 s after the shown flag goes
-  up (`Repaints`, `Rotation.refresh`). Every skin change starts from black too.
+  but the meter faces. The driver repaints everything from black on any
+  window event pygame reports (logged as `peppy: window ...`) and 0.6 s and
+  2 s after the shown flag goes up (`Repaints`, `Rotation.refresh`), **out of
+  sight and shown once**: the meter's parts are put back as its start found
+  them, it is restarted and its needles run one frame to the music, the
+  spectrum's bars are drawn where they stand, and the text and art go over
+  it before the one whole-window update (2026-10-21: repaints shown frame by
+  frame - needles at rest, bars from nothing, no text - read as flicker).
+  Every skin change starts from black too.
 - **What it draws besides levels.** The core writes
   `/run/gexis/nowplaying.json` (`peppy_metadata.py`) for title, artist,
   artwork and times, and `/run/gexis/visualisation.json` (`skins.py`) for the
