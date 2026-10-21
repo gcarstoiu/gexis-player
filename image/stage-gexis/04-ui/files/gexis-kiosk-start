@@ -97,7 +97,32 @@ write_labwc_config() {
 	echo "gexis-kiosk: touch and the window on ${connector}" >&2
 }
 
+# **Chromium's remembered window size is forgotten at every start**
+# (sofapi, 2026-10-20). The profile keeps the last window's bounds in its own
+# units (`browser.window_placement`), and with --force-device-scale-factor a
+# new screen's start restored the old screen's size scaled: on the 7" at
+# 0.625 a stored 800x480 became a 500x300 page in a corner. A kiosk's window
+# is the screen; nothing should be remembered.
+forget_window() {
+	local prefs="$1/Default/Preferences"
+	[ -f "${prefs}" ] || return 0
+	python3 - "${prefs}" <<'PY' || echo "gexis-kiosk: the stored window size could not be forgotten" >&2
+import json, sys
+path = sys.argv[1]
+with open(path) as f:
+    prefs = json.load(f)
+if prefs.get("browser", {}).pop("window_placement", None) is not None:
+    with open(path, "w") as f:
+        json.dump(prefs, f)
+    print("gexis-kiosk: the stored window size forgotten", file=sys.stderr)
+PY
+}
+
 case "${1:-}" in
+	forget-window)
+		forget_window "$2"
+		exit
+		;;
 	compositor)
 		# A configuration that cannot be written must not cost the panel:
 		# labwc then reads the installed one, which is HDMI-A-1's.
@@ -254,6 +279,7 @@ if [ -n "${GEXIS_SCREEN_SCALE:-}" ]; then
 	scale=(--force-device-scale-factor="${GEXIS_SCREEN_SCALE}")
 	echo "gexis-kiosk: ${GEXIS_SCREEN_ID:-screen} (${GEXIS_SCREEN_FAMILY:-standard}), scale ${GEXIS_SCREEN_SCALE}" >&2
 fi
+forget_window "${GEXIS_KIOSK_PROFILE}"
 echo "gexis-kiosk: exec chromium" >&2
 
 exec chromium \

@@ -83,3 +83,24 @@ def test_any_output_but_the_screens_is_black():
     script = SCRIPT.read_text()
     assert script.count("swaybg -o '*' --color '#000000'") == 2
     assert '-o "${screen_output}"' in script and "screen_output=$(screen_connector)" in script
+
+
+def test_the_stored_window_size_is_forgotten_before_chromium_starts(tmp_path):
+    """sofapi, 2026-10-20: a stored 800x480, restored at scale 0.625, drew the
+    page at 500x300 in a corner of the 7". Every other preference stays."""
+    import json
+    prefs = tmp_path / "Default" / "Preferences"
+    prefs.parent.mkdir()
+    prefs.write_text(json.dumps({"browser": {"window_placement": {"right": 800, "bottom": 480},
+                                             "has_seen_welcome_page": True}, "profile": {"name": "x"}}))
+    subprocess.run(["bash", str(SCRIPT), "forget-window", str(tmp_path)], check=True, capture_output=True)
+    kept = json.loads(prefs.read_text())
+    assert "window_placement" not in kept["browser"]
+    assert kept["browser"]["has_seen_welcome_page"] is True and kept["profile"] == {"name": "x"}
+    # No profile yet (a first start): nothing to do, and no error.
+    subprocess.run(["bash", str(SCRIPT), "forget-window", str(tmp_path / "none")], check=True, capture_output=True)
+
+
+def test_chromium_is_started_only_after_the_window_size_is_forgotten():
+    text = SCRIPT.read_text()
+    assert text.index('forget_window "${GEXIS_KIOSK_PROFILE}"') < text.index("exec chromium \\")

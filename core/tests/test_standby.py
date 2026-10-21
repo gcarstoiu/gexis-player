@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
+
 from aiohttp.test_utils import TestClient, TestServer
 
 from gexis_core import standby as sb
@@ -322,3 +324,108 @@ def test_standby_turns_off_the_port_the_screen_is_on(tmp_path, monkeypatch):
     assert sb.output_command(False, {}, 1000, sb.seen_connector())[-2:] == ["HDMI-A-2", "--off"]
     monkeypatch.setattr(screen_detect, "seen", lambda *a, **k: screen_detect.Seen())
     assert sb.seen_connector() == "HDMI-A-1"
+
+
+# ── ADR-0135 as amended 2026-10-20: power down, keep the output; the real
+# screen at start ──────────────────────────────────────────────────────────
+
+
+def test_lit_is_wlr_randrs_enabled():
+    assert sb.lit(True) is True and sb.lit(False) is False and sb.lit(None) is None
+
+
+def test_touchscreens_are_the_devices_that_report_btn_touch(tmp_path):
+    """BTN_TOUCH is bit 330: in the `key` capability's hex words (the last the
+    lowest bits) it is in the second word from the end on a 64-bit kernel."""
+    def dev(name, words):
+        (tmp_path / name / "device" / "capabilities").mkdir(parents=True)
+        (tmp_path / name / "device" / "capabilities" / "key").write_text(words + "\n")
+    dev("event4", "400 0 0 0 0 0")          # 0x400 << 320: bit 330 - the bar's touchscreen
+    dev("event1", "70000 0 0 0 0 0 0 0 0")  # a keyboard's keys, no BTN_TOUCH
+    dev("event2", "0")
+    assert sb.touchscreens(tmp_path) == [sb.Path("/dev/input/event4")]
+
+
+def test_finger_downs_counts_only_a_finger_coming_down():
+    ev = lambda typ, code, value: sb.EVENT.pack(0, 0, typ, code, value)
+    data = ev(3, 0, 120) + ev(1, 330, 1) + ev(0, 0, 0) + ev(1, 330, 0) + ev(1, 330, 1)
+    assert sb.finger_downs(data) == 2
+    assert sb.finger_downs(ev(1, 272, 1)) == 0, "a mouse button is not a finger"
+
+
+@pytest.mark.asyncio
+async def test_a_finger_on_the_dark_screen_wakes_it(tmp_path):
+    """ShelvesPi (2026-10-20): the bar's touch is mapped to its output, so with
+    the output off no tap reached the page. The core reads the kernel."""
+    import os
+    r, w = os.pipe()
+    fifo = tmp_path / "touch"
+    os.mkfifo(fifo)
+    calls, published = [], []
+    s = _standby(calls, published)
+    s.touch_watch = sb.TouchWatch(lambda: asyncio.ensure_future(s.wake("touch")), devices=lambda: [fifo])
+    writer = os.open(fifo, os.O_RDWR | os.O_NONBLOCK)
+    await s.sleep("asked")
+    assert calls == [False] and s.touch_watch._open
+    os.write(writer, sb.EVENT.pack(0, 0, 1, 330, 1))
+    for _ in range(50):
+        await asyncio.sleep(0.01)
+        if not s.off:
+            break
+    assert not s.off and calls == [False, True] and published[-1] == (False, None)
+    assert not s.touch_watch._open, "the watch stops when the screen is on"
+    os.close(writer); os.close(r); os.close(w)
+
+
+def _standby(calls, published):
+    async def switch(on):
+        calls.append(on)
+        return True
+    s = sb.Standby(switch=switch, publish=lambda off, reason: published.append((off, reason)))
+    s.touch_watch = sb.TouchWatch(lambda: None, devices=lambda: [])  # not this machine's devices
+    return s
+
+
+@pytest.mark.asyncio
+async def test_dark_at_start_outside_a_standby_time_is_woken():
+    """The ShelvesPi case: asked off at 22:50, the update restarted the core at
+    03:45, and the screen stayed dark all day with the core calling it on."""
+    calls, published = [], []
+    s = _standby(calls, published)
+    await s.reconcile(False, inside_standby_time=False)
+    assert calls == [True] and not s.off and not s.may_be_dark
+
+
+@pytest.mark.asyncio
+async def test_dark_at_start_inside_a_standby_time_is_the_schedules_standby():
+    """Kept dark, but said: the phone offers to wake it, a touch wakes it, and
+    the schedule wakes it when the time ends."""
+    calls, published = [], []
+    s = _standby(calls, published)
+    await s.reconcile(False, inside_standby_time=True)
+    assert calls == [] and s.off and s.reason == "schedule" and published == [(True, "schedule")]
+    await s.wake("touch")
+    assert calls == [True] and not s.off and published[-1] == (False, None)
+
+
+@pytest.mark.asyncio
+async def test_lit_at_start_is_known_on_and_unknown_changes_nothing():
+    calls, published = [], []
+    s = _standby(calls, published)
+    await s.reconcile(True, inside_standby_time=True)
+    assert calls == [] and not s.off and not s.may_be_dark
+    s2 = _standby(calls, published)
+    await s2.reconcile(None, inside_standby_time=False)
+    assert calls == [] and s2.may_be_dark, "unread: a touch still switches it on, as before"
+
+
+def test_inside_now_follows_the_schedule_and_headless():
+    import datetime as dt
+    vals = {"standby_schedule": True, "headless": False,
+            "standby_times": [{"from": "22:30", "until": "07:00", "days": list(sb.DAYS)}]}
+    s = sb.Schedule(sb.Standby(), vals.get, lambda: False, now=lambda: dt.datetime(2026, 10, 20, 23, 0))
+    assert s.inside_now()
+    vals["headless"] = True
+    assert not s.inside_now()
+    vals["headless"], vals["standby_schedule"] = False, False
+    assert not s.inside_now()

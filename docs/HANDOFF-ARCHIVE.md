@@ -7348,3 +7348,20 @@ consecutively without letters, each with a stable ID** (George); the open ones
 are 14-21. **Phase 14 is `ph-first-use`** (George, 2026-10-15): setup split into
 a device part and a personal part, before MPD (now 15); ADR-0149 proposed, its
 open points owed by George, then Claude Design.
+
+## 2026-10-20: 1.2.0 on Stable (moved from HANDOFF verbatim when 1.3.0 was released)
+
+**Current release: 1.2.0, on Stable** (2026-10-19; Stable serial 6,
+Testing serial 51, both signatures good from the release key, read back
+from GitHub; the public `gexis-player.img.xz` decompresses to the checked
+image). Image `image/deploy/2026-10-19-gexis-player-v1.2.0.img`, 123
+checks; parts `ours-c246c9c094c6`, `skins-9c8185729dfd` (reused),
+`rpi-7325dbec7a52`, `debian-5d5dc927ef03`. It carries Phase 15, the public
+API (`ph-api`, merged into `next`), and George's fixes from testing it on
+sofapi. **GitHub Pages is on** (source GitHub Actions; the `github-pages`
+environment lets `main` and `v*` tags deploy), so `api-docs.yml` publishes
+the API description from each release tag. **PR #77** was merged by George the same day; post-merge steps and the
+clean-up are done; the wiki Roadmap is pushed (Now 16 optical, Next 17 DSI
+and 18 room correction). sofapi runs the preview `+git33`, equal in content
+to 1.2.0. **The README's badge bar** (tests, release, licence, Raspberry Pi
+4, API, PayPal) is on `docs` and `next`, for the next release PR.

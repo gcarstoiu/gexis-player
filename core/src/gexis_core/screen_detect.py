@@ -46,6 +46,14 @@ FINGERPRINTS: dict[str, Fingerprint] = {
     # 0712:000a. Without it setup showed the whole list on the phone where
     # the 10.1" and 13.3" were recognised (George, the same day).
     "waveshare-11.9-hdmi": Fingerprint(edid_maker="WSD", edid_name="WaveShare-119", usb="0712:000a"),
+    # George's HMTECH 7" on sofapi, read 2026-10-20: EDID "HCT" / "HDMI",
+    # preferred 800x480 (it claims 62 x 34 cm); no touch - the non-touch
+    # model, as its maker lists it. "HDMI" is a generic name, so the maker
+    # and the 800x480 carry the match with it.
+    "hmtech-7-hdmi": Fingerprint(edid_maker="HCT", edid_name="HDMI"),
+    # George's HMTECH 10.1" on sofapi, read 2026-10-20: EDID "DEL" /
+    # "TLD1280" (a borrowed Dell code), preferred 1024x600, no touch.
+    "hmtech-10.1-hdmi-monitor": Fingerprint(edid_maker="DEL", edid_name="TLD1280"),
 }
 
 

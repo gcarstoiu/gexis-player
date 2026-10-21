@@ -114,3 +114,44 @@ player, and an interval whose start and end are the same is refused.
   output it has not switched on since it started as possibly dark.
 - **`POST /touch` is the panel's only**: a phone's would wake the screen and
   count as attention.
+
+## Amendment, 2026-10-20 — a tap seen in the kernel; the real screen at start
+
+George, on ShelvesPi (the 11.9" bar): *"The screen is blank and doesn't wake
+up on tap"*; approved the two fixes (*"Ok with both. Go for it"*), then
+rejected the first way of doing the first (*"3 seconds is too much"*).
+
+- **What happened.** Standby was asked for at 22:50 and switched the output
+  off (`wlr-randr --off`). The bar's touchscreen is tied to that output
+  (`<touch mapToOutput>`, ADR-0109: the bars are portrait panels used
+  sideways), so with the output gone the compositor dropped its taps: none
+  reached the page after 22:50 (the core's log). At 03:45 the nightly update
+  restarted the core, which then called the screen on; the phone offered
+  nothing to wake it. The 10.1" measurement above (a touch reaches the page
+  with the output off) does not hold for a screen whose touch is mapped.
+- **Tried and dropped: powering the display down instead** (`wlopm --off`,
+  output kept). Every tap arrived (measured, 3 of 3), and one tap woke the
+  player's own standby - but the picture took about 3 s to come back, against
+  almost instant with the output switched on (George: *"too much"*).
+- **Kept: the output switched off, and the core listens to the touchscreens
+  in the kernel while it is off** (`standby.TouchWatch`: the event devices
+  that report BTN_TOUCH, read without taking them from the compositor; a
+  finger coming down wakes the screen). On ShelvesPi the kernel saw every tap
+  with the output off, in both rounds of the test. The tap wakes the screen
+  and presses nothing underneath - the page never sees it.
+- **At start the core reads the real screen** (`wlr-randr --json`'s
+  `enabled`). Dark inside a standby time, it is the schedule's standby, said
+  as such - the phone offers to wake it, a touch wakes it (the watch runs),
+  the schedule wakes it when the time ends. Dark outside one, it is woken.
+  Lit, it is known to be on.
+- **Checked on ShelvesPi** (1.3.0+git11, 2026-10-20): standby asked as the
+  phone asks; one tap woke it ("listening for a touch on 1 touchscreen(s)",
+  then "screen on (touch)"). The picture took **about 3 s** to come back, as
+  it had with `wlopm` - and switching the output takes 0.05 s each way
+  (timed): **the 3 s is the bar's own screen locking onto the returning
+  signal**, paid by any standby that stops the signal. A "soft" standby
+  (signal kept, black cover only) would wake at once but leave the backlight
+  lit. **George, 2026-10-20: "Keep it as is"** - dark, one tap, about 3 s.
+- Not yet measured: the 10.1" with the watch (its taps reached the page
+  anyway) and its time back; a USB touchscreen unplugged while the watch
+  reads it.

@@ -32,7 +32,27 @@ TESTED: frozenset[str] = frozenset({
     "waveshare-13.3-hdmi-h",
     "waveshare-7.9-hdmi",
     "waveshare-11.9-hdmi",
+    # George, 2026-10-20 (sofapi): "Record it as tested" - the non-touch 7".
+    "hmtech-7-hdmi",
+    # And the non-touch 10.1", the same evening (OUR_PRESETS below).
+    "hmtech-10.1-hdmi-monitor",
 })
+
+#: **Screens George owns that the vendored list lacks** (`display_presets.json`
+#: is pi_screen_setup's, kept as it is). Merged into it when the list loads.
+#: The HMTECH 10.1" there is the touch model; George's, on sofapi 2026-10-20,
+#: has none ("No touch display"), and a touch entry would ask *Keep this
+#: screen?* on a screen nobody can tap.
+OUR_PRESETS: dict[str, dict] = {
+    "hmtech-10.1-hdmi-monitor": {
+        "name": "HMTECH 10.1\" HDMI Monitor (1024x600)",
+        "type": "hdmi",
+        "description": "IPS display, non-touch",
+        "native_resolution": "1024x600",
+        "recommended_rotation": 0,
+        "notes": "No touch. EDID reads Dell TLD1280. Tested on sofapi, 2026-10-20.",
+    },
+}
 
 #: The aspect ratio from which a screen is a bar (lib/family.svelte.js: the
 #: same boundary).
@@ -110,7 +130,7 @@ def _maker_and_model(name: str) -> tuple[str, str]:
 
 @lru_cache(maxsize=1)
 def all_screens(path: Path = PRESETS) -> tuple[Screen, ...]:
-    raw = json.loads(path.read_text())["presets"]
+    raw = {**json.loads(path.read_text())["presets"], **OUR_PRESETS}
     out = []
     for key, preset in raw.items():
         if not isinstance(preset, dict) or "name" not in preset or key in NOT_MODELS:

@@ -3013,6 +3013,17 @@ rate, a 96 or 192 kHz file goes out at that rate, and many sound bars take only
 - **Volume**: Fixed (the sound bar's remote) or Software (the phone's
   slider); an adapter without a volume control offers only those.
 
+**Closed 2026-10-20** (George: *"Merge and let's move forward"*), released in
+1.3.0. **ADR-0155** (accepted) and **Finding 130**: a Realtek USB-to-optical
+adapter into the SMSL's optical input, George listening. The adapter lacks
+88.2 and 176.4 kHz; Squeezelite now converts only the rates a card lacks, up
+to its highest (`-R -u vEX`); Plexamp converts by itself. Against the
+acceptance below: 1 was met into a DAC, **not a sound bar** (none at hand);
+2's maximum rate was not built (George: *"Not yet. We can check later"*) -
+the adapter takes up to 192 kHz; 3 holds: 44.1 and 96 kHz went out untouched
+(`hw_params`), heard. Not run on a device: the Fixed default (sofapi keeps a
+stored Software), DSD through the adapter.
+
 **Acceptance (draft):**
 
 1. A USB-to-optical adapter plays to a sound bar over TOSLINK, chosen under
