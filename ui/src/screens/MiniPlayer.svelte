@@ -9,7 +9,7 @@
   that its app keeps a volume of its own.
 -->
 <script>
-  import { active, metadata, volume, fixedOutput, meters, panel, setVolume, showPeppy, hidePeppy, requestIdle, requestStandby, goTo } from '../lib/state.js';
+  import { active, metadata, volume, fixedOutput, meters, panel, setVolume, showPeppy, hidePeppy, requestIdle, requestStandby, requestDashboard, goTo } from '../lib/state.js';
   import SourceMark from '../lib/SourceMark.svelte';
   import { settingValues } from '../lib/settings.js';
   import { openTouchpad } from '../lib/touchpad.js';
@@ -509,6 +509,19 @@
       >
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V11M10 19V5M15 19V9M20 19V13" /></svg>
       </button>
+    {/if}
+    {#if ($settingValues.dashboard_url ?? '').trim() && $settingValues.dashboard_button !== false}
+    <!-- ADR-0156: the Home Assistant dashboard on the panel, up or down. -->
+    <button
+      class="mini__icon"
+      class:is-on={$panel.dashboard?.shown}
+      type="button"
+      aria-pressed={!!$panel.dashboard?.shown}
+      aria-label={$panel.dashboard?.shown ? 'Take the dashboard down' : 'Home Assistant dashboard on the panel'}
+      onclick={() => requestDashboard(!$panel.dashboard?.shown).catch(() => {})}
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11 12 4.5 20 11v8.5H14.5V14h-5v5.5H4Z" /></svg>
+    </button>
     {/if}
     <!-- ADR-0135: the panel's screen off, or back on. -->
     <button
