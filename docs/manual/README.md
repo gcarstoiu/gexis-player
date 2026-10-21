@@ -172,8 +172,10 @@ their page. A tap on a Popular track shows its actions, as anywhere else.
 
 ![Album page](images/panel-album-page.webp)
 
-**Play album** or **Add to queue**, and the tracks with their lengths. Tap a
-track once to show its actions, twice to play it.
+**Play album** or **Add to queue**, and the tracks with their lengths. A
+track by someone other than the album's artist - a guest on one song, every
+track of a compilation - shows that artist under its title. Tap a track once
+to show its actions, twice to play it.
 
 ### Playlists
 
