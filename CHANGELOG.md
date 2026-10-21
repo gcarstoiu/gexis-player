@@ -6,6 +6,22 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.3.1 — 20 October 2026
+
+### New
+
+- Two more screens are tested and recognised by themselves: the HMTECH 7" HDMI Monitor (800 × 480) and the HMTECH 10.1" HDMI Monitor (1024 × 600), both without touch.
+
+### Fixed
+
+- The idle screen comes back as it should after the visualiser has been up with nothing playing. Before, it could stay away until the screen was touched.
+- On the bars, a tap wakes the screen from standby again, and a screen in standby when the player restarts (for example during an update) is no longer left dark with nothing to wake it.
+- After a change to a screen of a different size, the player no longer comes up in a small box in a corner of the screen.
+
+### Good to know
+
+- Some screens take a few seconds to show a picture after waking from standby. The 11.9" bar takes about three.
+
 ## 1.3.0 — 20 October 2026
 
 ### New
