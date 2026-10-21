@@ -78,6 +78,7 @@ from gexis_core.fanart import Fanart
 from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, Queue, TrackMetadata
 from gexis_core import connections, discovery, hardware_report, hardware_reports, personalise, settings_migrations, settling, updates, wired
+from gexis_core.dashboard import Dashboard, DashboardSchedule, explain as explain_dashboard
 from gexis_core.standby import Schedule, Standby
 from gexis_core.settings import SettingsStore
 # ADR-0127's `output_mode` row and ADR-0124's remembered software level, kept
@@ -1711,6 +1712,13 @@ async def main() -> None:
     async def idle_page() -> dict:
         return await probe_idle_page(settings.value("idle_url") or "", idle_session)
 
+    # ADR-0156: the same check for the Home Assistant dashboard, with the
+    # sentence the panel shows when it cannot be (decision 8: what the user
+    # has to set in Home Assistant, never set from here).
+    async def dashboard_page() -> dict:
+        found = await probe_idle_page(settings.value("dashboard_url") or "", idle_session)
+        return {**found, "message": explain_dashboard(found.get("reason"))}
+
     # ADR-0047 §2a. Both share the idle screen's session: one screen, three
     # things it asks for, and a fourth connection pool would be a pool for
     # something that runs once every fifteen minutes.
@@ -2585,6 +2593,11 @@ async def main() -> None:
                "pointer_style": None, "listenbrainz_token": None,
                # Text size: read by the panel as it draws (George, 2026-10-14).
                "text_size": None,
+               # ADR-0156: read where they are used - the address by the
+               # dashboard's check, the button by the panel, the times by
+               # the dashboard's schedule each tick.
+               "dashboard_url": None, "dashboard_button": None,
+               "dashboard_schedule": None, "dashboard_times": None,
                # ADR-0118 B: read by the menus route and the panel's home.
                "lms_extended_nav": None,
                # ADR-0149: read by the panel, which shows the waiting home in
@@ -3191,6 +3204,20 @@ async def main() -> None:
         except Exception:  # noqa: BLE001 - a screen check is no reason to stop
             logger.exception("standby: could not read the screen at start")
 
+    # ADR-0156: a Home Assistant dashboard on the screen. It takes the
+    # visualiser down when it comes up - one screen - and keeps it from
+    # coming up by itself while it is there (decision 3).
+    def _dashboard_published(shown: bool, by: str | None) -> None:
+        state_store.set_panel(dashboard={"shown": shown, "by": by})
+        if shown and peppy_screen.visible:
+            asyncio.ensure_future(peppy_screen.hide_async())
+
+    dashboard = Dashboard(publish=_dashboard_published)
+    state_store.set_panel(dashboard={"shown": False, "by": None}, dashboard_time=False)
+    dashboard_schedule = DashboardSchedule(
+        dashboard, lambda key: settings.value(key),
+        lambda inside: state_store.set_panel(dashboard_time=inside))
+
     standby_schedule = Schedule(
         standby, lambda key: settings.value(key),
         lambda: state_store.state.metadata.transport == "playing",
@@ -3204,8 +3231,9 @@ async def main() -> None:
         ),
         # ADR-0055 §6: nothing raises a screen this output cannot feed.
         has_levels=lambda: state_store.state.meters,
-        # ADR-0135: nor one that is in standby.
-        blocked=lambda: standby.off,
+        # ADR-0135: nor one that is in standby; ADR-0156: nor over the
+        # Home Assistant dashboard.
+        blocked=lambda: standby.off or dashboard.shown,
     )
 
     # **ADR-0055 §5.** An output with no volume control takes the choice
@@ -4203,6 +4231,8 @@ async def main() -> None:
         settings=settings,
         peppy=peppy,
         standby=standby,
+        dashboard=dashboard,
+        dashboard_page=dashboard_page,
         # Phase 7 (ADR-0038): the same server, and the same player, the
         # renderer adapter talks to.
         library=library,
@@ -4536,6 +4566,8 @@ async def main() -> None:
         setup_network.watch(),
         # ADR-0135: the screen off at the owner's standby times.
         standby_schedule.run(),
+        # ADR-0156: the dashboard's times, in place of the idle screen.
+        dashboard_schedule.run(),
         # ADR-0135 as amended 2026-10-20: the screen as it really is at start
         # - a standby outlives a core restart; this core would call it on.
         _reconcile_standby(),

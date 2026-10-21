@@ -142,6 +142,8 @@ class StateServer:
         settings=None,
         peppy=None,
         standby=None,
+        dashboard=None,
+        dashboard_page=None,
         library=None,
         artistinfo=None,
         notes=None,
@@ -209,6 +211,9 @@ class StateServer:
         self._peppy = peppy
         #: ADR-0135: the screen's standby, which a touch and the phone wake.
         self._standby = standby
+        #: ADR-0156: the Home Assistant dashboard, and the check of its address.
+        self._dashboard = dashboard
+        self._dashboard_page = dashboard_page
         #: ADR-0136: the other players on the network, for the phone's switcher.
         #: This core, as the others see it in its status: a player whose mDNS
         #: name was changed by a conflict (`guestpi-2.local`, 2026-10-12) is
@@ -1403,6 +1408,35 @@ class StateServer:
         else:
             return web.json_response({"error": f"unknown action {action}"}, status=404)
         return web.json_response({"standby": self._standby.off})
+
+    async def _handle_dashboard(self, request: web.Request) -> web.Response:
+        """**ADR-0156: whether the dashboard is up, and whether it can be.**
+        The panel asks each time it puts the dashboard up, as it does for the
+        idle page: a frame cannot say why it is blank, so the core checks the
+        address and answers with the sentence to show."""
+        if self._dashboard is None or self._dashboard_page is None:
+            return web.json_response({"error": "the dashboard is not wired up"}, status=503)
+        page = await self._dashboard_page()
+        return web.json_response({"shown": self._dashboard.shown, "by": self._dashboard.by, **page})
+
+    async def _handle_dashboard_request(self, request: web.Request) -> web.Response:
+        """**ADR-0156: the dashboard up or down** - from the panel's button
+        and edge tab, a phone, or Home Assistant itself. `?by=schedule` is the
+        panel putting it up in place of the idle screen, which the schedule's
+        end takes down again; anything else is a person's."""
+        action = request.match_info["action"]
+        if self._dashboard is None:
+            return web.json_response({"error": "the dashboard is not wired up"}, status=503)
+        by = "schedule" if request.query.get("by") == "schedule" else "asked"
+        if action == "show":
+            if by == "asked" and self._peppy is not None:
+                self._peppy.on_touch()
+            self._dashboard.show(by)
+        elif action == "hide":
+            self._dashboard.hide(by)
+        else:
+            return web.json_response({"error": f"unknown action {action}"}, status=404)
+        return web.json_response({"shown": self._dashboard.shown, "by": self._dashboard.by})
 
     async def _handle_idle_request(self, request: web.Request) -> web.Response:
         """**ADR-0101: the phone's idle-screen toggle.** Attention first, as a
@@ -2993,6 +3027,8 @@ class StateServer:
         # ADR-0101: the phone's idle toggle, and the panel saying what it shows.
         app.router.add_post("/panel/idle/{action}", self._handle_idle_request)
         app.router.add_post("/panel/standby/{action}", self._handle_standby)
+        app.router.add_get("/panel/dashboard", self._handle_dashboard)
+        app.router.add_post("/panel/dashboard/{action}", self._handle_dashboard_request)
         app.router.add_get("/player/status", self._handle_player_status)
         app.router.add_get("/players", self._handle_players)
         app.router.add_post("/panel/shown", self._handle_panel_shown)

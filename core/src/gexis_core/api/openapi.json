@@ -5410,6 +5410,127 @@
           "ADR-0028"
         ]
       }
+    },
+    "/panel/dashboard": {
+      "get": {
+        "operationId": "dashboard",
+        "tags": [
+          "Panel"
+        ],
+        "summary": "Whether the Home Assistant dashboard is up, and whether it can be shown",
+        "description": "The dashboard set in `dashboard_url` (ADR-0156), checked as the idle page is: unconfigured, unreachable within 5 seconds, an HTTP error status, or headers that forbid framing make it not embeddable, and `message` says what to set and where - in Home Assistant, framing is `use_x_frame_options: false` under `http`. The player changes nothing in Home Assistant. Asked by the panel each time it puts the dashboard up. Headers only: whether Home Assistant lets the player in without a login is not checked.",
+        "x-gexis-stability": "stable",
+        "x-gexis-adr": [
+          "ADR-0156"
+        ],
+        "responses": {
+          "200": {
+            "description": "Up or not, who asked, and whether the address can be shown.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanelDashboardCheck"
+                },
+                "example": {
+                  "shown": false,
+                  "by": null,
+                  "url": "http://homeassistant.local:8123/lovelace/0",
+                  "embeddable": false,
+                  "reason": "refuses framing",
+                  "message": "Home Assistant does not allow its pages to be shown inside another page. In Home Assistant's configuration, set use_x_frame_options: false under http, then restart Home Assistant."
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The dashboard is not wired up in this core.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/dashboard/{action}": {
+      "post": {
+        "operationId": "dashboard_request",
+        "tags": [
+          "Panel"
+        ],
+        "summary": "Put the Home Assistant dashboard up or take it down",
+        "description": "From the panel's button and edge tab, a phone, or Home Assistant itself - a `rest_command` or automation (ADR-0156). Music is not touched; the dashboard stays until it is taken down. A person's `show` counts as attention, so the visualiser goes down. `?by=schedule` is the panel putting it up in place of the idle screen during the dashboard's times; the schedule takes down only what it put up, and a person's `show` over it makes it theirs.",
+        "x-gexis-stability": "stable",
+        "x-gexis-adr": [
+          "ADR-0156"
+        ],
+        "parameters": [
+          {
+            "name": "action",
+            "in": "path",
+            "required": true,
+            "description": "`show` puts the dashboard up; `hide` takes it down.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "show",
+                "hide"
+              ]
+            }
+          },
+          {
+            "name": "by",
+            "in": "query",
+            "required": false,
+            "description": "`schedule` when the panel puts it up in place of the idle screen; left out for anyone else.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "schedule"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Done; whether the dashboard is now up.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanelDashboard"
+                },
+                "example": {
+                  "shown": true,
+                  "by": "asked"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`action` is neither `show` nor `hide`: `unknown action <action>`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The dashboard is not wired up in this core.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -7666,7 +7787,7 @@
       },
       "PlaybackPanel": {
         "type": "object",
-        "description": "What the panel shows, for the phone's mini player (ADR-0101, as amended; ADR-0122, ADR-0135).",
+        "description": "What the panel shows, for the phone's mini player (ADR-0101, as amended; ADR-0122, ADR-0135, ADR-0156).",
         "properties": {
           "visualiser": {
             "type": "boolean",
@@ -7701,6 +7822,25 @@
           "standby": {
             "type": "boolean",
             "description": "Whether the screen is in standby (off)."
+          },
+          "dashboard": {
+            "type": "object",
+            "description": "The Home Assistant dashboard, `{shown, by}` (ADR-0156).",
+            "properties": {
+              "shown": {
+                "type": "boolean"
+              },
+              "by": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "dashboard_time": {
+            "type": "boolean",
+            "description": "Whether one of the dashboard's times is on now, so the panel shows it in place of the idle screen (ADR-0156)."
           }
         },
         "additionalProperties": true
@@ -10840,6 +10980,82 @@
               "Tapes",
               "Fanart"
             ]
+          }
+        }
+      },
+      "PanelDashboard": {
+        "description": "The Home Assistant dashboard (ADR-0156).",
+        "type": "object",
+        "required": [
+          "shown",
+          "by"
+        ],
+        "properties": {
+          "shown": {
+            "type": "boolean",
+            "description": "Whether the dashboard is up."
+          },
+          "by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "asked",
+              "schedule",
+              null
+            ],
+            "description": "Who put it up: `asked` (a person, the panel, a phone or Home Assistant) or `schedule`; null when it is down."
+          }
+        }
+      },
+      "PanelDashboardCheck": {
+        "description": "The dashboard's state and the check of its address (ADR-0156).",
+        "type": "object",
+        "required": [
+          "shown",
+          "by",
+          "url",
+          "embeddable",
+          "reason",
+          "message"
+        ],
+        "properties": {
+          "shown": {
+            "type": "boolean",
+            "description": "Whether the dashboard is up."
+          },
+          "by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`asked`, `schedule`, or null when it is down."
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The dashboard's address, or null when none is set."
+          },
+          "embeddable": {
+            "type": "boolean",
+            "description": "Whether the address answered and allows being shown in a frame."
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why not: `unconfigured`, `unreachable`, `http <status>` or `refuses framing`; null when it can be shown."
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The sentence the panel shows for `reason`, saying what to set and where; null when it can be shown."
           }
         }
       }
