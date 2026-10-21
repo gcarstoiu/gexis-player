@@ -2342,7 +2342,12 @@ class StateServer:
             return web.json_response({"error": f"unknown action {action}"}, status=404)
         # Off the loop: raising or lowering waits on wlrctl (review, 2026-10-12).
         shown = await self._peppy.request_async(action)
-        if not shown and action == "show" and self._peppy._has_levels():
+        # **Only when it was tried and found no window** (ShelvesPi,
+        # 2026-10-21): a show refused for standby started the driver again
+        # with the only output off, and it could not start - *the video
+        # driver did not add any displays* - so the visualiser stayed gone.
+        if (not shown and action == "show" and self._peppy._has_levels()
+                and not getattr(self._peppy, "refused", False)):
             # **One restart at a time** (review, 2026-10-12): a second tap
             # while the skins load (~9 s) restarted the unit again and killed
             # the half-loaded one. A later ask waits for the restart under way;

@@ -620,6 +620,12 @@ flowchart LR
   lowers the meter once that raise is done (Finding 125 #14), instead of
   being lost with the meter left over the panel; a raise the user asked for
   is not lowered that way, since the tap that asked for it also sends a touch.
+  A show asked for while the window cannot be found starts `gexis-peppy`
+  again and shows it once it is up (`_peppy_again`, within 25 s); a show the
+  core refuses itself - the screen in standby, the dashboard up, an output
+  with no levels - starts nothing (2026-10-21: on a player with one screen, a
+  driver started while that screen was off could not open a display and
+  stayed gone).
   **The engines draw on a canvas of their own, never on the window**
   (`draw_on_a_canvas`, 2026-10-21): every `pygame.display.update` copies what
   changed to the window and presents it, and a smaller pack is copied

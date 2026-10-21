@@ -315,6 +315,10 @@ class PeppyController:
         #: five minutes, which is the black-screen-that-owns-every-touch
         #: shape of LESSONS case 15.
         self._has_levels = has_levels or (lambda: True)
+        #: Whether the last show was refused here - standby, the dashboard,
+        #: no levels - rather than tried. A refused show is no sign the
+        #: window is gone, so it is no reason to start the driver again.
+        self.refused = False
         self._track: tuple | None = None
         self._now = timer._now
         # (position, duration, playing, when): the last position a renderer
@@ -410,12 +414,14 @@ class PeppyController:
 
     def _may(self, action: str) -> bool:
         self._timer.attention()
+        self.refused = True
         if action == "show" and self._blocked():
             logger.info("peppy: not showing - the screen is in standby")
             return False
         if action == "show" and not self._has_levels():
             logger.info("peppy: not showing - this output feeds it no levels")
             return False
+        self.refused = False
         return True
 
     async def run(self) -> None:
