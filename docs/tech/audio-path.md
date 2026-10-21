@@ -620,6 +620,16 @@ flowchart LR
   lowers the meter once that raise is done (Finding 125 #14), instead of
   being lost with the meter left over the panel; a raise the user asked for
   is not lowered that way, since the tap that asked for it also sends a touch.
+  **The engines draw on a canvas of their own, never on the window**
+  (`draw_on_a_canvas`, 2026-10-21): every `pygame.display.update` copies what
+  changed to the window and presents it, and a smaller pack is copied
+  centred on black (ADR-0111). Display standby turns the panel's output off
+  and labwc moves windows to the output left (on sofapi a 640 x 480 TV), which
+  replaces the window's surface; drawing into the old one segfaulted the
+  driver. A size event now takes the window's new surface at once
+  (`take_the_window_as_it_is`), and the core asks for full screen before
+  each raise, which puts a moved window back over the panel. The copy costs
+  about 3 % of a core with nothing playing (13 % to 16 %, sofapi, one skin).
   **The whole frame is painted again when the window comes back** (Finding
   131): PeppyMeter paints a skin's full picture only when it starts, then only
   the needles' boxes, so a window raised without its picture showed little
