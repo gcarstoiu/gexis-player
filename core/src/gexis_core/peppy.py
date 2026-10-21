@@ -79,6 +79,7 @@ class PeppyScreen:
             "WAYLAND_DISPLAY": wayland_display,
         }
         self.visible = False
+        self.no_window = False
         #: One raise or lower at a time from the loop: with the settle and
         #: wlrctl off it, a touch could otherwise lower the window before a
         #: raise already under way puts it up.
@@ -92,6 +93,9 @@ class PeppyScreen:
             logger.warning("peppy: wlrctl not found; the Peppy screen cannot be raised")
 
     def _run(self, action: str) -> bool:
+        #: Whether the last call found no window to act on - the driver has
+        #: gone (it is restarted on the next show), not a failure of wlrctl.
+        self.no_window = False
         if self._wlrctl is None:
             return False
         try:
@@ -107,6 +111,7 @@ class PeppyScreen:
             return False
         if result.returncode != 0:
             logger.info("peppy: %s found no window (%s)", action, result.stderr.decode().strip())
+            self.no_window = True
             return False
         return True
 
@@ -121,13 +126,28 @@ class PeppyScreen:
         except OSError as exc:
             logger.info("peppy: could not write %s (%s)", self._shown_path, exc)
 
+    def _raise(self) -> bool:
+        """**Full screen on the panel, then raised** (George's photo, sofapi,
+        2026-10-21: the visualiser in a 640 x 480 box in the panel's corner).
+        Display standby turns the panel's output off (ADR-0135), and labwc
+        moves every window to the output left - on a player with a TV on its
+        other port, the TV's size - and does not move them back; a window
+        already maximised stays as it is. Full screen puts it back over the
+        output it is on and changes nothing for one that already fills it; a
+        minimised window stays minimised until the focus raises it (both
+        checked on sofapi). The resize this can cause no longer crashes the
+        driver: it draws on a canvas of its own (gexis-peppy-driver,
+        `draw_on_a_canvas`)."""
+        self._run("fullscreen")
+        return self._run("focus")
+
     def show(self) -> bool:
         """Blocks for the settle and a wlrctl call: on the event loop, use
         `show_async`."""
         self._tell(True)
         if self._settle_s:
             time.sleep(self._settle_s)
-        return self._shown(self._run("focus"))
+        return self._shown(self._raise())
 
     def hide(self) -> bool:
         """Blocks for a wlrctl call: on the event loop, use `hide_async`."""
@@ -144,7 +164,7 @@ class PeppyScreen:
             self._tell(True)
             if self._settle_s:
                 await asyncio.sleep(self._settle_s)
-            return self._shown(await asyncio.to_thread(self._run, "focus"))
+            return self._shown(await asyncio.to_thread(self._raise))
 
     async def hide_async(self) -> bool:
         async with self._turn:
@@ -162,7 +182,10 @@ class PeppyScreen:
         return False
 
     def _hidden(self, minimised: bool) -> bool:
-        if minimised:
+        # **No window is not shown** (sofapi, 2026-10-21): a driver that died
+        # left `visible` set, the phone's Meters lit and every later hide
+        # failing on a window that was not there.
+        if minimised or self.no_window:
             self._tell(False)
             self.visible = False
             logger.info("peppy: hidden")

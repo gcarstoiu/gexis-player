@@ -11,6 +11,8 @@ import importlib.util
 import json
 import sys
 import types
+
+import pytest
 from pathlib import Path
 
 DRIVER = (
@@ -534,3 +536,69 @@ def test_window_events_are_read_where_the_engine_reads_its_events(monkeypatch, c
     driver.pygame.event.get()
     assert repaints.due()
     assert capsys.readouterr().out.count("window windowexposed") == 1, "logged once in a while, not per event"
+
+
+# ── a window resized under the engines (George's photo, sofapi, 2026-10-21) ──
+
+
+def _display(monkeypatch, size):
+    import os
+
+    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
+    pg = pytest.importorskip("pygame")
+    if not hasattr(pg, "display"):
+        pytest.skip("pygame here is a stand-in")
+    # The driver was loaded with a stand-in; these need the real one.
+    monkeypatch.setattr(driver, "pygame", pg)
+    pg.display.init()
+    window = pg.display.set_mode(size, pg.NOFRAME)
+    # The wrapper replaces pygame.display.update: give it back after.
+    monkeypatch.setattr(pg.display, "update", pg.display.update)
+    return pg, types.SimpleNamespace(PYGAME_SCREEN=window)
+
+
+def test_the_engines_draw_on_a_canvas_and_an_update_copies_it_to_the_window(monkeypatch):
+    pg, util = _display(monkeypatch, (1280, 800))
+    assert driver.draw_on_a_canvas(util, (1280, 800)) == (0, 0)
+    canvas = util.PYGAME_SCREEN
+    assert canvas is not pg.display.get_surface()
+    canvas.fill((200, 10, 10), pg.Rect(100, 100, 50, 50))
+    pg.display.update(pg.Rect(100, 100, 50, 50))
+    assert pg.display.get_surface().get_at((120, 120))[:3] == (200, 10, 10)
+
+
+def test_a_smaller_pack_is_drawn_centred_through_the_canvas(monkeypatch):
+    pg, util = _display(monkeypatch, (800, 480))
+    assert driver.draw_on_a_canvas(util, (1024, 600)) == (112, 60)
+    util.PYGAME_SCREEN.fill((10, 200, 10), pg.Rect(0, 0, 10, 10))
+    pg.display.update([pg.Rect(0, 0, 10, 10), None])
+    window = pg.display.get_surface()
+    assert window.get_size() == (1024, 600)
+    assert window.get_at((115, 65))[:3] == (10, 200, 10) and window.get_at((5, 5))[:3] == (0, 0, 0)
+
+
+def test_a_window_shrunk_under_the_engines_only_clips_what_is_shown(monkeypatch):
+    """Display standby moved the window to a 640 x 480 TV; drawing on went
+    on into the surface that had gone, and the driver segfaulted. Now the
+    engines' canvas is untouched by it and the copy clips."""
+    pg, util = _display(monkeypatch, (1280, 800))
+    driver.draw_on_a_canvas(util, (1280, 800))
+    canvas = util.PYGAME_SCREEN
+    pg.display.set_mode((640, 480), pg.NOFRAME)   # what the compositor did
+    driver.take_the_window_as_it_is()
+    canvas.fill((10, 10, 200))                      # the engines draw on, full size
+    pg.display.update(pg.Rect(600, 400, 400, 300))  # partly outside the window
+    pg.display.update()
+    assert canvas.get_size() == (1280, 800)
+    assert pg.display.get_surface().get_size() == (640, 480)
+    assert pg.display.get_surface().get_at((630, 470))[:3] == (10, 10, 200)
+
+
+def test_a_size_event_takes_the_window_as_it_is_before_anything_draws(monkeypatch):
+    pg, util = _display(monkeypatch, (1280, 800))
+    taken = []
+    monkeypatch.setattr(driver, "take_the_window_as_it_is", lambda: taken.append(True))
+    sizes = [types.SimpleNamespace(type=pg.WINDOWSIZECHANGED), types.SimpleNamespace(type=pg.VIDEORESIZE)]
+    monkeypatch.setattr(pg.event, "get", lambda *a, **k: sizes)
+    driver.watch_window_events(driver.Repaints())
+    assert pg.event.get() == sizes and taken == [True], "once per batch of events"

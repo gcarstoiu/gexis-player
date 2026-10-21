@@ -1516,3 +1516,22 @@ Static measured 4.4-7.9 % (Finding 129).
 through the test that showed it would help; until then it is a hypothesis,
 and the records say so.
 
+**79. A way in that was never tried** (2026-10-21, ADR-0156, Phase 18).
+Designing the Home Assistant dashboard, signing in had two answers: Home
+Assistant's trusted networks, or signing in once on the panel "typing from the
+phone, which already types into the panel". The second went into ADR-0156
+decision 6, the manual, the FAQ, and the answer to George's "Any other way?" -
+with a caveat about reboots, none about whether it worked at all. Framing and
+trusted networks had been tested in a browser that morning (Finding 132); the
+phone's typing had not. George tried it on sofapi: *"Keyboard is not popping
+up in the login"*. The phone's touchpad and keyboard are `PanelPointer`'s:
+they move a pointer drawn in the player's page, dispatch made-up events there
+and insert text into its focused field. A frame from another site is a closed
+box to that page - its fields cannot be focused, typed into or even tapped by
+it. A finger on the glass reaches it; a USB keyboard does. Corrected the same
+day: the fallback is a USB keyboard, and the documents say why the phone
+cannot.
+**Rule:** a path offered to the user - in a record, the manual or an answer -
+is tried end to end first. Reasoning from a neighbouring case that works is a
+hypothesis, and is said as one.
+

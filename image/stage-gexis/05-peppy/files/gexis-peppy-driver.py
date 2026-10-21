@@ -147,10 +147,14 @@ def watch_window_events(repaints: Repaints, log_every_s: float = 10.0) -> None:
 
     def get(*args, **kwargs):
         events = original_get(*args, **kwargs)
+        resized = False
         for event in events:
             name = codes.get(event.type)
             if name is None:
                 continue
+            if name in SIZE_EVENTS and not resized:
+                take_the_window_as_it_is()
+                resized = True
             repaints.event(name)
             now = _time.monotonic()
             if now - logged.get(name, -log_every_s) >= log_every_s:
@@ -971,43 +975,80 @@ def centring(pack: tuple[int, int], screen: tuple[int, int] | None) -> tuple[int
     return (screen[0] - pack[0]) // 2, (screen[1] - pack[1]) // 2
 
 
-def moved(rects, dx: int, dy: int):
-    """`pygame.display.update`'s argument, in the window's coordinates:
-    a rect, a list of them (a None in it stays None), or nothing at all."""
+def _rects(rects) -> list[pygame.Rect]:
+    """`pygame.display.update`'s argument as a list of rects: one rect or
+    four numbers, a list of them (a None in it dropped)."""
     if rects is None:
-        return None
+        return []
     if isinstance(rects, (list, tuple)) and rects and not isinstance(rects[0], (int, float)):
-        return [None if r is None else pygame.Rect(r).move(dx, dy) for r in rects]
-    return pygame.Rect(rects).move(dx, dy)
+        return [pygame.Rect(r) for r in rects if r is not None]
+    return [pygame.Rect(rects)]
 
 
-def centre_on_black(util, screen: tuple[int, int] | None) -> tuple[int, int] | None:
-    """**A pack smaller than the screen, centred on black** (ADR-0111).
+def draw_on_a_canvas(util, screen: tuple[int, int] | None) -> tuple[int, int]:
+    """**Both engines - and our layers - draw on a canvas of their own; the
+    window is only what is shown** (George's photo, sofapi, 2026-10-21).
 
-    The window becomes the whole screen, painted black once, and both
-    engines - and our layers - are handed the pack-sized middle of it as
-    their screen: a subsurface, so whatever they draw lands in place. What
-    they ask to be shown is in their coordinates, so `display.update` is
-    wrapped to move it. Called right after `init_display`, before any meter
-    or spectrum component takes the surface (component.py reads it once).
-    """
+    They used to draw on the window itself (or a subsurface of it). Display
+    standby turns the panel's output off (ADR-0135); labwc moves the windows
+    to the output left - on sofapi a TV at 640 x 480 - and the window's
+    surface is replaced by one of the new size. Every engine kept drawing
+    into the surface that had gone, and the driver died of a segfault
+    (sofapi four times that day; both players on 10-16, 10-19, 10-20).
+
+    Now each `pygame.display.update` copies what changed from the canvas to
+    the window and presents that: a window of any size, smaller included,
+    only clips the copy. A pack smaller than the screen is centred on black
+    as before (ADR-0111). Called right after `init_display`, before any
+    meter or spectrum component takes the surface (component.py reads it
+    once). Returns the canvas's place in the window."""
     pack = util.PYGAME_SCREEN.get_size()
     offset = centring(pack, screen)
-    if offset is None:
-        return None
-    window = pygame.display.set_mode(screen, pygame.NOFRAME)
+    if offset is not None:
+        window = pygame.display.set_mode(screen, pygame.NOFRAME)
+        print(f"peppy: {pack[0]}x{pack[1]} centred on a {screen[0]}x{screen[1]} screen")
+    else:
+        window = pygame.display.get_surface()
+        offset = (0, 0)
     window.fill((0, 0, 0))
-    pygame.display.update()
-    util.PYGAME_SCREEN = window.subsurface(pygame.Rect(offset, pack))
+    canvas = pygame.Surface(pack, 0, window)
+    canvas.fill((0, 0, 0))
+    util.PYGAME_SCREEN = canvas
     real = pygame.display.update
     dx, dy = offset
 
     def update(rects=None):
-        return real() if rects is None else real(moved(rects, dx, dy))
+        window = pygame.display.get_surface()
+        if window is None:
+            return None
+        if rects is None:
+            window.blit(canvas, offset)
+            return real()
+        shown = []
+        for rect in _rects(rects):
+            window.blit(canvas, rect.move(dx, dy), rect)
+            shown.append(rect.move(dx, dy))
+        return real(shown) if shown else None
 
     pygame.display.update = update
-    print(f"peppy: {pack[0]}x{pack[1]} centred on a {screen[0]}x{screen[1]} screen")
     return offset
+
+
+#: The window events that mean its size - and so its surface - changed.
+SIZE_EVENTS = ("WINDOWSIZECHANGED", "VIDEORESIZE", "WINDOWRESIZED")
+
+
+def take_the_window_as_it_is() -> None:
+    """**The window's surface asked for again at the window's own size**, at
+    once, before anything draws: after a resize the old one is gone, and
+    pygame keeps the display surface object - the canvas's copies land in
+    the new one (checked: the same object, drawn through after the call)."""
+    if pygame.display.get_surface() is None:
+        return
+    size = pygame.display.get_window_size()
+    if size[0] > 0 and size[1] > 0:
+        pygame.display.set_mode(size, pygame.NOFRAME)
+        pygame.display.get_surface().fill((0, 0, 0))
 
 
 def hold_the_last_frame(data_source) -> None:
@@ -1111,7 +1152,7 @@ def main() -> int:
     # surface for either engine to draw on.
     peppy.init_display()
     util = peppy.util
-    centre_on_black(util, screen_size())
+    draw_on_a_canvas(util, screen_size())
 
     # The engine parsed its own directory; the other one is adopted into the
     # same config so the factory can build from either.
