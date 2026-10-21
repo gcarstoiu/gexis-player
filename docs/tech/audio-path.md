@@ -630,6 +630,14 @@ flowchart LR
   (`take_the_window_as_it_is`), and the core asks for full screen before
   each raise, which puts a moved window back over the panel. The copy costs
   about 3 % of a core with nothing playing (13 % to 16 %, sofapi, one skin).
+  **One present a frame** (Finding 134): the copy is made at once, but SDL's
+  present - about 1.75 ms of processor for any rectangle on a Pi 4, 30-44 %
+  of the driver's time - waits for `present_the_frame` at the end of the
+  frame, the rectangles merged; the meters, the ticker, the turning parts and
+  the spectrum each used to present on their own. A record or a reel is
+  repainted in the box its visible pixels reach (`reach`), not its picture's
+  diagonal, and its sixty turned frames are kept cut to that box; the
+  tonearm's last turn is kept, not made again in every repaint.
   **The whole frame is painted again when the window comes back** (Finding
   131): PeppyMeter paints a skin's full picture only when it starts, then only
   the needles' boxes, so a window raised without its picture showed little
