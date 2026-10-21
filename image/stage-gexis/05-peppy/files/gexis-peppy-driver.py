@@ -857,26 +857,19 @@ class Rotation:
         if self.current is None or meter is None:
             return False
         meter.stop()
-        window = pygame.display.get_surface()
-        if window is not None:
-            window.fill((0, 0, 0))
-        screen = self.peppy.util.PYGAME_SCREEN
-        if screen is not None and screen is not window:
-            screen.fill((0, 0, 0))
         # As the skin was when it first started: a part left where the
         # needles last had it is drawn there by the start, and wiped in
         # another order than a fresh start's (check-skins, 2026-10-21).
         for component, state in self._as_built:
             restore_component(component, state)
-        meter.set_volume(self.vumeter.current_volume)
-        meter.start()
-        meter.run()
-        self.spectrum.redraw()
-        if self.layer is not None:
-            self.layer.forget_drawn()
+        # Every layer set afresh, as a skin's start sets them - the artist
+        # photo's frame and the motion layer included: leaving them out left
+        # a dark box where the frame stood (George's photo, ShelvesPi,
+        # 2026-10-21; check-skins runs without those layers).
+        self._paint_whole_frame(self.current, meter, quiet=True)
         return True
 
-    def _paint_whole_frame(self, name: str, meter) -> None:
+    def _paint_whole_frame(self, name: str, meter, quiet: bool = False) -> None:
         """Every layer of `name`'s skin, from black - what a skin start and a
         refresh both draw. From black because a skin need not paint every
         pixel (a meter background smaller than the screen, no `screen.bgr`):
@@ -887,11 +880,19 @@ class Rotation:
         screen = self.peppy.util.PYGAME_SCREEN
         if screen is not None and screen is not window:
             screen.fill((0, 0, 0))
-        self._as_built = [(c, component_state(c)) for c in meter.components if c is not None]
+        if not quiet:
+            self._as_built = [(c, component_state(c)) for c in meter.components if c is not None]
         meter.set_volume(self.vumeter.current_volume)
         meter.start()
         skin = self.skins.get(name, {})
-        self.spectrum.follow(skin, self.homes.get(name))
+        if quiet:
+            # A refresh (Rotation.refresh): the needles straight back to the
+            # music, and the spectrum's bars drawn where they stand rather
+            # than its section chosen again, which starts them from nothing.
+            meter.run()
+            self.spectrum.redraw()
+        else:
+            self.spectrum.follow(skin, self.homes.get(name))
         if self.layer is not None:
             self.layer.set_skin(skin, self.homes.get(name), name)
             if self.motion is not None and self.homes.get(name) is not None:
@@ -899,7 +900,10 @@ class Rotation:
         if self.fanart is not None:
             self.fanart.attach(skin, meter, self.layer, self.motion,
                                self.peppy.util.PYGAME_SCREEN.get_size())
-        pygame.display.update()
+        # A refresh shows nothing yet: its caller draws the text and art over
+        # it and presents the whole window once.
+        if not quiet:
+            pygame.display.update()
 
 
 class SpectrumState:

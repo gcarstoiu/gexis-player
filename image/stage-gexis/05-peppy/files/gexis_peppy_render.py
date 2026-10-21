@@ -427,14 +427,6 @@ class MetadataLayer:
 
     # ---- drawing -------------------------------------------------------
 
-    def forget_drawn(self) -> None:
-        """The screen under this layer was painted again without it: the next
-        `draw` puts every field and the art back, even unchanged. The skin,
-        its background and the art already scaled are kept."""
-        self._painted = []
-        self._items = []
-        self._last_drawn = None
-
     def draw(self, metadata: dict, paint: bool = True) -> list[pygame.Rect]:
         """Returns the rectangles that changed, for the caller to present.
 

@@ -451,7 +451,6 @@ def _rotation_on_screen(monkeypatch, log):
     )
     layer = types.SimpleNamespace(
         set_skin=lambda *a: log.append(("layer", "set_skin")),
-        forget_drawn=lambda: log.append(("layer", "forget_drawn")),
         background=None,
     )
     rotation = driver.Rotation(peppy, {"01G5_Needle": {"screen.bgr": "x.jpg"}}, spectrum, layer)
@@ -476,7 +475,7 @@ def test_a_refresh_paints_the_whole_frame_again_from_black(monkeypatch):
         ("meter", "start"),
         ("meter", "run"),
         ("spectrum", "redraw"),
-        ("layer", "forget_drawn"),
+        ("layer", "set_skin"),
     ]
 
 
@@ -490,7 +489,18 @@ def test_a_refresh_shows_nothing_until_it_is_whole(monkeypatch):
     rotation = _rotation_on_screen(monkeypatch, log)
     rotation.refresh()
     assert ("display", "update") not in log
-    assert ("spectrum", "follow") not in log and ("layer", "set_skin") not in log
+    assert ("spectrum", "follow") not in log
+
+
+def test_a_refresh_sets_every_layer_afresh_as_a_start_does(monkeypatch):
+    """George's photo, ShelvesPi, 2026-10-21: a dark box where the artist
+    photo's frame stood. The first quiet refresh restarted the meter only;
+    the text, motion and photo-frame layers were left as they were."""
+    log = []
+    rotation = _rotation_on_screen(monkeypatch, log)
+    rotation.fanart = types.SimpleNamespace(attach=lambda *a: log.append(("fanart", "attach")))
+    rotation.refresh()
+    assert ("layer", "set_skin") in log and ("fanart", "attach") in log
 
 
 def test_a_refresh_restarts_the_meter_as_its_start_found_it(monkeypatch):
