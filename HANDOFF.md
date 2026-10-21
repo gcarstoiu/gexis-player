@@ -41,7 +41,8 @@ screen's own (the bar ~3 s; George: "Keep it as is"), in the release notes and
 the FAQ. **PR #80** was merged by George; post-merge steps and the clean-up are
 done. sofapi runs `1.3.0+git16`, ShelvesPi `1.3.0+git11` - previews of what
 1.3.1 carries; they move to 1.3.1 by the update. GitHub reports 6 Dependabot
-alerts on `main` (2 high, 4 moderate), not yet looked at.
+alerts on `main` (2 high, 4 moderate), all `vite` (the UI's build tool, not
+on the player; fixed in 8.3.3), raised 20-21 Oct.
 
 **Open from 1.3.1:** the HMTECH 10.1" came up at 800x480 on the first start
 after the boot that switched to it (Chromium stored 1004x580 in a 1024x600
