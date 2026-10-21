@@ -101,11 +101,19 @@ yet:**
   the only screen off the new driver could not open a display and stayed
   gone. The core now restarts it only when a show was tried and found no
   window. Core suite 2606 passed.
-- **Glass (foonerd) measured on ShelvesPi** (Finding 133): on a needle meter it
-  draws for about 3 points of a core less than ours, its default tap costs
-  about 4 more in the audio process, memory about 90 MB against 235. The
-  heavy skins were not compared fairly (no music through Lyrion, no player
-  state fed to Glass). No decision asked yet.
+- **Glass (foonerd) measured on ShelvesPi and sofapi** (Finding 133, the
+  thorough run George asked for): cheaper than ours on every skin measured -
+  2.1-3.8 times on ShelvesPi at matched work, 2.3-4.2 against our *Smooth*
+  rotation - at a fifth to a third of the memory; its tap costs 2.6 % of a
+  core at 44.1 kHz and 10.4 % at 192 kHz, in the audio process. Adopting it
+  would be a project (tap in every chain, state channel, show/hide, fonts, our
+  layers); a one-person project a month old. **Decision for George:** whether
+  to take it further (an ADR first). LESSONS 80: the first results measured
+  our needles at rest.
+- **Open, seen in that test:** sofapi's needles get no level on HDMI 2 - the
+  peppyalsa scope's level read zero while the spectrum read small values (at
+  Lyrion volume 5; not checked at a normal volume). And ours drew a black box
+  over part of the spectrum on `102G5_Marschal S+M` (1480 x 320).
 
 **Next: Phase 18, a Home Assistant dashboard on the screen**
 (`ph-ha-dashboard`, ADR-0156, added 2026-10-21; George: *"let's build

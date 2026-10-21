@@ -1535,3 +1535,25 @@ cannot.
 is tried end to end first. Reasoning from a neighbouring case that works is a
 hypothesis, and is said as one.
 
+
+**80. A meter measured at rest** (2026-10-21, Finding 133). George asked for
+a thorough comparison of Glass, foonerd's Rust replacement for PeppyMeter,
+with our visualiser. To keep ShelvesPi's room quiet, Lyrion played at volume 5
+while each engine drew the same skins; Glass was fed a test signal through its
+own tap. The matrix ran an hour and the preliminary results went to George:
+needle and spectrum skins about even, turntables and tapes two to five times
+cheaper in Glass. On sofapi the screenshots showed our spectrum skins with no
+bars at all, which led back: our needles follow half the volume's cut
+(`meter_follow`, ADR-0146), 50 dB at volume 5, so the levels our driver
+received were 3-4 on a scale of 100 - the needles stood near the bottom, and
+the spectrum barely rose. ShelvesPi's screenshots had shown a meter on screen,
+which looked like a meter working. Holding the meter's cut at 0 dB for the
+test (the core rewrites it at the next volume change), our needle skin cost
+13.7 % of a core instead of 4.1 %, the spectrum 19.4 % instead of 2.1 %, and
+Glass came out ahead on every skin. The same evening the first copy of the
+results was lost: `scp` with a brace list failed and the trial folder was
+removed in the same step; the numbers survived only because a waiting job had
+printed them.
+**Rule:** before measuring what something costs, see it doing the work at the
+conditions of the measurement - a still picture of the right screen is not
+that. And copy results back and count them before the source is removed.
