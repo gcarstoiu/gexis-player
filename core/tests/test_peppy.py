@@ -583,6 +583,48 @@ async def test_a_show_with_no_window_starts_the_visualiser_again(monkeypatch):
     assert screen.visible
 
 
+async def test_a_show_refused_for_standby_starts_nothing(monkeypatch):
+    """ShelvesPi, 2026-10-21: a show asked while the only screen was in
+    standby restarted the driver with no output to open, and it could not
+    start (*the video driver did not add any displays*) - the visualiser was
+    gone until something started it again. A refused show tries no window,
+    so it says nothing about the driver."""
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+
+    screen = FakeScreen()
+    controller = PeppyController(screen, UnattendedPlayback(300), blocked=lambda: True)
+    server = StateServer(StateStore({}), peppy=controller)
+    started = []
+
+    async def exec_(*args, **kw):
+        started.append(args)
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", exec_)
+    async with TestClient(TestServer(server.make_app())) as client:
+        assert (await client.post("/peppy/show")).status == 409
+    assert started == []
+    assert "show" not in screen.calls
+    assert controller.refused
+
+
+async def test_a_show_that_is_tried_again_is_no_longer_refused():
+    """The mark is the last ask's: once the screen is back, a show is tried."""
+    blocked = [True]
+    screen = FakeScreen()
+    controller = PeppyController(screen, UnattendedPlayback(300), blocked=lambda: blocked[0])
+    assert await controller.request_async("show") is False
+    assert controller.refused
+    blocked[0] = False
+    await controller.request_async("show")
+    assert not controller.refused
+    assert "show" in screen.calls
+
+
 async def test_raising_and_lowering_never_hold_up_the_event_loop(tmp_path, monkeypatch):
     """Review, 2026-10-12: the settle was slept and wlrctl run on the loop,
     so every raise held volume and arbitration for at least 0.25 s, and a
