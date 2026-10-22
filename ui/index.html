@@ -2,7 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- **The keyboard shortens the page** (George, 2026-10-22: "Some empty
+         space there"): by default Android's Chromium only shrinks what is
+         seen, so the mini player, fixed to the page's bottom, stood above
+         the keyboard with the page showing between them. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
     <title>gexis</title>
     <!-- The panel's ground colour, before any stylesheet has loaded. Without
          it Chromium's first paint is white, which is a flash between the

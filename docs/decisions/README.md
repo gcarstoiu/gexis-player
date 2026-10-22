@@ -144,7 +144,7 @@ been written properly. **0098 has no record either.**
 | [0121](0121-the-phone-as-the-panel-s-touchpad-and-keyboard.md) | The phone as the panel's touchpad and keyboard | Accepted 2026-10-05: a touchpad drives a panel pointer; a text field opens the phone's keyboard |
 | [0122](0122-now-playing-minimised-to-where-you-were.md) | Now Playing minimised, back to where you were | Accepted 2026-10-06: a Minimise chevron keeps the library's path and scroll; Home kept |
 | [0123](0123-the-network-in-settings-cable-and-wi-fi.md) | The network in Settings: cable and Wi-Fi | Accepted 2026-10-07: a Cable row; a manual address kept only once confirmed within 60 s |
-| [0124](0124-software-volume.md) | Software volume, the owner's choice | Accepted 2026-10-07: off by default, after the meter tap, not bit-perfect below 100 %. Row merged by 0127 |
+| [0124](0124-software-volume.md) | Software volume, the owner's choice | Accepted 2026-10-07: off by default, after the meter tap, not bit-perfect below 100 %. Row merged by 0127. Amended 2026-10-22: `meter → copy → softvol`, so the meter reads before the cut (Finding 135) |
 | [0125](0125-a-problem-report-users-can-download.md) | A problem report users can download, with the personal parts taken out | Accepted 2026-10-07: one zip, personal parts tokenised on the device, read before sending. Sending revised by 0138 |
 | [0126](0126-hardware-reports-from-users.md) | Hardware reports from users | Accepted 2026-10-07: a guided check to a pre-filled GitHub issue; a Reported state, merged by reviewed commit. **Amended 2026-10-18**: lists show Tested (here or reported working) or nothing, a problem as a line |
 | [0127](0127-one-volume-row.md) | One Volume row: Hardware, Software or Fixed | Accepted 2026-10-07: default Hardware, Software where there is no control; a migration carries old choices |
@@ -155,7 +155,7 @@ been written properly. **0098 has no record either.**
 | [0132](0132-reset-to-factory-settings.md) | Reset to factory settings | Accepted 2026-10-09: in System; wiped at next boot to a fresh card, backups and music included |
 | [0133](0133-the-waiting-screen-and-the-players-own-wallpapers.md) | The waiting screen, and the player's own wallpapers | Accepted 2026-10-10 (amended 2026-10-11): built-in Gexis wallpapers; with LMS off, a waiting screen of clock and source tiles |
 | [0134](0134-the-panel-says-when-the-player-has-no-network.md) | A network lost after boot opens the setup network | Accepted 2026-10-11: after two minutes without a network; the strip withdrawn |
-| [0135](0135-display-standby.md) | Display standby: the screen off on demand and at night | Accepted 2026-10-11: HDMI off while playing; touch, music or phone wake it. Amends 0019 |
+| [0135](0135-display-standby.md) | Display standby: the screen off on demand and at night | Accepted 2026-10-11: HDMI off while playing; touch, music or phone wake it. Amends 0019; amended 2026-10-20 (kernel tap, real screen at start) |
 | [0136](0136-switching-between-players-on-the-phone.md) | Switching between players on the phone | Accepted 2026-10-11: players announce `_gexis._tcp`; the phone lists them and moves the tab |
 | [0137](0137-plugins-are-told-when-output-is-fixed.md) | Plugins are told when the output is Fixed | Accepted 2026-10-11: an `output` message within contract 1; Plexamp held at 100 |
 | [0138](0138-reports-in-steps-and-one-way-to-send.md) | Reports in steps, a visible checklist, and one way to send for both | Accepted 2026-10-11: three steps; one Send step: GitHub issue or a download to e-mail |
@@ -176,6 +176,8 @@ been written properly. **0098 has no record either.**
 | [0153](0153-the-moon-at-night.md) | The moon at night | Accepted 2026-10-19: current weather shows the moon in its real phase between sunset and sunrise |
 | [0154](0154-four-more-weather-icon-sets.md) | Four more weather icon sets | Accepted 2026-10-19: Modern, Futuristic, Photographic, Atmospheric join Solid, Duotone, Neon |
 | [0155](0155-a-sound-system-on-optical.md) | A sound system on optical, through a USB adapter | Accepted 2026-10-20: Squeezelite converts only rates the card lacks, upward; adapter marked Tested |
+| [0156](0156-home-assistant-dashboard-on-the-screen.md) | A Home Assistant dashboard on the screen | Accepted 2026-10-21: one per player, in the panel's page; button, API, schedule; edge tab dismisses. Amended 2026-10-22: the visualiser - asked for or its timeout - takes over from it |
+| [0157](0157-the-phone-as-real-input-on-the-panel.md) | The phone's touchpad and keyboard as real input on the panel | Accepted 2026-10-21: over a framed page, taps and typing as real input (uinput); amended the same day |
 
 ## Cross-cutting rules
 

@@ -11,6 +11,8 @@ import importlib.util
 import json
 import sys
 import types
+
+import pytest
 from pathlib import Path
 
 DRIVER = (
@@ -394,6 +396,51 @@ def test_the_newest_whole_frame_is_read_however_the_sizes_went_before():
         _os.close(write_fd)
 
 
+def test_the_spectrum_s_own_box_follows_each_skin(tmp_path, monkeypatch):
+    """ShelvesPi, 2026-10-22: started on MarschalSpectrum (its spectrum at
+    240,65, 1149x148) and changed to Marschal S+M (741x129 at 393,36), the
+    first box was painted black over the new skin. The engine had taken
+    `util.screen_rect` once, when it was made."""
+    import pytest
+
+    pg = pytest.importorskip("pygame")
+    if not hasattr(pg, "Rect"):
+        pytest.skip("pygame here is a stand-in")
+    monkeypatch.setattr(driver, "pygame", pg)
+    monkeypatch.setattr(driver, "SPECTRUM_DIR", tmp_path)
+    (tmp_path / "config.txt").write_text("[current]\nspectrum = x\nbase.folder = /old\nspectrum.folder = 1480x320\n")
+    names = ["AVAILABLE_SPECTRUM_NAMES", "BASE_FOLDER", "PIPE_SIZE", "SCREEN_HEIGHT", "SCREEN_WIDTH", "SIZE",
+             "SPECTRUM_FOLDER", "SPECTRUM_X", "SPECTRUM_Y"]
+    monkeypatch.setitem(sys.modules, "spectrumconfigparser", types.SimpleNamespace(**{n: n for n in names}))
+    monkeypatch.setattr(driver, "select_spectrum_section", lambda *a: None)
+    places = {"Marschal1": (240, 65), "Marschal2": (393, 36)}
+    built = []
+
+    class Engine:
+        def __init__(self):
+            self.config = {"SIZE": 20}
+            self.bounding_box = self.content = pg.Rect(240, 65, 1149, 148)   # the first skin's
+            self.config_parser = types.SimpleNamespace(get_spectrum_configs=lambda: [
+                {"SPECTRUM_X": places[self.config["AVAILABLE_SPECTRUM_NAMES"][0]][0],
+                 "SPECTRUM_Y": places[self.config["AVAILABLE_SPECTRUM_NAMES"][0]][1]}])
+
+        def init_spectrums(self):
+            built.append(tuple(self.bounding_box))
+
+        set_background = set_bars = set_reflections = set_toppings = set_foreground = init_variables = lambda self: None
+
+    state = driver.SpectrumState()
+    state.spectrum = Engine()
+    state.util = types.SimpleNamespace(screen_rect=pg.Rect(240, 65, 1149, 148))
+    state.follow({"spectrum.name": "Marschal2", "spectrum.size": "741,129"})
+    assert state.active
+    assert tuple(state.spectrum.bounding_box) == (393, 36, 741, 129) == tuple(state.util.screen_rect)
+    assert state.spectrum.content == state.spectrum.bounding_box
+    assert built == [(393, 36, 741, 129)], "the backdrops are made for the new box"
+    state.follow({"spectrum.name": "Marschal1", "spectrum.size": "1149,148"})
+    assert tuple(state.spectrum.bounding_box) == (240, 65, 1149, 148)
+
+
 def test_updates_and_a_skin_change_take_one_lock():
     calls = []
     engine = types.SimpleNamespace(set_values=lambda: calls.append(engine.gexis_lock.locked()))
@@ -419,6 +466,7 @@ class _Surface:
 class _Meter:
     def __init__(self, log):
         self.log = log
+        self.components = []
 
     def stop(self):
         self.log.append(("meter", "stop"))
@@ -428,6 +476,9 @@ class _Meter:
 
     def set_volume(self, volume):
         self.log.append(("meter", "volume", volume))
+
+    def run(self):
+        self.log.append(("meter", "run"))
 
 
 def _rotation_on_screen(monkeypatch, log):
@@ -441,8 +492,14 @@ def _rotation_on_screen(monkeypatch, log):
         meter=types.SimpleNamespace(meter=meter, current_volume=70),
         util=types.SimpleNamespace(PYGAME_SCREEN=window, meter_config={}),
     )
-    spectrum = types.SimpleNamespace(follow=lambda skin, home=None: log.append(("spectrum", "follow")))
-    layer = types.SimpleNamespace(set_skin=lambda *a: log.append(("layer", "set_skin")), background=None)
+    spectrum = types.SimpleNamespace(
+        follow=lambda skin, home=None: log.append(("spectrum", "follow")),
+        redraw=lambda: log.append(("spectrum", "redraw")),
+    )
+    layer = types.SimpleNamespace(
+        set_skin=lambda *a: log.append(("layer", "set_skin")),
+        background=None,
+    )
     rotation = driver.Rotation(peppy, {"01G5_Needle": {"screen.bgr": "x.jpg"}}, spectrum, layer)
     rotation.current = "01G5_Needle"
     return rotation
@@ -453,13 +510,67 @@ def test_a_refresh_paints_the_whole_frame_again_from_black(monkeypatch):
     that, the needles' boxes. A window that lost its picture showed the meter
     faces as far as the needles had swept and the page behind elsewhere
     (George's photos, sofapi, 2026-10-20). A refresh restarts the meter on
-    black and sets every layer afresh, then presents the whole window."""
+    black and runs its needles back to the music at once; the spectrum and
+    the text are drawn again over it."""
     log = []
     rotation = _rotation_on_screen(monkeypatch, log)
     assert rotation.refresh() is True
-    assert log[:4] == [("meter", "stop"), ("window", "fill", (0, 0, 0)), ("meter", "volume", 70), ("meter", "start")]
-    assert ("spectrum", "follow") in log and ("layer", "set_skin") in log
-    assert log[-1] == ("display", "update"), "the whole window is presented, not a region"
+    assert log == [
+        ("meter", "stop"),
+        ("window", "fill", (0, 0, 0)),
+        ("meter", "volume", 70),
+        ("meter", "start"),
+        ("meter", "run"),
+        ("spectrum", "redraw"),
+        ("layer", "set_skin"),
+    ]
+
+
+def test_a_refresh_shows_nothing_until_it_is_whole(monkeypatch):
+    """George, 2026-10-21: "some blinking/flickering in the first 3 seconds".
+    The refresh presented a frame without text or art, its needles at rest,
+    and chose the spectrum's section again - its bars back to nothing -
+    twice after every show. Now no frame of it reaches the screen; the
+    caller presents it once, with the text on it."""
+    log = []
+    rotation = _rotation_on_screen(monkeypatch, log)
+    rotation.refresh()
+    assert ("display", "update") not in log
+    assert ("spectrum", "follow") not in log
+
+
+def test_a_refresh_sets_every_layer_afresh_as_a_start_does(monkeypatch):
+    """George's photo, ShelvesPi, 2026-10-21: a dark box where the artist
+    photo's frame stood. The first quiet refresh restarted the meter only;
+    the text, motion and photo-frame layers were left as they were."""
+    log = []
+    rotation = _rotation_on_screen(monkeypatch, log)
+    rotation.fanart = types.SimpleNamespace(attach=lambda *a: log.append(("fanart", "attach")))
+    rotation.refresh()
+    assert ("layer", "set_skin") in log and ("fanart", "attach") in log
+
+
+def test_a_refresh_restarts_the_meter_as_its_start_found_it(monkeypatch):
+    """A needle left where the music had it was drawn there by the restart
+    and wiped in another order than a fresh start's: a few pixels at the
+    bars' ends and the needles' edges differed (check-skins, 2026-10-21).
+    Each part is put back as the skin's start found it."""
+    log = []
+    rotation = _rotation_on_screen(monkeypatch, log)
+    meter = rotation.vumeter.meter
+    class Box(tuple):
+        def copy(self):
+            return Box(self)
+
+    needle = types.SimpleNamespace(content="at rest", bounding_box=Box((0, 0, 1, 1)),
+                                   content_x=10, content_y=20)
+    meter.components = [needle]
+    rotation._paint_whole_frame("01G5_Needle", meter)
+    needle.content, needle.bounding_box, needle.content_x = "at 40", Box((5, 5, 9, 9)), 99
+    seen = []
+    meter.start = lambda: seen.append((needle.content, tuple(needle.bounding_box), needle.content_x))
+    rotation.refresh()
+    assert seen == [("at rest", (0, 0, 1, 1), 10)]
 
 
 def test_nothing_on_screen_is_nothing_to_refresh(monkeypatch):
@@ -534,3 +645,121 @@ def test_window_events_are_read_where_the_engine_reads_its_events(monkeypatch, c
     driver.pygame.event.get()
     assert repaints.due()
     assert capsys.readouterr().out.count("window windowexposed") == 1, "logged once in a while, not per event"
+
+
+# ── a window resized under the engines (George's photo, sofapi, 2026-10-21) ──
+
+
+def _display(monkeypatch, size):
+    import os
+
+    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
+    pg = pytest.importorskip("pygame")
+    if not hasattr(pg, "display"):
+        pytest.skip("pygame here is a stand-in")
+    # The driver was loaded with a stand-in; these need the real one.
+    monkeypatch.setattr(driver, "pygame", pg)
+    pg.display.init()
+    window = pg.display.set_mode(size, pg.NOFRAME)
+    # The wrapper replaces pygame.display.update and the frame's present:
+    # give them back after.
+    monkeypatch.setattr(pg.display, "update", pg.display.update)
+    monkeypatch.setattr(driver, "present_the_frame", driver.present_the_frame)
+    return pg, types.SimpleNamespace(PYGAME_SCREEN=window)
+
+
+def test_the_engines_draw_on_a_canvas_and_an_update_copies_it_to_the_window(monkeypatch):
+    pg, util = _display(monkeypatch, (1280, 800))
+    assert driver.draw_on_a_canvas(util, (1280, 800)) == (0, 0)
+    canvas = util.PYGAME_SCREEN
+    assert canvas is not pg.display.get_surface()
+    canvas.fill((200, 10, 10), pg.Rect(100, 100, 50, 50))
+    pg.display.update(pg.Rect(100, 100, 50, 50))
+    assert pg.display.get_surface().get_at((120, 120))[:3] == (200, 10, 10)
+
+
+def test_a_frame_is_presented_once_however_many_updates_asked(monkeypatch):
+    """Finding 134: SDL's present cost about 1.75 ms of processor for any
+    rectangle and was 30-44 % of the driver's time; the meters, the ticker,
+    the turning parts and the spectrum each asked for one a frame. The copy
+    to the window is still made at once."""
+    pg, util = _display(monkeypatch, (1280, 800))
+    presented = []
+    monkeypatch.setattr(pg.display, "update", lambda rects=None: presented.append(rects))
+    driver.draw_on_a_canvas(util, (1280, 800))
+    canvas = util.PYGAME_SCREEN
+    canvas.fill((200, 10, 10), pg.Rect(100, 100, 50, 50))
+    pg.display.update(pg.Rect(100, 100, 50, 50))
+    pg.display.update([pg.Rect(140, 120, 40, 40), None])
+    pg.display.update(pg.Rect(900, 600, 10, 10))
+    assert pg.display.get_surface().get_at((120, 120))[:3] == (200, 10, 10), "copied at once"
+    assert presented == [], "nothing presented before the frame ends"
+    driver.present_the_frame()
+    assert len(presented) == 1
+    assert sorted(map(tuple, presented[0])) == [(100, 100, 80, 60), (900, 600, 10, 10)]
+    driver.present_the_frame()
+    assert len(presented) == 1, "an empty frame presents nothing"
+    pg.display.update(pg.Rect(0, 0, 5, 5))
+    pg.display.update()
+    driver.present_the_frame()
+    assert presented[-1] is None, "a whole-window update presents the whole window"
+
+
+def test_rectangles_are_merged_only_where_they_meet(monkeypatch):
+    pg = pytest.importorskip("pygame")
+    monkeypatch.setattr(driver, "pygame", pg)
+    rects = [pg.Rect(0, 0, 10, 10), pg.Rect(10, 0, 10, 10), pg.Rect(50, 50, 5, 5), pg.Rect(0, 0, 0, 5)]
+    assert sorted(map(tuple, driver.merge_rects(rects))) == [(0, 0, 20, 10), (50, 50, 5, 5)]
+
+
+def test_a_smaller_pack_is_drawn_centred_through_the_canvas(monkeypatch):
+    pg, util = _display(monkeypatch, (800, 480))
+    assert driver.draw_on_a_canvas(util, (1024, 600)) == (112, 60)
+    util.PYGAME_SCREEN.fill((10, 200, 10), pg.Rect(0, 0, 10, 10))
+    pg.display.update([pg.Rect(0, 0, 10, 10), None])
+    window = pg.display.get_surface()
+    assert window.get_size() == (1024, 600)
+    assert window.get_at((115, 65))[:3] == (10, 200, 10) and window.get_at((5, 5))[:3] == (0, 0, 0)
+
+
+def test_a_window_shrunk_under_the_engines_only_clips_what_is_shown(monkeypatch):
+    """Display standby moved the window to a 640 x 480 TV; drawing on went
+    on into the surface that had gone, and the driver segfaulted. Now the
+    engines' canvas is untouched by it and the copy clips."""
+    pg, util = _display(monkeypatch, (1280, 800))
+    driver.draw_on_a_canvas(util, (1280, 800))
+    canvas = util.PYGAME_SCREEN
+    pg.display.set_mode((640, 480), pg.NOFRAME)   # what the compositor did
+    driver.take_the_window_as_it_is()
+    canvas.fill((10, 10, 200))                      # the engines draw on, full size
+    pg.display.update(pg.Rect(600, 400, 400, 300))  # partly outside the window
+    pg.display.update()
+    assert canvas.get_size() == (1280, 800)
+    assert pg.display.get_surface().get_size() == (640, 480)
+    assert pg.display.get_surface().get_at((630, 470))[:3] == (10, 10, 200)
+
+
+def test_a_size_event_at_the_window_s_own_size_leaves_it_alone(monkeypatch):
+    """ShelvesPi, 2026-10-22: every show brought a size event at the size the
+    window already had, and taking the window again took it out of full
+    screen - a black frame between the panel and the meters."""
+    pg, util = _display(monkeypatch, (1480, 320))
+    modes = []
+    real = pg.display.set_mode
+    monkeypatch.setattr(pg.display, "set_mode", lambda *a, **k: modes.append(a) or real(*a, **k))
+    monkeypatch.setattr(pg.display, "get_window_size", lambda: (1480, 320))
+    driver.take_the_window_as_it_is()
+    assert modes == [], "nothing to take again"
+    monkeypatch.setattr(pg.display, "get_window_size", lambda: (640, 480))
+    driver.take_the_window_as_it_is()
+    assert modes and modes[-1][0] == (640, 480), "a new size is still taken at once"
+
+
+def test_a_size_event_takes_the_window_as_it_is_before_anything_draws(monkeypatch):
+    pg, util = _display(monkeypatch, (1280, 800))
+    taken = []
+    monkeypatch.setattr(driver, "take_the_window_as_it_is", lambda: taken.append(True))
+    sizes = [types.SimpleNamespace(type=pg.WINDOWSIZECHANGED), types.SimpleNamespace(type=pg.VIDEORESIZE)]
+    monkeypatch.setattr(pg.event, "get", lambda *a, **k: sizes)
+    driver.watch_window_events(driver.Repaints())
+    assert pg.event.get() == sizes and taken == [True], "once per batch of events"

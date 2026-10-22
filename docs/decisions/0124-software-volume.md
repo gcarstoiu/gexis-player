@@ -44,6 +44,15 @@ the panel says *Fixed* and offers no slider.
 5. **Output mode stays:** *Fixed* still means full level for an amplifier
    that sets the volume; software volume applies to *Variable*.
 
+**Amended 2026-10-22 ([Finding 135](../findings/135-the-meter-read-after-the-software-volume.md)):
+the chain is `meter → copy → softvol → card`.** Decision 3 holds - the meter
+shows the music as it arrives - but `meter → softvol` did not do it: ALSA's
+meter reads the samples its slave holds, and a `softvol` slave holds them
+already cut. The visualiser saw the volume's cut and then the meter service's
+share of it again (ADR-0146), and at a low volume nothing (sofapi, HDMI). A
+`copy` between them keeps the music as it arrives in a buffer of its own:
+measured unscaled, and byte for byte in every format the stage carries.
+
 ## Consequences
 
 - Below 100 % the samples are recalculated (ALSA's `softvol`, 24-bit headroom

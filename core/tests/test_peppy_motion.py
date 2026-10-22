@@ -261,3 +261,75 @@ def test_smooth_redraws_whenever_the_picture_changes_and_not_otherwise(screen, t
     # 33 rpm is 198 deg/s: 1/30 s is 6.6 deg, past a 6 deg step.
     assert motion.tick(playing, None, now=1.0 + 1 / 30), "a new step at frame rate, not held to 8 a second"
     assert motion.tick(playing, None, now=1.0 + 1 / 30 + 0.001) == [], "the same step is not redrawn"
+
+
+def _picture(kind):
+    """Pictures a record or a reel can be: a disc with a soft edge, of odd
+    and even size, an opaque square, and a reel with spokes and holes."""
+    if kind == "opaque":
+        pic = pygame.Surface((180, 120))
+        for x in range(0, 180, 6):
+            pygame.draw.line(pic, (x, 255 - x, 90), (x, 0), (179 - x, 119))
+        return pic
+    size = {"soft-odd": 201, "soft-even": 200, "reel": 240}[kind]
+    pic = pygame.Surface((size, size), pygame.SRCALPHA)
+    c = size // 2
+    if kind == "reel":
+        pygame.draw.circle(pic, (90, 90, 90, 255), (c, c), c - 3)
+        for a in range(0, 360, 60):
+            pygame.draw.circle(pic, (0, 0, 0, 0), (int(c + 60 * __import__("math").cos(a)), int(c + 60 * __import__("math").sin(a))), 25)
+        return pic
+    for r in range(c, 0, -1):
+        alpha = 255 if r < c - 6 else max(1, 255 - (r - (c - 6)) * 40)
+        pygame.draw.circle(pic, ((r * 7) % 256, (r * 3) % 256, 200, alpha), (c, c), r)
+    return pic
+
+
+@pytest.mark.parametrize("kind", ["soft-odd", "soft-even", "opaque", "reel"])
+def test_a_turned_frame_is_the_whole_turn_cut_to_its_reach(screen, kind):
+    """Finding 134: the frames are kept cut to the picture's reach, and the
+    box repainted is that reach, not the diagonal. Every step and some angles
+    between must put exactly the pixels the whole turned picture did."""
+    picture = _picture(kind)
+    spinner = Spinner(picture, (403, 297), 33, True)
+    while spinner._queue:
+        spinner.build_some()
+    background = pygame.Surface((800, 600))
+    background.fill((30, 60, 90))
+    for angle in [i * 6.0 for i in range(60)] + [1.5, 44.9, 133.3, 271.0]:
+        spinner.angle = angle
+        old = background.copy()
+        whole = pygame.transform.rotate(picture, -(int(angle // 6) % 60) * 6)
+        old.blit(whole, whole.get_rect(center=spinner.center))
+        new = background.copy()
+        spinner.draw(new)
+        assert pygame.image.tobytes(old, "RGB") == pygame.image.tobytes(new, "RGB"), (kind, angle)
+        # Every pixel the turn changed is inside the box repainted.
+        changed = pygame.mask.from_threshold(old, (30, 60, 90), (1, 1, 1, 255))
+        changed.invert()
+        for box in changed.get_bounding_rects():
+            assert spinner.region.contains(box), (kind, angle, box, spinner.region)
+
+
+def test_the_box_of_a_round_record_is_its_reach_not_its_diagonal(screen):
+    spinner = Spinner(_picture("soft-even"), (300, 300), 33, True)
+    assert spinner.region.width <= 200 + 8, "its reach and a margin, not the diagonal (288)"
+    opaque = Spinner(_picture("opaque"), (300, 300), 33, True)
+    assert opaque.region.width >= 216, "an opaque picture reaches its corners"
+
+
+def test_the_arm_is_turned_once_for_each_angle(screen, monkeypatch):
+    """Finding 134: every repaint of every box the arm crosses turned it
+    again - a tenth of the driver's time on a turntable."""
+    tonearm = arm()
+    turns = []
+    real = pygame.transform.rotate
+    monkeypatch.setattr(pygame.transform, "rotate", lambda s, a: turns.append(a) or real(s, a))
+    first = tonearm.placed(-30.0)
+    second = tonearm.placed(-30.0)
+    assert turns == [-30.0]
+    assert first[0] is second[0] and first[1] == second[1]
+    second[1].move_ip(5, 5)
+    assert tonearm.placed(-30.0)[1] == first[1], "the cached place is not the caller's to move"
+    tonearm.placed(-31.0)
+    assert turns == [-30.0, -31.0]

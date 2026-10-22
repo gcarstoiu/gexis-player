@@ -82,6 +82,16 @@ export const foldedName = (name) =>
     .trim()
     .toLowerCase();
 
+/** **A track's own artist, when it is not the album's** (George,
+ *  2026-10-21: "there are songs that have featuring other artists and the
+ *  information is not shown"): a guest on one track - Sting's "Sting Feat.
+ *  Eric Clapton" - or every track of a compilation. The album's own artist
+ *  is already on the page, so for an ordinary album this is empty. */
+export const trackArtist = (track, album) => {
+  const own = track?.artist ?? '';
+  return own && album?.artist && foldedName(own) !== foldedName(album.artist) ? own : '';
+};
+
 export const loadArtists = () => get('artists');
 
 /** The artist's genres, for the tag pills under their name. LMS answers this

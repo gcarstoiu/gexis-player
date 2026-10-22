@@ -583,6 +583,48 @@ async def test_a_show_with_no_window_starts_the_visualiser_again(monkeypatch):
     assert screen.visible
 
 
+async def test_a_show_refused_for_standby_starts_nothing(monkeypatch):
+    """ShelvesPi, 2026-10-21: a show asked while the only screen was in
+    standby restarted the driver with no output to open, and it could not
+    start (*the video driver did not add any displays*) - the visualiser was
+    gone until something started it again. A refused show tries no window,
+    so it says nothing about the driver."""
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+
+    screen = FakeScreen()
+    controller = PeppyController(screen, UnattendedPlayback(300), blocked=lambda: True)
+    server = StateServer(StateStore({}), peppy=controller)
+    started = []
+
+    async def exec_(*args, **kw):
+        started.append(args)
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", exec_)
+    async with TestClient(TestServer(server.make_app())) as client:
+        assert (await client.post("/peppy/show")).status == 409
+    assert started == []
+    assert "show" not in screen.calls
+    assert controller.refused
+
+
+async def test_a_show_that_is_tried_again_is_no_longer_refused():
+    """The mark is the last ask's: once the screen is back, a show is tried."""
+    blocked = [True]
+    screen = FakeScreen()
+    controller = PeppyController(screen, UnattendedPlayback(300), blocked=lambda: blocked[0])
+    assert await controller.request_async("show") is False
+    assert controller.refused
+    blocked[0] = False
+    await controller.request_async("show")
+    assert not controller.refused
+    assert "show" in screen.calls
+
+
 async def test_raising_and_lowering_never_hold_up_the_event_loop(tmp_path, monkeypatch):
     """Review, 2026-10-12: the settle was slept and wlrctl run on the loop,
     so every raise held volume and arbitration for at least 0.25 s, and a
@@ -653,7 +695,7 @@ async def test_a_touch_during_a_raise_lowers_it_after_not_before(tmp_path, monke
     controller.on_touch()
     await raising
     await asyncio.gather(*controller._lowering)
-    assert order == ["focus", "minimize"] and not screen.visible
+    assert order == ["fullscreen", "focus", "minimize"] and not screen.visible
 
 
 def _wlrctl_logged(monkeypatch):
@@ -697,7 +739,7 @@ async def test_a_touch_or_a_new_source_while_the_timer_s_raise_settles_still_low
             break
     await asyncio.gather(*controller._lowering)
     task.cancel()
-    assert order == ["minimize", "focus", "minimize"] and not screen.visible
+    assert order == ["minimize", "fullscreen", "focus", "minimize"] and not screen.visible
     assert (tmp_path / "shown").read_text() == "0"
 
 
@@ -717,7 +759,7 @@ async def test_a_touch_during_a_raise_the_user_asked_for_leaves_it_up(tmp_path, 
     controller.on_touch()
     await raising
     await asyncio.gather(*controller._lowering)
-    assert order == ["focus"] and screen.visible
+    assert order == ["fullscreen", "focus"] and screen.visible
     assert (tmp_path / "shown").read_text() == "1"
 
 
@@ -751,3 +793,34 @@ def test_peppymeter_s_config_is_replaced_whole_never_rewritten_in_place(tmp_path
         assert "[current]" in conf.read_text()
     finally:
         os.chmod(tmp_path, 0o700)
+
+
+def test_a_raise_asks_for_full_screen_first_so_a_window_moved_by_standby_comes_back(monkeypatch, tmp_path):
+    """George's photo, sofapi, 2026-10-21: after display standby the
+    visualiser came up in a 640 x 480 box - the TV's size - in the panel's
+    corner. labwc moves windows to the other output while the panel's is off
+    and leaves them there; full screen puts the window back over the panel."""
+    class Done:
+        returncode = 0
+        stderr = b""
+
+    calls = []
+    monkeypatch.setattr(subprocess, "run", lambda cmd, **kw: (calls.append(cmd[2:]), Done())[1])
+    screen = PeppyScreen(wlrctl="/usr/bin/wlrctl", shown_path=tmp_path / "shown", settle_s=0)
+    assert screen.show() is True
+    assert calls == [["fullscreen", "title:pygame window"], ["focus", "title:pygame window"]]
+
+
+def test_a_hide_that_finds_no_window_is_hidden_all_the_same(monkeypatch, tmp_path):
+    """A driver that died left the core believing it was up: the phone's
+    Meters stayed lit and every hide failed on a window that was gone."""
+    class Missing:
+        returncode = 1
+        stderr = b""
+
+    monkeypatch.setattr(subprocess, "run", lambda cmd, **kw: Missing())
+    told = []
+    screen = PeppyScreen(wlrctl="/usr/bin/wlrctl", shown_path=tmp_path / "shown", settle_s=0)
+    screen.on_change = told.append
+    screen.visible = True
+    assert screen.hide() is True and not screen.visible and told == [False]

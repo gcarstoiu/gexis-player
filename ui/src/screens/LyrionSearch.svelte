@@ -137,7 +137,9 @@
   .search { flex: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; }
   .scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 22px 40px 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; scrollbar-width: none; touch-action: pan-y; }
   button { font: inherit; color: inherit; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
-  button:active { transform: scale(0.95); }
+  /* Not a result row, which shows only its selection (George, 2026-10-15
+     and 2026-10-21: a tap is the selection, no effect). */
+  button:active:not(.row) { transform: scale(0.95); }
   .chips { display: flex; flex-wrap: wrap; gap: 10px; flex-shrink: 0; }
   .chip { height: 52px; padding: 0 20px; border-radius: 999px; display: flex; align-items: center; gap: 10px; box-sizing: border-box; background: rgba(233, 238, 242, 0.06); border: 1px solid rgba(233, 238, 242, 0.14); font-size: 18px; font-weight: 700; white-space: nowrap; }
   .chip.is-on { background: rgba(126, 214, 188, 0.16); border-color: rgba(126, 214, 188, 0.4); color: #7ed6bc; }

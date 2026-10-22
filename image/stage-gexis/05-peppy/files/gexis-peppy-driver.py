@@ -147,10 +147,14 @@ def watch_window_events(repaints: Repaints, log_every_s: float = 10.0) -> None:
 
     def get(*args, **kwargs):
         events = original_get(*args, **kwargs)
+        resized = False
         for event in events:
             name = codes.get(event.type)
             if name is None:
                 continue
+            if name in SIZE_EVENTS and not resized:
+                take_the_window_as_it_is()
+                resized = True
             repaints.event(name)
             now = _time.monotonic()
             if now - logged.get(name, -log_every_s) >= log_every_s:
@@ -625,6 +629,22 @@ def report_touches_to_the_daemon() -> None:
     pygame.event.get = get
 
 
+def component_state(component) -> tuple:
+    """What a meter's start reads from one of its parts and its animators
+    change: the picture and where it is drawn."""
+    box = component.bounding_box
+    return (component.content, box.copy() if hasattr(box, "copy") else box,
+            component.content_x, component.content_y)
+
+
+def restore_component(component, state: tuple) -> None:
+    content, box, x, y = state
+    component.content = content
+    component.bounding_box = box.copy() if hasattr(box, "copy") else box
+    component.content_x = x
+    component.content_y = y
+
+
 class Rotation:
     """Phase 5 criterion 5: a new skin per track, with the next one built
     before it is needed.
@@ -661,6 +681,8 @@ class Rotation:
         #: new skin after the text and motion layers (it is put into their
         #: backgrounds and the engine's).
         self.fanart = None
+        #: Each part of the meter on screen as its start found it (refresh).
+        self._as_built: list[tuple] = []
         self.unseen: list[str] = []
         self.current: str | None = None
         self.prepared: tuple[str, object] | None = None
@@ -823,16 +845,35 @@ class Rotation:
         minimised window is raised and maximised again - showed only what
         was repainted afterwards: the meter faces as far as the needles had
         swept, the text over its own boxes, and the page behind everywhere
-        else (sofapi, 2026-10-20). The same meter is restarted: nothing is
-        loaded from disk."""
+        else (sofapi, 2026-10-20).
+
+        **Painted out of sight, shown once** (George, 2026-10-21: "some
+        blinking/flickering in the first 3 seconds"). The repaint used to
+        present a frame without its text and art, with the needles set back
+        to rest and the spectrum's bars started again from nothing - twice,
+        0.6 s and 2 s after every show. Now the meter is restarted in the
+        window's memory and its needles run one frame at once, back where
+        the music has them; the spectrum's bars are drawn where they stand,
+        its section not chosen again; and nothing reaches the screen here:
+        the caller draws the text and art over it and presents the whole
+        window once."""
         meter = self.vumeter.meter
         if self.current is None or meter is None:
             return False
         meter.stop()
-        self._paint_whole_frame(self.current, meter)
+        # As the skin was when it first started: a part left where the
+        # needles last had it is drawn there by the start, and wiped in
+        # another order than a fresh start's (check-skins, 2026-10-21).
+        for component, state in self._as_built:
+            restore_component(component, state)
+        # Every layer set afresh, as a skin's start sets them - the artist
+        # photo's frame and the motion layer included: leaving them out left
+        # a dark box where the frame stood (George's photo, ShelvesPi,
+        # 2026-10-21; check-skins runs without those layers).
+        self._paint_whole_frame(self.current, meter, quiet=True)
         return True
 
-    def _paint_whole_frame(self, name: str, meter) -> None:
+    def _paint_whole_frame(self, name: str, meter, quiet: bool = False) -> None:
         """Every layer of `name`'s skin, from black - what a skin start and a
         refresh both draw. From black because a skin need not paint every
         pixel (a meter background smaller than the screen, no `screen.bgr`):
@@ -843,10 +884,19 @@ class Rotation:
         screen = self.peppy.util.PYGAME_SCREEN
         if screen is not None and screen is not window:
             screen.fill((0, 0, 0))
+        if not quiet:
+            self._as_built = [(c, component_state(c)) for c in meter.components if c is not None]
         meter.set_volume(self.vumeter.current_volume)
         meter.start()
         skin = self.skins.get(name, {})
-        self.spectrum.follow(skin, self.homes.get(name))
+        if quiet:
+            # A refresh (Rotation.refresh): the needles straight back to the
+            # music, and the spectrum's bars drawn where they stand rather
+            # than its section chosen again, which starts them from nothing.
+            meter.run()
+            self.spectrum.redraw()
+        else:
+            self.spectrum.follow(skin, self.homes.get(name))
         if self.layer is not None:
             self.layer.set_skin(skin, self.homes.get(name), name)
             if self.motion is not None and self.homes.get(name) is not None:
@@ -854,7 +904,10 @@ class Rotation:
         if self.fanart is not None:
             self.fanart.attach(skin, meter, self.layer, self.motion,
                                self.peppy.util.PYGAME_SCREEN.get_size())
-        pygame.display.update()
+        # A refresh shows nothing yet: its caller draws the text and art over
+        # it and presents the whole window once.
+        if not quiet:
+            pygame.display.update()
 
 
 class SpectrumState:
@@ -870,6 +923,15 @@ class SpectrumState:
         self.spectrum = None
         self.util = None
         self.active = False
+
+    def redraw(self) -> None:
+        """The bars where they stand, over the spectrum's own background -
+        no new section, no reset of the heights (Rotation.refresh)."""
+        if not self.active or self.spectrum is None:
+            return
+        lock = getattr(self.spectrum, "gexis_lock", None) or threading.Lock()
+        with lock:
+            self.spectrum.draw()
 
     def follow(self, skin: dict[str, str], home: Path | None = None) -> None:
         wanted = spectrum_for(skin)
@@ -930,6 +992,15 @@ class SpectrumState:
                 width,
                 height,
             )
+            # **The engine's own box too** (ShelvesPi, 2026-10-22): it took
+            # `util.screen_rect` once, when it was made, for the first skin
+            # with a spectrum - and kept it. A skin with its spectrum
+            # elsewhere then had that first box painted black over it after
+            # a change (Marschal S+M after MarschalSpectrum, the default:
+            # 240,65 1149x148 over a 741x129 panel at 393,36), and backdrops
+            # of a colour or a gradient were sized to it.
+            spectrum.bounding_box = self.util.screen_rect.copy()
+            spectrum.content = spectrum.bounding_box
             # Rebuild the images and geometry, but not the data source: that
             # would open a second reader on the pipe.
             spectrum.init_spectrums()
@@ -971,43 +1042,137 @@ def centring(pack: tuple[int, int], screen: tuple[int, int] | None) -> tuple[int
     return (screen[0] - pack[0]) // 2, (screen[1] - pack[1]) // 2
 
 
-def moved(rects, dx: int, dy: int):
-    """`pygame.display.update`'s argument, in the window's coordinates:
-    a rect, a list of them (a None in it stays None), or nothing at all."""
+def _rects(rects) -> list[pygame.Rect]:
+    """`pygame.display.update`'s argument as a list of rects: one rect or
+    four numbers, a list of them (a None in it dropped)."""
     if rects is None:
-        return None
+        return []
     if isinstance(rects, (list, tuple)) and rects and not isinstance(rects[0], (int, float)):
-        return [None if r is None else pygame.Rect(r).move(dx, dy) for r in rects]
-    return pygame.Rect(rects).move(dx, dy)
+        return [pygame.Rect(r) for r in rects if r is not None]
+    return [pygame.Rect(rects)]
 
 
-def centre_on_black(util, screen: tuple[int, int] | None) -> tuple[int, int] | None:
-    """**A pack smaller than the screen, centred on black** (ADR-0111).
+def draw_on_a_canvas(util, screen: tuple[int, int] | None) -> tuple[int, int]:
+    """**Both engines - and our layers - draw on a canvas of their own; the
+    window is only what is shown** (George's photo, sofapi, 2026-10-21).
 
-    The window becomes the whole screen, painted black once, and both
-    engines - and our layers - are handed the pack-sized middle of it as
-    their screen: a subsurface, so whatever they draw lands in place. What
-    they ask to be shown is in their coordinates, so `display.update` is
-    wrapped to move it. Called right after `init_display`, before any meter
-    or spectrum component takes the surface (component.py reads it once).
-    """
+    They used to draw on the window itself (or a subsurface of it). Display
+    standby turns the panel's output off (ADR-0135); labwc moves the windows
+    to the output left - on sofapi a TV at 640 x 480 - and the window's
+    surface is replaced by one of the new size. Every engine kept drawing
+    into the surface that had gone, and the driver died of a segfault
+    (sofapi four times that day; both players on 10-16, 10-19, 10-20).
+
+    Now each `pygame.display.update` copies what changed from the canvas to
+    the window and presents that: a window of any size, smaller included,
+    only clips the copy. A pack smaller than the screen is centred on black
+    as before (ADR-0111). Called right after `init_display`, before any
+    meter or spectrum component takes the surface (component.py reads it
+    once). Returns the canvas's place in the window.
+
+    **Presented once a frame** (Finding 134): the copy is made at once, but
+    the present - SDL's `update`, which costs about 1.75 ms of processor
+    for any rectangle on a Pi 4 and was 30-44 % of the driver's time - waits
+    for `present_the_frame`, called at the end of every frame. The meters,
+    the ticker, the turning parts and the spectrum each asked for one; the
+    window shows the same frame either way."""
     pack = util.PYGAME_SCREEN.get_size()
     offset = centring(pack, screen)
-    if offset is None:
-        return None
-    window = pygame.display.set_mode(screen, pygame.NOFRAME)
+    if offset is not None:
+        window = pygame.display.set_mode(screen, pygame.NOFRAME)
+        print(f"peppy: {pack[0]}x{pack[1]} centred on a {screen[0]}x{screen[1]} screen")
+    else:
+        window = pygame.display.get_surface()
+        offset = (0, 0)
     window.fill((0, 0, 0))
-    pygame.display.update()
-    util.PYGAME_SCREEN = window.subsurface(pygame.Rect(offset, pack))
+    canvas = pygame.Surface(pack, 0, window)
+    canvas.fill((0, 0, 0))
+    util.PYGAME_SCREEN = canvas
     real = pygame.display.update
     dx, dy = offset
+    pending: list[pygame.Rect] = []
+    whole = [False]
 
     def update(rects=None):
-        return real() if rects is None else real(moved(rects, dx, dy))
+        window = pygame.display.get_surface()
+        if window is None:
+            return None
+        if rects is None:
+            window.blit(canvas, offset)
+            whole[0] = True
+            return None
+        for rect in _rects(rects):
+            window.blit(canvas, rect.move(dx, dy), rect)
+            pending.append(rect.move(dx, dy))
+        return None
 
+    def present() -> None:
+        shown, everything = merge_rects(pending), whole[0]
+        pending.clear()
+        whole[0] = False
+        if pygame.display.get_surface() is None:
+            return
+        if everything:
+            real()
+        elif shown:
+            real(shown)
+
+    global present_the_frame
+    present_the_frame = present
     pygame.display.update = update
-    print(f"peppy: {pack[0]}x{pack[1]} centred on a {screen[0]}x{screen[1]} screen")
     return offset
+
+
+def present_the_frame() -> None:
+    """Replaced by `draw_on_a_canvas`; nothing to present before it."""
+
+
+def merge_rects(rects: list[pygame.Rect]) -> list[pygame.Rect]:
+    """Overlapping or touching rectangles as one: SDL's cost grows with every
+    rectangle it is given, and a turning record's box usually holds the
+    needles' and the arm's."""
+    out: list[pygame.Rect] = []
+    for rect in rects:
+        rect = pygame.Rect(rect)
+        if rect.width <= 0 or rect.height <= 0:
+            continue
+        merged = True
+        while merged:
+            merged = False
+            for i, other in enumerate(out):
+                if rect.inflate(2, 2).colliderect(other):
+                    rect = rect.union(out.pop(i))
+                    merged = True
+                    break
+        out.append(rect)
+    return out
+
+
+#: The window events that mean its size - and so its surface - changed.
+SIZE_EVENTS = ("WINDOWSIZECHANGED", "VIDEORESIZE", "WINDOWRESIZED")
+
+
+def take_the_window_as_it_is() -> None:
+    """**The window's surface asked for again at the window's own size**, at
+    once, before anything draws: after a resize the old one is gone, and
+    pygame keeps the display surface object - the canvas's copies land in
+    the new one (checked: the same object, drawn through after the call)."""
+    surface = pygame.display.get_surface()
+    if surface is None:
+        return
+    size = pygame.display.get_window_size()
+    # **Not at the size it already has** (ShelvesPi, 2026-10-22: "a bit of a
+    # flash when opening the visualizer"). Every show brings a size event at
+    # the window's own size; taking the window again then took it out of the
+    # full screen the core had just asked for, and a black frame came
+    # between the panel and the meters - 3 shows in 4, about 80 ms. Left
+    # alone at its size: none in 14 shows, and a standby cycle after drew
+    # the whole skin in the same process.
+    if size == surface.get_size():
+        return
+    if size[0] > 0 and size[1] > 0:
+        pygame.display.set_mode(size, pygame.NOFRAME)
+        pygame.display.get_surface().fill((0, 0, 0))
 
 
 def hold_the_last_frame(data_source) -> None:
@@ -1111,7 +1276,7 @@ def main() -> int:
     # surface for either engine to draw on.
     peppy.init_display()
     util = peppy.util
-    centre_on_black(util, screen_size())
+    draw_on_a_canvas(util, screen_size())
 
     # The engine parsed its own directory; the other one is adopted into the
     # same config so the factory can build from either.
@@ -1295,12 +1460,14 @@ def main() -> int:
             time.sleep(HIDDEN_FRAME_S)
         elif repaints.due() and rotation.refresh():
             # Finding 131: the window back without its picture. The text and
-            # art follow at this frame's poll: the layer was set afresh.
+            # art go back over it here: the layer has forgotten them.
             print(f"peppy: whole frame painted again ({repaints.reason})")
             metadata = read_metadata()
             dirty = layer.draw(metadata, paint=not motion.active)
-            if dirty:
-                pygame.display.update(motion.compose(dirty) if motion.active else dirty)
+            if dirty and motion.active:
+                motion.compose(dirty)
+            # One whole frame, the text and art already on it.
+            pygame.display.update()
         if hidden or frames % poll_every == 0:
             # The same poll carries both files: which track is playing, and
             # what the panel last asked for (ADR-0051 §1).
@@ -1372,7 +1539,15 @@ def main() -> int:
     hold_the_last_frame(peppy.meter.data_source)
     report_touches_to_the_daemon()
     watch_window_events(repaints)
-    peppy.dependent = per_frame
+    def frame() -> None:
+        # PeppyMeter's loop calls this after drawing the meters: the end of
+        # the frame, where everything drawn in it is presented at once.
+        try:
+            per_frame()
+        finally:
+            present_the_frame()
+
+    peppy.dependent = frame
     peppy.start_display_output()
     return 0
 

@@ -55,6 +55,10 @@ put 644 "$S/03-core/files/gexis-mdns-name.timer" "$U/gexis-mdns-name.timer"
 # --- The panel (04-ui) --------------------------------------------------------
 put 644 "$S/04-ui/files/kiosk.env" /etc/gexis/kiosk.env
 put 755 "$S/04-ui/files/gexis-kiosk-start" /usr/bin/gexis-kiosk-start
+# ADR-0156: the kiosk never offers to save a password or fill a form - a
+# Home Assistant login in the dashboard brought up Chromium's "Save
+# password?" over the panel (George, 2026-10-21).
+put 644 "$S/04-ui/files/chromium-policy.json" /etc/chromium/policies/managed/gexis-kiosk.json
 put 755 "$S/04-ui/files/gexis-panel-warmup" /usr/bin/gexis-panel-warmup
 put 644 "$S/04-ui/files/gexis-panel-warmup.service" "$U/gexis-panel-warmup.service"
 put 644 "$S/04-ui/files/gexis-kiosk.service" "$U/gexis-kiosk.service"

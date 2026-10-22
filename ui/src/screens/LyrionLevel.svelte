@@ -616,8 +616,9 @@
   /* A press shrinks a button - not a list row, which shows only its
      selection, in teal (George, 2026-10-15: "when tapping on a track, we
      should see only the selection not also this zoom out and in effect";
-     2026-10-16: no lighting up on the press either). */
-  button:active:not(.row):not(.trow) { transform: scale(0.95); }
+     2026-10-16: no lighting up on the press either; 2026-10-21: the
+     cards too). */
+  button:active:not(.row):not(.trow):not(.card) { transform: scale(0.95); }
   .is-busy { opacity: 0.6; }
   .is-unnamed { font-style: italic; color: rgba(233, 238, 242, 0.62); }
 

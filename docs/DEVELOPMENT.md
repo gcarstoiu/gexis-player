@@ -2059,7 +2059,7 @@ registry advertises.
 > unit), `docs/PLUGIN-CONTRACT.md` at version 1, and Findings 075-080.
 
 **Themes left this phase on 2026-09-25** (George): *"Themes to be cut out and
-have its own phase at the end of the current list."* They are **Phase 20** (`ph-themes`), and
+have its own phase at the end of the current list."* They are **Phase 22** (`ph-themes`), and
 he restated it on the day the phase closed: *"I stated before that themes are
 out and have their own phase at the end of the list."*
 
@@ -2179,7 +2179,7 @@ the exercise.
    extends to it, whether it ships in the image or installs on demand, and
    what it costs in memory and CPU on a Pi 4 that is already frame-limited.
    None of that is settled by adding it to this list.
-4. ~~Theme engine.~~ **Moved to Phase 20** (`ph-themes`; numbered 14 until 2026-10-13, 16 until 2026-10-14, 17 until 2026-10-15, 18 until 2026-10-19), 2026-09-25.
+4. ~~Theme engine.~~ **Moved to Phase 22** (`ph-themes`; numbered 14 until 2026-10-13, 16 until 2026-10-14, 17 until 2026-10-15, 18 until 2026-10-19, 20 until 2026-10-20, 21 until 2026-10-21), 2026-09-25.
 
 ### What closing this means, and what it deliberately does not
 
@@ -2369,7 +2369,7 @@ the ALSA default.
 
 ### Phase 11a — The library answers for itself (moved)
 
-Now **Phase 21** (`ph-library`), with the open phases after the release.
+Now **Phase 23** (`ph-library`), with the open phases after the release.
 
 ### Phase 12 — Plugins that fetch their software on the device
 
@@ -2858,7 +2858,7 @@ per file on Pis other than 4 GB, and temperatures with a case (HARDWARE.md).
 
 ### Phase 13f — Lyrion's own menus, plugins included
 
-**Closed 2026-10-12 for the release; George's look moved to Phase 22** (`ph-lyrion-menus`)
+**Closed 2026-10-12 for the release; George's look moved to Phase 24** (`ph-lyrion-menus`)
 (George: *"create a separate phase for this at the end of the current phase
 list"*). It ships as built, behind *Extended navigation* (ADR-0118); the hidden
 library's hour was measured (Finding 118).
@@ -3073,9 +3073,55 @@ receiver, a sound bar or a TV.
    back on.
 4. `docs/HARDWARE.md` lists it as tested, saying what was and was not checked.
 
-### Phase 18 — Room correction with a USB microphone
+### Phase 18 — A Home Assistant dashboard on the screen
 
-**ID:** `ph-room-correction` · numbered 18 on 2026-10-19 (16 from 2026-10-15, 15 from 2026-10-14).
+**ID:** `ph-ha-dashboard` · added 2026-10-21.
+
+**Added 2026-10-21** (George: *"I need to be able to control devices from the
+screen for a specific room. The dashboards are created in home assistant and
+should be displayed on the screen on command or replacing the idle screen on a
+schedule. During this time, playback is not affected and the dashboard stays
+up until it's dismissed. Everything in the dashboard is actionable."*), a
+small phase before room correction. Settled in
+[ADR-0156](decisions/0156-home-assistant-dashboard-on-the-screen.md): one
+dashboard per player, shown in the panel's own page; up from a button on the
+panel and the phone, from Home Assistant through the API, or in place of the
+idle screen at set times; dismissed by an edge tab. Not to be confused with
+Phase 21 (`ph-home-assistant`), the player inside Home Assistant.
+
+**Acceptance (draft):**
+
+1. With an address set, the dashboard button on the panel (the bar's tray;
+   beside the visualiser elsewhere) and on the phone page puts the dashboard
+   up full screen, and every control in it works by touch.
+2. `POST /panel/dashboard/show` and `/hide` put it up and take it down, are in
+   the OpenAPI file, and its state is on `/state`.
+3. During its scheduled times it stands where the idle screen would; outside
+   them the idle screen (or the idle page) is as before.
+4. While it is up, music plays on, and track changes, the idle timeout, the
+   visualiser's automatic start and the takeover animation leave it in place;
+   the volume drawer still shows over it; display standby still darkens the
+   screen and comes back to it.
+5. The edge tab, the phone's button and the API dismiss it.
+6. An address that does not answer, a refused frame or a login page each say
+   what is wrong and how to get back - never a blank screen.
+7. The manual says what Home Assistant needs (`use_x_frame_options`,
+   signing in, a dashboard shaped for the screen), from a check against a
+   real Home Assistant.
+
+### Phase 19 — Room correction for the bass, with a USB microphone
+
+**ID:** `ph-room-correction` · numbered 19 on 2026-10-21 (18 from 2026-10-19, 16 from 2026-10-15, 15 from 2026-10-14).
+**Split 2026-10-20** (George: room correction in two - the bass first, the
+full range after; *"yes - let's do it like that"*): this phase is **the bass**,
+below the room's Schroeder frequency (about 200-300 Hz in a living room),
+where its modes do most harm and correction gains most. **Several positions
+around the listening seat, averaged** (3-5 within about half a metre of the
+head): below that frequency the response changes most from place to place,
+so one position would fit the microphone's spot and miss the listener's head.
+Mostly cuts, no deep boosts into nulls. The full range, with more positions
+and a target curve, is Phase 20 (`ph-room-correction-full`). Finding 124's
+first tier.
 
 **Added 2026-10-14** (George: *"let's add another phase about room
 correction using usb microphone after phase 14"*). The player measures the
@@ -3115,16 +3161,43 @@ Pi, and the microphones (miniDSP UMIK-1 first).
 
 1. With a supported microphone plugged in, a measurement started from the
    phone completes and shows the room's response before and after.
-2. The corrected response at the listening position is measurably closer
-   to the target than the uncorrected one, recorded as a finding.
+2. Below the bass limit, the response averaged over the positions measured
+   is measurably closer to the target than uncorrected, and no position is
+   measurably worse, recorded as a finding.
 3. Correction on and off can be switched without a restart, and off is
    bit-perfect as before.
 4. Every source plays through the correction with no audible gap or
    dropout, and the visualiser keeps working.
 
-### Phase 19 — The player in Home Assistant
+### Phase 20 — Room correction for the full range
 
-**ID:** `ph-home-assistant` · numbered 19 on 2026-10-19 (17 from 2026-10-15, 16 from 2026-10-14, 15 from 2026-10-13; was 13g).
+**ID:** `ph-room-correction-full` · added 2026-10-20 as 19, split from `ph-room-correction`; numbered 20 on 2026-10-21.
+
+**Added 2026-10-20** (George, splitting room correction in two). After the
+bass (Phase 19, `ph-room-correction`): correction above the Schroeder
+frequency, from **more positions across the listening area**, towards a
+target curve, and gentle - above the bass what is heard is mostly the
+speakers and their reflections, which the ear blends, and a correction of
+one point's response makes every other point worse. Later, the time-domain
+part Dirac adds (mixed-phase, multi-position design; Finding 124's second
+tier: DRC-FIR first, then our own design after the Dirac paper and Carini).
+
+**An ADR before anything is built.** It must settle: how many positions and
+where; the target curve and how it is chosen; how much correction above the
+bass, smoothed how; whether the time-domain part comes in this phase or a
+later one; what it costs a Pi 4 beside Phase 19's filter.
+
+**Acceptance (draft):**
+
+1. A measurement over the listening area completes from the phone and shows
+   the response before and after, per position and averaged.
+2. The averaged response is measurably closer to the target than without,
+   and no position is measurably worse - recorded as a finding.
+3. It builds on Phase 19's correction: on and off, A/B, one per output.
+
+### Phase 21 — The player in Home Assistant
+
+**ID:** `ph-home-assistant` · numbered 21 on 2026-10-21 (20 from 2026-10-20, 19 from 2026-10-19, 17 from 2026-10-15, 16 from 2026-10-14, 15 from 2026-10-13; was 13g).
 
 **Added 2026-10-11** (George: *"Let's add the home assistant with the player
 as a plugin as a separate phase before themes"*, after choosing the player
@@ -3152,9 +3225,9 @@ and the screen's standby (ADR-0135).
 3. Nothing it does disturbs playback, measured as Phase 13e measured the
    Lyrion Server.
 
-### Phase 20 — Themes
+### Phase 22 — Themes
 
-**ID:** `ph-themes` · numbered 20 on 2026-10-19 (18 from 2026-10-15, 17 from 2026-10-14, 16 from 2026-10-13; was 14).
+**ID:** `ph-themes` · numbered 22 on 2026-10-21 (21 from 2026-10-20, 20 from 2026-10-19, 18 from 2026-10-15, 17 from 2026-10-14, 16 from 2026-10-13; was 14).
 
 **Cut out of Phase 10 on 2026-09-25** (George): *"Themes to be cut out and have
 its own phase at the end of the current list."* It was that phase's criterion
@@ -3183,9 +3256,9 @@ that is settled.
 4. **The visualiser is not themed by this.** PeppyMeter skins are ADR-0051's
    separate corpus with their own picker, and share no tokens with the panel.
 
-### Phase 21 — The library answers for itself
+### Phase 23 — The library answers for itself
 
-**ID:** `ph-library` · numbered 21 on 2026-10-19 (20 from 2026-10-15, 19 from 2026-10-14, 18 from 2026-10-13; was 11a).
+**ID:** `ph-library` · numbered 23 on 2026-10-21 (22 from 2026-10-20, 21 from 2026-10-19, 20 from 2026-10-15, 19 from 2026-10-14, 18 from 2026-10-13; was 11a).
 
 **Added 2026-09-25 (George):** *"Let's introduce another phase … which should tackle the question of how we can we leverage the plexamp/Plex
 server metadata that is available. Anything that can reduce the dependency on
@@ -3264,9 +3337,9 @@ consumes. **Popular tracks do remain ListenBrainz's**, 404 on that server.
 its own catalogue groupings (*Singles & EPs*, *Live Albums*, *Compilations*).
 All are there; none is asked for by anything today.
 
-### Phase 22 — Lyrion's own menus: the look
+### Phase 24 — Lyrion's own menus: the look
 
-**ID:** `ph-lyrion-menus` · numbered 22 on 2026-10-19 (21 from 2026-10-15, 20 from 2026-10-14, 19 from 2026-10-13; was 16).
+**ID:** `ph-lyrion-menus` · numbered 24 on 2026-10-21 (23 from 2026-10-20, 22 from 2026-10-19, 21 from 2026-10-15, 20 from 2026-10-14, 19 from 2026-10-13; was 16).
 
 **Added 2026-10-12** (George, taking it out of the first public release:
 *"create a separate phase for this at the end of the current phase list"*).

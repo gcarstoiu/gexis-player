@@ -133,8 +133,17 @@ export function openTouchpad(onMessage) {
 
 /** Whether an element takes typed text (an input that is not a button, a
  *  checkbox or a slider; a textarea; anything content-editable). */
+/** **ADR-0157: a page from another site in a frame** (the Home Assistant
+ *  dashboard), marked `data-real-input`: closed to this page's made-up
+ *  events, so the phone's taps and typing over it are made real by the core.
+ *  It takes text as far as the phone is concerned - a field inside it cannot
+ *  be seen from here, so the keyboard is offered over all of it. */
+export const isRealInputFrame = (element) =>
+  element?.tagName === 'IFRAME' && element.hasAttribute('data-real-input');
+
 export function takesText(element) {
   if (!element) return false;
+  if (isRealInputFrame(element)) return true;
   if (element.isContentEditable) return true;
   if (element.tagName === 'TEXTAREA') return !element.disabled && !element.readOnly;
   if (element.tagName !== 'INPUT') return false;

@@ -79,3 +79,34 @@ better coverage set of tests"*).
   comes back from a lost frame pixel-exact. 978 skins in five packs, about a
   minute. With the driver on `next` before this branch, **all 286 skins** of
   the 1280 × 800 pack failed it.
+
+## After: the repaint without the flicker (2026-10-21)
+
+George, on ShelvesPi's 1480 × 320 bar: *"once it did start - there was some
+blinking/flickering in the first 3 seconds or so with no reason"*. The
+journal showed the two scheduled repaints per show (`whole frame painted
+again (shown)` at about +0.6 s and +2 s), each re-choosing the spectrum's
+section (`spectrum ...: 19 bars`).
+
+- **Cause (from the code):** each repaint presented a frame of its own
+  before the text and art were back, with the needles restarted at rest and
+  the spectrum's bars started again from nothing - two such bursts in about
+  three seconds.
+- **Changed (branch `peppy-quiet-repaint`):** nothing of a repaint reaches
+  the screen until it is whole. The meter is restarted in memory with its
+  parts as its start found them, its needles run one frame to the music (a
+  needle goes straight to its level; it does not glide), the spectrum's bars
+  are drawn where they stand, the text layer forgets what it drew, and the
+  caller presents the whole window once.
+- **Tried first and dropped:** drawing the meter's container as it stood,
+  without a restart - 31 skins came back with needle edges up to 59 shades
+  off, and 321 once the needles had moved: the animators hold state the
+  container does not.
+- **`make check-skins`** now holds the meter's signal at one level while a
+  repaint is compared, against the meter started and run once; with the
+  parts restored all 978 skins come back pixel-exact. Without the restore,
+  113 of the 1280 × 800 pack differed (1-pixel lines at the ends of linear
+  bars, up to 211 shades).
+- **Not measured:** the repaint on the bar itself, by eye; the spectrum's
+  redraw is not part of the check (it runs meters only).
+

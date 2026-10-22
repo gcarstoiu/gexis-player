@@ -12,6 +12,7 @@
   import IdleScreen from './screens/IdleScreen.svelte';
   import VolumeDrawer from './screens/VolumeDrawer.svelte';
   import HandoffScreen from './screens/HandoffScreen.svelte';
+  import DashboardScreen from './screens/DashboardScreen.svelte';
   import PairingFrame from './screens/PairingFrame.svelte';
   import Settings from './screens/Settings.svelte';
   import MiniPlayer from './screens/MiniPlayer.svelte';
@@ -31,7 +32,7 @@
   import NewScreen from './screens/NewScreen.svelte';
   import { loadSettings, settingValues, settingsDevice } from './lib/settings.js';
   import { loadLibraryRoot } from './lib/library.js';
-  import { reportTouch, showPeppy, reportPainted, reportShown } from './lib/state.js';
+  import { reportTouch, showPeppy, reportPainted, reportShown, requestDashboard } from './lib/state.js';
   import { components } from './lib/state.js';
   import { lyricsAsk, lyricsShown } from './lib/panelView.js';
 
@@ -189,9 +190,51 @@
     // idle screen for eight hours). Reading `idle` makes this effect run
     // again when it turns false; while it is up there is nothing to time.
     if (idle) return;
-    const id = setTimeout(() => (idle = true), IDLE_MS);
+    // **ADR-0156: the dashboard stays until it is dismissed**, and nothing
+    // counts down under it; dismissed, the countdown starts again here.
+    if (dashboardUp) return;
+    const id = setTimeout(() => {
+      // In the dashboard's times it stands where the idle screen would.
+      if (dashboardTime) requestDashboard(true, 'schedule').catch(() => (idle = true));
+      else idle = true;
+    }, IDLE_MS);
     return () => clearTimeout(id);
   });
+
+  //: **ADR-0156: a Home Assistant dashboard on the screen**, on the panel
+  //: only - the phone has its button. Up from the panel's button, a phone,
+  //: Home Assistant through the API, or the schedule; `dashboard_time` is
+  //: whether one of its times is on, and only with an address set.
+  const dashboardUp = $derived(surface === 'panel' && $panel.dashboard?.shown === true);
+  const hasDashboard = $derived(!!($settingValues.dashboard_url ?? '').trim());
+  const dashboardTime = $derived(hasDashboard && $panel.dashboard_time === true);
+  const dashboardButton = $derived(hasDashboard && $settingValues.dashboard_button !== false);
+  // An idle screen already up when one of its times begins gives way to it;
+  // the dashboard, once up, takes the idle screen down.
+  $effect(() => {
+    if (surface !== 'panel') return;
+    if (dashboardUp) {
+      untrack(() => { idle = false; askedIdle = false; });
+      return;
+    }
+    if (idle && dashboardTime && !untrack(() => askedIdle)) {
+      requestDashboard(true, 'schedule').catch(() => {});
+    }
+  });
+  // **Its times ending bring the idle screen back at once** (ADR-0156): a
+  // dashboard the schedule put up comes down, and the screen it stood in
+  // for follows, rather than whatever was under it until the timeout.
+  let dashboardBy = null;
+  $effect(() => {
+    const now = $panel.dashboard;
+    const was = dashboardBy;
+    dashboardBy = now?.shown ? now.by : null;
+    if (surface === 'panel' && was === 'schedule' && !now?.shown && !dashboardTime && idleOn && !playing) {
+      untrack(() => (idle = true));
+    }
+  });
+  const showDashboard = () => requestDashboard(true).catch(() => {});
+  const hideDashboard = () => requestDashboard(false).catch(() => {});
 
   //: **A takeover wakes the panel** (George, 2026-09-26, reproduced: *"when
   //: plexamp takes over, idle screen doesn't go away"*, and then *"the idle
@@ -794,14 +837,14 @@
            than a link that leads nowhere. -->
       {#if screen.family === 'bar'}
         <!-- ADR-0109, Bar family: the strip, with the same props. -->
-        <BarNowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} queue={$queue} onvolume={openVolume} onvisualisation={showVisualisation}
+        <BarNowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} queue={$queue} onvolume={openVolume} onvisualisation={showVisualisation} ondashboard={dashboardButton ? showDashboard : null}
           rootless={lmsOff}
           onhome={lmsOff ? openSettings : openLibraryHome}
           onminimise={lmsOff ? null : minimise}
           onartist={lmsOff ? undefined : openLibraryArtist}
           onalbum={lmsOff ? undefined : openLibraryAlbum} />
       {:else}
-      <NowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} queue={$queue} onvolume={openVolume} onvisualisation={showVisualisation}
+      <NowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} queue={$queue} onvolume={openVolume} onvisualisation={showVisualisation} ondashboard={dashboardButton ? showDashboard : null}
         rootless={lmsOff}
         onhome={lmsOff ? openSettings : openLibraryHome}
         onminimise={lmsOff ? null : minimise}
@@ -871,6 +914,7 @@
       rootless={lmsOff}
       onhome={lmsOff ? openSettings : openLibraryHome}
       onvisualisation={showVisualisation}
+      ondashboard={dashboardButton ? showDashboard : null}
     />
   {:else if $volume || $fixedOutput}
     <VolumeDrawer
@@ -892,7 +936,12 @@
     <IdleScreen ondismiss={() => { idle = false; askedIdle = false; }} settings={$settingValues} />
   {/if}
 
-  {#if shownHandoff}
+  {#if dashboardUp}
+    <!-- ADR-0156: stays until dismissed; the takeover is not drawn over it. -->
+    <DashboardScreen ondismiss={hideDashboard} />
+  {/if}
+
+  {#if shownHandoff && !dashboardUp}
     <HandoffScreen from={shownHandoff.from} to={shownHandoff.to} />
   {/if}
 
