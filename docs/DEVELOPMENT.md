@@ -3089,6 +3089,14 @@ panel and the phone, from Home Assistant through the API, or in place of the
 idle screen at set times; dismissed by an edge tab. Not to be confused with
 Phase 21 (`ph-home-assistant`), the player inside Home Assistant.
 
+**Closed 2026-10-22** (George: *"Close phase 18 - ha works fine"*), released
+in 1.4.0. ADR-0156 (accepted, decision 3 amended) and ADR-0157 (the phone as
+input over the dashboard, amended), Finding 132. George checked it with his
+own Home Assistant. Against the acceptance below, one change: by George's
+decision of 2026-10-22 the visualiser **takes over** from the dashboard when
+it is asked for or starts by its timeout, rather than leaving it in place
+(criterion 4); the rest of criterion 4 stands.
+
 **Acceptance (draft):**
 
 1. With an address set, the dashboard button on the panel (the bar's tray;

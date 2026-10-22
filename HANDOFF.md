@@ -90,13 +90,8 @@ player), raised 20-21 Oct.
   the kiosk (check nobody is using the bar first). `tools/panel-touch.py`'s
   coordinates are wrong on the 1480x320 bar - inject with CDP
   `Input.dispatchTouchEvent` instead.
-- **Not yet tried with a real Home Assistant**: the dashboard was checked
-  with George's own dashboard on sofapi (put back after) and with a
-  throwaway one on R2D2 (`docker rm -f gexis-test-ha` when done); the phone
-  typing with a stand-in login only, not George's. The schedule and standby
-  over the dashboard are not tried on a device. iOS's handling of
-  `interactive-widget` (the mini player on the keyboard) is not checked;
-  Android's is.
+- **Not checked:** iOS's handling of `interactive-widget` (the mini player
+  on the phone's keyboard); Android's is.
 - **The visualiser made cheaper, the rest left** (Finding 134; George,
   2026-10-22: stop here): the needle and spectrum skins are unchanged - the
   present itself and the vendored engines' drawing (to-do `viz-cheaper`).
@@ -106,9 +101,8 @@ player), raised 20-21 Oct.
 - George's look at the moon before sunrise.
 
 **Phase 18, a Home Assistant dashboard on the screen** (`ph-ha-dashboard`,
-ADR-0156) is built and in 1.4.0 on Testing; it is not closed in
-`docs/DEVELOPMENT.md` - **a decision for George**: close it with 1.4.0, or
-after a test with his real Home Assistant. **Next:** Phase 17, DSI screens
+ADR-0156) was closed on 2026-10-22, released in 1.4.0 (George: *"Close
+phase 18 - ha works fine"*). **Next:** Phase 17, DSI screens
 (`ph-dsi`), which waits for George to name his screen. Then, in order (`docs/DEVELOPMENT.md`; refer
 to them by ID): **19** room correction for the bass (`ph-room-correction`),
 **20** room correction for the full range (`ph-room-correction-full`), **21**
@@ -126,9 +120,10 @@ every merged release PR, otherwise weekly on Sunday evening. **Last run:
 
 ## Phases
 
-Closed: 0-16 (13 with letters a-f; Phase 15, the public API, on
-2026-10-19 with 1.2.0; Phase 16, optical, with 1.3.0). Phases are numbered consecutively without letters,
-each with a stable ID (George, 2026-10-13); the open ones are 17-24, with
+Closed: 0-16 and 18 (13 with letters a-f; Phase 15, the public API, on
+2026-10-19 with 1.2.0; Phase 16, optical, with 1.3.0; Phase 18, the Home
+Assistant dashboard, with 1.4.0). Phases are numbered consecutively without letters,
+each with a stable ID (George, 2026-10-13); the open ones are 17 and 19-24, with
 MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
 
 ## Machines
