@@ -55,14 +55,15 @@
   const head = playhead(() => metadata);
   const toggle = playToggle(() => transport, () => active);
   const hasPlayPause = $derived(controls.includes('play') && controls.includes('pause'));
-  //: **Removed, not disabled, when it cannot work** (design: *unsupported
-  //: controls are removed*; round 2: Bluetooth has no shuffle or repeat).
-  //: Gated on what the renderer says is available, never on its name - a
-  //: Bluetooth phone that reports shuffle gets the button. The panel keeps a
-  //: declared control and dims it (ADR-0037 §3); on a bar the transport is
-  //: the one row of controls, and a dimmed button there is room taken by
-  //: something that does nothing.
-  const can = (what) => controls.includes(what) && available.includes(what);
+  //: **Removed when the source does not have it, dimmed when it cannot work
+  //: right now** (ADR-0037 §3, as the panel does; George, 2026-10-21: "The
+  //: rule was that we hide if the source is not capable otherwise they show
+  //: up inactive"). Bluetooth without shuffle has no shuffle button; one
+  //: song in Lyrion's queue dims previous, next and shuffle. The bar used to
+  //: remove both, reading the design's *unsupported controls are removed*
+  //: as "not available now" - the buttons vanished with a single song.
+  const has = (what) => controls.includes(what);
+  const can = (what) => has(what) && available.includes(what);
   const NEXT_REPEAT = { off: 'all', all: 'one', one: 'off' };
   async function skip(command, body) {
     try {
@@ -241,26 +242,26 @@
       <div class="transport">
         <div></div>
         <div class="transport__mid">
-          {#if can('shuffle')}
+          {#if has('shuffle')}
             <button class="btn btn--toggle" class:is-on={shuffle === true} type="button" aria-label="Shuffle" aria-pressed={shuffle === true}
-              onclick={() => skip('shuffle', { on: shuffle !== true })}>
+              disabled={!can('shuffle')} onclick={() => skip('shuffle', { on: shuffle !== true })}>
               <span class="i-shuffle"><i></i><i></i><i></i><i></i><b></b><b></b></span>
             </button>
           {/if}
-          {#if can('previous')}
-            <button class="btn btn--lg" type="button" aria-label="Previous" onclick={() => skip('previous')}><span class="i-prev"></span></button>
+          {#if has('previous')}
+            <button class="btn btn--lg" type="button" aria-label="Previous" disabled={!can('previous')} onclick={() => skip('previous')}><span class="i-prev"></span></button>
           {/if}
           {#if hasPlayPause}
             <button class="btn btn--play" type="button" data-shows={toggle.shows} aria-label={toggle.shows === 'playing' ? 'Pause' : 'Play'} onclick={toggle.toggle}>
               <span class="i-play"></span><span class="i-pause"></span>
             </button>
           {/if}
-          {#if can('next')}
-            <button class="btn btn--lg" type="button" aria-label="Next" onclick={() => skip('next')}><span class="i-next"></span></button>
+          {#if has('next')}
+            <button class="btn btn--lg" type="button" aria-label="Next" disabled={!can('next')} onclick={() => skip('next')}><span class="i-next"></span></button>
           {/if}
-          {#if can('repeat')}
+          {#if has('repeat')}
             <button class="btn btn--toggle" class:is-on={repeat === 'all' || repeat === 'one'} type="button" aria-label={`Repeat ${repeat ?? 'off'}`}
-              onclick={() => skip('repeat', { mode: NEXT_REPEAT[repeat ?? 'off'] })}>
+              disabled={!can('repeat')} onclick={() => skip('repeat', { mode: NEXT_REPEAT[repeat ?? 'off'] })}>
               <span class="i-repeat"><i></i><i></i><i></i><i></i><b></b><b></b>{#if repeat === 'one'}<span class="i-repeat__one">1</span>{/if}</span>
             </button>
           {/if}
@@ -683,6 +684,8 @@
   .transport__mid { display: flex; align-items: center; gap: 22px; }
   .transport__right { justify-self: end; display: flex; align-items: center; gap: 18px; }
 
+  /* Dimmed, as on the panel: the source has it, it cannot work now. */
+  .btn:disabled { opacity: 0.4; }
   .btn {
     width: var(--ctl);
     height: var(--ctl);

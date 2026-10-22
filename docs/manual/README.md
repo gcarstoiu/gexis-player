@@ -172,8 +172,10 @@ their page. A tap on a Popular track shows its actions, as anywhere else.
 
 ![Album page](images/panel-album-page.webp)
 
-**Play album** or **Add to queue**, and the tracks with their lengths. Tap a
-track once to show its actions, twice to play it.
+**Play album** or **Add to queue**, and the tracks with their lengths. A
+track by someone other than the album's artist - a guest on one song, every
+track of a compilation - shows that artist under its title. Tap a track once
+to show its actions, twice to play it.
 
 ### Playlists
 
@@ -257,6 +259,56 @@ right (16 kHz), the same at every sample rate. Each bar shows the music's own
 level in its range, so a recording with little treble has short bars on the
 right.
 
+### A Home Assistant dashboard
+
+The panel can show a **Home Assistant dashboard** - the room's lights,
+blinds, scenes, whatever the dashboard holds - full screen, and everything on
+it works by touch. The dashboard itself is made in Home Assistant; the player
+only needs its address, set in *Settings → Display → Home Assistant
+dashboard*.
+
+- **To bring it up:** the dashboard button - in the pull-down controls on a
+  bar, beside the visualiser button on Now Playing elsewhere, and on the phone
+  page - or Home Assistant itself (an automation can call
+  `POST /panel/dashboard/show` on the player). With *Dashboard instead of the
+  idle screen* on, it comes up where the idle screen would during the times
+  set.
+- **While it is up**, the music goes on; a new track or the idle screen does
+  not take the dashboard down. The volume drawer still shows over it, and
+  display standby still turns the screen off.
+- **The visualiser takes over from it**: opened from the phone, or coming on
+  by itself after the visualiser's timeout while music plays, it takes the
+  dashboard down and shows in its place.
+- **To dismiss it:** the tab on the right edge of the screen, the phone's
+  button, or `POST /panel/dashboard/hide`. A dashboard the schedule put up
+  goes when its time ends, and the idle screen follows.
+
+**What Home Assistant needs.** The player changes nothing in Home Assistant;
+two things are set there, by whoever runs it:
+
+1. **Allow it to be shown inside another page.** In Home Assistant 2026.10
+   and later: *Settings → System → Network → HTTP server → More options*,
+   turn off **Send X-Frame-Options**, then *Save and restart*. Keep that
+   page open until Home Assistant is back: a change it does not see confirmed
+   within five minutes is rolled back to the previous setting. (Before
+   2026.10: `use_x_frame_options: false` under `http:` in
+   `configuration.yaml`, then a restart; from 2026.10 that line is read once
+   and then ignored.) Until this is done, the panel says so instead of
+   showing the dashboard.
+2. **Let the player in.** Either add the player's network to Home
+   Assistant's *trusted networks* (`auth_providers` in `configuration.yaml`,
+   with `allow_bypass_login: true`), so the dashboard opens without a login;
+   or sign in once on the panel - Home Assistant then keeps the player signed
+   in. To sign in, tap the fields with a finger and type on a USB keyboard
+   plugged into the player, or use the phone page: its touchpad taps inside
+   the dashboard where the pointer is, and its keyboard types there. The
+   phone types the characters the player's keyboard layout has (a US layout
+   unless set otherwise); one it lacks is left out, and the phone says so.
+
+Home Assistant's own header and side bar show unless the dashboard or the
+user's profile in Home Assistant hides them. On a bar (1480 × 320), a
+dashboard made for that shape reads best.
+
 ## 7. The phone page
 
 Open the player's address in a phone's browser, for example
@@ -273,16 +325,21 @@ the right of the *Settings* title: tap it for every player, each with what it is
 
 The mini player has:
 
-- the track playing;
-- a row of buttons for the panel: **Home**, **Now Playing** (lit while the
-  panel shows it; tap again to minimise), **Lyrics**, **Visualiser**, the
-  **Screen** button (the panel's screen off until a touch, music starting or
-  the button again wakes it; the player keeps playing, and some screens show
-  their own "No signal" for a few seconds first) and **Idle screen**
-  (not offered while the idle screen is switched off);
+- **the track playing**, with **play/pause**;
+- **the panel**: its **Screen off** switch in the heading (the panel's screen
+  off until a touch, music starting or the switch again wakes it; the player
+  keeps playing, and some screens show their own "No signal" for a few
+  seconds first), and under it what the panel shows, one round button each:
+  **Home**, **Playing** (tap again to minimise it), **Lyrics**, **Meters**
+  (the visualiser), **Room** (the Home Assistant dashboard, once its address
+  is set) and **Idle** (not offered while the idle screen is switched off).
+  The one the panel shows is outlined;
 - the volume slider. A tap sets the level where it lands and a sideways
   drag moves it; a swipe up or down that starts on the slider changes
   nothing.
+
+Swipe the mini player up, or tap its arrow, for the **touchpad**, which
+opens between the track and the row.
 
 ### The touchpad
 
@@ -437,6 +494,9 @@ player into your Plex account).
 | Headless | Turns the player's screen off; settings that only affect the screen are hidden while it is on, the screen in use, its ports and its rotation included. |
 | Display standby: Scheduled standby, Standby times | With *Scheduled standby* on, the screen goes off during the standby times whenever nothing is playing. Up to six times, each a start and an end - picked from a grid of hours and quarters - on the chosen days; one may run past midnight, counting for the day it starts. |
 | Display standby: Back to standby after | A screen woken during a standby time goes dark again after this long with no touch and nothing playing (2 minutes unless changed; up to 30). |
+| Home Assistant dashboard: Dashboard address | The address of the room's Home Assistant dashboard. Home Assistant has to allow it to be shown and let the player in - see [A Home Assistant dashboard](#a-home-assistant-dashboard). Empty, nothing of the dashboard shows. |
+| Home Assistant dashboard: Dashboard button | The button that puts it up: in the bar's pull-down controls, beside the visualiser on Now Playing, and on the phone page. On unless changed, once an address is set. |
+| Home Assistant dashboard: Dashboard instead of the idle screen, Dashboard times | At the times set - the same grid as the standby times - the dashboard comes up where the idle screen would. Off unless changed. |
 | Touchpad: Phone touchpad, Pointer speed, Pointer style | The phone's touchpad (section 7). |
 | Volume: Show volume when changed elsewhere | A phone's volume change opens the drawer; the panel's own changes do not. |
 | Volume: Volume drawer auto-hide | How long the drawer stays when a change from elsewhere opened it. |

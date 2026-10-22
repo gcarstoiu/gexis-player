@@ -655,6 +655,46 @@ it wakes a dark screen, so the countdown never runs under the black cover. Measu
 the page with the output off; the screen shows its own "No signal" for about
 10 s some 30 s in.
 
+## A Home Assistant dashboard (ADR-0156)
+
+`dashboard.py`. `Dashboard` holds whether it is up and who asked (`asked`
+or `schedule`), published as `panel.dashboard = {shown, by}`; a person's
+`show` over the schedule's makes it theirs. `DashboardSchedule.tick()`, every
+15 s, publishes `panel.dashboard_time` - inside one of `dashboard_times`, with
+`dashboard_schedule` on, an address set and the player not headless (the
+standby times' `in_standby_time`) - and takes down a dashboard the schedule
+put up when its time ends. `POST /panel/dashboard/{show,hide}` (`?by=schedule`
+from the panel) and `GET /panel/dashboard`, which runs the idle page's probe
+(`idle_page.probe`) on `dashboard_url` and adds `message`, the sentence for
+`reason` (`dashboard.explain`). A visualiser show - a person's or the
+timer's - takes it down first (`PeppyController(before_show=...)`, ADR-0156
+as amended 2026-10-22), and the dashboard's own `show` takes the visualiser
+down. The panel draws it
+(`DashboardScreen.svelte`, an `<iframe>` at z-index 11, under the volume
+drawer); at the idle timeout inside a dashboard time it asks for the
+dashboard instead of the idle screen, and when the schedule takes it down the
+idle screen follows at once. Home Assistant's side - framing and trusted
+networks - is the user's (decision 8, Finding 132).
+
+**The phone's touchpad and keyboard over the dashboard are real input**
+(ADR-0157). A page from another site is closed to the panel's page, so the
+touchpad's made-up events and inserted text cannot reach it. Over an
+`<iframe>` marked `data-real-input` the panel (`lib/PanelPointer.svelte`,
+`isRealInputFrame` in `lib/touchpad.js`) sends the phone's tap, text and keys
+to `POST /panel/input` instead - `{kind: "tap", x, y}` as fractions of the
+screen, `{kind: "text", text}` (1-500 characters), `{kind: "key", key}`
+(Backspace, Enter, Tab); 400 for anything else, 503 when the core has no
+panel input.
+`panel_input.py` (`PanelInput`) makes them through `/dev/uinput` in the
+panel's session, as a finger and a USB keyboard would: a tap as a touch on a
+virtual touchscreen (`gexis-phone-touch`, held 50 ms), text as key presses
+on a virtual keyboard (`gexis-phone-keys`, 12 ms apart), each character found
+as a key with its Shift or AltGr on the compositor's own layout (libxkbcommon
+through ctypes, with labwc's `XKB_DEFAULT_*`; none set on the image, so US). A
+character the layout lacks is left out and the answer says so (`done: false`); the phone then
+shows a note (`untyped`). The devices are made at the first use and given a
+second to settle.
+
 ## Other players on the network (ADR-0136)
 
 Each player announces `_gexis._tcp` on port 8090

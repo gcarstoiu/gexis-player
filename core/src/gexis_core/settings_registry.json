@@ -605,6 +605,67 @@
       },
       {
         "type": "group",
+        "label": "Home Assistant dashboard",
+        "accent": "#c8a2d8",
+        "onlyWhen": [
+          "headless",
+          false
+        ]
+      },
+      {
+        "key": "dashboard_url",
+        "type": "text",
+        "label": "Dashboard address",
+        "marks": "N",
+        "note": "The address of this room's Home Assistant dashboard. Home Assistant has to allow it to be shown here and let this player in: see the manual.",
+        "placeholder": "http://homeassistant.local:8123/lovelace/0",
+        "default": null
+      },
+      {
+        "key": "dashboard_button",
+        "type": "toggle",
+        "label": "Dashboard button",
+        "marks": "N",
+        "note": "A button that puts the dashboard up: in the controls on a bar, beside the visualiser on other screens, and on the phone.",
+        "default": true
+      },
+      {
+        "key": "dashboard_schedule",
+        "type": "toggle",
+        "label": "Dashboard instead of the idle screen",
+        "marks": "N",
+        "note": "At the times below, the dashboard comes up where the idle screen would.",
+        "default": false
+      },
+      {
+        "key": "dashboard_times",
+        "type": "intervals",
+        "label": "Dashboard times",
+        "marks": "N",
+        "note": "Each from a start to an end time, on the days chosen; one may run past midnight.",
+        "max": 6,
+        "default": [
+          {
+            "from": "18:00",
+            "until": "23:00",
+            "days": [
+              "Mon",
+              "Tue",
+              "Wed",
+              "Thu",
+              "Fri",
+              "Sat",
+              "Sun"
+            ]
+          }
+        ],
+        "onlyWhen": [
+          "dashboard_schedule",
+          true
+        ]
+      },
+      {
+        "type": "group",
         "label": "Touchpad",
         "accent": "#c8a2d8",
         "onlyWhen": [

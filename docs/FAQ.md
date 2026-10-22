@@ -266,6 +266,28 @@ seconds to find the signal again before they show anything; the 11.9″ bar
 takes about three. One tap is enough - more taps during the wait do not
 make it faster. Screens that wake almost at once do so with the same player.
 
+**Can the panel show my Home Assistant dashboard?**
+Yes: set its address in *Settings → Display → Home Assistant dashboard*. It
+comes up from the dashboard button (the bar's pull-down controls, beside the
+visualiser on Now Playing, and the phone page), from Home Assistant itself
+through the player's API, or in place of the idle screen at the times you
+set. Everything on it works by touch, the music plays on, and the tab on the
+right edge takes it away. Home Assistant has to allow it to be shown inside
+another page and let the player in; the player changes nothing there - see
+the manual's *A Home Assistant dashboard*.
+
+**The panel says the dashboard can't be shown.**
+It says why. *Does not allow its pages to be shown inside another page*: in
+Home Assistant 2026.10 or later, turn off *Send X-Frame-Options* under
+*Settings → System → Network → HTTP server → More options*, *Save and
+restart*, and keep that page open until Home Assistant is back - otherwise it
+rolls the change back after five minutes. A login page inside the dashboard
+instead means Home Assistant does not trust the player yet: add the player's
+address to *trusted networks*, or sign in once: from the phone page (its
+touchpad taps the fields, its keyboard types into them) or with a USB
+keyboard plugged into the player. Home Assistant then keeps the player signed
+in.
+
 **When does the idle screen appear?**
 Only with *Settings → Display → Idle screen* switched on - it is off on a new
 player, and the panel then stays on what it shows. On, it appears after

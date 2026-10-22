@@ -93,6 +93,21 @@ def _disc(surface: pygame.Surface, size: tuple[int, int]) -> pygame.Surface:
     return scaled
 
 
+def reach(picture: pygame.Surface) -> int:
+    """How far from the picture's centre its visible pixels go - any alpha
+    above nothing counts, so a soft edge is inside. An opaque picture reaches
+    its corners."""
+    w, h = picture.get_size()
+    cx, cy = w / 2, h / 2
+    far = 0.0
+    # The farthest pixel of a piece is on its outline; a pixel's far corner
+    # is what counts, so half a pixel is added each way.
+    for piece in pygame.mask.from_surface(picture, 0).connected_components():
+        for x, y in piece.outline() or [piece.centroid()]:
+            far = max(far, math.hypot(abs(x + 0.5 - cx) + 0.5, abs(y + 0.5 - cy) + 0.5))
+    return int(math.ceil(far))
+
+
 class Spinner:
     """A vinyl or a reel: a picture turning about `center` at `rpm` while
     playing, still while not."""
@@ -104,12 +119,10 @@ class Spinner:
         self.rpm = abs(rpm)
         self.sign = 1 if clockwise else -1
         self.angle = 0.0
-        self._frames: list[pygame.Surface | None] = []
+        self._frames: list[tuple[pygame.Surface, int, int] | None] = []
         self._queue: list[int] = []
+        self.region = pygame.Rect(0, 0, 0, 0)
         self._rebuild()
-        diagonal = int(math.hypot(*picture.get_size())) + 4
-        self.region = pygame.Rect(0, 0, diagonal, diagonal)
-        self.region.center = center
 
     def with_label(self, label: pygame.Surface | None) -> None:
         """The album art composited onto the disc, so art and record turn as
@@ -124,11 +137,33 @@ class Spinner:
         count = 360 // SPIN_STEP_DEG
         self._frames = [None] * count
         self._queue = list(range(count))
+        # **The box is the picture's reach, not its diagonal** (Finding 134):
+        # a record or a reel is round in a square picture, so turning it
+        # never leaves the circle its visible pixels reach. The diagonal's
+        # box was twice the area, repainted and presented at every step.
+        side = 2 * reach(self.picture) + 4
+        self.region = pygame.Rect(0, 0, side, side)
+        self.region.center = self.center
+
+    def _turned(self, angle: float) -> tuple[pygame.Surface, int, int]:
+        """The picture turned by `angle`, cut to its reach, with where that
+        cut's corner sits from `center`: the same pixels, at the same place,
+        as the whole turned picture blitted about `center` - which grows
+        to the diagonal and was kept sixty times over."""
+        turned = pygame.transform.rotate(self.picture, angle)
+        rw, rh = turned.get_size()
+        left, top = -(rw // 2), -(rh // 2)
+        keep = pygame.Rect(0, 0, rw, rh).clip(self.region.move(-self.region.x, -self.region.y)
+                                               .move(rw // 2 - self.region.width // 2,
+                                                     rh // 2 - self.region.height // 2))
+        if keep.size == (rw, rh) or keep.width <= 0 or keep.height <= 0:
+            return turned, left, top
+        return turned.subsurface(keep).copy(), left + keep.x, top + keep.y
 
     def build_some(self) -> None:
         for _ in range(min(BUILD_PER_TICK, len(self._queue))):
             index = self._queue.pop(0)
-            self._frames[index] = pygame.transform.rotate(self.picture, -index * SPIN_STEP_DEG)
+            self._frames[index] = self._turned(-index * SPIN_STEP_DEG)
 
     def advance(self, seconds: float) -> None:
         self.angle = (self.angle + self.rpm * 6.0 * seconds * self.sign) % 360.0
@@ -140,8 +175,9 @@ class Spinner:
         index = self.frame_index()
         frame = self._frames[index]
         if frame is None:
-            frame = pygame.transform.rotate(self.picture, -self.angle)
-        screen.blit(frame, frame.get_rect(center=self.center))
+            frame = self._turned(-self.angle)
+        picture, left, top = frame
+        screen.blit(picture, (self.center[0] + left, self.center[1] + top))
 
 
 class Tonearm:
@@ -161,6 +197,10 @@ class Tonearm:
         self._early = False
         self.drawn_angle: float | None = None
         self.drawn_rect: pygame.Rect | None = None
+        #: The last turn made: the arm is drawn at its drawn angle in every
+        #: repaint of every box it crosses, and turning it each time was a
+        #: tenth of the driver's time on a turntable (Finding 134).
+        self._placed: tuple[float, pygame.Surface, pygame.Rect] | None = None
 
     def _groove(self, progress: float) -> float:
         return self.start + (self.end - self.start) * max(0.0, min(1.0, progress))
@@ -212,6 +252,8 @@ class Tonearm:
         placed so `pivot_image` lands on `pivot_screen` (pygame rotates
         counter-clockwise, y down)."""
         angle = self.angle if angle is None else angle
+        if self._placed is not None and self._placed[0] == angle:
+            return self._placed[1], self._placed[2].copy()
         rotated = pygame.transform.rotate(self.picture, angle)
         w, h = self.picture.get_size()
         dx, dy = self.pivot_image[0] - w / 2, self.pivot_image[1] - h / 2
@@ -220,6 +262,7 @@ class Tonearm:
         rw, rh = rotated.get_size()
         left = int(self.pivot_screen[0] - (rw / 2 + rx))
         top = int(self.pivot_screen[1] - (rh / 2 + ry))
+        self._placed = (angle, rotated, pygame.Rect(left, top, rw, rh))
         return rotated, pygame.Rect(left, top, rw, rh)
 
 

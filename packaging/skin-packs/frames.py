@@ -52,6 +52,8 @@ LOST = (3, 254, 1)
 OTHER = (251, 2, 249)
 #: Needle frames run after the loss: two seconds at the engine's 30 a second.
 NEEDLE_FRAMES = 60
+#: The level the needles hold while a refresh is compared (of 100).
+HELD_LEVEL = 40.0
 
 HERE = Path(__file__).resolve().parent
 DRIVER = HERE.parents[1] / "image/stage-gexis/05-peppy/files/gexis-peppy-driver.py"
@@ -98,6 +100,9 @@ class NoSpectrum:
 
     def follow(self, skin, home=None) -> None:
         self.active = False
+
+    def redraw(self) -> None:
+        pass
 
 
 def share_lost(window: pygame.Surface, started: pygame.Surface | None = None) -> float:
@@ -173,6 +178,20 @@ def check_pack(root: Path, size: tuple[int, int], engines: Path, driver_path: Pa
     for directory in {home for home in homes.values()} - {corpus}:
         driver.adopt_sections(peppy.util.meter_config, directory)
 
+    # **The music held still while a frame is compared** (2026-10-21): a
+    # refresh runs the needles to the music at once, so the frame it is
+    # compared with is the meter started and run once at the same level.
+    # Noise again afterwards, for the needles' own sweep below.
+    held = [False]
+    source = peppy.data_source
+    for method in ("get_current_data", "get_current_left_channel_data",
+                   "get_current_right_channel_data", "get_current_mono_channel_data"):
+        noisy = getattr(source, method, None)
+        if noisy is None:
+            continue
+        still = [HELD_LEVEL] * 4 if method == "get_current_data" else HELD_LEVEL
+        setattr(source, method, lambda noisy=noisy, still=still: still if held[0] else noisy())
+
     rotation = driver.Rotation(peppy, skins, NoSpectrum(), None, homes, driver.Selection())
     rotation.prepare_next = lambda name=None: None  # one skin at a time, built below
     results = []
@@ -192,6 +211,7 @@ def check_pack(root: Path, size: tuple[int, int], engines: Path, driver_path: Pa
                     # Drawn from the corner on black, by the engine and the
                     # text layer alike: a note for the pack, not a fault.
                     row["notes"] = [f"screen.bgr {picture!r} is {found[0]}x{found[1]}, not the pack's {meter_folder}"]
+        held[0] = True
         started = time.monotonic()
         # Started over the loss colour: whatever a skin's start leaves
         # unpainted shows as it, where on a player it would be the skin before.
@@ -213,9 +233,10 @@ def check_pack(root: Path, size: tuple[int, int], engines: Path, driver_path: Pa
             if both.count():
                 w, h = window.get_size()
                 row["problems"].append(f"its start leaves {both.count() / (w * h):.2%} of the frame unpainted")
+        rotation.vumeter.meter.run()
         started_frame = window.copy()
 
-        # A lost frame, painted again at once: the needles have not moved, so
+        # A lost frame, painted again at once: the level has not moved, so
         # the repaint must be the started frame exactly.
         window.fill(LOST)
         refresh = getattr(rotation, "refresh", None)
@@ -234,6 +255,7 @@ def check_pack(root: Path, size: tuple[int, int], engines: Path, driver_path: Pa
 
         # Lost again, and left to the engine: what two seconds of needle
         # frames bring back by themselves - the screen before this fix.
+        held[0] = False
         window.fill(LOST)
         meter = rotation.vumeter.meter
         for _ in range(NEEDLE_FRAMES):

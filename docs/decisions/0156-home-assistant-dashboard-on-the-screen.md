@@ -46,8 +46,13 @@ player's hands. Read from Home Assistant's documentation, not tried here.
 3. **While it is up:**
    - **playback is untouched**: music goes on, and starting, stopping or
      changing tracks does not take it down;
-   - **it stays until dismissed**: the idle timeout, the visualiser's
-     automatic start and the takeover animation do not replace it;
+   - **it stays until dismissed**: the idle timeout and the takeover
+     animation do not replace it;
+   - **the visualiser takes over** (amended 2026-10-22, George: *"If the user
+     deliberately opens the visualizer then it should take over. Also if the
+     timeout triggers it."*): a show asked for, or the visualiser's own
+     start after its timeout, takes the dashboard down and comes up in its
+     place. Found when a phone's Meters did nothing while it was up;
    - **every touch is the dashboard's**: no layer over it.
    - **Over it** still: the volume drawer on a change from elsewhere, and the
      setup, update and screen-confirm screens.
@@ -66,10 +71,12 @@ player's hands. Read from Home Assistant's documentation, not tried here.
    placement and focus to manage (as with the visualiser, Findings 125, 131).
 6. **Signing in is Home Assistant's**: its *trusted networks* lets the player
    in without a login (George, 2026-10-21: *"Trusted networks"*), set up by the
-   user in Home Assistant; signing in once - typing from the phone, which
-   already types into the panel - with the session kept in the kiosk's
-   profile is the fallback. Both documented; the player stores no Home
-   Assistant password or token.
+   user in Home Assistant; signing in once with a USB keyboard on the player,
+   the session kept in the kiosk's profile, is the fallback. **Not from the
+   phone** (found 2026-10-21, George: *"Keyboard is not popping up in the
+   login"*): the phone's touchpad and keyboard act inside the player's own
+   page (`PanelPointer`), and a frame from another site is closed to it. Both
+   documented; the player stores no Home Assistant password or token.
 7. **The idle page stays** (George: *"Why would we retire it?"*): it is a
    different thing - a page to look at while idle, set at flash time. When
    both are set, the dashboard wins during its scheduled times and the idle
@@ -106,8 +113,12 @@ player's hands. Read from Home Assistant's documentation, not tried here.
 
 ## Unverified
 
-- That `use_x_frame_options: false` and *trusted networks* behave as their
-  documentation says on a current Home Assistant; to be tried against a real
-  one before the ADR's decision 5 is built on.
+- ~~That `use_x_frame_options: false` and *trusted networks* behave as their
+  documentation says on a current Home Assistant.~~ **Checked 2026-10-21**
+  ([Finding 132](../findings/132-home-assistant-framed-by-the-panel.md)) on
+  a throwaway 2026.10.2: both work, but from 2026.10 the framing setting is
+  set in Home Assistant's interface (*Send X-Frame-Options*) and confirmed
+  within five minutes - the YAML line is read once and then ignored.
 - How Chromium keeps a framed Home Assistant's sign-in (third-party storage
-  is partitioned by the top-level site): whether it survives a reboot.
+  is partitioned by the top-level site): whether it survives a reboot. Not
+  needed with trusted networks.

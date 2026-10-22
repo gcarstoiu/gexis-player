@@ -142,6 +142,9 @@ class StateServer:
         settings=None,
         peppy=None,
         standby=None,
+        dashboard=None,
+        dashboard_page=None,
+        panel_input=None,
         library=None,
         artistinfo=None,
         notes=None,
@@ -209,6 +212,11 @@ class StateServer:
         self._peppy = peppy
         #: ADR-0135: the screen's standby, which a touch and the phone wake.
         self._standby = standby
+        #: ADR-0156: the Home Assistant dashboard, and the check of its address.
+        self._dashboard = dashboard
+        self._dashboard_page = dashboard_page
+        #: ADR-0157: real taps and typing on the panel, over a framed page.
+        self._panel_input = panel_input
         #: ADR-0136: the other players on the network, for the phone's switcher.
         #: This core, as the others see it in its status: a player whose mDNS
         #: name was changed by a conflict (`guestpi-2.local`, 2026-10-12) is
@@ -1404,6 +1412,72 @@ class StateServer:
             return web.json_response({"error": f"unknown action {action}"}, status=404)
         return web.json_response({"standby": self._standby.off})
 
+    async def _handle_dashboard(self, request: web.Request) -> web.Response:
+        """**ADR-0156: whether the dashboard is up, and whether it can be.**
+        The panel asks each time it puts the dashboard up, as it does for the
+        idle page: a frame cannot say why it is blank, so the core checks the
+        address and answers with the sentence to show."""
+        if self._dashboard is None or self._dashboard_page is None:
+            return web.json_response({"error": "the dashboard is not wired up"}, status=503)
+        page = await self._dashboard_page()
+        return web.json_response({"shown": self._dashboard.shown, "by": self._dashboard.by, **page})
+
+    async def _handle_dashboard_request(self, request: web.Request) -> web.Response:
+        """**ADR-0156: the dashboard up or down** - from the panel's button
+        and edge tab, a phone, or Home Assistant itself. `?by=schedule` is the
+        panel putting it up in place of the idle screen, which the schedule's
+        end takes down again; anything else is a person's."""
+        action = request.match_info["action"]
+        if self._dashboard is None:
+            return web.json_response({"error": "the dashboard is not wired up"}, status=503)
+        by = "schedule" if request.query.get("by") == "schedule" else "asked"
+        if action == "show":
+            if by == "asked" and self._peppy is not None:
+                self._peppy.on_touch()
+            self._dashboard.show(by)
+        elif action == "hide":
+            self._dashboard.hide(by)
+        else:
+            return web.json_response({"error": f"unknown action {action}"}, status=404)
+        return web.json_response({"shown": self._dashboard.shown, "by": self._dashboard.by})
+
+    async def _handle_panel_input(self, request: web.Request) -> web.Response:
+        """**ADR-0157: the phone's tap or typing, made real.** The panel asks
+        when the phone's pointer is over a page from another site in a frame
+        (the Home Assistant dashboard), which its own made-up events cannot
+        reach. `{kind: "tap", x, y}` with `x`, `y` fractions of the screen;
+        `{kind: "text", text}`; `{kind: "key", key}` - Backspace, Enter or Tab."""
+        if self._panel_input is None:
+            return web.json_response({"error": "panel input is not wired up"}, status=503)
+        try:
+            body = await request.json()
+        except (ValueError, UnicodeDecodeError):
+            return web.json_response({"error": "expected a JSON object"}, status=400)
+        kind = body.get("kind") if isinstance(body, dict) else None
+        try:
+            if kind == "tap":
+                x, y = float(body["x"]), float(body["y"])
+                if not (0 <= x <= 1 and 0 <= y <= 1):
+                    raise ValueError("x and y are fractions of the screen")
+                await self._panel_input.tap(x, y)
+                return web.json_response({"done": True})
+            if kind == "text":
+                text = body["text"]
+                if not isinstance(text, str) or not text or len(text) > 500:
+                    raise ValueError("text is 1 to 500 characters")
+                return web.json_response({"done": await self._panel_input.type(text)})
+            if kind == "key":
+                done = await self._panel_input.key(str(body["key"]))
+                if not done:
+                    raise ValueError("key is Backspace, Enter or Tab")
+                return web.json_response({"done": True})
+        except (KeyError, TypeError, ValueError) as exc:
+            return web.json_response({"error": str(exc) or "bad input"}, status=400)
+        except OSError as exc:
+            logger.warning("panel input: %s", exc)
+            return web.json_response({"error": f"the panel's input could not be made: {exc}"}, status=503)
+        return web.json_response({"error": "kind is tap, text or key"}, status=400)
+
     async def _handle_idle_request(self, request: web.Request) -> web.Response:
         """**ADR-0101: the phone's idle-screen toggle.** Attention first, as a
         touch on the panel is (George: "Timers would restart from that
@@ -2342,7 +2416,12 @@ class StateServer:
             return web.json_response({"error": f"unknown action {action}"}, status=404)
         # Off the loop: raising or lowering waits on wlrctl (review, 2026-10-12).
         shown = await self._peppy.request_async(action)
-        if not shown and action == "show" and self._peppy._has_levels():
+        # **Only when it was tried and found no window** (ShelvesPi,
+        # 2026-10-21): a show refused for standby started the driver again
+        # with the only output off, and it could not start - *the video
+        # driver did not add any displays* - so the visualiser stayed gone.
+        if (not shown and action == "show" and self._peppy._has_levels()
+                and not getattr(self._peppy, "refused", False)):
             # **One restart at a time** (review, 2026-10-12): a second tap
             # while the skins load (~9 s) restarted the unit again and killed
             # the half-loaded one. A later ask waits for the restart under way;
@@ -2993,6 +3072,9 @@ class StateServer:
         # ADR-0101: the phone's idle toggle, and the panel saying what it shows.
         app.router.add_post("/panel/idle/{action}", self._handle_idle_request)
         app.router.add_post("/panel/standby/{action}", self._handle_standby)
+        app.router.add_get("/panel/dashboard", self._handle_dashboard)
+        app.router.add_post("/panel/dashboard/{action}", self._handle_dashboard_request)
+        app.router.add_post("/panel/input", self._handle_panel_input)
         app.router.add_get("/player/status", self._handle_player_status)
         app.router.add_get("/players", self._handle_players)
         app.router.add_post("/panel/shown", self._handle_panel_shown)
