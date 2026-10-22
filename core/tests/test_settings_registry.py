@@ -164,6 +164,10 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         "lms_extended_nav",
         # ADR-0125 (2026-10-07): the problem report, downloaded.
         "problem_report",
+        # ADR-0156 (George, 2026-10-21): a Home Assistant dashboard on the
+        # screen - its address, its button, and its times in place of the
+        # idle screen.
+        "dashboard_url", "dashboard_button", "dashboard_schedule", "dashboard_times",
         # ADR-0126 (2026-10-07): hardware reports from owners.
         "hardware_report",
         # ADR-0123 (2026-10-08): the cable, shown while one is plugged in.
@@ -683,8 +687,9 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # **124**: Library on the screen and Personalise (ADR-0149, 2026-10-18).
     # **123**: the waiting screen's hint line removed (George, 2026-10-18).
     # **124**: API explorer (ADR-0152, 2026-10-19). **125**: Navigation, one
-    # choice over the two switches it hides (George, 2026-10-19).
-    assert len(rows) == 125
+    # choice over the two switches it hides (George, 2026-10-19). **129**: the
+    # Home Assistant dashboard's four rows (ADR-0156, 2026-10-21).
+    assert len(rows) == 129
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
@@ -704,7 +709,7 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # 82 with Report this hardware (ADR-0126).
     # **81**: Software volume merged into Volume (ADR-0127). **80**: Pexels
     # removed.
-    assert len(rows) - len(kept) == 106  # 106: Navigation shown, its two switches hidden; 107: API explorer (ADR-0152); 106: the waiting screen's hint removed (2026-10-18); 107: Library on the screen and Personalise (ADR-0149); 105: Text size (ADR-0148); 104: Needles follow the volume (ADR-0146 amended); 103: Gain (ADR-0146); 102: Screen port and its one-port tile (ADR-0141); 100: display standby (ADR-0135); 97: the idle switch and the home background (ADR-0133, 2026-10-11); 88: Weather icon motion (Finding 118); 87: Version hidden, it repeated Release; 88: the waiting screen's two rows (ADR-0133); 86: the own wallpapers (ADR-0133); 82: the factory reset (ADR-0132); 81: Cable (ADR-0123)
+    assert len(rows) - len(kept) == 110  # 110: the Home Assistant dashboard's four rows (ADR-0156); 106: Navigation shown, its two switches hidden; 107: API explorer (ADR-0152); 106: the waiting screen's hint removed (2026-10-18); 107: Library on the screen and Personalise (ADR-0149); 105: Text size (ADR-0148); 104: Needles follow the volume (ADR-0146 amended); 103: Gain (ADR-0146); 102: Screen port and its one-port tile (ADR-0141); 100: display standby (ADR-0135); 97: the idle switch and the home background (ADR-0133, 2026-10-11); 88: Weather icon motion (Finding 118); 87: Version hidden, it repeated Release; 88: the waiting screen's two rows (ADR-0133); 86: the own wallpapers (ADR-0133); 82: the factory reset (ADR-0132); 81: Cable (ADR-0123)
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():
@@ -1721,7 +1726,7 @@ def test_holidays_show_for_either_wallpaper_background_and_no_other():
         assert visible(holidays, rows, values) is shown, background
     display = next(g for g in load_registry() if g.get("label") == "Display")
     heads = [r["label"] for r in display["rows"] if r.get("type") == "group"]
-    assert heads == ["Panel", "Display standby", "Touchpad", "Volume", "Photo service and location", "Home screen",
+    assert heads == ["Panel", "Display standby", "Home Assistant dashboard", "Touchpad", "Volume", "Photo service and location", "Home screen",
                      "Idle screen", "Visualiser", "Visualiser tweaks"]
     keys = [r.get("key") for r in display["rows"]]
     order = ["background", "wallpaper_topics", "wallpaper_styles", "wallpaper_time_of_day",

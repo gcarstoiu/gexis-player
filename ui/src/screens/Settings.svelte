@@ -1114,6 +1114,9 @@
   let ivs = $state([]);
   let picking = $state(null); // { i, which } while a time's grid is open
   let ivTimer = null;
+  //: The times row the sheet last opened - the standby times or the
+  //: dashboard's (ADR-0156) - for a write still waiting when it closes.
+  let ivKey = 'standby_times';
   function daysSaid(days = []) {
     const on = DAYS.filter((d) => days.includes(d));
     if (on.length === 7) return 'every day';
@@ -1129,7 +1132,7 @@
   async function saveIntervals() {
     clearTimeout(ivTimer);
     ivTimer = null;
-    const row = sheet ?? rowOf('standby_times');
+    const row = sheet ?? rowOf(ivKey);
     if (!row || row.type !== 'intervals') return;
     const wanted = $state.snapshot(ivs);
     if (JSON.stringify(wanted) === JSON.stringify(row.value ?? [])) return;
@@ -1222,6 +1225,7 @@
     if (row.type === 'list') openList(row.key);
     if (row.type === 'intervals') {
       ivs = structuredClone(row.value ?? []);
+      ivKey = row.key;
       picking = null;
     }
     if (row.type === 'multi') picked = Array.isArray(row.value) ? [...row.value] : [];
@@ -2640,7 +2644,7 @@
         <div class="iv" data-noscrollbar>
           {#each ivs as iv, i (i)}
             <div class="iv__item">
-              <button class="iv__remove" type="button" aria-label="Remove this standby time"
+              <button class="iv__remove" type="button" aria-label="Remove this time"
                 onclick={() => removeInterval(i)}>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17" /></svg>
               </button>
@@ -2680,10 +2684,10 @@
               </div>
             </div>
           {:else}
-            <p class="iv__none">No standby times yet.</p>
+            <p class="iv__none">No times yet.</p>
           {/each}
           <button class="iv__add" type="button" disabled={ivs.length >= (sheet.max ?? 6)}
-            onclick={addInterval}>Add standby time</button>
+            onclick={addInterval}>Add a time</button>
         </div>
       {:else if sheet.type === 'multi'}
         <!-- The choice sheet with the radio replaced: tapping toggles, and

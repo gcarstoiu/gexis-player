@@ -9,8 +9,9 @@
   that its app keeps a volume of its own.
 -->
 <script>
-  import { active, metadata, volume, fixedOutput, meters, panel, setVolume, showPeppy, hidePeppy, requestIdle, requestStandby, goTo } from '../lib/state.js';
+  import { active, metadata, volume, fixedOutput, meters, panel, setVolume, showPeppy, hidePeppy, requestIdle, requestStandby, requestDashboard, goTo } from '../lib/state.js';
   import SourceMark from '../lib/SourceMark.svelte';
+  import { playToggle } from '../lib/playToggle.svelte.js';
   import { settingValues } from '../lib/settings.js';
   import { openTouchpad } from '../lib/touchpad.js';
 
@@ -63,6 +64,8 @@
     pad = openTouchpad((message) => {
       if (message.t === 'over') overField = !!message.field;
       if (message.t === 'focus' && !message.field) stopTyping();
+      // ADR-0157: a character the player's keyboard layout cannot type.
+      if (message.t === 'untyped') say('Some characters could not be typed on the player');
     });
     return () => {
       pad?.close();
@@ -264,6 +267,17 @@
 
   const shown = $derived(dragging || settling ? local : ($volume?.percent ?? 0));
   const pct = $derived($volume?.muted ? 0 : shown);
+  //: ADR-0101 as amended 2026-10-21: which of the six views the panel shows.
+  const hasDashboard = $derived(!!($settingValues.dashboard_url ?? '').trim() && $settingValues.dashboard_button !== false);
+  const views = $derived(3 + ($meters ? 1 : 0) + (hasDashboard ? 1 : 0) + ($settingValues.idle_enabled === true ? 1 : 0));
+  const showing = $derived(
+    $panel.dashboard?.shown ? 'room'
+      : $panel.idle ? 'idle'
+      : $panel.visualiser ? 'meters'
+      : $active && $panel.lyrics ? 'lyrics'
+      : $active && $panel.now ? 'now'
+      : 'home');
+  const toggle = playToggle(() => $metadata?.transport, () => $active);
   const title = $derived($metadata?.title ?? null);
   const artist = $derived($metadata?.artist ?? null);
 
@@ -424,17 +438,37 @@
   onpointercancel={() => (swipe = null)}
   style:--src-accent={`var(--accent-${$active}, var(--accent-lms))`}
 >
-  <button class="mini__now" type="button" aria-expanded={open}
-    onclick={() => { if (swallowTap) return; open = !open; }}>
+  <!-- **ADR-0101 as amended 2026-10-21 (George, mockup A2, frame 3)**: what
+       is playing, with the panel's screen and play/pause beside it; the six
+       views of the panel in one labelled row, the one it shows marked; the
+       touchpad, only when the sheet is open, between the track and the row
+       (George, 2026-10-21: "between the icon row and the now playing"). -->
+  <div class="mini__head">
+    <button class="mini__now" type="button" aria-expanded={open}
+      onclick={() => { if (swallowTap) return; open = !open; }}>
+      {#if $active}
+        <SourceMark source={$active} size={open ? 22 : 16} color="var(--src-accent)" />
+      {/if}
+      <span class="mini__text">
+        <span class="mini__title">{title ?? ($active ? 'Playing' : 'Nothing playing')}</span>
+        {#if open && artist}<span class="mini__artist">{artist}</span>{/if}
+      </span>
+    </button>
     {#if $active}
-      <SourceMark source={$active} size={open ? 22 : 16} color="var(--src-accent)" />
+      <button class="mini__round mini__round--play" type="button" data-shows={toggle.shows}
+        aria-label={toggle.shows === 'playing' ? 'Pause' : 'Play'} onclick={toggle.toggle}>
+        {#if toggle.shows === 'playing'}
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14" /></svg>
+        {:else}
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10-6.5z" /></svg>
+        {/if}
+      </button>
     {/if}
-    <span class="mini__text">
-      <span class="mini__title">{title ?? ($active ? 'Playing' : 'Nothing playing')}</span>
-      {#if open && artist}<span class="mini__artist">{artist}</span>{/if}
-    </span>
-    <span class="mini__chev" class:is-open={open}></span>
-  </button>
+    <button class="mini__open" type="button" aria-expanded={open} aria-label={open ? 'Close the touchpad' : 'Open the touchpad'}
+      onclick={() => { if (swallowTap) return; open = !open; }}>
+      <span class="mini__chev" class:is-open={open}></span>
+    </button>
+  </div>
 
   {#if touchpad}
     <!-- ADR-0121: a touchpad for the panel, above the slider. -->
@@ -466,53 +500,19 @@
     />
   {/if}
 
-  <!-- ADR-0101 as amended 2026-10-06 (George): **every toggle in one row,
-       icons only, open or not** - opening the sheet adds the touchpad and
-       nothing else. The row stands between the touchpad and the volume, so
-       a sideways stroke that overshoots the pad lands on buttons that want
-       a tap, not on the slider. Now playing is a toggle: up on the panel it
-       minimises to the strip (ADR-0122); down, it brings it up. -->
-  <div class="mini__icons">
-    <button class="mini__icon" type="button" aria-label="Home on the panel" onclick={() => go('home', 'Home')}>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 5l8 6.5M6.5 10v9h11v-9" /></svg>
-    </button>
-    <button
-      class="mini__icon"
-      class:is-on={!!$active && $panel.now}
-      type="button"
-      disabled={!$active}
-      aria-pressed={!!$active && !!$panel.now}
-      aria-label={$panel.now ? 'Minimise Now Playing' : 'Now Playing on the panel'}
-      onclick={() => go($panel.now ? 'minimise' : 'now', 'Now playing')}
-    >
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" /><path d="M10.5 9v6l4.5-3z" /></svg>
-    </button>
-    <button
-      class="mini__icon"
-      class:is-on={!!$active && $panel.lyrics}
-      type="button"
-      disabled={!$active}
-      aria-pressed={!!$active && !!$panel.lyrics}
-      aria-label="Lyrics on the panel"
-      onclick={() => go($panel.lyrics ? 'track' : 'lyrics', 'Lyrics')}
-    >
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h9M5 17h11" /></svg>
-    </button>
-    {#if $meters}
-      <button
-        class="mini__icon"
-        class:is-on={$panel.visualiser}
-        type="button"
-        aria-pressed={$panel.visualiser}
-        aria-label="Visualiser on the panel"
-        onclick={toggleVisualiser}
-      >
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V11M10 19V5M15 19V9M20 19V13" /></svg>
-      </button>
-    {/if}
+  <!-- One view at a time: the mark follows what the panel shows, the
+       dashboard and the idle screen over the rest. Each keeps what its
+       button did: Now playing minimises to the strip when it is up
+       (ADR-0122), the visualiser, the dashboard and the idle screen go
+       down again on a second tap. -->
+  <!-- **ADR-0101 as amended 2026-10-21 (George, mockup D2)**: the panel's
+       views as a dock, its screen off as a switch in their heading. -->
+  <div class="mini__panelhead">
+    <span class="mini__label">Panel</span>
+    <span class="mini__rule"></span>
     <!-- ADR-0135: the panel's screen off, or back on. -->
     <button
-      class="mini__icon"
+      class="mini__pill"
       class:is-on={$panel.standby}
       type="button"
       aria-pressed={$panel.standby}
@@ -520,19 +520,49 @@
       onclick={() => requestStandby(!$panel.standby).catch(() => {})}
     >
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="11" rx="1.5" /><path d="M9 20h6M12 16v4" /></svg>
+      <span>{$panel.standby ? 'Screen on' : 'Screen off'}</span>
     </button>
+  </div>
+  <div class="mini__views" style:--views={views}>
+    <button class="mini__view" class:is-on={showing === 'home'} type="button" aria-pressed={showing === 'home'}
+      aria-label="Home on the panel" onclick={() => go('home', 'Home')}>
+      <span class="mini__face"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 5l8 6.5M6.5 10v9h11v-9" /></svg></span>
+      <span>Home</span>
+    </button>
+    <button class="mini__view" class:is-on={showing === 'now'} type="button" disabled={!$active} aria-pressed={showing === 'now'}
+      aria-label={$panel.now ? 'Minimise Now Playing' : 'Now Playing on the panel'}
+      onclick={() => go($panel.now ? 'minimise' : 'now', 'Now playing')}>
+      <span class="mini__face"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" /><path d="M10.5 9v6l4.5-3z" /></svg></span>
+      <span>Playing</span>
+    </button>
+    <button class="mini__view" class:is-on={showing === 'lyrics'} type="button" disabled={!$active} aria-pressed={showing === 'lyrics'}
+      aria-label="Lyrics on the panel" onclick={() => go($panel.lyrics ? 'track' : 'lyrics', 'Lyrics')}>
+      <span class="mini__face"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h9M5 17h11" /></svg></span>
+      <span>Lyrics</span>
+    </button>
+    {#if $meters}
+      <button class="mini__view" class:is-on={showing === 'meters'} type="button" aria-pressed={showing === 'meters'}
+        aria-label="Visualiser on the panel" onclick={toggleVisualiser}>
+        <span class="mini__face"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V11M10 19V5M15 19V9M20 19V13" /></svg></span>
+        <span>Meters</span>
+      </button>
+    {/if}
+    {#if hasDashboard}
+      <!-- ADR-0156: the room's Home Assistant dashboard. -->
+      <button class="mini__view" class:is-on={showing === 'room'} type="button" aria-pressed={showing === 'room'}
+        aria-label={$panel.dashboard?.shown ? 'Take the dashboard down' : 'Home Assistant dashboard on the panel'}
+        onclick={() => requestDashboard(!$panel.dashboard?.shown).catch((err) => say(`Dashboard: ${err.message}`))}>
+        <span class="mini__face"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z" /></svg></span>
+        <span>Room</span>
+      </button>
+    {/if}
     {#if $settingValues.idle_enabled === true}
-    <!-- Not offered with the idle screen switched off (2026-10-11). -->
-    <button
-      class="mini__icon"
-      class:is-on={$panel.idle}
-      type="button"
-      aria-pressed={$panel.idle}
-      aria-label="Idle screen on the panel"
-      onclick={toggleIdle}
-    >
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 14.5A7.5 7.5 0 0 1 9.5 5 7.5 7.5 0 1 0 19 14.5Z" /></svg>
-    </button>
+      <!-- Not offered with the idle screen switched off (2026-10-11). -->
+      <button class="mini__view" class:is-on={showing === 'idle'} type="button" aria-pressed={showing === 'idle'}
+        aria-label="Idle screen on the panel" onclick={toggleIdle}>
+        <span class="mini__face"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 14.5A7.5 7.5 0 0 1 9.5 5 7.5 7.5 0 1 0 19 14.5Z" /></svg></span>
+        <span>Idle</span>
+      </button>
     {/if}
   </div>
 
@@ -699,42 +729,150 @@
     color: var(--ink-quiet);
   }
   /* One row of equal icon buttons, the width of the sheet. */
-  .mini__icons {
+  .mini__head {
     display: flex;
+    align-items: center;
     gap: 8px;
   }
-  .mini__icon {
+  .mini__head .mini__now {
     flex: 1;
+  }
+  .mini__round,
+  .mini__open {
+    width: 44px;
     height: 44px;
-    border-radius: 12px;
-    border: 1px solid var(--ink-line);
-    background: var(--ink-fill);
-    color: var(--ink-quiet);
+    flex: none;
+    border-radius: 50%;
+    border: 0;
+    padding: 0;
     display: grid;
     place-items: center;
-    padding: 0;
     cursor: pointer;
   }
-  .mini__icon:disabled {
-    opacity: 0.38;
-    cursor: default;
+  .mini__round {
+    background: var(--ink-fill);
+    color: var(--ink);
   }
-  .mini__icon.is-on {
+  .mini__round.is-on {
     background: var(--src-accent);
-    border-color: transparent;
     color: var(--ink-on-accent);
   }
-  .mini__icon svg {
-    width: 22px;
-    height: 22px;
+  .mini__round--play {
+    background: var(--src-accent);
+    color: var(--ink-on-accent);
+  }
+  .mini__open {
+    background: none;
+  }
+  .mini__round svg {
+    width: 20px;
+    height: 20px;
     fill: none;
     stroke: currentColor;
     stroke-width: 2;
     stroke-linecap: round;
     stroke-linejoin: round;
   }
-  .mini__icons + .mini__row {
-    margin-top: 4px;
+  .mini__round--play svg {
+    stroke-width: 2.6;
+  }
+  /* The panel's views as a dock (mockup D2): a round face, its name under
+     it; the one the panel shows outlined and tinted, as the design's
+     selected tiles are (George: "the selection highlight from D1 or D3"). */
+  .mini__panelhead {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .mini__label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+  }
+  .mini__rule {
+    flex: 1;
+    height: 1px;
+    background: var(--ink-line);
+  }
+  .mini__pill {
+    height: 32px;
+    padding: 0 12px 0 10px;
+    border-radius: 999px;
+    border: 1px solid var(--ink-line);
+    background: none;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .mini__pill.is-on {
+    border-color: var(--src-accent);
+    background: color-mix(in srgb, var(--src-accent) 16%, transparent);
+    color: var(--src-accent);
+  }
+  .mini__pill svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .mini__views {
+    display: grid;
+    grid-template-columns: repeat(var(--views, 6), minmax(0, 1fr));
+    gap: 2px;
+  }
+  .mini__view {
+    border: 0;
+    background: none;
+    color: var(--ink);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .mini__view:disabled {
+    opacity: 0.38;
+    cursor: default;
+  }
+  .mini__face {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 1px solid transparent;
+    background: var(--ink-fill);
+    display: grid;
+    place-items: center;
+  }
+  .mini__view.is-on {
+    color: var(--src-accent);
+    font-weight: 700;
+  }
+  .mini__view.is-on .mini__face {
+    border-color: var(--src-accent);
+    background: color-mix(in srgb, var(--src-accent) 16%, transparent);
+  }
+  .mini__view svg {
+    width: 21px;
+    height: 21px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
   .mini__scrim {
     position: fixed;
