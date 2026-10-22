@@ -43,10 +43,18 @@ everything"*), on what Finding 133 left open: sofapi's needles had no level.
    of random bytes, S16_LE 44.1 kHz, S24_3LE and S24_LE 96 kHz, S32_LE 192
    and 384 kHz, plain writes and mmap (`-M`), with readers on the scope's
    FIFOs: every file identical to its input, no error, no assertion.
+4. **A running renderer kept the old chain.** After the update the core
+   rewrote `output.conf` at its start, as it does whenever the file differs;
+   squeezelite - running since the evening before - played a new stream
+   through it and the meter still read zero (95 reads, all 0). Restarted,
+   the same music read 10.6 / 13.1, peaks 24, at Lyrion volume 5. The core's
+   log had said *"renderers pick it up on their next open"*: alsa-lib did not
+   read the file again for a process that had read it once.
 
 ## What changed
 
-`outputs.render` writes `meter → copy → softvol` for both `output` and
-`output_wait` (ADR-0124 as amended). The core compares `output.conf` with
-what it should be at every start and rewrites it, so an update applies it;
-the renderers take it at their next open.
+- `outputs.render` writes `meter → copy → softvol` for both `output` and
+  `output_wait` (ADR-0124 as amended).
+- **A chain rewritten at the core's start restarts the renderers** whose
+  source is on, as a change of output does (ADR-0055 §2): once the card is
+  free, never under something playing.

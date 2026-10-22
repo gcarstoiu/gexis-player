@@ -630,6 +630,8 @@ async def main() -> None:
     # it is read unconditionally further down: with no output at all it was
     # unbound and the core died in a restart loop (code review, 2026-10-12).
     meters_available = False
+    #: Whether `output.conf` was rewritten here, so the renderers read it.
+    chain_rewritten = False
     if chosen_output is None:
         logger.error("outputs: no playback output found at all")
     else:
@@ -652,9 +654,10 @@ async def main() -> None:
         if outputs.write(chosen_output,
                          fixed=volume_mode(settings_store.get(VOLUME_KEY), chosen_output) == FIXED
                          and not standing_in):
+            chain_rewritten = True
             logger.warning(
                 "outputs: output.conf did not match %s and was rewritten; "
-                "renderers pick it up on their next open",
+                "the renderers are restarted once the card is free",
                 chosen_output.label,
             )
         if _squeezelite_env() != squeezelite_env_was:
@@ -3142,6 +3145,24 @@ async def main() -> None:
         await bus.wait_for_disconnect()
 
     asyncio.ensure_future(_reconcile_sources())
+
+    async def _reopen_the_rewritten_chain(card: str) -> None:
+        """**A renderer already running keeps the chain it opened with**
+        (Finding 135): sofapi's squeezelite, running since the evening
+        before, played on through `meter → softvol` after `output.conf` had
+        been rewritten at this core's start, through a stop and a new play -
+        alsa-lib did not read the file again. So the renderers are restarted,
+        as a change of output restarts them (ADR-0055 §2): once the card is
+        free, never under something playing, and after the sources have
+        been made to match their rows."""
+        await asyncio.sleep(5)
+        while await asyncio.to_thread(outputs.card_running, card):
+            await asyncio.sleep(30)
+        logger.info("outputs: restarting the renderers so they read the rewritten output.conf")
+        await _restart_renderers()
+
+    if chain_rewritten and chosen_output is not None:
+        asyncio.ensure_future(_reopen_the_rewritten_chain(chosen_output.card))
     asyncio.ensure_future(_reconcile_debug_logs())
     asyncio.ensure_future(_watch_components())
     asyncio.ensure_future(_bluetooth_setup())
