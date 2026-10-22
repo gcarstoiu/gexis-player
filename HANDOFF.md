@@ -59,6 +59,10 @@ against a local copy, so losing that folder means re-uploading every OS file.
 **Not an issue** (George, 2026-10-20): Squeezelite joining whichever Lyrion server answers first after a restart (Finding 130 point 6). **Open:** George's look at the moon before sunrise. sofapi
 and ShelvesPi run previews of 1.3.1's fixes.
 
+**Both players run one preview since 2026-10-22 07:40: `1.3.1+git48.8c9bfbc`**
+(`preview-1021` with every branch below merged in; George checking). Core
+suite 2627 passed on it, the visualiser's 125 with the device's pygame.
+
 **In flight (2026-10-21), each on its own branch, none merged into `next`
 yet:**
 - `tap-no-flash` (rows: a tap shows only the selection), `peppy-quiet-repaint`
@@ -107,9 +111,10 @@ yet:**
   rotation - at a fifth to a third of the memory; its tap costs 2.6 % of a
   core at 44.1 kHz and 10.4 % at 192 kHz, in the audio process. Adopting it
   would be a project (tap in every chain, state channel, show/hide, fonts, our
-  layers); a one-person project a month old. **Decision for George:** whether
-  to take it further (an ADR first). LESSONS 80: the first results measured
-  our needles at rest.
+  layers); a one-person project a month old. **George, 2026-10-22: stop for
+  now - "Glass is too young now"; remind him at the beginning of 2027 and
+  check it again** (to-do `glass-revisit-2027`). LESSONS 80: the first
+  results measured our needles at rest.
 - **Our visualiser made cheaper (George: *"Then let's do a first"*)** -
   branch `peppy-cheaper` (from `peppy-survive-resize`), Finding 134: one
   present a frame, the tonearm's turn kept, turning parts boxed by their
@@ -117,7 +122,7 @@ yet:**
   *Smooth* 28-46 %; needle and spectrum skins unchanged. In the ShelvesPi
   preview (`preview-1021` at `1.3.1+git31`, with `peppy-refused-no-restart`),
   not yet on sofapi. Left: the needle and spectrum skins (the present itself
-  and the vendored engines' drawing).
+  and the vendored engines' drawing) - George, 2026-10-22: stop here for now.
 - **Open, seen in that test:** sofapi's needles get no level on HDMI 2 - the
   peppyalsa scope's level read zero while the spectrum read small values (at
   Lyrion volume 5; not checked at a normal volume). And ours drew a black box
