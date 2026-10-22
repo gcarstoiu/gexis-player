@@ -739,6 +739,22 @@ def test_a_window_shrunk_under_the_engines_only_clips_what_is_shown(monkeypatch)
     assert pg.display.get_surface().get_at((630, 470))[:3] == (10, 10, 200)
 
 
+def test_a_size_event_at_the_window_s_own_size_leaves_it_alone(monkeypatch):
+    """ShelvesPi, 2026-10-22: every show brought a size event at the size the
+    window already had, and taking the window again took it out of full
+    screen - a black frame between the panel and the meters."""
+    pg, util = _display(monkeypatch, (1480, 320))
+    modes = []
+    real = pg.display.set_mode
+    monkeypatch.setattr(pg.display, "set_mode", lambda *a, **k: modes.append(a) or real(*a, **k))
+    monkeypatch.setattr(pg.display, "get_window_size", lambda: (1480, 320))
+    driver.take_the_window_as_it_is()
+    assert modes == [], "nothing to take again"
+    monkeypatch.setattr(pg.display, "get_window_size", lambda: (640, 480))
+    driver.take_the_window_as_it_is()
+    assert modes and modes[-1][0] == (640, 480), "a new size is still taken at once"
+
+
 def test_a_size_event_takes_the_window_as_it_is_before_anything_draws(monkeypatch):
     pg, util = _display(monkeypatch, (1280, 800))
     taken = []
