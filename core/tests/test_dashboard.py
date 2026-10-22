@@ -98,17 +98,55 @@ async def test_the_panel_a_phone_or_home_assistant_put_it_up_and_take_it_down():
         assert (await client.post("/panel/dashboard/sideways")).status == 404
 
 
-def test_the_visualiser_does_not_come_up_over_the_dashboard():
-    """Decision 3: the visualiser's automatic start does not replace it."""
+def test_the_visualiser_takes_over_from_the_dashboard():
+    """Decision 3 as amended (George, 2026-10-22): "If the user deliberately
+    opens the visualizer then it should take over. Also if the timeout
+    triggers it." A show takes the dashboard down first; standby still
+    keeps the visualiser down."""
+    import asyncio
+
     from gexis_core.peppy import PeppyController, UnattendedPlayback
     from test_standby import FakeScreen
 
-    dashboard, _ = _dashboard()
-    controller = PeppyController(FakeScreen(), UnattendedPlayback(300), blocked=lambda: dashboard.shown)
+    dashboard, published = _dashboard()
+    standby = {"off": False}
+    screen = FakeScreen()
+    controller = PeppyController(screen, UnattendedPlayback(300), blocked=lambda: standby["off"],
+                                 before_show=lambda: dashboard.hide("visualiser"))
     dashboard.show()
-    assert controller.request("show") is False
-    dashboard.hide()
     assert controller.request("show") is True
+    assert dashboard.shown is False and screen.visible, "asked for: the dashboard went down"
+    screen.visible = False
+    dashboard.show()
+    assert asyncio.run(controller.request_async("show")) is True and not dashboard.shown
+    screen.visible = False
+    dashboard.show()
+    standby["off"] = True
+    assert controller.request("show") is False and dashboard.shown, "standby still wins, and nothing changes"
+
+
+async def test_the_timer_s_show_takes_over_from_the_dashboard_too():
+    """The same amendment: the visualiser's automatic start replaces it."""
+    import asyncio
+    import time
+    import types
+
+    from gexis_core.peppy import PeppyController
+    from test_standby import FakeScreen
+
+    dashboard, _ = _dashboard()
+    screen = FakeScreen()
+    timer = types.SimpleNamespace(due=lambda: True, stop_due=lambda: False, _now=time.monotonic,
+                                  attention=lambda: None, stop_after_s=None)
+    controller = PeppyController(screen, timer, tick_s=0.01, before_show=lambda: dashboard.hide("visualiser"))
+    dashboard.show()
+    run = asyncio.ensure_future(controller.run())
+    for _ in range(100):
+        await asyncio.sleep(0.01)
+        if screen.visible:
+            break
+    run.cancel()
+    assert screen.visible and not dashboard.shown
 
 
 async def test_the_phone_input_over_a_frame_is_made_real_by_the_core():

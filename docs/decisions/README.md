@@ -176,7 +176,7 @@ been written properly. **0098 has no record either.**
 | [0153](0153-the-moon-at-night.md) | The moon at night | Accepted 2026-10-19: current weather shows the moon in its real phase between sunset and sunrise |
 | [0154](0154-four-more-weather-icon-sets.md) | Four more weather icon sets | Accepted 2026-10-19: Modern, Futuristic, Photographic, Atmospheric join Solid, Duotone, Neon |
 | [0155](0155-a-sound-system-on-optical.md) | A sound system on optical, through a USB adapter | Accepted 2026-10-20: Squeezelite converts only rates the card lacks, upward; adapter marked Tested |
-| [0156](0156-home-assistant-dashboard-on-the-screen.md) | A Home Assistant dashboard on the screen | Accepted 2026-10-21: one per player, in the panel's page; button, API, schedule; edge tab dismisses |
+| [0156](0156-home-assistant-dashboard-on-the-screen.md) | A Home Assistant dashboard on the screen | Accepted 2026-10-21: one per player, in the panel's page; button, API, schedule; edge tab dismisses. Amended 2026-10-22: the visualiser - asked for or its timeout - takes over from it |
 
 ## Cross-cutting rules
 
