@@ -1557,3 +1557,23 @@ printed them.
 **Rule:** before measuring what something costs, see it doing the work at the
 conditions of the measurement - a still picture of the right screen is not
 that. And copy results back and count them before the source is removed.
+
+**81. Two readings the design predicted** (2026-10-22, Finding 135). On
+sofapi (HDMI, Volume on Software) the visualiser's needles had no level at
+Lyrion volume 5. Finding 116, which put the meter in front of the software
+stage on HDMI on 2026-10-07, had read the meter service at −26 dB and seen
+the needles "near 0", explained in the same sentence as the volume's cut the
+meters are meant to follow (ADR-0057) - only the spectrum's bands were taken
+as proof the music arrived. Feeding a −6 dBFS sine through a private copy of
+the chain, silently, showed the meter reading 1.3 where it reads 9.0 alone:
+ALSA's `type meter` reads the samples its slave holds, and a `softvol` slave
+holds them already cut - so the cut was applied twice, once in the samples and
+once by the meter service. A `copy` between them restored 9.0. Installed,
+the meter still read zero: the core had rewritten `output.conf` at its start
+and logged that the renderers "pick it up on their next open", and
+squeezelite, running since the evening before, had not - restarted, the same
+music read 10.6 / 13.3. Neither belief had been tested; each was what the
+design predicted.
+**Rule:** a result that matches the prediction still needs the case that
+would tell the two stories apart - a signal the design says must arrive uncut,
+a renderer that must have reloaded - before it is taken as the design working.

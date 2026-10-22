@@ -59,9 +59,20 @@ against a local copy, so losing that folder means re-uploading every OS file.
 **Not an issue** (George, 2026-10-20): Squeezelite joining whichever Lyrion server answers first after a restart (Finding 130 point 6). **Open:** George's look at the moon before sunrise. sofapi
 and ShelvesPi run previews of 1.3.1's fixes.
 
-**Both players run one preview since 2026-10-22 07:40: `1.3.1+git48.8c9bfbc`**
-(`preview-1021` with every branch below merged in; George checking). Core
-suite 2627 passed on it, the visualiser's 125 with the device's pygame.
+**Both players run one preview since 2026-10-22 08:44:** `preview-1021` with
+every branch below merged in - gexis-ui `1.3.1+git48`, gexis-system `git52`,
+gexis-core and gexis-player `git58` (George checking). Core suite 2628 passed
+on it, the visualiser's 126 with the device's pygame.
+
+- **Fixed on `meter-before-softvol` (Finding 135, ADR-0124 amended, LESSONS
+  81): with software volume the meters read the music after the cut** -
+  `meter → copy → softvol` now; and a chain rewritten at the core's start
+  restarts the renderers once the card is free (a running squeezelite never
+  read the new file). Checked on sofapi end to end.
+- **Fixed on `spectrum-box-follows` (Finding 136): a black box after a skin
+  change** - PeppySpectrum kept the first spectrum skin's box. Reproduced on
+  ShelvesPi (started on MarschalSpectrum, then Marschal S+M: 61 % black),
+  gone with the fix (6 %, the skin's own shadow).
 
 **In flight (2026-10-21), each on its own branch, none merged into `next`
 yet:**
@@ -123,10 +134,6 @@ yet:**
   preview (`preview-1021` at `1.3.1+git31`, with `peppy-refused-no-restart`),
   not yet on sofapi. Left: the needle and spectrum skins (the present itself
   and the vendored engines' drawing) - George, 2026-10-22: stop here for now.
-- **Open, seen in that test:** sofapi's needles get no level on HDMI 2 - the
-  peppyalsa scope's level read zero while the spectrum read small values (at
-  Lyrion volume 5; not checked at a normal volume). And ours drew a black box
-  over part of the spectrum on `102G5_Marschal S+M` (1480 x 320).
 
 **Next: Phase 18, a Home Assistant dashboard on the screen**
 (`ph-ha-dashboard`, ADR-0156, added 2026-10-21; George: *"let's build
