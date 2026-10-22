@@ -49,7 +49,7 @@ volume (Finding 135), the spectrum box after a skin change (Finding 136),
 dimmed bar controls, rows without a flash, the mini player on the phone's
 keyboard, no password-save offer. `CHANGELOG.md` on `next` has the notes as
 George approved them. CI: *Tests* passed on `release-1.4.0`, `next` and the
-tag; the tag's *API description* run was still in progress at hand-off.
+tag, and the tag's *API description* run too.
 
 **PR #81 (`release-1.4.0` → `main`) waits for George's merge** - never
 Claude's. Once he has merged it (`docs/tech/updates-and-releases.md` §4,
