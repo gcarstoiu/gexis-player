@@ -59,9 +59,11 @@ against a local copy, so losing that folder means re-uploading every OS file.
 **Not an issue** (George, 2026-10-20): Squeezelite joining whichever Lyrion server answers first after a restart (Finding 130 point 6). **Open:** George's look at the moon before sunrise. sofapi
 and ShelvesPi run previews of 1.3.1's fixes.
 
-**Both players run one preview since 2026-10-22 12:57:** `preview-1021` with
-every branch below merged in - gexis-ui `1.3.1+git48`, gexis-system `git60`,
-gexis-core and gexis-player `git62` (George checking). Core suite 2630 passed
+**Both players run one preview since 2026-10-22 13:10:** `preview-1021` with
+every branch below merged in - gexis-ui and gexis-player `1.3.1+git64`,
+gexis-system `git60`, gexis-core `git62` (George checking). The phone page's
+viewport now has `interactive-widget=resizes-content` (`phone-sheet`), so the
+mini player sits on the keyboard - for George to check on his phone. Core suite 2630 passed
 on it, the visualiser's 127 with the device's pygame.
 
 - **The visualiser takes over from the dashboard** (George, 2026-10-22: asked
