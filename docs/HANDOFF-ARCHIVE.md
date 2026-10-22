@@ -7408,3 +7408,130 @@ EDID in the tests, not again on the device. **Open:** it came up at 800x480 on
 the first start after the boot that switched to it (Chromium stored 1004x580 in a
 1024x600 work area: not full-screen), then full-screen on two restarts in a
 row. A first start after a screen change may still miss full-screen.
+
+## 2026-10-22: 1.3.1 on Stable, the preview on both players and the branches that made 1.4.0 (moved from HANDOFF verbatim when 1.4.0 was released)
+
+**Current release: 1.3.1, on Stable** (2026-10-21; Stable serial 8,
+Testing serial 53, both signatures good from the release key, read back from
+GitHub; the public `gexis-player.img.xz` decompresses to the checked image).
+Image `image/deploy/2026-10-20-gexis-player-v1.3.1.img`, 123 checks, 978
+skins clean; parts `ours-2a97557a07d1`, `skins-67e037cab00f`,
+`rpi-7325dbec7a52`, `debian-256b0ff5ed7a`. A fix release: the idle countdown
+re-arms after the visualiser, standby wakes on a tap read from the kernel and
+reads the real screen at start (ADR-0135 amended), the kiosk forgets
+Chromium's stored window at every start, and the HMTECH 7" and 10.1" (both
+without touch) are tested. A screen's few seconds back from standby are the
+screen's own (the bar ~3 s; George: "Keep it as is"), in the release notes and
+the FAQ. **PR #80** was merged by George; post-merge steps and the clean-up are
+done. sofapi runs `1.3.0+git16`, ShelvesPi `1.3.0+git11` - previews of what
+1.3.1 carries; they move to 1.3.1 by the update. GitHub reports 6 Dependabot
+alerts on `main` (2 high, 4 moderate), all `vite` (the UI's build tool, not
+on the player; fixed in 8.3.3), raised 20-21 Oct.
+
+**Deferred until a bug report** (George, 2026-10-21; from 1.3.1): the HMTECH 10.1" came up at 800x480 on the first start
+after the boot that switched to it (Chromium stored 1004x580 in a 1024x600
+work area: not full-screen), then full-screen on two restarts in a row. A
+first start after a screen change may still miss full-screen. The 10.1" was
+checked by its EDID in the tests, not again on the device under the new
+standby.
+
+**Release build output lives in `~/.local/share/gexis-release-out`**: in each
+release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
+(excluded in `.git/info/exclude`). `reuse.py` reuses a published file only
+against a local copy, so losing that folder means re-uploading every OS file.
+
+**Not an issue** (George, 2026-10-20): Squeezelite joining whichever Lyrion server answers first after a restart (Finding 130 point 6). **Open:** George's look at the moon before sunrise. sofapi
+and ShelvesPi run previews of 1.3.1's fixes.
+
+**Both players run one preview since 2026-10-22 13:10:** `preview-1021` with
+every branch below merged in - gexis-ui and gexis-player `1.3.1+git64`,
+gexis-system `git60`, gexis-core `git62` (George checking). The phone page's
+viewport now has `interactive-widget=resizes-content` (`phone-sheet`), so the
+mini player sits on the keyboard - for George to check on his phone. Core suite 2630 passed
+on it, the visualiser's 127 with the device's pygame.
+
+- **The visualiser takes over from the dashboard** (George, 2026-10-22: asked
+  for or by its timeout; ADR-0156 decision 3 amended, `ph-ha-dashboard`):
+  checked on sofapi with George's dashboard up, which was put back after.
+- **No black frame when the visualiser opens** (`peppy-survive-resize`): a
+  size event at the window's own size no longer takes the window again (it
+  left full screen) - 3 shows in 4 had a black frame, 0 in 20 after.
+- **Open: the visualiser button on the bar sometimes does nothing** (George,
+  21 and 22 Oct). Not the tray's 2 s self-hide (George tapped at once); a
+  tap whose finger moves ~12 px gives no click in Chromium (reproduced
+  headless), not yet caught on George's finger: three recorded taps all
+  worked. ShelvesPi's kiosk runs with a local DevTools port and a touch
+  recorder in the page until the next reboot (`/run` drop-in
+  `gexis-kiosk.service.d/zz-debug.conf`) - read `window.__rec` when it fails
+  again, then remove it.
+
+- **Fixed on `meter-before-softvol` (Finding 135, ADR-0124 amended, LESSONS
+  81): with software volume the meters read the music after the cut** -
+  `meter → copy → softvol` now; and a chain rewritten at the core's start
+  restarts the renderers once the card is free (a running squeezelite never
+  read the new file). Checked on sofapi end to end.
+- **Fixed on `spectrum-box-follows` (Finding 136): a black box after a skin
+  change** - PeppySpectrum kept the first spectrum skin's box. Reproduced on
+  ShelvesPi (started on MarschalSpectrum, then Marschal S+M: 61 % black),
+  gone with the fix (6 %, the skin's own shadow).
+
+**In flight (2026-10-21), each on its own branch, none merged into `next`
+yet:**
+- `tap-no-flash` (rows: a tap shows only the selection), `peppy-quiet-repaint`
+  (the repaint after a show painted out of sight; check-skins holds the level,
+  978 pixel-exact; the skin packs' check left out of their version, with a
+  floor at `96b8a42`), `album-track-artist` (a track's own artist when not the
+  album's). All three together on **ShelvesPi as one preview**
+  (`preview-1021`, `1.3.1+git11.8d12629`), George testing.
+- `ph-ha-dashboard` (Phase 18): core, panel, buttons, schedule, docs,
+  Finding 132; on **sofapi** (`1.3.1+git12.96d8129`), shown and its failure
+  message checked by screenshot with a framable page. Not yet tried: the
+  phone's and the tray's buttons, the schedule, standby over it, a real Home
+  Assistant dashboard (George has no address yet; he declined changes to his
+  Home Assistant - the player changes nothing there, ADR-0156 decision 8).
+  A throwaway Home Assistant runs on R2D2 (`docker rm -f gexis-test-ha` when
+  done).
+- **Fixed, waiting for George's test: the visualiser crashed when its window
+  was resized** (SEGV on both players 10-16 to 10-21; sofapi's photo of a
+  640x480 box after standby). Branch `peppy-survive-resize`: the engines draw
+  on a canvas, the window is only copied to; a raise asks for full screen;
+  a hide with no window counts as hidden. Checked: sofapi six cases (show,
+  a forced resize, standby cycles) and ShelvesPi five, same process, no
+  crash, the whole skin each time; check-skins 978 clean. Cost: +3 % of a
+  core with nothing playing; not yet measured with music.
+- **Phone typing over the dashboard (ADR-0157 amended)**: key presses on the
+  compositor's layout (US on the image); checked exact on sofapi with a
+  stand-in login (`ph-ha-dashboard`, `phone-sheet`). Chromium's password
+  manager off by policy (gexis-system). Not yet tried by George with his
+  Home Assistant login.
+- **Open: the visualiser button on ShelvesPi refused several taps** (George,
+  21 Oct morning: nothing happened). The page received the taps (`/touch`)
+  but sent no `/peppy/show`; cause not found by reading. Next: reproduce with
+  injected taps (`tools/panel-touch.py`) once George is off the bar. The bar's
+  touch controller also dropped off USB at 07:56 and 08:15 (about 1 s each).
+  Seen once that evening (19:48:47): `wlrctl focus` found no window just after
+  `fullscreen` acted on it, and the core's restart showed it 2.4 s later; not
+  reproduced in ten tries (after skin changes, standby cycles, from maximised).
+- **Fixed on `peppy-refused-no-restart`, not yet previewed: a show refused for
+  standby restarted the visualiser** (ShelvesPi, 2026-10-21, reproduced): with
+  the only screen off the new driver could not open a display and stayed
+  gone. The core now restarts it only when a show was tried and found no
+  window. Core suite 2606 passed.
+- **Glass (foonerd) measured on ShelvesPi and sofapi** (Finding 133, the
+  thorough run George asked for): cheaper than ours on every skin measured -
+  2.1-3.8 times on ShelvesPi at matched work, 2.3-4.2 against our *Smooth*
+  rotation - at a fifth to a third of the memory; its tap costs 2.6 % of a
+  core at 44.1 kHz and 10.4 % at 192 kHz, in the audio process. Adopting it
+  would be a project (tap in every chain, state channel, show/hide, fonts, our
+  layers); a one-person project a month old. **George, 2026-10-22: stop for
+  now - "Glass is too young now"; remind him at the beginning of 2027 and
+  check it again** (to-do `glass-revisit-2027`). LESSONS 80: the first
+  results measured our needles at rest.
+- **Our visualiser made cheaper (George: *"Then let's do a first"*)** -
+  branch `peppy-cheaper` (from `peppy-survive-resize`), Finding 134: one
+  present a frame, the tonearm's turn kept, turning parts boxed by their
+  reach. ShelvesPi, same work: turntables and tapes 20-33 % cheaper, on
+  *Smooth* 28-46 %; needle and spectrum skins unchanged. In the ShelvesPi
+  preview (`preview-1021` at `1.3.1+git31`, with `peppy-refused-no-restart`),
+  not yet on sofapi. Left: the needle and spectrum skins (the present itself
+  and the vendored engines' drawing) - George, 2026-10-22: stop here for now.
