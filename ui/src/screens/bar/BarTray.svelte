@@ -26,7 +26,7 @@
 
   //: `armsAt`: before this (performance.now()), a tray that came down by
   //: itself takes no touch on its level or mute (App.svelte, VOLUME_ARM_MS).
-  let { open, armsAt = 0, volume, active, onclose, onexternal, onactivity, onsettled, onhome, onvisualisation, rootless = false } = $props();
+  let { open, armsAt = 0, volume, active, onclose, onexternal, onactivity, onsettled, onhome, onvisualisation, ondashboard = null, rootless = false } = $props();
 
   const press = pressing();
 
@@ -135,6 +135,13 @@
       onhome?.();
     });
   }
+  //: ADR-0156: the Home Assistant dashboard, when an address is set.
+  function goDashboard() {
+    press.act(() => {
+      onclose?.();
+      ondashboard?.();
+    });
+  }
   function goVisualiser() {
     press.act(() => {
       onclose?.();
@@ -180,6 +187,12 @@
     <button class="btn" class:is-pressed={press.is('viz')} type="button" aria-label="Visualization"
       onpointerdown={() => press.down('viz')} onpointerup={press.up} onpointercancel={press.up} onclick={goVisualiser}>
       <span class="i-meter"><i style="height:12px"></i><i style="height:22px"></i><i style="height:16px"></i><i style="height:8px"></i></span>
+    </button>
+  {/if}
+  {#if ondashboard}
+    <button class="btn" class:is-pressed={press.is('dash')} type="button" aria-label="Home Assistant dashboard"
+      onpointerdown={() => press.down('dash')} onpointerup={press.up} onpointercancel={press.up} onclick={goDashboard}>
+      <svg class="i-dash" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11 12 4.5 20 11v8.5H14.5V14h-5v5.5H4Z" /></svg>
     </button>
   {/if}
   <span class="divider"></span>
@@ -324,6 +337,7 @@
   }
   .btn:active,
   .btn.is-pressed { transform: scale(0.95); }
+  .i-dash { width: 26px; height: 26px; fill: none; stroke: rgba(233, 238, 242, 0.85); stroke-width: 2; stroke-linejoin: round; }
   .btn--home {
     width: 64px;
     height: 64px;

@@ -655,6 +655,27 @@ it wakes a dark screen, so the countdown never runs under the black cover. Measu
 the page with the output off; the screen shows its own "No signal" for about
 10 s some 30 s in.
 
+## A Home Assistant dashboard (ADR-0156)
+
+`dashboard.py`. `Dashboard` holds whether it is up and who asked (`asked`
+or `schedule`), published as `panel.dashboard = {shown, by}`; a person's
+`show` over the schedule's makes it theirs. `DashboardSchedule.tick()`, every
+15 s, publishes `panel.dashboard_time` - inside one of `dashboard_times`, with
+`dashboard_schedule` on, an address set and the player not headless (the
+standby times' `in_standby_time`) - and takes down a dashboard the schedule
+put up when its time ends. `POST /panel/dashboard/{show,hide}` (`?by=schedule`
+from the panel) and `GET /panel/dashboard`, which runs the idle page's probe
+(`idle_page.probe`) on `dashboard_url` and adds `message`, the sentence for
+`reason` (`dashboard.explain`). A visualiser show - a person's or the
+timer's - takes it down first (`PeppyController(before_show=...)`, ADR-0156
+as amended 2026-10-22), and the dashboard's own `show` takes the visualiser
+down. The panel draws it
+(`DashboardScreen.svelte`, an `<iframe>` at z-index 11, under the volume
+drawer); at the idle timeout inside a dashboard time it asks for the
+dashboard instead of the idle screen, and when the schedule takes it down the
+idle screen follows at once. Home Assistant's side - framing and trusted
+networks - is the user's (decision 8, Finding 132).
+
 ## Other players on the network (ADR-0136)
 
 Each player announces `_gexis._tcp` on port 8090

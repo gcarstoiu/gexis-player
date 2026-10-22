@@ -79,6 +79,7 @@ class PeppyScreen:
             "WAYLAND_DISPLAY": wayland_display,
         }
         self.visible = False
+        self.no_window = False
         #: One raise or lower at a time from the loop: with the settle and
         #: wlrctl off it, a touch could otherwise lower the window before a
         #: raise already under way puts it up.
@@ -92,6 +93,9 @@ class PeppyScreen:
             logger.warning("peppy: wlrctl not found; the Peppy screen cannot be raised")
 
     def _run(self, action: str) -> bool:
+        #: Whether the last call found no window to act on - the driver has
+        #: gone (it is restarted on the next show), not a failure of wlrctl.
+        self.no_window = False
         if self._wlrctl is None:
             return False
         try:
@@ -107,6 +111,7 @@ class PeppyScreen:
             return False
         if result.returncode != 0:
             logger.info("peppy: %s found no window (%s)", action, result.stderr.decode().strip())
+            self.no_window = True
             return False
         return True
 
@@ -121,13 +126,28 @@ class PeppyScreen:
         except OSError as exc:
             logger.info("peppy: could not write %s (%s)", self._shown_path, exc)
 
+    def _raise(self) -> bool:
+        """**Full screen on the panel, then raised** (George's photo, sofapi,
+        2026-10-21: the visualiser in a 640 x 480 box in the panel's corner).
+        Display standby turns the panel's output off (ADR-0135), and labwc
+        moves every window to the output left - on a player with a TV on its
+        other port, the TV's size - and does not move them back; a window
+        already maximised stays as it is. Full screen puts it back over the
+        output it is on and changes nothing for one that already fills it; a
+        minimised window stays minimised until the focus raises it (both
+        checked on sofapi). The resize this can cause no longer crashes the
+        driver: it draws on a canvas of its own (gexis-peppy-driver,
+        `draw_on_a_canvas`)."""
+        self._run("fullscreen")
+        return self._run("focus")
+
     def show(self) -> bool:
         """Blocks for the settle and a wlrctl call: on the event loop, use
         `show_async`."""
         self._tell(True)
         if self._settle_s:
             time.sleep(self._settle_s)
-        return self._shown(self._run("focus"))
+        return self._shown(self._raise())
 
     def hide(self) -> bool:
         """Blocks for a wlrctl call: on the event loop, use `hide_async`."""
@@ -144,7 +164,7 @@ class PeppyScreen:
             self._tell(True)
             if self._settle_s:
                 await asyncio.sleep(self._settle_s)
-            return self._shown(await asyncio.to_thread(self._run, "focus"))
+            return self._shown(await asyncio.to_thread(self._raise))
 
     async def hide_async(self) -> bool:
         async with self._turn:
@@ -162,7 +182,10 @@ class PeppyScreen:
         return False
 
     def _hidden(self, minimised: bool) -> bool:
-        if minimised:
+        # **No window is not shown** (sofapi, 2026-10-21): a driver that died
+        # left `visible` set, the phone's Meters lit and every later hide
+        # failing on a window that was not there.
+        if minimised or self.no_window:
             self._tell(False)
             self.visible = False
             logger.info("peppy: hidden")
@@ -277,8 +300,15 @@ class PeppyController:
         tick_s: float = 5.0,
         has_levels=None,
         blocked=None,
+        before_show=None,
     ) -> None:
         self._screen = screen
+        #: **What a show takes down first** (ADR-0156 as amended 2026-10-22,
+        #: George: "If the user deliberately opens the visualizer then it
+        #: should take over. Also if the timeout triggers it"): the Home
+        #: Assistant dashboard. Called on every show that is allowed - a
+        #: person's or the timer's - before the window is raised.
+        self._before_show = before_show or (lambda: None)
         #: **ADR-0135: not while the screen is in standby.** Drawn on an
         #: output that is off, it would only cost the CPU.
         self._blocked = blocked or (lambda: False)
@@ -292,6 +322,10 @@ class PeppyController:
         #: five minutes, which is the black-screen-that-owns-every-touch
         #: shape of LESSONS case 15.
         self._has_levels = has_levels or (lambda: True)
+        #: Whether the last show was refused here - standby, the dashboard,
+        #: no levels - rather than tried. A refused show is no sign the
+        #: window is gone, so it is no reason to start the driver again.
+        self.refused = False
         self._track: tuple | None = None
         self._now = timer._now
         # (position, duration, playing, when): the last position a renderer
@@ -377,22 +411,28 @@ class PeppyController:
         Blocks: on the event loop, use `request_async`."""
         if not self._may(action):
             return False
+        if action == "show":
+            self._before_show()
         return self._screen.show() if action == "show" else self._screen.hide()
 
     async def request_async(self, action: str) -> bool:
         """`request` without holding the event loop."""
         if not self._may(action):
             return False
+        if action == "show":
+            self._before_show()
         return await (self._screen.show_async() if action == "show" else self._screen.hide_async())
 
     def _may(self, action: str) -> bool:
         self._timer.attention()
+        self.refused = True
         if action == "show" and self._blocked():
             logger.info("peppy: not showing - the screen is in standby")
             return False
         if action == "show" and not self._has_levels():
             logger.info("peppy: not showing - this output feeds it no levels")
             return False
+        self.refused = False
         return True
 
     async def run(self) -> None:
@@ -412,6 +452,7 @@ class PeppyController:
                 # included (Finding 125 #14, 2026-10-14).
                 self._auto_raising = True
                 try:
+                    self._before_show()
                     await self._screen.show_async()
                 finally:
                     self._auto_raising = False

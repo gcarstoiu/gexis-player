@@ -60,7 +60,7 @@ refused rather than converted, because nothing in the chain is a `plug`
 |---|---|---|
 | `pcm.output` | `type meter` over `hw:sndrpihifiberry`, with the peppyalsa scope | go-librespot, bluealsa-aplay, and (through `default`) Plexamp |
 | `pcm.output_wait` | The same chain, but the slave is opened with `nonblock 0` so a busy DAC makes the open *wait* instead of failing (ADR-0095) | squeezelite only |
-| `gexis_softvol`, `gexis_softvol_wait` | **With Volume on Software (ADR-0124, ADR-0127):** `meter → softvol → card`; on HDMI `meter → softvol → plug → card` (the meter there since 2026-10-07, Finding 116; HDMI on Fixed is `plug → card` with no meter). One control for both, `Gexis Playback Volume` (`Gexis` to amixer), -90..0 dB in 0.25 dB steps; at 0 dB it passes every sample unchanged (Finding 115). Before any renderer starts, `gexis-softvol-restore.service` (ADR-0140) makes the control and writes the saved level, so a renderer resuming after a power cut never plays through it at the 0 dB ALSA makes it with; the core makes it again at start and sets the same level (`softvol_boot.start_level`), parks the card's own control at 0 dB only after that level reads back, and gives the card the level back when Hardware is chosen again. On every change of output the core closes its mixer handles and frees libasound's cached configuration (`volume.forget_mixers`): a running process otherwise keeps resolving `output` to the card it first saw | every renderer, through `output` / `output_wait` |
+| `gexis_softvol`, `gexis_softvol_wait` | **With Volume on Software (ADR-0124, ADR-0127):** `meter → copy → softvol → card`; on HDMI `meter → copy → softvol → plug → card` (the meter there since 2026-10-07, Finding 116; HDMI on Fixed is `plug → card` with no meter). One control for both, `Gexis Playback Volume` (`Gexis` to amixer), -90..0 dB in 0.25 dB steps; at 0 dB it passes every sample unchanged (Finding 115). Before any renderer starts, `gexis-softvol-restore.service` (ADR-0140) makes the control and writes the saved level, so a renderer resuming after a power cut never plays through it at the 0 dB ALSA makes it with; the core makes it again at start and sets the same level (`softvol_boot.start_level`), parks the card's own control at 0 dB only after that level reads back, and gives the card the level back when Hardware is chosen again. On every change of output the core closes its mixer handles and frees libasound's cached configuration (`volume.forget_mixers`): a running process otherwise keeps resolving `output` to the card it first saw | every renderer, through `output` / `output_wait` |
 | `ctl.output` | The DAC's control interface, so `amixer -D output` and the core reach the hardware mixer by name | gexis-core |
 | `pcm_scope.peppyalsa` | Level and 30-band spectrum analysis, written to FIFOs in `/run/gexis` | loaded inside whichever renderer has the device open |
 
@@ -319,7 +319,7 @@ toggle into ADR-0046's Output mode).
 | Mode | What happens | Claim |
 |---|---|---|
 | **Hardware** (default; was *Variable*) | The output's own volume control sets the level, on the scale read for that card (ADR-0117): on the DAC2 HD, `DAC Playback Volume`, 240 steps of 0.5 dB. Samples reach the card unmodified. | Bit-perfect up to the DAC chip |
-| **Software** | `meter → softvol → card` (HDMI: `meter → softvol → plug → card`); the card's own control parked at 0 dB. On an output with no control of its own, `Settings.restrict` greys Hardware and `Settings.value` answers Software, the next option (`volume_mode()` in `softvol_boot.py` for start-up, shared by the core and the boot step). | Bit-perfect at 100 % only (Finding 115) |
+| **Software** | `meter → copy → softvol → card` (HDMI: `meter → copy → softvol → plug → card`; the `copy` so the meter reads the music before the cut, Finding 135); the card's own control parked at 0 dB. On an output with no control of its own, `Settings.restrict` greys Hardware and `Settings.value` answers Software, the next option (`volume_mode()` in `softvol_boot.py` for start-up, shared by the core and the boot step). | Bit-perfect at 100 % only (Finding 115) |
 | **Fixed** | The output's control is set to its own 0 dB (240 on the DAC2 HD) and nothing may write it; the amplifier sets the level. Volume controls are hidden, with a padlock and a reason, not greyed (ADR-0046). | Nothing in the signal path is touched |
 
 Switching to Fixed while playing waits until playback stops, because a jump to
@@ -526,8 +526,8 @@ The chains `outputs.render()` writes:
 | Output and mode | Chain |
 |---|---|
 | Hardware | `meter → card` |
-| Software | `meter → softvol → card` (`Gexis`, -90..0 dB, 361 steps of 0.25 dB) |
-| HDMI on Software | `meter → softvol → plug → card` |
+| Software | `meter → copy → softvol → card` (`Gexis`, -90..0 dB, 361 steps of 0.25 dB) |
+| HDMI on Software | `meter → copy → softvol → plug → card` |
 | HDMI on Fixed | `plug → card`, no meter |
 
 HDMI accepts only IEC958 subframes, so no renderer can open it raw and a
@@ -620,13 +620,43 @@ flowchart LR
   lowers the meter once that raise is done (Finding 125 #14), instead of
   being lost with the meter left over the panel; a raise the user asked for
   is not lowered that way, since the tap that asked for it also sends a touch.
+  A show asked for while the window cannot be found starts `gexis-peppy`
+  again and shows it once it is up (`_peppy_again`, within 25 s); a show the
+  core refuses itself - the screen in standby, the dashboard up, an output
+  with no levels - starts nothing (2026-10-21: on a player with one screen, a
+  driver started while that screen was off could not open a display and
+  stayed gone).
+  **The engines draw on a canvas of their own, never on the window**
+  (`draw_on_a_canvas`, 2026-10-21): every `pygame.display.update` copies what
+  changed to the window and presents it, and a smaller pack is copied
+  centred on black (ADR-0111). Display standby turns the panel's output off
+  and labwc moves windows to the output left (on sofapi a 640 x 480 TV), which
+  replaces the window's surface; drawing into the old one segfaulted the
+  driver. A size event now takes the window's new surface at once
+  (`take_the_window_as_it_is`) - only when the size changed: taken again at
+  its own size, it left full screen and showed a black frame on every show, and the core asks for full screen before
+  each raise, which puts a moved window back over the panel. The copy costs
+  about 3 % of a core with nothing playing (13 % to 16 %, sofapi, one skin).
+  **One present a frame** (Finding 134): the copy is made at once, but SDL's
+  present - about 1.75 ms of processor for any rectangle on a Pi 4, 30-44 %
+  of the driver's time - waits for `present_the_frame` at the end of the
+  frame, the rectangles merged; the meters, the ticker, the turning parts and
+  the spectrum each used to present on their own. A record or a reel is
+  repainted in the box its visible pixels reach (`reach`), not its picture's
+  diagonal, and its sixty turned frames are kept cut to that box; the
+  tonearm's last turn is kept, not made again in every repaint.
   **The whole frame is painted again when the window comes back** (Finding
   131): PeppyMeter paints a skin's full picture only when it starts, then only
   the needles' boxes, so a window raised without its picture showed little
-  but the meter faces. The driver repaints everything from black - the meter
-  restarted, every layer set afresh - on any window event pygame reports
-  (logged as `peppy: window ...`) and 0.6 s and 2 s after the shown flag goes
-  up (`Repaints`, `Rotation.refresh`). Every skin change starts from black too.
+  but the meter faces. The driver repaints everything from black on any
+  window event pygame reports (logged as `peppy: window ...`) and 0.6 s and
+  2 s after the shown flag goes up (`Repaints`, `Rotation.refresh`), **out of
+  sight and shown once**: the meter's parts are put back as its start found
+  them, it is restarted and its needles run one frame to the music, the
+  spectrum's bars are drawn where they stand, and the text and art go over
+  it before the one whole-window update (2026-10-21: repaints shown frame by
+  frame - needles at rest, bars from nothing, no text - read as flicker).
+  Every skin change starts from black too.
 - **What it draws besides levels.** The core writes
   `/run/gexis/nowplaying.json` (`peppy_metadata.py`) for title, artist,
   artwork and times, and `/run/gexis/visualisation.json` (`skins.py`) for the

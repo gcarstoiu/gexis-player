@@ -78,6 +78,8 @@ from gexis_core.fanart import Fanart
 from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, Queue, TrackMetadata
 from gexis_core import connections, discovery, hardware_report, hardware_reports, personalise, settings_migrations, settling, updates, wired
+from gexis_core.dashboard import Dashboard, DashboardSchedule, explain as explain_dashboard
+from gexis_core.panel_input import PanelInput
 from gexis_core.standby import Schedule, Standby
 from gexis_core.settings import SettingsStore
 # ADR-0127's `output_mode` row and ADR-0124's remembered software level, kept
@@ -630,6 +632,8 @@ async def main() -> None:
     # it is read unconditionally further down: with no output at all it was
     # unbound and the core died in a restart loop (code review, 2026-10-12).
     meters_available = False
+    #: Whether `output.conf` was rewritten here, so the renderers read it.
+    chain_rewritten = False
     if chosen_output is None:
         logger.error("outputs: no playback output found at all")
     else:
@@ -652,9 +656,10 @@ async def main() -> None:
         if outputs.write(chosen_output,
                          fixed=volume_mode(settings_store.get(VOLUME_KEY), chosen_output) == FIXED
                          and not standing_in):
+            chain_rewritten = True
             logger.warning(
                 "outputs: output.conf did not match %s and was rewritten; "
-                "renderers pick it up on their next open",
+                "the renderers are restarted once the card is free",
                 chosen_output.label,
             )
         if _squeezelite_env() != squeezelite_env_was:
@@ -1711,6 +1716,13 @@ async def main() -> None:
     async def idle_page() -> dict:
         return await probe_idle_page(settings.value("idle_url") or "", idle_session)
 
+    # ADR-0156: the same check for the Home Assistant dashboard, with the
+    # sentence the panel shows when it cannot be (decision 8: what the user
+    # has to set in Home Assistant, never set from here).
+    async def dashboard_page() -> dict:
+        found = await probe_idle_page(settings.value("dashboard_url") or "", idle_session)
+        return {**found, "message": explain_dashboard(found.get("reason"))}
+
     # ADR-0047 §2a. Both share the idle screen's session: one screen, three
     # things it asks for, and a fourth connection pool would be a pool for
     # something that runs once every fifteen minutes.
@@ -2585,6 +2597,11 @@ async def main() -> None:
                "pointer_style": None, "listenbrainz_token": None,
                # Text size: read by the panel as it draws (George, 2026-10-14).
                "text_size": None,
+               # ADR-0156: read where they are used - the address by the
+               # dashboard's check, the button by the panel, the times by
+               # the dashboard's schedule each tick.
+               "dashboard_url": None, "dashboard_button": None,
+               "dashboard_schedule": None, "dashboard_times": None,
                # ADR-0118 B: read by the menus route and the panel's home.
                "lms_extended_nav": None,
                # ADR-0149: read by the panel, which shows the waiting home in
@@ -3142,6 +3159,24 @@ async def main() -> None:
         await bus.wait_for_disconnect()
 
     asyncio.ensure_future(_reconcile_sources())
+
+    async def _reopen_the_rewritten_chain(card: str) -> None:
+        """**A renderer already running keeps the chain it opened with**
+        (Finding 135): sofapi's squeezelite, running since the evening
+        before, played on through `meter → softvol` after `output.conf` had
+        been rewritten at this core's start, through a stop and a new play -
+        alsa-lib did not read the file again. So the renderers are restarted,
+        as a change of output restarts them (ADR-0055 §2): once the card is
+        free, never under something playing, and after the sources have
+        been made to match their rows."""
+        await asyncio.sleep(5)
+        while await asyncio.to_thread(outputs.card_running, card):
+            await asyncio.sleep(30)
+        logger.info("outputs: restarting the renderers so they read the rewritten output.conf")
+        await _restart_renderers()
+
+    if chain_rewritten and chosen_output is not None:
+        asyncio.ensure_future(_reopen_the_rewritten_chain(chosen_output.card))
     asyncio.ensure_future(_reconcile_debug_logs())
     asyncio.ensure_future(_watch_components())
     asyncio.ensure_future(_bluetooth_setup())
@@ -3191,6 +3226,24 @@ async def main() -> None:
         except Exception:  # noqa: BLE001 - a screen check is no reason to stop
             logger.exception("standby: could not read the screen at start")
 
+    # ADR-0156: a Home Assistant dashboard on the screen. It takes the
+    # visualiser down when it comes up - one screen - and keeps it from
+    # coming up by itself while it is there (decision 3).
+    def _dashboard_published(shown: bool, by: str | None) -> None:
+        state_store.set_panel(dashboard={"shown": shown, "by": by})
+        if shown and peppy_screen.visible:
+            asyncio.ensure_future(peppy_screen.hide_async())
+
+    dashboard = Dashboard(publish=_dashboard_published)
+    # ADR-0157: the phone's taps and typing made real over a framed page,
+    # in the panel's session - the same one the visualiser's wlrctl reaches.
+    panel_input = PanelInput(runtime_dir=config.peppy_runtime_dir,
+                             wayland_display=config.peppy_wayland_display)
+    state_store.set_panel(dashboard={"shown": False, "by": None}, dashboard_time=False)
+    dashboard_schedule = DashboardSchedule(
+        dashboard, lambda key: settings.value(key),
+        lambda inside: state_store.set_panel(dashboard_time=inside))
+
     standby_schedule = Schedule(
         standby, lambda key: settings.value(key),
         lambda: state_store.state.metadata.transport == "playing",
@@ -3206,6 +3259,9 @@ async def main() -> None:
         has_levels=lambda: state_store.state.meters,
         # ADR-0135: nor one that is in standby.
         blocked=lambda: standby.off,
+        # ADR-0156 as amended 2026-10-22: a show - asked for or the timer's -
+        # takes the Home Assistant dashboard down and comes up in its place.
+        before_show=lambda: dashboard.hide("visualiser"),
     )
 
     # **ADR-0055 §5.** An output with no volume control takes the choice
@@ -4203,6 +4259,9 @@ async def main() -> None:
         settings=settings,
         peppy=peppy,
         standby=standby,
+        dashboard=dashboard,
+        dashboard_page=dashboard_page,
+        panel_input=panel_input,
         # Phase 7 (ADR-0038): the same server, and the same player, the
         # renderer adapter talks to.
         library=library,
@@ -4536,6 +4595,8 @@ async def main() -> None:
         setup_network.watch(),
         # ADR-0135: the screen off at the owner's standby times.
         standby_schedule.run(),
+        # ADR-0156: the dashboard's times, in place of the idle screen.
+        dashboard_schedule.run(),
         # ADR-0135 as amended 2026-10-20: the screen as it really is at start
         # - a standby outlives a core restart; this core would call it on.
         _reconcile_standby(),

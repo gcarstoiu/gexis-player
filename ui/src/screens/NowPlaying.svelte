@@ -28,7 +28,7 @@
   // replaced by settings button... Tapping in the artist does nothing."* An
   // absent `onartist` is what makes the line inert, so nothing here can offer
   // a page that is not reachable.
-  let { active, metadata, volume, controls = [], available = [], shuffle = null, repeat = null, queue = null, onvolume, onvisualisation, onhome, onartist,
+  let { active, metadata, volume, controls = [], available = [], shuffle = null, repeat = null, queue = null, onvolume, onvisualisation, ondashboard = null, onhome, onartist,
     //: George, 2026-10-14: the release title opens the album page.
     onalbum, onminimise = null, rootless = false } = $props();
   const artistLinked = $derived(!!onartist);
@@ -691,6 +691,21 @@
               <span class="i-meter">
                 <i style="height:12px"></i><i style="height:22px"></i><i style="height:16px"></i><i style="height:8px"></i>
               </span>
+            </button>
+          {/if}
+          {#if ondashboard}
+            <!-- ADR-0156: the Home Assistant dashboard, when an address is set. -->
+            <button
+              class="btn"
+              class:is-pressed={press.is('dash')}
+              type="button"
+              aria-label="Home Assistant dashboard"
+              onpointerdown={() => press.down('dash')}
+              onpointerup={press.up}
+              onpointercancel={press.up}
+              onclick={() => press.act(ondashboard)}
+            >
+              <svg class="i-dash" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11 12 4.5 20 11v8.5H14.5V14h-5v5.5H4Z" /></svg>
             </button>
           {/if}
         </div>
@@ -1834,4 +1849,5 @@
   .similar__chip--link:active {
     opacity: 0.7;
   }
+  .i-dash { width: 26px; height: 26px; fill: none; stroke: rgba(233, 238, 242, 0.85); stroke-width: 2; stroke-linejoin: round; }
 </style>
