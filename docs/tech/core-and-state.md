@@ -676,6 +676,25 @@ dashboard instead of the idle screen, and when the schedule takes it down the
 idle screen follows at once. Home Assistant's side - framing and trusted
 networks - is the user's (decision 8, Finding 132).
 
+**The phone's touchpad and keyboard over the dashboard are real input**
+(ADR-0157). A page from another site is closed to the panel's page, so the
+touchpad's made-up events and inserted text cannot reach it. Over an
+`<iframe>` marked `data-real-input` the panel (`lib/PanelPointer.svelte`,
+`isRealInputFrame` in `lib/touchpad.js`) sends the phone's tap, text and keys
+to `POST /panel/input` instead - `{kind: "tap", x, y}` as fractions of the
+screen, `{kind: "text", text}` (1-500 characters), `{kind: "key", key}`
+(Backspace, Enter, Tab); 400 for anything else, 503 when the core has no
+panel input.
+`panel_input.py` (`PanelInput`) makes them through `/dev/uinput` in the
+panel's session, as a finger and a USB keyboard would: a tap as a touch on a
+virtual touchscreen (`gexis-phone-touch`, held 50 ms), text as key presses
+on a virtual keyboard (`gexis-phone-keys`, 12 ms apart), each character found
+as a key with its Shift or AltGr on the compositor's own layout (libxkbcommon
+through ctypes, with labwc's `XKB_DEFAULT_*`; none set on the image, so US). A
+character the layout lacks is left out and the answer says so (`done: false`); the phone then
+shows a note (`untyped`). The devices are made at the first use and given a
+second to settle.
+
 ## Other players on the network (ADR-0136)
 
 Each player announces `_gexis._tcp` on port 8090

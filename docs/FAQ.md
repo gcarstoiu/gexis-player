@@ -283,9 +283,10 @@ Home Assistant 2026.10 or later, turn off *Send X-Frame-Options* under
 restart*, and keep that page open until Home Assistant is back - otherwise it
 rolls the change back after five minutes. A login page inside the dashboard
 instead means Home Assistant does not trust the player yet: add the player's
-address to *trusted networks*, or sign in once with a USB keyboard plugged
-into the player. The phone's keyboard does not reach Home Assistant's login:
-its page is another site's, and the phone types only into the player's own.
+address to *trusted networks*, or sign in once: from the phone page (its
+touchpad taps the fields, its keyboard types into them) or with a USB
+keyboard plugged into the player. Home Assistant then keeps the player signed
+in.
 
 **When does the idle screen appear?**
 Only with *Settings → Display → Idle screen* switched on - it is off on a new

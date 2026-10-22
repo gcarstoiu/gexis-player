@@ -298,11 +298,12 @@ two things are set there, by whoever runs it:
 2. **Let the player in.** Either add the player's network to Home
    Assistant's *trusted networks* (`auth_providers` in `configuration.yaml`,
    with `allow_bypass_login: true`), so the dashboard opens without a login;
-   or sign in once on the panel with a **USB keyboard** plugged into the
-   player, tapping the fields with a finger - Home Assistant then keeps the
-   player signed in. The phone's keyboard and touchpad cannot type or tap
-   inside Home Assistant's page: it is another site's, closed to the
-   player's.
+   or sign in once on the panel - Home Assistant then keeps the player signed
+   in. To sign in, tap the fields with a finger and type on a USB keyboard
+   plugged into the player, or use the phone page: its touchpad taps inside
+   the dashboard where the pointer is, and its keyboard types there. The
+   phone types the characters the player's keyboard layout has (a US layout
+   unless set otherwise); one it lacks is left out, and the phone says so.
 
 Home Assistant's own header and side bar show unless the dashboard or the
 user's profile in Home Assistant hides them. On a bar (1480 × 320), a
