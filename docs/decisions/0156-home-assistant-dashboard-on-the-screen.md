@@ -46,8 +46,13 @@ player's hands. Read from Home Assistant's documentation, not tried here.
 3. **While it is up:**
    - **playback is untouched**: music goes on, and starting, stopping or
      changing tracks does not take it down;
-   - **it stays until dismissed**: the idle timeout, the visualiser's
-     automatic start and the takeover animation do not replace it;
+   - **it stays until dismissed**: the idle timeout and the takeover
+     animation do not replace it;
+   - **the visualiser takes over** (amended 2026-10-22, George: *"If the user
+     deliberately opens the visualizer then it should take over. Also if the
+     timeout triggers it."*): a show asked for, or the visualiser's own
+     start after its timeout, takes the dashboard down and comes up in its
+     place. Found when a phone's Meters did nothing while it was up;
    - **every touch is the dashboard's**: no layer over it.
    - **Over it** still: the volume drawer on a change from elsewhere, and the
      setup, update and screen-confirm screens.

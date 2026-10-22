@@ -273,10 +273,12 @@ dashboard*.
   `POST /panel/dashboard/show` on the player). With *Dashboard instead of the
   idle screen* on, it comes up where the idle screen would during the times
   set.
-- **While it is up**, the music goes on; nothing takes the dashboard down -
-  not a new track, the idle screen or the visualiser - until it is dismissed.
-  The volume drawer still shows over it, and display standby still turns the
-  screen off.
+- **While it is up**, the music goes on; a new track or the idle screen does
+  not take the dashboard down. The volume drawer still shows over it, and
+  display standby still turns the screen off.
+- **The visualiser takes over from it**: opened from the phone, or coming on
+  by itself after the visualiser's timeout while music plays, it takes the
+  dashboard down and shows in its place.
 - **To dismiss it:** the tab on the right edge of the screen, the phone's
   button, or `POST /panel/dashboard/hide`. A dashboard the schedule put up
   goes when its time ends, and the idle screen follows.

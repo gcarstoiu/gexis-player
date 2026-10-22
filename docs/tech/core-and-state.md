@@ -666,9 +666,10 @@ standby times' `in_standby_time`) - and takes down a dashboard the schedule
 put up when its time ends. `POST /panel/dashboard/{show,hide}` (`?by=schedule`
 from the panel) and `GET /panel/dashboard`, which runs the idle page's probe
 (`idle_page.probe`) on `dashboard_url` and adds `message`, the sentence for
-`reason` (`dashboard.explain`). While it is up the visualiser's automatic
-start is blocked (`PeppyController(blocked=...)`, beside standby), and a
-person's `show` takes the visualiser down. The panel draws it
+`reason` (`dashboard.explain`). A visualiser show - a person's or the
+timer's - takes it down first (`PeppyController(before_show=...)`, ADR-0156
+as amended 2026-10-22), and the dashboard's own `show` takes the visualiser
+down. The panel draws it
 (`DashboardScreen.svelte`, an `<iframe>` at z-index 11, under the volume
 drawer); at the idle timeout inside a dashboard time it asks for the
 dashboard instead of the idle screen, and when the schedule takes it down the

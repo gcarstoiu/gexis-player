@@ -300,8 +300,15 @@ class PeppyController:
         tick_s: float = 5.0,
         has_levels=None,
         blocked=None,
+        before_show=None,
     ) -> None:
         self._screen = screen
+        #: **What a show takes down first** (ADR-0156 as amended 2026-10-22,
+        #: George: "If the user deliberately opens the visualizer then it
+        #: should take over. Also if the timeout triggers it"): the Home
+        #: Assistant dashboard. Called on every show that is allowed - a
+        #: person's or the timer's - before the window is raised.
+        self._before_show = before_show or (lambda: None)
         #: **ADR-0135: not while the screen is in standby.** Drawn on an
         #: output that is off, it would only cost the CPU.
         self._blocked = blocked or (lambda: False)
@@ -404,12 +411,16 @@ class PeppyController:
         Blocks: on the event loop, use `request_async`."""
         if not self._may(action):
             return False
+        if action == "show":
+            self._before_show()
         return self._screen.show() if action == "show" else self._screen.hide()
 
     async def request_async(self, action: str) -> bool:
         """`request` without holding the event loop."""
         if not self._may(action):
             return False
+        if action == "show":
+            self._before_show()
         return await (self._screen.show_async() if action == "show" else self._screen.hide_async())
 
     def _may(self, action: str) -> bool:
@@ -441,6 +452,7 @@ class PeppyController:
                 # included (Finding 125 #14, 2026-10-14).
                 self._auto_raising = True
                 try:
+                    self._before_show()
                     await self._screen.show_async()
                 finally:
                     self._auto_raising = False

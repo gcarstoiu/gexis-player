@@ -3257,9 +3257,11 @@ async def main() -> None:
         ),
         # ADR-0055 §6: nothing raises a screen this output cannot feed.
         has_levels=lambda: state_store.state.meters,
-        # ADR-0135: nor one that is in standby; ADR-0156: nor over the
-        # Home Assistant dashboard.
-        blocked=lambda: standby.off or dashboard.shown,
+        # ADR-0135: nor one that is in standby.
+        blocked=lambda: standby.off,
+        # ADR-0156 as amended 2026-10-22: a show - asked for or the timer's -
+        # takes the Home Assistant dashboard down and comes up in its place.
+        before_show=lambda: dashboard.hide("visualiser"),
     )
 
     # **ADR-0055 §5.** An output with no volume control takes the choice
