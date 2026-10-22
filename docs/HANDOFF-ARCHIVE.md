@@ -7535,3 +7535,23 @@ yet:**
   preview (`preview-1021` at `1.3.1+git31`, with `peppy-refused-no-restart`),
   not yet on sofapi. Left: the needle and spectrum skins (the present itself
   and the vendored engines' drawing) - George, 2026-10-22: stop here for now.
+
+## 2026-10-22: PR #81 and the steps after its merge (moved from HANDOFF verbatim once they were done)
+
+**PR #81 (`release-1.4.0` → `main`) waits for George's merge** - never
+Claude's. Once he has merged it (`docs/tech/updates-and-releases.md` §4,
+step 5, then `docs/ROUTINE-CLEANUP.md`):
+- merge `origin/main` into `docs` and into `next`, push both;
+- delete the merged branches on GitHub and locally: `release-1.4.0`,
+  `album-track-artist`, `bar-controls-dimmed`, `meter-before-softvol`,
+  `peppy-cheaper`, `peppy-quiet-repaint`, `peppy-refused-no-restart`,
+  `peppy-survive-resize`, `ph-ha-dashboard`, `phone-sheet`, `preview-1021`,
+  `spectrum-box-follows`, `tap-no-flash` (all are in `next`; check with
+  `git merge-base --is-ancestor <b> origin/main` first);
+- remove their worktrees (`~/projects/gexis-player-{artist,barctl,cheaper,
+  dash,meter,preview,refused,repaint,resize,sheet,spectrum,tap}`) and the
+  release worktree `~/projects/gexis-player-r140`;
+- the routine clean-up; tick `rel-1-4-0` on the to-do list; mark Phase 18
+  in the phases doc and the wiki Roadmap as George decides (show him first).
+- Promotion to Stable is George's call, later; the README's "current
+  release" line changes only then.
