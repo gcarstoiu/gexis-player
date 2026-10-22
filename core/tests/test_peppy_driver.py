@@ -15,6 +15,8 @@ import types
 import pytest
 from pathlib import Path
 
+import pytest
+
 DRIVER = (
     Path(__file__).parents[2]
     / "image/stage-gexis/05-peppy/files/gexis-peppy-driver.py"
@@ -394,6 +396,49 @@ def test_the_newest_whole_frame_is_read_however_the_sizes_went_before():
     finally:
         _os.close(read_fd)
         _os.close(write_fd)
+
+
+def test_the_spectrum_s_own_box_follows_each_skin(tmp_path, monkeypatch):
+    """ShelvesPi, 2026-10-22: started on MarschalSpectrum (its spectrum at
+    240,65, 1149x148) and changed to Marschal S+M (741x129 at 393,36), the
+    first box was painted black over the new skin. The engine had taken
+    `util.screen_rect` once, when it was made."""
+    pg = pytest.importorskip("pygame")
+    if not hasattr(pg, "Rect"):
+        pytest.skip("pygame here is a stand-in")
+    monkeypatch.setattr(driver, "pygame", pg)
+    monkeypatch.setattr(driver, "SPECTRUM_DIR", tmp_path)
+    (tmp_path / "config.txt").write_text("[current]\nspectrum = x\nbase.folder = /old\nspectrum.folder = 1480x320\n")
+    names = ["AVAILABLE_SPECTRUM_NAMES", "BASE_FOLDER", "PIPE_SIZE", "SCREEN_HEIGHT", "SCREEN_WIDTH", "SIZE",
+             "SPECTRUM_FOLDER", "SPECTRUM_X", "SPECTRUM_Y"]
+    monkeypatch.setitem(sys.modules, "spectrumconfigparser", types.SimpleNamespace(**{n: n for n in names}))
+    monkeypatch.setattr(driver, "select_spectrum_section", lambda *a: None)
+    places = {"Marschal1": (240, 65), "Marschal2": (393, 36)}
+    built = []
+
+    class Engine:
+        def __init__(self):
+            self.config = {"SIZE": 20}
+            self.bounding_box = self.content = pg.Rect(240, 65, 1149, 148)   # the first skin's
+            self.config_parser = types.SimpleNamespace(get_spectrum_configs=lambda: [
+                {"SPECTRUM_X": places[self.config["AVAILABLE_SPECTRUM_NAMES"][0]][0],
+                 "SPECTRUM_Y": places[self.config["AVAILABLE_SPECTRUM_NAMES"][0]][1]}])
+
+        def init_spectrums(self):
+            built.append(tuple(self.bounding_box))
+
+        set_background = set_bars = set_reflections = set_toppings = set_foreground = init_variables = lambda self: None
+
+    state = driver.SpectrumState()
+    state.spectrum = Engine()
+    state.util = types.SimpleNamespace(screen_rect=pg.Rect(240, 65, 1149, 148))
+    state.follow({"spectrum.name": "Marschal2", "spectrum.size": "741,129"})
+    assert state.active
+    assert tuple(state.spectrum.bounding_box) == (393, 36, 741, 129) == tuple(state.util.screen_rect)
+    assert state.spectrum.content == state.spectrum.bounding_box
+    assert built == [(393, 36, 741, 129)], "the backdrops are made for the new box"
+    state.follow({"spectrum.name": "Marschal1", "spectrum.size": "1149,148"})
+    assert tuple(state.spectrum.bounding_box) == (240, 65, 1149, 148)
 
 
 def test_updates_and_a_skin_change_take_one_lock():

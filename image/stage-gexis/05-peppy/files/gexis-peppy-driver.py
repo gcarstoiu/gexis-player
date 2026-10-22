@@ -992,6 +992,15 @@ class SpectrumState:
                 width,
                 height,
             )
+            # **The engine's own box too** (ShelvesPi, 2026-10-22): it took
+            # `util.screen_rect` once, when it was made, for the first skin
+            # with a spectrum - and kept it. A skin with its spectrum
+            # elsewhere then had that first box painted black over it after
+            # a change (Marschal S+M after MarschalSpectrum, the default:
+            # 240,65 1149x148 over a 741x129 panel at 393,36), and backdrops
+            # of a colour or a gradient were sized to it.
+            spectrum.bounding_box = self.util.screen_rect.copy()
+            spectrum.content = spectrum.bounding_box
             # Rebuild the images and geometry, but not the data source: that
             # would open a second reader on the pipe.
             spectrum.init_spectrums()
