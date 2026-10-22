@@ -806,15 +806,22 @@ def render(output: Output, plug: bool, tuning: Tuning = Tuning(), widen: bool = 
         card_wait = (f"{{ type plug slave.pcm {{ type hw card {output.card} nonblock 0 }} }}" if plug
                      else _widened(output.card, wait=True) if widen
                      else f"{{ type hw card {output.card} nonblock 0 }}")
+        #
+        # **A `copy` between the meter and the software stage** (Finding
+        # 135): ALSA's meter reads the samples its slave holds, and a
+        # `softvol` slave holds them already scaled - the visualiser saw the
+        # volume's cut, and then the meter service's half of it again; at a
+        # low volume the needles had nothing. `copy` keeps a buffer of its
+        # own with the music as it arrives, byte for byte (Finding 135).
         head = f'''pcm.output {{
     type meter
-    slave.pcm "gexis_softvol"
+    slave.pcm {{ type copy slave.pcm "gexis_softvol" }}
     scopes.0 peppyalsa
 }}
 {_softvol("gexis_softvol", card, output.card)}'''
         wait = f'''pcm.output_wait {{
     type meter
-    slave.pcm "gexis_softvol_wait"
+    slave.pcm {{ type copy slave.pcm "gexis_softvol_wait" }}
     scopes.0 peppyalsa
 }}
 {_softvol("gexis_softvol_wait", card_wait, output.card)}'''
