@@ -627,7 +627,8 @@ flowchart LR
   and labwc moves windows to the output left (on sofapi a 640 x 480 TV), which
   replaces the window's surface; drawing into the old one segfaulted the
   driver. A size event now takes the window's new surface at once
-  (`take_the_window_as_it_is`), and the core asks for full screen before
+  (`take_the_window_as_it_is`) - only when the size changed: taken again at
+  its own size, it left full screen and showed a black frame on every show, and the core asks for full screen before
   each raise, which puts a moved window back over the panel. The copy costs
   about 3 % of a core with nothing playing (13 % to 16 %, sofapi, one skin).
   **The whole frame is painted again when the window comes back** (Finding

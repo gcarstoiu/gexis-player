@@ -1043,9 +1043,19 @@ def take_the_window_as_it_is() -> None:
     once, before anything draws: after a resize the old one is gone, and
     pygame keeps the display surface object - the canvas's copies land in
     the new one (checked: the same object, drawn through after the call)."""
-    if pygame.display.get_surface() is None:
+    surface = pygame.display.get_surface()
+    if surface is None:
         return
     size = pygame.display.get_window_size()
+    # **Not at the size it already has** (ShelvesPi, 2026-10-22: "a bit of a
+    # flash when opening the visualizer"). Every show brings a size event at
+    # the window's own size; taking the window again then took it out of the
+    # full screen the core had just asked for, and a black frame came
+    # between the panel and the meters - 3 shows in 4, about 80 ms. Left
+    # alone at its size: none in 14 shows, and a standby cycle after drew
+    # the whole skin in the same process.
+    if size == surface.get_size():
+        return
     if size[0] > 0 and size[1] > 0:
         pygame.display.set_mode(size, pygame.NOFRAME)
         pygame.display.get_surface().fill((0, 0, 0))
