@@ -51,23 +51,10 @@ keyboard, no password-save offer. `CHANGELOG.md` on `next` has the notes as
 George approved them. CI: *Tests* passed on `release-1.4.0`, `next` and the
 tag, and the tag's *API description* run too.
 
-**PR #81 (`release-1.4.0` → `main`) waits for George's merge** - never
-Claude's. Once he has merged it (`docs/tech/updates-and-releases.md` §4,
-step 5, then `docs/ROUTINE-CLEANUP.md`):
-- merge `origin/main` into `docs` and into `next`, push both;
-- delete the merged branches on GitHub and locally: `release-1.4.0`,
-  `album-track-artist`, `bar-controls-dimmed`, `meter-before-softvol`,
-  `peppy-cheaper`, `peppy-quiet-repaint`, `peppy-refused-no-restart`,
-  `peppy-survive-resize`, `ph-ha-dashboard`, `phone-sheet`, `preview-1021`,
-  `spectrum-box-follows`, `tap-no-flash` (all are in `next`; check with
-  `git merge-base --is-ancestor <b> origin/main` first);
-- remove their worktrees (`~/projects/gexis-player-{artist,barctl,cheaper,
-  dash,meter,preview,refused,repaint,resize,sheet,spectrum,tap}`) and the
-  release worktree `~/projects/gexis-player-r140`;
-- the routine clean-up; tick `rel-1-4-0` on the to-do list; mark Phase 18
-  in the phases doc and the wiki Roadmap as George decides (show him first).
-- Promotion to Stable is George's call, later; the README's "current
-  release" line changes only then.
+**PR #81 was merged by George** (2026-10-22); `main` is merged into `docs`
+and `next`, the merged branches and worktrees are gone, and the routine
+clean-up ran. Promotion to Stable is George's call, later; the README's
+"current release" line changes only then.
 
 **Both players run the preview `preview-1021`** (since 2026-10-22 13:10):
 gexis-ui and gexis-player `1.3.1+git64`, gexis-system `git60`, gexis-core
@@ -135,7 +122,7 @@ in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-10-21, after 1.3.1** (/home 227 -> 232 GB free); due again once PR #81 is merged.
+2026-10-22, after 1.4.0** (/home 220 -> 231 GB free).
 
 ## Phases
 
