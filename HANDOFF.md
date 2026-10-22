@@ -190,6 +190,12 @@ MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
 
 The full list, with how each was found, is in the archive (2026-10-12 block).
 
+- **The release tag goes on the release-notes commit, nothing after it**
+  (1.4.0, 2026-10-22): a package's version is the last commit that touched it,
+  and the notes are core's last change - a documents fix committed after them
+  and tagged built core as `1.3.1+git67`. A fix found after the notes goes in
+  *before* them (reorder the unpushed commits), then the tag.
+
 **Building**
 - **Clear space with `make prune`, never `make clean`**: `clean` destroys the
   warm pi-gen stages (~9 GB; a cold build is ~40 min against ~15).
