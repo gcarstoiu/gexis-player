@@ -59,10 +59,25 @@ against a local copy, so losing that folder means re-uploading every OS file.
 **Not an issue** (George, 2026-10-20): Squeezelite joining whichever Lyrion server answers first after a restart (Finding 130 point 6). **Open:** George's look at the moon before sunrise. sofapi
 and ShelvesPi run previews of 1.3.1's fixes.
 
-**Both players run one preview since 2026-10-22 08:44:** `preview-1021` with
-every branch below merged in - gexis-ui `1.3.1+git48`, gexis-system `git52`,
-gexis-core and gexis-player `git58` (George checking). Core suite 2628 passed
-on it, the visualiser's 126 with the device's pygame.
+**Both players run one preview since 2026-10-22 12:57:** `preview-1021` with
+every branch below merged in - gexis-ui `1.3.1+git48`, gexis-system `git60`,
+gexis-core and gexis-player `git62` (George checking). Core suite 2630 passed
+on it, the visualiser's 127 with the device's pygame.
+
+- **The visualiser takes over from the dashboard** (George, 2026-10-22: asked
+  for or by its timeout; ADR-0156 decision 3 amended, `ph-ha-dashboard`):
+  checked on sofapi with George's dashboard up, which was put back after.
+- **No black frame when the visualiser opens** (`peppy-survive-resize`): a
+  size event at the window's own size no longer takes the window again (it
+  left full screen) - 3 shows in 4 had a black frame, 0 in 20 after.
+- **Open: the visualiser button on the bar sometimes does nothing** (George,
+  21 and 22 Oct). Not the tray's 2 s self-hide (George tapped at once); a
+  tap whose finger moves ~12 px gives no click in Chromium (reproduced
+  headless), not yet caught on George's finger: three recorded taps all
+  worked. ShelvesPi's kiosk runs with a local DevTools port and a touch
+  recorder in the page until the next reboot (`/run` drop-in
+  `gexis-kiosk.service.d/zz-debug.conf`) - read `window.__rec` when it fails
+  again, then remove it.
 
 - **Fixed on `meter-before-softvol` (Finding 135, ADR-0124 amended, LESSONS
   81): with software volume the meters read the music after the cut** -
