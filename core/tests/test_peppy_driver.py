@@ -15,8 +15,6 @@ import types
 import pytest
 from pathlib import Path
 
-import pytest
-
 DRIVER = (
     Path(__file__).parents[2]
     / "image/stage-gexis/05-peppy/files/gexis-peppy-driver.py"
@@ -403,6 +401,8 @@ def test_the_spectrum_s_own_box_follows_each_skin(tmp_path, monkeypatch):
     240,65, 1149x148) and changed to Marschal S+M (741x129 at 393,36), the
     first box was painted black over the new skin. The engine had taken
     `util.screen_rect` once, when it was made."""
+    import pytest
+
     pg = pytest.importorskip("pygame")
     if not hasattr(pg, "Rect"):
         pytest.skip("pygame here is a stand-in")
