@@ -6,6 +6,33 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.4.0 — 22 October 2026
+
+### New
+
+- A Home Assistant dashboard on the screen. Set its address in Settings → Display → Home Assistant dashboard, then put it up with the house button on Now Playing, in the bar's pull-down controls or on the phone page. It stays until it is dismissed with the tab on its right edge or from the phone, and the music goes on underneath. It can also come up in place of the idle screen at set times.
+- From the phone, the touchpad and keyboard work inside the dashboard as well: taps and typing reach Home Assistant's own page, for example to sign in.
+- The phone page's mini player is redesigned: the screen's views in one row of round buttons with the current one marked, Screen off beside the Panel heading, and the touchpad between the track and the views.
+- Album pages show a track's own artist under its title when it differs from the album's, for example a featured artist.
+- Turntable and tape skins use noticeably less processor time.
+
+### Fixed
+
+- The visualiser no longer stops when the screen it is on changes, for example after display standby on a player with two screens.
+- Opening the visualiser no longer shows a brief black flash, and its first seconds no longer flicker.
+- The visualiser opens over the Home Assistant dashboard when asked for, or when it starts by itself.
+- Asking for the visualiser while the screen is in standby no longer leaves it unable to start afterwards.
+- With software volume (as on HDMI), the meters show the music again: at a low volume the needles barely moved or not at all.
+- After a change of visualiser skin, part of the picture is no longer left black.
+- On the bars, previous, next, shuffle and repeat are shown dimmed when they cannot be used for the current track, rather than hidden.
+- Tapping a row in the library and Lyrion lists no longer flashes.
+- With the phone's keyboard open, the mini player sits directly on the keyboard.
+- The browser's offer to save a password no longer appears on the screen.
+
+### Good to know
+
+- Home Assistant has to allow its pages to be shown inside another page before the dashboard can appear. The manual says where to set it; the player changes nothing in Home Assistant.
+
 ## 1.3.1 — 20 October 2026
 
 ### New
