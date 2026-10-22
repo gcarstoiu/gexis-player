@@ -417,7 +417,8 @@ def test_software_volume_puts_softvol_after_the_meter_on_a_dac():
     out = outputs.with_software_volume(outputs.Output(card="IQaudIODAC", label="IQaudIO Pi-DAC PRO", control="Digital"))
     conf = outputs.render(out, False)
     meter = conf.index("pcm.output {")
-    assert 'slave.pcm "gexis_softvol"' in conf[meter:conf.index("}", meter)], "the meter sees the music as it arrives"
+    assert 'slave.pcm { type copy slave.pcm "gexis_softvol" }' in conf[meter:conf.index("\n}", meter)], \
+        "the meter sees the music as it arrives - through a copy, not the scaled samples (Finding 135)"
     assert 'type softvol\n    slave.pcm "hw:IQaudIODAC"' in conf
     assert 'control { name "Gexis Playback Volume" card IQaudIODAC }' in conf
     assert "gexis_softvol_wait" in conf and "nonblock 0" in conf, "squeezelite's waiting open has the same stage"
@@ -429,7 +430,8 @@ def test_software_volume_goes_in_front_of_plug_on_hdmi_with_the_meter_first():
     arrive; the meter straight over `plug` (HDMI on Fixed) still never."""
     out = outputs.with_software_volume(outputs.Output(card="vc4hdmi0", label="HDMI 1", control=None))
     conf = outputs.render(out, True)
-    assert conf.startswith('pcm.output {\n    type meter\n    slave.pcm "gexis_softvol"')
+    assert conf.startswith('pcm.output {\n    type meter\n    slave.pcm { type copy slave.pcm "gexis_softvol" }')
+    assert 'slave.pcm { type copy slave.pcm "gexis_softvol_wait" }' in conf
     assert 'type softvol\n    slave.pcm { type plug slave.pcm "hw:vc4hdmi0" }' in conf
     assert 'slave.pcm { type plug slave.pcm { type hw card vc4hdmi0 nonblock 0 } }' in conf
     fixed = outputs.render(outputs.Output(card="vc4hdmi0", label="HDMI 1", control=None), True)
