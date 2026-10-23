@@ -3041,9 +3041,10 @@ stored Software), DSD through the adapter.
 Hosyond 7" DSI touch panel, 800 x 480, in bedroompi. ADR-0158 accepted the
 same day (George's five decisions) and built on `ph-dsi`; on bedroompi the
 panel, its 180° rotation, standby by the backlight and the brightness row
-work (George at the panel). Open: the four-corner touch check, a receiver
-or TV on HDMI beside it (criterion 2), and a freshly flashed card
-(criterion 1).
+work (George at the panel), and so does touch at the four corners. George
+decided on 2026-10-23 that criteria 1 (a freshly flashed card) and 2 (a
+receiver or TV on HDMI beside the panel) will not be tested. Left: a second
+DSI screen he has; if that leaves nothing open, the phase closes.
 
 **Added 2026-10-19** (George: *"And then after this it will be dsi display
 support, fit similar reasons"* - as with the optical adapter, a screen to
