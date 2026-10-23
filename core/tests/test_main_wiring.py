@@ -239,9 +239,11 @@ def test_rotating_finds_the_screen_in_use_by_the_name_settings_shows():
 def test_a_screen_chosen_in_settings_is_applied_on_the_port_it_is_on():
     """ADR-0109 (George, 2026-10-12): a choice was always written for
     HDMI-A-1, so a screen on the second port lost its mode, touch and
-    standby the moment it was chosen."""
+    standby the moment it was chosen. ADR-0158: through `connector_for`,
+    which puts a DSI model on DSI and anything else where `connector_now`
+    finds the screen (its behaviour: test_screen_apply)."""
     choose = _closure("_choose_screen")
-    assert "screen_apply.connector_now()" in choose
+    assert "screen_apply.connector_for(model)" in choose
 
 
 def test_fixed_on_an_output_with_no_control_writes_nothing():

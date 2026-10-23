@@ -514,14 +514,18 @@
       {
         "key": "brightness",
         "type": "number",
-        "label": "Brightness",
-        "marks": "N",
-        "note": null,
+        "label": "Screen brightness",
+        "marks": "R",
+        "note": "How bright the screen is. Applies at once. Only on a screen whose backlight the player can set, such as a DSI panel.",
         "min": 10,
         "max": 100,
+        "step": 10,
         "unit": "%",
-        "default": null,
-        "surfaced": false
+        "default": 100,
+        "onlyWhen": [
+          "headless",
+          false
+        ]
       },
       {
         "key": "time_display",

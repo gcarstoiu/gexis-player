@@ -80,6 +80,7 @@ from gexis_core.model import BLANK_METADATA, Queue, TrackMetadata
 from gexis_core import connections, discovery, hardware_report, hardware_reports, personalise, settings_migrations, settling, updates, wired
 from gexis_core.dashboard import Dashboard, DashboardSchedule, explain as explain_dashboard
 from gexis_core.panel_input import PanelInput
+from gexis_core import standby as standby_module
 from gexis_core.standby import Schedule, Standby
 from gexis_core.settings import SettingsStore
 # ADR-0127's `output_mode` row and ADR-0124's remembered software level, kept
@@ -2468,7 +2469,9 @@ async def main() -> None:
                "screen_port": lambda: not settings_store.get("headless")
                and len(screen_detect.ports()) >= 2,
                "screen_port_info": lambda: not settings_store.get("headless")
-               and len(screen_detect.ports()) == 1},
+               and len(screen_detect.ports()) == 1,
+               # ADR-0158 D5: only where the player can set the backlight.
+               "brightness": lambda: standby_module.screen_backlight() is not None},
         registry=Settings.with_plugins(load_registry(), installed_plugins, downloads,
                                        missing=restored_missing),
         defaults={
@@ -2597,6 +2600,8 @@ async def main() -> None:
                "pointer_style": None, "listenbrainz_token": None,
                # Text size: read by the panel as it draws (George, 2026-10-14).
                "text_size": None,
+               # ADR-0158 D5: the DSI panel's backlight, at once.
+               "brightness": lambda value: standby_module.set_brightness(value),
                # ADR-0156: read where they are used - the address by the
                # dashboard's check, the button by the panel, the times by
                # the dashboard's schedule each tick.
@@ -3221,6 +3226,10 @@ async def main() -> None:
     # ADR-0135: the owner's standby times. Their rows are read each tick.
     async def _reconcile_standby() -> None:
         from .standby import read_output
+        # ADR-0158 D5: the brightness set, at every start - the kernel's
+        # driver starts the backlight at its full.
+        if standby_module.screen_backlight() is not None:
+            standby_module.set_brightness(settings.value("brightness"))
         try:
             await standby.reconcile(await read_output(), standby_schedule.inside_now())
         except Exception:  # noqa: BLE001 - a screen check is no reason to stop
