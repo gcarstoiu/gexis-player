@@ -2318,7 +2318,7 @@ async def main() -> None:
         # On the port the screen is on - not always HDMI-A-1 (ADR-0109;
         # George, 2026-10-12). A port chosen under Screen port stays chosen
         # (Finding 125 #7, 2026-10-14).
-        applied = screen_apply.applied_on(model.id, turn, screen_apply.connector_now())
+        applied = screen_apply.applied_on(model.id, turn, screen_apply.connector_for(model))
         asks = screen_apply.choose(applied, after_setup=in_setup)
         logger.info("screen: %s at %d° on %s chosen; %s", model.id, turn, applied.connector,
                     "it waits for Keep on the panel" if asks else "the picture is unchanged, so it is kept")

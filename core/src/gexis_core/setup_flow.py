@@ -295,7 +295,7 @@ class SetupFlow:
             return False
         try:
             turn = screen_apply.parse_rotation(self._settings.value("rotation"))
-            return screen_apply.would_ask(screen_apply.Applied(model.id, turn, screen_apply.connector_now()))
+            return screen_apply.would_ask(screen_apply.Applied(model.id, turn, screen_apply.connector_for(model)))
         except Exception as exc:  # a guess for the phone's wording, never a failure
             logger.info("setup: cannot tell whether Keep will be asked: %s", exc)
             return True

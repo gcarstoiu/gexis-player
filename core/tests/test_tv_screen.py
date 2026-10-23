@@ -99,10 +99,11 @@ def test_a_rotation_or_model_change_on_a_chosen_tv_keeps_it_chosen(tmp_path):
 
 
 def test_attached_screen_and_rotation_carry_the_port_choice():
-    """Finding 125 #7: the Settings handler builds its screen through it."""
+    """Finding 125 #7: the Settings handler builds its screen through it -
+    on the connector for the model (ADR-0158: a DSI model on DSI)."""
     from test_main_wiring import _closure
     choose = _closure("_choose_screen")
-    assert "screen_apply.applied_on(model.id, turn, screen_apply.connector_now())" in choose
+    assert "screen_apply.applied_on(model.id, turn, screen_apply.connector_for(model))" in choose
 
 
 # --- D3: Keep from the phone on a screen without touch ----------------------

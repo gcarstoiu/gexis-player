@@ -48,10 +48,22 @@ STATE = Path("/var/lib/gexis/screen-seen.json")
 
 def key(seen: screen_detect.Seen) -> list | None:
     """What makes a screen this screen, or None when nothing readable is
-    attached (no EDID: nothing to tell one screen from another by)."""
-    if not seen.connected or seen.preferred is None or not (seen.edid_maker or seen.edid_name):
+    attached (no EDID: nothing to tell one screen from another by).
+
+    **A DSI panel by its port and its controller** (ADR-0158): no EDID, so
+    `["DSI", <its panel controller's driver or None>, <its mode>]` - enough
+    to see that a DSI panel has come where an HDMI screen was, or another
+    kind of DSI panel; nothing tells two of one kind apart, and nothing
+    needs to: they apply the same thing."""
+    if not seen.connected or seen.preferred is None:
         return None
-    return [seen.edid_maker, seen.edid_name, f"{seen.preferred[0]}x{seen.preferred[1]}"]
+    size = f"{seen.preferred[0]}x{seen.preferred[1]}"
+    if seen.dsi:
+        known = {fp.panel for fp in screen_detect.FINGERPRINTS.values() if fp.panel}
+        return ["DSI", next((d for d in seen.panel if d in known), None), size]
+    if not (seen.edid_maker or seen.edid_name):
+        return None
+    return [seen.edid_maker, seen.edid_name, size]
 
 
 def _read(path: Path) -> dict:
@@ -193,7 +205,7 @@ def during_setup(seen: screen_detect.Seen | None = None, *, path: Path = STATE, 
         return "same"
     model = target(seen)
     applied = screen_apply.Applied(model.id, 0, seen.connector or screen_apply.CONNECTOR)
-    where = {k: files[k] for k in ("env", "cmdline") if k in files}
+    where = {k: files[k] for k in ("env", "cmdline", "config") if k in files}
     restart = screen_apply.picture(**where)[0] != screen_apply.picture_of(applied)[0]
     screen_apply.write_files(applied, **where)
     screen_apply.write_state({"current": applied.to_json(), "previous": None, "pending": False,
@@ -234,9 +246,9 @@ def at_start(seen: screen_detect.Seen | None = None, *, headless: bool | None = 
     model = target(seen)
     tried(q["key"], path)
     applied = screen_apply.Applied(model.id, 0, seen.connector or screen_apply.CONNECTOR)
-    # `files`: screen_apply's env, cmdline and state, for a test.
+    # `files`: screen_apply's env, cmdline, config and state, for a test.
     files = files or {}
-    where = {k: files[k] for k in ("env", "cmdline") if k in files}
+    where = {k: files[k] for k in ("env", "cmdline", "config") if k in files}
     restart = screen_apply.picture(**where)[0] != screen_apply.picture_of(applied)[0]
     if not screen_apply.choose(applied, **files):
         kept(seen, path)
@@ -266,7 +278,7 @@ def moved(seen: screen_detect.Seen, *, headless: bool, files: dict | None = None
     if was.connector == seen.connector:
         return "same"
     applied = screen_apply.Applied(was.screen_id, was.rotation, seen.connector)
-    where = {k: files[k] for k in ("env", "cmdline") if k in files}
+    where = {k: files[k] for k in ("env", "cmdline", "config") if k in files}
     restart = screen_apply.picture(**where)[0] != screen_apply.picture_of(applied)[0]
     provisional = bool(screen_apply.read_state(state).get("provisional"))
     asks = screen_apply.choose(applied, **files)
