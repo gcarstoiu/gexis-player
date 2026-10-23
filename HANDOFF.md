@@ -154,11 +154,12 @@ backlight, *Screen brightness* on a DSI panel. **On bedroompi with George
 at the panel** (ADR-0158, *Measured*): the start put the panel's entry in
 place of the HMTECH at 180°, nothing asked, picture the right way up;
 standby dark by the backlight and back at a touch; brightness steps
-visible. **Still to do:** the four-corner touch check (the hardware
-feedback's screen check, started from the phone - on the panel that sheet
-only points to the phone, which George took for a cut-off sheet), a
-receiver or TV on HDMI beside the panel (none to hand, criterion 2), and a
-card flashed with the panel attached (criterion 1). `ph-dsi` merges into
+visible; touch right at all four corners (checked by hand). George decided
+(2026-10-23) that a receiver or TV beside the panel (criterion 2) and a
+freshly flashed card (criterion 1) will not be tested. **Next: a second DSI
+screen George has, on bedroompi**; if it leaves nothing open, Phase 17
+closes. (On the panel, Hardware feedback only points to the phone, since it
+ends on GitHub; George had taken that short sheet for a cut-off one.) `ph-dsi` merges into
 `next` after Phase 17's acceptance. Then, in order (`docs/DEVELOPMENT.md`; refer
 to them by ID): **19** room correction for the bass (`ph-room-correction`),
 **20** room correction for the full range (`ph-room-correction-full`), **21**
