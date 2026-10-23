@@ -20,9 +20,8 @@ receiver, a sound bar or a TV.
 
 George has one now: a **7" DSI touch panel, 800 x 480**, on bedroompi (Pi 4
 Rev 1.4, gexis 1.4.0, flashed from the 1.1.1 image and updated). He wrote its
-maker as "Hoysund"; the player's list has **Hosyond 7" DSI Display (800x480)**
-(`hosyond-7-dsi`), and the card's previous screen was a Hosyond 5" HDMI, so
-it is most likely that maker [to confirm with George]. He chose *HMTECH 7"
+maker as "Hoysund"; it is the list's **Hosyond 7" DSI Display (800x480)**
+(`hosyond-7-dsi`), confirmed by George the same evening. He chose *HMTECH 7"
 HDMI Monitor (800x480)* in Settings and it *"worked out of the box"*.
 
 ## Measured on bedroompi (2026-10-23, read only: nothing installed or changed)
@@ -121,16 +120,20 @@ What does not work, all of it aimed at `HDMI-A-1`:
 the dsi list that we deferred until now."* Not only the panels the firmware
 detects: every DSI model the list holds, as ADR-0109 lists every HDMI one.
 Of the list's 68 DSI entries, 63 remain after ADR-0109's own filters (no
-square panels, a case listed as its panel); **60 are offered**:
-- **23 on the Touch Display v1 overlay** (`vc4-kms-dsi-7inch`): brought up
-  by the firmware itself (*Settled by the evidence* 1), nothing written;
-- **37 with an overlay of their own** (Waveshare's DSI panels, the Touch
+square panels, a case listed as its panel); **58 are offered**:
+- **23 on the Touch Display v1 overlay** (`vc4-kms-dsi-7inch`, 4.3" to 8",
+  all 800 x 480): brought up by the firmware itself (*Settled by the
+  evidence* 1), nothing written;
+- **35 with an overlay of their own** (Waveshare's DSI panels, the Touch
   Display 2 on `vc4-kms-dsi-ili9881-7inch`, the generic ones): the player
   writes it (*Applying a DSI screen*, below);
-- **3 left out**: Waveshare's 4.3" rev 1, BIGTREETECH's PiTFT50 v1.0 and
-  DFRobot's 5" v1.0. Their list entries (`emit_dsi_overlay: false`) run
+- **5 left out**. Waveshare's 4.3" rev 1, BIGTREETECH's PiTFT50 v1.0 and
+  DFRobot's 5" v1.0: their list entries (`emit_dsi_overlay: false`) run
   them only with `vc4-kms-v3d` removed, and the player's compositor needs
-  the KMS driver that removes.
+  the KMS driver that removes. Waveshare's 3.5" DSI-E and DSI-H: their
+  overlay (`waveshare_35DSI`) is Waveshare's own download, not in Raspberry
+  Pi OS (not in bedroompi's `/boot/firmware/overlays`, where every other
+  one named is), so written it would leave the panel dark.
 
 The Hosyond 7" is tested (on bedroompi); every other DSI model is listed
 untested, as the untested HDMI screens are.
@@ -140,10 +143,11 @@ the user selects from a list shouldnt we display that name?"* - yes. The
 name shown, in setup and in *Settings → Display*, is the model chosen. Only
 a panel recognised and not yet chosen (setup's suggestion, before anyone
 picks) needs a name the player can stand behind, since nothing it reads
-tells the makers apart: it is suggested as **7" DSI touch screen, 800 x 480
-(Raspberry Pi Touch Display or compatible)**, and choosing a maker's model
-from the list instead names that one from then on. The class entry and
-the 23 models apply the same thing (nothing written).
+tells the makers apart: it is suggested as **Raspberry Pi Touch Display or
+compatible (DSI, 800x480)** - not "7 inch": the class runs from 4.3" to 8"
+(Claude, building) - and choosing a maker's model from the list instead
+names that one from then on. The class entry and the 23 models apply the
+same thing (nothing written); the class is marked tested with the Hosyond.
 
 **D3 — The DSI panel is the screen, and the user can switch.** George:
 *"Agreed. User can still switch if he wants though."* With a DSI panel
@@ -166,9 +170,9 @@ whose backlight the player can set - a DSI panel today - and hidden on an
 HDMI screen. Applied at once, kept across restarts. Display standby's
 backlight off is separate from it: waking returns to the brightness set.
 
-**Still to confirm with George:** the maker and model on the panel or its
-box (Hosyond 7" DSI, 800 x 480?), so the tested mark goes on the right
-entry.
+**The maker, confirmed** (George, 2026-10-23: *"Yes hoysond"*): the panel
+is the list's **Hosyond 7" DSI Display (800x480)** (`hosyond-7-dsi`), the
+entry marked tested.
 
 ## Applying a DSI screen that needs its overlay (settled, Claude)
 
@@ -221,7 +225,7 @@ existing rows, applied to `DSI-1`.
 - That the firmware detects the Touch Display 2 without a `config.txt` line.
 - That a panel built to answer as a Touch Display always does: one that
   does not shows nothing until its model is chosen and its overlay written.
-- **Every overlay-written model** (37): that its overlay, as the list gives
+- **Every overlay-written model** (35): that its overlay, as the list gives
   it, brings it up beside `display_auto_detect=1` on a Pi 4. None is on the
   bench; the way back (*Applying a DSI screen*, step 3) covers a wrong one.
 - That the Touch Display 2 and the other portrait panels come up turned to
