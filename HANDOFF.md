@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-22 (on R2D2).
+Last updated: 2026-10-23 (on R2D2).
 
 ## Start here
 
@@ -56,10 +56,25 @@ and `next`, the merged branches and worktrees are gone, and the routine
 clean-up ran. Promotion to Stable is George's call, later; the README's
 "current release" line changes only then.
 
-**Both players run the preview `preview-1021`** (since 2026-10-22 13:10):
-gexis-ui and gexis-player `1.3.1+git64`, gexis-system `git60`, gexis-core
-`git62` - the same code as 1.4.0 except core's version string. They move to
-1.4.0 by the update.
+**ShelvesPi runs the preview `bar-wallpapers`** (since 2026-10-23 15:02;
+it had updated itself to 1.4.0 before): gexis-core and gexis-player
+`1.4.0+git22.8af98fa`, the rest 1.4.0's. **For George to look at before
+1.4.0 goes to Stable.** On a bar the wide pictures now join the usual ones
+(ADR-0120 amended 2026-10-23, George: *"lets go with 1"*): with Nature and
+Animals each topic's wide page had held one picture since 19 October, the
+same Roman snail, and the bar showed it every minute for five days. After
+the install: three pictures in three minutes, all different, placed by
+what they show; a screenshot showed a butterfly. Core suite 2630 passed, 48
+skipped. The branch is not merged into `next` yet. **sofapi is still on
+`preview-1021`** (core `1.3.1+git62`, the rest `git64`, 1.4.0's code) and
+moves to 1.4.0 by the update.
+
+**The test venv imports the core from `~/projects/gexis-player-next`** (an
+editable install): in another worktree run the suite with `PYTHONPATH=src`
+from its `core/`, or it tests `next`'s code. **A preview of core needs the
+player meta-package too** (it pins core exactly): `packaging/build.sh` with
+every component and `player`, after copying the unchanged UI and system
+packages from the release's build output (`repos/ours-*`).
 
 **Deferred until a bug report** (George, 2026-10-21; from 1.3.1): the HMTECH 10.1" came up at 800x480 on the first start
 after the boot that switched to it (Chromium stored 1004x580 in a 1024x600
