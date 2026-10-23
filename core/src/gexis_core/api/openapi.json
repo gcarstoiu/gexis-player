@@ -10604,7 +10604,8 @@
                   "string",
                   "null"
                 ],
-                "example": "HDMI-A-1"
+                "example": "HDMI-A-1",
+                "description": "The port: HDMI-A-1, HDMI-A-2, or DSI-1 for a DSI panel (ADR-0158), which has no EDID."
               },
               "edid_maker": {
                 "type": [
@@ -10630,6 +10631,13 @@
                 "items": {
                   "type": "string"
                 }
+              },
+              "panel": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "A DSI panel's I2C drivers, by which it is recognised (ADR-0158); empty on HDMI."
               }
             }
           },

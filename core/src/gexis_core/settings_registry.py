@@ -61,7 +61,7 @@ ONLY_WHEN_IN = "in"
 #: Sources a `choice` may draw its options from instead of a literal list
 #: (ADR-0044 §4). Adding one is a code change, not a registry edit, which is
 #: the point: an unknown name is a typo and must fail the load.
-OPTION_SOURCES = {"skin_corpus", "timezones", "output_device", "screens", "boards", "screen_ports"}
+OPTION_SOURCES = {"skin_corpus", "timezones", "output_device", "screens", "boards", "screen_port"}
 
 
 @lru_cache(maxsize=1)
@@ -153,14 +153,14 @@ def _board_problems() -> dict[str, str]:
     return board_apply.problems()
 
 
-#: `screen_ports`: the ports a screen can be on (ADR-0141; ADR-0158 D3: a
+#: `screen_port`: the ports a screen can be on (ADR-0141; ADR-0158 D3: a
 #: DSI panel's too, while its driver is loaded) - the two HDMI ports until
 #: the daemon says what is there.
 OPTION_RESOLVERS = {"timezones": _timezones, "skin_corpus": tuple, "output_device": tuple,
-                    "screens": _screens, "boards": _boards, "screen_ports": lambda: ("HDMI 1", "HDMI 2")}
+                    "screens": _screens, "boards": _boards, "screen_port": lambda: ("HDMI 1", "HDMI 2")}
 #: Sources only the daemon can answer: the resolvers above are placeholders
 #: for them, and the daemon's own are injected into `Settings`.
-INJECTED_ONLY = {"skin_corpus", "output_device", "screen_ports"}
+INJECTED_ONLY = {"skin_corpus", "output_device", "screen_port"}
 
 #: A word beside an option in the picker, by source: *Tested*, or nothing
 #: (2026-10-18; was Tested / Untested / Known / Reported).

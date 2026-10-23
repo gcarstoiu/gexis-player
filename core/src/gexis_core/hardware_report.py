@@ -78,6 +78,9 @@ class Facts:
     screen_connected: bool = False
     edid_maker: str | None = None
     edid_name: str | None = None
+    #: ADR-0158: the port, and a DSI panel's I2C drivers.
+    screen_port: str | None = None
+    panel: tuple = ()
     preferred: str | None = None
     screen_chosen: str | None = None
     touch: list[str] = field(default_factory=list)
@@ -102,9 +105,11 @@ class Facts:
             f"- rates: {self.rates or 'not read (card in use)'}",
             "",
             "Screen",
-            f"- connected: {'yes' if self.screen_connected else 'no'}",
+            f"- connected: {'yes' if self.screen_connected else 'no'}"
+            + (f" on {self.screen_port}" if self.screen_port else ""),
             f"- EDID: {self.edid_maker or '?'} / {self.edid_name or '?'}, preferred {self.preferred or '?'}",
             f"- chosen in Settings: {self.screen_chosen or 'none'}",
+            *([f"- DSI panel drivers: {', '.join(self.panel)}"] if self.panel else []),
             f"- touch: {', '.join(self.touch) or 'none found'}",
         ]
         return "\n".join(lines) + "\n"
@@ -205,6 +210,7 @@ def collect(card: str | None, chosen_board: str | None = None, screen_chosen: st
         seen = screen_detect.seen()
         facts.screen_connected = seen.connected
         facts.edid_maker, facts.edid_name = seen.edid_maker, seen.edid_name
+        facts.screen_port, facts.panel = seen.connector, tuple(seen.panel)
         facts.preferred = f"{seen.preferred[0]}x{seen.preferred[1]}" if seen.preferred else None
     except Exception:  # noqa: BLE001 - a report is still worth having without it
         logger.warning("hardware report: the screen could not be read")

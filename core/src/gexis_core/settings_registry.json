@@ -459,7 +459,7 @@
         "marks": "N",
         "note": "Which port the screen is on, and what is on each.",
         "warn": "Changing it restarts the player with the screen on that port and asks Keep this screen?. If nobody answers Keep within 2 minutes of it appearing, it goes back.",
-        "optionsFrom": "screen_ports",
+        "optionsFrom": "screen_port",
         "default": null,
         "onlyWhen": [
           "headless",

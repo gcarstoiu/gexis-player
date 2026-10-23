@@ -2568,7 +2568,7 @@ async def main() -> None:
             # without a restart.
             "output_device": lambda: [o.option for o in outputs.discover()],
             # ADR-0158 D3: a DSI panel's port beside the HDMI ones.
-            "screen_ports": lambda: [_port_label(p.connector) for p in screen_detect.ports()],
+            "screen_port": lambda: [_port_label(p.connector) for p in screen_detect.ports()],
         },
         # A line under a USB DAC: what it reports it can do (George,
         # 2026-10-12). Worked out with the outputs, so asking costs nothing.
