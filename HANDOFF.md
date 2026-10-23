@@ -69,11 +69,16 @@ skipped. The branch is not merged into `next` yet. **sofapi is still on
 `preview-1021`** (core `1.3.1+git62`, the rest `git64`, 1.4.0's code) and
 moves to 1.4.0 by the update.
 
-**bedroompi runs the preview `lms-server-restart`** (since 2026-10-23
-20:08; a card from an earlier life, now with a Hosyond 7" DSI panel):
-gexis-core, gexis-ui and gexis-player `1.4.0+git24.e505054`. **For George
-to look at before Stable**, then merged into `next` with `bar-wallpapers`.
-It had updated itself to 1.4.0 and kept a Lyrion server address that had
+**bedroompi runs the preview `preview-1023`** (since 2026-10-23 21:09; a
+card from an earlier life, now with a Hosyond 7" DSI panel): `ph-dsi` with
+`lms-server-restart` and `bar-wallpapers` merged in
+(`~/projects/gexis-player-preview-1023`, its own branch, removed once
+`ph-dsi` merges). gexis-core and gexis-player `1.4.0+git39.1bac691`,
+gexis-ui `1.4.0+git36.b8793e5`, gexis-system `1.4.0+git29.d93d43f`; it ran
+`lms-server-restart` alone (`git24.e505054`) from 20:08. The state before is
+in the scratchpad's `bedroompi-before/`. **`lms-server-restart` (pushed) is
+for George to look at before Stable**, then merged into `next` with
+`bar-wallpapers`. It had updated itself to 1.4.0 and kept a Lyrion server address that had
 moved to sofapi, which has none: no library, an empty New Music strip, no
 Lyrion on the waiting screen. George chose the right server in Settings at
 19:51 and nothing changed - the server is read at the core's start. Now
@@ -139,12 +144,22 @@ in bedroompi; the firmware brings it up by itself (`display_auto_detect`,
 overlay `vc4-kms-dsi-7inch`, as the original Touch Display), no EDID, touch
 `edt_ft5x06` on I2C, backlight `/sys/class/backlight/10-0045`. Set as the
 HMTECH 7" HDMI it half-works: everything aimed at `HDMI-A-1` fails, so the
-180° rotation, standby and the kiosk background never apply. **ADR-0158
-(proposed, committed on `ph-dsi`, not pushed) waits for George's five
-decisions** - which screens, the name shown, which wins with HDMI too,
-standby by backlight, a brightness row - then measurements on bedroompi
-(touch at 180°, backlight timing, HDMI sound beside it), then the build.
-Then, in order (`docs/DEVELOPMENT.md`; refer
+180° rotation, standby and the kiosk background never apply. **ADR-0158 is
+accepted** (George's five decisions, 2026-10-23) **and built on `ph-dsi`**
+(pushed; core suite 2656 passed, 48 skipped): every DSI model in the list
+that can run (58 of 68, plus *Raspberry Pi Touch Display or compatible*
+for a panel found by its I2C controllers), a picked model's own name, the
+DSI panel the screen unless an HDMI port is chosen, standby by the
+backlight, *Screen brightness* on a DSI panel. **On bedroompi with George
+at the panel** (ADR-0158, *Measured*): the start put the panel's entry in
+place of the HMTECH at 180°, nothing asked, picture the right way up;
+standby dark by the backlight and back at a touch; brightness steps
+visible. **Still to do:** the four-corner touch check (the hardware
+feedback's screen check, started from the phone - on the panel that sheet
+only points to the phone, which George took for a cut-off sheet), a
+receiver or TV on HDMI beside the panel (none to hand, criterion 2), and a
+card flashed with the panel attached (criterion 1). `ph-dsi` merges into
+`next` after Phase 17's acceptance. Then, in order (`docs/DEVELOPMENT.md`; refer
 to them by ID): **19** room correction for the bass (`ph-room-correction`),
 **20** room correction for the full range (`ph-room-correction-full`), **21**
 Home Assistant (`ph-home-assistant`), **22** themes (`ph-themes`), **23** the
