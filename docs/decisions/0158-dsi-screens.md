@@ -1,10 +1,11 @@
 # ADR-0158 — DSI screens
 
-**Status:** **Proposed** — 2026-10-23. Phase 17, `ph-dsi` (George, 2026-10-23:
-*"Start phase 17"*). Nothing built yet. The decisions marked **Decision for
-George** below are his; the rest is settled by what bedroompi showed.
-**Amends, once accepted:** [ADR-0109](0109-other-screens.md) (*HDMI only, for
-now*), [ADR-0135](0135-display-standby.md) (screen off on a DSI panel),
+**Status:** **Accepted** — 2026-10-23 (George, the same evening: *"Start
+phase 17"*, then his answers to D1-D5 below). Phase 17, `ph-dsi`. Nothing
+built yet; the measurements listed below come first.
+**Amends:** [ADR-0109](0109-other-screens.md) (*HDMI only, for now*; a
+choice that is applied at the next start now writes `config.txt` too),
+[ADR-0135](0135-display-standby.md) (screen off on a DSI panel),
 [ADR-0141](0141-picture-and-sound-on-different-hdmi-ports.md) and
 [ADR-0147](0147-a-tv-as-the-screen.md) (which output is the screen).
 
@@ -114,82 +115,93 @@ What does not work, all of it aimed at `HDMI-A-1`:
    window rule, standby's output, `screen.env`, `screen.json`. A DSI panel
    gets no `video=` line: its mode is the panel's only one.
 
-## Decisions for George
+## Decided (George, 2026-10-23)
 
-**D1 — Which screens this phase brings in.**
-- **(a) The ones the firmware detects by itself**: every listed model on the
-  Touch Display v1 overlay (`vc4-kms-dsi-7inch`, 23 entries - the original,
-  the Hosyond 5" and 7", BIGTREETECH and others), the Hosyond 7" marked
-  tested; and the Touch Display 2 (`vc4-kms-dsi-ili9881-7inch`), listed
-  untested, if the firmware detects it as well [to check from Raspberry Pi's
-  documentation before listing it].
-- **(b) Also the DSI screens that need an overlay written** (Waveshare's
-  DSI panels and the rest, 44 entries): a `config.txt` writer with a
-  way back if the panel stays dark, none of it testable here.
-- **Recommendation: (a).** It needs no write to the boot partition, and the
-  one panel on the bench stands for the whole class: they answer the same
-  driver the same way. (b) comes back when a screen of that kind is on the
-  bench, as ADR-0109 said of DSI.
+**D1 — Every DSI screen in the list.** George: *"For all that we have in
+the dsi list that we deferred until now."* Not only the panels the firmware
+detects: every DSI model the list holds, as ADR-0109 lists every HDMI one.
+Of the list's 68 DSI entries, 63 remain after ADR-0109's own filters (no
+square panels, a case listed as its panel); **60 are offered**:
+- **23 on the Touch Display v1 overlay** (`vc4-kms-dsi-7inch`): brought up
+  by the firmware itself (*Settled by the evidence* 1), nothing written;
+- **37 with an overlay of their own** (Waveshare's DSI panels, the Touch
+  Display 2 on `vc4-kms-dsi-ili9881-7inch`, the generic ones): the player
+  writes it (*Applying a DSI screen*, below);
+- **3 left out**: Waveshare's 4.3" rev 1, BIGTREETECH's PiTFT50 v1.0 and
+  DFRobot's 5" v1.0. Their list entries (`emit_dsi_overlay: false`) run
+  them only with `vc4-kms-v3d` removed, and the player's compositor needs
+  the KMS driver that removes.
 
-**D2 — What a detected panel is called**, since the player cannot tell
-which maker's it is.
-- **(a) One entry for the class**: *7" DSI touch screen, 800 x 480
-  (Raspberry Pi Touch Display or compatible)*, recognised by setup and shown
-  in Settings; the makers' models stay in the list and apply the same thing.
-- **(b) The tested model's name**, Hosyond 7" DSI, for any such panel - the
-  original Touch Display would be shown as a Hosyond.
-- **(c) The original's name**, Raspberry Pi Touch Display, for any such
-  panel - marking it tested on the strength of a clone.
-- **Recommendation: (a).** It is true of every panel it will be shown for,
-  and ADR-0109's rule (recognition suggests only a tested model) holds: the
-  class is what was tested.
+The Hosyond 7" is tested (on bedroompi); every other DSI model is listed
+untested, as the untested HDMI screens are.
 
-**D3 — Which is the screen when HDMI is connected too.**
-- **(a) The DSI panel, whenever it is connected**; an HDMI port carries
-  sound (black, ADR-0141 D2) unless *Screen port* chooses it (ADR-0147 D1,
-  the choice wins: a TV). *Screen port* then lists *DSI* beside *HDMI 1* and
-  *HDMI 2*, and *Settings → Display* names each: *DSI - screen (7" DSI touch
-  screen)*, *HDMI 1 - sound (AV receiver)*. With a TV chosen, the DSI panel
-  is black and its touch ignored, as a panel on the other HDMI port is today.
-- **(b) Ask in setup and Settings whenever both are connected.**
-- **Recommendation: (a).** A panel on the ribbon is almost always the
-  screen, and Phase 17's reason for being is HDMI left free for sound.
+**D2 — A model picked from the list shows its own name.** George: *"If
+the user selects from a list shouldnt we display that name?"* - yes. The
+name shown, in setup and in *Settings → Display*, is the model chosen. Only
+a panel recognised and not yet chosen (setup's suggestion, before anyone
+picks) needs a name the player can stand behind, since nothing it reads
+tells the makers apart: it is suggested as **7" DSI touch screen, 800 x 480
+(Raspberry Pi Touch Display or compatible)**, and choosing a maker's model
+from the list instead names that one from then on. The class entry and
+the 23 models apply the same thing (nothing written).
 
-**D4 — How display standby turns a DSI panel off.**
-- **(a) The backlight off** (`bl_power`), the output kept on and the black
-  cover drawn: the picture comes back as fast as the backlight, and the
-  touch keeps reaching the compositor.
-- **(b) The output off**, as on HDMI: the panel driver powers the panel and,
-  through it, the backlight down [inference from the driver]; coming back
-  re-initialises the panel, which may take as long as the 3 s George found
-  too much on 2026-10-20 (`wlopm`).
-- **Recommendation: (a)**, if measurement agrees: both are timed on
-  bedroompi before building.
+**D3 — The DSI panel is the screen, and the user can switch.** George:
+*"Agreed. User can still switch if he wants though."* With a DSI panel
+connected it is the screen, and the HDMI ports carry sound (black,
+ADR-0141 D2). *Screen port* lists *DSI* beside *HDMI 1* and *HDMI 2*; an
+HDMI port chosen there wins (ADR-0147 D1: a TV), with the DSI panel then
+black and its touch ignored, and choosing *DSI* again goes back.
+*Settings → Display* names each output: *DSI - screen (<the model>)*,
+*HDMI 1 - sound (AV receiver)*.
 
-**D5 — A brightness setting.** ADR-0022 holds *Screen brightness* as [N]
-(*"brightness is a separate question"*), and the registry has its row
-(`brightness`, 10-100 %, not shown).
-- **(a) Show it where the backlight can be set**: on a DSI panel, hidden on
-  an HDMI screen, where nothing can set it. 10-100 %, default 100 %, applied
-  at once and kept across restarts.
-- **(b) Not in this phase.**
-- **Recommendation: (a)**: it is the one thing a DSI panel can do that the
-  HDMI screens cannot, and the row is already designed.
+**D4 — Standby turns the backlight off.** George: *"Agreed"*: `bl_power`
+off, the output kept on and the black cover drawn, so the picture comes
+back as fast as the backlight and the touch still reaches the compositor.
+If the measurements below show the backlight does not go dark that way, the
+output off (as on HDMI) is the fallback, and George hears which.
 
-**To confirm with George:** the panel's maker and model as written on it or
-its box (Hosyond 7" DSI, 800 x 480?).
+**D5 — Screen brightness, where it can be set.** George: *"Agreed"*: the
+registry's `brightness` row (10-100 %, default 100 %) is shown on a screen
+whose backlight the player can set - a DSI panel today - and hidden on an
+HDMI screen. Applied at once, kept across restarts. Display standby's
+backlight off is separate from it: waking returns to the brightness set.
 
-## Settings (for ADR-0022, on George's confirmation; not appended)
+**Still to confirm with George:** the maker and model on the panel or its
+box (Hosyond 7" DSI, 800 x 480?), so the tested mark goes on the right
+entry.
 
-| Row | Mark | Proposal |
+## Applying a DSI screen that needs its overlay (settled, Claude)
+
+`config.txt` is read only at boot, as `cmdline.txt` is, and ADR-0109's
+apply already writes `cmdline.txt` (`video=`) with a restart and *Keep this
+screen?*. A DSI model's overlay goes the same way:
+1. **One block of our own at the end of `config.txt`**, under `[all]`,
+   between `# gexis screen (ADR-0158) - written by the player` and
+   `# end gexis screen`: the model's `dtoverlay` (and `dtoverlay_2` where the
+   list has one), as the list gives them. Nothing else in `config.txt` is
+   changed, `display_auto_detect=1` included. A model on
+   `vc4-kms-dsi-7inch`, an HDMI screen or no screen leaves the block empty.
+2. **Written as `cmdline.txt` is** (`_replace_durably`: a copy, synced,
+   renamed over), and only when it changes.
+3. **Choosing such a model restarts the device** and asks *Keep this
+   screen?*, as any screen choice that needs the next boot does. Not kept,
+   or never drawn (`NEVER_DRAWN_S`), it goes back: the block as it was, and
+   another restart. A wrong overlay leaves the panel dark, which is the
+   case this exists for.
+4. **The overlay's own `rotation=` is not used**; rotation is the
+   compositor's (*Settled by the evidence* 3).
+
+## Settings (ADR-0022, appended on George's confirmation)
+
+| Row | Mark | What |
 |---|---|---|
-| Screen brightness | [N] -> [R] | D5 (a): Display, shown only on a screen whose backlight the player can set (a DSI panel today); 10-100 %, default 100 % |
-| Screen port | [N], options extended | D3 (a): *DSI* listed beside *HDMI 1* and *HDMI 2* when a DSI panel is connected |
+| Screen brightness | [N] -> [R] | D5: Display, shown only on a screen whose backlight the player can set (a DSI panel today); 10-100 %, default 100 %, at once |
+| Screen port | [R], options extended | D3: *DSI* beside *HDMI 1* and *HDMI 2* when a DSI panel is connected; the DSI panel is the default, an HDMI port chosen wins |
 
 No other new setting: rotation, standby and *Attached screen* are the
 existing rows, applied to `DSI-1`.
 
-## To measure before building (bedroompi, with George's say-so)
+## To measure before building (bedroompi, with George watching the panel)
 
 - **Touch at 180°** with `mapToOutput="DSI-1"`: a tap at each corner lands
   where the finger is.
@@ -208,4 +220,9 @@ existing rows, applied to `DSI-1`.
   on the bench).
 - That the firmware detects the Touch Display 2 without a `config.txt` line.
 - That a panel built to answer as a Touch Display always does: one that
-  needs its overlay written would show nothing and fall under D1 (b).
+  does not shows nothing until its model is chosen and its overlay written.
+- **Every overlay-written model** (37): that its overlay, as the list gives
+  it, brings it up beside `display_auto_detect=1` on a Pi 4. None is on the
+  bench; the way back (*Applying a DSI screen*, step 3) covers a wrong one.
+- That the Touch Display 2 and the other portrait panels come up turned to
+  landscape with touch following (*Settled by the evidence* 4).
