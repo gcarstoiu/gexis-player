@@ -3037,6 +3037,10 @@ stored Software), DSD through the adapter.
 
 **ID:** `ph-dsi` · added 2026-10-19.
 
+**Started 2026-10-23** (George: *"Start phase 17"*), on the screen he has: a
+Hosyond 7" DSI touch panel, 800 x 480, in bedroompi. ADR-0158 is proposed
+(on `ph-dsi`), with five decisions for George.
+
 **Added 2026-10-19** (George: *"And then after this it will be dsi display
 support, fit similar reasons"* - as with the optical adapter, a screen to
 hand to test on). The player supports HDMI screens only today
