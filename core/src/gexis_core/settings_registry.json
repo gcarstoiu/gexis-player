@@ -457,12 +457,9 @@
         "type": "choice",
         "label": "Screen port",
         "marks": "N",
-        "note": "Which HDMI port the screen is on, and what is on each.",
+        "note": "Which port the screen is on, and what is on each.",
         "warn": "Changing it restarts the player with the screen on that port and asks Keep this screen?. If nobody answers Keep within 2 minutes of it appearing, it goes back.",
-        "options": [
-          "HDMI 1",
-          "HDMI 2"
-        ],
+        "optionsFrom": "screen_ports",
         "default": null,
         "onlyWhen": [
           "headless",

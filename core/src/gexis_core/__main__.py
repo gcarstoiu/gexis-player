@@ -2332,8 +2332,19 @@ async def main() -> None:
         asyncio.ensure_future(_restart())
 
     def _port_label(connector: str | None) -> str:
-        """`HDMI-A-2` as Settings says it: *HDMI 2*."""
-        return f"HDMI {(connector or screen_apply.CONNECTOR).rsplit('-', 1)[-1]}"
+        """`HDMI-A-2` as Settings says it: *HDMI 2*; a DSI panel's port is
+        *DSI* (ADR-0158 D3), *DSI 2* on a board with two."""
+        connector = connector or screen_apply.CONNECTOR
+        if connector.startswith("DSI-"):
+            number = connector.rsplit("-", 1)[-1]
+            return "DSI" if number == "1" else f"DSI {number}"
+        return f"HDMI {connector.rsplit('-', 1)[-1]}"
+
+    def _port_connector(label: str) -> str:
+        """*HDMI 2* back to `HDMI-A-2`, *DSI* to `DSI-1`."""
+        if label.startswith("DSI"):
+            return f"DSI-{label.split(' ', 1)[1] if ' ' in label else '1'}"
+        return f"HDMI-A-{label.rsplit(' ', 1)[-1]}"
 
     def _screen_name(connector: str) -> str | None:
         """The screen's name when `connector` is the screen's port, else
@@ -2356,7 +2367,8 @@ async def main() -> None:
         port = next((p for p in screen_detect.ports() if p.connector == connector), None)
         if port is None or not port.connected:
             return "Nothing connected"
-        parts = [_screen_name(connector) or port.edid_name or port.edid_maker or "Connected"]
+        parts = [_screen_name(connector) or port.edid_name or port.edid_maker
+                 or ("DSI panel" if port.dsi else "Connected")]
         if alsa.card() == outputs.CARD_FOR_CONNECTOR.get(connector):
             parts.append("sound")
         return " · ".join(parts)
@@ -2388,7 +2400,7 @@ async def main() -> None:
         without touch, the phone answers (ADR-0147 D3). The stored setting
         goes: the row shows the port in use."""
         settings_store.delete("screen_port")
-        connector = f"HDMI-A-{label.rsplit(' ', 1)[-1]}"
+        connector = _port_connector(label)
         port = next((p for p in screen_detect.ports() if p.connector == connector and p.connected), None)
         if port is None or port.preferred is None:
             logger.warning("screen: nothing on %s to choose", connector)
@@ -2396,7 +2408,8 @@ async def main() -> None:
         current = screen_apply.read_state().get("current")
         was = screen_apply.Applied.of(current) if isinstance(current, dict) and current.get("screen") else None
         model = screen_watch.target(port)
-        if screen_detect.suggest(port) is None and (size := screen_detect.tv_mode(connector)) is not None:
+        if (not port.dsi and screen_detect.suggest(port) is None
+                and (size := screen_detect.tv_mode(connector)) is not None):
             # A TV, run at 1080p from its own list and held there by the
             # kernel's mode, whatever a receiver says at a start (ADR-0147).
             model = screens.other(*size, capped=True)
@@ -2554,6 +2567,8 @@ async def main() -> None:
             # `/settings`, so plugging an HDMI cable in changes the list
             # without a restart.
             "output_device": lambda: [o.option for o in outputs.discover()],
+            # ADR-0158 D3: a DSI panel's port beside the HDMI ones.
+            "screen_ports": lambda: [_port_label(p.connector) for p in screen_detect.ports()],
         },
         # A line under a USB DAC: what it reports it can do (George,
         # 2026-10-12). Worked out with the outputs, so asking costs nothing.

@@ -249,10 +249,11 @@ def paint(png_path: str) -> int:
 
 
 def connected_ports(drm: str = "/sys/class/drm") -> int:
-    """How many HDMI ports have something connected."""
+    """How many screen ports have something connected: HDMI, and a DSI
+    panel (ADR-0158) - fbdev's one buffer is as wrong on it as on HDMI."""
     import glob
     count = 0
-    for status in glob.glob(f"{drm}/card*-HDMI-A-*/status"):
+    for status in glob.glob(f"{drm}/card*-HDMI-A-*/status") + glob.glob(f"{drm}/card*-DSI-*/status"):
         try:
             with open(status) as handle:
                 count += handle.read().strip() == "connected"

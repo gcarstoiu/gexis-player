@@ -302,6 +302,9 @@ def test_with_a_tv_as_the_screen_the_panels_touch_is_ignored_by_udev(tmp_path):
     assert "0712:0010" in ids
     text = rules.read_text()
     assert 'ATTRS{idVendor}=="0712", ATTRS{idProduct}=="0010", ENV{LIBINPUT_IGNORE_DEVICE}="1"' in text
+    # ADR-0158 D3: a DSI panel's touch too, by its I2C driver.
+    assert "i2c:edt_ft5x06" in ids
+    assert 'SUBSYSTEM=="input", DRIVERS=="edt_ft5x06", ENV{LIBINPUT_IGNORE_DEVICE}="1"' in text
     assert ["udevadm", "trigger", "--action=change", "--subsystem-match=input"] in ran
     # The panel the screen again: the rule goes, and udev is told.
     screen_apply.write_state({"current": Applied("waveshare-10.1-hdmi-b", 0, "HDMI-A-1", chosen=True).to_json()},
@@ -379,3 +382,22 @@ def test_with_two_screens_the_boot_gap_is_black_on_both(tmp_path):
     payload, geometry = splash.black((b"\x10\x20\x30\x40", (1, 1, 32, 4)))
     assert payload == bytes(4) and geometry == (1, 1, 32, 4)
     assert splash.black(None) is None
+
+
+def test_a_dsi_panel_counts_as_a_screen_for_the_boot_gap_and_setup(tmp_path):
+    """ADR-0158: a DSI panel beside a receiver on HDMI is two screens for
+    the framebuffer, and on its own it is the panel setup's password is
+    shown on (ADR-0104)."""
+    from gexis_core import setup_network
+    splash = _splash()
+    drm = tmp_path / "drm"
+    for name, status in (("card1-DSI-1", "connected"), ("card1-HDMI-A-1", "connected"),
+                         ("card1-HDMI-A-2", "disconnected")):
+        (drm / name).mkdir(parents=True)
+        (drm / name / "status").write_text(status + "\n")
+    assert splash.connected_ports(str(drm)) == 2
+    (drm / "card1-HDMI-A-1" / "status").write_text("disconnected\n")
+    assert splash.connected_ports(str(drm)) == 1
+    assert setup_network.panel_attached(drm)
+    (drm / "card1-DSI-1" / "status").write_text("disconnected\n")
+    assert not setup_network.panel_attached(drm)

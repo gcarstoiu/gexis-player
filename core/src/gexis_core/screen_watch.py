@@ -302,20 +302,28 @@ TOUCH_RULES = Path("/run/udev/rules.d/90-gexis-panel-touch-off.rules")
 def touch_rules(state: Path | None = None, rules: Path = TOUCH_RULES, run=None) -> list[str]:
     """While the screen in use has no touch of its own (a TV), every known
     touch panel's input is ignored; otherwise none is. Returns the USB ids
-    ignored. `run` triggers udev (None: subprocess.run)."""
+    ignored, and a DSI panel's I2C touch driver as `i2c:<driver>` (ADR-0158
+    D3: with a TV chosen, the DSI panel is black and its touch ignored).
+    `run` triggers udev (None: subprocess.run)."""
     from . import screen_apply, screen_detect
     current = screen_apply.read_state(state or screen_apply.STATE).get("current") or {}
     screen_id = current.get("screen")
     ids: list[str] = []
     if screen_id and not screen_detect.has_touch(screen_id):
         ids = sorted({fp.usb for fp in screen_detect.FINGERPRINTS.values() if fp.usb})
+        ids += sorted({f"i2c:{fp.touch_i2c}" for fp in screen_detect.FINGERPRINTS.values() if fp.touch_i2c})
     had = rules.exists()
     if ids:
         rules.parent.mkdir(parents=True, exist_ok=True)
         lines = ["# Written at each start by gexis-screen-check (ADR-0147): the screen in use has",
                  "# no touch, so the touch panels' input is ignored."]
-        for usb in ids:
-            vendor, product = usb.split(":")
+        for device in ids:
+            if device.startswith("i2c:"):
+                # An I2C touch controller has no USB ids; its driver names it.
+                lines.append(f'ACTION=="add|change", SUBSYSTEM=="input", DRIVERS=="{device[4:]}", '
+                             f'ENV{{LIBINPUT_IGNORE_DEVICE}}="1"')
+                continue
+            vendor, product = device.split(":")
             lines.append(f'ACTION=="add|change", SUBSYSTEM=="input", ATTRS{{idVendor}}=="{vendor}", '
                          f'ATTRS{{idProduct}}=="{product}", ENV{{LIBINPUT_IGNORE_DEVICE}}="1"')
         rules.write_text("\n".join(lines) + "\n")
