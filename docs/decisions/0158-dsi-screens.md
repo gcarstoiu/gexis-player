@@ -241,12 +241,17 @@ screen (`screen-seen.json` absent).
   *"Brightness works."*
 - **Touch at 180°.** Settings worked by touch (19 touches from the panel
   reached the core; George reached System → Hardware feedback on the panel).
-  The four corners are not yet checked: that is the hardware feedback's
-  screen check, which runs from a phone (ADR-0126); on the panel the sheet
-  only points there.
-- **A receiver or TV on HDMI beside the panel:** not tested, none to hand
-  (George). Criterion 2 stays open.
-- **A card flashed from the image:** not yet (criterion 1).
+  George then checked the four corners by hand and found each tap where his
+  finger was. The hardware feedback's screen check (ADR-0126, started from a
+  phone) was not run: the core logged no request for it.
+- **A receiver or TV on HDMI beside the panel:** not tested, and not to be
+  (George decided, 2026-10-23). Criterion 2 is dropped.
+- **A card flashed from the image:** not tested, and not to be (George
+  decided, 2026-10-23). Criterion 1 is dropped; what a fresh card does with
+  the panel rests on the same detection the running player used above.
+
+**Next:** a second DSI screen George has, on bedroompi; if it leaves nothing
+open, Phase 17 closes (George, 2026-10-23).
 
 ## Unverified
 
