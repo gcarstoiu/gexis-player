@@ -1483,11 +1483,11 @@
       // A found server is shown by its name and stored by its address.
       const address = item.address ?? item.name;
       if (String(row.value ?? '') === address) return;
-      // The daemon reads this at the next start: moving a running player to
+      // The daemon reads this at its start, so saving it restarts the core
+      // (George, 2026-10-23, ADR-0048 amended): moving a running player to
       // another server means dropping its subscription, re-resolving the
-      // player and re-arbitrating. Said plainly rather than left to be
-      // discovered.
-      if (await write(row, address)) flash(`${row.label} set — restart to use it`);
+      // player and re-arbitrating.
+      if (await write(row, address)) flash(restartToast(row), 6000);
       return;
     }
     if (row.kind === 'backup') {
@@ -1731,7 +1731,9 @@
         // A row that takes effect at a restart restarts the device once
         // saved (ADR-0048, amended 2026-10-05) - and a new name is a new
         // address, so the toast says where the player comes back.
-        if (row.restart) {
+        if (row.restart === 'core') {
+          flash(restartToast(row), 6000);
+        } else if (row.restart) {
           const back = row.key === 'device_name' && draft ? ` It comes back as ${hostOf(draft)}.local.` : '';
           flash(`${row.label} saved. The device is restarting.${back}`, 12000);
         } else {
@@ -1739,6 +1741,12 @@
         }
       }
     }
+  }
+
+  /** A row the core reads at its start (`restart: "core"`): saving it
+   *  restarts the core, and the player is back within seconds. */
+  function restartToast(row) {
+    return `${row.label} saved. The player is restarting to use it.`;
   }
 
   function cancelSheet() {
