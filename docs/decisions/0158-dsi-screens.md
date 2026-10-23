@@ -205,7 +205,7 @@ screen?*. A DSI model's overlay goes the same way:
 No other new setting: rotation, standby and *Attached screen* are the
 existing rows, applied to `DSI-1`.
 
-## To measure before building (bedroompi, with George watching the panel)
+## To measure (bedroompi, with George watching the panel)
 
 - **Touch at 180°** with `mapToOutput="DSI-1"`: a tap at each corner lands
   where the finger is.
@@ -217,6 +217,36 @@ existing rows, applied to `DSI-1`.
   the sound on HDMI with the DSI panel as the screen (Phase 17 criterion 2).
 - **A card flashed from the image** with the panel attached: setup's Screen
   step recognises it (criterion 1).
+
+## Measured with George at the panel (bedroompi, 2026-10-23)
+
+The preview: core and player 1.4.0+git39.1bac691, this branch with two
+fixes waiting for George's look merged in. Installed over the HMTECH 7"
+HDMI choice made by hand, the Hosyond 7" on DSI at 180°, with no remembered
+screen (`screen-seen.json` absent).
+
+- **The start.** The screen check found an HDMI model on `DSI-1` and put the
+  panel's own entry in its place, rotation kept, nothing asked: *"hmtech-7-hdmi
+  moved from HDMI-A-1 to DSI-1, now dsi-touch-display-class; the picture is
+  unchanged, so it is kept"*. `config.txt` unchanged, no touch rule written,
+  the compositor's `DSI-1` at transform 180. George: the picture is the
+  right way up.
+- **Standby (D4).** Asked from the phone at 21:18:13, *"DSI-1's backlight
+  off"*; a touch at 21:18:15, *"DSI-1's backlight on"*. George: *"Works as
+  expected."* The backlight stands; the output-off fallback is not needed.
+  One cycle, about two seconds off; the time from the finger to the picture
+  was not timed.
+- **Brightness (D5).** 40, 20, 10, 50, 80 and 100 % from the phone, each
+  written at once (*"the backlight at 10% (26)"* … *"100% (255)"*). George:
+  *"Brightness works."*
+- **Touch at 180°.** Settings worked by touch (19 touches from the panel
+  reached the core; George reached System → Hardware feedback on the panel).
+  The four corners are not yet checked: that is the hardware feedback's
+  screen check, which runs from a phone (ADR-0126); on the panel the sheet
+  only points there.
+- **A receiver or TV on HDMI beside the panel:** not tested, none to hand
+  (George). Criterion 2 stays open.
+- **A card flashed from the image:** not yet (criterion 1).
 
 ## Unverified
 
