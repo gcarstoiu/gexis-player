@@ -277,7 +277,16 @@ def moved(seen: screen_detect.Seen, *, headless: bool, files: dict | None = None
     was = screen_apply.Applied.of(current)
     if was.connector == seen.connector:
         return "same"
-    applied = screen_apply.Applied(was.screen_id, was.rotation, seen.connector)
+    model = screens.by_id(was.screen_id)
+    screen_id = was.screen_id
+    if (model.interface == "dsi") != seen.dsi and not screens.OTHER.match(model.id):
+        # **An HDMI model is not the panel on the ribbon, nor a DSI model the
+        # screen on HDMI** (ADR-0158; bedroompi, 2026-10-23: the HMTECH 7"
+        # HDMI chosen while a DSI panel was the screen). The screen on the
+        # port is applied instead - the recognised panel, else its own mode -
+        # with the rotation the owner gave it.
+        screen_id = target(seen).id
+    applied = screen_apply.Applied(screen_id, was.rotation, seen.connector)
     where = {k: files[k] for k in ("env", "cmdline", "config") if k in files}
     restart = screen_apply.picture(**where)[0] != screen_apply.picture_of(applied)[0]
     provisional = bool(screen_apply.read_state(state).get("provisional"))
@@ -286,7 +295,8 @@ def moved(seen: screen_detect.Seen, *, headless: bool, files: dict | None = None
         # Still setup's screen, not one anybody has kept (ADR-0104's fixed
         # password depends on it): a move of port does not confirm it.
         screen_apply.write_state({**screen_apply.read_state(state), "provisional": True}, state)
-    logger.info("screen: %s moved from %s to %s; %s", was.screen_id, was.connector, seen.connector,
+    logger.info("screen: %s moved from %s to %s%s; %s", was.screen_id, was.connector, seen.connector,
+                f", now {screen_id}" if screen_id != was.screen_id else "",
                 "it waits for Keep" if asks else "the picture is unchanged, so it is kept")
     return "restart" if restart else "switched"
 
@@ -311,7 +321,11 @@ def touch_rules(state: Path | None = None, rules: Path = TOUCH_RULES, run=None) 
     ids: list[str] = []
     if screen_id and not screen_detect.has_touch(screen_id):
         ids = sorted({fp.usb for fp in screen_detect.FINGERPRINTS.values() if fp.usb})
-        ids += sorted({f"i2c:{fp.touch_i2c}" for fp in screen_detect.FINGERPRINTS.values() if fp.touch_i2c})
+        # A DSI panel's touch only while the screen is elsewhere (a TV): on
+        # the DSI connector, a model without touch is still on the panel
+        # whose touch it is.
+        if not str(current.get("connector") or "").startswith("DSI-"):
+            ids += sorted({f"i2c:{fp.touch_i2c}" for fp in screen_detect.FINGERPRINTS.values() if fp.touch_i2c})
     had = rules.exists()
     if ids:
         rules.parent.mkdir(parents=True, exist_ok=True)

@@ -305,3 +305,41 @@ def test_a_dsi_panel_kept_is_the_same_screen_at_the_next_start(tmp_path):
     path = tmp_path / "seen.json"
     sw.kept(DSI_PANEL, path)
     assert sw.question(DSI_PANEL, headless=False, path=path) is None
+
+
+def test_bedroompi_without_a_screen_remembered_comes_up_as_the_dsi_panel_at_its_rotation(tmp_path):
+    """bedroompi as it really was, 2026-10-23: no screen-seen.json, the
+    HMTECH 7" HDMI chosen at 180° on HDMI-A-1, the DSI panel attached. The
+    start takes what is attached as kept, then finds the screen moved to
+    DSI-1 - and an HDMI model there is replaced by the panel recognised, at
+    the owner's 180°. Same picture (0.625, 180), so no Keep."""
+    import json
+    from gexis_core import screen_apply, screens
+    path = tmp_path / "seen.json"
+    files = _files(tmp_path)
+    files["config"] = tmp_path / "config.txt"
+    files["config"].write_text("display_auto_detect=1\n")
+    screen_apply.write_state({"current": {"screen": "hmtech-7-hdmi", "rotation": 180, "connector": "HDMI-A-1"},
+                              "previous": None, "pending": False}, files["state"])
+    screen_apply.write_files(screen_apply.Applied("hmtech-7-hdmi", 180, "HDMI-A-1"),
+                             env=files["env"], cmdline=files["cmdline"], config=files["config"])
+    outcome = sw.at_start(DSI_PANEL, headless=False, setup_needed=False, path=path, files=files)
+    assert outcome == "switched"
+    state = json.loads(files["state"].read_text())
+    assert state["current"] == {"screen": screens.TOUCH_DISPLAY_CLASS, "rotation": 180, "connector": "DSI-1"}
+    assert state["pending"] is False, "the picture is the one it had"
+    env = dict(l.split("=", 1) for l in files["env"].read_text().splitlines() if l and not l.startswith("#"))
+    assert env["GEXIS_SCREEN_CONNECTOR"] == "DSI-1" and env["GEXIS_SCREEN_TRANSFORM"] == "180"
+
+
+def test_a_screen_without_touch_on_the_dsi_connector_leaves_the_panel_s_touch_alone(tmp_path):
+    """The HMTECH (no touch) applied on DSI-1 is still the DSI panel's
+    screen: its I2C touch must not be ignored. A TV on HDMI ignores it."""
+    from gexis_core import screen_apply
+    state, rules = tmp_path / "screen.json", tmp_path / "rules" / "90.rules"
+    screen_apply.write_state({"current": {"screen": "hmtech-7-hdmi", "rotation": 180, "connector": "DSI-1"}}, state)
+    ids = sw.touch_rules(state, rules, run=lambda args, check=False: None)
+    assert not any(i.startswith("i2c:") for i in ids)
+    screen_apply.write_state({"current": {"screen": "other-1920x1080-capped", "rotation": 0,
+                                          "connector": "HDMI-A-2", "chosen": True}}, state)
+    assert "i2c:edt_ft5x06" in sw.touch_rules(state, rules, run=lambda args, check=False: None)
