@@ -185,7 +185,7 @@ or removed from Settings, with its progress shown in the switch itself.
 | 🔀 **Handover** | One source at a time, never mixed · takeover in any direction · the previous source released before the next one plays |
 | 🖼️ **Now playing** | Artwork · synced or plain lyrics · artist information and photos · the Lyrion queue |
 | 📈 **Visualiser** | Up to 287 skins, depending on the screen · VU meters, spectrum, turntables and tape decks · progress, time, volume and play-state in each skin's own style · skins that rotate per track |
-| 🖥️ **Screens** | HDMI touchscreens from 7" to 13.3", including 7.9" and 11.9" bar displays, recognised and laid out for their shape · or Headless, with no screen at all |
+| 🖥️ **Screens** | HDMI touchscreens from 7" to 13.3", including 7.9" and 11.9" bar displays, and DSI screens on the Pi's own display connector, leaving HDMI free for sound · recognised and laid out for their shape · or Headless, with no screen at all |
 | 🧭 **Setup** | Over the player's own Wi-Fi (WPA2, password on the panel) or your network on a cable · only what the player needs to run, then *make it yours* from your home Wi-Fi · a wrong password brings setup back with the reason · a player that starts without its Wi-Fi offers setup again after 90 seconds |
 | 💾 **Backup & restore** | Settings, pairings and source logins in one archive, on a network share or downloaded to your phone · restored during setup, which asks for this player's output and screen and lets you change the rest · one player's backup can start a second one, leaving the first one's sign-ins behind · a factory reset starts the player over without re-flashing |
 | ⬆️ **Updates** | Over the network, with release notes · *Testing* gets each release first, *Stable* once it has been tried |
@@ -246,9 +246,10 @@ Rough, and subject to change:
   download software, with progress, retry and remove, and your own plugins
   installed from Settings. A mini player on the phone. Animated skins with
   scrolling tickers and smooth rotation. A fixed address on cable or Wi-Fi.
-  Problem reports and hardware feedback.
-- 🔜 **Next:** a Home Assistant dashboard on the screen, DSI screens on the Pi's own display connector, and room correction for the bass with a USB microphone.
-- 🎨 **Later:** room correction for the full range, the player inside Home Assistant as a media player, themes. With Plex switched on, your own Plex server fills in
+  Problem reports and hardware feedback. A Home Assistant dashboard on the
+  screen. DSI screens on the Pi's own display connector.
+- 🔜 **Next:** room correction for the bass with a USB microphone, then for the full range.
+- 🎨 **Later:** the player inside Home Assistant as a media player, themes. With Plex switched on, your own Plex server fills in
   the artist and album information other sources leave out.
 - 💭 **Maybe:** a visual equaliser, the DAC's own filter and polarity options.
 

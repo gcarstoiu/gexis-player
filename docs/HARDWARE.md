@@ -19,7 +19,7 @@ on a 1, 2 or 8 GB Pi 4, or on any other model.
 | **Memory** | 2 GB (**untested**) | 4 GB (**tested**) | The player's own processes use about **700 MB** with a screen attached (measured on `gexis`, 2026-10-03: the visualiser 283 MB, the screen's browser about 226 MB, Plexamp 62 MB, the core 34 MB, the rest under 25 MB each). A 1 GB Pi would leave little room: **untested**. |
 | **Storage** | 16 GB card (**calculated**) | 32 GB or more | The image is **5.1 GB** (0.9.2; 4.9 GB at 0.8.4). `gexis`, with one skin pack and the Lyrion server holding a library of tens of thousands of files, uses **8.3 GB**. Space for an update's downloads comes on top. |
 | **Audio** | None beyond the Pi: its HDMI (a sound bar or AV receiver) or its headphone jack | A DAC HAT from the player's list, or a USB DAC; on the bench the HiFiBerry DAC2 HD | ADR-0117 (Phase 13d) gives every DAC one of three states (a fourth, *Reported*, from owners' feedback, ADR-0126). **Tested:** the HiFiBerry DAC2 HD (`hw:sndrpihifiberry`, the bench board throughout). **Tested:** the IQaudIO Pi-DAC PRO, recognised by its EEPROM - every rate from 44.1 to 192 kHz reaches it unchanged, its own volume control is used; Lyrion, Spotify, Bluetooth and Plexamp measured, and a chosen board that is not fitted taken back by itself (Finding 114). The IQaudIO DAC Plus itself: **untested**. **Known:** the rest of the list (from Volumio's, corrected - Finding 106), **untested**. **Detected:** a USB DAC works as any class-compliant card, shown by its maker: an SMSL USB DAC (USB 2.0) **tested** on 2026-10-12 (Finding 120): found by itself; 32-bit only, every rate from 44.1 to 768 kHz reaching it unchanged, 16- and 24-bit sources widened to 32 bits without changing a sample (ADR-0143); through Lyrion unchanged up to 384 kHz (a 705.6 or 768 kHz file served over the network does not play); no volume control of its own, so Software or Fixed; **native DSD** (DSD64, 128, 256) from Lyrion with the volume Fixed, reaching it unconverted (ADR-0144). Bluetooth and Plexamp on it: **tested**. **Tested:** a **USB-to-optical adapter** (Realtek *USB SPDIF Adapter*, USB `0bda:4e27`) into the SMSL's optical input, 2026-10-20 (Finding 130, ADR-0155): 44.1, 48, 96 and 192 kHz reach it unchanged, heard and on the SMSL's display; it lacks 88.2 and 176.4 kHz, so Lyrion converts those to 192 kHz (until ADR-0155 they played silence) and Plexamp converts them itself; no volume control, so Fixed to start with, Software if chosen. **Untested:** a sound bar or receiver on optical, and any other adapter model. DSD on the HATs: neither tested board plays it; a DSD file is converted to PCM for them, and for any DAC whose volume is not Fixed. |
-| **Screen** | None (the player runs without one) | An HDMI touch screen from the tested list | HDMI only, on either port (ADR-0109; HDMI 2 seen with a TV on sofapi, not with a touch screen). With a screen on one port and a sound bar or receiver on the other, *Settings → Display* lists both and the screen's port can be chosen; the other port shows black, and if it carries the sound and disappears, the headphone jack stands in (ADR-0141). Seen on sofapi with a Sony receiver on HDMI 2; switching the receiver off and on: **untested**. **Tested on the hardware** (Phase 13b, closed 2026-10-04): Waveshare 10.1" HDMI LCD (B), 1280 x 800, with or without its case; a 13.3" at 1920 x 1080; the Waveshare 7.9" bar (1280 x 400) and 11.9" bar (1480 x 320), both landscape; the **HMTECH 7" HDMI Monitor, 800 x 480, no touch** (sofapi, 2026-10-20: recognised by its EDID, *Keep this screen?* answered on the phone; the first 800 x 480 screen on the hardware, which found Chromium restoring a stored window size at the wrong scale - fixed); the **HMTECH 10.1" HDMI Monitor, 1024 x 600, no touch** (sofapi, 2026-10-20; its EDID reads Dell TLD1280; the list's HMTECH 10.1" is the touch model, so this one has its own entry). **Listed, untested:** every other HDMI screen in the player's list, and a bar at 0°. DSI and DPI screens: not supported (DSI is planned next but one, `ph-dsi`). **A TV as the screen** (ADR-0147, George, 2026-10-13): chosen under *Settings → Display → Screen port*, run at 1920 x 1080 from the modes the TV offers, set at boot and again by the compositor (a 4K TV scales it up), *Keep this screen?* answered on the phone since a TV has no touch; a touch panel on the other port is switched off. Seen on sofapi with an LG TV on HDMI 2 behind a Sony receiver: the third try, 2026-10-14, passed - the TV at 1920 x 1080, the panel on HDMI 1 fully off, TV standby keeping the music. Behind a receiver, the TV is named by the receiver (*SONY AVSYSTEM*). Turned off and on, the receiver first offers 640 x 480 alone; the player sets 1920 x 1080 again within a few seconds (2026-10-14, forced by hand; the TV itself turned off and on: to see). |
+| **Screen** | None (the player runs without one) | An HDMI or DSI touch screen from the tested list | HDMI on either port, or DSI on the Pi's own display connector (ADR-0109, ADR-0158; HDMI 2 seen with a TV on sofapi, not with a touch screen). With a screen on one port and a sound bar or receiver on the other, *Settings → Display* lists both and the screen's port can be chosen; the other port shows black, and if it carries the sound and disappears, the headphone jack stands in (ADR-0141). Seen on sofapi with a Sony receiver on HDMI 2; switching the receiver off and on: **untested**. **Tested on the hardware** (Phase 13b, closed 2026-10-04): Waveshare 10.1" HDMI LCD (B), 1280 x 800, with or without its case; a 13.3" at 1920 x 1080; the Waveshare 7.9" bar (1280 x 400) and 11.9" bar (1480 x 320), both landscape; the **HMTECH 7" HDMI Monitor, 800 x 480, no touch** (sofapi, 2026-10-20: recognised by its EDID, *Keep this screen?* answered on the phone; the first 800 x 480 screen on the hardware, which found Chromium restoring a stored window size at the wrong scale - fixed); the **HMTECH 10.1" HDMI Monitor, 1024 x 600, no touch** (sofapi, 2026-10-20; its EDID reads Dell TLD1280; the list's HMTECH 10.1" is the touch model, so this one has its own entry). **DSI** (ADR-0158, Phase 17): the **Hosyond 7" DSI Display, 800 x 480, touch** (bedroompi, 2026-10-23: brought up by the Pi's firmware with nothing written, as the Raspberry Pi Touch Display it answers as; recognised by its I2C controllers, there being no EDID, and shown as *Raspberry Pi Touch Display or compatible* until its model is picked). What was and was not checked on it is in [ADR-0158](decisions/0158-dsi-screens.md). Every other DSI model in the list (57) is **listed, untested**: 22 on the Touch Display's driver, found by the firmware the same way; 35 whose driver line the player writes into `config.txt`, with a restart, *Keep this screen?* and a way back if the screen stays dark. Five DSI models are left out: three that need the KMS graphics driver removed, two on Waveshare's own driver, which Raspberry Pi OS does not carry. **Listed, untested:** every other HDMI screen in the player's list, and a bar at 0°. DPI screens: not supported (they take the GPIO header, where the DACs sit). **A TV as the screen** (ADR-0147, George, 2026-10-13): chosen under *Settings → Display → Screen port*, run at 1920 x 1080 from the modes the TV offers, set at boot and again by the compositor (a 4K TV scales it up), *Keep this screen?* answered on the phone since a TV has no touch; a touch panel on the other port is switched off. Seen on sofapi with an LG TV on HDMI 2 behind a Sony receiver: the third try, 2026-10-14, passed - the TV at 1920 x 1080, the panel on HDMI 1 fully off, TV standby keeping the music. Behind a receiver, the TV is named by the receiver (*SONY AVSYSTEM*). Turned off and on, the receiver first offers 640 x 480 alone; the player sets 1920 x 1080 again within a few seconds (2026-10-14, forced by hand; the TV itself turned off and on: to see). |
 | **Network** | Wi-Fi | Wi-Fi or Ethernet | `gexis` runs on Wi-Fi. Internet is needed for updates, skin packs, and anything a plugin downloads (Plexamp, the Lyrion server). **Untested:** whether Wi-Fi power saving, on in the image, delays the phone's touchpad (2026-10-06: the bursts measured came from the core, not the network). |
 | **Phone** | None (the panel works by touch) | A phone with a current browser, on the same network | The phone page (ADR-0101): Settings, the mini player and the touchpad (ADR-0121), tried on George's phone. No app to install. |
 | **Power** | Raspberry Pi's 5.1 V 3 A USB-C supply | Same, and a screen on its own supply where it has a port for one | Raspberry Pi's own recommendation for the Pi 4. **Measured, 2026-10-08/09:** an 11.9" bar powered from the Pi's USB, on a phone charger, reset the Pi eleven times within seconds of each start; on a better supply the resets stopped, but `vcgencmd get_throttled` still read `0x50000` (5 undervoltage dips in 7.5 minutes, mostly while the screen was touched). **No USB extension cable on the supply:** on 2026-10-13/14 the same bar on Raspberry Pi's own 5.1 V supply, through a USB extension, read undervoltage *continuously* (`0x50005`, the CPU held throttled); plugged in directly it read `0x0` for its first 28 minutes. If the supply's cable does not reach, extend the mains side instead. A Pi 4 with a 13.3" screen read `0x0` over two days. |
@@ -228,8 +228,17 @@ and the player through a reviewed change (ADR-0126).
 | BIGTREETECH HDMI5 V1.0 (800x480) |  |  |
 | BIGTREETECH HDMI7 V1.0 (1024x600) |  |  |
 | BIGTREETECH HDMI7 V1.2 (1024x600) |  |  |
+| BIGTREETECH PI TFT43 V2.0 (800x480) |  |  |
+| BIGTREETECH PI TFT43 V2.1 (800x480) |  |  |
+| BIGTREETECH PI TFT50 V2.0 (800x480) |  |  |
+| BIGTREETECH PI TFT50 V2.1 (800x480) |  |  |
+| BIGTREETECH PI TFT70 V2.0 (800x480) |  |  |
+| BIGTREETECH PI TFT70 V2.1 (800x480) |  |  |
 | Elecrow 5" HDMI (800x480) |  |  |
 | Elecrow 7" HDMI (1024x600) |  |  |
+| Freenove 4.3" DSI (800x480) |  |  |
+| Freenove 5" DSI (800x480) |  |  |
+| Freenove 7" DSI (800x480) |  |  |
 | Freenove 7" HDMI (1024x600) |  |  |
 | GeeekPi 10.1" HDMI (1024x600) |  |  |
 | GeeekPi 10.1" HDMI (1280x800) |  |  |
@@ -252,10 +261,14 @@ and the player through a reviewed change (ADR-0126).
 | Hosyond 10.1" HDMI Display-H (1024x600) |  |  |
 | Hosyond 10.1" HDMI Display-S (1024x600) |  |  |
 | Hosyond 10.1" HDMI Display-Y (1024x600) |  |  |
+| Hosyond 5" DSI Display (800x480) |  |  |
 | Hosyond 5" HDMI Display-B (800x480) |  |  |
+| Hosyond 7" DSI Display (800x480) | Tested |  |
 | Hosyond 7" HDMI Display-C (1024x600) |  |  |
 | Hosyond 7" HDMI Display-H (1024x600) |  |  |
 | Hosyond 8.8" HDMI Bar (480x1920) |  |  |
+| JDI LT070ME05000 DSI (1920x1200) |  |  |
+| JDI LT070ME05000 V2 DSI (1920x1200) |  |  |
 | Joy-IT 10" HDMI LCD V2 (1280x800) |  |  |
 | Joy-IT 10.1" HDMI LCD Version B (1280x800) |  |  |
 | Joy-IT 10.1" IPS HDMI V3 (1280x800) |  |  |
@@ -271,6 +284,10 @@ and the player through a reviewed change (ADR-0126).
 | Longruner 5" HDMI (800x480) |  |  |
 | Longruner 7" HDMI (1024x600) |  |  |
 | Pollin 5" HDMI 800x480 Touch (pre-2020) |  |  |
+| Raspberry Pi Touch Display 2 - 5" |  |  |
+| Raspberry Pi Touch Display 2 - 7" |  |  |
+| Raspberry Pi Touch Display 7" (Original) |  |  |
+| Raspberry Pi Touch Display or compatible (DSI, 800x480) | Tested |  |
 | Seeed Studio 10.1" HDMI (1366x768) |  |  |
 | Seeed Studio 10.1" HDMI IPS (1200x1920) |  |  |
 | Seeed Studio 10.1" HDMI IPS (1280x800) |  |  |
@@ -289,6 +306,12 @@ and the player through a reviewed change (ADR-0126).
 | UCTRONICS 5" HDMI (800x480) |  |  |
 | UCTRONICS 7" HDMI (1024x600) |  |  |
 | UCTRONICS 7" HDMI (1024x768) |  |  |
+| Waveshare 10.1" DSI (1280x800) |  |  |
+| Waveshare 10.1" DSI-C (1280x800) |  |  |
+| Waveshare 10.1" DSI-TOUCH V2-A 2-lane (800x1280) |  |  |
+| Waveshare 10.1" DSI-TOUCH V2-A 4-lane (800x1280) |  |  |
+| Waveshare 10.1" DSI-TOUCH V2-B 2-lane (720x1280) |  |  |
+| Waveshare 10.1" DSI-TOUCH V2-B 4-lane (720x1280) |  |  |
 | Waveshare 10.1" HDMI LCD (1024x600) |  |  |
 | Waveshare 10.1" HDMI LCD (B) (1280x800) | Tested |  |
 | Waveshare 10.1" HDMI LCD (D) (1024x600) |  |  |
@@ -298,33 +321,69 @@ and the player through a reviewed change (ADR-0126).
 | Waveshare 10.1" HDMI LCD (H) (1024x600) |  |  |
 | Waveshare 10.5" HDMI AMOLED (2560x1600) |  |  |
 | Waveshare 11.6" HDMI LCD (H) (1920x1080) |  |  |
+| Waveshare 11.9" DSI (320x1480) |  |  |
 | Waveshare 11.9" HDMI LCD (320x1480) | Tested |  |
+| Waveshare 12.3" DSI-TOUCH V2-A 4-lane (720x1920) |  |  |
+| Waveshare 13.3" DSI 2-lane (1920x1080) |  |  |
+| Waveshare 13.3" DSI 4-lane (1920x1080) |  |  |
 | Waveshare 13.3" HDMI LCD (H) (1920x1080) | Tested |  |
 | Waveshare 15.6" FHD Monitor (B) (1920x1080) |  |  |
 | Waveshare 15.6" HDMI LCD (1920x1080) |  |  |
+| Waveshare 2.8" DSI (480x640) |  |  |
 | Waveshare 2.8" HDMI LCD (H) (480x640) |  |  |
 | Waveshare 3.5" HDMI LCD (480x320) |  |  |
 | Waveshare 3.5" HDMI LCD (E) (640x480) |  |  |
 | Waveshare 4" HDMI LCD (480x800) |  |  |
 | Waveshare 4" HDMI LCD (H) (480x800) |  |  |
+| Waveshare 4.0" DSI (480x800) |  |  |
+| Waveshare 4.3" DSI (800x480) |  |  |
+| Waveshare 4.3" DSI QLED (800x480) |  |  |
 | Waveshare 4.3" HDMI LCD (480x272) |  |  |
 | Waveshare 4.3" HDMI LCD (B) (800x480) |  |  |
+| Waveshare 5" DSI (800x480) |  |  |
+| Waveshare 5" DSI-B IPS (800x480) |  |  |
+| Waveshare 5" DSI-C IPS (800x480) |  |  |
+| Waveshare 5" DSI-D IPS (800x480) |  |  |
 | Waveshare 5" HDMI AMOLED (960x544) |  |  |
 | Waveshare 5" HDMI LCD (800x480) |  |  |
 | Waveshare 5" HDMI LCD (B) (800x480) |  |  |
 | Waveshare 5" HDMI LCD (G) (800x480) |  |  |
 | Waveshare 5" HDMI LCD (H) (800x480) |  |  |
 | Waveshare 5" HDMI LCD (H) V4 (800x480) |  |  |
+| Waveshare 5.0" DSI (720x1280) |  |  |
+| Waveshare 5.0" DSI-TOUCH V2-A (720x1280) |  |  |
 | Waveshare 5.5" 2K HDMI LCD (1440x2560) |  |  |
+| Waveshare 5.5" DSI-TOUCH V2-A (720x1280) |  |  |
 | Waveshare 5.5" HDMI AMOLED (1080x1920) |  |  |
 | Waveshare 6" HDMI AMOLED (1080x2160) |  |  |
+| Waveshare 6.25" DSI (720x1560) |  |  |
+| Waveshare 7" DSI (800x480) |  |  |
+| Waveshare 7" DSI with Camera (800x480) |  |  |
+| Waveshare 7" DSI-B (800x480) |  |  |
 | Waveshare 7" FHD HDMI Monitor (1080x1920) |  |  |
 | Waveshare 7" HDMI LCD (1024x600) |  |  |
 | Waveshare 7" HDMI LCD (B) (800x480) |  |  |
 | Waveshare 7" HDMI LCD (C) (1024x600) |  |  |
 | Waveshare 7" HDMI LCD (H) (1024x600) |  |  |
+| Waveshare 7.0" DSI-C (1024x600) |  |  |
+| Waveshare 7.0" DSI-E (1280x800) |  |  |
+| Waveshare 7.0" DSI-H (1280x720) |  |  |
+| Waveshare 7.0" DSI-TOUCH V2-A (720x1280) |  |  |
+| Waveshare 7.0" DSI-TOUCH V2-B (720x1280) |  |  |
+| Waveshare 7.0" DSI-TOUCH V2-C (1024x600) |  |  |
+| Waveshare 7.9" DSI (400x1280) |  |  |
 | Waveshare 7.9" HDMI LCD (400x1280) | Tested |  |
+| Waveshare 8" DSI (800x480) |  |  |
+| Waveshare 8" DSI with Camera (800x480) |  |  |
+| Waveshare 8.0" DSI (1280x800) |  |  |
+| Waveshare 8.0" DSI-C (1280x800) |  |  |
+| Waveshare 8.0" DSI-TOUCH V2-A 2-lane (800x1280) |  |  |
+| Waveshare 8.0" DSI-TOUCH V2-A 4-lane (800x1280) |  |  |
+| Waveshare 8.8" DSI (480x1920) |  |  |
+| Waveshare 8.8" DSI-TOUCH V2-A (480x1920) |  |  |
 | Waveshare 8.8" HDMI Side Monitor (480x1920) |  |  |
+| Waveshare 9.0" DSI-TOUCH V2-B 2-lane (720x1280) |  |  |
+| Waveshare 9.0" DSI-TOUCH V2-B 4-lane (720x1280) |  |  |
 | Waveshare 9.3" HDMI LCD (1600x600) |  |  |
 
 <!-- hardware-reports:end -->
