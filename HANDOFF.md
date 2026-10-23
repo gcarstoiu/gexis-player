@@ -69,6 +69,21 @@ skipped. The branch is not merged into `next` yet. **sofapi is still on
 `preview-1021`** (core `1.3.1+git62`, the rest `git64`, 1.4.0's code) and
 moves to 1.4.0 by the update.
 
+**bedroompi runs the preview `lms-server-restart`** (since 2026-10-23
+20:08; a card from an earlier life, now with a Hosyond 7" DSI panel):
+gexis-core, gexis-ui and gexis-player `1.4.0+git24.e505054`. **For George
+to look at before Stable**, then merged into `next` with `bar-wallpapers`.
+It had updated itself to 1.4.0 and kept a Lyrion server address that had
+moved to sofapi, which has none: no library, an empty New Music strip, no
+Lyrion on the waiting screen. George chose the right server in Settings at
+19:51 and nothing changed - the server is read at the core's start. Now
+the row carries `restart: "core"` and Settings restarts the core 1.5 s
+after a save that changed it (ADR-0048 amended 2026-10-23, George:
+*"Yes"*); tried there: the same server again kept the core, another one
+restarted it onto the new address, and back. Core suite 2631 passed, 48
+skipped. Its home strip is *Most played artists* (a setting from the
+card's earlier life; *New Music* was only the empty strip's fallback title).
+
 **The test venv imports the core from `~/projects/gexis-player-next`** (an
 editable install): in another worktree run the suite with `PYTHONPATH=src`
 from its `core/`, or it tests `next`'s code. **A preview of core needs the
@@ -117,8 +132,19 @@ player), raised 20-21 Oct.
 
 **Phase 18, a Home Assistant dashboard on the screen** (`ph-ha-dashboard`,
 ADR-0156) was closed on 2026-10-22, released in 1.4.0 (George: *"Close
-phase 18 - ha works fine"*). **Next:** Phase 17, DSI screens
-(`ph-dsi`), which waits for George to name his screen. Then, in order (`docs/DEVELOPMENT.md`; refer
+phase 18 - ha works fine"*). **In progress: Phase 17, DSI screens** (`ph-dsi`,
+`~/projects/gexis-player-ph-dsi`, from `next`; started 2026-10-23, George:
+*"Start phase 17"*). The screen is a Hosyond 7" DSI touch panel, 800x480,
+in bedroompi; the firmware brings it up by itself (`display_auto_detect`,
+overlay `vc4-kms-dsi-7inch`, as the original Touch Display), no EDID, touch
+`edt_ft5x06` on I2C, backlight `/sys/class/backlight/10-0045`. Set as the
+HMTECH 7" HDMI it half-works: everything aimed at `HDMI-A-1` fails, so the
+180° rotation, standby and the kiosk background never apply. **ADR-0158
+(proposed, committed on `ph-dsi`, not pushed) waits for George's five
+decisions** - which screens, the name shown, which wins with HDMI too,
+standby by backlight, a brightness row - then measurements on bedroompi
+(touch at 180°, backlight timing, HDMI sound beside it), then the build.
+Then, in order (`docs/DEVELOPMENT.md`; refer
 to them by ID): **19** room correction for the bass (`ph-room-correction`),
 **20** room correction for the full range (`ph-room-correction-full`), **21**
 Home Assistant (`ph-home-assistant`), **22** themes (`ph-themes`), **23** the
@@ -146,7 +172,7 @@ MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
 | Name | What it is |
 |---|---|
 | R2D2 | Dev machine. CachyOS, **fish shell** (use `bash -c` for loops). Docker `data-root` `/home/docker`. Claude builds here; George flashes. |
-| sofapi, the bar (ShelvesPi), guestpi | Test players, Pi 4. Reached by SSH key as `pi`; host keys kept in the session's scratchpad. |
+| sofapi, the bar (ShelvesPi), guestpi, bedroompi | Test players, Pi 4 (bedroompi: the Hosyond 7" DSI panel, Phase 17). Reached by SSH key as `pi`; host keys kept in the session's scratchpad. |
 | rig | Pi 4 reference for Findings 002-004. Not a test target. |
 | LMS server | George's Lyrion server, for manual tests. CI must never depend on it. |
 
