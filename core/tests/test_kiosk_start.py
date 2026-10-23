@@ -17,13 +17,13 @@ SCRIPT = FILES / "gexis-kiosk-start"
 pytestmark = pytest.mark.skipif(shutil.which("bash") is None, reason="needs bash")
 
 
-def _write(tmp_path: Path, connector: str | None = None, connected: tuple[str, ...] = ()) -> str:
+def _write(tmp_path: Path, connector: str | None = None, connected: tuple[str, ...] = (), dsi: bool = False) -> str:
     source = tmp_path / "xdg"
     source.mkdir(exist_ok=True)
     shutil.copy(FILES / "labwc-rc.xml", source / "rc.xml")
     (source / "environment").write_text("XKB_DEFAULT_LAYOUT=gb\n")
     drm = tmp_path / "drm"
-    for name in ("card1-HDMI-A-1", "card1-HDMI-A-2"):
+    for name in ("card1-HDMI-A-1", "card1-HDMI-A-2") + (("card1-DSI-1",) if dsi else ()):
         (drm / name).mkdir(parents=True, exist_ok=True)
         (drm / name / "status").write_text("connected\n" if name.split("-", 1)[1] in connected else "disconnected\n")
     env = {k: v for k, v in os.environ.items() if not k.startswith("GEXIS_")}
@@ -104,3 +104,19 @@ def test_the_stored_window_size_is_forgotten_before_chromium_starts(tmp_path):
 def test_chromium_is_started_only_after_the_window_size_is_forgotten():
     text = SCRIPT.read_text()
     assert text.index('forget_window "${GEXIS_KIOSK_PROFILE}"') < text.index("exec chromium \\")
+
+
+def test_a_dsi_panel_s_touch_and_window_are_tied_to_dsi(tmp_path):
+    """ADR-0158: the core names DSI-1 in screen.env; touch follows it, and
+    the window is moved there - labwc would otherwise open it on HDMI-A-1."""
+    rc = _write(tmp_path, "DSI-1", connected=("DSI-1",), dsi=True)
+    assert '<touch mapToOutput="DSI-1"/>' in rc
+    assert '<action name="MoveToOutput" output="DSI-1"/>' in rc
+
+
+def test_with_no_screen_chosen_a_dsi_panel_comes_before_hdmi(tmp_path):
+    """ADR-0158 D3: with a receiver on HDMI 1 and the panel on the ribbon,
+    the panel is the screen."""
+    rc = _write(tmp_path, None, connected=("DSI-1", "HDMI-A-1"), dsi=True)
+    assert '<touch mapToOutput="DSI-1"/>' in rc and '<action name="MoveToOutput" output="DSI-1"/>' in rc
+
