@@ -178,6 +178,7 @@ been written properly. **0098 has no record either.**
 | [0155](0155-a-sound-system-on-optical.md) | A sound system on optical, through a USB adapter | Accepted 2026-10-20: Squeezelite converts only rates the card lacks, upward; adapter marked Tested |
 | [0156](0156-home-assistant-dashboard-on-the-screen.md) | A Home Assistant dashboard on the screen | Accepted 2026-10-21: one per player, in the panel's page; button, API, schedule; edge tab dismisses. Amended 2026-10-22: the visualiser - asked for or its timeout - takes over from it |
 | [0157](0157-the-phone-as-real-input-on-the-panel.md) | The phone's touchpad and keyboard as real input on the panel | Accepted 2026-10-21: over a framed page, taps and typing as real input (uinput); amended the same day |
+| [0158](0158-dsi-screens.md) | DSI screens | Proposed 2026-10-23 (Phase 17): firmware-detected Touch Display-compatible panels, no config.txt writes; five decisions owed |
 
 ## Cross-cutting rules
 
