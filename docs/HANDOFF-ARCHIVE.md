@@ -7028,15 +7028,6 @@ worktree made 1.0.3's first build want every OS file uploaded again; the
 copies were fetched back into `prior/` (1,004 files) and only the 10 changed
 ones uploaded. Make the symlink before `build.sh` in every release worktree.
 
-**The blog (George's WordPress, tag `sound`):** eleven articles in
-`~/projects/gexis-blog/` (articles, media, the demo tools); the setup article
-left out until setup changes. George pushed them to his site as drafts with
-`push_wp.py` (2026-10-15). `schedule_wp.py` schedules nine of them, one a day
-at 18:00 from 2026-10-16 (its `ORDER`); whether George has run it is not
-recorded here. The theme (`gcarstoiu/gexis-wp-theme`, 1.0.3, pushed) has the
-`gexis/repo-doc` block, which reads FAQ, Install, Hardware, Manual and Release
-notes from `main`, cached an hour, and a Documents row on a tag's page.
-
 Suite 2,485 passed, 47 skipped (2026-10-16), run with the venv in
 `~/.local/share/gexis-venv` (never under `/tmp`: LESSONS 74).
 
@@ -7307,25 +7298,8 @@ screenshots retaken from the demo). sofapi runs core, ui and player
 `1.1.1+git33`, core restarted by hand (LESSONS 77). **Waiting on George:** his test of the four fixes, and whether
 he switched *API explorer* on (it reads on; it was off after my test). Then
 `ph-api` into `next`, GitHub Pages on, the release.
-**Three Phase 14 articles** (13-15: setup in two parts,
-where your music is, a music server's first minutes) are drafts 186, 190 and
-191 in the local WordPress copy for George to read; `import_wp.py` now takes
-article numbers, and `bundle.json` is refreshed for `push_wp.py`.
 
-## 2026-10-19: the blog, the suite, the next phases and the phase list as they stood before 1.2.0 (moved from HANDOFF verbatim at the clean-up after 1.2.0)
-
-**Five articles** (13-15 for Phase 14; 16, the API, and 17, the small
-things, for Phase 15) are drafts 186, 190, 191, 196 and 201 in the local
-WordPress copy; `schedule_wp.py` now schedules them 25-29 October after the
-first nine, once George has pushed them; `import_wp.py` now takes
-article numbers, and `bundle.json` is refreshed for `push_wp.py`.
-
-**The blog** (George's WordPress, tag `sound`): eleven articles in
-`~/projects/gexis-blog/`, pushed as drafts by George (2026-10-15; article 05
-now mentions *Add a backup*, bundle rebuilt 2026-10-17, for George to re-push);
-`schedule_wp.py` schedules nine, daily at 18:00 from 2026-10-16 - whether he
-ran it is not recorded. The theme (`gcarstoiu/gexis-wp-theme` 1.0.3, pushed)
-mirrors FAQ, Install, Hardware, Manual and Release notes from `main`.
+## 2026-10-19: the suite, the next phases and the phase list as they stood before 1.2.0 (moved from HANDOFF verbatim at the clean-up after 1.2.0)
 
 Suite 2,544 passed, 47 skipped (2026-10-18, on `ph-first-use`), with the venv in
 `~/.local/share/gexis-venv` (never under `/tmp`: LESSONS 74).
