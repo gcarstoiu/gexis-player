@@ -81,14 +81,19 @@ PAGES = 3
 MIN_WIDTH = 1280
 MIN_HEIGHT = 800
 
-#: **On a bar, wide pictures only** (George, 2026-10-04, "C": the bars'
+#: **On a bar, wide pictures too** (George, 2026-10-04, "C": the bars'
 #: wallpapers "do not come in the ratio of a bar which is making them look
 #: strange"). Pixabay has no panorama filter but reports every picture's
-#: size, so the page is filtered here: at least 2.4 to 1, the family boundary
+#: size, so a page is filtered here: at least 2.4 to 1, the family boundary
 #: (ADR-0109), which a 1280 x 400 bar crops by at most a quarter. The bar's
-#: page asks for the most results Pixabay gives at once and a lower height,
-#: since panoramas are a small share of any category. A bar whose categories
-#: have none falls back to the usual pictures, which the idle screen crops.
+#: wide page asks for the most results Pixabay gives at once and a lower
+#: height, since panoramas are a small share of any category.
+#:
+#: **The wide pictures join the usual ones, they do not replace them**
+#: (ADR-0120 amended 2026-10-23, George: "1"). Wide-only with a fallback at
+#: none showed ShelvesPi one Roman snail every minute for five days: from
+#: 19 October Nature and Animals each had one wide picture in 200, the same
+#: one. The usual pictures are placed on the bar by what they show (§1).
 WIDE_RATIO = 2.4
 WIDE_PER_PAGE = 200
 WIDE_MIN_HEIGHT = 400
@@ -234,7 +239,12 @@ class Wallpapers:
         """**No picture twice until every one has been shown** (ADR-0047
         §2e); then the round starts again - never with the one on screen,
         when there is another."""
-        shown = set(self._state["shown"].get(json.dumps(list(slot)), []))
+        key = json.dumps(list(slot))
+        # A bar's pool is two pages, so no one page's refresh prunes it:
+        # what has left the pool is forgotten here.
+        ids = {h["id"] for h in hits}
+        self._state["shown"][key] = [i for i in self._state["shown"].get(key, []) if i in ids]
+        shown = set(self._state["shown"][key])
         fresh = [h for h in hits if h["id"] not in shown and f"{h['id']}.jpg" != avoid]
         if fresh:
             return fresh
@@ -347,6 +357,18 @@ class Wallpapers:
             return random.sample(sources, len(sources))
         return sorted(sources, key=lambda s: -(self.wide_share(s) if self.wide_share(s) is not None else 1.0))
 
+    async def _pool(self, key: str, category: str, wide: bool) -> tuple[list[dict], tuple]:
+        """The pictures a category offers this screen, and the slot that
+        counts which were shown. **On a bar, its wide page and its usual
+        page together** (ADR-0120 amended 2026-10-23), each picture once, so
+        a page with one panorama in it gives one picture among two hundred."""
+        if not wide:
+            return await self._page(key, category, False), (category, False)
+        panoramas = await self._page(key, category, True)
+        usual = await self._page(key, category, False)
+        ids = {h["id"] for h in panoramas}
+        return panoramas + [h for h in usual if h["id"] not in ids], (category, "bar")
+
     async def next(self, key: str, topics: list[str], avoid: str | None = None, wide: bool = False) -> dict:
         """One picture, ready to draw, or an `error` saying why not.
 
@@ -367,15 +389,11 @@ class Wallpapers:
             # rather than picked once, so a category that answers with
             # nothing falls through to another instead of blanking the
             # screen until the next change.
-            # A bar asks for wide pictures first - from the source measured
-            # wider first - then the usual ones.
-            rounds = []
-            for w in ((True, False) if wide else (False,)):
-                for source in self._order(sources, w):
-                    rounds += [(source, c, w) for c in random.sample(chosen, len(chosen))]
-            for source, category, w in rounds:
-                hits = await self._page(key, category, w)
-                slot = (category, w)
+            # A bar asks the source measured wider first.
+            rounds = [(source, c) for source in self._order(sources, wide)
+                      for c in random.sample(chosen, len(chosen))]
+            for source, category in rounds:
+                hits, slot = await self._pool(key, category, wide)
                 if not hits:
                     continue
                 hit = random.choice(self._unshown(slot, hits, avoid))
