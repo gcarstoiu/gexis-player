@@ -3096,7 +3096,7 @@ small phase before room correction. Settled in
 dashboard per player, shown in the panel's own page; up from a button on the
 panel and the phone, from Home Assistant through the API, or in place of the
 idle screen at set times; dismissed by an edge tab. Not to be confused with
-Phase 21 (`ph-home-assistant`), the player inside Home Assistant.
+Phase 19 (`ph-home-assistant`), the player inside Home Assistant.
 
 **Closed 2026-10-22** (George: *"Close phase 18 - ha works fine"*), released
 in 1.4.0. ADR-0156 (accepted, decision 3 amended) and ADR-0157 (the phone as
@@ -3126,9 +3126,39 @@ it is asked for or starts by its timeout, rather than leaving it in place
    signing in, a dashboard shaped for the screen), from a check against a
    real Home Assistant.
 
-### Phase 19 — Room correction for the bass, with a USB microphone
+### Phase 19 — The player in Home Assistant
 
-**ID:** `ph-room-correction` · numbered 19 on 2026-10-21 (18 from 2026-10-19, 16 from 2026-10-15, 15 from 2026-10-14).
+**ID:** `ph-home-assistant` · numbered 19 on 2026-10-24, moved before room correction (George); 21 from 2026-10-21 (20 from 2026-10-20, 19 from 2026-10-19, 17 from 2026-10-15, 16 from 2026-10-14, 15 from 2026-10-13; was 13g).
+
+**Added 2026-10-11** (George: *"Let's add the home assistant with the player
+as a plugin as a separate phase before themes"*, after choosing the player
+inside an existing Home Assistant over hosting Home Assistant on the player).
+The player appears in the owner's own Home Assistant as a media player: what
+plays, its artwork, volume, play and pause, next and previous, the source,
+and the screen's standby (ADR-0135).
+
+**An ADR before anything is built.** It must settle:
+- **How Home Assistant reaches it**: an integration of our own, published for
+  Home Assistant to install, reading the player's existing API and its
+  `/state` socket; or MQTT, with Home Assistant's discovery - which needs a
+  broker the owner runs.
+- **How it is found**: the `_gexis._tcp` announcement (ADR-0136) lets Home
+  Assistant discover players with no address typed.
+- **What it may change**, given the API is open to the LAN by decision
+  (ADR-0028).
+
+**Acceptance (draft):**
+
+1. A player on the network appears in Home Assistant without an address
+   typed.
+2. Home Assistant shows what plays, with artwork, within two seconds of a
+   change, and controls play, pause, next, previous and volume.
+3. Nothing it does disturbs playback, measured as Phase 13e measured the
+   Lyrion Server.
+
+### Phase 20 — Room correction for the bass, with a USB microphone
+
+**ID:** `ph-room-correction` · numbered 20 on 2026-10-24; 19 from 2026-10-21 (18 from 2026-10-19, 16 from 2026-10-15, 15 from 2026-10-14).
 **Split 2026-10-20** (George: room correction in two - the bass first, the
 full range after; *"yes - let's do it like that"*): this phase is **the bass**,
 below the room's Schroeder frequency (about 200-300 Hz in a living room),
@@ -3137,7 +3167,7 @@ around the listening seat, averaged** (3-5 within about half a metre of the
 head): below that frequency the response changes most from place to place,
 so one position would fit the microphone's spot and miss the listener's head.
 Mostly cuts, no deep boosts into nulls. The full range, with more positions
-and a target curve, is Phase 20 (`ph-room-correction-full`). Finding 124's
+and a target curve, is Phase 21 (`ph-room-correction-full`). Finding 124's
 first tier.
 
 **Added 2026-10-14** (George: *"let's add another phase about room
@@ -3186,12 +3216,12 @@ Pi, and the microphones (miniDSP UMIK-1 first).
 4. Every source plays through the correction with no audible gap or
    dropout, and the visualiser keeps working.
 
-### Phase 20 — Room correction for the full range
+### Phase 21 — Room correction for the full range
 
-**ID:** `ph-room-correction-full` · added 2026-10-20 as 19, split from `ph-room-correction`; numbered 20 on 2026-10-21.
+**ID:** `ph-room-correction-full` · added 2026-10-20 as 19, split from `ph-room-correction`; numbered 20 on 2026-10-21, 21 on 2026-10-24.
 
 **Added 2026-10-20** (George, splitting room correction in two). After the
-bass (Phase 19, `ph-room-correction`): correction above the Schroeder
+bass (Phase 20, `ph-room-correction`): correction above the Schroeder
 frequency, from **more positions across the listening area**, towards a
 target curve, and gentle - above the bass what is heard is mostly the
 speakers and their reflections, which the ear blends, and a correction of
@@ -3202,7 +3232,7 @@ tier: DRC-FIR first, then our own design after the Dirac paper and Carini).
 **An ADR before anything is built.** It must settle: how many positions and
 where; the target curve and how it is chosen; how much correction above the
 bass, smoothed how; whether the time-domain part comes in this phase or a
-later one; what it costs a Pi 4 beside Phase 19's filter.
+later one; what it costs a Pi 4 beside Phase 20's filter.
 
 **Acceptance (draft):**
 
@@ -3210,37 +3240,7 @@ later one; what it costs a Pi 4 beside Phase 19's filter.
    the response before and after, per position and averaged.
 2. The averaged response is measurably closer to the target than without,
    and no position is measurably worse - recorded as a finding.
-3. It builds on Phase 19's correction: on and off, A/B, one per output.
-
-### Phase 21 — The player in Home Assistant
-
-**ID:** `ph-home-assistant` · numbered 21 on 2026-10-21 (20 from 2026-10-20, 19 from 2026-10-19, 17 from 2026-10-15, 16 from 2026-10-14, 15 from 2026-10-13; was 13g).
-
-**Added 2026-10-11** (George: *"Let's add the home assistant with the player
-as a plugin as a separate phase before themes"*, after choosing the player
-inside an existing Home Assistant over hosting Home Assistant on the player).
-The player appears in the owner's own Home Assistant as a media player: what
-plays, its artwork, volume, play and pause, next and previous, the source,
-and the screen's standby (ADR-0135).
-
-**An ADR before anything is built.** It must settle:
-- **How Home Assistant reaches it**: an integration of our own, published for
-  Home Assistant to install, reading the player's existing API and its
-  `/state` socket; or MQTT, with Home Assistant's discovery - which needs a
-  broker the owner runs.
-- **How it is found**: the `_gexis._tcp` announcement (ADR-0136) lets Home
-  Assistant discover players with no address typed.
-- **What it may change**, given the API is open to the LAN by decision
-  (ADR-0028).
-
-**Acceptance (draft):**
-
-1. A player on the network appears in Home Assistant without an address
-   typed.
-2. Home Assistant shows what plays, with artwork, within two seconds of a
-   change, and controls play, pause, next, previous and volume.
-3. Nothing it does disturbs playback, measured as Phase 13e measured the
-   Lyrion Server.
+3. It builds on Phase 20's correction: on and off, A/B, one per output.
 
 ### Phase 22 — Themes
 

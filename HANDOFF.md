@@ -75,9 +75,9 @@ now with the Waveshare 10.1" DSI-TOUCH-A): `ph-dsi` with
 (`~/projects/gexis-player-preview-1023`, its own branch, removed once
 `ph-dsi` merges). Since 2026-10-24 15:11 gexis-core and gexis-player
 `1.4.0+git45.561e337`, gexis-ui `1.4.0+git36.b8793e5`, gexis-system
-`1.4.0+git29.d93d43f`. **`lms-server-restart` (pushed) is
-for George to look at before Stable**, then merged into `next` with
-`bar-wallpapers`. It had updated itself to 1.4.0 and kept a Lyrion server address that had
+`1.4.0+git29.d93d43f`. **`lms-server-restart` and `bar-wallpapers`**:
+checked by George, merged into `next` 2026-10-24, branches deleted.
+bedroompi had updated itself to 1.4.0 and kept a Lyrion server address that had
 moved to sofapi, which has none: no library, an empty New Music strip, no
 Lyrion on the waiting screen. George chose the right server in Settings at
 19:51 and nothing changed - the server is read at the core's start. Now
@@ -164,12 +164,15 @@ recorder stops by itself at 14:52) with the core's `POST /touch` log; nothing
 lost: Phase 17 closes. (On the panel, Hardware feedback only points to the phone, since it
 ends on GitHub; George had taken that short sheet for a cut-off one.) `ph-dsi` merges into
 `next` after Phase 17's acceptance. Then, in order (`docs/DEVELOPMENT.md`; refer
-to them by ID): **19** room correction for the bass (`ph-room-correction`),
-**20** room correction for the full range (`ph-room-correction-full`), **21**
-Home Assistant (`ph-home-assistant`), **22** themes (`ph-themes`), **23** the
+to them by ID): **19** the player in Home Assistant (`ph-home-assistant`,
+moved up 2026-10-24), **20** room correction for the bass
+(`ph-room-correction`), **21** room correction for the full range
+(`ph-room-correction-full`), **22** themes (`ph-themes`), **23** the
 library answers for itself (`ph-library`), **24** Lyrion's own menus' look
-(`ph-lyrion-menus`); MPD is parked (`ph-mpd`, ADR-0151). Each ADR first. Still open from 1.0.0: Raspberry Pi
-Imager, the image file and *Use custom* (g14).
+(`ph-lyrion-menus`); MPD is parked (`ph-mpd`, ADR-0151). Each ADR first. **Raspberry Pi Imager** (open since
+1.0.0): the image file with *Use custom*, our own Imager list, Imager's
+community list - a task alongside Phase 17's close, not a phase (George,
+2026-10-24); its ADR first, settling ADR-0021's deferred channel.
 
 The shared to-do list (an artifact with a `todos` collection; its address is
 in Claude's memory, not here) holds the open items with their detail.
