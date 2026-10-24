@@ -7529,3 +7529,18 @@ step 5, then `docs/ROUTINE-CLEANUP.md`):
   in the phases doc and the wiki Roadmap as George decides (show him first).
 - Promotion to Stable is George's call, later; the README's "current
   release" line changes only then.
+
+## 2026-10-24: ShelvesPi's `bar-wallpapers` preview (moved from HANDOFF verbatim once the branch was merged)
+
+**ShelvesPi runs the preview `bar-wallpapers`** (since 2026-10-23 15:02;
+it had updated itself to 1.4.0 before): gexis-core and gexis-player
+`1.4.0+git22.8af98fa`, the rest 1.4.0's. **For George to look at before
+1.4.0 goes to Stable.** On a bar the wide pictures now join the usual ones
+(ADR-0120 amended 2026-10-23, George: *"lets go with 1"*): with Nature and
+Animals each topic's wide page had held one picture since 19 October, the
+same Roman snail, and the bar showed it every minute for five days. After
+the install: three pictures in three minutes, all different, placed by
+what they show; a screenshot showed a butterfly. Core suite 2630 passed, 48
+skipped. The branch is not merged into `next` yet. **sofapi is still on
+`preview-1021`** (core `1.3.1+git62`, the rest `git64`, 1.4.0's code) and
+moves to 1.4.0 by the update.
