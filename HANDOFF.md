@@ -56,18 +56,12 @@ and `next`, the merged branches and worktrees are gone, and the routine
 clean-up ran. Promotion to Stable is George's call, later; the README's
 "current release" line changes only then.
 
-**ShelvesPi runs the preview `bar-wallpapers`** (since 2026-10-23 15:02;
-it had updated itself to 1.4.0 before): gexis-core and gexis-player
-`1.4.0+git22.8af98fa`, the rest 1.4.0's. **For George to look at before
-1.4.0 goes to Stable.** On a bar the wide pictures now join the usual ones
-(ADR-0120 amended 2026-10-23, George: *"lets go with 1"*): with Nature and
-Animals each topic's wide page had held one picture since 19 October, the
-same Roman snail, and the bar showed it every minute for five days. After
-the install: three pictures in three minutes, all different, placed by
-what they show; a screenshot showed a butterfly. Core suite 2630 passed, 48
-skipped. The branch is not merged into `next` yet. **sofapi is still on
-`preview-1021`** (core `1.3.1+git62`, the rest `git64`, 1.4.0's code) and
-moves to 1.4.0 by the update.
+**ShelvesPi runs the preview `preview-bar-1024`** (since 2026-10-24 21:35):
+`next` with `bar-pictures-retry` and `bar-settings-fit` merged in
+(`~/projects/gexis-player-preview-bar-1024`, its own branch, removed once both
+merge): gexis-core `1.4.0+git53.5b660b4`, gexis-ui and gexis-player
+`1.4.0+git63.40b646c`. For George: album artists' pictures and the Settings
+sheets on the bar. **sofapi runs the Phase 19 preview** (below).
 
 **bedroompi runs the preview `preview-1023`** (a card from an earlier life,
 now with the Waveshare 10.1" DSI-TOUCH-A): `ph-dsi` with
@@ -113,17 +107,24 @@ server answers first after a restart (Finding 130 point 6). GitHub reported
 player), raised 20-21 Oct.
 
 **Open:**
-- **The visualiser button on the bar sometimes does nothing** (George, 21
-  and 22 Oct; not in 1.4.0's notes). Not the tray's 2 s self-hide (George
-  tapped at once); a tap whose finger moves about 12 px gives no click in
-  Chromium (reproduced headless), not yet caught on George's finger: the
-  three recorded taps all worked. ShelvesPi's kiosk runs with a local
-  DevTools port 9222 and a touch recorder in the page (`window.__rec`) until
-  the next reboot (`/run/systemd/system/gexis-kiosk.service.d/zz-debug.conf`).
-  Read the recorder when it fails again, then remove the drop-in and restart
-  the kiosk (check nobody is using the bar first). `tools/panel-touch.py`'s
-  coordinates are wrong on the 1480x320 bar - inject with CDP
-  `Input.dispatchTouchEvent` instead.
+- **The visualiser button in the bar's tray opens it only on the second
+  tap** (George, 21-24 Oct, every time on ShelvesPi). Synthetic taps through
+  the kernel all opened it on the first tap: tap or pull to open, a tap
+  0.15 s into the slide, 6-20 px of drift (2026-10-24; `tools/panel-touch.py`
+  works on the bar with the page's axes turned: page (x, y) is device
+  (y / 400 x 1480, (1 - x / 1850) x 320)). **Open diagnostics:** ShelvesPi's
+  kiosk has DevTools on 9222 (`/run/systemd/system/gexis-kiosk.service.d/zz-debug.conf`)
+  and a tunnel from this computer (`~/projects/scratch/tunnel-shelvespi.pid`),
+  with a recorder in the page (`scratch/cdp_bar.py`). George taps until it
+  opens; read it, fix, then remove the drop-in, restart the kiosk (nobody
+  using the bar) and close the tunnel by its PID.
+- **Bar fixes, 2026-10-24, on their own branches:** `bar-pictures-retry` (a
+  picture that failed to load was given up for the page's life - every album
+  artist showed initials; now tried again after 15 s, 60 s, 5 min) and
+  `bar-settings-fit` (sheets on a bar: the value beside its slider, a compact
+  empty list, a long note scrolls - every sheet checked with mocked data at
+  both bar sizes, `scratch/layout`). Both in the preview branch
+  `preview-bar-1024`, for ShelvesPi.
 - **Not checked:** iOS's handling of `interactive-widget` (the mini player
   on the phone's keyboard); Android's is.
 - **The visualiser made cheaper, the rest left** (Finding 134; George,
