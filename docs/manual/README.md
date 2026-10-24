@@ -113,12 +113,13 @@ to play it; **Clear** empties the queue; **Play from** starts a playlist.
 
 ![Volume](images/panel-volume.webp)
 
-Drag the slider or tap along it. The drawer closes by itself after a few
-seconds, but stays open while the phone's pointer rests on it. A change made
-elsewhere (a phone, a Lyrion app) can open the drawer too
+Drag the slider or tap along it. A drawer opened on the screen stays until
+it is closed - a tap outside it - or the visualiser takes over or Home opens.
+A change made elsewhere (a phone, a Lyrion app) can open the drawer too
 (*Settings → Display → Show volume when changed elsewhere*); a drawer opened
-that way ignores touches for a moment, so a tap meant for what was under it
-does not set the level.
+that way closes by itself after *Volume drawer auto-hide*, stays open while
+the phone's pointer rests on it, and ignores touches for a moment, so a tap
+meant for what was under it does not set the level.
 
 With **Volume** set to *Fixed*, the player always plays at full level
 for an amplifier that sets the volume; the button then shows a padlock and
@@ -395,7 +396,8 @@ it.
 ![Bar: the waiting screen](images/bar-waiting.webp)
 
 Pulled down from the top of any screen, the tray: Home, the visualiser and
-the volume. Tap below it, or push it back up, to close it.
+the volume. It stays until it is closed - tap below it, or push it back up -
+or the visualiser takes over or Home opens.
 
 ![Bar: the tray](images/bar-tray.webp)
 

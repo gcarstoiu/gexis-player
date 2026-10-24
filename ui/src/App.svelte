@@ -114,9 +114,11 @@
     });
   });
 
-  // **The drawer closes itself 3 s after volume activity stops, however it
-  // was opened** (ADR-0022's row, as George found it should behave on
-  // 2026-09-23). It is pinned only while a finger is actually on it.
+  // **Only a drawer a change from elsewhere opened closes itself**, 3 s
+  // after volume activity stops (ADR-0022's row; George, 2026-10-24). One
+  // the user opened - the bar's tray pulled down, the volume button - stays
+  // until they close it, the visualiser takes over or Home opens; until
+  // then every drawer closed itself, however it was opened (2026-09-23).
   const AUTO_HIDE_MS = $derived(($settingValues.drawer_autohide ?? 3) * 1000);
   let autoHide = null;
   //: **A drawer that opened by itself takes no touch at first** (code
@@ -128,9 +130,16 @@
   //: seen it.
   const VOLUME_ARM_MS = 400;
   let volumeArmsAt = $state(0);
+  //: Whether the open drawer was opened by a change from elsewhere.
+  let volumeFromOutside = false;
   function openFromExternal() {
     if ($settingValues.drawer_on_external === false) return;
-    if (!volumeOpen) volumeArmsAt = performance.now() + VOLUME_ARM_MS;
+    // The user's own drawer stays as it is.
+    if (volumeOpen && !volumeFromOutside) return;
+    if (!volumeOpen) {
+      volumeArmsAt = performance.now() + VOLUME_ARM_MS;
+      volumeFromOutside = true;
+    }
     volumeOpen = true;
     armAutoHide();
   }
@@ -152,7 +161,7 @@
   }
   function armAutoHide(event) {
     if (event?.type === 'pointerleave' && event.pointerType === 'mouse') pointerOver = false;
-    if (pointerOver) return;
+    if (pointerOver || !volumeFromOutside) return;
     clearTimeout(autoHide);
     autoHide = setTimeout(closeVolume, AUTO_HIDE_MS);
   }
@@ -160,6 +169,7 @@
     pointerOver = false;
     keepVolumeOpen();
     volumeOpen = false;
+    volumeFromOutside = false;
   }
   let touches = $state(0);
   const playing = $derived($active !== null && $metadata?.transport === 'playing');
@@ -310,12 +320,13 @@
   });
 
   //: The panel has one screen: the visualiser coming up takes the idle
-  //: screen down, whoever asked for it.
+  //: screen down, whoever asked for it - and the volume drawer or tray.
   $effect(() => {
     if (!$panel.visualiser) return;
     untrack(() => {
       idle = false;
       askedIdle = false;
+      if (volumeOpen) closeVolume();
     });
   });
 
@@ -453,6 +464,7 @@
   });
   const libraryShown = $derived(libraryOpen && !settingsOpen && !waitingOpen);
   function openLibraryHome() {
+    closeVolume();
     libraryArtist = null;
     libraryAlbum = null;
     libraryHome += 1;
@@ -511,7 +523,8 @@
   }
 
   const openVolume = () => {
-    armAutoHide();
+    keepVolumeOpen();
+    volumeFromOutside = false;
     volumeArmsAt = 0;
     volumeOpen = true;
   };
