@@ -195,16 +195,34 @@ folded and may not play. Surround playback, all channels to an AV receiver,
 is planned.
 
 **Which screens work?**
-HDMI screens only. Tested on the hardware: a 10.1″ 1280 × 800 (the reference
-screen), a 13.3″ at 1920 × 1080, and the 1280 × 400 and 1480 × 320 bars.
+HDMI screens, and DSI screens on the Pi's own display connector. Tested on
+the hardware: a 10.1″ 1280 × 800 (the reference screen), a 13.3″ at 1920 ×
+1080, the 1280 × 400 and 1480 × 320 bars, two HMTECH monitors (7″ and
+10.1″, no touch), a Hosyond 7″ DSI touch screen and a Waveshare 10.1″
+DSI-TOUCH-A.
 Others under *Change* on *Settings → Display → Attached screen* are listed but untested;
 those tested, or reported working by owners, are marked *Tested*, and a
-problem an owner reported shows as a line under the model. DSI and DPI screens are not supported. The screen can be on
+problem an owner reported shows as a line under the model. DPI screens are not supported. The screen can be on
 either of the Pi's HDMI ports; a bar screen moved from one port to the other
 is set up again at the next start and asks *Keep this screen?*. With
 something connected to both ports (a screen on one, a sound bar on the
 other), *Settings → Display → Screen port* shows what is on each and lets
 you choose which is the screen.
+
+**Does a DSI screen work?**
+Yes. The Raspberry Pi Touch Display and the many panels built to answer as
+one (800 × 480, 4.3″ to 8″) are found by the Pi itself: the player
+recognises one as *Raspberry Pi Touch Display or compatible*, and *Change*
+on *Settings → Display → Attached screen* names it after its maker's model
+if you pick that. Other DSI screens in the list need a line in the Pi's
+boot settings, which the player writes when you choose the model: the
+player restarts and asks *Keep this screen?*, and if the screen stays dark
+it goes back by itself. A four-lane DSI model needs a Pi 5 or a Compute
+Module, whose display connectors carry four lanes; a Pi 4's carries two, so
+on a Pi 4 the list leaves those models out. With a DSI screen connected it is the screen, and
+both HDMI ports are free for a receiver, a sound bar or a TV; *Screen port*
+can still make an HDMI port the screen. On a DSI screen, *Screen brightness*
+sets its backlight, and display standby turns the backlight off.
 
 **Can a TV be the screen?**
 Yes: connect it to either HDMI port and choose that port under *Settings →

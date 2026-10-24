@@ -80,6 +80,7 @@ from gexis_core.model import BLANK_METADATA, Queue, TrackMetadata
 from gexis_core import connections, discovery, hardware_report, hardware_reports, personalise, settings_migrations, settling, updates, wired
 from gexis_core.dashboard import Dashboard, DashboardSchedule, explain as explain_dashboard
 from gexis_core.panel_input import PanelInput
+from gexis_core import standby as standby_module
 from gexis_core.standby import Schedule, Standby
 from gexis_core.settings import SettingsStore
 # ADR-0127's `output_mode` row and ADR-0124's remembered software level, kept
@@ -2318,7 +2319,7 @@ async def main() -> None:
         # On the port the screen is on - not always HDMI-A-1 (ADR-0109;
         # George, 2026-10-12). A port chosen under Screen port stays chosen
         # (Finding 125 #7, 2026-10-14).
-        applied = screen_apply.applied_on(model.id, turn, screen_apply.connector_now())
+        applied = screen_apply.applied_on(model.id, turn, screen_apply.connector_for(model))
         asks = screen_apply.choose(applied, after_setup=in_setup)
         logger.info("screen: %s at %d° on %s chosen; %s", model.id, turn, applied.connector,
                     "it waits for Keep on the panel" if asks else "the picture is unchanged, so it is kept")
@@ -2331,8 +2332,19 @@ async def main() -> None:
         asyncio.ensure_future(_restart())
 
     def _port_label(connector: str | None) -> str:
-        """`HDMI-A-2` as Settings says it: *HDMI 2*."""
-        return f"HDMI {(connector or screen_apply.CONNECTOR).rsplit('-', 1)[-1]}"
+        """`HDMI-A-2` as Settings says it: *HDMI 2*; a DSI panel's port is
+        *DSI* (ADR-0158 D3), *DSI 2* on a board with two."""
+        connector = connector or screen_apply.CONNECTOR
+        if connector.startswith("DSI-"):
+            number = connector.rsplit("-", 1)[-1]
+            return "DSI" if number == "1" else f"DSI {number}"
+        return f"HDMI {connector.rsplit('-', 1)[-1]}"
+
+    def _port_connector(label: str) -> str:
+        """*HDMI 2* back to `HDMI-A-2`, *DSI* to `DSI-1`."""
+        if label.startswith("DSI"):
+            return f"DSI-{label.split(' ', 1)[1] if ' ' in label else '1'}"
+        return f"HDMI-A-{label.rsplit(' ', 1)[-1]}"
 
     def _screen_name(connector: str) -> str | None:
         """The screen's name when `connector` is the screen's port, else
@@ -2355,7 +2367,8 @@ async def main() -> None:
         port = next((p for p in screen_detect.ports() if p.connector == connector), None)
         if port is None or not port.connected:
             return "Nothing connected"
-        parts = [_screen_name(connector) or port.edid_name or port.edid_maker or "Connected"]
+        parts = [_screen_name(connector) or port.edid_name or port.edid_maker
+                 or ("DSI panel" if port.dsi else "Connected")]
         if alsa.card() == outputs.CARD_FOR_CONNECTOR.get(connector):
             parts.append("sound")
         return " · ".join(parts)
@@ -2387,7 +2400,7 @@ async def main() -> None:
         without touch, the phone answers (ADR-0147 D3). The stored setting
         goes: the row shows the port in use."""
         settings_store.delete("screen_port")
-        connector = f"HDMI-A-{label.rsplit(' ', 1)[-1]}"
+        connector = _port_connector(label)
         port = next((p for p in screen_detect.ports() if p.connector == connector and p.connected), None)
         if port is None or port.preferred is None:
             logger.warning("screen: nothing on %s to choose", connector)
@@ -2395,7 +2408,8 @@ async def main() -> None:
         current = screen_apply.read_state().get("current")
         was = screen_apply.Applied.of(current) if isinstance(current, dict) and current.get("screen") else None
         model = screen_watch.target(port)
-        if screen_detect.suggest(port) is None and (size := screen_detect.tv_mode(connector)) is not None:
+        if (not port.dsi and screen_detect.suggest(port) is None
+                and (size := screen_detect.tv_mode(connector)) is not None):
             # A TV, run at 1080p from its own list and held there by the
             # kernel's mode, whatever a receiver says at a start (ADR-0147).
             model = screens.other(*size, capped=True)
@@ -2468,7 +2482,9 @@ async def main() -> None:
                "screen_port": lambda: not settings_store.get("headless")
                and len(screen_detect.ports()) >= 2,
                "screen_port_info": lambda: not settings_store.get("headless")
-               and len(screen_detect.ports()) == 1},
+               and len(screen_detect.ports()) == 1,
+               # ADR-0158 D5: only where the player can set the backlight.
+               "brightness": lambda: standby_module.screen_backlight() is not None},
         registry=Settings.with_plugins(load_registry(), installed_plugins, downloads,
                                        missing=restored_missing),
         defaults={
@@ -2551,6 +2567,8 @@ async def main() -> None:
             # `/settings`, so plugging an HDMI cable in changes the list
             # without a restart.
             "output_device": lambda: [o.option for o in outputs.discover()],
+            # ADR-0158 D3: a DSI panel's port beside the HDMI ones.
+            "screen_port": lambda: [_port_label(p.connector) for p in screen_detect.ports()],
         },
         # A line under a USB DAC: what it reports it can do (George,
         # 2026-10-12). Worked out with the outputs, so asking costs nothing.
@@ -2598,6 +2616,8 @@ async def main() -> None:
                "pointer_style": None, "listenbrainz_token": None,
                # Text size: read by the panel as it draws (George, 2026-10-14).
                "text_size": None,
+               # ADR-0158 D5: the DSI panel's backlight, at once.
+               "brightness": lambda value: standby_module.set_brightness(value),
                # ADR-0156: read where they are used - the address by the
                # dashboard's check, the button by the panel, the times by
                # the dashboard's schedule each tick.
@@ -3222,6 +3242,10 @@ async def main() -> None:
     # ADR-0135: the owner's standby times. Their rows are read each tick.
     async def _reconcile_standby() -> None:
         from .standby import read_output
+        # ADR-0158 D5: the brightness set, at every start - the kernel's
+        # driver starts the backlight at its full.
+        if standby_module.screen_backlight() is not None:
+            standby_module.set_brightness(settings.value("brightness"))
         try:
             await standby.reconcile(await read_output(), standby_schedule.inside_now())
         except Exception:  # noqa: BLE001 - a screen check is no reason to stop

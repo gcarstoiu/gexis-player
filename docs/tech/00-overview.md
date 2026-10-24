@@ -188,7 +188,8 @@ flowchart LR
   (ADR-0055); an output without a hardware mixer gets the software volume
   stage by default, and Fixed is only ever the user's choice (ADR-0127).
   Volume semantics are on [audio-path.md](audio-path.md).
-- **Screen.** HDMI only. Screens fall into two families, Standard (around
+- **Screen.** HDMI, or DSI on the Pi's own display connector (ADR-0158).
+  Screens fall into two families, Standard (around
   1280 x 800) and Bar (wide strips such as 1280 x 400), applied through
   Chromium's device scale factor and a known list of displays
   (ADR-0109, `core/src/gexis_core/screens_data/display_presets.json`).

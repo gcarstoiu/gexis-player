@@ -45,23 +45,27 @@
 #                             sound cues later and a user-gesture
 #                             requirement has no user to gesture.
 
-# **The HDMI port the screen is on** (ADR-0109; George, 2026-10-12: a panel
-# on the second port was turned, touched and put to standby as if it were on
+# **The port the screen is on** (ADR-0109; George, 2026-10-12: a panel on
+# the second port was turned, touched and put to standby as if it were on
 # the first). The core names it in screen.env; with no screen chosen, the
-# first port a screen is connected to, as the core's own detection reads it;
-# else HDMI-A-1. Only a name of that shape: it goes into an XML attribute.
+# first port a screen is connected to, as the core's own detection reads it
+# - a DSI panel before the HDMI ports (ADR-0158 D3: the panel on the ribbon
+# is the screen); else HDMI-A-1. Only a name of that shape: it goes into an
+# XML attribute.
+SCREEN_PORT='^(HDMI-A|DSI)-[0-9]+$'
 screen_connector() {
-	if [[ "${GEXIS_SCREEN_CONNECTOR:-}" =~ ^HDMI-A-[0-9]+$ ]]; then
+	if [[ "${GEXIS_SCREEN_CONNECTOR:-}" =~ ${SCREEN_PORT} ]]; then
 		echo "${GEXIS_SCREEN_CONNECTOR}"
 		return
 	fi
 	local status name
-	for status in "${GEXIS_DRM:-/sys/class/drm}"/card*-HDMI-A-*/status; do
+	for status in "${GEXIS_DRM:-/sys/class/drm}"/card*-DSI-*/status \
+		"${GEXIS_DRM:-/sys/class/drm}"/card*-HDMI-A-*/status; do
 		[ "$(cat "${status}" 2>/dev/null)" = connected ] || continue
 		name=${status%/status}
 		name=${name##*/}
 		name=${name#*-}
-		[[ "${name}" =~ ^HDMI-A-[0-9]+$ ]] && { echo "${name}"; return; }
+		[[ "${name}" =~ ${SCREEN_PORT} ]] && { echo "${name}"; return; }
 	done
 	echo HDMI-A-1
 }
@@ -80,10 +84,12 @@ write_labwc_config() {
 	[ -n "${dir}" ] && rm -rf "${dir}" && mkdir -p "${dir}" || return 1
 	cp -R "${source}/." "${dir}/" || return 1
 	sed -i -E "s/mapToOutput=\"[^\"]*\"/mapToOutput=\"${connector}\"/" "${dir}/rc.xml" || return 1
-	# Off HDMI-A-1, or with something on the other port too (ADR-0141: a
-	# sound bar on HDMI 2), labwc could open the window on the wrong output.
+	# Off HDMI-A-1, or with something on another port too (ADR-0141: a
+	# sound bar on HDMI 2; ADR-0158: a DSI panel beside HDMI), labwc could
+	# open the window on the wrong output.
 	local others=0 status
-	for status in "${GEXIS_DRM:-/sys/class/drm}"/card*-HDMI-A-*/status; do
+	for status in "${GEXIS_DRM:-/sys/class/drm}"/card*-DSI-*/status \
+		"${GEXIS_DRM:-/sys/class/drm}"/card*-HDMI-A-*/status; do
 		[ "$(cat "${status}" 2>/dev/null)" = connected ] && others=$((others + 1))
 	done
 	if [ "${connector}" != HDMI-A-1 ] || [ "${others}" -gt 1 ]; then

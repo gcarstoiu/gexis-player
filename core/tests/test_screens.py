@@ -11,10 +11,12 @@ def test_every_model_is_listed_and_the_two_modes_are_not():
     not screens."""
     listed = screens.all_screens()
     # 192 models, less the 11 square and round ones George left out, less
-    # the DSI and DPI screens (HDMI only for now, 2026-10-01), and a case listed
-    # once as its panel (2026-10-03): 106; and our own non-touch HMTECH 10.1" (2026-10-20): 107.
-    assert len(listed) == 107
-    assert {s.interface for s in listed} == {"hdmi"}
+    # the DPI screens, and a case listed once as its panel (2026-10-03): 106
+    # HDMI; our own non-touch HMTECH 10.1" (2026-10-20): 107. ADR-0158: 58
+    # DSI models and the Touch Display class: 166.
+    assert len(listed) == 166
+    assert {s.interface for s in listed} == {"hdmi", "dsi"}
+    assert sum(s.interface == "hdmi" for s in listed) == 107
     assert not {s.id for s in listed} & screens.NOT_MODELS
     assert len({s.label for s in listed}) == len(listed), "the picker's labels are unique"
 
@@ -42,13 +44,72 @@ def test_a_maker_never_contains_the_picker_s_separator():
     assert makers["Waveshare"] > 30 and "GeeekPi" in makers and "Generic" in makers
 
 
-def test_george_s_six_are_the_tested_ones():
-    """Decision 1: the four Waveshare HDMI screens George owns, and from
-    2026-10-20 the two HMTECHs tried on sofapi."""
+def test_george_s_screens_are_the_tested_ones():
+    """Decision 1: the four Waveshare HDMI screens George owns, from
+    2026-10-20 the two HMTECHs tried on sofapi, and from 2026-10-23 the
+    Hosyond 7" DSI on bedroompi with the class it is recognised as
+    (ADR-0158)."""
     tested = {s.id for s in screens.all_screens() if s.tested}
-    assert tested == set(screens.TESTED) and len(tested) == 6
-    assert all(screens.by_id(i).interface == "hdmi" for i in tested)
-    assert {screens.by_id(i).maker for i in tested} == {"Waveshare", "HMTECH"}
+    assert tested == set(screens.TESTED) and len(tested) == 9
+    hdmi = {i for i in tested if screens.by_id(i).interface == "hdmi"}
+    assert {screens.by_id(i).maker for i in hdmi} == {"Waveshare", "HMTECH"} and len(hdmi) == 6
+    assert tested - hdmi == {"hosyond-7-dsi", screens.TOUCH_DISPLAY_CLASS, "waveshare-dsi-v2-10.1a"}
+
+
+def test_every_dsi_model_in_the_list_is_offered_with_its_overlay():
+    """ADR-0158 D1 (George, 2026-10-23: *"For all that we have in the dsi
+    list that we deferred until now"*): 58 models - 23 the firmware brings
+    up by itself (nothing to write), 35 with the overlay the list gives
+    them; the 3 that need KMS removed and the 2 on Waveshare's own overlay
+    left out."""
+    dsi = [s for s in screens.all_screens() if s.interface == "dsi" and s.id != screens.TOUCH_DISPLAY_CLASS]
+    assert len(dsi) == 58
+    assert sum(not s.overlays for s in dsi) == 23 and sum(bool(s.overlays) for s in dsi) == 35
+    assert screens.by_id("hosyond-7-dsi").overlays == ()
+    assert screens.by_id("rpi-touch-7inch").overlays == (), "the original: found by the firmware"
+    assert screens.by_id("rpi-touch2-7inch").overlays == ("vc4-kms-dsi-ili9881-7inch",)
+    for gone in ("waveshare-dsi-4.3-rev1-knockout", "btt-pitft50-v1.0", "dfrobot-dsi-5-tft-v1.0",
+                 "waveshare-dsi-3.5e", "waveshare-dsi-3.5h"):
+        assert screens.by_id(gone) is None, gone
+    assert all(o.split(",", 1)[0] not in screens.FIRMWARE_FINDS for s in dsi for o in s.overlays)
+    assert all(s.overlays == () for s in screens.all_screens() if s.interface == "hdmi")
+
+
+def test_a_four_lane_model_is_offered_only_where_the_board_has_four_lanes(tmp_path):
+    """ADR-0158 D6."""
+    four = {s.id for s in screens.all_screens() if s.lanes == 4}
+    assert four == {"waveshare-dsi-v2-8.0a-4lane", "waveshare-dsi-v2-9.0b-4lane", "waveshare-dsi-v2-10.1a-4lane",
+                    "waveshare-dsi-v2-10.1b-4lane", "waveshare-dsi-v2-12.3a-4lane", "waveshare-dsi-13.3-4lane"}
+    assert screens.by_id("waveshare-dsi-v2-10.1a").lanes == 2 and screens.by_id("waveshare-dsi-13.3-2lane").lanes == 2
+    model = tmp_path / "model"
+    model.write_text("Raspberry Pi 4 Model B Rev 1.5\x00")
+    assert screens.board_lanes(model) == 2
+    pi4 = screens.offered(model)
+    assert not four & {s.id for s in pi4}
+    dsi = [s for s in pi4 if s.interface == "dsi" and s.id != screens.TOUCH_DISPLAY_CLASS]
+    assert len(dsi) == 52 and sum(bool(s.overlays) for s in dsi) == 29
+    assert screens.by_id("waveshare-dsi-v2-10.1a-4lane").label.endswith("4-lane (800x1280)"), \
+        "a choice already made keeps its name"
+    for board in ("Raspberry Pi 5 Model B Rev 1.0", "Raspberry Pi Compute Module 4 Rev 1.0",
+                  "Raspberry Pi Compute Module 5 Rev 1.0"):
+        model.write_text(board + "\x00")
+        assert screens.board_lanes(model) == 4 and screens.offered(model) == screens.all_screens(), board
+    model.write_text("Raspberry Pi 500 Rev 1.0\x00")
+    assert screens.board_lanes(model) == 2, "the keyboard Pi 5 is not a Pi 5 Model B"
+    model.write_text("Some other board\x00")
+    assert screens.offered(model) == screens.all_screens()
+    assert screens.offered(tmp_path / "absent") == screens.all_screens()
+
+
+def test_a_recognised_dsi_panel_is_named_for_its_class():
+    """ADR-0158 D2: nothing the Pi reads tells the Touch Display's makers
+    apart, so a panel recognised and not chosen is the class - 800 x 480,
+    Standard, nothing written - and a model picked keeps its own name."""
+    cls = screens.by_id(screens.TOUCH_DISPLAY_CLASS)
+    assert cls.interface == "dsi" and (cls.width, cls.height) == (800, 480) and cls.family == "standard"
+    assert cls.overlays == () and cls.tested
+    assert cls.label == "Raspberry Pi/Touch Display or compatible (DSI, 800x480)"
+    assert screens.by_label('Hosyond/7" DSI Display (800x480)').id == "hosyond-7-dsi"
 
 
 def test_a_case_is_listed_once_as_its_panel():

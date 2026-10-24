@@ -458,12 +458,9 @@
         "type": "choice",
         "label": "Screen port",
         "marks": "N",
-        "note": "Which HDMI port the screen is on, and what is on each.",
+        "note": "Which port the screen is on, and what is on each.",
         "warn": "Changing it restarts the player with the screen on that port and asks Keep this screen?. If nobody answers Keep within 2 minutes of it appearing, it goes back.",
-        "options": [
-          "HDMI 1",
-          "HDMI 2"
-        ],
+        "optionsFrom": "screen_port",
         "default": null,
         "onlyWhen": [
           "headless",
@@ -515,14 +512,18 @@
       {
         "key": "brightness",
         "type": "number",
-        "label": "Brightness",
-        "marks": "N",
-        "note": null,
+        "label": "Screen brightness",
+        "marks": "R",
+        "note": "How bright the screen is. Applies at once. Only on a screen whose backlight the player can set, such as a DSI panel.",
         "min": 10,
         "max": 100,
+        "step": 10,
         "unit": "%",
-        "default": null,
-        "surfaced": false
+        "default": 100,
+        "onlyWhen": [
+          "headless",
+          false
+        ]
       },
       {
         "key": "time_display",

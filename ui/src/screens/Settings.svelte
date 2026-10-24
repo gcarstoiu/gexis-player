@@ -1969,7 +1969,7 @@
                 {@const port = rowOf('screen_port') ?? rowOf('screen_port_info')}
                 {@const portLine = port?.key === 'screen_port' ? port.optionNotes?.[port.value] : port?.value}
                 {@const named = String(r.value ?? '').startsWith('Other screen/')
-                  ? (String(portLine ?? '').replace(/^HDMI \d+ · /, '').split(' · ')[0] || String(r.value).replace('/', ' '))
+                  ? (String(portLine ?? '').replace(/^(HDMI \d+|DSI( \d+)?) · /, '').split(' · ')[0] || String(r.value).replace('/', ' '))
                   : r.value}
                 <div class="row row--tile">
                   <span class="row__body">

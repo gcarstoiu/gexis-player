@@ -48,10 +48,22 @@ STATE = Path("/var/lib/gexis/screen-seen.json")
 
 def key(seen: screen_detect.Seen) -> list | None:
     """What makes a screen this screen, or None when nothing readable is
-    attached (no EDID: nothing to tell one screen from another by)."""
-    if not seen.connected or seen.preferred is None or not (seen.edid_maker or seen.edid_name):
+    attached (no EDID: nothing to tell one screen from another by).
+
+    **A DSI panel by its port and its controller** (ADR-0158): no EDID, so
+    `["DSI", <its panel controller's driver or None>, <its mode>]` - enough
+    to see that a DSI panel has come where an HDMI screen was, or another
+    kind of DSI panel; nothing tells two of one kind apart, and nothing
+    needs to: they apply the same thing."""
+    if not seen.connected or seen.preferred is None:
         return None
-    return [seen.edid_maker, seen.edid_name, f"{seen.preferred[0]}x{seen.preferred[1]}"]
+    size = f"{seen.preferred[0]}x{seen.preferred[1]}"
+    if seen.dsi:
+        known = {fp.panel for fp in screen_detect.FINGERPRINTS.values() if fp.panel}
+        return ["DSI", next((d for d in seen.panel if d in known), None), size]
+    if not (seen.edid_maker or seen.edid_name):
+        return None
+    return [seen.edid_maker, seen.edid_name, size]
 
 
 def _read(path: Path) -> dict:
@@ -193,7 +205,7 @@ def during_setup(seen: screen_detect.Seen | None = None, *, path: Path = STATE, 
         return "same"
     model = target(seen)
     applied = screen_apply.Applied(model.id, 0, seen.connector or screen_apply.CONNECTOR)
-    where = {k: files[k] for k in ("env", "cmdline") if k in files}
+    where = {k: files[k] for k in ("env", "cmdline", "config") if k in files}
     restart = screen_apply.picture(**where)[0] != screen_apply.picture_of(applied)[0]
     screen_apply.write_files(applied, **where)
     screen_apply.write_state({"current": applied.to_json(), "previous": None, "pending": False,
@@ -234,9 +246,9 @@ def at_start(seen: screen_detect.Seen | None = None, *, headless: bool | None = 
     model = target(seen)
     tried(q["key"], path)
     applied = screen_apply.Applied(model.id, 0, seen.connector or screen_apply.CONNECTOR)
-    # `files`: screen_apply's env, cmdline and state, for a test.
+    # `files`: screen_apply's env, cmdline, config and state, for a test.
     files = files or {}
-    where = {k: files[k] for k in ("env", "cmdline") if k in files}
+    where = {k: files[k] for k in ("env", "cmdline", "config") if k in files}
     restart = screen_apply.picture(**where)[0] != screen_apply.picture_of(applied)[0]
     if not screen_apply.choose(applied, **files):
         kept(seen, path)
@@ -265,8 +277,17 @@ def moved(seen: screen_detect.Seen, *, headless: bool, files: dict | None = None
     was = screen_apply.Applied.of(current)
     if was.connector == seen.connector:
         return "same"
-    applied = screen_apply.Applied(was.screen_id, was.rotation, seen.connector)
-    where = {k: files[k] for k in ("env", "cmdline") if k in files}
+    model = screens.by_id(was.screen_id)
+    screen_id = was.screen_id
+    if (model.interface == "dsi") != seen.dsi and not screens.OTHER.match(model.id):
+        # **An HDMI model is not the panel on the ribbon, nor a DSI model the
+        # screen on HDMI** (ADR-0158; bedroompi, 2026-10-23: the HMTECH 7"
+        # HDMI chosen while a DSI panel was the screen). The screen on the
+        # port is applied instead - the recognised panel, else its own mode -
+        # with the rotation the owner gave it.
+        screen_id = target(seen).id
+    applied = screen_apply.Applied(screen_id, was.rotation, seen.connector)
+    where = {k: files[k] for k in ("env", "cmdline", "config") if k in files}
     restart = screen_apply.picture(**where)[0] != screen_apply.picture_of(applied)[0]
     provisional = bool(screen_apply.read_state(state).get("provisional"))
     asks = screen_apply.choose(applied, **files)
@@ -274,7 +295,8 @@ def moved(seen: screen_detect.Seen, *, headless: bool, files: dict | None = None
         # Still setup's screen, not one anybody has kept (ADR-0104's fixed
         # password depends on it): a move of port does not confirm it.
         screen_apply.write_state({**screen_apply.read_state(state), "provisional": True}, state)
-    logger.info("screen: %s moved from %s to %s; %s", was.screen_id, was.connector, seen.connector,
+    logger.info("screen: %s moved from %s to %s%s; %s", was.screen_id, was.connector, seen.connector,
+                f", now {screen_id}" if screen_id != was.screen_id else "",
                 "it waits for Keep" if asks else "the picture is unchanged, so it is kept")
     return "restart" if restart else "switched"
 
@@ -290,20 +312,32 @@ TOUCH_RULES = Path("/run/udev/rules.d/90-gexis-panel-touch-off.rules")
 def touch_rules(state: Path | None = None, rules: Path = TOUCH_RULES, run=None) -> list[str]:
     """While the screen in use has no touch of its own (a TV), every known
     touch panel's input is ignored; otherwise none is. Returns the USB ids
-    ignored. `run` triggers udev (None: subprocess.run)."""
+    ignored, and a DSI panel's I2C touch driver as `i2c:<driver>` (ADR-0158
+    D3: with a TV chosen, the DSI panel is black and its touch ignored).
+    `run` triggers udev (None: subprocess.run)."""
     from . import screen_apply, screen_detect
     current = screen_apply.read_state(state or screen_apply.STATE).get("current") or {}
     screen_id = current.get("screen")
     ids: list[str] = []
     if screen_id and not screen_detect.has_touch(screen_id):
         ids = sorted({fp.usb for fp in screen_detect.FINGERPRINTS.values() if fp.usb})
+        # A DSI panel's touch only while the screen is elsewhere (a TV): on
+        # the DSI connector, a model without touch is still on the panel
+        # whose touch it is.
+        if not str(current.get("connector") or "").startswith("DSI-"):
+            ids += sorted({f"i2c:{fp.touch_i2c}" for fp in screen_detect.FINGERPRINTS.values() if fp.touch_i2c})
     had = rules.exists()
     if ids:
         rules.parent.mkdir(parents=True, exist_ok=True)
         lines = ["# Written at each start by gexis-screen-check (ADR-0147): the screen in use has",
                  "# no touch, so the touch panels' input is ignored."]
-        for usb in ids:
-            vendor, product = usb.split(":")
+        for device in ids:
+            if device.startswith("i2c:"):
+                # An I2C touch controller has no USB ids; its driver names it.
+                lines.append(f'ACTION=="add|change", SUBSYSTEM=="input", DRIVERS=="{device[4:]}", '
+                             f'ENV{{LIBINPUT_IGNORE_DEVICE}}="1"')
+                continue
+            vendor, product = device.split(":")
             lines.append(f'ACTION=="add|change", SUBSYSTEM=="input", ATTRS{{idVendor}}=="{vendor}", '
                          f'ATTRS{{idProduct}}=="{product}", ENV{{LIBINPUT_IGNORE_DEVICE}}="1"')
         rules.write_text("\n".join(lines) + "\n")

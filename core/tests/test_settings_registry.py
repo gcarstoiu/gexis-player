@@ -633,7 +633,9 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # run them, through the same action route.
     # 16 since ADR-0132 (2026-10-09): the factory reset is surfaced.
     # 17 since 2026-10-10: Version, which repeated Release (George: "Yes, you can remove").
-    assert len(kept) == 19, "ADR-0022's amendment: inventoried, not surfaced (19: the two navigation switches under Navigation, 2026-10-19)"
+    # 18 since ADR-0158 D5 (2026-10-23): Screen brightness is surfaced where
+    # the player can set the backlight.
+    assert len(kept) == 18, "ADR-0022's amendment: inventoried, not surfaced (18: brightness surfaced, 2026-10-23)"
     # Every one of them is still served by the API.
     assert all(r.get("key") for r in kept)
     # 54 at the start of 9d, plus the two rows the design has and the plan
@@ -709,7 +711,7 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # 82 with Report this hardware (ADR-0126).
     # **81**: Software volume merged into Volume (ADR-0127). **80**: Pexels
     # removed.
-    assert len(rows) - len(kept) == 110  # 110: the Home Assistant dashboard's four rows (ADR-0156); 106: Navigation shown, its two switches hidden; 107: API explorer (ADR-0152); 106: the waiting screen's hint removed (2026-10-18); 107: Library on the screen and Personalise (ADR-0149); 105: Text size (ADR-0148); 104: Needles follow the volume (ADR-0146 amended); 103: Gain (ADR-0146); 102: Screen port and its one-port tile (ADR-0141); 100: display standby (ADR-0135); 97: the idle switch and the home background (ADR-0133, 2026-10-11); 88: Weather icon motion (Finding 118); 87: Version hidden, it repeated Release; 88: the waiting screen's two rows (ADR-0133); 86: the own wallpapers (ADR-0133); 82: the factory reset (ADR-0132); 81: Cable (ADR-0123)
+    assert len(rows) - len(kept) == 111  # 111: Screen brightness (ADR-0158 D5); 110: the Home Assistant dashboard's four rows (ADR-0156); 106: Navigation shown, its two switches hidden; 107: API explorer (ADR-0152); 106: the waiting screen's hint removed (2026-10-18); 107: Library on the screen and Personalise (ADR-0149); 105: Text size (ADR-0148); 104: Needles follow the volume (ADR-0146 amended); 103: Gain (ADR-0146); 102: Screen port and its one-port tile (ADR-0141); 100: display standby (ADR-0135); 97: the idle switch and the home background (ADR-0133, 2026-10-11); 88: Weather icon motion (Finding 118); 87: Version hidden, it repeated Release; 88: the waiting screen's two rows (ADR-0133); 86: the own wallpapers (ADR-0133); 82: the factory reset (ADR-0132); 81: Cable (ADR-0123)
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():

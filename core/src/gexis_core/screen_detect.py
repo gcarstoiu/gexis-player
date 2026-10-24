@@ -8,6 +8,11 @@ Two witnesses, read from sysfs:
   10.1" panel on sofa-pi claims 121 × 68 cm (Finding 100).
 - **The touch controller's USB ID**, `vendor:product`.
 
+**A DSI panel has neither** (ADR-0158, bedroompi 2026-10-23: EDID 0 bytes,
+an I2C touch controller). Its port is `DSI-<n>`, its mode the only one the
+driver offers, and its witnesses are the drivers bound on the I2C bus: the
+panel's own controller and its touch.
+
 A suggestion needs both a tested model's fingerprint to match and the
 preferred mode to be that model's own size, so a screen that merely shares a
 maker or a controller is not named for another.
@@ -22,6 +27,7 @@ from . import memo, screens
 
 DRM = Path("/sys/class/drm")
 USB = Path("/sys/bus/usb/devices")
+I2C = Path("/sys/bus/i2c/devices")
 
 
 @dataclass(frozen=True)
@@ -29,6 +35,10 @@ class Fingerprint:
     edid_maker: str | None = None     # PNP code, e.g. "WAV"
     edid_name: str | None = None      # the monitor name descriptor
     usb: str | None = None            # touch controller "vvvv:pppp"
+    #: ADR-0158: a DSI panel's own controller and its touch, by the I2C
+    #: driver bound to them.
+    panel: str | None = None
+    touch_i2c: str | None = None
 
 
 #: What each tested model reports, measured on the hardware. Filled in as
@@ -54,6 +64,14 @@ FINGERPRINTS: dict[str, Fingerprint] = {
     # George's HMTECH 10.1" on sofapi, read 2026-10-20: EDID "DEL" /
     # "TLD1280" (a borrowed Dell code), preferred 1024x600, no touch.
     "hmtech-10.1-hdmi-monitor": Fingerprint(edid_maker="DEL", edid_name="TLD1280"),
+    # ADR-0158: George's Hosyond 7" DSI on bedroompi, read 2026-10-23: no
+    # EDID; `10-0045` bound to rpi_touchscreen_attiny (the Touch Display's
+    # backlight and power controller), `10-0038` to edt_ft5x06 (its touch).
+    # The class first: that is what a panel answering so is recognised as,
+    # since nothing tells its makers apart (D2); the Hosyond, once picked,
+    # keeps its touch recognised.
+    screens.TOUCH_DISPLAY_CLASS: Fingerprint(panel="rpi_touchscreen_attiny", touch_i2c="edt_ft5x06"),
+    "hosyond-7-dsi": Fingerprint(panel="rpi_touchscreen_attiny", touch_i2c="edt_ft5x06"),
 }
 
 
@@ -66,6 +84,12 @@ class Seen:
     edid_name: str | None = None
     preferred: tuple[int, int] | None = None
     usb: tuple[str, ...] = field(default_factory=tuple)
+    #: The I2C drivers bound on a DSI port's bus (ADR-0158); none for HDMI.
+    panel: tuple[str, ...] = field(default_factory=tuple)
+
+    @property
+    def dsi(self) -> bool:
+        return (self.connector or "").startswith("DSI-")
 
     def to_json(self) -> dict:
         return {
@@ -75,6 +99,7 @@ class Seen:
             "edid_name": self.edid_name,
             "preferred": f"{self.preferred[0]}x{self.preferred[1]}" if self.preferred else None,
             "usb": list(self.usb),
+            "panel": list(self.panel),
         }
 
 
@@ -116,12 +141,36 @@ def usb_devices(root: Path = USB) -> tuple[str, ...]:
 
 
 @memo.once
-def ports(drm: Path = DRM, usb: Path = USB) -> list[Seen]:
-    """**Every HDMI port, connected or not** (ADR-0141 D4; George,
-    2026-10-12: *"for video we don't even show the second hdmi port"*), in
-    connector order, each with what is plugged into it."""
+def i2c_drivers(root: Path = I2C) -> tuple[str, ...]:
+    """The drivers bound to I2C devices (`<bus>-<address>`), each once."""
+    found = set()
+    for dev in root.glob("*-*"):
+        try:
+            found.add((dev / "driver").resolve(strict=True).name)
+        except OSError:
+            continue
+    return tuple(sorted(found))
+
+
+@memo.once
+def ports(drm: Path = DRM, usb: Path = USB, i2c: Path = I2C) -> list[Seen]:
+    """**Every screen port, connected or not** (ADR-0141 D4; George,
+    2026-10-12: *"for video we don't even show the second hdmi port"*), each
+    with what is plugged into it. **A DSI port first** (ADR-0158 D3: the
+    panel on the ribbon is the screen), then the HDMI ports in order. A DSI
+    port exists only while a panel's driver is loaded, and has no EDID: its
+    mode is the panel's own."""
     devices = usb_devices(usb)
     out = []
+    for connector in sorted(drm.glob("card*-DSI-*")):
+        name = connector.name.split("-", 1)[1]
+        try:
+            connected = (connector / "status").read_text().strip() == "connected"
+        except OSError:
+            connected = False
+        offered = modes(name, drm) if connected else []
+        out.append(Seen(connected, name, None, None, offered[0] if offered else None, devices,
+                        i2c_drivers(i2c) if connected else ()))
     for connector in sorted(drm.glob("card*-HDMI-A-*")):
         name = connector.name.split("-", 1)[1]
         try:
@@ -187,7 +236,7 @@ def has_touch(screen_id: str) -> bool:
         return False
     fp = FINGERPRINTS.get(model.id)
     if fp is not None:
-        return bool(fp.usb)
+        return bool(fp.usb or fp.touch_i2c)
     return model.maker != "Generic" and not NO_TOUCH.search(model.notes or "")
 
 
@@ -203,7 +252,7 @@ def touch_recognised(screen_id: str) -> bool:
     panel whose touch is dead is not left to its countdown."""
     model = screens.by_id(screen_id)
     fp = FINGERPRINTS.get(model.id) if model is not None else None
-    return bool(fp and fp.usb)
+    return bool(fp and (fp.usb or fp.touch_i2c))
 
 
 def _chosen_connector() -> str | None:
@@ -221,7 +270,7 @@ def _applied_connector() -> str | None:
     return current.get("connector") if isinstance(current, dict) else None
 
 
-def seen(drm: Path = DRM, usb: Path = USB, prefer: str | None = "applied") -> Seen:
+def seen(drm: Path = DRM, usb: Path = USB, prefer: str | None = "applied", i2c: Path = I2C) -> Seen:
     """**The screen's port**, and the USB devices. With one port connected,
     that one. With both (ADR-0141 D2: a panel on one, a sound bar on the
     other), in this order: the port the screen was applied on, if a known
@@ -230,7 +279,7 @@ def seen(drm: Path = DRM, usb: Path = USB, prefer: str | None = "applied") -> Se
     there; else the first connected. Until 2026-10-12 it was always the
     first connected, so a chosen second port could not hold. `prefer` is a
     connector, or "applied" for screen.json's."""
-    connected = [p for p in ports(drm, usb) if p.connected]
+    connected = [p for p in ports(drm, usb, i2c) if p.connected]
     if not connected:
         return Seen(usb=usb_devices(usb))
     if len(connected) == 1:
@@ -260,13 +309,14 @@ def seen(drm: Path = DRM, usb: Path = USB, prefer: str | None = "applied") -> Se
 
 
 def suggest(report: Seen) -> screens.Screen | None:
-    """A tested model whose fingerprint and size match, or nothing."""
+    """A tested model whose fingerprint and size match, or nothing. A DSI
+    port is matched only by a DSI model, an HDMI one only by an HDMI one."""
     if not report.connected or report.preferred is None:
         return None
     width, height = report.preferred
     for screen_id, fp in FINGERPRINTS.items():
         model = screens.by_id(screen_id)
-        if model is None or not model.tested:
+        if model is None or not model.tested or (model.interface == "dsi") != report.dsi:
             continue
         native = {(model.width, model.height), (model.height, model.width)}
         if (width, height) not in native:
@@ -274,6 +324,7 @@ def suggest(report: Seen) -> screens.Screen | None:
         edid_ok = fp.edid_maker is None or fp.edid_maker == report.edid_maker
         name_ok = fp.edid_name is None or fp.edid_name == report.edid_name
         usb_ok = fp.usb is None or fp.usb in report.usb
-        if edid_ok and name_ok and usb_ok:
+        panel_ok = fp.panel is None or fp.panel in report.panel
+        if edid_ok and name_ok and usb_ok and panel_ok:
             return model
     return None

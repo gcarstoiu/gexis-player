@@ -155,3 +155,10 @@ rejected the first way of doing the first (*"3 seconds is too much"*).
 - Not yet measured: the 10.1" with the watch (its taps reached the page
   anyway) and its time back; a USB touchscreen unplugged while the watch
   reads it.
+
+## Amended 2026-10-23 (ADR-0158): a DSI panel's backlight
+
+On a DSI connector with a backlight the player can set, standby turns the
+backlight off (`bl_power`) and leaves the output on, with the black cover
+drawn; the start reads the backlight to know whether the screen is dark
+([ADR-0158](0158-dsi-screens.md) D4, George: *"Agreed"*).
