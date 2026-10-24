@@ -288,6 +288,16 @@ touchpad taps the fields, its keyboard types into them) or with a USB
 keyboard plugged into the player. Home Assistant then keeps the player signed
 in.
 
+**Can Home Assistant control the player?**
+Yes, with the *Gexis Player* integration, installed in Home Assistant through
+HACS from
+[gexis-player-homeassistant](https://github.com/gcarstoiu/gexis-player-homeassistant).
+Each player is found on the network and shows as a media player - what plays,
+with its artwork, the transport, volume and the source - and, on a player
+with a screen, as switches for the screen, the dashboard and the visualiser.
+The player changes nothing in Home Assistant. The manual's *The player in
+Home Assistant* has the steps.
+
 **When does the idle screen appear?**
 Only with *Settings → Display → Idle screen* switched on - it is off on a new
 player, and the panel then stays on what it shows. On, it appears after
