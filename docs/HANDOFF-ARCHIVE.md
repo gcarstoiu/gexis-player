@@ -7577,3 +7577,34 @@ recorder stops by itself at 14:52) with the core's `POST /touch` log; nothing
 lost: Phase 17 closes. (On the panel, Hardware feedback only points to the phone, since it
 ends on GitHub; George had taken that short sheet for a cut-off one.) `ph-dsi` merges into
 `next` after Phase 17's acceptance.
+
+## 2026-10-24: 1.4.0 on Testing and PR #81 (moved from HANDOFF verbatim when 1.5.0 went to Testing)
+
+**Current release: 1.4.0, on Testing** (2026-10-22; Testing serial 54, its
+signature good from the release key, read back with `gh release download
+channels`; Stable unchanged at serial 8, 1.3.1). Tag `v1.4.0` on the
+release-notes commit `527c3bd0`; `next` and `release-1.4.0` pushed there.
+Image `image/deploy/2026-10-22-gexis-player-v1.4.0.img` (`verify-image.sh`
+123/123 from the release worktree, 978 skins clean); parts
+`ours-488ab973183a`, `skins-67e037cab00f`, `rpi-222df5468eaa`,
+`debian-ddaba64c92a5`; build output in `~/projects/gexis-release-out/r1.4.0`.
+Packages: gexis-core and gexis-player `1.4.0`, gexis-system
+`1.3.1+git60.4f8ea32`, gexis-ui `1.3.1+git64.be7558c`; the skin packs are
+1.3.0's published files (`1.2.0+git33.96b8a42`, copied, not rebuilt - a
+rebuilt archive differs in bytes from the published one with the same files).
+What it carries: Phase 18's Home Assistant dashboard (ADR-0156) with the
+phone's touchpad and typing over it (ADR-0157), the phone's mini player
+redesigned, a track's own artist on album pages, the visualiser cheaper on
+turntables and tapes (Finding 134), and the fixes - the visualiser surviving
+a screen change, no black frame on opening, over the dashboard when asked
+for, a show refused in standby starting nothing, meters after software
+volume (Finding 135), the spectrum box after a skin change (Finding 136),
+dimmed bar controls, rows without a flash, the mini player on the phone's
+keyboard, no password-save offer. `CHANGELOG.md` on `next` has the notes as
+George approved them. CI: *Tests* passed on `release-1.4.0`, `next` and the
+tag, and the tag's *API description* run too.
+
+**PR #81 was merged by George** (2026-10-22); `main` is merged into `docs`
+and `next`, the merged branches and worktrees are gone, and the routine
+clean-up ran. Promotion to Stable is George's call, later; the README's
+"current release" line changes only then.

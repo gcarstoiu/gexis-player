@@ -27,34 +27,28 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.4.0, on Testing** (2026-10-22; Testing serial 54, its
+**Current release: 1.5.0, on Testing** (2026-10-24; Testing serial 55, its
 signature good from the release key, read back with `gh release download
-channels`; Stable unchanged at serial 8, 1.3.1). Tag `v1.4.0` on the
-release-notes commit `527c3bd0`; `next` and `release-1.4.0` pushed there.
-Image `image/deploy/2026-10-22-gexis-player-v1.4.0.img` (`verify-image.sh`
-123/123 from the release worktree, 978 skins clean); parts
-`ours-488ab973183a`, `skins-67e037cab00f`, `rpi-222df5468eaa`,
-`debian-ddaba64c92a5`; build output in `~/projects/gexis-release-out/r1.4.0`.
-Packages: gexis-core and gexis-player `1.4.0`, gexis-system
-`1.3.1+git60.4f8ea32`, gexis-ui `1.3.1+git64.be7558c`; the skin packs are
-1.3.0's published files (`1.2.0+git33.96b8a42`, copied, not rebuilt - a
-rebuilt archive differs in bytes from the published one with the same files).
-What it carries: Phase 18's Home Assistant dashboard (ADR-0156) with the
-phone's touchpad and typing over it (ADR-0157), the phone's mini player
-redesigned, a track's own artist on album pages, the visualiser cheaper on
-turntables and tapes (Finding 134), and the fixes - the visualiser surviving
-a screen change, no black frame on opening, over the dashboard when asked
-for, a show refused in standby starting nothing, meters after software
-volume (Finding 135), the spectrum box after a skin change (Finding 136),
-dimmed bar controls, rows without a flash, the mini player on the phone's
-keyboard, no password-save offer. `CHANGELOG.md` on `next` has the notes as
-George approved them. CI: *Tests* passed on `release-1.4.0`, `next` and the
-tag, and the tag's *API description* run too.
+channels`; Stable unchanged at serial 8, 1.3.1). Tag `v1.5.0` on the
+release-notes commit `bfb0f647`; `next` and `release-1.5.0` pushed there.
+Image `image/deploy/2026-10-24-gexis-player-v1.5.0.img` (`verify-image.sh`
+123/123 from the release worktree `~/projects/gexis-player-release-1.5.0`,
+978 skins clean); parts `ours-17e046a32cf3`, `skins-67e037cab00f`,
+`rpi-dea26bfd5ea8`, `debian-612079c6b5f1`; build output in
+`~/projects/gexis-release-out/r1.5.0`. gexis-core and gexis-player `1.5.0`,
+gexis-ui `1.4.0+git88.eaca532`, gexis-system `1.4.0+git29.d93d43f`.
+What it carries: Phase 17's DSI screens, Phase 19's player side (`id`,
+`screen`), the bar fixes (the tray's buttons on the first tap, settings
+sheets that fit, pictures tried again, the tray staying open), the Lyrion
+server and bar wallpaper fixes. **PR #82 into `main` is open for George**;
+after his merge: `main` into `docs` and `next`, delete `release-1.5.0` and its
+worktree, the routine clean-up. The Home Assistant integration's 0.1.0 is
+released on its own repository the same evening.
 
-**PR #81 was merged by George** (2026-10-22); `main` is merged into `docs`
-and `next`, the merged branches and worktrees are gone, and the routine
-clean-up ran. Promotion to Stable is George's call, later; the README's
-"current release" line changes only then.
+**The release key** moved to `~/projects/gexis-release-key` (George,
+2026-10-24): every release command sets
+`GEXIS_RELEASE_GNUPGHOME=~/projects/gexis-release-key`; the scripts default
+to `~/.gnupg-gexis-release`, which no longer exists.
 
 **ShelvesPi runs the bar fixes' preview** (since 2026-10-24 21:35, ui and
 player `1.4.0+git69.eed6457` later that evening, core `1.4.0+git53.5b660b4`; the
