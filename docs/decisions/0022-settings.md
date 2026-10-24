@@ -321,7 +321,7 @@ Confirmed by George, 2026-10-04 (*"Yes you can"*):
 
 | Setting | Mark | Notes |
 |---|---|---|
-| Bar wallpaper shape and crop | [H] | On a bar, Pixabay pictures at least 2.4 times as wide as tall are preferred, from a 200-result page at 400 px minimum height, falling back to the usual ones; the idle screen fills a bar with any picture it can crop by up to 70 %, framed at 35 % from the top (George, "C"). Fixed values, not rows |
+| Bar wallpaper shape and crop | [H] | On a bar, Pixabay pictures at least 2.4 times as wide as tall, from a 200-result page at 400 px minimum height, are mixed in with the usual ones (ADR-0120 amended 2026-10-23); the idle screen fills a bar with any picture it can crop by up to 70 %, framed at 35 % from the top (George, "C"). Fixed values, not rows |
 
 ### Appended 2026-10-10 — the waiting screen and the player's own wallpapers
 
