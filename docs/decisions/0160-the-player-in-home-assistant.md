@@ -82,8 +82,8 @@ catalog. Core: not now.
 **D5 — The player's side** (this repository, `ph-home-assistant`):
 `/player/status` gains `id` and `screen`. `id`: the first 16 hex digits of
 SHA-256 over `gexis:` and the board's serial number
-(`/proc/device-tree/serial-number`), `/etc/machine-id` off a Pi - the same
-after a rename, a reflash or a factory reset, and not the serial itself.
+(`/proc/device-tree/serial-number`), null off a Pi - the same after a
+rename, a reflash or a factory reset, and not the serial itself.
 `screen`: false when headless. The announcement is unchanged. The
 integration needs a player with `id`; an older one is refused with *update
 the player first*.
