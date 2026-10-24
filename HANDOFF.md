@@ -171,8 +171,15 @@ our own integration `gexis` in a new public repository
 (`gcarstoiu/gexis-player-homeassistant`, not created yet), a media player
 plus *Screen*, *Dashboard* and *Visualiser* switches, `id` and `screen` on
 `/player/status`; tested against a Home Assistant in Docker that hears
-nothing on the network, a test player added by address. **Next:** the
-player's side on `ph-home-assistant` (from `next`), then the integration.
+nothing on the network, a test player added by address. **Built:** the
+player's side on `ph-home-assistant` (`~/projects/gexis-player-ph-home-assistant`,
+pushed; `id` and `screen` on `/player/status`; core suite 2633 passed, 48
+skipped, run with `PYTHONPATH=src` since the shared venv imports `next`'s
+code); the integration in `~/projects/gexis-player-homeassistant` (local git,
+one commit, not on GitHub yet): 17 tests pass on Home Assistant 2026.10.3's
+test kit (`~/projects/ha-venv`), hassfest clean (Docker). **Next:** a preview
+on a test player, the Docker Home Assistant check against it, then the
+repository on GitHub and the documents (ADR-0160 D6).
 
 Then, in order (`docs/DEVELOPMENT.md`; refer
 to them by ID): **20** room correction for the bass
