@@ -1609,6 +1609,44 @@ async def test_saving_the_device_name_from_settings_restarts_the_device(store):
     assert restarted == ["device_name"]
 
 
+async def test_choosing_a_lyrion_server_in_settings_restarts_the_core(store, monkeypatch):
+    """George, 2026-10-23 (ADR-0048 amended): a server chosen in Settings
+    was saved and not used - the core reads it at its start, and bedroompi
+    went on asking the old address. Saving it restarts the core, never the
+    device; the same address again restarts nothing, and setup's own write
+    (through `Settings.set`) leaves the restart to part 2."""
+    import asyncio
+
+    ran, rebooted = [], []
+
+    async def fake_exec(*args, **_k):
+        ran.append(args)
+
+    async def restart(key):
+        rebooted.append(key)
+
+    real_sleep = asyncio.sleep
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
+    monkeypatch.setattr(asyncio, "sleep", lambda s: real_sleep(0))
+    state = StateStore({})
+    settings = Settings(store, registry=load_registry(), wired={"lms_server": None})
+    server = StateServer(state, settings=settings, restart_device=restart)
+    async with TestClient(TestServer(server.make_app())) as client:
+        assert (await client.put("/settings/lms_server", json={"value": "192.0.2.10:9000"})).status == 200
+        for _ in range(3):
+            await real_sleep(0)
+        assert ran == [("systemctl", "restart", "gexis-core")]
+        assert rebooted == [], "the core, not the device"
+        await client.put("/settings/lms_server", json={"value": "192.0.2.10:9000"})
+        for _ in range(3):
+            await real_sleep(0)
+        assert len(ran) == 1, "the same server again restarts nothing"
+    settings.set("lms_server", "192.0.2.20:9000")  # setup's way in
+    for _ in range(3):
+        await real_sleep(0)
+    assert len(ran) == 1
+
+
 def test_every_row_shown_and_editable_is_wired():
     """2026-10-05: TheAudioDB key, Pexels API key (ADR-0120) and Pointer
     style (ADR-0121) were shown in Settings and refused every write - none

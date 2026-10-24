@@ -2699,10 +2699,24 @@ class StateServer:
         # full reloads followed every tap on the phone).
         response = self._settings_call(lambda: {"key": key, "value": self._settings.set(key, value),
                                                 "revision": self._store.settings_revision})
-        if (response.status == 200 and self._restart_device is not None
-                and self._settings_restarts(key) and self._settings_value(key) != before):
-            asyncio.ensure_future(self._restart_device(key))
+        if response.status == 200 and self._settings_value(key) != before:
+            restarts = self._settings_restarts(key)
+            if restarts == "core":
+                asyncio.ensure_future(self._restart_core_for(key))
+            elif restarts and self._restart_device is not None:
+                asyncio.ensure_future(self._restart_device(key))
         return response
+
+    async def _restart_core_for(self, key: str) -> None:
+        """**A Lyrion server chosen in Settings is used at once** (George,
+        2026-10-23: *"Yes"*, ADR-0048 amended). The server is read at the
+        core's start; before, a choice waited for the next one, and the
+        player went on asking the old address while Settings showed the new.
+        The core restarts as part 2's does (`_restart_when_settled`), after
+        the answer, which the toast needs."""
+        logger.info("settings: %s changed; restarting the core to use it", key)
+        await asyncio.sleep(1.5)
+        await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-core")
 
     def _settings_value(self, key: str):
         try:
@@ -2710,9 +2724,10 @@ class StateServer:
         except Exception:  # noqa: BLE001 - the write below says what is wrong
             return None
 
-    def _settings_restarts(self, key: str) -> bool:
+    def _settings_restarts(self, key: str) -> bool | str:
+        """The row's `restart`: true restarts the device, `"core"` the core."""
         try:
-            return bool(self._settings.row(key).get("restart"))
+            return self._settings.row(key).get("restart") or False
         except Exception:  # noqa: BLE001
             return False
 

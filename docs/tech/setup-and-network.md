@@ -778,7 +778,8 @@ off, so the panel waits with Spotify and Bluetooth (George, 2026-10-18: a
 fresh player put off showed the library's tiles with nothing behind them);
 asked again from Settings it changes nothing. **A server part 2 sets is used
 from the core's next start**, as one picked in Settings is
-(`_chosen_server`): when `lms_server` is among what `apply` wrote, the core
+(`_chosen_server`; Settings restarts the core 1.5 s after the save, its row
+marked `restart: "core"` - ADR-0048 amended 2026-10-23): when `lms_server` is among what `apply` wrote, the core
 restarts once the downloads it began are in (`_restart_when_settled`: the
 settling record gone, or `settling.downloads_in` - every item done or failed,
 or only following Lyrion after its download) - the skins install as the

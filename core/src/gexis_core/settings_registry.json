@@ -32,6 +32,7 @@
         "marks": "RH",
         "note": "Servers announce themselves on the network. Typing an address is the fallback, not the route.",
         "default": null,
+        "restart": "core",
         "empty": "No servers found. Check the server is running, or enter its address by hand.",
         "kind": "server",
         "discover": true,

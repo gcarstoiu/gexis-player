@@ -3889,7 +3889,7 @@
           "Settings"
         ],
         "summary": "Write one setting's value",
-        "description": "Validates the value against the row (ADR-0035), stores it and runs whatever applies it. The answer carries the value as stored and the settings revision the save made. A row marked `restart` restarts the device after answering when its value changed. Refusals come back as `{\"error\": sentence}` with 400 (the value is wrong), 404 (no such key), 405 (the row takes no value), or 409 (not wired, or the option is unavailable on this hardware, ADR-0055).",
+        "description": "Validates the value against the row (ADR-0035), stores it and runs whatever applies it. The answer carries the value as stored and the settings revision the save made. A row marked `restart` restarts the device after answering when its value changed, or only the core when it is marked `\"core\"` (the Lyrion server). Refusals come back as `{\"error\": sentence}` with 400 (the value is wrong), 404 (no such key), 405 (the row takes no value), or 409 (not wired, or the option is unavailable on this hardware, ADR-0055).",
         "parameters": [
           {
             "name": "key",
@@ -9800,8 +9800,11 @@
             "description": "The action is confirmed by holding."
           },
           "restart": {
-            "type": "boolean",
-            "description": "Changing the value restarts the device."
+            "oneOf": [
+              {"type": "boolean"},
+              {"type": "string", "enum": ["core"]}
+            ],
+            "description": "true: changing the value restarts the device. \"core\": it restarts the player's core instead (lms_server), the device staying up."
           },
           "surfaced": {
             "type": "boolean",

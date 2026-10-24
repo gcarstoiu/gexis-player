@@ -2586,8 +2586,9 @@ async def main() -> None:
         # Wired = something reads it (ADR-0035). The token is read on every
         # Popular lookup, so it takes effect as soon as it is typed.
         # Wired = something reads it, or something happens. `lms_server` is
-        # read at the next start (see `_chosen_server`); `timezone` and
-        # `reboot` act at once.
+        # read at the start (see `_chosen_server`), and saving it from
+        # Settings restarts the core (its row's `restart: "core"`);
+        # `timezone` and `reboot` act at once.
         # ADR-0047's rows are read where they are used: the two routes above
         # read the weather and wallpaper rows on every request, and the panel
         # reads the rest as it draws. None of them needs a callback, and all
