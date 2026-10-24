@@ -3788,6 +3788,15 @@
     flex-shrink: 0;
     min-width: 0;
   }
+  /* **On a bar the head gives way, not the controls** (George, 2026-10-24:
+     a smoothing sheet's button cut off). The sheet's height is fixed there
+     (376 px), and a long note above a warning and a slider pushed Close
+     below its edge; the note now scrolls instead. */
+  :global(.panel--bar) .sheet__head {
+    flex-shrink: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
   .sheet__title {
     font-size: 22px;
     font-weight: 700;
@@ -4162,6 +4171,22 @@
     font-size: 13px;
     letter-spacing: 0.1em;
     color: rgba(233, 238, 242, 0.6);
+  }
+  /* On a bar the value stands beside its slider, not above it: the line it
+     took was what pushed Close off a 376 px sheet under a long note. A fixed
+     width keeps the slider still while the number changes. */
+  :global(.panel--bar) .editor {
+    display: grid;
+    grid-template-columns: 170px 1fr;
+    column-gap: 20px;
+    row-gap: 0;
+    align-items: center;
+  }
+  :global(.panel--bar) .editor__read {
+    grid-row: 1 / span 2;
+  }
+  :global(.panel--bar) .editor__ends {
+    grid-column: 2;
   }
   /* ADR-0044 §2 - a warning the choice holds back until the option is
      chosen, in the same amber the danger rows use. */
@@ -4628,6 +4653,19 @@
     text-align: center;
     text-wrap: pretty;
     max-width: 36ch;
+  }
+  /* On a bar the empty state is compact: at the panel's size it took the
+     room the note above it needed (Restore). */
+  :global(.panel--bar) .empty {
+    padding: 8px 20px;
+    gap: 10px;
+  }
+  :global(.panel--bar) .empty__ring {
+    width: 40px;
+    height: 40px;
+  }
+  :global(.panel--bar) .empty__text {
+    max-width: 60ch;
   }
 
   /* ADR-0044 §5 - the full-screen picker. */
