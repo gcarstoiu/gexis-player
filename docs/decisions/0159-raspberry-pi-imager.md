@@ -1,8 +1,8 @@
 # ADR-0159 — Raspberry Pi Imager
 
-**Status:** **Proposed** — 2026-10-24. A task alongside Phase 17's close, not
-a phase (George, 2026-10-24). Settles ADR-0021's deferred *Image distribution
-channel*.
+**Status:** **Accepted in part** — 2026-10-24 (George): D1 yes, D2 and D3
+not now, D4 open. A task alongside Phase 17's close, not a phase. Settles
+ADR-0021's deferred *Image distribution channel* for now.
 
 ## Context
 
@@ -36,22 +36,25 @@ Imager as of 2.0.12 (2026-10-08), from its source, docs and issues:
   mechanism. No review time is published. Media player OSes listed: moOde,
   Volumio (`systemd`), piCorePlayer, LibreELEC, OSMC (`none`).
 
-## Proposed (for George)
+## Decisions
 
 **D1 — The image file with *Use custom* stays,** and `docs/INSTALL.md` says
-what Imager 2 does: nothing to skip.
+what Imager 2 does: nothing to skip. **Done 2026-10-24.**
 
 **D2 — Our own Imager list, published with each Stable release:** one entry,
 `init_format: none`, as a `.json` release asset reached through the release's
 `latest` download URL; the image URL inside names that release's own asset.
 `docs/INSTALL.md` offers an *Open in Raspberry Pi Imager* link and the
-manifest file beside the image. Setup stays on the phone.
+manifest file beside the image. Setup stays on the phone. **Not now:**
+GitHub renders an `rpi-imager://` link as plain text (checked with its
+Markdown API, 2026-10-24), so only the downloaded file would be left, which
+saves little over *Use custom*.
 
 **D3 — Imager's own settings (Wi-Fi, name): not now.** They would need the
 image to take Imager's `firstrun.sh` or cloud-init in place of its own first
 boot.
 
-**D4 — Imager's own list: after D2 has been through a release.** It needs
+**D4 — Imager's own list: open.** It needs a list file like D2's and
 George's name as a contact, and an answer for the setup network's fixed
 password (`gexis-setup`, used until a screen is kept, and always without
 one).

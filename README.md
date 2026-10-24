@@ -62,7 +62,7 @@ touch screen from the hardware list is optional.
    ([checksum](https://github.com/gcarstoiu/gexis-player/releases/latest/download/gexis-player.img.xz.sha256),
    [signature](https://github.com/gcarstoiu/gexis-player/releases/latest/download/gexis-player.img.xz.asc)).
 2. **Write it to the card** with [Raspberry Pi Imager](https://www.raspberrypi.com/software/):
-   *Choose OS → Use custom*, pick the file, and skip Imager's own settings.
+   choose *Use custom* at the bottom of the operating systems and pick the file.
 3. **Start the Pi** with the card in, and the DAC and screen if you use them.
    The screen shows two QR codes: the first joins your phone to the player's
    own Wi-Fi, **gexis-setup**, the second opens the setup page. Without a screen, join
