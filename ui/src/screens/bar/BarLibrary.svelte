@@ -27,6 +27,7 @@
   to playlist opens Library.svelte's playlist picker, drawn as a bar's sheet.
 -->
 <script>
+  import { failures } from '../../lib/failures.svelte.js';
   import RadioGlyph from '../../lib/RadioGlyph.svelte';
   import { untrack } from 'svelte';
 
@@ -156,8 +157,8 @@
 
   // ---- photos ------------------------------------------------------------
   const photos = $derived($artistPhotos);
-  let failed = $state(new Set());
-  const markFailed = (url) => (failed = new Set(failed).add(url));
+  const failed = failures();
+  const markFailed = failed.mark;
 
   //: Only the picture is taken from the artist lookup: fanart first, then
   //: LMS's plugin, as on the panel (Library.svelte, George 2026-09-18). The
