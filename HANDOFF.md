@@ -182,9 +182,9 @@ Phase 19 preview** (core and player 1.4.0+git49.c4af394, ui
 1.4.0+git24.e505054, since 2026-10-24 19:22). Checked against a Home
 Assistant 2026.10.3 in Docker (`~/projects/scratch/ha-test`, container
 `gexis-ha-test`, stopped; no discovery loaded): criterion 2 and 4 hold
-(0.53-0.64 s; ADR-0160 *Measured*). **Open:** criterion 3 (squeezelite's
-output logging must be turned up for a count, as Finding 109 did - George
-to agree), criterion 1 on George's own Home Assistant. **On GitHub:**
+(0.53-0.64 s; ADR-0160 *Measured*), and criterion 3 (Finding 137: 46 min,
+0 underruns, 0 XRUNs; the logging drop-in removed). **Open:** criterion 1 on
+George's own Home Assistant. **On GitHub:**
 `gcarstoiu/gexis-player-homeassistant` (public, 2026-10-24; tests, hassfest
 and HACS pass; no release yet - 0.1.0 goes out with the player release that
 carries `id`). The documents (D6) are on `ph-home-assistant`: manual *The
