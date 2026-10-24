@@ -3,7 +3,7 @@
 **Status:** **Accepted** — 2026-10-24 (George: D1 our own integration, D4 a
 repository of its own, D3 with the dashboard and visualiser switches, D7 a
 Home Assistant in Docker that hears nothing on the network). Phase 19,
-`ph-home-assistant`. Nothing built yet.
+`ph-home-assistant`. Built 2026-10-24 (*Measured*, below).
 
 ## Context
 
@@ -106,9 +106,28 @@ and XRUNs during playback with Home Assistant connected and commanding.
 
 None: nothing to set on the player.
 
+## Measured (sofapi, 2026-10-24)
+
+Core and player 1.4.0+git49.c4af394, ui 1.4.0+git24.e505054; Home Assistant
+2026.10.3 in Docker, bridge network, no `default_config` (zeroconf, SSDP,
+DHCP not loaded); the integration 0.1.0 (17 tests, hassfest clean), sofapi
+added by address.
+
+- One media player and the three switches; *Dashboard* available (an address
+  is set on sofapi). No errors in either log.
+- **Criterion 2:** the player's own pause, play, next and volume reached
+  Home Assistant in 0.53-0.64 s (polled every 50 ms); title, artist,
+  position and artwork shown, the artwork through Home Assistant's proxy
+  (`image/jpeg`, from sofapi's own Lyrion server: the loopback address
+  rewritten).
+- **From Home Assistant:** source, play, pause, next, volume and each switch
+  over and back, each seen within 0.7 s.
+- **Not seen:** the artwork changing with the album (the queue was one
+  album); criterion 1 (discovery: George's own Home Assistant); criterion
+  3 - squeezelite's output logging was not turned up and it logged nothing,
+  so no underrun counted means nothing yet.
+
 ## Unverified
 
 - The Marketplace in 2026.11 as described before its release.
-- Artwork whose URL is on the Lyrion server or online, through Home
-  Assistant's proxy.
-- Two seconds from a change to Home Assistant (criterion 2).
+- Artwork from an online source (Spotify's), through Home Assistant's proxy.
