@@ -123,9 +123,10 @@ added by address.
 - **From Home Assistant:** source, play, pause, next, volume and each switch
   over and back, each seen within 0.7 s.
 - **Not seen:** the artwork changing with the album (the queue was one
-  album); criterion 1 (discovery: George's own Home Assistant); criterion
-  3 - squeezelite's output logging was not turned up and it logged nothing,
-  so no underrun counted means nothing yet.
+  album); criterion 1 (discovery: George's own Home Assistant).
+- **Criterion 3** (the same evening): 46 minutes of playback with Home
+  Assistant commanding every 40-80 s - 0 underruns, 0 XRUNs, counted by
+  squeezelite's output logging ([Finding 137](../findings/137-playback-with-home-assistant-connected.md)).
 
 ## Unverified
 
