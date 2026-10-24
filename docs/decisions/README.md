@@ -179,6 +179,7 @@ been written properly. **0098 has no record either.**
 | [0156](0156-home-assistant-dashboard-on-the-screen.md) | A Home Assistant dashboard on the screen | Accepted 2026-10-21: one per player, in the panel's page; button, API, schedule; edge tab dismisses. Amended 2026-10-22: the visualiser - asked for or its timeout - takes over from it |
 | [0157](0157-the-phone-as-real-input-on-the-panel.md) | The phone's touchpad and keyboard as real input on the panel | Accepted 2026-10-21: over a framed page, taps and typing as real input (uinput); amended the same day |
 | [0159](0159-raspberry-pi-imager.md) | Raspberry Pi Imager | Accepted in part 2026-10-24: Use custom stays, guide corrected; our own list and Imager's settings not now; Imager's own list open |
+| [0160](0160-the-player-in-home-assistant.md) | The player in Home Assistant | Accepted 2026-10-24 (Phase 19): our own integration in its own repository; a media player plus screen, dashboard and visualiser switches; `id` on `/player/status` |
 
 ## Cross-cutting rules
 
