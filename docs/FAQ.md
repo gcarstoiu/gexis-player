@@ -198,7 +198,8 @@ is planned.
 HDMI screens, and DSI screens on the Pi's own display connector. Tested on
 the hardware: a 10.1″ 1280 × 800 (the reference screen), a 13.3″ at 1920 ×
 1080, the 1280 × 400 and 1480 × 320 bars, two HMTECH monitors (7″ and
-10.1″, no touch), and a Hosyond 7″ DSI touch screen.
+10.1″, no touch), a Hosyond 7″ DSI touch screen and a Waveshare 10.1″
+DSI-TOUCH-A.
 Others under *Change* on *Settings → Display → Attached screen* are listed but untested;
 those tested, or reported working by owners, are marked *Tested*, and a
 problem an owner reported shows as a line under the model. DPI screens are not supported. The screen can be on

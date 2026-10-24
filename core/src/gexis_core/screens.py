@@ -48,6 +48,7 @@ TESTED: frozenset[str] = frozenset({
     # tested, since nothing the Pi reads tells the class's makers apart.
     "hosyond-7-dsi",
     TOUCH_DISPLAY_CLASS,
+    "waveshare-dsi-v2-10.1a",
 })
 
 #: **Screens George owns that the vendored list lacks** (`display_presets.json`

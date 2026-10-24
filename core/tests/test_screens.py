@@ -50,10 +50,10 @@ def test_george_s_screens_are_the_tested_ones():
     Hosyond 7" DSI on bedroompi with the class it is recognised as
     (ADR-0158)."""
     tested = {s.id for s in screens.all_screens() if s.tested}
-    assert tested == set(screens.TESTED) and len(tested) == 8
+    assert tested == set(screens.TESTED) and len(tested) == 9
     hdmi = {i for i in tested if screens.by_id(i).interface == "hdmi"}
     assert {screens.by_id(i).maker for i in hdmi} == {"Waveshare", "HMTECH"} and len(hdmi) == 6
-    assert tested - hdmi == {"hosyond-7-dsi", screens.TOUCH_DISPLAY_CLASS}
+    assert tested - hdmi == {"hosyond-7-dsi", screens.TOUCH_DISPLAY_CLASS, "waveshare-dsi-v2-10.1a"}
 
 
 def test_every_dsi_model_in_the_list_is_offered_with_its_overlay():
