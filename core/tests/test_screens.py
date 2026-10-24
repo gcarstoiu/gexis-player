@@ -76,10 +76,7 @@ def test_every_dsi_model_in_the_list_is_offered_with_its_overlay():
 
 
 def test_a_four_lane_model_is_offered_only_where_the_board_has_four_lanes(tmp_path):
-    """ADR-0158 D6 (George, 2026-10-24): a Pi 4's display connector carries
-    two lanes, and a four-lane model written there showed no picture
-    (bedroompi, Waveshare's 10.1" DSI-TOUCH-A). A Pi 5 and the Compute
-    Modules carry four; off a Pi, every model."""
+    """ADR-0158 D6."""
     four = {s.id for s in screens.all_screens() if s.lanes == 4}
     assert four == {"waveshare-dsi-v2-8.0a-4lane", "waveshare-dsi-v2-9.0b-4lane", "waveshare-dsi-v2-10.1a-4lane",
                     "waveshare-dsi-v2-10.1b-4lane", "waveshare-dsi-v2-12.3a-4lane", "waveshare-dsi-13.3-4lane"}

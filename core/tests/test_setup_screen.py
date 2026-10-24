@@ -232,8 +232,7 @@ def test_the_list_alone_is_offered_when_no_other_screen_is_in_use(tmp_path, monk
 
 
 def test_a_pi_4_offers_no_four_lane_model_in_settings_or_setup(tmp_path, monkeypatch):
-    """ADR-0158 D6 (George, 2026-10-24): on a Pi 4 neither list offers a
-    four-lane DSI model; one already in use is still named in Settings."""
+    """ADR-0158 D6; one already in use is still named."""
     from gexis_core import screen_apply, settings_registry
 
     monkeypatch.setattr(screens, "MODEL", tmp_path / "model")

@@ -268,6 +268,18 @@ screen (`screen-seen.json` absent).
 **Next:** a second DSI screen George has, on bedroompi; if it leaves nothing
 open, Phase 17 closes (George, 2026-10-23).
 
+## Measured: Waveshare 10.1" DSI-TOUCH-A (bedroompi, 2026-10-24)
+
+- 4-lane entry: backlight and touch, no picture (D6). *10.1" DSI* and
+  *10.1" DSI-C*: no picture; the 120 s go-back restored the screen before.
+- 2-lane entry (`10_1_inch_a`): picture at 1280 x 800 (transform 270),
+  Keep answered on the panel.
+- Touch: the controller (Goodix, 800 x 1280) reported every tap in place.
+  From 22 s after Keep, taps stopped reaching the page (later, 2 of about 70
+  over two minutes) and the screen check got no tap; the controller
+  also reported phantom multi-finger contacts. Restarting `gexis-kiosk`
+  cleared it: 25 of 25 reached the page. Cause not established.
+
 ## Unverified
 
 - That the original Touch Display v1 reads exactly as this panel does (not

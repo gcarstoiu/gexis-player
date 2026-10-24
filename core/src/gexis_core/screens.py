@@ -104,11 +104,7 @@ FIRMWARE_FINDS = frozenset({"vc4-kms-dsi-7inch"})
 #: panel dark until the restart went back.
 NOT_SHIPPED = frozenset({"waveshare_35DSI"})
 
-#: **ADR-0158 D6: a four-lane DSI model only on a board with four lanes**
-#: (George, 2026-10-24). A Pi 4 Model B's display connector carries two: a
-#: four-lane model written there lights its backlight and answers touch, with
-#: no picture (Waveshare's 10.1" DSI-TOUCH-A on bedroompi, 2026-10-24). A Pi 5
-#: and the Compute Modules carry four.
+#: ADR-0158 D6: boards whose DSI connector carries four lanes.
 MODEL = Path("/proc/device-tree/model")
 FOUR_LANE_BOARDS = re.compile(r"^Raspberry Pi (5 Model|Compute Module)")
 
@@ -160,8 +156,7 @@ class Screen:
 
     @property
     def lanes(self) -> int:
-        """The DSI data lanes the model's overlay drives: four where its
-        parameter says so (`10_1_inch_a_4lane`), two otherwise (D6)."""
+        """DSI lanes the overlay drives (`..._4lane` or two)."""
         params = (p for o in self.overlays for p in o.split(",")[1:])
         return 4 if any(p.endswith("4lane") for p in params) else 2
 
@@ -240,9 +235,7 @@ def all_screens(path: Path = PRESETS) -> tuple[Screen, ...]:
 
 
 def board_lanes(path: Path | None = None) -> int | None:
-    """The DSI lanes this board's display connector carries (D6): four on a
-    Pi 5 or a Compute Module, two on any other Pi. None off a Pi - a
-    development machine - where every model is offered."""
+    """DSI lanes on this board's connector; None off a Pi (all offered)."""
     try:
         model = (path or MODEL).read_text(errors="replace").strip("\x00\n ")
     except OSError:
@@ -253,9 +246,7 @@ def board_lanes(path: Path | None = None) -> int | None:
 
 
 def offered(path: Path | None = None) -> tuple[Screen, ...]:
-    """**The models the list offers on this board** (D6): every one, less
-    the four-lane DSI models where the connector carries two. `by_id` and
-    `by_label` still find those, so a choice already made keeps its name."""
+    """The models this board can drive (D6). `by_id` still finds the rest."""
     lanes = board_lanes(path)
     every = all_screens()
     return every if lanes is None else tuple(s for s in every if s.lanes <= lanes)
