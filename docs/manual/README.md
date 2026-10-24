@@ -310,6 +310,36 @@ Home Assistant's own header and side bar show unless the dashboard or the
 user's profile in Home Assistant hides them. On a bar (1480 × 320), a
 dashboard made for that shape reads best.
 
+### The player in Home Assistant
+
+Home Assistant can show each player as a media player and control it, with
+the *Gexis Player* integration
+([gexis-player-homeassistant](https://github.com/gcarstoiu/gexis-player-homeassistant)).
+It is installed in Home Assistant by whoever runs it; the player changes
+nothing there.
+
+1. With HACS, add `https://github.com/gcarstoiu/gexis-player-homeassistant`
+   under *Custom repositories* (type *Integration*), download *Gexis Player*
+   and restart Home Assistant.
+2. The player then shows under *Settings → Devices & services* as
+   discovered: confirm it. One that does not show is added by its address -
+   *Add integration → Gexis Player*, its name on the network (for example
+   `livingroom.local`) and port 8090.
+
+What Home Assistant gets:
+- **A media player**: playing, paused or idle; title, artist, album, artwork
+  and position; play, pause, next and previous when the source playing
+  offers them, shuffle and repeat where it has them; volume and mute, unless
+  the output is fixed; the source, from those that can take over.
+- **On a player with a screen, three switches**: *Screen* (off is display
+  standby), *Dashboard* (the dashboard above, up or down; unavailable until
+  its address is set) and *Visualiser*.
+
+It needs Home Assistant 2026.3 or later and a player newer than 1.4.0; an
+older player is found and asked to update. With Home Assistant's own
+*Lyrion Music Server* integration also set up, the player shows there too,
+as Lyrion's player.
+
 ## 7. The phone page
 
 Open the player's address in a phone's browser, for example

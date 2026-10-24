@@ -72,6 +72,18 @@ is dropped. `{"t":"ping"}` is answered `{"t":"pong"}`. The schemas
 `PanelTouchpadFromPhone` and `PanelTouchpadFromPanel` give the fields. It is
 *internal*: the phone page's own.
 
+## Home Assistant
+
+The first client written against the file by someone other than the player's
+own pages is the Home Assistant integration (ADR-0160), in its own
+repository, [gexis-player-homeassistant](https://github.com/gcarstoiu/gexis-player-homeassistant).
+It uses only *stable* routes: `GET /player/status` for the player's lasting
+`id` (its unique ID in Home Assistant) and `screen`, `GET /state` (one
+WebSocket per player), `GET /panel/dashboard`, and the POST routes for the
+transport, volume, mute, source, standby, the dashboard and the visualiser.
+A player found by `_gexis._tcp` or added by address without an `id` is
+refused as too old.
+
 ## Keeping the file true
 
 The file is written by hand - aiohttp, which the core is built on, generates
