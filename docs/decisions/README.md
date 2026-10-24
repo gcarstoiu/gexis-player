@@ -178,6 +178,7 @@ been written properly. **0098 has no record either.**
 | [0155](0155-a-sound-system-on-optical.md) | A sound system on optical, through a USB adapter | Accepted 2026-10-20: Squeezelite converts only rates the card lacks, upward; adapter marked Tested |
 | [0156](0156-home-assistant-dashboard-on-the-screen.md) | A Home Assistant dashboard on the screen | Accepted 2026-10-21: one per player, in the panel's page; button, API, schedule; edge tab dismisses. Amended 2026-10-22: the visualiser - asked for or its timeout - takes over from it |
 | [0157](0157-the-phone-as-real-input-on-the-panel.md) | The phone's touchpad and keyboard as real input on the panel | Accepted 2026-10-21: over a framed page, taps and typing as real input (uinput); amended the same day |
+| [0159](0159-raspberry-pi-imager.md) | Raspberry Pi Imager | Proposed 2026-10-24: Use custom stays; our own Imager list per Stable release (`init_format: none`); Imager's settings not now; Imager's own list later |
 
 ## Cross-cutting rules
 
@@ -218,7 +219,7 @@ selection criteria. Protect the audio path with priority, not by doing less.
 | Subject | Raised by | Why it is not settled |
 |---|---|---|
 | ~~Qobuz navigation model~~ | 0020 | Answered 2026-09-14 by [0030](0030-library-typed-radio-slimbrowse.md): not rendered. |
-| Image distribution channel | 0021 | Plain `.img`, self-hosted Imager repository, or Imager's community categories. |
+| Image distribution channel | 0021 | Proposed in [0159](0159-raspberry-pi-imager.md), 2026-10-24. |
 | `steps.per.degree` quantisation | 0015 | Not decidable from configuration; spike defined. |
 | Apt repository infrastructure | 0021 | In-place updates require a signed, hosted repository. |
 | Maximum volume ceiling | 0018 | Still undecided. |
