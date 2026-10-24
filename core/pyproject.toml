@@ -23,7 +23,7 @@ test = [
     # What the image's own tools are tested with: the skin packs and
     # letterboxing (Pillow), the visualiser's renderers (pygame), the photo
     # placement (numpy, OpenCV). Without them those tests skip.
-    "pillow==12.3.0",
+    "pillow==13.0.0",
     "pygame==2.6.1",
     "numpy==2.5.4",
     "opencv-python-headless==5.0.0.93",
