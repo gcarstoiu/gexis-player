@@ -163,16 +163,26 @@ the page once, until the panel restarted (ADR-0158, *Measured*). **Next, on
 recorder stops by itself at 14:52) with the core's `POST /touch` log; nothing
 lost: Phase 17 closes. (On the panel, Hardware feedback only points to the phone, since it
 ends on GitHub; George had taken that short sheet for a cut-off one.) `ph-dsi` merges into
-`next` after Phase 17's acceptance. Then, in order (`docs/DEVELOPMENT.md`; refer
-to them by ID): **19** the player in Home Assistant (`ph-home-assistant`,
-moved up 2026-10-24), **20** room correction for the bass
+`next` after Phase 17's acceptance.
+
+**In progress: Phase 19, the player in Home Assistant** (`ph-home-assistant`,
+moved up and started 2026-10-24). **ADR-0160 accepted** the same day:
+our own integration `gexis` in a new public repository
+(`gcarstoiu/gexis-player-homeassistant`, not created yet), a media player
+plus *Screen*, *Dashboard* and *Visualiser* switches, `id` and `screen` on
+`/player/status`; tested against a Home Assistant in Docker that hears
+nothing on the network, a test player added by address. **Next:** the
+player's side on `ph-home-assistant` (from `next`), then the integration.
+
+Then, in order (`docs/DEVELOPMENT.md`; refer
+to them by ID): **20** room correction for the bass
 (`ph-room-correction`), **21** room correction for the full range
 (`ph-room-correction-full`), **22** themes (`ph-themes`), **23** the
 library answers for itself (`ph-library`), **24** Lyrion's own menus' look
-(`ph-lyrion-menus`); MPD is parked (`ph-mpd`, ADR-0151). Each ADR first. **Raspberry Pi Imager** (open since
-1.0.0): the image file with *Use custom*, our own Imager list, Imager's
-community list - a task alongside Phase 17's close, not a phase (George,
-2026-10-24); its ADR first, settling ADR-0021's deferred channel.
+(`ph-lyrion-menus`); MPD is parked (`ph-mpd`, ADR-0151). Each ADR first. **Raspberry Pi Imager**
+(ADR-0159, a task, not a phase): the install guide is corrected; our own
+Imager list and Imager's settings not now; Imager's own list stays open, as
+it is, with no further changes for now (George, 2026-10-24).
 
 The shared to-do list (an artifact with a `todos` collection; its address is
 in Claude's memory, not here) holds the open items with their detail.
