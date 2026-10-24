@@ -5,13 +5,13 @@
 #     packaging/skin-packs/check.sh [<deb dir> ...]
 #
 # Takes gexis-peppy-engines and each gexis-skins-<W>x<H> from packaging/out,
-# else the newest in the build cache (~/.cache/gexis-player/debs), else the
-# newest a release published (~/.local/share/gexis-release-out). Fails if any
+# else the newest in the build cache ($GEXIS_DEB_CACHE), else the newest a
+# release published (~/projects/gexis-release-out). Fails if any
 # skin of any pack fails.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 dirs=("$@")
-[ ${#dirs[@]} -gt 0 ] || dirs=(packaging/out "${HOME}/.cache/gexis-player/debs" "${HOME}/.local/share/gexis-release-out")
+[ ${#dirs[@]} -gt 0 ] || dirs=(packaging/out "${GEXIS_DEB_CACHE:-$HOME/.cache/gexis-player/debs}" "${HOME}/projects/gexis-release-out")
 # The newest file of that name in the first directory that has one (the
 # release output keeps one copy per release, so it is searched deep).
 newest() {

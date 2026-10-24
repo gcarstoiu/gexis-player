@@ -34,7 +34,7 @@ release-notes commit `527c3bd0`; `next` and `release-1.4.0` pushed there.
 Image `image/deploy/2026-10-22-gexis-player-v1.4.0.img` (`verify-image.sh`
 123/123 from the release worktree, 978 skins clean); parts
 `ours-488ab973183a`, `skins-67e037cab00f`, `rpi-222df5468eaa`,
-`debian-ddaba64c92a5`; build output in `~/.local/share/gexis-release-out/r1.4.0`.
+`debian-ddaba64c92a5`; build output in `~/projects/gexis-release-out/r1.4.0`.
 Packages: gexis-core and gexis-player `1.4.0`, gexis-system
 `1.3.1+git60.4f8ea32`, gexis-ui `1.3.1+git64.be7558c`; the skin packs are
 1.3.0's published files (`1.2.0+git33.96b8a42`, copied, not rebuilt - a
@@ -103,7 +103,7 @@ first start after a screen change may still miss full-screen. The 10.1" was
 checked by its EDID in the tests, not again on the device under the new
 standby.
 
-**Release build output lives in `~/.local/share/gexis-release-out`**: in each
+**Release build output lives in `~/projects/gexis-release-out`**: in each
 release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
 (excluded in `.git/info/exclude`). `reuse.py` reuses a published file only
 against a local copy, so losing that folder means re-uploading every OS file.
