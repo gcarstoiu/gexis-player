@@ -3037,6 +3037,15 @@ stored Software), DSD through the adapter.
 
 **ID:** `ph-dsi` · added 2026-10-19.
 
+**Closed 2026-10-24** (George), merged into `next` for 1.5.0. Two screens
+tested: the Hosyond 7" (found by the firmware as a Touch Display) and the
+Waveshare 10.1" DSI-TOUCH-A on its 2-lane entry; four-lane models offered
+only on a Pi 5 or a Compute Module (ADR-0158 D6). Criteria 1 and 2 dropped
+by George (2026-10-23). The Waveshare's touch stopped reaching the page once
+until the panel restarted; the day's watch on it was lost to a reboot of
+bedroompi, so that stays as ADR-0158 records it: seen once, cause not
+established.
+
 **Started 2026-10-23** (George: *"Start phase 17"*), on the screen he has: a
 Hosyond 7" DSI touch panel, 800 x 480, in bedroompi. ADR-0158 accepted the
 same day (George's five decisions) and built on `ph-dsi`; on bedroompi the

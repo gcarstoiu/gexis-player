@@ -56,18 +56,17 @@ and `next`, the merged branches and worktrees are gone, and the routine
 clean-up ran. Promotion to Stable is George's call, later; the README's
 "current release" line changes only then.
 
-**ShelvesPi runs the preview `preview-bar-1024`** (since 2026-10-24 21:35):
-`next` with `bar-pictures-retry` and `bar-settings-fit` merged in
-(`~/projects/gexis-player-preview-bar-1024`, its own branch, removed once both
-merge): gexis-core `1.4.0+git53.5b660b4`, gexis-ui and gexis-player
-`1.4.0+git63.40b646c`. For George: album artists' pictures and the Settings
-sheets on the bar. **sofapi runs the Phase 19 preview** (below).
+**ShelvesPi runs the bar fixes' preview** (since 2026-10-24 21:35, ui and
+player `1.4.0+git69.eed6457` later that evening, core `1.4.0+git53.5b660b4`; the
+branch `preview-bar-1024` removed, everything in it now on `next`). Checked
+there with the synthetic finger: a flick then a tap opens the visualiser
+3/3 (0/3 before), a pulled tray stays open, one opened by a change from
+elsewhere hides itself. **sofapi runs the Phase 19 preview** (below).
 
 **bedroompi runs the preview `preview-1023`** (a card from an earlier life,
 now with the Waveshare 10.1" DSI-TOUCH-A): `ph-dsi` with
 `lms-server-restart` and `bar-wallpapers` merged in
-(`~/projects/gexis-player-preview-1023`, its own branch, removed once
-`ph-dsi` merges). Since 2026-10-24 15:11 gexis-core and gexis-player
+(its branch removed 2026-10-24, everything in it now on `next`). Since 2026-10-24 15:11 gexis-core and gexis-player
 `1.4.0+git45.561e337`, gexis-ui `1.4.0+git36.b8793e5`, gexis-system
 `1.4.0+git29.d93d43f`. **`lms-server-restart` and `bar-wallpapers`**:
 checked by George, merged into `next` 2026-10-24, branches deleted.
@@ -107,24 +106,24 @@ server answers first after a restart (Finding 130 point 6). GitHub reported
 player), raised 20-21 Oct.
 
 **Open:**
-- **The visualiser button in the bar's tray opens it only on the second
-  tap** (George, 21-24 Oct, every time on ShelvesPi). Synthetic taps through
-  the kernel all opened it on the first tap: tap or pull to open, a tap
-  0.15 s into the slide, 6-20 px of drift (2026-10-24; `tools/panel-touch.py`
-  works on the bar with the page's axes turned: page (x, y) is device
-  (y / 400 x 1480, (1 - x / 1850) x 320)). **Open diagnostics:** ShelvesPi's
-  kiosk has DevTools on 9222 (`/run/systemd/system/gexis-kiosk.service.d/zz-debug.conf`)
-  and a tunnel from this computer (`~/projects/scratch/tunnel-shelvespi.pid`),
-  with a recorder in the page (`scratch/cdp_bar.py`). George taps until it
-  opens; read it, fix, then remove the drop-in, restart the kiosk (nobody
-  using the bar) and close the tunnel by its PID.
-- **Bar fixes, 2026-10-24, on their own branches:** `bar-pictures-retry` (a
+- **The visualiser button in the bar's tray opened it only on the second
+  tap** (George, 21-24 Oct): fixed 2026-10-24. George's recorded taps: a tap
+  within about a second of pulling the tray down got no click from Chromium
+  (9 of 9, 0.52-0.97 s after the pull; Home the same), reproduced with an
+  80 ms synthetic flick. The tray's buttons now act when the finger lifts on
+  them (`press.lift`). `tools/panel-touch.py` works on the bar with the
+  page's axes turned: page (x, y) is device (y / 400 x 1480, (1 - x / 1850)
+  x 320). ShelvesPi's debug port, its helper files and the tunnel are
+  closed.
+- **Bar fixes, 2026-10-24, merged into `next` for 1.5.0:** `bar-pictures-retry` (a
   picture that failed to load was given up for the page's life - every album
   artist showed initials; now tried again after 15 s, 60 s, 5 min) and
   `bar-settings-fit` (sheets on a bar: the value beside its slider, a compact
   empty list, a long note scrolls - every sheet checked with mocked data at
-  both bar sizes, `scratch/layout`). Both in the preview branch
-  `preview-bar-1024`, for ShelvesPi.
+  both bar sizes, `scratch/layout`), with `bar-tray-taps` (above) and
+  `tray-stays-open` (George, 2026-10-24: a drawer or tray the user opened
+  stays until closed, the visualiser takes over or Home opens; ADR-0022's
+  row amended). Branches deleted.
 - **Not checked:** iOS's handling of `interactive-widget` (the mini player
   on the phone's keyboard); Android's is.
 - **The visualiser made cheaper, the rest left** (Finding 134; George,
@@ -135,36 +134,10 @@ player), raised 20-21 Oct.
   measure it again (to-do `glass-revisit-2027`).
 - George's look at the moon before sunrise.
 
-**Phase 18, a Home Assistant dashboard on the screen** (`ph-ha-dashboard`,
-ADR-0156) was closed on 2026-10-22, released in 1.4.0 (George: *"Close
-phase 18 - ha works fine"*). **In progress: Phase 17, DSI screens** (`ph-dsi`,
-`~/projects/gexis-player-ph-dsi`, from `next`; started 2026-10-23, George:
-*"Start phase 17"*). The screen is a Hosyond 7" DSI touch panel, 800x480,
-in bedroompi; the firmware brings it up by itself (`display_auto_detect`,
-overlay `vc4-kms-dsi-7inch`, as the original Touch Display), no EDID, touch
-`edt_ft5x06` on I2C, backlight `/sys/class/backlight/10-0045`. Set as the
-HMTECH 7" HDMI it half-works: everything aimed at `HDMI-A-1` fails, so the
-180° rotation, standby and the kiosk background never apply. **ADR-0158 is
-accepted** (George's five decisions, 2026-10-23) **and built on `ph-dsi`**
-(pushed; core suite 2656 passed, 48 skipped): every DSI model in the list
-that can run (58 of 68, plus *Raspberry Pi Touch Display or compatible*
-for a panel found by its I2C controllers), a picked model's own name, the
-DSI panel the screen unless an HDMI port is chosen, standby by the
-backlight, *Screen brightness* on a DSI panel. **On bedroompi with George
-at the panel** (ADR-0158, *Measured*): the start put the panel's entry in
-place of the HMTECH at 180°, nothing asked, picture the right way up;
-standby dark by the backlight and back at a touch; brightness steps
-visible; touch right at all four corners (checked by hand). George decided
-(2026-10-23) that a receiver or TV beside the panel (criterion 2) and a
-freshly flashed card (criterion 1) will not be tested. **Second screen,
-2026-10-24: Waveshare 10.1" DSI-TOUCH-A**, on its 2-lane entry, marked
-tested; four-lane models hidden on a Pi 4 (D6). Its touch stopped reaching
-the page once, until the panel restarted (ADR-0158, *Measured*). **Next, on
-2026-10-25:** compare bedroompi's raw touches (`/tmp/touchwatch.txt`, the
-recorder stops by itself at 14:52) with the core's `POST /touch` log; nothing
-lost: Phase 17 closes. (On the panel, Hardware feedback only points to the phone, since it
-ends on GitHub; George had taken that short sheet for a cut-off one.) `ph-dsi` merges into
-`next` after Phase 17's acceptance.
+**Phase 17, DSI screens** (`ph-dsi`, ADR-0158) was closed on 2026-10-24 by
+George and merged into `next` for 1.5.0; the Waveshare's touch watch was lost
+to a reboot of bedroompi (the stopped-touch case stays as ADR-0158 records
+it). Phase 18 closed on 2026-10-22 with 1.4.0.
 
 **In progress: Phase 19, the player in Home Assistant** (`ph-home-assistant`,
 moved up and started 2026-10-24). **ADR-0160 accepted** the same day:
@@ -210,10 +183,10 @@ every merged release PR, otherwise weekly on Sunday evening. **Last run:
 
 ## Phases
 
-Closed: 0-16 and 18 (13 with letters a-f; Phase 15, the public API, on
+Closed: 0-18 (13 with letters a-f; Phase 15, the public API, on
 2026-10-19 with 1.2.0; Phase 16, optical, with 1.3.0; Phase 18, the Home
-Assistant dashboard, with 1.4.0). Phases are numbered consecutively without letters,
-each with a stable ID (George, 2026-10-13); the open ones are 17 and 19-24, with
+Assistant dashboard, with 1.4.0; Phase 17, DSI screens, for 1.5.0). Phases are numbered consecutively without letters,
+each with a stable ID (George, 2026-10-13); the open ones are 19-24, with
 MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
 
 ## Machines

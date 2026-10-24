@@ -7544,3 +7544,36 @@ what they show; a screenshot showed a butterfly. Core suite 2630 passed, 48
 skipped. The branch is not merged into `next` yet. **sofapi is still on
 `preview-1021`** (core `1.3.1+git62`, the rest `git64`, 1.4.0's code) and
 moves to 1.4.0 by the update.
+
+## 2026-10-24: Phase 17 in progress (moved from HANDOFF verbatim when George closed it)
+
+**Phase 18, a Home Assistant dashboard on the screen** (`ph-ha-dashboard`,
+ADR-0156) was closed on 2026-10-22, released in 1.4.0 (George: *"Close
+phase 18 - ha works fine"*). **In progress: Phase 17, DSI screens** (`ph-dsi`,
+`~/projects/gexis-player-ph-dsi`, from `next`; started 2026-10-23, George:
+*"Start phase 17"*). The screen is a Hosyond 7" DSI touch panel, 800x480,
+in bedroompi; the firmware brings it up by itself (`display_auto_detect`,
+overlay `vc4-kms-dsi-7inch`, as the original Touch Display), no EDID, touch
+`edt_ft5x06` on I2C, backlight `/sys/class/backlight/10-0045`. Set as the
+HMTECH 7" HDMI it half-works: everything aimed at `HDMI-A-1` fails, so the
+180° rotation, standby and the kiosk background never apply. **ADR-0158 is
+accepted** (George's five decisions, 2026-10-23) **and built on `ph-dsi`**
+(pushed; core suite 2656 passed, 48 skipped): every DSI model in the list
+that can run (58 of 68, plus *Raspberry Pi Touch Display or compatible*
+for a panel found by its I2C controllers), a picked model's own name, the
+DSI panel the screen unless an HDMI port is chosen, standby by the
+backlight, *Screen brightness* on a DSI panel. **On bedroompi with George
+at the panel** (ADR-0158, *Measured*): the start put the panel's entry in
+place of the HMTECH at 180°, nothing asked, picture the right way up;
+standby dark by the backlight and back at a touch; brightness steps
+visible; touch right at all four corners (checked by hand). George decided
+(2026-10-23) that a receiver or TV beside the panel (criterion 2) and a
+freshly flashed card (criterion 1) will not be tested. **Second screen,
+2026-10-24: Waveshare 10.1" DSI-TOUCH-A**, on its 2-lane entry, marked
+tested; four-lane models hidden on a Pi 4 (D6). Its touch stopped reaching
+the page once, until the panel restarted (ADR-0158, *Measured*). **Next, on
+2026-10-25:** compare bedroompi's raw touches (`/tmp/touchwatch.txt`, the
+recorder stops by itself at 14:52) with the core's `POST /touch` log; nothing
+lost: Phase 17 closes. (On the panel, Hardware feedback only points to the phone, since it
+ends on GitHub; George had taken that short sheet for a cut-off one.) `ph-dsi` merges into
+`next` after Phase 17's acceptance.
