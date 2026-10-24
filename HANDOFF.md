@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-23 (on R2D2).
+Last updated: 2026-10-24 (on R2D2).
 
 ## Start here
 
@@ -69,14 +69,13 @@ skipped. The branch is not merged into `next` yet. **sofapi is still on
 `preview-1021`** (core `1.3.1+git62`, the rest `git64`, 1.4.0's code) and
 moves to 1.4.0 by the update.
 
-**bedroompi runs the preview `preview-1023`** (since 2026-10-23 21:09; a
-card from an earlier life, now with a Hosyond 7" DSI panel): `ph-dsi` with
+**bedroompi runs the preview `preview-1023`** (a card from an earlier life,
+now with the Waveshare 10.1" DSI-TOUCH-A): `ph-dsi` with
 `lms-server-restart` and `bar-wallpapers` merged in
 (`~/projects/gexis-player-preview-1023`, its own branch, removed once
-`ph-dsi` merges). gexis-core and gexis-player `1.4.0+git39.1bac691`,
-gexis-ui `1.4.0+git36.b8793e5`, gexis-system `1.4.0+git29.d93d43f`; it ran
-`lms-server-restart` alone (`git24.e505054`) from 20:08. The state before is
-in the scratchpad's `bedroompi-before/`. **`lms-server-restart` (pushed) is
+`ph-dsi` merges). Since 2026-10-24 15:11 gexis-core and gexis-player
+`1.4.0+git45.561e337`, gexis-ui `1.4.0+git36.b8793e5`, gexis-system
+`1.4.0+git29.d93d43f`. **`lms-server-restart` (pushed) is
 for George to look at before Stable**, then merged into `next` with
 `bar-wallpapers`. It had updated itself to 1.4.0 and kept a Lyrion server address that had
 moved to sofapi, which has none: no library, an empty New Music strip, no
@@ -156,9 +155,13 @@ place of the HMTECH at 180°, nothing asked, picture the right way up;
 standby dark by the backlight and back at a touch; brightness steps
 visible; touch right at all four corners (checked by hand). George decided
 (2026-10-23) that a receiver or TV beside the panel (criterion 2) and a
-freshly flashed card (criterion 1) will not be tested. **Next: a second DSI
-screen George has, on bedroompi**; if it leaves nothing open, Phase 17
-closes. (On the panel, Hardware feedback only points to the phone, since it
+freshly flashed card (criterion 1) will not be tested. **Second screen,
+2026-10-24: Waveshare 10.1" DSI-TOUCH-A**, on its 2-lane entry, marked
+tested; four-lane models hidden on a Pi 4 (D6). Its touch stopped reaching
+the page once, until the panel restarted (ADR-0158, *Measured*). **Next, on
+2026-10-25:** compare bedroompi's raw touches (`/tmp/touchwatch.txt`, the
+recorder stops by itself at 14:52) with the core's `POST /touch` log; nothing
+lost: Phase 17 closes. (On the panel, Hardware feedback only points to the phone, since it
 ends on GitHub; George had taken that short sheet for a cut-off one.) `ph-dsi` merges into
 `next` after Phase 17's acceptance. Then, in order (`docs/DEVELOPMENT.md`; refer
 to them by ID): **19** room correction for the bass (`ph-room-correction`),
@@ -188,7 +191,7 @@ MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
 | Name | What it is |
 |---|---|
 | R2D2 | Dev machine. CachyOS, **fish shell** (use `bash -c` for loops). Docker `data-root` `/home/docker`. Claude builds here; George flashes. |
-| sofapi, the bar (ShelvesPi), guestpi, bedroompi | Test players, Pi 4 (bedroompi: the Hosyond 7" DSI panel, Phase 17). Reached by SSH key as `pi`; host keys kept in the session's scratchpad. |
+| sofapi, the bar (ShelvesPi), guestpi, bedroompi | Test players, Pi 4 (bedroompi: the Waveshare 10.1" DSI-TOUCH-A, Phase 17). Reached by SSH key as `pi`; host keys in `~/projects/scratch/known_hosts`. |
 | rig | Pi 4 reference for Findings 002-004. Not a test target. |
 | LMS server | George's Lyrion server, for manual tests. CI must never depend on it. |
 
