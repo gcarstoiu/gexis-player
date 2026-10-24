@@ -13,6 +13,7 @@
   while the idle screen, which is removed when it closes, never did.
 -->
 <script>
+  import { failures } from '../lib/failures.svelte.js';
   import { tick, untrack } from 'svelte';
 
   import {
@@ -1188,8 +1189,8 @@
         ? 'Recently played'
         : 'New Music'
   );
-  let failed = $state(new Set());
-  const markFailed = (url) => (failed = new Set(failed).add(url));
+  const failed = failures();
+  const markFailed = failed.mark;
 
   const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
