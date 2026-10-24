@@ -170,6 +170,21 @@ whose backlight the player can set - a DSI panel today - and hidden on an
 HDMI screen. Applied at once, kept across restarts. Display standby's
 backlight off is separate from it: waking returns to the brightness set.
 
+**D6 — A four-lane model only on a board with four lanes** (George
+decided, 2026-10-24). Waveshare's 10.1" DSI-TOUCH-A, tried on bedroompi as
+its *4-lane* entry, lit its backlight and answered touch with no picture:
+the driver set the panel up for four data lanes (*"lanes: 4"*), and a Pi 4
+Model B's display connector carries two. Six of the list's models are
+four-lane - Waveshare's 8.0" A, 9.0" B, 10.1" A and B, 12.3" A and 13.3";
+the first five have a two-lane entry beside them, the 12.3" has none. They
+stay in the list and are offered where the board carries four lanes, a Pi 5
+or a Compute Module, and not on any other Pi. The player reads which board
+it is on from the board's own name (`/proc/device-tree/model`) and asks
+nothing; a four-lane model already chosen keeps its name in Settings. On a
+Pi 4 the list offers 52 of D1's 58 (23 found by the firmware, 29 written),
+plus the class entry. Taking them out of the list altogether was proposed
+first; George asked which boards drive them, and they were kept for those.
+
 **The maker, confirmed** (George, 2026-10-23: *"Yes hoysond"*): the panel
 is the list's **Hosyond 7" DSI Display (800x480)** (`hosyond-7-dsi`), the
 entry marked tested.

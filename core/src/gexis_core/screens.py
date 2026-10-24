@@ -104,6 +104,14 @@ FIRMWARE_FINDS = frozenset({"vc4-kms-dsi-7inch"})
 #: panel dark until the restart went back.
 NOT_SHIPPED = frozenset({"waveshare_35DSI"})
 
+#: **ADR-0158 D6: a four-lane DSI model only on a board with four lanes**
+#: (George, 2026-10-24). A Pi 4 Model B's display connector carries two: a
+#: four-lane model written there lights its backlight and answers touch, with
+#: no picture (Waveshare's 10.1" DSI-TOUCH-A on bedroompi, 2026-10-24). A Pi 5
+#: and the Compute Modules carry four.
+MODEL = Path("/proc/device-tree/model")
+FOUR_LANE_BOARDS = re.compile(r"^Raspberry Pi (5 Model|Compute Module)")
+
 #: **A case is not a screen** (George, 2026-10-03: *"In general the box and
 #: non box i would say are the same"* - his 10.1" (B) came in Waveshare's case,
 #: and the list offered it twice). A preset "with Case" is listed as its panel:
@@ -149,6 +157,13 @@ class Screen:
         """`Maker/Model` - the grouped picker's option (Settings splits at
         the first "/")."""
         return f"{self.maker}/{self.model}"
+
+    @property
+    def lanes(self) -> int:
+        """The DSI data lanes the model's overlay drives: four where its
+        parameter says so (`10_1_inch_a_4lane`), two otherwise (D6)."""
+        params = (p for o in self.overlays for p in o.split(",")[1:])
+        return 4 if any(p.endswith("4lane") for p in params) else 2
 
 
 def _size(text: str | None) -> tuple[int, int] | None:
@@ -222,6 +237,28 @@ def all_screens(path: Path = PRESETS) -> tuple[Screen, ...]:
             overlays=_overlays(preset),
         ))
     return tuple(sorted(out, key=lambda s: (s.maker.lower(), s.model.lower())))
+
+
+def board_lanes(path: Path | None = None) -> int | None:
+    """The DSI lanes this board's display connector carries (D6): four on a
+    Pi 5 or a Compute Module, two on any other Pi. None off a Pi - a
+    development machine - where every model is offered."""
+    try:
+        model = (path or MODEL).read_text(errors="replace").strip("\x00\n ")
+    except OSError:
+        return None
+    if not model.startswith("Raspberry Pi"):
+        return None
+    return 4 if FOUR_LANE_BOARDS.match(model) else 2
+
+
+def offered(path: Path | None = None) -> tuple[Screen, ...]:
+    """**The models the list offers on this board** (D6): every one, less
+    the four-lane DSI models where the connector carries two. `by_id` and
+    `by_label` still find those, so a choice already made keeps its name."""
+    lanes = board_lanes(path)
+    every = all_screens()
+    return every if lanes is None else tuple(s for s in every if s.lanes <= lanes)
 
 
 #: A screen known only by its own preferred mode (ADR-0109, amended

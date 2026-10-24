@@ -95,9 +95,10 @@ def _timezones() -> tuple[str, ...]:
 #: picker rather than a crash (ADR-0044 §4).
 def _screens() -> tuple[str, ...]:
     """ADR-0109: the screens gexis offers, as `Maker/Model` for the grouped
-    picker (makers, then that maker's models)."""
+    picker (makers, then that maker's models) - those this board can drive
+    (ADR-0158 D6)."""
     from . import screens
-    listed = tuple(s.label for s in screens.all_screens())
+    listed = tuple(s.label for s in screens.offered())
     in_use = _screen_in_use()
     return listed + (in_use,) if in_use and in_use not in listed else listed
 

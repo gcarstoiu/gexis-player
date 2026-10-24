@@ -496,7 +496,11 @@ no connector). The firmware brings up the Touch Display's overlay by itself
 `/boot/firmware/config.txt`, under `[all]`, between `screen_apply.CONFIG_BEGIN`
 and `CONFIG_END`, durably as `cmdline.txt` is, and nothing else in the file
 is changed. The overlays are part of `picture()`'s boot part, so a change
-restarts, asks Keep, and a go-back takes the block out. Display standby on a
+restarts, asks Keep, and a go-back takes the block out. The list offered
+(`screens.offered()`, D6) leaves out a four-lane model (`Screen.lanes`, from
+its overlay's `…_4lane` parameter) on a board whose connector carries two:
+`screens.board_lanes()` reads `/proc/device-tree/model`, four on a Pi 5 or a
+Compute Module, two on any other Pi, every model off a Pi. Display standby on a
 DSI connector turns `bl_power` off and leaves the output on
 (`standby.backlight`), and `read_output` reads the backlight back;
 *Screen brightness* writes `brightness` as a share of `max_brightness`, at

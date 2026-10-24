@@ -216,7 +216,9 @@ on *Settings → Display → Attached screen* names it after its maker's model
 if you pick that. Other DSI screens in the list need a line in the Pi's
 boot settings, which the player writes when you choose the model: the
 player restarts and asks *Keep this screen?*, and if the screen stays dark
-it goes back by itself. With a DSI screen connected it is the screen, and
+it goes back by itself. A four-lane DSI model needs a Pi 5 or a Compute
+Module, whose display connectors carry four lanes; a Pi 4's carries two, so
+on a Pi 4 the list leaves those models out. With a DSI screen connected it is the screen, and
 both HDMI ports are free for a receiver, a sound bar or a TV; *Screen port*
 can still make an HDMI port the screen. On a DSI screen, *Screen brightness*
 sets its backlight, and display standby turns the backlight off.

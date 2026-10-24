@@ -231,6 +231,25 @@ def test_the_list_alone_is_offered_when_no_other_screen_is_in_use(tmp_path, monk
     assert settings_registry._screens() == tuple(s.label for s in screens.all_screens())
 
 
+def test_a_pi_4_offers_no_four_lane_model_in_settings_or_setup(tmp_path, monkeypatch):
+    """ADR-0158 D6 (George, 2026-10-24): on a Pi 4 neither list offers a
+    four-lane DSI model; one already in use is still named in Settings."""
+    from gexis_core import screen_apply, settings_registry
+
+    monkeypatch.setattr(screens, "MODEL", tmp_path / "model")
+    (tmp_path / "model").write_text("Raspberry Pi 4 Model B Rev 1.5\x00")
+    monkeypatch.setattr(screen_apply, "STATE", tmp_path / "screen.json")
+    four = {s.label for s in screens.all_screens() if s.lanes == 4}
+    listed = settings_registry._screens()
+    assert len(four) == 6 and not four & set(listed)
+    assert listed == tuple(s.label for s in screens.offered())
+    models = {m["label"] for m in screen_choices(screen_detect.Seen(), now=())["models"]}
+    assert not four & models and len(models) == len(screens.all_screens()) - 6
+    screen_apply.write_state({"current": {"screen": "waveshare-dsi-v2-10.1a-4lane", "rotation": 180,
+                                          "connector": "DSI-1"}}, tmp_path / "screen.json")
+    assert settings_registry._screens()[-1] == screens.by_id("waveshare-dsi-v2-10.1a-4lane").label
+
+
 def test_setup_applies_and_compares_the_screen_on_the_port_it_is_on(tmp_path, monkeypatch):
     """ADR-0109 (George, 2026-10-12): the Screen step's choice is applied on
     the port the screen was seen on, and a bar already laid out there for

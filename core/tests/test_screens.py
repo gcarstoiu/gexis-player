@@ -75,6 +75,35 @@ def test_every_dsi_model_in_the_list_is_offered_with_its_overlay():
     assert all(s.overlays == () for s in screens.all_screens() if s.interface == "hdmi")
 
 
+def test_a_four_lane_model_is_offered_only_where_the_board_has_four_lanes(tmp_path):
+    """ADR-0158 D6 (George, 2026-10-24): a Pi 4's display connector carries
+    two lanes, and a four-lane model written there showed no picture
+    (bedroompi, Waveshare's 10.1" DSI-TOUCH-A). A Pi 5 and the Compute
+    Modules carry four; off a Pi, every model."""
+    four = {s.id for s in screens.all_screens() if s.lanes == 4}
+    assert four == {"waveshare-dsi-v2-8.0a-4lane", "waveshare-dsi-v2-9.0b-4lane", "waveshare-dsi-v2-10.1a-4lane",
+                    "waveshare-dsi-v2-10.1b-4lane", "waveshare-dsi-v2-12.3a-4lane", "waveshare-dsi-13.3-4lane"}
+    assert screens.by_id("waveshare-dsi-v2-10.1a").lanes == 2 and screens.by_id("waveshare-dsi-13.3-2lane").lanes == 2
+    model = tmp_path / "model"
+    model.write_text("Raspberry Pi 4 Model B Rev 1.5\x00")
+    assert screens.board_lanes(model) == 2
+    pi4 = screens.offered(model)
+    assert not four & {s.id for s in pi4}
+    dsi = [s for s in pi4 if s.interface == "dsi" and s.id != screens.TOUCH_DISPLAY_CLASS]
+    assert len(dsi) == 52 and sum(bool(s.overlays) for s in dsi) == 29
+    assert screens.by_id("waveshare-dsi-v2-10.1a-4lane").label.endswith("4-lane (800x1280)"), \
+        "a choice already made keeps its name"
+    for board in ("Raspberry Pi 5 Model B Rev 1.0", "Raspberry Pi Compute Module 4 Rev 1.0",
+                  "Raspberry Pi Compute Module 5 Rev 1.0"):
+        model.write_text(board + "\x00")
+        assert screens.board_lanes(model) == 4 and screens.offered(model) == screens.all_screens(), board
+    model.write_text("Raspberry Pi 500 Rev 1.0\x00")
+    assert screens.board_lanes(model) == 2, "the keyboard Pi 5 is not a Pi 5 Model B"
+    model.write_text("Some other board\x00")
+    assert screens.offered(model) == screens.all_screens()
+    assert screens.offered(tmp_path / "absent") == screens.all_screens()
+
+
 def test_a_recognised_dsi_panel_is_named_for_its_class():
     """ADR-0158 D2: nothing the Pi reads tells the Touch Display's makers
     apart, so a panel recognised and not chosen is the class - 800 x 480,

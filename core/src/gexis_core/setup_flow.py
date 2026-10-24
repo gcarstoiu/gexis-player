@@ -604,7 +604,7 @@ def screen_choices(report: screen_detect.Seen, turn: int = 0, *, now: tuple | No
     its three states apart from this: a suggestion is *recognised*, a screen
     connected without one is *uncertain*, nothing connected is *none*."""
     suggested = screen_detect.suggest(report)
-    every = screens.all_screens()
+    every = screens.offered()
     # **Which choices change nothing** (George, 2026-10-11: the Keep warning
     # showed on the bar's recognised, tested screen, already applied for
     # setup): those whose picture is the one on the screen now. Only the
