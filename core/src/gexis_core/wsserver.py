@@ -45,7 +45,7 @@ from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
 from gexis_core import memo, own_wallpapers, screen_apply, settling, updates
-from gexis_core.players import Players, status_line
+from gexis_core.players import Players, own_id, status_line
 from gexis_core.wallpapers import SEARCH as PIXABAY_SEARCH
 from gexis_core import backups, bluetooth_devices, skin_packs, device_name, discovery, hardware_report, lyrion_folders, lyrion_stage, music_floor, lyrion_scan, lyrion_shares, lyrion_usb, problem_report, skin_previews, skins, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
@@ -1377,11 +1377,14 @@ class StateServer:
         return web.json_response({"touched": True})
 
     def _player_status(self) -> dict:
-        """**ADR-0136: what this player says of itself** to the others."""
+        """**ADR-0136: what this player says of itself** to the others, and
+        to Home Assistant (ADR-0160 D5: `id`, `screen`)."""
         state = self._store.state
         return {"name": self._setting_or_none("device_name") or device_name.hostname(),
                 "host": f"{device_name.hostname()}.local",
                 "instance": self._instance,
+                "id": own_id(),
+                "screen": self._setting_or_none("headless") is not True,
                 **status_line(state, state.sources)}
 
     async def watch_players(self) -> None:

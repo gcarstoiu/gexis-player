@@ -7932,7 +7932,7 @@
       },
       "PlaybackPlayerStatus": {
         "type": "object",
-        "description": "What a player says of itself (ADR-0136; wsserver.py `_player_status`, players.py `status_line`).",
+        "description": "What a player says of itself (ADR-0136, ADR-0160; wsserver.py `_player_status`, players.py `status_line`).",
         "required": [
           "name",
           "host",
@@ -7958,6 +7958,20 @@
           "instance": {
             "type": "string",
             "description": "A random id for this run of the core (32 hex characters), new at every start; used to recognise this player under another mDNS name."
+          },
+          "id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "This player's lasting id (16 hex characters): a hash of the board's serial number, the same after a rename, a reflash or a factory reset; null off a Raspberry Pi. What Home Assistant knows the player by (ADR-0160). Absent from players older than this field.",
+            "examples": [
+              "3f2a9c41d07b5e86"
+            ]
+          },
+          "screen": {
+            "type": "boolean",
+            "description": "Whether the player has a screen: false when it runs headless (ADR-0160). Absent from players older than this field."
           },
           "transport": {
             "type": "string",

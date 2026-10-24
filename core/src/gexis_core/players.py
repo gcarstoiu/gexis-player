@@ -9,8 +9,11 @@ is off, unreachable or too old to announce is simply not listed.
 from __future__ import annotations
 
 import asyncio
+import functools
+import hashlib
 import logging
 import time
+from pathlib import Path
 
 import aiohttp
 
@@ -24,6 +27,8 @@ STATUS_TIMEOUT_S = 2.0
 #: The core looks every `FRESH_S`, so the phone's request is answered from
 #: what was found.
 FRESH_S = 30.0
+#: ADR-0160 D5: the board's own serial number, which every Pi carries.
+SERIAL = Path("/proc/device-tree/serial-number")
 
 
 def parse_browse(out: str, own_host: str) -> list[dict]:
@@ -45,6 +50,22 @@ def parse_browse(out: str, own_host: str) -> list[dict]:
             continue
         found[host] = {"host": host, "address": parts[7], "port": port}
     return sorted(found.values(), key=lambda p: p["host"])
+
+
+def stable_id(serial: Path = SERIAL) -> str | None:
+    """ADR-0160 D5: an id that outlives a rename, a reflash and a factory
+    reset - a hash of the board's serial, never the serial itself. None off
+    a Pi."""
+    try:
+        raw = serial.read_text(errors="replace").strip("\x00\n ")
+    except OSError:
+        return None
+    return hashlib.sha256(f"gexis:{raw}".encode()).hexdigest()[:16] if raw else None
+
+
+@functools.cache
+def own_id() -> str | None:
+    return stable_id()
 
 
 def status_line(state, sources) -> dict:

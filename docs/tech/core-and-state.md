@@ -704,9 +704,13 @@ share's). `players.py`: `Players.watch()` (started with the core) runs
 host (`parse_browse`, this player left out by hostname) and asks each `GET
 /player/status` (2 s); `/players` answers from that, in about 10 ms where a
 search on request took 1.1 s (measured on sofapi, 2026-10-11). The phone
-remembers the last list (`localStorage`), so the button shows at once. `/player/status` is `{name, host, instance, transport, renderer}` - the
+remembers the last list (`localStorage`), so the button shows at once. `/player/status` is `{name, host, instance, id, screen, transport, renderer}` - the
 renderer named as the source list names it; `instance` a token made at each
 core start, by which a player found under a name avahi changed after a
-conflict (`guestpi-2.local`, 2026-10-12) still leaves itself out; `/players` is `{self, others}`, each other
+conflict (`guestpi-2.local`, 2026-10-12) still leaves itself out; `id` the
+player's lasting id for Home Assistant (ADR-0160 D5: `players.stable_id`, the
+first 16 hex digits of SHA-256 over `gexis:` and
+`/proc/device-tree/serial-number`, null off a Pi); `screen` false when
+headless; `/players` is `{self, others}`, each other
 with the `url` of its page by name. `PlayerSwitcher.svelte` draws it on the
 phone only.

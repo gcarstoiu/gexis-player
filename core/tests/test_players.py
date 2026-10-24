@@ -104,3 +104,40 @@ async def test_a_player_that_never_answers_does_not_take_the_others_with_it(tmp_
     monkeypatch.setattr(pl, "BROWSE_TIMEOUT_S", 0.5)
     out = await pl._browse()
     assert "guestpi.local" in out
+
+
+def test_a_player_keeps_one_id_from_its_board_and_never_shows_the_serial(tmp_path):
+    """ADR-0160 D5: Home Assistant knows a player by this id."""
+    serial = tmp_path / "serial-number"
+    serial.write_bytes(b"10000000abcdef01\x00")
+    first = pl.stable_id(serial)
+    assert first == pl.stable_id(serial) and len(first) == 16 and int(first, 16) >= 0
+    assert "abcdef01" not in first
+    other = tmp_path / "other"
+    other.write_bytes(b"10000000abcdef02\x00")
+    assert pl.stable_id(other) != first
+    empty = tmp_path / "empty"
+    empty.write_bytes(b"\x00")
+    assert pl.stable_id(empty) is None
+    assert pl.stable_id(tmp_path / "absent") is None, "off a Pi"
+
+
+@pytest.mark.asyncio
+async def test_the_status_carries_the_id_and_whether_there_is_a_screen(tmp_path, monkeypatch):
+    """ADR-0160 D5: what Home Assistant reads before it adds a player."""
+    from aiohttp.test_utils import TestClient
+
+    from gexis_core import wsserver
+    from gexis_core.settings import SettingsStore
+    from gexis_core.settings_registry import Settings
+    from gexis_core.state import StateStore
+
+    monkeypatch.setattr(wsserver, "own_id", lambda: "0123456789abcdef")
+    registry = [{"id": "g", "label": "G", "rows": [{"key": "headless", "type": "toggle", "default": False}]}]
+    settings = Settings(SettingsStore(tmp_path / "s.db"), registry=registry, wired={"headless": None})
+    server = wsserver.StateServer(StateStore({}), settings=settings)
+    async with TestClient(TestServer(server.make_app())) as client:
+        status = await (await client.get("/player/status")).json()
+        assert status["id"] == "0123456789abcdef" and status["screen"] is True
+        settings.set("headless", True)
+        assert (await (await client.get("/player/status")).json())["screen"] is False
