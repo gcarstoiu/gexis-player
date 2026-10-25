@@ -160,6 +160,8 @@
   style:transform={`translateY(${shownH - TRAY_H - (shownH ? 0 : 60)}px)`}
   inert={!open}
   role="presentation"
+  data-dpad-layer
+  ondpadback={(event) => { event.preventDefault(); onclose?.(); }}
   onpointerdown={(event) => { onactivity?.(event); bodySwipe.down(event); }}
   onpointermove={bodySwipe.move}
   onpointerup={(event) => { onsettled?.(event); bodySwipe.up(event); }}
@@ -167,11 +169,11 @@
   onpointerenter={(event) => event.pointerType === 'mouse' && onactivity?.(event)}
   onpointerleave={(event) => event.pointerType === 'mouse' && onsettled?.(event)}
 >
-  <div class="closeband" role="button" tabindex="-1" aria-label="Close controls"
+  <div class="closeband" role="button" tabindex="-1" aria-label="Close controls" data-dpad-skip
     onpointerdown={band.down} onpointermove={band.move} onpointerup={band.up} onpointercancel={band.cancel}></div>
   <div class="handle"></div>
 
-  <button class="btn btn--home" class:is-pressed={press.is('home')} type="button" aria-label={rootless ? 'Settings' : 'Home'}
+  <button class="btn btn--home" class:is-pressed={press.is('home')} type="button" data-dpad-main aria-label={rootless ? 'Settings' : 'Home'}
     onpointerdown={() => press.down('home')} onpointerup={(event) => press.lift(event, goHome)} onpointercancel={press.up} onclick={() => press.click(goHome)}>
     {#if rootless}
       <span class="i-sliders"><i></i><b></b><i></i><b></b></span>
@@ -222,14 +224,15 @@
       aria-valuemin="0"
       aria-valuemax="100"
       aria-valuenow={pct}
+      ondpadstep={(event) => vol.step(event.detail.step * 2)}
       onpointerdown={down}
       onpointermove={move}
       onpointerup={up}
       onpointercancel={cancel}
     >
-      <div class="rail" bind:this={rail}>
+      <div class="rail" bind:this={rail} data-dpad-box>
         <div class="fill" class:is-muted={muted} style:width={`${pct}%`}></div>
-        <div class="knob" class:is-muted={muted} style:left={`${pct}%`}></div>
+        <div class="knob" class:is-muted={muted} style:left={`${pct}%`} data-dpad-box></div>
       </div>
     </div>
     <span class="readout" class:is-muted={muted}>{muted ? 'Mute' : shown}</span>

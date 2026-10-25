@@ -345,7 +345,7 @@
         <!-- ADR-0122: back to the library as it was left, Now Playing down to
              the mini strip (George, 2026-10-06: the chevron top left). -->
         {#if onminimise}
-          <button class="minimise" type="button" aria-label="Minimise" onclick={onminimise}><span class="minimise__chev"></span></button>
+          <button class="minimise" type="button" aria-label="Minimise" data-dpad-back onclick={onminimise}><span class="minimise__chev"></span></button>
         {/if}
         {#if artwork}
           <img src={artwork} alt="" onerror={() => (failedArtwork = artwork)} />
@@ -723,7 +723,7 @@
             </button>
           {/if}
           {#if hasPlayPause}
-            <button class="btn btn--play" type="button" data-shows={toggle.shows} aria-label={toggle.shows === 'playing' ? 'Pause' : 'Play'} onclick={toggle.toggle}>
+            <button class="btn btn--play" type="button" data-dpad-main data-shows={toggle.shows} aria-label={toggle.shows === 'playing' ? 'Pause' : 'Play'} onclick={toggle.toggle}>
               <span class="i-play"></span><span class="i-pause"></span>
             </button>
           {/if}

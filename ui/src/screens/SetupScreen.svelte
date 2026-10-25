@@ -226,7 +226,7 @@
 {/snippet}
 
 {#if bar}
-<div class="setup setup--bar" role="status" aria-live="polite">
+<div class="setup setup--bar" role="status" aria-live="polite" data-dpad-off>
   <header class="bs__head">
     <img class="bs__mark" src={mark} alt="" width="32" height="32" />
     <span class="crumb bs__crumb grow">{crumb}</span>
@@ -294,7 +294,7 @@
   {/if}
 </div>
 {:else}
-<div class="setup" role="status" aria-live="polite">
+<div class="setup" role="status" aria-live="polite" data-dpad-off>
   <header>
     <img class="mark" src={mark} alt="" width="40" height="40" />
     <span class="crumb grow">{crumb}</span>

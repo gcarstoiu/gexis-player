@@ -11,7 +11,7 @@
   let { surface = 'panel' } = $props();
 </script>
 
-<div class="reset" role="alertdialog" aria-modal="true" aria-label="Resetting to factory settings">
+<div class="reset" role="alertdialog" aria-modal="true" aria-label="Resetting to factory settings" data-dpad-off>
   <div class="card">
     <div class="title">Resetting to factory settings</div>
     {#if surface === 'panel'}

@@ -51,6 +51,9 @@ UI_DEV_CREATE, UI_DEV_DESTROY = 0x5501, 0x5502
 SPAN = 32767
 #: Named keys the phone sends (linux/input-event-codes.h).
 KEYS = {"Backspace": 14, "Enter": 28, "Tab": 15}
+#: ADR-0161 D1: the D-pad's keys, as a keyboard's - arrows, Enter, Escape - so
+#: the page answers them as it would a USB keyboard's, and later a TV remote's.
+DPAD = {"up": 103, "down": 108, "left": 105, "right": 106, "ok": 28, "back": 1}
 KEY_LEFTSHIFT, KEY_RIGHTALT = 42, 100
 #: Between one key and the next: a burst of events with none is where a
 #: client can drop keys.
@@ -235,6 +238,16 @@ class PanelInput:
 
     async def key(self, name: str) -> bool:
         code = KEYS.get(name)
+        if code is None:
+            return False
+        async with self._lock:
+            await self._devices()
+            self._press(code)
+        return True
+
+    async def dpad(self, name: str) -> bool:
+        """A D-pad press (ADR-0161): `up`, `down`, `left`, `right`, `ok`, `back`."""
+        code = DPAD.get(name)
         if code is None:
             return False
         async with self._lock:

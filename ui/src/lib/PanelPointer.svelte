@@ -243,6 +243,8 @@
   let lookTimer;
 
   function wake() {
+    // The D-pad's ring goes while the phone points (ADR-0161).
+    dispatchEvent(new Event('panelpointer'));
     shown = true;
     clearTimeout(hideTimer);
     hideTimer = setTimeout(rest, HIDE_MS);
