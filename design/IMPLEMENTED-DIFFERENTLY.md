@@ -769,4 +769,14 @@ pictures (ADR-0161, ADR-0163).
 - **[S]** The album line has no year: Home Assistant carries none.
 - **[U]** The fixed output's note fits on one line where `Le` wraps it; a
   clamped title ends with an ellipsis, as the README asks.
+- **[U]** The transport follows the player's rule, not the design's
+  "removed, never greyed" (George, 2026-10-25, after trying the card): what
+  the source has is shown, and a control it cannot use now (Next on the last
+  track) is greyed at 0.38, as the quick-action tiles are. What the source
+  lacks is still left out (`Lf`, `Lg`).
+- **[U]** The quick actions are the phone's Panel views (George, 2026-10-25:
+  Idle and Meters were missing): Home, Now playing, Lyrics, then Meters, Room
+  and Idle, each left out where the phone leaves it out - three to a row in
+  the full form, wrapping in the compact one, where the D-pad's button can
+  fall to a second row. A view that is up has the accent's outline.
 
