@@ -3229,6 +3229,16 @@ stream's rate, which costs 12-24 ms of a stream's start. Left for the real
 card: the delay, players in sync, the visualiser beside it, native DSD, and
 George's ear on the edges and a dragged band.
 
+**Built 2026-10-26** on `ph-equaliser` (George, 2026-10-25: the settings
+confirmed, the design `design/source/20` handed over, implement with the
+decisions left to Claude recorded for his confirmation, ADR-0162 *Built*;
+the measurement through a card after the implementation): the core's
+equaliser, its engine on the loopback and its routes; `gexis-camilladsp`
+and `snd-aloop`; the editor on the panel, the bars and the phone and the
+quick change in the drawer and both trays; the manual, FAQ, technical guide
+and README. Next: a preview on a player, the measurement through its card,
+and George's try.
+
 **An ADR before anything is built.** It had to settle:
 - **How simple**: bass and treble with loudness, a fixed 5- or 10-band
   equaliser, or bands set by hand (frequency, gain, width); the presets on

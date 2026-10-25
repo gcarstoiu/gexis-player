@@ -70,24 +70,27 @@ default list**: hacs/default#12691 (from George's fork `gcarstoiu/default`),
 every automated check passed; it waits for HACS's maintainers - do not ask
 them for a review (their template).
 
-**Phase 20, the equaliser, in progress** (started 2026-10-25 after the
-merge, George). Branch `ph-equaliser` in `~/projects/gexis-player-ph-equaliser`
-(from `next`), not pushed yet; on it so far: go-librespot 0.10.5 and Beszel
-0.21.1 (George: they go with this phase's preview; archives checked against
-upstream's checksums, `verify-image.sh`'s binary checksums raised). ADR-0162
-proposed; **the first measurement's silent part** done on sofapi the same
-night (Finding 138: ten Peaking filters, 2-5 % of a core, no click when
-dragged - CamillaDSP's GraphicEqualizer clicks; a rate change by letting the
-loopback go and starting CamillaDSP at each stream's rate, 12-24 ms off a
-stream's start). The kit is in `~/projects/scratch/eq-m1` (CamillaDSP 4.1.3,
-`gen.py`, `pv/run.py`, `an2.py`, `an3.py`); sofapi was left as it was (kit
-removed, `snd-aloop` unloaded). **Owed by George:** ADR-0162's three [N]
-settings, and the brief `design/briefs/20-equaliser.md` handed to Claude
-Design (nothing of the screens is built before he has seen the design).
-**Next for Claude:** the measurement through the real card (the delay, the
-DAC's clock, players in sync, the visualiser beside it, a DSD file through
-Squeezelite) - it plays through the amplifier, so at a time George picks;
-then the filter stage in the core (D1-D9).
+**Phase 20, the equaliser, built, not yet on a player** (2026-10-26).
+George, 2026-10-25: the three settings confirmed (ADR-0022), the design
+handed over (`design/source/20`, look 3a), implement with the decisions left
+to Claude recorded and shown to him (ADR-0162 *Built*, C1-C16 - **owed by
+George: his confirmation**), measure through a card after. Branch
+`ph-equaliser` in `~/projects/gexis-player-ph-equaliser`, not pushed:
+go-librespot 0.10.5 and Beszel 0.21.1 (for this preview); the core
+(`equaliser.py`, `eq_engine.py`, `eq_control.py`, `outputs.render(eq=True)`,
+the routes, `equaliser` on `/state`, the Settings row); `gexis-camilladsp`
+4.1.3 and `gexis-equaliser.service`, `snd-aloop` at boot; the UI
+(`ui/src/screens/eq/`, the drawer, the bar's tray, the phone's mini
+player); the documents. Core suite 2717 passed, 48 skipped; the UI builds
+with no new warnings; every screen checked from mocked data at 1280x800,
+1280x400, 1850x400 and 412 wide (`~/projects/scratch/eq-m1`: `eq_layout.py`
+the mocked core, `eq_shots.py`, `eq_dpad.py`; the design's artboards in
+`~/projects/scratch/design20/shots`). **Never run on a device**: CamillaDSP
+driving a card, the loopback at boot, a stream's edges, a rate the card
+lacks, DSD through `alsaloop`, switching on and off under a playing source.
+**Next for Claude:** packages and a preview on sofapi (dry run first), the
+measurement through its card (Finding 138's second part), the manual's
+drawer picture retaken with the demo library; then George's try.
 
 Then 21-29 in order, each ADR first (`docs/DEVELOPMENT.md`, the IDs
 there); MPD parked (ADR-0151). **Raspberry Pi Imager** (ADR-0159, a task):

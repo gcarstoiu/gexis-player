@@ -7880,3 +7880,24 @@ Assistant dashboard, with 1.4.0; Phase 17, DSI screens, for 1.5.0; Phase 19,
 the player in Home Assistant, for 1.6.0). Phases are numbered consecutively without letters,
 each with a stable ID (George, 2026-10-13); the open ones are 20-29, with
 MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
+
+## 2026-10-26: Phase 20 in progress, before the build (moved from HANDOFF verbatim when it was built)
+
+**Phase 20, the equaliser, in progress** (started 2026-10-25 after the
+merge, George). Branch `ph-equaliser` in `~/projects/gexis-player-ph-equaliser`
+(from `next`), not pushed yet; on it so far: go-librespot 0.10.5 and Beszel
+0.21.1 (George: they go with this phase's preview; archives checked against
+upstream's checksums, `verify-image.sh`'s binary checksums raised). ADR-0162
+proposed; **the first measurement's silent part** done on sofapi the same
+night (Finding 138: ten Peaking filters, 2-5 % of a core, no click when
+dragged - CamillaDSP's GraphicEqualizer clicks; a rate change by letting the
+loopback go and starting CamillaDSP at each stream's rate, 12-24 ms off a
+stream's start). The kit is in `~/projects/scratch/eq-m1` (CamillaDSP 4.1.3,
+`gen.py`, `pv/run.py`, `an2.py`, `an3.py`); sofapi was left as it was (kit
+removed, `snd-aloop` unloaded). **Owed by George:** ADR-0162's three [N]
+settings, and the brief `design/briefs/20-equaliser.md` handed to Claude
+Design (nothing of the screens is built before he has seen the design).
+**Next for Claude:** the measurement through the real card (the delay, the
+DAC's clock, players in sync, the visualiser beside it, a DSD file through
+Squeezelite) - it plays through the amplifier, so at a time George picks;
+then the filter stage in the core (D1-D9).
