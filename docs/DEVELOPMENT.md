@@ -3165,6 +3165,25 @@ Assistant in Docker that hears nothing on the network.
 4. On a player with a screen, the *Screen*, *Dashboard* and *Visualiser*
    switches follow the player and work from Home Assistant.
 
+**Criterion 1 seen 2026-10-25** on George's own Home Assistant: every player
+found with no address typed, the controls working. His findings that day
+(ADR-0160): the source shown, not chosen; *Home*, *Now playing* and
+*Lyrics* as buttons; a D-pad for the panel; moving between players from a
+dashboard. **Both stay in this phase** (George, 2026-10-25): the D-pad, in
+both Simple and Extended navigation and later the TV remote's (HDMI-CEC)
+too, and a dashboard card of our own - the switcher between players, the
+D-pad and the quick actions - designed first in Claude Design and installed
+through HACS. Each gets an ADR before it is built.
+
+5. The source playing is shown and not offered as a choice; *Home*, *Now
+   playing* and *Lyrics* open those screens from Home Assistant.
+6. A D-pad moves through the panel - Home, the library in Simple and
+   Extended navigation, Now Playing, Settings - and selects, with the
+   focused item always visible; sent from Home Assistant.
+7. A Gexis Player card on a dashboard moves between the players, shows
+   what plays with its transport, and carries the D-pad and the quick
+   actions; built from George's design.
+
 ### Phase 20 — A simple equaliser
 
 **ID:** `ph-equaliser` · added 2026-10-25 as 20, before room correction (George).

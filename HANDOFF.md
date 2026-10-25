@@ -98,8 +98,15 @@ started 2026-10-24, ADR-0160). In 1.5.0: `id` and `screen` on
 copy `~/projects/gexis-player-homeassistant`, tests on `~/projects/ha-venv`).
 Criteria 2-4 hold against a Home Assistant 2026.10.3 in Docker
 (`~/projects/scratch/ha-test`, container `gexis-ha-test`, stopped; ADR-0160
-*Measured*, Finding 137). **Open:** criterion 1, discovery, on George's own
-Home Assistant; the branch and worktree stay until the phase closes.
+*Measured*, Finding 137). **Criterion 1 seen 2026-10-25** on George's own
+Home Assistant: every player found by itself, the controls working. **His
+findings that day widen the phase** (criteria 5-7, ADR-0160): the source
+shown and not chosen, and *Home*, *Now playing* and *Lyrics* buttons - built
+on the integration's branch `quick-actions` (20 tests, hassfest clean; not
+released), the documents on `ph-home-assistant`; a D-pad for the panel and
+a dashboard card of our own (switcher, D-pad, quick actions; George's
+design in Claude Design), each with an ADR first. The branch and worktree
+stay until the phase closes.
 
 Then, in order (`docs/DEVELOPMENT.md`; refer
 to them by ID): **20** a simple equaliser (`ph-equaliser`, added

@@ -3,7 +3,8 @@
 **Status:** **Accepted** — 2026-10-24 (George: D1 our own integration, D4 a
 repository of its own, D3 with the dashboard and visualiser switches, D7 a
 Home Assistant in Docker that hears nothing on the network). Phase 19,
-`ph-home-assistant`. Built 2026-10-24 (*Measured*, below).
+`ph-home-assistant`. Built 2026-10-24 (*Measured*, below). D3 amended
+2026-10-25 (George).
 
 ## Context
 
@@ -63,11 +64,15 @@ plus the dashboard and the visualiser):
   power state of its own); title, artist, album, artwork, duration and
   position; play, pause, next and previous as `controls.available` allows;
   shuffle and repeat where the renderer declares them; volume and mute,
-  unless the output is fixed (`fixed_output`); the source, chosen from the
-  installed sources that can be activated.
+  unless the output is fixed (`fixed_output`); the source playing, shown
+  and not chosen (amended 2026-10-25, George: only Lyrion could be started
+  from the player; every other source is taken over from its own app).
 - **Switches, on a player with a screen:** *Screen* (on is lit; off is
   display standby, ADR-0135), *Dashboard* (ADR-0156; unavailable with no
   dashboard address) and *Visualiser*.
+- **Buttons, on a player with a screen** (added 2026-10-25, George): *Home*,
+  *Now playing* and *Lyrics*, through `/panel/go/{to}`; the last two are
+  unavailable while no source is active, as the route refuses them.
 - Nothing else: no settings, updates, restart, reset, uploads, library
   browsing. The API being open (ADR-0028) is no reason to expose more.
 - While the socket is down the entities are unavailable, and it reconnects.
@@ -127,6 +132,16 @@ added by address.
 - **Criterion 3** (the same evening): 46 minutes of playback with Home
   Assistant commanding every 40-80 s - 0 underruns, 0 XRUNs, counted by
   squeezelite's output logging ([Finding 137](../findings/137-playback-with-home-assistant-connected.md)).
+
+## Seen on George's Home Assistant (2026-10-25)
+
+The integration 0.1.0 from HACS, the players on 1.5.0. **Criterion 1:**
+every player was found on the network with no address typed. The controls
+worked. George's findings the same day: the source choice (D3 amended),
+the quick actions (D3's buttons), a D-pad for navigating the panel, in
+both Simple and Extended navigation, which the TV remote (HDMI-CEC) would
+need too, and a way to move between players from a dashboard: a card of
+our own. Both stay in Phase 19 (George), each with its own ADR first.
 
 ## Unverified
 
