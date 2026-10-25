@@ -163,4 +163,9 @@ fixed:
     pointer is then the one in use.
 16. **A dashboard that comes up by itself** takes the ring away too, as a
     press over it does (10).
+17. **The D-pad does not move inside the Home Assistant dashboard** (George,
+    2026-10-25, asked whether it should): Back takes the dashboard down; the
+    arrows and OK go to Home Assistant's page as they are. Turning the
+    arrows into Tab was offered and not taken - Home Assistant's order, not
+    the direction pressed, and its own thin outline.
 

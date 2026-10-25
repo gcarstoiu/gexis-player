@@ -126,8 +126,15 @@ ADR-0163): the D-pad on `ph-home-assistant` (`POST /panel/key`,
 clean; released 2026-10-25 at George's request, so he can check it from
 HACS). **sofapi
 runs the preview** (core 1.5.0+git44.94ca2b7, ui and player
-1.5.0+git47.6789276, system 1.4.0+git29.d93d43f; installed while paused,
-core and kiosk restarted, `/panel/key` served): waiting for George's check.
+1.5.0+git49.8e939ff, system 1.4.0+git29.d93d43f; the ui and player
+installed 2026-10-25 19:24 while playing, with George's go, kiosk
+restarted). George's first check found three things, fixed in git49
+(ADR-0161 13-16): the ring over the idle screen, left behind by a closing
+drawer, kept by a touchpad tap. He decided the D-pad leaves the Home
+Assistant dashboard's own page alone (ADR-0161 17). The card works on his
+Home Assistant (the app needed a force stop to load it); its editor shows
+*Form* and *Look* empty until chosen - for the integration's next release.
+Waiting for the rest of his check.
 HACS's default
 list (our icon in HACS's store): not before Phase 19 is finished (George,
 2026-10-25). The
