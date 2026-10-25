@@ -117,7 +117,10 @@ the integration's 0.2.0 (released 2026-10-25), the documents on
 `ph-home-assistant`; a D-pad for the panel and
 a dashboard card of our own (switcher, D-pad, quick actions; George's
 design in Claude Design), each with an ADR first: ADR-0161 (the D-pad)
-accepted 2026-10-25 (George; its focus look comes from the design). The
+accepted 2026-10-25 (George; its focus look comes from the design, and
+nothing is built before it arrives, George the same day). HACS's default
+list (our icon in HACS's store): not before Phase 19 is finished (George,
+2026-10-25). The
 brief for Claude Design is `design/briefs/19-ha-card-and-dpad-focus.md`, and
 `design/IMPLEMENTED-DIFFERENTLY.md` was brought up to date for it. George
 settled its three open points the same day: Settings stays on a bar
