@@ -3,7 +3,9 @@
 **Status:** **Proposed** — 2026-10-25. Phase 20 (`ph-equaliser`). The
 product decisions are George's, the same day (below); the technical ones are
 proposed and are confirmed or changed by the phase's first measurement, then
-recorded here. Nothing built. Builds on
+recorded here: its silent part, the same day
+([Finding 138](../findings/138-the-equaliser-on-a-loopback-first-measurement.md)),
+changed D1, D3, D6 and D7 below. Nothing built. Builds on
 [Finding 124](../findings/124-room-correction-what-open-source-offers.md)
 (CamillaDSP as the engine), [ADR-0124](0124-software-volume.md) and
 [ADR-0127](0127-one-volume-row.md) (the volume types),
@@ -79,18 +81,27 @@ keep playing to `pcm.output`; with the equaliser on, its slave is an ALSA
 loopback that CamillaDSP captures, and CamillaDSP plays to the card. The
 core starts and configures it (pycamilladsp) and sends every change over the
 websocket. CamillaDSP ships as a package of ours from upstream's aarch64
-release, with its licence (ADR-0107's parts).
+release, with its licence (ADR-0107's parts). **Measured 2026-10-25
+(Finding 138):** the bands are **ten Peaking filters**, one an octave at the
+ISO centres, not CamillaDSP's GraphicEqualizer, which rebuilds its filters on
+every change (a click at −18 dBFS under a −20 dBFS tone) and cannot place a
+16 kHz band at 44.1 kHz. Ten bands cost 2.3 % of one core at 44.1 kHz and
+4.9 % at 192 kHz. The loopback is kept out of the outputs the player lists.
 
 **D2 — A change is heard at once.** Moving a band, choosing a preset or
 another of the owner's settings changes the filter's gains in the running
-CamillaDSP: no restart, no gap. Turning the equaliser on or off changes the
+CamillaDSP: no restart, no gap. Measured: a band dragged in 0.5 dB steps
+every 30 ms left nothing above −63 dBFS under a −20 dBFS tone; whether that
+is heard is for the ear. Turning the equaliser on or off changes the
 path (D5), so it may cost a moment of silence; measured and stated in the
 manual.
 
 **D3 — Headroom by the curve, never clipping.** Before the bands, the signal
 is lowered by the highest point of the combined curve (adjacent boosts add
 up, so it is computed from the filters, not read off the largest band), and
-rounded up to 0.5 dB. A setting with no boost lowers nothing. Under *Fixed*
+rounded up to 0.5 dB. A setting with no boost lowers nothing. A plain gain
+stepped by 0.5 dB left −53 dBFS (Finding 138), so the lowering moves through
+a ramped volume stage; to be measured. Under *Fixed*
 volume the music plays that much quieter and the amplifier is turned up; the
 equaliser's row says by how much.
 
@@ -101,16 +112,25 @@ low under every preset, as software volume did before Finding 135.
 **D5 — Off is bit-perfect.** Off, `pcm.output`'s slave is the card, as
 today. *Flat* is a preset, in the path; *Off* is the switch.
 
-**D6 — A change of sample rate.** CamillaDSP runs at one rate. On the
+**D6 — A change of sample rate.** CamillaDSP runs at one rate. ~~On the
 loopback it stops when the rate changes (`stop_on_rate_change`), and the core
-starts it again at the new rate. The gap this leaves between tracks is
-measured; if it is heard, a per-stream start (alsa_cdsp, dormant since 2022)
-is the alternative tried.
+starts it again at the new rate.~~ **Changed 2026-10-25 (Finding 138):** the
+loopback cannot be held across a change (a 96 kHz stream was given the
+44.1 kHz already open), and `stop_on_rate_change` needs three readings a
+second apart. Instead CamillaDSP lets the loopback go at each stream's end
+(`stop_on_inactive`); the core watches the loopback's controls (*PCM Slave
+Active*, *PCM Slave Rate*, announced 5-10 ms after a stream begins) and
+starts it at that stream's rate. Measured cost: 12-24 ms off a stream's
+start and up to a chunk (8-15 ms) off its end, nothing inside it - at every
+change of rate and every resume after a pause (Squeezelite lets the device go
+1 s into one). If that is heard, a per-stream start (alsa_cdsp, dormant since
+2022) is the alternative tried.
 
 **D7 — DSD past it.** Native DSD (Fixed volume and a card that takes it,
-ADR-0144) does not go through the loopback. Whether Squeezelite's DSD is sent
-past the loopback, or the equaliser stands aside while DSD plays, is
-settled by the first measurement and recorded here.
+ADR-0144) does not go through CamillaDSP. The loopback takes DSD formats
+(Finding 138), so Squeezelite can open it as it is; the core tells a DSD
+stream by the loopback's format and sends it on to the card untouched
+instead of starting CamillaDSP. To be tried with Squeezelite and a DSD file.
 
 **D8 — The volume types.** Hardware: the DAC's control, after the
 equaliser. Software: after the equaliser, as the last stage. Fixed: no

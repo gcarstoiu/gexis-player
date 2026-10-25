@@ -3218,6 +3218,17 @@ output; Settings and quick controls close to the music, drawn in Claude
 Design first (`design/briefs/20-equaliser.md`); native DSD skips it. Its
 technical decisions are confirmed by the phase's first measurement.
 
+**Started 2026-10-25**, after 1.6.0's merge (George), on `ph-equaliser`; the
+go-librespot 0.10.5 and Beszel 0.21.1 pins go with its preview (George).
+**The first measurement's silent part, the same day**
+([Finding 138](findings/138-the-equaliser-on-a-loopback-first-measurement.md)):
+ten Peaking filters cost 2-5 % of a core and do not click when dragged
+(CamillaDSP's GraphicEqualizer does); a change of rate is handled by letting
+the loopback go at each stream's end and starting CamillaDSP at the next
+stream's rate, which costs 12-24 ms of a stream's start. Left for the real
+card: the delay, players in sync, the visualiser beside it, native DSD, and
+George's ear on the edges and a dragged band.
+
 **An ADR before anything is built.** It had to settle:
 - **How simple**: bass and treble with loudness, a fixed 5- or 10-band
   equaliser, or bands set by hand (frequency, gain, width); the presets on
