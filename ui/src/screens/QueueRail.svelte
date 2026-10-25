@@ -331,7 +331,8 @@
 
 <div class="scrim" class:is-open={open} role="presentation" onclick={onclose}></div>
 
-<div class="rail" class:is-open={open} inert={!open}>
+<div class="rail" class:is-open={open} inert={!open} data-dpad-layer
+  ondpadback={(event) => { event.preventDefault(); onclose?.(); }}>
   <div class="rail__head">
     <div class="rail__headtext">
       <div class="rail__kicker">Up next</div>

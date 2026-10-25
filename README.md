@@ -52,7 +52,7 @@ Spotify Premium, and Plexamp a Plex account, on Plex's terms.
 
 ## 💾 Download and install
 
-**Gexis Player 1.5.0** is the current release. You need a Raspberry Pi 4 and a
+**Gexis Player 1.6.0** is the current release. You need a Raspberry Pi 4 and a
 microSD card of 32 GB or more. A DAC gives the best sound (the
 [hardware list](docs/HARDWARE.md) says which are tested), but the Pi's own
 HDMI (to a sound bar or AV receiver) or headphone jack works too; an HDMI
@@ -193,7 +193,7 @@ or removed from Settings, with its progress shown in the switch itself.
 | 📱 **Settings anywhere** | The full settings on the panel and on any phone or computer on your network, with a mini player on the phone |
 | 🖐️ **Phone as a touchpad** | Drive the panel from across the room: one finger moves a pointer, a tap presses, two fingers scroll, a pinch zooms, and a text field on the panel brings up the phone's keyboard · no app to install |
 | 🏠 **Home Assistant dashboard** | Your room's Home Assistant dashboard on the screen, every control usable · up from a button, from Home Assistant itself, or in place of the idle screen at set times · the music plays on, and it stays until you dismiss it |
-| 🏡 **In Home Assistant** | Each player as a media player in Home Assistant: what plays, its artwork, the transport, volume and source, and switches for the screen, the dashboard and the visualiser · found on the network · the [Gexis Player integration](https://github.com/gcarstoiu/gexis-player-homeassistant), installed through HACS |
+| 🏡 **In Home Assistant** | Each player as a media player in Home Assistant: what plays, its artwork, the transport, volume and the source playing · switches for the screen, the dashboard, the visualiser and the idle screen, buttons for Home, Now Playing and Lyrics, and a D-pad for the screen · a dashboard card of its own, with every player in one place · found on the network · the [Gexis Player integration](https://github.com/gcarstoiu/gexis-player-homeassistant), installed through HACS |
 | 🧩 **Open API** | Everything the screen and phone page do, over HTTP and a live WebSocket, described as OpenAPI · *API explorer* shows and tries it on the player itself |
 | 🩺 **When something is wrong** | A problem report in one download, with addresses, names, keys and what you play taken out first · hardware feedback that tests your screen's touch and your DAC's rates |
 
@@ -248,11 +248,13 @@ Rough, and subject to change:
   installed from Settings. A mini player on the phone. Animated skins with
   scrolling tickers and smooth rotation. A fixed address on cable or Wi-Fi.
   Problem reports and hardware feedback. A Home Assistant dashboard on the
-  screen. DSI screens on the Pi's own display connector.
-- 🔜 **Next:** room correction for the bass with a USB microphone, then for the full range.
-- 🎨 **Later:** the player inside Home Assistant as a media player, themes. With Plex switched on, your own Plex server fills in
+  screen. DSI screens on the Pi's own display connector. Each player in Home
+  Assistant as a media player, with a D-pad for its screen and a dashboard
+  card.
+- 🔜 **Next:** a simple equaliser with a few presets and a manual setup, then room correction for the bass with a USB microphone.
+- 🎨 **Later:** room correction for the full range, AirPlay 2, multiroom for every source, a plugin catalogue, internet radio without a Lyrion server, themes. With Plex switched on, your own Plex server fills in
   the artist and album information other sources leave out.
-- 💭 **Maybe:** a visual equaliser, the DAC's own filter and polarity options.
+- 💭 **Maybe:** the DAC's own filter and polarity options.
 
 ## 📜 Legal
 

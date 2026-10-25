@@ -6,6 +6,24 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.6.0 — 25 October 2026
+
+### New
+
+- The screen can be used without touching it. With the D-pad of the Gexis Player integration in Home Assistant, or a USB keyboard plugged into the player, the arrows move a ring from control to control, OK opens what it is on, and Back goes back a step or closes what is open - on Home, in the library, on Now Playing and in Settings, on the panels and the bars.
+- The first press shows the ring and a touch hides it. In the volume drawer and on a Settings slider, Left and Right change the value. While the screen is in standby, on the idle screen or showing the visualiser, a press only wakes it.
+- Home Assistant learns whether the idle screen is switched on, so the integration's card offers it only then.
+
+### Fixed
+
+- Settings → Display → Attached screen names the screen by maker and model, and breaks lines between words rather than in the middle of one.
+
+### Good to know
+
+- Over the Home Assistant dashboard, the arrows and OK go to Home Assistant's own page as they are; Back takes the dashboard down.
+- Setup, updates and the factory reset are left to touch and the phone; the D-pad does not act on them.
+- The D-pad and the card for dashboards come with the Gexis Player integration 0.4.0 or later, installed in Home Assistant through HACS.
+
 ## 1.5.0 — 24 October 2026
 
 ### New

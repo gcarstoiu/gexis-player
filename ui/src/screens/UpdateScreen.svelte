@@ -20,6 +20,7 @@
 <div
   class="lock"
   role="alertdialog"
+  data-dpad-off
   aria-modal="true"
   aria-live="polite"
   aria-label="Updating"

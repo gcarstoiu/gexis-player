@@ -68,7 +68,7 @@
 {/snippet}
 
 {#if bar}
-<div class="handoff handoff--bar" style:--to-accent={accent} out:fade={{ duration: 260 }}>
+<div class="handoff handoff--bar" style:--to-accent={accent} out:fade={{ duration: 260 }} data-dpad-cover>
   <div class="hb__wash"></div>
   <div class="hb">
     <div class="hb__from">
@@ -106,7 +106,7 @@
 <!-- **Appears at once, fades out** (George, 2026-09-26). The design fades it in
   over 260 ms, and the incoming renderer's artwork changed underneath while it
   was still mostly transparent - a blink. Its contents still rise in. -->
-<div class="handoff" style:--to-accent={accent} out:fade={{ duration: 260 }}>
+<div class="handoff" style:--to-accent={accent} out:fade={{ duration: 260 }} data-dpad-cover>
   <div class="caption">Handing off</div>
 
   <div class="pair">

@@ -129,7 +129,7 @@ been written properly. **0098 has no record either.**
 | [0106](0106-plugins-you-install-and-update.md) | Plugins you install and update | Accepted 2026-09-29: ours update with the release; uploaded `.tar.gz` plugins run confined; upload notice wording owed |
 | [0107](0107-our-parts-as-debian-packages.md) | Our parts as Debian packages | Accepted 2026-09-30 (amended 2026-10-18: PeppyMeter's own keys kept across upgrades): one package per component, Debian's paths, no LMS address shipped |
 | [0108](0108-how-a-release-is-published-and-found.md) | How a release is published and found | Accepted 2026-09-30 (amended 2026-10-07): apt repositories on GitHub Releases; signed channel files whose serial never goes down |
-| [0109](0109-other-screens.md) | Other screens: two families, a known list, and the skins per size | Accepted 2026-09-30, amended the same day and 2026-10-18 (every window maximised): two families by scale factor; 197 models; skin sets become plugins |
+| [0109](0109-other-screens.md) | Other screens: two families, a known list, and the skins per size | Accepted 2026-09-30, amended the same day, 2026-10-18 (every window maximised) and 2026-10-25 (Settings stays on a bar): two families by scale factor; 197 models; skin sets become plugins |
 | [0110](0110-the-update-experience.md) | The update experience: release numbers, one modal, playback stops on consent, the panel locked | Accepted 2026-10-01: `x.y.z` releases; night runs 03:00–04:00 when idle. Amends 0105, 0022 |
 | [0111](0111-skin-sets-follow-the-screen.md) | Skin sets follow the screen: one pack, chosen by the screen, with consent | Accepted 2026-10-01: one `gexis-skins-<W>x<H>` pack, installed after consent; none in the image. Amends 0109, 0022 |
 | [0112](0112-the-visualisers-fanart-frame-shows-the-artists-photos.md) | The visualiser's fanart frame shows the artist's photos | Accepted 2026-10-02: LMS `artistphotos` cached ahead; a 20 s crossfading slideshow |
@@ -181,6 +181,9 @@ been written properly. **0098 has no record either.**
 | [0158](0158-dsi-screens.md) | DSI screens | Accepted 2026-10-23 (Phase 17): every DSI screen in the list (58), overlays written to config.txt with Keep and a way back; the DSI panel is the screen; standby by backlight; a brightness row |
 | [0159](0159-raspberry-pi-imager.md) | Raspberry Pi Imager | Accepted in part 2026-10-24: Use custom stays, guide corrected; our own list and Imager's settings not now; Imager's own list open |
 | [0160](0160-the-player-in-home-assistant.md) | The player in Home Assistant | Accepted 2026-10-24 (Phase 19): our own integration in its own repository; a media player plus screen, dashboard and visualiser switches; `id` on `/player/status` |
+| [0161](0161-a-d-pad-on-the-panel.md) | A D-pad on the panel | Accepted 2026-10-25 (Phase 19), built the same day, in 1.6.0: real key presses, focus by position, a Home Assistant remote; the design's teal ring |
+| [0162](0162-a-simple-equaliser.md) | A simple equaliser | Proposed 2026-10-25 (Phase 20; George's product decisions): ten bands, genre presets plus Vocal and Late night, ten of the owner's, per output; CamillaDSP on the shared path; DSD skips it |
+| [0163](0163-a-gexis-player-card-for-dashboards.md) | A Gexis Player card for Home Assistant dashboards | Accepted 2026-10-25 (Phase 19; decisions delegated to Claude), built in the integration's 0.3.0, changed after George's check in 0.4.0: shipped inside the integration, a plain web component in the player's look, everything through Home Assistant's services |
 
 ## Cross-cutting rules
 

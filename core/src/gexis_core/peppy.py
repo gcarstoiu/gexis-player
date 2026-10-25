@@ -367,6 +367,11 @@ class PeppyController:
             logger.info("peppy: renderer changed to %s, exiting to now playing", renderer_id or "nobody")
             self._lower()
 
+    @property
+    def up(self) -> bool:
+        """The visualiser is on the screen, or on its way up."""
+        return self._up()
+
     def on_touch(self) -> None:
         self._timer.attention()
         if self._up():

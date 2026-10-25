@@ -7577,3 +7577,173 @@ recorder stops by itself at 14:52) with the core's `POST /touch` log; nothing
 lost: Phase 17 closes. (On the panel, Hardware feedback only points to the phone, since it
 ends on GitHub; George had taken that short sheet for a cut-off one.) `ph-dsi` merges into
 `next` after Phase 17's acceptance.
+
+## 2026-10-24: 1.4.0 on Testing and PR #81 (moved from HANDOFF verbatim when 1.5.0 went to Testing)
+
+**Current release: 1.4.0, on Testing** (2026-10-22; Testing serial 54, its
+signature good from the release key, read back with `gh release download
+channels`; Stable unchanged at serial 8, 1.3.1). Tag `v1.4.0` on the
+release-notes commit `527c3bd0`; `next` and `release-1.4.0` pushed there.
+Image `image/deploy/2026-10-22-gexis-player-v1.4.0.img` (`verify-image.sh`
+123/123 from the release worktree, 978 skins clean); parts
+`ours-488ab973183a`, `skins-67e037cab00f`, `rpi-222df5468eaa`,
+`debian-ddaba64c92a5`; build output in `~/projects/gexis-release-out/r1.4.0`.
+Packages: gexis-core and gexis-player `1.4.0`, gexis-system
+`1.3.1+git60.4f8ea32`, gexis-ui `1.3.1+git64.be7558c`; the skin packs are
+1.3.0's published files (`1.2.0+git33.96b8a42`, copied, not rebuilt - a
+rebuilt archive differs in bytes from the published one with the same files).
+What it carries: Phase 18's Home Assistant dashboard (ADR-0156) with the
+phone's touchpad and typing over it (ADR-0157), the phone's mini player
+redesigned, a track's own artist on album pages, the visualiser cheaper on
+turntables and tapes (Finding 134), and the fixes - the visualiser surviving
+a screen change, no black frame on opening, over the dashboard when asked
+for, a show refused in standby starting nothing, meters after software
+volume (Finding 135), the spectrum box after a skin change (Finding 136),
+dimmed bar controls, rows without a flash, the mini player on the phone's
+keyboard, no password-save offer. `CHANGELOG.md` on `next` has the notes as
+George approved them. CI: *Tests* passed on `release-1.4.0`, `next` and the
+tag, and the tag's *API description* run too.
+
+**PR #81 was merged by George** (2026-10-22); `main` is merged into `docs`
+and `next`, the merged branches and worktrees are gone, and the routine
+clean-up ran. Promotion to Stable is George's call, later; the README's
+"current release" line changes only then.
+
+## 2026-10-25: 1.5.0's previews, fixes and PR #82 (moved from HANDOFF verbatim after George merged PR #82)
+
+**ShelvesPi runs the bar fixes' preview** (since 2026-10-24 21:35, ui and
+player `1.4.0+git69.eed6457` later that evening, core `1.4.0+git53.5b660b4`; the
+branch `preview-bar-1024` removed, everything in it now on `next`). Checked
+there with the synthetic finger: a flick then a tap opens the visualiser
+3/3 (0/3 before), a pulled tray stays open, one opened by a change from
+elsewhere hides itself. **sofapi runs the Phase 19 preview** (below).
+
+**bedroompi runs the preview `preview-1023`** (a card from an earlier life,
+now with the Waveshare 10.1" DSI-TOUCH-A): `ph-dsi` with
+`lms-server-restart` and `bar-wallpapers` merged in
+(its branch removed 2026-10-24, everything in it now on `next`). Since 2026-10-24 15:11 gexis-core and gexis-player
+`1.4.0+git45.561e337`, gexis-ui `1.4.0+git36.b8793e5`, gexis-system
+`1.4.0+git29.d93d43f`. **`lms-server-restart` and `bar-wallpapers`**:
+checked by George, merged into `next` 2026-10-24, branches deleted.
+bedroompi had updated itself to 1.4.0 and kept a Lyrion server address that had
+moved to sofapi, which has none: no library, an empty New Music strip, no
+Lyrion on the waiting screen. George chose the right server in Settings at
+19:51 and nothing changed - the server is read at the core's start. Now
+the row carries `restart: "core"` and Settings restarts the core 1.5 s
+after a save that changed it (ADR-0048 amended 2026-10-23, George:
+*"Yes"*); tried there: the same server again kept the core, another one
+restarted it onto the new address, and back. Core suite 2631 passed, 48
+skipped. Its home strip is *Most played artists* (a setting from the
+card's earlier life; *New Music* was only the empty strip's fallback title).
+
+- **The visualiser button in the bar's tray opened it only on the second
+  tap** (George, 21-24 Oct): fixed 2026-10-24. George's recorded taps: a tap
+  within about a second of pulling the tray down got no click from Chromium
+  (9 of 9, 0.52-0.97 s after the pull; Home the same), reproduced with an
+  80 ms synthetic flick. The tray's buttons now act when the finger lifts on
+  them (`press.lift`). `tools/panel-touch.py` works on the bar with the
+  page's axes turned: page (x, y) is device (y / 400 x 1480, (1 - x / 1850)
+  x 320). ShelvesPi's debug port, its helper files and the tunnel are
+  closed.
+
+- **Bar fixes, 2026-10-24, merged into `next` for 1.5.0:** `bar-pictures-retry` (a
+  picture that failed to load was given up for the page's life - every album
+  artist showed initials; now tried again after 15 s, 60 s, 5 min) and
+  `bar-settings-fit` (sheets on a bar: the value beside its slider, a compact
+  empty list, a long note scrolls - every sheet checked with mocked data at
+  both bar sizes, `scratch/layout`), with `bar-tray-taps` (above) and
+  `tray-stays-open` (George, 2026-10-24: a drawer or tray the user opened
+  stays until closed, the visualiser takes over or Home opens; ADR-0022's
+  row amended). Branches deleted.
+
+**Phase 17, DSI screens** (`ph-dsi`, ADR-0158) was closed on 2026-10-24 by
+George and merged into `next` for 1.5.0; the Waveshare's touch watch was lost
+to a reboot of bedroompi (the stopped-touch case stays as ADR-0158 records
+it). Phase 18 closed on 2026-10-22 with 1.4.0.
+
+**In progress: Phase 19, the player in Home Assistant** (`ph-home-assistant`,
+moved up and started 2026-10-24). **ADR-0160 accepted** the same day:
+our own integration `gexis` in a new public repository
+(`gcarstoiu/gexis-player-homeassistant`), a media player
+plus *Screen*, *Dashboard* and *Visualiser* switches, `id` and `screen` on
+`/player/status`; tested against a Home Assistant in Docker that hears
+nothing on the network, a test player added by address. **Built:** the
+player's side on `ph-home-assistant` (`~/projects/gexis-player-ph-home-assistant`,
+pushed; `id` and `screen` on `/player/status`; core suite 2633 passed, 48
+skipped, run with `PYTHONPATH=src` since the shared venv imports `next`'s
+code); the integration in `~/projects/gexis-player-homeassistant` (local git,
+one commit, not on GitHub yet): 17 tests pass on Home Assistant 2026.10.3's
+test kit (`~/projects/ha-venv`), hassfest clean (Docker). **sofapi runs the
+Phase 19 preview** (core and player 1.4.0+git49.c4af394, ui
+1.4.0+git24.e505054, since 2026-10-24 19:22). Checked against a Home
+Assistant 2026.10.3 in Docker (`~/projects/scratch/ha-test`, container
+`gexis-ha-test`, stopped; no discovery loaded): criterion 2 and 4 hold
+(0.53-0.64 s; ADR-0160 *Measured*), and criterion 3 (Finding 137: 46 min,
+0 underruns, 0 XRUNs; the logging drop-in removed). **Open:** criterion 1 on
+George's own Home Assistant. **On GitHub:**
+`gcarstoiu/gexis-player-homeassistant` (public, 2026-10-24; tests, hassfest
+and HACS pass; 0.1.0 released with 1.5.0). The player's side and the
+documents (D6: manual *The player in Home Assistant*, FAQ, README feature
+row, `docs/tech/api.md`) are on `next`, in 1.5.0.
+
+server and bar wallpaper fixes. **PR #82 into `main` is open for George**,
+its checks green since 2026-10-25 (the cancelled `next` run re-run);
+after his merge: `main` into `docs` and `next`, delete `release-1.5.0` and its
+worktree, the routine clean-up. The Home Assistant integration's 0.1.0 is
+released on its own repository the same evening.
+
+## 2026-10-25: Phase 19 in progress (moved from HANDOFF verbatim when Phase 19 closed)
+
+**In progress: Phase 19, the player in Home Assistant** (`ph-home-assistant`,
+started 2026-10-24, ADR-0160). In 1.5.0: `id` and `screen` on
+`/player/status` and the documents. The integration
+`gcarstoiu/gexis-player-homeassistant` 0.1.0 is released (2026-10-24; local
+copy `~/projects/gexis-player-homeassistant`, tests on `~/projects/ha-venv`).
+Criteria 2-4 hold against a Home Assistant 2026.10.3 in Docker
+(`~/projects/scratch/ha-test`, container `gexis-ha-test`, stopped; ADR-0160
+*Measured*, Finding 137). **Criterion 1 seen 2026-10-25** on George's own
+Home Assistant: every player found by itself, the controls working. **His
+findings that day widen the phase** (criteria 5-7, ADR-0160): the source
+shown and not chosen, and *Home*, *Now playing* and *Lyrics* buttons - in
+the integration's 0.2.0 (released 2026-10-25), the documents on
+`ph-home-assistant`; a D-pad for the panel and
+a dashboard card of our own (switcher, D-pad, quick actions; George's
+design in Claude Design), each with an ADR first: ADR-0161 (the D-pad)
+accepted 2026-10-25 (George). **Both built 2026-10-25 from George's design**
+(`design/source/19/`: the card in the player's look, the teal ring, Jump;
+the choices while building delegated to Claude and recorded in ADR-0161 and
+ADR-0163): the D-pad on `ph-home-assistant` (`POST /panel/key`,
+`ui/src/lib/dpad.js`), checked with mocked data at 1280x800, 1850x400 and
+1280x400; the remote and the card in the integration's 0.3.0 (30 tests, hassfest
+clean; released 2026-10-25 at George's request, so he can check it from
+HACS). **sofapi
+runs the preview** (core 1.5.0+git44.94ca2b7, ui and player
+1.5.0+git49.8e939ff, system 1.4.0+git29.d93d43f; the ui and player
+installed 2026-10-25 19:24 while playing, with George's go, kiosk
+restarted). George's first check found three things, fixed in git49
+(ADR-0161 13-16): the ring over the idle screen, left behind by a closing
+drawer, kept by a touchpad tap. He decided the D-pad leaves the Home
+Assistant dashboard's own page alone (ADR-0161 17). The card works on his
+Home Assistant (the app needed a force stop to load it). His second round
+(the transport by the source, as the player; Idle and Meters on the card) is
+in the integration's 0.4.0, released 2026-10-25 (ADR-0163 11-14), and in
+`idle_screen` on `/player/status` on `ph-home-assistant` (not on sofapi
+yet: until it is, the card offers Idle there whether or not the idle screen
+is on). Waiting for the rest of his check.
+HACS's default
+list (our icon in HACS's store): not before Phase 19 is finished (George,
+2026-10-25). The
+brief for Claude Design is `design/briefs/19-ha-card-and-dpad-focus.md`, and
+`design/IMPLEMENTED-DIFFERENTLY.md` was brought up to date for it. George
+settled its three open points the same day: Settings stays on a bar
+(ADR-0109 amended); the attribution line and a bar's two-step *Attached
+screen* stay as built. George handed the brief to Claude Design
+(2026-10-25); the card's look (Home Assistant's theme or the player's) is
+settled in the design. **0.2.0 on George's Home Assistant** (2026-10-25):
+HACS offered no update and a forced re-download brought no new entities
+until *Update information* and a restart; then the three buttons showed.
+On the Docker Home Assistant (2026.10.3) 0.2.0 adds them to an entry made
+under 0.1.0 and serves `brand/icon.png` (local brand images since 2026.3).
+HACS's own list shows the placeholder: the public brands site has no gexis
+image. The branch and worktree
+stay until the phase closes.

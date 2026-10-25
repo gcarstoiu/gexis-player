@@ -2552,6 +2552,98 @@
         }
       }
     },
+    "/panel/key": {
+      "post": {
+        "operationId": "panel_key",
+        "tags": [
+          "Panel"
+        ],
+        "summary": "A D-pad press on the panel",
+        "description": "Moves around the panel as a D-pad does (ADR-0161): `up`, `down`, `left` and `right` move the focus to the next control in that direction, `ok` presses it as a tap does, `back` goes one step back (closes the topmost sheet, drawer, tray or dialog, otherwise goes up a level, otherwise minimises Now Playing). Each becomes a key press on the panel's virtual keyboard - an arrow, Enter or Escape - so the page answers it as it answers a keyboard. It counts as attention first, as `/panel/go` does. While the screen is in standby or the visualiser is up, a press only wakes the panel, as a first touch does, and says so with `woke`. Over the Home Assistant dashboard the keys reach Home Assistant's own page, except `back`, which takes the dashboard down. For Home, use `/panel/go/home`.",
+        "x-gexis-stability": "stable",
+        "x-gexis-adr": [
+          "ADR-0161"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PanelKey"
+              },
+              "example": {
+                "key": "down"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pressed, or the panel woken.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "key"
+                  ],
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "description": "The key asked for."
+                    },
+                    "woke": {
+                      "type": "boolean",
+                      "description": "True when the press only woke the panel (standby or the visualiser) and was not passed on."
+                    },
+                    "dashboard": {
+                      "type": "string",
+                      "enum": [
+                        "hidden"
+                      ],
+                      "description": "Present when `back` took the dashboard down."
+                    }
+                  }
+                },
+                "example": {
+                  "key": "down"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Not a JSON object, or `key` is not one of the six: `key is up, down, left, right, ok or back`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The player has no screen (Headless): `this player has no screen`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The panel's virtual keyboard is not wired up, or could not be made.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/panel/idle/{action}": {
       "post": {
         "operationId": "idle_request",
@@ -7446,6 +7538,27 @@
           }
         }
       },
+      "PanelKey": {
+        "description": "A D-pad key.",
+        "type": "object",
+        "required": [
+          "key"
+        ],
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down",
+              "left",
+              "right",
+              "ok",
+              "back"
+            ],
+            "description": "The key pressed."
+          }
+        }
+      },
       "PersonaliseAnswers": {
         "type": "object",
         "description": "Part 2's answers. Only keys part 2 may write are accepted (personalise.checked); any other refuses the whole request.",
@@ -7972,6 +8085,10 @@
           "screen": {
             "type": "boolean",
             "description": "Whether the player has a screen: false when it runs headless (ADR-0160). Absent from players older than this field."
+          },
+          "idle_screen": {
+            "type": "boolean",
+            "description": "Whether the idle screen is switched on (`idle_enabled`), so Home Assistant offers it only then. Absent from players older than this field."
           },
           "transport": {
             "type": "string",

@@ -1385,6 +1385,9 @@ class StateServer:
                 "instance": self._instance,
                 "id": own_id(),
                 "screen": self._setting_or_none("headless") is not True,
+                # Home Assistant offers the idle screen only where the phone
+                # does: while it is switched on (ADR-0163).
+                "idle_screen": self._setting_or_none("idle_enabled") is True,
                 **status_line(state, state.sources)}
 
     async def watch_players(self) -> None:
@@ -1480,6 +1483,51 @@ class StateServer:
             logger.warning("panel input: %s", exc)
             return web.json_response({"error": f"the panel's input could not be made: {exc}"}, status=503)
         return web.json_response({"error": "kind is tap, text or key"}, status=400)
+
+    #: ADR-0161 D2: the D-pad's keys.
+    DPAD_KEYS = ("up", "down", "left", "right", "ok", "back")
+
+    async def _handle_panel_key(self, request: web.Request) -> web.Response:
+        """**ADR-0161 D6: a D-pad press on the panel** - from Home Assistant's
+        remote, or anything with the API. It becomes a key press on the
+        core's virtual keyboard (D1), which the page answers as a keyboard's.
+        Attention first, as `/panel/go` is. While the screen is in standby or
+        the visualiser is up, a press only wakes the panel, as a first touch
+        does (D4); Back over the dashboard takes the dashboard down (D2),
+        since the keys would otherwise go to Home Assistant's own page."""
+        try:
+            body = await request.json()
+        except (ValueError, UnicodeDecodeError):
+            return web.json_response({"error": "expected a JSON object"}, status=400)
+        key = body.get("key") if isinstance(body, dict) else None
+        if key not in self.DPAD_KEYS:
+            return web.json_response({"error": "key is up, down, left, right, ok or back"}, status=400)
+        if self._setting_or_none("headless") is True:
+            return web.json_response({"error": "this player has no screen"}, status=409)
+        if self._panel_input is None:
+            return web.json_response({"error": "panel input is not wired up"}, status=503)
+        woke = False
+        if self._standby is not None:
+            self._standby.used()
+            if self._standby.may_be_dark:
+                # Only a screen known to be off swallows the press: after a
+                # restart its state is unknown, and a lit one must not lose it.
+                woke = self._standby.off
+                await self._standby.wake("key")
+        if self._peppy is not None:
+            woke = woke or self._peppy.up
+            self._peppy.on_touch()
+        if woke:
+            return web.json_response({"key": key, "woke": True})
+        if key == "back" and self._dashboard is not None and self._dashboard.shown:
+            self._dashboard.hide("asked")
+            return web.json_response({"key": key, "dashboard": "hidden"})
+        try:
+            await self._panel_input.dpad(key)
+        except OSError as exc:
+            logger.warning("panel key: %s", exc)
+            return web.json_response({"error": f"the key could not be pressed: {exc}"}, status=503)
+        return web.json_response({"key": key})
 
     async def _handle_idle_request(self, request: web.Request) -> web.Response:
         """**ADR-0101: the phone's idle-screen toggle.** Attention first, as a
@@ -3097,6 +3145,7 @@ class StateServer:
         app.router.add_get("/players", self._handle_players)
         app.router.add_post("/panel/shown", self._handle_panel_shown)
         app.router.add_post("/panel/go/{to}", self._handle_view_request)
+        app.router.add_post("/panel/key", self._handle_panel_key)
         app.router.add_post("/peppy/{action}", self._handle_peppy)
         app.router.add_get("/settings", self._handle_settings)
         app.router.add_get("/notices/{name}", self._handle_notice)

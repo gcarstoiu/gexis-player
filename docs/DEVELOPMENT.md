@@ -2059,7 +2059,7 @@ registry advertises.
 > unit), `docs/PLUGIN-CONTRACT.md` at version 1, and Findings 075-080.
 
 **Themes left this phase on 2026-09-25** (George): *"Themes to be cut out and
-have its own phase at the end of the current list."* They are **Phase 22** (`ph-themes`), and
+have its own phase at the end of the current list."* They are **Phase 27** (`ph-themes`), and
 he restated it on the day the phase closed: *"I stated before that themes are
 out and have their own phase at the end of the list."*
 
@@ -2179,7 +2179,7 @@ the exercise.
    extends to it, whether it ships in the image or installs on demand, and
    what it costs in memory and CPU on a Pi 4 that is already frame-limited.
    None of that is settled by adding it to this list.
-4. ~~Theme engine.~~ **Moved to Phase 22** (`ph-themes`; numbered 14 until 2026-10-13, 16 until 2026-10-14, 17 until 2026-10-15, 18 until 2026-10-19, 20 until 2026-10-20, 21 until 2026-10-21), 2026-09-25.
+4. ~~Theme engine.~~ **Moved to Phase 27** (`ph-themes`; numbered 14 until 2026-10-13, 16 until 2026-10-14, 17 until 2026-10-15, 18 until 2026-10-19, 20 until 2026-10-20, 21 until 2026-10-21, 22 and 23 until 2026-10-25), 2026-09-25.
 
 ### What closing this means, and what it deliberately does not
 
@@ -2369,7 +2369,7 @@ the ALSA default.
 
 ### Phase 11a — The library answers for itself (moved)
 
-Now **Phase 23** (`ph-library`), with the open phases after the release.
+Now **Phase 28** (`ph-library`), with the open phases after the release.
 
 ### Phase 12 — Plugins that fetch their software on the device
 
@@ -2655,7 +2655,8 @@ the draft below - George: *"Yes"*; ADR-0109 and its amendments, ADR-0111):
 5. **Each supported screen tried on hardware** before it is in the table.
 
 **Decisions owed:** *(settled 2026-10-03, ADR-0109: a bar keeps Browse and
-Settings is on the phone only; 800 x 480 stays untested until one is at hand.)*
+Settings is on the phone only - changed 2026-10-25, Settings stays on the
+bar; 800 x 480 stays untested until one is at hand.)*
 - **Browse and Settings on a bar** (George asked what was meant; not yet
   answered): phone-only on bars, or a one-row Browse on the bar itself.
 - **Settings inventory** (not appended until George confirms): **[N] Screen**
@@ -2858,7 +2859,7 @@ per file on Pis other than 4 GB, and temperatures with a case (HARDWARE.md).
 
 ### Phase 13f — Lyrion's own menus, plugins included
 
-**Closed 2026-10-12 for the release; George's look moved to Phase 24** (`ph-lyrion-menus`)
+**Closed 2026-10-12 for the release; George's look moved to Phase 29** (`ph-lyrion-menus`)
 (George: *"create a separate phase for this at the end of the current phase
 list"*). It ships as built, behind *Extended navigation* (ADR-0118); the hidden
 library's hour was measured (Finding 118).
@@ -3139,6 +3140,14 @@ it is asked for or starts by its timeout, rather than leaving it in place
 
 **ID:** `ph-home-assistant` · numbered 19 on 2026-10-24, moved before room correction (George); 21 from 2026-10-21 (20 from 2026-10-20, 19 from 2026-10-19, 17 from 2026-10-15, 16 from 2026-10-14, 15 from 2026-10-13; was 13g).
 
+**Closed 2026-10-25** (George, after checking the D-pad on sofapi and the
+card on his own Home Assistant), merged into `next` for 1.6.0. All seven
+criteria met: 1 and 5 on George's Home Assistant, 2-4 in Docker (Finding
+137), 6 (the D-pad, ADR-0161) on sofapi, 7 (the card, ADR-0163) in the
+integration's 0.3.0 and 0.4.0. Not seen: the D-pad through Lyrion's own
+menus with a server (Extended navigation), and artwork from Spotify through
+Home Assistant. The TV remote over HDMI-CEC stays an idea for later.
+
 **Added 2026-10-11** (George: *"Let's add the home assistant with the player
 as a plugin as a separate phase before themes"*, after choosing the player
 inside an existing Home Assistant over hosting Home Assistant on the player).
@@ -3165,9 +3174,86 @@ Assistant in Docker that hears nothing on the network.
 4. On a player with a screen, the *Screen*, *Dashboard* and *Visualiser*
    switches follow the player and work from Home Assistant.
 
-### Phase 20 — Room correction for the bass, with a USB microphone
+**Criterion 1 seen 2026-10-25** on George's own Home Assistant: every player
+found with no address typed, the controls working. His findings that day
+(ADR-0160): the source shown, not chosen; *Home*, *Now playing* and
+*Lyrics* as buttons; a D-pad for the panel; moving between players from a
+dashboard. **Both stay in this phase** (George, 2026-10-25): the D-pad, in
+both Simple and Extended navigation and later the TV remote's (HDMI-CEC)
+too, and a dashboard card of our own - the switcher between players, the
+D-pad and the quick actions - designed first in Claude Design and installed
+through HACS. Each gets an ADR before it is built.
 
-**ID:** `ph-room-correction` · numbered 20 on 2026-10-24; 19 from 2026-10-21 (18 from 2026-10-19, 16 from 2026-10-15, 15 from 2026-10-14).
+5. The source playing is shown and not offered as a choice; *Home*, *Now
+   playing* and *Lyrics* open those screens from Home Assistant.
+6. A D-pad moves through the panel - Home, the library in Simple and
+   Extended navigation, Now Playing, Settings - and selects, with the
+   focused item always visible; sent from Home Assistant.
+7. A Gexis Player card on a dashboard moves between the players, shows
+   what plays with its transport, and carries the D-pad and the quick
+   actions; built from George's design.
+
+**Criteria 6 and 7 built 2026-10-25** from George's design (ADR-0161,
+ADR-0163): the D-pad on `ph-home-assistant`, the remote and the card in the
+integration's 0.3.0 (released the same day); checked with mocked data, on
+sofapi as a preview, waiting for George's check.
+
+### Phase 20 — A simple equaliser
+
+**ID:** `ph-equaliser` · added 2026-10-25 as 20, before room correction (George).
+
+**Added 2026-10-25** (George, proposed the day before): an equaliser with a
+few presets and a manual setup, running in CamillaDSP, before any room
+correction. Room correction's hard part is the filter stage in the audio
+path, not the measurement (Finding 124's pitfalls), and an equaliser needs
+the same stage without a microphone, judged by ear. Phases 21 and 22 then
+add measuring the room and designing filters, fed to this stage. It turns
+the Roadmap's idea *A simple equaliser* (bass, treble and loudness, ahead of
+room correction) into a phase.
+
+**[ADR-0162](decisions/0162-a-simple-equaliser.md), proposed 2026-10-25**,
+with George's product decisions the same day: ten bands at ±12 dB; genre
+presets plus Vocal and Late night; up to ten of the owner's; the choice per
+output; Settings and quick controls close to the music, drawn in Claude
+Design first (`design/briefs/20-equaliser.md`); native DSD skips it. Its
+technical decisions are confirmed by the phase's first measurement.
+
+**An ADR before anything is built.** It had to settle:
+- **How simple**: bass and treble with loudness, a fixed 5- or 10-band
+  equaliser, or bands set by hand (frequency, gain, width); the presets on
+  top (for example Flat, Bass, Vocal, Late night).
+- **Where it applies**: one per output (DAC, HDMI, optical) or one for the
+  player; every source, or a choice of which.
+- **The filter stage**, which Phases 21 and 22 reuse: CamillaDSP controlled
+  from the core (pycamilladsp, Finding 124); how every source reaches it;
+  what a change of sample rate between tracks does (a restart per rate, or a
+  loopback with rate adjust); off as bit-perfect output; native DSD past it
+  (CamillaDSP is PCM only); the three volume types (ADR-0144).
+- **Headroom**: a boost needs the signal lowered first; how, and what that
+  does with Fixed volume (optical to an external DAC).
+- **The meters and the visualiser**: before or after the equaliser.
+
+**Measured, not assumed:** what it costs a Pi 4 with the visualiser running;
+the delay it adds, and whether players in sync through Lyrion stay in sync; a
+gap or click at a change of sample rate.
+
+**Acceptance (draft):**
+
+1. From the phone, a preset is chosen or the bands are set by hand, and the
+   change is heard without playback stopping.
+2. Every source plays through it with no audible gap or dropout, a change of
+   sample rate between tracks included, and the visualiser keeps working.
+3. Off is bit-perfect as before.
+4. No preset or setting within its limits clips the output.
+5. Its cost on a Pi 4, its delay and its effect on players in sync are
+   recorded as a finding.
+
+### Phase 21 — Room correction for the bass, with a USB microphone
+
+**ID:** `ph-room-correction` · numbered 21 on 2026-10-25; 20 from 2026-10-24, 19 from 2026-10-21 (18 from 2026-10-19, 16 from 2026-10-15, 15 from 2026-10-14).
+**Since 2026-10-25** it builds on Phase 20's filter stage (`ph-equaliser`):
+where the filter runs and what it changes are settled there, and this ADR
+starts from them.
 **Split 2026-10-20** (George: room correction in two - the bass first, the
 full range after; *"yes - let's do it like that"*): this phase is **the bass**,
 below the room's Schroeder frequency (about 200-300 Hz in a living room),
@@ -3176,7 +3262,7 @@ around the listening seat, averaged** (3-5 within about half a metre of the
 head): below that frequency the response changes most from place to place,
 so one position would fit the microphone's spot and miss the listener's head.
 Mostly cuts, no deep boosts into nulls. The full range, with more positions
-and a target curve, is Phase 21 (`ph-room-correction-full`). Finding 124's
+and a target curve, is Phase 22 (`ph-room-correction-full`). Finding 124's
 first tier.
 
 **Added 2026-10-14** (George: *"let's add another phase about room
@@ -3225,12 +3311,12 @@ Pi, and the microphones (miniDSP UMIK-1 first).
 4. Every source plays through the correction with no audible gap or
    dropout, and the visualiser keeps working.
 
-### Phase 21 — Room correction for the full range
+### Phase 22 — Room correction for the full range
 
-**ID:** `ph-room-correction-full` · added 2026-10-20 as 19, split from `ph-room-correction`; numbered 20 on 2026-10-21, 21 on 2026-10-24.
+**ID:** `ph-room-correction-full` · added 2026-10-20 as 19, split from `ph-room-correction`; numbered 20 on 2026-10-21, 21 on 2026-10-24, 22 on 2026-10-25.
 
 **Added 2026-10-20** (George, splitting room correction in two). After the
-bass (Phase 20, `ph-room-correction`): correction above the Schroeder
+bass (Phase 21, `ph-room-correction`): correction above the Schroeder
 frequency, from **more positions across the listening area**, towards a
 target curve, and gentle - above the bass what is heard is mostly the
 speakers and their reflections, which the ear blends, and a correction of
@@ -3241,7 +3327,7 @@ tier: DRC-FIR first, then our own design after the Dirac paper and Carini).
 **An ADR before anything is built.** It must settle: how many positions and
 where; the target curve and how it is chosen; how much correction above the
 bass, smoothed how; whether the time-domain part comes in this phase or a
-later one; what it costs a Pi 4 beside Phase 20's filter.
+later one; what it costs a Pi 4 beside Phase 21's filter.
 
 **Acceptance (draft):**
 
@@ -3249,11 +3335,67 @@ later one; what it costs a Pi 4 beside Phase 20's filter.
    the response before and after, per position and averaged.
 2. The averaged response is measurably closer to the target than without,
    and no position is measurably worse - recorded as a finding.
-3. It builds on Phase 20's correction: on and off, A/B, one per output.
+3. It builds on Phase 21's correction: on and off, A/B, one per output.
 
-### Phase 22 — Themes
+### Phase 23 — AirPlay 2
 
-**ID:** `ph-themes` · numbered 22 on 2026-10-21 (21 from 2026-10-20, 20 from 2026-10-19, 18 from 2026-10-15, 17 from 2026-10-14, 16 from 2026-10-13; was 14).
+**ID:** `ph-airplay` · added 2026-10-25 as 23.
+
+**Added 2026-10-25** (George moved the Must ideas, and internet radio
+without Lyrion, into phases of their own after room correction). Play from
+any iPhone, iPad or Mac, as a plugin like Plexamp (ADR-0016).
+
+**An ADR before anything is built.** It must settle: which AirPlay 2
+receiver; how it takes the output over and hands it back, as the other
+sources do; what Now Playing and the phone show from it.
+
+**Acceptance:** drafted with its ADR.
+
+### Phase 24 — Multiroom for every source
+
+**ID:** `ph-multiroom` · added 2026-10-25 as 24.
+
+**Added 2026-10-25** (George, with Phase 23). Spotify, AirPlay and Bluetooth
+playing in sync on several players, as Lyrion's own playback already does.
+
+**An ADR before anything is built.** It must settle: how the players find
+each other and which one leads; how they keep in sync; how a group is made
+and undone from the phone and the panel.
+
+**Acceptance:** drafted with its ADR.
+
+### Phase 25 — Plugin catalogue
+
+**ID:** `ph-plugin-catalogue` · added 2026-10-25 as 25.
+
+**Added 2026-10-25** (George, with Phase 23). An index on GitHub that the
+player lists, so a developer's plugin reaches users without waiting for a
+release (ADR-0106: plugins installed and updated today come with the release
+or as an uploaded file).
+
+**An ADR before anything is built.** It must settle: the index's format and
+how it is signed; what a plugin needs to be listed, and who checks it; how
+the player lists, installs and updates from it.
+
+**Acceptance:** drafted with its ADR.
+
+### Phase 26 — Internet radio without Lyrion
+
+**ID:** `ph-radio` · added 2026-10-25 as 26.
+
+**Added 2026-10-25** (George, with Phase 23; it was a Should idea). A radio
+directory for players that only stream, with no Lyrion server: today the
+library's Radio is Lyrion's own directory.
+
+**An ADR before anything is built.** It must settle: which directory; how a
+station plays and shows on Now Playing; favourites; how it sits beside
+Lyrion's Radio on a player that has both.
+
+**Acceptance:** drafted with its ADR.
+
+### Phase 27 — Themes
+
+**ID:** `ph-themes` · numbered 27 on 2026-10-25 (23 earlier that day, 22 from 2026-10-21, 21 from 2026-10-20, 20 from 2026-10-19, 18 from 2026-10-15, 17 from 2026-10-14, 16 from 2026-10-13; was 14).
 
 **Cut out of Phase 10 on 2026-09-25** (George): *"Themes to be cut out and have
 its own phase at the end of the current list."* It was that phase's criterion
@@ -3282,9 +3424,9 @@ that is settled.
 4. **The visualiser is not themed by this.** PeppyMeter skins are ADR-0051's
    separate corpus with their own picker, and share no tokens with the panel.
 
-### Phase 23 — The library answers for itself
+### Phase 28 — The library answers for itself
 
-**ID:** `ph-library` · numbered 23 on 2026-10-21 (22 from 2026-10-20, 21 from 2026-10-19, 20 from 2026-10-15, 19 from 2026-10-14, 18 from 2026-10-13; was 11a).
+**ID:** `ph-library` · numbered 28 on 2026-10-25 (24 earlier that day, 23 from 2026-10-21, 22 from 2026-10-20, 21 from 2026-10-19, 20 from 2026-10-15, 19 from 2026-10-14, 18 from 2026-10-13; was 11a).
 
 **Added 2026-09-25 (George):** *"Let's introduce another phase … which should tackle the question of how we can we leverage the plexamp/Plex
 server metadata that is available. Anything that can reduce the dependency on
@@ -3363,9 +3505,9 @@ consumes. **Popular tracks do remain ListenBrainz's**, 404 on that server.
 its own catalogue groupings (*Singles & EPs*, *Live Albums*, *Compilations*).
 All are there; none is asked for by anything today.
 
-### Phase 24 — Lyrion's own menus: the look
+### Phase 29 — Lyrion's own menus: the look
 
-**ID:** `ph-lyrion-menus` · numbered 24 on 2026-10-21 (23 from 2026-10-20, 22 from 2026-10-19, 21 from 2026-10-15, 20 from 2026-10-14, 19 from 2026-10-13; was 16).
+**ID:** `ph-lyrion-menus` · numbered 29 on 2026-10-25 (25 earlier that day, 24 from 2026-10-21, 23 from 2026-10-20, 22 from 2026-10-19, 21 from 2026-10-15, 20 from 2026-10-14, 19 from 2026-10-13; was 16).
 
 **Added 2026-10-12** (George, taking it out of the first public release:
 *"create a separate phase for this at the end of the current phase list"*).

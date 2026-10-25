@@ -35,6 +35,7 @@
   import { reportTouch, showPeppy, reportPainted, reportShown, requestDashboard } from './lib/state.js';
   import { components } from './lib/state.js';
   import { lyricsAsk, lyricsShown } from './lib/panelView.js';
+  import { startDpad } from './lib/dpad.js';
 
   //: The browser tab says which player it is (George, 2026-10-10: with
   //: several players open in tabs "it is hard to distinguish between the
@@ -67,6 +68,31 @@
   // daemon cannot see the glass, which is why the panel reports at all; a
   // remote browser is not the glass.
   let lastReported = 0;
+  //: ADR-0161: the D-pad on the panel - a keyboard's arrows, Enter and Escape,
+  //: from Home Assistant's remote, a USB keyboard or later a TV remote.
+  $effect(() => {
+    if (surface !== 'panel') return;
+    return startDpad({
+      root: () => document.querySelector('.panel'),
+      onkey: onPointerDown,
+      // As a first touch: a dark screen or the idle screen only wakes (D4).
+      wake: () => {
+        if ($panel.standby) return true;
+        if (idle) {
+          idle = false;
+          askedIdle = false;
+          return true;
+        }
+        return false;
+      },
+      // A bar's tray comes down from the top, as pulling it does (D3).
+      trayUp: () => {
+        if (screen.family !== 'bar' || volumeOpen) return false;
+        openVolume();
+        return true;
+      },
+    });
+  });
   function onPointerDown() {
     touches++;
     if (surface !== 'panel') return;

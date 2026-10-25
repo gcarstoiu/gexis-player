@@ -833,6 +833,7 @@
         class:is-pressed={pressed === 'lib-back'}
         type="button"
         aria-label="Back"
+        data-dpad-back
         onpointerdown={() => press('lib-back')}
         onpointerup={lift}
         onpointercancel={lift}
@@ -894,7 +895,7 @@
       {@render heroPanel(album.artwork, album.title ?? '', [album.artist, album.year].filter(Boolean).join(' · '), false)}
     {/if}
 
-    <div class="main">
+    <div class="main" data-dpad-start>
       {#if resolvingArtist && path.length === 0}
         <div class="page">
           <div class="skel"><span></span><span></span><span></span></div>
@@ -1309,7 +1310,8 @@
            width - 48) wide (Settings.svelte's `.panel--bar` sheet). -->
       <div class="over">
         <div class="sheet__scrim" role="presentation" onclick={() => (picker = null)}></div>
-        <div class="sheet" role="dialog" aria-label="Add to playlist">
+        <div class="sheet" role="dialog" aria-label="Add to playlist"
+          ondpadback={(event) => { event.preventDefault(); picker = null; }}>
           <div class="sheet__head">
             <div class="sheet__kicker">Add to playlist</div>
             <div class="sheet__title">{picker.label}</div>
