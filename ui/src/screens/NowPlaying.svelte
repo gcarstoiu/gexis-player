@@ -359,10 +359,10 @@
 
       <div class="meta">
         <div class="tabs" role="tablist" aria-label="Track detail">
-          <button class="tab" data-tab="track" data-pointer="underline" data-dpad-ring="outside" type="button" role="tab" aria-selected={tab === 'track'} onclick={() => (tab = 'track')}>Track</button>
-          <button class="tab" data-tab="lyrics" data-pointer="underline" data-dpad-ring="outside" type="button" role="tab" aria-selected={tab === 'lyrics'} onclick={() => (tab = 'lyrics')}>Lyrics</button>
-          <button class="tab" data-tab="artist" data-pointer="underline" data-dpad-ring="outside" type="button" role="tab" aria-selected={tab === 'artist'} onclick={() => (tab = 'artist')}>Artist</button>
-          <button class="tab" data-tab="release" data-pointer="underline" data-dpad-ring="outside" type="button" role="tab" aria-selected={tab === 'release'} onclick={() => (tab = 'release')}>Release</button>
+          <button class="tab" data-tab="track" data-pointer="underline" type="button" role="tab" aria-selected={tab === 'track'} onclick={() => (tab = 'track')}>Track</button>
+          <button class="tab" data-tab="lyrics" data-pointer="underline" type="button" role="tab" aria-selected={tab === 'lyrics'} onclick={() => (tab = 'lyrics')}>Lyrics</button>
+          <button class="tab" data-tab="artist" data-pointer="underline" type="button" role="tab" aria-selected={tab === 'artist'} onclick={() => (tab = 'artist')}>Artist</button>
+          <button class="tab" data-tab="release" data-pointer="underline" type="button" role="tab" aria-selected={tab === 'release'} onclick={() => (tab = 'release')}>Release</button>
         </div>
 
         <div class="panel">
