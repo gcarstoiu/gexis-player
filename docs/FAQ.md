@@ -313,9 +313,17 @@ HACS from
 Each player is found on the network and shows as a media player - what plays,
 with its artwork, the transport, volume and the source playing - and, on a
 player with a screen, as switches for the screen, the dashboard and the
-visualiser, and buttons for Home, Now Playing and Lyrics.
+visualiser, buttons for Home, Now Playing and Lyrics, and a D-pad that moves
+around the screen. A *Gexis Player* card for dashboards comes with it: what
+plays and its controls, a switch between the players, and the D-pad.
 The player changes nothing in Home Assistant. The manual's *The player in
 Home Assistant* has the steps.
+
+**Can I use the screen without touching it?**
+Yes: with the D-pad in Home Assistant, or a USB keyboard plugged into the
+player - the arrows move a ring from control to control, Enter presses it and
+Escape goes back. The manual's *Moving around with a D-pad or a keyboard* has
+the details.
 
 **When does the idle screen appear?**
 Only with *Settings → Display → Idle screen* switched on - it is off on a new

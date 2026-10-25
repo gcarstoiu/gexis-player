@@ -337,11 +337,40 @@ What Home Assistant gets:
   its address is set) and *Visualiser*; **and three buttons**: *Home*, *Now
   playing* and *Lyrics*, which open them on the screen (the last two while a
   source is active).
+- **On a player with a screen, a D-pad**: a remote, *D-pad*, whose commands
+  `up`, `down`, `left`, `right`, `ok`, `back` and `home` move around the
+  screen (*Moving around with a D-pad or a keyboard*, below).
+- **A card for dashboards**: *Gexis Player*, in Home Assistant's card
+  picker once the integration is installed - what plays with its artwork,
+  the transport and the volume, a list to move to another player, and the
+  quick actions and the D-pad for the player's screen. In the player's own
+  look, or Home Assistant's (*look: home-assistant*); full, or compact with
+  the D-pad folded away.
 
-It needs Home Assistant 2026.3 or later and a player newer than 1.4.0; an
-older player is found and asked to update. With Home Assistant's own
+It needs Home Assistant 2026.3 or later and a player newer than 1.4.0 (the
+D-pad a player newer than 1.5.0); an older player is found and asked to
+update. With Home Assistant's own
 *Lyrion Music Server* integration also set up, the player shows there too,
 as Lyrion's player.
+
+### Moving around with a D-pad or a keyboard
+
+The screen can be used without touching it: with Home Assistant's *D-pad*
+(above), or a USB keyboard plugged into the player.
+
+- The **arrows** move a teal ring to the next control in that direction;
+  **OK** (Enter) presses it, as a tap does; **Back** (Escape) closes what is
+  open - a sheet, the volume, the tray - or goes back one step, and on Now
+  Playing minimises it. On Home it does nothing.
+- The ring shows at the first press, where it was last on that screen, or on
+  the screen's main control (Play/Pause on Now Playing). A touch hides it.
+- On a slider, Left and Right change the value; Up and Down leave it.
+- On a bar, Up from the top row brings the tray down.
+- While the screen is dark, or the visualiser or the idle screen is up, the
+  first press from Home Assistant only wakes the screen.
+- Over the Home Assistant dashboard, the keys go to Home Assistant's own
+  page; Back from Home Assistant's *D-pad* takes the dashboard down.
+- Setup and updates are done from the phone.
 
 ## 7. The phone page
 

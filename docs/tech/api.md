@@ -80,8 +80,11 @@ repository, [gexis-player-homeassistant](https://github.com/gcarstoiu/gexis-play
 It uses only *stable* routes: `GET /player/status` for the player's lasting
 `id` (its unique ID in Home Assistant) and `screen`, `GET /state` (one
 WebSocket per player), `GET /panel/dashboard`, and the POST routes for the
-transport, volume, mute, standby, the dashboard, the visualiser and
-`/panel/go/{to}` (Home, Now Playing, Lyrics).
+transport, volume, mute, standby, the dashboard, the visualiser,
+`/panel/go/{to}` (Home, Now Playing, Lyrics) and `/panel/key` (the D-pad's
+up, down, left, right, ok and back, pressed on the panel's virtual keyboard;
+ADR-0161). A player without `/panel/key` answers 404, and the integration
+asks for it to be updated.
 A player found by `_gexis._tcp` or added by address without an `id` is
 refused as too old.
 
