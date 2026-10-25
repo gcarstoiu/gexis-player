@@ -312,8 +312,8 @@ HACS from
 [gexis-player-homeassistant](https://github.com/gcarstoiu/gexis-player-homeassistant).
 Each player is found on the network and shows as a media player - what plays,
 with its artwork, the transport, volume and the source playing - and, on a
-player with a screen, as switches for the screen, the dashboard and the
-visualiser, buttons for Home, Now Playing and Lyrics, and a D-pad that moves
+player with a screen, as switches for the screen, the dashboard, the
+visualiser and the idle screen, buttons for Home, Now Playing and Lyrics, and a D-pad that moves
 around the screen. A *Gexis Player* card for dashboards comes with it: what
 plays and its controls, a switch between the players, and the D-pad.
 The player changes nothing in Home Assistant. The manual's *The player in

@@ -1385,6 +1385,9 @@ class StateServer:
                 "instance": self._instance,
                 "id": own_id(),
                 "screen": self._setting_or_none("headless") is not True,
+                # Home Assistant offers the idle screen only where the phone
+                # does: while it is switched on (ADR-0163).
+                "idle_screen": self._setting_or_none("idle_enabled") is True,
                 **status_line(state, state.sources)}
 
     async def watch_players(self) -> None:

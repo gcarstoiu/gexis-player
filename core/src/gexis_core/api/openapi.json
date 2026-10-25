@@ -8086,6 +8086,10 @@
             "type": "boolean",
             "description": "Whether the player has a screen: false when it runs headless (ADR-0160). Absent from players older than this field."
           },
+          "idle_screen": {
+            "type": "boolean",
+            "description": "Whether the idle screen is switched on (`idle_enabled`), so Home Assistant offers it only then. Absent from players older than this field."
+          },
           "transport": {
             "type": "string",
             "description": "The active renderer's transport state (`playing`, `paused`, `stopped`; a plugin's value is passed through), `stopped` when nothing is known."

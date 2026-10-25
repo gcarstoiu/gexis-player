@@ -329,12 +329,16 @@ nothing there.
 What Home Assistant gets:
 - **A media player**: playing, paused or idle; title, artist, album, artwork
   and position; play, pause, next and previous when the source playing
-  offers them, shuffle and repeat where it has them; volume and mute, unless
+  has them, shuffle and repeat where it has them - shown as on the player,
+  greyed in the card while one cannot be used (Next on the last track);
+  volume and mute, unless
   the output is fixed; the source playing (each source is taken over from
   its own app, as on the player).
-- **On a player with a screen, three switches**: *Screen* (off is display
+- **On a player with a screen, four switches**: *Screen* (off is display
   standby), *Dashboard* (the dashboard above, up or down; unavailable until
-  its address is set) and *Visualiser*; **and three buttons**: *Home*, *Now
+  its address is set), *Visualiser* (unavailable when the output cannot feed
+  the meters) and *Idle screen* (unavailable while the idle screen is
+  switched off); **and three buttons**: *Home*, *Now
   playing* and *Lyrics*, which open them on the screen (the last two while a
   source is active).
 - **On a player with a screen, a D-pad**: a remote, *D-pad*, whose commands
@@ -342,8 +346,10 @@ What Home Assistant gets:
   screen (*Moving around with a D-pad or a keyboard*, below).
 - **A card for dashboards**: *Gexis Player*, in Home Assistant's card
   picker once the integration is installed - what plays with its artwork,
-  the transport and the volume, a list to move to another player, and the
-  quick actions and the D-pad for the player's screen. In the player's own
+  the transport and the volume, a list to move to another player, and for
+  the player's screen the quick actions - Home, Now playing, Lyrics, Meters,
+  Room (the dashboard) and Idle, as on the phone, each left out where the
+  phone leaves it out - and the D-pad. In the player's own
   look, or Home Assistant's (*look: home-assistant*); full, or compact with
   the D-pad folded away. It goes on a dashboard edited by hand (Home
   Assistant's new *Overview* takes favourite entities, not cards): *Settings
