@@ -14,8 +14,17 @@
   import { playToggle } from '../lib/playToggle.svelte.js';
   import { settingValues } from '../lib/settings.js';
   import { openTouchpad } from '../lib/touchpad.js';
+  import { equaliser } from '../lib/equaliser.svelte.js';
+  import EqQuick from './eq/EqQuick.svelte';
+
+  //: ADR-0162: Edit in the equaliser's quick change opens its editor.
+  let { onequaliser = null } = $props();
 
   let open = $state(false);
+  //: The EQ chip beside the volume, while the sheet is closed (design/source/20, Q10).
+  const eqLit = $derived(!!$equaliser?.on && !$equaliser?.dsd);
+  const eqName = $derived(!$equaliser ? '' : !$equaliser.on ? 'EQ off' : $equaliser.dsd ? 'DSD'
+    : $equaliser.sel === 'custom' ? 'Custom' : ($equaliser.name ?? 'Flat'));
 
   //: **Swiped open and closed** (George, 2026-10-14: "Mouse touchpad - should
   //: open up and close by swipe up and down"). Up opens the sheet, down
@@ -566,6 +575,11 @@
     {/if}
   </div>
 
+  {#if open && $equaliser}
+    <!-- ADR-0162 (design/source/20, Q11-Q12): the equaliser's quick change. -->
+    <EqQuick host="phonetray" onedit={() => { open = false; onequaliser?.(); }} />
+  {/if}
+
   <div class="mini__row">
     {#if $fixedOutput}
       <span class="mini__fixed">Fixed output · the amplifier sets the level</span>
@@ -588,6 +602,15 @@
         <span class="mini__knob" style:left={`${pct}%`}></span>
       </div>
       <span class="mini__pct">{$volume?.muted ? 'Muted' : `${shown}%`}</span>
+    {/if}
+    {#if !open && $equaliser}
+      <button class="mini__eq" class:is-lit={eqLit} type="button" aria-label="Equaliser" onclick={() => (open = true)}>
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M6 4v16M12 4v16M18 4v16" />
+          <circle cx="6" cy="14" r="2.6" fill="#16232c" /><circle cx="12" cy="8" r="2.6" fill="#16232c" /><circle cx="18" cy="15" r="2.6" fill="#16232c" />
+        </svg>
+        <span>{eqName}</span>
+      </button>
     {/if}
   </div>
 
@@ -721,6 +744,34 @@
     font-size: var(--t-label);
     color: var(--ink-muted);
     text-align: right;
+    flex: none;
+  }
+  /* ADR-0162: the EQ chip beside the volume (design/source/20, Q10). */
+  .mini__eq {
+    height: 44px;
+    padding: 0 12px;
+    border-radius: 12px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: none;
+    background: rgba(233, 238, 242, 0.07);
+    border: 1px solid rgba(233, 238, 242, 0.14);
+    color: rgba(233, 238, 242, 0.82);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .mini__eq.is-lit {
+    background: rgba(126, 214, 188, 0.12);
+    border-color: rgba(126, 214, 188, 0.45);
+    color: #7ed6bc;
+  }
+  .mini__eq svg {
+    width: 18px;
+    height: 18px;
     flex: none;
   }
   .mini__fixed {

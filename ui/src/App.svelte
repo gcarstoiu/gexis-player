@@ -16,6 +16,7 @@
   import PairingFrame from './screens/PairingFrame.svelte';
   import Settings from './screens/Settings.svelte';
   import MiniPlayer from './screens/MiniPlayer.svelte';
+  import Equaliser from './screens/eq/Equaliser.svelte';
   import SetupScreen from './screens/SetupScreen.svelte';
   import FirstUsePage from './screens/FirstUsePage.svelte';
   import { screen } from './lib/family.svelte.js';
@@ -488,9 +489,12 @@
       libraryAlbum = null;
     }
   });
-  const libraryShown = $derived(libraryOpen && !settingsOpen && !waitingOpen);
+  //: ADR-0162: the equaliser's editor is open as a screen of its own (`openEqualiser`).
+  let eqOpen = $state(false);
+  const libraryShown = $derived(libraryOpen && !settingsOpen && !waitingOpen && !eqOpen);
   function openLibraryHome() {
     closeVolume();
+    eqOpen = false;
     libraryArtist = null;
     libraryAlbum = null;
     libraryHome += 1;
@@ -530,7 +534,18 @@
 
   function openSettings() {
     closeVolume();
+    eqOpen = false;
     settingsOpen = true;
+  }
+
+  //: **ADR-0162: the equaliser's editor**, from Edit in its quick change (the
+  //: drawer, the bar's tray, the phone's): a screen of its own, in place of
+  //: the one it was opened over. Settings -> Audio opens the same editor
+  //: inside Settings.
+  function openEqualiser() {
+    closeVolume();
+    settingsOpen = false;
+    eqOpen = true;
   }
 
   //: ADR-0109, amended 2026-10-03: the answer to "a different screen is
@@ -818,8 +833,11 @@
   <FirstUsePage mode="p2" onclose={() => (personaliseHeld = false)} />
 {:else if surface === 'remote'}
   <!-- ADR-0101: on a phone, Settings and the mini player under it. -->
-  <div class="remote remote--mini"><Settings {openRow} onrowopened={() => (openRow = null)} /></div>
-  <MiniPlayer />
+  <div class="remote remote--mini" style:display={eqOpen ? 'none' : null}><Settings {openRow} onrowopened={() => (openRow = null)} /></div>
+  {#if eqOpen}
+    <div class="remote remote--mini remote--eq"><Equaliser surface="phone" onback={() => (eqOpen = false)} /></div>
+  {/if}
+  <MiniPlayer onequaliser={openEqualiser} />
   {#if $screenNew}
     <NewScreen question={$screenNew} onanswer={answerNew} />
   {/if}
@@ -862,6 +880,11 @@
   {#if settingsOpen}
     <div class="screen-layer">
       <Settings onback={() => (settingsOpen = false)} embedded {openRow} onrowopened={() => (openRow = null)} />
+    </div>
+  {:else if eqOpen}
+    <div class="screen-layer">
+      <Equaliser surface={screen.family === 'bar' ? 'bar' : 'panel'} onback={() => (eqOpen = false)}
+        onhome={screen.family === 'bar' ? (lmsOff ? openSettings : openLibraryHome) : null} />
     </div>
   {:else if waitingOpen}
     <div class="screen-layer">
@@ -954,6 +977,7 @@
       onhome={lmsOff ? openSettings : openLibraryHome}
       onvisualisation={showVisualisation}
       ondashboard={dashboardButton ? showDashboard : null}
+      onequaliser={openEqualiser}
     />
   {:else if $volume || $fixedOutput}
     <VolumeDrawer
@@ -965,6 +989,7 @@
       onexternal={openFromExternal}
       onactivity={keepVolumeOpen}
       onsettled={armAutoHide}
+      onequaliser={openEqualiser}
     />
   {/if}
 
@@ -1119,6 +1144,10 @@
      the sheet. */
   .remote--mini {
     --foot-clear: calc(var(--mini-closed-h, 160px) + 16px);
+  }
+  /* ADR-0162: the equaliser's editor, over where Settings was. */
+  .remote--eq {
+    position: relative;
   }
 
   /* ADR-0109, Standard family: Chromium's scale factor makes every screen

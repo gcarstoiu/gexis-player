@@ -22,7 +22,8 @@
 // - `data-dpad-back` on the control Back presses (a screen's Back,
 //   Minimise, a sheet's Cancel), or a `dpadback` listener on the layer that
 //   calls `preventDefault()` once it has closed itself;
-// - a `dpadstep` listener (`detail.step` +1 or -1) on a custom slider, and
+// - a `dpadstep` listener (`detail.step` +1 or -1) on a custom slider
+//   (Left and Right; Up and Down on one with `aria-orientation="vertical"`), and
 //   `data-dpad-box` inside a control on the parts the ring goes round;
 // - `data-dpad-off` on the screens the D-pad leaves to the phone (D8);
 // - `data-dpad-cover` on a screen over everything that a press only takes
@@ -76,6 +77,12 @@ function scrollers(el, stop) {
 
 function isSlider(el) {
   return el.matches('[role="slider"], input[type="range"], [data-dpad-slider]');
+}
+
+//: An upright slider (the equaliser's bands, ADR-0162) steps on Up and Down,
+//: and Left and Right move to its neighbours.
+function isVertical(el) {
+  return el.getAttribute('aria-orientation') === 'vertical';
 }
 
 function isText(el) {
@@ -275,7 +282,7 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
     const box = boxes[0] ?? current;
     const r = boxes.length > 1 ? union(boxes.map((b) => b.getBoundingClientRect())) : box.getBoundingClientRect();
     const rad = radius(box, r);
-    const slider = isSlider(current);
+    const slider = isSlider(current) && !isVertical(current);
     let x, y, w, h, rr;
     if (!slider && insetForm) {
       x = r.left + INSET; y = r.top + INSET; w = r.width - 2 * INSET; h = r.height - 2 * INSET;
@@ -400,8 +407,12 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
       track();
       return;
     }
-    if (isSlider(current) && (key === 'left' || key === 'right')) {
+    if (isSlider(current) && !isVertical(current) && (key === 'left' || key === 'right')) {
       step(current, key === 'right' ? 1 : -1);
+      return;
+    }
+    if (isSlider(current) && isVertical(current) && (key === 'up' || key === 'down')) {
+      step(current, key === 'up' ? 1 : -1);
       return;
     }
     const from = current.getBoundingClientRect();

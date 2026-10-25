@@ -16,6 +16,8 @@
   import ReleaseNotes from './ReleaseNotes.svelte';
   import ReleaseHistory from './ReleaseHistory.svelte';
   import NoteText from '../lib/NoteText.svelte';
+  import Equaliser from './eq/Equaliser.svelte';
+  import { screen } from '../lib/family.svelte.js';
   import {
     settingsGroups,
     settingsDevice,
@@ -52,6 +54,8 @@
   let pickerKey = $state(null);
   // ADR-0099: a `document` row opens a page to read (Legal, Credits).
   let docKey = $state(null);
+  //: ADR-0162: Audio -> Equaliser opens the equaliser's own page.
+  let eqPage = $state(false);
   let docPage = $state(null);
   let docError = $state(null);
   //: Which row the pane is showing. **Not the value**: tapping a row in the
@@ -757,7 +761,8 @@
     if (group && row) {
       cat = group.id;
       drilled = group.id;
-      openSheet(row);
+      if (row.kind === 'equaliser') eqPage = true;
+      else openSheet(row);
     }
     onrowopened?.();
   });
@@ -964,6 +969,10 @@
   }
 
   function tap(row) {
+    if (row.kind === 'equaliser') {
+      eqPage = true;
+      return;
+    }
     // A read-only row is a disabled button - except an uploaded plugin's,
     // which holds its Remove: a browser drops every tap inside a disabled
     // button, and that Remove did nothing (George, 2026-10-03). The row
@@ -2127,10 +2136,10 @@
                   class="row"
                   class:row--add={r.kind === 'share'}
                   class:row--danger={r.danger}
-                  class:row--readonly={r.type === 'readonly' || toggleBlocked(r)}
+                  class:row--readonly={(r.type === 'readonly' && r.kind !== 'equaliser') || toggleBlocked(r)}
                   class:row--dl={!!r.component}
                   type="button"
-                  disabled={(r.type === 'readonly' && !r.uploaded) || toggleBlocked(r)}
+                  disabled={(r.type === 'readonly' && !r.uploaded && r.kind !== 'equaliser') || toggleBlocked(r)}
                   data-unwired={r.wired ? undefined : 'settings'}
                   onclick={() => tap(r)}
                 >
@@ -2326,6 +2335,10 @@
         </div>
       </div>
     </div>
+  {/if}
+
+  {#if eqPage}
+    <Equaliser surface={!onPanel() ? 'phone' : screen.family === 'bar' ? 'bar' : 'panel'} onback={() => (eqPage = false)} />
   {/if}
 
   {#if picker}

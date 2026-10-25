@@ -23,10 +23,28 @@
   import LockIcon from '../../lib/LockIcon.svelte';
   import VolumeIcon from '../../lib/VolumeIcon.svelte';
   import { pull, bandDrag, TRAY_H } from './tray.svelte.js';
+  import { equaliser } from '../../lib/equaliser.svelte.js';
+  import EqQuick from '../eq/EqQuick.svelte';
 
   //: `armsAt`: before this (performance.now()), a tray that came down by
   //: itself takes no touch on its level or mute (App.svelte, VOLUME_ARM_MS).
-  let { open, armsAt = 0, volume, active, onclose, onexternal, onactivity, onsettled, onhome, onvisualisation, ondashboard = null, rootless = false } = $props();
+  let { open, armsAt = 0, volume, active, onclose, onexternal, onactivity, onsettled, onhome, onvisualisation, ondashboard = null, onequaliser = null, rootless = false } = $props();
+
+  //: ADR-0162 (design/source/20, Q06-Q09): the EQ button opens a second band
+  //: under the first - the switch, the settings, the note and Edit.
+  const EQ_H = 254;
+  let eqBand = $state(false);
+  $effect(() => {
+    if (!open) eqBand = false;
+  });
+  const trayH = $derived(eqBand ? EQ_H : TRAY_H);
+  const eqLit = $derived(!!$equaliser?.on && !$equaliser?.dsd);
+  const eqName = $derived(!$equaliser ? '' : !$equaliser.on ? 'EQ off' : $equaliser.dsd ? 'DSD'
+    : $equaliser.sel === 'custom' ? 'Custom' : ($equaliser.name ?? 'Flat'));
+  function goEqualiser() {
+    onclose?.();
+    onequaliser?.();
+  }
 
   const press = pressing();
 
@@ -157,7 +175,8 @@
   class="tray"
   class:is-shown={open || following}
   class:is-following={following}
-  style:transform={`translateY(${shownH - TRAY_H - (shownH ? 0 : 60)}px)`}
+  style:height={`${trayH}px`}
+  style:transform={`translateY(${shownH - TRAY_H - (shownH ? 0 : 60 + trayH - TRAY_H)}px)`}
   inert={!open}
   role="presentation"
   data-dpad-layer
@@ -173,6 +192,7 @@
     onpointerdown={band.down} onpointermove={band.move} onpointerup={band.up} onpointercancel={band.cancel}></div>
   <div class="handle"></div>
 
+  <div class="row">
   <button class="btn btn--home" class:is-pressed={press.is('home')} type="button" data-dpad-main aria-label={rootless ? 'Settings' : 'Home'}
     onpointerdown={() => press.down('home')} onpointerup={(event) => press.lift(event, goHome)} onpointercancel={press.up} onclick={() => press.click(goHome)}>
     {#if rootless}
@@ -191,6 +211,17 @@
     <button class="btn" class:is-pressed={press.is('dash')} type="button" aria-label="Home Assistant dashboard"
       onpointerdown={() => press.down('dash')} onpointerup={(event) => press.lift(event, goDashboard)} onpointercancel={press.up} onclick={() => press.click(goDashboard)}>
       <svg class="i-dash" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11 12 4.5 20 11v8.5H14.5V14h-5v5.5H4Z" /></svg>
+    </button>
+  {/if}
+  {#if $equaliser}
+    <button class="eqbtn" class:is-lit={eqLit} type="button" aria-label="Equaliser" aria-expanded={eqBand}
+      onpointerup={(event) => press.lift(event, () => (eqBand = !eqBand))} onclick={() => press.click(() => (eqBand = !eqBand))}>
+      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M6 4v16M12 4v16M18 4v16" />
+        <circle cx="6" cy="14" r="2.6" fill="#16232c" /><circle cx="12" cy="8" r="2.6" fill="#16232c" /><circle cx="18" cy="15" r="2.6" fill="#16232c" />
+      </svg>
+      <span class="eqbtn__name">{eqName}</span>
+      <span class="eqbtn__chev" class:is-open={eqBand}></span>
     </button>
   {/if}
   <span class="divider"></span>
@@ -237,6 +268,12 @@
     </div>
     <span class="readout" class:is-muted={muted}>{muted ? 'Mute' : shown}</span>
   {/if}
+  </div>
+  {#if eqBand}
+    <div class="eqband">
+      <EqQuick host="bartray" onedit={goEqualiser} />
+    </div>
+  {/if}
 </div>
 
 <div class="toast" class:is-shown={toast}>
@@ -280,9 +317,8 @@
     touch-action: none;
     z-index: 13;
     display: flex;
-    align-items: center;
-    gap: 20px;
-    padding: 0 40px 14px;
+    flex-direction: column;
+    padding: 0 0 14px;
     background: var(--bg-panel);
     border-radius: 0 0 24px 24px;
     border-bottom: 1px solid rgba(233, 238, 242, 0.12);
@@ -298,6 +334,63 @@
   }
   /* Under a finger it is wherever the finger is. */
   .tray.is-following { transition: none; }
+  .row {
+    height: 122px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 0 40px;
+  }
+  /* ADR-0162: the equaliser's band, under the first (design/source/20, Q07). */
+  .eqband {
+    position: relative;
+    z-index: 1;
+    height: 120px;
+    flex-shrink: 0;
+    padding: 0 40px;
+    border-top: 1px solid rgba(233, 238, 242, 0.08);
+  }
+  .eqbtn {
+    position: relative;
+    z-index: 1;
+    height: 60px;
+    padding: 0 20px 0 18px;
+    border-radius: 30px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+    background: rgba(233, 238, 242, 0.07);
+    border: 1px solid rgba(233, 238, 242, 0.14);
+    color: rgba(233, 238, 242, 0.82);
+    font: inherit;
+  }
+  .eqbtn.is-lit {
+    background: rgba(126, 214, 188, 0.12);
+    border-color: rgba(126, 214, 188, 0.45);
+    color: #7ed6bc;
+  }
+  .eqbtn:active {
+    transform: scale(0.95);
+  }
+  .eqbtn__name {
+    font-size: 19px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .eqbtn__chev {
+    width: 9px;
+    height: 9px;
+    border-right: 2.5px solid rgba(233, 238, 242, 0.6);
+    border-bottom: 2.5px solid rgba(233, 238, 242, 0.6);
+    transform: rotate(45deg) translate(-2px, -2px);
+    transition: transform 160ms ease;
+  }
+  .eqbtn__chev.is-open {
+    transform: rotate(-135deg) translate(-2px, -2px);
+  }
 
   .closeband {
     position: absolute;

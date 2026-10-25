@@ -9,10 +9,11 @@
   import { VolumeControl } from '../lib/volumeControl.svelte.js';
   import LockIcon from '../lib/LockIcon.svelte';
   import VolumeIcon from '../lib/VolumeIcon.svelte';
+  import EqQuick from './eq/EqQuick.svelte';
 
   //: `armsAt`: before this (performance.now()), a drawer that opened by
   //: itself takes no touch on its level or mute (App.svelte, VOLUME_ARM_MS).
-  let { open, armsAt = 0, volume, active, onclose, onexternal, onactivity, onsettled } = $props();
+  let { open, armsAt = 0, volume, active, onclose, onexternal, onactivity, onsettled, onequaliser = null } = $props();
 
   //: The level, dragging, mute and the changes from elsewhere: one copy,
   //: shared with the bar's tray (lib/volumeControl.svelte.js).
@@ -82,6 +83,8 @@
     <span class="readout" class:is-muted={muted}>{muted ? 'Mute' : shown}</span>
   </div>
   {/if}
+  <!-- ADR-0162 (design/source/20, Q01-Q05): the equaliser's quick change. -->
+  <EqQuick host="drawer" onedit={() => { onclose?.(); onequaliser?.(); }} />
 </div>
 
 <div class="toast" class:is-shown={toast}>
