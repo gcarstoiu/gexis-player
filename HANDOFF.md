@@ -1,25 +1,18 @@
 # Handoff
 
-Last updated: 2026-10-25 (on R2D2).
+Last updated: 2026-10-25, late (on R2D2).
 
 ## Start here
 
-Branches (renamed 2026-10-18, George: Phase 13d was over and the names read
-as open phases): **`docs`** in the main checkout holds the documents and
-shared work (was `phase-13b`); **`next`** in `~/projects/gexis-player-next` is
-the release branch, what the next release is built from (was `phase-13d`),
-and `docs` is merged into it after each docs change. A phase's work has its
-own branch (`ph-first-use`) and is merged into `next` once George's tests
-pass. A release is built
-from a worktree made at its tag, then removed.
+Branches: **`docs`** in the main checkout holds the documents and shared
+work; **`next`** in `~/projects/gexis-player-next` is the release branch, and
+`docs` is merged into it after each docs change. A phase's work has its own
+branch (`ph-…`), merged into `next` once George's tests pass. A release is
+built from a worktree made at its tag, then removed.
 
-**GitHub checks every push** (2026-10-18): `.github/workflows/tests.yml` runs
-*Core tests* (Python 3.13) and *UI build*; `main`'s ruleset requires both and
-a pull request; merged branches are deleted by GitHub; Dependabot alerts are
-on (security alerts only, no version-bump PRs). On GitHub the visualiser's
-tests run too (pygame's fonts work on 3.13): 2546 pass, against 2500 here.
-*Releases built on GitHub* is a Should on the Roadmap (signing stays local;
-a trial build first, for the disk).
+**GitHub checks every push**: *Core tests* (Python 3.13) and *UI build*;
+`main`'s ruleset requires both and a pull request; merged branches are
+deleted by GitHub; Dependabot sends security alerts only.
 
 **The public roadmap is the GitHub wiki's *Roadmap* page** (2026-10-18; its own
 repository, `gexis-player.wiki.git`): Now, Next (the next two phases), Later,
@@ -27,41 +20,20 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.6.0, on Stable** (2026-10-25: George asked for the
-merge, release and promotion together and approved the notes). Testing
-serial 56 and Stable serial 10, both signatures good from the release key,
-read back with `gh release download channels`; the public
-`gexis-player.img.xz`, downloaded through `releases/latest/download`, passes
-its checksum and signature and decompresses to the checked image; r1.6.0 is
-GitHub's latest. Tag `v1.6.0` on the release-notes commit `3f5e96d3`;
-`release-1.6.0` and `next` pushed at `3188394a` (the tag plus documents only:
-the README's current release and roadmap, Phases 23-26). Image
-`image/deploy/2026-10-25-gexis-player-v1.6.0.img` (`verify-image.sh`
-123/123 with `GEXIS_BUILD_CACHE` set - without it the plugin tarball is not
-found, its comparison is skipped and 122 pass; 978 skins clean); parts
-`ours-27290f57fb65`, `skins-67e037cab00f`, `rpi-0e5671e1892c`,
-`debian-2e90e264cb7d`; build output in `~/projects/gexis-release-out/r1.6.0`;
-release worktree `~/projects/gexis-player-r160`. gexis-core and gexis-player
-`1.6.0`, gexis-ui `1.5.0+git49.8e939ff` (the same build as sofapi's
-preview), gexis-system `1.4.0+git29.d93d43f`. What it carries: Phase 19's
-player side (the D-pad, `POST /panel/key`, `idle_screen` on
-`/player/status`) and the *Attached screen* name fix. **PR #84 waits for
-George's merge** (checks green); after it: `main` into `docs` and `next`,
-delete `release-1.6.0` on GitHub and locally, remove the release worktree,
-the routine clean-up. Pins behind their makers at release
-(`check-upstream.sh`): go-librespot 0.10.3 (0.10.5 out) and Beszel 0.21.0
-(0.21.1 out) - a preview first (ADR-0100).
+**Current release: 1.6.0, on Stable** (2026-10-25; Testing serial 56,
+Stable serial 10). PR #84 merged by George the same day; `main` merged into
+`docs` and `next`, `release-1.6.0` and its worktree gone, the routine
+clean-up run. Image `image/deploy/2026-10-25-gexis-player-v1.6.0.img`; build
+output in `~/projects/gexis-release-out/r1.6.0`. The release's detail is in
+the archive (2026-10-25, 1.6.0).
 
 **The release key** moved to `~/projects/gexis-release-key` (George,
 2026-10-24): every release command sets
 `GEXIS_RELEASE_GNUPGHOME=~/projects/gexis-release-key`; the scripts default
 to `~/.gnupg-gexis-release`, which no longer exists.
 
-**The players** (2026-10-25): sofapi runs 1.6.0 (core and player installed
-over the Phase 19 preview at 21:54, dry run first, the core restarted after
-the install; its ui was already 1.6.0's build); ShelvesPi 1.5.0 (no debug
-drop-in or DevTools port left); bedroompi `preview-1023` as last recorded
-(core and player `1.4.0+git45.561e337`). All of it is older than 1.6.0.
+**The players** (2026-10-25; all four idle and clean at the clean-up):
+sofapi 1.6.0; ShelvesPi 1.5.0; bedroompi `preview-1023` as last recorded.
 
 **The test venv imports the core from `~/projects/gexis-player-next`** (an
 editable install): in another worktree run the suite with `PYTHONPATH=src`
@@ -70,22 +42,14 @@ player meta-package too** (it pins core exactly): `packaging/build.sh` with
 every component and `player`, after copying the unchanged UI and system
 packages from the release's build output (`repos/ours-*`).
 
-**Deferred until a bug report** (George, 2026-10-21; from 1.3.1): the HMTECH 10.1" came up at 800x480 on the first start
-after the boot that switched to it (Chromium stored 1004x580 in a 1024x600
-work area: not full-screen), then full-screen on two restarts in a row. A
-first start after a screen change may still miss full-screen. The 10.1" was
-checked by its EDID in the tests, not again on the device under the new
-standby.
+**Deferred until a bug report** (George, 2026-10-21): a first start after a
+screen change may miss full-screen (the HMTECH 10.1"; to-do
+`first-start-fullscreen`).
 
 **Release build output lives in `~/projects/gexis-release-out`**: in each
 release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
 (excluded in `.git/info/exclude`). `reuse.py` reuses a published file only
 against a local copy, so losing that folder means re-uploading every OS file.
-
-**Not an issue** (George, 2026-10-20): Squeezelite joining whichever Lyrion
-server answers first after a restart (Finding 130 point 6). GitHub reported
-6 Dependabot alerts on `main` (all `vite`, the UI's build tool, not on the
-player), raised 20-21 Oct.
 
 **Open:**
 - **Not checked:** iOS's handling of `interactive-widget` (the mini player
@@ -98,51 +62,50 @@ player), raised 20-21 Oct.
   measure it again (to-do `glass-revisit-2027`).
 - George's look at the moon before sunrise.
 
-**Phase 19, the player in Home Assistant, closed 2026-10-25** (George,
-after checking the D-pad on sofapi and the card on his own Home Assistant;
-`docs/DEVELOPMENT.md`, ADR-0160, ADR-0161, ADR-0163). `ph-home-assistant` is
-merged into `next` for 1.6.0 (core suite 2664 passed, 48 skipped) and its
-branch and worktree are gone. The integration
-`gcarstoiu/gexis-player-homeassistant` is at 0.4.1 (README: the D-pad needs
-1.6.0; released after its checks passed, as HACS asks; local copy
+**The Home Assistant integration** (Phase 19, closed 2026-10-25):
+`gcarstoiu/gexis-player-homeassistant` at 0.4.1 (local copy
 `~/projects/gexis-player-homeassistant`, tests on `~/projects/ha-venv`; a
 Home Assistant 2026.10.3 in Docker, `~/projects/scratch/ha-test`). **HACS's
-default list**: applied 2026-10-25 at George's word, hacs/default#12691
-(from his fork `gcarstoiu/default`); every automated check passed; it waits
-for HACS's maintainers - do not ask them for a review (their template).
+default list**: hacs/default#12691 (from George's fork `gcarstoiu/default`),
+every automated check passed; it waits for HACS's maintainers - do not ask
+them for a review (their template).
 
-Then, in order (`docs/DEVELOPMENT.md`; refer
-to them by ID): **20** a simple equaliser (`ph-equaliser`, added
-2026-10-25: presets and a manual setup in CamillaDSP, the filter stage room
-correction then reuses; ADR-0162 proposed 2026-10-25 with George's product
-decisions, its brief `design/briefs/20-equaliser.md` for Claude Design, its
-settings [N] not yet confirmed), **21** room correction for the bass
-(`ph-room-correction`), **22** room correction for the full range
-(`ph-room-correction-full`), **23** AirPlay 2 (`ph-airplay`), **24**
-multiroom for every source (`ph-multiroom`), **25** the plugin catalogue
-(`ph-plugin-catalogue`), **26** internet radio without Lyrion (`ph-radio`)
-- the four added 2026-10-25 from the ideas (George) - **27** themes
-(`ph-themes`), **28** the library answers for itself (`ph-library`), **29**
-Lyrion's own menus' look (`ph-lyrion-menus`); MPD is parked (`ph-mpd`, ADR-0151). Each ADR first. **Raspberry Pi Imager**
-(ADR-0159, a task, not a phase): the install guide is corrected; our own
-Imager list and Imager's settings not now; Imager's own list stays open, as
-it is, with no further changes for now (George, 2026-10-24).
+**Phase 20, the equaliser, in progress** (started 2026-10-25 after the
+merge, George). Branch `ph-equaliser` in `~/projects/gexis-player-ph-equaliser`
+(from `next`), not pushed yet; on it so far: go-librespot 0.10.5 and Beszel
+0.21.1 (George: they go with this phase's preview; archives checked against
+upstream's checksums, `verify-image.sh`'s binary checksums raised). ADR-0162
+proposed; **the first measurement's silent part** done on sofapi the same
+night (Finding 138: ten Peaking filters, 2-5 % of a core, no click when
+dragged - CamillaDSP's GraphicEqualizer clicks; a rate change by letting the
+loopback go and starting CamillaDSP at each stream's rate, 12-24 ms off a
+stream's start). The kit is in `~/projects/scratch/eq-m1` (CamillaDSP 4.1.3,
+`gen.py`, `pv/run.py`, `an2.py`, `an3.py`); sofapi was left as it was (kit
+removed, `snd-aloop` unloaded). **Owed by George:** ADR-0162's three [N]
+settings, and the brief `design/briefs/20-equaliser.md` handed to Claude
+Design (nothing of the screens is built before he has seen the design).
+**Next for Claude:** the measurement through the real card (the delay, the
+DAC's clock, players in sync, the visualiser beside it, a DSD file through
+Squeezelite) - it plays through the amplifier, so at a time George picks;
+then the filter stage in the core (D1-D9).
+
+Then 21-29 in order, each ADR first (`docs/DEVELOPMENT.md`, the IDs
+there); MPD parked (ADR-0151). **Raspberry Pi Imager** (ADR-0159, a task):
+Imager's own list stays open as it is (George, 2026-10-24).
 
 The shared to-do list (an artifact with a `todos` collection; its address is
 in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-10-25, after 1.5.0** (/home 223 -> 230 GB free).
+2026-10-25, after 1.6.0** (/home 224 -> 237 GB free).
 
 ## Phases
 
-Closed: 0-19 (13 with letters a-f; Phase 15, the public API, on
-2026-10-19 with 1.2.0; Phase 16, optical, with 1.3.0; Phase 18, the Home
-Assistant dashboard, with 1.4.0; Phase 17, DSI screens, for 1.5.0; Phase 19,
-the player in Home Assistant, for 1.6.0). Phases are numbered consecutively without letters,
-each with a stable ID (George, 2026-10-13); the open ones are 20-29, with
-MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
+Closed: 0-19 (13 with letters a-f). Phases are numbered consecutively
+without letters, each with a stable ID (George, 2026-10-13); 20 is in
+progress, 21-29 to come, MPD parked. `docs/DEVELOPMENT.md` holds each
+phase's acceptance criteria.
 
 ## Machines
 
