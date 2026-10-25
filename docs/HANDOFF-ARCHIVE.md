@@ -7747,3 +7747,41 @@ under 0.1.0 and serves `brand/icon.png` (local brand images since 2026.3).
 HACS's own list shows the placeholder: the public brands site has no gexis
 image. The branch and worktree
 stay until the phase closes.
+
+## 2026-10-25: 1.5.0 on Stable, the players, the Attached screen fix (moved from HANDOFF verbatim when 1.6.0 went to Stable)
+
+**Current release: 1.5.0, on Stable** (promoted 2026-10-25 at George's word:
+Stable serial 9, Testing serial 55 since 2026-10-24, both signatures good
+from the release key, read back with `gh release download channels`; the
+public `gexis-player.img.xz` passes its checksum and signature and
+decompresses to the checked image; r1.5.0 is GitHub's latest). Tag `v1.5.0` on the
+release-notes commit `bfb0f647`; `next` and `release-1.5.0` pushed there.
+Image `image/deploy/2026-10-24-gexis-player-v1.5.0.img` (`verify-image.sh`
+123/123, 978 skins clean); parts `ours-17e046a32cf3`, `skins-67e037cab00f`,
+`rpi-dea26bfd5ea8`, `debian-612079c6b5f1`; build output in
+`~/projects/gexis-release-out/r1.5.0`. gexis-core and gexis-player `1.5.0`,
+gexis-ui `1.4.0+git88.eaca532`, gexis-system `1.4.0+git29.d93d43f`.
+What it carries: Phase 17's DSI screens, Phase 19's player side (`id`,
+`screen`), the bar fixes (the tray's buttons on the first tap, settings
+sheets that fit, pictures tried again, the tray staying open), the Lyrion
+server and bar wallpaper fixes. **PR #82 was merged by George**
+(2026-10-25); `main` is merged into `docs` and `next`, `release-1.5.0` and its
+worktree are gone, and the routine clean-up ran. **PR #83** (README: 1.5.0
+is the current release) was merged by George the same day; `main` is merged
+into `docs` and `next`, and its branch and worktree are gone.
+
+**The players** (2026-10-25): ShelvesPi runs 1.5.0 (the four bar fixes
+checked there by George, all fine, 2026-10-25; no debug drop-in or DevTools
+port left), sofapi the
+Phase 19 preview (core and player `1.4.0+git49.c4af394`, ui
+`1.4.0+git24.e505054`), bedroompi `preview-1023` (core and player
+`1.4.0+git45.561e337`, ui `1.4.0+git36.b8793e5`, system
+`1.4.0+git29.d93d43f`); all of it is in 1.5.0, a newer version.
+
+- **Merged into `next` for the next release** (2026-10-25, `screen-name-tile`,
+  branch deleted): Settings' *Attached screen* tile showed the stored
+  `Maker/Model` and broke mid-word (a DSI panel read "Raspberry Pi/Touch
+  Display or compati / ble" on a phone, in 1.5.0); now maker and model,
+  wrapping between words. Checked with mocked data at the phone's, panel's
+  and bar's size; no preview on a player (George: text only, and no DSI
+  screen free).
