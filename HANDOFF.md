@@ -44,9 +44,8 @@ sheets that fit, pictures tried again, the tray staying open), the Lyrion
 server and bar wallpaper fixes. **PR #82 was merged by George**
 (2026-10-25); `main` is merged into `docs` and `next`, `release-1.5.0` and its
 worktree are gone, and the routine clean-up ran. **PR #83** (README: 1.5.0
-is the current release; branch `readme-1.5.0`, worktree
-`~/projects/gexis-player-readme`) waits for George; the same line is on
-`docs` and `next`.
+is the current release) was merged by George the same day; `main` is merged
+into `docs` and `next`, and its branch and worktree are gone.
 
 **The release key** moved to `~/projects/gexis-release-key` (George,
 2026-10-24): every release command sets
