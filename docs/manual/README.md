@@ -345,7 +345,11 @@ What Home Assistant gets:
   the transport and the volume, a list to move to another player, and the
   quick actions and the D-pad for the player's screen. In the player's own
   look, or Home Assistant's (*look: home-assistant*); full, or compact with
-  the D-pad folded away.
+  the D-pad folded away. It goes on a dashboard edited by hand (Home
+  Assistant's new *Overview* takes favourite entities, not cards): *Settings
+  → Dashboards → Add dashboard → New dashboard from scratch* if there is
+  none, then on it the pencil, *+* in a section, the *By card* tab, and a
+  search for *Gexis*.
 
 It needs Home Assistant 2026.3 or later and a player newer than 1.4.0 (the
 D-pad a player newer than 1.5.0); an older player is found and asked to
