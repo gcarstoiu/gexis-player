@@ -45,7 +45,7 @@ class FakeCamilla:
 
 
 class Rig:
-    def __init__(self, monkeypatch, takes_rate=lambda card, rate: True):
+    def __init__(self, monkeypatch, tmp_path, takes_rate=lambda card, rate: True):
         self.camilla = FakeCamilla()
         self.units = []
         self.amixer = contents(active="off")
@@ -54,13 +54,21 @@ class Rig:
         async def systemctl(*args):
             self.units.append(args)
 
+        self.modprobed = []
+
         async def run(*args, timeout=5):
+            if args[0] == "modprobe":
+                self.modprobed.append(args)
+                return ""
             assert args[:3] == ("amixer", "-D", "hw:Loopback")
             return self.amixer
 
         self.statuses = []
+        self.cards = tmp_path / "cards"
+        self.cards.write_text(" 0 [sndrpihifiberry]: HifiberryDacp - snd_rpi_hifiberry_dacplus\n"
+                              " 7 [Loopback       ]: Loopback - Loopback\n")
         self.engine = EqEngine(camilla=self.camilla, systemctl=systemctl, run=run,
-                               on_change=self.statuses.append, takes_rate=takes_rate)
+                               on_change=self.statuses.append, takes_rate=takes_rate, cards=self.cards)
 
         async def no_watch():
             await asyncio.sleep(3600)
@@ -87,8 +95,8 @@ class Rig:
             await self.engine._push
 
 
-async def test_on_starts_camilladsp_and_waits_for_a_stream(monkeypatch):
-    rig = Rig(monkeypatch)
+async def test_on_starts_camilladsp_and_waits_for_a_stream(monkeypatch, tmp_path):
+    rig = Rig(monkeypatch, tmp_path)
     await rig.engine.configure("sndrpihifiberry", eq.PRESET["rock"].gains)
     assert ("start", eq_engine.UNIT) in rig.units
     await rig.engine._look()
@@ -96,8 +104,8 @@ async def test_on_starts_camilladsp_and_waits_for_a_stream(monkeypatch):
     assert rig.engine.status()["running"] is True
 
 
-async def test_a_stream_starts_it_at_its_own_rate_lowered_first(monkeypatch):
-    rig = Rig(monkeypatch)
+async def test_a_stream_starts_it_at_its_own_rate_lowered_first(monkeypatch, tmp_path):
+    rig = Rig(monkeypatch, tmp_path)
     await rig.engine.configure("sndrpihifiberry", eq.PRESET["rock"].gains)
     rig.amixer = contents(rate=96000, fmt=6)
     await rig.engine._look()
@@ -111,8 +119,8 @@ async def test_a_stream_starts_it_at_its_own_rate_lowered_first(monkeypatch):
     assert config["filters"]["band_31"]["parameters"]["gain"] == 4
 
 
-async def test_a_dragged_band_is_patched_and_the_headroom_moves_first(monkeypatch):
-    rig = Rig(monkeypatch)
+async def test_a_dragged_band_is_patched_and_the_headroom_moves_first(monkeypatch, tmp_path):
+    rig = Rig(monkeypatch, tmp_path)
     monkeypatch.setattr(eq_engine, "RAMP_S", 0)
     await rig.engine.configure("sndrpihifiberry", eq.FLAT)
     rig.amixer = contents()
@@ -129,8 +137,8 @@ async def test_a_dragged_band_is_patched_and_the_headroom_moves_first(monkeypatc
                                 ("SetFaderVolume", [1, -0.0])], "a falling one after the cut"
 
 
-async def test_a_change_while_nothing_plays_waits_for_the_next_stream(monkeypatch):
-    rig = Rig(monkeypatch)
+async def test_a_change_while_nothing_plays_waits_for_the_next_stream(monkeypatch, tmp_path):
+    rig = Rig(monkeypatch, tmp_path)
     await rig.engine.configure("sndrpihifiberry", eq.FLAT)
     await rig.engine.configure("sndrpihifiberry", eq.PRESET["jazz"].gains)
     await rig.settle()
@@ -141,8 +149,8 @@ async def test_a_change_while_nothing_plays_waits_for_the_next_stream(monkeypatc
     assert config["filters"]["band_31"]["parameters"]["gain"] == 3
 
 
-async def test_dsd_goes_past_it_untouched(monkeypatch):
-    rig = Rig(monkeypatch)
+async def test_dsd_goes_past_it_untouched(monkeypatch, tmp_path):
+    rig = Rig(monkeypatch, tmp_path)
     await rig.engine.configure("AUDIO", eq.PRESET["rock"].gains)
     rig.amixer = contents(rate=352800, fmt=52)
     await rig.engine._look()
@@ -155,8 +163,8 @@ async def test_dsd_goes_past_it_untouched(monkeypatch):
     assert rig.engine.status()["dsd"] is False
 
 
-async def test_a_rate_the_card_lacks_is_converted_to_its_highest(monkeypatch):
-    rig = Rig(monkeypatch, takes_rate=lambda card, rate: rate != 88200)
+async def test_a_rate_the_card_lacks_is_converted_to_its_highest(monkeypatch, tmp_path):
+    rig = Rig(monkeypatch, tmp_path, takes_rate=lambda card, rate: rate != 88200)
     monkeypatch.setattr(eq_engine.outputs, "top_rate", lambda card: 192000)
     await rig.engine.configure("Adapter", eq.FLAT)
     rig.amixer = contents(rate=88200)
@@ -165,16 +173,26 @@ async def test_a_rate_the_card_lacks_is_converted_to_its_highest(monkeypatch):
     assert d["capture_samplerate"] == 88200 and d["samplerate"] == 192000 and d["resampler"]["type"] == "AsyncSinc"
 
 
-async def test_off_stops_it(monkeypatch):
-    rig = Rig(monkeypatch)
+async def test_off_stops_it(monkeypatch, tmp_path):
+    rig = Rig(monkeypatch, tmp_path)
     await rig.engine.configure("sndrpihifiberry", eq.FLAT)
     await rig.engine.configure(None, eq.FLAT)
     assert rig.units[-1] == ("stop", eq_engine.UNIT)
     assert rig.engine.status()["running"] is False
 
 
-async def test_another_output_restarts_camilladsp(monkeypatch):
-    rig = Rig(monkeypatch)
+async def test_another_output_restarts_camilladsp(monkeypatch, tmp_path):
+    rig = Rig(monkeypatch, tmp_path)
     await rig.engine.configure("sndrpihifiberry", eq.FLAT)
     await rig.engine.configure("vc4hdmi0", eq.FLAT)
     assert rig.units[-1] == ("restart", eq_engine.UNIT), "it reads output.conf only when it starts"
+
+
+async def test_the_loopback_is_loaded_when_it_is_not_there(monkeypatch, tmp_path):
+    rig = Rig(monkeypatch, tmp_path)
+    await rig.engine.configure("sndrpihifiberry", eq.FLAT)
+    assert rig.modprobed == [], "loaded at boot"
+    await rig.engine.configure(None, eq.FLAT)
+    rig.cards.write_text(" 0 [sndrpihifiberry]: HifiberryDacp - snd_rpi_hifiberry_dacplus\n")
+    await rig.engine.configure("sndrpihifiberry", eq.FLAT)
+    assert rig.modprobed == [("modprobe", "snd-aloop")], "updated since the last boot"

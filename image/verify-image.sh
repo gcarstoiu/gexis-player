@@ -63,6 +63,9 @@ image/stage-gexis/10-lyrion/files/lyrion-memory-limit /usr/lib/gexis/lyrion-memo
 image/stage-gexis/10-lyrion/files/lyrion-prepare /usr/lib/gexis/lyrion-prepare
 image/stage-gexis/10-lyrion/files/90-gexis-usb-music.rules /usr/lib/udev/rules.d/90-gexis-usb-music.rules
 image/stage-gexis/10-lyrion/files/gexis-music.conf /etc/samba/smb.conf.d/gexis-music.conf
+image/stage-gexis/11-equaliser/files/gexis-equaliser.service /usr/lib/systemd/system/gexis-equaliser.service
+image/stage-gexis/00-alsa/files/gexis-loopback-load.conf /etc/modules-load.d/gexis-loopback.conf
+image/stage-gexis/00-alsa/files/gexis-loopback-modprobe.conf /etc/modprobe.d/gexis-loopback.conf
 EOF
 
 # **No skins in the image** (ADR-0111 decision 9): neither the old
@@ -218,6 +221,26 @@ else
 		|| bad "beszel-hub sha256 is $got, expected $BESZEL_HUB_BINARY_SHA256"
 fi
 rm -f "$OUT/hub"
+
+# ADR-0162 D1: CamillaDSP, the build its pin names (the binary's own checksum,
+# extracted from the pinned release, v4.1.3, 2026-10-25). Raise it with every
+# new pin, as Beszel's.
+dfs "dump /usr/bin/camilladsp $OUT/camilladsp" >/dev/null
+CAMILLADSP_BINARY_SHA256="e04c7a6603e9482bab33c1e18afc41d3c07410b54ba9c246eda69f7e9cbaedfa"
+if [ ! -s "$OUT/camilladsp" ]; then
+	bad "/usr/bin/camilladsp missing"
+else
+	got="$(sha256sum "$OUT/camilladsp" | cut -d' ' -f1)"
+	[ "$got" = "$CAMILLADSP_BINARY_SHA256" ] && ok "camilladsp is the pinned build" \
+		|| bad "camilladsp sha256 is $got, expected $CAMILLADSP_BINARY_SHA256"
+fi
+rm -f "$OUT/camilladsp"
+# Started by the core only: no [Install] section, so nothing enables it.
+if dfs "stat /etc/systemd/system/multi-user.target.wants/gexis-equaliser.service" | grep -q 'Inode:'; then
+	bad "gexis-equaliser is enabled in the image - the core starts it (ADR-0162)"
+else
+	ok "gexis-equaliser not enabled (the core starts it while the equaliser is on)"
+fi
 
 # **Not enabled.** An unenrolled device runs nothing, and the switch on the
 # settings screen reads the unit's real state (ADR-0086 as amended) - so a unit
@@ -418,6 +441,7 @@ for f in /usr/share/doc/gexis-player/COPYING \
          /usr/share/doc/gexis-player/licenses/peppy_screensaver/LICENSE \
          /usr/share/doc/gexis-player/licenses/beszel/LICENSE \
          /usr/share/doc/gexis-player/licenses/go-librespot/README \
+         /usr/share/doc/gexis-player/licenses/camilladsp/README \
          /usr/share/doc/gexis-player/licenses/peppyalsa/README \
          /usr/share/doc/gexis-player/licenses/squeezelite/README \
          /opt/gexis-ui/licenses/svelte/LICENSE.md \

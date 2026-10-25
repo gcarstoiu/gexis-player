@@ -31,6 +31,7 @@ import json
 import logging
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Awaitable, Callable
 
 import aiohttp
@@ -173,12 +174,14 @@ class EqEngine:
                  systemctl: Callable[..., Awaitable[None]] = _systemctl,
                  run: Callable[..., Awaitable[str]] = _run,
                  on_change: Callable[[dict], None] = lambda status: None,
-                 takes_rate: Callable[[str, int], bool | None] = outputs.takes_rate):
+                 takes_rate: Callable[[str, int], bool | None] = outputs.takes_rate,
+                 cards: Path = Path("/proc/asound/cards")):
         self._camilla = camilla or Camilla()
         self._systemctl = systemctl
         self._run = run
         self._on_change = on_change
         self._takes_rate = takes_rate
+        self._cards = cards
         self._card: str | None = None
         self._gains: tuple[int, ...] = eq.FLAT
         self._watch: asyncio.Task | None = None
@@ -210,11 +213,21 @@ class EqEngine:
     def status(self) -> dict:
         return dict(self._status)
 
+    def _loopback_loaded(self) -> bool:
+        try:
+            return f"[{outputs.LOOPBACK}" in self._cards.read_text()
+        except OSError:
+            return False
+
     # -- running -------------------------------------------------------------
 
     async def _start(self, restart: bool) -> None:
         await self._end_stream()
         await self._camilla.close()
+        if not self._loopback_loaded():
+            # Loaded at boot (modules-load.d); a player updated since its last
+            # boot has the file and not yet the card.
+            await self._run("modprobe", "snd-aloop")
         await self._systemctl("restart" if restart else "start", UNIT)
         if self._watch is None or self._watch.done():
             self._watch = asyncio.create_task(self._watching())

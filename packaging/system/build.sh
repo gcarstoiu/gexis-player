@@ -26,6 +26,8 @@ put 644 "$S/00-alsa/files/zz-gexis-default.conf" /etc/alsa/conf.d/zz-gexis-defau
 put 644 "$S/06-splash/files/gexis-show-status.conf" /etc/systemd/system.conf.d/gexis-show-status.conf
 put 644 "$S/00-alsa/files/gexis-dummy-mixers-load.conf" /etc/modules-load.d/gexis-dummy-mixers.conf
 put 644 "$S/00-alsa/files/gexis-dummy-mixers-modprobe.conf" /etc/modprobe.d/gexis-dummy-mixers.conf
+put 644 "$S/00-alsa/files/gexis-loopback-load.conf" /etc/modules-load.d/gexis-loopback.conf
+put 644 "$S/00-alsa/files/gexis-loopback-modprobe.conf" /etc/modprobe.d/gexis-loopback.conf
 # Rewritten when the output is chosen (outputs.py): a default, placed once.
 put 644 "$S/00-alsa/files/output.conf" "$DEF/output.conf"
 

@@ -50,5 +50,6 @@ gh_latest() {
 report "Beszel agent" "$(pin packaging/beszel-agent/pins.sh BESZEL_VERSION)" "$(gh_latest henrygd/beszel)"
 report "Beszel hub" "$(pin packaging/beszel-hub/pins.sh BESZEL_HUB_VERSION)" "$(gh_latest henrygd/beszel)"
 report go-librespot "$(pin packaging/go-librespot/pins.sh GO_LIBRESPOT_VERSION)" "$(gh_latest devgianlu/go-librespot)"
+report CamillaDSP "$(pin packaging/camilladsp/pins.sh CAMILLADSP_VERSION)" "$(gh_latest HEnquist/camilladsp)"
 
 exit $status

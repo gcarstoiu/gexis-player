@@ -298,6 +298,18 @@
       ]
     },
     {
+      "name": "CamillaDSP",
+      "group": "system",
+      "role": "Runs the equaliser: its ten bands, between every source and the output.",
+      "author": "Henrik Enquist and contributors",
+      "licence": "GPL-3.0",
+      "url": "https://github.com/HEnquist/camilladsp",
+      "arrives": "Fetched from its release when the image is built, checked against a pinned checksum",
+      "sources": [
+        "github.com/HEnquist/camilladsp"
+      ]
+    },
+    {
       "name": "gexis-plexamp",
       "group": "renderer",
       "role": "Connects Plexamp to the player.",
