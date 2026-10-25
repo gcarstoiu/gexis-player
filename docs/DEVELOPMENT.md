@@ -3198,7 +3198,14 @@ add measuring the room and designing filters, fed to this stage. It turns
 the Roadmap's idea *A simple equaliser* (bass, treble and loudness, ahead of
 room correction) into a phase.
 
-**An ADR before anything is built.** It must settle:
+**[ADR-0162](decisions/0162-a-simple-equaliser.md), proposed 2026-10-25**,
+with George's product decisions the same day: ten bands at ±12 dB; genre
+presets plus Vocal and Late night; up to ten of the owner's; the choice per
+output; Settings and quick controls close to the music, drawn in Claude
+Design first (`design/briefs/20-equaliser.md`); native DSD skips it. Its
+technical decisions are confirmed by the phase's first measurement.
+
+**An ADR before anything is built.** It had to settle:
 - **How simple**: bass and treble with loudness, a fixed 5- or 10-band
   equaliser, or bands set by hand (frequency, gain, width); the presets on
   top (for example Flat, Bass, Vocal, Late night).

@@ -139,7 +139,9 @@ stay until the phase closes.
 Then, in order (`docs/DEVELOPMENT.md`; refer
 to them by ID): **20** a simple equaliser (`ph-equaliser`, added
 2026-10-25: presets and a manual setup in CamillaDSP, the filter stage room
-correction then reuses), **21** room correction for the bass
+correction then reuses; ADR-0162 proposed 2026-10-25 with George's product
+decisions, its brief `design/briefs/20-equaliser.md` for Claude Design, its
+settings [N] not yet confirmed), **21** room correction for the bass
 (`ph-room-correction`), **22** room correction for the full range
 (`ph-room-correction-full`), **23** themes (`ph-themes`), **24** the
 library answers for itself (`ph-library`), **25** Lyrion's own menus' look
