@@ -257,6 +257,13 @@ attributes and two events, so a new screen needs nothing in the module:
 | `data-dpad-box` | inside a control: the parts the ring goes round |
 | `data-dpad-ring="inset"` / `"outside"` | the ring's form, where the rule would choose the other |
 | `data-dpad-skip`, `data-dpad-off` | not a stop; a screen the D-pad leaves alone (setup, updates) |
+| `data-dpad-cover` | a screen over everything (the idle screen, a takeover's): no ring while it is up, and a press only takes it down |
+
+A touch hides the ring, and so does the phone's touchpad: its moves and taps
+are made up in the page, so `PanelPointer.svelte` says so with a
+`panelpointer` event. The ring leaves a layer the moment it closes (a
+`MutationObserver` on the page, besides a check four times a second) and
+lands on the control beneath 150 ms later.
 
 ---
 

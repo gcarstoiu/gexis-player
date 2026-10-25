@@ -8,7 +8,9 @@
 //   direction, measured on the screen, within the topmost layer - a sheet,
 //   drawer, tray or dialog over the screen - scrolled into view.
 // - It is hidden until the first press, which only shows it (D4): on the
-//   control focused last in that layer, or on its main one. A touch hides it.
+//   control focused last in that layer, or on its main one. A touch hides it,
+//   and so do the phone's touchpad and a screen over everything (the idle
+//   screen).
 // - Its look is the design's (`design/source/19/Focus Ring.dc.html`, George's
 //   teal ring, Jump): one element over the control's box, in no layout.
 //
@@ -22,7 +24,9 @@
 //   calls `preventDefault()` once it has closed itself;
 // - a `dpadstep` listener (`detail.step` +1 or -1) on a custom slider, and
 //   `data-dpad-box` inside a control on the parts the ring goes round;
-// - `data-dpad-off` on the screens the D-pad leaves to the phone (D8).
+// - `data-dpad-off` on the screens the D-pad leaves to the phone (D8);
+// - `data-dpad-cover` on a screen over everything that a press only takes
+//   down (the idle screen, a takeover's).
 
 const KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Enter: 'ok', Escape: 'back' };
 
@@ -32,6 +36,7 @@ const FOCUSABLE = [
   '[role="menuitem"]', '[role="link"]', '[tabindex]:not([tabindex="-1"])',
 ].join(',');
 const LAYERS = '[data-dpad-layer], [role="dialog"], [role="alertdialog"]';
+const COVERS = '[data-dpad-cover]';
 const TEXT = /^(text|search|email|url|tel|password|number)$/;
 
 // The design's ring (design/tokens.css, *Phase 19: the D-pad's focus*).
@@ -152,6 +157,9 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
   // Inside the control or outside it, decided when the focus lands.
   let insetForm = false;
   let shown = false;
+  // Shown, but what it was on has gone (a drawer closing): hidden until it
+  // lands again, so it never outlives the drawer's fade.
+  let lost = false;
   let follow = 0;
   let nudge = null;
   let nudgeTimer;
@@ -180,6 +188,11 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
 
   function off() {
     return !root() || [...document.querySelectorAll('[data-dpad-off]')].some(layerShown);
+  }
+
+  // Svelte makes a screen inert while it fades out.
+  function covered() {
+    return [...document.querySelectorAll(COVERS)].some((el) => el.isConnected && !el.closest('[inert]'));
   }
 
   // In a layer that is closing (still fading out) or closed, or nested in
@@ -251,8 +264,8 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
 
   let placed = '';
   function draw() {
-    if (!shown || !current || !visible(current)) {
-      ring.hidden = true;
+    if (!shown || lost || !current || !visible(current)) {
+      if (!ring.hidden) ring.hidden = true;
       placed = '';
       return;
     }
@@ -300,6 +313,7 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
   function focus(el, layer, list) {
     current = el;
     shown = !!el;
+    lost = false;
     if (el) {
       last.set(layer, el);
       reveal(el, layer);
@@ -352,7 +366,10 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
     event.preventDefault();
     event.stopPropagation();
     onkey();
-    if (wake()) return;
+    if (wake() || covered()) {
+      hide();
+      return;
+    }
     if (typing) document.activeElement.blur();
     const layer = topLayer();
     if (key === 'back') {
@@ -402,10 +419,13 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
     else if (key === 'up' && trayUp()) track();
   }
 
-  function onPointer(event) {
-    if (!event.isTrusted) return;
+  function hide() {
     shown = false;
     draw();
+  }
+
+  function onPointer(event) {
+    if (event.isTrusted) hide();
   }
 
   // A control that went away (a screen changed under it): the ring comes
@@ -416,12 +436,23 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
     const layer = topLayer();
     return !!current && visible(current) && layer.contains(current) && !shut(current, layer);
   };
-  const watch = setInterval(() => {
+  function check() {
     if (!shown) return;
+    if (covered()) {
+      hide();
+      return;
+    }
     if (here()) {
+      if (lost) {
+        lost = false;
+        track();
+      }
       draw();
       return;
     }
+    if (lost) return;
+    lost = true;
+    draw();
     if (pressed && performance.now() - pressedAt < 1500) {
       openers.push(pressed);
       if (openers.length > 20) openers.shift();
@@ -429,23 +460,51 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
     pressed = null;
     clearTimeout(lostTimer);
     lostTimer = setTimeout(() => {
-      if (!shown || here() || off()) return;
+      if (!shown || off()) return;
+      if (here()) {
+        lost = false;
+        draw();
+        return;
+      }
       const layer = topLayer();
-      focus(start(layer, candidates(layer)), layer);
+      // Over a page from another site the ring stays away, as a press there
+      // leaves it (D1).
+      if (layer.matches('[data-dpad-frame]')) hide();
+      else focus(start(layer, candidates(layer)), layer);
     }, 150);
-  }, 250);
+  }
+  const watch = setInterval(check, 250);
+  // As the page changes, not only at the watch's beat: a drawer that closes
+  // takes the ring with it.
+  let checking = 0;
+  const observer = new MutationObserver((records) => {
+    if (!shown || checking || records.every((r) => ring.contains(r.target))) return;
+    checking = requestAnimationFrame(() => {
+      checking = 0;
+      check();
+    });
+  });
+  observer.observe(document.body, {
+    subtree: true, childList: true, attributes: true,
+    attributeFilter: ['class', 'hidden', 'inert', 'aria-hidden', 'open'],
+  });
   const onScroll = () => shown && draw();
 
   addEventListener('keydown', onKey, true);
   addEventListener('pointerdown', onPointer, true);
+  // The phone's touchpad: its pointer moves and taps are made up in the page.
+  addEventListener('panelpointer', hide);
   addEventListener('scroll', onScroll, true);
   addEventListener('resize', onScroll);
   return () => {
     removeEventListener('keydown', onKey, true);
     removeEventListener('pointerdown', onPointer, true);
+    removeEventListener('panelpointer', hide);
     removeEventListener('scroll', onScroll, true);
     removeEventListener('resize', onScroll);
     clearInterval(watch);
+    observer.disconnect();
+    cancelAnimationFrame(checking);
     clearTimeout(nudgeTimer);
     clearTimeout(changeTimer);
     clearTimeout(lostTimer);

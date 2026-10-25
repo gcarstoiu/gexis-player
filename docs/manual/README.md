@@ -367,7 +367,8 @@ The screen can be used without touching it: with Home Assistant's *D-pad*
   open - a sheet, the volume, the tray - or goes back one step, and on Now
   Playing minimises it. On Home it does nothing.
 - The ring shows at the first press, where it was last on that screen, or on
-  the screen's main control (Play/Pause on Now Playing). A touch hides it.
+  the screen's main control (Play/Pause on Now Playing). A touch, the
+  phone's touchpad and the idle screen hide it.
 - On a slider, Left and Right change the value; Up and Down leave it.
 - On a bar, Up from the top row brings the tray down.
 - While the screen is dark, or the visualiser or the idle screen is up, the
