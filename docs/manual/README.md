@@ -357,9 +357,8 @@ What Home Assistant gets:
   none, then on it the pencil, *+* in a section, the *By card* tab, and a
   search for *Gexis*.
 
-It needs Home Assistant 2026.3 or later and a player newer than 1.4.0 (the
-D-pad a player newer than 1.5.0); an older player is found and asked to
-update. With Home Assistant's own
+It needs Home Assistant 2026.3 or later and a player on 1.5.0 or later (the
+D-pad 1.6.0 or later); an older player is found and asked to update. With Home Assistant's own
 *Lyrion Music Server* integration also set up, the player shows there too,
 as Lyrion's player.
 
