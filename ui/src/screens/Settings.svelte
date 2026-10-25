@@ -1970,7 +1970,7 @@
                 {@const portLine = port?.key === 'screen_port' ? port.optionNotes?.[port.value] : port?.value}
                 {@const named = String(r.value ?? '').startsWith('Other screen/')
                   ? (String(portLine ?? '').replace(/^(HDMI \d+|DSI( \d+)?) · /, '').split(' · ')[0] || String(r.value).replace('/', ' '))
-                  : r.value}
+                  : String(r.value ?? '').replace('/', ' ')}
                 <div class="row row--tile">
                   <span class="row__body">
                     <span class="row__text">
@@ -3414,6 +3414,12 @@
     font-family: var(--font-mono);
     font-size: 15px;
     color: var(--ink-body);
+  }
+  /* A name wraps between its words, a single long one still breaks; over
+     `.row__value`'s break-all, which comes later. */
+  .row__value.row__value--tile {
+    word-break: normal;
+    overflow-wrap: anywhere;
   }
   .tile__btn {
     flex-shrink: 0;
