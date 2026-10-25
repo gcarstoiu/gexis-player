@@ -752,8 +752,8 @@ pictures (ADR-0161, ADR-0163).
 *The focus ring*
 - **[U]** Which form a control gets is a rule, not drawn per control: inside
   on rows and wherever a neighbour is under 12 px or the ring would leave
-  the screen, outside otherwise. Now Playing's tabs are made outside, as
-  `F07` draws them.
+  the screen, outside otherwise. Now Playing's tabs have square corners, so
+  their ring (radius 10) sits closer than `F07`'s.
 - **[U]** The bar tray's slider is ringed round its rail and knob, not its
   taller touch area (which ran off the screen); the drawer's slider is
   ringed whole, as `F13`.

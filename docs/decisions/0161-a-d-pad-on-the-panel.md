@@ -125,8 +125,8 @@ None proposed.
    screen's Back, Now Playing's Minimise, a confirmation's Cancel).
 7. **The ring's two forms**, as the design: outside, round staying round;
    inside on rows and wherever a neighbour is under 12 px or the ring would
-   leave the screen. Now Playing's tabs take the outside form (their boxes
-   touch through padding). A slider is ringed whole with its two arrows;
+   leave the screen; `data-dpad-ring` sets it where the rule would not. A
+   slider is ringed whole with its two arrows;
    the bar tray's, whose touch area is taller than it draws, round its rail
    and knob (`data-dpad-box`).
 8. **Sliders**: Left and Right step - the volume 2 %, as the phone's
