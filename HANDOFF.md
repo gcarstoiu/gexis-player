@@ -75,7 +75,8 @@ George, 2026-10-25: the three settings confirmed (ADR-0022), the design
 handed over (`design/source/20`, look 3a), implement with the decisions left
 to Claude recorded and shown to him (ADR-0162 *Built*, C1-C16 - **owed by
 George: his confirmation**), measure through a card after. Branch
-`ph-equaliser` in `~/projects/gexis-player-ph-equaliser`, not pushed:
+`ph-equaliser` in `~/projects/gexis-player-ph-equaliser`, pushed (GitHub's
+tests pass):
 go-librespot 0.10.5 and Beszel 0.21.1 (for this preview); the core
 (`equaliser.py`, `eq_engine.py`, `eq_control.py`, `outputs.render(eq=True)`,
 the routes, `equaliser` on `/state`, the Settings row); `gexis-camilladsp`
@@ -85,12 +86,19 @@ player); the documents. Core suite 2717 passed, 48 skipped; the UI builds
 with no new warnings; every screen checked from mocked data at 1280x800,
 1280x400, 1850x400 and 412 wide (`~/projects/scratch/eq-m1`: `eq_layout.py`
 the mocked core, `eq_shots.py`, `eq_dpad.py`; the design's artboards in
-`~/projects/scratch/design20/shots`). **Never run on a device**: CamillaDSP
-driving a card, the loopback at boot, a stream's edges, a rate the card
-lacks, DSD through `alsaloop`, switching on and off under a playing source.
-**Next for Claude:** packages and a preview on sofapi (dry run first), the
-measurement through its card (Finding 138's second part), the manual's
-drawer picture retaken with the demo library; then George's try.
+`~/projects/scratch/design20/shots`). **On sofapi since 2026-10-26 00:44**, with the equaliser off: core
+`1.6.0+git13.6186a94`, ui `1.6.0+git14.ff9562f`, system
+`1.6.0+git13.6186a94`, player `1.6.0+git16.d669ab5`, camilladsp `4.1.3-1`,
+go-librespot `0.10.5-2`, Beszel `0.21.1` (dry run first: 7 upgraded, 1 new,
+nothing removed; the core and kiosk restarted, the panel on the new bundle;
+`/equaliser` answers; the comment changed in `output.conf`, so the core
+rewrote it once and restarted the renderers when the card was free).
+**Never run with the equaliser on**: CamillaDSP driving a card, the loopback
+loaded by the engine (sofapi has not rebooted), a stream's edges, a rate the
+card lacks, DSD through `alsaloop`, switching on and off under a playing
+source. **Next:** the measurement through sofapi's card (it plays through the
+amplifier: at a time George picks), the manual's drawer picture retaken with
+the demo library; then George's try.
 
 Then 21-29 in order, each ADR first (`docs/DEVELOPMENT.md`, the IDs
 there); MPD parked (ADR-0151). **Raspberry Pi Imager** (ADR-0159, a task):
