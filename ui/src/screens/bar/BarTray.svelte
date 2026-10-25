@@ -129,24 +129,20 @@
     cancel: band.cancel,
   };
 
+  //: Each acts when the finger lifts on it (`press.lift`, which says why);
+  //: `press.click` takes a mouse's click.
   function goHome() {
-    press.act(() => {
-      onclose?.();
-      onhome?.();
-    });
+    onclose?.();
+    onhome?.();
   }
   //: ADR-0156: the Home Assistant dashboard, when an address is set.
   function goDashboard() {
-    press.act(() => {
-      onclose?.();
-      ondashboard?.();
-    });
+    onclose?.();
+    ondashboard?.();
   }
   function goVisualiser() {
-    press.act(() => {
-      onclose?.();
-      onvisualisation?.();
-    });
+    onclose?.();
+    onvisualisation?.();
   }
 </script>
 
@@ -176,7 +172,7 @@
   <div class="handle"></div>
 
   <button class="btn btn--home" class:is-pressed={press.is('home')} type="button" aria-label={rootless ? 'Settings' : 'Home'}
-    onpointerdown={() => press.down('home')} onpointerup={press.up} onpointercancel={press.up} onclick={goHome}>
+    onpointerdown={() => press.down('home')} onpointerup={(event) => press.lift(event, goHome)} onpointercancel={press.up} onclick={() => press.click(goHome)}>
     {#if rootless}
       <span class="i-sliders"><i></i><b></b><i></i><b></b></span>
     {:else}
@@ -185,13 +181,13 @@
   </button>
   {#if $meters}
     <button class="btn" class:is-pressed={press.is('viz')} type="button" aria-label="Visualization"
-      onpointerdown={() => press.down('viz')} onpointerup={press.up} onpointercancel={press.up} onclick={goVisualiser}>
+      onpointerdown={() => press.down('viz')} onpointerup={(event) => press.lift(event, goVisualiser)} onpointercancel={press.up} onclick={() => press.click(goVisualiser)}>
       <span class="i-meter"><i style="height:12px"></i><i style="height:22px"></i><i style="height:16px"></i><i style="height:8px"></i></span>
     </button>
   {/if}
   {#if ondashboard}
     <button class="btn" class:is-pressed={press.is('dash')} type="button" aria-label="Home Assistant dashboard"
-      onpointerdown={() => press.down('dash')} onpointerup={press.up} onpointercancel={press.up} onclick={goDashboard}>
+      onpointerdown={() => press.down('dash')} onpointerup={(event) => press.lift(event, goDashboard)} onpointercancel={press.up} onclick={() => press.click(goDashboard)}>
       <svg class="i-dash" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11 12 4.5 20 11v8.5H14.5V14h-5v5.5H4Z" /></svg>
     </button>
   {/if}
@@ -209,7 +205,8 @@
       <span class="fixed__level">100%</span>
     </div>
   {:else if volume}
-    <button class="btn mute" class:is-muted={muted} type="button" aria-label={muted ? 'Unmute' : 'Mute'} onclick={toggleMute}>
+    <button class="btn mute" class:is-muted={muted} type="button" aria-label={muted ? 'Unmute' : 'Mute'}
+      onpointerup={(event) => press.lift(event, toggleMute)} onclick={() => press.click(toggleMute)}>
       {#if muted}
         <!-- Round 2's muted glyph: the cone dimmed, crossed in amber. -->
         <span class="i-muted"><span class="i-muted__cone"></span><i></i><i></i></span>

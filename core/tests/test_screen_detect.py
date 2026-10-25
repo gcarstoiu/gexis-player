@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from gexis_core import screen_detect
+from gexis_core import screen_detect, screens
 
 EDID = (Path(__file__).parent / "data" / "edid-waveshare-10.1-hdmi-b.bin").read_bytes()
 
@@ -167,3 +167,83 @@ def test_a_panel_moved_away_from_the_applied_port_is_followed(tmp_path):
     """Applied on HDMI-A-1, now a receiver there and the panel on HDMI-A-2."""
     drm, usb = two_ports(tmp_path, _receiver_edid(), EDID)
     assert screen_detect.seen(drm, usb, prefer="HDMI-A-1").connector == "HDMI-A-2"
+
+
+def bedroompi(tmp_path, hdmi=None, drivers=(("10-0045", "rpi_touchscreen_attiny"), ("10-0038", "edt_ft5x06"))):
+    """ADR-0158: bedroompi as read 2026-10-23 - `card1-DSI-1` connected with
+    one mode and no EDID, the Touch Display's two I2C drivers bound, and both
+    HDMI ports (`hdmi`: an EDID on HDMI-A-1, or nothing)."""
+    drm = tmp_path / "drm"
+    dsi = drm / "card1-DSI-1"
+    dsi.mkdir(parents=True)
+    (dsi / "status").write_text("connected\n")
+    (dsi / "modes").write_text("800x480\n")
+    (dsi / "edid").write_bytes(b"")
+    for name, edid in (("card1-HDMI-A-1", hdmi), ("card1-HDMI-A-2", None)):
+        d = drm / name
+        d.mkdir()
+        (d / "status").write_text("connected\n" if edid else "disconnected\n")
+        (d / "edid").write_bytes(edid or b"")
+    i2c = tmp_path / "i2c"
+    for device, driver in drivers:
+        (tmp_path / "drivers" / driver).mkdir(parents=True)
+        (i2c / device).mkdir(parents=True)
+        (i2c / device / "driver").symlink_to(tmp_path / "drivers" / driver)
+    (i2c / "i2c-10").mkdir()  # a bus, not a device: no driver to read
+    (tmp_path / "usb").mkdir()
+    return drm, tmp_path / "usb", i2c
+
+
+def test_a_dsi_panel_is_a_port_before_the_hdmi_ones(tmp_path):
+    """ADR-0158 D3: listed first, with the panel's only mode and its I2C
+    drivers; no EDID."""
+    drm, usb, i2c = bedroompi(tmp_path)
+    ports = screen_detect.ports(drm, usb, i2c)
+    assert [(p.connector, p.connected) for p in ports] == [("DSI-1", True), ("HDMI-A-1", False), ("HDMI-A-2", False)]
+    dsi = ports[0]
+    assert dsi.dsi and dsi.preferred == (800, 480) and dsi.edid_maker is None and dsi.edid_name is None
+    assert dsi.panel == ("edt_ft5x06", "rpi_touchscreen_attiny")
+
+
+def test_bedroompi_s_panel_is_recognised_as_the_touch_display_class(tmp_path):
+    """ADR-0158 D2: the class, not a maker's model - nothing it reports tells
+    the Hosyond from the original or the other 21."""
+    drm, usb, i2c = bedroompi(tmp_path)
+    report = screen_detect.seen(drm, usb, prefer=None, i2c=i2c)
+    assert report.connector == "DSI-1"
+    assert screen_detect.suggest(report).id == screens.TOUCH_DISPLAY_CLASS
+
+
+def test_a_dsi_panel_without_the_touch_display_s_controller_is_not_named(tmp_path):
+    """A panel whose overlay was written (a Waveshare) answers with other
+    drivers: laid out from its mode, not named after the class."""
+    drm, usb, i2c = bedroompi(tmp_path, drivers=(("10-0014", "goodix"),))
+    assert screen_detect.suggest(screen_detect.seen(drm, usb, prefer=None, i2c=i2c)) is None
+
+
+def test_an_hdmi_screen_of_the_same_size_is_never_the_dsi_class(tmp_path):
+    """The HMTECH 7" is 800 x 480 too, and the I2C drivers are there: an HDMI
+    port is matched only by HDMI models."""
+    hmtech = bytearray(EDID)
+    hmtech[8], hmtech[9] = 0x20, 0x74          # PNP "HCT"
+    drm, usb, i2c = bedroompi(tmp_path, hdmi=bytes(hmtech))
+    hdmi = next(p for p in screen_detect.ports(drm, usb, i2c) if p.connector == "HDMI-A-1")
+    assert hdmi.panel == () and screen_detect.suggest(hdmi) is None
+    # Even a report that carried the drivers is not a DSI port.
+    from dataclasses import replace
+    assert screen_detect.suggest(replace(hdmi, panel=("rpi_touchscreen_attiny",), preferred=(800, 480))) is None
+
+
+def test_with_a_receiver_on_hdmi_the_dsi_panel_is_the_screen(tmp_path):
+    """ADR-0158 D3: the panel on the ribbon, the receiver for sound."""
+    drm, usb, i2c = bedroompi(tmp_path, hdmi=_receiver_edid())
+    assert screen_detect.seen(drm, usb, prefer=None, i2c=i2c).connector == "DSI-1"
+    assert screen_detect.seen(drm, usb, prefer="HDMI-A-1", i2c=i2c).connector == "DSI-1", \
+        "a known panel wins over the port applied last, as on HDMI"
+
+
+def test_the_dsi_panel_s_touch_is_its_own(tmp_path):
+    """Keep this screen? on the panel itself (ADR-0158, settled 5): the class
+    and the Hosyond have an I2C touch the player recognises."""
+    for screen_id in (screens.TOUCH_DISPLAY_CLASS, "hosyond-7-dsi"):
+        assert screen_detect.has_touch(screen_id) and screen_detect.touch_recognised(screen_id), screen_id

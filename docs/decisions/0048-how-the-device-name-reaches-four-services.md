@@ -202,3 +202,24 @@ toast says the device is restarting and the address it comes back on
 callback: first-time setup writes the same row and finishes on its own
 terms. A save that does not change the name restarts nothing.
 
+## Amended 2026-10-23: choosing a Lyrion server restarts the core
+
+The Lyrion server is the other row read only at the core's start
+(`_chosen_server`), and it had kept this record's first form: saved, with
+*"set — restart to use it"* in a toast that lasts a few seconds. On
+bedroompi, after a card from an earlier life updated itself to 1.4.0, the
+core went on asking a server address that had moved to another machine,
+every 5 s for an hour; George chose the right server in Settings at 19:51
+and nothing changed, so there was no library, no New Music strip and no
+Lyrion on the waiting screen. A restart of the core by hand at 19:55 used
+the chosen server at once.
+
+George, asked whether choosing a server should take effect at once:
+*"Yes"*. The row carries `restart: "core"`: the settings route restarts
+the core (not the device) 1.5 s after answering a save that changed the
+server, as part 2 of first use already does (ADR-0149 decision 37), so
+the toast reaches whoever saved it: *"Server saved. The player is
+restarting to use it."* From Settings only, as for the name: setup writes
+the same row through `Settings.set` and restarts on its own terms. The
+same server again restarts nothing.
+

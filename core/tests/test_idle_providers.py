@@ -290,19 +290,26 @@ async def test_a_picture_is_downloaded_rather_than_hotlinked(tmp_path):
     assert asked["min_width"] == 1280
 
 
-async def test_a_bar_is_given_wide_pictures_and_the_usual_ones_without_any(tmp_path):
+async def test_a_bar_is_given_wide_pictures_among_the_usual_ones(tmp_path):
     """George, 2026-10-04 ("C"): a bar's wallpapers in a bar's shape - at
-    least 2.4 to 1, from a bigger page asked for at a lower height."""
+    least 2.4 to 1, from a bigger page asked for at a lower height. ADR-0120
+    amended 2026-10-23 (George: "1"): **beside the usual pictures, not
+    instead of them** - one panorama in a page had ShelvesPi showing the
+    same snail every minute for five days."""
     wide = {**hit(1, "nature"), "imageWidth": 6000, "imageHeight": 2000}
-    usual = {**hit(2, "nature"), "imageWidth": 1920, "imageHeight": 1080}
-    session = FakeSession(pixabay({"nature": [usual, wide]}))
+    usual = [{**hit(n, "nature"), "imageWidth": 1920, "imageHeight": 1080} for n in (2, 3, 4)]
+    session = FakeSession(pixabay({"nature": [*usual, wide]}))
     source = Wallpapers(session, tmp_path)
-    for _ in range(10):
-        assert (await source.next("key", ["Nature"], wide=True))["file"] == "1.jpg"
+    # Four pictures, four refreshes: each once, the panorama one of them.
+    shown = [(await source.next("key", ["Nature"], wide=True))["file"] for _ in range(4)]
+    assert sorted(shown) == ["1.jpg", "2.jpg", "3.jpg", "4.jpg"]
+    # And the round starts again rather than stopping on one picture.
+    again = [(await source.next("key", ["Nature"], wide=True))["file"] for _ in range(4)]
+    assert sorted(again) == ["1.jpg", "2.jpg", "3.jpg", "4.jpg"]
     asked = [p for url, p in session.calls if "/api/" in url]
-    assert asked[0]["per_page"] == 200 and asked[0]["min_height"] == 400
-    # None wide: the usual pictures, which the idle screen crops to the bar.
-    session = FakeSession(pixabay({"nature": [usual]}))
+    assert sorted((p["per_page"], p["min_height"]) for p in asked) == [(200, 400), (200, 800)]
+    # None wide: the usual pictures, which the idle screen places on the bar.
+    session = FakeSession(pixabay({"nature": usual[:1]}))
     assert (await Wallpapers(session, tmp_path / "b").next("key", ["Nature"], wide=True))["file"] == "2.jpg"
 
 

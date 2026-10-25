@@ -525,3 +525,13 @@ panel on HDMI-A-2. A `Maximize` rule fixed it on either port.
 rule, ahead of `Maximize`, instead of writing a rule of its own. The meter
 shows black for about three seconds while it loads after a skin change; that
 was judged acceptable and is not gated.
+
+## Amended 2026-10-23 (ADR-0158): DSI screens too
+
+*HDMI only, for now* ends: every DSI model in the list but five is offered
+([ADR-0158](0158-dsi-screens.md) D1, George: *"For all that we have in the
+dsi list that we deferred until now"*). A DSI model that needs its overlay
+has it written in a block of our own at the end of `config.txt`, with the
+restart and *Keep this screen?* of decision 5 and the same way back; a model
+picked from the list is shown by its own name, and a recognised panel not
+yet chosen as *Raspberry Pi Touch Display or compatible* (D2).

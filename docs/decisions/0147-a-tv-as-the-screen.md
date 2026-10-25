@@ -200,3 +200,10 @@ model's id, so a panel kept under its old `-case` id keeps its touch, #8) and
 `phone` (not `screen_detect.touch_recognised`, the fingerprint test that
 `has_touch` was until now). Scheduled display standby no longer blanks the
 screen while the question is up, and drawing it wakes a dark screen (#17).
+
+## Amended 2026-10-23 (ADR-0158): a TV chosen over a DSI panel
+
+An HDMI port chosen under *Screen port* wins over a connected DSI panel as it
+does over a panel on the other HDMI port: the DSI panel is switched off and
+its I2C touch ignored by udev, by its driver ([ADR-0158](0158-dsi-screens.md)
+D3, George: *"User can still switch if he wants though"*).

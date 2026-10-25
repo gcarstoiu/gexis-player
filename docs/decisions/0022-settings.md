@@ -111,7 +111,7 @@ Phase 2 and ADR-0027.
 | `steps.per.degree` override | [R] | ADR-0015, deferred to a spike; may not survive as a user setting |
 | Theme | [R] | Should tier |
 | Headless — disable the local screen | [R] | **Wired 2026-09-25** ([ADR-0077](0077-a-source-that-is-off-is-not-running.md)). Must. Three units, not one: the kiosk, the visualiser, and the panel warm-up that is pure boot cost without a kiosk to warm for. The core, the phone UI and audio are untouched. **Turning it on from the panel closes the panel**; it is reversible from a phone, and only from a phone. Measured on the device: 12 s to the panel gone, 20 s to it back **Hides every setting that needs a screen, 2026-10-05** (George, on the Settings copy review): Home screen, Idle screen, Visualiser and its tweaks, the two volume-drawer rows, the transition screen and all of Enrichment - by the headings' and the group's conditions ([ADR-0044](0044-settings-row-vocabulary.md), amended the same day). Attached screen and rotation stay, with the switch. Plugins' *Visualiser skins* hides with them, by its heading (George, the same day); Attached screen and rotation stay. |
-| Screen brightness | [N] | The panel never sleeps by decision (ADR-0019); brightness is a separate question that record does not answer |
+| Screen brightness | [R] | The panel never sleeps by decision (ADR-0019); brightness is a separate question that record does not answer. **Recorded 2026-10-23, confirmed by George** ([ADR-0158](0158-dsi-screens.md) D5: *"Agreed"*): under Display, shown only on a screen whose backlight the player can set (a DSI panel today), hidden on HDMI; 10-100 %, default 100 %, applied at once |
 | Display standby: Scheduled standby, Standby times, Back to standby after | [N] | **Appended 2026-10-11, confirmed by George** ([ADR-0135](0135-display-standby.md), amending ADR-0019's "the panel does not sleep"): a section of its own. *Turn the screen off* was a row too until the same day (George: the phone's button "is enough"); the schedule (off by default) at up to six owner-set times with days (default 23:00-07:00 every day); a woken screen back off after 2 min unused (1-30) |
 | Elapsed vs remaining time | [N] | Both are published |
 | Show the transition screen at all | [R] | **Wired 2026-09-25**, with the screen's length beside it. Off means a takeover changes screen with no announcement |
@@ -298,7 +298,7 @@ recognition.
 |---|---|---|
 | Attached screen | [N] | A choice from the list of supported screens (grouped by maker, from `foonerd/pi_screen_setup`'s presets, Finding 100). Sets the layout family (Standard or Bar) and the visualiser's skin set. The same list as setup's Screen step, where a recognised screen is confirmed or another chosen. Applies at the next restart |
 | Screen rotation | [N] | 0° / 180° (ADR-0109 decision 6, George 2026-09-30: portrait is not designed). 0° is the model's landscape: the two bar screens are portrait panels used sideways (Finding 100), and their list entry carries that turn. Applies at the next restart |
-| Screen port | [R] | HDMI 1 / HDMI 2 - which port the screen is on; the picker says what is on each port, and a port with nothing connected is greyed (ADR-0141 D2/D4; George, 2026-10-12: *"I agree to both"*, then *"collapse the 3 hdmi tiles into 1"*). With one port connected the cable decides. Applies at once with a restart and *Keep this screen?*. On a board with one HDMI port: information only (`screen_port_info`) |
+| Screen port | [R] | HDMI 1 / HDMI 2 - which port the screen is on; the picker says what is on each port, and a port with nothing connected is greyed (ADR-0141 D2/D4; George, 2026-10-12: *"I agree to both"*, then *"collapse the 3 hdmi tiles into 1"*). With one port connected the cable decides. Applies at once with a restart and *Keep this screen?*. On a board with one HDMI port: information only (`screen_port_info`). **DSI added 2026-10-23, confirmed by George** ([ADR-0158](0158-dsi-screens.md) D3: *"Agreed. User can still switch if he wants though."*): with a DSI panel connected, *DSI* is listed beside the HDMI ports and is the default; an HDMI port chosen wins |
 
 ### Appended 2026-10-04 — Phase 13d's row
 
@@ -321,7 +321,7 @@ Confirmed by George, 2026-10-04 (*"Yes you can"*):
 
 | Setting | Mark | Notes |
 |---|---|---|
-| Bar wallpaper shape and crop | [H] | On a bar, Pixabay pictures at least 2.4 times as wide as tall are preferred, from a 200-result page at 400 px minimum height, falling back to the usual ones; the idle screen fills a bar with any picture it can crop by up to 70 %, framed at 35 % from the top (George, "C"). Fixed values, not rows |
+| Bar wallpaper shape and crop | [H] | On a bar, Pixabay pictures at least 2.4 times as wide as tall, from a 200-result page at 400 px minimum height, are mixed in with the usual ones (ADR-0120 amended 2026-10-23); the idle screen fills a bar with any picture it can crop by up to 70 %, framed at 35 % from the top (George, "C"). Fixed values, not rows |
 
 ### Appended 2026-10-10 — the waiting screen and the player's own wallpapers
 

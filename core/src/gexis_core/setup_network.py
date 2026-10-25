@@ -100,10 +100,11 @@ def needs_setup(saved_wifi: int, marker: Path = DONE_MARKER) -> bool:
 
 
 def panel_attached(drm: Path = DRM) -> bool:
-    """A screen on an HDMI connector. The panel is on `HDMI-A-1` on gexis;
-    whichever one it is on, a connected status is what counts."""
+    """A screen on an HDMI connector, or a DSI panel (ADR-0158). The panel is
+    on `HDMI-A-1` on gexis; whichever one it is on, a connected status is
+    what counts."""
     try:
-        connectors = list(drm.glob("card*-HDMI-A-*"))
+        connectors = list(drm.glob("card*-HDMI-A-*")) + list(drm.glob("card*-DSI-*"))
     except OSError:
         return False
     for connector in connectors:

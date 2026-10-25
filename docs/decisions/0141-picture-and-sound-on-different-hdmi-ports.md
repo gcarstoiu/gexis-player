@@ -157,3 +157,9 @@ port in the Output picker: the device on it - the screen by its model, a TV or
 receiver by the name its ELD gives - and the highest PCM rate and size it
 takes, or *takes no sound*. Only PCM, since the Pi sends nothing else over
 HDMI and two channels until Phase 15 (`ph-mpd`). No setting.
+
+## Amended 2026-10-23 (ADR-0158): a DSI panel beside the HDMI ports
+
+With a DSI panel connected it is the screen and both HDMI ports may carry
+sound; *Screen port* lists *DSI* beside *HDMI 1* and *HDMI 2*
+([ADR-0158](0158-dsi-screens.md) D3).

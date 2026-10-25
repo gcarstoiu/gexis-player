@@ -2,6 +2,23 @@
 
 > **Amended 2026-10-07: Pexels removed** (George: *"remove pexels completely as they are not providing API keys anymore"*). Its source, row and key are gone; Pixabay is the online wallpaper source. The Pexels parts below are history.
 
+> **Amended 2026-10-23: on a bar, the wide pictures join the usual ones**
+> (George: *"lets go with 1"*). Until now a bar showed only Pixabay's
+> pictures at least 2.4 to 1 and fell back to the usual ones only when there
+> were none. ShelvesPi's log and its wallpaper state, 2026-10-23: with
+> *Nature* and *Animals*, the wide pages held 0 pictures from 16 to 18
+> October and **one** from 19 October, the same Roman snail in both, so the
+> bar showed that snail at every change (one a minute) for five days; the
+> usual pages held 200 each and were not asked for after 18 October. Asking
+> more often is not open (one request per topic per day, Finding 043), and
+> about one picture in 200 is that wide. So a bar's pool for a topic is its
+> wide page and its usual page together, each picture once, none twice
+> until all have been shown. The usual ones are placed by §1 and skipped by
+> §2: on ShelvesPi, 16-18 October, 1,654 pictures were placed and 349
+> passed over as too big for the band. Rejected: wide only above a pool
+> size (in practice nearly always the usual ones) and a fallback below
+> three (two or three pictures taking turns all day). No setting.
+
 **Status:** **Accepted** — George, 2026-10-05, on the comparison page
 *Bar Backgrounds* and in the session: *"Let's do this but with some
 modifications"*, then **1.a**, **2. agreed**, **3. that is fine for pexels -
