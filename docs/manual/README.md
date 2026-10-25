@@ -330,10 +330,13 @@ What Home Assistant gets:
 - **A media player**: playing, paused or idle; title, artist, album, artwork
   and position; play, pause, next and previous when the source playing
   offers them, shuffle and repeat where it has them; volume and mute, unless
-  the output is fixed; the source, from those that can take over.
+  the output is fixed; the source playing (each source is taken over from
+  its own app, as on the player).
 - **On a player with a screen, three switches**: *Screen* (off is display
   standby), *Dashboard* (the dashboard above, up or down; unavailable until
-  its address is set) and *Visualiser*.
+  its address is set) and *Visualiser*; **and three buttons**: *Home*, *Now
+  playing* and *Lyrics*, which open them on the screen (the last two while a
+  source is active).
 
 It needs Home Assistant 2026.3 or later and a player newer than 1.4.0; an
 older player is found and asked to update. With Home Assistant's own

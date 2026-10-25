@@ -311,8 +311,9 @@ Yes, with the *Gexis Player* integration, installed in Home Assistant through
 HACS from
 [gexis-player-homeassistant](https://github.com/gcarstoiu/gexis-player-homeassistant).
 Each player is found on the network and shows as a media player - what plays,
-with its artwork, the transport, volume and the source - and, on a player
-with a screen, as switches for the screen, the dashboard and the visualiser.
+with its artwork, the transport, volume and the source playing - and, on a
+player with a screen, as switches for the screen, the dashboard and the
+visualiser, and buttons for Home, Now Playing and Lyrics.
 The player changes nothing in Home Assistant. The manual's *The player in
 Home Assistant* has the steps.
 
