@@ -86,6 +86,12 @@ server answers first after a restart (Finding 130 point 6). GitHub reported
 player), raised 20-21 Oct.
 
 **Open:**
+- **`screen-name-tile`** (from `next`, worktree
+  `~/projects/gexis-player-screen-name`, 2026-10-25): Settings' *Attached
+  screen* tile showed the stored `Maker/Model` and broke mid-word (a DSI
+  panel read "Raspberry Pi/Touch Display or compati / ble" on a phone, in
+  1.5.0); now maker and model, wrapping between words. Checked with mocked
+  data at the phone's, panel's and bar's size; waits for George's preview.
 - **Not checked:** iOS's handling of `interactive-widget` (the mini player
   on the phone's keyboard); Android's is.
 - **The visualiser made cheaper, the rest left** (Finding 134; George,
