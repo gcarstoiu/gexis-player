@@ -1,6 +1,10 @@
 # ADR-0162 — A simple equaliser
 
-**Status:** **Proposed** — 2026-10-25. Phase 20 (`ph-equaliser`). The
+**Status:** **Built** — 2026-10-26, on `ph-equaliser`, not yet measured
+through a card or tried by George (below, *Built*). The settings confirmed by
+George on 2026-10-25 (ADR-0022); the design received the same day
+(`design/source/20`, look 3a). The decisions George left to Claude are listed
+under *Built* for his confirmation. Proposed 2026-10-25. Phase 20 (`ph-equaliser`). The
 product decisions are George's, the same day (below); the technical ones are
 proposed and are confirmed or changed by the phase's first measurement, then
 recorded here: its silent part, the same day
@@ -142,7 +146,7 @@ stable once the phase closes.
 
 ## Settings (ADR-0022)
 
-Proposed, not appended until George confirms:
+Confirmed by George, 2026-10-25, and appended to ADR-0022:
 
 - **[N] Equaliser** - on / off, per output; off by default.
 - **[N] Equaliser preset** - one of the presets or the owner's settings, per
@@ -165,3 +169,72 @@ Proposed, not appended until George confirms:
   and 22).
 - The equaliser from Home Assistant (a preset to choose): possible once D9's
   route exists.
+
+## Built (2026-10-26)
+
+George, 2026-10-25: implement, with the decisions left to Claude stored and
+shown to him at the end for confirmation; the measurement through a card
+after the implementation. What was built: `equaliser.py` (the bands,
+presets, state, headroom, CamillaDSP's configuration), `eq_engine.py` (the
+loopback and CamillaDSP), `eq_control.py` (the store, `/state`, the routes),
+`outputs.render(eq=True)`, `gexis-camilladsp` 4.1.3 and
+`gexis-equaliser.service`, `snd-aloop` at boot; the editor and the quick
+change in `ui/src/screens/eq/`, the volume drawer, the bar's tray and the
+phone's mini player.
+
+### Claude's decisions, for George's confirmation
+
+The sound:
+
+- **C1 — Ten Peaking filters** at the design's centres (31.25 × 2ⁿ Hz),
+  Q √2, all ten always in the pipeline (Finding 138; D1).
+- **C2 — A rate change restarts CamillaDSP at the stream's rate** (D6 as
+  changed): 12-24 ms off the start of a stream, up to a chunk off its end, at
+  every change of rate and every resume after a pause.
+- **C3 — A rate the card lacks is converted in CamillaDSP to the card's
+  highest** (AsyncSinc), as Squeezelite's own resampler did before: with
+  the equaliser on, Squeezelite sees the loopback, which takes every rate.
+- **C4 — The headroom is the worse of 44.1 and 48 kHz, rounded strictly up
+  to 0.5 dB** (the higher rates come within 0.01 dB): the design's drawing
+  rounds 0.05 dB the other way, so one of the design's sample settings reads
+  3 dB here against its 2.5. It moves on a fader that ramps over 200 ms; a
+  rising headroom moves before the boost.
+- **C5 — The design's open point on the line and the note**: the note stays
+  as D3 has it (from the filters, where neighbouring boosts add up), so
+  Rock's line tops out at +4 while its note says 5 dB.
+- **C6 — The loopback is always loaded** (`snd-aloop`, one substream, by its
+  id), and never offered as an output.
+- **C7 — Switching it on or off restarts the renderers**, as a change of
+  the visualiser's tuning does: what is playing stops. Whether each source
+  then carries on by itself is for the device to show.
+- **C8 — Native DSD goes past it** through `alsaloop`, untouched; to be
+  tried with a DSD file (D7).
+- **C9 — With the equaliser on, the meter sits over the loopback**, so the
+  visualiser moves on HDMI at any volume type, not only on Software.
+- **C10 — CamillaDSP runs as `pi`/`audio`, at nice −10**, its websocket on
+  127.0.0.1:1234; the state is one internal key in the settings database
+  (backed up and wiped with the settings), each output by its card's id.
+
+What the owner sees:
+
+- **C11 — Delete sends an output that uses it back to Flat** (the design's
+  open point); Custom moved from it keeps its bands.
+- **C12 — Bands moved back to the setting's own levels are that setting
+  again**, not Custom.
+- **C13 — Names are unique** (ignoring case, the presets' included), up to
+  40 characters; *My setting n* is offered.
+- **C14 — Edit in the quick change opens the editor as a screen of its
+  own**; Back returns to where it was opened. *Settings → Audio → Equaliser*
+  opens the same editor inside Settings, and the row says what is in use
+  (*Off*, *Rock*, *Custom*).
+- **C15 — On the D-pad a band is an upright slider**: Up and Down move it,
+  Left and Right go to its neighbours.
+- **C16 — The routes are *internal*** until the phase closes, then
+  *stable* (D9).
+
+### Not yet done
+
+- The measurement through a card (*Measured before it is called done*),
+  and George's ear on the presets, a dragged band and a stream's edges.
+- The manual's picture of the volume drawer still shows it before the
+  equaliser's row; retaken with the demo library on the preview player.

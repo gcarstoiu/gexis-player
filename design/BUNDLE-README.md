@@ -45,6 +45,17 @@ Not final, and marked so: the QR codes (placeholders), the setup password
 name; the animated skins are not in the repo), and the screen models in the
 Screen step's list (samples from `foonerd/pi_screen_setup`, Finding 100).
 
+## Phase 20 — the equaliser (2026-10-25)
+
+Open `design/source/20/Equaliser Board.dc.html` and read
+`design/source/20/README.md`, which is self-contained. The editor on the
+panel, the bars and the phone, and the quick change in the volume drawer, the
+bar's tray and the phone's tray. **George chose look 3a (Ridge)**; it is the
+default in the prototype, and the board's Turn 2 and Turn 3 options are not
+to be built. New: the glide between settings. Tokens under *Phase 20* in
+`design/tokens.css`. Two points are open for George (the README's *Open*).
+`Now Playing` and `Settings` are unchanged.
+
 ## Round 2 — what changed on 2026-10-01
 
 Open `13b/Screen Families Round 2.dc.html`. Its width buttons put every bar

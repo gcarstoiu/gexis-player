@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas" />
+<style>
+@font-face{font-family:'Nunito Sans';src:url('../../fonts/NunitoSans-Variable.woff2') format('woff2-variations'),url('../../fonts/NunitoSans-Variable.woff2') format('woff2');font-weight:300 800;font-display:block;}
+@font-face{font-family:'IBM Plex Mono';src:url('../../fonts/IBMPlexMono-Regular.woff2') format('woff2');font-weight:400;font-display:block;}
+@font-face{font-family:'IBM Plex Mono';src:url('../../fonts/IBMPlexMono-SemiBold.woff2') format('woff2');font-weight:500 600;font-display:block;}
+@font-face{font-family:'IBM Plex Mono';src:url('../../fonts/IBMPlexMono-Bold.woff2') format('woff2');font-weight:700;font-display:block;}
+html,body{margin:0;padding:0;background:#0c1014;}a{color:#7ed6bc;}a:hover{color:#a8e5d3;}
+</style>
+</helmet>
+<section data-screen-label="Turn 3 · Five more looks" style="background:#0c1014;color:#e9eef2;font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif;padding:56px 56px 40px;box-sizing:border-box;display:flex;flex-direction:column;gap:40px;border-bottom:1px solid rgba(233,238,242,0.12);">
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:940px;">
+    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#7ed6bc;">Phase 20 · turn 3</div>
+    <div style="font-size:44px;font-weight:700;letter-spacing:-0.015em;">Five more looks</div>
+    <div style="font-size:18px;line-height:1.5;color:rgba(233,238,242,0.72);text-wrap:pretty;">Five more ways to draw the bands, further apart from each other than turn 2. Each artboard is live: drag a band, pick a setting. As in turn 2, the line runs through the knobs, so it stays flat between two bands at the same level.</div>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:56px 48px;align-items:flex-start;">
+    <sc-for list="{{ looks3 }}" as="o" hint-placeholder-count="3">
+      <div id="{{ o.id }}" style="display:flex;flex-direction:column;gap:20px;width:1280px;">
+        <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
+          <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:600;padding:3px 9px;border-radius:999px;background:#e9eef2;color:#0c1014;">{{ o.id }}</span>
+          <span style="font-size:22px;font-weight:700;white-space:nowrap;">{{ o.label }}</span>
+          <span style="font-size:15px;color:rgba(233,238,242,0.62);text-wrap:pretty;">{{ o.note }}</span>
+        </div>
+        <sc-for list="{{ o.states }}" as="a" hint-placeholder-count="2">
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;color:rgba(233,238,242,0.6);">{{ a.cap }}</div>
+            <div data-shot="{{ a.id }}" style="position:relative;width:1280px;height:800px;overflow:hidden;border-radius:6px;background:#101a21;">
+              <sc-if value="{{ a.mounted }}" hint-placeholder-val="{{ false }}"><dc-import name="Equaliser" surface="panel" look="{{ a.look }}" on="{{ a.on }}" sel="{{ a.sel }}" from="{{ a.from }}" drag="{{ a.drag }}" sheet="{{ a.sheet }}" full="{{ a.full }}" fixed="{{ a.fixed }}" dsd="{{ a.dsd }}" output="{{ a.output }}" hint-size="1280px,800px" style="position:absolute;left:0;top:0;width:1280px;height:800px;"></dc-import></sc-if>
+              <sc-if value="{{ a.waiting }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.4);">Loads in view</div></sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-for>
+  </div>
+</section>
+<section data-screen-label="Turn 2 · How the bands look" style="background:#0c1014;color:#e9eef2;font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif;padding:56px 56px 40px;box-sizing:border-box;display:flex;flex-direction:column;gap:40px;border-bottom:1px solid rgba(233,238,242,0.12);">
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:940px;">
+    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#7ed6bc;">Phase 20 · turn 2</div>
+    <div style="font-size:44px;font-weight:700;letter-spacing:-0.015em;">How the bands look</div>
+    <div style="font-size:18px;line-height:1.5;color:rgba(233,238,242,0.72);text-wrap:pretty;">Three ways to draw the bands on the panel. Each artboard is live: drag a band, pick a setting. In all three the line runs through the knobs, so two neighbouring bands at the same level are joined flat instead of dipping between them. The headroom note is still worked out from the ten filters.</div>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:56px 48px;align-items:flex-start;">
+    <sc-for list="{{ looks }}" as="o" hint-placeholder-count="3">
+      <div id="{{ o.id }}" style="display:flex;flex-direction:column;gap:20px;width:1280px;">
+        <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
+          <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:600;padding:3px 9px;border-radius:999px;background:#e9eef2;color:#0c1014;">{{ o.id }}</span>
+          <span style="font-size:22px;font-weight:700;white-space:nowrap;">{{ o.label }}</span>
+          <span style="font-size:15px;color:rgba(233,238,242,0.62);text-wrap:pretty;">{{ o.note }}</span>
+        </div>
+        <sc-for list="{{ o.states }}" as="a" hint-placeholder-count="2">
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;color:rgba(233,238,242,0.6);">{{ a.cap }}</div>
+            <div data-shot="{{ a.id }}" style="position:relative;width:1280px;height:800px;overflow:hidden;border-radius:6px;background:#101a21;">
+              <sc-if value="{{ a.mounted }}" hint-placeholder-val="{{ false }}"><dc-import name="Equaliser" surface="panel" look="{{ a.look }}" on="{{ a.on }}" sel="{{ a.sel }}" from="{{ a.from }}" drag="{{ a.drag }}" sheet="{{ a.sheet }}" full="{{ a.full }}" fixed="{{ a.fixed }}" dsd="{{ a.dsd }}" output="{{ a.output }}" hint-size="1280px,800px" style="position:absolute;left:0;top:0;width:1280px;height:800px;"></dc-import></sc-if>
+              <sc-if value="{{ a.waiting }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.4);">Loads in view</div></sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-for>
+  </div>
+</section>
+<section data-screen-label="Turn 1 · Equaliser" style="min-height:100vh;background:#0c1014;color:#e9eef2;font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif;padding:56px 56px 120px;box-sizing:border-box;display:flex;flex-direction:column;gap:64px;">
+
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:940px;">
+    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#7ed6bc;">Phase 20 · brief 20</div>
+    <div style="font-size:44px;font-weight:700;letter-spacing:-0.015em;">The equaliser</div>
+    <div style="font-size:18px;line-height:1.5;color:rgba(233,238,242,0.72);text-wrap:pretty;">The editor in Settings → Audio → Equaliser on the panel, the bars and the phone, then the quick change in the volume drawer and the two trays. Every artboard is live: drag a band, pick a setting, save, rename or delete. Drawn in 3a, the look George chose. The line runs through the ten knobs; the headroom note is worked out from the ten filters the player runs.</div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:14px;max-width:1280px;">
+    <div style="font-size:26px;font-weight:700;border-bottom:1px solid rgba(233,238,242,0.12);padding-bottom:12px;">Calls made in the drawing</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px 32px;font-size:15px;line-height:1.5;color:rgba(233,238,242,0.82);">
+      <sc-for list="{{ calls }}" as="c" hint-placeholder-count="6">
+        <div style="display:flex;flex-direction:column;gap:6px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">{{ c.h }}</div><div style="text-wrap:pretty;">{{ c.t }}</div></div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:20px;">
+    <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;border-bottom:1px solid rgba(233,238,242,0.12);padding-bottom:12px;">
+      <div style="font-size:26px;font-weight:700;">The editor on the panel</div>
+      <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;color:rgba(233,238,242,0.6);">1280 × 800 · Settings → Audio → Equaliser</div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:40px 36px;align-items:flex-start;">
+      <sc-for list="{{ panel }}" as="a" hint-placeholder-count="4">
+        <div id="{{ a.id }}" style="display:flex;flex-direction:column;gap:12px;width:1280px;">
+          <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:600;padding:3px 9px;border-radius:999px;background:#e9eef2;color:#0c1014;">{{ a.id }}</span>
+            <span style="font-size:20px;font-weight:700;white-space:nowrap;">{{ a.label }}</span>
+            <span style="font-size:15px;color:rgba(233,238,242,0.62);">{{ a.note }}</span>
+          </div>
+          <div data-shot="{{ a.id }}" style="position:relative;width:1280px;height:800px;overflow:hidden;border-radius:6px;background:#101a21;">
+            <sc-if value="{{ a.mounted }}" hint-placeholder-val="{{ false }}"><dc-import name="Equaliser" surface="panel" on="{{ a.on }}" sel="{{ a.sel }}" from="{{ a.from }}" drag="{{ a.drag }}" sheet="{{ a.sheet }}" full="{{ a.full }}" fixed="{{ a.fixed }}" dsd="{{ a.dsd }}" output="{{ a.output }}" hint-size="1280px,800px" style="position:absolute;left:0;top:0;width:1280px;height:800px;"></dc-import></sc-if>
+            <sc-if value="{{ a.waiting }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.4);">Loads in view</div></sc-if>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:20px;">
+    <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;border-bottom:1px solid rgba(233,238,242,0.12);padding-bottom:12px;">
+      <div style="font-size:26px;font-weight:700;">The editor on the bars</div>
+      <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;color:rgba(233,238,242,0.6);">11.9″: the 1850 × 400 page at 0.8, 1480 × 320 · 7.9″: 1280 × 400</div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:40px 36px;align-items:flex-start;">
+      <sc-for list="{{ bars }}" as="a" hint-placeholder-count="3">
+        <div id="{{ a.id }}" style="display:flex;flex-direction:column;gap:12px;width:{{ a.fw }}px;">
+          <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:600;padding:3px 9px;border-radius:999px;background:#e9eef2;color:#0c1014;">{{ a.id }}</span>
+            <span style="font-size:20px;font-weight:700;white-space:nowrap;">{{ a.label }}</span>
+            <span style="font-size:15px;color:rgba(233,238,242,0.62);">{{ a.note }}</span>
+          </div>
+          <div data-shot="{{ a.id }}" style="position:relative;overflow:hidden;border-radius:6px;background:#101a21;width:{{ a.fw }}px;height:{{ a.fh }}px;">
+            <div style="position:absolute;left:0;top:0;height:400px;transform-origin:0 0;width:{{ a.w }}px;transform:scale({{ a.scale }});">
+              <sc-if value="{{ a.mounted }}" hint-placeholder-val="{{ false }}"><dc-import name="Equaliser" surface="bar" on="{{ a.on }}" sel="{{ a.sel }}" from="{{ a.from }}" drag="{{ a.drag }}" sheet="{{ a.sheet }}" full="{{ a.full }}" fixed="{{ a.fixed }}" dsd="{{ a.dsd }}" output="{{ a.output }}" hint-size="100%,400px" style="position:absolute;inset:0;"></dc-import></sc-if>
+              <sc-if value="{{ a.waiting }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.4);">Loads in view</div></sc-if>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:20px;">
+    <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;border-bottom:1px solid rgba(233,238,242,0.12);padding-bottom:12px;">
+      <div style="font-size:26px;font-weight:700;">The editor on the phone</div>
+      <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;color:rgba(233,238,242,0.6);">412 × 915 · ten rows, each 52 px tall, with the pull-up tray closed under them</div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:40px 32px;align-items:flex-start;">
+      <sc-for list="{{ phone }}" as="a" hint-placeholder-count="4">
+        <div id="{{ a.id }}" style="display:flex;flex-direction:column;gap:12px;width:412px;">
+          <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;min-height:56px;align-content:flex-start;">
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:600;padding:3px 9px;border-radius:999px;background:#e9eef2;color:#0c1014;">{{ a.id }}</span>
+            <span style="font-size:18px;font-weight:700;">{{ a.label }}</span>
+            <span style="font-size:14px;color:rgba(233,238,242,0.62);">{{ a.note }}</span>
+          </div>
+          <div data-shot="{{ a.id }}" style="position:relative;width:412px;height:915px;overflow:hidden;border-radius:6px;background:#101a21;">
+            <sc-if value="{{ a.mounted }}" hint-placeholder-val="{{ false }}"><dc-import name="Equaliser" surface="phone" on="{{ a.on }}" sel="{{ a.sel }}" from="{{ a.from }}" drag="{{ a.drag }}" sheet="{{ a.sheet }}" full="{{ a.full }}" fixed="{{ a.fixed }}" dsd="{{ a.dsd }}" output="{{ a.output }}" screen="{{ a.screen }}" shift="{{ a.shift }}" hint-size="412px,915px" style="position:absolute;left:0;top:0;width:412px;height:915px;"></dc-import></sc-if>
+            <sc-if value="{{ a.waiting }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.4);">Loads in view</div></sc-if>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:20px;">
+    <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;border-bottom:1px solid rgba(233,238,242,0.12);padding-bottom:12px;">
+      <div style="font-size:26px;font-weight:700;">Quick change, close to the music</div>
+      <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;color:rgba(233,238,242,0.6);">the volume drawer on Now Playing · the bar’s tray · the phone’s pull-up tray</div>
+    </div>
+    <div style="font-size:15px;line-height:1.5;color:rgba(233,238,242,0.72);max-width:940px;text-wrap:pretty;">Each shows the setting in use, lists the presets and then the owner’s own sideways, turns the equaliser on and off, and has Edit for the whole of it. The screens under them are pictures of the locked designs.</div>
+    <div style="display:flex;flex-wrap:wrap;gap:40px 36px;align-items:flex-start;">
+      <sc-for list="{{ quick }}" as="a" hint-placeholder-count="4">
+        <div id="{{ a.id }}" style="display:flex;flex-direction:column;gap:12px;width:{{ a.fw }}px;">
+          <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;min-height:28px;">
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:600;padding:3px 9px;border-radius:999px;background:#e9eef2;color:#0c1014;">{{ a.id }}</span>
+            <span style="font-size:18px;font-weight:700;">{{ a.label }}</span>
+            <span style="font-size:14px;color:rgba(233,238,242,0.62);">{{ a.note }}</span>
+          </div>
+          <div data-shot="{{ a.id }}" style="position:relative;overflow:hidden;border-radius:6px;background:#101a21;width:{{ a.fw }}px;height:{{ a.fh }}px;">
+            <div style="position:absolute;left:0;top:0;transform-origin:0 0;width:{{ a.w }}px;height:{{ a.h }}px;transform:scale({{ a.scale }});">
+              <sc-if value="{{ a.mounted }}" hint-placeholder-val="{{ false }}"><dc-import name="EQ Quick" host="{{ a.host }}" w="{{ a.w }}" on="{{ a.on }}" sel="{{ a.sel }}" open="{{ a.open }}" dsd="{{ a.dsd }}" fixed="{{ a.fixed }}" screen="{{ a.screen }}" hint-size="100%,100%" style="position:absolute;inset:0;"></dc-import></sc-if>
+              <sc-if value="{{ a.waiting }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.4);">Loads in view</div></sc-if>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const D = { on: true, sel: 'rock', from: 'rock', drag: -1, sheet: 'none', full: false, fixed: false, dsd: false, output: 'dac', screen: true, shift: 0 };
+const PANEL = [
+  { id: 'E01', label: 'On, with a preset', note: 'Rock' },
+  { id: 'E02', label: 'On, with one of the owner’s', note: 'Rename and Delete appear', sel: 'evening' },
+  { id: 'E03', label: 'Custom, a band being dragged', note: '125 Hz moved from Rock; the value shows above it', sel: 'custom', drag: 2 },
+  { id: 'E04', label: 'Off', note: 'bit-perfect; the bands keep their place', on: false },
+  { id: 'E05', label: 'Save as…', note: 'naming it', sel: 'custom', sheet: 'save' },
+  { id: 'E06', label: 'Rename', note: '', sel: 'evening', sheet: 'rename' },
+  { id: 'E07', label: 'Delete, to confirm', note: '', sel: 'evening', sheet: 'delete' },
+  { id: 'E08', label: 'The list full at ten', note: 'Save as… from Custom', sel: 'custom', full: true, sheet: 'full' },
+  { id: 'E09', label: 'Headroom with Fixed volume', note: 'the note in amber', fixed: true },
+  { id: 'E10', label: 'DSD playing', note: 'the equaliser stands aside', dsd: true },
+  { id: 'E11', label: 'Another output, no boost', note: 'HDMI keeps its own, Flat here', sel: 'flat', output: 'hdmi' }
+];
+const BARS = [
+  { id: 'B01', w: 1850, label: '11.9″ · a preset', note: '' },
+  { id: 'B02', w: 1850, label: '11.9″ · Custom, dragging', note: '', sel: 'custom', drag: 2 },
+  { id: 'B03', w: 1280, label: '7.9″ · one of the owner’s', note: '', sel: 'evening' },
+  { id: 'B04', w: 1280, label: '7.9″ · Save as…', note: '', sel: 'custom', sheet: 'save' },
+  { id: 'B05', w: 1280, label: '7.9″ · Fixed volume', note: '', fixed: true }
+];
+const PHONE = [
+  { id: 'P01', label: 'On, with a preset', note: '' },
+  { id: 'P02', label: 'Custom, a band being dragged', note: '125 Hz, scrolled to the bands', sel: 'custom', drag: 2, shift: 300 },
+  { id: 'P03', label: 'Choosing a setting', note: 'presets, then the owner’s; it opens on the one in use', sel: 'evening', sheet: 'pick', shift: 250 },
+  { id: 'P04', label: 'Save as…', note: 'the phone’s own keyboard', sel: 'custom', sheet: 'save' },
+  { id: 'P05', label: 'Delete, to confirm', note: '', sel: 'evening', sheet: 'delete' },
+  { id: 'P06', label: 'Headroom with Fixed volume', note: '', fixed: true },
+  { id: 'P07', label: 'DSD playing', note: '', dsd: true },
+  { id: 'P08', label: 'Off', note: '', on: false },
+  { id: 'P09', label: 'A player without a screen', note: 'the tray has no Panel row', screen: false }
+];
+const DRAWER = { host: 'drawer', w: 1280, h: 800, fw: 1280, fh: 800, scale: 1 };
+const BAR19 = { host: 'bartray', w: 1850, h: 400, fw: 1480, fh: 320, scale: 0.8 };
+const BAR79 = { host: 'bartray', w: 1280, h: 400, fw: 1280, fh: 400, scale: 1 };
+const PH = { host: 'phonetray', w: 412, h: 915, fw: 412, fh: 915, scale: 1 };
+const QUICK = [
+  { id: 'Q01', ...DRAWER, label: 'Volume drawer · a preset', note: '' },
+  { id: 'Q02', ...DRAWER, label: 'Volume drawer · Custom', note: 'first in the row, not saved', sel: 'custom' },
+  { id: 'Q03', ...DRAWER, label: 'Volume drawer · off', note: '', on: false },
+  { id: 'Q04', ...DRAWER, label: 'Volume drawer · DSD playing', note: '', dsd: true },
+  { id: 'Q05', ...DRAWER, label: 'Volume drawer · Fixed volume', note: 'the headroom note matters most here', fixed: true },
+  { id: 'Q06', ...BAR19, label: '11.9″ tray · closed', note: 'the EQ button names the setting' },
+  { id: 'Q07', ...BAR19, label: '11.9″ tray · the EQ button opened', note: 'a second band under the first', open: true },
+  { id: 'Q08', ...BAR79, label: '7.9″ tray · opened, Fixed volume', note: '', open: true, fixed: true },
+  { id: 'Q09', ...BAR79, label: '7.9″ tray · opened, DSD playing', note: '', open: true, dsd: true },
+  { id: 'Q10', ...PH, label: 'Phone tray · closed', note: 'the EQ chip beside the volume' },
+  { id: 'Q11', ...PH, label: 'Phone tray · open', note: 'with the touchpad', open: true },
+  { id: 'Q12', ...PH, label: 'Phone tray · a player without a screen', note: 'open', open: true, screen: false },
+  { id: 'Q13', ...PH, label: 'Phone tray · closed, off', note: '', on: false }
+];
+const CALLS = [
+  { h: 'Upright, then rows', t: 'The panel and the bars draw the ten bands upright: a 34 px ring knob over a dashed centre line, the whole band column taking the touch. On the phone ten upright sliders would be 36 px wide, so each band is a row 52 px tall, under a small picture of the curve.' },
+  { h: 'The curve', t: 'The line runs through the knobs as a monotone curve, so it never dips or overshoots between two bands. Boosts fill coral to amber as they rise, cuts blue to violet. The headroom note is worked out from the ten filters the player runs, rounded up to 0.5 dB.' },
+  { h: 'Changing setting', t: 'Choosing a setting moves the bands to it: each eases over 380 ms, each 32 ms after the band below, so the line rolls from left to right. The values count with the knobs. Touching a band stops it.' },
+  { h: 'Custom', t: 'Moving a band from a preset or a saved setting puts Custom at the top of the list, marked Not saved in amber, and makes Save as… the lit button until it is saved.' },
+  { h: 'Off', t: 'The switch sits in the header. Off greys the list and the bands, which keep their place, and the note says the sound is untouched. A preset cannot be chosen while it is off.' },
+  { h: 'Naming', t: 'Save as… and Rename take a typed name. The panel has no on-screen keyboard, so the sheet says to type with a keyboard on the player or from the phone’s touchpad, and offers a name to keep.' },
+  { h: 'Delete', t: 'Asks first. An output that used the deleted setting goes back to Flat. This is not in ADR-0162 and is George’s to confirm.' },
+  { h: 'Per output', t: 'The header names the output being set (DAC, HDMI, optical) and says each keeps its own. The owner’s settings are one list for all of them.' },
+  { h: 'Quick change', t: 'Presets, then the owner’s after a rule, in one sideways row that opens on the setting in use. Edit leads to the editor. Off or DSD dims the row.' }
+];
+const fill = (a) => ({ ...D, ...a });
+const LOOKS3 = [
+  { id: '3a', look: 'd', label: 'Ridge', note: 'the boost is a solid shape that warms from coral to amber as it rises, cuts deepen from blue to violet; hollow ring knobs on the edge' },
+  { id: '3b', look: 'e', label: 'Capsules', note: 'each band is a rounded bar from 0, mint up and blue down, with a grip at its end; a faint line joins the ends' },
+  { id: '3c', look: 'f', label: 'LED', note: 'a dot grid, one row per dB, lit up to the line like a hardware display; square knobs mark the exact level' },
+  { id: '3d', look: 'g', label: 'Contours', note: 'four fainter copies of the line at smaller sizes, so the shape reads like a contour map; spectrum colours per band' },
+  { id: '3e', look: 'h', label: 'Aurora', note: 'soft colour pools behind each knob, stronger the further a band moves; a plain white line and small knobs on top' }
+];
+const LOOKS = [
+  { id: '2a', look: 'a', label: 'Glow', note: 'white knobs with a coloured core, mint for a boost and blue for a cut; the line and its fill change colour either side of 0' },
+  { id: '2b', look: 'b', label: 'Ladder', note: 'one lit step per dB, as on a hardware equaliser; past +6 the steps warm towards amber, cuts light blue; flat fader caps' },
+  { id: '2c', look: 'c', label: 'Spectrum', note: 'each band has its own colour, warm in the bass to violet at the top; a stem from 0 up or down to the knob' }
+].map(o => ({ ...o, states: [
+  { id: o.id + '1', look: o.look, cap: 'Rock' },
+  { id: o.id + '2', look: o.look, cap: 'Custom, 125 Hz being dragged', sel: 'custom', drag: 2 }
+] }));
+
+class Component extends DCLogic {
+  state = { mounted: {} };
+  // artboards mount when they come into view and stay mounted; #shot=E03,Q01
+  // mounts exactly those (PNG export). Checked on a timer: the canvas pans
+  // and zooms with transforms, which fire no scroll events.
+  componentDidMount() {
+    this.t = setInterval(() => {
+      const only = (location.hash.match(/^#shot=([\w,]+)/) || [])[1];
+      const H = window.innerHeight, W = window.innerWidth, M = 300;
+      const add = {};
+      if (only) only.split(',').forEach(id => { add[id] = true; });
+      else document.querySelectorAll('[data-shot]').forEach(n => {
+        const r = n.getBoundingClientRect();
+        if (r.bottom > -M && r.top < H + M && r.right > -M && r.left < W + M) add[n.dataset.shot] = true;
+      });
+      const cur = this.state.mounted;
+      const next = only ? add : { ...cur, ...add };
+      const same = Object.keys(next).length === Object.keys(cur).length && Object.keys(next).every(k => cur[k]);
+      if (!same) this.setState({ mounted: next });
+    }, 400);
+  }
+  componentWillUnmount() { clearInterval(this.t); }
+  renderVals() {
+    const m = this.state.mounted;
+    const gate = (a) => ({ ...a, mounted: !!m[a.id], waiting: !m[a.id] });
+    return {
+      calls: CALLS,
+      looks3: [...LOOKS3.map(o => ({ ...o, states: [
+        { id: o.id + '1', look: o.look, cap: 'Rock' },
+        { id: o.id + '2', look: o.look, cap: 'Custom, 125 Hz being dragged', sel: 'custom', drag: 2 }
+      ] }))].map(o => ({ ...o, states: o.states.map(fill).map(gate) })),
+      looks: LOOKS.map(o => ({ ...o, states: o.states.map(fill).map(gate) })),
+      panel: PANEL.map(fill).map(gate),
+      bars: BARS.map(a => gate({ ...fill(a), fw: a.w === 1850 ? 1480 : 1280, fh: a.w === 1850 ? 320 : 400, scale: a.w === 1850 ? 0.8 : 1 })),
+      phone: PHONE.map(fill).map(gate),
+      quick: QUICK.map(fill).map(gate)
+    };
+  }
+}
+</script>
+</body>
+</html>

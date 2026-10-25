@@ -780,3 +780,24 @@ pictures (ADR-0161, ADR-0163).
   the full form, wrapping in the compact one, where the D-pad's button can
   fall to a second row. A view that is up has the accent's outline.
 
+
+## The equaliser (Phase 20, 2026-10-26)
+
+Built from `source/20` (look 3a, Ridge; ADR-0162, its *Built* section for the
+decisions). Not yet seen by George on a device.
+
+- **[U]** The headroom figure is the core's, not the drawing's: the worse of
+  44.1 and 48 kHz, rounded strictly up to 0.5 dB, where `eq-data.js` allows
+  0.05 dB the other way - so the sample *Evening* reads 3 dB, not 2.5.
+- **[U]** The phone's curve spans its gradient over its own box (200 high),
+  so the step from coral to blue falls on 0 dB; the drawing spans it over
+  the panel's 240 and puts it below 0 dB.
+- **[U]** Edit in the quick change opens the editor as a screen of its own,
+  where it was opened; Back returns there. Settings → Audio opens the same
+  editor inside Settings.
+- **[U]** On the D-pad a band is an upright slider: Up and Down move it,
+  Left and Right go to its neighbours, and the ring goes round the knob.
+- **[S]** *Yours · 0 of 10* shows with nothing saved, so the list says where
+  a saved setting will go.
+- **[S]** A refused name (taken, too long) is said in the sheet, in amber,
+  under the field; the drawing has no such state.
