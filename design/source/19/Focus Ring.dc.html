@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<sc-if value="{{ on }}" hint-placeholder-val="{{ false }}">
+  <div data-focus-ring="ring" style="position:absolute;left:{{ rx }}px;top:{{ ry }}px;width:{{ rw }}px;height:{{ rh }}px;box-sizing:border-box;border:{{ bw }}px solid {{ ink }};border-radius:{{ rr }}px;box-shadow:{{ shadow }};pointer-events:none;z-index:200;transition:{{ glide }};">
+    <sc-if value="{{ arrows }}" hint-placeholder-val="{{ false }}">
+      <svg viewBox="0 0 20 28" width="20" height="28" style="position:absolute;left:{{ arrowOut }}px;top:50%;margin-top:-14px;opacity:{{ leftOp }};transform:translateX({{ leftNudge }}px);overflow:visible;"><path d="M17 3 L4 14 L17 25 Z" fill="{{ ink }}" stroke="rgba(8,12,16,0.8)" stroke-width="2.5" stroke-linejoin="round"></path></svg>
+      <svg viewBox="0 0 20 28" width="20" height="28" style="position:absolute;right:{{ arrowOut }}px;top:50%;margin-top:-14px;opacity:{{ rightOp }};transform:translateX({{ rightNudge }}px);overflow:visible;"><path d="M3 3 L16 14 L3 25 Z" fill="{{ ink }}" stroke="rgba(8,12,16,0.8)" stroke-width="2.5" stroke-linejoin="round"></path></svg>
+    </sc-if>
+  </div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:320,&quot;height&quot;:200},&quot;on&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;x&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:100,&quot;tsType&quot;:&quot;number&quot;},&quot;y&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:70,&quot;tsType&quot;:&quot;number&quot;},&quot;w&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:120,&quot;tsType&quot;:&quot;number&quot;},&quot;h&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:60,&quot;tsType&quot;:&quot;number&quot;},&quot;r&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:16,&quot;tsType&quot;:&quot;number&quot;},&quot;look&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;white&quot;,&quot;teal&quot;,&quot;lift&quot;],&quot;default&quot;:&quot;teal&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;inset&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;slider&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;none&quot;,&quot;focus&quot;,&quot;left&quot;,&quot;right&quot;],&quot;default&quot;:&quot;none&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;glide&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;gap&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:4,&quot;tsType&quot;:&quot;number&quot;},&quot;band&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:6,&quot;tsType&quot;:&quot;number&quot;}}">
+// The D-pad's focus: one element in a top layer, placed over the focused
+// control's box. It never takes part in layout, so nothing around it moves.
+const KEY = 'rgba(8,12,16,0.8)';
+const LOOKS = {
+  white: { ink: '#ffffff', extra: '' },
+  teal:  { ink: '#7ed6bc', extra: '' },
+  lift:  { ink: '#ffffff', extra: ', 0 14px 34px rgba(0,0,0,0.5)' }
+};
+class Component extends DCLogic {
+  state = { i: 0 };
+  componentDidMount() {
+    if (Array.isArray(this.props.cycle) && this.props.cycle.length > 1) {
+      this.t = setInterval(() => this.setState(s => ({ i: (s.i + 1) % this.props.cycle.length })), this.props.cycleMs ?? 1200);
+    }
+  }
+  componentWillUnmount() { clearInterval(this.t); }
+  renderVals() {
+    const p = Array.isArray(this.props.cycle) && this.props.cycle.length ? { ...this.props, x: this.props.cycle[this.state.i] } : this.props;
+    const L = LOOKS[p.look] || LOOKS.teal;
+    const G = p.gap ?? 4, B = p.band ?? 6;
+    const x = p.x ?? 0, y = p.y ?? 0, w = p.w ?? 0, h = p.h ?? 0, r = p.r ?? 0;
+    const round = r >= Math.min(w, h) / 2 - 0.5;
+    let rx, ry, rw, rh, rr;
+    if (p.inset) {
+      rx = x + 2; ry = y + 2; rw = w - 4; rh = h - 4; rr = Math.max(4, r - 2);
+    } else {
+      const o = G + B;
+      rx = x - o; ry = y - o; rw = w + 2 * o; rh = h + 2 * o;
+      rr = round ? 9999 : r + o;
+    }
+    const s = p.slider || 'none';
+    return {
+      on: !!p.on && w > 0,
+      rx, ry, rw, rh, rr, bw: B, ink: L.ink,
+      shadow: `0 0 0 2px ${KEY}, inset 0 0 0 2px ${KEY}${L.extra}`,
+      glide: p.glide ? 'left 160ms cubic-bezier(0.32,0.72,0,1), top 160ms cubic-bezier(0.32,0.72,0,1), width 160ms cubic-bezier(0.32,0.72,0,1), height 160ms cubic-bezier(0.32,0.72,0,1)' : 'none',
+      arrows: s !== 'none',
+      arrowOut: -(B + 26),
+      leftOp: s === 'right' ? 0.35 : 1, rightOp: s === 'left' ? 0.35 : 1,
+      leftNudge: s === 'left' ? -5 : 0, rightNudge: s === 'right' ? 5 : 0
+    };
+  }
+}
+</script>
+</body>
+</html>

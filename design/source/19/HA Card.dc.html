@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:'Roboto';src:url('../../fonts/Roboto-latin.woff2') format('woff2');font-weight:100 900;font-display:block;}
+@font-face{font-family:'Nunito Sans';src:url('../../fonts/NunitoSans-Variable.woff2') format('woff2-variations'),url('../../fonts/NunitoSans-Variable.woff2') format('woff2');font-weight:300 800;font-display:block;}
+@font-face{font-family:'IBM Plex Mono';src:url('../../fonts/IBMPlexMono-Regular.woff2') format('woff2');font-weight:400;font-display:block;}
+@font-face{font-family:'IBM Plex Mono';src:url('../../fonts/IBMPlexMono-SemiBold.woff2') format('woff2');font-weight:500 600;font-display:block;}
+@font-face{font-family:'IBM Plex Mono';src:url('../../fonts/IBMPlexMono-Bold.woff2') format('woff2');font-weight:700;font-display:block;}
+html,body{margin:0;padding:0;}a{color:#009ac7;}a:hover{color:#006787;}</style>
+</helmet>
+<div data-gexis-card="root" style="--gx-bg:var(--gexis-card-background,var(--ha-card-background,var(--card-background-color,#fff)));--gx-ink:var(--gexis-card-ink,var(--primary-text-color,#212121));--gx-ink-2:var(--gexis-card-ink-2,var(--secondary-text-color,#727272));--gx-line:var(--gexis-card-line,var(--divider-color,rgba(0,0,0,0.12)));--gx-border:var(--gexis-card-border,var(--ha-card-border-color,var(--divider-color,#e0e0e0)));--gx-radius:var(--gexis-card-radius,var(--ha-card-border-radius,12px));--gx-card-shadow:var(--gexis-card-shadow,var(--ha-card-box-shadow,none));--gx-font:var(--gexis-card-font,var(--ha-font-family-body,Roboto,Noto,sans-serif));--gx-label-font:var(--gexis-card-label-font,var(--ha-font-family-body,Roboto,Noto,sans-serif));--gx-label-case:var(--gexis-card-label-case,none);--gx-label-track:var(--gexis-card-label-track,0.01em);--gx-label-size:var(--gexis-card-label-size,14px);--gx-play:var(--gexis-card-play,var(--primary-color,#009ac7));--gx-on-play:var(--gexis-card-on-play,var(--text-primary-color,#fff));--gx-accent:var(--gexis-card-accent,var(--primary-color,#009ac7));--gx-vol:var(--gexis-card-volume,var(--primary-color,#009ac7));--gx-vol-track:var(--gexis-card-volume-track,color-mix(in srgb,var(--primary-color,#009ac7) 20%,transparent));--gx-fill:var(--gexis-card-fill,rgba(127,127,127,0.12));--gx-fill-2:var(--gexis-card-fill-strong,rgba(127,127,127,0.24));--gx-menu:var(--gexis-card-menu,var(--card-background-color,#fff));--gx-menu-shadow:var(--gexis-card-menu-shadow,0 6px 24px rgba(0,0,0,0.18));--gx-bleed:var(--gexis-card-bleed,0);--gx-bleed-scrim:var(--gexis-card-bleed-scrim,none);--gx-src-lyrion:var(--gexis-source-lyrion,oklch(0.52 0.09 170));--gx-src-spotify:var(--gexis-source-spotify,oklch(0.52 0.12 150));--gx-src-bluetooth:var(--gexis-source-bluetooth,oklch(0.5 0.12 272));--gx-src-plexamp:var(--gexis-source-plexamp,var(--secondary-text-color,#727272));container-type:inline-size;position:relative;box-sizing:border-box;width:100%;background:var(--gx-bg);color:var(--gx-ink);border:1px solid var(--gx-border);border-radius:var(--gx-radius);box-shadow:var(--gx-card-shadow);font-family:var(--gx-font);font-size:14px;line-height:1.4;overflow:hidden;-webkit-font-smoothing:antialiased;">
+
+  <sc-if value="{{ showBleed }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;overflow:hidden;pointer-events:none;"><img src="album-art.webp" alt="" style="position:absolute;left:-15%;top:-15%;width:32.5%;height:32.5%;object-fit:cover;filter:blur(11px) saturate(1.3);transform:scale(4);transform-origin:0 0;opacity:var(--gx-bleed);" /></div>
+    <div style="position:absolute;inset:0;background:var(--gx-bleed-scrim);pointer-events:none;"></div>
+  </sc-if>
+
+  <div data-gexis-card="switcher" style="position:relative;display:flex;align-items:center;gap:12px;padding:10px 12px 2px 12px;min-height:52px;">
+    <div onClick="{{ toggleSwitcher }}" style="display:flex;align-items:center;gap:12px;min-width:0;flex:1 1 auto;width:100%;border-radius:12px;padding:4px 8px 4px 4px;cursor:{{ switchCursor }};background:{{ switchBg }};">
+      <img src="gexis-mark.svg" alt="" style="width:36px;height:36px;flex-shrink:0;display:block;opacity:{{ markOpacity }};" />
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;">
+        <div style="display:flex;align-items:center;gap:4px;min-width:0;">
+          <span style="flex:1 1 auto;min-width:0;font-size:16px;font-weight:500;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ name }}</span>
+          <sc-if value="{{ multi }}" hint-placeholder-val="{{ true }}">
+            <svg viewBox="0 0 24 24" width="22" height="22" style="flex-shrink:0;color:var(--gx-ink-2);transform:rotate({{ chevronTurn }}deg);transition:transform 160ms ease;"><path d="M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z" fill="currentColor"></path></svg>
+          </sc-if>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;min-width:0;font-size:13px;color:var(--gx-ink-2);">
+          <sc-if value="{{ hasSource }}" hint-placeholder-val="{{ true }}">
+            <span style="display:flex;align-items:center;justify-content:center;width:14px;height:14px;flex-shrink:0;color:{{ srcInk }};">
+              <sc-if value="{{ mkBars }}" hint-placeholder-val="{{ false }}"><span style="display:flex;align-items:flex-end;gap:2px;height:14px;"><span style="width:2px;height:7px;border-radius:1px;background:currentColor;"></span><span style="width:2px;height:14px;border-radius:1px;background:currentColor;"></span><span style="width:2px;height:10px;border-radius:1px;background:currentColor;"></span><span style="width:2px;height:12px;border-radius:1px;background:currentColor;"></span></span></sc-if>
+              <sc-if value="{{ mkSpotify }}" hint-placeholder-val="{{ false }}"><img src="icon-spotify.png" alt="" style="width:14px;height:14px;display:block;" /></sc-if>
+              <sc-if value="{{ mkBt }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 64 64" width="14" height="14" style="display:block;"><g fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><rect x="10" y="8" width="22" height="48" rx="5"></rect><line x1="18" y1="49" x2="24" y2="49"></line><path d="M41 24.5a10 10 0 0 1 0 15"></path><path d="M48 17.5a20 20 0 0 1 0 29"></path></g></svg></sc-if>
+              <sc-if value="{{ mkPlex }}" hint-placeholder-val="{{ false }}"><span style="box-sizing:border-box;width:14px;height:14px;border-radius:50%;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;line-height:1;">P</span></sc-if>
+            </span>
+          </sc-if>
+          <span style="flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ stateLine }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <sc-if value="{{ unreachable }}" hint-placeholder-val="{{ false }}">
+    <div data-gexis-card="unreachable" style="position:relative;display:flex;align-items:flex-start;gap:14px;padding:14px 20px 22px 20px;">
+      <svg viewBox="0 0 24 24" width="28" height="28" style="flex-shrink:0;color:var(--gx-ink-2);margin-top:1px;"><path d="M11,15H13V17H11V15M11,7H13V13H11V7M12,2C6.47,2 2,6.5 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20Z" fill="currentColor"></path></svg>
+      <div style="display:flex;flex-direction:column;gap:3px;min-width:0;">
+        <div style="font-size:16px;font-weight:500;">Can’t reach {{ name }}</div>
+        <div style="color:var(--gx-ink-2);text-wrap:pretty;">Home Assistant reconnects when the player is back on the network.</div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ full }}" hint-placeholder-val="{{ true }}">
+    <div style="position:relative;display:flex;flex-wrap:wrap;">
+      <div data-gexis-card="now-playing" style="flex:1 1 300px;min-width:0;display:flex;flex-direction:column;box-shadow:-1px -1px 0 0 var(--gx-line);">
+        <div data-gexis-card="what-plays" style="display:flex;gap:16px;padding:12px 16px 0;align-items:flex-start;">
+          <div style="position:relative;width:clamp(96px,28cqi,128px);aspect-ratio:1;flex-shrink:0;border-radius:10px;overflow:hidden;background:var(--gx-fill);display:flex;align-items:center;justify-content:center;">
+            <sc-if value="{{ showArt }}" hint-placeholder-val="{{ true }}"><img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" /></sc-if>
+            <sc-if value="{{ showWellMark }}" hint-placeholder-val="{{ false }}">
+              <span style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;color:{{ wellInk }};">
+                <sc-if value="{{ wBars }}" hint-placeholder-val="{{ false }}"><span style="display:flex;align-items:flex-end;gap:4px;height:36px;"><span style="width:5px;height:18px;border-radius:3px;background:currentColor;"></span><span style="width:5px;height:36px;border-radius:3px;background:currentColor;"></span><span style="width:5px;height:26px;border-radius:3px;background:currentColor;"></span><span style="width:5px;height:32px;border-radius:3px;background:currentColor;"></span></span></sc-if>
+                <sc-if value="{{ wSpotify }}" hint-placeholder-val="{{ false }}"><img src="icon-spotify.png" alt="" style="width:40px;height:40px;display:block;" /></sc-if>
+                <sc-if value="{{ wBt }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 64 64" width="40" height="40" style="display:block;"><g fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><rect x="10" y="8" width="22" height="48" rx="5"></rect><line x1="18" y1="49" x2="24" y2="49"></line><path d="M41 24.5a10 10 0 0 1 0 15"></path><path d="M48 17.5a20 20 0 0 1 0 29"></path></g></svg></sc-if>
+                <sc-if value="{{ wPlex }}" hint-placeholder-val="{{ false }}"><span style="box-sizing:border-box;width:38px;height:38px;border-radius:50%;border:3px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:800;line-height:1;">P</span></sc-if>
+                <sc-if value="{{ wNone }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="36" height="36"><path d="M12 3V13.55C11.41 13.21 10.73 13 10 13C7.79 13 6 14.79 6 17S7.79 21 10 21 14 19.21 14 17V7H18V3H12Z" fill="currentColor"></path></svg></sc-if>
+              </span>
+            </sc-if>
+          </div>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;padding-top:2px;">
+            <div style="font-size:18px;font-weight:500;line-height:1.3;color:{{ titleInk }};display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;">{{ title }}</div>
+            <sc-if value="{{ hasTrack }}" hint-placeholder-val="{{ true }}">
+              <div style="font-size:14px;color:var(--gx-ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ artist }}</div>
+              <div style="font-size:14px;color:var(--gx-ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ album }}</div>
+            </sc-if>
+          </div>
+        </div>
+
+        <sc-if value="{{ hasPos }}" hint-placeholder-val="{{ true }}">
+          <div data-gexis-card="position" style="padding:14px 16px 0;display:flex;flex-direction:column;gap:6px;">
+            <div style="position:relative;height:4px;border-radius:2px;background:var(--gx-fill-2);overflow:hidden;">
+              <div style="position:absolute;left:0;top:0;bottom:0;width:{{ posPct }}%;border-radius:2px;background:{{ srcInk }};"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--gx-ink-2);font-variant-numeric:tabular-nums;">
+              <span>{{ posText }}</span><span>{{ durText }}</span>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ hasTransport }}" hint-placeholder-val="{{ true }}">
+          <div data-gexis-card="transport" style="display:flex;align-items:center;justify-content:center;gap:clamp(6px,3cqi,22px);padding:6px 16px 2px;">
+            <sc-if value="{{ hasShuffle }}" hint-placeholder-val="{{ true }}">
+              <div onClick="{{ toggleShuffle }}" aria-label="Shuffle" style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:{{ shuffleInk }};" style-hover="background:var(--gx-fill);">
+                <svg viewBox="0 0 24 24" width="22" height="22"><path d="M17,3L22.25,7.5L17,12L22.25,16.5L17,21V18H14.26L11.44,15.18L13.56,13.06L15.5,15H17V12L17,9H15.5L6.5,18H2V15H5.26L14.26,6H17V3M2,6H6.5L9.32,8.82L7.2,10.94L5.26,9H2V6Z" fill="currentColor"></path></svg>
+              </div>
+            </sc-if>
+            <div aria-label="Previous" style="width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:var(--gx-fill);">
+              <svg viewBox="0 0 24 24" width="30" height="30"><path d="M6,18V6H8V18H6M9.5,12L18,6V18L9.5,12Z" fill="currentColor"></path></svg>
+            </div>
+            <div onClick="{{ togglePlay }}" aria-label="{{ playLabel }}" style="width:56px;height:56px;border-radius:50%;background:var(--gx-play);color:var(--gx-on-play);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;" style-active="transform:scale(0.95);">
+              <sc-if value="{{ isPlaying }}" hint-placeholder-val="{{ true }}"><svg viewBox="0 0 24 24" width="30" height="30"><path d="M14,19H18V5H14M6,19H10V5H6V19Z" fill="currentColor"></path></svg></sc-if>
+              <sc-if value="{{ isPaused }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="32" height="32"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" fill="currentColor"></path></svg></sc-if>
+            </div>
+            <div aria-label="Next" style="width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:var(--gx-fill);">
+              <svg viewBox="0 0 24 24" width="30" height="30"><path d="M16,18H18V6H16M6,18L14.5,12L6,6V18Z" fill="currentColor"></path></svg>
+            </div>
+            <sc-if value="{{ hasShuffle }}" hint-placeholder-val="{{ true }}">
+              <div onClick="{{ toggleRepeat }}" aria-label="Repeat" style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:{{ repeatInk }};" style-hover="background:var(--gx-fill);">
+                <svg viewBox="0 0 24 24" width="22" height="22"><path d="M17,17H7V14L3,18L7,22V19H19V13H17M7,7H17V10L21,6L17,2V5H5V11H7V7Z" fill="currentColor"></path></svg>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ hasVolume }}" hint-placeholder-val="{{ true }}">
+          <div data-gexis-card="volume" style="display:flex;align-items:center;gap:8px;padding:8px 16px 14px 10px;">
+            <div onClick="{{ toggleMute }}" aria-label="Mute" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;color:{{ muteInk }};" style-hover="background:var(--gx-fill);">
+              <sc-if value="{{ notMuted }}" hint-placeholder-val="{{ true }}"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" fill="currentColor"></path></svg></sc-if>
+              <sc-if value="{{ isMuted }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z" fill="currentColor"></path></svg></sc-if>
+            </div>
+            <div onClick="{{ onVol }}" aria-label="Volume" style="position:relative;flex:1;min-width:0;height:40px;border-radius:12px;background:var(--gx-vol-track);overflow:hidden;cursor:pointer;">
+              <div style="position:absolute;left:0;top:0;bottom:0;width:{{ volPct }}%;background:var(--gx-vol);opacity:{{ volOpacity }};"></div>
+              <div style="position:absolute;top:12px;bottom:12px;left:calc({{ volPct }}% - 10px);width:4px;border-radius:2px;background:var(--gx-on-play);opacity:{{ volKnob }};"></div>
+            </div>
+            <span style="min-width:44px;text-align:right;font-size:14px;font-weight:500;font-variant-numeric:tabular-nums;color:var(--gx-ink-2);">{{ volText }}</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ fixedNote }}" hint-placeholder-val="{{ false }}">
+          <div data-gexis-card="volume-fixed" style="display:flex;align-items:center;gap:10px;padding:10px 16px 16px 20px;color:var(--gx-ink-2);font-size:13px;">
+            <svg viewBox="0 0 24 24" width="18" height="18" style="flex-shrink:0;"><path d="M12,17A2,2 0 0,0 14,15C14,13.89 13.1,13 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V10C4,8.89 4.9,8 6,8H7V6A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,3A3,3 0 0,0 9,6V8H15V6A3,3 0 0,0 12,3Z" fill="currentColor"></path></svg>
+            <span>Fixed output · the volume is set on the amplifier</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ idleGap }}" hint-placeholder-val="{{ false }}"><div style="height:14px;"></div></sc-if>
+      </div>
+
+      <sc-if value="{{ hasScreen }}" hint-placeholder-val="{{ true }}">
+        <div data-gexis-card="screen" style="flex:1 1 260px;min-width:0;display:flex;flex-direction:column;gap:12px;padding:14px 16px 18px;box-shadow:-1px -1px 0 0 var(--gx-line);">
+          <div style="font-family:var(--gx-label-font);font-size:var(--gx-label-size);font-weight:500;letter-spacing:var(--gx-label-track);text-transform:var(--gx-label-case);color:var(--gx-ink-2);">On the player’s screen</div>
+          <div data-gexis-card="quick-actions" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;">
+            <div aria-label="Home" style="height:58px;border-radius:12px;background:var(--gx-fill);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;min-width:0;padding:0 6px;" style-hover="background:var(--gx-fill-2);">
+              <svg viewBox="0 0 24 24" width="20" height="20" style="flex-shrink:0;"><path d="M12 5.69L17 10.19V18H15V12H9V18H7V10.19L12 5.69M12 3L2 12H5V20H11V14H13V20H19V12H22" fill="currentColor"></path></svg>
+              <span style="font-size:13px;font-weight:500;white-space:nowrap;">Home</span>
+            </div>
+            <div aria-label="Now playing" style="height:58px;border-radius:12px;background:var(--gx-fill);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:{{ trackCursor }};min-width:0;padding:0 6px;opacity:{{ trackOpacity }};" style-hover="background:var(--gx-fill-2);">
+              <svg viewBox="0 0 24 24" width="20" height="20" style="flex-shrink:0;"><path d="M12 3V13.55C11.41 13.21 10.73 13 10 13C7.79 13 6 14.79 6 17S7.79 21 10 21 14 19.21 14 17V7H18V3H12Z" fill="currentColor"></path></svg>
+              <span style="font-size:13px;font-weight:500;white-space:nowrap;">Now playing</span>
+            </div>
+            <div aria-label="Lyrics" style="height:58px;border-radius:12px;background:var(--gx-fill);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:{{ trackCursor }};min-width:0;padding:0 6px;opacity:{{ trackOpacity }};" style-hover="background:var(--gx-fill-2);">
+              <svg viewBox="0 0 24 24" width="20" height="20" style="flex-shrink:0;"><path d="M4 5h16v2H4zM4 10h16v2H4zM4 15h10v2H4z" fill="currentColor"></path></svg>
+              <span style="font-size:13px;font-weight:500;white-space:nowrap;">Lyrics</span>
+            </div>
+          </div>
+          <div data-gexis-card="dpad" style="display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;gap:8px;padding-top:4px;">
+            <div onClick="{{ keyBack }}" aria-label="Back" style="justify-self:start;height:44px;border-radius:22px;padding:0 14px 0 10px;background:var(--gx-fill);display:flex;align-items:center;gap:6px;cursor:pointer;" style-hover="background:var(--gx-fill-2);" style-active="transform:scale(0.95);">
+              <svg viewBox="0 0 24 24" width="20" height="20"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" fill="currentColor"></path></svg>
+              <span style="font-size:14px;font-weight:500;white-space:nowrap;">Back</span>
+            </div>
+            <div style="position:relative;width:clamp(168px,44cqi,216px);aspect-ratio:1;border-radius:50%;background:var(--gx-fill);">
+              <div onClick="{{ keyUp }}" aria-label="Up" style="position:absolute;left:32%;top:3%;width:36%;height:28%;border-radius:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:var(--gx-fill);" style-active="background:var(--gx-fill-2);"><svg viewBox="0 0 24 24" width="30" height="30"><path d="M7.41,15.41L12,10.83L16.59,15.41L18,14L12,8L6,14L7.41,15.41Z" fill="currentColor"></path></svg></div>
+              <div onClick="{{ keyDown }}" aria-label="Down" style="position:absolute;left:32%;bottom:3%;width:36%;height:28%;border-radius:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:var(--gx-fill);" style-active="background:var(--gx-fill-2);"><svg viewBox="0 0 24 24" width="30" height="30"><path d="M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z" fill="currentColor"></path></svg></div>
+              <div onClick="{{ keyLeft }}" aria-label="Left" style="position:absolute;top:32%;left:3%;height:36%;width:28%;border-radius:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:var(--gx-fill);" style-active="background:var(--gx-fill-2);"><svg viewBox="0 0 24 24" width="30" height="30"><path d="M15.41,16.58L10.83,12L15.41,7.41L14,6L8,12L14,18L15.41,16.58Z" fill="currentColor"></path></svg></div>
+              <div onClick="{{ keyRight }}" aria-label="Right" style="position:absolute;top:32%;right:3%;height:36%;width:28%;border-radius:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:var(--gx-fill);" style-active="background:var(--gx-fill-2);"><svg viewBox="0 0 24 24" width="30" height="30"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z" fill="currentColor"></path></svg></div>
+              <div onClick="{{ keyOk }}" aria-label="OK" style="position:absolute;left:33%;top:33%;width:34%;height:34%;border-radius:50%;background:var(--gx-bg);box-shadow:0 0 0 1px var(--gx-line);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;font-weight:500;letter-spacing:0.04em;" style-active="transform:scale(0.95);">OK</div>
+            </div>
+            <div></div>
+          </div>
+          <sc-if value="{{ hasSent }}" hint-placeholder-val="{{ false }}">
+            <div style="text-align:center;font-size:12px;color:var(--gx-ink-2);margin-top:-4px;">{{ sentText }}</div>
+          </sc-if>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ compact }}" hint-placeholder-val="{{ false }}">
+    <div data-gexis-card="now-playing" style="position:relative;display:flex;flex-direction:column;">
+      <div data-gexis-card="what-plays" style="display:flex;align-items:center;gap:12px;padding:8px 12px 0 16px;">
+        <div style="position:relative;width:56px;height:56px;flex-shrink:0;border-radius:8px;overflow:hidden;background:var(--gx-fill);display:flex;align-items:center;justify-content:center;color:{{ wellInk }};">
+          <sc-if value="{{ showArt }}" hint-placeholder-val="{{ true }}"><img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" /></sc-if>
+          <sc-if value="{{ wBars }}" hint-placeholder-val="{{ false }}"><span style="display:flex;align-items:flex-end;gap:2px;height:22px;"><span style="width:3px;height:11px;border-radius:2px;background:currentColor;"></span><span style="width:3px;height:22px;border-radius:2px;background:currentColor;"></span><span style="width:3px;height:16px;border-radius:2px;background:currentColor;"></span><span style="width:3px;height:19px;border-radius:2px;background:currentColor;"></span></span></sc-if>
+          <sc-if value="{{ wSpotify }}" hint-placeholder-val="{{ false }}"><img src="icon-spotify.png" alt="" style="width:24px;height:24px;display:block;" /></sc-if>
+          <sc-if value="{{ wBt }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 64 64" width="26" height="26" style="display:block;"><g fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><rect x="10" y="8" width="22" height="48" rx="5"></rect><line x1="18" y1="49" x2="24" y2="49"></line><path d="M41 24.5a10 10 0 0 1 0 15"></path><path d="M48 17.5a20 20 0 0 1 0 29"></path></g></svg></sc-if>
+          <sc-if value="{{ wPlex }}" hint-placeholder-val="{{ false }}"><span style="box-sizing:border-box;width:24px;height:24px;border-radius:50%;border:2px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;line-height:1;">P</span></sc-if>
+          <sc-if value="{{ wNone }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M12 3V13.55C11.41 13.21 10.73 13 10 13C7.79 13 6 14.79 6 17S7.79 21 10 21 14 19.21 14 17V7H18V3H12Z" fill="currentColor"></path></svg></sc-if>
+        </div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;">
+          <div style="font-size:16px;font-weight:500;line-height:1.3;color:{{ titleInk }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ title }}</div>
+          <sc-if value="{{ hasTrack }}" hint-placeholder-val="{{ true }}">
+            <div style="font-size:14px;color:var(--gx-ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ artist }}</div>
+          </sc-if>
+        </div>
+        <sc-if value="{{ hasTransport }}" hint-placeholder-val="{{ true }}">
+          <div data-gexis-card="transport" style="display:flex;align-items:center;gap:2px;flex-shrink:0;">
+            <div aria-label="Previous" style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:var(--gx-fill);"><svg viewBox="0 0 24 24" width="26" height="26"><path d="M6,18V6H8V18H6M9.5,12L18,6V18L9.5,12Z" fill="currentColor"></path></svg></div>
+            <div onClick="{{ togglePlay }}" aria-label="{{ playLabel }}" style="width:48px;height:48px;border-radius:50%;background:var(--gx-play);color:var(--gx-on-play);display:flex;align-items:center;justify-content:center;cursor:pointer;" style-active="transform:scale(0.95);">
+              <sc-if value="{{ isPlaying }}" hint-placeholder-val="{{ true }}"><svg viewBox="0 0 24 24" width="26" height="26"><path d="M14,19H18V5H14M6,19H10V5H6V19Z" fill="currentColor"></path></svg></sc-if>
+              <sc-if value="{{ isPaused }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="28" height="28"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" fill="currentColor"></path></svg></sc-if>
+            </div>
+            <div aria-label="Next" style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:var(--gx-fill);"><svg viewBox="0 0 24 24" width="26" height="26"><path d="M16,18H18V6H16M6,18L14.5,12L6,6V18Z" fill="currentColor"></path></svg></div>
+          </div>
+        </sc-if>
+      </div>
+      <sc-if value="{{ hasPos }}" hint-placeholder-val="{{ true }}">
+        <div data-gexis-card="position" style="padding:10px 16px 0;">
+          <div style="position:relative;height:3px;border-radius:2px;background:var(--gx-fill-2);overflow:hidden;">
+            <div style="position:absolute;left:0;top:0;bottom:0;width:{{ posPct }}%;border-radius:2px;background:{{ srcInk }};"></div>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ hasVolume }}" hint-placeholder-val="{{ true }}">
+        <div data-gexis-card="volume" style="display:flex;align-items:center;gap:8px;padding:6px 16px 0 10px;">
+          <div onClick="{{ toggleMute }}" aria-label="Mute" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;color:{{ muteInk }};" style-hover="background:var(--gx-fill);">
+            <sc-if value="{{ notMuted }}" hint-placeholder-val="{{ true }}"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" fill="currentColor"></path></svg></sc-if>
+            <sc-if value="{{ isMuted }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z" fill="currentColor"></path></svg></sc-if>
+          </div>
+          <div onClick="{{ onVol }}" aria-label="Volume" style="position:relative;flex:1;min-width:0;height:32px;border-radius:10px;background:var(--gx-vol-track);overflow:hidden;cursor:pointer;">
+            <div style="position:absolute;left:0;top:0;bottom:0;width:{{ volPct }}%;background:var(--gx-vol);opacity:{{ volOpacity }};"></div>
+            <div style="position:absolute;top:9px;bottom:9px;left:calc({{ volPct }}% - 9px);width:4px;border-radius:2px;background:var(--gx-on-play);opacity:{{ volKnob }};"></div>
+          </div>
+          <span style="min-width:40px;text-align:right;font-size:13px;font-weight:500;font-variant-numeric:tabular-nums;color:var(--gx-ink-2);">{{ volText }}</span>
+        </div>
+      </sc-if>
+      <sc-if value="{{ fixedNote }}" hint-placeholder-val="{{ false }}">
+        <div data-gexis-card="volume-fixed" style="display:flex;align-items:center;gap:8px;padding:12px 16px 2px 18px;color:var(--gx-ink-2);font-size:13px;">
+          <svg viewBox="0 0 24 24" width="16" height="16" style="flex-shrink:0;"><path d="M12,17A2,2 0 0,0 14,15C14,13.89 13.1,13 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V10C4,8.89 4.9,8 6,8H7V6A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,3A3,3 0 0,0 9,6V8H15V6A3,3 0 0,0 12,3Z" fill="currentColor"></path></svg>
+          <span>Fixed output · set on the amplifier</span>
+        </div>
+      </sc-if>
+      <sc-if value="{{ hasScreen }}" hint-placeholder-val="{{ true }}">
+        <div data-gexis-card="quick-actions" style="display:flex;align-items:center;gap:6px;padding:10px 12px 12px 12px;">
+          <div aria-label="Home" style="width:44px;height:44px;border-radius:12px;background:var(--gx-fill);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;" style-hover="background:var(--gx-fill-2);"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 5.69L17 10.19V18H15V12H9V18H7V10.19L12 5.69M12 3L2 12H5V20H11V14H13V20H19V12H22" fill="currentColor"></path></svg></div>
+          <div aria-label="Now playing" style="width:44px;height:44px;border-radius:12px;background:var(--gx-fill);display:flex;align-items:center;justify-content:center;cursor:{{ trackCursor }};flex-shrink:0;opacity:{{ trackOpacity }};" style-hover="background:var(--gx-fill-2);"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 3V13.55C11.41 13.21 10.73 13 10 13C7.79 13 6 14.79 6 17S7.79 21 10 21 14 19.21 14 17V7H18V3H12Z" fill="currentColor"></path></svg></div>
+          <div aria-label="Lyrics" style="width:44px;height:44px;border-radius:12px;background:var(--gx-fill);display:flex;align-items:center;justify-content:center;cursor:{{ trackCursor }};flex-shrink:0;opacity:{{ trackOpacity }};" style-hover="background:var(--gx-fill-2);"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 5h16v2H4zM4 10h16v2H4zM4 15h10v2H4z" fill="currentColor"></path></svg></div>
+          <div style="flex:1;"></div>
+          <div onClick="{{ toggleDpad }}" aria-label="D-pad" style="height:44px;border-radius:12px;padding:0 14px 0 10px;background:{{ dpadBtnBg }};display:flex;align-items:center;gap:8px;cursor:pointer;flex-shrink:0;" style-hover="background:var(--gx-fill-2);">
+            <svg viewBox="0 0 24 24" width="22" height="22"><path d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7V2zm2 2v7H4v2h7v7h2v-7h7v-2h-7V4h-2z" fill="currentColor"></path></svg>
+            <span style="font-size:14px;font-weight:500;white-space:nowrap;">D-pad</span>
+            <svg viewBox="0 0 24 24" width="18" height="18" style="color:var(--gx-ink-2);transform:rotate({{ dpadTurn }}deg);transition:transform 160ms ease;"><path d="M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z" fill="currentColor"></path></svg>
+          </div>
+        </div>
+        <sc-if value="{{ dpadOpen }}" hint-placeholder-val="{{ false }}">
+          <div data-gexis-card="dpad" style="display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;gap:8px;padding:2px 16px 16px;">
+            <div onClick="{{ keyBack }}" aria-label="Back" style="justify-self:start;height:44px;border-radius:22px;padding:0 14px 0 10px;background:var(--gx-fill);display:flex;align-items:center;gap:6px;cursor:pointer;" style-hover="background:var(--gx-fill-2);" style-active="transform:scale(0.95);">
+              <svg viewBox="0 0 24 24" width="20" height="20"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" fill="currentColor"></path></svg>
+              <span style="font-size:14px;font-weight:500;white-space:nowrap;">Back</span>
+            </div>
+            <div style="position:relative;width:160px;height:160px;border-radius:50%;background:var(--gx-fill);">
+              <div onClick="{{ keyUp }}" aria-label="Up" style="position:absolute;left:32%;top:3%;width:36%;height:28%;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:var(--gx-fill);" style-active="background:var(--gx-fill-2);"><svg viewBox="0 0 24 24" width="28" height="28"><path d="M7.41,15.41L12,10.83L16.59,15.41L18,14L12,8L6,14L7.41,15.41Z" fill="currentColor"></path></svg></div>
+              <div onClick="{{ keyDown }}" aria-label="Down" style="position:absolute;left:32%;bottom:3%;width:36%;height:28%;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:var(--gx-fill);" style-active="background:var(--gx-fill-2);"><svg viewBox="0 0 24 24" width="28" height="28"><path d="M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z" fill="currentColor"></path></svg></div>
+              <div onClick="{{ keyLeft }}" aria-label="Left" style="position:absolute;top:32%;left:3%;height:36%;width:28%;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:var(--gx-fill);" style-active="background:var(--gx-fill-2);"><svg viewBox="0 0 24 24" width="28" height="28"><path d="M15.41,16.58L10.83,12L15.41,7.41L14,6L8,12L14,18L15.41,16.58Z" fill="currentColor"></path></svg></div>
+              <div onClick="{{ keyRight }}" aria-label="Right" style="position:absolute;top:32%;right:3%;height:36%;width:28%;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:var(--gx-fill);" style-active="background:var(--gx-fill-2);"><svg viewBox="0 0 24 24" width="28" height="28"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z" fill="currentColor"></path></svg></div>
+              <div onClick="{{ keyOk }}" aria-label="OK" style="position:absolute;left:33%;top:33%;width:34%;height:34%;border-radius:50%;background:var(--gx-bg);box-shadow:0 0 0 1px var(--gx-line);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;font-weight:500;letter-spacing:0.04em;" style-active="transform:scale(0.95);">OK</div>
+            </div>
+            <div></div>
+          </div>
+        </sc-if>
+      </sc-if>
+      <sc-if value="{{ compactPad }}" hint-placeholder-val="{{ false }}"><div style="height:14px;"></div></sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ switcherOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeSwitcher }}" style="position:absolute;inset:0;z-index:4;"></div>
+    <div data-gexis-card="switcher-menu" style="position:absolute;z-index:5;left:8px;right:8px;top:60px;max-width:420px;background:var(--gx-menu);border:1px solid var(--gx-line);border-radius:12px;box-shadow:var(--gx-menu-shadow);padding:6px 0;">
+      <div style="padding:8px 16px 6px;font-family:var(--gx-label-font);font-size:12px;font-weight:500;letter-spacing:var(--gx-label-track);text-transform:var(--gx-label-case);color:var(--gx-ink-2);">Gexis players</div>
+      <sc-for list="{{ players }}" as="p" hint-placeholder-count="3">
+        <div onClick="{{ p.pick }}" style="display:flex;align-items:center;gap:12px;min-height:56px;padding:0 16px;cursor:pointer;background:{{ p.bg }};" style-hover="background:var(--gx-fill);">
+          <img src="gexis-mark.svg" alt="" style="width:28px;height:28px;flex-shrink:0;display:block;opacity:{{ p.markOpacity }};" />
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;">
+            <span style="display:block;font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.name }}</span>
+            <span style="display:block;font-size:13px;color:var(--gx-ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.st }}</span>
+          </div>
+          <sc-if value="{{ p.current }}" hint-placeholder-val="{{ false }}">
+            <svg viewBox="0 0 24 24" width="22" height="22" style="flex-shrink:0;color:var(--gx-accent);"><path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" fill="currentColor"></path></svg>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:412,&quot;height&quot;:640},&quot;form&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;full&quot;,&quot;compact&quot;],&quot;default&quot;:&quot;full&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Card&quot;},&quot;dpad&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Card&quot;},&quot;switcher&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Card&quot;},&quot;players&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;min&quot;:1,&quot;max&quot;:3,&quot;default&quot;:3,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Card&quot;},&quot;name&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Living Room&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Player&quot;},&quot;state&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;playing&quot;,&quot;paused&quot;,&quot;idle&quot;,&quot;unreachable&quot;],&quot;default&quot;:&quot;playing&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Player&quot;},&quot;source&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;lyrion&quot;,&quot;spotify&quot;,&quot;bluetooth&quot;,&quot;plexamp&quot;],&quot;default&quot;:&quot;spotify&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Player&quot;},&quot;controls&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;all&quot;,&quot;noshuffle&quot;,&quot;none&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Player&quot;},&quot;screen&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Player&quot;},&quot;fixed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Player&quot;},&quot;muted&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Player&quot;},&quot;volume&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;min&quot;:0,&quot;max&quot;:100,&quot;default&quot;:62,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Player&quot;},&quot;long&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Track&quot;},&quot;artwork&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Track&quot;}}">
+const SRC = {
+  lyrion:    { name: 'Lyrion',    ink: 'var(--gx-src-lyrion)',    controls: 'all' },
+  spotify:   { name: 'Spotify',   ink: 'var(--gx-src-spotify)',   controls: 'noshuffle' },
+  bluetooth: { name: 'Bluetooth', ink: 'var(--gx-src-bluetooth)', controls: 'noshuffle' },
+  plexamp:   { name: 'Plexamp',   ink: 'var(--gx-src-plexamp)',   controls: 'all' }
+};
+const TRACK = {
+  normal: { title: 'Rempompi', artist: 'Gasca Zurli', album: 'Atentiune, Acceleram! · 2014', pos: 52, dur: 115 },
+  long: { title: 'Everything I Said Before About Never Coming Back Here Again (Extended Remaster)',
+    artist: 'The Very Long Name Ensemble of Greater Amsterdam',
+    album: 'Recordings From A House That No Longer Exists, Volume Two · 1998', pos: 252, dur: 468 }
+};
+const OTHERS = [
+  { name: 'Kitchen', state: 'paused', source: 'lyrion' },
+  { name: 'Study', state: 'idle', source: null }
+];
+const mmss = s => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+const KEYS = { up: 'Up', down: 'Down', left: 'Left', right: 'Right', ok: 'OK', back: 'Back' };
+
+class Component extends DCLogic {
+  state = { cur: 0, play: null, sw: null, dpad: null, muted: null, vol: null, shuffle: false, repeat: false, sent: null };
+
+  componentDidUpdate(prev) {
+    const keys = ['state', 'source', 'switcher', 'dpad', 'muted', 'volume', 'players', 'form'];
+    if (keys.some(k => prev[k] !== this.props[k])) {
+      this.setState({ cur: 0, play: null, sw: null, dpad: null, muted: null, vol: null, sent: null });
+    }
+  }
+  componentWillUnmount() { clearTimeout(this._sent); }
+
+  stateLine(st, src) {
+    if (st === 'unreachable') return 'Unavailable';
+    if (st === 'idle' || !src) return 'Idle';
+    return (st === 'paused' ? 'Paused' : 'Playing') + ' · ' + SRC[src].name;
+  }
+
+  send(k) {
+    clearTimeout(this._sent);
+    this.setState({ sent: k });
+    this._sent = setTimeout(() => this.setState({ sent: null }), 1200);
+  }
+
+  renderVals() {
+    const p = this.props;
+    const s = this.state;
+    const nPlayers = p.players ?? 3;
+    const me = { name: p.name ?? 'Living Room', state: p.state ?? 'playing', source: p.source ?? 'spotify' };
+    const list = [me, ...OTHERS].slice(0, Math.max(1, nPlayers));
+    const cur = list[Math.min(s.cur, list.length - 1)];
+    const isMe = cur === me;
+    let st = cur.state;
+    if (s.play && (st === 'playing' || st === 'paused')) st = s.play;
+    const src = st === 'idle' || st === 'unreachable' ? null : cur.source;
+    const S = src ? SRC[src] : null;
+    const unreachable = st === 'unreachable';
+    const idle = st === 'idle';
+    const hasTrack = !!S;
+    const art = isMe ? (p.artwork ?? true) : true;
+    const showArt = hasTrack && art && src !== 'bluetooth';
+    const T = (isMe && p.long) ? TRACK.long : TRACK.normal;
+    const controls = (isMe && p.controls && p.controls !== 'auto') ? p.controls : (S ? S.controls : 'none');
+    const hasPos = hasTrack && src !== 'bluetooth';
+    const screen = p.screen ?? true;
+    const fixed = isMe ? !!p.fixed : false;
+    const muted = s.muted ?? !!p.muted;
+    const vol = s.vol ?? (p.volume ?? 62);
+    const full = (p.form ?? 'full') === 'full';
+    const dpadOpen = s.dpad ?? !!p.dpad;
+    const swOpen = nPlayers > 1 && (s.sw ?? !!p.switcher);
+    const wellKind = showArt ? null : (src || 'none');
+    const pct = Math.round(T.pos / T.dur * 100);
+    const live = !unreachable;
+
+    return {
+      name: cur.name,
+      multi: nPlayers > 1,
+      switchCursor: nPlayers > 1 ? 'pointer' : 'default',
+      chevronTurn: swOpen ? 180 : 0,
+      switchBg: swOpen ? 'var(--gx-fill)' : 'transparent',
+      markOpacity: unreachable ? 0.45 : 1,
+      hasSource: !!S,
+      srcInk: S ? S.ink : 'var(--gx-ink-2)',
+      mkBars: src === 'lyrion', mkSpotify: src === 'spotify', mkBt: src === 'bluetooth', mkPlex: src === 'plexamp',
+      stateLine: this.stateLine(st, src),
+      showBleed: showArt && !!p.bleed,
+      unreachable,
+      full: live && full,
+      compact: live && !full,
+      showArt,
+      showWellMark: !showArt,
+      wellInk: S ? S.ink : 'var(--gx-ink-2)',
+      wBars: wellKind === 'lyrion', wSpotify: wellKind === 'spotify', wBt: wellKind === 'bluetooth', wPlex: wellKind === 'plexamp', wNone: wellKind === 'none',
+      title: hasTrack ? T.title : 'Nothing playing',
+      titleInk: hasTrack ? 'var(--gx-ink)' : 'var(--gx-ink-2)',
+      hasTrack,
+      artist: T.artist, album: T.album,
+      hasPos,
+      posPct: pct, posText: mmss(T.pos), durText: mmss(T.dur),
+      hasTransport: hasTrack && controls !== 'none',
+      hasShuffle: controls === 'all',
+      shuffleInk: s.shuffle ? 'var(--gx-accent)' : 'var(--gx-ink-2)',
+      repeatInk: s.repeat ? 'var(--gx-accent)' : 'var(--gx-ink-2)',
+      toggleShuffle: () => this.setState({ shuffle: !s.shuffle }),
+      toggleRepeat: () => this.setState({ repeat: !s.repeat }),
+      isPlaying: st === 'playing', isPaused: st !== 'playing',
+      playLabel: st === 'playing' ? 'Pause' : 'Play',
+      togglePlay: () => this.setState({ play: st === 'playing' ? 'paused' : 'playing' }),
+      hasVolume: !fixed,
+      fixedNote: fixed,
+      idleGap: false,
+      notMuted: !muted, isMuted: muted,
+      muteInk: muted ? 'var(--gx-accent)' : 'var(--gx-ink)',
+      toggleMute: () => this.setState({ muted: !muted }),
+      volPct: vol, volOpacity: muted ? 0.35 : 1, volKnob: vol > 6 ? (muted ? 0.5 : 0.9) : 0,
+      volText: muted ? 'Muted' : vol + '%',
+      onVol: (e) => {
+        const r = e.currentTarget.getBoundingClientRect();
+        const v = Math.max(0, Math.min(100, Math.round((e.clientX - r.left) / r.width * 100)));
+        this.setState({ vol: v, muted: false });
+      },
+      hasScreen: screen,
+      trackOpacity: hasTrack ? 1 : 0.38,
+      trackCursor: hasTrack ? 'pointer' : 'default',
+      dpadOpen,
+      dpadTurn: dpadOpen ? 180 : 0,
+      dpadBtnBg: dpadOpen ? 'var(--gx-fill-2)' : 'var(--gx-fill)',
+      toggleDpad: () => this.setState({ dpad: !dpadOpen }),
+      compactPad: !screen,
+      keyUp: () => this.send('up'), keyDown: () => this.send('down'), keyLeft: () => this.send('left'),
+      keyRight: () => this.send('right'), keyOk: () => this.send('ok'), keyBack: () => this.send('back'),
+      hasSent: !!s.sent, sentText: s.sent ? 'Sent ' + KEYS[s.sent] : '',
+      switcherOpen: swOpen,
+      toggleSwitcher: () => { if (nPlayers > 1) this.setState({ sw: !swOpen }); },
+      closeSwitcher: () => this.setState({ sw: false }),
+      players: list.map((pl, i) => ({
+        name: pl.name,
+        st: this.stateLine(i === s.cur ? st : pl.state, pl.state === 'idle' || pl.state === 'unreachable' ? null : pl.source),
+        current: pl === cur,
+        bg: pl === cur ? 'var(--gx-fill)' : 'transparent',
+        markOpacity: pl.state === 'unreachable' ? 0.45 : 1,
+        pick: () => this.setState({ cur: i, sw: false, play: null })
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas" />
+<style>
+@font-face{font-family:'Nunito Sans';src:url('../../fonts/NunitoSans-Variable.woff2') format('woff2-variations'),url('../../fonts/NunitoSans-Variable.woff2') format('woff2');font-weight:300 800;font-display:block;}
+@font-face{font-family:'IBM Plex Mono';src:url('../../fonts/IBMPlexMono-Regular.woff2') format('woff2');font-weight:400;font-display:block;}
+@font-face{font-family:'IBM Plex Mono';src:url('../../fonts/IBMPlexMono-SemiBold.woff2') format('woff2');font-weight:500 600;font-display:block;}
+@font-face{font-family:'IBM Plex Mono';src:url('../../fonts/IBMPlexMono-Bold.woff2') format('woff2');font-weight:700;font-display:block;}
+html,body{margin:0;padding:0;background:#0c1014;}html{overflow:auto !important;}body{overflow:visible !important;}a{color:#7ed6bc;}a:hover{color:#a8e5d3;}
+</style>
+</helmet>
+<section data-screen-label="Turn 2 · D-pad focus" style="min-height:100vh;background:#0c1014;color:#e9eef2;font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif;padding:56px 56px 120px;box-sizing:border-box;display:flex;flex-direction:column;gap:64px;">
+
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:920px;">
+    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#7ed6bc;">Phase 19 · brief 19, part 2</div>
+    <div style="font-size:44px;font-weight:700;letter-spacing:-0.015em;">How the D-pad’s focus looks</div>
+    <div style="font-size:18px;line-height:1.5;color:rgba(233,238,242,0.72);text-wrap:pretty;">It appears at the first key press, a touch hides it, and it moves to the next control in the direction pressed (ADR-0161). One element in a top layer draws it over the control’s box, so nothing around it moves or resizes, and no scrolling list can clip it. George chose the teal ring, <a href="#2b">2b</a>, and Jump (2026-10-25); the screens below are drawn in it.</div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:20px;">
+    <div style="font-size:26px;font-weight:700;border-bottom:1px solid rgba(233,238,242,0.12);padding-bottom:12px;">Which ring</div>
+    <div style="font-size:15px;line-height:1.5;color:rgba(233,238,242,0.72);max-width:920px;text-wrap:pretty;">All three share one geometry: a 6 px band 4 px off the control, following its corners, with a 2 px dark keyline on each side. From 3 m one arc-minute is 0.87 mm. A pixel is 0.17 mm on the 10.1″ panel and 0.15 mm on the 7.9″ bar; on the 11.9″ bar, drawn at 0.8, a page pixel is 0.16 mm. The band is about 1 mm on all three, and 1.7 mm with its keylines.</div>
+    <div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start;">
+      <sc-for list="{{ looks }}" as="l" hint-placeholder-count="3">
+        <div id="{{ l.id }}" style="width:640px;display:flex;flex-direction:column;gap:14px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:600;padding:4px 10px;border-radius:999px;background:#e9eef2;color:#0c1014;">{{ l.id }}</span>
+            <span style="font-size:20px;font-weight:700;white-space:nowrap;">{{ l.name }}</span>
+          </div>
+          <div style="font-size:15px;line-height:1.5;color:rgba(233,238,242,0.72);min-height:68px;text-wrap:pretty;">{{ l.note }}</div>
+          <div style="display:grid;grid-template-columns:repeat(2,300px);gap:12px;">
+
+            <div style="position:relative;width:300px;height:190px;border-radius:14px;overflow:hidden;background:#101a21;">
+              <div style="position:absolute;inset:-60px;background:repeating-linear-gradient(38deg,#3f5a6d 0 48px,#2e4453 48px 96px);filter:blur(40px);opacity:0.55;"></div>
+              <div style="position:absolute;left:120px;top:65px;width:60px;height:60px;border-radius:50%;background:rgba(233,238,242,0.07);display:flex;align-items:center;justify-content:center;">
+                <span style="width:22px;height:22px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:3.5px;"><span style="border-radius:2px;background:rgba(233,238,242,0.88);"></span><span style="border-radius:2px;background:rgba(233,238,242,0.88);"></span><span style="border-radius:2px;background:rgba(233,238,242,0.88);"></span><span style="border-radius:2px;background:rgba(233,238,242,0.88);"></span></span>
+              </div>
+              <dc-import name="Focus Ring" on="{{ true }}" x="{{ 120 }}" y="{{ 65 }}" w="{{ 60 }}" h="{{ 60 }}" r="{{ 30 }}" look="{{ l.look }}" hint-size="0px,0px" style="position:absolute;left:0;top:0;width:0;height:0;overflow:visible;"></dc-import>
+              <div style="position:absolute;left:14px;bottom:10px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;white-space:nowrap;color:rgba(233,238,242,0.72);">Panel ground</div>
+            </div>
+
+            <div style="position:relative;width:300px;height:190px;border-radius:14px;overflow:hidden;background:#17242d;">
+              <img src="album-art.webp" alt="" style="position:absolute;left:-10%;top:-10%;width:30%;height:30%;object-fit:cover;filter:blur(6px) saturate(1.6);transform:scale(4);transform-origin:0 0;" />
+              <div style="position:absolute;left:116px;top:61px;width:68px;height:68px;border-radius:50%;background:rgba(233,238,242,0.09);display:flex;align-items:center;justify-content:center;">
+                <div style="width:0;height:0;border-left:13px solid #e9eef2;border-top:10px solid transparent;border-bottom:10px solid transparent;margin-right:3px;"></div>
+                <div style="width:3px;height:19px;background:#e9eef2;border-radius:2px;"></div>
+              </div>
+              <dc-import name="Focus Ring" on="{{ true }}" x="{{ 116 }}" y="{{ 61 }}" w="{{ 68 }}" h="{{ 68 }}" r="{{ 34 }}" look="{{ l.look }}" hint-size="0px,0px" style="position:absolute;left:0;top:0;width:0;height:0;overflow:visible;"></dc-import>
+              <div style="position:absolute;left:14px;bottom:10px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;white-space:nowrap;color:#ffffff;text-shadow:0 1px 3px rgba(0,0,0,0.6);">Artwork colours</div>
+            </div>
+
+            <div style="position:relative;width:300px;height:190px;border-radius:14px;overflow:hidden;background:#c9d6e6;">
+              <img src="wallpapers/calm/c148381086.webp" alt="" style="position:absolute;left:-560px;top:-150px;width:1500px;height:auto;" />
+              <div style="position:absolute;left:118px;top:63px;width:64px;height:64px;border-radius:18px;box-sizing:border-box;border:1px solid rgba(233,238,242,0.14);background:rgba(16,26,33,0.42);display:flex;align-items:center;justify-content:center;">
+                <span style="width:30px;height:30px;position:relative;display:block;"><span style="position:absolute;left:0;right:0;top:7px;height:3px;border-radius:2px;background:rgba(233,238,242,0.7);display:block;"></span><span style="position:absolute;left:17px;top:4px;width:9px;height:9px;border-radius:50%;background:#e9eef2;display:block;"></span><span style="position:absolute;left:0;right:0;top:20px;height:3px;border-radius:2px;background:rgba(233,238,242,0.7);display:block;"></span><span style="position:absolute;left:4px;top:17px;width:9px;height:9px;border-radius:50%;background:#e9eef2;display:block;"></span></span>
+              </div>
+              <dc-import name="Focus Ring" on="{{ true }}" x="{{ 118 }}" y="{{ 63 }}" w="{{ 64 }}" h="{{ 64 }}" r="{{ 18 }}" look="{{ l.look }}" hint-size="0px,0px" style="position:absolute;left:0;top:0;width:0;height:0;overflow:visible;"></dc-import>
+              <div style="position:absolute;left:14px;bottom:10px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;white-space:nowrap;color:#0d151c;">Snow in a wallpaper</div>
+            </div>
+
+            <div style="position:relative;width:300px;height:190px;border-radius:14px;overflow:hidden;background:#101a21;">
+              <div style="position:absolute;left:20px;top:20px;width:260px;height:36px;display:flex;align-items:center;padding:0 16px;box-sizing:border-box;font-size:17px;color:rgba(233,238,242,0.82);">Trenulet</div>
+              <div style="position:absolute;left:20px;top:63px;width:260px;height:64px;border-radius:15px;background:rgba(126,214,188,0.16);display:flex;align-items:center;justify-content:space-between;padding:0 16px;box-sizing:border-box;">
+                <span style="font-size:17px;font-weight:600;color:#7ed6bc;">Zurli Dance</span>
+                <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;color:rgba(126,214,188,0.85);">2:41</span>
+              </div>
+              <div style="position:absolute;left:20px;top:134px;width:260px;height:36px;display:flex;align-items:center;padding:0 16px;box-sizing:border-box;font-size:17px;color:rgba(233,238,242,0.82);">Cifrele</div>
+              <dc-import name="Focus Ring" on="{{ true }}" x="{{ 20 }}" y="{{ 63 }}" w="{{ 260 }}" h="{{ 64 }}" r="{{ 15 }}" inset="{{ true }}" look="{{ l.look }}" hint-size="0px,0px" style="position:absolute;left:0;top:0;width:0;height:0;overflow:visible;"></dc-import>
+              <div style="position:absolute;left:14px;bottom:4px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;white-space:nowrap;color:rgba(233,238,242,0.72);">Selected row, teal</div>
+            </div>
+
+            <div style="position:relative;width:300px;height:190px;border-radius:14px;overflow:hidden;background:#101a21;">
+              <img src="album-art.webp" alt="" style="position:absolute;left:-10%;top:-10%;width:30%;height:30%;object-fit:cover;filter:blur(6px) saturate(1.3);transform:scale(4);transform-origin:0 0;opacity:0.5;" />
+              <div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,rgba(22,36,46,0.3),rgba(14,23,30,0.86));"></div>
+              <div style="position:absolute;left:104px;top:49px;width:92px;height:92px;border-radius:50%;background:#f2a48f;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 0 22px rgba(242,164,143,0.25);">
+                <div style="width:8px;height:30px;background:#0d151c;border-radius:2px;"></div><div style="width:8px;height:30px;background:#0d151c;border-radius:2px;"></div>
+              </div>
+              <dc-import name="Focus Ring" on="{{ true }}" x="{{ 104 }}" y="{{ 49 }}" w="{{ 92 }}" h="{{ 92 }}" r="{{ 46 }}" look="{{ l.look }}" hint-size="0px,0px" style="position:absolute;left:0;top:0;width:0;height:0;overflow:visible;"></dc-import>
+              <div style="position:absolute;left:14px;bottom:10px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;white-space:nowrap;color:rgba(233,238,242,0.72);">Play, coral</div>
+            </div>
+
+            <div style="position:relative;width:300px;height:190px;border-radius:14px;overflow:hidden;background:#101a21;">
+              <div style="position:absolute;left:20px;top:56px;width:260px;height:78px;border-radius:15px;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);display:flex;align-items:center;justify-content:space-between;padding:0 20px;">
+                <span style="font-size:18px;font-weight:600;color:#e9eef2;">Enabled</span>
+                <span style="width:60px;height:34px;border-radius:17px;position:relative;box-sizing:border-box;background:rgba(126,214,188,0.32);border:1px solid rgba(126,214,188,0.5);display:block;"><span style="position:absolute;top:3px;left:29px;width:26px;height:26px;border-radius:50%;background:#7ed6bc;display:block;"></span></span>
+              </div>
+              <dc-import name="Focus Ring" on="{{ true }}" x="{{ 20 }}" y="{{ 56 }}" w="{{ 260 }}" h="{{ 78 }}" r="{{ 15 }}" inset="{{ true }}" look="{{ l.look }}" hint-size="0px,0px" style="position:absolute;left:0;top:0;width:0;height:0;overflow:visible;"></dc-import>
+              <div style="position:absolute;left:14px;bottom:10px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;white-space:nowrap;color:rgba(233,238,242,0.72);">Toggle on, teal</div>
+            </div>
+
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:20px;">
+    <div style="font-size:26px;font-weight:700;border-bottom:1px solid rgba(233,238,242,0.12);padding-bottom:12px;">Its rules</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px 32px;max-width:1280px;font-size:15px;line-height:1.5;color:rgba(233,238,242,0.82);">
+      <div style="display:flex;flex-direction:column;gap:6px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Outside</div><div style="text-wrap:pretty;">Round controls, buttons, tiles and covers. The ring sits 4 px out and its corners are the control’s radius plus 10.</div></div>
+      <div style="display:flex;flex-direction:column;gap:6px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Inset</div><div style="text-wrap:pretty;">Rows and anything else with less than 12 px to its neighbours. The ring is drawn 2 px inside the row, so it never covers the next one.</div></div>
+      <div style="display:flex;flex-direction:column;gap:6px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Sliders</div><div style="text-wrap:pretty;">The ring takes the whole track with an arrow at each end, because Left and Right change the value. The arrow pressed steps out 5 px and the other dims while the value moves.</div></div>
+      <div style="display:flex;flex-direction:column;gap:6px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Selection stays</div><div style="text-wrap:pretty;">A selected row keeps its teal, a tab its underline, a toggle its state. The focus is only ever the ring on top, its dark keylines keeping it apart from the teal under it.</div></div>
+      <div style="display:flex;flex-direction:column;gap:6px;"><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">On the Pi</div><div style="text-wrap:pretty;">The ring is one element with a border and two box-shadows of no blur, moved with transform. Nothing is read back from the screen.</div></div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:20px;">
+    <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;border-bottom:1px solid rgba(233,238,242,0.12);padding-bottom:12px;">
+      <div style="font-size:26px;font-weight:700;">How it travels</div>
+      <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;color:rgba(233,238,242,0.6);">Right, every 1.2 s</div>
+    </div>
+    <div style="font-size:15px;line-height:1.5;color:rgba(233,238,242,0.72);max-width:920px;text-wrap:pretty;">Jump, chosen: the ring is drawn on the next control at once. Gliding, not taken, moves it there in 160 ms on the panel’s own curve, which helps the eye follow it across a wide gap; a held key skips the glide and jumps.</div>
+    <div style="display:flex;flex-wrap:wrap;gap:28px;">
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Jump</div>
+        <div style="position:relative;width:640px;height:220px;border-radius:14px;overflow:hidden;background:#101a21;">
+          <div style="position:absolute;left:40px;top:40px;width:170px;height:140px;border-radius:24px;box-sizing:border-box;background:rgba(126,214,188,0.1);border:1px solid rgba(126,214,188,0.3);padding:20px;display:flex;align-items:flex-end;font-size:24px;font-weight:700;">Browse</div>
+          <div style="position:absolute;left:235px;top:40px;width:170px;height:140px;border-radius:24px;box-sizing:border-box;background:rgba(159,180,232,0.1);border:1px solid rgba(159,180,232,0.3);padding:20px;display:flex;align-items:flex-end;font-size:24px;font-weight:700;">Artists</div>
+          <div style="position:absolute;left:430px;top:40px;width:170px;height:140px;border-radius:24px;box-sizing:border-box;background:rgba(242,164,143,0.1);border:1px solid rgba(242,164,143,0.3);padding:20px;display:flex;align-items:flex-end;font-size:24px;font-weight:700;">Playlists</div>
+          <dc-import name="Focus Ring" on="{{ true }}" cycle="{{ travelXs }}" y="{{ 40 }}" w="{{ 170 }}" h="{{ 140 }}" r="{{ 24 }}" look="{{ look }}" hint-size="0px,0px" style="position:absolute;left:0;top:0;width:0;height:0;overflow:visible;"></dc-import>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Glide · 160 ms</div>
+        <div style="position:relative;width:640px;height:220px;border-radius:14px;overflow:hidden;background:#101a21;">
+          <div style="position:absolute;left:40px;top:40px;width:170px;height:140px;border-radius:24px;box-sizing:border-box;background:rgba(126,214,188,0.1);border:1px solid rgba(126,214,188,0.3);padding:20px;display:flex;align-items:flex-end;font-size:24px;font-weight:700;">Browse</div>
+          <div style="position:absolute;left:235px;top:40px;width:170px;height:140px;border-radius:24px;box-sizing:border-box;background:rgba(159,180,232,0.1);border:1px solid rgba(159,180,232,0.3);padding:20px;display:flex;align-items:flex-end;font-size:24px;font-weight:700;">Artists</div>
+          <div style="position:absolute;left:430px;top:40px;width:170px;height:140px;border-radius:24px;box-sizing:border-box;background:rgba(242,164,143,0.1);border:1px solid rgba(242,164,143,0.3);padding:20px;display:flex;align-items:flex-end;font-size:24px;font-weight:700;">Playlists</div>
+          <dc-import name="Focus Ring" on="{{ true }}" cycle="{{ travelXs }}" y="{{ 40 }}" w="{{ 170 }}" h="{{ 140 }}" r="{{ 24 }}" glide="{{ true }}" look="{{ look }}" hint-size="0px,0px" style="position:absolute;left:0;top:0;width:0;height:0;overflow:visible;"></dc-import>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:20px;">
+    <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;border-bottom:1px solid rgba(233,238,242,0.12);padding-bottom:12px;">
+      <div style="font-size:26px;font-weight:700;">On the standard screens</div>
+      <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;color:rgba(233,238,242,0.6);">1280 × 800 · {{ lookName }}</div>
+    </div>
+    <div style="font-size:15px;line-height:1.5;color:rgba(233,238,242,0.72);max-width:920px;text-wrap:pretty;">The locked designs themselves, with the ring drawn over the control the D-pad is on. An artboard loads when it comes into view, three at a time and one Now Playing at a time.</div>
+    <div style="display:flex;flex-wrap:wrap;gap:40px 36px;align-items:flex-start;">
+      <sc-for list="{{ stdShots }}" as="s" hint-placeholder-count="4">
+        <div id="{{ s.id }}" style="display:flex;flex-direction:column;gap:12px;width:1280px;">
+          <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:600;padding:3px 9px;border-radius:999px;background:#e9eef2;color:#0c1014;">{{ s.id }}</span>
+            <span style="font-size:20px;font-weight:700;white-space:nowrap;">{{ s.label }}</span>
+            <span style="font-size:15px;color:rgba(233,238,242,0.62);white-space:nowrap;">{{ s.note }}</span>
+          </div>
+          <div data-shot="{{ s.id }}" style="position:relative;width:1280px;height:800px;overflow:hidden;border-radius:6px;background:#101a21;">
+            <div data-layer="1" style="position:absolute;left:0;top:0;width:1280px;height:800px;">
+              <sc-if value="{{ s.mounted }}" hint-placeholder-val="{{ false }}">
+                <sc-if value="{{ s.isNp }}" hint-placeholder-val="{{ false }}"><dc-import name="Now Playing" hint-size="1280px,800px" style="position:absolute;left:0;top:0;width:1280px;height:800px;"></dc-import></sc-if>
+                <sc-if value="{{ s.isLyr }}" hint-placeholder-val="{{ false }}"><dc-import name="Lyrion Standard" screen="{{ s.screen }}" hint-size="1280px,800px" style="position:absolute;left:0;top:0;width:1280px;height:800px;"></dc-import></sc-if>
+                <sc-if value="{{ s.isSet }}" hint-placeholder-val="{{ false }}"><dc-import name="Settings" mode="wide" hint-size="1280px,800px" style="position:absolute;left:0;top:0;width:1280px;height:800px;"></dc-import></sc-if>
+                <dc-import name="Focus Ring" on="{{ s.ring.on }}" x="{{ s.ring.x }}" y="{{ s.ring.y }}" w="{{ s.ring.w }}" h="{{ s.ring.h }}" r="{{ s.ring.r }}" inset="{{ s.ring.inset }}" slider="{{ s.ring.slider }}" look="{{ look }}" hint-size="0px,0px" style="position:absolute;left:0;top:0;width:0;height:0;overflow:visible;z-index:300;"></dc-import>
+              </sc-if>
+              <sc-if value="{{ s.waiting }}" hint-placeholder-val="{{ true }}">
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.4);">Loads in view, three at a time</div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:20px;">
+    <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;border-bottom:1px solid rgba(233,238,242,0.12);padding-bottom:12px;">
+      <div style="font-size:26px;font-weight:700;">On the bars</div>
+      <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;color:rgba(233,238,242,0.6);">1480 × 320 (the 1850 × 400 page at 0.8) and 1280 × 400 · {{ lookName }}</div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:40px 36px;align-items:flex-start;">
+      <sc-for list="{{ barShots }}" as="s" hint-placeholder-count="3">
+        <div id="{{ s.id }}" style="display:flex;flex-direction:column;gap:12px;width:{{ s.fw }}px;">
+          <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:600;padding:3px 9px;border-radius:999px;background:#e9eef2;color:#0c1014;">{{ s.id }}</span>
+            <span style="font-size:20px;font-weight:700;white-space:nowrap;">{{ s.label }}</span>
+            <span style="font-size:15px;color:rgba(233,238,242,0.62);white-space:nowrap;">{{ s.note }}</span>
+          </div>
+          <div data-shot="{{ s.id }}" style="position:relative;width:{{ s.fw }}px;height:{{ s.fh }}px;overflow:hidden;border-radius:6px;background:#101a21;">
+            <div data-layer="1" style="position:absolute;left:0;top:0;width:{{ s.w }}px;height:400px;transform:scale({{ s.scale }});transform-origin:0 0;">
+              <sc-if value="{{ s.mounted }}" hint-placeholder-val="{{ false }}">
+                <dc-import name="Bar Frame" variant="{{ s.variant }}" w="{{ s.w }}" layout="{{ s.layout }}" tray="{{ s.tray }}" hint-size="100%,400px" style="position:absolute;left:0;top:0;width:{{ s.w }}px;height:400px;"></dc-import>
+                <dc-import name="Focus Ring" on="{{ s.ring.on }}" x="{{ s.ring.x }}" y="{{ s.ring.y }}" w="{{ s.ring.w }}" h="{{ s.ring.h }}" r="{{ s.ring.r }}" inset="{{ s.ring.inset }}" slider="{{ s.ring.slider }}" look="{{ look }}" hint-size="0px,0px" style="position:absolute;left:0;top:0;width:0;height:0;overflow:visible;z-index:300;"></dc-import>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;focusLook&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;white&quot;,&quot;teal&quot;,&quot;lift&quot;],&quot;default&quot;:&quot;teal&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Board&quot;}}">
+const LOOKS = [
+  { id: '2a', look: 'white', name: 'White ring', note: 'Neutral white, so it never reads as a selection (teal), a source (its accent) or the play control (coral). The dark keylines on both sides hold it on snow and on light artwork.' },
+  { id: '2b', look: 'teal', name: 'Teal ring', note: 'The phone pointer’s teal (ADR-0121), so both ways of driving the panel share one mark. It sinks into a selected row and a switched-on toggle, which are teal too.' },
+  { id: '2c', look: 'lift', name: 'White ring and lift', note: '2a, and the focused control grows to 1.04 with a shadow under it, as a TV shows focus. Rows and other full-width controls keep the ring alone.' }
+];
+
+const STD = [
+  { id: 'F01', kind: 'np', label: 'Home tile', note: 'Simple navigation', target: { handler: 'onOpenArtists' } },
+  { id: 'F02', kind: 'lyr', screen: 'home', label: 'Lyrion’s menu tile', note: 'Extended navigation', target: { text: 'My Music', minH: 120 } },
+  { id: 'F03', kind: 'lyr', screen: 'tracks', label: 'A library row', note: 'inset', target: { row: 3 }, inset: true },
+  { id: 'F04', kind: 'lyr', screen: 'albums', label: 'An album in a grid', note: 'on the cover', target: { cover: 1 } },
+  { id: 'F05', kind: 'np', label: 'Now Playing · play/pause', note: 'where the focus starts', steps: [{ click: { handler: 'onLibClose' } }], target: { handler: 'onToggle' } },
+  { id: 'F06', kind: 'np', label: 'Now Playing · volume', note: '', steps: [{ click: { handler: 'onLibClose' } }], target: { handler: 'onVolTrigger' } },
+  { id: 'F07', kind: 'np', label: 'Now Playing · Lyrics tab', note: 'Track keeps its underline', steps: [{ click: { handler: 'onLibClose' } }], target: { handler: 'onLyrics', pad: [12, 10] } },
+  { id: 'F08', kind: 'set', label: 'A Settings row', note: 'inset', target: { text: 'Output', pressable: true }, inset: true },
+  { id: 'F09', kind: 'set', label: 'A toggle', note: 'the row is the control; OK flips it', steps: [{ click: { text: 'Sources', pressable: true } }], target: { text: 'Enabled', pressable: true }, inset: true },
+  { id: 'F10', kind: 'set', label: 'A slider, focused', note: 'Left and Right are live', steps: [{ click: { text: 'Starting volume', pressable: true } }], target: { handler: 'onSlideDown' }, slider: 'focus' },
+  { id: 'F11', kind: 'set', label: 'The slider while Right is held', note: '60 → 72 %', steps: [{ click: { text: 'Starting volume', pressable: true } }, { drag: { handler: 'onSlideDown', pct: 0.69 } }], target: { handler: 'onSlideDown' }, slider: 'right' },
+  { id: 'F12', kind: 'set', label: 'A button in a sheet', note: '', steps: [{ click: { text: 'Starting volume', pressable: true } }], target: { handler: 'onSheetConfirm' } },
+  { id: 'F13', kind: 'np', label: 'The volume drawer', note: 'its slider, where the focus starts', steps: [{ click: { handler: 'onLibClose' } }, { click: { handler: 'onVolTrigger' } }], target: { handler: 'onVolume' }, slider: 'focus' }
+];
+
+const BARS = [
+  { id: 'B01', w: 1850, variant: 'home', layout: 'c', label: 'The rail', note: '11.9″ · its play control', target: { coral: 64 } },
+  { id: 'B02', w: 1850, variant: 'strip', layout: 'c', tray: true, label: 'A tray button', note: '11.9″ · Home', target: { trayFirst: true } },
+  { id: 'B03', w: 1850, variant: 'home', layout: 'c', label: 'A library tile', note: '11.9″', target: { text: 'Browse', minH: 150 } },
+  { id: 'B04', w: 1280, variant: 'home', layout: 'c', label: 'The rail', note: '7.9″', target: { coral: 64 } },
+  { id: 'B05', w: 1280, variant: 'strip', layout: 'c', tray: true, label: 'A tray button', note: '7.9″', target: { trayFirst: true } },
+  { id: 'B06', w: 1280, variant: 'home', layout: 'c', label: 'A library tile', note: '7.9″', target: { text: 'Browse', minH: 150 } }
+];
+const MAX_LIVE = 3;
+const TRAVEL_XS = [40, 235, 430];
+const ORDER = [...STD, ...BARS].map(s => s.id);
+const ALL = {};
+STD.forEach(s => { ALL[s.id] = s; });
+BARS.forEach(s => { ALL[s.id] = s; });
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+let RPK = null;
+const rp = el => {
+  if (RPK) return el[RPK] || null;
+  const k = Object.keys(el).find(k => k.startsWith('__reactProps'));
+  if (k) RPK = k;
+  return k ? el[k] : null;
+};
+const vis = el => {
+  const r = el.getBoundingClientRect();
+  if (r.width < 1 || r.height < 1) return false;
+  return el.checkVisibility ? el.checkVisibility({ opacityProperty: true, visibilityProperty: true }) : true;
+};
+const ownText = el => [...el.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim();
+const fake = (el, x, y) => ({
+  currentTarget: { getBoundingClientRect: () => el.getBoundingClientRect(), setPointerCapture() {}, releasePointerCapture() {}, hasPointerCapture() { return true; } },
+  target: el, clientX: x, clientY: y, pointerId: 1, button: 0, buttons: 1,
+  preventDefault() {}, stopPropagation() {}
+});
+
+class Component extends DCLogic {
+  state = { rings: {}, mounted: {} };
+  els = {};
+  runs = {};
+
+  componentDidMount() {
+    this.visible = new Set();
+    // checked on a timer rather than with IntersectionObserver: the canvas
+    // pans and zooms with transforms, which fire no scroll events
+    this.vis = setInterval(() => {
+      const H = window.innerHeight, W = window.innerWidth, M = 200;
+      const v = new Set();
+      // #shot=F05,B01 mounts exactly those, wherever they are (PNG export)
+      const only = (location.hash.match(/^#shot=([\w,]+)/) || [])[1];
+      if (only) only.split(',').forEach(id => v.add(id));
+      else document.querySelectorAll('[data-shot]').forEach(n => {
+        const r = n.getBoundingClientRect();
+        if (r.bottom > -M && r.top < H + M && r.right > -M && r.left < W + M) v.add(n.dataset.shot);
+      });
+      this.visible = v;
+      try { this.updateMounted(); } catch (e) { document.body.dataset.err = String(e && e.message); }
+      document.body.dataset.vis = [...v].join(',') + ' | ' + Object.keys(this.state.mounted).join(',');
+    }, 500);
+    this.remeasure = setInterval(() => Object.keys(this.els).forEach(id => this.measure(id)), 1500);
+  }
+  componentDidUpdate(prev) {
+    Object.keys(this.state.mounted).forEach(id => { if (!this.runs[id]) { this.runs[id] = true; this.run(id); } });
+    if (prev.focusLook !== this.props.focusLook) Object.keys(this.els).forEach(id => this.measure(id));
+  }
+  // the locked screens are heavy: at most MAX_LIVE are mounted at once, the
+  // ones in view; the rest wait under a placeholder
+  updateMounted() {
+    const cur = this.state.mounted;
+    const vis = ORDER.filter(id => this.visible.has(id));
+    // Now Playing is not safe to mount twice on one page, so one at a time
+    const next = [];
+    let np = 0;
+    [...vis.filter(id => cur[id]), ...vis.filter(id => !cur[id])].forEach(id => {
+      if (next.length >= MAX_LIVE) return;
+      if (ALL[id].kind === 'np') { if (np) return; np++; }
+      next.push(id);
+    });
+    const m = {};
+    next.forEach(id => { m[id] = true; });
+    const same = Object.keys(m).length === Object.keys(cur).length && next.every(id => cur[id]);
+    if (same) return;
+    Object.keys(cur).forEach(id => { if (!m[id]) { this.runs[id] = false; delete this.els[id]; } });
+    this.setState(s => {
+      const rings = { ...s.rings };
+      Object.keys(cur).forEach(id => { if (!m[id]) delete rings[id]; });
+      return { mounted: m, rings };
+    });
+  }
+  componentWillUnmount() { clearInterval(this.vis); clearInterval(this.remeasure); }
+
+  find(root, t) {
+    const all = [...root.querySelectorAll('*')];
+    if (t.handler) {
+      return all.find(el => { const p = rp(el); return p && ['onClick', 'onPointerDown'].some(h => p[h] && p[h].name === t.handler) && vis(el); }) || null;
+    }
+    if (t.text) {
+      let el = all.find(e => ownText(e) === t.text && vis(e));
+      if (!el) return null;
+      if (t.pressable) { let a = el; while (a && a !== root && !(rp(a) && rp(a).onClick)) a = a.parentElement; return a && a !== root ? a : null; }
+      if (t.minH) { let a = el; while (a && a !== root && a.getBoundingClientRect().height < t.minH * this.scaleOf(root)) a = a.parentElement; return a && a !== root ? a : null; }
+      return el;
+    }
+    if (t.row != null) {
+      const s = this.scaleOf(root);
+      const rows = all.filter(e => {
+        if (getComputedStyle(e).borderTopLeftRadius !== '14px') return false;
+        const b = e.getBoundingClientRect();
+        return b.height >= 50 * s && b.height <= 90 * s && b.width > 300 * s && vis(e);
+      });
+      return rows[t.row] || null;
+    }
+    if (t.cover != null) {
+      const s = this.scaleOf(root);
+      const imgs = all.filter(e => e.tagName === 'IMG' && vis(e) && e.getBoundingClientRect().width > 140 * s && e.getBoundingClientRect().top - root.getBoundingClientRect().top > 90 * s);
+      const img = imgs[t.cover];
+      if (!img) return null;
+      let a = img.parentElement;
+      while (a && a !== root && a.getBoundingClientRect().width > img.getBoundingClientRect().width + 2) a = a.parentElement;
+      return a && a !== root ? a : img;
+    }
+    if (t.coral) {
+      return all.find(e => vis(e) && getComputedStyle(e).backgroundColor === 'rgb(242, 164, 143)' && e.offsetWidth === t.coral) || null;
+    }
+    if (t.trayFirst) {
+      const tray = all.find(e => vis(e) && getComputedStyle(e).backgroundColor === 'rgb(22, 35, 44)' && e.offsetHeight === 136);
+      if (!tray) return null;
+      return [...tray.children].find(c => c.offsetWidth === 64) || null;
+    }
+    return null;
+  }
+  scaleOf(root) {
+    const layer = root.closest('[data-layer]') || root;
+    return layer.getBoundingClientRect().width / layer.offsetWidth || 1;
+  }
+  step(root, st) {
+    if (st.click) {
+      const el = this.find(root, st.click);
+      if (!el) return false;
+      const p = rp(el); const r = el.getBoundingClientRect();
+      p.onClick(fake(el, r.left + r.width / 2, r.top + r.height / 2));
+      return true;
+    }
+    if (st.drag) {
+      const el = this.find(root, { handler: st.drag.handler });
+      if (!el) return false;
+      const p = rp(el); const r = el.getBoundingClientRect();
+      const x = r.left + r.width * st.drag.pct, y = r.top + r.height / 2;
+      try { p.onPointerDown && p.onPointerDown(fake(el, x, y)); p.onPointerMove && p.onPointerMove(fake(el, x, y)); p.onPointerUp && p.onPointerUp(fake(el, x, y)); } catch (e) { console.warn('drag', e); }
+      return true;
+    }
+    return true;
+  }
+  async run(id) {
+    const spec = ALL[id];
+    let layer = null;
+    for (let i = 0; i < 60; i++) {
+      layer = document.querySelector(`[data-shot="${id}"] [data-layer]`);
+      if (layer && layer.querySelectorAll('*').length > 40) break;
+      await sleep(250);
+    }
+    if (!layer) return;
+    await sleep(500);
+    for (const st of spec.steps || []) {
+      let ok = false;
+      for (let i = 0; i < 40 && !ok; i++) { ok = this.step(layer, st); if (!ok) await sleep(250); }
+      await sleep(450);
+    }
+    let el = null;
+    for (let i = 0; i < 40 && !el; i++) { el = this.find(layer, spec.target); if (!el) await sleep(250); }
+    if (!this.state.mounted[id]) return;
+    if (!el) { console.warn('focus target not found', id); return; }
+    this.els[id] = el;
+    this.measure(id);
+  }
+  measure(id) {
+    const el = this.els[id], spec = ALL[id];
+    const layer = document.querySelector(`[data-shot="${id}"] [data-layer]`);
+    if (!el || !layer || !el.isConnected) return;
+    const lift = (this.props.focusLook ?? 'teal') === 'lift' && !spec.inset && !spec.slider;
+    el.style.transition = 'transform 160ms cubic-bezier(0.32,0.72,0,1)';
+    el.style.transform = lift ? 'scale(1.04)' : '';
+    const S = this.scaleOf(layer);
+    const L = layer.getBoundingClientRect(), R = el.getBoundingClientRect();
+    const pad = spec.target.pad || [0, 0];
+    const cs = getComputedStyle(el);
+    let r = parseFloat(cs.borderTopLeftRadius) || 0;
+    if (cs.borderTopLeftRadius.includes('%')) r = 9999;
+    const w = R.width / S, h = R.height / S;
+    if (r >= Math.min(w, h) / 2) r = 9999;
+    const ring = {
+      on: true, x: Math.round((R.left - L.left) / S - pad[0]), y: Math.round((R.top - L.top) / S - pad[1]),
+      w: Math.round(w + 2 * pad[0]), h: Math.round(h + 2 * pad[1]),
+      r: pad[0] ? 12 : Math.round(r * (lift ? 1.04 : 1)), inset: !!spec.inset, slider: spec.slider || 'none'
+    };
+    const old = this.state.rings[id];
+    if (old && ['x', 'y', 'w', 'h', 'r'].every(k => old[k] === ring[k])) return;
+    this.setState(s => ({ rings: { ...s.rings, [id]: ring } }));
+  }
+
+  renderVals() {
+    const look = this.props.focusLook ?? 'teal';
+    const { rings, mounted } = this.state;
+    const off = { on: false, x: 0, y: 0, w: 0, h: 0, r: 0, inset: false, slider: 'none' };
+    const shot = s => ({ ...s, mounted: !!mounted[s.id], waiting: !mounted[s.id], ring: rings[s.id] || off });
+    return {
+      look,
+      lookName: (LOOKS.find(l => l.look === look) || LOOKS[0]).id + ' · ' + (LOOKS.find(l => l.look === look) || LOOKS[0]).name,
+      looks: LOOKS,
+      travelXs: TRAVEL_XS,
+      stdShots: STD.map(s => ({ ...shot(s), isNp: s.kind === 'np', isLyr: s.kind === 'lyr', isSet: s.kind === 'set', screen: s.screen || '' })),
+      barShots: BARS.map(s => ({ ...shot(s), fw: s.w === 1850 ? 1480 : 1280, fh: s.w === 1850 ? 320 : 400, scale: s.w === 1850 ? 0.8 : 1, layout: s.layout, tray: !!s.tray }))
+    };
+  }
+}
+</script>
+</body>
+</html>

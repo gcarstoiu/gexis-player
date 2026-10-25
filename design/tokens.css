@@ -89,3 +89,95 @@
   --dur:        200ms;
   --dur-screen: 260ms;
 }
+
+/* ---- Phase 19: the Home Assistant card (2026-10-25) --------------------
+   Extracted from source/19/HA Card.dc.html and HA Card Board.dc.html.
+   George chose the player's look (1b): the card sets these on its root
+   whatever the Home Assistant theme. The root then reads them through the
+   --gx-* chain below, which falls back to Home Assistant's own theme
+   variables and then to a literal: drop the first block and the card is
+   in Home Assistant's look (1a). Set on the root, these win over the
+   theme; to change one, override it on the root. */
+[data-gexis-card="root"] {
+  --gexis-card-background:      #16232c;
+  --gexis-card-ink:             #e9eef2;
+  --gexis-card-ink-2:           rgba(233,238,242,0.72);
+  --gexis-card-line:            rgba(233,238,242,0.10);
+  --gexis-card-border:          rgba(126,214,188,0.22);
+  --gexis-card-radius:          24px;
+  --gexis-card-shadow:          none;
+  --gexis-card-font:            'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif;
+  --gexis-card-label-font:      'IBM Plex Mono','Courier New',monospace;
+  --gexis-card-label-case:      uppercase;
+  --gexis-card-label-track:     0.2em;
+  --gexis-card-label-size:      12px;
+  --gexis-card-play:            #f2a48f;
+  --gexis-card-on-play:         #0d151c;
+  --gexis-card-accent:          #7ed6bc;
+  --gexis-card-volume:          #7ed6bc;
+  --gexis-card-volume-track:    rgba(233,238,242,0.12);
+  --gexis-card-fill:            rgba(233,238,242,0.07);
+  --gexis-card-fill-strong:     rgba(233,238,242,0.18);
+  --gexis-card-menu:            #16232c;
+  --gexis-card-menu-shadow:     0 18px 48px rgba(0,0,0,0.5);
+  --gexis-card-bleed:           0.55;
+  --gexis-card-bleed-scrim:     radial-gradient(130% 105% at 20% 42%,rgba(22,36,46,0.3),rgba(14,23,30,0.86));
+  --gexis-source-lyrion:        #7ed6bc;
+  --gexis-source-spotify:       #8fd9a8;
+  --gexis-source-bluetooth:     #9fb4e8;
+  --gexis-source-plexamp:       rgba(233,238,242,0.8);
+
+  /* the chain the card reads (verbatim from the card root) */
+  --gx-bg:                      var(--gexis-card-background,var(--ha-card-background,var(--card-background-color,#fff)));
+  --gx-ink:                     var(--gexis-card-ink,var(--primary-text-color,#212121));
+  --gx-ink-2:                   var(--gexis-card-ink-2,var(--secondary-text-color,#727272));
+  --gx-line:                    var(--gexis-card-line,var(--divider-color,rgba(0,0,0,0.12)));
+  --gx-border:                  var(--gexis-card-border,var(--ha-card-border-color,var(--divider-color,#e0e0e0)));
+  --gx-radius:                  var(--gexis-card-radius,var(--ha-card-border-radius,12px));
+  --gx-card-shadow:             var(--gexis-card-shadow,var(--ha-card-box-shadow,none));
+  --gx-font:                    var(--gexis-card-font,var(--ha-font-family-body,Roboto,Noto,sans-serif));
+  --gx-label-font:              var(--gexis-card-label-font,var(--ha-font-family-body,Roboto,Noto,sans-serif));
+  --gx-label-case:              var(--gexis-card-label-case,none);
+  --gx-label-track:             var(--gexis-card-label-track,0.01em);
+  --gx-label-size:              var(--gexis-card-label-size,14px);
+  --gx-play:                    var(--gexis-card-play,var(--primary-color,#009ac7));
+  --gx-on-play:                 var(--gexis-card-on-play,var(--text-primary-color,#fff));
+  --gx-accent:                  var(--gexis-card-accent,var(--primary-color,#009ac7));
+  --gx-vol:                     var(--gexis-card-volume,var(--primary-color,#009ac7));
+  --gx-vol-track:               var(--gexis-card-volume-track,color-mix(in srgb,var(--primary-color,#009ac7) 20%,transparent));
+  --gx-fill:                    var(--gexis-card-fill,rgba(127,127,127,0.12));
+  --gx-fill-2:                  var(--gexis-card-fill-strong,rgba(127,127,127,0.24));
+  --gx-menu:                    var(--gexis-card-menu,var(--card-background-color,#fff));
+  --gx-menu-shadow:             var(--gexis-card-menu-shadow,0 6px 24px rgba(0,0,0,0.18));
+  --gx-bleed:                   var(--gexis-card-bleed,0);
+  --gx-bleed-scrim:             var(--gexis-card-bleed-scrim,none);
+  --gx-src-lyrion:              var(--gexis-source-lyrion,oklch(0.52 0.09 170));
+  --gx-src-spotify:             var(--gexis-source-spotify,oklch(0.52 0.12 150));
+  --gx-src-bluetooth:           var(--gexis-source-bluetooth,oklch(0.5 0.12 272));
+  --gx-src-plexamp:             var(--gexis-source-plexamp,var(--secondary-text-color,#727272));
+}
+
+/* ---- Phase 19: the D-pad's focus (2026-10-25) ---------------------------
+   Extracted from source/19/Focus Ring.dc.html. George chose the teal ring
+   (2b) and Jump: the ring is drawn on the next control at once, with no
+   glide. One element in a top layer, placed over the focused control's
+   box with transform; it takes no part in layout and reads nothing back
+   from the screen. */
+:root {
+  --focus-ink:                  #7ed6bc;  /* the band; the phone pointer’s teal */
+  --focus-band:                 6px;  /* band width */
+  --focus-gap:                  4px;  /* between the control and the band, outside */
+  --focus-out:                  10px;  /* gap + band: how far the ring’s box sits outside */
+  --focus-radius-add:           10px;  /* outside: the control’s radius plus this; round stays round */
+  --focus-inset:                2px;  /* inset form (rows, < 12px to a neighbour): drawn this far inside */
+  --focus-inset-radius-sub:     2px;  /* inset: the control’s radius minus this, at least 4px */
+  --focus-keyline-ink:          rgba(8,12,16,0.8);  /* dark keyline each side of the band */
+  --focus-keyline:              2px;
+  --focus-shadow:               0 0 0 2px rgba(8,12,16,0.8), inset 0 0 0 2px rgba(8,12,16,0.8);  /* no blur */
+  --focus-arrow-w:              20px;  /* slider arrows, one each end */
+  --focus-arrow-h:              28px;
+  --focus-arrow-out:            32px;  /* arrow box from the ring’s edge */
+  --focus-arrow-nudge:          5px;  /* the arrow pressed steps out while the value moves */
+  --focus-arrow-dim:            0.35;  /* opacity of the other arrow meanwhile */
+  --focus-z:                    200;  /* its layer, above every sheet and drawer */
+}
