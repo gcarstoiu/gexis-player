@@ -132,9 +132,12 @@ restarted). George's first check found three things, fixed in git49
 (ADR-0161 13-16): the ring over the idle screen, left behind by a closing
 drawer, kept by a touchpad tap. He decided the D-pad leaves the Home
 Assistant dashboard's own page alone (ADR-0161 17). The card works on his
-Home Assistant (the app needed a force stop to load it); its editor shows
-*Form* and *Look* empty until chosen - for the integration's next release.
-Waiting for the rest of his check.
+Home Assistant (the app needed a force stop to load it). His second round
+(the transport by the source, as the player; Idle and Meters on the card) is
+in the integration's 0.4.0, released 2026-10-25 (ADR-0163 11-14), and in
+`idle_screen` on `/player/status` on `ph-home-assistant` (not on sofapi
+yet: until it is, the card offers Idle there whether or not the idle screen
+is on). Waiting for the rest of his check.
 HACS's default
 list (our icon in HACS's store): not before Phase 19 is finished (George,
 2026-10-25). The

@@ -81,6 +81,26 @@ while their buttons are unavailable.
 10. **The album line is the album only**: Home Assistant carries no year,
     which the design's sample shows.
 
+## Changed after George's check (2026-10-25, integration 0.4.0)
+
+After trying the card on his Home Assistant, George asked for the player's
+rule on the transport and for the idle screen and the meters:
+
+11. **The transport is the source's** (amends D6): a control the source has
+    is shown, and greyed while it cannot be used now, as on the player
+    (ADR-0037 §3). The media player's features are the active source's
+    `capabilities` controls; `available_controls` says which work now.
+12. **The phone's Panel views**: Meters, Room (the dashboard) and Idle join
+    Home, Now playing and Lyrics, each left out where the phone leaves it
+    out - Meters without meters on the output, Room until the dashboard's
+    address is set, Idle while the idle screen is switched off. They are the
+    integration's switches (a new *Idle screen* one, through
+    `/panel/idle/{action}`); one that is up has the accent's outline.
+13. **Whether the idle screen is on** reaches Home Assistant as
+    `idle_screen` on `/player/status`; a player without the field offers it.
+14. **The editor says the defaults** (Full, the player's look) under *Form*
+    and *Look*, and a new card is made with them.
+
 ## Settings (ADR-0022)
 
 None: the card's options live in the dashboard, not on the player.
