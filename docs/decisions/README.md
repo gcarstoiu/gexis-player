@@ -181,6 +181,7 @@ been written properly. **0098 has no record either.**
 | [0158](0158-dsi-screens.md) | DSI screens | Accepted 2026-10-23 (Phase 17): every DSI screen in the list (58), overlays written to config.txt with Keep and a way back; the DSI panel is the screen; standby by backlight; a brightness row |
 | [0159](0159-raspberry-pi-imager.md) | Raspberry Pi Imager | Accepted in part 2026-10-24: Use custom stays, guide corrected; our own list and Imager's settings not now; Imager's own list open |
 | [0160](0160-the-player-in-home-assistant.md) | The player in Home Assistant | Accepted 2026-10-24 (Phase 19): our own integration in its own repository; a media player plus screen, dashboard and visualiser switches; `id` on `/player/status` |
+| [0161](0161-a-d-pad-on-the-panel.md) | A D-pad on the panel | Proposed 2026-10-25 (Phase 19): real key presses, focus by position, a Home Assistant remote |
 
 ## Cross-cutting rules
 
