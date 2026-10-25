@@ -7608,3 +7608,86 @@ tag, and the tag's *API description* run too.
 and `next`, the merged branches and worktrees are gone, and the routine
 clean-up ran. Promotion to Stable is George's call, later; the README's
 "current release" line changes only then.
+
+## 2026-10-25: 1.5.0's previews, fixes and PR #82 (moved from HANDOFF verbatim after George merged PR #82)
+
+**ShelvesPi runs the bar fixes' preview** (since 2026-10-24 21:35, ui and
+player `1.4.0+git69.eed6457` later that evening, core `1.4.0+git53.5b660b4`; the
+branch `preview-bar-1024` removed, everything in it now on `next`). Checked
+there with the synthetic finger: a flick then a tap opens the visualiser
+3/3 (0/3 before), a pulled tray stays open, one opened by a change from
+elsewhere hides itself. **sofapi runs the Phase 19 preview** (below).
+
+**bedroompi runs the preview `preview-1023`** (a card from an earlier life,
+now with the Waveshare 10.1" DSI-TOUCH-A): `ph-dsi` with
+`lms-server-restart` and `bar-wallpapers` merged in
+(its branch removed 2026-10-24, everything in it now on `next`). Since 2026-10-24 15:11 gexis-core and gexis-player
+`1.4.0+git45.561e337`, gexis-ui `1.4.0+git36.b8793e5`, gexis-system
+`1.4.0+git29.d93d43f`. **`lms-server-restart` and `bar-wallpapers`**:
+checked by George, merged into `next` 2026-10-24, branches deleted.
+bedroompi had updated itself to 1.4.0 and kept a Lyrion server address that had
+moved to sofapi, which has none: no library, an empty New Music strip, no
+Lyrion on the waiting screen. George chose the right server in Settings at
+19:51 and nothing changed - the server is read at the core's start. Now
+the row carries `restart: "core"` and Settings restarts the core 1.5 s
+after a save that changed it (ADR-0048 amended 2026-10-23, George:
+*"Yes"*); tried there: the same server again kept the core, another one
+restarted it onto the new address, and back. Core suite 2631 passed, 48
+skipped. Its home strip is *Most played artists* (a setting from the
+card's earlier life; *New Music* was only the empty strip's fallback title).
+
+- **The visualiser button in the bar's tray opened it only on the second
+  tap** (George, 21-24 Oct): fixed 2026-10-24. George's recorded taps: a tap
+  within about a second of pulling the tray down got no click from Chromium
+  (9 of 9, 0.52-0.97 s after the pull; Home the same), reproduced with an
+  80 ms synthetic flick. The tray's buttons now act when the finger lifts on
+  them (`press.lift`). `tools/panel-touch.py` works on the bar with the
+  page's axes turned: page (x, y) is device (y / 400 x 1480, (1 - x / 1850)
+  x 320). ShelvesPi's debug port, its helper files and the tunnel are
+  closed.
+
+- **Bar fixes, 2026-10-24, merged into `next` for 1.5.0:** `bar-pictures-retry` (a
+  picture that failed to load was given up for the page's life - every album
+  artist showed initials; now tried again after 15 s, 60 s, 5 min) and
+  `bar-settings-fit` (sheets on a bar: the value beside its slider, a compact
+  empty list, a long note scrolls - every sheet checked with mocked data at
+  both bar sizes, `scratch/layout`), with `bar-tray-taps` (above) and
+  `tray-stays-open` (George, 2026-10-24: a drawer or tray the user opened
+  stays until closed, the visualiser takes over or Home opens; ADR-0022's
+  row amended). Branches deleted.
+
+**Phase 17, DSI screens** (`ph-dsi`, ADR-0158) was closed on 2026-10-24 by
+George and merged into `next` for 1.5.0; the Waveshare's touch watch was lost
+to a reboot of bedroompi (the stopped-touch case stays as ADR-0158 records
+it). Phase 18 closed on 2026-10-22 with 1.4.0.
+
+**In progress: Phase 19, the player in Home Assistant** (`ph-home-assistant`,
+moved up and started 2026-10-24). **ADR-0160 accepted** the same day:
+our own integration `gexis` in a new public repository
+(`gcarstoiu/gexis-player-homeassistant`), a media player
+plus *Screen*, *Dashboard* and *Visualiser* switches, `id` and `screen` on
+`/player/status`; tested against a Home Assistant in Docker that hears
+nothing on the network, a test player added by address. **Built:** the
+player's side on `ph-home-assistant` (`~/projects/gexis-player-ph-home-assistant`,
+pushed; `id` and `screen` on `/player/status`; core suite 2633 passed, 48
+skipped, run with `PYTHONPATH=src` since the shared venv imports `next`'s
+code); the integration in `~/projects/gexis-player-homeassistant` (local git,
+one commit, not on GitHub yet): 17 tests pass on Home Assistant 2026.10.3's
+test kit (`~/projects/ha-venv`), hassfest clean (Docker). **sofapi runs the
+Phase 19 preview** (core and player 1.4.0+git49.c4af394, ui
+1.4.0+git24.e505054, since 2026-10-24 19:22). Checked against a Home
+Assistant 2026.10.3 in Docker (`~/projects/scratch/ha-test`, container
+`gexis-ha-test`, stopped; no discovery loaded): criterion 2 and 4 hold
+(0.53-0.64 s; ADR-0160 *Measured*), and criterion 3 (Finding 137: 46 min,
+0 underruns, 0 XRUNs; the logging drop-in removed). **Open:** criterion 1 on
+George's own Home Assistant. **On GitHub:**
+`gcarstoiu/gexis-player-homeassistant` (public, 2026-10-24; tests, hassfest
+and HACS pass; 0.1.0 released with 1.5.0). The player's side and the
+documents (D6: manual *The player in Home Assistant*, FAQ, README feature
+row, `docs/tech/api.md`) are on `next`, in 1.5.0.
+
+server and bar wallpaper fixes. **PR #82 into `main` is open for George**,
+its checks green since 2026-10-25 (the cancelled `next` run re-run);
+after his merge: `main` into `docs` and `next`, delete `release-1.5.0` and its
+worktree, the routine clean-up. The Home Assistant integration's 0.1.0 is
+released on its own repository the same evening.
