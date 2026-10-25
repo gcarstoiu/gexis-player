@@ -248,11 +248,12 @@ Rough, and subject to change:
   installed from Settings. A mini player on the phone. Animated skins with
   scrolling tickers and smooth rotation. A fixed address on cable or Wi-Fi.
   Problem reports and hardware feedback. A Home Assistant dashboard on the
-  screen. DSI screens on the Pi's own display connector.
-- 🔜 **Next:** room correction for the bass with a USB microphone, then for the full range.
-- 🎨 **Later:** the player inside Home Assistant as a media player, themes. With Plex switched on, your own Plex server fills in
+  screen. DSI screens on the Pi's own display connector. Each player in Home
+  Assistant as a media player.
+- 🔜 **Next:** a simple equaliser with a few presets and a manual setup, then room correction for the bass with a USB microphone.
+- 🎨 **Later:** room correction for the full range, themes. With Plex switched on, your own Plex server fills in
   the artist and album information other sources leave out.
-- 💭 **Maybe:** a visual equaliser, the DAC's own filter and polarity options.
+- 💭 **Maybe:** the DAC's own filter and polarity options.
 
 ## 📜 Legal
 
