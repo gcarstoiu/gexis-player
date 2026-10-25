@@ -106,26 +106,25 @@ Criteria 2-4 hold against a Home Assistant 2026.10.3 in Docker
 *Measured*, Finding 137). **Criterion 1 seen 2026-10-25** on George's own
 Home Assistant: every player found by itself, the controls working. **His
 findings that day widen the phase** (criteria 5-7, ADR-0160): the source
-shown and not chosen, and *Home*, *Now playing* and *Lyrics* buttons - built
-on the integration's branch `quick-actions` (20 tests, hassfest clean; not
-released), the documents on `ph-home-assistant`; a D-pad for the panel and
+shown and not chosen, and *Home*, *Now playing* and *Lyrics* buttons - in
+the integration's 0.2.0 (released 2026-10-25), the documents on
+`ph-home-assistant`; a D-pad for the panel and
 a dashboard card of our own (switcher, D-pad, quick actions; George's
 design in Claude Design), each with an ADR first: ADR-0161 (the D-pad)
-proposed 2026-10-25; integration 0.2.0 released with the first two. The
+accepted 2026-10-25 (George; its focus look comes from the design). The
 brief for Claude Design is `design/briefs/19-ha-card-and-dpad-focus.md`, and
 `design/IMPLEMENTED-DIFFERENTLY.md` was brought up to date for it. George
 settled its three open points the same day: Settings stays on a bar
 (ADR-0109 amended); the attribution line and a bar's two-step *Attached
 screen* stay as built. George handed the brief to Claude Design
 (2026-10-25); the card's look (Home Assistant's theme or the player's) is
-settled in the design. **0.2.0 on George's Home Assistant:** no update
-offered, and after a forced re-download no new entities and no icon. On the
-Docker Home Assistant (2026.10.3) 0.2.0 adds the three buttons to an entry
-made under 0.1.0 and serves `brand/icon.png` (local brand images since
-2026.3); the likely cause is HACS not yet knowing 0.2.0 (re-download
-fetching 0.1.0) or no restart. George was given *Update information*, then
-0.2.0 and a restart; the public brands site has no gexis image, so HACS's
-own list shows none. The branch and worktree
+settled in the design. **0.2.0 on George's Home Assistant** (2026-10-25):
+HACS offered no update and a forced re-download brought no new entities
+until *Update information* and a restart; then the three buttons showed.
+On the Docker Home Assistant (2026.10.3) 0.2.0 adds them to an entry made
+under 0.1.0 and serves `brand/icon.png` (local brand images since 2026.3).
+HACS's own list shows the placeholder: the public brands site has no gexis
+image. The branch and worktree
 stay until the phase closes.
 
 Then, in order (`docs/DEVELOPMENT.md`; refer

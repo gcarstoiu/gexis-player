@@ -1,7 +1,7 @@
 # ADR-0161 — A D-pad on the panel
 
-**Status:** **Proposed** — 2026-10-25. Phase 19 (`ph-home-assistant`),
-criterion 6. George asked for it the same day, after trying the integration:
+**Status:** **Accepted** — George, 2026-10-25, as proposed the same day.
+Phase 19 (`ph-home-assistant`), criterion 6. George asked for it the same day, after trying the integration:
 moving around the panel with a D-pad, in both Simple and Extended navigation,
 which the TV remote (HDMI-CEC) will need too. Nothing built.
 
@@ -26,7 +26,7 @@ which the TV remote (HDMI-CEC) will need too. Nothing built.
 - **HDMI-CEC, later:** Linux's CEC framework can pass a TV remote's keys on
   as key presses of an input device (the `rc-cec` keymap). Not tried on a Pi.
 
-## Decisions (proposed)
+## Decisions
 
 **D1 — Real key presses, one handler.** A D-pad press becomes a key press on
 the core's virtual keyboard (ADR-0157): an arrow, Enter or Escape. The page
