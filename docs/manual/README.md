@@ -580,8 +580,8 @@ whether the equaliser is on and which setting it uses, and the page says
 which output it is setting.
 
 - **On or off**, at the top. Off, the sound is untouched, bit-perfect, as
-  it always was. Switching it on or off reopens the output, so the music
-  stops for a moment.
+  it always was. Switching it on or off reopens the output, so what is
+  playing stops; start it again if it does not carry on.
 - **A setting**: one of the presets - *Flat*, *Rock*, *Pop*, *Jazz*,
   *Classical*, *Electronic*, *Hip-hop*, *Acoustic*, *Vocal* and *Late
   night* (more bass and treble for listening quietly) - or one of your own.
