@@ -124,6 +124,14 @@ export class VolumeControl {
     this.#get.onsettled()?.();
   }
 
+  /** A step from the D-pad (ADR-0161 D3): Left or Right on the slider,
+   *  `delta` percent from the level shown. */
+  step(delta) {
+    this.settling = true;
+    this.local = Math.min(100, Math.max(0, this.shown + delta));
+    this.send(this.local);
+  }
+
   async toggleMute() {
     const next = !this.muted;
     this.#markOwn();

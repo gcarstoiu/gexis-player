@@ -31,11 +31,14 @@
   const move = (event) => vol.move(event, event.currentTarget);
   const up = () => vol.up();
   const toggleMute = () => armed() && vol.toggleMute();
+  //: Left and Right on the slider (ADR-0161), as the phone's touchpad steps.
+  const DPAD_STEP = 2;
 </script>
 
 <div class="scrim" class:is-open={open} role="presentation" onclick={onclose}></div>
 
-<div class="drawer" class:is-open={open} role="presentation"
+<div class="drawer" class:is-open={open} role="presentation" data-dpad-layer
+     ondpadback={(event) => { event.preventDefault(); onclose?.(); }}
      onpointerdown={onactivity} onpointerup={onsettled}
      onpointercancel={onsettled} onpointerleave={onsettled}
      onpointerenter={(event) => event.pointerType === 'mouse' && onactivity?.(event)}>
@@ -63,6 +66,8 @@
       aria-valuemin="0"
       aria-valuemax="100"
       aria-valuenow={pct}
+      data-dpad-main
+      ondpadstep={(event) => vol.step(event.detail.step * DPAD_STEP)}
       onpointerdown={down}
       onpointermove={move}
       onpointerup={up}

@@ -1853,6 +1853,7 @@
           class:is-pressed={press.is('back')}
           type="button"
           aria-label="Back"
+          data-dpad-back
           onpointerdown={() => press.down('back')}
           onpointerup={press.up}
           onpointercancel={press.up}
@@ -1879,7 +1880,7 @@
     {#if loadError}
       <div class="error">Settings could not be loaded. Check the connection to the player, then reload this page.</div>
     {:else}
-      <div class="body">
+      <div class="body" data-dpad-start>
         {#if wide}
           <div class="rail" data-noscrollbar>
             {#each categories as g (g.id)}
@@ -2282,6 +2283,7 @@
           class:is-pressed={press.is('doc-back')}
           type="button"
           aria-label="Back"
+          data-dpad-back
           onpointerdown={() => press.down('doc-back')}
           onpointerup={press.up}
           onpointercancel={press.up}
@@ -2341,6 +2343,7 @@
           class:is-pressed={press.is('picker-back')}
           type="button"
           aria-label="Back"
+          data-dpad-back
           onpointerdown={() => press.down('picker-back')}
           onpointerup={press.up}
           onpointercancel={press.up}
@@ -2392,6 +2395,7 @@
                   class:is-pressed={press.is('view-back')}
                   type="button"
                   aria-label="Back to list"
+                  data-dpad-back
                   onpointerdown={() => press.down('view-back')}
                   onpointerup={press.up}
                   onpointercancel={press.up}
@@ -2429,7 +2433,8 @@
 
   {#if sheet}
     <div class="sheet" class:sheet--full={sheetFull} class:sheet--fit={sheet.type === 'action' && !sheet.kind && !restorePending}
-      class:sheet--steps={sheet.kind === 'hardware' || sheet.kind === 'report'} role="dialog" aria-label={sheet.label}>
+      class:sheet--steps={sheet.kind === 'hardware' || sheet.kind === 'report'} role="dialog" aria-label={sheet.label}
+      ondpadback={(event) => { event.preventDefault(); closeSheet(); }}>
       <div class="sheet__head">
         <div class="sheet__title">{sheet.grouped && region !== null ? region : sheet.label}</div>
         {#if sheet.note && !joinItem && sheet.kind !== 'cable'}<div class="sheet__note"><NoteText text={sheet.note} /></div>{/if}
@@ -3093,7 +3098,7 @@
           <span class="warn__text">{ask.text}</span>
         </div>
         <div class="ask__buttons">
-          <button type="button" class="btn" onclick={() => answerAsk(false)}>Cancel</button>
+          <button type="button" class="btn" data-dpad-back onclick={() => answerAsk(false)}>Cancel</button>
           <button type="button" class="btn btn--confirm" class:btn--danger={ask.danger} onclick={() => answerAsk(true)}>{ask.confirm}</button>
         </div>
       </div>

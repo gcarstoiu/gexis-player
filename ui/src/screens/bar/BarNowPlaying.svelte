@@ -164,7 +164,7 @@
       <!-- ADR-0122: back to the library as it was left, Now Playing down to
            the mini strip (George, 2026-10-06: the chevron top left). -->
       {#if onminimise}
-        <button class="minimise" type="button" aria-label="Minimise" onclick={onminimise}><span class="minimise__chev"></span></button>
+        <button class="minimise" type="button" aria-label="Minimise" data-dpad-back onclick={onminimise}><span class="minimise__chev"></span></button>
       {/if}
       {#if artwork}
         <img src={artwork} alt="" onerror={() => (failedArtwork = artwork)} />
@@ -252,7 +252,7 @@
             <button class="btn btn--lg" type="button" aria-label="Previous" disabled={!can('previous')} onclick={() => skip('previous')}><span class="i-prev"></span></button>
           {/if}
           {#if hasPlayPause}
-            <button class="btn btn--play" type="button" data-shows={toggle.shows} aria-label={toggle.shows === 'playing' ? 'Pause' : 'Play'} onclick={toggle.toggle}>
+            <button class="btn btn--play" type="button" data-dpad-main data-shows={toggle.shows} aria-label={toggle.shows === 'playing' ? 'Pause' : 'Play'} onclick={toggle.toggle}>
               <span class="i-play"></span><span class="i-pause"></span>
             </button>
           {/if}
@@ -284,7 +284,7 @@
   </div>
 
   <!-- The tray's handle and the 44px band that pulls it: drag down, or tap. -->
-  <div class="pullband" role="button" tabindex="-1" aria-label="Controls"
+  <div class="pullband" role="button" tabindex="-1" aria-label="Controls" data-dpad-skip
     onpointerdown={band.down} onpointermove={band.move} onpointerup={band.up} onpointercancel={band.cancel}
     onlostpointercapture={band.cancel}></div>
   <div class="handle"></div>

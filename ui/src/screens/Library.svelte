@@ -1350,6 +1350,7 @@
           class:is-pressed={pressed === 'lib-back'}
           type="button"
           aria-label="Back"
+          data-dpad-back
           onpointerdown={() => press('lib-back')}
           onpointerup={lift}
           onpointercancel={lift}
@@ -1375,7 +1376,7 @@
     </div>
   {/if}
 
-  <div class="content">
+  <div class="content" data-dpad-start>
     {#if (resolvingArtist && path.length === 0) || reopening}
       <!-- The artist page on its way. Its own head, so the screen that
            appears is the one that was asked for. Also an artist reopened
@@ -2153,7 +2154,7 @@
 
   {#if picker}
     <div class="sheet__scrim" role="presentation" onclick={() => (picker = null)}></div>
-    <div class="sheet">
+    <div class="sheet" data-dpad-layer ondpadback={(event) => { event.preventDefault(); picker = null; }}>
       <div class="sheet__head">
         <div class="sheet__kicker">Add to playlist</div>
         <div class="sheet__title">{picker.label}</div>

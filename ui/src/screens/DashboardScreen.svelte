@@ -31,7 +31,8 @@
   });
 </script>
 
-<div class="dash" role="presentation">
+<div class="dash" role="presentation" data-dpad-layer data-dpad-frame
+  ondpadback={(event) => { event.preventDefault(); ondismiss?.(); }}>
   {#if check?.embeddable}
     <iframe
       class="dash__page"
