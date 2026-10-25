@@ -1483,11 +1483,11 @@
       // A found server is shown by its name and stored by its address.
       const address = item.address ?? item.name;
       if (String(row.value ?? '') === address) return;
-      // The daemon reads this at the next start: moving a running player to
+      // The daemon reads this at its start, so saving it restarts the core
+      // (George, 2026-10-23, ADR-0048 amended): moving a running player to
       // another server means dropping its subscription, re-resolving the
-      // player and re-arbitrating. Said plainly rather than left to be
-      // discovered.
-      if (await write(row, address)) flash(`${row.label} set — restart to use it`);
+      // player and re-arbitrating.
+      if (await write(row, address)) flash(restartToast(row), 6000);
       return;
     }
     if (row.kind === 'backup') {
@@ -1731,7 +1731,9 @@
         // A row that takes effect at a restart restarts the device once
         // saved (ADR-0048, amended 2026-10-05) - and a new name is a new
         // address, so the toast says where the player comes back.
-        if (row.restart) {
+        if (row.restart === 'core') {
+          flash(restartToast(row), 6000);
+        } else if (row.restart) {
           const back = row.key === 'device_name' && draft ? ` It comes back as ${hostOf(draft)}.local.` : '';
           flash(`${row.label} saved. The device is restarting.${back}`, 12000);
         } else {
@@ -1739,6 +1741,12 @@
         }
       }
     }
+  }
+
+  /** A row the core reads at its start (`restart: "core"`): saving it
+   *  restarts the core, and the player is back within seconds. */
+  function restartToast(row) {
+    return `${row.label} saved. The player is restarting to use it.`;
   }
 
   function cancelSheet() {
@@ -1961,7 +1969,7 @@
                 {@const port = rowOf('screen_port') ?? rowOf('screen_port_info')}
                 {@const portLine = port?.key === 'screen_port' ? port.optionNotes?.[port.value] : port?.value}
                 {@const named = String(r.value ?? '').startsWith('Other screen/')
-                  ? (String(portLine ?? '').replace(/^HDMI \d+ · /, '').split(' · ')[0] || String(r.value).replace('/', ' '))
+                  ? (String(portLine ?? '').replace(/^(HDMI \d+|DSI( \d+)?) · /, '').split(' · ')[0] || String(r.value).replace('/', ' '))
                   : r.value}
                 <div class="row row--tile">
                   <span class="row__body">
@@ -3780,6 +3788,15 @@
     flex-shrink: 0;
     min-width: 0;
   }
+  /* **On a bar the head gives way, not the controls** (George, 2026-10-24:
+     a smoothing sheet's button cut off). The sheet's height is fixed there
+     (376 px), and a long note above a warning and a slider pushed Close
+     below its edge; the note now scrolls instead. */
+  :global(.panel--bar) .sheet__head {
+    flex-shrink: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
   .sheet__title {
     font-size: 22px;
     font-weight: 700;
@@ -4154,6 +4171,22 @@
     font-size: 13px;
     letter-spacing: 0.1em;
     color: rgba(233, 238, 242, 0.6);
+  }
+  /* On a bar the value stands beside its slider, not above it: the line it
+     took was what pushed Close off a 376 px sheet under a long note. A fixed
+     width keeps the slider still while the number changes. */
+  :global(.panel--bar) .editor {
+    display: grid;
+    grid-template-columns: 170px 1fr;
+    column-gap: 20px;
+    row-gap: 0;
+    align-items: center;
+  }
+  :global(.panel--bar) .editor__read {
+    grid-row: 1 / span 2;
+  }
+  :global(.panel--bar) .editor__ends {
+    grid-column: 2;
   }
   /* ADR-0044 §2 - a warning the choice holds back until the option is
      chosen, in the same amber the danger rows use. */
@@ -4620,6 +4653,19 @@
     text-align: center;
     text-wrap: pretty;
     max-width: 36ch;
+  }
+  /* On a bar the empty state is compact: at the panel's size it took the
+     room the note above it needed (Restore). */
+  :global(.panel--bar) .empty {
+    padding: 8px 20px;
+    gap: 10px;
+  }
+  :global(.panel--bar) .empty__ring {
+    width: 40px;
+    height: 40px;
+  }
+  :global(.panel--bar) .empty__text {
+    max-width: 60ch;
   }
 
   /* ADR-0044 §5 - the full-screen picker. */

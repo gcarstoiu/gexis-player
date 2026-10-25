@@ -7028,15 +7028,6 @@ worktree made 1.0.3's first build want every OS file uploaded again; the
 copies were fetched back into `prior/` (1,004 files) and only the 10 changed
 ones uploaded. Make the symlink before `build.sh` in every release worktree.
 
-**The blog (George's WordPress, tag `sound`):** eleven articles in
-`~/projects/gexis-blog/` (articles, media, the demo tools); the setup article
-left out until setup changes. George pushed them to his site as drafts with
-`push_wp.py` (2026-10-15). `schedule_wp.py` schedules nine of them, one a day
-at 18:00 from 2026-10-16 (its `ORDER`); whether George has run it is not
-recorded here. The theme (`gcarstoiu/gexis-wp-theme`, 1.0.3, pushed) has the
-`gexis/repo-doc` block, which reads FAQ, Install, Hardware, Manual and Release
-notes from `main`, cached an hour, and a Documents row on a tag's page.
-
 Suite 2,485 passed, 47 skipped (2026-10-16), run with the venv in
 `~/.local/share/gexis-venv` (never under `/tmp`: LESSONS 74).
 
@@ -7307,25 +7298,8 @@ screenshots retaken from the demo). sofapi runs core, ui and player
 `1.1.1+git33`, core restarted by hand (LESSONS 77). **Waiting on George:** his test of the four fixes, and whether
 he switched *API explorer* on (it reads on; it was off after my test). Then
 `ph-api` into `next`, GitHub Pages on, the release.
-**Three Phase 14 articles** (13-15: setup in two parts,
-where your music is, a music server's first minutes) are drafts 186, 190 and
-191 in the local WordPress copy for George to read; `import_wp.py` now takes
-article numbers, and `bundle.json` is refreshed for `push_wp.py`.
 
-## 2026-10-19: the blog, the suite, the next phases and the phase list as they stood before 1.2.0 (moved from HANDOFF verbatim at the clean-up after 1.2.0)
-
-**Five articles** (13-15 for Phase 14; 16, the API, and 17, the small
-things, for Phase 15) are drafts 186, 190, 191, 196 and 201 in the local
-WordPress copy; `schedule_wp.py` now schedules them 25-29 October after the
-first nine, once George has pushed them; `import_wp.py` now takes
-article numbers, and `bundle.json` is refreshed for `push_wp.py`.
-
-**The blog** (George's WordPress, tag `sound`): eleven articles in
-`~/projects/gexis-blog/`, pushed as drafts by George (2026-10-15; article 05
-now mentions *Add a backup*, bundle rebuilt 2026-10-17, for George to re-push);
-`schedule_wp.py` schedules nine, daily at 18:00 from 2026-10-16 - whether he
-ran it is not recorded. The theme (`gcarstoiu/gexis-wp-theme` 1.0.3, pushed)
-mirrors FAQ, Install, Hardware, Manual and Release notes from `main`.
+## 2026-10-19: the suite, the next phases and the phase list as they stood before 1.2.0 (moved from HANDOFF verbatim at the clean-up after 1.2.0)
 
 Suite 2,544 passed, 47 skipped (2026-10-18, on `ph-first-use`), with the venv in
 `~/.local/share/gexis-venv` (never under `/tmp`: LESSONS 74).
@@ -7408,3 +7382,198 @@ EDID in the tests, not again on the device. **Open:** it came up at 800x480 on
 the first start after the boot that switched to it (Chromium stored 1004x580 in a
 1024x600 work area: not full-screen), then full-screen on two restarts in a
 row. A first start after a screen change may still miss full-screen.
+
+## 2026-10-22: 1.3.1 on Stable, the preview on both players and the branches that made 1.4.0 (moved from HANDOFF verbatim when 1.4.0 was released)
+
+**Current release: 1.3.1, on Stable** (2026-10-21; Stable serial 8,
+Testing serial 53, both signatures good from the release key, read back from
+GitHub; the public `gexis-player.img.xz` decompresses to the checked image).
+Image `image/deploy/2026-10-20-gexis-player-v1.3.1.img`, 123 checks, 978
+skins clean; parts `ours-2a97557a07d1`, `skins-67e037cab00f`,
+`rpi-7325dbec7a52`, `debian-256b0ff5ed7a`. A fix release: the idle countdown
+re-arms after the visualiser, standby wakes on a tap read from the kernel and
+reads the real screen at start (ADR-0135 amended), the kiosk forgets
+Chromium's stored window at every start, and the HMTECH 7" and 10.1" (both
+without touch) are tested. A screen's few seconds back from standby are the
+screen's own (the bar ~3 s; George: "Keep it as is"), in the release notes and
+the FAQ. **PR #80** was merged by George; post-merge steps and the clean-up are
+done. sofapi runs `1.3.0+git16`, ShelvesPi `1.3.0+git11` - previews of what
+1.3.1 carries; they move to 1.3.1 by the update. GitHub reports 6 Dependabot
+alerts on `main` (2 high, 4 moderate), all `vite` (the UI's build tool, not
+on the player; fixed in 8.3.3), raised 20-21 Oct.
+
+**Deferred until a bug report** (George, 2026-10-21; from 1.3.1): the HMTECH 10.1" came up at 800x480 on the first start
+after the boot that switched to it (Chromium stored 1004x580 in a 1024x600
+work area: not full-screen), then full-screen on two restarts in a row. A
+first start after a screen change may still miss full-screen. The 10.1" was
+checked by its EDID in the tests, not again on the device under the new
+standby.
+
+**Release build output lives in `~/.local/share/gexis-release-out`**: in each
+release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
+(excluded in `.git/info/exclude`). `reuse.py` reuses a published file only
+against a local copy, so losing that folder means re-uploading every OS file.
+
+**Not an issue** (George, 2026-10-20): Squeezelite joining whichever Lyrion server answers first after a restart (Finding 130 point 6). **Open:** George's look at the moon before sunrise. sofapi
+and ShelvesPi run previews of 1.3.1's fixes.
+
+**Both players run one preview since 2026-10-22 13:10:** `preview-1021` with
+every branch below merged in - gexis-ui and gexis-player `1.3.1+git64`,
+gexis-system `git60`, gexis-core `git62` (George checking). The phone page's
+viewport now has `interactive-widget=resizes-content` (`phone-sheet`), so the
+mini player sits on the keyboard - for George to check on his phone. Core suite 2630 passed
+on it, the visualiser's 127 with the device's pygame.
+
+- **The visualiser takes over from the dashboard** (George, 2026-10-22: asked
+  for or by its timeout; ADR-0156 decision 3 amended, `ph-ha-dashboard`):
+  checked on sofapi with George's dashboard up, which was put back after.
+- **No black frame when the visualiser opens** (`peppy-survive-resize`): a
+  size event at the window's own size no longer takes the window again (it
+  left full screen) - 3 shows in 4 had a black frame, 0 in 20 after.
+- **Open: the visualiser button on the bar sometimes does nothing** (George,
+  21 and 22 Oct). Not the tray's 2 s self-hide (George tapped at once); a
+  tap whose finger moves ~12 px gives no click in Chromium (reproduced
+  headless), not yet caught on George's finger: three recorded taps all
+  worked. ShelvesPi's kiosk runs with a local DevTools port and a touch
+  recorder in the page until the next reboot (`/run` drop-in
+  `gexis-kiosk.service.d/zz-debug.conf`) - read `window.__rec` when it fails
+  again, then remove it.
+
+- **Fixed on `meter-before-softvol` (Finding 135, ADR-0124 amended, LESSONS
+  81): with software volume the meters read the music after the cut** -
+  `meter → copy → softvol` now; and a chain rewritten at the core's start
+  restarts the renderers once the card is free (a running squeezelite never
+  read the new file). Checked on sofapi end to end.
+- **Fixed on `spectrum-box-follows` (Finding 136): a black box after a skin
+  change** - PeppySpectrum kept the first spectrum skin's box. Reproduced on
+  ShelvesPi (started on MarschalSpectrum, then Marschal S+M: 61 % black),
+  gone with the fix (6 %, the skin's own shadow).
+
+**In flight (2026-10-21), each on its own branch, none merged into `next`
+yet:**
+- `tap-no-flash` (rows: a tap shows only the selection), `peppy-quiet-repaint`
+  (the repaint after a show painted out of sight; check-skins holds the level,
+  978 pixel-exact; the skin packs' check left out of their version, with a
+  floor at `96b8a42`), `album-track-artist` (a track's own artist when not the
+  album's). All three together on **ShelvesPi as one preview**
+  (`preview-1021`, `1.3.1+git11.8d12629`), George testing.
+- `ph-ha-dashboard` (Phase 18): core, panel, buttons, schedule, docs,
+  Finding 132; on **sofapi** (`1.3.1+git12.96d8129`), shown and its failure
+  message checked by screenshot with a framable page. Not yet tried: the
+  phone's and the tray's buttons, the schedule, standby over it, a real Home
+  Assistant dashboard (George has no address yet; he declined changes to his
+  Home Assistant - the player changes nothing there, ADR-0156 decision 8).
+  A throwaway Home Assistant runs on R2D2 (`docker rm -f gexis-test-ha` when
+  done).
+- **Fixed, waiting for George's test: the visualiser crashed when its window
+  was resized** (SEGV on both players 10-16 to 10-21; sofapi's photo of a
+  640x480 box after standby). Branch `peppy-survive-resize`: the engines draw
+  on a canvas, the window is only copied to; a raise asks for full screen;
+  a hide with no window counts as hidden. Checked: sofapi six cases (show,
+  a forced resize, standby cycles) and ShelvesPi five, same process, no
+  crash, the whole skin each time; check-skins 978 clean. Cost: +3 % of a
+  core with nothing playing; not yet measured with music.
+- **Phone typing over the dashboard (ADR-0157 amended)**: key presses on the
+  compositor's layout (US on the image); checked exact on sofapi with a
+  stand-in login (`ph-ha-dashboard`, `phone-sheet`). Chromium's password
+  manager off by policy (gexis-system). Not yet tried by George with his
+  Home Assistant login.
+- **Open: the visualiser button on ShelvesPi refused several taps** (George,
+  21 Oct morning: nothing happened). The page received the taps (`/touch`)
+  but sent no `/peppy/show`; cause not found by reading. Next: reproduce with
+  injected taps (`tools/panel-touch.py`) once George is off the bar. The bar's
+  touch controller also dropped off USB at 07:56 and 08:15 (about 1 s each).
+  Seen once that evening (19:48:47): `wlrctl focus` found no window just after
+  `fullscreen` acted on it, and the core's restart showed it 2.4 s later; not
+  reproduced in ten tries (after skin changes, standby cycles, from maximised).
+- **Fixed on `peppy-refused-no-restart`, not yet previewed: a show refused for
+  standby restarted the visualiser** (ShelvesPi, 2026-10-21, reproduced): with
+  the only screen off the new driver could not open a display and stayed
+  gone. The core now restarts it only when a show was tried and found no
+  window. Core suite 2606 passed.
+- **Glass (foonerd) measured on ShelvesPi and sofapi** (Finding 133, the
+  thorough run George asked for): cheaper than ours on every skin measured -
+  2.1-3.8 times on ShelvesPi at matched work, 2.3-4.2 against our *Smooth*
+  rotation - at a fifth to a third of the memory; its tap costs 2.6 % of a
+  core at 44.1 kHz and 10.4 % at 192 kHz, in the audio process. Adopting it
+  would be a project (tap in every chain, state channel, show/hide, fonts, our
+  layers); a one-person project a month old. **George, 2026-10-22: stop for
+  now - "Glass is too young now"; remind him at the beginning of 2027 and
+  check it again** (to-do `glass-revisit-2027`). LESSONS 80: the first
+  results measured our needles at rest.
+- **Our visualiser made cheaper (George: *"Then let's do a first"*)** -
+  branch `peppy-cheaper` (from `peppy-survive-resize`), Finding 134: one
+  present a frame, the tonearm's turn kept, turning parts boxed by their
+  reach. ShelvesPi, same work: turntables and tapes 20-33 % cheaper, on
+  *Smooth* 28-46 %; needle and spectrum skins unchanged. In the ShelvesPi
+  preview (`preview-1021` at `1.3.1+git31`, with `peppy-refused-no-restart`),
+  not yet on sofapi. Left: the needle and spectrum skins (the present itself
+  and the vendored engines' drawing) - George, 2026-10-22: stop here for now.
+
+## 2026-10-22: PR #81 and the steps after its merge (moved from HANDOFF verbatim once they were done)
+
+**PR #81 (`release-1.4.0` → `main`) waits for George's merge** - never
+Claude's. Once he has merged it (`docs/tech/updates-and-releases.md` §4,
+step 5, then `docs/ROUTINE-CLEANUP.md`):
+- merge `origin/main` into `docs` and into `next`, push both;
+- delete the merged branches on GitHub and locally: `release-1.4.0`,
+  `album-track-artist`, `bar-controls-dimmed`, `meter-before-softvol`,
+  `peppy-cheaper`, `peppy-quiet-repaint`, `peppy-refused-no-restart`,
+  `peppy-survive-resize`, `ph-ha-dashboard`, `phone-sheet`, `preview-1021`,
+  `spectrum-box-follows`, `tap-no-flash` (all are in `next`; check with
+  `git merge-base --is-ancestor <b> origin/main` first);
+- remove their worktrees (`~/projects/gexis-player-{artist,barctl,cheaper,
+  dash,meter,preview,refused,repaint,resize,sheet,spectrum,tap}`) and the
+  release worktree `~/projects/gexis-player-r140`;
+- the routine clean-up; tick `rel-1-4-0` on the to-do list; mark Phase 18
+  in the phases doc and the wiki Roadmap as George decides (show him first).
+- Promotion to Stable is George's call, later; the README's "current
+  release" line changes only then.
+
+## 2026-10-24: ShelvesPi's `bar-wallpapers` preview (moved from HANDOFF verbatim once the branch was merged)
+
+**ShelvesPi runs the preview `bar-wallpapers`** (since 2026-10-23 15:02;
+it had updated itself to 1.4.0 before): gexis-core and gexis-player
+`1.4.0+git22.8af98fa`, the rest 1.4.0's. **For George to look at before
+1.4.0 goes to Stable.** On a bar the wide pictures now join the usual ones
+(ADR-0120 amended 2026-10-23, George: *"lets go with 1"*): with Nature and
+Animals each topic's wide page had held one picture since 19 October, the
+same Roman snail, and the bar showed it every minute for five days. After
+the install: three pictures in three minutes, all different, placed by
+what they show; a screenshot showed a butterfly. Core suite 2630 passed, 48
+skipped. The branch is not merged into `next` yet. **sofapi is still on
+`preview-1021`** (core `1.3.1+git62`, the rest `git64`, 1.4.0's code) and
+moves to 1.4.0 by the update.
+
+## 2026-10-24: Phase 17 in progress (moved from HANDOFF verbatim when George closed it)
+
+**Phase 18, a Home Assistant dashboard on the screen** (`ph-ha-dashboard`,
+ADR-0156) was closed on 2026-10-22, released in 1.4.0 (George: *"Close
+phase 18 - ha works fine"*). **In progress: Phase 17, DSI screens** (`ph-dsi`,
+`~/projects/gexis-player-ph-dsi`, from `next`; started 2026-10-23, George:
+*"Start phase 17"*). The screen is a Hosyond 7" DSI touch panel, 800x480,
+in bedroompi; the firmware brings it up by itself (`display_auto_detect`,
+overlay `vc4-kms-dsi-7inch`, as the original Touch Display), no EDID, touch
+`edt_ft5x06` on I2C, backlight `/sys/class/backlight/10-0045`. Set as the
+HMTECH 7" HDMI it half-works: everything aimed at `HDMI-A-1` fails, so the
+180° rotation, standby and the kiosk background never apply. **ADR-0158 is
+accepted** (George's five decisions, 2026-10-23) **and built on `ph-dsi`**
+(pushed; core suite 2656 passed, 48 skipped): every DSI model in the list
+that can run (58 of 68, plus *Raspberry Pi Touch Display or compatible*
+for a panel found by its I2C controllers), a picked model's own name, the
+DSI panel the screen unless an HDMI port is chosen, standby by the
+backlight, *Screen brightness* on a DSI panel. **On bedroompi with George
+at the panel** (ADR-0158, *Measured*): the start put the panel's entry in
+place of the HMTECH at 180°, nothing asked, picture the right way up;
+standby dark by the backlight and back at a touch; brightness steps
+visible; touch right at all four corners (checked by hand). George decided
+(2026-10-23) that a receiver or TV beside the panel (criterion 2) and a
+freshly flashed card (criterion 1) will not be tested. **Second screen,
+2026-10-24: Waveshare 10.1" DSI-TOUCH-A**, on its 2-lane entry, marked
+tested; four-lane models hidden on a Pi 4 (D6). Its touch stopped reaching
+the page once, until the panel restarted (ADR-0158, *Measured*). **Next, on
+2026-10-25:** compare bedroompi's raw touches (`/tmp/touchwatch.txt`, the
+recorder stops by itself at 14:52) with the core's `POST /touch` log; nothing
+lost: Phase 17 closes. (On the panel, Hardware feedback only points to the phone, since it
+ends on GitHub; George had taken that short sheet for a cut-off one.) `ph-dsi` merges into
+`next` after Phase 17's acceptance.

@@ -3889,7 +3889,7 @@
           "Settings"
         ],
         "summary": "Write one setting's value",
-        "description": "Validates the value against the row (ADR-0035), stores it and runs whatever applies it. The answer carries the value as stored and the settings revision the save made. A row marked `restart` restarts the device after answering when its value changed. Refusals come back as `{\"error\": sentence}` with 400 (the value is wrong), 404 (no such key), 405 (the row takes no value), or 409 (not wired, or the option is unavailable on this hardware, ADR-0055).",
+        "description": "Validates the value against the row (ADR-0035), stores it and runs whatever applies it. The answer carries the value as stored and the settings revision the save made. A row marked `restart` restarts the device after answering when its value changed, or only the core when it is marked `\"core\"` (the Lyrion server). Refusals come back as `{\"error\": sentence}` with 400 (the value is wrong), 404 (no such key), 405 (the row takes no value), or 409 (not wired, or the option is unavailable on this hardware, ADR-0055).",
         "parameters": [
           {
             "name": "key",
@@ -7932,7 +7932,7 @@
       },
       "PlaybackPlayerStatus": {
         "type": "object",
-        "description": "What a player says of itself (ADR-0136; wsserver.py `_player_status`, players.py `status_line`).",
+        "description": "What a player says of itself (ADR-0136, ADR-0160; wsserver.py `_player_status`, players.py `status_line`).",
         "required": [
           "name",
           "host",
@@ -7958,6 +7958,20 @@
           "instance": {
             "type": "string",
             "description": "A random id for this run of the core (32 hex characters), new at every start; used to recognise this player under another mDNS name."
+          },
+          "id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "This player's lasting id (16 hex characters): a hash of the board's serial number, the same after a rename, a reflash or a factory reset; null off a Raspberry Pi. What Home Assistant knows the player by (ADR-0160). Absent from players older than this field.",
+            "examples": [
+              "3f2a9c41d07b5e86"
+            ]
+          },
+          "screen": {
+            "type": "boolean",
+            "description": "Whether the player has a screen: false when it runs headless (ADR-0160). Absent from players older than this field."
           },
           "transport": {
             "type": "string",
@@ -9800,8 +9814,11 @@
             "description": "The action is confirmed by holding."
           },
           "restart": {
-            "type": "boolean",
-            "description": "Changing the value restarts the device."
+            "oneOf": [
+              {"type": "boolean"},
+              {"type": "string", "enum": ["core"]}
+            ],
+            "description": "true: changing the value restarts the device. \"core\": it restarts the player's core instead (lms_server), the device staying up."
           },
           "surfaced": {
             "type": "boolean",
@@ -10604,7 +10621,8 @@
                   "string",
                   "null"
                 ],
-                "example": "HDMI-A-1"
+                "example": "HDMI-A-1",
+                "description": "The port: HDMI-A-1, HDMI-A-2, or DSI-1 for a DSI panel (ADR-0158), which has no EDID."
               },
               "edid_maker": {
                 "type": [
@@ -10630,6 +10648,13 @@
                 "items": {
                   "type": "string"
                 }
+              },
+              "panel": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "A DSI panel's I2C drivers, by which it is recognised (ADR-0158); empty on HDMI."
               }
             }
           },

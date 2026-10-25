@@ -62,7 +62,7 @@ touch screen from the hardware list is optional.
    ([checksum](https://github.com/gcarstoiu/gexis-player/releases/latest/download/gexis-player.img.xz.sha256),
    [signature](https://github.com/gcarstoiu/gexis-player/releases/latest/download/gexis-player.img.xz.asc)).
 2. **Write it to the card** with [Raspberry Pi Imager](https://www.raspberrypi.com/software/):
-   *Choose OS → Use custom*, pick the file, and skip Imager's own settings.
+   choose *Use custom* at the bottom of the operating systems and pick the file.
 3. **Start the Pi** with the card in, and the DAC and screen if you use them.
    The screen shows two QR codes: the first joins your phone to the player's
    own Wi-Fi, **gexis-setup**, the second opens the setup page. Without a screen, join
@@ -185,7 +185,7 @@ or removed from Settings, with its progress shown in the switch itself.
 | 🔀 **Handover** | One source at a time, never mixed · takeover in any direction · the previous source released before the next one plays |
 | 🖼️ **Now playing** | Artwork · synced or plain lyrics · artist information and photos · the Lyrion queue |
 | 📈 **Visualiser** | Up to 287 skins, depending on the screen · VU meters, spectrum, turntables and tape decks · progress, time, volume and play-state in each skin's own style · skins that rotate per track |
-| 🖥️ **Screens** | HDMI touchscreens from 7" to 13.3", including 7.9" and 11.9" bar displays, recognised and laid out for their shape · or Headless, with no screen at all |
+| 🖥️ **Screens** | HDMI touchscreens from 7" to 13.3", including 7.9" and 11.9" bar displays, and DSI screens on the Pi's own display connector, leaving HDMI free for sound · recognised and laid out for their shape · or Headless, with no screen at all |
 | 🧭 **Setup** | Over the player's own Wi-Fi (WPA2, password on the panel) or your network on a cable · only what the player needs to run, then *make it yours* from your home Wi-Fi · a wrong password brings setup back with the reason · a player that starts without its Wi-Fi offers setup again after 90 seconds |
 | 💾 **Backup & restore** | Settings, pairings and source logins in one archive, on a network share or downloaded to your phone · restored during setup, which asks for this player's output and screen and lets you change the rest · one player's backup can start a second one, leaving the first one's sign-ins behind · a factory reset starts the player over without re-flashing |
 | ⬆️ **Updates** | Over the network, with release notes · *Testing* gets each release first, *Stable* once it has been tried |
@@ -193,6 +193,7 @@ or removed from Settings, with its progress shown in the switch itself.
 | 📱 **Settings anywhere** | The full settings on the panel and on any phone or computer on your network, with a mini player on the phone |
 | 🖐️ **Phone as a touchpad** | Drive the panel from across the room: one finger moves a pointer, a tap presses, two fingers scroll, a pinch zooms, and a text field on the panel brings up the phone's keyboard · no app to install |
 | 🏠 **Home Assistant dashboard** | Your room's Home Assistant dashboard on the screen, every control usable · up from a button, from Home Assistant itself, or in place of the idle screen at set times · the music plays on, and it stays until you dismiss it |
+| 🏡 **In Home Assistant** | Each player as a media player in Home Assistant: what plays, its artwork, the transport, volume and source, and switches for the screen, the dashboard and the visualiser · found on the network · the [Gexis Player integration](https://github.com/gcarstoiu/gexis-player-homeassistant), installed through HACS |
 | 🧩 **Open API** | Everything the screen and phone page do, over HTTP and a live WebSocket, described as OpenAPI · *API explorer* shows and tries it on the player itself |
 | 🩺 **When something is wrong** | A problem report in one download, with addresses, names, keys and what you play taken out first · hardware feedback that tests your screen's touch and your DAC's rates |
 
@@ -246,9 +247,10 @@ Rough, and subject to change:
   download software, with progress, retry and remove, and your own plugins
   installed from Settings. A mini player on the phone. Animated skins with
   scrolling tickers and smooth rotation. A fixed address on cable or Wi-Fi.
-  Problem reports and hardware feedback.
-- 🔜 **Next:** a Home Assistant dashboard on the screen, DSI screens on the Pi's own display connector, and room correction for the bass with a USB microphone.
-- 🎨 **Later:** room correction for the full range, the player inside Home Assistant as a media player, themes. With Plex switched on, your own Plex server fills in
+  Problem reports and hardware feedback. A Home Assistant dashboard on the
+  screen. DSI screens on the Pi's own display connector.
+- 🔜 **Next:** room correction for the bass with a USB microphone, then for the full range.
+- 🎨 **Later:** the player inside Home Assistant as a media player, themes. With Plex switched on, your own Plex server fills in
   the artist and album information other sources leave out.
 - 💭 **Maybe:** a visual equaliser, the DAC's own filter and polarity options.
 

@@ -429,3 +429,56 @@ def test_inside_now_follows_the_schedule_and_headless():
     assert not s.inside_now()
     vals["headless"], vals["standby_schedule"] = False, False
     assert not s.inside_now()
+
+
+# --- ADR-0158 D4: a DSI panel's standby is its backlight ---------------------
+
+def _backlight(tmp_path, power="0"):
+    """bedroompi's, 2026-10-23: /sys/class/backlight/10-0045."""
+    device = tmp_path / "backlight" / "10-0045"
+    device.mkdir(parents=True)
+    (device / "bl_power").write_text(power + "\n")
+    (device / "brightness").write_text("255\n")
+    (device / "max_brightness").write_text("255\n")
+    return tmp_path / "backlight", device
+
+
+def test_only_a_dsi_screen_has_a_backlight_to_switch(tmp_path):
+    root, device = _backlight(tmp_path)
+    assert sb.backlight("DSI-1", root) == device
+    assert sb.backlight("HDMI-A-1", root) is None, "an HDMI screen's backlight is not the player's"
+    assert sb.backlight("DSI-1", tmp_path / "none") is None
+
+
+async def test_standby_on_a_dsi_panel_switches_its_backlight_not_its_output(tmp_path, monkeypatch):
+    """The output stays on (no wlr-randr), bl_power goes 4 and back to 0."""
+    root, device = _backlight(tmp_path)
+    env = tmp_path / "screen.env"
+    env.write_text("GEXIS_SCREEN_CONNECTOR=DSI-1\nGEXIS_SCREEN_TRANSFORM=180\n")
+    monkeypatch.setattr(sb, "screen_env", lambda path=env: {k: v for k, v in (l.split("=", 1) for l in env.read_text().split())})
+    monkeypatch.setattr(sb, "BACKLIGHTS", root)
+    monkeypatch.setattr(sb.pwd, "getpwnam", lambda name: type("pw", (), {"pw_uid": 1000})())
+    ran = []
+
+    async def no_wlr_randr(*args, **kwargs):
+        ran.append(args)
+        raise AssertionError("the output is not switched")
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", no_wlr_randr)
+    assert await sb.switch_output(False) is True
+    assert (device / "bl_power").read_text() == "4" and ran == []
+    assert await sb.read_output() is False, "dark: the backlight, though the output is on"
+    assert await sb.switch_output(True) is True
+    assert (device / "bl_power").read_text() == "0"
+    assert await sb.read_output() is True
+
+
+def test_brightness_is_a_share_of_the_backlight_s_maximum_and_never_dark(tmp_path):
+    """ADR-0158 D5: 10-100 % of max_brightness; standby, not brightness,
+    turns it off."""
+    _, device = _backlight(tmp_path)
+    assert sb.set_brightness(50, device) and (device / "brightness").read_text() == "128"
+    assert sb.set_brightness(100, device) and (device / "brightness").read_text() == "255"
+    assert sb.set_brightness(0, device) and (device / "brightness").read_text() == "26", "held at the row's 10 %"
+    assert not sb.set_brightness(50, tmp_path / "none"), "no backlight: nothing set, and said so"
+    assert not sb.set_brightness(None, device)

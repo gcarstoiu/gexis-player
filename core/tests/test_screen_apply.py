@@ -316,3 +316,115 @@ def test_setup_keeping_the_screen_it_applied_clears_provisional(tmp_path):
     assert screen_apply.confirm_provisional(bar.label, state=state) is True
     assert screen_apply.confirmed(state) is True
     assert screen_apply.confirm_provisional(bar.label, state=state) is False, "nothing left to clear"
+
+
+#: Raspberry Pi OS's own config.txt, as on bedroompi (2026-10-23), the
+#: comments left out: it ends in a section filter for the Pi 5, then [all].
+CONFIG = """dtparam=audio=on
+camera_auto_detect=1
+display_auto_detect=1
+auto_initramfs=1
+dtoverlay=vc4-kms-v3d
+max_framebuffers=2
+disable_fw_kms_setup=1
+arm_64bit=1
+disable_overscan=1
+arm_boost=1
+
+[cm4]
+otg_mode=1
+
+[cm5]
+dtoverlay=dwc2,dr_mode=host
+
+[pi5]
+dtoverlay=nospi10
+
+[all]
+disable_splash=1
+"""
+
+
+def dsi_files(tmp_path, config=CONFIG):
+    f = files(tmp_path)
+    f["config"] = tmp_path / "config.txt"
+    f["config"].write_text(config)
+    return f
+
+
+def test_a_dsi_model_s_overlay_goes_in_our_block_and_comes_out_again(tmp_path):
+    """ADR-0158 D1: the overlay the list gives, at the end under [all];
+    every other line as it was; Keep asked; going back takes the block out
+    and leaves the file as it was."""
+    f = dsi_files(tmp_path)
+    model = screens.by_id("rpi-touch2-7inch")
+    assert screen_apply.choose(Applied(model.id, 0, "DSI-1"), **f, now=1), "a new picture asks Keep"
+    text = f["config"].read_text()
+    assert text.startswith(CONFIG.rstrip("\n")), "nothing above is touched"
+    assert text.endswith(f"[all]\n{screen_apply.CONFIG_BEGIN}\ndtoverlay=vc4-kms-dsi-ili9881-7inch\n"
+                         f"{screen_apply.CONFIG_END}\n")
+    assert screen_apply.overlays_in(text) == ("vc4-kms-dsi-ili9881-7inch",)
+    assert f["cmdline"].read_text() == CMDLINE, "a DSI panel needs no video="
+    assert env_of(f["env"])["GEXIS_SCREEN_CONNECTOR"] == "DSI-1"
+    screen_apply.revert(state=f["state"], env=f["env"], cmdline=f["cmdline"], config=f["config"])
+    assert f["config"].read_text() == CONFIG
+
+
+def test_another_dsi_model_replaces_the_block_rather_than_adding_one(tmp_path):
+    f = dsi_files(tmp_path)
+    screen_apply.choose(Applied("rpi-touch2-7inch", 0, "DSI-1"), **f, now=1)
+    screen_apply.keep(state=f["state"])
+    screen_apply.choose(Applied("waveshare-dsi-v2-10.1a", 0, "DSI-1"), **f, now=2)
+    text = f["config"].read_text()
+    assert text.count(screen_apply.CONFIG_BEGIN) == 1 and text.count("[all]") == 2
+    assert screen_apply.overlays_in(text) == screens.by_id("waveshare-dsi-v2-10.1a").overlays
+
+
+def test_a_panel_the_firmware_finds_writes_nothing(tmp_path):
+    """The Hosyond and the Touch Display class: brought up by
+    display_auto_detect, so config.txt is not written at all."""
+    for screen_id in ("hosyond-7-dsi", screens.TOUCH_DISPLAY_CLASS):
+        (tmp_path / screen_id).mkdir()
+        f = dsi_files(tmp_path / screen_id)
+        before = f["config"].stat().st_mtime_ns
+        screen_apply.choose(Applied(screen_id, 180, "DSI-1"), **f, now=1)
+        assert f["config"].read_text() == CONFIG and f["config"].stat().st_mtime_ns == before
+        assert env_of(f["env"])["GEXIS_SCREEN_TRANSFORM"] == "180"
+
+
+def test_an_hdmi_screen_chosen_after_a_dsi_one_takes_the_block_out(tmp_path):
+    f = dsi_files(tmp_path)
+    screen_apply.choose(Applied("rpi-touch2-7inch", 0, "DSI-1"), **f, now=1)
+    screen_apply.keep(state=f["state"])
+    screen_apply.choose(Applied("waveshare-10.1-hdmi-b", 0), **f, now=2)
+    assert f["config"].read_text() == CONFIG
+
+
+def test_the_overlay_is_what_only_a_restart_changes(tmp_path):
+    """The boot check restarts when the boot part of the picture changes: a
+    DSI model's overlay is in it, as a bar's video= is."""
+    f = dsi_files(tmp_path)
+    where = {k: f[k] for k in ("env", "cmdline", "config")}
+    now = screen_apply.picture(**where)[0]
+    assert now == (None, ())
+    assert screen_apply.picture_of(Applied("rpi-touch2-7inch", 0, "DSI-1"))[0] != now
+    assert screen_apply.picture_of(Applied("hosyond-7-dsi", 0, "DSI-1"))[0] == now
+
+
+def test_a_dsi_model_is_applied_on_the_dsi_connector(tmp_path):
+    """ADR-0158: a panel whose overlay is not written has no connector yet -
+    DSI-1; one seen on another DSI connector, that one. An HDMI model goes
+    where the screen is found."""
+    model = screens.by_id("rpi-touch2-7inch")
+    assert screen_apply.connector_for(model, ports=[]) == "DSI-1"
+    seen = [screen_detect.Seen(False, "DSI-1"), screen_detect.Seen(True, "DSI-2", preferred=(800, 480))]
+    assert screen_apply.connector_for(model, ports=seen) == "DSI-2"
+    hdmi = screen_detect.Seen(True, "HDMI-A-2", "WAV", "WaveShare", (1280, 800))
+    assert screen_apply.connector_for(screens.by_id("waveshare-10.1-hdmi-b"), seen=hdmi) == "HDMI-A-2"
+
+
+def test_our_block_survives_a_file_without_a_trailing_newline(tmp_path):
+    out = screen_apply.with_overlays("dtparam=audio=on", ("vc4-kms-dsi-generic",))
+    assert out == f"dtparam=audio=on\n\n[all]\n{screen_apply.CONFIG_BEGIN}\ndtoverlay=vc4-kms-dsi-generic\n{screen_apply.CONFIG_END}\n"
+    assert screen_apply.with_overlays(out, ()) == "dtparam=audio=on\n"
+    assert screen_apply.with_overlays(screen_apply.with_overlays(out, ("a",)), ("a",)).count(screen_apply.CONFIG_BEGIN) == 1

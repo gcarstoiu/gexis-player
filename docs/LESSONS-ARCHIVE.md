@@ -1535,3 +1535,45 @@ cannot.
 is tried end to end first. Reasoning from a neighbouring case that works is a
 hypothesis, and is said as one.
 
+
+**80. A meter measured at rest** (2026-10-21, Finding 133). George asked for
+a thorough comparison of Glass, foonerd's Rust replacement for PeppyMeter,
+with our visualiser. To keep ShelvesPi's room quiet, Lyrion played at volume 5
+while each engine drew the same skins; Glass was fed a test signal through its
+own tap. The matrix ran an hour and the preliminary results went to George:
+needle and spectrum skins about even, turntables and tapes two to five times
+cheaper in Glass. On sofapi the screenshots showed our spectrum skins with no
+bars at all, which led back: our needles follow half the volume's cut
+(`meter_follow`, ADR-0146), 50 dB at volume 5, so the levels our driver
+received were 3-4 on a scale of 100 - the needles stood near the bottom, and
+the spectrum barely rose. ShelvesPi's screenshots had shown a meter on screen,
+which looked like a meter working. Holding the meter's cut at 0 dB for the
+test (the core rewrites it at the next volume change), our needle skin cost
+13.7 % of a core instead of 4.1 %, the spectrum 19.4 % instead of 2.1 %, and
+Glass came out ahead on every skin. The same evening the first copy of the
+results was lost: `scp` with a brace list failed and the trial folder was
+removed in the same step; the numbers survived only because a waiting job had
+printed them.
+**Rule:** before measuring what something costs, see it doing the work at the
+conditions of the measurement - a still picture of the right screen is not
+that. And copy results back and count them before the source is removed.
+
+**81. Two readings the design predicted** (2026-10-22, Finding 135). On
+sofapi (HDMI, Volume on Software) the visualiser's needles had no level at
+Lyrion volume 5. Finding 116, which put the meter in front of the software
+stage on HDMI on 2026-10-07, had read the meter service at −26 dB and seen
+the needles "near 0", explained in the same sentence as the volume's cut the
+meters are meant to follow (ADR-0057) - only the spectrum's bands were taken
+as proof the music arrived. Feeding a −6 dBFS sine through a private copy of
+the chain, silently, showed the meter reading 1.3 where it reads 9.0 alone:
+ALSA's `type meter` reads the samples its slave holds, and a `softvol` slave
+holds them already cut - so the cut was applied twice, once in the samples and
+once by the meter service. A `copy` between them restored 9.0. Installed,
+the meter still read zero: the core had rewritten `output.conf` at its start
+and logged that the renderers "pick it up on their next open", and
+squeezelite, running since the evening before, had not - restarted, the same
+music read 10.6 / 13.3. Neither belief had been tested; each was what the
+design predicted.
+**Rule:** a result that matches the prediction still needs the case that
+would tell the two stories apart - a signal the design says must arrive uncut,
+a renderer that must have reloaded - before it is taken as the design working.

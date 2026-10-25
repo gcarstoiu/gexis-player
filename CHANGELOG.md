@@ -6,6 +6,29 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.5.0 — 24 October 2026
+
+### New
+
+- DSI screens: touch screens on the Pi's own display connector, leaving both HDMI ports free for a receiver, a sound bar or a TV. The Raspberry Pi Touch Display and panels built like it are found by themselves; another DSI model is chosen in Settings → Display → Attached screen, and the player restarts and asks Keep this screen?, going back by itself if the screen stays dark.
+- On a DSI screen, Screen brightness sets its backlight, and display standby turns the backlight off.
+- The player in Home Assistant: with the Gexis Player integration, installed in Home Assistant through HACS, each player shows there as a media player - what plays with its artwork, play, pause, next, previous, volume and the source - with switches for the screen, the dashboard and the visualiser. The player changes nothing in Home Assistant.
+- The volume drawer and the bar's pull-down controls stay open when opened on the screen, until they are closed, the visualiser takes over or Home opens. One opened by a change from elsewhere still closes by itself.
+
+### Fixed
+
+- On the bars, the buttons in the pull-down controls work on the first tap right after pulling them down.
+- On the bars, every settings panel fits the screen: a number's value sits beside its slider, and Close is no longer cut off.
+- Artist pictures and covers that failed to load once are tried again, rather than staying as initials until the screen restarts.
+- A Lyrion server chosen in Settings is used at once.
+- On the bars, the background pictures vary again; one picture had been shown over and over.
+
+### Good to know
+
+- A four-lane DSI model needs a Pi 5 or a Compute Module; on a Pi 4 the list leaves those models out.
+- Tested on the hardware: the Hosyond 7" and the Waveshare 10.1" DSI-TOUCH-A. The other DSI models are listed but untested.
+- The Home Assistant integration needs 1.5.0 or later.
+
 ## 1.4.0 — 22 October 2026
 
 ### New

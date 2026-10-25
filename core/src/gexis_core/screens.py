@@ -23,6 +23,13 @@ from pathlib import Path
 
 PRESETS = Path(__file__).with_name("screens_data") / "display_presets.json"
 
+#: **ADR-0158 D2: a DSI panel recognised, before anyone picks its model.**
+#: The Touch Display v1's overlay drives 23 listed models from 4.3" to 8",
+#: all 800 x 480, and none can be told from another: no EDID, the same
+#: driver. A model picked from the list is shown by its own name; this is
+#: what setup suggests until then.
+TOUCH_DISPLAY_CLASS = "dsi-touch-display-class"
+
 #: ADR-0109 decision 1: the models George owns, marked tested. George,
 #: 2026-10-01: *"All of them are waveshare with hdmi inputs"* - the 10.1" (B)
 #: that sofa-pi runs, and the 13.3" and two bars that step 6 tries on the
@@ -36,6 +43,12 @@ TESTED: frozenset[str] = frozenset({
     "hmtech-7-hdmi",
     # And the non-touch 10.1", the same evening (OUR_PRESETS below).
     "hmtech-10.1-hdmi-monitor",
+    # ADR-0158: George's DSI panel on bedroompi, 2026-10-23 (*"Yes
+    # hoysond"*), and the class it is recognised as - which is what was
+    # tested, since nothing the Pi reads tells the class's makers apart.
+    "hosyond-7-dsi",
+    TOUCH_DISPLAY_CLASS,
+    "waveshare-dsi-v2-10.1a",
 })
 
 #: **Screens George owns that the vendored list lacks** (`display_presets.json`
@@ -52,6 +65,16 @@ OUR_PRESETS: dict[str, dict] = {
         "recommended_rotation": 0,
         "notes": "No touch. EDID reads Dell TLD1280. Tested on sofapi, 2026-10-20.",
     },
+    TOUCH_DISPLAY_CLASS: {
+        "name": "Raspberry Pi Touch Display or compatible (DSI, 800x480)",
+        "type": "dsi",
+        "description": "DSI touch screen on the Touch Display's own driver",
+        "native_resolution": "800x480",
+        "config": {"dtoverlay": "vc4-kms-dsi-7inch"},
+        "recommended_rotation": 0,
+        "notes": "Recognised by its driver: the original Touch Display and the panels built to answer as one. "
+                 "Tested as the Hosyond 7\" on bedroompi, 2026-10-23.",
+    },
 }
 
 #: The aspect ratio from which a screen is a bar (lib/family.svelte.js: the
@@ -65,11 +88,26 @@ NOT_MODELS = frozenset({"auto", "custom"})
 #: 2026-10-01: *"Leave them out"* (11 models, 480x480 to 1080x1080).
 SQUARE_BELOW = 1.3
 
-#: Only HDMI screens for now (George, 2026-10-01: *"B it is and I will try
-#: to get my hands on one"*). A DSI or DPI screen needs its own dtoverlay in
-#: config.txt, which applying does not write and nobody here can test; they
-#: come back when one can be.
-INTERFACES = frozenset({"hdmi"})
+#: HDMI screens, and **DSI screens since ADR-0158** (George, 2026-10-23:
+#: *"For all that we have in the dsi list that we deferred until now"*).
+#: DPI screens stay out: they take the GPIO header, where the DACs sit.
+INTERFACES = frozenset({"hdmi", "dsi"})
+
+#: **The overlays the firmware loads by itself** (`display_auto_detect=1`,
+#: Raspberry Pi OS's own `config.txt`): a panel answering as the Touch
+#: Display v1 is brought up with nothing written (ADR-0158, measured on
+#: bedroompi). Every other DSI model's overlay is written (`screen_apply`).
+FIRMWARE_FINDS = frozenset({"vc4-kms-dsi-7inch"})
+
+#: **Overlays Raspberry Pi OS does not carry** (ADR-0158 D1; bedroompi's
+#: `/boot/firmware/overlays`, 2026-10-23): Waveshare's own, downloaded from
+#: its site. A model needing one is left out - written, it would leave the
+#: panel dark until the restart went back.
+NOT_SHIPPED = frozenset({"waveshare_35DSI"})
+
+#: ADR-0158 D6: boards whose DSI connector carries four lanes.
+MODEL = Path("/proc/device-tree/model")
+FOUR_LANE_BOARDS = re.compile(r"^Raspberry Pi (5 Model|Compute Module)")
 
 #: **A case is not a screen** (George, 2026-10-03: *"In general the box and
 #: non box i would say are the same"* - his 10.1" (B) came in Waveshare's case,
@@ -103,6 +141,9 @@ class Screen:
     tested: bool
     video_mode: str | None   # the preset's cmdline mode, when it gives one
     notes: str | None
+    #: ADR-0158: the `dtoverlay=` lines a DSI model needs in config.txt -
+    #: none for an HDMI screen or one the firmware finds by itself.
+    overlays: tuple[str, ...] = ()
 
     @property
     def family(self) -> str:
@@ -113,6 +154,12 @@ class Screen:
         """`Maker/Model` - the grouped picker's option (Settings splits at
         the first "/")."""
         return f"{self.maker}/{self.model}"
+
+    @property
+    def lanes(self) -> int:
+        """DSI lanes the overlay drives (`..._4lane` or two)."""
+        params = (p for o in self.overlays for p in o.split(",")[1:])
+        return 4 if any(p.endswith("4lane") for p in params) else 2
 
 
 def _size(text: str | None) -> tuple[int, int] | None:
@@ -126,6 +173,16 @@ def _maker_and_model(name: str) -> tuple[str, str]:
         rest = rest[3:]
     maker = _MAKER_NAMES.get(first, first)
     return maker, (rest.strip() or name).replace("/", "-")
+
+
+def _overlays(preset: dict) -> tuple[str, ...]:
+    """The `dtoverlay=` values a DSI preset needs written, in the list's
+    order (`dtoverlay`, then `dtoverlay_2`); none for one the firmware finds."""
+    if preset.get("type") != "dsi":
+        return ()
+    config = preset.get("config") or {}
+    found = tuple(str(config[k]) for k in sorted(config) if k.startswith("dtoverlay") and config[k])
+    return () if set(found) <= FIRMWARE_FINDS else found
 
 
 @lru_cache(maxsize=1)
@@ -155,6 +212,12 @@ def all_screens(path: Path = PRESETS) -> tuple[Screen, ...]:
             continue
         if preset.get("type", "hdmi") not in INTERFACES:
             continue
+        if preset.get("emit_dsi_overlay") is False:
+            # ADR-0158 D1: run only with `vc4-kms-v3d` removed, which the
+            # compositor needs (Waveshare 4.3" rev 1, PiTFT50 v1.0, DFRobot 5").
+            continue
+        if any(o.split(",", 1)[0] in NOT_SHIPPED for o in _overlays(preset)):
+            continue
         maker, model = _maker_and_model(CASE.sub("", preset["name"]))
         out.append(Screen(
             id=key,
@@ -167,8 +230,27 @@ def all_screens(path: Path = PRESETS) -> tuple[Screen, ...]:
             tested=panel in TESTED,
             video_mode=preset.get("video_mode"),
             notes=preset.get("notes"),
+            overlays=_overlays(preset),
         ))
     return tuple(sorted(out, key=lambda s: (s.maker.lower(), s.model.lower())))
+
+
+def board_lanes(path: Path | None = None) -> int | None:
+    """DSI lanes on this board's connector; None off a Pi (all offered)."""
+    try:
+        model = (path or MODEL).read_text(errors="replace").strip("\x00\n ")
+    except OSError:
+        return None
+    if not model.startswith("Raspberry Pi"):
+        return None
+    return 4 if FOUR_LANE_BOARDS.match(model) else 2
+
+
+def offered(path: Path | None = None) -> tuple[Screen, ...]:
+    """The models this board can drive (D6). `by_id` still finds the rest."""
+    lanes = board_lanes(path)
+    every = all_screens()
+    return every if lanes is None else tuple(s for s in every if s.lanes <= lanes)
 
 
 #: A screen known only by its own preferred mode (ADR-0109, amended

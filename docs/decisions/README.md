@@ -69,7 +69,7 @@ been written properly. **0098 has no record either.**
 | [0045](0045-bluetooth-pairing-confirmation.md) | Bluetooth pairing is confirmed on the panel, on a device's first pair only | Accepted 2026-09-20; **reverses 0024**; needs our own BlueZ `Agent1` |
 | [0046](0046-fixed-output-hides-the-slider.md) | Fixed output hides the volume control everywhere, with a padlock and a reason, rather than disabling it | Accepted 2026-09-20, built 2026-09-23; implements 0018's unbuilt half |
 | [0047](0047-the-idle-screen-gains-backgrounds-and-weather.md) | The idle screen gains four backgrounds and a weather stack, both keyed and both optional | Accepted 2026-09-21: Pixabay wallpapers, Open-Meteo weather; the external page becomes one option. Amends 0033 |
-| [0048](0048-how-the-device-name-reaches-four-services.md) | How the one device name reaches squeezelite, go-librespot, BlueZ and the hostname | **Proposed** 2026-09-20: nothing applied while the device runs, not even the hostname |
+| [0048](0048-how-the-device-name-reaches-four-services.md) | How the one device name reaches squeezelite, go-librespot, BlueZ and the hostname | **Proposed** 2026-09-20: nothing applied while the device runs, not even the hostname (amended 2026-10-23: choosing a Lyrion server restarts the core) |
 | [0049](0049-the-pictures-folder-is-a-share.md) | The on-device pictures folder is an SMB share | Accepted 2026-09-21: one guest-writable directory; Debian's default shares off. Amended 2026-10-16: `nmbd` on, answering names only (never master browser) |
 | [0050](0050-skin-previews-are-the-skins-own-picture.md) | A skin's preview is the skin's own picture | Accepted 2026-09-21: each skin's 1280x800 `screen.bgr`; no generated thumbnails or cache |
 | [0051](0051-the-visualiser-reads-its-selection-from-a-file.md) | The visualiser reads its skin selection from a file | Accepted 2026-09-22: `/run/gexis/visualisation.json`, polled; corpus spans both template directories. Amends 0019, 0026, 0050 |
@@ -140,7 +140,7 @@ been written properly. **0098 has no record either.**
 | [0117](0117-dacs-beyond-the-two-on-the-bench.md) | DACs beyond the two on the bench | Accepted 2026-10-04: the card reports its own scale and name; Tested, Known, Detected; DSD postponed. **Amended 2026-10-18**: the lists show Tested or nothing |
 | [0118](0118-lyrion-s-own-menus.md) | Lyrion's own menus, plugins included | Accepted 2026-10-05: Lyrion's menus as home tiles, behind *Extended navigation*, off by default; player settings left out |
 | [0119](0119-plexamp-is-claimed-from-settings.md) | Plexamp is claimed from Settings, and says when it is | Accepted 2026-10-05: claimed by `PLEXAMP_CLAIM_TOKEN`; the row reads *Claimed* with *Claim again* |
-| [0120](0120-backgrounds-cropped-by-what-they-show.md) | Backgrounds cropped by what they show; Pexels and TheAudioDB | Accepted 2026-10-05 (**Pexels removed 2026-10-07**): cropped around detected subjects on the player (YOLOX-S) |
+| [0120](0120-backgrounds-cropped-by-what-they-show.md) | Backgrounds cropped by what they show; Pexels and TheAudioDB | Accepted 2026-10-05 (**Pexels removed 2026-10-07**; **a bar's wide pictures join the usual ones 2026-10-23**): cropped around detected subjects on the player (YOLOX-S) |
 | [0121](0121-the-phone-as-the-panel-s-touchpad-and-keyboard.md) | The phone as the panel's touchpad and keyboard | Accepted 2026-10-05: a touchpad drives a panel pointer; a text field opens the phone's keyboard |
 | [0122](0122-now-playing-minimised-to-where-you-were.md) | Now Playing minimised, back to where you were | Accepted 2026-10-06: a Minimise chevron keeps the library's path and scroll; Home kept |
 | [0123](0123-the-network-in-settings-cable-and-wi-fi.md) | The network in Settings: cable and Wi-Fi | Accepted 2026-10-07: a Cable row; a manual address kept only once confirmed within 60 s |
@@ -178,6 +178,9 @@ been written properly. **0098 has no record either.**
 | [0155](0155-a-sound-system-on-optical.md) | A sound system on optical, through a USB adapter | Accepted 2026-10-20: Squeezelite converts only rates the card lacks, upward; adapter marked Tested |
 | [0156](0156-home-assistant-dashboard-on-the-screen.md) | A Home Assistant dashboard on the screen | Accepted 2026-10-21: one per player, in the panel's page; button, API, schedule; edge tab dismisses. Amended 2026-10-22: the visualiser - asked for or its timeout - takes over from it |
 | [0157](0157-the-phone-as-real-input-on-the-panel.md) | The phone's touchpad and keyboard as real input on the panel | Accepted 2026-10-21: over a framed page, taps and typing as real input (uinput); amended the same day |
+| [0158](0158-dsi-screens.md) | DSI screens | Accepted 2026-10-23 (Phase 17): every DSI screen in the list (58), overlays written to config.txt with Keep and a way back; the DSI panel is the screen; standby by backlight; a brightness row |
+| [0159](0159-raspberry-pi-imager.md) | Raspberry Pi Imager | Accepted in part 2026-10-24: Use custom stays, guide corrected; our own list and Imager's settings not now; Imager's own list open |
+| [0160](0160-the-player-in-home-assistant.md) | The player in Home Assistant | Accepted 2026-10-24 (Phase 19): our own integration in its own repository; a media player plus screen, dashboard and visualiser switches; `id` on `/player/status` |
 
 ## Cross-cutting rules
 
@@ -218,7 +221,7 @@ selection criteria. Protect the audio path with priority, not by doing less.
 | Subject | Raised by | Why it is not settled |
 |---|---|---|
 | ~~Qobuz navigation model~~ | 0020 | Answered 2026-09-14 by [0030](0030-library-typed-radio-slimbrowse.md): not rendered. |
-| Image distribution channel | 0021 | Plain `.img`, self-hosted Imager repository, or Imager's community categories. |
+| Image distribution channel | 0021 | [0159](0159-raspberry-pi-imager.md): *Use custom* for now; Imager's own list open. |
 | `steps.per.degree` quantisation | 0015 | Not decidable from configuration; spike defined. |
 | Apt repository infrastructure | 0021 | In-place updates require a signed, hosted repository. |
 | Maximum volume ceiling | 0018 | Still undecided. |

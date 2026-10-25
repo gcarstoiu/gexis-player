@@ -479,6 +479,35 @@ mode, `screens.fitted` holding a 16:9 screen larger than 1080p to
 value so the row reads the port in use. `gexis-kiosk-start` then pins the
 window to the screen's port whenever both are connected.
 
+**A DSI screen** (ADR-0158, Phase 17). `screen_detect.ports()` reads a
+`card*-DSI-*` connector before the HDMI ones (D3: the panel on the ribbon
+is the screen). It has no EDID: its mode is the driver's only one
+(`modes`), and its witnesses are the drivers bound on the I2C bus
+(`Seen.panel`). A panel answering as the Raspberry Pi Touch Display
+(`rpi_touchscreen_attiny` for its backlight and power, `edt_ft5x06` for its
+touch, as bedroompi reads them) is recognised as the class
+`dsi-touch-display-class`, and `screen_watch.key` gives it
+`["DSI", <controller>, <mode>]` for the start's comparison. A DSI model is
+applied on the DSI connector (`screen_apply.connector_for`: the one a panel
+is seen on, else `DSI-1`, since a panel whose overlay is not yet written has
+no connector). The firmware brings up the Touch Display's overlay by itself
+(`display_auto_detect=1`, `screens.FIRMWARE_FINDS`); any other DSI model's
+`dtoverlay=` lines are written into a block of our own at the end of
+`/boot/firmware/config.txt`, under `[all]`, between `screen_apply.CONFIG_BEGIN`
+and `CONFIG_END`, durably as `cmdline.txt` is, and nothing else in the file
+is changed. The overlays are part of `picture()`'s boot part, so a change
+restarts, asks Keep, and a go-back takes the block out. The list offered
+(`screens.offered()`, D6) leaves out a four-lane model (`Screen.lanes`, from
+its overlay's `…_4lane` parameter) on a board whose connector carries two:
+`screens.board_lanes()` reads `/proc/device-tree/model`, four on a Pi 5 or a
+Compute Module, two on any other Pi, every model off a Pi. Display standby on a
+DSI connector turns `bl_power` off and leaves the output on
+(`standby.backlight`), and `read_output` reads the backlight back;
+*Screen brightness* writes `brightness` as a share of `max_brightness`, at
+once and at every start. *Screen port* takes its options from the ports
+there are (`optionsFrom: screen_port`), *DSI* among them. With a TV chosen,
+the DSI touch is ignored by a udev rule on its I2C driver (`DRIVERS==`).
+
 **Who answers *Keep this screen?*** (ADR-0147 D3, D5, as amended by
 Finding 125, 2026-10-14). The question carries two fields:
 
@@ -778,7 +807,8 @@ off, so the panel waits with Spotify and Bluetooth (George, 2026-10-18: a
 fresh player put off showed the library's tiles with nothing behind them);
 asked again from Settings it changes nothing. **A server part 2 sets is used
 from the core's next start**, as one picked in Settings is
-(`_chosen_server`): when `lms_server` is among what `apply` wrote, the core
+(`_chosen_server`; Settings restarts the core 1.5 s after the save, its row
+marked `restart: "core"` - ADR-0048 amended 2026-10-23): when `lms_server` is among what `apply` wrote, the core
 restarts once the downloads it began are in (`_restart_when_settled`: the
 settling record gone, or `settling.downloads_in` - every item done or failed,
 or only following Lyrion after its download) - the skins install as the

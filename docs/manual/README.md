@@ -113,12 +113,13 @@ to play it; **Clear** empties the queue; **Play from** starts a playlist.
 
 ![Volume](images/panel-volume.webp)
 
-Drag the slider or tap along it. The drawer closes by itself after a few
-seconds, but stays open while the phone's pointer rests on it. A change made
-elsewhere (a phone, a Lyrion app) can open the drawer too
+Drag the slider or tap along it. A drawer opened on the screen stays until
+it is closed - a tap outside it - or the visualiser takes over or Home opens.
+A change made elsewhere (a phone, a Lyrion app) can open the drawer too
 (*Settings → Display → Show volume when changed elsewhere*); a drawer opened
-that way ignores touches for a moment, so a tap meant for what was under it
-does not set the level.
+that way closes by itself after *Volume drawer auto-hide*, stays open while
+the phone's pointer rests on it, and ignores touches for a moment, so a tap
+meant for what was under it does not set the level.
 
 With **Volume** set to *Fixed*, the player always plays at full level
 for an amplifier that sets the volume; the button then shows a padlock and
@@ -309,6 +310,36 @@ Home Assistant's own header and side bar show unless the dashboard or the
 user's profile in Home Assistant hides them. On a bar (1480 × 320), a
 dashboard made for that shape reads best.
 
+### The player in Home Assistant
+
+Home Assistant can show each player as a media player and control it, with
+the *Gexis Player* integration
+([gexis-player-homeassistant](https://github.com/gcarstoiu/gexis-player-homeassistant)).
+It is installed in Home Assistant by whoever runs it; the player changes
+nothing there.
+
+1. With HACS, add `https://github.com/gcarstoiu/gexis-player-homeassistant`
+   under *Custom repositories* (type *Integration*), download *Gexis Player*
+   and restart Home Assistant.
+2. The player then shows under *Settings → Devices & services* as
+   discovered: confirm it. One that does not show is added by its address -
+   *Add integration → Gexis Player*, its name on the network (for example
+   `livingroom.local`) and port 8090.
+
+What Home Assistant gets:
+- **A media player**: playing, paused or idle; title, artist, album, artwork
+  and position; play, pause, next and previous when the source playing
+  offers them, shuffle and repeat where it has them; volume and mute, unless
+  the output is fixed; the source, from those that can take over.
+- **On a player with a screen, three switches**: *Screen* (off is display
+  standby), *Dashboard* (the dashboard above, up or down; unavailable until
+  its address is set) and *Visualiser*.
+
+It needs Home Assistant 2026.3 or later and a player newer than 1.4.0; an
+older player is found and asked to update. With Home Assistant's own
+*Lyrion Music Server* integration also set up, the player shows there too,
+as Lyrion's player.
+
 ## 7. The phone page
 
 Open the player's address in a phone's browser, for example
@@ -395,7 +426,8 @@ it.
 ![Bar: the waiting screen](images/bar-waiting.webp)
 
 Pulled down from the top of any screen, the tray: Home, the visualiser and
-the volume. Tap below it, or push it back up, to close it.
+the volume. It stays until it is closed - tap below it, or push it back up -
+or the visualiser takes over or Home opens.
 
 ![Bar: the tray](images/bar-tray.webp)
 
@@ -450,7 +482,7 @@ still mounted.
 | Setting | What it does |
 | --- | --- |
 | Lyrion Client: Enabled | Plays your Lyrion server's music. |
-| Lyrion Client: Server | Which Lyrion server. Servers announce themselves on the network, each shown by its machine's name, else the library name set in Lyrion, else its address; typing an address is the fallback. |
+| Lyrion Client: Server | Which Lyrion server. Servers announce themselves on the network, each shown by its machine's name, else the library name set in Lyrion, else its address; typing an address is the fallback. Choosing another one restarts the player's software, so it is used at once. |
 | Lyrion Client: Navigation | How you move around your library on the screen, one choice: **Simple** - the home tiles, albums, artists, playlists and radio; **Extended** - Lyrion's own menus as well: My Music, Favourites, Apps (section 4); **Off** - only what is playing and the sources, with no library to browse; Lyrion's apps on your phone still play to the player. |
 | Spotify Connect: Enabled | The player appears as a Spotify Connect device. |
 | Spotify Connect: Starting volume | The loudest Spotify starts at when it takes over. Hidden with Volume on *Fixed*. |
@@ -487,12 +519,13 @@ player into your Plex account).
 | Setting | What it does |
 | --- | --- |
 | Personalise | Asks again, on your phone, how you listen, whether the phone's touchpad works the screen, and what the screen shows - the questions after first-time setup - starting from what the player has now. The player's screen shows a code to the page. |
-| Attached screen | The display in use, by its name (a TV by the name it gives). **Change** picks the screen's model from the list, by maker; it sets the layout, Standard or Bar, and which visualiser skins are offered. A screen not in the list is shown as *Other screen* with its size. |
-| Screen port | Which HDMI port the screen is on. The tile and its list show what is plugged into each port - the screen, another device by its name (a sound bar or receiver), *sound* when the sound goes to that port; a port with nothing connected is greyed. A change that alters the picture restarts the player and asks *Keep this screen?*. The port chosen stays the screen, even with a touch panel on the other port. **A TV can be the screen**: it runs at 1920 x 1080 (or the largest 16:9 size below it that it offers), and since it has no touch, *Keep this screen?* is answered on the phone page, as for any screen not in the list. A listed touch screen is answered on itself, and on the phone page too when the player cannot tell that its touch works. A touch panel left on the other port is switched off. A port that is not the screen shows black. If the TV crops the edges of the picture, set its picture size to *Just Scan* or *Original*. When the TV's port also carries the sound, display standby only blacks the picture, so the music goes on. On a board with one HDMI port, the row only says what is on it. |
+| Attached screen | The display in use, by its name (a TV by the name it gives). **Change** picks the screen's model from the list, by maker; it sets the layout, Standard or Bar, and which visualiser skins are offered. A screen not in the list is shown as *Other screen* with its size. A DSI screen the Pi finds by itself - the Raspberry Pi Touch Display and those built to answer as one - is shown as *Raspberry Pi Touch Display or compatible* until its model is picked. Another DSI model needs a line in the Pi's boot settings, which choosing it writes: the player restarts and asks *Keep this screen?*, and goes back by itself if the screen stays dark. A four-lane DSI model is listed only on a Pi 5 or a Compute Module: a Pi 4's display connector carries two lanes. |
+| Screen port | Which port the screen is on: *DSI*, the Pi's own display connector, when a DSI screen is connected, and the HDMI ports. A DSI screen is the screen unless an HDMI port is chosen here, which leaves the DSI screen black. The tile and its list show what is plugged into each port - the screen, another device by its name (a sound bar or receiver), *sound* when the sound goes to that port; a port with nothing connected is greyed. A change that alters the picture restarts the player and asks *Keep this screen?*. The port chosen stays the screen, even with a touch panel on the other port. **A TV can be the screen**: it runs at 1920 x 1080 (or the largest 16:9 size below it that it offers), and since it has no touch, *Keep this screen?* is answered on the phone page, as for any screen not in the list. A listed touch screen is answered on itself, and on the phone page too when the player cannot tell that its touch works. A touch panel left on the other port is switched off. A port that is not the screen shows black. If the TV crops the edges of the picture, set its picture size to *Just Scan* or *Original*. When the TV's port also carries the sound, display standby only blacks the picture, so the music goes on. On a board with one HDMI port, the row only says what is on it. |
 | Text size | How large the writing on the player's screen is: 90 % to 130 %, 100 % as it comes. The screen changes at once; Home's tiles grow with larger text. Pictures, buttons and the layout keep their size, so long titles are cut short sooner at large sizes. A phone keeps its own size. |
 | Screen rotation | For a screen mounted the other way up. |
+| Screen brightness | How bright the screen's backlight is, 10 % to 100 % (100 % unless changed); applies at once. Only on a screen whose backlight the player can set: a DSI screen. |
 | Headless | Turns the player's screen off; settings that only affect the screen are hidden while it is on, the screen in use, its ports and its rotation included. |
-| Display standby: Scheduled standby, Standby times | With *Scheduled standby* on, the screen goes off during the standby times whenever nothing is playing. Up to six times, each a start and an end - picked from a grid of hours and quarters - on the chosen days; one may run past midnight, counting for the day it starts. |
+| Display standby: Scheduled standby, Standby times | With *Scheduled standby* on, the screen goes off during the standby times whenever nothing is playing (on a DSI screen, its backlight). Up to six times, each a start and an end - picked from a grid of hours and quarters - on the chosen days; one may run past midnight, counting for the day it starts. |
 | Display standby: Back to standby after | A screen woken during a standby time goes dark again after this long with no touch and nothing playing (2 minutes unless changed; up to 30). |
 | Home Assistant dashboard: Dashboard address | The address of the room's Home Assistant dashboard. Home Assistant has to allow it to be shown and let the player in - see [A Home Assistant dashboard](#a-home-assistant-dashboard). Empty, nothing of the dashboard shows. |
 | Home Assistant dashboard: Dashboard button | The button that puts it up: in the bar's pull-down controls, beside the visualiser on Now Playing, and on the phone page. On unless changed, once an address is set. |
@@ -507,7 +540,7 @@ player into your Plex account).
 | Idle screen | On or off. Off (the default on a new player), the panel stays on what it shows and the rows below are hidden. |
 | Idle screen: Screen, Timeout | The built-in clock-and-weather screen, or an external page; and after how long, with nothing playing and nobody touching the panel. |
 | Idle screen: Background | **Gexis wallpapers**, the player's own pictures; artist pictures from the library, which show the player's own while the Lyrion client is off; online wallpapers (Pixabay); pictures on the device; or black. |
-| Idle screen: Wallpaper topics | With online wallpapers. *Space* (galaxies, nebulae, astronomy) and *Calm* search Pixabay's selected photos; the others are Pixabay's own categories. Choosing several mixes them. |
+| Idle screen: Wallpaper topics | With online wallpapers. *Space* (galaxies, nebulae, astronomy) and *Calm* search Pixabay's selected photos; the others are Pixabay's own categories. Choosing several mixes them. On a bar, panoramas are mixed in with the other photos. |
 | Idle screen: Wallpaper styles, Follow the time of day | With Gexis wallpapers: the chosen styles (Calm, Colourful, Psychedelic), and the hour's pictures (dawn, day, dusk, night). |
 | Idle screen: Seasons, Holidays | *Seasons*, with Gexis wallpapers: the season's pictures join the styles, by hemisphere. *Holidays*, with Gexis wallpapers or online wallpapers: on New Year, and on Christmas and Easter where they are public holidays, only those days' pictures show; Easter follows the Western or Orthodox date by country. |
 | Idle screen: Background brightness, Change the picture every | How dark the picture is behind the text, and how often it changes. |

@@ -32,10 +32,10 @@ There is no need to unpack it.
    the `gexis-player.img.xz` you downloaded.
 4. **Storage:** your microSD card. Check it is the card: everything on it is
    erased.
-5. When Imager offers to **customise the settings** (Wi-Fi, user name and
-   so on), **skip it**. The player is set up from your phone in step 4, and
-   Imager's settings would get in its way.
-6. Write, wait for Imager to verify the card, and take the card out.
+5. Write, wait for Imager to verify the card, and take the card out.
+
+Imager asks nothing about Wi-Fi or a user name for a file chosen this way:
+the player is set up from your phone in step 4.
 
 ## 3. Start the player
 

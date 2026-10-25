@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-21 (on R2D2).
+Last updated: 2026-10-24 (on R2D2).
 
 ## Start here
 
@@ -27,22 +27,66 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.3.1, on Stable** (2026-10-21; Stable serial 8,
-Testing serial 53, both signatures good from the release key, read back from
-GitHub; the public `gexis-player.img.xz` decompresses to the checked image).
-Image `image/deploy/2026-10-20-gexis-player-v1.3.1.img`, 123 checks, 978
-skins clean; parts `ours-2a97557a07d1`, `skins-67e037cab00f`,
-`rpi-7325dbec7a52`, `debian-256b0ff5ed7a`. A fix release: the idle countdown
-re-arms after the visualiser, standby wakes on a tap read from the kernel and
-reads the real screen at start (ADR-0135 amended), the kiosk forgets
-Chromium's stored window at every start, and the HMTECH 7" and 10.1" (both
-without touch) are tested. A screen's few seconds back from standby are the
-screen's own (the bar ~3 s; George: "Keep it as is"), in the release notes and
-the FAQ. **PR #80** was merged by George; post-merge steps and the clean-up are
-done. sofapi runs `1.3.0+git16`, ShelvesPi `1.3.0+git11` - previews of what
-1.3.1 carries; they move to 1.3.1 by the update. GitHub reports 6 Dependabot
-alerts on `main` (2 high, 4 moderate), all `vite` (the UI's build tool, not
-on the player; fixed in 8.3.3), raised 20-21 Oct.
+**Current release: 1.4.0, on Testing** (2026-10-22; Testing serial 54, its
+signature good from the release key, read back with `gh release download
+channels`; Stable unchanged at serial 8, 1.3.1). Tag `v1.4.0` on the
+release-notes commit `527c3bd0`; `next` and `release-1.4.0` pushed there.
+Image `image/deploy/2026-10-22-gexis-player-v1.4.0.img` (`verify-image.sh`
+123/123 from the release worktree, 978 skins clean); parts
+`ours-488ab973183a`, `skins-67e037cab00f`, `rpi-222df5468eaa`,
+`debian-ddaba64c92a5`; build output in `~/projects/gexis-release-out/r1.4.0`.
+Packages: gexis-core and gexis-player `1.4.0`, gexis-system
+`1.3.1+git60.4f8ea32`, gexis-ui `1.3.1+git64.be7558c`; the skin packs are
+1.3.0's published files (`1.2.0+git33.96b8a42`, copied, not rebuilt - a
+rebuilt archive differs in bytes from the published one with the same files).
+What it carries: Phase 18's Home Assistant dashboard (ADR-0156) with the
+phone's touchpad and typing over it (ADR-0157), the phone's mini player
+redesigned, a track's own artist on album pages, the visualiser cheaper on
+turntables and tapes (Finding 134), and the fixes - the visualiser surviving
+a screen change, no black frame on opening, over the dashboard when asked
+for, a show refused in standby starting nothing, meters after software
+volume (Finding 135), the spectrum box after a skin change (Finding 136),
+dimmed bar controls, rows without a flash, the mini player on the phone's
+keyboard, no password-save offer. `CHANGELOG.md` on `next` has the notes as
+George approved them. CI: *Tests* passed on `release-1.4.0`, `next` and the
+tag, and the tag's *API description* run too.
+
+**PR #81 was merged by George** (2026-10-22); `main` is merged into `docs`
+and `next`, the merged branches and worktrees are gone, and the routine
+clean-up ran. Promotion to Stable is George's call, later; the README's
+"current release" line changes only then.
+
+**ShelvesPi runs the bar fixes' preview** (since 2026-10-24 21:35, ui and
+player `1.4.0+git69.eed6457` later that evening, core `1.4.0+git53.5b660b4`; the
+branch `preview-bar-1024` removed, everything in it now on `next`). Checked
+there with the synthetic finger: a flick then a tap opens the visualiser
+3/3 (0/3 before), a pulled tray stays open, one opened by a change from
+elsewhere hides itself. **sofapi runs the Phase 19 preview** (below).
+
+**bedroompi runs the preview `preview-1023`** (a card from an earlier life,
+now with the Waveshare 10.1" DSI-TOUCH-A): `ph-dsi` with
+`lms-server-restart` and `bar-wallpapers` merged in
+(its branch removed 2026-10-24, everything in it now on `next`). Since 2026-10-24 15:11 gexis-core and gexis-player
+`1.4.0+git45.561e337`, gexis-ui `1.4.0+git36.b8793e5`, gexis-system
+`1.4.0+git29.d93d43f`. **`lms-server-restart` and `bar-wallpapers`**:
+checked by George, merged into `next` 2026-10-24, branches deleted.
+bedroompi had updated itself to 1.4.0 and kept a Lyrion server address that had
+moved to sofapi, which has none: no library, an empty New Music strip, no
+Lyrion on the waiting screen. George chose the right server in Settings at
+19:51 and nothing changed - the server is read at the core's start. Now
+the row carries `restart: "core"` and Settings restarts the core 1.5 s
+after a save that changed it (ADR-0048 amended 2026-10-23, George:
+*"Yes"*); tried there: the same server again kept the core, another one
+restarted it onto the new address, and back. Core suite 2631 passed, 48
+skipped. Its home strip is *Most played artists* (a setting from the
+card's earlier life; *New Music* was only the empty strip's fallback title).
+
+**The test venv imports the core from `~/projects/gexis-player-next`** (an
+editable install): in another worktree run the suite with `PYTHONPATH=src`
+from its `core/`, or it tests `next`'s code. **A preview of core needs the
+player meta-package too** (it pins core exactly): `packaging/build.sh` with
+every component and `player`, after copying the unchanged UI and system
+packages from the release's build output (`repos/ours-*`).
 
 **Deferred until a bug report** (George, 2026-10-21; from 1.3.1): the HMTECH 10.1" came up at 800x480 on the first start
 after the boot that switched to it (Chromium stored 1004x580 in a 1024x600
@@ -51,72 +95,98 @@ first start after a screen change may still miss full-screen. The 10.1" was
 checked by its EDID in the tests, not again on the device under the new
 standby.
 
-**Release build output lives in `~/.local/share/gexis-release-out`**: in each
+**Release build output lives in `~/projects/gexis-release-out`**: in each
 release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
 (excluded in `.git/info/exclude`). `reuse.py` reuses a published file only
 against a local copy, so losing that folder means re-uploading every OS file.
 
-**Not an issue** (George, 2026-10-20): Squeezelite joining whichever Lyrion server answers first after a restart (Finding 130 point 6). **Open:** George's look at the moon before sunrise. sofapi
-and ShelvesPi run previews of 1.3.1's fixes.
+**Not an issue** (George, 2026-10-20): Squeezelite joining whichever Lyrion
+server answers first after a restart (Finding 130 point 6). GitHub reported
+6 Dependabot alerts on `main` (all `vite`, the UI's build tool, not on the
+player), raised 20-21 Oct.
 
-**In flight (2026-10-21), each on its own branch, none merged into `next`
-yet:**
-- `tap-no-flash` (rows: a tap shows only the selection), `peppy-quiet-repaint`
-  (the repaint after a show painted out of sight; check-skins holds the level,
-  978 pixel-exact; the skin packs' check left out of their version, with a
-  floor at `96b8a42`), `album-track-artist` (a track's own artist when not the
-  album's). All three together on **ShelvesPi as one preview**
-  (`preview-1021`, `1.3.1+git11.8d12629`), George testing.
-- `ph-ha-dashboard` (Phase 18): core, panel, buttons, schedule, docs,
-  Finding 132; on **sofapi** (`1.3.1+git12.96d8129`), shown and its failure
-  message checked by screenshot with a framable page. Not yet tried: the
-  phone's and the tray's buttons, the schedule, standby over it, a real Home
-  Assistant dashboard (George has no address yet; he declined changes to his
-  Home Assistant - the player changes nothing there, ADR-0156 decision 8).
-  A throwaway Home Assistant runs on R2D2 (`docker rm -f gexis-test-ha` when
-  done).
-- **Fixed, waiting for George's test: the visualiser crashed when its window
-  was resized** (SEGV on both players 10-16 to 10-21; sofapi's photo of a
-  640x480 box after standby). Branch `peppy-survive-resize`: the engines draw
-  on a canvas, the window is only copied to; a raise asks for full screen;
-  a hide with no window counts as hidden. Checked: sofapi six cases (show,
-  a forced resize, standby cycles) and ShelvesPi five, same process, no
-  crash, the whole skin each time; check-skins 978 clean. Cost: +3 % of a
-  core with nothing playing; not yet measured with music.
-- **Phone typing over the dashboard (ADR-0157 amended)**: key presses on the
-  compositor's layout (US on the image); checked exact on sofapi with a
-  stand-in login (`ph-ha-dashboard`, `phone-sheet`). Chromium's password
-  manager off by policy (gexis-system). Not yet tried by George with his
-  Home Assistant login.
-- **Open: the visualiser button on ShelvesPi refused several taps** (George,
-  21 Oct morning: nothing happened). The page received the taps (`/touch`)
-  but sent no `/peppy/show`; cause not found by reading. Next: reproduce with
-  injected taps (`tools/panel-touch.py`) once George is off the bar. The bar's
-  touch controller also dropped off USB at 07:56 and 08:15 (about 1 s each).
+**Open:**
+- **The visualiser button in the bar's tray opened it only on the second
+  tap** (George, 21-24 Oct): fixed 2026-10-24. George's recorded taps: a tap
+  within about a second of pulling the tray down got no click from Chromium
+  (9 of 9, 0.52-0.97 s after the pull; Home the same), reproduced with an
+  80 ms synthetic flick. The tray's buttons now act when the finger lifts on
+  them (`press.lift`). `tools/panel-touch.py` works on the bar with the
+  page's axes turned: page (x, y) is device (y / 400 x 1480, (1 - x / 1850)
+  x 320). ShelvesPi's debug port, its helper files and the tunnel are
+  closed.
+- **Bar fixes, 2026-10-24, merged into `next` for 1.5.0:** `bar-pictures-retry` (a
+  picture that failed to load was given up for the page's life - every album
+  artist showed initials; now tried again after 15 s, 60 s, 5 min) and
+  `bar-settings-fit` (sheets on a bar: the value beside its slider, a compact
+  empty list, a long note scrolls - every sheet checked with mocked data at
+  both bar sizes, `scratch/layout`), with `bar-tray-taps` (above) and
+  `tray-stays-open` (George, 2026-10-24: a drawer or tray the user opened
+  stays until closed, the visualiser takes over or Home opens; ADR-0022's
+  row amended). Branches deleted.
+- **Not checked:** iOS's handling of `interactive-widget` (the mini player
+  on the phone's keyboard); Android's is.
+- **The visualiser made cheaper, the rest left** (Finding 134; George,
+  2026-10-22: stop here): the needle and spectrum skins are unchanged - the
+  present itself and the vendored engines' drawing (to-do `viz-cheaper`).
+- **Glass** (foonerd's Rust PeppyMeter, Finding 133): George, 2026-10-22,
+  *"Glass is too young now"* - **remind him at the beginning of 2027** and
+  measure it again (to-do `glass-revisit-2027`).
+- George's look at the moon before sunrise.
 
-**Next: Phase 18, a Home Assistant dashboard on the screen**
-(`ph-ha-dashboard`, ADR-0156, added 2026-10-21; George: *"let's build
-afterwards"*) - built ahead of Phase 17, DSI screens (`ph-dsi`), which waits
-for George to name his screen. Then, in order (`docs/DEVELOPMENT.md`; refer
-to them by ID): **19** room correction for the bass (`ph-room-correction`),
-**20** room correction for the full range (`ph-room-correction-full`), **21**
-Home Assistant (`ph-home-assistant`), **22** themes (`ph-themes`), **23** the
+**Phase 17, DSI screens** (`ph-dsi`, ADR-0158) was closed on 2026-10-24 by
+George and merged into `next` for 1.5.0; the Waveshare's touch watch was lost
+to a reboot of bedroompi (the stopped-touch case stays as ADR-0158 records
+it). Phase 18 closed on 2026-10-22 with 1.4.0.
+
+**In progress: Phase 19, the player in Home Assistant** (`ph-home-assistant`,
+moved up and started 2026-10-24). **ADR-0160 accepted** the same day:
+our own integration `gexis` in a new public repository
+(`gcarstoiu/gexis-player-homeassistant`, not created yet), a media player
+plus *Screen*, *Dashboard* and *Visualiser* switches, `id` and `screen` on
+`/player/status`; tested against a Home Assistant in Docker that hears
+nothing on the network, a test player added by address. **Built:** the
+player's side on `ph-home-assistant` (`~/projects/gexis-player-ph-home-assistant`,
+pushed; `id` and `screen` on `/player/status`; core suite 2633 passed, 48
+skipped, run with `PYTHONPATH=src` since the shared venv imports `next`'s
+code); the integration in `~/projects/gexis-player-homeassistant` (local git,
+one commit, not on GitHub yet): 17 tests pass on Home Assistant 2026.10.3's
+test kit (`~/projects/ha-venv`), hassfest clean (Docker). **sofapi runs the
+Phase 19 preview** (core and player 1.4.0+git49.c4af394, ui
+1.4.0+git24.e505054, since 2026-10-24 19:22). Checked against a Home
+Assistant 2026.10.3 in Docker (`~/projects/scratch/ha-test`, container
+`gexis-ha-test`, stopped; no discovery loaded): criterion 2 and 4 hold
+(0.53-0.64 s; ADR-0160 *Measured*), and criterion 3 (Finding 137: 46 min,
+0 underruns, 0 XRUNs; the logging drop-in removed). **Open:** criterion 1 on
+George's own Home Assistant. **On GitHub:**
+`gcarstoiu/gexis-player-homeassistant` (public, 2026-10-24; tests, hassfest
+and HACS pass; no release yet - 0.1.0 goes out with the player release that
+carries `id`). The documents (D6) are on `ph-home-assistant`: manual *The
+player in Home Assistant*, FAQ, README feature row, `docs/tech/api.md`.
+
+Then, in order (`docs/DEVELOPMENT.md`; refer
+to them by ID): **20** room correction for the bass
+(`ph-room-correction`), **21** room correction for the full range
+(`ph-room-correction-full`), **22** themes (`ph-themes`), **23** the
 library answers for itself (`ph-library`), **24** Lyrion's own menus' look
-(`ph-lyrion-menus`); MPD is parked (`ph-mpd`, ADR-0151). Each ADR first. Still open from 1.0.0: Raspberry Pi
-Imager, the image file and *Use custom* (g14).
+(`ph-lyrion-menus`); MPD is parked (`ph-mpd`, ADR-0151). Each ADR first. **Raspberry Pi Imager**
+(ADR-0159, a task, not a phase): the install guide is corrected; our own
+Imager list and Imager's settings not now; Imager's own list stays open, as
+it is, with no further changes for now (George, 2026-10-24).
 
 The shared to-do list (an artifact with a `todos` collection; its address is
 in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-10-21, after 1.3.1** (/home 227 -> 232 GB free).
+2026-10-22, after 1.4.0** (/home 220 -> 231 GB free).
 
 ## Phases
 
-Closed: 0-16 (13 with letters a-f; Phase 15, the public API, on
-2026-10-19 with 1.2.0; Phase 16, optical, with 1.3.0). Phases are numbered consecutively without letters,
-each with a stable ID (George, 2026-10-13); the open ones are 17-24, with
+Closed: 0-18 (13 with letters a-f; Phase 15, the public API, on
+2026-10-19 with 1.2.0; Phase 16, optical, with 1.3.0; Phase 18, the Home
+Assistant dashboard, with 1.4.0; Phase 17, DSI screens, for 1.5.0). Phases are numbered consecutively without letters,
+each with a stable ID (George, 2026-10-13); the open ones are 19-24, with
 MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
 
 ## Machines
@@ -124,13 +194,19 @@ MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
 | Name | What it is |
 |---|---|
 | R2D2 | Dev machine. CachyOS, **fish shell** (use `bash -c` for loops). Docker `data-root` `/home/docker`. Claude builds here; George flashes. |
-| sofapi, the bar (ShelvesPi), guestpi | Test players, Pi 4. Reached by SSH key as `pi`; host keys kept in the session's scratchpad. |
+| sofapi, the bar (ShelvesPi), guestpi, bedroompi | Test players, Pi 4 (bedroompi: the Waveshare 10.1" DSI-TOUCH-A, Phase 17). Reached by SSH key as `pi`; host keys in `~/projects/scratch/known_hosts`. |
 | rig | Pi 4 reference for Findings 002-004. Not a test target. |
 | LMS server | George's Lyrion server, for manual tests. CI must never depend on it. |
 
 ## Things that will bite
 
 The full list, with how each was found, is in the archive (2026-10-12 block).
+
+- **The release tag goes on the release-notes commit, nothing after it**
+  (1.4.0, 2026-10-22): a package's version is the last commit that touched it,
+  and the notes are core's last change - a documents fix committed after them
+  and tagged built core as `1.3.1+git67`. A fix found after the notes goes in
+  *before* them (reorder the unpushed commits), then the tag.
 
 **Building**
 - **Clear space with `make prune`, never `make clean`**: `clean` destroys the
@@ -155,6 +231,11 @@ The full list, with how each was found, is in the archive (2026-10-12 block).
 **Releasing**
 - **Run `verify-image.sh` from the release worktree**: from the main checkout it
   compares against code the release does not carry (0.11.0: five false fails).
+- **A skin pack whose version did not change ships the published file**
+  (1.4.0): a rebuilt archive with the same files differs in bytes, and the
+  repository refuses one version with two contents. Copy the published debs
+  from the release that built them (for 1.4.0, `out/r1.3.0/repos/skins-*/`)
+  into the release's `packaging/out` before `publish.sh`.
 - **GitHub caches `channels/<name>` for minutes after a publish**: verify the
   new file with `gh release download channels`, not the public URL.
 

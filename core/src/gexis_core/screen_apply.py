@@ -11,6 +11,11 @@ the presets do not apply (Finding 100); the kernel's `video=` and the
 compositor's rotation do. A preset's `video_mode` becomes `video=`; a model
 without one is driven at the mode its own EDID prefers.
 
+**A DSI model's overlay goes in `config.txt`** (ADR-0158): in a block of
+our own at its end, read by the firmware at the next boot as `cmdline.txt`
+is by the kernel. A panel the firmware finds by itself, an HDMI screen or
+no screen leaves the block empty, and nothing else in the file is touched.
+
 The state of the last change is `/var/lib/gexis/screen.json`:
 `current`, `previous`, and whether the current one is still `pending` a
 Keep. Nothing here restarts anything; the caller does.
@@ -29,6 +34,14 @@ from . import screens
 SCREEN_ENV = Path("/etc/gexis/screen.env")
 STATE = Path("/var/lib/gexis/screen.json")
 CMDLINE = Path("/boot/firmware/cmdline.txt")
+CONFIG = Path("/boot/firmware/config.txt")
+#: ADR-0158: the lines between these two are ours, under `[all]`.
+CONFIG_BEGIN = "# gexis screen (ADR-0158): written by the player - choose the screen in Settings"
+CONFIG_END = "# end gexis screen"
+#: The DSI connector a DSI model is applied on before its panel is seen: a
+#: panel whose overlay is not written yet has no connector at all. The Pi 4
+#: has one DSI connector on the board.
+DSI_CONNECTOR = "DSI-1"
 #: **The connector when none is known** - nothing connected, or a state
 #: written before the connector was kept, which every one of those players
 #: ran on. Otherwise the screen is applied on the connector it was seen on
@@ -88,6 +101,23 @@ def connector_now(seen=None, state: Path | None = None) -> str:
         return seen.connector
     current = read_state(state or STATE).get("current")
     return (current.get("connector") if isinstance(current, dict) else None) or CONNECTOR
+
+
+def connector_for(screen: screens.Screen, seen=None, state: Path | None = None, ports=None) -> str:
+    """**The connector to apply `screen` on** (ADR-0158). A DSI model goes on
+    the DSI connector: the one a panel is seen on, else `DSI_CONNECTOR` - a
+    panel whose overlay is not written yet has no connector at all, and is
+    seen only after the restart. Any other screen where `connector_now`
+    finds the screen, which is a DSI panel when one is connected (D3)."""
+    if screen.interface == "dsi":
+        if ports is None:
+            from . import screen_detect
+            try:
+                ports = screen_detect.ports()
+            except OSError:
+                ports = []
+        return next((p.connector for p in ports if p.dsi and p.connected), DSI_CONNECTOR)
+    return connector_now(seen, state)
 
 
 def applied_on(screen_id: str, rotation: int, connector: str, state: Path | None = None) -> Applied:
@@ -183,12 +213,51 @@ def with_video(cmdline: str, video: str | None) -> str:
     return " ".join(words) + "\n"
 
 
-def picture(env: Path = SCREEN_ENV, cmdline: Path = CMDLINE) -> tuple:
-    """**What the screen shows**, as far as a choice can change it: the
-    forced mode, the scale and the rotation. No screen.env is the screen's
-    own mode at scale 1, unrotated. The mode names its connector, so the
-    same bar moved to the other port is a different picture, and asks Keep;
-    a screen without a forced mode looks the same on either."""
+def with_overlays(config: str, overlays: tuple[str, ...]) -> str:
+    """config.txt with our block replaced, added or removed (ADR-0158).
+    The block starts with `[all]`, so a section filter above it (`[pi5]`)
+    does not swallow it; every other line stays as it was."""
+    lines = config.splitlines()
+    out, inside = [], False
+    for line in lines:
+        if line.strip() == CONFIG_BEGIN:
+            inside = True
+            # The `[all]` the block opened with goes with it.
+            if out and out[-1].strip() == "[all]":
+                out.pop()
+            continue
+        if inside:
+            inside = line.strip() != CONFIG_END
+            continue
+        out.append(line)
+    while out and not out[-1].strip():
+        out.pop()
+    if overlays:
+        out += ["", "[all]", CONFIG_BEGIN, *(f"dtoverlay={o}" for o in overlays), CONFIG_END]
+    return "\n".join(out) + "\n"
+
+
+def overlays_in(config: str) -> tuple[str, ...]:
+    """The overlays our block holds now."""
+    found, inside = [], False
+    for line in config.splitlines():
+        if line.strip() == CONFIG_BEGIN:
+            inside = True
+        elif line.strip() == CONFIG_END:
+            inside = False
+        elif inside and line.startswith("dtoverlay="):
+            found.append(line.split("=", 1)[1].strip())
+    return tuple(found)
+
+
+def picture(env: Path = SCREEN_ENV, cmdline: Path = CMDLINE, config: Path = CONFIG) -> tuple:
+    """**What the screen shows**, as far as a choice can change it: what the
+    boot sets (the forced mode, and a DSI panel's overlay, ADR-0158), the
+    scale and the rotation. No screen.env is the screen's own mode at scale
+    1, unrotated. The mode names its connector, so the same bar moved to the
+    other port is a different picture, and asks Keep; a screen without a
+    forced mode looks the same on either. The first part is what only a
+    restart changes."""
     try:
         fields = dict(l.split("=", 1) for l in env.read_text().splitlines() if "=" in l and not l.startswith("#"))
     except OSError:
@@ -198,7 +267,12 @@ def picture(env: Path = SCREEN_ENV, cmdline: Path = CMDLINE) -> tuple:
     except OSError:
         words = []
     video = next((w for w in words if w.startswith(HDMI_VIDEO)), None)
-    return video, float(fields.get("GEXIS_SCREEN_SCALE", 1)), fields.get("GEXIS_SCREEN_TRANSFORM", "normal")
+    try:
+        overlays = overlays_in(config.read_text())
+    except OSError:
+        overlays = ()
+    return ((video, overlays), float(fields.get("GEXIS_SCREEN_SCALE", 1)),
+            fields.get("GEXIS_SCREEN_TRANSFORM", "normal"))
 
 
 def picture_of(applied: Applied) -> tuple:
@@ -208,13 +282,13 @@ def picture_of(applied: Applied) -> tuple:
         raise ValueError(f"no such screen {applied.screen_id!r}")
     fields = dict(l.split("=", 1) for l in env_for(screen, applied.rotation, applied.connector).splitlines()
                   if "=" in l and not l.startswith("#"))
-    return (video_for(screen, applied.connector, applied.rotation), float(fields["GEXIS_SCREEN_SCALE"]),
-            fields["GEXIS_SCREEN_TRANSFORM"])
+    return ((video_for(screen, applied.connector, applied.rotation), screen.overlays),
+            float(fields["GEXIS_SCREEN_SCALE"]), fields["GEXIS_SCREEN_TRANSFORM"])
 
 
-def would_ask(applied: Applied, *, env: Path = SCREEN_ENV, cmdline: Path = CMDLINE) -> bool:
+def would_ask(applied: Applied, *, env: Path = SCREEN_ENV, cmdline: Path = CMDLINE, config: Path = CONFIG) -> bool:
     """Whether choosing `applied` will ask *Keep this screen?*."""
-    return picture_of(applied) != picture(env, cmdline)
+    return picture_of(applied) != picture(env, cmdline, config)
 
 
 def read_state(path: Path = STATE) -> dict:
@@ -241,10 +315,11 @@ def confirmed(path: Path = STATE) -> bool:
     return bool(data.get("current")) and not data.get("pending") and not data.get("provisional")
 
 
-def write_files(applied: Applied | None, *, env: Path = SCREEN_ENV, cmdline: Path = CMDLINE) -> bool:
-    """screen.env and cmdline.txt for `applied` (None: no screen chosen - the
-    screen's own preferred mode, no scale). True when cmdline.txt changed,
-    which only a restart makes effective."""
+def write_files(applied: Applied | None, *, env: Path = SCREEN_ENV, cmdline: Path = CMDLINE,
+                config: Path = CONFIG) -> bool:
+    """screen.env, cmdline.txt and config.txt's block for `applied` (None: no
+    screen chosen - the screen's own preferred mode, no scale). True when a
+    boot file changed, which only a restart makes effective."""
     screen = screens.by_id(applied.screen_id) if applied else None
     if applied and screen is None:
         raise ValueError(f"no such screen {applied.screen_id!r}")
@@ -256,13 +331,23 @@ def write_files(applied: Applied | None, *, env: Path = SCREEN_ENV, cmdline: Pat
         tmp.write_text(env_for(screen, applied.rotation, applied.connector,
                                tuple(panels_off(applied.screen_id, applied.connector))))
         tmp.replace(env)
+    changed = False
+    try:
+        before = config.read_text()
+    except OSError:
+        before = None
+    if before is not None:
+        after = with_overlays(before, screen.overlays if screen else ())
+        if overlays_in(after) != overlays_in(before):
+            _replace_durably(config, after)
+            changed = True
     try:
         before = cmdline.read_text()
     except OSError:
-        return False
+        return changed
     after = with_video(before.strip(), video_for(screen, applied.connector, applied.rotation) if screen else None)
     if after.strip() == before.strip():
-        return False
+        return changed
     _replace_durably(cmdline, after)
     return True
 
@@ -296,7 +381,7 @@ def _replace_durably(path: Path, text: str) -> None:
 
 
 def choose(applied: Applied, *, state: Path = STATE, env: Path = SCREEN_ENV, cmdline: Path = CMDLINE,
-           now: float | None = None, after_setup: bool = False) -> bool:
+           config: Path = CONFIG, now: float | None = None, after_setup: bool = False) -> bool:
     """Make `applied` the screen, pending a Keep; remember the one before for
     going back. The caller restarts the device.
 
@@ -307,14 +392,14 @@ def choose(applied: Applied, *, state: Path = STATE, env: Path = SCREEN_ENV, cmd
     setup ends on the phone, not beside the panel."""
     data = read_state(state)
     previous = data.get("current") if not data.get("pending") else data.get("previous")
-    asks = would_ask(applied, env=env, cmdline=cmdline)
-    write_files(applied, env=env, cmdline=cmdline)
+    asks = would_ask(applied, env=env, cmdline=cmdline, config=config)
+    write_files(applied, env=env, cmdline=cmdline, config=config)
     write_state({"current": applied.to_json(), "previous": previous, "pending": asks,
                  "after_setup": after_setup, "since": now if now is not None else time.time()}, state)
     return asks
 
 
-def refresh(*, state: Path = STATE, env: Path = SCREEN_ENV, cmdline: Path = CMDLINE) -> bool:
+def refresh(*, state: Path = STATE, env: Path = SCREEN_ENV, cmdline: Path = CMDLINE, config: Path = CONFIG) -> bool:
     """**The kept screen's files as this version writes them** (2026-10-04:
     a bar's `video=` now carries the panel's orientation, and a bar set up
     before has it without). Rewritten only when they differ, and not while a
@@ -324,7 +409,7 @@ def refresh(*, state: Path = STATE, env: Path = SCREEN_ENV, cmdline: Path = CMDL
     current = data.get("current")
     if not current or data.get("pending") or screens.by_id(current["screen"]) is None:
         return False
-    return write_files(Applied.of(current), env=env, cmdline=cmdline)
+    return write_files(Applied.of(current), env=env, cmdline=cmdline, config=config)
 
 
 def confirm_provisional(label: str, *, state: Path = STATE) -> bool:
@@ -353,13 +438,13 @@ def keep(*, state: Path = STATE) -> None:
         write_state(data, state)
 
 
-def revert(*, state: Path = STATE, env: Path = SCREEN_ENV, cmdline: Path = CMDLINE) -> None:
+def revert(*, state: Path = STATE, env: Path = SCREEN_ENV, cmdline: Path = CMDLINE, config: Path = CONFIG) -> None:
     """Back to the screen before, or to none (decision 3: at first setup,
     *no screen chosen* - the screen's own mode)."""
     data = read_state(state)
     previous = data.get("previous")
     applied = Applied.of(previous) if previous else None
-    write_files(applied, env=env, cmdline=cmdline)
+    write_files(applied, env=env, cmdline=cmdline, config=config)
     write_state({"current": previous, "previous": None, "pending": False, "reverted": data.get("current")}, state)
 
 

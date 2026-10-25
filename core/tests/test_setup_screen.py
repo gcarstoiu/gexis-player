@@ -74,9 +74,11 @@ def test_the_screen_step_s_three_states():
     none = screen_choices(screen_detect.Seen())
     assert none["suggested"] is None and not none["seen"]["connected"]
     models = none["models"]
-    assert len(models) == len(screens.all_screens()) == 107
+    assert len(models) == len(screens.all_screens()) == 166
     assert set(models[0]) == {"id", "label", "maker", "model", "width", "height", "family", "tested", "problem", "skins", "skin_count"}
-    assert sum(m["tested"] for m in models) == 6  # four Waveshares and two HMTECHs (2026-10-20)
+    # Four Waveshares and two HMTECHs (2026-10-20), the Hosyond 7" DSI and its
+    # class (ADR-0158, 2026-10-23), the Waveshare 10.1" DSI-TOUCH-A.
+    assert sum(m["tested"] for m in models) == 9
 
 
 class FakeSetup:
@@ -105,7 +107,7 @@ async def test_the_screen_route_answers_only_while_setup_is_open(tmp_path):
         r = await client.get("/setup/screen")
         assert r.status == 200
         body = await r.json()
-        assert body["suggested"] is None and not body["seen"]["connected"] and len(body["models"]) == 107
+        assert body["suggested"] is None and not body["seen"]["connected"] and len(body["models"]) == 166
         fake.state = {"network": "online", "needed": False}
         assert (await client.get("/setup/screen")).status == 409
 
@@ -227,6 +229,24 @@ def test_the_list_alone_is_offered_when_no_other_screen_is_in_use(tmp_path, monk
     assert settings_registry._screens() == tuple(s.label for s in screens.all_screens())
     screen_apply.write_state({"current": {"screen": "waveshare-10.1-hdmi-b", "rotation": 0}}, tmp_path / "screen.json")
     assert settings_registry._screens() == tuple(s.label for s in screens.all_screens())
+
+
+def test_a_pi_4_offers_no_four_lane_model_in_settings_or_setup(tmp_path, monkeypatch):
+    """ADR-0158 D6; one already in use is still named."""
+    from gexis_core import screen_apply, settings_registry
+
+    monkeypatch.setattr(screens, "MODEL", tmp_path / "model")
+    (tmp_path / "model").write_text("Raspberry Pi 4 Model B Rev 1.5\x00")
+    monkeypatch.setattr(screen_apply, "STATE", tmp_path / "screen.json")
+    four = {s.label for s in screens.all_screens() if s.lanes == 4}
+    listed = settings_registry._screens()
+    assert len(four) == 6 and not four & set(listed)
+    assert listed == tuple(s.label for s in screens.offered())
+    models = {m["label"] for m in screen_choices(screen_detect.Seen(), now=())["models"]}
+    assert not four & models and len(models) == len(screens.all_screens()) - 6
+    screen_apply.write_state({"current": {"screen": "waveshare-dsi-v2-10.1a-4lane", "rotation": 180,
+                                          "connector": "DSI-1"}}, tmp_path / "screen.json")
+    assert settings_registry._screens()[-1] == screens.by_id("waveshare-dsi-v2-10.1a-4lane").label
 
 
 def test_setup_applies_and_compares_the_screen_on_the_port_it_is_on(tmp_path, monkeypatch):

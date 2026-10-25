@@ -45,7 +45,7 @@ from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
 from gexis_core import memo, own_wallpapers, screen_apply, settling, updates
-from gexis_core.players import Players, status_line
+from gexis_core.players import Players, own_id, status_line
 from gexis_core.wallpapers import SEARCH as PIXABAY_SEARCH
 from gexis_core import backups, bluetooth_devices, skin_packs, device_name, discovery, hardware_report, lyrion_folders, lyrion_stage, music_floor, lyrion_scan, lyrion_shares, lyrion_usb, problem_report, skin_previews, skins, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
@@ -1377,11 +1377,14 @@ class StateServer:
         return web.json_response({"touched": True})
 
     def _player_status(self) -> dict:
-        """**ADR-0136: what this player says of itself** to the others."""
+        """**ADR-0136: what this player says of itself** to the others, and
+        to Home Assistant (ADR-0160 D5: `id`, `screen`)."""
         state = self._store.state
         return {"name": self._setting_or_none("device_name") or device_name.hostname(),
                 "host": f"{device_name.hostname()}.local",
                 "instance": self._instance,
+                "id": own_id(),
+                "screen": self._setting_or_none("headless") is not True,
                 **status_line(state, state.sources)}
 
     async def watch_players(self) -> None:
@@ -2699,10 +2702,24 @@ class StateServer:
         # full reloads followed every tap on the phone).
         response = self._settings_call(lambda: {"key": key, "value": self._settings.set(key, value),
                                                 "revision": self._store.settings_revision})
-        if (response.status == 200 and self._restart_device is not None
-                and self._settings_restarts(key) and self._settings_value(key) != before):
-            asyncio.ensure_future(self._restart_device(key))
+        if response.status == 200 and self._settings_value(key) != before:
+            restarts = self._settings_restarts(key)
+            if restarts == "core":
+                asyncio.ensure_future(self._restart_core_for(key))
+            elif restarts and self._restart_device is not None:
+                asyncio.ensure_future(self._restart_device(key))
         return response
+
+    async def _restart_core_for(self, key: str) -> None:
+        """**A Lyrion server chosen in Settings is used at once** (George,
+        2026-10-23: *"Yes"*, ADR-0048 amended). The server is read at the
+        core's start; before, a choice waited for the next one, and the
+        player went on asking the old address while Settings showed the new.
+        The core restarts as part 2's does (`_restart_when_settled`), after
+        the answer, which the toast needs."""
+        logger.info("settings: %s changed; restarting the core to use it", key)
+        await asyncio.sleep(1.5)
+        await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-core")
 
     def _settings_value(self, key: str):
         try:
@@ -2710,9 +2727,10 @@ class StateServer:
         except Exception:  # noqa: BLE001 - the write below says what is wrong
             return None
 
-    def _settings_restarts(self, key: str) -> bool:
+    def _settings_restarts(self, key: str) -> bool | str:
+        """The row's `restart`: true restarts the device, `"core"` the core."""
         try:
-            return bool(self._settings.row(key).get("restart"))
+            return self._settings.row(key).get("restart") or False
         except Exception:  # noqa: BLE001
             return False
 

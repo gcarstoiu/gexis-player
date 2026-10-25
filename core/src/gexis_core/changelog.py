@@ -49,8 +49,8 @@ def page(path: Path = NOTES, shown: int = SHOWN) -> dict:
 
 def markdown(path: Path = NOTES) -> str:
     """`CHANGELOG.md` at the repository's root, from the same file."""
-    # The note for whoever edits it is a comment: GitHub and the blog's copy
-    # of this file (George, 2026-10-15) show readers only the sentence below.
+    # The note for whoever edits it is a comment: GitHub and any other page
+    # showing this file (George, 2026-10-15) show readers only the sentence below.
     lines = ["# Changelog", "",
              "<!-- Generated from core/src/gexis_core/release_notes.json by",
              "     `python -m gexis_core.changelog`: edit that file, not this one. -->", "",

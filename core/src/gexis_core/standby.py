@@ -16,6 +16,12 @@ bars): with the output off its taps land nowhere in the compositor
 the touchscreens itself, in the kernel (`TouchWatch`), and any finger wakes
 it.
 
+**A DSI panel's backlight instead** (ADR-0158 D4, George 2026-10-23:
+*"Agreed"*): the player can set it (`/sys/class/backlight`), so standby
+turns the backlight off and leaves the output on, with the black cover drawn
+- the picture is back as fast as the backlight, and the touch keeps reaching
+the compositor. An HDMI screen has no backlight the player can reach.
+
 `Standby` holds the state and is told what wakes it; it does not decide when
 to sleep. While it is on, the panel also draws black over everything, so a
 screen whose output could not be switched still goes dark.
@@ -41,6 +47,10 @@ DEFAULT_CONNECTOR = "HDMI-A-1"
 TIMEOUT_S = 10.0
 #: The kernel's input devices; BTN_TOUCH, which a touchscreen reports.
 INPUT_SYS = Path("/sys/class/input")
+#: ADR-0158 D4: the backlights the kernel exposes; a DSI panel's is there.
+BACKLIGHTS = Path("/sys/class/backlight")
+#: `bl_power`'s values: FB_BLANK_UNBLANK and FB_BLANK_POWERDOWN.
+BL_ON, BL_OFF = "0", "4"
 EV_KEY, BTN_TOUCH = 1, 330
 #: struct input_event on a 64-bit kernel: two longs of time, type, code, value.
 EVENT = struct.Struct("qqHHi")
@@ -66,6 +76,62 @@ def seen_connector() -> str:
     except OSError:
         return DEFAULT_CONNECTOR
     return seen.connector if seen.connected and seen.connector else DEFAULT_CONNECTOR
+
+
+def backlight(connector: str | None, root: Path | None = None) -> Path | None:
+    """**The screen's backlight, if the player can set it** (ADR-0158): on a
+    DSI connector, the panel's - the only backlight a Pi 4 has with a DSI
+    panel on it (bedroompi, 2026-10-23: `10-0045`, the Touch Display's
+    controller). None on HDMI, or when there is none."""
+    if not (connector or "").startswith("DSI-"):
+        return None
+    try:
+        found = sorted(d for d in (root or BACKLIGHTS).iterdir() if (d / "bl_power").exists())
+    except OSError:
+        return None
+    return found[0] if found else None
+
+
+def backlight_on(device: Path) -> bool | None:
+    """Whether the backlight is lit; None when it cannot be read."""
+    try:
+        return (device / "bl_power").read_text().strip() == BL_ON
+    except OSError:
+        return None
+
+
+def set_backlight(device: Path, on: bool) -> bool:
+    """The backlight on or off. False, and logged, when it could not be."""
+    try:
+        (device / "bl_power").write_text(BL_ON if on else BL_OFF)
+    except OSError as exc:
+        logger.warning("standby: could not turn the backlight %s: %s", "on" if on else "off", exc)
+        return False
+    return True
+
+
+def screen_backlight() -> Path | None:
+    """The backlight of the screen in use, if the player can set it."""
+    return backlight(screen_env().get("GEXIS_SCREEN_CONNECTOR") or seen_connector())
+
+
+def set_brightness(percent, device: Path | None = None) -> bool:
+    """**Screen brightness** (ADR-0158 D5, George 2026-10-23: *"Agreed"*):
+    the backlight at `percent` of its maximum, never fully dark - standby
+    is what turns it off, and waking comes back to this. False when there
+    is no backlight to set, or it refused."""
+    device = device if device is not None else screen_backlight()
+    if device is None or percent is None:
+        return False
+    try:
+        top = int((device / "max_brightness").read_text().strip())
+        level = max(1, round(top * min(100, max(10, int(percent))) / 100))
+        (device / "brightness").write_text(str(level))
+    except (OSError, ValueError) as exc:
+        logger.warning("brightness: could not set the backlight to %s%%: %s", percent, exc)
+        return False
+    logger.info("brightness: the backlight at %s%% (%d)", percent, level)
+    return True
 
 
 def _session(uid: int) -> list[str]:
@@ -106,6 +172,11 @@ async def switch_output(on: bool) -> bool:
         return False
     env = screen_env()
     connector = env.get("GEXIS_SCREEN_CONNECTOR") or seen_connector()
+    if (light := backlight(connector)) is not None:
+        # ADR-0158 D4: the output stays on; the backlight goes.
+        if set_backlight(light, on):
+            logger.info("standby: %s's backlight %s", connector, "on" if on else "off")
+            return True
     if not on and carries_sound(connector):
         # **Black, and the sound goes on** (ADR-0147 as amended; George,
         # 2026-10-13: a TV through a receiver went silent with the screen -
@@ -146,6 +217,9 @@ async def read_output() -> bool | None:
     except KeyError:
         return None
     connector = screen_env().get("GEXIS_SCREEN_CONNECTOR") or seen_connector()
+    if (light := backlight(connector)) is not None:
+        # ADR-0158 D4: the output is on all along; the backlight says.
+        return backlight_on(light)
 
     async def run(args: list[str]) -> str | None:
         try:
