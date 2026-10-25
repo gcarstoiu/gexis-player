@@ -102,59 +102,18 @@ player), raised 20-21 Oct.
   measure it again (to-do `glass-revisit-2027`).
 - George's look at the moon before sunrise.
 
-**In progress: Phase 19, the player in Home Assistant** (`ph-home-assistant`,
-started 2026-10-24, ADR-0160). In 1.5.0: `id` and `screen` on
-`/player/status` and the documents. The integration
-`gcarstoiu/gexis-player-homeassistant` 0.1.0 is released (2026-10-24; local
-copy `~/projects/gexis-player-homeassistant`, tests on `~/projects/ha-venv`).
-Criteria 2-4 hold against a Home Assistant 2026.10.3 in Docker
-(`~/projects/scratch/ha-test`, container `gexis-ha-test`, stopped; ADR-0160
-*Measured*, Finding 137). **Criterion 1 seen 2026-10-25** on George's own
-Home Assistant: every player found by itself, the controls working. **His
-findings that day widen the phase** (criteria 5-7, ADR-0160): the source
-shown and not chosen, and *Home*, *Now playing* and *Lyrics* buttons - in
-the integration's 0.2.0 (released 2026-10-25), the documents on
-`ph-home-assistant`; a D-pad for the panel and
-a dashboard card of our own (switcher, D-pad, quick actions; George's
-design in Claude Design), each with an ADR first: ADR-0161 (the D-pad)
-accepted 2026-10-25 (George). **Both built 2026-10-25 from George's design**
-(`design/source/19/`: the card in the player's look, the teal ring, Jump;
-the choices while building delegated to Claude and recorded in ADR-0161 and
-ADR-0163): the D-pad on `ph-home-assistant` (`POST /panel/key`,
-`ui/src/lib/dpad.js`), checked with mocked data at 1280x800, 1850x400 and
-1280x400; the remote and the card in the integration's 0.3.0 (30 tests, hassfest
-clean; released 2026-10-25 at George's request, so he can check it from
-HACS). **sofapi
-runs the preview** (core 1.5.0+git44.94ca2b7, ui and player
-1.5.0+git49.8e939ff, system 1.4.0+git29.d93d43f; the ui and player
-installed 2026-10-25 19:24 while playing, with George's go, kiosk
-restarted). George's first check found three things, fixed in git49
-(ADR-0161 13-16): the ring over the idle screen, left behind by a closing
-drawer, kept by a touchpad tap. He decided the D-pad leaves the Home
-Assistant dashboard's own page alone (ADR-0161 17). The card works on his
-Home Assistant (the app needed a force stop to load it). His second round
-(the transport by the source, as the player; Idle and Meters on the card) is
-in the integration's 0.4.0, released 2026-10-25 (ADR-0163 11-14), and in
-`idle_screen` on `/player/status` on `ph-home-assistant` (not on sofapi
-yet: until it is, the card offers Idle there whether or not the idle screen
-is on). Waiting for the rest of his check.
-HACS's default
-list (our icon in HACS's store): not before Phase 19 is finished (George,
-2026-10-25). The
-brief for Claude Design is `design/briefs/19-ha-card-and-dpad-focus.md`, and
-`design/IMPLEMENTED-DIFFERENTLY.md` was brought up to date for it. George
-settled its three open points the same day: Settings stays on a bar
-(ADR-0109 amended); the attribution line and a bar's two-step *Attached
-screen* stay as built. George handed the brief to Claude Design
-(2026-10-25); the card's look (Home Assistant's theme or the player's) is
-settled in the design. **0.2.0 on George's Home Assistant** (2026-10-25):
-HACS offered no update and a forced re-download brought no new entities
-until *Update information* and a restart; then the three buttons showed.
-On the Docker Home Assistant (2026.10.3) 0.2.0 adds them to an entry made
-under 0.1.0 and serves `brand/icon.png` (local brand images since 2026.3).
-HACS's own list shows the placeholder: the public brands site has no gexis
-image. The branch and worktree
-stay until the phase closes.
+**Phase 19, the player in Home Assistant, closed 2026-10-25** (George,
+after checking the D-pad on sofapi and the card on his own Home Assistant;
+`docs/DEVELOPMENT.md`, ADR-0160, ADR-0161, ADR-0163). `ph-home-assistant` is
+merged into `next` for 1.6.0 (core suite 2664 passed, 48 skipped) and its
+branch and worktree are gone. The integration
+`gcarstoiu/gexis-player-homeassistant` is at 0.4.0 (local copy
+`~/projects/gexis-player-homeassistant`, tests on `~/projects/ha-venv`; a
+Home Assistant 2026.10.3 in Docker, `~/projects/scratch/ha-test`). HACS's
+default list: George asked to wait until the phase was done, so he is asked
+again now. **1.6.0 is being prepared** (George, 2026-10-25: merge, release
+and promotion to Stable): Phase 19's player side (the D-pad, `idle_screen`)
+and the *Attached screen* name fix.
 
 Then, in order (`docs/DEVELOPMENT.md`; refer
 to them by ID): **20** a simple equaliser (`ph-equaliser`, added
@@ -179,10 +138,11 @@ every merged release PR, otherwise weekly on Sunday evening. **Last run:
 
 ## Phases
 
-Closed: 0-18 (13 with letters a-f; Phase 15, the public API, on
+Closed: 0-19 (13 with letters a-f; Phase 15, the public API, on
 2026-10-19 with 1.2.0; Phase 16, optical, with 1.3.0; Phase 18, the Home
-Assistant dashboard, with 1.4.0; Phase 17, DSI screens, for 1.5.0). Phases are numbered consecutively without letters,
-each with a stable ID (George, 2026-10-13); the open ones are 19-25, with
+Assistant dashboard, with 1.4.0; Phase 17, DSI screens, for 1.5.0; Phase 19,
+the player in Home Assistant, for 1.6.0). Phases are numbered consecutively without letters,
+each with a stable ID (George, 2026-10-13); the open ones are 20-25, with
 MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
 
 ## Machines

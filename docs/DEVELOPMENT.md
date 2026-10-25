@@ -3140,6 +3140,14 @@ it is asked for or starts by its timeout, rather than leaving it in place
 
 **ID:** `ph-home-assistant` · numbered 19 on 2026-10-24, moved before room correction (George); 21 from 2026-10-21 (20 from 2026-10-20, 19 from 2026-10-19, 17 from 2026-10-15, 16 from 2026-10-14, 15 from 2026-10-13; was 13g).
 
+**Closed 2026-10-25** (George, after checking the D-pad on sofapi and the
+card on his own Home Assistant), merged into `next` for 1.6.0. All seven
+criteria met: 1 and 5 on George's Home Assistant, 2-4 in Docker (Finding
+137), 6 (the D-pad, ADR-0161) on sofapi, 7 (the card, ADR-0163) in the
+integration's 0.3.0 and 0.4.0. Not seen: the D-pad through Lyrion's own
+menus with a server (Extended navigation), and artwork from Spotify through
+Home Assistant. The TV remote over HDMI-CEC stays an idea for later.
+
 **Added 2026-10-11** (George: *"Let's add the home assistant with the player
 as a plugin as a separate phase before themes"*, after choosing the player
 inside an existing Home Assistant over hosting Home Assistant on the player).

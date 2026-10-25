@@ -1,12 +1,13 @@
 # ADR-0161 — A D-pad on the panel
 
 **Status:** **Accepted** — George, 2026-10-25, as proposed the same day.
-**Built** the same day on `ph-home-assistant` (not merged), the focus's look
+**Built** the same day on `ph-home-assistant`, the focus's look
 from his design (`design/source/19/`: the teal ring, Jump); the choices
-while building delegated to Claude, below. Phase 19 (`ph-home-assistant`),
-criterion 6. George asked for it the same day, after trying the integration:
-moving around the panel with a D-pad, in both Simple and Extended navigation,
-which the TV remote (HDMI-CEC) will need too. Nothing built.
+while building delegated to Claude, below. Checked by George on sofapi and
+merged into `next` for 1.6.0 when Phase 19 closed (2026-10-25). Phase 19
+(`ph-home-assistant`), criterion 6. George asked for it the same day, after
+trying the integration: moving around the panel with a D-pad, in both Simple
+and Extended navigation, which the TV remote (HDMI-CEC) will need too.
 
 ## Context
 
