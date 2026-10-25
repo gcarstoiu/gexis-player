@@ -743,3 +743,30 @@ Lyrion*, *Idle*), this one marked; another opens in the same tab. Phone only.
 **[S] The touchpad** takes half the phone's height, with two-finger scrolling
 and a 1-3x pinch; over the dashboard its taps and typing become real input
 (ADR-0121, ADR-0157).
+
+### Phase 19: the focus and the card (2026-10-25)
+
+Built from `source/19/` the same day; checked with mocked data against its
+pictures (ADR-0161, ADR-0163).
+
+*The focus ring*
+- **[U]** Which form a control gets is a rule, not drawn per control: inside
+  on rows and wherever a neighbour is under 12 px or the ring would leave
+  the screen, outside otherwise. Now Playing's tabs are made outside, as
+  `F07` draws them.
+- **[U]** The bar tray's slider is ringed round its rail and knob, not its
+  taller touch area (which ran off the screen); the drawer's slider is
+  ringed whole, as `F13`.
+- **[S]** On a bar the library's rail (ADR-0109's 124 px column) is one
+  control, Now Playing, and its play control a second below it; `B01` and
+  `B04` draw a bottom strip. The tray comes down from the top, as built
+  and in the manual, where `B02` and `B05` draw it at the foot.
+- **[S]** Lyrion's own menu tiles (`F02`) were not seen with data: the
+  check had no Lyrion server. They are buttons like Home's, so the same
+  rules hold.
+
+*The card*
+- **[S]** The album line has no year: Home Assistant carries none.
+- **[U]** The fixed output's note fits on one line where `Le` wraps it; a
+  clamped title ends with an ellipsis, as the README asks.
+

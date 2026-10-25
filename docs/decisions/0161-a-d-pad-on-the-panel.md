@@ -1,7 +1,10 @@
 # ADR-0161 — A D-pad on the panel
 
 **Status:** **Accepted** — George, 2026-10-25, as proposed the same day.
-Phase 19 (`ph-home-assistant`), criterion 6. George asked for it the same day, after trying the integration:
+**Built** the same day on `ph-home-assistant` (not merged), the focus's look
+from his design (`design/source/19/`: the teal ring, Jump); the choices
+while building delegated to Claude, below. Phase 19 (`ph-home-assistant`),
+criterion 6. George asked for it the same day, after trying the integration:
 moving around the panel with a D-pad, in both Simple and Extended navigation,
 which the TV remote (HDMI-CEC) will need too. Nothing built.
 
@@ -93,3 +96,51 @@ None proposed.
 - Keys from the virtual keyboard reach the page when no touch has come first.
 - What Home Assistant's page does with the arrows inside the frame.
 - CEC, when its phase comes.
+
+## Decisions taken while building (Claude, delegated by George, 2026-10-25)
+
+**The page (`ui/src/lib/dpad.js`)**
+1. **The first press shows, and does not move**: an arrow or OK with the
+   ring hidden only shows it. Back acts at once - closing what is open is
+   what it is pressed for.
+2. **The topmost layer** is the last one shown of `role="dialog"` and
+   `data-dpad-layer` (the volume drawer, the bar's tray, the queue, the
+   library's playlist sheet, the dashboard); a layer closing or closed -
+   still fading - counts for nothing.
+3. **The next control by position**: in the pressed direction, the smallest
+   gap along it plus three times the gap across it (0 when they overlap),
+   centres as the tie-break. Controls out of sight count only inside a
+   list that scrolls, which is then scrolled to keep 24 px clear.
+4. **Where a screen starts**: the control used last in that layer; else its
+   `data-dpad-main` (Play/Pause on Now Playing and the bar, the drawer's
+   slider, the tray's Home); else the first in reading order inside its
+   `data-dpad-start` (the library's content, the bar library's, Settings'
+   body); else the first on the screen. After OK opened a screen, the ring
+   appears on its start by itself.
+5. **Back returns to what opened**: the control OK pressed, when the screen
+   changed under it, is remembered by its name; Back looks for it on the
+   screen it comes back to (screens are drawn anew).
+6. **Back's target**: the layer's own `dpadback` handler (drawer, tray,
+   queue, sheets, dashboard), else the last shown `data-dpad-back` (a
+   screen's Back, Now Playing's Minimise, a confirmation's Cancel).
+7. **The ring's two forms**, as the design: outside, round staying round;
+   inside on rows and wherever a neighbour is under 12 px or the ring would
+   leave the screen. Now Playing's tabs take the outside form (their boxes
+   touch through padding). A slider is ringed whole with its two arrows;
+   the bar tray's, whose touch area is taller than it draws, round its rail
+   and knob (`data-dpad-box`).
+8. **Sliders**: Left and Right step - the volume 2 %, as the phone's
+   touchpad does; a Settings slider its own step, saved once the presses
+   stop (400 ms).
+9. **What a press counts as**: attention, as a touch; on the idle screen or
+   a dark screen it only wakes. Untrusted (made-up) key events are ignored,
+   so the phone's own typing over the dashboard is not taken for OK.
+10. **The dashboard's frame takes the keyboard**: the first press over it
+    moves the keyboard into Home Assistant's page and draws no ring there.
+11. **Left out (D8)**: setup, settling, the update screens and the factory
+    reset carry `data-dpad-off`.
+
+**The core**
+12. **Only a screen known to be off swallows a press**: after a restart the
+    output's state is unknown, and a lit screen must not lose the first one.
+
