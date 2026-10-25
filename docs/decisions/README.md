@@ -181,9 +181,9 @@ been written properly. **0098 has no record either.**
 | [0158](0158-dsi-screens.md) | DSI screens | Accepted 2026-10-23 (Phase 17): every DSI screen in the list (58), overlays written to config.txt with Keep and a way back; the DSI panel is the screen; standby by backlight; a brightness row |
 | [0159](0159-raspberry-pi-imager.md) | Raspberry Pi Imager | Accepted in part 2026-10-24: Use custom stays, guide corrected; our own list and Imager's settings not now; Imager's own list open |
 | [0160](0160-the-player-in-home-assistant.md) | The player in Home Assistant | Accepted 2026-10-24 (Phase 19): our own integration in its own repository; a media player plus screen, dashboard and visualiser switches; `id` on `/player/status` |
-| [0161](0161-a-d-pad-on-the-panel.md) | A D-pad on the panel | Accepted 2026-10-25 (Phase 19), built the same day on `ph-home-assistant`: real key presses, focus by position, a Home Assistant remote; the design's teal ring |
+| [0161](0161-a-d-pad-on-the-panel.md) | A D-pad on the panel | Accepted 2026-10-25 (Phase 19), built the same day, in 1.6.0: real key presses, focus by position, a Home Assistant remote; the design's teal ring |
 | [0162](0162-a-simple-equaliser.md) | A simple equaliser | Proposed 2026-10-25 (Phase 20; George's product decisions): ten bands, genre presets plus Vocal and Late night, ten of the owner's, per output; CamillaDSP on the shared path; DSD skips it |
-| [0163](0163-a-gexis-player-card-for-dashboards.md) | A Gexis Player card for Home Assistant dashboards | Accepted 2026-10-25 (Phase 19; decisions delegated to Claude), built in the integration's 0.3.0: shipped inside the integration, a plain web component in the player's look, everything through Home Assistant's services |
+| [0163](0163-a-gexis-player-card-for-dashboards.md) | A Gexis Player card for Home Assistant dashboards | Accepted 2026-10-25 (Phase 19; decisions delegated to Claude), built in the integration's 0.3.0, changed after George's check in 0.4.0: shipped inside the integration, a plain web component in the player's look, everything through Home Assistant's services |
 
 ## Cross-cutting rules
 
