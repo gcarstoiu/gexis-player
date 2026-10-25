@@ -249,9 +249,10 @@ Rough, and subject to change:
   scrolling tickers and smooth rotation. A fixed address on cable or Wi-Fi.
   Problem reports and hardware feedback. A Home Assistant dashboard on the
   screen. DSI screens on the Pi's own display connector. Each player in Home
-  Assistant as a media player.
+  Assistant as a media player, with a D-pad for its screen and a dashboard
+  card.
 - 🔜 **Next:** a simple equaliser with a few presets and a manual setup, then room correction for the bass with a USB microphone.
-- 🎨 **Later:** room correction for the full range, themes. With Plex switched on, your own Plex server fills in
+- 🎨 **Later:** room correction for the full range, AirPlay 2, multiroom for every source, a plugin catalogue, internet radio without a Lyrion server, themes. With Plex switched on, your own Plex server fills in
   the artist and album information other sources leave out.
 - 💭 **Maybe:** the DAC's own filter and polarity options.
 
