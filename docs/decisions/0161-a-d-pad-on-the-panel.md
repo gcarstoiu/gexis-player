@@ -144,3 +144,23 @@ None proposed.
 12. **Only a screen known to be off swallows a press**: after a restart the
     output's state is unknown, and a lit screen must not lose the first one.
 
+## Changed after George's check on sofapi (2026-10-25)
+
+He found the ring drawn over the idle screen, left behind for a moment by a
+volume drawer that had already faded, and kept by a tap on the phone's
+touchpad. Each was found again with mocked data and real key presses, and
+fixed:
+
+13. **A screen over everything hides the ring** (`data-dpad-cover`: the idle
+    screen, a takeover's). A press there only takes it down; the next shows
+    the ring.
+14. **A layer that closes takes the ring at once**: the page is watched as it
+    changes, not only four times a second, and the ring lands on the control
+    beneath 150 ms later. Measured on the volume drawer: gone on the next
+    frame, back at 167 ms, the drawer's fade ending at about 210 ms; before,
+    the ring stayed until 233 ms.
+15. **The phone's touchpad hides the ring**, a move as well as a tap: its
+    pointer is then the one in use.
+16. **A dashboard that comes up by itself** takes the ring away too, as a
+    press over it does (10).
+
