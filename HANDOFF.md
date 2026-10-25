@@ -27,38 +27,41 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.5.0, on Stable** (promoted 2026-10-25 at George's word:
-Stable serial 9, Testing serial 55 since 2026-10-24, both signatures good
-from the release key, read back with `gh release download channels`; the
-public `gexis-player.img.xz` passes its checksum and signature and
-decompresses to the checked image; r1.5.0 is GitHub's latest). Tag `v1.5.0` on the
-release-notes commit `bfb0f647`; `next` and `release-1.5.0` pushed there.
-Image `image/deploy/2026-10-24-gexis-player-v1.5.0.img` (`verify-image.sh`
-123/123, 978 skins clean); parts `ours-17e046a32cf3`, `skins-67e037cab00f`,
-`rpi-dea26bfd5ea8`, `debian-612079c6b5f1`; build output in
-`~/projects/gexis-release-out/r1.5.0`. gexis-core and gexis-player `1.5.0`,
-gexis-ui `1.4.0+git88.eaca532`, gexis-system `1.4.0+git29.d93d43f`.
-What it carries: Phase 17's DSI screens, Phase 19's player side (`id`,
-`screen`), the bar fixes (the tray's buttons on the first tap, settings
-sheets that fit, pictures tried again, the tray staying open), the Lyrion
-server and bar wallpaper fixes. **PR #82 was merged by George**
-(2026-10-25); `main` is merged into `docs` and `next`, `release-1.5.0` and its
-worktree are gone, and the routine clean-up ran. **PR #83** (README: 1.5.0
-is the current release) was merged by George the same day; `main` is merged
-into `docs` and `next`, and its branch and worktree are gone.
+**Current release: 1.6.0, on Stable** (2026-10-25: George asked for the
+merge, release and promotion together and approved the notes). Testing
+serial 56 and Stable serial 10, both signatures good from the release key,
+read back with `gh release download channels`; the public
+`gexis-player.img.xz`, downloaded through `releases/latest/download`, passes
+its checksum and signature and decompresses to the checked image; r1.6.0 is
+GitHub's latest. Tag `v1.6.0` on the release-notes commit `3f5e96d3`;
+`release-1.6.0` and `next` pushed at `3188394a` (the tag plus documents only:
+the README's current release and roadmap, Phases 23-26). Image
+`image/deploy/2026-10-25-gexis-player-v1.6.0.img` (`verify-image.sh`
+123/123 with `GEXIS_BUILD_CACHE` set - without it the plugin tarball is not
+found, its comparison is skipped and 122 pass; 978 skins clean); parts
+`ours-27290f57fb65`, `skins-67e037cab00f`, `rpi-0e5671e1892c`,
+`debian-2e90e264cb7d`; build output in `~/projects/gexis-release-out/r1.6.0`;
+release worktree `~/projects/gexis-player-r160`. gexis-core and gexis-player
+`1.6.0`, gexis-ui `1.5.0+git49.8e939ff` (the same build as sofapi's
+preview), gexis-system `1.4.0+git29.d93d43f`. What it carries: Phase 19's
+player side (the D-pad, `POST /panel/key`, `idle_screen` on
+`/player/status`) and the *Attached screen* name fix. **PR #84 waits for
+George's merge** (checks green); after it: `main` into `docs` and `next`,
+delete `release-1.6.0` on GitHub and locally, remove the release worktree,
+the routine clean-up. Pins behind their makers at release
+(`check-upstream.sh`): go-librespot 0.10.3 (0.10.5 out) and Beszel 0.21.0
+(0.21.1 out) - a preview first (ADR-0100).
 
 **The release key** moved to `~/projects/gexis-release-key` (George,
 2026-10-24): every release command sets
 `GEXIS_RELEASE_GNUPGHOME=~/projects/gexis-release-key`; the scripts default
 to `~/.gnupg-gexis-release`, which no longer exists.
 
-**The players** (2026-10-25): ShelvesPi runs 1.5.0 (the four bar fixes
-checked there by George, all fine, 2026-10-25; no debug drop-in or DevTools
-port left), sofapi the
-Phase 19 preview (core and player `1.4.0+git49.c4af394`, ui
-`1.4.0+git24.e505054`), bedroompi `preview-1023` (core and player
-`1.4.0+git45.561e337`, ui `1.4.0+git36.b8793e5`, system
-`1.4.0+git29.d93d43f`); all of it is in 1.5.0, a newer version.
+**The players** (2026-10-25): sofapi runs 1.6.0 (core and player installed
+over the Phase 19 preview at 21:54, dry run first, the core restarted after
+the install; its ui was already 1.6.0's build); ShelvesPi 1.5.0 (no debug
+drop-in or DevTools port left); bedroompi `preview-1023` as last recorded
+(core and player `1.4.0+git45.561e337`). All of it is older than 1.6.0.
 
 **The test venv imports the core from `~/projects/gexis-player-next`** (an
 editable install): in another worktree run the suite with `PYTHONPATH=src`
@@ -85,13 +88,6 @@ server answers first after a restart (Finding 130 point 6). GitHub reported
 player), raised 20-21 Oct.
 
 **Open:**
-- **Merged into `next` for the next release** (2026-10-25, `screen-name-tile`,
-  branch deleted): Settings' *Attached screen* tile showed the stored
-  `Maker/Model` and broke mid-word (a DSI panel read "Raspberry Pi/Touch
-  Display or compati / ble" on a phone, in 1.5.0); now maker and model,
-  wrapping between words. Checked with mocked data at the phone's, panel's
-  and bar's size; no preview on a player (George: text only, and no DSI
-  screen free).
 - **Not checked:** iOS's handling of `interactive-widget` (the mini player
   on the phone's keyboard); Android's is.
 - **The visualiser made cheaper, the rest left** (Finding 134; George,
@@ -107,13 +103,13 @@ after checking the D-pad on sofapi and the card on his own Home Assistant;
 `docs/DEVELOPMENT.md`, ADR-0160, ADR-0161, ADR-0163). `ph-home-assistant` is
 merged into `next` for 1.6.0 (core suite 2664 passed, 48 skipped) and its
 branch and worktree are gone. The integration
-`gcarstoiu/gexis-player-homeassistant` is at 0.4.0 (local copy
+`gcarstoiu/gexis-player-homeassistant` is at 0.4.1 (README: the D-pad needs
+1.6.0; released after its checks passed, as HACS asks; local copy
 `~/projects/gexis-player-homeassistant`, tests on `~/projects/ha-venv`; a
-Home Assistant 2026.10.3 in Docker, `~/projects/scratch/ha-test`). HACS's
-default list: George asked to wait until the phase was done, so he is asked
-again now. **1.6.0 is being prepared** (George, 2026-10-25: merge, release
-and promotion to Stable): Phase 19's player side (the D-pad, `idle_screen`)
-and the *Attached screen* name fix.
+Home Assistant 2026.10.3 in Docker, `~/projects/scratch/ha-test`). **HACS's
+default list**: applied 2026-10-25 at George's word, hacs/default#12691
+(from his fork `gcarstoiu/default`); every automated check passed; it waits
+for HACS's maintainers - do not ask them for a review (their template).
 
 Then, in order (`docs/DEVELOPMENT.md`; refer
 to them by ID): **20** a simple equaliser (`ph-equaliser`, added
