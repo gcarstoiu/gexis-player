@@ -147,7 +147,10 @@ choice wins. Its `hello` says what it can do:
 
 **Play to the ALSA device `output`**, always - never to a card by number. The
 player defines `output` and routes it to whichever DAC the user chose, with the
-level meter tapped from it.
+level meter tapped from it - and, with the equaliser on, through the
+equaliser first (ADR-0162), so a plugin is equalised like every other source
+without doing anything. Open it at your stream's own rate and format: the
+equaliser follows them.
 
 **The four messages that matter:**
 

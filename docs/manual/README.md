@@ -129,6 +129,11 @@ while music plays stops playback, and the sources reconnect on the new type,
 so the level never jumps mid-track; the source that comes back starts no
 louder than its *Starting volume*.
 
+Under the volume sits the **equaliser**: the setting in use (*Rock ·
+preset*), its switch, and the settings as a row of buttons to change to -
+the presets, then your own. **Edit** opens the whole equaliser (see
+[The equaliser](#the-equaliser)).
+
 ## 3. The library
 
 The library is your Lyrion server's music. Home offers:
@@ -409,7 +414,12 @@ The mini player has:
   The one the panel shows is outlined;
 - the volume slider. A tap sets the level where it lands and a sideways
   drag moves it; a swipe up or down that starts on the slider changes
-  nothing.
+  nothing;
+- beside it, the **EQ** button with the setting in use. It opens the mini
+  player, where the **Equaliser** row has its switch, the settings to change
+  to and **Edit**, which opens the whole equaliser. On the phone the bands
+  are rows, each a slider sideways from 0, and the setting is chosen from a
+  list.
 
 Swipe the mini player up, or tap its arrow, for the **touchpad**, which
 opens between the track and the row.
@@ -467,9 +477,12 @@ it.
 
 ![Bar: the waiting screen](images/bar-waiting.webp)
 
-Pulled down from the top of any screen, the tray: Home, the visualiser and
-the volume. It stays until it is closed - tap below it, or push it back up -
-or the visualiser takes over or Home opens.
+Pulled down from the top of any screen, the tray: Home, the visualiser,
+the equaliser's button and the volume. It stays until it is closed - tap
+below it, or push it back up - or the visualiser takes over or Home opens.
+The equaliser's button names the setting in use; tapped, it opens a second
+band under the first with the switch, the settings to change to and
+**Edit**.
 
 ![Bar: the tray](images/bar-tray.webp)
 
@@ -555,6 +568,42 @@ player into your Plex account).
 | Volume | How the level is set. *Hardware* (default): by the sound card's own volume control, bit-perfect at every level. *Software*: by the player recalculating the sound, on any output; not bit-perfect below 100 %. *Fixed*: always full level, for an amplifier that sets the volume itself; it asks first. Any change of volume type stops playback while the sources reconnect on it. On a DAC that takes DSD natively (some USB DACs), *Fixed* also plays DSD files from Lyrion as DSD, unconverted, and the Fixed choice says so; otherwise DSD files are converted to PCM. A DSD file of more than two channels is always converted, and folded down to stereo. The visualiser stays still during DSD. On an output with no volume control of its own, such as HDMI, Hardware is greyed out and Software is used in its place. The level carries across between Hardware and Software. |
 | Maximum volume | The loudest the player will go, on any input. At 80, 100 % on every control means that level. Hidden with Volume on *Fixed*. |
 | Volume curve | How the slider's travel maps to loudness. *Cubic* (half travel is −15.5 dB) is the usual shape; *Linear* puts half travel at −30 dB. |
+| Equaliser | Opens the equaliser, for the output in use; the row says what it uses (*Rock*, *Custom*) or *Off*. See below. |
+
+#### The equaliser
+
+![The equaliser](images/panel-equaliser.webp)
+
+Ten bands, an octave apart from 31 Hz to 16 kHz, each from −12 to +12 dB.
+**Each output keeps its own**: the DAC, HDMI and optical each remember
+whether the equaliser is on and which setting it uses, and the page says
+which output it is setting.
+
+- **On or off**, at the top. Off, the sound is untouched, bit-perfect, as
+  it always was. Switching it on or off reopens the output, so the music
+  stops for a moment.
+- **A setting**: one of the presets - *Flat*, *Rock*, *Pop*, *Jazz*,
+  *Classical*, *Electronic*, *Hip-hop*, *Acoustic*, *Vocal* and *Late
+  night* (more bass and treble for listening quietly) - or one of your own.
+  Choosing one is heard at once, and the bands move to it.
+- **The bands**: drag one up or down; the change is heard as it moves.
+  Moving a band of a preset or of one of your own makes it **Custom**
+  (*From Rock · not saved*), until it is saved.
+- **Save as…** keeps the bands as one of your own, under a name: up to ten,
+  shared by every output. One of your own can be **renamed** or **deleted**;
+  an output that uses a deleted one goes back to *Flat*. On the panel, type
+  the name with a keyboard plugged into the player or from the phone's
+  touchpad.
+- **The note under the bands** says how far the music is lowered so that a
+  boost cannot clip - *Lowered by 5 dB so the boost cannot clip* - or that
+  nothing is lowered when no band rises. With *Volume* on *Fixed* the music
+  then plays that much quieter, and the note says to turn the amplifier up
+  to match.
+- **DSD** plays untouched: while a DSD track plays natively, the equaliser
+  stands aside, and it is back for the next PCM track.
+
+Every source plays through it - Lyrion, Spotify, Bluetooth and Plexamp -
+and the visualiser shows the music as it arrives, before the equaliser.
 
 ### Display — *Screen and idle*
 

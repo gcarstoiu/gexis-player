@@ -184,6 +184,22 @@ elsewhere, takes no touch on its level or mute for 400 ms
 (`VOLUME_ARM_MS` in `App.svelte`), so a tap meant for what was under it does
 not set the level; one opened from the panel is unaffected.
 
+### The equaliser (ADR-0162)
+
+`screens/eq/`, from `design/source/20` (look 3a, Ridge): `Equaliser.svelte`
+is the editor on all three surfaces (`surface`: `panel`, `bar`, `phone`);
+`EqGraph` the upright bands of the panel and bars, `EqCurve` and `EqRows`
+the phone's picture and sideways sliders, `EqQuick` the quick change in the
+volume drawer, the bar's tray (its second band, under an EQ button) and the
+phone's mini player. All draw from `/state`'s `equaliser`
+(`lib/equaliser.svelte.js`): the line through the knobs is a monotone cubic
+(`ridge`), a dragged band sends the whole bands with one request in flight
+and the latest after it (`BandSender`), and choosing a setting glides the
+drawn levels to it (`Glide`, 380 ms each, 32 ms apart) while the setting is
+chosen at once. Settings' *Equaliser* row (`kind: equaliser`) opens the
+editor inside Settings; the quick change's Edit opens it as a screen of its
+own (`App.svelte`'s `openEqualiser`).
+
 ---
 
 ## 5. The panel's layer stack
@@ -198,7 +214,7 @@ sit above the screen in a fixed z-order:
 ```mermaid
 flowchart BT
   BG["PanelBackground<br/>(one backdrop, never rebuilt per screen)"]
-  SL["screen-layer (one of):<br/>Settings · WaitingHome · NowPlaying/BarNowPlaying<br/>· Library/BarLibrary (kept mounted, ADR-0122)"]
+  SL["screen-layer (one of):<br/>Settings · the equaliser · WaitingHome · NowPlaying/BarNowPlaying<br/>· Library/BarLibrary (kept mounted, ADR-0122)"]
   VD["VolumeDrawer or BarTray"]
   ID["IdleScreen"]
   HO["HandoffScreen"]
@@ -221,6 +237,7 @@ flowchart TD
   App -->|panel| Pan[".panel"]
   Pan --> PB[PanelBackground]
   Pan --> St[Settings embedded]
+  Pan --> EQ["screens/eq/Equaliser<br/>(from the quick change's Edit, ADR-0162)"]
   Pan --> WH["WaitingHome<br/>(LMS off, nothing playing)"]
   Pan --> NP["NowPlaying / BarNowPlaying"]
   NP --> QR["QueueRail (LMS only)"]
@@ -253,7 +270,7 @@ attributes and two events, so a new screen needs nothing in the module:
 | `data-dpad-start` | the area whose first item a screen starts on |
 | `data-dpad-back` | what Back presses (a screen's Back, Minimise, Cancel) |
 | `dpadback` event | a layer closing itself on Back (`preventDefault()` when done) |
-| `dpadstep` event | Left or Right on a custom slider (`detail.step`: +1 or -1) |
+| `dpadstep` event | Left or Right on a custom slider (`detail.step`: +1 or -1); Up or Down on one with `aria-orientation="vertical"` (the equaliser's bands), whose Left and Right go to its neighbours |
 | `data-dpad-box` | inside a control: the parts the ring goes round |
 | `data-dpad-ring="inset"` / `"outside"` | the ring's form, where the rule would choose the other |
 | `data-dpad-skip`, `data-dpad-off` | not a stop; a screen the D-pad leaves alone (setup, updates) |

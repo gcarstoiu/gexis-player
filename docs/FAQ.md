@@ -39,7 +39,27 @@ volume is set in the DAC's own hardware, not by changing the samples. Three
 exceptions: over HDMI the sound is not bit-perfect; with *Settings → Audio →
 Volume* on *Software* it is not bit-perfect below 100 %; and Plexamp lowers its
 volume inside its own software, so below 100 in the Plexamp app it is not
-bit-perfect either.
+bit-perfect either. With the equaliser on, the sound is changed on purpose,
+so it is not bit-perfect; off, it is as before.
+
+**Is there an equaliser?**
+Yes: *Settings → Audio → Equaliser*, and from the volume drawer, the bar's
+tray or the phone's mini player for a quick change. Ten bands from 31 Hz to
+16 kHz, presets (*Flat*, *Rock*, *Pop*, *Jazz*, *Classical*, *Electronic*,
+*Hip-hop*, *Acoustic*, *Vocal*, *Late night*) and up to ten of your own.
+Each output (the DAC, HDMI, optical) keeps its own setting, and it is off
+until switched on. Every source plays through it.
+
+**With the equaliser on, the music is quieter. Why?**
+A band that rises would clip a loud passage, so the music is lowered first
+by as much as the bands rise together - the note under the bands says by
+how much (*Lowered by 5 dB so the boost cannot clip*). Cutting instead of
+boosting lowers nothing. With *Volume* on *Fixed*, turn the amplifier up by
+that much to match.
+
+**Does the equaliser change DSD?**
+No. Native DSD plays untouched: the equaliser stands aside while a DSD track
+plays, and is back for the next PCM one.
 
 **Why is there no volume slider?**
 *Settings → Audio → Volume* is set to *Fixed*. Fixed sends the full level all

@@ -100,7 +100,9 @@ and native DSD64 to DSD256 from Lyrion with the volume fixed. A 5.1 or 7.1
 file from Lyrion plays whole, folded down to stereo. The volume is set in the DAC's own
 hardware, in software for an output with none of its own (HDMI), or fixed for
 an amplifier that does it. A maximum level holds for every source, and
-Spotify never starts louder than you allow. Because Gexis is the whole
+Spotify never starts louder than you allow. An equaliser - ten bands, genre
+presets and your own settings, kept for each output - is there when you want
+it, and out of the path when it is off. Because Gexis is the whole
 system, not an app on someone else's, the audio chain can be checked rather
 than taken on trust.
 
@@ -181,7 +183,7 @@ or removed from Settings, with its progress shown in the switch itself.
 | | |
 |---|---|
 | 🔊 **Sources** | Spotify Connect · Lyrion (squeezelite) · Bluetooth (A2DP) · Plexamp · your own plugins |
-| 🎚️ **Sound** | Bit-perfect, tested up to 24/192 on DAC boards and to 768 kHz on a USB DAC · native DSD on a DAC that takes it · hardware, software or fixed volume · a maximum level for every source · a starting volume Spotify never exceeds |
+| 🎚️ **Sound** | Bit-perfect, tested up to 24/192 on DAC boards and to 768 kHz on a USB DAC · native DSD on a DAC that takes it · hardware, software or fixed volume · a maximum level for every source · a starting volume Spotify never exceeds · a ten-band equaliser with presets and your own settings, for each output, off (and bit-perfect) until you switch it on |
 | 🔀 **Handover** | One source at a time, never mixed · takeover in any direction · the previous source released before the next one plays |
 | 🖼️ **Now playing** | Artwork · synced or plain lyrics · artist information and photos · the Lyrion queue |
 | 📈 **Visualiser** | Up to 287 skins, depending on the screen · VU meters, spectrum, turntables and tape decks · progress, time, volume and play-state in each skin's own style · skins that rotate per track |
@@ -250,9 +252,9 @@ Rough, and subject to change:
   Problem reports and hardware feedback. A Home Assistant dashboard on the
   screen. DSI screens on the Pi's own display connector. Each player in Home
   Assistant as a media player, with a D-pad for its screen and a dashboard
-  card.
-- 🔜 **Next:** a simple equaliser with a few presets and a manual setup, then room correction for the bass with a USB microphone.
-- 🎨 **Later:** room correction for the full range, AirPlay 2, multiroom for every source, a plugin catalogue, internet radio without a Lyrion server, themes. With Plex switched on, your own Plex server fills in
+  card. A ten-band equaliser with presets and your own settings.
+- 🔜 **Next:** room correction for the bass with a USB microphone, then for the full range.
+- 🎨 **Later:** AirPlay 2, multiroom for every source, a plugin catalogue, internet radio without a Lyrion server, themes. With Plex switched on, your own Plex server fills in
   the artist and album information other sources leave out.
 - 💭 **Maybe:** the DAC's own filter and polarity options.
 
@@ -284,7 +286,7 @@ with what.
 ## 🙏 Credits
 
 Gexis Player stands on the shoulders of PeppyMeter and its skin artists,
-squeezelite, go-librespot, bluez-alsa, Lyrion, Raspberry Pi OS and many more,
+squeezelite, go-librespot, CamillaDSP, bluez-alsa, Lyrion, Raspberry Pi OS and many more,
 all listed in [THIRD-PARTY.md](THIRD-PARTY.md). None of this would exist if
 they had not shared their work first. Thank you.
 

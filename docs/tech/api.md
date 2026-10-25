@@ -72,6 +72,19 @@ is dropped. `{"t":"ping"}` is answered `{"t":"pong"}`. The schemas
 `PanelTouchpadFromPhone` and `PanelTouchpadFromPanel` give the fields. It is
 *internal*: the phone page's own.
 
+## The equaliser
+
+ADR-0162, *internal* until Phase 20 closes (then *stable*). For the output in
+use: `GET /equaliser` (the same object as `/state`'s `equaliser`: whether it
+is on, the setting and its bands, the headroom, `fixed`, `dsd`, the presets
+and the owner's settings); `PUT /equaliser` with `on`, `sel` (a preset's or
+an own setting's key), `gains` (ten whole decibels, −12 to +12, low to high)
+or `band` with `gain`; `POST /equaliser/settings {name}` saves the bands as
+one of the owner's (up to ten); `PUT` and `DELETE /equaliser/settings/{key}`
+rename and delete one. A refusal is a 400 with the sentence to show (*There
+is a setting called Rock already.*). A band or a setting is heard at once;
+`on` reopens the output.
+
 ## Home Assistant
 
 The first client written against the file by someone other than the player's

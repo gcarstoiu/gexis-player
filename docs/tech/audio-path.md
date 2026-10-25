@@ -61,6 +61,7 @@ refused rather than converted, because nothing in the chain is a `plug`
 | `pcm.output` | `type meter` over `hw:sndrpihifiberry`, with the peppyalsa scope | go-librespot, bluealsa-aplay, and (through `default`) Plexamp |
 | `pcm.output_wait` | The same chain, but the slave is opened with `nonblock 0` so a busy DAC makes the open *wait* instead of failing (ADR-0095) | squeezelite only |
 | `gexis_softvol`, `gexis_softvol_wait` | **With Volume on Software (ADR-0124, ADR-0127):** `meter → copy → softvol → card`; on HDMI `meter → copy → softvol → plug → card` (the meter there since 2026-10-07, Finding 116; HDMI on Fixed is `plug → card` with no meter). One control for both, `Gexis Playback Volume` (`Gexis` to amixer), -90..0 dB in 0.25 dB steps; at 0 dB it passes every sample unchanged (Finding 115). Before any renderer starts, `gexis-softvol-restore.service` (ADR-0140) makes the control and writes the saved level, so a renderer resuming after a power cut never plays through it at the 0 dB ALSA makes it with; the core makes it again at start and sets the same level (`softvol_boot.start_level`), parks the card's own control at 0 dB only after that level reads back, and gives the card the level back when Hardware is chosen again. On every change of output the core closes its mixer handles and frees libasound's cached configuration (`volume.forget_mixers`): a running process otherwise keeps resolving `output` to the card it first saw | every renderer, through `output` / `output_wait` |
+| `gexis_eq_out` | **With the equaliser on (ADR-0162):** what CamillaDSP plays to - the rest of the output's chain: `hw:` the card, `plug → card` on HDMI, `gexis_softvol → card` on Software. `pcm.output` and `pcm.output_wait` then end on the loopback, `hw:Loopback,0,0` (see [The equaliser](#the-equaliser)) | CamillaDSP |
 | `ctl.output` | The DAC's control interface, so `amixer -D output` and the core reach the hardware mixer by name | gexis-core |
 | `pcm_scope.peppyalsa` | Level and 30-band spectrum analysis, written to FIFOs in `/run/gexis` | loaded inside whichever renderer has the device open |
 
@@ -540,6 +541,60 @@ switch itself runs: setup writes the volume type straight after the output.
 With the softvol between them the meter works on HDMI (ADR-0055 §6 as
 amended, Finding 116). A meter straight over a plug crashes the renderers, so
 HDMI on Fixed has no meter and no visualiser levels.
+
+## The equaliser
+
+ADR-0162, Finding 138. Off, nothing below exists and `output.conf` is
+exactly what it was: bit-perfect. On, for the output in use:
+
+```text
+renderer → pcm.output (meter, peppyalsa) → hw:Loopback,0,0
+           hw:Loopback,1,0 → CamillaDSP (headroom fader, ten Peaking filters) → gexis_eq_out → card
+```
+
+- **The loopback** is `snd-aloop` with one substream, by its id `Loopback`
+  (`/etc/modprobe.d/gexis-loopback.conf`, loaded at boot; the engine loads it
+  on a player updated since its last boot). It is never an output
+  (`outputs.OURS`), and while it is in the path arbitration asks who holds
+  *its* playback node (`alsa.set_renderers_card`), since CamillaDSP holds the
+  card.
+- **CamillaDSP** (`gexis-camilladsp`, upstream's aarch64 release) runs as
+  `gexis-equaliser.service`, started and stopped by the core only, waiting
+  on a websocket at `127.0.0.1:1234`. `eq_engine.py` drives it.
+- **One stream at a time, at its own rate.** Whoever opens the loopback
+  first sets its rate, format and channels, and it cannot be held across a
+  change of rate (a 96 kHz stream opened while 44.1 kHz was held is given
+  44.1). So CamillaDSP is configured only once a renderer has opened it: the
+  engine watches the loopback's controls (`alsactl monitor hw:Loopback`),
+  reads *PCM Slave Active/Rate/Format/Channels* from device 1 and sends the
+  configuration at exactly those; CamillaDSP lets the loopback go when the
+  stream ends (`stop_on_inactive`). Measured: 12-24 ms off a stream's start
+  and up to a chunk off its end, nothing inside it - so at every change of
+  rate and every resume after a pause (Squeezelite lets the device go 1 s
+  into one). A rate the card lacks is converted to its highest
+  (`AsyncSinc`), as Squeezelite's own resampler would, since Squeezelite
+  now sees the loopback, which takes every rate.
+- **The bands** are ten Peaking filters (Q √2, 31.25 × 2ⁿ Hz), all in the
+  pipeline at 0 dB too. A change is a `PatchConfig` of the bands that moved,
+  heard at once; CamillaDSP's GraphicEqualizer is not used, because it
+  rebuilds its filters on each change and clicks (Finding 138).
+- **The headroom** (D3) is the combined curve's peak at 44.1 and 48 kHz,
+  rounded up to 0.5 dB, on the fader Aux1 of a `Volume` filter that ramps
+  over 200 ms. It is set before each stream starts; when it rises the fader
+  moves first and the bands follow the ramp.
+- **The meter** stays before it, over the loopback (D4): the visualiser
+  shows the music as it arrives, on every output, HDMI included.
+- **Native DSD** (D7): a DSD format on the loopback starts `alsaloop` to the
+  card instead of CamillaDSP, untouched; the equaliser's state says `dsd`.
+- **Switching it on or off** writes `output.conf` again and restarts the
+  renderers, under the same lock as a change of output; every rewrite of the
+  chain restarts CamillaDSP, which reads ALSA's configuration only when it
+  starts.
+
+The state is kept in the settings database (`_equaliser`): for each output,
+by its card id, `on`, the setting (`sel`, `from`) and the bands; and the
+owner's list. `/state` carries it as `equaliser`; the routes are in
+[api.md](api.md).
 
 ## Meters and the visualiser
 
