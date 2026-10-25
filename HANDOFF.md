@@ -122,9 +122,12 @@ correction then reuses; ADR-0162 proposed 2026-10-25 with George's product
 decisions, its brief `design/briefs/20-equaliser.md` for Claude Design, its
 settings [N] not yet confirmed), **21** room correction for the bass
 (`ph-room-correction`), **22** room correction for the full range
-(`ph-room-correction-full`), **23** themes (`ph-themes`), **24** the
-library answers for itself (`ph-library`), **25** Lyrion's own menus' look
-(`ph-lyrion-menus`); MPD is parked (`ph-mpd`, ADR-0151). Each ADR first. **Raspberry Pi Imager**
+(`ph-room-correction-full`), **23** AirPlay 2 (`ph-airplay`), **24**
+multiroom for every source (`ph-multiroom`), **25** the plugin catalogue
+(`ph-plugin-catalogue`), **26** internet radio without Lyrion (`ph-radio`)
+- the four added 2026-10-25 from the ideas (George) - **27** themes
+(`ph-themes`), **28** the library answers for itself (`ph-library`), **29**
+Lyrion's own menus' look (`ph-lyrion-menus`); MPD is parked (`ph-mpd`, ADR-0151). Each ADR first. **Raspberry Pi Imager**
 (ADR-0159, a task, not a phase): the install guide is corrected; our own
 Imager list and Imager's settings not now; Imager's own list stays open, as
 it is, with no further changes for now (George, 2026-10-24).
@@ -142,7 +145,7 @@ Closed: 0-19 (13 with letters a-f; Phase 15, the public API, on
 2026-10-19 with 1.2.0; Phase 16, optical, with 1.3.0; Phase 18, the Home
 Assistant dashboard, with 1.4.0; Phase 17, DSI screens, for 1.5.0; Phase 19,
 the player in Home Assistant, for 1.6.0). Phases are numbered consecutively without letters,
-each with a stable ID (George, 2026-10-13); the open ones are 20-25, with
+each with a stable ID (George, 2026-10-13); the open ones are 20-29, with
 MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
 
 ## Machines

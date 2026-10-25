@@ -2059,7 +2059,7 @@ registry advertises.
 > unit), `docs/PLUGIN-CONTRACT.md` at version 1, and Findings 075-080.
 
 **Themes left this phase on 2026-09-25** (George): *"Themes to be cut out and
-have its own phase at the end of the current list."* They are **Phase 23** (`ph-themes`), and
+have its own phase at the end of the current list."* They are **Phase 27** (`ph-themes`), and
 he restated it on the day the phase closed: *"I stated before that themes are
 out and have their own phase at the end of the list."*
 
@@ -2179,7 +2179,7 @@ the exercise.
    extends to it, whether it ships in the image or installs on demand, and
    what it costs in memory and CPU on a Pi 4 that is already frame-limited.
    None of that is settled by adding it to this list.
-4. ~~Theme engine.~~ **Moved to Phase 23** (`ph-themes`; numbered 14 until 2026-10-13, 16 until 2026-10-14, 17 until 2026-10-15, 18 until 2026-10-19, 20 until 2026-10-20, 21 until 2026-10-21, 22 until 2026-10-25), 2026-09-25.
+4. ~~Theme engine.~~ **Moved to Phase 27** (`ph-themes`; numbered 14 until 2026-10-13, 16 until 2026-10-14, 17 until 2026-10-15, 18 until 2026-10-19, 20 until 2026-10-20, 21 until 2026-10-21, 22 and 23 until 2026-10-25), 2026-09-25.
 
 ### What closing this means, and what it deliberately does not
 
@@ -2369,7 +2369,7 @@ the ALSA default.
 
 ### Phase 11a — The library answers for itself (moved)
 
-Now **Phase 24** (`ph-library`), with the open phases after the release.
+Now **Phase 28** (`ph-library`), with the open phases after the release.
 
 ### Phase 12 — Plugins that fetch their software on the device
 
@@ -2859,7 +2859,7 @@ per file on Pis other than 4 GB, and temperatures with a case (HARDWARE.md).
 
 ### Phase 13f — Lyrion's own menus, plugins included
 
-**Closed 2026-10-12 for the release; George's look moved to Phase 25** (`ph-lyrion-menus`)
+**Closed 2026-10-12 for the release; George's look moved to Phase 29** (`ph-lyrion-menus`)
 (George: *"create a separate phase for this at the end of the current phase
 list"*). It ships as built, behind *Extended navigation* (ADR-0118); the hidden
 library's hour was measured (Finding 118).
@@ -3337,9 +3337,65 @@ later one; what it costs a Pi 4 beside Phase 21's filter.
    and no position is measurably worse - recorded as a finding.
 3. It builds on Phase 21's correction: on and off, A/B, one per output.
 
-### Phase 23 — Themes
+### Phase 23 — AirPlay 2
 
-**ID:** `ph-themes` · numbered 23 on 2026-10-25 (22 from 2026-10-21, 21 from 2026-10-20, 20 from 2026-10-19, 18 from 2026-10-15, 17 from 2026-10-14, 16 from 2026-10-13; was 14).
+**ID:** `ph-airplay` · added 2026-10-25 as 23.
+
+**Added 2026-10-25** (George moved the Must ideas, and internet radio
+without Lyrion, into phases of their own after room correction). Play from
+any iPhone, iPad or Mac, as a plugin like Plexamp (ADR-0016).
+
+**An ADR before anything is built.** It must settle: which AirPlay 2
+receiver; how it takes the output over and hands it back, as the other
+sources do; what Now Playing and the phone show from it.
+
+**Acceptance:** drafted with its ADR.
+
+### Phase 24 — Multiroom for every source
+
+**ID:** `ph-multiroom` · added 2026-10-25 as 24.
+
+**Added 2026-10-25** (George, with Phase 23). Spotify, AirPlay and Bluetooth
+playing in sync on several players, as Lyrion's own playback already does.
+
+**An ADR before anything is built.** It must settle: how the players find
+each other and which one leads; how they keep in sync; how a group is made
+and undone from the phone and the panel.
+
+**Acceptance:** drafted with its ADR.
+
+### Phase 25 — Plugin catalogue
+
+**ID:** `ph-plugin-catalogue` · added 2026-10-25 as 25.
+
+**Added 2026-10-25** (George, with Phase 23). An index on GitHub that the
+player lists, so a developer's plugin reaches users without waiting for a
+release (ADR-0106: plugins installed and updated today come with the release
+or as an uploaded file).
+
+**An ADR before anything is built.** It must settle: the index's format and
+how it is signed; what a plugin needs to be listed, and who checks it; how
+the player lists, installs and updates from it.
+
+**Acceptance:** drafted with its ADR.
+
+### Phase 26 — Internet radio without Lyrion
+
+**ID:** `ph-radio` · added 2026-10-25 as 26.
+
+**Added 2026-10-25** (George, with Phase 23; it was a Should idea). A radio
+directory for players that only stream, with no Lyrion server: today the
+library's Radio is Lyrion's own directory.
+
+**An ADR before anything is built.** It must settle: which directory; how a
+station plays and shows on Now Playing; favourites; how it sits beside
+Lyrion's Radio on a player that has both.
+
+**Acceptance:** drafted with its ADR.
+
+### Phase 27 — Themes
+
+**ID:** `ph-themes` · numbered 27 on 2026-10-25 (23 earlier that day, 22 from 2026-10-21, 21 from 2026-10-20, 20 from 2026-10-19, 18 from 2026-10-15, 17 from 2026-10-14, 16 from 2026-10-13; was 14).
 
 **Cut out of Phase 10 on 2026-09-25** (George): *"Themes to be cut out and have
 its own phase at the end of the current list."* It was that phase's criterion
@@ -3368,9 +3424,9 @@ that is settled.
 4. **The visualiser is not themed by this.** PeppyMeter skins are ADR-0051's
    separate corpus with their own picker, and share no tokens with the panel.
 
-### Phase 24 — The library answers for itself
+### Phase 28 — The library answers for itself
 
-**ID:** `ph-library` · numbered 24 on 2026-10-25 (23 from 2026-10-21, 22 from 2026-10-20, 21 from 2026-10-19, 20 from 2026-10-15, 19 from 2026-10-14, 18 from 2026-10-13; was 11a).
+**ID:** `ph-library` · numbered 28 on 2026-10-25 (24 earlier that day, 23 from 2026-10-21, 22 from 2026-10-20, 21 from 2026-10-19, 20 from 2026-10-15, 19 from 2026-10-14, 18 from 2026-10-13; was 11a).
 
 **Added 2026-09-25 (George):** *"Let's introduce another phase … which should tackle the question of how we can we leverage the plexamp/Plex
 server metadata that is available. Anything that can reduce the dependency on
@@ -3449,9 +3505,9 @@ consumes. **Popular tracks do remain ListenBrainz's**, 404 on that server.
 its own catalogue groupings (*Singles & EPs*, *Live Albums*, *Compilations*).
 All are there; none is asked for by anything today.
 
-### Phase 25 — Lyrion's own menus: the look
+### Phase 29 — Lyrion's own menus: the look
 
-**ID:** `ph-lyrion-menus` · numbered 25 on 2026-10-25 (24 from 2026-10-21, 23 from 2026-10-20, 22 from 2026-10-19, 21 from 2026-10-15, 20 from 2026-10-14, 19 from 2026-10-13; was 16).
+**ID:** `ph-lyrion-menus` · numbered 29 on 2026-10-25 (25 earlier that day, 24 from 2026-10-21, 23 from 2026-10-20, 22 from 2026-10-19, 21 from 2026-10-15, 20 from 2026-10-14, 19 from 2026-10-13; was 16).
 
 **Added 2026-10-12** (George, taking it out of the first public release:
 *"create a separate phase for this at the end of the current phase list"*).
