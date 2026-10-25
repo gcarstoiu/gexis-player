@@ -84,10 +84,10 @@ form is also held while the lookup runs, so the panel does not jump.
 **[S] An attribution line under the biography and the lyrics.**
 The designs have no element for it. *2026-10-25:* wrong - the 2026-09-22 drop draws
 it (mono 12 px, 0.1em, sentence case); the build draws it at 11 px, upper
-case, 0.12em, and no record says why (see *Not recorded* at the end). Wikipedia's text is CC BY-SA and
+case, 0.12em, and the build's stays (George). Wikipedia's text is CC BY-SA and
 MusicBrainz's tags are CC BY-NC-SA: the credit is a licence term, not
 decoration (ADR-0040 §4). It reads *"From Wikipedia, CC BY-SA"* or *"From
-LMS"*, in mono, under the text it credits. **This wants drawing properly.**
+LMS"*, in mono, under the text it credits. **Draw it as built.**
 
 **[S] The Release tab omits what is not known.** The design draws a label
 chip; LMS does not hold one, so for an LMS track the row simply has fewer
@@ -190,7 +190,8 @@ Enrichment, Pixabay under Display › Photo service and location.
 These are open, and Phase 9's sweep is where George settles them:
 
 *2026-10-25:* blur is ruled out for good (Finding 042 §6.16); the attribution
-line and the API-key rows are drawn (above). The scrim and the volume
+line and the API-key rows are drawn (above), the line in the build's style
+(George). The scrim and the volume
 questions have no recorded decision: the build keeps a 0.62 scrim and the
 drawer.
 
@@ -628,14 +629,17 @@ ring (2026-10-01).
   use the same strip.
 
 *Settings on a bar*
+- **[U]** Settings stays on the bar, opened from its card on Home in the
+  content area; ADR-0109 had put it on the phone only (2026-10-03) and is
+  amended (George, 2026-10-25).
 - **[U]** Sheets are 376 px tall and min(760, width - 48) wide; a confirmation
   takes its content's size, centred (2026-10-08). The value sits beside its
   slider (a 170 px + 1fr editor), an empty list is compact with a 40 px ring,
   and a long note scrolls (2026-10-24, after George found a slider's buttons
   cut off).
-- **[S]** *Attached screen* is chosen in two steps, maker then model, as in
-  `Settings.dc.html`; *Bar States* draws them side by side (see *Not
-  recorded*).
+- **[U]** *Attached screen* is chosen in two steps, maker then model, as in
+  `Settings.dc.html`, not side by side as *Bar States* draws them (George,
+  2026-10-25).
 
 *Moments*
 - **[U]** Wallpapers fill the bar by cropping up to 70 % (25 % elsewhere),
@@ -739,13 +743,3 @@ Lyrion*, *Idle*), this one marked; another opens in the same tab. Phone only.
 **[S] The touchpad** takes half the phone's height, with two-finger scrolling
 and a 1-3x pinch; over the dashboard its taps and typing become real input
 (ADR-0121, ADR-0157).
-
-### Not recorded
-
-Built this way, with no record found that chose it:
-- the attribution line's style (Now Playing, above);
-- *Attached screen* on a bar in two steps, against *Bar States*' side by side;
-- **Settings on a bar.** ADR-0109 (2026-10-03) says a bar keeps Browse and
-  Settings is on the phone only; the bar has had a Settings card since
-  2026-10-01, and George corrected its sheets on 2026-10-08 and 2026-10-24.
-  Put to George on 2026-10-25.

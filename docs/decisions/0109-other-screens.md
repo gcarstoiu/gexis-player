@@ -227,7 +227,8 @@ George, 2026-10-03, on the two points DEVELOPMENT.md still listed as owed:
 
 - **A bar keeps Browse; Settings is on the phone only** (*"already answered
   and we have designs for it. We keep browse and put settings only on the
-  phone"*). The bar designs (round 2) draw it.
+  phone"*). The bar designs (round 2) draw it. *Changed 2026-10-25
+  (below): Settings stays on the bar.*
 - **800 x 480 stays in the list, untested,** until such a screen is at hand
   (*"we leave it untested for now. No point in holding off an entire phase for
   it. Once I have one, we can test"*). It does not hold 13b's close.
@@ -535,3 +536,12 @@ has it written in a block of our own at the end of `config.txt`, with the
 restart and *Keep this screen?* of decision 5 and the same way back; a model
 picked from the list is shown by its own name, and a recognised panel not
 yet chosen as *Raspberry Pi Touch Display or compatible* (D2).
+
+## Amended 2026-10-25: Settings stays on a bar
+
+The bar has opened Settings from its card on Home, in the content area,
+since 2026-10-01, against the 2026-10-03 point above; George corrected its
+sheets on 2026-10-08 and 2026-10-24. Found while bringing
+`design/IMPLEMENTED-DIFFERENTLY.md` up to date. George, 2026-10-25: Settings
+stays on the bar, as built. There, *Attached screen* keeps its two steps,
+maker then model, rather than the side by side of the bar designs.

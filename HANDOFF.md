@@ -108,8 +108,10 @@ a dashboard card of our own (switcher, D-pad, quick actions; George's
 design in Claude Design), each with an ADR first: ADR-0161 (the D-pad)
 proposed 2026-10-25; integration 0.2.0 released with the first two. The
 brief for Claude Design is `design/briefs/19-ha-card-and-dpad-focus.md`, and
-`design/IMPLEMENTED-DIFFERENTLY.md` was brought up to date for it (its *Not
-recorded* list holds three questions for George). The branch and worktree
+`design/IMPLEMENTED-DIFFERENTLY.md` was brought up to date for it. George
+settled its three open points the same day: Settings stays on a bar
+(ADR-0109 amended); the attribution line and a bar's two-step *Attached
+screen* stay as built. The branch and worktree
 stay until the phase closes.
 
 Then, in order (`docs/DEVELOPMENT.md`; refer
