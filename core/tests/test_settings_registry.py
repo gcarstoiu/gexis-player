@@ -190,6 +190,9 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         # George, 2026-10-19: Simple, Extended or Off, one choice over
         # lms_library and lms_extended_nav.
         "library_navigation",
+        # ADR-0162 (George, 2026-10-25): the equaliser's row, which opens
+        # its own page (design/source/20); the design's Settings predates it.
+        "equaliser",
         # ADR-0055, 2026-09-23: the design has no output picker, because
         # the design did not know the device has four playback outputs and
         # that two of them cannot be turned down.
@@ -690,8 +693,9 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # **123**: the waiting screen's hint line removed (George, 2026-10-18).
     # **124**: API explorer (ADR-0152, 2026-10-19). **125**: Navigation, one
     # choice over the two switches it hides (George, 2026-10-19). **129**: the
-    # Home Assistant dashboard's four rows (ADR-0156, 2026-10-21).
-    assert len(rows) == 129
+    # Home Assistant dashboard's four rows (ADR-0156, 2026-10-21). **130**: the
+    # Equaliser, which opens its own page (ADR-0162, 2026-10-25).
+    assert len(rows) == 130
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
@@ -711,7 +715,7 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # 82 with Report this hardware (ADR-0126).
     # **81**: Software volume merged into Volume (ADR-0127). **80**: Pexels
     # removed.
-    assert len(rows) - len(kept) == 111  # 111: Screen brightness (ADR-0158 D5); 110: the Home Assistant dashboard's four rows (ADR-0156); 106: Navigation shown, its two switches hidden; 107: API explorer (ADR-0152); 106: the waiting screen's hint removed (2026-10-18); 107: Library on the screen and Personalise (ADR-0149); 105: Text size (ADR-0148); 104: Needles follow the volume (ADR-0146 amended); 103: Gain (ADR-0146); 102: Screen port and its one-port tile (ADR-0141); 100: display standby (ADR-0135); 97: the idle switch and the home background (ADR-0133, 2026-10-11); 88: Weather icon motion (Finding 118); 87: Version hidden, it repeated Release; 88: the waiting screen's two rows (ADR-0133); 86: the own wallpapers (ADR-0133); 82: the factory reset (ADR-0132); 81: Cable (ADR-0123)
+    assert len(rows) - len(kept) == 112  # 112: the Equaliser (ADR-0162); 111: Screen brightness (ADR-0158 D5); 110: the Home Assistant dashboard's four rows (ADR-0156); 106: Navigation shown, its two switches hidden; 107: API explorer (ADR-0152); 106: the waiting screen's hint removed (2026-10-18); 107: Library on the screen and Personalise (ADR-0149); 105: Text size (ADR-0148); 104: Needles follow the volume (ADR-0146 amended); 103: Gain (ADR-0146); 102: Screen port and its one-port tile (ADR-0141); 100: display standby (ADR-0135); 97: the idle switch and the home background (ADR-0133, 2026-10-11); 88: Weather icon motion (Finding 118); 87: Version hidden, it repeated Release; 88: the waiting screen's two rows (ADR-0133); 86: the own wallpapers (ADR-0133); 82: the factory reset (ADR-0132); 81: Cable (ADR-0123)
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():

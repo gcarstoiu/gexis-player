@@ -298,6 +298,9 @@ class PlaybackState:
     personalise: str | None = None
     #: ADR-0132: a factory reset was confirmed; the device restarts into it.
     resetting: bool = False
+    #: ADR-0162: the equaliser for the output in use, as `eq_control.snapshot`
+    #: gives it; None with no output.
+    equaliser: dict | None = None
 
     @property
     def controls(self) -> dict | None:
@@ -346,4 +349,5 @@ class PlaybackState:
             "settling": dict(self.settling) if self.settling else None,
             "personalise": self.personalise,
             "resetting": self.resetting,
+            "equaliser": dict(self.equaliser) if self.equaliser else None,
         }

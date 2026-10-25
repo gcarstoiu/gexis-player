@@ -74,6 +74,7 @@ class StateStore:
         self._settling: dict | None = None
         self._personalise: str | None = None
         self._resetting = False
+        self._equaliser: dict | None = None
         #: **ADR-0081: the cover the daemon found for a renderer that sent
         #: none.** `renderer_id -> (track, url)`, applied in `state` below
         #: only where the renderer's own artwork is absent. Keyed on the
@@ -131,6 +132,7 @@ class StateStore:
             settling=dict(self._settling) if self._settling else None,
             personalise=self._personalise,
             resetting=self._resetting,
+            equaliser=self._equaliser,
         )
 
     def set_active(self, renderer_id: str | None) -> None:
@@ -426,6 +428,14 @@ class StateStore:
         if self._resetting:
             return
         self._resetting = True
+        self._notify()
+
+    def set_equaliser(self, snapshot: dict | None) -> None:
+        """ADR-0162: the equaliser changed - a band, a setting, the output in
+        use, or DSD standing it aside."""
+        if snapshot == self._equaliser:
+            return
+        self._equaliser = snapshot
         self._notify()
 
     @property

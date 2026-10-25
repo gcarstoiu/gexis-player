@@ -94,6 +94,9 @@ from gexis_core.settings_registry import InvalidValue, Settings, UnknownSetting,
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
 from gexis_core import announce, backups, bluealsa_volume, components, outputs, plugin_env, plugins, uploads
+from gexis_core import eq_control
+from gexis_core.eq_engine import EqEngine
+from gexis_core.equaliser import Equaliser
 from gexis_core.setup_network import SetupNetwork
 from gexis_core.setup_flow import SetupFlow
 from gexis_core.adapters.plugin import PluginAdapter
@@ -592,6 +595,13 @@ async def main() -> None:
     # anything reads a setting.
     settings_migrations.migrate(settings_store)
     logger.info("settings: store ready at %s", settings_store.path)
+    # ADR-0162: whether the equaliser is in the chain, read from the store by
+    # every writer of output.conf - this start's included, so a player that
+    # had it on comes up with it.
+    outputs.eq_in_path = lambda card: Equaliser.from_settings(
+        settings_store.get(eq_control.KEY)).output(card).on
+    #: The equaliser's controller, made once the rest it needs exists.
+    equaliser = None
 
     # A server chosen from the Settings sheet (ADR-0044 §1's `kind: server`)
     # wins over the deployment's own address - but only from here, at
@@ -677,6 +687,8 @@ async def main() -> None:
         # ADR-0055: arbitration asks about the output the device is
         # playing to, not about the card it shipped with (Finding 048 §5).
         alsa.set_card(chosen_output.card)
+        # ADR-0162: with the equaliser on, about the loopback they play into.
+        alsa.set_renderers_card(outputs.LOOPBACK if outputs.eq_in_path(chosen_output.card) else None)
         # ADR-0117: raw values mean what this output's control says they do.
         use_scale(chosen_output.scale)
         if chosen_output.software:
@@ -692,7 +704,8 @@ async def main() -> None:
         # ADR-0055 §6: a converted chain carries no meter, so the
         # visualiser has nothing to draw and its button is not offered -
         # unless the software stage is in it (amended 2026-10-07).
-        meters_available = chosen_output.software or outputs.needs_plug(chosen_output.card) is not True
+        meters_available = (chosen_output.software or outputs.eq_in_path(chosen_output.card)
+                            or outputs.needs_plug(chosen_output.card) is not True)
 
     # The player squeezelite announces, which a rename changes (ADR-0048).
     lms_player_name = device_name.lms_player(config.lms_player_name)
@@ -1247,7 +1260,10 @@ async def main() -> None:
         # The monitor watches one card and was spawned for the old one; its
         # own loop restarts it, so ending it is enough to move it.
         volume_bridge.restart_monitor()
-        meters_chain["ok"] = chosen.software or outputs.needs_plug(chosen.card) is not True
+        # ADR-0162: with the equaliser on the meter sits over the loopback,
+        # which every output's chain can carry.
+        meters_chain["ok"] = (chosen.software or outputs.eq_in_path(chosen.card)
+                              or outputs.needs_plug(chosen.card) is not True)
         _publish_meters()
         _choose_output_mode()
         state_store.bump_settings_revision()
@@ -1278,6 +1294,7 @@ async def main() -> None:
         )
         await stop.wait()
         outputs.write(chosen, tuning=_tuning(), fixed=fixed_wanted["value"])
+        await _equaliser_follows(chosen)
         # The mixer handles open on the old card are let go of: the next
         # write opens the new one's.
         await forget_mixers()
@@ -1435,7 +1452,16 @@ async def main() -> None:
         )
         await stop.wait()
         outputs.write(chosen, tuning=_tuning(), fixed=fixed_wanted["value"])
+        await _equaliser_follows(chosen)
         await _restart_renderers(wait=wait)
+
+    async def _equaliser_follows(chosen) -> None:
+        """**ADR-0162: the equaliser follows a rewritten chain** - after the
+        file, before the renderers: arbitration asks the loopback while it
+        is in the path, and CamillaDSP starts again to read the file."""
+        alsa.set_renderers_card(outputs.LOOPBACK if outputs.eq_in_path(chosen.card) else None)
+        if equaliser is not None:
+            await equaliser.sync(restart=True)
 
     def _apply_scope_tuning(_value=None) -> None:
         """`spectrum_smoothing` and `meter_fall` both live in `output.conf`."""
@@ -2488,6 +2514,8 @@ async def main() -> None:
         registry=Settings.with_plugins(load_registry(), installed_plugins, downloads,
                                        missing=restored_missing),
         defaults={
+            # ADR-0162: the Equaliser row says what is in use.
+            "equaliser": lambda: equaliser.summary() if equaliser is not None else "Off",
             "lms_server": lambda: f"{config.lms_host}:{config.lms_port}",
             # ADR-0141 D4: both HDMI ports, read when Settings is.
             "screen_port": lambda: _port_label(screen_apply.connector_now()),
@@ -4269,6 +4297,25 @@ async def main() -> None:
     # The Lyrion servers on the network, searched for in the background so
     # a page asking is answered at once (George, 2026-10-18).
     lyrion_known = discovery.Known()
+
+    # ADR-0162: the equaliser - its engine on the loopback, and the controller
+    # the routes and the screens use. Switching it on or off rewrites the
+    # chain under the lock a change of output or volume type takes.
+    async def _equaliser_reopen(reason: str) -> None:
+        async with volume_change:
+            await _rewrite_output_conf(reason, wait=True)
+
+    equaliser_engine = EqEngine(on_change=lambda status: equaliser.publish() if equaliser is not None else None)
+    equaliser = eq_control.EqualiserControl(
+        settings_store, equaliser_engine,
+        output=lambda: _with_software(outputs.in_force(settings.value("output_device"))[0]),
+        fixed=lambda: fixed_now["value"],
+        reopen=_equaliser_reopen,
+        publish=state_store.set_equaliser,
+        changed=state_store.bump_settings_revision,
+    )
+    asyncio.ensure_future(equaliser.sync())
+
     state_server = StateServer(
         state_store,
         lyrion_known=lyrion_known,
@@ -4287,6 +4334,7 @@ async def main() -> None:
         dashboard=dashboard,
         dashboard_page=dashboard_page,
         panel_input=panel_input,
+        equaliser=equaliser,
         # Phase 7 (ADR-0038): the same server, and the same player, the
         # renderer adapter talks to.
         library=library,
