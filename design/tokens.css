@@ -181,3 +181,33 @@
   --focus-arrow-dim:            0.35;  /* opacity of the other arrow meanwhile */
   --focus-z:                    200;  /* its layer, above every sheet and drawer */
 }
+
+/* ---- Phase 20: the equaliser (2026-10-25) ------------------------------
+   Extracted from source/20/Equaliser.dc.html. George chose look 3a,
+   "Ridge". The fill is one vertical gradient over the whole +12 to -12 box. */
+:root {
+  --eq-ridge-fill: linear-gradient(180deg,
+    rgba(242,179,94,0.95) 0%, rgba(239,143,122,0.75) 30%, rgba(239,143,122,0.26) 50%,
+    rgba(127,176,220,0.26) 50%, rgba(127,159,230,0.75) 70%, rgba(164,140,232,0.95) 100%);
+  --eq-line:                    #f4f1ea;  /* the line, the knob rings, a dragged knob's centre */
+  --eq-line-width:              2.5px;    /* phone 2px */
+  --eq-knob:                    34px;     /* panel and bar; ring 4px */
+  --eq-knob-ring:               4px;
+  --eq-knob-core:               #0d151c;
+  --eq-knob-shadow:             0 3px 10px rgba(0,0,0,0.5);
+  --eq-knob-drag-halo:          0 0 0 8px rgba(244,241,234,0.18);
+  --eq-row-knob:                26px;     /* phone rows; ring 3px */
+  --eq-dot:                     12px;     /* phone curve; ring 2px */
+  --eq-zero-line:               rgba(233,238,242,0.3);   /* over the fill */
+  --eq-edge-line:               rgba(233,238,242,0.05);  /* +12 and -12 */
+  --eq-centre-line:             rgba(233,238,242,0.1);   /* 1px dashed, each band */
+  --eq-col-drag:                rgba(233,238,242,0.05);  /* the dragged band's column */
+  --eq-boost-low:               rgb(239,143,122);  /* value colour: mix low to high by |g| / 12 */
+  --eq-boost-high:              rgb(242,179,94);
+  --eq-cut-low:                 rgb(127,176,220);
+  --eq-cut-high:                rgb(164,140,232);
+  --eq-zero-ink:                rgba(233,238,242,0.6);
+  --eq-glide:                   380ms;    /* each band, ease-out cubic */
+  --eq-glide-ease:              cubic-bezier(0.33,1,0.68,1);
+  --eq-glide-step:              32ms;     /* band i starts i x step after the lowest */
+}

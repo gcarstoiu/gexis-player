@@ -23,6 +23,7 @@ are all final unless a row below says otherwise. Recreate them exactly.
 | `source/*.dc.html` | The full interactive design — Now Playing, Settings, Setup (phone) and Panel Setup. Open in a browser. |
 | `source/13b/` | Phase 13b, other screens. Open `Screen Families Chosen.dc.html`. |
 | `source/19/` | Phase 19: the Home Assistant card and the D-pad's focus, with a PNG per state (the PNGs kept out of git). Read its `README.md`. |
+| `source/20/` | Phase 20: the equaliser, its editor on panel, bars and phone and the quick change. George chose look 3a. Read its `README.md` (the backdrop PNGs in `eq/` kept out of git). |
 | `assets/` | Service marks and the two sample images. |
 
 ---
