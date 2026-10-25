@@ -600,6 +600,111 @@ async def test_the_phones_home_now_playing_and_lyrics_reach_the_panel():
         assert (await client.post("/panel/go/sideways")).status == 404
 
 
+class _Keys:
+    def __init__(self):
+        self.pressed = []
+
+    async def dpad(self, name):
+        self.pressed.append(name)
+        return True
+
+
+class _Standby:
+    def __init__(self, off=False):
+        self.off = off
+        self.woken = []
+
+    @property
+    def may_be_dark(self):
+        return self.off
+
+    def used(self):
+        pass
+
+    async def wake(self, reason):
+        self.woken.append(reason)
+        self.off = False
+
+
+class _PeppyUp(_Peppy):
+    def __init__(self, up=False):
+        super().__init__()
+        self.up = up
+
+    def on_touch(self):
+        super().on_touch()
+        self.up = False
+
+
+class _Headless:
+    def __init__(self, headless):
+        self.headless = headless
+
+    def value(self, key):
+        from gexis_core.settings_registry import UnknownSetting
+        if key != "headless":
+            raise UnknownSetting(key)
+        return self.headless
+
+
+@pytest.mark.asyncio
+async def test_a_d_pad_press_becomes_a_key_on_the_panel():
+    """ADR-0161 D6: each of the six keys pressed on the virtual keyboard,
+    attention first; anything else refused."""
+    keys, peppy = _Keys(), _PeppyUp()
+    server = StateServer(StateStore(_caps("lms")), peppy=peppy, panel_input=keys, settings=_Headless(False))
+    async with TestClient(TestServer(server.make_app())) as client:
+        for key in ("up", "down", "left", "right", "ok", "back"):
+            r = await client.post("/panel/key", json={"key": key})
+            assert r.status == 200 and await r.json() == {"key": key}
+        assert keys.pressed == ["up", "down", "left", "right", "ok", "back"] and peppy.touches == 6
+        assert (await client.post("/panel/key", json={"key": "home"})).status == 400
+        assert (await client.post("/panel/key", json=["up"])).status == 400
+        assert (await client.post("/panel/key", data="up")).status == 400
+    assert keys.pressed == ["up", "down", "left", "right", "ok", "back"]
+
+
+@pytest.mark.asyncio
+async def test_a_d_pad_press_on_a_dark_screen_or_the_visualiser_only_wakes_it():
+    """ADR-0161 D4: as a first touch does - the press is not passed on."""
+    keys, standby = _Keys(), _Standby(off=True)
+    server = StateServer(StateStore(_caps("lms")), peppy=_PeppyUp(), panel_input=keys, standby=standby,
+                         settings=_Headless(False))
+    async with TestClient(TestServer(server.make_app())) as client:
+        assert await (await client.post("/panel/key", json={"key": "ok"})).json() == {"key": "ok", "woke": True}
+        assert standby.woken == ["key"] and keys.pressed == []
+        assert await (await client.post("/panel/key", json={"key": "ok"})).json() == {"key": "ok"}
+        assert keys.pressed == ["ok"]
+    keys, peppy = _Keys(), _PeppyUp(up=True)
+    server = StateServer(StateStore(_caps("lms")), peppy=peppy, panel_input=keys, settings=_Headless(False))
+    async with TestClient(TestServer(server.make_app())) as client:
+        assert (await (await client.post("/panel/key", json={"key": "down"})).json())["woke"] is True
+        assert keys.pressed == [] and peppy.up is False
+        assert await (await client.post("/panel/key", json={"key": "down"})).json() == {"key": "down"}
+
+
+@pytest.mark.asyncio
+async def test_back_over_the_dashboard_takes_it_down_and_a_headless_player_refuses():
+    """ADR-0161 D2: the keys would go to Home Assistant's own page; D6: a
+    player without a screen has nothing to move around."""
+    from gexis_core.dashboard import Dashboard
+
+    store = StateStore(_caps("lms"))
+    dashboard = Dashboard(publish=lambda shown, by: store.set_panel(dashboard={"shown": shown, "by": by}))
+    dashboard.show("asked")
+    keys = _Keys()
+    server = StateServer(store, panel_input=keys, dashboard=dashboard, settings=_Headless(False))
+    async with TestClient(TestServer(server.make_app())) as client:
+        assert await (await client.post("/panel/key", json={"key": "down"})).json() == {"key": "down"}
+        assert await (await client.post("/panel/key", json={"key": "back"})).json() == {"key": "back",
+                                                                                         "dashboard": "hidden"}
+        assert dashboard.shown is False and keys.pressed == ["down"]
+    server = StateServer(StateStore(_caps("lms")), panel_input=keys, settings=_Headless(True))
+    async with TestClient(TestServer(server.make_app())) as client:
+        assert (await client.post("/panel/key", json={"key": "ok"})).status == 409
+    assert keys.pressed == ["down"]
+
+
 @pytest.mark.asyncio
 async def test_the_panel_says_whether_its_lyrics_are_shown():
     store = StateStore(_caps("lms"))
