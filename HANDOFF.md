@@ -27,9 +27,11 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.5.0, on Testing** (2026-10-24; Testing serial 55, its
-signature good from the release key, read back with `gh release download
-channels`; Stable unchanged at serial 8, 1.3.1). Tag `v1.5.0` on the
+**Current release: 1.5.0, on Stable** (promoted 2026-10-25 at George's word:
+Stable serial 9, Testing serial 55 since 2026-10-24, both signatures good
+from the release key, read back with `gh release download channels`; the
+public `gexis-player.img.xz` passes its checksum and signature and
+decompresses to the checked image; r1.5.0 is GitHub's latest). Tag `v1.5.0` on the
 release-notes commit `bfb0f647`; `next` and `release-1.5.0` pushed there.
 Image `image/deploy/2026-10-24-gexis-player-v1.5.0.img` (`verify-image.sh`
 123/123, 978 skins clean); parts `ours-17e046a32cf3`, `skins-67e037cab00f`,
@@ -41,16 +43,19 @@ What it carries: Phase 17's DSI screens, Phase 19's player side (`id`,
 sheets that fit, pictures tried again, the tray staying open), the Lyrion
 server and bar wallpaper fixes. **PR #82 was merged by George**
 (2026-10-25); `main` is merged into `docs` and `next`, `release-1.5.0` and its
-worktree are gone, and the routine clean-up ran. Promotion to Stable is
-George's call.
+worktree are gone, and the routine clean-up ran. **PR #83** (README: 1.5.0
+is the current release; branch `readme-1.5.0`, worktree
+`~/projects/gexis-player-readme`) waits for George; the same line is on
+`docs` and `next`.
 
 **The release key** moved to `~/projects/gexis-release-key` (George,
 2026-10-24): every release command sets
 `GEXIS_RELEASE_GNUPGHOME=~/projects/gexis-release-key`; the scripts default
 to `~/.gnupg-gexis-release`, which no longer exists.
 
-**The players** (2026-10-25): ShelvesPi runs the bar fixes' preview (ui and
-player `1.4.0+git69.eed6457`, core `1.4.0+git53.5b660b4`), sofapi the
+**The players** (2026-10-25): ShelvesPi runs 1.5.0 (the four bar fixes
+checked there by George, all fine, 2026-10-25; no debug drop-in or DevTools
+port left), sofapi the
 Phase 19 preview (core and player `1.4.0+git49.c4af394`, ui
 `1.4.0+git24.e505054`), bedroompi `preview-1023` (core and player
 `1.4.0+git45.561e337`, ui `1.4.0+git36.b8793e5`, system
@@ -111,7 +116,16 @@ brief for Claude Design is `design/briefs/19-ha-card-and-dpad-focus.md`, and
 `design/IMPLEMENTED-DIFFERENTLY.md` was brought up to date for it. George
 settled its three open points the same day: Settings stays on a bar
 (ADR-0109 amended); the attribution line and a bar's two-step *Attached
-screen* stay as built. The branch and worktree
+screen* stay as built. George handed the brief to Claude Design
+(2026-10-25); the card's look (Home Assistant's theme or the player's) is
+settled in the design. **0.2.0 on George's Home Assistant:** no update
+offered, and after a forced re-download no new entities and no icon. On the
+Docker Home Assistant (2026.10.3) 0.2.0 adds the three buttons to an entry
+made under 0.1.0 and serves `brand/icon.png` (local brand images since
+2026.3); the likely cause is HACS not yet knowing 0.2.0 (re-download
+fetching 0.1.0) or no restart. George was given *Update information*, then
+0.2.0 and a restart; the public brands site has no gexis image, so HACS's
+own list shows none. The branch and worktree
 stay until the phase closes.
 
 Then, in order (`docs/DEVELOPMENT.md`; refer

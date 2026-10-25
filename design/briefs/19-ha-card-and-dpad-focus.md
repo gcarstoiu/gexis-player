@@ -5,9 +5,9 @@ want it: [ADR-0160](../../docs/decisions/0160-the-player-in-home-assistant.md)
 (the player in Home Assistant, with George's findings after trying it) and
 [ADR-0161](../../docs/decisions/0161-a-d-pad-on-the-panel.md) (the D-pad,
 proposed). What is built and differs from the earlier designs is in
-[`IMPLEMENTED-DIFFERENTLY.md`](../IMPLEMENTED-DIFFERENTLY.md). Still open
-with George: whether the card follows Home Assistant's look (as below) or the
-player's.
+[`IMPLEMENTED-DIFFERENTLY.md`](../IMPLEMENTED-DIFFERENTLY.md). Whether the
+card follows Home Assistant's look (as below) or the player's is settled in
+the design (George, 2026-10-25).
 
 ---
 
