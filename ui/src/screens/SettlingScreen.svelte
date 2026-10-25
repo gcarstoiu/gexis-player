@@ -56,7 +56,7 @@
   }
 </script>
 
-<div class="settle" role="dialog" aria-modal="true" aria-label={title}>
+<div class="settle" role="dialog" aria-modal="true" aria-label={title} data-dpad-off>
   <div class="card">
     <div class="title">{title}</div>
     <div class="note">

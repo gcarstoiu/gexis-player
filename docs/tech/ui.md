@@ -236,6 +236,35 @@ flowchart TD
   Pan --> PP[PanelPointer]
 ```
 
+### The D-pad (ADR-0161)
+
+`lib/dpad.js`, started by `App.svelte` on the panel only, answers a
+keyboard's arrows, Enter and Escape - from the core's virtual keyboard (Home
+Assistant's remote, `POST /panel/key`) or a USB keyboard; made-up events are
+ignored. It moves a ring (`.dpad-ring`, styled in `styles/tokens.css` from
+the design's tokens) to the nearest control in the pressed direction within
+the topmost layer, scrolling lists to keep it in view. Screens take part by
+attributes and two events, so a new screen needs nothing in the module:
+
+| | |
+|---|---|
+| `role="dialog"`, `data-dpad-layer` | an overlay the focus is kept inside while it is open |
+| `data-dpad-main` | the control a screen or layer starts on |
+| `data-dpad-start` | the area whose first item a screen starts on |
+| `data-dpad-back` | what Back presses (a screen's Back, Minimise, Cancel) |
+| `dpadback` event | a layer closing itself on Back (`preventDefault()` when done) |
+| `dpadstep` event | Left or Right on a custom slider (`detail.step`: +1 or -1) |
+| `data-dpad-box` | inside a control: the parts the ring goes round |
+| `data-dpad-ring="inset"` / `"outside"` | the ring's form, where the rule would choose the other |
+| `data-dpad-skip`, `data-dpad-off` | not a stop; a screen the D-pad leaves alone (setup, updates) |
+| `data-dpad-cover` | a screen over everything (the idle screen, a takeover's): no ring while it is up, and a press only takes it down |
+
+A touch hides the ring, and so does the phone's touchpad: its moves and taps
+are made up in the page, so `PanelPointer.svelte` says so with a
+`panelpointer` event. The ring leaves a layer the moment it closes (a
+`MutationObserver` on the page, besides a check four times a second) and
+lands on the control beneath 150 ms later.
+
 ---
 
 ## 6. Which screen shows: navigation

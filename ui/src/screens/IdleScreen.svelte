@@ -303,7 +303,7 @@
 
 <svelte:window bind:innerHeight={panelHeight} bind:innerWidth={panelWidth} />
 
-<div class="idle" class:idle--bar={bar} transition:fade={{ duration: 520 }} style:--stroke={stroke}>
+<div class="idle" class:idle--bar={bar} transition:fade={{ duration: 520 }} style:--stroke={stroke} data-dpad-cover>
   <!-- The picture, shared with the waiting screen (ADR-0133). -->
   <Backdrop {settings} active={!external} bind:picture bind:shown />
   {#if !external}

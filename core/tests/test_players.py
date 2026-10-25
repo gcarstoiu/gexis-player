@@ -133,11 +133,15 @@ async def test_the_status_carries_the_id_and_whether_there_is_a_screen(tmp_path,
     from gexis_core.state import StateStore
 
     monkeypatch.setattr(wsserver, "own_id", lambda: "0123456789abcdef")
-    registry = [{"id": "g", "label": "G", "rows": [{"key": "headless", "type": "toggle", "default": False}]}]
-    settings = Settings(SettingsStore(tmp_path / "s.db"), registry=registry, wired={"headless": None})
+    registry = [{"id": "g", "label": "G", "rows": [{"key": "headless", "type": "toggle", "default": False},
+                                                   {"key": "idle_enabled", "type": "toggle", "default": False}]}]
+    settings = Settings(SettingsStore(tmp_path / "s.db"), registry=registry, wired={"headless": None, "idle_enabled": None})
     server = wsserver.StateServer(StateStore({}), settings=settings)
     async with TestClient(TestServer(server.make_app())) as client:
         status = await (await client.get("/player/status")).json()
         assert status["id"] == "0123456789abcdef" and status["screen"] is True
+        assert status["idle_screen"] is False
+        settings.set("idle_enabled", True)
+        assert (await (await client.get("/player/status")).json())["idle_screen"] is True
         settings.set("headless", True)
         assert (await (await client.get("/player/status")).json())["screen"] is False
