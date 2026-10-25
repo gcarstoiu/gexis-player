@@ -3185,6 +3185,11 @@ through HACS. Each gets an ADR before it is built.
    what plays with its transport, and carries the D-pad and the quick
    actions; built from George's design.
 
+**Criteria 6 and 7 built 2026-10-25** from George's design (ADR-0161,
+ADR-0163): the D-pad on `ph-home-assistant`, the remote and the card in the
+integration's `remote-and-card` (0.3.0); checked with mocked data, on
+sofapi as a preview, waiting for George's check.
+
 ### Phase 20 — A simple equaliser
 
 **ID:** `ph-equaliser` · added 2026-10-25 as 20, before room correction (George).

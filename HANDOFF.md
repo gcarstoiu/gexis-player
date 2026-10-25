@@ -117,8 +117,17 @@ the integration's 0.2.0 (released 2026-10-25), the documents on
 `ph-home-assistant`; a D-pad for the panel and
 a dashboard card of our own (switcher, D-pad, quick actions; George's
 design in Claude Design), each with an ADR first: ADR-0161 (the D-pad)
-accepted 2026-10-25 (George; its focus look comes from the design, and
-nothing is built before it arrives, George the same day). HACS's default
+accepted 2026-10-25 (George). **Both built 2026-10-25 from George's design**
+(`design/source/19/`: the card in the player's look, the teal ring, Jump;
+the choices while building delegated to Claude and recorded in ADR-0161 and
+ADR-0163): the D-pad on `ph-home-assistant` (`POST /panel/key`,
+`ui/src/lib/dpad.js`), checked with mocked data at 1280x800, 1850x400 and
+1280x400; the remote and the card in the integration's branch
+`remote-and-card` (0.3.0, 30 tests, hassfest clean; not released). **sofapi
+runs the preview** (core 1.5.0+git44.94ca2b7, ui and player
+1.5.0+git47.6789276, system 1.4.0+git29.d93d43f; installed while paused,
+core and kiosk restarted, `/panel/key` served): waiting for George's check
+and his choice of how 0.3.0 reaches his Home Assistant. HACS's default
 list (our icon in HACS's store): not before Phase 19 is finished (George,
 2026-10-25). The
 brief for Claude Design is `design/briefs/19-ha-card-and-dpad-focus.md`, and
