@@ -3,7 +3,8 @@
 **Status:** **Accepted** — 2026-10-25, Claude, the decisions delegated by
 George (he asked for the card to be built from his design with the choices
 around it left to Claude, and shown to him to verify). **Built** the same day
-in the integration's branch `remote-and-card` (0.3.0, not released). Phase 19
+and released in the integration's 0.3.0 (George asked for the release, to
+check it). Phase 19
 (`ph-home-assistant`), criterion 7. Builds on
 [ADR-0160](0160-the-player-in-home-assistant.md) (the integration) and
 [ADR-0161](0161-a-d-pad-on-the-panel.md) (the D-pad, its `remote` entity).
