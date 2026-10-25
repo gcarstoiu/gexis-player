@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-24 (on R2D2).
+Last updated: 2026-10-25 (on R2D2).
 
 ## Start here
 
@@ -40,7 +40,8 @@ gexis-ui `1.4.0+git88.eaca532`, gexis-system `1.4.0+git29.d93d43f`.
 What it carries: Phase 17's DSI screens, Phase 19's player side (`id`,
 `screen`), the bar fixes (the tray's buttons on the first tap, settings
 sheets that fit, pictures tried again, the tray staying open), the Lyrion
-server and bar wallpaper fixes. **PR #82 into `main` is open for George**;
+server and bar wallpaper fixes. **PR #82 into `main` is open for George**,
+its checks green since 2026-10-25 (the cancelled `next` run re-run);
 after his merge: `main` into `docs` and `next`, delete `release-1.5.0` and its
 worktree, the routine clean-up. The Home Assistant integration's 0.1.0 is
 released on its own repository the same evening.
@@ -136,7 +137,7 @@ it). Phase 18 closed on 2026-10-22 with 1.4.0.
 **In progress: Phase 19, the player in Home Assistant** (`ph-home-assistant`,
 moved up and started 2026-10-24). **ADR-0160 accepted** the same day:
 our own integration `gexis` in a new public repository
-(`gcarstoiu/gexis-player-homeassistant`, not created yet), a media player
+(`gcarstoiu/gexis-player-homeassistant`), a media player
 plus *Screen*, *Dashboard* and *Visualiser* switches, `id` and `screen` on
 `/player/status`; tested against a Home Assistant in Docker that hears
 nothing on the network, a test player added by address. **Built:** the
@@ -154,15 +155,17 @@ Assistant 2026.10.3 in Docker (`~/projects/scratch/ha-test`, container
 0 underruns, 0 XRUNs; the logging drop-in removed). **Open:** criterion 1 on
 George's own Home Assistant. **On GitHub:**
 `gcarstoiu/gexis-player-homeassistant` (public, 2026-10-24; tests, hassfest
-and HACS pass; no release yet - 0.1.0 goes out with the player release that
-carries `id`). The documents (D6) are on `ph-home-assistant`: manual *The
-player in Home Assistant*, FAQ, README feature row, `docs/tech/api.md`.
+and HACS pass; 0.1.0 released with 1.5.0). The player's side and the
+documents (D6: manual *The player in Home Assistant*, FAQ, README feature
+row, `docs/tech/api.md`) are on `next`, in 1.5.0.
 
 Then, in order (`docs/DEVELOPMENT.md`; refer
-to them by ID): **20** room correction for the bass
-(`ph-room-correction`), **21** room correction for the full range
-(`ph-room-correction-full`), **22** themes (`ph-themes`), **23** the
-library answers for itself (`ph-library`), **24** Lyrion's own menus' look
+to them by ID): **20** a simple equaliser (`ph-equaliser`, added
+2026-10-25: presets and a manual setup in CamillaDSP, the filter stage room
+correction then reuses), **21** room correction for the bass
+(`ph-room-correction`), **22** room correction for the full range
+(`ph-room-correction-full`), **23** themes (`ph-themes`), **24** the
+library answers for itself (`ph-library`), **25** Lyrion's own menus' look
 (`ph-lyrion-menus`); MPD is parked (`ph-mpd`, ADR-0151). Each ADR first. **Raspberry Pi Imager**
 (ADR-0159, a task, not a phase): the install guide is corrected; our own
 Imager list and Imager's settings not now; Imager's own list stays open, as
@@ -180,7 +183,7 @@ every merged release PR, otherwise weekly on Sunday evening. **Last run:
 Closed: 0-18 (13 with letters a-f; Phase 15, the public API, on
 2026-10-19 with 1.2.0; Phase 16, optical, with 1.3.0; Phase 18, the Home
 Assistant dashboard, with 1.4.0; Phase 17, DSI screens, for 1.5.0). Phases are numbered consecutively without letters,
-each with a stable ID (George, 2026-10-13); the open ones are 19-24, with
+each with a stable ID (George, 2026-10-13); the open ones are 19-25, with
 MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
 
 ## Machines
@@ -201,6 +204,10 @@ The full list, with how each was found, is in the archive (2026-10-12 block).
   and the notes are core's last change - a documents fix committed after them
   and tagged built core as `1.3.1+git67`. A fix found after the notes goes in
   *before* them (reorder the unpushed commits), then the tag.
+- **A cancelled run blocks the release PR** (1.5.0, 2026-10-24): pushing
+  `next` again cancels the run on the release commit, and `main`'s ruleset
+  counts a cancelled *Core tests* as failed, though the PR's own run passed.
+  Re-run it (`gh run rerun <id>`), or push `next` once.
 
 **Building**
 - **Clear space with `make prune`, never `make clean`**: `clean` destroys the
