@@ -104,7 +104,8 @@ gains *Music on this player or a share* (MPD); until then it is Lyrion's.
 
 ## Settings (ADR-0022)
 
-Proposed, not appended until George confirms:
+Proposed, not appended until George confirms (*Library on the screen*
+appended to ADR-0022 on 2026-10-18):
 
 - **[N] Library on the screen** - on / off; on by default, off from question
   1's second answer. Display (or Sources), beside the Lyrion client row,
@@ -124,6 +125,12 @@ Proposed, not appended until George confirms:
    code to it and then the downloads.
 4. Claude Design draws part 2 on the phone, the panel's QR and download
    screens (10.1", bars), and the shorter part 1, once 1-2 are settled.
+
+*Settled, all four* (closed on the record 2026-10-25, George): 1 and 4 with
+Claude Design's hand-off, given to build on 2026-10-18 and tested by George
+as Phase 14; 2 on 2026-10-18 - *Library on the screen* in Sources → Lyrion
+Client (ADR-0022), part of the one *Navigation* choice (Simple, Extended,
+Off) since 2026-10-19.
 
 ## Not decided here
 
