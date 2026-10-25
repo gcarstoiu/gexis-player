@@ -105,7 +105,11 @@ shown and not chosen, and *Home*, *Now playing* and *Lyrics* buttons - built
 on the integration's branch `quick-actions` (20 tests, hassfest clean; not
 released), the documents on `ph-home-assistant`; a D-pad for the panel and
 a dashboard card of our own (switcher, D-pad, quick actions; George's
-design in Claude Design), each with an ADR first. The branch and worktree
+design in Claude Design), each with an ADR first: ADR-0161 (the D-pad)
+proposed 2026-10-25; integration 0.2.0 released with the first two. The
+brief for Claude Design is `design/briefs/19-ha-card-and-dpad-focus.md`, and
+`design/IMPLEMENTED-DIFFERENTLY.md` was brought up to date for it (its *Not
+recorded* list holds three questions for George). The branch and worktree
 stay until the phase closes.
 
 Then, in order (`docs/DEVELOPMENT.md`; refer

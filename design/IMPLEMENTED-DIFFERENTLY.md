@@ -3,6 +3,12 @@
 **For Claude Design, 2026-09-18.** George asked for a diff so the mockups can
 be brought up to date before Phase 9's UI sweep.
 
+**Brought up to date 2026-10-25**, for Phase 19's brief
+([`briefs/19-ha-card-and-dpad-focus.md`](briefs/19-ha-card-and-dpad-focus.md)).
+Everything since 2026-09-29 is in the last section, *Changed since
+2026-09-29*; an entry above that is no longer true carries a dated note
+under it. The pictures in `implemented/` are still those of 2026-09-28.
+
 `design/source/` is locked and built from, never edited, so the shipped panel
 has drifted from it in ways that are recorded per decision but never
 collected. This is that collection. Everything here is deliberate and has a
@@ -40,10 +46,15 @@ really blinks... remove the entire animation from both directions"*). The
 backdrop stays put and the swap is the whole effect. The library and Settings
 are also **mounted only while open** - left in the page at opacity 0, the
 closed library covered now playing in black.
+*2026-10-25:* the library now stays mounted, hidden, under Now Playing and
+Settings, so Minimise returns to it as it was (ADR-0122, 2026-10-06).
 
 **[U] Press feedback shrinks; it does not fill.**
 The design's grey press fill read as a flash. Controls keep their resting
 fill and scale to 0.95 (the mini strip to 0.995).
+*2026-10-25:* except the library's and Lyrion's rows, where a tap shows only
+the teal selection, with no press effect (George, 2026-10-21); Home's cards
+keep it.
 
 **[U] The volume glyph is the drawer's 30 px one everywhere**, including now
 playing's button and the mini strip, not the design's 26 px and 24 px
@@ -52,19 +63,28 @@ variants, whose three arcs merge at full volume.
 **[U] The volume drawer opens on a change from elsewhere.** A phone's volume
 change raises it; it closes 3 s after the last change. The panel's own
 changes and a takeover's restored level do not open it.
+*2026-10-25:* only a drawer opened by a change from elsewhere hides itself,
+after *Drawer auto-hide* (1-30 s, Display › Volume). One the user opened
+stays until it is closed, the visualiser takes over or Home opens; a change
+from elsewhere leaves it alone (George, 2026-10-24; ADR-0022). On a bar the
+same holds for its tray.
 
 ---
 
 ## Now playing
 
 **[S] The tabs are Track, Lyrics, Artist, Release - all four now work.**
+*2026-10-25:* on the standard screens; a bar's Now Playing has no tabs
+(13b).
 The design's Track panel has two forms and both are built: the tall block,
 and a **compact one when the track has synced lyrics** - title, artist and
 album on one line, a rule, then the words following the playhead. The compact
 form is also held while the lookup runs, so the panel does not jump.
 
 **[S] An attribution line under the biography and the lyrics.**
-The designs have no element for it. Wikipedia's text is CC BY-SA and
+The designs have no element for it. *2026-10-25:* wrong - the 2026-09-22 drop draws
+it (mono 12 px, 0.1em, sentence case); the build draws it at 11 px, upper
+case, 0.12em, and no record says why (see *Not recorded* at the end). Wikipedia's text is CC BY-SA and
 MusicBrainz's tags are CC BY-NC-SA: the credit is a licence term, not
 decoration (ADR-0040 §4). It reads *"From Wikipedia, CC BY-SA"* or *"From
 LMS"*, in mono, under the text it credits. **This wants drawing properly.**
@@ -85,6 +105,10 @@ photos" and drew initials. That was wrong: LMS's Music & Artist Information
 plugin has them, and fanart.tv has better ones. The grid shows the plugin's
 photo, the artist page prefers fanart's, and **the initial is the fallback**,
 not the rule (ADR-0040 §1).
+*2026-10-25:* the grid now shows fanart's portrait too, after *Update artist
+portraits*, then Lyrion's photo, then the initial; one lookup serves the
+grid, the artist page and the renderers, and a picture that failed is tried
+again (ADR-0059, ADR-0075; Finding 125).
 
 **[S] The artist page's About block is measured, not fixed.** It takes as
 much height as is left while the first row of albums still shows a quarter of
@@ -136,12 +160,17 @@ playlist"* when there is nothing to name.
 
 ## Settings
 
-**[S] 54 rows, 6 wired.** The design's seven groups are intact and the keys
+**[S] 54 rows, 6 wired.** *2026-10-25:* 8 categories, 129 rows, 18 of them never
+shown; every shown row that takes a value works. The structure since is in
+the last section. The design's seven groups are intact and the keys
 match, with four deviations already recorded: `idle_grace` merged into
 `idle_timeout`; `travel_curve` decided; `drawer_on_external` and
 `drawer_autohide` added under Display › Panel; and two new keys the design
 has no row for - **`listenbrainz_token`** and **`fanart_key`**, both per-user
 API keys (ADR-0022). Those two want drawing.
+*2026-10-25:* built as the drop draws them (a secret field with a
+placeholder); four keys now - ListenBrainz, fanart.tv and TheAudioDB under
+Enrichment, Pixabay under Display › Photo service and location.
 
 ---
 
@@ -159,6 +188,11 @@ API keys (ADR-0022). Those two want drawing.
 ## What the sweep has not decided yet
 
 These are open, and Phase 9's sweep is where George settles them:
+
+*2026-10-25:* blur is ruled out for good (Finding 042 §6.16); the attribution
+line and the API-key rows are drawn (above). The scrim and the volume
+questions have no recorded decision: the build keeps a 0.62 scrim and the
+drawer.
 
 - Whether a sheet without its blur reads as enough separation, or wants a
   darker scrim (free, measured).
@@ -194,17 +228,23 @@ all, so a directory-shaped option would have handed a spectrum to someone
 who asked for a needle — and two of the four words would have offered
 nothing (ADR-0019 as amended, ADR-0051). The fourth word was `Random` until
 George renamed it: `skin_rotate` is the one that is random.
+*2026-10-25:* seven words now, with *Fanart* (ADR-0112), and the row is
+labelled *Skin type*.
 
 **[U] The `device_name` warning is a different sentence.** The drop says
 saving *"restarts the services that carry the name. Anything playing
 stops."* ADR-0048 writes all four services and applies none of them until
 the next restart, so on this device nothing stops. The row reads *"Change
 only takes place after a restart of the device."*
+*2026-10-25:* saving the name from Settings now restarts the device, and the
+row says so (ADR-0048 amended 2026-10-05).
 
 **Two type sizes are pinned rather than grown**, pending George: the drop
 moves `--t-artist` 25 → 35 and `--t-lead` 22 → 25 for the Track header, and
 the Artist tab's name and the Release tab's title used those tokens. The
 drop changes neither panel, so both keep the size they had.
+*2026-10-25:* George chose to grow both (2026-09-22): the Artist tab's name
+is 35 px and the Release tab's title 25 px.
 
 ## Changed on 2026-09-26
 
@@ -232,19 +272,26 @@ and the join QR code are hidden in them**, and personal values (a location, a
 network address) are blanked in two Settings pictures. The phone's setup page
 has one picture, from George's phone (2026-09-29).
 First-time setup is on branch `phase-13` (PR #37) until it merges.
+*2026-10-25:* merged 2026-09-29. Since 2026-10-18 first use is in two parts
+(ADR-0149, the `14-first-use` design): Music, Visualiser and Plugins moved
+to the second.
 
 ### Settings
 
 **[S] New rows.** Each is in `core/src/gexis_core/settings_registry.json`:
 - **Audio → Starting volume** (`start_max`): the loudest Spotify starts at when
   it takes over (ADR-0054 §5). *settings-audio-starting-volume.png*
+  *2026-10-25:* now beside Spotify's switch, under Sources › Spotify Connect.
 - **Display → Clock format** (`clock_format`), 24 h / 12 h, under Clock
   (George, 2026-09-28). In 12 h the idle clock drops the leading zero and puts
   am/pm after the seconds, at their size. *settings-display-clock-format.png*
 - **Display → the animated skins' rows**: `skin_motion`, `record_speed`
   (ADR-0096) and `rotation_mode`, Stepped / Smooth (ADR-0097), in
   **Visualisation tweaks**, which was *Meters and spectrum tweaks*.
+  *2026-10-25:* now *Visualiser tweaks*.
 - **System → Debug logs** (`debug_logs`), a switch, off by default (ADR-0103).
+  *2026-10-25:* Device merged into System on 2026-10-10: Debug logs is in
+  System › Help, Legal and Credits in System › About.
 - **System → Legal** and **System → Credits** (ADR-0099): document rows that
   open a full-screen reader, generated from one inventory
   (`core/src/gexis_core/notices.json`). *settings-system-debug-legal-credits.png,
@@ -252,7 +299,8 @@ First-time setup is on branch `phase-13` (PR #37) until it merges.
 
 **[U] Plugins sit under their area** (George: *"beszel is system, plexamp in
 sources"*): the Plugins page is headed **Sources** and **System**, by the
-plugin's kind. *settings-plugins.png*
+plugin's kind. *settings-plugins.png* *2026-10-25:* four headings now - Visualiser,
+Library, Sources, System (ADR-0111, ADR-0150).
 
 **[U] A plugin's download lives inside its own row** (George: *"The status
 and the download need to be part of the pill itself otherwise it floats"*).
@@ -279,6 +327,8 @@ the visualiser's badge. It is square.
 for a larger sheet), the panel's volume slider with its percentage, and two
 toggles that act on the panel and show what it shows: the visualiser and the
 idle screen. *phone-settings-mini-player.png, phone-system.png*
+*2026-10-25:* the two toggles became a dock - see *The phone* in the last
+section.
 
 **[S] Settings as a bookmark with the gexis mark** (ADR-0102): a web manifest
 and the gexis sound mark as the icon; Android offers a bookmark, not an
@@ -404,3 +454,298 @@ in the tile."* The tile holds the file's name and *Ready*; below it, one
 block per Settings section in the design's own ticked list - the left
 column of its *Split* block, drawn without the right column when that is
 empty (ADR-0131 amended 2026-10-18).
+
+## Changed since 2026-09-29
+
+**For Claude Design, 2026-10-25.** Collected from the records for Phase 19's
+brief. No new pictures yet: `implemented/` is still 2026-09-28's. Sizes on a
+bar are CSS pixels of its 1850 x 400 page (drawn at 0.8 on the 11.9" bar).
+
+### The whole panel
+
+**[U] Text size, 90-130 %** (Display; ADR-0148). Every font scales. Above
+100 % Home's tiles grow (200 to 260 px at 130 %); layouts, icons and buttons
+keep their size, so titles cut off sooner.
+
+**[S] The phone's pointer on the panel.** The Dot and Arrow pointers come from
+Claude Design's *Cursors* handoff (2026-10-05, not in `source/`), built
+without its jump to a control's centre, its glide or its busy states. It
+hides after 5 s; its outline follows anything pressable and is cut where
+covered; under it a tab shows its own underline instead of a ring (ADR-0121
+amended 2026-10-06 and 2026-10-14).
+
+**[U] The Home Assistant dashboard** (ADR-0156). Full screen, with nothing
+over it but a 44 x 104 tab at the right edge, an X that dismisses it (George
+chose the edge tab). A page that cannot be shown says so, with Close. Its
+buttons: on Now Playing after the visualiser's (a house outline, only once an
+address is set), in a bar's tray, and *Room* in the phone's dock. In its
+scheduled hours it stands where the idle screen would; the visualiser takes
+over from it.
+
+**[U] Display standby** (ADR-0135): a black cover; a touch, music or the
+phone wakes it.
+
+### Now Playing, on the standard screens
+
+**[U] Minimise** (ADR-0122): a 52 px round button with a down chevron at the
+artwork's top-left corner. It goes back to the library exactly as it was left
+(path and scroll), with the mini strip. Home stays bottom left and opens the
+root. There is none with Lyrion off.
+
+**[U] Names and titles open their pages** (2026-10-14): the Artist tab's name,
+the release title on Track and Release, a similar artist's chip when the
+library has that artist. They keep their own size and colour.
+
+**[U] The Lyrics tab** shows five lines with a 7 % fade at the edges (the
+design masks 30 % / 70 %), and no heading (2026-10-07).
+
+**[U] Now Playing opens only on a track** (2026-10-19): a source with no title
+leaves Home showing.
+
+### Home and the library
+
+**[U] Home's Artists tile reads *Album Artists*** in every mode (George,
+2026-10-06).
+
+**[U] Navigation is one choice: Simple, Extended or Off.** Extended adds
+Lyrion's own menus (13f) - My Music, Favourites, the app categories and Apps -
+as one sideways row of 200 px cards (13f draws 219) with no scroll-snap. Off
+shows the waiting screen as Home while Lyrion still plays (ADR-0118; ADR-0149
+decision 14). Lyrion's menus are otherwise built as drawn; George's own look
+at them is still to come (Phase 25, `ph-lyrion-menus`).
+
+**[U] A tap on a row shows only the teal selection**, and a second tap puts
+its actions away again, so only Play plays; 13f and `Now Playing.dc.html` play
+on the second tap (George, 2026-10-15 to 2026-10-21).
+
+**[U] Album and playlist pages show a track's own artist** under its title
+when it differs from the album's; an app's playlist has *Play playlist*
+(2026-10-14, 2026-10-21).
+
+**[S] An album an app cannot stream** opens with its tracks marked *Not
+available* and inert, a line saying so in place of Play, and its cover dimmed
+to 0.45 in grids (2026-10-06).
+
+**[S] An app's Search folder opens straight to its field**; past searches are
+not listed (ADR-0118).
+
+**[S] Letter headers follow Lyrion's own sort**, and the jump rail is drawn
+inert while its index loads, so nothing moves when it lands.
+
+**[S] The artist page's genre pills stop at two rows**; a pill too long for one
+line is left out (2026-10-04).
+
+**[S] Not built:** on an app's album page the artist is plain coral text, not
+the link 13f draws.
+
+### The waiting screen, backgrounds, the idle screen
+
+**[U] The waiting screen** (ADR-0133): its own wallpaper under a veil; the
+clock, date and player name top left; Settings top right; the pulsing marks
+at the foot; the picture's credit. `Now Playing.dc.html`'s plain weave with
+180 px rings and 14's *Start music from your phone* line are gone.
+
+**[U] While a new player first reads its library**, a centred plate on the
+waiting screen: *Lyrion · Step n of 5*, the step as a 40 px title, a bar with
+a percentage, Lyrion's detail and one line. Lyrion's mark leaves the sources
+until then (ADR-0149 decision 43).
+
+**[U] With no artwork, the blurred background is a built-in *Calm* sunset**,
+not the bare weave; the waiting and idle screens show it until their first
+picture loads (2026-10-18).
+
+**[U] Gexis wallpapers are built in and the default**: Calm, Colourful,
+Psychedelic, following the time of day, the seasons and holidays; Home and the
+idle screen each have their own background rows (ADR-0133).
+
+**[U] Pictures are placed by their subject** - faces, then a person or animal,
+then whatever stands out. When the subject does not fit, the picture shrinks
+to at least 75 % of the width over its own blur, or is skipped. The design
+centres every picture (ADR-0120).
+
+**[U] Seven weather icon sets** (Modern, Futuristic, Photographic and
+Atmospheric added). Between sunset and sunrise the current weather's sun is
+the moon in its real phase; *Static* stops every animation (ADR-0153,
+ADR-0154).
+
+**[U] The idle screen is off on a new player**, and the forecast's *None* is
+called *Today only* (ADR-0133).
+
+**[S] On the takeover screen** a plugin with no mark shows its initial in the
+ring (2026-10-01).
+
+### The bar (13b)
+
+*Now Playing*
+- **[U]** The artwork runs edge to edge, 400 px tall, flush left, square
+  corners (the design: 336 px, radius 20, in 32/40 padding); artist 36, album
+  32, the year 28 after the album (the design: 28/24/21). George, 2026-10-04.
+- **[U]** The lyrics switch sits bottom right by the queue, and the source mark
+  takes its place top right. Lyrics have no title header; the lines are
+  centred, synced at 34 px and plain at 30 px (the design: 26/22).
+- **[U]** The lyrics switch is always there, with *Instrumental*, *No lyrics*
+  and *Retry* states (the design hides it without lyrics). With no position
+  the progress bar is a faded line and the times hide (round-2 review,
+  decisions 5 and 6).
+- **[U]** A control the source lacks is removed; one that cannot work just now
+  is dimmed to 0.4 (round 2 removed both; George, 2026-10-21).
+- **[U]** Minimise, which the design does not draw: 60 px at 24/24 over the
+  art, the chevron pointing right.
+- **[U]** The pull handle is centred on the space right of the art. A tap on
+  the 44 px band opens the tray too; a control under the finger wins.
+
+*The tray*
+- **[S]** A *Dashboard* button after the visualiser's, once a Home Assistant
+  address is set (ADR-0156).
+- **[H]** Home, Visualiser, Dashboard and Mute act when the finger lifts.
+  Chromium sent no click for a tap within about a second of the pull: 9 of 9
+  recorded taps, 0.52-0.97 s after it. A mouse still acts on its click
+  (2026-10-24).
+- **[U]** It stays open as the volume drawer does (above); one opened by a
+  change from elsewhere takes no touch for its first 400 ms.
+- **[U]** A swipe up closes it from anywhere on it, or from the dimmed screen
+  below; on the slider the first 8 px decide between closing and sliding (the
+  design has only the bottom 44 px band). George, 2026-10-04.
+- **[U]** The slider's fill is Lyrion teal for every source (round 2: the
+  source's accent).
+
+*The library*
+- **[U]** With nothing playing, the rail shows the waiting sources as pulsing
+  marks without text, sized to how many there are (64 / 59 / 47 px); round 2
+  has an empty slot and an inert play button (George, 2026-10-04).
+- **[U]** Rows keep the standard screens' reveal - Play now, Add to queue, Add
+  to playlist, 44 px. A tap no longer plays; a revealed row is teal, with no
+  press effect (ADR-0109 amended 2026-10-01).
+- **[U]** Playlist columns are 420 px wide, not 300. Radio is two rows that
+  scroll sideways with a third of the next column showing, in the standard
+  screens' category shapes and tints.
+- **[S]** The artist page has no Top tracks and no tags, though round 2 draws
+  both.
+- **[U]** With Extended navigation, My Music, Favourites and Apps join a
+  sideways row of 196 x 300 tiles that widens with Text size, over Now
+  Playing's lighter veil (ADR-0118, ADR-0148).
+- **[S]** The jump strip is `#` and 13 letter pairs; Lyrion's lettered lists
+  use the same strip.
+
+*Settings on a bar*
+- **[U]** Sheets are 376 px tall and min(760, width - 48) wide; a confirmation
+  takes its content's size, centred (2026-10-08). The value sits beside its
+  slider (a 170 px + 1fr editor), an empty list is compact with a 40 px ring,
+  and a long note scrolls (2026-10-24, after George found a slider's buttons
+  cut off).
+- **[S]** *Attached screen* is chosen in two steps, maker then model, as in
+  `Settings.dc.html`; *Bar States* draws them side by side (see *Not
+  recorded*).
+
+*Moments*
+- **[U]** Wallpapers fill the bar by cropping up to 70 % (25 % elsewhere),
+  each placed by its subject; a topic mixes its wide pictures (2.4:1 and
+  wider) with the usual ones, each once a round (ADR-0120 amended 2026-10-23).
+- **[U]** The idle row is measured: today's type steps down to 0.8, then
+  forecast days drop.
+- **[U]** On the takeover screen the notes travel the line (George,
+  2026-10-04).
+- **[U]** The waiting screen: a clock column on the left and the pulsing marks
+  beside it (the design's *wait* board uses rings and discs; ADR-0133).
+- **[U]** *Keep this screen?* counts 2 minutes, not 30 s, from when the
+  question is drawn, and is asked only when the picture changes; a change of
+  rotation alone asks *Keep this rotation?* (ADR-0109 as amended).
+
+### Settings
+
+- **Eight categories**, in this order: Library (only with a library plugin
+  installed), Sources, Handoff, Audio, Display, Enrichment, Plugins, System
+  (ADR-0150). Device merged into System under headings - This player,
+  Network, Updates, Backup and reset, Help, About, Power - and LMS is called
+  Lyrion everywhere (2026-10-10).
+- **Display has ten sections**: Panel, Display standby, Home Assistant
+  dashboard, Touchpad, Volume, Photo service and location, Home screen, Idle
+  screen (with its own switch), Visualiser, Visualiser tweaks; *Personalise*
+  at the top (ADR-0149 decision 31).
+- **One Volume row**: Hardware, Software or Fixed (ADR-0127). **Navigation**:
+  Simple, Extended or Off.
+- **Text size** 90-130 % (ADR-0148); **Screen brightness** 10-100 %, on DSI
+  screens only (ADR-0158).
+- **Attached screen** and **Screen port** are tiles with *Change* (ADR-0147).
+- **Display standby has its own section**, and no *Turn the screen off* row:
+  the phone's *Screen off* pill does it (George, 2026-10-11). Its interval
+  grid is drawn only in 14-first-use's standby step.
+- **A Cable row** while a cable is in (ADR-0123): its sheet shows the facts
+  and Automatic / Manual with fields; the connected Wi-Fi network's sheet
+  shows signal, speed, band and channel, with the same form; a banner on every
+  page asks to keep a new address within 60 s.
+- **Enrichment's two sweep rows are one tile**; a TheAudioDB key (ADR-0120).
+- **Option sheets explain each option beside it.**
+- **Plexamp's row** reads *Claimed* with *Claim again* (ADR-0119).
+- **API explorer**: a switch, off by default; the API's page at `/api` on the
+  player (ADR-0152).
+
+### Screens and sheets no design draws
+
+**[U] Updates** (ADR-0110): built from the existing design system on purpose,
+never sent to Claude Design (George). A read-only *Release* row (number ·
+channel); a *Software update* tile (the last check, notes waiting, one
+button: *Check for updates*, *Update…*, *Updating…*); one modal on the phone
+and in the panel's Settings: checking, available with its notes, the
+playback warning, six steps ticked with bars, *Updated* or *Did not update*,
+Done. On the panel a full-screen lock takes no input until Done, and lets go
+after 10 min.
+
+**[U] Release notes** are sections (*New*, *Fixed*, *Good to know*) with
+bullets; an update waiting shows one block per release skipped; *Change logs*
+opens the reader with the last 10 releases (ADR-0116).
+
+**[S] Problem report and Hardware feedback**, on a phone or computer; on the
+panel the sheet says to open Settings on a phone. The report: what happened
+with how-often chips, then a ticking checklist, then Send. Feedback: Screen,
+Sound, Anything else, Send. One shared Send step - GitHub, or download and
+e-mail with Copy; kept feedback turns its row into a tile with *Send again* /
+*Start over* (ADR-0125, ADR-0126, ADR-0138).
+
+**[S] The test pattern** on the panel, asked for from the phone: a coloured
+line on each edge, then a circle at a corner for each of four taps; the phone
+shows how far off each tap landed (ADR-0126).
+
+**[U] Factory reset**: the confirm button is held for 3 s while a bar fills, a
+check that needs no keyboard (George). Then a reset screen covers the panel
+and every phone, with no way out; the phone's says how to reach setup
+(ADR-0132).
+
+**[S] A different screen attached**: a sheet at start, on the panel and the
+phone - *Use it*, *Choose*, *Not now* (ADR-0109 amended 2026-10-03).
+
+**[S] Keep this screen, beyond 13b's drawing**: the phone gets a *Keep* / *Go
+back* banner; a screen with no touch shows no buttons and says to answer on
+the phone; DSI panels answer on the panel (ADR-0147, ADR-0158).
+
+**[U] The settling card**, on the panel and over the phone's Settings: one bar
+per download, *Installing…* while a package goes in, *Use the player now* from
+the start, a failure named with *Settings → Plugins* and OK. Only the phone's
+*Getting ready* is drawn, in 14-first-use (ADR-0128).
+
+**[U] A network lost after boot** shows no strip; after two minutes, the setup
+*Join* screen (ADR-0134).
+
+### The phone
+
+**[S] The mini player is a dock**: Home, Playing, Lyrics, Meters, Room and Idle
+under a *Panel* heading, with the *Screen off* pill; opening its sheet adds the
+touchpad (George's mockup D2, 2026-10-21; ADR-0101 amended).
+
+**[S] The player switcher** (ADR-0136): a button at the right end of the title
+line opens *Players*, each with its state (*Playing · Spotify*, *Paused ·
+Lyrion*, *Idle*), this one marked; another opens in the same tab. Phone only.
+
+**[S] The touchpad** takes half the phone's height, with two-finger scrolling
+and a 1-3x pinch; over the dashboard its taps and typing become real input
+(ADR-0121, ADR-0157).
+
+### Not recorded
+
+Built this way, with no record found that chose it:
+- the attribution line's style (Now Playing, above);
+- *Attached screen* on a bar in two steps, against *Bar States*' side by side;
+- **Settings on a bar.** ADR-0109 (2026-10-03) says a bar keeps Browse and
+  Settings is on the phone only; the bar has had a Settings card since
+  2026-10-01, and George corrected its sheets on 2026-10-08 and 2026-10-24.
+  Put to George on 2026-10-25.
