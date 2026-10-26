@@ -109,9 +109,9 @@ merged in. The design `design/source/21` (on `docs`; its Settings copy is
 the repository's, as the bundle's had LAN addresses, and the bundle's
 shared README was older than ours, so only its Phase 21 parts were taken).
 [ADR-0164](docs/decisions/0164-the-phone-remote.md) accepted: George's
-answers (the touchpad keeps the pointer, the D-pad is the steps, touch
-sizes as drawn, repeat cycles, the Home Assistant card follows); Claude's
-C1-C11 for his confirmation.
+answers (both pads as drawn, the touchpad sending steps, so the pointer
+leaves the phone; touch sizes as drawn; repeat cycles; the Home Assistant
+card follows); Claude's C1-C12 for his confirmation.
 
 Then 22-30 in order, each ADR first (`docs/DEVELOPMENT.md`, the IDs
 there); MPD parked (ADR-0151). **Raspberry Pi Imager** (ADR-0159, a task):

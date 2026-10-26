@@ -3284,9 +3284,10 @@ whose quick change it moves. The design: Claude Design's *phone remote*,
 accepted the same day**: one remote with a player picker and Remote /
 Settings pages; for a player with a screen a touch area with a Touchpad /
 D-pad switch, quick actions and the volume row; for one without, a large
-cover and a seek bar. George's answers: the touchpad keeps the pointer, the
-touch sizes as drawn, repeat cycles as on the panel, the Home Assistant card
-follows. Claude's decisions C1-C11 are for his confirmation.
+cover and a seek bar. George's answers: the design followed, both pads as
+drawn (the touchpad sends steps, so the pointer leaves the phone), the touch
+sizes as drawn, repeat cycles as on the panel, the Home Assistant card
+follows. Claude's decisions C1-C12 are for his confirmation.
 
 **Before it** the mini player at the bottom of the phone page
 ([ADR-0101](decisions/0101-a-mini-player-on-the-phone.md)) holds the track
@@ -3315,10 +3316,10 @@ received 2026-10-26, `design/source/21`.
 
 1. On a phone the remote opens on Remote for its player; the picker lists
    the players on the network and opens another's remote.
-2. With a screen, the touchpad drives the pointer as before (moving,
-   tapping, scrolling, zooming, typing), the D-pad moves the ring, and the
-   corner buttons and quick actions show and change what the screen shows,
-   standby included.
+2. With a screen, the touchpad's swipes and the D-pad move the panel's
+   ring, a tap or OK presses, the strips scroll, a text field brings up the
+   phone's keyboard, and the corner buttons and quick actions show and
+   change what the screen shows, standby included.
 3. Without a screen, the cover, the transport and the seek bar work with
    Lyrion and Spotify; a renderer that cannot seek shows no knob.
 4. The volume row sets the level, mutes and names the EQ setting; the EQ
