@@ -689,7 +689,7 @@
         "type": "toggle",
         "label": "Phone touchpad",
         "marks": "N",
-        "note": "A touchpad in the phone's volume sheet that moves a pointer on this screen, taps, types into its text fields, scrolls with two fingers and zooms with a pinch.",
+        "note": "The touchpad of the phone's remote: a swipe moves around this screen, a tap chooses, its strips scroll, and a text field here takes the phone's keyboard. Off, the remote has its D-pad alone.",
         "default": true,
         "onlyWhen": [
           "headless",
