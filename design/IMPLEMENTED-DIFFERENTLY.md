@@ -513,7 +513,7 @@ Lyrion's own menus (13f) - My Music, Favourites, the app categories and Apps -
 as one sideways row of 200 px cards (13f draws 219) with no scroll-snap. Off
 shows the waiting screen as Home while Lyrion still plays (ADR-0118; ADR-0149
 decision 14). Lyrion's menus are otherwise built as drawn; George's own look
-at them is still to come (Phase 29, `ph-lyrion-menus`).
+at them is still to come (Phase 30, `ph-lyrion-menus`).
 
 **[U] A tap on a row shows only the teal selection**, and a second tap puts
 its actions away again, so only Play plays; 13f and `Now Playing.dc.html` play
