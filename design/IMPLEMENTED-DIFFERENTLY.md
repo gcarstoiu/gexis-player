@@ -513,7 +513,7 @@ Lyrion's own menus (13f) - My Music, Favourites, the app categories and Apps -
 as one sideways row of 200 px cards (13f draws 219) with no scroll-snap. Off
 shows the waiting screen as Home while Lyrion still plays (ADR-0118; ADR-0149
 decision 14). Lyrion's menus are otherwise built as drawn; George's own look
-at them is still to come (Phase 29, `ph-lyrion-menus`).
+at them is still to come (Phase 30, `ph-lyrion-menus`).
 
 **[U] A tap on a row shows only the teal selection**, and a second tap puts
 its actions away again, so only Play plays; 13f and `Now Playing.dc.html` play
@@ -780,3 +780,31 @@ pictures (ADR-0161, ADR-0163).
   the full form, wrapping in the compact one, where the D-pad's button can
   fall to a second row. A view that is up has the accent's outline.
 
+
+## The equaliser (Phase 20, 2026-10-26)
+
+Built from `source/20` (look 3a, Ridge; ADR-0162, its *Built* section for the
+decisions). Not yet seen by George on a device.
+
+- **[U]** The headroom figure is the core's, not the drawing's: the worse of
+  44.1 and 48 kHz, rounded strictly up to 0.5 dB, where `eq-data.js` allows
+  0.05 dB the other way - so the sample *Evening* reads 3 dB, not 2.5.
+- **[U]** The phone's curve spans its gradient over its own box (200 high),
+  so the step from coral to blue falls on 0 dB; the drawing spans it over
+  the panel's 240 and puts it below 0 dB.
+- **[U]** Edit in the quick change opens the editor as a screen of its own,
+  where it was opened; Back returns there. Settings → Audio opens the same
+  editor inside Settings.
+- **[U]** On the D-pad a band is an upright slider: Up and Down move it,
+  Left and Right go to its neighbours, and the ring goes round the knob.
+- **[S]** *Yours · 0 of 10* shows with nothing saved, so the list says where
+  a saved setting will go.
+- **[S]** A refused name (taken, too long) is said in the sheet, in amber,
+  under the field; the drawing has no such state.
+- **[U]** The headroom note says the volume gives the lowering back (George,
+  2026-10-26, ADR-0162 D3 as amended): *Lowered by 5 dB so the boost cannot
+  clip; the volume gives it back up to 65%* in the editor, where the drawing
+  ends at *clip*; in the quick change *As loud as Flat up to 65% of the
+  volume; above it, up to 5 dB quieter*, where the drawing had the editor's
+  line. The badge stays the lowering; Fixed keeps the drawing's words. The
+  wording is Claude's (C17), confirmed by George the same day.

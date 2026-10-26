@@ -403,25 +403,23 @@ the panel. It cannot type into another site's frame: its input is simulated
 inside the player's own page. George found it at the login. A path offered
 to the user is tried end to end first; until then it is not offered.
 
-**80. A meter measured at rest** (2026-10-21, Finding 133). Comparing Glass
-with our visualiser, music played at volume 5 so the rooms stayed quiet. Our
-needles follow half the volume's cut (`meter_follow`), so they stood near the
-bottom and our spectrum bars barely rose; Glass, fed its own signal, moved.
-Our needle skin read 4.1 % of a core against 13.7 % with the needles moving,
-and the first results sent to George said the two were even. A screenshot
-showed a meter, which looked like a meter working. Before measuring what
-something costs, see it doing the work, at the conditions of the measurement.
+**80. A meter measured at rest** (2026-10-21, Finding 133). Glass against
+our visualiser at volume 5: our needles follow the volume's cut, barely moved,
+and read a third of their working cost. Before measuring what something
+costs, see it doing the work, at the conditions of the measurement.
 
-**81. Two readings the design predicted** (2026-10-22, Finding 135). With
-software volume, Finding 116 saw the needles near zero at −26 dB and took it
-for the meters following the volume, as designed; the core logged that a
-rewritten `output.conf` reaches the renderers "on their next open". Both
-were what was expected, so neither was checked. In fact ALSA's meter read
-the samples after the volume stage (the cut applied twice), and a running
-squeezelite never read the rewritten file. A result that matches the
-prediction still needs the case that would tell the two stories apart - a
-signal the design says must arrive uncut, a renderer that must have
-reloaded.
+**81. Two readings the design predicted** (2026-10-22, Finding 135). Needles
+near zero at −26 dB and a rewritten `output.conf` "read on next open" were both
+expected, so neither was checked; both were wrong. A result that matches the
+prediction still needs the case that tells the two stories apart.
+
+**82. A tap tried with one format** (2026-10-26, Finding 138). With the
+equaliser on, the meter sat over a loopback that takes float; go-librespot
+asks for float first, and the meter's 16-bit view has none. The silent
+measurement had played integers, and the visualiser "moving on every output"
+was reasoned from the chain. When a chain under a tap changes what it
+accepts, set each renderer's format order against it and try the tap in
+each format a renderer can pick.
 
 ## Common shape
 

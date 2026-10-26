@@ -253,8 +253,8 @@ Rough, and subject to change:
   screen. DSI screens on the Pi's own display connector. Each player in Home
   Assistant as a media player, with a D-pad for its screen and a dashboard
   card. A ten-band equaliser with presets and your own settings.
-- 🔜 **Next:** room correction for the bass with a USB microphone, then for the full range.
-- 🎨 **Later:** AirPlay 2, multiroom for every source, a plugin catalogue, internet radio without a Lyrion server, themes. With Plex switched on, your own Plex server fills in
+- 🔜 **Next:** a redesign of the phone's quick actions and touchpad, then room correction for the bass with a USB microphone.
+- 🎨 **Later:** room correction for the full range, AirPlay 2, multiroom for every source, a plugin catalogue, internet radio without a Lyrion server, themes. With Plex switched on, your own Plex server fills in
   the artist and album information other sources leave out.
 - 💭 **Maybe:** the DAC's own filter and polarity options.
 

@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:'Nunito Sans';src:url('../../fonts/NunitoSans-Variable.woff2') format('woff2-variations'),url('../../fonts/NunitoSans-Variable.woff2') format('woff2');font-weight:300 800;font-display:block;}
+@font-face{font-family:'IBM Plex Mono';src:url('../../fonts/IBMPlexMono-Regular.woff2') format('woff2');font-weight:400;font-display:block;}
+@font-face{font-family:'IBM Plex Mono';src:url('../../fonts/IBMPlexMono-SemiBold.woff2') format('woff2');font-weight:500 600;font-display:block;}
+@font-face{font-family:'IBM Plex Mono';src:url('../../fonts/IBMPlexMono-Bold.woff2') format('woff2');font-weight:700;font-display:block;}
+html,body{margin:0;padding:0;background:#0c1014;}a{color:#7ed6bc;}a:hover{color:#a8e5d3;}[data-noscrollbar]::-webkit-scrollbar{display:none;}
+</style>
+<script src="./eq-data.js"></script>
+</helmet>
+<div data-eq-quick="root" style="position:relative;width:100%;height:100%;overflow:hidden;font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif;color:#e9eef2;-webkit-tap-highlight-color:transparent;user-select:none;pointer-events:none;">
+
+  <sc-if value="{{ isDrawer }}" hint-placeholder-val="{{ true }}">
+    <img src="eq/backdrop-now-playing.png" alt="" style="position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;display:block;" />
+    <div style="position:absolute;inset:0;background:rgba(8,12,16,0.6);"></div>
+    <div data-eq-quick="drawer" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:820px;background:#16232c;border:1px solid rgba(126,214,188,0.22);border-radius:28px;padding:34px 40px 36px;box-sizing:border-box;box-shadow:0 34px 90px rgba(0,0,0,0.6);pointer-events:auto;">
+      <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);margin-bottom:22px;">Controls</div>
+      <sc-if value="{{ notFixed }}" hint-placeholder-val="{{ true }}">
+        <div data-eq-quick="volume" style="display:flex;align-items:center;gap:22px;">
+          <div style="width:58px;height:58px;border-radius:15px;flex-shrink:0;display:flex;align-items:center;justify-content:center;box-sizing:border-box;border:1px solid transparent;">
+            <span style="position:relative;width:30px;height:30px;display:block;">
+              <span style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:15px;height:26px;background:#e9eef2;clip-path:polygon(0 27%,42% 27%,100% 0,100% 100%,42% 73%,0 73%);display:block;"></span>
+              <span style="position:absolute;left:5px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span>
+              <span style="position:absolute;left:1px;top:50%;width:24px;height:24px;margin-top:-12px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span>
+              <span style="position:absolute;left:-2px;top:50%;width:30px;height:30px;margin-top:-15px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.18);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span>
+            </span>
+          </div>
+          <div style="flex:1;height:64px;display:flex;align-items:center;min-width:0;">
+            <div style="width:100%;height:14px;border-radius:999px;background:rgba(233,238,242,0.14);position:relative;">
+              <div style="position:absolute;left:0;top:0;bottom:0;width:62%;border-radius:999px;background:#7ed6bc;"></div>
+              <div style="position:absolute;top:50%;left:62%;width:40px;height:40px;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 4px 14px rgba(0,0,0,0.45);background:#e9eef2;"></div>
+            </div>
+          </div>
+          <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:26px;font-weight:600;width:76px;text-align:right;flex-shrink:0;">62</span>
+        </div>
+      </sc-if>
+      <sc-if value="{{ fixed }}" hint-placeholder-val="{{ false }}">
+        <div data-eq-quick="volume-fixed" style="display:flex;align-items:center;gap:20px;min-height:78px;border-radius:18px;background:rgba(233,238,242,0.05);border:1px solid rgba(233,238,242,0.12);padding:0 24px;box-sizing:border-box;">
+          <span style="position:relative;width:30px;height:34px;flex-shrink:0;display:block;">
+            <span style="position:absolute;left:5px;top:0;width:20px;height:16px;border:3px solid rgba(233,238,242,0.7);border-bottom:none;border-radius:10px 10px 0 0;box-sizing:border-box;display:block;"></span>
+            <span style="position:absolute;left:0;bottom:0;width:30px;height:20px;border-radius:5px;background:rgba(233,238,242,0.7);display:block;"></span>
+          </span>
+          <span style="flex:1;min-width:0;display:block;">
+            <span style="font-size:19px;font-weight:600;display:block;">Fixed output</span>
+            <span style="font-size:15px;line-height:1.35;color:rgba(233,238,242,0.6);display:block;margin-top:4px;">Level is set downstream. Set it on your amplifier.</span>
+          </span>
+        </div>
+      </sc-if>
+      <div style="height:1px;background:rgba(233,238,242,0.1);margin:26px 0 22px;"></div>
+      <div data-eq-quick="eq">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:19px;font-weight:600;">Equaliser</div>
+            <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{ stateInk }};">{{ stateText }}</div>
+          </div>
+          <div style="height:58px;padding:0 18px 0 22px;border-radius:15px;box-sizing:border-box;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;gap:12px;font-size:17px;font-weight:600;cursor:pointer;flex-shrink:0;" style-active="transform:scale(0.95)">Edit<span style="width:9px;height:9px;border-right:2.5px solid rgba(233,238,242,0.6);border-top:2.5px solid rgba(233,238,242,0.6);transform:rotate(45deg);display:block;margin-left:-2px;"></span></div>
+          <div onClick="{{ toggleOn }}" style="height:58px;padding:0 12px;border-radius:15px;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);display:flex;align-items:center;cursor:pointer;flex-shrink:0;" style-active="transform:scale(0.95)">
+            <span style="width:60px;height:34px;border-radius:17px;position:relative;box-sizing:border-box;display:block;background:{{ togBg }};border:1px solid {{ togBorder }};"><span style="position:absolute;top:3px;width:26px;height:26px;border-radius:50%;display:block;left:{{ knobLeft }};background:{{ knobBg }};"></span></span>
+          </div>
+        </div>
+        <div ref="{{ chipsRef }}" data-noscrollbar style="display:flex;gap:10px;margin-top:18px;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 64px),transparent 100%);mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 64px),transparent 100%);opacity:{{ chipsOpacity }};pointer-events:{{ chipsPointer }};">
+          <sc-for list="{{ chips }}" as="c" hint-placeholder-count="7">
+            <div style="display:contents;">
+              <span style="width:1px;align-self:stretch;margin:10px 4px;background:rgba(233,238,242,0.16);flex-shrink:0;display:{{ c.sepDisplay }};"></span>
+              <div data-sel="{{ c.selFlag }}" onClick="{{ c.onTap }}" style="flex-shrink:0;height:56px;padding:0 22px;border-radius:14px;box-sizing:border-box;display:flex;align-items:center;gap:10px;font-size:17px;font-weight:600;white-space:nowrap;cursor:pointer;background:{{ c.bg }};border:1px solid {{ c.border }};color:{{ c.ink }};" style-active="transform:scale(0.95)">{{ c.name }}<span style="width:7px;height:7px;border-radius:50%;background:#e0a758;display:{{ c.dotDisplay }};"></span></div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="font-size:15px;line-height:1.4;margin-top:16px;text-wrap:pretty;display:{{ noteDisplay }};color:{{ noteInk }};">{{ noteText }}</div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isBarTray }}" hint-placeholder-val="{{ false }}">
+    <img src="{{ barBackdrop }}" alt="" style="position:absolute;left:0;top:0;width:100%;height:100%;display:block;" />
+    <div style="position:absolute;inset:0;background:rgba(8,12,16,0.55);"></div>
+    <div data-eq-quick="bar-tray" style="position:absolute;left:0;right:0;top:0;background:#16232c;border-radius:0 0 24px 24px;border-bottom:1px solid rgba(233,238,242,0.12);box-shadow:0 18px 44px rgba(0,0,0,0.5);pointer-events:auto;height:{{ trayH }};">
+      <div style="position:absolute;left:0;right:0;top:0;height:122px;display:flex;align-items:center;gap:20px;padding:0 40px;box-sizing:border-box;">
+        <div style="width:64px;height:64px;border-radius:50%;background:rgba(233,238,242,0.07);display:grid;place-items:center;flex-shrink:0;"><span style="width:24px;height:24px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:4px;"><i style="border-radius:3px;background:rgba(233,238,242,0.85);"></i><i style="border-radius:3px;background:rgba(233,238,242,0.85);"></i><i style="border-radius:3px;background:rgba(233,238,242,0.85);"></i><i style="border-radius:3px;background:rgba(233,238,242,0.85);"></i></span></div>
+        <div style="width:60px;height:60px;border-radius:50%;background:rgba(233,238,242,0.07);display:grid;place-items:center;flex-shrink:0;"><span style="display:flex;align-items:flex-end;gap:4px;height:22px;"><i style="width:4px;height:12px;border-radius:2px;background:rgba(233,238,242,0.82);"></i><i style="width:4px;height:22px;border-radius:2px;background:rgba(233,238,242,0.82);"></i><i style="width:4px;height:16px;border-radius:2px;background:rgba(233,238,242,0.82);"></i><i style="width:4px;height:8px;border-radius:2px;background:rgba(233,238,242,0.82);"></i></span></div>
+        <div data-eq-quick="eq-button" onClick="{{ toggleOpen }}" style="height:60px;padding:0 20px 0 18px;border-radius:30px;box-sizing:border-box;display:flex;align-items:center;gap:12px;flex-shrink:0;cursor:pointer;background:{{ eqBtnBg }};border:1px solid {{ eqBtnLine }};" style-active="transform:scale(0.95)">
+          <svg viewBox="0 0 24 24" width="24" height="24" style="flex-shrink:0;color:{{ eqBtnInk }};" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 4v16M12 4v16M18 4v16"></path><circle cx="6" cy="14" r="2.6" fill="#16232c"></circle><circle cx="12" cy="8" r="2.6" fill="#16232c"></circle><circle cx="18" cy="12" r="2.6" fill="#16232c"></circle></svg>
+          <span style="font-size:19px;font-weight:700;white-space:nowrap;color:{{ eqBtnInk }};">{{ btnName }}</span>
+          <span style="width:9px;height:9px;border-right:2.5px solid rgba(233,238,242,0.6);border-bottom:2.5px solid rgba(233,238,242,0.6);display:block;transition:transform 160ms ease;transform:{{ chevTurn }};"></span>
+        </div>
+        <span style="width:1px;height:44px;background:rgba(233,238,242,0.14);flex-shrink:0;"></span>
+        <sc-if value="{{ notFixed }}" hint-placeholder-val="{{ true }}">
+          <div style="width:60px;height:60px;border-radius:50%;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.12);box-sizing:border-box;display:grid;place-items:center;flex-shrink:0;">
+            <span style="position:relative;width:30px;height:30px;display:block;">
+              <span style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:15px;height:26px;background:#e9eef2;clip-path:polygon(0 27%,42% 27%,100% 0,100% 100%,42% 73%,0 73%);display:block;"></span>
+              <span style="position:absolute;left:5px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span>
+              <span style="position:absolute;left:1px;top:50%;width:24px;height:24px;margin-top:-12px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span>
+              <span style="position:absolute;left:-2px;top:50%;width:30px;height:30px;margin-top:-15px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.18);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span>
+            </span>
+          </div>
+          <div style="flex:1;min-width:0;align-self:stretch;display:flex;align-items:center;">
+            <div style="width:100%;height:10px;border-radius:999px;background:rgba(233,238,242,0.15);position:relative;">
+              <div style="position:absolute;left:0;top:0;bottom:0;width:62%;border-radius:999px;background:#7ed6bc;"></div>
+              <div style="position:absolute;top:50%;left:62%;width:44px;height:44px;border-radius:50%;transform:translate(-50%,-50%);background:#e9eef2;box-shadow:0 3px 10px rgba(0,0,0,0.45);"></div>
+            </div>
+          </div>
+          <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:26px;font-weight:700;width:72px;text-align:right;flex-shrink:0;">62</span>
+        </sc-if>
+        <sc-if value="{{ fixed }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;min-width:0;display:flex;align-items:center;gap:20px;min-height:78px;padding:0 24px;border-radius:18px;background:rgba(233,238,242,0.05);border:1px solid rgba(233,238,242,0.12);box-sizing:border-box;">
+            <span style="position:relative;width:30px;height:34px;flex-shrink:0;display:block;"><span style="position:absolute;left:5px;top:0;width:20px;height:16px;border:3px solid rgba(233,238,242,0.7);border-bottom:none;border-radius:10px 10px 0 0;box-sizing:border-box;display:block;"></span><span style="position:absolute;left:0;bottom:0;width:30px;height:20px;border-radius:5px;background:rgba(233,238,242,0.7);display:block;"></span></span>
+            <span style="flex:1;min-width:0;"><span style="display:block;font-size:20px;font-weight:600;">Fixed output</span><span style="display:block;margin-top:4px;font-size:16px;line-height:1.35;color:rgba(233,238,242,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Level is set downstream. Set it on your amplifier.</span></span>
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);flex-shrink:0;">100%</span>
+          </div>
+        </sc-if>
+      </div>
+      <sc-if value="{{ open }}" hint-placeholder-val="{{ false }}">
+        <div data-eq-quick="eq" style="position:absolute;left:0;right:0;top:122px;height:120px;display:flex;align-items:center;gap:16px;padding:0 40px;box-sizing:border-box;border-top:1px solid rgba(233,238,242,0.08);">
+          <div onClick="{{ toggleOn }}" style="height:60px;padding:0 12px 0 18px;border-radius:15px;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);display:flex;align-items:center;gap:14px;cursor:pointer;flex-shrink:0;" style-active="transform:scale(0.95)">
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;letter-spacing:0.14em;text-transform:uppercase;width:40px;color:{{ powerInk }};">{{ powerShort }}</span>
+            <span style="width:60px;height:34px;border-radius:17px;position:relative;box-sizing:border-box;display:block;background:{{ togBg }};border:1px solid {{ togBorder }};"><span style="position:absolute;top:3px;width:26px;height:26px;border-radius:50%;display:block;left:{{ knobLeft }};background:{{ knobBg }};"></span></span>
+          </div>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;">
+            <div ref="{{ chipsRef }}" data-noscrollbar style="display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 88px),transparent 100%);mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 88px),transparent 100%);opacity:{{ chipsOpacity }};pointer-events:{{ chipsPointer }};">
+              <sc-for list="{{ chips }}" as="c" hint-placeholder-count="8">
+                <div style="display:contents;">
+                  <span style="width:1px;align-self:stretch;margin:12px 4px;background:rgba(233,238,242,0.16);flex-shrink:0;display:{{ c.sepDisplay }};"></span>
+                  <div data-sel="{{ c.selFlag }}" onClick="{{ c.onTap }}" style="flex-shrink:0;height:60px;padding:0 24px;border-radius:15px;box-sizing:border-box;display:flex;align-items:center;gap:10px;font-size:18px;font-weight:600;white-space:nowrap;cursor:pointer;background:{{ c.bg }};border:1px solid {{ c.border }};color:{{ c.ink }};" style-active="transform:scale(0.95)">{{ c.name }}<span style="width:7px;height:7px;border-radius:50%;background:#e0a758;display:{{ c.dotDisplay }};"></span></div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="font-size:15px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:{{ noteDisplay }};color:{{ noteInk }};">{{ noteText }}</div>
+          </div>
+          <div style="height:60px;padding:0 20px 0 24px;border-radius:15px;box-sizing:border-box;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;gap:12px;font-size:18px;font-weight:600;cursor:pointer;flex-shrink:0;" style-active="transform:scale(0.95)">Edit<span style="width:9px;height:9px;border-right:2.5px solid rgba(233,238,242,0.6);border-top:2.5px solid rgba(233,238,242,0.6);transform:rotate(45deg);display:block;margin-left:-2px;"></span></div>
+        </div>
+      </sc-if>
+      <div style="position:absolute;left:50%;bottom:10px;width:88px;height:6px;margin-left:-44px;border-radius:3px;background:rgba(233,238,242,0.42);"></div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isPhoneTray }}" hint-placeholder-val="{{ false }}">
+    <sc-if value="{{ notBare }}" hint-placeholder-val="{{ false }}">
+      <img src="eq/backdrop-phone-settings.png" alt="" style="position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;object-position:top;display:block;" />
+    </sc-if>
+    <sc-if value="{{ open }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ toggleOpen }}" style="position:absolute;inset:0;background:rgba(0,0,0,0.45);pointer-events:auto;"></div>
+    </sc-if>
+    <div style="position:absolute;left:0;right:0;bottom:0;pointer-events:auto;">
+      <div data-eq-quick="phone-tray" style="position:relative;display:flex;flex-direction:column;gap:8px;padding:16px 16px 12px;background:#16232c;border-top:1px solid rgba(233,238,242,0.16);border-radius:20px 20px 0 0;box-shadow:0 -10px 32px rgba(0,0,0,0.6),0 -1px 0 rgba(0,0,0,0.4);">
+        <span style="position:absolute;top:6px;left:50%;width:36px;height:4px;margin-left:-18px;border-radius:2px;background:rgba(233,238,242,0.24);display:block;"></span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div onClick="{{ toggleOpen }}" style="flex:1;min-width:0;display:flex;align-items:center;gap:10px;cursor:pointer;">
+            <span style="display:flex;align-items:flex-end;gap:2px;height:16px;flex-shrink:0;"><span style="width:3px;height:8px;border-radius:1px;background:#7ed6bc;"></span><span style="width:3px;height:16px;border-radius:1px;background:#7ed6bc;"></span><span style="width:3px;height:11px;border-radius:1px;background:#7ed6bc;"></span><span style="width:3px;height:13px;border-radius:1px;background:#7ed6bc;"></span></span>
+            <span style="display:flex;flex-direction:column;min-width:0;flex:1;">
+              <span style="font-size:17px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Rempompi</span>
+              <span style="font-size:15px;color:rgba(233,238,242,0.72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:{{ artistDisplay }};">Gasca Zurli</span>
+            </span>
+          </div>
+          <div style="width:44px;height:44px;border-radius:50%;background:#7ed6bc;color:#0d151c;display:grid;place-items:center;flex-shrink:0;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M8 5v14M16 5v14"></path></svg></div>
+          <div onClick="{{ toggleOpen }}" style="width:44px;height:44px;display:grid;place-items:center;flex-shrink:0;cursor:pointer;"><span style="width:10px;height:10px;border-left:2px solid rgba(233,238,242,0.6);border-top:2px solid rgba(233,238,242,0.6);display:block;transform:{{ miniChev }};"></span></div>
+        </div>
+        <sc-if value="{{ touchpad }}" hint-placeholder-val="{{ false }}">
+          <div style="position:relative;height:400px;border-radius:16px;border:1px solid rgba(233,238,242,0.14);background:rgba(233,238,242,0.05);display:flex;align-items:flex-end;justify-content:center;padding-bottom:32px;box-sizing:border-box;">
+            <span style="position:absolute;right:18px;top:18px;bottom:40px;width:3px;border-radius:2px;background:rgba(233,238,242,0.22);display:block;"></span>
+            <span style="position:absolute;left:18px;right:40px;bottom:18px;height:3px;border-radius:2px;background:rgba(233,238,242,0.22);display:block;"></span>
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(233,238,242,0.72);">Touchpad</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ screen }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Panel</span>
+            <span style="flex:1;height:1px;background:rgba(233,238,242,0.1);display:block;"></span>
+            <span style="height:32px;padding:0 12px 0 10px;border-radius:999px;border:1px solid rgba(233,238,242,0.1);box-sizing:border-box;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;white-space:nowrap;flex-shrink:0;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="11" rx="1.5"></rect><path d="M9 20h6M12 16v4"></path></svg>Screen off</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px;">
+            <sc-for list="{{ views }}" as="v" hint-placeholder-count="5">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11px;color:{{ v.ink }};font-weight:{{ v.weight }};">
+                <span style="width:46px;height:46px;border-radius:50%;box-sizing:border-box;display:grid;place-items:center;background:{{ v.bg }};border:1px solid {{ v.line }};"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ v.d }}"></path></svg></span>
+                <span>{{ v.name }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ open }}" hint-placeholder-val="{{ false }}">
+          <div data-eq-quick="eq" style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-top:2px;">
+              <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Equaliser</span>
+              <span style="flex:1;height:1px;background:rgba(233,238,242,0.1);display:block;"></span>
+              <span style="height:32px;padding:0 10px 0 12px;border-radius:999px;border:1px solid rgba(233,238,242,0.1);box-sizing:border-box;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;">Edit<span style="width:7px;height:7px;border-right:2px solid rgba(233,238,242,0.6);border-top:2px solid rgba(233,238,242,0.6);transform:rotate(45deg);display:block;"></span></span>
+              <span onClick="{{ toggleOn }}" style="height:32px;padding:0 12px;border-radius:999px;box-sizing:border-box;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid {{ pillLine }};background:{{ pillBg }};color:{{ pillInk }};">{{ pillText }}</span>
+            </div>
+            <div ref="{{ chipsRef }}" data-noscrollbar style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 16px,#000 calc(100% - 40px),transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 16px,#000 calc(100% - 40px),transparent 100%);opacity:{{ chipsOpacity }};pointer-events:{{ chipsPointer }};">
+              <sc-for list="{{ chips }}" as="c" hint-placeholder-count="6">
+                <div style="display:contents;">
+                  <span style="width:1px;align-self:stretch;margin:10px 3px;background:rgba(233,238,242,0.16);flex-shrink:0;display:{{ c.sepDisplay }};"></span>
+                  <div data-sel="{{ c.selFlag }}" onClick="{{ c.onTap }}" style="flex-shrink:0;height:44px;padding:0 16px;border-radius:12px;box-sizing:border-box;display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;white-space:nowrap;cursor:pointer;background:{{ c.bg }};border:1px solid {{ c.border }};color:{{ c.ink }};">{{ c.name }}<span style="width:6px;height:6px;border-radius:50%;background:#e0a758;display:{{ c.dotDisplay }};"></span></div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="font-size:14px;line-height:1.4;text-wrap:pretty;display:{{ noteDisplay }};color:{{ noteInk }};">{{ noteText }}</div>
+          </div>
+        </sc-if>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <sc-if value="{{ notFixed }}" hint-placeholder-val="{{ true }}">
+            <div style="position:relative;flex:1;height:32px;display:flex;align-items:center;min-width:0;">
+              <span style="width:100%;height:6px;border-radius:3px;background:rgba(233,238,242,0.18);overflow:hidden;display:block;"><span style="display:block;height:100%;width:62%;background:#7ed6bc;"></span></span>
+              <span style="position:absolute;top:50%;left:62%;width:20px;height:20px;margin:-10px 0 0 -10px;border-radius:50%;background:#e9eef2;box-shadow:0 1px 4px rgba(0,0,0,0.4);display:block;"></span>
+            </div>
+            <span style="width:44px;flex:none;text-align:right;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;color:rgba(233,238,242,0.72);">62%</span>
+          </sc-if>
+          <sc-if value="{{ fixed }}" hint-placeholder-val="{{ false }}">
+            <span style="flex:1;min-width:0;font-size:15px;color:rgba(233,238,242,0.6);">Fixed output · the amplifier sets the level</span>
+          </sc-if>
+          <sc-if value="{{ chipShown }}" hint-placeholder-val="{{ true }}">
+            <div data-eq-quick="eq-chip" onClick="{{ toggleOpen }}" style="height:44px;padding:0 12px 0 10px;border-radius:12px;box-sizing:border-box;display:flex;align-items:center;gap:7px;flex:none;cursor:pointer;background:{{ eqBtnBg }};border:1px solid {{ eqBtnLine }};color:{{ eqBtnInk }};">
+              <svg viewBox="0 0 24 24" width="18" height="18" style="flex-shrink:0;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 4v16M12 4v16M18 4v16"></path><circle cx="6" cy="14" r="2.6" fill="#16232c"></circle><circle cx="12" cy="8" r="2.6" fill="#16232c"></circle><circle cx="18" cy="12" r="2.6" fill="#16232c"></circle></svg>
+              <span style="font-size:13px;font-weight:700;white-space:nowrap;flex-shrink:0;">{{ btnName }}</span>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:800},&quot;host&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;drawer&quot;,&quot;bartray&quot;,&quot;phonetray&quot;],&quot;default&quot;:&quot;drawer&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Quick change&quot;},&quot;w&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[1850,1280],&quot;default&quot;:1850,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Quick change&quot;},&quot;on&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Quick change&quot;},&quot;sel&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;flat&quot;,&quot;rock&quot;,&quot;pop&quot;,&quot;jazz&quot;,&quot;classical&quot;,&quot;electronic&quot;,&quot;hiphop&quot;,&quot;acoustic&quot;,&quot;vocal&quot;,&quot;late&quot;,&quot;evening&quot;,&quot;kitchen&quot;,&quot;records&quot;,&quot;custom&quot;],&quot;default&quot;:&quot;rock&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Quick change&quot;},&quot;label&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Quick change&quot;},&quot;open&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Quick change&quot;},&quot;dsd&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Output&quot;},&quot;fixed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Output&quot;},&quot;screen&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Output&quot;},&quot;bare&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Output&quot;}}">
+// Phase 20, the equaliser close to the music: the panel's volume drawer,
+// the bar's tray and the phone's pull-up tray. Shows the setting in use,
+// changes it, turns it on or off, and leads to the editor.
+const Q = () => window.EQ;
+const SEL = { bg: 'rgba(126,214,188,0.16)', border: 'rgba(126,214,188,0.55)', ink: '#7ed6bc' };
+const REST = { bg: 'rgba(233,238,242,0.07)', border: 'rgba(233,238,242,0.12)', ink: '#e9eef2' };
+const AMBER = '#e0a758';
+const VIEWS = [
+  { name: 'Home', d: 'M4 11.5 12 5l8 6.5M6.5 10v9h11v-9' },
+  { name: 'Playing', d: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM10.5 9v6l4.5-3z', on: true },
+  { name: 'Lyrics', d: 'M5 7h14M5 12h9M5 17h11' },
+  { name: 'Meters', d: 'M5 19V11M10 19V5M15 19V9M20 19V13' },
+  { name: 'Room', d: 'M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z' }
+];
+
+class Component extends DCLogic {
+  state = { k: null, s: null };
+  componentDidMount() {
+    if (!window.EQ) this._t = setInterval(() => { if (window.EQ) { clearInterval(this._t); this.forceUpdate(); } }, 50);
+  }
+  componentWillUnmount() { clearInterval(this._t); }
+  key() { const p = this.props; return ['host', 'on', 'sel', 'label', 'dsd', 'fixed', 'open', 'screen'].map(k => String(p[k])).join('|'); }
+  seed() { const p = this.props; return { on: p.on ?? true, sel: p.sel || 'rock', open: !!p.open }; }
+  cur() { return this.state.k === this.key() && this.state.s ? this.state.s : this.seed(); }
+  put(patch) { const s = this.cur(); this.setState({ k: this.key(), s: { ...s, ...patch } }); }
+
+  renderVals() {
+    if (!window.EQ) return { isDrawer: false, isBarTray: false, isPhoneTray: false, chips: [], views: [] };
+    const E = Q();
+    const p = this.props;
+    const s = this.cur();
+    const host = p.host || 'drawer';
+    const own = E.OWN;
+    const custom = s.sel === 'custom';
+    const obj = E.PRESETS.find(x => x.k === s.sel) || E.OWN_FULL.find(x => x.k === s.sel);
+    const isOwn = !!E.OWN_FULL.find(x => x.k === s.sel);
+    const name = custom ? 'Custom' : (p.label && !obj ? p.label : obj ? obj.name : (p.label || 'Rock'));
+    const gains = obj ? obj.g : (E.PRESETS.find(x => x.k === 'rock').g.map((g, i) => i === 2 ? g + 3 : i === 6 ? g + 2 : g));
+    const h = E.headroom(gains);
+    const hText = E.dbText(h);
+    const on = s.on, dsd = !!p.dsd, fixed = !!p.fixed;
+
+    const chip = (o, sep) => {
+      const sel = s.sel === o.k;
+      const c = sel ? SEL : REST;
+      return { name: o.name, bg: c.bg, border: c.border, ink: c.ink, selFlag: sel ? '1' : '0', sepDisplay: sep ? 'block' : 'none', dotDisplay: 'none', onTap: () => this.put({ sel: o.k }) };
+    };
+    const chips = [];
+    if (custom) chips.push({ name: 'Custom', ...SEL, selFlag: '1', sepDisplay: 'none', dotDisplay: 'block', onTap: null });
+    E.PRESETS.forEach(o => chips.push(chip(o, false)));
+    own.forEach((o, i) => chips.push(chip(o, i === 0)));
+
+    let stateText, stateInk = 'rgba(233,238,242,0.72)';
+    if (!on) stateText = 'Off · bit-perfect';
+    else if (dsd) stateText = name + ' · stands aside while DSD plays';
+    else if (custom) { stateText = 'Custom · not saved'; stateInk = AMBER; }
+    else stateText = name + (isOwn ? ' · yours' : ' · preset');
+
+    let noteText = '', noteInk = 'rgba(233,238,242,0.6)';
+    if (on && dsd) noteText = 'DSD plays untouched. The equaliser is back for the next PCM track.';
+    else if (on && h > 0 && fixed) { noteText = 'Lowered by ' + hText + ' so the boost cannot clip. With Fixed volume, turn the amplifier up ' + hText + ' to match.'; noteInk = AMBER; }
+    else if (on && h > 0) noteText = 'Lowered by ' + hText + ' so the boost cannot clip.';
+
+    const btnName = !on ? 'EQ off' : dsd ? 'DSD' : name;
+    const lit = on && !dsd;
+    const W = p.w ?? 1850;
+    return {
+      isDrawer: host === 'drawer', isBarTray: host === 'bartray', isPhoneTray: host === 'phonetray',
+      notBare: !p.bare, fixed, notFixed: !fixed,
+      chips, stateText, stateInk,
+      noteText, noteInk, noteDisplay: noteText ? 'block' : 'none',
+      chipsOpacity: lit ? 1 : 0.4, chipsPointer: lit ? 'auto' : 'none',
+      togBg: on ? 'rgba(126,214,188,0.32)' : 'rgba(233,238,242,0.08)',
+      togBorder: on ? 'rgba(126,214,188,0.5)' : 'rgba(233,238,242,0.16)',
+      knobLeft: on ? '29px' : '3px', knobBg: on ? '#7ed6bc' : 'rgba(233,238,242,0.6)',
+      powerShort: on ? 'On' : 'Off', powerInk: on ? '#7ed6bc' : 'rgba(233,238,242,0.72)',
+      toggleOn: () => this.put({ on: !s.on }),
+      open: s.open, toggleOpen: () => this.put({ open: !s.open }),
+      chipsRef: (el) => {
+        if (!el) return;
+        requestAnimationFrame(() => {
+          const t = el.querySelector('[data-sel="1"]');
+          if (!t) return;
+          const r = el.getBoundingClientRect(), sc = r.width / (el.offsetWidth || r.width);
+          const d = (t.getBoundingClientRect().left - r.left) / sc;
+          if (d + t.offsetWidth > el.clientWidth - 40) el.scrollLeft += d - 120;
+        });
+      },
+      btnName, chevTurn: s.open ? 'rotate(-135deg) translate(-2px,-2px)' : 'rotate(45deg) translate(-2px,-2px)',
+      eqBtnBg: lit ? 'rgba(126,214,188,0.12)' : 'rgba(233,238,242,0.07)',
+      eqBtnLine: lit ? 'rgba(126,214,188,0.45)' : 'rgba(233,238,242,0.14)',
+      eqBtnInk: lit ? '#7ed6bc' : 'rgba(233,238,242,0.82)',
+      trayH: s.open ? '254px' : '136px',
+      barBackdrop: W === 1280 ? 'eq/backdrop-bar-1280.png' : 'eq/backdrop-bar-1850.png',
+      screen: p.screen ?? true,
+      touchpad: s.open && (p.screen ?? true),
+      artistDisplay: s.open ? 'block' : 'none',
+      miniChev: s.open ? 'rotate(225deg) translate(2px,2px)' : 'rotate(45deg) translate(2px,2px)',
+      chipShown: !s.open,
+      pillText: on ? 'On' : 'Off',
+      pillBg: on ? 'rgba(126,214,188,0.16)' : 'transparent',
+      pillLine: on ? '#7ed6bc' : 'rgba(233,238,242,0.1)',
+      pillInk: on ? '#7ed6bc' : '#e9eef2',
+      views: VIEWS.map(v => ({
+        name: v.name, d: v.d,
+        ink: v.on ? '#7ed6bc' : '#e9eef2', weight: v.on ? 700 : 600,
+        bg: v.on ? 'rgba(126,214,188,0.16)' : 'rgba(233,238,242,0.07)', line: v.on ? '#7ed6bc' : 'transparent'
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>
