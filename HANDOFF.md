@@ -124,8 +124,12 @@ sofapi idle; dry run first: 3 upgraded, nothing removed): core
 `1.6.0+git50.18da13b` - Phase 20's too, the branch being built on it; the
 other packages as Phase 20's preview left them (copied from its
 `packaging/out` for the player's pins). Core and kiosk restarted, the panel
-on `index-BhU4fWJL.js`, `/tmp/pv` removed. Next: George's look and answers,
-then the Home Assistant card in the integration's next release.
+on `index-BhU4fWJL.js`, `/tmp/pv` removed. **George, the same evening:
+Claude Design got the remote wrong; fresh designs are coming.** Phase 21
+waits for them; ADR-0164 and the branch are revised from them, and the
+Home Assistant card follows after. Rolling sofapi back to Phase 20's preview
+(core git18, ui git19, player git20, in `ph-equaliser`'s `packaging/out`)
+only if George asks.
 
 Then 22-30 in order, each ADR first (`docs/DEVELOPMENT.md`, the IDs
 there); MPD parked (ADR-0151). **Raspberry Pi Imager** (ADR-0159, a task):
