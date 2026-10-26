@@ -102,7 +102,18 @@ the measurement through sofapi's card (it plays through the amplifier: at a
 time George picks), with the give-back's checks (ADR-0162 *Not yet done*);
 the manual's drawer picture retaken with the demo library.
 
-Then 21-29 in order, each ADR first (`docs/DEVELOPMENT.md`, the IDs
+**Phase 21, the phone remote, being built** (2026-10-26; George: while he
+tries Phase 20, two phases open). Branch `ph-phone-controls` in
+`~/projects/gexis-player-ph-phone-controls`, from `ph-equaliser` with `next`
+merged in. The design `design/source/21` (on `docs`; its Settings copy is
+the repository's, as the bundle's had LAN addresses, and the bundle's
+shared README was older than ours, so only its Phase 21 parts were taken).
+[ADR-0164](docs/decisions/0164-the-phone-remote.md) accepted: George's
+answers (the touchpad keeps the pointer, the D-pad is the steps, touch
+sizes as drawn, repeat cycles, the Home Assistant card follows); Claude's
+C1-C11 for his confirmation.
+
+Then 22-30 in order, each ADR first (`docs/DEVELOPMENT.md`, the IDs
 there); MPD parked (ADR-0151). **Raspberry Pi Imager** (ADR-0159, a task):
 Imager's own list stays open as it is (George, 2026-10-24).
 
@@ -116,10 +127,9 @@ every merged release PR, otherwise weekly on Sunday evening. **Last run:
 ## Phases
 
 Closed: 0-19 (13 with letters a-f). Phases are numbered consecutively
-without letters, each with a stable ID (George, 2026-10-13); 20 is in
-progress, 21-30 to come (21, the phone's quick actions and touchpad
-redesigned, `ph-phone-controls`, added by George on 2026-10-26), MPD
-parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
+without letters, each with a stable ID (George, 2026-10-13); 20 and 21
+(the phone remote, `ph-phone-controls`, added by George on 2026-10-26) in
+progress, 22-30 to come, MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
 
 ## Machines
 

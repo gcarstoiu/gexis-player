@@ -3277,7 +3277,18 @@ gap or click at a change of sample rate.
 phone page's quick actions and its touch area, the touchpad. Room correction
 and the phases after it move one place down.
 
-**Today** the mini player at the bottom of the phone page
+**Started 2026-10-26** (George, the same day: build it while he tries Phase
+20; two phases open), on `ph-phone-controls`, branched from `ph-equaliser`,
+whose quick change it moves. The design: Claude Design's *phone remote*,
+`design/source/21`. **[ADR-0164](decisions/0164-the-phone-remote.md),
+accepted the same day**: one remote with a player picker and Remote /
+Settings pages; for a player with a screen a touch area with a Touchpad /
+D-pad switch, quick actions and the volume row; for one without, a large
+cover and a seek bar. George's answers: the touchpad keeps the pointer, the
+touch sizes as drawn, repeat cycles as on the panel, the Home Assistant card
+follows. Claude's decisions C1-C11 are for his confirmation.
+
+**Before it** the mini player at the bottom of the phone page
 ([ADR-0101](decisions/0101-a-mini-player-on-the-phone.md)) holds the track
 with play/pause; the panel's row, *Screen off* in its heading and a round
 button each for Home, Playing, Lyrics, Meters, Room and Idle; the volume
@@ -3287,8 +3298,8 @@ touchpad between the track and the row
 half the phone's height, a tap outside it only closing it, its gestures, and
 the phone's keyboard for a text field on the panel.
 
-**An ADR before anything is built**, amending ADR-0101 and ADR-0121 where
-it changes them. It must settle:
+**The ADR had to settle**, amending ADR-0101 and ADR-0121 where it changes
+them:
 - **The quick actions**: which the phone offers, Phase 20's equaliser
   included, how they are laid out and what each shows of the panel.
 - **The touchpad**: how it opens and closes, its size, and its place beside
@@ -3297,10 +3308,24 @@ it changes them. It must settle:
   ([ADR-0163](decisions/0163-a-gexis-player-card-for-dashboards.md)), whose
   quick actions follow the phone's: whether it follows the redesign.
 
-**Drawn in Claude Design first**, as the UI is here (*UI work*, above): a
-brief in `design/briefs/`, seen by George before it is built.
+**Drawn in Claude Design first**, as the UI is here (*UI work*, above):
+received 2026-10-26, `design/source/21`.
 
-**Acceptance:** drafted with its ADR.
+**Acceptance (draft):**
+
+1. On a phone the remote opens on Remote for its player; the picker lists
+   the players on the network and opens another's remote.
+2. With a screen, the touchpad drives the pointer as before (moving,
+   tapping, scrolling, zooming, typing), the D-pad moves the ring, and the
+   corner buttons and quick actions show and change what the screen shows,
+   standby included.
+3. Without a screen, the cover, the transport and the seek bar work with
+   Lyrion and Spotify; a renderer that cannot seek shows no knob.
+4. The volume row sets the level, mutes and names the EQ setting; the EQ
+   sheet switches the equaliser and changes its setting, and Edit opens it
+   in Settings.
+5. Settings works as before, without the mini player.
+6. The Home Assistant card follows, in the integration's next release.
 
 ### Phase 22 — Room correction for the bass, with a USB microphone
 
