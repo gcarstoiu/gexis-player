@@ -956,7 +956,7 @@
     min-height: 0;
     overflow-y: auto;
     scrollbar-width: none;
-    padding: 14px 16px calc(var(--mini-closed-h, 96px) + 24px);
+    padding: 14px 16px calc(24px + env(safe-area-inset-bottom, 0px));
     display: flex;
     flex-direction: column;
     gap: 6px;

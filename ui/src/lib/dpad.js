@@ -28,6 +28,11 @@
 // - `data-dpad-off` on the screens the D-pad leaves to the phone (D8);
 // - `data-dpad-cover` on a screen over everything that a press only takes
 //   down (the idle screen, a takeover's).
+//
+// **The phone's remote drives it too** (ADR-0164): its steps arrive as these
+// keys, its scroll strips as a `dpadscroll` event (`detail.axis` 'x' or 'y',
+// `detail.by` +1 or -1), and `dpadring` says whether OK would land in a text
+// field, so the phone can bring up its keyboard in the same touch.
 
 const KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Enter: 'ok', Escape: 'back' };
 
@@ -269,8 +274,18 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
     return false;
   }
 
+  let ringField = false;
+  function tell() {
+    // A field, or a control that opens one focused (`data-text-entry`).
+    const now = shown && !lost && !!current && (isText(current) || !!current.closest('[data-text-entry]'));
+    if (now === ringField) return;
+    ringField = now;
+    dispatchEvent(new CustomEvent('dpadring', { detail: { field: now } }));
+  }
+
   let placed = '';
   function draw() {
+    tell();
     if (!shown || lost || !current || !visible(current)) {
       if (!ring.hidden) ring.hidden = true;
       placed = '';
@@ -435,6 +450,40 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
     draw();
   }
 
+  // ADR-0164 C11: a step of the phone's scroll strip scrolls the list the
+  // ring is in, or else the largest in the top layer, by a fifth of it. As a
+  // key does, it counts as a touch and only wakes a dark screen.
+  function onScrollStep(event) {
+    const axis = event.detail?.axis === 'x' ? 'x' : 'y';
+    const by = Math.sign(Number(event.detail?.by) || 0);
+    if (!by || off()) return;
+    onkey();
+    if (wake() || covered()) {
+      hide();
+      return;
+    }
+    const layer = topLayer();
+    if (layer.matches('[data-dpad-frame]')) return;
+    let box = shown && current && layer.contains(current) ? scrollers(current, layer).find((s) => s[axis])?.el : null;
+    if (!box) {
+      let most = 0;
+      for (const el of [layer, ...layer.querySelectorAll('*')]) {
+        const extra = axis === 'x' ? el.scrollWidth - el.clientWidth : el.scrollHeight - el.clientHeight;
+        if (extra <= 1 || !visible(el)) continue;
+        const style = getComputedStyle(el);
+        if (!/(auto|scroll)/.test(axis === 'x' ? style.overflowX : style.overflowY)) continue;
+        const size = axis === 'x' ? el.clientWidth : el.clientHeight;
+        if (size > most) {
+          most = size;
+          box = el;
+        }
+      }
+    }
+    if (!box) return;
+    const size = axis === 'x' ? box.clientWidth : box.clientHeight;
+    box.scrollBy({ [axis === 'x' ? 'left' : 'top']: (by * size) / 5, behavior: 'smooth' });
+  }
+
   function onPointer(event) {
     if (event.isTrusted) hide();
   }
@@ -505,12 +554,14 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
   addEventListener('pointerdown', onPointer, true);
   // The phone's touchpad: its pointer moves and taps are made up in the page.
   addEventListener('panelpointer', hide);
+  addEventListener('dpadscroll', onScrollStep);
   addEventListener('scroll', onScroll, true);
   addEventListener('resize', onScroll);
   return () => {
     removeEventListener('keydown', onKey, true);
     removeEventListener('pointerdown', onPointer, true);
     removeEventListener('panelpointer', hide);
+    removeEventListener('dpadscroll', onScrollStep);
     removeEventListener('scroll', onScroll, true);
     removeEventListener('resize', onScroll);
     clearInterval(watch);

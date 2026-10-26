@@ -222,6 +222,9 @@ export const reportShown = (shown) => post('/panel/shown', shown);
 // ADR-0101 as amended 2026-10-05: 'home', 'now', 'lyrics', 'track' or
 // 'minimise'.
 export const goTo = (to) => post(`/panel/go/${to}`);
+//: ADR-0161: a D-pad key on the panel - the phone's remote (ADR-0164) sends
+//: them as Home Assistant's D-pad does.
+export const pressKey = (key) => post('/panel/key', { key });
 
 /** Accept or reject the open pairing request. A 409 means the window closed
  *  while the finger was moving - the answer did not land, and the frame has

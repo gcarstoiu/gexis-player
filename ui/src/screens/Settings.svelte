@@ -38,7 +38,9 @@
   //
   // `embedded` is the panel too: there the weave is drawn once for the whole
   // panel (PanelBackground.svelte). A phone gets its own, as before.
-  let { onback = null, embedded = false, openRow = null, onrowopened = null } = $props();
+  //: `switcher`: ADR-0136's player switcher in the title, left out inside the
+  //: phone's remote, whose picker is above Settings (ADR-0164).
+  let { onback = null, embedded = false, openRow = null, onrowopened = null, switcher = true } = $props();
 
   const WIDE_MIN = 720;
 
@@ -1874,7 +1876,7 @@
           <div class="title" class:title--wide={wide}>{!wide && current ? current.label : 'Settings'}</div>
           <!-- ADR-0136: on a phone, the way to the other players - at the
                right end of the title's line (George, 2026-10-11). -->
-          {#if !onPanel()}<PlayerSwitcher />{/if}
+          {#if !onPanel() && switcher}<PlayerSwitcher />{/if}
         </div>
         <!-- Shown at both widths: the panel is where someone types the
              name, so it is where the resolved host has to sit beside it. -->

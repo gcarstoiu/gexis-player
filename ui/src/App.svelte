@@ -15,7 +15,7 @@
   import DashboardScreen from './screens/DashboardScreen.svelte';
   import PairingFrame from './screens/PairingFrame.svelte';
   import Settings from './screens/Settings.svelte';
-  import MiniPlayer from './screens/MiniPlayer.svelte';
+  import PhoneRemote from './screens/remote/PhoneRemote.svelte';
   import Equaliser from './screens/eq/Equaliser.svelte';
   import SetupScreen from './screens/SetupScreen.svelte';
   import FirstUsePage from './screens/FirstUsePage.svelte';
@@ -832,12 +832,8 @@
 {:else if surface === 'remote' && personalisePage}
   <FirstUsePage mode="p2" onclose={() => (personaliseHeld = false)} />
 {:else if surface === 'remote'}
-  <!-- ADR-0101: on a phone, Settings and the mini player under it. -->
-  <div class="remote remote--mini" style:display={eqOpen ? 'none' : null}><Settings {openRow} onrowopened={() => (openRow = null)} /></div>
-  {#if eqOpen}
-    <div class="remote remote--mini remote--eq"><Equaliser surface="phone" onback={() => (eqOpen = false)} /></div>
-  {/if}
-  <MiniPlayer onequaliser={openEqualiser} />
+  <!-- ADR-0164: on a phone, the remote - Remote and Settings. -->
+  <PhoneRemote {openRow} onrowopened={() => (openRow = null)} />
   {#if $screenNew}
     <NewScreen question={$screenNew} onanswer={answerNew} />
   {/if}
@@ -1131,23 +1127,6 @@
   :global(body),
   :global(#app) {
     height: 100%;
-  }
-
-  .remote {
-    height: 100%;
-  }
-  /* ADR-0101: room for the mini player, so the last rows are not under it -
-     its closed height as MiniPlayer measures it (the home-indicator inset is
-     inside that), and 16 px between the last row and its top edge (George,
-     2026-10-06). Left at the end of Settings' own scrolling lists, not as
-     padding here: padded, the page stopped short and left a bare band above
-     the sheet. */
-  .remote--mini {
-    --foot-clear: calc(var(--mini-closed-h, 160px) + 16px);
-  }
-  /* ADR-0162: the equaliser's editor, over where Settings was. */
-  .remote--eq {
-    position: relative;
   }
 
   /* ADR-0109, Standard family: Chromium's scale factor makes every screen

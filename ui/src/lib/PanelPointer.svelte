@@ -219,6 +219,9 @@
     if (!on) return;
     pad = openTouchpad(receive);
     const focusChanged = () => pad?.send({ t: 'focus', field: takesText(document.activeElement) });
+    // ADR-0164 C5: the D-pad's ring on a text field, for the phone's remote.
+    const ringChanged = (event) => pad?.send({ t: 'ring', field: !!event.detail?.field });
+    addEventListener('dpadring', ringChanged);
     // After a focus-out the new focus is not yet set; read it a moment later.
     const focusLeft = () => setTimeout(focusChanged, 0);
     document.addEventListener('focusin', focusChanged);
@@ -226,6 +229,7 @@
     return () => {
       document.removeEventListener('focusin', focusChanged);
       document.removeEventListener('focusout', focusLeft);
+      removeEventListener('dpadring', ringChanged);
       pad?.close();
       pad = null;
       rest();
@@ -355,6 +359,12 @@
         key(String(message.key ?? ''));
         break;
       case 'scroll':
+        // ADR-0164 C11: the remote's scroll strip, a step for the D-pad's
+        // list rather than a distance under the pointer.
+        if (message.step) {
+          dispatchEvent(new CustomEvent('dpadscroll', { detail: { axis: message.step, by: message.by } }));
+          break;
+        }
         wake();
         scrolledAt = performance.now();
         scrolledX = Math.abs(Number(message.dx || 0)) > Math.abs(Number(message.dy || 0));

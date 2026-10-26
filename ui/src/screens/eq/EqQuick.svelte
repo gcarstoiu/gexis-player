@@ -2,8 +2,9 @@
 <!--
   The equaliser's quick change (ADR-0162; design/source/20, EQ Quick): the
   setting in use, the others to change it to, on and off, and Edit, which
-  opens the editor. In the panel's volume drawer (`drawer`), the bar's tray's
-  second band (`bartray`) and the phone's pull-up tray (`phonetray`).
+  opens the editor. In the panel's volume drawer (`drawer`) and the bar's
+  tray's second band (`bartray`); the phone's is the remote's EQ sheet
+  (ADR-0164).
 
   The settings are chips in one sideways row - presets, then the owner's after
   a rule - opening scrolled to the one in use; Custom comes first. Off, or
@@ -123,19 +124,6 @@
       </div>
       {@render edit()}
     </div>
-  {:else}
-    <div class="phonetray">
-      <div class="phead">
-        <span class="phead__label">Equaliser</span>
-        <span class="phead__rule"></span>
-        <button type="button" class="pill" onclick={() => onedit?.()}>Edit<span class="pill__chev"></span></button>
-        <button type="button" class="pill pill--power" class:is-on={on} aria-pressed={on} onclick={toggle}>
-          {on ? 'On' : 'Off'}
-        </button>
-      </div>
-      {@render chipRow()}
-      {@render noteLine()}
-    </div>
   {/if}
 {/if}
 
@@ -210,8 +198,7 @@
   }
   .edit:active,
   .power:active,
-  .chip:active,
-  .pill:active {
+  .chip:active {
     transform: scale(0.95);
   }
   .switch {
@@ -360,81 +347,5 @@
     height: 60px;
     padding: 0 20px 0 24px;
     font-size: 18px;
-  }
-
-  /* -- the phone's tray -- */
-  .phonetray {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .phead {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 2px;
-  }
-  .phead__label {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: rgba(233, 238, 242, 0.6);
-  }
-  .phead__rule {
-    flex: 1;
-    height: 1px;
-    background: rgba(233, 238, 242, 0.1);
-  }
-  .pill {
-    height: 32px;
-    padding: 0 10px 0 12px;
-    border-radius: var(--r-pill);
-    border: 1px solid rgba(233, 238, 242, 0.1);
-    box-sizing: border-box;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: transparent;
-    font: inherit;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--ink);
-  }
-  .pill__chev {
-    width: 7px;
-    height: 7px;
-    border-right: 2px solid rgba(233, 238, 242, 0.6);
-    border-top: 2px solid rgba(233, 238, 242, 0.6);
-    transform: rotate(45deg);
-  }
-  .pill--power {
-    padding: 0 12px;
-  }
-  .pill--power.is-on {
-    background: rgba(126, 214, 188, 0.16);
-    border-color: #7ed6bc;
-    color: #7ed6bc;
-  }
-  .phonetray .chips {
-    margin: 0 -16px;
-    padding: 0 16px;
-    gap: 6px;
-    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 40px), transparent 100%);
-    mask-image: linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 40px), transparent 100%);
-  }
-  .phonetray .chip {
-    height: 44px;
-    padding: 0 16px;
-    border-radius: 12px;
-    gap: 8px;
-    font-size: 15px;
-  }
-  .phonetray .rule {
-    margin: 10px 3px;
-  }
-  .phonetray .note {
-    margin-top: 0;
-    font-size: 14px;
   }
 </style>
