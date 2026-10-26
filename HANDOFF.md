@@ -118,9 +118,14 @@ mocked data against the design (`~/projects/scratch/ph21`: `remote_layout.py`
 in `gexis-layout-core:1`, its `demo` flag for the manual's pictures from
 the demo library; `remote_shots.py`, `variant_shot.py`, `typing_shot.py`
 with `fake_panel.py`, in `gexis-layout:1`, on a `gexis-layout` network).
-**Not yet on a player.** Next: George's look and answers, a preview (it
-carries Phase 20 too: ask before installing on sofapi), then the Home
-Assistant card in the integration's next release.
+**On sofapi as a preview since 2026-10-26 21:19** (George asked for it;
+sofapi idle; dry run first: 3 upgraded, nothing removed): core
+`1.6.0+git50.18da13b`, ui `1.6.0+git49.b740c16`, player
+`1.6.0+git50.18da13b` - Phase 20's too, the branch being built on it; the
+other packages as Phase 20's preview left them (copied from its
+`packaging/out` for the player's pins). Core and kiosk restarted, the panel
+on `index-BhU4fWJL.js`, `/tmp/pv` removed. Next: George's look and answers,
+then the Home Assistant card in the integration's next release.
 
 Then 22-30 in order, each ADR first (`docs/DEVELOPMENT.md`, the IDs
 there); MPD parked (ADR-0151). **Raspberry Pi Imager** (ADR-0159, a task):
