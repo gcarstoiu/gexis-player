@@ -5,9 +5,9 @@
 questions it left (below). The decisions he left to Claude are listed
 under *Claude's decisions* for his confirmation. Phase 21
 (`ph-phone-controls`). Replaces [ADR-0101](0101-a-mini-player-on-the-phone.md)'s
-mini player on the phone; keeps
+mini player on the phone and
 [ADR-0121](0121-the-phone-as-the-panel-s-touchpad-and-keyboard.md)'s
-touchpad and keyboard in a new place. Builds on
+pointer; keeps its keyboard. Builds on
 [ADR-0037](0037-transport-commands.md) (what a renderer declares),
 [ADR-0135](0135-display-standby.md) (standby),
 [ADR-0136](0136-switching-between-players-on-the-phone.md) (the players on the
@@ -34,13 +34,15 @@ the touchpad, and handed over Claude Design's *phone remote* the same day.
    progress, transport), a touch area, quick actions and the volume row.
    The touch area has four corner buttons (Home, Lyrics, Back, Meters) and
    a switch between two pads.
-3. **The two pads: Touchpad and D-pad.** George, asked whether the pointer
-   goes: the design shows both, with a switch between them. **Touchpad is
-   today's pointer** (ADR-0121: one finger moves it, a tap presses, two
-   fingers scroll, a pinch zooms, the keyboard for a text field); the
-   design's scroll strips are its edge lines. **D-pad sends ADR-0161's
-   steps.** The design's Touchpad sent steps too (52 px of swipe a step);
-   that is not built, as it was the D-pad again (`IMPLEMENTED-DIFFERENTLY`).
+3. **The two pads, as drawn** (George: the design shows both, with a switch
+   between them, and it is followed). **Touchpad**: every 52 px of swipe
+   sends one of ADR-0161's steps (Up, Down, Left, Right), a tap sends OK,
+   and what was sent is named for a second (*Up × 3*); the strips along the
+   right and bottom edges scroll, a step each 24 px. **D-pad**: the arrows
+   and OK as buttons. Both drive the panel's ring, as Home Assistant's
+   D-pad does. **The pointer leaves the phone**, and with it the pinch and
+   a tap on the Home Assistant dashboard from the phone (ADR-0157): over the
+   dashboard the steps reach Home Assistant's own page, as its D-pad's do.
 4. **Quick actions**: Standby (the screen, ADR-0135), Idle screen, Playing,
    Room.
 5. **A player without a screen**: a large cover, a seek bar, larger
@@ -90,16 +92,20 @@ the touchpad, and handed over Claude Design's *phone remote* the same day.
   Idle screen only with the idle screen switched on; Playing and Lyrics
   need something playing.
 - **C8 — The pad the remote starts on is the one last used on that phone**
-  (kept in the phone's browser), Touchpad the first time, rather than a
-  setting. With *Phone touchpad* off the D-pad alone is offered and the
-  switch is not shown.
+  (kept in the phone's browser), Touchpad the first time as in the design;
+  its `startPad` is the drawing's tweak, not a setting. With *Phone
+  touchpad* off the touch area offers the D-pad alone, without the switch,
+  and no typing (the socket that carries it is the setting's).
 - **C9 — The phone opens on Remote.** Setup, first use and *Personalise*
   still take the whole page while they run.
 - **C10 — The page is the design's column** on a phone, at most 480 px wide
   and centred on a larger screen; nothing on it scrolls but Settings.
-- **C11 — The volume bar waits for the finger's direction**, as the mini
-  player's slider did (2026-10-12): a tap sets the level on lift, a
-  sideways drag follows the finger, an up or down swipe sends nothing.
+- **C11 — A scroll step** goes over `/touchpad` as ADR-0121's `scroll`,
+  marked as a step: the panel scrolls the list the ring is in, or the
+  screen's main list, by a fifth of its height or width.
+- **C12 — Pointer speed and Pointer style** have nothing left to set:
+  proposed for ADR-0022 as retired, hidden from Settings once George
+  confirms.
 
 ## Not in this record
 
