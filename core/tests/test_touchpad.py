@@ -46,6 +46,10 @@ async def test_a_phone_s_moves_reach_the_panel_and_the_panel_s_field_reaches_the
         assert await _next(panel) == {"t": "move", "dx": 12, "dy": -3}
         await panel.send_str(json.dumps({"t": "over", "field": True}))
         assert await _next(phone) == {"t": "over", "field": True}
+        # ADR-0164 C5: the D-pad's ring on a text field; ADR-0157's untyped.
+        for said in ({"t": "ring", "field": True}, {"t": "untyped"}):
+            await panel.send_str(json.dumps(said))
+            assert await _next(phone) == said
         # Each side may say only its own messages; the rest are dropped.
         await phone.send_str(json.dumps({"t": "over", "field": True}))
         await phone.send_str(json.dumps({"t": "volume", "percent": 100}))

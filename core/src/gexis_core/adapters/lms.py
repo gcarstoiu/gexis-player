@@ -246,7 +246,7 @@ class LmsAdapter(Adapter):
         # could act on a user's command; `activate()` below now can, and
         # only for LMS - Spotify and Bluetooth are taken over by a phone
         # connecting, never by us asking.
-        controls=frozenset({"activate", "play", "pause", "next", "previous", "shuffle", "repeat"}),
+        controls=frozenset({"activate", "play", "pause", "next", "previous", "shuffle", "repeat", "seek"}),
     )
 
     # ADR-0027, 2026-09-12: this adapter no longer fights squeezelite for
@@ -1092,6 +1092,11 @@ class LmsAdapter(Adapter):
         return await self._command(
             ["playlist", "repeat", REPEAT_TO_LMS[mode]], read_back=True
         )
+
+    async def seek(self, position: float) -> bool:
+        """ADR-0164 C2: `time`, the same command a release uses to put the
+        position back."""
+        return await self._command(["time", f"{position:.2f}"])
 
     async def previous(self) -> bool:
         """`jump_rew`, not `playlist index -1`: the index always goes back a

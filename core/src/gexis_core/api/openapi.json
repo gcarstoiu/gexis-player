@@ -5509,7 +5509,7 @@
           "Panel"
         ],
         "summary": "Open the touchpad relay WebSocket",
-        "description": "Upgrades to a WebSocket that lets a phone act as the panel's touchpad and keyboard (ADR-0121). A connection from loopback is the panel; any other is a phone (ADR-0035 §6). A phone may send move, tap, text, key, scroll and zoom messages, which the core relays unchanged to every connected panel; the panel may send over and focus, relayed to every connected phone. Anything else, any non-text frame and any frame over 2048 bytes is dropped, and while the Phone touchpad setting (`phone_touchpad`) is off every relayed message is dropped too. A `{\"t\":\"ping\"}` from either side is always answered to the sender alone with `{\"t\":\"pong\"}`; when a phone disconnects, every panel is sent `{\"t\":\"gone\",\"phones\":<n>}`. The socket is separate from `/state`, which stays publish-only (ADR-0028); the server sends a WebSocket heartbeat every 20 seconds.",
+        "description": "Upgrades to a WebSocket that lets a phone act as the panel's touchpad and keyboard (ADR-0121). A connection from loopback is the panel; any other is a phone (ADR-0035 §6). A phone may send move, tap, text, key, scroll and zoom messages, which the core relays unchanged to every connected panel; the panel may send over, focus, ring (the D-pad's ring is on a text field, ADR-0164) and untyped (a character the Home Assistant dashboard could not be given), relayed to every connected phone. A scroll marked `step` is the remote's scroll strip: the panel scrolls the list around its D-pad ring. Anything else, any non-text frame and any frame over 2048 bytes is dropped, and while the Phone touchpad setting (`phone_touchpad`) is off every relayed message is dropped too. A `{\"t\":\"ping\"}` from either side is always answered to the sender alone with `{\"t\":\"pong\"}`; when a phone disconnects, every panel is sent `{\"t\":\"gone\",\"phones\":<n>}`. The socket is separate from `/state`, which stays publish-only (ADR-0028); the server sends a WebSocket heartbeat every 20 seconds.",
         "x-gexis-stability": "internal",
         "x-gexis-adr": [
           "ADR-0121",
@@ -5554,7 +5554,7 @@
           "Playback"
         ],
         "summary": "Send a transport command to the active renderer",
-        "description": "Sends play, pause, next, previous, shuffle or repeat to whichever renderer holds the device - never to a renderer by name, since a command to one that is not active would be an acquisition (ADR-0037 §1). The command must be declared by the active renderer and listed in the state's `controls.available` right now (ADR-0037 §2). `shuffle` and `repeat` take a JSON body; the others take none. A 200 means the command was sent; its effect arrives on /state.",
+        "description": "Sends play, pause, next, previous, shuffle, repeat or seek to whichever renderer holds the device - never to a renderer by name, since a command to one that is not active would be an acquisition (ADR-0037 §1). The command must be declared by the active renderer and listed in the state's `controls.available` right now (ADR-0037 §2). `shuffle`, `repeat` and `seek` take a JSON body; the others take none. `seek` needs a known duration, and a position past it is the end (ADR-0164 C2). A 200 means the command was sent; its effect arrives on /state.",
         "parameters": [
           {
             "name": "command",
@@ -5569,14 +5569,15 @@
                 "next",
                 "previous",
                 "shuffle",
-                "repeat"
+                "repeat",
+                "seek"
               ]
             }
           }
         ],
         "requestBody": {
           "required": false,
-          "description": "Only for `shuffle` (`{\"on\": true|false}`) and `repeat` (`{\"mode\": \"off\"|\"all\"|\"one\"}`); ignored for the other commands.",
+          "description": "Only for `shuffle` (`{\"on\": true|false}`), `repeat` (`{\"mode\": \"off\"|\"all\"|\"one\"}`) and `seek` (`{\"position\": <seconds>}`); ignored for the other commands.",
           "content": {
             "application/json": {
               "schema": {
@@ -5586,6 +5587,9 @@
                   },
                   {
                     "$ref": "#/components/schemas/PlaybackRepeatRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PlaybackSeekRequest"
                   }
                 ]
               }
@@ -5604,7 +5608,7 @@
             }
           },
           "400": {
-            "description": "`shuffle` without a boolean `on`, or `repeat` without `mode` set to off, all or one.",
+            "description": "`shuffle` without a boolean `on`, `repeat` without `mode` set to off, all or one, or `seek` without a `position` of 0 or more.",
             "content": {
               "application/json": {
                 "schema": {
@@ -8370,7 +8374,8 @@
                 "next",
                 "previous",
                 "shuffle",
-                "repeat"
+                "repeat",
+                "seek"
               ]
             },
             "description": "Commands the renderer accepts (ADR-0037): `activate` for POST /renderer/{renderer_id}/activate, the rest for POST /transport/{command}. Sorted."
@@ -8396,10 +8401,11 @@
                 "next",
                 "previous",
                 "shuffle",
-                "repeat"
+                "repeat",
+                "seek"
               ]
             },
-            "description": "Declared commands minus those the renderer reports unavailable right now, sorted."
+            "description": "Declared commands minus those the renderer reports unavailable right now, sorted; `seek` only with a known duration."
           },
           "shuffle": {
             "type": [
@@ -8751,6 +8757,20 @@
           }
         }
       },
+      "PlaybackSeekRequest": {
+        "type": "object",
+        "description": "Body of POST /transport/seek (ADR-0164 C2).",
+        "required": [
+          "position"
+        ],
+        "properties": {
+          "position": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Where to go in the track, in seconds from its start."
+          }
+        }
+      },
       "PlaybackShuffleRequest": {
         "type": "object",
         "description": "Body of POST /transport/shuffle.",
@@ -8958,7 +8978,8 @@
               "next",
               "previous",
               "shuffle",
-              "repeat"
+              "repeat",
+              "seek"
             ],
             "description": "The command sent."
           },

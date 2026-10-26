@@ -310,8 +310,12 @@ class PlaybackState:
         if self.active is None or self.active not in self.capabilities:
             return None
         declared = self.capabilities[self.active].controls & TRANSPORT_COMMANDS
+        unavailable = set(self.metadata.unavailable)
+        # ADR-0164 C2: a seek needs somewhere to go - a known duration.
+        if not self.metadata.duration or self.metadata.duration <= 0:
+            unavailable.add("seek")
         return {
-            "available": sorted(declared - self.metadata.unavailable),
+            "available": sorted(declared - unavailable),
             "shuffle": self.metadata.shuffle if "shuffle" in declared else None,
             "repeat": self.metadata.repeat if "repeat" in declared else None,
         }

@@ -363,7 +363,9 @@ class StateServer:
     #: What each side may say on the touchpad's socket (ADR-0121 §5). Anything
     #: else is dropped: the core relays these, it does not interpret them.
     PAD_FROM_PHONE = frozenset({"move", "tap", "text", "key", "scroll", "zoom"})
-    PAD_FROM_PANEL = frozenset({"over", "focus"})
+    #: `ring`: the D-pad's ring is on a text field (ADR-0164 C5); `untyped`:
+    #: a character Home Assistant's page could not be given (ADR-0157).
+    PAD_FROM_PANEL = frozenset({"over", "focus", "ring", "untyped"})
     PAD_MAX = 2048
 
     async def _handle_touchpad(self, request: web.Request) -> web.WebSocketResponse:
@@ -469,7 +471,17 @@ class StateServer:
                 {"error": f"{command} cannot work on {state.active} right now"}, status=409
             )
         argument = None
-        if command in ("shuffle", "repeat"):
+        if command == "seek":
+            try:
+                body = await request.json()
+            except ValueError:
+                body = None
+            position = body.get("position") if isinstance(body, dict) else None
+            if isinstance(position, bool) or not isinstance(position, (int, float)) or position < 0:
+                return web.json_response({"error": 'body must be {"position": <seconds, 0 or more>}'}, status=400)
+            # Past the end is the end: a drag released beyond the bar.
+            argument = float(min(position, state.metadata.duration or position))
+        elif command in ("shuffle", "repeat"):
             try:
                 body = await request.json()
             except ValueError:

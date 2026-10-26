@@ -19,7 +19,8 @@ if typing.TYPE_CHECKING:
 #: ADR-0037 §1: every transport command the route knows. An adapter
 #: declares the ones it accepts in `Capabilities.controls` and implements
 #: each as a coroutine method of the same name returning success.
-TRANSPORT_COMMANDS = frozenset({"play", "pause", "next", "previous", "shuffle", "repeat"})
+#: `seek` takes a position in seconds (ADR-0164 C2).
+TRANSPORT_COMMANDS = frozenset({"play", "pause", "next", "previous", "shuffle", "repeat", "seek"})
 
 
 class ReleaseAction(enum.Enum):
