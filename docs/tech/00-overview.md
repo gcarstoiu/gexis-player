@@ -48,7 +48,7 @@ These come up on every page, so they are stated once here.
 flowchart TB
     subgraph Presentation
         kiosk["Chromium kiosk under labwc<br/>(the panel)"]
-        phone["Phone browser<br/>(Settings, mini player, touchpad)"]
+        phone["Phone browser<br/>(the remote and Settings)"]
         peppy["Peppy screen<br/>native PeppyMeter / PeppySpectrum"]
     end
     subgraph Control["Control plane (Python)"]
@@ -197,8 +197,9 @@ flowchart LR
   The visualiser's skin pack follows the screen size (ADR-0111). The player
   also runs with no screen at all.
 - **Phone.** No app. A browser on the same network opens the device's page
-  and gets Settings, a mini player, and a touchpad and keyboard for the
-  panel (ADR-0101, ADR-0121). During first boot it is also how Wi-Fi is
+  and gets a remote - what plays, the volume, and a touchpad or D-pad and the
+  phone's keyboard for the panel - with Settings as its second page
+  (ADR-0164). During first boot it is also how Wi-Fi is
   entered (ADR-0031).
 
 `docs/HARDWARE.md` lists what has been tested, on which hardware.

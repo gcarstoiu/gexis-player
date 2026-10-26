@@ -156,7 +156,7 @@ Taken from `Adapter` and `Capabilities` as they are. The prose for each is in
 | `capabilities.volume_over_bluealsa` | bool | ADR-0054 §1 |
 | `capabilities.volume_handed` | bool, optional | **Added 2026-09-28, within version 1.** True when the level the plugin would report at a takeover is only its app's leftover. The core then *hands* it a level (the DAC's, capped by `start_max`) through `set_volume` instead of applying its report. A plugin that declares it should hold back its `volume` reports from its acquisition until that `set_volume` arrives. ADR-0054 §5, as amended |
 | `capabilities.sample_rate_is_source` | bool, optional | **Added 2026-10-02, within version 1.** True when the `sample_rate` (and `bit_depth`) the plugin reports is the playing file's own, not a decoder's rate for a lossy stream. Only then does the visualiser show it (ADR-0036 as amended). Absent is false |
-| `capabilities.controls` | array | Subset of `play`, `pause`, `next`, `previous`, `repeat`, `shuffle`, plus `activate` |
+| `capabilities.controls` | array | Subset of `play`, `pause`, `next`, `previous`, `repeat`, `shuffle`, `seek`, plus `activate`. **`seek` added 2026-10-26, within version 1** (ADR-0164): its `transport` message carries the position in seconds as `argument`; it is offered only while the plugin reports a `duration` |
 
 ## Plugin → core
 

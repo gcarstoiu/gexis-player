@@ -127,7 +127,7 @@ questions make it yours: how you listen (Lyrion, Plex or streaming) and what
 the screen shows while music plays, while it waits and at night, each with a
 default and all of them asked again from Settings any time. After that, updates arrive
 over the network, every setting is on your phone as well as the panel, your
-phone doubles as a touchpad for the screen, and a backup brings it all back on
+phone doubles as a remote for the screen, and a backup brings it all back on
 a new card, during setup, straight from your phone. No keyboard, no terminal,
 no config files.
 
@@ -192,8 +192,8 @@ or removed from Settings, with its progress shown in the switch itself.
 | 💾 **Backup & restore** | Settings, pairings and source logins in one archive, on a network share or downloaded to your phone · restored during setup, which asks for this player's output and screen and lets you change the rest · one player's backup can start a second one, leaving the first one's sign-ins behind · a factory reset starts the player over without re-flashing |
 | ⬆️ **Updates** | Over the network, with release notes · *Testing* gets each release first, *Stable* once it has been tried |
 | 🔗 **Network** | Wi-Fi or cable, and the cable wins while it is plugged in · a fixed address on either, kept only once it is shown to work |
-| 📱 **Settings anywhere** | The full settings on the panel and on any phone or computer on your network, with a mini player on the phone |
-| 🖐️ **Phone as a touchpad** | Drive the panel from across the room: one finger moves a pointer, a tap presses, two fingers scroll, a pinch zooms, and a text field on the panel brings up the phone's keyboard · no app to install |
+| 📱 **Settings anywhere** | The full settings on the panel and on any phone or computer on your network |
+| 🖐️ **Phone as a remote** | What plays, its controls, the volume and the equaliser · for a player with a screen, a touchpad or a D-pad that drives it from across the room, and a text field on it brings up the phone's keyboard · for one without, a large cover and a bar to move through the track · every player on the network in one menu · no app to install |
 | 🏠 **Home Assistant dashboard** | Your room's Home Assistant dashboard on the screen, every control usable · up from a button, from Home Assistant itself, or in place of the idle screen at set times · the music plays on, and it stays until you dismiss it |
 | 🏡 **In Home Assistant** | Each player as a media player in Home Assistant: what plays, its artwork, the transport, volume and the source playing · switches for the screen, the dashboard, the visualiser and the idle screen, buttons for Home, Now Playing and Lyrics, and a D-pad for the screen · a dashboard card of its own, with every player in one place · found on the network · the [Gexis Player integration](https://github.com/gcarstoiu/gexis-player-homeassistant), installed through HACS |
 | 🧩 **Open API** | Everything the screen and phone page do, over HTTP and a live WebSocket, described as OpenAPI · *API explorer* shows and tries it on the player itself |
@@ -210,10 +210,10 @@ I'd rather you knew these up front:
   testing is very welcome and is how this list grows: if you run Gexis on
   other hardware, *Hardware feedback* on the player tests it and fills in
   most of the report for you.
-- **On a phone you get Settings and a mini player, not the whole player.**
-  The mini player has the volume, a touchpad and buttons that drive the panel;
-  the library is browsed on the panel, in a Lyrion app or in your streaming
-  app.
+- **On a phone you get a remote and Settings, not the whole player.**
+  The remote has what plays, the volume and a touch area that drives the
+  panel; the library is browsed on the panel, in a Lyrion app or in your
+  streaming app.
 - **Plexamp keeps its own volume.** This comes from Plexamp itself: it
   scales the sound inside its own engine and does not hand its level to the
   player. So the Plexamp app's slider sets Plexamp's level, the panel's sets
@@ -247,14 +247,15 @@ Rough, and subject to change:
   backup during setup. Updates over the network, on a Testing and a Stable
   channel. Touchscreens from 7" to 13.3", bar displays included. Plugins that
   download software, with progress, retry and remove, and your own plugins
-  installed from Settings. A mini player on the phone. Animated skins with
+  installed from Settings. A remote on the phone. Animated skins with
   scrolling tickers and smooth rotation. A fixed address on cable or Wi-Fi.
   Problem reports and hardware feedback. A Home Assistant dashboard on the
   screen. DSI screens on the Pi's own display connector. Each player in Home
   Assistant as a media player, with a D-pad for its screen and a dashboard
-  card. A ten-band equaliser with presets and your own settings.
-- 🔜 **Next:** a redesign of the phone's quick actions and touchpad, then room correction for the bass with a USB microphone.
-- 🎨 **Later:** room correction for the full range, AirPlay 2, multiroom for every source, a plugin catalogue, internet radio without a Lyrion server, themes. With Plex switched on, your own Plex server fills in
+  card. A ten-band equaliser with presets and your own settings. The phone as
+  a remote, with a touchpad or a D-pad for the screen.
+- 🔜 **Next:** room correction with a USB microphone, the bass first and then the full range.
+- 🎨 **Later:** AirPlay 2, multiroom for every source, a plugin catalogue, internet radio without a Lyrion server, themes. With Plex switched on, your own Plex server fills in
   the artist and album information other sources leave out.
 - 💭 **Maybe:** the DAC's own filter and polarity options.
 

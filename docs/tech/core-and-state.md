@@ -191,7 +191,7 @@ something the panel is not showing).
 |---|---|---|
 | State | `GET /state` (WebSocket) | Panel, phone |
 | Surface | `GET /surface` → `panel` or `remote` | Both, at start (ADR-0032) |
-| Touchpad relay | `GET /touchpad` (WebSocket) | Phone ↔ panel (ADR-0121) |
+| Touchpad relay | `GET /touchpad` (WebSocket) | Phone ↔ panel: typing, scroll steps, the ring on a field (ADR-0121, ADR-0164) |
 | Playback | `POST /renderer/{id}/activate`, `POST /transport/{command}`, `POST /volume`, `POST /volume/mute` | Both |
 | Panel view | `POST /touch`, `POST /panel/painted`, `POST /panel/shown`, `POST /panel/idle/{show,hide}`, `POST /panel/standby/{on,off}` (ADR-0135), `GET /player/status` and `GET /players` (ADR-0136), `POST /panel/go/{to}`, `POST /peppy/{action}` | Panel reports; phone asks |
 | Idle screen | `GET /idle`, `/idle/weather`, `/idle/wallpaper`, `/idle/wallpaper/{name}`, `/idle/wallpaper/local/{path}` | Panel (ADR-0047) |
@@ -677,9 +677,11 @@ dashboard instead of the idle screen, and when the schedule takes it down the
 idle screen follows at once. Home Assistant's side - framing and trusted
 networks - is the user's (decision 8, Finding 132).
 
-**The phone's touchpad and keyboard over the dashboard are real input**
-(ADR-0157). A page from another site is closed to the panel's page, so the
-touchpad's made-up events and inserted text cannot reach it. Over an
+**The phone's keyboard, and the panel's pointer, over the dashboard are
+real input** (ADR-0157). A page from another site is closed to the panel's
+page, so made-up events and inserted text cannot reach it; the phone's remote
+(ADR-0164) sends its steps as D-pad keys, which reach Home Assistant's page as
+a keyboard's do. Over an
 `<iframe>` marked `data-real-input` the panel (`lib/PanelPointer.svelte`,
 `isRealInputFrame` in `lib/touchpad.js`) sends the phone's tap, text and keys
 to `POST /panel/input` instead - `{kind: "tap", x, y}` as fractions of the

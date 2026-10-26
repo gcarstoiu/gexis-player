@@ -6,9 +6,9 @@ commands back to the core. This document covers how the app is built and
 served, how it chooses what to draw, and how the phone drives the panel.
 
 Related records: ADR-0023 (Svelte), ADR-0028 (the core serves the UI;
-commands over REST), ADR-0032 (one page, two surfaces), ADR-0101 (the
-phone's mini player), ADR-0109 (screen families), ADR-0121 (the phone as
-touchpad).
+commands over REST), ADR-0032 (one page, two surfaces), ADR-0164 (the
+phone's remote, after ADR-0101's mini player), ADR-0109 (screen families),
+ADR-0121 (the touchpad relay and the panel's pointer).
 
 ---
 
@@ -121,7 +121,7 @@ flowchart TD
   A[App.svelte mounts] --> B{"GET /surface"}
   B -- remote --> C{setup page needed?}
   C -- yes --> D[FirstUsePage<br/>first-time setup on the phone]
-  C -- no --> E[Settings<br/>+ MiniPlayer pinned below<br/>+ NewScreen question if asked]
+  C -- no --> E[PhoneRemote: Remote and Settings<br/>+ NewScreen question if asked]
   B -- panel --> F[The panel: every screen,<br/>fixed logical layout]
 ```
 
@@ -130,8 +130,9 @@ flowchart TD
   ends the boot animation, ADR-0043), and what it shows (`/panel/shown`).
   Only the panel reports touches, so that a tap on a phone does not count as
   attention and take the visualiser down (ADR-0036).
-- **Remote (phone)**: Settings, which is the only responsive screen
-  (ADR-0032), plus the mini player (ADR-0101). During setup it shows
+- **Remote (phone)**: the phone's remote, with Settings - the only
+  responsive screen (ADR-0032) - as its second page (ADR-0164). During
+  setup it shows
   `FirstUsePage` instead (ADR-0104, ADR-0149). The first-boot flow is covered in
   `setup-and-network.md`.
 
@@ -190,8 +191,8 @@ not set the level; one opened from the panel is unaffected.
 is the editor on all three surfaces (`surface`: `panel`, `bar`, `phone`);
 `EqGraph` the upright bands of the panel and bars, `EqCurve` and `EqRows`
 the phone's picture and sideways sliders, `EqQuick` the quick change in the
-volume drawer, the bar's tray (its second band, under an EQ button) and the
-phone's mini player. All draw from `/state`'s `equaliser`
+volume drawer, the bar's tray (its second band, under an EQ button); the phone's is the
+remote's EQ sheet (`screens/remote/EqSheet.svelte`). All draw from `/state`'s `equaliser`
 (`lib/equaliser.svelte.js`): the line through the knobs is a monotone cubic
 (`ridge`), a dragged band sends the whole bands with one request in flight
 and the latest after it (`BandSender`), and choosing a setting glides the
@@ -233,7 +234,7 @@ Component tree, as `App.svelte` mounts it:
 ```mermaid
 flowchart TD
   App[App.svelte]
-  App -->|remote| Rem["Settings + MiniPlayer<br/>(or FirstUsePage)"]
+  App -->|remote| Rem["PhoneRemote<br/>(or FirstUsePage)"]
   App -->|panel| Pan[".panel"]
   Pan --> PB[PanelBackground]
   Pan --> St[Settings embedded]
@@ -276,9 +277,11 @@ attributes and two events, so a new screen needs nothing in the module:
 | `data-dpad-skip`, `data-dpad-off` | not a stop; a screen the D-pad leaves alone (setup, updates) |
 | `data-dpad-cover` | a screen over everything (the idle screen, a takeover's): no ring while it is up, and a press only takes it down |
 
-A touch hides the ring, and so does the phone's touchpad: its moves and taps
-are made up in the page, so `PanelPointer.svelte` says so with a
-`panelpointer` event. The ring leaves a layer the moment it closes (a
+A touch hides the ring, and so does the panel's pointer (ADR-0121): its moves
+and taps are made up in the page, so `PanelPointer.svelte` says so with a
+`panelpointer` event. The phone's remote drives the ring itself (section 7):
+its steps are keys, its scroll strips a `dpadscroll` event, and `dpadring`
+tells the phone when OK would land in a text field. The ring leaves a layer the moment it closes (a
 `MutationObserver` on the page, besides a check four times a second) and
 lands on the control beneath 150 ms later.
 
@@ -383,7 +386,8 @@ drawn per kind:
   on a page the service did not mark an album.
   Every search entry (`searchy`: a `search` row, or an app's first-level
   "Search" folder) opens on its field (`onsearchentry`) and carries
-  `data-text-entry`, so a touchpad tap on it raises the phone's keyboard.
+  `data-text-entry`, so OK from the phone's remote on it raises the phone's
+  keyboard.
   A row whose actions are revealed is the selection, teal
   (`is-revealed` in `Library.svelte`, `is-on` on the bar, `is-sel` in
   Lyrion's lists); the artist page's Popular reveals like any track list.
@@ -498,70 +502,78 @@ are NASA photographs (`assets/weather/`, credited in Credits).
 
 ## 7. The phone page
 
-On a phone, `Settings.svelte` fills the page and `MiniPlayer.svelte` is
-pinned below it (ADR-0101). The mini player provides:
+On a phone, `screens/remote/PhoneRemote.svelte` fills the page (ADR-0164,
+built from `design/source/21`): a player picker over `/players` (ADR-0136;
+another player opens its own page, C1) and a Remote / Settings switch, the
+two pages side by side. Settings is `Settings.svelte` with
+`switcher={false}`, mounted on its first visit. During setup, first use and
+*Personalise*, `FirstUsePage` takes the page instead, as before.
 
-- what is playing and from which source;
-- the volume (`POST /volume`), shown as a padlock in fixed output (ADR-0046).
-  As the bar tray's slider does, it waits for the finger to move 8 px
-  (`SLIDE_DECIDE`): mostly vertical sends nothing (a swipe that starts on
-  it), sideways follows the finger, and a tap sets the level on lift;
-- toggles that act on the panel: the visualiser (`/peppy/show|hide`), the
-  idle screen, and Home / Now playing / Lyrics. Each toggle reflects what the
-  panel reports it is showing (`panel.visualiser`, `panel.idle`,
-  `panel.now`, `panel.lyrics`);
-- when its sheet is open, a **touchpad** (ADR-0121).
+The Remote page, **with a screen** (`RemoteScreen.svelte`): now playing with
+`RemoteTransport.svelte` (what the renderer declares, ADR-0037; repeat off,
+all, one), the touch area (`TouchArea.svelte`), the quick actions
+(`QuickActions.svelte`) and the volume row (`VolumeRow.svelte`: `POST
+/volume` one request at a time, `/volume/mute`, the padlock under Fixed
+output, the EQ button). **Without one** (`headless`): `RemoteNoScreen.svelte`,
+whose seek bar sends `POST /transport/seek` on release while
+`controls.available` has `seek`.
+
+- **The touchpad**: 52 px of travel on the main axis is one step, `POST
+  /panel/key` (ADR-0161), sent one at a time and in order (`commands.js`,
+  `key`); a release that never stepped is OK under 12 px, otherwise a step its
+  way. The scroll strips send `{"t":"scroll","step":"y","by":1}` each 24 px
+  over `/touchpad`; the panel's `dpad.js` scrolls the list around its ring, or
+  the top layer's largest, by a fifth of it (`dpadscroll`).
+- **The D-pad**: the same keys, as buttons.
+- **Corners and quick actions**: `/panel/go`, `/peppy/show|hide`,
+  `/panel/dashboard`, `/panel/idle`, `/panel/standby`; a view asked for in
+  standby wakes the screen first. Lit from `/state`'s `panel`
+  (`commands.js`, `showing`).
+- **The pad** last used is kept in the phone's `localStorage`
+  (`gexis.remote.pad`); with `phone_touchpad` off, the D-pad alone.
+- **The sheets**: the player menu, the EQ sheet (`EqSheet.svelte`, with
+  Phase 20's `note` and `stateLine`) and the typing sheet
+  (`TypingSheet.svelte`, kept above the keyboard with `visualViewport` where
+  the page is not shortened by it).
 
 ### Touchpad relay
 
-The phone moves a pointer that the panel draws itself
-(`lib/PanelPointer.svelte`); the compositor's cursor is a blank theme. Both
-sides use one WebSocket, `/touchpad`. The core relays messages and never
-interprets them:
+One WebSocket, `/touchpad`, between the phones and the panel (ADR-0121). The
+core relays messages and never interprets them:
 
 - It tells the two ends apart by loopback (the panel) or LAN (a phone).
 - It accepts only `move`, `tap`, `text`, `key`, `scroll`, `zoom` from phones
-  and `over`, `focus` from the panel.
+  and `over`, `focus`, `ring`, `untyped` from the panel.
 - It drops messages over 2 KB, and drops everything while the
   `phone_touchpad` setting is off.
 - When a phone disconnects, it tells the panels `gone`, and the panels zoom
   back out.
 
-`/state` stays publish-only (ADR-0028).
+The remote opens it while its Remote page shows a player with a screen; the
+panel, while `phone_touchpad` is on. `/state` stays publish-only (ADR-0028).
 
 ```mermaid
 sequenceDiagram
-  participant Ph as Phone (MiniPlayer)
-  participant C as gexis-core /touchpad
-  participant P as Panel (PanelPointer)
+  participant Ph as Phone (PhoneRemote)
+  participant C as gexis-core
+  participant P as Panel (dpad.js, PanelPointer)
 
-  Ph->>C: open /touchpad (sheet opened)
+  Ph->>C: open /touchpad (Remote shown)
   P->>C: open /touchpad (phone_touchpad on)
-  Ph->>C: {"t":"move","dx":..,"dy":..}
-  C->>P: relayed as-is
-  Note over P: moves summed per frame,<br/>bursts spread over frames;<br/>hover events synthesised
-  P->>C: {"t":"over","field":true}
-  C->>Ph: relayed - pointer is over a text field
-  Ph->>C: {"t":"tap"}
-  C->>P: relayed
-  Note over P: pointerdown/mouseup/click dispatched<br/>at the pointer; field focused
-  Note over Ph: same touch opens the phone keyboard<br/>(the only moment a browser allows it)
+  Ph->>C: POST /panel/key {"key":"down"}
+  C->>P: a key press on the virtual keyboard
+  Note over P: the ring moves to a search field
+  P->>C: {"t":"ring","field":true}
+  C->>Ph: relayed - OK would land in a text field
+  Ph->>C: POST /panel/key {"key":"ok"}
+  Note over Ph: the same touch focuses the hidden field:<br/>the phone's keyboard opens (the only moment a browser allows it)
+  C->>P: Enter - the field takes focus
   P->>C: {"t":"focus","field":true}
-  C->>Ph: relayed
+  C->>Ph: relayed - the typing sheet
   Ph->>C: {"t":"text","text":"abc"} / {"t":"key","key":"Backspace"}
   C->>P: relayed - inserted into the focused field
-  Ph--xC: sheet closed / phone gone
-  C->>P: {"t":"gone","phones":0}
-  Note over P: unzoom, hide pointer
 ```
 
-- **Moves are relative**, like a laptop touchpad, and scaled by the
-  *Pointer speed* setting, so a bar and a 16:9 panel feel the same. The
-  pointer hides after 5 s without input.
-- **Taps** dispatch real pointer and mouse events at
-  `document.elementFromPoint`, then focus the field if one is there.
-- **Two fingers** either scroll (the scroll is applied smoothly over several
-  frames) or pinch-zoom the panel up to 3x.
 - **Typing** is inserted as `InputEvent`s into the focused field, so any
   character works. There is no on-screen keyboard (ADR-0029).
 - **Reconnect**: `lib/touchpad.js` opens a fresh socket on
@@ -574,6 +586,24 @@ sequenceDiagram
   touch after a quiet spell** (`probe`, called from the pad's
   `pointerdown`): nothing heard for 1.5 s, a ping at once, and a fresh socket
   if no answer comes within 0.8 s.
+- **Wi-Fi power saving is off on a player**
+  (`/etc/NetworkManager/conf.d/gexis-wifi-powersave.conf`, `wifi.powersave =
+  2`, and `iw ... set power_save off` at install): on sofapi, round trips
+  from idle spiked to 85-98 ms with it on, 10-11 ms at most with it off.
+
+### The panel's pointer (ADR-0121)
+
+The panel still draws a pointer for `move`, `tap` and `zoom`
+(`lib/PanelPointer.svelte`; the compositor's cursor is a blank theme), which
+the phone has not sent since ADR-0164. As built:
+
+- **Moves are relative**, like a laptop touchpad, and scaled by the
+  *Pointer speed* setting, so a bar and a 16:9 panel feel the same. The
+  pointer hides after 5 s without input.
+- **Taps** dispatch real pointer and mouse events at
+  `document.elementFromPoint`, then focus the field if one is there.
+- **Two fingers** either scroll (the scroll is applied smoothly over several
+  frames) or pinch-zoom the panel up to 3x.
 - **The panel's work per move**: what lies under the pointer (`look`:
   `elementFromPoint`, hover events, the outline) is asked at most every
   80 ms while the pointer moves, and on the frame it stops, not every frame.
@@ -598,13 +628,6 @@ sequenceDiagram
   (`reportTouch`): the meters are a window over the page, and a tap replayed
   in the page pressed whatever the pointer rested on - the visualiser's
   button, or Next.
-- **Wi-Fi power saving is off on a player**
-  (`/etc/NetworkManager/conf.d/gexis-wifi-powersave.conf`, `wifi.powersave =
-  2`, and `iw ... set power_save off` at install): on sofapi, round trips
-  from idle spiked to 85-98 ms with it on, 10-11 ms at most with it off.
-- **The phone's sheet swipes**: up opens it, down closes it, anywhere but the
-  touchpad (`MiniPlayer.svelte`, `swipeStart`/`swipeEnd`, 40 px, mostly
-  vertical; `touch-action: none` on the sheet).
 
 ---
 

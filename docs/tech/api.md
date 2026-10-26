@@ -56,7 +56,7 @@ client keeps nothing between messages. The client sends nothing on it;
 commands go over HTTP. Its JSON is the schema `State` in the file:
 `active` (the source playing, or null), `available`, `metadata` (title,
 artist, album, artwork, position), `volume`, `controls` (which transport
-commands work now), `sources`, `queue`, `pairing` (a Bluetooth request
+commands work now; `seek` only with a known duration, ADR-0164), `sources`, `queue`, `pairing` (a Bluetooth request
 waiting for an answer), `panel` (standby, what the screen shows), and the
 first-use and update fields the player's own pages use.
 
@@ -65,7 +65,10 @@ first-use and update fields the player's own pages use.
 A WebSocket between a phone and the panel (ADR-0121). A connection from the
 player itself is the panel; any other is a phone. A phone sends `move`,
 `tap`, `text`, `key`, `scroll` and `zoom` messages, relayed unchanged to the
-panel; the panel sends `over` and `focus`, relayed to the phones. Every
+panel; the phone's remote (ADR-0164) sends `text`, `key` and `scroll` with
+`step`, and its other steps as D-pad keys (`POST /panel/key`). The panel
+sends `over`, `focus`, `ring` (its D-pad ring is on a text field) and
+`untyped`, relayed to the phones. Every
 message is a JSON object with its kind in `t`; anything else, or a frame over
 2048 bytes, is dropped, and with *Phone touchpad* off every relayed message
 is dropped. `{"t":"ping"}` is answered `{"t":"pong"}`. The schemas

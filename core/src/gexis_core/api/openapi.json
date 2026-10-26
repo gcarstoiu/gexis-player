@@ -7980,17 +7980,18 @@
         "description": "A message the panel sends on /touchpad; relayed unchanged to every phone.",
         "type": "object",
         "required": [
-          "t",
-          "field"
+          "t"
         ],
         "properties": {
           "t": {
             "type": "string",
             "enum": [
               "over",
-              "focus"
+              "focus",
+              "ring",
+              "untyped"
             ],
-            "description": "`over`: whether the pointer is over a text field; `focus`: whether a text field has focus."
+            "description": "`over`: whether the pointer is over a text field; `focus`: whether a text field has focus; `ring`: whether the D-pad's ring is on a text field, or on a control that opens one (ADR-0164 C5); `untyped`: characters the Home Assistant dashboard could not be given (ADR-0157), with no `field`."
           },
           "field": {
             "type": "boolean",
@@ -8035,7 +8036,15 @@
           },
           "by": {
             "type": "number",
-            "description": "`zoom`: the factor to zoom by (1 is unchanged)."
+            "description": "`zoom`: the factor to zoom by (1 is unchanged). A `scroll` with `step`: +1 or -1, one step down or right, or up or left."
+          },
+          "step": {
+            "type": "string",
+            "enum": [
+              "x",
+              "y"
+            ],
+            "description": "`scroll` from the remote's scroll strips (ADR-0164 C11): a step on that axis, which the panel takes to the list around its D-pad ring; `dx` and `dy` are then absent."
           }
         }
       },
