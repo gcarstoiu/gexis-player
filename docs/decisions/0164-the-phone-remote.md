@@ -1,7 +1,10 @@
 # ADR-0164 — The phone remote
 
-**Status:** **Built** — 2026-10-26 on `ph-phone-controls`, checked against
-the design from mocked data (below, *Built*); not yet on a player.
+**Status:** **Waiting for a new design** — George, 2026-10-26, after the
+preview on sofapi: Claude Design's remote came out wrong; fresh designs are
+coming, and this record is revised from them. **Built** — 2026-10-26 on
+`ph-phone-controls` from the first design, checked against it from mocked
+data (below, *Built*) and previewed on sofapi.
 **Accepted** — George, 2026-10-26: the design handed over
 (`design/source/21`, Claude Design), build it, with his answers to the
 questions it left (below). The decisions he left to Claude are listed

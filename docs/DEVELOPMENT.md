@@ -3293,8 +3293,8 @@ follows. Claude's decisions C1-C12 are for his confirmation.
 the core, the panel's ring and scroll steps, the remote's two layouts and
 its sheets, the mini player gone; checked from mocked data against the
 design; the manual, FAQ, README and technical guide. C13 and C14 added for
-George's confirmation. Next: George's look, a preview on a player, then the
-Home Assistant card.
+George's confirmation. **Previewed on sofapi the same evening; George: Claude
+Design got it wrong, fresh designs are coming.** The phase waits for them.
 
 **Before it** the mini player at the bottom of the phone page
 ([ADR-0101](decisions/0101-a-mini-player-on-the-phone.md)) holds the track
