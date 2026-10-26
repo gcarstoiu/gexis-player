@@ -548,7 +548,7 @@ ADR-0162, Finding 138. Off, nothing below exists and `output.conf` is
 exactly what it was: bit-perfect. On, for the output in use:
 
 ```text
-renderer → pcm.output (meter, peppyalsa) → hw:Loopback,0,0
+renderer → pcm.output (meter, peppyalsa; integers only) → hw:Loopback,0,0
            hw:Loopback,1,0 → CamillaDSP (headroom fader, ten Peaking filters) → gexis_eq_out → card
 ```
 
@@ -582,8 +582,28 @@ renderer → pcm.output (meter, peppyalsa) → hw:Loopback,0,0
   rounded up to 0.5 dB, on the fader Aux1 of a `Volume` filter that ramps
   over 200 ms. It is set before each stream starts; when it rises the fader
   moves first and the bands follow the ramp.
+- **The volume gives the headroom back** (D3 as amended): the level control
+  after CamillaDSP - the card's own or the software stage - cuts that much
+  less, so a setting plays as loud as Flat at the same level. Within twice
+  the headroom of the control's 0 dB the control travels half as far, so
+  the slider keeps working to the top, where the setting plays the headroom
+  quieter. It lives only between the level and the control
+  (`volume.GiveBack`): `set_raw` writes the control's value for a level and
+  `get_raw` reads it back as the level, for the level control alone, with
+  what was written kept so an echo is the level written; every raw the core
+  keeps and every renderer's number stay as they were. The engine gives it
+  back on the quiet side of each change (after the lowering when it rises,
+  before it when it falls) in 0.5 dB steps, and at once while nothing plays;
+  the start, the boot step (`softvol_boot`) and a change of output put it in
+  force before the level is read or written. Not under Fixed, where the
+  control holds full scale under any give-back.
 - **The meter** stays before it, over the loopback (D4): the visualiser
-  shows the music as it arrives, on every output, HDMI included.
+  shows the music as it arrives, on every output, HDMI included. `output`
+  reaches the loopback through `copy` and `linear` to S32_LE, so float is
+  refused: go-librespot asks for float first, and the meter's 16-bit view
+  has no float conversion - it switched itself off and the visualiser had
+  nothing while Spotify played. `output_wait` (Squeezelite, integers and
+  native DSD) keeps the loopback itself.
 - **Native DSD** (D7): a DSD format on the loopback starts `alsaloop` to the
   card instead of CamillaDSP, untouched; the equaliser's state says `dsd`.
 - **Switching it on or off** writes `output.conf` again and restarts the

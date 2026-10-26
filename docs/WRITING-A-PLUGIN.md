@@ -149,8 +149,10 @@ choice wins. Its `hello` says what it can do:
 player defines `output` and routes it to whichever DAC the user chose, with the
 level meter tapped from it - and, with the equaliser on, through the
 equaliser first (ADR-0162), so a plugin is equalised like every other source
-without doing anything. Open it at your stream's own rate and format: the
-equaliser follows them.
+without doing anything. Open it at your stream's own rate, in an integer
+format (S16, S24 or S32): the equaliser follows them. Float is refused with
+the equaliser on, as under software volume, so a plugin that prefers it
+falls back to an integer format.
 
 **The four messages that matter:**
 

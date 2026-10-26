@@ -595,10 +595,13 @@ which output it is setting.
   the name with a keyboard plugged into the player or from the phone's
   touchpad.
 - **The note under the bands** says how far the music is lowered so that a
-  boost cannot clip - *Lowered by 5 dB so the boost cannot clip* - or that
-  nothing is lowered when no band rises. With *Volume* on *Fixed* the music
-  then plays that much quieter, and the note says to turn the amplifier up
-  to match.
+  boost cannot clip, and that the volume gives it back - *Lowered by 5 dB so
+  the boost cannot clip; the volume gives it back up to 65%* - or that
+  nothing is lowered when no band rises. Up to that volume a setting plays
+  as loud as *Flat*; above it, a little quieter, up to the lowering at
+  100 %, and the quick change says so. With *Volume* on *Fixed* there is no
+  volume to give it back with: the music plays that much quieter, and the
+  note says to turn the amplifier up to match.
 - **DSD** plays untouched: while a DSD track plays natively, the equaliser
   stands aside, and it is back for the next PCM track.
 

@@ -50,12 +50,18 @@ tray or the phone's mini player for a quick change. Ten bands from 31 Hz to
 Each output (the DAC, HDMI, optical) keeps its own setting, and it is off
 until switched on. Every source plays through it.
 
-**With the equaliser on, the music is quieter. Why?**
-A band that rises would clip a loud passage, so the music is lowered first
-by as much as the bands rise together - the note under the bands says by
-how much (*Lowered by 5 dB so the boost cannot clip*). Cutting instead of
-boosting lowers nothing. With *Volume* on *Fixed*, turn the amplifier up by
-that much to match.
+**Does the equaliser make the music quieter?**
+Not at most volumes. A band that rises would clip a loud passage, so the
+music is lowered first by as much as the bands rise together, and the volume
+then gives the same amount back: a setting plays as loud as *Flat* at the
+same volume, and going back to *Flat* changes nothing but the bands. Only
+near the top of the volume is there not that much left to give, so there
+the setting plays a little quieter than *Flat* - up to the lowering at 100 %.
+The note under the bands says how much is lowered and up to which volume it
+is given back (*Lowered by 5 dB so the boost cannot clip; the volume gives
+it back up to 65%*). Cutting instead of boosting lowers nothing. With
+*Volume* on *Fixed* the player has no volume to give it back with: the music
+plays that much quieter, and the amplifier is turned up to match.
 
 **Does the equaliser change DSD?**
 No. Native DSD plays untouched: the equaliser stands aside while a DSD track
