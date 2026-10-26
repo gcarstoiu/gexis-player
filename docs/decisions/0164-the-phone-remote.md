@@ -1,6 +1,8 @@
 # ADR-0164 — The phone remote
 
-**Status:** **Accepted** — George, 2026-10-26: the design handed over
+**Status:** **Built** — 2026-10-26 on `ph-phone-controls`, checked against
+the design from mocked data (below, *Built*); not yet on a player.
+**Accepted** — George, 2026-10-26: the design handed over
 (`design/source/21`, Claude Design), build it, with his answers to the
 questions it left (below). The decisions he left to Claude are listed
 under *Claude's decisions* for his confirmation. Phase 21
@@ -54,8 +56,7 @@ the touchpad, and handed over Claude Design's *phone remote* the same day.
 7. **Repeat cycles off, all, one**, as on the panel (the design's open
    point; it drew on and off).
 8. **Sources as on the panel**: what a renderer does not declare is left
-   out (ADR-0037): no shuffle or repeat with Spotify, and with Bluetooth no
-   duration either, so no seeking.
+   out (ADR-0037); with Bluetooth no duration, so no seeking (and C13).
 9. **The Home Assistant card follows the redesign**
    ([ADR-0163](0163-a-gexis-player-card-for-dashboards.md)): Standby added
    and the views grouped as on the phone, in the integration's next release,
@@ -105,7 +106,47 @@ the touchpad, and handed over Claude Design's *phone remote* the same day.
   screen's main list, by a fifth of its height or width.
 - **C12 — Pointer speed and Pointer style** have nothing left to set:
   proposed for ADR-0022 as retired, hidden from Settings once George
-  confirms.
+  confirms; until then they stay, as does first use's pointer preview and
+  its line about them.
+- **C13 — Shuffle and repeat with Spotify and Bluetooth**: shown, as on the
+  panel. The design's source table has them absent, but both declare them
+  since George's amendment of ADR-0037 (2026-09-17), and the design's own
+  rule is *as on the panel*.
+- **C14 — On a phone narrower than the design's 412 px** the transport's
+  gaps give way first, so the five buttons keep their size down to 360 px.
+
+## Built (2026-10-26)
+
+On `ph-phone-controls` (from `ph-equaliser`, `next` merged in):
+
+- **The core**: `seek` in `TRANSPORT_COMMANDS`, `POST /transport/seek`
+  (`{"position": seconds}`, past the end is the end), offered only with a
+  known duration (`model.controls`); Lyrion `time`, Spotify
+  `/player/seek`, a plugin's `transport` message. The `/touchpad` relay
+  passes the panel's `ring` and `untyped` - the latter (ADR-0157) was sent
+  by the panel and dropped by the relay, so the phone never said a
+  character could not be typed. The Phone touchpad setting's note describes
+  the remote's touchpad. Core suite 2745 passed, 48 skipped.
+- **The panel**: `dpad.js` sends `dpadring` (OK would land in a text field,
+  or a control that opens one) and scrolls on `dpadscroll`;
+  `PanelPointer.svelte` carries both over the socket.
+- **The phone**: `ui/src/screens/remote/` - `PhoneRemote` (the frame, the
+  picker, the pages, the socket, typing), `RemoteScreen`, `RemoteNoScreen`,
+  `RemoteTransport`, `TouchArea`, `QuickActions`, `VolumeRow`, `EqSheet`,
+  `TypingSheet`, `PlayerMenu`, `commands.js`, `icons.js`; the design's
+  tokens in `tokens.css`. `MiniPlayer.svelte` and the quick change's phone
+  tray are gone; `Settings` takes `switcher={false}`.
+- **Checked from mocked data** (a core with a made-up track, sample
+  players and a fake panel; nothing from a player) at 412 x 915 beside the
+  design's board, and at 390 and 360: both layouts, the D-pad, the EQ
+  sheet, the menu, Settings; Spotify, Bluetooth, nothing playing, Fixed,
+  standby. A 120 px swipe sent two Rights and named them, a tap OK; with the
+  fake panel's ring on a field, a tap focused the phone's field in the same
+  touch, typing reached the panel as text and Done closed the sheet.
+- **The documents**: the manual's section 7 and its pictures (from the
+  public-domain demo library), the gallery, the FAQ, the README, the
+  technical guide (`ui.md`, `api.md`, `core-and-state.md`, the overview),
+  `HARDWARE.md` and the plugin contract (`seek`).
 
 ## Not in this record
 

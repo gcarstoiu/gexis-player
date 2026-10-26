@@ -814,3 +814,27 @@ decisions). Not yet seen by George on a device.
 Built from `source/21` (ADR-0164, its decisions). Not yet seen by George on
 a device.
 
+- **[S]** Picking another player in the menu opens that player's own page
+  in the same tab (C1); the drawing switches in place.
+- **[S]** The seek bar seeks where the renderer can (Lyrion, Spotify; C2);
+  elsewhere it is the drawing's inert rule, with no knob, as Bluetooth's.
+- **[U]** With Fixed volume the bar's place says *Fixed output · the
+  amplifier sets the level*, with the panel's padlock; the EQ button stays
+  (C3; the drawing's open point).
+- **[U]** Bluetooth has no cover, the note glyph in its place (C4).
+- **[U]** The EQ sheet's note is Phase 20's, with the volume giving the
+  lowering back (C6); Custom leads the chips, with its dot, while it is the
+  setting in use. The bar names *DSD* while DSD stands the equaliser aside.
+- **[S]** The idle screen, Room and Meters are offered only where the player
+  has them; Playing and Lyrics are dimmed with nothing playing (C7).
+- **[U]** Spotify and Bluetooth show shuffle and repeat, as the panel does
+  (ADR-0037 as amended 2026-09-17); the drawing's source table had them
+  absent (C13). Repeat cycles off, all, one, with a 1 in the glyph for one
+  (D7).
+- **[S]** A player stopped with a source reads *Idle*, the drawing's third
+  state.
+- **[U]** Under the drawing's 412 px the transport's gaps narrow, so the
+  buttons keep their size down to 360 px (C14).
+- **[S]** A tap on the typing sheet's words brings the keyboard back if it
+  was put away another way.
+

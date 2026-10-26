@@ -3289,6 +3289,13 @@ drawn (the touchpad sends steps, so the pointer leaves the phone), the touch
 sizes as drawn, repeat cycles as on the panel, the Home Assistant card
 follows. Claude's decisions C1-C12 are for his confirmation.
 
+**Built 2026-10-26** on `ph-phone-controls` (ADR-0164, *Built*): seeking in
+the core, the panel's ring and scroll steps, the remote's two layouts and
+its sheets, the mini player gone; checked from mocked data against the
+design; the manual, FAQ, README and technical guide. C13 and C14 added for
+George's confirmation. Next: George's look, a preview on a player, then the
+Home Assistant card.
+
 **Before it** the mini player at the bottom of the phone page
 ([ADR-0101](decisions/0101-a-mini-player-on-the-phone.md)) holds the track
 with play/pause; the panel's row, *Screen off* in its heading and a round
