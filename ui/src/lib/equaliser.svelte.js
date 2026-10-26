@@ -76,7 +76,8 @@ export function fmt(value) {
 }
 
 /** A headroom in dB: 5 dB, 2.5 dB. */
-export const dbText = (h) => `${h % 1 ? h.toFixed(1) : String(h)} dB`;
+//: The number and its unit kept on one line (a no-break space).
+export const dbText = (h) => `${h % 1 ? h.toFixed(1) : String(h)}\u00a0dB`;
 
 const BOOST_LOW = [239, 143, 122];
 const BOOST_HIGH = [242, 179, 94];
@@ -193,8 +194,20 @@ export function note(eq) {
       amber: true,
     };
   }
-  if (h > 0) return { badge: `−${dbText(h)}`, text: `Lowered by ${dbText(h)} so the boost cannot clip.`, amber: false };
+  if (h > 0) return { badge: `−${dbText(h)}`, text: `Lowered by ${dbText(h)} so the boost cannot clip${givenBack(eq)}`, amber: false };
   return { badge: '0 dB', text: 'No boost, so nothing is lowered.', amber: false };
+}
+
+/**
+ * ADR-0162 D3 as amended: the volume gives the lowering back, all of it up
+ * to `given_up_to` per cent of the slider. A core that does not say ends
+ * the sentence as the design had it.
+ */
+function givenBack(eq) {
+  if (!eq.gives_back) return '.';
+  // One line on the bars: the part that matters inside 80 characters.
+  if (eq.given_up_to == null || eq.given_up_to >= 100) return '; the volume gives it back at any level.';
+  return `; the volume gives it back up to ${eq.given_up_to}%.`;
 }
 
 /** The setting in use as the quick change names it: *Rock · preset*. */
@@ -213,6 +226,11 @@ export function quickNote(eq) {
   const h = eq.headroom_db;
   if (h > 0 && eq.fixed) {
     return { text: `Lowered by ${dbText(h)} so the boost cannot clip. With Fixed volume, turn the amplifier up ${dbText(h)} to match.`, amber: true };
+  }
+  if (h > 0 && eq.gives_back) {
+    // Given back: as loud as Flat, so there is only the top to speak of.
+    if (eq.given_up_to == null || eq.given_up_to >= 100) return { text: '', amber: false };
+    return { text: `As loud as Flat up to ${eq.given_up_to}% of the volume; above it, up to ${dbText(h)} quieter so the boost cannot clip.`, amber: false };
   }
   if (h > 0) return { text: `Lowered by ${dbText(h)} so the boost cannot clip.`, amber: false };
   return { text: '', amber: false };
