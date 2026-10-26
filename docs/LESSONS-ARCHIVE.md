@@ -1577,3 +1577,23 @@ design predicted.
 **Rule:** a result that matches the prediction still needs the case that
 would tell the two stories apart - a signal the design says must arrive uncut,
 a renderer that must have reloaded - before it is taken as the design working.
+
+**82. A tap tried with one format** (2026-10-26, Finding 138). The
+equaliser's chain put the meter over the ALSA loopback, and ADR-0162's C9 said
+the visualiser would move on every output, HDMI included - reasoned from the
+loopback taking any format, which was what made it attractive. The silent
+measurement that preceded it (Finding 138) had played integer tones, and the
+screens were checked with mocked data, where no meter runs. On sofapi George
+found the visualiser still with the equaliser on. The core's log showed a
+stream in FLOAT_LE: go-librespot asks for float first, then S32 and S16, and
+under software volume the `softvol` stage had always refused float, so it had
+always played S32 - the loopback took float. ALSA's meter feeds peppyalsa
+through a 16-bit scope that converts integer formats only; for float its
+enable fails and the meter skips it, without an error anywhere. A copy of the
+meter on the loopback, fed each format silently, showed it at once: float
+plays and the meter writes nothing.
+**Rule:** when a chain under a tap changes what it accepts, set each
+renderer's format order against it, and try the tap in each format a renderer
+can pick - "it takes any format" is a change of what is negotiated, not only
+a convenience.
+

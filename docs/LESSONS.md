@@ -413,6 +413,14 @@ near zero at −26 dB and a rewritten `output.conf` "read on next open" were bot
 expected, so neither was checked; both were wrong. A result that matches the
 prediction still needs the case that tells the two stories apart.
 
+**82. A tap tried with one format** (2026-10-26, Finding 138). With the
+equaliser on, the meter sat over a loopback that takes float; go-librespot
+asks for float first, and the meter's 16-bit view has none. The silent
+measurement had played integers, and the visualiser "moving on every output"
+was reasoned from the chain. When a chain under a tap changes what it
+accepts, set each renderer's format order against it and try the tap in
+each format a renderer can pick.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target, the check quietly

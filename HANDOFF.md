@@ -70,35 +70,37 @@ default list**: hacs/default#12691 (from George's fork `gcarstoiu/default`),
 every automated check passed; it waits for HACS's maintainers - do not ask
 them for a review (their template).
 
-**Phase 20, the equaliser, built, not yet on a player** (2026-10-26).
+**Phase 20, the equaliser, on sofapi as a preview** (2026-10-26).
 George, 2026-10-25: the three settings confirmed (ADR-0022), the design
 handed over (`design/source/20`, look 3a), implement with the decisions left
-to Claude recorded and shown to him (ADR-0162 *Built*, C1-C16 - **owed by
-George: his confirmation**), measure through a card after. Branch
-`ph-equaliser` in `~/projects/gexis-player-ph-equaliser`, pushed (GitHub's
-tests pass):
+to Claude recorded and shown to him, measure through a card after. Branch
+`ph-equaliser` in `~/projects/gexis-player-ph-equaliser`, pushed:
 go-librespot 0.10.5 and Beszel 0.21.1 (for this preview); the core
 (`equaliser.py`, `eq_engine.py`, `eq_control.py`, `outputs.render(eq=True)`,
 the routes, `equaliser` on `/state`, the Settings row); `gexis-camilladsp`
 4.1.3 and `gexis-equaliser.service`, `snd-aloop` at boot; the UI
 (`ui/src/screens/eq/`, the drawer, the bar's tray, the phone's mini
-player); the documents. Core suite 2717 passed, 48 skipped; the UI builds
-with no new warnings; every screen checked from mocked data at 1280x800,
-1280x400, 1850x400 and 412 wide (`~/projects/scratch/eq-m1`: `eq_layout.py`
-the mocked core, `eq_shots.py`, `eq_dpad.py`; the design's artboards in
-`~/projects/scratch/design20/shots`). **On sofapi since 2026-10-26 00:44**, with the equaliser off: core
-`1.6.0+git13.6186a94`, ui `1.6.0+git14.ff9562f`, system
-`1.6.0+git13.6186a94`, player `1.6.0+git16.d669ab5`, camilladsp `4.1.3-1`,
-go-librespot `0.10.5-2`, Beszel `0.21.1` (dry run first: 7 upgraded, 1 new,
-nothing removed; the core and kiosk restarted, the panel on the new bundle;
-`/equaliser` answers; the comment changed in `output.conf`, so the core
-rewrote it once and restarted the renderers when the card was free).
-**Never run with the equaliser on**: CamillaDSP driving a card, the loopback
-loaded by the engine (sofapi has not rebooted), a stream's edges, a rate the
-card lacks, DSD through `alsaloop`, switching on and off under a playing
-source. **Next:** the measurement through sofapi's card (it plays through the
-amplifier: at a time George picks), the manual's drawer picture retaken with
-the demo library; then George's try.
+player); the documents. **George's try, 2026-10-26:** C1-C16 confirmed; D3
+amended - the volume gives the lowering back, with the gentler top
+(`volume.GiveBack`, only between the level and the control; the engine
+gives it back on the quiet side of a change); no visualiser with the
+equaliser on - Spotify's float, which the meter's 16-bit view cannot read
+(Finding 138, *The meter and float*; lesson 82), mended by `output` taking
+integers only. **Owed by George:** C17 (the note's wording) and C18 (a
+change is a short dip). Core suite 2738 passed, 48 skipped; the note checked
+from mocked data on every surface (`~/projects/scratch/eq-m2`:
+`note_shots.py`, with eq-m1's `eq_layout.py`; the silent meter test
+`meter_test.sh`). **On sofapi since 2026-10-26 10:50**, the equaliser off
+as George left it: core `1.6.0+git18.09b35e4`, ui `1.6.0+git19.f3c8a9f`,
+player `1.6.0+git20.8b3b945` (dry run first: 3 upgraded, nothing removed;
+core and kiosk restarted, the panel on `index-0Jj3Qt9V.js`); system
+`1.6.0+git13.6186a94`, camilladsp `4.1.3-1`, go-librespot `0.10.5-2`,
+Beszel `0.21.1` from the first preview. **Not yet on the device:** the
+give-back and the integer-only `output` with the equaliser on (switching it
+on is George's setting to change: ask, or read back after he does). **Next:**
+the measurement through sofapi's card (it plays through the amplifier: at a
+time George picks), with the give-back's checks (ADR-0162 *Not yet done*);
+the manual's drawer picture retaken with the demo library.
 
 Then 21-29 in order, each ADR first (`docs/DEVELOPMENT.md`, the IDs
 there); MPD parked (ADR-0151). **Raspberry Pi Imager** (ADR-0159, a task):

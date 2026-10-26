@@ -801,3 +801,10 @@ decisions). Not yet seen by George on a device.
   a saved setting will go.
 - **[S]** A refused name (taken, too long) is said in the sheet, in amber,
   under the field; the drawing has no such state.
+- **[U]** The headroom note says the volume gives the lowering back (George,
+  2026-10-26, ADR-0162 D3 as amended): *Lowered by 5 dB so the boost cannot
+  clip; the volume gives it back up to 65%* in the editor, where the drawing
+  ends at *clip*; in the quick change *As loud as Flat up to 65% of the
+  volume; above it, up to 5 dB quieter*, where the drawing had the editor's
+  line. The badge stays the lowering; Fixed keeps the drawing's words. The
+  wording is Claude's (C17), for George's confirmation.
