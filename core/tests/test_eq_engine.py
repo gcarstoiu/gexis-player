@@ -45,8 +45,12 @@ class FakeCamilla:
 
 
 class Rig:
-    def __init__(self, monkeypatch, tmp_path, takes_rate=lambda card, rate: True):
+    def __init__(self, monkeypatch, tmp_path, takes_rate=lambda card, rate: True, give=False):
         self.camilla = FakeCamilla()
+
+        async def give_back(db):
+            # Into CamillaDSP's list, so the order between the two is seen.
+            self.camilla.sent.append(("give", db))
         self.units = []
         self.amixer = contents(active="off")
         self.spawned = []
@@ -68,7 +72,8 @@ class Rig:
         self.cards.write_text(" 0 [sndrpihifiberry]: HifiberryDacp - snd_rpi_hifiberry_dacplus\n"
                               " 7 [Loopback       ]: Loopback - Loopback\n")
         self.engine = EqEngine(camilla=self.camilla, systemctl=systemctl, run=run,
-                               on_change=self.statuses.append, takes_rate=takes_rate, cards=self.cards)
+                               on_change=self.statuses.append, takes_rate=takes_rate, cards=self.cards,
+                               give_back=give_back if give else None)
 
         async def no_watch():
             await asyncio.sleep(3600)
@@ -196,3 +201,59 @@ async def test_the_loopback_is_loaded_when_it_is_not_there(monkeypatch, tmp_path
     rig.cards.write_text(" 0 [sndrpihifiberry]: HifiberryDacp - snd_rpi_hifiberry_dacplus\n")
     await rig.engine.configure("sndrpihifiberry", eq.FLAT)
     assert rig.modprobed == [("modprobe", "snd-aloop")], "updated since the last boot"
+
+
+# ---- D3 as amended: the volume gives the headroom back ---------------------------
+
+
+async def test_while_nothing_plays_the_headroom_is_given_back_at_once(monkeypatch, tmp_path):
+    rig = Rig(monkeypatch, tmp_path, give=True)
+    await rig.engine.configure("sndrpihifiberry", eq.PRESET["rock"].gains)
+    await rig.engine.configure("sndrpihifiberry", eq.PRESET["late"].gains)
+    await rig.engine.configure("sndrpihifiberry", eq.PRESET["late"].gains)
+    assert [s for s in rig.camilla.sent if s[0] == "give"] == [("give", 5.0), ("give", 6.0)], "once a change"
+    await rig.engine.configure(None, eq.FLAT)
+    assert rig.camilla.sent[-1] == ("give", 0.0), "off: taken back, after CamillaDSP stopped"
+
+
+async def test_a_rising_headroom_is_given_back_after_the_lowering_and_a_falling_one_before(monkeypatch, tmp_path):
+    """The quiet side of each change: the volume never gives back what the
+    equaliser has not yet lowered, so a change is a short dip, never louder."""
+    rig = Rig(monkeypatch, tmp_path, give=True)
+    monkeypatch.setattr(eq_engine, "RAMP_S", 0)
+    await rig.engine.configure("sndrpihifiberry", eq.FLAT)
+    rig.amixer = contents()
+    await rig.engine._look()
+    rig.camilla.sent.clear()
+    await rig.engine.configure("sndrpihifiberry", (0, 0, 6, 0, 0, 0, 0, 0, 0, 0))
+    await rig.settle()
+    assert [s[0] for s in rig.camilla.sent] == ["SetFaderVolume", "PatchConfig", "give"]
+    assert rig.camilla.sent[-1] == ("give", 6.0)
+    rig.camilla.sent.clear()
+    await rig.engine.configure("sndrpihifiberry", eq.FLAT)
+    await rig.settle()
+    assert rig.camilla.sent == [("give", 0.0),
+                                ("PatchConfig", {"filters": {"band_125": {"parameters": {"gain": 0}}}}),
+                                ("SetFaderVolume", [1, -0.0])]
+
+
+async def test_a_stream_starts_with_the_headroom_already_given_back(monkeypatch, tmp_path):
+    rig = Rig(monkeypatch, tmp_path, give=True)
+    await rig.engine.configure("sndrpihifiberry", eq.PRESET["rock"].gains)
+    rig.amixer = contents()
+    await rig.engine._look()
+    sent = [s for s in rig.camilla.sent if s[0] != "close"]
+    assert sent[0] == ("give", 5.0) and [s[0] for s in sent[1:3]] == ["SetFaderVolume", "SetConfigJson"]
+    assert [s for s in sent if s[0] == "give"] == [("give", 5.0)]
+
+
+async def test_a_volume_that_cannot_give_back_does_not_stop_the_equaliser(monkeypatch, tmp_path):
+    rig = Rig(monkeypatch, tmp_path)
+
+    async def broken(db):
+        raise OSError("no control")
+    rig.engine._give_back = broken
+    await rig.engine.configure("sndrpihifiberry", eq.PRESET["rock"].gains)
+    rig.amixer = contents()
+    await rig.engine._look()
+    assert any(s[0] == "SetConfigJson" for s in rig.camilla.sent)

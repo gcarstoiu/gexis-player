@@ -106,6 +106,7 @@ import math
 import re
 import time
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 from gexis_core import alsa, mixer_scale
@@ -170,6 +171,139 @@ def hardware_silence() -> int:
     raw 0 is 0 dB. Mute, a renderer's 0 and the slider's 0% all wrote 0 there:
     full scale into headphones (code review, 2026-10-12)."""
     return _scale.raw_min
+
+
+# ---- ADR-0162 D3 as amended: the equaliser's lowering, given back -------------
+#
+# **The equaliser lowers the music before its bands, so a boost cannot clip;
+# the volume control after it cuts that much less** (George, 2026-10-26).
+# Lowered and given back, a setting plays as loud as Flat at the same level:
+# nobody turns the volume up for a preset and finds Flat louder afterwards.
+#
+# **Near the top there is not that much left to give.** Within twice the
+# lowering of the control's 0 dB, the control travels half as far as the
+# level: the slider keeps doing something all the way up (a stop short of
+# it is what the ceiling's clip looked like, ADR-0052 amended), and the top
+# plays the lowering quieter than Flat.
+#
+# **Only between the level and the control.** Every raw level the core keeps
+# - the published one, Mute's, a renderer's, the one before Fixed - means what
+# it meant before; `set_raw` turns one into the control's value and `get_raw`
+# turns it back, for the level control alone. Nothing above them sees the
+# give-back, and no renderer's slider moves with it.
+
+
+@dataclass(frozen=True)
+class GiveBack:
+    """`db` given back at `control` (the level control: the card's own, or
+    the software stage), on that control's `scale`."""
+    control: str
+    db: float
+    scale: mixer_scale.Scale
+
+    @property
+    def steps(self) -> int:
+        return round(self.db / self.scale.db_step)
+
+
+#: A change of give-back is walked, not jumped: 5 dB is ten writes, ~0.1 s
+#: (`VolumeBridge.give_back`).
+GIVE_BACK_STEP_DB = 0.5
+GIVE_BACK_PAUSE_S = 0.01
+
+_give_back: GiveBack | None = None
+#: **What was written under it**, the control's raw to the level's: a read of
+#: our own write must give back the very level written. Over the top's halved
+#: travel two levels share a value, and the inverse alone handed the echo
+#: back a step away - which the bridge takes for somebody turning the knob,
+#: and pushes to the renderer. Kept for the echo window, and the last one for
+#: as long as it is the last.
+_written_as: dict[int, tuple[int, float]] = {}
+_last_as: tuple[int, int] | None = None
+
+
+def give_back() -> GiveBack | None:
+    return _give_back
+
+
+def set_give_back(target: GiveBack | None) -> None:
+    """The give-back in force from now on - nothing is written here (the
+    bridge's `give_back` rewrites the control). A target that gives back
+    less than a step of its control is none."""
+    global _give_back, _last_as
+    if target is not None and target.steps <= 0:
+        target = None
+    _give_back = target
+    _last_as = None
+
+
+def to_control(raw: int, target: GiveBack) -> int:
+    """A level as the control's value: `steps` higher, and over the top
+    `2 * steps` half as far. Silence and the top are themselves."""
+    scale, k = target.scale, target.steps
+    top = scale.top
+    if k <= 0 or raw <= scale.raw_min or raw >= top:
+        return raw
+    if raw <= top - 2 * k:
+        return raw + k
+    return (raw + top + 1) // 2
+
+
+def from_control(raw: int, target: GiveBack) -> int:
+    """The inverse, to within a step over the top - an audible control is
+    never read as silence."""
+    scale, k = target.scale, target.steps
+    top = scale.top
+    if k <= 0 or raw <= scale.raw_min or raw >= top:
+        return raw
+    if raw <= top - k:
+        return max(scale.raw_min + 1, raw - k)
+    return 2 * raw - top
+
+
+def _gives_back(mixer_name: str, device: str) -> GiveBack | None:
+    target = _give_back
+    if target is None or device != MIXER_DEVICE or mixer_name != target.control:
+        return None
+    return target
+
+
+def _as_control(mixer_name: str, device: str, raw: int) -> int:
+    global _last_as
+    target = _gives_back(mixer_name, device)
+    if target is None:
+        return raw
+    value = to_control(raw, target)
+    now = time.monotonic()
+    for old in [v for v, (_, at) in _written_as.items() if now - at >= ECHO_WINDOW_S]:
+        del _written_as[old]
+    _written_as[value] = (raw, now)
+    _last_as = (value, raw)
+    return value
+
+
+def _as_level(mixer_name: str, device: str, raw: int) -> int:
+    target = _gives_back(mixer_name, device)
+    if target is None:
+        return raw
+    if _last_as is not None and _last_as[0] == raw:
+        return _last_as[1]
+    kept = _written_as.get(raw)
+    if kept is not None and time.monotonic() - kept[1] < ECHO_WINDOW_S:
+        return kept[0]
+    return from_control(raw, target)
+
+
+def given_back_up_to(target: GiveBack | None) -> int | None:
+    """The slider's position up to which all of it is given back, as a
+    percentage (100: everywhere, under a ceiling low enough); None when
+    nothing is given back."""
+    if target is None or target.steps <= 0:
+        return None
+    knee_db = target.scale.db(max(target.scale.raw_min, target.scale.top - 2 * target.steps))
+    if knee_db >= ceiling_db():
+        return 100
+    return raw_to_slider_percent(db_to_raw(knee_db))
 
 #: **Where the current attenuation is left for the meter service to read**
 #: ([ADR-0057](../../../docs/decisions/0057-the-meters-follow-the-volume.md)).
@@ -665,7 +799,10 @@ async def get_raw(mixer_name: str, device: str = MIXER_DEVICE) -> int | None:
     """`device` defaults to the real hardware mixer ("output"); pass
     "hw:<dummy card id>" to read one of the per-renderer dummy controls
     instead (DummyMixerBridge, below) - same amixer call either way, a
-    dummy control is a perfectly ordinary ALSA simple-mixer element."""
+    dummy control is a perfectly ordinary ALSA simple-mixer element.
+
+    The level control's value is read back as the level it plays (ADR-0162
+    D3 as amended, above)."""
     proc = await asyncio.create_subprocess_exec(
         "amixer",
         "-D",
@@ -677,7 +814,7 @@ async def get_raw(mixer_name: str, device: str = MIXER_DEVICE) -> int | None:
     )
     out, _ = await proc.communicate()
     m = _VALUE_RE.search(out)
-    return int(m.group(1)) if m else None
+    return _as_level(mixer_name, device, int(m.group(1))) if m else None
 
 
 class _Mixer:
@@ -835,11 +972,16 @@ async def set_raw(
     2026-10-12): this took a bare `maximum` and clamped below at 0, so the
     headphone jack's -20 dB (raw -2000) handed back to the card was written
     as raw 0, which is 0 dB there.
+
+    `value` is a level; on the level control with the equaliser's lowering
+    given back, what is written is the control's value for it (ADR-0162 D3
+    as amended, above).
     """
     if scale is None:
         value = max(_scale.raw_min, min(hardware_max(), value))
     else:
         value = max(scale.raw_min, min(scale.raw_max, value))
+    value = _as_control(mixer_name, device, value)
     key = (device, mixer_name)
     mixer = _MIXERS.get(key)
     if mixer is None:
@@ -936,6 +1078,9 @@ class VolumeBridge:
         #: dozen times (the volume drawer then never auto-hid, George,
         #: 2026-09-22) and echoed each step out to Spotify.
         self._written: dict[int, float] = {}
+        #: One give-back at a time (`give_back`): a stream starting under a
+        #: change waits for it.
+        self._giving = asyncio.Lock()
         adapter.on_volume_change(self._on_adapter_volume)
 
     def restart_monitor(self) -> None:
@@ -982,6 +1127,58 @@ class VolumeBridge:
         logger.info("volume: the control is now %r", mixer_name)
         self._mixer_name = mixer_name
         self._last_written = None
+
+    async def give_back(self, target: GiveBack | None) -> None:
+        """**The equaliser's lowering given back, or taken back, at the
+        control** (ADR-0162 D3 as amended; the module's note above). The
+        level stays what it is: the control is written its value for the
+        same level under the new give-back.
+
+        **Walked in half-decibel steps**, about 10 ms apart, so the control
+        glides rather than jumps; the equaliser's engine calls this on the
+        quiet side of its own change - after the lowering on the way up,
+        before it on the way down - so the walk is a short dip, never a
+        moment louder than the level.
+
+        The level is the one last written, else the control's read through
+        the give-back it was written under. Under Fixed the control holds
+        full scale, which is the same under any give-back: nothing is
+        written."""
+        async with self._giving:
+            old = give_back()
+            if target is not None and target.steps <= 0:
+                target = None
+            if target == old:
+                return
+            control = (target or old).control
+            level = self._last_written if control == self._mixer_name else None
+            if level is None:
+                level = await get_raw(control)
+            scale = (target or old).scale
+            if old is None or target is None or (old.control, old.scale) == (target.control, target.scale):
+                start = old.db if old is not None else 0.0
+            else:
+                # Another control (a change of volume type): written once,
+                # while the renderers are stopped for it.
+                start = None
+            end = target.db if target is not None else 0.0
+            if start is None or level is None or fixed_output():
+                steps = [end]
+            else:
+                count = max(1, round(abs(end - start) / GIVE_BACK_STEP_DB))
+                steps = [start + (end - start) * (i + 1) / count for i in range(count)]
+            for i, db in enumerate(steps):
+                set_give_back(GiveBack(control, db, scale) if db > 0 else None)
+                if level is None or fixed_output():
+                    continue
+                if i:
+                    await asyncio.sleep(GIVE_BACK_PAUSE_S)
+                now = self._last_written if (control == self._mixer_name
+                                             and self._last_written is not None) else level
+                self._note_written(now)
+                self._expected_hw_raw = (now, time.monotonic())
+                await set_raw(control, now, scale=scale)
+            logger.info("volume: %.1f dB given back at %s", end, control)
 
     def _capped(self, raw: int) -> int:
         """Every level reaches the DAC through here, so the ceiling is

@@ -131,6 +131,7 @@ from gexis_core.volume import (
     set_ceiling_reader,
     set_curve_reader,
     set_fixed_output_reader,
+    set_give_back,
     set_raw,
     slider_percent_to_raw,
     raw_to_db,
@@ -691,6 +692,10 @@ async def main() -> None:
         alsa.set_renderers_card(outputs.LOOPBACK if outputs.eq_in_path(chosen_output.card) else None)
         # ADR-0117: raw values mean what this output's control says they do.
         use_scale(chosen_output.scale)
+        # ADR-0162 D3 as amended: the control holds the level with the
+        # equaliser's headroom given back, as the store has it (and the boot
+        # step wrote it) - in force before anything reads or writes it.
+        set_give_back(eq_control.give_back_for(settings_store.get(eq_control.KEY), chosen_output))
         if chosen_output.software:
             await _start_software_volume(card_output, settings_store)
         if chosen_output.control:
@@ -1294,10 +1299,11 @@ async def main() -> None:
         )
         await stop.wait()
         outputs.write(chosen, tuning=_tuning(), fixed=fixed_wanted["value"])
-        await _equaliser_follows(chosen)
         # The mixer handles open on the old card are let go of: the next
-        # write opens the new one's.
+        # write opens the new one's - before the equaliser follows, whose
+        # give-back writes the new card's control (ADR-0162 D3 as amended).
         await forget_mixers()
+        await _equaliser_follows(chosen)
         # ADR-0124: **the software level in place before anything can play**
         # - on every change of output, not only when the row is switched on
         # (George, 2026-10-07: on HDMI the volume stayed the same throughout).
@@ -1536,6 +1542,13 @@ async def main() -> None:
     def _choose_volume(value=None) -> None:
         """ADR-0127: the Volume row - Hardware, Software or Fixed."""
         asyncio.ensure_future(_change_volume_type())
+
+    def _equaliser_republish() -> None:
+        """The equaliser's note says up to where on the slider its headroom is
+        made up (ADR-0162 D3 as amended), which the ceiling and the curve
+        move."""
+        if equaliser is not None:
+            equaliser.publish()
 
     def _reapply_level() -> None:
         """Put the level back where the *position* now says it belongs.
@@ -2739,11 +2752,11 @@ async def main() -> None:
                # ADR-0052 §3: read on every map between a position and a
                # level, and re-applied here when it changes so the level
                # comes down at once if it is now above the ceiling.
-               "max_ceiling": lambda _value=None: _reapply_level(),
+               "max_ceiling": lambda _value=None: (_reapply_level(), _equaliser_republish()),
                # ADR-0054 §3's two curves, wired 2026-09-23. A change moves
                # the level under a slider that has not been touched, so it
                # is re-applied rather than waiting for the next change.
-               "travel_curve": lambda _value=None: _reapply_level(),
+               "travel_curve": lambda _value=None: (_reapply_level(), _equaliser_republish()),
                # ADR-0046: chosen now, in force at the next legal moment.
                "output_mode": _choose_volume,
                # ADR-0055: rewrites output.conf, then restarts everything
@@ -4305,7 +4318,16 @@ async def main() -> None:
         async with volume_change:
             await _rewrite_output_conf(reason, wait=True)
 
-    equaliser_engine = EqEngine(on_change=lambda status: equaliser.publish() if equaliser is not None else None)
+    async def _equaliser_gives_back(headroom: float) -> None:
+        """ADR-0162 D3 as amended: the engine's headroom, given back at the
+        level control of the output in use - when the engine says, which is
+        on the quiet side of its own change."""
+        output = _with_software(outputs.in_force(settings.value("output_device"))[0])
+        await volume_bridge.give_back(
+            eq_control.give_back_for(settings_store.get(eq_control.KEY), output, headroom))
+
+    equaliser_engine = EqEngine(on_change=lambda status: equaliser.publish() if equaliser is not None else None,
+                                give_back=_equaliser_gives_back)
     equaliser = eq_control.EqualiserControl(
         settings_store, equaliser_engine,
         output=lambda: _with_software(outputs.in_force(settings.value("output_device"))[0]),

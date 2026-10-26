@@ -20,6 +20,11 @@ Measured: 12-24 ms off a stream's start, nothing inside it.
 CamillaDSP, the headroom moved on its fader, which ramps. When the headroom
 rises it moves first, so a boost never arrives before the room for it.
 
+**The volume gives the headroom back** (D3 as amended, George 2026-10-26;
+`volume.GiveBack`): `give_back` is told the headroom on the quiet side of
+each change - after the lowering when it rises, before it when it falls -
+and at once while nothing plays through CamillaDSP.
+
 **Native DSD goes past it** (D7, decision 5): a DSD stream on the loopback is
 sent on to the card untouched (`alsaloop`), and the equaliser stands aside
 until the next PCM one.
@@ -174,12 +179,15 @@ class EqEngine:
                  systemctl: Callable[..., Awaitable[None]] = _systemctl,
                  run: Callable[..., Awaitable[str]] = _run,
                  on_change: Callable[[dict], None] = lambda status: None,
+                 give_back: Callable[[float], Awaitable[None]] | None = None,
                  takes_rate: Callable[[str, int], bool | None] = outputs.takes_rate,
                  cards: Path = Path("/proc/asound/cards")):
         self._camilla = camilla or Camilla()
         self._systemctl = systemctl
         self._run = run
         self._on_change = on_change
+        self._give_back = give_back
+        self._given = 0.0   # the headroom the volume was last told to give back
         self._takes_rate = takes_rate
         self._cards = cards
         self._card: str | None = None
@@ -201,12 +209,17 @@ class EqEngine:
             if self._card is not None or self._watch is not None:
                 self._card = None
                 await self._stop()
+            await self._give(0.0)
             return
         started = self._card is None
         moved = self._card is not None and self._card != card
         self._card, self._gains = card, gains
         if started or moved or restart:
             await self._start(restart=not started)
+        if self._applied is None:
+            # Nothing plays through it: given back now, and the next stream
+            # starts lowered by it.
+            await self._give(eq.headroom_db(gains))
         else:
             self._kick()
 
@@ -304,6 +317,9 @@ class EqEngine:
                 config["devices"].update(samplerate=top, capture_samplerate=stream.rate,
                                          chunksize=eq.chunksize(top),
                                          resampler={"type": "AsyncSinc", "profile": "Balanced"})
+        # Nothing is heard before CamillaDSP runs, so the order does not
+        # matter here - only that a change still walking has ended.
+        await self._give(headroom)
         try:
             await self._camilla.cmd("SetFaderVolume", [eq.HEADROOM_FADER, -headroom])
             await self._camilla.cmd("SetConfigJson", json.dumps(config))
@@ -357,16 +373,30 @@ class EqEngine:
                 if headroom > old_headroom:
                     await self._camilla.cmd("SetFaderVolume", [eq.HEADROOM_FADER, -headroom])
                     await asyncio.sleep(RAMP_S)
+                else:
+                    await self._give(headroom)
                 changed = {eq.filter_name(i): {"parameters": {"gain": g}}
                            for i, (g, was) in enumerate(zip(gains, old_gains)) if g != was}
                 if changed:
                     await self._camilla.cmd("PatchConfig", {"filters": changed})
                 if headroom < old_headroom:
                     await self._camilla.cmd("SetFaderVolume", [eq.HEADROOM_FADER, -headroom])
+                else:
+                    await self._give(headroom)
                 self._applied = (gains, headroom)
             except (ConnectionError, RuntimeError) as exc:
                 logger.warning("equaliser: a change did not reach CamillaDSP (%s)", exc)
                 return
+
+    async def _give(self, headroom: float) -> None:
+        """The volume told to give `headroom` back, once per change."""
+        if self._give_back is None or headroom == self._given:
+            return
+        try:
+            await self._give_back(headroom)
+            self._given = headroom
+        except Exception:  # noqa: BLE001 - the volume must not stop the equaliser
+            logger.exception("equaliser: the volume did not give %.1f dB back", headroom)
 
     def _set_status(self) -> None:
         status = {"running": self._card is not None,

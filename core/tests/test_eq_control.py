@@ -171,3 +171,39 @@ async def test_the_state_carries_it():
     store.set_equaliser({"on": True})
     store.set_equaliser({"on": True})
     assert seen == [{"on": True}], "published once per change"
+
+
+# ---- D3 as amended: the volume gives the headroom back ---------------------------
+
+
+def test_given_back_at_the_level_control_of_an_output_with_the_equaliser_on():
+    from gexis_core import mixer_scale
+    from gexis_core.eq_control import give_back_for
+    from gexis_core.volume import GiveBack
+    dac = outputs.Output(card="sndrpihifiberry", label="DAC", control="DAC", scale=mixer_scale.DAC2_HD)
+    store = Store()
+    assert give_back_for(store.get(KEY), dac) is None, "off"
+    on = eq.Equaliser().set_on("sndrpihifiberry", True)
+    assert give_back_for(on.to_settings(), dac) is None, "Flat boosts nothing"
+    rock = on.choose("sndrpihifiberry", "rock").to_settings()
+    assert give_back_for(rock, dac) == GiveBack("DAC", 5.0, mixer_scale.DAC2_HD)
+    assert give_back_for(rock, dac, headroom=2.5) == GiveBack("DAC", 2.5, mixer_scale.DAC2_HD), "the engine's, mid-change"
+    soft = outputs.with_software_volume(dac)
+    assert give_back_for(rock, soft) == GiveBack(outputs.SOFTVOL_CONTROL, 5.0, outputs.SOFTVOL_SCALE)
+    assert give_back_for(rock, HDMI) is None, "no control to give it back at"
+    assert give_back_for(rock, outputs.Output(card="vc4hdmi0", label="HDMI", control="DAC")) is None, \
+        "each output keeps its own"
+
+
+async def test_the_screens_are_told_whether_and_up_to_where_it_is_given_back():
+    from gexis_core import mixer_scale
+    rig = Rig()
+    rig.output = outputs.Output(card="sndrpihifiberry", label="DAC", control="DAC", scale=mixer_scale.DAC2_HD)
+    snap = await rig.control.update({"on": True, "sel": "rock"})
+    assert snap["gives_back"] is True and 64 <= snap["given_up_to"] <= 65
+    rig.fixed = True
+    snap = rig.control.snapshot()
+    assert snap["gives_back"] is False and snap["given_up_to"] is None, "Fixed: the amplifier makes it up"
+    rig.fixed = False
+    snap = await rig.control.update({"sel": "flat"})
+    assert snap["gives_back"] is False and snap["given_up_to"] is None

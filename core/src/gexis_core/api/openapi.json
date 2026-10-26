@@ -6002,6 +6002,8 @@
           "from_name",
           "gains",
           "headroom_db",
+          "gives_back",
+          "given_up_to",
           "fixed",
           "dsd",
           "bands",
@@ -6081,6 +6083,17 @@
           "headroom_db": {
             "type": "number",
             "description": "How far the music is lowered before the bands so the boost cannot clip, in 0.5 dB steps; 0 with no boost."
+          },
+          "gives_back": {
+            "type": "boolean",
+            "description": "The volume control after the equaliser cuts that much less, so the music plays as loud as Flat at the same volume (not under Fixed volume, nor with no boost)."
+          },
+          "given_up_to": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "With `gives_back`, the volume (per cent) up to which all of the lowering is given back; above it the music plays up to `headroom_db` quieter at the top. 100 when it is given back at any volume; null when nothing is given back."
           },
           "fixed": {
             "type": "boolean",
