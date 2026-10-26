@@ -1,7 +1,9 @@
 # ADR-0162 — A simple equaliser
 
 **Status:** **Built** — 2026-10-26, on `ph-equaliser`, not yet measured
-through a card or tried by George (below, *Built*). The settings confirmed by
+through a card (below, *Built*). C1-C16 confirmed by George on 2026-10-26;
+D3 amended the same day (the volume gives the headroom back), after his
+question on it. The settings confirmed by
 George on 2026-10-25 (ADR-0022); the design received the same day
 (`design/source/20`, look 3a). The decisions George left to Claude are listed
 under *Built* for his confirmation. Proposed 2026-10-25. Phase 20 (`ph-equaliser`). The
@@ -109,6 +111,21 @@ a ramped volume stage; to be measured. Under *Fixed*
 volume the music plays that much quieter and the amplifier is turned up; the
 equaliser's row says by how much.
 
+**Amended 2026-10-26 (George): the volume gives it back.** Lowered and left
+lowered, a setting played quieter than Flat at the same volume: whoever
+turned the volume up for a preset and went back to Flat had it louder than
+before, by up to the lowering. George chose to keep the lowering and give it
+back at the volume control after the equaliser - the card's own or the
+software stage - which then cuts that much less, so a setting plays as loud
+as Flat at the same volume; no source's slider moves with it. Near the top
+there is not that much left to give: George chose Claude's recommendation,
+a gentler top - within twice the lowering of the control's 0 dB the control
+travels half as far, so the slider keeps working all the way up, and at the
+top the setting plays the lowering quieter. The alternative, all of it given
+back until it runs out and a slider that does nothing above that, is what
+the ceiling's clip looked like (ADR-0052 amended). Under *Fixed* nothing is
+given back, as before.
+
 **D4 — The meters before the equaliser.** The visualiser shows the music as
 it is: the equaliser's lowering (D3) would otherwise make the meters read
 low under every preset, as software volume did before Finding 135.
@@ -182,7 +199,7 @@ loopback and CamillaDSP), `eq_control.py` (the store, `/state`, the routes),
 change in `ui/src/screens/eq/`, the volume drawer, the bar's tray and the
 phone's mini player.
 
-### Claude's decisions, for George's confirmation
+### Claude's decisions, confirmed by George (2026-10-26)
 
 The sound:
 
@@ -211,6 +228,11 @@ The sound:
   tried with a DSD file (D7).
 - **C9 — With the equaliser on, the meter sits over the loopback**, so the
   visualiser moves on HDMI at any volume type, not only on Software.
+  **Mended 2026-10-26** (George: no visualiser with the equaliser on): the
+  loopback took float, which go-librespot asks for first, and the meter's
+  16-bit view has no float conversion. `output` now reaches the loopback
+  through `copy` and `linear` to S32_LE, as under software volume; float is
+  refused and go-librespot plays S32 (Finding 138, *The meter and float*).
 - **C10 — CamillaDSP runs as `pi`/`audio`, at nice −10**, its websocket on
   127.0.0.1:1234; the state is one internal key in the settings database
   (backed up and wiped with the settings), each output by its card's id.
@@ -232,9 +254,32 @@ What the owner sees:
 - **C16 — The routes are *internal*** until the phase closes, then
   *stable* (D9).
 
+### After George's try (2026-10-26)
+
+D3 as amended is built: `volume.GiveBack`, between the level and the
+control only - `set_raw` writes the control's value for a level and
+`get_raw` reads it back as the level, for the level control alone - so every
+raw the core keeps and every renderer's number are unchanged. Claude's
+decisions in it, for George's confirmation:
+
+- **C17 — The note keeps its badge, the lowering** (*−5 dB*), as the design
+  drew it; the editor's text says it is given back and up to which volume
+  (*Lowered by 5 dB so the boost cannot clip; the volume gives it back up to
+  65%*), short enough for one line on the bars. The quick change says *As
+  loud as Flat up to 65% of the volume; above it, up to 5 dB quieter so the
+  boost cannot clip*, and nothing when it is given back at every volume (a
+  ceiling low enough). Under Fixed, the design's words.
+- **C18 — A change is a short dip, never louder.** The engine gives the
+  headroom back on the quiet side of each change - after the lowering when
+  it rises, before it when it falls - walking the control in 0.5 dB steps
+  about 10 ms apart; at once while nothing plays.
+
 ### Not yet done
 
 - The measurement through a card (*Measured before it is called done*),
   and George's ear on the presets, a dragged band and a stream's edges.
+- The give-back on the device: each source's slider (Lyrion, Spotify,
+  Bluetooth, the panel's) unchanged across a change of setting and on and
+  off; a change of source with a boost on; the dip at a change.
 - The manual's picture of the volume drawer still shows it before the
   equaliser's row; retaken with the demo library on the preview player.

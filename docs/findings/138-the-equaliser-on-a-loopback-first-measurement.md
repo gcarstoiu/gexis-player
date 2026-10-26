@@ -101,3 +101,34 @@ In ADR-0162 (recorded there):
   5).
 - **The loopback is not an output**: while loaded it is a sound card
   (`/proc/asound/cards`), which `outputs.discover` would list.
+
+## The meter and float (2026-10-26)
+
+George found the visualiser still with the equaliser on, on sofapi (the SMSL
+USB DAC, Volume on Software); the core's log showed a stream on the loopback
+in FLOAT_LE, after one in S32_LE.
+
+**Scope.** On sofapi, silent: the equaliser off, so nothing captured the
+loopback and nothing reached the card. A private ALSA configuration with a
+copy of the equaliser's meter (`type meter` over `hw:Loopback,0,0` with the
+peppyalsa scope, writing to its own pipes, not the visualiser's), and the
+same with `copy` and `linear` to S32_LE between them; `speaker-test`, a
+440 Hz sine, 44.1 kHz stereo, about 2.5 s a format. Read: what the meter
+pipe received. Not tested: go-librespot itself, the visualiser, a card.
+
+| Chain | FLOAT_LE | S32_LE | S16_LE |
+|---|---|---|---|
+| meter over the loopback (as built) | plays; the meter writes nothing | levels | levels |
+| meter, `copy`, `linear` S32_LE, loopback | refused (*Sample format not available*) | levels | levels |
+
+**Why.** alsa-lib's `pcm_meter.c`: the 16-bit scope peppyalsa reads from
+converts only integer formats; for any other its enable returns `-EINVAL`,
+and the meter skips a scope that did not enable - no crash, no levels.
+go-librespot 0.10.5 (`output/driver-alsa.go`) asks for FLOAT_LE first, then
+S32_LE, then S16_LE: under software volume the `softvol` stage refuses float,
+so it played S32; the loopback takes float, so it played float.
+
+**What it changes.** With the equaliser on, `output` reaches the loopback
+through `copy` and `linear` to S32_LE, and go-librespot falls back to S32 as
+under software volume. `output_wait`, Squeezelite's, keeps the loopback
+itself: Squeezelite sends integers, and native DSD, which `linear` refuses.
