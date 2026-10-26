@@ -182,8 +182,8 @@ Confirmed by George, 2026-10-25, and appended to ADR-0022:
 ## Not in this record
 
 - A loudness that follows the volume.
-- Bands set by hand (frequency, gain, width): room correction's (Phases 21
-  and 22).
+- Bands set by hand (frequency, gain, width): room correction's (Phases 22
+  and 23).
 - The equaliser from Home Assistant (a preset to choose): possible once D9's
   route exists.
 

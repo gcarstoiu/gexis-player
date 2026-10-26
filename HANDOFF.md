@@ -117,8 +117,9 @@ every merged release PR, otherwise weekly on Sunday evening. **Last run:
 
 Closed: 0-19 (13 with letters a-f). Phases are numbered consecutively
 without letters, each with a stable ID (George, 2026-10-13); 20 is in
-progress, 21-29 to come, MPD parked. `docs/DEVELOPMENT.md` holds each
-phase's acceptance criteria.
+progress, 21-30 to come (21, the phone's quick actions and touchpad
+redesigned, `ph-phone-controls`, added by George on 2026-10-26), MPD
+parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
 
 ## Machines
 
