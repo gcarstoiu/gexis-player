@@ -830,7 +830,17 @@ def _equalised(output: Output, plug: bool) -> tuple[str, str]:
     visualiser shows it as it arrives (D4), on every output: the loopback
     takes any format, so even HDMI, whose meter cannot sit over `plug`,
     keeps its levels here. One substream: whoever opens it holds it, as with
-    a card, and `output_wait`'s open waits for it as for the card."""
+    a card, and `output_wait`'s open waits for it as for the card.
+
+    **`output` takes integer samples only** (George, 2026-10-26: no
+    visualiser with the equaliser on). The loopback takes float, and
+    go-librespot asks for it first; the meter's 16-bit view has no float
+    conversion, switches itself off, and the visualiser got nothing while
+    Spotify played. Through `copy` and `linear`, as the software stage's
+    chain does, float is refused and go-librespot plays S32_LE - what it
+    plays under software volume already. `output_wait` stays as it was:
+    Squeezelite, its only user, sends integers, and native DSD, which
+    `linear` would refuse."""
     card = output.card
     if output.software:
         slave = f'{{ type plug slave.pcm "hw:{card}" }}' if plug else f'"hw:{card}"'
@@ -841,7 +851,7 @@ def _equalised(output: Output, plug: bool) -> tuple[str, str]:
         out = f"pcm.{EQ_OUT} {{\n    type hw\n    card {card}\n}}"
     head = f'''pcm.output {{
     type meter
-    slave.pcm "hw:{LOOPBACK},0,0"
+    slave.pcm {{ type copy slave.pcm {{ type linear slave {{ pcm "hw:{LOOPBACK},0,0" format S32_LE }} }} }}
     scopes.0 peppyalsa
 }}
 

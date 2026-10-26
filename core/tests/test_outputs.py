@@ -941,7 +941,7 @@ def test_with_the_equaliser_the_renderers_play_into_the_loopback(tmp_path):
     out = outputs.Output(card="sndrpihifiberry", label="HiFiBerry", control="DAC")
     conf = outputs.render(out, False, eq=True)
     head, wait = _parts(conf)
-    assert 'slave.pcm "hw:Loopback,0,0"' in head and "scopes.0 peppyalsa" in head, "the meter before it (D4)"
+    assert "scopes.0 peppyalsa" in head and 'pcm "hw:Loopback,0,0"' in head, "the meter before it (D4)"
     assert "pcm.gexis_eq_out {\n    type hw\n    card sndrpihifiberry\n}" in head
     assert "{ type hw card Loopback device 0 subdevice 0 nonblock 0 }" in wait and "type meter" in wait
     assert "ctl.output {\n    type hw\n    card sndrpihifiberry\n}" in conf, "the card's own controls, as ever"
@@ -955,7 +955,18 @@ def test_with_the_equaliser_the_software_stage_comes_after_it():
     head, _ = _parts(outputs.render(out, False, eq=True))
     assert "pcm.gexis_softvol {\n    type softvol\n    slave.pcm \"hw:sndrpihifiberry\"" in head
     assert 'pcm.gexis_eq_out "gexis_softvol"' in head, "D8: the volume is the last stage"
-    assert "type copy" not in head, "the meter's slave is the loopback, which holds the music unscaled"
+
+
+def test_with_the_equaliser_output_takes_integers_and_output_wait_anything():
+    """go-librespot asks for float first, which the meter cannot read (the
+    visualiser had nothing, 2026-10-26); `linear` refuses it. Squeezelite's
+    `output_wait` keeps the loopback itself, for native DSD."""
+    out = outputs.Output(card="sndrpihifiberry", label="HiFiBerry", control="DAC")
+    head, wait = _parts(outputs.render(out, False, eq=True))
+    meter = head[:head.index("}\n\n")]
+    assert ('slave.pcm { type copy slave.pcm { type linear slave { pcm "hw:Loopback,0,0" format S32_LE } } }'
+            in meter)
+    assert "linear" not in wait and "copy" not in wait
 
 
 def test_with_the_equaliser_hdmi_keeps_its_meter_and_converts_after_it():
