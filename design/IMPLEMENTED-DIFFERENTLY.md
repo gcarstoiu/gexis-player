@@ -808,3 +808,15 @@ decisions). Not yet seen by George on a device.
   volume; above it, up to 5 dB quieter*, where the drawing had the editor's
   line. The badge stays the lowering; Fixed keeps the drawing's words. The
   wording is Claude's (C17), confirmed by George the same day.
+
+## The phone remote (Phase 21, 2026-10-26)
+
+Built from `source/21` (ADR-0164, its decisions). Not yet seen by George on
+a device.
+
+- **[U]** The touchpad moves the panel's pointer, as before (George,
+  2026-10-26: the design shows both pads, with a switch between them): one
+  finger moves it, a tap presses, two fingers scroll, a pinch zooms, and the
+  scroll strips are its edge lines. The drawing's touchpad sent a step for
+  each 52 px of swipe and named it (*Up × 3*); that is the D-pad again, and
+  the D-pad sends the steps.

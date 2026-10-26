@@ -184,6 +184,7 @@ been written properly. **0098 has no record either.**
 | [0161](0161-a-d-pad-on-the-panel.md) | A D-pad on the panel | Accepted 2026-10-25 (Phase 19), built the same day, in 1.6.0: real key presses, focus by position, a Home Assistant remote; the design's teal ring |
 | [0162](0162-a-simple-equaliser.md) | A simple equaliser | Built 2026-10-26 (Phase 20; George's product decisions, Claude's C1-C16 for his confirmation): ten bands, genre presets, ten of the owner's, per output; CamillaDSP per stream on a loopback (Finding 138) |
 | [0163](0163-a-gexis-player-card-for-dashboards.md) | A Gexis Player card for Home Assistant dashboards | Accepted 2026-10-25 (Phase 19; decisions delegated to Claude), built in the integration's 0.3.0, changed after George's check in 0.4.0: shipped inside the integration, a plain web component in the player's look, everything through Home Assistant's services |
+| [0164](0164-the-phone-remote.md) | The phone remote | Accepted 2026-10-26 (Phase 21; George's decisions on the design, Claude's C1-C11 for his confirmation): Remote and Settings pages, a touchpad or D-pad, seeking |
 
 ## Cross-cutting rules
 
