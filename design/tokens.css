@@ -211,3 +211,32 @@
   --eq-glide-ease:              cubic-bezier(0.33,1,0.68,1);
   --eq-glide-step:              32ms;     /* band i starts i x step after the lowest */
 }
+
+/* ---- Phase 21: the phone remote (2026-10-26) ----------------------------
+   Extracted from source/21/Phone Remote v2.dc.html. */
+:root {
+  --remote-weave:               repeating-linear-gradient(38deg, #3f5a6d 0 48px, #2e4453 48px 96px); /* blur 70px, scale 1.14, inset -90px */
+  --remote-veil:                radial-gradient(130% 105% at 20% 42%, rgba(20,33,42,0.72), rgba(13,21,28,0.96));
+  --remote-control-ground:      rgba(22,35,44,0.9);       /* switches and corner buttons */
+  --remote-control-line:        rgba(233,238,242,0.12);   /* switches; corner buttons 0.14 */
+  --remote-select:              rgba(126,214,188,0.16);   /* sliding indicator, on buttons */
+  --remote-slide:               300ms cubic-bezier(0.32,0.72,0,1); /* indicators, EQ sheet */
+  --remote-page:                340ms cubic-bezier(0.32,0.72,0,1); /* Remote <-> Settings */
+  --remote-touch-ground:        rgba(233,238,242,0.04);
+  --remote-touch-line:          rgba(233,238,242,0.12);
+  --remote-touch-radius:        26px;
+  --remote-corner:              48px;     /* Home, Lyrics, Back, Meters; 10px from the edges */
+  --remote-button:              56px;     /* quick actions and EQ */
+  --remote-button-radius:       18px;
+  --remote-button-ground:       rgba(233,238,242,0.07);
+  --remote-button-line:         rgba(233,238,242,0.1);
+  --remote-button-on-line:      rgba(126,214,188,0.55);
+  --remote-vol-height:          36px;
+  --remote-vol-radius:          12px;
+  --remote-vol-ground:          rgba(233,238,242,0.08);
+  --remote-vol-ink-on-fill:     #0d151c;
+  --remote-scroll-line:         rgba(233,238,242,0.07);
+  --remote-scroll-thumb:        rgba(233,238,242,0.18);  /* 3 x 24; #7ed6bc while dragged */
+  --remote-pad-step:            52px;     /* touchpad travel per step */
+  --remote-scroll-step:         24px;     /* scroll strip travel per step */
+}
