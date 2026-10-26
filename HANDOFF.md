@@ -111,7 +111,16 @@ shared README was older than ours, so only its Phase 21 parts were taken).
 [ADR-0164](docs/decisions/0164-the-phone-remote.md) accepted: George's
 answers (both pads as drawn, the touchpad sending steps, so the pointer
 leaves the phone; touch sizes as drawn; repeat cycles; the Home Assistant
-card follows); Claude's C1-C12 for his confirmation.
+card follows); Claude's C1-C14 for his confirmation (C12: Pointer speed and
+style retired, ADR-0022, only once he confirms). **Built the same day**
+(ADR-0164, *Built*), pushed: core suite 2745 passed, 48 skipped; checked from
+mocked data against the design (`~/projects/scratch/ph21`: `remote_layout.py`
+in `gexis-layout-core:1`, its `demo` flag for the manual's pictures from
+the demo library; `remote_shots.py`, `variant_shot.py`, `typing_shot.py`
+with `fake_panel.py`, in `gexis-layout:1`, on a `gexis-layout` network).
+**Not yet on a player.** Next: George's look and answers, a preview (it
+carries Phase 20 too: ask before installing on sofapi), then the Home
+Assistant card in the integration's next release.
 
 Then 22-30 in order, each ADR first (`docs/DEVELOPMENT.md`, the IDs
 there); MPD parked (ADR-0151). **Raspberry Pi Imager** (ADR-0159, a task):
