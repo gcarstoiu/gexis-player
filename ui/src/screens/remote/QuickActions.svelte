@@ -13,7 +13,7 @@
   import { showing, standby, view } from './commands.js';
   import { STROKED } from './icons.js';
 
-  let { onsay = () => {}, ontouch = () => {} } = $props();
+  let { onsay = () => {} } = $props();
 
   const hasDashboard = $derived(!!($settingValues.dashboard_url ?? '').trim() && $settingValues.dashboard_button !== false);
   const idleOn = $derived($settingValues.idle_enabled === true);
@@ -21,14 +21,13 @@
   const lit = (which) => !off && $showing === which;
 
   function go(which) {
-    ontouch();
     view(which, (text) => onsay(text));
   }
 </script>
 
 <div class="actions">
   <button class="act" class:is-on={off} type="button" aria-label={off ? 'Screen on' : 'Standby'} aria-pressed={off}
-          onclick={() => { ontouch(); standby(!off); }}>
+          onclick={() => standby(!off)}>
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d={STROKED.standby} /></svg>
   </button>
   {#if idleOn}

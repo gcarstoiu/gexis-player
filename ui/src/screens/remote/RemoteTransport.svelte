@@ -69,11 +69,13 @@
 </div>
 
 <style>
+  /* The design's gaps at its 412 px; narrower, they give way first, so the
+     five buttons keep their size on a 360 px phone. */
   .transport {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 24px;
+    gap: max(4px, min(24px, calc((100% - 272px) / 4)));
     --tg: 44px;
     --tg-glyph: 22px;
     --sk: 56px;
@@ -83,7 +85,7 @@
     --pl-play: 38px;
   }
   .transport.is-big {
-    gap: 18px;
+    gap: max(4px, min(18px, calc((100% - 308px) / 4)));
     --tg: 48px;
     --tg-glyph: 24px;
     --sk: 64px;

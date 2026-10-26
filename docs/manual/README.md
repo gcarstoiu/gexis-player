@@ -223,7 +223,7 @@ and its button says *Play playlist*.
 
 **Search**: tap a search field and type on your phone (section 7); results
 arrive as you type. A service's *Search* opens straight on its field, and
-tapped from the phone's touchpad it brings up the phone's keyboard. My Music's Search looks for artists, albums, works,
+chosen from the phone's remote it brings up the phone's keyboard. My Music's Search looks for artists, albums, works,
 songs and playlists at once.
 
 A few things are left out on purpose:
@@ -305,10 +305,10 @@ two things are set there, by whoever runs it:
    Assistant's *trusted networks* (`auth_providers` in `configuration.yaml`,
    with `allow_bypass_login: true`), so the dashboard opens without a login;
    or sign in once on the panel - Home Assistant then keeps the player signed
-   in. To sign in, tap the fields with a finger and type on a USB keyboard
-   plugged into the player, or use the phone page: its touchpad taps inside
-   the dashboard where the pointer is, and its keyboard types there. The
-   phone types the characters the player's keyboard layout has (a US layout
+   in. To sign in, tap a field on the panel and type on a USB keyboard
+   plugged into the player, or on the phone: while a field on the screen is
+   chosen, the remote offers the phone's keyboard (tap *Typing on the
+   player's screen* if it is not up). The phone types the characters the player's keyboard layout has (a US layout
    unless set otherwise); one it lacks is left out, and the phone says so.
 
 Home Assistant's own header and side bar show unless the dashboard or the
@@ -377,8 +377,8 @@ The screen can be used without touching it: with Home Assistant's *D-pad*
   open - a sheet, the volume, the tray - or goes back one step, and on Now
   Playing minimises it. On Home it does nothing.
 - The ring shows at the first press, where it was last on that screen, or on
-  the screen's main control (Play/Pause on Now Playing). A touch, the
-  phone's touchpad and the idle screen hide it.
+  the screen's main control (Play/Pause on Now Playing). A touch and the
+  idle screen hide it. The phone's remote moves it too (section 7).
 - On a slider, Left and Right change the value; Up and Down leave it.
 - On a bar, Up from the top row brings the tray down.
 - While the screen is dark, or the visualiser or the idle screen is up, the
@@ -394,71 +394,73 @@ Open the player's address in a phone's browser, for example
 Nothing needs installing; the phone and the player only need to be on the
 same network.
 
-![Phone: Settings](images/phone-settings.webp)
+The phone page is a **remote** for the player. At the top, the player's
+name with what it is doing (*Playing · Lyrion*, *Paused · Spotify*,
+*Idle*) and a switch between two pages, **Remote** and **Settings**. Tap
+the name for every Gexis player on the network, each with what it is
+doing, and choose one to open its remote in the same tab.
 
-The phone page shows **Settings** above and the **mini player** at the
-bottom. With more than one player on the network, a switch button sits at
-the right of the *Settings* title: tap it for every player, each with what it is doing - *Playing · Spotify*, *Stopped · Lyrion*,
-*Idle* - and choose one to open its page in the same tab.
+### The remote, with a screen
 
-The mini player has:
+![Phone: the remote](images/phone-remote.webp)
 
-- **the track playing**, with **play/pause**;
-- **the panel**: its **Screen off** switch in the heading (the panel's screen
-  off until a touch, music starting or the switch again wakes it; the player
-  keeps playing, and some screens show their own "No signal" for a few
-  seconds first), and under it what the panel shows, one round button each:
-  **Home**, **Playing** (tap again to minimise it), **Lyrics**, **Meters**
-  (the visualiser), **Room** (the Home Assistant dashboard, once its address
-  is set) and **Idle** (not offered while the idle screen is switched off).
-  The one the panel shows is outlined;
-- the volume slider. A tap sets the level where it lands and a sideways
-  drag moves it; a swipe up or down that starts on the slider changes
-  nothing;
-- beside it, the **EQ** button with the setting in use. It opens the mini
-  player, where the **Equaliser** row has its switch, the settings to change
-  to and **Edit**, which opens the whole equaliser. On the phone the bands
-  are rows, each a slider sideways from 0, and the setting is chosen from a
-  list.
+For a player with a screen, the remote has, from the top:
 
-Swipe the mini player up, or tap its arrow, for the **touchpad**, which
-opens between the track and the row.
+- **what is playing**: the cover, the track, the artist and the album, how
+  far into the track it is, and the controls - shuffle, previous, play or
+  pause, next and repeat (off, all, one). A source that has no shuffle or
+  repeat shows none.
+- **the touch area**, which drives the player's screen from across the room.
+  Its corners are **Home**, **Lyrics**, **Back** and **Meters** (the
+  visualiser); the one the screen shows is lit. The switch at its top
+  chooses how:
+  - **Touchpad**: swipe to move around the screen and tap to choose. Each
+    short swipe moves one step, a longer one several, and the steps are named
+    under the area (*Right × 2*). The lines along the right and bottom edges
+    scroll the list the screen is on: drag along them.
+  - **D-pad**: the four arrows and OK, as buttons.
 
-### The touchpad
+  A teal ring on the screen shows where you are, as with Home Assistant's
+  D-pad. The phone remembers which of the two you used last.
+- **quick actions**: **Standby** (the screen off until a touch, music
+  starting or Standby again wakes it; the player keeps playing), **Idle
+  screen** (while the idle screen is switched on), **Playing** (Now Playing,
+  or back to the strip when it is up) and **Room** (the Home Assistant
+  dashboard, once its address is set). While in standby the views are dimmed,
+  and any of them, a corner or the touch area wakes the screen.
+- **the volume**: tap or drag anywhere on the bar. The speaker at its left
+  mutes and unmutes; the equaliser's setting is named in the middle. With
+  *Fixed output* the bar says so instead.
 
-![Phone: the touchpad](images/phone-sheet-open.webp)
+When a text field on the screen is chosen (a search, for example), the
+phone's keyboard comes up and a strip says *Typing on the player's screen*:
+what you type appears on the screen. **Done** puts the keyboard away.
 
-Tap the track name, or swipe the sheet up, to open it: its large area is a
-**touchpad** for the panel, so you can drive the screen from across the room.
-Swipe it down to close it.
+### The remote, without a screen
 
-| Gesture | Does |
-| --- | --- |
-| One finger | Moves the pointer on the panel. |
-| Tap | Presses what the pointer is on. |
-| Two fingers up or down, or sideways | Scroll what is under the pointer. |
-| One finger along the right or bottom edge line | Scrolls with one finger. |
-| Pinch | Zooms the panel in or out around the pointer. |
+![Phone: the remote for a player without a screen](images/phone-remote-noscreen.webp)
 
-Tap a text field on the panel (a search, for example) and the phone's
-keyboard comes up: what you type appears on the panel. Whatever the pointer
-is over that can be pressed is outlined, and the dot shrinks inside the
-outline (Now Playing's tabs are underlined instead); only the part that
-shows is outlined, so a button half under the
-mini strip is outlined down to the strip. A track whose Play, Queue and Add
-buttons are showing is not outlined itself. The pointer hides after a few
-seconds of rest. *Settings → Display* sets **Pointer speed**,
-**Pointer style** (Dot or Arrow), and whether the touchpad is offered at
-all (**Phone touchpad**). While the visualiser is up, a tap on the touchpad
-only closes it, as a tap on the screen does. A tap outside the open sheet just closes it, so
-nothing behind it is pressed by mistake.
+For a player without a screen there is nothing to drive, so the remote has
+a large cover, the track, a bar to move through it (drag or tap; with Lyrion
+and Spotify), larger controls and the volume.
+
+### The equaliser
+
+![Phone: the equaliser](images/phone-eq-sheet.webp)
+
+The button beside the volume opens the **equaliser**: its switch, the
+settings as a row of buttons (the presets, then your own), and what it does
+to the level. **Edit bands in Settings** opens the whole equaliser, where on
+the phone each band is a row, a slider sideways from 0.
 
 ### Settings on the phone
 
-![Phone: Display settings](images/phone-settings-display.webp)
+![Phone: Settings](images/phone-settings.webp)
 
-Every setting can be changed from the phone, which is the easier place to
-type a name, a password or a key.
+**Settings** has every setting, and the phone is the easier place to type a
+name, a password or a key. *Settings → Display → Touchpad* has **Phone
+touchpad**: off, the remote's touch area offers the D-pad alone, and no
+typing.
 
 ## 8. Bar screens
 

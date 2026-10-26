@@ -15,7 +15,7 @@
   import VolumeRow from './VolumeRow.svelte';
   import { FILLED } from './icons.js';
 
-  let { pad, onpad, padSwitch, socket, onok, ontouch, onsay, oneq } = $props();
+  let { pad, onpad, padSwitch, socket, onok, onsay, oneq } = $props();
 
   const hasTrack = $derived(!!$active);
   let failed = $state(null);
@@ -55,8 +55,8 @@
     <RemoteTransport />
   </div>
 
-  <TouchArea {pad} {onpad} {padSwitch} {socket} {onok} {ontouch} {onsay} />
-  <QuickActions {onsay} {ontouch} />
+  <TouchArea {pad} {onpad} {padSwitch} {socket} {onok} {onsay} />
+  <QuickActions {onsay} />
   <div class="volume"><VolumeRow {oneq} {onsay} /></div>
 </div>
 

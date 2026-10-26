@@ -25,7 +25,6 @@
     padSwitch = true,
     socket = null,
     onok = () => {},
-    ontouch = () => {},
     onsay = () => {},
   } = $props();
 
@@ -44,7 +43,6 @@
   let sentTimer;
   let goneTimer;
   function press(name, quiet = false) {
-    ontouch();
     if (name === 'ok') onok();
     key(name);
     if (quiet) return;
@@ -126,7 +124,6 @@
     el.setPointerCapture?.(event.pointerId);
     strip = { id: event.pointerId, axis, at: axis === 'y' ? event.clientY : event.clientX };
     thumb = { axis, f: fraction(event, el, axis) };
-    ontouch();
   }
   function stripMove(event) {
     if (!strip || event.pointerId !== strip.id) return;
@@ -144,7 +141,6 @@
   }
 
   function corner(which) {
-    ontouch();
     view(which, onsay);
   }
 </script>

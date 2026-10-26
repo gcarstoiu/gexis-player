@@ -123,18 +123,16 @@
   let typing = $state(false);
   let typeEl = $state(null);
   let typed = '';
-  let touchedAt = 0;
-  const touch = () => (touchedAt = Date.now());
-  //: A field the panel focuses shows the sheet only on the phone that was
-  //: just driving it, not on every phone open on the player.
-  const DRIVING_MS = 3000;
   $effect(() => {
     if (!(hasScreen && padAllowed && page === 'remote')) return;
     const s = openTouchpad((message) => {
       if (message.t === 'ring') ringField = !!message.field;
       else if (message.t === 'focus') {
-        if (message.field && Date.now() - touchedAt < DRIVING_MS) typing = true;
-        else if (!message.field) stopTyping();
+        // The design's: while a field on the screen has focus, however it
+        // got it - a tap on the panel itself included, so a phone can type
+        // into the field a finger chose there (a dashboard's sign-in).
+        if (message.field) typing = true;
+        else stopTyping();
       } else if (message.t === 'untyped') say('Some characters could not be typed on the player');
     });
     socket = s;
@@ -229,7 +227,7 @@
       <div class="track" style:transform={page === 'settings' ? 'translateX(-50%)' : 'none'}>
         <div class="page" inert={page !== 'remote'}>
           {#if hasScreen}
-            <RemoteScreen {pad} onpad={choosePad} padSwitch={padAllowed} {socket} onok={beforeOk} ontouch={touch}
+            <RemoteScreen {pad} onpad={choosePad} padSwitch={padAllowed} {socket} onok={beforeOk}
                           onsay={say} oneq={() => { eqOpen = true; stopTyping(); }} />
           {:else}
             <RemoteNoScreen onsay={say} oneq={() => (eqOpen = true)} />
