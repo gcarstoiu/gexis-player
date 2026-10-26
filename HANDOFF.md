@@ -86,8 +86,8 @@ amended - the volume gives the lowering back, with the gentler top
 gives it back on the quiet side of a change); no visualiser with the
 equaliser on - Spotify's float, which the meter's 16-bit view cannot read
 (Finding 138, *The meter and float*; lesson 82), mended by `output` taking
-integers only. **Owed by George:** C17 (the note's wording) and C18 (a
-change is a short dip). Core suite 2738 passed, 48 skipped; the note checked
+integers only; C17 (the note's wording) and C18 (a change is a short dip)
+confirmed the same day. Core suite 2738 passed, 48 skipped; the note checked
 from mocked data on every surface (`~/projects/scratch/eq-m2`:
 `note_shots.py`, with eq-m1's `eq_layout.py`; the silent meter test
 `meter_test.sh`). **On sofapi since 2026-10-26 10:50**, the equaliser off

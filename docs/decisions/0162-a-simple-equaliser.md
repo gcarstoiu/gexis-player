@@ -1,7 +1,7 @@
 # ADR-0162 — A simple equaliser
 
 **Status:** **Built** — 2026-10-26, on `ph-equaliser`, not yet measured
-through a card (below, *Built*). C1-C16 confirmed by George on 2026-10-26;
+through a card (below, *Built*). C1-C18 confirmed by George on 2026-10-26;
 D3 amended the same day (the volume gives the headroom back), after his
 question on it. The settings confirmed by
 George on 2026-10-25 (ADR-0022); the design received the same day
@@ -260,7 +260,7 @@ D3 as amended is built: `volume.GiveBack`, between the level and the
 control only - `set_raw` writes the control's value for a level and
 `get_raw` reads it back as the level, for the level control alone - so every
 raw the core keeps and every renderer's number are unchanged. Claude's
-decisions in it, for George's confirmation:
+decisions in it, confirmed by George the same day:
 
 - **C17 — The note keeps its badge, the lowering** (*−5 dB*), as the design
   drew it; the editor's text says it is given back and up to which volume

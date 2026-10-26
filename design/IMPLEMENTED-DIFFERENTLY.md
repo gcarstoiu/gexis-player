@@ -807,4 +807,4 @@ decisions). Not yet seen by George on a device.
   ends at *clip*; in the quick change *As loud as Flat up to 65% of the
   volume; above it, up to 5 dB quieter*, where the drawing had the editor's
   line. The badge stays the lowering; Fixed keeps the drawing's words. The
-  wording is Claude's (C17), for George's confirmation.
+  wording is Claude's (C17), confirmed by George the same day.
