@@ -360,7 +360,8 @@ async def test_transport_goes_to_the_active_renderer():
     [
         (None, ("play", "pause"), "/transport/play", 409),       # nothing active
         ("spotify", ("play",), "/transport/pause", 409),        # not declared
-        ("spotify", ("play", "pause"), "/transport/seek", 404), # not a command
+        ("spotify", ("play", "pause"), "/transport/seek", 409), # not declared (ADR-0164 C2)
+        ("spotify", ("play", "pause"), "/transport/rewind", 404), # not a command
     ],
 )
 async def test_transport_refuses_what_cannot_be_sent(active, controls, path, status):

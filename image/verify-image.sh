@@ -63,6 +63,9 @@ image/stage-gexis/10-lyrion/files/lyrion-memory-limit /usr/lib/gexis/lyrion-memo
 image/stage-gexis/10-lyrion/files/lyrion-prepare /usr/lib/gexis/lyrion-prepare
 image/stage-gexis/10-lyrion/files/90-gexis-usb-music.rules /usr/lib/udev/rules.d/90-gexis-usb-music.rules
 image/stage-gexis/10-lyrion/files/gexis-music.conf /etc/samba/smb.conf.d/gexis-music.conf
+image/stage-gexis/11-equaliser/files/gexis-equaliser.service /usr/lib/systemd/system/gexis-equaliser.service
+image/stage-gexis/00-alsa/files/gexis-loopback-load.conf /etc/modules-load.d/gexis-loopback.conf
+image/stage-gexis/00-alsa/files/gexis-loopback-modprobe.conf /etc/modprobe.d/gexis-loopback.conf
 EOF
 
 # **No skins in the image** (ADR-0111 decision 9): neither the old
@@ -193,11 +196,12 @@ else
 	# The tarball's checksum is what the stage pins; the extracted binary has its
 	# own, and this is it. First taken from the first image built with this
 	# stage (2026-09-25, v0.20.0, the binary run and measured on `gexis`,
-	# Findings 078 and 080). **v0.21.0 since 2026-10-08**: extracted from the
-	# release archive that matches the pin, and the build connected to the hub
-	# on guestpi. Raise it with every new Beszel pin - 0.9.5's first image
-	# check failed here because the pin moved and this did not.
-	BESZEL_BINARY_SHA256="bd6eed7a98493e0900c3398177552a53809546733ea69a8ad200e2cf4c7b677c"
+	# Findings 078 and 080). **v0.21.1 since 2026-10-25**: extracted from the
+	# release archive that matches the pin (upstream's checksums file agrees);
+	# it connects to the hub in Phase 20's preview. Raise it with every new
+	# Beszel pin - 0.9.5's first image check failed here because the pin moved
+	# and this did not.
+	BESZEL_BINARY_SHA256="eb4e7ac9340d380b19ab18261301b18813c1e46ebab5f0e4bf8cb6c86b4d5c20"
 	got="$(sha256sum "$OUT/agent" | cut -d' ' -f1)"
 	[ "$got" = "$BESZEL_BINARY_SHA256" ] && ok "beszel-agent is the build that was tested" \
 		|| bad "beszel-agent sha256 is $got, expected $BESZEL_BINARY_SHA256"
@@ -206,9 +210,9 @@ fi
 rm -f "$OUT/agent"
 
 # ADR-0114: the hub, the build its pin names (the binary's own checksum, taken
-# from the pinned release - v0.21.0 since 2026-10-08, as the agent above).
+# from the pinned release - v0.21.1 since 2026-10-25, as the agent above).
 dfs "dump /usr/bin/beszel-hub $OUT/hub" >/dev/null
-BESZEL_HUB_BINARY_SHA256="deb0823dc34e80e85555558eaa091da6f11ef9d769feceef13b54d7a07b47052"
+BESZEL_HUB_BINARY_SHA256="20d0a703b22c2914bdbf95a6906a55c9321287b4ba7c3aadb2964a851e8ed2e4"
 if [ ! -s "$OUT/hub" ]; then
 	bad "/usr/bin/beszel-hub missing"
 else
@@ -217,6 +221,26 @@ else
 		|| bad "beszel-hub sha256 is $got, expected $BESZEL_HUB_BINARY_SHA256"
 fi
 rm -f "$OUT/hub"
+
+# ADR-0162 D1: CamillaDSP, the build its pin names (the binary's own checksum,
+# extracted from the pinned release, v4.1.3, 2026-10-25). Raise it with every
+# new pin, as Beszel's.
+dfs "dump /usr/bin/camilladsp $OUT/camilladsp" >/dev/null
+CAMILLADSP_BINARY_SHA256="e04c7a6603e9482bab33c1e18afc41d3c07410b54ba9c246eda69f7e9cbaedfa"
+if [ ! -s "$OUT/camilladsp" ]; then
+	bad "/usr/bin/camilladsp missing"
+else
+	got="$(sha256sum "$OUT/camilladsp" | cut -d' ' -f1)"
+	[ "$got" = "$CAMILLADSP_BINARY_SHA256" ] && ok "camilladsp is the pinned build" \
+		|| bad "camilladsp sha256 is $got, expected $CAMILLADSP_BINARY_SHA256"
+fi
+rm -f "$OUT/camilladsp"
+# Started by the core only: no [Install] section, so nothing enables it.
+if dfs "stat /etc/systemd/system/multi-user.target.wants/gexis-equaliser.service" | grep -q 'Inode:'; then
+	bad "gexis-equaliser is enabled in the image - the core starts it (ADR-0162)"
+else
+	ok "gexis-equaliser not enabled (the core starts it while the equaliser is on)"
+fi
 
 # **Not enabled.** An unenrolled device runs nothing, and the switch on the
 # settings screen reads the unit's real state (ADR-0086 as amended) - so a unit
@@ -417,6 +441,7 @@ for f in /usr/share/doc/gexis-player/COPYING \
          /usr/share/doc/gexis-player/licenses/peppy_screensaver/LICENSE \
          /usr/share/doc/gexis-player/licenses/beszel/LICENSE \
          /usr/share/doc/gexis-player/licenses/go-librespot/README \
+         /usr/share/doc/gexis-player/licenses/camilladsp/README \
          /usr/share/doc/gexis-player/licenses/peppyalsa/README \
          /usr/share/doc/gexis-player/licenses/squeezelite/README \
          /opt/gexis-ui/licenses/svelte/LICENSE.md \

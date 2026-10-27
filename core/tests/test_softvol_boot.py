@@ -177,3 +177,24 @@ def test_the_unit_runs_before_every_renderer():
         assert renderer in before
     assert "Type=oneshot" in unit
     assert "-m gexis_core.softvol_boot" in unit
+
+
+def test_with_the_equaliser_on_the_control_is_written_as_the_core_writes_it(tmp_path, monkeypatch, amixer):
+    """ADR-0162 D3 as amended: the level with the headroom given back, which
+    is what the core reads it back through - else the core read it 5 dB low
+    and every slider showed it so."""
+    from gexis_core import equaliser as eq
+    from gexis_core import eq_control, volume
+    _output(monkeypatch, HDMI)
+    rock = eq.Equaliser().set_on("vc4hdmi0", True).choose("vc4hdmi0", "rock").to_settings()
+    path = _store(tmp_path, output_device="HDMI 1", _software_level_db=-30.0, **{eq_control.KEY: rock})
+    outcome = softvol_boot.restore(path)
+    level = outputs.SOFTVOL_SCALE.raw(-30.0)
+    given = volume.GiveBack(outputs.SOFTVOL_CONTROL, 5.0, outputs.SOFTVOL_SCALE)
+    assert amixer.value("Gexis") == volume.to_control(level, given) == level + 20
+    assert "5.0 dB of the equaliser's given back" in outcome
+    off = eq.Equaliser().set_on("vc4hdmi0", False).choose("vc4hdmi0", "rock").to_settings()
+    (tmp_path / "off").mkdir()
+    softvol_boot.restore(_store(tmp_path / "off", output_device="HDMI 1", _software_level_db=-30.0,
+                                **{eq_control.KEY: off}))
+    assert amixer.value("Gexis") == level, "off: the level as it is"

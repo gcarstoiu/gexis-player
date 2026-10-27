@@ -123,11 +123,19 @@ meant for what was under it does not set the level.
 
 With **Volume** set to *Fixed*, the player always plays at full level
 for an amplifier that sets the volume; the button then shows a padlock and
-the drawer explains why. *Maximum volume* and Spotify's *Starting volume* do
+the drawer explains why. Mute still works there, where the output has a
+volume control of its own (the HiFiBerry has; some USB DACs have none): the
+drawer's speaker silences the output, the button shows the crossed speaker
+while it is muted, and unmuting brings back the full level. *Maximum volume* and Spotify's *Starting volume* do
 not apply in Fixed, and their rows are hidden. Changing the volume type
 while music plays stops playback, and the sources reconnect on the new type,
 so the level never jumps mid-track; the source that comes back starts no
 louder than its *Starting volume*.
+
+Under the volume sits the **equaliser**: the setting in use (*Rock ·
+preset*), its switch, and the settings as a row of buttons to change to -
+the presets, then your own. **Edit** opens the whole equaliser (see
+[The equaliser](#the-equaliser)).
 
 ## 3. The library
 
@@ -218,7 +226,7 @@ and its button says *Play playlist*.
 
 **Search**: tap a search field and type on your phone (section 7); results
 arrive as you type. A service's *Search* opens straight on its field, and
-tapped from the phone's touchpad it brings up the phone's keyboard. My Music's Search looks for artists, albums, works,
+chosen from the phone's remote it brings up the phone's keyboard. My Music's Search looks for artists, albums, works,
 songs and playlists at once.
 
 A few things are left out on purpose:
@@ -300,10 +308,10 @@ two things are set there, by whoever runs it:
    Assistant's *trusted networks* (`auth_providers` in `configuration.yaml`,
    with `allow_bypass_login: true`), so the dashboard opens without a login;
    or sign in once on the panel - Home Assistant then keeps the player signed
-   in. To sign in, tap the fields with a finger and type on a USB keyboard
-   plugged into the player, or use the phone page: its touchpad taps inside
-   the dashboard where the pointer is, and its keyboard types there. The
-   phone types the characters the player's keyboard layout has (a US layout
+   in. To sign in, tap a field on the panel and type on a USB keyboard
+   plugged into the player, or on the phone: while a field on the screen is
+   chosen, the remote offers the phone's keyboard (tap *Typing on the
+   player's screen* if it is not up). The phone types the characters the player's keyboard layout has (a US layout
    unless set otherwise); one it lacks is left out, and the phone says so.
 
 Home Assistant's own header and side bar show unless the dashboard or the
@@ -372,8 +380,8 @@ The screen can be used without touching it: with Home Assistant's *D-pad*
   open - a sheet, the volume, the tray - or goes back one step, and on Now
   Playing minimises it. On Home it does nothing.
 - The ring shows at the first press, where it was last on that screen, or on
-  the screen's main control (Play/Pause on Now Playing). A touch, the
-  phone's touchpad and the idle screen hide it.
+  the screen's main control (Play/Pause on Now Playing). A touch and the
+  idle screen hide it. The phone's remote moves it too (section 7).
 - On a slider, Left and Right change the value; Up and Down leave it.
 - On a bar, Up from the top row brings the tray down.
 - While the screen is dark, or the visualiser or the idle screen is up, the
@@ -389,66 +397,84 @@ Open the player's address in a phone's browser, for example
 Nothing needs installing; the phone and the player only need to be on the
 same network.
 
-![Phone: Settings](images/phone-settings.webp)
+The phone page is a **remote** for the player. At the top, the player's
+name with what it is doing (*Playing · Lyrion*, *Paused · Spotify*,
+*Idle*) and a switch between two pages, **Remote** and **Settings**. Tap
+the name for every Gexis player on the network, each with what it is
+doing, and choose one to open its remote in the same tab.
 
-The phone page shows **Settings** above and the **mini player** at the
-bottom. With more than one player on the network, a switch button sits at
-the right of the *Settings* title: tap it for every player, each with what it is doing - *Playing · Spotify*, *Stopped · Lyrion*,
-*Idle* - and choose one to open its page in the same tab.
+### The remote, with a screen
 
-The mini player has:
+![Phone: the remote](images/phone-remote.webp)
 
-- **the track playing**, with **play/pause**;
-- **the panel**: its **Screen off** switch in the heading (the panel's screen
-  off until a touch, music starting or the switch again wakes it; the player
-  keeps playing, and some screens show their own "No signal" for a few
-  seconds first), and under it what the panel shows, one round button each:
-  **Home**, **Playing** (tap again to minimise it), **Lyrics**, **Meters**
-  (the visualiser), **Room** (the Home Assistant dashboard, once its address
-  is set) and **Idle** (not offered while the idle screen is switched off).
-  The one the panel shows is outlined;
-- the volume slider. A tap sets the level where it lands and a sideways
-  drag moves it; a swipe up or down that starts on the slider changes
-  nothing.
+For a player with a screen, the remote has, from the top:
 
-Swipe the mini player up, or tap its arrow, for the **touchpad**, which
-opens between the track and the row.
+- **what is playing**: the cover, the track and the artist, beside them
+  previous, play or pause and next, and under them how far into the track it
+  is. Shuffle and repeat are on the player's own screen.
+- **the touch area**, which drives the player's screen from across the room.
+  Its corners are **Home**, **Lyrics**, **Back** and **Meters** (the
+  visualiser); the one the screen shows is lit. The switch at its top
+  chooses how:
+  - **Trackpad**: a pointer on the player's screen, moved like a laptop's
+    touchpad.
 
-### The touchpad
+    | Gesture | Does |
+    | --- | --- |
+    | One finger | Moves the pointer on the screen. |
+    | Tap | Presses what the pointer is on. |
+    | Two fingers up or down, or sideways | Scroll what is under the pointer. |
+    | One finger along the line at the right or the bottom | Scrolls with one finger. |
+    | Pinch | Zooms the screen in or out around the pointer. |
 
-![Phone: the touchpad](images/phone-sheet-open.webp)
+    Whatever the pointer is over that can be pressed is outlined. The
+    pointer hides after a few seconds of rest.
+  - **D-pad**: the four arrows and OK, as buttons. A teal ring on the screen
+    shows where you are, as with Home Assistant's D-pad.
 
-Tap the track name, or swipe the sheet up, to open it: its large area is a
-**touchpad** for the panel, so you can drive the screen from across the room.
-Swipe it down to close it.
+  The phone remembers which of the two you used last.
+- **quick actions**: **Standby** (the screen off until a touch, music
+  starting or Standby again wakes it; the player keeps playing), **Idle
+  screen** (while the idle screen is switched on), **Playing** (Now Playing,
+  or back to the strip when it is up) and **Room** (the Home Assistant
+  dashboard, once its address is set). While in standby the views are dimmed,
+  and any of them, a corner or the touch area wakes the screen.
+- **the volume**: tap or drag anywhere on the bar. The speaker at its left
+  mutes and unmutes; the equaliser's setting is named in the middle. With
+  *Fixed output* the bar is the panel's locked row: the level is set on the
+  amplifier, and the speaker still mutes (where the output has a volume
+  control of its own, as the HiFiBerry has).
 
-| Gesture | Does |
-| --- | --- |
-| One finger | Moves the pointer on the panel. |
-| Tap | Presses what the pointer is on. |
-| Two fingers up or down, or sideways | Scroll what is under the pointer. |
-| One finger along the right or bottom edge line | Scrolls with one finger. |
-| Pinch | Zooms the panel in or out around the pointer. |
+Tap a text field on the screen (a search, for example), or press OK on one
+with the D-pad, and the phone's own keyboard comes up: what you type appears
+on the screen.
 
-Tap a text field on the panel (a search, for example) and the phone's
-keyboard comes up: what you type appears on the panel. Whatever the pointer
-is over that can be pressed is outlined, and the dot shrinks inside the
-outline (Now Playing's tabs are underlined instead); only the part that
-shows is outlined, so a button half under the
-mini strip is outlined down to the strip. A track whose Play, Queue and Add
-buttons are showing is not outlined itself. The pointer hides after a few
-seconds of rest. *Settings → Display* sets **Pointer speed**,
-**Pointer style** (Dot or Arrow), and whether the touchpad is offered at
-all (**Phone touchpad**). While the visualiser is up, a tap on the touchpad
-only closes it, as a tap on the screen does. A tap outside the open sheet just closes it, so
-nothing behind it is pressed by mistake.
+### The remote, without a screen
+
+![Phone: the remote for a player without a screen](images/phone-remote-noscreen.webp)
+
+For a player without a screen there is nothing to drive, so the remote has
+a large cover, the track, a bar to move through it (drag or tap; with Lyrion
+and Spotify), larger controls and the volume.
+
+### The equaliser
+
+![Phone: the equaliser](images/phone-eq-sheet.webp)
+
+The button beside the volume opens the **equaliser**: its switch, the
+settings as a row of buttons (the presets, then your own), and what it does
+to the level. **Edit bands in Settings** opens the whole equaliser, where on
+the phone each band is a row, a slider sideways from 0. Swipe it down, or tap
+above it, to close it.
 
 ### Settings on the phone
 
-![Phone: Display settings](images/phone-settings-display.webp)
+![Phone: Settings](images/phone-settings.webp)
 
-Every setting can be changed from the phone, which is the easier place to
-type a name, a password or a key.
+**Settings** has every setting, and the phone is the easier place to type a
+name, a password or a key. *Settings → Display → Touchpad* has **Phone
+touchpad** (off, the remote's touch area offers the D-pad alone, and no
+typing), **Pointer speed** and **Pointer style** (Dot or Arrow).
 
 ## 8. Bar screens
 
@@ -467,9 +493,12 @@ it.
 
 ![Bar: the waiting screen](images/bar-waiting.webp)
 
-Pulled down from the top of any screen, the tray: Home, the visualiser and
-the volume. It stays until it is closed - tap below it, or push it back up -
-or the visualiser takes over or Home opens.
+Pulled down from the top of any screen, the tray: Home, the visualiser,
+the equaliser's button and the volume. It stays until it is closed - tap
+below it, or push it back up - or the visualiser takes over or Home opens.
+The equaliser's button names the setting in use; tapped, it opens a second
+band under the first with the switch, the settings to change to and
+**Edit**.
 
 ![Bar: the tray](images/bar-tray.webp)
 
@@ -555,6 +584,45 @@ player into your Plex account).
 | Volume | How the level is set. *Hardware* (default): by the sound card's own volume control, bit-perfect at every level. *Software*: by the player recalculating the sound, on any output; not bit-perfect below 100 %. *Fixed*: always full level, for an amplifier that sets the volume itself; it asks first. Any change of volume type stops playback while the sources reconnect on it. On a DAC that takes DSD natively (some USB DACs), *Fixed* also plays DSD files from Lyrion as DSD, unconverted, and the Fixed choice says so; otherwise DSD files are converted to PCM. A DSD file of more than two channels is always converted, and folded down to stereo. The visualiser stays still during DSD. On an output with no volume control of its own, such as HDMI, Hardware is greyed out and Software is used in its place. The level carries across between Hardware and Software. |
 | Maximum volume | The loudest the player will go, on any input. At 80, 100 % on every control means that level. Hidden with Volume on *Fixed*. |
 | Volume curve | How the slider's travel maps to loudness. *Cubic* (half travel is −15.5 dB) is the usual shape; *Linear* puts half travel at −30 dB. |
+| Equaliser | Opens the equaliser, for the output in use; the row says what it uses (*Rock*, *Custom*) or *Off*. See below. |
+
+#### The equaliser
+
+![The equaliser](images/panel-equaliser.webp)
+
+Ten bands, an octave apart from 31 Hz to 16 kHz, each from −12 to +12 dB.
+**Each output keeps its own**: the DAC, HDMI and optical each remember
+whether the equaliser is on and which setting it uses, and the page says
+which output it is setting.
+
+- **On or off**, at the top. Off, the sound is untouched, bit-perfect, as
+  it always was. Switching it on or off reopens the output, so what is
+  playing stops; start it again if it does not carry on.
+- **A setting**: one of the presets - *Flat*, *Rock*, *Pop*, *Jazz*,
+  *Classical*, *Electronic*, *Hip-hop*, *Acoustic*, *Vocal* and *Late
+  night* (more bass and treble for listening quietly) - or one of your own.
+  Choosing one is heard at once, and the bands move to it.
+- **The bands**: drag one up or down; the change is heard as it moves.
+  Moving a band of a preset or of one of your own makes it **Custom**
+  (*From Rock · not saved*), until it is saved.
+- **Save as…** keeps the bands as one of your own, under a name: up to ten,
+  shared by every output. One of your own can be **renamed** or **deleted**;
+  an output that uses a deleted one goes back to *Flat*. On the panel, type
+  the name with a keyboard plugged into the player or from the phone's
+  touchpad.
+- **The note under the bands** says how far the music is lowered so that a
+  boost cannot clip, and that the volume gives it back - *Lowered by 5 dB so
+  the boost cannot clip; the volume gives it back up to 65%* - or that
+  nothing is lowered when no band rises. Up to that volume a setting plays
+  as loud as *Flat*; above it, a little quieter, up to the lowering at
+  100 %, and the quick change says so. With *Volume* on *Fixed* there is no
+  volume to give it back with: the music plays that much quieter, and the
+  note says to turn the amplifier up to match.
+- **DSD** plays untouched: while a DSD track plays natively, the equaliser
+  stands aside, and it is back for the next PCM track.
+
+Every source plays through it - Lyrion, Spotify, Bluetooth and Plexamp -
+and the visualiser shows the music as it arrives, before the equaliser.
 
 ### Display — *Screen and idle*
 

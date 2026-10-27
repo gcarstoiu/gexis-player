@@ -7,7 +7,7 @@
 <script>
   import { enrichedArtwork } from '../lib/enrichment.js';
   import VolumeIcon from '../lib/VolumeIcon.svelte';
-  import { fixedOutput } from '../lib/state.js';
+  import { fixedMute, fixedOutput } from '../lib/state.js';
   import LockIcon from '../lib/LockIcon.svelte';
   import SourceMark from '../lib/SourceMark.svelte';
   import { playhead, mmss } from '../lib/playhead.svelte.js';
@@ -92,7 +92,9 @@
       onpointerdown={guard}
       onclick={own(onvolume)}
     >
-      {#if $fixedOutput}
+      {#if $fixedOutput && $fixedMute}
+        <VolumeIcon percent={100} muted />
+      {:else if $fixedOutput}
         <LockIcon />
       {:else}
         <VolumeIcon percent={volume?.percent ?? null} muted={!!volume?.muted} />

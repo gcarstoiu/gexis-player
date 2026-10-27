@@ -17,16 +17,34 @@
   review decision 7: keep the panel's), not the source accent round 2 drew.
 -->
 <script>
-  import { fixedOutput, meters } from '../../lib/state.js';
+  import { fixedMute, fixedOutput, meters } from '../../lib/state.js';
   import { VolumeControl } from '../../lib/volumeControl.svelte.js';
   import { pressing } from '../../lib/press.svelte.js';
   import LockIcon from '../../lib/LockIcon.svelte';
   import VolumeIcon from '../../lib/VolumeIcon.svelte';
   import { pull, bandDrag, TRAY_H } from './tray.svelte.js';
+  import { equaliser } from '../../lib/equaliser.svelte.js';
+  import EqQuick from '../eq/EqQuick.svelte';
 
   //: `armsAt`: before this (performance.now()), a tray that came down by
   //: itself takes no touch on its level or mute (App.svelte, VOLUME_ARM_MS).
-  let { open, armsAt = 0, volume, active, onclose, onexternal, onactivity, onsettled, onhome, onvisualisation, ondashboard = null, rootless = false } = $props();
+  let { open, armsAt = 0, volume, active, onclose, onexternal, onactivity, onsettled, onhome, onvisualisation, ondashboard = null, onequaliser = null, rootless = false } = $props();
+
+  //: ADR-0162 (design/source/20, Q06-Q09): the EQ button opens a second band
+  //: under the first - the switch, the settings, the note and Edit.
+  const EQ_H = 254;
+  let eqBand = $state(false);
+  $effect(() => {
+    if (!open) eqBand = false;
+  });
+  const trayH = $derived(eqBand ? EQ_H : TRAY_H);
+  const eqLit = $derived(!!$equaliser?.on && !$equaliser?.dsd);
+  const eqName = $derived(!$equaliser ? '' : !$equaliser.on ? 'EQ off' : $equaliser.dsd ? 'DSD'
+    : $equaliser.sel === 'custom' ? 'Custom' : ($equaliser.name ?? 'Flat'));
+  function goEqualiser() {
+    onclose?.();
+    onequaliser?.();
+  }
 
   const press = pressing();
 
@@ -38,6 +56,7 @@
     active: () => active,
     onexternal: () => onexternal,
     onsettled: () => onsettled,
+    fixedMute: () => $fixedMute,
   });
   const muted = $derived(vol.muted);
   const shown = $derived(vol.shown);
@@ -157,7 +176,8 @@
   class="tray"
   class:is-shown={open || following}
   class:is-following={following}
-  style:transform={`translateY(${shownH - TRAY_H - (shownH ? 0 : 60)}px)`}
+  style:height={`${trayH}px`}
+  style:transform={`translateY(${shownH - TRAY_H - (shownH ? 0 : 60 + trayH - TRAY_H)}px)`}
   inert={!open}
   role="presentation"
   data-dpad-layer
@@ -173,6 +193,7 @@
     onpointerdown={band.down} onpointermove={band.move} onpointerup={band.up} onpointercancel={band.cancel}></div>
   <div class="handle"></div>
 
+  <div class="row">
   <button class="btn btn--home" class:is-pressed={press.is('home')} type="button" data-dpad-main aria-label={rootless ? 'Settings' : 'Home'}
     onpointerdown={() => press.down('home')} onpointerup={(event) => press.lift(event, goHome)} onpointercancel={press.up} onclick={() => press.click(goHome)}>
     {#if rootless}
@@ -193,18 +214,39 @@
       <svg class="i-dash" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11 12 4.5 20 11v8.5H14.5V14h-5v5.5H4Z" /></svg>
     </button>
   {/if}
+  {#if $equaliser}
+    <button class="eqbtn" class:is-lit={eqLit} type="button" aria-label="Equaliser" aria-expanded={eqBand}
+      onpointerup={(event) => press.lift(event, () => (eqBand = !eqBand))} onclick={() => press.click(() => (eqBand = !eqBand))}>
+      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M6 4v16M12 4v16M18 4v16" />
+        <circle cx="6" cy="14" r="2.6" fill="#16232c" /><circle cx="12" cy="8" r="2.6" fill="#16232c" /><circle cx="18" cy="15" r="2.6" fill="#16232c" />
+      </svg>
+      <span class="eqbtn__name">{eqName}</span>
+      <span class="eqbtn__chev" class:is-open={eqBand}></span>
+    </button>
+  {/if}
   <span class="divider"></span>
 
   {#if $fixedOutput}
     <!-- ADR-0046: the sentence where the question is asked, not a disabled
-         slider. -->
+         slider. ADR-0165: mute before it, where the output can be silenced. -->
+    {#if $fixedMute !== null}
+      <button class="btn mute" class:is-muted={muted} type="button" aria-label={muted ? 'Unmute' : 'Mute'}
+        onpointerup={(event) => press.lift(event, toggleMute)} onclick={() => press.click(toggleMute)}>
+        {#if muted}
+          <span class="i-muted"><span class="i-muted__cone"></span><i></i><i></i></span>
+        {:else}
+          <VolumeIcon percent={100} muted={false} />
+        {/if}
+      </button>
+    {/if}
     <div class="fixed">
       <span class="fixed__lock"><LockIcon size={34} /></span>
       <span class="fixed__text">
         <span class="fixed__title">Fixed output</span>
         <span class="fixed__sub">Level is set downstream. Set it on your amplifier.</span>
       </span>
-      <span class="fixed__level">100%</span>
+      <span class="fixed__level" class:is-muted={muted}>{muted ? 'Mute' : '100%'}</span>
     </div>
   {:else if volume}
     <button class="btn mute" class:is-muted={muted} type="button" aria-label={muted ? 'Unmute' : 'Mute'}
@@ -236,6 +278,12 @@
       </div>
     </div>
     <span class="readout" class:is-muted={muted}>{muted ? 'Mute' : shown}</span>
+  {/if}
+  </div>
+  {#if eqBand}
+    <div class="eqband">
+      <EqQuick host="bartray" onedit={goEqualiser} />
+    </div>
   {/if}
 </div>
 
@@ -280,9 +328,8 @@
     touch-action: none;
     z-index: 13;
     display: flex;
-    align-items: center;
-    gap: 20px;
-    padding: 0 40px 14px;
+    flex-direction: column;
+    padding: 0 0 14px;
     background: var(--bg-panel);
     border-radius: 0 0 24px 24px;
     border-bottom: 1px solid rgba(233, 238, 242, 0.12);
@@ -298,6 +345,63 @@
   }
   /* Under a finger it is wherever the finger is. */
   .tray.is-following { transition: none; }
+  .row {
+    height: 122px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 0 40px;
+  }
+  /* ADR-0162: the equaliser's band, under the first (design/source/20, Q07). */
+  .eqband {
+    position: relative;
+    z-index: 1;
+    height: 120px;
+    flex-shrink: 0;
+    padding: 0 40px;
+    border-top: 1px solid rgba(233, 238, 242, 0.08);
+  }
+  .eqbtn {
+    position: relative;
+    z-index: 1;
+    height: 60px;
+    padding: 0 20px 0 18px;
+    border-radius: 30px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+    background: rgba(233, 238, 242, 0.07);
+    border: 1px solid rgba(233, 238, 242, 0.14);
+    color: rgba(233, 238, 242, 0.82);
+    font: inherit;
+  }
+  .eqbtn.is-lit {
+    background: rgba(126, 214, 188, 0.12);
+    border-color: rgba(126, 214, 188, 0.45);
+    color: #7ed6bc;
+  }
+  .eqbtn:active {
+    transform: scale(0.95);
+  }
+  .eqbtn__name {
+    font-size: 19px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .eqbtn__chev {
+    width: 9px;
+    height: 9px;
+    border-right: 2.5px solid rgba(233, 238, 242, 0.6);
+    border-bottom: 2.5px solid rgba(233, 238, 242, 0.6);
+    transform: rotate(45deg) translate(-2px, -2px);
+    transition: transform 160ms ease;
+  }
+  .eqbtn__chev.is-open {
+    transform: rotate(-135deg) translate(-2px, -2px);
+  }
 
   .closeband {
     position: absolute;
@@ -518,6 +622,9 @@
     text-transform: uppercase;
     color: rgba(233, 238, 242, 0.55);
     flex-shrink: 0;
+  }
+  .fixed__level.is-muted {
+    color: var(--accent-warn);
   }
 
   .toast {

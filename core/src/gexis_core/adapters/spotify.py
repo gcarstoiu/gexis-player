@@ -117,7 +117,7 @@ class SpotifyAdapter(Adapter):
         # Shuffle and repeat: George, 2026-09-17, over the design's LMS-only
         # rule. go-librespot sets and reports both (api-spec, and events
         # shuffle_context / repeat_context / repeat_track).
-        controls=frozenset({"play", "pause", "next", "previous", "shuffle", "repeat"}),
+        controls=frozenset({"play", "pause", "next", "previous", "shuffle", "repeat", "seek"}),
     )
 
     def __init__(self, host: str, port: int) -> None:
@@ -445,6 +445,10 @@ class SpotifyAdapter(Adapter):
         if not await self._post_player("repeat_track", {"repeat_track": False}):
             return False
         return await self._post_player("repeat_context", {"repeat_context": mode == "all"})
+
+    async def seek(self, position: float) -> bool:
+        """ADR-0164 C2: go-librespot's `/player/seek` takes milliseconds."""
+        return await self._post_player("seek", {"position": round(position * 1000), "relative": False})
 
     async def _post_player(self, action: str, body: dict | None = None) -> bool:
         """ADR-0037. The result arrives as go-librespot's own transport

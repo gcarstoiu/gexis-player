@@ -56,7 +56,7 @@ client keeps nothing between messages. The client sends nothing on it;
 commands go over HTTP. Its JSON is the schema `State` in the file:
 `active` (the source playing, or null), `available`, `metadata` (title,
 artist, album, artwork, position), `volume`, `controls` (which transport
-commands work now), `sources`, `queue`, `pairing` (a Bluetooth request
+commands work now; `seek` only with a known duration, ADR-0164), `sources`, `queue`, `pairing` (a Bluetooth request
 waiting for an answer), `panel` (standby, what the screen shows), and the
 first-use and update fields the player's own pages use.
 
@@ -65,12 +65,29 @@ first-use and update fields the player's own pages use.
 A WebSocket between a phone and the panel (ADR-0121). A connection from the
 player itself is the panel; any other is a phone. A phone sends `move`,
 `tap`, `text`, `key`, `scroll` and `zoom` messages, relayed unchanged to the
-panel; the panel sends `over` and `focus`, relayed to the phones. Every
+panel - the phone remote's trackpad (ADR-0164), whose D-pad goes as keys
+instead (`POST /panel/key`). The panel sends `over`, `focus`, `ring` (its
+D-pad ring is on a text field) and
+`untyped`, relayed to the phones. Every
 message is a JSON object with its kind in `t`; anything else, or a frame over
 2048 bytes, is dropped, and with *Phone touchpad* off every relayed message
 is dropped. `{"t":"ping"}` is answered `{"t":"pong"}`. The schemas
 `PanelTouchpadFromPhone` and `PanelTouchpadFromPanel` give the fields. It is
 *internal*: the phone page's own.
+
+## The equaliser
+
+ADR-0162, *internal* until Phase 20 closes (then *stable*). For the output in
+use: `GET /equaliser` (the same object as `/state`'s `equaliser`: whether it
+is on, the setting and its bands, the headroom, whether the volume gives it
+back and up to which volume (`gives_back`, `given_up_to`), `fixed`, `dsd`, the
+presets and the owner's settings); `PUT /equaliser` with `on`, `sel` (a
+preset's or an own setting's key), `gains` (ten whole decibels, −12 to +12,
+low to high) or `band` with `gain`; `POST /equaliser/settings {name}` saves
+the bands as one of the owner's (up to ten); `PUT` and `DELETE
+/equaliser/settings/{key}` rename and delete one. A refusal is a 400 with the
+sentence to show (*There is a setting called Rock already.*). A band or a
+setting is heard at once; `on` reopens the output.
 
 ## Home Assistant
 

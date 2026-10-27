@@ -1,0 +1,18 @@
+# ADR-0162 D1: CamillaDSP behind the equaliser's loopback. Never enabled: the
+# core starts it while the equaliser is on for the output in use, sends it a
+# configuration for each stream over its websocket (loopback only), and stops
+# it when the equaliser is out of the path.
+[Unit]
+Description=Gexis Player equaliser (CamillaDSP)
+Documentation=https://github.com/HEnquist/camilladsp
+After=sound.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/camilladsp --port 1234 --address 127.0.0.1 --wait --loglevel warn
+Restart=on-failure
+RestartSec=1
+User=pi
+Group=audio
+# Ahead of the visualiser for the processor: an underrun here is a dropout.
+Nice=-10

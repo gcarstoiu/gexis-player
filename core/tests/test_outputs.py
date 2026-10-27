@@ -926,3 +926,61 @@ def test_a_missing_output_is_reported_once_until_it_comes_back(caplog, monkeypat
     assert outputs.resolve("SMSL USB DAC", [JACK, dac], current="Headphones") is dac
     outputs.resolve("SMSL USB DAC", [JACK], current="Headphones")
     assert said() == 2
+
+
+# ---- ADR-0162: the equaliser in the chain ------------------------------------------
+
+
+def _parts(conf):
+    head = conf[conf.index("pcm.output {"):conf.index("pcm.output_wait")]
+    wait = conf[conf.index("pcm.output_wait {"):conf.index("ctl.output {")]
+    return head, wait
+
+
+def test_with_the_equaliser_the_renderers_play_into_the_loopback(tmp_path):
+    out = outputs.Output(card="sndrpihifiberry", label="HiFiBerry", control="DAC")
+    conf = outputs.render(out, False, eq=True)
+    head, wait = _parts(conf)
+    assert "scopes.0 peppyalsa" in head and 'pcm "hw:Loopback,0,0"' in head, "the meter before it (D4)"
+    assert "pcm.gexis_eq_out {\n    type hw\n    card sndrpihifiberry\n}" in head
+    assert "{ type hw card Loopback device 0 subdevice 0 nonblock 0 }" in wait and "type meter" in wait
+    assert "ctl.output {\n    type hw\n    card sndrpihifiberry\n}" in conf, "the card's own controls, as ever"
+    path = tmp_path / "output.conf"
+    path.write_text(conf)
+    assert outputs.configured(path) == "sndrpihifiberry", "the card, not the loopback"
+
+
+def test_with_the_equaliser_the_software_stage_comes_after_it():
+    out = outputs.with_software_volume(outputs.Output(card="sndrpihifiberry", label="HiFiBerry", control="DAC"))
+    head, _ = _parts(outputs.render(out, False, eq=True))
+    assert "pcm.gexis_softvol {\n    type softvol\n    slave.pcm \"hw:sndrpihifiberry\"" in head
+    assert 'pcm.gexis_eq_out "gexis_softvol"' in head, "D8: the volume is the last stage"
+
+
+def test_with_the_equaliser_output_takes_integers_and_output_wait_anything():
+    """go-librespot asks for float first, which the meter cannot read (the
+    visualiser had nothing, 2026-10-26); `linear` refuses it. Squeezelite's
+    `output_wait` keeps the loopback itself, for native DSD."""
+    out = outputs.Output(card="sndrpihifiberry", label="HiFiBerry", control="DAC")
+    head, wait = _parts(outputs.render(out, False, eq=True))
+    meter = head[:head.index("}\n\n")]
+    assert ('slave.pcm { type copy slave.pcm { type linear slave { pcm "hw:Loopback,0,0" format S32_LE } } }'
+            in meter)
+    assert "linear" not in wait and "copy" not in wait
+
+
+def test_with_the_equaliser_hdmi_keeps_its_meter_and_converts_after_it():
+    out = outputs.Output(card="vc4hdmi0", label="HDMI 1", control=None)
+    head, wait = _parts(outputs.render(out, True, eq=True))
+    assert "type meter" in head and "type meter" in wait
+    assert 'pcm.gexis_eq_out {\n    type plug\n    slave.pcm "hw:vc4hdmi0"\n}' in head
+
+
+def test_off_the_file_is_what_it_was():
+    out = outputs.Output(card="sndrpihifiberry", label="HiFiBerry", control="DAC")
+    assert outputs.render(out, False, eq=False) == outputs.render(out, False)
+    assert "Loopback" not in outputs.render(out, False)
+
+
+def test_the_loopback_is_never_an_output():
+    assert "Loopback" in outputs.OURS

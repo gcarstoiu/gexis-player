@@ -118,7 +118,7 @@ Top-level fields of the `/state` payload:
 | `capabilities`, `controls` | Each renderer's declared contract; the active renderer's transport commands that work now, with its shuffle and repeat state where it declares them (ADR-0037) |
 | `sources` | One entry per installed source from its manifest: name, kind, accent, mark URL (ADR-0086) |
 | `handoff` | A takeover in progress, for the transition screen (ADR-0094) |
-| `volume`, `fixed_output`, `meters` | Level; whether there is no attenuation at all (ADR-0046); whether the output can feed the visualiser (ADR-0055 §6) |
+| `volume`, `fixed_output`, `fixed_mute`, `meters` | Level; whether there is no attenuation at all (ADR-0046); muted with Fixed volume, null where nothing can mute (ADR-0165); whether the output can feed the visualiser (ADR-0055 §6) |
 | `queue` | The active renderer's queue, where it has one |
 | `pairing` | A Bluetooth pairing request awaiting an answer on the panel (ADR-0045) |
 | `components` | Progress of on-device downloads (ADR-0100) |
@@ -191,7 +191,7 @@ something the panel is not showing).
 |---|---|---|
 | State | `GET /state` (WebSocket) | Panel, phone |
 | Surface | `GET /surface` → `panel` or `remote` | Both, at start (ADR-0032) |
-| Touchpad relay | `GET /touchpad` (WebSocket) | Phone ↔ panel (ADR-0121) |
+| Touchpad relay | `GET /touchpad` (WebSocket) | Phone ↔ panel: the trackpad, typing, the pointer or ring on a field (ADR-0121, ADR-0164) |
 | Playback | `POST /renderer/{id}/activate`, `POST /transport/{command}`, `POST /volume`, `POST /volume/mute` | Both |
 | Panel view | `POST /touch`, `POST /panel/painted`, `POST /panel/shown`, `POST /panel/idle/{show,hide}`, `POST /panel/standby/{on,off}` (ADR-0135), `GET /player/status` and `GET /players` (ADR-0136), `POST /panel/go/{to}`, `POST /peppy/{action}` | Panel reports; phone asks |
 | Idle screen | `GET /idle`, `/idle/weather`, `/idle/wallpaper`, `/idle/wallpaper/{name}`, `/idle/wallpaper/local/{path}` | Panel (ADR-0047) |
@@ -199,6 +199,7 @@ something the panel is not showing).
 | Radio | `GET /radio?handle=…`, `POST /radio/play` | Panel (ADR-0030) |
 | Lyrion menus | `GET /menus`, `/menus/browse`, `/menus/letters`; `POST /menus/act`, `/menus/search` | Panel, when Extended navigation is on (ADR-0118) |
 | Enrichment | `GET /enrichment` | Panel, phone |
+| Equaliser | `GET`/`PUT /equaliser`, `POST /equaliser/settings`, `PUT`/`DELETE /equaliser/settings/{key}` - for the output in use; `equaliser` on `/state` (ADR-0162; `eq_control.py`, `eq_engine.py`) | Both |
 | Settings | `GET /settings`; `PUT /settings/{key}` (write a value); `POST /settings/{key}` (run an action); `GET`/`POST /settings/{key}/items` (list rows: Wi-Fi, trusted devices, backups, `lyrion-server.shares`, `lyrion-server.usb_folders`, `lms_server`); `GET /network/wifi` (the connected network's signal, speed, band, channel and address, no rescan - ADR-0123); `GET /notices/{name}` (Legal, Credits) | Both (ADR-0035) |
 | Skins and plugins | `GET /skins`, `/skins/{name}/preview`, `/plugins/{id}/mark`; `POST /plugins/upload`, `/plugins/{id}/uninstall` | Settings (ADR-0050, ADR-0106) |
 | Bluetooth | `POST /bluetooth/pairing/{answer}` | Panel (ADR-0045) |
@@ -676,9 +677,11 @@ dashboard instead of the idle screen, and when the schedule takes it down the
 idle screen follows at once. Home Assistant's side - framing and trusted
 networks - is the user's (decision 8, Finding 132).
 
-**The phone's touchpad and keyboard over the dashboard are real input**
+**The phone's trackpad and keyboard over the dashboard are real input**
 (ADR-0157). A page from another site is closed to the panel's page, so the
-touchpad's made-up events and inserted text cannot reach it. Over an
+trackpad's made-up events and inserted text cannot reach it; the remote's
+D-pad (ADR-0164) sends keys, which reach Home Assistant's page as a
+keyboard's do. Over an
 `<iframe>` marked `data-real-input` the panel (`lib/PanelPointer.svelte`,
 `isRealInputFrame` in `lib/touchpad.js`) sends the phone's tap, text and keys
 to `POST /panel/input` instead - `{kind: "tap", x, y}` as fractions of the

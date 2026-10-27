@@ -145,6 +145,7 @@ class StateServer:
         dashboard=None,
         dashboard_page=None,
         panel_input=None,
+        equaliser=None,
         library=None,
         artistinfo=None,
         notes=None,
@@ -217,6 +218,8 @@ class StateServer:
         self._dashboard_page = dashboard_page
         #: ADR-0157: real taps and typing on the panel, over a framed page.
         self._panel_input = panel_input
+        #: ADR-0162: the equaliser (`eq_control.EqualiserControl`).
+        self._equaliser = equaliser
         #: ADR-0136: the other players on the network, for the phone's switcher.
         #: This core, as the others see it in its status: a player whose mDNS
         #: name was changed by a conflict (`guestpi-2.local`, 2026-10-12) is
@@ -360,7 +363,9 @@ class StateServer:
     #: What each side may say on the touchpad's socket (ADR-0121 §5). Anything
     #: else is dropped: the core relays these, it does not interpret them.
     PAD_FROM_PHONE = frozenset({"move", "tap", "text", "key", "scroll", "zoom"})
-    PAD_FROM_PANEL = frozenset({"over", "focus"})
+    #: `ring`: the D-pad's ring is on a text field (ADR-0164 C5); `untyped`:
+    #: a character Home Assistant's page could not be given (ADR-0157).
+    PAD_FROM_PANEL = frozenset({"over", "focus", "ring", "untyped"})
     PAD_MAX = 2048
 
     async def _handle_touchpad(self, request: web.Request) -> web.WebSocketResponse:
@@ -466,7 +471,17 @@ class StateServer:
                 {"error": f"{command} cannot work on {state.active} right now"}, status=409
             )
         argument = None
-        if command in ("shuffle", "repeat"):
+        if command == "seek":
+            try:
+                body = await request.json()
+            except ValueError:
+                body = None
+            position = body.get("position") if isinstance(body, dict) else None
+            if isinstance(position, bool) or not isinstance(position, (int, float)) or position < 0:
+                return web.json_response({"error": 'body must be {"position": <seconds, 0 or more>}'}, status=400)
+            # Past the end is the end: a drag released beyond the bar.
+            argument = float(min(position, state.metadata.duration or position))
+        elif command in ("shuffle", "repeat"):
             try:
                 body = await request.json()
             except ValueError:
@@ -510,6 +525,11 @@ class StateServer:
             muted = None
         if not isinstance(muted, bool):
             return web.json_response({"error": 'body must be {"muted": true|false}'}, status=400)
+        state = self._store.state
+        if state.fixed_output and state.fixed_mute is None:
+            # ADR-0165 §2: Fixed on an output with no control of its own.
+            return web.json_response(
+                {"error": "this output has no volume control of its own to mute"}, status=409)
         if not await self._set_mute(muted):
             return web.json_response({"error": "volume level not known yet"}, status=409)
         return web.json_response({"muted": muted})
@@ -1528,6 +1548,62 @@ class StateServer:
             logger.warning("panel key: %s", exc)
             return web.json_response({"error": f"the key could not be pressed: {exc}"}, status=503)
         return web.json_response({"key": key})
+
+    # ---- ADR-0162: the equaliser -------------------------------------------------
+
+    async def _equaliser_call(self, call) -> web.Response:
+        """One of the equaliser's operations, answered with what it gives back;
+        a refusal is a 400 with the sentence for the person."""
+        from gexis_core.equaliser import EqualiserError
+        if self._equaliser is None:
+            return web.json_response({"error": "the equaliser is not wired up"}, status=503)
+        try:
+            return web.json_response(await call())
+        except EqualiserError as exc:
+            return web.json_response({"error": str(exc)}, status=400)
+
+    async def _json_body(self, request: web.Request):
+        try:
+            body = await request.json()
+        except (ValueError, UnicodeDecodeError):
+            return None
+        return body if isinstance(body, dict) else None
+
+    async def _handle_equaliser(self, request: web.Request) -> web.Response:
+        """ADR-0162 D9: the equaliser for the output in use."""
+        if self._equaliser is None:
+            return web.json_response({"error": "the equaliser is not wired up"}, status=503)
+        snapshot = self._equaliser.snapshot()
+        if snapshot is None:
+            return web.json_response({"error": "there is no output"}, status=409)
+        return web.json_response(snapshot)
+
+    async def _handle_equaliser_set(self, request: web.Request) -> web.Response:
+        """On or off, a setting chosen, the bands or one band, for the output
+        in use. A band or a setting is heard at once; on or off reopens the
+        output (a moment of silence)."""
+        body = await self._json_body(request)
+        if body is None:
+            return web.json_response({"error": "expected a JSON object"}, status=400)
+        return await self._equaliser_call(lambda: self._equaliser.update(body))
+
+    async def _handle_equaliser_save(self, request: web.Request) -> web.Response:
+        """The bands as set, saved as one of the owner's (*Save as...*)."""
+        body = await self._json_body(request)
+        if body is None or "name" not in body:
+            return web.json_response({"error": 'body must be {"name": ...}'}, status=400)
+        return await self._equaliser_call(lambda: self._equaliser.save_as(body["name"]))
+
+    async def _handle_equaliser_rename(self, request: web.Request) -> web.Response:
+        body = await self._json_body(request)
+        if body is None or "name" not in body:
+            return web.json_response({"error": 'body must be {"name": ...}'}, status=400)
+        key = request.match_info["key"]
+        return await self._equaliser_call(lambda: self._equaliser.rename(key, body["name"]))
+
+    async def _handle_equaliser_delete(self, request: web.Request) -> web.Response:
+        key = request.match_info["key"]
+        return await self._equaliser_call(lambda: self._equaliser.delete(key))
 
     async def _handle_idle_request(self, request: web.Request) -> web.Response:
         """**ADR-0101: the phone's idle-screen toggle.** Attention first, as a
@@ -3146,6 +3222,11 @@ class StateServer:
         app.router.add_post("/panel/shown", self._handle_panel_shown)
         app.router.add_post("/panel/go/{to}", self._handle_view_request)
         app.router.add_post("/panel/key", self._handle_panel_key)
+        app.router.add_get("/equaliser", self._handle_equaliser)
+        app.router.add_put("/equaliser", self._handle_equaliser_set)
+        app.router.add_post("/equaliser/settings", self._handle_equaliser_save)
+        app.router.add_put("/equaliser/settings/{key}", self._handle_equaliser_rename)
+        app.router.add_delete("/equaliser/settings/{key}", self._handle_equaliser_delete)
         app.router.add_post("/peppy/{action}", self._handle_peppy)
         app.router.add_get("/settings", self._handle_settings)
         app.router.add_get("/notices/{name}", self._handle_notice)
