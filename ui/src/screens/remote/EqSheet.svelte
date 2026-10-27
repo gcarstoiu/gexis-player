@@ -238,13 +238,15 @@
   .note.is-amber {
     color: var(--accent-warn);
   }
+  /* The switch alone, without the drawing's box round it (George,
+     2026-10-27); the touch is still 48 px tall. */
   .power {
     height: 48px;
     padding: 0 10px;
-    border-radius: 14px;
+    margin-right: -10px;
     box-sizing: border-box;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(233, 238, 242, 0.1);
+    background: none;
+    border: 0;
     display: flex;
     align-items: center;
     cursor: pointer;
