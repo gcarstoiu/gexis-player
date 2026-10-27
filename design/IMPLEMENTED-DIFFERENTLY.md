@@ -842,4 +842,9 @@ decisions; ADR-0165 for mute with Fixed volume).
 - **[U]** The panel's fixed rows (the volume drawer, the bar's tray) have the
   mute button, and the volume button shows the crossed speaker while muted
   (ADR-0165 §4); `Now Playing.dc.html` is locked and does not draw them.
+- **[U]** The EQ sheet closes with a swipe down as well as a tap on its
+  handle or the scrim (George, 2026-10-27, after the preview).
+- **[U]** Settings shows the remote's background - the weave, the blurred
+  cover, the veil - where the drawing embeds the locked Settings on its own
+  ground (George, 2026-10-27, after the preview).
 
