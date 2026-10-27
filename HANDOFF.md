@@ -50,7 +50,12 @@ on the branch byte for byte the release's); the Harmony Hub ideas (an IR
 receiver, a Bluetooth remote) drafted for the wiki's Should list, shown to
 him, not pushed; the Home Assistant card started (D-pad only, the
 equaliser's switch and setting; the registration fix and a version bump,
-asked for through his dashboard session). **Next:** release PR #85 (checks green; George merges), then `main` into `docs`
+asked for through his dashboard session) - **built** on the integration's
+`card-remote` (1f65d82, 0.5.0, not released; tests 48 passed, checks green;
+ADR-0163 *Built*; mocked-entity harness `~/projects/scratch/hacard`, `run.sh`;
+the throwaway Home Assistant stopped again). When 0.5.0 is released: the
+player's manual, FAQ and README get the equaliser and the card's new look.
+**Next:** release PR #85 (checks green; George merges), then `main` into `docs`
 and `next`, `release-1.7.0` and the worktree removed, the routine clean-up.
 
 **The release key** moved to `~/projects/gexis-release-key` (George,
