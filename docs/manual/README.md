@@ -337,11 +337,13 @@ nothing there.
 What Home Assistant gets:
 - **A media player**: playing, paused or idle; title, artist, album, artwork
   and position; play, pause, next and previous when the source playing
-  has them, shuffle and repeat where it has them - shown as on the player,
-  greyed in the card while one cannot be used (Next on the last track);
-  volume and mute, unless
-  the output is fixed; the source playing (each source is taken over from
-  its own app, as on the player).
+  has them, shuffle, repeat and seeking where it has them - shown as on the
+  player, greyed in the card while one cannot be used (Next on the last
+  track); volume and mute, and with Fixed volume mute alone where the output
+  has a volume control of its own; the source playing (each source is taken
+  over from its own app, as on the player).
+- **The equaliser**, on any player: a switch, *Equaliser*, and *Equaliser
+  setting*, the setting in use - the presets, then your own.
 - **On a player with a screen, four switches**: *Screen* (off is display
   standby), *Dashboard* (the dashboard above, up or down; unavailable until
   its address is set), *Visualiser* (unavailable when the output cannot feed
@@ -353,20 +355,24 @@ What Home Assistant gets:
   `up`, `down`, `left`, `right`, `ok`, `back` and `home` move around the
   screen (*Moving around with a D-pad or a keyboard*, below).
 - **A card for dashboards**: *Gexis Player*, in Home Assistant's card
-  picker once the integration is installed - what plays with its artwork,
-  the transport and the volume, a list to move to another player, and for
-  the player's screen the quick actions - Home, Now playing, Lyrics, Meters,
-  Room (the dashboard) and Idle, as on the phone, each left out where the
-  phone leaves it out - and the D-pad. In the player's own
-  look, or Home Assistant's (*look: home-assistant*); full, or compact with
-  the D-pad folded away. It goes on a dashboard edited by hand (Home
+  picker once the integration is installed, laid out as the phone's remote
+  with a list to move to another player: what plays with its artwork and
+  the transport; for the player's screen the D-pad, with Home, Lyrics, Back
+  and Meters at its corners, then Standby, Idle screen, Playing and Room,
+  each left out where the phone leaves it out; the volume, with mute and
+  the equaliser's setting, beside the button that opens the equaliser. A
+  player without a screen gets a large cover and a bar to move through the
+  track. In the player's own look, or Home Assistant's
+  (*look: home-assistant*); full, or compact with the D-pad folded away. It goes on a dashboard edited by hand (Home
   Assistant's new *Overview* takes favourite entities, not cards): *Settings
   → Dashboards → Add dashboard → New dashboard from scratch* if there is
   none, then on it the pencil, *+* in a section, the *By card* tab, and a
   search for *Gexis*.
 
 It needs Home Assistant 2026.3 or later and a player on 1.5.0 or later (the
-D-pad 1.6.0 or later); an older player is found and asked to update. With Home Assistant's own
+D-pad 1.6.0 or later; the equaliser, seeking and mute with Fixed volume
+1.7.0 or later, with the integration's 0.5.0); an older player is found and
+asked to update. With Home Assistant's own
 *Lyrion Music Server* integration also set up, the player shows there too,
 as Lyrion's player.
 
