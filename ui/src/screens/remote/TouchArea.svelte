@@ -361,8 +361,8 @@
     width: 36%;
     height: 36%;
     border-radius: 50%;
-    background: #16232c;
-    border: 1px solid rgba(233, 238, 242, 0.16);
+    background: var(--remote-button-ground);
+    border: 1px solid var(--remote-button-line);
     box-sizing: border-box;
     display: grid;
     place-items: center;
@@ -377,13 +377,15 @@
   .ok:active {
     transform: scale(0.95);
   }
+  /* OK, the corners and the switch look as the quick actions do, not the
+     drawing's dark ground (George, 2026-10-27). */
   .corner {
     position: absolute;
     width: var(--remote-corner);
     height: var(--remote-corner);
     border-radius: 50%;
-    background: var(--remote-control-ground);
-    border: 1px solid rgba(233, 238, 242, 0.14);
+    background: var(--remote-button-ground);
+    border: 1px solid var(--remote-button-line);
     box-sizing: border-box;
     display: grid;
     place-items: center;
@@ -463,8 +465,8 @@
     display: flex;
     padding: 3px;
     border-radius: 14px;
-    background: var(--remote-control-ground);
-    border: 1px solid var(--remote-control-line);
+    background: var(--remote-button-ground);
+    border: 1px solid var(--remote-button-line);
   }
   .switch__ind {
     position: absolute;

@@ -305,7 +305,9 @@
     background: var(--remote-veil);
     pointer-events: none;
   }
-  /* C10: the design's column, at most 412 px wide on a larger screen. */
+  /* C10: the design's column, at most 412 px wide on a larger screen; a
+     phone wider than the drawing is filled, so nothing leaves strips at its
+     edges (George, 2026-10-27, on a 427 px phone). */
   .column {
     position: relative;
     height: 100%;
@@ -316,6 +318,11 @@
     padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
     box-sizing: border-box;
+  }
+  @media (max-width: 480px) {
+    .column {
+      max-width: none;
+    }
   }
   .top {
     position: relative;
@@ -388,8 +395,10 @@
     padding: 3px;
     border-radius: 16px;
     box-sizing: border-box;
-    background: var(--remote-control-ground);
-    border: 1px solid var(--remote-control-line);
+    /* As the quick actions, not the drawing's dark ground (George,
+       2026-10-27). */
+    background: var(--remote-button-ground);
+    border: 1px solid var(--remote-button-line);
     flex-shrink: 0;
   }
   .pages-switch__ind {
