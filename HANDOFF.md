@@ -41,9 +41,10 @@ correction for the bass, for the full range).
 [ADR-0166](docs/decisions/0166-multiroom-for-every-source.md) proposed the
 same day from George's nine answers (one group, Lyrion's sync for Lyrion,
 Snapcast for every other source and plugin; the shortest delay; the source's
-rate); Claude's C1-C6 for his confirmation; the wiki Roadmap shows the new
-order (pushed with his OK). **Next:** his word on the ADR,
-then the design brief for the grouping (Claude Design), then the build.
+rate); Claude's C1-C6 confirmed by him (ADR accepted); the wiki Roadmap shows the
+new order (pushed with his OK). **Next:** the grouping drawn in Claude Design
+from `design/briefs/22-multiroom.md` (George hands it over), then the build;
+the measurement with it (ADR-0166 *Measured before it is called done*).
 The wiki Roadmap shows Phases 20 and 21 done and the Harmony Hub ideas
 (pushed 2026-10-27 with his OK).
 
