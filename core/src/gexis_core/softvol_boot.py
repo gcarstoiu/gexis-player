@@ -18,6 +18,12 @@ level, chosen by the same rule (`start_level`), and the card's own control
 is left alone (the core parks it at 0 dB only once its own write is read
 back).
 
+**With the equaliser on, the control is written as the core writes it**
+(ADR-0162 D3 as amended): the level with the equaliser's headroom given
+back (`volume.to_control`), which is what the core reads it back through.
+The level heard is the same - and nothing is heard through the equaliser
+before the core starts it.
+
 Read only: the store is opened read-only and nothing is written to it.
 """
 from __future__ import annotations
@@ -28,7 +34,7 @@ import subprocess
 import time
 from pathlib import Path
 
-from gexis_core import outputs
+from gexis_core import eq_control, outputs, volume
 
 logger = logging.getLogger("gexis_core.softvol_boot")
 
@@ -73,15 +79,16 @@ def start_level(remembered, card_db: float | None) -> float:
 
 
 def read_store(path: Path = STORE) -> dict | None:
-    """The two rows and the output, read-only; None when there is no store."""
+    """The rows it needs - the volume's, the output and the equaliser -
+    read-only; None when there is no store."""
     import json
     if not path.exists():
         return None
     conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
     try:
         rows = dict(conn.execute(
-            "SELECT key, value FROM settings WHERE key IN (?, ?, ?)",
-            (VOLUME_KEY, SOFTWARE_LEVEL_KEY, "output_device"),
+            "SELECT key, value FROM settings WHERE key IN (?, ?, ?, ?)",
+            (VOLUME_KEY, SOFTWARE_LEVEL_KEY, "output_device", eq_control.KEY),
         ).fetchall())
     finally:
         conn.close()
@@ -143,11 +150,15 @@ def restore(store_path: Path = STORE) -> str:
     if not outputs.create_softvol_control():
         logger.warning("softvol-boot: the software control could not be made")
     want = outputs.SOFTVOL_SCALE.raw(db)
+    given = eq_control.give_back_for(rows.get(eq_control.KEY), outputs.with_software_volume(output))
+    if given is not None:
+        want = volume.to_control(want, given)
     set_raw(outputs.SOFTVOL_CONTROL, want)
     got = get_raw(outputs.SOFTVOL_CONTROL)
     if got != want:
         return f"the software level did not take (wanted {want}, read {got})"
-    return f"software volume at {db:.2f} dB on {output.label}"
+    return f"software volume at {db:.2f} dB on {output.label}" + (
+        f", {given.db:.1f} dB of the equaliser's given back" if given is not None else "")
 
 
 def main() -> int:

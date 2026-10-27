@@ -239,6 +239,10 @@ class PlaybackState:
     #: cases, which the design named as the one outcome to avoid -
     #: "indistinguishable from a bug".
     fixed_output: bool = False
+    #: **ADR-0165: muted with Fixed volume** - `None` where there is no such
+    #: mute (Variable, or Fixed on an output with no control of its own to
+    #: silence), else whether it is muted. `volume` stays absent in Fixed.
+    fixed_mute: bool | None = None
     #: **ADR-0055 §6: whether the visualiser can have levels at all.**
     #:
     #: False on an output whose chain carries no meter - only HDMI on Fixed
@@ -298,6 +302,9 @@ class PlaybackState:
     personalise: str | None = None
     #: ADR-0132: a factory reset was confirmed; the device restarts into it.
     resetting: bool = False
+    #: ADR-0162: the equaliser for the output in use, as `eq_control.snapshot`
+    #: gives it; None with no output.
+    equaliser: dict | None = None
 
     @property
     def controls(self) -> dict | None:
@@ -307,8 +314,12 @@ class PlaybackState:
         if self.active is None or self.active not in self.capabilities:
             return None
         declared = self.capabilities[self.active].controls & TRANSPORT_COMMANDS
+        unavailable = set(self.metadata.unavailable)
+        # ADR-0164 C2: a seek needs somewhere to go - a known duration.
+        if not self.metadata.duration or self.metadata.duration <= 0:
+            unavailable.add("seek")
         return {
-            "available": sorted(declared - self.metadata.unavailable),
+            "available": sorted(declared - unavailable),
             "shuffle": self.metadata.shuffle if "shuffle" in declared else None,
             "repeat": self.metadata.repeat if "repeat" in declared else None,
         }
@@ -329,6 +340,7 @@ class PlaybackState:
             "handoff": self.handoff.to_json() if self.handoff else None,
             "volume": self.volume.to_json() if self.volume else None,
             "fixed_output": self.fixed_output,
+            "fixed_mute": self.fixed_mute,
             "meters": self.meters,
             "sources": [dict(s) for s in self.sources],
             "settings_revision": self.settings_revision,
@@ -346,4 +358,5 @@ class PlaybackState:
             "settling": dict(self.settling) if self.settling else None,
             "personalise": self.personalise,
             "resetting": self.resetting,
+            "equaliser": dict(self.equaliser) if self.equaliser else None,
         }

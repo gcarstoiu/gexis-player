@@ -15,7 +15,8 @@
   import DashboardScreen from './screens/DashboardScreen.svelte';
   import PairingFrame from './screens/PairingFrame.svelte';
   import Settings from './screens/Settings.svelte';
-  import MiniPlayer from './screens/MiniPlayer.svelte';
+  import PhoneRemote from './screens/remote/PhoneRemote.svelte';
+  import Equaliser from './screens/eq/Equaliser.svelte';
   import SetupScreen from './screens/SetupScreen.svelte';
   import FirstUsePage from './screens/FirstUsePage.svelte';
   import { screen } from './lib/family.svelte.js';
@@ -488,9 +489,12 @@
       libraryAlbum = null;
     }
   });
-  const libraryShown = $derived(libraryOpen && !settingsOpen && !waitingOpen);
+  //: ADR-0162: the equaliser's editor is open as a screen of its own (`openEqualiser`).
+  let eqOpen = $state(false);
+  const libraryShown = $derived(libraryOpen && !settingsOpen && !waitingOpen && !eqOpen);
   function openLibraryHome() {
     closeVolume();
+    eqOpen = false;
     libraryArtist = null;
     libraryAlbum = null;
     libraryHome += 1;
@@ -530,7 +534,18 @@
 
   function openSettings() {
     closeVolume();
+    eqOpen = false;
     settingsOpen = true;
+  }
+
+  //: **ADR-0162: the equaliser's editor**, from Edit in its quick change (the
+  //: drawer, the bar's tray, the phone's): a screen of its own, in place of
+  //: the one it was opened over. Settings -> Audio opens the same editor
+  //: inside Settings.
+  function openEqualiser() {
+    closeVolume();
+    settingsOpen = false;
+    eqOpen = true;
   }
 
   //: ADR-0109, amended 2026-10-03: the answer to "a different screen is
@@ -817,9 +832,8 @@
 {:else if surface === 'remote' && personalisePage}
   <FirstUsePage mode="p2" onclose={() => (personaliseHeld = false)} />
 {:else if surface === 'remote'}
-  <!-- ADR-0101: on a phone, Settings and the mini player under it. -->
-  <div class="remote remote--mini"><Settings {openRow} onrowopened={() => (openRow = null)} /></div>
-  <MiniPlayer />
+  <!-- ADR-0164: on a phone, the remote - Remote and Settings. -->
+  <PhoneRemote {openRow} onrowopened={() => (openRow = null)} />
   {#if $screenNew}
     <NewScreen question={$screenNew} onanswer={answerNew} />
   {/if}
@@ -862,6 +876,11 @@
   {#if settingsOpen}
     <div class="screen-layer">
       <Settings onback={() => (settingsOpen = false)} embedded {openRow} onrowopened={() => (openRow = null)} />
+    </div>
+  {:else if eqOpen}
+    <div class="screen-layer">
+      <Equaliser surface={screen.family === 'bar' ? 'bar' : 'panel'} onback={() => (eqOpen = false)}
+        onhome={screen.family === 'bar' ? (lmsOff ? openSettings : openLibraryHome) : null} />
     </div>
   {:else if waitingOpen}
     <div class="screen-layer">
@@ -954,6 +973,7 @@
       onhome={lmsOff ? openSettings : openLibraryHome}
       onvisualisation={showVisualisation}
       ondashboard={dashboardButton ? showDashboard : null}
+      onequaliser={openEqualiser}
     />
   {:else if $volume || $fixedOutput}
     <VolumeDrawer
@@ -965,6 +985,7 @@
       onexternal={openFromExternal}
       onactivity={keepVolumeOpen}
       onsettled={armAutoHide}
+      onequaliser={openEqualiser}
     />
   {/if}
 
@@ -1106,19 +1127,6 @@
   :global(body),
   :global(#app) {
     height: 100%;
-  }
-
-  .remote {
-    height: 100%;
-  }
-  /* ADR-0101: room for the mini player, so the last rows are not under it -
-     its closed height as MiniPlayer measures it (the home-indicator inset is
-     inside that), and 16 px between the last row and its top edge (George,
-     2026-10-06). Left at the end of Settings' own scrolling lists, not as
-     padding here: padded, the page stopped short and left a bare band above
-     the sheet. */
-  .remote--mini {
-    --foot-clear: calc(var(--mini-closed-h, 160px) + 16px);
   }
 
   /* ADR-0109, Standard family: Chromium's scale factor makes every screen

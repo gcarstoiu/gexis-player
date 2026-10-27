@@ -16,6 +16,8 @@
   import ReleaseNotes from './ReleaseNotes.svelte';
   import ReleaseHistory from './ReleaseHistory.svelte';
   import NoteText from '../lib/NoteText.svelte';
+  import Equaliser from './eq/Equaliser.svelte';
+  import { screen } from '../lib/family.svelte.js';
   import {
     settingsGroups,
     settingsDevice,
@@ -36,7 +38,11 @@
   //
   // `embedded` is the panel too: there the weave is drawn once for the whole
   // panel (PanelBackground.svelte). A phone gets its own, as before.
-  let { onback = null, embedded = false, openRow = null, onrowopened = null } = $props();
+  //: `switcher`: ADR-0136's player switcher in the title, left out inside the
+  //: phone's remote, whose picker is above Settings (ADR-0164).
+  //: `flat`: inside the remote, every screen of Settings on the modals'
+  //: solid grey, with no weave or veil (George, 2026-10-27).
+  let { onback = null, embedded = false, openRow = null, onrowopened = null, switcher = true, flat = false } = $props();
 
   const WIDE_MIN = 720;
 
@@ -52,6 +58,8 @@
   let pickerKey = $state(null);
   // ADR-0099: a `document` row opens a page to read (Legal, Credits).
   let docKey = $state(null);
+  //: ADR-0162: Audio -> Equaliser opens the equaliser's own page.
+  let eqPage = $state(false);
   let docPage = $state(null);
   let docError = $state(null);
   //: Which row the pane is showing. **Not the value**: tapping a row in the
@@ -757,7 +765,8 @@
     if (group && row) {
       cat = group.id;
       drilled = group.id;
-      openSheet(row);
+      if (row.kind === 'equaliser') eqPage = true;
+      else openSheet(row);
     }
     onrowopened?.();
   });
@@ -964,6 +973,10 @@
   }
 
   function tap(row) {
+    if (row.kind === 'equaliser') {
+      eqPage = true;
+      return;
+    }
     // A read-only row is a disabled button - except an uploaded plugin's,
     // which holds its Remove: a browser drops every tap inside a disabled
     // button, and that Remove did nothing (George, 2026-10-03). The row
@@ -1839,11 +1852,11 @@
   </button>
 {/snippet}
 
-<div class="settings" class:is-embedded={embedded} bind:clientWidth={width}>
-  {#if !embedded}
+<div class="settings" class:is-embedded={embedded} class:is-flat={flat} bind:clientWidth={width}>
+  {#if !embedded && !flat}
     <div class="weave"></div>
   {/if}
-  <div class="veil"></div>
+  {#if !flat}<div class="veil"></div>{/if}
 
   <div class="frame">
     <div class="head" class:head--wide={wide}>
@@ -1865,7 +1878,7 @@
           <div class="title" class:title--wide={wide}>{!wide && current ? current.label : 'Settings'}</div>
           <!-- ADR-0136: on a phone, the way to the other players - at the
                right end of the title's line (George, 2026-10-11). -->
-          {#if !onPanel()}<PlayerSwitcher />{/if}
+          {#if !onPanel() && switcher}<PlayerSwitcher />{/if}
         </div>
         <!-- Shown at both widths: the panel is where someone types the
              name, so it is where the resolved host has to sit beside it. -->
@@ -2127,10 +2140,10 @@
                   class="row"
                   class:row--add={r.kind === 'share'}
                   class:row--danger={r.danger}
-                  class:row--readonly={r.type === 'readonly' || toggleBlocked(r)}
+                  class:row--readonly={(r.type === 'readonly' && r.kind !== 'equaliser') || toggleBlocked(r)}
                   class:row--dl={!!r.component}
                   type="button"
-                  disabled={(r.type === 'readonly' && !r.uploaded) || toggleBlocked(r)}
+                  disabled={(r.type === 'readonly' && !r.uploaded && r.kind !== 'equaliser') || toggleBlocked(r)}
                   data-unwired={r.wired ? undefined : 'settings'}
                   onclick={() => tap(r)}
                 >
@@ -2275,8 +2288,10 @@
   {#if docKey}
     {@const docRow = rowOf(docKey)}
     <div class="picker">
-      <div class="weave"></div>
-      <div class="veil"></div>
+      {#if !flat}
+        <div class="weave"></div>
+        <div class="veil"></div>
+      {/if}
       <div class="picker__head" class:head--wide={wide}>
         <button
           class="back"
@@ -2328,6 +2343,10 @@
     </div>
   {/if}
 
+  {#if eqPage}
+    <Equaliser surface={!onPanel() ? 'phone' : screen.family === 'bar' ? 'bar' : 'panel'} {flat} onback={() => (eqPage = false)} />
+  {/if}
+
   {#if picker}
     {@const options = byLabel(picker)}
     {@const inUse = picker.value == null ? null : String(picker.value)}
@@ -2335,8 +2354,10 @@
     <div class="picker">
       <!-- Its own ground, embedded or not: it covers the rows, so the
            panel's weave behind the app cannot reach it. -->
-      <div class="weave"></div>
-      <div class="veil"></div>
+      {#if !flat}
+        <div class="weave"></div>
+        <div class="veil"></div>
+      {/if}
       <div class="picker__head" class:head--wide={wide}>
         <button
           class="back"
@@ -3153,6 +3174,11 @@
   }
   .settings.is-embedded {
     background: none;
+  }
+  .settings.is-flat,
+  .settings.is-flat .picker,
+  .settings.is-flat .pane--over {
+    background: var(--bg-panel);
   }
   .weave {
     position: absolute;

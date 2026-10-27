@@ -94,6 +94,9 @@ from gexis_core.settings_registry import InvalidValue, Settings, UnknownSetting,
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
 from gexis_core import announce, backups, bluealsa_volume, components, outputs, plugin_env, plugins, uploads
+from gexis_core import eq_control
+from gexis_core.eq_engine import EqEngine
+from gexis_core.equaliser import Equaliser
 from gexis_core.setup_network import SetupNetwork
 from gexis_core.setup_flow import SetupFlow
 from gexis_core.adapters.plugin import PluginAdapter
@@ -123,11 +126,13 @@ from gexis_core.volume import (
     hardware_raw_to_renderer_value,
     fixed_output as volume_fixed_output,
     hardware_max,
+    hardware_silence,
     publish_attenuation,
     use_scale,
     set_ceiling_reader,
     set_curve_reader,
     set_fixed_output_reader,
+    set_give_back,
     set_raw,
     slider_percent_to_raw,
     raw_to_db,
@@ -592,6 +597,13 @@ async def main() -> None:
     # anything reads a setting.
     settings_migrations.migrate(settings_store)
     logger.info("settings: store ready at %s", settings_store.path)
+    # ADR-0162: whether the equaliser is in the chain, read from the store by
+    # every writer of output.conf - this start's included, so a player that
+    # had it on comes up with it.
+    outputs.eq_in_path = lambda card: Equaliser.from_settings(
+        settings_store.get(eq_control.KEY)).output(card).on
+    #: The equaliser's controller, made once the rest it needs exists.
+    equaliser = None
 
     # A server chosen from the Settings sheet (ADR-0044 §1's `kind: server`)
     # wins over the deployment's own address - but only from here, at
@@ -677,8 +689,14 @@ async def main() -> None:
         # ADR-0055: arbitration asks about the output the device is
         # playing to, not about the card it shipped with (Finding 048 §5).
         alsa.set_card(chosen_output.card)
+        # ADR-0162: with the equaliser on, about the loopback they play into.
+        alsa.set_renderers_card(outputs.LOOPBACK if outputs.eq_in_path(chosen_output.card) else None)
         # ADR-0117: raw values mean what this output's control says they do.
         use_scale(chosen_output.scale)
+        # ADR-0162 D3 as amended: the control holds the level with the
+        # equaliser's headroom given back, as the store has it (and the boot
+        # step wrote it) - in force before anything reads or writes it.
+        set_give_back(eq_control.give_back_for(settings_store.get(eq_control.KEY), chosen_output))
         if chosen_output.software:
             await _start_software_volume(card_output, settings_store)
         if chosen_output.control:
@@ -692,7 +710,8 @@ async def main() -> None:
         # ADR-0055 §6: a converted chain carries no meter, so the
         # visualiser has nothing to draw and its button is not offered -
         # unless the software stage is in it (amended 2026-10-07).
-        meters_available = chosen_output.software or outputs.needs_plug(chosen_output.card) is not True
+        meters_available = (chosen_output.software or outputs.eq_in_path(chosen_output.card)
+                            or outputs.needs_plug(chosen_output.card) is not True)
 
     # The player squeezelite announces, which a rename changes (ADR-0048).
     lms_player_name = device_name.lms_player(config.lms_player_name)
@@ -1084,6 +1103,8 @@ async def main() -> None:
     #: of output for one (Finding 125 #10, 2026-10-14).
     output_seen = {"value": None}
     fixed_now = {"value": False}
+    #: ADR-0165: muted with Fixed volume, where the output has a control.
+    fixed_muted = {"value": False}
     set_fixed_output_reader(lambda: fixed_now["value"])
     # ADR-0137: the plugins are told when Fixed changes. Made further down; a
     # change before it exists reaches each plugin as it connects instead.
@@ -1111,6 +1132,23 @@ async def main() -> None:
         if volume is not None:
             publish_volume(carry_raw(volume.raw, old, new))
 
+    def _fixed_mute_offered() -> bool:
+        """ADR-0165 §2: Fixed, and an output with a control of its own to
+        silence - not one Fixed has nothing to write to."""
+        if not fixed_now["value"]:
+            return False
+        output = outputs.in_force(settings.value("output_device"))[0]
+        return output is None or output.control is not None
+
+    def publish_fixed_mute() -> None:
+        """`fixed_mute` in `/state` (ADR-0165 §3): `None` where there is no
+        such mute, which also ends one that was."""
+        if not _fixed_mute_offered():
+            fixed_muted["value"] = False
+            state_store.set_fixed_mute(None)
+        else:
+            state_store.set_fixed_mute(fixed_muted["value"])
+
     async def _apply_output_mode(force: bool = False) -> None:
         """Put the chosen mode into force, if now is a legal moment.
 
@@ -1137,7 +1175,14 @@ async def main() -> None:
             # clears the published level.
             volume = state_store.state.volume
             before_fixed["raw"] = mute.audible_raw(volume.raw if volume is not None else None)
+            # ADR-0165 §5: a change of volume type ends mute, Variable's too.
+            mute.observe(hardware_max())
+        # And Fixed's: from muted to Variable, the DAC goes from silence to
+        # Variable's level, straight to it (`write_fixed` left no position
+        # for a ramp to start from).
+        fixed_muted["value"] = False
         state_store.set_fixed_output(wanted)
+        publish_fixed_mute()
         if plugin_server is not None:
             plugin_server.tell_output(wanted)
         if wanted:
@@ -1247,7 +1292,10 @@ async def main() -> None:
         # The monitor watches one card and was spawned for the old one; its
         # own loop restarts it, so ending it is enough to move it.
         volume_bridge.restart_monitor()
-        meters_chain["ok"] = chosen.software or outputs.needs_plug(chosen.card) is not True
+        # ADR-0162: with the equaliser on the meter sits over the loopback,
+        # which every output's chain can carry.
+        meters_chain["ok"] = (chosen.software or outputs.eq_in_path(chosen.card)
+                              or outputs.needs_plug(chosen.card) is not True)
         _publish_meters()
         _choose_output_mode()
         state_store.bump_settings_revision()
@@ -1279,8 +1327,10 @@ async def main() -> None:
         await stop.wait()
         outputs.write(chosen, tuning=_tuning(), fixed=fixed_wanted["value"])
         # The mixer handles open on the old card are let go of: the next
-        # write opens the new one's.
+        # write opens the new one's - before the equaliser follows, whose
+        # give-back writes the new card's control (ADR-0162 D3 as amended).
         await forget_mixers()
+        await _equaliser_follows(chosen)
         # ADR-0124: **the software level in place before anything can play**
         # - on every change of output, not only when the row is switched on
         # (George, 2026-10-07: on HDMI the volume stayed the same throughout).
@@ -1300,6 +1350,10 @@ async def main() -> None:
             # review, 2026-10-12): its control was left at whatever it held -
             # the jack's own 0 dB, say - under a panel showing another level.
             await volume_bridge.write_hardware(state_store.state.volume.raw)
+        # ADR-0165 §5: a change of output ends mute with Fixed volume, and
+        # the new card may have no control to offer it on.
+        fixed_muted["value"] = False
+        publish_fixed_mute()
         # **This daemon is not restarted any more.** It was, to pick up the
         # new card's control name; that name is now settable in place
         # (`VolumeBridge.set_mixer_name`), and the restart was most of what
@@ -1435,7 +1489,16 @@ async def main() -> None:
         )
         await stop.wait()
         outputs.write(chosen, tuning=_tuning(), fixed=fixed_wanted["value"])
+        await _equaliser_follows(chosen)
         await _restart_renderers(wait=wait)
+
+    async def _equaliser_follows(chosen) -> None:
+        """**ADR-0162: the equaliser follows a rewritten chain** - after the
+        file, before the renderers: arbitration asks the loopback while it
+        is in the path, and CamillaDSP starts again to read the file."""
+        alsa.set_renderers_card(outputs.LOOPBACK if outputs.eq_in_path(chosen.card) else None)
+        if equaliser is not None:
+            await equaliser.sync(restart=True)
 
     def _apply_scope_tuning(_value=None) -> None:
         """`spectrum_smoothing` and `meter_fall` both live in `output.conf`."""
@@ -1510,6 +1573,13 @@ async def main() -> None:
     def _choose_volume(value=None) -> None:
         """ADR-0127: the Volume row - Hardware, Software or Fixed."""
         asyncio.ensure_future(_change_volume_type())
+
+    def _equaliser_republish() -> None:
+        """The equaliser's note says up to where on the slider its headroom is
+        made up (ADR-0162 D3 as amended), which the ceiling and the curve
+        move."""
+        if equaliser is not None:
+            equaliser.publish()
 
     def _reapply_level() -> None:
         """Put the level back where the *position* now says it belongs.
@@ -1697,11 +1767,25 @@ async def main() -> None:
 
     async def set_mute(muted: bool) -> bool:
         logger.info("command: %s", "mute" if muted else "unmute")
+        if fixed_now["value"]:
+            return await _set_fixed_mute(muted)
         ok = await mute.set(muted)
         volume = state_store.state.volume
         if ok and volume is not None:
             state_store.set_volume_raw(volume.raw, muted=mute.muted)
         return ok
+
+    async def _set_fixed_mute(muted: bool) -> bool:
+        """**ADR-0165: mute with Fixed volume** silences the output's own
+        control, and unmute gives it full scale back. False where there is
+        nothing to silence with."""
+        if not _fixed_mute_offered():
+            return False
+        if muted != fixed_muted["value"]:
+            await volume_bridge.write_fixed(hardware_silence() if muted else hardware_max())
+            fixed_muted["value"] = muted
+        publish_fixed_mute()
+        return True
 
     # Serve the UI only if a build is actually present. A configured path
     # that does not exist is normal, not an error: the core ships and runs
@@ -2488,6 +2572,8 @@ async def main() -> None:
         registry=Settings.with_plugins(load_registry(), installed_plugins, downloads,
                                        missing=restored_missing),
         defaults={
+            # ADR-0162: the Equaliser row says what is in use.
+            "equaliser": lambda: equaliser.summary() if equaliser is not None else "Off",
             "lms_server": lambda: f"{config.lms_host}:{config.lms_port}",
             # ADR-0141 D4: both HDMI ports, read when Settings is.
             "screen_port": lambda: _port_label(screen_apply.connector_now()),
@@ -2711,11 +2797,11 @@ async def main() -> None:
                # ADR-0052 §3: read on every map between a position and a
                # level, and re-applied here when it changes so the level
                # comes down at once if it is now above the ceiling.
-               "max_ceiling": lambda _value=None: _reapply_level(),
+               "max_ceiling": lambda _value=None: (_reapply_level(), _equaliser_republish()),
                # ADR-0054 §3's two curves, wired 2026-09-23. A change moves
                # the level under a slider that has not been touched, so it
                # is re-applied rather than waiting for the next change.
-               "travel_curve": lambda _value=None: _reapply_level(),
+               "travel_curve": lambda _value=None: (_reapply_level(), _equaliser_republish()),
                # ADR-0046: chosen now, in force at the next legal moment.
                "output_mode": _choose_volume,
                # ADR-0055: rewrites output.conf, then restarts everything
@@ -4269,6 +4355,34 @@ async def main() -> None:
     # The Lyrion servers on the network, searched for in the background so
     # a page asking is answered at once (George, 2026-10-18).
     lyrion_known = discovery.Known()
+
+    # ADR-0162: the equaliser - its engine on the loopback, and the controller
+    # the routes and the screens use. Switching it on or off rewrites the
+    # chain under the lock a change of output or volume type takes.
+    async def _equaliser_reopen(reason: str) -> None:
+        async with volume_change:
+            await _rewrite_output_conf(reason, wait=True)
+
+    async def _equaliser_gives_back(headroom: float) -> None:
+        """ADR-0162 D3 as amended: the engine's headroom, given back at the
+        level control of the output in use - when the engine says, which is
+        on the quiet side of its own change."""
+        output = _with_software(outputs.in_force(settings.value("output_device"))[0])
+        await volume_bridge.give_back(
+            eq_control.give_back_for(settings_store.get(eq_control.KEY), output, headroom))
+
+    equaliser_engine = EqEngine(on_change=lambda status: equaliser.publish() if equaliser is not None else None,
+                                give_back=_equaliser_gives_back)
+    equaliser = eq_control.EqualiserControl(
+        settings_store, equaliser_engine,
+        output=lambda: _with_software(outputs.in_force(settings.value("output_device"))[0]),
+        fixed=lambda: fixed_now["value"],
+        reopen=_equaliser_reopen,
+        publish=state_store.set_equaliser,
+        changed=state_store.bump_settings_revision,
+    )
+    asyncio.ensure_future(equaliser.sync())
+
     state_server = StateServer(
         state_store,
         lyrion_known=lyrion_known,
@@ -4287,6 +4401,7 @@ async def main() -> None:
         dashboard=dashboard,
         dashboard_page=dashboard_page,
         panel_input=panel_input,
+        equaliser=equaliser,
         # Phase 7 (ADR-0038): the same server, and the same player, the
         # renderer adapter talks to.
         library=library,

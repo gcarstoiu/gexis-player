@@ -6,6 +6,24 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.7.0 — 27 October 2026
+
+### New
+
+- An equaliser for everything the player plays: ten bands, ten presets and up to ten saved settings, each output with its own. In Settings → Audio, with a quick change in the volume drawer and on the phone.
+- The phone page is now a remote: a trackpad or D-pad for the player's screen, quick actions, the volume and the equaliser, and a switch to Settings. For a player without a screen: a large cover and a bar to move through the track.
+- With Fixed volume, mute works where the output has a volume control of its own.
+
+### Fixed
+
+- On the phone, a character the player's screen cannot type is now said in a note.
+- The Beszel hub has two security fixes (Beszel 0.21.1).
+
+### Good to know
+
+- Off, the equaliser leaves the sound bit-perfect; switching it on or off stops what is playing.
+- The phone's mini player is gone; shuffle and repeat are on the player's own screen.
+
 ## 1.6.0 — 25 October 2026
 
 ### New
