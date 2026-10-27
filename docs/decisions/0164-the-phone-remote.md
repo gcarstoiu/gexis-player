@@ -6,8 +6,8 @@ design (below, *Built (2026-10-27)*) and previewed on sofapi.
 second remote (`design/source/21`, `Phone Remote v3`) replaces the first;
 build it, with his answers to the three points where it left the current
 build (below). The decisions he left to Claude are listed under *Claude's
-decisions*; he confirmed C3, C4, C10, C12 and C13 the same day, and the
-others are for his confirmation. Phase 21 (`ph-phone-controls`).
+decisions*; George confirmed all of them the same day. Phase 21
+(`ph-phone-controls`).
 **First design** — accepted 2026-10-26, built on `ph-phone-controls` and
 previewed on sofapi the same evening; George found that Claude Design had
 got the remote wrong (its touchpad sent D-pad steps by swipes, where he had
@@ -66,7 +66,8 @@ the touchpad.
    padlock, *Fixed output*, the EQ name - and mute works there
    (ADR-0165). **The EQ sheet closes with a swipe down too**, besides the
    drawing's tap on its handle or outside it (George's finding on the
-   preview, 2026-10-27).
+   preview, 2026-10-27). **Its on/off switch stands alone**, without the
+   box the drawing puts round it (George, the same day).
 7. **Typing**: a trackpad tap on a text field on the player's screen, or
    OK with the ring on one, opens the phone's own keyboard. The remote has
    no keyboard, typing sheet or keyboard button of its own.
@@ -92,7 +93,7 @@ the touchpad.
     and the views grouped as on the phone, in the integration's next
     release, after the phone. George sees it before it is released.
 
-## Claude's decisions (for George's confirmation)
+## Claude's decisions (confirmed by George, 2026-10-27)
 
 - **C1 — Another player opens its own page.** The picker lists `/players`
   (ADR-0136); picking one opens that player's address in the same tab, as
@@ -106,12 +107,11 @@ the touchpad.
   as Bluetooth's in the design. The plugin contract lists the new control.
 - **C3 — The fixed row's mute** is there where ADR-0165 offers it; on an
   output with no control of its own the row is the padlock, *Fixed output*
-  and the EQ name. *Confirmed by George, 2026-10-27.*
+  and the EQ name.
 - **C4 — The cover is the panel's**: the renderer's, else the one the
   library enrichment found, else the *artwork pending* glyph - for any
   source, so Bluetooth's is the glyph, as drawn. The blurred background
-  only with a cover. Nothing playing: the note glyph. *Confirmed by George,
-  2026-10-27.*
+  only with a cover. Nothing playing: the note glyph.
 - **C5 — The keyboard opens inside the touch**, the one moment a browser
   allows it: the panel says in advance that its pointer is over a text
   field (`over`, ADR-0121) or that its ring is on one (`ring`, a message
@@ -137,19 +137,17 @@ the touchpad.
   centred on a larger screen. The touch area's floor is 312 px, where the
   D-pad clears the pad switch; without a screen the cover's is 140 px.
   Below them the Remote page scrolls under the top bar (a drag on the
-  touch area stays the pad's). *Confirmed by George, 2026-10-27.*
+  touch area stays the pad's).
   **Amended** the same day: on his 427 px phone the column left 7 px at
   each side that no dimming reached; asked, he chose the remote filling a
   phone up to 480 px wide, the 412 px column kept for wider screens.
 - **C11 — A scroll strip's step** is ADR-0121's `scroll`, 24 px on its
   axis. The first build's step that scrolled the ring's list goes.
 - **C12 — Pointer speed and Pointer style stay**, with the pointer; the
-  first build's proposal to retire them is withdrawn. *Confirmed by George,
-  2026-10-27.*
+  first build's proposal to retire them is withdrawn.
 - **C13 — The notes the phone shows stay**: a volume or a mute that failed,
   a character the player could not type (ADR-0157). They are errors, not
-  the trackpad's feedback the design took away. *Confirmed by George,
-  2026-10-27.*
+  the trackpad's feedback the design took away.
 
 ## From the first build
 
@@ -196,11 +194,18 @@ sheet follows a finger pulled down and closes past 80 px or at a flick
 (500 px/s over the last 100 ms), else goes back; a sideways drag stays the
 chips' scroll, and a pull that starts on a chip does not choose it. Settings
 takes `ground={false}` in the remote: no ground, weave or veil of its own.
-Checked from mocked data; on sofapi from 14:22. **Not settled**: over a
-bright cover Settings' small grey lines measured 1.7:1 against their
-background (the titles 2.2:1), where its own ground has the 4.5:1 its grey
-was chosen for, and Settings' veil kept over the cover 3.8:1; the Remote
-page's own lines over the same cover measured 2.2 to 4.0:1.
+Checked from mocked data; on sofapi from 14:22. Over a bright cover
+Settings' small grey lines measured 1.7:1 against their background (the
+titles 2.2:1), where its own ground has the 4.5:1 its grey was chosen for,
+and Settings' veil kept over the cover 3.8:1; the Remote page's own lines
+over the same cover measured 2.2 to 4.0:1. **Kept as it is** (George, the
+same day, shown the figures).
+
+The second round: the column fills a phone up to 480 px (C10, amended), so
+every dimming layer reaches its edges; the touch area's buttons and both
+switches take the quick actions' ground. On sofapi from 14:57. The third:
+the EQ sheet's switch without its box, the touch still 48 px tall; checked
+from mocked data at 427 and 360 wide.
 
 ## Not in this record
 
