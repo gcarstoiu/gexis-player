@@ -239,6 +239,10 @@ class PlaybackState:
     #: cases, which the design named as the one outcome to avoid -
     #: "indistinguishable from a bug".
     fixed_output: bool = False
+    #: **ADR-0165: muted with Fixed volume** - `None` where there is no such
+    #: mute (Variable, or Fixed on an output with no control of its own to
+    #: silence), else whether it is muted. `volume` stays absent in Fixed.
+    fixed_mute: bool | None = None
     #: **ADR-0055 §6: whether the visualiser can have levels at all.**
     #:
     #: False on an output whose chain carries no meter - only HDMI on Fixed
@@ -336,6 +340,7 @@ class PlaybackState:
             "handoff": self.handoff.to_json() if self.handoff else None,
             "volume": self.volume.to_json() if self.volume else None,
             "fixed_output": self.fixed_output,
+            "fixed_mute": self.fixed_mute,
             "meters": self.meters,
             "sources": [dict(s) for s in self.sources],
             "settings_revision": self.settings_revision,

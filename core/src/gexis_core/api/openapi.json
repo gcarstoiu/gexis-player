@@ -5509,7 +5509,7 @@
           "Panel"
         ],
         "summary": "Open the touchpad relay WebSocket",
-        "description": "Upgrades to a WebSocket that lets a phone act as the panel's touchpad and keyboard (ADR-0121). A connection from loopback is the panel; any other is a phone (ADR-0035 §6). A phone may send move, tap, text, key, scroll and zoom messages, which the core relays unchanged to every connected panel; the panel may send over, focus, ring (the D-pad's ring is on a text field, ADR-0164) and untyped (a character the Home Assistant dashboard could not be given), relayed to every connected phone. A scroll marked `step` is the remote's scroll strip: the panel scrolls the list around its D-pad ring. Anything else, any non-text frame and any frame over 2048 bytes is dropped, and while the Phone touchpad setting (`phone_touchpad`) is off every relayed message is dropped too. A `{\"t\":\"ping\"}` from either side is always answered to the sender alone with `{\"t\":\"pong\"}`; when a phone disconnects, every panel is sent `{\"t\":\"gone\",\"phones\":<n>}`. The socket is separate from `/state`, which stays publish-only (ADR-0028); the server sends a WebSocket heartbeat every 20 seconds.",
+        "description": "Upgrades to a WebSocket that lets a phone act as the panel's touchpad and keyboard (ADR-0121). A connection from loopback is the panel; any other is a phone (ADR-0035 §6). A phone may send move, tap, text, key, scroll and zoom messages, which the core relays unchanged to every connected panel; the panel may send over, focus, ring (the D-pad's ring is on a text field, ADR-0164) and untyped (a character the Home Assistant dashboard could not be given), relayed to every connected phone. Anything else, any non-text frame and any frame over 2048 bytes is dropped, and while the Phone touchpad setting (`phone_touchpad`) is off every relayed message is dropped too. A `{\"t\":\"ping\"}` from either side is always answered to the sender alone with `{\"t\":\"pong\"}`; when a phone disconnects, every panel is sent `{\"t\":\"gone\",\"phones\":<n>}`. The socket is separate from `/state`, which stays publish-only (ADR-0028); the server sends a WebSocket heartbeat every 20 seconds.",
         "x-gexis-stability": "internal",
         "x-gexis-adr": [
           "ADR-0121",
@@ -5739,7 +5739,7 @@
           "Playback"
         ],
         "summary": "Mute or unmute the output",
-        "description": "Mutes or unmutes the output (ADR-0028's command surface). The new state is published on /state as `volume.muted`. It fails with 409 while the volume level has not been read yet, a real window just after start.",
+        "description": "Mutes or unmutes the output (ADR-0028's command surface). The new state is published on /state as `volume.muted`, or with Fixed volume as `fixed_mute` (ADR-0165: the output's own control is silenced, and given full scale back). It fails with 409 while the volume level has not been read yet, a real window just after start, and with Fixed volume on an output with no volume control of its own.",
         "requestBody": {
           "required": true,
           "content": {
@@ -5772,7 +5772,7 @@
             }
           },
           "409": {
-            "description": "The mute could not be set: the volume level is not known yet.",
+            "description": "The mute could not be set: the volume level is not known yet, or with Fixed volume the output has no control of its own to mute.",
             "content": {
               "application/json": {
                 "schema": {
@@ -8036,15 +8036,7 @@
           },
           "by": {
             "type": "number",
-            "description": "`zoom`: the factor to zoom by (1 is unchanged). A `scroll` with `step`: +1 or -1, one step down or right, or up or left."
-          },
-          "step": {
-            "type": "string",
-            "enum": [
-              "x",
-              "y"
-            ],
-            "description": "`scroll` from the remote's scroll strips (ADR-0164 C11): a step on that axis, which the panel takes to the list around its D-pad ring; `dx` and `dy` are then absent."
+            "description": "`zoom`: the factor to zoom by (1 is unchanged)."
           }
         }
       },
@@ -11519,6 +11511,7 @@
           "handoff",
           "volume",
           "fixed_output",
+          "fixed_mute",
           "meters",
           "sources",
           "settings_revision",
@@ -11589,6 +11582,13 @@
           "fixed_output": {
             "type": "boolean",
             "description": "True when the device does not attenuate at all (ADR-0046); the volume slider does not apply."
+          },
+          "fixed_mute": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Muted with Fixed volume (ADR-0165): null where there is no such mute (Variable, or Fixed on an output with no volume control of its own), else whether the output is muted."
           },
           "meters": {
             "type": "boolean",

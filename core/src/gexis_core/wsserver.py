@@ -525,6 +525,11 @@ class StateServer:
             muted = None
         if not isinstance(muted, bool):
             return web.json_response({"error": 'body must be {"muted": true|false}'}, status=400)
+        state = self._store.state
+        if state.fixed_output and state.fixed_mute is None:
+            # ADR-0165 §2: Fixed on an output with no control of its own.
+            return web.json_response(
+                {"error": "this output has no volume control of its own to mute"}, status=409)
         if not await self._set_mute(muted):
             return web.json_response({"error": "volume level not known yet"}, status=409)
         return web.json_response({"muted": muted})

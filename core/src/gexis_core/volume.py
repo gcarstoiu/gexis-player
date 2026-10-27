@@ -1111,6 +1111,19 @@ class VolumeBridge:
         write goes straight to its target instead."""
         self._last_written = None
 
+    async def write_fixed(self, raw: int) -> None:
+        """**ADR-0165: mute with Fixed volume** - silence, or full scale back,
+        straight to the control; `write_hardware` refuses every other write
+        in Fixed. The echo window is armed as for any write of ours, so the
+        monitor does not take it for a hand on the knob and hand it to the
+        renderer (Spotify's own slider at 0 for a mute). No ramp: a mute is
+        meant to be immediate, and the next ramp starts at its target."""
+        self._note_written(raw)
+        self._expected_hw_raw = (raw, time.monotonic())
+        self._last_written = None
+        await set_raw(self._mixer_name, raw)
+        publish_attenuation(raw)
+
     def set_mixer_name(self, mixer_name: str) -> None:
         """**The control's name follows the chosen output** (ADR-0055 §3):
         `DAC` on this HAT, `PCM` on the Pi's own jack. Settable rather than

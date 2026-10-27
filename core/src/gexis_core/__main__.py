@@ -126,6 +126,7 @@ from gexis_core.volume import (
     hardware_raw_to_renderer_value,
     fixed_output as volume_fixed_output,
     hardware_max,
+    hardware_silence,
     publish_attenuation,
     use_scale,
     set_ceiling_reader,
@@ -1102,6 +1103,8 @@ async def main() -> None:
     #: of output for one (Finding 125 #10, 2026-10-14).
     output_seen = {"value": None}
     fixed_now = {"value": False}
+    #: ADR-0165: muted with Fixed volume, where the output has a control.
+    fixed_muted = {"value": False}
     set_fixed_output_reader(lambda: fixed_now["value"])
     # ADR-0137: the plugins are told when Fixed changes. Made further down; a
     # change before it exists reaches each plugin as it connects instead.
@@ -1129,6 +1132,23 @@ async def main() -> None:
         if volume is not None:
             publish_volume(carry_raw(volume.raw, old, new))
 
+    def _fixed_mute_offered() -> bool:
+        """ADR-0165 §2: Fixed, and an output with a control of its own to
+        silence - not one Fixed has nothing to write to."""
+        if not fixed_now["value"]:
+            return False
+        output = outputs.in_force(settings.value("output_device"))[0]
+        return output is None or output.control is not None
+
+    def publish_fixed_mute() -> None:
+        """`fixed_mute` in `/state` (ADR-0165 §3): `None` where there is no
+        such mute, which also ends one that was."""
+        if not _fixed_mute_offered():
+            fixed_muted["value"] = False
+            state_store.set_fixed_mute(None)
+        else:
+            state_store.set_fixed_mute(fixed_muted["value"])
+
     async def _apply_output_mode(force: bool = False) -> None:
         """Put the chosen mode into force, if now is a legal moment.
 
@@ -1155,7 +1175,14 @@ async def main() -> None:
             # clears the published level.
             volume = state_store.state.volume
             before_fixed["raw"] = mute.audible_raw(volume.raw if volume is not None else None)
+            # ADR-0165 §5: a change of volume type ends mute, Variable's too.
+            mute.observe(hardware_max())
+        # And Fixed's: from muted to Variable, the DAC goes from silence to
+        # Variable's level, straight to it (`write_fixed` left no position
+        # for a ramp to start from).
+        fixed_muted["value"] = False
         state_store.set_fixed_output(wanted)
+        publish_fixed_mute()
         if plugin_server is not None:
             plugin_server.tell_output(wanted)
         if wanted:
@@ -1323,6 +1350,10 @@ async def main() -> None:
             # review, 2026-10-12): its control was left at whatever it held -
             # the jack's own 0 dB, say - under a panel showing another level.
             await volume_bridge.write_hardware(state_store.state.volume.raw)
+        # ADR-0165 §5: a change of output ends mute with Fixed volume, and
+        # the new card may have no control to offer it on.
+        fixed_muted["value"] = False
+        publish_fixed_mute()
         # **This daemon is not restarted any more.** It was, to pick up the
         # new card's control name; that name is now settable in place
         # (`VolumeBridge.set_mixer_name`), and the restart was most of what
@@ -1736,11 +1767,25 @@ async def main() -> None:
 
     async def set_mute(muted: bool) -> bool:
         logger.info("command: %s", "mute" if muted else "unmute")
+        if fixed_now["value"]:
+            return await _set_fixed_mute(muted)
         ok = await mute.set(muted)
         volume = state_store.state.volume
         if ok and volume is not None:
             state_store.set_volume_raw(volume.raw, muted=mute.muted)
         return ok
+
+    async def _set_fixed_mute(muted: bool) -> bool:
+        """**ADR-0165: mute with Fixed volume** silences the output's own
+        control, and unmute gives it full scale back. False where there is
+        nothing to silence with."""
+        if not _fixed_mute_offered():
+            return False
+        if muted != fixed_muted["value"]:
+            await volume_bridge.write_fixed(hardware_silence() if muted else hardware_max())
+            fixed_muted["value"] = muted
+        publish_fixed_mute()
+        return True
 
     # Serve the UI only if a build is actually present. A configured path
     # that does not exist is normal, not an error: the core ships and runs

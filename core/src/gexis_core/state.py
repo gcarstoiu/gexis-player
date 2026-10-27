@@ -58,6 +58,7 @@ class StateStore:
         self._handoff: Handoff | None = None
         self._volume: VolumeState | None = None
         self._fixed_output = False
+        self._fixed_mute: bool | None = None
         self._meters = True
         self._settings_revision = 0
         self._pictures_revision = 0
@@ -117,6 +118,7 @@ class StateStore:
             handoff=self._handoff,
             volume=self._volume,
             fixed_output=self._fixed_output,
+            fixed_mute=self._fixed_mute,
             meters=self._meters,
             sources=self._sources,
             settings_revision=self._settings_revision,
@@ -313,6 +315,13 @@ class StateStore:
         self._fixed_output = fixed
         if fixed:
             self._volume = None
+        self._notify()
+
+    def set_fixed_mute(self, muted: bool | None) -> None:
+        """ADR-0165: mute with Fixed volume - `None` where there is none."""
+        if muted == self._fixed_mute:
+            return
+        self._fixed_mute = muted
         self._notify()
 
     def set_meters(self, available: bool) -> None:
