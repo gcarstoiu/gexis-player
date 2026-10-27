@@ -1,23 +1,25 @@
 # ADR-0164 — The phone remote
 
-**Status:** **Waiting for a new design** — George, 2026-10-26, after the
-preview on sofapi: Claude Design's remote came out wrong; fresh designs are
-coming, and this record is revised from them. **Built** — 2026-10-26 on
-`ph-phone-controls` from the first design, checked against it from mocked
-data (below, *Built*) and previewed on sofapi.
-**Accepted** — George, 2026-10-26: the design handed over
-(`design/source/21`, Claude Design), build it, with his answers to the
-questions it left (below). The decisions he left to Claude are listed
-under *Claude's decisions* for his confirmation. Phase 21
-(`ph-phone-controls`). Replaces [ADR-0101](0101-a-mini-player-on-the-phone.md)'s
-mini player on the phone and
-[ADR-0121](0121-the-phone-as-the-panel-s-touchpad-and-keyboard.md)'s
-pointer; keeps its keyboard. Builds on
+**Status:** **Accepted, revised** — George, 2026-10-27: Claude Design's
+second remote (`design/source/21`, `Phone Remote v3`) replaces the first;
+build it, with his answers to the three points where it left the current
+build (below). The decisions he left to Claude are listed under *Claude's
+decisions* for his confirmation. Phase 21 (`ph-phone-controls`).
+**First design** — accepted 2026-10-26, built on `ph-phone-controls` and
+previewed on sofapi the same evening; George found that Claude Design had
+got the remote wrong (its touchpad sent D-pad steps by swipes, where he had
+asked for a touchpad and a D-pad), and fresh designs followed. What the
+first build kept and dropped is under *From the first build*.
+
+Replaces [ADR-0101](0101-a-mini-player-on-the-phone.md)'s mini player on
+the phone; keeps [ADR-0121](0121-the-phone-as-the-panel-s-touchpad-and-keyboard.md)'s
+touchpad and keyboard, now on the remote. Builds on
 [ADR-0037](0037-transport-commands.md) (what a renderer declares),
 [ADR-0135](0135-display-standby.md) (standby),
 [ADR-0136](0136-switching-between-players-on-the-phone.md) (the players on the
-network), [ADR-0161](0161-a-d-pad-on-the-panel.md) (the D-pad) and
-[ADR-0162](0162-a-simple-equaliser.md) (the equaliser's quick change).
+network), [ADR-0161](0161-a-d-pad-on-the-panel.md) (the D-pad),
+[ADR-0162](0162-a-simple-equaliser.md) (the equaliser's quick change) and
+[ADR-0165](0165-mute-with-fixed-output.md) (mute with Fixed volume).
 
 ## Context
 
@@ -27,27 +29,28 @@ Lyrics, Meters, Room, Idle), the volume and, from Phase 20, the EQ button.
 Swiped up, it opens the touchpad between the track and the row (ADR-0121).
 A player without a screen gets the same page, its panel row included.
 George added Phase 21 on 2026-10-26 for a redesign of the quick actions and
-the touchpad, and handed over Claude Design's *phone remote* the same day.
+the touchpad.
 
-## Decided (George, 2026-10-26)
+## Decided (George, 2026-10-26 and 2026-10-27)
 
 1. **One remote, two pages** (`design/source/21/README.md`): a player
    picker and a Remote / Settings switch on top; the Remote page, and
    Settings as it is, without the mini player. The mini player goes from
    the phone.
-2. **A player with a screen**: now playing (cover, title, artist, album,
-   progress, transport), a touch area, quick actions and the volume row.
-   The touch area has four corner buttons (Home, Lyrics, Back, Meters) and
-   a switch between two pads.
-3. **The two pads, as drawn** (George: the design shows both, with a switch
-   between them, and it is followed). **Touchpad**: every 52 px of swipe
-   sends one of ADR-0161's steps (Up, Down, Left, Right), a tap sends OK,
-   and what was sent is named for a second (*Up × 3*); the strips along the
-   right and bottom edges scroll, a step each 24 px. **D-pad**: the arrows
-   and OK as buttons. Both drive the panel's ring, as Home Assistant's
-   D-pad does. **The pointer leaves the phone**, and with it the pinch and
-   a tap on the Home Assistant dashboard from the phone (ADR-0157): over the
-   dashboard the steps reach Home Assistant's own page, as its D-pad's do.
+2. **A player with a screen**: now playing - a 136 px cover beside the
+   title, the artist and previous / play / next, the progress under both -
+   then a touch area, quick actions and the volume row. **No shuffle or
+   repeat on the phone**, in either layout; the panel keeps them.
+3. **Two pads, and a switch between them.** **Trackpad**: drives the
+   panel's pointer, relative, as a laptop's touchpad, with ADR-0121's
+   gestures (move, tap, two fingers to scroll, a pinch); nothing is drawn
+   on the phone, the pointer on the player's screen is the feedback.
+   Scroll strips along its right and bottom edges, drawn still: **each
+   24 px of drag scrolls what is under the pointer by those 24 px**, scaled
+   as two fingers are - the content follows the finger, as the old phone
+   page's scroll lines did (George, 2026-10-27, asked). **D-pad**: the
+   arrows and OK as buttons, driving the panel's ring (ADR-0161); no
+   strips. Four corner buttons on both: Home, Lyrics, Back, Meters.
 4. **Quick actions**: Standby (the screen, ADR-0135), Idle screen, Playing,
    Room.
 5. **A player without a screen**: a large cover, a seek bar, larger
@@ -55,15 +58,28 @@ the touchpad, and handed over Claude Design's *phone remote* the same day.
 6. **The volume row**: a bar with mute inside it, the level and the EQ
    setting's name, then the EQ button, which opens the EQ sheet. **Its
    touch sizes as drawn** (the bar 36 px tall, mute 32 x 32), under the
-   44 px floor (the design's open point).
-7. **Repeat cycles off, all, one**, as on the panel (the design's open
-   point; it drew on and off).
+   44 px floor (George, 2026-10-26; the second design keeps it). **With
+   Fixed volume** the bar becomes the panel's locked row - mute, the
+   padlock, *Fixed output*, the EQ name - and mute works there
+   (ADR-0165).
+7. **Typing**: a trackpad tap on a text field on the player's screen, or
+   OK with the ring on one, opens the phone's own keyboard. The remote has
+   no keyboard, typing sheet or keyboard button of its own.
 8. **Sources as on the panel**: what a renderer does not declare is left
-   out (ADR-0037); with Bluetooth no duration, so no seeking (and C13).
-9. **The Home Assistant card follows the redesign**
-   ([ADR-0163](0163-a-gexis-player-card-for-dashboards.md)): Standby added
-   and the views grouped as on the phone, in the integration's next release,
-   after the phone. George sees it before it is released.
+   out (ADR-0037); no cover is the panel's *artwork pending* glyph, and no
+   duration (Bluetooth) the inert rule and *live*.
+9. **The panel's background**: the weave, the blurred cover where there is
+   one, the veil.
+10. **Size**: drawn at 410 x 780 (a Pixel 10 Pro in Chrome with the address
+    bar showing), 360 to 412 wide. Taller, the touch area (or, without a
+    screen, the cover, up to 380) takes the extra. **Shorter, they give way
+    first**, down to a floor that keeps the D-pad whole, and only then does
+    the page scroll (George, 2026-10-27, asked: the design never went below
+    780, which many phones are).
+11. **The Home Assistant card follows the redesign**
+    ([ADR-0163](0163-a-gexis-player-card-for-dashboards.md)): Standby added
+    and the views grouped as on the phone, in the integration's next
+    release, after the phone. George sees it before it is released.
 
 ## Claude's decisions (for George's confirmation)
 
@@ -77,79 +93,55 @@ the touchpad, and handed over Claude Design's *phone remote* the same day.
   with go-librespot's `POST /player/seek` (milliseconds, 0.10.5's API).
   Plexamp and Bluetooth do not declare it, and their bar does not respond,
   as Bluetooth's in the design. The plugin contract lists the new control.
-- **C3 — Fixed volume**: the bar's place says *Fixed output*, with the
-  panel's padlock, and the EQ button stays (the design's open point).
-- **C4 — Bluetooth has no cover**: the note glyph, as on the panel (the
-  design's open point; it drew the sample cover).
-- **C5 — The typing sheet** shows while a text field on the player's screen
-  has focus (the panel's `focus` message, ADR-0121). With the D-pad the
-  panel also says when its ring is on a text field (a new `ring` message on
-  `/touchpad`), so OK there opens the phone's keyboard in the same touch,
-  the one moment a browser allows it. **Done** puts the phone's keyboard
-  away; what was typed stays in the field.
+- **C3 — The fixed row's mute** is there where ADR-0165 offers it; on an
+  output with no control of its own the row is the padlock, *Fixed output*
+  and the EQ name.
+- **C4 — The cover is the panel's**: the renderer's, else the one the
+  library enrichment found, else the *artwork pending* glyph - for any
+  source, so Bluetooth's is the glyph, as drawn. The blurred background
+  only with a cover. Nothing playing: the note glyph.
+- **C5 — The keyboard opens inside the touch**, the one moment a browser
+  allows it: the panel says in advance that its pointer is over a text
+  field (`over`, ADR-0121) or that its ring is on one (`ring`, a message
+  the first build added to `/touchpad`). The phone's own field is out of
+  sight; Enter is sent as Enter; the keyboard goes when the panel's field
+  loses its focus.
 - **C6 — The EQ sheet's note is Phase 20's** (ADR-0162 C18: the volume
-  gives the lowering back), not the design's earlier sentence. Its chips
-  are Phase 20's settings; *Custom* joins them while it is the one in use.
+  gives the lowering back), not the design's sentence. Its chips are
+  Phase 20's settings; *Custom* joins them while it is the one in use.
   *Edit bands in Settings* opens Settings on the equaliser.
 - **C7 — What the remote offers follows the player**, as the mini player
   did: Meters only with the visualiser, Room only with a dashboard set,
   Idle screen only with the idle screen switched on; Playing and Lyrics
   need something playing.
 - **C8 — The pad the remote starts on is the one last used on that phone**
-  (kept in the phone's browser), Touchpad the first time as in the design;
+  (kept in the phone's browser), Trackpad the first time as in the design;
   its `startPad` is the drawing's tweak, not a setting. With *Phone
   touchpad* off the touch area offers the D-pad alone, without the switch,
   and no typing (the socket that carries it is the setting's).
 - **C9 — The phone opens on Remote.** Setup, first use and *Personalise*
   still take the whole page while they run.
-- **C10 — The page is the design's column** on a phone, at most 480 px wide
-  and centred on a larger screen; nothing on it scrolls but Settings.
-- **C11 — A scroll step** goes over `/touchpad` as ADR-0121's `scroll`,
-  marked as a step: the panel scrolls the list the ring is in, or the
-  screen's main list, by a fifth of its height or width.
-- **C12 — Pointer speed and Pointer style** have nothing left to set:
-  proposed for ADR-0022 as retired, hidden from Settings once George
-  confirms; until then they stay, as does first use's pointer preview and
-  its line about them.
-- **C13 — Shuffle and repeat with Spotify and Bluetooth**: shown, as on the
-  panel. The design's source table has them absent, but both declare them
-  since George's amendment of ADR-0037 (2026-09-17), and the design's own
-  rule is *as on the panel*.
-- **C14 — On a phone narrower than the design's 412 px** the transport's
-  gaps give way first, so the five buttons keep their size down to 360 px.
+- **C10 — The page is the design's column**, at most 412 px wide and
+  centred on a larger screen. The touch area's floor is 312 px, where the
+  D-pad clears the pad switch; without a screen the cover's is 140 px.
+  Below them the Remote page scrolls under the top bar (a drag on the
+  touch area stays the pad's).
+- **C11 — A scroll strip's step** is ADR-0121's `scroll`, 24 px on its
+  axis. The first build's step that scrolled the ring's list goes.
+- **C12 — Pointer speed and Pointer style stay**, with the pointer; the
+  first build's proposal to retire them is withdrawn.
+- **C13 — The notes the phone shows stay**: a volume or a mute that failed,
+  a character the player could not type (ADR-0157). They are errors, not
+  the trackpad's feedback the design took away.
 
-## Built (2026-10-26)
+## From the first build
 
-On `ph-phone-controls` (from `ph-equaliser`, `next` merged in):
-
-- **The core**: `seek` in `TRANSPORT_COMMANDS`, `POST /transport/seek`
-  (`{"position": seconds}`, past the end is the end), offered only with a
-  known duration (`model.controls`); Lyrion `time`, Spotify
-  `/player/seek`, a plugin's `transport` message. The `/touchpad` relay
-  passes the panel's `ring` and `untyped` - the latter (ADR-0157) was sent
-  by the panel and dropped by the relay, so the phone never said a
-  character could not be typed. The Phone touchpad setting's note describes
-  the remote's touchpad. Core suite 2745 passed, 48 skipped.
-- **The panel**: `dpad.js` sends `dpadring` (OK would land in a text field,
-  or a control that opens one) and scrolls on `dpadscroll`;
-  `PanelPointer.svelte` carries both over the socket.
-- **The phone**: `ui/src/screens/remote/` - `PhoneRemote` (the frame, the
-  picker, the pages, the socket, typing), `RemoteScreen`, `RemoteNoScreen`,
-  `RemoteTransport`, `TouchArea`, `QuickActions`, `VolumeRow`, `EqSheet`,
-  `TypingSheet`, `PlayerMenu`, `commands.js`, `icons.js`; the design's
-  tokens in `tokens.css`. `MiniPlayer.svelte` and the quick change's phone
-  tray are gone; `Settings` takes `switcher={false}`.
-- **Checked from mocked data** (a core with a made-up track, sample
-  players and a fake panel; nothing from a player) at 412 x 915 beside the
-  design's board, and at 390 and 360: both layouts, the D-pad, the EQ
-  sheet, the menu, Settings; Spotify, Bluetooth, nothing playing, Fixed,
-  standby. A 120 px swipe sent two Rights and named them, a tap OK; with the
-  fake panel's ring on a field, a tap focused the phone's field in the same
-  touch, typing reached the panel as text and Done closed the sheet.
-- **The documents**: the manual's section 7 and its pictures (from the
-  public-domain demo library), the gallery, the FAQ, the README, the
-  technical guide (`ui.md`, `api.md`, `core-and-state.md`, the overview),
-  `HARDWARE.md` and the plugin contract (`seek`).
+Kept: the seek route and control (C2), the `ring` message (C5), the relay's
+fix that lets the panel's `untyped` reach the phone, the picker, the pages,
+the quick actions, the EQ sheet, the volume bar and the layout without a
+screen. Dropped: the swipe steps and their labels, the finger dot, the
+scroll step for the ring's list, the typing sheet, shuffle and repeat, the
+480 px column, and the proposal to retire Pointer speed and style.
 
 ## Not in this record
 

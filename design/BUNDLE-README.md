@@ -56,15 +56,16 @@ to be built. New: the glide between settings. Tokens under *Phase 20* in
 `design/tokens.css`. Two points are open for George (the README's *Open*).
 `Now Playing` and `Settings` are unchanged.
 
-## Phase 21 — the phone remote (2026-10-26)
+## Phase 21 — the phone remote (2026-10-27)
 
 Open `design/source/21/Phone Remote Board.dc.html` and read
 `design/source/21/README.md`, which is self-contained. Two phones: a player
-with a screen (touch area, quick actions) and one without (large cover, seek
-bar). Both share the player picker, the Remote / Settings switch and the
-volume row, with the EQ setting's name inside the bar. Tokens under
-*Phase 21* in `design/tokens.css`. Five points are open (the README's
-*Open*). `Now Playing` and `Settings` are unchanged.
+with a screen (a trackpad or D-pad for the panel, quick actions) and one
+without (large cover, seek bar). Both share the player picker, the Remote /
+Settings switch and the volume row, with the EQ setting's name inside the
+bar. Tokens under *Phase 21* in `design/tokens.css`. One build change is
+outside the phone: mute works with Fixed volume, on the panel too.
+`Now Playing` and `Settings` are unchanged.
 
 ## Round 2 — what changed on 2026-10-01
 
@@ -462,7 +463,7 @@ brand/                       brand package
 4. Add `screen` and `rotation` to `settings_registry.json` (George confirmed
    them 2026-09-30) and the Screen step to `SetupPage.svelte`.
 5. Build Phase 20 from `design/source/20/README.md` (look 3a only).
-5b. Build Phase 21 from `design/source/21/README.md`; settle its *Open* list
-    with George first.
+5b. Build Phase 21 from `design/source/21/README.md`; its *Open for the
+    build* is the panel's mute with Fixed volume.
 6. Port round 2 (above), then write Phase 13b's ADR from `design/source/13b/Screen Families Round 2.dc.html`, `Screen Families Chosen.dc.html` and this
    README's 13b section, then build the families.

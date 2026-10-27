@@ -3294,7 +3294,19 @@ the core, the panel's ring and scroll steps, the remote's two layouts and
 its sheets, the mini player gone; checked from mocked data against the
 design; the manual, FAQ, README and technical guide. C13 and C14 added for
 George's confirmation. **Previewed on sofapi the same evening; George: Claude
-Design got it wrong, fresh designs are coming.** The phase waits for them.
+Design got it wrong, fresh designs are coming.**
+
+**Second design 2026-10-27** (George): `Phone Remote v3` replaces the
+first. ADR-0164 revised from it: the Trackpad drives the panel's pointer
+again, with ADR-0121's gestures and no feedback on the phone; the D-pad
+drives the ring; no typing sheet, the phone's own keyboard; no shuffle or
+repeat on the phone; the cover beside the title and the transport; Fixed
+volume as the panel's locked row with mute. George's answers the same day:
+mute with Fixed volume where the output has a control of its own
+([ADR-0165](decisions/0165-mute-with-fixed-output.md), the panel too); on a
+phone shorter than the drawing's 780 px the touch area gives way before the
+page scrolls; the scroll strips follow the finger. Claude's C1-C13 are for
+his confirmation. Rebuilding on `ph-phone-controls`.
 
 **Before it** the mini player at the bottom of the phone page
 ([ADR-0101](decisions/0101-a-mini-player-on-the-phone.md)) holds the track
@@ -3323,17 +3335,23 @@ received 2026-10-26, `design/source/21`.
 
 1. On a phone the remote opens on Remote for its player; the picker lists
    the players on the network and opens another's remote.
-2. With a screen, the touchpad's swipes and the D-pad move the panel's
-   ring, a tap or OK presses, the strips scroll, a text field brings up the
-   phone's keyboard, and the corner buttons and quick actions show and
-   change what the screen shows, standby included.
+2. With a screen, the Trackpad moves the panel's pointer and taps, two
+   fingers scroll and pinch, the strips scroll what is under the pointer,
+   the D-pad moves the ring and presses, a text field brings up the phone's
+   keyboard, and the corner buttons and quick actions show and change what
+   the screen shows, standby included.
 3. Without a screen, the cover, the transport and the seek bar work with
    Lyrion and Spotify; a renderer that cannot seek shows no knob.
 4. The volume row sets the level, mutes and names the EQ setting; the EQ
    sheet switches the equaliser and changes its setting, and Edit opens it
    in Settings.
-5. Settings works as before, without the mini player.
-6. The Home Assistant card follows, in the integration's next release.
+5. With Fixed volume, mute silences the output and unmute brings it back at
+   full scale, from the phone and from the panel; on an output with no
+   control of its own there is no mute.
+6. On a phone shorter than 780 px nothing is cut off: the touch area gives
+   way, then the page scrolls.
+7. Settings works as before, without the mini player.
+8. The Home Assistant card follows, in the integration's next release.
 
 ### Phase 22 — Room correction for the bass, with a USB microphone
 

@@ -408,17 +408,18 @@ unchanged.
 
 ---
 
-## Changed 2026-10-26
+## Changed 2026-10-27
 
-**Phase 21, the phone remote** — `source/21/`. Open
-`Phone Remote Board.dc.html`: the final two phones, Living Room (screen) and
-Kitchen (no screen). A player picker and a Remote / Settings switch on top;
-for a screen, now playing, a touch area (touchpad or D-pad, corner buttons,
-scroll strips), quick actions and the volume bar with the EQ name inside it;
-without a screen, a large cover, a seek bar, larger transport and the same
-volume row. Settings is the locked screen, embedded without its mini player.
-Tokens at the end of `tokens.css` under *Phase 21*. `source/21/README.md`
-lists five open points. The locked designs are unchanged.
+**Phase 21, the phone remote, redone** — `source/21/`. `Phone Remote v3`
+replaces v2 (deleted). Open `Phone Remote Board.dc.html`: Living Room
+(screen) and Kitchen (no screen) in Pixel 10 Pro frames, 410 x 780. For a
+screen: a 136 cover beside the title, artist and previous / play / next,
+progress under them, a touch area whose Trackpad drives the panel's pointer
+(or a D-pad), quick actions and the volume row. Without a screen: a large
+cover, a seek bar, larger transport. No shuffle or repeat on the phone. The
+panel's background. With Fixed volume the bar becomes the panel's locked
+row, mute kept. No typing sheet: the phone's own keyboard. Tokens at the end
+of `tokens.css` under *Phase 21*. The locked designs are unchanged.
 
 ---
 
