@@ -1,6 +1,6 @@
 # ADR-0165 — Mute with fixed output
 
-**Status:** **Built** 2026-10-27 on `ph-phone-controls`, checked from
+**Status:** **Built** 2026-10-27 on `ph-phone-controls`, in 1.7.0 (Testing), checked from
 mocked data (the phone's row, the panel's drawer and the bar's tray) and
 previewed on sofapi; not yet heard through an amplifier. **Accepted** —
 George, 2026-10-27: the second Phase 21 design
