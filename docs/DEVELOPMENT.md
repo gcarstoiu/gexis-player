@@ -3305,10 +3305,21 @@ volume as the panel's locked row with mute. George's answers the same day:
 mute with Fixed volume where the output has a control of its own
 ([ADR-0165](decisions/0165-mute-with-fixed-output.md), the panel too); on a
 phone shorter than the drawing's 780 px the touch area gives way before the
-page scrolls; the scroll strips follow the finger. Claude's C1-C13 are for
-his confirmation. **Rebuilt the same day** on `ph-phone-controls`
+page scrolls; the scroll strips follow the finger. Claude's C1-C13: all
+confirmed by George the same day.
+**Rebuilt the same day** on `ph-phone-controls`
 (ADR-0164, *Built (2026-10-27)*), checked from mocked data against the
-board, and **previewed on sofapi** from 12:44.
+board, and **previewed on sofapi** from 12:44. **George's two findings the
+same day**: the EQ sheet closes with a swipe down too, and Settings shows the
+remote's background; both fixed and on sofapi from 14:22. **Two more**:
+the remote fills a phone up to 480 px wide (C10 amended: a 427 px phone
+showed strips at its edges that no dimming reached), and the touch area's
+buttons and both switches look as the quick actions do; on sofapi from
+14:57. **Then** (George, the same day): Settings' grey text over a bright
+cover kept as it is; the EQ sheet's switch without the box round it, on
+sofapi from 15:55. **And** Settings, all of it, on the modals' solid grey,
+the whole screen while it shows (George; asked, the top bar included); on
+sofapi from 16:15.
 
 **Before it** the mini player at the bottom of the phone page
 ([ADR-0101](decisions/0101-a-mini-player-on-the-phone.md)) holds the track

@@ -6,7 +6,8 @@ design (below, *Built (2026-10-27)*) and previewed on sofapi.
 second remote (`design/source/21`, `Phone Remote v3`) replaces the first;
 build it, with his answers to the three points where it left the current
 build (below). The decisions he left to Claude are listed under *Claude's
-decisions* for his confirmation. Phase 21 (`ph-phone-controls`).
+decisions*; George confirmed all of them the same day. Phase 21
+(`ph-phone-controls`).
 **First design** — accepted 2026-10-26, built on `ph-phone-controls` and
 previewed on sofapi the same evening; George found that Claude Design had
 got the remote wrong (its touchpad sent D-pad steps by swipes, where he had
@@ -63,7 +64,10 @@ the touchpad.
    44 px floor (George, 2026-10-26; the second design keeps it). **With
    Fixed volume** the bar becomes the panel's locked row - mute, the
    padlock, *Fixed output*, the EQ name - and mute works there
-   (ADR-0165).
+   (ADR-0165). **The EQ sheet closes with a swipe down too**, besides the
+   drawing's tap on its handle or outside it (George's finding on the
+   preview, 2026-10-27). **Its on/off switch stands alone**, without the
+   box the drawing puts round it (George, the same day).
 7. **Typing**: a trackpad tap on a text field on the player's screen, or
    OK with the ring on one, opens the phone's own keyboard. The remote has
    no keyboard, typing sheet or keyboard button of its own.
@@ -71,7 +75,16 @@ the touchpad.
    out (ADR-0037); no cover is the panel's *artwork pending* glyph, and no
    duration (Bluetooth) the inert rule and *live*.
 9. **The panel's background**: the weave, the blurred cover where there is
-   one, the veil.
+   one, the veil, behind the Remote page. **Settings, all of it** - its
+   pages, its choosers and the equaliser editor - **on the modals' solid
+   grey** (`--bg-panel`), and while it shows the whole screen, the top bar
+   included (George, 2026-10-27, after the preview: first the remote's
+   background behind Settings; seeing it, the modals' grey; asked, he chose
+   the whole screen over the Settings page alone). **The touch
+   area's buttons, the pad switch and the Remote / Settings switch** take
+   the quick actions' faint ground and thin line, not the drawing's dark
+   ground, so the remote's buttons look alike (George, the same day; asked,
+   he chose the quick actions' look over none at all).
 10. **Size**: drawn at 410 x 780 (a Pixel 10 Pro in Chrome with the address
     bar showing), 360 to 412 wide. Taller, the touch area (or, without a
     screen, the cover, up to 380) takes the extra. **Shorter, they give way
@@ -83,7 +96,7 @@ the touchpad.
     and the views grouped as on the phone, in the integration's next
     release, after the phone. George sees it before it is released.
 
-## Claude's decisions (for George's confirmation)
+## Claude's decisions (confirmed by George, 2026-10-27)
 
 - **C1 — Another player opens its own page.** The picker lists `/players`
   (ADR-0136); picking one opens that player's address in the same tab, as
@@ -128,6 +141,9 @@ the touchpad.
   D-pad clears the pad switch; without a screen the cover's is 140 px.
   Below them the Remote page scrolls under the top bar (a drag on the
   touch area stays the pad's).
+  **Amended** the same day: on his 427 px phone the column left 7 px at
+  each side that no dimming reached; asked, he chose the remote filling a
+  phone up to 480 px wide, the 412 px column kept for wider screens.
 - **C11 — A scroll strip's step** is ADR-0121's `scroll`, 24 px on its
   axis. The first build's step that scrolled the ring's list goes.
 - **C12 — Pointer speed and Pointer style stay**, with the pointer; the
@@ -175,6 +191,30 @@ On `ph-phone-controls`, `next` merged in:
   library), mute with Fixed in the manual and FAQ, the FAQ's trackpad
   answers, the technical guide (`ui.md`, `api.md`, `core-and-state.md`,
   `audio-path.md`), the README.
+
+**After George's findings (2026-10-27)**, on `ph-phone-controls`: the EQ
+sheet follows a finger pulled down and closes past 80 px or at a flick
+(500 px/s over the last 100 ms), else goes back; a sideways drag stays the
+chips' scroll, and a pull that starts on a chip does not choose it. Settings
+takes `ground={false}` in the remote: no ground, weave or veil of its own.
+Checked from mocked data; on sofapi from 14:22. Over a bright cover
+Settings' small grey lines measured 1.7:1 against their background (the
+titles 2.2:1), where its own ground has the 4.5:1 its grey was chosen for,
+and Settings' veil kept over the cover 3.8:1; the Remote page's own lines
+over the same cover measured 2.2 to 4.0:1. Kept as it was at first
+(George, the same day, shown the figures); the fourth round below settles
+it.
+
+The second round: the column fills a phone up to 480 px (C10, amended), so
+every dimming layer reaches its edges; the touch area's buttons and both
+switches take the quick actions' ground. On sofapi from 14:57. The third:
+the EQ sheet's switch without its box, the touch still 48 px tall; checked
+from mocked data at 427 and 360 wide; on sofapi from 15:55. The fourth:
+Settings takes `flat` in the remote (its pages, choosers and the equaliser
+editor on `--bg-panel`, no weave or veil), and the remote's own
+`--bg-panel` layer fades in with the slide, behind the top bar; checked from
+mocked data at 427 and 800 wide (Settings, Display, a chooser, Credits, the
+editor), its grey text 4.4 to 4.5:1 on it; on sofapi from 16:15.
 
 ## Not in this record
 

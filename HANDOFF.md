@@ -135,7 +135,8 @@ same day: mute with Fixed volume where the output has a control
 ([ADR-0165](docs/decisions/0165-mute-with-fixed-output.md), the panel's
 fixed rows too), the touch area giving way on phones under 780 px before
 the page scrolls, the strips following the finger. Claude's C1-C13 for his
-confirmation (C12 now keeps Pointer speed and style: nothing for ADR-0022).
+confirmation (C12 now keeps Pointer speed and style: nothing for ADR-0022);
+**all confirmed by George the same day**.
 **Rebuilt the same day** (ADR-0164, *Built (2026-10-27)*), pushed: core
 suite 2751 passed, 48 skipped; checked from mocked data against the board
 (`~/projects/scratch/ph21`: `run2.sh` / `batch2.sh` with `remote_shots2.py`
@@ -146,10 +147,45 @@ stopped; dry run first: 3 upgraded, nothing removed): core
 `1.6.0+git63.6990a1d`; core and kiosk restarted, the panel on
 `index-BfuMrj2Q.js`, no errors in the core's journal, `/tmp/pv` removed. The
 first build's three debs are in `~/projects/scratch/ph21/first-build-debs`.
+**George's findings the same day** (the EQ sheet to close with a swipe down;
+Settings to show the remote's background) fixed on `ph-phone-controls`
+(105f9bf4 UI, 48d64a91 docs and the manual's Settings picture), checked from
+mocked data (`remote_shots2.py` modes `settings`, `swipe`; a `brightart`
+flag for the contrast check), pushed; **on sofapi since 14:22** (stopped;
+dry run: 2 upgraded, nothing removed): ui `1.6.0+git67.105f9bf`, player
+`1.6.0+git68.48d64a9`, core unchanged; core and kiosk restarted, the panel on
+`index-Bx9oVtwP.js`, no warnings, `/tmp/pv` removed; the rebuild's ui and
+player debs in `~/projects/scratch/ph21/second-build-debs`. **George's next
+two findings, the same afternoon**, his answers asked: the remote fills a
+phone up to 480 px wide (C10 amended; his phone's browser is 427 px, and
+the 412 px column left 7 px strips no dimming reached), and the touch area's
+buttons (OK included) and both switches take the quick actions' ground
+(the remote's `--remote-control-*` tokens dropped). 5c8235b9 UI, 6dcdeb93
+docs (the four phone pictures retaken); checked from mocked data at 427,
+412 and 800 wide (`remote_shots2.py` mode `edges`). **On sofapi since
+14:57** while it played (George agreed; no restarts, the UI served from
+disk): ui `1.6.0+git69.5c8235b`, player `1.6.0+git70.6dcdeb9`; the previous
+pair in `~/projects/scratch/ph21/findings1-debs`. **George, the same
+afternoon**: Settings' grey text over a bright cover kept as it is; the
+wiki's Roadmap (Phase 21 under Now) pushed with his OK; **the EQ sheet's
+switch without the box round it** (9fbbebf5, the manual's EQ picture
+retaken; checked from mocked data at 427 and 360, `remote_shots2.py` mode
+`eqpower`). **On sofapi since 15:55** (stopped; dry run: 2 upgraded,
+nothing removed; no restarts): ui and player `1.6.0+git71.9fbbebf`; the
+previous pair in `~/projects/scratch/ph21/findings2-debs`. Asked: whether
+the panel's volume drawer, whose switch has the same box (Phase 20's
+`EqQuick`), follows. **Then Settings, all of it, on the modals' solid grey**
+(George; asked, the whole screen while it shows): `flat` on `Settings` and
+`Equaliser`, a `--bg-panel` layer in `PhoneRemote` (0f1783cf, the manual's
+Settings picture retaken; checked from mocked data at 427 and 800,
+`remote_shots2.py` mode `flat`). **On sofapi since 16:15** (stopped; dry
+run: 2 upgraded, nothing removed; no restarts): ui and player
+`1.6.0+git72.0f1783c`; the previous pair in
+`~/projects/scratch/ph21/findings3-debs`.
 Rolling sofapi back to Phase 20's preview (core git18, ui git19, player
 git20, in `ph-equaliser`'s `packaging/out`) only if George asks. Next:
-George's look on sofapi, his confirmation of C1-C13, then the Home
-Assistant card (and its media player reading `fixed_mute`).
+George's look on sofapi, then the Home Assistant card (and its media player
+reading `fixed_mute`).
 
 Then 22-30 in order, each ADR first (`docs/DEVELOPMENT.md`, the IDs
 there); MPD parked (ADR-0151). **Raspberry Pi Imager** (ADR-0159, a task):
