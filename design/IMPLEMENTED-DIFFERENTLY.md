@@ -844,10 +844,10 @@ Fixed volume).
   (ADR-0165 §4); `Now Playing.dc.html` is locked and does not draw them.
 - **[U]** The EQ sheet closes with a swipe down as well as a tap on its
   handle or the scrim (George, 2026-10-27, after the preview).
-- **[U]** Settings shows the remote's background - the weave, the blurred
-  cover, the veil - where the drawing embeds the locked Settings on its own
-  ground (George, 2026-10-27, after the preview); its grey text is kept as
-  it is over a bright cover (George, the same day).
+- **[U]** Settings, all of it - its pages, choosers and the equaliser
+  editor - is on the modals' solid grey (`--bg-panel`), and while it shows
+  the whole screen is, the top bar included; the drawing embeds the locked
+  Settings on its own ground (George, 2026-10-27, after the preview).
 - **[U]** The remote fills a phone up to 480 px wide, where the drawing's
   column stops at 412 (C10 as amended, George, 2026-10-27: on a 427 px
   phone the dimming left strips at the edges); wider screens keep it.

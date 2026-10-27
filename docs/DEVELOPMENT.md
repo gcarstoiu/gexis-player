@@ -3317,7 +3317,9 @@ showed strips at its edges that no dimming reached), and the touch area's
 buttons and both switches look as the quick actions do; on sofapi from
 14:57. **Then** (George, the same day): Settings' grey text over a bright
 cover kept as it is; the EQ sheet's switch without the box round it, on
-sofapi from 15:55.
+sofapi from 15:55. **And** Settings, all of it, on the modals' solid grey,
+the whole screen while it shows (George; asked, the top bar included); on
+sofapi from 16:15.
 
 **Before it** the mini player at the bottom of the phone page
 ([ADR-0101](decisions/0101-a-mini-player-on-the-phone.md)) holds the track
