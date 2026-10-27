@@ -144,7 +144,10 @@ the touchpad.
   touch area stays the pad's).
   **Amended** the same day: on his 427 px phone the column left 7 px at
   each side that no dimming reached; asked, he chose the remote filling a
-  phone up to 480 px wide, the 412 px column kept for wider screens.
+  phone up to 480 px wide, the 412 px column kept for wider screens. **And**
+  the background is the column's: on a laptop the remote stays centred and
+  the screen beside it plain, without the blurred cover (George, after
+  1.7.0's release the same day).
 - **C11 — A scroll strip's step** is ADR-0121's `scroll`, 24 px on its
   axis. The first build's step that scrolled the ring's list goes.
 - **C12 — Pointer speed and Pointer style stay**, with the pointer; the

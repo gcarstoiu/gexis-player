@@ -853,7 +853,9 @@ Fixed volume).
   Settings on its own ground (George, 2026-10-27, after the preview).
 - **[U]** The remote fills a phone up to 480 px wide, where the drawing's
   column stops at 412 (C10 as amended, George, 2026-10-27: on a 427 px
-  phone the dimming left strips at the edges); wider screens keep it.
+  phone the dimming left strips at the edges); wider screens keep it, with
+  the background inside the column and the plain ground beside it (George,
+  the same day).
 - **[U]** The touch area's corner buttons and OK, the pad switch and the
   Remote / Settings switch have the quick actions' ground and line
   (`rgba(233,238,242,0.07)`, `0.1`), not the drawing's
