@@ -25,7 +25,7 @@ import re
 import subprocess
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import NamedTuple
+from typing import Callable, NamedTuple
 
 from gexis_core import boards, mixer_scale
 
@@ -55,8 +55,14 @@ class Tuning(NamedTuple):
 DRM = Path("/sys/class/drm")
 
 #: Our own snd-dummy cards. They have a mixer and no audio path, which is
-#: exactly the shape that would otherwise pass every test below.
-OURS = frozenset({"gexislmsvol", "gexisbtvol"})
+#: exactly the shape that would otherwise pass every test below. And the
+#: equaliser's loopback (ADR-0162 D1): a card every renderer plays into while
+#: the equaliser is on, never an output of its own.
+LOOPBACK = "Loopback"
+OURS = frozenset({"gexislmsvol", "gexisbtvol", LOOPBACK})
+#: What CamillaDSP plays to while the equaliser is on: the rest of the
+#: output's chain, after the loopback (ADR-0162 D1, D8).
+EQ_OUT = "gexis_eq_out"
 
 #: Friendly names for the board's own outputs, whose ALSA ids are stable
 #: and unhelpful. Anything else is named from what `aplay -l` says it is,
@@ -96,6 +102,9 @@ _needs_plug: dict[str, bool] = {}
 _formats: dict[str, frozenset[str]] = {}
 #: Its lowest and highest rate, from the same question (`squeezelite_options`).
 _rates: dict[str, tuple[int, int]] = {}
+#: The rates themselves when the card lists them one by one rather than as a
+#: range (`takes_rate`).
+_rate_list: dict[str, tuple[int, ...]] = {}
 #: Which device gave those answers (`_device`), by card id.
 _asked_of: dict[str, tuple | None] = {}
 
@@ -274,12 +283,14 @@ def needs_plug(card: str) -> bool | None:
         return None
     formats: set[str] = set()
     rates: tuple[int, int] | None = None
+    listed: tuple[int, ...] | None = None
     for line in dump.splitlines():
         if line.startswith("FORMAT:") and not formats:
             formats = set(line.split(":", 1)[1].split())
         elif line.startswith("RATE:") and rates is None:
             found = [int(n) for n in re.findall(r"\d+", line)]
             rates = (min(found), max(found)) if found else None
+            listed = tuple(found) if found and "[" not in line and "(" not in line else None
     if not formats:
         # **A busy card answers nothing, and nothing is not an answer.**
         # Caching it turned a transient "the old renderer still has this
@@ -292,13 +303,35 @@ def needs_plug(card: str) -> bool | None:
     _needs_plug[card] = answer
     _formats[card] = frozenset(formats)
     _rates.pop(card, None)
+    _rate_list.pop(card, None)
     if rates is not None:
         _rates[card] = rates
+        if listed is not None:
+            _rate_list[card] = listed
     _asked_of[card] = _device(card)
     if answer:
         logger.info("outputs: %s takes only %s; it needs a conversion layer",
                     card, " ".join(sorted(formats)))
     return answer
+
+
+def takes_rate(card: str, rate: int) -> bool | None:
+    """**Whether the card plays this rate as it is** (ADR-0162, ADR-0155),
+    from what it said it takes; None when it has not been asked. A card
+    behind a conversion (HDMI) takes every rate."""
+    if _needs_plug.get(card):
+        return True
+    if card in _rate_list:
+        return rate in _rate_list[card]
+    if card in _rates:
+        low, high = _rates[card]
+        return low <= rate <= high
+    return None
+
+
+def top_rate(card: str) -> int | None:
+    """The highest rate the card said it takes, or None."""
+    return _rates[card][1] if card in _rates else None
 
 
 @dataclass(frozen=True)
@@ -379,13 +412,17 @@ def with_software_volume(output: Output) -> Output:
     return replace(output, control=SOFTVOL_CONTROL, scale=SOFTVOL_SCALE, software=True)
 
 
-def create_softvol_control(pcm: str = "output") -> bool:
+def create_softvol_control(pcm: str = "gexis_softvol") -> bool:
     """**Make the software stage's control exist without playing anything**
     (ADR-0124). ALSA creates a `softvol` control when its PCM is first
     opened, and creates it at 0 dB; the core sets the remembered level on it
     before any renderer opens the output. Open and close, non-blocking: a
     card someone is already playing to has the control already. True when
-    the open succeeded or the card was busy."""
+    the open succeeded or the card was busy.
+
+    **The stage itself is opened, not `output`** (ADR-0162): with the
+    equaliser on, `output` leads to the loopback and the software stage sits
+    after CamillaDSP; `gexis_softvol` is the stage in both chains."""
     import ctypes
     try:
         lib = ctypes.CDLL("libasound.so.2")
@@ -715,11 +752,16 @@ def in_force(stored: str | None, available: list[Output] | None = None) -> tuple
 
 
 def configured(path: Path = CONF_PATH) -> str | None:
-    """The card `output.conf` names right now, or None."""
+    """The card `output.conf` names right now, or None: `ctl.output`'s, which
+    every variant has (with the equaliser on, the first slave is the
+    loopback); the first slave's for a file written before that."""
     try:
-        match = re.search(r'(?:slave\.)?pcm\s+"hw:([^"]+)"', path.read_text())
+        text = path.read_text()
     except OSError:
         return None
+    match = re.search(r"ctl\.output\s*\{\s*type\s+hw\s+card\s+(\S+)", text)
+    if match is None:
+        match = re.search(r'(?:slave\.)?pcm\s+"hw:([^"]+)"', text)
     return match.group(1) if match else None
 
 
@@ -778,8 +820,54 @@ def _widened(card: str, wait: bool = False) -> str:
     return f"{{ type linear slave {{ pcm {hw} format S32_LE }} }}"
 
 
+def _equalised(output: Output, plug: bool) -> tuple[str, str]:
+    """**The chain with the equaliser in it** (ADR-0162 D1, D4, D8): the
+    meter first, as ever, over the loopback that CamillaDSP captures; then
+    CamillaDSP plays to `gexis_eq_out`, the rest of what the output's chain
+    would have been - the software stage last (D8), a conversion for HDMI.
+
+    The meter reads the music before the equaliser and its lowering, so the
+    visualiser shows it as it arrives (D4), on every output: the loopback
+    takes any format, so even HDMI, whose meter cannot sit over `plug`,
+    keeps its levels here. One substream: whoever opens it holds it, as with
+    a card, and `output_wait`'s open waits for it as for the card.
+
+    **`output` takes integer samples only** (George, 2026-10-26: no
+    visualiser with the equaliser on). The loopback takes float, and
+    go-librespot asks for it first; the meter's 16-bit view has no float
+    conversion, switches itself off, and the visualiser got nothing while
+    Spotify played. Through `copy` and `linear`, as the software stage's
+    chain does, float is refused and go-librespot plays S32_LE - what it
+    plays under software volume already. `output_wait` stays as it was:
+    Squeezelite, its only user, sends integers, and native DSD, which
+    `linear` would refuse."""
+    card = output.card
+    if output.software:
+        slave = f'{{ type plug slave.pcm "hw:{card}" }}' if plug else f'"hw:{card}"'
+        out = f'{_softvol("gexis_softvol", slave, card)}\npcm.{EQ_OUT} "gexis_softvol"'
+    elif plug:
+        out = f'pcm.{EQ_OUT} {{\n    type plug\n    slave.pcm "hw:{card}"\n}}'
+    else:
+        out = f"pcm.{EQ_OUT} {{\n    type hw\n    card {card}\n}}"
+    head = f'''pcm.output {{
+    type meter
+    slave.pcm {{ type copy slave.pcm {{ type linear slave {{ pcm "hw:{LOOPBACK},0,0" format S32_LE }} }} }}
+    scopes.0 peppyalsa
+}}
+
+# ADR-0162: the equaliser is on for this output. CamillaDSP captures the
+# loopback and plays the music, equalised, to this - the output's own chain.
+{out}'''
+    wait = f'''pcm.output_wait {{
+    type meter
+    slave.pcm {{ type hw card {LOOPBACK} device 0 subdevice 0 nonblock 0 }}
+    scopes.0 peppyalsa
+}}'''
+    return head, wait
+
+
 def render(output: Output, plug: bool, tuning: Tuning = Tuning(), widen: bool = False,
-           dsd: bool = False) -> str:
+           dsd: bool = False, eq: bool = False) -> str:
     """`output.conf`, with this output's card in the two places it goes.
 
     The rest is verbatim from what the image ships - the comment earns its
@@ -789,8 +877,13 @@ def render(output: Output, plug: bool, tuning: Tuning = Tuning(), widen: bool = 
     `plug` is passed in rather than asked for here, because asking means
     *opening the card*, and a caller that has not freed it first would get
     no answer and render something wrong. See `write`.
+
+    With `eq` the renderers play into the equaliser's loopback instead
+    (`_equalised`); off, the file is exactly what it was (ADR-0162 D5).
     """
-    if output.software:
+    if eq:
+        head, wait = _equalised(output, plug)
+    elif output.software:
         # **ADR-0124: the meter first, then the software stage** (Finding
         # 115), so the visualiser shows the music as it arrives, as with the
         # card's own control. One control for both PCMs: the level is the
@@ -886,8 +979,8 @@ def render(output: Output, plug: bool, tuning: Tuning = Tuning(), widen: bool = 
 # the slave lets the kernel hold the open until the renderer being released
 # lets go. Only squeezelite uses this name (ADR-0095 as amended - one waiter
 # cannot deadlock); `output` above is
-# unchanged for everything else, and must stay first - `configured()` reads the
-# card back from the first slave in this file.
+# unchanged for everything else. `configured()` reads the card back from
+# the ctl device below.
 {wait}
 
 # squeezelite's mixer resolution (-V <name>) goes through the ctl device
@@ -922,6 +1015,11 @@ pcm_scope_type.peppyalsa {{
 '''
 
 
+#: **Whether the equaliser is in the path for a card** (ADR-0162): set by the
+#: core from the equaliser's state, so every writer of this file agrees.
+eq_in_path: Callable[[str], bool] = lambda card: False
+
+
 def write(output: Output, path: Path = CONF_PATH, tuning: Tuning = Tuning(), fixed: bool = False) -> bool:
     """Put `output` in the config. True if the file changed.
 
@@ -944,7 +1042,8 @@ def write(output: Output, path: Path = CONF_PATH, tuning: Tuning = Tuning(), fix
     # ADR-0144: native DSD only with the volume Fixed - DSD cannot be
     # attenuated by the software stage, nor read by it - on a card taking it.
     dsd = fixed and not output.software and not plug and native_dsd(output.card) is not None
-    wanted = render(output, plug, tuning, widen=not plug and widens(output.card), dsd=dsd)
+    wanted = render(output, plug, tuning, widen=not plug and widens(output.card), dsd=dsd,
+                    eq=eq_in_path(output.card))
     # ADR-0143: Squeezelite's rates follow the card; restarted with the
     # renderers after this, as the config is. The device's own file only.
     if path == CONF_PATH:

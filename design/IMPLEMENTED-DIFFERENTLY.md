@@ -513,7 +513,7 @@ Lyrion's own menus (13f) - My Music, Favourites, the app categories and Apps -
 as one sideways row of 200 px cards (13f draws 219) with no scroll-snap. Off
 shows the waiting screen as Home while Lyrion still plays (ADR-0118; ADR-0149
 decision 14). Lyrion's menus are otherwise built as drawn; George's own look
-at them is still to come (Phase 29, `ph-lyrion-menus`).
+at them is still to come (Phase 30, `ph-lyrion-menus`).
 
 **[U] A tap on a row shows only the teal selection**, and a second tap puts
 its actions away again, so only Play plays; 13f and `Now Playing.dc.html` play
@@ -779,4 +779,86 @@ pictures (ADR-0161, ADR-0163).
   and Idle, each left out where the phone leaves it out - three to a row in
   the full form, wrapping in the compact one, where the D-pad's button can
   fall to a second row. A view that is up has the accent's outline.
+
+
+## The equaliser (Phase 20, 2026-10-26)
+
+Built from `source/20` (look 3a, Ridge; ADR-0162, its *Built* section for the
+decisions). Not yet seen by George on a device.
+
+- **[U]** The headroom figure is the core's, not the drawing's: the worse of
+  44.1 and 48 kHz, rounded strictly up to 0.5 dB, where `eq-data.js` allows
+  0.05 dB the other way - so the sample *Evening* reads 3 dB, not 2.5.
+- **[U]** The phone's curve spans its gradient over its own box (200 high),
+  so the step from coral to blue falls on 0 dB; the drawing spans it over
+  the panel's 240 and puts it below 0 dB.
+- **[U]** Edit in the quick change opens the editor as a screen of its own,
+  where it was opened; Back returns there. Settings → Audio opens the same
+  editor inside Settings.
+- **[U]** On the D-pad a band is an upright slider: Up and Down move it,
+  Left and Right go to its neighbours, and the ring goes round the knob.
+- **[S]** *Yours · 0 of 10* shows with nothing saved, so the list says where
+  a saved setting will go.
+- **[S]** A refused name (taken, too long) is said in the sheet, in amber,
+  under the field; the drawing has no such state.
+- **[U]** The headroom note says the volume gives the lowering back (George,
+  2026-10-26, ADR-0162 D3 as amended): *Lowered by 5 dB so the boost cannot
+  clip; the volume gives it back up to 65%* in the editor, where the drawing
+  ends at *clip*; in the quick change *As loud as Flat up to 65% of the
+  volume; above it, up to 5 dB quieter*, where the drawing had the editor's
+  line. The badge stays the lowering; Fixed keeps the drawing's words. The
+  wording is Claude's (C17), confirmed by George the same day.
+- **[U]** The volume drawer's on/off switch stands alone, without the box
+  the drawing puts round it, as the phone's EQ sheet (George, 2026-10-27);
+  the bar's tray and the editor keep the box, which holds *On* / *Off*.
+
+## The phone remote (Phase 21, 2026-10-27)
+
+Built from `source/21`'s second design, `Phone Remote v3` (ADR-0164, its
+decisions, all confirmed by George on 2026-10-27; ADR-0165 for mute with
+Fixed volume).
+
+- **[S]** Picking another player in the menu opens that player's own page
+  in the same tab (C1); the drawing switches in place.
+- **[S]** The seek bar seeks where the renderer can (Lyrion, Spotify; C2);
+  elsewhere it is the drawing's inert rule, with no knob, as Bluetooth's.
+- **[S]** With Fixed volume on an output with no volume control of its own,
+  the locked row has no mute: nothing can silence that output (ADR-0165,
+  C3).
+- **[S]** The cover is the panel's: the renderer's, else the one the library
+  enrichment found, else *artwork pending* - for any source, Bluetooth
+  included (C4).
+- **[U]** The EQ sheet's note is Phase 20's, with the volume giving the
+  lowering back (C6); Custom leads the chips, with its dot, while it is the
+  setting in use. The bar names *DSD* while DSD stands the equaliser aside.
+- **[S]** The idle screen, Room and Meters are offered only where the player
+  has them; Playing and Lyrics are dimmed with nothing playing (C7).
+- **[S]** A player stopped with a source reads *Idle*, the drawing's third
+  state.
+- **[U]** On a phone shorter than the drawing's 780 px the touch area gives
+  way first, to 312 px, and the cover without a screen to 140 px; only then
+  does the Remote page scroll (D10; C10).
+- **[U]** The scroll strips' 24 px steps scroll what is under the pointer by
+  those 24 px, the content following the finger (D3).
+- **[S]** A volume or mute that failed, and a character the player could not
+  type, are said in a short note over the page (C13); the drawing has none.
+- **[U]** The panel's fixed rows (the volume drawer, the bar's tray) have the
+  mute button, and the volume button shows the crossed speaker while muted
+  (ADR-0165 §4); `Now Playing.dc.html` is locked and does not draw them.
+- **[U]** The EQ sheet closes with a swipe down as well as a tap on its
+  handle or the scrim (George, 2026-10-27, after the preview).
+- **[U]** Settings, all of it - its pages, choosers and the equaliser
+  editor - is on the modals' solid grey (`--bg-panel`), and while it shows
+  the whole screen is, the top bar included; the drawing embeds the locked
+  Settings on its own ground (George, 2026-10-27, after the preview).
+- **[U]** The remote fills a phone up to 480 px wide, where the drawing's
+  column stops at 412 (C10 as amended, George, 2026-10-27: on a 427 px
+  phone the dimming left strips at the edges); wider screens keep it.
+- **[U]** The touch area's corner buttons and OK, the pad switch and the
+  Remote / Settings switch have the quick actions' ground and line
+  (`rgba(233,238,242,0.07)`, `0.1`), not the drawing's
+  `rgba(22,35,44,0.9)` (George, 2026-10-27).
+- **[U]** The EQ sheet's on/off switch stands alone, without the box the
+  drawing puts round it (`rgba(255,255,255,0.05)`, a `0.1` line); its touch
+  is still 48 px tall (George, 2026-10-27).
 

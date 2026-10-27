@@ -70,13 +70,13 @@ Two of the skins, on the 10.1" panel and on the 11.9" bar.
 
 ## On a phone
 
-Settings and the mini player, in the phone's browser. No app to install.
+A remote for the player, in the phone's browser. No app to install.
 
 <table>
 <tr>
+<td align="center" valign="top"><img src="manual/images/phone-remote.webp" alt="The remote" width="260"><br><sub>The remote</sub></td>
+<td align="center" valign="top"><img src="manual/images/phone-remote-noscreen.webp" alt="The remote for a player without a screen" width="260"><br><sub>Without a screen</sub></td>
 <td align="center" valign="top"><img src="manual/images/phone-settings.webp" alt="Settings" width="260"><br><sub>Settings</sub></td>
-<td align="center" valign="top"><img src="manual/images/phone-sheet-open.webp" alt="The touchpad and mini player" width="260"><br><sub>The touchpad and mini player</sub></td>
-<td align="center" valign="top"><img src="manual/images/phone-settings-display.webp" alt="Display settings" width="260"><br><sub>Display settings</sub></td>
 </tr>
 </table>
 

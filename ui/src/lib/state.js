@@ -96,6 +96,8 @@ export const volume = derived(playback, ($s) => $s?.volume ?? null);
 // its level yet looks exactly like fixed output from here, which is why
 // `!volume` was the wrong test and drew a disabled slider for both.
 export const fixedOutput = derived(playback, ($s) => $s?.fixed_output === true);
+//: ADR-0165: muted with Fixed volume - null where there is no such mute.
+export const fixedMute = derived(playback, ($s) => $s?.fixed_mute ?? null);
 // ADR-0055 §6: whether this output's chain can feed the visualiser at all.
 // Absent (an older core) means yes, which is what every output but HDMI is.
 export const meters = derived(playback, ($s) => $s?.meters !== false);
@@ -222,6 +224,9 @@ export const reportShown = (shown) => post('/panel/shown', shown);
 // ADR-0101 as amended 2026-10-05: 'home', 'now', 'lyrics', 'track' or
 // 'minimise'.
 export const goTo = (to) => post(`/panel/go/${to}`);
+//: ADR-0161: a D-pad key on the panel - the phone's remote (ADR-0164) sends
+//: them as Home Assistant's D-pad does.
+export const pressKey = (key) => post('/panel/key', { key });
 
 /** Accept or reject the open pairing request. A 409 means the window closed
  *  while the finger was moving - the answer did not land, and the frame has

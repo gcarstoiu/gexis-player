@@ -7747,3 +7747,157 @@ under 0.1.0 and serves `brand/icon.png` (local brand images since 2026.3).
 HACS's own list shows the placeholder: the public brands site has no gexis
 image. The branch and worktree
 stay until the phase closes.
+
+## 2026-10-25: 1.5.0 on Stable, the players, the Attached screen fix (moved from HANDOFF verbatim when 1.6.0 went to Stable)
+
+**Current release: 1.5.0, on Stable** (promoted 2026-10-25 at George's word:
+Stable serial 9, Testing serial 55 since 2026-10-24, both signatures good
+from the release key, read back with `gh release download channels`; the
+public `gexis-player.img.xz` passes its checksum and signature and
+decompresses to the checked image; r1.5.0 is GitHub's latest). Tag `v1.5.0` on the
+release-notes commit `bfb0f647`; `next` and `release-1.5.0` pushed there.
+Image `image/deploy/2026-10-24-gexis-player-v1.5.0.img` (`verify-image.sh`
+123/123, 978 skins clean); parts `ours-17e046a32cf3`, `skins-67e037cab00f`,
+`rpi-dea26bfd5ea8`, `debian-612079c6b5f1`; build output in
+`~/projects/gexis-release-out/r1.5.0`. gexis-core and gexis-player `1.5.0`,
+gexis-ui `1.4.0+git88.eaca532`, gexis-system `1.4.0+git29.d93d43f`.
+What it carries: Phase 17's DSI screens, Phase 19's player side (`id`,
+`screen`), the bar fixes (the tray's buttons on the first tap, settings
+sheets that fit, pictures tried again, the tray staying open), the Lyrion
+server and bar wallpaper fixes. **PR #82 was merged by George**
+(2026-10-25); `main` is merged into `docs` and `next`, `release-1.5.0` and its
+worktree are gone, and the routine clean-up ran. **PR #83** (README: 1.5.0
+is the current release) was merged by George the same day; `main` is merged
+into `docs` and `next`, and its branch and worktree are gone.
+
+**The players** (2026-10-25): ShelvesPi runs 1.5.0 (the four bar fixes
+checked there by George, all fine, 2026-10-25; no debug drop-in or DevTools
+port left), sofapi the
+Phase 19 preview (core and player `1.4.0+git49.c4af394`, ui
+`1.4.0+git24.e505054`), bedroompi `preview-1023` (core and player
+`1.4.0+git45.561e337`, ui `1.4.0+git36.b8793e5`, system
+`1.4.0+git29.d93d43f`); all of it is in 1.5.0, a newer version.
+
+- **Merged into `next` for the next release** (2026-10-25, `screen-name-tile`,
+  branch deleted): Settings' *Attached screen* tile showed the stored
+  `Maker/Model` and broke mid-word (a DSI panel read "Raspberry Pi/Touch
+  Display or compati / ble" on a phone, in 1.5.0); now maker and model,
+  wrapping between words. Checked with mocked data at the phone's, panel's
+  and bar's size; no preview on a player (George: text only, and no DSI
+  screen free).
+
+## 2026-10-25: 1.6.0 released, Phase 19 closed (moved from HANDOFF verbatim after George merged PR #84)
+
+**Current release: 1.6.0, on Stable** (2026-10-25: George asked for the
+merge, release and promotion together and approved the notes). Testing
+serial 56 and Stable serial 10, both signatures good from the release key,
+read back with `gh release download channels`; the public
+`gexis-player.img.xz`, downloaded through `releases/latest/download`, passes
+its checksum and signature and decompresses to the checked image; r1.6.0 is
+GitHub's latest. Tag `v1.6.0` on the release-notes commit `3f5e96d3`;
+`release-1.6.0` and `next` pushed at `3188394a` (the tag plus documents only:
+the README's current release and roadmap, Phases 23-26). Image
+`image/deploy/2026-10-25-gexis-player-v1.6.0.img` (`verify-image.sh`
+123/123 with `GEXIS_BUILD_CACHE` set - without it the plugin tarball is not
+found, its comparison is skipped and 122 pass; 978 skins clean); parts
+`ours-27290f57fb65`, `skins-67e037cab00f`, `rpi-0e5671e1892c`,
+`debian-2e90e264cb7d`; build output in `~/projects/gexis-release-out/r1.6.0`;
+release worktree `~/projects/gexis-player-r160`. gexis-core and gexis-player
+`1.6.0`, gexis-ui `1.5.0+git49.8e939ff` (the same build as sofapi's
+preview), gexis-system `1.4.0+git29.d93d43f`. What it carries: Phase 19's
+player side (the D-pad, `POST /panel/key`, `idle_screen` on
+`/player/status`) and the *Attached screen* name fix. **PR #84 waits for
+George's merge** (checks green); after it: `main` into `docs` and `next`,
+delete `release-1.6.0` on GitHub and locally, remove the release worktree,
+the routine clean-up. Pins behind their makers at release
+(`check-upstream.sh`): go-librespot 0.10.3 (0.10.5 out) and Beszel 0.21.0
+(0.21.1 out) - a preview first (ADR-0100).
+
+**Phase 19, the player in Home Assistant, closed 2026-10-25** (George,
+after checking the D-pad on sofapi and the card on his own Home Assistant;
+`docs/DEVELOPMENT.md`, ADR-0160, ADR-0161, ADR-0163). `ph-home-assistant` is
+merged into `next` for 1.6.0 (core suite 2664 passed, 48 skipped) and its
+branch and worktree are gone. The integration
+`gcarstoiu/gexis-player-homeassistant` is at 0.4.1 (README: the D-pad needs
+1.6.0; released after its checks passed, as HACS asks; local copy
+`~/projects/gexis-player-homeassistant`, tests on `~/projects/ha-venv`; a
+Home Assistant 2026.10.3 in Docker, `~/projects/scratch/ha-test`). **HACS's
+default list**: applied 2026-10-25 at George's word, hacs/default#12691
+(from his fork `gcarstoiu/default`); every automated check passed; it waits
+for HACS's maintainers - do not ask them for a review (their template).
+
+Branches (renamed 2026-10-18, George: Phase 13d was over and the names read
+as open phases): **`docs`** in the main checkout holds the documents and
+shared work (was `phase-13b`); **`next`** in `~/projects/gexis-player-next` is
+the release branch, what the next release is built from (was `phase-13d`),
+and `docs` is merged into it after each docs change. A phase's work has its
+own branch (`ph-first-use`) and is merged into `next` once George's tests
+pass. A release is built
+from a worktree made at its tag, then removed.
+
+**GitHub checks every push** (2026-10-18): `.github/workflows/tests.yml` runs
+*Core tests* (Python 3.13) and *UI build*; `main`'s ruleset requires both and
+a pull request; merged branches are deleted by GitHub; Dependabot alerts are
+on (security alerts only, no version-bump PRs). On GitHub the visualiser's
+tests run too (pygame's fonts work on 3.13): 2546 pass, against 2500 here.
+*Releases built on GitHub* is a Should on the Roadmap (signing stays local;
+a trial build first, for the disk).
+
+**The players** (2026-10-25; all four idle and clean at the clean-up): sofapi runs 1.6.0 (core and player installed
+over the Phase 19 preview at 21:54, dry run first, the core restarted after
+the install; its ui was already 1.6.0's build); ShelvesPi 1.5.0 (no debug
+drop-in or DevTools port left); bedroompi `preview-1023` as last recorded
+(core and player `1.4.0+git45.561e337`). All of it is older than 1.6.0.
+
+**Deferred until a bug report** (George, 2026-10-21; from 1.3.1): the HMTECH 10.1" came up at 800x480 on the first start
+after the boot that switched to it (Chromium stored 1004x580 in a 1024x600
+work area: not full-screen), then full-screen on two restarts in a row. A
+first start after a screen change may still miss full-screen. The 10.1" was
+checked by its EDID in the tests, not again on the device under the new
+standby.
+
+**Not an issue** (George, 2026-10-20): Squeezelite joining whichever Lyrion
+server answers first after a restart (Finding 130 point 6). GitHub reported
+6 Dependabot alerts on `main` (all `vite`, the UI's build tool, not on the
+player), raised 20-21 Oct.
+
+Then, in order (`docs/DEVELOPMENT.md`; refer
+to them by ID): **21** room correction for the bass
+(`ph-room-correction`), **22** room correction for the full range
+(`ph-room-correction-full`), **23** AirPlay 2 (`ph-airplay`), **24**
+multiroom for every source (`ph-multiroom`), **25** the plugin catalogue
+(`ph-plugin-catalogue`), **26** internet radio without Lyrion (`ph-radio`)
+- the four added 2026-10-25 from the ideas (George) - **27** themes
+(`ph-themes`), **28** the library answers for itself (`ph-library`), **29**
+Lyrion's own menus' look (`ph-lyrion-menus`); MPD is parked (`ph-mpd`, ADR-0151). Each ADR first. **Raspberry Pi Imager**
+(ADR-0159, a task, not a phase): the install guide is corrected; our own
+Imager list and Imager's settings not now; Imager's own list stays open, as
+it is, with no further changes for now (George, 2026-10-24).
+
+Closed: 0-19 (13 with letters a-f; Phase 15, the public API, on
+2026-10-19 with 1.2.0; Phase 16, optical, with 1.3.0; Phase 18, the Home
+Assistant dashboard, with 1.4.0; Phase 17, DSI screens, for 1.5.0; Phase 19,
+the player in Home Assistant, for 1.6.0). Phases are numbered consecutively without letters,
+each with a stable ID (George, 2026-10-13); the open ones are 20-29, with
+MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
+
+## 2026-10-26: Phase 20 in progress, before the build (moved from HANDOFF verbatim when it was built)
+
+**Phase 20, the equaliser, in progress** (started 2026-10-25 after the
+merge, George). Branch `ph-equaliser` in `~/projects/gexis-player-ph-equaliser`
+(from `next`), not pushed yet; on it so far: go-librespot 0.10.5 and Beszel
+0.21.1 (George: they go with this phase's preview; archives checked against
+upstream's checksums, `verify-image.sh`'s binary checksums raised). ADR-0162
+proposed; **the first measurement's silent part** done on sofapi the same
+night (Finding 138: ten Peaking filters, 2-5 % of a core, no click when
+dragged - CamillaDSP's GraphicEqualizer clicks; a rate change by letting the
+loopback go and starting CamillaDSP at each stream's rate, 12-24 ms off a
+stream's start). The kit is in `~/projects/scratch/eq-m1` (CamillaDSP 4.1.3,
+`gen.py`, `pv/run.py`, `an2.py`, `an3.py`); sofapi was left as it was (kit
+removed, `snd-aloop` unloaded). **Owed by George:** ADR-0162's three [N]
+settings, and the brief `design/briefs/20-equaliser.md` handed to Claude
+Design (nothing of the screens is built before he has seen the design).
+**Next for Claude:** the measurement through the real card (the delay, the
+DAC's clock, players in sync, the visualiser beside it, a DSD file through
+Squeezelite) - it plays through the amplifier, so at a time George picks;
+then the filter stage in the core (D1-D9).

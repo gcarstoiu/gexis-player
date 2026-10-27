@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:'Nunito Sans';src:url('../../fonts/NunitoSans-Variable.woff2') format('woff2-variations'),url('../../fonts/NunitoSans-Variable.woff2') format('woff2');font-weight:300 800;font-display:block;}
+@font-face{font-family:'IBM Plex Mono';src:url('../../fonts/IBMPlexMono-Regular.woff2') format('woff2');font-weight:400;font-display:block;}
+@font-face{font-family:'IBM Plex Mono';src:url('../../fonts/IBMPlexMono-SemiBold.woff2') format('woff2');font-weight:500 600;font-display:block;}
+@font-face{font-family:'IBM Plex Mono';src:url('../../fonts/IBMPlexMono-Bold.woff2') format('woff2');font-weight:700;font-display:block;}
+html,body{margin:0;padding:0;background:#0c1014;}a{color:#7ed6bc;}a:hover{color:#a8e5d3;}[data-noscrollbar]::-webkit-scrollbar{display:none;}
+</style>
+<script src="./eq-data.js"></script>
+</helmet>
+<div data-eq="root" style="position:relative;width:100%;height:100%;overflow:hidden;font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif;color:#e9eef2;background:#101a21;-webkit-tap-highlight-color:transparent;user-select:none;">
+
+  <sc-if value="{{ isPanel }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute;inset:-90px;background:repeating-linear-gradient(38deg,#3f5a6d 0 48px,#2e4453 48px 96px);filter:blur(70px);transform:scale(1.14);"></div>
+    <div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,rgba(20,33,42,0.72),rgba(13,21,28,0.96));"></div>
+    <div style="position:relative;height:100%;display:flex;flex-direction:column;">
+      <div data-eq="header" style="flex-shrink:0;display:flex;align-items:center;gap:18px;padding:0 36px;min-height:92px;border-bottom:1px solid rgba(233,238,242,0.09);">
+        <div style="width:56px;height:56px;border-radius:50%;background:rgba(233,238,242,0.07);display:flex;align-items:center;justify-content:center;flex-shrink:0;" style-active="transform:scale(0.95)">
+          <div style="width:13px;height:13px;border-left:3px solid #e9eef2;border-bottom:3px solid #e9eef2;transform:rotate(45deg);margin-left:10px;"></div>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:25px;font-weight:700;letter-spacing:-0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Equaliser</div>
+          <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;color:rgba(233,238,242,0.6);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ panelCrumb }}</div>
+        </div>
+        <div data-eq="power" onClick="{{ toggleOn }}" style="display:flex;align-items:center;gap:16px;height:58px;padding:0 14px 0 20px;border-radius:15px;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);box-sizing:border-box;cursor:pointer;flex-shrink:0;" style-active="transform:scale(0.95)">
+          <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.14em;text-transform:uppercase;white-space:nowrap;color:{{ powerInk }};">{{ powerText }}</span>
+          <span style="width:60px;height:34px;border-radius:17px;flex-shrink:0;position:relative;box-sizing:border-box;transition:background 140ms ease;display:block;background:{{ togBg }};border:1px solid {{ togBorder }};"><span style="position:absolute;top:3px;width:26px;height:26px;border-radius:50%;transition:left 140ms ease;display:block;left:{{ knobLeft }};background:{{ knobBg }};"></span></span>
+        </div>
+      </div>
+
+      <div style="flex:1;min-height:0;display:flex;gap:24px;padding:22px 36px 26px;box-sizing:border-box;">
+        <div data-eq="list" data-noscrollbar style="width:300px;flex-shrink:0;overflow-y:auto;scrollbar-width:none;display:flex;flex-direction:column;gap:6px;transition:opacity 160ms ease;opacity:{{ listOpacity }};pointer-events:{{ offPointer }};">
+          <sc-for list="{{ listItems }}" as="it" hint-placeholder-count="12">
+            <div style="flex-shrink:0;">
+              <div style="align-items:center;gap:12px;padding:14px 2px 6px;display:{{ it.headDisplay }};">
+                <span style="width:9px;height:9px;border-radius:50%;flex-shrink:0;display:block;background:#7ed6bc;"></span>
+                <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#7ed6bc;flex-shrink:0;white-space:nowrap;">{{ it.head }}</span>
+                <span style="flex:1;height:1px;background:rgba(233,238,242,0.1);display:block;"></span>
+              </div>
+              <div onClick="{{ it.onTap }}" style="align-items:center;gap:14px;min-height:56px;padding:0 16px;border-radius:14px;box-sizing:border-box;cursor:pointer;display:{{ it.rowDisplay }};background:{{ it.bg }};border:1px solid {{ it.border }};">
+                <span style="width:22px;height:22px;border-radius:50%;flex-shrink:0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border:2px solid {{ it.ringInk }};"><span style="width:11px;height:11px;border-radius:50%;background:#7ed6bc;display:{{ it.dotDisplay }};"></span></span>
+                <span style="flex:1;min-width:0;font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{ it.ink }};">{{ it.name }}</span>
+                <span style="flex-shrink:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;white-space:nowrap;color:#e0a758;display:{{ it.metaDisplay }};">{{ it.meta }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:16px;">
+          <div data-eq="bands" style="flex:1;min-height:0;display:flex;flex-direction:column;border-radius:22px;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);padding:20px 24px 14px;box-sizing:border-box;transition:opacity 160ms ease;opacity:{{ cardOpacity }};pointer-events:{{ offPointer }};">
+            <div style="display:flex;align-items:baseline;gap:14px;flex-shrink:0;min-width:0;">
+              <span style="font-size:26px;font-weight:700;letter-spacing:-0.01em;white-space:nowrap;">{{ selName }}</span>
+              <span style="flex:1 1 auto;min-width:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{ metaInk }};">{{ selMeta }}</span>
+            </div>
+            <sc-if value="{{ lookOld }}" hint-placeholder-val="{{ true }}">
+            <div data-eq="graph" style="flex:1;min-height:0;display:flex;flex-direction:column;margin-top:8px;">
+              <div style="display:flex;align-items:flex-end;height:36px;flex-shrink:0;">
+                <span style="width:44px;flex-shrink:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;color:rgba(233,238,242,0.6);padding-bottom:6px;">dB</span>
+                <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                  <div style="flex:1;min-width:0;display:flex;justify-content:center;"><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:17px;font-weight:600;line-height:1;padding:6px 9px;border-radius:9px;background:{{ b.valBg }};color:{{ b.valInk }};">{{ b.val }}</span></div>
+                </sc-for>
+              </div>
+              <div style="flex:1;min-height:0;display:flex;margin:26px 0;">
+                <div style="width:44px;flex-shrink:0;position:relative;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;color:rgba(233,238,242,0.6);">
+                  <span style="position:absolute;left:0;top:0;transform:translateY(-50%);">+12</span>
+                  <span style="position:absolute;left:0;top:25%;transform:translateY(-50%);">+6</span>
+                  <span style="position:absolute;left:0;top:50%;transform:translateY(-50%);color:rgba(233,238,242,0.82);">0</span>
+                  <span style="position:absolute;left:0;top:75%;transform:translateY(-50%);">−6</span>
+                  <span style="position:absolute;left:0;top:100%;transform:translateY(-50%);">−12</span>
+                </div>
+                <div style="flex:1;min-width:0;position:relative;">
+                  <div style="position:absolute;left:0;right:0;top:0;height:1px;background:rgba(233,238,242,0.06);"></div>
+                  <div style="position:absolute;left:0;right:0;top:25%;height:1px;background:rgba(233,238,242,0.06);"></div>
+                  <div style="position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(233,238,242,0.24);"></div>
+                  <div style="position:absolute;left:0;right:0;top:75%;height:1px;background:rgba(233,238,242,0.06);"></div>
+                  <div style="position:absolute;left:0;right:0;top:100%;height:1px;background:rgba(233,238,242,0.06);"></div>
+                  <svg data-eq="curve" viewBox="0 0 1000 240" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;overflow:hidden;pointer-events:none;opacity:{{ curveOpacity }};"><path d="{{ curveArea }}" fill="rgba(126,214,188,0.1)"></path><path d="{{ curveLine }}" fill="none" stroke="rgba(126,214,188,0.85)" stroke-width="3" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path></svg>
+                  <div style="position:absolute;left:0;right:0;top:-26px;bottom:-26px;display:flex;">
+                    <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                      <div data-eq="band" onPointerDown="{{ b.onDown }}" onPointerMove="{{ b.onMove }}" onPointerUp="{{ b.onUp }}" onPointerCancel="{{ b.onUp }}" style="flex:1;min-width:0;position:relative;touch-action:none;cursor:ns-resize;">
+                        <div style="position:absolute;left:8px;right:8px;top:0;bottom:0;border-radius:16px;background:{{ b.colBg }};"></div>
+                        <div style="position:absolute;left:50%;top:26px;bottom:26px;width:8px;margin-left:-4px;border-radius:999px;background:rgba(233,238,242,0.13);">
+                          <div style="position:absolute;left:0;right:0;border-radius:999px;background:#7ed6bc;top:{{ b.fillTop }};height:{{ b.fillH }};"></div>
+                        </div>
+                        <div style="position:absolute;left:50%;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;background:#e9eef2;box-shadow:0 4px 14px rgba(0,0,0,0.45);box-sizing:border-box;top:{{ b.knobTop }};border:{{ b.knobRing }};"></div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;height:24px;flex-shrink:0;">
+                <span style="width:44px;flex-shrink:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;color:rgba(233,238,242,0.6);">Hz</span>
+                <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                  <div style="flex:1;min-width:0;text-align:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;color:rgba(233,238,242,0.72);">{{ b.label }}</div>
+                </sc-for>
+              </div>
+            </div>
+            </sc-if>
+
+            <sc-if value="{{ lookA }}" hint-placeholder-val="{{ false }}">
+            <div data-eq="graph" style="flex:1;min-height:0;display:flex;flex-direction:column;margin-top:8px;">
+              <div style="display:flex;align-items:flex-end;height:36px;flex-shrink:0;">
+                <span style="width:44px;flex-shrink:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;color:rgba(233,238,242,0.6);padding-bottom:6px;">dB</span>
+                <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                  <div style="flex:1;min-width:0;display:flex;justify-content:center;"><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:17px;font-weight:600;line-height:1;padding:6px 9px;border-radius:9px;background:{{ b.valBg }};color:{{ b.valInk }};">{{ b.val }}</span></div>
+                </sc-for>
+              </div>
+              <div style="flex:1;min-height:0;display:flex;margin:26px 0;">
+                <div style="width:44px;flex-shrink:0;position:relative;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;color:rgba(233,238,242,0.6);">
+                  <span style="position:absolute;left:0;top:0;transform:translateY(-50%);">+12</span>
+                  <span style="position:absolute;left:0;top:25%;transform:translateY(-50%);">+6</span>
+                  <span style="position:absolute;left:0;top:50%;transform:translateY(-50%);color:rgba(233,238,242,0.82);">0</span>
+                  <span style="position:absolute;left:0;top:75%;transform:translateY(-50%);">−6</span>
+                  <span style="position:absolute;left:0;top:100%;transform:translateY(-50%);">−12</span>
+                </div>
+                <div style="flex:1;min-width:0;position:relative;">
+                  <div style="position:absolute;left:0;right:0;top:0;height:1px;background:rgba(233,238,242,0.06);"></div>
+                  <div style="position:absolute;left:0;right:0;top:25%;height:1px;background:rgba(233,238,242,0.06);"></div>
+                  <div style="position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(233,238,242,0.24);"></div>
+                  <div style="position:absolute;left:0;right:0;top:75%;height:1px;background:rgba(233,238,242,0.06);"></div>
+                  <div style="position:absolute;left:0;right:0;top:100%;height:1px;background:rgba(233,238,242,0.06);"></div>
+                  <svg data-eq="curve" viewBox="0 0 1000 240" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;">
+                    <defs>
+                      <linearGradient id="{{ gA }}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="240"><stop offset="0" stop-color="#7ed6bc" stop-opacity="0.36"></stop><stop offset="0.5" stop-color="#7ed6bc" stop-opacity="0.02"></stop><stop offset="0.5" stop-color="#7fb0dc" stop-opacity="0.02"></stop><stop offset="1" stop-color="#7fb0dc" stop-opacity="0.32"></stop></linearGradient>
+                      <linearGradient id="{{ gAl }}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="240"><stop offset="0.45" stop-color="#7ed6bc"></stop><stop offset="0.5" stop-color="#cfe3ea"></stop><stop offset="0.55" stop-color="#7fb0dc"></stop></linearGradient>
+                    </defs>
+                    <path d="{{ smoothArea }}" fill="url(#{{ gA }})"></path>
+                    <path d="{{ smoothLine }}" fill="none" stroke="url(#{{ gAl }})" stroke-opacity="0.2" stroke-width="12" stroke-linecap="round" vector-effect="non-scaling-stroke"></path>
+                    <path d="{{ smoothLine }}" fill="none" stroke="url(#{{ gAl }})" stroke-width="3.5" stroke-linecap="round" vector-effect="non-scaling-stroke"></path>
+                  </svg>
+                  <div style="position:absolute;left:0;right:0;top:-26px;bottom:-26px;display:flex;">
+                    <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                      <div data-eq="band" onPointerDown="{{ b.onDown }}" onPointerMove="{{ b.onMove }}" onPointerUp="{{ b.onUp }}" onPointerCancel="{{ b.onUp }}" style="flex:1;min-width:0;position:relative;touch-action:none;cursor:ns-resize;">
+                        <div style="position:absolute;left:8px;right:8px;top:0;bottom:0;border-radius:16px;background:{{ b.aColBg }};"></div>
+                        <div style="position:absolute;left:50%;top:26px;bottom:26px;width:2px;margin-left:-1px;background:rgba(233,238,242,0.08);"></div>
+                        <div style="position:absolute;left:50%;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;background:#e9eef2;display:flex;align-items:center;justify-content:center;top:{{ b.knobTop }};box-shadow:{{ b.aKnobShadow }};"><span style="width:14px;height:14px;border-radius:50%;display:block;background:{{ b.signInk }};"></span></div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;height:24px;flex-shrink:0;">
+                <span style="width:44px;flex-shrink:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;color:rgba(233,238,242,0.6);">Hz</span>
+                <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                  <div style="flex:1;min-width:0;text-align:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;color:rgba(233,238,242,0.72);">{{ b.label }}</div>
+                </sc-for>
+              </div>
+            </div>
+            </sc-if>
+
+            <sc-if value="{{ lookB }}" hint-placeholder-val="{{ false }}">
+            <div data-eq="graph" style="flex:1;min-height:0;display:flex;flex-direction:column;margin-top:8px;">
+              <div style="display:flex;align-items:flex-end;height:36px;flex-shrink:0;">
+                <span style="width:44px;flex-shrink:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;color:rgba(233,238,242,0.6);padding-bottom:6px;">dB</span>
+                <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                  <div style="flex:1;min-width:0;display:flex;justify-content:center;"><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:17px;font-weight:600;line-height:1;padding:6px 9px;border-radius:9px;background:{{ b.valBg }};color:{{ b.bValInk }};">{{ b.val }}</span></div>
+                </sc-for>
+              </div>
+              <div style="flex:1;min-height:0;display:flex;margin:26px 0;">
+                <div style="width:44px;flex-shrink:0;position:relative;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;color:rgba(233,238,242,0.6);">
+                  <span style="position:absolute;left:0;top:0;transform:translateY(-50%);">+12</span>
+                  <span style="position:absolute;left:0;top:25%;transform:translateY(-50%);">+6</span>
+                  <span style="position:absolute;left:0;top:50%;transform:translateY(-50%);color:rgba(233,238,242,0.82);">0</span>
+                  <span style="position:absolute;left:0;top:75%;transform:translateY(-50%);">−6</span>
+                  <span style="position:absolute;left:0;top:100%;transform:translateY(-50%);">−12</span>
+                </div>
+                <div style="flex:1;min-width:0;position:relative;">
+                  <div style="position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(233,238,242,0.24);"></div>
+                  <svg data-eq="curve" viewBox="0 0 1000 240" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;"><path d="{{ smoothLine }}" fill="none" stroke="rgba(233,238,242,0.5)" stroke-width="2" stroke-linecap="round" vector-effect="non-scaling-stroke"></path></svg>
+                  <div style="position:absolute;left:0;right:0;top:-26px;bottom:-26px;display:flex;">
+                    <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                      <div data-eq="band" onPointerDown="{{ b.onDown }}" onPointerMove="{{ b.onMove }}" onPointerUp="{{ b.onUp }}" onPointerCancel="{{ b.onUp }}" style="flex:1;min-width:0;position:relative;touch-action:none;cursor:ns-resize;">
+                        <div style="position:absolute;left:8px;right:8px;top:0;bottom:0;border-radius:16px;background:{{ b.colBg }};"></div>
+                        <div style="position:absolute;left:50%;top:26px;bottom:26px;width:40px;margin-left:-20px;display:flex;flex-direction:column;gap:3px;">
+                          <sc-for list="{{ b.segs }}" as="sg" hint-placeholder-count="24">
+                            <span style="flex:1;min-height:0;border-radius:2px;display:block;background:{{ sg.bg }};"></span>
+                          </sc-for>
+                        </div>
+                        <div style="position:absolute;left:50%;width:60px;height:26px;margin:-13px 0 0 -30px;border-radius:7px;box-shadow:0 4px 12px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;top:{{ b.knobTop }};background:{{ b.capBg }};"><span style="width:30px;height:2px;border-radius:1px;background:rgba(13,21,28,0.55);display:block;"></span></div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;height:24px;flex-shrink:0;">
+                <span style="width:44px;flex-shrink:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;color:rgba(233,238,242,0.6);">Hz</span>
+                <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                  <div style="flex:1;min-width:0;text-align:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;color:rgba(233,238,242,0.72);">{{ b.label }}</div>
+                </sc-for>
+              </div>
+            </div>
+            </sc-if>
+
+            <sc-if value="{{ lookC }}" hint-placeholder-val="{{ false }}">
+            <div data-eq="graph" style="flex:1;min-height:0;display:flex;flex-direction:column;margin-top:8px;">
+              <div style="display:flex;align-items:flex-end;height:36px;flex-shrink:0;">
+                <span style="width:44px;flex-shrink:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;color:rgba(233,238,242,0.6);padding-bottom:6px;">dB</span>
+                <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                  <div style="flex:1;min-width:0;display:flex;justify-content:center;"><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:17px;font-weight:600;line-height:1;padding:6px 9px;border-radius:9px;background:{{ b.cValBg }};color:{{ b.cValInk }};">{{ b.val }}</span></div>
+                </sc-for>
+              </div>
+              <div style="flex:1;min-height:0;display:flex;margin:26px 0;">
+                <div style="width:44px;flex-shrink:0;position:relative;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;color:rgba(233,238,242,0.6);">
+                  <span style="position:absolute;left:0;top:0;transform:translateY(-50%);">+12</span>
+                  <span style="position:absolute;left:0;top:25%;transform:translateY(-50%);">+6</span>
+                  <span style="position:absolute;left:0;top:50%;transform:translateY(-50%);color:rgba(233,238,242,0.82);">0</span>
+                  <span style="position:absolute;left:0;top:75%;transform:translateY(-50%);">−6</span>
+                  <span style="position:absolute;left:0;top:100%;transform:translateY(-50%);">−12</span>
+                </div>
+                <div style="flex:1;min-width:0;position:relative;">
+                  <div style="position:absolute;left:0;right:0;top:0;height:1px;background:rgba(233,238,242,0.06);"></div>
+                  <div style="position:absolute;left:0;right:0;top:25%;height:1px;background:rgba(233,238,242,0.06);"></div>
+                  <div style="position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(233,238,242,0.24);"></div>
+                  <div style="position:absolute;left:0;right:0;top:75%;height:1px;background:rgba(233,238,242,0.06);"></div>
+                  <div style="position:absolute;left:0;right:0;top:100%;height:1px;background:rgba(233,238,242,0.06);"></div>
+                  <svg data-eq="curve" viewBox="0 0 1000 240" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;">
+                    <defs>
+                      <linearGradient id="{{ gC }}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1000" y2="0"><stop offset="0" stop-color="rgb(239,155,134)"></stop><stop offset="0.45" stop-color="rgb(126,214,188)"></stop><stop offset="0.75" stop-color="rgb(128,180,232)"></stop><stop offset="1" stop-color="rgb(180,158,240)"></stop></linearGradient>
+                    </defs>
+                    <path d="{{ smoothArea }}" fill="url(#{{ gC }})" fill-opacity="0.14"></path>
+                    <path d="{{ smoothLine }}" fill="none" stroke="url(#{{ gC }})" stroke-opacity="0.22" stroke-width="12" stroke-linecap="round" vector-effect="non-scaling-stroke"></path>
+                    <path d="{{ smoothLine }}" fill="none" stroke="url(#{{ gC }})" stroke-width="4" stroke-linecap="round" vector-effect="non-scaling-stroke"></path>
+                  </svg>
+                  <div style="position:absolute;left:0;right:0;top:-26px;bottom:-26px;display:flex;">
+                    <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                      <div data-eq="band" onPointerDown="{{ b.onDown }}" onPointerMove="{{ b.onMove }}" onPointerUp="{{ b.onUp }}" onPointerCancel="{{ b.onUp }}" style="flex:1;min-width:0;position:relative;touch-action:none;cursor:ns-resize;">
+                        <div style="position:absolute;left:8px;right:8px;top:0;bottom:0;border-radius:16px;background:{{ b.cColBg }};"></div>
+                        <div style="position:absolute;left:50%;top:26px;bottom:26px;width:12px;margin-left:-6px;">
+                          <div style="position:absolute;left:0;right:0;border-radius:999px;top:{{ b.fillTop }};height:{{ b.fillH }};background:{{ b.cStem }};"></div>
+                        </div>
+                        <div style="position:absolute;left:50%;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;top:{{ b.knobTop }};background:{{ b.cInk }};box-shadow:{{ b.cKnobShadow }};"></div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;height:24px;flex-shrink:0;">
+                <span style="width:44px;flex-shrink:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;color:rgba(233,238,242,0.6);">Hz</span>
+                <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                  <div style="flex:1;min-width:0;text-align:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;color:rgba(233,238,242,0.72);">{{ b.label }}</div>
+                </sc-for>
+              </div>
+            </div>
+            </sc-if>
+            <sc-if value="{{ lookD }}" hint-placeholder-val="{{ false }}">
+            <div data-eq="graph" style="flex:1;min-height:0;display:flex;flex-direction:column;margin-top:8px;">
+              <div style="display:flex;align-items:flex-end;height:36px;flex-shrink:0;">
+                <span style="width:44px;flex-shrink:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;color:rgba(233,238,242,0.6);padding-bottom:6px;">dB</span>
+                <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                  <div style="flex:1;min-width:0;display:flex;justify-content:center;"><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:17px;font-weight:600;line-height:1;padding:6px 9px;border-radius:9px;background:{{ b.dChipBg }};color:{{ b.dChipInk }};">{{ b.val }}</span></div>
+                </sc-for>
+              </div>
+              <div style="flex:1;min-height:0;display:flex;margin:26px 0;">
+                <div style="width:44px;flex-shrink:0;position:relative;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;color:rgba(233,238,242,0.6);">
+                  <span style="position:absolute;left:0;top:0;transform:translateY(-50%);">+12</span><span style="position:absolute;left:0;top:25%;transform:translateY(-50%);">+6</span><span style="position:absolute;left:0;top:50%;transform:translateY(-50%);color:rgba(233,238,242,0.82);">0</span><span style="position:absolute;left:0;top:75%;transform:translateY(-50%);">−6</span><span style="position:absolute;left:0;top:100%;transform:translateY(-50%);">−12</span>
+                </div>
+                <div style="flex:1;min-width:0;position:relative;">
+                  <div style="position:absolute;left:0;right:0;top:0;height:1px;background:rgba(233,238,242,0.05);"></div><div style="position:absolute;left:0;right:0;top:100%;height:1px;background:rgba(233,238,242,0.05);"></div><svg data-eq="curve" viewBox="0 0 1000 240" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;opacity:{{ curveOpacity }};"><defs><linearGradient id="{{ gD }}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="240"><stop offset="0" stop-color="#f2b35e" stop-opacity="0.95"></stop><stop offset="0.3" stop-color="#ef8f7a" stop-opacity="0.75"></stop><stop offset="0.5" stop-color="#ef8f7a" stop-opacity="0.26"></stop><stop offset="0.5" stop-color="#7fb0dc" stop-opacity="0.26"></stop><stop offset="0.7" stop-color="#7f9fe6" stop-opacity="0.75"></stop><stop offset="1" stop-color="#a48ce8" stop-opacity="0.95"></stop></linearGradient></defs><path d="{{ smoothArea }}" fill="url(#{{ gD }})"></path><path d="{{ smoothLine }}" fill="none" stroke="#f4f1ea" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path></svg><div style="position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(233,238,242,0.3);"></div>
+                  <div style="position:absolute;left:0;right:0;top:-26px;bottom:-26px;display:flex;">
+                    <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                      <div data-eq="band" onPointerDown="{{ b.onDown }}" onPointerMove="{{ b.onMove }}" onPointerUp="{{ b.onUp }}" onPointerCancel="{{ b.onUp }}" style="flex:1;min-width:0;position:relative;touch-action:none;cursor:ns-resize;">
+                        <div style="position:absolute;left:8px;right:8px;top:0;bottom:0;border-radius:16px;background:{{ b.dColBg }};"></div><div style="position:absolute;left:50%;top:26px;bottom:26px;width:0;border-left:1px dashed rgba(233,238,242,0.1);"></div><div style="position:absolute;left:50%;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;box-sizing:border-box;border:4px solid #f4f1ea;top:{{ b.knobTop }};background:{{ b.dKnobBg }};box-shadow:{{ b.dKnobShadow }};"></div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;height:24px;flex-shrink:0;">
+                <span style="width:44px;flex-shrink:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;color:rgba(233,238,242,0.6);">Hz</span>
+                <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                  <div style="flex:1;min-width:0;text-align:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;color:rgba(233,238,242,0.72);">{{ b.label }}</div>
+                </sc-for>
+              </div>
+            </div>
+            </sc-if>
+            <sc-if value="{{ lookE }}" hint-placeholder-val="{{ false }}">
+            <div data-eq="graph" style="flex:1;min-height:0;display:flex;flex-direction:column;margin-top:8px;">
+              <div style="display:flex;align-items:flex-end;height:36px;flex-shrink:0;">
+                <span style="width:44px;flex-shrink:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;color:rgba(233,238,242,0.6);padding-bottom:6px;">dB</span>
+                <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                  <div style="flex:1;min-width:0;display:flex;justify-content:center;"><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:17px;font-weight:600;line-height:1;padding:6px 9px;border-radius:9px;background:{{ b.eChipBg }};color:{{ b.eChipInk }};">{{ b.val }}</span></div>
+                </sc-for>
+              </div>
+              <div style="flex:1;min-height:0;display:flex;margin:26px 0;">
+                <div style="width:44px;flex-shrink:0;position:relative;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;color:rgba(233,238,242,0.6);">
+                  <span style="position:absolute;left:0;top:0;transform:translateY(-50%);">+12</span><span style="position:absolute;left:0;top:25%;transform:translateY(-50%);">+6</span><span style="position:absolute;left:0;top:50%;transform:translateY(-50%);color:rgba(233,238,242,0.82);">0</span><span style="position:absolute;left:0;top:75%;transform:translateY(-50%);">−6</span><span style="position:absolute;left:0;top:100%;transform:translateY(-50%);">−12</span>
+                </div>
+                <div style="flex:1;min-width:0;position:relative;">
+                  <div style="position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(233,238,242,0.18);"></div><svg data-eq="curve" viewBox="0 0 1000 240" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;"><path d="{{ smoothLine }}" fill="none" stroke="rgba(233,238,242,0.22)" stroke-width="2" vector-effect="non-scaling-stroke"></path></svg>
+                  <div style="position:absolute;left:0;right:0;top:-26px;bottom:-26px;display:flex;">
+                    <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                      <div data-eq="band" onPointerDown="{{ b.onDown }}" onPointerMove="{{ b.onMove }}" onPointerUp="{{ b.onUp }}" onPointerCancel="{{ b.onUp }}" style="flex:1;min-width:0;position:relative;touch-action:none;cursor:ns-resize;">
+                        <div style="position:absolute;left:8px;right:8px;top:0;bottom:0;border-radius:16px;background:{{ b.eColBg }};"></div><div style="position:absolute;left:0;right:0;top:26px;bottom:26px;"><div style="position:absolute;left:50%;border-radius:999px;width:{{ b.eW }};margin-left:{{ b.eMl }};top:{{ b.eTop }};height:{{ b.eH }};background:{{ b.eFill }};box-shadow:{{ b.eShadow }};"></div><div style="position:absolute;left:50%;width:24px;height:4px;margin:-2px 0 0 -12px;border-radius:2px;top:{{ b.eGripTop }};background:{{ b.eGrip }};"></div></div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;height:24px;flex-shrink:0;">
+                <span style="width:44px;flex-shrink:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;color:rgba(233,238,242,0.6);">Hz</span>
+                <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                  <div style="flex:1;min-width:0;text-align:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;color:rgba(233,238,242,0.72);">{{ b.label }}</div>
+                </sc-for>
+              </div>
+            </div>
+            </sc-if>
+            <sc-if value="{{ lookF }}" hint-placeholder-val="{{ false }}">
+            <div data-eq="graph" style="flex:1;min-height:0;display:flex;flex-direction:column;margin-top:8px;">
+              <div style="display:flex;align-items:flex-end;height:36px;flex-shrink:0;">
+                <span style="width:44px;flex-shrink:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;color:rgba(233,238,242,0.6);padding-bottom:6px;">dB</span>
+                <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                  <div style="flex:1;min-width:0;display:flex;justify-content:center;"><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:17px;font-weight:600;line-height:1;padding:6px 9px;border-radius:9px;background:{{ b.fChipBg }};color:{{ b.fChipInk }};">{{ b.val }}</span></div>
+                </sc-for>
+              </div>
+              <div style="flex:1;min-height:0;display:flex;margin:26px 0;">
+                <div style="width:44px;flex-shrink:0;position:relative;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;color:rgba(233,238,242,0.6);">
+                  <span style="position:absolute;left:0;top:0;transform:translateY(-50%);">+12</span><span style="position:absolute;left:0;top:25%;transform:translateY(-50%);">+6</span><span style="position:absolute;left:0;top:50%;transform:translateY(-50%);color:rgba(233,238,242,0.82);">0</span><span style="position:absolute;left:0;top:75%;transform:translateY(-50%);">−6</span><span style="position:absolute;left:0;top:100%;transform:translateY(-50%);">−12</span>
+                </div>
+                <div style="flex:1;min-width:0;position:relative;">
+                  <div style="position:absolute;inset:0;background-image:radial-gradient(circle at center, rgba(233,238,242,0.08) 0 3.5px, transparent 4px);background-size:calc(100% / 60) calc(100% / 24);"></div><sc-for list="{{ ledCols }}" as="c" hint-placeholder-count="60"><div style="position:absolute;width:1.6667%;mask-image:radial-gradient(circle at center, #000 0 3.5px, transparent 4px);background-repeat:no-repeat;left:{{ c.left }};top:{{ c.top }};height:{{ c.h }};background-image:{{ c.bg }};background-size:{{ c.bgSize }};background-position:{{ c.pos }};mask-size:{{ c.mSize }};mask-position:{{ c.pos }};"></div></sc-for><div style="position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(233,238,242,0.2);"></div>
+                  <div style="position:absolute;left:0;right:0;top:-26px;bottom:-26px;display:flex;">
+                    <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                      <div data-eq="band" onPointerDown="{{ b.onDown }}" onPointerMove="{{ b.onMove }}" onPointerUp="{{ b.onUp }}" onPointerCancel="{{ b.onUp }}" style="flex:1;min-width:0;position:relative;touch-action:none;cursor:ns-resize;">
+                        <div style="position:absolute;left:8px;right:8px;top:0;bottom:0;border-radius:16px;background:{{ b.fColBg }};"></div><div style="position:absolute;left:50%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:12px;box-sizing:border-box;border:2.5px solid #e9eef2;top:{{ b.knobTop }};background:{{ b.fKnobBg }};box-shadow:{{ b.fShadow }};"></div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;height:24px;flex-shrink:0;">
+                <span style="width:44px;flex-shrink:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;color:rgba(233,238,242,0.6);">Hz</span>
+                <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                  <div style="flex:1;min-width:0;text-align:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;color:rgba(233,238,242,0.72);">{{ b.label }}</div>
+                </sc-for>
+              </div>
+            </div>
+            </sc-if>
+            <sc-if value="{{ lookG }}" hint-placeholder-val="{{ false }}">
+            <div data-eq="graph" style="flex:1;min-height:0;display:flex;flex-direction:column;margin-top:8px;">
+              <div style="display:flex;align-items:flex-end;height:36px;flex-shrink:0;">
+                <span style="width:44px;flex-shrink:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;color:rgba(233,238,242,0.6);padding-bottom:6px;">dB</span>
+                <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                  <div style="flex:1;min-width:0;display:flex;justify-content:center;"><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:17px;font-weight:600;line-height:1;padding:6px 9px;border-radius:9px;background:{{ b.gChipBg }};color:{{ b.gChipInk }};">{{ b.val }}</span></div>
+                </sc-for>
+              </div>
+              <div style="flex:1;min-height:0;display:flex;margin:26px 0;">
+                <div style="width:44px;flex-shrink:0;position:relative;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;color:rgba(233,238,242,0.6);">
+                  <span style="position:absolute;left:0;top:0;transform:translateY(-50%);">+12</span><span style="position:absolute;left:0;top:25%;transform:translateY(-50%);">+6</span><span style="position:absolute;left:0;top:50%;transform:translateY(-50%);color:rgba(233,238,242,0.82);">0</span><span style="position:absolute;left:0;top:75%;transform:translateY(-50%);">−6</span><span style="position:absolute;left:0;top:100%;transform:translateY(-50%);">−12</span>
+                </div>
+                <div style="flex:1;min-width:0;position:relative;">
+                  <div style="position:absolute;left:0;right:0;top:0;height:1px;background:rgba(233,238,242,0.06);"></div><div style="position:absolute;left:0;right:0;top:25%;height:1px;background:rgba(233,238,242,0.06);"></div><div style="position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(233,238,242,0.24);"></div><div style="position:absolute;left:0;right:0;top:75%;height:1px;background:rgba(233,238,242,0.06);"></div><div style="position:absolute;left:0;right:0;top:100%;height:1px;background:rgba(233,238,242,0.06);"></div><svg data-eq="curve" viewBox="0 0 1000 240" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;"><defs><linearGradient id="{{ gG }}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1000" y2="0"><stop offset="0" stop-color="rgb(239,155,134)"></stop><stop offset="0.45" stop-color="rgb(126,214,188)"></stop><stop offset="0.75" stop-color="rgb(128,180,232)"></stop><stop offset="1" stop-color="rgb(180,158,240)"></stop></linearGradient></defs><path d="{{ echo1 }}" fill="none" stroke="url(#{{ gG }})" stroke-opacity="0.16" stroke-width="1.5" vector-effect="non-scaling-stroke"></path><path d="{{ echo2 }}" fill="none" stroke="url(#{{ gG }})" stroke-opacity="0.26" stroke-width="1.5" vector-effect="non-scaling-stroke"></path><path d="{{ echo3 }}" fill="none" stroke="url(#{{ gG }})" stroke-opacity="0.38" stroke-width="2" vector-effect="non-scaling-stroke"></path><path d="{{ echo4 }}" fill="none" stroke="url(#{{ gG }})" stroke-opacity="0.55" stroke-width="2" vector-effect="non-scaling-stroke"></path><path d="{{ smoothLine }}" fill="none" stroke="url(#{{ gG }})" stroke-opacity="0.2" stroke-width="12" stroke-linecap="round" vector-effect="non-scaling-stroke"></path><path d="{{ smoothLine }}" fill="none" stroke="url(#{{ gG }})" stroke-width="4" stroke-linecap="round" vector-effect="non-scaling-stroke"></path></svg>
+                  <div style="position:absolute;left:0;right:0;top:-26px;bottom:-26px;display:flex;">
+                    <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                      <div data-eq="band" onPointerDown="{{ b.onDown }}" onPointerMove="{{ b.onMove }}" onPointerUp="{{ b.onUp }}" onPointerCancel="{{ b.onUp }}" style="flex:1;min-width:0;position:relative;touch-action:none;cursor:ns-resize;">
+                        <div style="position:absolute;left:8px;right:8px;top:0;bottom:0;border-radius:16px;background:{{ b.gColBg }};"></div><div style="position:absolute;left:50%;width:36px;height:36px;margin:-18px 0 0 -18px;border-radius:50%;box-sizing:border-box;background:#0d151c;top:{{ b.knobTop }};border:4px solid {{ b.gRing }};box-shadow:{{ b.gShadow }};"></div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;height:24px;flex-shrink:0;">
+                <span style="width:44px;flex-shrink:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;color:rgba(233,238,242,0.6);">Hz</span>
+                <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                  <div style="flex:1;min-width:0;text-align:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;color:rgba(233,238,242,0.72);">{{ b.label }}</div>
+                </sc-for>
+              </div>
+            </div>
+            </sc-if>
+            <sc-if value="{{ lookH }}" hint-placeholder-val="{{ false }}">
+            <div data-eq="graph" style="flex:1;min-height:0;display:flex;flex-direction:column;margin-top:8px;">
+              <div style="display:flex;align-items:flex-end;height:36px;flex-shrink:0;">
+                <span style="width:44px;flex-shrink:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;color:rgba(233,238,242,0.6);padding-bottom:6px;">dB</span>
+                <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                  <div style="flex:1;min-width:0;display:flex;justify-content:center;"><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:17px;font-weight:600;line-height:1;padding:6px 9px;border-radius:9px;background:{{ b.hChipBg }};color:{{ b.hChipInk }};">{{ b.val }}</span></div>
+                </sc-for>
+              </div>
+              <div style="flex:1;min-height:0;display:flex;margin:26px 0;">
+                <div style="width:44px;flex-shrink:0;position:relative;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;color:rgba(233,238,242,0.6);">
+                  <span style="position:absolute;left:0;top:0;transform:translateY(-50%);">+12</span><span style="position:absolute;left:0;top:25%;transform:translateY(-50%);">+6</span><span style="position:absolute;left:0;top:50%;transform:translateY(-50%);color:rgba(233,238,242,0.82);">0</span><span style="position:absolute;left:0;top:75%;transform:translateY(-50%);">−6</span><span style="position:absolute;left:0;top:100%;transform:translateY(-50%);">−12</span>
+                </div>
+                <div style="flex:1;min-width:0;position:relative;">
+                  <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10"><div style="position:absolute;width:240px;height:320px;margin:-160px 0 0 -120px;mix-blend-mode:screen;pointer-events:none;left:{{ b.hBlobLeft }};top:{{ b.hBlobTop }};background-image:{{ b.hBlob }};"></div></sc-for><div style="position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(233,238,242,0.22);"></div><svg data-eq="curve" viewBox="0 0 1000 240" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;"><path d="{{ smoothLine }}" fill="none" stroke="#f4f1ea" stroke-opacity="0.14" stroke-width="10" stroke-linecap="round" vector-effect="non-scaling-stroke"></path><path d="{{ smoothLine }}" fill="none" stroke="#f4f1ea" stroke-width="2.5" stroke-linecap="round" vector-effect="non-scaling-stroke"></path></svg>
+                  <div style="position:absolute;left:0;right:0;top:-26px;bottom:-26px;display:flex;">
+                    <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                      <div data-eq="band" onPointerDown="{{ b.onDown }}" onPointerMove="{{ b.onMove }}" onPointerUp="{{ b.onUp }}" onPointerCancel="{{ b.onUp }}" style="flex:1;min-width:0;position:relative;touch-action:none;cursor:ns-resize;">
+                        <div style="position:absolute;left:50%;border-radius:50%;box-sizing:border-box;background:#f4f1ea;border:3px solid #0d151c;top:{{ b.knobTop }};width:{{ b.hK }};height:{{ b.hK }};margin:{{ b.hKm }};box-shadow:{{ b.hShadow }};"></div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;height:24px;flex-shrink:0;">
+                <span style="width:44px;flex-shrink:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;color:rgba(233,238,242,0.6);">Hz</span>
+                <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                  <div style="flex:1;min-width:0;text-align:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;color:rgba(233,238,242,0.72);">{{ b.label }}</div>
+                </sc-for>
+              </div>
+            </div>
+            </sc-if>
+          </div>
+
+          <div data-eq="footer" style="flex-shrink:0;display:flex;align-items:center;gap:12px;min-height:58px;">
+            <div data-eq="note" style="flex:1;min-width:0;display:flex;align-items:center;gap:14px;">
+              <span style="flex-shrink:0;min-width:64px;height:36px;padding:0 10px;border-radius:10px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;font-weight:600;white-space:nowrap;background:{{ noteBadgeBg }};color:{{ noteBadgeInk }};border:1px solid {{ noteBadgeLine }};">{{ noteBadge }}</span>
+              <span style="flex:1;min-width:0;font-size:15px;line-height:1.4;color:rgba(233,238,242,0.78);text-wrap:pretty;">{{ noteText }}</span>
+            </div>
+            <div data-eq="actions" style="display:flex;gap:10px;flex-shrink:0;opacity:{{ listOpacity }};pointer-events:{{ offPointer }};">
+              <sc-for list="{{ actions }}" as="a" hint-placeholder-count="1">
+                <div onClick="{{ a.onTap }}" style="height:58px;padding:0 24px;border-radius:15px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:17px;white-space:nowrap;cursor:pointer;background:{{ a.bg }};border:1px solid {{ a.border }};color:{{ a.ink }};font-weight:{{ a.weight }};opacity:{{ a.opacity }};" style-active="transform:scale(0.95)">{{ a.label }}</div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isBar }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:#37505f;"></div>
+    <div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,rgba(20,33,42,0.62),rgba(13,21,28,0.93));"></div>
+    <div style="position:absolute;inset:0;display:flex;">
+      <div data-eq="header" style="width:220px;flex-shrink:0;display:flex;flex-direction:column;gap:12px;padding:28px 24px 24px;box-sizing:border-box;border-right:1px solid rgba(233,238,242,0.09);">
+        <div style="display:flex;gap:10px;">
+          <div style="width:60px;height:60px;border-radius:50%;background:rgba(233,238,242,0.07);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><div style="width:14px;height:14px;border-left:3px solid #e9eef2;border-bottom:3px solid #e9eef2;transform:rotate(45deg);margin-left:11px;"></div></div>
+          <div style="width:60px;height:60px;border-radius:50%;background:rgba(233,238,242,0.07);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="width:22px;height:22px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:3.5px;"><span style="border-radius:2px;background:rgba(233,238,242,0.88);display:block;"></span><span style="border-radius:2px;background:rgba(233,238,242,0.88);display:block;"></span><span style="border-radius:2px;background:rgba(233,238,242,0.88);display:block;"></span><span style="border-radius:2px;background:rgba(233,238,242,0.88);display:block;"></span></span></div>
+        </div>
+        <div style="font-size:26px;font-weight:700;letter-spacing:-0.01em;margin-top:8px;line-height:1.15;">Equaliser</div>
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;letter-spacing:0.06em;color:rgba(233,238,242,0.6);">{{ barCrumb }}</div>
+        <div style="flex:1;"></div>
+        <div data-eq="power" onClick="{{ toggleOn }}" style="display:flex;align-items:center;gap:12px;height:60px;padding:0 12px 0 16px;border-radius:15px;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);box-sizing:border-box;cursor:pointer;" style-active="transform:scale(0.95)">
+          <span style="flex:1;min-width:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;letter-spacing:0.14em;text-transform:uppercase;white-space:nowrap;color:{{ powerInk }};">{{ powerShort }}</span>
+          <span style="width:60px;height:34px;border-radius:17px;flex-shrink:0;position:relative;box-sizing:border-box;display:block;background:{{ togBg }};border:1px solid {{ togBorder }};"><span style="position:absolute;top:3px;width:26px;height:26px;border-radius:50%;display:block;left:{{ knobLeft }};background:{{ knobBg }};"></span></span>
+        </div>
+      </div>
+
+      <div data-eq="list" data-noscrollbar style="width:clamp(250px,18%,340px);flex-shrink:0;overflow-y:auto;scrollbar-width:none;display:flex;flex-direction:column;gap:6px;padding:12px 20px 24px 24px;box-sizing:border-box;border-right:1px solid rgba(233,238,242,0.09);-webkit-mask-image:linear-gradient(180deg,#000 82%,transparent 100%);mask-image:linear-gradient(180deg,#000 82%,transparent 100%);opacity:{{ listOpacity }};pointer-events:{{ offPointer }};">
+        <sc-for list="{{ listItems }}" as="it" hint-placeholder-count="8">
+          <div style="flex-shrink:0;">
+            <div style="align-items:center;gap:12px;padding:12px 2px 6px;display:{{ it.headDisplay }};">
+              <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#7ed6bc;flex-shrink:0;white-space:nowrap;">{{ it.head }}</span>
+              <span style="flex:1;height:1px;background:rgba(233,238,242,0.1);display:block;"></span>
+            </div>
+            <div onClick="{{ it.onTap }}" style="align-items:center;gap:14px;min-height:56px;padding:0 16px;border-radius:14px;box-sizing:border-box;cursor:pointer;display:{{ it.rowDisplay }};background:{{ it.bg }};border:1px solid {{ it.border }};">
+              <span style="width:22px;height:22px;border-radius:50%;flex-shrink:0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border:2px solid {{ it.ringInk }};"><span style="width:11px;height:11px;border-radius:50%;background:#7ed6bc;display:{{ it.dotDisplay }};"></span></span>
+              <span style="flex:1;min-width:0;font-size:18px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{ it.ink }};">{{ it.name }}</span>
+              <span style="flex-shrink:0;width:9px;height:9px;border-radius:50%;background:#e0a758;display:{{ it.metaDisplay }};"></span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:12px;padding:22px 32px 22px 24px;box-sizing:border-box;">
+        <div style="display:flex;align-items:center;gap:20px;min-height:60px;flex-shrink:0;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:baseline;gap:14px;min-width:0;">
+              <span style="font-size:26px;font-weight:700;letter-spacing:-0.01em;white-space:nowrap;">{{ selName }}</span>
+              <span style="flex:1 1 auto;min-width:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;letter-spacing:0.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{ metaInk }};">{{ selMeta }}</span>
+            </div>
+            <div data-eq="note" style="font-size:16px;line-height:1.3;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{ barNoteInk }};">{{ noteText }}</div>
+          </div>
+          <div data-eq="actions" style="display:flex;gap:10px;flex-shrink:0;opacity:{{ listOpacity }};pointer-events:{{ offPointer }};">
+            <sc-for list="{{ actions }}" as="a" hint-placeholder-count="1">
+              <div onClick="{{ a.onTap }}" style="height:60px;padding:0 22px;border-radius:15px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:18px;white-space:nowrap;cursor:pointer;background:{{ a.bg }};border:1px solid {{ a.border }};color:{{ a.ink }};font-weight:{{ a.weight }};opacity:{{ a.opacity }};" style-active="transform:scale(0.95)">{{ a.label }}</div>
+            </sc-for>
+          </div>
+        </div>
+        <div data-eq="bands" style="flex:1;min-height:0;display:flex;flex-direction:column;border-radius:20px;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);padding:8px 18px 8px;box-sizing:border-box;opacity:{{ cardOpacity }};pointer-events:{{ offPointer }};">
+          <div style="display:flex;align-items:flex-end;height:30px;flex-shrink:0;">
+            <span style="width:40px;flex-shrink:0;"></span>
+            <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+              <div style="flex:1;min-width:0;display:flex;justify-content:center;"><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:17px;font-weight:600;line-height:1;padding:5px 8px;border-radius:8px;background:{{ b.dChipBg }};color:{{ b.dChipInk }};">{{ b.val }}</span></div>
+            </sc-for>
+          </div>
+          <div style="flex:1;min-height:0;display:flex;margin:24px 0;">
+            <div style="width:40px;flex-shrink:0;position:relative;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;color:rgba(233,238,242,0.6);">
+              <span style="position:absolute;left:0;top:0;transform:translateY(-50%);">+12</span>
+              <span style="position:absolute;left:0;top:50%;transform:translateY(-50%);color:rgba(233,238,242,0.82);">0</span>
+              <span style="position:absolute;left:0;top:100%;transform:translateY(-50%);">−12</span>
+            </div>
+            <div style="flex:1;min-width:0;position:relative;">
+              <div style="position:absolute;left:0;right:0;top:0;height:1px;background:rgba(233,238,242,0.05);"></div><div style="position:absolute;left:0;right:0;top:100%;height:1px;background:rgba(233,238,242,0.05);"></div><svg data-eq="curve" viewBox="0 0 1000 240" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;opacity:{{ curveOpacity }};"><defs><linearGradient id="{{ gD }}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="240"><stop offset="0" stop-color="#f2b35e" stop-opacity="0.95"></stop><stop offset="0.3" stop-color="#ef8f7a" stop-opacity="0.75"></stop><stop offset="0.5" stop-color="#ef8f7a" stop-opacity="0.26"></stop><stop offset="0.5" stop-color="#7fb0dc" stop-opacity="0.26"></stop><stop offset="0.7" stop-color="#7f9fe6" stop-opacity="0.75"></stop><stop offset="1" stop-color="#a48ce8" stop-opacity="0.95"></stop></linearGradient></defs><path d="{{ smoothArea }}" fill="url(#{{ gD }})"></path><path d="{{ smoothLine }}" fill="none" stroke="#f4f1ea" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path></svg><div style="position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(233,238,242,0.3);"></div>
+              <div style="position:absolute;left:0;right:0;top:-24px;bottom:-24px;display:flex;">
+                <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+                  <div data-eq="band" onPointerDown="{{ b.onDown }}" onPointerMove="{{ b.onMove }}" onPointerUp="{{ b.onUp }}" onPointerCancel="{{ b.onUp }}" style="flex:1;min-width:0;position:relative;touch-action:none;cursor:ns-resize;">
+                    <div style="position:absolute;left:6px;right:6px;top:0;bottom:0;border-radius:14px;background:{{ b.dColBg }};"></div><div style="position:absolute;left:50%;top:24px;bottom:24px;width:0;border-left:1px dashed rgba(233,238,242,0.1);"></div><div style="position:absolute;left:50%;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;box-sizing:border-box;border:4px solid #f4f1ea;top:{{ b.knobTopBar }};background:{{ b.dKnobBg }};box-shadow:{{ b.dKnobShadow }};"></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;height:22px;flex-shrink:0;">
+            <span style="width:40px;flex-shrink:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.12em;color:rgba(233,238,242,0.6);">Hz</span>
+            <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+              <div style="flex:1;min-width:0;text-align:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;color:rgba(233,238,242,0.72);">{{ b.label }}</div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isPhone }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:-90px;background:repeating-linear-gradient(38deg,#3f5a6d 0 48px,#2e4453 48px 96px);filter:blur(70px);transform:scale(1.14);"></div>
+    <div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,rgba(20,33,42,0.72),rgba(13,21,28,0.96));"></div>
+    <div style="position:relative;height:100%;display:flex;flex-direction:column;">
+      <div data-eq="header" style="flex-shrink:0;display:flex;align-items:center;gap:16px;box-sizing:border-box;border-bottom:1px solid rgba(233,238,242,0.09);padding:14px 18px;min-height:78px;">
+        <div style="width:56px;height:56px;border-radius:50%;background:rgba(233,238,242,0.07);display:flex;align-items:center;justify-content:center;flex-shrink:0;" style-active="transform:scale(0.95)">
+          <div style="width:13px;height:13px;border-left:3px solid #e9eef2;border-bottom:3px solid #e9eef2;transform:rotate(45deg);margin-left:10px;"></div>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:23px;font-weight:700;letter-spacing:-0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Equaliser</div>
+          <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;color:rgba(233,238,242,0.6);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ phoneCrumb }}</div>
+        </div>
+      </div>
+
+      <div ref="{{ phoneScrollRef }}" data-noscrollbar style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;box-sizing:border-box;padding:14px 16px 240px;display:flex;flex-direction:column;gap:6px;">
+        <div style="flex-shrink:0;height:0;margin-bottom:-6px;margin-top:{{ shiftTop }};"></div>
+        <div data-eq="power" onClick="{{ toggleOn }}" style="flex-shrink:0;display:flex;align-items:center;gap:18px;border-radius:15px;padding:14px 20px;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);cursor:pointer;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:18px;font-weight:600;">Equaliser</div>
+            <div style="font-size:14px;line-height:1.36;color:rgba(233,238,242,0.6);margin-top:5px;text-wrap:pretty;">{{ phonePowerNote }}</div>
+          </div>
+          <span style="width:60px;height:34px;border-radius:17px;flex-shrink:0;position:relative;box-sizing:border-box;display:block;background:{{ togBg }};border:1px solid {{ togBorder }};"><span style="position:absolute;top:3px;width:26px;height:26px;border-radius:50%;display:block;left:{{ knobLeft }};background:{{ knobBg }};"></span></span>
+        </div>
+
+        <div data-eq="setting" onClick="{{ openPick }}" style="flex-shrink:0;display:flex;align-items:center;gap:18px;min-height:78px;border-radius:15px;padding:14px 20px;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);cursor:pointer;opacity:{{ listOpacity }};pointer-events:{{ offPointer }};">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:18px;font-weight:600;">Setting</div>
+            <div style="font-size:14px;line-height:1.36;margin-top:5px;color:{{ metaInk }};">{{ selMeta }}</div>
+          </div>
+          <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;flex-shrink:0;color:rgba(233,238,242,0.88);">{{ selName }}</span>
+          <span style="width:11px;height:11px;border-right:2.5px solid rgba(233,238,242,0.42);border-top:2.5px solid rgba(233,238,242,0.42);transform:rotate(45deg);flex-shrink:0;display:block;"></span>
+        </div>
+
+        <div data-eq="actions" style="flex-shrink:0;display:flex;flex-wrap:wrap;gap:8px;padding:4px 0 6px;opacity:{{ listOpacity }};pointer-events:{{ offPointer }};">
+          <sc-for list="{{ actions }}" as="a" hint-placeholder-count="1">
+            <div onClick="{{ a.onTap }}" style="height:44px;padding:0 18px;border-radius:12px;box-sizing:border-box;display:flex;align-items:center;font-size:15px;white-space:nowrap;cursor:pointer;background:{{ a.bg }};border:1px solid {{ a.border }};color:{{ a.ink }};font-weight:{{ a.weight }};opacity:{{ a.opacity }};" style-active="transform:scale(0.95)">{{ a.label }}</div>
+          </sc-for>
+        </div>
+
+        <div data-eq="bands" style="flex-shrink:0;border-radius:18px;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);padding:14px 14px 10px;box-sizing:border-box;opacity:{{ cardOpacity }};pointer-events:{{ offPointer }};">
+          <div style="position:relative;height:104px;margin:0 2px;">
+            <div style="position:absolute;left:0;right:0;top:0;height:1px;background:rgba(233,238,242,0.05);"></div><div style="position:absolute;left:0;right:0;top:100%;height:1px;background:rgba(233,238,242,0.05);"></div>
+            <svg data-eq="curve" viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;opacity:{{ curveOpacity }};"><defs><linearGradient id="{{ gD }}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="240"><stop offset="0" stop-color="#f2b35e" stop-opacity="0.95"></stop><stop offset="0.3" stop-color="#ef8f7a" stop-opacity="0.75"></stop><stop offset="0.5" stop-color="#ef8f7a" stop-opacity="0.26"></stop><stop offset="0.5" stop-color="#7fb0dc" stop-opacity="0.26"></stop><stop offset="0.7" stop-color="#7f9fe6" stop-opacity="0.75"></stop><stop offset="1" stop-color="#a48ce8" stop-opacity="0.95"></stop></linearGradient></defs><g transform="matrix(1 0 0 0.75 0 10)"><path d="{{ smoothArea }}" fill="url(#{{ gD }})"></path><path d="{{ smoothLine }}" fill="none" stroke="#f4f1ea" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path></g></svg>
+            <div style="position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(233,238,242,0.3);"></div>
+            <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+              <span style="position:absolute;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;box-sizing:border-box;border:2px solid #f4f1ea;display:block;left:{{ b.dotLeft }};top:{{ b.dotTop }};background:{{ b.dKnobBg }};"></span>
+            </sc-for>
+          </div>
+          <div style="display:flex;margin:6px 2px 0;">
+            <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+              <div style="flex:1;min-width:0;text-align:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;color:rgba(233,238,242,0.6);">{{ b.label }}</div>
+            </sc-for>
+          </div>
+          <div data-eq="note" style="display:flex;align-items:flex-start;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(233,238,242,0.08);">
+            <span style="flex-shrink:0;min-width:54px;height:30px;padding:0 8px;border-radius:9px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:600;white-space:nowrap;background:{{ noteBadgeBg }};color:{{ noteBadgeInk }};border:1px solid {{ noteBadgeLine }};">{{ noteBadge }}</span>
+            <span style="flex:1;min-width:0;font-size:14px;line-height:1.4;color:rgba(233,238,242,0.78);text-wrap:pretty;padding-top:5px;">{{ noteText }}</span>
+          </div>
+        </div>
+
+        <div style="flex-shrink:0;display:flex;align-items:center;gap:12px;padding:16px 2px 4px;">
+          <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Bands</span>
+          <span style="flex:1;height:1px;background:rgba(233,238,242,0.1);display:block;"></span>
+          <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.1em;color:rgba(233,238,242,0.6);white-space:nowrap;">−12 to +12 dB</span>
+        </div>
+        <div data-eq="band-rows" style="flex-shrink:0;display:flex;flex-direction:column;gap:2px;opacity:{{ cardOpacity }};pointer-events:{{ offPointer }};">
+          <sc-for list="{{ bands }}" as="b" hint-placeholder-count="10">
+            <div data-eq="band" style="display:flex;align-items:center;gap:12px;height:52px;padding:0 12px;border-radius:12px;background:{{ b.rowBg }};">
+              <span style="width:38px;flex-shrink:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;color:rgba(233,238,242,0.82);">{{ b.label }}</span>
+              <div onPointerDown="{{ b.onRowDown }}" onPointerMove="{{ b.onRowMove }}" onPointerUp="{{ b.onRowUp }}" onPointerCancel="{{ b.onRowCancel }}" style="flex:1;min-width:0;align-self:stretch;position:relative;touch-action:pan-y;cursor:ew-resize;">
+                <span style="position:absolute;left:0;right:0;top:50%;height:6px;margin-top:-3px;border-radius:3px;background:rgba(233,238,242,0.14);display:block;"></span>
+                <span style="position:absolute;left:50%;top:50%;width:2px;height:16px;margin:-8px 0 0 -1px;border-radius:1px;background:rgba(233,238,242,0.4);display:block;"></span>
+                <span style="position:absolute;top:50%;height:6px;margin-top:-3px;border-radius:3px;background:{{ b.dRidge }};display:block;left:{{ b.hFillLeft }};width:{{ b.hFillW }};"></span>
+                <span style="position:absolute;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;box-sizing:border-box;border:3px solid #f4f1ea;display:block;left:{{ b.hLeft }};background:{{ b.dKnobBg }};box-shadow:{{ b.dKnobShadow }};"></span>
+              </div>
+              <span style="width:34px;flex-shrink:0;text-align:right;font-family:'IBM Plex Mono','Courier New',monospace;font-size:15px;font-weight:600;color:{{ b.dRowVal }};">{{ b.val }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+    <dc-import name="EQ Quick" host="phonetray" bare="{{ true }}" on="{{ trayOn }}" sel="{{ traySel }}" label="{{ selName }}" dsd="{{ trayDsd }}" fixed="{{ trayFixed }}" screen="{{ trayScreen }}" hint-size="100%,100%" style="position:absolute;inset:0;pointer-events:none;"></dc-import>
+  </sc-if>
+
+  <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;z-index:40;background:rgba(8,12,16,0.62);transition:opacity 180ms ease;opacity:{{ sheetScrim }};pointer-events:{{ sheetPointer }};"></div>
+  <div data-eq="sheet" style="position:absolute;z-index:41;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 44px);max-width:560px;max-height:calc(100% - 24px);background:#16232c;border:1px solid rgba(233,238,242,0.14);border-radius:22px;box-shadow:0 30px 70px rgba(0,0,0,0.5);box-sizing:border-box;padding:26px;flex-direction:column;gap:18px;display:{{ sheetDisplay }};">
+    <div style="flex-shrink:0;min-width:0;">
+      <div style="font-size:22px;font-weight:700;text-wrap:pretty;">{{ sheetTitle }}</div>
+      <div style="font-size:15px;line-height:1.4;color:rgba(233,238,242,0.6);margin-top:8px;text-wrap:pretty;display:{{ sheetNoteDisplay }};">{{ sheetNote }}</div>
+    </div>
+    <div ref="{{ pickRef }}" data-noscrollbar style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;flex-direction:column;gap:6px;display:{{ pickDisplay }};">
+      <div style="flex-shrink:0;height:0;margin-bottom:-6px;margin-top:{{ pickShiftTop }};"></div>
+      <sc-for list="{{ listItems }}" as="it" hint-placeholder-count="6">
+        <div style="flex-shrink:0;">
+          <div style="align-items:center;gap:12px;padding:12px 2px 6px;display:{{ it.headDisplay }};">
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#7ed6bc;flex-shrink:0;white-space:nowrap;">{{ it.head }}</span>
+            <span style="flex:1;height:1px;background:rgba(233,238,242,0.1);display:block;"></span>
+          </div>
+          <div data-sel="{{ it.selFlag }}" onClick="{{ it.onTap }}" style="align-items:center;gap:16px;min-height:56px;padding:0 18px;border-radius:14px;box-sizing:border-box;cursor:pointer;display:{{ it.rowDisplay }};background:{{ it.bg }};border:1px solid {{ it.border }};">
+            <span style="width:22px;height:22px;border-radius:50%;flex-shrink:0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border:2px solid {{ it.ringInk }};"><span style="width:11px;height:11px;border-radius:50%;background:#7ed6bc;display:{{ it.dotDisplay }};"></span></span>
+            <span style="flex:1;min-width:0;font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{ it.ink }};">{{ it.name }}</span>
+            <span style="flex-shrink:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;white-space:nowrap;color:#e0a758;display:{{ it.metaDisplay }};">{{ it.meta }}</span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+    <input type="text" value="{{ sheetInput }}" onInput="{{ onInput }}" autoComplete="off" spellCheck="{{ false }}" style="flex-shrink:0;width:100%;box-sizing:border-box;height:62px;border-radius:14px;background:rgba(8,12,16,0.6);border:1px solid rgba(126,214,188,0.45);padding:0 18px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:17px;letter-spacing:0.02em;color:#e9eef2;outline:none;display:{{ inputDisplay }};" style-focus="border-color:#7ed6bc" />
+    <div style="flex-shrink:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;line-height:1.5;letter-spacing:0.02em;color:rgba(233,238,242,0.6);margin-top:-8px;text-wrap:pretty;display:{{ hintDisplay }};">{{ sheetHint }}</div>
+    <div style="flex-shrink:0;display:flex;align-items:center;gap:12px;">
+      <div onClick="{{ closeSheet }}" style="flex:1;height:58px;border-radius:15px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);align-items:center;justify-content:center;font-size:17px;font-weight:600;box-sizing:border-box;cursor:pointer;display:{{ cancelDisplay }};" style-active="transform:scale(0.95)">{{ cancelLabel }}</div>
+      <div onClick="{{ confirmSheet }}" style="flex:1;height:58px;border-radius:15px;box-sizing:border-box;align-items:center;justify-content:center;font-size:17px;font-weight:700;cursor:pointer;display:{{ confirmDisplay }};background:{{ confirmBg }};border:1px solid {{ confirmBorder }};color:{{ confirmInk }};" style-active="transform:scale(0.95)">{{ confirmLabel }}</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:800},&quot;surface&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;panel&quot;,&quot;bar&quot;,&quot;phone&quot;],&quot;default&quot;:&quot;panel&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Equaliser&quot;},&quot;on&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Equaliser&quot;},&quot;sel&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;flat&quot;,&quot;rock&quot;,&quot;pop&quot;,&quot;jazz&quot;,&quot;classical&quot;,&quot;electronic&quot;,&quot;hiphop&quot;,&quot;acoustic&quot;,&quot;vocal&quot;,&quot;late&quot;,&quot;evening&quot;,&quot;kitchen&quot;,&quot;records&quot;,&quot;custom&quot;],&quot;default&quot;:&quot;rock&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Equaliser&quot;},&quot;from&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;rock&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Equaliser&quot;},&quot;drag&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;min&quot;:-1,&quot;max&quot;:9,&quot;default&quot;:-1,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Equaliser&quot;},&quot;sheet&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;none&quot;,&quot;save&quot;,&quot;rename&quot;,&quot;delete&quot;,&quot;full&quot;,&quot;pick&quot;],&quot;default&quot;:&quot;none&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Equaliser&quot;},&quot;full&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Equaliser&quot;},&quot;fixed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Output&quot;},&quot;dsd&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Output&quot;},&quot;output&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dac&quot;,&quot;hdmi&quot;,&quot;optical&quot;],&quot;default&quot;:&quot;dac&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Output&quot;},&quot;screen&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Output&quot;},&quot;shift&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;min&quot;:0,&quot;max&quot;:800,&quot;default&quot;:0,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Drawing&quot;},&quot;look&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;d&quot;,&quot;current&quot;,&quot;a&quot;,&quot;b&quot;,&quot;c&quot;,&quot;e&quot;,&quot;f&quot;,&quot;g&quot;,&quot;h&quot;],&quot;default&quot;:&quot;d&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Equaliser&quot;}}">
+// Phase 20, the equaliser's editor: Settings → Audio → Equaliser on the
+// panel (1280 × 800), the bars (1850 or 1280 × 400 logical) and the phone.
+// Bands, presets and the combined curve come from eq-data.js.
+const SEL_BG = 'rgba(126,214,188,0.14)', SEL_LINE = 'rgba(126,214,188,0.4)';
+const ROW_BG = 'rgba(255,255,255,0.04)', ROW_LINE = 'rgba(233,238,242,0.1)';
+const BTN = { bg: 'rgba(233,238,242,0.07)', border: 'rgba(233,238,242,0.14)', ink: '#e9eef2', weight: 600 };
+const PRIMARY = { bg: 'rgba(126,214,188,0.16)', border: 'rgba(126,214,188,0.4)', ink: '#7ed6bc', weight: 700 };
+const DANGER = { bg: 'rgba(224,167,88,0.14)', border: 'rgba(224,167,88,0.4)', ink: '#e0a758', weight: 600 };
+const AMBER = '#e0a758';
+const PAD = { panel: 26, bar: 24 };
+const Q = () => window.EQ;
+const findIn = (k, own) => Q().PRESETS.find(x => x.k === k) || own.find(x => x.k === k) || null;
+// looks a–c (turn 2): the line runs through the knobs as a monotone cubic, so
+// it never dips or overshoots between two bands. 1000 × 240 box, 0 dB at 120.
+const BLUE = '#7fb0dc', SEG_OFF = 'rgba(233,238,242,0.07)';
+function smooth(g) {
+  const n = g.length, h = 100, y = g.map(v => 120 - v * 10), d = [];
+  for (let i = 0; i < n - 1; i++) d.push((y[i + 1] - y[i]) / h);
+  const m = y.map((_, i) => (i === 0 || i === n - 1 || d[i - 1] * d[i] <= 0) ? 0 : 2 * d[i - 1] * d[i] / (d[i - 1] + d[i]));
+  const f = (v) => v.toFixed(1);
+  let line = 'M0 ' + y[0] + ' L50 ' + y[0];
+  for (let i = 0; i < n - 1; i++) {
+    const x0 = i * h + 50, x1 = x0 + h;
+    line += ' C' + f(x0 + h / 3) + ' ' + f(y[i] + m[i] * h / 3) + ' ' + f(x1 - h / 3) + ' ' + f(y[i + 1] - m[i + 1] * h / 3) + ' ' + x1 + ' ' + y[i + 1];
+  }
+  line += ' L1000 ' + y[n - 1];
+  return { line, area: line + ' L1000 120 L0 120 Z' };
+}
+const hot = (L) => L <= 6 ? '#7ed6bc' : L <= 9 ? '#b6cd85' : '#e0a758';
+const SPEC = [[0, [239, 155, 134]], [0.45, [126, 214, 188]], [0.75, [128, 180, 232]], [1, [180, 158, 240]]];
+function specAt(t) {
+  for (let i = 1; i < SPEC.length; i++) if (t <= SPEC[i][0]) {
+    const [a, ca] = SPEC[i - 1], [b, cb] = SPEC[i], k = (t - a) / (b - a);
+    return ca.map((v, j) => Math.round(v + (cb[j] - v) * k));
+  }
+  return SPEC[SPEC.length - 1][1];
+}
+const rgb = (c, a) => a == null ? 'rgb(' + c.join(',') + ')' : 'rgba(' + c.join(',') + ',' + a + ')';
+const SHADOW = '0 4px 14px rgba(0,0,0,0.45)';
+// looks d–h (turn 3)
+const t3mix = (a, b, t) => a.map((v, j) => Math.round(v + (b[j] - v) * t));
+const t3MINT = [126, 214, 188], t3AMBER = [240, 164, 106], t3SKY = [127, 176, 220], t3VIOLET = [164, 140, 232], t3PALE = [233, 238, 242];
+const t3CORAL = [239, 143, 122], t3GOLD = [242, 179, 94];
+const t3MUTED = 'rgba(233,238,242,0.6)', t3INK = '#0d151c', t3CREAM = '#f4f1ea';
+function t3curveAt(g, x) {
+  const n = g.length, u = (x - 50) / 100;
+  if (u <= 0) return g[0];
+  if (u >= n - 1) return g[n - 1];
+  const d = [];
+  for (let i = 0; i < n - 1; i++) d.push(g[i + 1] - g[i]);
+  const m = g.map((_, i) => (i === 0 || i === n - 1 || d[i - 1] * d[i] <= 0) ? 0 : 2 * d[i - 1] * d[i] / (d[i - 1] + d[i]));
+  const i = Math.floor(u), t = u - i, t2 = t * t, t3 = t2 * t;
+  return (2 * t3 - 3 * t2 + 1) * g[i] + (t3 - 2 * t2 + t) * m[i] + (-2 * t3 + 3 * t2) * g[i + 1] + (t3 - t2) * m[i + 1];
+}
+const t3LED_UP = 'linear-gradient(to top,#7ed6bc,#b6cd85 50%,#e0a758 80%,#ef8f7a)', t3LED_DN = 'linear-gradient(to bottom,#7fb0dc,#a48ce8)';
+function t3leds(g) {
+  return Array.from({ length: 60 }, (_, j) => {
+    const v = Math.round(t3curveAt(g, (j + 0.5) / 60 * 1000)), n = Math.abs(v), c = 100 / 24, left = (j * 100 / 60).toFixed(4) + '%';
+    if (!n) return { left, top: '50%', h: '0%', bg: 'none', bgSize: '100% 100%', pos: 'center bottom', mSize: '100% 100%' };
+    return { left, top: (v > 0 ? 50 - n * c : 50) + '%', h: n * c + '%', bg: v > 0 ? t3LED_UP : t3LED_DN,
+      bgSize: '100% ' + (1200 / n) + '%', pos: v > 0 ? 'center bottom' : 'center top', mSize: '100% ' + (100 / n) + '%' };
+  });
+}
+
+class Component extends DCLogic {
+  state = { k: null, s: null };
+
+  componentDidMount() {
+    if (!window.EQ) this._t = setInterval(() => { if (window.EQ) { clearInterval(this._t); this.forceUpdate(); } }, 50);
+  }
+  componentWillUnmount() { clearInterval(this._t); cancelAnimationFrame(this._raf); }
+  // a new setting glides in: each band eases to its new level, low bands
+  // first, so the line rolls across from left to right
+  glide(from, to) {
+    cancelAnimationFrame(this._raf);
+    if (!from || from.every((v, i) => v === to[i])) { this._vis = null; return; }
+    const t0 = performance.now(), STEP = 32, DUR = 380, n = to.length;
+    const ease = (x) => 1 - Math.pow(1 - x, 3);
+    const tick = (now) => {
+      const el = now - t0;
+      this._vis = to.map((v, i) => { const k = Math.max(0, Math.min(1, (el - i * STEP) / DUR)); return from[i] + (v - from[i]) * ease(k); });
+      if (el >= (n - 1) * STEP + DUR) { this._vis = null; this.forceUpdate(); return; }
+      this.forceUpdate();
+      this._raf = requestAnimationFrame(tick);
+    };
+    this._raf = requestAnimationFrame(tick);
+  }
+  stopGlide() { if (this._vis) { cancelAnimationFrame(this._raf); this._vis = null; } }
+
+  key() {
+    const p = this.props;
+    return ['surface', 'on', 'sel', 'from', 'drag', 'sheet', 'full', 'fixed', 'dsd', 'output'].map(k => String(p[k])).join('|');
+  }
+  seed() {
+    const p = this.props;
+    const own = (p.full ? Q().OWN_FULL : Q().OWN).map(o => ({ k: o.k, name: o.name, g: o.g.slice() }));
+    const sel = p.sel || 'rock';
+    const from = p.from || 'rock';
+    let gains;
+    if (sel === 'custom') {
+      const b = findIn(from, own) || Q().PRESETS[1];
+      gains = b.g.slice();
+      gains[2] = Math.min(12, gains[2] + 3);
+      gains[6] = Math.min(12, gains[6] + 2);
+    } else gains = (findIn(sel, own) || Q().PRESETS[1]).g.slice();
+    return { on: p.on ?? true, sel, from, gains, own, sheet: p.sheet && p.sheet !== 'none' ? p.sheet : null, drag: p.drag ?? -1, draft: null };
+  }
+  cur() { return this.state.k === this.key() && this.state.s ? this.state.s : this.seed(); }
+  put(patch) { const s = this.cur(); this.setState({ k: this.key(), s: { ...s, ...patch } }); }
+
+  setBand(i, v) {
+    this.stopGlide();
+    const s = this.cur();
+    const g = Math.max(-12, Math.min(12, Math.round(v)));
+    if (s.gains[i] === g) { if (s.drag !== i) this.put({ drag: i }); return; }
+    const gains = s.gains.slice();
+    gains[i] = g;
+    const patch = { gains, drag: i };
+    // moving a band away from a preset or a saved setting makes it Custom
+    if (s.sel !== 'custom') { patch.from = s.sel; patch.sel = 'custom'; }
+    this.put(patch);
+  }
+  // upright bands, panel and bar: the knob's travel is the rail, inset by the
+  // knob's radius at each end of the touch column
+  fromY(i, e) {
+    const el = e.currentTarget;
+    const r = el.getBoundingClientRect();
+    const sc = r.height / (el.offsetHeight || r.height);
+    const pad = (PAD[this.props.surface] || 26) * sc;
+    this.setBand(i, 12 - (e.clientY - r.top - pad) / (r.height - 2 * pad) * 24);
+  }
+  colDown(i, e) {
+    if (!this.cur().on) return;
+    if (e.currentTarget.setPointerCapture) e.currentTarget.setPointerCapture(e.pointerId);
+    this._drag = i;
+    this.fromY(i, e);
+  }
+  colMove(i, e) { if (this._drag === i) this.fromY(i, e); }
+  colUp() { if (this._drag != null) { this._drag = null; this.put({ drag: -1 }); } }
+  // the phone's rows: as its volume slider, 8 px decide between a scroll and a slide
+  fromX(i, x, el) {
+    const r = el.getBoundingClientRect();
+    this.setBand(i, (x - r.left) / r.width * 24 - 12);
+  }
+  rowDown(i, e) {
+    if (!this.cur().on) return;
+    this._land = { i, x: e.clientX, y: e.clientY, way: null, el: e.currentTarget };
+  }
+  rowMove(i, e) {
+    const l = this._land;
+    if (!l || l.i !== i) return;
+    if (l.way === null) {
+      const dx = e.clientX - l.x, dy = e.clientY - l.y;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < 8) return;
+      if (Math.abs(dy) > Math.abs(dx)) { this._land = null; return; }
+      l.way = 'slide';
+      if (l.el.setPointerCapture) l.el.setPointerCapture(e.pointerId);
+    }
+    this.fromX(i, e.clientX, l.el);
+  }
+  rowUp(i) {
+    const l = this._land;
+    if (l && l.i === i && l.way === null) this.fromX(i, l.x, l.el);
+    this._land = null;
+    if (this.cur().drag !== -1) this.put({ drag: -1 });
+  }
+
+  pick(k) {
+    const s = this.cur();
+    if (!s.on || k === 'custom') return;
+    const o = findIn(k, s.own);
+    if (!o) return;
+    const from = (this._vis || s.gains).slice();
+    if (from.some((v, i) => v !== o.g[i])) this._vis = from;
+    this.put({ sel: k, gains: o.g.slice(), drag: -1, sheet: s.sheet === 'pick' ? null : s.sheet });
+    this.glide(from, o.g);
+  }
+  confirm() {
+    const s = this.cur();
+    const def = 'My setting ' + (s.own.length + 1);
+    const selOwn = s.own.find(o => o.k === s.sel);
+    if (s.sheet === 'save') {
+      const name = ((s.draft ?? def).trim()) || def;
+      const k = 'u' + Date.now();
+      this.put({ own: [...s.own, { k, name, g: s.gains.slice() }], sel: k, sheet: null, draft: null });
+    } else if (s.sheet === 'rename' && selOwn) {
+      const name = ((s.draft ?? selOwn.name).trim()) || selOwn.name;
+      this.put({ own: s.own.map(o => o.k === s.sel ? { ...o, name } : o), sheet: null, draft: null });
+    } else if (s.sheet === 'delete') {
+      const from = (this._vis || s.gains).slice();
+      if (from.some((v, i) => v !== Q().PRESETS[0].g[i])) this._vis = from;
+      this.put({ own: s.own.filter(o => o.k !== s.sel), sel: 'flat', gains: Q().PRESETS[0].g.slice(), sheet: null });
+      this.glide(from, Q().PRESETS[0].g);
+    } else this.put({ sheet: null, draft: null });
+  }
+
+  renderVals() {
+    if (!window.EQ) return { isPanel: false, isBar: false, isPhone: false, listItems: [], bands: [], actions: [], sheetDisplay: 'none', sheetScrim: 0, sheetPointer: 'none' };
+    const E = Q();
+    const p = this.props;
+    const s = this.cur();
+    const surface = p.surface || 'panel';
+    const look = p.look || 'd';
+    const out = E.OUTPUTS[p.output || 'dac'] || E.OUTPUTS.dac;
+    const custom = s.sel === 'custom';
+    const selObj = custom ? null : findIn(s.sel, s.own);
+    const isOwn = !!s.own.find(o => o.k === s.sel);
+    const fromObj = findIn(s.from, s.own);
+    const full = s.own.length >= 10;
+    const on = s.on;
+    const dsd = !!p.dsd;
+    const h = E.headroom(s.gains);
+    const hText = E.dbText(h);
+    const pad = PAD[surface] || 26;
+    const padBar = PAD.bar;
+
+    const row = (o) => {
+      const sel = s.sel === o.k;
+      return {
+        headDisplay: 'none', rowDisplay: 'flex', head: '', name: o.name, meta: '', metaDisplay: 'none',
+        bg: sel ? SEL_BG : ROW_BG, border: sel ? SEL_LINE : ROW_LINE, selFlag: sel ? '1' : '0',
+        ink: sel ? '#e9eef2' : 'rgba(233,238,242,0.82)',
+        ringInk: sel ? '#7ed6bc' : 'rgba(233,238,242,0.3)', dotDisplay: sel ? 'block' : 'none',
+        onTap: () => this.pick(o.k)
+      };
+    };
+    const head = (t) => ({ headDisplay: 'flex', rowDisplay: 'none', head: t, name: '', meta: '', metaDisplay: 'none', bg: 'transparent', border: 'transparent', ink: '', ringInk: 'transparent', dotDisplay: 'none', onTap: null });
+    const listItems = [];
+    if (custom) listItems.push({ ...row({ k: 'custom', name: 'Custom' }), meta: 'Not saved', metaDisplay: 'block' });
+    listItems.push(head('Presets'));
+    E.PRESETS.forEach(o => listItems.push(row(o)));
+    listItems.push(head('Yours · ' + s.own.length + ' of 10'));
+    s.own.forEach(o => listItems.push(row(o)));
+
+    const G = this._vis || s.gains;
+    const c = E.path(G, 100, 120, 10, 1, 239);
+    const cp = E.path(G, 100, 100, 7.5, 1, 199);
+    const sm = smooth(G);
+    if (!this._uid) this._uid = 'eq' + Math.random().toString(36).slice(2, 8);
+    const bands = E.BANDS.map((label, i) => {
+      const g = G[i];
+      const f = ((12 - g) / 24).toFixed(4);
+      const knob = 50 - g / 12 * 50;
+      const hx = 50 + g / 12 * 50;
+      const dragging = s.drag === i;
+      return {
+        label, val: E.fmt(Math.round(g)),
+        valBg: dragging ? '#7ed6bc' : 'transparent',
+        valInk: dragging ? '#0d151c' : g ? 'rgba(233,238,242,0.9)' : 'rgba(233,238,242,0.6)',
+        colBg: dragging ? 'rgba(126,214,188,0.09)' : 'transparent',
+        knobTop: 'calc(' + pad + 'px + (100% - ' + 2 * pad + 'px) * ' + f + ')',
+        knobTopBar: 'calc(' + padBar + 'px + (100% - ' + 2 * padBar + 'px) * ' + f + ')',
+        knobRing: dragging ? '3px solid #7ed6bc' : '0px solid transparent',
+        fillTop: Math.min(50, knob) + '%', fillH: Math.abs(g) / 12 * 50 + '%',
+        hLeft: hx + '%', hFillLeft: Math.min(50, hx) + '%', hFillW: Math.abs(g) / 12 * 50 + '%',
+        rowBg: dragging ? 'rgba(126,214,188,0.1)' : 'transparent',
+        rowValInk: dragging ? '#7ed6bc' : g ? 'rgba(233,238,242,0.9)' : 'rgba(233,238,242,0.6)',
+        dotLeft: (i * 10 + 5) + '%', dotTop: (50 - g * 3.75) + '%',
+        dotInk: dragging ? '#7ed6bc' : '#e9eef2',
+        signInk: g > 0 ? '#7ed6bc' : g < 0 ? BLUE : 'rgba(13,21,28,0.18)',
+        aColBg: dragging ? 'linear-gradient(180deg,rgba(126,214,188,0.16),rgba(126,214,188,0.03))' : 'transparent',
+        aKnobShadow: dragging ? '0 0 0 7px rgba(126,214,188,0.24),' + SHADOW : SHADOW,
+        segs: Array.from({ length: 24 }, (_, t) => {
+          const L = t < 12 ? 12 - t : t - 11, lit = t < 12 ? g >= L : -g >= L;
+          return { bg: lit ? (t < 12 ? hot(L) : BLUE) : SEG_OFF };
+        }),
+        bValInk: dragging ? '#0d151c' : g > 0 ? hot(g) : g < 0 ? BLUE : 'rgba(233,238,242,0.6)',
+        capBg: dragging ? '#7ed6bc' : '#e9eef2',
+        ...(() => {
+          const sc = specAt((i + 0.5) / 10);
+          return {
+            cInk: rgb(sc), cStem: rgb(sc, 0.42),
+            cColBg: dragging ? 'linear-gradient(180deg,' + rgb(sc, 0.16) + ',' + rgb(sc, 0.03) + ')' : 'transparent',
+            cValBg: dragging ? rgb(sc) : 'transparent',
+            cValInk: dragging ? '#0d151c' : g ? rgb(sc) : 'rgba(233,238,242,0.6)',
+            cKnobShadow: 'inset 0 0 0 2px rgba(255,255,255,0.28),' + (dragging ? '0 0 0 8px ' + rgb(sc, 0.26) + ',' : '') + SHADOW
+          };
+        })(),
+        ...(() => {
+          const sc = specAt((i + 0.5) / 10), up = g > 0, dn = g < 0, t = Math.abs(g) / 12;
+          const ac = up ? t3mix(t3MINT, t3AMBER, t) : dn ? t3mix(t3SKY, t3VIOLET, t) : t3PALE, aa = g ? 0.18 + t * 0.5 : 0.05;
+          const ridge = up ? rgb(t3mix(t3CORAL, t3GOLD, t)) : dn ? rgb(t3mix(t3SKY, t3VIOLET, t)) : t3MUTED;
+          const chip = (k, c) => ({ [k + 'ChipBg']: dragging ? (g ? c : '#e9eef2') : 'transparent', [k + 'ChipInk']: dragging ? t3INK : g ? c : t3MUTED });
+          const soft = dragging ? 'rgba(233,238,242,0.05)' : 'transparent';
+          return {
+            dRidge: ridge, dRowVal: dragging ? '#f4f1ea' : ridge,
+            ...chip('d', ridge), ...chip('e', up ? '#7ed6bc' : BLUE), ...chip('f', up ? hot(g) : BLUE), ...chip('g', rgb(sc)), ...chip('h', rgb(ac)),
+            dColBg: soft, dKnobBg: dragging ? t3CREAM : t3INK,
+            dKnobShadow: (dragging ? '0 0 0 8px rgba(244,241,234,0.18),' : '') + '0 3px 10px rgba(0,0,0,0.5)',
+            eColBg: soft, eW: dragging ? '64px' : '56px', eMl: dragging ? '-32px' : '-28px',
+            eTop: 'calc(' + Math.min(50, knob) + '% - 16px)', eH: 'calc(' + t * 50 + '% + 32px)',
+            eFill: up ? 'linear-gradient(to top,rgba(126,214,188,0.25),#7ed6bc)' : dn ? 'linear-gradient(to bottom,rgba(127,176,220,0.25),#7fb0dc)' : 'rgba(233,238,242,0.12)',
+            eGripTop: knob + '%', eGrip: g ? 'rgba(13,21,28,0.6)' : 'rgba(233,238,242,0.55)',
+            eShadow: dragging ? '0 0 0 3px #e9eef2,0 6px 18px rgba(0,0,0,0.4)' : 'none',
+            fColBg: soft, fKnobBg: dragging ? '#e9eef2' : 'rgba(13,21,28,0.6)',
+            fShadow: dragging ? '0 0 0 7px rgba(233,238,242,0.16)' : '0 3px 10px rgba(0,0,0,0.45)',
+            gColBg: dragging ? 'linear-gradient(180deg,' + rgb(sc, 0.14) + ',' + rgb(sc, 0.02) + ')' : 'transparent',
+            gRing: rgb(sc), gShadow: dragging ? '0 0 0 8px ' + rgb(sc, 0.24) + ',0 0 26px ' + rgb(sc, 0.55) : '0 0 16px ' + rgb(sc, 0.35),
+            hBlobLeft: (i * 10 + 5) + '%', hBlobTop: knob + '%',
+            hBlob: 'radial-gradient(closest-side,' + rgb(ac, aa) + ',' + rgb(ac, +(aa * 0.45).toFixed(3)) + ' 50%,' + rgb(ac, 0) + ')',
+            hK: dragging ? '34px' : '26px', hKm: dragging ? '-17px 0 0 -17px' : '-13px 0 0 -13px',
+            hShadow: dragging ? '0 0 0 8px rgba(244,241,234,0.2),0 0 24px ' + rgb(ac, 0.8) : '0 2px 8px rgba(0,0,0,0.5)'
+          };
+        })(),
+        onDown: (e) => this.colDown(i, e), onMove: (e) => this.colMove(i, e), onUp: () => this.colUp(),
+        onRowDown: (e) => this.rowDown(i, e), onRowMove: (e) => this.rowMove(i, e),
+        onRowUp: () => this.rowUp(i), onRowCancel: () => { this._land = null; if (this.cur().drag !== -1) this.put({ drag: -1 }); }
+      };
+    });
+
+    // the headroom note (ADR-0162 D3), and what stands in its place
+    let noteBadge, noteText, badge = BTN;
+    if (!on) { noteBadge = 'Off'; noteText = 'Off. The sound is untouched, bit-perfect.'; }
+    else if (dsd) { noteBadge = 'DSD'; noteText = 'DSD plays untouched. The equaliser stands aside for this track and is back for the next PCM one.'; }
+    else if (h > 0 && p.fixed) { noteBadge = '−' + hText; noteText = 'Lowered by ' + hText + ' so the boost cannot clip. With Fixed volume the music plays ' + hText + ' quieter: turn the amplifier up to match.'; badge = DANGER; }
+    else if (h > 0) { noteBadge = '−' + hText; noteText = 'Lowered by ' + hText + ' so the boost cannot clip.'; }
+    else { noteBadge = '0 dB'; noteText = 'No boost, so nothing is lowered.'; }
+
+    const actions = [{
+      label: 'Save as…', onTap: () => this.put({ sheet: full ? 'full' : 'save', draft: null }),
+      ...(custom && !full ? PRIMARY : BTN), opacity: full ? 0.5 : 1
+    }];
+    if (isOwn) {
+      actions.push({ label: 'Rename', onTap: () => this.put({ sheet: 'rename', draft: null }), ...BTN, opacity: 1 });
+      actions.push({ label: 'Delete', onTap: () => this.put({ sheet: 'delete' }), ...DANGER, opacity: 1 });
+    }
+
+    const def = 'My setting ' + (s.own.length + 1);
+    const selOwn = s.own.find(o => o.k === s.sel);
+    const sh = s.sheet;
+    const SHEETS = {
+      save: { title: 'Save as…', note: 'Saved settings are shared by every output. ' + s.own.length + ' of 10 used.', input: s.draft ?? def, hint: surface === 'phone' ? '' : 'Type with a keyboard on the player, or from the phone’s touchpad.', confirm: 'Save' },
+      rename: { title: 'Rename “' + (selOwn ? selOwn.name : '') + '”', input: s.draft ?? (selOwn ? selOwn.name : ''), hint: surface === 'phone' ? '' : 'Type with a keyboard on the player, or from the phone’s touchpad.', confirm: 'Rename' },
+      delete: { title: 'Delete “' + (selOwn ? selOwn.name : '') + '”?', note: 'Its bands go. An output that uses it goes back to Flat.', confirm: 'Delete', danger: true },
+      full: { title: 'Ten saved already', note: 'Ten of your own is the most there can be. Delete one, then save this setting.', confirm: 'OK', single: true },
+      pick: { title: 'Setting', pick: true, cancel: 'Close' }
+    };
+    const S = sh ? SHEETS[sh] : null;
+    const tog = {
+      togBg: on ? 'rgba(126,214,188,0.32)' : 'rgba(233,238,242,0.08)',
+      togBorder: on ? 'rgba(126,214,188,0.5)' : 'rgba(233,238,242,0.16)',
+      knobLeft: on ? '29px' : '3px', knobBg: on ? '#7ed6bc' : 'rgba(233,238,242,0.6)'
+    };
+    const selName = custom ? 'Custom' : selObj ? selObj.name : 'Flat';
+    const selMeta = custom ? 'From ' + (fromObj ? fromObj.name : 'Flat') + ' · not saved' : isOwn ? 'Yours' : 'Preset';
+
+    return {
+      isPanel: surface === 'panel', isBar: surface === 'bar', isPhone: surface === 'phone',
+      lookOld: look === 'current', lookA: look === 'a', lookB: look === 'b', lookC: look === 'c',
+      lookD: !['current', 'a', 'b', 'c', 'e', 'f', 'g', 'h'].includes(look), lookE: look === 'e', lookF: look === 'f', lookG: look === 'g', lookH: look === 'h',
+      echo1: look === 'g' ? smooth(G.map(v => v * 0.2)).line : '', echo2: look === 'g' ? smooth(G.map(v => v * 0.4)).line : '',
+      echo3: look === 'g' ? smooth(G.map(v => v * 0.6)).line : '', echo4: look === 'g' ? smooth(G.map(v => v * 0.8)).line : '',
+      ledCols: look === 'f' ? t3leds(G) : [], gD: this._uid + 'd', gG: this._uid + 'g',
+      smoothLine: sm.line, smoothArea: sm.area,
+      gA: this._uid + 'a', gAl: this._uid + 'al', gC: this._uid + 'c',
+      panelCrumb: 'Audio · for the ' + out.short + ', ' + out.name + ' · each output keeps its own',
+      barCrumb: 'Audio · ' + out.short,
+      phoneCrumb: 'Settings · Audio',
+      phonePowerNote: 'For the ' + out.short + ', ' + out.name + '. Each output keeps its own.',
+      powerText: on ? 'On' : 'Off · bit-perfect', powerShort: on ? 'On' : 'Off',
+      powerInk: on ? '#7ed6bc' : 'rgba(233,238,242,0.72)',
+      toggleOn: () => this.put({ on: !s.on, drag: -1 }),
+      ...tog,
+      listOpacity: on ? 1 : 0.4, offPointer: on ? 'auto' : 'none',
+      cardOpacity: !on ? 0.4 : dsd ? 0.5 : 1, curveOpacity: 1,
+      listItems, bands, actions,
+      selName, selMeta, metaInk: custom ? AMBER : 'rgba(233,238,242,0.6)',
+      curveLine: c.line, curveArea: c.area, phoneLine: cp.line, phoneArea: cp.area,
+      noteBadge, noteText, noteBadgeBg: badge.bg, noteBadgeLine: badge.border, noteBadgeInk: badge.ink,
+      barNoteInk: on && !dsd && h > 0 && p.fixed ? AMBER : 'rgba(233,238,242,0.72)',
+      openPick: () => this.put({ sheet: 'pick' }),
+      shiftTop: s.sheet === 'pick' || !p.shift ? '0px' : -p.shift + 'px',
+      pickShiftTop: s.sheet === 'pick' && p.shift ? -p.shift + 'px' : '0px',
+      pickRef: (el) => {
+        if (!el || p.shift) return;
+        requestAnimationFrame(() => {
+          const t = el.querySelector('[data-sel="1"]');
+          if (!t) return;
+          const d = t.getBoundingClientRect().top - el.getBoundingClientRect().top;
+          if (d + t.offsetHeight > el.clientHeight) el.scrollTop += d - el.clientHeight / 2;
+        });
+      },
+      // the board opens a dragging state scrolled to the bands
+      phoneScrollRef: (el) => {
+        if (!el || this._scrolled || !(p.drag >= 0) || p.shift) return;
+        this._scrolled = true;
+        requestAnimationFrame(() => { const t = el.querySelector('[data-eq="band-rows"]'); if (t) el.scrollTop = t.offsetTop - 70; });
+      },
+      trayOn: on, traySel: s.sel, trayDsd: dsd, trayFixed: !!p.fixed, trayScreen: p.screen ?? true,
+      sheetDisplay: S ? 'flex' : 'none', sheetScrim: S ? 1 : 0, sheetPointer: S ? 'auto' : 'none',
+      sheetTitle: S ? S.title : '', sheetNote: S && S.note ? S.note : '', sheetNoteDisplay: S && S.note ? 'block' : 'none',
+      pickDisplay: S && S.pick ? 'flex' : 'none',
+      inputDisplay: S && S.input != null ? 'block' : 'none', sheetInput: S && S.input != null ? S.input : '',
+      onInput: (e) => this.put({ draft: e.target.value }),
+      hintDisplay: S && S.hint ? 'block' : 'none', sheetHint: S && S.hint ? S.hint : '',
+      cancelDisplay: S && S.single ? 'none' : 'flex', cancelLabel: S && S.cancel ? S.cancel : 'Cancel',
+      confirmDisplay: S && !S.pick ? 'flex' : 'none', confirmLabel: S ? S.confirm || '' : '',
+      confirmBg: S && S.danger ? 'rgba(224,167,88,0.2)' : 'rgba(126,214,188,0.16)',
+      confirmBorder: S && S.danger ? 'rgba(224,167,88,0.5)' : 'rgba(126,214,188,0.4)',
+      confirmInk: S && S.danger ? AMBER : '#7ed6bc',
+      closeSheet: () => this.put({ sheet: null, draft: null }),
+      confirmSheet: () => this.confirm()
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -28,8 +28,9 @@ export class VolumeControl {
   #queued = null;
 
   /** `get` reads the component's props as they are now: `volume`,
-   *  `active`, `onexternal`, `onsettled`. Construct during component set-up:
-   *  it watches them. */
+   *  `active`, `onexternal`, `onsettled`, and `fixedMute` - with Fixed
+   *  volume, whether it is muted, null where there is no such mute
+   *  (ADR-0165). Construct during component set-up: it watches them. */
   constructor(get) {
     this.#get = get;
     $effect(() => {
@@ -52,7 +53,7 @@ export class VolumeControl {
   }
 
   get muted() {
-    return !!this.#get.volume()?.muted;
+    return this.#get.fixedMute?.() ?? !!this.#get.volume()?.muted;
   }
   get shown() {
     return this.dragging || this.settling ? this.local : (this.#get.volume()?.percent ?? 0);

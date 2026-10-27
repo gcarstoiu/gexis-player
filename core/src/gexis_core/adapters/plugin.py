@@ -29,7 +29,7 @@ logger = logging.getLogger("gexis_core.adapters.plugin")
 #: because a control the panel offers and nothing implements is worse than one
 #: that was never offered.
 CONTROLS = frozenset(
-    {"play", "pause", "next", "previous", "repeat", "shuffle", "activate"}
+    {"play", "pause", "next", "previous", "repeat", "shuffle", "seek", "activate"}
 )
 
 
@@ -303,6 +303,9 @@ class PluginAdapter(Adapter):
 
     async def repeat(self, mode: str) -> bool:
         return await self._transport("repeat", mode)
+
+    async def seek(self, position: float) -> bool:
+        return await self._transport("seek", position)
 
     async def activate(self) -> bool:
         """ADR-0027's deliberate acquisition, asked for from the panel."""

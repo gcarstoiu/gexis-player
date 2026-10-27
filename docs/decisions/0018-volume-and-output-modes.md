@@ -3,6 +3,8 @@
 **Status:** Accepted
 **Date:** 2026-09-04
 **Amends:** ADR-0010 (the silence rule was restated to accommodate mute)
+**Amended by [ADR-0165](0165-mute-with-fixed-output.md)** (2026-10-27): with
+Fixed volume, mute silences the output where it has a control of its own.
 **Amended:** 2026-09-05 — confirmed from source that the startup assertion
 below has to be ours. See "squeezelite must be told".
 **Amended:** 2026-09-08 — squeezelite and bluealsa-aplay no longer engage
@@ -327,7 +329,8 @@ Requirements:
 - The muted state is displayed prominently enough that it cannot be read as a
   fault.
 - The volume readout shows **the level it will return to**, not zero.
-- **Mute does not exist in fixed output mode.** The mixer is locked at 240, so
+- **Mute does not exist in fixed output mode** (*amended by ADR-0165,
+  2026-10-27*: it does where the output has a control of its own). The mixer is locked at 240, so
   the control disappears along with the slider. In fixed output the device has
   no volume affordances at all.
 

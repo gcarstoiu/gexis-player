@@ -51,6 +51,23 @@ def card() -> str:
     return _card
 
 
+#: **The card the renderers open, when it is not the output's** (ADR-0162):
+#: with the equaliser on they play into its loopback, and CamillaDSP holds
+#: the output's card - so who holds the device is asked of the loopback.
+_renderers_card: str | None = None
+
+
+def set_renderers_card(card_id: str | None) -> None:
+    global _renderers_card
+    if card_id != _renderers_card:
+        logger.info("alsa: renderers now play to %s", card_id or _card)
+        _renderers_card = card_id
+
+
+def renderers_card() -> str:
+    return _renderers_card or _card
+
+
 def resolve_card_number(card_id: str | None = None, cards_file: Path | None = None) -> int:
     """Resolve e.g. "sndrpihifiberry" to its current ALSA card number."""
     card_id = card_id or _card
@@ -71,8 +88,9 @@ def resolve_card_number(card_id: str | None = None, cards_file: Path | None = No
 
 
 def playback_pcm_node(card_id: str | None = None) -> Path:
-    """The kernel device node for the card's first playback PCM."""
-    return Path(f"/dev/snd/pcmC{resolve_card_number(card_id)}D0p")
+    """The kernel device node for the card's first playback PCM - by
+    default the one the renderers open (`renderers_card`)."""
+    return Path(f"/dev/snd/pcmC{resolve_card_number(card_id or renderers_card())}D0p")
 
 
 def device_busy(card_id: str | None = None) -> bool:

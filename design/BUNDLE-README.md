@@ -45,6 +45,28 @@ Not final, and marked so: the QR codes (placeholders), the setup password
 name; the animated skins are not in the repo), and the screen models in the
 Screen step's list (samples from `foonerd/pi_screen_setup`, Finding 100).
 
+## Phase 20 — the equaliser (2026-10-25)
+
+Open `design/source/20/Equaliser Board.dc.html` and read
+`design/source/20/README.md`, which is self-contained. The editor on the
+panel, the bars and the phone, and the quick change in the volume drawer, the
+bar's tray and the phone's tray. **George chose look 3a (Ridge)**; it is the
+default in the prototype, and the board's Turn 2 and Turn 3 options are not
+to be built. New: the glide between settings. Tokens under *Phase 20* in
+`design/tokens.css`. Two points are open for George (the README's *Open*).
+`Now Playing` and `Settings` are unchanged.
+
+## Phase 21 — the phone remote (2026-10-27)
+
+Open `design/source/21/Phone Remote Board.dc.html` and read
+`design/source/21/README.md`, which is self-contained. Two phones: a player
+with a screen (a trackpad or D-pad for the panel, quick actions) and one
+without (large cover, seek bar). Both share the player picker, the Remote /
+Settings switch and the volume row, with the EQ setting's name inside the
+bar. Tokens under *Phase 21* in `design/tokens.css`. One build change is
+outside the phone: mute works with Fixed volume, on the panel too.
+`Now Playing` and `Settings` are unchanged.
+
 ## Round 2 — what changed on 2026-10-01
 
 Open `13b/Screen Families Round 2.dc.html`. Its width buttons put every bar
@@ -410,6 +432,8 @@ Setup.dc.html                phone setup, with the Screen step
 Panel Setup.dc.html          the panel during setup, one step at a time
 support.js                   prototype runtime, required by every .dc.html
 *.webp / *.png / *.svg       images the prototypes load
+design/source/20/            Phase 20, the equaliser — read its README.md
+design/source/21/            Phase 21, the phone remote — read its README.md
 design/source/13b/           Phase 13b — open Screen Families Round 2.dc.html
   Screen Families Round 2.dc.html  round 2, 2026-10-01
   Bar States / Keep This Screen .dc.html   round 2 boards
@@ -438,5 +462,8 @@ brand/                       brand package
    panel's own behaviour taken back into the design.
 4. Add `screen` and `rotation` to `settings_registry.json` (George confirmed
    them 2026-09-30) and the Screen step to `SetupPage.svelte`.
-5. Port round 2 (above), then write Phase 13b's ADR from `design/source/13b/Screen Families Round 2.dc.html`, `Screen Families Chosen.dc.html` and this
+5. Build Phase 20 from `design/source/20/README.md` (look 3a only).
+5b. Build Phase 21 from `design/source/21/README.md`; its *Open for the
+    build* is the panel's mute with Fixed volume.
+6. Port round 2 (above), then write Phase 13b's ADR from `design/source/13b/Screen Families Round 2.dc.html`, `Screen Families Chosen.dc.html` and this
    README's 13b section, then build the families.

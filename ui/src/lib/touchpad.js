@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // ADR-0121: the phone as the panel's touchpad and keyboard. One socket,
-// `/touchpad`, used by both sides: a phone sends moves, taps and typing; the
-// panel sends whether its pointer is over a text field and whether one has
-// focus. The core relays and never interprets.
+// `/touchpad`, used by both sides: a phone sends moves, taps, scrolls, pinches
+// and typing (its D-pad goes as keys, ADR-0164); the panel sends whether its
+// pointer or its D-pad ring is on a text field and whether one has focus. The
+// core relays and never interprets.
 //
 // Opened only while something uses it (the panel while Phone touchpad is on,
-// a phone while its volume sheet is open), and reopened with a backoff, as
-// the `/state` socket is.
+// the phone's remote while it shows a player with a screen), and reopened
+// with a backoff, as the `/state` socket is.
 
 const RECONNECT_MIN_MS = 500;
 const RECONNECT_MAX_MS = 5000;

@@ -23,6 +23,8 @@ are all final unless a row below says otherwise. Recreate them exactly.
 | `source/*.dc.html` | The full interactive design — Now Playing, Settings, Setup (phone) and Panel Setup. Open in a browser. |
 | `source/13b/` | Phase 13b, other screens. Open `Screen Families Chosen.dc.html`. |
 | `source/19/` | Phase 19: the Home Assistant card and the D-pad's focus, with a PNG per state (the PNGs kept out of git). Read its `README.md`. |
+| `source/20/` | Phase 20: the equaliser, its editor on panel, bars and phone and the quick change. George chose look 3a. Read its `README.md` (the backdrop PNGs in `eq/` kept out of git). |
+| `source/21/` | Phase 21: the phone remote, for a player with a screen and one without. Read its `README.md`. |
 | `assets/` | Service marks and the two sample images. |
 
 ---
@@ -390,6 +392,34 @@ marks, rotation 0° / 180°, and Skin size.
 **`verify.html` has not been run against this revision.** It needs a local
 HTTP server. The slice was re-extracted by hand for the changes above;
 `geometry.json` is unchanged, as no landmark moved.
+
+---
+
+## Changed 2026-10-25
+
+**Phase 20, the equaliser** — `source/20/`. The editor (Settings → Audio →
+Equaliser) on the panel, both bars and the phone, and the quick change in
+the volume drawer and the two trays. George chose look **3a, Ridge**: the
+line runs through the knobs with no dip between two bands, the area to 0
+fills coral to amber up and blue to violet down, ring knobs. Choosing a
+setting glides the bands to it (380 ms each, 32 ms apart, low band first).
+Tokens at the end of `tokens.css` under *Phase 20*. The locked designs are
+unchanged.
+
+---
+
+## Changed 2026-10-27
+
+**Phase 21, the phone remote, redone** — `source/21/`. `Phone Remote v3`
+replaces v2 (deleted). Open `Phone Remote Board.dc.html`: Living Room
+(screen) and Kitchen (no screen) in Pixel 10 Pro frames, 410 x 780. For a
+screen: a 136 cover beside the title, artist and previous / play / next,
+progress under them, a touch area whose Trackpad drives the panel's pointer
+(or a D-pad), quick actions and the volume row. Without a screen: a large
+cover, a seek bar, larger transport. No shuffle or repeat on the phone. The
+panel's background. With Fixed volume the bar becomes the panel's locked
+row, mute kept. No typing sheet: the phone's own keyboard. Tokens at the end
+of `tokens.css` under *Phase 21*. The locked designs are unchanged.
 
 ---
 

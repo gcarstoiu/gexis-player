@@ -467,7 +467,7 @@ class Component extends DCLogic {
           return { title: 'Bluetooth', sub, blocks: [en, ...(last ? [status('ok', last.name + ' is paired')] : []), ...devs, btn('Pair another phone', () => set({ btPhase: 'disc', btLeft: 180 }))] }; }
         return { title: 'Bluetooth', sub, blocks: [en, status('spin', 'Waiting for a phone', 'Tap ' + nm + ' in its Bluetooth list'), ...devs], foot: SK };
       }
-      case 'touchpad': return { title: 'Touchpad on your phone', sub: 'In the phone’s volume sheet: move a pointer on ' + nm + '’s screen, tap, type, scroll with two fingers and pinch to zoom.', pv: pv({ kind: 'lib', pointer: s.touchpad }),
+      case 'touchpad': return { title: 'Touchpad on your phone', sub: 'On the phone’s remote: move a pointer on ' + nm + '’s screen, tap, type, scroll with two fingers and pinch to zoom.', pv: pv({ kind: 'lib', pointer: s.touchpad }),
         blocks: [list([T('Phone touchpad', '', s.touchpad, flip('touchpad'))]), note('info', 'More in Settings', s.touchpad ? 'Display → Touchpad: Pointer speed, how far the pointer moves for a finger’s movement, and Pointer style, a dot or an arrow.' : 'Display → Touchpad turns it on again, with its pointer speed and style.')], foot: SK };
       case 'visualiser': { const k = s.skin, a = ANIM[k], rpm = s.rpm ? 45 : 33;
         return { title: 'While music plays', sub: 'What the screen shows with the music.', pv: pv(s.vizOn ? { kind: k, rpm, animate: s.animate } : { kind: d.lyr ? KNAV[s.browse] : 'now' }),

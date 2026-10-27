@@ -616,3 +616,13 @@ The sanitiser the design specifies (fold accents, lowercase, illegal
 characters to hyphens, trim, cap at 63) applies to the hostname only; the
 header shows the name **as typed**, then the sanitised hostname, then the
 device's address.
+
+### Appended 2026-10-25 — the equaliser
+
+Confirmed by George, 2026-10-25, [ADR-0162](0162-a-simple-equaliser.md):
+
+| Setting | Mark | Notes |
+|---|---|---|
+| Equaliser | [N] | On or off, kept for each output (the DAC, HDMI, optical); off by default. Off, the output is bit-perfect as before |
+| Equaliser preset | [N] | The preset or one of the owner's settings in use, kept for each output; *Flat* by default |
+| Your equaliser settings | [N] | Up to ten, named, saved from the bands as set; one list shared by every output |

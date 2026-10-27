@@ -39,12 +39,39 @@ volume is set in the DAC's own hardware, not by changing the samples. Three
 exceptions: over HDMI the sound is not bit-perfect; with *Settings → Audio →
 Volume* on *Software* it is not bit-perfect below 100 %; and Plexamp lowers its
 volume inside its own software, so below 100 in the Plexamp app it is not
-bit-perfect either.
+bit-perfect either. With the equaliser on, the sound is changed on purpose,
+so it is not bit-perfect; off, it is as before.
+
+**Is there an equaliser?**
+Yes: *Settings → Audio → Equaliser*, and from the volume drawer, the bar's
+tray or the button beside the phone's volume for a quick change. Ten bands from 31 Hz to
+16 kHz, presets (*Flat*, *Rock*, *Pop*, *Jazz*, *Classical*, *Electronic*,
+*Hip-hop*, *Acoustic*, *Vocal*, *Late night*) and up to ten of your own.
+Each output (the DAC, HDMI, optical) keeps its own setting, and it is off
+until switched on. Every source plays through it.
+
+**Does the equaliser make the music quieter?**
+Not at most volumes. A band that rises would clip a loud passage, so the
+music is lowered first by as much as the bands rise together, and the volume
+then gives the same amount back: a setting plays as loud as *Flat* at the
+same volume, and going back to *Flat* changes nothing but the bands. Only
+near the top of the volume is there not that much left to give, so there
+the setting plays a little quieter than *Flat* - up to the lowering at 100 %.
+The note under the bands says how much is lowered and up to which volume it
+is given back (*Lowered by 5 dB so the boost cannot clip; the volume gives
+it back up to 65%*). Cutting instead of boosting lowers nothing. With
+*Volume* on *Fixed* the player has no volume to give it back with: the music
+plays that much quieter, and the amplifier is turned up to match.
+
+**Does the equaliser change DSD?**
+No. Native DSD plays untouched: the equaliser stands aside while a DSD track
+plays, and is back for the next PCM one.
 
 **Why is there no volume slider?**
 *Settings → Audio → Volume* is set to *Fixed*. Fixed sends the full level all
 the time, for an amplifier that sets the volume itself; the screen shows a
-padlock instead of a slider. To get the slider back, choose *Hardware* (the
+padlock instead of a slider, and mute still silences an output that has a
+volume control of its own. To get the slider back, choose *Hardware* (the
 sound card's own volume control) or *Software* (the player recalculates the
 sound - not bit-perfect below 100 %). On an output with no volume control of
 its own, such as HDMI, Hardware is greyed out and Software is used in its
@@ -248,10 +275,10 @@ screen, its ports and its rotation. Everything else,
 including all sources and Settings on the phone, keeps working.
 
 **How do I type into a text field on the screen?**
-With the phone: open the volume sheet on the phone page, use the touchpad to
-tap the field on the screen, and the phone's own keyboard comes up; what is
-typed appears on the screen. Every text setting can also be filled in
-directly from Settings on the phone.
+With the phone: tap the field with the remote's trackpad, or move to it with
+the D-pad and press OK, and the phone's own keyboard comes up; what is typed
+appears on the screen. Every text setting can also be filled in directly from Settings
+on the phone.
 
 **How do I get back from Now Playing to where I was?**
 Tap the Minimise button in Now Playing's top-left corner. It returns to the
@@ -263,15 +290,14 @@ the library.
 ## Idle screen and visualiser
 
 **I have more than one player. Do I need a tab for each?**
-No. On the phone page, tap the switch button at the right of the *Settings*
-title - there when another player is on the network. It lists
-every player with what it is playing and through which source; choosing one
-opens its page in the same tab. A player is listed once it runs this release
+No. On the phone page, tap the player's name at the top. It lists every
+player on the network with what it is playing and through which source;
+choosing one opens its remote in the same tab. A player is listed once it runs this release
 or later and is on the same network.
 
 **Can the screen turn off, at night or on demand?**
-Yes. The *Screen* button in the phone's mini player darkens it until a
-touch, music starting or the button again wakes it; the player keeps playing meanwhile.
+Yes. *Standby* on the phone's remote darkens it until a touch, music
+starting or *Standby* again wakes it; the player keeps playing meanwhile.
 *Settings → Display → Display standby → Scheduled standby* does it at the
 *Standby times* you set - several,
 each with its own days. Woken during one, the screen goes dark again after
@@ -301,9 +327,9 @@ Home Assistant 2026.10 or later, turn off *Send X-Frame-Options* under
 restart*, and keep that page open until Home Assistant is back - otherwise it
 rolls the change back after five minutes. A login page inside the dashboard
 instead means Home Assistant does not trust the player yet: add the player's
-address to *trusted networks*, or sign in once: from the phone page (its
-touchpad taps the fields, its keyboard types into them) or with a USB
-keyboard plugged into the player. Home Assistant then keeps the player signed
+address to *trusted networks*, or sign in once: tap a field with the phone
+remote's trackpad and type on the phone's keyboard, or use a USB keyboard
+plugged into the player. Home Assistant then keeps the player signed
 in.
 
 **Can Home Assistant control the player?**
@@ -440,24 +466,27 @@ player from its previous start; the player takes its own name back within a
 few minutes, so keep using the address without the *-2*.
 
 **What can the phone do?**
-Everything in Settings, plus a mini player at the bottom: the source, the
-title, the volume, and one row of buttons for the panel - Home, Now Playing,
-Lyrics, Visualiser and Idle screen. Opening the sheet adds a touchpad for the
-screen. Browsing the library happens on the screen, or in the
-streaming app.
+It is a remote: what is playing with its controls, the volume and the
+equaliser, and for a player with a screen a touch area that drives the
+screen, with Home, Lyrics, Back and Meters at its corners, and Standby, the
+idle screen, Now Playing and the Home Assistant dashboard below it. Its
+second page is everything in Settings. Browsing the library happens on the
+screen, or in the streaming app.
 
 **How does the touchpad work?**
-Open the volume sheet on the phone - tap it, or swipe it up; swipe down to
-close it. One finger moves a pointer on the screen, a tap presses, two
-fingers scroll, and a pinch zooms. What the pointer is over is outlined when
-it can be pressed. If the touchpad stops answering, it reconnects by itself:
-within about a second of touching it again, or about five seconds on its own. The lines along
-the right and bottom edges scroll with one finger. Tapping a text field on
-the screen brings up the phone's keyboard. A touch outside the sheet closes it.
+The touch area is a **trackpad**: one finger moves a pointer on the screen,
+a tap presses, two fingers scroll, and a pinch zooms. What the pointer is
+over is outlined when it can be pressed. The lines along the right and
+bottom edges scroll with one finger. Tapping a text field on the screen
+brings up the phone's keyboard. The switch at the top of the area changes to
+a **D-pad**: four arrows and OK, as buttons, with a teal ring on the screen
+showing where you are. If the remote stops answering, it reconnects by
+itself, within about a second of touching it again. *Settings → Display →
+Phone touchpad* off leaves the D-pad alone.
 
 **The pointer is too slow, or hard to see.**
 *Settings → Display → Pointer speed* (150–400 %) and *Pointer style* (*Dot* or
-*Arrow*). *Phone touchpad* switches the touchpad off altogether.
+*Arrow*).
 
 **The touchpad or the phone page does nothing.**
 The phone and the player must be on the same network. If the page loads but
@@ -760,7 +789,8 @@ including for tracks by several artists.
 **Where do lyrics come from, and why are some not synced?**
 From LRCLIB, switched on with *Settings → Enrichment → Lyrics*. Where LRCLIB
 has only plain lyrics, they are shown without timing. Some tracks have none.
-The Lyrics button on Now Playing, or on the phone's volume sheet, shows them.
+The Lyrics button on Now Playing, or the Lyrics corner of the phone's
+remote, shows them.
 
 **Where do artist pictures and biographies come from?**
 Biographies from Wikipedia; album and artist details from MusicBrainz. Artist

@@ -58,6 +58,7 @@ class StateStore:
         self._handoff: Handoff | None = None
         self._volume: VolumeState | None = None
         self._fixed_output = False
+        self._fixed_mute: bool | None = None
         self._meters = True
         self._settings_revision = 0
         self._pictures_revision = 0
@@ -74,6 +75,7 @@ class StateStore:
         self._settling: dict | None = None
         self._personalise: str | None = None
         self._resetting = False
+        self._equaliser: dict | None = None
         #: **ADR-0081: the cover the daemon found for a renderer that sent
         #: none.** `renderer_id -> (track, url)`, applied in `state` below
         #: only where the renderer's own artwork is absent. Keyed on the
@@ -116,6 +118,7 @@ class StateStore:
             handoff=self._handoff,
             volume=self._volume,
             fixed_output=self._fixed_output,
+            fixed_mute=self._fixed_mute,
             meters=self._meters,
             sources=self._sources,
             settings_revision=self._settings_revision,
@@ -131,6 +134,7 @@ class StateStore:
             settling=dict(self._settling) if self._settling else None,
             personalise=self._personalise,
             resetting=self._resetting,
+            equaliser=self._equaliser,
         )
 
     def set_active(self, renderer_id: str | None) -> None:
@@ -313,6 +317,13 @@ class StateStore:
             self._volume = None
         self._notify()
 
+    def set_fixed_mute(self, muted: bool | None) -> None:
+        """ADR-0165: mute with Fixed volume - `None` where there is none."""
+        if muted == self._fixed_mute:
+            return
+        self._fixed_mute = muted
+        self._notify()
+
     def set_meters(self, available: bool) -> None:
         """ADR-0055 §6: whether this output's chain can feed the
         visualiser."""
@@ -426,6 +437,14 @@ class StateStore:
         if self._resetting:
             return
         self._resetting = True
+        self._notify()
+
+    def set_equaliser(self, snapshot: dict | None) -> None:
+        """ADR-0162: the equaliser changed - a band, a setting, the output in
+        use, or DSD standing it aside."""
+        if snapshot == self._equaliser:
+            return
+        self._equaliser = snapshot
         self._notify()
 
     @property

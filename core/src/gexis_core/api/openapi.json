@@ -27,6 +27,10 @@
   ],
   "tags": [
     {
+      "name": "Equaliser",
+      "description": "The equaliser: ten bands, the presets and the owner's own settings, for each output."
+    },
+    {
       "name": "Playback",
       "description": "What plays: the live state, the sources, transport, volume, the players on the network."
     },
@@ -84,6 +88,293 @@
     }
   ],
   "paths": {
+    "/equaliser": {
+      "get": {
+        "operationId": "equaliser",
+        "tags": [
+          "Equaliser"
+        ],
+        "summary": "The equaliser for the output in use",
+        "description": "Whether the equaliser is on for the output in use, the setting it uses and its ten bands, how far the music is lowered so a boost cannot clip, the presets and the owner's own settings. Each output (the DAC, HDMI, optical) keeps its own; the owner's settings are shared. The same object is `equaliser` on `/state`. Off, the output is bit-perfect.",
+        "x-gexis-stability": "internal",
+        "x-gexis-adr": [
+          "ADR-0162"
+        ],
+        "responses": {
+          "200": {
+            "description": "The equaliser.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Equaliser"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "There is no output: `there is no output`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The equaliser is not wired up (a core without it): `the equaliser is not wired up`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "equaliser_set",
+        "tags": [
+          "Equaliser"
+        ],
+        "summary": "Switch the equaliser, choose a setting or set the bands",
+        "description": "For the output in use: `on` switches it (the output is reopened, a moment of silence); `sel` chooses a preset or one of the owner's settings by key; `gains` sets all ten bands, or `band` (0-9, low to high) with `gain` one of them, in whole decibels from -12 to +12. Bands moved away from the setting in use make it `custom`, remembered with what it came from. A setting or a band is heard at once, while playing. Several at once apply in the order on, sel, gains, band.",
+        "x-gexis-stability": "internal",
+        "x-gexis-adr": [
+          "ADR-0162"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EqualiserChange"
+              },
+              "example": {
+                "sel": "rock"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The equaliser after the change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Equaliser"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A request the equaliser refuses, with the sentence to show: a band out of range, an unknown setting, a name taken or empty, ten saved already.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The equaliser is not wired up (a core without it): `the equaliser is not wired up`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/equaliser/settings": {
+      "post": {
+        "operationId": "equaliser_save",
+        "tags": [
+          "Equaliser"
+        ],
+        "summary": "Save the bands as one of the owner's settings",
+        "description": "The bands as set on the output in use, saved under a name (Save as...); the output then uses it. Up to ten, shared by every output; a name is unique and at most 40 characters.",
+        "x-gexis-stability": "internal",
+        "x-gexis-adr": [
+          "ADR-0162"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EqualiserName"
+              },
+              "example": {
+                "name": "Evening"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EqualiserSaved"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A request the equaliser refuses, with the sentence to show: a band out of range, an unknown setting, a name taken or empty, ten saved already.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The equaliser is not wired up (a core without it): `the equaliser is not wired up`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/equaliser/settings/{key}": {
+      "put": {
+        "operationId": "equaliser_rename",
+        "tags": [
+          "Equaliser"
+        ],
+        "summary": "Rename one of the owner's settings",
+        "description": "A new name for one of the owner's settings, by its key.",
+        "x-gexis-stability": "internal",
+        "x-gexis-adr": [
+          "ADR-0162"
+        ],
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The setting's key, from `own`."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EqualiserName"
+              },
+              "example": {
+                "name": "Late evening"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The equaliser after the change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Equaliser"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A request the equaliser refuses, with the sentence to show: a band out of range, an unknown setting, a name taken or empty, ten saved already.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The equaliser is not wired up (a core without it): `the equaliser is not wired up`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "equaliser_delete",
+        "tags": [
+          "Equaliser"
+        ],
+        "summary": "Delete one of the owner's settings",
+        "description": "Its bands go. An output that uses it goes back to Flat; Custom moved from it keeps its bands.",
+        "x-gexis-stability": "internal",
+        "x-gexis-adr": [
+          "ADR-0162"
+        ],
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The setting's key, from `own`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The equaliser after the change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Equaliser"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A request the equaliser refuses, with the sentence to show: a band out of range, an unknown setting, a name taken or empty, ten saved already.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The equaliser is not wired up (a core without it): `the equaliser is not wired up`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/backups": {
       "post": {
         "operationId": "backup_upload",
@@ -5218,7 +5509,7 @@
           "Panel"
         ],
         "summary": "Open the touchpad relay WebSocket",
-        "description": "Upgrades to a WebSocket that lets a phone act as the panel's touchpad and keyboard (ADR-0121). A connection from loopback is the panel; any other is a phone (ADR-0035 §6). A phone may send move, tap, text, key, scroll and zoom messages, which the core relays unchanged to every connected panel; the panel may send over and focus, relayed to every connected phone. Anything else, any non-text frame and any frame over 2048 bytes is dropped, and while the Phone touchpad setting (`phone_touchpad`) is off every relayed message is dropped too. A `{\"t\":\"ping\"}` from either side is always answered to the sender alone with `{\"t\":\"pong\"}`; when a phone disconnects, every panel is sent `{\"t\":\"gone\",\"phones\":<n>}`. The socket is separate from `/state`, which stays publish-only (ADR-0028); the server sends a WebSocket heartbeat every 20 seconds.",
+        "description": "Upgrades to a WebSocket that lets a phone act as the panel's touchpad and keyboard (ADR-0121). A connection from loopback is the panel; any other is a phone (ADR-0035 §6). A phone may send move, tap, text, key, scroll and zoom messages, which the core relays unchanged to every connected panel; the panel may send over, focus, ring (the D-pad's ring is on a text field, ADR-0164) and untyped (a character the Home Assistant dashboard could not be given), relayed to every connected phone. Anything else, any non-text frame and any frame over 2048 bytes is dropped, and while the Phone touchpad setting (`phone_touchpad`) is off every relayed message is dropped too. A `{\"t\":\"ping\"}` from either side is always answered to the sender alone with `{\"t\":\"pong\"}`; when a phone disconnects, every panel is sent `{\"t\":\"gone\",\"phones\":<n>}`. The socket is separate from `/state`, which stays publish-only (ADR-0028); the server sends a WebSocket heartbeat every 20 seconds.",
         "x-gexis-stability": "internal",
         "x-gexis-adr": [
           "ADR-0121",
@@ -5263,7 +5554,7 @@
           "Playback"
         ],
         "summary": "Send a transport command to the active renderer",
-        "description": "Sends play, pause, next, previous, shuffle or repeat to whichever renderer holds the device - never to a renderer by name, since a command to one that is not active would be an acquisition (ADR-0037 §1). The command must be declared by the active renderer and listed in the state's `controls.available` right now (ADR-0037 §2). `shuffle` and `repeat` take a JSON body; the others take none. A 200 means the command was sent; its effect arrives on /state.",
+        "description": "Sends play, pause, next, previous, shuffle, repeat or seek to whichever renderer holds the device - never to a renderer by name, since a command to one that is not active would be an acquisition (ADR-0037 §1). The command must be declared by the active renderer and listed in the state's `controls.available` right now (ADR-0037 §2). `shuffle`, `repeat` and `seek` take a JSON body; the others take none. `seek` needs a known duration, and a position past it is the end (ADR-0164 C2). A 200 means the command was sent; its effect arrives on /state.",
         "parameters": [
           {
             "name": "command",
@@ -5278,14 +5569,15 @@
                 "next",
                 "previous",
                 "shuffle",
-                "repeat"
+                "repeat",
+                "seek"
               ]
             }
           }
         ],
         "requestBody": {
           "required": false,
-          "description": "Only for `shuffle` (`{\"on\": true|false}`) and `repeat` (`{\"mode\": \"off\"|\"all\"|\"one\"}`); ignored for the other commands.",
+          "description": "Only for `shuffle` (`{\"on\": true|false}`), `repeat` (`{\"mode\": \"off\"|\"all\"|\"one\"}`) and `seek` (`{\"position\": <seconds>}`); ignored for the other commands.",
           "content": {
             "application/json": {
               "schema": {
@@ -5295,6 +5587,9 @@
                   },
                   {
                     "$ref": "#/components/schemas/PlaybackRepeatRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PlaybackSeekRequest"
                   }
                 ]
               }
@@ -5313,7 +5608,7 @@
             }
           },
           "400": {
-            "description": "`shuffle` without a boolean `on`, or `repeat` without `mode` set to off, all or one.",
+            "description": "`shuffle` without a boolean `on`, `repeat` without `mode` set to off, all or one, or `seek` without a `position` of 0 or more.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5444,7 +5739,7 @@
           "Playback"
         ],
         "summary": "Mute or unmute the output",
-        "description": "Mutes or unmutes the output (ADR-0028's command surface). The new state is published on /state as `volume.muted`. It fails with 409 while the volume level has not been read yet, a real window just after start.",
+        "description": "Mutes or unmutes the output (ADR-0028's command surface). The new state is published on /state as `volume.muted`, or with Fixed volume as `fixed_mute` (ADR-0165: the output's own control is silenced, and given full scale back). It fails with 409 while the volume level has not been read yet, a real window just after start, and with Fixed volume on an output with no volume control of its own.",
         "requestBody": {
           "required": true,
           "content": {
@@ -5477,7 +5772,7 @@
             }
           },
           "409": {
-            "description": "The mute could not be set: the volume level is not known yet.",
+            "description": "The mute could not be set: the volume level is not known yet, or with Fixed volume the output has no control of its own to mute.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5699,6 +5994,280 @@
   },
   "components": {
     "schemas": {
+      "Equaliser": {
+        "type": "object",
+        "description": "The equaliser for the output in use (ADR-0162).",
+        "required": [
+          "output",
+          "on",
+          "sel",
+          "name",
+          "from",
+          "from_name",
+          "gains",
+          "headroom_db",
+          "gives_back",
+          "given_up_to",
+          "fixed",
+          "dsd",
+          "bands",
+          "range",
+          "presets",
+          "own",
+          "own_max"
+        ],
+        "properties": {
+          "output": {
+            "type": "object",
+            "required": [
+              "card",
+              "name",
+              "kind"
+            ],
+            "properties": {
+              "card": {
+                "type": "string",
+                "description": "The output's ALSA card id."
+              },
+              "name": {
+                "type": "string",
+                "description": "The output as Settings names it."
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "DAC",
+                  "HDMI",
+                  "Optical",
+                  "Headphones",
+                  "USB DAC"
+                ]
+              }
+            }
+          },
+          "on": {
+            "type": "boolean",
+            "description": "Off, the output is bit-perfect."
+          },
+          "sel": {
+            "type": "string",
+            "description": "A preset's key, one of the owner's keys, or `custom`."
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The setting's name; `Custom` for custom."
+          },
+          "from": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What custom bands were moved from."
+          },
+          "from_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "gains": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": -12,
+              "maximum": 12
+            },
+            "minItems": 10,
+            "maxItems": 10,
+            "description": "Ten bands in decibels, low to high: 31, 63, 125, 250, 500 Hz, 1, 2, 4, 8, 16 kHz."
+          },
+          "headroom_db": {
+            "type": "number",
+            "description": "How far the music is lowered before the bands so the boost cannot clip, in 0.5 dB steps; 0 with no boost."
+          },
+          "gives_back": {
+            "type": "boolean",
+            "description": "The volume control after the equaliser cuts that much less, so the music plays as loud as Flat at the same volume (not under Fixed volume, nor with no boost)."
+          },
+          "given_up_to": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "With `gives_back`, the volume (per cent) up to which all of the lowering is given back; above it the music plays up to `headroom_db` quieter at the top. 100 when it is given back at any volume; null when nothing is given back."
+          },
+          "fixed": {
+            "type": "boolean",
+            "description": "The output's volume is Fixed: the lowering then makes the music quieter, to be made up on the amplifier."
+          },
+          "dsd": {
+            "type": "boolean",
+            "description": "Native DSD is playing: it goes past the equaliser untouched."
+          },
+          "bands": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "range": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "A band's lowest and highest gain."
+          },
+          "presets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "key",
+                "name",
+                "gains"
+              ],
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "gains": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -12,
+                    "maximum": 12
+                  },
+                  "minItems": 10,
+                  "maxItems": 10,
+                  "description": "Ten bands in decibels, low to high: 31, 63, 125, 250, 500 Hz, 1, 2, 4, 8, 16 kHz."
+                }
+              }
+            }
+          },
+          "own": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "key",
+                "name",
+                "gains"
+              ],
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "gains": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -12,
+                    "maximum": 12
+                  },
+                  "minItems": 10,
+                  "maxItems": 10,
+                  "description": "Ten bands in decibels, low to high: 31, 63, 125, 250, 500 Hz, 1, 2, 4, 8, 16 kHz."
+                }
+              }
+            },
+            "description": "The owner's own settings, shared by every output."
+          },
+          "own_max": {
+            "type": "integer"
+          }
+        }
+      },
+      "EqualiserChange": {
+        "type": "object",
+        "properties": {
+          "on": {
+            "type": "boolean"
+          },
+          "sel": {
+            "type": "string"
+          },
+          "gains": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": -12,
+              "maximum": 12
+            },
+            "minItems": 10,
+            "maxItems": 10,
+            "description": "Ten bands in decibels, low to high: 31, 63, 125, 250, 500 Hz, 1, 2, 4, 8, 16 kHz."
+          },
+          "band": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9
+          },
+          "gain": {
+            "type": "integer",
+            "minimum": -12,
+            "maximum": 12
+          }
+        }
+      },
+      "EqualiserName": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "EqualiserSaved": {
+        "type": "object",
+        "required": [
+          "saved",
+          "equaliser"
+        ],
+        "properties": {
+          "saved": {
+            "type": "object",
+            "required": [
+              "key",
+              "name",
+              "gains"
+            ],
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "gains": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": -12,
+                  "maximum": 12
+                },
+                "minItems": 10,
+                "maxItems": 10,
+                "description": "Ten bands in decibels, low to high: 31, 63, 125, 250, 500 Hz, 1, 2, 4, 8, 16 kHz."
+              }
+            }
+          },
+          "equaliser": {
+            "$ref": "#/components/schemas/Equaliser"
+          }
+        }
+      },
       "BackupsAdded": {
         "description": "A backup file added to the share and the Restore list (nothing restored). `already` is true when the same backup was there already, under `name`.",
         "type": "object",
@@ -7411,17 +7980,18 @@
         "description": "A message the panel sends on /touchpad; relayed unchanged to every phone.",
         "type": "object",
         "required": [
-          "t",
-          "field"
+          "t"
         ],
         "properties": {
           "t": {
             "type": "string",
             "enum": [
               "over",
-              "focus"
+              "focus",
+              "ring",
+              "untyped"
             ],
-            "description": "`over`: whether the pointer is over a text field; `focus`: whether a text field has focus."
+            "description": "`over`: whether the pointer is over a text field; `focus`: whether a text field has focus; `ring`: whether the D-pad's ring is on a text field, or on a control that opens one (ADR-0164 C5); `untyped`: characters the Home Assistant dashboard could not be given (ADR-0157), with no `field`."
           },
           "field": {
             "type": "boolean",
@@ -7805,7 +8375,8 @@
                 "next",
                 "previous",
                 "shuffle",
-                "repeat"
+                "repeat",
+                "seek"
               ]
             },
             "description": "Commands the renderer accepts (ADR-0037): `activate` for POST /renderer/{renderer_id}/activate, the rest for POST /transport/{command}. Sorted."
@@ -7831,10 +8402,11 @@
                 "next",
                 "previous",
                 "shuffle",
-                "repeat"
+                "repeat",
+                "seek"
               ]
             },
-            "description": "Declared commands minus those the renderer reports unavailable right now, sorted."
+            "description": "Declared commands minus those the renderer reports unavailable right now, sorted; `seek` only with a known duration."
           },
           "shuffle": {
             "type": [
@@ -8186,6 +8758,20 @@
           }
         }
       },
+      "PlaybackSeekRequest": {
+        "type": "object",
+        "description": "Body of POST /transport/seek (ADR-0164 C2).",
+        "required": [
+          "position"
+        ],
+        "properties": {
+          "position": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Where to go in the track, in seconds from its start."
+          }
+        }
+      },
       "PlaybackShuffleRequest": {
         "type": "object",
         "description": "Body of POST /transport/shuffle.",
@@ -8393,7 +8979,8 @@
               "next",
               "previous",
               "shuffle",
-              "repeat"
+              "repeat",
+              "seek"
             ],
             "description": "The command sent."
           },
@@ -10924,6 +11511,7 @@
           "handoff",
           "volume",
           "fixed_output",
+          "fixed_mute",
           "meters",
           "sources",
           "settings_revision",
@@ -10940,7 +11528,8 @@
           "screen_check",
           "settling",
           "personalise",
-          "resetting"
+          "resetting",
+          "equaliser"
         ],
         "properties": {
           "active": {
@@ -10993,6 +11582,13 @@
           "fixed_output": {
             "type": "boolean",
             "description": "True when the device does not attenuate at all (ADR-0046); the volume slider does not apply."
+          },
+          "fixed_mute": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Muted with Fixed volume (ADR-0165): null where there is no such mute (Variable, or Fixed on an output with no volume control of its own), else whether the output is muted."
           },
           "meters": {
             "type": "boolean",
@@ -11112,6 +11708,10 @@
           "resetting": {
             "type": "boolean",
             "description": "True once a factory reset is confirmed and the device is restarting into it (ADR-0132)."
+          },
+          "equaliser": {
+            "oneOf": [{"$ref": "#/components/schemas/Equaliser"}, {"type": "null"}],
+            "description": "The equaliser for the output in use (ADR-0162); null with no output."
           }
         }
       },
