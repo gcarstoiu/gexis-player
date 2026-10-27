@@ -186,7 +186,7 @@ been written properly. **0098 has no record either.**
 | [0163](0163-a-gexis-player-card-for-dashboards.md) | A Gexis Player card for Home Assistant dashboards | Accepted 2026-10-25 (Phase 19; decisions delegated to Claude), built in the integration's 0.3.0, as the phone remote in 0.5.0 (2026-10-27), changed after George's check in 0.4.0: shipped inside the integration, a plain web component in the player's look, everything through Home Assistant's services |
 | [0164](0164-the-phone-remote.md) | The phone remote | Built 2026-10-27, in 1.7.0 (Phase 21, the second design; George's three answers, Claude's C1-C13, all confirmed): Remote and Settings pages, a trackpad for the panel's pointer or a D-pad, seeking |
 | [0165](0165-mute-with-fixed-output.md) | Mute with fixed output | Built 2026-10-27, in 1.7.0 (Phase 21): mute silences an output with a control of its own; none where it has no control; amends 0018 and 0046 |
-| [0166](0166-multiroom-for-every-source.md) | Multiroom for every source | Proposed 2026-10-27 (Phase 22; George's nine answers, Claude's C1-C6 for his confirmation): one group, Lyrion's sync for Lyrion, Snapcast for the rest |
+| [0166](0166-multiroom-for-every-source.md) | Multiroom for every source | Accepted 2026-10-27 (Phase 22; George's nine answers, Claude's C1-C6 confirmed): one group, Lyrion's sync for Lyrion, Snapcast for the rest |
 
 ## Cross-cutting rules
 

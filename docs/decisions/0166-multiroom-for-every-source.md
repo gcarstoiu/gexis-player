@@ -1,7 +1,8 @@
 # ADR-0166 — Multiroom for every source
 
-**Status:** **Proposed** 2026-10-27. Phase 22 (`ph-multiroom`), started the
-same day (George: multiroom, then AirPlay 2, before room correction, which
+**Status:** **Accepted** 2026-10-27 (George: his answers, and C1-C6
+confirmed the same day; C3 he called an edge case). Phase 22
+(`ph-multiroom`), started the same day (George: multiroom, then AirPlay 2, before room correction, which
 cannot be tried yet). The experience is George's, from his answers the same
 day (*Decided*); the technical decisions are proposed, and confirmed or
 changed by the phase's first measurement. Builds on
@@ -105,7 +106,7 @@ test players' Wi-Fi, aiming at about a third of a second.
 the core already sees the loopback's rate change; members' clients reopen
 their outputs at the new rate.
 
-## Claude's decisions (for George's confirmation)
+## Claude's decisions (confirmed by George, 2026-10-27)
 
 - **C1 — A player in a group plays nothing of its own.** Grouped, the
   player's sound is the group's; leaving the group is how it plays alone.

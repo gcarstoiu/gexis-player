@@ -3410,14 +3410,15 @@ well**, and leave Lyrion's own synchronisation working.
 each other and which one leads; how they keep in sync; how a group is made
 and undone from the phone and the panel.
 
-**[ADR-0166](decisions/0166-multiroom-for-every-source.md), proposed
+**[ADR-0166](decisions/0166-multiroom-for-every-source.md), accepted
 2026-10-27**, with George's answers the same day: one group made in Gexis,
 Lyrion's own sync while it plays Lyrion and Snapcast for the rest; players
 joined from the remote and the panel until undone; a source started on any
 member plays on the whole group; each player its own volume and a group
 slider; every member shows the group's Now Playing; as short a delay as
 possible; the source's own rate; Home Assistant's join and unjoin. Claude's
-C1-C6 for his confirmation. The grouping is drawn in Claude Design first.
+C1-C6, confirmed by him the same day. The grouping is drawn in Claude
+Design first: the brief is `design/briefs/22-multiroom.md`.
 
 **Acceptance (draft):**
 
