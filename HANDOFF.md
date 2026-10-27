@@ -136,9 +136,20 @@ same day: mute with Fixed volume where the output has a control
 fixed rows too), the touch area giving way on phones under 780 px before
 the page scrolls, the strips following the finger. Claude's C1-C13 for his
 confirmation (C12 now keeps Pointer speed and style: nothing for ADR-0022).
-**Being rebuilt on `ph-phone-controls`**; sofapi still has the first
-build's preview. Rolling it back to Phase 20's (core git18, ui git19,
-player git20, in `ph-equaliser`'s `packaging/out`) only if George asks.
+**Rebuilt the same day** (ADR-0164, *Built (2026-10-27)*), pushed: core
+suite 2751 passed, 48 skipped; checked from mocked data against the board
+(`~/projects/scratch/ph21`: `run2.sh` / `batch2.sh` with `remote_shots2.py`
+and `fake_panel2.py`, `run_manual2.sh` for the manual's pictures from the
+demo library). **On sofapi as a preview since 2026-10-27 12:44** (sofapi
+stopped; dry run first: 3 upgraded, nothing removed): core
+`1.6.0+git60.3c5147e`, ui `1.6.0+git62.8367bb5`, player
+`1.6.0+git63.6990a1d`; core and kiosk restarted, the panel on
+`index-BfuMrj2Q.js`, no errors in the core's journal, `/tmp/pv` removed. The
+first build's three debs are in `~/projects/scratch/ph21/first-build-debs`.
+Rolling sofapi back to Phase 20's preview (core git18, ui git19, player
+git20, in `ph-equaliser`'s `packaging/out`) only if George asks. Next:
+George's look on sofapi, his confirmation of C1-C13, then the Home
+Assistant card (and its media player reading `fixed_mute`).
 
 Then 22-30 in order, each ADR first (`docs/DEVELOPMENT.md`, the IDs
 there); MPD parked (ADR-0151). **Raspberry Pi Imager** (ADR-0159, a task):
