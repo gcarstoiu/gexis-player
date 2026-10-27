@@ -212,16 +212,20 @@
   --eq-glide-step:              32ms;     /* band i starts i x step after the lowest */
 }
 
-/* ---- Phase 21: the phone remote (2026-10-26) ----------------------------
-   Extracted from source/21/Phone Remote v2.dc.html. */
+/* ---- Phase 21: the phone remote (2026-10-27) ----------------------------
+   Extracted from source/21/Phone Remote v3.dc.html. */
 :root {
   --remote-weave:               repeating-linear-gradient(38deg, #3f5a6d 0 48px, #2e4453 48px 96px); /* blur 70px, scale 1.14, inset -90px */
-  --remote-veil:                radial-gradient(130% 105% at 20% 42%, rgba(20,33,42,0.72), rgba(13,21,28,0.96));
+  --remote-veil:                radial-gradient(130% 105% at 20% 42%, rgba(22,36,46,0.3), rgba(14,23,30,0.86)); /* the panel's */
+  --remote-min-height:          780px;    /* Pixel 10 Pro in Chrome, address bar showing */
+  --remote-max-width:           412px;    /* works down to 360 */
   --remote-control-ground:      rgba(22,35,44,0.9);       /* switches and corner buttons */
   --remote-control-line:        rgba(233,238,242,0.12);   /* switches; corner buttons 0.14 */
   --remote-select:              rgba(126,214,188,0.16);   /* sliding indicator, on buttons */
   --remote-slide:               300ms cubic-bezier(0.32,0.72,0,1); /* indicators, EQ sheet */
   --remote-page:                340ms cubic-bezier(0.32,0.72,0,1); /* Remote <-> Settings */
+  --remote-cover:               136px;    /* screen layout; shrinks to 96 on narrow phones */
+  --remote-cover-radius:        18px;
   --remote-touch-ground:        rgba(233,238,242,0.04);
   --remote-touch-line:          rgba(233,238,242,0.12);
   --remote-touch-radius:        26px;
@@ -235,8 +239,9 @@
   --remote-vol-radius:          12px;
   --remote-vol-ground:          rgba(233,238,242,0.08);
   --remote-vol-ink-on-fill:     #0d151c;
+  --remote-fixed-ground:        rgba(233,238,242,0.05);
+  --remote-fixed-line:          rgba(233,238,242,0.12);
   --remote-scroll-line:         rgba(233,238,242,0.07);
-  --remote-scroll-thumb:        rgba(233,238,242,0.18);  /* 3 x 24; #7ed6bc while dragged */
-  --remote-pad-step:            52px;     /* touchpad travel per step */
+  --remote-scroll-thumb:        rgba(233,238,242,0.18);  /* 3 x 24, centred, static */
   --remote-scroll-step:         24px;     /* scroll strip travel per step */
 }
