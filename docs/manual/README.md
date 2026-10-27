@@ -464,7 +464,8 @@ and Spotify), larger controls and the volume.
 The button beside the volume opens the **equaliser**: its switch, the
 settings as a row of buttons (the presets, then your own), and what it does
 to the level. **Edit bands in Settings** opens the whole equaliser, where on
-the phone each band is a row, a slider sideways from 0.
+the phone each band is a row, a slider sideways from 0. Swipe it down, or tap
+above it, to close it.
 
 ### Settings on the phone
 

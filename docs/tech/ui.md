@@ -506,7 +506,8 @@ On a phone, `screens/remote/PhoneRemote.svelte` fills the page (ADR-0164,
 built from `design/source/21`): a player picker over `/players` (ADR-0136;
 another player opens its own page, C1) and a Remote / Settings switch, the
 two pages side by side. Settings is `Settings.svelte` with
-`switcher={false}`, mounted on its first visit. During setup, first use and
+`switcher={false}` and `ground={false}` (no weave or veil of its own: the
+remote's background shows behind it), mounted on its first visit. During setup, first use and
 *Personalise*, `FirstUsePage` takes the page instead, as before.
 
 The Remote page, **with a screen** (`RemoteScreen.svelte`): the cover
@@ -537,7 +538,8 @@ both, the panel's background, with the blurred cover. The column is at most
 - **The pad** last used is kept in the phone's `localStorage`
   (`gexis.remote.pad`); with `phone_touchpad` off, the D-pad alone.
 - **The sheets**: the player menu and the EQ sheet (`EqSheet.svelte`, with
-  Phase 20's `note` and `stateLine`).
+  Phase 20's `note` and `stateLine`; a tap on its handle or the scrim, or a
+  swipe down past 80 px or flicked, closes it).
 - **Typing**: the phone's own keyboard, opened by focusing a hidden field
   inside the touch that taps (the panel said `over`) or sends OK (`ring`).
 
