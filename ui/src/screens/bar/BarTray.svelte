@@ -17,7 +17,7 @@
   review decision 7: keep the panel's), not the source accent round 2 drew.
 -->
 <script>
-  import { fixedOutput, meters } from '../../lib/state.js';
+  import { fixedMute, fixedOutput, meters } from '../../lib/state.js';
   import { VolumeControl } from '../../lib/volumeControl.svelte.js';
   import { pressing } from '../../lib/press.svelte.js';
   import LockIcon from '../../lib/LockIcon.svelte';
@@ -56,6 +56,7 @@
     active: () => active,
     onexternal: () => onexternal,
     onsettled: () => onsettled,
+    fixedMute: () => $fixedMute,
   });
   const muted = $derived(vol.muted);
   const shown = $derived(vol.shown);
@@ -228,14 +229,24 @@
 
   {#if $fixedOutput}
     <!-- ADR-0046: the sentence where the question is asked, not a disabled
-         slider. -->
+         slider. ADR-0165: mute before it, where the output can be silenced. -->
+    {#if $fixedMute !== null}
+      <button class="btn mute" class:is-muted={muted} type="button" aria-label={muted ? 'Unmute' : 'Mute'}
+        onpointerup={(event) => press.lift(event, toggleMute)} onclick={() => press.click(toggleMute)}>
+        {#if muted}
+          <span class="i-muted"><span class="i-muted__cone"></span><i></i><i></i></span>
+        {:else}
+          <VolumeIcon percent={100} muted={false} />
+        {/if}
+      </button>
+    {/if}
     <div class="fixed">
       <span class="fixed__lock"><LockIcon size={34} /></span>
       <span class="fixed__text">
         <span class="fixed__title">Fixed output</span>
         <span class="fixed__sub">Level is set downstream. Set it on your amplifier.</span>
       </span>
-      <span class="fixed__level">100%</span>
+      <span class="fixed__level" class:is-muted={muted}>{muted ? 'Mute' : '100%'}</span>
     </div>
   {:else if volume}
     <button class="btn mute" class:is-muted={muted} type="button" aria-label={muted ? 'Unmute' : 'Mute'}
@@ -611,6 +622,9 @@
     text-transform: uppercase;
     color: rgba(233, 238, 242, 0.55);
     flex-shrink: 0;
+  }
+  .fixed__level.is-muted {
+    color: var(--accent-warn);
   }
 
   .toast {

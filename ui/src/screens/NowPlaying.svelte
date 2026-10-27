@@ -18,7 +18,7 @@
   import { artistsCached, foldedName, loadArtistGenres } from '../lib/library.js';
   import QueueRail from './QueueRail.svelte';
 
-  import { sendTransport, fixedOutput, meters } from '../lib/state.js';
+  import { sendTransport, fixedMute, fixedOutput, meters } from '../lib/state.js';
   import { playhead, mmss } from '../lib/playhead.svelte.js';
   import { playToggle } from '../lib/playToggle.svelte.js';
 
@@ -748,7 +748,10 @@
             disabled={!$fixedOutput && !volume}
             onclick={onvolume}
           >
-            {#if $fixedOutput}
+            {#if $fixedOutput && $fixedMute}
+              <!-- ADR-0165: muted shows as muted, not as the padlock. -->
+              <VolumeIcon percent={100} muted />
+            {:else if $fixedOutput}
               <!-- ADR-0046: the state is legible without opening anything. -->
               <LockIcon />
             {:else}

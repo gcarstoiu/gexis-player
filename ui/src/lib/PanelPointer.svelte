@@ -359,12 +359,6 @@
         key(String(message.key ?? ''));
         break;
       case 'scroll':
-        // ADR-0164 C11: the remote's scroll strip, a step for the D-pad's
-        // list rather than a distance under the pointer.
-        if (message.step) {
-          dispatchEvent(new CustomEvent('dpadscroll', { detail: { axis: message.step, by: message.by } }));
-          break;
-        }
         wake();
         scrolledAt = performance.now();
         scrolledX = Math.abs(Number(message.dx || 0)) > Math.abs(Number(message.dy || 0));

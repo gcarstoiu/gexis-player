@@ -5,7 +5,7 @@
   slider position; mute restores the level from before it.
 -->
 <script>
-  import { fixedOutput } from '../lib/state.js';
+  import { fixedMute, fixedOutput } from '../lib/state.js';
   import { VolumeControl } from '../lib/volumeControl.svelte.js';
   import LockIcon from '../lib/LockIcon.svelte';
   import VolumeIcon from '../lib/VolumeIcon.svelte';
@@ -22,6 +22,7 @@
     active: () => active,
     onexternal: () => onexternal,
     onsettled: () => onsettled,
+    fixedMute: () => $fixedMute,
   });
   const muted = $derived(vol.muted);
   const shown = $derived(vol.shown);
@@ -50,6 +51,12 @@
       is asked. Not a disabled slider - the design ruled that out by name.
     -->
     <div class="fixed">
+      <!-- ADR-0165: mute stays where the output has a control to silence. -->
+      {#if $fixedMute !== null}
+        <button class="mute" class:is-muted={muted} type="button" aria-label={muted ? 'Unmute' : 'Mute'} onclick={toggleMute}>
+          <VolumeIcon percent={100} {muted} />
+        </button>
+      {/if}
       <LockIcon size={26} />
       <span>Fixed output — level is set downstream. Set it on your amplifier.</span>
     </div>
