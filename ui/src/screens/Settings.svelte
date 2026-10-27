@@ -40,9 +40,9 @@
   // panel (PanelBackground.svelte). A phone gets its own, as before.
   //: `switcher`: ADR-0136's player switcher in the title, left out inside the
   //: phone's remote, whose picker is above Settings (ADR-0164).
-  //: `ground`: false inside the remote too, whose weave, blurred cover and
-  //: veil are behind both its pages (George, 2026-10-27).
-  let { onback = null, embedded = false, openRow = null, onrowopened = null, switcher = true, ground = true } = $props();
+  //: `flat`: inside the remote, every screen of Settings on the modals'
+  //: solid grey, with no weave or veil (George, 2026-10-27).
+  let { onback = null, embedded = false, openRow = null, onrowopened = null, switcher = true, flat = false } = $props();
 
   const WIDE_MIN = 720;
 
@@ -1852,11 +1852,11 @@
   </button>
 {/snippet}
 
-<div class="settings" class:is-embedded={embedded || !ground} bind:clientWidth={width}>
-  {#if !embedded && ground}
+<div class="settings" class:is-embedded={embedded} class:is-flat={flat} bind:clientWidth={width}>
+  {#if !embedded && !flat}
     <div class="weave"></div>
   {/if}
-  {#if ground}<div class="veil"></div>{/if}
+  {#if !flat}<div class="veil"></div>{/if}
 
   <div class="frame">
     <div class="head" class:head--wide={wide}>
@@ -2288,8 +2288,10 @@
   {#if docKey}
     {@const docRow = rowOf(docKey)}
     <div class="picker">
-      <div class="weave"></div>
-      <div class="veil"></div>
+      {#if !flat}
+        <div class="weave"></div>
+        <div class="veil"></div>
+      {/if}
       <div class="picker__head" class:head--wide={wide}>
         <button
           class="back"
@@ -2342,7 +2344,7 @@
   {/if}
 
   {#if eqPage}
-    <Equaliser surface={!onPanel() ? 'phone' : screen.family === 'bar' ? 'bar' : 'panel'} onback={() => (eqPage = false)} />
+    <Equaliser surface={!onPanel() ? 'phone' : screen.family === 'bar' ? 'bar' : 'panel'} {flat} onback={() => (eqPage = false)} />
   {/if}
 
   {#if picker}
@@ -2352,8 +2354,10 @@
     <div class="picker">
       <!-- Its own ground, embedded or not: it covers the rows, so the
            panel's weave behind the app cannot reach it. -->
-      <div class="weave"></div>
-      <div class="veil"></div>
+      {#if !flat}
+        <div class="weave"></div>
+        <div class="veil"></div>
+      {/if}
       <div class="picker__head" class:head--wide={wide}>
         <button
           class="back"
@@ -3170,6 +3174,11 @@
   }
   .settings.is-embedded {
     background: none;
+  }
+  .settings.is-flat,
+  .settings.is-flat .picker,
+  .settings.is-flat .pane--over {
+    background: var(--bg-panel);
   }
   .weave {
     position: absolute;

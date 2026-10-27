@@ -7,7 +7,8 @@
   cover, a seek bar and larger transport - and Settings as it is, without the
   mini player, mounted on its first visit. Over them the player menu and the
   EQ sheet. Behind both the panel's background: the weave, the blurred cover
-  where there is one, the veil (D9; Settings' too, George 2026-10-27).
+  where there is one, the veil (D9). While Settings shows, the whole screen
+  takes the modals' solid grey, as Settings does (George, 2026-10-27).
 
   For a player with a screen, the touchpad's socket (ADR-0121) is open while
   Remote shows: the trackpad and its strips go over it, and the panel says
@@ -205,6 +206,7 @@
   <div class="weave" aria-hidden="true"></div>
   {#if artwork}<img class="blur" src={artwork} alt="" aria-hidden="true" />{/if}
   <div class="veil" aria-hidden="true"></div>
+  <div class="ground" class:is-on={page === 'settings'} aria-hidden="true"></div>
 
   <div class="column">
     <div class="top">
@@ -244,7 +246,7 @@
         </div>
         <div class="page page--settings" inert={page !== 'settings'}>
           {#if settingsSeen}
-            <Settings openRow={settingsRow} onrowopened={() => { settingsRow = null; onrowopened?.(); }} switcher={false} ground={false} />
+            <Settings openRow={settingsRow} onrowopened={() => { settingsRow = null; onrowopened?.(); }} switcher={false} flat />
           {/if}
         </div>
       </div>
@@ -304,6 +306,18 @@
     inset: 0;
     background: var(--remote-veil);
     pointer-events: none;
+  }
+  /* Fades in with the slide to Settings, under the top bar too. */
+  .ground {
+    position: absolute;
+    inset: 0;
+    background: var(--bg-panel);
+    opacity: 0;
+    transition: opacity var(--remote-page);
+    pointer-events: none;
+  }
+  .ground.is-on {
+    opacity: 1;
   }
   /* C10: the design's column, at most 412 px wide on a larger screen; a
      phone wider than the drawing is filled, so nothing leaves strips at its

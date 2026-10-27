@@ -20,7 +20,9 @@
   import EqGraph from './EqGraph.svelte';
   import EqRows from './EqRows.svelte';
 
-  let { surface = 'panel', onback, onhome = null } = $props();
+  //: `flat`: inside the phone's remote, the modals' solid grey, with no
+  //: weave or veil (George, 2026-10-27).
+  let { surface = 'panel', onback, onhome = null, flat = false } = $props();
 
   const press = pressing();
   const glide = new Glide();
@@ -214,13 +216,13 @@
   <span class="badge" class:badge--amber={told.amber}>{told.badge}</span>
 {/snippet}
 
-<div class="eq" class:eq--bar={bar} class:eq--phone={phone} data-dpad-layer>
+<div class="eq" class:eq--bar={bar} class:eq--phone={phone} class:eq--flat={flat} data-dpad-layer>
   {#if bar}
     <div class="ground ground--bar"></div>
-  {:else}
+  {:else if !flat}
     <div class="weave"></div>
   {/if}
-  <div class="veil" class:veil--bar={bar}></div>
+  {#if !flat}<div class="veil" class:veil--bar={bar}></div>{/if}
 
   {#if !eq}
     <div class="frame">
@@ -405,6 +407,9 @@
      stays over every page (ADR-0101). */
   .eq--phone {
     z-index: 18;
+  }
+  .eq--flat {
+    background: var(--bg-panel);
   }
   .weave {
     position: absolute;

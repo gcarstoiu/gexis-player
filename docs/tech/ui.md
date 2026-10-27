@@ -506,8 +506,10 @@ On a phone, `screens/remote/PhoneRemote.svelte` fills the page (ADR-0164,
 built from `design/source/21`): a player picker over `/players` (ADR-0136;
 another player opens its own page, C1) and a Remote / Settings switch, the
 two pages side by side. Settings is `Settings.svelte` with
-`switcher={false}` and `ground={false}` (no weave or veil of its own: the
-remote's background shows behind it), mounted on its first visit. During setup, first use and
+`switcher={false}` and `flat` (its pages, choosers and the equaliser editor
+on the modals' solid `--bg-panel`, no weave or veil), mounted on its first
+visit; while it shows, the remote's own `--bg-panel` layer fades in over its
+background, behind the top bar too. During setup, first use and
 *Personalise*, `FirstUsePage` takes the page instead, as before.
 
 The Remote page, **with a screen** (`RemoteScreen.svelte`): the cover
