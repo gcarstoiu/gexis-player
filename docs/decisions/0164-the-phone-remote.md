@@ -75,9 +75,12 @@ the touchpad.
    out (ADR-0037); no cover is the panel's *artwork pending* glyph, and no
    duration (Bluetooth) the inert rule and *live*.
 9. **The panel's background**: the weave, the blurred cover where there is
-   one, the veil - **behind Settings too**, where the drawing embeds the
-   locked Settings on its own ground (George's finding on the preview,
-   2026-10-27: Settings covered the remote's background). **The touch
+   one, the veil, behind the Remote page. **Settings, all of it** - its
+   pages, its choosers and the equaliser editor - **on the modals' solid
+   grey** (`--bg-panel`), and while it shows the whole screen, the top bar
+   included (George, 2026-10-27, after the preview: first the remote's
+   background behind Settings; seeing it, the modals' grey; asked, he chose
+   the whole screen over the Settings page alone). **The touch
    area's buttons, the pad switch and the Remote / Settings switch** take
    the quick actions' faint ground and thin line, not the drawing's dark
    ground, so the remote's buttons look alike (George, the same day; asked,
@@ -198,14 +201,20 @@ Checked from mocked data; on sofapi from 14:22. Over a bright cover
 Settings' small grey lines measured 1.7:1 against their background (the
 titles 2.2:1), where its own ground has the 4.5:1 its grey was chosen for,
 and Settings' veil kept over the cover 3.8:1; the Remote page's own lines
-over the same cover measured 2.2 to 4.0:1. **Kept as it is** (George, the
-same day, shown the figures).
+over the same cover measured 2.2 to 4.0:1. Kept as it was at first
+(George, the same day, shown the figures); the fourth round below settles
+it.
 
 The second round: the column fills a phone up to 480 px (C10, amended), so
 every dimming layer reaches its edges; the touch area's buttons and both
 switches take the quick actions' ground. On sofapi from 14:57. The third:
 the EQ sheet's switch without its box, the touch still 48 px tall; checked
-from mocked data at 427 and 360 wide.
+from mocked data at 427 and 360 wide; on sofapi from 15:55. The fourth:
+Settings takes `flat` in the remote (its pages, choosers and the equaliser
+editor on `--bg-panel`, no weave or veil), and the remote's own
+`--bg-panel` layer fades in with the slide, behind the top bar; checked from
+mocked data at 427 and 800 wide (Settings, Display, a chooser, Credits, the
+editor), its grey text 4.4 to 4.5:1 on it; on sofapi from 16:15.
 
 ## Not in this record
 

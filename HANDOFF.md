@@ -174,7 +174,14 @@ retaken; checked from mocked data at 427 and 360, `remote_shots2.py` mode
 nothing removed; no restarts): ui and player `1.6.0+git71.9fbbebf`; the
 previous pair in `~/projects/scratch/ph21/findings2-debs`. Asked: whether
 the panel's volume drawer, whose switch has the same box (Phase 20's
-`EqQuick`), follows.
+`EqQuick`), follows. **Then Settings, all of it, on the modals' solid grey**
+(George; asked, the whole screen while it shows): `flat` on `Settings` and
+`Equaliser`, a `--bg-panel` layer in `PhoneRemote` (0f1783cf, the manual's
+Settings picture retaken; checked from mocked data at 427 and 800,
+`remote_shots2.py` mode `flat`). **On sofapi since 16:15** (stopped; dry
+run: 2 upgraded, nothing removed; no restarts): ui and player
+`1.6.0+git72.0f1783c`; the previous pair in
+`~/projects/scratch/ph21/findings3-debs`.
 Rolling sofapi back to Phase 20's preview (core git18, ui git19, player
 git20, in `ph-equaliser`'s `packaging/out`) only if George asks. Next:
 George's look on sofapi, then the Home Assistant card (and its media player
