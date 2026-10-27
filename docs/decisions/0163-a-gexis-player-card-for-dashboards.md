@@ -141,6 +141,17 @@ Claude's decisions, for George's confirmation:
   defining again a few times after, as the request described; the version
   in its address is the integration's, raised with every release.
 
+**Built** 2026-10-27 on the integration's `card-remote` (0.5.0, not
+released): `switch.<player>_equaliser` and `select.<player>_equaliser_setting`
+(`presets` and `own` as attributes; *Custom* shown, never chosen), the media
+player's seeking and Fixed mute, the card's full form; integration tests 48
+passed, its checks green. Checked from mocked entities at 340, 480 and 900
+wide in both looks - every state above, the sheet, the menu - and each
+press's service call; in the throwaway Home Assistant against sofapi, the
+new entities and, in its own frontend, the card defined 86 ms after the page
+(the registry polyfill at 52 ms), once in the picker. Not tried: the Home
+Assistant app, where the defect was seen.
+
 ## Settings (ADR-0022)
 
 None: the card's options live in the dashboard, not on the player.

@@ -3330,7 +3330,9 @@ George); the phase stays open for the Home Assistant card. **Then** (George,
 the same day): on a laptop the background stays inside the centred column;
 on sofapi from 18:21. The Home Assistant card started (George: now; the
 D-pad alone in the touch area, the equaliser's switch and setting added to
-the integration).
+the integration). **Built** the same day on the integration's
+`card-remote` (0.5.0, ADR-0163 15-17, C1-C7 for George): checked from mocked
+entities and in the throwaway Home Assistant; released after George's look.
 
 **Before it** the mini player at the bottom of the phone page
 ([ADR-0101](decisions/0101-a-mini-player-on-the-phone.md)) holds the track
