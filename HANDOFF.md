@@ -155,8 +155,18 @@ flag for the contrast check), pushed; **on sofapi since 14:22** (stopped;
 dry run: 2 upgraded, nothing removed): ui `1.6.0+git67.105f9bf`, player
 `1.6.0+git68.48d64a9`, core unchanged; core and kiosk restarted, the panel on
 `index-Bx9oVtwP.js`, no warnings, `/tmp/pv` removed; the rebuild's ui and
-player debs in `~/projects/scratch/ph21/second-build-debs`. Open for George:
-Settings' grey text over a bright cover (ADR-0164, *Not settled*).
+player debs in `~/projects/scratch/ph21/second-build-debs`. **George's next
+two findings, the same afternoon**, his answers asked: the remote fills a
+phone up to 480 px wide (C10 amended; his phone's browser is 427 px, and
+the 412 px column left 7 px strips no dimming reached), and the touch area's
+buttons (OK included) and both switches take the quick actions' ground
+(the remote's `--remote-control-*` tokens dropped). 5c8235b9 UI, 6dcdeb93
+docs (the four phone pictures retaken); checked from mocked data at 427,
+412 and 800 wide (`remote_shots2.py` mode `edges`). **On sofapi since
+14:57** while it played (George agreed; no restarts, the UI served from
+disk): ui `1.6.0+git69.5c8235b`, player `1.6.0+git70.6dcdeb9`; the previous
+pair in `~/projects/scratch/ph21/findings1-debs`. Open for George: Settings'
+grey text over a bright cover (ADR-0164, *Not settled*).
 Rolling sofapi back to Phase 20's preview (core git18, ui git19, player
 git20, in `ph-equaliser`'s `packaging/out`) only if George asks. Next:
 George's look on sofapi, his confirmation of C1, C2, C5-C9 and C11, then

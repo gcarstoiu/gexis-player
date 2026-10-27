@@ -76,7 +76,11 @@ the touchpad.
 9. **The panel's background**: the weave, the blurred cover where there is
    one, the veil - **behind Settings too**, where the drawing embeds the
    locked Settings on its own ground (George's finding on the preview,
-   2026-10-27: Settings covered the remote's background).
+   2026-10-27: Settings covered the remote's background). **The touch
+   area's buttons, the pad switch and the Remote / Settings switch** take
+   the quick actions' faint ground and thin line, not the drawing's dark
+   ground, so the remote's buttons look alike (George, the same day; asked,
+   he chose the quick actions' look over none at all).
 10. **Size**: drawn at 410 x 780 (a Pixel 10 Pro in Chrome with the address
     bar showing), 360 to 412 wide. Taller, the touch area (or, without a
     screen, the cover, up to 380) takes the extra. **Shorter, they give way
@@ -134,6 +138,9 @@ the touchpad.
   D-pad clears the pad switch; without a screen the cover's is 140 px.
   Below them the Remote page scrolls under the top bar (a drag on the
   touch area stays the pad's). *Confirmed by George, 2026-10-27.*
+  **Amended** the same day: on his 427 px phone the column left 7 px at
+  each side that no dimming reached; asked, he chose the remote filling a
+  phone up to 480 px wide, the 412 px column kept for wider screens.
 - **C11 — A scroll strip's step** is ADR-0121's `scroll`, 24 px on its
   axis. The first build's step that scrolled the ring's list goes.
 - **C12 — Pointer speed and Pointer style stay**, with the pointer; the
