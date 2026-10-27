@@ -105,7 +105,7 @@
           <div class="state" class:is-amber={line.amber}>{line.text}</div>
         </div>
         {@render edit()}
-        <button type="button" class="power" aria-label="Equaliser" aria-pressed={on} onclick={toggle}>
+        <button type="button" class="power power--alone" aria-label="Equaliser" aria-pressed={on} onclick={toggle}>
           {@render toggleSwitch()}
         </button>
       </div>
@@ -195,6 +195,13 @@
     gap: 14px;
     flex-shrink: 0;
     color: inherit;
+  }
+  /* The drawer's switch alone, without the box round it, as the phone's EQ
+     sheet (George, 2026-10-27); the touch is still 58 px tall. */
+  .power--alone {
+    background: none;
+    border: 0;
+    margin-right: -12px;
   }
   .edit:active,
   .power:active,
