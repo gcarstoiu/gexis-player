@@ -54,7 +54,7 @@
     flex-shrink: 0;
     display: flex;
     gap: 8px;
-    margin-top: 14px;
+    margin-top: 12px;
   }
   .gap {
     flex: 1;

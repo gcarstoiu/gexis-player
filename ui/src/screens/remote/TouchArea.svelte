@@ -2,17 +2,19 @@
 <!--
   ADR-0164 D3: the touch area of a player with a screen (design/source/21,
   *Touch area*). Corner buttons for Home, Lyrics, Back and Meters; a switch
-  between the two pads, both driving the panel's D-pad ring (ADR-0161):
+  between the two pads:
 
-  - **Touchpad**: every 52 px of travel on the main axis sends one step and
-    starts counting again; a release that never stepped is OK if it moved
-    under 12 px, else one step its way. What was sent is named for a second,
-    counting repeats (*Up × 3*). The strips along the right and bottom edges
-    scroll, a step each 24 px (C11).
-  - **D-pad**: the arrows and OK as buttons, with no name shown.
+  - **Trackpad**: the panel's pointer, relative, as a laptop's touchpad, with
+    ADR-0121's gestures - one finger moves and taps, two scroll or pinch.
+    Nothing is drawn on the phone: the pointer on the screen is the feedback.
+    The strips along the right and bottom edges, drawn still, scroll what is
+    under the pointer by 24 px for each 24 px of drag, the content following
+    the finger (C11).
+  - **D-pad**: the arrows and OK as buttons, driving the panel's ring
+    (ADR-0161).
 
-  OK calls `onok` first, inside the touch, so the phone's keyboard can open
-  for a text field the ring is on (C5).
+  A tap calls `ontap`, and OK `onok`, first, inside the touch, so the phone's
+  keyboard can open for the text field the pointer or the ring is on (C5).
 -->
 <script>
   import { active, meters, panel } from '../../lib/state.js';
@@ -25,119 +27,184 @@
     padSwitch = true,
     socket = null,
     onok = () => {},
+    ontap = () => {},
     onsay = () => {},
   } = $props();
-
-  const STEP = 52;
-  const TAP = 12;
-  const SCROLL_STEP = 24;
-  const NAMES = { up: 'Up', down: 'Down', left: 'Left', right: 'Right', ok: 'OK', back: 'Back' };
 
   const off = $derived(!!$panel.standby);
   const lit = (which) => !off && $showing === which;
 
-  // ── What was sent, named ────────────────────────────────────────────────
-  let sent = $state(null);
-  let count = $state(0);
-  let sentOn = $state(false);
-  let sentTimer;
-  let goneTimer;
-  function press(name, quiet = false) {
+  function press(name) {
     if (name === 'ok') onok();
     key(name);
-    if (quiet) return;
-    clearTimeout(sentTimer);
-    clearTimeout(goneTimer);
-    count = sent === name ? count + 1 : 1;
-    sent = name;
-    sentOn = true;
-    sentTimer = setTimeout(() => {
-      sentOn = false;
-      goneTimer = setTimeout(() => (sent = null), 240);
-    }, 1000);
   }
-  const sentText = $derived(sent ? NAMES[sent] + (count > 1 ? ` × ${count}` : '') : '');
 
-  const dir = (dx, dy) => (Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up');
+  // ── The trackpad (ADR-0121) ─────────────────────────────────────────────
+  //: A tap: quick, and hardly moved.
+  const TAP_MS = 300;
+  const TAP_MOVE = 10;
+  //: How far two fingers go together, or apart, before the gesture is
+  //: decided - a scroll or a zoom, which it then stays until they lift.
+  const DECIDE = 12;
 
-  // ── The touchpad ────────────────────────────────────────────────────────
-  let finger = null;
-  let dot = $state(null);
-  let lastDot = { x: -100, y: -100 };
-  function point(event, el) {
-    const r = el.getBoundingClientRect();
-    return { x: event.clientX - r.left, y: event.clientY - r.top };
+  const fingers = new Map();
+  //: 'one' (moving and tapping), 'two' (undecided), 'scroll', 'zoom', or
+  //: 'done' - after two fingers, nothing until every finger has lifted.
+  let gesture = null;
+  let touchStart = null;
+  let last = null;
+  let travelled = 0;
+  let middle = null;
+  let spread = 0;
+  let firstMiddle = null;
+  let firstSpread = 0;
+  let sideways = false;
+  let pending = { dx: 0, dy: 0 };
+  let scrolled = { dx: 0, dy: 0 };
+  let zoomed = 1;
+  let frame = 0;
+
+  /** Whole pixels go; **the fraction stays for the next frame**, so a
+   *  finger starting slowly is not held still and then let jump (George,
+   *  2026-10-05: "choppy at the beginning"). The same for two fingers. */
+  function flush() {
+    frame = 0;
+    const dx = Math.trunc(pending.dx);
+    const dy = Math.trunc(pending.dy);
+    if (dx || dy) socket?.send({ t: 'move', dx, dy });
+    pending = { dx: pending.dx - dx, dy: pending.dy - dy };
+    const sx = Math.trunc(scrolled.dx);
+    const sy = Math.trunc(scrolled.dy);
+    if (sx || sy) socket?.send({ t: 'scroll', dx: sx, dy: sy });
+    scrolled = { dx: scrolled.dx - sx, dy: scrolled.dy - sy };
+    if (Math.abs(zoomed - 1) > 0.002) {
+      socket?.send({ t: 'zoom', by: Math.round(zoomed * 1000) / 1000 });
+      zoomed = 1;
+    }
   }
+  function soon() {
+    if (!frame) frame = requestAnimationFrame(flush);
+  }
+  function midpoint() {
+    const [a, b] = [...fingers.values()];
+    return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  }
+  function apart() {
+    const [a, b] = [...fingers.values()];
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
   function padDown(event) {
-    if (finger) return;
-    const el = event.currentTarget;
-    el.setPointerCapture?.(event.pointerId);
-    const a = point(event, el);
-    finger = { id: event.pointerId, sx: a.x, sy: a.y, ax: a.x, ay: a.y, stepped: false };
-    dot = a;
+    // A finger after a quiet spell: is the socket still there?
     socket?.probe?.();
-  }
-  function padMove(event) {
-    if (!finger || event.pointerId !== finger.id) return;
-    const a = point(event, event.currentTarget);
-    const dx = a.x - finger.ax;
-    const dy = a.y - finger.ay;
-    if (Math.max(Math.abs(dx), Math.abs(dy)) >= STEP) {
-      press(dir(dx, dy));
-      finger.ax = a.x;
-      finger.ay = a.y;
-      finger.stepped = true;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    fingers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (fingers.size === 1 && gesture === null) {
+      gesture = 'one';
+      touchStart = performance.now();
+      last = { x: event.clientX, y: event.clientY };
+      travelled = 0;
+    } else if (fingers.size === 2 && gesture === 'one') {
+      // The second finger: no tap, no pointer movement, until decided.
+      gesture = 'two';
+      touchStart = null;
+      middle = firstMiddle = midpoint();
+      spread = firstSpread = apart();
+    } else {
+      gesture = 'done';
     }
-    dot = a;
   }
-  function padUp(event) {
-    if (!finger || event.pointerId !== finger.id) return;
-    const f = finger;
-    finger = null;
-    if (!f.stepped) {
-      const a = point(event, event.currentTarget);
-      const dx = a.x - f.sx;
-      const dy = a.y - f.sy;
-      press(Math.hypot(dx, dy) < TAP ? 'ok' : dir(dx, dy));
-    }
-    dot = null;
-  }
-  function padCancel() {
-    finger = null;
-    dot = null;
-  }
-  const shownDot = $derived.by(() => {
-    if (dot) lastDot = dot;
-    return dot ?? lastDot;
-  });
 
-  // ── The scroll strips ───────────────────────────────────────────────────
-  let strip = null;
-  let thumb = $state(null);
-  function fraction(event, el, axis) {
-    const r = el.getBoundingClientRect();
-    const f = axis === 'y' ? (event.clientY - r.top) / r.height : (event.clientX - r.left) / r.width;
-    return Math.max(0.12, Math.min(0.88, f));
+  function padMove(event) {
+    if (!fingers.has(event.pointerId)) return;
+    fingers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (gesture === 'one') {
+      const dx = event.clientX - last.x;
+      const dy = event.clientY - last.y;
+      last = { x: event.clientX, y: event.clientY };
+      travelled += Math.abs(dx) + Math.abs(dy);
+      pending = { dx: pending.dx + dx, dy: pending.dy + dy };
+      soon();
+      return;
+    }
+    if (fingers.size !== 2) return;
+    const m = midpoint();
+    const d = apart();
+    if (gesture === 'two') {
+      if (Math.abs(d - firstSpread) > DECIDE * 1.5) gesture = 'zoom';
+      else if (Math.hypot(m.x - firstMiddle.x, m.y - firstMiddle.y) > DECIDE) {
+        gesture = 'scroll';
+        // One direction per scroll: a list goes up and down, a row sideways.
+        sideways = Math.abs(m.x - firstMiddle.x) > Math.abs(m.y - firstMiddle.y);
+      } else return;
+      // Counted from here, so the deciding distance is not a jump.
+      middle = m;
+      spread = d;
+      return;
+    }
+    if (gesture === 'scroll') {
+      scrolled = sideways
+        ? { dx: scrolled.dx + m.x - middle.x, dy: 0 }
+        : { dx: 0, dy: scrolled.dy + m.y - middle.y };
+      middle = m;
+      soon();
+    } else if (gesture === 'zoom' && spread > 0) {
+      zoomed *= d / spread;
+      spread = d;
+      soon();
+    }
   }
+
+  function padUp(event) {
+    fingers.delete(event.pointerId);
+    const was = gesture;
+    if (fingers.size > 0) {
+      if (gesture !== 'one') gesture = 'done';
+      return;
+    }
+    gesture = null;
+    last = null;
+    if (was !== 'one' || touchStart === null) return;
+    const quick = performance.now() - touchStart < TAP_MS && travelled < TAP_MOVE;
+    touchStart = null;
+    if (!quick) return;
+    // **The keyboard opens inside this same touch** (ADR-0121 §4): the
+    // panel has said in advance that the pointer is over a text field.
+    ontap();
+    socket?.send({ t: 'tap' });
+  }
+
+  function padCancel(event) {
+    fingers.delete(event.pointerId);
+    touchStart = null;
+    if (fingers.size === 0) {
+      gesture = null;
+      last = null;
+    } else {
+      gesture = 'done';
+    }
+  }
+
+  // ── The scroll strips (C11) ─────────────────────────────────────────────
+  const SCROLL_STEP = 24;
+  let strip = null;
   function stripDown(event, axis) {
-    const el = event.currentTarget;
-    el.setPointerCapture?.(event.pointerId);
+    socket?.probe?.();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
     strip = { id: event.pointerId, axis, at: axis === 'y' ? event.clientY : event.clientX };
-    thumb = { axis, f: fraction(event, el, axis) };
   }
   function stripMove(event) {
     if (!strip || event.pointerId !== strip.id) return;
     const now = strip.axis === 'y' ? event.clientY : event.clientX;
     const d = now - strip.at;
-    if (Math.abs(d) >= SCROLL_STEP) {
-      socket?.send({ t: 'scroll', step: strip.axis, by: Math.sign(d) });
-      strip.at = now;
-    }
-    thumb = { axis: strip.axis, f: fraction(event, event.currentTarget, strip.axis) };
+    if (Math.abs(d) < SCROLL_STEP) return;
+    // The content follows the finger, as two fingers' scroll does.
+    const by = Math.sign(d) * SCROLL_STEP;
+    socket?.send(strip.axis === 'y' ? { t: 'scroll', dx: 0, dy: by } : { t: 'scroll', dx: by, dy: 0 });
+    strip.at += by;
   }
   function stripUp() {
     strip = null;
-    thumb = null;
   }
 
   function corner(which) {
@@ -151,38 +218,42 @@
       <!-- A touch's own mousedown, after the tap, would take the focus from
            the phone's keyboard field (ADR-0121 §4): refused. -->
       <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-      <div class="touch" role="application" aria-label="Touchpad"
+      <div class="touch" role="application" aria-label="Trackpad"
            onpointerdown={padDown} onpointermove={padMove} onpointerup={padUp} onpointercancel={padCancel}
-           onmousedown={(e) => e.preventDefault()}>
-        <div class="hint" style:opacity={dot || sentOn ? 0 : 1}>
-          <span>Swipe to move</span>
-          <span>Tap to choose</span>
-        </div>
-        <span class="dot" style:left={`${shownDot.x}px`} style:top={`${shownDot.y}px`} style:opacity={dot ? 1 : 0}></span>
-      </div>
+           onmousedown={(e) => e.preventDefault()}></div>
     {:else}
       <div class="dpad-wrap">
         <div class="dpad">
-          <button class="arrow arrow--up" type="button" aria-label="Up" onclick={() => press('up', true)}>
+          <button class="arrow arrow--up" type="button" aria-label="Up" onclick={() => press('up')}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d={FILLED.up} /></svg>
           </button>
-          <button class="arrow arrow--down" type="button" aria-label="Down" onclick={() => press('down', true)}>
+          <button class="arrow arrow--down" type="button" aria-label="Down" onclick={() => press('down')}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d={FILLED.down} /></svg>
           </button>
-          <button class="arrow arrow--left" type="button" aria-label="Left" onclick={() => press('left', true)}>
+          <button class="arrow arrow--left" type="button" aria-label="Left" onclick={() => press('left')}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d={FILLED.left} /></svg>
           </button>
-          <button class="arrow arrow--right" type="button" aria-label="Right" onclick={() => press('right', true)}>
+          <button class="arrow arrow--right" type="button" aria-label="Right" onclick={() => press('right')}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d={FILLED.right} /></svg>
           </button>
-          <button class="ok" type="button" aria-label="OK" onclick={() => press('ok', true)}>OK</button>
+          <button class="ok" type="button" aria-label="OK" onclick={() => press('ok')}>OK</button>
         </div>
       </div>
     {/if}
 
-    <button class="corner corner--bl" type="button" aria-label="Back" onclick={() => press('back')}>
-      <svg class="fill" viewBox="0 0 24 24" aria-hidden="true"><path d={FILLED.back} /></svg>
-    </button>
+    {#if pad === 'touch' && socket}
+      <div class="strip strip--v" role="application" aria-label="Scroll up and down"
+           onpointerdown={(e) => stripDown(e, 'y')} onpointermove={stripMove} onpointerup={stripUp} onpointercancel={stripUp}>
+        <span class="strip__line"></span>
+        <span class="strip__mark"></span>
+      </div>
+      <div class="strip strip--h" role="application" aria-label="Scroll left and right"
+           onpointerdown={(e) => stripDown(e, 'x')} onpointermove={stripMove} onpointerup={stripUp} onpointercancel={stripUp}>
+        <span class="strip__line"></span>
+        <span class="strip__mark"></span>
+      </div>
+    {/if}
+
     <button class="corner corner--tl" class:is-on={lit('home')} type="button" aria-label="Home" onclick={() => corner('home')}>
       <svg class="stroke" viewBox="0 0 24 24" aria-hidden="true"><path d={STROKED.home} /></svg>
     </button>
@@ -190,31 +261,19 @@
             disabled={!$active} onclick={() => corner('lyrics')}>
       <svg class="stroke" viewBox="0 0 24 24" aria-hidden="true"><path d={STROKED.lyrics} /></svg>
     </button>
+    <button class="corner corner--bl" type="button" aria-label="Back" onclick={() => press('back')}>
+      <svg class="fill" viewBox="0 0 24 24" aria-hidden="true"><path d={FILLED.back} /></svg>
+    </button>
     {#if $meters}
       <button class="corner corner--br" class:is-on={lit('meters')} type="button" aria-label="Meters" onclick={() => corner('meters')}>
         <svg class="stroke" viewBox="0 0 24 24" aria-hidden="true"><path d={STROKED.meters} /></svg>
       </button>
     {/if}
 
-    {#if pad === 'touch' && socket}
-      <div class="strip strip--v" role="application" aria-label="Scroll up and down"
-           onpointerdown={(e) => stripDown(e, 'y')} onpointermove={stripMove} onpointerup={stripUp} onpointercancel={stripUp}>
-        <span class="strip__line"></span>
-        <span class="strip__thumb" class:is-on={thumb?.axis === 'y'} style:top={`${thumb?.axis === 'y' ? thumb.f * 100 : 50}%`}></span>
-      </div>
-      <div class="strip strip--h" role="application" aria-label="Scroll left and right"
-           onpointerdown={(e) => stripDown(e, 'x')} onpointermove={stripMove} onpointerup={stripUp} onpointercancel={stripUp}>
-        <span class="strip__line"></span>
-        <span class="strip__thumb" class:is-on={thumb?.axis === 'x'} style:left={`${thumb?.axis === 'x' ? thumb.f * 100 : 50}%`}></span>
-      </div>
-    {/if}
-
-    <span class="sent" style:opacity={sentOn ? 1 : 0}>{sentText}</span>
-
     {#if padSwitch}
       <div class="switch">
         <span class="switch__ind" style:transform={pad === 'dpad' ? 'translateX(44px)' : 'none'}></span>
-        <button class="seg" class:is-on={pad === 'touch'} type="button" aria-label="Touchpad" aria-pressed={pad === 'touch'}
+        <button class="seg" class:is-on={pad === 'touch'} type="button" aria-label="Trackpad" aria-pressed={pad === 'touch'}
                 onclick={() => onpad('touch')}>
           <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="4.5" y="3" width="15" height="18" rx="3" /><circle cx="12" cy="11" r="2.4" />
@@ -230,10 +289,12 @@
 </div>
 
 <style>
+  /* C10: the drawing's height and more; shorter, down to where the D-pad
+     still clears the pad switch, before the page scrolls. */
   .area {
-    flex: 1;
-    min-height: 0;
-    margin-top: 14px;
+    flex: 1 1 0;
+    min-height: 312px;
+    margin-top: 12px;
     display: flex;
   }
   .pad {
@@ -249,33 +310,7 @@
     position: absolute;
     inset: 0;
     touch-action: none;
-    cursor: pointer;
-  }
-  .hint {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    pointer-events: none;
-    color: rgba(233, 238, 242, 0.6);
-    font-size: 15px;
-    white-space: nowrap;
-    transition: opacity 200ms ease;
-  }
-  .dot {
-    position: absolute;
-    width: 68px;
-    height: 68px;
-    margin: -34px 0 0 -34px;
-    border-radius: 50%;
-    box-sizing: border-box;
-    background: rgba(126, 214, 188, 0.16);
-    border: 1.5px solid rgba(126, 214, 188, 0.6);
-    pointer-events: none;
-    transition: opacity 160ms ease;
+    cursor: default;
   }
   .dpad-wrap {
     position: absolute;
@@ -402,41 +437,24 @@
     height: 28px;
     cursor: ew-resize;
   }
-  .strip__line {
+  .strip__line,
+  .strip__mark {
     position: absolute;
     display: block;
     pointer-events: none;
+  }
+  .strip__line {
     background: var(--remote-scroll-line);
   }
   .strip--v .strip__line { left: 50%; top: 0; bottom: 0; width: 1px; margin-left: -0.5px; }
   .strip--h .strip__line { top: 50%; left: 0; right: 0; height: 1px; margin-top: -0.5px; }
-  .strip__thumb {
-    position: absolute;
-    display: block;
+  /* Still: nothing moves or changes colour while dragging (the design). */
+  .strip__mark {
     border-radius: 2px;
-    pointer-events: none;
     background: var(--remote-scroll-thumb);
-    transition: background 120ms ease;
   }
-  .strip__thumb.is-on {
-    background: #7ed6bc;
-  }
-  .strip--v .strip__thumb { left: 50%; width: 3px; height: 24px; margin: -12px 0 0 -1.5px; }
-  .strip--h .strip__thumb { top: 50%; height: 3px; width: 24px; margin: -1.5px 0 0 -12px; }
-  .sent {
-    position: absolute;
-    left: 64px;
-    right: 64px;
-    bottom: 46px;
-    text-align: center;
-    font-family: var(--font-mono);
-    font-size: 13px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: #7ed6bc;
-    pointer-events: none;
-    transition: opacity 220ms ease;
-  }
+  .strip--v .strip__mark { left: 50%; top: 50%; width: 3px; height: 24px; margin: -12px 0 0 -1.5px; }
+  .strip--h .strip__mark { top: 50%; left: 50%; height: 3px; width: 24px; margin: -1.5px 0 0 -12px; }
   .switch {
     position: absolute;
     left: 50%;

@@ -2,67 +2,56 @@
 <!--
   ADR-0164 D2: the Remote page of a player with a screen (design/source/21,
   *Remote page: a player with a screen*). Top to bottom: now playing - the
-  cover, the track, a progress bar to read and the transport - the touch
-  area, which takes the height that is left, the quick actions and the
-  volume row.
+  cover, and beside it the title, the artist and the transport - the
+  progress to read, the touch area, which takes the height that is left,
+  the quick actions and the volume row. Shorter than the drawing, the touch
+  area gives way to its floor (C10) before the page scrolls.
 -->
 <script>
   import { active, metadata } from '../../lib/state.js';
   import { playhead, mmss } from '../../lib/playhead.svelte.js';
+  import RemoteCover from './RemoteCover.svelte';
   import RemoteTransport from './RemoteTransport.svelte';
   import TouchArea from './TouchArea.svelte';
   import QuickActions from './QuickActions.svelte';
   import VolumeRow from './VolumeRow.svelte';
-  import { FILLED } from './icons.js';
 
-  let { pad, onpad, padSwitch, socket, onok, onsay, oneq } = $props();
+  let { artwork = null, onartfailed, pad, onpad, padSwitch, socket, onok, ontap, onsay, oneq } = $props();
 
   const hasTrack = $derived(!!$active);
-  let failed = $state(null);
-  const artwork = $derived($metadata?.artwork && $metadata.artwork !== failed ? $metadata.artwork : null);
   const head = playhead(() => $metadata);
 </script>
 
 <div class="page">
   <div class="now">
-    <div class="track">
-      <div class="cover">
-        {#if hasTrack && artwork}
-          <img src={artwork} alt="" onerror={() => (failed = artwork)} />
-        {:else}
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d={FILLED.note} /></svg>
-        {/if}
-      </div>
+    <div class="cover"><RemoteCover {artwork} {hasTrack} onfailed={onartfailed} /></div>
+    <div class="side">
       <div class="text">
         <span class="title" class:is-none={!hasTrack}>{hasTrack ? ($metadata?.title ?? 'Playing') : 'Nothing playing'}</span>
-        {#if hasTrack}
-          {#if $metadata?.artist}<span class="artist">{$metadata.artist}</span>{/if}
-          {#if $metadata?.album}<span class="album">{$metadata.album}</span>{/if}
-        {/if}
+        {#if hasTrack && $metadata?.artist}<span class="artist">{$metadata.artist}</span>{/if}
       </div>
+      <RemoteTransport />
     </div>
-    {#if hasTrack}
-      <div class="progress">
-        <div class="bar" class:is-live={!head.hasPosition}>
-          {#if head.hasPosition}<div class="bar__fill" style:width={`${head.percent}%`}></div>{/if}
-        </div>
-        <div class="times">
-          <span>{head.hasPosition ? mmss(head.elapsed) : mmss($metadata?.position ?? 0)}</span>
-          <span>{head.hasPosition ? mmss(head.duration) : 'live'}</span>
-        </div>
-      </div>
-    {/if}
-    <RemoteTransport />
   </div>
 
-  <TouchArea {pad} {onpad} {padSwitch} {socket} {onok} {onsay} />
+  <div class="progress" class:is-idle={!hasTrack}>
+    <div class="bar" class:is-live={hasTrack && !head.hasPosition}>
+      {#if hasTrack && head.hasPosition}<div class="bar__fill" style:width={`${head.percent}%`}></div>{/if}
+    </div>
+    <div class="times">
+      <span>{!hasTrack ? '0:00' : head.hasPosition ? mmss(head.elapsed) : mmss($metadata?.position ?? 0)}</span>
+      <span>{!hasTrack ? '0:00' : head.hasPosition ? mmss(head.duration) : 'live'}</span>
+    </div>
+  </div>
+
+  <TouchArea {pad} {onpad} {padSwitch} {socket} {onok} {ontap} {onsay} />
   <QuickActions {onsay} />
   <div class="volume"><VolumeRow {oneq} {onsay} /></div>
 </div>
 
 <style>
   .page {
-    height: 100%;
+    min-height: 100%;
     box-sizing: border-box;
     padding: 0 16px 16px;
     display: flex;
@@ -71,55 +60,37 @@
   .now {
     flex-shrink: 0;
     display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  .track {
-    display: flex;
     gap: 16px;
-    align-items: stretch;
   }
+  /* The cover gives way first on a narrow phone, to 96 (the design's). */
   .cover {
-    position: relative;
-    width: 168px;
-    height: 168px;
-    border-radius: 20px;
-    overflow: hidden;
-    background: rgba(233, 238, 242, 0.07);
-    display: grid;
-    place-items: center;
-    flex-shrink: 0;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
-    color: rgba(233, 238, 242, 0.5);
+    width: var(--remote-cover);
+    min-width: 96px;
+    aspect-ratio: 1 / 1;
+    align-self: flex-start;
+    flex-shrink: 1;
   }
-  .cover img {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-  .cover svg {
-    width: 48px;
-    height: 48px;
-    fill: currentColor;
+  .side {
+    flex: 1 0 168px;
+    min-width: 168px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 2px 0;
   }
   .text {
-    flex: 1;
-    min-width: 0;
     display: flex;
     flex-direction: column;
-    justify-content: flex-end;
-    gap: 4px;
-    padding-bottom: 4px;
+    gap: 3px;
+    min-width: 0;
   }
   .title {
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 700;
     line-height: 1.2;
     display: -webkit-box;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     overflow-wrap: anywhere;
@@ -127,26 +98,22 @@
   .title.is-none {
     color: rgba(233, 238, 242, 0.6);
   }
-  .artist,
-  .album {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    overflow-wrap: anywhere;
-  }
   .artist {
-    font-size: 16px;
+    font-size: 15px;
     color: rgba(233, 238, 242, 0.72);
-  }
-  .album {
-    font-size: 14px;
-    color: rgba(233, 238, 242, 0.6);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .progress {
+    flex-shrink: 0;
+    margin-top: 12px;
     display: flex;
     flex-direction: column;
     gap: 6px;
+  }
+  .progress.is-idle {
+    opacity: 0.38;
   }
   .bar {
     position: relative;
@@ -171,6 +138,7 @@
     justify-content: space-between;
     font-family: var(--font-mono);
     font-size: 12px;
+    line-height: 16px;
     color: rgba(233, 238, 242, 0.6);
   }
   .volume {

@@ -5,12 +5,13 @@
   right, the equaliser's setting named in the middle - a second copy, clipped
   to the fill, reads dark over it - then the EQ button, which opens the EQ
   sheet. Its touch sizes are the design's (ADR-0164 D6). With Fixed volume
-  the bar's place says so (C3) and the EQ button stays.
+  the bar becomes the panel's locked row - mute, where the output has a
+  control to silence (ADR-0165, C3), the padlock, *Fixed output* and the EQ
+  name - and the EQ button stays.
 -->
 <script>
-  import { fixedOutput, setMute, setVolume, volume } from '../../lib/state.js';
+  import { fixedMute, fixedOutput, setMute, setVolume, volume } from '../../lib/state.js';
   import { equaliser } from '../../lib/equaliser.svelte.js';
-  import LockIcon from '../../lib/LockIcon.svelte';
   import { FILLED } from './icons.js';
 
   let { oneq = () => {}, onsay = () => {} } = $props();
@@ -19,7 +20,7 @@
   let settling = $state(false);
   let local = $state(0);
   const shown = $derived(dragging || settling ? local : Math.round($volume?.percent ?? 0));
-  const muted = $derived(!!$volume?.muted);
+  const muted = $derived($fixedOutput ? $fixedMute === true : !!$volume?.muted);
 
   const eq = $derived($equaliser);
   const eqOn = $derived(!!eq?.on);
@@ -90,9 +91,17 @@
 
 <div class="row">
   {#if $fixedOutput}
-    <div class="fixed" role="status">
-      <LockIcon size={20} />
-      <span>Fixed output · the amplifier sets the level</span>
+    <div class="fixed" class:has-mute={$fixedMute !== null} role="group" aria-label="Fixed output">
+      {#if $fixedMute !== null}
+        <button class="mute mute--fixed" type="button" aria-label={muted ? 'Unmute' : 'Mute'} aria-pressed={muted} onclick={toggleMute}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d={muted ? FILLED.muted : FILLED.speaker} /></svg>
+        </button>
+      {/if}
+      <span class="lock" aria-hidden="true"><span class="lock__shackle"></span><span class="lock__body"></span></span>
+      <span class="fixed__text">Fixed output</span>
+      {#if eq}
+        <span class="eq-fixed" class:is-lit={eqLit}><span class="eq__word">EQ</span><span class="eq-fixed__name">{eqName}</span></span>
+      {/if}
     </div>
   {:else}
     <div
@@ -236,25 +245,80 @@
   .level.is-dark {
     color: var(--remote-vol-ink-on-fill);
   }
+  /* The panel's locked row (design, *Fixed volume*). */
   .fixed {
+    position: relative;
     flex: 1;
     min-width: 0;
     height: var(--remote-vol-height);
     border-radius: var(--remote-vol-radius);
-    background: var(--remote-vol-ground);
+    background: var(--remote-fixed-ground);
+    border: 1px solid var(--remote-fixed-line);
+    box-sizing: border-box;
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 0 12px;
+    gap: 9px;
+    padding: 0 15px;
+  }
+  .fixed.has-mute {
+    padding-left: 44px;
+  }
+  .mute--fixed {
+    left: 3px;
+    top: 1px;
+  }
+  .lock {
+    position: relative;
+    width: 14px;
+    height: 16px;
+    flex-shrink: 0;
+    display: block;
+  }
+  .lock__shackle {
+    position: absolute;
+    left: 2px;
+    top: 0;
+    width: 10px;
+    height: 8px;
+    border: 2px solid rgba(233, 238, 242, 0.7);
+    border-bottom: none;
+    border-radius: 5px 5px 0 0;
     box-sizing: border-box;
-    font-size: 13px;
-    color: rgba(233, 238, 242, 0.72);
+    display: block;
+  }
+  .lock__body {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 14px;
+    height: 9px;
+    border-radius: 2.5px;
+    background: rgba(233, 238, 242, 0.7);
+    display: block;
+  }
+  .fixed__text {
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+    font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
-  }
-  .fixed span {
-    overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .eq-fixed {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    white-space: nowrap;
+    color: rgba(233, 238, 242, 0.72);
+  }
+  .eq-fixed.is-lit {
+    color: #7ed6bc;
+  }
+  .eq-fixed__name {
+    font-size: 13px;
+    font-weight: 700;
   }
   .eqbtn {
     width: var(--remote-button);

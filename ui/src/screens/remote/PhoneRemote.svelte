@@ -5,12 +5,14 @@
   the pair sliding a page at a time: Remote - with a screen, now playing, the
   touch area, the quick actions and the volume row; without one, a large
   cover, a seek bar and larger transport - and Settings as it is, without the
-  mini player, mounted on its first visit. Over them the player menu, the
-  typing sheet and the EQ sheet.
+  mini player, mounted on its first visit. Over them the player menu and the
+  EQ sheet. Behind them the panel's background: the weave, the blurred cover
+  where there is one, the veil (D9).
 
   For a player with a screen, the touchpad's socket (ADR-0121) is open while
-  Remote shows: the scroll strips go over it, and the panel says over it
-  where its ring is and when a text field has focus (C5).
+  Remote shows: the trackpad and its strips go over it, and the panel says
+  over it when its pointer or its ring is on a text field and when one has
+  focus, so the phone's own keyboard can type there (D7, C5).
 -->
 <script>
   import { onMount, untrack } from 'svelte';
@@ -23,13 +25,17 @@
   import RemoteNoScreen from './RemoteNoScreen.svelte';
   import PlayerMenu from './PlayerMenu.svelte';
   import EqSheet from './EqSheet.svelte';
-  import TypingSheet from './TypingSheet.svelte';
   import { said } from './commands.js';
   import { FILLED } from './icons.js';
 
   let { openRow = null, onrowopened = null } = $props();
 
   const hasScreen = $derived($settingValues.headless !== true);
+
+  //: C4: the cover, here for the background too; one that fails to load is
+  //: the pending glyph's, and no blur behind it.
+  let failedArt = $state(null);
+  const artwork = $derived($active && $metadata?.artwork && $metadata.artwork !== failedArt ? $metadata.artwork : null);
 
   // ── The pages ───────────────────────────────────────────────────────────
   let page = $state('remote');
@@ -95,7 +101,7 @@
   }
 
   // ── The pad ─────────────────────────────────────────────────────────────
-  //: C8: the one last used on this phone, Touchpad the first time; with
+  //: C8: the one last used on this phone, Trackpad the first time; with
   //: Phone touchpad off, the D-pad alone.
   const PAD_KEPT = 'gexis.remote.pad';
   const padAllowed = $derived($settingValues.phone_touchpad !== false);
@@ -117,49 +123,50 @@
   }
   const pad = $derived(padAllowed ? chosenPad : 'dpad');
 
-  // ── The socket, the ring and typing (C5) ────────────────────────────────
+  // ── The socket, and typing (C5) ─────────────────────────────────────────
   let socket = $state(null);
+  //: What the panel said in advance: its pointer over a text field, its
+  //: ring on one.
+  let overField = false;
   let ringField = false;
-  let typing = $state(false);
   let typeEl = $state(null);
   let typed = '';
   $effect(() => {
     if (!(hasScreen && padAllowed && page === 'remote')) return;
     const s = openTouchpad((message) => {
-      if (message.t === 'ring') ringField = !!message.field;
-      else if (message.t === 'focus') {
-        // The design's: while a field on the screen has focus, however it
-        // got it - a tap on the panel itself included, so a phone can type
-        // into the field a finger chose there (a dashboard's sign-in).
-        if (message.field) typing = true;
-        else stopTyping();
-      } else if (message.t === 'untyped') say('Some characters could not be typed on the player');
+      if (message.t === 'over') overField = !!message.field;
+      else if (message.t === 'ring') ringField = !!message.field;
+      else if (message.t === 'focus' && !message.field) stopTyping();
+      // ADR-0157: a character the player's keyboard layout cannot type.
+      else if (message.t === 'untyped') say('Some characters could not be typed on the player');
     });
     socket = s;
     return () => {
       s.close();
       socket = null;
+      overField = false;
       ringField = false;
       stopTyping();
     };
   });
 
-  //: **The keyboard opens inside the touch that sends OK** (ADR-0121 §4),
-  //: the one moment a browser allows it: the panel has said in advance that
-  //: its ring is on a text field.
+  //: **The keyboard opens inside the touch** that taps or sends OK (ADR-0121
+  //: §4), the one moment a browser allows it.
+  function beforeTap() {
+    if (overField) keyboard();
+  }
   function beforeOk() {
-    if (!ringField || !typeEl) return;
-    keyboard();
+    if (ringField) keyboard();
   }
   function keyboard() {
     if (!typeEl) return;
     typeEl.value = '';
     typed = '';
-    typeEl.focus();
-    typing = true;
+    // Not scrolled to: its caret is taller than the field, and the browser
+    // moved the whole remote up for it.
+    typeEl.focus({ preventScroll: true });
   }
   function stopTyping() {
-    typing = false;
     typed = '';
     if (typeEl) {
       typeEl.value = '';
@@ -196,6 +203,7 @@
 
 <div class="remote">
   <div class="weave" aria-hidden="true"></div>
+  {#if artwork}<img class="blur" src={artwork} alt="" aria-hidden="true" />{/if}
   <div class="veil" aria-hidden="true"></div>
 
   <div class="column">
@@ -225,12 +233,13 @@
 
     <div class="pages">
       <div class="track" style:transform={page === 'settings' ? 'translateX(-50%)' : 'none'}>
-        <div class="page" inert={page !== 'remote'}>
+        <div class="page page--remote" inert={page !== 'remote'}>
           {#if hasScreen}
-            <RemoteScreen {pad} onpad={choosePad} padSwitch={padAllowed} {socket} onok={beforeOk}
+            <RemoteScreen {artwork} onartfailed={(a) => (failedArt = a)} {pad} onpad={choosePad} padSwitch={padAllowed}
+                          {socket} onok={beforeOk} ontap={beforeTap}
                           onsay={say} oneq={() => { eqOpen = true; stopTyping(); }} />
           {:else}
-            <RemoteNoScreen onsay={say} oneq={() => (eqOpen = true)} />
+            <RemoteNoScreen {artwork} onartfailed={(a) => (failedArt = a)} onsay={say} oneq={() => (eqOpen = true)} />
           {/if}
         </div>
         <div class="page page--settings" inert={page !== 'settings'}>
@@ -256,7 +265,6 @@
     />
 
     <PlayerMenu open={menuOpen} {me} {others} {here} onclose={() => (menuOpen = false)} />
-    <TypingSheet open={typing} ondone={stopTyping} onkeyboard={keyboard} />
     <EqSheet open={eqOpen} onclose={() => (eqOpen = false)} onedit={() => toSettings('equaliser')} />
   </div>
 </div>
@@ -281,17 +289,27 @@
     transform: scale(1.14);
     pointer-events: none;
   }
+  .blur {
+    position: absolute;
+    inset: -120px;
+    width: calc(100% + 240px);
+    height: calc(100% + 240px);
+    object-fit: cover;
+    filter: blur(72px) saturate(1.7);
+    transform: scale(1.12);
+    pointer-events: none;
+  }
   .veil {
     position: absolute;
     inset: 0;
     background: var(--remote-veil);
     pointer-events: none;
   }
-  /* C10: the design's column, at most 480 px wide on a larger screen. */
+  /* C10: the design's column, at most 412 px wide on a larger screen. */
   .column {
     position: relative;
     height: 100%;
-    max-width: 480px;
+    max-width: var(--remote-max-width);
     margin: 0 auto;
     display: flex;
     flex-direction: column;
@@ -425,6 +443,15 @@
     height: 100%;
     overflow: hidden;
   }
+  /* C10: shorter than its floors, Remote scrolls under the top bar. */
+  .page--remote {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+  }
+  .page--remote::-webkit-scrollbar {
+    display: none;
+  }
   /* Settings keeps its own text selection, for the fields typed into. */
   .page--settings {
     user-select: text;
@@ -443,11 +470,12 @@
     color: var(--accent-warn);
     z-index: 20;
   }
-  /* Focusable, so the phone's keyboard opens for it, and out of sight. */
+  /* Focusable, so the phone's keyboard opens for it, and out of sight; at
+     the top, where a keyboard coming up never covers it. */
   .type {
     position: absolute;
     left: 0;
-    bottom: 0;
+    top: 0;
     width: 1px;
     height: 1px;
     opacity: 0;
