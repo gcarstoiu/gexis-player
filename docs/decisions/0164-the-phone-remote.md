@@ -1,6 +1,8 @@
 # ADR-0164 — The phone remote
 
-**Status:** **Accepted, revised** — George, 2026-10-27: Claude Design's
+**Status:** **Built** 2026-10-27 on `ph-phone-controls` from the second
+design (below, *Built (2026-10-27)*) and previewed on sofapi.
+**Accepted, revised** — George, 2026-10-27: Claude Design's
 second remote (`design/source/21`, `Phone Remote v3`) replaces the first;
 build it, with his answers to the three points where it left the current
 build (below). The decisions he left to Claude are listed under *Claude's
@@ -142,6 +144,37 @@ the quick actions, the EQ sheet, the volume bar and the layout without a
 screen. Dropped: the swipe steps and their labels, the finger dot, the
 scroll step for the ring's list, the typing sheet, shuffle and repeat, the
 480 px column, and the proposal to retire Pointer speed and style.
+
+## Built (2026-10-27)
+
+On `ph-phone-controls`, `next` merged in:
+
+- **The core**: ADR-0165's mute with Fixed volume (`fixed_mute` in
+  `/state`, `VolumeBridge.write_fixed`); the first build's scroll step
+  taken out of the touchpad's schema; *Phone touchpad*'s note describes the
+  trackpad again. Core suite 2751 passed, 48 skipped.
+- **The panel**: the fixed rows of the volume drawer and the bar's tray
+  have mute, the volume buttons show it; `dpad.js` keeps `dpadring`, the
+  ring's scroll step goes; first use's touchpad step describes the pointer.
+- **The phone** (`ui/src/screens/remote/`): `RemoteScreen` with
+  `RemoteCover` beside the title and `RemoteTransport` (previous, play,
+  next), `TouchArea` with ADR-0121's gestures (moved from the mini player)
+  and the still strips, the fixed row in `VolumeRow`, the blurred cover in
+  `PhoneRemote`; `TypingSheet` deleted.
+- **Checked from mocked data** (a mock core, a fake panel on the socket,
+  nothing from a player) at 410 x 780 beside the design's board, within a
+  pixel of its positions; at 360, 390 x 650, 412 x 915 and 800 wide; LMS,
+  Spotify, Bluetooth, no cover, nothing playing, standby, Fixed with and
+  without a control, muted; the panel's drawer and the bar's tray in Fixed.
+  A 100 px drag arrived as 100 px of `move`, a tap as `tap` with the phone's
+  field focused (the fake panel's `over`), 100 px down a strip as four
+  24 px `scroll`s, two fingers as `scroll` after the 12 px decision; the
+  D-pad's OK and Back as keys. The focus moved the whole remote up 8 px
+  (the hidden field's caret); it is focused without scrolling now.
+- **The documents**: the manual's section 7 and its pictures (the demo
+  library), mute with Fixed in the manual and FAQ, the FAQ's trackpad
+  answers, the technical guide (`ui.md`, `api.md`, `core-and-state.md`,
+  `audio-path.md`), the README.
 
 ## Not in this record
 
