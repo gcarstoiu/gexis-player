@@ -2,7 +2,7 @@
 
 **Status:** **Built** 2026-10-27 on `ph-phone-controls` from the second
 design (below, *Built (2026-10-27)*), previewed on sofapi, in 1.7.0
-(Testing, 2026-10-27).
+(Stable, 2026-10-27; Phase 21 closed by George the same day).
 **Accepted, revised** — George, 2026-10-27: Claude Design's
 second remote (`design/source/21`, `Phone Remote v3`) replaces the first;
 build it, with his answers to the three points where it left the current

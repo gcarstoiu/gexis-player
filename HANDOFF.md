@@ -20,20 +20,24 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.7.0 on Testing, 1.6.0 on Stable** (2026-10-27;
-Testing serial 57, Stable serial 10). 1.7.0 carries Phases 20 and 21 (the
+**Current release: 1.7.0, on Stable** (promoted 2026-10-27 at George's
+word: Stable serial 11, Testing serial 57, both read back with good
+signatures; r1.7.0 is GitHub's latest; the public `gexis-player.img.xz`
+through `releases/latest/download` passes its checksum and signature and
+decompresses to the checked image). 1.7.0 carries Phases 20 and 21 (the
 equaliser, the phone remote, mute with Fixed volume); PR #85 merged by George
-the same day, `main` merged into `docs` and `next`, the release branch and
-worktree gone, the routine clean-up run. Image
+the same day. README's current release: PR #86 (`stable-1.7.0`, worktree
+`~/projects/gexis-player-stable170`) waits for George's merge; after it,
+`main` into `docs` and `next`, the branch and worktree removed. Image
 `image/deploy/2026-10-27-gexis-player-v1.7.0.img`; build output
-`~/projects/gexis-release-out/r1.7.0`. Stable when George says
-(`publish.sh --promote r1.7.0`, then the README's *Download and install*).
-The release's detail is in the archive (2026-10-27, 1.7.0).
+`~/projects/gexis-release-out/r1.7.0`. The release's detail is in the
+archive (2026-10-27, 1.7.0).
 **R2D2's `/` fills up**: Docker's containerd store keeps images on `/`, not
 in `/home/docker`, and pi-gen rebuilds its 1.16 GB build image on every
 image build; check `df -h /` before one (1.9 GB free after 1.7.0's).
-**Next:** George's word on Stable; the Harmony ideas for the wiki (drafted,
-not pushed); the remote's laptop background into `next` after his look.
+**Next:** PR #86; the wiki Roadmap (the closed phases and the Harmony
+ideas, drafted, shown to George, not pushed); then Phase 22 when George
+picks it up.
 
 **The release key** moved to `~/projects/gexis-release-key` (George,
 2026-10-24): every release command sets
@@ -80,23 +84,15 @@ default list**: hacs/default#12691 (from George's fork `gcarstoiu/default`),
 every automated check passed; it waits for HACS's maintainers - do not ask
 them for a review (their template).
 
-**Phase 20, the equaliser** (`ph-equaliser`, ADR-0162): built, previewed,
-in 1.7.0; its branch is in `main` (worktree removed, the GitHub branch kept
-while the phase is open). **Open:** the measurement through sofapi's card (it
-plays through the amplifier: at a time George picks), with the give-back's
-checks (ADR-0162 *Not yet done*); the manual's drawer picture, retaken with
-the demo library.
-
-**Phase 21, the phone remote** (`ph-phone-controls` in
-`~/projects/gexis-player-ph-phone-controls`, ADR-0164, ADR-0165): built,
-George's findings over five rounds fixed, C1-C13 confirmed, in 1.7.0; the
-Home Assistant card follows it in the integration's 0.5.0 (ADR-0163 15-17,
-C1-C7 shown to George). **Open:** the remote's background inside the column
-on a laptop (5596698e, on the branch only; on sofapi since 18:21 - ui and
-player `1.7.0+git5.5596698` over the release's core) into `next` after
-George's look. Mocked-data checks: `~/projects/scratch/ph21` (`run2.sh`,
-`remote_shots2.py`, `run_manual2.sh`) and `~/projects/scratch/hacard`
-(`run.sh`, the card).
+**Phases 20 (the equaliser) and 21 (the phone remote) closed 2026-10-27**
+(George, with 1.7.0's promotion; `docs/DEVELOPMENT.md` has what each
+criterion rests on). `ph-equaliser` is gone (in `main`). The remote's laptop
+background (5596698e) was merged into `next` after 1.7.0 (222edb08), so
+`ph-phone-controls` and its worktree stay until the next release takes it to
+`main` (ROUTINE-CLEANUP). Left from Phase 20: the measurement through a card
+(to-do `eq-measure`, at a time George picks). Mocked-data checks:
+`~/projects/scratch/ph21` (`run2.sh`, `remote_shots2.py`, `run_manual2.sh`)
+and `~/projects/scratch/hacard` (`run.sh`, the card).
 
 Then 22-30 in order, each ADR first (`docs/DEVELOPMENT.md`, the IDs
 there); MPD parked (ADR-0151). **Raspberry Pi Imager** (ADR-0159, a task):
@@ -111,10 +107,10 @@ every merged release PR, otherwise weekly on Sunday evening. **Last run:
 
 ## Phases
 
-Closed: 0-19 (13 with letters a-f). Phases are numbered consecutively
-without letters, each with a stable ID (George, 2026-10-13); 20 and 21
-(the phone remote, `ph-phone-controls`, added by George on 2026-10-26) in
-progress, 22-30 to come, MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
+Closed: 0-21 (13 with letters a-f). Phases are numbered consecutively
+without letters, each with a stable ID (George, 2026-10-13); 20 (the
+equaliser) and 21 (the phone remote) closed 2026-10-27 with 1.7.0; 22-30 to
+come, none started, MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
 
 ## Machines
 
