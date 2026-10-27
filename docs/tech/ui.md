@@ -521,9 +521,12 @@ and the volume row (`VolumeRow.svelte`: `POST /volume` one request at a time,
 `fixed_mute` is not null, ADR-0165; the EQ button). **Without one**
 (`headless`): `RemoteNoScreen.svelte`, whose seek bar sends `POST
 /transport/seek` on release while `controls.available` has `seek`. Behind
-both, the panel's background, with the blurred cover. The column is at most
-412 px wide; shorter than the drawing's 780 px, the touch area gives way to
-312 px (the cover without a screen to 140 px), then the Remote page scrolls.
+both, the panel's background, with the blurred cover. The column fills a
+phone up to 480 px wide and is 412 px, centred, on a wider screen; the touch
+area's buttons and the two switches take the quick actions' ground
+(`--remote-button-ground`). Shorter than the drawing's 780 px, the touch
+area gives way to 312 px (the cover without a screen to 140 px), then the
+Remote page scrolls.
 
 - **The trackpad**: ADR-0121's gestures over `/touchpad` (`move`, `tap`,
   two-finger `scroll`, `zoom`; whole pixels each frame, the fraction kept).
