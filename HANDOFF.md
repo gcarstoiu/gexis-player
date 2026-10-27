@@ -34,7 +34,15 @@ archive (2026-10-27, 1.7.0).
 **R2D2's `/` fills up**: Docker's containerd store keeps images on `/`, not
 in `/home/docker`, and pi-gen rebuilds its 1.16 GB build image on every
 image build; check `df -h /` before one (1.9 GB free after 1.7.0's).
-**Next:** Phase 22 when George picks it up.
+**Now: Phase 22, multiroom for every source** (`ph-multiroom`, started
+2026-10-27; George moved multiroom, then AirPlay 2, before room correction,
+which cannot be tried yet: 22-25 are now multiroom, AirPlay 2, room
+correction for the bass, for the full range).
+[ADR-0166](docs/decisions/0166-multiroom-for-every-source.md) proposed the
+same day from George's nine answers (one group, Lyrion's sync for Lyrion,
+Snapcast for every other source and plugin; the shortest delay; the source's
+rate); Claude's C1-C6 for his confirmation. **Next:** his word on the ADR,
+then the design brief for the grouping (Claude Design), then the build.
 The wiki Roadmap shows Phases 20 and 21 done and the Harmony Hub ideas
 (pushed 2026-10-27 with his OK).
 
@@ -108,8 +116,8 @@ every merged release PR, otherwise weekly on Sunday evening. **Last run:
 
 Closed: 0-21 (13 with letters a-f). Phases are numbered consecutively
 without letters, each with a stable ID (George, 2026-10-13); 20 (the
-equaliser) and 21 (the phone remote) closed 2026-10-27 with 1.7.0; 22-30 to
-come, none started, MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
+equaliser) and 21 (the phone remote) closed 2026-10-27 with 1.7.0; 22
+(multiroom) in progress, 23-30 to come, MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
 
 ## Machines
 

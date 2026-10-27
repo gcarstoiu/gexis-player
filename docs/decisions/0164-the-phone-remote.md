@@ -223,5 +223,5 @@ editor), its grey text 4.4 to 4.5:1 on it; on sofapi from 16:15.
 
 ## Not in this record
 
-- A remote for several players at once (multiroom, Phase 25).
+- A remote for several players at once (multiroom, Phase 22, `ph-multiroom`).
 - The pointer or the D-pad on a player without a screen.

@@ -254,8 +254,8 @@ Rough, and subject to change:
   Assistant as a media player, with a D-pad for its screen and a dashboard
   card. A ten-band equaliser with presets and your own settings. The phone as
   a remote, with a touchpad or a D-pad for the screen.
-- 🔜 **Next:** room correction with a USB microphone, the bass first and then the full range.
-- 🎨 **Later:** AirPlay 2, multiroom for every source, a plugin catalogue, internet radio without a Lyrion server, themes. With Plex switched on, your own Plex server fills in
+- 🔜 **Next:** multiroom for every source, then AirPlay 2.
+- 🎨 **Later:** room correction with a USB microphone, the bass first and then the full range; a plugin catalogue, internet radio without a Lyrion server, themes. With Plex switched on, your own Plex server fills in
   the artist and album information other sources leave out.
 - 💭 **Maybe:** the DAC's own filter and polarity options.
 
