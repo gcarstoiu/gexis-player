@@ -3311,7 +3311,11 @@ his confirmation; he confirmed C3, C4, C10, C12 and C13 the same day.
 (ADR-0164, *Built (2026-10-27)*), checked from mocked data against the
 board, and **previewed on sofapi** from 12:44. **George's two findings the
 same day**: the EQ sheet closes with a swipe down too, and Settings shows the
-remote's background; both fixed and on sofapi from 14:22.
+remote's background; both fixed and on sofapi from 14:22. **Two more**:
+the remote fills a phone up to 480 px wide (C10 amended: a 427 px phone
+showed strips at its edges that no dimming reached), and the touch area's
+buttons and both switches look as the quick actions do; on sofapi from
+14:57.
 
 **Before it** the mini player at the bottom of the phone page
 ([ADR-0101](decisions/0101-a-mini-player-on-the-phone.md)) holds the track
