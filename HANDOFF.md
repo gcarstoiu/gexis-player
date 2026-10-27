@@ -135,7 +135,8 @@ same day: mute with Fixed volume where the output has a control
 ([ADR-0165](docs/decisions/0165-mute-with-fixed-output.md), the panel's
 fixed rows too), the touch area giving way on phones under 780 px before
 the page scrolls, the strips following the finger. Claude's C1-C13 for his
-confirmation (C12 now keeps Pointer speed and style: nothing for ADR-0022).
+confirmation (C12 now keeps Pointer speed and style: nothing for ADR-0022);
+**C3, C4, C10, C12 and C13 confirmed by George the same day**.
 **Rebuilt the same day** (ADR-0164, *Built (2026-10-27)*), pushed: core
 suite 2751 passed, 48 skipped; checked from mocked data against the board
 (`~/projects/scratch/ph21`: `run2.sh` / `batch2.sh` with `remote_shots2.py`
@@ -148,8 +149,8 @@ stopped; dry run first: 3 upgraded, nothing removed): core
 first build's three debs are in `~/projects/scratch/ph21/first-build-debs`.
 Rolling sofapi back to Phase 20's preview (core git18, ui git19, player
 git20, in `ph-equaliser`'s `packaging/out`) only if George asks. Next:
-George's look on sofapi, his confirmation of C1-C13, then the Home
-Assistant card (and its media player reading `fixed_mute`).
+George's look on sofapi, his confirmation of C1, C2, C5-C9 and C11, then
+the Home Assistant card (and its media player reading `fixed_mute`).
 
 Then 22-30 in order, each ADR first (`docs/DEVELOPMENT.md`, the IDs
 there); MPD parked (ADR-0151). **Raspberry Pi Imager** (ADR-0159, a task):

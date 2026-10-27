@@ -6,7 +6,8 @@ design (below, *Built (2026-10-27)*) and previewed on sofapi.
 second remote (`design/source/21`, `Phone Remote v3`) replaces the first;
 build it, with his answers to the three points where it left the current
 build (below). The decisions he left to Claude are listed under *Claude's
-decisions* for his confirmation. Phase 21 (`ph-phone-controls`).
+decisions*; he confirmed C3, C4, C10, C12 and C13 the same day, and the
+others are for his confirmation. Phase 21 (`ph-phone-controls`).
 **First design** — accepted 2026-10-26, built on `ph-phone-controls` and
 previewed on sofapi the same evening; George found that Claude Design had
 got the remote wrong (its touchpad sent D-pad steps by swipes, where he had
@@ -97,11 +98,12 @@ the touchpad.
   as Bluetooth's in the design. The plugin contract lists the new control.
 - **C3 — The fixed row's mute** is there where ADR-0165 offers it; on an
   output with no control of its own the row is the padlock, *Fixed output*
-  and the EQ name.
+  and the EQ name. *Confirmed by George, 2026-10-27.*
 - **C4 — The cover is the panel's**: the renderer's, else the one the
   library enrichment found, else the *artwork pending* glyph - for any
   source, so Bluetooth's is the glyph, as drawn. The blurred background
-  only with a cover. Nothing playing: the note glyph.
+  only with a cover. Nothing playing: the note glyph. *Confirmed by George,
+  2026-10-27.*
 - **C5 — The keyboard opens inside the touch**, the one moment a browser
   allows it: the panel says in advance that its pointer is over a text
   field (`over`, ADR-0121) or that its ring is on one (`ring`, a message
@@ -127,14 +129,16 @@ the touchpad.
   centred on a larger screen. The touch area's floor is 312 px, where the
   D-pad clears the pad switch; without a screen the cover's is 140 px.
   Below them the Remote page scrolls under the top bar (a drag on the
-  touch area stays the pad's).
+  touch area stays the pad's). *Confirmed by George, 2026-10-27.*
 - **C11 — A scroll strip's step** is ADR-0121's `scroll`, 24 px on its
   axis. The first build's step that scrolled the ring's list goes.
 - **C12 — Pointer speed and Pointer style stay**, with the pointer; the
-  first build's proposal to retire them is withdrawn.
+  first build's proposal to retire them is withdrawn. *Confirmed by George,
+  2026-10-27.*
 - **C13 — The notes the phone shows stay**: a volume or a mute that failed,
   a character the player could not type (ADR-0157). They are errors, not
-  the trackpad's feedback the design took away.
+  the trackpad's feedback the design took away. *Confirmed by George,
+  2026-10-27.*
 
 ## From the first build
 

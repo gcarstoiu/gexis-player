@@ -3306,7 +3306,8 @@ mute with Fixed volume where the output has a control of its own
 ([ADR-0165](decisions/0165-mute-with-fixed-output.md), the panel too); on a
 phone shorter than the drawing's 780 px the touch area gives way before the
 page scrolls; the scroll strips follow the finger. Claude's C1-C13 are for
-his confirmation. **Rebuilt the same day** on `ph-phone-controls`
+his confirmation; he confirmed C3, C4, C10, C12 and C13 the same day.
+**Rebuilt the same day** on `ph-phone-controls`
 (ADR-0164, *Built (2026-10-27)*), checked from mocked data against the
 board, and **previewed on sofapi** from 12:44.
 
