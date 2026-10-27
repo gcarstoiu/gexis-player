@@ -3309,7 +3309,9 @@ page scrolls; the scroll strips follow the finger. Claude's C1-C13 are for
 his confirmation; he confirmed C3, C4, C10, C12 and C13 the same day.
 **Rebuilt the same day** on `ph-phone-controls`
 (ADR-0164, *Built (2026-10-27)*), checked from mocked data against the
-board, and **previewed on sofapi** from 12:44.
+board, and **previewed on sofapi** from 12:44. **George's two findings the
+same day**: the EQ sheet closes with a swipe down too, and Settings shows the
+remote's background; both fixed and on sofapi from 14:22.
 
 **Before it** the mini player at the bottom of the phone page
 ([ADR-0101](decisions/0101-a-mini-player-on-the-phone.md)) holds the track

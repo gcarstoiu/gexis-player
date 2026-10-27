@@ -64,7 +64,9 @@ the touchpad.
    44 px floor (George, 2026-10-26; the second design keeps it). **With
    Fixed volume** the bar becomes the panel's locked row - mute, the
    padlock, *Fixed output*, the EQ name - and mute works there
-   (ADR-0165).
+   (ADR-0165). **The EQ sheet closes with a swipe down too**, besides the
+   drawing's tap on its handle or outside it (George's finding on the
+   preview, 2026-10-27).
 7. **Typing**: a trackpad tap on a text field on the player's screen, or
    OK with the ring on one, opens the phone's own keyboard. The remote has
    no keyboard, typing sheet or keyboard button of its own.
@@ -72,7 +74,9 @@ the touchpad.
    out (ADR-0037); no cover is the panel's *artwork pending* glyph, and no
    duration (Bluetooth) the inert rule and *live*.
 9. **The panel's background**: the weave, the blurred cover where there is
-   one, the veil.
+   one, the veil - **behind Settings too**, where the drawing embeds the
+   locked Settings on its own ground (George's finding on the preview,
+   2026-10-27: Settings covered the remote's background).
 10. **Size**: drawn at 410 x 780 (a Pixel 10 Pro in Chrome with the address
     bar showing), 360 to 412 wide. Taller, the touch area (or, without a
     screen, the cover, up to 380) takes the extra. **Shorter, they give way
@@ -179,6 +183,17 @@ On `ph-phone-controls`, `next` merged in:
   library), mute with Fixed in the manual and FAQ, the FAQ's trackpad
   answers, the technical guide (`ui.md`, `api.md`, `core-and-state.md`,
   `audio-path.md`), the README.
+
+**After George's findings (2026-10-27)**, on `ph-phone-controls`: the EQ
+sheet follows a finger pulled down and closes past 80 px or at a flick
+(500 px/s over the last 100 ms), else goes back; a sideways drag stays the
+chips' scroll, and a pull that starts on a chip does not choose it. Settings
+takes `ground={false}` in the remote: no ground, weave or veil of its own.
+Checked from mocked data; on sofapi from 14:22. **Not settled**: over a
+bright cover Settings' small grey lines measured 1.7:1 against their
+background (the titles 2.2:1), where its own ground has the 4.5:1 its grey
+was chosen for, and Settings' veil kept over the cover 3.8:1; the Remote
+page's own lines over the same cover measured 2.2 to 4.0:1.
 
 ## Not in this record
 

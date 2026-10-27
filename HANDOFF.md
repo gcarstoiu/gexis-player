@@ -147,6 +147,16 @@ stopped; dry run first: 3 upgraded, nothing removed): core
 `1.6.0+git63.6990a1d`; core and kiosk restarted, the panel on
 `index-BfuMrj2Q.js`, no errors in the core's journal, `/tmp/pv` removed. The
 first build's three debs are in `~/projects/scratch/ph21/first-build-debs`.
+**George's findings the same day** (the EQ sheet to close with a swipe down;
+Settings to show the remote's background) fixed on `ph-phone-controls`
+(105f9bf4 UI, 48d64a91 docs and the manual's Settings picture), checked from
+mocked data (`remote_shots2.py` modes `settings`, `swipe`; a `brightart`
+flag for the contrast check), pushed; **on sofapi since 14:22** (stopped;
+dry run: 2 upgraded, nothing removed): ui `1.6.0+git67.105f9bf`, player
+`1.6.0+git68.48d64a9`, core unchanged; core and kiosk restarted, the panel on
+`index-Bx9oVtwP.js`, no warnings, `/tmp/pv` removed; the rebuild's ui and
+player debs in `~/projects/scratch/ph21/second-build-debs`. Open for George:
+Settings' grey text over a bright cover (ADR-0164, *Not settled*).
 Rolling sofapi back to Phase 20's preview (core git18, ui git19, player
 git20, in `ph-equaliser`'s `packaging/out`) only if George asks. Next:
 George's look on sofapi, his confirmation of C1, C2, C5-C9 and C11, then
