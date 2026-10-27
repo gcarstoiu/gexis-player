@@ -1,0 +1,161 @@
+# ADR-0166 — Multiroom for every source
+
+**Status:** **Proposed** 2026-10-27. Phase 22 (`ph-multiroom`), started the
+same day (George: multiroom, then AirPlay 2, before room correction, which
+cannot be tried yet). The experience is George's, from his answers the same
+day (*Decided*); the technical decisions are proposed, and confirmed or
+changed by the phase's first measurement. Builds on
+[ADR-0010](0010-arbitration-slot-model.md) (arbitration),
+[ADR-0013](0013-defaults-implement-public-contract.md) (renderers and the
+plugin contract), [ADR-0018](0018-volume-and-output-modes.md) (volume),
+[ADR-0037](0037-transport-commands.md) (transport commands),
+[ADR-0136](0136-switching-between-players-on-the-phone.md) (the players on
+the network), [ADR-0162](0162-a-simple-equaliser.md) (the loopback, a change
+of rate) and [ADR-0164](0164-the-phone-remote.md) (the phone remote).
+
+## Context
+
+- Lyrion already plays in sync on several players: Squeezelite is synced by
+  the Lyrion server, bit-perfect and gapless, on players that use the same
+  server. Spotify, Bluetooth, Plexamp and plugin renderers play on one
+  player each.
+- Every renderer, the plugins included, plays to the same output path,
+  `pcm.output` (or `pcm.output_wait`, Squeezelite's), and with the equaliser
+  on that path already ends on `snd-aloop`'s loopback (ADR-0162 D1). Audio
+  taken there is every source's, with no change to a renderer or to the
+  plugin contract.
+- The players already find each other: each announces `_gexis._tcp`, and
+  `/players` lists them (ADR-0136).
+- Snapcast (GPL-3.0) keeps players in time over the network: a server reads
+  the audio, clients play it, each corrected to the server's clock. Debian's
+  `snapserver` and `snapclient` 0.31.0 are in the players' own archive
+  (trixie), with no download from elsewhere.
+
+## Decided (George, 2026-10-27)
+
+1. **It works for every source**: Lyrion, Spotify, Bluetooth, Plexamp, and
+   any renderer plugin, with nothing asked of the plugin.
+2. **One group, Lyrion's own sync for Lyrion.** Players are grouped once,
+   in Gexis. While the group plays Lyrion, the group is Lyrion's own sync
+   group (bit-perfect, gapless, seen in Lyrion's apps); the other sources go
+   through Gexis's own sync. Lyrion's multiroom keeps working as it does.
+3. **Join players, until undone.** From a player's remote, and from the
+   panel, other players are joined to it; the group lasts until it is
+   undone, a restart included.
+4. **The whole group follows.** A source started on any player of the group
+   plays on the whole group.
+5. **Each player keeps its own volume, and a group slider** moves them all
+   together, keeping their balance. A player on Fixed volume stays fixed.
+6. **Every member shows the group's Now Playing**, marked as grouped, and
+   play, pause, skip and the group volume work from any of them.
+7. **As short a delay as possible.** Grouped, a command is heard after the
+   buffer that keeps the players together; George chose the shortest, over
+   about a second that rides out a weak Wi-Fi link.
+8. **The source's own rate.** Grouped, a source plays at its own rate,
+   unchanged; a change of rate between tracks costs a short gap, as the
+   equaliser's does.
+9. **Home Assistant too**: the integration offers Home Assistant's own join
+   and unjoin for media players, in its release after the player's.
+
+## Proposed (technical)
+
+**D1 — Snapcast for every source but Lyrion.** Each player runs
+`snapserver` and `snapclient`, idle until grouped. The player where the
+group's source plays is the group's **leader**: its output path ends on a
+loopback, its server reads the loopback, and every member's client - the
+leader's own included, so all are equally late - plays into that member's
+own output chain: its equaliser, its volume control, its meters. Lossless
+(FLAC or plain PCM, chosen by the measurement); bit-perfect to each
+member's chain.
+
+**D2 — Lyrion through Lyrion.** While the group plays Lyrion, the core syncs
+the members' Squeezelite players to the leader's through the Lyrion server
+(`sync`, and `sync -` to undo); Snapcast is idle. A member on a different
+Lyrion server cannot be in Lyrion's sync: see C3.
+
+**D3 — The group is the players' state, kept by each.** A new `group` in
+`/state` (the leader, the members, each member's reachability) and routes
+to join a player, leave, and undo the group; the player that is asked tells
+the others over their HTTP API, as the phone's player list does. Each keeps
+the group across a restart.
+
+**D4 — The leader moves with the source** (decision 4). A takeover on any
+member - Spotify Connect, Bluetooth, Plexamp, a plugin's `acquire`, Lyrion
+starting there - makes that member the leader: the others' clients move to
+its server, after a short gap. The source keeps its own arbitration
+(ADR-0010) on the player it plays on.
+
+**D5 — Commands and metadata through the leader.** A member's `/state`
+carries the leader's metadata and controls; a transport command on a member
+is sent to the leader (ADR-0037's one route to the active renderer).
+
+**D6 — Volume per player; the group's as a relative move.** Each player's
+own control after its client (hardware or software, ADR-0018) sets its
+level; Snapcast's own volume stays at 100 % so nothing is scaled twice. The
+group slider moves every Variable member by the same step, as a share of
+its own travel, and leaves Fixed members alone. A source's own app volume
+(Spotify's slider, a volume-handing plugin) moves the group.
+
+**D7 — The buffer as short as measured safe** (decision 7): Snapcast's
+`buffer` and each client's latency set from the phase's measurement on the
+test players' Wi-Fi, aiming at about a third of a second.
+
+**D8 — A change of rate restarts the group's stream at the new rate**
+(decision 8), as CamillaDSP is restarted for the equaliser (ADR-0162 C2):
+the core already sees the loopback's rate change; members' clients reopen
+their outputs at the new rate.
+
+## Claude's decisions (for George's confirmation)
+
+- **C1 — A player in a group plays nothing of its own.** Grouped, the
+  player's sound is the group's; leaving the group is how it plays alone.
+- **C2 — The leader gone** (switched off, off the network): the members fall
+  silent and stay in the group, and the next source started on any of them
+  leads; the group is never undone by a player's absence alone.
+- **C3 — Players on different Lyrion servers**: Lyrion cannot sync them, so
+  such a group plays Lyrion through Snapcast too (not gapless across tracks,
+  as Lyrion's own sync is).
+- **C4 — Native DSD in a group** comes only from Lyrion: through Lyrion's
+  sync, each player plays it as its Squeezelite does today. Snapcast carries
+  PCM only, so where Lyrion goes through Snapcast (C3) a DSD track plays as
+  PCM or not at all - which, the measurement says.
+- **C5 — Grouped, the meters and the visualiser on each player show its own
+  output**, after its own equaliser, as when it plays alone.
+- **C6 — The grouping is drawn in Claude Design first**: the phone's player
+  list (join, leave, the group), the panel's place for it, and the grouped
+  mark on Now Playing; a brief once this record is accepted.
+
+## Settings (ADR-0022)
+
+None proposed. The group is the players' state, not a setting; the buffer is
+fixed from the measurement. If the measurement shows that no single buffer
+suits every home's Wi-Fi, a setting is proposed then.
+
+## Measured before it is called done
+
+- The delay heard from a command, and the buffer that gives no dropout over
+  an hour on the test players' Wi-Fi.
+- How far apart the players are: Snapcast's own clock figures from each
+  client, and George by ear in two rooms.
+- What it costs a Pi 4: the leader (server and client) and a member, with
+  the equaliser and the visualiser on.
+- The gap at a change of rate and at a change of leader.
+- Lyrion's own sync unchanged with Gexis's grouping around it.
+
+## Not in this record
+
+- AirPlay 2 (Phase 23) and its own multiroom from Apple's devices.
+- Groups of players on more than one network.
+- Saved, named groups (George chose joining until undone).
+
+## Alternatives considered
+
+- **Gexis's sync for Lyrion too.** One mechanism, but Lyrion's apps would
+  see separate players and lose its own groups; George chose to keep them.
+- **Feeding the other sources into the Lyrion server** (its line-in plugins)
+  and letting Lyrion sync everything. It needs a Lyrion server in every
+  home, adds Lyrion's several seconds of buffer, and transcodes.
+- **RTP or PulseAudio's network sink.** No clock correction between
+  players: they drift apart.
+- **Groups of the renderers' own** (Spotify Connect groups, Plexamp's).
+  Each covers one source, and not every source has one.
