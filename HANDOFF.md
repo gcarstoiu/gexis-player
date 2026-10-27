@@ -43,7 +43,9 @@ the release's core and player (core restarted 18:00, no warnings). **R2D2's
 in `/home/docker`, and pi-gen rebuilds its 1.16 GB build image every time;
 the first image build failed on it. George chose removing the two
 Squeezelite test images; with the dangling images pruned, 1.9 GB free after
-the build. **After it** (George): the remote's background inside the column
+the build. **PR #85 merged by George the same day**: `main` merged into
+`docs` and `next`, `release-1.7.0` and `fix-backup-test` and their worktrees
+gone, the routine clean-up run. **After it** (George): the remote's background inside the column
 on a laptop (5596698e on `ph-phone-controls`, `next` merged in; on sofapi
 since 18:21 - ui and player `1.7.0+git5.5596698`, its core `1.7.0` built
 on the branch byte for byte the release's); the Harmony Hub ideas (an IR
@@ -51,12 +53,12 @@ receiver, a Bluetooth remote) drafted for the wiki's Should list, shown to
 him, not pushed; the Home Assistant card started (D-pad only, the
 equaliser's switch and setting; the registration fix and a version bump,
 asked for through his dashboard session) - **built** on the integration's
-`card-remote` (1f65d82, 0.5.0, not released; tests 48 passed, checks green;
+`card-remote` (1f65d82, **released as 0.5.0** at George's word; tests 48 passed, checks green;
 ADR-0163 *Built*; mocked-entity harness `~/projects/scratch/hacard`, `run.sh`;
-the throwaway Home Assistant stopped again). When 0.5.0 is released: the
-player's manual, FAQ and README get the equaliser and the card's new look.
-**Next:** release PR #85 (checks green; George merges), then `main` into `docs`
-and `next`, `release-1.7.0` and the worktree removed, the routine clean-up.
+the throwaway Home Assistant stopped again); the player's manual, FAQ and
+README describe 0.5.0.
+**Next:** George's word on Stable; the Harmony ideas for the wiki (drafted,
+not pushed); the remote's laptop background into `next` after his look.
 
 **The release key** moved to `~/projects/gexis-release-key` (George,
 2026-10-24): every release command sets
@@ -95,7 +97,9 @@ against a local copy, so losing that folder means re-uploading every OS file.
 - George's look at the moon before sunrise.
 
 **The Home Assistant integration** (Phase 19, closed 2026-10-25):
-`gcarstoiu/gexis-player-homeassistant` at 0.4.1 (local copy
+`gcarstoiu/gexis-player-homeassistant` at 0.5.0 (2026-10-27: the card as the
+phone remote, the equaliser's switch and setting, seeking, Fixed mute, the
+app's registration fix; local copy
 `~/projects/gexis-player-homeassistant`, tests on `~/projects/ha-venv`; a
 Home Assistant 2026.10.3 in Docker, `~/projects/scratch/ha-test`). **HACS's
 default list**: hacs/default#12691 (from George's fork `gcarstoiu/default`),
