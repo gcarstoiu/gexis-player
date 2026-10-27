@@ -1150,13 +1150,15 @@ def test_an_upload_never_replaces_a_different_backup_of_the_same_name(tmp_path):
     made, share = tmp_path / "made", tmp_path / "share"
     name = backups.create("Kitchen", made, _real_device(tmp_path / "root", VALUES))
     share.mkdir()
-    (share / name).write_bytes(gzip.compress(b"another backup"))
+    # Compressed once: gzip's header holds the time, to the second.
+    other = gzip.compress(b"another backup")
+    (share / name).write_bytes(other)
     fd, part = backups.upload_part(share)
     with os.fdopen(fd, "wb") as f:
         f.write((made / name).read_bytes())
     added = backups.add_upload(part, name, 5, share)
     assert added["name"] != name and not added["already"]
-    assert (share / name).read_bytes() == gzip.compress(b"another backup")
+    assert (share / name).read_bytes() == other
     assert (share / added["name"]).read_bytes() == (made / name).read_bytes()
     assert not part.exists()
 
