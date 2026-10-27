@@ -43,7 +43,7 @@ the release's core and player (core restarted 18:00, no warnings). **R2D2's
 in `/home/docker`, and pi-gen rebuilds its 1.16 GB build image every time;
 the first image build failed on it. George chose removing the two
 Squeezelite test images; with the dangling images pruned, 1.9 GB free after
-the build. **Next:** the release PR (George merges), then `main` into `docs`
+the build. **Next:** release PR #85 (checks green; George merges), then `main` into `docs`
 and `next`, `release-1.7.0` and the worktree removed, the routine clean-up.
 
 **The release key** moved to `~/projects/gexis-release-key` (George,
