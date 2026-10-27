@@ -524,7 +524,9 @@ and the volume row (`VolumeRow.svelte`: `POST /volume` one request at a time,
 (`headless`): `RemoteNoScreen.svelte`, whose seek bar sends `POST
 /transport/seek` on release while `controls.available` has `seek`. Behind
 both, the panel's background, with the blurred cover. The column fills a
-phone up to 480 px wide and is 412 px, centred, on a wider screen; the touch
+phone up to 480 px wide and is 412 px, centred, on a wider screen; the
+background and Settings' grey layer are the column's (`overflow: clip`), so
+a laptop shows plain `#101a21` beside it; the touch
 area's buttons and the two switches take the quick actions' ground
 (`--remote-button-ground`). Shorter than the drawing's 780 px, the touch
 area gives way to 312 px (the cover without a screen to 140 px), then the

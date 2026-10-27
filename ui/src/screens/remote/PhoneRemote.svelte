@@ -6,8 +6,8 @@
   touch area, the quick actions and the volume row; without one, a large
   cover, a seek bar and larger transport - and Settings as it is, without the
   mini player, mounted on its first visit. Over them the player menu and the
-  EQ sheet. Behind both the panel's background: the weave, the blurred cover
-  where there is one, the veil (D9). While Settings shows, the whole screen
+  EQ sheet. Behind both, inside the column, the panel's background: the
+  weave, the blurred cover where there is one, the veil (D9). While Settings shows, the whole screen
   takes the modals' solid grey, as Settings does (George, 2026-10-27).
 
   For a player with a screen, the touchpad's socket (ADR-0121) is open while
@@ -203,12 +203,12 @@
 </script>
 
 <div class="remote">
-  <div class="weave" aria-hidden="true"></div>
-  {#if artwork}<img class="blur" src={artwork} alt="" aria-hidden="true" />{/if}
-  <div class="veil" aria-hidden="true"></div>
-  <div class="ground" class:is-on={page === 'settings'} aria-hidden="true"></div>
-
   <div class="column">
+    <div class="weave" aria-hidden="true"></div>
+    {#if artwork}<img class="blur" src={artwork} alt="" aria-hidden="true" />{/if}
+    <div class="veil" aria-hidden="true"></div>
+    <div class="ground" class:is-on={page === 'settings'} aria-hidden="true"></div>
+
     <div class="top">
       <button class="picker" type="button" aria-label="Choose a player" aria-expanded={menuOpen} onclick={toggleMenu}>
         <img src={mark} alt="" />
@@ -321,9 +321,12 @@
   }
   /* C10: the design's column, at most 412 px wide on a larger screen; a
      phone wider than the drawing is filled, so nothing leaves strips at its
-     edges (George, 2026-10-27, on a 427 px phone). */
+     edges (George, 2026-10-27, on a 427 px phone). The background is the
+     column's: on a laptop the screen beside it stays plain (George, the
+     same day). */
   .column {
     position: relative;
+    overflow: clip;
     height: 100%;
     max-width: var(--remote-max-width);
     margin: 0 auto;
