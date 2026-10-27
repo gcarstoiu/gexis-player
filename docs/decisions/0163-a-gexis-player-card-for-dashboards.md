@@ -101,6 +101,46 @@ rule on the transport and for the idle screen and the meters:
 14. **The editor says the defaults** (Full, the player's look) under *Form*
     and *Look*, and a new card is made with them.
 
+## Following the phone remote (2026-10-27, integration 0.5.0)
+
+George, 2026-10-27, through the session working on his dashboards: the full
+form in the player's look should look like the phone's remote
+([ADR-0164](0164-the-phone-remote.md), item 11) without its Remote /
+Settings switch, centred at a sensible width; a defect, the card defined
+before the Home Assistant app's scoped element registry is in place, so the
+app shows *Custom element doesn't exist*; and the card's address to change
+with every version, so phones fetch it again. Asked, he decided:
+
+15. **The touch area is the D-pad alone**: Home Assistant sends the D-pad's
+    keys and cannot move a pointer, so no Trackpad and no pad switch. Its
+    corners are the remote's: Home, Lyrics, Back, Meters.
+16. **The equaliser in Home Assistant**: a switch (on or off) and a select
+    (the setting: the presets and the owner's), per player, for the output
+    in use; the card's EQ button opens a sheet with both.
+17. **Built now**, after 1.7.0, for the integration's next release; George
+    sees it before it is released.
+
+Claude's decisions, for George's confirmation:
+
+- **C1 — The full form is the remote's layout** in both looks (the player's
+  colours, or Home Assistant's theme); the compact form stays as it is.
+- **C2 — Centred, at most 440 px wide**, and narrower in a narrow column.
+- **C3 — Without a screen**: the remote's large cover, a bar that seeks where
+  the source does (the media player gains seeking, through
+  `POST /transport/seek`), the larger transport.
+- **C4 — Fixed volume is the panel's locked row**, with mute where
+  ADR-0165 offers it: the media player reads `fixed_mute`.
+- **C5 — What the screen shows is known only through the switches**: Meters,
+  Room, the idle screen and Standby light up; Home, Lyrics and Playing do
+  not. No *Sent* line under the D-pad: the screen is the feedback, as on
+  the phone.
+- **C6 — The EQ sheet has its switch and settings only**: no headroom note
+  and no *Edit bands*, which are the player's; it closes by its handle or a
+  tap above it.
+- **C7 — The card defines itself once the scoped registry is in place**,
+  defining again a few times after, as the request described; the version
+  in its address is the integration's, raised with every release.
+
 ## Settings (ADR-0022)
 
 None: the card's options live in the dashboard, not on the player.
