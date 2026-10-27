@@ -181,7 +181,21 @@ Settings picture retaken; checked from mocked data at 427 and 800,
 `remote_shots2.py` mode `flat`). **On sofapi since 16:15** (stopped; dry
 run: 2 upgraded, nothing removed; no restarts): ui and player
 `1.6.0+git72.0f1783c`; the previous pair in
-`~/projects/scratch/ph21/findings3-debs`.
+`~/projects/scratch/ph21/findings3-debs`. **George's answers then**: the
+panel's volume drawer loses its switch's box too (e5d09001 on
+`ph-equaliser`, merged into `ph-phone-controls`; checked from mocked data,
+the drawer Variable and Fixed, the bar's tray unchanged); a Settings
+chooser's dimming stays below the top bar. **On sofapi since 16:37** (stopped;
+dry run: 2 upgraded, nothing removed; the kiosk restarted for the panel,
+no warnings): ui `1.6.0+git74.913b105`, player `1.6.0+git89.7f1b297`; the
+previous pair in `~/projects/scratch/ph21/findings4-debs`. **The flaky
+backup test fixed** on `fix-backup-test` (81415912: the upload test
+compares the bytes it wrote; on Python 3.13, CI's, `gzip.compress` stamps
+the second, so two calls a second apart differ; reproduced in
+`python:3.13-slim` with a ticking clock, the old test failing and the new
+passing), checks passed, merged into `next` (28c3f319) and `next` into
+`ph-phone-controls`; its worktree `~/projects/gexis-player-fix-backup-test`
+stays until the branch reaches `main` (ROUTINE-CLEANUP).
 Rolling sofapi back to Phase 20's preview (core git18, ui git19, player
 git20, in `ph-equaliser`'s `packaging/out`) only if George asks. Next:
 George's look on sofapi, then the Home Assistant card (and its media player

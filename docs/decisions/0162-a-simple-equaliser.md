@@ -274,6 +274,11 @@ decisions in it, confirmed by George the same day:
   it rises, before it when it falls - walking the control in 0.5 dB steps
   about 10 ms apart; at once while nothing plays.
 
+**The volume drawer's switch stands alone** (George, 2026-10-27, after the
+phone remote's EQ sheet lost the box round its switch): no box, the touch
+still 58 px tall. The bar's tray and the editor keep theirs, which hold
+*On* / *Off* beside the switch.
+
 ### Not yet done
 
 - The measurement through a card (*Measured before it is called done*),

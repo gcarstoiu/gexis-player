@@ -808,6 +808,9 @@ decisions). Not yet seen by George on a device.
   volume; above it, up to 5 dB quieter*, where the drawing had the editor's
   line. The badge stays the lowering; Fixed keeps the drawing's words. The
   wording is Claude's (C17), confirmed by George the same day.
+- **[U]** The volume drawer's on/off switch stands alone, without the box
+  the drawing puts round it, as the phone's EQ sheet (George, 2026-10-27);
+  the bar's tray and the editor keep the box, which holds *On* / *Off*.
 
 ## The phone remote (Phase 21, 2026-10-27)
 
