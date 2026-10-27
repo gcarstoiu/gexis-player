@@ -65,9 +65,9 @@ first-use and update fields the player's own pages use.
 A WebSocket between a phone and the panel (ADR-0121). A connection from the
 player itself is the panel; any other is a phone. A phone sends `move`,
 `tap`, `text`, `key`, `scroll` and `zoom` messages, relayed unchanged to the
-panel; the phone's remote (ADR-0164) sends `text`, `key` and `scroll` with
-`step`, and its other steps as D-pad keys (`POST /panel/key`). The panel
-sends `over`, `focus`, `ring` (its D-pad ring is on a text field) and
+panel - the phone remote's trackpad (ADR-0164), whose D-pad goes as keys
+instead (`POST /panel/key`). The panel sends `over`, `focus`, `ring` (its
+D-pad ring is on a text field) and
 `untyped`, relayed to the phones. Every
 message is a JSON object with its kind in `t`; anything else, or a frame over
 2048 bytes, is dropped, and with *Phone touchpad* off every relayed message

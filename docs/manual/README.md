@@ -123,7 +123,10 @@ meant for what was under it does not set the level.
 
 With **Volume** set to *Fixed*, the player always plays at full level
 for an amplifier that sets the volume; the button then shows a padlock and
-the drawer explains why. *Maximum volume* and Spotify's *Starting volume* do
+the drawer explains why. Mute still works there, where the output has a
+volume control of its own (the HiFiBerry has; some USB DACs have none): the
+drawer's speaker silences the output, the button shows the crossed speaker
+while it is muted, and unmuting brings back the full level. *Maximum volume* and Spotify's *Starting volume* do
 not apply in Fixed, and their rows are hidden. Changing the volume type
 while music plays stops playback, and the sources reconnect on the new type,
 so the level never jumps mid-track; the source that comes back starts no
@@ -406,22 +409,30 @@ doing, and choose one to open its remote in the same tab.
 
 For a player with a screen, the remote has, from the top:
 
-- **what is playing**: the cover, the track, the artist and the album, how
-  far into the track it is, and the controls - shuffle, previous, play or
-  pause, next and repeat (off, all, one). A source that has no shuffle or
-  repeat shows none.
+- **what is playing**: the cover, the track and the artist, beside them
+  previous, play or pause and next, and under them how far into the track it
+  is. Shuffle and repeat are on the player's own screen.
 - **the touch area**, which drives the player's screen from across the room.
   Its corners are **Home**, **Lyrics**, **Back** and **Meters** (the
   visualiser); the one the screen shows is lit. The switch at its top
   chooses how:
-  - **Touchpad**: swipe to move around the screen and tap to choose. Each
-    short swipe moves one step, a longer one several, and the steps are named
-    under the area (*Right × 2*). The lines along the right and bottom edges
-    scroll the list the screen is on: drag along them.
-  - **D-pad**: the four arrows and OK, as buttons.
+  - **Trackpad**: a pointer on the player's screen, moved like a laptop's
+    touchpad.
 
-  A teal ring on the screen shows where you are, as with Home Assistant's
-  D-pad. The phone remembers which of the two you used last.
+    | Gesture | Does |
+    | --- | --- |
+    | One finger | Moves the pointer on the screen. |
+    | Tap | Presses what the pointer is on. |
+    | Two fingers up or down, or sideways | Scroll what is under the pointer. |
+    | One finger along the line at the right or the bottom | Scrolls with one finger. |
+    | Pinch | Zooms the screen in or out around the pointer. |
+
+    Whatever the pointer is over that can be pressed is outlined. The
+    pointer hides after a few seconds of rest.
+  - **D-pad**: the four arrows and OK, as buttons. A teal ring on the screen
+    shows where you are, as with Home Assistant's D-pad.
+
+  The phone remembers which of the two you used last.
 - **quick actions**: **Standby** (the screen off until a touch, music
   starting or Standby again wakes it; the player keeps playing), **Idle
   screen** (while the idle screen is switched on), **Playing** (Now Playing,
@@ -430,11 +441,13 @@ For a player with a screen, the remote has, from the top:
   and any of them, a corner or the touch area wakes the screen.
 - **the volume**: tap or drag anywhere on the bar. The speaker at its left
   mutes and unmutes; the equaliser's setting is named in the middle. With
-  *Fixed output* the bar says so instead.
+  *Fixed output* the bar is the panel's locked row: the level is set on the
+  amplifier, and the speaker still mutes (where the output has a volume
+  control of its own, as the HiFiBerry has).
 
-When a text field on the screen is chosen (a search, for example), the
-phone's keyboard comes up and a strip says *Typing on the player's screen*:
-what you type appears on the screen. **Done** puts the keyboard away.
+Tap a text field on the screen (a search, for example), or press OK on one
+with the D-pad, and the phone's own keyboard comes up: what you type appears
+on the screen.
 
 ### The remote, without a screen
 
@@ -459,8 +472,8 @@ the phone each band is a row, a slider sideways from 0.
 
 **Settings** has every setting, and the phone is the easier place to type a
 name, a password or a key. *Settings → Display → Touchpad* has **Phone
-touchpad**: off, the remote's touch area offers the D-pad alone, and no
-typing.
+touchpad** (off, the remote's touch area offers the D-pad alone, and no
+typing), **Pointer speed** and **Pointer style** (Dot or Arrow).
 
 ## 8. Bar screens
 

@@ -118,7 +118,7 @@ Top-level fields of the `/state` payload:
 | `capabilities`, `controls` | Each renderer's declared contract; the active renderer's transport commands that work now, with its shuffle and repeat state where it declares them (ADR-0037) |
 | `sources` | One entry per installed source from its manifest: name, kind, accent, mark URL (ADR-0086) |
 | `handoff` | A takeover in progress, for the transition screen (ADR-0094) |
-| `volume`, `fixed_output`, `meters` | Level; whether there is no attenuation at all (ADR-0046); whether the output can feed the visualiser (ADR-0055 §6) |
+| `volume`, `fixed_output`, `fixed_mute`, `meters` | Level; whether there is no attenuation at all (ADR-0046); muted with Fixed volume, null where nothing can mute (ADR-0165); whether the output can feed the visualiser (ADR-0055 §6) |
 | `queue` | The active renderer's queue, where it has one |
 | `pairing` | A Bluetooth pairing request awaiting an answer on the panel (ADR-0045) |
 | `components` | Progress of on-device downloads (ADR-0100) |
@@ -191,7 +191,7 @@ something the panel is not showing).
 |---|---|---|
 | State | `GET /state` (WebSocket) | Panel, phone |
 | Surface | `GET /surface` → `panel` or `remote` | Both, at start (ADR-0032) |
-| Touchpad relay | `GET /touchpad` (WebSocket) | Phone ↔ panel: typing, scroll steps, the ring on a field (ADR-0121, ADR-0164) |
+| Touchpad relay | `GET /touchpad` (WebSocket) | Phone ↔ panel: the trackpad, typing, the pointer or ring on a field (ADR-0121, ADR-0164) |
 | Playback | `POST /renderer/{id}/activate`, `POST /transport/{command}`, `POST /volume`, `POST /volume/mute` | Both |
 | Panel view | `POST /touch`, `POST /panel/painted`, `POST /panel/shown`, `POST /panel/idle/{show,hide}`, `POST /panel/standby/{on,off}` (ADR-0135), `GET /player/status` and `GET /players` (ADR-0136), `POST /panel/go/{to}`, `POST /peppy/{action}` | Panel reports; phone asks |
 | Idle screen | `GET /idle`, `/idle/weather`, `/idle/wallpaper`, `/idle/wallpaper/{name}`, `/idle/wallpaper/local/{path}` | Panel (ADR-0047) |
@@ -677,11 +677,11 @@ dashboard instead of the idle screen, and when the schedule takes it down the
 idle screen follows at once. Home Assistant's side - framing and trusted
 networks - is the user's (decision 8, Finding 132).
 
-**The phone's keyboard, and the panel's pointer, over the dashboard are
-real input** (ADR-0157). A page from another site is closed to the panel's
-page, so made-up events and inserted text cannot reach it; the phone's remote
-(ADR-0164) sends its steps as D-pad keys, which reach Home Assistant's page as
-a keyboard's do. Over an
+**The phone's trackpad and keyboard over the dashboard are real input**
+(ADR-0157). A page from another site is closed to the panel's page, so the
+trackpad's made-up events and inserted text cannot reach it; the remote's
+D-pad (ADR-0164) sends keys, which reach Home Assistant's page as a
+keyboard's do. Over an
 `<iframe>` marked `data-real-input` the panel (`lib/PanelPointer.svelte`,
 `isRealInputFrame` in `lib/touchpad.js`) sends the phone's tap, text and keys
 to `POST /panel/input` instead - `{kind: "tap", x, y}` as fractions of the

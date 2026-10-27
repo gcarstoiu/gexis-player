@@ -70,7 +70,8 @@ plays, and is back for the next PCM one.
 **Why is there no volume slider?**
 *Settings → Audio → Volume* is set to *Fixed*. Fixed sends the full level all
 the time, for an amplifier that sets the volume itself; the screen shows a
-padlock instead of a slider. To get the slider back, choose *Hardware* (the
+padlock instead of a slider, and mute still silences an output that has a
+volume control of its own. To get the slider back, choose *Hardware* (the
 sound card's own volume control) or *Software* (the player recalculates the
 sound - not bit-perfect below 100 %). On an output with no volume control of
 its own, such as HDMI, Hardware is greyed out and Software is used in its
@@ -274,9 +275,9 @@ screen, its ports and its rotation. Everything else,
 including all sources and Settings on the phone, keeps working.
 
 **How do I type into a text field on the screen?**
-With the phone: move to the field with the remote's touchpad or D-pad and
-choose it, and the phone's own keyboard comes up; what is typed appears on
-the screen. Every text setting can also be filled in directly from Settings
+With the phone: tap the field with the remote's trackpad, or move to it with
+the D-pad and press OK, and the phone's own keyboard comes up; what is typed
+appears on the screen. Every text setting can also be filled in directly from Settings
 on the phone.
 
 **How do I get back from Now Playing to where I was?**
@@ -326,9 +327,9 @@ Home Assistant 2026.10 or later, turn off *Send X-Frame-Options* under
 restart*, and keep that page open until Home Assistant is back - otherwise it
 rolls the change back after five minutes. A login page inside the dashboard
 instead means Home Assistant does not trust the player yet: add the player's
-address to *trusted networks*, or sign in once: tap a field on the screen,
-then type on the phone (the remote offers its keyboard while the field is
-chosen) or on a USB keyboard plugged into the player. Home Assistant then keeps the player signed
+address to *trusted networks*, or sign in once: tap a field with the phone
+remote's trackpad and type on the phone's keyboard, or use a USB keyboard
+plugged into the player. Home Assistant then keeps the player signed
 in.
 
 **Can Home Assistant control the player?**
@@ -473,13 +474,19 @@ second page is everything in Settings. Browsing the library happens on the
 screen, or in the streaming app.
 
 **How does the touchpad work?**
-A short swipe moves one step on the screen - to the next control in that
-direction, shown by a teal ring - and a tap chooses it; the step is named
-under the area (*Down × 2*). The lines along the right and bottom edges
-scroll the list the screen is on. The switch at the top of the area changes
-to a D-pad: four arrows and OK, as buttons. If the remote stops answering, it
-reconnects by itself, within about a second of touching it again.
-*Settings → Display → Phone touchpad* off leaves the D-pad alone.
+The touch area is a **trackpad**: one finger moves a pointer on the screen,
+a tap presses, two fingers scroll, and a pinch zooms. What the pointer is
+over is outlined when it can be pressed. The lines along the right and
+bottom edges scroll with one finger. Tapping a text field on the screen
+brings up the phone's keyboard. The switch at the top of the area changes to
+a **D-pad**: four arrows and OK, as buttons, with a teal ring on the screen
+showing where you are. If the remote stops answering, it reconnects by
+itself, within about a second of touching it again. *Settings → Display →
+Phone touchpad* off leaves the D-pad alone.
+
+**The pointer is too slow, or hard to see.**
+*Settings → Display → Pointer speed* (150–400 %) and *Pointer style* (*Dot* or
+*Arrow*).
 
 **The touchpad or the phone page does nothing.**
 The phone and the player must be on the same network. If the page loads but

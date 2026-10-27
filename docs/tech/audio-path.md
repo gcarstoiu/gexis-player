@@ -411,7 +411,11 @@ Mechanics behind the picture:
 - **Ceiling.** `max_ceiling` (a percentage) shifts the top of every scale down
   rather than clipping, so 100 in any app means the ceiling (ADR-0052 §3).
 - **Mute** remembers the level and writes silence, the bottom of the
-  control's range; any other change ends mute (ADR-0034).
+  control's range; any other change ends mute (ADR-0034). **With Fixed**
+  (ADR-0165) it writes the control's silence straight to it
+  (`VolumeBridge.write_fixed`, the echo window armed, so no renderer is told)
+  and full scale back; an output with no control of its own has no mute. A
+  change of volume type or of output, or a restart, ends it.
 - **Single-value controls are read.** A control with one value (the jack's
   `PCM`, many USB DACs) prints as `Mono:` rather than `Front Left:`, and both
   forms are parsed.

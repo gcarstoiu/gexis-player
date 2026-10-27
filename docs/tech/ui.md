@@ -279,9 +279,9 @@ attributes and two events, so a new screen needs nothing in the module:
 
 A touch hides the ring, and so does the panel's pointer (ADR-0121): its moves
 and taps are made up in the page, so `PanelPointer.svelte` says so with a
-`panelpointer` event. The phone's remote drives the ring itself (section 7):
-its steps are keys, its scroll strips a `dpadscroll` event, and `dpadring`
-tells the phone when OK would land in a text field. The ring leaves a layer the moment it closes (a
+`panelpointer` event. The phone remote's D-pad drives the ring itself
+(section 7): its presses are keys, and `dpadring` tells the phone when OK
+would land in a text field. The ring leaves a layer the moment it closes (a
 `MutationObserver` on the page, besides a check four times a second) and
 lands on the control beneath 150 ms later.
 
@@ -509,32 +509,37 @@ two pages side by side. Settings is `Settings.svelte` with
 `switcher={false}`, mounted on its first visit. During setup, first use and
 *Personalise*, `FirstUsePage` takes the page instead, as before.
 
-The Remote page, **with a screen** (`RemoteScreen.svelte`): now playing with
-`RemoteTransport.svelte` (what the renderer declares, ADR-0037; repeat off,
-all, one), the touch area (`TouchArea.svelte`), the quick actions
-(`QuickActions.svelte`) and the volume row (`VolumeRow.svelte`: `POST
-/volume` one request at a time, `/volume/mute`, the padlock under Fixed
-output, the EQ button). **Without one** (`headless`): `RemoteNoScreen.svelte`,
-whose seek bar sends `POST /transport/seek` on release while
-`controls.available` has `seek`.
+The Remote page, **with a screen** (`RemoteScreen.svelte`): the cover
+(`RemoteCover.svelte`: the renderer's or the core's found one, else the
+panel's *artwork pending*), beside it the title, the artist and
+`RemoteTransport.svelte` (previous, play/pause, next, as the renderer
+declares them, ADR-0037; no shuffle or repeat on the phone), the progress,
+the touch area (`TouchArea.svelte`), the quick actions (`QuickActions.svelte`)
+and the volume row (`VolumeRow.svelte`: `POST /volume` one request at a time,
+`/volume/mute`; under Fixed output the panel's locked row, with mute while
+`fixed_mute` is not null, ADR-0165; the EQ button). **Without one**
+(`headless`): `RemoteNoScreen.svelte`, whose seek bar sends `POST
+/transport/seek` on release while `controls.available` has `seek`. Behind
+both, the panel's background, with the blurred cover. The column is at most
+412 px wide; shorter than the drawing's 780 px, the touch area gives way to
+312 px (the cover without a screen to 140 px), then the Remote page scrolls.
 
-- **The touchpad**: 52 px of travel on the main axis is one step, `POST
-  /panel/key` (ADR-0161), sent one at a time and in order (`commands.js`,
-  `key`); a release that never stepped is OK under 12 px, otherwise a step its
-  way. The scroll strips send `{"t":"scroll","step":"y","by":1}` each 24 px
-  over `/touchpad`; the panel's `dpad.js` scrolls the list around its ring, or
-  the top layer's largest, by a fifth of it (`dpadscroll`).
-- **The D-pad**: the same keys, as buttons.
+- **The trackpad**: ADR-0121's gestures over `/touchpad` (`move`, `tap`,
+  two-finger `scroll`, `zoom`; whole pixels each frame, the fraction kept).
+  The scroll strips send a 24 px `scroll` on their axis for each 24 px of
+  drag. Nothing is drawn on the phone.
+- **The D-pad**: `POST /panel/key` (ADR-0161), sent one at a time and in
+  order (`commands.js`, `key`).
 - **Corners and quick actions**: `/panel/go`, `/peppy/show|hide`,
   `/panel/dashboard`, `/panel/idle`, `/panel/standby`; a view asked for in
   standby wakes the screen first. Lit from `/state`'s `panel`
   (`commands.js`, `showing`).
 - **The pad** last used is kept in the phone's `localStorage`
   (`gexis.remote.pad`); with `phone_touchpad` off, the D-pad alone.
-- **The sheets**: the player menu, the EQ sheet (`EqSheet.svelte`, with
-  Phase 20's `note` and `stateLine`) and the typing sheet
-  (`TypingSheet.svelte`, kept above the keyboard with `visualViewport` where
-  the page is not shortened by it).
+- **The sheets**: the player menu and the EQ sheet (`EqSheet.svelte`, with
+  Phase 20's `note` and `stateLine`).
+- **Typing**: the phone's own keyboard, opened by focusing a hidden field
+  inside the touch that taps (the panel said `over`) or sends OK (`ring`).
 
 ### Touchpad relay
 
@@ -551,6 +556,9 @@ core relays messages and never interprets them:
 
 The remote opens it while its Remote page shows a player with a screen; the
 panel, while `phone_touchpad` is on. `/state` stays publish-only (ADR-0028).
+With the D-pad, the keys go as `POST /panel/key` and the panel says `ring`
+where its ring is; with the trackpad, the phone sends the gestures and the
+panel says `over` where its pointer is.
 
 ```mermaid
 sequenceDiagram
@@ -569,7 +577,6 @@ sequenceDiagram
   Note over Ph: the same touch focuses the hidden field:<br/>the phone's keyboard opens (the only moment a browser allows it)
   C->>P: Enter - the field takes focus
   P->>C: {"t":"focus","field":true}
-  C->>Ph: relayed - the typing sheet
   Ph->>C: {"t":"text","text":"abc"} / {"t":"key","key":"Backspace"}
   C->>P: relayed - inserted into the focused field
 ```
@@ -593,9 +600,9 @@ sequenceDiagram
 
 ### The panel's pointer (ADR-0121)
 
-The panel still draws a pointer for `move`, `tap` and `zoom`
-(`lib/PanelPointer.svelte`; the compositor's cursor is a blank theme), which
-the phone has not sent since ADR-0164. As built:
+The panel draws a pointer for the remote's trackpad - `move`, `tap`,
+`scroll` and `zoom` (`lib/PanelPointer.svelte`; the compositor's cursor is a
+blank theme). As built:
 
 - **Moves are relative**, like a laptop touchpad, and scaled by the
   *Pointer speed* setting, so a bar and a 16:9 panel feel the same. The
