@@ -80,7 +80,8 @@ the touchpad.
    grey** (`--bg-panel`), and while it shows the whole screen, the top bar
    included (George, 2026-10-27, after the preview: first the remote's
    background behind Settings; seeing it, the modals' grey; asked, he chose
-   the whole screen over the Settings page alone). **The touch
+   the whole screen over the Settings page alone). A Settings chooser's
+   dimming stays below the top bar (George, asked, the same day). **The touch
    area's buttons, the pad switch and the Remote / Settings switch** take
    the quick actions' faint ground and thin line, not the drawing's dark
    ground, so the remote's buttons look alike (George, the same day; asked,
