@@ -3239,7 +3239,9 @@ quick change in the drawer and both trays; the manual, FAQ, technical guide
 and README. Next: a preview on a player, the measurement through its card,
 and George's try. **2026-10-27** (George): the volume drawer's switch
 without the box round it, as the phone's EQ sheet; on sofapi from 16:37
-with Phase 21's preview.
+with Phase 21's preview. **In 1.7.0, on Testing** (2026-10-27, George: both
+phases for testing, not yet Stable); the phase stays open for the
+measurement.
 
 **An ADR before anything is built.** It had to settle:
 - **How simple**: bass and treble with loudness, a fixed 5- or 10-band
@@ -3323,7 +3325,8 @@ sofapi from 15:55. **And** Settings, all of it, on the modals' solid grey,
 the whole screen while it shows (George; asked, the top bar included); on
 sofapi from 16:15. The panel's volume drawer's switch follows the sheet's
 (Phase 20's, merged in); on sofapi from 16:37. A chooser's dimming stays
-below the top bar (George, asked).
+below the top bar (George, asked). **In 1.7.0, on Testing** (2026-10-27,
+George); the phase stays open for the Home Assistant card.
 
 **Before it** the mini player at the bottom of the phone page
 ([ADR-0101](decisions/0101-a-mini-player-on-the-phone.md)) holds the track

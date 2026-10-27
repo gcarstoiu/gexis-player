@@ -27,6 +27,25 @@ clean-up run. Image `image/deploy/2026-10-25-gexis-player-v1.6.0.img`; build
 output in `~/projects/gexis-release-out/r1.6.0`. The release's detail is in
 the archive (2026-10-25, 1.6.0).
 
+**1.7.0 on Testing, not promoted** (2026-10-27; George: both phases for
+testing, Stable later; the notes, shortened at his word, approved by him).
+Phases 20 and 21 merged into `next` (2c63fa87; core suite 2751 passed, 48
+skipped; the UI builds); tag `v1.7.0` on the notes commit `81dd559d`. Image
+`image/deploy/2026-10-27-gexis-player-v1.7.0.img`, built from the tag in
+`~/projects/gexis-player-r170` (944 s; `verify-image.sh` 129 checks passed;
+the skins check clean); parts `ours-db936235e357`, `rpi-668ab304bc41`
+(Chromium 156, new), `skins-67e037cab00f`, `debian-2e90e264cb7d`; build
+output `~/projects/gexis-release-out/r1.7.0`. Testing serial 57 read back,
+good signature; Stable still 1.6.0, serial 10. gexis-core and gexis-player
+`1.7.0`, gexis-ui `1.6.0+git74.913b105` (the preview's build). sofapi has
+the release's core and player (core restarted 18:00, no warnings). **R2D2's
+`/` was full** (80 MB): Docker's containerd store keeps images there, not
+in `/home/docker`, and pi-gen rebuilds its 1.16 GB build image every time;
+the first image build failed on it. George chose removing the two
+Squeezelite test images; with the dangling images pruned, 1.9 GB free after
+the build. **Next:** the release PR (George merges), then `main` into `docs`
+and `next`, `release-1.7.0` and the worktree removed, the routine clean-up.
+
 **The release key** moved to `~/projects/gexis-release-key` (George,
 2026-10-24): every release command sets
 `GEXIS_RELEASE_GNUPGHOME=~/projects/gexis-release-key`; the scripts default
@@ -34,6 +53,7 @@ to `~/.gnupg-gexis-release`, which no longer exists.
 
 **The players** (2026-10-25; all four idle and clean at the clean-up):
 sofapi 1.6.0; ShelvesPi 1.5.0; bedroompi `preview-1023` as last recorded.
+sofapi since 2026-10-27: core and player 1.7.0, ui `1.6.0+git74.913b105`.
 
 **The test venv imports the core from `~/projects/gexis-player-next`** (an
 editable install): in another worktree run the suite with `PYTHONPATH=src`
