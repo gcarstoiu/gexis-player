@@ -35,9 +35,9 @@ archive (2026-10-27, 1.7.0).
 **R2D2's `/` fills up**: Docker's containerd store keeps images on `/`, not
 in `/home/docker`, and pi-gen rebuilds its 1.16 GB build image on every
 image build; check `df -h /` before one (1.9 GB free after 1.7.0's).
-**Next:** PR #86; the wiki Roadmap (the closed phases and the Harmony
-ideas, drafted, shown to George, not pushed); then Phase 22 when George
-picks it up.
+**Next:** PR #86 (George merges); then Phase 22 when George picks it up.
+The wiki Roadmap shows Phases 20 and 21 done and the Harmony Hub ideas
+(pushed 2026-10-27 with his OK).
 
 **The release key** moved to `~/projects/gexis-release-key` (George,
 2026-10-24): every release command sets
