@@ -3202,6 +3202,15 @@ sofapi as a preview, waiting for George's check.
 
 **ID:** `ph-equaliser` · added 2026-10-25 as 20, before room correction (George).
 
+**Closed 2026-10-27** (George, promoting 1.7.0 to Stable), in 1.7.0.
+Criteria 1 (a preset or the bands from the phone, heard without stopping)
+and 4 (no clipping, the headroom by the curve, ADR-0162 D3) seen by George on
+a test player and in Finding 138's silent measurement; 3 (off is
+bit-perfect) by design (D5); 2 and 5 in part - every source through it and
+the visualiser working (the float fix), its cost recorded (Finding 138). Not
+measured: the delay through a card, players in sync, a rate change heard
+through the amplifier (to-do `eq-measure`, left for a time George picks).
+
 **Added 2026-10-25** (George, proposed the day before): an equaliser with a
 few presets and a manual setup, running in CamillaDSP, before any room
 correction. Room correction's hard part is the filter stage in the audio
@@ -3276,6 +3285,13 @@ gap or click at a change of sample rate.
 ### Phase 21 — The phone's quick actions and touchpad, redesigned
 
 **ID:** `ph-phone-controls` · added 2026-10-26 as 21, after the equaliser (George).
+
+**Closed 2026-10-27** (George, promoting 1.7.0 to Stable), in 1.7.0, the
+remote's laptop background merged into `next` after it. Criteria 1-4, 6
+and 7 checked from mocked data and on a test player through George's five
+rounds of findings; 8, the Home Assistant card, in the integration's 0.5.0.
+Not seen: mute with Fixed volume heard through an amplifier (5; ADR-0165
+*Not verified*, native DSD).
 
 **Added 2026-10-26** (George, before Phase 20 closes): a redesign of the
 phone page's quick actions and its touch area, the touchpad. Room correction
