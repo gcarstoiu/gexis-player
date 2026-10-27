@@ -40,7 +40,9 @@
   // panel (PanelBackground.svelte). A phone gets its own, as before.
   //: `switcher`: ADR-0136's player switcher in the title, left out inside the
   //: phone's remote, whose picker is above Settings (ADR-0164).
-  let { onback = null, embedded = false, openRow = null, onrowopened = null, switcher = true } = $props();
+  //: `ground`: false inside the remote too, whose weave, blurred cover and
+  //: veil are behind both its pages (George, 2026-10-27).
+  let { onback = null, embedded = false, openRow = null, onrowopened = null, switcher = true, ground = true } = $props();
 
   const WIDE_MIN = 720;
 
@@ -1850,11 +1852,11 @@
   </button>
 {/snippet}
 
-<div class="settings" class:is-embedded={embedded} bind:clientWidth={width}>
-  {#if !embedded}
+<div class="settings" class:is-embedded={embedded || !ground} bind:clientWidth={width}>
+  {#if !embedded && ground}
     <div class="weave"></div>
   {/if}
-  <div class="veil"></div>
+  {#if ground}<div class="veil"></div>{/if}
 
   <div class="frame">
     <div class="head" class:head--wide={wide}>

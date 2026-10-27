@@ -6,6 +6,8 @@
   Custom first while it is the one in use - applied at a tap; the note; and
   *Edit bands in Settings*. The note is Phase 20's (C6): the design's
   sentence with the volume giving the lowering back (ADR-0162 C17).
+  A swipe down closes it too (George, 2026-10-27), as the handle and the
+  scrim do.
 -->
 <script>
   import { equaliser, note, setEqualiser, stateLine } from '../../lib/equaliser.svelte.js';
@@ -60,10 +62,71 @@
       if (d + t.offsetWidth > row.clientWidth - 40 || d < 16) row.scrollLeft = t.offsetLeft - 120;
     });
   });
+
+  // ── The swipe down ──────────────────────────────────────────────────────
+  //: Below this a gesture has not said what it is yet; past it a sideways
+  //: one is the chips' scroll and a downward one pulls the sheet.
+  const DECIDE_AT = 12;
+  //: Pulled further than this, or flicked, the sheet closes; short of it, it
+  //: goes back.
+  const CLOSE_AT = 80;
+  const FLICK = 0.5; // px/ms, downwards
+  //: The gesture in progress; nothing draws from it.
+  let gesture = null;
+  //: How far the finger has pulled the sheet down, while it does.
+  let pull = $state(null);
+  //: A pull ends with a click on whatever it started on; this is when the
+  //: last one ended, so that click is not a tap.
+  let pulled = 0;
+
+  function grab(event) {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    gesture = { id: event.pointerId, x: event.clientX, y: event.clientY, trail: [], decided: false };
+  }
+  function drag(event) {
+    if (!gesture || event.pointerId !== gesture.id) return;
+    const dx = event.clientX - gesture.x;
+    const dy = event.clientY - gesture.y;
+    if (!gesture.decided) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) <= DECIDE_AT) return;
+      if (dy <= 0 || Math.abs(dx) > dy) {
+        gesture = null;
+        return;
+      }
+      gesture.decided = true;
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+    pull = Math.max(0, dy);
+    // Its last 100 ms, for the speed it is let go at.
+    const trail = gesture.trail;
+    trail.push([event.timeStamp, pull]);
+    while (trail.length > 2 && event.timeStamp - trail[0][0] > 100) trail.shift();
+  }
+  function release(event, cancelled = false) {
+    if (!gesture || event.pointerId !== gesture.id) return;
+    const { decided, trail } = gesture;
+    gesture = null;
+    const [t0, y0] = trail[0] ?? [0, 0];
+    const [t1, y1] = trail.at(-1) ?? [0, 0];
+    // A finger that stopped before it let go did not flick.
+    const v = event.timeStamp - t1 > 100 || t1 <= t0 ? 0 : (y1 - y0) / (t1 - t0);
+    if (!decided) return;
+    pulled = Date.now();
+    if (!cancelled && (pull > CLOSE_AT || v > FLICK)) onclose();
+    pull = null;
+  }
+  function notTapped(event) {
+    if (Date.now() - pulled > 320) return;
+    event.stopPropagation();
+    event.preventDefault();
+  }
 </script>
 
 <div class="scrim" class:is-open={open} role="presentation" onclick={onclose}></div>
-<div class="sheet" class:is-open={open} role="dialog" aria-label="Equaliser" aria-hidden={!open} inert={!open}>
+<div class="sheet" class:is-open={open} class:is-pulled={pull !== null} role="dialog" aria-label="Equaliser"
+     aria-hidden={!open} inert={!open} style:transform={pull !== null ? `translateY(${pull}px)` : null}
+     onpointerdown={grab} onpointermove={drag} onpointerup={(e) => release(e)}
+     onpointercancel={(e) => release(e, true)} onclickcapture={notTapped}>
   <button class="handle" type="button" aria-label="Close" onclick={onclose}></button>
   {#if eq}
     <div class="head">
@@ -118,9 +181,15 @@
     box-shadow: 0 -10px 32px rgba(0, 0, 0, 0.6);
     transform: translateY(calc(100% + 24px));
     transition: transform var(--remote-slide);
+    /* Sideways is the chips' scroll; down is the sheet's. */
+    touch-action: pan-x;
   }
   .sheet.is-open {
     transform: translateY(0);
+  }
+  /* Where the finger is. */
+  .sheet.is-pulled {
+    transition: none;
   }
   /* Drawn 36 x 4, touched 52 x 20. */
   .handle {
@@ -218,6 +287,8 @@
     scrollbar-width: none;
     margin: 0 -16px;
     padding: 0 16px;
+    /* Its own, as a scroller: the sheet's does not reach inside it. */
+    touch-action: pan-x;
     -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 40px), transparent 100%);
     mask-image: linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 40px), transparent 100%);
     transition: opacity 160ms ease;

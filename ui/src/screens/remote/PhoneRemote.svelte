@@ -6,8 +6,8 @@
   touch area, the quick actions and the volume row; without one, a large
   cover, a seek bar and larger transport - and Settings as it is, without the
   mini player, mounted on its first visit. Over them the player menu and the
-  EQ sheet. Behind them the panel's background: the weave, the blurred cover
-  where there is one, the veil (D9).
+  EQ sheet. Behind both the panel's background: the weave, the blurred cover
+  where there is one, the veil (D9; Settings' too, George 2026-10-27).
 
   For a player with a screen, the touchpad's socket (ADR-0121) is open while
   Remote shows: the trackpad and its strips go over it, and the panel says
@@ -244,7 +244,7 @@
         </div>
         <div class="page page--settings" inert={page !== 'settings'}>
           {#if settingsSeen}
-            <Settings openRow={settingsRow} onrowopened={() => { settingsRow = null; onrowopened?.(); }} switcher={false} />
+            <Settings openRow={settingsRow} onrowopened={() => { settingsRow = null; onrowopened?.(); }} switcher={false} ground={false} />
           {/if}
         </div>
       </div>
