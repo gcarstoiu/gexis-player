@@ -26,16 +26,15 @@ signatures; r1.7.0 is GitHub's latest; the public `gexis-player.img.xz`
 through `releases/latest/download` passes its checksum and signature and
 decompresses to the checked image). 1.7.0 carries Phases 20 and 21 (the
 equaliser, the phone remote, mute with Fixed volume); PR #85 merged by George
-the same day. README's current release: PR #86 (`stable-1.7.0`, worktree
-`~/projects/gexis-player-stable170`) waits for George's merge; after it,
-`main` into `docs` and `next`, the branch and worktree removed. Image
+the same day. README's current release: PR #86, merged by George the same day; `main`
+merged into `docs` and `next`, its branch and worktree gone. Image
 `image/deploy/2026-10-27-gexis-player-v1.7.0.img`; build output
 `~/projects/gexis-release-out/r1.7.0`. The release's detail is in the
 archive (2026-10-27, 1.7.0).
 **R2D2's `/` fills up**: Docker's containerd store keeps images on `/`, not
 in `/home/docker`, and pi-gen rebuilds its 1.16 GB build image on every
 image build; check `df -h /` before one (1.9 GB free after 1.7.0's).
-**Next:** PR #86 (George merges); then Phase 22 when George picks it up.
+**Next:** Phase 22 when George picks it up.
 The wiki Roadmap shows Phases 20 and 21 done and the Harmony Hub ideas
 (pushed 2026-10-27 with his OK).
 
