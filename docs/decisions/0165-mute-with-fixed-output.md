@@ -1,6 +1,9 @@
 # ADR-0165 — Mute with fixed output
 
-**Status:** **Accepted** — George, 2026-10-27: the second Phase 21 design
+**Status:** **Built** 2026-10-27 on `ph-phone-controls`, checked from
+mocked data (the phone's row, the panel's drawer and the bar's tray) and
+previewed on sofapi; not yet heard through an amplifier. **Accepted** —
+George, 2026-10-27: the second Phase 21 design
 (`design/source/21`, *Fixed volume*) keeps mute on the fixed row and makes
 it silence the output, on the panel too; asked how, he chose mute where the
 output can be silenced and no mute where it cannot. Phase 21
