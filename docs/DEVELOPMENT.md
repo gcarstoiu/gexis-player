@@ -3326,7 +3326,11 @@ the whole screen while it shows (George; asked, the top bar included); on
 sofapi from 16:15. The panel's volume drawer's switch follows the sheet's
 (Phase 20's, merged in); on sofapi from 16:37. A chooser's dimming stays
 below the top bar (George, asked). **In 1.7.0, on Testing** (2026-10-27,
-George); the phase stays open for the Home Assistant card.
+George); the phase stays open for the Home Assistant card. **Then** (George,
+the same day): on a laptop the background stays inside the centred column;
+on sofapi from 18:21. The Home Assistant card started (George: now; the
+D-pad alone in the touch area, the equaliser's switch and setting added to
+the integration).
 
 **Before it** the mini player at the bottom of the phone page
 ([ADR-0101](decisions/0101-a-mini-player-on-the-phone.md)) holds the track

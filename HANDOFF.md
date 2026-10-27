@@ -43,7 +43,14 @@ the release's core and player (core restarted 18:00, no warnings). **R2D2's
 in `/home/docker`, and pi-gen rebuilds its 1.16 GB build image every time;
 the first image build failed on it. George chose removing the two
 Squeezelite test images; with the dangling images pruned, 1.9 GB free after
-the build. **Next:** release PR #85 (checks green; George merges), then `main` into `docs`
+the build. **After it** (George): the remote's background inside the column
+on a laptop (5596698e on `ph-phone-controls`, `next` merged in; on sofapi
+since 18:21 - ui and player `1.7.0+git5.5596698`, its core `1.7.0` built
+on the branch byte for byte the release's); the Harmony Hub ideas (an IR
+receiver, a Bluetooth remote) drafted for the wiki's Should list, shown to
+him, not pushed; the Home Assistant card started (D-pad only, the
+equaliser's switch and setting; the registration fix and a version bump,
+asked for through his dashboard session). **Next:** release PR #85 (checks green; George merges), then `main` into `docs`
 and `next`, `release-1.7.0` and the worktree removed, the routine clean-up.
 
 **The release key** moved to `~/projects/gexis-release-key` (George,
