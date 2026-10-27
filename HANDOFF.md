@@ -136,7 +136,7 @@ same day: mute with Fixed volume where the output has a control
 fixed rows too), the touch area giving way on phones under 780 px before
 the page scrolls, the strips following the finger. Claude's C1-C13 for his
 confirmation (C12 now keeps Pointer speed and style: nothing for ADR-0022);
-**C3, C4, C10, C12 and C13 confirmed by George the same day**.
+**all confirmed by George the same day**.
 **Rebuilt the same day** (ADR-0164, *Built (2026-10-27)*), pushed: core
 suite 2751 passed, 48 skipped; checked from mocked data against the board
 (`~/projects/scratch/ph21`: `run2.sh` / `batch2.sh` with `remote_shots2.py`
@@ -165,12 +165,20 @@ docs (the four phone pictures retaken); checked from mocked data at 427,
 412 and 800 wide (`remote_shots2.py` mode `edges`). **On sofapi since
 14:57** while it played (George agreed; no restarts, the UI served from
 disk): ui `1.6.0+git69.5c8235b`, player `1.6.0+git70.6dcdeb9`; the previous
-pair in `~/projects/scratch/ph21/findings1-debs`. Open for George: Settings'
-grey text over a bright cover (ADR-0164, *Not settled*).
+pair in `~/projects/scratch/ph21/findings1-debs`. **George, the same
+afternoon**: Settings' grey text over a bright cover kept as it is; the
+wiki's Roadmap (Phase 21 under Now) pushed with his OK; **the EQ sheet's
+switch without the box round it** (9fbbebf5, the manual's EQ picture
+retaken; checked from mocked data at 427 and 360, `remote_shots2.py` mode
+`eqpower`). **On sofapi since 15:55** (stopped; dry run: 2 upgraded,
+nothing removed; no restarts): ui and player `1.6.0+git71.9fbbebf`; the
+previous pair in `~/projects/scratch/ph21/findings2-debs`. Asked: whether
+the panel's volume drawer, whose switch has the same box (Phase 20's
+`EqQuick`), follows.
 Rolling sofapi back to Phase 20's preview (core git18, ui git19, player
 git20, in `ph-equaliser`'s `packaging/out`) only if George asks. Next:
-George's look on sofapi, his confirmation of C1, C2, C5-C9 and C11, then
-the Home Assistant card (and its media player reading `fixed_mute`).
+George's look on sofapi, then the Home Assistant card (and its media player
+reading `fixed_mute`).
 
 Then 22-30 in order, each ADR first (`docs/DEVELOPMENT.md`, the IDs
 there); MPD parked (ADR-0151). **Raspberry Pi Imager** (ADR-0159, a task):

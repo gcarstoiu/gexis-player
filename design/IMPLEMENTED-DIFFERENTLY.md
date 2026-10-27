@@ -812,7 +812,8 @@ decisions). Not yet seen by George on a device.
 ## The phone remote (Phase 21, 2026-10-27)
 
 Built from `source/21`'s second design, `Phone Remote v3` (ADR-0164, its
-decisions; ADR-0165 for mute with Fixed volume).
+decisions, all confirmed by George on 2026-10-27; ADR-0165 for mute with
+Fixed volume).
 
 - **[S]** Picking another player in the menu opens that player's own page
   in the same tab (C1); the drawing switches in place.
@@ -820,10 +821,10 @@ decisions; ADR-0165 for mute with Fixed volume).
   elsewhere it is the drawing's inert rule, with no knob, as Bluetooth's.
 - **[S]** With Fixed volume on an output with no volume control of its own,
   the locked row has no mute: nothing can silence that output (ADR-0165,
-  C3, confirmed by George the same day).
+  C3).
 - **[S]** The cover is the panel's: the renderer's, else the one the library
   enrichment found, else *artwork pending* - for any source, Bluetooth
-  included (C4, confirmed by George the same day).
+  included (C4).
 - **[U]** The EQ sheet's note is Phase 20's, with the volume giving the
   lowering back (C6); Custom leads the chips, with its dot, while it is the
   setting in use. The bar names *DSD* while DSD stands the equaliser aside.
@@ -833,12 +834,11 @@ decisions; ADR-0165 for mute with Fixed volume).
   state.
 - **[U]** On a phone shorter than the drawing's 780 px the touch area gives
   way first, to 312 px, and the cover without a screen to 140 px; only then
-  does the Remote page scroll (D10; C10, confirmed by George the same day).
+  does the Remote page scroll (D10; C10).
 - **[U]** The scroll strips' 24 px steps scroll what is under the pointer by
   those 24 px, the content following the finger (D3).
 - **[S]** A volume or mute that failed, and a character the player could not
-  type, are said in a short note over the page (C13, confirmed by George the
-  same day); the drawing has none.
+  type, are said in a short note over the page (C13); the drawing has none.
 - **[U]** The panel's fixed rows (the volume drawer, the bar's tray) have the
   mute button, and the volume button shows the crossed speaker while muted
   (ADR-0165 §4); `Now Playing.dc.html` is locked and does not draw them.
@@ -846,7 +846,8 @@ decisions; ADR-0165 for mute with Fixed volume).
   handle or the scrim (George, 2026-10-27, after the preview).
 - **[U]** Settings shows the remote's background - the weave, the blurred
   cover, the veil - where the drawing embeds the locked Settings on its own
-  ground (George, 2026-10-27, after the preview).
+  ground (George, 2026-10-27, after the preview); its grey text is kept as
+  it is over a bright cover (George, the same day).
 - **[U]** The remote fills a phone up to 480 px wide, where the drawing's
   column stops at 412 (C10 as amended, George, 2026-10-27: on a 427 px
   phone the dimming left strips at the edges); wider screens keep it.
@@ -854,4 +855,7 @@ decisions; ADR-0165 for mute with Fixed volume).
   Remote / Settings switch have the quick actions' ground and line
   (`rgba(233,238,242,0.07)`, `0.1`), not the drawing's
   `rgba(22,35,44,0.9)` (George, 2026-10-27).
+- **[U]** The EQ sheet's on/off switch stands alone, without the box the
+  drawing puts round it (`rgba(255,255,255,0.05)`, a `0.1` line); its touch
+  is still 48 px tall (George, 2026-10-27).
 
