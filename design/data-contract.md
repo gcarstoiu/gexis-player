@@ -214,3 +214,31 @@ Fields the panel code on `phase-13` already carries are named as it names them.
 | `rotation`: 0 or 180 | Settings → Display → Screen rotation |
 | whether the model was confirmed, and whether anything is showing yet | choosing between the three Screen step states |
 | the skin set for the current screen, and whether it is exact or the nearest that fits | the visualiser's letterbox (opaque black around it) and the skin picker, which offers only that set |
+
+---
+
+## Changed 2026-10-27
+
+**Phase 21, the phone remote** (`source/21/README.md`, *State and data*;
+ADR-0164). What the remote reads and sends, against what the core has:
+
+| Needs | Where |
+|---|---|
+| the players, their names and what each is doing | `/players` (ADR-0136) |
+| whether the player has a screen | the `headless` setting |
+| track, position, duration, source | `metadata`, `active`, `sources` |
+| volume percent, muted | `volume` |
+| volume mode | `fixed_output` |
+| muted with Fixed volume | `NEW` — `fixed_mute`: null where nothing can mute (Variable, or an output with no control of its own), else false / true (ADR-0165) |
+| EQ on, the setting in use | `equaliser` (ADR-0162) |
+| the screen's view, standby | `panel` (`now`, `lyrics`, `visualiser`, `idle`, `dashboard`, `standby`) |
+| pointer move (relative dx, dy), tap, two-finger scroll, pinch | `/touchpad` `move`, `tap`, `scroll`, `zoom` (ADR-0121) |
+| a scroll strip's step | `/touchpad` `scroll` of 24 px on one axis |
+| D-pad up, down, left, right, ok, back | `POST /panel/key` (ADR-0161) |
+| text to the focused field | `/touchpad` `text`, `key` (ADR-0121) |
+| a tap or OK that lands on a text field | `/touchpad` `over` (the pointer), `NEW` — `ring` (the D-pad's ring), from the panel |
+| go to a view; standby on / off | `/panel/go/*`, `/panel/idle/*`, `/panel/dashboard/*`, the visualiser's; `/panel/standby/*` (ADR-0101, ADR-0135) |
+| volume set, mute | `POST /volume`, `POST /volume/mute`; `NEW` — mute with Fixed volume (ADR-0165) |
+| EQ on / off, choose a setting | `/equaliser` (ADR-0162) |
+| transport | `POST /transport/{play,pause,next,previous}` |
+| seek | `NEW` — `POST /transport/seek` `{"position": seconds}` (ADR-0164 C2) |

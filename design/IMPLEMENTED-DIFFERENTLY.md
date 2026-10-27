@@ -809,8 +809,36 @@ decisions). Not yet seen by George on a device.
   line. The badge stays the lowering; Fixed keeps the drawing's words. The
   wording is Claude's (C17), confirmed by George the same day.
 
-## The phone remote (Phase 21, 2026-10-26)
+## The phone remote (Phase 21, 2026-10-27)
 
-Built from `source/21` (ADR-0164, its decisions). Not yet seen by George on
-a device.
+Built from `source/21`'s second design, `Phone Remote v3` (ADR-0164, its
+decisions; ADR-0165 for mute with Fixed volume).
+
+- **[S]** Picking another player in the menu opens that player's own page
+  in the same tab (C1); the drawing switches in place.
+- **[S]** The seek bar seeks where the renderer can (Lyrion, Spotify; C2);
+  elsewhere it is the drawing's inert rule, with no knob, as Bluetooth's.
+- **[S]** With Fixed volume on an output with no volume control of its own,
+  the locked row has no mute: nothing can silence that output (ADR-0165,
+  C3).
+- **[S]** The cover is the panel's: the renderer's, else the one the library
+  enrichment found, else *artwork pending* - for any source, Bluetooth
+  included (C4).
+- **[U]** The EQ sheet's note is Phase 20's, with the volume giving the
+  lowering back (C6); Custom leads the chips, with its dot, while it is the
+  setting in use. The bar names *DSD* while DSD stands the equaliser aside.
+- **[S]** The idle screen, Room and Meters are offered only where the player
+  has them; Playing and Lyrics are dimmed with nothing playing (C7).
+- **[S]** A player stopped with a source reads *Idle*, the drawing's third
+  state.
+- **[U]** On a phone shorter than the drawing's 780 px the touch area gives
+  way first, to 312 px, and the cover without a screen to 140 px; only then
+  does the Remote page scroll (D10, C10).
+- **[U]** The scroll strips' 24 px steps scroll what is under the pointer by
+  those 24 px, the content following the finger (D3).
+- **[S]** A volume or mute that failed, and a character the player could not
+  type, are said in a short note over the page (C13); the drawing has none.
+- **[U]** The panel's fixed rows (the volume drawer, the bar's tray) have the
+  mute button, and the volume button shows the crossed speaker while muted
+  (ADR-0165 §4); `Now Playing.dc.html` is locked and does not draw them.
 

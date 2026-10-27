@@ -1,5 +1,7 @@
 # ADR-0046 — Fixed output hides the volume control everywhere
 
+> **Amended by [ADR-0165](0165-mute-with-fixed-output.md) (2026-10-27):** with Fixed volume, mute silences the output where it has a control of its own; the fixed rows keep a mute button there.
+
 > **Amended by [ADR-0127](0127-one-volume-row.md) (2026-10-07):** Output mode and Software volume are one row, *Volume* - Hardware, Software or Fixed. On an output with no volume control of its own, Hardware is greyed and Software takes its place; Fixed is no longer forced there.
 
 **Status:** **Built 2026-09-23**, and verified on the panel — the trigger
@@ -67,7 +69,8 @@ reason is visible where the control used to be.**
 - **A wrong choice here is loud.** Fixed output at 100% into an amplifier set
   for a quiet source is the worst failure this device can produce, which is
   why the warning is part of the decision and not a nicety.
-- **Mute has no meaning in fixed mode**, and neither does
+- **Mute has no meaning in fixed mode** (*amended by ADR-0165*: it silences
+  an output that has a control of its own), and neither does
   [ADR-0034](0034-panel-volume-travel-and-mute.md)'s travel curve or the
   restore-on-return logic. Those paths need a fixed branch rather than a
   clamped one.

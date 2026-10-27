@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-25, late (on R2D2).
+Last updated: 2026-10-27 (on R2D2).
 
 ## Start here
 
@@ -111,7 +111,34 @@ shared README was older than ours, so only its Phase 21 parts were taken).
 [ADR-0164](docs/decisions/0164-the-phone-remote.md) accepted: George's
 answers (both pads as drawn, the touchpad sending steps, so the pointer
 leaves the phone; touch sizes as drawn; repeat cycles; the Home Assistant
-card follows); Claude's C1-C12 for his confirmation.
+card follows); Claude's C1-C14 for his confirmation (C12: Pointer speed and
+style retired, ADR-0022, only once he confirms). **Built the same day**
+(ADR-0164, *Built*), pushed: core suite 2745 passed, 48 skipped; checked from
+mocked data against the design (`~/projects/scratch/ph21`: `remote_layout.py`
+in `gexis-layout-core:1`, its `demo` flag for the manual's pictures from
+the demo library; `remote_shots.py`, `variant_shot.py`, `typing_shot.py`
+with `fake_panel.py`, in `gexis-layout:1`, on a `gexis-layout` network).
+**On sofapi as a preview since 2026-10-26 21:19** (George asked for it;
+sofapi idle; dry run first: 3 upgraded, nothing removed): core
+`1.6.0+git50.18da13b`, ui `1.6.0+git49.b740c16`, player
+`1.6.0+git50.18da13b` - Phase 20's too, the branch being built on it; the
+other packages as Phase 20's preview left them (copied from its
+`packaging/out` for the player's pins). Core and kiosk restarted, the panel
+on `index-BhU4fWJL.js`, `/tmp/pv` removed. **George, the same evening:
+Claude Design got the remote wrong.** **The second design came on
+2026-10-27** (`Phone Remote v3`, imported on `docs`; v2 deleted, the
+Settings copy still the repository's): the Trackpad drives the panel's
+pointer again (ADR-0121's gestures, nothing drawn on the phone), the D-pad
+the ring, no typing sheet, no shuffle or repeat on the phone, Fixed volume
+as the panel's locked row with mute. ADR-0164 revised; George's answers the
+same day: mute with Fixed volume where the output has a control
+([ADR-0165](docs/decisions/0165-mute-with-fixed-output.md), the panel's
+fixed rows too), the touch area giving way on phones under 780 px before
+the page scrolls, the strips following the finger. Claude's C1-C13 for his
+confirmation (C12 now keeps Pointer speed and style: nothing for ADR-0022).
+**Being rebuilt on `ph-phone-controls`**; sofapi still has the first
+build's preview. Rolling it back to Phase 20's (core git18, ui git19,
+player git20, in `ph-equaliser`'s `packaging/out`) only if George asks.
 
 Then 22-30 in order, each ADR first (`docs/DEVELOPMENT.md`, the IDs
 there); MPD parked (ADR-0151). **Raspberry Pi Imager** (ADR-0159, a task):
