@@ -170,12 +170,35 @@ def test_a_player_older_than_multiroom_is_no_member():
         g.Member("x", "New", "new.local")
 
 
-def test_the_all_slider_moves_every_member_by_the_same_step_within_0_to_100():
-    levels = {"living": 62, "kitchen": 48, "study": 35}  # mean 48.3
-    assert g.step_levels(levels, 58.3333) == {"living": 72, "kitchen": 58, "study": 45}
-    assert g.step_levels(levels, 0) == {"living": 14, "kitchen": 0, "study": 0}
-    # From the levels when the drag began, the way back keeps the balance.
+def test_the_all_slider_moves_every_member_the_same_share_of_its_own_travel():
+    levels = {"living": 62, "kitchen": 48, "study": 35}  # mean 48.33
+    up = g.step_levels(levels, 74.1667)  # half way from the mean to 100
+    assert up == {"living": 81, "kitchen": 74, "study": 68}
+    down = g.step_levels(levels, 24.1667)  # half way to 0
+    assert down == {"living": 31, "kitchen": 24, "study": 18}
+    assert g.step_levels(levels, 100) == {"living": 100, "kitchen": 100, "study": 100}
+    assert g.step_levels(levels, 0) == {"living": 0, "kitchen": 0, "study": 0}
+    # From the levels when the drag began, the way back gives them back.
     assert g.step_levels(levels, 48.3333) == levels
+
+
+def test_a_member_at_the_top_does_not_hold_the_slider_back():
+    """sofapi at 100 and the bar at 80: the mean follows the finger."""
+    levels = {"sofa": 100, "bar": 80}
+    for target in (91, 95, 99):
+        moved = g.step_levels(levels, target)
+        assert moved["sofa"] == 100
+        assert abs(sum(moved.values()) / 2 - target) <= 0.5
+
+
+def test_a_source_apps_volume_moves_the_others_the_same_share():
+    # Spotify's slider takes the leader from 60 to 80, half its way up.
+    assert g.follow_level(40, 60, 80) == 70
+    assert g.follow_level(100, 60, 80) == 100
+    # Down from 80 to 40, half its way to 0.
+    assert g.follow_level(50, 80, 40) == 25
+    assert g.follow_level(0, 80, 40) == 0
+    assert g.follow_level(37, 0, 0) == 37
 
 
 class Peers:

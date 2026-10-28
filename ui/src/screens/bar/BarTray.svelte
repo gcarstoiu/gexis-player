@@ -131,8 +131,8 @@
   let rail = $state(null);
 
   //: **Grouped, the slider is the *All* slider** (D6, the design's
-  //: `dragGroup`): every Variable member by the same step from where they
-  //: were when the finger landed, drawn before the core's answer.
+  //: `dragGroup`): every Variable member the same share of its own way from
+  //: where they were when the finger landed, drawn before the core's answer.
   const gsend = new LevelSender((percent, from) => groupLevel(percent, from),
     (error) => vol.flash(`Volume not changed: ${error.message}`));
   let gLocal = $state(null);

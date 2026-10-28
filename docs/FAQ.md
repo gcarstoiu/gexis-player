@@ -196,8 +196,9 @@ The others fall silent and stay grouped (*Grouped · silent*). Start music on
 one of them and it leads. Undo the group, or Leave it, to play alone.
 
 **Does each player keep its own volume and equaliser?**
-Yes. The group's **All** slider moves every player by the same step, keeping
-the balance between rooms; each player's own row sets that one. A player on
+Yes. The group's **All** slider moves every player the same share of its way
+up or down: a louder room stays louder, and all of them reach the top and the
+bottom together. Each player's own row sets that one. A player on
 Fixed volume is not moved. Each keeps its own equaliser setting.
 
 **Why does a player in the list say *Update to join*?**

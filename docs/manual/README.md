@@ -280,8 +280,9 @@ of the group shows the group's Now Playing, marked *with Kitchen, Study*;
 tap the mark for the group. Play, pause and skip work from any of them.
 
 **Volume.** Each player keeps its own level. Grouped, the volume control is
-the group's **All** slider: it moves every player by the same step, so the
-balance between rooms stays. Each player's own row sets that one alone, and
+the group's **All** slider: it moves every player the same share of its way
+up or down, so a louder room stays louder and all of them reach the top and
+the bottom together. Each player's own row sets that one alone, and
 its speaker mutes it. A player on *Fixed* volume (an amplifier sets the
 level) is not moved; its mute still works where its output has a control of
 its own. Moving the volume in Spotify, or in a plugin that hands its volume

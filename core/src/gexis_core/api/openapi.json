@@ -6318,7 +6318,7 @@
           "Multiroom"
         ],
         "summary": "The group's level (the All slider)",
-        "description": "Moves every reachable Variable member by the same step - `percent` less their mean - kept within 0-100, so the balance between rooms stays; Fixed members are not moved, and a muted member is unmuted. `from` is the members' levels when a drag began, so a drag down to nothing and back restores the balance; without it, their levels now (ADR-0166 D6).",
+        "description": "Moves every reachable Variable member the same share of its own way - up, of its way to 100; down, of its way to 0 - so their mean is `percent`; Fixed members are not moved, and a muted member is unmuted. `from` is the members' levels when a drag began, so a drag down to nothing and back restores the balance; without it, their levels now (ADR-0166 D6).",
         "requestBody": {
           "required": true,
           "content": {

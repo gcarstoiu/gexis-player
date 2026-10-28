@@ -33,7 +33,7 @@ export const setMemberMute = (id, muted) =>
 /** **The *All* slider and a member's row while a finger moves them**: one
  *  request in flight, only the latest after it, as the volume slider sends.
  *  The *All* slider's drag keeps the members' levels as it began (`from`),
- *  so a drag down to nothing and back keeps the balance (the design's
+ *  so a drag down to nothing and back gives their levels back (the design's
  *  `_gBase`). */
 export class LevelSender {
   #inFlight = false;
@@ -79,14 +79,23 @@ export function dragStart(g) {
   return from;
 }
 
-/** The members a drag moves, from where they were: the design's `dragGroup`,
- *  drawn before the core's answer comes back. */
+/** The members a drag moves, from where they were - drawn before the core's
+ *  answer, by its rule (D6, `group.step_levels`): every member the same
+ *  share of its own way, to 100 going up and to 0 going down, so the mean
+ *  is where the finger is. */
 export function stepped(from, target) {
   const ids = Object.keys(from);
   if (!ids.length) return {};
   const mean = ids.reduce((a, k) => a + from[k], 0) / ids.length;
+  const t = Math.max(0, Math.min(100, target));
   const out = {};
-  for (const k of ids) out[k] = Math.max(0, Math.min(100, Math.round(from[k] + target - mean)));
+  for (const k of ids) {
+    const l = from[k];
+    const v = t >= mean
+      ? l + (mean >= 100 ? 0 : (t - mean) / (100 - mean)) * (100 - l)
+      : l - (mean <= 0 ? 0 : (mean - t) / mean) * l;
+    out[k] = Math.max(0, Math.min(100, Math.round(v)));
+  }
   return out;
 }
 
@@ -178,7 +187,7 @@ export const levelsSub = (g) => `${g.members.length} players · each keeps its o
 /** The note under the group volume's rows, naming Fixed members. */
 export function fixedNote(g) {
   const fixed = g.members.filter((m) => m.fixed).map((m) => m.name);
-  const base = 'The group slider moves each player by the same step, so the balance between rooms stays.';
+  const base = 'The group slider moves each player the same share of its way up or down, so a louder room stays louder.';
   if (!fixed.length) return base;
   return `${base} ${joinNames(fixed)} ${fixed.length > 1 ? 'are' : 'is'} on Fixed volume: the amplifier sets the level.`;
 }

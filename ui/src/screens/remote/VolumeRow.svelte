@@ -14,6 +14,7 @@
   group's - and the group button left of EQ opens the group volume sheet.
 -->
 <script>
+  import { onDestroy } from 'svelte';
   import { fixedMute, fixedOutput, setMute, setVolume, volume } from '../../lib/state.js';
   import { equaliser } from '../../lib/equaliser.svelte.js';
   import { FILLED } from './icons.js';
@@ -88,12 +89,21 @@
   function move(event) {
     if (dragging) at(event.currentTarget, event.clientX);
   }
+  //: Grouped, the core's answer arrives through every member's /state: the
+  //: bar keeps the finger's level for SETTLE_MS, as the panel's does, or it
+  //: jumps back to the old mean first.
+  const SETTLE_MS = 1500;
+  let settle = null;
+  function settleLater() {
+    clearTimeout(settle);
+    settle = setTimeout(() => { if (!dragging) settling = false; }, SETTLE_MS);
+  }
+  onDestroy(() => clearTimeout(settle));
   function up() {
     dragging = false;
     if (g) {
-      // The core's answer arrives on /state; the bar shows it from now.
-      settling = false;
       groupFrom = null;
+      settleLater();
       return;
     }
     if (!inFlight && queued === null) settling = false;
@@ -104,7 +114,10 @@
     event.preventDefault();
     local = Math.min(100, Math.max(0, shown + step));
     if (g) {
-      if (!groupFixed) groupSender.send(local, dragStart(g));
+      if (groupFixed) return;
+      groupSender.send(local, dragStart(g));
+      settling = true;
+      settleLater();
       return;
     }
     settling = true;

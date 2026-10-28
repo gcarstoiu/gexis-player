@@ -19,8 +19,9 @@ in force, and answers the group's routes:
   makes it the leader; the old leader's own source stops (C1).
 - **The group's Now Playing on a member** (D5): the leader's playback,
   mirrored into this player's state; its transport commands sent there.
-- **The group volume** (D6): the *All* slider moves every Variable member by
-  the same step; each member's own row is its own control.
+- **The group volume** (D6): the *All* slider moves every Variable member the
+  same share of its own way up or down; each member's own row is its own
+  control.
 """
 from __future__ import annotations
 
@@ -295,8 +296,8 @@ class Multiroom:
 
     def on_source_volume(self, before: int, after: int) -> None:
         """**A source's own app moved the leader's level** (D6): Spotify's
-        slider, a volume-handing plugin. The other Variable members move by
-        the same step. Lyrion's apps set each player's own (its sync group
+        slider, a volume-handing plugin. The other Variable members move the
+        same share of their own way. Lyrion's apps set each player's own (its sync group
         has a volume of its own)."""
         record = self.group.record
         if record is None or record.leader != self.group.me or after == before:
@@ -304,11 +305,10 @@ class Multiroom:
         if self._local_active() == "lms" and self.chain == outputs.BUT_LYRION:
             return
         view = self.view() or {}
-        delta = after - before
         for m in view.get("members") or []:
             if m["me"] or not m["reachable"] or m["fixed"] or m["volume"] is None:
                 continue
-            level = max(0, min(100, m["volume"] + delta))
+            level = groups.follow_level(m["volume"], before, after)
             asyncio.ensure_future(self._post(m["id"], "/volume", {"percent": level}))
 
     # -- what happens here ----------------------------------------------------------------

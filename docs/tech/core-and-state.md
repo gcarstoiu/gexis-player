@@ -760,10 +760,11 @@ phone only.
   a transport command goes to the leader.
 - **The group volume** (D6): the *All* slider sends a target and the
   members' levels as the drag began; every reachable Variable member moves
-  by the target less their mean, within 0-100 (`group.step_levels`), and a
-  muted one is unmuted. A level reported by the leader's source from its
-  own app (Spotify's slider), not by our own send, moves the others by the
-  same step (`on_source_volume`); Lyrion's apps set each player's own.
+  the same share of its own way - up, of its way to 100; down, of its way
+  to 0 - so their mean is the target (`group.step_levels`), and a muted one
+  is unmuted. A level reported by the leader's source from its own app
+  (Spotify's slider), not by our own send, moves the others the same share
+  of theirs (`group.follow_level`, `on_source_volume`); Lyrion's apps set each player's own.
 - **Lyrion's syncs are groups** (decision 10): the LMS adapter reports its
   player's `sync_master` and `sync_slaves` from the status push; a sync seen
   that was not ours (6 s after our own commands are ours) groups the Gexis

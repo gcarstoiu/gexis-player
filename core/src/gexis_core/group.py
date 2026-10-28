@@ -558,12 +558,35 @@ def summary(record: Record | None) -> dict | None:
 
 
 def step_levels(levels: dict[str, int], target: float) -> dict[str, int]:
-    """**The *All* slider** (D6; the design's `dragGroup`): every Variable
-    member moved by the same step - the target less their mean - kept within
-    0-100, so the balance between rooms stays. `levels` are the members'
-    levels when the drag began."""
+    """**The *All* slider** (D6: *the same step, as a share of its own
+    travel*). From the members' levels when the drag began - their mean is
+    where the slider stood - every Variable member moves the same share of
+    its own way: up, of its way to 100; down, of its way to 0. So the mean
+    lands where the finger is, everyone reaches 100 at the top and 0 at the
+    bottom, nothing is cut at either end, and a drag back to where it began
+    gives the levels back as they were (sofapi and the bar, 2026-10-28: with
+    the same step for all, a member at 100 held the mean below the finger,
+    and the slider jumped back)."""
     if not levels:
         return {}
     mean = sum(levels.values()) / len(levels)
-    delta = target - mean
-    return {player_id: max(0, min(100, round(level + delta))) for player_id, level in levels.items()}
+    target = max(0.0, min(100.0, float(target)))
+    if target >= mean:
+        share = 0.0 if mean >= 100 else (target - mean) / (100 - mean)
+        moved = {k: level + share * (100 - level) for k, level in levels.items()}
+    else:
+        share = 0.0 if mean <= 0 else (mean - target) / mean
+        moved = {k: level - share * level for k, level in levels.items()}
+    return {k: max(0, min(100, round(v))) for k, v in moved.items()}
+
+
+def follow_level(level: int, before: int, after: int) -> int:
+    """A member's level when the leader's source moved its own from `before`
+    to `after` (D6): the same share of its own way, as `step_levels`."""
+    if after > before:
+        moved = level + (after - before) / (100 - before) * (100 - level)
+    elif after < before:
+        moved = level - (before - after) / before * level
+    else:
+        moved = level
+    return max(0, min(100, round(moved)))

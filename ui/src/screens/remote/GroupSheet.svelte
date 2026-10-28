@@ -2,14 +2,15 @@
 <!--
   ADR-0166 D6, design/source/22 (*Phone: group volume*): built as the EQ
   sheet is. *Group volume*, the sub-line, the *All* slider - which moves
-  every Variable member by the same step from where they were when the drag
-  began, and unmutes them - a rule, then each member's own row: a slider
-  with its mute inside, the locked row for a Fixed one (its mute where the
-  output has a control to silence), *Not reachable* for one that is off. The
-  note under them names the Fixed members. A swipe down closes it, as the
+  every Variable member the same share of its own way from where they were
+  when the drag began, and unmutes them - a rule, then each member's own
+  row: a slider with its mute inside, the locked row for a Fixed one (its
+  mute where the output has a control to silence), *Not reachable* for one
+  that is off. The note under them names the Fixed members. A swipe down closes it, as the
   handle and the scrim do.
 -->
 <script>
+  import { onDestroy } from 'svelte';
   import { FILLED } from './icons.js';
   import {
     LevelSender, dragStart, fixedNote, group, groupLevel, levelsSub, setGroupMute, setMemberMute,
@@ -23,9 +24,20 @@
   const sheet = new SheetPull(() => onclose());
   const told = (error) => onsay(`Not changed: ${error.message}`);
 
+  //: A slider let go keeps the finger's levels for SETTLE_MS, as the
+  //: panel's do: the core's answer arrives through every member's /state,
+  //: and the knob would jump back to the old levels first.
+  const SETTLE_MS = 1500;
+  const timers = {};
+  function settleLater(key, clear) {
+    clearTimeout(timers[key]);
+    timers[key] = setTimeout(clear, SETTLE_MS);
+  }
+  onDestroy(() => Object.values(timers).forEach(clearTimeout));
+
   // ── The *All* slider ───────────────────────────────────────────────────
   const allSender = new LevelSender(groupLevel, told);
-  let allDrag = $state(null); // { from, target }
+  let allDrag = $state(null); // { from, target, el, up }
   const variable = $derived((g?.members ?? []).filter((m) => m.reachable && !m.fixed && m.volume != null));
   const allFixed = $derived(!!g && variable.length === 0);
   const allLevel = $derived(allDrag ? Math.round(allDrag.target) : (g?.level ?? 0));
@@ -43,17 +55,20 @@
     allMove(event);
   }
   function allMove(event) {
-    if (!allDrag) return;
+    if (!allDrag || allDrag.up) return;
     allDrag.target = ratio(event, allDrag.el) * 100;
     allSender.send(allDrag.target, allDrag.from);
   }
   function allUp() {
-    allDrag = null;
+    if (!allDrag) return;
+    allDrag.up = true;
+    const drag = allDrag;
+    settleLater('all', () => { if (allDrag === drag) allDrag = null; });
   }
 
   // ── A member's own row ─────────────────────────────────────────────────
   const memberSender = new LevelSender(setMemberVolume, told);
-  let memberDrag = $state(null); // { id, level, el }
+  let memberDrag = $state(null); // { id, level, el, up }
   function levelOf(m) {
     if (memberDrag?.id === m.id) return memberDrag.level;
     if (allDrag && m.id in allDrag.from) return stepped(allDrag.from, allDrag.target)[m.id];
@@ -67,12 +82,15 @@
     memberMove(event);
   }
   function memberMove(event) {
-    if (!memberDrag) return;
+    if (!memberDrag || memberDrag.up) return;
     memberDrag.level = Math.round(ratio(event, memberDrag.el) * 100);
     memberSender.send(memberDrag.id, memberDrag.level);
   }
   function memberUp() {
-    memberDrag = null;
+    if (!memberDrag) return;
+    memberDrag.up = true;
+    const drag = memberDrag;
+    settleLater('member', () => { if (memberDrag === drag) memberDrag = null; });
   }
   function tagOf(m) {
     if (!m.reachable) return 'Off';

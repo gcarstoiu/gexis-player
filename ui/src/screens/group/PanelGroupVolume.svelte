@@ -43,7 +43,7 @@
   const levelOf = (m) => local[m.id] ?? m.volume;
 
   //: The *All* slider's drag starts from the members' levels as they are,
-  //: and moves each by the same step (the design's `_gBase`).
+  //: and moves each the same share of its own way (the design's `_gBase`).
   let from = null;
   const allDrag = track((percent, first) => {
     if (!variable.length) return;
