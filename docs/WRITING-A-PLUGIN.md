@@ -223,7 +223,10 @@ six test rounds to hand over cleanly. Each of these cost one:
   session - must end that session when another source takes over. Left to the
   player's kill, it never ends: the app stays attached to a receiver that is
   gone, so its next play pauses the phone's own player and goes nowhere, and
-  nothing sounds anywhere. The player always kills with SIGKILL, so no
+  nothing sounds anywhere. Worse, the session left open can break the app
+  itself: in our test it stayed silent everywhere - over Bluetooth, even
+  on the phone's own speaker - until its user signed out and in again. The
+  player always kills with SIGKILL, so no
   shutdown code of yours runs then. On `release`, have your receiver leave
   its session - many do so on SIGTERM - and close the card, and declare a
   `polite_grace` long enough for both, so the player waits instead of
