@@ -1633,7 +1633,11 @@ per-second record of each stage (the raw meter, the Bluetooth PCM, the DAC's
 state) and finally the device bluealsa-aplay held open (`pcmC8D0p`, the
 Multiroom card) showed where the audio went. Restarted, it held the DAC and
 played. Spotify Connect had read the new chain at its next open, which is what
-made the belief look true.
+made the belief look true. The silence that remained after the fix was the
+app's own - recorded straight from BlueALSA, every sample zero - and it too
+went back to us: a session an uploaded test renderer left open when it was
+killed earlier had broken the app, silent even on the phone's speaker until
+George signed in again.
 **Rule:** before a design leans on how another program behaves, search the
 lessons and the code for it; one program behaving as predicted does not make
 the rule. And before blaming the other end, look at where our own process
