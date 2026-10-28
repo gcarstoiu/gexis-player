@@ -44,11 +44,10 @@ George's confirmation**. Built: core (`group.py`, `multiroom.py`,
 `snapcast.py`, the grouped chain in `outputs.py`, Lyrion's sync in the LMS
 adapter, the `/group` routes), the UI on the phone, the panel and the bars,
 the manual's section 6, the FAQ, the technical guide, README, the plugin
-manual. **Preview 3** (`1.7.0+git41.7f7eab5`, core and player; ui
+manual. **Preview 4** (`1.7.0+git42.8aedb1d`, core and player; ui
 `git39.a3dc6a3`, system `git38.d9a696d`, Debian's `snapserver` and
 `snapclient` 0.31.0-1 installed from the downloaded files) on sofapi, the
-bar, guestpi and bedroompi; `8aedb1db` (Lyrion plays on when a group forms)
-is newer than it. The integration's join and unjoin: its `multiroom` branch
+bar, guestpi and bedroompi, the branch's head. The integration's join and unjoin: its `multiroom` branch
 (`9744bb3`), for its release after the player's. **Open:** the measurement
 with George (the delay, the rooms by ear, an hour without a dropout, the
 cost with the equaliser and the visualiser, the gaps); Lyrion's half on a
@@ -67,7 +66,7 @@ The wiki Roadmap shows Phases 20 and 21 done and the Harmony Hub ideas
 to `~/.gnupg-gexis-release`, which no longer exists.
 
 **The players**: sofapi, the bar (ShelvesPi), guestpi and bedroompi on
-Phase 22's preview 3 (2026-10-28, above).
+Phase 22's preview 4 (2026-10-28, above).
 
 **The test venv imports the core from `~/projects/gexis-player-next`** (an
 editable install): in another worktree run the suite with `PYTHONPATH=src`
