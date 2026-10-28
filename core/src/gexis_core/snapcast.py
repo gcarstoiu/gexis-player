@@ -118,22 +118,27 @@ def client_env(host: str, host_id: str, latency_ms: int = 0, sampleformat: str |
             f"GEXIS_SNAP_LATENCY={int(latency_ms)}\nGEXIS_SNAP_OPTS={opts}\n")
 
 
-def sample_format_for(card: str | None, chain_takes_32: bool) -> str | None:
+def sample_format_for(card: str | None, chain_takes_32: bool, rate: int | None = None,
+                      any_rate: bool = True) -> str | None:
     """**What this player's client asks for**, as `<rate>:<bits>:<channels>`,
-    or None to play the stream as it comes (32 bits). A chain that cannot
-    take 32 bits - a card offering 16 or 24 only, with no equaliser or
-    conversion in front of it - gets the widest it takes; the rate is kept.
-    Padding is undone exactly: a 16-bit source arrives as it left."""
-    if chain_takes_32 or card is None:
-        return None
-    formats = outputs.formats_of(card)
-    if not formats or "S32_LE" in formats:
-        return None
-    if "S24_LE" in formats:
-        return "*:24:*"
-    if "S16_LE" in formats:
-        return "*:16:*"
-    return None
+    or None to play the stream as it comes (32 bits, its own rate). A chain
+    that cannot take 32 bits - a card offering 16 or 24 only, with no
+    equaliser or conversion in front of it - gets the widest it takes;
+    padding is undone exactly, so a 16-bit source arrives as it left. A rate
+    the card lacks, where nothing in front of it converts (`any_rate`: the
+    equaliser's resampler, HDMI's conversion), is converted to the card's
+    highest, as the equaliser and Squeezelite's own resampler do."""
+    bits = "*"
+    if not chain_takes_32 and card is not None:
+        formats = outputs.formats_of(card)
+        if formats and "S32_LE" not in formats:
+            bits = "24" if "S24_LE" in formats else "16" if "S16_LE" in formats else "*"
+    to = "*"
+    if rate and not any_rate and card is not None and outputs.takes_rate(card, rate) is False:
+        top = outputs.top_rate(card)
+        if top:
+            to = str(top)
+    return None if bits == "*" and to == "*" else f"{to}:{bits}:*"
 
 
 async def _run(*args: str, timeout: float = 20) -> tuple[int, str]:

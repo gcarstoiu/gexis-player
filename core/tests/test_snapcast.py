@@ -53,6 +53,15 @@ def test_a_card_without_32_bits_is_given_the_widest_it_takes(monkeypatch):
     assert snapcast.sample_format_for("unknown", False) is None, "not asked: as it comes"
 
 
+def test_a_rate_the_card_lacks_is_converted_to_its_highest_unless_the_chain_converts(monkeypatch):
+    monkeypatch.setattr(outputs, "formats_of", lambda card: frozenset({"S16_LE", "S24_LE", "S32_LE"}))
+    monkeypatch.setattr(outputs, "takes_rate", lambda card, rate: rate <= 192000)
+    monkeypatch.setattr(outputs, "top_rate", lambda card: 192000)
+    assert snapcast.sample_format_for("dac", False, 96000, any_rate=False) is None
+    assert snapcast.sample_format_for("dac", False, 384000, any_rate=False) == "192000:*:*"
+    assert snapcast.sample_format_for("dac", True, 384000, any_rate=True) is None, "the equaliser resamples"
+
+
 class FakeControl:
     def __init__(self, groups):
         self.groups = groups

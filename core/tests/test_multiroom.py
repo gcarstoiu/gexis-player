@@ -120,7 +120,7 @@ class Player:
             lms = type("Lms", (), {"player_id": lyrion[1], "server_id": lyrion[0], "sync_group": (None, ())})()
         self.room = Room(store=self.store, players=FakePlayers(net), snap=self.snap, me=lambda: member,
                          local_active=lambda: self.active, stop_source=stop_source, rechain=rechain,
-                         chain_card=lambda: ("sndrpihifiberry", True), set_own_volume=set_volume,
+                         chain_card=lambda: ("sndrpihifiberry", True, True), set_own_volume=set_volume,
                          set_own_mute=set_mute, screen=lambda: True, lms=lms, lms_on=lambda: bool(lyrion),
                          group_path=tmp_path / f"{member.id}.json",
                          chain_path=tmp_path / f"{member.id}-chain.json", peers=FakePeers())

@@ -4805,14 +4805,16 @@ async def main() -> None:
                     "systemctl", "restart", "squeezelite.service")).wait()
             logger.info("outputs: the group's chain is in place; nothing played, nothing restarted")
 
-    def _group_chain_card() -> tuple[str | None, bool]:
-        """The card the group's music plays to here, and whether the chain in
-        front of it takes 32 bits whatever the card does."""
+    def _group_chain_card() -> tuple[str | None, bool, bool]:
+        """The card the group's music plays to here, whether the chain in
+        front of it takes 32 bits whatever the card does, and every rate (the
+        equaliser's resampler, HDMI's conversion)."""
         output = _with_software(outputs.in_force(settings.value("output_device"))[0])
         if output is None:
-            return None, True
-        return output.card, bool(outputs.eq_in_path(output.card) or outputs.needs_plug(output.card)
-                                 or outputs.widens(output.card))
+            return None, True, True
+        eq_on = outputs.eq_in_path(output.card)
+        plug = outputs.needs_plug(output.card) is True
+        return output.card, bool(eq_on or plug or outputs.widens(output.card)), bool(eq_on or plug)
 
     async def _before_loopback_reload() -> None:
         """Nothing may hold a loopback while the module is loaded again."""

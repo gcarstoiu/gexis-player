@@ -113,7 +113,7 @@ class Multiroom:
                  local_active: Callable[[], str | None],
                  stop_source: Callable[[], Awaitable[object]],
                  rechain: Callable[[], Awaitable[None]],
-                 chain_card: Callable[[], tuple[str | None, bool]],
+                 chain_card: Callable[[], tuple[str | None, bool, bool]],
                  set_own_volume: Callable[[float], Awaitable[bool]],
                  set_own_mute: Callable[[bool], Awaitable[bool]],
                  screen: Callable[[], bool],
@@ -150,6 +150,9 @@ class Multiroom:
         self._refresh_task: asyncio.Task | None = None
         self._session: aiohttp.ClientSession | None = None
         self._statuses: dict[str, dict] = {}
+        #: The client's format for the stream last heard of, kept while
+        #: nothing plays so a pause does not restart it.
+        self._format: str | None = None
         snap.on_change = self._changed
 
     # -- what others ask about this player -------------------------------------
@@ -498,11 +501,15 @@ class Multiroom:
         me = self.group.me or ""
         if record.leader == me:
             host = "127.0.0.1"
+            rate = self.snap.rate
         else:
             leader = record.member(record.leader)
             host = self._address(leader)[0] if leader else None
-        card, takes_32 = self._chain_card()
-        await self.snap.listen(host, me, groups_format(card, takes_32))
+            rate = ((self.peers.states.get(record.leader) or {}).get("group") or {}).get("rate")
+        card, takes_32, any_rate = self._chain_card()
+        if rate or self._format is None:
+            self._format = sample_format_for(card, takes_32, rate, any_rate)
+        await self.snap.listen(host, me, self._format)
 
     def _changed(self) -> None:
         """Something the group's view or this player's part in it depends on
@@ -523,6 +530,10 @@ class Multiroom:
         self._mirror(record)
         if record is not None and not self._claiming:
             await self._settle(record)
+            # The stream's rate may want another format of the client: only a
+            # change restarts it (`Snapcast.listen`).
+            if self.snap.listening:
+                await self._listen()
 
     def _publish(self, record: Record | None) -> None:
         me = self.group.me
@@ -549,13 +560,17 @@ class Multiroom:
             urls[me] = f"http://{mine.host}:{mine.port}/"
         mode = "lyrion" if (self.chain == outputs.BUT_LYRION and
                             ((self.peers.states.get(record.leader) or own).get("active") == "lms")) else "snapcast"
+        names = {pid: s.get("name") for pid, s in self._statuses.items() if s.get("name")}
+        if mine is not None:
+            names[me] = mine.name
         view = groups.view(record, Live(me, own, self._screen()), self.peers, mode=mode,
-                           joining=joining, screens=screens, urls=urls)
+                           joining=joining, screens=screens, urls=urls, names=names)
         if view is not None and record.leader == me:
             view["source"] = groups.source_of(own)
             view["transport"] = own["metadata"].get("transport")
             view["title"] = own["metadata"].get("title")
             view["silent"] = False
+            view["rate"] = self.snap.rate
         self._store.set_group(view)
 
     def _mirror(self, record: Record | None) -> None:
@@ -655,6 +670,3 @@ class Multiroom:
                     await self.group.join(member)
 
 
-def groups_format(card: str | None, takes_32: bool) -> str | None:
-    """The client's `--sampleformat` for this player's chain (snapcast)."""
-    return sample_format_for(card, takes_32)

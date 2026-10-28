@@ -504,7 +504,7 @@ def source_of(state: dict) -> dict | None:
 
 
 def view(record: Record | None, me: Live, peers: Peers, *, mode: str, joining: set[str],
-         screens: dict[str, bool], urls: dict[str, str]) -> dict | None:
+         screens: dict[str, bool], urls: dict[str, str], names: dict[str, str] | None = None) -> dict | None:
     """**The group as `/state` publishes it** (design/data-contract.md,
     Phase 22): the members leader first, each with its level, mute, Fixed,
     whether it is reachable and whether it is catching up; the group's level
@@ -520,7 +520,8 @@ def view(record: Record | None, me: Live, peers: Peers, *, mode: str, joining: s
         percent, muted, fixed, fixed_mute = _volume_of(state)
         up = bool(reachable.get(member.id))
         members.append({
-            "id": member.id, "name": member.name, "url": urls.get(member.id),
+            # A rename shows without joining again: the name as it says it now.
+            "id": member.id, "name": (names or {}).get(member.id) or member.name, "url": urls.get(member.id),
             "me": member.id == me.id, "leads": member.id == record.leader,
             "reachable": up, "joining": up and member.id in joining,
             "screen": screens.get(member.id, True) if member.id != me.id else me.screen,
@@ -541,6 +542,8 @@ def view(record: Record | None, me: Live, peers: Peers, *, mode: str, joining: s
         "source": source_of(leader_state) if leader_up else None,
         "transport": metadata.get("transport") if leader_up else None,
         "title": metadata.get("title") if leader_up else None,
+        # The stream's rate, as the leader feeds it (its own view says).
+        "rate": (leader_state.get("group") or {}).get("rate") if leader_up else None,
     }
 
 
