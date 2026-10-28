@@ -186,6 +186,12 @@ play control. Its rules, beyond the decisions above:
   chain is unchanged (one Lyrion server). So joining a player that plays
   Spotify, Bluetooth or Plexamp to a group interrupts it a moment, as the
   equaliser's switch does; a player that was idle is not touched.
+  *Amended 2026-10-28, for George to confirm:* the idle renderers restart
+  too, without the join or the leave waiting for them - a renderer keeps the
+  ALSA configuration it read first, so out of a group sofapi's
+  bluealsa-aplay went on writing every Bluetooth stream into the group's
+  loopback (LESSONS 84). Nothing that plays is cut by it; a phone may see
+  Spotify or Plexamp leave its list of devices for a few seconds.
 - **B3 — Undo keeps the music on the leader without a cut**: it plays on
   through its own server until the stream ends, then plays alone.
   *Amended 2026-10-28, for George to confirm:* until nothing holds the
