@@ -29,6 +29,14 @@ gone. Image `image/deploy/2026-10-28-gexis-player-v1.8.0.img`; build output
 `~/projects/gexis-release-out/r1.8.0`. The detail of both releases is in the
 archive (2026-10-27, 1.7.0; 2026-10-28, 1.8.0). A release worktree needs
 its pi-gen submodule initialised before `make image`.
+**Before the next Stable promotion, remind George** (his request,
+2026-10-28; to-do `ph22-eq-check`): a group heard in sync with the
+equaliser on at one player only. 1.8.0 plays such a player about 46 ms late
+(lesson 85); the fix, `c913bdc6`, is on `next` (merged at George's word,
+not yet heard), not in 1.8.0 - promoting 1.8.0 as it is ships the offset.
+On sofapi it is installed (core `1.8.0+git18.66947eb`, the AirPlay preview
+with it) and not yet running: restart `gexis-core` there before the check,
+once nobody is playing.
 **R2D2's `/` fills up**: Docker's containerd store keeps images on `/`, not
 in `/home/docker`, and pi-gen rebuilds its 1.16 GB build image on every
 image build; check `df -h /` before one (1.9 GB free after 1.8.0's, 213 MB at its lowest while pi-gen rebuilt).
