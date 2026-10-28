@@ -8074,3 +8074,103 @@ Rolling sofapi back to Phase 20's preview (core git18, ui git19, player
 git20, in `ph-equaliser`'s `packaging/out`) only if George asks. Next:
 George's look on sofapi, then the Home Assistant card (and its media player
 reading `fixed_mute`).
+
+## 2026-10-28: Phase 22 designed, built and previewed (previews 4-13), 1.8.0 on Testing (moved from HANDOFF verbatim after George merged PR #87)
+
+**Current release: 1.7.0 on Stable, 1.8.0 on Testing (2026-10-28, below)** (promoted 2026-10-27 at George's
+word: Stable serial 11, Testing serial 57, both read back with good
+signatures; r1.7.0 is GitHub's latest; the public `gexis-player.img.xz`
+through `releases/latest/download` passes its checksum and signature and
+decompresses to the checked image). 1.7.0 carries Phases 20 and 21 (the
+equaliser, the phone remote, mute with Fixed volume); PR #85 merged by George
+the same day. README's current release: PR #86, merged by George the same day; `main`
+merged into `docs` and `next`, its branch and worktree gone. Image
+`image/deploy/2026-10-27-gexis-player-v1.7.0.img`; build output
+`~/projects/gexis-release-out/r1.7.0`. The release's detail is in the
+archive (2026-10-27, 1.7.0).
+
+**Now: Phase 22, multiroom for every source** (`ph-multiroom`, worktree
+`~/projects/gexis-player-ph-multiroom`; started 2026-10-27, designed and
+built 2026-10-28). [ADR-0166](docs/decisions/0166-multiroom-for-every-source.md):
+George's decisions 1-10 (10, 2026-10-28: Lyrion's syncs are Gexis groups),
+C1-C6 confirmed, D1 as Finding 139 found it, the design `design/source/22/`
+(picks 1a, 2a, 3a), and Claude's build decisions B1-B13, confirmed by
+George the same day. Built: core (`group.py`, `multiroom.py`,
+`snapcast.py`, the grouped chain in `outputs.py`, Lyrion's sync in the LMS
+adapter, the `/group` routes), the UI on the phone, the panel and the bars,
+the manual's section 6, the FAQ, the technical guide, README, the plugin
+manual. **Preview 13** (core `1.7.0+git57.0f7eda3`, ui and player
+`git58.1ae1e2c`, system `git38.d9a696d`, Debian's `snapserver` and
+`snapclient` 0.31.0-1 installed from the downloaded files) on sofapi, the
+bar, guestpi and bedroompi, the branch's head. George's findings so far,
+each fixed: a group of sofapi and the bar did not play (preview 5,
+`e476a4e`: the equaliser's watch held the first loopback, so the group's
+card was never made and the renderers stayed stopped); the *All* slider
+jumped back with the members at different levels (preview 6, B13); Spotify
+cast to the leader after Lyrion played on the bar alone (preview 7: the
+leader's client, stopped for Lyrion's sync, was not started again); and no
+slider took a touchpad's sideways scroll - now every slider does (preview
+8, ADR-0121 amended, Claude's S1-S3 confirmed by George); and the lead's
+mute seemed not to work at the first tap (preview 9: the phone, back from
+sleep, still held a socket sofapi had closed, so the mutes were done but
+never shown - a page back after more than 5 s opens a fresh one); and the
+bar silent after a cast to sofapi (preview 10: the half-minute round
+rewrote its chain when sofapi missed a round, and the client stopped for
+the rewrite was never started again; LESSONS 83); and a cast just after an
+undo restarted mid-start (preview 11: alone only once nothing holds the
+device, B3 amended, confirmed by George); and every Bluetooth stream
+silent on sofapi after it left a group (preview 12: an idle renderer keeps
+the ALSA configuration it read first, so bluealsa-aplay went on writing
+into the group's loopback; the idle renderers now restart on a rewrite,
+proven on guestpi and bedroompi; B2 amended, confirmed by George;
+LESSONS 84 - the silence was first put down to the phone app, wrongly);
+and, after George's test of the rest (Fixed, the equaliser and four
+players in a group, the leader rebooted - all fine): Lyrion playing in the
+leader's sync no longer stopped on joining (a Lyrion-app sync paused
+itself), the level after a mute the renderer's own again, the equaliser's
+switch moving at once (preview 13). **1.8.0 on Testing** (George,
+2026-10-28; the notes approved by him): `ph-multiroom` merged into `next`
+(6ec5070e; core 2800 passed, the UI builds); tag `v1.8.0` on the notes
+commit `6a9d1a44`; image `image/deploy/2026-10-28-gexis-player-v1.8.0.img`,
+built from the tag in `~/projects/gexis-player-r180` (993 s, its pi-gen
+submodule initialised there first; `verify-image.sh` 134 checks passed);
+build output `~/projects/gexis-release-out/r1.8.0` (new: gexis-core and
+gexis-player 1.8.0, gexis-ui `1.7.0+git58.1ae1e2c`, gexis-system
+`1.7.0+git38.d9a696d`, Debian's snapserver and snapclient 0.31.0-1);
+Testing serial 58 read back, good signature; Stable still 1.7.0, serial 11.
+**PR #87** (`release-1.8.0` into `main`) open for George to merge. The four
+test players run preview 13 (the release's packages but the core, which
+differs only by the notes). R2D2's `/` touched 213 MB free while pi-gen
+rebuilt its image, 826 MB after. Still open: the 192 kHz measurement session,
+the Home Assistant integration's release, back and forth between Lyrion-app
+grouping and the player's.
+After that fix, one phone app over Bluetooth still delivered silence -
+recorded straight from BlueALSA, every sample zero, where another app read
+-1.2 dBFS peak. It was silent on the phone's own speaker too: a session left
+open when an uploaded test renderer was killed had broken the app; signed in
+again, it played over Bluetooth and by casting (George, 2026-10-28). The plugin guide and
+contract carry what an uploaded test renderer taught (leave a cast session
+before letting go; read the device name as systemd's form). The leader fix
+is checked by a test only: George's cast is the device check. The integration's join and unjoin: its `multiroom` branch
+(`9744bb3`), for its release after the player's. **Open:** the measurement
+with George (the delay, the rooms by ear, an hour without a dropout, the
+cost with the equaliser and the visualiser, the gaps); Lyrion's half on a
+test server waits for George - the test players cannot reach the Lyrion in
+Docker here (gexis-test-lms) through R2D2's firewall, and a reverse SSH
+tunnel was refused by the session's safety check. **To put back:** guestpi's
+and bedroompi's `lms_server` point at that unreachable test server
+(originals in `~/projects/scratch/ph22/restore/`), and the container
+`gexis-test-lms` (Lyrion 9.1.2, on `/`) goes before the next image build.
+The wiki Roadmap shows Phases 20 and 21 done and the Harmony Hub ideas
+(pushed 2026-10-27 with his OK).
+
+
+**Phases 20 (the equaliser) and 21 (the phone remote) closed 2026-10-27**
+(George, with 1.7.0's promotion; `docs/DEVELOPMENT.md` has what each
+criterion rests on). `ph-equaliser` is gone (in `main`). The remote's laptop
+background (5596698e) was merged into `next` after 1.7.0 (222edb08), so
+`ph-phone-controls` and its worktree stay until the next release takes it to
+`main` (ROUTINE-CLEANUP). Left from Phase 20: the measurement through a card
+(to-do `eq-measure`, at a time George picks). Mocked-data checks:
+`~/projects/scratch/ph21` (`run2.sh`, `remote_shots2.py`, `run_manual2.sh`)
+and `~/projects/scratch/hacard` (`run.sh`, the card).
