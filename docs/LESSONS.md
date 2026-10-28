@@ -421,6 +421,24 @@ was reasoned from the chain. When a chain under a tap changes what it
 accepts, set each renderer's format order against it and try the tap in
 each format a renderer can pick.
 
+**83. A fake that always answered** (2026-10-28, Phase 22). The multiroom
+tests' list of players answered for every player in every round, so a member
+missing one round was never tried; and no test drove the half-minute round's
+own rewrite of the chain. On the bar both met: sofapi missed a round, the
+chain changed, the rewrite stopped the client, and nothing started it again.
+Let a fake fail the way the real thing does, and follow every path that stops
+something to where it starts again.
+
+**84. A belief a lesson had already disproved** (2026-10-28, Phase 22). ADR-0166
+B2 restarted only the renderers that played, reasoning that an idle one reads
+a rewritten chain at its next open - the belief case 81 had disproved with
+Squeezelite, and `volume.py` works around in the core itself. Out of a group,
+sofapi's bluealsa-aplay wrote every Bluetooth stream into the group's
+loopback for the rest of the afternoon, and the silence was first put down
+to the phone app. Before a design leans on how another program behaves,
+search the lessons and the code for it; and before blaming the other end,
+look at where our own process writes.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target, the check quietly

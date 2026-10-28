@@ -31,6 +31,17 @@ put 644 "$S/00-alsa/files/gexis-loopback-modprobe.conf" /etc/modprobe.d/gexis-lo
 # Rewritten when the output is chosen (outputs.py): a default, placed once.
 put 644 "$S/00-alsa/files/output.conf" "$DEF/output.conf"
 
+# --- Multiroom (12-multiroom, ADR-0166) ----------------------------------------
+put 644 "$S/12-multiroom/files/gexis-snapserver.service" "$U/gexis-snapserver.service"
+put 644 "$S/12-multiroom/files/gexis-snapclient.service" "$U/gexis-snapclient.service"
+# Debian's own units masked before they can start (Finding 139 #8): their
+# postinst enables and starts them, and the client would play to the output.
+# Shipped as the masks themselves, so they are there before the packages'
+# scripts run; deb-systemd-helper leaves a mask it did not make alone.
+mkdir -p "$STAGE/etc/systemd/system"
+ln -s /dev/null "$STAGE/etc/systemd/system/snapserver.service"
+ln -s /dev/null "$STAGE/etc/systemd/system/snapclient.service"
+
 # --- Renderers (02-renderers) -------------------------------------------------
 put 644 "$S/02-renderers/files/squeezelite.service" "$U/squeezelite.service"
 put 755 "$S/02-renderers/files/squeezelite-mixer-check.sh" /usr/lib/gexis/squeezelite-mixer-check.sh
@@ -182,6 +193,8 @@ if command -v systemctl >/dev/null; then
 	# Units of other packages that must not run on this device.
 	systemctl mask alsa-restore.service samba-ad-dc.service \
 		plymouth-quit.service plymouth-quit-wait.service >/dev/null
+	# ADR-0166: Debian's Snapcast units never run; the core runs its own.
+	systemctl stop snapserver.service snapclient.service >/dev/null 2>&1 || true
 	# ADR-0049 as amended 2026-10-16: nmbd answers the player's NetBIOS name,
 	# which some file managers name machines by. Every install, so an update
 	# brings it to a player that had it masked.

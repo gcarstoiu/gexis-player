@@ -8,19 +8,32 @@
   the bar becomes the panel's locked row - mute, where the output has a
   control to silence (ADR-0165, C3), the padlock, *Fixed output* and the EQ
   name - and the EQ button stays.
+
+  ADR-0166, design/source/22 (*Phone: group volume*): grouped, the bar is the
+  group's *All* slider - *GROUP* and the count in its middle, its mute the
+  group's - and the group button left of EQ opens the group volume sheet.
 -->
 <script>
+  import { onDestroy } from 'svelte';
   import { fixedMute, fixedOutput, setMute, setVolume, volume } from '../../lib/state.js';
   import { equaliser } from '../../lib/equaliser.svelte.js';
   import { FILLED } from './icons.js';
+  import GroupGlyph from '../../lib/GroupGlyph.svelte';
+  import { LevelSender, dragStart, group, groupLevel, setGroupMute } from '../../lib/group.svelte.js';
 
-  let { oneq = () => {}, onsay = () => {} } = $props();
+  let { oneq = () => {}, ongroup = () => {}, onsay = () => {} } = $props();
+
+  const g = $derived($group);
+  const groupFixed = $derived(!!g && !g.members.some((m) => m.reachable && !m.fixed && m.volume != null));
+  const groupSender = new LevelSender(groupLevel, (err) => onsay(`Volume not changed: ${err.message}`));
+  let groupFrom = null;
 
   let dragging = $state(false);
   let settling = $state(false);
   let local = $state(0);
-  const shown = $derived(dragging || settling ? local : Math.round($volume?.percent ?? 0));
-  const muted = $derived($fixedOutput ? $fixedMute === true : !!$volume?.muted);
+  const shown = $derived(dragging || settling ? local
+    : g ? (groupFixed ? 0 : (g.level ?? 0)) : Math.round($volume?.percent ?? 0));
+  const muted = $derived(g ? !!g.muted && !dragging : $fixedOutput ? $fixedMute === true : !!$volume?.muted);
 
   const eq = $derived($equaliser);
   const eqOn = $derived(!!eq?.on);
@@ -48,7 +61,7 @@
       const next = queued;
       queued = null;
       await send(next);
-    } else if (!dragging) {
+    } else if (!dragging && !stepHeld) {
       settling = false;
     }
   }
@@ -56,41 +69,93 @@
   function at(target, x) {
     const r = target.getBoundingClientRect();
     local = Math.round(Math.min(1, Math.max(0, (x - r.left) / r.width)) * 100);
-    send(local);
+    if (g) groupSender.send(local, groupFrom);
+    else send(local);
   }
 
   //: The design's: a tap or a drag anywhere sets the level from where the
   //: finger is, and unmutes.
   function down(event) {
+    if (g && groupFixed) return;
     event.currentTarget.setPointerCapture?.(event.pointerId);
     dragging = true;
     settling = true;
-    if (muted) setMute(false).catch(() => {});
+    // Grouped, the members' levels as the drag begins, so it keeps their
+    // balance; the core unmutes them as it moves them.
+    if (g) groupFrom = dragStart(g);
+    else if (muted) setMute(false).catch(() => {});
     at(event.currentTarget, event.clientX);
   }
   function move(event) {
     if (dragging) at(event.currentTarget, event.clientX);
   }
+  //: Grouped, the core's answer arrives through every member's /state: the
+  //: bar keeps the finger's level for SETTLE_MS, as the panel's does, or it
+  //: jumps back to the old mean first.
+  const SETTLE_MS = 1500;
+  let settle = null;
+  //: Alone too, after a step (a key, a scroll), which starts from the level
+  //: shown: a scroll sends steps faster than the player answers.
+  let stepHeld = false;
+  function settleLater() {
+    clearTimeout(settle);
+    settle = setTimeout(() => {
+      stepHeld = false;
+      if (!dragging && !inFlight && queued === null) settling = false;
+    }, SETTLE_MS);
+  }
+  onDestroy(() => clearTimeout(settle));
   function up() {
     dragging = false;
+    if (g) {
+      groupFrom = null;
+      settleLater();
+      return;
+    }
     if (!inFlight && queued === null) settling = false;
   }
   function keyed(event) {
     const step = { ArrowRight: 2, ArrowUp: 2, ArrowLeft: -2, ArrowDown: -2 }[event.key];
     if (step === undefined) return;
     event.preventDefault();
-    local = Math.min(100, Math.max(0, shown + step));
+    stepBy(step);
+  }
+  //: A key, or a scroll along the bar (lib/scrollSlide.js): `delta` per cent
+  //: from the level shown.
+  function stepBy(delta) {
+    if (g && groupFixed) return;
+    local = Math.min(100, Math.max(0, shown + delta));
+    if (g) {
+      groupSender.send(local, dragStart(g));
+      settling = true;
+      settleLater();
+      return;
+    }
     settling = true;
+    stepHeld = true;
+    settleLater();
     send(local);
   }
   function toggleMute(event) {
     event.stopPropagation();
-    setMute(!muted).catch((err) => onsay(`Mute: ${err.message}`));
+    (g ? setGroupMute(!g.muted) : setMute(!muted)).catch((err) => onsay(`Mute: ${err.message}`));
   }
 </script>
 
+{#snippet caption(dark)}
+  {#if g}
+    <span class="eq" class:eq--dark={dark} class:is-group={!dark} aria-hidden={dark}>
+      <span class="eq__word">GROUP</span><span class="eq__name">{g.members.length}</span>
+    </span>
+  {:else if eq}
+    <span class="eq" class:eq--dark={dark} class:is-lit={!dark && eqLit} aria-hidden={dark}>
+      <span class="eq__word">EQ</span><span class="eq__name">{eqName}</span>
+    </span>
+  {/if}
+{/snippet}
+
 <div class="row">
-  {#if $fixedOutput}
+  {#if $fixedOutput && !g}
     <div class="fixed" class:has-mute={$fixedMute !== null} role="group" aria-label="Fixed output">
       {#if $fixedMute !== null}
         <button class="mute mute--fixed" type="button" aria-label={muted ? 'Unmute' : 'Mute'} aria-pressed={muted} onclick={toggleMute}>
@@ -112,6 +177,8 @@
       aria-valuemin="0"
       aria-valuemax="100"
       aria-valuenow={muted ? 0 : shown}
+      data-step="2"
+      ondpadstep={(event) => stepBy(event.detail.step * 2)}
       onpointerdown={down}
       onpointermove={move}
       onpointerup={up}
@@ -119,20 +186,21 @@
       onkeydown={keyed}
     >
       <span class="fill" class:is-muted={muted} style:width={`${shown}%`}></span>
-      {#if eq}
-        <span class="eq" class:is-lit={eqLit}><span class="eq__word">EQ</span><span class="eq__name">{eqName}</span></span>
-        {#if !muted}
-          <span class="eq eq--dark" style:clip-path={`inset(0 ${100 - shown}% 0 0)`} aria-hidden="true">
-            <span class="eq__word">EQ</span><span class="eq__name">{eqName}</span>
-          </span>
-        {/if}
+      {@render caption(false)}
+      {#if !muted && (g || eq)}
+        <span class="clip" style:clip-path={`inset(0 ${100 - shown}% 0 0)`}>{@render caption(true)}</span>
       {/if}
       <button class="mute" class:is-dark={!muted && shown > 14} type="button" aria-label={muted ? 'Unmute' : 'Mute'}
               aria-pressed={muted} onpointerdown={(e) => e.stopPropagation()} onclick={toggleMute}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d={muted ? FILLED.muted : FILLED.speaker} /></svg>
       </button>
-      <span class="level" class:is-dark={!muted && shown > 86}>{muted ? 'Off' : shown}</span>
+      <span class="level" class:is-dark={!muted && shown > 86}>{g && groupFixed ? 'Fixed' : muted ? 'Off' : shown}</span>
     </div>
+  {/if}
+  {#if g}
+    <button class="groupbtn" type="button" aria-label="Group volume" onclick={ongroup}>
+      <GroupGlyph size={22} />
+    </button>
   {/if}
   {#if eq}
     <button class="eqbtn" class:is-on={eqOn} type="button" aria-label="Equaliser" onclick={oneq}>
@@ -189,6 +257,14 @@
   }
   .eq.is-lit {
     color: #7ed6bc;
+  }
+  .eq.is-group {
+    color: #e9eef2;
+  }
+  .clip {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
   }
   .eq--dark {
     color: var(--remote-vol-ink-on-fill);
@@ -342,5 +418,22 @@
   .eqbtn svg {
     width: 22px;
     height: 22px;
+  }
+  .groupbtn {
+    width: var(--remote-button);
+    height: var(--remote-button);
+    border-radius: var(--remote-button-radius);
+    display: grid;
+    place-items: center;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    cursor: pointer;
+    padding: 0;
+    background: var(--group-on-ground);
+    border: 1px solid var(--group-on-line);
+    color: var(--group-ink);
+  }
+  .groupbtn:active {
+    transform: scale(0.97);
   }
 </style>

@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-27 (on R2D2).
+Last updated: 2026-10-28 (on R2D2).
 
 ## Start here
 
@@ -20,40 +20,91 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.6.0, on Stable** (2026-10-25; Testing serial 56,
-Stable serial 10). PR #84 merged by George the same day; `main` merged into
-`docs` and `next`, `release-1.6.0` and its worktree gone, the routine
-clean-up run. Image `image/deploy/2026-10-25-gexis-player-v1.6.0.img`; build
-output in `~/projects/gexis-release-out/r1.6.0`. The release's detail is in
-the archive (2026-10-25, 1.6.0).
-
-**1.7.0 on Testing, not promoted** (2026-10-27; George: both phases for
-testing, Stable later; the notes, shortened at his word, approved by him).
-Phases 20 and 21 merged into `next` (2c63fa87; core suite 2751 passed, 48
-skipped; the UI builds); tag `v1.7.0` on the notes commit `81dd559d`. Image
-`image/deploy/2026-10-27-gexis-player-v1.7.0.img`, built from the tag in
-`~/projects/gexis-player-r170` (944 s; `verify-image.sh` 129 checks passed;
-the skins check clean); parts `ours-db936235e357`, `rpi-668ab304bc41`
-(Chromium 156, new), `skins-67e037cab00f`, `debian-2e90e264cb7d`; build
-output `~/projects/gexis-release-out/r1.7.0`. Testing serial 57 read back,
-good signature; Stable still 1.6.0, serial 10. gexis-core and gexis-player
-`1.7.0`, gexis-ui `1.6.0+git74.913b105` (the preview's build). sofapi has
-the release's core and player (core restarted 18:00, no warnings). **R2D2's
-`/` was full** (80 MB): Docker's containerd store keeps images there, not
-in `/home/docker`, and pi-gen rebuilds its 1.16 GB build image every time;
-the first image build failed on it. George chose removing the two
-Squeezelite test images; with the dangling images pruned, 1.9 GB free after
-the build. **Next:** the release PR (George merges), then `main` into `docs`
-and `next`, `release-1.7.0` and the worktree removed, the routine clean-up.
+**Current release: 1.7.0, on Stable** (promoted 2026-10-27 at George's
+word: Stable serial 11, Testing serial 57, both read back with good
+signatures; r1.7.0 is GitHub's latest; the public `gexis-player.img.xz`
+through `releases/latest/download` passes its checksum and signature and
+decompresses to the checked image). 1.7.0 carries Phases 20 and 21 (the
+equaliser, the phone remote, mute with Fixed volume); PR #85 merged by George
+the same day. README's current release: PR #86, merged by George the same day; `main`
+merged into `docs` and `next`, its branch and worktree gone. Image
+`image/deploy/2026-10-27-gexis-player-v1.7.0.img`; build output
+`~/projects/gexis-release-out/r1.7.0`. The release's detail is in the
+archive (2026-10-27, 1.7.0).
+**R2D2's `/` fills up**: Docker's containerd store keeps images on `/`, not
+in `/home/docker`, and pi-gen rebuilds its 1.16 GB build image on every
+image build; check `df -h /` before one (1.9 GB free after 1.7.0's).
+**Now: Phase 22, multiroom for every source** (`ph-multiroom`, worktree
+`~/projects/gexis-player-ph-multiroom`; started 2026-10-27, designed and
+built 2026-10-28). [ADR-0166](docs/decisions/0166-multiroom-for-every-source.md):
+George's decisions 1-10 (10, 2026-10-28: Lyrion's syncs are Gexis groups),
+C1-C6 confirmed, D1 as Finding 139 found it, the design `design/source/22/`
+(picks 1a, 2a, 3a), and Claude's build decisions B1-B13, confirmed by
+George the same day. Built: core (`group.py`, `multiroom.py`,
+`snapcast.py`, the grouped chain in `outputs.py`, Lyrion's sync in the LMS
+adapter, the `/group` routes), the UI on the phone, the panel and the bars,
+the manual's section 6, the FAQ, the technical guide, README, the plugin
+manual. **Preview 13** (core `1.7.0+git57.0f7eda3`, ui and player
+`git58.1ae1e2c`, system `git38.d9a696d`, Debian's `snapserver` and
+`snapclient` 0.31.0-1 installed from the downloaded files) on sofapi, the
+bar, guestpi and bedroompi, the branch's head. George's findings so far,
+each fixed: a group of sofapi and the bar did not play (preview 5,
+`e476a4e`: the equaliser's watch held the first loopback, so the group's
+card was never made and the renderers stayed stopped); the *All* slider
+jumped back with the members at different levels (preview 6, B13); Spotify
+cast to the leader after Lyrion played on the bar alone (preview 7: the
+leader's client, stopped for Lyrion's sync, was not started again); and no
+slider took a touchpad's sideways scroll - now every slider does (preview
+8, ADR-0121 amended, Claude's S1-S3 confirmed by George); and the lead's
+mute seemed not to work at the first tap (preview 9: the phone, back from
+sleep, still held a socket sofapi had closed, so the mutes were done but
+never shown - a page back after more than 5 s opens a fresh one); and the
+bar silent after a cast to sofapi (preview 10: the half-minute round
+rewrote its chain when sofapi missed a round, and the client stopped for
+the rewrite was never started again; LESSONS 83); and a cast just after an
+undo restarted mid-start (preview 11: alone only once nothing holds the
+device, B3 amended, confirmed by George); and every Bluetooth stream
+silent on sofapi after it left a group (preview 12: an idle renderer keeps
+the ALSA configuration it read first, so bluealsa-aplay went on writing
+into the group's loopback; the idle renderers now restart on a rewrite,
+proven on guestpi and bedroompi; B2 amended, confirmed by George;
+LESSONS 84 - the silence was first put down to the phone app, wrongly);
+and, after George's test of the rest (Fixed, the equaliser and four
+players in a group, the leader rebooted - all fine): Lyrion playing in the
+leader's sync no longer stopped on joining (a Lyrion-app sync paused
+itself), the level after a mute the renderer's own again, the equaliser's
+switch moving at once (preview 13). **1.8.0 for Testing being cut**
+(George, 2026-10-28): `ph-multiroom` merged into `next` (6ec5070e; core
+2800 passed, the UI builds); the notes drafted for his approval. Still open: the 192 kHz measurement session,
+the Home Assistant integration's release, back and forth between Lyrion-app
+grouping and the player's.
+After that fix, one phone app over Bluetooth still delivered silence -
+recorded straight from BlueALSA, every sample zero, where another app read
+-1.2 dBFS peak. It was silent on the phone's own speaker too: a session left
+open when an uploaded test renderer was killed had broken the app; signed in
+again, it played over Bluetooth and by casting (George, 2026-10-28). The plugin guide and
+contract carry what an uploaded test renderer taught (leave a cast session
+before letting go; read the device name as systemd's form). The leader fix
+is checked by a test only: George's cast is the device check. The integration's join and unjoin: its `multiroom` branch
+(`9744bb3`), for its release after the player's. **Open:** the measurement
+with George (the delay, the rooms by ear, an hour without a dropout, the
+cost with the equaliser and the visualiser, the gaps); Lyrion's half on a
+test server waits for George - the test players cannot reach the Lyrion in
+Docker here (gexis-test-lms) through R2D2's firewall, and a reverse SSH
+tunnel was refused by the session's safety check. **To put back:** guestpi's
+and bedroompi's `lms_server` point at that unreachable test server
+(originals in `~/projects/scratch/ph22/restore/`), and the container
+`gexis-test-lms` (Lyrion 9.1.2, on `/`) goes before the next image build.
+The wiki Roadmap shows Phases 20 and 21 done and the Harmony Hub ideas
+(pushed 2026-10-27 with his OK).
 
 **The release key** moved to `~/projects/gexis-release-key` (George,
 2026-10-24): every release command sets
 `GEXIS_RELEASE_GNUPGHOME=~/projects/gexis-release-key`; the scripts default
 to `~/.gnupg-gexis-release`, which no longer exists.
 
-**The players** (2026-10-25; all four idle and clean at the clean-up):
-sofapi 1.6.0; ShelvesPi 1.5.0; bedroompi `preview-1023` as last recorded.
-sofapi since 2026-10-27: core and player 1.7.0, ui `1.6.0+git74.913b105`.
+**The players**: sofapi, the bar (ShelvesPi), guestpi and bedroompi on
+Phase 22's preview 13 (2026-10-28, above).
 
 **The test venv imports the core from `~/projects/gexis-player-next`** (an
 editable install): in another worktree run the suite with `PYTHONPATH=src`
@@ -83,143 +134,24 @@ against a local copy, so losing that folder means re-uploading every OS file.
 - George's look at the moon before sunrise.
 
 **The Home Assistant integration** (Phase 19, closed 2026-10-25):
-`gcarstoiu/gexis-player-homeassistant` at 0.4.1 (local copy
+`gcarstoiu/gexis-player-homeassistant` at 0.5.0 (2026-10-27: the card as the
+phone remote, the equaliser's switch and setting, seeking, Fixed mute, the
+app's registration fix; local copy
 `~/projects/gexis-player-homeassistant`, tests on `~/projects/ha-venv`; a
 Home Assistant 2026.10.3 in Docker, `~/projects/scratch/ha-test`). **HACS's
 default list**: hacs/default#12691 (from George's fork `gcarstoiu/default`),
 every automated check passed; it waits for HACS's maintainers - do not ask
 them for a review (their template).
 
-**Phase 20, the equaliser, on sofapi as a preview** (2026-10-26).
-George, 2026-10-25: the three settings confirmed (ADR-0022), the design
-handed over (`design/source/20`, look 3a), implement with the decisions left
-to Claude recorded and shown to him, measure through a card after. Branch
-`ph-equaliser` in `~/projects/gexis-player-ph-equaliser`, pushed:
-go-librespot 0.10.5 and Beszel 0.21.1 (for this preview); the core
-(`equaliser.py`, `eq_engine.py`, `eq_control.py`, `outputs.render(eq=True)`,
-the routes, `equaliser` on `/state`, the Settings row); `gexis-camilladsp`
-4.1.3 and `gexis-equaliser.service`, `snd-aloop` at boot; the UI
-(`ui/src/screens/eq/`, the drawer, the bar's tray, the phone's mini
-player); the documents. **George's try, 2026-10-26:** C1-C16 confirmed; D3
-amended - the volume gives the lowering back, with the gentler top
-(`volume.GiveBack`, only between the level and the control; the engine
-gives it back on the quiet side of a change); no visualiser with the
-equaliser on - Spotify's float, which the meter's 16-bit view cannot read
-(Finding 138, *The meter and float*; lesson 82), mended by `output` taking
-integers only; C17 (the note's wording) and C18 (a change is a short dip)
-confirmed the same day. Core suite 2738 passed, 48 skipped; the note checked
-from mocked data on every surface (`~/projects/scratch/eq-m2`:
-`note_shots.py`, with eq-m1's `eq_layout.py`; the silent meter test
-`meter_test.sh`). **On sofapi since 2026-10-26 10:50**, the equaliser off
-as George left it: core `1.6.0+git18.09b35e4`, ui `1.6.0+git19.f3c8a9f`,
-player `1.6.0+git20.8b3b945` (dry run first: 3 upgraded, nothing removed;
-core and kiosk restarted, the panel on `index-0Jj3Qt9V.js`); system
-`1.6.0+git13.6186a94`, camilladsp `4.1.3-1`, go-librespot `0.10.5-2`,
-Beszel `0.21.1` from the first preview. **Not yet on the device:** the
-give-back and the integer-only `output` with the equaliser on (switching it
-on is George's setting to change: ask, or read back after he does). **Next:**
-the measurement through sofapi's card (it plays through the amplifier: at a
-time George picks), with the give-back's checks (ADR-0162 *Not yet done*);
-the manual's drawer picture retaken with the demo library.
-
-**Phase 21, the phone remote, being built** (2026-10-26; George: while he
-tries Phase 20, two phases open). Branch `ph-phone-controls` in
-`~/projects/gexis-player-ph-phone-controls`, from `ph-equaliser` with `next`
-merged in. The design `design/source/21` (on `docs`; its Settings copy is
-the repository's, as the bundle's had LAN addresses, and the bundle's
-shared README was older than ours, so only its Phase 21 parts were taken).
-[ADR-0164](docs/decisions/0164-the-phone-remote.md) accepted: George's
-answers (both pads as drawn, the touchpad sending steps, so the pointer
-leaves the phone; touch sizes as drawn; repeat cycles; the Home Assistant
-card follows); Claude's C1-C14 for his confirmation (C12: Pointer speed and
-style retired, ADR-0022, only once he confirms). **Built the same day**
-(ADR-0164, *Built*), pushed: core suite 2745 passed, 48 skipped; checked from
-mocked data against the design (`~/projects/scratch/ph21`: `remote_layout.py`
-in `gexis-layout-core:1`, its `demo` flag for the manual's pictures from
-the demo library; `remote_shots.py`, `variant_shot.py`, `typing_shot.py`
-with `fake_panel.py`, in `gexis-layout:1`, on a `gexis-layout` network).
-**On sofapi as a preview since 2026-10-26 21:19** (George asked for it;
-sofapi idle; dry run first: 3 upgraded, nothing removed): core
-`1.6.0+git50.18da13b`, ui `1.6.0+git49.b740c16`, player
-`1.6.0+git50.18da13b` - Phase 20's too, the branch being built on it; the
-other packages as Phase 20's preview left them (copied from its
-`packaging/out` for the player's pins). Core and kiosk restarted, the panel
-on `index-BhU4fWJL.js`, `/tmp/pv` removed. **George, the same evening:
-Claude Design got the remote wrong.** **The second design came on
-2026-10-27** (`Phone Remote v3`, imported on `docs`; v2 deleted, the
-Settings copy still the repository's): the Trackpad drives the panel's
-pointer again (ADR-0121's gestures, nothing drawn on the phone), the D-pad
-the ring, no typing sheet, no shuffle or repeat on the phone, Fixed volume
-as the panel's locked row with mute. ADR-0164 revised; George's answers the
-same day: mute with Fixed volume where the output has a control
-([ADR-0165](docs/decisions/0165-mute-with-fixed-output.md), the panel's
-fixed rows too), the touch area giving way on phones under 780 px before
-the page scrolls, the strips following the finger. Claude's C1-C13 for his
-confirmation (C12 now keeps Pointer speed and style: nothing for ADR-0022);
-**all confirmed by George the same day**.
-**Rebuilt the same day** (ADR-0164, *Built (2026-10-27)*), pushed: core
-suite 2751 passed, 48 skipped; checked from mocked data against the board
-(`~/projects/scratch/ph21`: `run2.sh` / `batch2.sh` with `remote_shots2.py`
-and `fake_panel2.py`, `run_manual2.sh` for the manual's pictures from the
-demo library). **On sofapi as a preview since 2026-10-27 12:44** (sofapi
-stopped; dry run first: 3 upgraded, nothing removed): core
-`1.6.0+git60.3c5147e`, ui `1.6.0+git62.8367bb5`, player
-`1.6.0+git63.6990a1d`; core and kiosk restarted, the panel on
-`index-BfuMrj2Q.js`, no errors in the core's journal, `/tmp/pv` removed. The
-first build's three debs are in `~/projects/scratch/ph21/first-build-debs`.
-**George's findings the same day** (the EQ sheet to close with a swipe down;
-Settings to show the remote's background) fixed on `ph-phone-controls`
-(105f9bf4 UI, 48d64a91 docs and the manual's Settings picture), checked from
-mocked data (`remote_shots2.py` modes `settings`, `swipe`; a `brightart`
-flag for the contrast check), pushed; **on sofapi since 14:22** (stopped;
-dry run: 2 upgraded, nothing removed): ui `1.6.0+git67.105f9bf`, player
-`1.6.0+git68.48d64a9`, core unchanged; core and kiosk restarted, the panel on
-`index-Bx9oVtwP.js`, no warnings, `/tmp/pv` removed; the rebuild's ui and
-player debs in `~/projects/scratch/ph21/second-build-debs`. **George's next
-two findings, the same afternoon**, his answers asked: the remote fills a
-phone up to 480 px wide (C10 amended; his phone's browser is 427 px, and
-the 412 px column left 7 px strips no dimming reached), and the touch area's
-buttons (OK included) and both switches take the quick actions' ground
-(the remote's `--remote-control-*` tokens dropped). 5c8235b9 UI, 6dcdeb93
-docs (the four phone pictures retaken); checked from mocked data at 427,
-412 and 800 wide (`remote_shots2.py` mode `edges`). **On sofapi since
-14:57** while it played (George agreed; no restarts, the UI served from
-disk): ui `1.6.0+git69.5c8235b`, player `1.6.0+git70.6dcdeb9`; the previous
-pair in `~/projects/scratch/ph21/findings1-debs`. **George, the same
-afternoon**: Settings' grey text over a bright cover kept as it is; the
-wiki's Roadmap (Phase 21 under Now) pushed with his OK; **the EQ sheet's
-switch without the box round it** (9fbbebf5, the manual's EQ picture
-retaken; checked from mocked data at 427 and 360, `remote_shots2.py` mode
-`eqpower`). **On sofapi since 15:55** (stopped; dry run: 2 upgraded,
-nothing removed; no restarts): ui and player `1.6.0+git71.9fbbebf`; the
-previous pair in `~/projects/scratch/ph21/findings2-debs`. Asked: whether
-the panel's volume drawer, whose switch has the same box (Phase 20's
-`EqQuick`), follows. **Then Settings, all of it, on the modals' solid grey**
-(George; asked, the whole screen while it shows): `flat` on `Settings` and
-`Equaliser`, a `--bg-panel` layer in `PhoneRemote` (0f1783cf, the manual's
-Settings picture retaken; checked from mocked data at 427 and 800,
-`remote_shots2.py` mode `flat`). **On sofapi since 16:15** (stopped; dry
-run: 2 upgraded, nothing removed; no restarts): ui and player
-`1.6.0+git72.0f1783c`; the previous pair in
-`~/projects/scratch/ph21/findings3-debs`. **George's answers then**: the
-panel's volume drawer loses its switch's box too (e5d09001 on
-`ph-equaliser`, merged into `ph-phone-controls`; checked from mocked data,
-the drawer Variable and Fixed, the bar's tray unchanged); a Settings
-chooser's dimming stays below the top bar. **On sofapi since 16:37** (stopped;
-dry run: 2 upgraded, nothing removed; the kiosk restarted for the panel,
-no warnings): ui `1.6.0+git74.913b105`, player `1.6.0+git89.7f1b297`; the
-previous pair in `~/projects/scratch/ph21/findings4-debs`. **The flaky
-backup test fixed** on `fix-backup-test` (81415912: the upload test
-compares the bytes it wrote; on Python 3.13, CI's, `gzip.compress` stamps
-the second, so two calls a second apart differ; reproduced in
-`python:3.13-slim` with a ticking clock, the old test failing and the new
-passing), checks passed, merged into `next` (28c3f319) and `next` into
-`ph-phone-controls`; its worktree `~/projects/gexis-player-fix-backup-test`
-stays until the branch reaches `main` (ROUTINE-CLEANUP).
-Rolling sofapi back to Phase 20's preview (core git18, ui git19, player
-git20, in `ph-equaliser`'s `packaging/out`) only if George asks. Next:
-George's look on sofapi, then the Home Assistant card (and its media player
-reading `fixed_mute`).
+**Phases 20 (the equaliser) and 21 (the phone remote) closed 2026-10-27**
+(George, with 1.7.0's promotion; `docs/DEVELOPMENT.md` has what each
+criterion rests on). `ph-equaliser` is gone (in `main`). The remote's laptop
+background (5596698e) was merged into `next` after 1.7.0 (222edb08), so
+`ph-phone-controls` and its worktree stay until the next release takes it to
+`main` (ROUTINE-CLEANUP). Left from Phase 20: the measurement through a card
+(to-do `eq-measure`, at a time George picks). Mocked-data checks:
+`~/projects/scratch/ph21` (`run2.sh`, `remote_shots2.py`, `run_manual2.sh`)
+and `~/projects/scratch/hacard` (`run.sh`, the card).
 
 Then 22-30 in order, each ADR first (`docs/DEVELOPMENT.md`, the IDs
 there); MPD parked (ADR-0151). **Raspberry Pi Imager** (ADR-0159, a task):
@@ -230,14 +162,14 @@ in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-10-25, after 1.6.0** (/home 224 -> 237 GB free).
+2026-10-27, after 1.7.0** (/home 220 -> 235 GB free).
 
 ## Phases
 
-Closed: 0-19 (13 with letters a-f). Phases are numbered consecutively
-without letters, each with a stable ID (George, 2026-10-13); 20 and 21
-(the phone remote, `ph-phone-controls`, added by George on 2026-10-26) in
-progress, 22-30 to come, MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
+Closed: 0-21 (13 with letters a-f). Phases are numbered consecutively
+without letters, each with a stable ID (George, 2026-10-13); 20 (the
+equaliser) and 21 (the phone remote) closed 2026-10-27 with 1.7.0; 22
+(multiroom) in progress, 23-30 to come, MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
 
 ## Machines
 

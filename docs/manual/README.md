@@ -10,7 +10,8 @@ Gexis Player is a music player for the Raspberry Pi with a high-quality
 DAC; it needs a Raspberry Pi 4 or newer, and the Pi 4 is the model it is
 built and tested on. It plays your Lyrion (Logitech Media Server) library,
 Spotify Connect, Bluetooth and Plexamp, one at a time, and switches to
-whichever one you start. You control it
+whichever one you start. Several players can play the same music together,
+in sync, in several rooms (section 6). You control it
 from its own touch screen (the *panel*), from any phone or computer on the
 same network (the *phone page*), or from the apps you already use: a
 Lyrion app, Spotify, or your phone's Bluetooth.
@@ -22,11 +23,12 @@ Lyrion app, Spotify, or your phone's Bluetooth.
 3. [The library](#3-the-library)
 4. [Lyrion's own menus (Extended navigation)](#4-lyrions-own-menus-extended-navigation)
 5. [When another source takes over](#5-when-another-source-takes-over)
-6. [The idle screen and the visualiser](#6-the-idle-screen-and-the-visualiser)
-7. [The phone page](#7-the-phone-page)
-8. [Bar screens](#8-bar-screens)
-9. [Settings](#9-settings)
-10. [Updates](#10-updates)
+6. [Several rooms together](#6-several-rooms-together)
+7. [The idle screen and the visualiser](#7-the-idle-screen-and-the-visualiser)
+8. [The phone page](#8-the-phone-page)
+9. [Bar screens](#9-bar-screens)
+10. [Settings](#10-settings)
+11. [Updates](#11-updates)
 
 ---
 
@@ -74,7 +76,7 @@ letter to jump there.
 | Cover | The album's art. With none from the source, the player looks one up. |
 | Chevron (top left) | Minimise: back to the library where you left it. |
 | Tabs | **Track**, **Lyrics**, **Artist**, **Release** (below). |
-| Visualiser button (top right) | Shows the visualiser (section 6). |
+| Visualiser button (top right) | Shows the visualiser (section 7). |
 | Progress bar | Elapsed and remaining time; tap to move through the track where the source allows it. |
 | Home (bottom left) | The library, at Home. |
 | Shuffle, previous, play/pause, next, repeat | As offered by the source playing. A source that cannot do something has that button greyed out. |
@@ -137,6 +139,10 @@ preset*), its switch, and the settings as a row of buttons to change to -
 the presets, then your own. **Edit** opens the whole equaliser (see
 [The equaliser](#the-equaliser)).
 
+Between them, when other Gexis players are on the network, **Other players**
+and **Add players**, to play the same music on them; grouped, the volume is
+the group's, with each player's own level under it (section 6).
+
 ## 3. The library
 
 The library is your Lyrion server's music. Home offers:
@@ -151,7 +157,7 @@ The library is your Lyrion server's music. Home offers:
 | New Music | The newest albums (also the row under the cards). |
 | Radio | Lyrion's radio directory. |
 | Apps | Lyrion's apps, such as streaming services (Extended navigation). |
-| Settings | The player's settings (section 9). |
+| Settings | The player's settings (section 10). |
 
 ### Browse
 
@@ -224,7 +230,7 @@ it is waiting for. A service's playlist opens as a page of its tracks, each
 with its artist under the title (a single artist's album shows titles only),
 and its button says *Play playlist*.
 
-**Search**: tap a search field and type on your phone (section 7); results
+**Search**: tap a search field and type on your phone (section 8); results
 arrive as you type. A service's *Search* opens straight on its field, and
 chosen from the phone's remote it brings up the phone's keyboard. My Music's Search looks for artists, albums, works,
 songs and playlists at once.
@@ -251,7 +257,67 @@ you can start Lyrion again from the panel.
 Spotify starts at the **Starting volume** you set, however loud the Spotify
 app was last time, so a takeover never starts at full volume.
 
-## 6. The idle screen and the visualiser
+## 6. Several rooms together
+
+Gexis players on the same home network can play the same music together, in
+sync - a **group**. It works for every source: Lyrion, Spotify, Bluetooth,
+Plexamp and what plugins add.
+
+**Making a group.** On the phone, tap the player's name at the top for
+*Gexis players*: every other player has **Join**. Joining a player to this
+one makes a group; the player joined stops what it was playing, says
+*Joining · catching up*, and plays the group's music a moment later. On the
+panel, open the volume drawer: under the volume, *Other players* and
+**Add players**. On a bar, the tray's **Group** button. A group lasts until
+it is undone, a restart included.
+
+![The group on the phone](images/phone-group.webp)
+
+**What a group plays.** Music started on any player of the group plays on
+all of them, and that player **leads** (tagged *Leads*). A player in a group
+plays nothing of its own: to play alone, it leaves the group. Every player
+of the group shows the group's Now Playing, marked *with Kitchen, Study*;
+tap the mark for the group. Play, pause and skip work from any of them.
+
+**Volume.** Each player keeps its own level. Grouped, the volume control is
+the group's **All** slider: it moves every player the same share of its way
+up or down, so a louder room stays louder and all of them reach the top and
+the bottom together. Each player's own row sets that one alone, and
+its speaker mutes it. A player on *Fixed* volume (an amplifier sets the
+level) is not moved; its mute still works where its output has a control of
+its own. Moving the volume in Spotify, or in a plugin that hands its volume
+over, moves the group; a Lyrion app sets each player's own, as Lyrion's own
+sync does.
+
+![The group volume in the panel's volume drawer](images/panel-group.webp)
+
+**Remove, Leave, Undo.** **Remove** takes another player out of the group;
+**Leave group** takes this one out; **Undo group** ends the group, asking
+first, and the music stays on the player that leads. The player that leads
+cannot be removed or leave: *Undo group* ends its group.
+
+**A moment late.** In a group every player plays the music about 0.4 seconds
+after it arrives, so that all play it together; a pause or a skip is heard
+that much later. A player playing alone has no such delay.
+
+**The player that leads switched off.** The others fall silent and stay
+grouped (*Grouped · silent*). Music started on one of them makes it lead.
+
+**Lyrion.** While the group plays Lyrion and all its players use the same
+Lyrion server, Lyrion's own sync plays it: gapless, bit-perfect, native DSD
+as each player plays it alone, and the players are synced in Lyrion's apps
+too. Syncing Gexis players in a Lyrion app groups them here, and unsyncing
+one there takes it out. With players on different Lyrion servers, Lyrion
+plays through the group like every other source: not gapless between
+tracks, and DSD as PCM.
+
+**Each player is still itself**: its own equaliser, its own visualiser
+showing what it plays, its own output. A player without a screen is grouped
+from the phone. A player older than this release says *Update to join*.
+
+![The group in the bar's tray](images/bar-group.webp)
+
+## 7. The idle screen and the visualiser
 
 After a while with nothing touched, the panel shows the **idle screen**: a
 clock, the weather and a changing background picture. A touch brings back
@@ -337,11 +403,13 @@ nothing there.
 What Home Assistant gets:
 - **A media player**: playing, paused or idle; title, artist, album, artwork
   and position; play, pause, next and previous when the source playing
-  has them, shuffle and repeat where it has them - shown as on the player,
-  greyed in the card while one cannot be used (Next on the last track);
-  volume and mute, unless
-  the output is fixed; the source playing (each source is taken over from
-  its own app, as on the player).
+  has them, shuffle, repeat and seeking where it has them - shown as on the
+  player, greyed in the card while one cannot be used (Next on the last
+  track); volume and mute, and with Fixed volume mute alone where the output
+  has a volume control of its own; the source playing (each source is taken
+  over from its own app, as on the player).
+- **The equaliser**, on any player: a switch, *Equaliser*, and *Equaliser
+  setting*, the setting in use - the presets, then your own.
 - **On a player with a screen, four switches**: *Screen* (off is display
   standby), *Dashboard* (the dashboard above, up or down; unavailable until
   its address is set), *Visualiser* (unavailable when the output cannot feed
@@ -353,20 +421,24 @@ What Home Assistant gets:
   `up`, `down`, `left`, `right`, `ok`, `back` and `home` move around the
   screen (*Moving around with a D-pad or a keyboard*, below).
 - **A card for dashboards**: *Gexis Player*, in Home Assistant's card
-  picker once the integration is installed - what plays with its artwork,
-  the transport and the volume, a list to move to another player, and for
-  the player's screen the quick actions - Home, Now playing, Lyrics, Meters,
-  Room (the dashboard) and Idle, as on the phone, each left out where the
-  phone leaves it out - and the D-pad. In the player's own
-  look, or Home Assistant's (*look: home-assistant*); full, or compact with
-  the D-pad folded away. It goes on a dashboard edited by hand (Home
+  picker once the integration is installed, laid out as the phone's remote
+  with a list to move to another player: what plays with its artwork and
+  the transport; for the player's screen the D-pad, with Home, Lyrics, Back
+  and Meters at its corners, then Standby, Idle screen, Playing and Room,
+  each left out where the phone leaves it out; the volume, with mute and
+  the equaliser's setting, beside the button that opens the equaliser. A
+  player without a screen gets a large cover and a bar to move through the
+  track. In the player's own look, or Home Assistant's
+  (*look: home-assistant*); full, or compact with the D-pad folded away. It goes on a dashboard edited by hand (Home
   Assistant's new *Overview* takes favourite entities, not cards): *Settings
   → Dashboards → Add dashboard → New dashboard from scratch* if there is
   none, then on it the pencil, *+* in a section, the *By card* tab, and a
   search for *Gexis*.
 
 It needs Home Assistant 2026.3 or later and a player on 1.5.0 or later (the
-D-pad 1.6.0 or later); an older player is found and asked to update. With Home Assistant's own
+D-pad 1.6.0 or later; the equaliser, seeking and mute with Fixed volume
+1.7.0 or later, with the integration's 0.5.0); an older player is found and
+asked to update. With Home Assistant's own
 *Lyrion Music Server* integration also set up, the player shows there too,
 as Lyrion's player.
 
@@ -381,7 +453,7 @@ The screen can be used without touching it: with Home Assistant's *D-pad*
   Playing minimises it. On Home it does nothing.
 - The ring shows at the first press, where it was last on that screen, or on
   the screen's main control (Play/Pause on Now Playing). A touch and the
-  idle screen hide it. The phone's remote moves it too (section 7).
+  idle screen hide it. The phone's remote moves it too (section 8).
 - On a slider, Left and Right change the value; Up and Down leave it.
 - On a bar, Up from the top row brings the tray down.
 - While the screen is dark, or the visualiser or the idle screen is up, the
@@ -390,18 +462,22 @@ The screen can be used without touching it: with Home Assistant's *D-pad*
   page; Back from Home Assistant's *D-pad* takes the dashboard down.
 - Setup and updates are done from the phone.
 
-## 7. The phone page
+## 8. The phone page
 
 Open the player's address in a phone's browser, for example
 **http://gexis.local:8090** (the name is your player's, chosen at setup).
 Nothing needs installing; the phone and the player only need to be on the
-same network.
+same network. A computer's browser opens it too; there a sideways scroll
+over a slider, with two fingers on the touchpad, moves it.
 
 The phone page is a **remote** for the player. At the top, the player's
 name with what it is doing (*Playing · Lyrion*, *Paused · Spotify*,
 *Idle*) and a switch between two pages, **Remote** and **Settings**. Tap
 the name for every Gexis player on the network, each with what it is
-doing, and choose one to open its remote in the same tab.
+doing, and choose one to open its remote in the same tab. **Join** beside a
+player plays the same music on it (section 6); grouped, the list starts
+with the group, and the volume row is the group's, with a button beside it
+for each player's own level.
 
 ### The remote, with a screen
 
@@ -424,6 +500,7 @@ For a player with a screen, the remote has, from the top:
     | One finger | Moves the pointer on the screen. |
     | Tap | Presses what the pointer is on. |
     | Two fingers up or down, or sideways | Scroll what is under the pointer. |
+    | Two fingers along a slider | Move the slider: sideways, or up and down on an equaliser band. |
     | One finger along the line at the right or the bottom | Scrolls with one finger. |
     | Pinch | Zooms the screen in or out around the pointer. |
 
@@ -476,7 +553,7 @@ name, a password or a key. *Settings → Display → Touchpad* has **Phone
 touchpad** (off, the remote's touch area offers the D-pad alone, and no
 typing), **Pointer speed** and **Pointer style** (Dot or Arrow).
 
-## 8. Bar screens
+## 9. Bar screens
 
 On a wide, short *bar* screen (such as the tested 1280 × 400 and 1480 × 320) the same player is
 laid out in strips: Now Playing on one line, and the library's lists run
@@ -498,7 +575,9 @@ the equaliser's button and the volume. It stays until it is closed - tap
 below it, or push it back up - or the visualiser takes over or Home opens.
 The equaliser's button names the setting in use; tapped, it opens a second
 band under the first with the switch, the settings to change to and
-**Edit**.
+**Edit**. Beside it, with other Gexis players on the network, the **Group**
+button: its band adds players to play the same music, and grouped it holds
+each player's own level, Leave and Undo group (section 6).
 
 ![Bar: the tray](images/bar-tray.webp)
 
@@ -514,7 +593,7 @@ played on the right.
 
 ![Bar: an album](images/bar-album.webp)
 
-## 9. Settings
+## 10. Settings
 
 Settings is reached from the **Settings** card on Home, or on the phone
 page. It is grouped into eight areas, listed down the left-hand side on the
@@ -640,7 +719,7 @@ and the visualiser shows the music as it arrives, before the equaliser.
 | Home Assistant dashboard: Dashboard address | The address of the room's Home Assistant dashboard. Home Assistant has to allow it to be shown and let the player in - see [A Home Assistant dashboard](#a-home-assistant-dashboard). Empty, nothing of the dashboard shows. |
 | Home Assistant dashboard: Dashboard button | The button that puts it up: in the bar's pull-down controls, beside the visualiser on Now Playing, and on the phone page. On unless changed, once an address is set. |
 | Home Assistant dashboard: Dashboard instead of the idle screen, Dashboard times | At the times set - the same grid as the standby times - the dashboard comes up where the idle screen would. Off unless changed. |
-| Touchpad: Phone touchpad, Pointer speed, Pointer style | The phone's touchpad (section 7). |
+| Touchpad: Phone touchpad, Pointer speed, Pointer style | The phone's touchpad (section 8). |
 | Volume: Show volume when changed elsewhere | A phone's volume change opens the drawer; the panel's own changes do not. |
 | Volume: Volume drawer auto-hide | How long the drawer stays when a change from elsewhere opened it. |
 | Photo service and location: Pixabay API key, Location | Shared by both screens below. The key is for online wallpapers (Pixabay, free). The location is for the weather and for the wallpapers' seasons and holidays; until one is set, the country comes from the time zone. |
@@ -709,7 +788,7 @@ Everything about the player itself, under seven headings.
 
 | Setting | What it does |
 | --- | --- |
-| Software update | What is installed, what is waiting, and *Check for updates* / *Update* (section 10). |
+| Software update | What is installed, what is waiting, and *Check for updates* / *Update* (section 11). |
 | Change logs | What changed in the last 10 releases. |
 | Updates | *Automatic* installs a waiting release at night, never while playing. |
 | Update channel | *Testing* gets each release first, *Stable* once it has been tried. Recommended: Stable. |
@@ -743,7 +822,7 @@ Everything about the player itself, under seven headings.
 | --- | --- |
 | Reboot | Restarts the device; playback stops. |
 
-## 10. Updates
+## 11. Updates
 
 When a new release is waiting, **Settings → System → Software update** shows
 it with its notes. A player several releases behind shows the notes of every

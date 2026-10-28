@@ -165,6 +165,7 @@ Notes on the diagram:
 | `gexis-bluetooth-setup.service` | Unblocks and powers the Bluetooth adapter before bluealsa |
 | `beszel-agent` / `beszel-hub` | Optional system-metrics plugins (ADR-0087, ADR-0114) |
 | `gexis-equaliser.service` | CamillaDSP behind the equaliser's loopback; started and stopped by the core while the equaliser is on for the output in use, never enabled (ADR-0162) |
+| `gexis-snapserver.service` / `gexis-snapclient.service` | Snapcast for a group of players: the server on every member, the client playing from the leader; started and stopped by the core while the player is in a group, never enabled; Debian's own `snapserver` and `snapclient` units are masked (ADR-0166) |
 
 ## Hardware path
 

@@ -242,3 +242,23 @@ ADR-0164). What the remote reads and sends, against what the core has:
 | EQ on / off, choose a setting | `/equaliser` (ADR-0162) |
 | transport | `POST /transport/{play,pause,next,previous}` |
 | seek | `NEW` — `POST /transport/seek` `{"position": seconds}` (ADR-0164 C2) |
+
+---
+
+## Changed 2026-10-28
+
+**Phase 22, multiroom** (`source/22/README.md`; ADR-0166). What the group's
+surfaces read and send, against what the core has:
+
+| Needs | Where |
+|---|---|
+| this player's group: members, leader, what plays, the leader gone | `NEW` — `group` in `/state`: `members` (leader first; `id`, `name`, `url`, `me`, `leads`, `reachable`, `joining`, `screen`), `leader`, `silent`, `source`, `transport`, `title`, `mode` (`lyrion` or `snapcast`) |
+| each member's level, mute, Fixed | `NEW` — `group.members[]`: `volume` (null with Fixed or unreachable), `muted`, `fixed`, `fixed_mute` |
+| the *All* slider's value and mute | `NEW` — `group.level` (the mean of the reachable Variable members), `group.muted` (all muted) |
+| *Joining · catching up* | `NEW` — `group.members[].joining`: joined, and its client not yet playing the leader's stream |
+| the other players, and whether each can be joined | `/players` (ADR-0136), each with `NEW` — `multiroom` (the group API; absent from older players), `group` (its group's id, leader, members' names), `lyrion`, `volume`, `fixed` |
+| join, remove, leave, undo | `NEW` — `POST /group/join {player}`, `/group/remove {player}`, `/group/leave`, `/group/undo` |
+| the *All* slider | `NEW` — `POST /group/volume {percent, from}` (`from`: the members' levels when the drag began); `POST /group/mute {muted}` |
+| one member's own level and mute | `NEW` — `POST /group/members/{id}/volume {percent}`, `/mute {muted}` |
+| the group's Now Playing on a member | `active`, `metadata`, `controls`, `queue`: the leader's while nothing of the member's own plays (D5) |
+| transport from a member | `POST /transport/*`, sent on to the leader |

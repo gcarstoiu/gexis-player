@@ -14,6 +14,7 @@ import hashlib
 import logging
 import time
 from pathlib import Path
+from typing import Awaitable, Callable
 
 import aiohttp
 
@@ -122,6 +123,12 @@ class Players:
         self._clock = clock
         self._kept: tuple[float, list[dict]] | None = None
         self._lock = asyncio.Lock()
+        #: **Where each player answered, by its id** (ADR-0166): a group's
+        #: members reach each other here. Not in the list the phone is given.
+        self.addresses: dict[str, tuple[str, int]] = {}
+        #: Told the statuses found, by id, after each look (the group's
+        #: `reconcile`).
+        self.on_refresh: Callable[[dict[str, dict]], Awaitable[None]] | None = None
 
     async def others(self, session: aiohttp.ClientSession) -> list[dict]:
         """What was last found; looked for now only if nothing has been yet,
@@ -140,8 +147,21 @@ class Players:
             # hostname did not leave it out; its own status does.
             listed = [a for a in answers if a is not None
                       and not (self._own_instance and a.get("instance") == self._own_instance)]
+            for peer, answer in zip(peers, answers):
+                if answer is not None and answer.get("id") and answer in listed:
+                    self.addresses[str(answer["id"])] = (peer["address"], peer["port"])
             self._kept = (self._clock(), listed)
-            return listed
+        if self.on_refresh is not None:
+            try:
+                await self.on_refresh({str(a["id"]): a for a in listed if a.get("id")})
+            except Exception:  # noqa: BLE001 - a look must not fail for what is done with it
+                logger.exception("players: what was found could not be passed on")
+        return listed
+
+    def status_of(self, player_id: str) -> dict | None:
+        """What a player last said of itself, by id."""
+        listed = self._kept[1] if self._kept else []
+        return next((p for p in listed if str(p.get("id")) == player_id), None)
 
     async def watch(self, every: float = FRESH_S) -> None:
         """Look for the others every `every` seconds, for the life of the core."""

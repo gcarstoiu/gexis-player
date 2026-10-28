@@ -1,6 +1,6 @@
 # ADR-0162 — A simple equaliser
 
-**Status:** **Built** — 2026-10-26, on `ph-equaliser`, not yet measured
+**Status:** **Built** — 2026-10-26, on `ph-equaliser`, in 1.7.0 (Stable, 2026-10-27; Phase 20 closed by George the same day), not yet measured
 through a card (below, *Built*). C1-C18 confirmed by George on 2026-10-26;
 D3 amended the same day (the volume gives the headroom back), after his
 question on it. The settings confirmed by
@@ -182,8 +182,8 @@ Confirmed by George, 2026-10-25, and appended to ADR-0022:
 ## Not in this record
 
 - A loudness that follows the volume.
-- Bands set by hand (frequency, gain, width): room correction's (Phases 22
-  and 23).
+- Bands set by hand (frequency, gain, width): room correction's (Phases 24
+  and 25).
 - The equaliser from Home Assistant (a preset to choose): possible once D9's
   route exists.
 

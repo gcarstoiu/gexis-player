@@ -742,7 +742,9 @@ Lyrion*, *Idle*), this one marked; another opens in the same tab. Phone only.
 
 **[S] The touchpad** takes half the phone's height, with two-finger scrolling
 and a 1-3x pinch; over the dashboard its taps and typing become real input
-(ADR-0121, ADR-0157).
+(ADR-0121, ADR-0157). Along a slider two fingers move it, as a computer's
+touchpad does over any slider (George, 2026-10-28; ADR-0121 amended); no
+design draws it.
 
 ### Phase 19: the focus and the card (2026-10-25)
 
@@ -811,6 +813,11 @@ decisions). Not yet seen by George on a device.
 - **[U]** The volume drawer's on/off switch stands alone, without the box
   the drawing puts round it, as the phone's EQ sheet (George, 2026-10-27);
   the bar's tray and the editor keep the box, which holds *On* / *Off*.
+- **[U]** The switch shows its new position from the press and goes back
+  only if the core refuses - putting the equaliser in or out of the chain
+  takes seconds - and it slides without the drawing's press
+  (`style-active="transform:scale(0.95)"` on the power box), which made it
+  read as a button (George, 2026-10-28).
 
 ## The phone remote (Phase 21, 2026-10-27)
 
@@ -853,7 +860,9 @@ Fixed volume).
   Settings on its own ground (George, 2026-10-27, after the preview).
 - **[U]** The remote fills a phone up to 480 px wide, where the drawing's
   column stops at 412 (C10 as amended, George, 2026-10-27: on a 427 px
-  phone the dimming left strips at the edges); wider screens keep it.
+  phone the dimming left strips at the edges); wider screens keep it, with
+  the background inside the column and the plain ground beside it (George,
+  the same day).
 - **[U]** The touch area's corner buttons and OK, the pad switch and the
   Remote / Settings switch have the quick actions' ground and line
   (`rgba(233,238,242,0.07)`, `0.1`), not the drawing's
@@ -862,3 +871,53 @@ Fixed volume).
   drawing puts round it (`rgba(255,255,255,0.05)`, a `0.1` line); its touch
   is still 48 px tall (George, 2026-10-27).
 
+
+## Multiroom (Phase 22, 2026-10-28)
+
+Built from `source/22` (picks 1a, 2a, 3a; ADR-0166). Production wins under
+the additions, as the design asks; what the build decided where the drawing
+is silent or production differs, confirmed by George (2026-10-28):
+
+- **[S]** The panel's *Other players* row and the bar's *Group* button are
+  offered only when another Gexis player is found on the network (or this
+  one is grouped); the drawing always shows them.
+- **[S]** A player older than multiroom has no Join and says why: its state,
+  then *Update to join*.
+- **[S]** The leader gone: *Start music on Kitchen or Study and it leads* -
+  *or*, where the drawing joins the names with *and*.
+- **[S]** Join says *Joining · catching up* on the row at once, until the
+  group has that player. Remove is not on this player's row (Leave group is)
+  nor on the leader's (Undo group is). A Fixed member's mute shows only
+  where its output has a control to silence.
+- **[S]** *Add players* on the panel and the bar lists the group's own
+  members first, with their state and no button, as the drawing's data does.
+- **[S]** On a panel shorter than 800 (720 at 13.3"), the grouped drawer
+  scrolls as a whole, the equaliser below the fold; the members' list keeps
+  four rows and scrolls past them, its fade only while it scrolls.
+- **[S]** On the bar, grouped, the progress row moves up about 32 px so the
+  mark fits midway between it and the transport: production's times sit on
+  the progress row, 22 px above play. The transport does not move; not
+  grouped, nothing changes.
+- **[S]** The bar has no leader-gone note: the drawing draws it only in a
+  layout not chosen.
+- **[S]** A member whose leader is off shows Home, as the design says; Home
+  has no volume button with nothing playing, so there the group is reached
+  from the phone, or the drawer and the tray open by themselves when a level
+  changes elsewhere. The drawing shows the drawer over Home without saying
+  how it opened.
+- **[S]** The panel's and the bar's own volume rows keep production's mute
+  look (amber, *Mute*); the new group rows follow the drawing (*Off*, the
+  fill at 0.35).
+- **[S]** Moving the group volume moves every member's own level, so a
+  member's panel may open its drawer by itself, as for any level changed
+  elsewhere (*Show volume when changed elsewhere*).
+- **[S]** The phone's group volume sheet closes with a swipe down from its
+  head, the *All* row or the note; its members' rows scroll on their own.
+- **[S]** A refused join or a member that does not answer is said in each
+  surface's own note (the remote's, the drawer's, the tray's toast).
+- **[S]** The *All* slider moves each member the same share of its own way
+  (up, of its way to 100; down, of its way to 0), not the same step: with
+  one member at 100, the same step held the mean below the finger and the
+  slider jumped back (ADR-0166 B13). The phone's note says so: *The group
+  slider moves each player the same share of its way up or down, so a
+  louder room stays louder.*

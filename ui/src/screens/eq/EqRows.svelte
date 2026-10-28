@@ -56,6 +56,11 @@
       : event.key === 'ArrowLeft' || event.key === 'ArrowDown' ? -1 : 0;
     if (!delta) return;
     event.preventDefault();
+    stepBand(i, delta);
+  }
+  //: A key, or a scroll along the band (lib/scrollSlide.js): 1 dB a step.
+  function stepBand(i, delta) {
+    if (disabled) return;
     onset?.(i, clamp(Math.round(levels[i]) + delta));
     onend?.();
   }
@@ -78,6 +83,8 @@
         aria-valuemax="12"
         aria-valuenow={Math.round(g)}
         aria-disabled={disabled}
+        data-step="1"
+        ondpadstep={(event) => stepBand(i, event.detail.step)}
         onpointerdown={(event) => down(i, event)}
         onpointermove={(event) => move(i, event)}
         onpointerup={() => up(i)}

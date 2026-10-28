@@ -15,7 +15,15 @@
   let { open = false, onclose = () => {}, onedit = () => {} } = $props();
 
   const eq = $derived($equaliser);
-  const on = $derived(!!eq?.on);
+  //: **The switch moves at once** (George, 2026-10-28: slow to react): the
+  //: core takes seconds to put the equaliser in the chain or out, so the new
+  //: position shows from the press, and goes back only if it is refused.
+  let wanted = $state(null);
+  let wantedTimer;
+  const on = $derived(wanted ?? !!eq?.on);
+  $effect(() => {
+    if (wanted !== null && !!eq?.on === wanted) wanted = null;
+  });
   const lit = $derived(on && !eq?.dsd);
   let busy = $state(false);
   let error = $state(null);
@@ -42,10 +50,15 @@
     if (!eq || busy) return;
     busy = true;
     error = null;
+    wanted = !on;
+    clearTimeout(wantedTimer);
+    // Never held for good: what the core says wins in the end.
+    wantedTimer = setTimeout(() => (wanted = null), 15000);
     try {
-      await setEqualiser({ on: !eq.on });
+      await setEqualiser({ on: wanted });
     } catch (e) {
       error = e.message;
+      wanted = null;
     } finally {
       busy = false;
     }

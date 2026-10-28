@@ -72,7 +72,8 @@ recommendation):
 - A gesture is one thing from start to finish: two fingers start as a
   scroll or a zoom, whichever they do first, and stay it; after two
   fingers, the pointer waits for every finger to lift. Still no gestures
-  for volume or tracks.
+  for volume or tracks (but along a slider, two fingers move it since
+  2026-10-28, below).
 
 ### 3. The pointer (B)
 
@@ -257,3 +258,33 @@ outline. And a tap on the touchpad over the visualiser *"closes it but then it
 reopens"*: the tap was also replayed in the page beneath the meters' window,
 pressing what the pointer rested on. Over the visualiser a touchpad tap now
 only reports the touch, as a finger's tap on the meters does.
+
+## Amended 2026-10-28: a scroll along a slider moves it
+
+George found, in a group, that two fingers' sideways scroll over a volume
+slider did nothing; no slider took a scroll, by D above (*still no gestures
+for volume*). His answer the same day: **every slider** moves with a
+sideways scroll over it, the knob following the fingers - volume alone and
+grouped, a group's members, the equaliser's bands - on the phone, the panel
+and the bar, from the phone's touchpad and from a computer's. An up-and-down
+scroll scrolls lists as before.
+
+Built (`lib/scrollSlide.js`): the scroll is turned into the slider's own
+D-pad steps (ADR-0161), one per step's length along it, so the knob keeps up
+with the fingers and every slider that the D-pad moves takes it. Checked from
+mocked data on the phone, the panel, the bar and through the touchpad's
+socket; on the four test players as preview 8.
+
+Claude's choices, confirmed by George the same day:
+
+- **S1 - An upright band takes the up-and-down scroll** (the panel's and the
+  bar's equaliser): a sideways one cannot follow it. Nothing under the bands
+  scrolls, so nothing is lost.
+- **S2 - On a computer the direction is a natural-scrolling touchpad's**,
+  the usual setting today: the knob follows the fingers. A browser cannot
+  tell that setting; with traditional scrolling or a mouse's tilt wheel the
+  knob goes the other way.
+- **S3 - The steps are the D-pad's**: 2 for volume, 1 dB for a band; the
+  phone's seek bar takes 5 s a step and seeks once the steps stop. A slider
+  that cannot move (the equaliser off, a stream without seeking) lets the
+  scroll pass.

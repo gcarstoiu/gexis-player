@@ -342,6 +342,13 @@ class LmsAdapter(Adapter):
         self._volume: int | None = None
         #: The last reported transport, so `play()` can pick its command.
         self._last_transport: str | None = None
+        #: **ADR-0166 D2: this player's sync in Lyrion** - (master, other
+        #: players) as the status push says it, and who is told of a change.
+        self._sync: tuple[str | None, tuple[str, ...]] = (None, ())
+        self._on_sync: Callable[[str | None, tuple[str, ...]], None] | None = None
+        #: The server's own id (its uuid), so players can tell whether they
+        #: use one server; its address until it has said.
+        self.server_id: str | None = None
 
     @property
     def current_artist_id(self) -> int | None:
@@ -367,6 +374,69 @@ class LmsAdapter(Adapter):
         startup - `None` until then. The library plays on the same player
         this adapter arbitrates for (ADR-0038 §5)."""
         return self._player_id
+
+    @property
+    def sync_group(self) -> tuple[str | None, tuple[str, ...]]:
+        """ADR-0166: (Lyrion's sync master, the other players synced with
+        this one) - (None, ()) when it plays on its own."""
+        return self._sync
+
+    def on_sync_change(self, callback: Callable[[str | None, tuple[str, ...]], None]) -> None:
+        self._on_sync = callback
+
+    def _report_sync(self, result: dict) -> None:
+        """Lyrion's sync as a status result carries it: `sync_master` and
+        `sync_slaves` (comma-separated), absent when not synced."""
+        if self._player_id is None or "power" not in result:
+            return
+        master = result.get("sync_master") or None
+        slaves = [s for s in str(result.get("sync_slaves") or "").split(",") if s]
+        members = {master, *slaves} - {None, self._player_id}
+        sync = (master if members else None, tuple(sorted(members)))
+        if sync == self._sync:
+            return
+        self._sync = sync
+        logger.info("lms: synced in Lyrion with %s", ", ".join(sync[1]) if sync[1] else "nobody")
+        if self._on_sync is not None:
+            self._on_sync(*sync)
+
+    async def sync_with(self, player: str) -> bool:
+        """**`player` joins this player's sync** (ADR-0166 D2): Lyrion's
+        `<this> sync <player>`."""
+        return await self._command(["sync", player])
+
+    async def unsync(self, player: str | None = None) -> bool:
+        """`player` (this one by default) out of its sync: `<player> sync -`."""
+        target = player or self._player_id
+        if target is None:
+            return False
+        async with aiohttp.ClientSession() as session:
+            try:
+                await self._rpc(session, target, ["sync", "-"])
+            except aiohttp.ClientError as exc:
+                logger.warning("lms: unsync of %s failed: %s", target, exc)
+                return False
+        logger.info("lms: %s unsynced", target)
+        return True
+
+    async def power_on(self, player: str) -> bool:
+        """Another player of the group switched on in Lyrion, so it plays
+        the group's Lyrion with this one (ADR-0166 D2)."""
+        async with aiohttp.ClientSession() as session:
+            try:
+                await self._rpc(session, player, ["power", "1"])
+            except aiohttp.ClientError as exc:
+                logger.info("lms: could not switch %s on: %s", player, exc)
+                return False
+        return True
+
+    async def _read_server_id(self, session: aiohttp.ClientSession) -> None:
+        try:
+            result = (await self._rpc(session, "", ["serverstatus", 0, 0])).get("result") or {}
+        except (aiohttp.ClientError, ValueError) as exc:
+            logger.info("lms: could not read the server's id (%s)", exc)
+            result = {}
+        self.server_id = str(result.get("uuid") or self._base)
 
     @property
     def last_transport(self) -> str | None:
@@ -799,6 +869,8 @@ class LmsAdapter(Adapter):
             if self._player_id is None:
                 self._player_id = await self._resolve_player_id(session)
                 logger.info("lms: resolved player %r to id %s", self._player_name, self._player_id)
+            if self.server_id is None:
+                await self._read_server_id(session)
 
             client_id = await self._cometd_handshake(session)
             response_channel = f"/{client_id}/slim/playerstatus/{self._player_id}"
@@ -878,6 +950,7 @@ class LmsAdapter(Adapter):
             last_mode = result.get("mode") if result.get("player_connected", 1) else None
             self._report_metadata(result)
             self._report_volume(result)
+            self._report_sync(result)
             await self._report_queue_if_changed(session, result)
 
             # If the player is *already* on when we start watching, it has
@@ -943,6 +1016,7 @@ class LmsAdapter(Adapter):
                     # measure later - not just power changes.
                     self._report_metadata(data)
                     self._report_volume(data)
+                    self._report_sync(data)
                     # The queue changes far more often than power does, and
                     # every one of those changes arrives here rather than at
                     # the seed query above: a queue read only at subscribe

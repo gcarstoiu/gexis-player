@@ -1,7 +1,8 @@
 # ADR-0164 — The phone remote
 
 **Status:** **Built** 2026-10-27 on `ph-phone-controls` from the second
-design (below, *Built (2026-10-27)*) and previewed on sofapi.
+design (below, *Built (2026-10-27)*), previewed on sofapi, in 1.7.0
+(Stable, 2026-10-27; Phase 21 closed by George the same day).
 **Accepted, revised** — George, 2026-10-27: Claude Design's
 second remote (`design/source/21`, `Phone Remote v3`) replaces the first;
 build it, with his answers to the three points where it left the current
@@ -144,7 +145,10 @@ the touchpad.
   touch area stays the pad's).
   **Amended** the same day: on his 427 px phone the column left 7 px at
   each side that no dimming reached; asked, he chose the remote filling a
-  phone up to 480 px wide, the 412 px column kept for wider screens.
+  phone up to 480 px wide, the 412 px column kept for wider screens. **And**
+  the background is the column's: on a laptop the remote stays centred and
+  the screen beside it plain, without the blurred cover (George, after
+  1.7.0's release the same day).
 - **C11 — A scroll strip's step** is ADR-0121's `scroll`, 24 px on its
   axis. The first build's step that scrolled the ring's list goes.
 - **C12 — Pointer speed and Pointer style stay**, with the pointer; the
@@ -219,5 +223,5 @@ editor), its grey text 4.4 to 4.5:1 on it; on sofapi from 16:15.
 
 ## Not in this record
 
-- A remote for several players at once (multiroom, Phase 25).
+- A remote for several players at once (multiroom, Phase 22, `ph-multiroom`).
 - The pointer or the D-pad on a player without a screen.

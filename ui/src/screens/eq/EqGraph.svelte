@@ -114,6 +114,7 @@
             aria-valuemax="12"
             aria-valuenow={Math.round(g)}
             aria-disabled={disabled}
+            data-step="1"
             ondpadstep={(event) => step(i, event)}
             onpointerdown={(event) => down(i, event)}
             onpointermove={(event) => move(i, event)}

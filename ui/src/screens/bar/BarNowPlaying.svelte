@@ -30,7 +30,9 @@
   import { playhead, mmss } from '../../lib/playhead.svelte.js';
   import { playToggle } from '../../lib/playToggle.svelte.js';
   import { parseSynced, sungOf, activeAt, anchorOf } from '../../lib/lyrics.js';
-  import { pull, bandDrag, TRAY_H } from './tray.svelte.js';
+  import { pull, bandDrag, TRAY_H, trayAsk } from './tray.svelte.js';
+  import BarMark from '../group/BarMark.svelte';
+  import { group } from '../../lib/group.svelte.js';
 
   // The props App.svelte gives NowPlaying, so the two are interchangeable.
   // `onhome` and `onvisualisation` are the tray's on a bar; they are accepted
@@ -238,6 +240,15 @@
         </div>
         <span class="progress__time">-{mmss((head.duration ?? 0) - head.elapsed)}</span>
       </div>
+
+      <!-- ADR-0166 (design/source/22, 3a): the grouped mark, midway between
+           the progress bar and the play control; a tap opens the tray on
+           the group's band. -->
+      {#if $group}
+        <div class="groupmark">
+          <BarMark onopen={() => { trayAsk.band = 'group'; onvolume?.(); }} />
+        </div>
+      {/if}
 
       <div class="transport">
         <div></div>
@@ -681,6 +692,17 @@
     align-items: center;
     margin-top: 22px;
   }
+  /* **The grouped mark midway between the bar and the play control**
+     (ADR-0166, 3a). The times share the progress row here, so the 22px
+     between the rows cannot hold a 36px chip: grouped, the chip goes between
+     them and the progress row rises into the room above it, the transport
+     staying where it is. The track's bottom is 5.5px above its row's; 6 + 5.5
+     above the chip, 12 below it. */
+  .groupmark {
+    margin-top: 6px;
+    min-width: 0;
+  }
+  .groupmark + .transport { margin-top: 12px; }
   .transport__mid { display: flex; align-items: center; gap: 22px; }
   .transport__right { justify-self: end; display: flex; align-items: center; gap: 18px; }
 

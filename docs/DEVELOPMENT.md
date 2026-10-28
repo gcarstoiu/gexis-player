@@ -3202,11 +3202,20 @@ sofapi as a preview, waiting for George's check.
 
 **ID:** `ph-equaliser` · added 2026-10-25 as 20, before room correction (George).
 
+**Closed 2026-10-27** (George, promoting 1.7.0 to Stable), in 1.7.0.
+Criteria 1 (a preset or the bands from the phone, heard without stopping)
+and 4 (no clipping, the headroom by the curve, ADR-0162 D3) seen by George on
+a test player and in Finding 138's silent measurement; 3 (off is
+bit-perfect) by design (D5); 2 and 5 in part - every source through it and
+the visualiser working (the float fix), its cost recorded (Finding 138). Not
+measured: the delay through a card, players in sync, a rate change heard
+through the amplifier (to-do `eq-measure`, left for a time George picks).
+
 **Added 2026-10-25** (George, proposed the day before): an equaliser with a
 few presets and a manual setup, running in CamillaDSP, before any room
 correction. Room correction's hard part is the filter stage in the audio
 path, not the measurement (Finding 124's pitfalls), and an equaliser needs
-the same stage without a microphone, judged by ear. Phases 22 and 23 then
+the same stage without a microphone, judged by ear. Phases 24 and 25 then
 add measuring the room and designing filters, fed to this stage. It turns
 the Roadmap's idea *A simple equaliser* (bass, treble and loudness, ahead of
 room correction) into a phase.
@@ -3249,7 +3258,7 @@ measurement.
   top (for example Flat, Bass, Vocal, Late night).
 - **Where it applies**: one per output (DAC, HDMI, optical) or one for the
   player; every source, or a choice of which.
-- **The filter stage**, which Phases 22 and 23 reuse: CamillaDSP controlled
+- **The filter stage**, which Phases 24 and 25 reuse: CamillaDSP controlled
   from the core (pycamilladsp, Finding 124); how every source reaches it;
   what a change of sample rate between tracks does (a restart per rate, or a
   loopback with rate adjust); off as bit-perfect output; native DSD past it
@@ -3276,6 +3285,13 @@ gap or click at a change of sample rate.
 ### Phase 21 — The phone's quick actions and touchpad, redesigned
 
 **ID:** `ph-phone-controls` · added 2026-10-26 as 21, after the equaliser (George).
+
+**Closed 2026-10-27** (George, promoting 1.7.0 to Stable), in 1.7.0, the
+remote's laptop background merged into `next` after it. Criteria 1-4, 6
+and 7 checked from mocked data and on a test player through George's five
+rounds of findings; 8, the Home Assistant card, in the integration's 0.5.0.
+Not seen: mute with Fixed volume heard through an amplifier (5; ADR-0165
+*Not verified*, native DSD).
 
 **Added 2026-10-26** (George, before Phase 20 closes): a redesign of the
 phone page's quick actions and its touch area, the touchpad. Room correction
@@ -3326,7 +3342,13 @@ the whole screen while it shows (George; asked, the top bar included); on
 sofapi from 16:15. The panel's volume drawer's switch follows the sheet's
 (Phase 20's, merged in); on sofapi from 16:37. A chooser's dimming stays
 below the top bar (George, asked). **In 1.7.0, on Testing** (2026-10-27,
-George); the phase stays open for the Home Assistant card.
+George); the phase stays open for the Home Assistant card. **Then** (George,
+the same day): on a laptop the background stays inside the centred column;
+on sofapi from 18:21. The Home Assistant card started (George: now; the
+D-pad alone in the touch area, the equaliser's switch and setting added to
+the integration). **Built** the same day on the integration's
+`card-remote` (0.5.0, ADR-0163 15-17, C1-C7 for George): checked from mocked
+entities and in the throwaway Home Assistant; released after George's look.
 
 **Before it** the mini player at the bottom of the phone page
 ([ADR-0101](decisions/0101-a-mini-player-on-the-phone.md)) holds the track
@@ -3373,9 +3395,87 @@ received 2026-10-26, `design/source/21`.
 7. Settings works as before, without the mini player.
 8. The Home Assistant card follows, in the integration's next release.
 
-### Phase 22 — Room correction for the bass, with a USB microphone
+### Phase 22 — Multiroom for every source
 
-**ID:** `ph-room-correction` · numbered 22 on 2026-10-26; 21 from 2026-10-25, 20 from 2026-10-24, 19 from 2026-10-21 (18 from 2026-10-19, 16 from 2026-10-15, 15 from 2026-10-14).
+**ID:** `ph-multiroom` · numbered 22 on 2026-10-27, moved before room correction with AirPlay 2 (George: room correction cannot be tried yet); added 2026-10-25 as 24, 25 from 2026-10-26.
+
+**Added 2026-10-25** (George, with AirPlay 2). Spotify, AirPlay and Bluetooth
+playing in sync on several players, as Lyrion's own playback already does.
+
+**Started 2026-10-27** (George): its ADR first, the experience settled with
+him by questions. **It must work for Plexamp and other source plugins as
+well**, and leave Lyrion's own synchronisation working.
+
+**An ADR before anything is built.** It must settle: how the players find
+each other and which one leads; how they keep in sync; how a group is made
+and undone from the phone and the panel.
+
+**[ADR-0166](decisions/0166-multiroom-for-every-source.md), accepted
+2026-10-27**, with George's answers the same day: one group made in Gexis,
+Lyrion's own sync while it plays Lyrion and Snapcast for the rest; players
+joined from the remote and the panel until undone; a source started on any
+member plays on the whole group; each player its own volume and a group
+slider; every member shows the group's Now Playing; as short a delay as
+possible; the source's own rate; Home Assistant's join and unjoin. Claude's
+C1-C6, confirmed by him the same day. The grouping is drawn in Claude
+Design first: the brief is `design/briefs/22-multiroom.md`.
+
+**Designed and built 2026-10-28.** Claude Design's export is
+`design/source/22/` (George's picks 1a, 2a, 3a); George's answers that day:
+Lyrion's syncs are Gexis groups (decision 10), the preview on all four test
+players, Lyrion's test on a Lyrion server of Claude's. Finding 139 (the first
+probe, guestpi) changed D1: a second loopback, a pipe per rate fed by
+`arecord`, FLAC at 32 bits, the units the player's own and Debian's masked.
+Built on `ph-multiroom` (core, UI on the phone, the panel and the bars, the
+documents); preview 12 on sofapi, the bar, guestpi and bedroompi, with
+George's findings fixed (a group that did not play; the group slider
+jumping back, ADR-0166 B13; Spotify on the leader after Lyrion; a scroll
+along a slider, ADR-0121 amended; a phone's stale socket after sleep; a
+member's client left stopped by the round's chain rewrite; a source
+restarted when the leader went alone after an undo; idle renderers left on
+the old chain after a group's rewrite). The
+integration's join and unjoin on its `multiroom` branch, for its release
+after the player's. **Open:** the measurement (ADR-0166 *Measured before it
+is called done*, with George by ear), and Lyrion's half on a test server,
+which waits for George (the test players cannot reach one on the
+development machine through its firewall, and a reverse tunnel was refused
+by the session's safety check).
+
+**Acceptance (draft):**
+
+1. From the phone and the panel, players are joined into a group and the
+   group undone; it survives a restart.
+2. Spotify, Bluetooth, Plexamp and a plugin renderer play in sync on every
+   player of a group; Lyrion through Lyrion's own sync, as before.
+3. A source started on any member plays on the whole group.
+4. Each player keeps its own volume; the group slider moves them together,
+   keeping their balance; a Fixed player stays fixed.
+5. Every member shows the group's Now Playing, its controls acting on the
+   group.
+6. A command is heard within the measured delay, with no dropout over an
+   hour on the test players' Wi-Fi.
+7. The source plays at its own rate; a change of rate costs a short gap
+   only.
+8. Home Assistant joins and unjoins players, in the integration's release
+   after the player's.
+
+### Phase 23 — AirPlay 2
+
+**ID:** `ph-airplay` · numbered 23 on 2026-10-27, after multiroom and before room correction (George); added 2026-10-25 as 23; numbered 24 on 2026-10-26.
+
+**Added 2026-10-25** (George moved the Must ideas, and internet radio
+without Lyrion, into phases of their own after room correction). Play from
+any iPhone, iPad or Mac, as a plugin like Plexamp (ADR-0016).
+
+**An ADR before anything is built.** It must settle: which AirPlay 2
+receiver; how it takes the output over and hands it back, as the other
+sources do; what Now Playing and the phone show from it.
+
+**Acceptance:** drafted with its ADR.
+
+### Phase 24 — Room correction for the bass, with a USB microphone
+
+**ID:** `ph-room-correction` · numbered 24 on 2026-10-27, after multiroom and AirPlay 2 (George: no room correction can be tried yet); numbered 22 on 2026-10-26; 21 from 2026-10-25, 20 from 2026-10-24, 19 from 2026-10-21 (18 from 2026-10-19, 16 from 2026-10-15, 15 from 2026-10-14).
 **Since 2026-10-25** it builds on Phase 20's filter stage (`ph-equaliser`):
 where the filter runs and what it changes are settled there, and this ADR
 starts from them.
@@ -3387,7 +3487,7 @@ around the listening seat, averaged** (3-5 within about half a metre of the
 head): below that frequency the response changes most from place to place,
 so one position would fit the microphone's spot and miss the listener's head.
 Mostly cuts, no deep boosts into nulls. The full range, with more positions
-and a target curve, is Phase 23 (`ph-room-correction-full`). Finding 124's
+and a target curve, is Phase 25 (`ph-room-correction-full`). Finding 124's
 first tier.
 
 **Added 2026-10-14** (George: *"let's add another phase about room
@@ -3436,12 +3536,12 @@ Pi, and the microphones (miniDSP UMIK-1 first).
 4. Every source plays through the correction with no audible gap or
    dropout, and the visualiser keeps working.
 
-### Phase 23 — Room correction for the full range
+### Phase 25 — Room correction for the full range
 
-**ID:** `ph-room-correction-full` · added 2026-10-20 as 19, split from `ph-room-correction`; numbered 20 on 2026-10-21, 21 on 2026-10-24, 22 on 2026-10-25, 23 on 2026-10-26.
+**ID:** `ph-room-correction-full` · numbered 25 on 2026-10-27, after multiroom and AirPlay 2 (George: no room correction can be tried yet); added 2026-10-20 as 19, split from `ph-room-correction`; numbered 20 on 2026-10-21, 21 on 2026-10-24, 22 on 2026-10-25, 23 on 2026-10-26.
 
 **Added 2026-10-20** (George, splitting room correction in two). After the
-bass (Phase 22, `ph-room-correction`): correction above the Schroeder
+bass (Phase 24, `ph-room-correction`): correction above the Schroeder
 frequency, from **more positions across the listening area**, towards a
 target curve, and gentle - above the bass what is heard is mostly the
 speakers and their reflections, which the ear blends, and a correction of
@@ -3452,7 +3552,7 @@ tier: DRC-FIR first, then our own design after the Dirac paper and Carini).
 **An ADR before anything is built.** It must settle: how many positions and
 where; the target curve and how it is chosen; how much correction above the
 bass, smoothed how; whether the time-domain part comes in this phase or a
-later one; what it costs a Pi 4 beside Phase 22's filter.
+later one; what it costs a Pi 4 beside Phase 24's filter.
 
 **Acceptance (draft):**
 
@@ -3460,40 +3560,13 @@ later one; what it costs a Pi 4 beside Phase 22's filter.
    the response before and after, per position and averaged.
 2. The averaged response is measurably closer to the target than without,
    and no position is measurably worse - recorded as a finding.
-3. It builds on Phase 22's correction: on and off, A/B, one per output.
-
-### Phase 24 — AirPlay 2
-
-**ID:** `ph-airplay` · added 2026-10-25 as 23; numbered 24 on 2026-10-26.
-
-**Added 2026-10-25** (George moved the Must ideas, and internet radio
-without Lyrion, into phases of their own after room correction). Play from
-any iPhone, iPad or Mac, as a plugin like Plexamp (ADR-0016).
-
-**An ADR before anything is built.** It must settle: which AirPlay 2
-receiver; how it takes the output over and hands it back, as the other
-sources do; what Now Playing and the phone show from it.
-
-**Acceptance:** drafted with its ADR.
-
-### Phase 25 — Multiroom for every source
-
-**ID:** `ph-multiroom` · added 2026-10-25 as 24; numbered 25 on 2026-10-26.
-
-**Added 2026-10-25** (George, with Phase 24). Spotify, AirPlay and Bluetooth
-playing in sync on several players, as Lyrion's own playback already does.
-
-**An ADR before anything is built.** It must settle: how the players find
-each other and which one leads; how they keep in sync; how a group is made
-and undone from the phone and the panel.
-
-**Acceptance:** drafted with its ADR.
+3. It builds on Phase 24's correction: on and off, A/B, one per output.
 
 ### Phase 26 — Plugin catalogue
 
 **ID:** `ph-plugin-catalogue` · added 2026-10-25 as 25; numbered 26 on 2026-10-26.
 
-**Added 2026-10-25** (George, with Phase 24). An index on GitHub that the
+**Added 2026-10-25** (George, with AirPlay 2). An index on GitHub that the
 player lists, so a developer's plugin reaches users without waiting for a
 release (ADR-0106: plugins installed and updated today come with the release
 or as an uploaded file).
@@ -3508,7 +3581,7 @@ the player lists, installs and updates from it.
 
 **ID:** `ph-radio` · added 2026-10-25 as 26; numbered 27 on 2026-10-26.
 
-**Added 2026-10-25** (George, with Phase 24; it was a Should idea). A radio
+**Added 2026-10-25** (George, with AirPlay 2; it was a Should idea). A radio
 directory for players that only stream, with no Lyrion server: today the
 library's Radio is Lyrion's own directory.
 
