@@ -583,6 +583,9 @@ class Settings:
                 switch = f"{plugin.id}.enabled"
                 switches.append({"key": switch, "type": "toggle",
                                  "label": plugin.name, "default": True})
+                if getattr(plugin, "tag", None):
+                    # ADR-0167: a few words beside its name (Limited testing).
+                    switches[-1]["tag"] = plugin.tag
                 if getattr(plugin, "version_line", None) and plugin.version_line():
                     # A line of its own on the row (George, 2026-10-12).
                     switches[-1]["version"] = plugin.version_line()

@@ -59,6 +59,7 @@ brings one is refused.
 | `accent` | no | A CSS colour for the panel's accent when your renderer plays |
 | `status` | no | The waiting screen's second line under your mark (`"Ready"`, `"Pairable"`) |
 | `summary` | no | One line on what it is. The player's own plugins show it in setup's Plugins step; an uploaded plugin arrives after setup, so it is not shown there |
+| `tag` | no | A few words beside its name on its switch in Settings, 24 characters at most - the player's AirPlay says *Limited testing* |
 | `connection` | no | Honoured only on the player's own `service` plugins, not on an uploaded one: the heading above its rows then says *Connected*, *Connecting* or *Not connected*. An uploaded plugin runs as a user made for each run, so there is no fixed user to read connections from |
 | `settings` | no | Rows for **Settings**, below |
 
@@ -179,7 +180,10 @@ so a helper process holding it counts. Let go promptly and it never needs to.
 **What the panel shows** comes from `{"t": "metadata", "metadata": {...}}`:
 `title`, `artist`, `album`, `artwork` (a URL), `position` and `duration`
 (seconds), `transport` (`playing`, `paused`, `stopped`), and more in the
-contract. Send what you know; absent fields draw nothing.
+contract. Send what you know; absent fields draw nothing. A cover you hold as
+a picture rather than an address goes in an `artwork` event first; the
+player serves it, and your `artwork` names the path it is served at
+(`/plugins/<id>/artwork/<key>`, the contract says how the key is made).
 
 **Volume.** With `volume_mechanism: "software_api"`, report your level with
 `{"t": "volume", "value": 62, "steps": 100}` and apply `set_volume` when told.

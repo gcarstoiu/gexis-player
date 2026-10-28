@@ -147,3 +147,15 @@ def test_camilla_config():
     assert eq.camilla_config(44100, "S24_3LE", 2, eq.FLAT, "x")["devices"]["capture"]["format"] == "S24_3_LE"
     with pytest.raises(EqualiserError):
         eq.camilla_config(44100, "DSD_U32_BE", 2, eq.FLAT, "x")
+
+
+def test_camilladsps_hold_is_two_chunks_at_every_rate():
+    """ADR-0166 D7 as amended: the chunk it fills, and its target level (the
+    chunk size by default) left in the card's buffer."""
+    from gexis_core import equaliser as eq
+    for rate in (44100, 88200, 176400):
+        assert round(eq.latency_ms(rate), 1) == 46.4
+    for rate in (48000, 96000, 192000):
+        assert round(eq.latency_ms(rate), 1) == 42.7
+    # The chunk stays at 4096 above 192 kHz, so it holds half as long.
+    assert round(eq.latency_ms(352800), 1) == 23.2 and round(eq.latency_ms(384000), 1) == 21.3

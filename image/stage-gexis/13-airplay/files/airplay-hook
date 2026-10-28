@@ -1,0 +1,5 @@
+#!/bin/sh
+# ADR-0167 T5: Shairport Sync's active-state hooks, run and waited for by it
+# (shairport-sync.conf, sessioncontrol). `begin` returns once the core has
+# freed the device; both always exit 0.
+PYTHONPATH=/opt/gexis-airplay/src exec /usr/bin/python3 -m gexis_airplay.hook "$1"

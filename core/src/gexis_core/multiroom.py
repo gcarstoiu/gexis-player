@@ -120,6 +120,7 @@ class Multiroom:
                  screen: Callable[[], bool],
                  lms=None, lms_on: Callable[[], bool] = lambda: False,
                  before_reload=None, after_reload=None,
+                 after_client: Callable[[int | None], float] = lambda rate: 0.0,
                  group_path: Path = groups.PATH, chain_path: Path = CHAIN_PATH, peers=None) -> None:
         self._store = store
         self._players = players
@@ -129,6 +130,9 @@ class Multiroom:
         self._stop_source = stop_source
         self._rechain = rechain
         self._chain_card = chain_card
+        #: ADR-0166 D7 as amended: the delay after this player's client that
+        #: Snapcast cannot see (the equaliser's), in ms, at a rate.
+        self._after_client = after_client
         self._set_own_volume = set_own_volume
         self._set_own_mute = set_own_mute
         self._screen = screen
@@ -571,7 +575,13 @@ class Multiroom:
         card, takes_32, any_rate = self._chain_card()
         if rate or self._format is None:
             self._format = sample_format_for(card, takes_32, rate, any_rate)
-        await self.snap.listen(host, me, self._format)
+        # **Snapcast keeps the clients in time at the device each one opens**
+        # (sofapi, 2026-10-28: with its equaliser on it played about 46 ms
+        # behind the bar - CamillaDSP's chunk and its card's buffer come
+        # after the loopback the client writes to). That delay is the
+        # client's latency, so it plays that much earlier.
+        latency = round(self._after_client(rate))
+        await self.snap.listen(host, me, self._format, latency)
 
     def _changed(self) -> None:
         """Something the group's view or this player's part in it depends on

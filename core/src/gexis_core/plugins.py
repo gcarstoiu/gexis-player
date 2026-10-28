@@ -101,6 +101,10 @@ class Plugin:
     notice: str | None = None
     #: **One line on what it is** (ADR-0128): the setup step's description.
     summary: str | None = None
+    #: **A few words beside its name** (ADR-0167, George 2026-10-28:
+    #: *Limited testing* for AirPlay until it is tried with an Apple device),
+    #: on its switch in Settings. 24 characters at most.
+    tag: str | None = None
     #: **ADR-0129: a service that connects somewhere** - its switch says
     #: *Connected*, *Connecting* or *Not connected*, read by the core from the
     #: connections its unit's user holds.
@@ -206,6 +210,7 @@ def parse(raw: dict, *, directory: Path | None = None, built_in: bool = False) -
         removes=raw["removes"] if isinstance(raw.get("removes"), str) else None,
         notice=raw.get("notice"),
         summary=raw["summary"] if isinstance(raw.get("summary"), str) else None,
+        tag=raw["tag"].strip() if isinstance(raw.get("tag"), str) and 0 < len(raw["tag"].strip()) <= 24 else None,
         connection=raw.get("connection") is True and raw["kind"] == "service",
         mark=mark,
         settings=tuple(settings),

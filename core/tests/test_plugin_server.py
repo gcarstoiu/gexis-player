@@ -171,6 +171,27 @@ async def test_events_reach_the_daemon(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_a_cover_of_most_of_a_line_reaches_the_daemon(tmp_path):
+    """ADR-0167 T9: the `artwork` event is one the server passes on - it
+    dropped every kind it did not list - at the size a plugin may send."""
+    async with Harness(tmp_path) as h:
+        reader, writer, _ = await _hello(h)
+        try:
+            data = "A" * (900 * 1024)
+            await _say(writer, {"t": "artwork", "type": "image/jpeg", "data": data})
+            for _ in range(200):
+                if h.events:
+                    break
+                await asyncio.sleep(0.01)
+            assert [t for _, t, _ in h.events] == ["artwork"]
+            assert len(h.events[0][2]["data"]) == len(data)
+        finally:
+            # A failed assertion must not leave the connection open: the
+            # harness waits for it to close.
+            writer.close()
+
+
+@pytest.mark.asyncio
 async def test_something_that_is_not_an_event_is_dropped_not_dispatched(tmp_path):
     async with Harness(tmp_path) as h:
         reader, writer, _ = await _hello(h)
