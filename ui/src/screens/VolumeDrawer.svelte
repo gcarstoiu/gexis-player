@@ -116,6 +116,7 @@
       aria-valuemax="100"
       aria-valuenow={pct}
       data-dpad-main
+      data-step={DPAD_STEP}
       ondpadstep={(event) => vol.step(event.detail.step * DPAD_STEP)}
       onpointerdown={down}
       onpointermove={move}

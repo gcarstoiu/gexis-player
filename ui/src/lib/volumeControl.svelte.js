@@ -10,6 +10,10 @@ import { setVolume, setMute } from './state.js';
 //: takeover restoring a renderer's remembered level is not a user action.
 const OWN_WINDOW_MS = 1500;
 const TAKEOVER_MS = 3000;
+//: A step's level (the D-pad, a scroll along the slider) stays this long
+//: after the last: a scroll sends steps faster than the player answers, and
+//: each starts from the level shown.
+const STEP_HOLD_MS = 800;
 
 export class VolumeControl {
   dragging = $state(false);
@@ -26,6 +30,8 @@ export class VolumeControl {
   // One request at a time; while one is in flight only the latest value waits.
   #inFlight = false;
   #queued = null;
+  #stepping = false;
+  #stepTimer;
 
   /** `get` reads the component's props as they are now: `volume`,
    *  `active`, `onexternal`, `onsettled`, and `fixedMute` - with Fixed
@@ -91,7 +97,7 @@ export class VolumeControl {
       const next = this.#queued;
       this.#queued = null;
       await this.send(next);
-    } else if (!this.dragging) {
+    } else if (!this.dragging && !this.#stepping) {
       this.settling = false;
     }
   }
@@ -128,8 +134,15 @@ export class VolumeControl {
   /** A step from the D-pad (ADR-0161 D3): Left or Right on the slider,
    *  `delta` percent from the level shown. */
   step(delta) {
-    this.settling = true;
+    // From the level shown before this step holds its own.
     this.local = Math.min(100, Math.max(0, this.shown + delta));
+    this.settling = true;
+    this.#stepping = true;
+    clearTimeout(this.#stepTimer);
+    this.#stepTimer = setTimeout(() => {
+      this.#stepping = false;
+      if (!this.dragging && !this.#inFlight && this.#queued === null) this.settling = false;
+    }, STEP_HOLD_MS);
     this.send(this.local);
   }
 

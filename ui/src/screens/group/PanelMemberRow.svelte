@@ -43,7 +43,7 @@
       <span class="small"><VolumeIcon percent={level} muted={m.muted} /></span>
     </button>
     <div class="track" role="slider" tabindex="-1" aria-label={`${m.name} volume`}
-         aria-valuemin="0" aria-valuemax="100" aria-valuenow={level ?? 0}
+         aria-valuemin="0" aria-valuemax="100" aria-valuenow={level ?? 0} data-step={DPAD_STEP}
          ondpadstep={(event) => { onlevel?.(Math.max(0, Math.min(100, (level ?? 0) + event.detail.step * DPAD_STEP))); ondone?.(); }}
          onpointerdown={drag.down} onpointermove={drag.move} onpointerup={drag.up} onpointercancel={drag.up}>
       <div class="rail">

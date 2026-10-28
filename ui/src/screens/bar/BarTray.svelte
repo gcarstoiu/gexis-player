@@ -143,10 +143,12 @@
     gLocal = Math.round(Math.max(0, Math.min(1, (x - r.left) / r.width)) * 100);
     gsend.send(gLocal, gFrom);
   }
+  let gTimer;
   function gUp() {
     gFrom = null;
     // The members' own reports take over once they arrive.
-    setTimeout(() => { if (gFrom === null) gLocal = null; }, 1200);
+    clearTimeout(gTimer);
+    gTimer = setTimeout(() => { if (gFrom === null) gLocal = null; }, 1200);
   }
   const slide = {
     down(x, target, pointerId) {
@@ -167,7 +169,9 @@
       if (!grouped) return vol.step(delta);
       if (!gVariable) return;
       gFrom = dragStart($group);
-      gLocal = Math.max(0, Math.min(100, ($group?.level ?? 0) + delta));
+      // From the level shown: a scroll sends several steps before the
+      // members' answer arrives.
+      gLocal = Math.max(0, Math.min(100, (gLocal ?? $group?.level ?? 0) + delta));
       gsend.send(gLocal, gFrom);
       gUp();
     },
@@ -397,6 +401,7 @@
       aria-valuemin="0"
       aria-valuemax="100"
       aria-valuenow={pct}
+      data-step="2"
       ondpadstep={(event) => slide.step(event.detail.step * 2)}
       onpointerdown={down}
       onpointermove={move}

@@ -53,9 +53,25 @@
     seek(at);
     heldTimer = setTimeout(() => (held = null), 1500);
   }
+  //: A scroll along the bar (lib/scrollSlide.js): 5 s a step, sought once
+  //: the steps stop.
+  const STEP_S = 5;
+  let stepping = null;
+  function seekStep(step) {
+    const duration = head.duration ?? 0;
+    if (!canSeek || seeking || !duration) return;
+    clearTimeout(heldTimer);
+    held = Math.max(0, Math.min(1, fraction + (step * STEP_S) / duration));
+    clearTimeout(stepping);
+    stepping = setTimeout(() => {
+      stepping = null;
+      seek(held * duration);
+      heldTimer = setTimeout(() => (held = null), 1500);
+    }, 400);
+  }
   $effect(() => {
     void $metadata?.position;
-    if (!seeking && held !== null) {
+    if (!seeking && !stepping && held !== null) {
       clearTimeout(heldTimer);
       heldTimer = setTimeout(() => (held = null), 200);
     }
@@ -73,6 +89,7 @@
   <div class="played" class:is-idle={!hasTrack} inert={!hasTrack}>
     <div class="seek" class:can-seek={canSeek} role="slider" tabindex="-1" aria-label="Position"
          aria-valuemin="0" aria-valuemax={Math.round(head.duration ?? 0)} aria-valuenow={Math.round(fraction * (head.duration ?? 0))}
+         aria-disabled={!canSeek} data-step={STEP_S} ondpadstep={(e) => seekStep(e.detail.step)}
          onpointerdown={down} onpointermove={move} onpointerup={up} onpointercancel={up}>
       <span class="seek__track" class:is-live={hasTrack && !head.hasPosition}>
         {#if hasTrack && head.hasPosition}<span class="seek__fill" style:width={`${fraction * 100}%`}></span>{/if}

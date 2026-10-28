@@ -42,10 +42,12 @@
     local = at(event);
     sender.send(local);
   }
+  let upTimer;
   function up() {
     held = null;
     // The member's own report takes over once it arrives.
-    setTimeout(() => { if (held === null) local = null; }, 1200);
+    clearTimeout(upTimer);
+    upTimer = setTimeout(() => { if (held === null) local = null; }, 1200);
   }
   function step(delta) {
     local = Math.max(0, Math.min(100, level + delta));
@@ -93,7 +95,7 @@
         <span class="fixed"><span class="lock"><i></i><b></b></span><span class="fixed__text">Fixed output</span></span>
       {:else}
         <div class="slider" role="slider" tabindex="-1" aria-label={`${m.name} volume`}
-          aria-valuemin="0" aria-valuemax="100" aria-valuenow={level}
+          aria-valuemin="0" aria-valuemax="100" aria-valuenow={level} data-step="2"
           ondpadstep={(event) => step(event.detail.step * 2)}
           onpointerdown={down} onpointermove={move} onpointerup={up} onpointercancel={up}>
           <div class="rail" bind:this={rail} data-dpad-box>

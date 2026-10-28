@@ -59,6 +59,15 @@
     allDrag.target = ratio(event, allDrag.el) * 100;
     allSender.send(allDrag.target, allDrag.from);
   }
+  //: A scroll along it (lib/scrollSlide.js), 2 a step, held as a drag is.
+  function allStep(step) {
+    if (!g || allFixed) return;
+    const from = allDrag?.up ? allDrag.from : dragStart(g);
+    allDrag = { from, target: Math.max(0, Math.min(100, allLevel + step * 2)), el: null, up: true };
+    allSender.send(allDrag.target, from);
+    const drag = allDrag;
+    settleLater('all', () => { if (allDrag === drag) allDrag = null; });
+  }
   function allUp() {
     if (!allDrag) return;
     allDrag.up = true;
@@ -85,6 +94,13 @@
     if (!memberDrag || memberDrag.up) return;
     memberDrag.level = Math.round(ratio(event, memberDrag.el) * 100);
     memberSender.send(memberDrag.id, memberDrag.level);
+  }
+  function memberStep(m, step) {
+    if (m.muted && memberDrag?.id !== m.id) setMemberMute(m.id, false).catch(told);
+    memberDrag = { id: m.id, level: Math.max(0, Math.min(100, levelOf(m) + step * 2)), el: null, up: true };
+    memberSender.send(m.id, memberDrag.level);
+    const drag = memberDrag;
+    settleLater('member', () => { if (memberDrag === drag) memberDrag = null; });
   }
   function memberUp() {
     if (!memberDrag) return;
@@ -114,8 +130,8 @@
     <div class="all">
       <span class="all__name">All</span>
       <div class="all__bar" role="slider" tabindex="0" aria-label="Group volume" aria-valuemin="0" aria-valuemax="100"
-           aria-valuenow={allLevel} onpointerdown={allDown} onpointermove={allMove} onpointerup={allUp}
-           onpointercancel={allUp}>
+           aria-valuenow={allLevel} data-step="2" ondpadstep={(e) => allStep(e.detail.step)}
+           onpointerdown={allDown} onpointermove={allMove} onpointerup={allUp} onpointercancel={allUp}>
         <span class="fill" class:is-muted={allMuted} style:width={`${allFixed ? 0 : allLevel}%`}></span>
         <span class="value" class:is-dark={!allMuted && allLevel > 86}>{allFixed ? 'Fixed' : allMuted ? 'Off' : allLevel}</span>
       </div>
@@ -145,7 +161,8 @@
             </div>
           {:else}
             <div class="bar" role="slider" tabindex="0" aria-label={`${m.name} volume`} aria-valuemin="0"
-                 aria-valuemax="100" aria-valuenow={muted ? 0 : level}
+                 aria-valuemax="100" aria-valuenow={muted ? 0 : level} data-step="2"
+                 ondpadstep={(e) => memberStep(m, e.detail.step)}
                  onpointerdown={(e) => memberDown(e, m)} onpointermove={memberMove} onpointerup={memberUp}
                  onpointercancel={memberUp}>
               <span class="fill" class:is-muted={muted} style:width={`${level}%`}></span>

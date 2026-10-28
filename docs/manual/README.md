@@ -467,7 +467,8 @@ The screen can be used without touching it: with Home Assistant's *D-pad*
 Open the player's address in a phone's browser, for example
 **http://gexis.local:8090** (the name is your player's, chosen at setup).
 Nothing needs installing; the phone and the player only need to be on the
-same network.
+same network. A computer's browser opens it too; there a sideways scroll
+over a slider, with two fingers on the touchpad, moves it.
 
 The phone page is a **remote** for the player. At the top, the player's
 name with what it is doing (*Playing · Lyrion*, *Paused · Spotify*,
@@ -499,6 +500,7 @@ For a player with a screen, the remote has, from the top:
     | One finger | Moves the pointer on the screen. |
     | Tap | Presses what the pointer is on. |
     | Two fingers up or down, or sideways | Scroll what is under the pointer. |
+    | Two fingers along a slider | Move the slider: sideways, or up and down on an equaliser band. |
     | One finger along the line at the right or the bottom | Scrolls with one finger. |
     | Pinch | Zooms the screen in or out around the pointer. |
 

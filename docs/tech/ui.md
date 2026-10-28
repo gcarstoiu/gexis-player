@@ -272,6 +272,7 @@ attributes and two events, so a new screen needs nothing in the module:
 | `data-dpad-back` | what Back presses (a screen's Back, Minimise, Cancel) |
 | `dpadback` event | a layer closing itself on Back (`preventDefault()` when done) |
 | `dpadstep` event | Left or Right on a custom slider (`detail.step`: +1 or -1); Up or Down on one with `aria-orientation="vertical"` (the equaliser's bands), whose Left and Right go to its neighbours |
+| `data-step` | a custom slider's step in its own units (`aria-valuemin` to `aria-valuemax`): a scroll along it sends one `dpadstep` per step's length (`lib/scrollSlide.js`) |
 | `data-dpad-box` | inside a control: the parts the ring goes round |
 | `data-dpad-ring="inset"` / `"outside"` | the ring's form, where the rule would choose the other |
 | `data-dpad-skip`, `data-dpad-off` | not a stop; a screen the D-pad leaves alone (setup, updates) |
@@ -619,7 +620,11 @@ blank theme). As built:
 - **Taps** dispatch real pointer and mouse events at
   `document.elementFromPoint`, then focus the field if one is there.
 - **Two fingers** either scroll (the scroll is applied smoothly over several
-  frames) or pinch-zoom the panel up to 3x.
+  frames) or pinch-zoom the panel up to 3x. Along a slider - sideways, or
+  up and down on an upright one - they move it instead (`lib/scrollSlide.js`),
+  as a computer's touchpad or wheel does on every surface: the slider's
+  `dpadstep` once per `data-step` of travel, so the knob keeps up with the
+  fingers. A wheel's deltas are taken as a natural-scrolling touchpad's.
 - **The panel's work per move**: what lies under the pointer (`look`:
   `elementFromPoint`, hover events, the outline) is asked at most every
   80 ms while the pointer moves, and on the frame it stops, not every frame.

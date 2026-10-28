@@ -23,8 +23,9 @@
 //   Minimise, a sheet's Cancel), or a `dpadback` listener on the layer that
 //   calls `preventDefault()` once it has closed itself;
 // - a `dpadstep` listener (`detail.step` +1 or -1) on a custom slider
-//   (Left and Right; Up and Down on one with `aria-orientation="vertical"`), and
-//   `data-dpad-box` inside a control on the parts the ring goes round;
+//   (Left and Right; Up and Down on one with `aria-orientation="vertical"`;
+//   a scroll along it sends the same, one per `data-step`, scrollSlide.js),
+//   and `data-dpad-box` inside a control on the parts the ring goes round;
 // - `data-dpad-off` on the screens the D-pad leaves to the phone (D8);
 // - `data-dpad-cover` on a screen over everything that a press only takes
 //   down (the idle screen, a takeover's).
@@ -32,6 +33,8 @@
 // **The phone's remote drives it too** (ADR-0164): its D-pad arrives as
 // these keys, and `dpadring` says whether OK would land in a text field, so
 // the phone can bring up its keyboard in the same touch.
+
+import { stepSlider } from './scrollSlide.js';
 
 const KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Enter: 'ok', Escape: 'back' };
 
@@ -174,7 +177,6 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
   let follow = 0;
   let nudge = null;
   let nudgeTimer;
-  let changeTimer;
   let lostTimer;
   // What OK pressed, newest last: Back brings the ring back to the control
   // that opened the screen it leaves, found by its name (screens are drawn
@@ -345,15 +347,7 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
   }
 
   function step(el, dir) {
-    if (el.matches('input[type="range"]')) {
-      if (dir > 0) el.stepUp(); else el.stepDown();
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-      // Saved once the presses stop, not at each one.
-      clearTimeout(changeTimer);
-      changeTimer = setTimeout(() => el.dispatchEvent(new Event('change', { bubbles: true })), 400);
-    } else {
-      el.dispatchEvent(new CustomEvent('dpadstep', { detail: { step: dir }, bubbles: true }));
-    }
+    stepSlider(el, dir);
     nudge = dir;
     clearTimeout(nudgeTimer);
     nudgeTimer = setTimeout(() => { nudge = null; draw(); }, 300);
@@ -531,7 +525,6 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
     observer.disconnect();
     cancelAnimationFrame(checking);
     clearTimeout(nudgeTimer);
-    clearTimeout(changeTimer);
     clearTimeout(lostTimer);
     ring.remove();
   };

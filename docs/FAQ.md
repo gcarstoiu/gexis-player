@@ -533,9 +533,9 @@ screen, or in the streaming app.
 
 **How does the touchpad work?**
 The touch area is a **trackpad**: one finger moves a pointer on the screen,
-a tap presses, two fingers scroll, and a pinch zooms. What the pointer is
-over is outlined when it can be pressed. The lines along the right and
-bottom edges scroll with one finger. Tapping a text field on the screen
+a tap presses, two fingers scroll - along a slider, they move it - and a
+pinch zooms. What the pointer is over is outlined when it can be pressed.
+The lines along the right and bottom edges scroll with one finger. Tapping a text field on the screen
 brings up the phone's keyboard. The switch at the top of the area changes to
 a **D-pad**: four arrows and OK, as buttons, with a teal ring on the screen
 showing where you are. If the remote stops answering, it reconnects by

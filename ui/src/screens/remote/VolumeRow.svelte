@@ -61,7 +61,7 @@
       const next = queued;
       queued = null;
       await send(next);
-    } else if (!dragging) {
+    } else if (!dragging && !stepHeld) {
       settling = false;
     }
   }
@@ -94,9 +94,15 @@
   //: jumps back to the old mean first.
   const SETTLE_MS = 1500;
   let settle = null;
+  //: Alone too, after a step (a key, a scroll), which starts from the level
+  //: shown: a scroll sends steps faster than the player answers.
+  let stepHeld = false;
   function settleLater() {
     clearTimeout(settle);
-    settle = setTimeout(() => { if (!dragging) settling = false; }, SETTLE_MS);
+    settle = setTimeout(() => {
+      stepHeld = false;
+      if (!dragging && !inFlight && queued === null) settling = false;
+    }, SETTLE_MS);
   }
   onDestroy(() => clearTimeout(settle));
   function up() {
@@ -112,15 +118,22 @@
     const step = { ArrowRight: 2, ArrowUp: 2, ArrowLeft: -2, ArrowDown: -2 }[event.key];
     if (step === undefined) return;
     event.preventDefault();
-    local = Math.min(100, Math.max(0, shown + step));
+    stepBy(step);
+  }
+  //: A key, or a scroll along the bar (lib/scrollSlide.js): `delta` per cent
+  //: from the level shown.
+  function stepBy(delta) {
+    if (g && groupFixed) return;
+    local = Math.min(100, Math.max(0, shown + delta));
     if (g) {
-      if (groupFixed) return;
       groupSender.send(local, dragStart(g));
       settling = true;
       settleLater();
       return;
     }
     settling = true;
+    stepHeld = true;
+    settleLater();
     send(local);
   }
   function toggleMute(event) {
@@ -164,6 +177,8 @@
       aria-valuemin="0"
       aria-valuemax="100"
       aria-valuenow={muted ? 0 : shown}
+      data-step="2"
+      ondpadstep={(event) => stepBy(event.detail.step * 2)}
       onpointerdown={down}
       onpointermove={move}
       onpointerup={up}

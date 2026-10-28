@@ -57,7 +57,9 @@
   function allStep(step) {
     if (!variable.length) return;
     const start = dragStart(g);
-    const target = Math.max(0, Math.min(100, (g.level ?? 0) + step * DPAD_STEP));
+    // From the level shown: a scroll sends several steps before the
+    // members' answer arrives.
+    const target = Math.max(0, Math.min(100, allLevel + step * DPAD_STEP));
     allLocal = target;
     local = stepped(start, target);
     allSender.send(target, start);
@@ -111,7 +113,7 @@
     <VolumeIcon percent={allLevel} muted={g.muted} />
   </button>
   <div class="track" role="slider" tabindex="-1" aria-label="All players volume"
-       aria-valuemin="0" aria-valuemax="100" aria-valuenow={allLevel} data-dpad-main
+       aria-valuemin="0" aria-valuemax="100" aria-valuenow={allLevel} data-dpad-main data-step={DPAD_STEP}
        ondpadstep={(event) => allStep(event.detail.step)}
        onpointerdown={allDrag.down} onpointermove={allDrag.move} onpointerup={allDrag.up} onpointercancel={allDrag.up}>
     <div class="rail">
