@@ -1,6 +1,10 @@
 {
  "_about": "Every release's notes, newest first, exactly as published and signed (ADR-0116). publish.sh reads a release's notes from here; Settings -> Change logs shows the last 10.",
  "releases": {
+  "1.9.0": {
+   "date": "2026-10-28",
+   "notes": "New\n• AirPlay 2: an iPhone, iPad or Mac plays to the player, listed under its own name. Marked Limited testing until it has been tried with an Apple device.\n• Make it yours offers AirPlay, on in every preset.\n\nFixed\n• A grouped player with the equaliser on plays in time with the rest of its group.\n• The Credits page names OpenCV, NumPy and the two picture models the player uses.\n\nGood to know\n• On a player updated from an earlier release, AirPlay is off until switched on in Settings → Plugins.\n• While AirPlay plays, play, pause and skip are on the Apple device; AirPlay sends 44.1 or 48 kHz."
+  },
   "1.8.0": {
    "date": "2026-10-28",
    "notes": "New\n• Several rooms together: Gexis players on the same network play the same music in sync, from every source, joined from the phone, the panel or a bar, each keeping its own volume.\n• Players synced in a Lyrion app are grouped on the players too; a group playing Lyrion plays through Lyrion's own sync.\n• A sideways scroll over a slider moves it, from the phone's touchpad or a computer's.\n\nFixed\n• After a mute, the volume returns to the level it was at.\n• The equaliser's switch moves the moment it is pressed.\n• The phone page catches up at once after the phone has been asleep.\n\nGood to know\n• In a group every player plays about 0.4 seconds late, so that all play together.\n• A player joining a group stops what it was playing; every player of a group needs 1.8.0."
