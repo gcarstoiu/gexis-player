@@ -39,15 +39,19 @@ image build; check `df -h /` before one (1.9 GB free after 1.7.0's).
 built 2026-10-28). [ADR-0166](docs/decisions/0166-multiroom-for-every-source.md):
 George's decisions 1-10 (10, 2026-10-28: Lyrion's syncs are Gexis groups),
 C1-C6 confirmed, D1 as Finding 139 found it, the design `design/source/22/`
-(picks 1a, 2a, 3a), and Claude's build decisions B1-B12 **waiting for
+(picks 1a, 2a, 3a), and Claude's build decisions B1-B13 **waiting for
 George's confirmation**. Built: core (`group.py`, `multiroom.py`,
 `snapcast.py`, the grouped chain in `outputs.py`, Lyrion's sync in the LMS
 adapter, the `/group` routes), the UI on the phone, the panel and the bars,
 the manual's section 6, the FAQ, the technical guide, README, the plugin
-manual. **Preview 4** (`1.7.0+git42.8aedb1d`, core and player; ui
-`git39.a3dc6a3`, system `git38.d9a696d`, Debian's `snapserver` and
-`snapclient` 0.31.0-1 installed from the downloaded files) on sofapi, the
-bar, guestpi and bedroompi, the branch's head. The integration's join and unjoin: its `multiroom` branch
+manual. **Preview 6** (`1.7.0+git44.839b618`, core, ui and player; system
+`git38.d9a696d`, Debian's `snapserver` and `snapclient` 0.31.0-1 installed
+from the downloaded files) on sofapi, the bar, guestpi and bedroompi, the
+branch's head. George's first two findings are fixed in it: a group of
+sofapi and the bar did not play (preview 5, `e476a4e`: the equaliser's
+watch held the first loopback, so the group's card was never made and the
+renderers stayed stopped), and the *All* slider jumped back with the
+members at different levels (preview 6, B13). The integration's join and unjoin: its `multiroom` branch
 (`9744bb3`), for its release after the player's. **Open:** the measurement
 with George (the delay, the rooms by ear, an hour without a dropout, the
 cost with the equaliser and the visualiser, the gaps); Lyrion's half on a
@@ -66,7 +70,7 @@ The wiki Roadmap shows Phases 20 and 21 done and the Harmony Hub ideas
 to `~/.gnupg-gexis-release`, which no longer exists.
 
 **The players**: sofapi, the bar (ShelvesPi), guestpi and bedroompi on
-Phase 22's preview 4 (2026-10-28, above).
+Phase 22's preview 6 (2026-10-28, above).
 
 **The test venv imports the core from `~/projects/gexis-player-next`** (an
 editable install): in another worktree run the suite with `PYTHONPATH=src`

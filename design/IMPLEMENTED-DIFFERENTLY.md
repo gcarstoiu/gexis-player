@@ -908,3 +908,9 @@ is silent or production differs, for George to confirm:
   head, the *All* row or the note; its members' rows scroll on their own.
 - **[S]** A refused join or a member that does not answer is said in each
   surface's own note (the remote's, the drawer's, the tray's toast).
+- **[S]** The *All* slider moves each member the same share of its own way
+  (up, of its way to 100; down, of its way to 0), not the same step: with
+  one member at 100, the same step held the mean below the finger and the
+  slider jumped back (ADR-0166 B13). The phone's note says so: *The group
+  slider moves each player the same share of its way up or down, so a
+  louder room stays louder.*
