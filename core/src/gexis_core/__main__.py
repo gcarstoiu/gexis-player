@@ -703,9 +703,10 @@ async def main() -> None:
             )
         if _squeezelite_env() != squeezelite_env_was:
             # ADR-0143: Squeezelite reads its options only when it starts, and
-            # it started before this core (ADR-0140) - unlike the chain, which
-            # it reads at its next open. Restarted now, unless it is playing:
-            # then the next change of output does it.
+            # it started before this core (ADR-0140) - the chain too: a process
+            # keeps the ALSA configuration it read first (LESSONS 81, 84), and
+            # a rewritten chain restarts the renderers above. Restarted now,
+            # unless it is playing: then the next change of output does it.
             if outputs.card_running(chosen_output.card):
                 logger.info("outputs: squeezelite's options changed while %s plays; "
                             "they apply at its next start", chosen_output.label)
@@ -1420,7 +1421,7 @@ async def main() -> None:
         async with volume_change:
             await _switch_output()
 
-    async def _restart_renderers(wait: bool = False) -> None:
+    async def _restart_renderers(wait: bool = False, keep: frozenset[str] = frozenset()) -> None:
         """**The renderers whose source is on, and only those** (ADR-0077).
 
         A plain `systemctl restart` of all three starts a unit that is stopped
@@ -1430,10 +1431,11 @@ async def main() -> None:
         volume chain: go-librespot offered to phones under a switch saying
         off, or squeezelite with no server finding one on the network by
         itself (code review, 2026-10-12)."""
-        units = [adapters[rid].unit_name for rid in RENDERER_ROWS if renderer_enabled(rid)]
+        units = [adapters[rid].unit_name for rid in RENDERER_ROWS
+                 if renderer_enabled(rid) and adapters[rid].unit_name not in keep]
         # A renderer plugin's unit by its own switch, which is its unit's
         # enabled state (ADR-0086).
-        plugin_restarts = [restart_if_enabled(unit) for unit in _plugin_renderer_units()]
+        plugin_restarts = [restart_if_enabled(unit) for unit in _plugin_renderer_units() if unit not in keep]
         if units:
             restart = await asyncio.create_subprocess_exec("systemctl", "restart", *units)
             if wait:
@@ -4775,10 +4777,13 @@ async def main() -> None:
 
     async def _group_rechain() -> None:
         """The chain rewritten for the group, under the lock a change of
-        output takes. **Renderers restarted only when one plays or holds the
-        device** (bedroompi, 2026-10-28: restarting all of them, Plexamp
-        and the plugins with them, took a join 26 s): an idle renderer reads
-        the new chain at its next open, as ALSA reads the file then."""
+        output takes. **Renderers restarted and waited for only when one
+        plays or holds the device** (bedroompi, 2026-10-28: waiting for all
+        of them, Plexamp and the plugins with them, took a join 26 s). **The
+        idle ones restart too, unwaited**: a renderer that has opened ALSA
+        keeps the configuration it read first (LESSONS 81, 84) - on sofapi,
+        out of a group, bluealsa-aplay went on writing every Bluetooth stream
+        into the group's loopback."""
         async with volume_change:
             units = [a.unit_name for a in adapters.values() if getattr(a, "unit_name", None)]
             units += _plugin_renderer_units()
@@ -4802,21 +4807,10 @@ async def main() -> None:
             if chosen is None:
                 logger.error("outputs: nothing to write the group's chain to")
                 return
-            try:
-                env_was = outputs.SQUEEZELITE_ENV.read_text()
-            except OSError:
-                env_was = None
             outputs.write(chosen, tuning=_tuning(), fixed=fixed_wanted["value"])
             await _equaliser_follows(chosen)
-            try:
-                env_now = outputs.SQUEEZELITE_ENV.read_text()
-            except OSError:
-                env_now = None
-            if env_now != env_was and renderer_enabled("lms"):
-                # Squeezelite reads its options only when it starts (ADR-0143).
-                await (await asyncio.create_subprocess_exec(
-                    "systemctl", "restart", "squeezelite.service")).wait()
-            logger.info("outputs: the group's chain is in place; nothing played, nothing restarted")
+            await _restart_renderers(wait=False)
+            logger.info("outputs: the group's chain is in place; nothing played, the renderers restart to read it")
 
     def _wait_block(text: str | None) -> str | None:
         if not text or "pcm.output_wait {" not in text:
@@ -4858,6 +4852,9 @@ async def main() -> None:
             # The file as written differs where Squeezelite reads (DSD's
             # chain): it reopens, as any rewrite makes it.
             await _restart_renderers(wait=True)
+        else:
+            # The others, idle, read the new `output` only if restarted.
+            await _restart_renderers(wait=False, keep=frozenset({"squeezelite.service"}))
         _watch_renderers_cards(chosen.card)
         logger.info("outputs: the group's chain is in place under Lyrion, which plays on")
         return True
