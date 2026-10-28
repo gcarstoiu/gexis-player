@@ -75,8 +75,7 @@ leader's sync no longer stopped on joining (a Lyrion-app sync paused
 itself), the level after a mute the renderer's own again, the equaliser's
 switch moving at once (preview 13). **1.8.0 for Testing being cut**
 (George, 2026-10-28): `ph-multiroom` merged into `next` (6ec5070e; core
-2800 passed, the UI builds); the notes drafted for his approval; the blog
-post drafted (local only). Still open: the 192 kHz measurement session,
+2800 passed, the UI builds); the notes drafted for his approval. Still open: the 192 kHz measurement session,
 the Home Assistant integration's release, back and forth between Lyrion-app
 grouping and the player's.
 After that fix, one phone app over Bluetooth still delivered silence -
