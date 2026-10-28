@@ -742,7 +742,9 @@ Lyrion*, *Idle*), this one marked; another opens in the same tab. Phone only.
 
 **[S] The touchpad** takes half the phone's height, with two-finger scrolling
 and a 1-3x pinch; over the dashboard its taps and typing become real input
-(ADR-0121, ADR-0157).
+(ADR-0121, ADR-0157). Along a slider two fingers move it, as a computer's
+touchpad does over any slider (George, 2026-10-28; ADR-0121 amended); no
+design draws it.
 
 ### Phase 19: the focus and the card (2026-10-25)
 
