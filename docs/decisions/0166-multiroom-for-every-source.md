@@ -174,6 +174,49 @@ play control. Its rules, beyond the decisions above:
 - The leader gone: the others fall silent and stay grouped (C2); its panel
   shows Home.
 
+## Claude's decisions in the build (2026-10-28, for George to confirm)
+
+- **B1 — A change reaches the members at once**, and each player puts it in
+  force after, in the order the changes were made: an undo reached the
+  leader 26 s late while the asker restarted its renderers (guestpi and
+  bedroompi). Of two changes made at once to one group, the later wins.
+- **B2 — Forming or leaving a group restarts a renderer only when one plays
+  or holds the device**, and not Squeezelite playing Lyrion when its own
+  chain is unchanged (one Lyrion server). So joining a player that plays
+  Spotify, Bluetooth or Plexamp to a group interrupts it a moment, as the
+  equaliser's switch does; a player that was idle is not touched.
+- **B3 — Undo keeps the music on the leader without a cut**: it plays on
+  through its own server until the stream ends, then plays alone.
+- **B4 — Every member runs its server**, idle (about 1.5 % of a core
+  measured), so a source started on any of them leads at once.
+- **B5 — The buffer is 400 ms** until the measurement (D7); the manual and
+  the FAQ say *about 0.4 seconds*.
+- **B6 — A member's card that cannot take the stream's rate** is given its
+  highest by the client's resampler, as the equaliser and Squeezelite's
+  own do; one that cannot take 32 bits, its widest (padding undone exactly).
+- **B7 — Lyrion's apps set each player's own volume** in a group (Lyrion's
+  sync group has its own); Spotify's and a volume-handing plugin's move the
+  group (D6).
+- **B8 — Lyrion's sync is kept as the group is while grouped** (one
+  server), so Lyrion started on any member plays on all; the leader switches
+  the members' players on while Lyrion plays there. Of a sync made in a
+  Lyrion app, Lyrion's master (or the first Gexis player synced) makes the
+  group here; a player unsynced there leaves (the leader hands the lead on
+  first).
+- **B9 — A player older than multiroom** is listed without Join, its state
+  followed by *Update to join*.
+- **B10 — The group is not in a backup**: a restored player plays alone; a
+  reflashed member, still in the others' group, is given the group again
+  when it is next seen.
+- **B11 — Home Assistant's unjoin of the leader undoes its group**, as the
+  design gives the leader no Leave.
+- **B12 — The UI's choices where the drawing is silent or production
+  differs** are listed in `design/IMPLEMENTED-DIFFERENTLY.md` (*Multiroom*):
+  among them, the panel's and the bar's group controls offered only when
+  another player is found; *or* in the leader-gone note; the bar's progress
+  row moved up when grouped; no new way to the group from Home on a member
+  whose leader is off.
+
 ## Settings (ADR-0022)
 
 None proposed. The group is the players' state, not a setting; the buffer is
