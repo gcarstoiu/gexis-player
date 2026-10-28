@@ -9,12 +9,13 @@ Schiller's *Ode to Joy* (1785). The addresses shown are examples.
 Gexis Player is a music player for the Raspberry Pi with a high-quality
 DAC; it needs a Raspberry Pi 4 or newer, and the Pi 4 is the model it is
 built and tested on. It plays your Lyrion (Logitech Media Server) library,
-Spotify Connect, Bluetooth and Plexamp, one at a time, and switches to
+Spotify Connect, AirPlay, Bluetooth and Plexamp, one at a time, and switches to
 whichever one you start. Several players can play the same music together,
 in sync, in several rooms (section 6). You control it
 from its own touch screen (the *panel*), from any phone or computer on the
 same network (the *phone page*), or from the apps you already use: a
-Lyrion app, Spotify, or your phone's Bluetooth.
+Lyrion app, Spotify, AirPlay from an iPhone, iPad or Mac, or your phone's
+Bluetooth.
 
 ## Contents
 
@@ -247,21 +248,46 @@ available*.
 
 ## 5. When another source takes over
 
-Only one source plays at a time. When you start Spotify, Bluetooth or
-Plexamp from your phone, that source **takes over**: Lyrion pauses, a short
+Only one source plays at a time. When you start Spotify, AirPlay, Bluetooth
+or Plexamp from your phone, that source **takes over**: Lyrion pauses, a short
 transition screen shows who took the player, and Now Playing shows the new
 source. When that session ends, the player can give itself back to Lyrion
 (*Settings → Handoff → Reclaim Lyrion when a session ends*, off by default), or
 you can start Lyrion again from the panel.
 
-Spotify starts at the **Starting volume** you set, however loud the Spotify
-app was last time, so a takeover never starts at full volume.
+Spotify and AirPlay start at the **Starting volume** you set, however loud
+the app was last time, so a takeover never starts at full volume.
+
+### AirPlay, from an iPhone, iPad or Mac
+
+The player is in the AirPlay list of every iPhone, iPad and Mac (macOS 10.15
+or later) on the same network, under its own name. On an iPhone or iPad, tap
+the AirPlay button where the music plays and choose the player; on a Mac,
+choose it as the sound output.
+
+- **Now Playing** shows the title, artist, album, cover and progress the
+  Apple device sends.
+- **Play, pause and skip are on the Apple device**: the player does not
+  offer them for AirPlay yet.
+- **The volume**: the Apple device's slider moves the player's volume. The
+  player's own volume moves only the player, so the two sliders can differ.
+  With Volume on *Fixed*, the Apple device's slider does not change the
+  level.
+- **The sound** arrives at 44.1 or 48 kHz, as AirPlay sends it; AirPlay does
+  not carry high-resolution audio.
+- **A new player has AirPlay on**; a player updated from an earlier release
+  has it off until it is switched on in *Settings → Sources → AirPlay*.
+
+AirPlay is a trademark of Apple Inc., registered in the U.S. and other countries and regions.
 
 ## 6. Several rooms together
 
 Gexis players on the same home network can play the same music together, in
-sync - a **group**. It works for every source: Lyrion, Spotify, Bluetooth,
-Plexamp and what plugins add.
+sync - a **group**. It works for every source: Lyrion, Spotify, AirPlay,
+Bluetooth, Plexamp and what plugins add. AirPlay can also send to several
+players itself, picked together in the Apple device's AirPlay list: that is
+for players not in a group here. With a group, choose one of its players in
+the AirPlay list, and the whole group plays.
 
 **Making a group.** On the phone, tap the player's name at the top for
 *Gexis players*: every other player has **Join**. Joining a player to this
@@ -636,6 +662,7 @@ still mounted.
 | Lyrion Client: Navigation | How you move around your library on the screen, one choice: **Simple** - the home tiles, albums, artists, playlists and radio; **Extended** - Lyrion's own menus as well: My Music, Favourites, Apps (section 4); **Off** - only what is playing and the sources, with no library to browse; Lyrion's apps on your phone still play to the player. |
 | Spotify Connect: Enabled | The player appears as a Spotify Connect device. |
 | Spotify Connect: Starting volume | The loudest Spotify starts at when it takes over. Hidden with Volume on *Fixed*. |
+| AirPlay: Enabled | The player is in the AirPlay list of iPhones, iPads and Macs on the network. On for a new player; off on a player updated from an earlier release until switched on. |
 | Bluetooth: Enabled | The player accepts Bluetooth audio. |
 | Bluetooth: Pairing | *Confirmation required* shows a six-digit code on the panel to accept; *PIN-free* pairs anything in range. |
 | Bluetooth: Discoverable | Whether phones can find the player: *Always* (the default), *3 min after boot* or *Off*. With *Pairing* on *Confirmation required*, a new phone still has to be accepted on the screen. |
@@ -700,7 +727,7 @@ which output it is setting.
 - **DSD** plays untouched: while a DSD track plays natively, the equaliser
   stands aside, and it is back for the next PCM track.
 
-Every source plays through it - Lyrion, Spotify, Bluetooth and Plexamp -
+Every source plays through it - Lyrion, Spotify, AirPlay, Bluetooth and Plexamp -
 and the visualiser shows the music as it arrives, before the equaliser.
 
 ### Display — *Screen and idle*
@@ -754,8 +781,9 @@ and the visualiser shows the music as it arrives, before the equaliser.
 ### Plugins — *What is installed beyond the player itself*
 
 Optional parts, each with its own switch: the **visualiser skins** for this
-screen's size, **Plexamp**, the **Lyrion Server** and the **Beszel**
-monitoring agent, among others. A plugin that needs software from its maker
+screen's size, **AirPlay** (in the player already, nothing to download),
+**Plexamp**, the **Lyrion Server** and the **Beszel** monitoring agent, among
+others. A plugin that needs software from its maker
 downloads it when switched on. Setup offers the same plugins, and the first
 start shows each download arriving. A plugin file can also be uploaded here.
 Each plugin's switch says its version (for example *Version 0.4.7*); the
@@ -774,7 +802,7 @@ Everything about the player itself, under seven headings.
 
 | Setting | What it does |
 | --- | --- |
-| Device name | One name for everything: the network address (*name*.local), the Lyrion player, the Spotify device and the Bluetooth name. A name is one line of text. |
+| Device name | One name for everything: the network address (*name*.local), the Lyrion player, the Spotify and AirPlay device and the Bluetooth name. A name is one line of text. |
 | Time zone | Taken from the network; set it by hand only when that is wrong. |
 
 **Network**

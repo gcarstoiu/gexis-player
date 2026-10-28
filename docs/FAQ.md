@@ -824,6 +824,24 @@ The phone is sending no track details. In the one case seen, the phone was
 in battery-saving mode, which can hold back what it sends; once that was off,
 the details came through. Not every app sends track details over Bluetooth.
 
+**The player does not appear in the AirPlay list.**
+Check *Settings → Sources → AirPlay → Enabled*: a new player has it on, a
+player updated from an earlier release has it off until it is switched on.
+The Apple device and the player must be on the same network; the player is
+listed under its device name.
+
+**Can I pause or skip from the player while AirPlay plays?**
+Not yet: AirPlay is controlled from the Apple device. The player shows what
+it plays - title, artist, album, cover and progress - and its volume.
+
+**Does AirPlay play in high resolution?**
+No. AirPlay sends 44.1 or 48 kHz, and the player plays it as it arrives.
+
+**How do I play AirPlay in several rooms?**
+Either group the players here (*Several rooms*) and choose one of them in the
+AirPlay list - the whole group plays - or, for players not grouped, choose
+several of them in the AirPlay list together.
+
 **How do I connect Plexamp?**
 Switch on *Plexamp* on the Plugins page (it is downloaded from Plex). Then, in
 its *Claim token* row under *Settings → Sources*, paste a token from

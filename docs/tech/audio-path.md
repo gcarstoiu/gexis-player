@@ -17,6 +17,7 @@ flowchart LR
         GL["go-librespot<br/>(Spotify Connect)"]
         BA["bluealsa-aplay<br/>(Bluetooth A2DP sink)"]
         PX["Plexamp<br/>(plugin renderer)"]
+        AP["Shairport Sync<br/>(AirPlay 2, plugin renderer)"]
     end
 
     subgraph ALSA["ALSA (/etc/alsa/conf.d)"]
@@ -31,6 +32,7 @@ flowchart LR
     GL -- "audio_device: output" --> OUT
     BA -- "--pcm=output" --> OUT
     PX -- "ALSA default" --> DEF --> OUT
+    AP -- "output_device output" --> OUT
     OW --> HW
     OUT --> HW
     OW -.-> SCOPE
@@ -92,6 +94,7 @@ each through that renderer's own control API, via an **adapter**
 | Lyrion (LMS) | `squeezelite.service` | LMS JSON-RPC + CometD push (`adapters/lms.py`) | the player's LMS **power** going on (`power_on`) | record transport + position, `pause 1`, `power 0` |
 | Spotify Connect | `go-librespot.service` | go-librespot local HTTP API + `/events` WebSocket on port 3678 (`adapters/spotify.py`) | `will_play`, `active` or `playing` events | `POST /player/pause`, short settle, `POST /player/stop` |
 | Bluetooth | `bluealsa-aplay.service` (with `bluealsa` and BlueZ) | BlueZ over D-Bus (`adapters/bluetooth.py`) | `MediaTransport1` or `MediaPlayer1` appearing | `Device1.Disconnect()` |
+| AirPlay (plugin, ADR-0167) | `gexis-shairport-sync.service`, with `gexis-nqptp` and the `gexis-airplay` plugin | the plugin over the socket; it reads Shairport Sync's metadata pipe and calls its D-Bus | the active-state hook asks the plugin, which sends `acquire` and lets Shairport Sync open the device on `device_freed` | `release`: D-Bus `DropSession`, then the ladder |
 | Plugin renderer (Plexamp) | the unit named in the plugin's manifest | JSON lines over a Unix socket (`adapters/plugin.py`, ADR-0084/0089) | the plugin sends `acquire` | the plugin is sent `release`, then the core kills the unit (ADR-0091) |
 
 Notes per renderer:
@@ -152,6 +155,16 @@ Notes per renderer:
   the device by killing its unit rather than waiting (ADR-0091); a new play
   queue counts as an acquisition (ADR-0092). It is claimed from Settings
   (ADR-0119).
+- **AirPlay** (ADR-0167): Shairport Sync 5.6.2 and NQPTP 1.2.9, built by
+  us for AirPlay 2 (`packaging/shairport-sync`, `packaging/nqptp`; Debian
+  trixie's is classic AirPlay only), run as `pi` like every renderer, with
+  `output_device = "output"` and `ignore_volume_control`: the sender's
+  slider (`pvol` on the metadata pipe) is reported by the plugin and applied
+  by the core. Its `run_this_before_entering_active_state` hook is waited
+  for, so the device is free before Shairport Sync opens it. It announces
+  itself through avahi, which AirPlay 2 needs (its TXT records change while
+  it runs). Covers arrive as pictures and reach the core in the contract's
+  `artwork` event. No transport controls are declared yet.
 - **Any renderer plugin** declares its capabilities in its `hello`
   (`docs/PLUGIN-CONTRACT.md`): acquisition events, release action, an
   optional release ladder, controls, and how its volume is handled.

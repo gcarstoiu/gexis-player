@@ -179,7 +179,10 @@ so a helper process holding it counts. Let go promptly and it never needs to.
 **What the panel shows** comes from `{"t": "metadata", "metadata": {...}}`:
 `title`, `artist`, `album`, `artwork` (a URL), `position` and `duration`
 (seconds), `transport` (`playing`, `paused`, `stopped`), and more in the
-contract. Send what you know; absent fields draw nothing.
+contract. Send what you know; absent fields draw nothing. A cover you hold as
+a picture rather than an address goes in an `artwork` event first; the
+player serves it, and your `artwork` names the path it is served at
+(`/plugins/<id>/artwork/<key>`, the contract says how the key is made).
 
 **Volume.** With `volume_mechanism: "software_api"`, report your level with
 `{"t": "volume", "value": 62, "steps": 100}` and apply `set_volume` when told.
