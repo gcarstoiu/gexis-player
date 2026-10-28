@@ -105,6 +105,7 @@ from gexis_core.equaliser import Equaliser
 from gexis_core.setup_network import SetupNetwork
 from gexis_core.setup_flow import SetupFlow
 from gexis_core.adapters.plugin import PluginAdapter
+from gexis_core.plugin_artwork import PluginArtwork, Refused as ArtworkRefused
 from gexis_core.plugin_server import PluginServer
 from gexis_core.systemd import is_enabled as _unit_is_enabled
 from gexis_core.systemd import disagreeing as disagreeing_units
@@ -4443,8 +4444,12 @@ async def main() -> None:
     )
     asyncio.ensure_future(equaliser.sync())
 
+    # ADR-0167 T9: covers a plugin hands over as bytes, served by the
+    # state server at /plugins/<id>/artwork/<key>.
+    plugin_art = PluginArtwork()
     state_server = StateServer(
         state_store,
+        plugin_artwork=plugin_art,
         lyrion_known=lyrion_known,
         cable=cable,
         wifi_address=wifi_address,
@@ -4669,6 +4674,7 @@ async def main() -> None:
             logger.warning("plugins: cannot withdraw %s's announcements: %s", session.id, exc)
         if settings.forget_reports(f"{session.id}."):
             state_store.bump_settings_revision()
+        plugin_art.forget(session.id)
         adapter = plugin_adapters.pop(session.id, None)
         if adapter is None:
             return
@@ -4699,6 +4705,16 @@ async def main() -> None:
                 return
             logger.info("plugins: announcing for %s: %s", session.id,
                         ", ".join(f"{s['name']} {s['type']} {s['port']}" for s in services) or "nothing")
+            return
+        if kind == "artwork":
+            # ADR-0167 T9: a cover as bytes, kept for the metadata that names
+            # it; any kind of plugin may send one, a renderer's is the use.
+            try:
+                key = plugin_art.put(session.id, message)
+            except ArtworkRefused as exc:
+                logger.warning("plugins: %s sent a cover that was refused: %s", session.id, exc)
+                return
+            logger.debug("plugins: %s handed over a cover, %s", session.id, key)
             return
         if kind == "row":
             # ADR-0119: a plugin says what one of its own rows is - a

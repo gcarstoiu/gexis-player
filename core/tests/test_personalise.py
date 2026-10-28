@@ -26,6 +26,7 @@ OFFERED = [
     {"id": "lyrion-server", "name": "Lyrion Server", "row": "lyrion-server.enabled", "component": "lyrion-server"},
     {"id": "plexamp", "name": "Plexamp", "row": "plexamp.enabled", "component": "plexamp"},
     {"id": "beszel", "name": "Beszel", "row": "beszel.enabled", "component": "beszel"},
+    {"id": "airplay", "name": "AirPlay", "row": "airplay.enabled", "component": None},
 ]
 
 
@@ -67,6 +68,17 @@ def test_answers_are_written_then_the_plugins_switched_on_then_the_downloads_fol
     assert [w["id"] for w in begun] == ["skins", "lyrion-server", "plexamp"]
     assert result == {"failed": [], "waiting": ["skins", "lyrion-server", "plexamp"],
                       "written": ["lms_library", "visualiser_skins", "skin_corpus", "lyrion-server.enabled", "plexamp.enabled"]}
+
+
+def test_airplay_is_written_either_way_and_waits_for_nothing():
+    """ADR-0167: in the image, so on or off it downloads nothing, and off is
+    written too, as Spotify's switch is."""
+    for on in (True, False):
+        settings, begun = FakeSettings(), []
+        values = personalise.checked({"airplay.enabled": on, "spotify_enabled": on})
+        result = personalise.apply(values, settings, OFFERED, begun.extend)
+        assert settings.values["airplay.enabled"] is on and result["failed"] == []
+        assert begun == []
 
 
 def test_one_refusal_is_named_and_the_rest_still_written():

@@ -88,14 +88,17 @@ source), [ADR-0149](0149-first-use-in-two-parts.md) (first use),
   --with-alsa --with-avahi --with-ssl=openssl --with-soxr --with-metadata
   --with-metadata-pipe --with-dbus-interface`), in the arm64 trixie builder,
   each commit and its source checksum checked. Debian's `shairport-sync` is
-  not installed.
+  not installed. Its build libraries are installed by its own build, not in
+  the builder image, whose one layer would be rebuilt whole (about 1.4 GB
+  on the build machine's `/`, which had 1.9 GB free).
 - **T2. Three packages, Plexamp's shape** (ADR-0090, ADR-0107): those two,
   and `gexis-airplay` - the adapter from its repository's tagged release,
   the manifest, the units and the configuration. All three in the player
   meta-package, so in the image.
 - **T3. The units.** NQPTP as upstream ships it (a dynamic user,
-  `CAP_NET_BIND_SERVICE` for 319 and 320). Shairport Sync under a system
-  user of its own, in `audio`, its name taken from
+  `CAP_NET_BIND_SERVICE` for 319 and 320). Shairport Sync as `pi`, in
+  `audio`, as every renderer runs (the output chain's meter pipes are
+  `pi`'s; a user of its own was the first draft), its name taken from
   `/etc/gexis/device-name.env` (ADR-0048), so a rename restarts it. The
   manifest's `unit` is Shairport Sync's, which opens the device; the
   adapter's unit is `PartOf` it, and the one switch starts and stops the
@@ -119,6 +122,14 @@ source), [ADR-0149](0149-first-use-in-two-parts.md) (first use),
   plugin.
 - **T8. Legal and credits** (ADR-0099): both licences; NQPTP's source with
   each release, as GPL-2.0 asks; Apple's trademark line.
+- **T9. Covers as bytes: the contract's `artwork` event**, added within
+  version 1 (found building, 2026-10-28). A cover reaches the screens as an
+  address, and AirPlay's arrive as pictures. The plugin sends each one
+  (JPEG or PNG, 800 px at most, under the line's 1 MiB); the core keeps the
+  last two per plugin in memory and serves them at
+  `/plugins/<id>/artwork/<key>` (the picture's sha256, 16 digits), which the
+  plugin names as its metadata's `artwork`. Generic: any plugin whose covers
+  come as bytes can use it.
 
 ## Settings (ADR-0022)
 

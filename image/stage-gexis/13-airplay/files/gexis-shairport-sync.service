@@ -1,0 +1,32 @@
+[Unit]
+Description=Shairport Sync, the AirPlay 2 receiver (ADR-0167)
+Documentation=https://github.com/gcarstoiu/gexis-player/blob/main/docs/decisions/0167-airplay-2-as-a-plugin.md
+# The manifest's unit: the process that opens the audio device, which the
+# core's release ladder takes off it (ADR-0091). The one switch in the
+# Plugins category enables this unit; NQPTP and the plugin follow it.
+After=network-online.target sound.target avahi-daemon.service gexis-nqptp.service gexis-airplay.service
+Wants=network-online.target gexis-airplay.service
+Requires=gexis-nqptp.service avahi-daemon.service
+# Taken off the device by SIGKILL at every takeover and brought back by
+# Restart= (ADR-0091), as Plexamp is: room for that.
+StartLimitIntervalSec=60
+StartLimitBurst=20
+
+[Service]
+Type=simple
+# As every renderer: the output chain's meter pipes and software volume are
+# pi's (go-librespot, Squeezelite, Plexamp).
+User=pi
+Group=audio
+# ADR-0048: the player's own name is the name in the AirPlay list; a rename
+# restarts this unit.
+EnvironmentFile=/etc/gexis/device-name.env
+ExecStart=/usr/bin/shairport-sync -c /usr/share/gexis/airplay/shairport-sync.conf -a ${GEXIS_DEVICE_NAME}
+RuntimeDirectory=gexis-airplay
+RuntimeDirectoryPreserve=yes
+LimitRTPRIO=5
+Restart=on-failure
+RestartSec=1
+
+[Install]
+WantedBy=multi-user.target

@@ -88,6 +88,18 @@ DEPENDS=$(cd /tmp/pkg && dpkg-shlibdeps -O "debian/$PKG/usr/bin/shairport-sync" 
 [ -n "$DEPENDS" ] || { echo "ERROR: dpkg-shlibdeps found no dependencies" >&2; exit 1; }
 case "$DEPENDS" in *libavcodec*) ;; *) echo "ERROR: not linked to FFmpeg's decoder: $DEPENDS" >&2; exit 1 ;; esac
 
+# An update replaces the binary under a running receiver: restarted, only if
+# running (switched on), and NQPTP with it (its unit is PartOf this one).
+cat > "$STAGE/DEBIAN/postinst" <<'EOF'
+#!/bin/sh
+set -e
+if [ "$1" = configure ] && [ -n "$2" ] && [ -d /run/systemd/system ]; then
+	systemctl try-restart gexis-shairport-sync.service || true
+fi
+exit 0
+EOF
+chmod 755 "$STAGE/DEBIAN/postinst"
+
 cat > "$STAGE/DEBIAN/control" <<CTL
 Package: $PKG
 Version: $VERSION

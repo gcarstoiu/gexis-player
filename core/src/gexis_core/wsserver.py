@@ -183,6 +183,7 @@ class StateServer:
         ui_dir: Path | None = None,
         lyrion_known: "discovery.Known | None" = None,
         multiroom=None,
+        plugin_artwork=None,
     ) -> None:
         """`activate(renderer_id) -> bool` and `set_volume(percent) -> bool`
         are injected by `__main__.py` (ADR-0028's command surface). Both are
@@ -242,6 +243,8 @@ class StateServer:
         #: fixed for the process and a request must not walk a directory a
         #: URL named.
         self._plugins = {p.id: p for p in plugins}
+        #: ADR-0167 T9: the covers plugins handed over as bytes.
+        self._plugin_artwork = plugin_artwork
         #: **ADR-0083.** Called after an archive has been written back, to
         #: reboot. Injected rather than imported so the route stays a route:
         #: the daemon owns what "restart the device" means, and a test can
@@ -1390,6 +1393,19 @@ class StateServer:
         return web.FileResponse(
             plugin.mark, headers={"Cache-Control": "public, max-age=86400"}
         )
+
+    async def _handle_plugin_artwork(self, request: web.Request) -> web.Response:
+        """A cover a plugin handed over (ADR-0167 T9), by its key. Looked up
+        in memory, never a path; the key names the bytes, so it is cached as
+        long as a browser likes."""
+        found = None
+        if self._plugin_artwork is not None:
+            found = self._plugin_artwork.get(request.match_info["id"], request.match_info["key"])
+        if found is None:
+            return web.json_response({"error": "no such cover"}, status=404)
+        kind, data = found
+        return web.Response(body=data, content_type=kind,
+                            headers={"Cache-Control": "public, max-age=31536000, immutable"})
 
     async def _handle_surface(self, request: web.Request) -> web.Response:
         """ADR-0035 §6: the panel always arrives on loopback, a phone from the LAN."""
@@ -3410,6 +3426,7 @@ class StateServer:
         app.router.add_get("/skins", self._handle_skins)
         app.router.add_get("/skins/{name:.*}/preview", self._handle_skin_preview)
         app.router.add_get("/plugins/{id}/mark", self._handle_plugin_mark)
+        app.router.add_get("/plugins/{id}/artwork/{key}", self._handle_plugin_artwork)
         app.router.add_get("/menus", self._handle_menus)
         app.router.add_get("/menus/browse", self._handle_menus_browse)
         app.router.add_get("/menus/letters", self._handle_menus_letters)

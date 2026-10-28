@@ -68,6 +68,18 @@ printf 'Source: %s\n\nPackage: %s\nArchitecture: arm64\n' "$PKG" "$PKG" > /tmp/p
 DEPENDS=$(cd /tmp/pkg && dpkg-shlibdeps -O "debian/$PKG/usr/bin/nqptp" | sed -n 's/^shlibs:Depends=//p')
 [ -n "$DEPENDS" ] || { echo "ERROR: dpkg-shlibdeps found no dependencies" >&2; exit 1; }
 
+# Upstream (5.6): NQPTP first, then Shairport Sync - restarting the receiver
+# restarts both, in that order (gexis-nqptp is PartOf it), only if running.
+cat > "$STAGE/DEBIAN/postinst" <<'EOF'
+#!/bin/sh
+set -e
+if [ "$1" = configure ] && [ -n "$2" ] && [ -d /run/systemd/system ]; then
+	systemctl try-restart gexis-shairport-sync.service || true
+fi
+exit 0
+EOF
+chmod 755 "$STAGE/DEBIAN/postinst"
+
 cat > "$STAGE/DEBIAN/control" <<CTL
 Package: $PKG
 Version: $VERSION

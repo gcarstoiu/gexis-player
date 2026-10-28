@@ -17,6 +17,8 @@
   import lyrionIcon from '../assets/icon-lyrion.svg';
   import spotifyIcon from '../assets/icon-spotify.png';
   import btIcon from '../assets/icon-bluetooth.png';
+  //: ADR-0167 decision 6: our own neutral mark (design/marks/airplay.svg).
+  import airplayIcon from '../assets/icon-airplay.png';
   import calmWall from '../assets/personalise/calm.webp';
   import colourfulWall from '../assets/personalise/colourful.webp';
   import psychedelicWall from '../assets/personalise/psychedelic.webp';
@@ -42,14 +44,14 @@
 
   // ===== The design's logic, from Setup Prototype.dc.html =====
 
-const C = { music: '#b0bcc4', lyr: '#9fb4e8', fold: '#f2a48f', browse: '#8fd9a8', spo: '#7ed6bc', bt: '#d8c88f', scr: '#c8a2d8', idle: '#e8a0b4', stby: '#8fc4d8', ext: '#a8d68f', plex: '#e0a758', rev: '#7ed6bc' };
+const C = { music: '#b0bcc4', lyr: '#9fb4e8', fold: '#f2a48f', browse: '#8fd9a8', spo: '#7ed6bc', air: '#b9c4ce', bt: '#d8c88f', scr: '#c8a2d8', idle: '#e8a0b4', stby: '#8fc4d8', ext: '#a8d68f', plex: '#e0a758', rev: '#7ed6bc' };
 const SEL = 'rgba(126,214,188,0.1)', SELB = 'rgba(126,214,188,0.45)', OFF = 'rgba(255,255,255,0.05)', OFFB = 'rgba(233,238,242,0.1)', RING = 'rgba(233,238,242,0.42)', MUTE = 'rgba(233,238,242,0.6)';
 const TAGS = { ok: ['rgba(126,214,188,0.14)', '#7ed6bc'], warn: ['rgba(224,167,88,0.14)', '#e0a758'], plain: ['rgba(233,238,242,0.08)', 'rgba(233,238,242,0.72)'] };
 const TONES = { info: ['#8fc4d8', OFF, OFFB], ok: ['#7ed6bc', OFF, OFFB], warn: ['#e0a758', 'rgba(224,167,88,0.08)', 'rgba(224,167,88,0.45)'] };
 const LETTER = { plex: 'P', viz: 'V', clk: 'C', stby: 'S', besz: 'B', lib: 'M', fold: 'F', browse: 'B', ext: '+' };
 const BTYPES = ['Sub', 'List', 'Note', 'Field', 'Status', 'P', 'Btn', 'Pics', 'Where', 'Split', 'Seg', 'Pick', 'Num', 'Code', 'Party', 'Dev', 'Prog', 'Cast', 'Sum', 'Clock', 'Addr', 'Iv', 'Head', 'Rule'];
 const noop = () => {};
-const SRCN = { lyr: 'Lyrion', spo: 'Spotify', bt: 'Bluetooth', plex: 'Plexamp' };
+const SRCN = { lyr: 'Lyrion', spo: 'Spotify', air: 'AirPlay', bt: 'Bluetooth', plex: 'Plexamp' };
 const tagOf = tag => {
   if (!tag) return { tagDisplay: 'none', tag: '', tagBg: 'transparent', tagInk: '#e9eef2' };
   const [text, tone] = Array.isArray(tag) ? tag : [tag, 'plain'];
@@ -57,19 +59,19 @@ const tagOf = tag => {
 };
 function row(o) {
   const k = o.k, radio = k === 'radio', net = k === 'net', ghost = k === 'ghost', sel = (radio || net || k === 'chk' || k === 'pick') && o.on;
-  const img = ['lyr', 'spo', 'bt'].includes(o.icon), letter = LETTER[o.icon] || '';
+  const img = ['lyr', 'spo', 'air', 'bt'].includes(o.icon), letter = LETTER[o.icon] || '';
   const bar = n => n <= (o.lvl || 0) ? '#8fc4d8' : 'rgba(233,238,242,0.22)';
   return Object.assign({
     label: o.label, labelInk: ghost ? MUTE : '#e9eef2', note: o.note || '', noteDisplay: o.note ? 'block' : 'none', meta: o.meta || '', metaDisplay: o.meta ? 'block' : 'none',
     onClick: o.fn || (k === 'pick' ? o.tick : null) || noop, onTick: k === 'pick' && o.fn ? o.tick : null, cursor: o.fn || o.tick ? 'pointer' : 'default',
     bg: ghost ? 'transparent' : sel ? SEL : OFF, border: ghost ? 'rgba(233,238,242,0.3)' : sel ? SELB : OFFB, bs: ghost ? 'dashed' : 'solid',
     radioDisplay: radio || net ? 'flex' : 'none', ring: sel ? '#7ed6bc' : RING, dotDisplay: sel ? 'block' : 'none',
-    iconDisplay: img || letter ? 'flex' : 'none', isLyr: o.icon === 'lyr', isSpo: o.icon === 'spo', isBt: o.icon === 'bt', letter, letterDisplay: letter && !img ? 'flex' : 'none',
+    iconDisplay: img || letter ? 'flex' : 'none', isLyr: o.icon === 'lyr', isSpo: o.icon === 'spo', isAir: o.icon === 'air', isBt: o.icon === 'bt', letter, letterDisplay: letter && !img ? 'flex' : 'none',
     barsDisplay: net ? 'flex' : 'none', b1: bar(1), b2: bar(2), b3: bar(3), b4: bar(4),
     togDisplay: k === 'tog' ? 'block' : 'none', togBg: o.on ? '#7ed6bc' : 'rgba(233,238,242,0.07)', togBorder: o.on ? '#7ed6bc' : 'rgba(233,238,242,0.18)',
     knobLeft: o.on ? '31px' : '3px', knobBg: o.on ? '#0d151c' : 'rgba(233,238,242,0.55)',
     chkDisplay: k === 'chk' || k === 'pick' ? 'flex' : 'none', boxBg: sel ? '#7ed6bc' : 'transparent', chevDisplay: k === 'hub' || (k === 'pick' && o.fn) ? 'block' : 'none',
-    srcs: (o.srcs || []).map(x => ({ isLyr: x === 'lyr', isSpo: x === 'spo', isBt: x === 'bt', isPlex: x === 'plex', name: SRCN[x] })), srcDisplay: o.srcs ? 'flex' : 'none',
+    srcs: (o.srcs || []).map(x => ({ isLyr: x === 'lyr', isSpo: x === 'spo', isAir: x === 'air', isBt: x === 'bt', isPlex: x === 'plex', name: SRCN[x] })), srcDisplay: o.srcs ? 'flex' : 'none',
     foot: o.foot || '', footMeta: o.footMeta || '', footDisplay: o.foot ? 'flex' : 'none', footDot: o.footDot || '#7ed6bc'
   }, tagOf(o.tag));
 }
@@ -135,9 +137,9 @@ const sum = (rows, head) => ({ t: 'Sum', rows, head });
 const P1N = ['Network', 'Start', 'Name', 'Time', 'Output', 'Screen', 'Review'], P1B = ['Network', 'Start', 'Output', 'Screen', 'Review'];
 const P1C = { Network: '#8fc4d8', Start: '#b0bcc4', Name: '#e8a0b4', Time: '#c8a2d8', Output: '#7ed6bc', Screen: '#8fd9a8', Review: '#f2a48f' };
 const P1AT = { p1net: 'Network', p1start: 'Start', p1backup: 'Start', p1name: 'Name', p1clock: 'Time', p1output: 'Output', p1screen: 'Screen', p1review: 'Review', p1restore: 'Review' };
-const P2M = { listen: ['Listen', C.music], mix: ['Listen', C.music], lyrion: ['Lyrion', C.lyr], folders: ['Folders', C.fold], plexamp: ['Plexamp', C.plex], browse: ['Browse', C.browse], spotify: ['Spotify', C.spo], bluetooth: ['Bluetooth', C.bt], touchpad: ['Touchpad', C.ext], visualiser: ['Visualiser', C.scr], idle: ['When idle', C.idle], wait: ['While it waits', C.idle], standby: ['Standby', C.stby], plexsign: ['Plex sign-in', C.plex], review: ['Review', C.rev] };
-const LABEL = { p1welcome: 'Welcome', p1net: 'Network', p1start: 'New player or backup', p1backup: 'Upload a backup', p1name: 'Name', p1clock: 'Clock', p1output: 'Output', p1screen: 'Screen', p1review: 'Check it over', p1join: 'Joining the network', p1restore: 'Check it over', p1restored: 'Restoring', listen: 'How will you listen?', mix: 'My own mix', lyrion: 'Where Lyrion runs', folders: 'Where your music is', plexamp: 'Plexamp', browse: 'Browse', spotify: 'Spotify', bluetooth: 'Bluetooth', touchpad: 'Touchpad', visualiser: 'Visualiser', idle: 'When idle', wait: 'While it waits', standby: 'Standby', plexsign: 'Plex sign-in', review: 'Your setup', done: 'Getting ready', later: 'Kept the defaults' };
-const CODES = { p1welcome: '1.0', p1net: '1.1', p1start: '1.2', p1name: '1.3', p1clock: '1.4', p1output: '1.5', p1screen: '1.6', p1review: '1.7', p1join: '1.8', p1backup: '1.2b', p1restore: '1.7b', p1restored: '1.8b', listen: '5A0', mix: '4A1m', lyrion: '5A2', folders: '5A3', plexamp: 'X1', browse: '5A4', spotify: '5A5', bluetooth: '5A6', touchpad: '5A6t', visualiser: '5A7', idle: '5A8', wait: '5A8w', standby: '5A9', plexsign: 'X2', review: '5A10', done: 'End', later: 'End' };
+const P2M = { listen: ['Listen', C.music], mix: ['Listen', C.music], lyrion: ['Lyrion', C.lyr], folders: ['Folders', C.fold], plexamp: ['Plexamp', C.plex], browse: ['Browse', C.browse], spotify: ['Spotify', C.spo], airplay: ['AirPlay', C.air], bluetooth: ['Bluetooth', C.bt], touchpad: ['Touchpad', C.ext], visualiser: ['Visualiser', C.scr], idle: ['When idle', C.idle], wait: ['While it waits', C.idle], standby: ['Standby', C.stby], plexsign: ['Plex sign-in', C.plex], review: ['Review', C.rev] };
+const LABEL = { p1welcome: 'Welcome', p1net: 'Network', p1start: 'New player or backup', p1backup: 'Upload a backup', p1name: 'Name', p1clock: 'Clock', p1output: 'Output', p1screen: 'Screen', p1review: 'Check it over', p1join: 'Joining the network', p1restore: 'Check it over', p1restored: 'Restoring', listen: 'How will you listen?', mix: 'My own mix', lyrion: 'Where Lyrion runs', folders: 'Where your music is', plexamp: 'Plexamp', browse: 'Browse', spotify: 'Spotify', airplay: 'AirPlay', bluetooth: 'Bluetooth', touchpad: 'Touchpad', visualiser: 'Visualiser', idle: 'When idle', wait: 'While it waits', standby: 'Standby', plexsign: 'Plex sign-in', review: 'Your setup', done: 'Getting ready', later: 'Kept the defaults' };
+const CODES = { p1welcome: '1.0', p1net: '1.1', p1start: '1.2', p1name: '1.3', p1clock: '1.4', p1output: '1.5', p1screen: '1.6', p1review: '1.7', p1join: '1.8', p1backup: '1.2b', p1restore: '1.7b', p1restored: '1.8b', listen: '5A0', mix: '4A1m', lyrion: '5A2', folders: '5A3', plexamp: 'X1', browse: '5A4', spotify: '5A5', airplay: '5A5a', bluetooth: '5A6', touchpad: '5A6t', visualiser: '5A7', idle: '5A8', wait: '5A8w', standby: '5A9', plexsign: 'X2', review: '5A10', done: 'End', later: 'End' };
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0')), QUARTERS = ['00', '15', '30', '45'];
 const daysSaid = days => { const on = DAYS.filter(d => days.includes(d)); return on.length === 7 ? 'every day' : on.join() === 'Mon,Tue,Wed,Thu,Fri' ? 'Mon–Fri' : on.join() === 'Sat,Sun' ? 'weekends' : on.join(', '); };
 const ivSaid = ivs => !ivs.length ? 'None' : ivs.length > 1 ? ivs.length + ' times' : ivs[0].from + '–' + ivs[0].until + ' · ' + daysSaid(ivs[0].days);
@@ -161,10 +163,10 @@ const uniq = a => a.filter((x, i) => a.indexOf(x) === i);
 function init(flow, startAt, wide) {
   return { flow, startAt, wide, screen: startAt === 'p2' ? 'listen' : 'p1welcome', ret: null,
     net: 'Studio 5G', pw: 'studio-5g-pass', start: 'new', uploaded: false, name: 'Living Room', fmt: 0, output: 'HiFiBerry DAC+ HD', scr: 'panel',
-    lyrState: 'idle', preset: null, presetTouched: false, mix: { lyr: true, plex: false, spo: true, bt: true },
+    lyrState: 'idle', preset: null, presetTouched: false, mix: { lyr: true, plex: false, spo: true, air: true, bt: true },
     lyrWhere: 'here', lyrAddrOpen: false, lyrAddr: '', places: { folder: false, usb: false, share: false }, usbDrives: [], usbOpen: null, usbError: null, shares: [], shareStep: null, shareSrv: null, shareUser: '', sharePw: '', shareAddr: '', shareAU: '', shareAP: '',
     plexOn: false, plexPct: 0, claimOpened: false, claim: '', plexState: 'code', plexSkipped: false,
-    browse: 'ext', spotify: true, bt: true, btPhase: null, btLeft: 180, reqLeft: 30, trusted: [], everPaired: false,
+    browse: 'ext', spotify: true, airplay: true, bt: true, btPhase: null, btLeft: 180, reqLeft: 30, trusted: [], everPaired: false,
     vizOn: false, vizAfter: '10 min', skin: 'vu', animate: true, rpm: 0,
     idleOn: true, bg: 'Gexis wallpapers', styles: ['Calm', 'Colourful'], wallStyle: 'Calm', listenPic: 'dac', clock: true, weather: false, loc: '',
     waitClock: true, waitBg: 'Gexis wallpapers', standby: false, ivs: [{ from: '23:00', until: '07:00', days: DAYS.slice() }], ivPick: null,
@@ -176,8 +178,10 @@ class Component extends DCLogic {
   d(s) {
     const lyr = s.preset === 'mine' || (s.preset === 'custom' && s.mix.lyr), plex = s.preset === 'plex' || (s.preset === 'custom' && s.mix.plex);
     const spo = s.preset !== 'custom' || s.mix.spo, bt = s.preset !== 'custom' || s.mix.bt, headless = s.scr === 'headless';
-    return { lyr, plex, spo, bt, headless, wait: !lyr || s.browse === 'off', here: lyr && s.lyrWhere === 'here',
-      marks: [lyr && 'lyr', plex && 'plex', spo && 'spo', bt && 'bt'].filter(Boolean) };
+    // ADR-0167 decision 1: AirPlay in every preset, as Spotify and Bluetooth.
+    const air = s.preset !== 'custom' || s.mix.air;
+    return { lyr, plex, spo, air, bt, headless, wait: !lyr || s.browse === 'off', here: lyr && s.lyrWhere === 'here',
+      marks: [lyr && 'lyr', plex && 'plex', spo && 'spo', air && 'air', bt && 'bt'].filter(Boolean) };
   }
   p1Path(s) { return s.start === 'new' ? ['p1welcome', 'p1net', 'p1start', 'p1name', 'p1clock', 'p1output', 'p1screen', 'p1review', 'p1join'] : ['p1welcome', 'p1net', 'p1start', 'p1backup', 'p1output', 'p1screen', 'p1restore', 'p1restored']; }
   ivBlock(s) {
@@ -208,6 +212,7 @@ class Component extends DCLogic {
     if (d.lyr && !d.headless) p.push('browse');
     if (d.plex) p.push('plexamp');
     if (d.spo) p.push('spotify');
+    if (d.air) p.push('airplay');
     if (d.bt) p.push('bluetooth');
     if (!d.headless) p.push('touchpad', 'visualiser', ...(d.wait ? ['wait'] : []), 'idle', 'standby');
     return p;
@@ -364,16 +369,16 @@ class Component extends DCLogic {
       case 'listen': { const st = s.lyrState, found = st === 'found', pk = p => () => set({ preset: p, presetTouched: true });
         const stat = null;
         const lfoot = { back: false, alt: 'Do it later', altFn: () => this.go('later'), nextOff: !s.preset };
-          const mine = R('My music + streaming', '', s.preset === 'mine', pk('mine'), Object.assign({ srcs: ['lyr', 'spo', 'bt'] }, found ? { foot: 'Lyrion found on ' + s.net, footMeta: s.lyrMeta } : st === 'none' ? { foot: 'No Lyrion found on ' + s.net, footMeta: 'Set it up on the next screen', footDot: 'rgba(233,238,242,0.4)' } : {}));
-          const rest = [R('Plex + streaming', '', s.preset === 'plex', pk('plex'), { srcs: ['plex', 'spo', 'bt'] }),
-            R('Streaming only', '', s.preset === 'stream', pk('stream'), { srcs: ['spo', 'bt'] })];
-          const own = R('My own mix', 'Choose from any of these on the next screen.', s.preset === 'custom', pk('custom'), { srcs: ['lyr', 'plex', 'spo', 'bt'] });
+          const mine = R('My music + streaming', '', s.preset === 'mine', pk('mine'), Object.assign({ srcs: ['lyr', 'spo', 'air', 'bt'] }, found ? { foot: 'Lyrion found on ' + s.net, footMeta: s.lyrMeta } : st === 'none' ? { foot: 'No Lyrion found on ' + s.net, footMeta: 'Set it up on the next screen', footDot: 'rgba(233,238,242,0.4)' } : {}));
+          const rest = [R('Plex + streaming', '', s.preset === 'plex', pk('plex'), { srcs: ['plex', 'spo', 'air', 'bt'] }),
+            R('Streaming only', '', s.preset === 'stream', pk('stream'), { srcs: ['spo', 'air', 'bt'] })];
+          const own = R('My own mix', 'Choose from any of these on the next screen.', s.preset === 'custom', pk('custom'), { srcs: ['lyr', 'plex', 'spo', 'air', 'bt'] });
           const lpv = s.wide ? { kind: 'flow', head: '' } : null;
           return { title: 'How will you listen?', sub: 'Pick the closest. Change anything after.', pv: lpv, foot: lfoot, blocks: [...(stat ? [stat] : []), list([mine, ...rest]), list([own], 'Or mix your own')] };
       }
       case 'mix': { const m = k => () => this.setState(st => ({ mix: Object.assign({}, st.mix, { [k]: !st.mix[k] }) }));
         return { title: 'My own mix', blocks: [list([T('Lyrion', 'Browse your files on the screen.', s.mix.lyr, m('lyr'), { icon: 'lyr' }), T('Plexamp', 'Your Plex library, from its app.', s.mix.plex, m('plex'), { icon: 'plex' }), { k: 'ghost', label: 'Library service', note: 'The next one lands here.', tag: 'Next phase' }], 'Your own music'),
-          list([T('Spotify', '', s.mix.spo, m('spo'), { icon: 'spo' }), T('Bluetooth', '', s.mix.bt, m('bt'), { icon: 'bt' })], 'Streaming')] }; }
+          list([T('Spotify', '', s.mix.spo, m('spo'), { icon: 'spo' }), T('AirPlay', '', s.mix.air, m('air'), { icon: 'air' }), T('Bluetooth', '', s.mix.bt, m('bt'), { icon: 'bt' })], 'Streaming')] }; }
       case 'lyrion': { const here = s.lyrWhere === 'here';
         if (s.lyrState === 'found') {
           const pick = (w, a) => () => set({ lyrWhere: w, lyrServer: a === undefined ? s.lyrServer : a });
@@ -456,6 +461,8 @@ class Component extends DCLogic {
       }
       case 'browse': return { title: 'Browse on the screen', sub: 'A Lyrion app on your phone works with any of these.', pv: pv({ kind: KNAV[s.browse] }), blocks: [list(NAV.map(n => R(n[1], n[2], s.browse === n[0], () => set({ browse: n[0] }))))], foot: SK };
       case 'spotify': return { title: 'Spotify', sub: 'Built in. ' + nm + ' appears in the Spotify app on your phone.', blocks: [list([T('Spotify Connect', '', s.spotify, flip('spotify'), { icon: 'spo' })]), ...(s.spotify ? [{ t: 'Cast', device: nm, text: 'Tap the devices icon, then ' + nm + '.' }] : [])], foot: SK };
+      case 'airplay': return { title: 'AirPlay', sub: 'Built in. ' + nm + ' appears in the AirPlay list on an iPhone, iPad or Mac.', blocks: [list([T('AirPlay', '', s.airplay, flip('airplay'), { icon: 'air' })]),
+        ...(s.airplay ? [note('info', 'On an iPhone or iPad', 'Where the music plays, tap the AirPlay button, then ' + nm + '. On a Mac, choose ' + nm + ' as the sound output.')] : [note('info', '', 'Apple devices can’t find ' + nm + '. Turn it on any time in Settings → AirPlay.')])], foot: SK };
       case 'bluetooth': {
         const ph = s.pairDevice || 'A phone', sub = 'Any phone can play to ' + nm + ' over Bluetooth. Pair one now, or later from Settings.';
         const en = list([T('Enabled', '', s.bt, () => this.setState(st => ({ bt: !st.bt, btPhase: !st.bt ? 'disc' : st.btPhase, btLeft: !st.bt ? 180 : st.btLeft })), { icon: 'bt' })]);
@@ -496,6 +503,7 @@ class Component extends DCLogic {
         if (d.plex) { const px = !s.plexOn ? ['Not installed · later, from Settings', ['Skipped', 'plain']] : s.plexState === 'ok' ? ['Signed in', ['Signed in', 'ok']] : s.plexState === 'later' ? [(s.plexPct < 100 ? 'Downloading' : 'Installed') + ' · sign in later', ['Later', 'warn']] : ['Not signed in', null];
           rows.push(HB('Plex', px[0], op(s.plexOn ? 'plexsign' : 'plexamp'), { icon: 'plex', tag: px[1] })); }
         if (d.spo) rows.push(HB('Spotify', s.spotify ? 'On' : 'Off', op('spotify'), { icon: 'spo', tag: sk('spotify') }));
+        if (d.air) rows.push(HB('AirPlay', s.airplay ? 'On' : 'Off', op('airplay'), { icon: 'air', tag: sk('airplay') }));
         if (d.bt) rows.push(HB('Bluetooth', !s.bt ? 'Off' : s.trusted.length ? s.trusted.map(t => t.name).join(' · ') : 'On · no phone yet', op('bluetooth'), { icon: 'bt', tag: s.trusted.length && s.bt ? ['Paired', 'ok'] : sk('bluetooth') }));
         if (!d.headless) {
           rows.push(HB('Visualiser', s.vizOn ? SKINS.find(x => x[0] === s.skin)[1] : 'Off', op('visualiser'), { icon: 'viz', tag: sk('visualiser') }));
@@ -526,7 +534,7 @@ class Component extends DCLogic {
         const waiting = !s.finished || got.some(g => !g.done && !g.failed);
         const state = s.finishError ? 'busy' : failedAny ? 'warn' : waiting ? 'busy' : 'done';
         return { hero: true, crumb: 'Make it yours', title: state === 'done' ? nm + ' is ready' : state === 'warn' ? nm + ' is nearly ready' : 'Getting ' + nm + ' ready', blocks: [{ t: 'Party', marks: d.marks, status: state }, ...items, { t: 'Rule' }, note('ok', '', 'Everything you set up here can be run again or changed in Settings → Display → Personalise.')], foot: s.finishError ? { back: false, next: 'Try again', nextFn: () => live.finish() } : { back: false, next: 'Close' } }; }
-      case 'later': return { hero: true, crumb: 'Make it yours', title: 'Kept the defaults', blocks: [P(s.first ? 'Spotify and Bluetooth are on, and nothing else is installed.' : 'Nothing was changed.'), note('ok', '', 'All of it is in Settings → Display → Personalise.')], foot: { back: false, next: 'Close' } };
+      case 'later': return { hero: true, crumb: 'Make it yours', title: 'Kept the defaults', blocks: [P(s.first ? 'Spotify, AirPlay and Bluetooth are on, and nothing else is installed.' : 'Nothing was changed.'), note('ok', '', 'All of it is in Settings → Display → Personalise.')], foot: { back: false, next: 'Close' } };
     }
     return { title: '', blocks: [] };
   }
@@ -1149,6 +1157,8 @@ class Component extends DCLogic {
   function answersAsSettings(s) {
     const d = comp.d(s);
     const o = { spotify_enabled: d.spo && s.spotify, bt_enabled: d.bt && s.bt, lms_enabled: d.lyr };
+    // ADR-0167: AirPlay downloads nothing, so it is written either way, as Spotify is.
+    o['airplay.enabled'] = d.air && s.airplay;
     if (d.lyr) {
       if (s.lyrState === 'found' && s.lyrWhere === 'there' && s.lyrServer) o.lms_server = s.lyrServer;
       else if ((s.lyrWhere === 'addr' || s.lyrAddrOpen) && s.lyrAddr.trim()) o.lms_server = s.lyrAddr.trim();
@@ -1189,7 +1199,7 @@ class Component extends DCLogic {
     const styles = (Array.isArray(v.wallpaper_styles) ? v.wallpaper_styles : []).filter((x) => STYLES.includes(x));
     Object.assign(st, {
       browse: v.lms_library === false ? 'off' : v.lms_extended_nav ? 'ext' : 'simple',
-      spotify: v.spotify_enabled !== false, bt: v.bt_enabled !== false,
+      spotify: v.spotify_enabled !== false, airplay: v['airplay.enabled'] !== false, bt: v.bt_enabled !== false,
       vizOn: v.visualiser_skins === true, vizAfter: `${after} min`,
       skin: (SKINS.find((x) => x[1] === v.skin_corpus) ?? SKINS[0])[0], animate: v.skin_motion !== false, rpm: v.record_speed === '45 rpm' ? 1 : 0,
       waitClock: v.waiting_clock !== false, waitBg: v.waiting_background === 'Black' ? 'Black' : 'Gexis wallpapers',
@@ -1369,6 +1379,7 @@ class Component extends DCLogic {
                         <span style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.12);box-sizing:border-box;flex-shrink:0;align-items:center;justify-content:center;display:{o.iconDisplay};">
                           {#if o.isLyr}<img src={lyrionIcon} alt="" style="display:block;width:28px;height:21px;">{/if}
                           {#if o.isSpo}<img src={spotifyIcon} alt="" style="display:block;width:22px;height:22px;">{/if}
+                          {#if o.isAir}<img src={airplayIcon} alt="" style="display:block;width:22px;height:22px;">{/if}
                           {#if o.isBt}<img src={btIcon} alt="" style="display:block;width:22px;height:22px;">{/if}
                           <span style="width:22px;height:22px;border-radius:50%;border:2px solid rgba(233,238,242,0.7);box-sizing:border-box;align-items:center;justify-content:center;font-size:11px;font-weight:800;display:{o.letterDisplay};">{o.letter}</span>
                         </span>
@@ -1381,6 +1392,7 @@ class Component extends DCLogic {
                               <span style="display:flex;align-items:center;gap:7px;height:30px;padding:0 11px 0 7px;border-radius:999px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.12);box-sizing:border-box;font-size:13px;font-weight:600;color:rgba(233,238,242,0.85);">
                                 {#if sx.isLyr}<img src={lyrionIcon} alt="" style="display:block;width:20px;height:15px;">{/if}
                                 {#if sx.isSpo}<img src={spotifyIcon} alt="" style="display:block;width:16px;height:16px;">{/if}
+                                {#if sx.isAir}<img src={airplayIcon} alt="" style="display:block;width:16px;height:16px;">{/if}
                                 {#if sx.isBt}<img src={btIcon} alt="" style="display:block;width:16px;height:16px;">{/if}
                                 {#if sx.isPlex}<span style="width:16px;height:16px;border-radius:50%;border:2px solid rgba(233,238,242,0.7);box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;">P</span>{/if}
                                 <span>{sx.name}</span>
