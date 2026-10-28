@@ -744,7 +744,9 @@ phone only.
   (C1). The leader moving: the old one's source stops, every client moves.
   Out of a group: the client and server stop and the chain is the player's
   own again - except on a leader still playing, which plays on through its
-  own server until the stream ends (*the music stays on the leader*).
+  own server until nothing holds the device (*the music stays on the
+  leader*): going alone rewrites the chain and would restart whoever holds
+  it - a paused source, or one taking over meanwhile.
 - **A source started on a member leads** (D4): the supervisor's
   `on_active_change` reaches `Multiroom.on_local_active`, which claims the
   lead; a member's own source still active after another leads is stopped
