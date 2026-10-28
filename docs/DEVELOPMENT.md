@@ -3427,11 +3427,12 @@ players, Lyrion's test on a Lyrion server of Claude's. Finding 139 (the first
 probe, guestpi) changed D1: a second loopback, a pipe per rate fed by
 `arecord`, FLAC at 32 bits, the units the player's own and Debian's masked.
 Built on `ph-multiroom` (core, UI on the phone, the panel and the bars, the
-documents); preview 10 on sofapi, the bar, guestpi and bedroompi, with
+documents); preview 11 on sofapi, the bar, guestpi and bedroompi, with
 George's findings fixed (a group that did not play; the group slider
 jumping back, ADR-0166 B13; Spotify on the leader after Lyrion; a scroll
 along a slider, ADR-0121 amended; a phone's stale socket after sleep; a
-member's client left stopped by the round's chain rewrite). The
+member's client left stopped by the round's chain rewrite; a source
+restarted when the leader went alone after an undo). The
 integration's join and unjoin on its `multiroom` branch, for its release
 after the player's. **Open:** the measurement (ADR-0166 *Measured before it
 is called done*, with George by ear), and Lyrion's half on a test server,

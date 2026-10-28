@@ -188,6 +188,11 @@ play control. Its rules, beyond the decisions above:
   equaliser's switch does; a player that was idle is not touched.
 - **B3 — Undo keeps the music on the leader without a cut**: it plays on
   through its own server until the stream ends, then plays alone.
+  *Amended 2026-10-28, for George to confirm:* until nothing holds the
+  device, a pause included - going alone rewrites the chain and restarts
+  whoever holds it, and a source cast to sofapi just after an undo was
+  restarted mid-start and lost its session. A source taking over meanwhile
+  plays on through the server too.
 - **B4 — Every member runs its server**, idle (about 1.5 % of a core
   measured), so a source started on any of them leads at once.
 - **B5 — The buffer is 400 ms** until the measurement (D7); the manual and
