@@ -1,6 +1,7 @@
 """ADR-0166 D3: the group's record, kept by every member, and its changes."""
 from __future__ import annotations
 
+import asyncio
 import json
 
 import pytest
@@ -83,8 +84,9 @@ async def test_joining_makes_one_record_on_both_players_led_by_the_one_asked(tmp
     record = await living.join(KITCHEN)
     assert living.record == kitchen.record == record
     assert record.leader == "living"
-    # Each kept it, for the next start (decision 3).
+    # Each kept it, for the next start (decision 3), and put it in force after.
     assert g.read(tmp_path / "kitchen.json") == record
+    await kitchen.settled()
     assert net.applied["kitchen"] == [(None, record)]
 
 
@@ -93,6 +95,8 @@ async def test_a_player_joined_from_another_group_leaves_it(tmp_path):
     office, garage, living = net.add(OFFICE), net.add(g.Member("garage", "Garage", "garage.local")), net.add(LIVING)
     await office.join(g.Member("garage", "Garage", "garage.local"))
     await living.join(g.Member("garage", "Garage", "garage.local"))
+    await asyncio.sleep(0)  # Garage's word to Office, sent beside its answer
+    await asyncio.sleep(0)
     # Garage is in Living Room's group now; Office's group of one is gone.
     assert garage.record.ids() == ["living", "garage"]
     assert office.record is None
@@ -203,3 +207,22 @@ def test_the_leader_gone_makes_the_group_silent():
                   screens={}, urls={})
     assert view["silent"] and view["source"] is None
     assert not view["members"][0]["reachable"] and view["level"] == 42
+
+
+async def test_a_member_is_told_before_the_player_asked_has_done_its_own_part(tmp_path):
+    """guestpi, 2026-10-28: an undo reached the leader 27 s late, after the
+    player asked had rewritten its own chain."""
+    net = Net(tmp_path)
+    living, kitchen = net.add(LIVING), net.add(KITCHEN)
+    await living.join(KITCHEN)
+    await living.settled()
+    await kitchen.settled()
+    slow = asyncio.Event()
+
+    async def slow_apply(old, new):
+        await slow.wait()
+    kitchen._apply = slow_apply
+    await kitchen.undo()
+    assert living.record is None, "told at once"
+    slow.set()
+    await kitchen.settled()

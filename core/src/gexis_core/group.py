@@ -182,6 +182,10 @@ class Group:
         #: Records a member has not had yet, by member id: sent again when it
         #: is next seen (`reconcile`).
         self._owed: dict[str, Record] = {}
+        #: Changes kept and not yet put in force here, in order.
+        self._queue: asyncio.Queue = asyncio.Queue()
+        self._worker_task: asyncio.Task | None = None
+        self._tasks: set[asyncio.Task] = set()
 
     @property
     def me(self) -> str | None:
@@ -192,6 +196,12 @@ class Group:
         return self.record is not None and self.record.leader == self.me
 
     # -- changes made here -------------------------------------------------------
+    #
+    # **A change is kept, sent, and put in force here - in that order of
+    # haste** (guestpi, 2026-10-28: an undo reached the leader 27 s late, after
+    # the player asked had rewritten its own chain). Each is kept under the
+    # lock; the members are sent it at once; this player's part runs after,
+    # one change at a time in the order they were kept (`_worker`).
 
     async def join(self, other: Member) -> Record:
         """`other` joins this player's group; a new group, led by this
@@ -209,7 +219,7 @@ class Group:
                 return current
             else:
                 new = current.with_member(other, by=me.id, clock=self._clock)
-            await self._adopt(new)
+            self._keep(new)
         await self._tell(new, also=(other,))
         return new
 
@@ -224,7 +234,7 @@ class Group:
             if not current.has(player_id):
                 return current
             new = current.without(player_id, by=me or "", clock=self._clock)
-            await self._adopt(new)
+            self._keep(new)
         await self._tell(new, also=(current.member(player_id),))
         return new
 
@@ -237,7 +247,7 @@ class Group:
         async with self._lock:
             current = self._current()
             new = current.bumped(self.me or "", self._clock, ended=True)
-            await self._adopt(new)
+            self._keep(new)
         await self._tell(new, also=current.members)
         return new
 
@@ -249,7 +259,7 @@ class Group:
             if current is None or me is None or current.leader == me:
                 return current
             new = current.led_by(me, by=me, clock=self._clock)
-            await self._adopt(new)
+            self._keep(new)
         await self._tell(new)
         return new
 
@@ -262,18 +272,19 @@ class Group:
             if current is None or not current.has(player_id) or current.leader == player_id:
                 return current
             new = current.led_by(player_id, by=me or "", clock=self._clock)
-            await self._adopt(new)
+            self._keep(new)
         await self._tell(new)
         return new
 
     # -- changes sent here --------------------------------------------------------
 
     async def receive(self, new: Record) -> bool:
-        """A record another player sent. True when it was taken."""
+        """A record another player sent. True when it was taken - answered
+        as soon as it is kept, so the sender never waits on this player's
+        own part of the change."""
         me = self.me
         if me is None:
             return False
-        left = None
         async with self._lock:
             current = self.record
             if not accepts(current, new, me):
@@ -282,10 +293,13 @@ class Group:
                 # Joined to another group: out of this one first (the
                 # design's "takes it out of any other group").
                 left = leaving(current, me)
-            await self._adopt(new)
-        if left is not None:
-            await self._tell(left)
+                self._spawn(self._tell(left))
+            self._keep(new)
         return True
+
+    async def settled(self) -> None:
+        """Every change kept so far has been put in force here."""
+        await self._queue.join()
 
     # -- keeping members in step ---------------------------------------------------
 
@@ -319,8 +333,7 @@ class Group:
                 async with self._lock:
                     if self.record is not None and self.record.has(member.id) \
                             and member.id != self.record.leader:
-                        new = self.record.without(member.id, by=self.me or "", clock=self._clock)
-                        await self._adopt(new)
+                        self._keep(self.record.without(member.id, by=self.me or "", clock=self._clock))
                 continue
             if await self._deliver(member, record):
                 self._owed.pop(member.id, None)
@@ -332,17 +345,33 @@ class Group:
             raise GroupError("this player is in no group")
         return self.record
 
-    async def _adopt(self, new: Record) -> None:
+    def _keep(self, new: Record) -> None:
+        """The change kept (under the lock), and queued to be put in force."""
         old = self.record
         self.record = None if new.ended or not new.has(self.me or "") else new
         write(self.record, self._path)
         logger.info("group: %s (revision %d, %d players, led by %s)",
                     "ended" if new.ended else ("left" if self.record is None else "now"),
                     new.revision, len(new.members), new.leader)
-        try:
-            await self._apply(old, self.record)
-        except Exception:  # noqa: BLE001 - a change kept must not be lost to its effects
-            logger.exception("group: putting the change in force failed")
+        self._queue.put_nowait((old, self.record))
+        if self._worker_task is None or self._worker_task.done():
+            self._worker_task = asyncio.get_running_loop().create_task(self._worker())
+
+    async def _worker(self) -> None:
+        """This player's part of each change, one at a time, in order."""
+        while True:
+            old, new = await self._queue.get()
+            try:
+                await self._apply(old, new)
+            except Exception:  # noqa: BLE001 - a change kept must not be lost to its effects
+                logger.exception("group: putting the change in force failed")
+            finally:
+                self._queue.task_done()
+
+    def _spawn(self, coro) -> None:
+        task = asyncio.get_running_loop().create_task(coro)
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
 
     async def _tell(self, record: Record, also=()) -> None:
         """Every member of `record` but this player, and `also` (members

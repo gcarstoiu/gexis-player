@@ -15,9 +15,10 @@
   import RemoteCover from './RemoteCover.svelte';
   import RemoteTransport from './RemoteTransport.svelte';
   import VolumeRow from './VolumeRow.svelte';
+  import GroupMark from './GroupMark.svelte';
   import { seek } from './commands.js';
 
-  let { artwork = null, onartfailed, onsay, oneq } = $props();
+  let { artwork = null, onartfailed, onsay, oneq, ongroup, onmark } = $props();
 
   const hasTrack = $derived(!!$active);
   const head = playhead(() => $metadata);
@@ -83,8 +84,10 @@
       <span>{!hasTrack ? '0:00' : head.hasPosition ? mmss(head.duration) : 'live'}</span>
     </div>
   </div>
+  <!-- ADR-0166 (3a): the grouped mark, under the times, above the transport. -->
+  <GroupMark onopen={onmark} gap={8} height={20} />
   <div class="transport"><RemoteTransport big /></div>
-  <div class="volume"><VolumeRow {oneq} {onsay} /></div>
+  <div class="volume"><VolumeRow {oneq} {ongroup} {onsay} /></div>
 </div>
 
 <style>

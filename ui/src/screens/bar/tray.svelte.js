@@ -12,6 +12,11 @@ export const TRAY_H = 136;
 
 export const pull = $state({ offset: null });
 
+//: **Which band the tray opens on** (ADR-0166): the grouped mark on Now
+//: Playing opens the tray on the group's band, not on the level alone. Set
+//: before the tray is opened; the tray takes it and clears it.
+export const trayAsk = $state({ band: null });
+
 /**
  * A vertical drag on a band: follows the finger, and on release says whether
  * the gesture was a tap or how far it went. `sign` is +1 for a band dragged

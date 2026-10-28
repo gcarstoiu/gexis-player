@@ -15,29 +15,61 @@
 
   **The slider fill stays LMS teal for every source** (George, 2026-10-01,
   review decision 7: keep the panel's), not the source accent round 2 drew.
+
+  **ADR-0166 (design/source/22, 2a): the group.** A *Group* pill beside the
+  equaliser's opens a second band as the equaliser's does: the members'
+  cards, + Add players, Leave and Undo group - or, not grouped, Add players.
+  Grouped, the pill names how many play together and the slider is the
+  *All* slider, its mute the group's.
 -->
 <script>
+  import { onMount } from 'svelte';
   import { fixedMute, fixedOutput, meters } from '../../lib/state.js';
   import { VolumeControl } from '../../lib/volumeControl.svelte.js';
   import { pressing } from '../../lib/press.svelte.js';
   import LockIcon from '../../lib/LockIcon.svelte';
   import VolumeIcon from '../../lib/VolumeIcon.svelte';
-  import { pull, bandDrag, TRAY_H } from './tray.svelte.js';
+  import { pull, bandDrag, TRAY_H, trayAsk } from './tray.svelte.js';
   import { equaliser } from '../../lib/equaliser.svelte.js';
   import EqQuick from '../eq/EqQuick.svelte';
+  import GroupGlyph from '../../lib/GroupGlyph.svelte';
+  import { dragStart, group, groupLevel, LevelSender, setGroupMute } from '../../lib/group.svelte.js';
+  import BarAddBand from '../group/BarAddBand.svelte';
+  import BarGroupBand from '../group/BarGroupBand.svelte';
+  import BarUndoConfirm from '../group/BarUndoConfirm.svelte';
 
   //: `armsAt`: before this (performance.now()), a tray that came down by
   //: itself takes no touch on its level or mute (App.svelte, VOLUME_ARM_MS).
   let { open, armsAt = 0, volume, active, onclose, onexternal, onactivity, onsettled, onhome, onvisualisation, ondashboard = null, onequaliser = null, rootless = false } = $props();
 
   //: ADR-0162 (design/source/20, Q06-Q09): the EQ button opens a second band
-  //: under the first - the switch, the settings, the note and Edit.
+  //: under the first - the switch, the settings, the note and Edit. ADR-0166
+  //: (design/source/22, 2a): the Group pill opens its own there, 150 tall -
+  //: the members (`group`) or Add players (`add`).
   const EQ_H = 254;
-  let eqBand = $state(false);
+  const GROUP_H = 290;
+  let second = $state(null);
+  let confirming = $state(false);
   $effect(() => {
-    if (!open) eqBand = false;
+    if (!open) {
+      second = null;
+      confirming = false;
+    }
   });
-  const trayH = $derived(eqBand ? EQ_H : TRAY_H);
+  //: The grouped mark on Now Playing asked for the group's band.
+  $effect(() => {
+    if (open && trayAsk.band) {
+      second = trayAsk.band === 'group' && !$group ? 'add' : trayAsk.band;
+      trayAsk.band = null;
+    }
+  });
+  //: A group undone or left while its band shows: the band goes with it.
+  $effect(() => {
+    if (second === 'group' && !$group) second = null;
+  });
+  const eqBand = $derived(second === 'eq');
+  const groupBand = $derived(second === 'group' || second === 'add');
+  const trayH = $derived(eqBand ? EQ_H : groupBand ? GROUP_H : TRAY_H);
   const eqLit = $derived(!!$equaliser?.on && !$equaliser?.dsd);
   const eqName = $derived(!$equaliser ? '' : !$equaliser.on ? 'EQ off' : $equaliser.dsd ? 'DSD'
     : $equaliser.sel === 'custom' ? 'Custom' : ($equaliser.name ?? 'Flat'));
@@ -47,6 +79,43 @@
   }
 
   const press = pressing();
+
+  // ---- the group (ADR-0166) ----------------------------------------------------
+  //: The other players, for the pill and Add players: asked each time the
+  //: tray opens, as the phone's list is.
+  let players = $state([]);
+  let here = $state(null);
+  async function loadPlayers() {
+    try {
+      const response = await fetch('/players');
+      if (!response.ok) return;
+      const body = await response.json();
+      here = body.self ?? null;
+      players = body.others ?? [];
+    } catch {
+      // Kept as it was: the pill stays as it is until the next answer.
+    }
+  }
+  $effect(() => {
+    if (open) loadPlayers();
+  });
+  // Asked once at the start too, so the pill is there the first time.
+  onMount(loadPlayers);
+  const grouped = $derived(!!$group);
+  //: Only where there is somebody to group with, or a group already.
+  const groupOffered = $derived(grouped || players.length > 0);
+  function toggleGroup() {
+    if (groupBand) {
+      second = null;
+      return;
+    }
+    second = grouped ? 'group' : 'add';
+    if (!grouped) loadPlayers();
+  }
+  function openAdd() {
+    second = 'add';
+    loadPlayers();
+  }
 
   // ---- the level: one copy, shared with the panel's drawer -----------------
   //: lib/volumeControl.svelte.js. The level is measured against the rail,
@@ -58,11 +127,54 @@
     onsettled: () => onsettled,
     fixedMute: () => $fixedMute,
   });
-  const muted = $derived(vol.muted);
-  const shown = $derived(vol.shown);
-  const pct = $derived(vol.pct);
   const toast = $derived(vol.toast);
   let rail = $state(null);
+
+  //: **Grouped, the slider is the *All* slider** (D6, the design's
+  //: `dragGroup`): every Variable member by the same step from where they
+  //: were when the finger landed, drawn before the core's answer.
+  const gsend = new LevelSender((percent, from) => groupLevel(percent, from),
+    (error) => vol.flash(`Volume not changed: ${error.message}`));
+  let gLocal = $state(null);
+  let gFrom = null;
+  const gVariable = $derived(($group?.members ?? []).some((m) => m.reachable && !m.fixed && m.volume != null));
+  function gSet(x) {
+    const r = rail.getBoundingClientRect();
+    gLocal = Math.round(Math.max(0, Math.min(1, (x - r.left) / r.width)) * 100);
+    gsend.send(gLocal, gFrom);
+  }
+  function gUp() {
+    gFrom = null;
+    // The members' own reports take over once they arrive.
+    setTimeout(() => { if (gFrom === null) gLocal = null; }, 1200);
+  }
+  const slide = {
+    down(x, target, pointerId) {
+      if (!grouped) return vol.down({ clientX: x, currentTarget: target, pointerId }, rail);
+      if (!gVariable) return;
+      gFrom = dragStart($group);
+      gSet(x);
+    },
+    move(event) {
+      if (!grouped) return vol.move(event, rail);
+      if (gFrom) gSet(event.clientX);
+    },
+    up() {
+      if (!grouped) return vol.up();
+      gUp();
+    },
+    step(delta) {
+      if (!grouped) return vol.step(delta);
+      if (!gVariable) return;
+      gFrom = dragStart($group);
+      gLocal = Math.max(0, Math.min(100, ($group?.level ?? 0) + delta));
+      gsend.send(gLocal, gFrom);
+      gUp();
+    },
+  };
+  const muted = $derived(grouped ? !!$group?.muted : vol.muted);
+  const pct = $derived(grouped ? (gLocal ?? $group?.level ?? 0) : vol.pct);
+  const shown = $derived(grouped ? (gVariable ? pct : '—') : vol.shown);
   //: **The slider waits to see which way the finger goes** (George,
   //: 2026-10-04: the swipe up "still doesn't work"). The slider is most of
   //: the tray, and it took every touch at once - setting the level under the
@@ -85,32 +197,40 @@
       if (Math.max(Math.abs(dx), Math.abs(dy)) < DECIDE) return;
       pending.way = -dy > Math.abs(dx) ? 'close' : 'slide';
       if (pending.way === 'close') band.down({ clientY: pending.y, pointerId: pending.id });
-      else vol.down({ clientX: pending.x, currentTarget: event.currentTarget, pointerId: pending.id }, rail);
+      else slide.down(pending.x, event.currentTarget, pending.id);
     }
     if (pending.way === 'close') band.move(event);
-    else vol.move(event, rail);
+    else slide.move(event);
   }
   function up(event) {
     if (!pending) return;
     const way = pending.way;
     if (way === null) {
       // A tap: the level where it landed.
-      vol.down({ clientX: pending.x, currentTarget: event.currentTarget, pointerId: pending.id }, rail);
-      vol.up();
+      slide.down(pending.x, event.currentTarget, pending.id);
+      slide.up();
     } else if (way === 'close') {
       band.up();
-      vol.up();
+      slide.up();
     } else {
-      vol.up();
+      slide.up();
     }
     pending = null;
   }
   function cancel() {
     if (pending?.way === 'close') band.cancel();
-    if (pending?.way === 'slide') vol.up();
+    if (pending?.way === 'slide') slide.up();
     pending = null;
   }
-  const toggleMute = () => performance.now() >= armsAt && vol.toggleMute();
+  async function toggleMute() {
+    if (performance.now() < armsAt) return;
+    if (!grouped) return vol.toggleMute();
+    try {
+      await setGroupMute(!$group.muted);
+    } catch (error) {
+      vol.flash(`Mute not changed: ${error.message}`);
+    }
+  }
 
   // ---- open, closed and in between -------------------------------------------
   //: How far the tray is from closed, 0 to TRAY_H: the strip's band while it
@@ -140,7 +260,8 @@
   //: should work as well with a swipe up") - not only on the close band.
   //: Still the control under the finger first: a touch that lands on a
   //: button or the slider is theirs.
-  const OWN = 'button, input, .slider, [role="slider"], .closeband';
+  //: The group's cards scroll sideways under a finger (ADR-0166).
+  const OWN = 'button, input, .slider, [role="slider"], .closeband, [data-pan-x]';
   const bodySwipe = {
     down(event) { if (!event.target.closest(OWN)) band.down(event); },
     move: band.move,
@@ -216,7 +337,7 @@
   {/if}
   {#if $equaliser}
     <button class="eqbtn" class:is-lit={eqLit} type="button" aria-label="Equaliser" aria-expanded={eqBand}
-      onpointerup={(event) => press.lift(event, () => (eqBand = !eqBand))} onclick={() => press.click(() => (eqBand = !eqBand))}>
+      onpointerup={(event) => press.lift(event, () => (second = eqBand ? null : 'eq'))} onclick={() => press.click(() => (second = eqBand ? null : 'eq'))}>
       <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
         <path d="M6 4v16M12 4v16M18 4v16" />
         <circle cx="6" cy="14" r="2.6" fill="#16232c" /><circle cx="12" cy="8" r="2.6" fill="#16232c" /><circle cx="18" cy="15" r="2.6" fill="#16232c" />
@@ -225,9 +346,18 @@
       <span class="eqbtn__chev" class:is-open={eqBand}></span>
     </button>
   {/if}
+  {#if groupOffered}
+    <!-- ADR-0166: beside the equaliser's, built as it is. -->
+    <button class="eqbtn" class:is-lit={grouped || groupBand} type="button" aria-label="Group" aria-expanded={groupBand}
+      onpointerup={(event) => press.lift(event, toggleGroup)} onclick={() => press.click(toggleGroup)}>
+      <GroupGlyph size={24} />
+      <span class="eqbtn__name">{grouped ? `${$group.members.length} players` : 'Group'}</span>
+      <span class="eqbtn__chev" class:is-open={groupBand}></span>
+    </button>
+  {/if}
   <span class="divider"></span>
 
-  {#if $fixedOutput}
+  {#if $fixedOutput && !grouped}
     <!-- ADR-0046: the sentence where the question is asked, not a disabled
          slider. ADR-0165: mute before it, where the output can be silenced. -->
     {#if $fixedMute !== null}
@@ -248,7 +378,8 @@
       </span>
       <span class="fixed__level" class:is-muted={muted}>{muted ? 'Mute' : '100%'}</span>
     </div>
-  {:else if volume}
+  {:else if volume || grouped}
+    {#if grouped}<span class="all">All</span>{/if}
     <button class="btn mute" class:is-muted={muted} type="button" aria-label={muted ? 'Unmute' : 'Mute'}
       onpointerup={(event) => press.lift(event, toggleMute)} onclick={() => press.click(toggleMute)}>
       {#if muted}
@@ -262,11 +393,11 @@
       class="track"
       role="slider"
       tabindex="-1"
-      aria-label="Volume"
+      aria-label={grouped ? 'All players volume' : 'Volume'}
       aria-valuemin="0"
       aria-valuemax="100"
       aria-valuenow={pct}
-      ondpadstep={(event) => vol.step(event.detail.step * 2)}
+      ondpadstep={(event) => slide.step(event.detail.step * 2)}
       onpointerdown={down}
       onpointermove={move}
       onpointerup={up}
@@ -284,8 +415,15 @@
     <div class="eqband">
       <EqQuick host="bartray" onedit={goEqualiser} />
     </div>
+  {:else if second === 'group' && $group}
+    <BarGroupBand g={$group} onadd={openAdd} onundo={() => (confirming = true)} onerror={(text) => vol.flash(text)} />
+  {:else if second === 'add'}
+    <BarAddBand g={$group} {players} {here} ondone={() => (second = grouped ? 'group' : null)}
+      onerror={(text) => vol.flash(text)} />
   {/if}
 </div>
+
+<BarUndoConfirm open={confirming} g={$group} onclose={() => (confirming = false)} onerror={(text) => vol.flash(text)} />
 
 <div class="toast" class:is-shown={toast}>
   <span>{toast ?? ''}</span>
@@ -481,6 +619,16 @@
   .i-sliders b:nth-child(4) { top: 9px; left: 13px; }
   .i-meter { display: flex; align-items: flex-end; gap: 4px; height: 22px; }
   .i-meter i { width: 4px; border-radius: 2px; background: var(--ink-body); }
+
+  /* ADR-0166: the group's level, the design's label before its mute. */
+  .all {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--group-ink);
+    flex-shrink: 0;
+  }
 
   .divider {
     width: 1px;

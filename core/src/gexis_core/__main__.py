@@ -4774,10 +4774,36 @@ async def main() -> None:
                                    host=f"{device_name.hostname()}.local", port=config.state_port)
 
     async def _group_rechain() -> None:
-        """The chain rewritten for the group, as the equaliser's switch does:
-        under the lock a change of output takes."""
+        """The chain rewritten for the group, under the lock a change of
+        output takes. **Renderers restarted only when one plays or holds the
+        device** (bedroompi, 2026-10-28: restarting all of them, Plexamp
+        and the plugins with them, took a join 26 s): an idle renderer reads
+        the new chain at its next open, as ALSA reads the file then."""
         async with volume_change:
-            await _rewrite_output_conf("the group changed", wait=True)
+            units = [a.unit_name for a in adapters.values() if getattr(a, "unit_name", None)]
+            units += _plugin_renderer_units()
+            if supervisor.active is not None or any(alsa.device_held_by(u) for u in units):
+                await _rewrite_output_conf("the group changed", wait=True)
+                return
+            chosen = _with_software(outputs.in_force(settings.value("output_device"))[0])
+            if chosen is None:
+                logger.error("outputs: nothing to write the group's chain to")
+                return
+            try:
+                env_was = outputs.SQUEEZELITE_ENV.read_text()
+            except OSError:
+                env_was = None
+            outputs.write(chosen, tuning=_tuning(), fixed=fixed_wanted["value"])
+            await _equaliser_follows(chosen)
+            try:
+                env_now = outputs.SQUEEZELITE_ENV.read_text()
+            except OSError:
+                env_now = None
+            if env_now != env_was and renderer_enabled("lms"):
+                # Squeezelite reads its options only when it starts (ADR-0143).
+                await (await asyncio.create_subprocess_exec(
+                    "systemctl", "restart", "squeezelite.service")).wait()
+            logger.info("outputs: the group's chain is in place; nothing played, nothing restarted")
 
     def _group_chain_card() -> tuple[str | None, bool]:
         """The card the group's music plays to here, and whether the chain in

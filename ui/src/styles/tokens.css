@@ -190,3 +190,25 @@
   --remote-scroll-line:         rgba(233, 238, 242, 0.07);
   --remote-scroll-thumb:        rgba(233, 238, 242, 0.18);
 }
+
+/* From design/tokens.css, *Phase 22: multiroom* (picks 1a, 2a, 3a). The
+   mark's and the drawer's sizes stay in their components, placed by the
+   rules (midway between, beside, under) rather than the artboards' pixels:
+   production wins under the additions. */
+:root {
+  --group-ink:                  #7ed6bc;                  /* glyph, Leads, group head: LMS accent, never the source's */
+  --group-ground:               rgba(126, 214, 188, 0.06);
+  --group-line:                 rgba(126, 214, 188, 0.22);
+  --group-on-ground:            rgba(126, 214, 188, 0.12);
+  --group-on-line:              rgba(126, 214, 188, 0.45);
+  --group-join-ground:          rgba(126, 214, 188, 0.14);
+  --group-join-line:            rgba(126, 214, 188, 0.45);
+  --group-undo-ink:             #e0a758;                  /* = --accent-warn */
+  --group-undo-ground:          rgba(224, 167, 88, 0.14);
+  --group-undo-line:            rgba(224, 167, 88, 0.4);
+  --group-off-opacity:          0.45;
+  --group-leads-ground:         rgba(126, 214, 188, 0.14);
+  --group-leads-tracking:       0.14em;
+  --mark-ground:                rgba(233, 238, 242, 0.07);
+  --mark-line:                  rgba(233, 238, 242, 0.14);
+}

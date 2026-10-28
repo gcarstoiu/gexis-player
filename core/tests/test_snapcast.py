@@ -3,6 +3,7 @@ fed from the group's loopback while something plays into it."""
 from __future__ import annotations
 
 import asyncio
+import json
 
 import pytest
 
@@ -153,3 +154,30 @@ async def test_the_groups_card_is_made_again_when_only_the_equalisers_is_there(t
     snap = snapcast.Snapcast(run=run, control=FakeControl([]), cards=cards)
     assert await snap.ensure_card(before_reload=before)
     assert stopped and ("modprobe", "-r", "snd-aloop") in calls
+
+
+async def test_the_control_connection_is_kept_and_passes_the_servers_notices_on():
+    connections = []
+
+    async def serve(reader, writer):
+        connections.append(1)
+        # A notice first, as the server sends one when a client connects.
+        writer.write(b'{"jsonrpc":"2.0","method":"Client.OnConnect","params":{"id":"c1"}}\r\n')
+        while line := await reader.readline():
+            request = json.loads(line)
+            writer.write((json.dumps({"id": request["id"], "jsonrpc": "2.0",
+                                      "result": {"echo": request["method"]}}) + "\r\n").encode())
+            await writer.drain()
+    server = await asyncio.start_server(serve, "127.0.0.1", 0)
+    port = server.sockets[0].getsockname()[1]
+    control = snapcast.Control(port=port)
+    notices = []
+    control.on_notice = lambda method, params: notices.append(method)
+    assert await control.call("Server.GetStatus") == {"echo": "Server.GetStatus"}
+    assert await control.call("Group.SetStream", {"id": "g"}) == {"echo": "Group.SetStream"}
+    await asyncio.sleep(0.05)
+    assert connections == [1], "one connection for every call"
+    assert notices == ["Client.OnConnect"]
+    await control.close()
+    server.close()
+    await server.wait_closed()

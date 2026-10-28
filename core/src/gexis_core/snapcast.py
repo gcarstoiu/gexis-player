@@ -151,37 +151,82 @@ async def _run(*args: str, timeout: float = 20) -> tuple[int, str]:
 
 
 class Control:
-    """The server's JSON-RPC on its control port, one request at a time."""
+    """**The server's JSON-RPC on its control port: one connection, kept**
+    (bedroompi, 2026-10-28: a connection a call, every second, wrote two
+    lines a time into a journal kept in memory). Replies are matched by id;
+    the server's own notices - a client connecting or going, a stream
+    starting - are passed to `on_notice`."""
 
     def __init__(self, port: int = CONTROL_PORT) -> None:
         self._port = port
         self._id = 0
-        self._lock = asyncio.Lock()
+        self._pending: dict[int, asyncio.Future] = {}
+        self._writer: asyncio.StreamWriter | None = None
+        self._reader: asyncio.Task | None = None
+        self._connecting = asyncio.Lock()
+        self.on_notice: Callable[[str, dict], None] = lambda method, params: None
 
-    async def call(self, method: str, params: dict | None = None, timeout: float = 3.0) -> dict:
-        async with self._lock:
-            self._id += 1
-            want = self._id
+    async def _connect(self, timeout: float) -> asyncio.StreamWriter:
+        async with self._connecting:
+            if self._writer is not None and not self._writer.is_closing():
+                return self._writer
             reader, writer = await asyncio.wait_for(
                 asyncio.open_connection("127.0.0.1", self._port), timeout)
-            try:
-                body = {"id": want, "jsonrpc": "2.0", "method": method, "params": params or {}}
-                writer.write((json.dumps(body) + "\r\n").encode())
-                await writer.drain()
-                while True:
-                    line = await asyncio.wait_for(reader.readline(), timeout)
-                    if not line:
-                        raise ConnectionError("the server closed the control connection")
+            self._writer = writer
+            self._reader = asyncio.create_task(self._read(reader))
+            return writer
+
+    async def _read(self, reader: asyncio.StreamReader) -> None:
+        try:
+            while line := await reader.readline():
+                try:
+                    message = json.loads(line)
+                except ValueError:
+                    continue
+                if not isinstance(message, dict):
+                    continue
+                waiting = self._pending.pop(message.get("id"), None) if "id" in message else None
+                if waiting is not None:
+                    if not waiting.done():
+                        waiting.set_result(message)
+                elif "method" in message:
                     try:
-                        message = json.loads(line)
-                    except ValueError:
-                        continue
-                    if message.get("id") == want:
-                        if "error" in message:
-                            raise RuntimeError(f"{method}: {message['error']}")
-                        return message.get("result") or {}
-            finally:
-                writer.close()
+                        self.on_notice(message["method"], message.get("params") or {})
+                    except Exception:  # noqa: BLE001 - a notice must not end the connection
+                        logger.exception("multiroom: a server notice could not be handled")
+        except (OSError, asyncio.IncompleteReadError):
+            pass
+        finally:
+            self._writer = None
+            for waiting in self._pending.values():
+                if not waiting.done():
+                    waiting.set_exception(ConnectionError("the server closed the control connection"))
+            self._pending.clear()
+
+    async def call(self, method: str, params: dict | None = None, timeout: float = 3.0) -> dict:
+        writer = await self._connect(timeout)
+        self._id += 1
+        want = self._id
+        answer = asyncio.get_running_loop().create_future()
+        self._pending[want] = answer
+        body = {"id": want, "jsonrpc": "2.0", "method": method, "params": params or {}}
+        writer.write((json.dumps(body) + "\r\n").encode())
+        try:
+            await writer.drain()
+            message = await asyncio.wait_for(answer, timeout)
+        finally:
+            self._pending.pop(want, None)
+        if "error" in message:
+            raise RuntimeError(f"{method}: {message['error']}")
+        return message.get("result") or {}
+
+    async def close(self) -> None:
+        if self._writer is not None:
+            self._writer.close()
+            self._writer = None
+        if self._reader is not None:
+            self._reader.cancel()
+            self._reader = None
 
 
 class Snapcast:
@@ -209,6 +254,9 @@ class Snapcast:
         #: Host ids of the clients connected to this player's server.
         self.connected: dict[str, float] = {}
         self._poll: asyncio.Task | None = None
+        self._looking: asyncio.Task | None = None
+        if hasattr(self._control, "on_notice"):
+            self._control.on_notice = self._notice
 
     # -- the loopback ----------------------------------------------------------
 
@@ -265,6 +313,8 @@ class Snapcast:
                     task.cancel()
             self._watch = self._poll = None
             await self._stop_feeder()
+            if hasattr(self._control, "close"):
+                await self._control.close()
             await self._run("systemctl", "stop", SERVER_UNIT)
             self.connected = {}
             logger.info("multiroom: the server is down")
@@ -322,10 +372,11 @@ class Snapcast:
     async def _feed(self, rate: int) -> None:
         pipe = RUN_DIR / str(rate)
         try:
-            # Non-blocking: a server that is not reading fails here at once
-            # rather than holding the core.
-            fd = os.open(pipe, os.O_WRONLY | os.O_NONBLOCK)
-            os.set_blocking(fd, True)
+            # **Read-write, never write-only** (guestpi, 2026-10-28): between
+            # its reads the server has the pipe closed, and a write-only open
+            # then fails (ENXIO) or waits. On Linux a pipe opened for both
+            # opens at once, and the server finds a writer whenever it looks.
+            fd = os.open(pipe, os.O_RDWR)
         except OSError as exc:
             logger.warning("multiroom: the server's %d Hz pipe is not open (%s)", rate, exc)
             return
@@ -368,34 +419,44 @@ class Snapcast:
         except (OSError, asyncio.TimeoutError, ConnectionError, RuntimeError) as exc:
             logger.warning("multiroom: could not point the clients at %d Hz: %s", self.rate, exc)
 
+    def _notice(self, method: str, params: dict) -> None:
+        """A client came or went, or a stream changed: who is connected is
+        looked at again, once, at once."""
+        if method.startswith(("Client.", "Server.", "Group.")):
+            if self._looking is None or self._looking.done():
+                self._looking = asyncio.get_running_loop().create_task(self._clients())
+
     async def _polling(self) -> None:
-        """The clients connected to this server, every second: a member that
-        joins is pointed at the stream playing, and the group's state says
-        who has caught up."""
-        loop = asyncio.get_running_loop()
+        """The clients, every 15 s besides the server's notices: a member
+        that joins is pointed at the stream playing, and the group's state
+        says who has caught up."""
+        await asyncio.sleep(1.0)
         while True:
-            await asyncio.sleep(1.0)
-            try:
-                status = await self._control.call("Server.GetStatus")
-            except (OSError, asyncio.TimeoutError, ConnectionError, RuntimeError):
-                continue
-            seen: dict[str, float] = {}
-            stale = False
-            for group in status.get("server", {}).get("groups", []):
-                if self.rate is not None and group.get("stream_id") != stream_id(self.rate):
-                    stale = True
-                for client in group.get("clients", []):
-                    if client.get("connected"):
-                        # The client's id is the `--hostID` it was started
-                        # with: the member's stable id.
-                        cid = client.get("id")
-                        if cid:
-                            seen[cid] = self.connected.get(cid, loop.time())
-            if stale:
-                await self.point_clients()
-            if seen.keys() != self.connected.keys():
-                self.connected = seen
-                self.on_change()
+            await self._clients()
+            await asyncio.sleep(15.0)
+
+    async def _clients(self) -> None:
+        loop = asyncio.get_running_loop()
+        try:
+            status = await self._control.call("Server.GetStatus")
+        except (OSError, asyncio.TimeoutError, ConnectionError, RuntimeError):
+            return
+        seen: dict[str, float] = {}
+        stale = False
+        for group in status.get("server", {}).get("groups", []):
+            if self.rate is not None and group.get("stream_id") != stream_id(self.rate):
+                stale = True
+            for client in group.get("clients", []):
+                # The client's id is the `--hostID` it was started with: the
+                # member's stable id.
+                cid = client.get("id")
+                if client.get("connected") and cid:
+                    seen[cid] = self.connected.get(cid, loop.time())
+        if stale:
+            await self.point_clients()
+        if seen.keys() != self.connected.keys():
+            self.connected = seen
+            self.on_change()
 
     def caught_up(self, host_id: str, settle_s: float = 1.5) -> bool:
         """Whether `host_id`'s client is connected to this server and has had
