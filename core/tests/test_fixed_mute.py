@@ -101,6 +101,13 @@ def test_with_fixed_volume_mute_takes_the_fixed_path():
     assert "volume_bridge.write_fixed(hardware_silence() if muted else hardware_max())" in fixed
 
 
+def test_mute_keeps_the_renderers_own_number():
+    """sofapi, 2026-10-28: Bluetooth at 6 % came back from mute showing the
+    DAC's 39, and the next touch sent 39 % to the phone (ADR-0053)."""
+    assert ("state_store.set_volume_raw(volume.raw, muted=mute.muted, percent=remote.percent())"
+            in _closure("set_mute"))
+
+
 def test_offered_only_where_the_output_has_a_control():
     offered = _closure("_fixed_mute_offered")
     assert "if not fixed_now['value']:\n        return False" in offered

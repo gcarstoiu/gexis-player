@@ -1828,7 +1828,11 @@ async def main() -> None:
         ok = await mute.set(muted)
         volume = state_store.state.volume
         if ok and volume is not None:
-            state_store.set_volume_raw(volume.raw, muted=mute.muted)
+            # **The renderer's own number, as `publish_volume` gives it**
+            # (ADR-0053): without it the level shown became the DAC's - on
+            # sofapi, Bluetooth at 6 % came back from mute showing 39, and
+            # the next touch sent 39 % to the phone (George, 2026-10-28).
+            state_store.set_volume_raw(volume.raw, muted=mute.muted, percent=remote.percent())
         return ok
 
     async def _set_fixed_mute(muted: bool) -> bool:
