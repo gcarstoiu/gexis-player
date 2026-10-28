@@ -245,3 +245,57 @@
   --remote-scroll-thumb:        rgba(233,238,242,0.18);  /* 3 x 24, centred, static */
   --remote-scroll-step:         24px;     /* scroll strip travel per step */
 }
+
+/* ---- Phase 22: multiroom (2026-10-28) -----------------------------------
+   Extracted from source/22/Phone Remote Multiroom.dc.html and
+   source/22/Multiroom Panel.dc.html. Picks: 1a, 2a, 3a. */
+:root {
+  /* the group, every surface */
+  --group-ink:                  #7ed6bc;                  /* glyph, Leads, group head; LMS accent, never the source's */
+  --group-ground:               rgba(126,214,188,0.06);   /* the group block in Gexis players / Players */
+  --group-line:                 rgba(126,214,188,0.22);
+  --group-on-ground:            rgba(126,214,188,0.12);   /* group button while grouped */
+  --group-on-line:              rgba(126,214,188,0.45);
+  --group-join-ground:          rgba(126,214,188,0.14);   /* Join */
+  --group-join-line:            rgba(126,214,188,0.45);
+  --group-joining-ink:          #7ed6bc;                  /* "Joining · catching up" */
+  --group-undo-ink:             #e0a758;                  /* Undo group = --accent-warn */
+  --group-undo-ground:          rgba(224,167,88,0.14);
+  --group-undo-line:            rgba(224,167,88,0.4);
+  --group-off-opacity:          0.45;                     /* unreachable rows */
+  --group-leads-ground:         rgba(126,214,188,0.14);
+  --group-leads-tracking:       0.14em;                   /* mono, uppercase */
+
+  /* the grouped mark */
+  --mark-ground:                rgba(233,238,242,0.07);   /* panel and bar chip */
+  --mark-line:                  rgba(233,238,242,0.14);
+  --mark-panel-height:          44px;     /* radius 22, padding 0 18 0 14, gap 10, glyph 20, 16/600 */
+  --mark-panel-top:             616px;    /* centre 638: midway between progress (bottom 609) and play (top 668) */
+  --mark-bar-height:            36px;     /* radius 18, 16/600; top 238 on 1850 x 400 */
+  --mark-phone-size:            13px;     /* 600 at rgba(233,238,242,0.86), glyph 16, gap 6, no chip */
+  --mark-names:                 2;        /* then " + N" */
+
+  /* panel volume drawer */
+  --drawer-group-width:         820px;    /* padding 30 40 32, radius 28, line --group-line */
+  --drawer-member-row:          64px;
+  --drawer-member-name:         200px;
+  --drawer-member-track:        10px;     /* knob 32, mute 48, value 20px mono */
+  --drawer-member-max:          256px;    /* five or more: scroll, 48px fade */
+  --drawer-remove:              48px;     /* circle */
+  --drawer-button:              58px;     /* Add players, Leave, Undo; radius 15 */
+
+  /* bar tray */
+  --tray-band-height:           150px;    /* the second band, as the equaliser's */
+  --tray-closed:                136px;
+  --tray-open:                  290px;
+  --tray-group-pill:            60px;     /* radius 30, 19/700, gap 12 */
+  --tray-card-width:            330px;
+  --tray-card-height:           116px;    /* radius 18, ground rgba(255,255,255,0.04), line rgba(233,238,242,0.1) */
+
+  /* phone */
+  --remote-group-row:           64px;     /* Gexis players rows; mark 30 */
+  --remote-group-button:        44px;     /* Join / Remove; radius 12, padding 0 14, 15/700 */
+  --remote-group-block-radius:  14px;
+  --remote-group-sheet-slider:  44px;     /* All; members 36 */
+  --remote-group-name-col:      104px;
+}

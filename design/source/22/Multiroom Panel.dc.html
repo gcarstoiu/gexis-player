@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:'Nunito Sans';src:url('../../fonts/NunitoSans-Variable.woff2') format('woff2-variations'),url('../../fonts/NunitoSans-Variable.woff2') format('woff2');font-weight:300 800;font-display:block;}
+@font-face{font-family:'IBM Plex Mono';src:url('../../fonts/IBMPlexMono-Regular.woff2') format('woff2');font-weight:400;font-display:block;}
+@font-face{font-family:'IBM Plex Mono';src:url('../../fonts/IBMPlexMono-SemiBold.woff2') format('woff2');font-weight:500 600;font-display:block;}
+@font-face{font-family:'IBM Plex Mono';src:url('../../fonts/IBMPlexMono-Bold.woff2') format('woff2');font-weight:700;font-display:block;}
+html,body{margin:0;padding:0;background:#0c1014;}a{color:#7ed6bc;}a:hover{color:#a8e5d3;}[data-noscrollbar]::-webkit-scrollbar{display:none;}
+</style>
+<script src="./multiroom-data.js"></script>
+</helmet>
+<div data-mr="root" style="position:relative;width:max-content;background:#0c1014;font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif;color:#e9eef2;-webkit-tap-highlight-color:transparent;user-select:none;">
+
+  <sc-if value="{{ isPanel }}" hint-placeholder-val="{{ true }}">
+    <div data-screen-label="Panel" style="position:relative;width:1280px;height:800px;overflow:hidden;">
+      <sc-if value="{{ npBack }}" hint-placeholder-val="{{ true }}"><img src="eq/backdrop-now-playing.png" alt="" style="position:absolute;left:0;top:0;width:1280px;height:800px;display:block;" /></sc-if>
+      <sc-if value="{{ homeBack }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:0;top:0;width:1280px;height:800px;overflow:hidden;z-index:0;isolation:isolate;"><dc-import name="Now Playing" source="none" hint-size="1280px,800px" style="position:absolute;left:0;top:0;width:1280px;height:800px;"></dc-import></div></sc-if>
+      <sc-if value="{{ playersBtn }}" hint-placeholder-val="{{ false }}"><div data-mr="players-button" onClick="{{ openSheet }}" aria-label="Players" style="position:absolute;left:210px;top:684px;width:60px;height:60px;border-radius:50%;box-sizing:border-box;display:grid;place-items:center;cursor:pointer;background:{{ pbBg }};border:1px solid {{ pbLine }};" style-active="transform:scale(0.95)"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" style="color:{{ pbInk }};flex-shrink:0;display:block;"><rect x="2.5" y="4" width="8" height="16" rx="2"></rect><rect x="13.5" y="4" width="8" height="16" rx="2"></rect><circle cx="6.5" cy="14.5" r="2"></circle><circle cx="17.5" cy="14.5" r="2"></circle></svg></div></sc-if>
+      <sc-if value="{{ markTime }}" hint-placeholder-val="{{ false }}"><div data-mr="mark" onClick="{{ openGroup }}" style="position:absolute;left:300px;width:680px;top:616px;height:44px;display:flex;justify-content:center;cursor:pointer;"><span style="height:44px;max-width:100%;border-radius:22px;box-sizing:border-box;padding:0 18px 0 14px;display:flex;align-items:center;gap:10px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);font-size:16px;font-weight:600;color:#e9eef2;white-space:nowrap;overflow:hidden;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#7ed6bc" stroke-width="2" stroke-linejoin="round" style="flex-shrink:0;display:block;"><rect x="2.5" y="4" width="8" height="16" rx="2"></rect><rect x="13.5" y="4" width="8" height="16" rx="2"></rect><circle cx="6.5" cy="14.5" r="2"></circle><circle cx="17.5" cy="14.5" r="2"></circle></svg><span style="flex-shrink:0;">{{ withText }}</span><span style="flex-shrink:0;">{{ withMore }}</span></span></div></sc-if>
+      <sc-if value="{{ markVol }}" hint-placeholder-val="{{ false }}"><div data-mr="mark" onClick="{{ openGroup }}" style="position:absolute;right:204px;top:692px;max-width:206px;height:44px;display:flex;justify-content:flex-end;cursor:pointer;"><span style="height:44px;max-width:100%;border-radius:22px;box-sizing:border-box;padding:0 14px 0 12px;display:flex;align-items:center;gap:8px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);font-size:15px;font-weight:600;color:#e9eef2;white-space:nowrap;overflow:hidden;"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#7ed6bc" stroke-width="2" stroke-linejoin="round" style="flex-shrink:0;display:block;"><rect x="2.5" y="4" width="8" height="16" rx="2"></rect><rect x="13.5" y="4" width="8" height="16" rx="2"></rect><circle cx="6.5" cy="14.5" r="2"></circle><circle cx="17.5" cy="14.5" r="2"></circle></svg><span style="flex-shrink:0;">{{ withText }}</span><span style="flex-shrink:0;">{{ withMore }}</span></span></div></sc-if>
+      <sc-if value="{{ markCover }}" hint-placeholder-val="{{ false }}"><div data-mr="mark" onClick="{{ openGroup }}" style="position:absolute;left:72px;top:483px;max-width:468px;height:44px;display:flex;cursor:pointer;"><span style="height:44px;max-width:100%;border-radius:22px;box-sizing:border-box;padding:0 18px 0 14px;display:flex;align-items:center;gap:10px;background:rgba(13,21,28,0.8);border:1px solid rgba(233,238,242,0.16);font-size:16px;font-weight:600;color:#e9eef2;white-space:nowrap;overflow:hidden;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#7ed6bc" stroke-width="2" stroke-linejoin="round" style="flex-shrink:0;display:block;"><rect x="2.5" y="4" width="8" height="16" rx="2"></rect><rect x="13.5" y="4" width="8" height="16" rx="2"></rect><circle cx="6.5" cy="14.5" r="2"></circle><circle cx="17.5" cy="14.5" r="2"></circle></svg><span style="flex-shrink:0;">{{ withText }}</span><span style="flex-shrink:0;">{{ withMore }}</span></span></div></sc-if>
+      
+
+      <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ close }}" style="position:absolute;inset:0;background:rgba(8,12,16,0.6);"></div>
+        <div data-mr="drawer" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:820px;max-height:776px;background:#16232c;border:1px solid rgba(126,214,188,0.22);border-radius:28px;padding:30px 40px 32px;box-sizing:border-box;box-shadow:0 34px 90px rgba(0,0,0,0.6);display:flex;flex-direction:column;">
+          <div style="flex-shrink:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);margin-bottom:20px;">Controls</div>
+          <sc-if value="{{ notGrouped }}" hint-placeholder-val="{{ true }}">
+            <div style="flex-shrink:0;display:flex;align-items:center;gap:22px;"><div onClick="{{ myMute }}" aria-label="Mute" style="position:relative;width:58px;height:58px;border-radius:15px;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-active="transform:scale(0.95)"><span style="position:relative;width:30px;height:30px;display:block;"><span style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:15px;height:26px;background:#e9eef2;clip-path:polygon(0 27%,42% 27%,100% 0,100% 100%,42% 73%,0 73%);display:block;"></span><span style="position:absolute;left:5px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:1px;top:50%;width:24px;height:24px;margin-top:-12px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:-2px;top:50%;width:30px;height:30px;margin-top:-15px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.18);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span></span><sc-if value="{{ myMuted }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:50%;top:50%;width:30px;height:3px;margin:-1.5px 0 0 -15px;border-radius:2px;transform:rotate(-38deg);background:#e0a758;display:block;"></span></sc-if></div>
+            <div onPointerDown="{{ myDown }}" onPointerMove="{{ myMove }}" onPointerUp="{{ myUp }}" onPointerCancel="{{ myUp }}" style="flex:1;height:64px;display:flex;align-items:center;min-width:0;touch-action:none;cursor:pointer;">
+              <div style="width:100%;height:14px;border-radius:999px;background:rgba(233,238,242,0.14);position:relative;">
+                <div style="position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:{{ myFill }};width:{{ myPct }};"></div>
+                <div style="position:absolute;top:50%;width:40px;height:40px;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 4px 14px rgba(0,0,0,0.45);background:#e9eef2;left:{{ myPct }};"></div>
+              </div>
+            </div>
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:26px;font-weight:600;width:76px;text-align:right;flex-shrink:0;">{{ myText }}</span></div>
+            <sc-if value="{{ manage }}" hint-placeholder-val="{{ false }}">
+              <div style="flex-shrink:0;height:1px;background:rgba(233,238,242,0.1);margin:22px 0 20px;"></div>
+              <div data-mr="players-row" style="flex-shrink:0;display:flex;align-items:center;gap:16px;">
+                <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="rgba(233,238,242,0.82)" stroke-width="2" stroke-linejoin="round" style="flex-shrink:0;display:block;"><rect x="2.5" y="4" width="8" height="16" rx="2"></rect><rect x="13.5" y="4" width="8" height="16" rx="2"></rect><circle cx="6.5" cy="14.5" r="2"></circle><circle cx="17.5" cy="14.5" r="2"></circle></svg>
+                <div style="flex:1;min-width:0;"><div style="font-size:19px;font-weight:600;">Other players</div><div style="font-size:15px;margin-top:4px;color:rgba(233,238,242,0.6);">Join players to this one to play the same music in sync.</div></div>
+                <div onClick="{{ openAdd }}" style="height:58px;padding:0 22px;border-radius:15px;box-sizing:border-box;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;gap:10px;font-size:17px;font-weight:600;white-space:nowrap;cursor:pointer;flex-shrink:0;" style-active="transform:scale(0.95)"><span style="font-size:24px;font-weight:400;line-height:1;margin-top:-2px;">+</span>Add players</div>
+              </div>
+            </sc-if>
+          </sc-if>
+          <sc-if value="{{ grouped }}" hint-placeholder-val="{{ false }}">
+            <div style="flex-shrink:0;display:flex;align-items:center;gap:14px;margin-bottom:10px;">
+              <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#7ed6bc" stroke-width="2" stroke-linejoin="round" style="flex-shrink:0;display:block;"><rect x="2.5" y="4" width="8" height="16" rx="2"></rect><rect x="13.5" y="4" width="8" height="16" rx="2"></rect><circle cx="6.5" cy="14.5" r="2"></circle><circle cx="17.5" cy="14.5" r="2"></circle></svg>
+              <div style="flex:1;min-width:0;"><div style="font-size:19px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ gvTitle }}</div><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;margin-top:5px;color:rgba(233,238,242,0.72);">{{ gvSub }}</div></div>
+              <sc-if value="{{ manage }}" hint-placeholder-val="{{ false }}"><div onClick="{{ openAdd }}" style="height:52px;padding:0 22px;border-radius:15px;box-sizing:border-box;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;gap:10px;font-size:17px;font-weight:600;white-space:nowrap;cursor:pointer;flex-shrink:0;" style-active="transform:scale(0.95)"><span style="font-size:24px;font-weight:400;line-height:1;margin-top:-2px;">+</span>Add players</div></sc-if>
+              <sc-if value="{{ viaSheet }}" hint-placeholder-val="{{ false }}"><div onClick="{{ openSheet }}" style="height:52px;padding:0 22px;border-radius:15px;box-sizing:border-box;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;gap:10px;font-size:17px;font-weight:600;white-space:nowrap;cursor:pointer;flex-shrink:0;" style-active="transform:scale(0.95)">Players<span style="width:9px;height:9px;border-right:2.5px solid rgba(233,238,242,0.6);border-top:2.5px solid rgba(233,238,242,0.6);transform:rotate(45deg);display:block;margin-left:-2px;"></span></div></sc-if>
+            </div>
+            <div data-mr="group-all" style="flex-shrink:0;display:flex;align-items:center;gap:16px;">
+              <span style="width:200px;flex-shrink:0;font-size:17px;font-weight:700;color:#7ed6bc;">All players</span>
+              <div onClick="{{ gMute }}" aria-label="Mute" style="position:relative;width:58px;height:58px;border-radius:15px;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-active="transform:scale(0.95)"><span style="position:relative;width:30px;height:30px;display:block;"><span style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:15px;height:26px;background:#e9eef2;clip-path:polygon(0 27%,42% 27%,100% 0,100% 100%,42% 73%,0 73%);display:block;"></span><span style="position:absolute;left:5px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:1px;top:50%;width:24px;height:24px;margin-top:-12px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:-2px;top:50%;width:30px;height:30px;margin-top:-15px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.18);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span></span><sc-if value="{{ gMuted }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:50%;top:50%;width:30px;height:3px;margin:-1.5px 0 0 -15px;border-radius:2px;transform:rotate(-38deg);background:#e0a758;display:block;"></span></sc-if></div>
+            <div onPointerDown="{{ gDown }}" onPointerMove="{{ gMove }}" onPointerUp="{{ gUp }}" onPointerCancel="{{ gUp }}" style="flex:1;height:64px;display:flex;align-items:center;min-width:0;touch-action:none;cursor:pointer;">
+              <div style="width:100%;height:14px;border-radius:999px;background:rgba(233,238,242,0.14);position:relative;">
+                <div style="position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:{{ gFill }};width:{{ gPct }};"></div>
+                <div style="position:absolute;top:50%;width:40px;height:40px;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 4px 14px rgba(0,0,0,0.45);background:#e9eef2;left:{{ gPct }};"></div>
+              </div>
+            </div>
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:26px;font-weight:600;width:76px;text-align:right;flex-shrink:0;">{{ gText }}</span>
+              <sc-if value="{{ manage }}" hint-placeholder-val="{{ false }}"><span style="width:48px;flex-shrink:0;display:block;"></span></sc-if>
+            </div>
+            <div style="flex-shrink:0;height:1px;background:rgba(233,238,242,0.08);margin:8px 0 4px;"></div>
+            <div data-noscrollbar style="min-height:0;max-height:{{ listMax }};overflow-y:auto;scrollbar-width:none;display:flex;flex-direction:column;-webkit-mask-image:{{ listMask }};mask-image:{{ listMask }};">
+              <sc-for list="{{ gvRows }}" as="m" hint-placeholder-count="3">
+                <sc-if value="{{ manage }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:16px;min-height:64px;flex-shrink:0;">
+              <span style="width:200px;flex-shrink:0;min-width:0;display:flex;flex-direction:column;gap:3px;">
+                <span style="font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:3px;">{{ m.name }}</span>
+                <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;white-space:nowrap;color:{{ m.tagInk }};">{{ m.tag }}</span>
+              </span>
+              <sc-if value="{{ m.variable }}" hint-placeholder-val="{{ true }}">
+                <div onClick="{{ m.mute }}" aria-label="Mute" style="position:relative;width:48px;height:48px;border-radius:13px;flex-shrink:0;display:grid;place-items:center;cursor:pointer;" style-active="transform:scale(0.95)"><span style="transform:scale(0.8);display:block;"><span style="position:relative;width:30px;height:30px;display:block;"><span style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:15px;height:26px;background:#e9eef2;clip-path:polygon(0 27%,42% 27%,100% 0,100% 100%,42% 73%,0 73%);display:block;"></span><span style="position:absolute;left:5px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:1px;top:50%;width:24px;height:24px;margin-top:-12px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:-2px;top:50%;width:30px;height:30px;margin-top:-15px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.18);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span></span></span><sc-if value="{{ m.muted }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:50%;top:50%;width:30px;height:3px;margin:-1.5px 0 0 -15px;border-radius:2px;transform:rotate(-38deg);background:#e0a758;display:block;"></span></sc-if></div>
+                <div onPointerDown="{{ m.down }}" onPointerMove="{{ m.move }}" onPointerUp="{{ m.up }}" onPointerCancel="{{ m.up }}" aria-label="{{ m.label }}" style="flex:1;min-width:0;height:52px;display:flex;align-items:center;touch-action:none;cursor:pointer;">
+                  <div style="width:100%;height:10px;border-radius:999px;background:rgba(233,238,242,0.14);position:relative;">
+                    <div style="position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:{{ m.fill }};width:{{ m.pct }};"></div>
+                    <div style="position:absolute;top:50%;width:32px;height:32px;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 3px 10px rgba(0,0,0,0.45);background:#e9eef2;left:{{ m.pct }};"></div>
+                  </div>
+                </div>
+                <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:20px;font-weight:600;width:64px;text-align:right;flex-shrink:0;">{{ m.text }}</span>
+              </sc-if>
+              <sc-if value="{{ m.fixed }}" hint-placeholder-val="{{ false }}">
+                <div onClick="{{ m.mute }}" aria-label="Mute" style="position:relative;width:48px;height:48px;border-radius:13px;flex-shrink:0;display:grid;place-items:center;cursor:pointer;"><span style="transform:scale(0.8);display:block;"><span style="position:relative;width:30px;height:30px;display:block;"><span style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:15px;height:26px;background:#e9eef2;clip-path:polygon(0 27%,42% 27%,100% 0,100% 100%,42% 73%,0 73%);display:block;"></span><span style="position:absolute;left:5px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:1px;top:50%;width:24px;height:24px;margin-top:-12px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:-2px;top:50%;width:30px;height:30px;margin-top:-15px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.18);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span></span></span><sc-if value="{{ m.muted }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:50%;top:50%;width:30px;height:3px;margin:-1.5px 0 0 -15px;border-radius:2px;transform:rotate(-38deg);background:#e0a758;display:block;"></span></sc-if></div>
+                <div style="flex:1;min-width:0;height:52px;border-radius:14px;background:rgba(233,238,242,0.05);border:1px solid rgba(233,238,242,0.12);box-sizing:border-box;display:flex;align-items:center;gap:14px;padding:0 18px;"><span style="position:relative;width:22px;height:26px;flex-shrink:0;display:block;"><span style="position:absolute;left:4px;top:0;width:14px;height:12px;border:2.5px solid rgba(233,238,242,0.7);border-bottom:none;border-radius:7px 7px 0 0;box-sizing:border-box;display:block;"></span><span style="position:absolute;left:0;bottom:0;width:22px;height:15px;border-radius:4px;background:rgba(233,238,242,0.7);display:block;"></span></span><span style="flex:1;min-width:0;font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Fixed output · the amplifier sets the level</span><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);flex-shrink:0;">{{ m.fixedTag }}</span></div>
+              </sc-if>
+              <sc-if value="{{ m.off }}" hint-placeholder-val="{{ false }}">
+                <span style="flex:1;min-width:0;height:52px;border-radius:14px;border:1px dashed rgba(233,238,242,0.18);box-sizing:border-box;display:flex;align-items:center;padding:0 18px;font-size:16px;color:rgba(233,238,242,0.6);">Not reachable</span>
+              </sc-if>
+              <sc-if value="{{ m.canRemove }}" hint-placeholder-val="{{ false }}"><div onClick="{{ m.remove }}" aria-label="Remove {{ m.name }}" style="width:48px;height:48px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;cursor:pointer;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.12);box-sizing:border-box;" style-active="transform:scale(0.95)"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="rgba(233,238,242,0.82)" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></div></sc-if><sc-if value="{{ m.noRemove }}" hint-placeholder-val="{{ true }}"><span style="width:48px;flex-shrink:0;display:block;"></span></sc-if>
+            </div></sc-if>
+                <sc-if value="{{ noManage }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;gap:16px;min-height:64px;flex-shrink:0;">
+              <span style="width:200px;flex-shrink:0;min-width:0;display:flex;flex-direction:column;gap:3px;">
+                <span style="font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:3px;">{{ m.name }}</span>
+                <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;white-space:nowrap;color:{{ m.tagInk }};">{{ m.tag }}</span>
+              </span>
+              <sc-if value="{{ m.variable }}" hint-placeholder-val="{{ true }}">
+                <div onClick="{{ m.mute }}" aria-label="Mute" style="position:relative;width:48px;height:48px;border-radius:13px;flex-shrink:0;display:grid;place-items:center;cursor:pointer;" style-active="transform:scale(0.95)"><span style="transform:scale(0.8);display:block;"><span style="position:relative;width:30px;height:30px;display:block;"><span style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:15px;height:26px;background:#e9eef2;clip-path:polygon(0 27%,42% 27%,100% 0,100% 100%,42% 73%,0 73%);display:block;"></span><span style="position:absolute;left:5px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:1px;top:50%;width:24px;height:24px;margin-top:-12px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:-2px;top:50%;width:30px;height:30px;margin-top:-15px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.18);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span></span></span><sc-if value="{{ m.muted }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:50%;top:50%;width:30px;height:3px;margin:-1.5px 0 0 -15px;border-radius:2px;transform:rotate(-38deg);background:#e0a758;display:block;"></span></sc-if></div>
+                <div onPointerDown="{{ m.down }}" onPointerMove="{{ m.move }}" onPointerUp="{{ m.up }}" onPointerCancel="{{ m.up }}" aria-label="{{ m.label }}" style="flex:1;min-width:0;height:52px;display:flex;align-items:center;touch-action:none;cursor:pointer;">
+                  <div style="width:100%;height:10px;border-radius:999px;background:rgba(233,238,242,0.14);position:relative;">
+                    <div style="position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:{{ m.fill }};width:{{ m.pct }};"></div>
+                    <div style="position:absolute;top:50%;width:32px;height:32px;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 3px 10px rgba(0,0,0,0.45);background:#e9eef2;left:{{ m.pct }};"></div>
+                  </div>
+                </div>
+                <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:20px;font-weight:600;width:64px;text-align:right;flex-shrink:0;">{{ m.text }}</span>
+              </sc-if>
+              <sc-if value="{{ m.fixed }}" hint-placeholder-val="{{ false }}">
+                <div onClick="{{ m.mute }}" aria-label="Mute" style="position:relative;width:48px;height:48px;border-radius:13px;flex-shrink:0;display:grid;place-items:center;cursor:pointer;"><span style="transform:scale(0.8);display:block;"><span style="position:relative;width:30px;height:30px;display:block;"><span style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:15px;height:26px;background:#e9eef2;clip-path:polygon(0 27%,42% 27%,100% 0,100% 100%,42% 73%,0 73%);display:block;"></span><span style="position:absolute;left:5px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:1px;top:50%;width:24px;height:24px;margin-top:-12px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:-2px;top:50%;width:30px;height:30px;margin-top:-15px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.18);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span></span></span><sc-if value="{{ m.muted }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:50%;top:50%;width:30px;height:3px;margin:-1.5px 0 0 -15px;border-radius:2px;transform:rotate(-38deg);background:#e0a758;display:block;"></span></sc-if></div>
+                <div style="flex:1;min-width:0;height:52px;border-radius:14px;background:rgba(233,238,242,0.05);border:1px solid rgba(233,238,242,0.12);box-sizing:border-box;display:flex;align-items:center;gap:14px;padding:0 18px;"><span style="position:relative;width:22px;height:26px;flex-shrink:0;display:block;"><span style="position:absolute;left:4px;top:0;width:14px;height:12px;border:2.5px solid rgba(233,238,242,0.7);border-bottom:none;border-radius:7px 7px 0 0;box-sizing:border-box;display:block;"></span><span style="position:absolute;left:0;bottom:0;width:22px;height:15px;border-radius:4px;background:rgba(233,238,242,0.7);display:block;"></span></span><span style="flex:1;min-width:0;font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Fixed output · the amplifier sets the level</span><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);flex-shrink:0;">{{ m.fixedTag }}</span></div>
+              </sc-if>
+              <sc-if value="{{ m.off }}" hint-placeholder-val="{{ false }}">
+                <span style="flex:1;min-width:0;height:52px;border-radius:14px;border:1px dashed rgba(233,238,242,0.18);box-sizing:border-box;display:flex;align-items:center;padding:0 18px;font-size:16px;color:rgba(233,238,242,0.6);">Not reachable</span>
+              </sc-if>
+              
+            </div></sc-if>
+              </sc-for>
+            </div>
+            <sc-if value="{{ gNoteOn }}" hint-placeholder-val="{{ false }}"><div style="flex-shrink:0;margin-top:12px;font-size:15px;line-height:1.4;color:#e0a758;">{{ gNote }}</div></sc-if>
+            <sc-if value="{{ manage }}" hint-placeholder-val="{{ false }}">
+              <div style="flex-shrink:0;display:flex;justify-content:flex-end;gap:12px;margin-top:16px;">
+                <sc-if value="{{ canLeave }}" hint-placeholder-val="{{ false }}"><div onClick="{{ leave }}" style="height:58px;padding:0 22px;border-radius:15px;box-sizing:border-box;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;gap:10px;font-size:17px;font-weight:600;white-space:nowrap;cursor:pointer;flex-shrink:0;" style-active="transform:scale(0.95)">Leave group</div></sc-if>
+                <div onClick="{{ askUndo }}" style="height:58px;padding:0 22px;border-radius:15px;box-sizing:border-box;background:rgba(224,167,88,0.14);border:1px solid rgba(224,167,88,0.4);color:#e0a758;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;white-space:nowrap;cursor:pointer;flex-shrink:0;" style-active="transform:scale(0.95)">Undo group</div>
+              </div>
+            </sc-if>
+          </sc-if>
+          <div style="flex-shrink:0;height:1px;background:rgba(233,238,242,0.1);margin:22px 0 20px;"></div>
+          <div style="flex-shrink:0;display:flex;align-items:center;gap:12px;">
+            <div style="flex:1;min-width:0;"><div style="font-size:19px;font-weight:600;">Equaliser</div><div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;margin-top:5px;color:rgba(233,238,242,0.72);">{{ eqLine }}</div></div>
+            <div style="height:58px;padding:0 18px 0 22px;border-radius:15px;box-sizing:border-box;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;gap:12px;font-size:17px;font-weight:600;flex-shrink:0;">Edit<span style="width:9px;height:9px;border-right:2.5px solid rgba(233,238,242,0.6);border-top:2.5px solid rgba(233,238,242,0.6);transform:rotate(45deg);display:block;margin-left:-2px;"></span></div>
+            <div style="height:58px;padding:0 12px;border-radius:15px;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);display:flex;align-items:center;flex-shrink:0;"><span style="width:60px;height:34px;border-radius:17px;position:relative;box-sizing:border-box;display:block;background:rgba(126,214,188,0.32);border:1px solid rgba(126,214,188,0.5);"><span style="position:absolute;top:3px;left:29px;width:26px;height:26px;border-radius:50%;display:block;background:#7ed6bc;"></span></span></div>
+          </div>
+          <div style="flex-shrink:0;display:flex;gap:10px;margin-top:16px;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 64px),transparent 100%);mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 64px),transparent 100%);"><div style="flex-shrink:0;height:56px;padding:0 22px;border-radius:14px;box-sizing:border-box;display:flex;align-items:center;font-size:17px;font-weight:600;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.12);color:#e9eef2;">Flat</div><div style="flex-shrink:0;height:56px;padding:0 22px;border-radius:14px;box-sizing:border-box;display:flex;align-items:center;font-size:17px;font-weight:600;background:rgba(126,214,188,0.16);border:1px solid rgba(126,214,188,0.55);color:#7ed6bc;">Rock</div><div style="flex-shrink:0;height:56px;padding:0 22px;border-radius:14px;box-sizing:border-box;display:flex;align-items:center;font-size:17px;font-weight:600;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.12);color:#e9eef2;">Pop</div><div style="flex-shrink:0;height:56px;padding:0 22px;border-radius:14px;box-sizing:border-box;display:flex;align-items:center;font-size:17px;font-weight:600;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.12);color:#e9eef2;">Jazz</div><div style="flex-shrink:0;height:56px;padding:0 22px;border-radius:14px;box-sizing:border-box;display:flex;align-items:center;font-size:17px;font-weight:600;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.12);color:#e9eef2;">Classical</div><div style="flex-shrink:0;height:56px;padding:0 22px;border-radius:14px;box-sizing:border-box;display:flex;align-items:center;font-size:17px;font-weight:600;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.12);color:#e9eef2;">Electronic</div><div style="flex-shrink:0;height:56px;padding:0 22px;border-radius:14px;box-sizing:border-box;display:flex;align-items:center;font-size:17px;font-weight:600;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.12);color:#e9eef2;">Hip-hop</div></div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ listOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ close }}" style="position:absolute;inset:0;background:rgba(8,12,16,0.6);"></div>
+        <div data-mr="players" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:820px;max-height:760px;background:#16232c;border:1px solid {{ listLine }};border-radius:28px;padding:26px 26px 26px;box-sizing:border-box;box-shadow:0 34px 90px rgba(0,0,0,0.6);display:flex;flex-direction:column;gap:14px;">
+          <div style="flex-shrink:0;display:flex;align-items:center;gap:16px;padding:0 0 0 10px;">
+            <sc-if value="{{ isAdd }}" hint-placeholder-val="{{ false }}"><div onClick="{{ backToDrawer }}" aria-label="Back" style="width:56px;height:56px;border-radius:50%;background:rgba(233,238,242,0.07);display:grid;place-items:center;flex-shrink:0;cursor:pointer;margin-left:-10px;" style-active="transform:scale(0.95)"><svg viewBox="0 0 24 24" width="26" height="26"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" fill="#e9eef2"></path></svg></div></sc-if>
+            <sc-if value="{{ isSheet }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#7ed6bc" stroke-width="2" stroke-linejoin="round" style="flex-shrink:0;display:block;"><rect x="2.5" y="4" width="8" height="16" rx="2"></rect><rect x="13.5" y="4" width="8" height="16" rx="2"></rect><circle cx="6.5" cy="14.5" r="2"></circle><circle cx="17.5" cy="14.5" r="2"></circle></svg></sc-if>
+            <div style="flex:1;min-width:0;"><div style="font-size:25px;font-weight:700;letter-spacing:-0.01em;">{{ listTitle }}</div><div style="font-size:15px;margin-top:4px;color:rgba(233,238,242,0.6);text-wrap:pretty;">{{ listSub }}</div></div>
+            <div onClick="{{ listDone }}" style="height:56px;padding:0 22px;border-radius:15px;box-sizing:border-box;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;gap:10px;font-size:17px;font-weight:600;white-space:nowrap;cursor:pointer;flex-shrink:0;" style-active="transform:scale(0.95)">{{ listDoneText }}</div>
+          </div>
+          <div data-noscrollbar style="min-height:0;overflow-y:auto;scrollbar-width:none;display:flex;flex-direction:column;gap:8px;">
+            <sc-if value="{{ showGroup }}" hint-placeholder-val="{{ false }}">
+              <div data-mr="group" style="flex-shrink:0;border-radius:20px;background:rgba(126,214,188,0.06);border:1px solid rgba(126,214,188,0.22);padding:14px 0 14px;overflow:hidden;">
+                <div style="display:flex;align-items:center;gap:14px;padding:0 18px 8px;">
+                  <div style="flex:1;min-width:0;"><div style="font-size:17px;font-weight:700;color:#7ed6bc;">{{ gHead }}</div><div style="font-size:15px;margin-top:2px;color:rgba(233,238,242,0.72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ gNow }}</div></div>
+                </div>
+                <sc-for list="{{ gRows }}" as="r" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:16px;min-height:72px;padding:0 14px 0 18px;background:{{ r.rowBg }};">
+              <img src="gexis-mark.svg" alt="" style="width:34px;height:34px;display:block;flex-shrink:0;opacity:{{ r.op }};" />
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;opacity:{{ r.op }};">
+                <span style="font-size:19px;font-weight:700;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">{{ r.name }}<sc-if value="{{ r.lead }}" hint-placeholder-val="{{ false }}"><span data-mr="leads" style="display:inline-block;vertical-align:3px;margin-left:10px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;font-weight:400;line-height:1;letter-spacing:0.14em;text-transform:uppercase;padding:5px 7px;border-radius:7px;background:rgba(126,214,188,0.14);color:#7ed6bc;">Leads</span></sc-if></span>
+                <span style="font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{ r.stInk }};">{{ r.st }}</span>
+              </div>
+              <sc-if value="{{ r.current }}" hint-placeholder-val="{{ false }}"><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(233,238,242,0.6);flex-shrink:0;padding-right:6px;">This one</span></sc-if>
+              <sc-if value="{{ r.hasBtn }}" hint-placeholder-val="{{ false }}"><div onClick="{{ r.act }}" style="flex-shrink:0;height:52px;padding:0 20px;border-radius:14px;box-sizing:border-box;display:flex;align-items:center;font-size:17px;font-weight:700;cursor:pointer;background:{{ r.bBg }};border:1px solid {{ r.bLine }};color:{{ r.bInk }};" style-active="transform:scale(0.95)">{{ r.btn }}</div></sc-if>
+            </div></sc-for>
+                <sc-if value="{{ gNoteOn }}" hint-placeholder-val="{{ false }}"><div style="padding:8px 18px 0;font-size:15px;line-height:1.4;color:#e0a758;">{{ gNote }}</div></sc-if>
+                <div style="display:flex;justify-content:flex-end;gap:12px;padding:12px 14px 0;">
+                  <sc-if value="{{ canLeave }}" hint-placeholder-val="{{ false }}"><div onClick="{{ leave }}" style="height:52px;padding:0 22px;border-radius:14px;box-sizing:border-box;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;gap:10px;font-size:17px;font-weight:600;white-space:nowrap;cursor:pointer;flex-shrink:0;" style-active="transform:scale(0.95)">Leave group</div></sc-if>
+                  <div onClick="{{ askUndo }}" style="height:52px;padding:0 22px;border-radius:14px;box-sizing:border-box;background:rgba(224,167,88,0.14);border:1px solid rgba(224,167,88,0.4);color:#e0a758;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;white-space:nowrap;cursor:pointer;flex-shrink:0;" style-active="transform:scale(0.95)">Undo group</div>
+                </div>
+              </div>
+              <div style="flex-shrink:0;padding:10px 18px 0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Other players</div>
+            </sc-if>
+            <sc-for list="{{ oRows }}" as="r" hint-placeholder-count="4"><div style="flex-shrink:0;border-radius:16px;overflow:hidden;"><div style="display:flex;align-items:center;gap:16px;min-height:72px;padding:0 14px 0 18px;background:{{ r.rowBg }};">
+              <img src="gexis-mark.svg" alt="" style="width:34px;height:34px;display:block;flex-shrink:0;opacity:{{ r.op }};" />
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;opacity:{{ r.op }};">
+                <span style="font-size:19px;font-weight:700;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">{{ r.name }}<sc-if value="{{ r.lead }}" hint-placeholder-val="{{ false }}"><span data-mr="leads" style="display:inline-block;vertical-align:3px;margin-left:10px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;font-weight:400;line-height:1;letter-spacing:0.14em;text-transform:uppercase;padding:5px 7px;border-radius:7px;background:rgba(126,214,188,0.14);color:#7ed6bc;">Leads</span></sc-if></span>
+                <span style="font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{ r.stInk }};">{{ r.st }}</span>
+              </div>
+              <sc-if value="{{ r.current }}" hint-placeholder-val="{{ false }}"><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(233,238,242,0.6);flex-shrink:0;padding-right:6px;">This one</span></sc-if>
+              <sc-if value="{{ r.hasBtn }}" hint-placeholder-val="{{ false }}"><div onClick="{{ r.act }}" style="flex-shrink:0;height:52px;padding:0 20px;border-radius:14px;box-sizing:border-box;display:flex;align-items:center;font-size:17px;font-weight:700;cursor:pointer;background:{{ r.bBg }};border:1px solid {{ r.bLine }};color:{{ r.bInk }};" style-active="transform:scale(0.95)">{{ r.btn }}</div></sc-if>
+            </div></div></sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ confirmOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ cancelUndo }}" style="position:absolute;inset:0;background:rgba(8,12,16,0.62);"></div>
+        <div data-mr="undo-confirm" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:560px;background:#16232c;border:1px solid rgba(233,238,242,0.14);border-radius:22px;padding:26px;box-sizing:border-box;box-shadow:0 34px 90px rgba(0,0,0,0.6);display:flex;flex-direction:column;gap:12px;">
+          <div style="font-size:25px;font-weight:700;">Undo the group?</div>
+          <div style="font-size:17px;line-height:1.45;color:rgba(233,238,242,0.72);text-wrap:pretty;">{{ undoBody }}</div>
+          <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:10px;">
+            <div onClick="{{ cancelUndo }}" style="height:58px;padding:0 22px;border-radius:15px;box-sizing:border-box;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;gap:10px;font-size:17px;font-weight:600;white-space:nowrap;cursor:pointer;flex-shrink:0;" style-active="transform:scale(0.95)">Cancel</div>
+            <div onClick="{{ doUndo }}" style="height:58px;padding:0 22px;border-radius:15px;box-sizing:border-box;background:rgba(224,167,88,0.14);border:1px solid rgba(224,167,88,0.4);color:#e0a758;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;white-space:nowrap;cursor:pointer;flex-shrink:0;" style-active="transform:scale(0.95)">Undo group</div>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+
+  <sc-if value="{{ isBar }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Bar" style="position:relative;width:1850px;height:400px;overflow:hidden;">
+      <img src="eq/backdrop-bar-1850.png" alt="" style="position:absolute;left:0;top:0;width:1850px;height:400px;display:block;" />
+      <sc-if value="{{ playersBtn }}" hint-placeholder-val="{{ false }}"><div data-mr="players-button" onClick="{{ openSheet }}" aria-label="Players" style="position:absolute;left:1478px;top:293px;width:60px;height:60px;border-radius:50%;box-sizing:border-box;display:grid;place-items:center;cursor:pointer;background:{{ pbBg }};border:1px solid {{ pbLine }};" style-active="transform:scale(0.95)"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" style="color:{{ pbInk }};flex-shrink:0;display:block;"><rect x="2.5" y="4" width="8" height="16" rx="2"></rect><rect x="13.5" y="4" width="8" height="16" rx="2"></rect><circle cx="6.5" cy="14.5" r="2"></circle><circle cx="17.5" cy="14.5" r="2"></circle></svg></div></sc-if>
+      <sc-if value="{{ markTime }}" hint-placeholder-val="{{ false }}"><div data-mr="mark" onClick="{{ openGroup }}" style="position:absolute;left:560px;width:1016px;top:238px;height:36px;display:flex;justify-content:center;cursor:pointer;"><span style="height:36px;max-width:100%;border-radius:18px;box-sizing:border-box;padding:0 18px 0 14px;display:flex;align-items:center;gap:10px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);font-size:16px;font-weight:600;color:#e9eef2;white-space:nowrap;overflow:hidden;"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#7ed6bc" stroke-width="2" stroke-linejoin="round" style="flex-shrink:0;display:block;"><rect x="2.5" y="4" width="8" height="16" rx="2"></rect><rect x="13.5" y="4" width="8" height="16" rx="2"></rect><circle cx="6.5" cy="14.5" r="2"></circle><circle cx="17.5" cy="14.5" r="2"></circle></svg><span style="flex-shrink:0;">{{ withText }}</span><span style="flex-shrink:0;">{{ withMore }}</span></span></div></sc-if>
+      <sc-if value="{{ markVolA }}" hint-placeholder-val="{{ false }}"><div data-mr="mark" onClick="{{ openGroup }}" style="position:absolute;right:310px;top:297px;max-width:560px;height:52px;display:flex;justify-content:flex-end;cursor:pointer;"><span style="height:52px;max-width:100%;border-radius:26px;box-sizing:border-box;padding:0 20px 0 16px;display:flex;align-items:center;gap:10px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);font-size:18px;font-weight:600;color:#e9eef2;white-space:nowrap;overflow:hidden;"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#7ed6bc" stroke-width="2" stroke-linejoin="round" style="flex-shrink:0;display:block;"><rect x="2.5" y="4" width="8" height="16" rx="2"></rect><rect x="13.5" y="4" width="8" height="16" rx="2"></rect><circle cx="6.5" cy="14.5" r="2"></circle><circle cx="17.5" cy="14.5" r="2"></circle></svg><span style="flex-shrink:0;">{{ withText }}</span><span style="flex-shrink:0;">{{ withMore }}</span></span></div></sc-if>
+      <sc-if value="{{ markVolB }}" hint-placeholder-val="{{ false }}"><div data-mr="mark" onClick="{{ openGroup }}" style="position:absolute;right:390px;top:297px;max-width:560px;height:52px;display:flex;justify-content:flex-end;cursor:pointer;"><span style="height:52px;max-width:100%;border-radius:26px;box-sizing:border-box;padding:0 20px 0 16px;display:flex;align-items:center;gap:10px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);font-size:18px;font-weight:600;color:#e9eef2;white-space:nowrap;overflow:hidden;"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#7ed6bc" stroke-width="2" stroke-linejoin="round" style="flex-shrink:0;display:block;"><rect x="2.5" y="4" width="8" height="16" rx="2"></rect><rect x="13.5" y="4" width="8" height="16" rx="2"></rect><circle cx="6.5" cy="14.5" r="2"></circle><circle cx="17.5" cy="14.5" r="2"></circle></svg><span style="flex-shrink:0;">{{ withText }}</span><span style="flex-shrink:0;">{{ withMore }}</span></span></div></sc-if>
+      <sc-if value="{{ markCover }}" hint-placeholder-val="{{ false }}"><div data-mr="mark" onClick="{{ openGroup }}" style="position:absolute;left:16px;top:336px;max-width:368px;height:48px;display:flex;cursor:pointer;"><span style="height:48px;max-width:100%;border-radius:24px;box-sizing:border-box;padding:0 18px 0 14px;display:flex;align-items:center;gap:10px;background:rgba(13,21,28,0.8);border:1px solid rgba(233,238,242,0.16);font-size:17px;font-weight:600;color:#e9eef2;white-space:nowrap;overflow:hidden;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#7ed6bc" stroke-width="2" stroke-linejoin="round" style="flex-shrink:0;display:block;"><rect x="2.5" y="4" width="8" height="16" rx="2"></rect><rect x="13.5" y="4" width="8" height="16" rx="2"></rect><circle cx="6.5" cy="14.5" r="2"></circle><circle cx="17.5" cy="14.5" r="2"></circle></svg><span style="flex-shrink:0;">{{ withText }}</span><span style="flex-shrink:0;">{{ withMore }}</span></span></div></sc-if>
+
+      <sc-if value="{{ trayOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ close }}" style="position:absolute;inset:0;background:rgba(8,12,16,0.55);"></div>
+        <div data-mr="bar-tray" style="position:absolute;left:0;right:0;top:0;background:#16232c;border-radius:0 0 24px 24px;border-bottom:1px solid rgba(233,238,242,0.12);box-shadow:0 18px 44px rgba(0,0,0,0.5);height:{{ trayH }};">
+          <div style="position:absolute;left:0;right:0;top:0;height:122px;display:flex;align-items:center;gap:20px;padding:0 40px;box-sizing:border-box;">
+            <div style="width:64px;height:64px;border-radius:50%;background:rgba(233,238,242,0.07);display:grid;place-items:center;flex-shrink:0;"><span style="width:24px;height:24px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:4px;"><i style="border-radius:3px;background:rgba(233,238,242,0.85);"></i><i style="border-radius:3px;background:rgba(233,238,242,0.85);"></i><i style="border-radius:3px;background:rgba(233,238,242,0.85);"></i><i style="border-radius:3px;background:rgba(233,238,242,0.85);"></i></span></div>
+            <div style="width:60px;height:60px;border-radius:50%;background:rgba(233,238,242,0.07);display:grid;place-items:center;flex-shrink:0;"><span style="display:flex;align-items:flex-end;gap:4px;height:22px;"><i style="width:4px;height:12px;border-radius:2px;background:rgba(233,238,242,0.82);"></i><i style="width:4px;height:22px;border-radius:2px;background:rgba(233,238,242,0.82);"></i><i style="width:4px;height:16px;border-radius:2px;background:rgba(233,238,242,0.82);"></i><i style="width:4px;height:8px;border-radius:2px;background:rgba(233,238,242,0.82);"></i></span></div>
+            <div style="height:60px;padding:0 20px 0 18px;border-radius:30px;box-sizing:border-box;display:flex;align-items:center;gap:12px;flex-shrink:0;background:rgba(126,214,188,0.12);border:1px solid rgba(126,214,188,0.45);">
+              <svg viewBox="0 0 24 24" width="24" height="24" style="flex-shrink:0;color:#7ed6bc;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 4v16M12 4v16M18 4v16"></path><circle cx="6" cy="14" r="2.6" fill="#16232c"></circle><circle cx="12" cy="8" r="2.6" fill="#16232c"></circle><circle cx="18" cy="12" r="2.6" fill="#16232c"></circle></svg>
+              <span style="font-size:19px;font-weight:700;white-space:nowrap;color:#7ed6bc;">Rock</span>
+              <span style="width:9px;height:9px;border-right:2.5px solid rgba(233,238,242,0.6);border-bottom:2.5px solid rgba(233,238,242,0.6);display:block;transform:rotate(45deg) translate(-2px,-2px);"></span>
+            </div>
+            <sc-if value="{{ groupPill }}" hint-placeholder-val="{{ false }}">
+              <div data-mr="group-button" onClick="{{ toggleBand }}" style="height:60px;padding:0 20px 0 18px;border-radius:30px;box-sizing:border-box;display:flex;align-items:center;gap:12px;flex-shrink:0;cursor:pointer;background:{{ gpBg }};border:1px solid {{ gpLine }};" style-active="transform:scale(0.95)">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" style="color:{{ gpInk }};flex-shrink:0;display:block;"><rect x="2.5" y="4" width="8" height="16" rx="2"></rect><rect x="13.5" y="4" width="8" height="16" rx="2"></rect><circle cx="6.5" cy="14.5" r="2"></circle><circle cx="17.5" cy="14.5" r="2"></circle></svg>
+                <span style="font-size:19px;font-weight:700;white-space:nowrap;color:{{ gpInk }};">{{ gpText }}</span>
+                <span style="width:9px;height:9px;border-right:2.5px solid rgba(233,238,242,0.6);border-bottom:2.5px solid rgba(233,238,242,0.6);display:block;transform:{{ gpChev }};"></span>
+              </div>
+            </sc-if>
+            <span style="width:1px;height:44px;background:rgba(233,238,242,0.14);flex-shrink:0;"></span>
+            <sc-if value="{{ grouped }}" hint-placeholder-val="{{ false }}"><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;letter-spacing:0.16em;text-transform:uppercase;color:#7ed6bc;flex-shrink:0;">All</span></sc-if>
+            <div onClick="{{ trayMute }}" aria-label="Mute" style="position:relative;width:60px;height:60px;border-radius:50%;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.12);box-sizing:border-box;display:grid;place-items:center;flex-shrink:0;cursor:pointer;"><span style="position:relative;width:30px;height:30px;display:block;"><span style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:15px;height:26px;background:#e9eef2;clip-path:polygon(0 27%,42% 27%,100% 0,100% 100%,42% 73%,0 73%);display:block;"></span><span style="position:absolute;left:5px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:1px;top:50%;width:24px;height:24px;margin-top:-12px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:-2px;top:50%;width:30px;height:30px;margin-top:-15px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.18);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span></span><sc-if value="{{ trayMuted }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:50%;top:50%;width:30px;height:3px;margin:-1.5px 0 0 -15px;border-radius:2px;transform:rotate(-38deg);background:#e0a758;display:block;"></span></sc-if></div>
+            <div onPointerDown="{{ trayDown }}" onPointerMove="{{ trayMove }}" onPointerUp="{{ trayUp }}" onPointerCancel="{{ trayUp }}" style="flex:1;min-width:0;align-self:stretch;display:flex;align-items:center;touch-action:none;cursor:pointer;">
+              <div style="width:100%;height:10px;border-radius:999px;background:rgba(233,238,242,0.15);position:relative;">
+                <div style="position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:{{ trayFill }};width:{{ trayPct }};"></div>
+                <div style="position:absolute;top:50%;width:44px;height:44px;border-radius:50%;transform:translate(-50%,-50%);background:#e9eef2;box-shadow:0 3px 10px rgba(0,0,0,0.45);left:{{ trayPct }};"></div>
+              </div>
+            </div>
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:26px;font-weight:700;width:72px;text-align:right;flex-shrink:0;">{{ trayText }}</span>
+          </div>
+          <sc-if value="{{ bandMembers }}" hint-placeholder-val="{{ false }}">
+            <div data-mr="group-band" style="position:absolute;left:0;right:0;top:122px;height:150px;display:flex;align-items:center;gap:16px;padding:0 40px;box-sizing:border-box;border-top:1px solid rgba(233,238,242,0.08);">
+              <div data-noscrollbar style="flex:1;min-width:0;display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 88px),transparent 100%);mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 88px),transparent 100%);">
+                <sc-for list="{{ gvRows }}" as="m" hint-placeholder-count="3">
+                  <sc-if value="{{ manage }}" hint-placeholder-val="{{ false }}"><div style="flex-shrink:0;width:330px;height:116px;border-radius:18px;background:rgba(255,255,255,0.04);border:1px solid rgba(233,238,242,0.1);box-sizing:border-box;padding:10px 12px 10px 18px;display:flex;flex-direction:column;justify-content:space-between;">
+                <div style="display:flex;align-items:center;gap:10px;min-height:40px;">
+                  <span style="flex:1;min-width:0;font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ m.name }}</span><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;white-space:nowrap;flex-shrink:0;color:{{ m.tagInk }};">{{ m.tag }}</span>
+                  <sc-if value="{{ m.canRemove }}" hint-placeholder-val="{{ false }}"><div onClick="{{ m.remove }}" aria-label="Remove {{ m.name }}" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;cursor:pointer;background:rgba(233,238,242,0.07);" style-active="transform:scale(0.95)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="rgba(233,238,242,0.82)" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></div></sc-if>
+                </div>
+                <sc-if value="{{ m.variable }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;align-items:center;gap:12px;">
+                    <div onClick="{{ m.mute }}" aria-label="Mute" style="position:relative;width:48px;height:48px;flex-shrink:0;display:grid;place-items:center;cursor:pointer;margin-left:-8px;"><span style="transform:scale(0.8);display:block;"><span style="position:relative;width:30px;height:30px;display:block;"><span style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:15px;height:26px;background:#e9eef2;clip-path:polygon(0 27%,42% 27%,100% 0,100% 100%,42% 73%,0 73%);display:block;"></span><span style="position:absolute;left:5px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:1px;top:50%;width:24px;height:24px;margin-top:-12px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:-2px;top:50%;width:30px;height:30px;margin-top:-15px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.18);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span></span></span><sc-if value="{{ m.muted }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:50%;top:50%;width:30px;height:3px;margin:-1.5px 0 0 -15px;border-radius:2px;transform:rotate(-38deg);background:#e0a758;display:block;"></span></sc-if></div>
+                    <div onPointerDown="{{ m.down }}" onPointerMove="{{ m.move }}" onPointerUp="{{ m.up }}" onPointerCancel="{{ m.up }}" aria-label="{{ m.label }}" style="flex:1;min-width:0;height:48px;display:flex;align-items:center;touch-action:none;cursor:pointer;">
+                      <div style="width:100%;height:8px;border-radius:999px;background:rgba(233,238,242,0.15);position:relative;">
+                        <div style="position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:{{ m.fill }};width:{{ m.pct }};"></div>
+                        <div style="position:absolute;top:50%;width:32px;height:32px;border-radius:50%;transform:translate(-50%,-50%);background:#e9eef2;box-shadow:0 3px 10px rgba(0,0,0,0.45);left:{{ m.pct }};"></div>
+                      </div>
+                    </div>
+                    <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:20px;font-weight:700;width:46px;text-align:right;flex-shrink:0;">{{ m.text }}</span>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ m.fixed }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;align-items:center;gap:12px;">
+                    <div onClick="{{ m.mute }}" aria-label="Mute" style="position:relative;width:48px;height:48px;flex-shrink:0;display:grid;place-items:center;cursor:pointer;margin-left:-8px;"><span style="transform:scale(0.8);display:block;"><span style="position:relative;width:30px;height:30px;display:block;"><span style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:15px;height:26px;background:#e9eef2;clip-path:polygon(0 27%,42% 27%,100% 0,100% 100%,42% 73%,0 73%);display:block;"></span><span style="position:absolute;left:5px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:1px;top:50%;width:24px;height:24px;margin-top:-12px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:-2px;top:50%;width:30px;height:30px;margin-top:-15px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.18);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span></span></span><sc-if value="{{ m.muted }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:50%;top:50%;width:30px;height:3px;margin:-1.5px 0 0 -15px;border-radius:2px;transform:rotate(-38deg);background:#e0a758;display:block;"></span></sc-if></div>
+                    <div style="flex:1;min-width:0;height:48px;border-radius:14px;background:rgba(233,238,242,0.05);border:1px solid rgba(233,238,242,0.12);box-sizing:border-box;display:flex;align-items:center;gap:12px;padding:0 14px;"><span style="position:relative;width:22px;height:26px;flex-shrink:0;display:block;"><span style="position:absolute;left:4px;top:0;width:14px;height:12px;border:2.5px solid rgba(233,238,242,0.7);border-bottom:none;border-radius:7px 7px 0 0;box-sizing:border-box;display:block;"></span><span style="position:absolute;left:0;bottom:0;width:22px;height:15px;border-radius:4px;background:rgba(233,238,242,0.7);display:block;"></span></span><span style="flex:1;min-width:0;font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Fixed output</span></div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ m.off }}" hint-placeholder-val="{{ false }}"><span style="height:48px;border-radius:14px;border:1px dashed rgba(233,238,242,0.18);box-sizing:border-box;display:flex;align-items:center;padding:0 16px;font-size:17px;color:rgba(233,238,242,0.6);">Not reachable</span></sc-if>
+              </div></sc-if>
+                  <sc-if value="{{ noManage }}" hint-placeholder-val="{{ true }}"><div style="flex-shrink:0;width:330px;height:116px;border-radius:18px;background:rgba(255,255,255,0.04);border:1px solid rgba(233,238,242,0.1);box-sizing:border-box;padding:10px 12px 10px 18px;display:flex;flex-direction:column;justify-content:space-between;">
+                <div style="display:flex;align-items:center;gap:10px;min-height:40px;">
+                  <span style="flex:1;min-width:0;font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ m.name }}</span><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;white-space:nowrap;flex-shrink:0;color:{{ m.tagInk }};">{{ m.tag }}</span>
+                  
+                </div>
+                <sc-if value="{{ m.variable }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;align-items:center;gap:12px;">
+                    <div onClick="{{ m.mute }}" aria-label="Mute" style="position:relative;width:48px;height:48px;flex-shrink:0;display:grid;place-items:center;cursor:pointer;margin-left:-8px;"><span style="transform:scale(0.8);display:block;"><span style="position:relative;width:30px;height:30px;display:block;"><span style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:15px;height:26px;background:#e9eef2;clip-path:polygon(0 27%,42% 27%,100% 0,100% 100%,42% 73%,0 73%);display:block;"></span><span style="position:absolute;left:5px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:1px;top:50%;width:24px;height:24px;margin-top:-12px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:-2px;top:50%;width:30px;height:30px;margin-top:-15px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.18);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span></span></span><sc-if value="{{ m.muted }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:50%;top:50%;width:30px;height:3px;margin:-1.5px 0 0 -15px;border-radius:2px;transform:rotate(-38deg);background:#e0a758;display:block;"></span></sc-if></div>
+                    <div onPointerDown="{{ m.down }}" onPointerMove="{{ m.move }}" onPointerUp="{{ m.up }}" onPointerCancel="{{ m.up }}" aria-label="{{ m.label }}" style="flex:1;min-width:0;height:48px;display:flex;align-items:center;touch-action:none;cursor:pointer;">
+                      <div style="width:100%;height:8px;border-radius:999px;background:rgba(233,238,242,0.15);position:relative;">
+                        <div style="position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:{{ m.fill }};width:{{ m.pct }};"></div>
+                        <div style="position:absolute;top:50%;width:32px;height:32px;border-radius:50%;transform:translate(-50%,-50%);background:#e9eef2;box-shadow:0 3px 10px rgba(0,0,0,0.45);left:{{ m.pct }};"></div>
+                      </div>
+                    </div>
+                    <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:20px;font-weight:700;width:46px;text-align:right;flex-shrink:0;">{{ m.text }}</span>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ m.fixed }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;align-items:center;gap:12px;">
+                    <div onClick="{{ m.mute }}" aria-label="Mute" style="position:relative;width:48px;height:48px;flex-shrink:0;display:grid;place-items:center;cursor:pointer;margin-left:-8px;"><span style="transform:scale(0.8);display:block;"><span style="position:relative;width:30px;height:30px;display:block;"><span style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:15px;height:26px;background:#e9eef2;clip-path:polygon(0 27%,42% 27%,100% 0,100% 100%,42% 73%,0 73%);display:block;"></span><span style="position:absolute;left:5px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:1px;top:50%;width:24px;height:24px;margin-top:-12px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.85);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span><span style="position:absolute;left:-2px;top:50%;width:30px;height:30px;margin-top:-15px;border-radius:50%;box-sizing:border-box;border:2.5px solid rgba(233,238,242,0.18);clip-path:polygon(50% 10%,100% 0,100% 100%,50% 90%);display:block;"></span></span></span><sc-if value="{{ m.muted }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:50%;top:50%;width:30px;height:3px;margin:-1.5px 0 0 -15px;border-radius:2px;transform:rotate(-38deg);background:#e0a758;display:block;"></span></sc-if></div>
+                    <div style="flex:1;min-width:0;height:48px;border-radius:14px;background:rgba(233,238,242,0.05);border:1px solid rgba(233,238,242,0.12);box-sizing:border-box;display:flex;align-items:center;gap:12px;padding:0 14px;"><span style="position:relative;width:22px;height:26px;flex-shrink:0;display:block;"><span style="position:absolute;left:4px;top:0;width:14px;height:12px;border:2.5px solid rgba(233,238,242,0.7);border-bottom:none;border-radius:7px 7px 0 0;box-sizing:border-box;display:block;"></span><span style="position:absolute;left:0;bottom:0;width:22px;height:15px;border-radius:4px;background:rgba(233,238,242,0.7);display:block;"></span></span><span style="flex:1;min-width:0;font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Fixed output</span></div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ m.off }}" hint-placeholder-val="{{ false }}"><span style="height:48px;border-radius:14px;border:1px dashed rgba(233,238,242,0.18);box-sizing:border-box;display:flex;align-items:center;padding:0 16px;font-size:17px;color:rgba(233,238,242,0.6);">Not reachable</span></sc-if>
+              </div></sc-if>
+                </sc-for>
+              </div>
+              <sc-if value="{{ manage }}" hint-placeholder-val="{{ false }}">
+                <div style="flex-shrink:0;display:flex;flex-direction:column;gap:10px;width:220px;">
+                  <div onClick="{{ openAdd }}" style="height:53px;padding:0 22px;border-radius:15px;box-sizing:border-box;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;gap:10px;font-size:18px;font-weight:600;white-space:nowrap;cursor:pointer;flex-shrink:0;" style-active="transform:scale(0.95)"><span style="font-size:24px;font-weight:400;line-height:1;margin-top:-2px;">+</span>Add players</div>
+                  <div style="display:flex;gap:10px;">
+                    <sc-if value="{{ canLeave }}" hint-placeholder-val="{{ false }}"><div onClick="{{ leave }}" style="flex:1;height:53px;padding:0 22px;border-radius:15px;box-sizing:border-box;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;gap:10px;font-size:17px;font-weight:600;white-space:nowrap;cursor:pointer;flex-shrink:0;padding:0 10px;" style-active="transform:scale(0.95)">Leave</div></sc-if>
+                    <div onClick="{{ askUndo }}" style="flex:1;height:53px;padding:0 22px;border-radius:15px;box-sizing:border-box;background:rgba(224,167,88,0.14);border:1px solid rgba(224,167,88,0.4);color:#e0a758;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;white-space:nowrap;cursor:pointer;flex-shrink:0;padding:0 10px;" style-active="transform:scale(0.95)">Undo group</div>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{ bandAdd }}" hint-placeholder-val="{{ false }}">
+            <div data-mr="add-band" style="position:absolute;left:0;right:0;top:122px;height:150px;display:flex;align-items:center;gap:16px;padding:0 40px;box-sizing:border-box;border-top:1px solid rgba(233,238,242,0.08);">
+              <div style="flex-shrink:0;width:200px;display:flex;flex-direction:column;gap:4px;"><span style="font-size:20px;font-weight:700;">{{ addTitle }}</span><span style="font-size:15px;line-height:1.35;color:rgba(233,238,242,0.6);">{{ addSub }}</span></div>
+              <div data-noscrollbar style="flex:1;min-width:0;display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 88px),transparent 100%);mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 88px),transparent 100%);">
+                <sc-for list="{{ addRows }}" as="r" hint-placeholder-count="4"><div style="flex-shrink:0;width:330px;height:116px;border-radius:18px;background:rgba(255,255,255,0.04);border:1px solid rgba(233,238,242,0.1);box-sizing:border-box;padding:0 12px 0 18px;display:flex;align-items:center;gap:14px;opacity:{{ r.op }};">
+                <img src="gexis-mark.svg" alt="" style="width:34px;height:34px;display:block;flex-shrink:0;" />
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;"><span style="font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:3px;">{{ r.name }}</span><span style="font-size:15px;line-height:1.3;color:{{ r.stInk }};display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ r.st }}</span></div>
+                <sc-if value="{{ r.hasBtn }}" hint-placeholder-val="{{ false }}"><div onClick="{{ r.act }}" style="flex-shrink:0;height:56px;padding:0 20px;border-radius:15px;box-sizing:border-box;display:flex;align-items:center;font-size:18px;font-weight:700;cursor:pointer;background:{{ r.bBg }};border:1px solid {{ r.bLine }};color:{{ r.bInk }};" style-active="transform:scale(0.95)">{{ r.btn }}</div></sc-if>
+              </div></sc-for>
+              </div>
+              <div onClick="{{ backToBand }}" style="height:56px;padding:0 22px;border-radius:15px;box-sizing:border-box;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;gap:10px;font-size:18px;font-weight:600;white-space:nowrap;cursor:pointer;flex-shrink:0;" style-active="transform:scale(0.95)">Done</div>
+            </div>
+          </sc-if>
+          <div style="position:absolute;left:50%;bottom:10px;width:88px;height:6px;margin-left:-44px;border-radius:3px;background:rgba(233,238,242,0.42);"></div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ sheetOpenBar }}" hint-placeholder-val="{{ false }}">
+        <div data-mr="players" style="position:absolute;inset:0;background:#16232c;display:flex;">
+          <div style="width:420px;flex-shrink:0;box-sizing:border-box;padding:30px 28px 28px 40px;border-right:1px solid rgba(233,238,242,0.1);display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:center;gap:14px;"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#7ed6bc" stroke-width="2" stroke-linejoin="round" style="flex-shrink:0;display:block;"><rect x="2.5" y="4" width="8" height="16" rx="2"></rect><rect x="13.5" y="4" width="8" height="16" rx="2"></rect><circle cx="6.5" cy="14.5" r="2"></circle><circle cx="17.5" cy="14.5" r="2"></circle></svg><span style="font-size:26px;font-weight:700;">Players</span></div>
+            <sc-if value="{{ grouped }}" hint-placeholder-val="{{ false }}"><div style="margin-top:6px;"><div style="font-size:18px;font-weight:700;color:#7ed6bc;">{{ gHead }}</div><div style="font-size:16px;line-height:1.35;margin-top:3px;color:rgba(233,238,242,0.72);">{{ gNow }}</div></div></sc-if>
+            <sc-if value="{{ notGrouped }}" hint-placeholder-val="{{ true }}"><div style="font-size:16px;line-height:1.4;margin-top:6px;color:rgba(233,238,242,0.72);text-wrap:pretty;">{{ aloneSub }}</div></sc-if>
+            <sc-if value="{{ gNoteOn }}" hint-placeholder-val="{{ false }}"><div style="font-size:15px;line-height:1.4;color:#e0a758;">{{ gNote }}</div></sc-if>
+            <span style="flex:1;"></span>
+            <sc-if value="{{ grouped }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:10px;">
+              <sc-if value="{{ canLeave }}" hint-placeholder-val="{{ false }}"><div onClick="{{ leave }}" style="flex:1;height:60px;padding:0 22px;border-radius:15px;box-sizing:border-box;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;gap:10px;font-size:18px;font-weight:600;white-space:nowrap;cursor:pointer;flex-shrink:0;padding:0 12px;" style-active="transform:scale(0.95)">Leave group</div></sc-if>
+              <div onClick="{{ askUndo }}" style="flex:1;height:60px;padding:0 22px;border-radius:15px;box-sizing:border-box;background:rgba(224,167,88,0.14);border:1px solid rgba(224,167,88,0.4);color:#e0a758;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;white-space:nowrap;cursor:pointer;flex-shrink:0;padding:0 12px;" style-active="transform:scale(0.95)">Undo group</div>
+            </div></sc-if>
+          </div>
+          <div data-noscrollbar style="flex:1;min-width:0;display:flex;align-items:center;gap:14px;padding:0 120px 0 28px;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 140px),transparent 100%);mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 140px),transparent 100%);">
+            <sc-for list="{{ gRows }}" as="r" hint-placeholder-count="3"><div style="flex-shrink:0;width:250px;height:344px;border-radius:20px;box-sizing:border-box;padding:20px 18px 18px;display:flex;flex-direction:column;gap:8px;background:rgba(126,214,188,0.06);border:1px solid rgba(126,214,188,0.22);">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;opacity:{{ r.op }};"><img src="gexis-mark.svg" alt="" style="width:40px;height:40px;display:block;flex-shrink:0;" /><sc-if value="{{ r.lead }}" hint-placeholder-val="{{ false }}"><span data-mr="leads" style="flex-shrink:0;align-self:flex-start;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;padding:3px 7px;border-radius:7px;background:rgba(126,214,188,0.14);color:#7ed6bc;">Leads</span></sc-if></div>
+                <div style="font-size:21px;font-weight:700;line-height:1.2;margin-top:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;opacity:{{ r.op }};">{{ r.name }}</div>
+                <div style="font-size:16px;line-height:1.35;color:{{ r.stInk }};display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;opacity:{{ r.op }};">{{ r.st }}</div>
+                <span style="flex:1;"></span>
+                <sc-if value="{{ r.hasBtn }}" hint-placeholder-val="{{ false }}"><div onClick="{{ r.act }}" style="height:60px;border-radius:15px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;cursor:pointer;background:{{ r.bBg }};border:1px solid {{ r.bLine }};color:{{ r.bInk }};" style-active="transform:scale(0.96)">{{ r.btn }}</div></sc-if>
+                <sc-if value="{{ r.current }}" hint-placeholder-val="{{ false }}"><div style="height:60px;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(233,238,242,0.6);">This one</div></sc-if>
+              </div></sc-for>
+            <sc-if value="{{ grouped }}" hint-placeholder-val="{{ false }}"><span style="width:1px;height:280px;background:rgba(233,238,242,0.14);flex-shrink:0;margin:0 8px;display:block;"></span></sc-if>
+            <sc-for list="{{ oRows }}" as="r" hint-placeholder-count="3"><div style="flex-shrink:0;width:250px;height:344px;border-radius:20px;box-sizing:border-box;padding:20px 18px 18px;display:flex;flex-direction:column;gap:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(233,238,242,0.1);">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;opacity:{{ r.op }};"><img src="gexis-mark.svg" alt="" style="width:40px;height:40px;display:block;flex-shrink:0;" /><sc-if value="{{ r.lead }}" hint-placeholder-val="{{ false }}"><span data-mr="leads" style="flex-shrink:0;align-self:flex-start;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;padding:3px 7px;border-radius:7px;background:rgba(126,214,188,0.14);color:#7ed6bc;">Leads</span></sc-if></div>
+                <div style="font-size:21px;font-weight:700;line-height:1.2;margin-top:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;opacity:{{ r.op }};">{{ r.name }}</div>
+                <div style="font-size:16px;line-height:1.35;color:{{ r.stInk }};display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;opacity:{{ r.op }};">{{ r.st }}</div>
+                <span style="flex:1;"></span>
+                <sc-if value="{{ r.hasBtn }}" hint-placeholder-val="{{ false }}"><div onClick="{{ r.act }}" style="height:60px;border-radius:15px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;cursor:pointer;background:{{ r.bBg }};border:1px solid {{ r.bLine }};color:{{ r.bInk }};" style-active="transform:scale(0.96)">{{ r.btn }}</div></sc-if>
+                <sc-if value="{{ r.current }}" hint-placeholder-val="{{ false }}"><div style="height:60px;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:14px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(233,238,242,0.6);">This one</div></sc-if>
+              </div></sc-for>
+          </div>
+          <div onClick="{{ close }}" aria-label="Close" style="position:absolute;right:28px;top:28px;width:64px;height:64px;border-radius:50%;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.12);box-sizing:border-box;display:grid;place-items:center;cursor:pointer;" style-active="transform:scale(0.95)"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#e9eef2" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ confirmOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ cancelUndo }}" style="position:absolute;inset:0;background:rgba(8,12,16,0.62);"></div>
+        <div data-mr="undo-confirm" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:640px;background:#16232c;border:1px solid rgba(233,238,242,0.14);border-radius:22px;padding:26px;box-sizing:border-box;box-shadow:0 34px 90px rgba(0,0,0,0.6);display:flex;flex-direction:column;gap:10px;">
+          <div style="font-size:26px;font-weight:700;">Undo the group?</div>
+          <div style="font-size:18px;line-height:1.45;color:rgba(233,238,242,0.72);text-wrap:pretty;">{{ undoBody }}</div>
+          <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:10px;">
+            <div onClick="{{ cancelUndo }}" style="height:60px;padding:0 22px;border-radius:15px;box-sizing:border-box;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;gap:10px;font-size:18px;font-weight:600;white-space:nowrap;cursor:pointer;flex-shrink:0;" style-active="transform:scale(0.95)">Cancel</div>
+            <div onClick="{{ doUndo }}" style="height:60px;padding:0 22px;border-radius:15px;box-sizing:border-box;background:rgba(224,167,88,0.14);border:1px solid rgba(224,167,88,0.4);color:#e0a758;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;white-space:nowrap;cursor:pointer;flex-shrink:0;" style-active="transform:scale(0.95)">Undo group</div>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:800},&quot;surface&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;panel&quot;,&quot;bar&quot;],&quot;default&quot;:&quot;panel&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Artboard&quot;},&quot;place&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;drawer&quot;,&quot;sheet&quot;],&quot;default&quot;:&quot;drawer&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Options&quot;},&quot;mark&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;time&quot;,&quot;volume&quot;,&quot;cover&quot;,&quot;none&quot;],&quot;default&quot;:&quot;time&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Options&quot;},&quot;scene&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;alone&quot;,&quot;joining&quot;,&quot;leader&quot;,&quot;member&quot;,&quot;undo&quot;,&quot;fixed&quot;,&quot;gone&quot;,&quot;left&quot;,&quot;undone&quot;,&quot;spotify&quot;,&quot;two&quot;,&quot;five&quot;],&quot;default&quot;:&quot;leader&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Group&quot;},&quot;open&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;none&quot;,&quot;drawer&quot;,&quot;add&quot;,&quot;sheet&quot;,&quot;undo&quot;],&quot;default&quot;:&quot;drawer&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Group&quot;},&quot;me&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;}}">
+const ACC = '#7ed6bc', INK = '#e9eef2', INK2 = 'rgba(233,238,242,0.72)', FILL = 'rgba(233,238,242,0.07)';
+const clamp = v => Math.max(0, Math.min(100, Math.round(v)));
+const TRACK = { panel: 'Late Set', bar: 'Rempompi' };
+const RESET = { sc: null, lv: {}, mu: {}, open: null, band: null, confirm: null };
+
+class Component extends DCLogic {
+  state = { ...RESET };
+  componentDidMount() { if (!window.MR) this._t = setInterval(() => { if (window.MR) { clearInterval(this._t); this.forceUpdate(); } }, 60); }
+  componentWillUnmount() { clearInterval(this._t); (this._tm || []).forEach(clearTimeout); }
+  componentDidUpdate(prev) { if (['surface', 'place', 'mark', 'scene', 'open', 'me'].some(k => prev[k] !== this.props[k])) this.setState({ ...RESET }); }
+  sc() { return this.state.sc || window.MR.scene(this.props.scene || 'leader'); }
+  lv(sc, k) { return this.state.lv[k] ?? (sc.st[k] ? sc.st[k].vol : 50); }
+  mu(k) { return !!this.state.mu[k]; }
+  later(fn, ms) { this._tm = this._tm || []; this._tm.push(setTimeout(fn, ms)); }
+
+  renderVals() {
+    const MR = window.MR;
+    if (!MR) return { gRows: [], oRows: [], gvRows: [], addRows: [] };
+    const p = this.props, s = this.state;
+    const surface = p.surface === 'bar' ? 'bar' : 'panel';
+    const manage = (p.place || 'drawer') === 'drawer';
+    const sc = this.sc();
+    const me = p.me || (MR.SCREEN[sc.me] ? sc.me : 'study');
+    const g = sc.g && sc.g.members.includes(me) ? sc.g : null;
+    const grouped = !!g;
+    const members = g ? g.members : [];
+    const n = members.length;
+    const open = s.open ?? (p.open || 'none');
+    const src = MR.SRC[MR.srcOf({ ...sc, me })] || 'Lyrion';
+    const title = TRACK[surface];
+    const [withText, withMore] = MR.withText({ ...sc, g }, me);
+    const live = members.filter(k => sc.st[k].state !== 'off');
+    const fixedOf = k => !!(sc.st[k] && sc.st[k].fixed);
+    const varM = live.filter(k => !fixedOf(k));
+    const gLevel = varM.length ? Math.round(varM.reduce((a, k) => a + this.lv(sc, k), 0) / varM.length) : 0;
+    const gMuted = live.length > 0 && live.every(k => this.mu(k));
+    const ratio = (e, el) => { const r = el.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)); };
+    const put = x => this.setState({ sc: x });
+    const stop = e => e && e.stopPropagation && e.stopPropagation();
+
+    const joinK = k => { put(MR.joinTo(this.sc(), k, me)); this.later(() => put(MR.settle(this.sc(), k)), 1800); };
+    const BJ = { bBg: 'rgba(126,214,188,0.14)', bLine: 'rgba(126,214,188,0.45)', bInk: ACC };
+    const BN = { bBg: FILL, bLine: 'rgba(233,238,242,0.14)', bInk: INK };
+    const row = (k, mode) => {
+      const st = sc.st[k] || {}, off = st.state === 'off', inG = members.includes(k), isMe = k === me;
+      let hasBtn = false, btn = '', act = null, bs = BN;
+      if (!off && !isMe) {
+        if (inG && mode === 'sheet' && k !== g.lead) { hasBtn = true; btn = 'Remove'; act = e => { stop(e); put(MR.removeFrom(this.sc(), k)); }; }
+        else if (!inG) { hasBtn = true; btn = 'Join'; bs = BJ; act = e => { stop(e); joinK(k); }; }
+      }
+      return {
+        name: MR.name(k), lead: !!(g && inG && !g.silent && k === g.lead), st: MR.rowStatus({ ...sc, g }, k),
+        stInk: g && g.joining.includes(k) ? ACC : off ? 'rgba(233,238,242,0.6)' : INK2,
+        op: off ? 0.45 : 1, current: isMe, rowBg: 'transparent', hasBtn, btn, act, ...bs
+      };
+    };
+    const isAdd = open === 'add';
+    const isSheet = open === 'sheet';
+    const gRows = grouped ? members.map(k => row(k, 'sheet')) : [];
+    const sheetORows = sc.list.filter(k => !members.includes(k) && (grouped || true)).map(k => row(k, 'sheet'));
+    const addRows = sc.list.filter(k => k !== me).map(k => row(k, 'add'));
+
+    const gDrag = (e, el) => {
+      const delta = Math.round(ratio(e, el) * 100) - this._gb.mean;
+      const lv = { ...this.state.lv }, mu = { ...this.state.mu };
+      Object.keys(this._gb.v).forEach(k => { lv[k] = clamp(this._gb.v[k] + delta); mu[k] = false; });
+      this.setState({ lv, mu });
+    };
+    const gDown = e => { if (!varM.length) return; const el = e.currentTarget; try { el.setPointerCapture(e.pointerId); } catch (_) {} this._gEl = el; const v = {}; varM.forEach(k => { v[k] = this.lv(sc, k); }); this._gb = { v, mean: gLevel }; gDrag(e, el); };
+    const gMove = e => { if (this._gEl) gDrag(e, this._gEl); };
+    const gUp = () => { this._gEl = null; };
+    const gMute = () => { const mu = { ...s.mu }; live.forEach(k => { mu[k] = !gMuted; }); this.setState({ mu }); };
+    const setOne = (k, v) => this.setState(st => ({ lv: { ...st.lv, [k]: v }, mu: { ...st.mu, [k]: false } }));
+    const myDown = e => { const el = e.currentTarget; try { el.setPointerCapture(e.pointerId); } catch (_) {} this._mEl = el; this._mK = me; setOne(me, Math.round(ratio(e, el) * 100)); };
+    const myMove = e => { if (this._mEl && this._mK === me) setOne(me, Math.round(ratio(e, this._mEl) * 100)); };
+    const upAll = () => { this._mEl = null; this._gEl = null; };
+
+    const gvRows = members.map(k => {
+      const off = sc.st[k].state === 'off', fx = !off && fixedOf(k), l = this.lv(sc, k), m = this.mu(k);
+      const lead = !g.silent && k === g.lead;
+      return {
+        name: MR.name(k), label: MR.name(k) + ' volume',
+        tag: off ? 'Off' : lead ? 'Leads' : k === me ? 'This one' : fx ? 'Fixed' : '',
+        tagInk: lead ? ACC : 'rgba(233,238,242,0.6)',
+        variable: !off && !fx, fixed: fx, off, fixedTag: m ? 'Off' : '100%',
+        pct: l + '%', fill: m ? 'rgba(126,214,188,0.35)' : ACC, text: m ? 'Off' : String(l), muted: m,
+        canRemove: manage && !off && k !== me && k !== g.lead, noRemove: !(manage && !off && k !== me && k !== g.lead),
+        remove: () => put(MR.removeFrom(this.sc(), k)),
+        mute: () => this.setState(st => ({ mu: { ...st.mu, [k]: !m } })),
+        down: e => { const el = e.currentTarget; try { el.setPointerCapture(e.pointerId); } catch (_) {} this._mEl = el; this._mK = k; setOne(k, Math.round(ratio(e, el) * 100)); },
+        move: e => { if (this._mEl && this._mK === k) setOne(k, Math.round(ratio(e, this._mEl) * 100)); },
+        up: upAll
+      };
+    });
+    const fixedNames = members.filter(k => sc.st[k].state !== 'off' && fixedOf(k)).map(MR.name);
+    const othersLive = members.filter(k => sc.st[k].state !== 'off');
+    const gNote = g && g.silent ? MR.name(g.lead) + ' is off. The group stays: start music on ' + MR.join(othersLive.map(MR.name)) + ' and it leads.' : '';
+
+    const isBar = surface === 'bar';
+    const trayOpen = isBar && (open === 'drawer' || open === 'add' || open === 'tray');
+    const band = s.band ?? (open === 'add' ? 'add' : grouped ? 'members' : null);
+    const openGroup = () => this.setState(manage ? { open: 'drawer', band: grouped ? 'members' : 'add' } : { open: 'sheet' });
+    const myLv = this.lv(sc, me), myMu = this.mu(me);
+    const tray = grouped ? { pct: gLevel + '%', text: gMuted ? 'Off' : String(gLevel), muted: gMuted, fill: gMuted ? 'rgba(126,214,188,0.35)' : ACC }
+      : { pct: myLv + '%', text: myMu ? 'Off' : String(myLv), muted: myMu, fill: myMu ? 'rgba(126,214,188,0.35)' : ACC };
+    const showList = !isBar && (isAdd || isSheet);
+    const five = members.length > 4;
+
+    return {
+      isPanel: !isBar, isBar, npBack: !(p.scene === 'gone' && !isBar), homeBack: p.scene === 'gone' && !isBar,
+      grouped, notGrouped: !grouped, manage, noManage: !manage, viaSheet: !manage,
+      withText, withMore,
+      markTime: grouped && p.mark === 'time', markVol: grouped && p.mark === 'volume', markCover: grouped && p.mark === 'cover',
+      markVolA: grouped && p.mark === 'volume' && manage, markVolB: grouped && p.mark === 'volume' && !manage,
+      playersBtn: !manage, openSheet: () => this.setState({ open: 'sheet' }), openGroup,
+      pbBg: grouped ? 'rgba(126,214,188,0.14)' : FILL, pbLine: grouped ? 'rgba(126,214,188,0.45)' : 'transparent', pbInk: grouped ? ACC : 'rgba(233,238,242,0.88)',
+      close: () => this.setState({ open: 'none', band: null }),
+      drawerOpen: !isBar && open === 'drawer',
+      listOpen: showList, isAdd: !isBar && isAdd, isSheet: !isBar && isSheet,
+      listTitle: isAdd ? 'Add players' : 'Players',
+      listSub: isAdd ? 'They play what ' + MR.name(g ? g.lead : me) + ' plays, in sync. A player that joins stops its own music and catches up in a moment.'
+        : grouped ? 'Play, pause, skip and the group volume work from any of them.' : 'Only ' + MR.name(me) + ' plays. Join other players to it to play the same music in sync.',
+      listDoneText: isAdd ? 'Done' : 'Close', listDone: () => this.setState({ open: isAdd ? 'drawer' : 'none' }), backToDrawer: () => this.setState({ open: 'drawer' }),
+      listLine: isAdd ? 'rgba(126,214,188,0.22)' : 'rgba(233,238,242,0.14)',
+      showGroup: isSheet && grouped,
+      gRows: isBar ? (grouped ? gRows : []) : gRows,
+      oRows: isBar ? sheetORows : (isAdd ? addRows : sheetORows),
+      addRows, gvRows,
+      gHead: g ? (g.silent ? 'Grouped · silent' : 'Grouped · ' + n + ' players') : '',
+      gNow: g ? (g.silent ? 'Nothing plays' : 'Playing · ' + src + ' · ' + title) : '',
+      gNoteOn: !!gNote, gNote,
+      canLeave: !!(g && me !== g.lead), leave: () => put(MR.removeFrom(this.sc(), me)),
+      askUndo: () => this.setState({ confirm: true }),
+      confirmOpen: grouped && (s.confirm ?? open === 'undo'), cancelUndo: () => this.setState({ confirm: false, open: s.open ?? (p.open === 'undo' ? 'none' : p.open) }),
+      doUndo: () => this.setState({ sc: MR.undo(this.sc()), confirm: false }),
+      undoBody: g ? MR.join(members.map(MR.name)) + ' each play on their own again.' + (g.silent ? '' : ' The music stays on ' + MR.name(g.lead) + '.') : '',
+      gvTitle: 'Group volume', gvSub: n + ' players · each keeps its own level',
+      gPct: gLevel + '%', gText: varM.length ? (gMuted ? 'Off' : String(gLevel)) : '—', gMuted, gFill: gMuted ? 'rgba(126,214,188,0.35)' : ACC, gDown, gMove, gUp, gMute,
+      myPct: myLv + '%', myText: myMu ? 'Off' : String(myLv), myMuted: myMu, myFill: myMu ? 'rgba(126,214,188,0.35)' : ACC, myDown, myMove, myUp: upAll, myMute: () => this.setState(st => ({ mu: { ...st.mu, [me]: !myMu } })),
+      listMax: five ? '256px' : 'none', listMask: five ? 'linear-gradient(180deg,#000 0,#000 calc(100% - 48px),transparent 100%)' : 'none',
+      openAdd: () => this.setState(isBar ? { band: 'add' } : { open: 'add' }),
+      eqLine: 'Rock · preset',
+      trayOpen, trayH: band ? '290px' : '136px',
+      groupPill: manage || grouped, toggleBand: () => this.setState({ band: band ? null : (grouped ? 'members' : 'add') }),
+      gpBg: grouped || band ? 'rgba(126,214,188,0.12)' : FILL, gpLine: grouped || band ? 'rgba(126,214,188,0.45)' : 'rgba(233,238,242,0.14)', gpInk: grouped || band ? ACC : 'rgba(233,238,242,0.82)',
+      gpText: grouped ? n + ' players' : 'Group', gpChev: band ? 'rotate(-135deg) translate(-2px,-2px)' : 'rotate(45deg) translate(-2px,-2px)',
+      bandMembers: trayOpen && grouped && band === 'members', bandAdd: trayOpen && manage && band === 'add',
+      backToBand: () => this.setState({ band: grouped ? 'members' : null }),
+      addTitle: 'Add players', addSub: 'They play what ' + MR.name(g ? g.lead : me) + ' plays, in sync.',
+      trayPct: tray.pct, trayText: tray.text, trayMuted: tray.muted, trayFill: tray.fill,
+      trayMute: grouped ? gMute : () => this.setState(st => ({ mu: { ...st.mu, [me]: !myMu } })),
+      trayDown: grouped ? gDown : myDown, trayMove: grouped ? gMove : myMove, trayUp: upAll,
+      sheetOpenBar: isBar && isSheet,
+      aloneSub: 'Only ' + MR.name(me) + ' plays. Join other players to it to play the same music in sync.'
+    };
+  }
+}
+</script>
+</body>
+</html>
