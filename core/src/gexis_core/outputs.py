@@ -59,7 +59,21 @@ DRM = Path("/sys/class/drm")
 #: equaliser's loopback (ADR-0162 D1): a card every renderer plays into while
 #: the equaliser is on, never an output of its own.
 LOOPBACK = "Loopback"
-OURS = frozenset({"gexislmsvol", "gexisbtvol", LOOPBACK})
+#: **The group's loopback** (ADR-0166 D1): a second card of the same module,
+#: which a grouped player's renderers play into; snapserver's feeder reads
+#: its capture (`snapcast.py`).
+GROUP_CARD = "Multiroom"
+OURS = frozenset({"gexislmsvol", "gexisbtvol", LOOPBACK, GROUP_CARD})
+#: What the group's music plays into on each player of a group: this
+#: player's own chain, as `output` is when it plays alone.
+GROUP_IN = "gexis_group_in"
+#: **ADR-0166: what a grouped player's renderers play into.** None alone;
+#: `BUT_LYRION`, every renderer but Squeezelite into the group's loopback -
+#: Squeezelite plays to this player's own chain, in Lyrion's own sync (D2);
+#: `ALL`, Squeezelite too, where Lyrion cannot sync the group (C3).
+BUT_LYRION = "but-lyrion"
+ALL = "all"
+group_in_path: Callable[[], str | None] = lambda: None
 #: What CamillaDSP plays to while the equaliser is on: the rest of the
 #: output's chain, after the loopback (ADR-0162 D1, D8).
 EQ_OUT = "gexis_eq_out"
@@ -313,6 +327,11 @@ def needs_plug(card: str) -> bool | None:
         logger.info("outputs: %s takes only %s; it needs a conversion layer",
                     card, " ".join(sorted(formats)))
     return answer
+
+
+def formats_of(card: str) -> frozenset[str]:
+    """The sample formats the card said it takes, when it has been asked."""
+    return _formats.get(card, frozenset())
 
 
 def takes_rate(card: str, rate: int) -> bool | None:
@@ -866,8 +885,36 @@ def _equalised(output: Output, plug: bool) -> tuple[str, str]:
     return head, wait
 
 
+def _grouped(head: str, wait: str, group: str) -> tuple[str, str]:
+    """**The chain of a player in a group** (ADR-0166 D1): every renderer
+    plays into the group's loopback, padded to 32 bits as the equaliser's
+    chain pads (float refused, so go-librespot sends integers); the chain it
+    would have played to alone is `gexis_group_in`, which the group's music
+    comes back to from the leader - the meter first, so the visualiser shows
+    this player's own output as it does alone (C5). Squeezelite keeps its
+    own chain for Lyrion's own sync (`BUT_LYRION`), or plays into the
+    loopback too (`ALL`); integers only there, so native DSD is refused
+    rather than sent into a group that carries PCM (C4)."""
+    group_in = head.replace("pcm.output {", f"pcm.{GROUP_IN} {{", 1)
+    head = f'''pcm.output {{
+    type linear
+    slave {{ pcm "hw:{GROUP_CARD},0,0" format S32_LE }}
+}}
+
+# ADR-0166: this player is in a group. Its renderers play into the group's
+# loopback (above); the group's music comes back from the leader and plays
+# through this player's own chain, below.
+{group_in}'''
+    if group == ALL:
+        wait = f'''pcm.output_wait {{
+    type linear
+    slave {{ pcm {{ type hw card {GROUP_CARD} device 0 subdevice 0 nonblock 0 }} format S32_LE }}
+}}'''
+    return head, wait
+
+
 def render(output: Output, plug: bool, tuning: Tuning = Tuning(), widen: bool = False,
-           dsd: bool = False, eq: bool = False) -> str:
+           dsd: bool = False, eq: bool = False, group: str | None = None) -> str:
     """`output.conf`, with this output's card in the two places it goes.
 
     The rest is verbatim from what the image ships - the comment earns its
@@ -880,6 +927,7 @@ def render(output: Output, plug: bool, tuning: Tuning = Tuning(), widen: bool = 
 
     With `eq` the renderers play into the equaliser's loopback instead
     (`_equalised`); off, the file is exactly what it was (ADR-0162 D5).
+    With `group` they play into the group's (`_grouped`, ADR-0166).
     """
     if eq:
         head, wait = _equalised(output, plug)
@@ -970,6 +1018,8 @@ def render(output: Output, plug: bool, tuning: Tuning = Tuning(), widen: bool = 
     slave.pcm {{ type hw card {output.card} nonblock 0 }}
     scopes.0 peppyalsa
 }}'''
+    if group:
+        head, wait = _grouped(head, wait, group)
     return f'''{head}
 
 # **ADR-0095: the same chain, with an open that waits.** alsa-lib opens a hw
@@ -1041,9 +1091,12 @@ def write(output: Output, path: Path = CONF_PATH, tuning: Tuning = Tuning(), fix
         return False
     # ADR-0144: native DSD only with the volume Fixed - DSD cannot be
     # attenuated by the software stage, nor read by it - on a card taking it.
-    dsd = fixed and not output.software and not plug and native_dsd(output.card) is not None
+    group = group_in_path()
+    # ADR-0166 C4: not where Squeezelite plays into the group's loopback.
+    dsd = (fixed and not output.software and not plug and group != ALL
+           and native_dsd(output.card) is not None)
     wanted = render(output, plug, tuning, widen=not plug and widens(output.card), dsd=dsd,
-                    eq=eq_in_path(output.card))
+                    eq=eq_in_path(output.card), group=group)
     # ADR-0143: Squeezelite's rates follow the card; restarted with the
     # renderers after this, as the config is. The device's own file only.
     if path == CONF_PATH:

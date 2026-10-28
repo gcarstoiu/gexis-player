@@ -46,6 +46,7 @@ from dbus_next.aio import MessageBus
 
 from gexis_core import memo, own_wallpapers, screen_apply, settling, updates
 from gexis_core.players import Players, own_id, status_line
+from gexis_core.group import GroupError
 from gexis_core.wallpapers import SEARCH as PIXABAY_SEARCH
 from gexis_core import backups, bluetooth_devices, skin_packs, device_name, discovery, hardware_report, lyrion_folders, lyrion_stage, music_floor, lyrion_scan, lyrion_shares, lyrion_usb, problem_report, skin_previews, skins, wifi
 from gexis_core.adapters.base import TRANSPORT_COMMANDS
@@ -181,6 +182,7 @@ class StateServer:
         skins_at: Callable[[], tuple[Path, str] | None] | None = None,
         ui_dir: Path | None = None,
         lyrion_known: "discovery.Known | None" = None,
+        multiroom=None,
     ) -> None:
         """`activate(renderer_id) -> bool` and `set_volume(percent) -> bool`
         are injected by `__main__.py` (ADR-0028's command surface). Both are
@@ -220,6 +222,8 @@ class StateServer:
         self._panel_input = panel_input
         #: ADR-0162: the equaliser (`eq_control.EqualiserControl`).
         self._equaliser = equaliser
+        #: ADR-0166: multiroom (`multiroom.Multiroom`).
+        self._multiroom = multiroom
         #: ADR-0136: the other players on the network, for the phone's switcher.
         #: This core, as the others see it in its status: a player whose mDNS
         #: name was changed by a conflict (`guestpi-2.local`, 2026-10-12) is
@@ -323,6 +327,19 @@ class StateServer:
         #: phones' apart. `/state` stays publish-only (ADR-0028).
         self._pad_panels: set[web.WebSocketResponse] = set()
         self._pad_phones: set[web.WebSocketResponse] = set()
+
+    @property
+    def players(self) -> Players:
+        """ADR-0136's other players, which a group's members are found by."""
+        return self._players
+
+    @property
+    def multiroom(self):
+        return self._multiroom
+
+    @multiroom.setter
+    def multiroom(self, value) -> None:
+        self._multiroom = value
 
     def _broadcast(self, state: PlaybackState) -> None:
         if not self._clients:
@@ -1408,7 +1425,9 @@ class StateServer:
                 # Home Assistant offers the idle screen only where the phone
                 # does: while it is switched on (ADR-0163).
                 "idle_screen": self._setting_or_none("idle_enabled") is True,
-                **status_line(state, state.sources)}
+                **status_line(state, state.sources),
+                # ADR-0166: its group API, group, Lyrion and level.
+                **(self._multiroom.status() if self._multiroom is not None else {})}
 
     async def watch_players(self) -> None:
         """ADR-0136: the other players kept warm, so the phone's list is ready."""
@@ -1423,6 +1442,124 @@ class StateServer:
         async with aiohttp.ClientSession() as session:
             others = await self._players.others(session)
         return web.json_response({"self": self._player_status(), "others": others})
+
+    # -- ADR-0166: the group ----------------------------------------------------
+
+    def _no_multiroom(self) -> web.Response | None:
+        if self._multiroom is None:
+            return web.json_response({"error": "multiroom is not wired up"}, status=503)
+        return None
+
+    async def _handle_group(self, request: web.Request) -> web.Response:
+        """This player's group: the record it keeps and the view `/state`
+        publishes; both null when it is in none."""
+        if (refusal := self._no_multiroom()) is not None:
+            return refusal
+        record = self._multiroom.record
+        return web.json_response({"record": record.to_json() if record else None,
+                                  "view": self._multiroom.view()})
+
+    async def _handle_group_record(self, request: web.Request) -> web.Response:
+        """**Another player's change to a group** (ADR-0166 D3): taken if it
+        is later than what this player has. `taken` says whether it was."""
+        if (refusal := self._no_multiroom()) is not None:
+            return refusal
+        try:
+            body = await request.json()
+            record = body["record"]
+        except (ValueError, KeyError, TypeError):
+            return web.json_response({"error": 'body must be {"record": {...}}'}, status=400)
+        try:
+            taken = await self._multiroom.receive(record)
+        except GroupError as exc:
+            return web.json_response({"error": str(exc)}, status=400)
+        return web.json_response({"taken": taken})
+
+    async def _handle_group_change(self, request: web.Request) -> web.Response:
+        """Join a player to this one's group, take one out, leave it, or undo
+        it (the design's Join, Remove, Leave group, Undo group)."""
+        if (refusal := self._no_multiroom()) is not None:
+            return refusal
+        action = request.path.rsplit("/", 1)[-1]
+        player = None
+        if action in ("join", "remove"):
+            try:
+                player = (await request.json())["player"]
+            except (ValueError, KeyError, TypeError):
+                player = None
+            if not isinstance(player, str) or not player:
+                return web.json_response({"error": 'body must be {"player": "<id>"}'}, status=400)
+        try:
+            if action == "join":
+                record = await self._multiroom.join(player)
+            elif action == "remove":
+                record = await self._multiroom.remove(player)
+            elif action == "leave":
+                record = await self._multiroom.leave()
+            else:
+                record = await self._multiroom.undo()
+        except GroupError as exc:
+            return web.json_response({"error": str(exc)}, status=409)
+        return web.json_response({"record": record.to_json() if record else None})
+
+    async def _handle_group_volume(self, request: web.Request) -> web.Response:
+        """**The *All* slider** (ADR-0166 D6): `percent`, and the members'
+        levels when the drag began as `from` (optional)."""
+        if (refusal := self._no_multiroom()) is not None:
+            return refusal
+        try:
+            body = await request.json()
+            percent = float(body["percent"])
+        except (ValueError, KeyError, TypeError):
+            return web.json_response({"error": 'body must be {"percent": <0-100>, "from": {...}}'},
+                                     status=400)
+        if not 0 <= percent <= 100:
+            return web.json_response({"error": "percent must be 0-100"}, status=400)
+        if self._multiroom.record is None:
+            return web.json_response({"error": "this player is in no group"}, status=409)
+        moved = await self._multiroom.group_volume(percent, body.get("from"))
+        return web.json_response({"levels": moved})
+
+    async def _handle_group_mute(self, request: web.Request) -> web.Response:
+        if (refusal := self._no_multiroom()) is not None:
+            return refusal
+        try:
+            muted = (await request.json())["muted"]
+        except (ValueError, KeyError, TypeError):
+            muted = None
+        if not isinstance(muted, bool):
+            return web.json_response({"error": 'body must be {"muted": true|false}'}, status=400)
+        if self._multiroom.record is None:
+            return web.json_response({"error": "this player is in no group"}, status=409)
+        await self._multiroom.group_mute(muted)
+        return web.json_response({"muted": muted})
+
+    async def _handle_group_member_volume(self, request: web.Request) -> web.Response:
+        """One member's own level, from any player of the group."""
+        if (refusal := self._no_multiroom()) is not None:
+            return refusal
+        try:
+            percent = float((await request.json())["percent"])
+        except (ValueError, KeyError, TypeError):
+            return web.json_response({"error": 'body must be {"percent": <0-100>}'}, status=400)
+        if not 0 <= percent <= 100:
+            return web.json_response({"error": "percent must be 0-100"}, status=400)
+        if not await self._multiroom.member_volume(request.match_info["id"], percent):
+            return web.json_response({"error": "that member did not take it"}, status=502)
+        return web.json_response({"percent": percent})
+
+    async def _handle_group_member_mute(self, request: web.Request) -> web.Response:
+        if (refusal := self._no_multiroom()) is not None:
+            return refusal
+        try:
+            muted = (await request.json())["muted"]
+        except (ValueError, KeyError, TypeError):
+            muted = None
+        if not isinstance(muted, bool):
+            return web.json_response({"error": 'body must be {"muted": true|false}'}, status=400)
+        if not await self._multiroom.member_mute(request.match_info["id"], muted):
+            return web.json_response({"error": "that member did not take it"}, status=502)
+        return web.json_response({"muted": muted})
 
     async def _handle_standby(self, request: web.Request) -> web.Response:
         """**ADR-0135: the screen off or on from a phone, or the Settings
@@ -3219,6 +3356,16 @@ class StateServer:
         app.router.add_post("/panel/input", self._handle_panel_input)
         app.router.add_get("/player/status", self._handle_player_status)
         app.router.add_get("/players", self._handle_players)
+        app.router.add_get("/group", self._handle_group)
+        app.router.add_post("/group/record", self._handle_group_record)
+        app.router.add_post("/group/join", self._handle_group_change)
+        app.router.add_post("/group/remove", self._handle_group_change)
+        app.router.add_post("/group/leave", self._handle_group_change)
+        app.router.add_post("/group/undo", self._handle_group_change)
+        app.router.add_post("/group/volume", self._handle_group_volume)
+        app.router.add_post("/group/mute", self._handle_group_mute)
+        app.router.add_post("/group/members/{id}/volume", self._handle_group_member_volume)
+        app.router.add_post("/group/members/{id}/mute", self._handle_group_member_mute)
         app.router.add_post("/panel/shown", self._handle_panel_shown)
         app.router.add_post("/panel/go/{to}", self._handle_view_request)
         app.router.add_post("/panel/key", self._handle_panel_key)

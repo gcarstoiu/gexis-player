@@ -984,3 +984,50 @@ def test_off_the_file_is_what_it_was():
 
 def test_the_loopback_is_never_an_output():
     assert "Loopback" in outputs.OURS
+
+
+# -- ADR-0166: a player in a group ---------------------------------------------
+
+
+def test_in_a_group_the_renderers_play_into_the_groups_loopback_and_the_chain_is_kept_for_the_music():
+    out = outputs.Output(card="sndrpihifiberry", label="HiFiBerry", control="DAC")
+    alone = outputs.render(out, False)
+    conf = outputs.render(out, False, group=outputs.BUT_LYRION)
+    head, wait = _parts(conf)
+    assert 'pcm "hw:Multiroom,0,0" format S32_LE' in head and "type linear" in head, \
+        "padded to 32 bits, float refused, as the equaliser's chain"
+    group_in = head[head.index("pcm.gexis_group_in {"):]
+    assert group_in.startswith("pcm.gexis_group_in {\n    type meter"), "C5: the meter on the music played here"
+    assert group_in.replace("pcm.gexis_group_in {", "pcm.output {", 1).strip() == _parts(alone)[0].strip()
+    assert wait == _parts(alone)[1], "Squeezelite keeps its own chain for Lyrion's own sync (D2)"
+
+
+def test_in_a_group_lyrion_cannot_sync_squeezelite_plays_into_the_loopback_too():
+    out = outputs.Output(card="sndrpihifiberry", label="HiFiBerry", control="DAC")
+    _, wait = _parts(outputs.render(out, False, dsd=True, group=outputs.ALL))
+    assert "card Multiroom device 0 subdevice 0 nonblock 0" in wait, "C3"
+    assert "format S32_LE" in wait, "C4: integers only - no native DSD into a group of PCM"
+
+
+def test_in_a_group_with_the_equaliser_the_music_comes_back_through_it():
+    out = outputs.Output(card="sndrpihifiberry", label="HiFiBerry", control="DAC")
+    head, wait = _parts(outputs.render(out, False, eq=True, group=outputs.BUT_LYRION))
+    group_in = head[head.index("pcm.gexis_group_in {"):]
+    assert 'pcm "hw:Loopback,0,0"' in group_in and "pcm.gexis_eq_out" in group_in
+    assert "card Loopback device 0 subdevice 0 nonblock 0" in wait
+
+
+def test_a_written_group_chain_comes_from_the_group_hook(tmp_path, monkeypatch):
+    out = outputs.Output(card="sndrpihifiberry", label="HiFiBerry", control="DAC")
+    monkeypatch.setattr(outputs, "needs_plug", lambda card: False)
+    monkeypatch.setattr(outputs, "widens", lambda card: False)
+    monkeypatch.setattr(outputs, "native_dsd", lambda card: "DSD_U32_BE")
+    monkeypatch.setattr(outputs, "group_in_path", lambda: outputs.ALL)
+    path = tmp_path / "output.conf"
+    outputs.write(out, path=path, fixed=True)
+    _, wait = _parts(path.read_text())
+    assert "card Multiroom" in wait and "{ type hw card sndrpihifiberry nonblock 0 }" not in wait
+
+
+def test_the_groups_loopback_is_never_offered_as_an_output():
+    assert outputs.GROUP_CARD in outputs.OURS

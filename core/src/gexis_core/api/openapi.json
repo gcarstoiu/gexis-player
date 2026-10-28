@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Gexis Player API",
-    "version": "1.1.1",
+    "version": "1.2.0",
     "description": "The HTTP API of a Gexis Player: everything its own screen and phone page\ndo goes through it.\n\n**Where:** `http://<player>.local:8090` on the home network, the player's\nname in place of `<player>`. **No login:** the API is open to the home\nnetwork, as the player's settings are (ADR-0028, ADR-0022) - every route here,\nrestart and reset included, can be called by anyone on it.\n\n**Stability.** Each operation carries `x-gexis-stability`: *stable* - what an\nintegration may rely on - or *internal*, the player's own plumbing, free to\nchange. A stable route changes only with notice in the release notes, and keeps working for a release after (ADR-0152).\n\n**Live state.** `GET /state` upgrades to a WebSocket that sends the whole\nstate as JSON whenever it changes (schema `State`); `GET /touchpad` is the\nphone touchpad's channel. Commands are plain HTTP requests.\n\n**Errors** answer with a status and `{\"error\": \"<what went wrong>\"}`.\n\nThe decision records cited (`ADR-xxxx`) are in the project's repository under\n`docs/decisions/`.",
     "license": {
       "name": "GPL-3.0-or-later",
@@ -85,6 +85,10 @@
     {
       "name": "Personalise",
       "description": "First use, part 2, and the first start's downloads (ADR-0149, ADR-0128)."
+    },
+    {
+      "name": "Multiroom",
+      "description": "Groups of players playing the same music in sync (ADR-0166)."
     }
   ],
   "paths": {
@@ -5990,6 +5994,608 @@
           }
         }
       }
+    },
+    "/group": {
+      "get": {
+        "operationId": "group",
+        "tags": [
+          "Multiroom"
+        ],
+        "summary": "This player's group",
+        "description": "The group this player is in: the record it keeps (its members, leader and revision) and the view `/state` publishes as `group`. Both are null when it plays alone.",
+        "responses": {
+          "200": {
+            "description": "The record and the view, or nulls.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupAnswer"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Multiroom is not wired up in this core.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-gexis-stability": "stable",
+        "x-gexis-adr": [
+          "ADR-0166"
+        ]
+      }
+    },
+    "/group/join": {
+      "post": {
+        "operationId": "group_join",
+        "tags": [
+          "Multiroom"
+        ],
+        "summary": "Join a player to this one's group",
+        "description": "Joins another player, by its lasting `id` from `/players`, to this player's group - a new group led by this player if it is in none. The player joined stops what it plays and leaves any other group (ADR-0166 C1). Every member is sent the change.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroupPlayerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The group as it now is.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupChanged"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The body is not JSON or `player` is missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The player cannot be joined: not found on the network, older than multiroom, or this player itself.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Multiroom is not wired up in this core.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-gexis-stability": "stable",
+        "x-gexis-adr": [
+          "ADR-0166"
+        ]
+      }
+    },
+    "/group/remove": {
+      "post": {
+        "operationId": "group_remove",
+        "tags": [
+          "Multiroom"
+        ],
+        "summary": "Take a member out of the group",
+        "description": "Takes a member out of this player's group; it plays on its own again, silent. The leader cannot be taken out: undo the group instead. A group of one left is no group.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroupPlayerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The group as it now is (null `record` when it ended).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupChanged"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The body is not JSON or `player` is missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "This player is in no group, or the player is the leader.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Multiroom is not wired up in this core.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-gexis-stability": "stable",
+        "x-gexis-adr": [
+          "ADR-0166"
+        ]
+      }
+    },
+    "/group/leave": {
+      "post": {
+        "operationId": "group_leave",
+        "tags": [
+          "Multiroom"
+        ],
+        "summary": "Leave the group",
+        "description": "This player leaves its group and plays on its own again. The leader has no leave: it undoes the group.",
+        "responses": {
+          "200": {
+            "description": "This player's group as it now is (null `record`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupChanged"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "This player is in no group, or it leads it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Multiroom is not wired up in this core.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-gexis-stability": "stable",
+        "x-gexis-adr": [
+          "ADR-0166"
+        ]
+      }
+    },
+    "/group/undo": {
+      "post": {
+        "operationId": "group_undo",
+        "tags": [
+          "Multiroom"
+        ],
+        "summary": "Undo the group",
+        "description": "Ends the group: every member plays on its own again, and the music stays on the leader.",
+        "responses": {
+          "200": {
+            "description": "The group is undone (null `record`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupChanged"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "This player is in no group.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Multiroom is not wired up in this core.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-gexis-stability": "stable",
+        "x-gexis-adr": [
+          "ADR-0166"
+        ]
+      }
+    },
+    "/group/record": {
+      "post": {
+        "operationId": "group_record",
+        "tags": [
+          "Multiroom"
+        ],
+        "summary": "A change to a group, from another player",
+        "description": "How the members of a group keep one record (ADR-0166 D3): the player that changes a group sends the new record to every member, old and new. It is taken when it is later than the one this player keeps, or when it is a group this player has been joined to. Meant for other players, not for clients.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroupRecordPush"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Whether the record was taken.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupTaken"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The body is not a group record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Multiroom is not wired up in this core.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-gexis-stability": "stable",
+        "x-gexis-adr": [
+          "ADR-0166"
+        ]
+      }
+    },
+    "/group/volume": {
+      "post": {
+        "operationId": "group_volume",
+        "tags": [
+          "Multiroom"
+        ],
+        "summary": "The group's level (the All slider)",
+        "description": "Moves every reachable Variable member by the same step - `percent` less their mean - kept within 0-100, so the balance between rooms stays; Fixed members are not moved, and a muted member is unmuted. `from` is the members' levels when a drag began, so a drag down to nothing and back restores the balance; without it, their levels now (ADR-0166 D6).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroupVolumeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Each member's new level, by id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupLevels"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The body is not JSON, or `percent` is missing or outside 0-100.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "This player is in no group.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Multiroom is not wired up in this core.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-gexis-stability": "stable",
+        "x-gexis-adr": [
+          "ADR-0166"
+        ]
+      }
+    },
+    "/group/mute": {
+      "post": {
+        "operationId": "group_mute",
+        "tags": [
+          "Multiroom"
+        ],
+        "summary": "Mute or unmute the whole group",
+        "description": "Mutes or unmutes every reachable member, a Fixed one too where its output has a control of its own to silence (ADR-0165).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaybackMuteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The mute was sent to every member.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaybackMuteSet"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The body is not JSON or `muted` is missing or not a boolean.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "This player is in no group.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Multiroom is not wired up in this core.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-gexis-stability": "stable",
+        "x-gexis-adr": [
+          "ADR-0166"
+        ]
+      }
+    },
+    "/group/members/{id}/volume": {
+      "post": {
+        "operationId": "group_member_volume",
+        "tags": [
+          "Multiroom"
+        ],
+        "summary": "One member's own level",
+        "description": "Sets one member's own level, from any player of the group: this player's own `/volume`, or the member's, sent to it.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroupPercentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The level was set.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupPercent"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The body is not JSON, or `percent` is missing or outside 0-100.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The member did not take it (unreachable, or no level yet).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Multiroom is not wired up in this core.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-gexis-stability": "stable",
+        "x-gexis-adr": [
+          "ADR-0166"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The member's lasting id, as in `group.members`."
+          }
+        ]
+      }
+    },
+    "/group/members/{id}/mute": {
+      "post": {
+        "operationId": "group_member_mute",
+        "tags": [
+          "Multiroom"
+        ],
+        "summary": "Mute or unmute one member",
+        "description": "Mutes or unmutes one member, from any player of the group.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaybackMuteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The mute was set.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaybackMuteSet"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The body is not JSON or `muted` is missing or not a boolean.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The member did not take it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Multiroom is not wired up in this core.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-gexis-stability": "stable",
+        "x-gexis-adr": [
+          "ADR-0166"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The member's lasting id, as in `group.members`."
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -8675,6 +9281,39 @@
             "examples": [
               "Spotify"
             ]
+          },
+          "multiroom": {
+            "type": "integer",
+            "description": "The version of the player's group API; absent from players older than multiroom, which cannot be joined."
+          },
+          "port": {
+            "type": "integer",
+            "description": "The API's port."
+          },
+          "group": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "The group it is in: `id`, `revision`, `changed`, `leader`, `members` (`id`, `name`); null alone."
+          },
+          "lyrion": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Its Lyrion: `server` (the server's id) and `player` (its player's id there); null with Lyrion off or not connected."
+          },
+          "volume": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Its level: `percent`, `muted`; null with Fixed volume."
+          },
+          "fixed": {
+            "type": "boolean",
+            "description": "On Fixed volume."
           }
         }
       },
@@ -10519,8 +11158,15 @@
           },
           "restart": {
             "oneOf": [
-              {"type": "boolean"},
-              {"type": "string", "enum": ["core"]}
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "core"
+                ]
+              }
             ],
             "description": "true: changing the value restarts the device. \"core\": it restarts the player's core instead (lms_server), the device staying up."
           },
@@ -11529,7 +12175,8 @@
           "settling",
           "personalise",
           "resetting",
-          "equaliser"
+          "equaliser",
+          "group"
         ],
         "properties": {
           "active": {
@@ -11710,8 +12357,26 @@
             "description": "True once a factory reset is confirmed and the device is restarting into it (ADR-0132)."
           },
           "equaliser": {
-            "oneOf": [{"$ref": "#/components/schemas/Equaliser"}, {"type": "null"}],
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Equaliser"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "description": "The equaliser for the output in use (ADR-0162); null with no output."
+          },
+          "group": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/GroupView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The group this player is in, or null (ADR-0166). On a member, `active`, `metadata`, `controls` and `queue` are the leader's while nothing of the member's own plays (D5)."
           }
         }
       },
@@ -11914,6 +12579,391 @@
               "Tab"
             ],
             "description": "For a key."
+          }
+        }
+      },
+      "GroupMember": {
+        "type": "object",
+        "description": "A member as the group's record holds it.",
+        "required": [
+          "id",
+          "name",
+          "host",
+          "port"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The player's lasting id (`/player/status` `id`)."
+          },
+          "name": {
+            "type": "string",
+            "description": "Its device name when it joined.",
+            "examples": [
+              "Kitchen"
+            ]
+          },
+          "host": {
+            "type": "string",
+            "description": "Its mDNS name.",
+            "examples": [
+              "kitchen.local"
+            ]
+          },
+          "port": {
+            "type": "integer",
+            "description": "Its API's port.",
+            "examples": [
+              8090
+            ]
+          }
+        }
+      },
+      "GroupRecord": {
+        "type": "object",
+        "description": "One group as its last change left it, kept by every member (ADR-0166 D3; group.py `Record`).",
+        "required": [
+          "id",
+          "revision",
+          "leader",
+          "members",
+          "changed",
+          "by",
+          "ended"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The group's id (32 hex characters), new for each group."
+          },
+          "revision": {
+            "type": "integer",
+            "description": "Raised by every change; the later change wins."
+          },
+          "leader": {
+            "type": "string",
+            "description": "The id of the member whose source the group plays."
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GroupMember"
+            },
+            "description": "Every member, the leader included, in the order they joined."
+          },
+          "changed": {
+            "type": "number",
+            "description": "When the change was made (seconds since the epoch)."
+          },
+          "by": {
+            "type": "string",
+            "description": "The id of the player that made it."
+          },
+          "ended": {
+            "type": "boolean",
+            "description": "The group was undone (or left with one member): sent so every member hears of it."
+          }
+        }
+      },
+      "GroupViewMember": {
+        "type": "object",
+        "description": "A member as the group's view shows it.",
+        "required": [
+          "id",
+          "name",
+          "me",
+          "leads",
+          "reachable",
+          "joining",
+          "screen",
+          "volume",
+          "muted",
+          "fixed",
+          "fixed_mute"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "examples": [
+              "Living Room"
+            ]
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Its page, to switch the phone to it."
+          },
+          "me": {
+            "type": "boolean",
+            "description": "This player."
+          },
+          "leads": {
+            "type": "boolean",
+            "description": "The leader."
+          },
+          "reachable": {
+            "type": "boolean",
+            "description": "Heard from now; false for one switched off or off the network (ADR-0166 C2)."
+          },
+          "joining": {
+            "type": "boolean",
+            "description": "Joined, and not yet playing the group's music (catching up)."
+          },
+          "screen": {
+            "type": "boolean",
+            "description": "Whether it has a screen."
+          },
+          "volume": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Its own level, 0-100; null with Fixed volume or while unreachable."
+          },
+          "muted": {
+            "type": "boolean"
+          },
+          "fixed": {
+            "type": "boolean",
+            "description": "On Fixed volume (an amplifier sets the level)."
+          },
+          "fixed_mute": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Muted with Fixed volume, or null where that has no mute (ADR-0165)."
+          }
+        }
+      },
+      "GroupView": {
+        "type": "object",
+        "description": "The group as `/state` publishes it (group.py `view`).",
+        "required": [
+          "id",
+          "revision",
+          "leader",
+          "me",
+          "mode",
+          "silent",
+          "members",
+          "level",
+          "muted",
+          "source",
+          "transport",
+          "title"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "leader": {
+            "type": "string",
+            "description": "The leader's id."
+          },
+          "me": {
+            "type": "string",
+            "description": "This player's id."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "lyrion",
+              "snapcast"
+            ],
+            "description": "How the group's music reaches the members: Lyrion's own sync while it plays Lyrion and every member uses one Lyrion server, else Gexis's own (ADR-0166 D1, D2)."
+          },
+          "silent": {
+            "type": "boolean",
+            "description": "The leader is not reachable: the others are silent and stay grouped (C2)."
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GroupViewMember"
+            },
+            "description": "The leader first."
+          },
+          "level": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "The All slider's value: the mean of the reachable Variable members' levels."
+          },
+          "muted": {
+            "type": "boolean",
+            "description": "Every reachable member is muted."
+          },
+          "source": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "What the group plays: the leader's active source (`id`, `name`, `accent`)."
+          },
+          "transport": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The leader's transport state."
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The leader's track title."
+          }
+        }
+      },
+      "GroupAnswer": {
+        "type": "object",
+        "required": [
+          "record",
+          "view"
+        ],
+        "properties": {
+          "record": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/GroupRecord"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "view": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/GroupView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "GroupChanged": {
+        "type": "object",
+        "required": [
+          "record"
+        ],
+        "properties": {
+          "record": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/GroupRecord"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "This player's group after the change; null when it plays alone."
+          }
+        }
+      },
+      "GroupPlayerRequest": {
+        "type": "object",
+        "required": [
+          "player"
+        ],
+        "properties": {
+          "player": {
+            "type": "string",
+            "description": "The player's lasting id, from `/players`."
+          }
+        }
+      },
+      "GroupRecordPush": {
+        "type": "object",
+        "required": [
+          "record"
+        ],
+        "properties": {
+          "record": {
+            "$ref": "#/components/schemas/GroupRecord"
+          }
+        }
+      },
+      "GroupTaken": {
+        "type": "object",
+        "required": [
+          "taken"
+        ],
+        "properties": {
+          "taken": {
+            "type": "boolean"
+          }
+        }
+      },
+      "GroupVolumeRequest": {
+        "type": "object",
+        "required": [
+          "percent"
+        ],
+        "properties": {
+          "percent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Where the All slider is."
+          },
+          "from": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "description": "Each Variable member's level when the drag began, by id."
+          }
+        }
+      },
+      "GroupLevels": {
+        "type": "object",
+        "required": [
+          "levels"
+        ],
+        "properties": {
+          "levels": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          }
+        }
+      },
+      "GroupPercentRequest": {
+        "type": "object",
+        "required": [
+          "percent"
+        ],
+        "properties": {
+          "percent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        }
+      },
+      "GroupPercent": {
+        "type": "object",
+        "required": [
+          "percent"
+        ],
+        "properties": {
+          "percent": {
+            "type": "number"
           }
         }
       }
