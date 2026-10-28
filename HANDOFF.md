@@ -69,10 +69,10 @@ the ALSA configuration it read first, so bluealsa-aplay went on writing
 into the group's loopback; the idle renderers now restart on a rewrite,
 proven on guestpi and bedroompi; B2 amended **for George to confirm**;
 LESSONS 84 - the silence was first put down to the phone app, wrongly).
-**Open:** after that fix, one phone app over Bluetooth still delivers
-digital silence to sofapi's chain (raw meter 0, DAC running, the same SBC
-setup as a stream that played) - which app was which to be confirmed with
-George, and a recording straight from BlueALSA proposed. The plugin guide and
+After that fix, one phone app over Bluetooth still delivers silence:
+recorded straight from BlueALSA (bluealsa-aplay stopped for 4 s), every
+sample was zero - the phone sends digital zeros; a control recording of
+another app the same way is owed. The plugin guide and
 contract carry what an uploaded test renderer taught (leave a cast session
 before letting go; read the device name as systemd's form). The leader fix
 is checked by a test only: George's cast is the device check. The integration's join and unjoin: its `multiroom` branch
