@@ -738,8 +738,9 @@ phone only.
   member that was off is sent the record when the next search for players
   finds it (`reconcile`, every 30 s).
 - **What a change does here** (`Multiroom._apply`): into a group, the
-  group's loopback is made, `output.conf` rewritten for the group (renderers
-  restarted only if one plays or holds the device), the server started and
+  group's loopback is made, `output.conf` rewritten for the group (the
+  renderers restarted - waited for only if one plays or holds the device,
+  since a renderer keeps the ALSA configuration it read first), the server started and
   the client pointed at the leader; a joined player's own source stops first
   (C1). The leader moving: the old one's source stops, every client moves.
   Out of a group: the client and server stop and the chain is the player's
