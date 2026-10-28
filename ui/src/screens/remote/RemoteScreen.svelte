@@ -15,8 +15,9 @@
   import TouchArea from './TouchArea.svelte';
   import QuickActions from './QuickActions.svelte';
   import VolumeRow from './VolumeRow.svelte';
+  import GroupMark from './GroupMark.svelte';
 
-  let { artwork = null, onartfailed, pad, onpad, padSwitch, socket, onok, ontap, onsay, oneq } = $props();
+  let { artwork = null, onartfailed, pad, onpad, padSwitch, socket, onok, ontap, onsay, oneq, ongroup, onmark } = $props();
 
   const hasTrack = $derived(!!$active);
   const head = playhead(() => $metadata);
@@ -34,6 +35,9 @@
     </div>
   </div>
 
+  <!-- ADR-0166 (3a): the grouped mark, under the transport row, above the
+       progress bar. -->
+  <GroupMark onopen={onmark} gap={12} after={-2} height={18} />
   <div class="progress" class:is-idle={!hasTrack}>
     <div class="bar" class:is-live={hasTrack && !head.hasPosition}>
       {#if hasTrack && head.hasPosition}<div class="bar__fill" style:width={`${head.percent}%`}></div>{/if}
@@ -46,7 +50,7 @@
 
   <TouchArea {pad} {onpad} {padSwitch} {socket} {onok} {ontap} {onsay} />
   <QuickActions {onsay} />
-  <div class="volume"><VolumeRow {oneq} {onsay} /></div>
+  <div class="volume"><VolumeRow {oneq} {ongroup} {onsay} /></div>
 </div>
 
 <style>

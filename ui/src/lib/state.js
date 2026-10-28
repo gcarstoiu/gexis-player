@@ -75,12 +75,31 @@ export function connect() {
 //: waited out its back-off - seven seconds on sofapi, during which every
 //: press of *Show the test pattern* looked like nothing, since the sheet
 //: hears the pattern is up through this socket.
+//:
+//: **And after a while away, a fresh socket even if this one says open**
+//: (George, 2026-10-28: the group's mute "doesn't work from the first
+//: try"). A phone asleep misses the close: sofapi dropped the phone's socket
+//: at 10:08:40, the phone came back still holding it as open, and for 68 s
+//: every mute it sent was done but never heard of, so each tap sent mute
+//: again. A new socket costs one snapshot.
+const STALE_AFTER_MS = 5000;
 if (typeof document !== 'undefined') {
+  let hiddenAt = null;
   const reconnectNow = () => {
-    if (document.visibilityState !== 'visible' || !socket) return;
-    if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) return;
+    if (document.visibilityState !== 'visible') {
+      hiddenAt ??= Date.now();
+      return;
+    }
+    const away = hiddenAt === null ? 0 : Date.now() - hiddenAt;
+    hiddenAt = null;
+    if (!socket) return;
+    const held = socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING;
+    if (held && away < STALE_AFTER_MS) return;
+    const old = socket;
     retryDelay = RECONNECT_MIN_MS;
     connect();
+    // Its close says nothing now: `connect` replaced it.
+    if (held) old.close();
   };
   document.addEventListener('visibilitychange', reconnectNow);
   window.addEventListener('pageshow', reconnectNow);

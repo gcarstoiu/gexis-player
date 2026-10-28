@@ -249,6 +249,21 @@ class EqEngine:
         self._set_status()
         logger.info("equaliser: on for %s", self._card)
 
+    async def suspend(self) -> None:
+        """**Everything the engine holds on the loopback let go** - its watch
+        (`alsactl monitor` keeps the module in use), CamillaDSP, DSD's
+        forward - so `snd-aloop` can be loaded again with the group's card
+        (ADR-0166; sofapi, 2026-10-28: the reload failed under the watch).
+        The card is kept: the next `configure(..., restart=True)` brings it
+        back."""
+        watch = self._watch
+        await self._stop()
+        if watch is not None:
+            try:
+                await asyncio.wait_for(asyncio.shield(watch), 3)
+            except (asyncio.CancelledError, asyncio.TimeoutError):
+                pass
+
     async def _stop(self) -> None:
         if self._watch is not None:
             self._watch.cancel()

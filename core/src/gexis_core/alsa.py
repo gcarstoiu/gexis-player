@@ -68,6 +68,19 @@ def renderers_card() -> str:
     return _renderers_card or _card
 
 
+#: **ADR-0166: a second card a renderer may hold.** In a group with Lyrion's
+#: own sync, the renderers play into the group's loopback and Squeezelite to
+#: this player's own chain (`outputs.BUT_LYRION`), so both are asked.
+_also_card: str | None = None
+
+
+def set_also_card(card_id: str | None) -> None:
+    global _also_card
+    if card_id != _also_card:
+        logger.info("alsa: arbitration also watches %s", card_id or "nothing else")
+        _also_card = card_id
+
+
 def resolve_card_number(card_id: str | None = None, cards_file: Path | None = None) -> int:
     """Resolve e.g. "sndrpihifiberry" to its current ALSA card number."""
     card_id = card_id or _card
@@ -150,8 +163,14 @@ def device_held_by(unit: str, card_id: str | None = None) -> bool:
     the outgoing renderer's PID is gone from that list, it has released,
     regardless of who (if anyone) holds the device now.
     """
-    node = playback_pcm_node(card_id)
-    if not node.exists():
+    nodes = [playback_pcm_node(card_id)]
+    if card_id is None and _also_card and _also_card != renderers_card():
+        try:
+            nodes.append(playback_pcm_node(_also_card))
+        except RuntimeError:
+            pass
+    nodes = [n for n in nodes if n.exists()]
+    if not nodes:
         return False
     # **Read the unit's own file descriptors rather than ask `fuser`**
     # (2026-09-26). `fuser` scans every process on the system and took 0.10 s
@@ -179,8 +198,8 @@ def device_held_by(unit: str, card_id: str | None = None) -> bool:
                 "process only, which misses any child that holds the card",
                 unit, procs.parent,
             )
-        return _held_by_main_pid(unit, node)
-    target = str(node)
+        return any(_held_by_main_pid(unit, node) for node in nodes)
+    targets = {str(node) for node in nodes}
     for pid in pids:
         fd_dir = Path(f"/proc/{pid}/fd")
         try:
@@ -189,7 +208,7 @@ def device_held_by(unit: str, card_id: str | None = None) -> bool:
             continue
         for fd in fds:
             try:
-                if os.readlink(fd) == target:
+                if os.readlink(fd) in targets:
                     return True
             except OSError:
                 continue

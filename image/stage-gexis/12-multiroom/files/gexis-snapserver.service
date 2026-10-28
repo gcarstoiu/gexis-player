@@ -1,0 +1,19 @@
+# ADR-0166 D1: the group's server, on every player of a group, so that
+# whichever a source starts on leads at once. Started and stopped by the
+# core only (no [Install]); its configuration is written by the core.
+[Unit]
+Description=Gexis Player multiroom server (Snapcast)
+Documentation=https://github.com/gcarstoiu/gexis-player/blob/main/docs/decisions/0166-multiroom-for-every-source.md
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/snapserver -c /run/gexis/snapserver.conf
+User=pi
+Group=audio
+# Its pipes, one per rate, and its own data, gone with it.
+RuntimeDirectory=gexis-snap
+# Off the system bus, so it announces nothing on the network (Finding 139):
+# the members are given the leader's address.
+InaccessiblePaths=-/run/dbus/system_bus_socket
+Restart=on-failure
+RestartSec=2

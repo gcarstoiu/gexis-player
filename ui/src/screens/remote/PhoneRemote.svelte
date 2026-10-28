@@ -26,6 +26,9 @@
   import RemoteNoScreen from './RemoteNoScreen.svelte';
   import PlayerMenu from './PlayerMenu.svelte';
   import EqSheet from './EqSheet.svelte';
+  import GroupSheet from './GroupSheet.svelte';
+  import UndoConfirm from './UndoConfirm.svelte';
+  import { group } from '../../lib/group.svelte.js';
   import { said } from './commands.js';
   import { FILLED } from './icons.js';
 
@@ -46,6 +49,7 @@
     settingsSeen = true;
     settingsRow = row;
     eqOpen = false;
+    groupOpen = false;
     menuOpen = false;
     stopTyping();
     page = 'settings';
@@ -92,9 +96,11 @@
     loadPlayers();
   });
   const sourceName = $derived($sources?.[$active]?.name ?? $active);
+  //: ADR-0166: a member whose leader is off says so (design/source/22).
   const here = $derived({
     name: $settingsDevice.name || me?.name || 'gexis',
-    state: said({ transport: $active ? $metadata?.transport : null, renderer: sourceName }),
+    state: $group?.silent && !$active ? 'Grouped · silent'
+      : said({ transport: $active ? $metadata?.transport : null, renderer: sourceName }),
   });
   function toggleMenu() {
     menuOpen = !menuOpen;
@@ -191,8 +197,21 @@
     }
   }
 
-  // ── The EQ sheet, and what is said ──────────────────────────────────────
+  // ── The EQ sheet, the group's, and what is said ─────────────────────────
   let eqOpen = $state(false);
+  //: ADR-0166: the group volume sheet, and Undo group's question.
+  let groupOpen = $state(false);
+  let undoAsked = $state(false);
+  $effect(() => {
+    if (!$group) {
+      groupOpen = false;
+      undoAsked = false;
+    }
+  });
+  function openMenu() {
+    menuOpen = true;
+    loadPlayers();
+  }
   let told = $state(null);
   let toldTimer;
   function say(text) {
@@ -239,9 +258,11 @@
           {#if hasScreen}
             <RemoteScreen {artwork} onartfailed={(a) => (failedArt = a)} {pad} onpad={choosePad} padSwitch={padAllowed}
                           {socket} onok={beforeOk} ontap={beforeTap}
-                          onsay={say} oneq={() => { eqOpen = true; stopTyping(); }} />
+                          onsay={say} oneq={() => { eqOpen = true; stopTyping(); }}
+                          ongroup={() => { groupOpen = true; stopTyping(); }} onmark={openMenu} />
           {:else}
-            <RemoteNoScreen {artwork} onartfailed={(a) => (failedArt = a)} onsay={say} oneq={() => (eqOpen = true)} />
+            <RemoteNoScreen {artwork} onartfailed={(a) => (failedArt = a)} onsay={say} oneq={() => (eqOpen = true)}
+                            ongroup={() => (groupOpen = true)} onmark={openMenu} />
           {/if}
         </div>
         <div class="page page--settings" inert={page !== 'settings'}>
@@ -266,8 +287,11 @@
       onkeydown={typedKey}
     />
 
-    <PlayerMenu open={menuOpen} {me} {others} {here} onclose={() => (menuOpen = false)} />
+    <PlayerMenu open={menuOpen} {me} {others} {here} onclose={() => (menuOpen = false)}
+                onundo={() => (undoAsked = true)} onsay={say} />
     <EqSheet open={eqOpen} onclose={() => (eqOpen = false)} onedit={() => toSettings('equaliser')} />
+    <GroupSheet open={groupOpen} onclose={() => (groupOpen = false)} onsay={say} />
+    <UndoConfirm open={undoAsked} onclose={() => (undoAsked = false)} onsay={say} />
   </div>
 </div>
 

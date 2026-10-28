@@ -92,6 +92,15 @@ a short transition shows who is taking over, and the new one plays. Nothing
 to disconnect first, no juggling apps when two of them want the DAC: the
 newest deliberate choice wins, and the others are told.
 
+### 📡 Plays in several rooms, in sync
+
+Join Gexis players into a group, from the phone, the screen or a bar's tray,
+and they play the same music together, whatever the source: Lyrion, Spotify,
+Bluetooth, Plexamp or a plugin. Music started on any of them plays on all,
+each keeps its own volume and equaliser, and one slider moves them all. A
+Lyrion group stays Lyrion's own sync, gapless and bit-perfect, and syncing
+players in a Lyrion app groups them too.
+
 ### 🎚️ Sounds the way the file does
 
 Bit-perfect to the DAC: nothing in the chain resamples. Tested up to 24/192
@@ -185,6 +194,7 @@ or removed from Settings, with its progress shown in the switch itself.
 | 🔊 **Sources** | Spotify Connect · Lyrion (squeezelite) · Bluetooth (A2DP) · Plexamp · your own plugins |
 | 🎚️ **Sound** | Bit-perfect, tested up to 24/192 on DAC boards and to 768 kHz on a USB DAC · native DSD on a DAC that takes it · hardware, software or fixed volume · a maximum level for every source · a starting volume Spotify never exceeds · a ten-band equaliser with presets and your own settings, for each output, off (and bit-perfect) until you switch it on |
 | 🔀 **Handover** | One source at a time, never mixed · takeover in any direction · the previous source released before the next one plays |
+| 📡 **Multiroom** | Players joined into a group play the same music in sync, for every source · music started on any of them plays on all · each keeps its own level and equaliser, and an *All* slider moves them together · Lyrion's own sync for Lyrion, and Lyrion's synced players grouped too · groups last until undone, restarts included |
 | 🖼️ **Now playing** | Artwork · synced or plain lyrics · artist information and photos · the Lyrion queue |
 | 📈 **Visualiser** | Up to 287 skins, depending on the screen · VU meters, spectrum, turntables and tape decks · progress, time, volume and play-state in each skin's own style · skins that rotate per track |
 | 🖥️ **Screens** | HDMI touchscreens from 7" to 13.3", including 7.9" and 11.9" bar displays, and DSI screens on the Pi's own display connector, leaving HDMI free for sound · recognised and laid out for their shape · or Headless, with no screen at all |
@@ -253,9 +263,10 @@ Rough, and subject to change:
   screen. DSI screens on the Pi's own display connector. Each player in Home
   Assistant as a media player, with a D-pad for its screen and a dashboard
   card. A ten-band equaliser with presets and your own settings. The phone as
-  a remote, with a touchpad or a D-pad for the screen.
-- 🔜 **Next:** multiroom for every source, then AirPlay 2.
-- 🎨 **Later:** room correction with a USB microphone, the bass first and then the full range; a plugin catalogue, internet radio without a Lyrion server, themes. With Plex switched on, your own Plex server fills in
+  a remote, with a touchpad or a D-pad for the screen. Multiroom for every
+  source.
+- 🔜 **Next:** AirPlay 2, then room correction with a USB microphone.
+- 🎨 **Later:** room correction for the full range; a plugin catalogue, internet radio without a Lyrion server, themes. With Plex switched on, your own Plex server fills in
   the artist and album information other sources leave out.
 - 💭 **Maybe:** the DAC's own filter and polarity options.
 

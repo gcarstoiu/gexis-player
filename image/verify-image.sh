@@ -64,6 +64,8 @@ image/stage-gexis/10-lyrion/files/lyrion-prepare /usr/lib/gexis/lyrion-prepare
 image/stage-gexis/10-lyrion/files/90-gexis-usb-music.rules /usr/lib/udev/rules.d/90-gexis-usb-music.rules
 image/stage-gexis/10-lyrion/files/gexis-music.conf /etc/samba/smb.conf.d/gexis-music.conf
 image/stage-gexis/11-equaliser/files/gexis-equaliser.service /usr/lib/systemd/system/gexis-equaliser.service
+image/stage-gexis/12-multiroom/files/gexis-snapserver.service /usr/lib/systemd/system/gexis-snapserver.service
+image/stage-gexis/12-multiroom/files/gexis-snapclient.service /usr/lib/systemd/system/gexis-snapclient.service
 image/stage-gexis/00-alsa/files/gexis-loopback-load.conf /etc/modules-load.d/gexis-loopback.conf
 image/stage-gexis/00-alsa/files/gexis-loopback-modprobe.conf /etc/modprobe.d/gexis-loopback.conf
 EOF
@@ -241,6 +243,23 @@ if dfs "stat /etc/systemd/system/multi-user.target.wants/gexis-equaliser.service
 else
 	ok "gexis-equaliser not enabled (the core starts it while the equaliser is on)"
 fi
+
+# ADR-0166: Snapcast's own units masked (they would start, and the client play
+# to the output); ours started by the core only.
+for unit in snapserver snapclient; do
+	if dfs "stat /etc/systemd/system/${unit}.service" | grep -q 'Fast link dest: "/dev/null"'; then
+		ok "${unit} masked (the core runs gexis-${unit})"
+	else
+		bad "${unit} is not masked - Debian's postinst starts it (Finding 139)"
+	fi
+done
+for unit in gexis-snapserver gexis-snapclient; do
+	if dfs "stat /etc/systemd/system/multi-user.target.wants/${unit}.service" | grep -q 'Inode:'; then
+		bad "${unit} is enabled in the image - the core starts it (ADR-0166)"
+	else
+		ok "${unit} not enabled (the core starts it in a group)"
+	fi
+done
 
 # **Not enabled.** An unenrolled device runs nothing, and the switch on the
 # settings screen reads the unit's real state (ADR-0086 as amended) - so a unit

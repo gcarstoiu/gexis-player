@@ -10,6 +10,11 @@
   import LockIcon from '../lib/LockIcon.svelte';
   import VolumeIcon from '../lib/VolumeIcon.svelte';
   import EqQuick from './eq/EqQuick.svelte';
+  import GroupGlyph from '../lib/GroupGlyph.svelte';
+  import { group } from '../lib/group.svelte.js';
+  import PanelGroupVolume from './group/PanelGroupVolume.svelte';
+  import PanelAddPlayers from './group/PanelAddPlayers.svelte';
+  import PanelUndoConfirm from './group/PanelUndoConfirm.svelte';
 
   //: `armsAt`: before this (performance.now()), a drawer that opened by
   //: itself takes no touch on its level or mute (App.svelte, VOLUME_ARM_MS).
@@ -35,17 +40,53 @@
   const toggleMute = () => armed() && vol.toggleMute();
   //: Left and Right on the slider (ADR-0161), as the phone's touchpad steps.
   const DPAD_STEP = 2;
+
+  // -- ADR-0166, design/source/22 (2a): the group, in the drawer ----------------
+  //: The other players on the network, asked each time the drawer opens
+  //: (`/players`, kept warm by the core): the *Other players* row is offered
+  //: only where there is one.
+  let others = $state([]);
+  let selfName = $state('');
+  async function loadPlayers() {
+    try {
+      const response = await fetch('/players');
+      if (!response.ok) return;
+      const body = await response.json();
+      others = Array.isArray(body.others) ? body.others : [];
+      selfName = body.self?.name ?? '';
+    } catch {
+      // No network answer: the row waits for the next opening.
+    }
+  }
+  //: `add`: the card turned to *Add players*; `confirming`: *Undo the group?*.
+  let page = $state('main');
+  let confirming = $state(false);
+  $effect(() => {
+    if (open) {
+      loadPlayers();
+    } else {
+      page = 'main';
+      confirming = false;
+    }
+  });
+  const g = $derived($group);
+  //: Whose music a player that joins will play: the leader's, or this one's.
+  const leaderName = $derived(g?.members.find((m) => m.leads)?.name ?? selfName ?? 'this player');
+  const flash = (text) => vol.flash(text);
 </script>
 
 <div class="scrim" class:is-open={open} role="presentation" onclick={onclose}></div>
 
-<div class="drawer" class:is-open={open} role="presentation" data-dpad-layer
+<div class="drawer" class:is-open={open && page === 'main'} class:is-grouped={!!g} role="presentation" data-dpad-layer
      ondpadback={(event) => { event.preventDefault(); onclose?.(); }}
      onpointerdown={onactivity} onpointerup={onsettled}
      onpointercancel={onsettled} onpointerleave={onsettled}
      onpointerenter={(event) => event.pointerType === 'mouse' && onactivity?.(event)}>
   <div class="drawer__title">Controls</div>
-  {#if $fixedOutput}
+  {#if g}
+    <!-- ADR-0166 D6: grouped, the volume is the group's. -->
+    <PanelGroupVolume {g} onadd={() => (page = 'add')} onundo={() => (confirming = true)} onflash={flash} />
+  {:else if $fixedOutput}
     <!--
       ADR-0046: the drawer still opens, so the answer is where the question
       is asked. Not a disabled slider - the design ruled that out by name.
@@ -75,6 +116,7 @@
       aria-valuemax="100"
       aria-valuenow={pct}
       data-dpad-main
+      data-step={DPAD_STEP}
       ondpadstep={(event) => vol.step(event.detail.step * DPAD_STEP)}
       onpointerdown={down}
       onpointermove={move}
@@ -90,9 +132,28 @@
     <span class="readout" class:is-muted={muted}>{muted ? 'Mute' : shown}</span>
   </div>
   {/if}
+  {#if !g && others.length}
+    <!-- ADR-0166 (2a-1): other players to join to this one. -->
+    <div class="rule"></div>
+    <div class="players">
+      <GroupGlyph size={26} ink="rgba(233,238,242,0.82)" />
+      <div class="players__text">
+        <div class="players__title">Other players</div>
+        <div class="players__sub">Join players to this one to play the same music in sync.</div>
+      </div>
+      <button class="add" type="button" onclick={() => (page = 'add')}><span class="add__plus">+</span>Add players</button>
+    </div>
+  {/if}
   <!-- ADR-0162 (design/source/20, Q01-Q05): the equaliser's quick change. -->
-  <EqQuick host="drawer" onedit={() => { onclose?.(); onequaliser?.(); }} />
+  <div class="eq">
+    <EqQuick host="drawer" onedit={() => { onclose?.(); onequaliser?.(); }} />
+  </div>
 </div>
+
+<PanelAddPlayers open={open && page === 'add'} {g} {others} leader={leaderName}
+                 onback={() => (page = 'main')} onflash={flash} onjoined={loadPlayers} />
+<PanelUndoConfirm open={open && confirming && !!g} {g} oncancel={() => (confirming = false)}
+                  ondone={() => (confirming = false)} onflash={flash} />
 
 <div class="toast" class:is-shown={toast}>
   <span>{toast ?? ''}</span>
@@ -146,6 +207,57 @@
     opacity: 1;
     pointer-events: auto;
   }
+  /* ADR-0166: grouped, the drawer holds the group's rows and still fits the
+     shortest panel: where it does not, the card itself scrolls (its radius
+     kept), the equaliser below the fold. Nothing in it gives way. */
+  .drawer.is-grouped {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100% - 24px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+  }
+  .drawer.is-grouped::-webkit-scrollbar { display: none; }
+  .drawer.is-grouped > .drawer__title,
+  .drawer.is-grouped > .eq {
+    flex-shrink: 0;
+  }
+
+  .rule {
+    height: 1px;
+    background: rgba(233, 238, 242, 0.1);
+    margin: 22px 0 20px;
+  }
+  .players {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .players__text { flex: 1; min-width: 0; }
+  .players__title { font-size: 19px; font-weight: 600; }
+  .players__sub { font-size: 15px; margin-top: 4px; color: rgba(233, 238, 242, 0.6); }
+  .add {
+    font: inherit;
+    height: 58px;
+    padding: 0 22px;
+    border-radius: 15px;
+    box-sizing: border-box;
+    background: rgba(233, 238, 242, 0.07);
+    border: 1px solid rgba(233, 238, 242, 0.14);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: 17px;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+    color: var(--ink);
+  }
+  .add:active { transform: scale(0.95); }
+  .add__plus { font-size: 24px; font-weight: 400; line-height: 1; margin-top: -2px; }
+
   .drawer__title {
     font-family: var(--font-mono);
     font-size: var(--t-label-sm);

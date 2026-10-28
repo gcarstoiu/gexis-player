@@ -158,6 +158,62 @@ That is *Settings → Handoff → Restore transport on return*: *Play only if
 playing* (the default) resumes only if Lyrion was playing when it was taken
 over; *Always pause* and *Always play* do what they say.
 
+## Several rooms
+
+**Can several Gexis players play the same music together?**
+Yes: join them into a group, from the phone's list of players (**Join**),
+the panel's volume drawer (**Add players**) or a bar's tray (**Group**). The
+music started on any player of the group plays on all of them, in sync. See
+the manual, section 6.
+
+**Which sources play in a group?**
+Every one: Lyrion, Spotify, Bluetooth, Plexamp, and what plugins add. A
+plugin has nothing to do for it.
+
+**Why does a group play a moment late?**
+To play together, every player of a group holds the music for about 0.4
+seconds before it plays it, so a pause or a skip is heard that much later.
+The player that leads waits too, so all the rooms are heard at once. A player
+playing alone does not wait.
+
+**Is the sound in a group bit-perfect?**
+While the group plays Lyrion with every player on the same Lyrion server,
+Lyrion's own sync plays it, as bit-perfect as each player is alone, native
+DSD included. For every other source the player that leads sends its music to
+the others losslessly (FLAC, 32 bits) and each plays it through its own
+chain - its own equaliser and volume, as alone. To stay in time with the
+others, a player now and then adds or drops a single sample.
+
+**Does Lyrion's own sync still work?**
+Yes. Gexis players synced in a Lyrion app are grouped on the players too, and
+unsynced there they leave the group; a group made on the players is synced in
+Lyrion while it plays Lyrion. Players on different Lyrion servers cannot be
+synced by Lyrion: such a group plays Lyrion as it plays every other source,
+not gapless between tracks.
+
+**What happens when the player that leads is switched off?**
+The others fall silent and stay grouped (*Grouped · silent*). Start music on
+one of them and it leads. Undo the group, or Leave it, to play alone.
+
+**Does each player keep its own volume and equaliser?**
+Yes. The group's **All** slider moves every player the same share of its way
+up or down: a louder room stays louder, and all of them reach the top and the
+bottom together. Each player's own row sets that one. A player on
+Fixed volume is not moved. Each keeps its own equaliser setting.
+
+**Why does a player in the list say *Update to join*?**
+It runs a release from before groups; update it (*Settings → System →
+Software update*) and it can be joined.
+
+**Can I name a group, or keep several?**
+No. A group is made by joining players and lasts until it is undone, across
+restarts.
+
+**What does a group need from the network?**
+The players on one home network, as for the phone's list of players. The
+music goes from the player that leads to each of the others: a network cable
+or a good Wi-Fi link to each player.
+
 ---
 
 ## Screen and touch
@@ -477,9 +533,9 @@ screen, or in the streaming app.
 
 **How does the touchpad work?**
 The touch area is a **trackpad**: one finger moves a pointer on the screen,
-a tap presses, two fingers scroll, and a pinch zooms. What the pointer is
-over is outlined when it can be pressed. The lines along the right and
-bottom edges scroll with one finger. Tapping a text field on the screen
+a tap presses, two fingers scroll - along a slider, they move it - and a
+pinch zooms. What the pointer is over is outlined when it can be pressed.
+The lines along the right and bottom edges scroll with one finger. Tapping a text field on the screen
 brings up the phone's keyboard. The switch at the top of the area changes to
 a **D-pad**: four arrows and OK, as buttons, with a teal ring on the screen
 showing where you are. If the remote stops answering, it reconnects by

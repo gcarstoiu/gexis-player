@@ -39,7 +39,15 @@
   const FLAT = Array(10).fill(0);
   const eq = $derived($equaliser);
   const own = $derived(eq?.own ?? []);
-  const on = $derived(!!eq?.on);
+  //: **The switch moves at once** (George, 2026-10-28: slow to react): the
+  //: core takes seconds to put the equaliser in the chain or out, so the new
+  //: position shows from the press, and goes back only if it is refused.
+  let wanted = $state(null);
+  let wantedTimer;
+  const on = $derived(wanted ?? !!eq?.on);
+  $effect(() => {
+    if (wanted !== null && !!eq?.on === wanted) wanted = null;
+  });
   const custom = $derived(eq?.sel === 'custom');
   const isOwn = $derived(!!eq && own.some((o) => o.key === eq.sel));
   const full = $derived(own.length >= (eq?.own_max ?? 10));
@@ -99,10 +107,15 @@
     if (!eq || busy) return;
     busy = true;
     error = null;
+    wanted = !on;
+    clearTimeout(wantedTimer);
+    // Never held for good: what the core says wins in the end.
+    wantedTimer = setTimeout(() => (wanted = null), 15000);
     try {
-      await setEqualiser({ on: !eq.on });
+      await setEqualiser({ on: wanted });
     } catch (e) {
       error = e.message;
+      wanted = null;
     } finally {
       busy = false;
     }
@@ -557,9 +570,6 @@
     border: 1px solid rgba(233, 238, 242, 0.1);
     color: inherit;
     flex-shrink: 0;
-  }
-  .power:active {
-    transform: scale(0.95);
   }
   .power--bar {
     gap: 12px;

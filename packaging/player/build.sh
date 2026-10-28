@@ -38,8 +38,9 @@ done
 ALSA="libasound2t64 (= 1.2.14-1+rpt1+deb13u1)"
 # The operating system's packages the device runs (the stages' lists), minus
 # the five that only compiled peppyalsa, which now arrives built, and minus
-# squeezelite: ours, gexis-squeezelite, replaces it (ADR-0145).
-OS="alsa-utils, bluez-alsa-utils, bluez-tools, chromium, grim, labwc, nodejs, plymouth, plymouth-themes, python3-pil, python3-pygame, rfkill, samba, swaybg, wlr-randr, wlrctl"
+# squeezelite: ours, gexis-squeezelite, replaces it (ADR-0145). Snapcast's two
+# for multiroom (ADR-0166), Debian's own.
+OS="alsa-utils, bluez-alsa-utils, bluez-tools, chromium, grim, labwc, nodejs, plymouth, plymouth-themes, python3-pil, python3-pygame, rfkill, samba, snapclient, snapserver, swaybg, wlr-randr, wlrctl"
 
 install -D -m 644 /src/image/stage-gexis/09-legal/files/COPYING "$STAGE/usr/share/doc/gexis-player/COPYING"
 install -D -m 644 /src/image/stage-gexis/09-legal/files/SOURCE.md "$STAGE/usr/share/doc/gexis-player/SOURCE.md"

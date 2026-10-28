@@ -17,6 +17,8 @@
   import { retryEnrichment, trackEnrichment } from '../lib/enrichment.js';
   import { artistsCached, foldedName, loadArtistGenres } from '../lib/library.js';
   import QueueRail from './QueueRail.svelte';
+  import PanelGroupMark from './group/PanelGroupMark.svelte';
+  import { group } from '../lib/group.svelte.js';
 
   import { sendTransport, fixedMute, fixedOutput, meters } from '../lib/state.js';
   import { playhead, mmss } from '../lib/playhead.svelte.js';
@@ -43,6 +45,29 @@
   });
 
   const transport = $derived(metadata?.transport ?? null);
+
+  //: **ADR-0166 (3a): the grouped mark, midway between the progress bar and
+  //: the play control**, centred on the transport. Placed by that rule, from
+  //: the footer's own layout - offsets, so a screen still sliding in is
+  //: measured as it will stand.
+  let footerEl = $state(null);
+  let railEl = $state(null);
+  let barEl = $state(null);
+  let markTop = $state(null);
+  function placeMark() {
+    if (!footerEl || !railEl || !barEl) return;
+    const play = barEl.querySelector('.btn--play') ?? barEl.querySelector('.bar__mid') ?? barEl;
+    const railBottom = railEl.offsetTop + railEl.offsetHeight;
+    const playTop = play.offsetParent === footerEl ? play.offsetTop : barEl.offsetTop;
+    markTop = (railBottom + playTop) / 2;
+  }
+  $effect(() => {
+    if (!$group || !footerEl) return;
+    placeMark();
+    const observer = new ResizeObserver(placeMark);
+    observer.observe(footerEl);
+    return () => observer.disconnect();
+  });
 
   // An artwork URL that fails to load falls back to the pending glyph.
   let failedArtwork = $state(null);
@@ -643,9 +668,9 @@
 
     <div class="spacer"></div>
 
-    <div class="footer">
+    <div class="footer" bind:this={footerEl}>
       <div class="progress">
-        <div class="progress__rail">
+        <div class="progress__rail" bind:this={railEl}>
           <div class="progress__track">
             <div class="progress__fill" style:--pos={`${head.percent}%`}></div>
           </div>
@@ -655,7 +680,13 @@
         </div>
       </div>
 
-      <div class="bar">
+      {#if $group && markTop != null}
+        <div class="group-mark" style:top={`${markTop}px`}>
+          <PanelGroupMark g={$group} onopen={onvolume} />
+        </div>
+      {/if}
+
+      <div class="bar" bind:this={barEl}>
         <div class="bar__left">
           <button
             class="btn btn--home"
@@ -1512,7 +1543,22 @@
   .is-empty { visibility: hidden; }
 
   .spacer { min-height: 0; }
-  .footer { flex-shrink: 0; }
+  .footer { flex-shrink: 0; position: relative; }
+  /* ADR-0166 (3a): centred on the transport (the footer's middle, where the
+     transport's column is), its centre on the line `placeMark` measured;
+     up to 680 wide, the names ellipsised past it. */
+  .group-mark {
+    position: absolute;
+    left: 50%;
+    z-index: 1;
+    width: 680px;
+    max-width: 100%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .group-mark > :global(*) { pointer-events: auto; }
 
   .progress__rail {
     position: relative;

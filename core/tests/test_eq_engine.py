@@ -257,3 +257,16 @@ async def test_a_volume_that_cannot_give_back_does_not_stop_the_equaliser(monkey
     rig.amixer = contents()
     await rig.engine._look()
     assert any(s[0] == "SetConfigJson" for s in rig.camilla.sent)
+
+
+async def test_suspended_the_engine_lets_go_of_the_loopback_and_comes_back(monkeypatch, tmp_path):
+    """ADR-0166: the group's card is made by loading snd-aloop again, which
+    the engine's watch (`alsactl monitor`) kept in use (sofapi, 2026-10-28)."""
+    rig = Rig(monkeypatch, tmp_path)
+    await rig.engine.configure("sndrpihifiberry", eq.FLAT)
+    assert rig.engine._watch is not None
+    await rig.engine.suspend()
+    assert rig.engine._watch is None and rig.units[-1] == ("stop", eq_engine.UNIT)
+    await rig.engine.configure("sndrpihifiberry", eq.FLAT, restart=True)
+    assert rig.engine._watch is not None and rig.units[-1] == ("restart", eq_engine.UNIT)
+    await rig.engine.suspend()

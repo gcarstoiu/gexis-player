@@ -146,7 +146,7 @@ Taken from `Adapter` and `Capabilities` as they are. The prose for each is in
 | `unit` | string | The systemd unit whose process opens the device. The release ladder attributes a still-busy device to it (`alsa.device_held_by`) |
 | `release_action` | `pause` \| `disconnect` | ADR-0010/0027 |
 | `release_ladder` | object, optional | Per-renderer override. **Plexamp needs one** — its device is not free for 14 s after a polite stop ([Finding 077](findings/077-plexamp-on-gexis.md)) |
-| `capabilities.audio_connection` | string | `output` for everything today (ADR-0009) |
+| `capabilities.audio_connection` | string | `output` for everything today (ADR-0009); in a group of players `output` reaches the group, with nothing asked of the plugin (ADR-0166) |
 | `capabilities.acquisition_events` | array of strings | The *names* of what this renderer treats as taking the device, so an accountability UI has something to point at |
 | `capabilities.supports_artwork` | bool | Whether it can ever supply one, not whether this track has one |
 | `capabilities.supports_sample_rate` | bool | As above |
@@ -247,9 +247,12 @@ Each carries an `id`; the plugin answers exactly once:
   channel. `result: true` means its API confirmed the action — **not** that
   the device is free. The core checks that separately, and for Plexamp the
   two are fourteen seconds apart.
-- **`signal_stop`** is process-level escalation, `force` being SIGKILL rather
-  than SIGTERM. A plugin that has nothing to do here may answer `true`; the
-  core also has the unit name and can act itself.
+- **`signal_stop`** is process-level escalation. `force` tells the rungs
+  apart, but the core's own signal to the unit is always SIGKILL (ADR-0091),
+  so no shutdown handler runs then. A plugin that must do something before it
+  goes - leave a cast session its controller holds, say - does it on
+  `release`, within its `polite_grace`. A plugin that has nothing to do here
+  may answer `true`; the core also has the unit name and can act itself.
 - **`device_freed`** and **`restart_after_release`** are the two hooks that
   exist because of measured races, not design (Findings 013 §1 and 014).
   Default: do nothing, answer `true`.
