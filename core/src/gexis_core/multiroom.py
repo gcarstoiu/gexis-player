@@ -428,6 +428,19 @@ class Multiroom:
         status = self._statuses.get(player_id) or self._players.status_of(player_id) or {}
         return status.get("lyrion")
 
+    def _in_lyrions_sync(self, record: Record) -> bool:
+        """**Lyrion plays here in its own sync with the group's leader**, on
+        one server, so Lyrion carries the group (D2) - not this player's own
+        music to stop (C1). Stopping it paused the sync it plays in (the
+        bar, 2026-10-28: synced in a Lyrion app while it played)."""
+        lms = self._lms
+        if (lms is None or self._local_active() != "lms"
+                or self._chain_for(record) != outputs.BUT_LYRION):
+            return False
+        leader = (self._lyrion_of(record.leader) or {}).get("player")
+        master, others = lms.sync_group
+        return bool(leader) and leader in {master, *others}
+
     def _chain_for(self, record: Record) -> str:
         """`BUT_LYRION` where every member plays Lyrion from one server, so
         Lyrion's own sync can carry it; else `ALL` (C3). **A member not heard
@@ -452,7 +465,7 @@ class Multiroom:
         else:
             self.peers.stop()
         if old is None and new is not None:
-            if new.leader != me:
+            if new.leader != me and not self._in_lyrions_sync(new):
                 await self._stop_own("it joined a group")
             await self._enter(new)
         elif old is not None and new is not None:

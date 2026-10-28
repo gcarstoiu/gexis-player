@@ -355,6 +355,40 @@ async def test_a_member_silent_for_a_round_does_not_change_the_chain(tmp_path):
     assert kitchen.room.chain == outputs.BUT_LYRION and kitchen.rechains == rechains
 
 
+async def test_lyrion_playing_in_the_leaders_sync_is_not_stopped_on_joining(tmp_path):
+    """The bar, 2026-10-28: synced with sofapi in a Lyrion app while it
+    played Lyrion, it joined sofapi's group and paused its own player - which
+    in Lyrion's sync paused them both."""
+    net = Net(tmp_path)
+    living = net.add("living", "Living Room", lyrion=("server-uuid", "player-a"))
+    kitchen = net.add("kitchen", "Kitchen", lyrion=("server-uuid", "player-b"))
+    await net.settle()
+    # Synced in a Lyrion app: Lyrion plays the master's stream on both.
+    living.play("lms")
+    kitchen.play("lms")
+    living.room._lms.sync_group = ("player-a", ("player-b",))
+    kitchen.room._lms.sync_group = ("player-a", ("player-a",))
+    await net.settle()
+    await living.room.join("kitchen")
+    kitchen.room.peers.states["living"] = {"active": "lms"}
+    await net.settle()
+    assert kitchen.room.record.leader == "living"
+    assert kitchen.stopped == [] and living.stopped == [], "Lyrion's own sync plays on"
+    assert kitchen.room.chain == outputs.BUT_LYRION and kitchen.snap.host is None
+
+
+async def test_lyrion_playing_on_its_own_is_stopped_on_joining(tmp_path):
+    net = Net(tmp_path)
+    living = net.add("living", "Living Room", lyrion=("server-uuid", "player-a"))
+    kitchen = net.add("kitchen", "Kitchen", lyrion=("server-uuid", "player-b"))
+    await net.settle()
+    kitchen.play("lms")
+    await net.settle()
+    await living.room.join("kitchen")
+    await net.settle()
+    assert kitchen.stopped == ["lms"], "C1: not synced with the leader, its own music stops"
+
+
 def test_a_leaders_relative_pictures_are_made_reachable():
     assert mr.absolute("/music/1/cover.jpg", "http://living.local:8090/") == \
         "http://living.local:8090/music/1/cover.jpg"
