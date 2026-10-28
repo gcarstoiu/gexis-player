@@ -95,7 +95,12 @@ from gexis_core.splash import Splash
 from gexis_core.state import StateStore
 from gexis_core import announce, backups, bluealsa_volume, components, outputs, plugin_env, plugins, uploads
 from gexis_core import eq_control
+from gexis_core import group as group_module
+from gexis_core import multiroom as multiroom_module
+from gexis_core import snapcast
+from gexis_core import eq_engine
 from gexis_core.eq_engine import EqEngine
+from gexis_core.players import own_id
 from gexis_core.equaliser import Equaliser
 from gexis_core.setup_network import SetupNetwork
 from gexis_core.setup_flow import SetupFlow
@@ -583,6 +588,21 @@ def standin_due(seen, now) -> bool:
     return seen is not None and now[0] == seen[0] and now[1:] != seen[1:]
 
 
+def _watch_renderers_cards(card: str) -> None:
+    """**Which cards arbitration asks about** (ADR-0162, ADR-0166): the
+    output's, or the equaliser's loopback while it is in the path - or, in a
+    group, the group's loopback, and with Lyrion's own sync also the chain
+    Squeezelite plays to."""
+    chain = outputs.LOOPBACK if outputs.eq_in_path(card) else None
+    group = outputs.group_in_path()
+    if group:
+        alsa.set_renderers_card(outputs.GROUP_CARD)
+        alsa.set_also_card((chain or card) if group == outputs.BUT_LYRION else None)
+    else:
+        alsa.set_renderers_card(chain)
+        alsa.set_also_card(None)
+
+
 async def main() -> None:
     config = Config.load()
 
@@ -604,6 +624,12 @@ async def main() -> None:
         settings_store.get(eq_control.KEY)).output(card).on
     #: The equaliser's controller, made once the rest it needs exists.
     equaliser = None
+    # ADR-0166: a player in a group plays into the group's loopback - and
+    # comes up so after a restart, before the other members are heard from.
+    group_chain = {"value": multiroom_module.read_chain() if group_module.read() else None}
+    outputs.group_in_path = lambda: group_chain["value"]
+    #: Multiroom (ADR-0166), made once the server it answers through exists.
+    multiroom = None
 
     # A server chosen from the Settings sheet (ADR-0044 §1's `kind: server`)
     # wins over the deployment's own address - but only from here, at
@@ -677,9 +703,10 @@ async def main() -> None:
             )
         if _squeezelite_env() != squeezelite_env_was:
             # ADR-0143: Squeezelite reads its options only when it starts, and
-            # it started before this core (ADR-0140) - unlike the chain, which
-            # it reads at its next open. Restarted now, unless it is playing:
-            # then the next change of output does it.
+            # it started before this core (ADR-0140) - the chain too: a process
+            # keeps the ALSA configuration it read first (LESSONS 81, 84), and
+            # a rewritten chain restarts the renderers above. Restarted now,
+            # unless it is playing: then the next change of output does it.
             if outputs.card_running(chosen_output.card):
                 logger.info("outputs: squeezelite's options changed while %s plays; "
                             "they apply at its next start", chosen_output.label)
@@ -689,8 +716,9 @@ async def main() -> None:
         # ADR-0055: arbitration asks about the output the device is
         # playing to, not about the card it shipped with (Finding 048 §5).
         alsa.set_card(chosen_output.card)
-        # ADR-0162: with the equaliser on, about the loopback they play into.
-        alsa.set_renderers_card(outputs.LOOPBACK if outputs.eq_in_path(chosen_output.card) else None)
+        # ADR-0162: with the equaliser on, about the loopback they play into;
+        # ADR-0166: in a group, about the group's.
+        _watch_renderers_cards(chosen_output.card)
         # ADR-0117: raw values mean what this output's control says they do.
         use_scale(chosen_output.scale)
         # ADR-0162 D3 as amended: the control holds the level with the
@@ -896,6 +924,8 @@ async def main() -> None:
         state_store.set_volume_raw(raw, muted=mute.muted, percent=remote.percent())
 
     start_guard = StartGuard()
+    #: When this player's own level was last set from here (ADR-0166 D6).
+    own_volume_sent = {"at": 0.0}
 
     def report_renderer_volume(renderer_id: str, value: int, steps: int) -> None:
         """**The one path from a renderer's number to the DAC** (ADR-0054 §3).
@@ -932,7 +962,14 @@ async def main() -> None:
                         renderer_id, value, steps)
             return
         remote.set_steps(renderer_id, steps)
+        before = remote.percent() if supervisor.active == renderer_id else None
         remote.report(renderer_id, value)
+        after = remote.percent() if supervisor.active == renderer_id else None
+        # ADR-0166 D6: the source's own app moved the leader's level, not the
+        # panel or the group's slider (whose echo can come back quantised).
+        if (multiroom is not None and before is not None and after is not None and before != after
+                and time.monotonic() - own_volume_sent["at"] > 2.0):
+            multiroom.on_source_volume(before, after)
         raw = renderer_value_to_hardware_raw(value, steps)
         if supervisor.active != renderer_id:
             logger.debug(
@@ -1320,6 +1357,9 @@ async def main() -> None:
         if stopped:
             logger.info("outputs: %s stopped for the change of output", stopped)
         logger.info("outputs: stopping the renderers to switch to %s", chosen.label)
+        # ADR-0166: the group's client too - it holds the card in a group.
+        if multiroom is not None:
+            await multiroom.snap.listen(None)
         stop = await asyncio.create_subprocess_exec(
             "systemctl", "stop", "squeezelite.service", "go-librespot.service",
             "bluealsa-aplay.service", *_plugin_renderer_units(),
@@ -1371,6 +1411,8 @@ async def main() -> None:
             _hold_the_level_playing(supervisor.active, untold_max_s=RESTART_HOLD_S)
         logger.info("outputs: starting the renderers again for %s", chosen.label)
         await _restart_renderers()
+        if multiroom is not None:
+            await multiroom.relisten()
 
     async def _change_output() -> None:
         """The output row (ADR-0055): under the lock a change of volume type
@@ -1379,7 +1421,7 @@ async def main() -> None:
         async with volume_change:
             await _switch_output()
 
-    async def _restart_renderers(wait: bool = False) -> None:
+    async def _restart_renderers(wait: bool = False, keep: frozenset[str] = frozenset()) -> None:
         """**The renderers whose source is on, and only those** (ADR-0077).
 
         A plain `systemctl restart` of all three starts a unit that is stopped
@@ -1389,10 +1431,11 @@ async def main() -> None:
         volume chain: go-librespot offered to phones under a switch saying
         off, or squeezelite with no server finding one on the network by
         itself (code review, 2026-10-12)."""
-        units = [adapters[rid].unit_name for rid in RENDERER_ROWS if renderer_enabled(rid)]
+        units = [adapters[rid].unit_name for rid in RENDERER_ROWS
+                 if renderer_enabled(rid) and adapters[rid].unit_name not in keep]
         # A renderer plugin's unit by its own switch, which is its unit's
         # enabled state (ADR-0086).
-        plugin_restarts = [restart_if_enabled(unit) for unit in _plugin_renderer_units()]
+        plugin_restarts = [restart_if_enabled(unit) for unit in _plugin_renderer_units() if unit not in keep]
         if units:
             restart = await asyncio.create_subprocess_exec("systemctl", "restart", *units)
             if wait:
@@ -1483,6 +1526,8 @@ async def main() -> None:
             logger.error("outputs: nothing to write the tuning to")
             return
         logger.info("outputs: stopping the renderers - %s", reason)
+        if multiroom is not None:
+            await multiroom.snap.listen(None)
         stop = await asyncio.create_subprocess_exec(
             "systemctl", "stop", "squeezelite.service", "go-librespot.service",
             "bluealsa-aplay.service", *_plugin_renderer_units(),
@@ -1491,12 +1536,14 @@ async def main() -> None:
         outputs.write(chosen, tuning=_tuning(), fixed=fixed_wanted["value"])
         await _equaliser_follows(chosen)
         await _restart_renderers(wait=wait)
+        if multiroom is not None:
+            await multiroom.relisten()
 
     async def _equaliser_follows(chosen) -> None:
         """**ADR-0162: the equaliser follows a rewritten chain** - after the
         file, before the renderers: arbitration asks the loopback while it
         is in the path, and CamillaDSP starts again to read the file."""
-        alsa.set_renderers_card(outputs.LOOPBACK if outputs.eq_in_path(chosen.card) else None)
+        _watch_renderers_cards(chosen.card)
         if equaliser is not None:
             await equaliser.sync(restart=True)
 
@@ -1631,6 +1678,9 @@ async def main() -> None:
 
     def on_active_change(renderer_id: str | None) -> None:
         state_store.set_active(renderer_id)
+        # ADR-0166 D4: a source started on a member leads the group.
+        if multiroom is not None:
+            multiroom.on_local_active(renderer_id)
         # ADR-0053: the number on the panel belongs to whoever holds the
         # device, so a takeover changes what it means - from one renderer's
         # scale to another's, or to the hardware's own with nobody active.
@@ -1739,6 +1789,11 @@ async def main() -> None:
         return await activate_method()
 
     async def transport(renderer_id: str, command: str, argument=None) -> bool:
+        # ADR-0166 D5: on a member, the group's Now Playing is the leader's,
+        # and so are its controls.
+        if multiroom is not None and multiroom.mirroring():
+            logger.info("command: %s to the group's leader", command)
+            return await multiroom.forward_transport(command, argument)
         # ADR-0037. The route has already checked the declaration; a
         # declared command with no method is our own contract violation.
         method = getattr(adapters[renderer_id], command, None)
@@ -1749,6 +1804,7 @@ async def main() -> None:
         return await (method() if argument is None else method(argument))
 
     async def set_volume(percent: float) -> bool:
+        own_volume_sent["at"] = time.monotonic()
         # **ADR-0053: the panel is a remote first.** With something playing,
         # the position goes to that renderer's own control and reaches the
         # DAC the way its changes always have. `send` returns False only
@@ -1772,7 +1828,11 @@ async def main() -> None:
         ok = await mute.set(muted)
         volume = state_store.state.volume
         if ok and volume is not None:
-            state_store.set_volume_raw(volume.raw, muted=mute.muted)
+            # **The renderer's own number, as `publish_volume` gives it**
+            # (ADR-0053): without it the level shown became the DAC's - on
+            # sofapi, Bluetooth at 6 % came back from mute showing 39, and
+            # the next touch sent 39 % to the phone (George, 2026-10-28).
+            state_store.set_volume_raw(volume.raw, muted=mute.muted, percent=remote.percent())
         return ok
 
     async def _set_fixed_mute(muted: bool) -> bool:
@@ -4711,6 +4771,137 @@ async def main() -> None:
         output_fixed=lambda: fixed_now["value"],
     )
 
+    # ADR-0166: multiroom - the group, Snapcast and Lyrion's own sync.
+    def _group_me():
+        player_id = own_id()
+        if not player_id:
+            return None
+        return group_module.Member(id=player_id, name=settings.value("device_name") or device_name.hostname(),
+                                   host=f"{device_name.hostname()}.local", port=config.state_port)
+
+    async def _group_rechain() -> None:
+        """The chain rewritten for the group, under the lock a change of
+        output takes. **Renderers restarted and waited for only when one
+        plays or holds the device** (bedroompi, 2026-10-28: waiting for all
+        of them, Plexamp and the plugins with them, took a join 26 s). **The
+        idle ones restart too, unwaited**: a renderer that has opened ALSA
+        keeps the configuration it read first (LESSONS 81, 84) - on sofapi,
+        out of a group, bluealsa-aplay went on writing every Bluetooth stream
+        into the group's loopback."""
+        async with volume_change:
+            units = [a.unit_name for a in adapters.values() if getattr(a, "unit_name", None)]
+            units += _plugin_renderer_units()
+            held = [u for u in units if alsa.device_held_by(u)]
+            lms_unit = adapters["lms"].unit_name if "lms" in adapters else None
+            if group_renderers_stopped["value"]:
+                group_renderers_stopped["value"] = False
+                await _rewrite_output_conf("the group changed, the loopback was loaded again", wait=True)
+                return
+            if held == [lms_unit] or (not held and supervisor.active == "lms"):
+                # **Lyrion playing here keeps playing** where its own chain
+                # does not change: grouped with one Lyrion server it keeps
+                # this player's chain (`BUT_LYRION`), so only `output`, which
+                # nothing else holds, is new.
+                if await _rechain_around_squeezelite():
+                    return
+            if supervisor.active is not None or held:
+                await _rewrite_output_conf("the group changed", wait=True)
+                return
+            chosen = _with_software(outputs.in_force(settings.value("output_device"))[0])
+            if chosen is None:
+                logger.error("outputs: nothing to write the group's chain to")
+                return
+            outputs.write(chosen, tuning=_tuning(), fixed=fixed_wanted["value"])
+            await _equaliser_follows(chosen)
+            await _restart_renderers(wait=False)
+            logger.info("outputs: the group's chain is in place; nothing played, the renderers restart to read it")
+
+    def _wait_block(text: str | None) -> str | None:
+        if not text or "pcm.output_wait {" not in text:
+            return None
+        start = text.index("pcm.output_wait {")
+        return text[start:text.find("\n}", start) + 2]
+
+    async def _rechain_around_squeezelite() -> bool:
+        """The group's chain written under a playing Squeezelite, when its own
+        part (`output_wait`) is unchanged; False, and nothing written, when
+        it would change, or the card cannot be asked what it takes."""
+        chosen = _with_software(outputs.in_force(settings.value("output_device"))[0])
+        if chosen is None or outputs.needs_plug(chosen.card) is None:
+            return False
+        try:
+            before = outputs.CONF_PATH.read_text()
+        except OSError:
+            return False
+        # What `write` would put there, written aside first: the same call,
+        # so DSD's chain and the widening come out as they would.
+        aside = Path("/run/gexis/output.conf.group")
+        try:
+            aside.parent.mkdir(parents=True, exist_ok=True)
+            aside.unlink(missing_ok=True)
+            outputs.write(chosen, path=aside, tuning=_tuning(), fixed=fixed_wanted["value"])
+            wanted = aside.read_text()
+        except OSError:
+            return False
+        finally:
+            aside.unlink(missing_ok=True)
+        if _wait_block(before) is None or _wait_block(before) != _wait_block(wanted):
+            return False
+        outputs.write(chosen, tuning=_tuning(), fixed=fixed_wanted["value"])
+        try:
+            after = outputs.CONF_PATH.read_text()
+        except OSError:
+            after = None
+        if _wait_block(after) != _wait_block(before):
+            # The file as written differs where Squeezelite reads (DSD's
+            # chain): it reopens, as any rewrite makes it.
+            await _restart_renderers(wait=True)
+        else:
+            # The others, idle, read the new `output` only if restarted.
+            await _restart_renderers(wait=False, keep=frozenset({"squeezelite.service"}))
+        _watch_renderers_cards(chosen.card)
+        logger.info("outputs: the group's chain is in place under Lyrion, which plays on")
+        return True
+
+    def _group_chain_card() -> tuple[str | None, bool, bool]:
+        """The card the group's music plays to here, whether the chain in
+        front of it takes 32 bits whatever the card does, and every rate (the
+        equaliser's resampler, HDMI's conversion)."""
+        output = _with_software(outputs.in_force(settings.value("output_device"))[0])
+        if output is None:
+            return None, True, True
+        eq_on = outputs.eq_in_path(output.card)
+        plug = outputs.needs_plug(output.card) is True
+        return output.card, bool(eq_on or plug or outputs.widens(output.card)), bool(eq_on or plug)
+
+    #: The renderers were stopped for the loopback's reload: the next chain
+    #: rewrite starts them again, whether or not anything played.
+    group_renderers_stopped = {"value": False}
+
+    async def _before_loopback_reload() -> None:
+        """**Nothing may hold a loopback while the module is loaded again**:
+        the renderers, CamillaDSP and the equaliser engine's own watch
+        (sofapi, 2026-10-28: the watch alone kept the module in use, the
+        reload failed, and the renderers stopped for it stayed stopped)."""
+        group_renderers_stopped["value"] = True
+        await equaliser_engine.suspend()
+        stop = await asyncio.create_subprocess_exec(
+            "systemctl", "stop", "squeezelite.service", "go-librespot.service", "bluealsa-aplay.service",
+            eq_engine.UNIT, *_plugin_renderer_units())
+        await stop.wait()
+
+    multiroom = multiroom_module.Multiroom(
+        store=state_store, players=state_server.players, snap=snapcast.Snapcast(), me=_group_me,
+        local_active=lambda: supervisor.active, stop_source=supervisor.stop_active,
+        rechain=_group_rechain, chain_card=_group_chain_card,
+        set_own_volume=set_volume, set_own_mute=set_mute,
+        screen=lambda: settings.value("headless") is not True,
+        lms=lms, lms_on=lambda: renderer_enabled("lms"),
+        before_reload=_before_loopback_reload)
+    outputs.group_in_path = lambda: multiroom.chain
+    state_server.multiroom = multiroom
+    lms.on_sync_change(multiroom.on_lyrion_sync)
+
     logger.info("gexis-core starting: adapters=%s", list(adapters))
     await asyncio.gather(
         # ADR-0077: through the gate, not directly - an adapter runs while its
@@ -4742,6 +4933,8 @@ async def main() -> None:
         _reconcile_standby(),
         # ADR-0136: the other players on the network, kept warm for the phone.
         state_server.watch_players(),
+        # ADR-0166: a group kept from before this start, in force again.
+        multiroom.start(),
         # ADR-0084: the socket plugins connect to. Served for the life of the
         # process, beside the one the browser uses.
         plugin_server.run(),

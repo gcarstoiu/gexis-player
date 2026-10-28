@@ -6,6 +6,25 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.8.0 — 28 October 2026
+
+### New
+
+- Several rooms together: Gexis players on the same network play the same music in sync, from every source, joined from the phone, the panel or a bar, each keeping its own volume.
+- Players synced in a Lyrion app are grouped on the players too; a group playing Lyrion plays through Lyrion's own sync.
+- A sideways scroll over a slider moves it, from the phone's touchpad or a computer's.
+
+### Fixed
+
+- After a mute, the volume returns to the level it was at.
+- The equaliser's switch moves the moment it is pressed.
+- The phone page catches up at once after the phone has been asleep.
+
+### Good to know
+
+- In a group every player plays about 0.4 seconds late, so that all play together.
+- A player joining a group stops what it was playing; every player of a group needs 1.8.0.
+
 ## 1.7.0 — 27 October 2026
 
 ### New

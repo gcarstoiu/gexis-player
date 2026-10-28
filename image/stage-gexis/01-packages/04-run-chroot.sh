@@ -13,9 +13,11 @@ done
 for unit in beszel-agent beszel-hub gexis-lyrion plexamp gexis-plexamp; do
 	[ "$(systemctl is-enabled "${unit}")" = disabled ] || { echo "ERROR: ${unit} should ship disabled" >&2; exit 1; }
 done
-# ADR-0162: started and stopped by the core only - no [Install] section at all.
-[ "$(systemctl is-enabled gexis-equaliser)" = static ] || { echo "ERROR: gexis-equaliser should be static" >&2; exit 1; }
-for unit in alsa-restore samba-ad-dc plymouth-quit plymouth-quit-wait; do
+# ADR-0162, ADR-0166: started and stopped by the core only - no [Install] section at all.
+for unit in gexis-equaliser gexis-snapserver gexis-snapclient; do
+	[ "$(systemctl is-enabled "${unit}")" = static ] || { echo "ERROR: ${unit} should be static" >&2; exit 1; }
+done
+for unit in alsa-restore samba-ad-dc plymouth-quit plymouth-quit-wait snapserver snapclient; do
 	[ "$(systemctl is-enabled "${unit}" 2>/dev/null)" = masked ] || { echo "ERROR: ${unit} is not masked" >&2; exit 1; }
 done
 [ ! -e /home/pi/.config/labwc/rc.xml ] || { echo "ERROR: a home-folder labwc config would override /etc/xdg/labwc" >&2; exit 1; }

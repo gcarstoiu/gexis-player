@@ -122,6 +122,27 @@ class TrackMetadata:
             "transport": self.transport,
         }
 
+    @classmethod
+    def from_json(cls, data: dict, *, unavailable=frozenset(), shuffle=None, repeat=None) -> "TrackMetadata":
+        """**Another player's track, as its `/state` publishes it** (ADR-0166
+        D5). `remaining_time` is computed, and what cannot be done now
+        arrives as `controls`, so the caller gives it."""
+        def num(key):
+            value = data.get(key)
+            return value if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+        def text(key):
+            value = data.get(key)
+            return value if isinstance(value, str) else None
+        rate, bits = num("sample_rate"), num("bit_depth")
+        return cls(track_id=text("track_id"), title=text("title"), artist=text("artist"),
+                   album=text("album"), year=text("year"), artwork=text("artwork"),
+                   artwork_small=text("artwork_small"),
+                   sample_rate=int(rate) if rate is not None else None,
+                   bit_depth=int(bits) if bits is not None else None,
+                   position=num("position"), duration=num("duration"),
+                   source_type=text("source_type"), transport=text("transport"), codec=text("codec"),
+                   unavailable=frozenset(unavailable), shuffle=shuffle, repeat=repeat)
+
 
 #: The blank metadata published when nobody holds the device (ADR-0027) -
 #: every field None, matching ADR-0014's "blank the region" rule rather than
@@ -189,6 +210,12 @@ class Queue:
             "id": self.id,
             "modified": self.modified,
         }
+
+    @classmethod
+    def from_json(cls, data: dict) -> "Queue":
+        items = tuple(TrackMetadata.from_json(i) for i in data.get("items") or () if isinstance(i, dict))
+        return cls(items=items, index=int(data.get("index") or 0), name=data.get("name"),
+                   id=data.get("id"), modified=bool(data.get("modified")))
 
 
 @dataclass(frozen=True)
@@ -305,6 +332,9 @@ class PlaybackState:
     #: ADR-0162: the equaliser for the output in use, as `eq_control.snapshot`
     #: gives it; None with no output.
     equaliser: dict | None = None
+    #: **ADR-0166: the group this player is in**, as `group.view` gives it -
+    #: the members with their levels, the leader, what plays - or None.
+    group: dict | None = None
 
     @property
     def controls(self) -> dict | None:
@@ -359,4 +389,5 @@ class PlaybackState:
             "personalise": self.personalise,
             "resetting": self.resetting,
             "equaliser": dict(self.equaliser) if self.equaliser else None,
+            "group": dict(self.group) if self.group else None,
         }

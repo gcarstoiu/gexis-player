@@ -76,6 +76,10 @@ class StateStore:
         self._personalise: str | None = None
         self._resetting = False
         self._equaliser: dict | None = None
+        #: ADR-0166: the group's view, and on a member the leader's playback
+        #: (`set_mirror`).
+        self._group: dict | None = None
+        self._mirror: tuple | None = None
         #: **ADR-0081: the cover the daemon found for a renderer that sent
         #: none.** `renderer_id -> (track, url)`, applied in `state` below
         #: only where the renderer's own artwork is absent. Keyed on the
@@ -102,6 +106,13 @@ class StateStore:
 
     @property
     def state(self) -> PlaybackState:
+        own = self.own()
+        if self._active is None and self._mirror is not None:
+            return self._mirrored(own)
+        return own
+
+    def own(self) -> PlaybackState:
+        """This player's own state, with nothing mirrored (ADR-0166 D5)."""
         metadata = self._metadata.get(self._active, BLANK_METADATA) if self._active else BLANK_METADATA
         # ADR-0081. The renderer's own cover always wins; this fills the hole
         # where there is one, and only for the track it was found for.
@@ -135,7 +146,41 @@ class StateStore:
             personalise=self._personalise,
             resetting=self._resetting,
             equaliser=self._equaliser,
+            group=self._group,
         )
+
+    def _mirrored(self, own: PlaybackState) -> PlaybackState:
+        """**The group's Now Playing on a member** (ADR-0166 D5): nothing of
+        this player's own plays, and the leader's playback is published as
+        if it were - its source, track, controls and queue."""
+        active, metadata, capabilities, source, queue = self._mirror
+        mine = replace(own, active=active, metadata=metadata, queue=queue,
+                       capabilities={**self._capabilities, active: capabilities})
+        if source and not any(s.get("id") == active for s in self._sources):
+            mine = replace(mine, sources=(*self._sources, dict(source)))
+        return mine
+
+    def set_mirror(self, mirror: tuple | None) -> None:
+        """ADR-0166 D5: `(active, metadata, capabilities, source, queue)` of
+        the leader's playback, shown while this player has nothing of its
+        own active; None to show this player's own again."""
+        if mirror == self._mirror:
+            return
+        self._mirror = mirror
+        if self._active is None:
+            self._notify()
+
+    @property
+    def mirrored(self) -> bool:
+        """Whether the leader's playback is what is published now."""
+        return self._active is None and self._mirror is not None
+
+    def set_group(self, group: dict | None) -> None:
+        """ADR-0166: the group's view changed."""
+        if group == self._group:
+            return
+        self._group = group
+        self._notify()
 
     def set_active(self, renderer_id: str | None) -> None:
         """Called by the supervisor whenever its own `active` changes
@@ -469,3 +514,4 @@ class StateStore:
         state = self.state
         for callback in self._subscribers:
             callback(state)
+

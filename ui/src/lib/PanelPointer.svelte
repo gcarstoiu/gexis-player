@@ -24,6 +24,7 @@
   import { openTouchpad, takesText, fieldOf, isRealInputFrame } from './touchpad.js';
   import { panelInput } from './state.js';
   import { panel, reportTouch } from './state.js';
+  import { scrollSlider } from './scrollSlide.js';
 
   const HIDE_MS = 5000;
   //: Pinch: from the panel as it is to three times as large (ADR-0121 §2).
@@ -390,6 +391,8 @@
   let owed = { el: null, axis: 'y', left: 0 };
   let scrollFrame = 0;
   function scroll(dx, dy) {
+    // Along a slider, it moves the slider (George, 2026-10-28).
+    if (scrollSlider(under(), dx * speed, dy * speed)) return;
     const axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
     const by = -(axis === 'x' ? dx : dy) * speed;
     if (!by) return;

@@ -37,6 +37,7 @@
   import { components } from './lib/state.js';
   import { lyricsAsk, lyricsShown } from './lib/panelView.js';
   import { startDpad } from './lib/dpad.js';
+  import { startWheelSlides } from './lib/scrollSlide.js';
 
   //: The browser tab says which player it is (George, 2026-10-10: with
   //: several players open in tabs "it is hard to distinguish between the
@@ -94,6 +95,9 @@
       },
     });
   });
+  //: A computer's touchpad or wheel along a slider moves it, on every surface
+  //: (George, 2026-10-28; lib/scrollSlide.js).
+  $effect(() => startWheelSlides());
   function onPointerDown() {
     touches++;
     if (surface !== 'panel') return;

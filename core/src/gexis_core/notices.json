@@ -310,6 +310,19 @@
       ]
     },
     {
+      "name": "Snapcast",
+      "group": "system",
+      "role": "Plays the same music on every player of a group, in time (multiroom).",
+      "author": "Johannes Pohl (badaix) and contributors",
+      "licence": "GPL-3.0",
+      "url": "https://github.com/badaix/snapcast",
+      "arrives": "Debian package",
+      "packages": [
+        "snapserver",
+        "snapclient"
+      ]
+    },
+    {
       "name": "gexis-plexamp",
       "group": "renderer",
       "role": "Connects Plexamp to the player.",

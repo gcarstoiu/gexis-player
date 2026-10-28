@@ -160,6 +160,27 @@ class Capabilities:
             "controls": sorted(self.controls),
         }
 
+    @classmethod
+    def from_json(cls, data: dict) -> "Capabilities":
+        """**Another player's renderer, as its `/state` declares it** (ADR-0166
+        D5): a member shows the group's Now Playing with the leader's
+        controls, for a source it may not have itself."""
+        try:
+            mechanism = VolumeMechanism(data.get("volume_mechanism"))
+        except ValueError:
+            mechanism = VolumeMechanism.SOFTWARE_API
+        return cls(
+            audio_connection=str(data.get("audio_connection") or "output"),
+            acquisition_events=frozenset(data.get("acquisition_events") or ()),
+            supports_artwork=bool(data.get("supports_artwork")),
+            supports_sample_rate=bool(data.get("supports_sample_rate")),
+            sample_rate_is_source=bool(data.get("sample_rate_is_source")),
+            volume_managed=bool(data.get("volume_managed")),
+            volume_mechanism=mechanism,
+            dummy_mixer_card=data.get("dummy_mixer_card"),
+            controls=frozenset(c for c in data.get("controls") or () if isinstance(c, str)),
+        )
+
 
 class Adapter(abc.ABC):
     """One renderer's acquisition/release behaviour."""

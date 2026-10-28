@@ -1,0 +1,20 @@
+# ADR-0166 D1: the group's music from the leader - the leader's own player
+# included, so every room is equally late - into this player's own chain
+# (`gexis_group_in`: its meter, equaliser, volume and card). Snapcast's own
+# volume is never used (--mixer none, D6). Started by the core only, with
+# the environment it writes.
+[Unit]
+Description=Gexis Player multiroom client (Snapcast)
+Documentation=https://github.com/gcarstoiu/gexis-player/blob/main/docs/decisions/0166-multiroom-for-every-source.md
+After=sound.target network-online.target
+
+[Service]
+EnvironmentFile=/run/gexis/snapclient.env
+ExecStart=/usr/bin/snapclient --logsink=system --logfilter=*:notice -h ${GEXIS_SNAP_HOST} -p ${GEXIS_SNAP_PORT} -s gexis_group_in --mixer none --hostID ${GEXIS_SNAP_ID} --latency ${GEXIS_SNAP_LATENCY} $GEXIS_SNAP_OPTS
+User=pi
+Group=audio
+InaccessiblePaths=-/run/dbus/system_bus_socket
+# Snapcast's own note: very noisy on stdout.
+StandardOutput=null
+Restart=on-failure
+RestartSec=1
