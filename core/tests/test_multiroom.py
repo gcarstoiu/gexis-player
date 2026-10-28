@@ -27,8 +27,15 @@ class Snap:
         self.rate = None
         self.connected = {}
 
+    card = True
+
     async def ensure_card(self, before=None, after=None):
-        return True
+        if not self.card and before is not None:
+            await before()
+        return self.card
+
+    def card_loaded(self):
+        return self.card
 
     async def serve(self, on):
         self.serving = on
@@ -272,3 +279,16 @@ def test_a_leaders_relative_pictures_are_made_reachable():
         "http://living.local:8090/music/1/cover.jpg"
     assert mr.absolute("http://lms:9000/x.jpg", "http://living.local:8090/") == "http://lms:9000/x.jpg"
     assert mr.absolute(None, "http://living.local:8090/") is None
+
+
+async def test_without_the_groups_loopback_a_member_still_hears_the_group(tmp_path):
+    """sofapi, 2026-10-28: the module stayed in use under the equaliser, the
+    reload failed, and the chain named a card that was not there."""
+    net = Net(tmp_path)
+    living, kitchen = net.add("living", "Living Room"), net.add("kitchen", "Kitchen")
+    kitchen.snap.card = False
+    await living.room.join("kitchen")
+    await net.settle()
+    assert kitchen.room.chain == outputs.WITHOUT_LOOPBACK
+    assert kitchen.snap.host == "living.local", "it plays the group's music through its own chain"
+    assert living.room.chain == outputs.ALL

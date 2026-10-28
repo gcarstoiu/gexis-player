@@ -200,7 +200,7 @@ class Multiroom:
         if self.chain is None:
             self.chain = outputs.ALL
             write_chain(self.chain, self._chain_path)
-        await self.snap.ensure_card(self._before_reload, self._after_reload)
+        await self._card_or_fallback()
         await self.snap.serve(True)
         await self._listen()
         self._changed()
@@ -403,6 +403,8 @@ class Multiroom:
         record = self.group.record
         if record is not None:
             chain = self._chain_for(record)
+            if self.chain == outputs.WITHOUT_LOOPBACK and not self.snap.card_loaded():
+                chain = self.chain
             if chain != self.chain and not self._alone_when_idle:
                 logger.info("multiroom: the group's chain is now %s", chain)
                 await self._set_chain(chain)
@@ -440,6 +442,8 @@ class Multiroom:
             if old.leader == me and new.leader != me and self._local_active() is not None:
                 await self._stop_own("another player leads the group now")
             chain = self._chain_for(new)
+            if self.chain == outputs.WITHOUT_LOOPBACK and not self.snap.card_loaded():
+                chain = self.chain
             if chain != self.chain:
                 await self._set_chain(chain)
             await self._listen()
@@ -453,10 +457,38 @@ class Multiroom:
         if stopped:
             logger.info("multiroom: %s stopped here - %s (C1)", stopped, why)
 
+    async def _card_or_fallback(self) -> bool:
+        """The group's loopback made, the renderers it stopped started again
+        (the chain rewritten), or - if it cannot be made - the player's own
+        chain with the group's music into it (`outputs.WITHOUT_LOOPBACK`).
+        Called at the start too, where the chain was written before."""
+        reloaded = {"value": False}
+
+        async def before() -> None:
+            reloaded["value"] = True
+            if self._before_reload is not None:
+                await self._before_reload()
+        made = await self.snap.ensure_card(before, self._after_reload)
+        if not made:
+            logger.error("multiroom: the group's loopback could not be made; this player hears "
+                         "the group, and what starts here plays here alone, until it restarts")
+            if self.chain != outputs.WITHOUT_LOOPBACK:
+                await self._set_chain(outputs.WITHOUT_LOOPBACK)
+            elif reloaded["value"]:
+                await self._rechain()
+            return False
+        if self.chain == outputs.WITHOUT_LOOPBACK and self.group.record is not None:
+            await self._set_chain(self._chain_for(self.group.record))
+        elif reloaded["value"] and self.chain is not None:
+            # The renderers were stopped for the reload: the chain written
+            # again starts them.
+            await self._rechain()
+        return True
+
     async def _enter(self, record: Record) -> None:
         self._alone_when_idle = False
-        await self.snap.ensure_card(self._before_reload, self._after_reload)
-        await self._set_chain(self._chain_for(record))
+        made = await self._card_or_fallback()
+        await self._set_chain(self._chain_for(record) if made else outputs.WITHOUT_LOOPBACK)
         await self.snap.serve(True)
         await self._listen()
 

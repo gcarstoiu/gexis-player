@@ -4784,6 +4784,10 @@ async def main() -> None:
             units += _plugin_renderer_units()
             held = [u for u in units if alsa.device_held_by(u)]
             lms_unit = adapters["lms"].unit_name if "lms" in adapters else None
+            if group_renderers_stopped["value"]:
+                group_renderers_stopped["value"] = False
+                await _rewrite_output_conf("the group changed, the loopback was loaded again", wait=True)
+                return
             if held == [lms_unit] or (not held and supervisor.active == "lms"):
                 # **Lyrion playing here keeps playing** where its own chain
                 # does not change: grouped with one Lyrion server it keeps
@@ -4869,8 +4873,17 @@ async def main() -> None:
         plug = outputs.needs_plug(output.card) is True
         return output.card, bool(eq_on or plug or outputs.widens(output.card)), bool(eq_on or plug)
 
+    #: The renderers were stopped for the loopback's reload: the next chain
+    #: rewrite starts them again, whether or not anything played.
+    group_renderers_stopped = {"value": False}
+
     async def _before_loopback_reload() -> None:
-        """Nothing may hold a loopback while the module is loaded again."""
+        """**Nothing may hold a loopback while the module is loaded again**:
+        the renderers, CamillaDSP and the equaliser engine's own watch
+        (sofapi, 2026-10-28: the watch alone kept the module in use, the
+        reload failed, and the renderers stopped for it stayed stopped)."""
+        group_renderers_stopped["value"] = True
+        await equaliser_engine.suspend()
         stop = await asyncio.create_subprocess_exec(
             "systemctl", "stop", "squeezelite.service", "go-librespot.service", "bluealsa-aplay.service",
             eq_engine.UNIT, *_plugin_renderer_units())

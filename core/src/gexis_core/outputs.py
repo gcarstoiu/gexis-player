@@ -73,6 +73,10 @@ GROUP_IN = "gexis_group_in"
 #: `ALL`, Squeezelite too, where Lyrion cannot sync the group (C3).
 BUT_LYRION = "but-lyrion"
 ALL = "all"
+#: The group's loopback could not be made (the module in use, ADR-0166): the
+#: player's own chain, and the group's music played into it - a member hears
+#: the group; a source started here is heard here alone.
+WITHOUT_LOOPBACK = "without-loopback"
 group_in_path: Callable[[], str | None] = lambda: None
 #: What CamillaDSP plays to while the equaliser is on: the rest of the
 #: output's chain, after the loopback (ADR-0162 D1, D8).
@@ -895,6 +899,12 @@ def _grouped(head: str, wait: str, group: str) -> tuple[str, str]:
     own chain for Lyrion's own sync (`BUT_LYRION`), or plays into the
     loopback too (`ALL`); integers only there, so native DSD is refused
     rather than sent into a group that carries PCM (C4)."""
+    if group == WITHOUT_LOOPBACK:
+        return f'''{head}
+
+# ADR-0166: this player is in a group, and the group's loopback could not be
+# made: the group's music plays through this player's own chain.
+pcm.{GROUP_IN} "output"''', wait
     group_in = head.replace("pcm.output {", f"pcm.{GROUP_IN} {{", 1)
     head = f'''pcm.output {{
     type linear

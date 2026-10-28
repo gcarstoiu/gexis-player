@@ -285,7 +285,16 @@ class Snapcast:
             return True
         if before_reload is not None:
             await before_reload()
-        await self._run("modprobe", "-r", "snd-aloop")
+        for _ in range(20):
+            code, out = await self._run("modprobe", "-r", "snd-aloop")
+            if code == 0:
+                break
+            # Something still holds it: a process letting go takes a moment.
+            await asyncio.sleep(0.25)
+        else:
+            _, holders = await self._run("fuser", "-v", *[str(p) for p in Path("/dev/snd").glob("*")])
+            logger.error("multiroom: snd-aloop stays in use (%s); held by: %s",
+                         out.strip(), " ".join(holders.split())[:300])
         code, out = await self._run("modprobe", "snd-aloop")
         if after_reload is not None:
             await after_reload()
@@ -328,7 +337,17 @@ class Snapcast:
     async def _watching(self) -> None:
         """`alsactl monitor` on the group's loopback, as the equaliser watches
         its own: every *PCM Slave* change is looked at."""
+        missing = False
         while True:
+            if not self.card_loaded():
+                # Said once, and looked at again now and then: the card comes
+                # back only with the module (`ensure_card`).
+                if not missing:
+                    logger.warning("multiroom: no %s loopback to watch", outputs.GROUP_CARD)
+                    missing = True
+                await asyncio.sleep(30)
+                continue
+            missing = False
             try:
                 proc = await asyncio.create_subprocess_exec(
                     "stdbuf", "-oL", "alsactl", "monitor", LOOPBACK,

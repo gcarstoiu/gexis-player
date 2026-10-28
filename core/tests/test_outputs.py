@@ -1031,3 +1031,13 @@ def test_a_written_group_chain_comes_from_the_group_hook(tmp_path, monkeypatch):
 
 def test_the_groups_loopback_is_never_offered_as_an_output():
     assert outputs.GROUP_CARD in outputs.OURS
+
+
+def test_in_a_group_without_its_loopback_the_players_own_chain_takes_the_groups_music():
+    out = outputs.Output(card="sndrpihifiberry", label="HiFiBerry", control="DAC")
+    alone = outputs.render(out, False)
+    conf = outputs.render(out, False, group=outputs.WITHOUT_LOOPBACK)
+    head, wait = _parts(conf)
+    assert 'pcm.output {\n    type meter\n    slave.pcm "hw:sndrpihifiberry"' in head, "the player's own chain"
+    assert 'pcm.gexis_group_in "output"' in head
+    assert "Multiroom" not in conf and wait == _parts(alone)[1]
