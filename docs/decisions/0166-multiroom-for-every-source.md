@@ -260,6 +260,26 @@ every test. Lyrion's half runs on a Lyrion server of Claude's in Docker on
 the development machine, with the public-domain demo library; the players
 used are pointed at it for the test and given their own server back after.
 
+## Amended 2026-10-28: D7, each client's latency is what follows it
+
+George heard sofapi and the bar apart in one group, and in time with
+sofapi's equaliser off. Snapcast keeps its clients in time at the device
+each one opens. On sofapi, with the equaliser on, that device is the
+loopback; CamillaDSP then holds every sample for a chunk and its target
+level (1024 + 1024 frames at 44.1 kHz, about 46 ms; the card's own buffer
+read 1010-2001 frames), and the bar, equaliser off, plays to its card. D7
+had left every client's latency to the measurement, so each was 0.
+
+- **A client's latency is the delay after it that Snapcast cannot see**,
+  worked out by the player's own core when its client starts: with the
+  equaliser in the chain, two of CamillaDSP's chunks at the rate it plays
+  to the card (`equaliser.latency_ms`, 43-46 ms up to 192 kHz), else 0. A
+  switch of the equaliser in a group already restarts the client, which
+  takes the new value then.
+- **The card's own delay** - a USB adapter, an optical or HDMI receiver, a
+  DAC's filters - is not read from anywhere: it stays with the measurement
+  above, by ear or with a microphone, per output.
+
 ## Not in this record
 
 - AirPlay 2 (Phase 23) and its own multiroom from Apple's devices.
