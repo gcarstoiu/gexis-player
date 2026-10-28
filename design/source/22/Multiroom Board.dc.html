@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+@font-face{font-family:'Nunito Sans';src:url('../../fonts/NunitoSans-Variable.woff2') format('woff2-variations'),url('../../fonts/NunitoSans-Variable.woff2') format('woff2');font-weight:300 800;font-display:block;}
+@font-face{font-family:'IBM Plex Mono';src:url('../../fonts/IBMPlexMono-Regular.woff2') format('woff2');font-weight:400;font-display:block;}
+@font-face{font-family:'IBM Plex Mono';src:url('../../fonts/IBMPlexMono-SemiBold.woff2') format('woff2');font-weight:500 600;font-display:block;}
+html,body{margin:0;padding:0;background:#0c1014;}a{color:#7ed6bc;}a:hover{color:#a8e5d3;}
+</style>
+</helmet>
+<section data-screen-label="Phase 22 · Final" style="min-height:100vh;min-width:1200px;background:#0c1014;color:#e9eef2;font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif;padding:64px 64px 120px;display:flex;flex-direction:column;gap:80px;box-sizing:border-box;">
+  <div style="display:flex;flex-direction:column;gap:12px;max-width:1100px;">
+    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#7ed6bc;">Phase 22 · multiroom · final</div>
+    <div style="font-size:52px;font-weight:700;letter-spacing:-0.015em;">Multiroom, final</div>
+    <div style="font-size:19px;line-height:1.55;color:rgba(233,238,242,0.72);text-wrap:pretty;">George's picks, 2026-10-27: <a href="#1a">1a</a> (Join and Remove on each row), <a href="#2a">2a</a> (the volume drawer and the bar's tray) and <a href="#3a">3a</a>, with the mark midway between the progress bar and the play control. Every artboard is live: Join, Remove, Leave, Undo and the sliders work. The options not chosen are in Multiroom Board (turn 1).dc.html.</div>
+    <div id="production" style="display:flex;flex-direction:column;gap:10px;padding:22px 26px;border-radius:20px;border:1px solid rgba(224,167,88,0.4);background:rgba(224,167,88,0.06);">
+      <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#e0a758;">For Claude Code · production wins</div>
+      <div style="font-size:18px;line-height:1.55;color:rgba(233,238,242,0.86);text-wrap:pretty;">The screens under these additions must stay as they are in production. The panel and bar artboards are drawn over pictures of the design files, and on the bars those pictures do not match production (strip, transport, tray). Do not change any production screen to match them. Build only what Phase 22 adds, onto production as it is: the grouped mark, the group in the volume drawer and the bar's tray, and the rows of Gexis players on the phone. Where a picture and production disagree, production wins.</div>
+    </div>
+    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;line-height:1.7;color:rgba(233,238,242,0.6);">Now Playing.dc.html and Settings.dc.html are unchanged. Panel and bar artboards draw over pictures of the locked Now Playing (eq/backdrop-*.png), as Phase 20 did. Phones are 410 × 780, bars 1850 × 400 drawn at 0.8.</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:22px;">
+      <div style="display:flex;flex-direction:column;gap:6px;max-width:1100px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#7ed6bc;">1a · chosen</div>
+        <div style="font-size:34px;font-weight:700;letter-spacing:-0.01em;">The phone: Gexis players</div>
+        <div style="font-size:18px;line-height:1.5;color:rgba(233,238,242,0.72);text-wrap:pretty;">A tap on a row still switches the remote to that player, as today. Join and Remove sit at the row's end.</div>
+      </div>
+      <div style="display:flex;flex-wrap:nowrap;gap:40px;align-items:flex-start;">
+      <sc-for list="{{ q1 }}" as="o" hint-placeholder-count="2">
+        <div id="{{ o.id }}" style="flex-shrink:0;width:{{ o.max }};display:flex;flex-direction:column;gap:22px;padding:28px 30px 34px;border-radius:24px;background:rgba(233,238,242,0.03);border:1px solid rgba(233,238,242,0.1);box-sizing:border-box;">
+          <div style="display:flex;align-items:baseline;gap:14px;">
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;font-weight:600;padding:4px 10px;border-radius:8px;background:rgba(126,214,188,0.16);color:#7ed6bc;flex-shrink:0;">{{ o.id }}</span>
+            <span style="font-size:28px;font-weight:700;letter-spacing:-0.01em;white-space:nowrap;">{{ o.title }}</span>
+          </div>
+          <div style="font-size:18px;line-height:1.5;color:rgba(233,238,242,0.72);max-width:860px;text-wrap:pretty;">{{ o.note }}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:36px 32px;align-items:flex-start;">
+            <sc-for list="{{ o.arts }}" as="a" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:10px;">
+              <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;color:rgba(233,238,242,0.72);white-space:nowrap;">{{ a.cap }}</span>
+              <sc-if value="{{ a.isPhone }}" hint-placeholder-val="{{ true }}"><div data-artboard="{{ a.id }}" style="position:relative;width:410px;height:780px;border-radius:26px;overflow:hidden;box-shadow:0 0 0 1px rgba(233,238,242,0.1),0 24px 60px rgba(0,0,0,0.5);"><sc-if value="{{ a.on }}" hint-placeholder-val="{{ false }}"><dc-import name="Phone Remote Multiroom" scene="{{ a.scene }}" open="{{ a.open }}" join="{{ a.join }}" mark="{{ a.mark }}" me="{{ a.me }}" hint-size="410px,780px" style="width:410px;height:780px;display:block;"></dc-import></sc-if></div></sc-if>
+              <sc-if value="{{ a.isPanel }}" hint-placeholder-val="{{ false }}"><div data-artboard="{{ a.id }}" style="position:relative;width:1280px;height:800px;border-radius:14px;overflow:hidden;box-shadow:0 0 0 1px rgba(233,238,242,0.1),0 24px 60px rgba(0,0,0,0.5);"><sc-if value="{{ a.on }}" hint-placeholder-val="{{ false }}"><dc-import name="Multiroom Panel" surface="panel" scene="{{ a.scene }}" open="{{ a.open }}" place="{{ a.place }}" mark="{{ a.mark }}" me="{{ a.me }}" hint-size="1280px,800px" style="width:1280px;height:800px;display:block;"></dc-import></sc-if></div></sc-if>
+              <sc-if value="{{ a.isBar }}" hint-placeholder-val="{{ false }}"><div data-artboard="{{ a.id }}" style="position:relative;width:1480px;height:320px;border-radius:10px;overflow:hidden;box-shadow:0 0 0 1px rgba(233,238,242,0.1),0 24px 60px rgba(0,0,0,0.5);"><div style="position:absolute;left:0;top:0;width:1850px;height:400px;transform:scale(0.8);transform-origin:0 0;"><sc-if value="{{ a.on }}" hint-placeholder-val="{{ false }}"><dc-import name="Multiroom Panel" surface="bar" scene="{{ a.scene }}" open="{{ a.open }}" place="{{ a.place }}" mark="{{ a.mark }}" me="{{ a.me }}" hint-size="1850px,400px" style="width:1850px;height:400px;display:block;"></dc-import></sc-if></div></div></sc-if>
+            </div></sc-for>
+          </div>
+        </div>
+      </sc-for>
+      </div>
+    </div>
+  <div style="display:flex;flex-direction:column;gap:22px;">
+      <div style="display:flex;flex-direction:column;gap:6px;max-width:1100px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#7ed6bc;">2a · chosen</div>
+        <div style="font-size:34px;font-weight:700;letter-spacing:-0.01em;">The panel and the bars: the volume drawer and the tray</div>
+        <div style="font-size:18px;line-height:1.5;color:rgba(233,238,242,0.72);text-wrap:pretty;">Same actions as the phone: join, remove, leave, undo. Nothing new on Now Playing but the mark.</div>
+      </div>
+      <div style="display:flex;flex-wrap:nowrap;gap:40px;align-items:flex-start;">
+      <sc-for list="{{ q2 }}" as="o" hint-placeholder-count="2">
+        <div id="{{ o.id }}" style="flex-shrink:0;width:{{ o.max }};display:flex;flex-direction:column;gap:22px;padding:28px 30px 34px;border-radius:24px;background:rgba(233,238,242,0.03);border:1px solid rgba(233,238,242,0.1);box-sizing:border-box;">
+          <div style="display:flex;align-items:baseline;gap:14px;">
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;font-weight:600;padding:4px 10px;border-radius:8px;background:rgba(126,214,188,0.16);color:#7ed6bc;flex-shrink:0;">{{ o.id }}</span>
+            <span style="font-size:28px;font-weight:700;letter-spacing:-0.01em;white-space:nowrap;">{{ o.title }}</span>
+          </div>
+          <div style="font-size:18px;line-height:1.5;color:rgba(233,238,242,0.72);max-width:860px;text-wrap:pretty;">{{ o.note }}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:36px 32px;align-items:flex-start;">
+            <sc-for list="{{ o.arts }}" as="a" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:10px;">
+              <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;color:rgba(233,238,242,0.72);white-space:nowrap;">{{ a.cap }}</span>
+              <sc-if value="{{ a.isPhone }}" hint-placeholder-val="{{ true }}"><div data-artboard="{{ a.id }}" style="position:relative;width:410px;height:780px;border-radius:26px;overflow:hidden;box-shadow:0 0 0 1px rgba(233,238,242,0.1),0 24px 60px rgba(0,0,0,0.5);"><sc-if value="{{ a.on }}" hint-placeholder-val="{{ false }}"><dc-import name="Phone Remote Multiroom" scene="{{ a.scene }}" open="{{ a.open }}" join="{{ a.join }}" mark="{{ a.mark }}" me="{{ a.me }}" hint-size="410px,780px" style="width:410px;height:780px;display:block;"></dc-import></sc-if></div></sc-if>
+              <sc-if value="{{ a.isPanel }}" hint-placeholder-val="{{ false }}"><div data-artboard="{{ a.id }}" style="position:relative;width:1280px;height:800px;border-radius:14px;overflow:hidden;box-shadow:0 0 0 1px rgba(233,238,242,0.1),0 24px 60px rgba(0,0,0,0.5);"><sc-if value="{{ a.on }}" hint-placeholder-val="{{ false }}"><dc-import name="Multiroom Panel" surface="panel" scene="{{ a.scene }}" open="{{ a.open }}" place="{{ a.place }}" mark="{{ a.mark }}" me="{{ a.me }}" hint-size="1280px,800px" style="width:1280px;height:800px;display:block;"></dc-import></sc-if></div></sc-if>
+              <sc-if value="{{ a.isBar }}" hint-placeholder-val="{{ false }}"><div data-artboard="{{ a.id }}" style="position:relative;width:1480px;height:320px;border-radius:10px;overflow:hidden;box-shadow:0 0 0 1px rgba(233,238,242,0.1),0 24px 60px rgba(0,0,0,0.5);"><div style="position:absolute;left:0;top:0;width:1850px;height:400px;transform:scale(0.8);transform-origin:0 0;"><sc-if value="{{ a.on }}" hint-placeholder-val="{{ false }}"><dc-import name="Multiroom Panel" surface="bar" scene="{{ a.scene }}" open="{{ a.open }}" place="{{ a.place }}" mark="{{ a.mark }}" me="{{ a.me }}" hint-size="1850px,400px" style="width:1850px;height:400px;display:block;"></dc-import></sc-if></div></div></sc-if>
+            </div></sc-for>
+          </div>
+        </div>
+      </sc-for>
+      </div>
+    </div>
+  <div style="display:flex;flex-direction:column;gap:22px;">
+      <div style="display:flex;flex-direction:column;gap:6px;max-width:1100px;">
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#7ed6bc;">3a · chosen</div>
+        <div style="font-size:34px;font-weight:700;letter-spacing:-0.01em;">The grouped mark</div>
+        <div style="font-size:18px;line-height:1.5;color:rgba(233,238,242,0.72);text-wrap:pretty;">The other players named, on every member, midway between the progress bar and the play control. A tap on it opens the volume drawer (the tray on a bar).</div>
+      </div>
+      <div style="display:flex;flex-wrap:nowrap;gap:40px;align-items:flex-start;">
+      <sc-for list="{{ q3 }}" as="o" hint-placeholder-count="2">
+        <div id="{{ o.id }}" style="flex-shrink:0;width:{{ o.max }};display:flex;flex-direction:column;gap:22px;padding:28px 30px 34px;border-radius:24px;background:rgba(233,238,242,0.03);border:1px solid rgba(233,238,242,0.1);box-sizing:border-box;">
+          <div style="display:flex;align-items:baseline;gap:14px;">
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;font-weight:600;padding:4px 10px;border-radius:8px;background:rgba(126,214,188,0.16);color:#7ed6bc;flex-shrink:0;">{{ o.id }}</span>
+            <span style="font-size:28px;font-weight:700;letter-spacing:-0.01em;white-space:nowrap;">{{ o.title }}</span>
+          </div>
+          <div style="font-size:18px;line-height:1.5;color:rgba(233,238,242,0.72);max-width:860px;text-wrap:pretty;">{{ o.note }}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:36px 32px;align-items:flex-start;">
+            <sc-for list="{{ o.arts }}" as="a" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:10px;">
+              <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;color:rgba(233,238,242,0.72);white-space:nowrap;">{{ a.cap }}</span>
+              <sc-if value="{{ a.isPhone }}" hint-placeholder-val="{{ true }}"><div data-artboard="{{ a.id }}" style="position:relative;width:410px;height:780px;border-radius:26px;overflow:hidden;box-shadow:0 0 0 1px rgba(233,238,242,0.1),0 24px 60px rgba(0,0,0,0.5);"><sc-if value="{{ a.on }}" hint-placeholder-val="{{ false }}"><dc-import name="Phone Remote Multiroom" scene="{{ a.scene }}" open="{{ a.open }}" join="{{ a.join }}" mark="{{ a.mark }}" me="{{ a.me }}" hint-size="410px,780px" style="width:410px;height:780px;display:block;"></dc-import></sc-if></div></sc-if>
+              <sc-if value="{{ a.isPanel }}" hint-placeholder-val="{{ false }}"><div data-artboard="{{ a.id }}" style="position:relative;width:1280px;height:800px;border-radius:14px;overflow:hidden;box-shadow:0 0 0 1px rgba(233,238,242,0.1),0 24px 60px rgba(0,0,0,0.5);"><sc-if value="{{ a.on }}" hint-placeholder-val="{{ false }}"><dc-import name="Multiroom Panel" surface="panel" scene="{{ a.scene }}" open="{{ a.open }}" place="{{ a.place }}" mark="{{ a.mark }}" me="{{ a.me }}" hint-size="1280px,800px" style="width:1280px;height:800px;display:block;"></dc-import></sc-if></div></sc-if>
+              <sc-if value="{{ a.isBar }}" hint-placeholder-val="{{ false }}"><div data-artboard="{{ a.id }}" style="position:relative;width:1480px;height:320px;border-radius:10px;overflow:hidden;box-shadow:0 0 0 1px rgba(233,238,242,0.1),0 24px 60px rgba(0,0,0,0.5);"><div style="position:absolute;left:0;top:0;width:1850px;height:400px;transform:scale(0.8);transform-origin:0 0;"><sc-if value="{{ a.on }}" hint-placeholder-val="{{ false }}"><dc-import name="Multiroom Panel" surface="bar" scene="{{ a.scene }}" open="{{ a.open }}" place="{{ a.place }}" mark="{{ a.mark }}" me="{{ a.me }}" hint-size="1850px,400px" style="width:1850px;height:400px;display:block;"></dc-import></sc-if></div></div></sc-if>
+            </div></sc-for>
+          </div>
+        </div>
+      </sc-for>
+      </div>
+    </div>
+  <div style="display:flex;flex-direction:column;gap:22px;">
+    <div style="display:flex;flex-direction:column;gap:6px;max-width:1100px;">
+      <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#7ed6bc;">States</div>
+      <div style="font-size:34px;font-weight:700;letter-spacing:-0.01em;">Every state in the brief</div>
+    </div>
+    <div style="display:flex;flex-wrap:nowrap;gap:40px;align-items:flex-start;"><sc-for list="{{ states }}" as="o" hint-placeholder-count="2">
+        <div id="{{ o.id }}" style="flex-shrink:0;width:{{ o.max }};display:flex;flex-direction:column;gap:22px;padding:28px 30px 34px;border-radius:24px;background:rgba(233,238,242,0.03);border:1px solid rgba(233,238,242,0.1);box-sizing:border-box;">
+          <div style="display:flex;align-items:baseline;gap:14px;">
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;font-weight:600;padding:4px 10px;border-radius:8px;background:rgba(126,214,188,0.16);color:#7ed6bc;flex-shrink:0;">{{ o.id }}</span>
+            <span style="font-size:28px;font-weight:700;letter-spacing:-0.01em;white-space:nowrap;">{{ o.title }}</span>
+          </div>
+          <div style="font-size:18px;line-height:1.5;color:rgba(233,238,242,0.72);max-width:860px;text-wrap:pretty;">{{ o.note }}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:36px 32px;align-items:flex-start;">
+            <sc-for list="{{ o.arts }}" as="a" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:10px;">
+              <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;color:rgba(233,238,242,0.72);white-space:nowrap;">{{ a.cap }}</span>
+              <sc-if value="{{ a.isPhone }}" hint-placeholder-val="{{ true }}"><div data-artboard="{{ a.id }}" style="position:relative;width:410px;height:780px;border-radius:26px;overflow:hidden;box-shadow:0 0 0 1px rgba(233,238,242,0.1),0 24px 60px rgba(0,0,0,0.5);"><sc-if value="{{ a.on }}" hint-placeholder-val="{{ false }}"><dc-import name="Phone Remote Multiroom" scene="{{ a.scene }}" open="{{ a.open }}" join="{{ a.join }}" mark="{{ a.mark }}" me="{{ a.me }}" hint-size="410px,780px" style="width:410px;height:780px;display:block;"></dc-import></sc-if></div></sc-if>
+              <sc-if value="{{ a.isPanel }}" hint-placeholder-val="{{ false }}"><div data-artboard="{{ a.id }}" style="position:relative;width:1280px;height:800px;border-radius:14px;overflow:hidden;box-shadow:0 0 0 1px rgba(233,238,242,0.1),0 24px 60px rgba(0,0,0,0.5);"><sc-if value="{{ a.on }}" hint-placeholder-val="{{ false }}"><dc-import name="Multiroom Panel" surface="panel" scene="{{ a.scene }}" open="{{ a.open }}" place="{{ a.place }}" mark="{{ a.mark }}" me="{{ a.me }}" hint-size="1280px,800px" style="width:1280px;height:800px;display:block;"></dc-import></sc-if></div></sc-if>
+              <sc-if value="{{ a.isBar }}" hint-placeholder-val="{{ false }}"><div data-artboard="{{ a.id }}" style="position:relative;width:1480px;height:320px;border-radius:10px;overflow:hidden;box-shadow:0 0 0 1px rgba(233,238,242,0.1),0 24px 60px rgba(0,0,0,0.5);"><div style="position:absolute;left:0;top:0;width:1850px;height:400px;transform:scale(0.8);transform-origin:0 0;"><sc-if value="{{ a.on }}" hint-placeholder-val="{{ false }}"><dc-import name="Multiroom Panel" surface="bar" scene="{{ a.scene }}" open="{{ a.open }}" place="{{ a.place }}" mark="{{ a.mark }}" me="{{ a.me }}" hint-size="1850px,400px" style="width:1850px;height:400px;display:block;"></dc-import></sc-if></div></div></sc-if>
+            </div></sc-for>
+          </div>
+        </div>
+      </sc-for></div>
+  </div>
+  <div id="open" style="display:flex;flex-direction:column;gap:14px;max-width:1000px;padding:28px 30px;border-radius:24px;border:1px solid rgba(224,167,88,0.35);background:rgba(224,167,88,0.05);">
+    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#e0a758;">Decided here, not in ADR-0166 (George, 2026-10-27: build as drawn)</div>
+    <sc-for list="{{ open }}" as="q" hint-placeholder-count="5"><div style="display:flex;gap:14px;font-size:18px;line-height:1.5;color:rgba(233,238,242,0.82);"><span style="color:#e0a758;flex-shrink:0;">·</span><span style="text-wrap:pretty;">{{ q }}</span></div></sc-for>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const P = (cap, scene, open, x) => ({ kind: 'phone', cap, scene, open, join: 'rows', mark: 'time', me: '', place: 'drawer', ...(x || {}) });
+const N = (cap, scene, open, x) => ({ kind: 'panel', cap, scene, open, join: 'rows', mark: 'time', me: '', place: 'drawer', ...(x || {}) });
+const B = (cap, scene, open, x) => ({ kind: 'bar', cap, scene, open, join: 'rows', mark: 'time', me: '', place: 'drawer', ...(x || {}) });
+const opt = (id, title, note, arts, max) => ({ id, title, note, max: max || '100%', arts: arts.map((a, i) => ({ ...a, id: id + '-' + (i + 1), cap: id + '·' + (i + 1) + '  ' + a.cap, isPhone: a.kind === 'phone', isPanel: a.kind === 'panel', isBar: a.kind === 'bar' })) });
+
+const Q1 = [
+  opt('1a', 'Join and Remove on each row',
+    'Every other player has Join on its row; members in the group block have Remove. The group block shows who plays, what plays and who leads, with Leave (on a member) and Undo group, which asks first.',
+    [P('Not grouped: another playing, idle, in another group, unreachable', 'alone', 'menu'),
+     P('Study joining, catching up', 'joining', 'menu'),
+     P('Grouped, from the leader', 'leader', 'menu'),
+     P('Grouped, from a member (Kitchen, no screen)', 'member', 'menu'),
+     P('Undo group asks first', 'undo', 'undo')], '2260px')
+];
+const Q2 = [
+  opt('2a', 'In the volume drawer and the bar\'s tray',
+    'Not grouped, the drawer offers Add players under the volume; grouped, it holds the group slider, each player\'s own, Remove, Leave and Undo. On the bar, a Group button joins the EQ button in the tray and opens a second band, as the equaliser\'s does.',
+    [N('Not grouped: Add players under the volume', 'alone', 'drawer'),
+     N('Add players', 'alone', 'add'),
+     N('Grouped, from the leader', 'leader', 'drawer'),
+     N('Grouped, from a member (Study)', 'member', 'drawer', { me: 'study' }),
+     B('Bar: the tray, not grouped', 'alone', 'drawer'),
+     B('Bar: Add players in the tray', 'alone', 'add'),
+     B('Bar: the tray, grouped', 'leader', 'drawer'),
+     B('Bar: the tray, from a member (Study)', 'member', 'drawer', { me: 'study' })], '2660px')
+];
+const Q3 = [
+  opt('3a', 'Between the progress bar and the play control',
+    'Centred, midway between the progress bar and the play control. On a phone with a screen it sits between the transport row and the progress bar; without a screen, between the times and the transport.',
+    [N('Panel, from the leader', 'leader', 'none'),
+     B('Bar', 'leader', 'none'),
+     P('Phone, Living Room', 'leader', 'none'),
+     P('Phone, Kitchen (no screen)', 'member', 'none')], '1560px')
+];
+const STATES = [
+  opt('S1', 'Group volume, phone',
+    'Grouped, the volume row is the group slider (GROUP · 3 players), and a group button beside EQ opens each player\'s own level. A Fixed player shows the locked row; its mute still works.',
+    [P('Group volume', 'vol', 'vol'), P('With a Fixed player (Study)', 'fixed', 'vol'), P('A group of two', 'two', 'vol'), P('Five others, long names', 'five', 'vol')], '1820px'),
+  opt('S2', 'Group volume, panel and bar', 'The same rows at panel and bar sizes. Five or more scroll, with a fade.',
+    [N('With a Fixed player', 'fixed', 'drawer'), N('Five others, long names', 'five', 'drawer'), B('Bar, with a Fixed player', 'fixed', 'drawer'), B('Bar, five others', 'five', 'drawer')], '2660px'),
+  opt('S3', 'The leading player gone', 'Living Room is switched off. Kitchen and Study fall silent and stay grouped; the next music started on either leads. The panel shows Home, as it does when nothing plays.',
+    [P('Kitchen\'s remote', 'gone', 'none'), P('Kitchen\'s list', 'gone', 'menu'), N('Study\'s panel', 'gone', 'drawer', { me: 'study' })], '2260px'),
+  opt('S4', 'Leaving, and the group undone', 'Kitchen left: it is idle, and Living Room and Study play on. Undone: Living Room keeps the music, the others are idle.',
+    [P('Kitchen after Leave group', 'left', 'menu'), P('Living Room after Undo group', 'undone', 'menu'), N('Undo, on the panel', 'undo', 'undo'), B('Undo, on the bar', 'undo', 'undo')], '2660px'),
+  opt('S5', 'Long names, and other sources', 'Five others with long names in the list and on the mark (two names, then a count). Spotify led by Kitchen looks the same as Lyrion led by Living Room.',
+    [P('Five others, the list', 'five', 'menu'), P('Five others, the remote', 'five', 'none'), N('Five others, the panel', 'five', 'none'), P('Spotify, led by Kitchen', 'spotify', 'none'), P('Spotify, the list', 'spotify', 'menu')], '2260px')
+];
+const OPEN = [
+  'The leader cannot be removed and does not have Leave; to stop being grouped it undoes the group. Removing the leader would take the music from the others.',
+  'Undo group keeps the music on the leader; the other players stop.',
+  'Mute in the group slider mutes every player; each player\'s own mute stays in its row.',
+  'Joining a player that plays something of its own stops it without asking, as C1 has it. Joining a player from another group takes it out of that group.',
+  'Each member keeps its own equaliser (C5), so the EQ button and name stay this player\'s.'
+];
+const ALL = () => Q1.concat(Q2, Q3, STATES);
+class Component extends DCLogic {
+  state = { seen: {} };
+  shot() { const m = (location.hash || '').match(/shot=([^&]+)/); return m ? decodeURIComponent(m[1]).split(',') : null; }
+  componentDidMount() {
+    const shot = this.shot();
+    const ids = []; ALL().forEach(o => o.arts.forEach(x => { if (!shot || shot.includes(x.id)) ids.push(x.id); }));
+    let i = 0;
+    const step = () => {
+      const add = ids.slice(i, i + 3); i += 3;
+      this.setState(s => { const seen = { ...s.seen }; add.forEach(k => { seen[k] = true; }); return { seen }; });
+      if (i < ids.length) this._t = setTimeout(step, 350);
+    };
+    this._t = setTimeout(step, 100);
+    this._h = () => location.reload();
+    window.addEventListener('hashchange', this._h);
+  }
+  componentWillUnmount() { clearTimeout(this._t); window.removeEventListener('hashchange', this._h); }
+  renderVals() {
+    const seen = this.state.seen, shot = this.shot();
+    const on = list => list.map(o => ({ ...o, arts: o.arts.filter(a => !shot || shot.includes(a.id)).map(a => ({ ...a, on: !!seen[a.id] })) })).filter(o => o.arts.length);
+    return { q1: on(Q1), q2: on(Q2), q3: on(Q3), states: on(STATES), open: OPEN };
+  }
+}
+</script>
+</body>
+</html>

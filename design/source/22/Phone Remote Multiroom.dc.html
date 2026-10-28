@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:'Nunito Sans';src:url('../../fonts/NunitoSans-Variable.woff2') format('woff2-variations'),url('../../fonts/NunitoSans-Variable.woff2') format('woff2');font-weight:300 800;font-display:block;}
+@font-face{font-family:'IBM Plex Mono';src:url('../../fonts/IBMPlexMono-Regular.woff2') format('woff2');font-weight:400;font-display:block;}
+@font-face{font-family:'IBM Plex Mono';src:url('../../fonts/IBMPlexMono-SemiBold.woff2') format('woff2');font-weight:500 600;font-display:block;}
+@font-face{font-family:'IBM Plex Mono';src:url('../../fonts/IBMPlexMono-Bold.woff2') format('woff2');font-weight:700;font-display:block;}
+html,body{margin:0;padding:0;background:#0c1014;}a{color:#7ed6bc;}a:hover{color:#a8e5d3;}[data-noscrollbar]::-webkit-scrollbar{display:none;}
+</style>
+<script src="./eq-data.js"></script>
+<script src="./multiroom-data.js"></script>
+</helmet>
+<div ref="{{ rootRef }}" data-remote="root" style="position:relative;width:min(100%,412px);height:100%;min-height:780px;overflow:hidden;background:#101a21;font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif;color:#e9eef2;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;display:flex;flex-direction:column;">
+  <div style="position:absolute;inset:-90px;background:repeating-linear-gradient(38deg,#3f5a6d 0 48px,#2e4453 48px 96px);filter:blur(70px);transform:scale(1.14);pointer-events:none;"></div>
+  <sc-if value="{{ hasArt }}" hint-placeholder-val="{{ true }}"><img src="album-art.webp" alt="" style="position:absolute;inset:-120px;width:calc(100% + 240px);height:calc(100% + 240px);object-fit:cover;filter:blur(72px) saturate(1.7);transform:scale(1.12);pointer-events:none;" /></sc-if>
+  <div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,rgba(22,36,46,0.3),rgba(14,23,30,0.86));pointer-events:none;"></div>
+
+  <div style="position:relative;flex-shrink:0;padding:10px 16px 12px;display:flex;align-items:center;gap:10px;">
+    <div onClick="{{ toggleMenu }}" aria-label="Choose a player" style="flex:1;min-width:0;height:54px;border-radius:16px;background:rgba(255,255,255,0.04);border:1px solid rgba(233,238,242,0.1);box-sizing:border-box;padding:0 8px 0 10px;display:flex;align-items:center;gap:10px;cursor:pointer;" style-active="background:rgba(255,255,255,0.07)">
+      <img src="gexis-mark.svg" alt="" style="width:30px;height:30px;display:block;flex-shrink:0;" />
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+        <span style="font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ curName }}</span>
+        <span style="font-size:12px;color:rgba(233,238,242,0.72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ curState }}</span>
+      </div>
+      <svg viewBox="0 0 24 24" width="22" height="22" style="flex-shrink:0;color:rgba(233,238,242,0.72);transition:transform 160ms ease;transform:{{ menuTurn }};"><path d="M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z" fill="currentColor"></path></svg>
+    </div>
+    <div style="position:relative;display:flex;height:54px;padding:3px;border-radius:16px;box-sizing:border-box;background:rgba(22,35,44,0.9);border:1px solid rgba(233,238,242,0.12);flex-shrink:0;">
+      <span style="position:absolute;left:3px;top:3px;width:56px;height:46px;border-radius:13px;background:rgba(126,214,188,0.16);transition:transform 300ms cubic-bezier(0.32,0.72,0,1);transform:{{ segInd }};display:block;pointer-events:none;"></span>
+      <div onClick="{{ goRemote }}" aria-label="Remote" style="position:relative;width:56px;display:grid;place-items:center;cursor:pointer;transition:color 200ms ease;color:{{ remoteInk }};"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="7" y="2.5" width="10" height="19" rx="3"></rect><circle cx="12" cy="8" r="2"></circle><path d="M10.5 14h3M10.5 17.5h3"></path></svg></div>
+      <div onClick="{{ goSettings }}" aria-label="Settings" style="position:relative;width:56px;display:grid;place-items:center;cursor:pointer;transition:color 200ms ease;color:{{ settingsInk }};"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.030-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.47.47 0 0 0-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.47.47 0 0 0 .12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.840c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.47.47 0 0 0-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z" fill="currentColor"></path></svg></div>
+    </div>
+  </div>
+
+  <div style="position:relative;flex:1;min-height:0;overflow:hidden;">
+    <div style="position:absolute;left:0;top:0;width:200%;height:100%;display:flex;transition:transform 340ms cubic-bezier(0.32,0.72,0,1);transform:{{ pageX }};">
+      <div data-screen-label="Remote" style="position:relative;width:50%;height:100%;box-sizing:border-box;padding:0 16px 16px;display:flex;flex-direction:column;">
+
+        <sc-if value="{{ isScreen }}" hint-placeholder-val="{{ true }}">
+          <div style="flex-shrink:0;display:flex;gap:16px;">
+            <div style="position:relative;width:136px;min-width:96px;aspect-ratio:1/1;align-self:flex-start;border-radius:18px;overflow:hidden;background:rgba(233,238,242,0.07);display:grid;place-items:center;flex-shrink:1;box-shadow:0 12px 32px rgba(0,0,0,0.4);color:rgba(233,238,242,0.5);">
+              <sc-if value="{{ hasArt }}" hint-placeholder-val="{{ true }}"><img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;" /></sc-if>
+              <sc-if value="{{ artPending }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:linear-gradient(160deg,rgba(126,214,188,0.07),rgba(242,164,143,0.06)),#17242d;">
+                  <div style="width:48px;height:48px;border-radius:50%;border:2px solid rgba(126,214,188,0.4);box-sizing:border-box;display:flex;align-items:center;justify-content:center;"><div style="width:12px;height:12px;border-radius:50%;background:rgba(126,214,188,0.45);"></div></div>
+                  <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:10px;letter-spacing:0.12em;color:rgba(233,238,242,0.6);text-transform:uppercase;white-space:nowrap;">artwork pending</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ noTrack }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="44" height="44"><path d="M12 3V13.55C11.41 13.21 10.73 13 10 13C7.79 13 6 14.79 6 17S7.790 21 10 21 14 19.21 14 17V7H18V3H12Z" fill="currentColor"></path></svg></sc-if>
+              <sc-if value="{{ markCover }}" hint-placeholder-val="{{ false }}"><span data-mr="mark" style="position:absolute;left:6px;right:6px;bottom:6px;height:26px;border-radius:9px;background:rgba(13,21,28,0.8);box-sizing:border-box;padding:0 8px;display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#e9eef2;white-space:nowrap;overflow:hidden;"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#7ed6bc" stroke-width="2" stroke-linejoin="round" style="flex-shrink:0;display:block;"><rect x="2.5" y="4" width="8" height="16" rx="2"></rect><rect x="13.5" y="4" width="8" height="16" rx="2"></rect><circle cx="6.5" cy="14.5" r="2"></circle><circle cx="17.5" cy="14.5" r="2"></circle></svg><span style="flex-shrink:0;">{{ withText }}</span><span style="flex-shrink:0;">{{ withMore }}</span></span></sc-if><div style="position:absolute;inset:0;border-radius:18px;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.08);pointer-events:none;"></div>
+            </div>
+            <div style="flex:1 0 168px;min-width:168px;display:flex;flex-direction:column;justify-content:space-between;gap:10px;padding:2px 0;">
+              <div style="display:flex;flex-direction:column;gap:3px;min-width:0;">
+                <span style="font-size:20px;font-weight:700;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:{{ titleInk }};">{{ title }}</span>
+                <sc-if value="{{ hasTrack }}" hint-placeholder-val="{{ true }}"><span style="font-size:15px;color:rgba(233,238,242,0.72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Gasca Zurli</span></sc-if>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:center;gap:12px;opacity:{{ trOp }};pointer-events:{{ trPe }};">
+                <div onClick="{{ prev }}" aria-label="Previous" style="width:44px;height:44px;border-radius:50%;display:grid;place-items:center;cursor:pointer;background:rgba(233,238,242,0.09);flex-shrink:0;" style-active="transform:scale(0.95)"><svg viewBox="0 0 24 24" width="26" height="26"><path d="M6,18V6H8V18H6M9.5,12L18,6V18L9.5,12Z" fill="currentColor"></path></svg></div>
+                <div onClick="{{ togglePlay }}" aria-label="{{ playLabel }}" style="width:56px;height:56px;border-radius:50%;background:#f2a48f;color:#16232c;box-shadow:0 0 22px rgba(242,164,143,0.22),0 12px 30px rgba(242,164,143,0.35);display:grid;place-items:center;cursor:pointer;flex-shrink:0;" style-active="transform:scale(0.95)">
+                  <sc-if value="{{ playing }}" hint-placeholder-val="{{ true }}"><svg viewBox="0 0 24 24" width="28" height="28"><path d="M14,19H18V5H14M6,19H10V5H6V19Z" fill="currentColor"></path></svg></sc-if>
+                  <sc-if value="{{ paused }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="30" height="30"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" fill="currentColor"></path></svg></sc-if>
+                </div>
+                <div onClick="{{ next }}" aria-label="Next" style="width:44px;height:44px;border-radius:50%;display:grid;place-items:center;cursor:pointer;background:rgba(233,238,242,0.09);flex-shrink:0;" style-active="transform:scale(0.95)"><svg viewBox="0 0 24 24" width="26" height="26"><path d="M16,18H18V6H16M6,18L14.5,12L6,6V18Z" fill="currentColor"></path></svg></div>
+              </div>
+            </div>
+          </div>
+          <sc-if value="{{ markTime }}" hint-placeholder-val="{{ false }}"><div style="flex-shrink:0;margin-top:12px;margin-bottom:-2px;height:18px;display:flex;justify-content:center;"><span data-mr="mark" style="max-width:100%;min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 8px;font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif;font-size:13px;font-weight:600;color:rgba(233,238,242,0.86);white-space:nowrap;overflow:hidden;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#7ed6bc" stroke-width="2" stroke-linejoin="round" style="flex-shrink:0;display:block;"><rect x="2.5" y="4" width="8" height="16" rx="2"></rect><rect x="13.5" y="4" width="8" height="16" rx="2"></rect><circle cx="6.5" cy="14.5" r="2"></circle><circle cx="17.5" cy="14.5" r="2"></circle></svg><span style="flex-shrink:0;">{{ withText }}</span><span style="flex-shrink:0;">{{ withMore }}</span></span></div></sc-if><div style="flex-shrink:0;margin-top:12px;display:flex;flex-direction:column;gap:6px;">
+            <div style="position:relative;height:4px;border-radius:2px;overflow:hidden;opacity:{{ trOp }};background:{{ barTrack }};"><div style="position:absolute;left:0;top:0;bottom:0;background:#7ed6bc;width:{{ posPct }};"></div></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;line-height:16px;color:rgba(233,238,242,0.6);"><span style="flex-shrink:0;opacity:{{ trOp }};">{{ posText }}</span><span style="flex-shrink:0;opacity:{{ trOp }};">{{ durText }}</span></div>
+          </div>
+
+          <div style="position:relative;flex:1;min-height:0;margin-top:12px;border-radius:26px;background:rgba(233,238,242,0.04);border:1px solid rgba(233,238,242,0.12);overflow:hidden;">
+            <sc-if value="{{ isTouch }}" hint-placeholder-val="{{ true }}">
+              <div aria-label="Trackpad" style="position:absolute;inset:0;touch-action:none;cursor:default;"></div>
+            </sc-if>
+            <sc-if value="{{ isDpad }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding-top:20px;box-sizing:border-box;">
+                <div style="position:relative;width:216px;height:216px;border-radius:50%;background:rgba(233,238,242,0.06);border:1px solid rgba(233,238,242,0.12);box-sizing:border-box;flex-shrink:0;">
+                  <div onClick="{{ key }}" aria-label="Up" style="position:absolute;left:32%;top:3%;width:36%;height:28%;border-radius:14px;display:grid;place-items:center;cursor:pointer;" style-active="background:rgba(126,214,188,0.18)"><svg viewBox="0 0 24 24" width="32" height="32"><path d="M7.41,15.41L12,10.83L16.59,15.41L18,14L12,8L6,14L7.41,15.41Z" fill="currentColor"></path></svg></div>
+                  <div onClick="{{ key }}" aria-label="Down" style="position:absolute;left:32%;bottom:3%;width:36%;height:28%;border-radius:14px;display:grid;place-items:center;cursor:pointer;" style-active="background:rgba(126,214,188,0.18)"><svg viewBox="0 0 24 24" width="32" height="32"><path d="M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z" fill="currentColor"></path></svg></div>
+                  <div onClick="{{ key }}" aria-label="Left" style="position:absolute;top:32%;left:3%;height:36%;width:28%;border-radius:14px;display:grid;place-items:center;cursor:pointer;" style-active="background:rgba(126,214,188,0.18)"><svg viewBox="0 0 24 24" width="32" height="32"><path d="M15.41,16.58L10.83,12L15.41,7.41L14,6L8,12L14,18L15.41,16.58Z" fill="currentColor"></path></svg></div>
+                  <div onClick="{{ key }}" aria-label="Right" style="position:absolute;top:32%;right:3%;height:36%;width:28%;border-radius:14px;display:grid;place-items:center;cursor:pointer;" style-active="background:rgba(126,214,188,0.18)"><svg viewBox="0 0 24 24" width="32" height="32"><path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z" fill="currentColor"></path></svg></div>
+                  <div onClick="{{ key }}" aria-label="OK" style="position:absolute;left:32%;top:32%;width:36%;height:36%;border-radius:50%;background:#16232c;border:1px solid rgba(233,238,242,0.16);box-sizing:border-box;display:grid;place-items:center;cursor:pointer;font-size:16px;font-weight:700;letter-spacing:0.04em;" style-active="transform:scale(0.95)">OK</div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ isTouch }}" hint-placeholder-val="{{ true }}">
+              <div data-axis="v" aria-label="Scroll up and down" style="position:absolute;right:20px;top:28%;bottom:28%;width:28px;touch-action:none;cursor:ns-resize;"><span style="position:absolute;left:50%;top:0;bottom:0;width:1px;margin-left:-0.5px;background:rgba(233,238,242,0.07);display:block;pointer-events:none;"></span><span style="position:absolute;left:50%;top:50%;width:3px;height:24px;margin:-12px 0 0 -1.5px;border-radius:2px;background:rgba(233,238,242,0.18);display:block;pointer-events:none;"></span></div>
+              <div data-axis="h" aria-label="Scroll left and right" style="position:absolute;left:28%;right:28%;bottom:20px;height:28px;touch-action:none;cursor:ew-resize;"><span style="position:absolute;top:50%;left:0;right:0;height:1px;margin-top:-0.5px;background:rgba(233,238,242,0.07);display:block;pointer-events:none;"></span><span style="position:absolute;top:50%;left:50%;height:3px;width:24px;margin:-1.5px 0 0 -12px;border-radius:2px;background:rgba(233,238,242,0.18);display:block;pointer-events:none;"></span></div>
+            </sc-if>
+            <div onClick="{{ goHome }}" aria-label="Home" style="position:absolute;left:10px;top:10px;width:48px;height:48px;border-radius:50%;background:rgba(22,35,44,0.9);border:1px solid rgba(233,238,242,0.14);box-sizing:border-box;display:grid;place-items:center;cursor:pointer;color:{{ homeInk }};" style-active="transform:scale(0.94)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 5l8 6.5M6.5 10v9h11v-9"></path></svg></div>
+            <div onClick="{{ goLyrics }}" aria-label="Lyrics" style="position:absolute;right:10px;top:10px;width:48px;height:48px;border-radius:50%;background:rgba(22,35,44,0.9);border:1px solid rgba(233,238,242,0.14);box-sizing:border-box;display:grid;place-items:center;cursor:pointer;color:{{ lyricsInk }};" style-active="transform:scale(0.94)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M5 12h9M5 17h11"></path></svg></div>
+            <div onClick="{{ key }}" aria-label="Back" style="position:absolute;left:10px;bottom:10px;width:48px;height:48px;border-radius:50%;background:rgba(22,35,44,0.9);border:1px solid rgba(233,238,242,0.14);box-sizing:border-box;display:grid;place-items:center;cursor:pointer;" style-active="transform:scale(0.94)"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" fill="currentColor"></path></svg></div>
+            <div onClick="{{ goMeters }}" aria-label="Meters" style="position:absolute;right:10px;bottom:10px;width:48px;height:48px;border-radius:50%;background:rgba(22,35,44,0.9);border:1px solid rgba(233,238,242,0.14);box-sizing:border-box;display:grid;place-items:center;cursor:pointer;color:{{ metersInk }};" style-active="transform:scale(0.94)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19V11M10 19V5M15 19V9M20 19V13"></path></svg></div>
+            <div style="position:absolute;left:50%;top:12px;transform:translateX(-50%);display:flex;padding:3px;border-radius:14px;background:rgba(22,35,44,0.9);border:1px solid rgba(233,238,242,0.12);">
+              <span style="position:absolute;left:3px;top:3px;width:44px;height:36px;border-radius:11px;background:rgba(126,214,188,0.16);transition:transform 300ms cubic-bezier(0.32,0.72,0,1);transform:{{ padInd }};display:block;pointer-events:none;"></span>
+              <div onClick="{{ useTouch }}" aria-label="Trackpad" style="width:44px;height:36px;border-radius:11px;display:grid;place-items:center;cursor:pointer;position:relative;transition:color 200ms ease;color:{{ segTouchInk }};"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2"><rect x="4.5" y="3" width="15" height="18" rx="3"></rect><circle cx="12" cy="11" r="2.4"></circle></svg></div>
+              <div onClick="{{ useDpad }}" aria-label="D-pad" style="width:44px;height:36px;border-radius:11px;display:grid;place-items:center;cursor:pointer;position:relative;transition:color 200ms ease;color:{{ segDpadInk }};"><svg viewBox="0 0 24 24" width="19" height="19"><path d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7V2zm2 2v7H4v2h7v7h2v-7h7v-2h-7V4h-2z" fill="currentColor"></path></svg></div>
+            </div>
+          </div>
+
+          <div style="flex-shrink:0;display:flex;gap:8px;margin-top:12px;">
+            <sc-for list="{{ actions }}" as="a" hint-placeholder-count="3">
+              <div onClick="{{ a.tap }}" aria-label="{{ a.label }}" style="width:56px;height:56px;border-radius:18px;flex-shrink:0;order:{{ a.order }};margin-right:{{ a.mr }};box-sizing:border-box;display:flex;align-items:center;justify-content:center;cursor:pointer;background:{{ a.bg }};border:1px solid {{ a.line }};color:{{ a.ink }};opacity:{{ a.op }};" style-active="transform:scale(0.97)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ a.d }}"></path></svg></div>
+            </sc-for>
+            <div onClick="{{ toggleOff }}" aria-label="{{ offLabel }}" style="width:56px;height:56px;border-radius:18px;box-sizing:border-box;flex-shrink:0;order:-2;display:flex;align-items:center;justify-content:center;cursor:pointer;background:{{ offBg }};border:1px solid {{ offLine }};color:{{ offInk }};" style-active="transform:scale(0.97)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 14.6A8 8 0 1 1 9.4 4.5a6.4 6.4 0 0 0 10.1 10.1z"></path></svg></div>
+          </div>
+
+          <div style="flex-shrink:0;display:flex;align-items:center;gap:10px;margin-top:12px;">
+            <div style="flex:1;min-width:0;">
+              <sc-if value="{{ notFixed }}" hint-placeholder-val="{{ true }}">
+                <div onPointerDown="{{ volDown }}" onPointerMove="{{ volMove }}" onPointerUp="{{ volUp }}" onPointerCancel="{{ volUp }}" aria-label="Volume" style="position:relative;width:100%;height:36px;border-radius:12px;background:rgba(233,238,242,0.08);overflow:hidden;cursor:pointer;touch-action:none;">
+                  <div style="position:absolute;left:0;top:0;bottom:0;background:#7ed6bc;width:{{ volPct }};opacity:{{ volOp }};"></div>
+                  <span style="position:absolute;inset:0;padding:0 52px 0 44px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;overflow:hidden;pointer-events:none;color:{{ capInk }};"><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.14em;flex-shrink:0;">{{ capTag }}</span><span style="min-width:0;font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;">{{ capText }}</span></span>
+                  <span style="position:absolute;inset:0;padding:0 52px 0 44px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;overflow:hidden;pointer-events:none;color:#0d151c;clip-path:inset(0 {{ eqClip }} 0 0);"><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.14em;flex-shrink:0;">{{ capTag }}</span><span style="min-width:0;font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;">{{ capText }}</span></span>
+                  <div onPointerDown="{{ stop }}" onClick="{{ toggleMute }}" aria-label="Mute" style="position:absolute;left:4px;top:2px;width:32px;height:32px;border-radius:10px;display:grid;place-items:center;cursor:pointer;color:{{ volIconInk }};">
+                    <sc-if value="{{ notMuted }}" hint-placeholder-val="{{ true }}"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" fill="currentColor"></path></svg></sc-if>
+                    <sc-if value="{{ muted }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.630C16.5,12.43 16.5,12.21 16.5,12Z" fill="currentColor"></path></svg></sc-if>
+                  </div>
+                  <span style="position:absolute;right:16px;top:0;bottom:0;display:flex;align-items:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;font-weight:600;pointer-events:none;color:{{ volValInk }};">{{ volText }}</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ isFixed }}" hint-placeholder-val="{{ false }}">
+                <div aria-label="Fixed output" style="position:relative;width:100%;height:36px;border-radius:12px;background:rgba(233,238,242,0.05);border:1px solid rgba(233,238,242,0.12);box-sizing:border-box;display:flex;align-items:center;gap:9px;padding:0 15px 0 44px;">
+                  <div onClick="{{ toggleMute }}" aria-label="Mute" style="position:absolute;left:3px;top:1px;width:32px;height:32px;border-radius:10px;display:grid;place-items:center;cursor:pointer;color:#e9eef2;">
+                    <sc-if value="{{ notMuted }}" hint-placeholder-val="{{ true }}"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" fill="currentColor"></path></svg></sc-if>
+                    <sc-if value="{{ muted }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.630C16.5,12.43 16.5,12.21 16.5,12Z" fill="currentColor"></path></svg></sc-if>
+                  </div>
+                  <span style="position:relative;width:14px;height:16px;flex-shrink:0;display:block;"><span style="position:absolute;left:2px;top:0;width:10px;height:8px;border:2px solid rgba(233,238,242,0.7);border-bottom:none;border-radius:5px 5px 0 0;box-sizing:border-box;display:block;"></span><span style="position:absolute;left:0;bottom:0;width:14px;height:9px;border-radius:2.5px;background:rgba(233,238,242,0.7);display:block;"></span></span>
+                  <span style="flex:1;min-width:0;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Fixed output</span>
+                  <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;white-space:nowrap;color:{{ eqInInk }};"><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.14em;">EQ</span><span style="font-size:13px;font-weight:700;">{{ eqCapText }}</span></span>
+                </div>
+              </sc-if>
+            </div>
+            <sc-if value="{{ grouped }}" hint-placeholder-val="{{ false }}"><div onClick="{{ openGv }}" aria-label="Group volume" style="width:56px;height:56px;border-radius:18px;display:grid;place-items:center;box-sizing:border-box;flex-shrink:0;cursor:pointer;background:rgba(126,214,188,0.12);border:1px solid rgba(126,214,188,0.45);color:#7ed6bc;" style-active="transform:scale(0.97)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" style="flex-shrink:0;display:block;"><rect x="2.5" y="4" width="8" height="16" rx="2"></rect><rect x="13.5" y="4" width="8" height="16" rx="2"></rect><circle cx="6.5" cy="14.5" r="2"></circle><circle cx="17.5" cy="14.5" r="2"></circle></svg></div></sc-if><div onClick="{{ openEq }}" aria-label="Equaliser" style="width:56px;height:56px;border-radius:18px;display:grid;place-items:center;box-sizing:border-box;flex-shrink:0;cursor:pointer;background:{{ eqBtnBg }};border:1px solid {{ eqBtnLine }};color:{{ eqBtnInk }};"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 4v16M12 4v16M18 4v16"></path><circle cx="6" cy="14" r="2.6" fill="#16232c"></circle><circle cx="12" cy="8" r="2.6" fill="#16232c"></circle><circle cx="18" cy="12" r="2.6" fill="#16232c"></circle></svg></div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ noScreen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:relative;flex:1;min-height:0;margin:6px 0 18px;">
+            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);height:100%;max-height:380px;aspect-ratio:1/1;max-width:100%;border-radius:24px;overflow:hidden;background:rgba(233,238,242,0.07);box-shadow:0 18px 48px rgba(0,0,0,0.5);color:rgba(233,238,242,0.5);display:grid;place-items:center;">
+              <sc-if value="{{ hasArt }}" hint-placeholder-val="{{ true }}"><img src="album-art.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;" /></sc-if>
+              <sc-if value="{{ artPending }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:linear-gradient(160deg,rgba(126,214,188,0.07),rgba(242,164,143,0.06)),#17242d;">
+                  <div style="width:110px;height:110px;border-radius:50%;border:2px solid rgba(126,214,188,0.4);box-sizing:border-box;display:flex;align-items:center;justify-content:center;"><div style="width:26px;height:26px;border-radius:50%;background:rgba(126,214,188,0.45);"></div></div>
+                  <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.16em;color:rgba(233,238,242,0.6);text-transform:uppercase;">artwork pending</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ noTrack }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="72" height="72"><path d="M12 3V13.55C11.41 13.21 10.73 13 10 13C7.79 13 6 14.79 6 17S7.790 21 10 21 14 19.21 14 17V7H18V3H12Z" fill="currentColor"></path></svg></sc-if>
+              <sc-if value="{{ markCover }}" hint-placeholder-val="{{ false }}"><span data-mr="mark" style="position:absolute;left:12px;bottom:12px;max-width:calc(100% - 24px);height:36px;border-radius:12px;background:rgba(13,21,28,0.8);box-sizing:border-box;padding:0 12px;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:#e9eef2;white-space:nowrap;overflow:hidden;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#7ed6bc" stroke-width="2" stroke-linejoin="round" style="flex-shrink:0;display:block;"><rect x="2.5" y="4" width="8" height="16" rx="2"></rect><rect x="13.5" y="4" width="8" height="16" rx="2"></rect><circle cx="6.5" cy="14.5" r="2"></circle><circle cx="17.5" cy="14.5" r="2"></circle></svg><span style="flex-shrink:0;">{{ withText }}</span><span style="flex-shrink:0;">{{ withMore }}</span></span></sc-if><div style="position:absolute;inset:0;border-radius:24px;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.08);pointer-events:none;"></div>
+            </div>
+          </div>
+          <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;">
+            <span style="font-size:26px;font-weight:700;letter-spacing:-0.01em;color:{{ titleInk }};">{{ title }}</span>
+            <sc-if value="{{ hasTrack }}" hint-placeholder-val="{{ true }}"><span style="font-size:17px;color:rgba(233,238,242,0.72);">Gasca Zurli · Atentiune, Acceleram!</span></sc-if>
+          </div>
+          <div onPointerDown="{{ seekDown }}" onPointerMove="{{ seekMove }}" onPointerUp="{{ seekUp }}" onPointerCancel="{{ seekUp }}" aria-label="Position" style="position:relative;flex-shrink:0;height:28px;margin-top:14px;display:flex;align-items:center;touch-action:none;cursor:{{ seekCursor }};opacity:{{ trOp }};">
+            <span style="position:relative;width:100%;height:6px;border-radius:3px;overflow:hidden;display:block;background:{{ barTrack }};"><span style="position:absolute;left:0;top:0;bottom:0;background:#7ed6bc;display:block;width:{{ posPct }};"></span></span>
+            <span style="position:absolute;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:#e9eef2;box-shadow:0 1px 4px rgba(0,0,0,0.4);display:{{ knobDisp }};left:{{ posPct }};"></span>
+          </div>
+          <div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;line-height:16px;color:rgba(233,238,242,0.6);"><span style="flex-shrink:0;opacity:{{ trOp }};">{{ posText }}</span><span style="flex-shrink:0;opacity:{{ trOp }};">{{ durText }}</span></div>
+          <sc-if value="{{ markTime }}" hint-placeholder-val="{{ false }}"><div style="flex-shrink:0;margin-top:8px;height:20px;display:flex;justify-content:center;"><span data-mr="mark" style="max-width:100%;min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 8px;font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif;font-size:13px;font-weight:600;color:rgba(233,238,242,0.86);white-space:nowrap;overflow:hidden;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#7ed6bc" stroke-width="2" stroke-linejoin="round" style="flex-shrink:0;display:block;"><rect x="2.5" y="4" width="8" height="16" rx="2"></rect><rect x="13.5" y="4" width="8" height="16" rx="2"></rect><circle cx="6.5" cy="14.5" r="2"></circle><circle cx="17.5" cy="14.5" r="2"></circle></svg><span style="flex-shrink:0;">{{ withText }}</span><span style="flex-shrink:0;">{{ withMore }}</span></span></div></sc-if><div style="flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:24px;margin-top:8px;opacity:{{ trOp }};pointer-events:{{ trPe }};">
+            <div onClick="{{ prev }}" aria-label="Previous" style="width:64px;height:64px;border-radius:50%;display:grid;place-items:center;cursor:pointer;background:rgba(233,238,242,0.09);" style-active="transform:scale(0.95)"><svg viewBox="0 0 24 24" width="38" height="38"><path d="M6,18V6H8V18H6M9.5,12L18,6V18L9.5,12Z" fill="currentColor"></path></svg></div>
+            <div onClick="{{ togglePlay }}" aria-label="{{ playLabel }}" style="width:84px;height:84px;border-radius:50%;background:#f2a48f;color:#16232c;box-shadow:0 0 22px rgba(242,164,143,0.22),0 12px 30px rgba(242,164,143,0.35);display:grid;place-items:center;cursor:pointer;" style-active="transform:scale(0.95)">
+              <sc-if value="{{ playing }}" hint-placeholder-val="{{ true }}"><svg viewBox="0 0 24 24" width="40" height="40"><path d="M14,19H18V5H14M6,19H10V5H6V19Z" fill="currentColor"></path></svg></sc-if>
+              <sc-if value="{{ paused }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="42" height="42"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" fill="currentColor"></path></svg></sc-if>
+            </div>
+            <div onClick="{{ next }}" aria-label="Next" style="width:64px;height:64px;border-radius:50%;display:grid;place-items:center;cursor:pointer;background:rgba(233,238,242,0.09);" style-active="transform:scale(0.95)"><svg viewBox="0 0 24 24" width="38" height="38"><path d="M16,18H18V6H16M6,18L14.5,12L6,6V18Z" fill="currentColor"></path></svg></div>
+          </div>
+
+          <div style="flex-shrink:0;display:flex;align-items:center;gap:10px;margin-top:16px;">
+            <div style="flex:1;min-width:0;">
+              <sc-if value="{{ notFixed }}" hint-placeholder-val="{{ true }}">
+                <div onPointerDown="{{ volDown }}" onPointerMove="{{ volMove }}" onPointerUp="{{ volUp }}" onPointerCancel="{{ volUp }}" aria-label="Volume" style="position:relative;width:100%;height:36px;border-radius:12px;background:rgba(233,238,242,0.08);overflow:hidden;cursor:pointer;touch-action:none;">
+                  <div style="position:absolute;left:0;top:0;bottom:0;background:#7ed6bc;width:{{ volPct }};opacity:{{ volOp }};"></div>
+                  <span style="position:absolute;inset:0;padding:0 52px 0 44px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;overflow:hidden;pointer-events:none;color:{{ capInk }};"><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.14em;flex-shrink:0;">{{ capTag }}</span><span style="min-width:0;font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;">{{ capText }}</span></span>
+                  <span style="position:absolute;inset:0;padding:0 52px 0 44px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;overflow:hidden;pointer-events:none;color:#0d151c;clip-path:inset(0 {{ eqClip }} 0 0);"><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.14em;flex-shrink:0;">{{ capTag }}</span><span style="min-width:0;font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;">{{ capText }}</span></span>
+                  <div onPointerDown="{{ stop }}" onClick="{{ toggleMute }}" aria-label="Mute" style="position:absolute;left:4px;top:2px;width:32px;height:32px;border-radius:10px;display:grid;place-items:center;cursor:pointer;color:{{ volIconInk }};">
+                    <sc-if value="{{ notMuted }}" hint-placeholder-val="{{ true }}"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" fill="currentColor"></path></svg></sc-if>
+                    <sc-if value="{{ muted }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.630C16.5,12.43 16.5,12.21 16.5,12Z" fill="currentColor"></path></svg></sc-if>
+                  </div>
+                  <span style="position:absolute;right:16px;top:0;bottom:0;display:flex;align-items:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;font-weight:600;pointer-events:none;color:{{ volValInk }};">{{ volText }}</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ isFixed }}" hint-placeholder-val="{{ false }}">
+                <div aria-label="Fixed output" style="position:relative;width:100%;height:36px;border-radius:12px;background:rgba(233,238,242,0.05);border:1px solid rgba(233,238,242,0.12);box-sizing:border-box;display:flex;align-items:center;gap:9px;padding:0 15px 0 44px;">
+                  <div onClick="{{ toggleMute }}" aria-label="Mute" style="position:absolute;left:3px;top:1px;width:32px;height:32px;border-radius:10px;display:grid;place-items:center;cursor:pointer;color:#e9eef2;">
+                    <sc-if value="{{ notMuted }}" hint-placeholder-val="{{ true }}"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" fill="currentColor"></path></svg></sc-if>
+                    <sc-if value="{{ muted }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.630C16.5,12.43 16.5,12.21 16.5,12Z" fill="currentColor"></path></svg></sc-if>
+                  </div>
+                  <span style="position:relative;width:14px;height:16px;flex-shrink:0;display:block;"><span style="position:absolute;left:2px;top:0;width:10px;height:8px;border:2px solid rgba(233,238,242,0.7);border-bottom:none;border-radius:5px 5px 0 0;box-sizing:border-box;display:block;"></span><span style="position:absolute;left:0;bottom:0;width:14px;height:9px;border-radius:2.5px;background:rgba(233,238,242,0.7);display:block;"></span></span>
+                  <span style="flex:1;min-width:0;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Fixed output</span>
+                  <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;white-space:nowrap;color:{{ eqInInk }};"><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.14em;">EQ</span><span style="font-size:13px;font-weight:700;">{{ eqCapText }}</span></span>
+                </div>
+              </sc-if>
+            </div>
+            <sc-if value="{{ grouped }}" hint-placeholder-val="{{ false }}"><div onClick="{{ openGv }}" aria-label="Group volume" style="width:56px;height:56px;border-radius:18px;display:grid;place-items:center;box-sizing:border-box;flex-shrink:0;cursor:pointer;background:rgba(126,214,188,0.12);border:1px solid rgba(126,214,188,0.45);color:#7ed6bc;" style-active="transform:scale(0.97)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" style="flex-shrink:0;display:block;"><rect x="2.5" y="4" width="8" height="16" rx="2"></rect><rect x="13.5" y="4" width="8" height="16" rx="2"></rect><circle cx="6.5" cy="14.5" r="2"></circle><circle cx="17.5" cy="14.5" r="2"></circle></svg></div></sc-if><div onClick="{{ openEq }}" aria-label="Equaliser" style="width:56px;height:56px;border-radius:18px;display:grid;place-items:center;box-sizing:border-box;flex-shrink:0;cursor:pointer;background:{{ eqBtnBg }};border:1px solid {{ eqBtnLine }};color:{{ eqBtnInk }};"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 4v16M12 4v16M18 4v16"></path><circle cx="6" cy="14" r="2.6" fill="#16232c"></circle><circle cx="12" cy="8" r="2.6" fill="#16232c"></circle><circle cx="18" cy="12" r="2.6" fill="#16232c"></circle></svg></div>
+          </div>
+        </sc-if>
+
+      </div>
+
+      <div data-screen-label="Settings" data-remote-settings style="position:relative;width:50%;height:100%;overflow:hidden;">
+        <div style="position:absolute;left:0;top:0;right:0;height:{{ setH }};">
+          <sc-if value="{{ setOn }}" hint-placeholder-val="{{ false }}"><dc-import name="Settings" hint-size="100%,100%" style="position:absolute;left:0;top:0;width:100%;height:100%;"></dc-import></sc-if>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeMenu }}" style="position:absolute;inset:0;z-index:30;background:rgba(4,8,10,0.45);"></div>
+    <div data-mr="players" data-noscrollbar style="position:absolute;z-index:31;left:16px;right:16px;top:72px;max-height:calc(100% - 88px);overflow-y:auto;scrollbar-width:none;background:#16232c;border:1px solid rgba(233,238,242,0.14);border-radius:18px;box-shadow:0 18px 48px rgba(0,0,0,0.55);padding:8px 0;box-sizing:border-box;">
+      <div style="padding:8px 18px 6px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">{{ menuHead }}</div>
+      <sc-if value="{{ showGroup }}" hint-placeholder-val="{{ false }}">
+        <div data-mr="group" style="margin:4px 8px 8px;border-radius:14px;background:rgba(126,214,188,0.06);border:1px solid rgba(126,214,188,0.22);padding:12px 0 10px;overflow:hidden;">
+          <div style="display:flex;align-items:center;gap:10px;padding:0 12px 6px;">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#7ed6bc" stroke-width="2" stroke-linejoin="round" style="flex-shrink:0;display:block;"><rect x="2.5" y="4" width="8" height="16" rx="2"></rect><rect x="13.5" y="4" width="8" height="16" rx="2"></rect><circle cx="6.5" cy="14.5" r="2"></circle><circle cx="17.5" cy="14.5" r="2"></circle></svg>
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;">
+              <span style="font-size:14px;font-weight:700;color:#7ed6bc;">{{ gHead }}</span>
+              <span style="font-size:13px;color:rgba(233,238,242,0.72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ gNow }}</span>
+            </div>
+          </div>
+          <sc-for list="{{ gRows }}" as="r" hint-placeholder-count="3">
+          <div onClick="{{ r.pick }}" style="display:flex;align-items:center;gap:12px;min-height:64px;padding:0 10px 0 12px;cursor:pointer;background:{{ r.rowBg }};">
+            <img src="gexis-mark.svg" alt="" style="width:30px;height:30px;display:block;flex-shrink:0;opacity:{{ r.op }};" />
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;opacity:{{ r.op }};">
+              <span style="font-size:16px;font-weight:700;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">{{ r.name }}<sc-if value="{{ r.lead }}" hint-placeholder-val="{{ false }}"><span data-mr="leads" style="display:inline-block;vertical-align:2px;margin-left:8px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:10px;font-weight:400;line-height:1;letter-spacing:0.14em;text-transform:uppercase;padding:4px 6px;border-radius:6px;background:rgba(126,214,188,0.14);color:#7ed6bc;">Leads</span></sc-if></span>
+              <span style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{ r.stInk }};">{{ r.st }}</span>
+            </div>
+            <sc-if value="{{ r.current }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="22" height="22" style="flex-shrink:0;color:#7ed6bc;"><path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" fill="currentColor"></path></svg></sc-if>
+            <sc-if value="{{ r.hasBtn }}" hint-placeholder-val="{{ false }}"><div onClick="{{ r.act }}" style="flex-shrink:0;height:44px;padding:0 14px;border-radius:12px;box-sizing:border-box;display:flex;align-items:center;font-size:14px;font-weight:700;cursor:pointer;background:{{ r.bBg }};border:1px solid {{ r.bLine }};color:{{ r.bInk }};" style-active="transform:scale(0.95)">{{ r.btn }}</div></sc-if>
+            <sc-if value="{{ r.hasBox }}" hint-placeholder-val="{{ false }}"><span onClick="{{ r.act }}" style="flex-shrink:0;width:44px;height:44px;display:grid;place-items:center;cursor:pointer;"><span style="width:26px;height:26px;border-radius:8px;box-sizing:border-box;display:grid;place-items:center;color:#0d151c;background:{{ r.boxBg }};border:2px solid {{ r.boxLine }};opacity:{{ r.boxOp }};"><sc-if value="{{ r.checked }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" fill="currentColor"></path></svg></sc-if></span></span></sc-if>
+          </div>
+          </sc-for>
+          <sc-if value="{{ gNoteOn }}" hint-placeholder-val="{{ false }}"><div style="padding:6px 12px 2px;font-size:13px;line-height:1.4;color:#e0a758;text-wrap:pretty;">{{ gNote }}</div></sc-if>
+          <div style="display:flex;gap:8px;padding:8px 10px 0;">
+            <sc-if value="{{ canLeave }}" hint-placeholder-val="{{ false }}"><div onClick="{{ leave }}" style="flex:1;height:44px;border-radius:12px;box-sizing:border-box;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;white-space:nowrap;cursor:pointer;" style-active="transform:scale(0.97)">Leave group</div></sc-if>
+            <div onClick="{{ askUndo }}" style="flex:1;height:44px;border-radius:12px;box-sizing:border-box;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;white-space:nowrap;cursor:pointer;color:#e0a758;" style-active="transform:scale(0.97)">Undo group</div>
+          </div>
+        </div>
+        <div style="padding:6px 18px 4px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Other players</div>
+      </sc-if>
+      <sc-for list="{{ oRows }}" as="r" hint-placeholder-count="3">
+          <div onClick="{{ r.pick }}" style="display:flex;align-items:center;gap:12px;min-height:64px;padding:0 12px 0 18px;cursor:pointer;background:{{ r.rowBg }};">
+            <img src="gexis-mark.svg" alt="" style="width:30px;height:30px;display:block;flex-shrink:0;opacity:{{ r.op }};" />
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;opacity:{{ r.op }};">
+              <span style="font-size:16px;font-weight:700;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">{{ r.name }}<sc-if value="{{ r.lead }}" hint-placeholder-val="{{ false }}"><span data-mr="leads" style="display:inline-block;vertical-align:2px;margin-left:8px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:10px;font-weight:400;line-height:1;letter-spacing:0.14em;text-transform:uppercase;padding:4px 6px;border-radius:6px;background:rgba(126,214,188,0.14);color:#7ed6bc;">Leads</span></sc-if></span>
+              <span style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{ r.stInk }};">{{ r.st }}</span>
+            </div>
+            <sc-if value="{{ r.current }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="22" height="22" style="flex-shrink:0;color:#7ed6bc;"><path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" fill="currentColor"></path></svg></sc-if>
+            <sc-if value="{{ r.hasBtn }}" hint-placeholder-val="{{ false }}"><div onClick="{{ r.act }}" style="flex-shrink:0;height:44px;padding:0 14px;border-radius:12px;box-sizing:border-box;display:flex;align-items:center;font-size:14px;font-weight:700;cursor:pointer;background:{{ r.bBg }};border:1px solid {{ r.bLine }};color:{{ r.bInk }};" style-active="transform:scale(0.95)">{{ r.btn }}</div></sc-if>
+            <sc-if value="{{ r.hasBox }}" hint-placeholder-val="{{ false }}"><span onClick="{{ r.act }}" style="flex-shrink:0;width:44px;height:44px;display:grid;place-items:center;cursor:pointer;"><span style="width:26px;height:26px;border-radius:8px;box-sizing:border-box;display:grid;place-items:center;color:#0d151c;background:{{ r.boxBg }};border:2px solid {{ r.boxLine }};opacity:{{ r.boxOp }};"><sc-if value="{{ r.checked }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" fill="currentColor"></path></svg></sc-if></span></span></sc-if>
+          </div>
+      </sc-for>
+      <sc-if value="{{ footGroup }}" hint-placeholder-val="{{ false }}"><div onClick="{{ startEdit }}" style="margin:8px 10px 2px;height:48px;border-radius:14px;box-sizing:border-box;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;gap:10px;font-size:16px;font-weight:600;white-space:nowrap;cursor:pointer;" style-active="transform:scale(0.98)"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#7ed6bc" stroke-width="2" stroke-linejoin="round" style="flex-shrink:0;display:block;"><rect x="2.5" y="4" width="8" height="16" rx="2"></rect><rect x="13.5" y="4" width="8" height="16" rx="2"></rect><circle cx="6.5" cy="14.5" r="2"></circle><circle cx="17.5" cy="14.5" r="2"></circle></svg>{{ editBtnText }}</div></sc-if>
+      <sc-if value="{{ footEdit }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:8px;margin:8px 10px 2px;">
+        <div onClick="{{ cancelEdit }}" style="flex:1;height:44px;border-radius:12px;box-sizing:border-box;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;white-space:nowrap;cursor:pointer;height:48px;border-radius:14px;font-size:16px;font-weight:600;" style-active="transform:scale(0.97)">Cancel</div>
+        <div onClick="{{ doneEdit }}" style="flex:1;height:48px;border-radius:14px;box-sizing:border-box;background:rgba(126,214,188,0.16);border:1px solid rgba(126,214,188,0.55);color:#7ed6bc;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;white-space:nowrap;cursor:pointer;" style-active="transform:scale(0.97)">{{ doneText }}</div>
+      </div></sc-if>
+    </div>
+  </sc-if>
+
+  <div onClick="{{ closeEq }}" style="position:absolute;inset:0;z-index:50;background:rgba(4,8,10,0.55);transition:opacity 260ms ease;opacity:{{ eqScrim }};pointer-events:{{ eqPe }};"></div>
+  <div style="position:absolute;left:0;right:0;bottom:0;z-index:51;background:#16232c;border-top:1px solid rgba(233,238,242,0.16);border-radius:24px 24px 0 0;padding:10px 16px 22px;display:flex;flex-direction:column;gap:14px;box-shadow:0 -10px 32px rgba(0,0,0,0.6);transition:transform 300ms cubic-bezier(0.32,0.72,0,1),visibility 0s linear {{ eqVisD }};transform:{{ eqY }};visibility:{{ eqVis }};">
+    <span onClick="{{ closeEq }}" style="align-self:center;width:36px;height:4px;border-radius:2px;background:rgba(233,238,242,0.24);display:block;cursor:pointer;"></span>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:19px;font-weight:700;">Equaliser</div>
+        <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;margin-top:4px;color:rgba(233,238,242,0.72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ eqState }}</div>
+      </div>
+      <div onClick="{{ toggleEqOn }}" aria-label="Equaliser on or off" style="height:48px;padding:0 10px;border-radius:14px;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);display:flex;align-items:center;cursor:pointer;flex-shrink:0;">
+        <span style="width:56px;height:32px;border-radius:16px;position:relative;box-sizing:border-box;display:block;transition:background 140ms ease;background:{{ togBg }};border:1px solid {{ togLine }};"><span style="position:absolute;top:3px;width:24px;height:24px;border-radius:50%;display:block;transition:left 140ms ease;left:{{ knobLeft }};background:{{ knobBg }};"></span></span>
+      </div>
+    </div>
+    <div data-noscrollbar style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 16px,#000 calc(100% - 40px),transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 16px,#000 calc(100% - 40px),transparent 100%);transition:opacity 160ms ease;opacity:{{ chipsOp }};pointer-events:{{ chipsPe }};">
+      <sc-for list="{{ chips }}" as="c" hint-placeholder-count="8">
+        <div style="display:contents;">
+          <span style="width:1px;align-self:stretch;margin:10px 3px;background:rgba(233,238,242,0.16);flex-shrink:0;display:{{ c.sep }};"></span>
+          <div onClick="{{ c.tap }}" style="flex-shrink:0;height:44px;padding:0 16px;border-radius:12px;box-sizing:border-box;display:flex;align-items:center;font-size:15px;font-weight:600;white-space:nowrap;cursor:pointer;background:{{ c.bg }};border:1px solid {{ c.line }};color:{{ c.ink }};">{{ c.name }}</div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="font-size:14px;line-height:1.4;color:rgba(233,238,242,0.6);text-wrap:pretty;">{{ eqNote }}</div>
+    <div onClick="{{ eqEdit }}" style="height:48px;border-radius:14px;box-sizing:border-box;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;gap:10px;font-size:16px;font-weight:600;white-space:nowrap;cursor:pointer;" style-active="transform:scale(0.98)">Edit bands in Settings<span style="width:8px;height:8px;border-right:2px solid rgba(233,238,242,0.6);border-top:2px solid rgba(233,238,242,0.6);transform:rotate(45deg);display:block;"></span></div>
+  </div>
+  <div onClick="{{ closeGv }}" style="position:absolute;inset:0;z-index:52;background:rgba(4,8,10,0.55);transition:opacity 260ms ease;opacity:{{ gvScrim }};pointer-events:{{ gvPe }};"></div>
+  <div data-mr="group-volume" style="position:absolute;left:0;right:0;bottom:0;z-index:53;max-height:calc(100% - 40px);box-sizing:border-box;background:#16232c;border-top:1px solid rgba(233,238,242,0.16);border-radius:24px 24px 0 0;padding:10px 16px 22px;display:flex;flex-direction:column;gap:12px;box-shadow:0 -10px 32px rgba(0,0,0,0.6);transition:transform 300ms cubic-bezier(0.32,0.72,0,1),visibility 0s linear {{ gvVisD }};transform:{{ gvY }};visibility:{{ gvVis }};">
+    <span onClick="{{ closeGv }}" style="align-self:center;width:36px;height:4px;border-radius:2px;background:rgba(233,238,242,0.24);display:block;cursor:pointer;flex-shrink:0;"></span>
+    <div style="flex-shrink:0;">
+      <div style="font-size:19px;font-weight:700;">Group volume</div>
+      <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.06em;margin-top:4px;color:rgba(233,238,242,0.72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ gvSub }}</div>
+    </div>
+    <div style="flex-shrink:0;display:flex;align-items:center;gap:12px;">
+      <span style="width:104px;flex-shrink:0;font-size:15px;font-weight:700;color:#7ed6bc;">All</span>
+      <div onPointerDown="{{ gDown }}" onPointerMove="{{ gMove }}" onPointerUp="{{ gUp }}" onPointerCancel="{{ gUp }}" aria-label="Group volume" style="position:relative;flex:1;min-width:0;height:44px;border-radius:12px;background:rgba(233,238,242,0.08);border:1px solid rgba(126,214,188,0.35);box-sizing:border-box;overflow:hidden;cursor:pointer;touch-action:none;">
+        <div style="position:absolute;left:0;top:0;bottom:0;background:#7ed6bc;width:{{ gPct }};opacity:{{ gOp }};"></div>
+        <span style="position:absolute;right:16px;top:0;bottom:0;display:flex;align-items:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;font-weight:600;pointer-events:none;color:{{ gValInk }};">{{ gText }}</span>
+      </div>
+    </div>
+    <div style="flex-shrink:0;height:1px;background:rgba(233,238,242,0.1);"></div>
+    <div data-noscrollbar style="min-height:0;overflow-y:auto;scrollbar-width:none;display:flex;flex-direction:column;gap:8px;">
+      <sc-for list="{{ gvRows }}" as="m" hint-placeholder-count="3">
+        <div style="flex-shrink:0;display:flex;align-items:center;gap:12px;min-height:40px;">
+          <span style="width:104px;flex-shrink:0;min-width:0;display:flex;flex-direction:column;gap:2px;">
+            <span style="font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ m.name }}</span>
+            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;white-space:nowrap;color:{{ m.tagInk }};">{{ m.tag }}</span>
+          </span>
+          <sc-if value="{{ m.variable }}" hint-placeholder-val="{{ true }}">
+            <div onPointerDown="{{ m.down }}" onPointerMove="{{ m.move }}" onPointerUp="{{ m.up }}" onPointerCancel="{{ m.up }}" aria-label="{{ m.label }}" style="position:relative;flex:1;min-width:0;height:36px;border-radius:12px;background:rgba(233,238,242,0.08);overflow:hidden;cursor:pointer;touch-action:none;">
+              <div style="position:absolute;left:0;top:0;bottom:0;background:#7ed6bc;width:{{ m.pct }};opacity:{{ m.op }};"></div>
+              <div onPointerDown="{{ stop }}" onClick="{{ m.mute }}" aria-label="Mute" style="position:absolute;left:4px;top:2px;width:32px;height:32px;border-radius:10px;display:grid;place-items:center;cursor:pointer;color:{{ m.iconInk }};">
+                <sc-if value="{{ m.notMuted }}" hint-placeholder-val="{{ true }}"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.860 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" fill="currentColor"></path></svg></sc-if>
+                <sc-if value="{{ m.muted }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.970,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z" fill="currentColor"></path></svg></sc-if>
+              </div>
+              <span style="position:absolute;right:16px;top:0;bottom:0;display:flex;align-items:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;font-weight:600;pointer-events:none;color:{{ m.valInk }};">{{ m.text }}</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ m.fixed }}" hint-placeholder-val="{{ false }}">
+            <div aria-label="Fixed output" style="position:relative;flex:1;min-width:0;height:36px;border-radius:12px;background:rgba(233,238,242,0.05);border:1px solid rgba(233,238,242,0.12);box-sizing:border-box;display:flex;align-items:center;gap:9px;padding:0 12px 0 44px;">
+              <div onClick="{{ m.mute }}" aria-label="Mute" style="position:absolute;left:3px;top:1px;width:32px;height:32px;border-radius:10px;display:grid;place-items:center;cursor:pointer;color:#e9eef2;">
+                <sc-if value="{{ m.notMuted }}" hint-placeholder-val="{{ true }}"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.860 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" fill="currentColor"></path></svg></sc-if>
+                <sc-if value="{{ m.muted }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.970,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z" fill="currentColor"></path></svg></sc-if>
+              </div>
+              <span style="position:relative;width:14px;height:16px;flex-shrink:0;display:block;"><span style="position:absolute;left:2px;top:0;width:10px;height:8px;border:2px solid rgba(233,238,242,0.7);border-bottom:none;border-radius:5px 5px 0 0;box-sizing:border-box;display:block;"></span><span style="position:absolute;left:0;bottom:0;width:14px;height:9px;border-radius:2.5px;background:rgba(233,238,242,0.7);display:block;"></span></span>
+              <span style="flex:1;min-width:0;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Fixed output</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ m.off }}" hint-placeholder-val="{{ false }}">
+            <span style="flex:1;min-width:0;height:36px;border-radius:12px;border:1px dashed rgba(233,238,242,0.16);box-sizing:border-box;display:flex;align-items:center;padding:0 14px;font-size:14px;color:rgba(233,238,242,0.6);">Not reachable</span>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+    <div style="flex-shrink:0;font-size:14px;line-height:1.4;color:rgba(233,238,242,0.6);text-wrap:pretty;">{{ gvNote }}</div>
+  </div>
+
+  <sc-if value="{{ confirmOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ cancelUndo }}" style="position:absolute;inset:0;z-index:60;background:rgba(4,8,10,0.6);"></div>
+    <div data-mr="undo-confirm" style="position:absolute;z-index:61;left:16px;right:16px;top:50%;transform:translateY(-50%);background:#16232c;border:1px solid rgba(233,238,242,0.14);border-radius:20px;box-shadow:0 18px 48px rgba(0,0,0,0.55);padding:22px 18px 16px;display:flex;flex-direction:column;gap:10px;">
+      <div style="font-size:19px;font-weight:700;">Undo the group?</div>
+      <div style="font-size:15px;line-height:1.45;color:rgba(233,238,242,0.72);text-wrap:pretty;">{{ undoBody }}</div>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <div onClick="{{ cancelUndo }}" style="flex:1;height:44px;border-radius:12px;box-sizing:border-box;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.14);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;white-space:nowrap;cursor:pointer;height:48px;border-radius:14px;font-size:16px;font-weight:600;" style-active="transform:scale(0.97)">Cancel</div>
+        <div onClick="{{ doUndo }}" style="flex:1;height:48px;border-radius:14px;box-sizing:border-box;background:rgba(224,167,88,0.14);border:1px solid rgba(224,167,88,0.4);color:#e0a758;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;white-space:nowrap;cursor:pointer;" style-active="transform:scale(0.97)">Undo group</div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:410,&quot;height&quot;:780},&quot;scene&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;alone&quot;,&quot;joining&quot;,&quot;leader&quot;,&quot;member&quot;,&quot;undo&quot;,&quot;vol&quot;,&quot;fixed&quot;,&quot;gone&quot;,&quot;left&quot;,&quot;undone&quot;,&quot;spotify&quot;,&quot;two&quot;,&quot;five&quot;],&quot;default&quot;:&quot;leader&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Group&quot;},&quot;open&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;none&quot;,&quot;menu&quot;,&quot;edit&quot;,&quot;vol&quot;,&quot;undo&quot;],&quot;default&quot;:&quot;menu&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Group&quot;},&quot;join&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;rows&quot;,&quot;edit&quot;],&quot;default&quot;:&quot;rows&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Options&quot;},&quot;mark&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;time&quot;,&quot;volume&quot;,&quot;cover&quot;],&quot;default&quot;:&quot;time&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Options&quot;},&quot;me&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;startPad&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;touchpad&quot;,&quot;dpad&quot;],&quot;default&quot;:&quot;touchpad&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Remote&quot;},&quot;volume&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;variable&quot;,&quot;fixed&quot;],&quot;default&quot;:&quot;variable&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Remote&quot;},&quot;eqStart&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;}}">
+const ACC = '#7ed6bc', INK = '#e9eef2', INK2 = 'rgba(233,238,242,0.72)', FILL = 'rgba(233,238,242,0.07)', AMBER = '#e0a758';
+const VIEWS = [
+  { k: 'playing', name: 'Playing', d: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM10.5 9v6l4.5-3z' },
+  { k: 'room', name: 'Room', d: 'M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z' },
+  { k: 'idle', name: 'Idle screen', d: 'M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17zM12 7.5V12l3 2' }
+];
+const TRACKS = [['Rempompi', 115], ['Trenulet', 132], ['Zurli Dance', 161], ['Cifrele', 108], ['Ursuletul', 127], ['Alfabetul', 153], ['La Gradinita', 119], ['Noapte Buna', 184]];
+const SEED = { living: { track: 0, pos: 52, play: true }, kitchen: { track: 1, pos: 64, play: true } };
+const SEED0 = { track: 2, pos: 30, play: true };
+const FALL = {
+  PRESETS: ['Flat', 'Rock', 'Pop', 'Jazz', 'Classical', 'Electronic', 'Hip-hop', 'Acoustic', 'Vocal', 'Late night'].map(n => ({ k: n.toLowerCase(), name: n })),
+  OWN: [{ k: 'evening', name: 'Evening' }, { k: 'kitchen', name: 'Kitchen radio' }, { k: 'records', name: 'Old records' }]
+};
+const SRCN = { lms: 'Lyrion', spotify: 'Spotify', plexamp: 'Plexamp', bluetooth: 'Bluetooth' };
+const NOPOS = 'linear-gradient(90deg,rgba(233,238,242,0),rgba(233,238,242,0.15) 16%,rgba(233,238,242,0.15) 84%,rgba(233,238,242,0))';
+const mmss = s => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+const clamp = v => Math.max(0, Math.min(100, Math.round(v)));
+const RESET = { view: 'remote', cur: null, pl: {}, menu: null, pad: null, eq: false, gv: null, confirm: null, edit: null, sel: null, sc: null, lv: {}, mu: {} };
+
+class Component extends DCLogic {
+  state = { ...RESET, eqOn: true, scr: 'playing', off: false, trayH: 94 };
+
+  startMeasure() {
+    clearInterval(this._iv); this._tries = 0;
+    this._iv = setInterval(() => { this.measure(); if (++this._tries > 24) clearInterval(this._iv); }, 250);
+  }
+  openSettings() {
+    if (!this.state.setSeen) this.startMeasure();
+    this.setState({ view: 'settings', setSeen: true, eq: false, menu: false, gv: false });
+  }
+  componentDidMount() {
+    if (!window.EQ || !window.MR) this._eqT = setInterval(() => { if (window.EQ && window.MR) { clearInterval(this._eqT); this.forceUpdate(); } }, 60);
+  }
+  componentDidUpdate(prev) {
+    if (['scene', 'open', 'join', 'mark', 'startPad', 'me'].some(k => prev[k] !== this.props[k])) this.setState({ ...RESET });
+  }
+  componentWillUnmount() { clearInterval(this._iv); clearInterval(this._eqT); (this._tm || []).forEach(clearTimeout); }
+  measure() {
+    const host = this._root && this._root.querySelector('[data-remote-settings]');
+    const t = host && host.querySelector('div[style*="z-index: 20"]');
+    if (t && t.offsetHeight && t.offsetHeight !== this.state.trayH) this.setState({ trayH: t.offsetHeight });
+  }
+  sc() { return this.state.sc || window.MR.scene(this.props.scene || 'leader'); }
+  meKey(sc) { return this.state.cur || this.props.me || sc.me; }
+  pdata(k) { return { ...(SEED[k] || SEED0), ...(this.state.pl[k] || {}) }; }
+  setP(k, patch) { this.setState(s => ({ pl: { ...s.pl, [k]: { ...(SEED[k] || SEED0), ...(s.pl[k] || {}), ...patch } } })); }
+  lv(sc, k) { return this.state.lv[k] ?? (sc.st[k] ? sc.st[k].vol : 50); }
+  mu(k) { return !!this.state.mu[k]; }
+  fixedOf(sc, k, me) { return !!(sc.st[k] && sc.st[k].fixed) || (k === me && this.props.volume === 'fixed'); }
+  putSc(sc) { this.setState({ sc }); }
+  later(fn, ms) { this._tm = this._tm || []; this._tm.push(setTimeout(fn, ms)); }
+  joinK(k, me) {
+    const sc = window.MR.joinTo(this.sc(), k, me);
+    this.putSc(sc);
+    this.later(() => this.putSc(window.MR.settle(this.sc(), k)), 1800);
+  }
+
+  renderVals() {
+    const MR = window.MR;
+    if (!MR) return { players: [], gRows: [], oRows: [], gvRows: [], actions: [], chips: [] };
+    const p = this.props, s = this.state;
+    const sc = this.sc();
+    const me = this.meKey(sc);
+    const g = sc.g && sc.g.members.includes(me) ? sc.g : null;
+    const grouped = !!g;
+    const screen = MR.SCREEN[me] !== false;
+    const playKey = g ? (g.silent ? null : g.lead) : me;
+    const pst = playKey && sc.st[playKey] ? sc.st[playKey].state : 'idle';
+    const d = this.pdata(playKey || me);
+    const hasTrack = !!playKey && (pst === 'playing' || pst === 'paused' || pst === 'group' || (g && playKey === g.lead));
+    const T = TRACKS[d.track];
+    const src = MR.srcOf({ ...sc, me }) || 'lms';
+    const hasDur = src !== 'bluetooth';
+    const art = hasTrack && src !== 'bluetooth';
+    const pad = s.pad || (p.startPad === 'dpad' ? 'dpad' : 'touch');
+    const settings = s.view === 'settings';
+    const E = window.EQ || FALL;
+    const eqSelK = s.eqSel || p.eqStart || 'rock';
+    const all = E.PRESETS.concat(E.OWN);
+    const cur = all.find(o => o.k === eqSelK) || all[1];
+    const isOwn = !!E.OWN.find(o => o.k === eqSelK);
+    let note = 'Off. The sound is untouched, bit-perfect.';
+    if (s.eqOn) {
+      const h = window.EQ && cur.g ? window.EQ.headroom(cur.g) : 0;
+      note = h > 0 ? 'Lowered by ' + window.EQ.dbText(h) + ' so the boost cannot clip.' : 'No boost, so nothing is lowered.';
+    }
+    const chip = (o, sep) => {
+      const on = o.k === eqSelK;
+      return { name: o.name, sep: sep ? 'block' : 'none', bg: on ? 'rgba(126,214,188,0.16)' : FILL, line: on ? 'rgba(126,214,188,0.55)' : 'rgba(233,238,242,0.12)', ink: on ? ACC : INK, tap: () => this.setState({ eqSel: o.k }) };
+    };
+    const tint = on => ({ bg: on ? 'rgba(126,214,188,0.16)' : FILL, line: on ? 'rgba(126,214,188,0.55)' : 'rgba(233,238,242,0.1)', ink: on ? ACC : INK });
+    const actions = VIEWS.map(v => {
+      const idle = v.k === 'idle';
+      return { ...tint(!s.off && s.scr === v.k), label: v.name, d: v.d, op: s.off ? 0.45 : 1, order: idle ? -1 : 0, mr: idle ? 'auto' : '0px', tap: () => this.setState({ scr: v.k, off: false }) };
+    });
+    const sb = tint(s.off);
+    const ratio = (e, el) => { const r = el.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)); };
+    const wake = () => this.setState({ off: false });
+    const view = k => () => this.setState({ scr: k, off: false });
+    const viewInk = k => !s.off && s.scr === k ? ACC : INK;
+    const srcName = SRCN[src] || 'Lyrion';
+
+    // --- the group
+    const members = g ? g.members : [];
+    const live = members.filter(k => sc.st[k].state !== 'off');
+    const varM = live.filter(k => !this.fixedOf(sc, k, me));
+    const gLevel = varM.length ? Math.round(varM.reduce((a, k) => a + this.lv(sc, k), 0) / varM.length) : 0;
+    const gMuted = live.length > 0 && live.every(k => this.mu(k));
+    const [withText, withMore] = MR.withText({ ...sc, g }, me);
+    const n = members.length;
+    const openP = p.open || 'none';
+    const menuOpen = s.menu ?? (openP === 'menu' || openP === 'edit' || openP === 'undo');
+    const editing = p.join === 'edit' && (s.edit ?? openP === 'edit');
+    const gvOpen = grouped && (s.gv ?? openP === 'vol');
+    const confirmOpen = grouped && (s.confirm ?? openP === 'undo');
+    const sel = s.sel || (editing ? (openP === 'edit' && !s.edit ? members.concat(grouped ? [] : ['study']).concat(me) : members.concat(me)) : []);
+    const rowsJoin = p.join !== 'edit';
+
+    const dragGroup = (e, el) => {
+      const target = Math.round(ratio(e, el) * 100);
+      const delta = target - this._gBase.mean;
+      const lv = { ...this.state.lv }, mu = { ...this.state.mu };
+      Object.keys(this._gBase.v).forEach(k => { lv[k] = clamp(this._gBase.v[k] + delta); mu[k] = false; });
+      this.setState({ lv, mu });
+    };
+    const gDown = e => {
+      if (!varM.length) return;
+      const el = e.currentTarget; try { el.setPointerCapture(e.pointerId); } catch (_) {}
+      this._gEl = el; const v = {}; varM.forEach(k => { v[k] = this.lv(sc, k); });
+      this._gBase = { v, mean: gLevel }; dragGroup(e, el);
+    };
+    const gMove = e => { if (this._gEl) dragGroup(e, this._gEl); };
+    const gUp = () => { this._gEl = null; };
+    const muteGroup = () => { const mu = { ...s.mu }; live.forEach(k => { mu[k] = !gMuted; }); this.setState({ mu }); };
+
+    const stop = e => e.stopPropagation();
+    const pickRow = k => () => { if (sc.st[k].state === 'off') return; this.setState({ cur: k, menu: false, eq: false, edit: null, sel: null }); };
+    const BTN_JOIN = { bBg: 'rgba(126,214,188,0.14)', bLine: 'rgba(126,214,188,0.45)', bInk: ACC };
+    const BTN_N = { bBg: FILL, bLine: 'rgba(233,238,242,0.14)', bInk: INK };
+    const mkRow = (k, inG) => {
+      const st = sc.st[k] || {};
+      const off = st.state === 'off';
+      const joining = g && g.joining.includes(k);
+      const isMe = k === me;
+      let hasBtn = false, btn = '', act = null, bs = BTN_N;
+      if (rowsJoin && !editing && !off && !isMe) {
+        if (inG && k !== g.lead) { hasBtn = true; btn = 'Remove'; act = e => { stop(e); this.putSc(MR.removeFrom(this.sc(), k)); }; }
+        else if (!inG) { hasBtn = true; btn = 'Join'; bs = BTN_JOIN; act = e => { stop(e); this.joinK(k, me); }; }
+      }
+      const locked = isMe || (g && k === g.lead);
+      const checked = sel.includes(k);
+      const box = editing ? {
+        hasBox: true, checked, boxOp: off ? 0.3 : locked ? 0.5 : 1,
+        boxBg: checked ? ACC : 'transparent', boxLine: checked ? ACC : 'rgba(233,238,242,0.3)'
+      } : { hasBox: false, checked: false, boxOp: 1, boxBg: 'transparent', boxLine: 'transparent' };
+      if (editing && !off && !locked) act = e => { stop(e); const cur = this.state.sel || sel; this.setState({ sel: cur.includes(k) ? cur.filter(x => x !== k) : cur.concat(k) }); };
+      return {
+        name: MR.name(k), lead: !!(g && inG && !g.silent && k === g.lead), st: MR.rowStatus({ ...sc, g }, k),
+        stInk: joining ? ACC : off ? 'rgba(233,238,242,0.6)' : INK2,
+        current: isMe && !editing && !hasBtn, rowBg: isMe ? 'rgba(233,238,242,0.05)' : 'transparent', op: off ? 0.45 : 1,
+        pick: editing ? (act || (() => {})) : pickRow(k), hasBtn, btn, act, ...bs, ...box
+      };
+    };
+    const showGroup = grouped && !editing;
+    const gRows = showGroup ? members.map(k => mkRow(k, true)) : [];
+    const oRows = sc.list.filter(k => editing || !showGroup || !members.includes(k)).map(k => mkRow(k, members.includes(k)));
+    const othersLive = members.filter(k => k !== me && sc.st[k].state !== 'off');
+
+    const curStateLine = () => {
+      if (grouped && p.mark === 'volume') return g.silent ? 'Grouped · silent' : 'Grouped ' + withText + withMore;
+      if (grouped && g.silent) return 'Grouped · silent';
+      return hasTrack ? (d.play ? 'Playing' : 'Paused') + ' · ' + srcName : 'Idle';
+    };
+
+    const vol = grouped ? gLevel : this.lv(sc, me);
+    const muted = grouped ? gMuted : this.mu(me);
+    const meFixed = !grouped && this.fixedOf(sc, me, me);
+    const allFixed = grouped && varM.length === 0;
+    const fixed = meFixed || allFixed;
+    const setMine = (v) => this.setState(st => ({ lv: { ...st.lv, [me]: v }, mu: { ...st.mu, [me]: false } }));
+
+    const gvRows = members.map(k => {
+      const off = sc.st[k].state === 'off';
+      const fx = !off && this.fixedOf(sc, k, me);
+      const l = this.lv(sc, k), m = this.mu(k);
+      const set = (e, el) => { const v = Math.round(ratio(e, el) * 100); this.setState(st => ({ lv: { ...st.lv, [k]: v }, mu: { ...st.mu, [k]: false } })); };
+      return {
+        name: MR.name(k), label: MR.name(k) + ' volume',
+        tag: off ? 'Off' : (!g.silent && k === g.lead) ? 'Leads' : fx ? 'Fixed' : k === me ? 'This one' : '',
+        tagInk: (!g.silent && k === g.lead) ? ACC : 'rgba(233,238,242,0.6)',
+        variable: !off && !fx, fixed: fx, off,
+        pct: l + '%', op: m ? 0.35 : 1, text: m ? 'Off' : String(l), muted: m, notMuted: !m,
+        iconInk: !m && l > 14 ? '#0d151c' : INK, valInk: !m && l > 86 ? '#0d151c' : INK,
+        mute: () => this.setState(st => ({ mu: { ...st.mu, [k]: !m } })),
+        down: e => { const el = e.currentTarget; try { el.setPointerCapture(e.pointerId); } catch (_) {} this._mEl = el; this._mK = k; set(e, el); },
+        move: e => { if (this._mEl && this._mK === k) set(e, this._mEl); },
+        up: () => { this._mEl = null; }
+      };
+    });
+    const fixedNames = members.filter(k => sc.st[k].state !== 'off' && this.fixedOf(sc, k, me)).map(MR.name);
+
+    return {
+      rootRef: el => { this._root = el; },
+      isScreen: screen, noScreen: !screen,
+      curName: MR.name(me), curState: curStateLine(),
+      menuOpen, toggleMenu: () => this.setState({ menu: !menuOpen, edit: null, sel: null }), closeMenu: () => this.setState({ menu: false, edit: false, sel: null }),
+      menuTurn: menuOpen ? 'rotate(180deg)' : 'none',
+      menuHead: editing ? 'Group with ' + MR.name(me) : 'Gexis players',
+      grouped, showGroup, gRows, oRows,
+      gHead: g ? (g.silent ? 'Grouped · silent' : 'Grouped · ' + n + ' players') : '',
+      gNow: g ? (g.silent ? MR.name(g.lead) + ' is off' : (d.play ? 'Playing' : 'Paused') + ' · ' + srcName + ' · ' + T[0]) : '',
+      gNoteOn: !!(g && g.silent), gNote: g && g.silent ? 'The group stays. Start music on ' + MR.join(othersLive.concat(me === g.lead ? [] : [me]).filter((x, i, a) => a.indexOf(x) === i).map(MR.name)) + ' and it leads.' : '',
+      canLeave: !!(g && me !== g.lead),
+      leave: () => this.putSc(MR.removeFrom(this.sc(), me)),
+      askUndo: () => this.setState({ confirm: true }),
+      confirmOpen, cancelUndo: () => this.setState({ confirm: false }),
+      doUndo: () => { this.setState({ sc: MR.undo(this.sc()), confirm: false }); },
+      undoBody: g ? MR.join(members.map(MR.name)) + ' each play on their own again.' + (g.silent ? '' : ' The music stays on ' + MR.name(g.lead) + '.') : '',
+      footGroup: p.join === 'edit' && !editing, editBtnText: grouped ? 'Change the group' : 'Group players',
+      startEdit: () => this.setState({ edit: true, sel: members.length ? members.slice() : [me] }),
+      footEdit: editing, cancelEdit: () => this.setState({ edit: false, sel: null }),
+      doneText: 'Done',
+      doneEdit: () => {
+        let x = this.sc(); const cur = this.state.sel || sel;
+        cur.filter(k => !(x.g && x.g.members.includes(k)) && k !== me).forEach(k => { x = MR.settle(MR.joinTo(x, k, me), k); });
+        if (x.g) x.g.members.filter(k => !cur.includes(k)).forEach(k => { x = MR.removeFrom(x, k); });
+        this.setState({ sc: x, edit: false, sel: null });
+      },
+      markTime: grouped && (p.mark || 'time') === 'time', markCover: grouped && p.mark === 'cover',
+      withText, withMore,
+
+      gvVis: gvOpen ? 'visible' : 'hidden', gvVisD: gvOpen ? '0s' : '300ms', eqVis: s.eq ? 'visible' : 'hidden', eqVisD: s.eq ? '0s' : '300ms', gvScrim: gvOpen ? 1 : 0, gvPe: gvOpen ? 'auto' : 'none', gvY: gvOpen ? 'translateY(0)' : 'translateY(calc(100% + 24px))',
+      openGv: () => this.setState({ gv: true, eq: false, menu: false }), closeGv: () => this.setState({ gv: false }),
+      gvSub: n + ' players · each keeps its own level',
+      gPct: (allFixed ? 0 : gLevel) + '%', gOp: gMuted ? 0.35 : 1, gText: allFixed ? 'Fixed' : gMuted ? 'Off' : String(gLevel), gValInk: !gMuted && gLevel > 86 ? '#0d151c' : INK,
+      gDown, gMove, gUp, gvRows,
+      gvNote: 'The group slider moves each player by the same step, so the balance between rooms stays.' + (fixedNames.length ? ' ' + MR.join(fixedNames) + (fixedNames.length > 1 ? ' are' : ' is') + ' on Fixed volume: the amplifier sets the level.' : ''),
+
+      pageX: settings ? 'translateX(-50%)' : 'translateX(0)',
+      segInd: settings ? 'translateX(56px)' : 'translateX(0)',
+      remoteInk: settings ? INK2 : ACC, settingsInk: settings ? ACC : INK2,
+      goSettings: () => this.openSettings(), setOn: !!s.setSeen,
+      goRemote: () => this.setState({ view: 'remote', menu: false }),
+      setH: 'calc(100% + ' + s.trayH + 'px)',
+
+      hasTrack, noTrack: !hasTrack, hasArt: art, artPending: hasTrack && !art,
+      title: hasTrack ? T[0] : 'Nothing playing', titleInk: hasTrack ? INK : 'rgba(233,238,242,0.6)',
+      posPct: (hasTrack && hasDur ? Math.round(d.pos / T[1] * 1000) / 10 : 0) + '%', posText: mmss(hasTrack ? d.pos : 0), durText: hasDur ? mmss(hasTrack ? T[1] : 0) : 'live',
+      barTrack: hasDur ? 'rgba(233,238,242,0.14)' : NOPOS, knobDisp: hasDur && hasTrack ? 'block' : 'none', seekCursor: hasDur ? 'pointer' : 'default',
+      trOp: hasTrack ? 1 : 0.38, trPe: hasTrack ? 'auto' : 'none',
+      playing: hasTrack && d.play, paused: !(hasTrack && d.play), playLabel: d.play ? 'Pause' : 'Play',
+      togglePlay: () => this.setP(playKey, { play: !d.play }),
+      prev: () => this.setP(playKey, d.pos > 3 || d.track === 0 ? { pos: 0 } : { track: d.track - 1, pos: 0 }),
+      next: () => { if (d.track < TRACKS.length - 1) this.setP(playKey, { track: d.track + 1, pos: 0 }); },
+      seekDown: e => { if (!hasDur || !hasTrack) return; const el = e.currentTarget; try { el.setPointerCapture(e.pointerId); } catch (_) {} this._seek = el; this.setP(playKey, { pos: Math.round(ratio(e, el) * T[1]) }); },
+      seekMove: e => { if (this._seek) this.setP(playKey, { pos: Math.round(ratio(e, this._seek) * T[1]) }); },
+      seekUp: () => { this._seek = null; },
+
+      isFixed: fixed, notFixed: !fixed,
+      muted, notMuted: !muted,
+      toggleMute: () => grouped ? muteGroup() : this.setState(st => ({ mu: { ...st.mu, [me]: !muted } })),
+      volPct: vol + '%', volOp: muted ? 0.35 : 1,
+      volText: muted ? 'Off' : String(vol),
+      volIconInk: !muted && vol > 14 ? '#0d151c' : INK, volValInk: !muted && vol > 86 ? '#0d151c' : INK,
+      volDown: e => { const el = e.currentTarget; try { el.setPointerCapture(e.pointerId); } catch (_) {} this._vol = el; if (grouped) gDown(e); else setMine(Math.round(ratio(e, el) * 100)); },
+      volMove: e => { if (!this._vol) return; if (grouped) gMove(e); else setMine(Math.round(ratio(e, this._vol) * 100)); },
+      volUp: () => { this._vol = null; this._gEl = null; },
+
+      isTouch: pad === 'touch', isDpad: pad === 'dpad',
+      useTouch: () => this.setState({ pad: 'touch' }), useDpad: () => this.setState({ pad: 'dpad' }),
+      segTouchInk: pad === 'touch' ? ACC : INK2, segDpadInk: pad === 'dpad' ? ACC : INK2,
+      padInd: pad === 'dpad' ? 'translateX(44px)' : 'translateX(0)',
+      key: wake, stop,
+      actions,
+      offBg: sb.bg, offLine: sb.line, offInk: sb.ink, offLabel: s.off ? 'Screen on' : 'Standby', toggleOff: () => this.setState({ off: !s.off }),
+      goHome: view('home'), homeInk: viewInk('home'),
+      goLyrics: view('lyrics'), lyricsInk: viewInk('lyrics'),
+      goMeters: view('meters'), metersInk: viewInk('meters'),
+
+      capTag: grouped ? 'GROUP' : 'EQ', capText: grouped ? String(n) : (s.eqOn ? cur.name : 'Off'), capInk: grouped ? INK : (s.eqOn ? ACC : INK2),
+      eqCapText: s.eqOn ? cur.name : 'Off',
+      eqInInk: s.eqOn ? ACC : INK2, eqClip: muted ? '100%' : (100 - vol) + '%',
+      eqBtnBg: s.eqOn ? 'rgba(126,214,188,0.12)' : FILL,
+      eqBtnLine: s.eqOn ? 'rgba(126,214,188,0.45)' : 'rgba(233,238,242,0.14)',
+      eqBtnInk: s.eqOn ? ACC : 'rgba(233,238,242,0.82)',
+      openEq: () => this.setState({ eq: true, menu: false, gv: false }), closeEq: () => this.setState({ eq: false }),
+      eqY: s.eq ? 'translateY(0)' : 'translateY(calc(100% + 24px))',
+      eqScrim: s.eq ? 1 : 0, eqPe: s.eq ? 'auto' : 'none',
+      eqState: s.eqOn ? cur.name + (isOwn ? ' · yours' : ' · preset') : 'Off · bit-perfect',
+      eqNote: note,
+      toggleEqOn: () => this.setState({ eqOn: !s.eqOn }),
+      togBg: s.eqOn ? 'rgba(126,214,188,0.32)' : 'rgba(233,238,242,0.08)',
+      togLine: s.eqOn ? 'rgba(126,214,188,0.5)' : 'rgba(233,238,242,0.16)',
+      knobLeft: s.eqOn ? '27px' : '3px', knobBg: s.eqOn ? ACC : 'rgba(233,238,242,0.6)',
+      chips: E.PRESETS.map(o => chip(o, false)).concat(E.OWN.map((o, i) => chip(o, i === 0))),
+      chipsOp: s.eqOn ? 1 : 0.4, chipsPe: s.eqOn ? 'auto' : 'none',
+      eqEdit: () => this.openSettings()
+    };
+  }
+}
+</script>
+</body>
+</html>

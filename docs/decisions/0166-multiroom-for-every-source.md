@@ -1,7 +1,9 @@
 # ADR-0166 — Multiroom for every source
 
 **Status:** **Accepted** 2026-10-27 (George: his answers, and C1-C6
-confirmed the same day; C3 he called an edge case). Phase 22
+confirmed the same day; C3 he called an edge case). Amended 2026-10-28:
+the design back from Claude Design (`design/source/22/`), decision 10 and
+where it is measured, George's answers that day. Phase 22
 (`ph-multiroom`), started the same day (George: multiroom, then AirPlay 2, before room correction, which
 cannot be tried yet). The experience is George's, from his answers the same
 day (*Decided*); the technical decisions are proposed, and confirmed or
@@ -57,6 +59,10 @@ of rate) and [ADR-0164](0164-the-phone-remote.md) (the phone remote).
    equaliser's does.
 9. **Home Assistant too**: the integration offers Home Assistant's own join
    and unjoin for media players, in its release after the player's.
+10. **Lyrion's syncs are Gexis groups** (George, 2026-10-28, after the
+    design): Gexis players synced in a Lyrion app (Material, Lyrion's web
+    page) are grouped in Gexis too, and unsynced there they leave it - one
+    group, whichever side made it; every source then follows it.
 
 ## Proposed (technical)
 
@@ -126,6 +132,24 @@ their outputs at the new rate.
   list (join, leave, the group), the panel's place for it, and the grouped
   mark on Now Playing; a brief once this record is accepted.
 
+## The design (Claude Design, 2026-10-28)
+
+`design/source/22/` (its `README.md` is the specification). George's picks:
+**1a**, Join and Remove on each row of the phone's *Gexis players*; **2a**,
+the group in the panel's volume drawer and a *Group* pill and band in the
+bar's tray; **3a**, the grouped mark midway between the progress bar and the
+play control. Its rules, beyond the decisions above:
+
+- The leader cannot be removed and has no *Leave*; *Undo group* ends the
+  group, asks first, and keeps the music on the leader.
+- The *All* slider moves every Variable member by the same step; its value
+  is their mean; its mute mutes every member. Fixed members are not moved.
+- Joining stops a player's own music without asking, and takes it out of
+  any other group (C1).
+- Each member keeps its own equaliser.
+- The leader gone: the others fall silent and stay grouped (C2); its panel
+  shows Home.
+
 ## Settings (ADR-0022)
 
 None proposed. The group is the players' state, not a setting; the buffer is
@@ -142,6 +166,12 @@ suits every home's Wi-Fi, a setting is proposed then.
   the equaliser and the visualiser on.
 - The gap at a change of rate and at a change of leader.
 - Lyrion's own sync unchanged with Gexis's grouping around it.
+
+**Where it is measured** (George, 2026-10-28): the preview goes on all four
+test players (sofapi, the bar, guestpi, bedroompi), each checked free before
+every test. Lyrion's half runs on a Lyrion server of Claude's in Docker on
+the development machine, with the public-domain demo library; the players
+used are pointed at it for the test and given their own server back after.
 
 ## Not in this record
 

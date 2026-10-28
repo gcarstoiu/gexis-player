@@ -25,6 +25,7 @@ are all final unless a row below says otherwise. Recreate them exactly.
 | `source/19/` | Phase 19: the Home Assistant card and the D-pad's focus, with a PNG per state (the PNGs kept out of git). Read its `README.md`. |
 | `source/20/` | Phase 20: the equaliser, its editor on panel, bars and phone and the quick change. George chose look 3a. Read its `README.md` (the backdrop PNGs in `eq/` kept out of git). |
 | `source/21/` | Phase 21: the phone remote, for a player with a screen and one without. Read its `README.md`. |
+| `source/22/` | Phase 22: multiroom - grouping on the phone's player list, the panel's volume drawer and the bar's tray, the grouped mark and the group volume. Read its `README.md` (the PNG per state and the backdrops in `eq/` kept out of git). |
 | `assets/` | Service marks and the two sample images. |
 
 ---
@@ -420,6 +421,21 @@ cover, a seek bar, larger transport. No shuffle or repeat on the phone. The
 panel's background. With Fixed volume the bar becomes the panel's locked
 row, mute kept. No typing sheet: the phone's own keyboard. Tokens at the end
 of `tokens.css` under *Phase 21*. The locked designs are unchanged.
+
+---
+
+## Changed 2026-10-28
+
+**Phase 22, multiroom** - `source/22/`. Open `Multiroom Board.dc.html`.
+George chose **1a** (Join and Remove on each row of the phone's *Gexis
+players*), **2a** (the group in the panel's volume drawer and a *Group* pill
+and band in the bar's tray) and **3a** (the grouped mark centred midway
+between the progress bar and the play control). The group volume: an *All*
+slider and each player's own. The export's own hand-over note is
+`source/22/HANDOFF.md`. **Production wins**: the panel and bar artboards are
+drawn over pictures of the design files, and only what Phase 22 adds is
+built. Tokens at the end of `tokens.css` under *Phase 22*. The locked
+designs are unchanged.
 
 ---
 

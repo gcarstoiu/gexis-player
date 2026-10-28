@@ -45,6 +45,19 @@ Not final, and marked so: the QR codes (placeholders), the setup password
 name; the animated skins are not in the repo), and the screen models in the
 Screen step's list (samples from `foonerd/pi_screen_setup`, Finding 100).
 
+## Phase 22 — multiroom (2026-10-28)
+
+Open `design/source/22/Multiroom Board.dc.html` and read
+`design/source/22/README.md`. Grouping on the phone's *Gexis players*
+(Join / Remove per row), in the panel's volume drawer and the bar's tray,
+the grouped mark midway between the progress bar and the play control, and
+the group volume. Tokens under *Phase 22* in `design/tokens.css`; a PNG per
+state in `design/source/22/png/`.
+
+**Production wins.** The panel and bar artboards are drawn over pictures of
+the design files, which on the bars do not match production. Do not change
+any production screen to match them; add only what Phase 22 adds.
+
 ## Phase 20 — the equaliser (2026-10-25)
 
 Open `design/source/20/Equaliser Board.dc.html` and read
@@ -56,15 +69,17 @@ to be built. New: the glide between settings. Tokens under *Phase 20* in
 `design/tokens.css`. Two points are open for George (the README's *Open*).
 `Now Playing` and `Settings` are unchanged.
 
-## Phase 21 — the phone remote (2026-10-27)
+## Phase 21 — the phone remote (revised 2026-10-27)
 
 Open `design/source/21/Phone Remote Board.dc.html` and read
-`design/source/21/README.md`, which is self-contained. Two phones: a player
-with a screen (a trackpad or D-pad for the panel, quick actions) and one
-without (large cover, seek bar). Both share the player picker, the Remote /
-Settings switch and the volume row, with the EQ setting's name inside the
-bar. Tokens under *Phase 21* in `design/tokens.css`. One build change is
-outside the phone: mute works with Fixed volume, on the panel too.
+`design/source/21/README.md`, which is self-contained. Two phones in Pixel 10
+Pro frames, sized for Chrome with the address bar showing (410 × 780): a
+player with a screen (cover with transport beside it, a relative trackpad or
+D-pad, quick actions) and one without (large cover, seek bar). No shuffle or
+repeat on the phone; no keyboard of its own (the phone's keyboard opens when
+a tap lands in a text field, as now). Tokens under *Phase 21* in
+`design/tokens.css`. Every earlier open point is settled; one build change
+remains: mute also works when the output is fixed, on the panel too.
 `Now Playing` and `Settings` are unchanged.
 
 ## Round 2 — what changed on 2026-10-01
@@ -463,7 +478,7 @@ brand/                       brand package
 4. Add `screen` and `rotation` to `settings_registry.json` (George confirmed
    them 2026-09-30) and the Screen step to `SetupPage.svelte`.
 5. Build Phase 20 from `design/source/20/README.md` (look 3a only).
-5b. Build Phase 21 from `design/source/21/README.md`; its *Open for the
-    build* is the panel's mute with Fixed volume.
+5b. Build Phase 21 from `design/source/21/README.md` (Phone Remote v3);
+    include the panel's mute-in-fixed-mode change.
 6. Port round 2 (above), then write Phase 13b's ADR from `design/source/13b/Screen Families Round 2.dc.html`, `Screen Families Chosen.dc.html` and this
    README's 13b section, then build the families.
