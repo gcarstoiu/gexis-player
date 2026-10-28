@@ -168,6 +168,7 @@ play control. Its rules, beyond the decisions above:
   group, asks first, and keeps the music on the leader.
 - The *All* slider moves every Variable member by the same step; its value
   is their mean; its mute mutes every member. Fixed members are not moved.
+  (Built as D6 words it, the same share of each one's own travel: B13.)
 - Joining stops a player's own music without asking, and takes it out of
   any other group (C1).
 - Each member keeps its own equaliser.
@@ -216,6 +217,14 @@ play control. Its rules, beyond the decisions above:
   another player is found; *or* in the leader-gone note; the bar's progress
   row moved up when grouped; no new way to the group from Home on a member
   whose leader is off.
+- **B13 — The *All* slider moves each member the same share of its own
+  way**: up, of its way to 100; down, of its way to 0, so their mean lands
+  where the finger is and all reach 100 and 0 together. A source's own app
+  moves the others the same share as the leader moved. The design's same
+  step for all had a member at 100 hold the mean below the finger, and the
+  slider jumped back (sofapi at 100, the bar at 80, 2026-10-28). Each
+  slider also keeps the finger's level for 1.5 s after it lets go, until
+  the members' new levels have arrived.
 
 ## Settings (ADR-0022)
 
