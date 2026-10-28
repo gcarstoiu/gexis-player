@@ -8174,3 +8174,52 @@ background (5596698e) was merged into `next` after 1.7.0 (222edb08), so
 (to-do `eq-measure`, at a time George picks). Mocked-data checks:
 `~/projects/scratch/ph21` (`run2.sh`, `remote_shots2.py`, `run_manual2.sh`)
 and `~/projects/scratch/hacard` (`run.sh`, the card).
+
+## 2026-10-28 (evening): 1.9.0 on Testing - blocks moved by the routine clean-up
+
+**Phase 22, multiroom for every source**, in 1.8.0 on Testing.
+[ADR-0166](docs/decisions/0166-multiroom-for-every-source.md): George's
+decisions 1-10, C1-C6, the design `design/source/22/`, Claude's build
+decisions B1-B13, B2 and B3 amended - all confirmed by George. His tests
+passed: joining and undoing from the phone, the panel and the bars; every
+source in a group; Fixed, the equaliser and four players in one group; the
+leader rebooted; Lyrion's half (after the sync fix of preview 13).
+**Open:** the measurement session (ADR-0166 *Measured before it is called
+done*; at 192 kHz the bar lost sync over Wi-Fi - whether to cap a group's
+rate is decided with the figures); the Home Assistant integration's join and
+unjoin (its `multiroom` branch, `9744bb3`), released after the player's;
+back and forth between Lyrion-app grouping and the player's. The story of
+the build and the previews is in the archive (2026-10-28).
+
+**The players**: sofapi, the bar (ShelvesPi), guestpi and bedroompi on
+Phase 22's preview 13 (2026-10-28): 1.8.0's packages but its core, which
+differs only by the notes. Each has its own Lyrion server again.
+
+**Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
+every merged release PR, otherwise weekly on Sunday evening. **Last run:
+2026-10-28, after 1.8.0** (/home 214 -> 226 GB free, / 826 MB -> 1.9 GB).
+**Now: Phase 23, AirPlay 2** (`ph-airplay`, started 2026-10-28; George:
+a plugin, offered in first use) - **in 1.9.0 on Testing, marked *Limited
+testing*** (George: released before it is tried, no Apple device yet).
+[ADR-0167](docs/decisions/0167-airplay-2-as-a-plugin.md) accepted: George's
+decisions 1-9, off for a player that updates, ADR-0022's row, the Legal and
+credits wording. Shairport Sync 5.6.2 and NQPTP 1.2.9 are built by us
+(`packaging/shairport-sync`, `packaging/nqptp`: Debian trixie has no AirPlay
+2 receiver; their build libraries are installed by the build itself, for
+want of space on `/`). The adapter is public, `gcarstoiu/gexis-airplay`
+v0.1.0 (local copy `~/projects/gexis-airplay`). **Open:** a test with an
+Apple device (to-do `ph23-test`), then T1-T9 put to George and the tag
+removed; whatever the test shows is fixed then. Tried without one: the
+receiver, NQPTP and plugin up on sofapi and guestpi, announced under the
+device name. Upstream's source, read for the ADR, is in
+`~/projects/scratch/ph23/upstream`.
+
+From *Things that will bite*, kept elsewhere as rules (LESSONS 10, 38, 54, 55, 66, 77; Claude's memory: dry run as its own step, restart after a preview):
+
+- **Dry-run every install** (`apt-get -s`) and read the removals: a lone UI
+  package removes `gexis-player`; build the player meta-package with the rest.
+- **Restarting `gexis-core` does not reload the panel**: restart
+  `gexis-kiosk`, and confirm the new bundle by hash in the core's log
+  (LESSONS 10, 38, 66).
+- **`systemctl is-active` does not mean working**: check the symptom (audio,
+  `fuser` on the PCM node).
