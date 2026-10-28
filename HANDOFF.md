@@ -44,7 +44,7 @@ George the same day. Built: core (`group.py`, `multiroom.py`,
 `snapcast.py`, the grouped chain in `outputs.py`, Lyrion's sync in the LMS
 adapter, the `/group` routes), the UI on the phone, the panel and the bars,
 the manual's section 6, the FAQ, the technical guide, README, the plugin
-manual. **Preview 11** (core and player `1.7.0+git51.149be6c`, ui
+manual. **Preview 12** (core and player `1.7.0+git53.3e18b96`, ui
 `git47.8073640`, system `git38.d9a696d`, Debian's `snapserver` and
 `snapclient` 0.31.0-1 installed from the downloaded files) on sofapi, the
 bar, guestpi and bedroompi, the branch's head. George's findings so far,
@@ -63,10 +63,16 @@ bar silent after a cast to sofapi (preview 10: the half-minute round
 rewrote its chain when sofapi missed a round, and the client stopped for
 the rewrite was never started again; LESSONS 83); and a cast just after an
 undo restarted mid-start (preview 11: alone only once nothing holds the
-device, B3 amended **for George to confirm**). Not the player's: an
-uploaded test renderer's phone app over Bluetooth sends silence - the
-meter before sofapi's DAC read 0 with it and 12-37 with Spotify over the
-same Bluetooth link (2026-10-28). The plugin guide and
+device, B3 amended **for George to confirm**); and every Bluetooth stream
+silent on sofapi after it left a group (preview 12: an idle renderer keeps
+the ALSA configuration it read first, so bluealsa-aplay went on writing
+into the group's loopback; the idle renderers now restart on a rewrite,
+proven on guestpi and bedroompi; B2 amended **for George to confirm**;
+LESSONS 84 - the silence was first put down to the phone app, wrongly).
+**Open:** after that fix, one phone app over Bluetooth still delivers
+digital silence to sofapi's chain (raw meter 0, DAC running, the same SBC
+setup as a stream that played) - which app was which to be confirmed with
+George, and a recording straight from BlueALSA proposed. The plugin guide and
 contract carry what an uploaded test renderer taught (leave a cast session
 before letting go; read the device name as systemd's form). The leader fix
 is checked by a test only: George's cast is the device check. The integration's join and unjoin: its `multiroom` branch
@@ -88,7 +94,7 @@ The wiki Roadmap shows Phases 20 and 21 done and the Harmony Hub ideas
 to `~/.gnupg-gexis-release`, which no longer exists.
 
 **The players**: sofapi, the bar (ShelvesPi), guestpi and bedroompi on
-Phase 22's preview 11 (2026-10-28, above).
+Phase 22's preview 12 (2026-10-28, above).
 
 **The test venv imports the core from `~/projects/gexis-player-next`** (an
 editable install): in another worktree run the suite with `PYTHONPATH=src`

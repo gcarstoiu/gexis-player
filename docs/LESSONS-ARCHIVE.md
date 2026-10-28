@@ -1615,3 +1615,27 @@ passed until the fake was made to miss an answer as the real list does.
 late - and follow every path that stops something to where it starts again,
 not only the paths the design names.
 
+**84. A belief a lesson had already disproved** (2026-10-28, Phase 22). George
+heard nothing over Bluetooth on sofapi - from one phone app, then from every
+app - after a day of grouping and ungrouping it. The chain had been rewritten
+correctly each time; ADR-0166's B2 restarted only the renderers that played or
+held the device, the code saying an idle renderer "reads the new chain at its
+next open, as ALSA reads the file then". It does not: a process keeps the
+configuration libasound loaded first - case 81 had found exactly that with
+Squeezelite on 2026-10-22, and `volume.py` frees the core's own copy for the
+same reason (guestpi, 2026-10-07). bluealsa-aplay, started while sofapi was
+grouped, opened `output` for every stream after the group ended, logged
+"Opening ALSA playback PCM: name=output", and wrote into the group's loopback,
+which nobody read; the DAC stayed closed. Before that was seen, the silence
+was explained twice from the far end - a meter read after the volume's cut
+compared at two different levels, then "the app sends silence" - and only a
+per-second record of each stage (the raw meter, the Bluetooth PCM, the DAC's
+state) and finally the device bluealsa-aplay held open (`pcmC8D0p`, the
+Multiroom card) showed where the audio went. Restarted, it held the DAC and
+played. Spotify Connect had read the new chain at its next open, which is what
+made the belief look true.
+**Rule:** before a design leans on how another program behaves, search the
+lessons and the code for it; one program behaving as predicted does not make
+the rule. And before blaming the other end, look at where our own process
+writes - the device it holds open, not the name it logs.
+
