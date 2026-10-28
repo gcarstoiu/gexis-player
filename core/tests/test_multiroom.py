@@ -11,6 +11,7 @@ from gexis_core import multiroom as mr
 from gexis_core import outputs
 from gexis_core.adapters.base import Capabilities, VolumeMechanism
 from gexis_core.group import Member
+from gexis_core.model import TrackMetadata
 from gexis_core.state import StateStore
 
 CAPS = Capabilities(audio_connection="output", acquisition_events=frozenset(), supports_artwork=True,
@@ -143,9 +144,23 @@ class Player:
                 **self.room.status()}
 
     def play(self, renderer):
+        # A source that starts plays: its track is playing.
         self.active = renderer
         self.store.set_active(renderer)
+        self.store.set_metadata(renderer, TrackMetadata(transport="playing", source_type=renderer))
         self.room.on_local_active(renderer)
+
+    def come_up(self, renderer):
+        """A source that becomes active and plays nothing - Lyrion at a core's
+        start (the bar, 2026-10-28)."""
+        self.active = renderer
+        self.store.set_active(renderer)
+        self.store.set_metadata(renderer, TrackMetadata(transport="stopped", source_type=renderer))
+        self.room.on_local_active(renderer)
+
+    def starts_playing(self, renderer):
+        self.store.set_metadata(renderer, TrackMetadata(transport="playing", source_type=renderer))
+        self.room._lead_if_playing()
 
 
 class Net:
@@ -221,6 +236,25 @@ async def test_a_source_started_on_a_member_makes_it_the_leader_and_stops_the_ol
     assert living.room.record.leader == kitchen.room.record.leader == "kitchen"
     assert living.stopped == ["spotify"], "C1: only the leader's source plays"
     assert kitchen.snap.host == "127.0.0.1" and living.snap.host == "kitchen.local"
+
+
+async def test_a_source_that_only_comes_up_on_a_member_does_not_take_the_lead(tmp_path):
+    """The bar, 2026-10-28: three seconds after its core restarted, Lyrion came
+    up as its active source and it took the group from sofapi, though nothing
+    played. George: only music that plays here leads."""
+    net = Net(tmp_path)
+    living, kitchen = net.add("living", "Living Room"), net.add("kitchen", "Kitchen")
+    living.play("spotify")
+    await net.settle()
+    await living.room.join("kitchen")
+    await net.settle()
+    kitchen.come_up("lms")
+    await net.settle()
+    assert kitchen.room.record.leader == "living" and living.room.record.leader == "living"
+    # Then it really plays: now it leads, as decision 4 has it.
+    kitchen.starts_playing("lms")
+    await net.settle()
+    assert kitchen.room.record.leader == "kitchen" and living.room.record.leader == "kitchen"
 
 
 async def test_undo_keeps_the_music_on_the_leader_until_nothing_holds_the_device(tmp_path):

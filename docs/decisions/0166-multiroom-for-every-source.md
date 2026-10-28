@@ -283,6 +283,17 @@ had left every client's latency to the measurement, so each was 0.
   DAC's filters - is not read from anywhere: it stays with the measurement
   above, by ear or with a microphone, per output.
 
+## Amended 2026-10-28: a source leads once it plays
+
+Decision 4's *a source started on any player* now means one that plays.
+After a member's core restarted, Lyrion came up as its active source within
+three seconds and the member took the group from its leader, though nothing
+played (the bar, 2026-10-28). A source that becomes active on a member waits
+until its track plays, then leads (C1's stop of the old leader follows as
+before); one that goes first never leads. Lyrion playing in the group's own
+sync still never leads (its leader plays it too), checked again when it
+plays. George agreed, the same day.
+
 ## Not in this record
 
 - AirPlay 2 (Phase 23) and its own multiroom from Apple's devices.

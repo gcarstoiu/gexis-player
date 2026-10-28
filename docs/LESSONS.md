@@ -447,6 +447,12 @@ played about 46 ms late, and George heard it. Where a design keeps things in
 step, test it with the members different in what lies after the point it
 keeps in step.
 
+**86. A source that started always played** (2026-10-28, Phase 22). The
+tests' players "played" by becoming active, nothing more, and the code took
+the lead on the same edge; after a member's core restarted, Lyrion came up
+active with nothing playing and took the group from its leader. Let a fake's
+states be as many as the real one's: active is not playing.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target, the check quietly

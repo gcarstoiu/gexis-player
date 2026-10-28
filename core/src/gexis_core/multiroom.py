@@ -147,6 +147,11 @@ class Multiroom:
         self.chain: str | None = read_chain(chain_path) if self.group.record else None
         #: A source started here, its claim to lead on the way (D4).
         self._claiming = False
+        #: **A source here that would lead, waiting to play** (the bar,
+        #: 2026-10-28: three seconds after its core restarted, Lyrion came up
+        #: as its active source and it took the group from sofapi, though
+        #: nothing played). It leads once it plays, and not if it goes.
+        self._wants_lead: str | None = None
         #: The group ended while this player led and played: it plays on
         #: through its own server until the stream ends (*the music stays on
         #: the leader*), then plays alone.
@@ -195,7 +200,7 @@ class Multiroom:
         """At the core's start: a group kept from before is put back in force
         (decision 3). The chain was written with it already (`chain`)."""
         self._players.on_refresh = self._seen
-        self._store.subscribe(lambda _state: self._changed())
+        self._store.subscribe(lambda _state: (self._lead_if_playing(), self._changed()))
         record = self.group.record
         if record is None:
             return
@@ -327,6 +332,7 @@ class Multiroom:
             return
         me = self.group.me
         if renderer_id is None:
+            self._wants_lead = None
             asyncio.ensure_future(self._listen())
             self._changed()
             return
@@ -337,17 +343,40 @@ class Multiroom:
             if record.leader == me:
                 asyncio.ensure_future(self._lms_follow())
         if record.leader == me:
+            self._wants_lead = None
             if not lyrion_here:
                 # It hears its own source through the group's server: Lyrion's
                 # sync had the client let go of the card (sofapi, 2026-10-28:
                 # Spotify after Lyrion played on the bar alone).
                 asyncio.ensure_future(self._listen())
             return
+        # **Only music that plays here leads** (George, 2026-10-28): a source
+        # that only came up - Lyrion at a core's start - waits for it.
+        self._wants_lead = renderer_id
+        self._lead_if_playing()
+
+    def _lead_if_playing(self) -> None:
+        """The waiting source leads now, if it plays and is still this
+        player's active one; Lyrion playing in the group's own sync never
+        does (its leader plays it too)."""
+        renderer_id = self._wants_lead
+        record = self.group.record
+        if renderer_id is None or record is None or self._claiming:
+            return
+        if self._local_active() != renderer_id or record.leader == self.group.me:
+            self._wants_lead = None
+            return
+        state = self._store.state
+        if state.active != renderer_id or (state.metadata.transport if state.metadata else None) != "playing":
+            return
+        lyrion_here = renderer_id == "lms" and self.chain == outputs.BUT_LYRION
         leader_state = self.peers.states.get(record.leader) or {}
         leader_up = self.peers.reachable.get(record.leader, False)
-        if lyrion_here and leader_up and leader_state.get("active") == "lms":
+        if lyrion_here and ((leader_up and leader_state.get("active") == "lms") or self._in_lyrions_sync(record)):
             # The group plays Lyrion already: this is its sync.
+            self._wants_lead = None
             return
+        self._wants_lead = None
         self._claiming = True
 
         async def claim() -> None:
@@ -356,7 +385,7 @@ class Multiroom:
             finally:
                 self._claiming = False
                 self._changed()
-        logger.info("multiroom: %s started here; this player leads the group", renderer_id)
+        logger.info("multiroom: %s plays here; this player leads the group", renderer_id)
         asyncio.ensure_future(claim())
 
     def on_lyrion_sync(self, master: str | None, others: tuple[str, ...]) -> None:
