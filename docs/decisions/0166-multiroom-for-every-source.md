@@ -290,7 +290,7 @@ After a member's core restarted, Lyrion came up as its active source within
 three seconds and the member took the group from its leader, though nothing
 played (the bar, 2026-10-28). A source that becomes active on a member waits
 until its track plays, then leads (C1's stop of the old leader follows as
-before); one that goes first never leads. Lyrion playing in the group's own
+before); one that stops before it plays never leads. Lyrion playing in the group's own
 sync still never leads (its leader plays it too), checked again when it
 plays. George agreed, the same day.
 
