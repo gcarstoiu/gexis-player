@@ -864,3 +864,47 @@ Fixed volume).
   drawing puts round it (`rgba(255,255,255,0.05)`, a `0.1` line); its touch
   is still 48 px tall (George, 2026-10-27).
 
+
+## Multiroom (Phase 22, 2026-10-28)
+
+Built from `source/22` (picks 1a, 2a, 3a; ADR-0166). Production wins under
+the additions, as the design asks; what the build decided where the drawing
+is silent or production differs, for George to confirm:
+
+- **[S]** The panel's *Other players* row and the bar's *Group* button are
+  offered only when another Gexis player is found on the network (or this
+  one is grouped); the drawing always shows them.
+- **[S]** A player older than multiroom has no Join and says why: its state,
+  then *Update to join*.
+- **[S]** The leader gone: *Start music on Kitchen or Study and it leads* -
+  *or*, where the drawing joins the names with *and*.
+- **[S]** Join says *Joining · catching up* on the row at once, until the
+  group has that player. Remove is not on this player's row (Leave group is)
+  nor on the leader's (Undo group is). A Fixed member's mute shows only
+  where its output has a control to silence.
+- **[S]** *Add players* on the panel and the bar lists the group's own
+  members first, with their state and no button, as the drawing's data does.
+- **[S]** On a panel shorter than 800 (720 at 13.3"), the grouped drawer
+  scrolls as a whole, the equaliser below the fold; the members' list keeps
+  four rows and scrolls past them, its fade only while it scrolls.
+- **[S]** On the bar, grouped, the progress row moves up about 32 px so the
+  mark fits midway between it and the transport: production's times sit on
+  the progress row, 22 px above play. The transport does not move; not
+  grouped, nothing changes.
+- **[S]** The bar has no leader-gone note: the drawing draws it only in a
+  layout not chosen.
+- **[S]** A member whose leader is off shows Home, as the design says; Home
+  has no volume button with nothing playing, so there the group is reached
+  from the phone, or the drawer and the tray open by themselves when a level
+  changes elsewhere. The drawing shows the drawer over Home without saying
+  how it opened.
+- **[S]** The panel's and the bar's own volume rows keep production's mute
+  look (amber, *Mute*); the new group rows follow the drawing (*Off*, the
+  fill at 0.35).
+- **[S]** Moving the group volume moves every member's own level, so a
+  member's panel may open its drawer by itself, as for any level changed
+  elsewhere (*Show volume when changed elsewhere*).
+- **[S]** The phone's group volume sheet closes with a swipe down from its
+  head, the *All* row or the note; its members' rows scroll on their own.
+- **[S]** A refused join or a member that does not answer is said in each
+  surface's own note (the remote's, the drawer's, the tray's toast).
