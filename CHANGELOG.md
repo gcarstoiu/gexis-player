@@ -6,6 +6,23 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.9.0 — 28 October 2026
+
+### New
+
+- AirPlay 2: an iPhone, iPad or Mac plays to the player, listed under its own name. Marked Limited testing until it has been tried with an Apple device.
+- Make it yours offers AirPlay, on in every preset.
+
+### Fixed
+
+- A grouped player with the equaliser on plays in time with the rest of its group.
+- The Credits page names OpenCV, NumPy and the two picture models the player uses.
+
+### Good to know
+
+- On a player updated from an earlier release, AirPlay is off until switched on in Settings → Plugins.
+- While AirPlay plays, play, pause and skip are on the Apple device; AirPlay sends 44.1 or 48 kHz.
+
 ## 1.8.0 — 28 October 2026
 
 ### New

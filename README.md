@@ -85,8 +85,9 @@ look a little better, it has done its job, and I am glad to share it.
 
 ### 🎧 Plays from the apps you already use
 
-It appears as a speaker in the Spotify app, as a player in Lyrion and
-Plexamp, and as a Bluetooth speaker on your phone. Start playing from any of
+It appears as a speaker in the Spotify app, in the AirPlay list of an
+iPhone, iPad or Mac, as a player in Lyrion and Plexamp, and as a Bluetooth
+speaker on your phone. Start playing from any of
 them and Gexis hands over: the source that was playing is stopped politely,
 a short transition shows who is taking over, and the new one plays. Nothing
 to disconnect first, no juggling apps when two of them want the DAC: the
@@ -96,7 +97,7 @@ newest deliberate choice wins, and the others are told.
 
 Join Gexis players into a group, from the phone, the screen or a bar's tray,
 and they play the same music together, whatever the source: Lyrion, Spotify,
-Bluetooth, Plexamp or a plugin. Music started on any of them plays on all,
+AirPlay, Bluetooth, Plexamp or a plugin. Music started on any of them plays on all,
 each keeps its own volume and equaliser, and one slider moves them all. A
 Lyrion group stays Lyrion's own sync, gapless and bit-perfect, and syncing
 players in a Lyrion app groups them too.
@@ -168,8 +169,8 @@ library; it uses one of the most mature there is:
 - **Wherever it suits you.** Use the Lyrion server you already run, or switch
   on the Lyrion Server plugin and the player keeps your library itself; its
   scans run at the lowest priority, and a full scan of a large library played
-  through 40 minutes without a gap. Or leave Lyrion out: Spotify, Plexamp and
-  Bluetooth work without it.
+  through 40 minutes without a gap. Or leave Lyrion out: Spotify, AirPlay,
+  Plexamp and Bluetooth work without it.
 
 ## 🔌 Plugins: make it yours
 
@@ -191,7 +192,7 @@ or removed from Settings, with its progress shown in the switch itself.
 
 | | |
 |---|---|
-| 🔊 **Sources** | Spotify Connect · Lyrion (squeezelite) · Bluetooth (A2DP) · Plexamp · your own plugins |
+| 🔊 **Sources** | Spotify Connect · AirPlay 2 (Shairport Sync) · Lyrion (squeezelite) · Bluetooth (A2DP) · Plexamp · your own plugins |
 | 🎚️ **Sound** | Bit-perfect, tested up to 24/192 on DAC boards and to 768 kHz on a USB DAC · native DSD on a DAC that takes it · hardware, software or fixed volume · a maximum level for every source · a starting volume Spotify never exceeds · a ten-band equaliser with presets and your own settings, for each output, off (and bit-perfect) until you switch it on |
 | 🔀 **Handover** | One source at a time, never mixed · takeover in any direction · the previous source released before the next one plays |
 | 📡 **Multiroom** | Players joined into a group play the same music in sync, for every source · music started on any of them plays on all · each keeps its own level and equaliser, and an *All* slider moves them together · Lyrion's own sync for Lyrion, and Lyrion's synced players grouped too · groups last until undone, restarts included |
@@ -264,8 +265,8 @@ Rough, and subject to change:
   Assistant as a media player, with a D-pad for its screen and a dashboard
   card. A ten-band equaliser with presets and your own settings. The phone as
   a remote, with a touchpad or a D-pad for the screen. Multiroom for every
-  source.
-- 🔜 **Next:** AirPlay 2, then room correction with a USB microphone.
+  source. AirPlay 2 from an iPhone, iPad or Mac.
+- 🔜 **Next:** room correction with a USB microphone.
 - 🎨 **Later:** room correction for the full range; a plugin catalogue, internet radio without a Lyrion server, themes. With Plex switched on, your own Plex server fills in
   the artist and album information other sources leave out.
 - 💭 **Maybe:** the DAC's own filter and polarity options.

@@ -49,8 +49,10 @@ KEYS = (
     "weather_location",
     "standby_schedule", "standby_times",
 )
-#: The plugins part 2 can switch on, by their switch: each downloads.
-PLUGIN_ROWS = ("lyrion-server.enabled", "plexamp.enabled")
+#: The plugins part 2 can switch, by their switch. The Lyrion server and
+#: Plexamp download; AirPlay is in the image (ADR-0167) and is written
+#: either way, as Spotify is.
+PLUGIN_ROWS = ("lyrion-server.enabled", "plexamp.enabled", "airplay.enabled")
 #: ADR-0115 decision 20: where the Lyrion server on this player reads music,
 #: written before its switch so it starts with them. The USB folders
 #: themselves are added on *Where is your music?* as they are chosen.

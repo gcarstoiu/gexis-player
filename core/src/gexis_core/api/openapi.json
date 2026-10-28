@@ -3520,6 +3520,77 @@
         ]
       }
     },
+    "/plugins/{id}/artwork/{key}": {
+      "get": {
+        "operationId": "plugin_artwork",
+        "tags": [
+          "Plugins"
+        ],
+        "summary": "Get a cover a plugin handed over",
+        "description": "A cover a renderer plugin sent as bytes in an `artwork` event (ADR-0167), by the first 16 hexadecimal digits of its sha256; the plugin names this path as its metadata's `artwork`. Kept in memory, the last two per plugin, for as long as the plugin is connected. Cached for good: the key names the bytes.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The plugin's id.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "description": "The first 16 hexadecimal digits of the picture's sha256.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The cover.",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "contentMediaType": "image/jpeg"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "contentMediaType": "image/png"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "`public, max-age=31536000, immutable`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such cover kept for that plugin (`no such cover`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-gexis-stability": "internal",
+        "x-gexis-adr": [
+          "ADR-0167"
+        ]
+      }
+    },
     "/plugins/{id}/uninstall": {
       "post": {
         "operationId": "plugin_uninstall",

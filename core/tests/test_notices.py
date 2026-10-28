@@ -34,8 +34,13 @@ def test_every_fetch_in_the_build_is_accounted_for(data):
     urls = set()
     # The stages' own downloads, and what a user's switch fetches on the
     # device (ADR-0100) - both are ours to account for.
-    for script in [*STAGES.glob("*/0*-run*.sh"), *STAGES.glob("*/files/components/*.env")]:
-        urls |= set(re.findall(r"https://[^\"' \n]+", script.read_text()))
+    # **And the packages' builds** (2026-10-28): since ADR-0107 most
+    # downloads moved there, and this looked only at the stages - OpenCV's
+    # models had gone uncredited since ADR-0120.
+    packaging = ROOT / "packaging"
+    for script in [*STAGES.glob("*/0*-run*.sh"), *STAGES.glob("*/files/components/*.env"),
+                   *packaging.glob("*/pins.sh"), *packaging.glob("*/build.sh"), *packaging.glob("*/models.sh")]:
+        urls |= set(re.findall(r"https://[^\"' \n)]+", script.read_text()))
     assert urls, "the stages fetch something"
     missing = sorted(u for u in urls if not any(
         s in u for c in data["components"] for s in c.get("sources", [])))

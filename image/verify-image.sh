@@ -304,6 +304,34 @@ done
 dfs "stat /opt/gexis-core/venv/lib/python3.13/site-packages/cv2/__init__.py" | grep -q 'Inode:' \
 	&& ok "OpenCV in the core's environment" || bad "OpenCV missing from the core's environment"
 
+echo "== AirPlay (ADR-0167), Shairport Sync and NQPTP built for AirPlay 2"
+for f in /usr/bin/shairport-sync /usr/bin/nqptp \
+         /usr/lib/systemd/system/gexis-shairport-sync.service \
+         /usr/lib/systemd/system/gexis-nqptp.service \
+         /usr/lib/systemd/system/gexis-airplay.service \
+         /usr/share/gexis/airplay/shairport-sync.conf \
+         /usr/lib/gexis/airplay-hook \
+         /usr/share/dbus-1/system.d/gexis-airplay.conf \
+         /usr/share/gexis/plugins/airplay/plugin.json \
+         /usr/share/gexis/plugins/airplay/mark.png \
+         /opt/gexis-airplay/src/gexis_airplay/main.py \
+         /usr/share/doc/gexis-player/licenses/shairport-sync/COPYING \
+         /usr/share/doc/gexis-player/licenses/nqptp/LICENSE; do
+	dfs "stat $f" | grep -q 'Inode:' && ok "$f" || bad "$f missing"
+done
+# **On in a new image** (decision 1): the switch is the receiver's unit.
+if dfs "stat /etc/systemd/system/multi-user.target.wants/gexis-shairport-sync.service" | grep -q 'Inode:'; then
+	ok "gexis-shairport-sync enabled"
+else
+	bad "gexis-shairport-sync is not enabled - a new image has AirPlay on"
+fi
+# Debian's classic-only receiver must not be the one installed.
+if dfs "stat /usr/lib/systemd/system/shairport-sync.service" | grep -q 'Inode:'; then
+	bad "Debian's shairport-sync is installed beside ours"
+else
+	ok "only our Shairport Sync"
+fi
+
 echo "== Plexamp (ADR-0090), a renderer from another repository"
 for f in /usr/lib/systemd/system/plexamp.service \
          /usr/lib/systemd/system/gexis-plexamp.service \

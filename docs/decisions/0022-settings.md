@@ -232,6 +232,7 @@ rather than something the user added.
 | Beszel — `beszel.key` | [N] | The hub's own public key, same dialog. `secret`, exported as `KEY` |
 | Plexamp — `plexamp.enabled` | [N] | The renderer ([ADR-0090](0090-plexamp-ships-the-way-beszel-does.md)). Off on a fresh image; the switch starts the player and our plugin together |
 | Plexamp — `plexamp.claim_token` | [N] | Confirmed by George, 2026-09-25. A Plex claim token, pasted once: the plugin claims the player with it and **the token is consumed**, so the row's value is dead afterwards and its note says so. `secret`. **The player's name is deliberately not a row** — [ADR-0048](0048-how-the-device-name-reaches-four-services.md) already writes one device name to four services and this makes a fifth; a second place to type it is a second place for it to disagree |
+| AirPlay — `airplay.enabled` | [N] | **Appended 2026-10-28 on George's confirmation** ([ADR-0167](0167-airplay-2-as-a-plugin.md)). The plugin's switch, on the Plugins page, tagged *Limited testing*. **On for a player not yet set up** (a new image; first use's presets keep it on), **off for one that updates** (George, 2026-10-28). Nothing else: the name is the device's, no password |
 
 **The three Beszel rows are not in this category.** They live in **System**,
 under a sub-heading carrying the plugin's name, and **they disappear with the

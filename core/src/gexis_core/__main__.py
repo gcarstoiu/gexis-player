@@ -101,10 +101,11 @@ from gexis_core import snapcast
 from gexis_core import eq_engine
 from gexis_core.eq_engine import EqEngine
 from gexis_core.players import own_id
-from gexis_core.equaliser import Equaliser
+from gexis_core.equaliser import Equaliser, latency_ms as eq_latency_ms
 from gexis_core.setup_network import SetupNetwork
 from gexis_core.setup_flow import SetupFlow
 from gexis_core.adapters.plugin import PluginAdapter
+from gexis_core.plugin_artwork import PluginArtwork, Refused as ArtworkRefused
 from gexis_core.plugin_server import PluginServer
 from gexis_core.systemd import is_enabled as _unit_is_enabled
 from gexis_core.systemd import disagreeing as disagreeing_units
@@ -4443,8 +4444,12 @@ async def main() -> None:
     )
     asyncio.ensure_future(equaliser.sync())
 
+    # ADR-0167 T9: covers a plugin hands over as bytes, served by the
+    # state server at /plugins/<id>/artwork/<key>.
+    plugin_art = PluginArtwork()
     state_server = StateServer(
         state_store,
+        plugin_artwork=plugin_art,
         lyrion_known=lyrion_known,
         cable=cable,
         wifi_address=wifi_address,
@@ -4669,6 +4674,7 @@ async def main() -> None:
             logger.warning("plugins: cannot withdraw %s's announcements: %s", session.id, exc)
         if settings.forget_reports(f"{session.id}."):
             state_store.bump_settings_revision()
+        plugin_art.forget(session.id)
         adapter = plugin_adapters.pop(session.id, None)
         if adapter is None:
             return
@@ -4699,6 +4705,16 @@ async def main() -> None:
                 return
             logger.info("plugins: announcing for %s: %s", session.id,
                         ", ".join(f"{s['name']} {s['type']} {s['port']}" for s in services) or "nothing")
+            return
+        if kind == "artwork":
+            # ADR-0167 T9: a cover as bytes, kept for the metadata that names
+            # it; any kind of plugin may send one, a renderer's is the use.
+            try:
+                key = plugin_art.put(session.id, message)
+            except ArtworkRefused as exc:
+                logger.warning("plugins: %s sent a cover that was refused: %s", session.id, exc)
+                return
+            logger.debug("plugins: %s handed over a cover, %s", session.id, key)
             return
         if kind == "row":
             # ADR-0119: a plugin says what one of its own rows is - a
@@ -4874,6 +4890,20 @@ async def main() -> None:
         plug = outputs.needs_plug(output.card) is True
         return output.card, bool(eq_on or plug or outputs.widens(output.card)), bool(eq_on or plug)
 
+    def _group_after_client(rate: int | None) -> float:
+        """ADR-0166 D7 as amended: what comes after this player's client and
+        Snapcast cannot see - CamillaDSP's hold on every sample while the
+        equaliser is on, at the rate it plays to the card (the card's
+        highest where it lacks the stream's). None but that: the card's own
+        delay is for the measurement."""
+        output = _with_software(outputs.in_force(settings.value("output_device"))[0])
+        if output is None or not outputs.eq_in_path(output.card):
+            return 0.0
+        playing = rate or 44100
+        if outputs.takes_rate(output.card, playing) is False:
+            playing = outputs.top_rate(output.card) or playing
+        return eq_latency_ms(playing)
+
     #: The renderers were stopped for the loopback's reload: the next chain
     #: rewrite starts them again, whether or not anything played.
     group_renderers_stopped = {"value": False}
@@ -4897,7 +4927,7 @@ async def main() -> None:
         set_own_volume=set_volume, set_own_mute=set_mute,
         screen=lambda: settings.value("headless") is not True,
         lms=lms, lms_on=lambda: renderer_enabled("lms"),
-        before_reload=_before_loopback_reload)
+        before_reload=_before_loopback_reload, after_client=_group_after_client)
     outputs.group_in_path = lambda: multiroom.chain
     state_server.multiroom = multiroom
     lms.on_sync_change(multiroom.on_lyrion_sync)
