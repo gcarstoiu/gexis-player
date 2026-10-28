@@ -813,6 +813,11 @@ decisions). Not yet seen by George on a device.
 - **[U]** The volume drawer's on/off switch stands alone, without the box
   the drawing puts round it, as the phone's EQ sheet (George, 2026-10-27);
   the bar's tray and the editor keep the box, which holds *On* / *Off*.
+- **[U]** The switch shows its new position from the press and goes back
+  only if the core refuses - putting the equaliser in or out of the chain
+  takes seconds - and it slides without the drawing's press
+  (`style-active="transform:scale(0.95)"` on the power box), which made it
+  read as a button (George, 2026-10-28).
 
 ## The phone remote (Phase 21, 2026-10-27)
 

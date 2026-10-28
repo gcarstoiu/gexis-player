@@ -44,8 +44,8 @@ George the same day. Built: core (`group.py`, `multiroom.py`,
 `snapcast.py`, the grouped chain in `outputs.py`, Lyrion's sync in the LMS
 adapter, the `/group` routes), the UI on the phone, the panel and the bars,
 the manual's section 6, the FAQ, the technical guide, README, the plugin
-manual. **Preview 12** (core and player `1.7.0+git53.3e18b96`, ui
-`git47.8073640`, system `git38.d9a696d`, Debian's `snapserver` and
+manual. **Preview 13** (core `1.7.0+git57.0f7eda3`, ui and player
+`git58.1ae1e2c`, system `git38.d9a696d`, Debian's `snapserver` and
 `snapclient` 0.31.0-1 installed from the downloaded files) on sofapi, the
 bar, guestpi and bedroompi, the branch's head. George's findings so far,
 each fixed: a group of sofapi and the bar did not play (preview 5,
@@ -68,7 +68,16 @@ silent on sofapi after it left a group (preview 12: an idle renderer keeps
 the ALSA configuration it read first, so bluealsa-aplay went on writing
 into the group's loopback; the idle renderers now restart on a rewrite,
 proven on guestpi and bedroompi; B2 amended, confirmed by George;
-LESSONS 84 - the silence was first put down to the phone app, wrongly).
+LESSONS 84 - the silence was first put down to the phone app, wrongly);
+and, after George's test of the rest (Fixed, the equaliser and four
+players in a group, the leader rebooted - all fine): Lyrion playing in the
+leader's sync no longer stopped on joining (a Lyrion-app sync paused
+itself), the level after a mute the renderer's own again, the equaliser's
+switch moving at once (preview 13). **1.8.0 for Testing being cut**
+(George, 2026-10-28): `ph-multiroom` merged into `next` (6ec5070e; core
+2800 passed, the UI builds); the notes drafted for his approval. Still open: the 192 kHz measurement session,
+the Home Assistant integration's release, back and forth between Lyrion-app
+grouping and the player's.
 After that fix, one phone app over Bluetooth still delivered silence -
 recorded straight from BlueALSA, every sample zero, where another app read
 -1.2 dBFS peak. It was silent on the phone's own speaker too: a session left
@@ -95,7 +104,7 @@ The wiki Roadmap shows Phases 20 and 21 done and the Harmony Hub ideas
 to `~/.gnupg-gexis-release`, which no longer exists.
 
 **The players**: sofapi, the bar (ShelvesPi), guestpi and bedroompi on
-Phase 22's preview 12 (2026-10-28, above).
+Phase 22's preview 13 (2026-10-28, above).
 
 **The test venv imports the core from `~/projects/gexis-player-next`** (an
 editable install): in another worktree run the suite with `PYTHONPATH=src`
