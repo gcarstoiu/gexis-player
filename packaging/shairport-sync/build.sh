@@ -55,8 +55,10 @@ strip --remove-section=.comment --remove-section=.note --strip-unneeded shairpor
 
 # What it was built with, as it reports itself: AirPlay 2 on NQPTP's
 # interface 11, through ALSA and Avahi, with the metadata pipe and D-Bus.
+# (FFmpeg is not named under AirPlay 2, which always uses it: common.c; its
+# decoder is checked among the libraries below.)
 said=$(./shairport-sync -V 2>&1)
-for part in "$TAG" -AirPlay2 -smi11 -FFmpeg -OpenSSL -Avahi -ALSA -soxr -metadata -dbus; do
+for part in "$TAG" -AirPlay2 -smi11 -OpenSSL -Avahi -ALSA -soxr -metadata -dbus; do
 	case "$said" in *"$part"*) ;; *) echo "ERROR: shairport-sync -V says '$said', without $part" >&2; exit 1 ;; esac
 done
 echo "built $said"
@@ -84,6 +86,7 @@ mkdir -p "$STAGE/DEBIAN"
 printf 'Source: %s\n\nPackage: %s\nArchitecture: arm64\n' "$PKG" "$PKG" > /tmp/pkg/debian/control
 DEPENDS=$(cd /tmp/pkg && dpkg-shlibdeps -O "debian/$PKG/usr/bin/shairport-sync" | sed -n 's/^shlibs:Depends=//p')
 [ -n "$DEPENDS" ] || { echo "ERROR: dpkg-shlibdeps found no dependencies" >&2; exit 1; }
+case "$DEPENDS" in *libavcodec*) ;; *) echo "ERROR: not linked to FFmpeg's decoder: $DEPENDS" >&2; exit 1 ;; esac
 
 cat > "$STAGE/DEBIAN/control" <<CTL
 Package: $PKG
