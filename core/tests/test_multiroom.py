@@ -197,7 +197,7 @@ async def test_a_source_started_on_a_member_makes_it_the_leader_and_stops_the_ol
     assert kitchen.snap.host == "127.0.0.1" and living.snap.host == "kitchen.local"
 
 
-async def test_undo_keeps_the_music_on_the_leader_until_its_stream_ends(tmp_path):
+async def test_undo_keeps_the_music_on_the_leader_until_nothing_holds_the_device(tmp_path):
     net = Net(tmp_path)
     living, kitchen = net.add("living", "Living Room"), net.add("kitchen", "Kitchen")
     await living.room.join("kitchen")
@@ -207,10 +207,35 @@ async def test_undo_keeps_the_music_on_the_leader_until_its_stream_ends(tmp_path
     await kitchen.room.undo()
     await net.settle()
     assert kitchen.room.record is None and kitchen.room.chain is None and not kitchen.snap.serving
-    # The leader plays on through its own server, then alone.
+    # The leader plays on through its own server, paused too, then alone.
     assert living.room.record is None and living.snap.serving and living.room.chain == outputs.ALL
     living.snap.rate = None
     living.room._changed()
+    await net.settle()
+    assert living.snap.serving, "paused, Spotify still holds the device: no restart"
+    living.play(None)
+    await net.settle()
+    assert not living.snap.serving and living.room.chain is None
+
+
+async def test_a_source_taking_over_after_an_undo_is_not_restarted(tmp_path):
+    """sofapi, 2026-10-28: the group undone while Bluetooth played; a cast
+    took over, the stream ended between the two, and going alone restarted
+    the renderers - the cast's among them, mid-start."""
+    net = Net(tmp_path)
+    living, kitchen = net.add("living", "Living Room"), net.add("kitchen", "Kitchen")
+    await living.room.join("kitchen")
+    living.play("spotify")
+    living.snap.rate = 44100
+    await net.settle()
+    await kitchen.room.undo()
+    await net.settle()
+    rechains = living.rechains
+    living.snap.rate = None
+    living.play("lms")
+    await net.settle()
+    assert living.snap.serving and living.rechains == rechains, "the newcomer plays on, untouched"
+    living.play(None)
     await net.settle()
     assert not living.snap.serving and living.room.chain is None
 

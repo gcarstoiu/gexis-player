@@ -317,6 +317,9 @@ class Multiroom:
         """This player's own source changed (the supervisor's `active`)."""
         record = self.group.record
         if record is None:
+            if self._alone_when_idle:
+                # Undone, playing on through its own server: alone once idle.
+                self._changed()
             return
         me = self.group.me
         if renderer_id is None:
@@ -570,7 +573,11 @@ class Multiroom:
     async def _refresh(self) -> None:
         await asyncio.sleep(0.05)
         record = self.group.record
-        if self._alone_when_idle and self.snap.rate is None:
+        # **Alone once nothing holds the device**, not as soon as its stream
+        # pauses: going alone rewrites the chain and restarts whoever holds
+        # it (sofapi, 2026-10-28: a cast taking over after an undo was
+        # restarted mid-start, and its session lost).
+        if self._alone_when_idle and self.snap.rate is None and self._local_active() is None:
             await self._alone()
         self._publish(record)
         self._mirror(record)
