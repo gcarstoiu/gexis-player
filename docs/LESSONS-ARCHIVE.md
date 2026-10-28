@@ -1597,3 +1597,21 @@ renderer's format order against it, and try the tap in each format a renderer
 can pick - "it takes any format" is a change of what is negotiated, not only
 a convenience.
 
+**83. A fake that always answered** (2026-10-28, Phase 22). George, testing a
+group of sofapi and the bar with a source cast to sofapi and then Bluetooth
+taking over, heard no sound from the group. The bar's core log: at 12:42:54 "the
+group's chain is now all", the client stopped; at 12:43:26 "now but-lyrion",
+and the client never started again. The half-minute round (`_seen`) chooses
+`but-lyrion` when every member reports the same Lyrion server; sofapi, busy
+starting a 192 kHz stream, had missed that round, so it read as having no
+Lyrion. The round then rewrote the chain - `_set_chain` stops the client
+first, as the card is asked of it - and unlike every other path that rewrites
+the chain, it did not listen again. The tests had every path but this one,
+and their fake list of players (`FakePlayers.status_of`) answered for every
+player in every round, where the real one answers only for those heard in the
+last round; written against the bar's case, the test of a silent member
+passed until the fake was made to miss an answer as the real list does.
+**Rule:** let a fake fail the way the real thing does - miss an answer, come
+late - and follow every path that stops something to where it starts again,
+not only the paths the design names.
+
