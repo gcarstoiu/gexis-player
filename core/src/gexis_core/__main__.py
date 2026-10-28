@@ -4782,7 +4782,16 @@ async def main() -> None:
         async with volume_change:
             units = [a.unit_name for a in adapters.values() if getattr(a, "unit_name", None)]
             units += _plugin_renderer_units()
-            if supervisor.active is not None or any(alsa.device_held_by(u) for u in units):
+            held = [u for u in units if alsa.device_held_by(u)]
+            lms_unit = adapters["lms"].unit_name if "lms" in adapters else None
+            if held == [lms_unit] or (not held and supervisor.active == "lms"):
+                # **Lyrion playing here keeps playing** where its own chain
+                # does not change: grouped with one Lyrion server it keeps
+                # this player's chain (`BUT_LYRION`), so only `output`, which
+                # nothing else holds, is new.
+                if await _rechain_around_squeezelite():
+                    return
+            if supervisor.active is not None or held:
                 await _rewrite_output_conf("the group changed", wait=True)
                 return
             chosen = _with_software(outputs.in_force(settings.value("output_device"))[0])
@@ -4804,6 +4813,50 @@ async def main() -> None:
                 await (await asyncio.create_subprocess_exec(
                     "systemctl", "restart", "squeezelite.service")).wait()
             logger.info("outputs: the group's chain is in place; nothing played, nothing restarted")
+
+    def _wait_block(text: str | None) -> str | None:
+        if not text or "pcm.output_wait {" not in text:
+            return None
+        start = text.index("pcm.output_wait {")
+        return text[start:text.find("\n}", start) + 2]
+
+    async def _rechain_around_squeezelite() -> bool:
+        """The group's chain written under a playing Squeezelite, when its own
+        part (`output_wait`) is unchanged; False, and nothing written, when
+        it would change, or the card cannot be asked what it takes."""
+        chosen = _with_software(outputs.in_force(settings.value("output_device"))[0])
+        if chosen is None or outputs.needs_plug(chosen.card) is None:
+            return False
+        try:
+            before = outputs.CONF_PATH.read_text()
+        except OSError:
+            return False
+        # What `write` would put there, written aside first: the same call,
+        # so DSD's chain and the widening come out as they would.
+        aside = Path("/run/gexis/output.conf.group")
+        try:
+            aside.parent.mkdir(parents=True, exist_ok=True)
+            aside.unlink(missing_ok=True)
+            outputs.write(chosen, path=aside, tuning=_tuning(), fixed=fixed_wanted["value"])
+            wanted = aside.read_text()
+        except OSError:
+            return False
+        finally:
+            aside.unlink(missing_ok=True)
+        if _wait_block(before) is None or _wait_block(before) != _wait_block(wanted):
+            return False
+        outputs.write(chosen, tuning=_tuning(), fixed=fixed_wanted["value"])
+        try:
+            after = outputs.CONF_PATH.read_text()
+        except OSError:
+            after = None
+        if _wait_block(after) != _wait_block(before):
+            # The file as written differs where Squeezelite reads (DSD's
+            # chain): it reopens, as any rewrite makes it.
+            await _restart_renderers(wait=True)
+        _watch_renderers_cards(chosen.card)
+        logger.info("outputs: the group's chain is in place under Lyrion, which plays on")
+        return True
 
     def _group_chain_card() -> tuple[str | None, bool, bool]:
         """The card the group's music plays to here, whether the chain in
