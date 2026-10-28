@@ -44,7 +44,7 @@ George the same day. Built: core (`group.py`, `multiroom.py`,
 `snapcast.py`, the grouped chain in `outputs.py`, Lyrion's sync in the LMS
 adapter, the `/group` routes), the UI on the phone, the panel and the bars,
 the manual's section 6, the FAQ, the technical guide, README, the plugin
-manual. **Preview 10** (core and player `1.7.0+git50.e7b0139`, ui
+manual. **Preview 11** (core and player `1.7.0+git51.149be6c`, ui
 `git47.8073640`, system `git38.d9a696d`, Debian's `snapserver` and
 `snapclient` 0.31.0-1 installed from the downloaded files) on sofapi, the
 bar, guestpi and bedroompi, the branch's head. George's findings so far,
@@ -61,7 +61,12 @@ sleep, still held a socket sofapi had closed, so the mutes were done but
 never shown - a page back after more than 5 s opens a fresh one); and the
 bar silent after a cast to sofapi (preview 10: the half-minute round
 rewrote its chain when sofapi missed a round, and the client stopped for
-the rewrite was never started again; LESSONS 83). The plugin guide and
+the rewrite was never started again; LESSONS 83); and a cast just after an
+undo restarted mid-start (preview 11: alone only once nothing holds the
+device, B3 amended **for George to confirm**). Open with an uploaded test
+renderer: its phone app over Bluetooth sends silence after a fraction of a
+second, while both clients play what arrives - to be read on the meter
+next time. The plugin guide and
 contract carry what an uploaded test renderer taught (leave a cast session
 before letting go; read the device name as systemd's form). The leader fix
 is checked by a test only: George's cast is the device check. The integration's join and unjoin: its `multiroom` branch
@@ -83,7 +88,7 @@ The wiki Roadmap shows Phases 20 and 21 done and the Harmony Hub ideas
 to `~/.gnupg-gexis-release`, which no longer exists.
 
 **The players**: sofapi, the bar (ShelvesPi), guestpi and bedroompi on
-Phase 22's preview 10 (2026-10-28, above).
+Phase 22's preview 11 (2026-10-28, above).
 
 **The test venv imports the core from `~/projects/gexis-player-next`** (an
 editable install): in another worktree run the suite with `PYTHONPATH=src`
