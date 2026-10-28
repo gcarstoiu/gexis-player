@@ -413,6 +413,9 @@ class Multiroom:
             if chain != self.chain and not self._alone_when_idle:
                 logger.info("multiroom: the group's chain is now %s", chain)
                 await self._set_chain(chain)
+                # The client let go of the card for the rewrite: back to the
+                # group (the bar, 2026-10-28: silent until the group changed).
+                await self._listen()
             await self._lms_follow()
         self._changed()
 
@@ -424,9 +427,15 @@ class Multiroom:
 
     def _chain_for(self, record: Record) -> str:
         """`BUT_LYRION` where every member plays Lyrion from one server, so
-        Lyrion's own sync can carry it; else `ALL` (C3)."""
+        Lyrion's own sync can carry it; else `ALL` (C3). **A member not heard
+        from this round keeps the chain as it is**: its Lyrion is unknown, not
+        absent (the bar, 2026-10-28: sofapi, starting a 192 kHz stream, missed
+        one round, and the bar's chain went to `all` and back)."""
         servers = set()
         for member in record.members:
+            if (member.id != self.group.me and self.chain in (outputs.ALL, outputs.BUT_LYRION)
+                    and not (self._statuses.get(member.id) or self._players.status_of(member.id))):
+                return self.chain
             lyrion = self._lyrion_of(member.id)
             if not lyrion or not lyrion.get("server"):
                 return outputs.ALL

@@ -72,8 +72,9 @@ class FakePlayers:
         self.on_refresh = None
 
     def status_of(self, player_id):
+        # As the real list: only a player heard in the last round.
         player = self.net.players.get(player_id)
-        return player.status_for_others() if player else None
+        return player.status_for_others() if player and player_id not in self.net.off else None
 
 
 class Player:
@@ -294,6 +295,39 @@ async def test_the_leader_hears_a_source_it_starts_after_lyrion(tmp_path):
     await net.settle()
     assert living.room.record.leader == "living"
     assert living.snap.host == "127.0.0.1"
+
+
+async def test_a_chain_changed_on_a_round_keeps_the_member_hearing_the_group(tmp_path):
+    """The bar, 2026-10-28: its chain changed on the half-minute round, the
+    client was stopped for the rewrite and never started again."""
+    net = Net(tmp_path)
+    living = net.add("living", "Living Room", lyrion=("server-uuid", "player-a"))
+    kitchen = net.add("kitchen", "Kitchen", lyrion=("server-uuid", "player-b"))
+    await net.settle()
+    await living.room.join("kitchen")
+    await net.settle()
+    assert kitchen.room.chain == outputs.BUT_LYRION and kitchen.snap.host == "living.local"
+    statuses = {pid: p.status_for_others() for pid, p in net.players.items()}
+    statuses["living"] = {**statuses["living"], "lyrion": {"server": "another-server", "player": "player-a"}}
+    await kitchen.room._seen(statuses)
+    await net.settle()
+    assert kitchen.room.chain == outputs.ALL
+    assert kitchen.snap.host == "living.local", "the client back after the rewrite"
+
+
+async def test_a_member_silent_for_a_round_does_not_change_the_chain(tmp_path):
+    """The bar, 2026-10-28: sofapi, starting a 192 kHz stream, missed one
+    round, and the bar's chain went to `all` and back half a minute later."""
+    net = Net(tmp_path)
+    living = net.add("living", "Living Room", lyrion=("server-uuid", "player-a"))
+    kitchen = net.add("kitchen", "Kitchen", lyrion=("server-uuid", "player-b"))
+    await net.settle()
+    await living.room.join("kitchen")
+    await net.settle()
+    rechains = kitchen.rechains
+    net.off.add("living")
+    await kitchen.room._seen({"kitchen": kitchen.status_for_others()})
+    assert kitchen.room.chain == outputs.BUT_LYRION and kitchen.rechains == rechains
 
 
 def test_a_leaders_relative_pictures_are_made_reachable():
