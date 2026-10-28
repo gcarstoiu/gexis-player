@@ -3471,7 +3471,26 @@ any iPhone, iPad or Mac, as a plugin like Plexamp (ADR-0016).
 receiver; how it takes the output over and hands it back, as the other
 sources do; what Now Playing and the phone show from it.
 
-**Acceptance:** drafted with its ADR.
+**Started 2026-10-28** (George: as a plugin, offered in first use).
+[ADR-0167](decisions/0167-airplay-2-as-a-plugin.md): Shairport Sync and
+NQPTP built by us, the adapter in `gcarstoiu/gexis-airplay`.
+
+**Acceptance**
+
+1. An iPhone, iPad or Mac plays to the player, which it lists under the
+   player's name.
+2. AirPlay takes the device from every other source, and each of them from
+   AirPlay, as the sources do with one another.
+3. Now Playing on the panel, the bars and the phone shows title, artist,
+   album, cover and progress.
+4. The Apple device's volume moves the player's; Fixed holds full level.
+5. In a Gexis group AirPlay plays on the whole group; two players not
+   grouped play together from AirPlay's own multiroom.
+6. *Make it yours* offers AirPlay, on in every preset; Settings switches it.
+7. *Legal and credits* carries both licences and Apple's trademark line; the
+   public documents are current.
+8. Measured: what it costs a Pi 4, playing and idle; an hour without a
+   dropout on Wi-Fi.
 
 ### Phase 24 — Room correction for the bass, with a USB microphone
 

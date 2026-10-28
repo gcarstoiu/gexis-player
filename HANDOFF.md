@@ -32,7 +32,16 @@ its pi-gen submodule initialised before `make image`.
 **R2D2's `/` fills up**: Docker's containerd store keeps images on `/`, not
 in `/home/docker`, and pi-gen rebuilds its 1.16 GB build image on every
 image build; check `df -h /` before one (1.9 GB free after 1.8.0's, 213 MB at its lowest while pi-gen rebuilt).
-**Now: Phase 22, multiroom for every source**, in 1.8.0 on Testing.
+**Now: Phase 23, AirPlay 2** (`ph-airplay`, started 2026-10-28; George:
+a plugin, offered in first use).
+[ADR-0167](docs/decisions/0167-airplay-2-as-a-plugin.md) proposed: George's
+decisions 1-8 (his acceptance of Claude's recommendations); open: on or off
+for a player that updates, the Apple device for the tests. Debian trixie
+has no AirPlay 2 receiver (`shairport-sync` 4.3.7 is classic only, no
+`nqptp`), so Shairport Sync 5.6.2 and NQPTP 1.2.9 are built by us; the
+adapter lives in `gcarstoiu/gexis-airplay`. Upstream's source, read for the
+ADR, is in `~/projects/scratch/ph23/upstream`.
+**Phase 22, multiroom for every source**, in 1.8.0 on Testing.
 [ADR-0166](docs/decisions/0166-multiroom-for-every-source.md): George's
 decisions 1-10, C1-C6, the design `design/source/22/`, Claude's build
 decisions B1-B13, B2 and B3 amended - all confirmed by George. His tests
@@ -112,7 +121,7 @@ every merged release PR, otherwise weekly on Sunday evening. **Last run:
 Closed: 0-21 (13 with letters a-f). Phases are numbered consecutively
 without letters, each with a stable ID (George, 2026-10-13); 20 (the
 equaliser) and 21 (the phone remote) closed 2026-10-27 with 1.7.0; 22
-(multiroom) in progress, 23-30 to come, MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
+(multiroom) on Testing, 23 (AirPlay 2) in progress, 24-30 to come, MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
 
 ## Machines
 
