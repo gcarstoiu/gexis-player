@@ -1894,6 +1894,15 @@ def test_a_plugins_switch_carries_its_version_line():
     assert switch["version"] == "Version 0.4.7"
 
 
+def test_a_plugins_switch_carries_its_tag():
+    """ADR-0167: AirPlay's *Limited testing*, beside its name on its switch."""
+    from gexis_core.plugins import Plugin
+    airplay = Plugin("airplay", "AirPlay", "renderer", "gexis-shairport-sync.service", tag="Limited testing")
+    merged = Settings.with_plugins(load_registry(), [airplay])
+    [switch] = [r for g in merged for r in g["rows"] if r.get("key") == "airplay.enabled"]
+    assert switch["tag"] == "Limited testing" and switch["label"] == "AirPlay"
+
+
 def test_navigation_is_one_choice_over_the_two_switches(tmp_path):
     """George, 2026-10-19: "Navigation, simple extended or off is a single
     choice in a modal. Not two separate toggles." The choice writes

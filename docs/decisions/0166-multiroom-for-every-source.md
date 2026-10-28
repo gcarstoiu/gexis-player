@@ -262,6 +262,9 @@ used are pointed at it for the test and given their own server back after.
 
 ## Amended 2026-10-28: D7, each client's latency is what follows it
 
+**Confirmed by George** the same day; merged into `next` at his word before
+it was heard, with a check by ear owed before the next Stable promotion.
+
 George heard sofapi and the bar apart in one group, and in time with
 sofapi's equaliser off. Snapcast keeps its clients in time at the device
 each one opens. On sofapi, with the equaliser on, that device is the

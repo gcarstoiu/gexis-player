@@ -51,6 +51,8 @@ const TONES = { info: ['#8fc4d8', OFF, OFFB], ok: ['#7ed6bc', OFF, OFFB], warn: 
 const LETTER = { plex: 'P', viz: 'V', clk: 'C', stby: 'S', besz: 'B', lib: 'M', fold: 'F', browse: 'B', ext: '+' };
 const BTYPES = ['Sub', 'List', 'Note', 'Field', 'Status', 'P', 'Btn', 'Pics', 'Where', 'Split', 'Seg', 'Pick', 'Num', 'Code', 'Party', 'Dev', 'Prog', 'Cast', 'Sum', 'Clock', 'Addr', 'Iv', 'Head', 'Rule'];
 const noop = () => {};
+//: ADR-0167 (George, 2026-10-28): beside AirPlay until it is tried with an Apple device.
+const LIMITED = ['Limited testing', 'plain'];
 const SRCN = { lyr: 'Lyrion', spo: 'Spotify', air: 'AirPlay', bt: 'Bluetooth', plex: 'Plexamp' };
 const tagOf = tag => {
   if (!tag) return { tagDisplay: 'none', tag: '', tagBg: 'transparent', tagInk: '#e9eef2' };
@@ -378,7 +380,7 @@ class Component extends DCLogic {
       }
       case 'mix': { const m = k => () => this.setState(st => ({ mix: Object.assign({}, st.mix, { [k]: !st.mix[k] }) }));
         return { title: 'My own mix', blocks: [list([T('Lyrion', 'Browse your files on the screen.', s.mix.lyr, m('lyr'), { icon: 'lyr' }), T('Plexamp', 'Your Plex library, from its app.', s.mix.plex, m('plex'), { icon: 'plex' }), { k: 'ghost', label: 'Library service', note: 'The next one lands here.', tag: 'Next phase' }], 'Your own music'),
-          list([T('Spotify', '', s.mix.spo, m('spo'), { icon: 'spo' }), T('AirPlay', '', s.mix.air, m('air'), { icon: 'air' }), T('Bluetooth', '', s.mix.bt, m('bt'), { icon: 'bt' })], 'Streaming')] }; }
+          list([T('Spotify', '', s.mix.spo, m('spo'), { icon: 'spo' }), T('AirPlay', '', s.mix.air, m('air'), { icon: 'air', tag: LIMITED }), T('Bluetooth', '', s.mix.bt, m('bt'), { icon: 'bt' })], 'Streaming')] }; }
       case 'lyrion': { const here = s.lyrWhere === 'here';
         if (s.lyrState === 'found') {
           const pick = (w, a) => () => set({ lyrWhere: w, lyrServer: a === undefined ? s.lyrServer : a });
@@ -461,8 +463,8 @@ class Component extends DCLogic {
       }
       case 'browse': return { title: 'Browse on the screen', sub: 'A Lyrion app on your phone works with any of these.', pv: pv({ kind: KNAV[s.browse] }), blocks: [list(NAV.map(n => R(n[1], n[2], s.browse === n[0], () => set({ browse: n[0] }))))], foot: SK };
       case 'spotify': return { title: 'Spotify', sub: 'Built in. ' + nm + ' appears in the Spotify app on your phone.', blocks: [list([T('Spotify Connect', '', s.spotify, flip('spotify'), { icon: 'spo' })]), ...(s.spotify ? [{ t: 'Cast', device: nm, text: 'Tap the devices icon, then ' + nm + '.' }] : [])], foot: SK };
-      case 'airplay': return { title: 'AirPlay', sub: 'Built in. ' + nm + ' appears in the AirPlay list on an iPhone, iPad or Mac.', blocks: [list([T('AirPlay', '', s.airplay, flip('airplay'), { icon: 'air' })]),
-        ...(s.airplay ? [note('info', 'On an iPhone or iPad', 'Where the music plays, tap the AirPlay button, then ' + nm + '. On a Mac, choose ' + nm + ' as the sound output.')] : [note('info', '', 'Apple devices can’t find ' + nm + '. Turn it on any time in Settings → AirPlay.')])], foot: SK };
+      case 'airplay': return { title: 'AirPlay', sub: 'Built in. ' + nm + ' appears in the AirPlay list on an iPhone, iPad or Mac.', blocks: [list([T('AirPlay', '', s.airplay, flip('airplay'), { icon: 'air', tag: LIMITED })]),
+        ...(s.airplay ? [note('info', 'On an iPhone or iPad', 'Where the music plays, tap the AirPlay button, then ' + nm + '. On a Mac, choose ' + nm + ' as the sound output.')] : [note('info', '', 'Apple devices can’t find ' + nm + '. Turn it on any time in Settings → Plugins.')])], foot: SK };
       case 'bluetooth': {
         const ph = s.pairDevice || 'A phone', sub = 'Any phone can play to ' + nm + ' over Bluetooth. Pair one now, or later from Settings.';
         const en = list([T('Enabled', '', s.bt, () => this.setState(st => ({ bt: !st.bt, btPhase: !st.bt ? 'disc' : st.btPhase, btLeft: !st.bt ? 180 : st.btLeft })), { icon: 'bt' })]);

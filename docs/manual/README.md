@@ -276,7 +276,10 @@ choose it as the sound output.
 - **The sound** arrives at 44.1 or 48 kHz, as AirPlay sends it; AirPlay does
   not carry high-resolution audio.
 - **A new player has AirPlay on**; a player updated from an earlier release
-  has it off until it is switched on in *Settings → Sources → AirPlay*.
+  has it off until it is switched on in *Settings → Plugins*.
+- **It is marked *Limited testing*** beside its name: it has not yet been
+  played to from an iPhone, iPad or Mac on the test players, so some of the
+  above is as designed rather than as seen. Problem reports help.
 
 AirPlay is a trademark of Apple Inc., registered in the U.S. and other countries and regions.
 
@@ -662,7 +665,6 @@ still mounted.
 | Lyrion Client: Navigation | How you move around your library on the screen, one choice: **Simple** - the home tiles, albums, artists, playlists and radio; **Extended** - Lyrion's own menus as well: My Music, Favourites, Apps (section 4); **Off** - only what is playing and the sources, with no library to browse; Lyrion's apps on your phone still play to the player. |
 | Spotify Connect: Enabled | The player appears as a Spotify Connect device. |
 | Spotify Connect: Starting volume | The loudest Spotify starts at when it takes over. Hidden with Volume on *Fixed*. |
-| AirPlay: Enabled | The player is in the AirPlay list of iPhones, iPads and Macs on the network. On for a new player; off on a player updated from an earlier release until switched on. |
 | Bluetooth: Enabled | The player accepts Bluetooth audio. |
 | Bluetooth: Pairing | *Confirmation required* shows a six-digit code on the panel to accept; *PIN-free* pairs anything in range. |
 | Bluetooth: Discoverable | Whether phones can find the player: *Always* (the default), *3 min after boot* or *Off*. With *Pairing* on *Confirmation required*, a new phone still has to be accepted on the screen. |
@@ -781,7 +783,9 @@ and the visualiser shows the music as it arrives, before the equaliser.
 ### Plugins — *What is installed beyond the player itself*
 
 Optional parts, each with its own switch: the **visualiser skins** for this
-screen's size, **AirPlay** (in the player already, nothing to download),
+screen's size, **AirPlay** (in the player already, nothing to download;
+on for a new player, off on one updated from an earlier release; marked
+*Limited testing*),
 **Plexamp**, the **Lyrion Server** and the **Beszel** monitoring agent, among
 others. A plugin that needs software from its maker
 downloads it when switched on. Setup offers the same plugins, and the first

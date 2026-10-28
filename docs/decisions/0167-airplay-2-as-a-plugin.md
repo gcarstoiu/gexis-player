@@ -1,9 +1,11 @@
 # ADR-0167 — AirPlay 2 as a plugin
 
-**Status:** **Proposed** 2026-10-28. Phase 23 (`ph-airplay`), started the
-same day (George: as a plugin, offered in first use). The experience is
-George's: on 2026-10-28 he took Claude's recommendation on each of eight
-questions (*Decided*); two are still his (*Open*). The technical decisions
+**Status:** **Accepted** 2026-10-28 (George: decisions 1-8, Open 1 off, the
+settings row and the Legal and credits wording; decision 9). Phase 23
+(`ph-airplay`), started the same day (George: as a plugin, offered in first
+use). The experience is George's: on 2026-10-28 he took Claude's
+recommendation on each of eight questions (*Decided*), and answered Open 1;
+Open 2 waits for an Apple device. The technical decisions
 are Claude's, proposed, and confirmed or changed by the phase's first
 measurement. Builds on [ADR-0016](0016-plugins-as-separate-processes.md)
 and [ADR-0086](0086-a-plugin-declares-itself-in-a-manifest.md) (plugins),
@@ -73,13 +75,19 @@ source), [ADR-0149](0149-first-use-in-two-parts.md) (first use),
    (GPL-3.0), as Plexamp's is (ADR-0090).
 8. **Apple's Home app** is neither offered nor documented, for now.
 
+9. **Released before it is tried, marked *Limited testing*** (George,
+   2026-10-28: no Apple device to test with yet): a tag beside its name - on
+   its switch in Settings (the manifest's `tag`) and in *Make it yours* -
+   until it has been played to from an Apple device, and whatever that
+   shows is fixed then. The manual and the FAQ say what the tag means.
+
 ## Open (George)
 
-1. **A player that updates**: is AirPlay switched on by the update, or off
-   until switched on in Settings or Personalise? Proposed: off - a release
+1. ~~**A player that updates**~~ - **off** (George, 2026-10-28): a release
    does not start announcing a new service on a network nobody chose it
-   for; the release notes say where to switch it on.
-2. **The Apple device for the tests**: an iPhone, an iPad or a Mac.
+   for; the release notes say where to switch it on (*Settings → Plugins*).
+2. **The Apple device for the tests**: none available yet (George,
+   2026-10-28) - decision 9 stands until one is.
 
 ## Proposed (Claude)
 
@@ -121,7 +129,9 @@ source), [ADR-0149](0149-first-use-in-two-parts.md) (first use),
   one, so ADR-0142's port 5353 rule does not apply: avahi answers, not the
   plugin.
 - **T8. Legal and credits** (ADR-0099): both licences; NQPTP's source with
-  each release, as GPL-2.0 asks; Apple's trademark line.
+  each release, as GPL-2.0 asks; Apple's trademark line. The wording, with
+  the entries OpenCV, NumPy and the two models had been missing since
+  ADR-0120, approved by George on 2026-10-28.
 - **T9. Covers as bytes: the contract's `artwork` event**, added within
   version 1 (found building, 2026-10-28). A cover reaches the screens as an
   address, and AirPlay's arrive as pictures. The plugin sends each one
@@ -133,7 +143,7 @@ source), [ADR-0149](0149-first-use-in-two-parts.md) (first use),
 
 ## Settings (ADR-0022)
 
-Proposed, appended only after George confirms:
+Appended 2026-10-28 on George's confirmation:
 
 - **[N] AirPlay** - `airplay.enabled`, the plugin's own switch (ADR-0086),
   under Sources and on the Plugins page; on from first use's presets

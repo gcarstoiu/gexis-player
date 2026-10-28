@@ -825,10 +825,15 @@ in battery-saving mode, which can hold back what it sends; once that was off,
 the details came through. Not every app sends track details over Bluetooth.
 
 **The player does not appear in the AirPlay list.**
-Check *Settings → Sources → AirPlay → Enabled*: a new player has it on, a
-player updated from an earlier release has it off until it is switched on.
+Check its switch in *Settings → Plugins*: a new player has it on, a player
+updated from an earlier release has it off until it is switched on.
 The Apple device and the player must be on the same network; the player is
 listed under its device name.
+
+**What does *Limited testing* beside AirPlay mean?**
+AirPlay has not yet been played to from an iPhone, iPad or Mac on the test
+players: it is built and announced, and what it shows and does is as
+designed rather than as seen. A problem report (*Settings → System*) helps.
 
 **Can I pause or skip from the player while AirPlay plays?**
 Not yet: AirPlay is controlled from the Apple device. The player shows what

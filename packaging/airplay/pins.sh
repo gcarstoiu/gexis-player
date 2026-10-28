@@ -3,4 +3,4 @@
 PLUGIN_VERSION="0.1.0"
 PLUGIN_ASSET="gexis-airplay-${PLUGIN_VERSION}.tar.gz"
 PLUGIN_URL="https://github.com/gcarstoiu/gexis-airplay/releases/download/v${PLUGIN_VERSION}/${PLUGIN_ASSET}"
-PLUGIN_SHA256="1610e846366de79c4d69f0bbcf242d2de31cfb20babc5395a01510b9877c9dcc"
+PLUGIN_SHA256="4b0ed6491ac36a55b1bb87f94106b4e5919f3a1ca5cd2a7ceb0aa6d9fad95292"
