@@ -20,7 +20,7 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.7.0, on Stable** (promoted 2026-10-27 at George's
+**Current release: 1.7.0 on Stable, 1.8.0 on Testing (2026-10-28, below)** (promoted 2026-10-27 at George's
 word: Stable serial 11, Testing serial 57, both read back with good
 signatures; r1.7.0 is GitHub's latest; the public `gexis-player.img.xz`
 through `releases/latest/download` passes its checksum and signature and
@@ -73,9 +73,20 @@ and, after George's test of the rest (Fixed, the equaliser and four
 players in a group, the leader rebooted - all fine): Lyrion playing in the
 leader's sync no longer stopped on joining (a Lyrion-app sync paused
 itself), the level after a mute the renderer's own again, the equaliser's
-switch moving at once (preview 13). **1.8.0 for Testing being cut**
-(George, 2026-10-28): `ph-multiroom` merged into `next` (6ec5070e; core
-2800 passed, the UI builds); the notes drafted for his approval. Still open: the 192 kHz measurement session,
+switch moving at once (preview 13). **1.8.0 on Testing** (George,
+2026-10-28; the notes approved by him): `ph-multiroom` merged into `next`
+(6ec5070e; core 2800 passed, the UI builds); tag `v1.8.0` on the notes
+commit `6a9d1a44`; image `image/deploy/2026-10-28-gexis-player-v1.8.0.img`,
+built from the tag in `~/projects/gexis-player-r180` (993 s, its pi-gen
+submodule initialised there first; `verify-image.sh` 134 checks passed);
+build output `~/projects/gexis-release-out/r1.8.0` (new: gexis-core and
+gexis-player 1.8.0, gexis-ui `1.7.0+git58.1ae1e2c`, gexis-system
+`1.7.0+git38.d9a696d`, Debian's snapserver and snapclient 0.31.0-1);
+Testing serial 58 read back, good signature; Stable still 1.7.0, serial 11.
+**PR #87** (`release-1.8.0` into `main`) open for George to merge. The four
+test players run preview 13 (the release's packages but the core, which
+differs only by the notes). R2D2's `/` touched 213 MB free while pi-gen
+rebuilt its image, 826 MB after. Still open: the 192 kHz measurement session,
 the Home Assistant integration's release, back and forth between Lyrion-app
 grouping and the player's.
 After that fix, one phone app over Bluetooth still delivered silence -
