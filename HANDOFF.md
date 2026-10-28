@@ -63,10 +63,10 @@ bar silent after a cast to sofapi (preview 10: the half-minute round
 rewrote its chain when sofapi missed a round, and the client stopped for
 the rewrite was never started again; LESSONS 83); and a cast just after an
 undo restarted mid-start (preview 11: alone only once nothing holds the
-device, B3 amended **for George to confirm**). Open with an uploaded test
-renderer: its phone app over Bluetooth sends silence after a fraction of a
-second, while both clients play what arrives - to be read on the meter
-next time. The plugin guide and
+device, B3 amended **for George to confirm**). Not the player's: an
+uploaded test renderer's phone app over Bluetooth sends silence - the
+meter before sofapi's DAC read 0 with it and 12-37 with Spotify over the
+same Bluetooth link (2026-10-28). The plugin guide and
 contract carry what an uploaded test renderer taught (leave a cast session
 before letting go; read the device name as systemd's form). The leader fix
 is checked by a test only: George's cast is the device check. The integration's join and unjoin: its `multiroom` branch
