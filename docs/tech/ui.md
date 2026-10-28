@@ -67,7 +67,9 @@ flowchart LR
   `handoff`, `pairing`, `panel`, `setup`, `update`, `screenConfirm`,
   `screenNew`, `screenCheck`, `sources`, …). Components subscribe to these stores and
   never read the socket. Reconnects back off from 0.5 s to 5 s, because the
-  kiosk has to outlive any number of core restarts.
+  kiosk has to outlive any number of core restarts. A page brought back to
+  the front reconnects at once, and after more than 5 s away it opens a fresh
+  socket even if the old one says open: a phone asleep misses the close.
 - **Commands go over REST, never the socket** (ADR-0028). `post()` in
   `state.js` raises the server's own `error` text, which lets messages such
   as "LMS unreachable" reach the user. A command's result is not taken from
